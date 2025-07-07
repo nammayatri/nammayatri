@@ -257,6 +257,7 @@ instance showAction :: Show Action where
   show (CoinsPopupAC var1) = "CoinsPopupAC_" <> show var1
   show (PetRidesPopupAC var1) = "PetRidesPopupAC_" <> show var1
   show (OptOutPetRidesPopupAC var1) = "OptOutPetRidesPopupAC" <> show var1
+  show (PetRidesInfoPopupAC var1) = "PetRidesInfoPopupAC" <> show var1
   show (ToggleStatsModel) = "ToggleStatsModel"
   show (ToggleBonusPopup) = "ToggleBonusPopup"
   show (GoToEarningsScreen _) = "GoToEarningsScreen"
@@ -624,6 +625,7 @@ data Action = NoAction
             | CoinsPopupAC PopUpModal.Action
             | PetRidesPopupAC PopUpModal.Action
             | OptOutPetRidesPopupAC PopUpModal.Action
+            | PetRidesInfoPopupAC PopUpModal.Action
             | ToggleStatsModel
             | ToggleBonusPopup
             | GoToEarningsScreen Boolean
@@ -1331,6 +1333,7 @@ eval (RideActionModalAction (RideActionModal.CallCustomer)) state = do
 
 eval (RideActionModalAction (RideActionModal.SecondaryTextClick popUpType)) state = do
   let updatedState = if popUpType == RideActionModal.RentalInfo then state{props{rentalInfoPopUp = true, safetyAudioAutoPlay = false}}
+    else if popUpType == RideActionModal.PetRidesInfo then state{props{showPetRidesInfoPopUp = true, safetyAudioAutoPlay = false}}
     else if popUpType == RideActionModal.IntercityInfo then state{props{intercityInfoPopUp = true, safetyAudioAutoPlay = false}}
     else state{props{showAccessbilityPopup = true, safetyAudioAutoPlay = false}}
   continue updatedState
@@ -1921,6 +1924,13 @@ eval (OptOutPetRidesPopupAC PopUpModal.OnButton1Click) state = do
 eval (OptOutPetRidesPopupAC PopUpModal.OnButton2Click) state = do
   let updatedState = state {props {showOptOutPetRidesPopup = false}}
   updateAndExit updatedState $ EnablePetRides updatedState
+
+eval (PetRidesInfoPopupAC PopUpModal.OnButton1Click) state =
+  continue state {props {showPetRidesInfoPopUp = false, safetyAudioAutoPlay = false}}
+
+eval (PetRidesInfoPopupAC PopUpModal.NoAction) state = continueWithCmd state [do
+  pure $ PetRidesInfoPopupAC PopUpModal.OnButton1Click
+]
 
 eval (CoinEarnedPopupAC PopUpModal.OnButton1Click) state = do
   void $ pure $ updateCoinPopupLocalStoreVal state

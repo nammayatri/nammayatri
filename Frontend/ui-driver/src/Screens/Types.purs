@@ -1417,6 +1417,7 @@ type HomeScreenProps =  {
   rcDeactivePopup :: Boolean,
   showAccessbilityPopup :: Boolean,
   rentalInfoPopUp :: Boolean,
+  showPetRidesInfoPopUp :: Boolean,
   showRideCompleted :: Boolean,
   showRideRating :: Boolean,
   showContactSupportPopUp :: Boolean,

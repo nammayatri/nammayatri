@@ -2404,6 +2404,13 @@ currentRideFlow activeRideResp isActiveRide = do
                 else
                   setValueToLocalStore NIGHT_SAFETY_POP_UP "false"
 
+              when (fromMaybe false activeRide.isPetRide) $ do
+                let localVal = getValueToLocalStore PET_RIDES_INFO_POPUP_SHOWN
+                    isShown = localVal == "true"
+                when (not isShown) $ do
+                  setValueToLocalStore PET_RIDES_INFO_POPUP_SHOWN "true"
+                  modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props {showPetRidesInfoPopUp = true }})
+
               void $ updateStage $ HomeScreenStage stage
               void $ pure $ setCleverTapUserProp [{key : "Driver On-ride", value : unsafeToForeign "Yes"}]
               let stateChange = if (ride.bookingType == Just ADVANCED)
@@ -2660,6 +2667,7 @@ homeScreenFlow = do
       resp <- lift $ lift $ Remote.driverActiveInactive "true" $ toUpper $ show Online
       handleDriverActivityResp resp
       void $ pure $ setValueToLocalStore RENTAL_RIDE_STATUS_POLLING "False"
+      void $ pure $ setValueToLocalStore PET_RIDES_INFO_POPUP_SHOWN "false"
       void $ updateStage $ HomeScreenStage HomeScreen
 
       when state.data.driverGotoState.isGotoEnabled do
@@ -3231,6 +3239,7 @@ endTheRide id endOtp endOdometerReading endOdometerImage lat lon ts state = do
             void $ pure $ setValueToLocalNativeStore DRIVER_STATUS_N "Online"
             void $ lift $ lift $ Remote.driverActiveInactive "true" $ toUpper $ show Online
             void $ pure $ setValueToLocalNativeStore TRIP_STATUS "ended"
+            void $ pure $ setValueToLocalStore PET_RIDES_INFO_POPUP_SHOWN "false"
             when (state.props.currentStage == RideStarted) $ for_  state.data.activeRide.stops $ \(API.Stop stop) -> do
               let (API.LocationInfo stopLocation) = stop.location
               pure $ removeMarker $ "stop" <> show stopLocation.lat <> show stopLocation.lon
