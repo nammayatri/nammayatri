@@ -75,6 +75,7 @@ Person:
     backendAppVersion : Maybe Text
     driverTag: "Maybe [TagNameValueExpiry]"
     clientId: Maybe Text
+    nyClubConsent: Maybe Bool
 
   domainInstance:
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <Role>
@@ -168,6 +169,7 @@ Person:
     registrationLon: double precision
     totalEarnedCoins: integer
     usedCoins: integer
+    nyClubConsent: boolean
 
 
   default:
@@ -175,6 +177,7 @@ Person:
     languagesSpoken: "'{}'"
     totalEarnedCoins: 0
     usedCoins: 0
+    nyClubConsent: false
 
   queries:
     findById:
@@ -251,6 +254,11 @@ Person:
     updateDriverTag:
       kvFunction: updateOneWithKV
       params: [driverTag]
+      where: id
+
+    updateNyClubConsent:
+      kvFunction: updateOneWithKV
+      params: [nyClubConsent]
       where: id
 
   extraOperations:

@@ -90,6 +90,11 @@ updateDriverTag driverTag id = do
 updateName :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateName firstName id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.firstName firstName, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateNyClubConsent :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateNyClubConsent nyClubConsent id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.nyClubConsent nyClubConsent, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateTotalEarnedCoins :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateTotalEarnedCoins totalEarnedCoins id = do
   _now <- getCurrentTime
@@ -146,6 +151,7 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
       Se.Set Beam.mobileCountryCode mobileCountryCode,
       Se.Set Beam.mobileNumberEncrypted (mobileNumber <&> unEncrypted . (.encrypted)),
       Se.Set Beam.mobileNumberHash (mobileNumber <&> (.hash)),
+      Se.Set Beam.nyClubConsent nyClubConsent,
       Se.Set Beam.onboardedFromDashboard onboardedFromDashboard,
       Se.Set Beam.passwordHash passwordHash,
       Se.Set Beam.registrationLat registrationLat,
