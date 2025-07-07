@@ -459,7 +459,8 @@ postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPP
   searchReqId <- generateGUID
   now <- getCurrentTime
   let updatedJourneyRouteDetails = map (\multiModalJourneyRouteDetails -> multiModalJourneyRouteDetails {JLT.journeyStatus = Just JLT.InPlan}) mbJourneyRouteDetails
-  let searchReq =
+      validTill = addUTCTime (maybe 30 intToNominalDiffTime bapConfig.searchTTLSec) now
+      searchReq =
         DFRFSSearch.FRFSSearch
           { id = searchReqId,
             vehicleType = vehicleType_,
@@ -478,6 +479,7 @@ postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPP
             journeyRouteDetails = updatedJourneyRouteDetails,
             integratedBppConfigId = integratedBPPConfig.id,
             isOnSearchReceived = Nothing,
+            validTill = Just validTill,
             ..
           }
   QFRFSSearch.create searchReq

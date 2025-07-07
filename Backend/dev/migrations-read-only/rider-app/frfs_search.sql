@@ -34,3 +34,8 @@ ALTER TABLE atlas_app.frfs_search ADD PRIMARY KEY ( id);
 
 ALTER TABLE atlas_app.frfs_search ALTER COLUMN to_station_id TYPE text;
 ALTER TABLE atlas_app.frfs_search ALTER COLUMN from_station_id TYPE text;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_search ADD COLUMN valid_till timestamp with time zone ;

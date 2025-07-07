@@ -15,6 +15,7 @@
 module Storage.GraphqlQueries.Types where
 
 import qualified BecknV2.FRFS.Enums
+import Control.Applicative ((<|>))
 import Data.Morpheus.Client.CodeGen.Internal
 import qualified Data.Time.LocalTime as LocalTime
 import EulerHS.Types (OptionEntity)
@@ -63,12 +64,18 @@ instance FromJSON StopData where
       <*> obj .: "name"
       <*> obj .: "stoptimesWithoutPatterns"
 
+data ExtraInfo = ExtraInfo
+  { fareStageNumber :: Maybe Text,
+    providerStopCode :: Maybe Text
+  }
+  deriving (Show, Generic, FromJSON)
+
 data RouteStopTimeTableEntry = RouteStopTimeTableEntry
   { scheduledArrival :: Int,
     realtimeArrival :: Int,
     arrivalDelay :: Int,
     scheduledDeparture :: Int,
-    headsign :: Maybe Text,
+    extraInfo :: Maybe ExtraInfo,
     trip :: TripData,
     stop :: Maybe PlatformCode
   }
@@ -76,12 +83,26 @@ data RouteStopTimeTableEntry = RouteStopTimeTableEntry
 
 instance FromJSON RouteStopTimeTableEntry where
   parseJSON = withObject "RouteStopTimeTableEntry" $ \obj -> do
+    let headsignParser =
+          (obj .: "headsign")
+            >>= ( pure
+                    . Just
+                    . ( \fareStageNumber ->
+                          ExtraInfo
+                            { fareStageNumber = Just fareStageNumber,
+                              providerStopCode = Nothing
+                            }
+                      )
+                    <=< parseJSON
+                )
+        extraInfoParser = obj .:? "headsign"
+        fallback = extraInfoParser <|> headsignParser
     RouteStopTimeTableEntry
       <$> obj .: "scheduledArrival"
       <*> obj .: "realtimeArrival"
       <*> obj .: "arrivalDelay"
       <*> obj .: "scheduledDeparture"
-      <*> obj .:? "headsign"
+      <*> fallback
       <*> obj .: "trip"
       <*> obj .:? "stop"
 
@@ -125,6 +146,7 @@ data TimetableEntry = TimetableEntry
     timeOfDeparture :: LocalTime.TimeOfDay,
     tripId :: Text,
     stage :: Maybe Int,
+    providerStopCode :: Maybe Text,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     platformCode :: Maybe Text

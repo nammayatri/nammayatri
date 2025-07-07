@@ -462,7 +462,7 @@ getFareV2 partnerOrg fromStation toStation partnerOrgTransactionId routeCode int
               endStationCode = toStation.code
             }
         ]
-  searchReq <- mkSearchReq frfsVehicleType partnerOrgTransactionId partnerOrg fromStation toStation route
+  searchReq <- mkSearchReq bapConfig frfsVehicleType partnerOrgTransactionId partnerOrg fromStation toStation route
   fork ("FRFS Search: " <> searchReq.id.getId) $ do
     QSearch.create searchReq
     CallExternalBPP.search merchant merchantOperatingCity bapConfig searchReq frfsRouteDetails integratedBPPConfig
@@ -483,8 +483,9 @@ getFareV2 partnerOrg fromStation toStation partnerOrgTransactionId routeCode int
             quotes = Nothing
           }
   where
-    mkSearchReq frfsVehicleType partnerOrgTransactionId' partnerOrg' fromStation' toStation' route = do
+    mkSearchReq bapConfig frfsVehicleType partnerOrgTransactionId' partnerOrg' fromStation' toStation' route = do
       now <- getCurrentTime
+      let validTill = addUTCTime (maybe 30 intToNominalDiffTime bapConfig.searchTTLSec) now
       uid <- generateGUID
       return
         DFRFSSearch.FRFSSearch
@@ -507,6 +508,7 @@ getFareV2 partnerOrg fromStation toStation partnerOrgTransactionId routeCode int
             integratedBppConfigId = integratedBPPConfig.id,
             journeyRouteDetails = [],
             recentLocationId = Nothing,
+            validTill = Just validTill,
             ..
           }
 

@@ -3,7 +3,7 @@ module Lib.JourneyModule.Types where
 import API.Types.RiderPlatform.Management.FRFSTicket
 import qualified API.Types.UI.FRFSTicketService as FRFSTicketServiceAPI
 import qualified BecknV2.FRFS.Enums as Spec
-import Control.Applicative (liftA2)
+import Control.Applicative (liftA2, (<|>))
 import Data.Aeson (object, withObject, (.:), (.=))
 import qualified Data.HashMap.Strict as HM
 import qualified Domain.Types.Booking as DBooking
@@ -162,7 +162,7 @@ type GetStateFlow m r c =
 
 type SearchJourneyLeg leg m = leg -> m SearchResponse
 
-type GetFareJourneyLeg leg m = leg -> m (Maybe GetFareResponse)
+type GetFareJourneyLeg leg m = leg -> m (Bool, Maybe GetFareResponse)
 
 type ConfirmJourneyLeg leg m = leg -> m ()
 
@@ -268,7 +268,8 @@ data LegInfo = LegInfo
     actualDistance :: Maybe Distance,
     totalFare :: Maybe PriceAPIEntity,
     entrance :: Maybe MultiModalLegGate,
-    exit :: Maybe MultiModalLegGate
+    exit :: Maybe MultiModalLegGate,
+    validTill :: Maybe UTCTime
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -620,7 +621,8 @@ mkLegInfoFromBookingAndRide booking mRide entrance exit = do
         actualDistance = mRide >>= (.traveledDistance),
         totalFare = mkPriceAPIEntity <$> (mRide >>= (.totalFare)),
         entrance = entrance,
-        exit = exit
+        exit = exit,
+        validTill = Nothing
       }
   where
     getBookingDetailsConstructor :: DBooking.BookingDetails -> Text
@@ -691,7 +693,8 @@ mkLegInfoFromSearchRequest DSR.SearchRequest {..} entrance exit = do
         actualDistance = Nothing,
         totalFare = Nothing,
         entrance = entrance,
-        exit = exit
+        exit = exit,
+        validTill = Nothing
       }
 
 getWalkLegStatusFromWalkLeg :: DWalkLeg.WalkLegMultimodal -> JourneySearchData -> JourneyLegStatus
@@ -740,7 +743,8 @@ mkWalkLegInfoFromWalkLegData legData@DWalkLeg.WalkLegMultimodal {..} entrance ex
         actualDistance = estimatedDistance,
         totalFare = Nothing,
         entrance = entrance,
-        exit = exit
+        exit = exit,
+        validTill = Nothing
       }
 
 getFRFSLegStatusFromBooking :: DFRFSBooking.FRFSTicketBooking -> JourneyLegStatus
@@ -802,7 +806,8 @@ mkLegInfoFromFrfsBooking booking distance duration entrance exit = do
         actualDistance = distance,
         totalFare = mkPriceAPIEntity <$> booking.finalPrice,
         entrance = entrance,
-        exit = exit
+        exit = exit,
+        validTill = (if null qrValidity then Nothing else Just $ maximum qrValidity) <|> Just booking.validTill
       }
   where
     mkLegExtraInfo qrDataList qrValidity ticketsCreatedAt journeyRouteDetails' metroRouteInfo' subwayRouteInfo' ticketNo integratedBPPConfig = do
@@ -989,7 +994,8 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} fallbackFare di
         actualDistance = Nothing,
         totalFare = Nothing,
         entrance = entrance,
-        exit = exit
+        exit = exit,
+        validTill = (mbQuote <&> (.validTill)) <|> (frfsSearch.validTill)
       }
   where
     mkLegExtraInfo mbQuote metroRouteInfo' subwayRouteInfo' integratedBPPConfig = do

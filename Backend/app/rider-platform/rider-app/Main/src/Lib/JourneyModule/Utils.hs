@@ -222,7 +222,8 @@ fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid moci
               delay = Nothing,
               source = LIVE,
               stage = Nothing,
-              platformCode = Nothing
+              platformCode = Nothing,
+              providerStopCode = Nothing
             }
 
 fetchLiveSubwayTimings ::
@@ -270,7 +271,8 @@ fetchLiveSubwayTimings routeCodes stopCode currentTime integratedBppConfig mid m
           delay = Just $ Seconds train.delayArrival,
           source = LIVE,
           stage = Nothing,
-          platformCode = Nothing
+          platformCode = Nothing,
+          providerStopCode = Nothing
         }
 
 fetchLiveTimings ::
