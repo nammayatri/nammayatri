@@ -402,6 +402,7 @@ library
       SharedLogic.KaalChakra.Actions
       SharedLogic.KaalChakra.Chakras
       SharedLogic.LocationMapping
+      SharedLogic.MediaFileDocument
       SharedLogic.Merchant
       SharedLogic.MerchantPaymentMethod
       SharedLogic.MessageBuilder
