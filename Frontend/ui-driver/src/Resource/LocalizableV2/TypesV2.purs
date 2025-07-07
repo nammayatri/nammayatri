@@ -1878,6 +1878,9 @@ newtype Keymap = Keymap {
     , open_meter :: String
     , this_ride_includes_a_pet :: String
     , pet_rides :: String
+    , thanks_for_accepting_pet_ride :: String
+    , clean_the_vehicle_after_ride_if_needed :: String
+    , the_customer_is_responsible_for_pet :: String
     , please_resume_ride_to_continue :: String
     , you_are_too_far_from_the_stop :: String
     , you_may_lose_some_coins_if_you_cancel_this_ride :: String
@@ -7524,6 +7527,15 @@ this_ride_includes_a_pet = a
 
 pet_rides :: Proxy "pet_rides"
 pet_rides = a
+
+thanks_for_accepting_pet_ride :: Proxy "thanks_for_accepting_pet_ride"
+thanks_for_accepting_pet_ride = a
+
+clean_the_vehicle_after_ride_if_needed :: Proxy "clean_the_vehicle_after_ride_if_needed"
+clean_the_vehicle_after_ride_if_needed = a
+
+the_customer_is_responsible_for_pet :: Proxy "the_customer_is_responsible_for_pet"
+the_customer_is_responsible_for_pet = a
 
 please_resume_ride_to_continue :: Proxy "please_resume_ride_to_continue"
 please_resume_ride_to_continue = a

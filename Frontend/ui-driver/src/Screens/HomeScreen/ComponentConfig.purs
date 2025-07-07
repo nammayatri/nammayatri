@@ -2700,6 +2700,43 @@ optOutPetRidesPopup state petRidesFeatureConfig =
     , dismissPopup = false
   }
 
+petRidesInfoPopupConfig :: ST.HomeScreenState -> RemoteConfig.PetRidesFeatureConfig -> PopUpModal.Config
+petRidesInfoPopupConfig state petRidesFeatureConfig =
+  let popupImage = fromMaybe "ny_ic_pet_rides" petRidesFeatureConfig.basePetRidesPopupConfig.popupImage
+  in
+  PopUpModal.config {
+    gravity = CENTER,
+    margin = MarginHorizontal 24 24,
+    buttonLayoutMargin = Margin 16 0 16 20,
+    padding = Padding 8 8 8 2,
+    primaryText {
+        text = getString THANKS_FOR_ACCEPTING_PET_RIDE
+      , margin = Margin 16 16 16 10
+      , textStyle = Heading2
+    },
+    secondaryText {
+      text = getString CLEAN_THE_VEHICLE_AFTER_RIDE_IF_NEEDED <> "<br>" <> getString THE_CUSTOMER_IS_RESPONSIBLE_FOR_PET
+    , textStyle = SubHeading2
+    , margin = Margin 16 2 16 15
+    },
+    option1 {
+      text = getString GOT_IT
+    , background = Color.black900
+    , color = Color.yellow900
+    },
+    option2 {
+      visibility = false
+    },
+    backgroundClickable = false,
+    cornerRadius = (PTD.Corners 15.0 true true true true),
+    coverImageConfig {
+        imageUrl = fetchImage FF_ASSET popupImage
+      , visibility = VISIBLE
+      , width = MATCH_PARENT
+      , height = V 200
+    }
+  }
+
 fetchTextFromLanguage :: RemoteConfig.PetRidesPopupConfig -> (RemoteConfig.PetRidesPopupConfig -> RemoteConfig.LanguageTextMapping) -> String
 fetchTextFromLanguage petRidePopupConfig fieldModifier =
   let languageKey = JB.getKeyInSharedPrefKeys "LANGUAGE_KEY"

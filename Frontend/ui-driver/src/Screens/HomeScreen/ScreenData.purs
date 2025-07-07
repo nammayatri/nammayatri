@@ -225,6 +225,7 @@ initData =
       , goOfflineModal: false
       , screenName: "Home"
       , rentalInfoPopUp : false
+      , showPetRidesInfoPopUp : false
       , rideActionModal: false
       , updatedArrivalInChat: false
       , enterOtpModal: false
