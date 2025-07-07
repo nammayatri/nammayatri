@@ -5,6 +5,7 @@ module API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration where
 
 import qualified AWS.S3
 import qualified Dashboard.Common
+import qualified Dashboard.Common.MediaFileDocument
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
 import EulerHS.Prelude hiding (id, state)
@@ -190,7 +191,18 @@ data ImageDocumentsRejectDetails = ImageDocumentsRejectDetails {reason :: Kernel
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-newtype MediaFileDocumentResp = MediaFileDocumentResp {mediaFileLink :: Kernel.Prelude.Text}
+data MediaFileDocumentConfirmReq = MediaFileDocumentConfirmReq {mediaFileDocumentId :: Kernel.Types.Id.Id Dashboard.Common.MediaFileDocument.MediaFileDocument}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Kernel.Types.HideSecrets.HideSecrets MediaFileDocumentConfirmReq where
+  hideSecrets = Kernel.Prelude.identity
+
+data MediaFileDocumentResp = MediaFileDocumentResp
+  { mediaFileLink :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    mediaFileDocumentId :: Kernel.Types.Id.Id Dashboard.Common.MediaFileDocument.MediaFileDocument,
+    mediaFileDocumentStatus :: Dashboard.Common.MediaFileDocument.MediaFileDocumentStatus
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -415,7 +427,7 @@ data VerifyAadhaarOtpRes = VerifyAadhaarOtpRes
 instance Kernel.Types.HideSecrets.HideSecrets VerifyAadhaarOtpRes where
   hideSecrets = Kernel.Prelude.identity
 
-type API = (GetDriverRegistrationDocumentsList :<|> GetDriverRegistrationGetDocument :<|> PostDriverRegistrationDocumentUpload :<|> PostDriverRegistrationMediaFileDocumentUploadLinkHelper :<|> GetDriverRegistrationMediaFileDocumentDownloadLinkHelper :<|> PostDriverRegistrationRegisterDl :<|> PostDriverRegistrationRegisterRc :<|> PostDriverRegistrationRegisterAadhaar :<|> PostDriverRegistrationRegisterGenerateAadhaarOtp :<|> PostDriverRegistrationRegisterVerifyAadhaarOtp :<|> GetDriverRegistrationUnderReviewDrivers :<|> GetDriverRegistrationDocumentsInfo :<|> PostDriverRegistrationDocumentsUpdate)
+type API = (GetDriverRegistrationDocumentsList :<|> GetDriverRegistrationGetDocument :<|> PostDriverRegistrationDocumentUpload :<|> PostDriverRegistrationMediaFileDocumentUploadLinkHelper :<|> PostDriverRegistrationMediaFileDocumentConfirmHelper :<|> GetDriverRegistrationMediaFileDocumentDownloadLinkHelper :<|> PostDriverRegistrationRegisterDl :<|> PostDriverRegistrationRegisterRc :<|> PostDriverRegistrationRegisterAadhaar :<|> PostDriverRegistrationRegisterGenerateAadhaarOtp :<|> PostDriverRegistrationRegisterVerifyAadhaarOtp :<|> GetDriverRegistrationUnderReviewDrivers :<|> GetDriverRegistrationDocumentsInfo :<|> PostDriverRegistrationDocumentsUpdate)
 
 type GetDriverRegistrationDocumentsList =
   ( Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "documents" :> "list" :> QueryParam "rcId" Kernel.Prelude.Text
@@ -441,6 +453,16 @@ type PostDriverRegistrationMediaFileDocumentUploadLinkHelper =
            '[JSON]
            UploadMediaFileDocumentReq
       :> Post '[JSON] MediaFileDocumentResp
+  )
+
+type PostDriverRegistrationMediaFileDocumentConfirm = ("mediaFileDocument" :> "confirm" :> ReqBody '[JSON] MediaFileDocumentConfirmReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
+
+type PostDriverRegistrationMediaFileDocumentConfirmHelper =
+  ( "mediaFileDocument" :> "confirm" :> MandatoryQueryParam "requestorId" Kernel.Prelude.Text
+      :> ReqBody
+           '[JSON]
+           MediaFileDocumentConfirmReq
+      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
   )
 
 type GetDriverRegistrationMediaFileDocumentDownloadLink =
@@ -509,6 +531,7 @@ data DriverRegistrationAPIs = DriverRegistrationAPIs
     getDriverRegistrationGetDocument :: Kernel.Types.Id.Id Dashboard.Common.Image -> EulerHS.Types.EulerClient GetDocumentResponse,
     postDriverRegistrationDocumentUpload :: Kernel.Types.Id.Id Dashboard.Common.Driver -> UploadDocumentReq -> EulerHS.Types.EulerClient UploadDocumentResp,
     postDriverRegistrationMediaFileDocumentUploadLink :: Kernel.Prelude.Text -> UploadMediaFileDocumentReq -> EulerHS.Types.EulerClient MediaFileDocumentResp,
+    postDriverRegistrationMediaFileDocumentConfirm :: Kernel.Prelude.Text -> MediaFileDocumentConfirmReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getDriverRegistrationMediaFileDocumentDownloadLink :: MediaFileDocumentType -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient MediaFileDocumentResp,
     postDriverRegistrationRegisterDl :: Kernel.Types.Id.Id Dashboard.Common.Driver -> RegisterDLReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postDriverRegistrationRegisterRc :: Kernel.Types.Id.Id Dashboard.Common.Driver -> RegisterRCReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
@@ -523,13 +546,14 @@ data DriverRegistrationAPIs = DriverRegistrationAPIs
 mkDriverRegistrationAPIs :: (Client EulerHS.Types.EulerClient API -> DriverRegistrationAPIs)
 mkDriverRegistrationAPIs driverRegistrationClient = (DriverRegistrationAPIs {..})
   where
-    getDriverRegistrationDocumentsList :<|> getDriverRegistrationGetDocument :<|> postDriverRegistrationDocumentUpload :<|> postDriverRegistrationMediaFileDocumentUploadLink :<|> getDriverRegistrationMediaFileDocumentDownloadLink :<|> postDriverRegistrationRegisterDl :<|> postDriverRegistrationRegisterRc :<|> postDriverRegistrationRegisterAadhaar :<|> postDriverRegistrationRegisterGenerateAadhaarOtp :<|> postDriverRegistrationRegisterVerifyAadhaarOtp :<|> getDriverRegistrationUnderReviewDrivers :<|> getDriverRegistrationDocumentsInfo :<|> postDriverRegistrationDocumentsUpdate = driverRegistrationClient
+    getDriverRegistrationDocumentsList :<|> getDriverRegistrationGetDocument :<|> postDriverRegistrationDocumentUpload :<|> postDriverRegistrationMediaFileDocumentUploadLink :<|> postDriverRegistrationMediaFileDocumentConfirm :<|> getDriverRegistrationMediaFileDocumentDownloadLink :<|> postDriverRegistrationRegisterDl :<|> postDriverRegistrationRegisterRc :<|> postDriverRegistrationRegisterAadhaar :<|> postDriverRegistrationRegisterGenerateAadhaarOtp :<|> postDriverRegistrationRegisterVerifyAadhaarOtp :<|> getDriverRegistrationUnderReviewDrivers :<|> getDriverRegistrationDocumentsInfo :<|> postDriverRegistrationDocumentsUpdate = driverRegistrationClient
 
 data DriverRegistrationUserActionType
   = GET_DRIVER_REGISTRATION_DOCUMENTS_LIST
   | GET_DRIVER_REGISTRATION_GET_DOCUMENT
   | POST_DRIVER_REGISTRATION_DOCUMENT_UPLOAD
   | POST_DRIVER_REGISTRATION_MEDIA_FILE_DOCUMENT_UPLOAD_LINK
+  | POST_DRIVER_REGISTRATION_MEDIA_FILE_DOCUMENT_CONFIRM
   | GET_DRIVER_REGISTRATION_MEDIA_FILE_DOCUMENT_DOWNLOAD_LINK
   | POST_DRIVER_REGISTRATION_REGISTER_DL
   | POST_DRIVER_REGISTRATION_REGISTER_RC

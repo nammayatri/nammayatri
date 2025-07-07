@@ -56,8 +56,16 @@ instance MimeRender S3ImageData Text where
 instance MimeUnrender S3ImageData Text where
   mimeUnrender _ = pure . DTE.decodeUtf8 . BSL.toStrict
 
-newtype ObjectStatus = ObjectStatus
-  { fileSizeInBytes :: Integer
+newtype EntityTag = EntityTag Text
+
+-- For PUT upload eTag is the same as md5 hash in double quotes
+-- Do not use for Multipart upload
+eTagToHash :: EntityTag -> Text
+eTagToHash (EntityTag t) = T.dropAround (== '\"') t
+
+data ObjectStatus = ObjectStatus
+  { fileSizeInBytes :: Integer,
+    entityTag :: EntityTag
   }
 
 data S3Config = S3AwsConf S3AwsConfig | S3MockConf S3MockConfig
@@ -151,6 +159,11 @@ put path file_ = do
   s3env <- asks (.s3Env)
   putH s3env path file_
 
+delete :: (MonadReader r m, HasField "s3Env" r (S3Env m)) => String -> m ()
+delete path = do
+  s3env <- asks (.s3Env)
+  deleteH s3env path
+
 generateUploadUrl :: (MonadReader r m, HasField "s3Env" r (S3Env m)) => String -> Seconds -> m Text
 generateUploadUrl path expires = do
   s3env <- asks (.s3Env)
@@ -160,6 +173,11 @@ generateDownloadUrl :: (MonadReader r m, HasField "s3Env" r (S3Env m)) => String
 generateDownloadUrl path expires = do
   s3env <- asks (.s3Env)
   generateDownloadUrlH s3env path expires
+
+headRequest :: (MonadReader r m, HasField "s3Env" r (S3Env m)) => String -> m ObjectStatus
+headRequest path = do
+  s3env <- asks (.s3Env)
+  headRequestH s3env path
 
 getPublic :: (MonadReader r m, HasField "s3EnvPublic" r (S3Env m)) => String -> m Text
 getPublic path = do

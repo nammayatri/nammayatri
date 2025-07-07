@@ -17,6 +17,7 @@ module Domain.Action.Dashboard.Management.DriverRegistration
     getDriverRegistrationGetDocument,
     postDriverRegistrationDocumentUpload,
     postDriverRegistrationMediaFileDocumentUploadLink,
+    postDriverRegistrationMediaFileDocumentConfirm,
     getDriverRegistrationMediaFileDocumentDownloadLink,
     postDriverRegistrationRegisterDl,
     postDriverRegistrationRegisterRc,
@@ -32,6 +33,7 @@ where
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverRegistration as Common
 import qualified API.Types.UI.DriverOnboardingV2
 import AWS.S3 as S3
+import qualified "dashboard-helper-api" Dashboard.Common.MediaFileDocument as CommonMFD
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
 import Data.Time.Format.ISO8601 (iso8601Show)
@@ -58,7 +60,7 @@ import qualified Domain.Types.VehiclePUC as DPUC
 import qualified Domain.Types.VehiclePermit as DVPermit
 import qualified Domain.Types.VehicleRegistrationCertificate as DRC
 import Environment
-import EulerHS.Prelude hiding (find, foldl', map, whenJust)
+import EulerHS.Prelude hiding (elem, find, foldl', map, whenJust)
 import Kernel.Beam.Functions
 import Kernel.External.AadhaarVerification.Interface.Types
 import Kernel.External.Encryption (decrypt, encrypt, hash)
@@ -70,6 +72,7 @@ import Kernel.Types.Documents
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.Cac.TransporterConfig as CCT
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -279,7 +282,10 @@ postDriverRegistrationMediaFileDocumentUploadLink merchantShortId opCity request
   rc <- QRC.findLastVehicleRCWrapper req.rcNumber >>= fromMaybeM (RCNotFound req.rcNumber)
   let mediaFileDocumentType = castMediaFileDocumentType req.mediaFileDocumentType
   mbExistingMediaFile <- QMFD.findOneByMerchantOpCityIdAndRcIdAndType merchantOpCity.id rc.id mediaFileDocumentType
-  whenJust mbExistingMediaFile \_ -> throwError (InvalidRequest $ "MediaFileDocument already exists")
+  whenJust mbExistingMediaFile \existingMediaFile -> do
+    -- if file was deleted by operator, then allow to create new one
+    unless (existingMediaFile.status == DMFD.DELETED) $
+      throwError (InvalidRequest $ "MediaFileDocument already exists")
 
   mediaPath <- createMediaPathByRcId merchantOpCity.id rc.id mediaFileDocumentType fileExtension
   mediaFileLink <- S3.generateUploadUrl (T.unpack mediaPath) merchant.mediaFileDocumentLinkExpires
@@ -287,7 +293,12 @@ postDriverRegistrationMediaFileDocumentUploadLink merchantShortId opCity request
   mediaFileDocument <- buildMediaFileDocument merchantOpCity (Id @DP.Person requestorId) mediaPath rc.id req
   QMFD.create mediaFileDocument
 
-  pure $ Common.MediaFileDocumentResp {mediaFileLink}
+  pure $
+    Common.MediaFileDocumentResp
+      { mediaFileLink = Just mediaFileLink,
+        mediaFileDocumentId = cast @DMFD.MediaFileDocument @CommonMFD.MediaFileDocument mediaFileDocument.id,
+        mediaFileDocumentStatus = castMediaFileDocumentStatus mediaFileDocument.status
+      }
   where
     validateContentType = do
       case req.fileType of
@@ -301,6 +312,14 @@ postDriverRegistrationMediaFileDocumentUploadLink merchantShortId opCity request
 castMediaFileDocumentType :: Common.MediaFileDocumentType -> DCommon.MediaFileDocumentType
 castMediaFileDocumentType = \case
   Common.VehicleVideo -> DCommon.VehicleVideo
+
+castMediaFileDocumentStatus :: DMFD.MediaFileDocumentStatus -> CommonMFD.MediaFileDocumentStatus
+castMediaFileDocumentStatus = \case
+  DMFD.PENDING -> CommonMFD.PENDING
+  DMFD.DELETED -> CommonMFD.DELETED
+  DMFD.FAILED -> CommonMFD.FAILED
+  DMFD.CONFIRMED -> CommonMFD.CONFIRMED
+  DMFD.COMPLETED -> CommonMFD.COMPLETED
 
 createMediaPathByRcId ::
   (MonadTime m, MonadReader r m, HasField "s3Env" r (S3Env m)) =>
@@ -345,10 +364,56 @@ buildMediaFileDocument merchantOpCity creatorId s3Path rcId Common.UploadMediaFi
         merchantOperatingCityId = merchantOpCity.id,
         rcId,
         s3Path,
-        status = DMFD.CONFIRMED,
+        status = DMFD.PENDING, -- TODO migrate CONFIRMED ==> COMPLETED
+        fileHash = Nothing,
         createdAt = now,
         updatedAt = now
       }
+
+postDriverRegistrationMediaFileDocumentConfirm ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Common.MediaFileDocumentConfirmReq ->
+  Flow APISuccess
+postDriverRegistrationMediaFileDocumentConfirm merchantShortId opCity requestorId req = do
+  let mediaFileDocumentId = cast @CommonMFD.MediaFileDocument @DMFD.MediaFileDocument req.mediaFileDocumentId
+  externalServiceRateLimitOptions <- asks (.externalServiceRateLimitOptions)
+  checkSlidingWindowLimitWithOptions (makeConfirmMediaDocHitsCountKey mediaFileDocumentId) externalServiceRateLimitOptions
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  mediaFileDocument <- QMFD.findByPrimaryKey mediaFileDocumentId >>= fromMaybeM (InvalidRequest "MediaFileDocument does not exist")
+  unless (Id @DP.Person requestorId == mediaFileDocument.creatorId) $ throwError AccessDenied
+
+  -- if status is PENDING, FAILED or CONFIRMED, we allow multiple reloads within rate limits, unless link will be expired
+  when (mediaFileDocument.status == DMFD.DELETED) $
+    throwError (InvalidRequest "MediaFileDocument was deleted")
+  when (mediaFileDocument.status == DMFD.COMPLETED) $
+    throwError (InvalidRequest "MediaFileDocument download was already completed")
+
+  let s3Path = T.unpack mediaFileDocument.s3Path
+  s3ObjectStatus <- catch (S3.headRequest s3Path) $ \(err :: SomeException) -> do
+    logError $ "File was not found: mediaFileDocumentId: " <> mediaFileDocumentId.getId <> "err: " <> show err
+    QMFD.updateStatus DMFD.FAILED Nothing mediaFileDocumentId
+    throwError $ InvalidRequest "File was not found"
+
+  let fileSizeInBytes = s3ObjectStatus.fileSizeInBytes
+  let fileHash = S3.eTagToHash s3ObjectStatus.entityTag
+  transporterConfig <- CCT.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  let maxSizeInMB = fromMaybe 500 transporterConfig.maxAllowedVideoDocSizeInMB
+      maxSizeInBytes = toInteger maxSizeInMB * 1024 * 1024
+  when (fileSizeInBytes > maxSizeInBytes) $ do
+    let message = "Video size " <> show fileSizeInBytes <> " bytes exceeds maximum limit of " <> show maxSizeInBytes <> " bytes (" <> show maxSizeInMB <> "MB)"
+    logError $ "Video upload failed: mediaFileDocumentId: " <> mediaFileDocumentId.getId <> "err: " <> show message
+    QMFD.updateStatus DMFD.FAILED Nothing mediaFileDocumentId
+    S3.delete s3Path
+    throwError $ InvalidRequest message
+
+  QMFD.updateStatus DMFD.CONFIRMED (Just fileHash) mediaFileDocumentId
+  pure Success
+  where
+    makeConfirmMediaDocHitsCountKey :: Id DMFD.MediaFileDocument -> Text
+    makeConfirmMediaDocHitsCountKey mediaFileDocumentId = "ConfirmMediaDoc:MediaDocHits:" <> mediaFileDocumentId.getId <> ":hitsCount"
 
 getDriverRegistrationMediaFileDocumentDownloadLink ::
   ShortId DM.Merchant ->
@@ -363,8 +428,20 @@ getDriverRegistrationMediaFileDocumentDownloadLink merchantShortId opCity mediaF
   rc <- QRC.findLastVehicleRCWrapper rcNumber >>= fromMaybeM (RCNotFound rcNumber)
   let mediaFileDocumentType = castMediaFileDocumentType mediaFileDocumentType'
   mediaFileDocument <- QMFD.findOneByMerchantOpCityIdAndRcIdAndType merchantOpCity.id rc.id mediaFileDocumentType >>= fromMaybeM (InvalidRequest "MediaFileDocument does not exist")
-  mediaFileLink <- S3.generateDownloadUrl (T.unpack mediaFileDocument.s3Path) merchant.mediaFileDocumentLinkExpires
-  pure $ Common.MediaFileDocumentResp {mediaFileLink}
+
+  when (mediaFileDocument.status == DMFD.DELETED) $
+    throwError (InvalidRequest "MediaFileDocument was deleted")
+
+  mbMediaFileLink <- case mediaFileDocument.status of
+    mediaFileDocumentStatus | mediaFileDocumentStatus `elem` [DMFD.CONFIRMED, DMFD.COMPLETED] -> do
+      Just <$> S3.generateDownloadUrl (T.unpack mediaFileDocument.s3Path) merchant.mediaFileDocumentLinkExpires
+    _ -> pure Nothing -- DMFD.PENDING, DMFD.FAILED
+  pure $
+    Common.MediaFileDocumentResp
+      { mediaFileLink = mbMediaFileLink,
+        mediaFileDocumentId = cast @DMFD.MediaFileDocument @CommonMFD.MediaFileDocument mediaFileDocument.id,
+        mediaFileDocumentStatus = castMediaFileDocumentStatus mediaFileDocument.status
+      }
 
 postDriverRegistrationRegisterDl :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.RegisterDLReq -> Flow APISuccess
 postDriverRegistrationRegisterDl merchantShortId opCity driverId_ Common.RegisterDLReq {..} = do

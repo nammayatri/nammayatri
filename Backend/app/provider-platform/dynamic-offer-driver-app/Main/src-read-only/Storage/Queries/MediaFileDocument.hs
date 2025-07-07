@@ -11,6 +11,7 @@ import qualified Domain.Types.VehicleRegistrationCertificate
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -35,6 +36,13 @@ findOneByMerchantOpCityIdAndRcIdAndType merchantOperatingCityId rcId mediaFileDo
         ]
     ]
 
+updateStatus ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Domain.Types.MediaFileDocument.MediaFileDocumentStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.MediaFileDocument.MediaFileDocument -> m ())
+updateStatus status fileHash id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.status status, Se.Set Beam.fileHash fileHash, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.MediaFileDocument.MediaFileDocument -> m (Maybe Domain.Types.MediaFileDocument.MediaFileDocument))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
@@ -43,6 +51,7 @@ updateByPrimaryKey (Domain.Types.MediaFileDocument.MediaFileDocument {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.creatorId (Kernel.Types.Id.getId creatorId),
+      Se.Set Beam.fileHash fileHash,
       Se.Set Beam.mediaFileDocumentType mediaFileDocumentType,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
@@ -60,6 +69,7 @@ instance FromTType' Beam.MediaFileDocument Domain.Types.MediaFileDocument.MediaF
       Just
         Domain.Types.MediaFileDocument.MediaFileDocument
           { creatorId = Kernel.Types.Id.Id creatorId,
+            fileHash = fileHash,
             id = Kernel.Types.Id.Id id,
             mediaFileDocumentType = mediaFileDocumentType,
             merchantId = Kernel.Types.Id.Id merchantId,
@@ -75,6 +85,7 @@ instance ToTType' Beam.MediaFileDocument Domain.Types.MediaFileDocument.MediaFil
   toTType' (Domain.Types.MediaFileDocument.MediaFileDocument {..}) = do
     Beam.MediaFileDocumentT
       { Beam.creatorId = Kernel.Types.Id.getId creatorId,
+        Beam.fileHash = fileHash,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.mediaFileDocumentType = mediaFileDocumentType,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,

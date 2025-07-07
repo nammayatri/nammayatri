@@ -15,6 +15,7 @@ import qualified Tools.Beam.UtilsTH
 
 data MediaFileDocument = MediaFileDocument
   { creatorId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
+    fileHash :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.MediaFileDocument.MediaFileDocument,
     mediaFileDocumentType :: Domain.Types.Common.MediaFileDocumentType,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
@@ -27,6 +28,6 @@ data MediaFileDocument = MediaFileDocument
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data MediaFileDocumentStatus = PENDING | DELETED | CONFIRMED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data MediaFileDocumentStatus = PENDING | DELETED | FAILED | CONFIRMED | COMPLETED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''MediaFileDocumentStatus)

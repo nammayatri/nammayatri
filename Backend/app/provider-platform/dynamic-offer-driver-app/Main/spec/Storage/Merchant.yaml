@@ -1024,6 +1024,7 @@ TransporterConfig:
     generateReferralCodeForFleet: Maybe Bool
     generateReferralCodeForOperator: Maybe Bool
     maxAllowedDocSizeInMB: Maybe Int
+    maxAllowedVideoDocSizeInMB: Maybe Int
     bulkWaiveOffLimit : Int
     rcExpiryChecks : Maybe Bool
     requireRouteMappingInVehicle: Bool

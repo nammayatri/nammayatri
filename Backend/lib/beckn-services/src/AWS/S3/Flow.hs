@@ -40,7 +40,10 @@ import qualified Amazonka
 import qualified Amazonka.S3 as Amazonka
 import qualified Amazonka.S3.HeadObject as Amazonka
 import Control.Lens.Getter ((^.))
+import qualified Crypto.Hash.MD5 as MD5
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Base16 as B16
+import qualified Data.ByteString.Lazy as BL
 import qualified Data.List as DL (last)
 import Data.String.Conversions
 import qualified Data.Text as T
@@ -56,7 +59,6 @@ import Servant.Client
 import System.Directory (removeFile)
 import qualified System.Directory as Dir
 import System.FilePath.Posix as Path
-import System.IO (hFileSize)
 import qualified System.Posix.Files as Posix
 import qualified System.Posix.IO as Posix
 import System.Process
@@ -347,7 +349,10 @@ headRequest' bucketName path = withLogTag "S3" $ do
   fileSizeInBytes <- case res ^. Amazonka.headObjectResponse_contentLength of
     Just size -> pure size
     Nothing -> throwError (InvalidRequest $ "Content length was not found")
-  pure $ ObjectStatus {fileSizeInBytes}
+  entityTag <- case res ^. Amazonka.headObjectResponse_eTag of
+    Just (Amazonka.ETag t) -> pure . EntityTag $ T.decodeUtf8 t
+    Nothing -> throwError (InvalidRequest $ "Entity tag was not found")
+  pure $ ObjectStatus {fileSizeInBytes, entityTag}
 
 mockHeadRequest ::
   (MonadIO m, Log m, MonadThrow m) =>
@@ -359,5 +364,9 @@ mockHeadRequest baseDirectory bucketName path = withLogTag "S3" $ do
   let fullPath'Name = getFullPathMock baseDirectory bucketName path
   fileExists <- liftIO $ Dir.doesFileExist fullPath'Name
   unless fileExists $ throwError (InvalidRequest $ "File does not exist: " <> T.pack fullPath'Name)
-  fileSize <- liftIO $ withFile fullPath'Name ReadMode hFileSize
-  pure $ ObjectStatus {fileSizeInBytes = fileSize}
+  fileContent <- liftIO $ BL.readFile fullPath'Name
+  let fileSizeInBytes = toInteger $ BL.length fileContent
+      md5Digest = MD5.hashlazy fileContent
+      md5Hex = B16.encode md5Digest
+      entityTag = EntityTag $ "\"" <> T.decodeUtf8 md5Hex <> "\""
+  pure $ ObjectStatus {fileSizeInBytes, entityTag}

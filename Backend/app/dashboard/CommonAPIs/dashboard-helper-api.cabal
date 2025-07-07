@@ -31,6 +31,7 @@ library
       Dashboard.Common.Driver
       Dashboard.Common.DriverCoins
       Dashboard.Common.Exotel
+      Dashboard.Common.MediaFileDocument
       Dashboard.Common.Merchant
       Dashboard.Common.Ride
       Dashboard.Common.SpecialZone

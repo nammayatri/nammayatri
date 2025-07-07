@@ -14,6 +14,7 @@ import Tools.Beam.UtilsTH
 
 data MediaFileDocumentT f = MediaFileDocumentT
   { creatorId :: B.C f Kernel.Prelude.Text,
+    fileHash :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,
     mediaFileDocumentType :: B.C f Domain.Types.Common.MediaFileDocumentType,
     merchantId :: B.C f Kernel.Prelude.Text,

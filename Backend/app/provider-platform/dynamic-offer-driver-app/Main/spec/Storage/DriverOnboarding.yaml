@@ -363,7 +363,7 @@ MediaFileDocument:
   tableName: media_file_document
   types:
     MediaFileDocumentStatus:
-      enum: "PENDING, DELETED, CONFIRMED"
+      enum: "PENDING, DELETED, FAILED, CONFIRMED, COMPLETED"
   fields:
     id: Id MediaFileDocument
     merchantId: Id Merchant
@@ -373,12 +373,17 @@ MediaFileDocument:
     rcId: Id VehicleRegistrationCertificate
     creatorId: Id Person
     status: MediaFileDocumentStatus
+    fileHash: Maybe Text
 
   queries:
     findOneByMerchantOpCityIdAndRcIdAndType:
       kvFunction: findOneWithKV
       where:
         and: [merchantOperatingCityId, rcId, mediaFileDocumentType]
+    updateStatus:
+      kvFunction: updateOneWithKV
+      params: [status, fileHash]
+      where: id
 
 DocumentVerificationConfig:
   tableName: document_verification_config
