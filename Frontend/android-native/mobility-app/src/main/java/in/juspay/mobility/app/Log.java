@@ -13,6 +13,8 @@ import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import in.juspay.mobility.app.RemoteConfigs.MobilityRemoteConfigs;
+
 /**
  * Custom logging utility for Android applications.
  * <p>
@@ -25,6 +27,7 @@ public class Log {
     private static Context appContext;
     private static int logRetentionDays = 7; // Default retention
     private static final ExecutorService logExecutor;
+    private static boolean isFileLoggingEnabled = false;
 
     static {
         logExecutor = Executors.newSingleThreadExecutor();
@@ -39,7 +42,8 @@ public class Log {
     public static void init(Context context) {
         appContext = context.getApplicationContext();
         android.util.Log.d("CustomLog", "Logger initialized with context: " + appContext);
-        clearOldLogs();
+        isFileLoggingEnabled = new MobilityRemoteConfigs(true, false).getBoolean("is_file_logging_enabled");
+        logExecutor.execute(Log::clearOldLogs);
     }
 
     /**
@@ -50,7 +54,7 @@ public class Log {
     public static void setLogRetentionDays(int days) {
         logRetentionDays = days;
         android.util.Log.d("CustomLog", "Log retention days set to: " + days);
-        clearOldLogs();
+        logExecutor.execute(Log::clearOldLogs);
     }
 
     /**
@@ -128,6 +132,7 @@ public class Log {
      * @param logTimestamp The timestamp when the log event occurred.
      */
     private static void writeLog(String level, String tag, String message, Throwable throwable, Date logTimestamp) {
+        if (!isFileLoggingEnabled) return;
         if (appContext == null) {
             android.util.Log.e("CustomLog", "Logger not initialized: appContext is null");
             return;
