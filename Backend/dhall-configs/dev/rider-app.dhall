@@ -229,6 +229,8 @@ let RiderJobType =
       | PostRideSafetyNotification
       | UpdateCrisUtsData
       | MetroBusinessHour
+      | NyRegularMaster
+      | NyRegularInstance
       >
 
 let jobInfoMapx =
@@ -261,6 +263,8 @@ let jobInfoMapx =
       , { mapKey = RiderJobType.PostRideSafetyNotification, mapValue = False }
       , { mapKey = RiderJobType.UpdateCrisUtsData, mapValue = True }
       , { mapKey = RiderJobType.MetroBusinessHour, mapValue = True }
+      , { mapKey = RiderJobType.NyRegularInstance, mapValue = True }
+      , { mapKey = RiderJobType.NyRegularMaster, mapValue = True }
       ]
 
 let cacConfig =
