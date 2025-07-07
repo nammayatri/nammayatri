@@ -368,6 +368,7 @@ library
       SharedLogic.CallBAPInternal
       SharedLogic.CallIGMBAP
       SharedLogic.Cancel
+      SharedLogic.CancellationCoins
       SharedLogic.DeleteDriver
       SharedLogic.DriverFee
       SharedLogic.DriverFleetOperatorAssociation

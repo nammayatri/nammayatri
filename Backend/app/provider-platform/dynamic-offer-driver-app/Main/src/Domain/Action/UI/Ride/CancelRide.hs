@@ -231,7 +231,7 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req isForceReallocation = d
           let currentDriverLocation = getCoordinates <$> mbLocation
           logDebug "RideCancelled Coin Event by driver"
           fork "DriverRideCancelledCoin Event : " $ do
-            DC.driverCoinsEvent driverId driver.merchantId booking.merchantOperatingCityId (DCT.Cancellation ride.createdAt booking.distanceToPickup disToPickup) (Just ride.id.getId) ride.vehicleVariant
+            DC.driverCoinsEvent driverId driver.merchantId booking.merchantOperatingCityId (DCT.Cancellation ride.createdAt booking.distanceToPickup disToPickup DCT.CancellationByDriver req.reasonCode) (Just ride.id.getId) ride.vehicleVariant
           buildRideCancelationReason currentDriverLocation updatedDisToPickup (Just driverId) DBCR.ByDriver ride (Just driver.merchantId) >>= \res -> return (res, cancellationCount, isGoToDisabled, DRide.Driver)
       return (rideCancellationReason, mbCancellationCnt, isGoToDisabled, rideEndedBy)
     DashboardRequestorId (reqMerchantId, _) -> do
