@@ -545,6 +545,7 @@ view push state =
       --   else dummyTextView
       , if state.props.currentStage == HomeScreen && state.props.showParcelIntroductionPopup then parcelIntroductionPopupView push state else dummyTextView
       , if state.props.showEndRideWithStopPopup then endRideWithStopPopup push state else dummyTextView
+      , if clubPopupCondition then driverConsentPopup push state else dummyTextView
   ]
   where
     currentDate = HU.getCurrentUTC ""
@@ -575,6 +576,7 @@ view push state =
     cugUser = fromMaybe false $ runFn3 DU.getAnyFromWindow "isCUGUser" Nothing Just
     dateDiff = runFn2 JB.differenceBetweenTwoUTC currentDate lastDate
     petRidesFeatureConfig = RC.getPetRidesFeatureConfig $ DS.toLower $ getValueToLocalStore DRIVER_LOCATION
+    clubPopupCondition = not onRide && (getValueToLocalStore NY_CLUB_POPUP_SHOWN == "false") && (isNothing state.props.nyClubConsent || state.props.nyClubConsent == Just false || state.data.nyClubTag == Just "ny_member")
 
 favPopUpView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 favPopUpView push state =
@@ -1121,6 +1123,12 @@ otpButtonView state push =
         ] <> FontStyle.subHeading2 TypoGraphy
     ]
 
+driverConsentPopup :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+driverConsentPopup push state =
+  linearLayout
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  ][PopUpModal.view (push <<< DriverConsentPopupAC) (driverConsentPopupConfig state)]
 
 cancelConfirmation :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 cancelConfirmation push state =
@@ -1377,6 +1385,7 @@ driverDetail push state =
   , gravity CENTER_VERTICAL
   , background Color.white900
   , clickable true
+  , layoutGravity "center_vertical"
   , margin (MarginTop 5)
   ] [ driverProfile push state
   , TripStageTopBar.view (push <<< TripStageTopBarAC) tripStageTopBarConfig
@@ -1388,7 +1397,7 @@ driverDetail push state =
     defaultTopBar =
       linearLayout[
         width MATCH_PARENT
-      , height MATCH_PARENT
+      , height WRAP_CONTENT
       , orientation HORIZONTAL
       , gravity CENTER_HORIZONTAL
       , stroke if state.props.driverStatusSet == Offline then ("2," <> Color.red)
@@ -1436,8 +1445,9 @@ driverProfile push state =
           "FEMALE" -> "ny_ic_profile_female"
           _ -> "ny_ic_generic_mascot"
       city = getValueToLocalStore DRIVER_LOCATION
+      showShield = state.data.nyClubTag == Just "ny_member"
       configs = cancellationThresholds "cancellation_rate_thresholds" city
-      showRingImage = state.data.cancellationRate > configs.warning1 ||(isJust state.data.overchargingTag && state.data.overchargingTag /= Just APITypes.NoOverCharging)
+      showRingImage = state.data.cancellationRate > configs.warning1 ||(isJust state.data.overchargingTag && state.data.overchargingTag /= Just APITypes.NoOverCharging) || showShield
       ringImage =
         case state.data.overchargingTag of
           Just overchargingTag ->
@@ -1446,29 +1456,46 @@ driverProfile push state =
             else if overchargingTag `elem` [APITypes.LowOverCharging, APITypes.VeryLowOverCharging] then HU.fetchImage HU.COMMON_ASSET "ny_ic_yellow_pfp_ring"
             else ""
           Nothing ->  if state.data.cancellationRate > configs.warning2 then HU.fetchImage HU.FF_ASSET "ny_ic_red_pfp_ring"
+            else if showShield then HU.fetchImage HU.FF_ASSET "ny_ic_ring_blue"
             else HU.fetchImage HU.FF_ASSET "ny_ic_orange_pfp_ring"
   in
    linearLayout
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
     , gravity CENTER
-    , padding $ Padding 16 20 12 16
+    , padding $ Padding 10 0 10 0
     ][ relativeLayout [
-        width $ V 42
-      , height $ V 42
+        width $ V 64
+      , height $ V 64
       , onClick push $ const GoToProfile
-      ][ imageView
-          [ width $ V 42
-          , height $ V 42
-          , imageWithFallback $ HU.fetchImage HU.FF_ASSET driverImage
+    ][  relativeLayout 
+        [  width $ V 58
+        , height $ V 58
+        , alignParentBottom "true,-1"
+        , onClick push $ const GoToProfile
+        ][ imageView
+            [ width $ V 58
+            , height $ V 58
+            , margin $ MarginLeft 6
+            , imageWithFallback $ HU.fetchImage HU.FF_ASSET driverImage
+            ]
+          , imageView
+            [ width $ V 58
+            , height $ V 58
+            , margin $ MarginLeft 6
+            , imageWithFallback ringImage
+            , visibility $ boolToVisibility showRingImage
+            ]
           ]
-        , imageView
-          [ width $ V 42
-          , height $ V 42
-          , imageWithFallback ringImage
-          , visibility $ boolToVisibility showRingImage
+          , imageView
+          [ width $ V 24
+          , height $ V 24
+          , alignParentBottom "true,-1"
+          , margin $ Margin 0 0 0 6
+          , visibility $ boolToVisibility showShield
+          , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_shield"
           ]
-        ]
+      ]
     ]
 
 -- tripStageTopBar :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -1565,7 +1592,7 @@ accessibilityHeaderView :: forall w . (Action -> Effect Unit) -> HomeScreenState
 accessibilityHeaderView push state accessibilityHeaderconfig =
   linearLayout
   [ weight 1.0
-  , height MATCH_PARENT
+  , height WRAP_CONTENT
   , gravity LEFT
   , visibility $ boolToVisibility $ (isJust state.data.activeRide.disabilityTag && not (isJust state.data.advancedRideData)) || state.data.activeRide.bookingFromOtherPlatform
   , margin (Margin 10 10 10 10)

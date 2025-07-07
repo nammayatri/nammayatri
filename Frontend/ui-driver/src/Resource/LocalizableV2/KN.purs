@@ -1869,4 +1869,11 @@ getKn =
     , you_may_lose_some_coins_if_you_cancel_this_ride : "ನೀವು ಈ ಸವಾರಿಯನ್ನು ರದ್ದು ಮಾಡಿದರೆ, ಕೆಲವೊಂದು ಕಾಲಿ ಹೋಗಬಹುದು"
     , cancellation_compensation : "ರದ್ದು ಮಾಡಲು ಸ್ಕೋರ್"
     , cancellation_penalisaton : "ರದ್ದು ಮಾಡಲು ಸ್ಕೋರ್"
+    , i_agree_to : "ನಾನು ಈ ಶರ್ತಗಳನ್ನು ಮೇಲ್ಮಡಿ ಮಾಡುತ್ತೇನೆ:"
+    , namma_kutumba : "ನಮ್ಮ ಕುತುಮಾ"
+    , become_a_member_of_the_namma_driver_welfare_trust : "ನಮ್ಮ ಡ್ರೈವರ್ ವಿಧಿ ಟ್ರಸ್ಟ್ ನ ಒಂದು ಸದಸ್ಯ ಹಾಗೆ"
+    , never_raise_fraudulent_claim : "ನಮ್ಮ ಡ್ರೈವರ್ ವಿಧಿ ಟ್ರಸ್ಟ್ ನ ಒಂದು ಸದಸ್ಯ ಹಾಗೆ"
+    , ask_only_the_fair_price_shown_in_the_app : "ನಮ್ಮ ಡ್ರೈವರ್ ವಿಧಿ ಟ್ರಸ್ಟ್ ನ ಒಂದು ಸದಸ್ಯ ಹಾಗೆ"
+    , follow_safety_standards : "ನಮ್ಮ ಡ್ರೈವರ್ ವಿಧಿ ಟ್ರಸ್ಟ್ ನ ಒಂದು ಸದಸ್ಯ ಹಾಗೆ"
+    , provide_sakkath_service_to_the_customers : "ನಮ್ಮ ಡ್ರೈವರ್ ವಿಧಿ ಟ್ರಸ್ಟ್ ನ ಒಂದು ಸದಸ್ಯ ಹಾಗೆ"
     }

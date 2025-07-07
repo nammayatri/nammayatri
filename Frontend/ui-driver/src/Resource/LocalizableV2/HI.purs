@@ -1869,4 +1869,11 @@ getHi =
     , you_may_lose_some_coins_if_you_cancel_this_ride : "यदि आप इस सवारी को रद्द करते हैं, तो आपको कुछ कॉइंस खो सकते हैं"
     , cancellation_compensation : "रद्दीकरण क्षतिपूर्ति"
     , cancellation_penalisaton : "रद्दीकरण दंड"
+    , i_agree_to : "मैं इस शर्तों को में चाहता हूँ:"
+    , namma_kutumba : "नम्मा कुतुमा"
+    , become_a_member_of_the_namma_driver_welfare_trust : "नम्मा ड्राइवर विधि ट्रस्ट का एक सदस्य बनें"
+    , never_raise_fraudulent_claim : "अफ़सोस दलियार न बनाएं"
+    , ask_only_the_fair_price_shown_in_the_app : "नम्मा ड्राइवर विधि ट्रस्ट का एक सदस्य बनें"
+    , follow_safety_standards : "नम्मा ड्राइवर विधि ट्रस्ट का एक सदस्य बनें"
+    , provide_sakkath_service_to_the_customers : "नम्मा ड्राइवर विधि ट्रस्ट का एक सदस्य बनें"
     }

@@ -1869,4 +1869,11 @@ getEn =
     , you_may_lose_some_coins_if_you_cancel_this_ride : "You may lose some coins if you cancel this ride"
     , cancellation_compensation : "Cancellation Compensation"
     , cancellation_penalisaton : "Cancellation Penalisaton"
+    , i_agree_to : "I agree to:"
+    , namma_kutumba : "Namma Kutumba"
+    , become_a_member_of_the_namma_driver_welfare_trust : "Become a member of the Namma Driver Welfare Trust."
+    , never_raise_fraudulent_claim : "Never raise a fraudulent claim."
+    , ask_only_the_fair_price_shown_in_the_app : "Ask only the fair price shown in the app."
+    , follow_safety_standards : "Follow safety standards"
+    , provide_sakkath_service_to_the_customers : "Provide Sakkath Service to the customers."
     }

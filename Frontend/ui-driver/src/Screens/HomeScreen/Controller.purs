@@ -328,6 +328,7 @@ instance showAction :: Show Action where
   show (UpdateRouteInState _) = "UpdateRouteInState"
   show (DriverBlockedPopUp _) = "DriverBlockedPopUp"
   show (RideInsuranceCardAction _) = "RideInsuranceCardAction"
+  show (DriverConsentPopupAC _) = "DriverConsentPopupAC"
 
 instance loggableAction :: Loggable Action where
   performLog action appId = pure unit
@@ -518,6 +519,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | MeterRideScreen ST.HomeScreenState
                     | UpdateDriverInsurance ST.HomeScreenState
                     | EnablePetRides ST.HomeScreenState
+                    | DriverConsentAgree ST.HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -538,6 +540,7 @@ data Action = NoAction
             | ActiveRideAPIResponseAction (Array RidesInfo)
             | PopUpModalAction PopUpModal.Action
             | PopUpModalCancelConfirmationAction PopUpModal.Action
+            | DriverConsentPopupAC PopUpModal.Action
             | CancelRideModalAction SelectListModal.Action
             | Cancel
             | SetToken String
@@ -1535,6 +1538,16 @@ eval (PopUpModalCancelConfirmationAction (PopUpModal.CountDown seconds status ti
     _ <- pure $ TF.clearTimerWithId timerID
     continue state { data { cancelRideConfirmationPopUp{delayInSeconds = 0, timerID = "", continueEnabled = true}}}
     else continue state { data {cancelRideConfirmationPopUp{delayInSeconds = seconds, timerID = timerID, continueEnabled = false}}}
+
+eval (DriverConsentPopupAC (PopUpModal.OnButton1Click)) state = exit $ DriverConsentAgree state
+
+eval (DriverConsentPopupAC (PopUpModal.OptionWithHtmlClick)) state = do
+  _ <- pure $ showDialer state.data.cityConfig.supportNumber false
+  continue state
+
+eval (DriverConsentPopupAC PopUpModal.DismissPopup) state = do
+  void $ pure $ setValueToLocalNativeStore NY_CLUB_POPUP_SHOWN "true"
+  continue state
 
 eval (CancelRideModalAction SelectListModal.NoAction) state = do
   _ <- pure $ printLog "CancelRideModalAction NoAction" state.data.cancelRideModal.selectionOptions

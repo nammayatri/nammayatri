@@ -1869,4 +1869,11 @@ getTe =
     , you_may_lose_some_coins_if_you_cancel_this_ride: "మీరు ఈ రైడ్‌ను రద్దు చేస్తే, కೆలవೊంటు కాలి ఉండవు"
     , cancellation_compensation: "రద్దు స్కోర్"
     , cancellation_penalisaton: "రద్దు స్కోర్"
+    , i_agree_to : "నేను ఈ నియమాలను మేల్మడి చేస్తున్నాను:"
+    , namma_kutumba : "నమ్మ కుతుమా"
+    , become_a_member_of_the_namma_driver_welfare_trust : "నమ్మ డ్రైవర్ విధి ట్రస్ట్ న ఒందు సదస్య హాగె"
+    , never_raise_fraudulent_claim : "నమ్మ డ్రైవర్ విధి ట్రస్ట్ న ఒందు సదస్య హాగె"
+    , ask_only_the_fair_price_shown_in_the_app : "నమ్మ డ్రైవర్ విధి ట్రస్ట్ న ఒందు సదస్య హాగె"
+    , follow_safety_standards : "నమ్మ డ్రైవర్ విధి ట్రస్ట్ న ఒందు సదస్య హాగె"
+    , provide_sakkath_service_to_the_customers : "నమ్మ డ్రైవర్ విధి ట్రస్ట్ న ఒందు సదస్య హాగె"
     }

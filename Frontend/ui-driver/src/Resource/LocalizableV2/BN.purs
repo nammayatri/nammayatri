@@ -1869,4 +1869,11 @@ getBn =
     , you_may_lose_some_coins_if_you_cancel_this_ride : "আপনি যাত্রা বাতিল করলে কিছু কালি হতে পারে"
     , cancellation_compensation : "রদ্দু মাড়ালু স্কোর"
     , cancellation_penalisaton : "রদ্দু মাড়ালু স্কোর"
+    , i_agree_to : "আমি এই শর্তাবলী মেনে চাই:"
+    , namma_kutumba : "নাম্মা কুতুমা"
+    , become_a_member_of_the_namma_driver_welfare_trust : "নাম্মা ড্রাইভার উপদেশন ট্রাস্টের একজন সদস্য হন"
+    , never_raise_fraudulent_claim : "অনাপত্তিত দলিল না তুলুন"
+    , ask_only_the_fair_price_shown_in_the_app : "নাম্মা ড্রাইভার উপদেশন ট্রাস্টের একজন সদস্য হন"
+    , follow_safety_standards : "নাম্মা ড্রাইভার উপদেশন ট্রাস্টের একজন সদস্য হন"
+    , provide_sakkath_service_to_the_customers : "নাম্মা ড্রাইভার উপদেশন ট্রাস্টের একজন সদস্য হন"
     }
