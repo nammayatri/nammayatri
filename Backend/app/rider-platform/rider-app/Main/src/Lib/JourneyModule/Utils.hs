@@ -5,6 +5,7 @@ import qualified BecknV2.OnDemand.Enums as Enums
 import Control.Applicative ((<|>))
 import qualified Data.Geohash as Geohash
 import Data.List (groupBy, nub, sort, sortBy)
+import qualified Data.Map.Strict as Map
 import Data.Ord (comparing)
 import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime, nominalDiffTimeToSeconds, secondsToNominalDiffTime)
@@ -567,9 +568,12 @@ getSingleModeRouteDetails mbRouteCode (Just originStopCode) (Just destinationSto
               routeCode
           case mbRoute of
             Just route -> do
+              routeStopMappings <- OTPRest.getRouteStopMappingByRouteCode route.code integratedBppConfig
               -- Get timing information for this route at the origin stop
               originStopTimings <- fetchLiveTimings [route.code] originStopCode currentTime integratedBppConfig mid mocid vc
               destStopTimings <- fetchLiveTimings [route.code] destinationStopCode currentTime integratedBppConfig mid mocid vc
+
+              let stopCodeToSequenceNum = Map.fromList $ map (\rst -> (rst.stopCode, rst.sequenceNum)) routeStopMappings
 
               let mbEarliestOriginTiming =
                     findEarliestTiming currentTimeIST currentTime $
@@ -581,14 +585,14 @@ getSingleModeRouteDetails mbRouteCode (Just originStopCode) (Just destinationSto
                         )
                         originStopTimings
 
-              -- Find the corresponding destination arrival for the same trip
               let mbDestinationTiming = do
                     originTiming <- mbEarliestOriginTiming
-                    find (\dt -> dt.tripId == originTiming.tripId) destStopTimings
-                  mbFirstOriginTiming = listToMaybe originStopTimings
-                  mbFirstDestinationTiming = do
+                    findMatchingDestinationTiming (.tripId) (.stopCode) originTiming destStopTimings stopCodeToSequenceNum
+
+              let mbFirstOriginTiming = listToMaybe originStopTimings
+              let mbFirstDestinationTiming = do
                     originTiming <- mbFirstOriginTiming
-                    find (\dt -> dt.tripId == originTiming.tripId) destStopTimings
+                    findMatchingDestinationTiming (.tripId) (.stopCode) originTiming destStopTimings stopCodeToSequenceNum
 
               let mbDepartureTime = getISTArrivalTime . (.timeOfDeparture) <$> mbEarliestOriginTiming <*> pure currentTime
                   mbArrivalTime = getISTArrivalTime . (.timeOfArrival) <$> mbDestinationTiming <*> pure currentTime
@@ -601,6 +605,17 @@ getSingleModeRouteDetails mbRouteCode (Just originStopCode) (Just destinationSto
             Nothing -> return Nothing
         _ -> return Nothing
     _ -> return Nothing
+  where
+    findMatchingDestinationTiming getTripId getStopCode originTiming destStopTimings stopCodeToSequenceNum =
+      let originSeq = Map.lookup (getStopCode originTiming) stopCodeToSequenceNum
+       in find
+            ( \dt ->
+                getTripId dt == getTripId originTiming
+                  && case (Map.lookup (getStopCode dt) stopCodeToSequenceNum, originSeq) of
+                    (Just destSeq, Just oSeq) -> destSeq > oSeq
+                    _ -> False
+            )
+            destStopTimings
 getSingleModeRouteDetails _ _ _ _ _ _ _ = return Nothing
 
 findEarliestTiming :: UTCTime -> UTCTime -> [RouteStopTimeTable] -> Maybe RouteStopTimeTable
