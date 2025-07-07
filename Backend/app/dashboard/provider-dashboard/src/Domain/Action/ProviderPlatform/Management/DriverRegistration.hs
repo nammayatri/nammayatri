@@ -18,6 +18,7 @@ module Domain.Action.ProviderPlatform.Management.DriverRegistration
     postDriverRegistrationDocumentUpload,
     postDriverRegistrationMediaFileDocumentUploadLink,
     postDriverRegistrationMediaFileDocumentConfirm,
+    postDriverRegistrationMediaFileDocumentDelete,
     getDriverRegistrationMediaFileDocumentDownloadLink,
     postDriverRegistrationRegisterDl,
     postDriverRegistrationRegisterRc,
@@ -113,7 +114,7 @@ postDriverRegistrationMediaFileDocumentConfirm ::
   ShortId DM.Merchant ->
   City.City ->
   ApiTokenInfo ->
-  Common.MediaFileDocumentConfirmReq ->
+  Common.MediaFileDocumentReq ->
   Flow APISuccess
 postDriverRegistrationMediaFileDocumentConfirm merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
@@ -121,6 +122,19 @@ postDriverRegistrationMediaFileDocumentConfirm merchantShortId opCity apiTokenIn
   let requestorId = apiTokenInfo.personId.getId
   T.withTransactionStoring transaction $ do
     Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationMediaFileDocumentConfirm) requestorId req
+
+postDriverRegistrationMediaFileDocumentDelete ::
+  ShortId DM.Merchant ->
+  City.City ->
+  ApiTokenInfo ->
+  Common.MediaFileDocumentReq ->
+  Flow APISuccess
+postDriverRegistrationMediaFileDocumentDelete merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo Nothing (Just req)
+  let requestorId = apiTokenInfo.personId.getId
+  T.withTransactionStoring transaction $ do
+    Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationMediaFileDocumentDelete) requestorId req
 
 getDriverRegistrationMediaFileDocumentDownloadLink ::
   ShortId DM.Merchant ->

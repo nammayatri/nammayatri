@@ -70,7 +70,7 @@ apis:
       endpoint: /mediaFileDocument/confirm
       auth: ApiAuthV2
       request:
-        type: MediaFileDocumentConfirmReq
+        type: MediaFileDocumentReq
       response:
         type: APISuccess
       helperApi:
@@ -78,7 +78,24 @@ apis:
             endpoint: /mediaFileDocument/confirm
             auth: ApiAuthV2
             request:
-              type: MediaFileDocumentConfirmReq
+              type: MediaFileDocumentReq
+            mandatoryQuery:
+              - requestorId: Text
+            response:
+              type: APISuccess
+  - POST:
+      endpoint: /mediaFileDocument/delete
+      auth: ApiAuthV2
+      request:
+        type: MediaFileDocumentReq
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /mediaFileDocument/delete
+            auth: ApiAuthV2
+            request:
+              type: MediaFileDocumentReq
             mandatoryQuery:
               - requestorId: Text
             response:
@@ -286,7 +303,7 @@ types:
   MediaFileDocumentType:
     - enum: "VehicleVideo"
     - derive': "Show, Generic, ToSchema, Kernel.Prelude.ToParamSchema"
-  MediaFileDocumentConfirmReq:
+  MediaFileDocumentReq:
     - mediaFileDocumentId: Id MediaFileDocument
     - derive: "'HideSecrets"
   RegisterDLReq:

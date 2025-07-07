@@ -18,6 +18,7 @@ module Domain.Action.Dashboard.Management.DriverRegistration
     postDriverRegistrationDocumentUpload,
     postDriverRegistrationMediaFileDocumentUploadLink,
     postDriverRegistrationMediaFileDocumentConfirm,
+    postDriverRegistrationMediaFileDocumentDelete,
     getDriverRegistrationMediaFileDocumentDownloadLink,
     postDriverRegistrationRegisterDl,
     postDriverRegistrationRegisterRc,
@@ -374,7 +375,7 @@ postDriverRegistrationMediaFileDocumentConfirm ::
   ShortId DM.Merchant ->
   Context.City ->
   Text ->
-  Common.MediaFileDocumentConfirmReq ->
+  Common.MediaFileDocumentReq ->
   Flow APISuccess
 postDriverRegistrationMediaFileDocumentConfirm merchantShortId opCity requestorId req = do
   let mediaFileDocumentId = cast @CommonMFD.MediaFileDocument @DMFD.MediaFileDocument req.mediaFileDocumentId
@@ -414,6 +415,21 @@ postDriverRegistrationMediaFileDocumentConfirm merchantShortId opCity requestorI
   where
     makeConfirmMediaDocHitsCountKey :: Id DMFD.MediaFileDocument -> Text
     makeConfirmMediaDocHitsCountKey mediaFileDocumentId = "ConfirmMediaDoc:MediaDocHits:" <> mediaFileDocumentId.getId <> ":hitsCount"
+
+postDriverRegistrationMediaFileDocumentDelete ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Common.MediaFileDocumentReq ->
+  Flow APISuccess
+postDriverRegistrationMediaFileDocumentDelete _merchantShortId _opCity _requestorId req = do
+  let mediaFileDocumentId = cast @CommonMFD.MediaFileDocument @DMFD.MediaFileDocument req.mediaFileDocumentId
+  mediaFileDocument <- QMFD.findByPrimaryKey mediaFileDocumentId >>= fromMaybeM (InvalidRequest "MediaFileDocument does not exist")
+  QMFD.updateStatus DMFD.DELETED Nothing mediaFileDocumentId
+  let s3Path = T.unpack mediaFileDocument.s3Path
+  catch (S3.delete s3Path) $ \(err :: SomeException) -> do
+    logError $ "Unable to delete file: mediaFileDocumentId: " <> mediaFileDocumentId.getId <> "err: " <> show err
+  pure Success
 
 getDriverRegistrationMediaFileDocumentDownloadLink ::
   ShortId DM.Merchant ->

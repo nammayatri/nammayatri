@@ -23,10 +23,10 @@ import Servant
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
 
-type API = ("driver" :> (GetDriverRegistrationDocumentsList :<|> GetDriverRegistrationGetDocument :<|> PostDriverRegistrationDocumentUpload :<|> PostDriverRegistrationMediaFileDocumentUploadLink :<|> PostDriverRegistrationMediaFileDocumentConfirm :<|> GetDriverRegistrationMediaFileDocumentDownloadLink :<|> PostDriverRegistrationRegisterDl :<|> PostDriverRegistrationRegisterRc :<|> PostDriverRegistrationRegisterAadhaar :<|> PostDriverRegistrationRegisterGenerateAadhaarOtp :<|> PostDriverRegistrationRegisterVerifyAadhaarOtp :<|> GetDriverRegistrationUnderReviewDrivers :<|> GetDriverRegistrationDocumentsInfo :<|> PostDriverRegistrationDocumentsUpdate))
+type API = ("driver" :> (GetDriverRegistrationDocumentsList :<|> GetDriverRegistrationGetDocument :<|> PostDriverRegistrationDocumentUpload :<|> PostDriverRegistrationMediaFileDocumentUploadLink :<|> PostDriverRegistrationMediaFileDocumentConfirm :<|> PostDriverRegistrationMediaFileDocumentDelete :<|> GetDriverRegistrationMediaFileDocumentDownloadLink :<|> PostDriverRegistrationRegisterDl :<|> PostDriverRegistrationRegisterRc :<|> PostDriverRegistrationRegisterAadhaar :<|> PostDriverRegistrationRegisterGenerateAadhaarOtp :<|> PostDriverRegistrationRegisterVerifyAadhaarOtp :<|> GetDriverRegistrationUnderReviewDrivers :<|> GetDriverRegistrationDocumentsInfo :<|> PostDriverRegistrationDocumentsUpdate))
 
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API)
-handler merchantId city = getDriverRegistrationDocumentsList merchantId city :<|> getDriverRegistrationGetDocument merchantId city :<|> postDriverRegistrationDocumentUpload merchantId city :<|> postDriverRegistrationMediaFileDocumentUploadLink merchantId city :<|> postDriverRegistrationMediaFileDocumentConfirm merchantId city :<|> getDriverRegistrationMediaFileDocumentDownloadLink merchantId city :<|> postDriverRegistrationRegisterDl merchantId city :<|> postDriverRegistrationRegisterRc merchantId city :<|> postDriverRegistrationRegisterAadhaar merchantId city :<|> postDriverRegistrationRegisterGenerateAadhaarOtp merchantId city :<|> postDriverRegistrationRegisterVerifyAadhaarOtp merchantId city :<|> getDriverRegistrationUnderReviewDrivers merchantId city :<|> getDriverRegistrationDocumentsInfo merchantId city :<|> postDriverRegistrationDocumentsUpdate merchantId city
+handler merchantId city = getDriverRegistrationDocumentsList merchantId city :<|> getDriverRegistrationGetDocument merchantId city :<|> postDriverRegistrationDocumentUpload merchantId city :<|> postDriverRegistrationMediaFileDocumentUploadLink merchantId city :<|> postDriverRegistrationMediaFileDocumentConfirm merchantId city :<|> postDriverRegistrationMediaFileDocumentDelete merchantId city :<|> getDriverRegistrationMediaFileDocumentDownloadLink merchantId city :<|> postDriverRegistrationRegisterDl merchantId city :<|> postDriverRegistrationRegisterRc merchantId city :<|> postDriverRegistrationRegisterAadhaar merchantId city :<|> postDriverRegistrationRegisterGenerateAadhaarOtp merchantId city :<|> postDriverRegistrationRegisterVerifyAadhaarOtp merchantId city :<|> getDriverRegistrationUnderReviewDrivers merchantId city :<|> getDriverRegistrationDocumentsInfo merchantId city :<|> postDriverRegistrationDocumentsUpdate merchantId city
 
 type GetDriverRegistrationDocumentsList =
   ( ApiAuth
@@ -66,6 +66,14 @@ type PostDriverRegistrationMediaFileDocumentConfirm =
       'DSL
       ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER_REGISTRATION / 'API.Types.ProviderPlatform.Management.DriverRegistration.POST_DRIVER_REGISTRATION_MEDIA_FILE_DOCUMENT_CONFIRM)
       :> API.Types.ProviderPlatform.Management.DriverRegistration.PostDriverRegistrationMediaFileDocumentConfirm
+  )
+
+type PostDriverRegistrationMediaFileDocumentDelete =
+  ( ApiAuth
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.DRIVER_REGISTRATION / 'API.Types.ProviderPlatform.Management.DriverRegistration.POST_DRIVER_REGISTRATION_MEDIA_FILE_DOCUMENT_DELETE)
+      :> API.Types.ProviderPlatform.Management.DriverRegistration.PostDriverRegistrationMediaFileDocumentDelete
   )
 
 type GetDriverRegistrationMediaFileDocumentDownloadLink =
@@ -152,8 +160,11 @@ postDriverRegistrationDocumentUpload merchantShortId opCity apiTokenInfo driverI
 postDriverRegistrationMediaFileDocumentUploadLink :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.DriverRegistration.UploadMediaFileDocumentReq -> Environment.FlowHandler API.Types.ProviderPlatform.Management.DriverRegistration.MediaFileDocumentResp)
 postDriverRegistrationMediaFileDocumentUploadLink merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.DriverRegistration.postDriverRegistrationMediaFileDocumentUploadLink merchantShortId opCity apiTokenInfo req
 
-postDriverRegistrationMediaFileDocumentConfirm :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.DriverRegistration.MediaFileDocumentConfirmReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postDriverRegistrationMediaFileDocumentConfirm :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.DriverRegistration.MediaFileDocumentReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postDriverRegistrationMediaFileDocumentConfirm merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.DriverRegistration.postDriverRegistrationMediaFileDocumentConfirm merchantShortId opCity apiTokenInfo req
+
+postDriverRegistrationMediaFileDocumentDelete :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.DriverRegistration.MediaFileDocumentReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postDriverRegistrationMediaFileDocumentDelete merchantShortId opCity apiTokenInfo req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.DriverRegistration.postDriverRegistrationMediaFileDocumentDelete merchantShortId opCity apiTokenInfo req
 
 getDriverRegistrationMediaFileDocumentDownloadLink :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.DriverRegistration.MediaFileDocumentType -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.DriverRegistration.MediaFileDocumentResp)
 getDriverRegistrationMediaFileDocumentDownloadLink merchantShortId opCity apiTokenInfo mediaFileDocumentType rcNumber = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.DriverRegistration.getDriverRegistrationMediaFileDocumentDownloadLink merchantShortId opCity apiTokenInfo mediaFileDocumentType rcNumber
