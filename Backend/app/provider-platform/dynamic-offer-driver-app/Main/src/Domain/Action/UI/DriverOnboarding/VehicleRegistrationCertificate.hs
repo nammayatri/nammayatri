@@ -210,7 +210,8 @@ data RCValidationReq = RCValidationReq
 data DriverDocument = DriverDocument
   { panNumber :: Maybe Text,
     aadhaarNumber :: Maybe Text,
-    dlNumber :: Maybe Text
+    dlNumber :: Maybe Text,
+    gstNumber :: Maybe Text
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
@@ -232,13 +233,14 @@ getDriverDocumentInfo person = do
       res <- FOI.findByPrimaryKey person.id >>= fromMaybeM (PersonNotFound person.id.getId)
       decryptedPanNumber <- mapM decrypt res.panNumber
       decryptedAadhaarNumber <- mapM decrypt res.aadhaarNumber
-      return (res.blocked, DriverDocument decryptedPanNumber decryptedAadhaarNumber Nothing)
+      decryptedGstNumber <- mapM decrypt res.gstNumber
+      return (res.blocked, DriverDocument decryptedPanNumber decryptedAadhaarNumber Nothing decryptedGstNumber)
     _ -> do
       res <- DIQuery.findById person.id >>= fromMaybeM (PersonNotFound person.id.getId)
       decryptedPanNumber <- mapM decrypt res.panNumber
       decryptedAadhaarNumber <- mapM decrypt res.aadhaarNumber
       decryptedDlNumber <- mapM decrypt res.dlNumber
-      return (res.blocked, DriverDocument decryptedPanNumber decryptedAadhaarNumber decryptedDlNumber)
+      return (res.blocked, DriverDocument decryptedPanNumber decryptedAadhaarNumber decryptedDlNumber Nothing)
 
 verifyRC ::
   Bool ->
@@ -352,8 +354,11 @@ verifyPan isDashboard mbMerchant (personId, _, merchantOpCityId) req = do
   case transporterConfig.allowDuplicatePan of
     Just False -> do
       panHash <- getDbHash req.panNumber
-      panInfo <- DPQuery.findByEncryptedPanNumber panHash
-      when (isJust panInfo) $ throwError PanAlreadyLinked
+      panInfoList <- DPQuery.findAllByEncryptedPanNumber panHash
+      when (length panInfoList > 1) $ throwError PanAlreadyLinked
+      panPersonDetails <- Person.getDriversByIdIn (map (.driverId) panInfoList)
+      let getRoles = map (.role) panPersonDetails
+      when (person.role `elem` getRoles) $ throwError PanAlreadyLinked
     _ -> pure ()
 
   merchantServiceUsageConfig <-
@@ -509,8 +514,11 @@ verifyGstin isDashboard mbMerchant (personId, _, merchantOpCityId) req = do
   case transporterConfig.allowDuplicateGst of
     Just False -> do
       gstinHash <- getDbHash req.gstin
-      gstInfo <- DGQuery.findByEncryptedGstin gstinHash
-      when (isJust gstInfo) $ throwError GstAlreadyLinked
+      gstInfoList <- DGQuery.findAllByEncryptedGstNumber gstinHash
+      when (length gstInfoList > 1) $ throwError GstAlreadyLinked
+      gstPersonDetails <- Person.getDriversByIdIn (map (.driverId) gstInfoList)
+      let getRoles = map (.role) gstPersonDetails
+      when (person.role `elem` getRoles) $ throwError GstAlreadyLinked
     _ -> pure ()
   whenJust mbMerchant $ \merchant -> do
     unless (merchant.id == person.merchantId) $ throwError (PersonNotFound personId.getId)
@@ -604,13 +612,13 @@ verifyGstin isDashboard mbMerchant (personId, _, merchantOpCityId) req = do
           resp <- Verification.extractGSTImage person.merchantId merchantOpCityId extractReq
           extractedGst <- validateExtractedGst resp
           when (isJust transporterConfig.validNameComparePercentage) $
-            validateDocument person.merchantId merchantOpCityId person.id Nothing extractedGst.pan_number Nothing ODC.GSTCertificate driverDocument
+            validateDocument person.merchantId merchantOpCityId person.id Nothing Nothing extractedGst.pan_number ODC.GSTCertificate driverDocument
           DGQuery.updateVerificationStatus Documents.VALID person.id
         Nothing -> do
           resp <- Verification.extractGSTImage person.merchantId merchantOpCityId extractReq
           extractedGst <- validateExtractedGst resp
           when (isJust transporterConfig.validNameComparePercentage) $
-            validateDocument person.merchantId merchantOpCityId person.id Nothing extractedGst.pan_number Nothing ODC.GSTCertificate driverDocument
+            validateDocument person.merchantId merchantOpCityId person.id Nothing Nothing extractedGst.pan_number ODC.GSTCertificate driverDocument
           gstCardDetails <- buildGstinCard person extractedGst.address extractedGst.constitution_of_business extractedGst.date_of_liability extractedGst.is_provisional extractedGst.legal_name extractedGst.trade_name extractedGst.type_of_registration extractedGst.valid_from extractedGst.valid_upto extractedGst.pan_number
           DGQuery.create $ gstCardDetails
       pure Success
@@ -634,8 +642,11 @@ verifyAadhaar _isDashboard mbMerchant (personId, merchantId, merchantOpCityId) r
   case transporterConfig.allowDuplicateAadhaar of
     Just False -> do
       aadhaarHash <- getDbHash req.aadhaarNumber
-      aadhaarInfo <- QAadhaarCard.findByAadhaarNumberHash (Just aadhaarHash)
-      when (isJust aadhaarInfo) $ throwError AadhaarAlreadyLinked
+      aadhaarInfoList <- QAadhaarCard.findAllByEncryptedAadhaarNumber (Just aadhaarHash)
+      when (length aadhaarInfoList > 1) $ throwError AadhaarAlreadyLinked
+      aadhaarPersonDetails <- Person.getDriversByIdIn (map (.driverId) aadhaarInfoList)
+      let getRoles = map (.role) aadhaarPersonDetails
+      when (person.role `elem` getRoles) $ throwError AadhaarAlreadyLinked
     _ -> pure ()
   whenJust mbMerchant $ \merchant -> do
     unless (merchant.id == person.merchantId) $ throwError (PersonNotFound personId.getId)
@@ -1215,7 +1226,7 @@ checkPan merchantId merchantOpCityId personId mbExtractedValue mbDateOfBirthValu
       if verifyingDocumentType `elem` [ODC.AadhaarCard, ODC.DriverLicense]
         then validateNameAndDOB merchantId merchantOpCityId mbExtractedValue panData.driverNameOnGovtDB mbDateOfBirthValue panData.driverDob personId
         else return False
-    Nothing -> return False
+    Nothing -> throwError $ InternalError "Pan not found"
 
 checkDL :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id Person.Person -> Maybe Text -> Maybe UTCTime -> ODC.DocumentType -> Flow Bool
 checkDL merchantId merchantOpCityId personId mbExtractedValue mbDateOfBirthValue verifyingDocumentType = do
@@ -1225,7 +1236,7 @@ checkDL merchantId merchantOpCityId personId mbExtractedValue mbDateOfBirthValue
       if verifyingDocumentType `elem` [ODC.AadhaarCard, ODC.PanCard]
         then validateNameAndDOB merchantId merchantOpCityId mbExtractedValue dlData.driverName mbDateOfBirthValue dlData.driverDob personId
         else return False
-    Nothing -> return False
+    Nothing -> throwError $ InternalError "DL not found"
 
 checkAadhaar :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id Person.Person -> Maybe Text -> Maybe UTCTime -> ODC.DocumentType -> Flow Bool
 checkAadhaar merchantId merchantOpCityId personId mbExtractedValue mbDateOfBirthValue verifyingDocumentType = do
@@ -1235,7 +1246,14 @@ checkAadhaar merchantId merchantOpCityId personId mbExtractedValue mbDateOfBirth
       if verifyingDocumentType `elem` [ODC.PanCard, ODC.DriverLicense]
         then validateNameAndDOB merchantId merchantOpCityId mbExtractedValue aadhaarData.nameOnCard mbDateOfBirthValue (parseDateTime =<< aadhaarData.dateOfBirth) personId
         else return False
-    Nothing -> return False
+    Nothing -> throwError $ InternalError "Aadhaar not found"
+
+checkGST :: Id Person.Person -> Maybe Text -> Flow ()
+checkGST personId mbPanNumber = do
+  mGstData <- DGQuery.findByDriverId personId
+  case mGstData of
+    Just gstData -> checkTwoPanNumber mbPanNumber gstData.panNumber
+    Nothing -> throwError $ InternalError "GST not found"
 
 validateDocument :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id Person.Person -> Maybe Text -> Maybe Text -> Maybe Text -> ODC.DocumentType -> DriverDocument -> Flow ()
 validateDocument merchantId merchantOpCityId personId mbNameValue mbDateOfBirthValue mbPanNumber verifyingDocumentType DriverDocument {..} = do
@@ -1251,7 +1269,8 @@ validateDocument merchantId merchantOpCityId personId mbNameValue mbDateOfBirthV
         void $ checkAadhaar merchantId merchantOpCityId personId mbNameValue mbUtcDateOfBirthValue ODC.PanCard
       when (isJust dlNumber) $ do
         void $ checkDL merchantId merchantOpCityId personId mbNameValue mbUtcDateOfBirthValue ODC.PanCard
-      checkTwoPanNumber mbPanNumber panNumber
+      when (isJust gstNumber) $ do
+        checkGST personId mbPanNumber
     ODC.DriverLicense -> do
       when (isJust aadhaarNumber) $ do
         void $ checkAadhaar merchantId merchantOpCityId personId mbNameValue mbUtcDateOfBirthValue ODC.DriverLicense
@@ -1259,14 +1278,14 @@ validateDocument merchantId merchantOpCityId personId mbNameValue mbDateOfBirthV
         void $ checkPan merchantId merchantOpCityId personId mbNameValue mbUtcDateOfBirthValue ODC.DriverLicense
     ODC.GSTCertificate -> checkTwoPanNumber mbPanNumber panNumber
     _ -> return ()
-  where
-    checkTwoPanNumber :: Maybe Text -> Maybe Text -> Flow ()
-    checkTwoPanNumber mbExtractedValue mbVerifiedValue = do
-      case (mbExtractedValue, mbVerifiedValue) of
-        (Just extractedValue, Just verifiedValue) -> do
-          unless (extractedValue == verifiedValue) $ throwError (InvalidRequest "GST not linked with existing PAN")
-          return ()
-        _ -> return ()
+
+checkTwoPanNumber :: Maybe Text -> Maybe Text -> Flow ()
+checkTwoPanNumber mbExtractedValue mbVerifiedValue = do
+  case (mbExtractedValue, mbVerifiedValue) of
+    (Just extractedValue, Just verifiedValue) -> do
+      unless (extractedValue == verifiedValue) $ throwError (InvalidRequest "GST not linked with existing PAN")
+      return ()
+    _ -> return ()
 
 validateNameAndDOB :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe UTCTime -> Id Person.Person -> Flow Bool
 validateNameAndDOB merchantId merchantOpCityId mbExtractedName mbVerifiedName mbExtractedDOB mbVerifiedDOB personId = do

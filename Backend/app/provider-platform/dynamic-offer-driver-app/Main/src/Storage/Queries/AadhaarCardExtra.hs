@@ -2,11 +2,17 @@ module Storage.Queries.AadhaarCardExtra where
 
 import qualified Domain.Types.AadhaarCard as Domain
 import Kernel.Beam.Functions
+import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
 import Sequelize as Se
 import Storage.Beam.AadhaarCard as Beam
 import Storage.Queries.OrphanInstances.AadhaarCard ()
+
+findAllByEncryptedAadhaarNumber :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe DbHash -> m [Domain.AadhaarCard]
+findAllByEncryptedAadhaarNumber mbAadhaarNumberHash = do
+  findAllWithKV
+    [Se.Is Beam.aadhaarNumberHash $ Se.Eq mbAadhaarNumberHash]
 
 upsertAadhaarRecord :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Domain.AadhaarCard -> m ()
 upsertAadhaarRecord a@Domain.AadhaarCard {..} =

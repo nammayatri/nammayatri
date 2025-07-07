@@ -25,6 +25,11 @@ findUnInvalidByGstNumber gstNumber = do
           ]
       ]
 
+findAllByEncryptedGstNumber :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DbHash -> m [DriverGstin]
+findAllByEncryptedGstNumber gstNumberHash = do
+  findAllWithKV
+    [Se.Is Beam.gstinHash $ Se.Eq gstNumberHash]
+
 findByGstNumberAndNotInValid :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> m (Maybe DriverGstin)
 findByGstNumberAndNotInValid personId = do
   findOneWithKV
