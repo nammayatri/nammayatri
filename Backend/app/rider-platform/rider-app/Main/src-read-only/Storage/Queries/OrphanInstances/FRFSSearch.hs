@@ -38,6 +38,7 @@ instance FromTType' Beam.FRFSSearch Domain.Types.FRFSSearch.FRFSSearch where
             riderId = Kernel.Types.Id.Id riderId,
             routeCode = routeId,
             toStationCode = toStationId,
+            validTill = validTill,
             vehicleType = vehicleType,
             createdAt = createdAt,
             updatedAt = updatedAt
@@ -68,6 +69,7 @@ instance ToTType' Beam.FRFSSearch Domain.Types.FRFSSearch.FRFSSearch where
         Beam.riderId = Kernel.Types.Id.getId riderId,
         Beam.routeId = routeCode,
         Beam.toStationId = toStationCode,
+        Beam.validTill = validTill,
         Beam.vehicleType = vehicleType,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt

@@ -19,7 +19,6 @@ import Data.Default.Class
 import qualified Data.List as L
 import qualified Data.Text as T
 import Data.Time hiding (secondsToNominalDiffTime)
-import Domain.Action.UI.Quote as UQuote
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.BppDetails as DBppDetails
@@ -58,6 +57,7 @@ import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.JobScheduler
 import qualified SharedLogic.MessageBuilder as MessageBuilder
+import SharedLogic.Quote
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.FollowRide as CQFollowRide
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
@@ -208,7 +208,7 @@ notifyOnDriverOfferIncoming ::
   m ()
 notifyOnDriverOfferIncoming estimateId tripCategory quotes person bppDetailList = do
   isValueAddNPList <- Prelude.for bppDetailList $ \bpp -> CQVAN.isValueAddNP bpp.subscriberId
-  let entity = Notification.Entity Notification.Product estimateId.getId $ UQuote.mkQAPIEntityList quotes bppDetailList isValueAddNPList
+  let entity = Notification.Entity Notification.Product estimateId.getId $ mkQAPIEntityList quotes bppDetailList isValueAddNPList
       notiReq = createNotificationReq "DRIVER_QUOTE_INCOMING" identity
   dynamicNotifyPerson person notiReq EmptyDynamicParam entity tripCategory mempty Nothing Nothing
 

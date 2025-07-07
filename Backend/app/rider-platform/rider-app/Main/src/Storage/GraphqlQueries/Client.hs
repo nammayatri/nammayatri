@@ -131,7 +131,8 @@ transformEntry stopData timestamp entry = do
     { routeCode = fromMaybe entry.trip.route.gtfsId $ lastMay $ Text.splitOn ":" entry.trip.route.gtfsId,
       serviceTierType = mapToServiceTierType entry.trip.gtfsId,
       stopCode = fromMaybe stopData.gtfsId $ lastMay $ Text.splitOn ":" stopData.gtfsId,
-      stage = entry.headsign >>= readMaybe . Text.unpack,
+      stage = entry.extraInfo >>= (.fareStageNumber) >>= readMaybe . Text.unpack,
+      providerStopCode = entry.extraInfo >>= (.providerStopCode),
       -- Convert seconds from midnight to HH:MM:SS
       timeOfArrival = secondsToTime entry.scheduledArrival,
       timeOfDeparture = secondsToTime entry.scheduledDeparture,

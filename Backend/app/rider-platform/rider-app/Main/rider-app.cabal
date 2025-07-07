@@ -296,6 +296,7 @@ library
       Domain.Types.RentalsIntercityCache
       Domain.Types.Route
       Domain.Types.RouteStopMapping
+      Domain.Types.RouteStopTimeTable
       Domain.Types.Station
       Domain.Types.TicketDashboard
       Domain.Types.UtilsTH
@@ -379,6 +380,7 @@ library
       SharedLogic.Person
       SharedLogic.PersonDefaultEmergencyNumber
       SharedLogic.PublicTransport
+      SharedLogic.Quote
       SharedLogic.Referral
       SharedLogic.Ride
       SharedLogic.ScheduledNotifications
@@ -434,6 +436,7 @@ library
       Storage.CachedQueries.Merchant.PayoutConfig
       Storage.CachedQueries.Merchant.RiderConfig
       Storage.CachedQueries.MerchantConfig
+      Storage.CachedQueries.OTPRest.Common
       Storage.CachedQueries.OTPRest.OTPRest
       Storage.CachedQueries.PartnerOrganization
       Storage.CachedQueries.PartnerOrgConfig
@@ -792,7 +795,6 @@ library
       Domain.Types.RouteDetails
       Domain.Types.RoutePolylines
       Domain.Types.RouteStopCalender
-      Domain.Types.RouteStopTimeTable
       Domain.Types.RouteTripMapping
       Domain.Types.SafetySettings
       Domain.Types.SavedReqLocation
@@ -925,7 +927,6 @@ library
       Storage.Beam.RouteDetails
       Storage.Beam.RoutePolylines
       Storage.Beam.RouteStopCalender
-      Storage.Beam.RouteStopTimeTable
       Storage.Beam.RouteTripMapping
       Storage.Beam.SafetySettings
       Storage.Beam.SavedReqLocation
@@ -1115,7 +1116,6 @@ library
       Storage.Queries.RouteDetails
       Storage.Queries.RoutePolylines
       Storage.Queries.RouteStopCalender
-      Storage.Queries.RouteStopTimeTable
       Storage.Queries.RouteTripMapping
       Storage.Queries.SafetySettings
       Storage.Queries.SavedReqLocation

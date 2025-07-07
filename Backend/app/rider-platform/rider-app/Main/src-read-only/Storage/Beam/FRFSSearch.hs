@@ -35,6 +35,7 @@ data FRFSSearchT f = FRFSSearchT
     riderId :: B.C f Kernel.Prelude.Text,
     routeId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     toStationId :: B.C f Kernel.Prelude.Text,
+    validTill :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     vehicleType :: B.C f BecknV2.FRFS.Enums.VehicleCategory,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime

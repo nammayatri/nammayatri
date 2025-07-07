@@ -95,7 +95,7 @@ search merchant merchantOperatingCity bapConfig searchReq routeDetails integrate
         routeStopMappingToStation <- OTPRest.getRouteStopMappingByStopCode searchReq.toStationCode integratedBPPConfig
         let fromStationProviderCode = fromMaybe searchReq.fromStationCode (listToMaybe routeStopMappingFromStation <&> (.providerCode))
             toStationProviderCode = fromMaybe searchReq.toStationCode (listToMaybe routeStopMappingToStation <&> (.providerCode))
-        bknSearchReq <- ACL.buildSearchReq searchReq.id.getId searchReq.vehicleType bapConfig (Just $ fromStation {DStation.code = bool searchReq.fromStationCode fromStationProviderCode (fromStationProviderCode /= "GTFS")}) (Just $ toStation {DStation.code = bool searchReq.toStationCode toStationProviderCode (toStationProviderCode /= "GTFS")}) merchantOperatingCity.city
+        bknSearchReq <- ACL.buildSearchReq searchReq.id.getId searchReq.vehicleType bapConfig (Just $ fromStation {DStation.code = fromStationProviderCode}) (Just $ toStation {DStation.code = toStationProviderCode}) merchantOperatingCity.city
         logDebug $ "FRFS SearchReq " <> encodeToText bknSearchReq
         Metrics.startMetrics Metrics.SEARCH_FRFS merchant.name searchReq.id.getId merchantOperatingCity.id.getId
         void $ CallFRFSBPP.search providerUrl bknSearchReq merchant.id

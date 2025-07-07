@@ -29,7 +29,7 @@ import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
+import Storage.CachedQueries.OTPRest.Common as OTPRestCommon
 import qualified Storage.GraphqlQueries.Client as Client
 import Tools.MultiModal
 
@@ -49,7 +49,7 @@ findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCode
   stopCodes <-
     case vehicleCategory of
       METRO -> do
-        OTPRest.getChildrenStationsCodes integratedBPPConfig stopCode'
+        OTPRestCommon.getChildrenStationsCodes integratedBPPConfig stopCode'
           >>= \case
             [] -> pure [stopCode']
             stopCodes@(_ : _) -> pure stopCodes
@@ -104,6 +104,7 @@ parseToRouteStopTimeTable integratedBPPConfigId mid mocid vehicleCategory entry 
             delay = Nothing,
             source = GTFS,
             stage = entry.stage,
+            providerStopCode = entry.providerStopCode,
             platformCode = entry.platformCode
           },
         RouteStopTimeTable
@@ -121,6 +122,7 @@ parseToRouteStopTimeTable integratedBPPConfigId mid mocid vehicleCategory entry 
             delay = Nothing,
             source = GTFS,
             stage = entry.stage,
+            providerStopCode = entry.providerStopCode,
             platformCode = entry.platformCode
           }
       ]
@@ -140,6 +142,7 @@ parseToRouteStopTimeTable integratedBPPConfigId mid mocid vehicleCategory entry 
             delay = Nothing,
             source = GTFS,
             stage = entry.stage,
+            providerStopCode = entry.providerStopCode,
             platformCode = entry.platformCode
           }
       ]

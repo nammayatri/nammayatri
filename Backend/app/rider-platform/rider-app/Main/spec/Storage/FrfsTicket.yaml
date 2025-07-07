@@ -59,6 +59,7 @@ FRFSSearch:
     journeyRouteDetails: "[MultiModalJourneyRouteDetails]"
     integratedBppConfigId: Id IntegratedBPPConfig
     recentLocationId: Maybe (Id RecentLocation)
+    validTill: Maybe UTCTime
 
   beamFields:
     fromStationCode:
@@ -959,51 +960,6 @@ RouteTripMapping:
       kvFunction: findAllWithKV
       where:
         and: [routeCode, integratedBppConfigId]
-
-RouteStopTimeTable:
-  tableName: route_stop_time_table
-  fields:
-    tripId: Id RouteStopTimeTable
-    routeCode: Text
-    stopCode: Text
-    timeOfDeparture: TimeOfDay
-    timeOfArrival: TimeOfDay
-    serviceTierType: ServiceTierType
-    integratedBppConfigId: Id IntegratedBPPConfig
-    delay: Maybe Seconds
-    source: SourceType
-    stage: Maybe Int
-    platformCode: Maybe Text
-  beamType:
-    source: Maybe SourceType
-  types:
-    SourceType:
-      enum: "LIVE, GTFS"
-  fromTType:
-    source: Kernel.Prelude.fromMaybe Domain.Types.RouteStopTimeTable.GTFS|I
-  toTType:
-    source: Kernel.Prelude.Just|I
-
-  constraints:
-    tripId: PrimaryKey
-    integratedBppConfigId : PrimaryKey
-    stopCode: PrimaryKey
-    timeOfArrival: PrimaryKey
-    serviceTierType: PrimaryKey
-  queries:
-    findByRouteCodeAndStopCode:
-      kvFunction: findAllWithKV
-      where:
-        and:
-          - in: [ routeCode]
-          - eq: [stopCode, integratedBppConfigId]
-
-    findByRouteCode:
-      kvFunction: findAllWithKV
-      where:
-        and:
-          - in: [routeCode]
-          - eq: [integratedBppConfigId]
 
 RouteStopCalender:
   tableName: route_stop_calender
