@@ -163,6 +163,7 @@ rideActionViewWithLabel push config =
                   else if fromMaybe false config.isPetRide then
                     dummyLabelConfig
                       { text = getString THIS_RIDE_INCLUDES_A_PET
+                      , secondaryText = getString LEARN_MORE
                       , textColor = Color.white900
                       , backgroundColor = Color.brown
                       , imageUrl = fetchImage FF_ASSET "ny_ic_pet_rides_label"
@@ -188,6 +189,7 @@ rideActionViewWithLabel push config =
                     else 
                     getRideLabelData config.specialLocationTag
       popupType = if config.bookingFromOtherPlatform then NoInfo
+                  else if fromMaybe false config.isPetRide then PetRidesInfo
                   else if config.rideType == ST.Rental then RentalInfo
                   else if config.rideType == ST.Intercity then IntercityInfo
                   else AccessibilityInfo
@@ -222,7 +224,7 @@ rideActionViewWithLabel push config =
         , linearLayout
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
-          , visibility $ if (Maybe.isJust config.accessibilityTag || config.rideType == ST.Rental ||  config.rideType == ST.Intercity ) && not (DS.null tagConfig.secondaryText) then VISIBLE else GONE
+          , visibility $ if (Maybe.isJust config.accessibilityTag || config.rideType == ST.Rental ||  config.rideType == ST.Intercity ||  fromMaybe false config.isPetRide ) && not (DS.null tagConfig.secondaryText) then VISIBLE else GONE
           ][  textView $ 
               [ width WRAP_CONTENT
               , height MATCH_PARENT

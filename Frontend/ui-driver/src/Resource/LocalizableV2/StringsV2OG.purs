@@ -1885,6 +1885,9 @@ getProxy str = case str of
   SUSPENDED_TILL arg1 arg2 -> \a -> (a @~ suspended_till)  arg1 arg2
   THIS_RIDE_INCLUDES_A_PET -> \a -> a @~ this_ride_includes_a_pet
   PET_RIDES -> \a -> a @~ pet_rides
+  THANKS_FOR_ACCEPTING_PET_RIDE -> \a -> a @~ thanks_for_accepting_pet_ride
+  CLEAN_THE_VEHICLE_AFTER_RIDE_IF_NEEDED -> \a -> a @~ clean_the_vehicle_after_ride_if_needed
+  THE_CUSTOMER_IS_RESPONSIBLE_FOR_PET -> \a -> a @~ the_customer_is_responsible_for_pet
   RESUME_RIDE -> \a -> a @~ resume_ride
   END_RIDE_WITH_STOPS -> \a -> a @~ end_ride_with_stops
   STOP arg1 -> \a -> (a @~ stop) arg1

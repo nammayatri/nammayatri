@@ -145,7 +145,7 @@ type AddressConfig = {
   detailText :: String
 }
 
-data LearnMorePopUp = AccessibilityInfo | RentalInfo | NoInfo | IntercityInfo
+data LearnMorePopUp = AccessibilityInfo | RentalInfo | NoInfo | IntercityInfo | PetRidesInfo
 
 derive instance genericLearnMorePopUp :: Generic LearnMorePopUp _
 instance eqLearnMorePopUp :: Eq LearnMorePopUp where eq = genericEq
