@@ -72,6 +72,7 @@ updateByPrimaryKey (Domain.Types.FRFSSearch.FRFSSearch {..}) = do
       Se.Set Beam.riderId (Kernel.Types.Id.getId riderId),
       Se.Set Beam.routeId routeCode,
       Se.Set Beam.toStationId toStationCode,
+      Se.Set Beam.validTill validTill,
       Se.Set Beam.vehicleType vehicleType,
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now

@@ -354,8 +354,11 @@ multiModalSearch searchRequest riderConfig initateJourney req' personId = do
 
   let userPreferredTransitModes = userPreferencesToGeneralVehicleTypes userPreferences.allowedTransitModes
       hasOnlyUserPreferredTransitModes otpRoute = all (isLegModeIn userPreferredTransitModes) otpRoute.legs
+      hasOnlyWalkOrUnspecifiedTransitModes otpRoute = all (isLegModeIn [MultiModalTypes.Walk, MultiModalTypes.Unspecified]) otpRoute.legs
       indexedRoutes = zip [0 ..] otpResponse.routes
-      filteredIndexedRoutes = filter (hasOnlyUserPreferredTransitModes . snd) indexedRoutes
+      filteredIndexedRoutes =
+        filter (not . hasOnlyWalkOrUnspecifiedTransitModes . snd) $
+          filter (hasOnlyUserPreferredTransitModes . snd) indexedRoutes
       indexedRoutesToProcess = if null filteredIndexedRoutes then indexedRoutes else filteredIndexedRoutes
       showMultimodalWarningForFirstJourney = null filteredIndexedRoutes
 
@@ -378,8 +381,12 @@ multiModalSearch searchRequest riderConfig initateJourney req' personId = do
             resp <- DMC.postMultimodalInitiate (Just searchRequest.riderId, searchRequest.merchantId) firstJourney.id
             fork "Rest of the routes Init" $ processRestOfRoutes [x | (j, x) <- zip [0 ..] otpResponse.routes, j /= idx] userPreferences
             return $ Just resp{crisSdkToken = mbCrisSdkToken}
-          Nothing -> return Nothing
-      else return Nothing
+          Nothing -> do
+            QSearchRequest.updateAllJourneysLoaded (Just True) searchRequest.id
+            return Nothing
+      else do
+        QSearchRequest.updateAllJourneysLoaded (Just True) searchRequest.id
+        return Nothing
 
   return $
     MultimodalSearchResp
