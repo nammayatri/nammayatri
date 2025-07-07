@@ -25,13 +25,14 @@ data IntegratedBPPConfig = IntegratedBPPConfig
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     platformType :: Domain.Types.IntegratedBPPConfig.PlatformType,
     providerConfig :: Domain.Types.IntegratedBPPConfig.ProviderConfig,
+    providerName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleCategory :: BecknV2.OnDemand.Enums.VehicleCategory,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, FromJSON, ToJSON)
 
-data PlatformType = MULTIMODAL | PARTNERORG | APPLICATION deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), (ToParamSchema))
+data PlatformType = MULTIMODAL | PARTNERORG | APPLICATION deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data ProviderConfig
   = EBIX Domain.Types.Extra.IntegratedBPPConfig.EBIXConfig
@@ -39,8 +40,8 @@ data ProviderConfig
   | CMRL Domain.Types.Extra.IntegratedBPPConfig.CMRLConfig
   | ONDC Domain.Types.Extra.IntegratedBPPConfig.ONDCBecknConfig
   | CRIS Domain.Types.Extra.IntegratedBPPConfig.CRISConfig
-  deriving (Generic, (FromJSON), (ToJSON), (Eq))
+  deriving (Generic, FromJSON, ToJSON, Eq)
 
-$(Kernel.Utils.TH.mkFromHttpInstanceForEnum (''PlatformType))
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''PlatformType)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''PlatformType))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''PlatformType)

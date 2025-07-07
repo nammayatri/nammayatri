@@ -45,12 +45,13 @@ import Tools.Error
 
 getProviderName :: IntegratedBPPConfig -> Text
 getProviderName integrationBPPConfig =
-  case integrationBPPConfig.providerConfig of
-    CMRL _ -> "Chennai Metro Rail Limited"
-    EBIX _ -> "Kolkata Buses"
-    DIRECT _ -> "Direct Multimodal Services"
-    Domain.Types.IntegratedBPPConfig.ONDC _ -> "ONDC Services"
-    CRIS _ -> "CRIS Subway"
+  case (integrationBPPConfig.providerName, integrationBPPConfig.providerConfig) of
+    (Just name, _) -> name
+    (_, CMRL _) -> "Chennai Metro Rail Limited"
+    (_, EBIX _) -> "Kolkata Buses"
+    (_, DIRECT _) -> "Direct Multimodal Services"
+    (_, ONDC _) -> "ONDC Services"
+    (_, CRIS _) -> "CRIS Subway"
 
 getFares :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Id Person -> Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> Text -> Text -> Text -> Spec.VehicleCategory -> m [FRFSUtils.FRFSFare]
 getFares riderId merchant merchanOperatingCity integrationBPPConfig routeCode startStopCode endStopCode vehicleCategory = do

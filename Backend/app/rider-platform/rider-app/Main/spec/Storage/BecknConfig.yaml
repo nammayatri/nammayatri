@@ -99,6 +99,7 @@ IntegratedBPPConfig:
     merchantId: Id Merchant
     vehicleCategory: VehicleCategory|NoRelation
     platformType: PlatformType
+    providerName: Maybe Text
 
   beamFields:
     providerConfig:
