@@ -52,6 +52,7 @@ data PersonT f = PersonT
     mobileCountryCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     mobileNumberEncrypted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     mobileNumberHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
+    nyClubConsent :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     onboardedFromDashboard :: B.C f Kernel.Prelude.Bool,
     passwordHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
     qrImageId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
