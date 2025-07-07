@@ -27,6 +27,7 @@ instance FromTType' Beam.IntegratedBPPConfig Domain.Types.IntegratedBPPConfig.In
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             platformType = platformType,
             providerConfig = providerConfig',
+            providerName = providerName,
             vehicleCategory = vehicleCategory,
             createdAt = createdAt,
             updatedAt = updatedAt
@@ -43,6 +44,7 @@ instance ToTType' Beam.IntegratedBPPConfig Domain.Types.IntegratedBPPConfig.Inte
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.platformType = platformType,
         Beam.configJSON = Storage.Queries.Transformers.IntegratedBPPConfig.getProviderConfigJson providerConfig,
+        Beam.providerName = providerName,
         Beam.vehicleCategory = vehicleCategory,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt

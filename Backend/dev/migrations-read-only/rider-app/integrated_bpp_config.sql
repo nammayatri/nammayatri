@@ -12,3 +12,9 @@ ALTER TABLE atlas_app.integrated_bpp_config ADD COLUMN vehicle_category text NOT
 ALTER TABLE atlas_app.integrated_bpp_config ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.integrated_bpp_config ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.integrated_bpp_config ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.integrated_bpp_config ADD COLUMN provider_name text ;
