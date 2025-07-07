@@ -6,12 +6,14 @@ on:
       - "main"
       - "prodHotPush-Common"
       - "prodHotPush-BAP"
+      - "frfsProdHotPush"
   pull_request:
     types: [opened, synchronize, reopened, closed]
     branches: 
       - "main"
       - "prodHotPush-Common"
       - "prodHotPush-BAP"
+      - "frfsProdHotPush"
   workflow_dispatch:
 
 permissions:
@@ -67,6 +69,7 @@ jobs:
           if [[ "${{ github.ref }}" == "refs/heads/main" || 
                 "${{ github.ref }}" == "refs/heads/prodHotPush-Common" || 
                 "${{ github.ref }}" == "refs/heads/prodHotPush-BAP" || 
+                "${{ github.ref }}" == "refs/heads/frfsProdHotPush" || 
                 "${{ github.event.pull_request.merged }}" == "true" ]]; then
             echo "should_push_docker=true" >> $GITHUB_OUTPUT
           else
