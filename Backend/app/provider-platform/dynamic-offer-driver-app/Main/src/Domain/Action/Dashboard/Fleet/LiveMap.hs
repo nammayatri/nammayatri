@@ -27,7 +27,9 @@ import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import SharedLogic.Merchant (findMerchantByShortId)
 import SharedLogic.WMB (getDriverCurrentLocation)
 import qualified Storage.Clickhouse.Booking as CHB
-import Storage.Queries.DriverInformationExtra (findByIdAndVerified)
+import Storage.Queries.DriverInformationExtra (findAllByDriverIds)
+import Storage.Queries.DriverOperatorAssociationExtra (findAllActiveDriverIdByOperatorId)
+import Storage.Queries.FleetDriverAssociationExtra (findAllActiveDriverIdByFleetOwnerId)
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QR
 import qualified Storage.Queries.Vehicle as QV
@@ -44,14 +46,20 @@ getLiveMapDrivers ::
 getLiveMapDrivers merchantShortId _opCity requestorId mbFleetOwnerId mbDriverIdForRadius req = do
   requestedPerson <- QP.findById (ID.Id requestorId) >>= fromMaybeM (PersonDoesNotExist requestorId)
   (entityRole, entityId) <- validateRequestorRoleAndGetEntityId requestedPerson mbFleetOwnerId
+  driverIdAssocWithEntityIdLs <- case entityRole of
+    DP.FLEET_OWNER -> findAllActiveDriverIdByFleetOwnerId entityId
+    DP.OPERATOR -> findAllActiveDriverIdByOperatorId entityId
+    _ -> throwError (InvalidRequest "Invalid Data")
   merchant <- findMerchantByShortId merchantShortId
   latLong <- maybe (pure req.point) (getDriverCurrentLocation . ID.cast) mbDriverIdForRadius
-  nearbyDriverLocations <- LF.nearBy latLong.lat latLong.lon Nothing (Just autoTypeLs) req.radius merchant.id (Just entityId)
-  mbPositionAndDriverInfoLs <- forM nearbyDriverLocations $
+  nearbyDriverLocations <- LF.nearBy latLong.lat latLong.lon Nothing (Just autoTypeLs) req.radius merchant.id Nothing
+  let filtredNearbyDriverLocations = filter (\location -> location.driverId `elem` driverIdAssocWithEntityIdLs) nearbyDriverLocations
+  driverInfoList <- findAllByDriverIds $ (.driverId.getId) <$> filtredNearbyDriverLocations
+  mbPositionAndDriverInfoLs <- forM filtredNearbyDriverLocations $
     \location -> do
       let mbRideId = (.rideId) <$> location.rideDetails
           position = LatLong location.lat location.lon
-      mbDriverInfo <- findByIdAndVerified location.driverId Nothing
+          mbDriverInfo = find (\di -> di.driverId == location.driverId) driverInfoList
       pure $ (mbRideId,position,) <$> mbDriverInfo
   fmap catMaybes . forM mbPositionAndDriverInfoLs . maybe (pure Nothing) $ case entityRole of
     DP.FLEET_OWNER -> buildFleetMapDriverInfo
