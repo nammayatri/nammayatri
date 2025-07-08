@@ -55,7 +55,7 @@ executeRouteStopTimeTableQuery integratedBPPConfig vars = do
         GtfsGraphQLRequest
           { query = pack (__query query),
             variables = Just (toJSON vars),
-            operation_name = Nothing,
+            operation_name = Just (pack (show (__name query))),
             city = Just integratedBPPConfig.merchantOperatingCityId.getId
           }
   result <- postGtfsGraphQL baseUrl request'
