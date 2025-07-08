@@ -10,6 +10,7 @@ where
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverRegistration as Common
 import AWS.S3 as S3
 import qualified "dashboard-helper-api" Dashboard.Common.MediaFileDocument as CommonMFD
+import Data.Either (isRight)
 import qualified Data.Text as T
 import Data.Time.Format.ISO8601 (iso8601Show)
 import qualified Domain.Types.Common as DCommon
@@ -300,14 +301,18 @@ mediaFileDocumentComplete Job {id, jobInfo, merchantId = mbMerchantId, merchantO
         Right s3ObjectStatus -> do
           case mediaFileDocument.status of
             status | status `elem` [DMFD.CONFIRMED, DMFD.COMPLETED] -> do
-              let fileHash = eTagToHash s3ObjectStatus.entityTag
-              if Just fileHash == mediaFileDocument.fileHash
-                then QMFD.updateStatusAndResetUploadLink DMFD.COMPLETED mediaFileDocument.id
-                else cleanMediaFileDocument mediaFileDocument "File was overwritten but not confirmed"
+              let isFileHashValid = Just (eTagToHash s3ObjectStatus.entityTag) == mediaFileDocument.fileHash
+              isFileSizeValid <- isRight <$> checkVideoFileSize mbMerchantOpCityId s3ObjectStatus.fileSizeInBytes mediaFileDocument.id
+              case (isFileHashValid, isFileSizeValid) of
+                (True, True) -> QMFD.updateStatusAndResetUploadLink DMFD.COMPLETED mediaFileDocument.id
+                (False, _) -> cleanMediaFileDocument mediaFileDocument "File was overwritten but not confirmed"
+                (_, False) -> cleanMediaFileDocument mediaFileDocument "File size exceeds maximum limit"
             DMFD.PENDING -> do
-              checkVideoFileSize mbMerchantOpCityId s3ObjectStatus.fileSizeInBytes mediaFileDocument.id >>= \case
-                Right () -> QMFD.updateStatusAndResetUploadLink DMFD.COMPLETED mediaFileDocument.id
-                Left _errMessage -> cleanMediaFileDocument mediaFileDocument "File size exceeds maximum limit"
+              -- fileHash check is not required if file was not confirmed by user
+              isFileSizeValid <- isRight <$> checkVideoFileSize mbMerchantOpCityId s3ObjectStatus.fileSizeInBytes mediaFileDocument.id
+              if isFileSizeValid
+                then QMFD.updateStatusAndResetUploadLink DMFD.COMPLETED mediaFileDocument.id
+                else cleanMediaFileDocument mediaFileDocument "File size exceeds maximum limit"
             _ -> cleanMediaFileDocument mediaFileDocument "Document was not confirmed"
         Left (err :: SomeException) -> cleanMediaFileDocument mediaFileDocument $ "File was not found: err: " <> show err
     cleanMediaFileDocument mediaFileDocument message = do
