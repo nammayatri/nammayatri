@@ -230,20 +230,38 @@ newtype BookingListResV2 = BookingListResV2
 data BookingAPIEntityV2 = Ride SRB.BookingAPIEntity | MultiModalRide APITypes.JourneyInfoResp
   deriving (Generic, FromJSON, ToJSON, ToSchema)
 
-bookingListV2 :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> [SRB.BookingStatus] -> [DJ.JourneyStatus] -> Maybe Bool -> Flow BookingListResV2
-bookingListV2 (personId, merchantId) mbLimit mbOffset mbFromDate' mbToDate' mbBookingStatusList mbJourneyStatusList mbIsPaymentSuccess = do
-  (rbList, allbookings) <- getBookingList (personId, merchantId) mbLimit mbOffset Nothing Nothing Nothing mbFromDate' mbToDate' mbBookingStatusList
-  allJourneys <- getJourneyList personId mbLimit mbOffset mbFromDate' mbToDate' mbJourneyStatusList mbIsPaymentSuccess
-  apiEntity <- buildApiEntityForRideOrJourney personId mbLimit rbList allJourneys
-  clearStuckRides allbookings rbList
+bookingListV2 :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> [SRB.BookingStatus] -> [DJ.JourneyStatus] -> Maybe Bool -> Maybe SRB.BookingRequestType -> Flow BookingListResV2
+bookingListV2 (personId, merchantId) mbLimit mbOffset mbFromDate' mbToDate' mbBookingStatusList mbJourneyStatusList mbIsPaymentSuccess mbBookingRequestType = do
+  apiEntity <- case mbBookingRequestType of
+    Just SRB.BookingRequest -> do
+      (rbList, allbookings) <- getBookingList (personId, merchantId) mbLimit mbOffset Nothing Nothing Nothing mbFromDate' mbToDate' mbBookingStatusList
+      clearStuckRides (Just allbookings) rbList
+      buildApiEntityForRideOrJourney personId mbLimit rbList []
+    Just SRB.JourneyRequest -> do
+      allJourneys <- getJourneyList personId mbLimit mbOffset mbFromDate' mbToDate' mbJourneyStatusList mbIsPaymentSuccess
+      clearStuckRides Nothing []
+      buildApiEntityForRideOrJourney personId mbLimit [] allJourneys
+    _ -> do
+      (rbList, allbookings) <- getBookingList (personId, merchantId) mbLimit mbOffset Nothing Nothing Nothing mbFromDate' mbToDate' mbBookingStatusList
+      allJourneys <- getJourneyList personId mbLimit mbOffset mbFromDate' mbToDate' mbJourneyStatusList mbIsPaymentSuccess
+      clearStuckRides (Just allbookings) rbList
+      buildApiEntityForRideOrJourney personId mbLimit rbList allJourneys
   pure $
     BookingListResV2
       { list = apiEntity
       }
   where
-    clearStuckRides allbookings rbList = do
-      fork "booking list status update" $ checkBookingsForStatus allbookings
-      logInfo $ "rbList: test " <> show rbList
+    clearStuckRides mbAllbookings rbList = do
+      case mbAllbookings of
+        Just allbookings -> do
+          fork "booking list status update" $ checkBookingsForStatus allbookings
+          logInfo $ "rbList: test " <> show rbList
+        Nothing -> do
+          fork "booking list status update" $ do
+            -- Fetching Bookings in Fork for stuck booking case
+            (rbList_, allbookings_) <- getBookingList (personId, merchantId) mbLimit mbOffset Nothing Nothing Nothing mbFromDate' mbToDate' mbBookingStatusList
+            checkBookingsForStatus allbookings_
+            logInfo $ "rbList: test " <> show rbList_
 
 buildApiEntityForRideOrJourney :: Id Person.Person -> Maybe Integer -> [SRB.Booking] -> [DJ.Journey] -> Flow [BookingAPIEntityV2]
 buildApiEntityForRideOrJourney personId mbLimit bookings journeys =
