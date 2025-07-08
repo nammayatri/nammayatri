@@ -13,6 +13,7 @@ import qualified Tools.Beam.UtilsTH
 
 data VendorSplitDetails = VendorSplitDetails
   { id :: Kernel.Types.Id.Id Domain.Types.VendorSplitDetails.VendorSplitDetails,
+    includeInSplit :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     integratedBPPConfigId :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
     splitType :: Domain.Types.VendorSplitDetails.SplitType,
     vendorId :: Data.Text.Text,
@@ -24,4 +25,4 @@ data VendorSplitDetails = VendorSplitDetails
 
 data SplitType = FIXED | FLEXIBLE deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SplitType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SplitType)

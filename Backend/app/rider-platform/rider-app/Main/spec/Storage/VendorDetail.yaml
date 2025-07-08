@@ -14,6 +14,7 @@ VendorSplitDetails:
     integratedBPPConfigId : Id IntegratedBPPConfig
     vendorId : Text
     splitType : SplitType
+    includeInSplit : Maybe Bool
 
   constraints:
     id: PrimaryKey

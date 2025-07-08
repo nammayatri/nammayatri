@@ -105,8 +105,12 @@ convertVendorDetails ::
   m [Payment.VendorSplitDetails]
 convertVendorDetails vendorDetails bookings = do
   let vendorDetailsMap = Map.fromList [(vd.integratedBPPConfigId, vd) | vd <- vendorDetails]
+      requiredVendors = filter (\vd -> fromMaybe False vd.includeInSplit) vendorDetails
       validVendorSplitDetails = mapMaybe (createVendorSplitForBooking vendorDetailsMap) bookings
-  return validVendorSplitDetails
+      finalSplits =
+        ensureAllRequiredVendorsExist requiredVendors validVendorSplitDetails
+  logInfo $ "finalSplits" <> show finalSplits
+  return finalSplits
   where
     createVendorSplitForBooking vendorDetailsMap booking = do
       case Map.lookup booking.integratedBppConfigId vendorDetailsMap of
@@ -119,6 +123,22 @@ convertVendorDetails vendorDetails bookings = do
           splitType = vendorSplitDetailSplitTypeToPaymentSplitType vd.splitType,
           vendorId = vd.vendorId,
           ticketId = Just $ booking.id.getId
+        }
+
+    ensureAllRequiredVendorsExist :: [VendorSplitDetails.VendorSplitDetails] -> [Payment.VendorSplitDetails] -> [Payment.VendorSplitDetails]
+    ensureAllRequiredVendorsExist requiredVendors existingVendorSplits =
+      let existingVendorIds = map (.vendorId) existingVendorSplits
+          missingVendors = filter (\vd -> vd.vendorId `notElem` existingVendorIds) requiredVendors
+          missingVendorSplits = map createDefaultVendorSplit missingVendors
+       in existingVendorSplits ++ missingVendorSplits
+
+    createDefaultVendorSplit :: VendorSplitDetails.VendorSplitDetails -> Payment.VendorSplitDetails
+    createDefaultVendorSplit vd =
+      Payment.VendorSplitDetails
+        { splitAmount = 0,
+          splitType = vendorSplitDetailSplitTypeToPaymentSplitType vd.splitType,
+          vendorId = vd.vendorId,
+          ticketId = Nothing
         }
 
 vendorSplitDetailSplitTypeToPaymentSplitType :: VendorSplitDetails.SplitType -> Payment.SplitType

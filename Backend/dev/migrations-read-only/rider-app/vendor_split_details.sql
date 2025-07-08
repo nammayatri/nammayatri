@@ -8,3 +8,9 @@ ALTER TABLE atlas_app.vendor_split_details ADD COLUMN merchant_operating_city_id
 ALTER TABLE atlas_app.vendor_split_details ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.vendor_split_details ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.vendor_split_details ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.vendor_split_details ADD COLUMN include_in_split boolean ;
