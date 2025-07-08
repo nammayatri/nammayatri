@@ -65,6 +65,7 @@ import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.NyRegularInstanceLog as QNyRegularInstanceLog
 import qualified Storage.Queries.NyRegularSubscription as QNyRegularSubscription
 import qualified Storage.Queries.NyRegularSubscriptionExtra as NyRegularSubscriptionExtra
+import qualified Storage.Queries.PersonExtra as QPerson
 import Tools.Auth
 import Tools.Error
 
@@ -84,6 +85,8 @@ postNyRegularSubscriptionsCreate ::
   )
 postNyRegularSubscriptionsCreate (mPersonId, merchantId) mbClientId mbIsDashboardRequest mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice req = do
   personId <- mPersonId & fromMaybeM (PersonNotFound "Person not found")
+  person <- QPerson.findByPId personId >>= fromMaybeM (PersonNotFound personId.getId)
+  let merchantOperatingCityId = person.merchantOperatingCityId
   now <- getCurrentTime
   subscriptionId <- generateGUID
 
@@ -111,12 +114,12 @@ postNyRegularSubscriptionsCreate (mPersonId, merchantId) mbClientId mbIsDashboar
             updatedAt = now,
             metadata = Nothing,
             merchantId = Just merchantId,
-            merchantOperatingCityId = Nothing,
+            merchantOperatingCityId = Just merchantOperatingCityId,
             schedulingHash = Nothing -- Initialize with Nothing
           }
   initialHash <- calculateSubscriptionSchedulingHash newSubscription
   let subscriptionWithHash = newSubscription {NySub.schedulingHash = Just $ show initialHash}
-  void $ QNyRegularSubscription.create subscriptionWithHash
+  void $ QNyRegularSubscription.createWithLocation subscriptionWithHash
 
   let searchReq = transformToSearchReq req subscriptionId
   searchRes <-

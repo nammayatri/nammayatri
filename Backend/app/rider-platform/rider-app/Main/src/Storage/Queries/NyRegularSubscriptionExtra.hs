@@ -21,7 +21,7 @@ import Domain.Types.NyRegularSubscription
 import qualified Domain.Types.NyRegularSubscription as NySub
 import Domain.Types.Person (Person)
 import Environment (Flow)
-import EulerHS.Prelude ((<|>))
+import EulerHS.Prelude (whenNothingM_, (<|>))
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import qualified Kernel.Types.Id as Id
@@ -29,6 +29,7 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
 import qualified Sequelize as Se
 import Storage.Beam.NyRegularSubscription as Beam
 import qualified Storage.Beam.NyRegularSubscription as BeamNyReg
+import qualified Storage.Queries.Location as QL
 import Storage.Queries.OrphanInstances.NyRegularSubscription ()
 
 listSubscriptionsByFilters ::
@@ -78,3 +79,9 @@ findAllActiveAt cityId today limit =
     ]
     limit
     Nothing
+
+createWithLocation :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.NyRegularSubscription.NyRegularSubscription -> m ())
+createWithLocation subscription = do
+  whenNothingM_ (QL.findById subscription.pickupLocation.id) $ QL.create subscription.pickupLocation
+  whenNothingM_ (QL.findById subscription.dropoffLocation.id) $ QL.create subscription.dropoffLocation
+  createWithKV subscription
