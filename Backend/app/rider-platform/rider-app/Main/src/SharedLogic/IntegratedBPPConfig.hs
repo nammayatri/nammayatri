@@ -138,3 +138,11 @@ fetchAllIntegratedBPPConfigResult integratedBPPConfigs handler = do
       )
       integratedBPPConfigs
   return $ concat result
+
+findAllIntegratedBPPConfigAcrossCities ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Enums.VehicleCategory ->
+  PlatformType ->
+  m [IntegratedBPPConfig]
+findAllIntegratedBPPConfigAcrossCities vehicleCategory platformType = do
+  QIBC.findAllByPlatformAndVehicleCategory (show Spec.FRFS) vehicleCategory platformType
