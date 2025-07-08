@@ -8,12 +8,12 @@ import qualified Data.Aeson
 import qualified Data.Time
 import qualified Data.Time.Calendar
 import qualified Data.Time.LocalTime
+import qualified Domain.Types.Extra.NyRegularSubscription
 import qualified Domain.Types.NyRegularSubscription
 import qualified Domain.Types.Person
 import qualified Domain.Types.ServiceTierType
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
-import qualified Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -32,13 +32,13 @@ createMany = traverse_ create
 
 confirmSubscriptionDetailsById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Domain.Types.ServiceTierType.ServiceTierType -> Kernel.Prelude.Maybe Kernel.Types.Common.Price -> Kernel.Prelude.Maybe Data.Aeson.Value -> Kernel.Prelude.Maybe Data.Time.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Domain.Types.NyRegularSubscription.NyRegularSubscriptionStatus -> Kernel.Types.Id.Id Domain.Types.NyRegularSubscription.NyRegularSubscription -> m ())
+  (Kernel.Prelude.Maybe Domain.Types.ServiceTierType.ServiceTierType -> Kernel.Prelude.Maybe Kernel.Types.Common.Price -> Kernel.Prelude.Maybe Data.Aeson.Value -> Kernel.Prelude.Maybe Data.Time.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Domain.Types.Extra.NyRegularSubscription.NyRegularSubscriptionStatus -> Kernel.Types.Id.Id Domain.Types.NyRegularSubscription.NyRegularSubscription -> m ())
 confirmSubscriptionDetailsById vehicleServiceTier fixedPrice fixedPriceBreakupDetails fixedPriceExpiryDate initialBppQuoteId status id = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.vehicleServiceTier vehicleServiceTier,
-      Se.Set Beam.fixedPrice ((.amount) <$> fixedPrice),
-      Se.Set Beam.fixedPriceCurrency ((.currency) <$> fixedPrice),
+      Se.Set Beam.fixedPrice (((.amount) <$> fixedPrice)),
+      Se.Set Beam.fixedPriceCurrency (((.currency) <$> fixedPrice)),
       Se.Set Beam.fixedPriceBreakupDetails fixedPriceBreakupDetails,
       Se.Set Beam.fixedPriceExpiryDate fixedPriceExpiryDate,
       Se.Set Beam.initialBppQuoteId initialBppQuoteId,
@@ -52,7 +52,7 @@ findById ::
   (Kernel.Types.Id.Id Domain.Types.NyRegularSubscription.NyRegularSubscription -> m (Maybe Domain.Types.NyRegularSubscription.NyRegularSubscription))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-findByUserId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m [Domain.Types.NyRegularSubscription.NyRegularSubscription])
+findByUserId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ([Domain.Types.NyRegularSubscription.NyRegularSubscription]))
 findByUserId userId = do findAllWithKV [Se.Is Beam.userId $ Se.Eq (Kernel.Types.Id.getId userId)]
 
 updateLastProcessedAtById ::
@@ -64,7 +64,7 @@ updateLastProcessedAtById lastProcessedAt id = do
 
 updatePauseDetailsById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Data.Time.UTCTime -> Kernel.Prelude.Maybe Data.Time.UTCTime -> Domain.Types.NyRegularSubscription.NyRegularSubscriptionStatus -> Kernel.Types.Id.Id Domain.Types.NyRegularSubscription.NyRegularSubscription -> m ())
+  (Kernel.Prelude.Maybe Data.Time.UTCTime -> Kernel.Prelude.Maybe Data.Time.UTCTime -> Domain.Types.Extra.NyRegularSubscription.NyRegularSubscriptionStatus -> Kernel.Types.Id.Id Domain.Types.NyRegularSubscription.NyRegularSubscription -> m ())
 updatePauseDetailsById pauseStartDate pauseEndDate status id = do
   _now <- getCurrentTime
   updateWithKV
@@ -90,14 +90,14 @@ updateRecurrenceById recurrenceRuleDays scheduledTimeOfDay recurrenceEndDate id 
 
 updateSchedulingHashById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash -> Kernel.Types.Id.Id Domain.Types.NyRegularSubscription.NyRegularSubscription -> m ())
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.NyRegularSubscription.NyRegularSubscription -> m ())
 updateSchedulingHashById schedulingHash id = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.schedulingHash schedulingHash, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateStatusById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Domain.Types.NyRegularSubscription.NyRegularSubscriptionStatus -> Kernel.Types.Id.Id Domain.Types.NyRegularSubscription.NyRegularSubscription -> m ())
+  (Domain.Types.Extra.NyRegularSubscription.NyRegularSubscriptionStatus -> Kernel.Types.Id.Id Domain.Types.NyRegularSubscription.NyRegularSubscription -> m ())
 updateStatusById status id = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.status status, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByPrimaryKey ::
@@ -112,8 +112,8 @@ updateByPrimaryKey (Domain.Types.NyRegularSubscription.NyRegularSubscription {..
     [ Se.Set Beam.bppId bppId,
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.dropoffLocationId (Kernel.Types.Id.getId $ (.id) dropoffLocation),
-      Se.Set Beam.fixedPrice ((.amount) <$> fixedPrice),
-      Se.Set Beam.fixedPriceCurrency ((.currency) <$> fixedPrice),
+      Se.Set Beam.fixedPrice (((.amount) <$> fixedPrice)),
+      Se.Set Beam.fixedPriceCurrency (((.currency) <$> fixedPrice)),
       Se.Set Beam.fixedPriceBreakupDetails fixedPriceBreakupDetails,
       Se.Set Beam.fixedPriceExpiryDate fixedPriceExpiryDate,
       Se.Set Beam.initialBppQuoteId initialBppQuoteId,

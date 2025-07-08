@@ -119,6 +119,6 @@ createNyRegularInstanceJob executionTimeOffsetMinutes subscription = do
             { nyRegularSubscriptionId = subscription.id,
               userId = subscription.userId,
               scheduledTime = scheduledTime,
-              expectedSchedulingHash = currentHash
+              expectedSchedulingHash = show currentHash
             }
     void $ createJobIn @_ @'NyRegularInstance subscription.merchantId subscription.merchantOperatingCityId scheduleAfter (jobData :: NyRegularInstanceJobData)

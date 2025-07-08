@@ -348,11 +348,7 @@ in  { esqDBCfg
     , coreVersion = "0.9.4"
     , loggerConfig =
             common.loggerConfig
-        //  { logToConsole = False
-            , logFilePath = "/tmp/rider-app.log"
-            , logRawSql = True
-            , level = globalCommon.LogLevel.DEBUG
-            }
+        //  { logFilePath = "/tmp/rider-app.log", logRawSql = True }
     , googleTranslateUrl = common.googleTranslateUrl
     , googleTranslateKey = common.googleTranslateKey
     , internalAPIKey = sec.internalAPIKey

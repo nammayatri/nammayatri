@@ -84,6 +84,33 @@ let healthCheckAppCfg =
       , enabledMerchantCityIds
       }
 
+let kafkaClickhouseCfg =
+      { username = sec.clickHouseUsername
+      , host = "localhost"
+      , port = 8123
+      , password = sec.clickHousePassword
+      , database = "atlas_kafka"
+      , tls = False
+      , retryInterval = [ +0 ]
+      }
+
+let kafkaProducerCfg =
+      { brokers = [ "localhost:29092" ]
+      , kafkaCompression = common.kafkaCompression.LZ4
+      }
+
+let serviceClickhouseCfg =
+      { username = sec.clickHouseUsername
+      , host = "localhost"
+      , port = 8123
+      , password = sec.clickHousePassword
+      , database = "atlas_app"
+      , tls = False
+      , retryInterval = [ +0 ]
+      }
+
+let dashboardClickhouseCfg = serviceClickhouseCfg
+
 let cacConfig =
       { host = "http://localhost:8080"
       , interval = 10
@@ -119,4 +146,12 @@ in  { hedisCfg
     , kvConfigUpdateFrequency
     , healthCheckAppCfg = Some healthCheckAppCfg
     , cacConfig
+    , kafkaClickhouseCfg
+    , serviceClickhouseCfg
+    , kafkaProducerCfg
+    , kafkaReadBatchDelay = +10
+    , kafkaReadBatchSize = +10
+    , consumerStartTime = Some +14
+    , consumerEndTime = Some +20
+    , dashboardClickhouseCfg
     }

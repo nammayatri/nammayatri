@@ -13,13 +13,11 @@ imports:
   Currency: Kernel.Types.Common # Added for Price beamFields
   HighPrecMoney: Kernel.Types.Common # Added for Price beamFields
   DbHash: Kernel.External.Encryption # Added for schedulingHash
+  NyRegularSubscriptionStatus : Domain.Types.Extra.NyRegularSubscription
 
 NyRegularSubscription:
   tableName: ny_regular_subscriptions
-  derives: "Generic, Eq, Show, ToJSON, FromJSON"
-  types:
-    NyRegularSubscriptionStatus:
-      enum: "NEW,ACTIVE,PAUSED,CANCELLED,EXPIRED"
+  derives: "Generic, Eq, Show, ToJSON, FromJSON, ToSchema"
 
   fields:
     id: Id NyRegularSubscription
@@ -43,7 +41,7 @@ NyRegularSubscription:
     updatedAt: UTCTime
     metadata: Maybe Value
     lastProcessedAt: Maybe UTCTime
-    schedulingHash: Maybe DbHash # Added new field
+    schedulingHash: Maybe Text # Added new field
 
   beamFields:
     pickupLocation:
@@ -73,7 +71,6 @@ NyRegularSubscription:
     metadata: json
     status: text
     vehicleServiceTier: text
-    schedulingHash: text # Added new field SQL type
 
   default:
     status: "'NEW'"

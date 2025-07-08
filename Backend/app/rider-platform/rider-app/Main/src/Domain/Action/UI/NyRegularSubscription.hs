@@ -72,13 +72,13 @@ postNyRegularSubscriptionsCreate ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Client.Client)) ->
+    Kernel.Prelude.Maybe Data.Text.Text ->
     Kernel.Prelude.Maybe (Kernel.Prelude.Bool) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Maybe Kernel.Types.Version.Version) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Maybe Kernel.Types.Version.Version) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Maybe Kernel.Types.Version.Version) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Maybe Data.Text.Text) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Maybe Data.Text.Text) ->
+    Kernel.Prelude.Maybe (Kernel.Types.Version.Version) ->
+    Kernel.Prelude.Maybe (Kernel.Types.Version.Version) ->
+    Kernel.Prelude.Maybe (Kernel.Types.Version.Version) ->
+    Kernel.Prelude.Maybe (Data.Text.Text) ->
+    Kernel.Prelude.Maybe (Data.Text.Text) ->
     API.Types.UI.NyRegularSubscription.CreateSubscriptionReq ->
     Flow API.Types.UI.NyRegularSubscription.CreateSubscriptionRes
   )
@@ -115,7 +115,7 @@ postNyRegularSubscriptionsCreate (mPersonId, merchantId) mbClientId mbIsDashboar
             schedulingHash = Nothing -- Initialize with Nothing
           }
   initialHash <- calculateSubscriptionSchedulingHash newSubscription
-  let subscriptionWithHash = newSubscription {NySub.schedulingHash = Just initialHash}
+  let subscriptionWithHash = newSubscription {NySub.schedulingHash = Just $ show initialHash}
   void $ QNyRegularSubscription.create subscriptionWithHash
 
   let searchReq = transformToSearchReq req subscriptionId
@@ -123,12 +123,12 @@ postNyRegularSubscriptionsCreate (mPersonId, merchantId) mbClientId mbIsDashboar
     Search.search
       personId
       searchReq
-      (join mbBundleVersion)
-      (join mbClientVersion)
-      (join mbClientConfigVersion)
-      (join mbRnVersion)
-      (join mbClientId)
-      (join mbDevice)
+      mbBundleVersion
+      mbClientVersion
+      mbClientConfigVersion
+      mbRnVersion
+      (Kernel.Types.Id.Id <$> mbClientId)
+      mbDevice
       (fromMaybe False mbIsDashboardRequest)
       Nothing
       False
@@ -265,7 +265,7 @@ postNyRegularSubscriptionsConfirm (mPersonId, merchantId) req = do
                 { nyRegularSubscriptionId = updatedSubscription.id,
                   userId = updatedSubscription.userId,
                   scheduledTime = jobScheduledTime,
-                  expectedSchedulingHash = currentHash
+                  expectedSchedulingHash = show currentHash
                 }
 
         -- Log before creating job
@@ -373,9 +373,9 @@ postNyRegularSubscriptionsUpdate (mPersonId, _) req = do
   QNyRegularSubscription.updateByPrimaryKey updatedSubscriptionInterim
 
   newSchedulingHash <- calculateSubscriptionSchedulingHash updatedSubscriptionInterim
-  QNyRegularSubscription.updateSchedulingHashById (Just newSchedulingHash) subscriptionIdToUpdate
+  QNyRegularSubscription.updateSchedulingHashById (Just $ show newSchedulingHash) subscriptionIdToUpdate
 
-  let finalUpdatedSubscription = updatedSubscriptionInterim {NySub.schedulingHash = Just newSchedulingHash}
+  let finalUpdatedSubscription = updatedSubscriptionInterim {NySub.schedulingHash = Just $ show newSchedulingHash}
 
   let significantChange = didSchedulingParametersChange currentSubscription finalUpdatedSubscription
 
@@ -458,17 +458,17 @@ getNyRegularSubscriptions ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Maybe Domain.Types.NyRegularSubscription.NyRegularSubscriptionStatus) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Maybe Kernel.Prelude.Int) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Maybe Kernel.Prelude.Int) ->
+    Kernel.Prelude.Maybe (Domain.Types.NyRegularSubscription.NyRegularSubscriptionStatus) ->
+    Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
+    Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
     Environment.Flow [Domain.Types.NyRegularSubscription.NyRegularSubscription]
   )
 getNyRegularSubscriptions (mPersonId, _) mmStatus mmLimit mmOffset = do
   personId <- mPersonId & fromMaybeM (PersonNotFound "Person not found in token")
 
-  let finalStatus = join mmStatus -- Flatten Maybe (Maybe Status) to Maybe Status
-      finalLimit = join mmLimit -- Flatten Maybe (Maybe Int) to Maybe Int
-      finalOffsetRaw = join mmOffset -- Flatten Maybe (Maybe Int) to Maybe Int - This was the type error source
+  let finalStatus = mmStatus -- Flatten Maybe (Maybe Status) to Maybe Status
+      finalLimit = mmLimit -- Flatten Maybe (Maybe Int) to Maybe Int
+      finalOffsetRaw = mmOffset -- Flatten Maybe (Maybe Int) to Maybe Int - This was the type error source
       finalOffset = fmap fromIntegral finalOffsetRaw -- Corrected: Convert Maybe Int to Maybe Integer
   NyRegularSubscriptionExtra.listSubscriptionsByFilters personId finalStatus finalLimit finalOffset
 

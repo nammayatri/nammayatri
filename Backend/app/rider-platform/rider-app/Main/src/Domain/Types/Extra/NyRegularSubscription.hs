@@ -14,7 +14,9 @@ import Data.OpenApi (NamedSchema (..), OpenApiType (OpenApiString), ToSchema (..
 -- Make sure DayOfWeek constructors (Monday..) are in scope
 import qualified Data.Text as T -- For T.pack
 import Data.Time.Calendar (DayOfWeek (..))
+import Kernel.Beam.Lib.UtilsTH
 import Kernel.Prelude
+import Servant.API (FromHttpApiData (..))
 
 -- If Kernel.Prelude doesn't export some basics like show, map:
 -- import Prelude (show, map, Maybe(..), ($), (.), pure, mempty)
@@ -28,3 +30,10 @@ instance ToSchema DayOfWeek where
         mempty
           & type_ ?~ OpenApiString
           & enum_ ?~ (map (Data.Aeson.String . T.pack . show) [Monday .. Sunday])
+
+data NyRegularSubscriptionStatus = NEW | ACTIVE | PAUSED | CANCELLED | EXPIRED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+instance FromHttpApiData NyRegularSubscriptionStatus where
+  parseUrlPiece = pure . read . T.unpack
+
+$(mkBeamInstancesForEnumAndList ''NyRegularSubscriptionStatus)

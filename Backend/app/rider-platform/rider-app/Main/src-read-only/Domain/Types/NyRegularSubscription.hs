@@ -9,12 +9,12 @@ import qualified Data.Time
 import qualified Data.Time.Calendar
 import qualified Data.Time.LocalTime
 import Domain.Types.Extra.NyRegularSubscription as ReExport
+import qualified Domain.Types.Extra.NyRegularSubscription
 import qualified Domain.Types.Location
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Domain.Types.ServiceTierType
-import qualified Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -37,17 +37,13 @@ data NyRegularSubscription = NyRegularSubscription
     recurrenceEndDate :: Kernel.Prelude.Maybe Data.Time.Calendar.Day,
     recurrenceRuleDays :: [Data.Time.Calendar.DayOfWeek],
     scheduledTimeOfDay :: Data.Time.LocalTime.TimeOfDay,
-    schedulingHash :: Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash,
+    schedulingHash :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     startDatetime :: Data.Time.UTCTime,
-    status :: Domain.Types.NyRegularSubscription.NyRegularSubscriptionStatus,
+    status :: Domain.Types.Extra.NyRegularSubscription.NyRegularSubscriptionStatus,
     updatedAt :: Data.Time.UTCTime,
     userId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     vehicleServiceTier :: Kernel.Prelude.Maybe Domain.Types.ServiceTierType.ServiceTierType,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity)
   }
-  deriving (Generic, Eq, Show, ToJSON, FromJSON)
-
-data NyRegularSubscriptionStatus = NEW | ACTIVE | PAUSED | CANCELLED | EXPIRED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
-
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''NyRegularSubscriptionStatus)
+  deriving (Generic, (Eq), (Show), (ToJSON), (FromJSON), (ToSchema))
