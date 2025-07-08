@@ -1,6 +1,5 @@
 module SharedLogic.External.Nandi.API.Nandi where
 
-import Data.Aeson
 import qualified EulerHS.Types as ET
 import Kernel.Prelude
 import Servant
@@ -27,8 +26,6 @@ type VehicleServiceTypeAPI = "vehicle" :> Capture "vehicle_number" Text :> "serv
 type StopChildrenAPI = "station-children" :> Capture "gtfs_id" Text :> Capture "stop_code" Text :> Get '[JSON] [Text]
 
 type GtfsVersionAPI = "version" :> Capture "gtfs_id" Text :> Get '[JSON] Text
-
-type GtfsGraphQLAPI = "graphql" :> ReqBody '[JSON] GtfsGraphQLRequest :> Post '[JSON] Value
 
 nandiGetRouteStopMappingByRouteIdAPI :: Proxy RouteStopMappingByRouteIdAPI
 nandiGetRouteStopMappingByRouteIdAPI = Proxy
@@ -63,9 +60,6 @@ nandiStopChildrenAPI = Proxy
 nandiGtfsVersionAPI :: Proxy GtfsVersionAPI
 nandiGtfsVersionAPI = Proxy
 
-nandiGtfsGraphQLAPI :: Proxy GtfsGraphQLAPI
-nandiGtfsGraphQLAPI = Proxy
-
 getNandiGetRouteStopMappingByRouteId :: Text -> Text -> ET.EulerClient [RouteStopMappingInMemoryServer]
 getNandiGetRouteStopMappingByRouteId = ET.client nandiGetRouteStopMappingByRouteIdAPI
 
@@ -98,6 +92,3 @@ getNandiStopChildren = ET.client nandiStopChildrenAPI
 
 getNandiGtfsVersion :: Text -> ET.EulerClient Text
 getNandiGtfsVersion = ET.client nandiGtfsVersionAPI
-
-postNandiGtfsGraphQL :: GtfsGraphQLRequest -> ET.EulerClient Value
-postNandiGtfsGraphQL = ET.client nandiGtfsGraphQLAPI

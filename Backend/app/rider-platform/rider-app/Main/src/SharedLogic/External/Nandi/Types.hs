@@ -102,10 +102,3 @@ data RouteStopMappingNandi = RouteStopMappingNandi
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
-
-data GtfsGraphQLRequest = GtfsGraphQLRequest
-  { query :: Text,
-    variables :: Maybe Value,
-    operation_name :: Maybe Text
-  }
-  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
