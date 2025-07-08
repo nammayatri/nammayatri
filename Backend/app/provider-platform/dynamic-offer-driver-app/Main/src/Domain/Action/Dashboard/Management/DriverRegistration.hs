@@ -26,6 +26,7 @@ module Domain.Action.Dashboard.Management.DriverRegistration
     getDriverRegistrationDocumentsInfo,
     postDriverRegistrationDocumentsUpdate,
     postDriverRegistrationRegisterAadhaar,
+    getDriverRegistrationRcVerificationStatus,
   )
 where
 
@@ -47,6 +48,7 @@ import qualified Domain.Types.Common as DCommon
 import qualified Domain.Types.DocumentVerificationConfig as Domain
 import qualified Domain.Types.DriverLicense as DDL
 import qualified Domain.Types.DriverPanCard as DPan
+import qualified Domain.Types.HyperVergeVerification as DHVV
 import qualified Domain.Types.MediaFileDocument as DMFD
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -77,6 +79,7 @@ import qualified Storage.Queries.BusinessLicense as QBL
 import qualified Storage.Queries.DriverLicense as QDL
 import qualified Storage.Queries.DriverPanCard as QPan
 import qualified Storage.Queries.DriverSSN as QSSN
+import qualified Storage.Queries.HyperVergeVerification as QHV
 import Storage.Queries.Image as QImage
 import qualified Storage.Queries.MediaFileDocument as QMFD
 import qualified Storage.Queries.Person as QDriver
@@ -879,3 +882,24 @@ convertVerifyOtp AadhaarVerificationResp {..} = Common.GenerateAadhaarOtpRes {..
 
 convertSubmitOtp :: AadhaarOtpVerifyRes -> Common.VerifyAadhaarOtpRes
 convertSubmitOtp AadhaarOtpVerifyRes {..} = Common.VerifyAadhaarOtpRes {..}
+
+getDriverRegistrationRcVerificationStatus :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow Common.VerificationStatusListResponse
+getDriverRegistrationRcVerificationStatus _merchantShortId _opCity driverId = do
+  rcVerificationRequests <- QHV.findAllByDriverIdAndDocType (cast driverId) Domain.VehicleRegistrationCertificate
+  case rcVerificationRequests of
+    [] -> pure Common.VerificationStatusListResponse {rcverificationStatus = []}
+    _ -> do
+      rcStatusObjects <- mapM convertToRcStatusObject rcVerificationRequests
+      pure Common.VerificationStatusListResponse {rcverificationStatus = rcStatusObjects}
+  where
+    convertToRcStatusObject :: DHVV.HyperVergeVerification -> Flow Common.RcStatusObject
+    convertToRcStatusObject hyperVergeRequest = do
+      image <- QImage.findById hyperVergeRequest.documentImageId1 >>= fromMaybeM (InternalError "Image not found")
+      pure
+        Common.RcStatusObject
+          { status = hyperVergeRequest.status,
+            createdAt = hyperVergeRequest.createdAt,
+            updatedAt = hyperVergeRequest.updatedAt,
+            imageId = cast hyperVergeRequest.documentImageId1,
+            imageUrl = image.s3Path
+          }
