@@ -17,6 +17,8 @@ module Domain.Action.Dashboard.Management.DriverRegistration
     getDriverRegistrationGetDocument,
     postDriverRegistrationDocumentUpload,
     postDriverRegistrationMediaFileDocumentUploadLink,
+    postDriverRegistrationMediaFileDocumentConfirm,
+    postDriverRegistrationMediaFileDocumentDelete,
     getDriverRegistrationMediaFileDocumentDownloadLink,
     postDriverRegistrationRegisterDl,
     postDriverRegistrationRegisterRc,
@@ -31,10 +33,7 @@ where
 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverRegistration as Common
 import qualified API.Types.UI.DriverOnboardingV2
-import AWS.S3 as S3
 import qualified Data.HashMap.Strict as HM
-import qualified Data.Text as T
-import Data.Time.Format.ISO8601 (iso8601Show)
 import qualified Data.Tuple.Extra as TE
 import qualified Domain.Action.Dashboard.Management.Driver as DDriver
 import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as AV
@@ -43,14 +42,11 @@ import Domain.Action.UI.DriverOnboarding.Image
 import Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
 import qualified Domain.Action.UI.DriverOnboardingV2 as DOV
 import qualified Domain.Types.BusinessLicense as DBL
-import qualified Domain.Types.Common as DCommon
 import qualified Domain.Types.DocumentVerificationConfig as Domain
 import qualified Domain.Types.DriverLicense as DDL
 import qualified Domain.Types.DriverPanCard as DPan
-import qualified Domain.Types.MediaFileDocument as DMFD
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
-import qualified Domain.Types.Person as DP
 import qualified Domain.Types.VehicleFitnessCertificate as DFC
 import qualified Domain.Types.VehicleInsurance as DVI
 import qualified Domain.Types.VehicleNOC as DNOC
@@ -58,7 +54,7 @@ import qualified Domain.Types.VehiclePUC as DPUC
 import qualified Domain.Types.VehiclePermit as DVPermit
 import qualified Domain.Types.VehicleRegistrationCertificate as DRC
 import Environment
-import EulerHS.Prelude hiding (find, foldl', map, whenJust)
+import EulerHS.Prelude hiding (elem, find, foldl', map, whenJust)
 import Kernel.Beam.Functions
 import Kernel.External.AadhaarVerification.Interface.Types
 import Kernel.External.Encryption (decrypt, encrypt, hash)
@@ -70,6 +66,7 @@ import Kernel.Types.Documents
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.MediaFileDocument as SMFD
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.Cac.TransporterConfig as CCT
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -78,7 +75,6 @@ import qualified Storage.Queries.DriverLicense as QDL
 import qualified Storage.Queries.DriverPanCard as QPan
 import qualified Storage.Queries.DriverSSN as QSSN
 import Storage.Queries.Image as QImage
-import qualified Storage.Queries.MediaFileDocument as QMFD
 import qualified Storage.Queries.Person as QDriver
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.VehicleFitnessCertificate as QFC
@@ -272,83 +268,23 @@ postDriverRegistrationMediaFileDocumentUploadLink ::
   Text ->
   Common.UploadMediaFileDocumentReq ->
   Flow Common.MediaFileDocumentResp
-postDriverRegistrationMediaFileDocumentUploadLink merchantShortId opCity requestorId req = do
-  merchant <- findMerchantByShortId merchantShortId
-  merchantOpCity <- CQMOC.getMerchantOpCity merchant (Just opCity)
-  fileExtension <- validateContentType
-  rc <- QRC.findLastVehicleRCWrapper req.rcNumber >>= fromMaybeM (RCNotFound req.rcNumber)
-  let mediaFileDocumentType = castMediaFileDocumentType req.mediaFileDocumentType
-  mbExistingMediaFile <- QMFD.findOneByMerchantOpCityIdAndRcIdAndType merchantOpCity.id rc.id mediaFileDocumentType
-  whenJust mbExistingMediaFile \_ -> throwError (InvalidRequest $ "MediaFileDocument already exists")
+postDriverRegistrationMediaFileDocumentUploadLink = SMFD.mediaFileDocumentUploadLink
 
-  mediaPath <- createMediaPathByRcId merchantOpCity.id rc.id mediaFileDocumentType fileExtension
-  mediaFileLink <- S3.generateUploadUrl (T.unpack mediaPath) merchant.mediaFileDocumentLinkExpires
-
-  mediaFileDocument <- buildMediaFileDocument merchantOpCity (Id @DP.Person requestorId) mediaPath rc.id req
-  QMFD.create mediaFileDocument
-
-  pure $ Common.MediaFileDocumentResp {mediaFileLink}
-  where
-    validateContentType = do
-      case req.fileType of
-        S3.Video -> case req.reqContentType of
-          "video/mp4" -> pure "mp4"
-          "video/x-msvideo" -> pure "avi"
-          "video/mpeg" -> pure "mpeg"
-          _ -> throwError $ FileFormatNotSupported req.reqContentType
-        _ -> throwError $ FileFormatNotSupported req.reqContentType
-
-castMediaFileDocumentType :: Common.MediaFileDocumentType -> DCommon.MediaFileDocumentType
-castMediaFileDocumentType = \case
-  Common.VehicleVideo -> DCommon.VehicleVideo
-
-createMediaPathByRcId ::
-  (MonadTime m, MonadReader r m, HasField "s3Env" r (S3Env m)) =>
-  Id DMOC.MerchantOperatingCity ->
-  Id DRC.VehicleRegistrationCertificate ->
-  DCommon.MediaFileDocumentType ->
+postDriverRegistrationMediaFileDocumentConfirm ::
+  ShortId DM.Merchant ->
+  Context.City ->
   Text ->
-  m Text
-createMediaPathByRcId merchantOpCityId rcId mediaFileDocumentType extension = do
-  pathPrefix <- asks (.s3Env.pathPrefix)
-  now <- getCurrentTime
-  let fileName = T.replace (T.singleton ':') (T.singleton '-') (T.pack $ iso8601Show now)
-  return
-    ( pathPrefix <> "/driver-onboarding/mocId-" <> merchantOpCityId.getId
-        <> "/rcId-"
-        <> rcId.getId
-        <> "/media/"
-        <> show mediaFileDocumentType
-        <> "/"
-        <> fileName
-        <> "."
-        <> extension
-    )
+  Common.MediaFileDocumentReq ->
+  Flow APISuccess
+postDriverRegistrationMediaFileDocumentConfirm = SMFD.mediaFileDocumentConfirm
 
-buildMediaFileDocument ::
-  MonadFlow m =>
-  DMOC.MerchantOperatingCity ->
-  Id DP.Person ->
+postDriverRegistrationMediaFileDocumentDelete ::
+  ShortId DM.Merchant ->
+  Context.City ->
   Text ->
-  Id DRC.VehicleRegistrationCertificate ->
-  Common.UploadMediaFileDocumentReq ->
-  m DMFD.MediaFileDocument
-buildMediaFileDocument merchantOpCity creatorId s3Path rcId Common.UploadMediaFileDocumentReq {..} = do
-  uuid <- generateGUID
-  now <- getCurrentTime
-  pure
-    DMFD.MediaFileDocument
-      { id = Id uuid,
-        creatorId,
-        mediaFileDocumentType = castMediaFileDocumentType mediaFileDocumentType,
-        merchantId = merchantOpCity.merchantId,
-        merchantOperatingCityId = merchantOpCity.id,
-        rcId,
-        s3Path,
-        status = DMFD.CONFIRMED,
-        createdAt = now,
-        updatedAt = now
-      }
+  Common.MediaFileDocumentReq ->
+  Flow APISuccess
+postDriverRegistrationMediaFileDocumentDelete = SMFD.mediaFileDocumentDelete
 
 getDriverRegistrationMediaFileDocumentDownloadLink ::
   ShortId DM.Merchant ->
@@ -357,14 +293,7 @@ getDriverRegistrationMediaFileDocumentDownloadLink ::
   Text ->
   Text ->
   Flow Common.MediaFileDocumentResp
-getDriverRegistrationMediaFileDocumentDownloadLink merchantShortId opCity mediaFileDocumentType' rcNumber _requestorId = do
-  merchant <- findMerchantByShortId merchantShortId
-  merchantOpCity <- CQMOC.getMerchantOpCity merchant (Just opCity)
-  rc <- QRC.findLastVehicleRCWrapper rcNumber >>= fromMaybeM (RCNotFound rcNumber)
-  let mediaFileDocumentType = castMediaFileDocumentType mediaFileDocumentType'
-  mediaFileDocument <- QMFD.findOneByMerchantOpCityIdAndRcIdAndType merchantOpCity.id rc.id mediaFileDocumentType >>= fromMaybeM (InvalidRequest "MediaFileDocument does not exist")
-  mediaFileLink <- S3.generateDownloadUrl (T.unpack mediaFileDocument.s3Path) merchant.mediaFileDocumentLinkExpires
-  pure $ Common.MediaFileDocumentResp {mediaFileLink}
+getDriverRegistrationMediaFileDocumentDownloadLink = SMFD.mediaFileDocumentDownloadLink
 
 postDriverRegistrationRegisterDl :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.RegisterDLReq -> Flow APISuccess
 postDriverRegistrationRegisterDl merchantShortId opCity driverId_ Common.RegisterDLReq {..} = do

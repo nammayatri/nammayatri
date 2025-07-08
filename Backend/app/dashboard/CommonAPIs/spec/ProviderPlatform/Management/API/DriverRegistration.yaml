@@ -8,6 +8,8 @@ imports:
   VehicleCategory: Dashboard.Common
   DriverVehicleDetails: Dashboard.Common
   FileType: AWS.S3
+  MediaFileDocument: Dashboard.Common.MediaFileDocument
+  MediaFileDocumentStatus: Dashboard.Common.MediaFileDocument
 
 module: DriverRegistration
 apiPrefix: driver
@@ -64,6 +66,40 @@ apis:
               - requestorId: Text
             response:
               type: MediaFileDocumentResp
+  - POST:
+      endpoint: /mediaFileDocument/confirm
+      auth: ApiAuthV2
+      request:
+        type: MediaFileDocumentReq
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /mediaFileDocument/confirm
+            auth: ApiAuthV2
+            request:
+              type: MediaFileDocumentReq
+            mandatoryQuery:
+              - requestorId: Text
+            response:
+              type: APISuccess
+  - POST:
+      endpoint: /mediaFileDocument/delete
+      auth: ApiAuthV2
+      request:
+        type: MediaFileDocumentReq
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /mediaFileDocument/delete
+            auth: ApiAuthV2
+            request:
+              type: MediaFileDocumentReq
+            mandatoryQuery:
+              - requestorId: Text
+            response:
+              type: APISuccess
   - GET:
       endpoint: /mediaFileDocument/downloadLink
       auth: ApiAuthV2
@@ -261,11 +297,15 @@ types:
     - reqContentType: Text
     - derive': "Show, Generic, ToSchema"
   MediaFileDocumentResp:
-    - recordType: NewType
-    - mediaFileLink: Text
+    - mediaFileLink: Maybe Text
+    - mediaFileDocumentId: Id MediaFileDocument
+    - mediaFileDocumentStatus: MediaFileDocumentStatus
   MediaFileDocumentType:
     - enum: "VehicleVideo"
     - derive': "Show, Generic, ToSchema, Kernel.Prelude.ToParamSchema"
+  MediaFileDocumentReq:
+    - mediaFileDocumentId: Id MediaFileDocument
+    - derive: "'HideSecrets"
   RegisterDLReq:
     - driverLicenseNumber: Text
     - operatingCity: Text

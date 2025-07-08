@@ -89,6 +89,7 @@ library
     , http-client-tls
     , http-media
     , http-types
+    , lens
     , mobility-core
     , openapi3
     , process
