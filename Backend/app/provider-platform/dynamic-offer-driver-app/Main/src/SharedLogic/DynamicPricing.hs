@@ -80,6 +80,7 @@ data DynamicPricingData = DynamicPricingData
     congestionMultiplier :: Double,
     congestionMultiplierPast :: Double,
     serviceTier :: DServiceTierType.ServiceTierType,
+    rainStatus :: Maybe Text,
     toss :: Int --,
   }
   deriving (Generic, Show, FromJSON, ToJSON)
@@ -97,5 +98,6 @@ instance Default DynamicPricingData where
         actualQARPast = 0,
         congestionMultiplier = 0,
         congestionMultiplierPast = 0,
+        rainStatus = Nothing,
         toss = 1 --,
       }
