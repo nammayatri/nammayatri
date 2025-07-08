@@ -28,6 +28,8 @@ data Station = Station
     possibleTypes :: Kernel.Prelude.Maybe [Domain.Types.StationType.StationType],
     regionalName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     suggestedDestinations :: Kernel.Prelude.Maybe [Domain.Types.StationType.SuggestedStations],
+    geoJson :: Maybe Value,
+    gates :: Maybe Value,
     timeBounds :: Kernel.Types.TimeBound.TimeBound,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory,
     createdAt :: Kernel.Prelude.UTCTime,

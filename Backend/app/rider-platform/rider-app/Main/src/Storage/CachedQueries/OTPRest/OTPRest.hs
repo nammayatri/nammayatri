@@ -206,6 +206,8 @@ parseStationsFromInMemoryServer stations integratedBPPConfig merchantId merchant
               possibleTypes = Nothing,
               regionalName = Nothing,
               suggestedDestinations = join (snd <$> HM.lookup station.stopCode stationAddressMap),
+              geoJson = station.geoJson,
+              gates = station.gates,
               timeBounds = Unbounded,
               vehicleType = station.vehicleType,
               createdAt = now,

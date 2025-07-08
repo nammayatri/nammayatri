@@ -41,10 +41,10 @@ type API =
            "x-rn-version"
            Data.Text.Text
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.NyRegularSubscription.CreateSubscriptionReq
       :> Post
-           ('[JSON])
+           '[JSON]
            API.Types.UI.NyRegularSubscription.CreateSubscriptionRes
       :<|> TokenAuth
       :> "nyRegular"
@@ -54,27 +54,27 @@ type API =
            "searchRequestId"
            Data.Text.Text
       :> Get
-           ('[JSON])
+           '[JSON]
            Domain.Action.UI.Quote.GetQuotesRes
       :<|> TokenAuth
       :> "nyRegular"
       :> "subscriptions"
       :> "confirm"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.NyRegularSubscription.ConfirmSubscriptionReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Domain.Types.NyRegularSubscription.NyRegularSubscription
       :<|> TokenAuth
       :> "nyRegular"
       :> "subscriptions"
       :> "update"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.NyRegularSubscription.UpdateSubscriptionReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Domain.Types.NyRegularSubscription.NyRegularSubscription
       :<|> TokenAuth
       :> "nyRegular"
@@ -89,7 +89,7 @@ type API =
            "offset"
            Kernel.Prelude.Int
       :> Get
-           ('[JSON])
+           '[JSON]
            [Domain.Types.NyRegularSubscription.NyRegularSubscription]
       :<|> TokenAuth
       :> "nyRegular"
@@ -98,7 +98,7 @@ type API =
            "subscriptionId"
            (Kernel.Types.Id.Id Domain.Types.NyRegularSubscription.NyRegularSubscription)
       :> Get
-           ('[JSON])
+           '[JSON]
            Domain.Types.NyRegularSubscription.NyRegularSubscription
       :<|> TokenAuth
       :> "nyRegular"
@@ -108,7 +108,7 @@ type API =
            (Kernel.Types.Id.Id Domain.Types.NyRegularSubscription.NyRegularSubscription)
       :> "cancel"
       :> Post
-           ('[JSON])
+           '[JSON]
            Domain.Types.NyRegularSubscription.NyRegularSubscription
   )
 
@@ -119,13 +119,13 @@ postNyRegularSubscriptionsCreate ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
-    Kernel.Prelude.Maybe (Data.Text.Text) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Bool) ->
-    Kernel.Prelude.Maybe (Kernel.Types.Version.Version) ->
-    Kernel.Prelude.Maybe (Kernel.Types.Version.Version) ->
-    Kernel.Prelude.Maybe (Kernel.Types.Version.Version) ->
-    Kernel.Prelude.Maybe (Data.Text.Text) ->
-    Kernel.Prelude.Maybe (Data.Text.Text) ->
+    Kernel.Prelude.Maybe Data.Text.Text ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+    Kernel.Prelude.Maybe Kernel.Types.Version.Version ->
+    Kernel.Prelude.Maybe Kernel.Types.Version.Version ->
+    Kernel.Prelude.Maybe Kernel.Types.Version.Version ->
+    Kernel.Prelude.Maybe Data.Text.Text ->
+    Kernel.Prelude.Maybe Data.Text.Text ->
     API.Types.UI.NyRegularSubscription.CreateSubscriptionReq ->
     Environment.FlowHandler API.Types.UI.NyRegularSubscription.CreateSubscriptionRes
   )
@@ -162,9 +162,9 @@ getNyRegularSubscriptions ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
-    Kernel.Prelude.Maybe (Domain.Types.NyRegularSubscription.NyRegularSubscriptionStatus) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
+    Kernel.Prelude.Maybe Domain.Types.NyRegularSubscription.NyRegularSubscriptionStatus ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
     Environment.FlowHandler [Domain.Types.NyRegularSubscription.NyRegularSubscription]
   )
 getNyRegularSubscriptions a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.NyRegularSubscription.getNyRegularSubscriptions (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1

@@ -720,6 +720,8 @@ getPublicTransportData (mbPersonId, merchantId) mbCity _mbConfigVersion = do
                               rgn = s.regionalName,
                               sgstdDest = s.suggestedDestinations,
                               hin = s.hindiName,
+                              gj = s.geoJson,
+                              gi = s.gates,
                               ibc = bppConfig.id
                             }
                       _ -> Nothing
