@@ -202,7 +202,7 @@ validateCancellation rideId rideStartTime initialDisToPickup cancellationDisToPi
   now <- getCurrentTime
 
   rideInfo <- case rideId of
-    Nothing -> throwError $ (RideNotFound "RideId is not present")
+    Nothing -> throwError $ RideNotFound "RideId is not present"
     Just rideIdText -> do
       ride <- QRide.findById (Id rideIdText) >>= fromMaybeM (RideNotFound rideIdText)
       let bookingId = ride.bookingId.getId
@@ -226,7 +226,7 @@ validateCancellation rideId rideStartTime initialDisToPickup cancellationDisToPi
         if isJust initialDisToPickup
           then
             let initialDistance = fromJust initialDisToPickup
-                progressRatio = fromIntegral timeOfCancellation / estimatedTimeToPickup
+                progressRatio = fromIntegral timeOfCancellation / max 1 estimatedTimeToPickup
                 expectedDistance = round $ fromIntegral initialDistance * progressRatio
              in Just expectedDistance
           else Nothing
