@@ -235,6 +235,7 @@ let AllocatorJobType =
       | SendWebhookToExternal
       | ScheduledFCMS
       | CheckDashCamInstallationStatus
+      | MediaFileDocumentComplete
       >
 
 let jobInfoMapx =
@@ -285,6 +286,7 @@ let jobInfoMapx =
       , { mapKey = AllocatorJobType.CheckDashCamInstallationStatus
         , mapValue = True
         }
+      , { mapKey = AllocatorJobType.MediaFileDocumentComplete, mapValue = True }
       ]
 
 let LocationTrackingeServiceConfig = { url = "http://localhost:8081/" }

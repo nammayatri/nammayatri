@@ -17,6 +17,8 @@ module Domain.Action.ProviderPlatform.Management.DriverRegistration
     getDriverRegistrationGetDocument,
     postDriverRegistrationDocumentUpload,
     postDriverRegistrationMediaFileDocumentUploadLink,
+    postDriverRegistrationMediaFileDocumentConfirm,
+    postDriverRegistrationMediaFileDocumentDelete,
     getDriverRegistrationMediaFileDocumentDownloadLink,
     postDriverRegistrationRegisterDl,
     postDriverRegistrationRegisterRc,
@@ -107,6 +109,32 @@ postDriverRegistrationMediaFileDocumentUploadLink merchantShortId opCity apiToke
   let requestorId = apiTokenInfo.personId.getId
   T.withTransactionStoring transaction $ do
     Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationMediaFileDocumentUploadLink) requestorId req
+
+postDriverRegistrationMediaFileDocumentConfirm ::
+  ShortId DM.Merchant ->
+  City.City ->
+  ApiTokenInfo ->
+  Common.MediaFileDocumentReq ->
+  Flow APISuccess
+postDriverRegistrationMediaFileDocumentConfirm merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo Nothing (Just req)
+  let requestorId = apiTokenInfo.personId.getId
+  T.withTransactionStoring transaction $ do
+    Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationMediaFileDocumentConfirm) requestorId req
+
+postDriverRegistrationMediaFileDocumentDelete ::
+  ShortId DM.Merchant ->
+  City.City ->
+  ApiTokenInfo ->
+  Common.MediaFileDocumentReq ->
+  Flow APISuccess
+postDriverRegistrationMediaFileDocumentDelete merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo Nothing (Just req)
+  let requestorId = apiTokenInfo.personId.getId
+  T.withTransactionStoring transaction $ do
+    Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationMediaFileDocumentDelete) requestorId req
 
 getDriverRegistrationMediaFileDocumentDownloadLink ::
   ShortId DM.Merchant ->

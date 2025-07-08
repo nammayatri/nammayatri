@@ -61,6 +61,7 @@ import SharedLogic.Allocator.Jobs.SupplyDemand.SupplyDemandRatio
 import SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver
 import SharedLogic.Allocator.Jobs.Webhook.Webhook
 import SharedLogic.KaalChakra.Chakras
+import SharedLogic.MediaFileDocument (mediaFileDocumentComplete)
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant as Storage
 
@@ -128,6 +129,7 @@ allocatorHandle flowRt env =
           & putJobHandlerInList (liftIO . runFlowR flowRt env . runScheduledFCMS)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . sendWebhookWithRetryToExternal)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . installationStatus)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . mediaFileDocumentComplete)
     }
 
 runDriverOfferAllocator ::

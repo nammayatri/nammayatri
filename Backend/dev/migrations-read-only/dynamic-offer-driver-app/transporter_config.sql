@@ -477,3 +477,8 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN valid_name_comp
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allow_duplicate_pan boolean ;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allow_duplicate_gst boolean ;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allow_duplicate_aadhaar boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN max_allowed_video_doc_size_in_mb integer ;

@@ -11,3 +11,9 @@ ALTER TABLE atlas_driver_offer_bpp.media_file_document ADD COLUMN status text NO
 ALTER TABLE atlas_driver_offer_bpp.media_file_document ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.media_file_document ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.media_file_document ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.media_file_document ADD COLUMN file_hash text ;
+ALTER TABLE atlas_driver_offer_bpp.media_file_document ADD COLUMN upload_link text ;

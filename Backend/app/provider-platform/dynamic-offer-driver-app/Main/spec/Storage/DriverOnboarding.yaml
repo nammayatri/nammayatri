@@ -363,22 +363,36 @@ MediaFileDocument:
   tableName: media_file_document
   types:
     MediaFileDocumentStatus:
-      enum: "PENDING, DELETED, CONFIRMED"
+      enum: "PENDING, DELETED, FAILED, CONFIRMED, COMPLETED"
   fields:
     id: Id MediaFileDocument
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     s3Path: Text
+    uploadLink: Maybe Text
     mediaFileDocumentType: MediaFileDocumentType
     rcId: Id VehicleRegistrationCertificate
     creatorId: Id Person
     status: MediaFileDocumentStatus
+    fileHash: Maybe Text
 
   queries:
-    findOneByMerchantOpCityIdAndRcIdAndType:
-      kvFunction: findOneWithKV
+    findAllByMerchantOpCityIdAndRcIdAndType:
+      kvFunction: findAllWithOptionsKV
       where:
         and: [merchantOperatingCityId, rcId, mediaFileDocumentType]
+      orderBy:
+        field: createdAt
+        order: desc
+    updateStatus:
+      kvFunction: updateOneWithKV
+      params: [status, fileHash]
+      where: id
+    deleteById:
+      kvFunction: deleteWithKV
+      where: id
+  extraOperations:
+    - EXTRA_QUERY_FILE
 
 DocumentVerificationConfig:
   tableName: document_verification_config
