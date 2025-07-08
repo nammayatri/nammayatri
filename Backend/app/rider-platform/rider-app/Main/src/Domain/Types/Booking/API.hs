@@ -16,6 +16,7 @@ module Domain.Types.Booking.API where
 
 -- TODO:Move api entity of booking to UI
 
+import Data.Aeson (eitherDecode, encode)
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
 import qualified Domain.Action.UI.FareBreakup as DAFareBreakup
 import qualified Domain.Action.UI.Location as SLoc
@@ -46,6 +47,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import SharedLogic.Booking (getfareBreakups)
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.Exophone as CQExophone
@@ -515,3 +517,9 @@ buildRideAPIEntity DRide.Ride {..} = do
         isInsured = Just isInsured,
         ..
       }
+
+-- BOOKING REQUEST TYPE in ListV2 API
+data BookingRequestType = BookingRequest | JourneyRequest | RequestBoth
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
+
+$(mkHttpInstancesForEnum ''BookingRequestType)
