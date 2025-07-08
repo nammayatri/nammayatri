@@ -369,6 +369,7 @@ MediaFileDocument:
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     s3Path: Text
+    uploadLink: Maybe Text
     mediaFileDocumentType: MediaFileDocumentType
     rcId: Id VehicleRegistrationCertificate
     creatorId: Id Person
@@ -376,14 +377,20 @@ MediaFileDocument:
     fileHash: Maybe Text
 
   queries:
-    findOneByMerchantOpCityIdAndRcIdAndType:
-      kvFunction: findOneWithKV
+    findAllByMerchantOpCityIdAndRcIdAndType:
+      kvFunction: findAllWithKV
       where:
         and: [merchantOperatingCityId, rcId, mediaFileDocumentType]
+      orderBy:
+        field: createdAt
+        order: desc
+
     updateStatus:
       kvFunction: updateOneWithKV
       params: [status, fileHash]
       where: id
+  extraOperations:
+    - EXTRA_QUERY_FILE
 
 DocumentVerificationConfig:
   tableName: document_verification_config

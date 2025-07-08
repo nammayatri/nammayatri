@@ -18,7 +18,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.VehicleRegistrationCertificate as DRC
 import Environment
-import EulerHS.Prelude hiding (elem, find, foldl', map, whenJust)
+import EulerHS.Prelude hiding (elem, find, foldl', length, map, whenJust)
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Beckn.Context as Context
@@ -43,23 +43,37 @@ mediaFileDocumentUploadLink merchantShortId opCity requestorId req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.getMerchantOpCity merchant (Just opCity)
   fileExtension <- validateContentType
+
   rc <- QRC.findLastVehicleRCWrapper req.rcNumber >>= fromMaybeM (RCNotFound req.rcNumber)
   let mediaFileDocumentType = castMediaFileDocumentType req.mediaFileDocumentType
-  mbExistingMediaFile <- QMFD.findOneByMerchantOpCityIdAndRcIdAndType merchantOpCity.id rc.id mediaFileDocumentType
-  whenJust mbExistingMediaFile \existingMediaFile -> do
-    -- if file was deleted by operator, then allow to create new one
-    unless (existingMediaFile.status == DMFD.DELETED) $
-      throwError (InvalidRequest $ "MediaFileDocument already exists")
+  -- if file was deleted by operator, then allow to create new one
+  existingMediaFiles <- filter (\mfd -> mfd.status /= DMFD.DELETED) <$> QMFD.findAllByMerchantOpCityIdAndRcIdAndType merchantOpCity.id rc.id mediaFileDocumentType
 
-  mediaPath <- createMediaPathByRcId merchantOpCity.id rc.id mediaFileDocumentType fileExtension
-  mediaFileLink <- S3.generateUploadUrl (T.unpack mediaPath) merchant.mediaFileDocumentLinkExpires
+  when (length existingMediaFiles > 1) $ do
+    logError $
+      "Duplicated MediaFileDocuments found: merchantOpCityId: " <> merchantOpCity.id.getId
+        <> "; rcId: "
+        <> rc.id.getId
+        <> "; mediaFileDocumentType: "
+        <> show mediaFileDocumentType
+        <> ": "
+        <> show (length existingMediaFiles)
+        <> " times"
 
-  mediaFileDocument <- buildMediaFileDocument merchantOpCity (Id @DP.Person requestorId) mediaPath rc.id req
-  QMFD.create mediaFileDocument
-
+  mediaFileDocument <- case listToMaybe existingMediaFiles of
+    Nothing -> do
+      mediaPath <- createMediaPathByRcId merchantOpCity.id rc.id mediaFileDocumentType fileExtension
+      mediaFileLink <- S3.generateUploadUrl (T.unpack mediaPath) merchant.mediaFileDocumentLinkExpires
+      newMediaFileDocument <- buildMediaFileDocument merchantOpCity (Id @DP.Person requestorId) mediaPath rc.id mediaFileLink req
+      QMFD.create newMediaFileDocument
+      pure newMediaFileDocument
+    Just existingMediaFile -> do
+      if existingMediaFile.creatorId == Id @DP.Person requestorId
+        then pure existingMediaFile
+        else pure existingMediaFile{uploadLink = Nothing} -- we can show upload link only to creator to avoid uploading by two users in the same time
   pure $
     Common.MediaFileDocumentResp
-      { mediaFileLink = Just mediaFileLink,
+      { mediaFileLink = mediaFileDocument.uploadLink,
         mediaFileDocumentId = cast @DMFD.MediaFileDocument @CommonMFD.MediaFileDocument mediaFileDocument.id,
         mediaFileDocumentStatus = castMediaFileDocumentStatus mediaFileDocument.status
       }
@@ -114,9 +128,10 @@ buildMediaFileDocument ::
   Id DP.Person ->
   Text ->
   Id DRC.VehicleRegistrationCertificate ->
+  Text ->
   Common.UploadMediaFileDocumentReq ->
   m DMFD.MediaFileDocument
-buildMediaFileDocument merchantOpCity creatorId s3Path rcId Common.UploadMediaFileDocumentReq {..} = do
+buildMediaFileDocument merchantOpCity creatorId s3Path rcId mediaFileLink Common.UploadMediaFileDocumentReq {..} = do
   uuid <- generateGUID
   now <- getCurrentTime
   pure
@@ -128,6 +143,7 @@ buildMediaFileDocument merchantOpCity creatorId s3Path rcId Common.UploadMediaFi
         merchantOperatingCityId = merchantOpCity.id,
         rcId,
         s3Path,
+        uploadLink = Just mediaFileLink,
         status = DMFD.PENDING, -- TODO migrate CONFIRMED ==> COMPLETED
         fileHash = Nothing,
         createdAt = now,
@@ -206,10 +222,20 @@ mediaFileDocumentDownloadLink merchantShortId opCity mediaFileDocumentType' rcNu
   merchantOpCity <- CQMOC.getMerchantOpCity merchant (Just opCity)
   rc <- QRC.findLastVehicleRCWrapper rcNumber >>= fromMaybeM (RCNotFound rcNumber)
   let mediaFileDocumentType = castMediaFileDocumentType mediaFileDocumentType'
-  mediaFileDocument <- QMFD.findOneByMerchantOpCityIdAndRcIdAndType merchantOpCity.id rc.id mediaFileDocumentType >>= fromMaybeM (InvalidRequest "MediaFileDocument does not exist")
+  mediaFileDocuments <- filter (\mfd -> mfd.status /= DMFD.DELETED) <$> QMFD.findAllByMerchantOpCityIdAndRcIdAndType merchantOpCity.id rc.id mediaFileDocumentType
 
-  when (mediaFileDocument.status == DMFD.DELETED) $
-    throwError (InvalidRequest "MediaFileDocument was deleted")
+  when (length mediaFileDocuments > 1) $ do
+    logError $
+      "Duplicated MediaFileDocuments found: merchantOpCityId: " <> merchantOpCity.id.getId
+        <> "; rcId: "
+        <> rc.id.getId
+        <> "; mediaFileDocumentType: "
+        <> show mediaFileDocumentType
+        <> ": "
+        <> show (length mediaFileDocuments)
+        <> " times"
+
+  mediaFileDocument <- listToMaybe mediaFileDocuments & fromMaybeM (InvalidRequest "MediaFileDocument does not exist")
 
   mbMediaFileLink <- case mediaFileDocument.status of
     mediaFileDocumentStatus | mediaFileDocumentStatus `elem` [DMFD.CONFIRMED, DMFD.COMPLETED] -> do

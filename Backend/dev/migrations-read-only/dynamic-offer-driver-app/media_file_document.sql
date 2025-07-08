@@ -16,3 +16,4 @@ ALTER TABLE atlas_driver_offer_bpp.media_file_document ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.media_file_document ADD COLUMN file_hash text ;
+ALTER TABLE atlas_driver_offer_bpp.media_file_document ADD COLUMN upload_link text ;

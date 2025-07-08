@@ -23,6 +23,7 @@ data MediaFileDocument = MediaFileDocument
     rcId :: Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate,
     s3Path :: Kernel.Prelude.Text,
     status :: Domain.Types.MediaFileDocument.MediaFileDocumentStatus,
+    uploadLink :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }

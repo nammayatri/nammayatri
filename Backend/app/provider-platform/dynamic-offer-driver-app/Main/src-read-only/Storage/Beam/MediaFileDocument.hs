@@ -22,6 +22,7 @@ data MediaFileDocumentT f = MediaFileDocumentT
     rcId :: B.C f Kernel.Prelude.Text,
     s3Path :: B.C f Kernel.Prelude.Text,
     status :: B.C f Domain.Types.MediaFileDocument.MediaFileDocumentStatus,
+    uploadLink :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
