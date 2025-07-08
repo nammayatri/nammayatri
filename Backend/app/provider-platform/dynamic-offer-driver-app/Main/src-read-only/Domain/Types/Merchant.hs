@@ -31,6 +31,7 @@ data MerchantD (s :: UsageSafety) = Merchant
     info :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     internalApiKey :: Kernel.Prelude.Text,
     mediaFileDocumentLinkExpires :: Kernel.Types.Common.Seconds,
+    mediaFileDocumentMandatoryConfirm :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     minimumDriverRatesCount :: Kernel.Prelude.Int,
     mobileCountryCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     mobileNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

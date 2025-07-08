@@ -32,6 +32,7 @@ import SharedLogic.Allocator
 import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Cac.TransporterConfig as CCT
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.MediaFileDocument as QMFD
 import qualified Storage.Queries.VehicleRegistrationCertificate as QRC
@@ -186,21 +187,35 @@ mediaFileDocumentConfirm merchantShortId opCity requestorId req = do
 
   let fileSizeInBytes = s3ObjectStatus.fileSizeInBytes
   let fileHash = S3.eTagToHash s3ObjectStatus.entityTag
-  transporterConfig <- CCT.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  let maxSizeInMB = fromMaybe 500 transporterConfig.maxAllowedVideoDocSizeInMB
-      maxSizeInBytes = toInteger maxSizeInMB * 1024 * 1024
-  when (fileSizeInBytes > maxSizeInBytes) $ do
-    let message = "Video size " <> show fileSizeInBytes <> " bytes exceeds maximum limit of " <> show maxSizeInBytes <> " bytes (" <> show maxSizeInMB <> "MB)"
-    logError $ "Video upload failed: mediaFileDocumentId: " <> mediaFileDocumentId.getId <> "err: " <> show message
-    QMFD.updateStatus DMFD.FAILED Nothing mediaFileDocumentId
-    S3.delete s3Path
-    throwError $ InvalidRequest message
+  checkVideoFileSize (Just merchantOpCityId) fileSizeInBytes mediaFileDocumentId >>= \case
+    Right () -> pure ()
+    Left errMessage -> do
+      QMFD.updateStatus DMFD.FAILED Nothing mediaFileDocumentId
+      S3.delete s3Path
+      throwError $ InvalidRequest errMessage
 
   QMFD.updateStatus DMFD.CONFIRMED (Just fileHash) mediaFileDocumentId
   pure Success
   where
     makeConfirmMediaDocHitsCountKey :: Id DMFD.MediaFileDocument -> Text
     makeConfirmMediaDocHitsCountKey mediaFileDocumentId = "ConfirmMediaDoc:MediaDocHits:" <> mediaFileDocumentId.getId <> ":hitsCount"
+
+checkVideoFileSize ::
+  (CacheFlow m r, MonadFlow m, EsqDBFlow m r) =>
+  Maybe (Id DMOC.MerchantOperatingCity) ->
+  Integer ->
+  Id DMFD.MediaFileDocument ->
+  m (Either Text ())
+checkVideoFileSize mbMerchantOpCityId fileSizeInBytes mediaFileDocumentId = do
+  mbTransporterConfig <- forM mbMerchantOpCityId $ \merchantOpCityId -> CCT.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  let maxSizeInMB = fromMaybe 500 $ mbTransporterConfig >>= (.maxAllowedVideoDocSizeInMB)
+      maxSizeInBytes = toInteger maxSizeInMB * 1024 * 1024
+  if fileSizeInBytes > maxSizeInBytes
+    then do
+      let errMessage = "Video size " <> show fileSizeInBytes <> " bytes exceeds maximum limit of " <> show maxSizeInBytes <> " bytes (" <> show maxSizeInMB <> "MB)"
+      logError $ "Video upload failed: mediaFileDocumentId: " <> mediaFileDocumentId.getId <> "err: " <> show errMessage
+      pure $ Left errMessage
+    else pure $ Right ()
 
 mediaFileDocumentDelete ::
   ShortId DM.Merchant ->
@@ -259,32 +274,46 @@ mediaFileDocumentComplete ::
   (CacheFlow m r, MonadFlow m, EsqDBFlow m r, HasField "s3Env" r (S3Env m)) =>
   Job 'MediaFileDocumentComplete ->
   m ExecutionResult
-mediaFileDocumentComplete Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) $ do
+mediaFileDocumentComplete Job {id, jobInfo, merchantId = mbMerchantId, merchantOperatingCityId = mbMerchantOpCityId} = withLogTag ("JobId-" <> id.getId) $ do
   let jobData = jobInfo.jobData
       mediaFileDocumentId = jobData.mediaFileDocumentId
   QMFD.findByPrimaryKey mediaFileDocumentId >>= \case
     Nothing -> logError $ "MediaFileDocument: " <> mediaFileDocumentId.getId <> " does not exist"
     Just mediaFileDocument -> do
-      let s3Path = T.unpack mediaFileDocument.s3Path
       case mediaFileDocument.status of
         status | status `elem` [DMFD.CONFIRMED, DMFD.COMPLETED] -> do
           when (status == DMFD.COMPLETED) $
             logWarning $ "MediaFileDocument: " <> mediaFileDocumentId.getId <> " already completed"
-          try (S3.headRequest s3Path) >>= \case
-            Right s3ObjectStatus -> do
+          tryToCompleteMediaFileDocument mediaFileDocument
+        DMFD.PENDING -> do
+          mbMerchant <- forM mbMerchantId $ \merchantId -> CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
+          let mediaFileDocumentMandatoryConfirm = fromMaybe False $ mbMerchant >>= (.mediaFileDocumentMandatoryConfirm)
+          if mediaFileDocumentMandatoryConfirm
+            then cleanMediaFileDocument mediaFileDocument "Document was not confirmed"
+            else tryToCompleteMediaFileDocument mediaFileDocument
+        _status -> cleanMediaFileDocument mediaFileDocument "Document was not confirmed"
+  pure Complete
+  where
+    tryToCompleteMediaFileDocument mediaFileDocument = do
+      let s3Path = T.unpack mediaFileDocument.s3Path
+      try (S3.headRequest s3Path) >>= \case
+        Right s3ObjectStatus -> do
+          case mediaFileDocument.status of
+            status | status `elem` [DMFD.CONFIRMED, DMFD.COMPLETED] -> do
               let fileHash = eTagToHash s3ObjectStatus.entityTag
               if Just fileHash == mediaFileDocument.fileHash
-                then QMFD.updateStatusAndResetUploadLink DMFD.COMPLETED mediaFileDocumentId
-                else do
-                  logError $ "File was overwritten but not confirmed: mediaFileDocumentId:" <> mediaFileDocumentId.getId <> "; status: " <> show status <> ", removing.."
-                  QMFD.deleteById mediaFileDocumentId
-                  catch (S3.delete s3Path) $ \(err :: SomeException) -> do
-                    logError $ "Unable to delete file: mediaFileDocumentId: " <> mediaFileDocumentId.getId <> "err: " <> show err
-            Left (err :: SomeException) -> do
-              logError $ "File was not found: mediaFileDocumentId: " <> mediaFileDocumentId.getId <> "err: " <> show err
-              QMFD.deleteById mediaFileDocumentId
-        status -> do
-          logInfo $ "MediaFileDocument: " <> mediaFileDocumentId.getId <> "; status " <> show status <> " was not confirmed, removing.."
-          QMFD.deleteById mediaFileDocumentId
-          catch (S3.delete s3Path) $ \(_err :: SomeException) -> pure ()
-  pure Complete
+                then QMFD.updateStatusAndResetUploadLink DMFD.COMPLETED mediaFileDocument.id
+                else cleanMediaFileDocument mediaFileDocument "File was overwritten but not confirmed"
+            DMFD.PENDING -> do
+              checkVideoFileSize mbMerchantOpCityId s3ObjectStatus.fileSizeInBytes mediaFileDocument.id >>= \case
+                Right () -> QMFD.updateStatusAndResetUploadLink DMFD.COMPLETED mediaFileDocument.id
+                Left _errMessage -> cleanMediaFileDocument mediaFileDocument "File size exceeds maximum limit"
+            _ -> cleanMediaFileDocument mediaFileDocument "Document was not confirmed"
+        Left (err :: SomeException) -> cleanMediaFileDocument mediaFileDocument $ "File was not found: err: " <> show err
+    cleanMediaFileDocument mediaFileDocument message = do
+      logInfo $ "Remove MediaFileDocument: " <> mediaFileDocument.id.getId <> "; status: " <> show mediaFileDocument.status <> "; message: " <> message
+      QMFD.deleteById mediaFileDocument.id
+      let s3Path = T.unpack mediaFileDocument.s3Path
+      catch (S3.delete s3Path) $ \(err :: SomeException) -> do
+        when (mediaFileDocument.status `elem` [DMFD.CONFIRMED, DMFD.COMPLETED]) $
+          logError $ "Unable to delete file from S3: mediaFileDocumentId: " <> mediaFileDocument.id.getId <> "err: " <> show err

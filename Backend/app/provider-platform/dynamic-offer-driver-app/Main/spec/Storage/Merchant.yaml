@@ -92,6 +92,7 @@ Merchant:
     fleetOwnerEnabledCheck: Maybe Bool
     overwriteAssociation: Maybe Bool
     mediaFileDocumentLinkExpires: Seconds
+    mediaFileDocumentMandatoryConfirm: Maybe Bool
   sqlType:
     destinationRestriction: text[]
     originRestriction: text[]

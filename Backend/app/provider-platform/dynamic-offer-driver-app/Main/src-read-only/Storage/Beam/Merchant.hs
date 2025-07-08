@@ -33,6 +33,7 @@ data MerchantT f = MerchantT
     info :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     internalApiKey :: B.C f Kernel.Prelude.Text,
     mediaFileDocumentLinkExpires :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
+    mediaFileDocumentMandatoryConfirm :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     minimumDriverRatesCount :: B.C f Kernel.Prelude.Int,
     mobileCountryCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     mobileNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

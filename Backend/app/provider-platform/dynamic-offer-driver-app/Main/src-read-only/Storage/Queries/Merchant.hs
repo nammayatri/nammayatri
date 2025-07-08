@@ -61,6 +61,7 @@ updateByPrimaryKey (Domain.Types.Merchant.Merchant {..}) = do
       Se.Set Beam.info info,
       Se.Set Beam.internalApiKey internalApiKey,
       Se.Set Beam.mediaFileDocumentLinkExpires (Kernel.Prelude.Just mediaFileDocumentLinkExpires),
+      Se.Set Beam.mediaFileDocumentMandatoryConfirm mediaFileDocumentMandatoryConfirm,
       Se.Set Beam.minimumDriverRatesCount minimumDriverRatesCount,
       Se.Set Beam.mobileCountryCode mobileCountryCode,
       Se.Set Beam.mobileNumber mobileNumber,
