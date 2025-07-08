@@ -163,7 +163,17 @@ handleConfigDBUpdate merchantOpCityId concludeReq baseLogics mbMerchantId opCity
       patchedConfigs <- applyPatchToConfig configWrapper
       let extractedPatchedConfigElement :: [Value] = fmap LYTC.config patchedConfigs
       appDynamicLogicElement <- LTSQADLE.findByPrimaryKey domain 0 version >>= fromMaybeM (InvalidRequest $ "No AppDynamicLogicElement found for domain " <> show domain <> " and version " <> show version)
-      let updatedAppDynamicLogicElement :: LYTADLE.AppDynamicLogicElement = appDynamicLogicElement {LYTADLE.patchedElement = listToMaybe extractedPatchedConfigElement}
+      let extractedPatchedConfigElementConfigWrapper = convertToConfigWrapper extractedPatchedConfigElement
+      extractedPatchedConfigElementResult <- mapM (LYTU.runLogics [appDynamicLogicElement.logic]) extractedPatchedConfigElementConfigWrapper
+      patchedConfigs' <-
+        mapM
+          ( \resp ->
+              case (A.fromJSON (resp.result) :: A.Result (LYT.Config Value)) of
+                A.Success val -> pure val.config
+                A.Error e -> throwError $ InvalidRequest $ "Error occurred while applying JSON patch to the config. " <> show e
+          )
+          extractedPatchedConfigElementResult
+      let updatedAppDynamicLogicElement :: LYTADLE.AppDynamicLogicElement = appDynamicLogicElement {LYTADLE.patchedElement = listToMaybe patchedConfigs'}
       configsToUpdate <- getConfigsToUpdate configWrapper patchedConfigs
       let configsToUpdate' :: [DTU.UiDriverConfig] = zipWith (\cfg newConfig -> cfg {DTU.config = newConfig}) [uiConfig] configsToUpdate
       LTSQADLE.updateByPrimaryKey updatedAppDynamicLogicElement
