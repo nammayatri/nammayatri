@@ -43,3 +43,18 @@ findByDomainAndCityAndVehicleCategory ::
   m (Maybe Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig)
 findByDomainAndCityAndVehicleCategory domain merchantOperatingCityId vehicleCategory platformType =
   fmap (listToMaybe . sortBy (\a b -> compare b.createdAt a.createdAt)) (findAllByDomainAndCityAndVehicleCategory domain merchantOperatingCityId vehicleCategory platformType)
+
+findAllByPlatformAndVehicleCategory ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Kernel.Prelude.Text ->
+  BecknV2.OnDemand.Enums.VehicleCategory ->
+  Domain.Types.IntegratedBPPConfig.PlatformType ->
+  m [Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig]
+findAllByPlatformAndVehicleCategory domain vehicleCategory platformType = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.domain $ Se.Eq domain,
+          Se.Is Beam.vehicleCategory $ Se.Eq vehicleCategory,
+          Se.Is Beam.platformType $ Se.Eq platformType
+        ]
+    ]

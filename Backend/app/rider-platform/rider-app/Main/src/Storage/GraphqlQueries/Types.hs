@@ -15,9 +15,12 @@
 module Storage.GraphqlQueries.Types where
 
 import qualified BecknV2.FRFS.Enums
-import Control.Applicative ((<|>))
+import Data.Aeson (Value (..), eitherDecodeStrict)
+import Data.Aeson.Types (Parser)
 import Data.Morpheus.Client.CodeGen.Internal
+import qualified Data.Text.Encoding as TE
 import qualified Data.Time.LocalTime as LocalTime
+import qualified Debug.Trace as Trace
 import EulerHS.Types (OptionEntity)
 import Kernel.Prelude
 import Network.HTTP.Client
@@ -83,26 +86,35 @@ data RouteStopTimeTableEntry = RouteStopTimeTableEntry
 
 instance FromJSON RouteStopTimeTableEntry where
   parseJSON = withObject "RouteStopTimeTableEntry" $ \obj -> do
-    let headsignParser =
-          (obj .: "headsign")
-            >>= ( pure
-                    . Just
-                    . ( \fareStageNumber ->
-                          ExtraInfo
-                            { fareStageNumber = Just fareStageNumber,
-                              providerStopCode = Nothing
-                            }
-                      )
-                    <=< parseJSON
-                )
-        extraInfoParser = obj .:? "headsign"
-        fallback = extraInfoParser <|> headsignParser
+    let headsignParser = do
+          headsignText <- obj .: "headsign" :: Parser Text
+          -- Try to parse headsign as JSON first
+          case eitherDecodeStrict (TE.encodeUtf8 headsignText) of
+            Right (Object headsignObj) -> do
+              -- Parse as ExtraInfo object
+              extraInfo <- parseJSON (Object headsignObj)
+              pure (Just extraInfo)
+            Right (String jsonString) -> do
+              -- The JSON string contains another JSON object, parse that
+              case eitherDecodeStrict (TE.encodeUtf8 jsonString) of
+                Right (Object headsignObj) -> do
+                  extraInfo <- parseJSON (Object headsignObj)
+                  pure (Just extraInfo)
+                _ -> do
+                  -- Fallback: treat as simple text for fareStageNumber
+                  Trace.trace ("nested JSON parsing failed for: " <> show jsonString) $ pure ()
+                  pure (Just (ExtraInfo {fareStageNumber = Just headsignText, providerStopCode = Nothing}))
+            other -> do
+              -- Debug: print what case we're hitting
+              Trace.trace ("headsign parsing case: " <> show other) $ pure ()
+              -- Fallback: treat as simple text for fareStageNumber
+              pure (Just (ExtraInfo {fareStageNumber = Just headsignText, providerStopCode = Nothing}))
     RouteStopTimeTableEntry
       <$> obj .: "scheduledArrival"
       <*> obj .: "realtimeArrival"
       <*> obj .: "arrivalDelay"
       <*> obj .: "scheduledDeparture"
-      <*> fallback
+      <*> headsignParser
       <*> obj .: "trip"
       <*> obj .:? "stop"
 

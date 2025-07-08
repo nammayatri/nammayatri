@@ -33,7 +33,6 @@ import EulerHS.Prelude hiding (map)
 import Kernel.Beam.Functions as B
 import qualified Kernel.Storage.Esqueleto as DB
 import qualified Kernel.Storage.Hedis as Redis
-import Kernel.Types.Beckn.Context
 import Kernel.Types.Id
 import qualified Kernel.Types.Logging as Log
 import Kernel.Utils.Common hiding (withLogTag)
@@ -147,11 +146,10 @@ getConfigByStationIds partnerOrg fromGMMStationId toGMMStationId mbIntegratedBPP
     do
       void $ checkRateLimit partnerOrg.orgId getConfigHitsCountKey
 
-      merchantOperatingCities <- catMaybes <$> mapM (CQMOC.findByMerchantIdAndCity (Id "4b17bd06-ae7e-48e9-85bf-282fb310209c")) [Bangalore, Delhi, Kochi, Chennai]
       integratedBPPConfigs <-
         case mbIntegratedBPPConfigId of
           Just integratedBPPConfigId -> (: []) <$> SIBC.findIntegratedBPPConfigById integratedBPPConfigId
-          Nothing -> catMaybes <$> mapM (\merchantOperatingCity -> SIBC.findMaybeIntegratedBPPConfig Nothing merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory Spec.METRO) DIBC.PARTNERORG) merchantOperatingCities
+          Nothing -> SIBC.findAllIntegratedBPPConfigAcrossCities (frfsVehicleCategoryToBecknVehicleCategory Spec.METRO) DIBC.PARTNERORG
 
       SIBC.fetchFirstIntegratedBPPConfigRightResult integratedBPPConfigs $ \integratedBPPConfig ->
         DPOFRFS.getConfigByStationIds partnerOrg fromGMMStationId toGMMStationId integratedBPPConfig
