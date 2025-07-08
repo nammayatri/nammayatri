@@ -69,3 +69,18 @@ ALTER TABLE atlas_app.ny_regular_subscriptions ADD COLUMN scheduling_hash text ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

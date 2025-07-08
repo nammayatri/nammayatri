@@ -29,7 +29,6 @@ import Domain.Types.Person
 import qualified Domain.Types.Ride as DR
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideRelatedNotificationConfig as DRN
-import Kernel.External.Encryption (DbHash)
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Types.Price
@@ -313,7 +312,7 @@ data NyRegularInstanceJobData = NyRegularInstanceJobData
   { nyRegularSubscriptionId :: Id NyRegularSubscription.NyRegularSubscription,
     userId :: Id Person,
     scheduledTime :: UTCTime,
-    expectedSchedulingHash :: DbHash
+    expectedSchedulingHash :: Text
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 

@@ -60,7 +60,7 @@ runNyRegularInstanceJob Job {id = jobId, jobInfo} = withLogTag ("JobId-" <> jobI
     Just currentSubscription -> do
       currentLiveHash <- calculateSubscriptionSchedulingHash currentSubscription
 
-      if currentLiveHash /= expectedHash
+      if (show currentLiveHash) /= expectedHash
         then do
           logInfo $
             "Terminating NyRegularInstance job " <> show jobId

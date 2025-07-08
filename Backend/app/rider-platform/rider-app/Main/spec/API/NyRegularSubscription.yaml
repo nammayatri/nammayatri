@@ -73,12 +73,12 @@ apis:
       endpoint: /nyRegular/subscriptions/create
       auth: TokenAuth
       headers:
-        x-bundle-version: Maybe Version
-        x-client-version: Maybe Version
-        x-config-version: Maybe Version
-        x-rn-version: Maybe Text
-        client-id: Maybe (Id Client)
-        x-device: Maybe Text
+        x-bundle-version: Version
+        x-client-version: Version
+        x-config-version: Version
+        x-rn-version:  Text
+        client-id: Text
+        x-device: Text
         is-dashboard-request: Bool
       request:
         type: CreateSubscriptionReq
@@ -118,9 +118,9 @@ apis:
       endpoint: /nyRegular/subscriptions
       auth: TokenAuth
       query:
-        - status: Maybe NyRegularSubscriptionStatus
-        - limit: Maybe Int
-        - offset: Maybe Int
+        - status: NyRegularSubscriptionStatus
+        - limit: Int
+        - offset: Int
       response:
         type: "[NyRegularSubscription]"
 
