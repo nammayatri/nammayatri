@@ -509,7 +509,8 @@ search vehicleCategory personId merchantId quantity city journeyLeg recentLocati
   frfsSearchReq <- buildFRFSSearchReq (Just journeySearchData)
   frfsRouteDetails <- getFrfsRouteDetails journeyLeg.routeDetails
   journeyRouteDetails <- getJourneyRouteDetails journeyLeg.routeDetails integratedBPPConfig
-  res <- FRFSTicketService.postFrfsSearchHandler (personId, merchantId) merchantOpCity integratedBPPConfig vehicleCategory frfsSearchReq frfsRouteDetails Nothing Nothing journeyRouteDetails
+  let mbFare = journeyLeg.estimatedMinFare <|> journeyLeg.estimatedMaxFare
+  res <- FRFSTicketService.postFrfsSearchHandler (personId, merchantId) merchantOpCity integratedBPPConfig vehicleCategory frfsSearchReq frfsRouteDetails Nothing Nothing journeyRouteDetails mbFare
   return $ JT.SearchResponse {id = res.searchId.getId}
   where
     buildFRFSSearchReq journeySearchData = do
@@ -560,19 +561,17 @@ confirm :: JT.ConfirmFlow m r c => Id DPerson.Person -> Id DMerchant.Merchant ->
 confirm personId merchantId searchId mbQuoteId ticketQuantity childTicketQuantity skipBooking bookingAllowed crisSdkResponse vehicleType = do
   mbBooking <- QTBooking.findBySearchId searchId -- if booking already there no need to confirm again
   whenJust mbBooking $ \booking -> do
-    void $ QTBooking.updateTicketAndChildTicketQuantityById booking.id ticketQuantity childTicketQuantity
     void $ JMU.updateCRISBookingAuthCode booking (crisSdkResponse <&> (.bookAuthCode))
-  when (not skipBooking && bookingAllowed && isNothing mbBooking) $ do
+  when (not skipBooking && bookingAllowed) $ do
     quoteId <- mbQuoteId & fromMaybeM (InvalidRequest "You can't confirm bus before getting the fare")
     quote <- QFRFSQuote.findById quoteId >>= fromMaybeM (QuoteNotFound quoteId.getId)
-    void $ QFRFSQuote.updateTicketAndChildTicketQuantityById quoteId ticketQuantity childTicketQuantity
     if vehicleType == Spec.BUS
       then do
         merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
         merchantOperatingCity <- CQMOC.findById quote.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound quote.merchantOperatingCityId.getId)
         bapConfig <- QBC.findByMerchantIdDomainAndVehicle (Just merchant.id) (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory vehicleType) >>= fromMaybeM (InternalError "Beckn Config not found")
-        void $ CallExternalBPP.select processOnSelect merchant merchantOperatingCity bapConfig quote
-      else void $ FRFSTicketService.postFrfsQuoteV2ConfirmUtil (Just personId, merchantId) quoteId (API.FRFSQuoteConfirmReq {discounts = []}) crisSdkResponse
+        void $ CallExternalBPP.select processOnSelect merchant merchantOperatingCity bapConfig quote ticketQuantity childTicketQuantity
+      else void $ FRFSTicketService.postFrfsQuoteV2ConfirmUtil (Just personId, merchantId) quoteId (API.FRFSQuoteConfirmReq {discounts = [], ticketQuantity = ticketQuantity, childTicketQuantity = childTicketQuantity}) crisSdkResponse
   where
     processOnSelect :: FRFSConfirmFlow m r => DOnSelect -> m ()
     processOnSelect onSelectReq = do

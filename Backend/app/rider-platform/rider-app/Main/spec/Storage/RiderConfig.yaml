@@ -123,6 +123,7 @@ RiderConfig:
     pickupInstructionsThreshold: Int
     pickupInstructionsProximityMeters: Int
     enableMultiModalForAllUsers: Maybe Bool
+    initiateFirstMultimodalJourney: Bool
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
@@ -159,6 +160,7 @@ RiderConfig:
     busTrackingConfig: Maybe Value
     pickupInstructionsThreshold: Maybe Int
     pickupInstructionsProximityMeters: Maybe Int
+    initiateFirstMultimodalJourney: Maybe Bool
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -202,6 +204,7 @@ RiderConfig:
     busTrackingConfig: busTrackingConfig >>= Kernel.Utils.JSON.valueToMaybe|E
     pickupInstructionsThreshold: fromMaybe 4 pickupInstructionsThreshold|E
     pickupInstructionsProximityMeters: fromMaybe 10 pickupInstructionsProximityMeters|E
+    initiateFirstMultimodalJourney: fromMaybe False initiateFirstMultimodalJourney|E
 
   toTType:
     ivrTriggerDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
@@ -238,6 +241,7 @@ RiderConfig:
     busTrackingConfig: busTrackingConfig >>= Just . Data.Aeson.toJSON|E
     pickupInstructionsThreshold: Just pickupInstructionsThreshold|E
     pickupInstructionsProximityMeters: Just pickupInstructionsProximityMeters|E
+    initiateFirstMultimodalJourney: Just initiateFirstMultimodalJourney|E
 
   default:
     enableLocalPoliceSupport: "false"
@@ -271,6 +275,7 @@ RiderConfig:
     blockedUntilInMins: "1440"
     busTrackingConfig: '''{"maxScoreDistanceInMeters":15.0,"goodScoreDistanceInMeters":30.0,"fairScoreDistanceInMeters":45.0,"maxScore":10.0,"goodScore":7.0,"fairScore":4.0,"thresholdFactor":0.5,"thresholdSeconds":30.0,"movementThresholdInMeters":25.0}'''
     enableMultiModalForAllUsers: "false"
+    initiateFirstMultimodalJourney: "false"
 
   queries:
     findByMerchantOperatingCityId:

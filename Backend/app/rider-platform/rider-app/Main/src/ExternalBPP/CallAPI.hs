@@ -83,10 +83,34 @@ discoverySearch merchant bapConfig _integratedBPPConfigId req = do
   logDebug $ "FRFS Discovery SearchReq " <> encodeToText bknSearchReq
   void $ CallFRFSBPP.search bapConfig.gatewayUrl bknSearchReq merchant.id
 
-search :: (FRFSSearchFlow m r, HasShortDurationRetryCfg r c) => Merchant -> MerchantOperatingCity -> BecknConfig -> DSearch.FRFSSearch -> [FRFSRouteDetails] -> IntegratedBPPConfig -> m ()
-search merchant merchantOperatingCity bapConfig searchReq routeDetails integratedBPPConfig = do
+search :: (FRFSSearchFlow m r, HasShortDurationRetryCfg r c) => Merchant -> MerchantOperatingCity -> BecknConfig -> DSearch.FRFSSearch -> Maybe HighPrecMoney -> [FRFSRouteDetails] -> IntegratedBPPConfig -> m ()
+search merchant merchantOperatingCity bapConfig searchReq mbFare routeDetails integratedBPPConfig = do
   case integratedBPPConfig.providerConfig of
-    ONDC ONDCBecknConfig {networkHostUrl} -> do
+    ONDC ONDCBecknConfig {networkHostUrl, fareCachingAllowed} -> do
+      case (fareCachingAllowed, mbFare) of
+        (Just True, Just _) ->
+          try @_ @SomeException (Flow.search merchant merchantOperatingCity integratedBPPConfig bapConfig searchReq routeDetails)
+            >>= \case
+              Left err -> do
+                logError $ "Error in calling ONDC Search: " <> show err
+                callOndcSearch networkHostUrl
+              Right onSearchReq ->
+                if null onSearchReq.quotes
+                  then callOndcSearch networkHostUrl
+                  else processOnSearch onSearchReq
+        _ -> callOndcSearch networkHostUrl
+    _ -> do
+      fork "FRFS Direct SearchReq" $ do
+        onSearchReq <- Flow.search merchant merchantOperatingCity integratedBPPConfig bapConfig searchReq routeDetails
+        processOnSearch onSearchReq
+  where
+    processOnSearch :: (FRFSSearchFlow m r, HasShortDurationRetryCfg r c) => DOnSearch.DOnSearch -> m ()
+    processOnSearch onSearchReq = do
+      validatedDOnSearch <- DOnSearch.validateRequest onSearchReq
+      DOnSearch.onSearch onSearchReq validatedDOnSearch
+
+    callOndcSearch :: Maybe BaseUrl -> (FRFSSearchFlow m r, HasShortDurationRetryCfg r c) => m ()
+    callOndcSearch networkHostUrl = do
       fork ("FRFS ONDC SearchReq for " <> show bapConfig.vehicleCategory) $ do
         let providerUrl = fromMaybe bapConfig.gatewayUrl networkHostUrl
         fromStation <- OTPRest.getStationByGtfsIdAndStopCode searchReq.fromStationCode integratedBPPConfig >>= fromMaybeM (StationNotFound searchReq.fromStationCode)
@@ -99,15 +123,6 @@ search merchant merchantOperatingCity bapConfig searchReq routeDetails integrate
         logDebug $ "FRFS SearchReq " <> encodeToText bknSearchReq
         Metrics.startMetrics Metrics.SEARCH_FRFS merchant.name searchReq.id.getId merchantOperatingCity.id.getId
         void $ CallFRFSBPP.search providerUrl bknSearchReq merchant.id
-    _ -> do
-      fork "FRFS External SearchReq" $ do
-        onSearchReq <- Flow.search merchant merchantOperatingCity integratedBPPConfig bapConfig searchReq routeDetails
-        processOnSearch onSearchReq
-  where
-    processOnSearch :: (FRFSSearchFlow m r, HasShortDurationRetryCfg r c) => DOnSearch.DOnSearch -> m ()
-    processOnSearch onSearchReq = do
-      validatedDOnSearch <- DOnSearch.validateRequest onSearchReq
-      DOnSearch.onSearch onSearchReq validatedDOnSearch
 
 select ::
   FRFSSelectFlow m r c =>
@@ -116,8 +131,10 @@ select ::
   MerchantOperatingCity ->
   BecknConfig ->
   DQuote.FRFSQuote ->
+  Maybe Int ->
+  Maybe Int ->
   m ()
-select processOnSelectHandler merchant merchantOperatingCity bapConfig quote = do
+select processOnSelectHandler merchant merchantOperatingCity bapConfig quote ticketQuantity childTicketQuantity = do
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity quote
   case integratedBPPConfig.providerConfig of
     ONDC _ -> do
@@ -128,7 +145,7 @@ select processOnSelectHandler merchant merchantOperatingCity bapConfig quote = d
         Metrics.startMetrics Metrics.SELECT_FRFS merchant.name quote.searchId.getId merchantOperatingCity.id.getId
         void $ CallFRFSBPP.select providerUrl bknSelectReq merchant.id
     _ -> do
-      onSelectReq <- Flow.select merchant merchantOperatingCity integratedBPPConfig bapConfig quote
+      onSelectReq <- Flow.select merchant merchantOperatingCity integratedBPPConfig bapConfig quote ticketQuantity childTicketQuantity
       processOnSelectHandler onSelectReq
 
 init :: FRFSConfirmFlow m r => Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> DBooking.FRFSTicketBooking -> m ()
