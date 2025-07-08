@@ -20,6 +20,7 @@ import qualified Domain.Action.Dashboard.Fleet.Driver as DFDriver
 import Domain.Action.Dashboard.Fleet.Onboarding (castStatusRes)
 import Domain.Action.Dashboard.RideBooking.Driver
 import qualified Domain.Action.Dashboard.RideBooking.DriverRegistration as DRBReg
+import qualified Domain.Action.Internal.DriverMode as DDriverMode
 import qualified Domain.Action.UI.DriverOnboarding.Referral as DOR
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Action.UI.OperationHub as Domain
@@ -346,13 +347,14 @@ postDriverOperatorVerifyJoiningOtp merchantShortId opCity mbAuthId requestorId r
 
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  transporterConfig <- findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   mobileNumberHash <- getDbHash req.mobileNumber
   person <- B.runInReplica $ QP.findByMobileNumberAndMerchantAndRole req.mobileCountryCode mobileNumberHash merchant.id DP.DRIVER >>= fromMaybeM (PersonNotFound req.mobileNumber)
   case mbAuthId of
     Just authId -> do
       smsCfg <- asks (.smsCfg)
 
-      SA.endDriverAssociationsIfAllowed merchant merchantOpCityId person
+      SA.endDriverAssociationsIfAllowed merchant merchantOpCityId transporterConfig person
 
       deviceToken <- fromMaybeM (DeviceTokenNotFound) $ req.deviceToken
       let regId = Id authId :: Id SR.RegistrationToken
@@ -370,6 +372,9 @@ postDriverOperatorVerifyJoiningOtp merchantShortId opCity mbAuthId requestorId r
 
       assoc <- SA.makeDriverOperatorAssociation merchant.id merchantOpCityId res.person.id operator.id.getId (DomainRC.convertTextToUTC (Just "2099-12-12"))
       QDOA.create assoc
+      when (transporterConfig.allowCacheDriverFlowStatus == Just True) $ do
+        driverInfo <- QDI.findById res.person.id >>= fromMaybeM (DriverNotFound res.person.id.getId)
+        DDriverMode.incrementFleetOperatorStatusKeyForDriver DP.OPERATOR operator.id.getId driverInfo.driverFlowStatus
 
       DOR.makeDriverReferredByOperator merchantOpCityId person.id operator.id
 
@@ -390,10 +395,13 @@ postDriverOperatorVerifyJoiningOtp merchantShortId opCity mbAuthId requestorId r
       checkAssocOperator <- B.runInReplica $ QDOA.findByDriverIdAndOperatorId person.id operator.id True
       when (isJust checkAssocOperator) $ throwError (InvalidRequest "Driver already associated with operator")
 
-      SA.endDriverAssociationsIfAllowed merchant merchantOpCityId person
+      SA.endDriverAssociationsIfAllowed merchant merchantOpCityId transporterConfig person
 
       assoc <- SA.makeDriverOperatorAssociation merchant.id merchantOpCityId person.id operator.id.getId (DomainRC.convertTextToUTC (Just "2099-12-12"))
       QDOA.create assoc
+      when (transporterConfig.allowCacheDriverFlowStatus == Just True) $ do
+        driverInfo <- QDI.findById person.id >>= fromMaybeM (DriverNotFound person.id.getId)
+        DDriverMode.incrementFleetOperatorStatusKeyForDriver DP.OPERATOR operator.id.getId driverInfo.driverFlowStatus
   pure Success
 
 makeOperatorDriverOtpKey :: Text -> Text

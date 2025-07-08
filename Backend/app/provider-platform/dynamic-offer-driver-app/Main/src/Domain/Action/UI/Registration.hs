@@ -54,6 +54,7 @@ import Kernel.External.Encryption
 import Kernel.External.Notification.FCM.Types (FCMRecipientToken)
 import Kernel.External.Whatsapp.Interface.Types as Whatsapp
 import Kernel.Sms.Config
+import qualified Kernel.Storage.Clickhouse.Config as CH
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
@@ -570,17 +571,21 @@ cleanCachedTokens personId = do
 logout ::
   ( EsqDBFlow m r,
     CacheFlow m r,
-    Redis.HedisFlow m r
+    Redis.HedisFlow m r,
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
   ) =>
   (Id SP.Person, Id DO.Merchant, Id DMOC.MerchantOperatingCity) ->
   m APISuccess
-logout (personId, _, _) = do
+logout (personId, _, merchantOpCityId) = do
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   cleanCachedTokens personId
   uperson <-
     QP.findById personId
       >>= fromMaybeM (PersonNotFound personId.getId)
   _ <- QP.updateDeviceToken Nothing uperson.id
   QR.deleteByPersonId personId.getId
-  let newFlowStatus = DDriverMode.getDriverFlowStatus (Just DriverInfo.OFFLINE) False
-  when (uperson.role == SP.DRIVER) $ void (QD.updateActivity False (Just DriverInfo.OFFLINE) (Just newFlowStatus) (cast uperson.id))
+  when (uperson.role == SP.DRIVER) $ do
+    let newFlowStatus = DDriverMode.getDriverFlowStatus (Just DriverInfo.OFFLINE) False
+    DDriverMode.updateDriverModeAndFlowStatus (cast uperson.id) transporterConfig.allowCacheDriverFlowStatus False (Just DriverInfo.OFFLINE) newFlowStatus Nothing
   pure Success

@@ -375,6 +375,7 @@ library
       SharedLogic.DeleteDriver
       SharedLogic.DriverFee
       SharedLogic.DriverFleetOperatorAssociation
+      SharedLogic.DriverFlowStatus
       SharedLogic.DriverOnboarding
       SharedLogic.DriverOnboarding.Status
       SharedLogic.DriverPool

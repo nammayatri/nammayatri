@@ -137,7 +137,8 @@ resetDriver driver = runARDUFlow "" $ do
   forM_ activeQuotes $ \activeQuote ->
     TDQ.setInactiveBySTId activeQuote.searchTryId
   let newFlowStatus = DDriverMode.getDriverFlowStatus (Just TDrInfo.OFFLINE) False
-  QTDrInfo.updateActivity False (Just TDrInfo.OFFLINE) (Just newFlowStatus) (cast driver.driverId)
+  let allowCacheDriverFlowStatus = Nothing -- TODO: Need to discuss this
+  DDriverMode.updateDriverModeAndFlowStatus (cast driver.driverId) allowCacheDriverFlowStatus False (Just TDrInfo.OFFLINE) newFlowStatus Nothing
   QTDrInfo.updateOnRide False (cast driver.driverId)
 
 -- flow primitives

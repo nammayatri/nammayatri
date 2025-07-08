@@ -23,7 +23,6 @@ import Kernel.External.Maps.Types (LatLong (..))
 import Kernel.Types.Flow (FlowR)
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified "dynamic-offer-driver-app" Storage.Queries.DriverInformation as Q
 import qualified "dynamic-offer-driver-app" Storage.Queries.Person as Q
 import qualified "dynamic-offer-driver-app" Storage.Queries.Person.GetNearestDrivers as S
 import Test.Hspec
@@ -120,5 +119,10 @@ setDriversActive :: Bool -> Maybe DI.DriverMode -> FlowR ARDUEnv.AppEnv ()
 setDriversActive isActive mode = do
   -- Esq.runTransaction $ do
   let drivers = [furthestDriver, closestDriver, suvDriver, sedanDriver, hatchbackDriver, driverWithOldLocation]
+  let allowCacheDriverFlowStatus = Nothing -- TODO: Need to discuss this
   let newFlowStatus = DDriverMode.getDriverFlowStatus mode isActive
-  forM_ drivers (\driver -> Q.updateActivity isActive mode (Just newFlowStatus) (Id driver))
+  forM_
+    drivers
+    ( \driver -> do
+        DDriverMode.updateDriverModeAndFlowStatus (Id driver) allowCacheDriverFlowStatus isActive mode newFlowStatus Nothing
+    )

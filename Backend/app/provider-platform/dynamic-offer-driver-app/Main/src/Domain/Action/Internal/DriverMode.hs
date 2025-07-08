@@ -15,21 +15,30 @@
 module Domain.Action.Internal.DriverMode where
 
 import Data.OpenApi (ToSchema)
+import qualified Data.Text as T
 import qualified Domain.Types.Common as DriverInfo
 import qualified Domain.Types.DriverFlowStatus as DDFS
+import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Person as DP
 import Environment
 import EulerHS.Prelude
+import qualified Kernel.Storage.Clickhouse.Config as CH
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.DriverFlowStatus as SDF
 import qualified Storage.Queries.DriverInformation as QDriverInformation
+import qualified Storage.Queries.DriverOperatorAssociationExtra as QDriverOperatorAssociationExtra
+import qualified Storage.Queries.FleetDriverAssociationExtra as QFleetDriverAssociationExtra
+import Tools.Error
 
 data DriverModeReq = DriverModeReq
   { driverId :: Id DP.Person,
     mode :: DriverInfo.DriverMode,
-    isActive :: Bool
+    isActive :: Bool,
+    allowCacheDriverFlowStatus :: Maybe Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -42,7 +51,7 @@ setDriverMode apiKey req = do
   unless (apiKey == Just locationTrackingServiceKey) $ do
     throwError $ InvalidRequest "Invalid API key"
   let newFlowStatus = getDriverFlowStatus (Just mode) isActive
-  void $ QDriverInformation.updateActivity isActive (Just mode) (Just newFlowStatus) driverId
+  updateDriverModeAndFlowStatus driverId req.allowCacheDriverFlowStatus isActive (Just mode) newFlowStatus Nothing
   pure Success
 
 getDriverFlowStatus :: Maybe DriverInfo.DriverMode -> Bool -> DDFS.DriverFlowStatus
@@ -52,3 +61,94 @@ getDriverFlowStatus mode isActive =
     Just DriverInfo.SILENT -> DDFS.SILENT
     Just DriverInfo.OFFLINE -> DDFS.OFFLINE
     Nothing -> if isActive then DDFS.ACTIVE else DDFS.INACTIVE
+
+updateFleetOperatorStatusKeyForDriver ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, HasField "serviceClickhouseCfg" r CH.ClickhouseCfg, HasField "serviceClickhouseEnv" r CH.ClickhouseEnv) =>
+  Id DP.Person ->
+  DDFS.DriverFlowStatus ->
+  Maybe DI.DriverInformation ->
+  m ()
+updateFleetOperatorStatusKeyForDriver driverId newStatus mbDriverInfo = do
+  driverInfo <- case mbDriverInfo of
+    Just driverInfoData -> pure driverInfoData
+    Nothing -> QDriverInformation.findById driverId >>= fromMaybeM (DriverNotFound driverId.getId)
+  let oldStatus = fromMaybe DDFS.INACTIVE driverInfo.driverFlowStatus
+  -- Try to find active FleetDriverAssociation
+  mbFleetDriverAssociation <- QFleetDriverAssociationExtra.findByDriverId driverId True
+  (entityId, entityType) <- case mbFleetDriverAssociation of
+    Just fda -> pure (fda.fleetOwnerId, DP.FLEET_OWNER)
+    Nothing -> do
+      -- If not found, try to find active DriverOperatorAssociation
+      mbDriverOperatorAssociation <- QDriverOperatorAssociationExtra.findByDriverId driverId True
+      case mbDriverOperatorAssociation of
+        Just doa -> pure (doa.operatorId, DP.OPERATOR)
+        Nothing -> throwError $ InternalError "No active FleetDriverAssociation or DriverOperatorAssociation found for driver"
+  decrementFleetOperatorStatusKeyForDriver entityType entityId (Just oldStatus)
+  incrementFleetOperatorStatusKeyForDriver entityType entityId (Just newStatus)
+
+-- | Increment the fleet/operator status key for a given entityId and status
+incrementFleetOperatorStatusKeyForDriver ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    Redis.HedisFlow m r,
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
+  ) =>
+  DP.Role ->
+  Text ->
+  Maybe DDFS.DriverFlowStatus ->
+  m ()
+incrementFleetOperatorStatusKeyForDriver entityType entityId mbStatus = do
+  let status = fromMaybe DDFS.INACTIVE mbStatus
+  let key = DDFS.getStatusKey entityId status
+  keyExists <- Redis.get @T.Text key
+  let msg = "Key does not exist for driver status key: " <> show key <> " for status=" <> show status <> ", entityId=" <> show entityId
+  if isNothing keyExists
+    then fork msg $ do
+      void $ SDF.handleCacheMissForDriverFlowStatus entityType entityId (DDFS.allKeys entityId)
+      void $ Redis.incr key
+    else do
+      logInfo $ "Key already exists for driver status key: " <> show key <> " for status=" <> show status <> ", entityId=" <> show entityId
+      void $ Redis.incr key
+
+-- | Decrement the fleet/operator status key for a given entityId and status
+decrementFleetOperatorStatusKeyForDriver ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    Redis.HedisFlow m r,
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
+  ) =>
+  DP.Role ->
+  Text ->
+  Maybe DDFS.DriverFlowStatus ->
+  m ()
+decrementFleetOperatorStatusKeyForDriver entityType entityId mbStatus = do
+  let status = fromMaybe DDFS.INACTIVE mbStatus
+  let key = DDFS.getStatusKey entityId status
+  keyExists <- Redis.get @T.Text key
+  let msg = "Key does not exist for driver status key: " <> show key <> " for status=" <> show status <> ", entityId=" <> show entityId
+  if isNothing keyExists
+    then fork msg $ do
+      void $ SDF.handleCacheMissForDriverFlowStatus entityType entityId (DDFS.allKeys entityId)
+      void $ Redis.decr key
+    else do
+      logInfo $ "Key already exists for driver status key: " <> show key <> " for status=" <> show status <> ", entityId=" <> show entityId
+      void $ Redis.decr key
+
+-- | Common function to update both the fleet/operator status key and the driver activity in the DB
+updateDriverModeAndFlowStatus ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, HasField "serviceClickhouseCfg" r CH.ClickhouseCfg, HasField "serviceClickhouseEnv" r CH.ClickhouseEnv) =>
+  Id DP.Person ->
+  Maybe Bool ->
+  Bool ->
+  Maybe DriverInfo.DriverMode ->
+  DDFS.DriverFlowStatus ->
+  Maybe DI.DriverInformation ->
+  m ()
+updateDriverModeAndFlowStatus driverId mbAllowCacheDriverFlowStatus isActive mbMode newFlowStatus mbDriverInfo = do
+  when (mbAllowCacheDriverFlowStatus == Just True) $
+    updateFleetOperatorStatusKeyForDriver driverId newFlowStatus mbDriverInfo
+  QDriverInformation.updateActivity isActive mbMode (Just newFlowStatus) driverId
