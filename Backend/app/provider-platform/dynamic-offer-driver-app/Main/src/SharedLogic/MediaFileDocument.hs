@@ -3,6 +3,7 @@ module SharedLogic.MediaFileDocument
     mediaFileDocumentConfirm,
     mediaFileDocumentDelete,
     mediaFileDocumentDownloadLink,
+    mediaFileDocumentComplete,
   )
 where
 
@@ -18,7 +19,6 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.VehicleRegistrationCertificate as DRC
 import Environment
-import EulerHS.Prelude hiding (elem, find, foldl', length, map, whenJust)
 import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Beckn.Context as Context
@@ -26,7 +26,11 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
+import Lib.Scheduler
+import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
+import SharedLogic.Allocator
 import SharedLogic.Merchant (findMerchantByShortId)
+import Storage.Beam.SchedulerJob ()
 import qualified Storage.Cac.TransporterConfig as CCT
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.MediaFileDocument as QMFD
@@ -66,6 +70,9 @@ mediaFileDocumentUploadLink merchantShortId opCity requestorId req = do
       mediaFileLink <- S3.generateUploadUrl (T.unpack mediaPath) merchant.mediaFileDocumentLinkExpires
       newMediaFileDocument <- buildMediaFileDocument merchantOpCity (Id @DP.Person requestorId) mediaPath rc.id mediaFileLink req
       QMFD.create newMediaFileDocument
+      let jobScheduledIn = fromIntegral merchant.mediaFileDocumentLinkExpires + 300 -- 5 minutes buffer
+      createJobIn @_ @'MediaFileDocumentComplete (Just merchant.id) (Just merchantOpCity.id) jobScheduledIn $
+        MediaFileDocumentCompleteJobData {mediaFileDocumentId = newMediaFileDocument.id}
       pure newMediaFileDocument
     Just existingMediaFile -> do
       if existingMediaFile.creatorId == Id @DP.Person requestorId
@@ -247,3 +254,37 @@ mediaFileDocumentDownloadLink merchantShortId opCity mediaFileDocumentType' rcNu
         mediaFileDocumentId = cast @DMFD.MediaFileDocument @CommonMFD.MediaFileDocument mediaFileDocument.id,
         mediaFileDocumentStatus = castMediaFileDocumentStatus mediaFileDocument.status
       }
+
+mediaFileDocumentComplete ::
+  (CacheFlow m r, MonadFlow m, EsqDBFlow m r, HasField "s3Env" r (S3Env m)) =>
+  Job 'MediaFileDocumentComplete ->
+  m ExecutionResult
+mediaFileDocumentComplete Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) $ do
+  let jobData = jobInfo.jobData
+      mediaFileDocumentId = jobData.mediaFileDocumentId
+  QMFD.findByPrimaryKey mediaFileDocumentId >>= \case
+    Nothing -> logError $ "MediaFileDocument: " <> mediaFileDocumentId.getId <> " does not exist"
+    Just mediaFileDocument -> do
+      let s3Path = T.unpack mediaFileDocument.s3Path
+      case mediaFileDocument.status of
+        status | status `elem` [DMFD.CONFIRMED, DMFD.COMPLETED] -> do
+          when (status == DMFD.COMPLETED) $
+            logWarning $ "MediaFileDocument: " <> mediaFileDocumentId.getId <> " already completed"
+          try (S3.headRequest s3Path) >>= \case
+            Right s3ObjectStatus -> do
+              let fileHash = eTagToHash s3ObjectStatus.entityTag
+              if Just fileHash == mediaFileDocument.fileHash
+                then QMFD.updateStatusAndResetUploadLink DMFD.COMPLETED mediaFileDocumentId
+                else do
+                  logError $ "File was overwritten but not confirmed: mediaFileDocumentId:" <> mediaFileDocumentId.getId <> "; status: " <> show status <> ", removing.."
+                  QMFD.deleteById mediaFileDocumentId
+                  catch (S3.delete s3Path) $ \(err :: SomeException) -> do
+                    logError $ "Unable to delete file: mediaFileDocumentId: " <> mediaFileDocumentId.getId <> "err: " <> show err
+            Left (err :: SomeException) -> do
+              logError $ "File was not found: mediaFileDocumentId: " <> mediaFileDocumentId.getId <> "err: " <> show err
+              QMFD.deleteById mediaFileDocumentId
+        status -> do
+          logInfo $ "MediaFileDocument: " <> mediaFileDocumentId.getId <> "; status " <> show status <> " was not confirmed, removing.."
+          QMFD.deleteById mediaFileDocumentId
+          catch (S3.delete s3Path) $ \(_err :: SomeException) -> pure ()
+  pure Complete

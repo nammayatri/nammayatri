@@ -384,10 +384,12 @@ MediaFileDocument:
       orderBy:
         field: createdAt
         order: desc
-
     updateStatus:
       kvFunction: updateOneWithKV
       params: [status, fileHash]
+      where: id
+    deleteById:
+      kvFunction: deleteWithKV
       where: id
   extraOperations:
     - EXTRA_QUERY_FILE

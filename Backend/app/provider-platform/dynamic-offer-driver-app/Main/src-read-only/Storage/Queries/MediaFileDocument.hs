@@ -25,6 +25,9 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.MediaFileDocument.MediaFileDocument] -> m ())
 createMany = traverse_ create
 
+deleteById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.MediaFileDocument.MediaFileDocument -> m ())
+deleteById id = do deleteWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 findAllByMerchantOpCityIdAndRcIdAndType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> Domain.Types.Common.MediaFileDocumentType -> m [Domain.Types.MediaFileDocument.MediaFileDocument])
