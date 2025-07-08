@@ -106,6 +106,7 @@ data RouteStopMappingNandi = RouteStopMappingNandi
 data GtfsGraphQLRequest = GtfsGraphQLRequest
   { query :: Text,
     variables :: Maybe Value,
-    operation_name :: Maybe Text
+    operation_name :: Maybe Text,
+    city :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
