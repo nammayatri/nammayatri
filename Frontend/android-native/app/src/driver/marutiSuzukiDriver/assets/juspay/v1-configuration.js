@@ -125,7 +125,7 @@ window.getMerchantConfig = function () {
       , "red900" : "#F0373A"
       }
     , "themeColors" : {
-      "navBarBackground" : "#F9FAFC",
+      "navBarBackground" : "#F9FAFC",     
       "primaryStrokeColor" : "#2E3494",
       "openMapsStrokeColor" : "#A8AEF0",
       "secondaryStrokeColor" : "#A8AEF0",
