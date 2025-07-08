@@ -34,6 +34,7 @@ imports:
   PlatformType: Domain.Types.IntegratedBPPConfig
   VehicleCategory: BecknV2.FRFS.Enums
   Provider: Lib.JourneyModule.Types
+  Value: Data.Aeson
 
 module: MultimodalConfirm
 
@@ -199,6 +200,8 @@ types:
     rgn: Maybe Text
     hin: Maybe Text
     sgstdDest: Maybe [SuggestedStations]
+    gj: Maybe Value
+    gi: Maybe Value
     ibc: Id IntegratedBPPConfig
 
   TransportRouteStopMapping:

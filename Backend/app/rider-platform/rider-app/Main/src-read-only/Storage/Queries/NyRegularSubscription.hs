@@ -37,8 +37,8 @@ confirmSubscriptionDetailsById vehicleServiceTier fixedPrice fixedPriceBreakupDe
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.vehicleServiceTier vehicleServiceTier,
-      Se.Set Beam.fixedPrice (((.amount) <$> fixedPrice)),
-      Se.Set Beam.fixedPriceCurrency (((.currency) <$> fixedPrice)),
+      Se.Set Beam.fixedPrice ((.amount) <$> fixedPrice),
+      Se.Set Beam.fixedPriceCurrency ((.currency) <$> fixedPrice),
       Se.Set Beam.fixedPriceBreakupDetails fixedPriceBreakupDetails,
       Se.Set Beam.fixedPriceExpiryDate fixedPriceExpiryDate,
       Se.Set Beam.initialBppQuoteId initialBppQuoteId,
@@ -52,7 +52,7 @@ findById ::
   (Kernel.Types.Id.Id Domain.Types.NyRegularSubscription.NyRegularSubscription -> m (Maybe Domain.Types.NyRegularSubscription.NyRegularSubscription))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-findByUserId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ([Domain.Types.NyRegularSubscription.NyRegularSubscription]))
+findByUserId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m [Domain.Types.NyRegularSubscription.NyRegularSubscription])
 findByUserId userId = do findAllWithKV [Se.Is Beam.userId $ Se.Eq (Kernel.Types.Id.getId userId)]
 
 updateLastProcessedAtById ::
@@ -112,8 +112,8 @@ updateByPrimaryKey (Domain.Types.NyRegularSubscription.NyRegularSubscription {..
     [ Se.Set Beam.bppId bppId,
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.dropoffLocationId (Kernel.Types.Id.getId $ (.id) dropoffLocation),
-      Se.Set Beam.fixedPrice (((.amount) <$> fixedPrice)),
-      Se.Set Beam.fixedPriceCurrency (((.currency) <$> fixedPrice)),
+      Se.Set Beam.fixedPrice ((.amount) <$> fixedPrice),
+      Se.Set Beam.fixedPriceCurrency ((.currency) <$> fixedPrice),
       Se.Set Beam.fixedPriceBreakupDetails fixedPriceBreakupDetails,
       Se.Set Beam.fixedPriceExpiryDate fixedPriceExpiryDate,
       Se.Set Beam.initialBppQuoteId initialBppQuoteId,

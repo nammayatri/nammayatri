@@ -4,6 +4,7 @@ module API.Types.UI.MultimodalConfirm where
 
 import qualified API.Types.UI.FRFSTicketService
 import qualified BecknV2.FRFS.Enums
+import qualified Data.Aeson
 import Data.OpenApi (ToSchema)
 import qualified Domain.Types.BookingUpdateRequest
 import qualified Domain.Types.Estimate
@@ -222,6 +223,8 @@ data TransportRouteStopMapping = TransportRouteStopMapping {ibc :: Kernel.Types.
 data TransportStation = TransportStation
   { ad :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     cd :: Kernel.Prelude.Text,
+    gi :: Kernel.Prelude.Maybe Data.Aeson.Value,
+    gj :: Kernel.Prelude.Maybe Data.Aeson.Value,
     hin :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     ibc :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
     ln :: Kernel.Prelude.Double,

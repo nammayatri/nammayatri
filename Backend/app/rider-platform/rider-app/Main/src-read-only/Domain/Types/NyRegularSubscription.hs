@@ -46,4 +46,4 @@ data NyRegularSubscription = NyRegularSubscription
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity)
   }
-  deriving (Generic, (Eq), (Show), (ToJSON), (FromJSON), (ToSchema))
+  deriving (Generic, Eq, Show, ToJSON, FromJSON, ToSchema)
