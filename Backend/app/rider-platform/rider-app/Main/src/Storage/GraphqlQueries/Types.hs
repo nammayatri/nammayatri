@@ -24,10 +24,10 @@ import Network.HTTP.Client
 
 -- Data types for RouteStopTimeTable query
 data RouteStopTimeTableQueryVars = RouteStopTimeTableQueryVars
-  { routeIds :: [Text],
-    stopId :: Text
+  { routeCode :: [Text],
+    stopCode :: Text
   }
-  deriving (Show, Generic, ToJSON, FromJSON)
+  deriving (Show, Generic)
 
 -- Response structure from OpenTripPlanner
 newtype OTPResponse = OTPResponse
