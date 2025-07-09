@@ -161,6 +161,7 @@ referralScreenInnerBody push state =
   , height $ WRAP_CONTENT
   , orientation VERTICAL
   ]([ GenericHeader.view (push <<< GenericHeaderActionController) (genericHeaderConfig state)
+    , nammaKutumbaCard push state
     , referralStatsView push state
     , linearLayout
       [ width MATCH_PARENT
@@ -215,6 +216,52 @@ referralStatsView push state =
         ]
      ]
   ]
+
+nammaKutumbaCard :: forall w. (Action -> Effect Unit) -> BenefitsScreenState -> PrestoDOM (Effect Unit) w
+nammaKutumbaCard push state =
+  relativeLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , margin $ Margin 0 16 0 16  -- Match lower card
+    -- , cornerRadius 24.0
+    , orientation HORIZONTAL
+    ]
+    [ imageView
+        [ width $ V 410
+        , height $ V 120
+        , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_claim_background"
+        ]
+    , linearLayout
+        [ width MATCH_PARENT
+        , height $ V 110  -- Ensures enough height for the icon
+        , orientation HORIZONTAL
+        , gravity CENTER_VERTICAL
+        , padding $ Padding 0 10 0 0
+        ]
+        [ imageView
+            [ width $ V 90
+            , height $ V 95
+            , margin $ MarginLeft 30
+            , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_namma_kutumba"
+            ]
+        , linearLayout [ weight 1.0 ] []
+        , textView
+            [ text "Namma Kutumba"
+            , color "#4B2E0E"
+            , textSize FontSize.a_24
+            , fontStyle $ FontStyle.semiBold LanguageStyle
+            , gravity CENTER_VERTICAL
+            ]
+        , linearLayout [ weight 1.0 ] []
+        , imageView
+            [ width $ V 38 -- Make arrow larger if it's a circular asset
+            , height $ V 38
+            , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_yellow_arrow_right"
+            , margin $ MarginRight 30
+            , onClick push $ const GoToClaimReward
+            ]
+        ]
+    ]
 
 referralBonusView :: forall w. (Action -> Effect Unit) -> BenefitsScreenState -> PrestoDOM (Effect Unit) w
 referralBonusView push state =

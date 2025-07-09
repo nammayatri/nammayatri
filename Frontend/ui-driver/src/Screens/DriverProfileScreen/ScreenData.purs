@@ -279,6 +279,7 @@ dummyDriverInfo = GetDriverInfoResp {
     , isSubscriptionEnabledAtCategoryLevel : Nothing
     , isSpecialLocWarrior : Nothing
     , subscriptionDown : Nothing
+    , safetyScore : Nothing
     , overchargingTag : Nothing
     , ridesWithFareIssues : Nothing
     , totalRidesConsideredForFareIssues : Nothing

@@ -235,3 +235,7 @@ type PetRidesFeatureConfig = {
 type CancellationTimeThresholdConfig = {
   cancellationTimeThresholdInSeconds :: Int
 }
+
+type NominationView = {
+  show :: Boolean
+}

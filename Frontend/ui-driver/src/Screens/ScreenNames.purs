@@ -67,6 +67,7 @@ data ScreenName = SPLASH_SCREEN
                 | UPLOAD_PARCEL_IMAGE_SCREEN
                 | METER_SCREEN
                 | METER_RIDE_SCREEN
+                | DriverClaimRewardScreen
 
 derive instance genericScreenName :: Generic ScreenName _
 instance eqScreenName :: Eq ScreenName where eq = genericEq
@@ -120,3 +121,4 @@ getScreen str = case str of
     UPLOAD_PARCEL_IMAGE_SCREEN         -> "upload_parcel_image_screen"
     METER_SCREEN                       -> "meter_screen"
     METER_RIDE_SCREEN                  -> "meter_ride_screen"
+    DriverClaimRewardScreen            -> "driver_claim_reward_screen"
