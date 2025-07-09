@@ -73,6 +73,7 @@ import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified SharedLogic.CallBPP as CallBPP
+import qualified SharedLogic.Insurance as SI
 import SharedLogic.JobScheduler
 import qualified SharedLogic.MerchantConfig as SMC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
@@ -349,6 +350,8 @@ buildRide req@ValidatedRideAssignedReq {..} mbMerchant now status = do
         pickupRouteCallCount = Just 0,
         talkedWithDriver = Nothing,
         isSafetyPlus = isSafetyPlus,
+        isInsured = booking.isInsured,
+        insuredAmount = booking.insuredAmount,
         ..
       }
 
@@ -529,6 +532,8 @@ rideStartedReqHandler ValidatedRideStartedReq {..} = do
   triggerRideStartedEvent RideEventData {ride = updRideForStartReq, personId = booking.riderId, merchantId = booking.merchantId}
   _ <- QRide.updateMultiple updRideForStartReq.id updRideForStartReq
   QPFS.clearCache booking.riderId
+  fork "create insurance" $ do
+    SI.createInsurance updRideForStartReq
   now <- getCurrentTime
   rideRelatedNotificationConfigList <- CRRN.findAllByMerchantOperatingCityIdAndTimeDiffEventInRideFlow booking.merchantOperatingCityId DRN.START_TIME booking.configInExperimentVersions
   forM_ rideRelatedNotificationConfigList (SN.pushReminderUpdatesInScheduler booking updRideForStartReq (fromMaybe now rideStartTime))

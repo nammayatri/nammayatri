@@ -92,6 +92,8 @@ Booking:
     isPetRide: Bool
     configInExperimentVersions: "[ConfigVersionMap]"
     coinsRewardedOnGoldTierRide: Maybe Int
+    isInsured: Bool
+    insuredAmount: Maybe Text
 
   excludedFields:
     - merchantId
@@ -112,6 +114,7 @@ Booking:
     configInExperimentVersions: Maybe Value
     isSafetyPlus : Maybe Bool
     isPetRide: Maybe Bool
+    isInsured: Maybe Bool
   beamFields:
     tripCategory:
       tripCategory: Maybe TripCategory
@@ -158,6 +161,7 @@ Booking:
     configInExperimentVersions: Just $ toJSON configInExperimentVersions|E
     isSafetyPlus : Just isSafetyPlus|E
     isPetRide: Just isPetRide|E
+    isInsured: Just isInsured|E
 
   intermediateTransformers:
     fromTType:
@@ -185,6 +189,7 @@ Booking:
     configInExperimentVersions: fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< configInExperimentVersions)|E
     isSafetyPlus: fromMaybe False isSafetyPlus|E
     isPetRide: fromMaybe False isPetRide|E
+    isInsured: fromMaybe False isInsured|E
   sqlType:
     status: character varying(255)
     bapId: character varying(255)

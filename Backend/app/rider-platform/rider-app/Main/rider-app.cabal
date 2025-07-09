@@ -214,6 +214,8 @@ library
       Domain.Action.UI.Frontend
       Domain.Action.UI.HotSpot
       Domain.Action.UI.IGM
+      Domain.Action.UI.Insurance
+      Domain.Action.UI.InsuranceInternal
       Domain.Action.UI.InterCityDetails
       Domain.Action.UI.Invoice
       Domain.Action.UI.Location
@@ -346,6 +348,7 @@ library
       SharedLogic.External.LocationTrackingService.Types
       SharedLogic.FRFSUtils
       SharedLogic.GoogleTranslate
+      SharedLogic.Insurance
       SharedLogic.JobScheduler
       SharedLogic.KaalChakra.Actions
       SharedLogic.LocationMapping
@@ -527,6 +530,7 @@ library
       Tools.Constants
       Tools.Error
       Tools.Event
+      Tools.Insurance
       Tools.JSON
       Tools.Maps
       Tools.Metrics
@@ -582,6 +586,8 @@ library
       API.Action.UI.FavouriteDriver
       API.Action.UI.FollowRide
       API.Action.UI.FRFSTicketService
+      API.Action.UI.Insurance
+      API.Action.UI.InsuranceInternal
       API.Action.UI.Invoice
       API.Action.UI.MeterRideInternal
       API.Action.UI.Miscellaneous
@@ -640,6 +646,7 @@ library
       API.Types.UI.FavouriteDriver
       API.Types.UI.FollowRide
       API.Types.UI.FRFSTicketService
+      API.Types.UI.Insurance
       API.Types.UI.Invoice
       API.Types.UI.MeterRideInternal
       API.Types.UI.Miscellaneous
@@ -701,6 +708,8 @@ library
       Domain.Types.FRFSVehicleServiceTier
       Domain.Types.GTFSFeedInfo
       Domain.Types.HotSpotConfig
+      Domain.Types.Insurance
+      Domain.Types.InsuranceConfig
       Domain.Types.IntegratedBPPConfig
       Domain.Types.InterCityDetails
       Domain.Types.Issue
@@ -832,6 +841,8 @@ library
       Storage.Beam.FRFSVehicleServiceTier
       Storage.Beam.GTFSFeedInfo
       Storage.Beam.HotSpotConfig
+      Storage.Beam.Insurance
+      Storage.Beam.InsuranceConfig
       Storage.Beam.IntegratedBPPConfig
       Storage.Beam.InterCityDetails
       Storage.Beam.Issue
@@ -916,6 +927,7 @@ library
       Storage.Beam.WalkLegMultimodal
       Storage.Beam.WhiteListOrg
       Storage.CachedQueries.FeedbackForm
+      Storage.CachedQueries.InsuranceConfig
       Storage.CachedQueries.IntegratedBPPConfig
       Storage.CachedQueries.SavedReqLocation
       Storage.Queries.AadhaarOtpReq
@@ -964,6 +976,8 @@ library
       Storage.Queries.FRFSVehicleServiceTier
       Storage.Queries.GTFSFeedInfo
       Storage.Queries.HotSpotConfig
+      Storage.Queries.Insurance
+      Storage.Queries.InsuranceConfig
       Storage.Queries.IntegratedBPPConfig
       Storage.Queries.InterCityDetails
       Storage.Queries.Issue
