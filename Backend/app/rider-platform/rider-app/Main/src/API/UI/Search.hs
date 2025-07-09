@@ -356,11 +356,12 @@ multiModalSearch searchRequest riderConfig initateJourney req' personId = do
       hasOnlyUserPreferredTransitModes otpRoute = all (isLegModeIn userPreferredTransitModes) otpRoute.legs
       hasOnlyWalkOrUnspecifiedTransitModes otpRoute = all (isLegModeIn [MultiModalTypes.Walk, MultiModalTypes.Unspecified]) otpRoute.legs
       indexedRoutes = zip [0 ..] otpResponse.routes
-      filteredIndexedRoutes =
-        filter (not . hasOnlyWalkOrUnspecifiedTransitModes . snd) $
-          filter (hasOnlyUserPreferredTransitModes . snd) indexedRoutes
-      indexedRoutesToProcess = if null filteredIndexedRoutes then indexedRoutes else filteredIndexedRoutes
-      showMultimodalWarningForFirstJourney = null filteredIndexedRoutes
+      removeOnlyWalkAndUnspecifiedTransitModes = filter (not . hasOnlyWalkOrUnspecifiedTransitModes . snd)
+      filteredUserPreferredIndexedRoutes = filter (hasOnlyUserPreferredTransitModes . snd) indexedRoutes
+      indexedRoutesToProcess =
+        removeOnlyWalkAndUnspecifiedTransitModes $
+          if null filteredUserPreferredIndexedRoutes then indexedRoutes else filteredUserPreferredIndexedRoutes
+      showMultimodalWarningForFirstJourney = null filteredUserPreferredIndexedRoutes
 
   mbJourneyWithIndex <- JMU.measureLatency (go indexedRoutesToProcess userPreferences) "Multimodal Init Time" -- process until first journey is found
   QSearchRequest.updateHasMultimodalSearch (Just True) searchRequest.id
@@ -458,15 +459,15 @@ multiModalSearch searchRequest riderConfig initateJourney req' personId = do
     extractDest (Just d) = return d
 
     userPreferencesToGeneralVehicleTypes :: [DTrip.MultimodalTravelMode] -> [GeneralVehicleType]
-    userPreferencesToGeneralVehicleTypes = mapMaybe allowedTransitModeToGeneralVehicleType
+    userPreferencesToGeneralVehicleTypes = map allowedTransitModeToGeneralVehicleType
 
-    allowedTransitModeToGeneralVehicleType :: DTrip.MultimodalTravelMode -> Maybe GeneralVehicleType
+    allowedTransitModeToGeneralVehicleType :: DTrip.MultimodalTravelMode -> GeneralVehicleType
     allowedTransitModeToGeneralVehicleType mode = case mode of
-      DTrip.Bus -> Just MultiModalTypes.Bus
-      DTrip.Metro -> Just MultiModalTypes.MetroRail
-      DTrip.Subway -> Just MultiModalTypes.Subway
-      DTrip.Walk -> Just MultiModalTypes.Walk
-      _ -> Nothing
+      DTrip.Bus -> MultiModalTypes.Bus
+      DTrip.Metro -> MultiModalTypes.MetroRail
+      DTrip.Subway -> MultiModalTypes.Subway
+      DTrip.Walk -> MultiModalTypes.Walk
+      _ -> MultiModalTypes.Unspecified
 
     castVehicleCategoryToGeneralVehicleType :: BecknV2.OnDemand.Enums.VehicleCategory -> GeneralVehicleType
     castVehicleCategoryToGeneralVehicleType vehicleCategory = case vehicleCategory of
