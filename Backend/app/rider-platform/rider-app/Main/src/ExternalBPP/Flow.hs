@@ -151,17 +151,12 @@ search merchant merchantOperatingCity integratedBPPConfig bapConfig searchReq ro
                       routeCode = routeInfo.route.code,
                       _type = DFRFSQuote.SingleJourney,
                       routeStations = routeStations,
-                      startStationCode = routeInfo.startStopCode,
-                      endStationCode = routeInfo.endStopCode,
-                      stations = map mkOndcStations stations,
                       fareDetails = fareDetails,
                       discounts = map mkDDiscount discounts,
                       ..
                     }
           )
           fares
-
-    mkOndcStations DStation {..} = DONDCStation {..}
 
     mkDVehicleServiceTier FRFSVehicleServiceTier {..} = DVehicleServiceTier {..}
 

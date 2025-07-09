@@ -85,22 +85,11 @@ data DQuote = DQuote
     price :: Price,
     childPrice :: Maybe Price,
     vehicleType :: Spec.VehicleCategory,
-    startStationCode :: Text,
-    endStationCode :: Text,
     routeStations :: [DRouteStation],
-    stations :: [DONDCStation],
+    stations :: [DStation],
     discounts :: [DDiscount],
     fareDetails :: Maybe Quote.FRFSFareDetails,
     _type :: Quote.FRFSQuoteType
-  }
-
-data DONDCStation = DONDCStation
-  { stationName :: Text,
-    stationLat :: Maybe Double,
-    stationLon :: Maybe Double,
-    stationType :: Station.StationType,
-    stopSequence :: Maybe Int,
-    towards :: Maybe Text
   }
 
 data DDiscount = DDiscount
@@ -200,19 +189,21 @@ onSearch onSearchReq validatedReq = do
   fork "Updating Route Stop Fare" $ do
     forM_ onSearchReq.quotes $ \quote -> do
       -- This `null quote.routeStation` check is to ensure that we only update the fare for the route stations if they are present in the quote.
+      dStartStation <- getStartStation quote.stations & fromMaybeM (InternalError "Start station not found")
+      dEndStation <- getEndStation quote.stations & fromMaybeM (InternalError "End station not found")
       if null quote.routeStations
         then do
           if quote.vehicleType == Spec.METRO
             then do
-              QRSF.findAllByStartStopAndIntegratedBPPConfigId quote.startStationCode quote.startStationCode integratedBPPConfig.id >>= \case
+              QRSF.findAllByStartStopAndIntegratedBPPConfigId dStartStation.stationCode dEndStation.stationCode integratedBPPConfig.id >>= \case
                 routeStopFares@(_ : _) -> do
                   let farePolicyIds = map (.farePolicyId) routeStopFares
-                  traverse_ (\fp -> QRSF.updateFareByStopCodes quote.price.amount fp quote.startStationCode quote.startStationCode) farePolicyIds
+                  traverse_ (\fp -> QRSF.updateFareByStopCodes quote.price.amount fp dStartStation.stationCode dEndStation.stationCode) farePolicyIds
                 [] -> do
                   QFRFP.findAllByIntegratedBPPConfigId integratedBPPConfig.id >>= \case
                     fareProducts@(_ : _) -> do
                       let farePolicyIds = map (.farePolicyId) fareProducts
-                      traverse_ (\farePolicyId -> createStopFare farePolicyId quote.startStationCode quote.startStationCode quote search.merchantId search.merchantOperatingCityId integratedBPPConfig.id) farePolicyIds
+                      traverse_ (\farePolicyId -> createStopFare farePolicyId dStartStation.stationCode dEndStation.stationCode quote search.merchantId search.merchantOperatingCityId integratedBPPConfig.id) farePolicyIds
                     [] -> do
                       createEntriesInFareTables search.merchantId search.merchantOperatingCityId quote integratedBPPConfig.id
             else do
@@ -221,7 +212,7 @@ onSearch onSearchReq validatedReq = do
                   let farePolicyIds = map (.farePolicyId) fareProducts
                   farePolicies <- QFFP.findAllByIds farePolicyIds
                   let filteredFarePolicies = filter (\fp -> fp._type == FRFSFarePolicy.MatrixBased) farePolicies
-                  traverse_ (\fp -> QRSF.updateFareByStopCodes quote.price.amount fp.id quote.startStationCode quote.startStationCode) filteredFarePolicies
+                  traverse_ (\fp -> QRSF.updateFareByStopCodes quote.price.amount fp.id dStartStation.stationCode dEndStation.stationCode) filteredFarePolicies
                 [] -> do
                   createEntriesInFareTables search.merchantId search.merchantOperatingCityId quote integratedBPPConfig.id
         else do
@@ -272,10 +263,12 @@ filterQuotes _ Nothing = return Nothing
 
 mkQuotes :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, HasShortDurationRetryCfg r c) => DOnSearch -> ValidatedDOnSearch -> DQuote -> m Quote.FRFSQuote
 mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
+  dStartStation <- getStartStation stations & fromMaybeM (InternalError "Start station not found")
+  dEndStation <- getEndStation stations & fromMaybeM (InternalError "End station not found")
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity search
-  startStation <- OTPRest.getStationByGtfsIdAndStopCode startStationCode integratedBPPConfig >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> startStationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
-  endStation <- OTPRest.getStationByGtfsIdAndStopCode endStationCode integratedBPPConfig >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> endStationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
-  let stationsJSON = stations & map (castONDCStationToAPI integratedBPPConfig.id) & encodeToText
+  startStation <- OTPRest.getStationByGtfsIdAndStopCode dStartStation.stationCode integratedBPPConfig >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> dStartStation.stationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
+  endStation <- OTPRest.getStationByGtfsIdAndStopCode dEndStation.stationCode integratedBPPConfig >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> dEndStation.stationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
+  let stationsJSON = stations & map (castStationToAPI integratedBPPConfig.id) & encodeToText
   let routeStationsJSON = routeStations & map (castRouteStationToAPI integratedBPPConfig.id) & encodeToText
   let discountsJSON = discounts & map castDiscountToAPI & encodeToText
   uid <- generateGUID
@@ -329,23 +322,6 @@ castStationToAPI integratedBppConfigId DStation {..} =
   API.FRFSStationAPI
     { API.address = Nothing,
       API.code = stationCode,
-      API.routeCodes = Nothing,
-      API.color = Nothing,
-      API.lat = stationLat,
-      API.lon = stationLon,
-      API.name = Just stationName,
-      API.stationType = Just stationType,
-      API.sequenceNum = stopSequence,
-      API.distance = Nothing,
-      API.towards = Nothing,
-      API.integratedBppConfigId = integratedBppConfigId
-    }
-
-castONDCStationToAPI :: Id DIBC.IntegratedBPPConfig -> DONDCStation -> API.FRFSStationAPI
-castONDCStationToAPI integratedBppConfigId DONDCStation {..} =
-  API.FRFSStationAPI
-    { API.address = Nothing,
-      API.code = "",
       API.routeCodes = Nothing,
       API.color = Nothing,
       API.lat = stationLat,
@@ -474,6 +450,8 @@ createEntriesInFareTables merchantId merchantOperatingCityId quote integratedBpp
   farePolicyId <- generateGUID
   now <- getCurrentTime
   let routeCode = quote.routeCode
+      startStopCode = find (\station -> station.stationType == Station.START) quote.stations <&> (.stationCode)
+      endStopCode = find (\station -> station.stationType == Station.END) quote.stations <&> (.stationCode)
   let farePolicy =
         FRFSFarePolicy.FRFSFarePolicy
           { id = farePolicyId,
@@ -489,8 +467,8 @@ createEntriesInFareTables merchantId merchantOperatingCityId quote integratedBpp
   let routeStopFare =
         StopFare.StopFare
           { farePolicyId,
-            startStopCode = quote.startStationCode,
-            endStopCode = quote.endStationCode,
+            startStopCode = fromMaybe "" startStopCode,
+            endStopCode = fromMaybe "" endStopCode,
             amount = quote.price.amount,
             currency = quote.price.currency,
             merchantId,

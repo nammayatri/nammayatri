@@ -23,13 +23,11 @@ import qualified Domain.Types.FRFSQuote as DQuote
 import Domain.Types.StationType
 import Kernel.Prelude
 import Kernel.Types.Error
-import Kernel.Types.Id
 import Kernel.Types.TimeRFC339
 import Kernel.Utils.Common
-import qualified Storage.Queries.FRFSSearch as QSearch
 
 buildOnSearchReq ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (MonadFlow m) =>
   Spec.OnSearchReq ->
   m Domain.DOnSearch
 buildOnSearchReq onSearchReq = do
@@ -68,9 +66,8 @@ buildOnSearchReq onSearchReq = do
     throwError $ InvalidRequest "Payment tags are missing for all payments"
 
   let bppDelayedInterest = listToMaybe interestTags
-  search <- QSearch.findById (Id transactionId) >>= fromMaybeM (InvalidRequest $ "Search with this transactionId: " <> transactionId <> " not found")
 
-  quotes <- mkQuotes items fulfillments search.fromStationCode search.toStationCode
+  quotes <- mkQuotes items fulfillments
 
   return
     Domain.DOnSearch
@@ -86,17 +83,17 @@ buildOnSearchReq onSearchReq = do
         bppDelayedInterest
       }
 
-mkQuotes :: (MonadFlow m) => [Spec.Item] -> [Spec.Fulfillment] -> Text -> Text -> m [Domain.DQuote]
-mkQuotes items fulfillments fromStationCode toStationCode =
-  traverse (parseItems fulfillments fromStationCode toStationCode) items <&> concat
+mkQuotes :: (MonadFlow m) => [Spec.Item] -> [Spec.Fulfillment] -> m [Domain.DQuote]
+mkQuotes items fulfillments =
+  traverse (parseItems fulfillments) items <&> concat
 
-parseItems :: (MonadFlow m) => [Spec.Fulfillment] -> Text -> Text -> Spec.Item -> m [Domain.DQuote]
-parseItems fulfillments fromStationCode toStationCode item = do
+parseItems :: (MonadFlow m) => [Spec.Fulfillment] -> Spec.Item -> m [Domain.DQuote]
+parseItems fulfillments item = do
   fulfillmentIds <- item.itemFulfillmentIds & fromMaybeM (InvalidRequest "FulfillmentIds not found")
-  traverse (parseFulfillments item fulfillments fromStationCode toStationCode) fulfillmentIds
+  traverse (parseFulfillments item fulfillments) fulfillmentIds
 
-parseFulfillments :: (MonadFlow m) => Spec.Item -> [Spec.Fulfillment] -> Text -> Text -> Text -> m Domain.DQuote
-parseFulfillments item fulfillments fromStationCode toStationCode fulfillmentId = do
+parseFulfillments :: (MonadFlow m) => Spec.Item -> [Spec.Fulfillment] -> Text -> m Domain.DQuote
+parseFulfillments item fulfillments fulfillmentId = do
   itemId <- item.itemId & fromMaybeM (InvalidRequest "ItemId not found")
   itemCode <- item.itemDescriptor >>= (.descriptorCode) & fromMaybeM (InvalidRequest "ItemCode not found")
   quoteType <- castQuoteType itemCode
@@ -117,8 +114,6 @@ parseFulfillments item fulfillments fromStationCode toStationCode fulfillmentId 
       { bppItemId = itemId,
         routeCode = fulfillmentId,
         price,
-        startStationCode = fromStationCode,
-        endStationCode = toStationCode,
         childPrice = Nothing,
         vehicleType,
         routeStations = [],
@@ -128,15 +123,17 @@ parseFulfillments item fulfillments fromStationCode toStationCode fulfillmentId 
         _type = quoteType
       }
 
-mkDStation :: (MonadFlow m) => Spec.Stop -> Maybe Int -> m Domain.DONDCStation
+mkDStation :: (MonadFlow m) => Spec.Stop -> Maybe Int -> m Domain.DStation
 mkDStation stop seqNumber = do
+  stationCode <- stop.stopLocation >>= (.locationDescriptor) >>= (.descriptorCode) & fromMaybeM (InvalidRequest "Stop Location code not found")
   stationName <- stop.stopLocation >>= (.locationDescriptor) >>= (.descriptorName) & fromMaybeM (InvalidRequest "Stop Location name not found")
   let mLatLon = stop.stopLocation >>= (.locationGps) >>= Utils.parseGPS
   stopType <- stop.stopType & fromMaybeM (InvalidRequest "Stop Location type not found")
   stationType <- stopType & castStationType & fromMaybeM (InvalidRequest "Stop Location type not found")
   return
-    Domain.DONDCStation
-      { stationName,
+    Domain.DStation
+      { stationCode,
+        stationName,
         stationType,
         stopSequence = seqNumber,
         stationLat = fst <$> mLatLon,
