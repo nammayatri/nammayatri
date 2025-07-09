@@ -177,7 +177,7 @@ rideActionModalConfig state =
   , delivery = if isDelivery then getDeliveryDetails state else Nothing
   , isSourceDetailsExpanded = state.props.isSourceDetailsExpanded
   , isDestinationDetailsExpanded = if state.props.currentStage == ST.RideStarted then true else not state.props.isSourceDetailsExpanded
-  , isInsured = true
+  , isInsured = fromMaybe false state.data.activeRide.isInsured
   }
   in rideActionModalConfig'
   where
