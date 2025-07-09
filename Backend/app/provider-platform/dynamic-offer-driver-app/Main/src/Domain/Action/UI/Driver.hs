@@ -820,12 +820,13 @@ processingChangeOnline (driverId, merchantId, merchantOpCityId) timeDiffFromUtc 
   mbDailyStats <- SQDS.findByDriverIdAndDate driverId merchantLocalDate
   when (previousMode == Just DriverInfo.ONLINE) $ do
     let mbLastOnlineFrom = addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) <$> driverInfo.onlineDurationRefreshedAt
-        newOnlineDuration = calcOnlineDuration localTime mbDailyStats mbLastOnlineFrom
+        lastOnlineFrom = fromMaybe localTime mbLastOnlineFrom
+        newOnlineDuration = calcOnlineDuration localTime mbDailyStats lastOnlineFrom
         startDayTime = UTCTime (utctDay localTime) 0
+    whenNothing_ mbLastOnlineFrom . logDebug $ "OnlineDurationRefreshedAt is Nothing. DriverId: " <> driverId.getId
     addDataToDailyStats mbDailyStats merchantLocalDate newOnlineDuration
     QDIE.updateOnlineDurationRefreshedAt driverId now
 
-    lastOnlineFrom <- fromMaybeM (InternalError $ "OnlineDurationRefreshedAt is Nothing DriverId: " <> driverId.getId) mbLastOnlineFrom
     when (lastOnlineFrom < startDayTime) $ setOnlineDurationInDailyStatsForPrevDays merchantLocalDate lastOnlineFrom
 
   when (mode == Just DriverInfo.ONLINE) $ QDIE.updateOnlineDurationRefreshedAt driverId now
@@ -883,15 +884,15 @@ processingChangeOnline (driverId, merchantId, merchantOpCityId) timeDiffFromUtc 
 calcOnlineDuration ::
   UTCTime ->
   Maybe DDS.DailyStats ->
-  Maybe UTCTime ->
+  UTCTime ->
   Seconds
-calcOnlineDuration localTime mbDailyStats mbLastOnlineFrom =
+calcOnlineDuration localTime mbDailyStats lastOnlineFrom =
   let lastOnlineTo = localTime
       startDayTime = UTCTime (utctDay localTime) 0
-      lastOnlineFrom = maybe startDayTime (max startDayTime) mbLastOnlineFrom
+      lastOnlineFrom' = max startDayTime lastOnlineFrom
       mbLastOnlineDuration = mbDailyStats >>= (.onlineDuration)
-      onlineDuration = if mbLastOnlineFrom < Just startDayTime then Seconds 0 else fromMaybe (Seconds 0) mbLastOnlineDuration
-   in onlineDuration + Seconds (floor $ diffUTCTime lastOnlineTo lastOnlineFrom)
+      onlineDuration = if lastOnlineFrom < startDayTime then Seconds 0 else fromMaybe (Seconds 0) mbLastOnlineDuration
+   in onlineDuration + Seconds (floor $ diffUTCTime lastOnlineTo lastOnlineFrom')
 
 calcPreviousDayOnlineDuration ::
   UTCTime ->

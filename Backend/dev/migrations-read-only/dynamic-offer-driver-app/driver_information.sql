@@ -215,6 +215,7 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN drunk_and_drive
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN is_pet_mode_enabled boolean  default false;
 
 
+
 ------- SQL updates -------
 
-ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN online_duration_refreshed_at timestamp with time zone ;
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN online_duration_refreshed_at timestamp with time zone  default CURRENT_TIMESTAMP;
