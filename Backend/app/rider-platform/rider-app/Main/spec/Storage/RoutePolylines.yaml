@@ -45,6 +45,15 @@ StationsExtraInformation:
     createdAt: UTCTime
     updatedAt: UTCTime
 
+  beamType:
+    suggestedDestinations: Maybe Text
+
+  fromTType:
+    suggestedDestinations: (Kernel.Utils.Text.decodeFromText =<< suggestedDestinations)|E
+
+  toTType:
+    suggestedDestinations: (Kernel.Utils.Text.encodeToText <$> suggestedDestinations)|E
+
   constraints:
     id: PrimaryKey
 

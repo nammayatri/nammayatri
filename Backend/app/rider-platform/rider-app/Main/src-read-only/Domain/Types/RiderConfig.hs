@@ -52,6 +52,7 @@ data RiderConfig = RiderConfig
     feedbackAlertRatingThreshold :: Kernel.Prelude.Int,
     hardLimitForSafetyJobs :: Kernel.Prelude.Int,
     incidentReportSupport :: Kernel.Prelude.Bool,
+    initiateFirstMultimodalJourney :: Kernel.Prelude.Bool,
     intercitySearchLocations :: Kernel.Prelude.Maybe [Domain.Types.RentalsIntercityCache.IntercitySearchLocation],
     isAvoidToll :: Kernel.Prelude.Bool,
     isDeviceIdCheckDisabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,

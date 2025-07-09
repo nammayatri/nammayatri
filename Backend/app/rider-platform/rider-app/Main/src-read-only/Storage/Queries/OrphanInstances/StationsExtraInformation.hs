@@ -10,6 +10,7 @@ import Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Kernel.Utils.Text
 import qualified Storage.Beam.StationsExtraInformation as Beam
 
 instance FromTType' Beam.StationsExtraInformation Domain.Types.StationsExtraInformation.StationsExtraInformation where
@@ -23,7 +24,7 @@ instance FromTType' Beam.StationsExtraInformation Domain.Types.StationsExtraInfo
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             stationId = stationId,
-            suggestedDestinations = suggestedDestinations,
+            suggestedDestinations = Kernel.Utils.Text.decodeFromText =<< suggestedDestinations,
             updatedAt = updatedAt
           }
 
@@ -36,6 +37,6 @@ instance ToTType' Beam.StationsExtraInformation Domain.Types.StationsExtraInform
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.stationId = stationId,
-        Beam.suggestedDestinations = suggestedDestinations,
+        Beam.suggestedDestinations = Kernel.Utils.Text.encodeToText <$> suggestedDestinations,
         Beam.updatedAt = updatedAt
       }
