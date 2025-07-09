@@ -157,8 +157,20 @@ onSearch ::
   ValidatedDOnSearch ->
   m ()
 onSearch onSearchReq validatedReq = do
-  quotesCreatedByCache <- QQuote.findAllBySearchId (Id onSearchReq.transactionId)
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity validatedReq.search
+  updatedQuotes <- mapM (updateQuote integratedBPPConfig) onSearchReq.quotes
+  onSearchHelper (onSearchReq {quotes = updatedQuotes}) validatedReq integratedBPPConfig
+  where
+    updateQuote integratedBPPConfig quote = do
+      stations <-
+        forM quote.stations \station -> do
+          stationCode <- OTPRest.getStopCodeFromProviderCode integratedBPPConfig station.stationCode
+          return $ station {stationCode = fromMaybe station.stationCode stationCode}
+      return $ quote {stations = stations}
+
+onSearchHelper :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, HasShortDurationRetryCfg r c) => DOnSearch -> ValidatedDOnSearch -> DIBC.IntegratedBPPConfig -> m ()
+onSearchHelper onSearchReq validatedReq integratedBPPConfig = do
+  quotesCreatedByCache <- QQuote.findAllBySearchId (Id onSearchReq.transactionId)
   filteredQuotes <-
     if validatedReq.search.vehicleType /= Spec.BUS
       then pure onSearchReq.quotes

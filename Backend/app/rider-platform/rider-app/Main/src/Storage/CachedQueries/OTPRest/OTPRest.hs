@@ -343,3 +343,15 @@ getVehicleServiceType ::
 getVehicleServiceType integratedBPPConfig vehicleNumber = do
   baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
   Flow.getVehicleServiceType baseUrl vehicleNumber
+
+-- Get Stop Code From Provider Code
+
+getStopCodeFromProviderCode ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  IntegratedBPPConfig ->
+  Text ->
+  m (Maybe Text)
+getStopCodeFromProviderCode integratedBPPConfig providerStopCode = do
+  baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
+  resp <- Flow.getStopCode baseUrl integratedBPPConfig.feedKey providerStopCode
+  return (resp <&> (.stop_code))

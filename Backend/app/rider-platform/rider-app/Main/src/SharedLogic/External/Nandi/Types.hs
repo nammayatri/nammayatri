@@ -60,6 +60,11 @@ data VehicleServiceTypeResponse = VehicleServiceTypeResponse
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
+data StopCodeResponse = StopCodeResponse
+  { stop_code :: Text
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
 data RouteInfoNandi = RouteInfoNandi
   { id :: Text,
     shortName :: Maybe Text,
