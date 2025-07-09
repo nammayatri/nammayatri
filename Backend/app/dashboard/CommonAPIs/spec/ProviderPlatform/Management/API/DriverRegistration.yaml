@@ -8,7 +8,6 @@ imports:
   VehicleCategory: Dashboard.Common
   DriverVehicleDetails: Dashboard.Common
   FileType: AWS.S3
-
 module: DriverRegistration
 apiPrefix: driver
 helperApiPrefix: ""
@@ -175,7 +174,15 @@ apis:
         endpoint: DriverRegistrationAPI UpdateDocumentEndpoint
         endpointV2:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UPDATE_DOCUMENT
-
+  - GET:
+      endpoint: /{driverId}/verificationStatus
+      auth: ApiAuthV2
+      params:
+        driverId: Id Driver
+      response:
+        type: VerificationStatusListResponse
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DOCUMENT_LIST
 types:
   ValidationStatus:
     enum: "APPROVED,DECLINED,AUTO_APPROVED,AUTO_DECLINED,NEEDS_REVIEW"
@@ -422,6 +429,16 @@ types:
       enum: "INDIVIDUAL,BUSINESS"
   ApproveDetails:
     - enum: "RC RCApproveDetails, DL DLApproveDetails, UploadProfile (Id Image), SSNApprove Text, ProfilePhoto (Id Image), VehiclePermit VPermitApproveDetails, VehiclePUC VPUCApproveDetails, VehicleInsurance VInsuranceApproveDetails, VehicleFitnessCertificate FitnessApproveDetails, VehicleInspectionForm VInspectionApproveDetails, Pan PanApproveDetails, NOC NOCApproveDetails, BusinessLicenseImg BusinessLicenseApproveDetails"
-
+  VerificationStatusListResponse:
+    - verificationStatus: [VerificationStatusObject]
+  VerificationStatusObject:
+    - status: Maybe Text
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+    - imageId: Id Image
+    - imageUrl: Text
+    - serviceName: Text
+    - response: Maybe Text
+    - documentType: Text
 extraOperations:
   - EXTRA_API_TYPES_FILE

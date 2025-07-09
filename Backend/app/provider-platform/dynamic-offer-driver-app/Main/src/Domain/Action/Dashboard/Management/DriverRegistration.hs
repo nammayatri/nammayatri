@@ -26,6 +26,7 @@ module Domain.Action.Dashboard.Management.DriverRegistration
     getDriverRegistrationDocumentsInfo,
     postDriverRegistrationDocumentsUpdate,
     postDriverRegistrationRegisterAadhaar,
+    getDriverRegistrationVerificationStatus,
   )
 where
 
@@ -47,6 +48,9 @@ import qualified Domain.Types.Common as DCommon
 import qualified Domain.Types.DocumentVerificationConfig as Domain
 import qualified Domain.Types.DriverLicense as DDL
 import qualified Domain.Types.DriverPanCard as DPan
+import qualified Domain.Types.HyperVergeVerification as DHV
+import qualified Domain.Types.IdfyVerification as DIdfy
+import qualified Domain.Types.Image as DImage
 import qualified Domain.Types.MediaFileDocument as DMFD
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -77,6 +81,8 @@ import qualified Storage.Queries.BusinessLicense as QBL
 import qualified Storage.Queries.DriverLicense as QDL
 import qualified Storage.Queries.DriverPanCard as QPan
 import qualified Storage.Queries.DriverSSN as QSSN
+import qualified Storage.Queries.HyperVergeVerification as QHV
+import qualified Storage.Queries.IdfyVerification as QIdfy
 import Storage.Queries.Image as QImage
 import qualified Storage.Queries.MediaFileDocument as QMFD
 import qualified Storage.Queries.Person as QDriver
@@ -873,6 +879,52 @@ postDriverRegistrationDocumentsUpdate _merchantShortId _opCity _req = do
     Common.Approve approveReq -> handleApproveRequest approveReq merchant.id merchantOpCityId
     Common.Reject rejectReq -> handleRejectRequest rejectReq merchant.id merchantOpCityId
   pure Success
+
+getDriverRegistrationVerificationStatus :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Flow Common.VerificationStatusListResponse
+getDriverRegistrationVerificationStatus _merchantShortId _opCity driverId = do
+  -- Fetch verification requests from both services
+  verificationRequestsHV <- QHV.findAllByDriverId (cast driverId)
+  verificationRequestsIdfy <- QIdfy.findAllByDriverId (cast driverId)
+
+  hvStatusObjects <- mapM convertHVToStatusObject verificationRequestsHV
+  idfyStatusObjects <- mapM convertIdfyToStatusObject verificationRequestsIdfy
+  let allStatusObjects = hvStatusObjects ++ idfyStatusObjects
+  pure $ Common.VerificationStatusListResponse {verificationStatus = allStatusObjects}
+  where
+    convertHVToStatusObject :: DHV.HyperVergeVerification -> Flow Common.VerificationStatusObject
+    convertHVToStatusObject hvReq = do
+      imageUrl <- getImageUrl hvReq.documentImageId1
+      pure $
+        Common.VerificationStatusObject
+          { status = Just hvReq.status,
+            createdAt = hvReq.createdAt,
+            updatedAt = hvReq.updatedAt,
+            imageId = cast hvReq.documentImageId1,
+            imageUrl = imageUrl,
+            serviceName = "HyperVerge",
+            response = hvReq.hypervergeResponse,
+            documentType = show hvReq.docType
+          }
+
+    convertIdfyToStatusObject :: DIdfy.IdfyVerification -> Flow Common.VerificationStatusObject
+    convertIdfyToStatusObject idfyReq = do
+      imageUrl <- getImageUrl idfyReq.documentImageId1
+      pure $
+        Common.VerificationStatusObject
+          { status = Just idfyReq.status,
+            createdAt = idfyReq.createdAt,
+            updatedAt = idfyReq.updatedAt,
+            imageId = cast idfyReq.documentImageId1,
+            imageUrl = imageUrl,
+            serviceName = "Idfy",
+            response = idfyReq.idfyResponse,
+            documentType = show idfyReq.docType
+          }
+
+    getImageUrl :: Id DImage.Image -> Flow Text
+    getImageUrl imageId = do
+      image <- QImage.findById imageId >>= fromMaybeM (InternalError "Image not found")
+      pure image.s3Path
 
 convertVerifyOtp :: AadhaarVerificationResp -> Common.GenerateAadhaarOtpRes
 convertVerifyOtp AadhaarVerificationResp {..} = Common.GenerateAadhaarOtpRes {..}
