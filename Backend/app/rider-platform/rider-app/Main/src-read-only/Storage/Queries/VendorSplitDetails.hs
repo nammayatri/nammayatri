@@ -5,10 +5,12 @@
 module Storage.Queries.VendorSplitDetails where
 
 import qualified Domain.Types.IntegratedBPPConfig
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.VendorSplitDetails
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -25,6 +27,17 @@ findAllByIntegratedBPPConfigId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m [Domain.Types.VendorSplitDetails.VendorSplitDetails])
 findAllByIntegratedBPPConfigId integratedBPPConfigId = do findAllWithKV [Se.Is Beam.integratedBPPConfigId $ Se.Eq (Kernel.Types.Id.getId integratedBPPConfigId)]
+
+findAllByMerchantOperatingCityIdAndIncludeInSplit ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> m [Domain.Types.VendorSplitDetails.VendorSplitDetails])
+findAllByMerchantOperatingCityIdAndIncludeInSplit merchantOperatingCityId includeInSplit = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId <$> merchantOperatingCityId),
+          Se.Is Beam.includeInSplit $ Se.Eq includeInSplit
+        ]
+    ]
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
