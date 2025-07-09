@@ -88,7 +88,8 @@ createVendorSplitFromBookings allJourneyBookings merchantId merchantOperatingCit
               )
               vehicleTypeList
           vendorSplitDetailsList <- mapM (QVendorSplitDetails.findAllByIntegratedBPPConfigId . (.id)) (concat integratedBPPConfigList)
-          vendorSplitDetails <- convertVendorDetails (concat vendorSplitDetailsList) allJourneyBookings
+          vendorSplitDetailsListToIncludeInSplit <- QVendorSplitDetails.findAllByMerchantOperatingCityIdAndIncludeInSplit (Just booking'.merchantOperatingCityId) (Just True)
+          vendorSplitDetails <- convertVendorDetails (concat vendorSplitDetailsList ++ vendorSplitDetailsListToIncludeInSplit) allJourneyBookings
           return (vendorSplitDetails, amount)
         else return ([], amount)
     Nothing -> return ([], 0.0)

@@ -24,3 +24,8 @@ VendorSplitDetails:
     findAllByIntegratedBPPConfigId:
       kvFunction: findAllWithKV
       where: integratedBPPConfigId
+
+    findAllByMerchantOperatingCityIdAndIncludeInSplit:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, includeInSplit]
