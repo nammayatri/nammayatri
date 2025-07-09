@@ -50,6 +50,7 @@ buildDInitReq subscriber req isValueAddNP = do
         Delivery _ -> getDeliveryDetails orderItem.itemTags
         _ -> Nothing
   let isAdvanceBookingEnabled = Just $ getAdvancedBookingEnabled orderItem.itemTags
+  let (isInsured, insuredAmount) = getIsInsured orderItem.itemTags
   pure $ Domain.Action.Beckn.Init.InitReq {bapCity = bapCity_, bapCountry = bapCountry_, bapId = bapId_, bapUri = bapUri_, fulfillmentId = fulfillmentId_, maxEstimatedDistance = maxEstimatedDistance_, paymentMethodInfo = paymentMethodInfo_, vehicleVariant = vehicleVariant_, bppSubscriberId = bppSubscriberId_, estimateId = estimateId, ..}
 
 getDeliveryDetails :: Maybe [Spec.TagGroup] -> Maybe Domain.Action.Beckn.Init.InitReqDetails
@@ -121,3 +122,12 @@ getAdvancedBookingEnabled tagGroups =
         Just "True" -> True
         Just "False" -> False
         _ -> False
+
+getIsInsured :: Maybe [Spec.TagGroup] -> (Maybe Bool, Maybe Text)
+getIsInsured tagGroups =
+  let tagValue = Utils.getTagV2 Tag.INSURANCE_INFO Tag.IS_INSURED tagGroups
+      insuredAmount = Utils.getTagV2 Tag.INSURANCE_INFO Tag.INSURED_AMOUNT tagGroups
+   in case tagValue of
+        Just "True" -> (Just True, insuredAmount)
+        Just "False" -> (Just False, Nothing)
+        _ -> (Nothing, Nothing)

@@ -33,6 +33,7 @@ imports:
   GatewayAndRegistryService: Domain.Types
   VehicleCategory: Domain.Types.VehicleCategory
   Expand: Kernel.External.Payout.Interface.Types
+  InsuranceService: Kernel.External.Insurance.Types
 
 Merchant:
   derives: "Generic,Show,'UsageSafety"
@@ -332,25 +333,26 @@ MerchantServiceUsageConfig:
     createdAt: UTCTime
     getMultiModalService: MultiModalService
     getMultimodalWalkDistance: MapsService
+    insuranceService: InsuranceService
 
   beamType:
     cancelPaymentIntent: Maybe PaymentService
     getFrfsAutocompleteDistances: Maybe MapsService
     getMultiModalService: Maybe MultiModalService
     getMultimodalWalkDistance: Maybe MapsService
-
+    insuranceService: Maybe InsuranceService
   fromTType:
     cancelPaymentIntent: fromMaybe (Kernel.External.Payment.Types.Stripe) cancelPaymentIntent|E
     getFrfsAutocompleteDistances: fromMaybe (Kernel.External.Maps.Types.OSRM)|I
     getMultiModalService: fromMaybe (Kernel.External.MultiModal.Types.OTPTransit)|I
     getMultimodalWalkDistance: fromMaybe (Kernel.External.Maps.Types.OSRM)|I
-
+    insuranceService: fromMaybe (Kernel.External.Insurance.Types.Acko) insuranceService|E
   toTType:
     cancelPaymentIntent: Kernel.Prelude.Just|I
     getFrfsAutocompleteDistances: Kernel.Prelude.Just|I
     getMultiModalService: Kernel.Prelude.Just|I
     getMultimodalWalkDistance: Kernel.Prelude.Just|I
-
+    insuranceService: Kernel.Prelude.Just|I
   beamInstance:
     - MakeTableInstances
     - Custom Domain.Types.UtilsTH.mkCacParseInstance <MerchantServiceUsageConfigT>
@@ -391,7 +393,7 @@ MerchantServiceUsageConfig:
     issueTicketService: character varying(30)
     getExophone: character varying (255)
     aadhaarVerificationService: character varying(30)
-
+    insuranceService: character varying(30)
   default:
     getPickupRoutes: "'Google'"
     getTripRoutes: "'Google'"
@@ -412,7 +414,7 @@ MerchantServiceUsageConfig:
     getFrfsAutocompleteDistances: "'OSRM'"
     getMultiModalService: "'OTPTransit'"
     getMultimodalWalkDistance: "'OSRM'"
-
+    insuranceService: "'Acko'"
 
 MerchantPaymentMethod:
   derives: "Generic,'UsageSafety"

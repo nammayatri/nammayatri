@@ -1,0 +1,20 @@
+imports:
+  Insurance: Domain.Types.Insurance
+
+module: Insurance
+types:
+  InsuranceAPIEntity:
+    policyId: Maybe Text
+    policyNumber: Maybe Text
+    certificateUrl: Maybe Text
+    plan: Maybe Text
+    message: Text
+
+apis:
+  - GET:
+      endpoint: /insurance/{referenceId}
+      params:
+        referenceId: Id Insurance
+      auth: TokenAuth
+      response:
+        type: InsuranceAPIEntity

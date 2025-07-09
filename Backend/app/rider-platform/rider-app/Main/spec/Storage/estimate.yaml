@@ -117,6 +117,8 @@ Estimate:
     vehicleIconUrl : Maybe BaseUrl
     smartTipSuggestion: Maybe HighPrecMoney
     smartTipReason: Maybe Text
+    isInsured: Bool
+    insuredAmount: Maybe Text
 
   constraints:
     id: PrimaryKey
@@ -179,6 +181,7 @@ Estimate:
     clientModelName: Maybe Text
     clientManufacturer: Maybe Text
     vehicleIconUrl: Maybe Text
+    isInsured: Maybe Bool
 
   fromTType:
     totalFareRange: mkFareRange
@@ -199,6 +202,7 @@ Estimate:
     clientDevice : (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer)|E
     distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter |I
     vehicleIconUrl: (Kernel.Prelude.maybe (return Kernel.Prelude.Nothing) (Kernel.Prelude.fmap Kernel.Prelude.Just . parseBaseUrl))|MI
+    isInsured: Kernel.Prelude.fromMaybe False isInsured|E
 
   toTType:
     maxTotalFare: (mkMaxTotalFare totalFareRange)|E
@@ -230,6 +234,7 @@ Estimate:
     clientModelName: (clientDevice <&> (.deviceModel))|E
     clientManufacturer: (clientDevice >>= (.deviceManufacturer))|E
     vehicleIconUrl: (Kernel.Prelude.fmap showBaseUrl)|I
+    isInsured: Kernel.Prelude.Just isInsured|E
 
   sqlType:
     estimatedFare: numeric(30,10)

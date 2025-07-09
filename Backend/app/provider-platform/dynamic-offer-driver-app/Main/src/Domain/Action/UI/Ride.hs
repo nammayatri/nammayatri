@@ -258,7 +258,9 @@ data DriverRideRes = DriverRideRes
     extraFareMitigationFlag :: Maybe Bool,
     parcelType :: Maybe DParcel.ParcelType,
     parcelQuantity :: Maybe Int,
-    isPetRide :: Bool
+    isPetRide :: Bool,
+    isInsured :: Maybe Bool,
+    insuredAmount :: Maybe Text
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -437,7 +439,9 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
         extraFareMitigationFlag = driverInfo >>= (.extraFareMitigationFlag),
         parcelType = booking.parcelType,
         parcelQuantity = booking.parcelQuantity,
-        isPetRide = booking.isPetRide
+        isPetRide = booking.isPetRide,
+        isInsured = Just $ ride.isInsured,
+        insuredAmount = ride.insuredAmount
       }
 
 makeStop :: [DSI.StopInformation] -> DLoc.Location -> Stop
