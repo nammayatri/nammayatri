@@ -153,8 +153,8 @@ getStationByGtfsIdAndStopCode ::
   m (Maybe Station.Station)
 getStationByGtfsIdAndStopCode stopCode integratedBPPConfig = do
   baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
-  stations <- Flow.getStationsByGtfsIdAndStopCode baseUrl integratedBPPConfig.feedKey stopCode
-  listToMaybe <$> parseStationsFromInMemoryServer [stations] integratedBPPConfig.id integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
+  station <- Flow.getStationsByGtfsIdAndStopCode baseUrl integratedBPPConfig.feedKey stopCode
+  listToMaybe <$> parseStationsFromInMemoryServerWithGeojson [station] integratedBPPConfig.id integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
 
 findAllStationsByVehicleType :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) => Maybe Int -> Maybe Int -> VehicleCategory -> IntegratedBPPConfig -> m [Station.Station]
 findAllStationsByVehicleType limit offset vehicleType integratedBPPConfig = do
@@ -206,10 +206,46 @@ parseStationsFromInMemoryServer stations integratedBPPConfig merchantId merchant
               possibleTypes = Nothing,
               regionalName = Nothing,
               suggestedDestinations = join (snd <$> HM.lookup station.stopCode stationAddressMap),
-              geoJson = station.geoJson,
-              gates = station.gates,
               timeBounds = Unbounded,
               vehicleType = station.vehicleType,
+              stopInfo = Nothing,
+              createdAt = now,
+              updatedAt = now
+            }
+    )
+    stations
+
+parseStationsFromInMemoryServerWithGeojson ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, EsqDBFlow m r, HasShortDurationRetryCfg r c, Log m, CacheFlow m r) =>
+  [RouteStopMappingInMemoryServerWithGeojson] ->
+  Id IntegratedBPPConfig ->
+  Id Merchant ->
+  Id MerchantOperatingCity ->
+  m [Station.Station]
+parseStationsFromInMemoryServerWithGeojson stations integratedBPPConfig merchantId merchantOperatingCityId = do
+  now <- getCurrentTime
+  stationsExtraInformation <- QStationsExtraInformation.getBystationIdsAndCity (map (.stopCode) stations) merchantOperatingCityId
+  let stationAddressMap = HM.fromList $ map (\info -> (info.stationId, (info.address, info.suggestedDestinations))) stationsExtraInformation
+  mapM
+    ( \station -> do
+        return $
+          Station.Station
+            { address = join (fst <$> HM.lookup station.stopCode stationAddressMap),
+              code = station.stopCode,
+              hindiName = Nothing,
+              id = Id station.stopCode,
+              integratedBppConfigId = integratedBPPConfig,
+              lat = Just station.stopPoint.lat,
+              lon = Just station.stopPoint.lon,
+              merchantId = merchantId,
+              merchantOperatingCityId = merchantOperatingCityId,
+              name = station.stopName,
+              possibleTypes = Nothing,
+              regionalName = Nothing,
+              suggestedDestinations = join (snd <$> HM.lookup station.stopCode stationAddressMap),
+              timeBounds = Unbounded,
+              vehicleType = station.vehicleType,
+              stopInfo = station.stopInfo,
               createdAt = now,
               updatedAt = now
             }

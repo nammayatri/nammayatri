@@ -38,6 +38,32 @@ data NandiStop = NandiStop
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
+-- StopGeojson type that matches the Rust StopGeojson struct
+data StopGeojson = StopGeojson
+  { stopCode :: Kernel.Prelude.Text,
+    gtfsId :: Kernel.Prelude.Text,
+    geoJson :: Kernel.Prelude.Text,
+    gates :: Kernel.Prelude.Text
+  }
+  deriving (Generic, ToSchema, Show)
+
+instance FromJSON StopGeojson where
+  parseJSON = withObject "StopGeojson" $ \o -> do
+    stopCode <- o .: "stop_code"
+    gtfsId <- o .: "gtfs_id"
+    geoJson <- o .: "geo_json"
+    gates <- o .: "gates"
+    pure StopGeojson {..}
+
+instance ToJSON StopGeojson where
+  toJSON StopGeojson {..} =
+    object
+      [ "stop_code" .= stopCode,
+        "gtfs_id" .= gtfsId,
+        "geo_json" .= geoJson,
+        "gates" .= gates
+      ]
+
 data RouteStopMappingInMemoryServer = RouteStopMappingInMemoryServer
   { estimatedTravelTimeFromPreviousStop :: Kernel.Prelude.Maybe Kernel.Types.Time.Seconds,
     providerCode :: Kernel.Prelude.Text,
@@ -46,11 +72,49 @@ data RouteStopMappingInMemoryServer = RouteStopMappingInMemoryServer
     stopCode :: Kernel.Prelude.Text,
     stopName :: Kernel.Prelude.Text,
     stopPoint :: Kernel.External.Maps.Types.LatLong,
-    vehicleType :: BecknV2.FRFS.Enums.VehicleCategory,
-    geoJson :: Maybe Value,
-    gates :: Maybe Value
+    vehicleType :: BecknV2.FRFS.Enums.VehicleCategory
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+data RouteStopMappingInMemoryServerWithGeojson = RouteStopMappingInMemoryServerWithGeojson
+  { estimatedTravelTimeFromPreviousStop :: Kernel.Prelude.Maybe Kernel.Types.Time.Seconds,
+    providerCode :: Kernel.Prelude.Text,
+    routeCode :: Kernel.Prelude.Text,
+    sequenceNum :: Kernel.Prelude.Int,
+    stopCode :: Kernel.Prelude.Text,
+    stopName :: Kernel.Prelude.Text,
+    stopPoint :: Kernel.External.Maps.Types.LatLong,
+    vehicleType :: BecknV2.FRFS.Enums.VehicleCategory,
+    stopInfo :: Kernel.Prelude.Maybe StopGeojson
+  }
+  deriving (Generic, ToSchema, Show)
+
+instance FromJSON RouteStopMappingInMemoryServerWithGeojson where
+  parseJSON = withObject "RouteStopMappingInMemoryServerWithGeojson" $ \o -> do
+    estimatedTravelTimeFromPreviousStop <- o .:? "estimatedTravelTimeFromPreviousStop"
+    providerCode <- o .: "providerCode"
+    routeCode <- o .: "routeCode"
+    sequenceNum <- o .: "sequenceNum"
+    stopCode <- o .: "stopCode"
+    stopName <- o .: "stopName"
+    stopPoint <- o .: "stopPoint"
+    vehicleType <- o .: "vehicleType"
+    stopInfo <- o .:? "stopGeojson"
+    pure RouteStopMappingInMemoryServerWithGeojson {..}
+
+instance ToJSON RouteStopMappingInMemoryServerWithGeojson where
+  toJSON RouteStopMappingInMemoryServerWithGeojson {..} =
+    object
+      [ "estimatedTravelTimeFromPreviousStop" .= estimatedTravelTimeFromPreviousStop,
+        "providerCode" .= providerCode,
+        "routeCode" .= routeCode,
+        "sequenceNum" .= sequenceNum,
+        "stopCode" .= stopCode,
+        "stopName" .= stopName,
+        "stopPoint" .= stopPoint,
+        "vehicleType" .= vehicleType,
+        "stopGeojson" .= stopInfo
+      ]
 
 data VehicleServiceTypeResponse = VehicleServiceTypeResponse
   { service_type :: Text,

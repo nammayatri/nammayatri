@@ -182,7 +182,15 @@ getTimetableStop (mbPersonId, mid) routeCode stopCode mbVehicleType = do
   routeStopTimeTables <-
     SIBC.fetchFirstIntegratedBPPConfigResult integratedBPPConfigs $ \integratedBPPConfig -> do
       concatMapM (GRSM.findByRouteCodeAndStopCode integratedBPPConfig mid person.merchantOperatingCityId [routeCode]) stopCodes
-  return $ API.Types.UI.NearbyBuses.TimetableResponse $ map convertToTimetableEntry routeStopTimeTables
+
+  stationList <-
+    SIBC.fetchFirstIntegratedBPPConfigResult integratedBPPConfigs $ \integratedBPPConfig -> do
+      mbStation <- OTPRest.getStationByGtfsIdAndStopCode stopCode integratedBPPConfig
+      return $ maybeToList mbStation
+
+  let mbStation = Kernel.Prelude.listToMaybe stationList
+
+  return $ API.Types.UI.NearbyBuses.TimetableResponse (map convertToTimetableEntry routeStopTimeTables) mbStation
   where
     convertToTimetableEntry :: RouteStopTimeTable -> API.Types.UI.NearbyBuses.TimetableEntry
     convertToTimetableEntry routeStopTimeTable = do

@@ -10,6 +10,7 @@ imports:
   ServiceTierType: BecknV2.FRFS.Enums
   VehicleCategory: BecknV2.FRFS.Enums
   UpcomingTripInfo: Lib.JourneyModule.Utils
+  Station: Domain.Types.Station
 
 module: NearbyBuses
 
@@ -50,6 +51,7 @@ types:
 
   TimetableResponse:
     timetable: [TimetableEntry]
+    station: Maybe Station
 
 apis:
   - POST:
