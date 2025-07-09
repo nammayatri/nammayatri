@@ -21,7 +21,11 @@ data UpdateVehicleInfoReq = UpdateVehicleInfoReq {rcNo :: Kernel.Prelude.Text, n
 instance Kernel.Types.HideSecrets.HideSecrets UpdateVehicleInfoReq where
   hideSecrets = Kernel.Prelude.identity
 
-data VehicleInfoAPIEntity = VehicleInfoAPIEntity {rcNo :: Kernel.Prelude.Text, questionId :: Kernel.Prelude.Text, question :: Kernel.Prelude.Text, answer :: Kernel.Prelude.Text}
+data VehicleExtraInformation = VehicleExtraInformation {rcNo :: Kernel.Prelude.Text, mediaUploaded :: Kernel.Prelude.Bool, vehicleInfo :: [VehicleInfoAPIEntity]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data VehicleInfoAPIEntity = VehicleInfoAPIEntity {questionId :: Kernel.Prelude.Text, question :: Kernel.Prelude.Text, answer :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -31,12 +35,12 @@ data VehicleInfoPostData = VehicleInfoPostData {questionId :: Kernel.Prelude.Tex
 
 type API = ("vehicleInfo" :> (GetVehicleInfoList :<|> PostVehicleInfoUpdate))
 
-type GetVehicleInfoList = (Capture "rcNo" Kernel.Prelude.Text :> "list" :> Get '[JSON] [VehicleInfoAPIEntity])
+type GetVehicleInfoList = (Capture "rcNo" Kernel.Prelude.Text :> "list" :> Get '[JSON] VehicleExtraInformation)
 
 type PostVehicleInfoUpdate = ("update" :> ReqBody '[JSON] UpdateVehicleInfoReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
 data VehicleInfoAPIs = VehicleInfoAPIs
-  { getVehicleInfoList :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient [VehicleInfoAPIEntity],
+  { getVehicleInfoList :: Kernel.Prelude.Text -> EulerHS.Types.EulerClient VehicleExtraInformation,
     postVehicleInfoUpdate :: UpdateVehicleInfoReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
   }
 

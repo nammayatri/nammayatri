@@ -43,6 +43,19 @@ findAllByMerchantOpCityIdAndRcIdAndType limit offset merchantOperatingCityId rcI
     limit
     offset
 
+findOneByCityRcTypeAndStatus ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> Domain.Types.Common.MediaFileDocumentType -> [Domain.Types.MediaFileDocument.MediaFileDocumentStatus] -> m (Maybe Domain.Types.MediaFileDocument.MediaFileDocument))
+findOneByCityRcTypeAndStatus merchantOperatingCityId rcId mediaFileDocumentType status = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
+          Se.Is Beam.rcId $ Se.Eq (Kernel.Types.Id.getId rcId),
+          Se.Is Beam.mediaFileDocumentType $ Se.Eq mediaFileDocumentType,
+          Se.Is Beam.status $ Se.In status
+        ]
+    ]
+
 updateStatus ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Domain.Types.MediaFileDocument.MediaFileDocumentStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.MediaFileDocument.MediaFileDocument -> m ())

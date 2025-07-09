@@ -384,6 +384,12 @@ MediaFileDocument:
       orderBy:
         field: createdAt
         order: desc
+    findOneByCityRcTypeAndStatus:
+      kvFunction: findOneWithKV
+      where:
+        and:
+          - eq: [merchantOperatingCityId, rcId, mediaFileDocumentType]
+          - in: [status]
     updateStatus:
       kvFunction: updateOneWithKV
       params: [status, fileHash]
@@ -393,6 +399,7 @@ MediaFileDocument:
       where: id
   extraOperations:
     - EXTRA_QUERY_FILE
+
 
 DocumentVerificationConfig:
   tableName: document_verification_config

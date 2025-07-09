@@ -22,7 +22,7 @@ import Servant
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
-type API = (TokenAuth :> "vehicleInfo" :> Capture "rcNo" Kernel.Prelude.Text :> "list" :> Get '[JSON] [API.Types.UI.VehicleInfo.VehicleInfoAPIEntity])
+type API = (TokenAuth :> "vehicleInfo" :> Capture "rcNo" Kernel.Prelude.Text :> "list" :> Get '[JSON] API.Types.UI.VehicleInfo.VehicleExtraInformation)
 
 handler :: Environment.FlowServer API
 handler = getVehicleInfoList
@@ -33,6 +33,6 @@ getVehicleInfoList ::
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     Kernel.Prelude.Text ->
-    Environment.FlowHandler [API.Types.UI.VehicleInfo.VehicleInfoAPIEntity]
+    Environment.FlowHandler API.Types.UI.VehicleInfo.VehicleExtraInformation
   )
 getVehicleInfoList a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.VehicleInfo.getVehicleInfoList (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
