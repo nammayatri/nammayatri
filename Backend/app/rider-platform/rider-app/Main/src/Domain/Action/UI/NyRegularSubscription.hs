@@ -220,7 +220,7 @@ postNyRegularSubscriptionsConfirm (mPersonId, merchantId) req = do
   merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
 
   -- Call BPP internal API to get the estimate
-  estimateDetails <- getEstimateDetails estimateId.getId merchant.driverOfferBaseUrl merchant.driverOfferApiKey
+  estimateDetails <- getEstimateDetails merchant.driverOfferApiKey merchant.driverOfferBaseUrl estimateId.getId
 
   -- Update the subscription's metadata field with the BppEstimate as JSON
   let updatedSubscription' = subscription {Domain.Types.NyRegularSubscription.metadata = Just (toJSON estimateDetails)}
