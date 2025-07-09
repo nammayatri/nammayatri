@@ -5,6 +5,7 @@ module: Insurance
 types:
   InsuranceAPIEntity:
     policyId: Maybe Text
+    policyNumber: Maybe Text
     certificateUrl: Maybe Text
     plan: Maybe Text
     message: Text
