@@ -10,7 +10,7 @@ apis:
         rcNo: Text
       auth: ApiAuthV2
       response:
-        type: "[VehicleInfoAPIEntity]"
+        type: VehicleExtraInformation
   - POST:
       endpoint: /update
       auth: ApiAuthV2
@@ -29,7 +29,10 @@ types:
     - question: Text
     - answer: Text
   VehicleInfoAPIEntity:
-    - rcNo: Text
     - questionId: Text
     - question: Text
     - answer: Text
+  VehicleExtraInformation:
+    - rcNo: Text
+    - mediaUploaded: Bool
+    - vehicleInfo: "[VehicleInfoAPIEntity]"

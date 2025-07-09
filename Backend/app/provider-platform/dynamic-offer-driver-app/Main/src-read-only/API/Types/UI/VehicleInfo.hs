@@ -8,6 +8,10 @@ import qualified Kernel.Prelude
 import Servant
 import Tools.Auth
 
-data VehicleInfoAPIEntity = VehicleInfoAPIEntity {rcNo :: Kernel.Prelude.Text, questionId :: Kernel.Prelude.Text, question :: Kernel.Prelude.Text, answer :: Kernel.Prelude.Text}
+data VehicleExtraInformation = VehicleExtraInformation {rcNo :: Kernel.Prelude.Text, mediaUploaded :: Kernel.Prelude.Bool, vehicleInfo :: [VehicleInfoAPIEntity]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data VehicleInfoAPIEntity = VehicleInfoAPIEntity {questionId :: Kernel.Prelude.Text, question :: Kernel.Prelude.Text, answer :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

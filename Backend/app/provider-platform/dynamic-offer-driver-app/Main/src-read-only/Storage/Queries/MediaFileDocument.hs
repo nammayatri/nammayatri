@@ -23,6 +23,19 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.MediaFileDocument.MediaFileDocument] -> m ())
 createMany = traverse_ create
 
+findOneByCityRcTypeAndStatus ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> Domain.Types.Common.MediaFileDocumentType -> Domain.Types.MediaFileDocument.MediaFileDocumentStatus -> m (Maybe Domain.Types.MediaFileDocument.MediaFileDocument))
+findOneByCityRcTypeAndStatus merchantOperatingCityId rcId mediaFileDocumentType status = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
+          Se.Is Beam.rcId $ Se.Eq (Kernel.Types.Id.getId rcId),
+          Se.Is Beam.mediaFileDocumentType $ Se.Eq mediaFileDocumentType,
+          Se.Is Beam.status $ Se.Eq status
+        ]
+    ]
+
 findOneByMerchantOpCityIdAndRcIdAndType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Types.Id.Id Domain.Types.VehicleRegistrationCertificate.VehicleRegistrationCertificate -> Domain.Types.Common.MediaFileDocumentType -> m (Maybe Domain.Types.MediaFileDocument.MediaFileDocument))

@@ -9,11 +9,14 @@ apis:
         rcNo: Text
       auth: TokenAuth PROVIDER_TYPE
       response:
-        type: "[VehicleInfoAPIEntity]"
+        type: VehicleExtraInformation
 
 types:
   VehicleInfoAPIEntity:
-    - rcNo: Text
     - questionId: Text
     - question: Text
     - answer: Text
+  VehicleExtraInformation:
+    - rcNo: Text
+    - mediaUploaded: Bool
+    - vehicleInfo: "[VehicleInfoAPIEntity]"

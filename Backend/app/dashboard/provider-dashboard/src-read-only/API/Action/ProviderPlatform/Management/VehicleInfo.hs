@@ -43,7 +43,7 @@ type PostVehicleInfoUpdate =
       :> API.Types.ProviderPlatform.Management.VehicleInfo.PostVehicleInfoUpdate
   )
 
-getVehicleInfoList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Environment.FlowHandler [API.Types.ProviderPlatform.Management.VehicleInfo.VehicleInfoAPIEntity])
+getVehicleInfoList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.VehicleInfo.VehicleExtraInformation)
 getVehicleInfoList merchantShortId opCity apiTokenInfo rcNo = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Management.VehicleInfo.getVehicleInfoList merchantShortId opCity apiTokenInfo rcNo
 
 postVehicleInfoUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.VehicleInfo.UpdateVehicleInfoReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
