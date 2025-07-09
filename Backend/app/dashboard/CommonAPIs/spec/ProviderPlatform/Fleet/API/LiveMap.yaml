@@ -7,26 +7,27 @@ module: LiveMap
 
 apis:
   - GET:
-      endpoint: /drivers
+      endpoint: /drivers/{radius}
       auth: ApiAuthV2
+      params:
+        radius: Int
       query:
         - fleetOwnerId: Text
         - driverIdForRadius: Id Driver
-      request:
-        type: NearbyDriverReq
+        - point: LatLong
       response:
         type: "[MapDriverInfoRes]"
       helperApi:
         - GET:
-            endpoint: /drivers/{requestorId}
+            endpoint: /drivers/{radius}/{requestorId}
             auth: ApiAuthV2
             params:
+              radius: Int
               requestorId: Text
             query:
               - fleetOwnerId: Text
               - driverIdForRadius: Id Driver
-            request:
-              type: NearbyDriverReq
+              - point: LatLong
             response:
               type: "[MapDriverInfoRes]"
 
@@ -52,7 +53,3 @@ types:
     - destination: Text
   Status:
     - enum: TO_PICKUP, ON_TRIP, ONLINE, SILENT, OFFLINE
-  NearbyDriverReq:
-    - point: LatLong
-    - radius: Int
-    - derive: "'HideSecrets"

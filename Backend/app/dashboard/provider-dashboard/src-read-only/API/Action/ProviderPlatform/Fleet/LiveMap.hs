@@ -14,6 +14,7 @@ import qualified Domain.Action.ProviderPlatform.Fleet.LiveMap
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude hiding (sortOn)
+import qualified Kernel.External.Maps.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
@@ -35,5 +36,5 @@ type GetLiveMapDrivers =
       :> API.Types.ProviderPlatform.Fleet.LiveMap.GetLiveMapDrivers
   )
 
-getLiveMapDrivers :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> API.Types.ProviderPlatform.Fleet.LiveMap.NearbyDriverReq -> Environment.FlowHandler [API.Types.ProviderPlatform.Fleet.LiveMap.MapDriverInfoRes])
-getLiveMapDrivers merchantShortId opCity apiTokenInfo fleetOwnerId driverIdForRadius req = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Fleet.LiveMap.getLiveMapDrivers merchantShortId opCity apiTokenInfo fleetOwnerId driverIdForRadius req
+getLiveMapDrivers :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong -> Environment.FlowHandler [API.Types.ProviderPlatform.Fleet.LiveMap.MapDriverInfoRes])
+getLiveMapDrivers merchantShortId opCity apiTokenInfo radius fleetOwnerId driverIdForRadius point = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.Fleet.LiveMap.getLiveMapDrivers merchantShortId opCity apiTokenInfo radius fleetOwnerId driverIdForRadius point

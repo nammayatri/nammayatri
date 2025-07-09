@@ -13,7 +13,6 @@ import qualified EulerHS.Types
 import qualified Kernel.External.Maps.Types
 import qualified Kernel.Prelude
 import Kernel.Types.Common
-import qualified Kernel.Types.HideSecrets
 import qualified Kernel.Types.Id
 import Servant
 import Servant.Client
@@ -35,13 +34,6 @@ data MapDriverInfoRes
   | OperatorMapDriverInfo OperatorMapDriverInfoRes
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data NearbyDriverReq = NearbyDriverReq {point :: Kernel.External.Maps.Types.LatLong, radius :: Kernel.Prelude.Int}
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-instance Kernel.Types.HideSecrets.HideSecrets NearbyDriverReq where
-  hideSecrets = Kernel.Prelude.identity
 
 data OperatorMapDriverInfoRes = OperatorMapDriverInfoRes
   { driverName :: Kernel.Prelude.Text,
@@ -68,23 +60,29 @@ data Status
 type API = ("liveMap" :> GetLiveMapDriversHelper)
 
 type GetLiveMapDrivers =
-  ( "drivers" :> QueryParam "fleetOwnerId" Kernel.Prelude.Text :> QueryParam "driverIdForRadius" (Kernel.Types.Id.Id Dashboard.Common.Driver)
-      :> ReqBody
-           '[JSON]
-           NearbyDriverReq
+  ( "drivers" :> Capture "radius" Kernel.Prelude.Int :> QueryParam "fleetOwnerId" Kernel.Prelude.Text
+      :> QueryParam
+           "driverIdForRadius"
+           (Kernel.Types.Id.Id Dashboard.Common.Driver)
+      :> QueryParam "point" Kernel.External.Maps.Types.LatLong
       :> Get '[JSON] [MapDriverInfoRes]
   )
 
 type GetLiveMapDriversHelper =
-  ( "drivers" :> Capture "requestorId" Kernel.Prelude.Text :> QueryParam "fleetOwnerId" Kernel.Prelude.Text
+  ( "drivers" :> Capture "radius" Kernel.Prelude.Int :> Capture "requestorId" Kernel.Prelude.Text
       :> QueryParam
-           "driverIdForRadius"
-           (Kernel.Types.Id.Id Dashboard.Common.Driver)
-      :> ReqBody '[JSON] NearbyDriverReq
-      :> Get '[JSON] [MapDriverInfoRes]
+           "fleetOwnerId"
+           Kernel.Prelude.Text
+      :> QueryParam "driverIdForRadius" (Kernel.Types.Id.Id Dashboard.Common.Driver)
+      :> QueryParam
+           "point"
+           Kernel.External.Maps.Types.LatLong
+      :> Get
+           '[JSON]
+           [MapDriverInfoRes]
   )
 
-newtype LiveMapAPIs = LiveMapAPIs {getLiveMapDrivers :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> NearbyDriverReq -> EulerHS.Types.EulerClient [MapDriverInfoRes]}
+newtype LiveMapAPIs = LiveMapAPIs {getLiveMapDrivers :: Kernel.Prelude.Int -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong -> EulerHS.Types.EulerClient [MapDriverInfoRes]}
 
 mkLiveMapAPIs :: (Client EulerHS.Types.EulerClient API -> LiveMapAPIs)
 mkLiveMapAPIs liveMapClient = (LiveMapAPIs {..})

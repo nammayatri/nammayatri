@@ -196,7 +196,7 @@ findAllActiveDriverIdByOperatorId operatorId = do
   now <- getCurrentTime
   res <-
     findAllWithKV
-      [ Se.And $
+      [ Se.And
           [ Se.Is BeamDOA.operatorId $ Se.Eq operatorId,
             Se.Is BeamDOA.associatedTill $ Se.GreaterThan (Just now),
             Se.Is BeamDOA.isActive $ Se.Eq True

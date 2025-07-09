@@ -38,12 +38,14 @@ import Tools.Error (GenericError (InvalidRequest))
 getLiveMapDrivers ::
   ID.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
+  Kernel.Prelude.Int ->
   Text ->
   Kernel.Prelude.Maybe Text ->
   Kernel.Prelude.Maybe (ID.Id ATD.Driver) ->
-  Common.NearbyDriverReq ->
+  Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong ->
   Environment.Flow [Common.MapDriverInfoRes]
-getLiveMapDrivers merchantShortId _opCity requestorId mbFleetOwnerId mbDriverIdForRadius req = do
+getLiveMapDrivers merchantShortId _opCity radius requestorId mbFleetOwnerId mbDriverIdForRadius mbPoint = do
+  let point = fromMaybe (LatLong 0.0 0.0) mbPoint
   requestedPerson <- QP.findById (ID.Id requestorId) >>= fromMaybeM (PersonDoesNotExist requestorId)
   (entityRole, entityId) <- validateRequestorRoleAndGetEntityId requestedPerson mbFleetOwnerId
   driverIdAssocWithEntityIdLs <- case entityRole of
@@ -51,8 +53,8 @@ getLiveMapDrivers merchantShortId _opCity requestorId mbFleetOwnerId mbDriverIdF
     DP.OPERATOR -> findAllActiveDriverIdByOperatorId entityId
     _ -> throwError (InvalidRequest "Invalid Data")
   merchant <- findMerchantByShortId merchantShortId
-  latLong <- maybe (pure req.point) (getDriverCurrentLocation . ID.cast) mbDriverIdForRadius
-  nearbyDriverLocations <- LF.nearBy latLong.lat latLong.lon Nothing (Just autoTypeLs) req.radius merchant.id Nothing
+  latLong <- maybe (pure point) (getDriverCurrentLocation . ID.cast) mbDriverIdForRadius
+  nearbyDriverLocations <- LF.nearBy latLong.lat latLong.lon Nothing (Just autoTypeLs) radius merchant.id Nothing
   let filtredNearbyDriverLocations = filter (\location -> location.driverId `elem` driverIdAssocWithEntityIdLs) nearbyDriverLocations
   driverInfoList <- findAllByDriverIds $ (.driverId.getId) <$> filtredNearbyDriverLocations
   mbPositionAndDriverInfoLs <- forM filtredNearbyDriverLocations $
