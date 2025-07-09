@@ -75,6 +75,8 @@ types:
 
   FRFSQuoteConfirmReq:
     discounts: "[FRFSDiscountReq]"
+    ticketQuantity: Maybe Int
+    childTicketQuantity: Maybe Int
 
   FRFSTicketBookingStatusAPIRes:
     bookingId: Id FRFSTicketBooking

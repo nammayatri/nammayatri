@@ -33,7 +33,9 @@ data CMRLConfig = CMRLConfig
   deriving anyclass (FromJSON, ToJSON)
 
 data ONDCBecknConfig = ONDCBecknConfig
-  { networkHostUrl :: Maybe BaseUrl
+  { networkHostUrl :: Maybe BaseUrl,
+    multiInitAllowed :: Maybe Bool,
+    fareCachingAllowed :: Maybe Bool
   }
   deriving stock (Eq, Generic)
   deriving anyclass (FromJSON, ToJSON)
