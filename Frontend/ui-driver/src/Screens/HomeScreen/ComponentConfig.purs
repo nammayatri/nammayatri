@@ -170,7 +170,7 @@ rideActionModalConfig state =
   , isSourceDetailsExpanded = state.props.isSourceDetailsExpanded
   , isDestinationDetailsExpanded = if state.props.currentStage == ST.RideStarted then true else not state.props.isSourceDetailsExpanded
   , stops = rideData.stops
-  , isInsured = true
+  , isInsured = fromMaybe false state.data.activeRide.isInsured
   , enableMapButton = isNothing stopToDepart
   , isPetRide = state.data.activeRide.isPetRide
   }
