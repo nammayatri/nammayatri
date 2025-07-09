@@ -6,6 +6,7 @@ import qualified BecknV2.FRFS.Enums
 import Data.OpenApi (ToSchema)
 import qualified Data.Text
 import qualified Domain.Types.IntegratedBPPConfig
+import qualified Domain.Types.Station
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Maps.Types
 import qualified Kernel.Prelude
@@ -50,6 +51,6 @@ data TimetableEntry = TimetableEntry {serviceTierType :: BecknV2.FRFS.Enums.Serv
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data TimetableResponse = TimetableResponse {timetable :: [TimetableEntry]}
+data TimetableResponse = TimetableResponse {timetable :: [TimetableEntry], station :: Kernel.Prelude.Maybe Domain.Types.Station.Station}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

@@ -12,6 +12,7 @@ import qualified Domain.Types.StationType
 import Kernel.Prelude
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.TimeBound
+import qualified SharedLogic.External.Nandi.Types as NandiTypes
 import qualified Tools.Beam.UtilsTH
 
 data Station = Station
@@ -28,10 +29,9 @@ data Station = Station
     possibleTypes :: Kernel.Prelude.Maybe [Domain.Types.StationType.StationType],
     regionalName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     suggestedDestinations :: Kernel.Prelude.Maybe [Domain.Types.StationType.SuggestedStations],
-    geoJson :: Maybe Value,
-    gates :: Maybe Value,
     timeBounds :: Kernel.Types.TimeBound.TimeBound,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory,
+    stopInfo :: Kernel.Prelude.Maybe NandiTypes.StopGeojson,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
