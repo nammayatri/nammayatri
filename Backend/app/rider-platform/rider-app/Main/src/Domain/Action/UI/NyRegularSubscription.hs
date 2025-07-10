@@ -61,6 +61,7 @@ import SharedLogic.NyRegularSubscriptionHasher (calculateSubscriptionSchedulingH
 import qualified SharedLogic.Search as Search
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
+import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.NyRegularInstanceLog as QNyRegularInstanceLog
 import qualified Storage.Queries.NyRegularSubscription as QNyRegularSubscription
@@ -219,8 +220,10 @@ postNyRegularSubscriptionsConfirm (mPersonId, merchantId) req = do
 
   merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
 
-  -- Call BPP internal API to get the estimate
-  estimateDetails <- getEstimateDetails merchant.driverOfferApiKey merchant.driverOfferBaseUrl estimateId.getId
+  -- Fetch the estimate by ID
+  estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
+
+  estimateDetails <- getEstimateDetails merchant.driverOfferApiKey merchant.driverOfferBaseUrl estimate.bppEstimateId.getId
 
   -- Update the subscription's metadata field with the BppEstimate as JSON
   let updatedSubscription' = subscription {Domain.Types.NyRegularSubscription.metadata = Just (toJSON estimateDetails)}
