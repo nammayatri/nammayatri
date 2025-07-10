@@ -16,6 +16,7 @@ data PickupInstructionsT f = PickupInstructionsT
     instruction :: (B.C f Kernel.Prelude.Text),
     lat :: (B.C f Kernel.Prelude.Double),
     lon :: (B.C f Kernel.Prelude.Double),
+    mediaFileId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
     merchantId :: (B.C f Kernel.Prelude.Text),
     merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
     personId :: (B.C f Kernel.Prelude.Text),

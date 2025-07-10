@@ -2,6 +2,7 @@ imports:
   Person: Domain.Types.Person
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  MediaFile: IssueManagement.Domain.Types.MediaFile
 
 PickupInstructions:
   tableName: pickup_instructions
@@ -14,6 +15,7 @@ PickupInstructions:
     lat: Double
     lon: Double
     instruction: Text
+    mediaFileId: "Maybe (Id MediaFile)"
     createdAt: UTCTime
     updatedAt: UTCTime
 
@@ -23,6 +25,7 @@ PickupInstructions:
     merchantId: character(36)
     merchantOperatingCityId: character(36)
     instruction: character(150)
+    mediaFileId: character(36)
 
   constraints:
     id: PrimaryKey
@@ -39,7 +42,7 @@ PickupInstructions:
 
     updateByPersonIdAndLocation:
       kvFunction: updateWithKV
-      params: [lat, lon, instruction]
+      params: [lat, lon, instruction, mediaFileId]
       where:
         and: [personId, lat, lon]
 
