@@ -320,3 +320,8 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN initiate_first_multimodal_journey 
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN ny_regular_execution_time_offset_minutes integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN ny_regular_min_gap_seconds integer ;

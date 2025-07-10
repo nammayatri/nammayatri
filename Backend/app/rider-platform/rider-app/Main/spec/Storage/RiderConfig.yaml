@@ -125,6 +125,7 @@ RiderConfig:
     enableMultiModalForAllUsers: Maybe Bool
     nyRegularSubscriptionBatchSize: Maybe Int
     nyRegularExecutionTimeOffsetMinutes: Maybe Int
+    nyRegularMinGapSeconds: Seconds
     initiateFirstMultimodalJourney: Bool
 
   beamType:
@@ -163,6 +164,7 @@ RiderConfig:
     pickupInstructionsThreshold: Maybe Int
     pickupInstructionsProximityMeters: Maybe Int
     initiateFirstMultimodalJourney: Maybe Bool
+    nyRegularMinGapSeconds: Maybe Seconds
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -207,6 +209,7 @@ RiderConfig:
     pickupInstructionsThreshold: fromMaybe 4 pickupInstructionsThreshold|E
     pickupInstructionsProximityMeters: fromMaybe 10 pickupInstructionsProximityMeters|E
     initiateFirstMultimodalJourney: fromMaybe False initiateFirstMultimodalJourney|E
+    nyRegularMinGapSeconds: fromMaybe 900 nyRegularMinGapSeconds|E
 
   toTType:
     ivrTriggerDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
@@ -244,6 +247,7 @@ RiderConfig:
     pickupInstructionsThreshold: Just pickupInstructionsThreshold|E
     pickupInstructionsProximityMeters: Just pickupInstructionsProximityMeters|E
     initiateFirstMultimodalJourney: Just initiateFirstMultimodalJourney|E
+    nyRegularMinGapSeconds: Just nyRegularMinGapSeconds|E
 
   default:
     enableLocalPoliceSupport: "false"

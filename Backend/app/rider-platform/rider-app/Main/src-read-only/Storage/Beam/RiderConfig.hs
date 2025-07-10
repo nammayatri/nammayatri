@@ -73,6 +73,7 @@ data RiderConfigT f = RiderConfigT
     nearbyDriverSearchRadius :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     noOfRideRequestsConfig :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     nyRegularExecutionTimeOffsetMinutes :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    nyRegularMinGapSeconds :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     nyRegularSubscriptionBatchSize :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     payoutBatchDelay :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     payoutBatchSize :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

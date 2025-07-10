@@ -244,33 +244,38 @@ postNyRegularSubscriptionsConfirm (mPersonId, merchantId) req = do
 
       -- Use UTC for reference time; the offset is only for interpreting scheduledTimeOfDay
       currentTime <- getCurrentTime
+      let utcOffset = KUT.secondsToNominalDiffTime riderConfig.timeDiffFromUtc
+          localCurrentTime = Time.addUTCTime utcOffset currentTime
+          today = Time.utctDay localCurrentTime
+          localScheduledTime = Time.UTCTime today (Time.timeOfDayToTime updatedSubscription.scheduledTimeOfDay)
+          minGap = KUT.secondsToNominalDiffTime riderConfig.nyRegularMinGapSeconds
+      logInfo $ "[NYREGULAR] utcOffset: " <> show utcOffset
+      logInfo $ "[NYREGULAR] localCurrentTime: " <> show localCurrentTime
+      logInfo $ "[NYREGULAR] localScheduledTime: " <> show localScheduledTime
+      logInfo $ "[NYREGULAR] minGap: " <> show minGap
+      nextInstanceTimesLocal <- getNextScheduledInstanceTimes minGap localScheduledTime updatedSubscription localCurrentTime
 
-      -- Get the next scheduled instance time
-      -- Calculate the difference between current time and the next scheduled time
-      let today = Time.utctDay currentTime
-          naiveUTCTime = Time.UTCTime today (Time.timeOfDayToTime updatedSubscription.scheduledTimeOfDay)
-          nextScheduledTime = Time.addUTCTime (KUT.secondsToNominalDiffTime riderConfig.timeDiffFromUtc) naiveUTCTime
-          timeDiff = Time.diffUTCTime nextScheduledTime currentTime
-      nextInstanceTimes <- getNextScheduledInstanceTimes (min timeDiff (KUT.secondsToNominalDiffTime riderConfig.timeDiffFromUtc)) updatedSubscription currentTime 1
-
-      for_ nextInstanceTimes $ \nextInstanceScheduledTime -> do
-        let jobScheduledTime = nextInstanceScheduledTime
+      for_ nextInstanceTimesLocal $ \nextInstanceScheduledTimeLocal -> do
+        let jobScheduledTimeLocal = nextInstanceScheduledTimeLocal
             executionTimeOffsetMinutes = fromMaybe 15 (riderConfig.nyRegularExecutionTimeOffsetMinutes)
             jobExecutionBuffer = fromIntegral (- executionTimeOffsetMinutes) * 60 -- Configurable minutes before scheduled time
-        let jobExecutionTime = Time.addUTCTime jobExecutionBuffer jobScheduledTime
-
+            jobExecutionTimeLocal = Time.addUTCTime jobExecutionBuffer jobScheduledTimeLocal
+            jobExecutionTimeUtc = Time.addUTCTime (-1 * utcOffset) jobExecutionTimeLocal
+        logInfo $ "[NYREGULAR] jobScheduledTimeLocal: " <> show jobScheduledTimeLocal
+        logInfo $ "[NYREGULAR] jobExecutionTimeLocal: " <> show jobExecutionTimeLocal
+        logInfo $ "[NYREGULAR] jobExecutionTimeUtc: " <> show jobExecutionTimeUtc
         jobCreationTime <- getCurrentTime -- current time for scheduleAfter calculation
-        when (jobExecutionTime <= jobCreationTime) $ do
-          throwM (InvalidRequest $ "Job execution time " <> show jobExecutionTime <> " is not in the future. Current time: " <> show jobCreationTime)
-        -- Ensure job is scheduled for the future
-        let scheduleAfter = Time.diffUTCTime jobExecutionTime jobCreationTime
-        -- Calculate the current scheduling hash
+        logInfo $ "[NYREGULAR] jobCreationTime: " <> show jobCreationTime
+        when (jobExecutionTimeUtc <= jobCreationTime) $ do
+          throwM (InvalidRequest $ "Job execution time " <> show jobExecutionTimeLocal <> " is not in the future. Current time: " <> show jobCreationTime)
+        let scheduleAfter = Time.diffUTCTime jobExecutionTimeUtc jobCreationTime
+        logInfo $ "[NYREGULAR] scheduleAfter: " <> show scheduleAfter
         currentHash <- calculateSubscriptionSchedulingHash updatedSubscription
         let jobData =
               NyRegularInstanceJobData
                 { nyRegularSubscriptionId = updatedSubscription.id,
                   userId = updatedSubscription.userId,
-                  scheduledTime = jobScheduledTime,
+                  scheduledTime = jobScheduledTimeLocal,
                   expectedSchedulingHash = show currentHash
                 }
 
@@ -278,7 +283,7 @@ postNyRegularSubscriptionsConfirm (mPersonId, merchantId) req = do
         logInfo $
           "Creating NyRegularInstance job for confirmed subscription " <> updatedSubscription.id.getId
             <> " at "
-            <> show jobScheduledTime
+            <> show jobScheduledTimeLocal
             <> " to run in "
             <> show scheduleAfter
             <> " seconds."
@@ -289,7 +294,7 @@ postNyRegularSubscriptionsConfirm (mPersonId, merchantId) req = do
             updatedSubscription.merchantOperatingCityId
             scheduleAfter
             jobData
-        logInfo $ "Created NyRegularInstance job for confirmed subscription " <> updatedSubscription.id.getId <> " at " <> show jobScheduledTime
+        logInfo $ "Created NyRegularInstance job for confirmed subscription " <> updatedSubscription.id.getId <> " at " <> show jobScheduledTimeLocal
 
   pure updatedSubscription
 
@@ -306,45 +311,28 @@ didSchedulingParametersChange oldSub newSub =
 
 -- Helper function to get the next N scheduled instance times for a subscription
 getNextScheduledInstanceTimes ::
-  Time.NominalDiffTime -> -- The timeDiffFromUtc from RiderConfig
+  -- | minimum gap required (from riderConfig)
+  Time.NominalDiffTime ->
+  -- | local scheduled time (UTC + timeDiffFromUtc)
+  KUT.UTCTime ->
+  -- | the subscription
   NySub.NyRegularSubscription ->
-  Time.UTCTime ->
-  Int ->
-  Flow [Time.UTCTime]
-getNextScheduledInstanceTimes timeDiffFromUtc sub referenceTime maxInstancesToFind
-  | maxInstancesToFind <= 0 = pure []
+  -- | current time
+  KUT.UTCTime ->
+  Environment.Flow [KUT.UTCTime]
+getNextScheduledInstanceTimes minGap localScheduledTime sub now
   | sub.status /= NySub.ACTIVE = pure []
   | otherwise = do
-    let subStartDay = Time.utctDay sub.startDatetime
-        referenceDay = Time.utctDay referenceTime
-        initialSearchDay = max subStartDay referenceDay
-        iterationLimitDays = 365 * 2
-    loop initialSearchDay 0 [] iterationLimitDays
-  where
-    loop :: Time.Day -> Int -> [Time.UTCTime] -> Int -> Flow [Time.UTCTime]
-    loop currentDay foundCount accInstances daysLeft
-      | foundCount >= maxInstancesToFind = pure (List.reverse accInstances)
-      | daysLeft <= 0 = pure (List.reverse accInstances)
-      | otherwise = do
-        let pastRecurrenceEnd = case sub.recurrenceEndDate of
-              Just endDate -> currentDay > endDate
-              Nothing -> False
-
-        if pastRecurrenceEnd
-          then pure (List.reverse accInstances)
-          else do
-            let currentDayOfWeek = Time.dayOfWeek currentDay
-            if currentDayOfWeek `elem` sub.recurrenceRuleDays
-              then do
-                -- Create a naive UTC time, then subtract the offset to get the true UTC time
-                let naiveUTCTime = Time.UTCTime currentDay (Time.timeOfDayToTime sub.scheduledTimeOfDay)
-                let potentialInstanceTime = Time.addUTCTime timeDiffFromUtc naiveUTCTime
-
-                if potentialInstanceTime > referenceTime
-                  && not (isTimestampInPausePeriod potentialInstanceTime sub.pauseStartDate sub.pauseEndDate)
-                  then loop (Time.addDays 1 currentDay) (foundCount + 1) (potentialInstanceTime : accInstances) (daysLeft - 1)
-                  else loop (Time.addDays 1 currentDay) foundCount accInstances (daysLeft - 1)
-              else loop (Time.addDays 1 currentDay) foundCount accInstances (daysLeft - 1)
+    let today = Time.utctDay now
+        dayOfWeekStr = Time.dayOfWeek today
+        recurrenceDays = sub.recurrenceRuleDays
+        inPause = isTimestampInPausePeriod localScheduledTime sub.pauseStartDate sub.pauseEndDate
+    if dayOfWeekStr `elem` recurrenceDays
+      then
+        if localScheduledTime > Time.addUTCTime minGap now && not inPause
+          then pure [localScheduledTime]
+          else pure []
+      else pure []
 
 postNyRegularSubscriptionsUpdate ::
   ( (Maybe (Id Domain.Types.Person.Person), Id Domain.Types.Merchant.Merchant) ->
@@ -398,11 +386,15 @@ postNyRegularSubscriptionsUpdate (mPersonId, _) req = do
 
     -- Use UTC for reference time; the offset is only for interpreting scheduledTimeOfDay
     currentTime <- getCurrentTime
+    let utcOffset = KUT.secondsToNominalDiffTime riderConfig.timeDiffFromUtc
+        localCurrentTime = Time.addUTCTime utcOffset currentTime
+        today = Time.utctDay localCurrentTime
+        localScheduledTime = Time.UTCTime today (Time.timeOfDayToTime finalUpdatedSubscription.scheduledTimeOfDay)
+        minGap = KUT.secondsToNominalDiffTime riderConfig.nyRegularMinGapSeconds
+    nextInstanceTimesLocal <- getNextScheduledInstanceTimes minGap localScheduledTime finalUpdatedSubscription localCurrentTime
 
-    -- Pass the offset to the helper
-    nextInstanceTimes <- getNextScheduledInstanceTimes (KUT.secondsToNominalDiffTime riderConfig.timeDiffFromUtc) finalUpdatedSubscription currentTime 1
-
-    for_ nextInstanceTimes $ \nextInstanceScheduledTime -> do
+    for_ nextInstanceTimesLocal $ \nextInstanceScheduledTimeLocal -> do
+      let nextInstanceScheduledTime = Time.addUTCTime (-1 * utcOffset) nextInstanceScheduledTimeLocal
       let jobDuplicationKey =
             "NyRegularInstanceJobCreationAttempt:"
               <> finalUpdatedSubscription.id.getId
@@ -413,7 +405,13 @@ postNyRegularSubscriptionsUpdate (mPersonId, _) req = do
 
       -- Attempt to acquire a lock for this specific instance creation attempt
       lockAcquired <- Hedis.setNxExpire jobDuplicationKey (24 * 60 * 60) True
-
+      logInfo $ "[NYREGULAR] lockAcquired: " <> show lockAcquired
+      logInfo $ "[NYREGULAR] jobDuplicationKey: " <> jobDuplicationKey
+      logInfo $ "[NYREGULAR] nextInstanceScheduledTimeLocal: " <> show nextInstanceScheduledTimeLocal
+      logInfo $ "[NYREGULAR] finalUpdatedSubscription.id: " <> finalUpdatedSubscription.id.getId
+      logInfo $ "[NYREGULAR] newSchedulingHash: " <> show newSchedulingHash
+      logInfo $ "[NYREGULAR] Time.formatTime Time.defaultTimeLocale \"%Y%m%d%H%M%S\" nextInstanceScheduledTime: " <> T.pack (Time.formatTime Time.defaultTimeLocale "%Y%m%d%H%M%S" nextInstanceScheduledTime)
+      logInfo $ "[NYREGULAR] nextInstanceScheduledTime: " <> show nextInstanceScheduledTime
       when lockAcquired $ do
         logInfo $ "Acquired lock for proactive job creation: " <> jobDuplicationKey
         mExistingLog <- QNyRegularInstanceLog.findBySubscriptionIdAndScheduledTime finalUpdatedSubscription.id nextInstanceScheduledTime
@@ -422,7 +420,7 @@ postNyRegularSubscriptionsUpdate (mPersonId, _) req = do
               Just logEntry ->
                 logEntry.automationStatus
                   `elem` [NyRegularInstanceLog.PENDING, NyRegularInstanceLog.FAILED_NO_OFFER, NyRegularInstanceLog.FAILED_BPP_ERROR]
-
+        logInfo $ "[NYREGULAR] shouldCreateJob: " <> show shouldCreateJob
         when shouldCreateJob $ do
           let jobScheduledTime = nextInstanceScheduledTime
               executionTimeOffsetMinutes = fromMaybe 15 (riderConfig.nyRegularExecutionTimeOffsetMinutes)
