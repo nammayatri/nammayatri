@@ -9,10 +9,10 @@ where
 
 import qualified API.Types.UI.TicketKapture
 import qualified Control.Lens
+import qualified Data.Text
 import qualified Domain.Action.UI.TicketKapture as Domain.Action.UI.TicketKapture
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
-import qualified Domain.Types.Ride
 import qualified Environment
 import EulerHS.Prelude
 import qualified Kernel.External.Ticket.Interface.Types
@@ -31,9 +31,7 @@ type API =
            API.Types.UI.TicketKapture.TicketKaptureResp
       :<|> TokenAuth
       :> "kaptureCloseTicket"
-      :> QueryParam
-           "rideId"
-           (Kernel.Types.Id.Id Domain.Types.Ride.Ride)
+      :> MandatoryQueryParam "ticketId" Data.Text.Text
       :> Post
            '[JSON]
            Kernel.Types.APISuccess.APISuccess
@@ -60,7 +58,7 @@ postKaptureCloseTicket ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
-    Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Ride.Ride) ->
+    Data.Text.Text ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
 postKaptureCloseTicket a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.TicketKapture.postKaptureCloseTicket (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
