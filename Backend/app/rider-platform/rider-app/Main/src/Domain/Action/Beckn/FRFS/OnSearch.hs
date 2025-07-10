@@ -158,8 +158,12 @@ onSearch ::
   m ()
 onSearch onSearchReq validatedReq = do
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity validatedReq.search
-  updatedQuotes <- mapM (updateQuote integratedBPPConfig) onSearchReq.quotes
-  onSearchHelper (onSearchReq {quotes = updatedQuotes}) validatedReq integratedBPPConfig
+  case integratedBPPConfig.providerConfig of
+    DIBC.ONDC _ -> do
+      updatedQuotes <- mapM (updateQuote integratedBPPConfig) onSearchReq.quotes
+      onSearchHelper (onSearchReq {quotes = updatedQuotes}) validatedReq integratedBPPConfig
+    _ -> do
+      onSearchHelper onSearchReq validatedReq integratedBPPConfig
   where
     updateQuote integratedBPPConfig quote = do
       stations <-

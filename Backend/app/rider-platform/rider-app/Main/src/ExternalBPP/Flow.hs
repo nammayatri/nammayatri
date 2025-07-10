@@ -35,15 +35,15 @@ getFares riderId merchant merchantOperatingCity integratedBPPConfig _bapConfig r
     Left _ -> return (True, [])
     Right fares -> return fares
 
-search :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> DFRFSSearch.FRFSSearch -> [FRFSRouteDetails] -> m DOnSearch
-search merchant merchantOperatingCity integratedBPPConfig bapConfig searchReq routeDetails = do
+search :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> Maybe BaseUrl -> Maybe Text -> DFRFSSearch.FRFSSearch -> [FRFSRouteDetails] -> m DOnSearch
+search merchant merchantOperatingCity integratedBPPConfig bapConfig mbNetworkHostUrl mbNetworkId searchReq routeDetails = do
   quotes <- buildQuotes routeDetails
   validTill <- mapM (\ttl -> addUTCTime (intToNominalDiffTime ttl) <$> getCurrentTime) bapConfig.searchTTLSec
   messageId <- generateGUID
   return $
     DOnSearch
-      { bppSubscriberId = bapConfig.subscriberId,
-        bppSubscriberUrl = showBaseUrl bapConfig.subscriberUrl,
+      { bppSubscriberId = fromMaybe bapConfig.subscriberId mbNetworkId,
+        bppSubscriberUrl = showBaseUrl $ fromMaybe bapConfig.subscriberUrl mbNetworkHostUrl,
         providerDescription = Nothing,
         providerId = bapConfig.uniqueKeyId,
         providerName = CallAPI.getProviderName integratedBPPConfig,
