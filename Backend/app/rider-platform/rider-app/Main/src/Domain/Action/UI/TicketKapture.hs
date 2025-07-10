@@ -5,6 +5,7 @@ module Domain.Action.UI.TicketKapture (postKaptureCustomerLogin, postKaptureClos
 import qualified API.Types.UI.TicketKapture
 import qualified API.Types.UI.TicketKapture as TicketKapture
 import Data.OpenApi (ToSchema)
+import Data.Text
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import qualified Domain.Types.Ride
@@ -59,35 +60,13 @@ postKaptureCloseTicket ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
-    Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Ride.Ride) ->
+    Data.Text.Text ->
     Environment.Flow APISuccess
   )
-postKaptureCloseTicket (mbPersonId, _) mbRideId = do
+postKaptureCloseTicket (mbPersonId, _) ticketId = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  resp <- kapturePullTicket person.merchantId person.merchantOperatingCityId (TIT.KapturePullTicketReq personId.getId "P" "0" "100")
-  let matchedTicketIds = case mbRideId of
-        Nothing ->
-          [ ticketSummary.ticketId
-            | ticketSummary <- resp.message,
-              ticketSummary.status == "Pending",
-              case ticketSummary.additionalInfo of
-                Just (TIT.PullAdditionalDetails (TIT.RideIdObject mbR)) ->
-                  case mbR of
-                    Nothing -> True
-                    Just t -> t == "" || t == "null"
-                _ -> True
-          ]
-        Just rideId ->
-          [ ticketSummary.ticketId
-            | ticketSummary <- resp.message,
-              ticketSummary.status == "Pending",
-              case ticketSummary.additionalInfo of
-                Just (TIT.PullAdditionalDetails (TIT.RideIdObject (Just t))) -> t == rideId.getId
-                _ -> False
-          ]
-  forM_ matchedTicketIds $ \ticketId -> do
-    updateTicket person.merchantId person.merchantOperatingCityId (TIT.UpdateTicketReq "" ticketId TIT.RS)
+  _ <- updateTicket person.merchantId person.merchantOperatingCityId (TIT.UpdateTicketReq "" ticketId TIT.RS)
   pure Success
 
 getGetAllActiveTickets ::
@@ -104,7 +83,7 @@ getGetAllActiveTickets (mbPersonId, _) = do
         [ TicketKapture.ActiveTicketsRes
             { rideId =
                 case ticketSummary.additionalInfo of
-                  Just (TIT.PullAdditionalDetails (TIT.RideIdObject (Just ridText)))
+                  Just (TIT.PullAdditionalDetails (Just (TIT.RideIdObject (Just ridText))))
                     | ridText /= "" && ridText /= "null" -> Just (Kernel.Types.Id.Id ridText)
                   _ -> Nothing,
               ticketId = ticketSummary.ticketId
