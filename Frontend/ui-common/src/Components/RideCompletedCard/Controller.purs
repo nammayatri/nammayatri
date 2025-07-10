@@ -93,7 +93,8 @@ type Config = {
   interCityTextConfig :: IntercityRideTextConfig,
   variant :: String,
   driverCity :: String,
-  driverInvoiceText :: String
+  driverInvoiceText :: String,
+  driverInvoiceTextBgColor :: String
 }
 
 data Theme = DARK | LIGHT
@@ -259,7 +260,8 @@ config = {
   },
   variant : "",
   driverCity : "",
-  driverInvoiceText : ""
+  driverInvoiceText : "",
+  driverInvoiceTextBgColor : Color.transparent
 }
 
 type CustomerIssue = {

@@ -129,7 +129,7 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
 
 eval (ChangeTab subView') state = do
   let _ = unsafePerformEffect $ logEventWithMultipleParams state.data.logField  "ny_driver_earnings_scn_change_tab" $ [{key : "Tab", value : unsafeToForeign (show subView')}]
-  if subView' == state.props.subView then continue state else exit $ ChangeDriverEarningsTab subView' state { props { graphIndex = 0, fromDate = "", toDate = "" } }
+  if subView' == state.props.subView then continue state else exit $ ChangeDriverEarningsTab subView' state { props { graphIndex = 0, fromDate = "", toDate = "", selectedBarIndex = -1 } }
 
 eval (GenericHeaderAC (GenericHeader.PrefixImgOnClick)) state = continueWithCmd state [ pure BackPressed ]
 

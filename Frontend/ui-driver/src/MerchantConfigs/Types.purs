@@ -125,7 +125,6 @@ type ThemeColors = {
   primaryStrokeColor :: String,
   openMapsStrokeColor :: String,
   secondaryStrokeColor :: String,
-  openMapsTextColor :: String,
   onlineStatusColor :: String,
   onboardingHeaderTextColor :: String,
   onboardingHeaderStroke :: String,
