@@ -157,6 +157,10 @@ window.onMerchantEvent = function (_event, payload) {
   console.log(payload);
   const JOSFlags = window.JOS.getJOSflags();
   const clientPayload = JSON.parse(payload);
+  if (clientPayload.payload.event == "ppCallback") {
+    window['onEvent'](payload);
+    return;
+  }
   window.__payload = clientPayload;
   const clientId = clientPayload.payload.clientId;
   const appName = clientPayload.payload.appName;
