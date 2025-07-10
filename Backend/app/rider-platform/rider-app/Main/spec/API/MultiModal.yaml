@@ -35,6 +35,7 @@ imports:
   VehicleCategory: BecknV2.FRFS.Enums
   Provider: Lib.JourneyModule.Types
   Value: Data.Aeson
+  Gate: Domain.Types.Station
 
 module: MultimodalConfirm
 
@@ -201,7 +202,7 @@ types:
     hin: Maybe Text
     sgstdDest: Maybe [SuggestedStations]
     gj: Maybe Value
-    gi: Maybe Value
+    gi: Maybe [Gate]
     ibc: Id IntegratedBPPConfig
 
   TransportRouteStopMapping:
