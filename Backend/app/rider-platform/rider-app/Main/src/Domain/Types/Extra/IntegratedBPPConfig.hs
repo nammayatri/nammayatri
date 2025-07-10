@@ -34,6 +34,7 @@ data CMRLConfig = CMRLConfig
 
 data ONDCBecknConfig = ONDCBecknConfig
   { networkHostUrl :: Maybe BaseUrl,
+    networkId :: Maybe Text,
     multiInitAllowed :: Maybe Bool,
     fareCachingAllowed :: Maybe Bool
   }

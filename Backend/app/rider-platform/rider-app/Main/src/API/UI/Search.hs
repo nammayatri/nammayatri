@@ -184,7 +184,7 @@ search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfi
   fork "Multimodal Search" $ do
     riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow dSearchRes.searchRequest.merchantOperatingCityId dSearchRes.searchRequest.configInExperimentVersions >>= fromMaybeM (RiderConfigNotFound dSearchRes.searchRequest.merchantOperatingCityId.getId)
     when riderConfig.makeMultiModalSearch $ do
-      void (multiModalSearch dSearchRes.searchRequest riderConfig riderConfig.initiateFirstMultimodalJourney req personId)
+      void (multiModalSearch dSearchRes.searchRequest riderConfig riderConfig.initiateFirstMultimodalJourney True req personId)
   return $ DSearch.SearchResp dSearchRes.searchRequest.id dSearchRes.searchRequestExpiry dSearchRes.shortestRouteInfo
   where
     -- TODO : remove this code after multiple search req issue get fixed from frontend
@@ -225,10 +225,10 @@ multimodalSearchHandler (personId, _merchantId) req mbInitateJourney mbBundleVer
     dSearchRes <- DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice (fromMaybe False mbIsDashboardRequest) Nothing True
     riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow dSearchRes.searchRequest.merchantOperatingCityId dSearchRes.searchRequest.configInExperimentVersions >>= fromMaybeM (RiderConfigNotFound dSearchRes.searchRequest.merchantOperatingCityId.getId)
     let initateJourney = fromMaybe False mbInitateJourney
-    multiModalSearch dSearchRes.searchRequest riderConfig initateJourney req personId
+    multiModalSearch dSearchRes.searchRequest riderConfig initateJourney False req personId
 
-multiModalSearch :: SearchRequest.SearchRequest -> DRC.RiderConfig -> Bool -> DSearch.SearchReq -> Id Person.Person -> Flow MultimodalSearchResp
-multiModalSearch searchRequest riderConfig initateJourney req' personId = do
+multiModalSearch :: SearchRequest.SearchRequest -> DRC.RiderConfig -> Bool -> Bool -> DSearch.SearchReq -> Id Person.Person -> Flow MultimodalSearchResp
+multiModalSearch searchRequest riderConfig initateJourney forkInitiateFirstJourney req' personId = do
   now <- getCurrentTime
   userPreferences <- DMC.getMultimodalUserPreferences (Just searchRequest.riderId, searchRequest.merchantId)
   let req = DSearch.extractSearchDetails now req'
@@ -379,9 +379,17 @@ multiModalSearch searchRequest riderConfig initateJourney req' personId = do
       then do
         case mbJourneyWithIndex of
           Just (idx, firstJourney) -> do
-            resp <- DMC.postMultimodalInitiate (Just searchRequest.riderId, searchRequest.merchantId) firstJourney.id
+            resp <-
+              if forkInitiateFirstJourney
+                then do
+                  fork "Initiate first the route" $ do
+                    void $ DMC.postMultimodalInitiate (Just searchRequest.riderId, searchRequest.merchantId) firstJourney.id
+                  return Nothing
+                else do
+                  res <- DMC.postMultimodalInitiate (Just searchRequest.riderId, searchRequest.merchantId) firstJourney.id
+                  return $ Just res {ApiTypes.crisSdkToken = mbCrisSdkToken}
             fork "Rest of the routes Init" $ processRestOfRoutes [x | (j, x) <- zip [0 ..] otpResponse.routes, j /= idx] userPreferences
-            return $ Just resp{crisSdkToken = mbCrisSdkToken}
+            return resp
           Nothing -> do
             QSearchRequest.updateAllJourneysLoaded (Just True) searchRequest.id
             return Nothing
