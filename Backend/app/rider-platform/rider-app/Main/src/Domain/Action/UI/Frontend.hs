@@ -22,7 +22,6 @@ module Domain.Action.UI.Frontend
   )
 where
 
-import Data.Ord (comparing)
 import Domain.Action.UI.Booking
 import qualified Domain.Action.UI.MultimodalConfirm as DMultimodal
 import Domain.Action.UI.Quote
@@ -39,7 +38,6 @@ import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.JourneyModule.Base (generateJourneyInfoResponse, getAllLegsInfo)
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.ValueAddNP as QNP
 import qualified Storage.Queries.Booking as QB
@@ -65,18 +63,11 @@ type NotifyEventResp = APISuccess
 
 getPersonFlowStatus :: Id DP.Person -> Id DM.Merchant -> Maybe Bool -> Maybe Bool -> Flow GetPersonFlowStatusRes
 getPersonFlowStatus personId merchantId _ pollActiveBooking = do
-  activeJourneys <- DMultimodal.getActiveJourneyIds personId
   now <- getCurrentTime
-  if not (null activeJourneys)
-    then do
-      (updatedActiveJourneys, paymentSuccessJourneys) <- processJourneys now activeJourneys
-      if null paymentSuccessJourneys
-        then return $ GetPersonFlowStatusRes Nothing (DPFS.ACTIVE_JOURNEYS {journeys = updatedActiveJourneys, currentJourney = Nothing}) Nothing
-        else do
-          let earliestActiveJourney = maximumBy (comparing (.startTime)) paymentSuccessJourneys
-          legs <- getAllLegsInfo earliestActiveJourney.id False
-          journeyInfoResp <- generateJourneyInfoResponse earliestActiveJourney legs
-          return $ GetPersonFlowStatusRes Nothing (DPFS.ACTIVE_JOURNEYS {journeys = updatedActiveJourneys, currentJourney = Just journeyInfoResp}) Nothing
+  activeJourneys <- DMultimodal.getActiveJourneyIds personId
+  updatedActiveJourneys <- processJourneys now activeJourneys
+  if not (null updatedActiveJourneys)
+    then return $ GetPersonFlowStatusRes Nothing (DPFS.ACTIVE_JOURNEYS {journeys = updatedActiveJourneys}) Nothing
     else do
       personStatus' <- QPFS.getStatus personId
       case personStatus' of
@@ -88,12 +79,11 @@ getPersonFlowStatus personId merchantId _ pollActiveBooking = do
         Nothing -> checkForActiveBooking
   where
     -- filter payment success journeys and update journey status if expired
-    processJourneys :: UTCTime -> [DJ.Journey] -> Flow ([DJ.Journey], [DJ.Journey])
+    processJourneys :: UTCTime -> [DJ.Journey] -> Flow [DJ.Journey]
+    processJourneys _ [] = return []
     processJourneys now journeys = do
       updatedJourneys <- mapM updateJourneyStatus journeys
-      let activeJourneys = filter (\j -> j.status /= DJ.EXPIRED) updatedJourneys
-      let paymentSuccessJourneys = filter (\j -> j.isPaymentSuccess == Just True) activeJourneys
-      return (activeJourneys, paymentSuccessJourneys)
+      return $ filter (\j -> j.status /= DJ.EXPIRED) updatedJourneys
       where
         updateJourneyStatus j = do
           case j.journeyExpiryTime of
