@@ -41,6 +41,8 @@ let encTools = { service = common.passetto, hashSalt = sec.encHashSalt }
 
 let kvConfigUpdateFrequency = +10
 
+let sendEmailRateLimitOptions = { limit = +3, limitResetTimeInSec = +600 }
+
 let driverOfferBpp =
       { name = common.ServerName.DRIVER_OFFER_BPP
       , url = "http://localhost:8016/"
@@ -108,6 +110,7 @@ in  { esqDBCfg
     , authTokenCacheExpiry = +600
     , registrationTokenExpiry = +365
     , registrationTokenInactivityTimeout = None Integer
+    , sendEmailRateLimitOptions
     , encTools
     , exotelToken = ""
     , dataServers = [ driverOfferBpp, driverOfferBppManagement ]

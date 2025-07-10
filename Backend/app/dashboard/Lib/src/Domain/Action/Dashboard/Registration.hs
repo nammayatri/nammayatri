@@ -36,8 +36,10 @@ import Kernel.Types.Common hiding (id)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.Predicate
+import Kernel.Types.SlidingWindowLimiter
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
+import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Kernel.Utils.Validation
 import Storage.Beam.BeamFlow
 import qualified Storage.Queries.Merchant as QMerchant
@@ -118,11 +120,14 @@ login ::
     Redis.HedisFlow m r,
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text],
     HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]],
+    HasFlowEnv m r '["sendEmailRateLimitOptions" ::: APIRateLimitOptions],
     EncFlow m r
   ) =>
   LoginReq ->
   m LoginRes
 login LoginReq {..} = do
+  sendEmailRateLimitOptions <- asks (.sendEmailRateLimitOptions)
+  checkSlidingWindowLimitWithOptions (makeEmailHitsCountKey email) sendEmailRateLimitOptions
   email_ <- email & fromMaybeM (InvalidRequest "Email cannot be empty when login type is email")
   person <- QP.findByEmailAndPassword email_ password >>= fromMaybeM (PersonDoesNotExist email_)
   merchantAccessList <- B.runInReplica $ QAccess.findAllMerchantAccessByPersonId person.id
@@ -143,6 +148,9 @@ login LoginReq {..} = do
               city' = if defaultCityPresent then merchant.defaultOperatingCity else head merchantWithCityList
           pure (merchant, city')
   generateLoginRes person merchant' otp city'
+
+makeEmailHitsCountKey :: Maybe Text -> Text
+makeEmailHitsCountKey email = "Email:" <> fromMaybe "" email <> ":hitsCount"
 
 switchMerchant ::
   ( BeamFlow m r,

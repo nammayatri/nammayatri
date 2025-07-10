@@ -79,6 +79,8 @@ let kafkaProducerCfg =
       , kafkaCompression = common.kafkaCompression.LZ4
       }
 
+let sendEmailRateLimitOptions = { limit = +3, limitResetTimeInSec = +600 }
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , hedisCfg = rcfg
@@ -106,6 +108,7 @@ in  { esqDBCfg
     , authTokenCacheExpiry = +600
     , registrationTokenExpiry = +365
     , registrationTokenInactivityTimeout = None Integer
+    , sendEmailRateLimitOptions
     , encTools
     , exotelToken = ""
     , dataServers = [ appBackend, appBackendManagement ]
