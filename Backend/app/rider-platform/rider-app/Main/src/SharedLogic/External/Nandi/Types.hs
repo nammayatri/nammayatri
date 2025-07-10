@@ -115,6 +115,7 @@ data GtfsGraphQLRequest = GtfsGraphQLRequest
   { query :: Text,
     variables :: Maybe Value,
     operation_name :: Maybe Text,
-    city :: Maybe Text
+    city :: Maybe Text, -- todo: remove this
+    feedId :: Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
