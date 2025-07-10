@@ -1013,6 +1013,7 @@ types:
     - fleetOwnerId: Text
     - fleetOwnerName: Text
     - fleetGroup: Maybe FleetGroup
+    - groups: "[FleetGroup]"
     - order: Maybe Int
     - enabled: Bool
   TripTransactionDetail:

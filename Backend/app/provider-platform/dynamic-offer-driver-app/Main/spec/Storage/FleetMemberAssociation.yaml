@@ -49,6 +49,12 @@ FleetMemberAssociation:
         and:
           - eq: [fleetMemberId, groupCode]
 
+    findAllWithOwnerIds:
+      kvFunction: findAllWithKV
+      where:
+        and:
+          - in: [fleetOwnerId]
+
   extraOperations:
     - EXTRA_QUERY_FILE
 

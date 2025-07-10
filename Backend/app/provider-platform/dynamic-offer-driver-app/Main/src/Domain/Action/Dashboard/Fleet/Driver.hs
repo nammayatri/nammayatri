@@ -2420,11 +2420,13 @@ getDriverFleetAccessList :: ShortId DM.Merchant -> Context.City -> Maybe Text ->
 getDriverFleetAccessList _ _ mbFleetMemberId = do
   fleetMemberId <- mbFleetMemberId & fromMaybeM (InvalidRequest "Fleet member ID is required")
   fleetOwners <- FMA.findAllByfleetMemberId fleetMemberId
+  allFleetGroups <- FMA.findAllWithOwnerIds ((.fleetOwnerId) <$> fleetOwners)
   ownersList <-
     mapM
       ( \fleetMemberAssociation -> do
           fleetMemberAssociation' <- FMA.findOneByFleetOwnerId fleetMemberAssociation.fleetOwnerId True >>= fromMaybeM (PersonNotFound fleetMemberAssociation.fleetOwnerId)
           person <- QP.findById (Id fleetMemberAssociation'.fleetMemberId) >>= fromMaybeM (PersonNotFound fleetMemberAssociation'.fleetMemberId)
+          let groups = map (\fma -> Common.FleetGroup {Common.groupCode = fromMaybe mempty fma.groupCode, Common.level = fromMaybe (-1) fma.level, parentGroupCode = Nothing}) $ filter (\fma -> fma.fleetOwnerId == person.id.getId) allFleetGroups
           return $
             Common.FleetOwnerListAPIEntity
               { fleetOwnerId = fleetMemberAssociation.fleetOwnerId,
@@ -2435,7 +2437,8 @@ getDriverFleetAccessList _ _ mbFleetMemberId = do
                       (level, groupCode) ->
                         Common.FleetGroup {level, parentGroupCode = fleetMemberAssociation.parentGroupCode, groupCode},
                 order = fleetMemberAssociation.order,
-                enabled = fleetMemberAssociation.enabled
+                enabled = fleetMemberAssociation.enabled,
+                ..
               }
       )
       fleetOwners

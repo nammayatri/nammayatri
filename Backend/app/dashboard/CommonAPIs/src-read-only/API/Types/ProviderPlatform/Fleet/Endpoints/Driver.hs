@@ -323,6 +323,7 @@ data FleetOwnerListAPIEntity = FleetOwnerListAPIEntity
   { fleetOwnerId :: Kernel.Prelude.Text,
     fleetOwnerName :: Kernel.Prelude.Text,
     fleetGroup :: Kernel.Prelude.Maybe FleetGroup,
+    groups :: [FleetGroup],
     order :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     enabled :: Kernel.Prelude.Bool
   }
