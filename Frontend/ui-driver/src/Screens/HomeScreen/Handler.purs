@@ -235,3 +235,6 @@ homeScreen = do
     EnablePetRides updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ ENABLE_PET_RIDES updatedState)
+    DriverConsentAgree updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ DRIVER_CONSENT_AGREED updatedState)

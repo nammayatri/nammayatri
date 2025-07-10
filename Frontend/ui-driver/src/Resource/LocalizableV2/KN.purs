@@ -1860,4 +1860,12 @@ getKn =
     , you_may_lose_some_coins_if_you_cancel_this_ride : "ನೀವು ಈ ಸವಾರಿಯನ್ನು ರದ್ದು ಮಾಡಿದರೆ, ಕೆಲವೊಂದು ಕಾಲಿ ಹೋಗಬಹುದು"
     , cancellation_compensation : "ರದ್ದು ಮಾಡಲು ಸ್ಕೋರ್"
     , cancellation_penalisaton : "ರದ್ದು ಮಾಡಲು ಸ್ಕೋರ್"
+    , i_agree_to : "ನಾನು ಒಪ್ಪುತ್ತೇನೆ:"
+    , namma_kutumba : "ನಮ್ಮ ಕುಟುಂಬ"
+    , become_a_member_of_the_namma_driver_welfare_trust : "ನಮ್ಮ ಚಾಲಕ ಕಲ್ಯಾಣ ಟ್ರಸ್ಟ್‌ನ ಸದಸ್ಯರಾಗಿ."
+    , never_raise_fraudulent_claim : "ಎಂದಿಗೂ ಮೋಸದ ಹಕ್ಕನ್ನು ಮಾಡಬೇಡಿ."
+    , ask_only_the_fair_price_shown_in_the_app : "ಅಪ್ಲಿಕೇಶನ್‌ನಲ್ಲಿ ತೋರಿಸಿರುವ ನ್ಯಾಯಯುತ ಬೆಲೆಯನ್ನು ಮಾತ್ರ ಕೇಳಿ."
+    , follow_safety_standards : "ಸುರಕ್ಷತಾ ಮಾನದಂಡಗಳನ್ನು ಅನುಸರಿಸಿ"
+    , provide_sakkath_service_to_the_customers : "ಗ್ರಾಹಕರಿಗೆ ಸಕ್ಕತ್ ಸೇವೆಯನ್ನು ಒದಗಿಸಿ."
+    , i_have_read_and_accept_the : "ನಾನು ಇದನ್ನು ಓದಿದ್ದೇನೆ ಮತ್ತು ಒಪ್ಪುತ್ತೇನೆ"
     }

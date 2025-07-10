@@ -375,6 +375,7 @@ data DRIVER_PROFILE_SCREEN_OUTPUT = DRIVER_DETAILS_SCREEN
                                     | GO_TO_METER_RIDE_SCREEN_FROM_PROFILE
 
                                     | GO_TO_EXTRA_CHARGE_INFO_SCREEN
+                                    | GO_TO_CLUB_DETAILS_SCREEN
 
 
 
@@ -510,6 +511,7 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN HomeScreenState
                           | UPDATE_STOPS_STATUS HomeScreenState
                           | GO_TO_METER_RIDE_SCREEN
                           | ENABLE_PET_RIDES HomeScreenState
+                          | DRIVER_CONSENT_AGREED HomeScreenState
 
 data REPORT_ISSUE_CHAT_SCREEN_OUTPUT = GO_TO_HELP_AND_SUPPORT | SUBMIT_ISSUE ReportIssueChatScreenState | CALL_CUSTOMER ReportIssueChatScreenState
 

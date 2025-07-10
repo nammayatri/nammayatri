@@ -1860,4 +1860,12 @@ getTa =
     , you_may_lose_some_coins_if_you_cancel_this_ride: "நீங்கள் இந்த சவாரியை ரத்து செய்தால், குறைந்த காலி இருக்கலாம்"
     , cancellation_compensation: "ரத்து செய்யும் மதிப்பெண்"
     , cancellation_penalisaton: "ரத்து செய்யும் மதிப்பெண்"
+    , i_agree_to : "நான் இந்த நிபந்தனைகளை மேல்மடி செய்கிறேன்:"
+    , namma_kutumba : "நம்ம குதுமா"
+    , become_a_member_of_the_namma_driver_welfare_trust : "நம்ம டிரைவர் விதி டிரஸ்ட் ந ஒஂது ஸதஸ்ய ஹாகெ"
+    , never_raise_fraudulent_claim : "நம்ம டிரைவர் விதி டிரஸ்ட் ந ஒஂது ஸதஸ்ய ஹாகெ"
+    , ask_only_the_fair_price_shown_in_the_app : "நம்ம டிரைவர் விதி டிரஸ்ட் ந ஒஂது ஸதஸ்ய ஹாகெ"
+    , follow_safety_standards : "நம்ம டிரைவர் விதி டிரஸ்ட் ந ஒஂது ஸதஸ்ய ஹாகெ"
+    , provide_sakkath_service_to_the_customers : "நம்ம டிரைவர் விதி டிரஸ்ட் ந ஒஂது ஸதஸ்ய ஹாகெ"
+    , i_have_read_and_accept_the : "நான் இந்த நிபந்தனைகளை மேல்மடி செய்கிறேன்:"
     }

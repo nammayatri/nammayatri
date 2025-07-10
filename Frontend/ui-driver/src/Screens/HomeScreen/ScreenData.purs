@@ -207,6 +207,8 @@ initData =
       , overchargingTag : Nothing
       , driverBlocked : false
       , blockedExpiryTime : ""
+      , nyClubTag : Nothing
+      , consentPopupPeakHeight : 0
     }
   , props:
       { isFreeRide: false
@@ -314,6 +316,7 @@ initData =
       , triggerGMapsIntent : false
       , showBlockerPopup : false
       , coinWaitingThreshold : 0
+      , nyClubConsent : Nothing
       }
   }
 
