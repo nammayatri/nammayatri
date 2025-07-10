@@ -1135,6 +1135,8 @@ type HomeScreenData =  {
 , overchargingTag :: Maybe API.OverchargingTag
 , driverBlocked :: Boolean
 , blockedExpiryTime :: String
+, nyClubTag :: Maybe String
+, consentPopupPeakHeight :: Int
 }
 
 type InsuranceData = {
@@ -1479,7 +1481,8 @@ type HomeScreenProps =  {
   triggerGMapsIntent :: Boolean,
   showBlockerPopup :: Boolean,
   showInsuranceBanner :: Boolean,
-  coinWaitingThreshold :: Int
+  coinWaitingThreshold :: Int,
+  nyClubConsent :: Maybe Boolean
  }
 
 type RideRequestPill = {

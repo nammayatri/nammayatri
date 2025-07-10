@@ -283,6 +283,8 @@ dummyDriverInfo = GetDriverInfoResp {
     , ridesWithFareIssues : Nothing
     , totalRidesConsideredForFareIssues : Nothing
     , isPetModeEnabled : Nothing
+    , driverTags : Nothing
+    , nyClubConsent : Nothing
 }
 
 organizationInfo :: OrganizationInfo
