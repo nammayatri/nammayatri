@@ -129,7 +129,6 @@ window.getMerchantConfig = function () {
       "primaryStrokeColor" : "#2E3494",
       "openMapsStrokeColor" : "#A8AEF0",
       "secondaryStrokeColor" : "#A8AEF0",
-      "openMapsTextColor" : "#A8AEF0",
       "onboardingHeaderTextColor" : "#0F1114",
       "onboardingHeaderStroke" : "#B2171C8F",
       "radioInactiveBackground" : "#F5F5F5",

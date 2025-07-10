@@ -171,7 +171,7 @@ topPillAndSupportView config push =
               , accessibility config.accessibility
               , visibility $ boolToVisibility config.enableContactSupport
               , accessibilityHint "Contact Support : Button"
-              , imageWithFallback $ fetchImage FF_COMMON_ASSET $ if config.theme == LIGHT then "ny_ic_black_headphone" else "ny_ic_headphone"
+              , imageWithFallback $ fetchImage FF_COMMON_ASSET $ if config.theme == LIGHT then "ny_ic_headphone_blue" else "ny_ic_headphone"
               , onClick push $ const Support
               , rippleColor Color.rippleShade
               ]
@@ -256,6 +256,9 @@ priceAndDistanceUpdateView config push =
               , color Color.black800
               , visibility $ boolToVisibility (fromMaybe true invoiceConfig.isEnabled && config.isDriver)
               , margin $ MarginBottom 10
+              , cornerRadius 8.0
+              , padding $ Padding 12 8 12 8
+              , background config.driverInvoiceTextBgColor
             ] <> FontStyle.body1 TypoGraphy
         , linearLayout [
             height WRAP_CONTENT

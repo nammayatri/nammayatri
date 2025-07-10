@@ -1069,7 +1069,6 @@ config =
     primaryStrokeColor : "#E5E7EB",
     openMapsStrokeColor : "#00FFFFFF",
     secondaryStrokeColor : "#B9BABE",
-    openMapsTextColor : "#FFFFFF",
     onlineStatusColor : "#53BB6F",
     onboardingHeaderTextColor : "#FFFFFF",
     onboardingHeaderStroke : "#FFFFFF",
