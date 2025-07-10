@@ -29,8 +29,8 @@ apis:
   - POST:
       endpoint: /kaptureCloseTicket
       auth: TokenAuth
-      query:
-        rideId: Id Ride
+      mandatoryQuery:
+        ticketId: Text
       response:
         type: APISuccess
   - GET:
