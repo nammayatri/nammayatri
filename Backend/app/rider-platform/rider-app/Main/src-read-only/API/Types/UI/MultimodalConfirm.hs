@@ -14,6 +14,7 @@ import qualified Domain.Types.Journey
 import qualified Domain.Types.Location
 import qualified Domain.Types.LocationAddress
 import qualified Domain.Types.MultimodalPreferences
+import qualified Domain.Types.Station
 import qualified Domain.Types.StationType
 import qualified Domain.Types.Trip
 import EulerHS.Prelude hiding (id)
@@ -223,7 +224,7 @@ data TransportRouteStopMapping = TransportRouteStopMapping {ibc :: Kernel.Types.
 data TransportStation = TransportStation
   { ad :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     cd :: Kernel.Prelude.Text,
-    gi :: Kernel.Prelude.Maybe Data.Aeson.Value,
+    gi :: Kernel.Prelude.Maybe [Domain.Types.Station.Gate],
     gj :: Kernel.Prelude.Maybe Data.Aeson.Value,
     hin :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     ibc :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,

@@ -14,6 +14,14 @@ import qualified Kernel.Types.Id
 import qualified Kernel.Types.TimeBound
 import qualified Tools.Beam.UtilsTH
 
+data Gate = Gate
+  { gateName :: String,
+    stopCode :: String,
+    lat :: Double,
+    lon :: Double
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
 data Station = Station
   { address :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     code :: Kernel.Prelude.Text,
@@ -29,7 +37,7 @@ data Station = Station
     regionalName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     suggestedDestinations :: Kernel.Prelude.Maybe [Domain.Types.StationType.SuggestedStations],
     geoJson :: Maybe Value,
-    gates :: Maybe Value,
+    gates :: Maybe [Gate],
     timeBounds :: Kernel.Types.TimeBound.TimeBound,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory,
     createdAt :: Kernel.Prelude.UTCTime,
