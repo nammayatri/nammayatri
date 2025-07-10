@@ -96,7 +96,7 @@ import Screens (ScreenName(..), getScreen)
 import Screens.Types as ST
 import Services.API (GetRidesHistoryResp, RidesInfo(..), Status(..), GetCurrentPlanResp(..), PlanEntity(..), PaymentBreakUp(..), GetRouteResp(..), Route(..), StopLocation(..),DriverProfileStatsResp(..), BookingTypes(..) , ScheduledBookingListResponse(..) , ScheduleBooking(..) , BookingAPIEntity(..))
 import Services.Accessor (_lat, _lon, _area, _extras, _instructions)
-import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, setValueToLocalNativeStore, setValueToLocalStore)
+import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, setValueToLocalNativeStore, setValueToLocalStore, getIntegerFromLocalStore)
 import Types.App (FlowBT, GlobalState(..), HOME_SCREENOUTPUT(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
 import Helpers.Utils as HU
@@ -328,6 +328,11 @@ instance showAction :: Show Action where
   show (UpdateRouteInState _) = "UpdateRouteInState"
   show (DriverBlockedPopUp _) = "DriverBlockedPopUp"
   show (RideInsuranceCardAction _) = "RideInsuranceCardAction"
+  show (ConsentPopupTnC) = "ConsentPopupTnC"
+  show (ConsentPopupAccept _) = "ConsentPopupAccept"
+  show (ConsentPopupCallSupport) = "ConsentPopupCallSupport"
+  show (DismissConsentPopup) = "DismissConsentPopup"
+  show (ConsentPopupAfterRender) = "ConsentPopupAfterRender"
 
 instance loggableAction :: Loggable Action where
   performLog action appId = pure unit
@@ -518,6 +523,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | MeterRideScreen ST.HomeScreenState
                     | UpdateDriverInsurance ST.HomeScreenState
                     | EnablePetRides ST.HomeScreenState
+                    | DriverConsentAgree ST.HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -691,6 +697,11 @@ data Action = NoAction
             | GotoMeterRideScreen
             | DriverBlockedPopUp PopUpModal.Action
             | RideInsuranceCardAction PopUpModal.Action
+            | ConsentPopupTnC
+            | ConsentPopupAccept PrimaryButtonController.Action
+            | ConsentPopupCallSupport
+            | DismissConsentPopup
+            | ConsentPopupAfterRender
 
 uploadFileConfig :: Common.UploadFileConfig
 uploadFileConfig = Common.UploadFileConfig {
@@ -1536,6 +1547,22 @@ eval (PopUpModalCancelConfirmationAction (PopUpModal.CountDown seconds status ti
     continue state { data { cancelRideConfirmationPopUp{delayInSeconds = 0, timerID = "", continueEnabled = true}}}
     else continue state { data {cancelRideConfirmationPopUp{delayInSeconds = seconds, timerID = timerID, continueEnabled = false}}}
 
+eval (ConsentPopupTnC) state = continueWithCmd state [pure $ OpenLink "tnc link"] -- TODO: Add tnc link
+
+eval (ConsentPopupCallSupport) state = do
+  _ <- pure $ showDialer state.data.cityConfig.supportNumber false
+  continue state
+
+eval (DismissConsentPopup) state = do
+  let currentDeclinedCount = getIntegerFromLocalStore NY_CLUB_POPUP_DECLINED_COUNT
+  void $ pure $ setValueToLocalStore NY_CLUB_POPUP_SHOWN "true"
+  void $ pure $ setValueToLocalNativeStore NY_CLUB_POPUP_DECLINED_COUNT $ show $ currentDeclinedCount + 1
+  continue state
+
+eval (ConsentPopupAccept PrimaryButtonController.OnClick) state = exit $ DriverConsentAgree state
+
+eval ConsentPopupAfterRender state = continue state { data { consentPopupPeakHeight = getConsentPopupPeakHeight state } }
+
 eval (CancelRideModalAction SelectListModal.NoAction) state = do
   _ <- pure $ printLog "CancelRideModalAction NoAction" state.data.cancelRideModal.selectionOptions
   continue state
@@ -2360,6 +2387,17 @@ getPeekHeight state =
       currentPeekHeight = headerLayout.height  + contentLayout.height + (if RideActionModal.showTag (rideActionModalConfig state) then (labelLayout.height + 6) else 0)
       requiredPeekHeight = ceil (((toNumber currentPeekHeight) /pixels) * density)
     in if requiredPeekHeight == 0 then 470 else requiredPeekHeight
+
+
+getConsentPopupPeakHeight :: ST.HomeScreenState -> Int
+getConsentPopupPeakHeight state = 
+  let consentPopup = runFn1 JB.getLayoutBounds $ getNewIDWithTag "driverConsentPopup"
+      declineButton = runFn1 JB.getLayoutBounds $ getNewIDWithTag "driverConsentPopupDeclineButton"
+      currentPeekHeight = consentPopup.height - declineButton.height
+      pixels = runFn1 HU.getPixels ""
+      density = (runFn1 HU.getDeviceDefaultDensity "")/  defaultDensity
+      requiredPeekHeight = ceil (((toNumber currentPeekHeight) /pixels) * density)
+    in requiredPeekHeight - 8
 
 getDriverSuggestions :: ST.HomeScreenState -> Array String-> Array String
 getDriverSuggestions state suggestions = case (Array.length suggestions == 0) of

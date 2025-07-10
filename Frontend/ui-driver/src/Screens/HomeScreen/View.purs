@@ -89,14 +89,14 @@ import PrestoDOM.Elements.Elements (coordinatorLayout)
 import PrestoDOM.Properties as PP
 import PrestoDOM.Types.DomAttributes as PTD
 import Screens as ScreenNames
-import Screens.HomeScreen.Controller (Action(..), RideRequestPollingData, ScreenOutput, ScreenOutput(GoToHelpAndSupportScreen), checkPermissionAndUpdateDriverMarker, eval, getPeekHeight, getBannerConfigs, getExoPhoneNumber)
+import Screens.HomeScreen.Controller (Action(..), RideRequestPollingData, ScreenOutput, ScreenOutput(GoToHelpAndSupportScreen), checkPermissionAndUpdateDriverMarker, eval, getPeekHeight, getBannerConfigs, getExoPhoneNumber, getConsentPopupPeakHeight)
 import Screens.HomeScreen.PopUpConfig as PopUpConfig
 import Screens.Types (HomeScreenStage(..), HomeScreenState, KeyboardModalType(..), DriverStatus(..), DriverStatusResult(..), PillButtonState(..), TimerStatus(..), DisabilityType(..), SavedLocationScreenType(..), LocalStoreSubscriptionInfo, SubscriptionBannerType(..), NotificationBody(..))
 import Screens.Types as ST
 import Services.API (GetRidesHistoryResp(..), OrderStatusRes(..), Status(..), DriverProfileStatsReq(..), DriverInfoReq(..), BookingTypes(..), RidesInfo(..), StopLocation(..), LocationInfo(..), ScheduledBookingListResponse(..))
 import Services.Accessor (_lat, _lon)
 import Services.Backend as Remote
-import Storage (getValueToLocalStore, KeyStore(..), setValueToLocalStore, getValueToLocalNativeStore, isLocalStageOn, setValueToLocalNativeStore)
+import Storage (getValueToLocalStore, KeyStore(..), setValueToLocalStore, getValueToLocalNativeStore, isLocalStageOn, setValueToLocalNativeStore, getIntegerFromLocalStore)
 import Styles.Colors as Color
 import Types.App (GlobalState(..), defaultGlobalState, FlowBT)
 import Constants (defaultDensity)
@@ -545,6 +545,7 @@ view push state =
       --   else dummyTextView
       , if state.props.currentStage == HomeScreen && state.props.showParcelIntroductionPopup then parcelIntroductionPopupView push state else dummyTextView
       , if state.props.showEndRideWithStopPopup then endRideWithStopPopup push state else dummyTextView
+      , if clubPopupCondition then driverConsentPopup push state else dummyTextView
   ]
   where
     currentDate = HU.getCurrentUTC ""
@@ -575,6 +576,7 @@ view push state =
     cugUser = fromMaybe false $ runFn3 DU.getAnyFromWindow "isCUGUser" Nothing Just
     dateDiff = runFn2 JB.differenceBetweenTwoUTC currentDate lastDate
     petRidesFeatureConfig = RC.getPetRidesFeatureConfig $ DS.toLower $ getValueToLocalStore DRIVER_LOCATION
+    clubPopupCondition = not onRide && (getValueToLocalStore NY_CLUB_POPUP_SHOWN == "false") && (getIntegerFromLocalStore NY_CLUB_POPUP_DECLINED_COUNT <= 2) && ((isNothing state.props.nyClubConsent || state.props.nyClubConsent == Just false) && state.data.nyClubTag == Just "ny_member")
 
 favPopUpView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 favPopUpView push state =
@@ -1121,7 +1123,6 @@ otpButtonView state push =
         ] <> FontStyle.subHeading2 TypoGraphy
     ]
 
-
 cancelConfirmation :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 cancelConfirmation push state =
   linearLayout
@@ -1377,6 +1378,7 @@ driverDetail push state =
   , gravity CENTER_VERTICAL
   , background Color.white900
   , clickable true
+  , layoutGravity "center_vertical"
   , margin (MarginTop 5)
   ] [ driverProfile push state
   , TripStageTopBar.view (push <<< TripStageTopBarAC) tripStageTopBarConfig
@@ -1388,7 +1390,7 @@ driverDetail push state =
     defaultTopBar =
       linearLayout[
         width MATCH_PARENT
-      , height MATCH_PARENT
+      , height WRAP_CONTENT
       , orientation HORIZONTAL
       , gravity CENTER_HORIZONTAL
       , stroke if state.props.driverStatusSet == Offline then ("2," <> Color.red)
@@ -1436,8 +1438,9 @@ driverProfile push state =
           "FEMALE" -> "ny_ic_profile_female"
           _ -> "ny_ic_generic_mascot"
       city = getValueToLocalStore DRIVER_LOCATION
+      showShield = state.data.nyClubTag == Just "ny_member"
       configs = cancellationThresholds "cancellation_rate_thresholds" city
-      showRingImage = state.data.cancellationRate > configs.warning1 ||(isJust state.data.overchargingTag && state.data.overchargingTag /= Just APITypes.NoOverCharging)
+      showRingImage = state.data.cancellationRate > configs.warning1 ||(isJust state.data.overchargingTag && state.data.overchargingTag /= Just APITypes.NoOverCharging) || showShield
       ringImage =
         case state.data.overchargingTag of
           Just overchargingTag ->
@@ -1446,29 +1449,46 @@ driverProfile push state =
             else if overchargingTag `elem` [APITypes.LowOverCharging, APITypes.VeryLowOverCharging] then HU.fetchImage HU.COMMON_ASSET "ny_ic_yellow_pfp_ring"
             else ""
           Nothing ->  if state.data.cancellationRate > configs.warning2 then HU.fetchImage HU.FF_ASSET "ny_ic_red_pfp_ring"
+            else if showShield then HU.fetchImage HU.FF_ASSET "ny_ic_ring_blue"
             else HU.fetchImage HU.FF_ASSET "ny_ic_orange_pfp_ring"
   in
    linearLayout
     [ width WRAP_CONTENT
     , height WRAP_CONTENT
     , gravity CENTER
-    , padding $ Padding 16 20 12 16
+    , padding $ Padding 10 0 10 0
     ][ relativeLayout [
-        width $ V 42
-      , height $ V 42
+        width $ V 64
+      , height $ V 64
       , onClick push $ const GoToProfile
-      ][ imageView
-          [ width $ V 42
-          , height $ V 42
-          , imageWithFallback $ HU.fetchImage HU.FF_ASSET driverImage
+    ][  relativeLayout 
+        [  width $ V 58
+        , height $ V 58
+        , alignParentBottom "true,-1"
+        , onClick push $ const GoToProfile
+        ][ imageView
+            [ width $ V 58
+            , height $ V 58
+            , margin $ MarginLeft 6
+            , imageWithFallback $ HU.fetchImage HU.FF_ASSET driverImage
+            ]
+          , imageView
+            [ width $ V 58
+            , height $ V 58
+            , margin $ MarginLeft 6
+            , imageWithFallback ringImage
+            , visibility $ boolToVisibility showRingImage
+            ]
           ]
-        , imageView
-          [ width $ V 42
-          , height $ V 42
-          , imageWithFallback ringImage
-          , visibility $ boolToVisibility showRingImage
+          , imageView
+          [ width $ V 24
+          , height $ V 24
+          , alignParentBottom "true,-1"
+          , margin $ Margin 0 0 0 6
+          , visibility $ boolToVisibility showShield
+          , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_shield"
           ]
-        ]
+      ]
     ]
 
 -- tripStageTopBar :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
@@ -1565,7 +1585,7 @@ accessibilityHeaderView :: forall w . (Action -> Effect Unit) -> HomeScreenState
 accessibilityHeaderView push state accessibilityHeaderconfig =
   linearLayout
   [ weight 1.0
-  , height MATCH_PARENT
+  , height WRAP_CONTENT
   , gravity LEFT
   , visibility $ boolToVisibility $ (isJust state.data.activeRide.disabilityTag && not (isJust state.data.advancedRideData)) || state.data.activeRide.bookingFromOtherPlatform
   , margin (Margin 10 10 10 10)
@@ -3612,3 +3632,148 @@ endRideWithStopPopup push state =
     , height MATCH_PARENT
     , background Color.blackLessTrans
     ][ PopUpModal.view (push <<< RideEndWithStopsPopupAction) (rideEndStopsWarningPopup state) ]
+
+driverConsentPopup :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+driverConsentPopup push state =
+  PrestoAnim.animationSet [ Anim.fadeIn true ] $
+  linearLayout
+  [ width MATCH_PARENT
+  , height MATCH_PARENT
+  , alignParentBottom "true,-1"
+  , background Color.black9000
+  , onClick push $ const $ DismissConsentPopup
+  ][  coordinatorLayout
+      [ width MATCH_PARENT
+      , height WRAP_CONTENT
+      ][  bottomSheetLayout
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , PP.sheetState COLLAPSED
+          , peakHeight $ getConsentPopupPeakHeight state
+          , topShift 0.0
+          ][ relativeLayout
+                [ height MATCH_PARENT
+                , width MATCH_PARENT
+                , onClick push $ const $ DismissConsentPopup
+                , id (EHC.getNewIDWithTag "driverConsentPopup")
+                ]
+                [ linearLayout
+                  [ height WRAP_CONTENT
+                  , width MATCH_PARENT
+                  , padding $ Padding 16 16 16 0
+                  , PP.cornerRadii $ PTD.Corners 24.0 true true false false
+                  , stroke $ "1," <> Color.grey900
+                  , gravity CENTER
+                  , orientation VERTICAL
+                  , alignParentBottom "true,-1"
+                  , background Color.white900
+                  , clickable true
+                  ][ textView $
+                      [ width WRAP_CONTENT
+                      , height WRAP_CONTENT
+                      , gravity CENTER_VERTICAL
+                      , color Color.black900
+                      , padding $ PaddingLeft 8
+                      , margin $ MarginVertical 0 16
+                      , text $ getStringV2 namma_kutumba
+                      , onAnimationEnd push $ const $ ConsentPopupAfterRender
+                      ] <> FontStyle.h2 TypoGraphy
+                    , imageView
+                      [ height $ V 220
+                      , width MATCH_PARENT
+                      , margin $ Margin 0 0 0 0
+                      , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_drivers_with_shield"
+                      , visibility VISIBLE
+                      ]
+                    , textView $
+                      [ width MATCH_PARENT
+                      , gravity LEFT
+                      , height WRAP_CONTENT
+                      , color Color.black900
+                      , padding $ PaddingLeft 8
+                      , margin $ MarginVertical 10 10
+                      , text $ getStringV2 i_agree_to
+                      ] <> FontStyle.h2 TypoGraphy
+                    , linearLayout
+                      [ height WRAP_CONTENT
+                      , width MATCH_PARENT
+                      , orientation VERTICAL 
+                      , margin $ Margin 8 0 16 0
+                      ](map (\item-> 
+                          linearLayout
+                          [ height WRAP_CONTENT
+                          , width MATCH_PARENT
+                          , orientation HORIZONTAL
+                          ][  imageView
+                              [ imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_yellow_bullet"
+                              , height $ V 8
+                              , alpha 0.7
+                              , width $ V 8
+                              , margin $ MarginTop 6
+                              ]
+                            , textView $
+                              [ width WRAP_CONTENT
+                              , height WRAP_CONTENT
+                              , margin $ MarginLeft 8
+                              , text item 
+                              , accessibility ENABLE
+                              , accessibilityHint item
+                              ] <> (FontStyle.getFontStyle FontStyle.Body5 TypoGraphy)
+                          ]
+                          ) [ getStringV2 become_a_member_of_the_namma_driver_welfare_trust,
+                              getStringV2 never_raise_fraudulent_claim,
+                              getStringV2 ask_only_the_fair_price_shown_in_the_app,
+                              getStringV2 follow_safety_standards,
+                              getStringV2 provide_sakkath_service_to_the_customers
+                              ])
+                    , textView $
+                      [ width MATCH_PARENT
+                      , height WRAP_CONTENT
+                      , margin $ Margin 8 8 8 16
+                      , textFromHtml $ getStringV2 i_have_read_and_accept_the <> "<span style='color:#2194FF'><u>"<> "T&C" <>"</u></span>"
+                      , gravity LEFT
+                      , onClick push $ const $ ConsentPopupTnC
+                      ] <> (FontStyle.getFontStyle FontStyle.Body5 TypoGraphy)
+                    , PrimaryButton.view (push <<< ConsentPopupAccept) (consentAcceptButton state)
+                    , 
+                    linearLayout
+                      [ width MATCH_PARENT
+                      , height WRAP_CONTENT
+                      , gravity CENTER
+                      , orientation HORIZONTAL
+                      , margin $ MarginVertical 12 0
+                      , afterRender push $ const $ ConsentPopupAfterRender
+                      , onClick push $ const $ ConsentPopupCallSupport
+                      ][textView $
+                            [ textFromHtml $ getString NEED_HELP
+                            , color $ Color.black650
+                            , gravity $ CENTER
+                            ] <> (FontStyle.getFontStyle FontStyle.SubHeading2 TypoGraphy)
+                            , imageView [
+                                imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_phone_filled_blue"
+                                , height $ V 16
+                                , width $ V 16
+                                , gravity $ CENTER
+                                , margin $ MarginTop 1
+                            ]
+                            , textView $
+                            [ textFromHtml $ "<span style='color:#2194FF'>"<> getString CALL_SUPPORT <>"</span>"
+                            , color $ Color.black650
+                            , gravity $ CENTER
+                            ] <> (FontStyle.getFontStyle FontStyle.SubHeading2 TypoGraphy)
+                      ]
+                    , textView $
+                      [ width WRAP_CONTENT
+                      , height WRAP_CONTENT
+                      , text $ getString DECLINE
+                      , margin $ MarginVertical 16 8
+                      , id (EHC.getNewIDWithTag "driverConsentPopupDeclineButton")
+                      , onClick push $ const $ DismissConsentPopup
+                      ] <> (FontStyle.getFontStyle FontStyle.SubHeading2 TypoGraphy)
+
+                  ]
+                ]
+
+        ]
+      ]
+    ]

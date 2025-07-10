@@ -2185,6 +2185,14 @@ primaryButtonConfig _ = PrimaryButton.config
     , height = V 52
   }
 
+consentAcceptButton :: ST.HomeScreenState -> PrimaryButton.Config
+consentAcceptButton _ = PrimaryButton.config
+  { textConfig
+      { text = getString ACCEPT}
+    , margin = (Margin 0 0 0 0)
+    , height = V 52
+  }
+
 
 enableButtonConfig :: ST.HomeScreenState -> PrimaryButton.Config
 enableButtonConfig state = PrimaryButton.config

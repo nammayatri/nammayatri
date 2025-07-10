@@ -180,7 +180,8 @@ data KeyStore = USER_NAME
                 | LOCATION_PRIORITY
                 | METER_RIDE_ACTIVE
                 | PET_RIDES_POPUP_SHOWN
-
+                | NY_CLUB_POPUP_SHOWN
+                | NY_CLUB_POPUP_DECLINED_COUNT
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where
@@ -220,3 +221,6 @@ isOnFreeTrial dummy = do
     freeTrialFromLocal == "true"
   else
     fromMaybe 0 (fromString (getValueToLocalNativeStore FREE_TRIAL_DAYS)) > 0
+
+getIntegerFromLocalStore :: KeyStore -> Int
+getIntegerFromLocalStore key = fromMaybe 0 $ fromString $ getValueToLocalStore key

@@ -991,6 +991,10 @@
       "tip_banner_rectangle" : true,
       "up_hand_arrow" : true,
       "widget_close_gradient" : true,
-      "zone_curve" : true
+      "zone_curve" : true,
+      "ny_ic_shield" : true,
+      "ny_ic_ring_blue" : true,
+      "ny_ic_drivers_with_shield" : true,
+      "ny_ic_yellow_bullet" : true
    }
 }
