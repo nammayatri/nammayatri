@@ -16,17 +16,26 @@ module Mobility.ARDU.NearestDrivers (spec) where
 
 -- import qualified Kernel.Storage.Esqueleto as Esq
 
+import Domain.Action.UI.Driver (processingChangeOnline)
 import qualified "dynamic-offer-driver-app" Domain.Types.Common as DI
 import qualified "dynamic-offer-driver-app" Environment as ARDUEnv
 import EulerHS.Prelude
 import Kernel.External.Maps.Types (LatLong (..))
+import Kernel.Types.Error (PersonError (PersonDoesNotExist))
 import Kernel.Types.Flow (FlowR)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified "dynamic-offer-driver-app" Storage.Cac.TransporterConfig as SCTC
 import qualified "dynamic-offer-driver-app" Storage.Queries.DriverInformation as Q
+import qualified "dynamic-offer-driver-app" Storage.Queries.DriverInformation as SQDI
 import qualified "dynamic-offer-driver-app" Storage.Queries.Person as Q
+import qualified "dynamic-offer-driver-app" Storage.Queries.Person as QP
 import qualified "dynamic-offer-driver-app" Storage.Queries.Person.GetNearestDrivers as S
 import Test.Hspec
+import "dynamic-offer-driver-app" Tools.Error
+  ( DriverInformationError (DriverInfoNotFound),
+    TransporterError (TransporterConfigNotFound),
+  )
 import Utils
 
 spec :: Spec
@@ -120,4 +129,13 @@ setDriversActive :: Bool -> Maybe DI.DriverMode -> FlowR ARDUEnv.AppEnv ()
 setDriversActive isActive mode = do
   -- Esq.runTransaction $ do
   let drivers = [furthestDriver, closestDriver, suvDriver, sedanDriver, hatchbackDriver, driverWithOldLocation]
-  forM_ drivers (\driver -> Q.updateActivity isActive mode (Id driver))
+  forM_ drivers (processingActivity . Id)
+  where
+    processingActivity driverId = do
+      Q.updateActivity isActive mode driverId
+      driver <- QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
+      transporterConfig <-
+        SCTC.findByMerchantOpCityId driver.merchantOperatingCityId Nothing
+          >>= fromMaybeM (TransporterConfigNotFound driver.merchantOperatingCityId.getId)
+      driverInfo <- SQDI.findByPrimaryKey driverId >>= fromMaybeM DriverInfoNotFound
+      processingChangeOnline (driverId, driver.merchantId, driver.merchantOperatingCityId) transporterConfig.timeDiffFromUtc driverInfo mode

@@ -82,6 +82,7 @@ module Domain.Action.UI.Driver
     getSecurityDepositDfStatus,
     refundByPayoutDriverFee,
     mkPayoutLockKeyByDriverAndService,
+    processingChangeOnline,
   )
 where
 

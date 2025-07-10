@@ -15,6 +15,7 @@
 module Domain.Action.Internal.DriverMode where
 
 import Data.OpenApi (ToSchema)
+import Domain.Action.UI.Driver (processingChangeOnline)
 import qualified Domain.Types.Common as DriverInfo
 import qualified Domain.Types.Person as DP
 import Environment
@@ -23,7 +24,11 @@ import Kernel.Types.APISuccess
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.Queries.DriverInformation as QDriverInformation
+import qualified Storage.Queries.DriverInformation as SQDI
+import qualified Storage.Queries.Person as QPerson
+import Tools.Error (DriverInformationError (DriverInfoNotFound))
 
 data DriverModeReq = DriverModeReq
   { driverId :: Id DP.Person,
@@ -40,5 +45,12 @@ setDriverMode apiKey req = do
   locationTrackingServiceKey <- asks (.locationTrackingServiceKey)
   unless (apiKey == Just locationTrackingServiceKey) $ do
     throwError $ InvalidRequest "Invalid API key"
-  void $ QDriverInformation.updateActivity isActive (Just mode) driverId
+  void $ do
+    QDriverInformation.updateActivity isActive (Just mode) driverId
+    driver <- QPerson.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
+    transporterConfig <-
+      SCTC.findByMerchantOpCityId driver.merchantOperatingCityId Nothing
+        >>= fromMaybeM (TransporterConfigNotFound driver.merchantOperatingCityId.getId)
+    driverInfo <- SQDI.findByPrimaryKey driverId >>= fromMaybeM DriverInfoNotFound
+    processingChangeOnline (driverId, driver.merchantId, driver.merchantOperatingCityId) transporterConfig.timeDiffFromUtc driverInfo $ Just mode
   pure Success
