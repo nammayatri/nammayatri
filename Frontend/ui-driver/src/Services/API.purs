@@ -491,6 +491,7 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , isSubscriptionEnabledAtCategoryLevel :: Maybe Boolean
     , isSpecialLocWarrior :: Maybe Boolean
     , subscriptionDown :: Maybe Boolean
+    , safetyScore :: Maybe Int
     , overchargingTag :: Maybe OverchargingTag
     , ridesWithFareIssues :: Maybe Int
     , totalRidesConsideredForFareIssues :: Maybe Int

@@ -73,6 +73,7 @@ instance showAction :: Show Action where
   show (GullakSDKResponse _) = "GullakSDKResponse"
   show (GullakBannerClick) = "GullakBannerClick"
   show (UpdateReferralCode _) = "UpdateReferralCode"
+  show (GoToClaimReward) = "GoToClaimReward"
 
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of
@@ -135,6 +136,7 @@ data Action = BackPressed
             | GullakSDKResponse String
             | GullakBannerClick
             | UpdateReferralCode GenerateReferralCodeRes
+            | GoToClaimReward
 
 data ScreenOutput = GoToHomeScreen BenefitsScreenState
                   | GoToNotifications BenefitsScreenState
@@ -144,6 +146,7 @@ data ScreenOutput = GoToHomeScreen BenefitsScreenState
                   | GoBack
                   | GoToLmsVideoScreen BenefitsScreenState
                   | GoToCustomerReferralTrackerScreen Boolean BenefitsScreenState
+                  | GoToDriverClaimRewardScreen BenefitsScreenState
 
 eval :: Action -> BenefitsScreenState -> Eval Action ScreenOutput BenefitsScreenState
 
@@ -284,6 +287,8 @@ eval (BannerCarousal (BannerCarousel.OnClick index)) state =
   ] 
 
 eval GullakBannerClick state = continue state { props { glBannerClickable = false}}
+
+eval GoToClaimReward state = exit $ GoToDriverClaimRewardScreen state
   
 eval _ state = update state
 

@@ -610,3 +610,15 @@ getCoinCancellationTimeThresholdConfig  =
   let config = fetchRemoteConfigString "coin_cancellation_time_threshold_config"
       value = decodeForeignObject (parseJSON config) defaultCancellationTimeThresholdConfig
   in value
+
+
+defaultNominationViewConfig :: NominationView 
+defaultNominationViewConfig = {
+  show : false
+}
+
+getNominationViewConfig :: NominationView
+getNominationViewConfig = 
+  let config = fetchRemoteConfigString "nomination_view_config"
+      value = decodeForeignObject (parseJSON config) defaultNominationViewConfig
+  in value
