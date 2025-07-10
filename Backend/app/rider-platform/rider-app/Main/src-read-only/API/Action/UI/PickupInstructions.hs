@@ -15,6 +15,7 @@ import qualified Domain.Types.Person
 import qualified Environment
 import EulerHS.Prelude
 import qualified Kernel.Prelude
+import Kernel.ServantMultipart
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
@@ -23,14 +24,16 @@ import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =
-  ( TokenAuth :> "pickupinstructions" :> ReqBody ('[JSON]) API.Types.UI.PickupInstructions.PickupInstructionsReq
+  ( TokenAuth :> "pickupinstructions" :> Kernel.ServantMultipart.MultipartForm Kernel.ServantMultipart.Tmp API.Types.UI.PickupInstructions.PickupInstructionsReq
       :> Post
            ('[JSON])
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "pickupinstructions"
       :> "closest"
-      :> QueryParam "lat" Kernel.Prelude.Double
+      :> QueryParam
+           "lat"
+           Kernel.Prelude.Double
       :> QueryParam
            "lon"
            Kernel.Prelude.Double

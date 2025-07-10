@@ -6,6 +6,7 @@ module Storage.Queries.PickupInstructions where
 
 import qualified Domain.Types.Person
 import qualified Domain.Types.PickupInstructions
+import qualified IssueManagement.Domain.Types.MediaFile
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -36,17 +37,17 @@ findOldestByPersonId personId = do findAllWithKV [Se.Is Beam.personId $ Se.Eq (K
 
 updateByPersonIdAndLocation ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Double -> Kernel.Prelude.Double -> Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
-updateByPersonIdAndLocation lat lon instruction personId = do
+  (Kernel.Prelude.Double -> Kernel.Prelude.Double -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile) -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateByPersonIdAndLocation lat lon instruction mediaFileId personId = do
   _now <- getCurrentTime
   updateWithKV
-    [Se.Set Beam.lat lat, Se.Set Beam.lon lon, Se.Set Beam.instruction instruction, Se.Set Beam.updatedAt _now]
-    [ Se.And
-        [ Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId),
-          Se.Is Beam.lat $ Se.Eq lat,
-          Se.Is Beam.lon $ Se.Eq lon
-        ]
+    [ Se.Set Beam.lat lat,
+      Se.Set Beam.lon lon,
+      Se.Set Beam.instruction instruction,
+      Se.Set Beam.mediaFileId (Kernel.Types.Id.getId <$> mediaFileId),
+      Se.Set Beam.updatedAt _now
     ]
+    [Se.And [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId), Se.Is Beam.lat $ Se.Eq lat, Se.Is Beam.lon $ Se.Eq lon]]
 
 instance FromTType' Beam.PickupInstructions Domain.Types.PickupInstructions.PickupInstructions where
   fromTType' (Beam.PickupInstructionsT {..}) = do
@@ -58,6 +59,7 @@ instance FromTType' Beam.PickupInstructions Domain.Types.PickupInstructions.Pick
             instruction = instruction,
             lat = lat,
             lon = lon,
+            mediaFileId = Kernel.Types.Id.Id <$> mediaFileId,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             personId = Kernel.Types.Id.Id personId,
@@ -72,6 +74,7 @@ instance ToTType' Beam.PickupInstructions Domain.Types.PickupInstructions.Pickup
         Beam.instruction = instruction,
         Beam.lat = lat,
         Beam.lon = lon,
+        Beam.mediaFileId = Kernel.Types.Id.getId <$> mediaFileId,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.personId = Kernel.Types.Id.getId personId,
