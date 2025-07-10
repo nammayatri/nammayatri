@@ -40,6 +40,7 @@ import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Text as T
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
+import qualified Domain.Types.CancellationReason as SCR
 import qualified Domain.Types.Common as DTrip
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.FRFSTicketBooking as DFRFSB
@@ -900,6 +901,7 @@ postMultimodalComplete (mbPersonId, merchantId) journeyId = do
   personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
   journey <- JM.getJourney journeyId
   legs <- JM.getAllLegsInfo journeyId False
+  mapM_ (\leg -> when (leg.travelMode == DTrip.Taxi) $ JM.cancelLeg leg (SCR.CancellationReasonCode "") False False) legs
   mapM_ (markAllSubLegsCompleted . (.legExtraInfo)) legs
 
   updatedLegStatus <- JM.getAllLegsStatus journey
