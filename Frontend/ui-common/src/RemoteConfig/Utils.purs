@@ -435,6 +435,8 @@ defaultWmbFlowConfig =
   , maxRadiusCanBeSearched : 16001.0
   , radiusMultiplier : 2.0
   , updatePollingRadiusToClosestBus : false
+  , enableTicketBooking : false
+  , disableTicketBookingInRoutes : []
   }
 
 -- Generic Polling Config can be used to fetch the polling config for any function as per functionName also can be used to remotely disable after a certain time :)
