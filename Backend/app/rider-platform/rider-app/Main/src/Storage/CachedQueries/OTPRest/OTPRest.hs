@@ -21,7 +21,7 @@ import Kernel.Utils.Common
 import qualified SharedLogic.External.Nandi.Flow as Flow
 import SharedLogic.External.Nandi.Types
 import Storage.CachedQueries.OTPRest.Common as OTPRestCommon
-import Storage.CachedQueries.RouteStopTimeTable as GRQRSTT
+-- import Storage.CachedQueries.RouteStopTimeTable as GRQRSTT
 import qualified Storage.Queries.RoutePolylines as QRoutePolylines
 import qualified Storage.Queries.StationsExtraInformation as QStationsExtraInformation
 import Tools.Error
@@ -282,14 +282,13 @@ parseRouteStopMappingInMemoryServer routeStopMappingInMemoryServer integratedBPP
     ( \mapping -> do
         let routeCode = last $ splitOn ":" mapping.routeCode
             stopCode = last $ splitOn ":" mapping.stopCode
-        routeStopTimeTables <- GRQRSTT.findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOperatingCityId [routeCode] stopCode
         return $
           RouteStopMapping
             { estimatedTravelTimeFromPreviousStop = mapping.estimatedTravelTimeFromPreviousStop,
               integratedBppConfigId = integratedBPPConfig.id,
               merchantId,
               merchantOperatingCityId,
-              Domain.Types.RouteStopMapping.providerCode = fromMaybe stopCode $ ((listToMaybe routeStopTimeTables) >>= \routeStopTimeTable -> routeStopTimeTable.providerStopCode),
+              Domain.Types.RouteStopMapping.providerCode = stopCode,
               routeCode = routeCode,
               sequenceNum = mapping.sequenceNum,
               stopCode = stopCode,
