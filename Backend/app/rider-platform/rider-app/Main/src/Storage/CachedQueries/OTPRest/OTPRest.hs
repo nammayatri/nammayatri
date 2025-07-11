@@ -1,6 +1,7 @@
 module Storage.CachedQueries.OTPRest.OTPRest (module OTPRestCommon, module Storage.CachedQueries.OTPRest.OTPRest) where
 
 import BecknV2.FRFS.Enums
+import qualified BecknV2.FRFS.Utils as BecknFRFSUtils
 import qualified Data.HashMap.Strict as HM
 import Data.List (groupBy)
 import Data.Text (splitOn)
@@ -144,7 +145,7 @@ getStationsByGtfsId ::
 getStationsByGtfsId integratedBPPConfig = do
   baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
   stations <- Flow.getStationsByGtfsId baseUrl integratedBPPConfig.feedKey
-  parseStationsFromInMemoryServer stations integratedBPPConfig.id integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
+  parseStationsFromInMemoryServer stations integratedBPPConfig
 
 getStationByGtfsIdAndStopCode ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
@@ -154,7 +155,7 @@ getStationByGtfsIdAndStopCode ::
 getStationByGtfsIdAndStopCode stopCode integratedBPPConfig = do
   baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
   stations <- Flow.getStationsByGtfsIdAndStopCode baseUrl integratedBPPConfig.feedKey stopCode
-  listToMaybe <$> parseStationsFromInMemoryServer [stations] integratedBPPConfig.id integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
+  listToMaybe <$> parseStationsFromInMemoryServer [stations] integratedBPPConfig
 
 findAllStationsByVehicleType :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) => Maybe Int -> Maybe Int -> VehicleCategory -> IntegratedBPPConfig -> m [Station.Station]
 findAllStationsByVehicleType limit offset vehicleType integratedBPPConfig = do
@@ -168,7 +169,7 @@ findAllMatchingStations mbSearchStr mbLimit mbOffset vehicle integratedBPPConfig
     else do
       baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
       stations <- Flow.getStationsByGtfsIdFuzzySearch baseUrl integratedBPPConfig.feedKey (fromMaybe "" mbSearchStr)
-      parsedStations <- parseStationsFromInMemoryServer stations integratedBPPConfig.id integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
+      parsedStations <- parseStationsFromInMemoryServer stations integratedBPPConfig
       pure $ take (fromMaybe (length parsedStations) mbLimit) $ drop (fromMaybe 0 mbOffset) $ filter (\station -> station.vehicleType == vehicle) parsedStations
 
 getStationsByVehicleType :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) => VehicleCategory -> IntegratedBPPConfig -> m [Station.Station]
@@ -181,13 +182,11 @@ getStationsByVehicleType vehicleType integratedBPPConfig = do
 parseStationsFromInMemoryServer ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, EsqDBFlow m r, HasShortDurationRetryCfg r c, Log m, CacheFlow m r) =>
   [RouteStopMappingInMemoryServer] ->
-  Id IntegratedBPPConfig ->
-  Id Merchant ->
-  Id MerchantOperatingCity ->
+  IntegratedBPPConfig ->
   m [Station.Station]
-parseStationsFromInMemoryServer stations integratedBPPConfig merchantId merchantOperatingCityId = do
+parseStationsFromInMemoryServer stations integratedBPPConfig = do
   now <- getCurrentTime
-  stationsExtraInformation <- QStationsExtraInformation.getBystationIdsAndCity (map (.stopCode) stations) merchantOperatingCityId
+  stationsExtraInformation <- QStationsExtraInformation.getBystationIdsAndCity (map (.stopCode) stations) integratedBPPConfig.merchantOperatingCityId
   let stationAddressMap = HM.fromList $ map (\info -> (info.stationId, (info.address, info.suggestedDestinations))) stationsExtraInformation
   mapM
     ( \station -> do
@@ -197,11 +196,11 @@ parseStationsFromInMemoryServer stations integratedBPPConfig merchantId merchant
               code = station.stopCode,
               hindiName = Nothing,
               id = Id station.stopCode,
-              integratedBppConfigId = integratedBPPConfig,
+              integratedBppConfigId = integratedBPPConfig.id,
               lat = Just station.stopPoint.lat,
               lon = Just station.stopPoint.lon,
-              merchantId = merchantId,
-              merchantOperatingCityId = merchantOperatingCityId,
+              merchantId = integratedBPPConfig.merchantId,
+              merchantOperatingCityId = integratedBPPConfig.merchantOperatingCityId,
               name = station.stopName,
               possibleTypes = Nothing,
               regionalName = Nothing,
@@ -209,7 +208,7 @@ parseStationsFromInMemoryServer stations integratedBPPConfig merchantId merchant
               geoJson = station.geoJson,
               gates = station.gates,
               timeBounds = Unbounded,
-              vehicleType = station.vehicleType,
+              vehicleType = BecknFRFSUtils.becknVehicleCategoryToFrfsVehicleCategory integratedBPPConfig.vehicleCategory,
               createdAt = now,
               updatedAt = now
             }

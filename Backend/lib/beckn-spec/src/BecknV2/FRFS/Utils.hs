@@ -158,6 +158,13 @@ frfsVehicleCategoryToBecknVehicleCategory = \case
   Spec.METRO -> BecknSpec.METRO
   Spec.SUBWAY -> BecknSpec.SUBWAY
 
+becknVehicleCategoryToFrfsVehicleCategory :: BecknSpec.VehicleCategory -> Spec.VehicleCategory
+becknVehicleCategoryToFrfsVehicleCategory = \case
+  BecknSpec.BUS -> Spec.BUS
+  BecknSpec.METRO -> Spec.METRO
+  BecknSpec.SUBWAY -> Spec.SUBWAY
+  _ -> Spec.METRO
+
 getAndValidateCancellationParams :: [Spec.QuotationBreakupInner] -> Spec.OrderStatus -> Either Text (HighPrecMoney, Maybe HighPrecMoney, Maybe HighPrecMoney)
 getAndValidateCancellationParams quoteBreakup orderStatus = do
   baseFare <- findCancellationParams Spec.BASE_FARE & maybe (Left "CancellationParams baseFare not found") Right
