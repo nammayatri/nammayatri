@@ -332,11 +332,12 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
   let fromRouteStopMap = map (\mapping -> (mapping.routeCode, mapping.sequenceNum)) fromRouteStopMappings
       toRouteStopMap = map (\mapping -> (mapping.routeCode, mapping.sequenceNum)) toRouteStopMappings
       validRoutes =
-        [ fromRouteCode
-          | (fromRouteCode, fromSeq) <- fromRouteStopMap,
-            (toRouteCode, toSeq) <- toRouteStopMap,
-            fromRouteCode == toRouteCode && fromSeq < toSeq -- Ensure correct sequence
-        ]
+        nub $
+          [ fromRouteCode
+            | (fromRouteCode, fromSeq) <- fromRouteStopMap,
+              (toRouteCode, toSeq) <- toRouteStopMap,
+              fromRouteCode == toRouteCode && fromSeq < toSeq -- Ensure correct sequence
+          ]
 
   -- Get the timing information for these routes at the origin stop
 
