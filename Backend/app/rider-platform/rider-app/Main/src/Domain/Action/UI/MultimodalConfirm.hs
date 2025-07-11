@@ -150,7 +150,7 @@ getMultimodalBookingInfo (mbPersonId, _merchantId) journeyId = do
     case find ((== DFRFSB.FAILED) . (.status)) allJourneyFrfsBookings of
       Just _frfsBooking -> do
         personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
-        FRFSTicketService.markAllRefundBookings allJourneyFrfsBookings personId journeyId
+        FRFSTicketService.markAllRefundBookings allJourneyFrfsBookings personId (Just journeyId)
       Nothing -> pure ()
   generateJourneyInfoResponse journey legs
 
