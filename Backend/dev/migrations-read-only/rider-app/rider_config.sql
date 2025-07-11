@@ -329,6 +329,11 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN ny_regular_min_gap_seconds integer
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_app.rider_config ADD COLUMN enable_auto_journey_refund boolean  default false;
+
+
+------- SQL updates -------
+
 ALTER TABLE atlas_app.rider_config ADD COLUMN filter_walk_and_unspecified_transit_modes boolean  default false;
 
 

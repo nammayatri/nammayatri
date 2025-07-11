@@ -24,8 +24,10 @@ import Kernel.Utils.Common
 import Lib.Scheduler
 import SharedLogic.JobScheduler
 import Storage.Beam.SchedulerJob ()
+import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
+import Tools.Error
 
 checkMultimodalConfirmFailJob ::
   ( EncFlow m r,
@@ -48,6 +50,9 @@ checkMultimodalConfirmFailJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.get
       journeyId <- booking.journeyId & fromMaybeM (InvalidRequest $ "journey not found for bookingId: " <> show bookingId)
       allJourneyFrfsBookings <- QFRFSTicketBooking.findAllByJourneyId (Just journeyId)
       let allMarked = all ((== DFRFSTicketBooking.REFUND_INITIATED) . (.status)) allJourneyFrfsBookings
-      unless allMarked $ FRFSTicketService.markAllRefundBookings allJourneyFrfsBookings booking.riderId journeyId
+      riderConfig <- QRC.findByMerchantOperatingCityId booking.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
+      unless allMarked $
+        when riderConfig.enableAutoJourneyRefund $
+          FRFSTicketService.markAllRefundBookings allJourneyFrfsBookings booking.riderId (Just journeyId)
       return Complete
     else return Complete
