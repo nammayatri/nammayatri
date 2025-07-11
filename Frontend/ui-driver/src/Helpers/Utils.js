@@ -693,3 +693,27 @@ export function rentalPickupTimeFormat(input) {
   return `${isToday ? 'Today' : 'Tomorrow'} ${hours}:${minutes.toString().padStart(2, '0')}${ampm} - ${day} ${month}`;
 }
 
+
+export const convertEpochToDateFormat = function (str) {
+    try {
+      // Convert epoch seconds to milliseconds if needed
+      const epochTime = str.toString().length === 10 ? str * 1000 : str;
+      const date = new Date(epochTime);
+      
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        console.error("Invalid epoch time:", str);
+        return "";
+      }
+      
+      const day = String(date.getDate()).padStart(2, "0");
+      const month = String(date.getMonth() + 1).padStart(2, "0"); // January is 0!
+      const year = date.getFullYear();
+      
+      // Return in dd/mm/yyyy format
+      return `${day}/${month}/${year}`;
+    } catch (error) {
+      console.error("Error in convertEpochToDateFormat:", error);
+      return "";
+    }
+};

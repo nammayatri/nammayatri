@@ -1882,7 +1882,40 @@ newtype Keymap = Keymap {
     , follow_safety_standards :: String
     , provide_sakkath_service_to_the_customers :: String
     , i_have_read_and_accept_the :: String
-  }
+    , nominate_your_representative :: String
+    , your_namma_kutumba_membership_has_been_revoked :: String
+    , high_cancellation_rate_take_more_rides :: String
+    , accidental_medical_support :: String
+    , accidental_death_support :: String
+    , medical_health_insurance :: String
+    , personal_loans :: String
+    , namma_support :: String
+    , accidental_medical_support_description :: String
+    , accidental_death_support_description :: String
+    , medical_health_insurance_description :: String
+    , personal_loans_description :: String
+    , namma_support_description :: String
+    , eligibility_criteria :: String
+    , completed_50_rides_in_the_last_3_months :: String
+    , safety_score_of_80_or_above :: String
+    , rating_of_4_6_or_above :: String
+    , cancellation_rate_below_30 :: String
+    , claim_via :: String
+    , what_is_kutumba :: String
+    , how_can_i_be_eligible :: String
+    , can_i_refer_a_friend_to_kutumba_once_i_am_eligible :: String
+    , how_do_i_claim_a_benefit :: String
+    , are_there_limits_on_claims_per_month :: String
+    , what_is_kutumba_answer :: String
+    , how_can_i_be_eligible_answer :: String
+    , can_i_refer_a_friend_to_kutumba_once_i_am_eligible_answer :: String
+    , how_do_i_claim_a_benefit_answer :: String
+    , are_there_limits_on_claims_per_month_answer :: String
+    , view_less :: String
+    , you_are_in_probation_period_till :: String -> String
+    , pass_all_eligibility_criteria_to_continue_being_a_member :: String
+
+}
 
 derive instance ntL :: Newtype Languages _
 
@@ -7470,3 +7503,99 @@ cancellation_compensation = a
 
 cancellation_penalisaton :: Proxy "cancellation_penalisaton"
 cancellation_penalisaton = a
+
+nominate_your_representative :: Proxy "nominate_your_representative"
+nominate_your_representative = a
+
+your_namma_kutumba_membership_has_been_revoked :: Proxy "your_namma_kutumba_membership_has_been_revoked"
+your_namma_kutumba_membership_has_been_revoked = a
+
+high_cancellation_rate_take_more_rides :: Proxy "high_cancellation_rate_take_more_rides"
+high_cancellation_rate_take_more_rides = a
+
+accidental_medical_support :: Proxy "accidental_medical_support"
+accidental_medical_support = a
+
+accidental_death_support :: Proxy "accidental_death_support"
+accidental_death_support = a
+
+medical_health_insurance :: Proxy "medical_health_insurance"
+medical_health_insurance = a
+
+personal_loans :: Proxy "personal_loans"
+personal_loans = a
+
+namma_support :: Proxy "namma_support"
+namma_support = a
+
+accidental_medical_support_description :: Proxy "accidental_medical_support_description"
+accidental_medical_support_description = a
+
+accidental_death_support_description :: Proxy "accidental_death_support_description"
+accidental_death_support_description = a
+
+medical_health_insurance_description :: Proxy "medical_health_insurance_description"
+medical_health_insurance_description = a
+
+personal_loans_description :: Proxy "personal_loans_description"
+personal_loans_description = a
+
+namma_support_description :: Proxy "namma_support_description"
+namma_support_description = a
+
+eligibility_criteria :: Proxy "eligibility_criteria"
+eligibility_criteria = a
+
+completed_50_rides_in_the_last_3_months :: Proxy "completed_50_rides_in_the_last_3_months"
+completed_50_rides_in_the_last_3_months = a
+
+safety_score_of_80_or_above :: Proxy "safety_score_of_80_or_above"
+safety_score_of_80_or_above = a
+
+rating_of_4_6_or_above :: Proxy "rating_of_4_6_or_above"
+rating_of_4_6_or_above = a
+
+cancellation_rate_below_30 :: Proxy "cancellation_rate_below_30"
+cancellation_rate_below_30 = a
+
+claim_via :: Proxy "claim_via"
+claim_via = a
+
+what_is_kutumba :: Proxy "what_is_kutumba"
+what_is_kutumba = a
+
+how_can_i_be_eligible :: Proxy "how_can_i_be_eligible"
+how_can_i_be_eligible = a
+
+can_i_refer_a_friend_to_kutumba_once_i_am_eligible :: Proxy "can_i_refer_a_friend_to_kutumba_once_i_am_eligible"
+can_i_refer_a_friend_to_kutumba_once_i_am_eligible = a
+
+how_do_i_claim_a_benefit :: Proxy "how_do_i_claim_a_benefit"
+how_do_i_claim_a_benefit = a
+
+are_there_limits_on_claims_per_month :: Proxy "are_there_limits_on_claims_per_month"
+are_there_limits_on_claims_per_month = a
+
+what_is_kutumba_answer :: Proxy "what_is_kutumba_answer"
+what_is_kutumba_answer = a
+
+how_can_i_be_eligible_answer :: Proxy "how_can_i_be_eligible_answer"
+how_can_i_be_eligible_answer = a
+
+can_i_refer_a_friend_to_kutumba_once_i_am_eligible_answer :: Proxy "can_i_refer_a_friend_to_kutumba_once_i_am_eligible_answer"
+can_i_refer_a_friend_to_kutumba_once_i_am_eligible_answer = a
+
+how_do_i_claim_a_benefit_answer :: Proxy "how_do_i_claim_a_benefit_answer"
+how_do_i_claim_a_benefit_answer = a
+
+are_there_limits_on_claims_per_month_answer :: Proxy "are_there_limits_on_claims_per_month_answer"
+are_there_limits_on_claims_per_month_answer = a
+
+view_less :: Proxy "view_less"
+view_less = a
+
+you_are_in_probation_period_till :: Proxy "you_are_in_probation_period_till"
+you_are_in_probation_period_till = a
+
+pass_all_eligibility_criteria_to_continue_being_a_member :: Proxy "pass_all_eligibility_criteria_to_continue_being_a_member"
+pass_all_eligibility_criteria_to_continue_being_a_member = a
