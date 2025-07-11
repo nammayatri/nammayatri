@@ -349,10 +349,10 @@ multiModalSearch searchRequest riderConfig initateJourney forkInitiateFirstJourn
               let onlySingleModeRoutes = filter (\r -> (all (eitherWalkOrSingleMode vehicleCategory) r.legs) && (any (onlySingleMode vehicleCategory) r.legs)) otpResponse''.routes
               let filterFirstAndLastMileWalks = map filterWalkLegs onlySingleModeRoutes
               let warningType = if null onlySingleModeRoutes then Just NoSingleModeRoutes else Nothing
-              filteredRoutes <- JM.filterTransitRoutes (if null onlySingleModeRoutes then otpResponse''.routes else filterFirstAndLastMileWalks) merchantOperatingCityId
+              filteredRoutes <- JM.filterTransitRoutes riderConfig (if null onlySingleModeRoutes then otpResponse''.routes else filterFirstAndLastMileWalks)
               return (warningType, MInterface.MultiModalResponse {routes = filteredRoutes})
             _ -> do
-              filteredRoutes <- JM.filterTransitRoutes otpResponse''.routes merchantOperatingCityId
+              filteredRoutes <- JM.filterTransitRoutes riderConfig otpResponse''.routes
               return (Nothing, MInterface.MultiModalResponse {routes = filteredRoutes})
 
   let userPreferredTransitModes = userPreferencesToGeneralVehicleTypes userPreferences.allowedTransitModes
