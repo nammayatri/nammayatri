@@ -267,7 +267,7 @@ infoCardForDriverTag push state =
         Nothing -> ""
       info =
         case driverTag of
-          "ny_member_probation"   -> { label: "You are in probation period till " <> nyMemberProbationTillDate <> "\nPass all Eligibility Criteria to continue being a member", color: "#FFEBDD", visible: true, support: false }
+          "ny_member_probation"   -> { label: getString (YOU_ARE_IN_PROBATION_PERIOD_TILL nyMemberProbationTillDate) <> "\n" <> getStringV2 LT2.pass_all_eligibility_criteria_to_continue_being_a_member, color: "#FFEBDD", visible: true, support: false }
           "ny_member_revoked"     -> { label: getStringV2 LT2.your_namma_kutumba_membership_has_been_revoked, color: "#FFE9E9", visible: true, support: true }
           _ -> { label: "", color: "#FFFFFF", visible: false, support: false }
   in
