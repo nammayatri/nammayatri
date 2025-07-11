@@ -803,8 +803,12 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
         Nothing -> throwError $ DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag)
   when (driverInfo.active /= isActive || driverInfo.mode /= mode) $ do
     QDriverInformation.updateActivity isActive (mode <|> Just DriverInfo.OFFLINE) driverId
-    processingChangeOnline (driverId, merchantId, merchantOpCityId) transporterConfig.timeDiffFromUtc driverInfo mode
+    fork "update driver online duration" . Redis.whenWithLockRedis (updateDriverOnlineDurationLockKey driverId) 60 $
+      processingChangeOnline (driverId, merchantId, merchantOpCityId) transporterConfig.timeDiffFromUtc driverInfo mode
   pure APISuccess.Success
+
+updateDriverOnlineDurationLockKey :: Id SP.Person -> Text
+updateDriverOnlineDurationLockKey id = "DriveOnlineDuration:PersonId-" <> id.getId
 
 processingChangeOnline ::
   (CacheFlow m r, EsqDBFlow m r) =>
