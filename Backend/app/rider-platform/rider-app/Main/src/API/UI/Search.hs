@@ -333,7 +333,7 @@ multiModalSearch searchRequest riderConfig initateJourney forkInitiateFirstJourn
               }
       transitServiceReq <- TMultiModal.getTransitServiceReq searchRequest.merchantId merchantOperatingCityId
       otpResponse' <- JMU.measureLatency (MultiModal.getTransitRoutes (Just searchRequest.id.getId) transitServiceReq transitRoutesReq >>= fromMaybeM (InternalError "routes dont exist")) "getTransitRoutes"
-      otpResponse'' <- MInterface.MultiModalResponse <$> JM.filterTransitRoutes otpResponse'.routes merchantOperatingCityId
+      let otpResponse'' = MInterface.MultiModalResponse otpResponse'.routes
       logDebug $ "[Multimodal - OTP Response]" <> show otpResponse''
       -- Add default auto leg if no routes are found
       if null otpResponse''.routes
@@ -349,8 +349,11 @@ multiModalSearch searchRequest riderConfig initateJourney forkInitiateFirstJourn
               let onlySingleModeRoutes = filter (\r -> (all (eitherWalkOrSingleMode vehicleCategory) r.legs) && (any (onlySingleMode vehicleCategory) r.legs)) otpResponse''.routes
               let filterFirstAndLastMileWalks = map filterWalkLegs onlySingleModeRoutes
               let warningType = if null onlySingleModeRoutes then Just NoSingleModeRoutes else Nothing
-              return (warningType, MInterface.MultiModalResponse {routes = if null onlySingleModeRoutes then otpResponse''.routes else filterFirstAndLastMileWalks})
-            _ -> return (Nothing, otpResponse'')
+              filteredRoutes <- JM.filterTransitRoutes (if null onlySingleModeRoutes then otpResponse''.routes else filterFirstAndLastMileWalks) merchantOperatingCityId
+              return (warningType, MInterface.MultiModalResponse {routes = filteredRoutes})
+            _ -> do
+              filteredRoutes <- JM.filterTransitRoutes otpResponse''.routes merchantOperatingCityId
+              return (Nothing, MInterface.MultiModalResponse {routes = filteredRoutes})
 
   let userPreferredTransitModes = userPreferencesToGeneralVehicleTypes userPreferences.allowedTransitModes
       hasOnlyUserPreferredTransitModes otpRoute = all (isLegModeIn userPreferredTransitModes) otpRoute.legs
