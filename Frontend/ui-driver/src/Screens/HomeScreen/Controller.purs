@@ -1533,7 +1533,9 @@ eval (PopUpModalCancelConfirmationAction (PopUpModal.CountDown seconds status ti
     continue state { data { cancelRideConfirmationPopUp{delayInSeconds = 0, timerID = "", continueEnabled = true}}}
     else continue state { data {cancelRideConfirmationPopUp{delayInSeconds = seconds, timerID = timerID, continueEnabled = false}}}
 
-eval (ConsentPopupTnC) state = continueWithCmd state [pure $ OpenLink "tnc link"] -- TODO: Add tnc link
+eval (ConsentPopupTnC) state = do
+  let driverRewardConfig = RC.getDriverRewardConfig $ DS.toLower $ getValueToLocalStore DRIVER_LOCATION
+  continueWithCmd state [pure $ OpenLink driverRewardConfig.termsAndConditionsLink]
 
 eval (ConsentPopupCallSupport) state = do
   _ <- pure $ showDialer state.data.cityConfig.supportNumber false

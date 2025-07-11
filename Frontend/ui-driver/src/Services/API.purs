@@ -491,6 +491,7 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , isSubscriptionEnabledAtCategoryLevel :: Maybe Boolean
     , isSpecialLocWarrior :: Maybe Boolean
     , subscriptionDown :: Maybe Boolean
+    , safetyScore :: Maybe Int
     , overchargingTag :: Maybe OverchargingTag
     , ridesWithFareIssues :: Maybe Int
     , totalRidesConsideredForFareIssues :: Maybe Int
@@ -526,7 +527,8 @@ newtype DriverGoHomeInfo = DriverGoHomeInfo {
 
 newtype DriverTags = DriverTags {
   "PetDriver" :: Maybe String,
-  "NYClubTag" :: Maybe String -- ny_member, ny_member_probation, ny_member_revoked, ny_ineligible
+  "NYClubTag" :: Maybe String, -- ny_member, ny_member_probation, ny_member_revoked, ny_ineligible
+  "NyMemberProbationTill" :: Maybe Int
 }
 
 newtype  OrganizationInfo = OrganizationInfo

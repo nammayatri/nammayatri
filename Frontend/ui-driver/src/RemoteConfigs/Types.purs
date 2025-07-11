@@ -235,3 +235,17 @@ type PetRidesFeatureConfig = {
 type CancellationTimeThresholdConfig = {
   cancellationTimeThresholdInSeconds :: Int
 }
+
+type NominationViewConfig = {
+  visibility :: Boolean,
+  videoLink :: String,
+  formLink :: String
+}
+
+type DriverRewardConfig = {
+  nominationViewConfig :: NominationViewConfig,
+  visibility :: Boolean,
+  whatsappSupportNumber :: String,
+  youtubeVideoLink :: String,
+  termsAndConditionsLink :: String
+}

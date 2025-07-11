@@ -507,6 +507,7 @@ nyClubView state push =
   let Tuple nyClubConsent nyClubTag = case state.data.driverInfoResponse of
                     Just (GetDriverInfoResp res) -> Tuple (fromMaybe false res.nyClubConsent) (res.driverTags >>= \(API.DriverTags tags) -> tags."NYClubTag")
                     Nothing -> Tuple false Nothing
+      nammaClubEnabled = state.props.nammaClubEnabled
   in
   linearLayout
   [ height WRAP_CONTENT
@@ -520,14 +521,14 @@ nyClubView state push =
   , gravity CENTER
   , onClick push $ const ClubDetailsClick
   , stroke "1,#339DFF"
-  , visibility $ boolToVisibility $ nyClubTag == Just "ny_member" && nyClubConsent
+  , visibility $ boolToVisibility $ (nyClubTag == Just "ny_member" || nyClubTag == Just "ny_member_probation") && nyClubConsent && nammaClubEnabled
   ][  imageView
       [ width $ V 18
       , height $ V 18
       , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_shield"
       ]
     , textView $ 
-      [ text "Namma Kutumba"
+      [ text $ getStringV2 namma_kutumba
       , color Color.black900
       , margin $ MarginLeft 6
       ] <> (FontStyle.body6 TypoGraphy)

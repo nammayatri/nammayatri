@@ -575,7 +575,7 @@ view push state =
     cugUser = fromMaybe false $ runFn3 DU.getAnyFromWindow "isCUGUser" Nothing Just
     dateDiff = runFn2 JB.differenceBetweenTwoUTC currentDate lastDate
     petRidesFeatureConfig = RC.getPetRidesFeatureConfig $ DS.toLower $ getValueToLocalStore DRIVER_LOCATION
-    clubPopupCondition = not onRide && (getValueToLocalStore NY_CLUB_POPUP_SHOWN == "false") && (getIntegerFromLocalStore NY_CLUB_POPUP_DECLINED_COUNT <= 2) && ((isNothing state.props.nyClubConsent || state.props.nyClubConsent == Just false) && state.data.nyClubTag == Just "ny_member")
+    clubPopupCondition = not onRide && (getValueToLocalStore NY_CLUB_POPUP_SHOWN == "false") && (getIntegerFromLocalStore NY_CLUB_POPUP_DECLINED_COUNT <= 2) && ((isNothing state.props.nyClubConsent || state.props.nyClubConsent == Just false) && (state.data.nyClubTag == Just "ny_member" || state.data.nyClubTag == Just "ny_member_probation"))
 
 favPopUpView :: forall w. (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
 favPopUpView push state =
@@ -1437,7 +1437,7 @@ driverProfile push state =
           "FEMALE" -> "ny_ic_profile_female"
           _ -> "ny_ic_generic_mascot"
       city = getValueToLocalStore DRIVER_LOCATION
-      showShield = state.data.nyClubTag == Just "ny_member"
+      showShield = state.data.nyClubTag == Just "ny_member" || state.data.nyClubTag == Just "ny_member_probation"
       configs = cancellationThresholds "cancellation_rate_thresholds" city
       showRingImage = state.data.cancellationRate > configs.warning1 ||(isJust state.data.overchargingTag && state.data.overchargingTag /= Just APITypes.NoOverCharging) || showShield
       ringImage =
