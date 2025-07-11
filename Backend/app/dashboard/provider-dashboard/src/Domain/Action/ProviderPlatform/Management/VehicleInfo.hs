@@ -19,7 +19,7 @@ import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
 import Tools.Auth.Merchant
 
-getVehicleInfoList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Environment.Flow [API.Types.ProviderPlatform.Management.VehicleInfo.VehicleInfoAPIEntity])
+getVehicleInfoList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Environment.Flow API.Types.ProviderPlatform.Management.VehicleInfo.VehicleExtraInformation)
 getVehicleInfoList merchantShortId opCity apiTokenInfo rcNo = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.vehicleInfoDSL.getVehicleInfoList) rcNo

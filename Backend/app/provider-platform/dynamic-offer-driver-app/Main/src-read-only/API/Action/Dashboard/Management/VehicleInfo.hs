@@ -23,7 +23,7 @@ import Tools.Auth
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API.Types.ProviderPlatform.Management.VehicleInfo.API)
 handler merchantId city = getVehicleInfoList merchantId city :<|> postVehicleInfoUpdate merchantId city
 
-getVehicleInfoList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Environment.FlowHandler [API.Types.ProviderPlatform.Management.VehicleInfo.VehicleInfoAPIEntity])
+getVehicleInfoList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Environment.FlowHandler API.Types.ProviderPlatform.Management.VehicleInfo.VehicleExtraInformation)
 getVehicleInfoList a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.Management.VehicleInfo.getVehicleInfoList a3 a2 a1
 
 postVehicleInfoUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> API.Types.ProviderPlatform.Management.VehicleInfo.UpdateVehicleInfoReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)

@@ -379,6 +379,10 @@ MediaFileDocument:
       kvFunction: findOneWithKV
       where:
         and: [merchantOperatingCityId, rcId, mediaFileDocumentType]
+    findOneByCityRcTypeAndStatus:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantOperatingCityId, rcId, mediaFileDocumentType, status]
 
 DocumentVerificationConfig:
   tableName: document_verification_config

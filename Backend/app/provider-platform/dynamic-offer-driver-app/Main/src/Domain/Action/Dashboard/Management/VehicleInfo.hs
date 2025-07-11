@@ -5,7 +5,8 @@ module Domain.Action.Dashboard.Management.VehicleInfo
 where
 
 import qualified API.Types.ProviderPlatform.Management.VehicleInfo as Common
-import qualified Domain.Action.UI.VehicleInfo as UIVI
+import Domain.Types.Common
+import Domain.Types.MediaFileDocument
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.VehicleInfo as DVI
 import qualified Environment
@@ -14,7 +15,10 @@ import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id as ID
 import Kernel.Utils.Common (fromMaybeM)
-import Storage.Queries.VehicleInfo (create, deleteAllByRcId)
+import SharedLogic.Merchant (findMerchantByShortId)
+import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.Queries.MediaFileDocument as QMFD
+import Storage.Queries.VehicleInfo (create, deleteAllByRcId, findAllByRcId)
 import Storage.Queries.VehicleRegistrationCertificateExtra (findLastVehicleRCWrapper)
 import Tools.Error (VehicleError (VehicleDoesNotExist))
 
@@ -22,14 +26,18 @@ getVehicleInfoList ::
   ID.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
   Text ->
-  Environment.Flow [Common.VehicleInfoAPIEntity]
-getVehicleInfoList _merchantShortId _opCity vrcNo =
-  map convertVehicleInfoToVehicleInfoAPIEntity <$> UIVI.getVehicleInfoListbyRcNo vrcNo
+  Environment.Flow Common.VehicleExtraInformation
+getVehicleInfoList merchantShortId opCity vrcNo = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  rc <- findLastVehicleRCWrapper vrcNo >>= fromMaybeM (VehicleDoesNotExist vrcNo)
+  vehicleInfo <- map convertVehicleInfoToVehicleInfoAPIEntity <$> findAllByRcId rc.id
+  mediaFileDocument <- QMFD.findOneByCityRcTypeAndStatus merchantOpCityId rc.id VehicleVideo CONFIRMED
+  pure $ Common.VehicleExtraInformation {rcNo = vrcNo, vehicleInfo = vehicleInfo, mediaUploaded = isJust mediaFileDocument}
   where
     convertVehicleInfoToVehicleInfoAPIEntity DVI.VehicleInfo {..} =
       Common.VehicleInfoAPIEntity
-        { rcNo = vrcNo,
-          ..
+        { ..
         }
 
 postVehicleInfoUpdate ::
