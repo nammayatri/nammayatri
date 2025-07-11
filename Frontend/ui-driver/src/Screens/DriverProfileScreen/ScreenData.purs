@@ -148,7 +148,8 @@ initData =
     canSwitchToIntraCity : Nothing,
     showDriverBlockedPopup : false,
     skipGlobalEvents : false,
-    isPetModeEnabled : Nothing
+    isPetModeEnabled : Nothing,
+    nammaClubEnabled : false
    }
 , showDriverDetails : false
 }
@@ -279,6 +280,7 @@ dummyDriverInfo = GetDriverInfoResp {
     , isSubscriptionEnabledAtCategoryLevel : Nothing
     , isSpecialLocWarrior : Nothing
     , subscriptionDown : Nothing
+    , safetyScore : Nothing
     , overchargingTag : Nothing
     , ridesWithFareIssues : Nothing
     , totalRidesConsideredForFareIssues : Nothing

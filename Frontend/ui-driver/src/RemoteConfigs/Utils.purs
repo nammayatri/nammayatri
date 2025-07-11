@@ -610,3 +610,26 @@ getCoinCancellationTimeThresholdConfig  =
   let config = fetchRemoteConfigString "coin_cancellation_time_threshold_config"
       value = decodeForeignObject (parseJSON config) defaultCancellationTimeThresholdConfig
   in value
+
+
+defaultDriverRewardConfig :: DriverRewardConfig 
+defaultDriverRewardConfig = {
+  nominationViewConfig : {  
+  visibility : false
+, videoLink : ""
+, formLink : ""
+  }
+  , visibility : false
+  , whatsappSupportNumber : ""
+  , youtubeVideoLink : ""
+  , termsAndConditionsLink : ""
+  }
+
+getDriverRewardConfig ::  String -> DriverRewardConfig
+getDriverRewardConfig city =
+  let
+    config = fetchRemoteConfigString "nomination_view_config"
+    value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultDriverRewardConfig
+    cityValue = getCityBasedConfig value $ toLower city
+  in cityValue
+  

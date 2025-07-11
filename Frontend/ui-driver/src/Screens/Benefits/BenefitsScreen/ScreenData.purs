@@ -50,6 +50,7 @@ initData = {
         , payoutAmountPaid : 0
         , payoutVpa : Nothing
         , payoutRewardAmount : Nothing
+        , nyClubTag : Nothing
         },
     props : {
       showDriverReferralQRCode : false,
@@ -60,6 +61,7 @@ initData = {
       showShimmer : true,
       isPayoutEnabled: Nothing,
       bannerLength : 0,
-      glBannerClickable : true
+      glBannerClickable : true,
+      nammaClubEnabled : false
     }
 }
