@@ -128,7 +128,8 @@ type Config = {
     voiceToTextConfig :: VoiceToTextConfig,
     goldTierRewardConfig :: CoinWarningConfig,
     showDownloadPolicy :: Boolean,
-    certificateUrl :: String
+    certificateUrl :: String,
+    listViewConfig :: ListViewConfig
 }
 
 
@@ -321,6 +322,14 @@ type CoinWarningConfig = {
   coinImage :: ImageConfig,
   arrowImage :: ImageConfig
 }  
+
+type ListViewConfig = {
+  width :: Length,
+  bulletPointSize :: Length,
+  bulletImage :: String,
+  margin :: Margin,
+  fontStyle :: Style
+}
 
 config :: Config
 config = {
@@ -838,6 +847,13 @@ config = {
         }
     }
   , certificateUrl : ""
+  , listViewConfig : {
+      width : MATCH_PARENT,
+      bulletPointSize : V 6,
+      bulletImage : "ny_ic_circle",
+      margin : Margin 0 8 0 0,
+      fontStyle : FontStyle.ParagraphText
+    }
 }
 
 dummyDeliveryDetailsConfig :: DeliveryDetailsConfig

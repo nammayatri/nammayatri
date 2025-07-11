@@ -3411,3 +3411,82 @@ rideInsuranceBannerConfig state = let
       }
   }
   in popUpConfig'
+
+
+driverConsentPopupConfig :: ST.HomeScreenState -> PopUpModal.Config
+driverConsentPopupConfig state = PopUpModal.config {
+  buttonLayoutMargin = Margin 16 0 16 0 ,
+  padding = PaddingVertical 16 16,
+  backgroundClickable = true,
+  dismissPopup = true,
+  listViewConfig = {
+      width : WRAP_CONTENT,
+      bulletPointSize : V 8,
+      bulletImage : "ny_ic_yellow_bullet",
+      margin : MarginTop 6,
+      fontStyle : FontStyle.Body5
+  },
+  primaryText {
+      text = getStringV2 LT2.i_agree_to,
+      textStyle = Heading2,
+      gravity = LEFT,
+      margin = Margin 28 0 16 10},
+  secondaryText{
+       textStyle = Body5
+      , visibility = GONE
+      , margin = Margin 16 0 16 15 },
+  coverImageConfig {
+      imageUrl = fetchImage COMMON_ASSET "ny_ic_drivers_with_shield"
+    , visibility = VISIBLE
+    , margin = MarginVertical 10 10
+    , width = MATCH_PARENT
+    , height = V 220
+    },
+  option1 {
+    text = getString ACCEPT
+  , background = Color.black900
+  , color = Color.yellow900
+  , margin = MarginHorizontal 10 10
+  },
+  option2 {
+    visibility = false
+  },
+  topTitle {
+    text = getStringV2 LT2.namma_kutumba,
+    visibility = VISIBLE,
+    margin = MarginVertical 0 10
+  },
+  listViewArray = [
+    getStringV2 LT2.become_a_member_of_the_namma_driver_welfare_trust,
+    getStringV2 LT2.never_raise_fraudulent_claim,
+    getStringV2 LT2.ask_only_the_fair_price_shown_in_the_app,
+    getStringV2 LT2.follow_safety_standards,
+    getStringV2 LT2.provide_sakkath_service_to_the_customers
+    ],
+  optionWithHtml {
+    textOpt1 {
+      color = Color.black650
+      , text = getString NEED_HELP
+      , textStyle = SubHeading2
+      , visibility = VISIBLE
+    }
+    , textOpt2 {
+      color = Color.blue800
+      , textStyle = SubHeading2
+      , text = getString CALL_SUPPORT
+      , visibility = VISIBLE
+    }
+    , image {
+        imageUrl = fetchImage FF_ASSET "ny_ic_phone_filled_blue"
+        , height = V 16
+        , width = V 16
+        , visibility = VISIBLE
+        , margin = Margin 3 1 3 0
+      }
+    , strokeColor = Color.white900
+    , margin = MarginHorizontal 16 16
+    , background = Color.white900
+    , visibility = true
+    , isClickable = true
+    }
+}

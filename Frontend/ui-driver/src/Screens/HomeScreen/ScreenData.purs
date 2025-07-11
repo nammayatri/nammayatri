@@ -214,6 +214,7 @@ initData =
         policyId : Nothing,
         policyNumber : Nothing
       }
+      , nyClubTag : Nothing
     }
   , props:
       { isFreeRide: false
@@ -322,6 +323,7 @@ initData =
       , showBlockerPopup : false
       , showInsuranceBanner : false
       , coinWaitingThreshold : 0
+      , nyClubConsent : Nothing
       }
   }
 

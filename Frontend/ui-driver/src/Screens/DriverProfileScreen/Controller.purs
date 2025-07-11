@@ -137,6 +137,7 @@ instance showAction :: Show Action where
   show (OnMoreDetailsClick) = "OnMoreDetailsClick"
   show (OnCloseDriverDetailsClick) = "OnCloseDriverDetailsClick"
   show (BottomSheetStageChanged _) = "BottomSheetStageChanged"
+  show (ClubDetailsClick) = "ClubDetailsClick"
 
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of
@@ -279,7 +280,7 @@ data ScreenOutput = GoToDriverDetailsScreen DriverProfileScreenState
                     | GoToCompletingProfile DriverProfileScreenState
                     | GoToCancellationRateScreen DriverProfileScreenState
                     | GoToExtraChargeInfoScreen DriverProfileScreenState
-
+                    | GoToClubDetailsScreen DriverProfileScreenState
 data Action = BackPressed
             | NoAction
             | OptionClick MenuOptions
@@ -346,7 +347,7 @@ data Action = BackPressed
             | OnMoreDetailsClick
             | OnCloseDriverDetailsClick
             | BottomSheetStageChanged String
-
+            | ClubDetailsClick
 eval :: Action -> DriverProfileScreenState -> Eval Action ScreenOutput DriverProfileScreenState
 
 eval AfterRender state = continue state
@@ -386,6 +387,7 @@ eval BackPressed state = if state.props.logoutModalView then continue $ state { 
                                       Screen.METER_RIDE_SCREEN -> exit $ GotoMeterRideScreen state{data{goBackTo = Screen.HOME_SCREEN}}
                                       _ -> exit $ GoBack state
 
+eval (ClubDetailsClick) state = exit $ GoToClubDetailsScreen state
 
 eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
   case screen of

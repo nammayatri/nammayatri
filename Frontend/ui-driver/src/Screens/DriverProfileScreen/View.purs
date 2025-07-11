@@ -59,7 +59,7 @@ import Language.Types (STR(..))
 import MerchantConfig.Utils as MU
 import MerchantConfig.Types
 import Mobility.Prelude as MP
-import Prelude (Unit, ($), const, map, (+), (==), (<), (||), (/), (/=), unit, bind, (-), (<>), (<=), (>=), (<<<), (>), pure, discard, show, (&&), void, negate, not, (*), otherwise, show)
+import Prelude (Unit, ($), (>>=), const, map, (+), (==), (<), (||), (/), (/=), unit, bind, (-), (<>), (<=), (>=), (<<<), (>), pure, discard, show, (&&), void, negate, not, (*), otherwise, show)
 import Presto.Core.Types.Language.Flow (Flow, doAff)
 import PrestoDOM
 import PrestoDOM.Animation as PrestoAnim
@@ -94,6 +94,7 @@ import Resource.Localizable.TypesV2
 import Components.DriverProfileScoreCard as DriverProfileScoreCard
 import PrestoDOM.Elements.Elements
 import Mobility.Prelude (capitalize)
+import Data.Tuple (Tuple(..))
 
 
 screen :: ST.DriverProfileScreenState -> LoggableScreen Action ST.DriverProfileScreenState ScreenOutput
@@ -488,6 +489,7 @@ profileView push state =
                       , completedProfile state push
                       ]
                     , nameAndMoreDetailsView state push
+                    , nyClubView state push
                     , verifiedVehiclesView state push
                     , pendingVehiclesVerificationList state push
                     ]
@@ -500,6 +502,42 @@ profileView push state =
         , if (length state.data.inactiveRCArray < 2) && state.props.screenType == ST.VEHICLE_DETAILS then addRcView state push else dummyTextView
         ]
 
+nyClubView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+nyClubView state push =
+  let Tuple nyClubConsent nyClubTag = case state.data.driverInfoResponse of
+                    Just (GetDriverInfoResp res) -> Tuple (fromMaybe false res.nyClubConsent) (res.driverTags >>= \(API.DriverTags tags) -> tags."NYClubTag")
+                    Nothing -> Tuple false Nothing
+  in
+  linearLayout
+  [ height WRAP_CONTENT
+  , width WRAP_CONTENT
+  , orientation HORIZONTAL
+  , background Color.white900
+  , cornerRadius 40.0
+  , padding $ Padding 12 12 12 12
+  , margin $ MarginTop 16
+  , layoutGravity "center"
+  , gravity CENTER
+  , onClick push $ const ClubDetailsClick
+  , stroke "1,#339DFF"
+  , visibility $ boolToVisibility $ nyClubTag == Just "ny_member" && nyClubConsent
+  ][  imageView
+      [ width $ V 18
+      , height $ V 18
+      , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_shield"
+      ]
+    , textView $ 
+      [ text "Namma Kutumba"
+      , color Color.black900
+      , margin $ MarginLeft 6
+      ] <> (FontStyle.body6 TypoGraphy)
+    , imageView
+      [ width $ V 18
+      , height $ V 18
+      , margin $ MarginTop 2
+      , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_right_grey"
+      ]
+  ]
 
 nameAndMoreDetailsView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 nameAndMoreDetailsView state push =

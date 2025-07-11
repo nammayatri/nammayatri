@@ -1869,4 +1869,11 @@ getMl =
     , you_may_lose_some_coins_if_you_cancel_this_ride : "നിങ്ങളുടെ യാത്ര രദ്ദു ചെയ്യുന്നതുമായി, കೆലവೊം കാലി ഹೋഗ് ബഹುദു"
     , cancellation_compensation : "റദ്ദുചെയ്യുന്ന സ്കോർ"
     , cancellation_penalisaton : "റദ്ദുചെയ്യുന്ന സ്കോർ"
+    , i_agree_to : "ഞാൻ ഈ ശര്ത്തുകൾ മേല്മഡി ചെയ്യുന്നു:"
+    , namma_kutumba : "നമ്മ കുതുമാ"
+    , become_a_member_of_the_namma_driver_welfare_trust : "നമ്മ ഡ്രൈവർ വിധി ട്രസ്ട್ ന ഒംദು സദസ്യ ഹാഗെ"
+    , never_raise_fraudulent_claim : "നമ്മ ഡ്രൈവർ വിധി ട്രസ്ട್ ന ഒംദು സദസ്യ ഹാഗെ"
+    , ask_only_the_fair_price_shown_in_the_app : "നമ്മ ഡ്രൈവർ വിധി ട്രസ്ട್ ന ഒംദು സദസ്യ ഹാഗെ"
+    , follow_safety_standards : "നമ്മ ഡ്രൈവർ വിധി ട്രസ്ട್ ന ഒംദು സദസ്യ ഹാഗെ"
+    , provide_sakkath_service_to_the_customers : "നമ്മ ഡ്രൈവർ വിധി ട്രസ്ട್ ന ഒംദು സദസ്യ ഹാഗെ"
     }
