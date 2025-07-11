@@ -48,6 +48,6 @@ checkMultimodalConfirmFailJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.get
       journeyId <- booking.journeyId & fromMaybeM (InvalidRequest $ "journey not found for bookingId: " <> show bookingId)
       allJourneyFrfsBookings <- QFRFSTicketBooking.findAllByJourneyId (Just journeyId)
       let allMarked = all ((== DFRFSTicketBooking.REFUND_INITIATED) . (.status)) allJourneyFrfsBookings
-      unless allMarked $ FRFSTicketService.markAllRefundBookings allJourneyFrfsBookings booking.riderId journeyId
+      unless allMarked $ FRFSTicketService.markAllRefundBookings allJourneyFrfsBookings booking.riderId (Just journeyId)
       return Complete
     else return Complete
