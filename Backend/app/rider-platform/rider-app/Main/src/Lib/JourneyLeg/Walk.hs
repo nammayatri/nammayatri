@@ -30,7 +30,8 @@ instance JT.JourneyLeg WalkLegRequest m where
               convenienceCost = 0,
               pricingId = Nothing,
               isDeleted = Just False,
-              onSearchFailed = Nothing
+              onSearchFailed = Nothing,
+              isCompleted = Just False
             }
     let walkLeg =
           DWalkLeg.WalkLegMultimodal

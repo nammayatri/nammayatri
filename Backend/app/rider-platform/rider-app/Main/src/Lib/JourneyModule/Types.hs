@@ -540,7 +540,10 @@ getTaxiLegStatusFromBooking booking mRide = do
 getTaxiLegStatusFromSearch :: JourneySearchData -> Maybe DEstimate.EstimateStatus -> JourneyLegStatus
 getTaxiLegStatusFromSearch journeyLegInfo mbEstimateStatus =
   if journeyLegInfo.skipBooking
-    then Skipped
+    then do
+      case journeyLegInfo.isCompleted of
+        Just True -> Completed
+        _ -> Skipped
     else case mbEstimateStatus of
       Nothing -> InPlan
       Just DEstimate.NEW -> InPlan

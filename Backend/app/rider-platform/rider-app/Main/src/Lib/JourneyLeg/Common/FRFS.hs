@@ -502,7 +502,8 @@ search vehicleCategory personId merchantId quantity city journeyLeg recentLocati
             convenienceCost = 0,
             pricingId = Nothing,
             isDeleted = Just False,
-            onSearchFailed = Nothing
+            onSearchFailed = Nothing,
+            isCompleted = Just False
           }
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchantId city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchantId.getId <> "-city-" <> show city)
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromAgency journeySearchData.agency merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleCategory) DIBC.MULTIMODAL

@@ -1611,11 +1611,25 @@ updateFRFSLegStatus status mbBookingId mbSubLegOrder = do
               QTBooking.updateJourneyLegStatus (Just status) bookingId
     Nothing -> whenJust mbBookingId $ QTBooking.updateJourneyLegStatus (Just status)
 
-markLegStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => JL.JourneyLegStatus -> JL.LegExtraInfo -> Maybe Int -> m ()
-markLegStatus status journeyLegExtraInfo mbSubLegOrder = do
-  case journeyLegExtraInfo of
-    JL.Metro legExtraInfo -> updateFRFSLegStatus status legExtraInfo.bookingId mbSubLegOrder
-    JL.Subway legExtraInfo -> updateFRFSLegStatus status legExtraInfo.bookingId mbSubLegOrder
-    JL.Bus legExtraInfo -> whenJust legExtraInfo.bookingId $ QTBooking.updateJourneyLegStatus (Just status)
-    JL.Walk legExtraInfo -> QWalkLeg.updateStatus (JL.castWalkLegStatusFromLegStatus status) legExtraInfo.id
-    JL.Taxi legExtraInfo -> whenJust legExtraInfo.bookingId $ QBooking.updateJourneyLegStatus (Just status)
+markLegStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => JL.JourneyLegStatus -> JL.LegInfo -> Maybe Int -> m ()
+markLegStatus status journeyLegInfo mbSubLegOrder = do
+  case journeyLegInfo.legExtraInfo of
+    JL.Metro legExtraInfo -> do
+      markFrfsCompleted
+      updateFRFSLegStatus status legExtraInfo.bookingId mbSubLegOrder
+    JL.Subway legExtraInfo -> do
+      markFrfsCompleted
+      updateFRFSLegStatus status legExtraInfo.bookingId mbSubLegOrder
+    JL.Bus legExtraInfo -> do
+      markFrfsCompleted
+      whenJust legExtraInfo.bookingId $ QTBooking.updateJourneyLegStatus (Just status)
+    JL.Walk legExtraInfo -> do
+      when (status == JL.Completed) $ do
+        QWalkLeg.updateIsCompleted (Id journeyLegInfo.searchId) (Just True)
+      QWalkLeg.updateStatus (JL.castWalkLegStatusFromLegStatus status) legExtraInfo.id
+    JL.Taxi legExtraInfo -> do
+      when (status == JL.Completed) $ do
+        QSearchRequest.updateIsCompleted (Id journeyLegInfo.searchId) (Just True)
+      whenJust legExtraInfo.bookingId $ QBooking.updateJourneyLegStatus (Just status)
+  where
+    markFrfsCompleted = when (status == JL.Completed) $ QFRFSSearch.updateIsCompleted (Id journeyLegInfo.searchId) (Just True)

@@ -47,3 +47,9 @@ updateIsCancelled (Id reqId) isDeleted = do
   updateOneWithKV
     [Se.Set Beam.isDeleted isDeleted]
     [Se.Is Beam.id (Se.Eq reqId)]
+
+updateIsCompleted :: (MonadFlow m, EsqDBFlow m r) => Id WalkLegMultimodal -> Maybe Bool -> m ()
+updateIsCompleted (Id reqId) isCompleted = do
+  updateOneWithKV
+    [Se.Set Beam.isCompleted isCompleted]
+    [Se.Is Beam.id (Se.Eq reqId)]

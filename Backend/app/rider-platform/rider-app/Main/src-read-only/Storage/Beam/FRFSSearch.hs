@@ -19,6 +19,7 @@ data FRFSSearchT f = FRFSSearchT
     isOnSearchReceived :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     agency :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     convenienceCost :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    isCompleted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isDeleted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     journeyId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     journeyLegOrder :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

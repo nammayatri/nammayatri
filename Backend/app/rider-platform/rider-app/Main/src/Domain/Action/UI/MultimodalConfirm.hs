@@ -837,7 +837,7 @@ postMultimodalOrderSublegSetStatus (mbPersonId, merchantId) journeyId legOrder s
   legs <- JM.getAllLegsInfo journeyId False
   journeyLegInfo <- find (\leg -> leg.order == legOrder) legs & fromMaybeM (InvalidRequest $ "No matching journey leg found for the given legOrder")
 
-  markLegStatus newStatus journeyLegInfo.legExtraInfo (Just subLegOrder)
+  markLegStatus newStatus journeyLegInfo (Just subLegOrder)
 
   -- refetch updated legs and journey
   updatedLegStatus <- JM.getAllLegsStatus journey
@@ -891,12 +891,12 @@ getSubLegOrders legExtraInfo =
     _ -> []
 
 -- Helper function to mark all sub-legs as completed for FRFS legs
-markAllSubLegsCompleted :: JMTypes.LegExtraInfo -> Environment.Flow ()
-markAllSubLegsCompleted legExtraInfo = do
-  let subLegOrders = getSubLegOrders legExtraInfo
+markAllSubLegsCompleted :: JMTypes.LegInfo -> Environment.Flow ()
+markAllSubLegsCompleted legInfo = do
+  let subLegOrders = getSubLegOrders legInfo.legExtraInfo
   case subLegOrders of
-    [] -> markLegStatus JL.Completed legExtraInfo Nothing
-    orders -> mapM_ (\subOrder -> markLegStatus JL.Completed legExtraInfo (Just subOrder)) orders
+    [] -> markLegStatus JL.Completed legInfo Nothing
+    orders -> mapM_ (\subOrder -> markLegStatus JL.Completed legInfo (Just subOrder)) orders
 
 postMultimodalComplete ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -908,7 +908,7 @@ postMultimodalComplete (mbPersonId, merchantId) journeyId = do
   personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
   journey <- JM.getJourney journeyId
   legs <- JM.getAllLegsInfo journeyId False
-  mapM_ (markAllSubLegsCompleted . (.legExtraInfo)) legs
+  mapM_ markAllSubLegsCompleted legs
 
   updatedLegStatus <- JM.getAllLegsStatus journey
   checkAndMarkJourneyAsFeedbackPending journey updatedLegStatus

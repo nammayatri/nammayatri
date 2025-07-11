@@ -208,6 +208,7 @@ WalkLegMultimodal:
       journeyId: Maybe Text
       agency: Maybe Text
       skipBooking: Maybe Bool
+      isCompleted: Maybe Bool
       convenienceCost: Maybe Int
       pricingId: Maybe Text
       isDeleted: Maybe Bool
@@ -228,6 +229,7 @@ WalkLegMultimodal:
     journeyId: Kernel.Prelude.fmap (.journeyId)|I
     agency: (journeyLegInfo >>= (.agency))|E
     skipBooking: Kernel.Prelude.fmap (.skipBooking)|I
+    isCompleted: (journeyLegInfo >>= (.isCompleted))|E
     convenienceCost: Kernel.Prelude.fmap (.convenienceCost)|I
     pricingId: (journeyLegInfo >>= (.pricingId))|E
     isDeleted: (journeyLegInfo >>= (.isDeleted))|E

@@ -277,3 +277,13 @@ ALTER TABLE atlas_app.search_request ADD COLUMN search_mode text ;
 
 
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.search_request ADD COLUMN is_completed boolean ;
+
+
+------- SQL updates -------
+

@@ -39,7 +39,8 @@ data JourneySearchData = JourneySearchData
     convenienceCost :: Int,
     pricingId :: Maybe Text,
     onSearchFailed :: Maybe Bool,
-    isDeleted :: Maybe Bool
+    isDeleted :: Maybe Bool,
+    isCompleted :: Maybe Bool
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
