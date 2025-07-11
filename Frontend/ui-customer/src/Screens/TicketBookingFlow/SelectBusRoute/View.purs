@@ -352,16 +352,19 @@ getQuotes push action searchId = do
   resp <- Remote.frfsQuotes searchId
   case resp of
     Right (FrfsQuotesRes response) -> do
-      _ <- pure $ spy "debug route getQuotes resp" response
-      let routes =
-            DA.catMaybes $  
-              map (\quote ->
-                getFirstRoute quote
-              ) response
-          routeCodeList = map (\(FRFSRouteAPI route) -> route.shortName) routes
-      _ <- getVehicleTrackingInfo push routeCodeList
-      doAff do liftEffect $ push $ action response
-
+      if DA.length response == 0 
+        then do
+          void $ delay $ Milliseconds 2000.0
+          getQuotes push action searchId
+        else do
+          let routes =
+                DA.catMaybes $  
+                  map (\quote ->
+                    getFirstRoute quote
+                  ) response
+              routeCodeList = map (\(FRFSRouteAPI route) -> route.shortName) routes
+          _ <- getVehicleTrackingInfo push routeCodeList
+          doAff do liftEffect $ push $ action response
     Left err -> do
       pure unit
 

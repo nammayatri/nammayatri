@@ -330,7 +330,9 @@ type WmbFlowConfig = {
   defaultZoomLevelOnMap :: Number,
   maxRadiusCanBeSearched :: Number,
   radiusMultiplier :: Number,
-  updatePollingRadiusToClosestBus :: Boolean
+  updatePollingRadiusToClosestBus :: Boolean,
+  enableTicketBooking :: Boolean,
+  disableTicketBookingInRoutes :: Array String
 }
 
 type PollingConfigList = {
