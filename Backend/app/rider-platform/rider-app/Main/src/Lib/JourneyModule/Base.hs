@@ -784,7 +784,7 @@ getTickets leg =
             )
         else Nothing
 
-cancelLeg ::
+tryCancelLeg ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
@@ -796,12 +796,34 @@ cancelLeg ::
   SCR.CancellationReasonCode ->
   Bool ->
   Bool ->
+  m Bool
+tryCancelLeg journeyLeg cancellationReasonCode isSkipped skippedDuringConfirmation = do
+  if skippedDuringConfirmation
+    then do
+      cancelLeg journeyLeg cancellationReasonCode isSkipped
+      return True
+    else do
+      isCancellable <- checkIfCancellable journeyLeg
+      if isCancellable
+        then do
+          cancelLeg journeyLeg cancellationReasonCode isSkipped
+          return True
+        else return False
+
+-- use this only when you have already checked if the leg is cancellable
+cancelLeg ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    EncFlow m r,
+    Monad m,
+    m ~ Kernel.Types.Flow.FlowR AppEnv
+  ) =>
+  JL.LegInfo ->
+  SCR.CancellationReasonCode ->
+  Bool ->
   m ()
-cancelLeg journeyLeg cancellationReasonCode isSkipped skippedDuringConfirmation = do
-  unless skippedDuringConfirmation $ do
-    isCancellable <- checkIfCancellable journeyLeg
-    unless isCancellable $
-      throwError $ InvalidRequest $ "Cannot cancel leg for: " <> show journeyLeg.travelMode
+cancelLeg journeyLeg cancellationReasonCode isSkipped = do
   case journeyLeg.travelMode of
     DTrip.Taxi ->
       JL.cancel $
@@ -845,7 +867,6 @@ cancelLeg journeyLeg cancellationReasonCode isSkipped skippedDuringConfirmation 
               cancellationType = Spec.CONFIRM_CANCEL,
               isSkipped
             }
-  return ()
 
 cancelRemainingLegs ::
   (JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
@@ -864,8 +885,8 @@ cancelRemainingLegs journeyId isExtend = do
         if leg.skipBooking
           then return ()
           else do
-            isCancellable <- checkIfCancellable leg
-            if isCancellable then (cancelLeg leg (SCR.CancellationReasonCode "")) False False else (QJourneyLeg.updateIsDeleted (Just True) (Just leg.searchId))
+            isCancelled <- tryCancelLeg leg (SCR.CancellationReasonCode "") False False
+            unless isCancelled $ (QJourneyLeg.updateIsDeleted (Just True) (Just leg.searchId))
   let failures = [e | Left e <- results]
   unless (null failures) $
     throwError $ InvalidRequest $ "Failed to cancel some legs: " <> show failures
@@ -889,7 +910,8 @@ skipLeg journeyId legOrder skippedDuringConfirmation = do
         throwError $ JourneyLegCannotBeSkippedForMode (show skippingLeg.travelMode)
       unless (cancellableStatus skippingLeg) $
         throwError $ JourneyLegCannotBeSkippedForStatus (show skippingLeg.status)
-      cancelLeg skippingLeg (SCR.CancellationReasonCode "") True skippedDuringConfirmation
+      isCancelled <- tryCancelLeg skippingLeg (SCR.CancellationReasonCode "") True skippedDuringConfirmation
+      unless isCancelled $ throwError $ InvalidRequest $ "Cannot cancel leg for: " <> show skippingLeg.travelMode
 
 addSkippedLeg ::
   (JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
@@ -1143,10 +1165,8 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
             return $ mkAddressFromStation fromStation.name
       withJourneyUpdateInProgress journeyId $ do
         forM_ legsToCancel $ \currLeg -> do
-          isCancellable <- checkIfCancellable currLeg
-          if isCancellable
-            then cancelLeg currLeg (SCR.CancellationReasonCode "") False False
-            else QJourneyLeg.updateIsDeleted (Just True) (Just currLeg.searchId)
+          isCancelled <- tryCancelLeg currLeg (SCR.CancellationReasonCode "") False False
+          unless isCancelled $ (QJourneyLeg.updateIsDeleted (Just True) (Just currLeg.searchId))
         QJourneyLeg.create journeyLeg
         updateJourneyChangeLogCounter journeyId
         searchResp <- addTaxiLeg parentSearchReq journeyLeg startLocationAddress (mkLocationAddress endLocation)
@@ -1187,10 +1207,8 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
           -- checkIfRemainingLegsAreCancellable legsToCancel
           mapM_
             ( \leg -> do
-                isCancellable <- checkIfCancellable leg
-                if isCancellable
-                  then cancelLeg leg (SCR.CancellationReasonCode "") False False
-                  else QJourneyLeg.updateIsDeleted (Just True) (Just leg.searchId)
+                isCancelled <- tryCancelLeg leg (SCR.CancellationReasonCode "") False False
+                unless isCancelled $ (QJourneyLeg.updateIsDeleted (Just True) (Just leg.searchId))
             )
             legsToCancel
 
@@ -1473,12 +1491,11 @@ switchLeg journeyId req = do
         return (Just newDistanceAndDuration.distanceWithUnit, Just newDistanceAndDuration.duration)
       _ -> return (journeyLeg.distance, journeyLeg.duration)
   canSwitch <- canBeSwitched legData req.newMode newDistance
-  isCancellable <- checkIfCancellable legData
-  unless isCancellable $ do throwError (JourneyLegCannotBeCancelled journeyLeg.id.getId)
   unless canSwitch $ do throwError (JourneyLegCannotBeSwitched journeyLeg.id.getId)
   let lockKey = multimodalLegSearchIdAccessLockKey journeyId.getId
   Redis.whenWithLockRedis lockKey 5 $ do
-    cancelLeg legData (SCR.CancellationReasonCode "") False False
+    isCancelled <- tryCancelLeg legData (SCR.CancellationReasonCode "") False False
+    unless isCancelled $ throwError (JourneyLegCannotBeCancelled journeyLeg.id.getId)
     newJourneyLeg <- createJourneyLegFromCancelledLeg journeyLeg req.newMode startLocation newDistance newDuration
     addAllLegs journeyId [newJourneyLeg]
     when (legData.status /= JL.InPlan) $
