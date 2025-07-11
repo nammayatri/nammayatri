@@ -181,7 +181,7 @@ foreign import renewFile :: EffectFn3 String String (AffSuccess Boolean) Unit
 
 foreign import getDateAfterNDays :: Int -> String
 foreign import downloadQR  :: String -> Effect Unit
-
+foreign import convertEpochToDateFormat :: String -> String
 foreign import performHapticFeedback :: Unit -> Effect Unit
 foreign import rentalPickupTimeFormat :: String -> String
 

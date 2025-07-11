@@ -614,7 +614,8 @@ type DriverProfileScreenProps = {
   canSwitchToInterCity :: Maybe Boolean,
   showDriverBlockedPopup :: Boolean,
   skipGlobalEvents :: Boolean,
-  isPetModeEnabled :: Maybe Boolean
+  isPetModeEnabled :: Maybe Boolean,
+  nammaClubEnabled :: Boolean
 }
 data Gender = MALE | FEMALE | OTHER | PREFER_NOT_TO_SAY
 
@@ -2166,6 +2167,31 @@ type DocumentDetailsScreenProps = {
 
 }
 
+type DriverClaimRewardScreenState = {
+  data :: DriverClaimRewardScreenData,
+  props :: DriverClaimRewardScreenProps
+}
+
+type DriverClaimRewardScreenData = {
+  config :: AppConfig
+  , numberOfRides :: Maybe Int
+  , safetyScore :: Maybe Int
+  , rating :: Maybe Number
+  , cancellationRateInWindow :: Maybe Int
+  , driverTag :: String
+  , driverRewardConfig :: RC.DriverRewardConfig
+  , nyMemberProbationTill :: Maybe Int
+}
+
+type DriverClaimRewardScreenProps = {
+  showAllBenefits :: Boolean
+  , showAllEligibility :: Boolean
+  , showNominationView :: Boolean
+  , showFaq :: Boolean
+  , openFaqIndex :: Maybe Int
+  , openBenefitIndex :: Maybe Int
+}
+
 type DriverCompleteProfileScreenState = {
   data :: DriverCompleteProfileScreenData,
   props :: DriverCompleteProfileScreenProps
@@ -2994,6 +3020,7 @@ type BenefitsScreenData = {
   , payoutAmountPaid :: Int
   , payoutVpa :: Maybe String
   , payoutRewardAmount :: Maybe Int
+  , nyClubTag :: Maybe String
 }
 
 type BenefitsScreenProps = {
@@ -3006,6 +3033,7 @@ type BenefitsScreenProps = {
 , isPayoutEnabled :: Maybe Boolean
 , bannerLength :: Int
 , glBannerClickable :: Boolean
+, nammaClubEnabled :: Boolean
 }
 
 type LmsModuleList =
