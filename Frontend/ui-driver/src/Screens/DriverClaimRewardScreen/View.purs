@@ -337,8 +337,8 @@ infoCard label backgroundColor visible showSupport push =
         else []
     )
 
-benefits :: Array Benefit
-benefits =
+benefits :: ST.DriverClaimRewardScreenState -> Array Benefit
+benefits state =
   [ { icon: "ny_ic_medical_support"
     , label: getStringV2 LT2.accidental_medical_support
     , description: getStringV2 LT2.accidental_medical_support_description
@@ -381,8 +381,8 @@ benefitsSection push state =
         , height WRAP_CONTENT
         , orientation VERTICAL
         ]
-        (mapWithIndex (\i b -> benefitItem push i state b) (if state.props.showAllBenefits then benefits else take 5 benefits) <>
-         if length benefits > 5 && not state.props.showAllBenefits
+        (mapWithIndex (\i b -> benefitItem push i state b) (if state.props.showAllBenefits then benefits state else take 5 (benefits state)) <>
+         if length (benefits state) > 5 && not state.props.showAllBenefits
            then [viewMoreButton push ViewMoreBenefits state.props.showAllBenefits]
            else [])
     ]
@@ -498,8 +498,8 @@ eligibilityItem push criterion =
         ] <> FontStyle.body25 TypoGraphy
     ]
 
-faqs :: Array FAQ
-faqs =
+faqs :: ST.DriverClaimRewardScreenState -> Array FAQ
+faqs state =
   [ { question: getStringV2 LT2.what_is_kutumba
     , answer: getStringV2 LT2.what_is_kutumba_answer
     }
@@ -573,7 +573,7 @@ faqQuestionView push state =
                   ]
               else
                 linearLayout [] []
-            , if i == (length faqs - 1) then
+            , if i == (length (faqs state) - 1) then
                 linearLayout [] []
               else
                 linearLayout
@@ -583,7 +583,7 @@ faqQuestionView push state =
                   ]
                   []
             ]
-        ) faqs)
+        ) (faqs state))
     ]
 
 termsAndConditionsButton :: forall w. (Action -> Effect Unit) -> ST.DriverClaimRewardScreenState -> PrestoDOM (Effect Unit) w
@@ -653,8 +653,8 @@ claimButton push state =
 getBenefitsToShow :: ST.DriverClaimRewardScreenState -> Array Benefit
 getBenefitsToShow state =
   if state.props.showAllBenefits
-    then benefits
-    else take 5 benefits
+    then benefits state
+    else take 5 (benefits state)
 
 getEligibilityToShow :: ST.DriverClaimRewardScreenState -> Array { label :: String, visibility :: Boolean }
 getEligibilityToShow state = 
