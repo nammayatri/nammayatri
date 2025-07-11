@@ -282,6 +282,13 @@ parseRouteStopMappingInMemoryServer routeStopMappingInMemoryServer integratedBPP
     ( \mapping -> do
         let routeCode = last $ splitOn ":" mapping.routeCode
             stopCode = last $ splitOn ":" mapping.stopCode
+        providerStopCode <-
+          if mapping.providerCode == "GTFS"
+            then do
+              routeStopTimetables <- GRQRSTT.findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOperatingCityId [routeCode] stopCode
+              return ((listToMaybe routeStopTimetables) >>= \routeStopTimeTable -> routeStopTimeTable.providerStopCode)
+            else do
+              pure $ Just mapping.providerCode
         return $
           RouteStopMapping
             { estimatedTravelTimeFromPreviousStop = mapping.estimatedTravelTimeFromPreviousStop,
