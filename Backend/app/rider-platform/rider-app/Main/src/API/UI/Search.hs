@@ -361,9 +361,11 @@ multiModalSearch searchRequest riderConfig initateJourney forkInitiateFirstJourn
       indexedRoutes = zip [0 ..] otpResponse.routes
       removeOnlyWalkAndUnspecifiedTransitModes = filter (not . hasOnlyWalkOrUnspecifiedTransitModes . snd)
       filteredUserPreferredIndexedRoutes = filter (hasOnlyUserPreferredTransitModes . snd) indexedRoutes
+      baseRoutes = if null filteredUserPreferredIndexedRoutes then indexedRoutes else filteredUserPreferredIndexedRoutes
       indexedRoutesToProcess =
-        removeOnlyWalkAndUnspecifiedTransitModes $
-          if null filteredUserPreferredIndexedRoutes then indexedRoutes else filteredUserPreferredIndexedRoutes
+        if riderConfig.filterWalkAndUnspecifiedTransitModes
+          then removeOnlyWalkAndUnspecifiedTransitModes baseRoutes
+          else baseRoutes
       showMultimodalWarningForFirstJourney = null filteredUserPreferredIndexedRoutes
 
   mbJourneyWithIndex <- JMU.measureLatency (go indexedRoutesToProcess userPreferences) "Multimodal Init Time" -- process until first journey is found
