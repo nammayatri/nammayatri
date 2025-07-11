@@ -7,7 +7,7 @@ module SharedLogic.MediaFileDocument
   )
 where
 
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverRegistration as Common
+import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.MediaFileDocument as Common
 import AWS.S3 as S3
 import qualified "dashboard-helper-api" Dashboard.Common.MediaFileDocument as CommonMFD
 import Data.Either (isRight)
@@ -115,13 +115,13 @@ castMediaFileDocumentType :: Common.MediaFileDocumentType -> DCommon.MediaFileDo
 castMediaFileDocumentType = \case
   Common.VehicleVideo -> DCommon.VehicleVideo
 
-castMediaFileDocumentStatus :: DMFD.MediaFileDocumentStatus -> CommonMFD.MediaFileDocumentStatus
+castMediaFileDocumentStatus :: DMFD.MediaFileDocumentStatus -> Common.MediaFileDocumentStatus
 castMediaFileDocumentStatus = \case
-  DMFD.PENDING -> CommonMFD.PENDING
-  DMFD.DELETED -> CommonMFD.DELETED
-  DMFD.FAILED -> CommonMFD.FAILED
-  DMFD.CONFIRMED -> CommonMFD.CONFIRMED
-  DMFD.COMPLETED -> CommonMFD.COMPLETED
+  DMFD.PENDING -> Common.PENDING
+  DMFD.DELETED -> Common.DELETED
+  DMFD.FAILED -> Common.FAILED
+  DMFD.CONFIRMED -> Common.CONFIRMED
+  DMFD.COMPLETED -> Common.COMPLETED
 
 createMediaPathByRcId ::
   (MonadTime m, MonadReader r m, HasField "s3Env" r (S3Env m)) =>

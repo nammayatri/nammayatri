@@ -16,10 +16,6 @@ module Domain.Action.Dashboard.Management.DriverRegistration
   ( getDriverRegistrationDocumentsList,
     getDriverRegistrationGetDocument,
     postDriverRegistrationDocumentUpload,
-    postDriverRegistrationMediaFileDocumentUploadLink,
-    postDriverRegistrationMediaFileDocumentConfirm,
-    postDriverRegistrationMediaFileDocumentDelete,
-    getDriverRegistrationMediaFileDocumentDownloadLink,
     postDriverRegistrationRegisterDl,
     postDriverRegistrationRegisterRc,
     postDriverRegistrationRegisterGenerateAadhaarOtp,
@@ -66,7 +62,6 @@ import Kernel.Types.Documents
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified SharedLogic.MediaFileDocument as SMFD
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.Cac.TransporterConfig as CCT
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -261,39 +256,6 @@ postDriverRegistrationDocumentUpload merchantShortId opCity driverId_ req = do
           sdkFailureReason = Nothing
         }
   pure $ Common.UploadDocumentResp {imageId = cast res.imageId}
-
-postDriverRegistrationMediaFileDocumentUploadLink ::
-  ShortId DM.Merchant ->
-  Context.City ->
-  Text ->
-  Common.UploadMediaFileDocumentReq ->
-  Flow Common.MediaFileDocumentResp
-postDriverRegistrationMediaFileDocumentUploadLink = SMFD.mediaFileDocumentUploadLink
-
-postDriverRegistrationMediaFileDocumentConfirm ::
-  ShortId DM.Merchant ->
-  Context.City ->
-  Text ->
-  Common.MediaFileDocumentReq ->
-  Flow APISuccess
-postDriverRegistrationMediaFileDocumentConfirm = SMFD.mediaFileDocumentConfirm
-
-postDriverRegistrationMediaFileDocumentDelete ::
-  ShortId DM.Merchant ->
-  Context.City ->
-  Text ->
-  Common.MediaFileDocumentReq ->
-  Flow APISuccess
-postDriverRegistrationMediaFileDocumentDelete = SMFD.mediaFileDocumentDelete
-
-getDriverRegistrationMediaFileDocumentDownloadLink ::
-  ShortId DM.Merchant ->
-  Context.City ->
-  Common.MediaFileDocumentType ->
-  Text ->
-  Text ->
-  Flow Common.MediaFileDocumentResp
-getDriverRegistrationMediaFileDocumentDownloadLink = SMFD.mediaFileDocumentDownloadLink
 
 postDriverRegistrationRegisterDl :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.RegisterDLReq -> Flow APISuccess
 postDriverRegistrationRegisterDl merchantShortId opCity driverId_ Common.RegisterDLReq {..} = do

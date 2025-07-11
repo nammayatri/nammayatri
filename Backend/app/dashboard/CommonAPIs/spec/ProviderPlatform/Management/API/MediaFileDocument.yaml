@@ -1,0 +1,104 @@
+imports:
+  FileType: AWS.S3
+  MediaFileDocument: Dashboard.Common.MediaFileDocument
+  MediaFileDocumentType: Dashboard.Common.MediaFileDocument
+
+module: MediaFileDocument
+
+apis:
+  - POST:
+      endpoint: /uploadLink
+      auth: ApiAuthV2
+      request:
+        type: UploadMediaFileDocumentReq
+      response:
+        type: MediaFileDocumentResp
+      helperApi:
+        - POST:
+            endpoint: /uploadLink
+            auth: ApiAuthV2
+            request:
+              type: UploadMediaFileDocumentReq
+            mandatoryQuery:
+              - requestorId: Text
+            response:
+              type: MediaFileDocumentResp
+  - POST:
+      endpoint: /confirm
+      auth: ApiAuthV2
+      request:
+        type: MediaFileDocumentReq
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /confirm
+            auth: ApiAuthV2
+            request:
+              type: MediaFileDocumentReq
+            mandatoryQuery:
+              - requestorId: Text
+            response:
+              type: APISuccess
+  - POST:
+      endpoint: /delete
+      auth: ApiAuthV2
+      request:
+        type: MediaFileDocumentReq
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /delete
+            auth: ApiAuthV2
+            request:
+              type: MediaFileDocumentReq
+            mandatoryQuery:
+              - requestorId: Text
+            response:
+              type: APISuccess
+  - GET:
+      endpoint: /downloadLink
+      auth: ApiAuthV2
+      mandatoryQuery:
+        - mediaFileDocumentType: MediaFileDocumentType
+        - rcNumber: Text
+      response:
+        type: MediaFileDocumentResp
+      helperApi:
+        - GET:
+            endpoint: /downloadLink
+            auth: ApiAuthV2
+            mandatoryQuery:
+              - mediaFileDocumentType: MediaFileDocumentType
+              - rcNumber: Text
+              - requestorId: Text
+            response:
+              type: MediaFileDocumentResp
+
+types:
+  UploadMediaFileDocumentReq:
+    - mediaFileDocumentType: MediaFileDocumentType
+    - fileType: FileType
+    - reqContentType: Text
+    - rcNumber: Text
+  UploadMediaFileDocumentTReq:
+    - mediaFileDocumentType: MediaFileDocumentType
+    - fileType: FileType
+    - reqContentType: Text
+  MediaFileDocumentResp:
+    - mediaFileLink: Maybe Text
+    - mediaFileDocumentId: Id MediaFileDocument
+    - mediaFileDocumentStatus: MediaFileDocumentStatus
+  MediaFileDocumentTResp:
+    - mediaFileDocumentId: Id MediaFileDocument
+    - mediaFileDocumentStatus: MediaFileDocumentStatus
+  MediaFileDocumentStatus:
+    - enum: "PENDING, DELETED, FAILED, CONFIRMED, COMPLETED"
+  MediaFileDocumentReq:
+    - mediaFileDocumentId: Id MediaFileDocument
+    - derive: "'HideSecrets"
+
+extraOperations:
+  - EXTRA_API_TYPES_FILE
+  - EXTRA_API_COMMON_TYPES_FILE
