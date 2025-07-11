@@ -803,8 +803,7 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
         Nothing -> throwError $ DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag)
   when (driverInfo.active /= isActive || driverInfo.mode /= mode) $ do
     QDriverInformation.updateActivity isActive (mode <|> Just DriverInfo.OFFLINE) driverId
-    fork "update driver online duration" . Redis.whenWithLockRedis (updateDriverOnlineDurationLockKey driverId) 60 $
-      processingChangeOnline (driverId, merchantId, merchantOpCityId) transporterConfig.timeDiffFromUtc driverInfo mode
+    processingChangeOnline (driverId, merchantId, merchantOpCityId) transporterConfig.timeDiffFromUtc driverInfo mode
   pure APISuccess.Success
 
 updateDriverOnlineDurationLockKey :: Id SP.Person -> Text
@@ -817,26 +816,27 @@ processingChangeOnline ::
   DriverInfo.DriverInformation ->
   Maybe DriverInfo.DriverMode ->
   m ()
-processingChangeOnline (driverId, merchantId, merchantOpCityId) timeDiffFromUtc driverInfo mode = do
-  localTime <- getLocalCurrentTime timeDiffFromUtc
-  let previousMode = driverInfo.mode
-      merchantLocalDate = utctDay localTime
-  now <- getCurrentTime
-  mbDailyStats <- SQDS.findByDriverIdAndDate driverId merchantLocalDate
-  when (previousMode == Just DriverInfo.ONLINE) $ do
-    let mbLastOnlineFrom = addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) <$> driverInfo.onlineDurationRefreshedAt
-        numDaysAgo = 10
-        limitLastOnlineFrom = addUTCTime (secondsToNominalDiffTime $ - numDaysAgo * 86400) localTime
-        lastOnlineFrom = maybe localTime (max limitLastOnlineFrom) mbLastOnlineFrom
-        newOnlineDuration = calcOnlineDuration localTime mbDailyStats lastOnlineFrom
-        startDayTime = UTCTime (utctDay localTime) 0
-    whenNothing_ mbLastOnlineFrom . logDebug $ "OnlineDurationRefreshedAt is Nothing. DriverId: " <> driverId.getId
-    addDataToDailyStats mbDailyStats merchantLocalDate newOnlineDuration
-    QDIE.updateOnlineDurationRefreshedAt driverId now
-
-    when (lastOnlineFrom < startDayTime) $ setOnlineDurationInDailyStatsForPrevDays merchantLocalDate lastOnlineFrom
-
-  when (mode == Just DriverInfo.ONLINE) $ QDIE.updateOnlineDurationRefreshedAt driverId now
+processingChangeOnline (driverId, merchantId, merchantOpCityId) timeDiffFromUtc driverInfo mode =
+  fork "update driver online duration" . Redis.whenWithLockRedis (updateDriverOnlineDurationLockKey driverId) 60 $ do
+    localTime <- getLocalCurrentTime timeDiffFromUtc
+    let previousMode = driverInfo.mode
+        merchantLocalDate = utctDay localTime
+    now <- getCurrentTime
+    mbDailyStats <- SQDS.findByDriverIdAndDate driverId merchantLocalDate
+    when (previousMode == Just DriverInfo.ONLINE) $ do
+      let mbLastOnlineFrom = addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) <$> driverInfo.onlineDurationRefreshedAt
+          numDaysAgo = 10
+          limitLastOnlineFrom = addUTCTime (secondsToNominalDiffTime $ - numDaysAgo * 86400) localTime
+          lastOnlineFrom = maybe localTime (max limitLastOnlineFrom) mbLastOnlineFrom
+          newOnlineDuration = calcOnlineDuration localTime mbDailyStats lastOnlineFrom
+          startDayTime = UTCTime (utctDay localTime) 0
+      when (lastOnlineFrom == limitLastOnlineFrom) . logDebug $
+        "The limit of " <> show numDaysAgo <> " days has been reached during the calculation of onlineDuration. DriverId: " <> driverId.getId
+      whenNothing_ mbLastOnlineFrom . logDebug $ "OnlineDurationRefreshedAt is Nothing. DriverId: " <> driverId.getId
+      addDataToDailyStats mbDailyStats merchantLocalDate newOnlineDuration
+      QDIE.updateOnlineDurationRefreshedAt driverId now
+      when (lastOnlineFrom < startDayTime) $ setOnlineDurationInDailyStatsForPrevDays merchantLocalDate lastOnlineFrom
+    when (mode == Just DriverInfo.ONLINE) $ QDIE.updateOnlineDurationRefreshedAt driverId now
   where
     setOnlineDurationInDailyStatsForPrevDays todayMerchantLocalDate lastOnlineFrom = do
       let lastOnlineFromMerchantLocalDate = utctDay lastOnlineFrom

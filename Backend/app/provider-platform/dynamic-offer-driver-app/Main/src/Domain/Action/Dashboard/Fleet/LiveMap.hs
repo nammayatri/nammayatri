@@ -45,7 +45,7 @@ getLiveMapDrivers ::
   Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong ->
   Environment.Flow [Common.MapDriverInfoRes]
 getLiveMapDrivers merchantShortId _opCity radius requestorId mbFleetOwnerId mbDriverIdForRadius mbPoint = do
-  let point = fromMaybe (LatLong 0.0 0.0) mbPoint
+  latLong <- getPoint mbDriverIdForRadius mbPoint
   requestedPerson <- QP.findById (ID.Id requestorId) >>= fromMaybeM (PersonDoesNotExist requestorId)
   (entityRole, entityId) <- validateRequestorRoleAndGetEntityId requestedPerson mbFleetOwnerId
   driverIdAssocWithEntityIdLs <- case entityRole of
@@ -53,7 +53,6 @@ getLiveMapDrivers merchantShortId _opCity radius requestorId mbFleetOwnerId mbDr
     DP.OPERATOR -> findAllActiveDriverIdByOperatorId entityId
     _ -> throwError (InvalidRequest "Invalid Data")
   merchant <- findMerchantByShortId merchantShortId
-  latLong <- maybe (pure point) (getDriverCurrentLocation . ID.cast) mbDriverIdForRadius
   nearbyDriverLocations <- LF.nearBy latLong.lat latLong.lon Nothing (Just autoTypeLs) radius merchant.id Nothing
   let filtredNearbyDriverLocations = filter (\location -> location.driverId `elem` driverIdAssocWithEntityIdLs) nearbyDriverLocations
   driverInfoList <- findAllByDriverIds $ (.driverId.getId) <$> filtredNearbyDriverLocations
@@ -68,6 +67,11 @@ getLiveMapDrivers merchantShortId _opCity radius requestorId mbFleetOwnerId mbDr
     DP.OPERATOR -> buildOperatorMapDriverInfo
     _ -> pure $ throwError (InvalidRequest "Invalid Data")
   where
+    getPoint :: Kernel.Prelude.Maybe (ID.Id ATD.Driver) -> Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong -> Environment.Flow LatLong
+    getPoint (Just driverIdForRadius) _ = getDriverCurrentLocation $ ID.cast driverIdForRadius
+    getPoint _ (Just point) = pure point
+    getPoint _ _ = throwError $ InvalidRequest "mbFleetOwnerId and mbPoint are Nothing"
+
     autoTypeLs =
       [ DV.SUV,
         DV.AUTO_RICKSHAW,

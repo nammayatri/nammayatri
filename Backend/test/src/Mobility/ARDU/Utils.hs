@@ -21,7 +21,6 @@ import qualified "rider-app" API.UI.Search as AppSearch
 import qualified API.UI.Select as AppSelect
 import Common
 import qualified "rider-app" Domain.Action.UI.Cancel as AppCancel
-import Domain.Action.UI.Driver (processingChangeOnline)
 import qualified "rider-app" Domain.Action.UI.Estimate as AppEstimate
 import qualified "dynamic-offer-driver-app" Domain.Action.UI.MerchantServiceConfig as TDMSC
 import qualified "rider-app" Domain.Action.UI.Quote as AppQuote
@@ -49,30 +48,22 @@ import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common (Currency (INR), Money, PriceAPIEntity (..), toHighPrecMoney)
-import Kernel.Types.Error (PersonError (PersonDoesNotExist))
 import Kernel.Types.Id
-import Kernel.Utils.Common (fromMaybeM)
 import qualified Mobility.ARDU.APICalls as API
 import Mobility.ARDU.Fixtures as Fixtures
 import Mobility.ARDU.Queries as Queries
 import Mobility.AppBackend.APICalls as BapAPI
 import Mobility.AppBackend.Fixtures
 import Servant.Client hiding (parseBaseUrl)
-import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified "dynamic-offer-driver-app" Storage.CachedQueries.Merchant.MerchantServiceConfig as TCQMSC
 import qualified "dynamic-offer-driver-app" Storage.Queries.Booking as TQRB
 import qualified "rider-app" Storage.Queries.Booking as BQRB
 import qualified "dynamic-offer-driver-app" Storage.Queries.DriverInformation as QTDrInfo
 import qualified Storage.Queries.DriverQuote as TDQ
-import qualified "dynamic-offer-driver-app" Storage.Queries.Person as QP
 import qualified "dynamic-offer-driver-app" Storage.Queries.Ride as TQRide
 import qualified "rider-app" Storage.Queries.Ride as BQRide
 import qualified "dynamic-offer-driver-app" Storage.Queries.SearchTry as QST
 import Test.HUnit (assertBool)
-import "dynamic-offer-driver-app" Tools.Error
-  ( DriverInformationError (DriverInfoNotFound),
-    TransporterError (TransporterConfigNotFound),
-  )
 import Utils
 
 -- database calls
@@ -144,16 +135,8 @@ resetDriver driver = runARDUFlow "" $ do
     TQRB.updateStatus booking.id TRB.CANCELLED
   forM_ activeQuotes $ \activeQuote ->
     TDQ.setInactiveBySTId activeQuote.searchTryId
-  let mbMode = Just TDrInfo.OFFLINE
-      driverId = cast driver.driverId
-  QTDrInfo.updateActivity False mbMode driverId
-  driver' <- QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
-  transporterConfig <-
-    SCTC.findByMerchantOpCityId driver'.merchantOperatingCityId Nothing
-      >>= fromMaybeM (TransporterConfigNotFound driver'.merchantOperatingCityId.getId)
-  driverInfo <- QTDrInfo.findByPrimaryKey driverId >>= fromMaybeM DriverInfoNotFound
-  processingChangeOnline (driverId, driver'.merchantId, driver'.merchantOperatingCityId) transporterConfig.timeDiffFromUtc driverInfo mbMode
-  QTDrInfo.updateOnRide False driverId
+  QTDrInfo.updateActivity False (Just TDrInfo.OFFLINE) (cast driver.driverId)
+  QTDrInfo.updateOnRide False (cast driver.driverId)
 
 -- flow primitives
 search :: Text -> AppSearch.SearchReq -> ClientsM (Id AppSearchReq.SearchRequest)
