@@ -160,6 +160,7 @@ library
       Domain.Action.Dashboard.Management.DriverReferral
       Domain.Action.Dashboard.Management.DriverRegistration
       Domain.Action.Dashboard.Management.Media
+      Domain.Action.Dashboard.Management.MediaFileDocument
       Domain.Action.Dashboard.Management.Merchant
       Domain.Action.Dashboard.Management.Message
       Domain.Action.Dashboard.Management.NammaTag
@@ -725,6 +726,7 @@ library
       API.Action.Dashboard.Management.DriverReferral
       API.Action.Dashboard.Management.DriverRegistration
       API.Action.Dashboard.Management.Media
+      API.Action.Dashboard.Management.MediaFileDocument
       API.Action.Dashboard.Management.Merchant
       API.Action.Dashboard.Management.Message
       API.Action.Dashboard.Management.NammaTag

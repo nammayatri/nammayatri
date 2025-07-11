@@ -24,7 +24,6 @@ import Dashboard.Common as Reexport
 import Data.Aeson
 import Kernel.External.Notification.FCM.Types (FCMRecipientToken)
 import Kernel.Prelude
-import Kernel.Utils.TH (mkHttpInstancesForEnum)
 
 instance HideSecrets UploadDocumentReq where
   type ReqWithoutSecrets UploadDocumentReq = UploadDocumentTReq
@@ -54,25 +53,3 @@ data AuthVerifyReq = AuthVerifyReq
     deviceToken :: FCMRecipientToken
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
-
-instance HideSecrets UploadMediaFileDocumentReq where
-  type ReqWithoutSecrets UploadMediaFileDocumentReq = UploadMediaFileDocumentTReq
-  hideSecrets UploadMediaFileDocumentReq {..} = UploadMediaFileDocumentTReq {..}
-
--- Type with single constructor will be serialized as empty list by default, that's why manual instances required
-instance ToJSON MediaFileDocumentType where
-  toJSON VehicleVideo = String "VehicleVideo"
-
-instance FromJSON MediaFileDocumentType where
-  parseJSON (String "VehicleVideo") = pure VehicleVideo
-  parseJSON _ = fail "VehicleVideo expected"
-
-instance ToJSON UploadMediaFileDocumentReq
-
-instance FromJSON UploadMediaFileDocumentReq
-
-instance ToJSON UploadMediaFileDocumentTReq
-
-instance FromJSON UploadMediaFileDocumentTReq
-
-$(mkHttpInstancesForEnum ''MediaFileDocumentType)

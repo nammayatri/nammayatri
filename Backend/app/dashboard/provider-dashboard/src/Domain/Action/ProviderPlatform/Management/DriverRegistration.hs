@@ -16,10 +16,6 @@ module Domain.Action.ProviderPlatform.Management.DriverRegistration
   ( getDriverRegistrationDocumentsList,
     getDriverRegistrationGetDocument,
     postDriverRegistrationDocumentUpload,
-    postDriverRegistrationMediaFileDocumentUploadLink,
-    postDriverRegistrationMediaFileDocumentConfirm,
-    postDriverRegistrationMediaFileDocumentDelete,
-    getDriverRegistrationMediaFileDocumentDownloadLink,
     postDriverRegistrationRegisterDl,
     postDriverRegistrationRegisterRc,
     postDriverRegistrationRegisterGenerateAadhaarOtp,
@@ -96,57 +92,6 @@ postDriverRegistrationDocumentUpload merchantShortId opCity apiTokenInfo driverI
   let mbRequestorId = determineRequestorId apiTokenInfo driverId
   T.withResponseTransactionStoring transaction $
     Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationDocumentUpload) driverId req {Common.requestorId = mbRequestorId}
-
-postDriverRegistrationMediaFileDocumentUploadLink ::
-  ShortId DM.Merchant ->
-  City.City ->
-  ApiTokenInfo ->
-  Common.UploadMediaFileDocumentReq ->
-  Flow Common.MediaFileDocumentResp
-postDriverRegistrationMediaFileDocumentUploadLink merchantShortId opCity apiTokenInfo req = do
-  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildTransaction apiTokenInfo Nothing (Just req)
-  let requestorId = apiTokenInfo.personId.getId
-  T.withTransactionStoring transaction $ do
-    Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationMediaFileDocumentUploadLink) requestorId req
-
-postDriverRegistrationMediaFileDocumentConfirm ::
-  ShortId DM.Merchant ->
-  City.City ->
-  ApiTokenInfo ->
-  Common.MediaFileDocumentReq ->
-  Flow APISuccess
-postDriverRegistrationMediaFileDocumentConfirm merchantShortId opCity apiTokenInfo req = do
-  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildTransaction apiTokenInfo Nothing (Just req)
-  let requestorId = apiTokenInfo.personId.getId
-  T.withTransactionStoring transaction $ do
-    Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationMediaFileDocumentConfirm) requestorId req
-
-postDriverRegistrationMediaFileDocumentDelete ::
-  ShortId DM.Merchant ->
-  City.City ->
-  ApiTokenInfo ->
-  Common.MediaFileDocumentReq ->
-  Flow APISuccess
-postDriverRegistrationMediaFileDocumentDelete merchantShortId opCity apiTokenInfo req = do
-  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildTransaction apiTokenInfo Nothing (Just req)
-  let requestorId = apiTokenInfo.personId.getId
-  T.withTransactionStoring transaction $ do
-    Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationMediaFileDocumentDelete) requestorId req
-
-getDriverRegistrationMediaFileDocumentDownloadLink ::
-  ShortId DM.Merchant ->
-  City.City ->
-  ApiTokenInfo ->
-  Common.MediaFileDocumentType ->
-  Text ->
-  Flow Common.MediaFileDocumentResp
-getDriverRegistrationMediaFileDocumentDownloadLink merchantShortId opCity apiTokenInfo mediaFileDocumentType rcNumber = do
-  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  let requestorId = apiTokenInfo.personId.getId
-  Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.getDriverRegistrationMediaFileDocumentDownloadLink) mediaFileDocumentType rcNumber requestorId
 
 postDriverRegistrationRegisterDl :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.RegisterDLReq -> Flow APISuccess
 postDriverRegistrationRegisterDl merchantShortId opCity apiTokenInfo driverId req = do

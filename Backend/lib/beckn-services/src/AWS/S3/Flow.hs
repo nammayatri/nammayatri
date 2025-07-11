@@ -348,10 +348,10 @@ headRequest' bucketName path = withLogTag "S3" $ do
   res <- liftIO . Amazonka.runResourceT $ Amazonka.send env (Amazonka.newHeadObject bucketName' path')
   fileSizeInBytes <- case res ^. Amazonka.headObjectResponse_contentLength of
     Just size -> pure size
-    Nothing -> throwError (InvalidRequest $ "Content length was not found")
+    Nothing -> throwError (InvalidRequest "Content length was not found")
   entityTag <- case res ^. Amazonka.headObjectResponse_eTag of
     Just (Amazonka.ETag t) -> pure . EntityTag $ T.decodeUtf8 t
-    Nothing -> throwError (InvalidRequest $ "Entity tag was not found")
+    Nothing -> throwError (InvalidRequest "Entity tag was not found")
   pure $ ObjectStatus {fileSizeInBytes, entityTag}
 
 mockHeadRequest ::
