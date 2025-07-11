@@ -391,7 +391,7 @@ multiModalSearch searchRequest riderConfig initateJourney forkInitiateFirstJourn
                 else do
                   res <- DMC.postMultimodalInitiate (Just searchRequest.riderId, searchRequest.merchantId) firstJourney.id
                   return $ Just res {ApiTypes.crisSdkToken = mbCrisSdkToken}
-            fork "Rest of the routes Init" $ processRestOfRoutes [x | (j, x) <- zip [0 ..] otpResponse.routes, j /= idx] userPreferences
+            fork "Rest of the routes Init" $ processRestOfRoutes [route' | (j, route') <- indexedRoutesToProcess, j /= idx] userPreferences
             return resp
           Nothing -> do
             QSearchRequest.updateAllJourneysLoaded (Just True) searchRequest.id
