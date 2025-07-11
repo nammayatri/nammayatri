@@ -4333,7 +4333,7 @@ benefitsScreenFlow = do
       cityConfig = getCityConfig appConfig.cityConfig (getValueToLocalStore DRIVER_LOCATION)
       driverRewardConfig = getDriverRewardConfig $ DS.toLower $ getValueToLocalStore DRIVER_LOCATION
       nammaClubEnabled = driverRewardConfig.visibility
-  modifyScreenState $ BenefitsScreenStateType (\benefitsScreen -> benefitsScreen { data {referralCode = referralCode, cityConfig = cityConfig, payoutRewardAmount = getDriverInfoResp.payoutRewardAmount, nyClubTag = nyClubTag}, props {nammaClubEnabled = nammaClubEnabled}})
+  modifyScreenState $ BenefitsScreenStateType (\benefitsScreen -> benefitsScreen { data {referralCode = referralCode, cityConfig = cityConfig, payoutRewardAmount = getDriverInfoResp.payoutRewardAmount, nyClubTag = nyClubTag}, props {nammaClubEnabled = nammaClubEnabled, nyClubConsent = getDriverInfoResp.nyClubConsent}})
   benefitsScreen <- UI.benefitsScreen
   case benefitsScreen of
     DRIVER_REFERRAL_SCREEN_NAV GoToSubscription -> updateAvailableAppsAndGoToSubs

@@ -231,7 +231,7 @@ nammaKutumbaCard push state =
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , margin $ Margin 0 16 0 16
-    , visibility $ boolToVisibility $ nammaClubEnabled && (nammaClubTag == Just "ny_member" || nammaClubTag == Just "ny_member_probation")
+    , visibility $ boolToVisibility $ nammaClubEnabled && (nammaClubTag == Just "ny_member" || nammaClubTag == Just "ny_member_probation") && state.props.nyClubConsent == Just true
     , onClick push $ const GoToClaimReward
     , orientation HORIZONTAL
     ]

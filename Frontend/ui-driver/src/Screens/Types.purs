@@ -3019,6 +3019,7 @@ type BenefitsScreenProps = {
 , bannerLength :: Int
 , glBannerClickable :: Boolean
 , nammaClubEnabled :: Boolean
+, nyClubConsent :: Maybe Boolean
 }
 
 type LmsModuleList =
