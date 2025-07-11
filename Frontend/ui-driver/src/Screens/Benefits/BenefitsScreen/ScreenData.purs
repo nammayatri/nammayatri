@@ -62,6 +62,7 @@ initData = {
       isPayoutEnabled: Nothing,
       bannerLength : 0,
       glBannerClickable : true,
-      nammaClubEnabled : false
+      nammaClubEnabled : false,
+      nyClubConsent : Nothing
     }
 }

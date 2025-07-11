@@ -1438,7 +1438,7 @@ driverProfile push state =
           "FEMALE" -> "ny_ic_profile_female"
           _ -> "ny_ic_generic_mascot"
       city = getValueToLocalStore DRIVER_LOCATION
-      showShield = state.data.nyClubTag == Just "ny_member" || state.data.nyClubTag == Just "ny_member_probation"
+      showShield = state.props.nyClubConsent == Just true && (state.data.nyClubTag == Just "ny_member" || state.data.nyClubTag == Just "ny_member_probation")
       configs = cancellationThresholds "cancellation_rate_thresholds" city
       showRingImage = state.data.cancellationRate > configs.warning1 ||(isJust state.data.overchargingTag && state.data.overchargingTag /= Just APITypes.NoOverCharging) || showShield
       ringImage =
@@ -3721,16 +3721,16 @@ driverConsentPopup push state =
                               ] <> (FontStyle.getFontStyle FontStyle.Body5 TypoGraphy)
                           ]
                           ) [ getStringV2 become_a_member_of_the_namma_driver_welfare_trust,
-                              getStringV2 never_raise_fraudulent_claim,
-                              getStringV2 ask_only_the_fair_price_shown_in_the_app,
+                              getStringV2 provide_sakkath_service_to_the_customers,
                               getStringV2 follow_safety_standards,
-                              getStringV2 provide_sakkath_service_to_the_customers
+                              getStringV2 never_raise_fraudulent_claim,
+                              getStringV2 ask_only_the_fair_price_shown_in_the_app
                               ])
                     , textView $
                       [ width MATCH_PARENT
                       , height WRAP_CONTENT
                       , margin $ Margin 8 8 8 16
-                      , textFromHtml $ getStringV2 i_have_read_and_accept_the <> "<span style='color:#2194FF'><u>"<> "T&C" <>"</u></span>"
+                      , textFromHtml $ getStringV2 i_have_read_and_accept_the <> " <span style='color:#2194FF'><u>"<> "T&Cs" <>"</u></span>"
                       , gravity LEFT
                       , onClick push $ const $ ConsentPopupTnC
                       ] <> (FontStyle.getFontStyle FontStyle.Body5 TypoGraphy)
