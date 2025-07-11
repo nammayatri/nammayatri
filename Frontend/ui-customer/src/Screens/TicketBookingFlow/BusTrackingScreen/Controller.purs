@@ -86,7 +86,7 @@ import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import Screens (getScreen, ScreenName(..))
 import Engineering.Helpers.BackTrack (liftFlowBT)
-import Engineering.Helpers.LogEvent (logEventWithMultipleParams)
+import Engineering.Helpers.LogEvent (logEventWithMultipleParams, logEvent)
 import Presto.Core.Types.Language.Flow (getLogFields)
 import Control.Monad.Except.Trans (lift)
 import Foreign (MultipleErrors, unsafeToForeign)
@@ -110,6 +110,7 @@ data ScreenOutput
   | GoBackToMetroMyTicketsScreen ST.BusTrackingScreenState
   | GoBackToSelectBusRouteScreen ST.BusTrackingScreenState
   | GoToHomeScreen ST.BusTrackingScreenState
+  | GoToSearchLocationScreen ST.BusTrackingScreenState
 
 data Action
   = AfterRender
@@ -182,8 +183,11 @@ eval (UpdateStops (API.GetMetroStationResponse metroResponse)) state =
       ]
 
 eval (BookTicketButtonAction PrimaryButton.OnClick) state = do
-  void $ pure $ firebaseLogEvent "ny_bus_user_book_ticket_initiated"
-  exit $ GoToSearchLocation state
+  let _ = unsafePerformEffect $ Events.addEventAggregate "ny_bus_user_book_ticket_initiated"
+  void $ pure $ logEvent state.data.logField "ny_bus_user_book_ticket_initiated"
+  if checkBusRouteEnabled state
+    then exit $ GoToSearchLocation state
+    else exit $ GoToHomeScreen state
 
 eval BackPressed state =
     case state.props.fromScreen of
@@ -452,12 +456,15 @@ eval (SaveRoute route) state = continue state {data{routePts = route}}
 
 eval UpdateToExpandView state = continue state {props{expandStopsView = true}}
 
-eval (BookTicketOnNoBus PrimaryButton.OnClick) state = continue state {data{isNoBusAvailable = true}}
+eval (BookTicketOnNoBus PrimaryButton.OnClick) state = 
+  if checkBusRouteEnabled state 
+    then continue state {data{isNoBusAvailable = true}}
+    else exit $ GoToHomeScreen state
 
 eval (PopUpModalAction PopUpModal.OnButton1Click) state = exit $ GoToSearchLocation state
 eval (PopUpModalAction PopUpModal.OnButton2Click) state = continue state {data{isNoBusAvailable = false}}
 
-eval BikeTaxiNudgeClicked state = exit $ GoToHomeScreen state
+eval BikeTaxiNudgeClicked state = exit $ GoToSearchLocationScreen state
 
 eval CloseBikeTaxiPopUp state = continue state{props{showBikeTaxiPopUp = false, isBikeTaxiCrossClicked = true}}
 
@@ -642,3 +649,12 @@ getMinEtaTimestamp minEta trackingData =
 isPostBookingTracking :: ST.BusTrackingScreenState -> Boolean
 isPostBookingTracking state = 
   not $ DS.null state.data.bookingId
+
+checkBusRouteEnabled :: ST.BusTrackingScreenState -> Boolean 
+checkBusRouteEnabled state = 
+  let
+    wmbFlowConfig = RU.fetchWmbFlowConfig CT.FunctionCall
+    isTicketBookingEnabled = wmbFlowConfig.enableTicketBooking
+    isTicketBookingDisabledInRoute = DA.elem state.data.busRouteCode wmbFlowConfig.disableTicketBookingInRoutes
+    _ = spy "Ticket Booking Enabled" $ Tuple isTicketBookingEnabled $ not isTicketBookingDisabledInRoute
+  in isTicketBookingEnabled && (not isTicketBookingDisabledInRoute)
