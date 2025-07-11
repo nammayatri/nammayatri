@@ -49,6 +49,7 @@ data RiderConfigT f = RiderConfigT
     fareCacheInterCitySearchLocations :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     fareCacheRentalsConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     feedbackAlertRatingThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    filterWalkAndUnspecifiedTransitModes :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     hardLimitForSafetyJobs :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     incidentReportSupport :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     initiateFirstMultimodalJourney :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
