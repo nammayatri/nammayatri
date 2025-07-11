@@ -394,7 +394,7 @@ getState mode searchId riderLastPoints isLastCompleted movementDetected routeCod
       mbToStation <- OTPRest.getStationByGtfsIdAndStopCode toStationCode integratedBppConfig
       let mbToLatLong = LatLong <$> (mbToStation >>= (.lat)) <*> (mbToStation >>= (.lon))
       let oldStatus = fromMaybe (if isLastCompleted' then JPT.OnTheWay else JPT.InPlan) mbOldStatus
-      return $ maybe (False, oldStatus) (\latLong -> updateJourneyLegStatus mode riderLastPoints latLong oldStatus isLastCompleted') mbToLatLong
+      return $ maybe (False, oldStatus) (\latLong -> updateJourneyLegStatus mode riderLastPoints latLong oldStatus isLastCompleted' mbToStation) mbToLatLong
 
     getStatusForMetroAndSubway :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => [JPT.MultiModalJourneyRouteDetails] -> Id Domain.Types.FRFSSearch.FRFSSearch -> DIBC.IntegratedBPPConfig -> Bool -> m [(JPT.MultiModalJourneyRouteDetails, Bool, JPT.JourneyLegStatus)]
     getStatusForMetroAndSubway journeyRouteDetails searchId' integratedBppConfig isLastCompleted' = do
