@@ -40,6 +40,7 @@ import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Text as T
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
+import qualified Domain.Types.CancellationReason as SCR
 import qualified Domain.Types.Common as DTrip
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.FRFSTicketBooking as DFRFSB
@@ -51,6 +52,7 @@ import qualified Domain.Types.JourneyLegsFeedbacks as JLFB
 import qualified Domain.Types.Merchant
 import Domain.Types.MultimodalPreferences as DMP
 import qualified Domain.Types.Person
+import qualified Domain.Types.Ride as DRide
 import Environment
 import EulerHS.Prelude hiding (all, concatMap, elem, find, forM_, id, map, mapM_, sum, whenJust)
 import qualified ExternalBPP.CallAPI as CallExternalBPP
@@ -908,9 +910,19 @@ postMultimodalComplete (mbPersonId, merchantId) journeyId = do
   personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
   journey <- JM.getJourney journeyId
   legs <- JM.getAllLegsInfo journeyId False
+  mapM_ handleTaxiLegCancellation legs
   mapM_ (markAllSubLegsCompleted . (.legExtraInfo)) legs
 
   updatedLegStatus <- JM.getAllLegsStatus journey
   checkAndMarkJourneyAsFeedbackPending journey updatedLegStatus
   updatedJourney <- JM.getJourney journeyId
   generateJourneyStatusResponse personId merchantId updatedJourney updatedLegStatus
+  where
+    handleTaxiLegCancellation legInfo =
+      when (legInfo.travelMode == DTrip.Taxi) $ do
+        case legInfo.legExtraInfo of
+          JMTypes.Taxi taxiExtraInfo -> do
+            when (taxiExtraInfo.rideStatus == Just DRide.INPROGRESS) $
+              throwError $ RideInvalidStatus "Cannot cancel inprogress ride"
+            void $ JM.tryCancelLeg legInfo (SCR.CancellationReasonCode "") False False
+          _ -> pure ()
