@@ -127,6 +127,7 @@ RiderConfig:
     nyRegularExecutionTimeOffsetMinutes: Maybe Int
     nyRegularMinGapSeconds: Seconds
     initiateFirstMultimodalJourney: Bool
+    enableAutoJourneyRefund: Bool
     filterWalkAndUnspecifiedTransitModes: Bool
     nyRegularMasterJobNextRunOffsetSeconds: NominalDiffTime
 
@@ -167,6 +168,7 @@ RiderConfig:
     pickupInstructionsProximityMeters: Maybe Int
     initiateFirstMultimodalJourney: Maybe Bool
     nyRegularMinGapSeconds: Maybe Seconds
+    enableAutoJourneyRefund: Maybe Bool
     filterWalkAndUnspecifiedTransitModes: Maybe Bool
     nyRegularMasterJobNextRunOffsetSeconds: Maybe Seconds
 
@@ -213,6 +215,7 @@ RiderConfig:
     pickupInstructionsThreshold: fromMaybe 4 pickupInstructionsThreshold|E
     pickupInstructionsProximityMeters: fromMaybe 10 pickupInstructionsProximityMeters|E
     initiateFirstMultimodalJourney: fromMaybe False initiateFirstMultimodalJourney|E
+    enableAutoJourneyRefund: fromMaybe False enableAutoJourneyRefund|E
     nyRegularMinGapSeconds: fromMaybe 900 nyRegularMinGapSeconds|E
     filterWalkAndUnspecifiedTransitModes: fromMaybe False filterWalkAndUnspecifiedTransitModes|E
     nyRegularMasterJobNextRunOffsetSeconds: fromMaybe 86400 (Kernel.Utils.Common.secondsToNominalDiffTime <$> nyRegularMasterJobNextRunOffsetSeconds)| E
@@ -253,6 +256,7 @@ RiderConfig:
     pickupInstructionsThreshold: Just pickupInstructionsThreshold|E
     pickupInstructionsProximityMeters: Just pickupInstructionsProximityMeters|E
     initiateFirstMultimodalJourney: Just initiateFirstMultimodalJourney|E
+    enableAutoJourneyRefund: Just enableAutoJourneyRefund|E
     nyRegularMinGapSeconds: Just nyRegularMinGapSeconds|E
     filterWalkAndUnspecifiedTransitModes: Just filterWalkAndUnspecifiedTransitModes|E
     nyRegularMasterJobNextRunOffsetSeconds: (Just  . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
@@ -290,6 +294,7 @@ RiderConfig:
     busTrackingConfig: '''{"maxScoreDistanceInMeters":15.0,"goodScoreDistanceInMeters":30.0,"fairScoreDistanceInMeters":45.0,"maxScore":10.0,"goodScore":7.0,"fairScore":4.0,"thresholdFactor":0.5,"thresholdSeconds":30.0,"movementThresholdInMeters":25.0}'''
     enableMultiModalForAllUsers: "false"
     initiateFirstMultimodalJourney: "false"
+    enableAutoJourneyRefund: "false"
     filterWalkAndUnspecifiedTransitModes: "false"
 
   queries:

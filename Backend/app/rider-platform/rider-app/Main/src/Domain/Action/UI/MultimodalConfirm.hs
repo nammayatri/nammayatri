@@ -76,6 +76,7 @@ import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
@@ -146,9 +147,10 @@ getMultimodalBookingInfo (mbPersonId, _merchantId) journeyId = do
   let allMarked = all ((== DFRFSB.REFUND_INITIATED) . (.status)) allJourneyFrfsBookings
   unless allMarked $
     case find ((== DFRFSB.FAILED) . (.status)) allJourneyFrfsBookings of
-      Just _frfsBooking -> do
+      Just frfsBooking -> do
         personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
-        FRFSTicketService.markAllRefundBookings allJourneyFrfsBookings personId journeyId
+        riderConfig <- QRC.findByMerchantOperatingCityId frfsBooking.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist frfsBooking.merchantOperatingCityId.getId)
+        when riderConfig.enableAutoJourneyRefund $ FRFSTicketService.markAllRefundBookings allJourneyFrfsBookings personId (Just journeyId)
       Nothing -> pure ()
   generateJourneyInfoResponse journey legs
 
