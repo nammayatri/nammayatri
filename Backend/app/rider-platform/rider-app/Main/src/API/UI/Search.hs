@@ -238,7 +238,7 @@ multiModalSearch searchRequest riderConfig initateJourney forkInitiateFirstJourn
   mbSingleModeRouteDetails <-
     case mbIntegratedBPPConfig of
       Just config ->
-        JMU.measureLatency (JMU.getSingleModeRouteDetails searchRequest.routeCode searchRequest.originStopCode searchRequest.destinationStopCode config searchRequest.merchantId searchRequest.merchantOperatingCityId vehicleCategory) "getSingleModeRouteDetails"
+        JMU.measureLatency (JMU.getSingleModeRouteDetails searchRequest.routeCode searchRequest.originStopCode searchRequest.destinationStopCode config searchRequest.merchantId searchRequest.merchantOperatingCityId vehicleCategory) ("getSingleModeRouteDetails" <> show vehicleCategory <> " routeCode: " <> show searchRequest.routeCode <> " originStopCode: " <> show searchRequest.originStopCode <> " destinationStopCode: " <> show searchRequest.destinationStopCode)
       Nothing -> return Nothing
   logDebug $ "mbSingleModeRouteDetails: " <> show mbSingleModeRouteDetails
   (singleModeWarningType, otpResponse) <- case mbSingleModeRouteDetails of
