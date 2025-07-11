@@ -127,6 +127,7 @@ RiderConfig:
     nyRegularExecutionTimeOffsetMinutes: Maybe Int
     nyRegularMinGapSeconds: Seconds
     initiateFirstMultimodalJourney: Bool
+    filterWalkAndUnspecifiedTransitModes: Bool
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
@@ -165,6 +166,7 @@ RiderConfig:
     pickupInstructionsProximityMeters: Maybe Int
     initiateFirstMultimodalJourney: Maybe Bool
     nyRegularMinGapSeconds: Maybe Seconds
+    filterWalkAndUnspecifiedTransitModes: Maybe Bool
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -210,6 +212,7 @@ RiderConfig:
     pickupInstructionsProximityMeters: fromMaybe 10 pickupInstructionsProximityMeters|E
     initiateFirstMultimodalJourney: fromMaybe False initiateFirstMultimodalJourney|E
     nyRegularMinGapSeconds: fromMaybe 900 nyRegularMinGapSeconds|E
+    filterWalkAndUnspecifiedTransitModes: fromMaybe False filterWalkAndUnspecifiedTransitModes|E
 
   toTType:
     ivrTriggerDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
@@ -248,6 +251,7 @@ RiderConfig:
     pickupInstructionsProximityMeters: Just pickupInstructionsProximityMeters|E
     initiateFirstMultimodalJourney: Just initiateFirstMultimodalJourney|E
     nyRegularMinGapSeconds: Just nyRegularMinGapSeconds|E
+    filterWalkAndUnspecifiedTransitModes: Just filterWalkAndUnspecifiedTransitModes|E
 
   default:
     enableLocalPoliceSupport: "false"
@@ -282,6 +286,7 @@ RiderConfig:
     busTrackingConfig: '''{"maxScoreDistanceInMeters":15.0,"goodScoreDistanceInMeters":30.0,"fairScoreDistanceInMeters":45.0,"maxScore":10.0,"goodScore":7.0,"fairScore":4.0,"thresholdFactor":0.5,"thresholdSeconds":30.0,"movementThresholdInMeters":25.0}'''
     enableMultiModalForAllUsers: "false"
     initiateFirstMultimodalJourney: "false"
+    filterWalkAndUnspecifiedTransitModes: "false"
 
   queries:
     findByMerchantOperatingCityId:

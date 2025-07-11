@@ -50,6 +50,7 @@ data RiderConfig = RiderConfig
     fareCacheInterCitySearchLocations :: Kernel.Prelude.Maybe [Domain.Types.RentalsIntercityCache.IntercitySearchLocation],
     fareCacheRentalsConfig :: Kernel.Prelude.Maybe [Domain.Types.RentalsIntercityCache.RentalsConfig],
     feedbackAlertRatingThreshold :: Kernel.Prelude.Int,
+    filterWalkAndUnspecifiedTransitModes :: Kernel.Prelude.Bool,
     hardLimitForSafetyJobs :: Kernel.Prelude.Int,
     incidentReportSupport :: Kernel.Prelude.Bool,
     initiateFirstMultimodalJourney :: Kernel.Prelude.Bool,
