@@ -168,13 +168,16 @@ fetchLiveBusTimings ::
   Id MerchantOperatingCity ->
   m [RouteStopTimeTable]
 fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid mocid = do
-  allRouteWithBuses <- MultiModalBus.getBusesForRoutes routeCodes
-  routeStopTimes <- mapM processRoute allRouteWithBuses
-  let flattenedRouteStopTimes = concat routeStopTimes
   disableLiveBuses <- fromMaybe False . (>>= readMaybe) <$> (liftIO $ Se.lookupEnv "DISABLE_LIVE_BUSES")
-  logDebug $ "allRouteWithBuses: " <> show allRouteWithBuses <> " routeStopTimes: " <> show routeStopTimes <> " flattenedRouteStopTimes: " <> show flattenedRouteStopTimes <> " disableLiveBuses: " <> show disableLiveBuses
-  if not (null flattenedRouteStopTimes) && not disableLiveBuses
-    then return flattenedRouteStopTimes
+  if not disableLiveBuses
+    then do
+      allRouteWithBuses <- MultiModalBus.getBusesForRoutes routeCodes
+      routeStopTimes <- mapM processRoute allRouteWithBuses
+      let flattenedRouteStopTimes = concat routeStopTimes
+      logDebug $ "allRouteWithBuses: " <> show allRouteWithBuses <> " routeStopTimes: " <> show routeStopTimes <> " flattenedRouteStopTimes: " <> show flattenedRouteStopTimes <> " disableLiveBuses: " <> show disableLiveBuses
+      if not (null flattenedRouteStopTimes)
+        then return flattenedRouteStopTimes
+        else measureLatency (GRSM.findByRouteCodeAndStopCode integratedBppConfig mid mocid routeCodes stopCode) "fetch route stop timing through graphql"
     else measureLatency (GRSM.findByRouteCodeAndStopCode integratedBppConfig mid mocid routeCodes stopCode) "fetch route stop timing through graphql"
   where
     processRoute routeWithBuses = do

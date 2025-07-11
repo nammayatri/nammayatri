@@ -25,7 +25,6 @@ import qualified Domain.Types.Location as DLocation
 import qualified Domain.Types.LocationAddress as LA
 import Domain.Types.Merchant
 import qualified Domain.Types.Merchant as DMerchant
-import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.MultimodalPreferences as DMP
 import qualified Domain.Types.Person as DPerson
@@ -93,9 +92,8 @@ import Tools.Error
 import Tools.Maps as Maps
 import qualified Tools.MultiModal as TMultiModal
 
-filterTransitRoutes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv) => [MultiModalRoute] -> Id MerchantOperatingCity -> m [MultiModalRoute]
-filterTransitRoutes routes mocid = do
-  riderConfig <- QRiderConfig.findByMerchantOperatingCityId mocid Nothing >>= fromMaybeM (RiderConfigDoesNotExist mocid.getId)
+filterTransitRoutes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv) => Domain.Types.RiderConfig.RiderConfig -> [MultiModalRoute] -> m [MultiModalRoute]
+filterTransitRoutes riderConfig routes = do
   if riderConfig.enableBusFiltering == Just True
     then filterM filterBusRoutes routes
     else return routes
