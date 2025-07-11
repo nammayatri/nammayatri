@@ -747,8 +747,8 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking booking' = do
         then do
           void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED bookingId
           void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.REFUND_PENDING bookingId
-          paymentBooking <- B.runInReplica $ QFRFSTicketBookingPayment.findNewTBPByBookingId bookingId >>= fromMaybeM (InvalidRequest "Payment booking not found for approved TicketBookingId")
-          paymentOrder <- QPaymentOrder.findById paymentBooking.paymentOrderId >>= fromMaybeM (InvalidRequest "Payment order not found for approved TicketBookingId")
+          -- paymentBooking <- B.runInReplica $ QFRFSTicketBookingPayment.findNewTBPByBookingId bookingId >>= fromMaybeM (InvalidRequest "Payment booking not found for approved TicketBookingId")
+          -- paymentOrder <- QPaymentOrder.findById paymentBooking.paymentOrderId >>= fromMaybeM (InvalidRequest "Payment order not found for approved TicketBookingId")
           -- refundOrderCall booking person paymentOrder
           let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.FAILED Nothing Nothing
           buildFRFSTicketBookingStatusAPIRes updatedBooking paymentFailed
@@ -925,7 +925,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking booking' = do
         [] -> throwError $ InvalidRequest "No successful transaction found"
         [transaction] -> return transaction.id
         _ -> throwError $ InvalidRequest "Multiple successful transactions found"
-    refundOrderCall booking person _paymentOrder = do
+    _refundOrderCall booking person _paymentOrder = do
       journeyId <- booking.journeyId & fromMaybeM (InvalidRequest "Journey id not found")
       allJourneyFrfsBookings <- QFRFSTicketBooking.findAllByJourneyId (Just journeyId)
       let allMarked = all ((== DFRFSTicketBooking.REFUND_INITIATED) . (.status)) allJourneyFrfsBookings
