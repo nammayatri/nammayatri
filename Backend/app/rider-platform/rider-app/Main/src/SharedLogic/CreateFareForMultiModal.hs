@@ -69,12 +69,15 @@ createVendorSplitFromBookings ::
   Id DMOC.MerchantOperatingCity ->
   Payment.PaymentServiceType ->
   m ([Payment.VendorSplitDetails], HighPrecMoney)
-createVendorSplitFromBookings allJourneyBookings merchantId merchantOperatingCityId paymentType = do
+createVendorSplitFromBookings allJourneyBookings merchantId merchantOperatingCityId paymentType isFRFSTestingEnabled = do
   let (amount, vehicleTypeList) =
-        foldl
-          (\(accAmt, accVehicles) item -> (accAmt + item.price.amount, item.vehicleType : accVehicles))
-          (0.0, [])
-          allJourneyBookings
+        if isFRFSTestingEnabled
+          then foldl (\(accAmt, accVehicles) item -> (accAmt + 1.0, item.vehicleType : accVehicles)) (0.0, []) allJourneyBookings
+          else
+            foldl
+              (\(accAmt, accVehicles) item -> (accAmt + item.price.amount, item.vehicleType : accVehicles))
+              (0.0, [])
+              allJourneyBookings
   isSplitEnabled <- Payment.getIsSplitEnabled merchantId merchantOperatingCityId Nothing paymentType
   let booking = listToMaybe allJourneyBookings
   case booking of
@@ -88,7 +91,7 @@ createVendorSplitFromBookings allJourneyBookings merchantId merchantOperatingCit
               vehicleTypeList
           vendorSplitDetailsList <- mapM (QVendorSplitDetails.findAllByIntegratedBPPConfigId . (.id)) (concat integratedBPPConfigList)
           vendorSplitDetailsListToIncludeInSplit <- QVendorSplitDetails.findAllByMerchantOperatingCityIdAndIncludeInSplit (Just booking'.merchantOperatingCityId) (Just True)
-          vendorSplitDetails <- convertVendorDetails (concat vendorSplitDetailsList ++ vendorSplitDetailsListToIncludeInSplit) allJourneyBookings
+          vendorSplitDetails <- convertVendorDetails (concat vendorSplitDetailsList ++ vendorSplitDetailsListToIncludeInSplit) allJourneyBookings isFRFSTestingEnabled
           return (vendorSplitDetails, amount)
         else return ([], amount)
     Nothing -> return ([], 0.0)
@@ -101,24 +104,25 @@ convertVendorDetails ::
   ) =>
   [VendorSplitDetails.VendorSplitDetails] ->
   [FTBooking.FRFSTicketBooking] ->
+  Bool ->
   m [Payment.VendorSplitDetails]
-convertVendorDetails vendorDetails bookings = do
+convertVendorDetails vendorDetails bookings isFRFSTestingEnabled = do
   let vendorDetailsMap = Map.fromList [(vd.integratedBPPConfigId, vd) | vd <- vendorDetails]
       requiredVendors = filter (\vd -> fromMaybe False vd.includeInSplit) vendorDetails
-      validVendorSplitDetails = mapMaybe (createVendorSplitForBooking vendorDetailsMap) bookings
+      validVendorSplitDetails = mapMaybe (createVendorSplitForBooking vendorDetailsMap isFRFSTestingEnabled) bookings
       finalSplits =
         ensureAllRequiredVendorsExist requiredVendors validVendorSplitDetails
   logInfo $ "finalSplits" <> show finalSplits
   return finalSplits
   where
-    createVendorSplitForBooking vendorDetailsMap booking = do
+    createVendorSplitForBooking vendorDetailsMap booking isFRFSTestingEnabled = do
       case Map.lookup booking.integratedBppConfigId vendorDetailsMap of
         Just vd -> Just $ toPaymentVendorDetails vd booking
         Nothing -> Nothing
 
-    toPaymentVendorDetails vd booking =
+    toPaymentVendorDetails vd booking isFRFSTestingEnabled =
       Payment.VendorSplitDetails
-        { splitAmount = booking.price.amount,
+        { splitAmount = if isFRFSTestingEnabled then (1 :: HighPrecMoney) else booking.price.amount,
           splitType = vendorSplitDetailSplitTypeToPaymentSplitType vd.splitType,
           vendorId = vd.vendorId,
           ticketId = Just $ booking.id.getId
