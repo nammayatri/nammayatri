@@ -468,7 +468,7 @@ multiModalSearch searchRequest riderConfig initateJourney forkInitiateFirstJourn
           MultiModalTypes.Unspecified -> do
             routeDetails <- calculateDistanceAndRoutes riderConfig searchRequest.merchantId searchRequest.merchantOperatingCityId searchRequest.riderId searchRequest.id [Maps.LatLong {lat = leg.startLocation.latLng.latitude, lon = leg.startLocation.latLng.longitude}, Maps.LatLong {lat = leg.endLocation.latLng.latitude, lon = leg.endLocation.latLng.longitude}]
             let correctedLeg :: MultiModalTypes.MultiModalLeg
-                correctedLeg = leg {distance = fromMaybe leg.distance ((convertMetersToDistance merchantOperatingCity.distanceUnit <$> routeDetails.shortestRouteDistance))}
+                correctedLeg = leg {distance = fromMaybe leg.distance ((convertMetersToDistance merchantOperatingCity.distanceUnit <$> routeDetails.shortestRouteDistance)), duration = fromMaybe leg.duration routeDetails.shortestRouteDuration}
             return (correctedLeg, Just (idx, routeDetails))
           _ -> return (leg, Nothing)
 
