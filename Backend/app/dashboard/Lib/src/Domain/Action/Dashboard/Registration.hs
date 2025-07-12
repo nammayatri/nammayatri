@@ -130,6 +130,7 @@ login LoginReq {..} = do
   checkSlidingWindowLimitWithOptions (makeEmailHitsCountKey email) sendEmailRateLimitOptions
   email_ <- email & fromMaybeM (InvalidRequest "Email cannot be empty when login type is email")
   person <- QP.findByEmailAndPassword email_ password >>= fromMaybeM (PersonDoesNotExist email_)
+  now <- getCurrentTime
   merchantAccessList <- B.runInReplica $ QAccess.findAllMerchantAccessByPersonId person.id
   (merchant', city') <- case merchantAccessList of
     [] -> throwError (InvalidRequest "No access to any merchant")
@@ -139,6 +140,15 @@ login LoginReq {..} = do
       let merchantIds = map DAccess.merchantShortId $ map head groupedByMerchant
       merchants <- QMerchant.findAllByShortIds merchantIds
       let enabledMerchants = filter (\merchant -> merchant.enabled == Just True) merchants
+      forM_ enabledMerchants $ \merchant' ->
+        case merchant'.passwordExpiryDays of
+          Just days -> do
+            let updatedAt = person.updatedAt
+                secondsSinceUpdate = diffUTCTime now updatedAt
+                expiryLimit = fromIntegral days * 86400
+            when (secondsSinceUpdate > expiryLimit) $
+              throwError $ InvalidRequest "Your password has expired. Please check with admin."
+          Nothing -> pure ()
       case enabledMerchants of
         [] -> throwError (InvalidRequest "Account deactivated. Please check with Admin")
         _ -> do

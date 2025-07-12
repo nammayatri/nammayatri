@@ -141,7 +141,9 @@ buildMerchant req = do
         createdAt = now,
         requireAdminApprovalForFleetOnboarding = Just False,
         verifyFleetWhileLogin = Just True,
-        hasFleetMemberHierarchy = Just True
+        hasFleetMemberHierarchy = Just True,
+        enforceStrongPasswordPolicy = Just False,
+        passwordExpiryDays = Nothing
       }
 
 changeMerchantEnableState ::
