@@ -93,6 +93,7 @@ import qualified Storage.Queries.Ride as QR
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Auth
 import Tools.Error
+import qualified Tools.Maps as Maps
 import qualified Tools.MultiModal as TMultiModal
 
 -------- Search Flow --------
@@ -215,7 +216,7 @@ handleBookingCancellation merchantId _personId sReqId = do
     _ -> pure ()
 
 multimodalSearchHandler :: (Id Person.Person, Id Merchant.Merchant) -> DSearch.SearchReq -> Maybe Bool -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe (Id DC.Client) -> Maybe Text -> Maybe Bool -> Maybe Text -> FlowHandler MultimodalSearchResp
-multimodalSearchHandler (personId, _merchantId) req mbInitateJourney mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice mbIsDashboardRequest mbImeiNumber = withFlowHandlerAPI $
+multimodalSearchHandler (personId, _merchantId) req mbInitiateJourney mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice mbIsDashboardRequest mbImeiNumber = withFlowHandlerAPI $
   withPersonIdLogTag personId $ do
     checkSearchRateLimit personId
     fork "updating person versions" $ updateVersions personId mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice
@@ -224,11 +225,11 @@ multimodalSearchHandler (personId, _merchantId) req mbInitateJourney mbBundleVer
       Person.updateImeiNumber (Just encryptedImeiNumber) personId
     dSearchRes <- DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice (fromMaybe False mbIsDashboardRequest) Nothing True
     riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow dSearchRes.searchRequest.merchantOperatingCityId dSearchRes.searchRequest.configInExperimentVersions >>= fromMaybeM (RiderConfigNotFound dSearchRes.searchRequest.merchantOperatingCityId.getId)
-    let initateJourney = fromMaybe False mbInitateJourney
-    multiModalSearch dSearchRes.searchRequest riderConfig initateJourney False req personId
+    let initiateJourney = fromMaybe False mbInitiateJourney
+    multiModalSearch dSearchRes.searchRequest riderConfig initiateJourney False req personId
 
 multiModalSearch :: SearchRequest.SearchRequest -> DRC.RiderConfig -> Bool -> Bool -> DSearch.SearchReq -> Id Person.Person -> Flow MultimodalSearchResp
-multiModalSearch searchRequest riderConfig initateJourney forkInitiateFirstJourney req' personId = do
+multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJourney req' personId = do
   now <- getCurrentTime
   userPreferences <- DMC.getMultimodalUserPreferences (Just searchRequest.riderId, searchRequest.merchantId)
   let req = DSearch.extractSearchDetails now req'
@@ -380,7 +381,7 @@ multiModalSearch searchRequest riderConfig initateJourney forkInitiateFirstJourn
   mbCrisSdkToken <- getCrisSdkToken merchantOperatingCityId journeys
   let mbFirstJourney = listToMaybe (fromMaybe [] journeys)
   firstJourneyInfo <-
-    if initateJourney
+    if initiateJourney
       then do
         case mbJourneyWithIndex of
           Just (idx, firstJourney) -> do
@@ -430,13 +431,14 @@ multiModalSearch searchRequest riderConfig initateJourney forkInitiateFirstJourn
 
     processRoute :: MultiModalTypes.MultiModalRoute -> ApiTypes.MultimodalUserPreferences -> Flow (Maybe Journey.Journey)
     processRoute r userPreferences = do
+      legs' <- mapM calculateLegProportionalDuration r.legs
       let initReq =
             JMTypes.JourneyInitData
               { parentSearchId = searchRequest.id,
                 merchantId = searchRequest.merchantId,
                 merchantOperatingCityId = searchRequest.merchantOperatingCityId,
                 personId = searchRequest.riderId,
-                legs = r.legs,
+                legs = legs',
                 estimatedDistance = r.distance,
                 estimatedDuration = r.duration,
                 startTime = r.startTime,
@@ -446,6 +448,45 @@ multiModalSearch searchRequest riderConfig initateJourney forkInitiateFirstJourn
                 relevanceScore = r.relevanceScore
               }
       JM.init initReq userPreferences
+    -- Calculate proportional duration only for Walk and Unspecified legs
+    calculateLegProportionalDuration :: MultiModalTypes.MultiModalLeg -> Flow MultiModalTypes.MultiModalLeg
+    calculateLegProportionalDuration leg = do
+      let totalEstimatedDuration = fromMaybe (Seconds 0) searchRequest.estimatedRideDuration
+          totalEstimatedDistance = fromMaybe (Distance 0 Meter) searchRequest.distance
+      case leg.mode of
+        MultiModalTypes.Walk ->
+          if (distanceToMeters leg.distance) > riderConfig.maximumWalkDistance
+            then do
+              -- Call OSRM for taxi/auto (car) distance/duration
+              distResp <-
+                Maps.getMultimodalWalkDistance searchRequest.merchantId searchRequest.merchantOperatingCityId (Just searchRequest.id.getId) $
+                  Maps.GetDistanceReq
+                    { origin = Maps.LatLong {lat = leg.startLocation.latLng.latitude, lon = leg.startLocation.latLng.longitude},
+                      destination = Maps.LatLong {lat = leg.endLocation.latLng.latitude, lon = leg.endLocation.latLng.longitude},
+                      travelMode = Just Maps.CAR,
+                      sourceDestinationMapping = Nothing,
+                      distanceUnit = Meter
+                    }
+              let newDistance = convertMetersToDistance Meter distResp.distance
+              let newDuration = distResp.duration
+              return (leg {distance = newDistance, duration = newDuration} :: MultiModalTypes.MultiModalLeg)
+            else return leg
+        MultiModalTypes.Unspecified -> return $ updateDuration totalEstimatedDuration totalEstimatedDistance leg
+        _ -> return leg -- Skip other modes
+      where
+        updateDuration :: Seconds -> Distance -> MultiModalTypes.MultiModalLeg -> MultiModalTypes.MultiModalLeg
+        updateDuration totalEstimatedDuration totalEstimatedDistance leg' =
+          let legDistance = leg.distance
+              proportionalDuration =
+                if totalEstimatedDistance > Distance 0 Meter
+                  then
+                    let totalSecs = fromIntegral totalEstimatedDuration.getSeconds :: Double
+                        legMeters = fromIntegral (distanceToMeters legDistance) :: Double
+                        totalMeters = fromIntegral (distanceToMeters totalEstimatedDistance) :: Double
+                        propSecs = if totalMeters > 0 then totalSecs * legMeters / totalMeters else 0
+                     in Seconds $ round propSecs
+                  else leg.duration
+           in leg' {duration = proportionalDuration}
 
     eitherWalkOrSingleMode :: BecknV2.OnDemand.Enums.VehicleCategory -> MultiModalTypes.MultiModalLeg -> Bool
     eitherWalkOrSingleMode selectedMode leg = isLegModeIn [MultiModalTypes.Walk, MultiModalTypes.Unspecified, castVehicleCategoryToGeneralVehicleType selectedMode] leg
