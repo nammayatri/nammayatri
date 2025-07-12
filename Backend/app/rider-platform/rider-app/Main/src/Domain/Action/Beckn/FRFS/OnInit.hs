@@ -99,9 +99,8 @@ onInit onInitReq merchant booking_ = do
           (orderId, orderShortId) <- getPaymentIds
           ticketBookingPayments <- processPayments orderId `mapM` allJourneyBookings
           let paymentType = Payment.FRFSMultiModalBooking
-          (_vendorSplitDetails, amount) <- createVendorSplitFromBookings allJourneyBookings merchant.id person.merchantOperatingCityId paymentType
-          let amt :: HighPrecMoney = if isMetroTestTransaction && frfsConfig.isFRFSTestingEnabled then 1 else amount
-          mCreateOrderRes <- createPayments booking.merchantOperatingCityId merchant.id orderId orderShortId amt person paymentType _vendorSplitDetails -- paymentVendorSplitDetailsList
+          (_vendorSplitDetails, amount) <- createVendorSplitFromBookings allJourneyBookings merchant.id person.merchantOperatingCityId paymentType (isMetroTestTransaction && frfsConfig.isFRFSTestingEnabled)
+          mCreateOrderRes <- createPayments booking.merchantOperatingCityId merchant.id orderId orderShortId amount person paymentType _vendorSplitDetails -- paymentVendorSplitDetailsList
           logInfo $ "Order created in onInit for journeyId" <> show journeyId <> show mCreateOrderRes
           case mCreateOrderRes of
             Just _ -> do
