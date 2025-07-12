@@ -70,6 +70,7 @@ triggerSubscriptionSearch subscription = do
       False -- isDashboardRequest
       Nothing -- journeySearchData
       False -- isMeterRide
+      Nothing -- mbPreCalculatedRouteData
   return searchResp.searchRequest.id
 
 toSearchReqLocation :: Location.Location -> SearchReqLocation

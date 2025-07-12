@@ -21,7 +21,8 @@ data TaxiLegRequestSearchData = TaxiLegRequestSearchData
   { parentSearchReq :: DSR.SearchRequest,
     journeyLegData :: DJourneyLeg.JourneyLeg,
     origin :: SearchReqLocation,
-    stops :: [SearchReqLocation]
+    stops :: [SearchReqLocation],
+    preCalculatedRouteData :: Maybe RouteDetails
   }
 
 data TaxiLegRequestConfirmData = TaxiLegRequestConfirmData

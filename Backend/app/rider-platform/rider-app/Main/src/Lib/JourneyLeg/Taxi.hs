@@ -8,7 +8,6 @@ import qualified Beckn.ACL.Cancel as ACL
 import qualified Beckn.ACL.Search as TaxiACL
 import Data.Aeson
 import Data.List (sortBy)
-import Data.Maybe ()
 import Data.Ord (comparing)
 import qualified Data.Text as T
 import Domain.Action.UI.Cancel as DCancel
@@ -53,6 +52,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
         False
         (Just journeySearchData)
         False
+        preCalculatedRouteData
     QJourneyLeg.updateDistanceAndDuration (convertMetersToDistance Meter <$> dSearchRes.distance) dSearchRes.duration journeyLegData.id
     fork "search cabs" . withShortRetry $ do
       becknTaxiReqV2 <- TaxiACL.buildSearchReqV2 dSearchRes

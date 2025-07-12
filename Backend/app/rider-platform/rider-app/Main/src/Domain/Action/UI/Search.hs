@@ -248,6 +248,7 @@ extractSearchDetails now = \case
 #         => create entry in frfs search table with along with parent search id (multi-modal parent search id)
 #     => also make a first and last miles search to BPP with parent search id as above search id (multi-modal parent search id)
 -}
+-- Unified search function: handles all search types, including reserved rides and meter rides, and integrates with NyRegularSubscription if needed.
 search ::
   SearchRequestFlow m r =>
   Id Person.Person ->
@@ -261,8 +262,9 @@ search ::
   Bool ->
   Maybe JPT.JourneySearchData ->
   Bool ->
+  Maybe RouteDetails ->
   m SearchRes
-search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion clientId device isDashboardRequest_ journeySearchData justMultimodalSearch = do
+search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion clientId device isDashboardRequest_ journeySearchData justMultimodalSearch mbPreCalculatedRouteInfo = do
   now <- getCurrentTime
   let SearchDetails {..} = extractSearchDetails now req
   let isReservedRideSearch = case req of
@@ -299,7 +301,12 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
     throwError (InvalidRequest $ "Only meter dummy guy is allowed to do this")
   configVersionMap <- getConfigVersionMapForStickiness (cast merchantOperatingCityId)
   riderCfg <- QRC.findByMerchantOperatingCityIdInRideFlow merchantOperatingCityId configVersionMap >>= fromMaybeM (RiderConfigNotFound merchantOperatingCityId.getId)
-  RouteDetails {..} <- getRouteDetails person merchant merchantOperatingCity searchRequestId stopsLatLong now sourceLatLong roundTrip originCity riderCfg isMeterRide req
+
+  -- Use pre-calculated route data if present, otherwise call Google Maps
+  RouteDetails {..} <- case mbPreCalculatedRouteInfo of
+    Just routeDetails -> return routeDetails
+    Nothing -> getRouteDetails person merchant merchantOperatingCity searchRequestId stopsLatLong now sourceLatLong roundTrip originCity riderCfg isMeterRide req
+
   fromLocation <- buildSearchReqLoc merchant.id merchantOperatingCityId origin
   stopLocations <- buildSearchReqLoc merchant.id merchantOperatingCityId `mapM` stops
   let driverIdentifier' = driverIdentifier_ <|> (person.referralCode >>= \refCode -> bool Nothing (mkDriverIdentifier refCode) $ shouldPriortiseDriver person riderCfg refCode)

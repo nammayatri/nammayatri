@@ -25,6 +25,7 @@ module Domain.Action.UI.MultimodalConfirm
     postMultimodalOrderSublegSetStatus,
     postMultimodalTicketVerify,
     postMultimodalComplete,
+    postMultimodalInitiateWithRouteDetails,
   )
 where
 
@@ -75,6 +76,7 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified SharedLogic.CreateFareForMultiModal as SMMFRFS
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
+import qualified SharedLogic.Search as Search
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.BecknConfig as QBC
@@ -96,6 +98,25 @@ import Tools.Error
 import Tools.MultiModal as MM
 import qualified Tools.Payment as TPayment
 
+postMultimodalInitiateGeneric ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
+    Maybe (Map Int Search.RouteDetails) ->
+    Environment.Flow ApiTypes.JourneyInfoResp
+  )
+postMultimodalInitiateGeneric (_personId, _merchantId) journeyId routeMap = do
+  Redis.withLockRedisAndReturnValue lockKey 60 $ do
+    journeyLegs <- getJourneyLegs journeyId
+    addAllLegs journeyId journeyLegs routeMap
+    journey <- JM.getJourney journeyId
+    JM.updateJourneyStatus journey Domain.Types.Journey.INITIATED
+    legs <- JM.getAllLegsInfo journeyId False
+    generateJourneyInfoResponse journey legs
+  where
+    lockKey = "infoLock-" <> journeyId.getId
+
 postMultimodalInitiate ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
@@ -103,16 +124,18 @@ postMultimodalInitiate ::
     Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
     Environment.Flow ApiTypes.JourneyInfoResp
   )
-postMultimodalInitiate (_personId, _merchantId) journeyId = do
-  Redis.withLockRedisAndReturnValue lockKey 60 $ do
-    journeyLegs <- getJourneyLegs journeyId
-    addAllLegs journeyId journeyLegs
-    journey <- JM.getJourney journeyId
-    JM.updateJourneyStatus journey Domain.Types.Journey.INITIATED
-    legs <- JM.getAllLegsInfo journeyId False
-    generateJourneyInfoResponse journey legs
-  where
-    lockKey = "infoLock-" <> journeyId.getId
+postMultimodalInitiate auth journeyId =
+  postMultimodalInitiateGeneric auth journeyId Nothing
+
+postMultimodalInitiateWithRouteDetails ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
+    Maybe (Map Int Search.RouteDetails) ->
+    Environment.Flow ApiTypes.JourneyInfoResp
+  )
+postMultimodalInitiateWithRouteDetails = postMultimodalInitiateGeneric
 
 postMultimodalConfirm ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

@@ -7,6 +7,7 @@ import qualified BecknV2.FRFS.Enums as Spec
 import Control.Monad.Extra (mapMaybeM)
 import Data.List (sortBy)
 import Data.List.NonEmpty (nonEmpty)
+import qualified Data.Map as Map
 import Data.Ord (comparing)
 import qualified Data.Time as Time
 import Domain.Action.UI.EditLocation as DEditLocation
@@ -209,7 +210,7 @@ getAllLegsInfo journeyId skipAddLegFallback = do
               if skipAddLegFallback
                 then return Nothing
                 else do
-                  addAllLegs journeyId [leg]
+                  addAllLegs journeyId [leg] Nothing
                   updatedLeg <- QJourneyLeg.findByPrimaryKey leg.id >>= fromMaybeM (JourneyLegNotFound leg.id.getId)
                   legSearchIdText' <- updatedLeg.legSearchId & fromMaybeM (JourneyLegSearchIdNotFound leg.journeyId.getId leg.sequenceNumber)
                   getLegInfo updatedLeg legSearchIdText'
@@ -339,7 +340,7 @@ getAllLegsStatus journey = do
             )
         Nothing -> do
           logError $ "LegId is null for JourneyLeg: " <> show leg.journeyId <> " JourneyLegId: " <> show leg.id
-          addAllLegs journey.id [leg] -- try to add the leg again
+          addAllLegs journey.id [leg] Nothing -- try to add the leg again
           updatedLeg <- QJourneyLeg.findByPrimaryKey leg.id >>= fromMaybeM (JourneyLegNotFound leg.id.getId)
           case updatedLeg.legSearchId of
             Just _ -> do
@@ -459,8 +460,9 @@ addAllLegs ::
   ) =>
   Id DJourney.Journey ->
   [DJourneyLeg.JourneyLeg] ->
+  Maybe (Map.Map Int RouteDetails) -> -- NEW: Pre-calculated route data from Google Maps
   m ()
-addAllLegs journeyId journeyLegs = do
+addAllLegs journeyId journeyLegs mbPreCalculatedRouteData = do
   journey <- getJourney journeyId
   parentSearchReq <- QSearchRequest.findById journey.searchRequestId >>= fromMaybeM (SearchRequestNotFound journey.searchRequestId.getId)
   oldLegs <- getJourneyLegs journeyId
@@ -473,10 +475,11 @@ addAllLegs journeyId journeyLegs = do
       searchResp <-
         case journeyLeg.mode of
           DTrip.Taxi -> do
+            let routeDetails = mbPreCalculatedRouteData >>= (Map.lookup (journeyLeg.sequenceNumber))
             snappedLeg <- snapJourneyLegToNearestGate journeyLeg
             let originAddress = mkAddress (mbPrevJourneyLeg >>= (.toStopDetails)) parentSearchReq.fromLocation.address
             let destinationAddress = mkAddress (mbNextJourneyLeg >>= (.fromStopDetails)) toLocation.address
-            addTaxiLeg parentSearchReq snappedLeg originAddress destinationAddress
+            addTaxiLeg parentSearchReq snappedLeg originAddress destinationAddress routeDetails
           DTrip.Metro -> do
             addMetroLeg parentSearchReq journeyLeg
           DTrip.Subway -> do
@@ -573,18 +576,20 @@ addTaxiLeg ::
   DJourneyLeg.JourneyLeg ->
   LA.LocationAddress ->
   LA.LocationAddress ->
+  Maybe RouteDetails -> -- NEW: Pre-calculated route data from Google Maps
   m JL.SearchResponse
-addTaxiLeg parentSearchReq journeyLeg originAddress destinationAddress = do
+addTaxiLeg parentSearchReq journeyLeg originAddress destinationAddress mbPreCalculatedRouteData = do
   let startLocation = JL.mkSearchReqLocation originAddress journeyLeg.startLocation
   let endLocation = JL.mkSearchReqLocation destinationAddress journeyLeg.endLocation
-  let taxiSearchReq = mkTaxiSearchReq startLocation [endLocation]
+  let taxiSearchReq = mkTaxiSearchReq startLocation [endLocation] mbPreCalculatedRouteData
   JL.search taxiSearchReq
   where
-    mkTaxiSearchReq :: SearchReqLocation -> [SearchReqLocation] -> TaxiLegRequest
-    mkTaxiSearchReq origin stops =
+    mkTaxiSearchReq :: SearchReqLocation -> [SearchReqLocation] -> Maybe RouteDetails -> TaxiLegRequest
+    mkTaxiSearchReq origin stops preCalculatedRouteData =
       TaxiLegRequestSearch $
         TaxiLegRequestSearchData
           { journeyLegData = journeyLeg,
+            preCalculatedRouteData = preCalculatedRouteData, -- NEW: Pass the pre-calculated route data
             ..
           }
 
@@ -928,7 +933,7 @@ addSkippedLeg journeyId legOrder = do
 
   exep <- try @_ @SomeException $ do
     QJourneyLeg.updateIsSkipped (Just False) skippedLeg.legSearchId
-    addAllLegs journeyId [skippedLeg {DJourneyLeg.isSkipped = Just False, DJourneyLeg.legSearchId = Nothing}]
+    addAllLegs journeyId [skippedLeg {DJourneyLeg.isSkipped = Just False, DJourneyLeg.legSearchId = Nothing}] Nothing
   case exep of
     Left _ -> do
       -- Rollback operations
@@ -1149,7 +1154,7 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
             else QJourneyLeg.updateIsDeleted (Just True) (Just currLeg.searchId)
         QJourneyLeg.create journeyLeg
         updateJourneyChangeLogCounter journeyId
-        searchResp <- addTaxiLeg parentSearchReq journeyLeg startLocationAddress (mkLocationAddress endLocation)
+        searchResp <- addTaxiLeg parentSearchReq journeyLeg startLocationAddress (mkLocationAddress endLocation) Nothing
         QJourneyLeg.updateLegSearchId (Just searchResp.id) journeyLeg.id
         when (currentLeg.status /= JL.InPlan) $
           fork "Start journey thread" $ withShortRetry $ startJourney [] Nothing journeyId
@@ -1174,7 +1179,7 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
       withJourneyUpdateInProgress journeyId $ do
         cancelRequiredLegs
         QJourneyLeg.create journeyLeg
-        searchResp <- addTaxiLeg parentSearchReq journeyLeg (mkLocationAddress startlocation.location) (mkLocationAddress endLocation)
+        searchResp <- addTaxiLeg parentSearchReq journeyLeg (mkLocationAddress startlocation.location) (mkLocationAddress endLocation) Nothing
         QJourneyLeg.updateLegSearchId (Just searchResp.id) journeyLeg.id
         startJourney [] (Just currentLeg.order) journeyId
 
@@ -1480,7 +1485,7 @@ switchLeg journeyId req = do
   Redis.whenWithLockRedis lockKey 5 $ do
     cancelLeg legData (SCR.CancellationReasonCode "") False False
     newJourneyLeg <- createJourneyLegFromCancelledLeg journeyLeg req.newMode startLocation newDistance newDuration
-    addAllLegs journeyId [newJourneyLeg]
+    addAllLegs journeyId [newJourneyLeg] Nothing
     when (legData.status /= JL.InPlan) $
       fork "Start journey thread" $ withShortRetry $ startJourney [] Nothing journeyId
 
