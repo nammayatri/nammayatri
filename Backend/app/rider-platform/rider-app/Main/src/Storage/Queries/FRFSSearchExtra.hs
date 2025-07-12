@@ -65,6 +65,12 @@ updateSkipBooking (Id reqId) skipBooking = do
     [Se.Set Beam.skipBooking skipBooking]
     [Se.Is Beam.id (Se.Eq reqId)]
 
+updateIsCompleted :: (MonadFlow m, EsqDBFlow m r) => Id FRFSSearch -> Maybe Bool -> m ()
+updateIsCompleted (Id reqId) isCompleted = do
+  updateOneWithKV
+    [Se.Set Beam.isCompleted isCompleted]
+    [Se.Is Beam.id (Se.Eq reqId)]
+
 updateIsCancelled :: (MonadFlow m, EsqDBFlow m r) => Id FRFSSearch -> Maybe Bool -> m ()
 updateIsCancelled (Id reqId) isDeleted = do
   updateOneWithKV

@@ -37,6 +37,7 @@ imports:
   RecentLocation: Domain.Types.RecentLocation
   DayOfWeek: Data.Time
   CrisSearchData: Lib.JourneyLeg.Types
+  RouteStopTimeTable: Domain.Types.RouteStopTimeTable
 
 FRFSSearch:
   tableName: frfs_search
@@ -73,6 +74,7 @@ FRFSSearch:
       journeyId: Maybe Text
       agency: Maybe Text
       skipBooking: Maybe Bool
+      isCompleted: Maybe Bool
       convenienceCost: Maybe Int
       pricingId: Maybe Text
       isDeleted: Maybe Bool
@@ -84,6 +86,7 @@ FRFSSearch:
     journeyId: Kernel.Prelude.fmap (.journeyId)|I
     agency: (journeyLegInfo >>= (.agency))|E
     skipBooking: Kernel.Prelude.fmap (.skipBooking)|I
+    isCompleted: (journeyLegInfo >>= (.isCompleted))|E
     convenienceCost: Kernel.Prelude.fmap (.convenienceCost)|I
     pricingId: (journeyLegInfo >>= (.pricingId))|E
     isDeleted: (journeyLegInfo >>= (.isDeleted))|E
@@ -362,7 +365,7 @@ FRFSTicketBooking:
 
   types:
     FRFSTicketBookingStatus:
-      enum: "NEW, APPROVED, PAYMENT_PENDING, CONFIRMING, FAILED, CONFIRMED, CANCELLED, COUNTER_CANCELLED, CANCEL_INITIATED, TECHNICAL_CANCEL_REJECTED"
+      enum: "NEW, APPROVED, PAYMENT_PENDING, CONFIRMING, FAILED, CONFIRMED, CANCELLED, COUNTER_CANCELLED, CANCEL_INITIATED, TECHNICAL_CANCEL_REJECTED, REFUND_INITIATED"
     CashbackStatus:
       enum: "PENDING, PROCESSING, SUCCESSFUL, CASHBACK_FAILED, MANUAL_VERIFICATION"
 
@@ -514,7 +517,7 @@ FRFSTicket:
 
   types:
     FRFSTicketStatus:
-      enum: "ACTIVE, EXPIRED, USED, CANCELLED, COUNTER_CANCELLED, CANCEL_INITIATED, TECHNICAL_CANCEL_REJECTED, FAILED"
+      enum: "ACTIVE, EXPIRED, USED, CANCELLED, COUNTER_CANCELLED, CANCEL_INITIATED, TECHNICAL_CANCEL_REJECTED, REFUND_INITIATED"
 
   constraints:
     id: PrimaryKey

@@ -100,7 +100,8 @@ instance JT.JourneyLeg TaxiLegRequest m where
             convenienceCost = 0,
             pricingId = Nothing,
             isDeleted = Just False,
-            onSearchFailed = Nothing
+            onSearchFailed = Nothing,
+            isCompleted = Just False
           }
   search _ = throwError (InternalError "Not Supported")
 
