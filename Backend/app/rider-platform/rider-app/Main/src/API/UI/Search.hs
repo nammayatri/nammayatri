@@ -457,19 +457,25 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
         MultiModalTypes.Walk ->
           if (distanceToMeters leg.distance) > riderConfig.maximumWalkDistance
             then do
-              -- Call OSRM for taxi/auto (car) distance/duration
-              distResp <-
-                Maps.getMultimodalWalkDistance searchRequest.merchantId searchRequest.merchantOperatingCityId (Just searchRequest.id.getId) $
-                  Maps.GetDistanceReq
-                    { origin = Maps.LatLong {lat = leg.startLocation.latLng.latitude, lon = leg.startLocation.latLng.longitude},
-                      destination = Maps.LatLong {lat = leg.endLocation.latLng.latitude, lon = leg.endLocation.latLng.longitude},
-                      travelMode = Just Maps.CAR,
-                      sourceDestinationMapping = Nothing,
-                      distanceUnit = Meter
-                    }
-              let newDistance = convertMetersToDistance Meter distResp.distance
-              let newDuration = distResp.duration
-              return (leg {distance = newDistance, duration = newDuration} :: MultiModalTypes.MultiModalLeg)
+              -- Call OSRM for taxi/auto (car) distance/duration, fallback to proportional duration if it fails
+              res <-
+                try @_ @SomeException $
+                  Maps.getMultimodalWalkDistance searchRequest.merchantId searchRequest.merchantOperatingCityId (Just searchRequest.id.getId) $
+                    Maps.GetDistanceReq
+                      { origin = Maps.LatLong {lat = leg.startLocation.latLng.latitude, lon = leg.startLocation.latLng.longitude},
+                        destination = Maps.LatLong {lat = leg.endLocation.latLng.latitude, lon = leg.endLocation.latLng.longitude},
+                        travelMode = Just Maps.CAR,
+                        sourceDestinationMapping = Nothing,
+                        distanceUnit = Meter
+                      }
+              case res of
+                Right distResp -> do
+                  let newDistance = convertMetersToDistance Meter distResp.distance
+                  let newDuration = distResp.duration
+                  return (leg {distance = newDistance, duration = newDuration} :: MultiModalTypes.MultiModalLeg)
+                Left err -> do
+                  logError $ "OSRM/Maps.getMultimodalWalkDistance failed: " <> show err <> ", falling back to proportional duration and distance" <> "latlong: " <> show (leg.startLocation.latLng.latitude, leg.startLocation.latLng.longitude) <> " " <> show (leg.endLocation.latLng.latitude, leg.endLocation.latLng.longitude)
+                  return $ updateDuration totalEstimatedDuration totalEstimatedDistance leg
             else return leg
         MultiModalTypes.Unspecified -> return $ updateDuration totalEstimatedDuration totalEstimatedDistance leg
         _ -> return leg -- Skip other modes
