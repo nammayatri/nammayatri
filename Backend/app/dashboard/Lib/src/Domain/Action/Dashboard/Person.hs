@@ -15,6 +15,7 @@
 module Domain.Action.Dashboard.Person where
 
 import Dashboard.Common
+import Data.Char (isDigit, isLower, isUpper)
 import Data.List (groupBy, nub, sortOn)
 import qualified Data.Text as T
 import qualified Domain.Types.AccessMatrix as DMatrix
@@ -339,28 +340,64 @@ resetMerchantCityAccess _ personId req = do
       pure Success
 
 changePassword ::
-  (BeamFlow m r, EncFlow m r) =>
+  ( BeamFlow m r,
+    EncFlow m r,
+    Redis.HedisFlow m r,
+    HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text],
+    HasFlowEnv m r '["enforceStrongPasswordPolicy" ::: Bool]
+  ) =>
   TokenInfo ->
   ChangePasswordReq ->
   m APISuccess
 changePassword tokenInfo req = do
   encPerson <- QP.findById tokenInfo.personId >>= fromMaybeM (PersonNotFound tokenInfo.personId.getId)
+  enforceStrongPasswordPolicy <- asks (.enforceStrongPasswordPolicy)
+  when enforceStrongPasswordPolicy $
+    validateStrongPassword req.newPassword
+
   newHash <- getDbHash req.newPassword
   let oldActual = encPerson.passwordHash
   oldProvided <- getDbHash req.oldPassword
   unless (oldActual == Just oldProvided) . throwError $ InvalidRequest "Old password is incorrect."
   QP.updatePersonPassword tokenInfo.personId newHash
+  -- Cleanup: delete auth token from cache and db to enforce re-authentication after password change
+  Auth.cleanCachedTokensByMerchantIdAndCity tokenInfo.personId tokenInfo.merchantId tokenInfo.city
+  QReg.deleteAllByPersonIdAndMerchantIdAndCity tokenInfo.personId tokenInfo.merchantId tokenInfo.city
   pure Success
 
 changePasswordAfterExpiry ::
-  (BeamFlow m r, EncFlow m r) =>
+  (BeamFlow m r, EncFlow m r, HasFlowEnv m r '["enforceStrongPasswordPolicy" ::: Bool]) =>
   ChangePasswordAfterExpiryReq ->
   m APISuccess
 changePasswordAfterExpiry req = do
   encPerson <- QP.findByEmailAndPassword req.email req.oldPassword >>= fromMaybeM (PersonDoesNotExist req.email)
+  enforceStrongPasswordPolicy <- asks (.enforceStrongPasswordPolicy)
+  when enforceStrongPasswordPolicy $
+    validateStrongPassword req.newPassword
   newHash <- getDbHash req.newPassword
   QP.updatePersonPassword encPerson.id newHash
   pure Success
+
+validateStrongPassword :: (BeamFlow m r) => Text -> m ()
+validateStrongPassword password = do
+  let pwd = T.unpack password
+      specialChars :: [Char]
+      specialChars = "!@#$%^&*()-_=+[]{}|;:',.<>?/`~"
+
+  unless (length pwd >= 10) $
+    throwError $ InvalidRequest "Password must be at least 10 characters long."
+
+  unless (any isUpper pwd) $
+    throwError $ InvalidRequest "Password must contain at least one uppercase letter."
+
+  unless (any isLower pwd) $
+    throwError $ InvalidRequest "Password must contain at least one lowercase letter."
+
+  unless (any isDigit pwd) $
+    throwError $ InvalidRequest "Password must contain at least one number."
+
+  unless (any (`elem` specialChars) pwd) $
+    throwError $ InvalidRequest "Password must contain at least one special character."
 
 buildMerchantAccess :: MonadFlow m => Id DP.Person -> Id DMerchant.Merchant -> ShortId DMerchant.Merchant -> City.City -> m DAccess.MerchantAccess
 buildMerchantAccess personId merchantId merchantShortId city = do
@@ -417,13 +454,16 @@ getAccessMatrix tokenInfo = do
   pure $ DMatrix.mkAccessMatrixRowAPIEntity accessMatrixItems role
 
 changePasswordByAdmin ::
-  (BeamFlow m r, EncFlow m r) =>
+  (BeamFlow m r, EncFlow m r, HasFlowEnv m r '["enforceStrongPasswordPolicy" ::: Bool]) =>
   TokenInfo ->
   Id DP.Person ->
   ChangePasswordByAdminReq ->
   m APISuccess
 changePasswordByAdmin _ personId req = do
   void $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  enforceStrongPasswordPolicy <- asks (.enforceStrongPasswordPolicy)
+  when enforceStrongPasswordPolicy $
+    validateStrongPassword req.newPassword
   newHash <- getDbHash req.newPassword
   QP.updatePersonPassword personId newHash
   pure Success
@@ -507,7 +547,8 @@ buildPerson req dashboardAccessType = do
         updatedAt = now,
         verified = Nothing,
         rejectionReason = Nothing,
-        rejectedAt = Nothing
+        rejectedAt = Nothing,
+        passwordUpdatedAt = Just now
       }
 
 data UpdatePersonReq = UpdatePersonReq

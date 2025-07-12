@@ -121,6 +121,7 @@ login ::
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text],
     HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]],
     HasFlowEnv m r '["sendEmailRateLimitOptions" ::: APIRateLimitOptions],
+    HasFlowEnv m r '["passwordExpiryDays" ::: Maybe Int],
     EncFlow m r
   ) =>
   LoginReq ->
@@ -130,6 +131,7 @@ login LoginReq {..} = do
   checkSlidingWindowLimitWithOptions (makeEmailHitsCountKey email) sendEmailRateLimitOptions
   email_ <- email & fromMaybeM (InvalidRequest "Email cannot be empty when login type is email")
   person <- QP.findByEmailAndPassword email_ password >>= fromMaybeM (PersonDoesNotExist email_)
+  Auth.checkPasswordExpiry person
   merchantAccessList <- B.runInReplica $ QAccess.findAllMerchantAccessByPersonId person.id
   (merchant', city') <- case merchantAccessList of
     [] -> throwError (InvalidRequest "No access to any merchant")
@@ -358,7 +360,8 @@ buildFleetOwner req pid roleId dashboardAccessType = do
         verified = Nothing,
         rejectionReason = Nothing,
         rejectedAt = Nothing,
-        dashboardType = DEFAULT_DASHBOARD
+        dashboardType = DEFAULT_DASHBOARD,
+        passwordUpdatedAt = Just now
       }
 
 validateFleetOwner :: Validate FleetRegisterReq

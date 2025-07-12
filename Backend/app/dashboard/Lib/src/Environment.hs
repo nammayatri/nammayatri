@@ -73,7 +73,9 @@ data AppCfg = AppCfg
     cacheConfig :: CacheConfig,
     cacConfig :: CacConfig,
     kafkaProducerCfg :: KafkaProducerCfg,
-    kvConfigUpdateFrequency :: Int
+    kvConfigUpdateFrequency :: Int,
+    passwordExpiryDays :: Maybe Int,
+    enforceStrongPasswordPolicy :: Bool
   }
   deriving (Generic, FromDhall)
 
@@ -119,7 +121,9 @@ data AppEnv = AppEnv
     requestId :: Maybe Text,
     shouldLogRequestId :: Bool,
     kafkaProducerForART :: Maybe KafkaProducerTools,
-    passettoContext :: PassettoContext
+    passettoContext :: PassettoContext,
+    passwordExpiryDays :: Maybe Int,
+    enforceStrongPasswordPolicy :: Bool
   }
   deriving (Generic)
 
