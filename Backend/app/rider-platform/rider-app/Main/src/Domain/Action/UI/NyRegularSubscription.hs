@@ -320,19 +320,35 @@ getNextScheduledInstanceTimes ::
   -- | current time
   KUT.UTCTime ->
   Environment.Flow [KUT.UTCTime]
-getNextScheduledInstanceTimes minGap localScheduledTime sub now
-  | sub.status /= NySub.ACTIVE = pure []
-  | otherwise = do
-    let today = Time.utctDay now
-        dayOfWeekStr = Time.dayOfWeek today
-        recurrenceDays = sub.recurrenceRuleDays
-        inPause = isTimestampInPausePeriod localScheduledTime sub.pauseStartDate sub.pauseEndDate
-    if dayOfWeekStr `elem` recurrenceDays
-      then
-        if localScheduledTime > Time.addUTCTime minGap now && not inPause
-          then pure [localScheduledTime]
-          else pure []
-      else pure []
+getNextScheduledInstanceTimes minGap localScheduledTime sub now = do
+  logInfo $ "[NYREGULAR] getNextScheduledInstanceTimes called for subscription: " <> sub.id.getId
+  logDebug $ "[NYREGULAR] Input parameters - minGap: " <> show minGap <> ", localScheduledTime: " <> show localScheduledTime <> ", now: " <> show now
+  logDebug $ "[NYREGULAR] Subscription status: " <> show sub.status
+  let today = Time.utctDay now
+      dayOfWeekStr = Time.dayOfWeek today
+      recurrenceDays = sub.recurrenceRuleDays
+      inPause = isTimestampInPausePeriod localScheduledTime sub.pauseStartDate sub.pauseEndDate
+  logDebug $ "[NYREGULAR] Calculated values - today: " <> show today <> ", dayOfWeekStr: " <> show dayOfWeekStr
+  logDebug $ "[NYREGULAR] Recurrence days: " <> show recurrenceDays <> ", inPause: " <> show inPause
+
+  if dayOfWeekStr `elem` recurrenceDays
+    then do
+      logDebug $ "[NYREGULAR] Today (" <> show dayOfWeekStr <> ") is in recurrence days"
+      let timeWithMinGap = Time.addUTCTime minGap now
+          isScheduledTimeAfterMinGap = localScheduledTime > timeWithMinGap
+
+      logDebug $ "[NYREGULAR] Time checks - timeWithMinGap: " <> show timeWithMinGap <> ", isScheduledTimeAfterMinGap: " <> show isScheduledTimeAfterMinGap
+
+      if isScheduledTimeAfterMinGap && not inPause
+        then do
+          logInfo $ "[NYREGULAR] Returning scheduled time " <> show localScheduledTime <> " for subscription " <> sub.id.getId
+          pure [localScheduledTime]
+        else do
+          logInfo $ "[NYREGULAR] Not returning scheduled time for subscription " <> sub.id.getId <> " - isScheduledTimeAfterMinGap: " <> show isScheduledTimeAfterMinGap <> ", inPause: " <> show inPause
+          pure []
+    else do
+      logInfo $ "[NYREGULAR] Today (" <> show dayOfWeekStr <> ") is not in recurrence days for subscription " <> sub.id.getId
+      pure []
 
 postNyRegularSubscriptionsUpdate ::
   ( (Maybe (Id Domain.Types.Person.Person), Id Domain.Types.Merchant.Merchant) ->
