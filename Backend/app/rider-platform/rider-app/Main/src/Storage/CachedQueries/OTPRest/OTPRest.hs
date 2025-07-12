@@ -22,7 +22,6 @@ import Kernel.Utils.Common
 import qualified SharedLogic.External.Nandi.Flow as Flow
 import SharedLogic.External.Nandi.Types
 import Storage.CachedQueries.OTPRest.Common as OTPRestCommon
--- import Storage.CachedQueries.RouteStopTimeTable as GRQRSTT
 import qualified Storage.Queries.RoutePolylines as QRoutePolylines
 import qualified Storage.Queries.StationsExtraInformation as QStationsExtraInformation
 import Tools.Error
@@ -281,20 +280,13 @@ parseRouteStopMappingInMemoryServer routeStopMappingInMemoryServer integratedBPP
     ( \mapping -> do
         let routeCode = last $ splitOn ":" mapping.routeCode
             stopCode = last $ splitOn ":" mapping.stopCode
-        providerStopCode <-
-          if mapping.providerCode == "GTFS"
-            then do
-              routeStopTimetables <- GRQRSTT.findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOperatingCityId [routeCode] stopCode
-              return ((listToMaybe routeStopTimetables) >>= \routeStopTimeTable -> routeStopTimeTable.providerStopCode)
-            else do
-              pure $ Just mapping.providerCode
         return $
           RouteStopMapping
             { estimatedTravelTimeFromPreviousStop = mapping.estimatedTravelTimeFromPreviousStop,
               integratedBppConfigId = integratedBPPConfig.id,
               merchantId,
               merchantOperatingCityId,
-              Domain.Types.RouteStopMapping.providerCode = stopCode,
+              Domain.Types.RouteStopMapping.providerCode = if mapping.providerCode == "GTFS" then stopCode else mapping.providerCode,
               routeCode = routeCode,
               sequenceNum = mapping.sequenceNum,
               stopCode = stopCode,
