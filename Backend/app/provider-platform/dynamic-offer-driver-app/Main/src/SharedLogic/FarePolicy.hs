@@ -239,7 +239,9 @@ getFullFarePolicy mbFromLocation mbFromLocGeohash mbToLocGeohash mbDistance mbDu
     checkGeoHashAndCalculate mbVehicleServiceTierItem localTimeZoneSeconds whiteListedGeohashes blackListedGeohashes transporterConfig mbfromLocGeohash fromLocation = do
       let fromLocGeohash = fromMaybe (fromMaybe "" $ T.pack <$> Geohash.encode (fromMaybe 5 transporterConfig.dpGeoHashPercision) (fromLocation.lat, fromLocation.lon)) mbfromLocGeohash
       if elem fromLocGeohash whiteListedGeohashes || notElem fromLocGeohash blackListedGeohashes
-        then getCongestionChargeMultiplierFromModel' localTimeZoneSeconds (Just fromLocation) (Just fromLocGeohash) mbToLocGeohash fareProduct.vehicleServiceTier (maybe Nothing (.vehicleCategory) mbVehicleServiceTierItem) mbDistance mbDuration transporterConfig.isDynamicPricingQARCalEnabled transporterConfig.qarCalRadiusInKm mbAppDynamicLogicVersion fareProduct.merchantOperatingCityId
+        then do
+          logInfo $ "Calling DynamicPricing 1" <> show localTimeZoneSeconds <> show fromLocGeohash <> show mbToLocGeohash <> show fareProduct.vehicleServiceTier <> show mbDistance <> show mbDuration <> show transporterConfig.isDynamicPricingQARCalEnabled <> show transporterConfig.qarCalRadiusInKm <> show mbAppDynamicLogicVersion <> show fareProduct.merchantOperatingCityId
+          getCongestionChargeMultiplierFromModel' localTimeZoneSeconds (Just fromLocation) (Just fromLocGeohash) mbToLocGeohash fareProduct.vehicleServiceTier (maybe Nothing (.vehicleCategory) mbVehicleServiceTierItem) mbDistance mbDuration transporterConfig.isDynamicPricingQARCalEnabled transporterConfig.qarCalRadiusInKm mbAppDynamicLogicVersion fareProduct.merchantOperatingCityId
         else return Nothing
 
 updateCongestionChargeMultiplier :: FarePolicyD.FarePolicy -> Maybe FarePolicyD.CongestionChargeMultiplier -> FarePolicyD.FarePolicy
@@ -771,6 +773,7 @@ getCongestionChargeMultiplierFromModel' ::
   m (Maybe CongestionChargeDetailsModel)
 getCongestionChargeMultiplierFromModel' timeDiffFromUtc (Just fromLocation) (Just fromLocGeohash) toLocGeohash serviceTier vehicleCategory (Just (Meters distance)) (Just (Seconds duration)) (Just True) radius' (Just dynamicPricingLogicVersion) merchantOperatingCityId = do
   localTime <- getLocalCurrentTime timeDiffFromUtc
+  logInfo $ "Calling DynamicPricing" <> show fromLocGeohash
   now <- getCurrentTime
   let radius = fromMaybe 3.0 radius'
   let distanceInKm = int2Double distance / 1000.0
@@ -798,6 +801,7 @@ getCongestionChargeMultiplierFromModel' timeDiffFromUtc (Just fromLocation) (Jus
   mbCongestionCity <- Hedis.withCrossAppRedis $ Hedis.get $ mkCongestionKeyWithCity merchantOperatingCityId.getId
   mbCongestionFromLocGeohashPast <- Hedis.withCrossAppRedis $ Hedis.get $ mkCongestionKeyWithGeohashPast fromLocGeohash
   (mbRainStatus :: Maybe Text) <- Hedis.withCrossAppRedis $ Hedis.get $ mkRainStatusKey fromLocGeohash
+  logInfo $ "Calling DynamicPricing" <> show mbRainStatus
   mbCongestionFromLocGeohashDistancePast <- Hedis.withCrossAppRedis $ Hedis.get $ mkCongestionKeyWithGeohashAndDistanceBinPast fromLocGeohash distanceBin
   mbCongestionCityPast <- Hedis.withCrossAppRedis $ Hedis.get $ mkCongestionKeyWithCityPast merchantOperatingCityId.getId
   let actualQAR = mbActualQARFromLocGeohashDistance <|> mbActualQARFromLocGeohash <|> mbActualQARFromLocGeohash2xRadius <|> mbActualQARCity
