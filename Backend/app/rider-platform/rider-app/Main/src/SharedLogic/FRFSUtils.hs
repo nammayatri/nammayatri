@@ -373,9 +373,12 @@ getFares riderId vehicleType integratedBPPConfig merchantId merchantOperatingCit
   fares <- getFareThroughGTFS riderId vehicleType integratedBPPConfig merchantId merchantOperatingCityId routeCode startStopCode endStopCode
   if null fares
     then do
-      fares' <- getFare riderId vehicleType integratedBPPConfig.id merchantId merchantOperatingCityId routeCode startStopCode endStopCode
-      logDebug $ "fares not found in GTFS: " <> show fares'
-      return fares'
+      try @_ @SomeException (getFare riderId vehicleType integratedBPPConfig.id merchantId merchantOperatingCityId routeCode startStopCode endStopCode)
+        >>= \case
+          Left err -> do
+            logError $ "Error in getFare: " <> show err
+            return []
+          Right fares' -> return fares'
     else return fares
 
 data VehicleTracking = VehicleTracking
