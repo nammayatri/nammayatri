@@ -7998,9 +7998,12 @@ busTrackingScreenFlow = do
           destCode = maybe "" (\item-> item.stationCode) state.data.destinationStation
       modifyScreenState $ BusTrackingScreenStateType (\state -> state { data { busRouteCode = state.data.busRouteCode, sourceStation = state.data.sourceStation, destinationStation = state.data.destinationStation } })
       selectBusRouteScreenFlow srcCode destCode
-    BusTrackingScreen.GoToHomeScreen state -> do 
+    BusTrackingScreen.GoToSearchLocationScreen state -> do 
       modifyScreenState $ HomeScreenStateType (\state -> state{props{isSource = Just false, isSearchLocation = SearchLocation, currentStage = SearchLocationModel, searchLocationModelProps{crossBtnSrcVisibility = false }}, data{source= getString STR.CURRENT_LOCATION}})
-      homeScreenFlow   
+      homeScreenFlow  
+    BusTrackingScreen.GoToHomeScreen state -> do 
+      modifyScreenState $ HomeScreenStateType (\state -> HomeScreenData.initData)
+      homeScreenFlow    
     _ -> busTrackingScreenFlow
 
 updateScheduledRides :: Boolean -> Boolean -> FlowBT String Unit
