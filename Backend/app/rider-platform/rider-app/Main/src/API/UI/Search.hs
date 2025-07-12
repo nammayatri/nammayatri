@@ -59,6 +59,7 @@ import ExternalBPP.ExternalAPI.CallAPI as CallAPI
 import ExternalBPP.ExternalAPI.Subway.CRIS.RouteFare as CRISRouteFare
 import Kernel.External.Encryption
 import Kernel.External.Maps.Google.MapsClient.Types
+import qualified Kernel.External.Maps.Types as MapsTypes
 import qualified Kernel.External.MultiModal.Interface as MInterface
 import qualified Kernel.External.MultiModal.Interface as MultiModal
 import Kernel.External.MultiModal.Interface.Types as MultiModalTypes
@@ -262,6 +263,9 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
       let toStopLocation = LocationV2 {latLng = LatLngV2 {latitude = singleModeRouteDetails.toStop.stopLat, longitude = singleModeRouteDetails.toStop.stopLon}}
       let distance = fromMaybe (Distance 0 Meter) searchRequest.distance
       let duration = nominalDiffTimeToSeconds $ diffUTCTime singleModeRouteDetails.toStop.stopArrivalTime singleModeRouteDetails.fromStop.stopArrivalTime
+      let currentLocation = fmap latLongToLocationV2 req.currentLocation
+      mbPreliminaryLeg <- getPreliminaryLeg currentLocation fromStopLocation riderConfig distance
+      let subLegOrder = if isJust mbPreliminaryLeg then 1 else 0
       let leg =
             MultiModalTypes.MultiModalLeg
               { distance = distance,
@@ -283,7 +287,7 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
                         toStopDetails = Just toStopDetails,
                         startLocation = fromStopLocation,
                         endLocation = toStopLocation,
-                        subLegOrder = 0,
+                        subLegOrder,
                         fromArrivalTime = Just singleModeRouteDetails.fromStop.stopArrivalTime,
                         fromDepartureTime = Just singleModeRouteDetails.fromStop.stopArrivalTime,
                         toArrivalTime = Just singleModeRouteDetails.toStop.stopArrivalTime,
@@ -299,6 +303,9 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
                 entrance = Nothing,
                 exit = Nothing
               }
+      legs <- case mbPreliminaryLeg of
+        Just preliminaryLeg -> return [preliminaryLeg, leg]
+        Nothing -> return [leg]
       return $
         ( Nothing,
           MInterface.MultiModalResponse
@@ -308,7 +315,7 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
                       duration = duration,
                       startTime = Just singleModeRouteDetails.fromStop.stopArrivalTime,
                       endTime = Just singleModeRouteDetails.toStop.stopArrivalTime,
-                      legs = [leg],
+                      legs = legs,
                       relevanceScore = Nothing
                     }
                 ]
@@ -341,8 +348,10 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
         then do
           case searchRequest.toLocation of
             Just toLocation -> do
-              autoLeg <- mkAutoLeg now toLocation
-              return (Just NoPublicTransportRoutes, autoLeg)
+              let toLocationV2 = LocationV2 {latLng = LatLngV2 {latitude = toLocation.lat, longitude = toLocation.lon}}
+              (autoLeg, startTime, endTime) <- mkAutoOrWalkLeg now Nothing toLocationV2 MultiModalTypes.Unspecified
+              let autoMultiModalResponse = mkMultimodalResponse autoLeg startTime endTime
+              return (Just NoPublicTransportRoutes, autoMultiModalResponse)
             Nothing -> return (Nothing, otpResponse'')
         else do
           case req' of
@@ -536,63 +545,55 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
       BecknV2.OnDemand.Enums.SUBWAY -> MultiModalTypes.Subway
       _ -> MultiModalTypes.Unspecified
 
-    mkAutoLeg now toLocation = do
+    mkAutoOrWalkLeg :: UTCTime -> Maybe LocationV2 -> LocationV2 -> MultiModalTypes.GeneralVehicleType -> Flow (MultiModalTypes.MultiModalLeg, UTCTime, UTCTime)
+    mkAutoOrWalkLeg now fromLocation toLocation mode = do
       let fromStopLocation = LocationV2 {latLng = LatLngV2 {latitude = searchRequest.fromLocation.lat, longitude = searchRequest.fromLocation.lon}}
-      let toStopLocation = LocationV2 {latLng = LatLngV2 {latitude = toLocation.lat, longitude = toLocation.lon}}
+      let toStopLocation = toLocation
+      let startLocation = fromMaybe fromStopLocation fromLocation
       let distance = fromMaybe (Distance 0 Meter) searchRequest.distance
       let duration = fromMaybe (Seconds 0) searchRequest.estimatedRideDuration
       let startTime = now
       let endTime = addUTCTime (secondsToNominalDiffTime duration) startTime
-      let leg =
-            MultiModalTypes.MultiModalLeg
-              { distance = distance,
-                duration = duration,
-                polyline = Polyline {encodedPolyline = ""},
-                mode = MultiModalTypes.Unspecified,
-                startLocation = fromStopLocation,
-                endLocation = toStopLocation,
-                fromStopDetails = Nothing,
-                toStopDetails = Nothing,
-                routeDetails =
-                  [ MultiModalTypes.MultiModalRouteDetails
-                      { gtfsId = Nothing,
-                        longName = Nothing,
-                        shortName = Nothing,
-                        color = Nothing,
-                        alternateShortNames = [],
-                        fromStopDetails = Nothing,
-                        toStopDetails = Nothing,
-                        startLocation = fromStopLocation,
-                        endLocation = toStopLocation,
-                        subLegOrder = 0,
-                        fromArrivalTime = Just startTime,
-                        fromDepartureTime = Just startTime,
-                        toArrivalTime = Just endTime,
-                        toDepartureTime = Just endTime
-                      }
-                  ],
-                serviceTypes = [],
-                agency = Nothing,
-                fromArrivalTime = Just startTime,
-                fromDepartureTime = Just startTime,
-                toArrivalTime = Just endTime,
-                toDepartureTime = Just endTime,
-                entrance = Nothing,
-                exit = Nothing
-              }
-      return $
-        MInterface.MultiModalResponse
-          { routes =
-              [ MultiModalTypes.MultiModalRoute
-                  { distance = distance,
-                    duration = duration,
-                    startTime = Just startTime,
-                    endTime = Just endTime,
-                    legs = [leg],
-                    relevanceScore = Nothing
-                  }
-              ]
-          }
+      return
+        ( MultiModalTypes.MultiModalLeg
+            { distance = distance,
+              duration = duration,
+              polyline = Polyline {encodedPolyline = ""},
+              mode,
+              startLocation,
+              endLocation = toStopLocation,
+              fromStopDetails = Nothing,
+              toStopDetails = Nothing,
+              routeDetails =
+                [ MultiModalTypes.MultiModalRouteDetails
+                    { gtfsId = Nothing,
+                      longName = Nothing,
+                      shortName = Nothing,
+                      color = Nothing,
+                      alternateShortNames = [],
+                      fromStopDetails = Nothing,
+                      toStopDetails = Nothing,
+                      startLocation,
+                      endLocation = toStopLocation,
+                      subLegOrder = 0,
+                      fromArrivalTime = Just startTime,
+                      fromDepartureTime = Just startTime,
+                      toArrivalTime = Just endTime,
+                      toDepartureTime = Just endTime
+                    }
+                ],
+              serviceTypes = [],
+              agency = Nothing,
+              fromArrivalTime = Just startTime,
+              fromDepartureTime = Just startTime,
+              toArrivalTime = Just endTime,
+              toDepartureTime = Just endTime,
+              entrance = Nothing,
+              exit = Nothing
+            },
+          startTime,
+          endTime
+        )
 
     isLegModeIn :: [GeneralVehicleType] -> MultiModalTypes.MultiModalLeg -> Bool
     isLegModeIn modes leg = leg.mode `elem` modes
@@ -658,6 +659,43 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
                       _ -> return Nothing
                   Nothing -> return Nothing
             _ -> return Nothing
+
+    mkMultimodalResponse :: MultiModalTypes.MultiModalLeg -> UTCTime -> UTCTime -> MultiModalTypes.MultiModalResponse
+    mkMultimodalResponse leg startTime endTime =
+      MInterface.MultiModalResponse
+        { routes =
+            [ MultiModalTypes.MultiModalRoute
+                { distance = leg.distance,
+                  duration = leg.duration,
+                  startTime = Just startTime,
+                  endTime = Just endTime,
+                  legs = [leg],
+                  relevanceScore = Nothing
+                }
+            ]
+        }
+
+    getPreliminaryLeg :: Maybe LocationV2 -> LocationV2 -> DRC.RiderConfig -> Distance -> Flow (Maybe MultiModalTypes.MultiModalLeg)
+    getPreliminaryLeg mbCurrentLocation fromStopLocation riderConfig' distance' = do
+      let distance = distanceToMeters distance'
+      if distance <= riderConfig'.minimumWalkDistance
+        then return Nothing
+        else case mbCurrentLocation of
+          Just currentLocation -> do
+            now <- getCurrentTime
+            let legMode = determineLegMode distance riderConfig'
+            (leg, _, _) <- mkAutoOrWalkLeg now (Just currentLocation) fromStopLocation legMode
+            return $ Just leg
+          Nothing -> return Nothing
+
+    latLongToLocationV2 :: MapsTypes.LatLong -> LocationV2
+    latLongToLocationV2 latLong = LocationV2 {latLng = LatLngV2 {latitude = latLong.lat, longitude = latLong.lon}}
+
+    determineLegMode :: Meters -> DRC.RiderConfig -> MultiModalTypes.GeneralVehicleType
+    determineLegMode distance riderConfig' =
+      if distance > riderConfig'.maximumWalkDistance
+        then MultiModalTypes.Unspecified
+        else MultiModalTypes.Walk
 
 checkSearchRateLimit ::
   ( Redis.HedisFlow m r,
