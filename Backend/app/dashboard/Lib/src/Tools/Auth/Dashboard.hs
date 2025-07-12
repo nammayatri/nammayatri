@@ -64,12 +64,18 @@ instance VerificationMethodWithPayload VerifyDashboard where
   type VerificationPayloadType VerifyDashboard = DRole.DashboardAccessType
 
 verifyDashboardAction ::
-  (Common.AuthFlow m r, Redis.HedisFlow m r) =>
+  ( Common.AuthFlow m r,
+    Redis.HedisFlow m r,
+    HasFlowEnv m r '["passwordExpiryDays" ::: Maybe Int]
+  ) =>
   VerificationActionWithPayload VerifyDashboard m
 verifyDashboardAction = VerificationActionWithPayload verifyDashboard
 
 verifyDashboard ::
-  (Common.AuthFlow m r, Redis.HedisFlow m r) =>
+  ( Common.AuthFlow m r,
+    Redis.HedisFlow m r,
+    HasFlowEnv m r '["passwordExpiryDays" ::: Maybe Int]
+  ) =>
   DRole.DashboardAccessType ->
   RegToken ->
   m TokenInfo
@@ -85,9 +91,17 @@ instance
   where
   toPayloadType _ = fromSing (sing @at)
 
-verifyDashboardAccess :: BeamFlow m r => DRole.DashboardAccessType -> Id DP.Person -> m (Id DP.Person)
+verifyDashboardAccess ::
+  ( BeamFlow m r,
+    HasFlowEnv m r '["passwordExpiryDays" ::: Maybe Int]
+  ) =>
+  DRole.DashboardAccessType ->
+  Id DP.Person ->
+  m (Id DP.Person)
 verifyDashboardAccess requiredAccessType personId = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  when (requiredAccessType `elem` [DRole.DASHBOARD_ADMIN, DRole.DASHBOARD_USER]) $ do
+    Common.checkPasswordExpiry person
   case requiredAccessType of
     DRole.DASHBOARD_ADMIN -> do
       role <- QRole.findById person.roleId >>= fromMaybeM (RoleNotFound person.roleId.getId)

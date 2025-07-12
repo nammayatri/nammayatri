@@ -39,7 +39,8 @@ data PersonE e = Person
     updatedAt :: UTCTime,
     verified :: Maybe Bool,
     rejectionReason :: Maybe Text,
-    rejectedAt :: Maybe UTCTime
+    rejectedAt :: Maybe UTCTime,
+    passwordUpdatedAt :: Maybe UTCTime
   }
   deriving (Generic)
 

@@ -302,7 +302,17 @@ updatePersonPassword personId newPasswordHash = do
   now <- getCurrentTime
   updateWithKV
     [ Se.Set BeamP.passwordHash $ Just newPasswordHash,
-      Se.Set BeamP.updatedAt now
+      Se.Set BeamP.updatedAt now,
+      Se.Set BeamP.passwordUpdatedAt $ Just now
+    ]
+    [ Se.Is BeamP.id $ Se.Eq $ getId personId
+    ]
+
+updatePersonPasswordUpdatedAt :: BeamFlow m r => Id Person -> m ()
+updatePersonPasswordUpdatedAt personId = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamP.passwordUpdatedAt $ Just now
     ]
     [ Se.Is BeamP.id $ Se.Eq $ getId personId
     ]

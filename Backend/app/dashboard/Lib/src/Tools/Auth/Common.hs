@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Tools.Auth.Common (verifyPerson, cleanCachedTokens, cleanCachedTokensByMerchantId, cleanCachedTokensByMerchantIdAndCity, cleanCachedTokensOfMerchantAndCity, AuthFlow, authTokenCacheKey, tokenActivityCacheKey) where
+module Tools.Auth.Common (verifyPerson, cleanCachedTokens, cleanCachedTokensByMerchantId, cleanCachedTokensByMerchantIdAndCity, cleanCachedTokensOfMerchantAndCity, AuthFlow, authTokenCacheKey, tokenActivityCacheKey, checkPasswordExpiry) where
 
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.Person as DP
@@ -28,6 +28,7 @@ import qualified Kernel.Utils.Common as Utils
 import Storage.Beam.BeamFlow
 import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.MerchantAccess as QAccess
+import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RegistrationToken as QR
 import Tools.Error
 
@@ -252,3 +253,21 @@ cleanCachedTokensByMerchantIdAndCity personId merchantId city = do
     void $ Redis.del key
     activityKey <- tokenActivityCacheKey regToken.token
     void $ Redis.del activityKey
+
+checkPasswordExpiry ::
+  ( BeamFlow m r,
+    HasFlowEnv m r '["passwordExpiryDays" ::: Maybe Int]
+  ) =>
+  DP.Person ->
+  m ()
+checkPasswordExpiry person = do
+  now <- getCurrentTime
+  passwordExpiryDays <- asks (.passwordExpiryDays)
+  whenJust passwordExpiryDays $ \days -> do
+    when (isNothing person.passwordUpdatedAt) $
+      QPerson.updatePersonPasswordUpdatedAt person.id
+    let passwordUpdatedAt = fromMaybe now person.passwordUpdatedAt
+        secondsSinceUpdate = diffUTCTime now passwordUpdatedAt
+        expiryLimit = fromIntegral days * 86400
+    when (secondsSinceUpdate > expiryLimit) $
+      throwError $ InvalidRequest "Your password has expired. Please reset or contact admin."
