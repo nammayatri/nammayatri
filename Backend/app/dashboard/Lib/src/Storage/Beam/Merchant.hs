@@ -37,7 +37,9 @@ data MerchantT f = MerchantT
     createdAt :: B.C f Time.UTCTime,
     requireAdminApprovalForFleetOnboarding :: B.C f (Maybe Bool),
     verifyFleetWhileLogin :: B.C f (Maybe Bool),
-    hasFleetMemberHierarchy :: B.C f (Maybe Bool)
+    hasFleetMemberHierarchy :: B.C f (Maybe Bool),
+    enforceStrongPasswordPolicy :: B.C f (Maybe Bool),
+    passwordExpiryDays :: B.C f (Maybe Int)
   }
   deriving (Generic, B.Beamable)
 
