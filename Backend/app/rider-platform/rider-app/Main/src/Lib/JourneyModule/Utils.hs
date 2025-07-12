@@ -322,10 +322,10 @@ findPossibleRoutes ::
   m (Maybe Text, [AvailableRoutesByTier])
 findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime integratedBppConfig mid mocid vc = do
   -- Get route mappings that contain the origin stop
-  fromRouteStopMappings <- OTPRest.getRouteStopMappingByStopCode fromStopCode integratedBppConfig
+  fromRouteStopMappings <- measureLatency (OTPRest.getRouteStopMappingByStopCode fromStopCode integratedBppConfig) ("getRouteStopMappingByStopCode" <> show fromStopCode)
 
   -- Get route mappings that contain the destination stop
-  toRouteStopMappings <- OTPRest.getRouteStopMappingByStopCode toStopCode integratedBppConfig
+  toRouteStopMappings <- measureLatency (OTPRest.getRouteStopMappingByStopCode toStopCode integratedBppConfig) ("getRouteStopMappingByStopCode" <> show toStopCode)
 
   -- Find common routes that have both the origin and destination stops
   -- and ensure that from-stop comes before to-stop in the route sequence
@@ -341,7 +341,7 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
 
   -- Get the timing information for these routes at the origin stop
 
-  routeStopTimings <- fetchLiveTimings validRoutes fromStopCode currentTime integratedBppConfig mid mocid vc
+  routeStopTimings <- measureLatency (fetchLiveTimings validRoutes fromStopCode currentTime integratedBppConfig mid mocid vc) ("fetchLiveTimings" <> show validRoutes <> " fromStopCode: " <> show fromStopCode <> " toStopCode: " <> show toStopCode)
   -- Get IST time info
   let (_, currentTimeIST) = getISTTimeInfo currentTime
 
