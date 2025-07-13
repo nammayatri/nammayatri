@@ -27,6 +27,7 @@ imports:
   PlatformType: Domain.Types.IntegratedBPPConfig
   IntegratedBPPConfig: Domain.Types.IntegratedBPPConfig
   RecentLocation: Domain.Types.RecentLocation
+  TimeOfDay: Date.Time
 
 module: FRFSTicketService
 types:
@@ -149,6 +150,7 @@ types:
     routeCodes: Maybe [Text]
     lat: Maybe Double
     lon: Maybe Double
+    timeTakenToTravelUpcomingStop: Maybe Seconds
     address: Maybe Text
     stationType: Maybe StationType
     color: Maybe Text
