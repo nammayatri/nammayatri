@@ -13,8 +13,10 @@
 -}
 
 module Storage.GraphqlQueries.RouteStopTimeTable
-  ( findByRouteCodeAndStopCode,
-  )
+  {-# WARNING
+    "This module contains direct calls to the table. \
+  \ But most likely you need a version from CachedQueries with caching results feature."
+    #-}
 where
 
 import BecknV2.FRFS.Enums (ServiceTierType (..), VehicleCategory (..))

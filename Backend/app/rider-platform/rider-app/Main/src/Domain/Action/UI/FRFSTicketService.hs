@@ -80,7 +80,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.Person as CQP
-import qualified Storage.GraphqlQueries.RouteStopTimeTable as QRouteStopTimeTable
+import qualified Storage.CachedQueries.RouteStopTimeTable as QRouteStopTimeTable
 import qualified Storage.Queries.BecknConfig as QBC
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.FRFSRecon as QFRFSRecon
@@ -193,7 +193,7 @@ getFrfsRoute (_personId, _mId) routeCode mbIntegratedBPPConfigId _platformType _
   stops <-
     foldM
       ( \processedStops stop -> do
-          routeStopTimeTables <- QRouteStopTimeTable.findByRouteCodeAndStopCode integratedBPPConfig integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId [route.code] stop.stopCode vehicleType
+          routeStopTimeTables <- QRouteStopTimeTable.findByRouteCodeAndStopCode integratedBPPConfig integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId [route.code] stop.stopCode
           now <- getCurrentTime
           let currentTimeOfDay = utcToTimeOfDay now
           let (upcomingSchedule, timeTakenToTravelUpcomingStop) =
