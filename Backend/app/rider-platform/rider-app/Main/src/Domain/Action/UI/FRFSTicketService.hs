@@ -247,7 +247,7 @@ getFrfsRoute (_personId, _mId) routeCode mbIntegratedBPPConfigId _platformType _
     utcToTimeOfDay = Time.timeToTimeOfDay . Time.utctDayTime
 
     diffTimeOfDay :: TimeOfDay -> TimeOfDay -> Int
-    diffTimeOfDay t1 t2 = round $ toRational (Time.timeOfDayToTime t1 - Time.timeOfDayToTime t2)
+    diffTimeOfDay t1 t2 = round $ toRational (Time.timeOfDayToTime t2 - Time.timeOfDayToTime t1)
 
     findJustGreaterThan :: TimeOfDay -> [RouteStopTimeTable] -> Maybe RouteStopTimeTable
     findJustGreaterThan currentTimeOfDay routeStopTimeTables =
