@@ -52,7 +52,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
         parentSearchReq.device
         False
         (Just journeySearchData)
-        False
+        True
     QJourneyLeg.updateDistanceAndDuration (convertMetersToDistance Meter <$> dSearchRes.distance) dSearchRes.duration journeyLegData.id
     fork "search cabs" . withShortRetry $ do
       becknTaxiReqV2 <- TaxiACL.buildSearchReqV2 dSearchRes

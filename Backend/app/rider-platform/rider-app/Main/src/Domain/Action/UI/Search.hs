@@ -446,7 +446,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
     validateStartAndReturnTime now startTime returnTime = do
       whenJust returnTime $ \rt -> do
         when (rt <= startTime) $ throwError (InvalidRequest "Return time should be greater than start time")
-      unless ((120 `addUTCTime` startTime) >= now) $ throwError (InvalidRequest "Ride time should only be future time") -- 2 mins buffer
+      when ((120 `addUTCTime` startTime) < now && not justMultimodalSearch) $ throwError (InvalidRequest "Ride time should only be future time") -- 2 mins buffer
     getRouteDetails ::
       SearchRequestFlow m r =>
       DPerson.Person ->
