@@ -29,7 +29,6 @@ import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Storage.CachedQueries.OTPRest.Common as OTPRestCommon
 import qualified Storage.GraphqlQueries.Client as Client
 
 findByRouteCodeAndStopCode ::
@@ -41,19 +40,10 @@ findByRouteCodeAndStopCode ::
   Id Merchant ->
   Id MerchantOperatingCity ->
   [Text] ->
-  Text ->
+  [Text] ->
   VehicleCategory ->
   m [RouteStopTimeTable]
-findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCodes stopCode' vehicleCategory = do
-  stopCodes <-
-    case vehicleCategory of
-      METRO -> do
-        OTPRestCommon.getChildrenStationsCodes integratedBPPConfig stopCode'
-          >>= \case
-            [] -> pure [stopCode']
-            stopCodes@(_ : _) -> pure stopCodes
-      _ -> pure [stopCode']
-
+findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCodes stopCodes vehicleCategory = do
   concatMapM
     ( \stopCode -> do
         let variables =
