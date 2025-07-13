@@ -34,6 +34,7 @@ import Kernel.Prelude as P
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Storage.CachedQueries.OTPRest.Common as OTPRestCommon
 import qualified Storage.GraphqlQueries.RouteStopTimeTable as Queries
 import Tools.Error
 
@@ -69,7 +70,16 @@ findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCode
         logDebug $ "Fetched route stop time table cached: " <> show a <> "for routeCodes:" <> show routeCodes <> " and stopCode:" <> show stopCode
         pure a
       Nothing -> do
-        allTrips <- Queries.findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCodes' stopCode vehicleType
+        stopCodes <-
+          P.map (modifyCodesToGTFS integratedBPPConfig)
+            <$> case vehicleType of
+              BecknV2.FRFS.Enums.METRO -> do
+                OTPRestCommon.getChildrenStationsCodes integratedBPPConfig stopCode'
+                  >>= \case
+                    [] -> pure [stopCode']
+                    stopCodes@(_ : _) -> pure stopCodes
+              _ -> pure [stopCode']
+        allTrips <- Queries.findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCodes' stopCodes vehicleType
         logDebug $ "Fetched route stop time table graphql: " <> show allTrips <> " for routeCodes:" <> show routeCodes <> " and stopCode:" <> show stopCode
         void $ cacheRouteStopTimeInfo stopCode allTrips
         pure allTrips
