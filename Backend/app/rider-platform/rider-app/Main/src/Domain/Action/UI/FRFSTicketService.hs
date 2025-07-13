@@ -11,6 +11,8 @@ import Data.List (groupBy, nub, nubBy)
 import qualified Data.List.NonEmpty as NonEmpty hiding (groupBy, map, nub, nubBy)
 import Data.List.Split (chunksOf)
 import qualified Data.Text as T
+import qualified Data.Time as Time
+import qualified Data.Time.LocalTime as Time
 import qualified Domain.Action.Beckn.FRFS.Common as Common
 import qualified Domain.Action.Beckn.FRFS.OnConfirm as DACFOC
 import Domain.Types.BecknConfig
@@ -35,6 +37,7 @@ import qualified Domain.Types.Person
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Route as Route
 import qualified Domain.Types.RouteStopMapping as RouteStopMapping
+import Domain.Types.RouteStopTimeTable
 import Domain.Types.Station
 import Domain.Types.StationType
 import qualified Environment
@@ -78,6 +81,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.Person as CQP
+import qualified Storage.GraphqlQueries.RouteStopTimeTable as QRouteStopTimeTable
 import qualified Storage.Queries.BecknConfig as QBC
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.FRFSRecon as QFRFSRecon
@@ -121,6 +125,7 @@ getFrfsRoutes (_personId, _mId) mbEndStationCode mbStartStationCode _city _vehic
                                   stationType = Just (if idx == 0 then START else if maybe False (\stops' -> idx < length stops') routeInfo.stops then INTERMEDIATE else END),
                                   sequenceNum = Just stop.sequenceNum,
                                   address = Nothing,
+                                  timeTakenToTravelUpcomingStop = Nothing,
                                   distance = Nothing,
                                   color = Nothing,
                                   towards = Nothing,
@@ -177,15 +182,54 @@ getFrfsRoute ::
   Context.City ->
   BecknV2.FRFS.Enums.VehicleCategory ->
   Environment.Flow API.Types.UI.FRFSTicketService.FRFSRouteAPI
-getFrfsRoute (_personId, _mId) routeCode mbIntegratedBPPConfigId _platformType _mbCity _vehicleType = do
+getFrfsRoute (_personId, _mId) routeCode mbIntegratedBPPConfigId _platformType _mbCity vehicleType = do
   merchantOpCity <- CQMOC.findByMerchantIdAndCity _mId _mbCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> _mId.getId <> "-city-" <> show _mbCity)
   let platformType = fromMaybe DIBC.APPLICATION _platformType
-  integratedBPPConfig <- SIBC.findIntegratedBPPConfig mbIntegratedBPPConfigId merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory _vehicleType) platformType
+  integratedBPPConfig <- SIBC.findIntegratedBPPConfig mbIntegratedBPPConfigId merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleType) platformType
   route <- OTPRest.getRouteByRouteId integratedBPPConfig routeCode >>= fromMaybeM (RouteNotFound routeCode)
   routeStops <- OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig
   currentTime <- getCurrentTime
   let serviceableStops = DTB.findBoundedDomain routeStops currentTime ++ filter (\stop -> stop.timeBounds == DTB.Unbounded) routeStops
       stopsSortedBySequenceNumber = sortBy (compare `on` RouteStopMapping.sequenceNum) serviceableStops
+  stops <-
+    foldM
+      ( \processedStops stop -> do
+          routeStopTimeTables <- QRouteStopTimeTable.findByRouteCodeAndStopCode integratedBPPConfig integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId [route.code] stop.stopCode vehicleType
+          now <- getCurrentTime
+          let currentTimeOfDay = utcToTimeOfDay now
+          let (upcomingSchedule, timeTakenToTravelUpcomingStop) =
+                case safeTail processedStops of
+                  Just (Just lastStopSchedule, _) ->
+                    let upcomingSchedule' = findJustGreaterThan lastStopSchedule.timeOfDeparture routeStopTimeTables
+                        timeDiff = fmap (\nextSchedule -> diffTimeOfDay lastStopSchedule.timeOfDeparture nextSchedule.timeOfArrival) upcomingSchedule'
+                     in (upcomingSchedule', timeDiff)
+                  _ ->
+                    let upcomingSchedule' = findJustGreaterThan currentTimeOfDay routeStopTimeTables
+                        timeDiff = fmap (\nextSchedule -> diffTimeOfDay currentTimeOfDay nextSchedule.timeOfArrival) upcomingSchedule'
+                     in (upcomingSchedule', timeDiff)
+          return $
+            processedStops
+              <> [ ( upcomingSchedule,
+                     FRFSStationAPI
+                       { name = Just stop.stopName,
+                         code = stop.stopCode,
+                         routeCodes = Nothing,
+                         lat = Just stop.stopPoint.lat,
+                         lon = Just stop.stopPoint.lon,
+                         timeTakenToTravelUpcomingStop = Seconds <$> timeTakenToTravelUpcomingStop,
+                         stationType = Nothing,
+                         sequenceNum = Just stop.sequenceNum,
+                         address = Nothing,
+                         distance = Nothing,
+                         color = Nothing,
+                         towards = Nothing,
+                         integratedBppConfigId = integratedBPPConfig.id
+                       }
+                   )
+                 ]
+      )
+      []
+      stopsSortedBySequenceNumber
   return $
     FRFSTicketService.FRFSRouteAPI
       { code = route.code,
@@ -193,31 +237,22 @@ getFrfsRoute (_personId, _mId) routeCode mbIntegratedBPPConfigId _platformType _
         longName = route.longName,
         startPoint = route.startPoint,
         endPoint = route.endPoint,
-        totalStops = Just $ length stopsSortedBySequenceNumber,
-        stops =
-          Just $
-            map
-              ( \stop ->
-                  FRFSStationAPI
-                    { name = Just stop.stopName,
-                      code = stop.stopCode,
-                      routeCodes = Nothing,
-                      lat = Just stop.stopPoint.lat,
-                      lon = Just stop.stopPoint.lon,
-                      stationType = Nothing,
-                      sequenceNum = Just stop.sequenceNum,
-                      address = Nothing,
-                      distance = Nothing,
-                      color = Nothing,
-                      towards = Nothing,
-                      integratedBppConfigId = integratedBPPConfig.id
-                    }
-              )
-              stopsSortedBySequenceNumber,
+        totalStops = Just $ length stops,
+        stops = Just $ map snd stops,
         timeBounds = Just route.timeBounds,
         waypoints = route.polyline <&> decode <&> fmap (\point -> LatLong {lat = point.latitude, lon = point.longitude}),
         integratedBppConfigId = integratedBPPConfig.id
       }
+  where
+    utcToTimeOfDay :: UTCTime -> TimeOfDay
+    utcToTimeOfDay = Time.timeToTimeOfDay . Time.utctDayTime
+
+    diffTimeOfDay :: TimeOfDay -> TimeOfDay -> Int
+    diffTimeOfDay t1 t2 = round $ toRational (Time.timeOfDayToTime t1 - Time.timeOfDayToTime t2)
+
+    findJustGreaterThan :: TimeOfDay -> [RouteStopTimeTable] -> Maybe RouteStopTimeTable
+    findJustGreaterThan currentTimeOfDay routeStopTimeTables =
+      listToMaybe $ filter (\entry -> entry.timeOfDeparture > currentTimeOfDay) routeStopTimeTables
 
 getFrfsStations ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -279,7 +314,8 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin minimalData _p
                         address = Nothing,
                         distance = Nothing,
                         color = Nothing,
-                        towards = Nothing
+                        towards = Nothing,
+                        timeTakenToTravelUpcomingStop = Nothing
                       }
                 )
                 possibleStartStops
@@ -306,7 +342,8 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin minimalData _p
                         address = Nothing,
                         distance = Nothing,
                         color = Nothing,
-                        towards = Nothing
+                        towards = Nothing,
+                        timeTakenToTravelUpcomingStop = Nothing
                       }
                 )
                 filteredRouteStops
@@ -332,7 +369,8 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin minimalData _p
                         address = Nothing,
                         distance = Nothing,
                         color = Nothing,
-                        towards = Nothing
+                        towards = Nothing,
+                        timeTakenToTravelUpcomingStop = Nothing
                       }
                 )
                 stopsSortedBySequenceNumber
@@ -372,7 +410,8 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin minimalData _p
                                   address = Nothing,
                                   distance = Nothing,
                                   color = Nothing,
-                                  towards = Nothing
+                                  towards = Nothing,
+                                  timeTakenToTravelUpcomingStop = Nothing
                                 }
                             ]
                       _ -> []
@@ -391,6 +430,7 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin minimalData _p
                         sequenceNum = Nothing,
                         stationType = Nothing,
                         towards = Nothing,
+                        timeTakenToTravelUpcomingStop = Nothing,
                         name = Just name,
                         routeCodes = Nothing,
                         integratedBppConfigId = integratedBPPConfig.id,
@@ -1152,6 +1192,7 @@ getFrfsAutocomplete (_, mId) mbInput mbLimit mbOffset _platformType opCity origi
                 sequenceNum = Nothing,
                 stationType = Nothing,
                 towards = Nothing,
+                timeTakenToTravelUpcomingStop = Nothing,
                 name = Just name,
                 integratedBppConfigId = integratedBPPConfig.id,
                 ..
@@ -1246,7 +1287,7 @@ tryStationsAPIWithOSRMDistances merchantId merchantOpCity origin stops integrate
                     travelMode = Just Maps.CAR
                   }
           case res of
-            Left _ -> return $ map (\StationResult {..} -> FRFSStationAPI {lat = Just lat, lon = Just lon, address = Nothing, color = Nothing, distance = Nothing, towards = Nothing, integratedBppConfigId = integratedBPPConfig.id, ..}) batch
+            Left _ -> return $ map (\StationResult {..} -> FRFSStationAPI {lat = Just lat, lon = Just lon, address = Nothing, color = Nothing, distance = Nothing, towards = Nothing, timeTakenToTravelUpcomingStop = Nothing, integratedBppConfigId = integratedBPPConfig.id, ..}) batch
             Right stopsDistanceResp ->
               return $ map (\stop -> mkStopToAPI stop.origin stop.distance) (NonEmpty.toList stopsDistanceResp)
 
@@ -1262,6 +1303,7 @@ tryStationsAPIWithOSRMDistances merchantId merchantOpCity origin stops integrate
           distance = Just distance,
           stationType = stop.stationType,
           sequenceNum = stop.sequenceNum,
+          timeTakenToTravelUpcomingStop = Nothing,
           address = Nothing,
           color = Nothing,
           towards = Nothing,

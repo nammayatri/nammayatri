@@ -826,11 +826,6 @@ scoreBusesByDistanceFRFS passengerLoc busTrackingConfig = map assignScore . filt
 isWorseThanThresholdFRFS :: Double -> Double -> Double -> Bool
 isWorseThanThresholdFRFS candidateScore bestScore worseThreshold = candidateScore < (worseThreshold * bestScore)
 
-safeTailEndFRFS :: [a] -> Maybe a
-safeTailEndFRFS [] = Nothing
-safeTailEndFRFS [_] = Nothing
-safeTailEndFRFS xs = Just (last xs)
-
 addAllScoresFRFS :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig], HasField "ltsHedisEnv" r Redis.HedisEnv, HasShortDurationRetryCfg r c, HasKafkaProducer r) => [(BusDataWithoutETA, Double)] -> DJourneyLeg.JourneyLeg -> m ()
 addAllScoresFRFS scoredBuses leg = do
   forM_ scoredBuses $ \(bus, points) -> do
@@ -866,7 +861,7 @@ votingSystemFRFS scoredBuses leg busTrackingConfig = do
       case busesChanged of
         Nothing -> QJourneyLeg.updateByPrimaryKey leg {DJourneyLeg.changedBusesInSequence = Just [bestVehicleNumber]}
         Just changedBusesInSequence ->
-          case safeTailEndFRFS changedBusesInSequence of
+          case safeTail changedBusesInSequence of
             Nothing -> QJourneyLeg.updateByPrimaryKey leg {DJourneyLeg.changedBusesInSequence = Just [bestVehicleNumber]}
             Just x ->
               if x == bestVehicleNumber

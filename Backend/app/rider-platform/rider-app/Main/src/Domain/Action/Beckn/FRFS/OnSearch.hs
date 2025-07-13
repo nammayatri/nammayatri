@@ -347,6 +347,7 @@ castStationToAPI integratedBppConfigId DStation {..} =
       API.sequenceNum = stopSequence,
       API.distance = Nothing,
       API.towards = Nothing,
+      API.timeTakenToTravelUpcomingStop = Nothing,
       API.integratedBppConfigId = integratedBppConfigId
     }
 

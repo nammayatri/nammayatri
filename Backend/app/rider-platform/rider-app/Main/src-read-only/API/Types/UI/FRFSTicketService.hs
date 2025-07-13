@@ -185,6 +185,7 @@ data FRFSStationAPI = FRFSStationAPI
     routeCodes :: Data.Maybe.Maybe [Data.Text.Text],
     sequenceNum :: Data.Maybe.Maybe Kernel.Prelude.Int,
     stationType :: Data.Maybe.Maybe Domain.Types.StationType.StationType,
+    timeTakenToTravelUpcomingStop :: Data.Maybe.Maybe Kernel.Types.Common.Seconds,
     towards :: Data.Maybe.Maybe Data.Text.Text
   }
   deriving stock (Generic, Show)
