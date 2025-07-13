@@ -766,7 +766,14 @@ mkLegInfoFromFrfsBooking ::
 mkLegInfoFromFrfsBooking booking distance duration entrance exit = do
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
   let journeyRouteDetails' = booking.journeyRouteDetails
-  ticketsData <- QFRFSTicket.findAllByTicketBookingId (booking.id)
+  tickets <- QFRFSTicket.findAllByTicketBookingId (booking.id)
+  let ticketsData =
+        case integratedBPPConfig.providerConfig of
+          DIBC.ONDC config -> do
+            if fromMaybe False config.singleTicketForMultiplePassengers
+              then tickets
+              else maybe [] (\ticket -> [ticket]) $ listToMaybe tickets
+          _ -> tickets
   let ticketsCreatedAt = ticketsData <&> (.createdAt)
   let qrDataList = ticketsData <&> (.qrData)
   let qrValidity = ticketsData <&> (.validTill)

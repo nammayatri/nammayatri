@@ -36,7 +36,8 @@ data ONDCBecknConfig = ONDCBecknConfig
   { networkHostUrl :: Maybe BaseUrl,
     networkId :: Maybe Text,
     multiInitAllowed :: Maybe Bool,
-    fareCachingAllowed :: Maybe Bool
+    fareCachingAllowed :: Maybe Bool,
+    singleTicketForMultiplePassengers :: Maybe Bool
   }
   deriving stock (Eq, Generic)
   deriving anyclass (FromJSON, ToJSON)
