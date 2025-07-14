@@ -44,12 +44,11 @@ buildContext ::
   Context.City ->
   Spec.VehicleCategory ->
   m Spec.Context
-buildContext action bapConfig txnId msgId mTTL bppData city vehicleCategory = do
+buildContext action bapConfig txnId msgId mTTL _ city vehicleCategory = do
   now <- UTCTimeRFC3339 <$> getCurrentTime
   let bapUrl = showBaseUrl bapConfig.subscriberUrl
   let bapId = bapConfig.subscriberId
-      contextBppId = bppData <&> (.bppId)
-      contextBppUri = bppData <&> (.bppUri)
+
   cityCode <- getCodeFromCity city
   let contextVersion = if vehicleCategory == Spec.BUS then "2.0.1" else "2.0.0"
   return $
@@ -57,8 +56,8 @@ buildContext action bapConfig txnId msgId mTTL bppData city vehicleCategory = do
       { contextAction = encodeToText' action,
         contextBapId = Just bapId,
         contextBapUri = Just bapUrl,
-        contextBppId,
-        contextBppUri,
+        contextBppId = Just "pramaan.ondc.org/beta/preprod/mock/seller",
+        contextBppUri = Just "https://pramaan.ondc.org/beta/preprod/mock/seller",
         contextDomain = encodeToText' Spec.FRFS,
         contextKey = Nothing,
         contextLocation = Just $ tfLocation cityCode,
@@ -104,9 +103,9 @@ mkFareBreakup fareBreakup = do
   title <- fareBreakup.quotationBreakupInnerTitle & fromMaybeM (InvalidRequest "Title not found")
   price <- fareBreakup.quotationBreakupInnerPrice >>= Utils.parseMoney & fromMaybeM (InvalidRequest "Price not found")
 
-  breakupItem <- fareBreakup.quotationBreakupInnerItem & fromMaybeM (InvalidRequest "BreakupItem not found")
-  let pricePerUnit = breakupItem.itemPrice >>= Utils.parseMoney & fromMaybe price
-  let quantity = breakupItem.itemQuantity >>= (.itemQuantitySelected) >>= (.itemQuantitySelectedCount) & fromMaybe 1
+  let breakupItem = fareBreakup.quotationBreakupInnerItem
+  let pricePerUnit = breakupItem >>= (.itemPrice) >>= Utils.parseMoney & fromMaybe price
+  let quantity = breakupItem >>= (.itemQuantity) >>= (.itemQuantitySelected) >>= (.itemQuantitySelectedCount) & fromMaybe 1
 
   pure $
     Domain.DFareBreakUp
@@ -263,7 +262,7 @@ mkBuyerFinderFeeTagGroup =
               descriptorName = Nothing
             },
       tagGroupDisplay = Just False,
-      tagGroupList = Just [feePercentage]
+      tagGroupList = Just [feePercentage, feeType]
     }
   where
     feePercentage =
@@ -276,6 +275,17 @@ mkBuyerFinderFeeTagGroup =
                   descriptorName = Nothing
                 },
           tagValue = Just "0"
+        }
+    feeType =
+      Spec.Tag
+        { tagDescriptor =
+            Just $
+              Spec.Descriptor
+                { descriptorCode = Just "BUYER_FINDER_FEES_TYPE",
+                  descriptorImages = Nothing,
+                  descriptorName = Nothing
+                },
+          tagValue = Just "percent"
         }
 
 mkSettlementTagGroup :: Maybe Text -> Maybe Text -> Maybe Text -> Spec.TagGroup
@@ -325,7 +335,7 @@ mkSettlementTagGroup mAmount mSettlementType mbDelayInterest =
                         descriptorImages = Nothing,
                         descriptorName = Nothing
                       },
-                tagValue = Just "PT1D"
+                tagValue = Just "PT24H"
               },
           mbDelayInterest <&> \delayInterest ->
             Spec.Tag
@@ -359,6 +369,28 @@ mkSettlementTagGroup mAmount mSettlementType mbDelayInterest =
                         descriptorName = Nothing
                       },
                 tagValue = Just "https://api.example-bap.com/booking/terms" -- TODO: update with actual terms url
+              },
+          Just $
+            Spec.Tag
+              { tagDescriptor =
+                  Just $
+                    Spec.Descriptor
+                      { descriptorCode = Just "COURT_JURISDICTION",
+                        descriptorImages = Nothing,
+                        descriptorName = Nothing
+                      },
+                tagValue = Just "New Delhi"
+              },
+          Just $
+            Spec.Tag
+              { tagDescriptor =
+                  Just $
+                    Spec.Descriptor
+                      { descriptorCode = Just "MANDATORY_ARBITRATION",
+                        descriptorImages = Nothing,
+                        descriptorName = Nothing
+                      },
+                tagValue = Just "true"
               }
         ]
 

@@ -472,6 +472,7 @@ buildPaymentOrder ::
 buildPaymentOrder merchantId mbMerchantOpCityId personId req resp = do
   now <- getCurrentTime
   clientAuthToken <- encrypt resp.sdk_payload.payload.clientAuthToken
+  logDebug $ "Creating payment order with Amount: " <> show req.amount
   pure
     DOrder.PaymentOrder
       { id = Id req.orderId,

@@ -62,6 +62,7 @@ import qualified Kernel.Types.TimeBound as DTB
 import qualified Kernel.Utils.CalculateDistance as CD
 import Kernel.Utils.Common hiding (mkPrice)
 import qualified Lib.JourneyLeg.Types as JLT
+import qualified Lib.JourneyModule.Types as JT
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
@@ -684,6 +685,7 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req crisSdkResponse
                 isSkipped = Just False,
                 quantity = ticketQuantity',
                 childTicketQuantity,
+                bppPaymentId = Nothing,
                 bookingAuthCode = crisSdkResponse <&> (.bookAuthCode),
                 osType = crisSdkResponse <&> (.osType),
                 osBuildVersion = crisSdkResponse <&> (.osBuildVersion),
@@ -718,6 +720,15 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req crisSdkResponse
 
 postFrfsQuoteConfirm :: CallExternalBPP.FRFSConfirmFlow m r => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId = postFrfsQuoteV2Confirm (mbPersonId, merchantId_) quoteId (API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq {discounts = [], ticketQuantity = Nothing, childTicketQuantity = Nothing})
+
+postFrfsQuoteSelect :: JT.ConfirmFlow m r c => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> m Kernel.Types.APISuccess.APISuccess
+postFrfsQuoteSelect (_, merchantId_) quoteId = do
+  quote <- B.runInReplica $ QFRFSQuote.findById quoteId >>= fromMaybeM (InvalidRequest "Invalid quote id")
+  merchant <- CQM.findById merchantId_ >>= fromMaybeM (MerchantDoesNotExist merchantId_.getId)
+  merchantOperatingCity <- CQMOC.findById quote.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound quote.merchantOperatingCityId.getId)
+  bapConfig <- QBC.findByMerchantIdDomainAndVehicle (Just merchant.id) (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory quote.vehicleType) >>= fromMaybeM (InternalError "Beckn Config not found")
+  void $ CallExternalBPP.select merchant merchantOperatingCity bapConfig quote Nothing Nothing
+  return Kernel.Types.APISuccess.Success
 
 postFrfsQuotePaymentRetry :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 postFrfsQuotePaymentRetry = error "Logic yet to be decided"
@@ -809,7 +820,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking booking' = do
           let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.FAILED Nothing Nothing
           buildFRFSTicketBookingStatusAPIRes updatedBooking paymentFailed
         else
-          if (paymentBookingStatus == FRFSTicketService.SUCCESS) && (booking.validTill < now)
+          if (paymentBookingStatus == FRFSTicketService.SUCCESS) && (addUTCTime 300 booking.validTill < now)
             then do
               void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED booking.id
               void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.REFUND_PENDING booking.id
@@ -839,13 +850,15 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking booking' = do
       logInfo $ "paymentBookingStatus: " <> show paymentBookingStatus
       if paymentBookingStatus == FRFSTicketService.FAILURE
         then do
+          logInfo $ "Payment failed for booking: " <> show bookingId <> "Magar Kaise"
           QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED bookingId
           QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.FAILED booking.id
           let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.FAILED Nothing Nothing
           buildFRFSTicketBookingStatusAPIRes updatedBooking paymentFailed
         else
-          if (paymentBookingStatus == FRFSTicketService.SUCCESS) && (booking.validTill < now)
+          if (paymentBookingStatus == FRFSTicketService.SUCCESS) && (addUTCTime 300 booking.validTill < now)
             then do
+              logDebug "Fuck How can get Here"
               void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED booking.id
               void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.REFUND_PENDING booking.id
               -- refundOrderCall booking person paymentOrder

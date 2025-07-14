@@ -42,8 +42,8 @@ buildConfirmReq ::
   m (Spec.ConfirmReq)
 buildConfirmReq rider booking bapConfig txnId bppData city = do
   let transactionId = booking.searchId.getId
-      messageId = booking.id.getId
-
+  messageId <- generateGUID
+  logDebug $ "Building Confirm Request for messageId: " <> messageId
   now <- getCurrentTime
   let confirmTtl = maybe booking.validTill (\ttlSec -> addUTCTime (intToNominalDiffTime ttlSec) now) bapConfig.confirmTTLSec
       ttl = diffUTCTime confirmTtl now
@@ -118,11 +118,11 @@ tfQuantity booking =
       }
 
 tfPayments :: DBooking.FRFSTicketBooking -> Text -> Maybe BknPaymentParams -> Maybe Text -> Maybe [Spec.Payment]
-tfPayments booking txnId mPaymentParams mSettlementType = do
+tfPayments booking _ mPaymentParams mSettlementType = do
   let mCurrency = Just booking.price.currency
   Just $
     singleton $
-      Utils.mkPaymentForConfirmReq Spec.PAID (Just $ encodeToText booking.price.amount) (Just txnId) mPaymentParams mSettlementType mCurrency Nothing
+      Utils.mkPaymentForConfirmReq Spec.PAID (Just $ encodeToText booking.price.amount) booking.bppPaymentId mPaymentParams mSettlementType mCurrency (Just "2.5")
 
 tfProvider :: DBooking.FRFSTicketBooking -> Maybe Spec.Provider
 tfProvider booking =

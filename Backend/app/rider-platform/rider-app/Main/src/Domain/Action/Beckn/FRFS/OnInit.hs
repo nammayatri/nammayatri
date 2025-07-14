@@ -56,7 +56,8 @@ data DOnInit = DOnInit
     messageId :: Text,
     bankAccNum :: Text,
     bankCode :: Text,
-    bppOrderId :: Maybe Text
+    bppOrderId :: Maybe Text,
+    bppPaymentId :: Maybe Text
   }
 
 validateRequest :: (EsqDBReplicaFlow m r, BeamFlow m r) => DOnInit -> m (Merchant.Merchant, FTBooking.FRFSTicketBooking)
@@ -82,6 +83,7 @@ onInit onInitReq merchant booking_ = do
   person <- QP.findById booking_.riderId >>= fromMaybeM (PersonNotFound booking_.riderId.getId)
   whenJust (onInitReq.validTill) (\validity -> void $ QFRFSTicketBooking.updateValidTillById validity booking_.id)
   void $ QFRFSTicketBooking.updatePriceById onInitReq.totalPrice booking_.id
+  void $ QFRFSTicketBooking.updateBppPaymentId onInitReq.bppPaymentId booking_.id
   void $ QFRFSTicketBooking.updateBppBankDetailsById (Just onInitReq.bankAccNum) (Just onInitReq.bankCode) booking_.id
   frfsConfig <- CQFRFSConfig.findByMerchantOperatingCityId booking_.merchantOperatingCityId Nothing >>= fromMaybeM (FRFSConfigNotFound booking_.merchantOperatingCityId.getId)
   whenJust onInitReq.bppOrderId (\bppOrderId -> void $ QFRFSTicketBooking.updateBPPOrderIdById (Just bppOrderId) booking_.id)
@@ -116,7 +118,6 @@ onInit onInitReq merchant booking_ = do
       let paymentType = getPaymentType booking.vehicleType
       let amt :: HighPrecMoney = if isMetroTestTransaction && frfsConfig.isFRFSTestingEnabled then 1 else booking.price.amount
       mCreateOrderRes <- createPayments booking.merchantOperatingCityId merchant.id orderId orderShortId amt person paymentType []
-      logInfo $ "Order created in onInit" <> show mCreateOrderRes
       case mCreateOrderRes of
         Just _ -> do
           markBookingApproved (ticketBookingPayment, booking)
@@ -183,7 +184,6 @@ createPayments ::
   [Payment.VendorSplitDetails] ->
   m (Maybe Payment.CreateOrderResp)
 createPayments merchantOperatingCityId merchantId orderId orderShortId amount person paymentType vendorSplitArr = do
-  logInfo $ "createPayments vendorSplitArr" <> show vendorSplitArr
   personPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
   personEmail <- mapM decrypt person.email
   isSplitEnabled <- Payment.getIsSplitEnabled merchantId merchantOperatingCityId Nothing paymentType

@@ -54,7 +54,7 @@ buildIssueReq ridebookingInfo category option description merchant rider igmConf
   (issueId, mbType, transactionId, createdAt) <- case mbIgmIssue of
     Nothing -> do
       issueId <- generateGUID
-      transactionId <- generateGUID
+      let transactionId = fromMaybe "" ridebookingInfo.bppBookingId
       pure (issueId, Nothing, transactionId, UTCTimeRFC3339 now)
     Just igmIssue -> pure (igmIssue.id.getId, Just igmIssue.issueType, igmIssue.transactionId, UTCTimeRFC3339 igmIssue.createdAt)
   context <- Utils.buildContext Spec.ISSUE ridebookingInfo.domain merchant transactionId messageId merchantOperatingCity.city (Just $ Utils.BppData ridebookingInfo.providerId (showBaseUrl ridebookingInfo.providerUrl)) (Just $ Utils.durationToText ttl)
@@ -103,8 +103,8 @@ tfIssue category option description createdAt now issueId merchant ridebookingIn
 tfDescription :: Text -> Maybe Spec.IssueDescription
 tfDescription description = do
   let desc = Just description
-  let additionalDesc = tfAdditionalDescription (Just "false") (Just "text/plain")
-  Just $ Spec.IssueDescription desc desc additionalDesc
+  let additionalDesc = tfAdditionalDescription (Just "https://www.example.com") (Just "image")
+  Just $ Spec.IssueDescription desc desc additionalDesc ["https//www.nammayatri.in/image1"]
 
 tfAdditionalDescription :: Maybe Text -> Maybe Text -> Maybe Spec.IssueDescriptionAdditionalDesc
 tfAdditionalDescription url contentType = do
@@ -120,14 +120,34 @@ tfIssueActions merchant now igmConfig description mbCustomerAction ridebookingIn
 
 tfComplainantActions :: DM.Merchant -> UTCTimeRFC3339 -> IGMConfig -> Text -> Maybe Common.CustomerResponse -> RideBooking -> Maybe [Spec.ComplainantAction]
 tfComplainantActions merchant now igmConfig description mbCustomerAction ridebookingInfo =
-  Just
-    [ Spec.ComplainantAction
-        { complainantActionComplainantAction = Just $ Utils.mapCustomerResponseToAction mbCustomerAction,
-          complainantActionShortDesc = Just description,
-          complainantActionUpdatedAt = Just now, -- this should be now only sad
-          complainantActionUpdatedBy = tfUpdatedBy merchant igmConfig ridebookingInfo
-        }
-    ]
+  case mbCustomerAction of
+    Just Common.ACCEPT -> do
+      -- When issue is CLOSED, return both OPEN and CLOSE actions
+      let openTime = UTCTimeRFC3339 $ addUTCTime (-120) (convertRFC3339ToUTC now) -- 3 minutes earlier
+      Just
+        [ Spec.ComplainantAction
+            { complainantActionComplainantAction = Just $ show Spec.OPEN_ISSUE,
+              complainantActionShortDesc = Just "Complaint created",
+              complainantActionUpdatedAt = Just openTime,
+              complainantActionUpdatedBy = tfUpdatedBy merchant igmConfig ridebookingInfo
+            },
+          Spec.ComplainantAction
+            { complainantActionComplainantAction = Just $ show Spec.CLOSE,
+              complainantActionShortDesc = Just "Complaint closed",
+              complainantActionUpdatedAt = Just now,
+              complainantActionUpdatedBy = tfUpdatedBy merchant igmConfig ridebookingInfo
+            }
+        ]
+    _ -> do
+      -- For other cases, return single action as before
+      Just
+        [ Spec.ComplainantAction
+            { complainantActionComplainantAction = Just $ Utils.mapCustomerResponseToAction mbCustomerAction,
+              complainantActionShortDesc = Just description,
+              complainantActionUpdatedAt = Just now, -- this should be now only sad
+              complainantActionUpdatedBy = tfUpdatedBy merchant igmConfig ridebookingInfo
+            }
+        ]
 
 tfUpdatedBy :: DM.Merchant -> IGMConfig -> RideBooking -> Maybe Spec.Organization
 tfUpdatedBy merchant igmConfig ridebookingInfo =
@@ -143,10 +163,10 @@ tfOrderDetails ridebookingInfo =
   Just $
     Spec.OrderDetails
       { orderDetailsFulfillments = tfFulfillments ridebookingInfo,
-        orderDetailsId = ridebookingInfo.bppOrderId <> ridebookingInfo.bppBookingId,
+        orderDetailsId = ridebookingInfo.bppOrderId,
         orderDetailsItems = tfItems ridebookingInfo,
         orderDetailsProviderId = Just $ ridebookingInfo.providerId,
-        orderDetailsState = ridebookingInfo.status,
+        orderDetailsState = Nothing,
         orderMerchantId = Nothing
       }
 
@@ -155,7 +175,7 @@ tfFulfillments ridebookingInfo =
   Just
     [ Spec.Fulfillment
         { fulfillmentId = Just ridebookingInfo.bppItemId,
-          fulfillmentState = ridebookingInfo.status
+          fulfillmentState = Nothing
         }
     ]
 

@@ -56,7 +56,7 @@ validateCoreVersion :: MonadFlow m => Spec.Context -> m ()
 validateCoreVersion context = do
   let supportedVersion = "1.0.0"
   version <- context.contextVersion & fromMaybeM (Error.InvalidRequest "Missing contextVersion")
-  unless (version == supportedVersion) $
+  unless (version == supportedVersion || version == "2.0.1" || version == "2.0.0") $
     throwError Error.UnsupportedCoreVer
 
 durationToText :: NominalDiffTime -> Text
@@ -70,7 +70,7 @@ ack =
         Spec.AckMessage
           { ackMessageAck =
               Spec.Ack
-                { ackStatus = Just "200"
+                { ackStatus = Just "ACK"
                 }
           }
     }

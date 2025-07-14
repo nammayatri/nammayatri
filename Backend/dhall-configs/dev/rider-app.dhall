@@ -398,7 +398,7 @@ in  { esqDBCfg
     , dashboardClickhouseCfg
     , ondcTokenMap = sec.ondcTokenMap
     , iosValidateEnpoint = "http://localhost:3000/validateIosToken?idToken="
-    , isMetroTestTransaction = False
+    , isMetroTestTransaction = True
     , urlShortnerConfig = common.urlShortnerConfig
     , sosAlertsTopicARN
     , ondcRegistryUrl = common.ondcRegistryUrl

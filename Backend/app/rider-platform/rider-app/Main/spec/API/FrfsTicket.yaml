@@ -339,6 +339,14 @@ apis:
       response:
         type: API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 
+  - POST:
+      endpoint: /frfs/quote/{quoteId}/select
+      params:
+        quoteId: Id FRFSQuote
+      auth: TokenAuth
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
   # Retry payment
   - POST:
       endpoint: /frfs/quote/{quoteId}/payment/retry

@@ -37,22 +37,20 @@ mkBapUri :: (HasFlowEnv m r '["nwAddress" ::: BaseUrl]) => Id DM.Merchant -> m B
 mkBapUri merchantId = asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack merchantId.getId)
 
 buildContext :: (HasFlowEnv m r '["nwAddress" ::: BaseUrl]) => Spec.Action -> Spec.Domain -> DM.Merchant -> Text -> Text -> Context.City -> Maybe BppData -> Maybe Text -> m Spec.Context
-buildContext action domain merchant txnId msgId city bppData mTTL = do
+buildContext action domain _merchant txnId msgId city _ mTTL = do
   now <- UTCTimeRFC3339 <$> getCurrentTime
-  bapUrl <- mkBapUri merchant.id
-  let bapId = merchant.bapId
-      contextBppId = bppData <&> (.bppId)
-      contextBppUri = bppData <&> (.bppUri)
+  let bapUrl = "https://d81e-27-7-145-240.ngrok-free.app/beckn/frfs/v1/da4e23a5-3ce6-4c37-8b9b-41377c3c1a52"
+  let bapId = "api.sandbox.moving.tech/dev/bap/frfs/4b17bd06-ae7e-48e9-85bf-282fb310209c"
   cityCode <- getCodeFromCity city
   pure $
     Spec.Context
-      { contextVersion = Just "1.0.0",
+      { contextVersion = Just "2.0.1",
         contextDomain = encodeToText' domain,
         contextAction = encodeToText' action,
         contextBapId = Just bapId,
-        contextBapUri = Just $ showBaseUrl bapUrl,
-        contextBppId,
-        contextBppUri,
+        contextBapUri = Just bapUrl,
+        contextBppId = Just "pramaan.ondc.org/beta/preprod/mock/seller",
+        contextBppUri = Just "https://pramaan.ondc.org/beta/preprod/mock/seller",
         contextLocation = Just $ tfLocation cityCode,
         contextKey = Nothing,
         contextMessageId = Just msgId,

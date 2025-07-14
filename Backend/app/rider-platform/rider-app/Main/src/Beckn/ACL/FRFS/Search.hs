@@ -59,7 +59,7 @@ tfIntent vehicleType mbFromStation mbToStation =
   Just $
     Spec.Intent
       { intentFulfillment = tfIntentFulfillment vehicleType mbFromStation mbToStation,
-        intentPayment = Just $ Utils.mkPaymentForSearchReq Nothing Nothing Nothing Nothing Nothing Nothing (Just "0")
+        intentPayment = Just $ Utils.mkPaymentForSearchReq Nothing Nothing Nothing Nothing Nothing Nothing (Just "2.5")
       }
 
 tfIntentFulfillment :: Spec.VehicleCategory -> Maybe DStation.Station -> Maybe DStation.Station -> Maybe Spec.Fulfillment
@@ -67,7 +67,7 @@ tfIntentFulfillment vehicleType mbFromStation mbToStation =
   Just $
     Spec.Fulfillment
       { fulfillmentId = Nothing,
-        fulfillmentStops = tfStops mbFromStation mbToStation,
+        fulfillmentStops = if isJust mbFromStation then tfStops mbFromStation mbToStation else Nothing,
         fulfillmentTags = Nothing,
         fulfillmentType = Nothing,
         fulfillmentVehicle = tfVehicle vehicleType

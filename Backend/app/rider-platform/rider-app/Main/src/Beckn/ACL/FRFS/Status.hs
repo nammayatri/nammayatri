@@ -37,8 +37,8 @@ buildStatusReq booking bapConfig bppData city = do
   now <- getCurrentTime
   let transactionId = booking.searchId.getId
   messageId <- generateGUID
-  let validTill = addUTCTime (intToNominalDiffTime 30) now
-      ttl = diffUTCTime validTill now
+  let confirmTtl = maybe booking.validTill (\ttlSec -> addUTCTime (intToNominalDiffTime ttlSec) now) bapConfig.confirmTTLSec
+      ttl = diffUTCTime confirmTtl now
 
   context <- Utils.buildContext Spec.STATUS bapConfig transactionId messageId (Just $ Utils.durationToText ttl) (Just bppData) city booking.vehicleType
 

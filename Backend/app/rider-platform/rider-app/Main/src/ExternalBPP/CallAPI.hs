@@ -126,7 +126,6 @@ search merchant merchantOperatingCity bapConfig searchReq mbFare routeDetails in
 
 select ::
   FRFSSelectFlow m r c =>
-  (DOnSelect -> m ()) ->
   Merchant ->
   MerchantOperatingCity ->
   BecknConfig ->
@@ -134,7 +133,7 @@ select ::
   Maybe Int ->
   Maybe Int ->
   m ()
-select processOnSelectHandler merchant merchantOperatingCity bapConfig quote ticketQuantity childTicketQuantity = do
+select merchant merchantOperatingCity bapConfig quote _ _ = do
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity quote
   case integratedBPPConfig.providerConfig of
     ONDC _ -> do
@@ -144,9 +143,7 @@ select processOnSelectHandler merchant merchantOperatingCity bapConfig quote tic
         logDebug $ "FRFS SelectReq " <> encodeToText bknSelectReq
         Metrics.startMetrics Metrics.SELECT_FRFS merchant.name quote.searchId.getId merchantOperatingCity.id.getId
         void $ CallFRFSBPP.select providerUrl bknSelectReq merchant.id
-    _ -> do
-      onSelectReq <- Flow.select merchant merchantOperatingCity integratedBPPConfig bapConfig quote ticketQuantity childTicketQuantity
-      processOnSelectHandler onSelectReq
+    _ -> return ()
 
 init :: FRFSConfirmFlow m r => Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> DBooking.FRFSTicketBooking -> m ()
 init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking = do

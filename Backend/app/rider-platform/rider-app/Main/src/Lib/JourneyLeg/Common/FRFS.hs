@@ -10,8 +10,6 @@ import Data.List (sortBy, sortOn)
 import qualified Data.Text.Encoding as TE
 import qualified Data.Time as Time
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
-import Domain.Action.Beckn.FRFS.Common
-import qualified Domain.Action.Beckn.FRFS.OnSelect as DOnSelect
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import Domain.Types.FRFSQuote
 import Domain.Types.FRFSRouteDetails
@@ -567,13 +565,8 @@ confirm personId merchantId mbQuoteId ticketQuantity childTicketQuantity skipBoo
         merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
         merchantOperatingCity <- CQMOC.findById quote.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound quote.merchantOperatingCityId.getId)
         bapConfig <- QBC.findByMerchantIdDomainAndVehicle (Just merchant.id) (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory vehicleType) >>= fromMaybeM (InternalError "Beckn Config not found")
-        void $ CallExternalBPP.select processOnSelect merchant merchantOperatingCity bapConfig quote ticketQuantity childTicketQuantity
+        void $ CallExternalBPP.select merchant merchantOperatingCity bapConfig quote ticketQuantity childTicketQuantity
       else void $ FRFSTicketService.postFrfsQuoteV2ConfirmUtil (Just personId, merchantId) quoteId (API.FRFSQuoteConfirmReq {discounts = [], ticketQuantity = ticketQuantity, childTicketQuantity = childTicketQuantity}) crisSdkResponse
-  where
-    processOnSelect :: FRFSConfirmFlow m r => DOnSelect -> m ()
-    processOnSelect onSelectReq = do
-      (merchant', quote') <- DOnSelect.validateRequest onSelectReq
-      DOnSelect.onSelect onSelectReq merchant' quote'
 
 cancel :: JT.CancelFlow m r c => Id FRFSSearch -> Spec.CancellationType -> Bool -> m ()
 cancel searchId cancellationType isSkipped = do
