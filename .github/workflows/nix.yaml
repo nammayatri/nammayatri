@@ -5,13 +5,13 @@ on:
     branches: 
       - "main"
       - "prodHotPush-Common"
-      - "prodHotPush-MMFRFS"
+      - "prodHotPush-MM"
   pull_request:
     types: [opened, synchronize, reopened, closed]
     branches: 
       - "main"
       - "prodHotPush-Common"
-      - "prodHotPush-MMFRFS"
+      - "prodHotPush-MM"
   workflow_dispatch:
 
 permissions:
@@ -66,7 +66,7 @@ jobs:
           # Moving the docker push conditions here from the build job
           if [[ "${{ github.ref }}" == "refs/heads/main" || 
                 "${{ github.ref }}" == "refs/heads/prodHotPush-Common" || 
-                "${{ github.ref }}" == "refs/heads/prodHotPush-MMFRFS" ||
+                "${{ github.ref }}" == "refs/heads/prodHotPush-MM" ||
                 "${{ github.event.pull_request.merged }}" == "true" ]]; then
             echo "should_push_docker=true" >> $GITHUB_OUTPUT
           else
