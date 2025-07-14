@@ -74,7 +74,7 @@ instance showAction :: Show Action where
   show (GullakBannerClick) = "GullakBannerClick"
   show (UpdateReferralCode _) = "UpdateReferralCode"
   show (GoToClaimReward) = "GoToClaimReward"
-
+  show (YoutubeVideoStatus _) = "YoutubeVideoStatus"
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of
     AfterRender -> trackAppScreenRender appId "screen" "BenefitsScreen"
@@ -137,7 +137,7 @@ data Action = BackPressed
             | GullakBannerClick
             | UpdateReferralCode GenerateReferralCodeRes
             | GoToClaimReward
-
+            | YoutubeVideoStatus String
 data ScreenOutput = GoToHomeScreen BenefitsScreenState
                   | GoToNotifications BenefitsScreenState
                   | SubscriptionScreen BenefitsScreenState

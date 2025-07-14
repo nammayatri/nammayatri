@@ -126,7 +126,7 @@ import RemoteConfig
 import Storage as Storage
 import PrestoDOM (Padding(..), Gravity(..), Margin(..), Length(..))
 import Font.Size as FontSize
-
+import Common.Types.App (YoutubeData, YoutubeVideoStatus(..))
 
 type AffSuccess s = (s -> Effect Unit)
 
@@ -1400,3 +1400,17 @@ fetchAndUpdateLocationUpdateServiceVars stage frequentLocationUpdates tripType =
   void $ pure $ Storage.setValueToLocalStore LOCATION_MAX_BATCH_AGE locationUpdateServiceConfig.maxBatchAge
   void $ pure $ Storage.setValueToLocalStore LOCATION_MAX_TIME_THRESHOLD locationUpdateServiceConfig.maxTimeThreshold
   void $ pure $ Storage.setValueToLocalStore LOCATION_PRIORITY locationUpdateServiceConfig.priority
+
+youtubeData :: YoutubeData
+youtubeData =
+  { videoTitle: ""
+  , setVideoTitle: false
+  , showMenuButton: false
+  , showDuration: true
+  , showSeekBar: true
+  , videoId: ""
+  , videoType: ""
+  , videoHeight : 0
+  , showFullScreen : false
+  , hideFullScreenButton : false
+  } 
