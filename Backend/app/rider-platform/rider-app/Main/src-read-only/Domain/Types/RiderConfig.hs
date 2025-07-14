@@ -75,6 +75,7 @@ data RiderConfig = RiderConfig
     nearbyDriverSearchRadius :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     noOfRideRequestsConfig :: Kernel.Prelude.Int,
     nyRegularExecutionTimeOffsetMinutes :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    nyRegularMasterJobNextRunOffsetSeconds :: Kernel.Prelude.NominalDiffTime,
     nyRegularMinGapSeconds :: Kernel.Types.Common.Seconds,
     nyRegularSubscriptionBatchSize :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     payoutBatchDelay :: Kernel.Prelude.NominalDiffTime,

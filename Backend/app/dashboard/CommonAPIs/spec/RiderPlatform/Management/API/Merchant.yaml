@@ -221,6 +221,13 @@ apis:
         endpoint: MerchantAPI UpsertTicketConfigEndpoint
         endpointV2:
         userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT UPSERT_FARE_TICKET_CONFIG
+  - POST: # SchedulerTriggerAPI
+      endpoint: /scheduler/trigger
+      auth: ApiAuthV2
+      request:
+        type: SchedulerTriggerReq
+      response:
+        type: APISuccess
 
 types:
   MerchantUpdateReq:
@@ -236,6 +243,13 @@ types:
   UpsertTicketConfigResp:
     - unprocessedTicketConfigs: [Text]
     - success: Text
+  SchedulerTriggerReq:
+    - scheduledAt: Maybe UTCTime
+    - jobName: Maybe JobName
+    - jobData: Text
+    - derive: "'HideSecrets"
+  JobName:
+    - enum: "NyRegularMasterTrigger"
 
 extraOperations:
   - EXTRA_API_TYPES_FILE
