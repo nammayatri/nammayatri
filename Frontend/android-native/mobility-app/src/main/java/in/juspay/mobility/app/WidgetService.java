@@ -592,17 +592,18 @@ public class WidgetService extends Service {
                                     boolean appNotKilled = !sharedPref.getString("ACTIVITY_STATUS", "null").equals("onDestroy");
                                     boolean rideActive = sharedPref.getString("IS_RIDE_ACTIVE", "null").equals("true");
                                     boolean mapOpenedFromApp = sharedPref.getString("MAPS_OPENED", "null").equals("true");
-                                    if ( appNotKilled && (mapOpenedFromApp || rideActive)) {
-                                        Handler mainLooper = new Handler(Looper.getMainLooper());
-                                        minimizeApp();
-                                        View loaderView = getLoaderView();
-                                        mainLooper.postDelayed(() -> {
-                                            loaderView.setVisibility(View.GONE);
-                                            openMainActivity();
-                                            }, ramBasedTime );
-                                    } else {
-                                        openMainActivity();
-                                    }
+                                    openMainActivity();
+                                    // if ( appNotKilled && (mapOpenedFromApp || rideActive)) {
+                                    //     Handler mainLooper = new Handler(Looper.getMainLooper());
+                                    //     minimizeApp();
+                                    //     View loaderView = getLoaderView();
+                                    //     mainLooper.postDelayed(() -> {
+                                    //         loaderView.setVisibility(View.GONE);
+                                    //         openMainActivity();
+                                    //         }, ramBasedTime );
+                                    // } else {
+                                    //     openMainActivity();
+                                    // }
                                 }
                             }
                             return true;
