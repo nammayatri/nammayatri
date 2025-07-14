@@ -997,7 +997,7 @@ canBeSwitched ::
   DTrip.MultimodalTravelMode ->
   Maybe Distance ->
   m Bool
-canBeSwitched legToBeSwitched newMode newDistance = do
+canBeSwitched legToBeSwitched newMode _ = do
   let currentMode = legToBeSwitched.travelMode
   case (currentMode, newMode) of
     (_, DTrip.Metro) -> return False
@@ -1005,13 +1005,14 @@ canBeSwitched legToBeSwitched newMode newDistance = do
     (DTrip.Bus, DTrip.Taxi) -> return False
     (DTrip.Metro, DTrip.Taxi) -> return False
     (DTrip.Walk, DTrip.Taxi) -> return True
-    (DTrip.Taxi, DTrip.Walk) -> do
-      case newDistance of
-        Just distance ->
-          if getMeters (distanceToMeters distance) <= 2000
-            then do return True
-            else do throwError $ InvalidRequest "Can't switch to walk if distance is more than 2km, skip the ride instead"
-        Nothing -> return True
+    (DTrip.Taxi, DTrip.Walk) -> return True
+    -- commenting this so that UI can handle the distance check
+    -- case newDistance of
+    --   Just distance ->
+    --     if getMeters (distanceToMeters distance) <= 2000
+    --       then do return True
+    --       else do throwError $ InvalidRequest "Can't switch to walk if distance is more than 2km, skip the ride instead"
+    --   Nothing -> return True
     _ -> return False
 
 updateJourneyStatus ::
