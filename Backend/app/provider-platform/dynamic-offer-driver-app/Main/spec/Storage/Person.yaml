@@ -27,7 +27,7 @@ Person:
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema,ToParamSchema"
 
     IdentifierType:
-      enum: "MOBILENUMBER, AADHAAR, EMAIL"
+      enum: "MOBILENUMBER, AADHAAR, EMAIL, DEVICEID"
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema,ToParamSchema"
 
     Gender:
@@ -184,6 +184,11 @@ Person:
     findById:
       kvFunction: findOneWithKV
       where: id
+
+    findByDeviceIdAndMerchant:
+      kvFunction: findOneWithKV
+      where:
+        and: [identifier, merchantId]
 
     findAllByMerchantId:
       kvFunction: findAllWithDb

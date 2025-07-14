@@ -44,15 +44,17 @@ newtype FleetAPIs = FleetAPIs
 
 mkDynamicOfferDriverAppFleetAPIs :: CheckedShortId DM.Merchant -> City.City -> Text -> FleetAPIs
 mkDynamicOfferDriverAppFleetAPIs merchantId city token = do
-  let registration = FleetRegistrationAPIs {..}
-
-  FleetAPIs {..}
-  where
-    fleetRegisterationClient = clientWithMerchantAndCity (Proxy :: Proxy BPP.API) merchantId city token
-
-    fleetOwnerLogin
-      :<|> fleetOwnerVerify
-      :<|> fleetOwnerRegister = fleetRegisterationClient
+  let client = clientWithMerchantAndCity (Proxy :: Proxy BPP.API)
+      fleetClient = client merchantId city token
+      (registrationAPI :<|> _) = fleetClient
+      (login :<|> verify :<|> register) = registrationAPI
+      registration =
+        FleetRegistrationAPIs
+          { fleetOwnerLogin = login,
+            fleetOwnerVerify = verify,
+            fleetOwnerRegister = register
+          }
+  FleetAPIs {registration}
 
 callDynamicOfferDriverAppFleetApi ::
   forall m r b c.
