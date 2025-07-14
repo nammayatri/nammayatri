@@ -139,16 +139,47 @@ nudgeOrBlockDriver transporterConfig driver driverInfo = do
       let mbCooldDownWeekly = driverInfo.weeklyCancellationRateBlockingCooldown
           mbCooldDownDaily = driverInfo.dailyCancellationRateBlockingCooldown
       logDebug $ "All cancellation rate data for driverId: " <> driver.id.getId <> ": dailyCancellationRate: " <> show dailyCancellationRate <> " dailyAssignedCount: " <> show dailyAssignedCount <> " weeklyCancellationRate: " <> show weeklyCancellationRate <> " weeklyAssignedCount: " <> show weeklyAssignedCount
-      let canBlockOnWeekly = isDriverBlockable cancellationRateThresholdWeekly weeklyMinRidesforBlocking weeklyCancellationRate weeklyAssignedCount mbCooldDownWeekly now
-          canBlockOnDaily = isDriverBlockable cancellationRateThresholdDaily dailyMinRidesforBlocking dailyCancellationRate dailyAssignedCount mbCooldDownDaily now
-      case (canBlockOnWeekly, canBlockOnDaily) of
-        (True, _) -> do
-          SPerson.blockDriverTemporarily driver.merchantId driver.merchantOperatingCityId driver.id "BLOCKED_BASED_ON_CANCELLATION_RATE" weeklyOffenceSuspensionTimeHours CancellationRateWeekly
+
+      (canBlockOnWeekly, canBlockOnDaily, weeklyOffenceSuspensionTimeHoursParam, dailyOffenceSuspensionTimeHoursParam) <- case cancellationRateSlabConfig of
+        Nothing -> do
+          return
+            ( isDriverBlockable cancellationRateThresholdWeekly weeklyMinRidesforBlocking weeklyCancellationRate weeklyAssignedCount mbCooldDownWeekly now,
+              isDriverBlockable cancellationRateThresholdDaily dailyMinRidesforBlocking dailyCancellationRate dailyAssignedCount mbCooldDownDaily now,
+              weeklyOffenceSuspensionTimeHours,
+              dailyOffenceSuspensionTimeHours
+            )
+        Just configData -> do
+          let matchingWeeklySlab = find (\slab -> isDriverBlockable (slab.penalityForCancellation.cancellationPercentageThreshold) (slab.minBookings) weeklyCancellationRate weeklyAssignedCount mbCooldDownWeekly now) (configData.weeklySlabs)
+          (canBlockOnWeekly', weeklyOffenceSuspensionTimeHoursParam') <- case matchingWeeklySlab of
+            Just slab -> return (True, slab.penalityForCancellation.suspensionTimeInHours)
+            Nothing -> return (False, weeklyOffenceSuspensionTimeHours)
+
+          let matchingDailySlab =
+                find
+                  ( \slab ->
+                      isDriverBlockable
+                        slab.penalityForCancellation.cancellationPercentageThreshold
+                        slab.minBookings
+                        dailyCancellationRate
+                        dailyAssignedCount
+                        mbCooldDownDaily
+                        now
+                  )
+                  configData.dailySlabs
+
+          (canBlockOnDaily', dailyOffenceSuspensionTimeHoursParam') <- case matchingDailySlab of
+            Just slab -> return (True, slab.penalityForCancellation.suspensionTimeInHours)
+            Nothing -> return (False, dailyOffenceSuspensionTimeHours)
+
+          return (canBlockOnWeekly', canBlockOnDaily', weeklyOffenceSuspensionTimeHoursParam', dailyOffenceSuspensionTimeHoursParam')
+      case (canBlockOnWeekly, canBlockOnDaily, weeklyOffenceSuspensionTimeHoursParam, dailyOffenceSuspensionTimeHoursParam) of
+        (True, _, weeklyOffenceSuspensionTimeHoursParam', _) -> do
+          SPerson.blockDriverTemporarily driver.merchantId driver.merchantOperatingCityId driver.id "BLOCKED_BASED_ON_CANCELLATION_RATE" weeklyOffenceSuspensionTimeHoursParam' CancellationRateWeekly
           let calculatedCooldownTime = addUTCTime (fromIntegral weeklyConditionCooldownTimeHours * 60 * 60) now
               finalCooldown = whenFirstJustReturnMaxElseReturnSecond mbCooldDownWeekly calculatedCooldownTime
           QDriverInformation.updateWeeklyCancellationRateBlockingCooldown (Just finalCooldown) driver.id
-        (_, True) -> do
-          SPerson.blockDriverTemporarily driver.merchantId driver.merchantOperatingCityId driver.id "BLOCKED_BASED_ON_CANCELLATION_RATE" dailyOffenceSuspensionTimeHours CancellationRateDaily
+        (_, True, _, dailyOffenceSuspensionTimeHoursParam') -> do
+          SPerson.blockDriverTemporarily driver.merchantId driver.merchantOperatingCityId driver.id "BLOCKED_BASED_ON_CANCELLATION_RATE" dailyOffenceSuspensionTimeHoursParam' CancellationRateDaily
           let calculatedCooldownTime = addUTCTime (fromIntegral dailyConditionCooldownTimeHours * 60 * 60) now
               finalDailyCoolDown = whenFirstJustReturnMaxElseReturnSecond mbCooldDownDaily calculatedCooldownTime
               finalyWeeklyCoolDown = whenFirstJustReturnMaxElseReturnSecond mbCooldDownWeekly calculatedCooldownTime
@@ -168,11 +199,11 @@ nudgeOrBlockDriver transporterConfig driver driverInfo = do
         Just cool -> max cool calculatedCooldown
         Nothing -> calculatedCooldown
 
-    isDriverBlockable cancellationRateThreshold rideAssignedThreshold cancellationRate assignedCount mbCooldown now = do
+    isDriverBlockable cancellationRateThreshold rideAssignedThreshold cancellationRate assignedCount mbCooldown now =
       let rule = (cancellationRate > cancellationRateThreshold) && (assignedCount > rideAssignedThreshold)
-      case mbCooldown of
-        Just cooldown -> rule && (cooldown <= now)
-        Nothing -> rule
+       in case mbCooldown of
+            Just cooldown -> rule && (cooldown <= now)
+            Nothing -> rule
 
     getCancellationRateOfDays period windowSize = do
       let windowInt = toInteger windowSize
@@ -199,4 +230,5 @@ nudgeOrBlockDriver transporterConfig driver driverInfo = do
       weeklyOffenceSuspensionTimeHours <- transporterConfig.weeklyOffenceSuspensionTimeHours
       dailyConditionCooldownTimeHours <- transporterConfig.dailyConditionCooldownTimeHours
       weeklyConditionCooldownTimeHours <- transporterConfig.weeklyConditionCooldownTimeHours
+      let cancellationRateSlabConfig = transporterConfig.cancellationRateSlabConfig
       return CancellationRateBasedNudgingAndBlockingConfig {..}
