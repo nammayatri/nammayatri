@@ -193,7 +193,7 @@ getFareV2 partnerOrg mbIntegratedBPPConfigId req = withFlowHandlerAPI . withLogT
   unless (merchantId == partnerOrg.merchantId) $
     throwError . InvalidRequest $ "apiKey of partnerOrgId:" +|| partnerOrg.orgId ||+ " not valid for merchantId:" +|| merchantId ||+ ""
 
-  DPOFRFS.getFareV2 partnerOrg fromStation toStation req.partnerOrgTransactionId req.routeCode integratedBPPConfig
+  DPOFRFS.getFareV2 merchantOperatingCity partnerOrg fromStation toStation req.partnerOrgTransactionId req.routeCode integratedBPPConfig
   where
     withLogTag = Log.withLogTag ("FRFS:GetFareV2:PartnerOrgId:" <> partnerOrg.orgId.getId)
 

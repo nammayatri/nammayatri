@@ -22,10 +22,10 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.JourneyModule.Utils as JourneyUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
+import qualified Storage.CachedQueries.BecknConfig as CQBC
 import Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
 import qualified Storage.CachedQueries.RouteStopTimeTable as GRSM
-import qualified Storage.Queries.BecknConfig as QBecknConfig
 import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.MerchantOperatingCity as QMerchantOperatingCity
 import qualified Storage.Queries.Person as QP
@@ -125,8 +125,8 @@ getRecentRides person req = do
             [] -> return Nothing
             integratedBPPConfigs@(_ : _) -> do
               merchant <- QMerchant.findById person.merchantId >>= fromMaybeM (MerchantDoesNotExist person.merchantId.getId)
-              becknConfig <- QBecknConfig.findByMerchantIdDomainAndVehicle (Just merchant.id) "FRFS" vehicleCategory >>= fromMaybeM (InternalError "No beckn config found")
               merchantOperatingCity <- QMerchantOperatingCity.findById person.merchantOperatingCityId >>= fromMaybeM (InternalError "No merchant operating city found")
+              becknConfig <- CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id "FRFS" vehicleCategory >>= fromMaybeM (InternalError "No beckn config found")
               mbFare <-
                 Kernel.Prelude.listToMaybe
                   <$> ( SIBC.fetchFirstIntegratedBPPConfigResult integratedBPPConfigs $ \integratedBPPConfig -> do
