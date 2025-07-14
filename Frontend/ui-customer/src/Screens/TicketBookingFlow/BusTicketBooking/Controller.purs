@@ -91,7 +91,7 @@ data ScreenOutput
   | GoToChooseYourRide ST.BusTicketBookingState
   | GoToConfirmgDelivery ST.BusTicketBookingState
   | GoToSearchLocationScreenForRoutes ST.BusTicketBookingState ST.LocationActionId
-  | GoToMetroTicketDetailsFlow String
+  | GoToMetroTicketDetailsFlow ST.BusTicketBookingState String
   | GoToMetroTicketDetailsScreen API.FRFSTicketBookingStatusAPIRes
 
 updateCurrentLocation :: ST.BusTicketBookingState -> String -> String -> Eval Action  ScreenOutput ST.BusTicketBookingState
@@ -130,7 +130,7 @@ eval (BusTicketBookingListRespAC bookingList) state =
 eval TicketIconClicked state = updateAndExit state $ GoToMyTicketsScreen state
 
 eval (TicketPressed (API.FRFSTicketBookingStatusAPIRes ticketApiResp)) state = do 
-  updateAndExit state $ GoToMetroTicketDetailsFlow ticketApiResp.bookingId
+  updateAndExit state $ GoToMetroTicketDetailsFlow state ticketApiResp.bookingId
 
 eval (RepeatRideClicked ticketApiResp) state = 
   updateAndExit state $ GoToMetroTicketDetailsScreen ticketApiResp
