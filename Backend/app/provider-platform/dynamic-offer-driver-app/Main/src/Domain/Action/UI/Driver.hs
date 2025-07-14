@@ -1165,7 +1165,7 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
           now <- getCurrentTime
           let reqDriverTagWithExpiry = Yudhishthira.addTagExpiry petTag (mbNammTag >>= (.validity)) now
           return $ Yudhishthira.replaceTagNameValue person.driverTag reqDriverTagWithExpiry
-        else return $ Yudhishthira.removeTagNameValue person.driverTag petTag
+        else return $ Yudhishthira.removeTagName person.driverTag petTag
     unless (Just (Yudhishthira.showRawTags tag) == (Yudhishthira.showRawTags <$> person.driverTag)) $
       QPerson.updateDriverTag (Just tag) personId
 
