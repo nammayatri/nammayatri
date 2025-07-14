@@ -89,13 +89,12 @@ postUpdateInfoSpecialLocWarrior (_, _, _merchantOperatingCityId) personId Specia
       then unless (maybe False (Yudhishthira.elemTagNameValue driverTag) driver.driverTag) $ do
         logDebug $ "Driver Tag driverTag: ----------" <> personId.getId <> "  " <> show driverTag
         whenJust mbOlderDriverTag $ \olderDriverTag -> do
-          let updatedTag = Yudhishthira.replaceTagNameValue (Just $ Yudhishthira.removeTagNameValue driver.driverTag olderDriverTag) driverTag
           logDebug $ "Driver Tag olderDriverTag: ----------" <> personId.getId <> "  " <> show olderDriverTag
-          logDebug $ "Driver Tag removeDriverTag: ----------" <> personId.getId <> "  " <> show (Yudhishthira.removeTagNameValue driver.driverTag olderDriverTag)
-          QPerson.updateDriverTag (Just updatedTag) personId
-        whenNothing_ mbOlderDriverTag $ QPerson.updateDriverTag (Just $ Yudhishthira.replaceTagNameValue driver.driverTag driverTag) personId
+          logDebug $ "Driver Tag removeDriverTag: ----------" <> personId.getId <> "  " <> show (Yudhishthira.removeTagName driver.driverTag olderDriverTag)
+        let updatedTag = Yudhishthira.replaceTagNameValue driver.driverTag driverTag
+        QPerson.updateDriverTag (Just updatedTag) personId
         logDebug $ "Driver Tag addDriverTag: ----------" <> personId.getId <> "  " <> show (Yudhishthira.replaceTagNameValue driver.driverTag driverTag)
-      else when (maybe False (Yudhishthira.elemTagNameValue driverTag) driver.driverTag) $ QPerson.updateDriverTag (Just $ Yudhishthira.removeTagNameValue driver.driverTag driverTag) personId
+      else when (maybe False (Yudhishthira.elemTagName driverTag) driver.driverTag) $ QPerson.updateDriverTag (Just $ Yudhishthira.removeTagName driver.driverTag driverTag) personId
   return $
     SpecialLocWarriorInfoRes
       { isSpecialLocWarrior = isSpecialLocWarrior,
