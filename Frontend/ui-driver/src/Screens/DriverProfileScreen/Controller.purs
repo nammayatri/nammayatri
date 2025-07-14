@@ -138,6 +138,7 @@ instance showAction :: Show Action where
   show (OnCloseDriverDetailsClick) = "OnCloseDriverDetailsClick"
   show (BottomSheetStageChanged _) = "BottomSheetStageChanged"
   show (ClubDetailsClick) = "ClubDetailsClick"
+  show (YoutubeVideoStatus _) = "YoutubeVideoStatus"
 
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of
@@ -348,6 +349,7 @@ data Action = BackPressed
             | OnCloseDriverDetailsClick
             | BottomSheetStageChanged String
             | ClubDetailsClick
+            | YoutubeVideoStatus String
 eval :: Action -> DriverProfileScreenState -> Eval Action ScreenOutput DriverProfileScreenState
 
 eval AfterRender state = continue state

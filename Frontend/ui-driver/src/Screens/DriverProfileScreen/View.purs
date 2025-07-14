@@ -37,7 +37,7 @@ import Control.Transformers.Back.Trans (runBackT)
 import Data.Array (length, mapWithIndex, null, any, (!!), take, range)
 import Data.Either (Either(..))
 import Data.Enum (enumFromThenTo)
-import Data.Function.Uncurried (runFn2)
+import Data.Function.Uncurried (runFn2, runFn5)
 import Data.Int (toNumber, round)
 import Data.List (elem)
 import Data.Maybe
@@ -95,8 +95,7 @@ import Components.DriverProfileScoreCard as DriverProfileScoreCard
 import PrestoDOM.Elements.Elements
 import Mobility.Prelude (capitalize)
 import Data.Tuple (Tuple(..))
-
-
+import Common.Types.App (YoutubeData, YoutubeVideoStatus(..))
 screen :: ST.DriverProfileScreenState -> LoggableScreen Action ST.DriverProfileScreenState ScreenOutput
 screen initialState =
   { initialState
@@ -109,6 +108,7 @@ screen initialState =
             else do
               void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT
                 $ do
+                    void $ pure $ runFn5 JB.setYoutubePlayer HU.youtubeData (getNewIDWithTag "youtubeView") (show PAUSE) push YoutubeVideoStatus
                     driverRegistrationStatusResp <- Remote.driverRegistrationStatusBT $ DriverRegistrationStatusReq true
                     lift $ lift $ doAff do liftEffect $ push $ RegStatusResponse driverRegistrationStatusResp
               void $ launchAff $ EHC.flowRunner defaultGlobalState $ do

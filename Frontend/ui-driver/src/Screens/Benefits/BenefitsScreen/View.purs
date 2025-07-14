@@ -55,7 +55,7 @@ import DecodeUtil (getAnyFromWindow)
 import Data.Function.Uncurried (runFn3)
 import Presto.Core.Types.Language.Flow (Flow)
 import Presto.Core.Types.API (ErrorResponse(..))
-import Data.Function.Uncurried (runFn2)
+import Data.Function.Uncurried (runFn2, runFn5)
 import Data.Either (Either(..))
 import Helpers.API as HelperAPI
 import Engineering.Helpers.Utils as EHU
@@ -67,7 +67,7 @@ import Data.String as DS
 import Data.Array as DA
 import Resource.Localizable.StringsV2 (getStringV2)
 import Resource.Localizable.TypesV2 as LT2
-
+import Common.Types.App (YoutubeData, YoutubeVideoStatus(..))
 
 screen :: BenefitsScreenState -> LoggableScreen Action BenefitsScreenState ScreenOutput
 screen initialState =
@@ -79,6 +79,7 @@ screen initialState =
             _ <-
               launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT
                 $ do
+                    void $ pure $ runFn5 JB.setYoutubePlayer HU.youtubeData (getNewIDWithTag "youtubeView") (show PAUSE) push YoutubeVideoStatus
                     (GetPerformanceRes referralInfoResp) <- Remote.getPerformanceBT (GetPerformanceReq {})
                     lift $ lift $ doAff do liftEffect $ push $ UpdateDriverPerformance (GetPerformanceRes referralInfoResp)
                     if (DA.any (_ == initialState.data.referralCode) ["__failed", "", "(null)"]) then do
@@ -111,7 +112,6 @@ screen initialState =
   , parent : Nothing
   , logWhitelist : initialState.data.config.logWhitelistConfig.benefitsLogWhitelist.benefitsScreenLogWhitelist
   }
-
 view :: forall w. (Action -> Effect Unit) -> BenefitsScreenState -> PrestoDOM (Effect Unit) w
 view push state =
   relativeLayout
