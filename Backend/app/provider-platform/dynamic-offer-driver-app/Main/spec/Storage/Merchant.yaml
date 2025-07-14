@@ -750,6 +750,18 @@ DriverIntelligentPoolConfig:
 TransporterConfig:
   derives: Generic,Show,'UsageSafety,Eq
   types:
+    CancellationRateSlab:
+      cancellationPercentageThreshold: Int
+      suspensionTimeInHours: Int
+      derive': Generic, Show, ToJSON, FromJSON, ToSchema,Eq
+    SlabType:
+      minBookings : Int
+      penalityForCancellation : CancellationRateSlab
+      derive': Generic, Show, ToJSON, FromJSON, ToSchema,Eq
+    CancellationRateSlabConfig:
+      dailySlabs: "[SlabType]"
+      weeklySlabs: "[SlabType]"
+      derive': Generic, Show, ToJSON, FromJSON, ToSchema,Eq
     CancellationRateBasedNudgingAndBlockingConfig:
       cancellationRateThresholdDaily: Int
       cancellationRateThresholdWeekly: Int
@@ -761,6 +773,7 @@ TransporterConfig:
       weeklyOffenceSuspensionTimeHours: Int
       dailyConditionCooldownTimeHours: Int
       weeklyConditionCooldownTimeHours: Int
+      cancellationRateSlabConfig : Maybe CancellationRateSlabConfig
       derive': Generic, Show, ToJSON, FromJSON, ToSchema,Eq
     DemandHotspotsConfig:
       enableDemandHotspots: Bool
@@ -1044,6 +1057,7 @@ TransporterConfig:
     allowDuplicatePan : Maybe Bool
     allowDuplicateGst: Maybe Bool
     allowDuplicateAadhaar : Maybe Bool
+    cancellationRateSlabConfig: Maybe CancellationRateSlabConfig
 
   beamType:
     currency: Maybe Currency
@@ -1105,6 +1119,7 @@ TransporterConfig:
     weekStartMode : Maybe Int
     earningsWindowSize : Maybe Int
     aaEnabledClientSdkVersion: Maybe Text
+    cancellationRateSlabConfig: Maybe Value
   beamFields:
     fcmConfig:
       fcmUrl: Text
@@ -1174,6 +1189,7 @@ TransporterConfig:
     weekStartMode : Just weekStartMode|E
     earningsWindowSize : Just earningsWindowSize|E
     aaEnabledClientSdkVersion: Just aaEnabledClientSdkVersion| E
+    cancellationRateSlabConfig: Data.Aeson.toJSON <$> cancellationRateSlabConfig|E
   intermediateTransformers:
     fromTType:
       - fcmUrl': Kernel.Prelude.parseBaseUrl fcmUrl|EM
@@ -1249,6 +1265,7 @@ TransporterConfig:
     enableExistingVehicleInBulkUpload: fromMaybe False enableExistingVehicleInBulkUpload|E
     weekStartMode : fromMaybe 3 weekStartMode|E
     earningsWindowSize : fromMaybe 7 earningsWindowSize|E
+    cancellationRateSlabConfig: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< cancellationRateSlabConfig|E
   constraints:
     merchantOperatingCityId: PrimaryKey
 
@@ -1308,6 +1325,7 @@ TransporterConfig:
     allowedReferralEntities: "text[]"
     weekStartMode : int
     earningsWindowSize : int
+    cancellationRateSlabConfig: json
   default:
     mediaFileUrlPattern: |-
       'http://localhost:8016/ui/<DOMAIN>/media?filePath=<FILE_PATH>'
@@ -1452,6 +1470,7 @@ TransporterConfig:
     aaEnabledClientSdkVersion : "'999.999.999'"
     isAAEnabledForRecurring : "false"
     disableDriverWhenUnlinkingVehicle : "true"
+    cancellationRateSlabConfig: '{}'
   excludedDefaultQueries:
     - findByPrimaryKey
     - updateByPrimaryKey
