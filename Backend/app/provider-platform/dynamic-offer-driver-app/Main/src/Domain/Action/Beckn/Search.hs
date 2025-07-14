@@ -838,7 +838,7 @@ checkForIntercityOrCrossCity transporterConfig mbDropLocation sourceCity merchan
 getPossibleTripOption :: UTCTime -> DTMT.TransporterConfig -> DSearchReq -> Bool -> Bool -> Maybe Text -> TripOption
 getPossibleTripOption now tConf dsReq isInterCity isCrossCity destinationTravelCityName = do
   let (schedule, isScheduled) =
-        if tConf.scheduleRideBufferTime `addUTCTime` now < dsReq.pickupTime
+        if maybe True not dsReq.isMultimodalSearch && tConf.scheduleRideBufferTime `addUTCTime` now < dsReq.pickupTime
           then (dsReq.pickupTime, True)
           else (now, False)
       tripCategories =
