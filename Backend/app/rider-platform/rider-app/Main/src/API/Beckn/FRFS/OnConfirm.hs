@@ -44,8 +44,9 @@ onConfirm ::
   FlowHandler Spec.AckResponse
 onConfirm _ req = withFlowHandlerAPI $ do
   transaction_id <- req.onConfirmReqContext.contextTransactionId & fromMaybeM (InvalidRequest "TransactionId not found")
-  bookingId <- req.onConfirmReqContext.contextMessageId & fromMaybeM (InvalidRequest "MessageId not found")
-  ticketBooking <- QFRFSTicketBooking.findById (Id bookingId) >>= fromMaybeM (InvalidRequest "Invalid booking id")
+  _ <- req.onConfirmReqContext.contextMessageId & fromMaybeM (InvalidRequest "MessageId not found")
+  logDebug $ "Received OnConfirm request with transaction id: " <> encodeToText transaction_id
+  ticketBooking <- QFRFSTicketBooking.findBySearchId (Id transaction_id) >>= fromMaybeM (InvalidRequest "Invalid booking id")
   bapConfig <- QBC.findByMerchantIdDomainAndVehicle (Just ticketBooking.merchantId) (show Spec.FRFS) (Utils.frfsVehicleCategoryToBecknVehicleCategory ticketBooking.vehicleType) >>= fromMaybeM (InternalError "Beckn Config not found")
   logDebug $ "Received OnConfirm request" <> encodeToText req
   withTransactionIdLogTag' transaction_id $ do

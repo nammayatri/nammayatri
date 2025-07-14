@@ -67,5 +67,6 @@ buildOnInitReq onInitReq = do
         validTill = ttl,
         bankAccNum,
         bankCode,
+        bppPaymentId = orderPayment.paymentId,
         bppOrderId = Nothing
       }

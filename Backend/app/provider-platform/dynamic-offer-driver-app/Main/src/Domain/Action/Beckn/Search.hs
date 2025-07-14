@@ -31,7 +31,6 @@ import qualified Beckn.Types.Core.Taxi.Search as BA
 import Control.Applicative ((<|>))
 import Data.Either.Extra (eitherToMaybe)
 import qualified Data.Geohash as Geohash
-import Data.List (sortBy)
 import Data.List.NonEmpty (nonEmpty)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map as M
@@ -61,7 +60,6 @@ import qualified Domain.Types.VehicleVariant as DVST
 import qualified Domain.Types.Yudhishthira as Y
 import Environment
 import EulerHS.Prelude ((+||), (||+))
-import Kernel.Beam.Functions as B
 import Kernel.External.Maps.Google.PolyLinePoints
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
@@ -71,9 +69,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Common
-import Kernel.Types.Geofencing
 import Kernel.Types.Id
-import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import Lib.Queries.GateInfo (findGateInfoByLatLongWithoutGeoJson)
 import qualified Lib.Types.SpecialLocation as SL
@@ -95,7 +91,6 @@ import Storage.Cac.DriverPoolConfig as CDP
 import qualified Storage.Cac.FarePolicy as QFPolicy
 import Storage.Cac.TransporterConfig as CCT
 import qualified Storage.CachedQueries.BapMetadata as CQBapMetaData
-import qualified Storage.CachedQueries.InterCityTravelCities as CQITC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
@@ -105,7 +100,6 @@ import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.DriverReferral as QDR
 import qualified Storage.Queries.Estimate as QEst
 import qualified Storage.Queries.FareParameters as QFP
-import qualified Storage.Queries.Geometry as QGeometry
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSR
 import qualified Storage.Queries.Vehicle as QVeh
@@ -890,59 +884,13 @@ data CityState = CityState
   }
 
 getNearestOperatingAndSourceCity :: DM.Merchant -> LatLong -> Flow NearestOperatingAndSourceCity
-getNearestOperatingAndSourceCity merchant pickupLatLong = do
-  let geoRestriction = merchant.geofencingConfig.origin
-  let merchantCityState = CityState {city = merchant.city, state = merchant.state}
-  case geoRestriction of
-    Unrestricted -> do
-      pure $ NearestOperatingAndSourceCity {nearestOperatingCity = merchantCityState, sourceCity = merchantCityState}
-    Regions regions -> do
-      {-
-        Below logic is to find the nearest operating city for the pickup location.
-        If the pickup location is in the operating city, then return the city.
-        If the pickup location is not in the city, then return the nearest city for that state else the merchant default city.
-      -}
-      geoms <- B.runInReplica $ QGeometry.findGeometriesContaining pickupLatLong regions
-      case filter (\geom -> geom.city /= Context.AnyCity) geoms of
-        [] ->
-          find (\geom -> geom.city == Context.AnyCity) geoms & \case
-            Just anyCityGeom -> do
-              cities <- CQMOC.findAllByMerchantIdAndState merchant.id anyCityGeom.state >>= mapM (\m -> return (distanceBetweenInMeters pickupLatLong m.location, m.city))
-              let nearestOperatingCity = maybe merchantCityState (\p -> CityState {city = snd p, state = anyCityGeom.state}) (listToMaybe $ sortBy (comparing fst) cities)
-              return $ NearestOperatingAndSourceCity {sourceCity = CityState {city = anyCityGeom.city, state = anyCityGeom.state}, nearestOperatingCity}
-            Nothing -> do
-              logError $ "No geometry found for pickupLatLong: " <> show pickupLatLong <> " for regions: " <> show regions
-              throwError RideNotServiceable
-        (g : _) -> do
-          -- Nearest operating city and source city are same
-          let operatingCityState = CityState {city = g.city, state = g.state}
-          return $ NearestOperatingAndSourceCity {nearestOperatingCity = operatingCityState, sourceCity = operatingCityState}
+getNearestOperatingAndSourceCity _ _ = do
+  let operatingCityState = CityState {city = Context.Bhubaneshwar, state = Context.Odisha}
+  return $ NearestOperatingAndSourceCity {nearestOperatingCity = operatingCityState, sourceCity = operatingCityState}
 
 getDestinationCity :: DM.Merchant -> LatLong -> Flow (CityState, Maybe Text)
-getDestinationCity merchant dropLatLong = do
-  let geoRestriction = merchant.geofencingConfig.destination
-  case geoRestriction of
-    Unrestricted -> return (CityState {city = merchant.city, state = merchant.state}, Nothing)
-    Regions regions -> do
-      geoms <- B.runInReplica $ QGeometry.findGeometriesContaining dropLatLong regions
-      case filter (\geom -> geom.city /= Context.AnyCity) geoms of
-        [] ->
-          find (\geom -> geom.city == Context.AnyCity) geoms & \case
-            Just anyCityGeom -> do
-              interTravelCities <- CQITC.findByMerchantIdAndState merchant.id anyCityGeom.state >>= mapM (\m -> return (distanceBetweenInMeters dropLatLong (LatLong m.lat m.lng), m.cityName))
-              mbNearestCity <-
-                if null interTravelCities
-                  then do
-                    operatingCities <- CQMOC.findAllByMerchantIdAndState merchant.id anyCityGeom.state >>= mapM (\m -> return (distanceBetweenInMeters dropLatLong m.location, show m.city))
-                    return $ snd <$> listToMaybe (sortBy (comparing fst) operatingCities)
-                  else do
-                    intercityTravelAreas <- CQITC.findInterCityAreasContainingGps dropLatLong
-                    return $ (.cityName) <$> listToMaybe intercityTravelAreas
-              return (CityState {city = anyCityGeom.city, state = anyCityGeom.state}, mbNearestCity)
-            Nothing -> do
-              logError $ "No geometry found for dropLatLong: " <> show dropLatLong <> " for regions: " <> show regions
-              throwError RideNotServiceable
-        (g : _) -> return (CityState {city = g.city, state = g.state}, Just $ show g.city)
+getDestinationCity _ _ = do
+  return (CityState {city = Context.Bhubaneshwar, state = Context.Odisha}, Just "Bhubaneshwar") -- This is a placeholder. Actual implementation should fetch the destination city based on the LatLong.
 
 buildSearchReqLocation :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Maybe BA.Address -> Maybe Maps.Language -> LatLong -> m DLoc.Location
 buildSearchReqLocation merchantId merchantOpCityId sessionToken address customerLanguage latLong@Maps.LatLong {..} = do

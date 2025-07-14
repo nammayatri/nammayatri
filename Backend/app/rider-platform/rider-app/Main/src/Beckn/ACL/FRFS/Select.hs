@@ -6,7 +6,6 @@ import qualified Beckn.ACL.FRFS.Utils as Utils
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec
 import qualified BecknV2.FRFS.Utils as Utils
-import Data.List (singleton)
 import Domain.Types.BecknConfig
 import qualified Domain.Types.FRFSQuote as DQuote
 import Kernel.Prelude
@@ -43,7 +42,7 @@ tfSelectMessage quote mSettlementType =
     }
 
 tfOrder :: DQuote.FRFSQuote -> Maybe Text -> Spec.Order
-tfOrder quote mSettlementType =
+tfOrder quote _ =
   Spec.Order
     { orderBilling = Nothing,
       orderCancellation = Nothing,
@@ -52,7 +51,7 @@ tfOrder quote mSettlementType =
       orderFulfillments = Nothing,
       orderId = Nothing,
       orderItems = tfItems quote,
-      orderPayments = tfPayments quote mSettlementType,
+      orderPayments = Nothing,
       orderProvider = tfProvider quote,
       orderQuote = Nothing,
       orderStatus = Nothing,
@@ -87,12 +86,12 @@ tfQuantity quote =
               }
       }
 
-tfPayments :: DQuote.FRFSQuote -> Maybe Text -> Maybe [Spec.Payment]
-tfPayments quote mSettlementType = do
-  let mCurrency = Just quote.price.currency
-  Just $
-    singleton $
-      Utils.mkPaymentForSelectReq Spec.NOT_PAID (Just $ encodeToText quote.price.amount) Nothing Nothing mSettlementType mCurrency (show <$> quote.bppDelayedInterest)
+-- tfPayments :: DQuote.FRFSQuote -> Maybe Text -> Maybe [Spec.Payment]
+-- tfPayments quote mSettlementType = do
+--   let mCurrency = Just quote.price.currency
+--   Just $
+--     singleton $
+--       Utils.mkPaymentForSelectReq Spec.NOT_PAID (Just $ encodeToText quote.price.amount) Nothing Nothing mSettlementType mCurrency (show <$> quote.bppDelayedInterest)
 
 tfProvider :: DQuote.FRFSQuote -> Maybe Spec.Provider
 tfProvider quote =

@@ -35,6 +35,7 @@ imports:
   MultiModalJourneyRouteDetails: Lib.JourneyLeg.Types
   IntegratedBPPConfig: Domain.Types.IntegratedBPPConfig
   RecentLocation: Domain.Types.RecentLocation
+  RouteStopTimeTable: Domain.Types.RouteStopTimeTable
   DayOfWeek: Data.Time
   CrisSearchData: Lib.JourneyLeg.Types
 
@@ -203,7 +204,7 @@ FRFSQuote:
     partnerOrgId: Maybe (Id PartnerOrganization)
     eventDiscountAmount: Maybe HighPrecMoney
     discountedTickets: Maybe Int
-    bppDelayedInterest: Maybe Int
+    bppDelayedInterest: Maybe Double
     oldCacheDump: Maybe Text
     childTicketQuantity: Maybe Int
   beamFields:
@@ -326,7 +327,7 @@ FRFSTicketBooking:
     payerVpa: Maybe Text
     cashbackStatus: Maybe CashbackStatus
     cashbackPayoutOrderId: Maybe Text
-    bppDelayedInterest: Maybe Int
+    bppDelayedInterest: Maybe Double
     googleWalletJWTUrl: Maybe Text
     journeyLegOrder: Maybe Int
     journeyId: Maybe (Id Journey)
@@ -342,7 +343,7 @@ FRFSTicketBooking:
     bookingAuthCode: Maybe Text
     osType: Maybe Text
     osBuildVersion: Maybe Text
-
+    bppPaymentId: Maybe Text
   default:
     customerCancelled: "false"
 
@@ -362,7 +363,7 @@ FRFSTicketBooking:
 
   types:
     FRFSTicketBookingStatus:
-      enum: "NEW, APPROVED, PAYMENT_PENDING, CONFIRMING, FAILED, CONFIRMED, CANCELLED, COUNTER_CANCELLED, CANCEL_INITIATED, TECHNICAL_CANCEL_REJECTED"
+      enum: "NEW, APPROVED, PAYMENT_PENDING, CONFIRMING, FAILED, CONFIRMED, CANCELLED, COUNTER_CANCELLED, CANCEL_INITIATED, TECHNICAL_CANCEL_REJECTED, REFUND_INITIATED"
     CashbackStatus:
       enum: "PENDING, PROCESSING, SUCCESSFUL, CASHBACK_FAILED, MANUAL_VERIFICATION"
 
@@ -485,6 +486,10 @@ FRFSTicketBooking:
       kvFunction: updateWithKV
       params: [quantity, updatedAt]
       where: id
+    updateBppPaymentId:
+      kvFunction: updateWithKV
+      params: [bppPaymentId, updatedAt]
+      where: id
 
   extraOperations:
     - EXTRA_QUERY_FILE
@@ -514,7 +519,7 @@ FRFSTicket:
 
   types:
     FRFSTicketStatus:
-      enum: "ACTIVE, EXPIRED, USED, CANCELLED, COUNTER_CANCELLED, CANCEL_INITIATED, TECHNICAL_CANCEL_REJECTED, FAILED"
+      enum: "ACTIVE, EXPIRED, USED, CANCELLED, COUNTER_CANCELLED, CANCEL_INITIATED, TECHNICAL_CANCEL_REJECTED, REFUND_INITIATED"
 
   constraints:
     id: PrimaryKey

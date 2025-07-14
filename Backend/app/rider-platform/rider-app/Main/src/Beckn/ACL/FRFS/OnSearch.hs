@@ -66,6 +66,7 @@ buildOnSearchReq onSearchReq = do
     throwError $ InvalidRequest "Payment tags are missing for all payments"
 
   let bppDelayedInterest = listToMaybe interestTags
+  logDebug $ "BPP Delayed Interest: " <> show bppDelayedInterest
 
   quotes <- mkQuotes items fulfillments
 

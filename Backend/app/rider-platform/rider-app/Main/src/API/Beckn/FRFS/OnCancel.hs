@@ -42,9 +42,9 @@ onCancel ::
   FlowHandler Spec.AckResponse
 onCancel _ req = withFlowHandlerAPI $ do
   transaction_id <- req.onCancelReqContext.contextTransactionId & fromMaybeM (InvalidRequest "TransactionId not found")
-  message_id <- req.onCancelReqContext.contextMessageId & fromMaybeM (InvalidRequest "MessageId not found")
+  _ <- req.onCancelReqContext.contextMessageId & fromMaybeM (InvalidRequest "MessageId not found")
   withTransactionIdLogTag' transaction_id $ do
-    ticketBooking <- runInReplica $ QTBooking.findBySearchId (Id transaction_id) >>= fromMaybeM (BookingDoesNotExist message_id)
+    ticketBooking <- runInReplica $ QTBooking.findBySearchId (Id transaction_id) >>= fromMaybeM (BookingDoesNotExist transaction_id)
     logDebug $ "Received OnCancel request" <> encodeToText req
     case req.onCancelReqError of
       Just err -> whenJust err.errorCode $ \errorCode -> do

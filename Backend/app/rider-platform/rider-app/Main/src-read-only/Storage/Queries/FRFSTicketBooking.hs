@@ -67,6 +67,9 @@ updateBppBankDetailsById bppBankAccountNumber bppBankCode id = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.bppBankAccountNumber bppBankAccountNumber, Se.Set Beam.bppBankCode bppBankCode, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateBppPaymentId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
+updateBppPaymentId bppPaymentId id = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.bppPaymentId bppPaymentId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateCustomerCancelledByBookingId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
 updateCustomerCancelledByBookingId customerCancelled id = do
   _now <- getCurrentTime
@@ -82,7 +85,7 @@ updateGoogleWalletLinkById googleWalletJWTUrl id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.googleWalletJWTUrl googleWalletJWTUrl, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateInterestDelayedByQuoteId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> m ())
+updateInterestDelayedByQuoteId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Double -> Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> m ())
 updateInterestDelayedByQuoteId bppDelayedInterest quoteId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.bppDelayedInterest bppDelayedInterest, Se.Set Beam.updatedAt _now] [Se.Is Beam.quoteId $ Se.Eq (Kernel.Types.Id.getId quoteId)]
@@ -168,6 +171,7 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.bppDelayedInterest bppDelayedInterest,
       Se.Set Beam.bppItemId bppItemId,
       Se.Set Beam.bppOrderId bppOrderId,
+      Se.Set Beam.bppPaymentId bppPaymentId,
       Se.Set Beam.bppSubscriberId bppSubscriberId,
       Se.Set Beam.bppSubscriberUrl bppSubscriberUrl,
       Se.Set Beam.cancellationCharges cancellationCharges,
