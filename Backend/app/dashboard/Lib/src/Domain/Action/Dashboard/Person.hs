@@ -77,6 +77,13 @@ data ChangePasswordReq = ChangePasswordReq
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
+data ChangePasswordAfterExpiryReq = ChangePasswordAfterExpiryReq
+  { email :: Text,
+    oldPassword :: Text,
+    newPassword :: Text
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
 data CreatePersonReq = CreatePersonReq
   { firstName :: Text,
     lastName :: Text,
@@ -343,6 +350,16 @@ changePassword tokenInfo req = do
   oldProvided <- getDbHash req.oldPassword
   unless (oldActual == Just oldProvided) . throwError $ InvalidRequest "Old password is incorrect."
   QP.updatePersonPassword tokenInfo.personId newHash
+  pure Success
+
+changePasswordAfterExpiry ::
+  (BeamFlow m r, EncFlow m r) =>
+  ChangePasswordAfterExpiryReq ->
+  m APISuccess
+changePasswordAfterExpiry req = do
+  encPerson <- QP.findByEmailAndPassword req.email req.oldPassword >>= fromMaybeM (PersonDoesNotExist req.email)
+  newHash <- getDbHash req.newPassword
+  QP.updatePersonPassword encPerson.id newHash
   pure Success
 
 buildMerchantAccess :: MonadFlow m => Id DP.Person -> Id DMerchant.Merchant -> ShortId DMerchant.Merchant -> City.City -> m DAccess.MerchantAccess
