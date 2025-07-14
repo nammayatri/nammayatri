@@ -28,8 +28,8 @@ import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.Merchant as QMerch
-import qualified Storage.Queries.BecknConfig as QBC
 import qualified Storage.Queries.FRFSRecon as QFRFSRecon
 import qualified Storage.Queries.FRFSTicketBooking as QTBooking
 import qualified Storage.Queries.FRFSTicketBookingPayment as QTBP
@@ -59,7 +59,7 @@ onUpdate :: Merchant -> Booking.FRFSTicketBooking -> DOnUpdate -> Flow ()
 onUpdate merchant booking' dOnUpdate = do
   let booking = booking' {Booking.bppOrderId = Just dOnUpdate.bppOrderId}
   bapConfig <-
-    QBC.findByMerchantIdDomainAndVehicle (Just merchant.id) (show Spec.FRFS) (FRFSUtils.frfsVehicleCategoryToBecknVehicleCategory booking'.vehicleType)
+    CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback booking.merchantOperatingCityId merchant.id (show Spec.FRFS) (FRFSUtils.frfsVehicleCategoryToBecknVehicleCategory booking'.vehicleType)
       >>= fromMaybeM (InternalError "Beckn Config not found")
   case dOnUpdate.orderStatus of
     Spec.CANCELLED -> do
