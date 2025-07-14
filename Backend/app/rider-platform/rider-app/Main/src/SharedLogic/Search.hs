@@ -122,7 +122,8 @@ data PublicTransportSearchReq = PublicTransportSearchReq
     routeCode :: Maybe Text,
     recentLocationId :: Maybe (Id DTRL.RecentLocation),
     vehicleCategory :: Maybe Enums.VehicleCategory,
-    platformType :: Maybe DIBPC.PlatformType
+    platformType :: Maybe DIBPC.PlatformType,
+    currentLocation :: Maybe LatLong
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
@@ -191,7 +192,8 @@ data SearchDetails = SearchDetails
     destinationStopCode :: Maybe Text,
     originStopCode :: Maybe Text,
     vehicleCategory :: Maybe Enums.VehicleCategory,
-    platformType :: Maybe DIBPC.PlatformType
+    platformType :: Maybe DIBPC.PlatformType,
+    currentLocation :: Maybe LatLong
   }
   deriving (Generic, Show)
 

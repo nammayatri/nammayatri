@@ -157,6 +157,7 @@ extractSearchDetails now = \case
         destinationStopCode = Nothing,
         originStopCode = Nothing,
         vehicleCategory = Nothing,
+        currentLocation = Nothing,
         ..
       }
   RentalSearch RentalSearchReq {..} ->
@@ -172,6 +173,7 @@ extractSearchDetails now = \case
         originStopCode = Nothing,
         platformType = Nothing,
         vehicleCategory = Nothing,
+        currentLocation = Nothing,
         ..
       }
   InterCitySearch InterCitySearchReq {..} ->
@@ -184,6 +186,7 @@ extractSearchDetails now = \case
         destinationStopCode = Nothing,
         originStopCode = Nothing,
         vehicleCategory = Nothing,
+        currentLocation = Nothing,
         ..
       }
   AmbulanceSearch OneWaySearchReq {..} ->
@@ -200,6 +203,7 @@ extractSearchDetails now = \case
         originStopCode = Nothing,
         platformType = Nothing,
         vehicleCategory = Nothing,
+        currentLocation = Nothing,
         ..
       }
   DeliverySearch OneWaySearchReq {..} ->
@@ -216,6 +220,7 @@ extractSearchDetails now = \case
         originStopCode = Nothing,
         platformType = Nothing,
         vehicleCategory = Nothing,
+        currentLocation = Nothing,
         ..
       }
   PTSearch PublicTransportSearchReq {..} ->
