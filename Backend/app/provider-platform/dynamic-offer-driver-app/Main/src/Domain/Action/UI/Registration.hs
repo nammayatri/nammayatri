@@ -199,6 +199,14 @@ authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersi
             >>= maybe (createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice (Just deploymentVersion.getDeploymentVersion) merchant.id merchantOpCityId isDashboard) return
         return (person, SP.EMAIL)
       SP.AADHAAR -> throwError $ InvalidRequest "Not implemented yet"
+      SP.DEVICEID -> do
+        countryCode <- req.mobileCountryCode & fromMaybeM (InvalidRequest "MobileCountryCode is required for DEVICEID auth")
+        mobileNumber <- req.mobileNumber & fromMaybeM (InvalidRequest "MobileNumber is required for DEVICEID auth")
+        mobileNumberHash <- getDbHash mobileNumber
+        person <-
+          QP.findByMobileNumberAndMerchantAndRole countryCode mobileNumberHash merchant.id SP.DRIVER
+            >>= maybe (createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice (Just deploymentVersion.getDeploymentVersion) merchant.id merchantOpCityId isDashboard) return
+        return (person, SP.DEVICEID)
 
   checkSlidingWindowLimit (authHitsCountKey person)
   let entityId = getId $ person.id
@@ -232,6 +240,20 @@ authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersi
         emailOTPConfig <- transporterConfig.emailOtpConfig & fromMaybeM (TransporterConfigNotFound $ "merchantOperatingCityId:- " <> merchantOpCityId.getId)
         L.runIO $ Email.sendEmail emailOTPConfig [receiverEmail] otpCode
       SP.AADHAAR -> throwError $ InvalidRequest "Not implemented yet"
+      SP.DEVICEID -> do
+        countryCode <- req.mobileCountryCode & fromMaybeM (InvalidRequest "MobileCountryCode is required for DEVICEID auth")
+        mobileNumber <- req.mobileNumber & fromMaybeM (InvalidRequest "MobileNumber is required for DEVICEID auth")
+        let phoneNumber = countryCode <> mobileNumber
+        withLogTag ("personId_" <> getId person.id) $ do
+          (mbSender, message, templateId) <-
+            MessageBuilder.buildSendOTPMessage merchantOpCityId $
+              MessageBuilder.BuildSendOTPMessageReq
+                { otp = otpCode,
+                  hash = otpHash
+                }
+          let sender = fromMaybe smsCfg.sender mbSender
+          Sms.sendSMS person.merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId)
+            >>= Sms.checkSmsResult
 
   let attempts = SR.attempts token
       authId = SR.id token
@@ -366,6 +388,13 @@ makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigV
             pure (Just email, Nothing, useFakeOtp)
           Nothing -> throwError $ InvalidRequest "Email is required"
       SP.AADHAAR -> throwError $ InvalidRequest "Not implemented yet"
+      SP.DEVICEID -> do
+        case (req.mobileNumber, req.mobileCountryCode) of
+          (Just mobileNumber, Just _) -> do
+            let useFakeOtp = if mobileNumber `elem` transporterConfig.fakeOtpMobileNumbers then Just "7891" else Nothing
+            encMobNum <- encrypt mobileNumber
+            return (Nothing, Just encMobNum, useFakeOtp)
+          (_, _) -> throwError $ InvalidRequest "phone number and country code required"
   safetyCohortNewTag <- Yudhishthira.fetchNammaTagExpiry $ LYT.TagNameValue "SafetyCohort#New"
   return $
     SP.Person

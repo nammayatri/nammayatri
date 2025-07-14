@@ -235,7 +235,18 @@ postDriverFleetAddVehicleHelper isBulkUpload merchantShortId opCity reqDriverPho
     (_, Just fleetOwnerId) -> do
       -- fleet and fleetDriver case
       whenJust rc $ \rcert -> checkRCAssociationForFleet fleetOwnerId rcert
-      void $ DCommon.runVerifyRCFlow getEntityData.id merchant merchantOpCityId opCity req True isBulkUpload (Just $ Id @DP.Person fleetOwnerId) -- Pass fleet.id if addvehicle under fleet or pass driver.id if addvehcile under driver
+      Redis.set (DomainRC.makeFleetOwnerKey req.registrationNo) fleetOwnerId -- setting this value here , so while creation of creation of vehicle we can add fleet owner id
+      fleetConfig <- QFC.findByPrimaryKey (Id fleetOwnerId) >>= fromMaybeM (FleetConfigNotFound fleetOwnerId)
+      unless (getField @"verificationSkippable" fleetConfig) $ do
+        void $
+          DCommon.runVerifyRCFlow
+            (getField @"id" getEntityData)
+            merchant
+            merchantOpCityId
+            opCity
+            req
+            True
+            (fromMaybe False mbBulkUpload)
       let logTag = case getEntityData.role of
             DP.FLEET_OWNER -> "dashboard -> addVehicleUnderFleet"
             DP.DRIVER -> "dashboard -> addVehicleUnderFleetDriver"
