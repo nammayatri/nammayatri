@@ -18,7 +18,7 @@ import qualified Tools.Beam.UtilsTH
 
 data FRFSQuote = FRFSQuote
   { _type :: Domain.Types.FRFSQuote.FRFSQuoteType,
-    bppDelayedInterest :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    bppDelayedInterest :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     bppItemId :: Kernel.Prelude.Text,
     bppSubscriberId :: Kernel.Prelude.Text,
     bppSubscriberUrl :: Kernel.Prelude.Text,

@@ -55,7 +55,8 @@ data DOnInit = DOnInit
     messageId :: Text,
     bankAccNum :: Text,
     bankCode :: Text,
-    bppOrderId :: Maybe Text
+    bppOrderId :: Maybe Text,
+    bppPaymentId :: Maybe Text
   }
 
 validateRequest :: (EsqDBReplicaFlow m r, BeamFlow m r) => DOnInit -> m (Merchant.Merchant, FTBooking.FRFSTicketBooking)
@@ -81,6 +82,7 @@ onInit onInitReq merchant oldBooking = do
   person <- QP.findById oldBooking.riderId >>= fromMaybeM (PersonNotFound oldBooking.riderId.getId)
   whenJust (onInitReq.validTill) (\validity -> void $ QFRFSTicketBooking.updateValidTillById validity oldBooking.id)
   void $ QFRFSTicketBooking.updatePriceAndQuantityById onInitReq.totalPrice onInitReq.totalQuantity onInitReq.totalChildTicketQuantity oldBooking.id -- Full Ticket Price (Multiplied By Quantity)
+  void $ QFRFSTicketBooking.updateBppPaymentId onInitReq.bppPaymentId booking_.id
   void $ QFRFSTicketBooking.updateBppBankDetailsById (Just onInitReq.bankAccNum) (Just onInitReq.bankCode) oldBooking.id
   frfsConfig <- CQFRFSConfig.findByMerchantOperatingCityId oldBooking.merchantOperatingCityId Nothing >>= fromMaybeM (FRFSConfigNotFound oldBooking.merchantOperatingCityId.getId)
   whenJust onInitReq.bppOrderId (\bppOrderId -> void $ QFRFSTicketBooking.updateBPPOrderIdById (Just bppOrderId) oldBooking.id)

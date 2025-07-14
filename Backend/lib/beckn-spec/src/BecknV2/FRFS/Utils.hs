@@ -13,14 +13,13 @@ import qualified Kernel.Types.Error as Error
 import Kernel.Utils.Error
 
 tfDescriptor :: Maybe Text -> Maybe Text -> Maybe Spec.Descriptor
-tfDescriptor mCode mName = do
+tfDescriptor mCode _ = do
   code <- mCode
-  name <- mName
   return
     Spec.Descriptor
       { descriptorCode = Just $ code,
         descriptorImages = Nothing,
-        descriptorName = Just $ name
+        descriptorName = Nothing
       }
 
 parsePrice :: Spec.Price -> Maybe Price
@@ -64,7 +63,7 @@ ack =
         Spec.AckMessage
           { ackMessageAck =
               Spec.Ack
-                { ackStatus = Just "200",
+                { ackStatus = Just "ACK",
                   ackTags = Nothing
                 }
           }
@@ -84,7 +83,7 @@ nack errorCode errorMessage =
         Spec.AckMessage
           { ackMessageAck =
               Spec.Ack
-                { ackStatus = Just errorCode,
+                { ackStatus = Just "NACK",
                   ackTags = Nothing
                 }
           }

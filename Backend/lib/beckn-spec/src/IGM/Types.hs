@@ -642,7 +642,8 @@ data IssueDescription = IssueDescription
     -- |
     issueDescriptionShortDesc :: Maybe Text,
     -- |
-    issueDescriptionAdditionalDesc :: Maybe IssueDescriptionAdditionalDesc
+    issueDescriptionAdditionalDesc :: Maybe IssueDescriptionAdditionalDesc,
+    issueDescriptionImage :: [Text]
   }
   deriving (Show, Eq, Generic, Data)
 
@@ -662,8 +663,8 @@ optionsIssueDescription =
     table =
       [ ("issueDescriptionLongDesc", "long_desc"),
         ("issueDescriptionShortDesc", "short_desc"),
-        ("issueDescriptionAdditionalDesc", "additional_desc")
-        -- ("issueDescriptionImage", "image")
+        ("issueDescriptionAdditionalDesc", "additional_desc"),
+        ("issueDescriptionImage", "images")
       ]
 
 data IssueDescriptionAdditionalDesc = IssueDescriptionAdditionalDesc
