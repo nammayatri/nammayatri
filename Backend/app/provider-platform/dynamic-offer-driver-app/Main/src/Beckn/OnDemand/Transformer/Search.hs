@@ -107,8 +107,10 @@ tfAddress (Just location) = do
   returnData <- Beckn.OnDemand.Utils.Common.buildAddressFromText fullAddress
   let allNothing = BecknV2.OnDemand.Utils.Common.allNothing returnData
   if allNothing
-    then pure Nothing
-    else pure $ Just returnData
+    then do
+      pure Nothing
+    else do
+      pure $ Just returnData
 
 tfLatLong :: (Kernel.Types.App.HasFlowEnv m r '["_version" ::: Data.Text.Text]) => Data.Text.Text -> m Kernel.External.Maps.LatLong
 tfLatLong locationGps = do
