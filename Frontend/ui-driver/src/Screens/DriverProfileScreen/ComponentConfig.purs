@@ -517,7 +517,7 @@ deleteRcPopUpConfig state =
 driverBLockedPopup :: ST.DriverProfileScreenState -> PopUpModal.Config
 driverBLockedPopup state =
   let
-    mbOverchargingTag = maybe Nothing (\(GetDriverInfoResp resp) -> resp.overchargingTag) state.data.driverInfoResponse
+    mbOverchargingTag = maybe Nothing (\(GetDriverInfoResp resp) -> resp.driverTags >>= \(DriverTags tags) -> tags."DriverChargingBehaviour") state.data.driverInfoResponse
     isOverCharging = maybe false (\overchargingTag -> overchargingTag `elem` [MediumOverCharging, SuperOverCharging, HighOverCharging]) mbOverchargingTag
     isSuspended = maybe false (\overchargingTag -> overchargingTag == MediumOverCharging) mbOverchargingTag
 
@@ -728,8 +728,9 @@ overchargingBadgeConfig state =
         city = getValueToLocalStore DRIVER_LOCATION
         config = spy "getExtraChargeConfig" $ RC.getExtraChargeConfig city
         percentage = ((fromMaybe 0 driverProfileResp.ridesWithFareIssues) * 100) / (fromMaybe 1 driverProfileResp.totalRidesConsideredForFareIssues)
+        overchargingTag = driverProfileResp.driverTags >>= \(DriverTags tags) -> tags."DriverChargingBehaviour"
       in
-        case driverProfileResp.overchargingTag of
+        case overchargingTag of
           Just NoOverCharging -> Just $ zeroConfig percentage config
           Just VeryLowOverCharging -> Just $ lowConfig percentage
           Just LowOverCharging -> Just $ lowConfig percentage
