@@ -25,7 +25,7 @@ type PostSelectEstimate =
            (Kernel.Types.Id.Id Domain.Types.Estimate.Estimate)
       :> "select"
       :> ReqBody '[JSON] Domain.Action.UI.Select.DSelectReq
-      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+      :> Post '[JSON] Domain.Action.UI.Select.MultimodalSelectRes
   )
 
 type GetSelectQuotes =
@@ -52,7 +52,7 @@ type PostSelectCancelSearch =
   )
 
 data SelectAPIs = SelectAPIs
-  { postSelectEstimate :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> Domain.Action.UI.Select.DSelectReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+  { postSelectEstimate :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> Domain.Action.UI.Select.DSelectReq -> EulerHS.Types.EulerClient Domain.Action.UI.Select.MultimodalSelectRes,
     getSelectQuotes :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> EulerHS.Types.EulerClient Domain.Action.UI.Select.SelectListRes,
     getSelectResult :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> EulerHS.Types.EulerClient Domain.Action.UI.Select.QuotesResultResponse,
     postSelectCancelSearch :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> EulerHS.Types.EulerClient Domain.Action.UI.Select.CancelAPIResponse
