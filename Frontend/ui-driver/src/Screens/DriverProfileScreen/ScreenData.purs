@@ -281,7 +281,6 @@ dummyDriverInfo = GetDriverInfoResp {
     , isSpecialLocWarrior : Nothing
     , subscriptionDown : Nothing
     , safetyScore : Nothing
-    , overchargingTag : Nothing
     , ridesWithFareIssues : Nothing
     , totalRidesConsideredForFareIssues : Nothing
     , isPetModeEnabled : Nothing

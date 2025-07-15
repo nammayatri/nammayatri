@@ -49,7 +49,7 @@ getTagBasedVideo :: Maybe ExtraChargeVideoConfig -> Maybe GetDriverInfoResp ->  
 getTagBasedVideo mbConfig mbDriverInfoResp =
     case mbConfig, mbDriverInfoResp of
         Just config, Just (GetDriverInfoResp driverInfoResp) ->
-            case driverInfoResp.overchargingTag of
+            case driverInfoResp.driverTags >>= \(DriverTags tags) -> tags."DriverChargingBehaviour" of
                 Just SuperOverCharging -> config.blocked
                 Just HighOverCharging -> config.blocked
                 Just MediumOverCharging -> config.suspended
