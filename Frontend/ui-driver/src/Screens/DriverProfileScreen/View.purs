@@ -72,7 +72,7 @@ import Screens.DriverProfileScreen.Controller (Action(..), ScreenOutput, eval, g
 import Screens.DriverProfileScreen.Transformer (fetchVehicles)
 import Screens.Types (MenuOptions(..), AutoPayStatus(..))
 import Screens.Types as ST
-import Services.API (DriverInfoReq(..), GetDriverInfoResp(..), DriverRegistrationStatusReq(..), DriverProfileDataReq(..),Vehicle(..))
+import Services.API (DriverInfoReq(..), GetDriverInfoResp(..), DriverRegistrationStatusReq(..), DriverProfileDataReq(..),Vehicle(..), DriverTags(..))
 import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalStore , setValueToLocalStore)
 import Storage (isLocalStageOn)
@@ -565,7 +565,9 @@ driverBlockedHeader state push =
   case state.data.driverInfoResponse of
     Just (GetDriverInfoResp res) ->
       let
-        isSuspended = res.overchargingTag == Just API.MediumOverCharging
+        isSuspended = case res.driverTags of
+          Just (API.DriverTags tags) -> tags."DriverChargingBehaviour" == Just API.MediumOverCharging
+          Nothing -> false
         timeFormat = EHC.convertUTCtoISC state.data.blockedExpiryTime "hh:mm A"
         dayFormat = EHC.convertUTCtoISC state.data.blockedExpiryTime "DD-MM-YYYY"
         blockedTitle = getString $ if isSuspended then SUSPENDED_TILL timeFormat dayFormat else BLOCKED_TILL timeFormat dayFormat
@@ -988,7 +990,7 @@ extraChargePenaltyView :: forall w. (Action -> Effect Unit) -> ST.DriverProfileS
 extraChargePenaltyView push state =
   case state.data.driverInfoResponse of
     Just (GetDriverInfoResp resp) ->
-       case resp.overchargingTag of
+       case resp.driverTags >>= \(DriverTags tags) -> tags."DriverChargingBehaviour" of
         Just overchargingTag ->
           linearLayout[
             width MATCH_PARENT,

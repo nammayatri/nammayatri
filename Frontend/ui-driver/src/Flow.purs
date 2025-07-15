@@ -4184,7 +4184,7 @@ updateBannerAndPopupFlags = do
                 , isVehicleSupported = fromMaybe true getDriverInfoResp.isVehicleSupported
                 , cityConfig = cityConfig
                 , cancellationRate = fromMaybe 0 getDriverInfoResp.cancellationRateInWindow
-                , overchargingTag = getDriverInfoResp.overchargingTag
+                , overchargingTag = getDriverInfoResp.driverTags >>= \(API.DriverTags tags) -> tags."DriverChargingBehaviour"
                 , driverBlocked = fromMaybe false getDriverInfoResp.blocked
                 , blockedExpiryTime = fromMaybe "" getDriverInfoResp.blockExpiryTime
                 , subsRemoteConfig = subscriptionRemoteConfig
