@@ -524,6 +524,7 @@ view push state =
       , if state.props.showCoinsPopup then PopUpModal.view (push <<< CoinsPopupAC) (introducingCoinsPopup state) else dummyTextView
       , if state.props.showPetRidesPopup then PopUpModal.view (push <<< PetRidesPopupAC) (petRidesPopupConfig state petRidesFeatureConfig) else dummyTextView
       , if state.props.showOptOutPetRidesPopup then PopUpModal.view (push <<< OptOutPetRidesPopupAC) (optOutPetRidesPopup state petRidesFeatureConfig) else dummyTextView
+      , if state.props.showPetRidesInfoPopUp then PopUpModal.view (push <<< PetRidesInfoPopupAC) (petRidesInfoPopupConfig state petRidesFeatureConfig) else dummyTextView
       , if state.props.coinPopupType /= ST.NO_COIN_POPUP then PopUpModal.view (push <<< CoinEarnedPopupAC) (coinEarnedPopup state) else dummyTextView
       , if state.data.driverGotoState.showGoto then gotoListView push state else dummyTextView
       , if state.data.driverGotoState.goToPopUpType /= ST.NO_POPUP_VIEW then gotoRequestPopupView push state else dummyTextView
