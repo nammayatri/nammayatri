@@ -12,7 +12,6 @@ import qualified "this" Domain.Types.Estimate
 import qualified Domain.Types.Merchant
 import qualified "this" Domain.Types.Person
 import qualified Environment
-import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import SharedLogic.Merchant (findMerchantByShortId)
@@ -23,7 +22,7 @@ postSelectEstimate ::
   Kernel.Types.Id.Id Domain.Types.Person.Person ->
   Kernel.Types.Id.Id Domain.Types.Estimate.Estimate ->
   Domain.Action.UI.Select.DSelectReq ->
-  Environment.Flow Kernel.Types.APISuccess.APISuccess
+  Environment.Flow Domain.Action.UI.Select.MultimodalSelectRes
 postSelectEstimate merchantShortId _opCity personId estimateId req = do
   m <- findMerchantByShortId merchantShortId
   API.UI.Select.select2' (personId, m.id) estimateId req
