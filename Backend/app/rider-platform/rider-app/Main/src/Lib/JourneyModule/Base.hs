@@ -557,16 +557,16 @@ addAllLegs journeyId mbOldJourneyLegs newJourneyLegs = do
         case journeyLeg.mode of
           DTrip.Taxi -> do
             snappedLeg <- snapJourneyLegToNearestGate journeyLeg
-            let originAddress = mkAddress (mbPrevJourneyLeg >>= (.toStopDetails)) parentSearchReq.fromLocation.address
-            let destinationAddress = mkAddress (mbNextJourneyLeg >>= (.fromStopDetails)) toLocation.address
+            let originAddress = mkAddress (mbPrevJourneyLeg >>= (.toStopDetails)) journeyLeg.mode parentSearchReq.fromLocation.address
+            let destinationAddress = mkAddress (mbNextJourneyLeg >>= (.fromStopDetails)) journeyLeg.mode toLocation.address
             addTaxiLeg parentSearchReq snappedLeg originAddress destinationAddress
           DTrip.Metro -> do
             addMetroLeg parentSearchReq journeyLeg
           DTrip.Subway -> do
             addSubwayLeg parentSearchReq journeyLeg
           DTrip.Walk -> do
-            let originAddress = mkAddress (mbPrevJourneyLeg >>= (.toStopDetails)) parentSearchReq.fromLocation.address
-            let destinationAddress = mkAddress (mbNextJourneyLeg >>= (.fromStopDetails)) toLocation.address
+            let originAddress = mkAddress (mbPrevJourneyLeg >>= (.toStopDetails)) journeyLeg.mode parentSearchReq.fromLocation.address
+            let destinationAddress = mkAddress (mbNextJourneyLeg >>= (.fromStopDetails)) journeyLeg.mode toLocation.address
             addWalkLeg parentSearchReq journeyLeg originAddress destinationAddress
           DTrip.Bus -> do
             addBusLeg parentSearchReq journeyLeg
@@ -581,24 +581,28 @@ addAllLegs journeyId mbOldJourneyLegs newJourneyLegs = do
         go prev [x] = [(prev, x, Nothing)] -- Last element case
         go prev (x : y : rest) = (prev, x, Just y) : go (Just x) (y : rest)
 
-    mkAddress :: Maybe MultiModalStopDetails -> LA.LocationAddress -> LA.LocationAddress
-    mkAddress Nothing parentAddress = parentAddress
-    mkAddress (Just stopDetails) _ =
-      LA.LocationAddress
-        { street = Nothing,
-          door = stopDetails.name,
-          city = Nothing,
-          state = Nothing,
-          country = Nothing,
-          building = Nothing,
-          areaCode = Nothing,
-          area = stopDetails.name,
-          ward = Nothing,
-          placeId = Nothing,
-          instructions = Nothing,
-          title = stopDetails.name,
-          extras = Nothing
-        }
+    mkAddress :: Maybe MultiModalStopDetails -> DTrip.MultimodalTravelMode -> LA.LocationAddress -> LA.LocationAddress
+    mkAddress Nothing _ parentAddress = parentAddress
+    mkAddress (Just stopDetails) mode _ =
+      let modeText = case mode of
+            DTrip.Metro -> Just "Metro Station"
+            DTrip.Bus -> Just "Bus Stop"
+            _ -> Nothing
+       in LA.LocationAddress
+            { street = Nothing,
+              door = Nothing,
+              city = Nothing,
+              state = Nothing,
+              country = Nothing,
+              building = Nothing,
+              areaCode = Nothing,
+              area = stopDetails.name,
+              ward = Nothing,
+              placeId = Nothing,
+              instructions = Nothing,
+              title = stopDetails.name,
+              extras = modeText
+            }
 
 snapJourneyLegToNearestGate ::
   ( JL.SearchRequestFlow m r c

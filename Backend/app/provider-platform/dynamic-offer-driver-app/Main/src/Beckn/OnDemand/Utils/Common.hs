@@ -1089,23 +1089,42 @@ buildAddressFromText fullAddress = do
   let splitedAddress = T.splitOn ", " fullAddress
       totalAddressComponents = List.length splitedAddress
   logDebug $ "Search Address:-" <> fullAddress
-  let area_code_ = Nothing
-      building_ = splitedAddress !? (totalAddressComponents - 6)
-      city_ = splitedAddress !? (totalAddressComponents - 3)
-      country_ = splitedAddress !? (totalAddressComponents - 1)
-      door_ =
-        if totalAddressComponents > 7
-          then splitedAddress !? 0 <> Just ", " <> splitedAddress !? 1
-          else splitedAddress !? 0
-      locality_ = splitedAddress !? (totalAddressComponents - 4)
-      state_ = splitedAddress !? (totalAddressComponents - 2)
-      street_ = splitedAddress !? (totalAddressComponents - 5)
-      building = replaceEmpty building_
-      street = replaceEmpty street_
-      locality = replaceEmpty locality_
-      ward_ = Just $ T.intercalate ", " $ catMaybes [locality, street, building]
-      ward = if ward_ == Just "" then city_ else ward_
-  pure $ OS.Address {area_code = area_code_, building = building_, city = city_, country = country_, door = door_, locality = locality_, state = state_, street = street_, ward = ward}
+  if totalAddressComponents == 1
+    then do
+      let addr = OS.Address Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing (Just fullAddress)
+      logDebug $ "Parsed Address Entity: " <> show addr
+      pure addr
+    else do
+      let area_code_ = Nothing
+          building_ = splitedAddress !? (totalAddressComponents - 6)
+          city_ = splitedAddress !? (totalAddressComponents - 3)
+          country_ = splitedAddress !? (totalAddressComponents - 1)
+          door_ =
+            if totalAddressComponents > 7
+              then splitedAddress !? 0 <> Just ", " <> splitedAddress !? 1
+              else splitedAddress !? 0
+          locality_ = splitedAddress !? (totalAddressComponents - 4)
+          state_ = splitedAddress !? (totalAddressComponents - 2)
+          street_ = splitedAddress !? (totalAddressComponents - 5)
+          building = replaceEmpty building_
+          street = replaceEmpty street_
+          locality = replaceEmpty locality_
+          ward_ = Just $ T.intercalate ", " $ catMaybes [locality, street, building]
+          ward = if ward_ == Just "" then city_ else ward_
+          addr =
+            OS.Address
+              { area_code = area_code_,
+                building = building_,
+                city = city_,
+                country = country_,
+                door = door_,
+                locality = locality_,
+                state = state_,
+                street = street_,
+                ward = ward
+              }
+      logDebug $ "Parsed Address Entity: " <> show addr
+      pure addr
 
 (!?) :: [a] -> Int -> Maybe a
 (!?) xs i
