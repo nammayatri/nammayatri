@@ -615,6 +615,8 @@ termsAndConditionsButton push state =
 
 claimButton :: forall w. (Action -> Effect Unit) -> ST.DriverClaimRewardScreenState -> PrestoDOM (Effect Unit) w
 claimButton push state =
+  let claimButtonConfig = state.data.driverRewardConfig.claimButtonConfig
+  in 
   linearLayout
     [ width MATCH_PARENT
     , height $ V 90
@@ -632,11 +634,11 @@ claimButton push state =
         , cornerRadius 12.0
         , margin $ Margin 0 12 0 10
         , gravity CENTER
-        , onClick push $ const OpenWhatsAppSupport
+        , onClick push $ if claimButtonConfig.visibility then const OpenWhatsAppSupport else const NoAction
         ]
         [ textView
-            [ text $ getStringV2 LT2.claim_via
-            , color Color.yellow900
+            [ text $ if claimButtonConfig.visibility then getStringV2 LT2.claim_via else getStringV2 LT2.coming_soon
+            , color $ if claimButtonConfig.visibility then Color.yellow900 else Color.grey700
             , fontStyle $ FontStyle.semiBold LanguageStyle
             , textSize FontSize.a_18
             , gravity CENTER
@@ -645,6 +647,7 @@ claimButton push state =
             [ width $ V 75
             , height $ V 18
             , imageWithFallback $ fetchImage FF_ASSET "ny_ic_whatsapp_green"
+            , visibility $ if claimButtonConfig.visibility then VISIBLE else GONE
             , margin $ Margin 10 2 0 0
             ]
         ]

@@ -623,6 +623,9 @@ defaultDriverRewardConfig = {
   , whatsappSupportNumber : ""
   , youtubeVideoLink : ""
   , termsAndConditionsLink : "https://docs.google.com/document/d/1xGvueVim40iEOVng4o1d1JejiLur1WEV9Ld6qAF_rR0/edit?usp=sharing"
+  , claimButtonConfig : {
+    visibility : false
+  }
   }
 
 getDriverRewardConfig ::  String -> DriverRewardConfig

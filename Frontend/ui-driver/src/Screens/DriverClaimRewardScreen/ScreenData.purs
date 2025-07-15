@@ -40,4 +40,7 @@ dummyDriverRewardConfig = {
   , whatsappSupportNumber : "7795865480"
   , youtubeVideoLink : ""
   , termsAndConditionsLink : ""
+  , claimButtonConfig : {
+    visibility : false
+  }
 }
