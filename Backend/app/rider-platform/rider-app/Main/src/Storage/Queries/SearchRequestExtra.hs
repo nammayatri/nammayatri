@@ -21,7 +21,8 @@ import qualified Storage.Queries.LocationMapping as QLM
 import Storage.Queries.OrphanInstances.SearchRequest ()
 
 createDSReq' :: (MonadFlow m, EsqDBFlow m r) => SearchRequest -> m ()
-createDSReq' = createWithKV
+createDSReq' searchReq = do
+  if fromMaybe False searchReq.isMultimodalSearch then createWithKVWithOptions Nothing True searchReq else createWithKV searchReq
 
 create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => SearchRequest -> m ()
 create dsReq = do

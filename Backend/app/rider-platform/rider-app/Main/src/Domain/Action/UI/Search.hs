@@ -631,6 +631,7 @@ buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCit
         originStopCode = originStopCode,
         allJourneysLoaded = Just False,
         searchMode = searchMode,
+        isMultimodalSearch = Just $ isJust journeySearchData,
         ..
       }
   where
