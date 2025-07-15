@@ -54,8 +54,9 @@ eval ViewMoreEligibility state = continue state { props { showAllEligibility = n
 
 eval OpenWhatsAppSupport state = continueWithCmd state [do
   let supportPhone = state.data.driverRewardConfig.whatsappSupportNumber
-  let phone = "%0APhone%20Number%3A%20" <> getValueToLocalStore MOBILE_NUMBER_KEY
-      message = "Hi%20Team%2C%0AI%20would%20require%20help%20in%20onboarding" <> phone
+  let name = "%0AName%3A%20" <> getValueToLocalStore USER_NAME
+      phone = "%0APhone%20Number%3A%20" <> getValueToLocalStore MOBILE_NUMBER_KEY
+      message = "Hi%2C%20I%27d%20like%20to%20file%20a%20claim%20under%20the%20Namma%20Kutumba%20program.%0AMy%20details%20are%20as%20follows%3A" <> name <> phone
       url = "https://wa.me/" <> supportPhone <> "?text=" <> message
   void $ openUrlInApp url
   pure NoAction

@@ -230,7 +230,7 @@ nammaKutumbaCard push state =
   relativeLayout
     [ width MATCH_PARENT
     , height WRAP_CONTENT
-    , margin $ Margin 0 16 0 16
+    , margin $ Margin 16 16 16 16
     , visibility $ boolToVisibility $ nammaClubEnabled && (nammaClubTag == Just "ny_member" || nammaClubTag == Just "ny_member_probation") && state.props.nyClubConsent == Just true
     , onClick push $ const GoToClaimReward
     , orientation HORIZONTAL
@@ -250,7 +250,7 @@ nammaKutumbaCard push state =
         [ imageView
             [ width $ V 90
             , height $ V 95
-            , margin $ MarginLeft 30
+            , margin $ MarginLeft 5
             , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_namma_kutumba"
             ]
         , linearLayout [ weight 1.0 ] []
@@ -263,10 +263,11 @@ nammaKutumbaCard push state =
             ]
         , linearLayout [ weight 1.0 ] []
         , imageView
-            [ width $ V 38 -- Make arrow larger if it's a circular asset
-            , height $ V 38
+            [ width $ V 35 -- Make arrow larger if it's a circular asset
+            , height $ V 35
             , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_yellow_arrow_right"
             , margin $ MarginRight 30
+            , margin $ MarginLeft 5
             ]
         ]
     ]
