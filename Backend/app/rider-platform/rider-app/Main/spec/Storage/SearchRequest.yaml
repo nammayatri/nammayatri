@@ -91,6 +91,7 @@ SearchRequest:
     configInExperimentVersions: "[ConfigVersionMap]"
     allJourneysLoaded: Maybe Bool
     searchMode: Maybe SearchMode
+    isMultimodalSearch: Maybe Bool
 
   default:
     hasMultimodalSearch: "false"

@@ -115,3 +115,8 @@ ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN prefer_safety_plus 
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN is_reserve_ride boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request ADD COLUMN is_multimodal_search boolean ;
