@@ -242,10 +242,15 @@ type NominationViewConfig = {
   formLink :: String
 }
 
+type ClaimButtonConfig = {
+  visibility :: Boolean
+}
+
 type DriverRewardConfig = {
   nominationViewConfig :: NominationViewConfig,
   visibility :: Boolean,
   whatsappSupportNumber :: String,
   youtubeVideoLink :: String,
-  termsAndConditionsLink :: String
+  termsAndConditionsLink :: String,
+  claimButtonConfig :: ClaimButtonConfig
 }
