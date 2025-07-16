@@ -271,3 +271,4 @@ ALTER TABLE atlas_app.search_request ADD COLUMN is_pet_ride boolean ;
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_app.search_request ADD COLUMN is_multimodal_search boolean ;

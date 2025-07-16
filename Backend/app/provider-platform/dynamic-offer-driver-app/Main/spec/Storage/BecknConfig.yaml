@@ -24,6 +24,7 @@ BecknConfig:
     staticTermsUrl: Maybe BaseUrl
     buyerFinderFee: Maybe Text
     settlementWindow: Maybe Text
+    multimodalOnSearchTTLSec: Maybe Int
     onSearchTTLSec: Maybe Int
     onSelectTTLSec: Maybe Int
     onInitTTLSec: Maybe Int

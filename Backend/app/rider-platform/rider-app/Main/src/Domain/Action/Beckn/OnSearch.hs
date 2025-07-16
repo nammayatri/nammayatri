@@ -437,6 +437,7 @@ buildEstimate providerInfo now searchRequest deploymentVersion EstimateInfo {..}
         distanceUnit = searchRequest.distanceUnit,
         tripCategory = Just tripCategory,
         insuredAmount = insuranceConfig >>= (.insuredAmount),
+        isMultimodalSearch = searchRequest.isMultimodalSearch,
         ..
       }
 

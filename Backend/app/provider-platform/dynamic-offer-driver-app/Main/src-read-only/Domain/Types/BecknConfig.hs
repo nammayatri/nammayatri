@@ -18,6 +18,7 @@ data BecknConfig = BecknConfig
     domain :: Kernel.Prelude.Text,
     gatewayUrl :: Servant.Client.Core.BaseUrl,
     id :: Kernel.Types.Id.Id Domain.Types.BecknConfig.BecknConfig,
+    multimodalOnSearchTTLSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     onCancelTTLSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     onConfirmTTLSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     onInitTTLSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

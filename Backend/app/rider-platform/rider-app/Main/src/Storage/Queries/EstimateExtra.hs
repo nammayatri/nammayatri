@@ -16,7 +16,8 @@ import qualified Storage.Queries.TripTerms as QTT
 -- Extra code goes here --
 
 createEstimate :: (MonadFlow m, EsqDBFlow m r) => Estimate -> m ()
-createEstimate = createWithKV
+createEstimate estimate = do
+  if fromMaybe False estimate.isMultimodalSearch then createWithKVWithOptions Nothing True estimate else createWithKV estimate
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Estimate -> m ()
 create estimate = do

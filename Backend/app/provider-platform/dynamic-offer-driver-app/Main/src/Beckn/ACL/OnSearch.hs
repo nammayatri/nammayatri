@@ -18,6 +18,7 @@ import qualified Beckn.OnDemand.Transformer.OnSearch as TOnSearch
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils (computeTtlISO8601)
+import Control.Applicative ((<|>))
 import qualified Domain.Action.Beckn.Search as DSearch
 import Kernel.Prelude
 import Kernel.Types.App
@@ -42,5 +43,5 @@ mkOnSearchRequest ::
   m Spec.OnSearchReq
 mkOnSearchRequest res@DSearch.DSearchRes {..} action domain messageId transactionId bapUri bppId bppUri city country isValueAddNP = do
   bppConfig <- QBC.findByMerchantIdDomainAndVehicle provider.id "MOBILITY" Enums.AUTO_RICKSHAW >>= fromMaybeM (InternalError $ "Beckn Config not found for merchantId:-" <> show provider.id.getId <> ",domain:-MOBILITY,vehicleVariant:-" <> show Enums.AUTO_RICKSHAW)
-  ttl <- bppConfig.onSearchTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
+  ttl <- (if fromMaybe False isMultimodalSearch then bppConfig.multimodalOnSearchTTLSec <|> bppConfig.onSearchTTLSec else bppConfig.onSearchTTLSec) & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
   TOnSearch.buildOnSearchRideReq ttl bppConfig res action domain messageId transactionId bapId bapUri bppId bppUri city country isValueAddNP

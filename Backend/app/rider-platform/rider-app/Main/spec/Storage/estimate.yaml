@@ -119,6 +119,7 @@ Estimate:
     smartTipReason: Maybe Text
     isInsured: Bool
     insuredAmount: Maybe Text
+    isMultimodalSearch: Maybe Bool
 
   constraints:
     id: PrimaryKey

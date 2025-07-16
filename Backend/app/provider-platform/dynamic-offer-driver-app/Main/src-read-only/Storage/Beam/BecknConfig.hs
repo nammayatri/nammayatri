@@ -18,6 +18,7 @@ data BecknConfigT f = BecknConfigT
     domain :: B.C f Kernel.Prelude.Text,
     gatewayUrl :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
+    multimodalOnSearchTTLSec :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     onCancelTTLSec :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     onConfirmTTLSec :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     onInitTTLSec :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

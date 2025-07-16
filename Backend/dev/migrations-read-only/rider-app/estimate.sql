@@ -526,3 +526,5 @@ ALTER TABLE atlas_app.estimate ADD COLUMN insured_amount text ;
 
 
 ------- SQL updates -------
+
+ALTER TABLE atlas_app.estimate ADD COLUMN is_multimodal_search boolean ;
