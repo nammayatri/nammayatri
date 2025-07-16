@@ -33,3 +33,9 @@ VendorSplitDetails:
       kvFunction: findAllWithKV
       where:
         and: [area, merchantOperatingCityId, vehicleVariant]
+    findAllByAreasCityAndVariant:
+      kvFunction: findAllWithKV
+      where:
+        and:
+          - in: [area]
+          - eq: [merchantOperatingCityId, vehicleVariant]
