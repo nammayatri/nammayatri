@@ -50,6 +50,7 @@ import qualified Domain.Types.Merchant as Merchant
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.MultimodalPreferences as DMP
 import qualified Domain.Types.Person as Person
+import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderConfig as DRC
 import qualified Domain.Types.SearchRequest as SearchRequest
 import qualified Domain.Types.StationType as Station
@@ -159,7 +160,7 @@ search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfi
   merchant <- CQM.findById (cast merchantId) >>= fromMaybeM (MerchantNotFound merchantId.getId)
   -- TODO : remove this code after multiple search req issue get fixed from frontend
   --BEGIN
-  when merchant.enableForMultipleSearchIssue $ do
+  whenJust merchant.stuckRideAutoCancellationBuffer $ \stuckRideAutoCancellationBuffer -> do
     mbSReq <- QSearchRequest.findLastSearchRequestInKV personId
     shouldCancelPrevSearch <- maybe (return False) (checkValidSearchReq merchant.scheduleRideBufferTime) mbSReq
     when shouldCancelPrevSearch $ do
@@ -171,9 +172,9 @@ search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfi
               Just estimate -> do
                 resp <- try @_ @SomeException $ Select.cancelSearch' (personId, merchantId) estimate.id
                 case resp of
-                  Left _ -> void $ handleBookingCancellation merchantId personId sReq.id
+                  Left _ -> void $ handleBookingCancellation merchantId personId stuckRideAutoCancellationBuffer sReq.id req
                   Right _ -> pure ()
-              Nothing -> void $ handleBookingCancellation merchantId personId sReq.id
+              Nothing -> void $ handleBookingCancellation merchantId personId stuckRideAutoCancellationBuffer sReq.id req
           _ -> pure ()
   -- TODO : remove this code after multiple search req issue get fixed from frontend
   --END
@@ -197,8 +198,8 @@ search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfi
           isValid = sReq.validTill > now
       return $ isNonScheduled && isValid
 
-handleBookingCancellation :: Id Merchant.Merchant -> Id Person.Person -> Id SearchRequest.SearchRequest -> Flow ()
-handleBookingCancellation merchantId _personId sReqId = do
+handleBookingCancellation :: Id Merchant.Merchant -> Id Person.Person -> Seconds -> Id SearchRequest.SearchRequest -> DSearch.SearchReq -> Flow ()
+handleBookingCancellation merchantId _personId stuckRideAutoCancellationBuffer sReqId req = do
   mbBooking <- QBooking.findByTransactionIdAndStatus sReqId.getId Booking.activeBookingStatus
   case mbBooking of
     Just booking -> do
@@ -212,9 +213,27 @@ handleBookingCancellation merchantId _personId sReqId = do
                 ..
               }
       mRide <- QR.findActiveByRBId booking.id
-      dCancelRes <- DCancel.cancel booking mRide cancelReq SBCR.ByUser
-      void $ withShortRetry $ CallBPP.cancelV2 merchantId dCancelRes.bppUrl =<< ACL.buildCancelReqV2 dCancelRes cancelReq.reallocate
+      whenJust mRide $ \ride -> do
+        isCancellingAllowed <- checkIfCancellingAllowed ride
+        when (ride.status `elem` [DRide.NEW, DRide.UPCOMING] && isCancellingAllowed) $ do
+          dCancelRes <- DCancel.cancel booking mRide cancelReq SBCR.ByUser
+          void $ withShortRetry $ CallBPP.cancelV2 merchantId dCancelRes.bppUrl =<< ACL.buildCancelReqV2 dCancelRes cancelReq.reallocate
     _ -> pure ()
+  where
+    checkIfCancellingAllowed ride =
+      case req of
+        DSearch.OneWaySearch DSearch.OneWaySearchReq {verifyBeforeCancellingOldBooking} -> do
+          let verifyBeforeCancelling = fromMaybe False verifyBeforeCancellingOldBooking -- defaulting to old behaviour when flag is not sent from frontend
+          if verifyBeforeCancelling
+            then do
+              now <- getCurrentTime
+              if addUTCTime (fromIntegral stuckRideAutoCancellationBuffer) ride.createdAt < now
+                then return True
+                else throwError (InvalidRequest "ACTIVE_BOOKING_PRESENT") -- 2 mins buffer
+            else do
+              return True -- this is the old behaviour, to cancel automatically
+        _ -> do
+          return True
 
 multimodalSearchHandler :: (Id Person.Person, Id Merchant.Merchant) -> DSearch.SearchReq -> Maybe Bool -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe (Id DC.Client) -> Maybe Text -> Maybe Bool -> Maybe Text -> FlowHandler MultimodalSearchResp
 multimodalSearchHandler (personId, _merchantId) req mbInitiateJourney mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice mbIsDashboardRequest mbImeiNumber = withFlowHandlerAPI $

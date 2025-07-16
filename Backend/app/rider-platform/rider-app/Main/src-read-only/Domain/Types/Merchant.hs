@@ -33,7 +33,6 @@ data MerchantD (s :: UsageSafety) = Merchant
     driverOfferMerchantId :: Kernel.Prelude.Text,
     driverOnTheWayNotifyExpiry :: Kernel.Types.Common.Seconds,
     editPickupDistanceThreshold :: Kernel.Types.Common.Distance,
-    enableForMultipleSearchIssue :: Kernel.Prelude.Bool,
     fakeOtpEmails :: [Kernel.Prelude.Text],
     fakeOtpMobileNumbers :: [Kernel.Prelude.Text],
     fallbackShortId :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant,
@@ -57,6 +56,7 @@ data MerchantD (s :: UsageSafety) = Merchant
     shortId :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant,
     signatureExpiry :: Kernel.Prelude.Int,
     signingPublicKey :: Kernel.Types.Base64.Base64,
+    stuckRideAutoCancellationBuffer :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     subscriberId :: Kernel.Types.Id.ShortId Kernel.Types.Registry.Subscriber,
     updatedAt :: Kernel.Prelude.UTCTime
   }

@@ -171,7 +171,8 @@ transformToSearchReq req subscriptionId =
             isSpecialLocation = Nothing,
             placeNameSource = Nothing,
             isReserveRide = Just True,
-            subscriptionId = Just subscriptionId
+            subscriptionId = Just subscriptionId,
+            verifyBeforeCancellingOldBooking = Just True
           }
   where
     transformLocation :: Location.Location -> Search.SearchReqLocation

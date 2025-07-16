@@ -67,6 +67,7 @@ import qualified Kernel.Types.SlidingWindowCounters as SW
 import Kernel.Utils.Common
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import qualified Kernel.Utils.Time as KUT
+import qualified Lib.JourneyLeg.Types as LJT
 import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DLP
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
@@ -833,6 +834,7 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee = do
   unless (booking.status == DRB.CANCELLED) $
     void $ do
       QRB.updateStatus booking.id DRB.CANCELLED
+      QRB.updateJourneyLegStatus (Just LJT.Cancelled) booking.id
       QBPL.makeAllInactiveByBookingId booking.id
   whenJust mbRide $ \ride -> void $ do
     unless (ride.status == DRide.CANCELLED) $ void $ QRide.updateStatus ride.id DRide.CANCELLED
