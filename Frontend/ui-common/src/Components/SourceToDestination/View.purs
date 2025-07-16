@@ -97,15 +97,15 @@ viewWithStops push config =
                 , orientation VERTICAL
                 , width MATCH_PARENT
                 ]
-                [ linearLayout
+                [ sourceLayout push config
+                , linearLayout
                     [ height WRAP_CONTENT
                     , orientation VERTICAL
                     , width MATCH_PARENT
                     , id $ getNewIDWithTag $ "source_destiniation_view" <> (fromMaybe "" config.id)
                     , visibility $ boolToVisibility config.showDestination
                     ]
-                    [ sourceLayout push config
-                    , stopsView config push
+                    [ stopsView config push
                     ]
                 , destinationLayout config push
                 ]
