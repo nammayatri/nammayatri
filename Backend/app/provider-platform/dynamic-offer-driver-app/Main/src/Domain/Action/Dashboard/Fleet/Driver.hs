@@ -2425,7 +2425,7 @@ getDriverFleetAccessList _ _ mbFleetMemberId = do
     mapM
       ( \fleetMemberAssociation -> do
           fleetMemberAssociation' <- FMA.findOneByFleetOwnerId fleetMemberAssociation.fleetOwnerId True >>= fromMaybeM (PersonNotFound fleetMemberAssociation.fleetOwnerId)
-          person <- QP.findById (Id fleetMemberAssociation'.fleetMemberId) >>= fromMaybeM (PersonNotFound fleetMemberAssociation'.fleetMemberId)
+          person <- QP.findById (Id fleetMemberAssociation'.fleetOwnerId) >>= fromMaybeM (PersonNotFound fleetMemberAssociation'.fleetOwnerId)
           let groups = map (\fma -> Common.FleetGroup {Common.groupCode = fromMaybe mempty fma.groupCode, Common.level = fromMaybe (-1) fma.level, parentGroupCode = Nothing}) $ filter (\fma -> fma.fleetOwnerId == person.id.getId) allFleetGroups
           return $
             Common.FleetOwnerListAPIEntity
