@@ -141,8 +141,8 @@ confirm DConfirmReq {..} = do
   case activeBooking of
     Just booking | not (isMeterRide quote.quoteDetails) -> DQuote.processActiveBooking booking OnConfirm
     _ -> pure ()
-  when (searchRequest.validTill < now) $
-    throwError SearchRequestExpired
+  -- when (searchRequest.validTill < now) $
+  --   throwError SearchRequestExpired
   unless (searchRequest.riderId == personId) $ throwError AccessDenied
   let fromLocation = searchRequest.fromLocation
       mbToLocation = searchRequest.toLocation
