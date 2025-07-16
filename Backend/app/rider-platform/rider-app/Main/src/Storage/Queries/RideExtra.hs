@@ -3,6 +3,7 @@
 module Storage.Queries.RideExtra where
 
 import qualified "dashboard-helper-api" API.Types.RiderPlatform.Management.Ride as Common
+import Data.Coerce (coerce)
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.HashSet as HS
 import Data.List.Extra (notNull)
@@ -386,6 +387,36 @@ findAllByRiderIdAndRide (Id personId) mbLimit mbOffset mbOnlyActive mbBookingSta
   let isOnlyActive = Just True == mbOnlyActive
   let limit' = maybe 10 fromIntegral mbLimit
   let offset' = maybe 0 fromIntegral mbOffset
+  -- Fetches all bookings which are associated with a ride and meets the other conditions (with pagination) from the DB
+  dbConf <- getReplicaBeamConfig
+  res <- L.runDB dbConf $
+    L.findRows $
+      B.select $
+        B.limit_ (fromMaybe 10 mbLimit) $
+          B.offset_ (fromMaybe 0 mbOffset) $
+            B.orderBy_ (\(booking, _ride) -> (if isOnlyActive then B.asc_ (booking.startTime) else B.desc_ (booking.startTime))) $
+              B.filter_'
+                ( \(booking, _) ->
+                    booking.riderId B.==?. B.val_ personId
+                      B.&&?. ( if isOnlyActive
+                                 then B.sqlBool_ (booking.status `B.in_` map B.val_ [DRB.COMPLETED, DRB.CANCELLED, DRB.REALLOCATED])
+                                 else B.sqlBool_ (B.val_ True)
+                             )
+                      B.&&?. B.sqlBool_ (booking.journeyId B.==. B.val_ Nothing)
+                      B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultFrom -> B.sqlBool_ $ booking.createdAt B.>=. B.val_ (roundToMidnightUTC defaultFrom)) mbFromDate
+                      B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultTo -> B.sqlBool_ $ booking.createdAt B.<=. B.val_ (roundToMidnightUTCToDate defaultTo)) mbToDate
+                      B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\bookingStatus -> booking.status B.==?. B.val_ (coerce bookingStatus)) mbBookingStatus
+                      B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\mbcid -> booking.clientId B.==?. B.val_ (Just (coerce mbcid))) mbClientId
+                      B.&&?. ( if not (null mbBookingStatusList)
+                                 then B.sqlBool_ (booking.status `B.in_` map B.val_ mbBookingStatusList)
+                                 else B.sqlBool_ (B.val_ True)
+                             )
+                )
+                do
+                  booking' <- B.all_ (BeamCommon.booking BeamCommon.atlasDB)
+                  ride' <- B.join_' (BeamCommon.ride BeamCommon.atlasDB) (\ride'' -> BeamR.bookingId ride'' B.==?. BeamB.id booking')
+                  pure (booking', ride')
+
   bookings' <-
     findAllWithOptionsKV
       [ Se.And
@@ -402,6 +433,16 @@ findAllByRiderIdAndRide (Id personId) mbLimit mbOffset mbOnlyActive mbBookingSta
       (if isOnlyActive then Se.Asc BeamB.startTime else Se.Desc BeamB.startTime)
       (Just limit')
       (Just offset')
+
+  res' <- case res of
+    Right x -> do
+      let bookings = fst <$> x
+          rides = snd <$> x
+      r <- catMaybes <$> mapM fromTType' rides
+      b <- catMaybes <$> mapM fromTType' bookings
+      pure $ zip b r
+    Left _ -> pure []
+
   otherActivePartyBooking <-
     if isOnlyActive && null bookings'
       then do
@@ -417,34 +458,9 @@ findAllByRiderIdAndRide (Id personId) mbLimit mbOffset mbOnlyActive mbBookingSta
                 booking
           Nothing -> pure []
       else pure []
+
   let bookings = bookings' <> otherActivePartyBooking
-  rides <- findAllWithOptionsKV [Se.And [Se.Is BeamR.bookingId $ Se.In $ getId . DRB.id <$> bookings]] (Se.Desc BeamR.createdAt) Nothing Nothing
-  let filteredBookings = matchBookingsWithRides bookings rides
-  let filteredB = filterBookingsWithConditions filteredBookings
-  pure (take limit' filteredB, bookings')
-  where
-    matchBookingsWithRides :: [Booking] -> [Ride.Ride] -> [(Booking, Maybe Ride.Ride)]
-    matchBookingsWithRides bookings rides =
-      [(booking, lookupRide booking rides) | booking <- bookings]
-      where
-        lookupRide :: Booking -> [Ride.Ride] -> Maybe Ride.Ride
-        lookupRide booking = foldr (\ride acc -> if booking.id == ride.bookingId then Just ride else acc) Nothing
-    filterBookingsWithConditions :: [(Booking, Maybe Ride.Ride)] -> [Booking]
-    filterBookingsWithConditions filteredBookings =
-      map fst $ filter (uncurry isBookingValid) filteredBookings
-      where
-        isBookingValid :: Booking -> Maybe Ride.Ride -> Bool
-        isBookingValid booking maybeRide =
-          let bookingDetails = DRB.bookingDetails booking
-              otpCode =
-                case bookingDetails of
-                  DRB.OneWaySpecialZoneDetails details -> details.otpCode
-                  _ -> Nothing
-              isRentalOrInterCity = case bookingDetails of
-                DRB.RentalDetails _ -> True
-                DRB.InterCityDetails _ -> True
-                _ -> False
-           in isJust maybeRide || isJust otpCode || isRentalOrInterCity
+  pure (take limit' (map fst res'), bookings)
 
 findAllByRiderIdAndDriverNumber :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe BookingStatus -> Maybe (Id DC.Client) -> DbHash -> m [Ride]
 findAllByRiderIdAndDriverNumber (Id personId) mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId driverNumber = do
