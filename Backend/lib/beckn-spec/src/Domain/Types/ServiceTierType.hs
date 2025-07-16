@@ -30,6 +30,7 @@ data ServiceTierType
   | PREMIUM
   | SUV
   | AUTO_RICKSHAW
+  | AUTO_PLUS
   | HATCHBACK
   | SEDAN
   | TAXI

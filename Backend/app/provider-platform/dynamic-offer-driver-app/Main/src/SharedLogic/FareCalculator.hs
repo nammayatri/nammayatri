@@ -665,6 +665,7 @@ calculateFareParameters params = do
             DELIVERY_TRUCK_ULTRA_LARGE -> avgSpeedOfVehicle.deliveryLightGoodsVehicle.getKilometers
             BUS_NON_AC -> avgSpeedOfVehicle.busNonAc.getKilometers
             BUS_AC -> avgSpeedOfVehicle.busAc.getKilometers
+            AUTO_PLUS -> avgSpeedOfVehicle.autorickshaw.getKilometers
       if avgSpeedOfVehicle' > 0
         then do
           let distanceInKilometer = realToFrac @_ @Double distance.getMeters / 1000

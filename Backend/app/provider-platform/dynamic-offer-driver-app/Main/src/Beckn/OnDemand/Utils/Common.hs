@@ -239,6 +239,7 @@ castVariant Variant.DELIVERY_TRUCK_LARGE = (show Enums.TRUCK, "DELIVERY_TRUCK_LA
 castVariant Variant.DELIVERY_TRUCK_ULTRA_LARGE = (show Enums.TRUCK, "DELIVERY_TRUCK_ULTRA_LARGE")
 castVariant Variant.BUS_NON_AC = (show Enums.BUS, "BUS_NON_AC")
 castVariant Variant.BUS_AC = (show Enums.BUS, "BUS_AC")
+castVariant Variant.AUTO_PLUS = (show Enums.AUTO_RICKSHAW, "AUTO_PLUS")
 
 rationaliseMoney :: Money -> Text
 rationaliseMoney = OS.valueToString . OS.DecimalValue . toRational
@@ -258,6 +259,7 @@ parseVehicleVariant mbCategory mbVariant = case (mbCategory, mbVariant) of
   (Just "CAB", Just "HERITAGE_CAB") -> Just Variant.HERITAGE_CAB
   (Just "AUTO_RICKSHAW", Just "AUTO_RICKSHAW") -> Just Variant.AUTO_RICKSHAW
   (Just "AUTO_RICKSHAW", Just "EV_AUTO_RICKSHAW") -> Just Variant.EV_AUTO_RICKSHAW
+  (Just "AUTO_RICKSHAW", Just "AUTO_PLUS") -> Just Variant.AUTO_PLUS
   (Just "CAB", Just "TAXI") -> Just Variant.TAXI
   (Just "CAB", Just "TAXI_PLUS") -> Just Variant.TAXI_PLUS
   (Just "MOTORCYCLE", Just "BIKE") -> Just Variant.BIKE -- becomes redundant, TODO : remove in next release
@@ -1583,6 +1585,7 @@ mkGeneralInfoTagGroup transporterConfig pricing isValueAddNP =
                 Variant.DELIVERY_TRUCK_ULTRA_LARGE -> avgSpeed.deliveryLightGoodsVehicle.getKilometers
                 Variant.BUS_NON_AC -> avgSpeed.busNonAc.getKilometers
                 Variant.BUS_AC -> avgSpeed.busAc.getKilometers
+                Variant.AUTO_PLUS -> avgSpeed.autorickshaw.getKilometers
 
           getDuration pricing.distanceToNearestDriver variantSpeed
 
