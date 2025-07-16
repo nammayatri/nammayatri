@@ -35,7 +35,7 @@ updateVendorFee vendorFee = do
               Se.Is Beam.vendorId $ Se.Eq vendorFee.vendorId
             ]
         ]
-    _ -> pure ()
+    _ -> createWithKV vendorFee
 
 updateManyVendorFee :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [VendorFee] -> m ()
 updateManyVendorFee = traverse_ updateVendorFee
