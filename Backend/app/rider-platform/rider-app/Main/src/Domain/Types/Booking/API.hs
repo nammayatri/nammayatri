@@ -28,6 +28,7 @@ import Domain.Types.CancellationReason
 import qualified Domain.Types.Exophone as DExophone
 import Domain.Types.Extra.Ride (RideAPIEntity (..))
 import Domain.Types.FareBreakup as DFareBreakup
+import qualified Domain.Types.Journey as DJourney
 import Domain.Types.Location (Location, LocationAPIEntity)
 import Domain.Types.ParcelDetails as DParcel
 import qualified Domain.Types.Person as Person
@@ -120,7 +121,8 @@ data BookingAPIEntity = BookingAPIEntity
     estimatedEndTimeRange :: Maybe DRide.EstimatedEndTimeRange,
     isSafetyPlus :: Bool,
     isInsured :: Maybe Bool,
-    insuredAmount :: Maybe Text
+    insuredAmount :: Maybe Text,
+    mbJourneyId :: Maybe (Id DJourney.Journey)
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -324,7 +326,8 @@ makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreaku
         vehicleIconUrl = fmap showBaseUrl booking.vehicleIconUrl,
         isSafetyPlus = fromMaybe False $ activeRide <&> (.isSafetyPlus),
         isInsured = Just booking.isInsured,
-        insuredAmount = booking.insuredAmount
+        insuredAmount = booking.insuredAmount,
+        mbJourneyId = booking.journeyId
       }
   where
     getRideDuration :: Maybe DRide.Ride -> Maybe Seconds

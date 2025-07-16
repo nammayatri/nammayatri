@@ -31,6 +31,7 @@ import qualified Domain.Types.Journey as DJ
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.PersonFlowStatus as DPFS
+import qualified Domain.Types.Trip as DTrip
 import Environment
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
@@ -66,7 +67,8 @@ getPersonFlowStatus personId merchantId _ pollActiveBooking = do
   now <- getCurrentTime
   activeJourneys <- DMultimodal.getActiveJourneyIds personId
   updatedActiveJourneys <- processJourneys now activeJourneys
-  if not (null updatedActiveJourneys)
+  let activeJourneysMode = (not (null updatedActiveJourneys)) && (not (checkIfNormalRideJourney updatedActiveJourneys))
+  if activeJourneysMode
     then return $ GetPersonFlowStatusRes Nothing (DPFS.ACTIVE_JOURNEYS {journeys = updatedActiveJourneys}) Nothing
     else do
       personStatus' <- QPFS.getStatus personId
@@ -94,7 +96,15 @@ getPersonFlowStatus personId merchantId _ pollActiveBooking = do
                   return j {DJ.status = DJ.EXPIRED}
                 else return j
             Nothing -> return j
-
+    checkIfNormalRideJourney :: [DJ.Journey] -> Bool
+    checkIfNormalRideJourney journeys =
+      case listToMaybe journeys of
+        Just firstNormalRideJourney ->
+          case listToMaybe firstNormalRideJourney.modes of
+            Just firstMode ->
+              length journeys == 1 && length firstNormalRideJourney.modes == 1 && (firstMode == DTrip.Taxi)
+            Nothing -> False
+        Nothing -> False
     checkForActiveBooking :: Flow GetPersonFlowStatusRes
     checkForActiveBooking = do
       if isJust pollActiveBooking
