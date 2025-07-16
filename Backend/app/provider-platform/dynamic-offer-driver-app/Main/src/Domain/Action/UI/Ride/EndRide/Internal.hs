@@ -623,13 +623,23 @@ createDriverFee merchantId merchantOpCityId driverId rideFare currency newFarePa
         fork "Updating vendor fees" $
           when (fromMaybe False (subscriptionConfig >>= (.isVendorSplitEnabled))) $ do
             let vehicleVariant = Variant.castServiceTierToVariant booking.vehicleServiceTier
-            vendorSplitDetails <- QVSD.findAllByAreaCityAndVariant (fromMaybe Default booking.area) merchantOpCityId vehicleVariant
-            let vendorAmounts = DL.map (\vendor -> (vendor.vendorId, toRational vendor.splitValue)) vendorSplitDetails
-                vendorFees = DL.map (mkVendorFee (maybe driverFee.id (.id) lastDriverFee) now) vendorAmounts
-
-            case lastDriverFee of
-              Just ldFee | now >= ldFee.startTime && now < ldFee.endTime -> QVF.updateManyVendorFee vendorFees
-              _ -> QVF.createMany vendorFees
+            let areasToSearch = case booking.area of
+                  Just area -> if area == Default then [Default] else [area, Default]
+                  Nothing -> [Default]
+            allVendorSplitDetails <- QVSD.findAllByAreasCityAndVariant areasToSearch merchantOpCityId vehicleVariant
+            let vendorSplitDetails = case booking.area of
+                  Just area ->
+                    let areaDetails = DL.filter (\detail -> detail.area == area) allVendorSplitDetails
+                     in if null areaDetails
+                          then DL.filter (\detail -> detail.area == Default) allVendorSplitDetails
+                          else areaDetails
+                  Nothing -> DL.filter (\detail -> detail.area == Default) allVendorSplitDetails
+            unless (null vendorSplitDetails) $ do
+              let vendorAmounts = DL.map (\vendor -> (vendor.vendorId, toRational vendor.splitValue)) vendorSplitDetails
+                  vendorFees = DL.map (mkVendorFee (maybe driverFee.id (.id) lastDriverFee) now) vendorAmounts
+              case lastDriverFee of
+                Just ldFee | now >= ldFee.startTime && now < ldFee.endTime -> QVF.updateManyVendorFee vendorFees
+                _ -> QVF.createMany vendorFees
 
         plan <- getPlan mbDriverPlan serviceName merchantOpCityId Nothing currentVehicleCategory
         fork "Sending switch plan nudge" $ PaymentNudge.sendSwitchPlanNudge transporterConfig driverInfo plan mbDriverPlan numRides serviceName
