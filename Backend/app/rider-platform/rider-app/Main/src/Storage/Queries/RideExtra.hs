@@ -399,8 +399,10 @@ findAllByRiderIdAndRide (Id personId) mbLimit mbOffset mbOnlyActive mbBookingSta
                 ( \(booking, _) ->
                     booking.riderId B.==?. B.val_ personId
                       B.&&?. ( if isOnlyActive
-                                 then B.sqlBool_ (booking.status `B.in_` map B.val_ [DRB.COMPLETED, DRB.CANCELLED, DRB.REALLOCATED])
+-                                 then B.sqlBool_ (booking.status `B.in_` map B.val_ [DRB.COMPLETED, DRB.CANCELLED, DRB.REALLOCATED])
++                                 then B.not_ (B.sqlBool_ (booking.status `B.in_` map B.val_ [DRB.COMPLETED, DRB.CANCELLED, DRB.REALLOCATED]))
                                  else B.sqlBool_ (B.val_ True)
+                              )
                              )
                       B.&&?. B.sqlBool_ (booking.journeyId B.==. B.val_ Nothing)
                       B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultFrom -> B.sqlBool_ $ booking.createdAt B.>=. B.val_ (roundToMidnightUTC defaultFrom)) mbFromDate
