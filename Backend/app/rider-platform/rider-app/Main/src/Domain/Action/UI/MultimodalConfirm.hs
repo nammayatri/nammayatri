@@ -761,6 +761,8 @@ getPublicTransportData (mbPersonId, merchantId) mbCity _mbConfigVersion = do
   let fetchData bppConfig = do
         stations <- OTPRest.getStationsByGtfsId bppConfig
         routes <- OTPRest.getRoutesByGtfsId bppConfig
+        logDebug $ "stations from rest api for " <> show bppConfig.feedKey <> " : " <> show stations
+        logDebug $ "routes from rest api for " <> show bppConfig.feedKey <> " : " <> show routes
         mkResponse stations routes bppConfig
 
   transportDataList <-
