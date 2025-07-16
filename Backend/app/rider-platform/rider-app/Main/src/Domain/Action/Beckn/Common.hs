@@ -383,7 +383,7 @@ rideAssignedReqHandler req = do
   mbMerchant <- CQM.findById booking.merchantId
   now <- getCurrentTime
   let rideStatus = case mbMerchant of
-        Just merchant | diffUTCTime booking.startTime now > merchant.scheduleRideBufferTime -> DRide.UPCOMING
+        Just merchant | (maybe True not booking.isMultimodalSearch) && diffUTCTime booking.startTime now > merchant.scheduleRideBufferTime -> DRide.UPCOMING
         _ -> DRide.NEW
   mbRide <- QRide.findByBPPRideId bppRideId
   case mbRide of

@@ -246,6 +246,7 @@ Booking:
     isInsured: Bool
     insuredAmount: Maybe Text
     driverInsuredAmount: Maybe Text
+    isMultimodalSearch: Maybe Bool
 
   beamFields:
     estimatedDistance:
