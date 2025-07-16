@@ -223,3 +223,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN dl_number_hash 
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN dl_number_encrypted text ;
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN aadhaar_number_hash text ;
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN aadhaar_number_encrypted text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN driver_flow_status text ;

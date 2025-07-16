@@ -2,6 +2,7 @@ module Domain.Action.UI.Operator (postOperatorConsent) where
 
 import Data.Maybe
 import qualified Data.Text as T
+import qualified Domain.Action.Internal.DriverMode as DDriverMode
 import qualified Domain.Action.UI.DriverOnboarding.Referral as DOR
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
@@ -39,15 +40,18 @@ postOperatorConsent (mbDriverId, merchantId, merchantOperatingCityId) = do
   let mbOnboardingVehicleCategory = driverOperatorAssociation.onboardingVehicleCategory
   operator <- QPerson.findById (Id driverOperatorAssociation.operatorId) >>= fromMaybeM (OperatorNotFound driverOperatorAssociation.operatorId)
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  transporterConfig <- SCT.findByMerchantOpCityId merchantOperatingCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
 
-  SA.endDriverAssociationsIfAllowed merchant merchantOperatingCityId driver
+  SA.endDriverAssociationsIfAllowed merchant merchantOperatingCityId transporterConfig driver
 
   DOR.makeDriverReferredByOperator merchantOperatingCityId driverId operator.id
 
   QDriverOperatorAssociation.updateByPrimaryKey driverOperatorAssociation{isActive = True}
+  when (transporterConfig.allowCacheDriverFlowStatus == Just True) $ do
+    driverInfo <- QDI.findById driverOperatorAssociation.driverId >>= fromMaybeM (DriverNotFound driverOperatorAssociation.driverId.getId)
+    DDriverMode.incrementFleetOperatorStatusKeyForDriver OPERATOR driverOperatorAssociation.operatorId driverInfo.driverFlowStatus
   QDriverInfoInternal.updateOnboardingVehicleCategory mbOnboardingVehicleCategory driver.id
 
-  transporterConfig <- SCT.findByMerchantOpCityId merchantOperatingCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
   unless (transporterConfig.requiresOnboardingInspection == Just True) $
     QDI.updateEnabledVerifiedState driverId True (Just True)
   mbMerchantPN <- CPN.findMatchingMerchantPN merchantOperatingCityId "OPERATOR_CONSENT" Nothing Nothing driver.language Nothing

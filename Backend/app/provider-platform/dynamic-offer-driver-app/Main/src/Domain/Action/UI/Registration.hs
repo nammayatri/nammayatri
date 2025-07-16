@@ -32,9 +32,11 @@ where
 
 import Data.OpenApi hiding (email, info, name, url)
 import Data.Text hiding (elem)
+import qualified Domain.Action.Internal.DriverMode as DDriverMode
 import Domain.Action.UI.DriverReferral
 import qualified Domain.Action.UI.Person as SP
 import qualified Domain.Types.Common as DriverInfo
+import qualified Domain.Types.DriverFlowStatus as DriverFlowStatus
 import qualified Domain.Types.DriverInformation as DriverInfo
 import qualified Domain.Types.Extra.Plan as DEP
 import qualified Domain.Types.Merchant as DO
@@ -52,6 +54,7 @@ import Kernel.External.Encryption
 import Kernel.External.Notification.FCM.Types (FCMRecipientToken)
 import Kernel.External.Whatsapp.Interface.Types as Whatsapp
 import Kernel.Sms.Config
+import qualified Kernel.Storage.Clickhouse.Config as CH
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
@@ -314,6 +317,7 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
             isBlockedForReferralPayout = Nothing,
             onboardingVehicleCategory = Nothing,
             servicesEnabledForSubscription = [DEP.YATRI_SUBSCRIPTION],
+            driverFlowStatus = Just DriverFlowStatus.OFFLINE,
             panNumber = Nothing,
             aadhaarNumber = Nothing,
             dlNumber = Nothing
@@ -571,16 +575,21 @@ cleanCachedTokens personId = do
 logout ::
   ( EsqDBFlow m r,
     CacheFlow m r,
-    Redis.HedisFlow m r
+    Redis.HedisFlow m r,
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
   ) =>
   (Id SP.Person, Id DO.Merchant, Id DMOC.MerchantOperatingCity) ->
   m APISuccess
-logout (personId, _, _) = do
+logout (personId, _, merchantOpCityId) = do
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   cleanCachedTokens personId
   uperson <-
     QP.findById personId
       >>= fromMaybeM (PersonNotFound personId.getId)
   _ <- QP.updateDeviceToken Nothing uperson.id
   QR.deleteByPersonId personId.getId
-  when (uperson.role == SP.DRIVER) $ void (QD.updateActivity False (Just DriverInfo.OFFLINE) (cast uperson.id))
+  when (uperson.role == SP.DRIVER) $ do
+    let newFlowStatus = DDriverMode.getDriverFlowStatus (Just DriverInfo.OFFLINE) False
+    DDriverMode.updateDriverModeAndFlowStatus (cast uperson.id) transporterConfig.allowCacheDriverFlowStatus False (Just DriverInfo.OFFLINE) newFlowStatus Nothing
   pure Success
