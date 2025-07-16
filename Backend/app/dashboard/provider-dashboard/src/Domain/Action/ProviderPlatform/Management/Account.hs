@@ -20,7 +20,10 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
+import Kernel.Types.Predicate
 import Kernel.Utils.Common
+import qualified Kernel.Utils.Predicates as P
+import Kernel.Utils.Validation
 import qualified SharedLogic.Transaction
 import Storage.Beam.CommonInstances ()
 import "lib-dashboard" Storage.Queries.Person
@@ -101,6 +104,7 @@ postAccountVerifyAccount ::
   Common.VerifyAccountReq ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
 postAccountVerifyAccount merchantShortId opCity apiTokenInfo req = do
+  runRequestValidation validateVerifyAccountReq req
   let personId = Kernel.Types.Id.cast req.fleetOwnerId
   case req.status of
     Common.Rejected -> do
@@ -118,6 +122,13 @@ postAccountVerifyAccount merchantShortId opCity apiTokenInfo req = do
       opCity
       (.accountDSL.postAccountVerifyAccount)
       req
+
+-- Validate the reason field in VerifyAccountReq
+validateVerifyAccountReq :: Validate Common.VerifyAccountReq
+validateVerifyAccountReq Common.VerifyAccountReq {..} =
+  sequenceA_
+    [ validateField "reason" reason $ InMaybe P.name
+    ]
 
 putAccountUpdateRole ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
