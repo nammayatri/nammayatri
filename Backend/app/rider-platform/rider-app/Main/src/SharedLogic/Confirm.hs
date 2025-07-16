@@ -150,7 +150,7 @@ confirm DConfirmReq {..} = do
   let merchantOperatingCityId = searchRequest.merchantOperatingCityId
   city <- CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
   exophone <- findRandomExophone merchantOperatingCityId
-  let isScheduled = merchant.scheduleRideBufferTime `addUTCTime` now < searchRequest.startTime
+  let isScheduled = (maybe False not searchRequest.isMultimodalSearch) && merchant.scheduleRideBufferTime `addUTCTime` now < searchRequest.startTime
   (booking, bookingParties) <- buildBooking searchRequest bppQuoteId quote fromLocation mbToLocation exophone now Nothing paymentMethodId isScheduled searchRequest.disabilityTag searchRequest.configInExperimentVersions
   -- check also for the booking parties
   checkIfActiveRidePresentForParties bookingParties
@@ -355,6 +355,7 @@ buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode
           journeyLegStatus = Nothing,
           preferSafetyPlus = quote.isSafetyPlus,
           recentLocationId = searchRequest.recentLocationId,
+          isMultimodalSearch = searchRequest.isMultimodalSearch,
           ..
         },
       bookingParties
