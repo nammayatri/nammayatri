@@ -180,7 +180,7 @@ data KeyStore = USER_NAME
                 | LOCATION_PRIORITY
                 | METER_RIDE_ACTIVE
                 | PET_RIDES_POPUP_SHOWN
-
+                | SHOW_RR_IN_SILENT
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where
