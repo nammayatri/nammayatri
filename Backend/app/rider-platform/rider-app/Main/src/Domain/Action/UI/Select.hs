@@ -268,8 +268,8 @@ select2 personId estimateId req@DSelectReq {..} = do
   when merchant.onlinePayment $ do
     when (isNothing paymentMethodId) $ throwError PaymentMethodRequired
     QP.updateDefaultPaymentMethodId paymentMethodId personId -- Make payment method as default payment method for customer
-  when ((searchRequest.validTill) < now) $
-    throwError SearchRequestExpired
+    -- when ((searchRequest.validTill) < now) $
+    --   throwError SearchRequestExpired
   when (maybe False Trip.isDeliveryTrip (DEstimate.tripCategory estimate)) $ do
     validDeliveryDetails <- deliveryDetails & fromMaybeM (InvalidRequest "Delivery details not found for trip category Delivery")
     updateRequiredDeliveryDetails searchRequestId searchRequest.merchantId searchRequest.merchantOperatingCityId validDeliveryDetails
