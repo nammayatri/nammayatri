@@ -396,7 +396,6 @@ findAllByRiderIdAndRide (Id personId) mbLimit mbOffset mbOnlyActive mbBookingSta
               <> ([Se.Is BeamB.createdAt $ Se.GreaterThanOrEq (fromJust mbFromDate) | isJust mbFromDate])
               <> ([Se.Is BeamB.createdAt $ Se.LessThanOrEq (fromJust mbToDate) | isJust mbToDate])
               <> ([Se.Is BeamB.status $ Se.In mbBookingStatusList | not (null mbBookingStatusList)])
-              <> ([Se.Is BeamB.journeyId $ Se.Eq Nothing])
           )
       ]
       (if isOnlyActive then Se.Asc BeamB.startTime else Se.Desc BeamB.startTime)
