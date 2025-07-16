@@ -107,7 +107,7 @@ postMultimodalInitiate ::
 postMultimodalInitiate (_personId, _merchantId) journeyId = do
   Redis.withLockRedisAndReturnValue lockKey 60 $ do
     journeyLegs <- getJourneyLegs journeyId
-    addAllLegs journeyId journeyLegs
+    addAllLegs journeyId (Just journeyLegs) journeyLegs
     journey <- JM.getJourney journeyId
     JM.updateJourneyStatus journey Domain.Types.Journey.INITIATED
     legs <- JM.getAllLegsInfo journeyId False
