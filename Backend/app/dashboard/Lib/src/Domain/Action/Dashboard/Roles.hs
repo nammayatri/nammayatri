@@ -23,7 +23,10 @@ import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (..))
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Types.Predicate
 import Kernel.Utils.Common
+import qualified Kernel.Utils.Predicates as P
+import Kernel.Utils.Validation
 import Storage.Beam.BeamFlow (BeamFlow)
 import qualified Storage.Queries.AccessMatrix as QMatrix
 import qualified Storage.Queries.Role as QRole
@@ -56,11 +59,20 @@ createRole ::
   CreateRoleReq ->
   m DRole.RoleAPIEntity
 createRole _ req = do
+  runRequestValidation validateCreateRoleReq req
   mbExistingRole <- QRole.findByName req.name
   whenJust mbExistingRole $ \_ -> throwError (RoleNameExists req.name)
   role <- buildRole req
   QRole.create role
   pure $ DRole.mkRoleAPIEntity role
+
+-- Validate input fields
+validateCreateRoleReq :: Validate CreateRoleReq
+validateCreateRoleReq CreateRoleReq {..} =
+  sequenceA_
+    [ validateField "name" name $ MinLength 3 `And` MaxLength 50 `And` P.inputName,
+      validateField "description" description $ MinLength 3 `And` P.inputName
+    ]
 
 buildRole ::
   MonadFlow m =>
