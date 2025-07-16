@@ -41,7 +41,8 @@ defaultSearchReq =
         recentLocationId = Nothing,
         platformType = Nothing,
         subscriptionId = Nothing,
-        isReserveRide = Nothing
+        isReserveRide = Nothing,
+        verifyBeforeCancellingOldBooking = Just True
       }
 
 defaultSearchReqAddress :: LocationAddress
