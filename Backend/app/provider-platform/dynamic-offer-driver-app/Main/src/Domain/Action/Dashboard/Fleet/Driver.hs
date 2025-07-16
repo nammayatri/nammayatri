@@ -52,6 +52,7 @@ module Domain.Action.Dashboard.Fleet.Driver
     postDriverFleetGetNearbyDrivers,
     getDriverDashboardInternalHelperGetFleetOwnerId,
     getDriverDashboardInternalHelperGetFleetOwnerIds,
+    postDriverFleetV2AccessMultiOwnerIdSelect,
   )
 where
 
@@ -2473,6 +2474,18 @@ postDriverFleetV2AccessSelect _ _ mbFleetMemberId mbFleetOwnerId mbGroupCode mbO
       FMA.updateFleetMembersActiveStatusByGroupCode enable fleetMemberId (Just groupCode)
       clearFleetMemberCache fleetMemberId Nothing
     _ -> return ()
+  return Success
+
+postDriverFleetV2AccessMultiOwnerIdSelect :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Maybe Bool -> Bool -> Common.MultiOwnerSelect -> Flow APISuccess
+postDriverFleetV2AccessMultiOwnerIdSelect _ _ mbFleetMemberId mbOnlyCurrent enable req = do
+  fleetMemberId <- mbFleetMemberId & fromMaybeM (InvalidRequest "Fleet member ID is required")
+  let onlyCurrent = fromMaybe False mbOnlyCurrent
+  when (onlyCurrent && enable) $ do
+    fleetOwnerIds <- getFleetOwnerIds fleetMemberId Nothing
+    FMA.updateFleetMembersActiveStatus False fleetMemberId (map fst fleetOwnerIds)
+    clearFleetMemberCacheMultiple fleetMemberId (map fst fleetOwnerIds)
+  FMA.updateFleetMembersActiveStatus enable fleetMemberId req.fleetOwnerIds
+  clearFleetMemberCacheMultiple fleetMemberId req.fleetOwnerIds
   return Success
 
 clearFleetMemberCache :: Text -> Maybe Text -> Flow ()
