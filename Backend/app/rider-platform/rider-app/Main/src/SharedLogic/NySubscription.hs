@@ -54,7 +54,8 @@ triggerSubscriptionSearch subscription = do
             recentLocationId = Nothing,
             platformType = Nothing,
             isReserveRide = Just True,
-            subscriptionId = Just subscription.id
+            subscriptionId = Just subscription.id,
+            verifyBeforeCancellingOldBooking = Just True
           }
 
   searchResp <-

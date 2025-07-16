@@ -42,7 +42,6 @@ instance FromTType' Beam.Merchant Domain.Types.Merchant.Merchant where
             driverOfferMerchantId = driverOfferMerchantId,
             driverOnTheWayNotifyExpiry = fromMaybe 3600 driverOnTheWayNotifyExpiry,
             editPickupDistanceThreshold = Kernel.Utils.Common.mkDistanceWithDefault distanceUnit editPickupDistanceThresholdValue editPickupDistanceThreshold,
-            enableForMultipleSearchIssue = fromMaybe False enableForMultipleSearchIssue,
             fakeOtpEmails = fakeOtpEmails,
             fakeOtpMobileNumbers = fakeOtpMobileNumbers,
             fallbackShortId = Kernel.Types.Id.ShortId fallbackShortId,
@@ -66,6 +65,7 @@ instance FromTType' Beam.Merchant Domain.Types.Merchant.Merchant where
             shortId = Kernel.Types.Id.ShortId shortId,
             signatureExpiry = signatureExpiry,
             signingPublicKey = signingPublicKey,
+            stuckRideAutoCancellationBuffer = stuckRideAutoCancellationBuffer,
             subscriberId = Kernel.Types.Id.ShortId subscriberId,
             updatedAt = updatedAt
           }
@@ -94,7 +94,6 @@ instance ToTType' Beam.Merchant Domain.Types.Merchant.Merchant where
         Beam.distanceUnit = Just $ (.unit) editPickupDistanceThreshold,
         Beam.editPickupDistanceThreshold = Kernel.Utils.Common.distanceToHighPrecMeters editPickupDistanceThreshold,
         Beam.editPickupDistanceThresholdValue = Just $ Kernel.Utils.Common.distanceToHighPrecDistance ((.unit) editPickupDistanceThreshold) editPickupDistanceThreshold,
-        Beam.enableForMultipleSearchIssue = Just enableForMultipleSearchIssue,
         Beam.fakeOtpEmails = fakeOtpEmails,
         Beam.fakeOtpMobileNumbers = fakeOtpMobileNumbers,
         Beam.fallbackShortId = Kernel.Types.Id.getShortId fallbackShortId,
@@ -119,6 +118,7 @@ instance ToTType' Beam.Merchant Domain.Types.Merchant.Merchant where
         Beam.shortId = Kernel.Types.Id.getShortId shortId,
         Beam.signatureExpiry = signatureExpiry,
         Beam.signingPublicKey = signingPublicKey,
+        Beam.stuckRideAutoCancellationBuffer = stuckRideAutoCancellationBuffer,
         Beam.subscriberId = Kernel.Types.Id.getShortId subscriberId,
         Beam.updatedAt = updatedAt
       }

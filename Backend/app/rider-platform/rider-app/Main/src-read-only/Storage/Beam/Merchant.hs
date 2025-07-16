@@ -37,7 +37,6 @@ data MerchantT f = MerchantT
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
     editPickupDistanceThreshold :: B.C f Kernel.Types.Common.HighPrecMeters,
     editPickupDistanceThresholdValue :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance),
-    enableForMultipleSearchIssue :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     fakeOtpEmails :: B.C f [Kernel.Prelude.Text],
     fakeOtpMobileNumbers :: B.C f [Kernel.Prelude.Text],
     fallbackShortId :: B.C f Kernel.Prelude.Text,
@@ -62,6 +61,7 @@ data MerchantT f = MerchantT
     shortId :: B.C f Kernel.Prelude.Text,
     signatureExpiry :: B.C f Kernel.Prelude.Int,
     signingPublicKey :: B.C f Kernel.Types.Base64.Base64,
+    stuckRideAutoCancellationBuffer :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     subscriberId :: B.C f Kernel.Prelude.Text,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }

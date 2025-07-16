@@ -109,7 +109,8 @@ data OneWaySearchReq = OneWaySearchReq
     recentLocationId :: Maybe (Id DTRL.RecentLocation),
     platformType :: Maybe DIBPC.PlatformType,
     isReserveRide :: Maybe Bool,
-    subscriptionId :: Maybe (Id DNyRegularSubscription.NyRegularSubscription)
+    subscriptionId :: Maybe (Id DNyRegularSubscription.NyRegularSubscription),
+    verifyBeforeCancellingOldBooking :: Maybe Bool
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
