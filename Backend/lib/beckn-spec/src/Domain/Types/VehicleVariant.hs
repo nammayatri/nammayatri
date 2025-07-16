@@ -32,6 +32,7 @@ data VehicleVariant
   | SUV
   | HATCHBACK
   | AUTO_RICKSHAW
+  | AUTO_PLUS
   | TAXI
   | TAXI_PLUS
   | PREMIUM_SEDAN
@@ -96,6 +97,7 @@ castServiceTierToVariant = \case
   DVST.DELIVERY_TRUCK_ULTRA_LARGE -> DELIVERY_TRUCK_ULTRA_LARGE
   DVST.BUS_NON_AC -> BUS_NON_AC
   DVST.BUS_AC -> BUS_AC
+  DVST.AUTO_PLUS -> AUTO_PLUS
 
 castVariantToServiceTier :: VehicleVariant -> DVST.ServiceTierType
 castVariantToServiceTier = \case
@@ -126,6 +128,7 @@ castVariantToServiceTier = \case
   DELIVERY_TRUCK_ULTRA_LARGE -> DVST.DELIVERY_TRUCK_ULTRA_LARGE
   BUS_NON_AC -> DVST.BUS_NON_AC
   BUS_AC -> DVST.BUS_AC
+  AUTO_PLUS -> DVST.AUTO_PLUS
 
 castVehicleVariantToVehicleCategory :: VehicleVariant -> DVC.VehicleCategory
 castVehicleVariantToVehicleCategory = \case
@@ -156,6 +159,7 @@ castVehicleVariantToVehicleCategory = \case
   DELIVERY_TRUCK_ULTRA_LARGE -> DVC.TRUCK
   BUS_NON_AC -> DVC.BUS
   BUS_AC -> DVC.BUS
+  AUTO_PLUS -> DVC.AUTO_CATEGORY
 
 castServiceTierToVehicleCategory :: DVST.ServiceTierType -> DVC.VehicleCategory
 castServiceTierToVehicleCategory = \case
@@ -189,6 +193,7 @@ castServiceTierToVehicleCategory = \case
   DVST.DELIVERY_TRUCK_ULTRA_LARGE -> DVC.TRUCK
   DVST.BUS_NON_AC -> DVC.BUS
   DVST.BUS_AC -> DVC.BUS
+  DVST.AUTO_PLUS -> DVC.AUTO_CATEGORY
 
 getVehicleCategory :: Maybe DVC.VehicleCategory -> VehicleVariant -> Maybe DVC.VehicleCategory
 getVehicleCategory mbVehicleCategory variant = mbVehicleCategory <|> (Just $ castVehicleVariantToVehicleCategory variant)
