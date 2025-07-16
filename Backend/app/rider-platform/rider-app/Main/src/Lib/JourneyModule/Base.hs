@@ -187,10 +187,13 @@ getJourney :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DJourney.Journey
 getJourney id = QJourney.findByPrimaryKey id >>= fromMaybeM (JourneyNotFound id.getId)
 
 getJourneyLegs :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DJourney.Journey -> m [DJourneyLeg.JourneyLeg]
-getJourneyLegs journeyId = do
-  legs <- QJourneyLeg.findAllByJourneyId journeyId
-  let filteredLegs = filter (\leg -> leg.isDeleted == Just False || leg.isDeleted == Nothing) legs
-  return $ sortBy (comparing (.sequenceNumber)) filteredLegs
+getJourneyLegs = QJourneyLeg.getJourneyLegs
+
+-- not needed as we are using getJourneyLegs from JourneyLegExtra and it is already
+-- sorted by sequenceNumber and filtered out deleted legs by default from db
+-- legs <- QJourneyLeg.findAllByJourneyId journeyId
+-- let filteredLegs = filter (\leg -> leg.isDeleted == Just False || leg.isDeleted == Nothing) legs
+-- return $ sortBy (comparing (.sequenceNumber)) filteredLegs
 
 getAllLegsInfo ::
   (JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
@@ -209,7 +212,7 @@ getAllLegsInfo journeyId skipAddLegFallback = do
               if skipAddLegFallback
                 then return Nothing
                 else do
-                  addAllLegs journeyId [leg]
+                  addAllLegs journeyId (Just allLegsRawData) [leg]
                   updatedLeg <- QJourneyLeg.findByPrimaryKey leg.id >>= fromMaybeM (JourneyLegNotFound leg.id.getId)
                   legSearchIdText' <- updatedLeg.legSearchId & fromMaybeM (JourneyLegSearchIdNotFound leg.journeyId.getId leg.sequenceNumber)
                   getLegInfo updatedLeg legSearchIdText'
@@ -285,7 +288,7 @@ getAllLegsStatus journey = do
   riderConfig <- getRiderConfig journey
   let busTrackingConfig = fromMaybe defaultBusTrackingConfig riderConfig.busTrackingConfig
   let movementDetected = hasSignificantMovement (map (.latLong) riderLastPoints) busTrackingConfig
-  (_, _, legPairs) <- foldlM (processLeg riderLastPoints movementDetected) (True, Nothing, []) allLegsRawData
+  (_, _, legPairs) <- foldlM (processLeg riderLastPoints allLegsRawData movementDetected) (True, Nothing, []) allLegsRawData
   let allLegsState = map snd legPairs
   -- Update journey expiry time to the next valid ticket expiry when a leg is completed
   whenJust (minimumTicketLegOrder legPairs) $ \nextLegOrder -> do
@@ -315,11 +318,12 @@ getAllLegsStatus journey = do
     processLeg ::
       (JL.GetStateFlow m r c, JL.SearchRequestFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
       [APITypes.RiderLocationReq] ->
+      [DJourneyLeg.JourneyLeg] ->
       Bool ->
       (Bool, Maybe DJourneyLeg.JourneyLeg, [(DJourneyLeg.JourneyLeg, JL.JourneyLegState)]) ->
       DJourneyLeg.JourneyLeg ->
       m (Bool, Maybe DJourneyLeg.JourneyLeg, [(DJourneyLeg.JourneyLeg, JL.JourneyLegState)])
-    processLeg riderLastPoints movementDetected (isLastCompleted, lastLeg, legsState) leg = do
+    processLeg riderLastPoints allLegsRawData movementDetected (isLastCompleted, lastLeg, legsState) leg = do
       case leg.legSearchId of
         Just legSearchIdText -> do
           let legSearchId = Id legSearchIdText
@@ -339,11 +343,11 @@ getAllLegsStatus journey = do
             )
         Nothing -> do
           logError $ "LegId is null for JourneyLeg: " <> show leg.journeyId <> " JourneyLegId: " <> show leg.id
-          addAllLegs journey.id [leg] -- try to add the leg again
+          addAllLegs journey.id (Just allLegsRawData) [leg] -- try to add the leg again
           updatedLeg <- QJourneyLeg.findByPrimaryKey leg.id >>= fromMaybeM (JourneyLegNotFound leg.id.getId)
           case updatedLeg.legSearchId of
             Just _ -> do
-              processLeg riderLastPoints movementDetected (isLastCompleted, lastLeg, legsState) updatedLeg
+              processLeg riderLastPoints allLegsRawData movementDetected (isLastCompleted, lastLeg, legsState) updatedLeg
             Nothing -> do
               throwError $ JourneyLegSearchIdNotFound leg.journeyId.getId leg.sequenceNumber
 
@@ -458,14 +462,15 @@ addAllLegs ::
     m ~ Kernel.Types.Flow.FlowR AppEnv
   ) =>
   Id DJourney.Journey ->
+  Maybe [DJourneyLeg.JourneyLeg] ->
   [DJourneyLeg.JourneyLeg] ->
   m ()
-addAllLegs journeyId journeyLegs = do
+addAllLegs journeyId mbOldJourneyLegs newJourneyLegs = do
   journey <- getJourney journeyId
   parentSearchReq <- QSearchRequest.findById journey.searchRequestId >>= fromMaybeM (SearchRequestNotFound journey.searchRequestId.getId)
-  oldLegs <- getJourneyLegs journeyId
-  let filteredOldLegs = filter (\leg1 -> all (\leg2 -> not (leg1.sequenceNumber == leg2.sequenceNumber)) journeyLegs) oldLegs
-  let allLegs = sortBy (comparing (.sequenceNumber)) (filteredOldLegs ++ journeyLegs)
+  oldLegs <- maybe (getJourneyLegs journeyId) (\oldJourneyLegs -> return oldJourneyLegs) mbOldJourneyLegs
+  let filteredOldLegs = filter (\leg1 -> all (\leg2 -> not (leg1.sequenceNumber == leg2.sequenceNumber)) newJourneyLegs) oldLegs
+  let allLegs = sortBy (comparing (.sequenceNumber)) (filteredOldLegs ++ newJourneyLegs)
   toLocation <- parentSearchReq.toLocation & fromMaybeM (InvalidRequest "To location nothing for parent search request")
   forM_ (traverseWithTriplets allLegs) $ \(mbPrevJourneyLeg, journeyLeg, mbNextJourneyLeg) -> do
     when (isNothing journeyLeg.legSearchId) $ do
@@ -928,7 +933,7 @@ addSkippedLeg journeyId legOrder = do
 
   exep <- try @_ @SomeException $ do
     QJourneyLeg.updateIsSkipped (Just False) skippedLeg.legSearchId
-    addAllLegs journeyId [skippedLeg {DJourneyLeg.isSkipped = Just False, DJourneyLeg.legSearchId = Nothing}]
+    addAllLegs journeyId (Just allLegs) [skippedLeg {DJourneyLeg.isSkipped = Just False, DJourneyLeg.legSearchId = Nothing}]
   case exep of
     Left _ -> do
       -- Rollback operations
@@ -1482,7 +1487,7 @@ switchLeg journeyId req = do
   Redis.whenWithLockRedis lockKey 5 $ do
     cancelLeg legData (SCR.CancellationReasonCode "") False False
     newJourneyLeg <- createJourneyLegFromCancelledLeg journeyLeg req.newMode startLocation newDistance newDuration
-    addAllLegs journeyId [newJourneyLeg]
+    addAllLegs journeyId (Just journeyLegs) [newJourneyLeg]
     when (legData.status /= JL.InPlan) $
       fork "Start journey thread" $ withShortRetry $ startJourney [] Nothing journeyId
 

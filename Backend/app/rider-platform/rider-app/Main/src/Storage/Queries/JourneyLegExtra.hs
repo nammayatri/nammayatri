@@ -4,6 +4,7 @@
 module Storage.Queries.JourneyLegExtra where
 
 import Domain.Types.FRFSRouteDetails
+import qualified Domain.Types.Journey as Journey
 import Domain.Types.JourneyLeg
 import qualified Domain.Types.JourneyLeg as JL
 import qualified Domain.Types.RouteDetails as RouteDetails
@@ -74,3 +75,16 @@ create journeyLeg = do
     RD.create routeDetails
 
   create' journeyLeg
+
+getJourneyLegs :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Journey.Journey -> m [Domain.Types.JourneyLeg.JourneyLeg]
+getJourneyLegs journeyId = do
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is Beam.journeyId $ Se.Eq (Kernel.Types.Id.getId journeyId),
+          Se.Or
+            [Se.Is Beam.isDeleted $ Se.Eq (Just False), Se.Is Beam.isDeleted $ Se.Eq Nothing]
+        ]
+    ]
+    (Se.Asc Beam.sequenceNumber)
+    Nothing
+    Nothing
