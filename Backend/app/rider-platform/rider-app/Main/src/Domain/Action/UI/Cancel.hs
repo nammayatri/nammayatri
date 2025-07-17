@@ -43,7 +43,6 @@ import qualified Domain.Types.Ride as Ride
 import Domain.Types.SearchRequest (SearchRequest)
 import qualified Domain.Types.VehicleVariant as DVeh
 import Environment
-import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import Kernel.External.Maps
 import Kernel.Prelude
@@ -229,15 +228,15 @@ mkDomainCancelSearch ::
   Id Person.Person ->
   Id DEstimate.Estimate ->
   m CancelSearch
-mkDomainCancelSearch personId estimateId = do
-  estStatus <- QEstimate.getStatus estimateId >>= fromMaybeM (EstimateStatusDoesNotExist estimateId.getId)
-  let isEstimateNotNew = estStatus /= DEstimate.NEW
-  buildCancelReq estimateId isEstimateNotNew estStatus
+mkDomainCancelSearch _personId estimateId = do
+  estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
+  buildCancelReq estimate
   where
-    buildCancelReq estId isEstimateNotNew estStatus = do
-      estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
-      person <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-      merchant <- CQM.findById person.merchantId >>= fromMaybeM (MerchantNotFound person.merchantId.getId)
+    buildCancelReq estimate = do
+      let estStatus = estimate.status
+      let isEstimateNotNew = estStatus /= DEstimate.NEW
+      merchantId <- fromMaybeM (MerchantNotFound $ "estimate with esId: " <> estimate.id.getId <> "doesn't have merchantID") estimate.merchantId
+      merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
       isValueAddNP <- CQVAN.isValueAddNP estimate.providerId
       let searchRequestId = estimate.requestId
       city <- case estimate.merchantOperatingCityId of
@@ -247,7 +246,7 @@ mkDomainCancelSearch personId estimateId = do
             >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound mOCId.getId)
       pure
         CancelSearch
-          { estimateId = estId,
+          { estimateId = estimate.id,
             providerUrl = estimate.providerUrl,
             providerId = estimate.providerId,
             searchReqId = searchRequestId,
@@ -264,17 +263,9 @@ cancelSearch ::
   CancelSearch ->
   m ()
 cancelSearch personId dcr = do
-  _ <-
-    if dcr.estimateStatus == DEstimate.GOT_DRIVER_QUOTE
-      then -- then Esq.runTransaction $ do
-      do
-        _ <- QPFS.updateStatus personId DPFS.IDLE
-        void $ QEstimate.updateStatus DEstimate.DRIVER_QUOTE_CANCELLED dcr.estimateId
-        QDOffer.updateStatus DDO.INACTIVE dcr.estimateId
-      else do
-        _ <- QPFS.updateStatus personId DPFS.IDLE
-        void $ QEstimate.updateStatus DEstimate.CANCELLED dcr.estimateId
-        QDOffer.updateStatus DDO.INACTIVE dcr.estimateId
+  QPFS.updateStatus personId DPFS.IDLE
+  void $ QEstimate.updateStatus (bool DEstimate.CANCELLED DEstimate.DRIVER_QUOTE_CANCELLED (dcr.estimateStatus == DEstimate.GOT_DRIVER_QUOTE)) dcr.estimateId
+  QDOffer.updateStatus DDO.INACTIVE dcr.estimateId
   return ()
 
 driverDistanceToPickup ::
