@@ -310,6 +310,9 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges estimatedTot
       petChargesCaption = show Tags.PET_CHARGES
       petChargesItem = mkBreakupItem petChargesCaption . (mkValue . show) <$> farePolicy.petCharges
 
+      priorityChargesCaption = show Tags.PRIORITY_CHARGES
+      priorityChargesItem = mkBreakupItem priorityChargesCaption . (mkValue . show) <$> farePolicy.priorityCharges
+
       serviceChargeCaption = show Tags.SERVICE_CHARGE
       serviceChargeItem = mkBreakupItem serviceChargeCaption . (mkValue . highPrecMoneyToText) <$> farePolicy.serviceCharge
 
@@ -361,6 +364,7 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges estimatedTot
       driverMinExtraFeeItem,
       driverMaxExtraFeeItem,
       petChargesItem,
+      priorityChargesItem,
       nightShiftStartItem,
       nightShiftEndItem,
       nightShiftStartInSecondsItem,

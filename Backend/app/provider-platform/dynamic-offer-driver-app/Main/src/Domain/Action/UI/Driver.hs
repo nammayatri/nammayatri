@@ -1189,14 +1189,14 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
     -- logic is deprecated, should be handle from driver service tier options now, kept it for backward compatibility
     checkIfCanDowngrade vehicle = do
       when
-        ( (vehicle.variant == DV.AUTO_RICKSHAW || vehicle.variant == DV.TAXI || vehicle.variant == DV.HATCHBACK)
+        ( (vehicle.variant == DV.AUTO_RICKSHAW || vehicle.variant == DV.AUTO_PLUS || vehicle.variant == DV.TAXI || vehicle.variant == DV.HATCHBACK)
             && (req.canDowngradeToSedan == Just True || req.canDowngradeToHatchback == Just True)
         )
         $ throwError $ InvalidRequest $ "Can't downgrade from " <> (show vehicle.variant)
       when (vehicle.variant == DV.SUV && req.canDowngradeToTaxi == Just True) $
         throwError $ InvalidRequest $ "Can't downgrade to NON-AC TAXI from " <> (show vehicle.variant)
       when
-        ( (vehicle.variant == DV.AUTO_RICKSHAW || vehicle.variant == DV.TAXI)
+        ( (vehicle.variant == DV.AUTO_RICKSHAW || vehicle.variant == DV.AUTO_PLUS || vehicle.variant == DV.TAXI)
             && (req.canDowngradeToSedan == Just True || req.canDowngradeToHatchback == Just True || req.canDowngradeToTaxi == Just True)
         )
         $ throwError $ InvalidRequest $ "Can't downgrade from " <> (show vehicle.variant)
@@ -1303,7 +1303,7 @@ getNearbySearchRequests (driverId, _, merchantOpCityId) searchTryIdReq = do
       let driverPickUpCharges = USRD.extractDriverPickupCharges farePolicy.farePolicyDetails
           parkingCharges = farePolicy.parkingCharge
       let safetyCharges = maybe 0 DCC.charge $ find (\ac -> DCC.SAFETY_PLUS_CHARGES == ac.chargeCategory) farePolicy.conditionalCharges
-      return $ USRD.makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata popupDelaySeconds Nothing (Seconds 0) nearbyReq.vehicleServiceTier False isValueAddNP useSilentFCMForForwardBatch driverPickUpCharges parkingCharges safetyCharges (estimate >>= (.fareParams) >>= (.congestionCharge)) (estimate >>= (.fareParams) >>= (.petCharges)) -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
+      return $ USRD.makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata popupDelaySeconds Nothing (Seconds 0) nearbyReq.vehicleServiceTier False isValueAddNP useSilentFCMForForwardBatch driverPickUpCharges parkingCharges safetyCharges (estimate >>= (.fareParams) >>= (.congestionCharge)) (estimate >>= (.fareParams) >>= (.petCharges)) (estimate >>= (.fareParams) >>= (.priorityCharges)) -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
     mkCancellationScoreRelatedConfig :: TransporterConfig -> CancellationScoreRelatedConfig
     mkCancellationScoreRelatedConfig tc = CancellationScoreRelatedConfig tc.popupDelayToAddAsPenalty tc.thresholdCancellationScore tc.minRidesForCancellationScore
 
