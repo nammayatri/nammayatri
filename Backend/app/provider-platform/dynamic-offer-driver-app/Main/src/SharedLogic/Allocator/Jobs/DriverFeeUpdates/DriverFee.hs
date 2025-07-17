@@ -72,6 +72,7 @@ import qualified Storage.Queries.DriverStats as QDS
 import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.Mandate as QMD
 import qualified Storage.Queries.Person as QP
+import Storage.Queries.VendorFeeExtra as QVF
 
 calculateDriverFeeForDrivers ::
   ( CacheFlow m r,
@@ -234,8 +235,9 @@ processRestFee ::
   PaymentMode ->
   DriverFee ->
   SubscriptionConfig ->
+  DriverFee ->
   m ()
-processRestFee paymentMode DriverFee {..} subscriptionConfig = do
+processRestFee paymentMode DriverFee {..} subscriptionConfig parentDriverFee = do
   id_ <- generateGUID
   let driverFee =
         DriverFee
@@ -245,6 +247,7 @@ processRestFee paymentMode DriverFee {..} subscriptionConfig = do
             ..
           }
   QDF.create driverFee
+  QVF.createChildVendorFee parentDriverFee driverFee
   processDriverFee paymentMode driverFee subscriptionConfig
   updateSerialOrderForInvoicesInWindow driverFee.id merchantOperatingCityId startTime endTime driverFee.serviceName
 
@@ -359,8 +362,11 @@ driverFeeSplitter paymentMode plan feeWithoutDiscount totalFee driverFee mandate
   case splittedFees of
     [] -> throwError (InternalError "No driver fee entity with non zero total fee")
     (firstFee : restFees) -> do
+      let adjustment = firstFee.platformFee.fee.getHighPrecMoney / driverFee.platformFee.fee.getHighPrecMoney
+      mapM_ (\dfee -> processRestFee paymentMode dfee subscriptionConfigs driverFee) restFees
+      -- Reset The Original Fee Amount & adjust the vendor fee amount in proportion
       resetFee firstFee.id firstFee.govtCharges firstFee.platformFee (Just feeWithoutDiscount) firstFee.amountPaidByCoin now
-      mapM_ (\dfee -> processRestFee paymentMode dfee subscriptionConfigs) restFees
+      QVF.adjustVendorFee firstFee.id adjustment
 
 getRescheduledTime :: (MonadFlow m) => NominalDiffTime -> m UTCTime
 getRescheduledTime gap = addUTCTime gap <$> getCurrentTime
