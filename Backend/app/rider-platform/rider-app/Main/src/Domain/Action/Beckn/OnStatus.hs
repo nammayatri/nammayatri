@@ -33,25 +33,23 @@ import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.VehicleVariant as DV
+import Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
-import Kernel.External.Types (SchedulerFlow)
 import Kernel.Sms.Config (SmsConfig)
-import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Error
 import Kernel.Types.Id (Id)
 import Kernel.Utils.Common
+import qualified Lib.JourneyModule.Base as JM
 import Lib.SessionizerMetrics.Types.Event
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.Ride as QRide
 import Tools.Metrics (HasBAPMetrics)
-import TransactionLogs.Types
-import qualified UrlShortner.Common as UrlShortner
 
 data DOnStatusReq = DOnStatusReq
   { bppBookingId :: Id DB.BPPBooking,
@@ -167,29 +165,8 @@ isStatusChanged bookingOldStatus bookingNewStatus rideEntity = do
 
 -- TODO: When making a onStatus request, make sure status only goes in forward direction.
 onStatus ::
-  ( MonadFlow m,
-    HasField "minTripDistanceForReferralCfg" r (Maybe Distance),
-    CacheFlow m r,
-    EsqDBFlow m r,
-    ClickhouseFlow m r,
-    HasBAPMetrics m r,
-    EncFlow m r,
-    SchedulerFlow r,
-    HasHttpClientOptions r c,
-    HasLongDurationRetryCfg r c,
-    HasShortDurationRetryCfg r c,
-    EventStreamFlow m r,
-    EsqDBReplicaFlow m r,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
-    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
-    HasField "storeRidesTimeLimit" r Int,
-    HasField "hotSpotExpiry" r Seconds,
-    HasFlowEnv m r '["urlShortnerConfig" ::: UrlShortner.UrlShortnerConfig],
-    HasFlowEnv m r '["selfBaseUrl" ::: BaseUrl]
-  ) =>
   ValidatedOnStatusReq ->
-  m ()
+  Flow ()
 onStatus req = do
   booking <- QB.findByBPPBookingId req.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> req.bppBookingId.getId)
   case req.validatedRideDetails of
@@ -212,7 +189,7 @@ onStatus req = do
     ValidatedRideStartedDetails request -> DCommon.rideStartedReqHandler request
     ValidatedRideCompletedDetails request -> DCommon.rideCompletedReqHandler request
     ValidatedFarePaidDetails request -> DCommon.farePaidReqHandler request
-    ValidatedBookingCancelledDetails request -> DCommon.bookingCancelledReqHandler request
+    ValidatedBookingCancelledDetails request -> DCommon.bookingCancelledReqHandler request JM.getAllLegsInfoWithoutAddingSkipLeg
     ValidatedBookingReallocationDetails BookingReallocationReq {bookingDetails, reallocationSource} -> do
       rideEntity <- buildRideEntity booking updateReallocatedRide bookingDetails
       let rideId = case rideEntity of

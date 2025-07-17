@@ -36,6 +36,7 @@ import qualified Domain.Types.ClientPersonInfo as DPCI
 import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import qualified Domain.Types.FareBreakup as DFareBreakup
 import Domain.Types.HotSpot
+import qualified Domain.Types.Journey as DJourney
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -48,6 +49,7 @@ import qualified Domain.Types.RideRelatedNotificationConfig as DRN
 import qualified Domain.Types.RiderConfig as DRC
 import qualified Domain.Types.Trip as Trip
 import qualified Domain.Types.VehicleVariant as DV
+import Environment
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import Kernel.External.Payment.Interface.Types as Payment
@@ -62,12 +64,14 @@ import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Tools.Metrics.CoreMetrics
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Confidence
+import qualified Kernel.Types.Flow
 import Kernel.Types.Id
 import qualified Kernel.Types.SlidingWindowCounters as SW
 import Kernel.Utils.Common
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import qualified Kernel.Utils.Time as KUT
-import qualified Lib.JourneyLeg.Types as LJT
+import qualified Lib.JourneyLeg.Types as JL
+import qualified Lib.JourneyModule.Types as JL
 import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DLP
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
@@ -98,6 +102,7 @@ import qualified Storage.Queries.BookingCancellationReason as QBCR
 import qualified Storage.Queries.BookingPartiesLink as QBPL
 import qualified Storage.Queries.ClientPersonInfo as QCP
 import qualified Storage.Queries.FareBreakup as QFareBreakup
+import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonStats as QPersonStats
 import qualified Storage.Queries.RecentLocation as SQRL
@@ -780,13 +785,15 @@ bookingCancelledReqHandler ::
     EventStreamFlow m r,
     SchedulerFlow r,
     HasShortDurationRetryCfg r c,
-    HasKafkaProducer r
+    HasKafkaProducer r,
+    m ~ Kernel.Types.Flow.FlowR AppEnv
   ) =>
   ValidatedBookingCancelledReq ->
+  (Id DJourney.Journey -> m [JL.LegInfo]) ->
   m ()
-bookingCancelledReqHandler ValidatedBookingCancelledReq {..} = do
+bookingCancelledReqHandler (ValidatedBookingCancelledReq {..}) getJourneyLegsCallbackFn = do
   logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason:-" <> show cancellationSource)
-  cancellationTransaction booking mbRide cancellationSource Nothing
+  cancellationTransaction booking mbRide cancellationSource Nothing getJourneyLegsCallbackFn
 
 cancellationTransaction ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
@@ -809,8 +816,9 @@ cancellationTransaction ::
   Maybe DRide.Ride ->
   DBCR.CancellationSource ->
   Maybe PriceAPIEntity ->
+  (Id DJourney.Journey -> m [JL.LegInfo]) ->
   m ()
-cancellationTransaction booking mbRide cancellationSource cancellationFee = do
+cancellationTransaction booking mbRide cancellationSource cancellationFee getJourneyLegsCallbackFn = do
   bookingCancellationReason <- mkBookingCancellationReason booking (mbRide <&> (.id)) cancellationSource
   merchantConfigs <- CMC.findAllByMerchantOperatingCityIdInRideFlow booking.merchantOperatingCityId booking.configInExperimentVersions
   fork "incrementing fraud counters" $ do
@@ -834,8 +842,16 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee = do
   unless (booking.status == DRB.CANCELLED) $
     void $ do
       QRB.updateStatus booking.id DRB.CANCELLED
-      QRB.updateJourneyLegStatus (Just LJT.Cancelled) booking.id
+      QRB.updateJourneyLegStatus (Just JL.Cancelled) booking.id
       QBPL.makeAllInactiveByBookingId booking.id
+      whenJust booking.journeyId $ \journeyId -> do
+        journeyLegs <- getJourneyLegsCallbackFn journeyId
+        when (length journeyLegs == 1 || length (filter (\journeyLeg -> journeyLeg.status == JL.Cancelled) journeyLegs) == length journeyLegs - 1) $ -- means, there was only one leg in the journey, which is now sadly cancelled, so we can mark the journey itself as cancelled.
+          QJourney.updateStatus DJourney.CANCELLED journeyId
+        when (length journeyLegs > 1) $ do
+          let activeLegs = filter (\journeyLeg -> journeyLeg.status `notElem` [JL.Skipped, JL.Cancelled, JL.Completed]) journeyLegs
+          when (length activeLegs <= 1) $ do
+            QJourney.updateStatus DJourney.COMPLETED journeyId
   whenJust mbRide $ \ride -> void $ do
     unless (ride.status == DRide.CANCELLED) $ void $ QRide.updateStatus ride.id DRide.CANCELLED
   riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow booking.merchantOperatingCityId booking.configInExperimentVersions >>= fromMaybeM (InternalError "RiderConfig not found")

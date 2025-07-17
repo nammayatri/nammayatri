@@ -15,8 +15,8 @@ data JourneyLegStatus
   | Arriving
   | Arrived
   | OnTheWay
-  | Skipped
   | Ongoing
+  | Skipped
   | Finishing
   | Cancelled
   | Completed

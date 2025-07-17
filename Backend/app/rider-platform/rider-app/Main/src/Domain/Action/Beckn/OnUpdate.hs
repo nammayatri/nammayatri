@@ -422,7 +422,7 @@ onUpdate = \case
   OUValidatedRideStartedReq req -> Common.rideStartedReqHandler req
   OUValidatedRideCompletedReq req -> Common.rideCompletedReqHandler req
   OUValidatedFarePaidReq req -> Common.farePaidReqHandler req
-  OUValidatedBookingCancelledReq req -> Common.bookingCancelledReqHandler req
+  OUValidatedBookingCancelledReq req -> Common.bookingCancelledReqHandler req JM.getAllLegsInfoWithoutAddingSkipLeg
   OUValidatedBookingReallocationReq ValidatedBookingReallocationReq {..} -> do
     mbRide <- QRide.findActiveByRBId booking.id
     bookingCancellationReason <- mkBookingCancellationReason booking (mbRide <&> (.id)) reallocationSource
