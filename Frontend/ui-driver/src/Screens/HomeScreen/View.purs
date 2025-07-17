@@ -204,6 +204,8 @@ screen initialState (GlobalState globalState) =
           when (isNothing initialState.data.bannerData.bannerItem) $ void $ launchAff $ EHC.flowRunner defaultGlobalState $ computeListItem push
           void $ launchAff $ flowRunner defaultGlobalState $ checkBgLocation push BgLocationAC initialState globalState.globalProps.bgLocPopupShown
           void $ triggerOnRideBannerTimer push initialState
+          let showRrInSilent = initialState.props.currentStage == RideCompleted
+          void $ pure $ setValueToLocalStore SHOW_RR_IN_SILENT (show showRrInSilent)
           -- void $ launchAff $ EHC.flowRunner defaultGlobalState $ getScheduledRidecount push GetRideCount initialState -- needs to be check later
           case localStage of
             "RideRequested"  -> do

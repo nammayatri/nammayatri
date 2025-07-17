@@ -815,7 +815,8 @@ public class NotificationUtils {
         sharedPref.edit().putString(context.getString(R.string.RIDE_STATUS), context.getString(R.string.NEW_RIDE_AVAILABLE)).apply();
         boolean isAppOnAnotherActivity = sharedPref.getString("ANOTHER_ACTIVITY_LAUNCHED", "false").equals("true");
         boolean activityBasedChecks = Arrays.asList("onPause", "onDestroy").contains(sharedPref.getString("ACTIVITY_STATUS", "null"));
-        boolean useWidgetService = !isAppOnAnotherActivity && ((sharedPref.getString("DRIVER_STATUS_N", "null").equals("Silent") && activityBasedChecks) || useSilentFCMForForwardBatch);
+        boolean checkExplicitCondition = sharedPref.getString("SHOW_RR_IN_SILENT", "null").equals("true");
+        boolean useWidgetService = !isAppOnAnotherActivity && ((sharedPref.getString("DRIVER_STATUS_N", "null").equals("Silent") && activityBasedChecks) || useSilentFCMForForwardBatch || checkExplicitCondition);
         boolean widgetCheckForNonOverlay = useWidgetService && !NotificationUtils.overlayFeatureNotAvailable(context);
          boolean reqPresentCheckForWidget = binder == null && widgetCheckForNonOverlay;
          if (reqPresentCheckForWidget) {
@@ -830,9 +831,10 @@ public class NotificationUtils {
         Intent widgetService = new Intent(context, WidgetService.class);
         String key = context.getString(R.string.service);
         boolean useSilentFCMForForwardBatch = fetchUseSilentFCMForForwardBatch(payload);
+        boolean checkExplicitCondition = sharedPref.getString("SHOW_RR_IN_SILENT", "null").equals("true");
         boolean activityStatusCheck = (sharedPref.getString(context.getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onPause") || sharedPref.getString(context.getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onDestroy"));
         String merchantType = key.contains("partner") || key.contains("driver") || key.contains("provider")? "DRIVER" : "USER";
-        if (merchantType.equals("DRIVER") && Settings.canDrawOverlays(context) && !sharedPref.getString(context.getResources().getString(R.string.REGISTERATION_TOKEN), "null").equals("null") && !sharedPref.getString("ANOTHER_ACTIVITY_LAUNCHED", "false").equals("true") && (activityStatusCheck || useSilentFCMForForwardBatch)) {
+        if (merchantType.equals("DRIVER") && Settings.canDrawOverlays(context) && !sharedPref.getString(context.getResources().getString(R.string.REGISTERATION_TOKEN), "null").equals("null") && !sharedPref.getString("ANOTHER_ACTIVITY_LAUNCHED", "false").equals("true") && (activityStatusCheck || useSilentFCMForForwardBatch || checkExplicitCondition)) {
             widgetService.putExtra(context.getResources().getString(R.string.WIDGET_MESSAGE), widgetMessage);
             widgetService.putExtra("payload", payload != null ? payload.toString() : null);
             widgetService.putExtra("data", data != null ? data.toString() : null);
