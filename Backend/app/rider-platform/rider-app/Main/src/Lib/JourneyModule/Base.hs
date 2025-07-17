@@ -189,6 +189,12 @@ getJourney id = QJourney.findByPrimaryKey id >>= fromMaybeM (JourneyNotFound id.
 getJourneyLegs :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DJourney.Journey -> m [DJourneyLeg.JourneyLeg]
 getJourneyLegs = QJourneyLeg.getJourneyLegs
 
+getAllLegsInfoWithoutAddingSkipLeg ::
+  (JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
+  Id DJourney.Journey ->
+  m [JL.LegInfo]
+getAllLegsInfoWithoutAddingSkipLeg journeyId = getAllLegsInfo journeyId False
+
 -- not needed as we are using getJourneyLegs from JourneyLegExtra and it is already
 -- sorted by sequenceNumber and filtered out deleted legs by default from db
 -- legs <- QJourneyLeg.findAllByJourneyId journeyId

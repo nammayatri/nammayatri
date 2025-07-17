@@ -142,7 +142,7 @@ getMultimodalBookingInfo ::
 getMultimodalBookingInfo (mbPersonId, _merchantId) journeyId = do
   journey <- JM.getJourney journeyId
   legs <- JM.getAllLegsInfo journeyId False
-  JM.updateJourneyStatus journey Domain.Types.Journey.INPROGRESS -- fix it properly
+  when (journey.status == Domain.Types.Journey.INITIATED) $ JM.updateJourneyStatus journey Domain.Types.Journey.INPROGRESS -- move it to payment success
   allJourneyFrfsBookings <- QFRFSTicketBooking.findAllByJourneyId (Just journeyId)
   let allMarked = all ((== DFRFSB.REFUND_INITIATED) . (.status)) allJourneyFrfsBookings
   unless allMarked $

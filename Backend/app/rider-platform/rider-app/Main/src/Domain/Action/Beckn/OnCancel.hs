@@ -35,6 +35,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.JourneyModule.Base as JM
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
@@ -59,7 +60,7 @@ onCancel ValidatedBookingCancelledReq {..} = do
   logTagInfo ("BookingId-" <> getId booking.id) ""
   whenJust cancellationSource $ \source -> logTagInfo ("Cancellation source " <> source) ""
   let castedCancellationSource = castCancellatonSource cancellationSource_
-  Common.cancellationTransaction booking mbRide castedCancellationSource cancellationFee
+  Common.cancellationTransaction booking mbRide castedCancellationSource cancellationFee JM.getAllLegsInfoWithoutAddingSkipLeg
   where
     castCancellatonSource = \case
       Just Enums.CONSUMER -> SBCR.ByUser
