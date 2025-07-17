@@ -904,6 +904,7 @@ getConfigValue language issueConfig mbRideInfoRes key = do
       driverPickupCharges = maybe 0.0 (.amount.amount) (getFareFromArray "DEAD_KILOMETER_FARE" fareBreakup)
       tollCharges = maybe 0.0 (.amount.amount) (getFareFromArray "TOLL_CHARGES" fareBreakup)
       petCharges = maybe 0.0 (.amount.amount) (getFareFromArray "PET_CHARGES" fareBreakup)
+      priorityCharges = maybe 0.0 (.amount.amount) (getFareFromArray "PRIORITY_CHARGES" fareBreakup)
       tipAdded = maybe 0.0 (.amount.amount) (getFareFromArray "CUSTOMER_SELECTED_FARE" fareBreakup)
       driverAdditions = maybe 0.0 (.amount.amount) (getFareFromArray "DRIVER_SELECTED_FARE" fareBreakup)
       rideStopCharges = maybe 0.0 (.amount.amount) (getFareFromArray "RIDE_STOP_CHARGES" fareBreakup)
@@ -931,6 +932,7 @@ getConfigValue language issueConfig mbRideInfoRes key = do
         "DRIVER_PICKUP_CHARGE" -> show driverPickupCharges
         "TOLL_CHARGES" -> show tollCharges
         "PET_CHARGES" -> show petCharges
+        "PRIORITY_CHARGES" -> show priorityCharges
         "TIP_ADDED" -> show tipAdded
         "DRIVER_ADDITIONS" -> show driverAdditions
         "RIDE_STOP_CHARGES" -> show rideStopCharges

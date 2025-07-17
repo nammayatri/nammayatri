@@ -100,6 +100,9 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
       petChargesCaption = show Enums.PET_CHARGES
       mbPetChargesItem = mkBreakupItem petChargesCaption . mkPrice <$> fareParams.petCharges
 
+      priorityChargesCaption = show Enums.PRIORITY_CHARGES
+      mbPriorityChargesItem = mkBreakupItem priorityChargesCaption . mkPrice <$> fareParams.priorityCharges
+
       insuranceChargeCaption = show Enums.INSURANCE_CHARGES
       mbInsuranceChargeItem = mkBreakupItem insuranceChargeCaption . mkPrice <$> fareParams.insuranceCharge
 
@@ -122,6 +125,7 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
       mbWaitingChargesItem,
       mbFixedGovtRateItem,
       mbPetChargesItem,
+      mbPriorityChargesItem,
       mbServiceChargeItem,
       mbSelectedFareItem,
       mkCustomerExtraFareItem,
@@ -237,6 +241,7 @@ pureFareSum fareParams conditionalChargeCategories = do
     + fromMaybe 0.0 fareParams.congestionCharge
     + fromMaybe 0.0 fareParams.petCharges
     + fromMaybe 0.0 fareParams.stopCharges
+    + fromMaybe 0.0 fareParams.priorityCharges
     + partOfNightShiftCharge
     + notPartOfNightShiftCharge
     + platformFee
@@ -330,6 +335,7 @@ calculateFareParameters params = do
           + finalCongestionCharge ----------Needs to be changed to congestionChargeResult
           + fromMaybe 0.0 params.petCharges
           + fromMaybe 0.0 fp.serviceCharge
+          + fromMaybe 0.0 fp.priorityCharges
           + fromMaybe 0.0 insuranceChargeResult
           + notPartOfNightShiftCharge
       govtCharges =
@@ -350,6 +356,7 @@ calculateFareParameters params = do
             serviceCharge = fp.serviceCharge,
             parkingCharge = fp.parkingCharge,
             petCharges = params.petCharges,
+            priorityCharges = fp.priorityCharges,
             congestionCharge = Just finalCongestionCharge,
             congestionChargeViaDp = congestionChargeByPerMin,
             stopCharges = stopCharges, --(\charges -> Just $ HighPrecMoney (toRational params.noOfStops * charges))=<< fp.perStopCharge,

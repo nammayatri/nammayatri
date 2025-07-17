@@ -248,6 +248,7 @@ parseVehicleVariant mbCategory mbVariant =
     (Just "CAB", Just "SUV_PLUS") -> Just VehVar.SUV_PLUS
     (Just "CAB", Just "HERITAGE_CAB") -> Just VehVar.HERITAGE_CAB
     (Just "AUTO_RICKSHAW", Just "EV_AUTO_RICKSHAW") -> Just VehVar.EV_AUTO_RICKSHAW
+    (Just "AUTO_RICKSHAW", Just "AUTO_PLUS") -> Just VehVar.AUTO_PLUS
     (Just "TRUCK", Just "DELIVERY_LIGHT_GOODS_VEHICLE") -> Just VehVar.DELIVERY_LIGHT_GOODS_VEHICLE
     (Just "TRUCK", Just "DELIVERY_TRUCK_MINI") -> Just VehVar.DELIVERY_TRUCK_MINI
     (Just "TRUCK", Just "DELIVERY_TRUCK_SMALL") -> Just VehVar.DELIVERY_TRUCK_SMALL
@@ -429,6 +430,7 @@ mkIntermediateStopSearch stop id parentStopId =
 mapTextToVehicle :: Text -> Maybe Enums.VehicleCategory
 mapTextToVehicle = \case
   "AUTO_RICKSHAW" -> Just Enums.AUTO_RICKSHAW
+  "AUTO_PLUS" -> Just Enums.AUTO_RICKSHAW
   "CAB" -> Just Enums.CAB
   "TWO_WHEELER" -> Just Enums.MOTORCYCLE
   "MOTORCYCLE" -> Just Enums.MOTORCYCLE

@@ -62,6 +62,7 @@ castVehicleVariantDashboard = \case
   Just DV.HATCHBACK -> Just Common.HATCHBACK
   Just DV.SEDAN -> Just Common.SEDAN
   Just DV.AUTO_RICKSHAW -> Just Common.AUTO_RICKSHAW
+  Just DV.AUTO_PLUS -> Just Common.AUTO_PLUS
   Just DV.TAXI -> Just Common.TAXI
   Just DV.TAXI_PLUS -> Just Common.TAXI_PLUS
   Just DV.PREMIUM_SEDAN -> Just Common.PREMIUM_SEDAN

@@ -976,6 +976,7 @@ postMerchantConfigFarePolicyUpdate _ _ reqFarePolicyId req = do
             perMinuteRideExtraTimeCharge = (req.perMinuteRideExtraTimeChargeWithCurrency <&> (.amount)) <|> req.perMinuteRideExtraTimeCharge <|> perMinuteRideExtraTimeCharge,
             tollCharges = req.tollCharges <|> tollCharges,
             petCharges = req.petCharges <|> petCharges,
+            priorityCharges = req.priorityCharges <|> priorityCharges,
             farePolicyDetails = fPDetails,
             congestionChargeMultiplier = FarePolicy.mkCongestionChargeMultiplier <$> req.congestionChargeMultiplier <|> congestionChargeMultiplier,
             description = req.description <|> description,
@@ -1035,6 +1036,7 @@ data FarePolicyCSVRow = FarePolicyCSVRow
     serviceCharge :: Text,
     tollCharges :: Text,
     petCharges :: Text,
+    priorityCharges :: Text,
     tipOptions :: Text,
     govtCharges :: Text,
     farePolicyType :: Text,
@@ -1122,6 +1124,7 @@ instance FromNamedRecord FarePolicyCSVRow where
       <*> r .: "service_charge"
       <*> r .: "toll_charges"
       <*> r .: "pet_charges"
+      <*> r .: "priority_charges"
       <*> r .: "tip_options"
       <*> r .: "govt_charges"
       <*> r .: "fare_policy_type"
@@ -1392,6 +1395,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
       let serviceCharge :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.serviceCharge "Service Charge"
       let tollCharges :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.tollCharges "Toll Charge"
       let petCharges :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.petCharges "Pet Charges"
+      let priorityCharges :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.priorityCharges "Priority Charges"
       let tipOptions :: (Maybe [Int]) = readMaybeCSVField idx row.tipOptions "Tip Options"
       let perMinuteRideExtraTimeCharge :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.perMinuteRideExtraTimeCharge "Per Minute Ride Extra Time Charge"
       let govtCharges :: (Maybe Double) = readMaybeCSVField idx row.govtCharges "Govt Charges"
