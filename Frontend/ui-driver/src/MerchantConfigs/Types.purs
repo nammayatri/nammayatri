@@ -332,7 +332,8 @@ type CityConfig = {
   showScheduledRides :: Boolean,
   chatFooterBanner :: Maybe ChatFootBannerConfig,
   enableNammaMeter :: Maybe (Object Boolean), -- Deprecated. Use openMeter instead.
-  openMeter :: Maybe OpenMeterConfig
+  openMeter :: Maybe OpenMeterConfig,
+  overChargingFlow :: Maybe Boolean
 }
 
 type OpenMeterConfig = {

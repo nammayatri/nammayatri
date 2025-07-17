@@ -404,7 +404,7 @@ function getNammaYatriConfig() {
               "tollAudio" : "https://assets.moving.tech/beckn/audios/toll_charges_background/kn.mp3",
               "acAudio" : "https://assets.moving.tech/beckn/audios/non_ac_background/kn.mp3"
             },
-  
+
             "auto" : {},
             "bike" : {}
           }
@@ -4630,6 +4630,7 @@ function getKeralaSavaariConfig() {
       },
       {
         "cityName" : "Chennai",
+        "overChargingFlow" : true,
         "chatFooterBanner": {
           "enable": true,
           "defaultText" : "Do not demand extra from customer",
@@ -5338,6 +5339,7 @@ function getKeralaSavaariConfig() {
         "cityName" : "Trichy",
         "mapImage" : "ny_ic_tamilnadu_map",
         "cityCode" : "std:0431",
+        "overChargingFlow" : true,
         "showSubscriptions" : false,
         "enableAdvancedBooking" : false,
         "enableGullak": false,
