@@ -796,6 +796,13 @@ mkLegInfoFromFrfsBooking booking distance duration entrance exit = do
           Just InPlan -> getFRFSLegStatusFromBooking booking
           Just status -> status
   let skipBooking = fromMaybe False booking.isSkipped
+  let amountToBeUpdated = safeDiv (getHighPrecMoney booking.estimatedPrice.amount) (fromIntegral booking.quantity)
+      estimatedPrice =
+        Price
+          { amount = HighPrecMoney amountToBeUpdated,
+            amountInt = Money $ roundToIntegral amountToBeUpdated,
+            currency = booking.price.currency
+          }
   legExtraInfo <- mkLegExtraInfo qrDataList qrValidity ticketsCreatedAt journeyRouteDetails' metroRouteInfo' subwayRouteInfo' ticketNo integratedBPPConfig
   return $
     LegInfo
@@ -807,9 +814,9 @@ mkLegInfoFromFrfsBooking booking distance duration entrance exit = do
         startTime = startTime,
         order = legOrder,
         estimatedDuration = duration,
-        estimatedMinFare = Just $ mkPriceAPIEntity booking.estimatedPrice,
+        estimatedMinFare = Just $ mkPriceAPIEntity estimatedPrice,
         estimatedChildFare = Nothing,
-        estimatedMaxFare = Just $ mkPriceAPIEntity booking.estimatedPrice,
+        estimatedMaxFare = Just $ mkPriceAPIEntity estimatedPrice,
         estimatedTotalFare = Nothing,
         estimatedDistance = distance,
         merchantId = booking.merchantId,
@@ -897,6 +904,9 @@ mkLegInfoFromFrfsBooking booking distance duration entrance exit = do
                   adultTicketQuantity = Just booking.quantity,
                   childTicketQuantity = booking.childTicketQuantity
                 }
+    safeDiv :: (Eq a, Fractional a) => a -> a -> a
+    safeDiv x 0 = x
+    safeDiv x y = x / y
 
 getMetroLegRouteInfo :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => [MultiModalJourneyRouteDetails] -> DIBC.IntegratedBPPConfig -> m [MetroLegRouteInfo]
 getMetroLegRouteInfo journeyRouteDetails integratedBPPConfig = do

@@ -227,7 +227,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
         return $
           JT.Single $
             JT.JourneyLegStateData
-              { status = finalStatus,
+              { status = journeyLegStatus,
                 userPosition = (.latLong) <$> listToMaybe req.riderLastPoints,
                 vehiclePositions = [],
                 legOrder = journeyLegInfo.journeyLegOrder,
