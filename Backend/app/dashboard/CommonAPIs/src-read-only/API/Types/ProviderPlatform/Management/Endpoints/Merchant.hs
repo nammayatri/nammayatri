@@ -463,6 +463,7 @@ data Status
 data TableName
   = SUBSCRIPTION_CONFIG
   | PLAN
+  | PLAN_TRANSLATION
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -481,7 +482,6 @@ data UpdateFarePolicyReq = UpdateFarePolicyReq
     govtCharges :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     perMinuteRideExtraTimeCharge :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     tollCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
-    petCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     perMinuteRideExtraTimeChargeWithCurrency :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
     congestionChargeMultiplier :: Kernel.Prelude.Maybe CongestionChargeMultiplierAPIEntity,
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -494,7 +494,8 @@ data UpdateFarePolicyReq = UpdateFarePolicyReq
     waitingCharge :: Kernel.Prelude.Maybe WaitingChargeAPIEntity,
     waitingChargeInfo :: Kernel.Prelude.Maybe WaitingChargeInfoAPIEntity,
     freeWaitingTime :: Kernel.Prelude.Maybe Kernel.Types.Common.Minutes,
-    nightShiftCharge :: Kernel.Prelude.Maybe NightShiftChargeAPIEntity
+    nightShiftCharge :: Kernel.Prelude.Maybe NightShiftChargeAPIEntity,
+    petCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

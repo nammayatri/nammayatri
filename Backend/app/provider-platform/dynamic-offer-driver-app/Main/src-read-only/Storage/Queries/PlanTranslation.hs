@@ -22,6 +22,9 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.PlanTranslation.PlanTranslation] -> m ())
 createMany = traverse_ create
 
+findAllByPlanId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Plan.Plan -> m [Domain.Types.PlanTranslation.PlanTranslation])
+findAllByPlanId planId = do findAllWithKV [Se.Is Beam.planId $ Se.Eq (Kernel.Types.Id.getId planId)]
+
 findByPlanIdAndLanguage ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.Plan.Plan -> Kernel.External.Types.Language -> m (Maybe Domain.Types.PlanTranslation.PlanTranslation))

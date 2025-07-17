@@ -95,6 +95,7 @@ import qualified Domain.Types.MerchantServiceUsageConfig as DMSUC
 import qualified Domain.Types.Overlay as DMO
 import qualified Domain.Types.PayoutConfig as DPC
 import qualified Domain.Types.Plan as Plan
+import qualified Domain.Types.PlanTranslation as PlanTrans
 import qualified Domain.Types.SubscriptionConfig as DSC
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.VehicleCategory as DVC
@@ -164,6 +165,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.Overlay as CQMO
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
 import qualified Storage.CachedQueries.Plan as CQPlan
+import qualified Storage.CachedQueries.PlanTranslation as SCQPT
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.BecknConfig as SQBC
@@ -177,6 +179,7 @@ import qualified Storage.Queries.Merchant as QM
 import qualified Storage.Queries.PayoutConfig as QPC
 import qualified Storage.Queries.Plan as QPlan
 import qualified Storage.Queries.PlanExtra as QPlanE
+import qualified Storage.Queries.PlanTranslation as SQPT
 import qualified Storage.Queries.SubscriptionConfig as QSC
 import Tools.Error
 
@@ -2528,6 +2531,7 @@ postMerchantConfigClearCacheSubscription merchantShortId opCity req = do
   case req.tableName of
     Just Common.PLAN -> clearPlanCache merchantOpCity
     Just Common.SUBSCRIPTION_CONFIG -> clearSubscriptionConfigCache merchantOpCity req.serviceName
+    Just Common.PLAN_TRANSLATION -> clearPlanTranslation
     Nothing -> clearPlanCache merchantOpCity
   where
     clearPlanCache merchantOpCity = do
@@ -2554,6 +2558,11 @@ postMerchantConfigClearCacheSubscription merchantShortId opCity req = do
               CQSC.makeMerchantOpCityIdAndUIEnabledKey merchantOpCity.id True,
               CQSC.makeMerchantOpCityIdAndUIEnabledKey merchantOpCity.id False
             ]
+      forM_ keysToClear $ \key -> Hedis.del key
+      return Success
+    clearPlanTranslation = do
+      pts <- SQPT.findAllByPlanId . Id =<< (pure req.planId >>= fromMaybeM (InvalidRequest $ "plan id not provided"))
+      let keysToClear = map (\pt -> SCQPT.makePlanIdAndLanguageKey pt.planId pt.language) pts
       forM_ keysToClear $ \key -> Hedis.del key
       return Success
     filterCriteriaPlan mbServiceName mbPlanId =
@@ -2584,6 +2593,7 @@ postMerchantConfigUpsertPlanAndConfigSubscription merchantShortId city req = do
           existingConfig <- case tableName of
             Common.SUBSCRIPTION_CONFIG -> runWithDecodeToType config tableName True (\(val :: DSC.SubscriptionConfig) -> QSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName val.merchantOperatingCityId val.serviceName)
             Common.PLAN -> runWithDecodeToType config tableName True (\(val :: Plan.Plan) -> QPlan.findByIdAndPaymentModeWithServiceName val.id val.paymentMode val.serviceName)
+            Common.PLAN_TRANSLATION -> runWithDecodeToType config tableName True (\(val :: [PlanTrans.PlanTranslation]) -> catMaybes <$> mapM (\ele -> SQPT.findByPlanIdAndLanguage ele.planId ele.language) val)
           diffVal <- do
             case existingConfig of
               JsonVal val -> pure $ Just (jsonDiff val config)
@@ -2600,8 +2610,10 @@ postMerchantConfigUpsertPlanAndConfigSubscription merchantShortId city req = do
           _ <- case (actionType, tableName) of
             (Common.CREATE_CONFIG, Common.SUBSCRIPTION_CONFIG) -> runWithDecodeToType config tableName False QSC.create
             (Common.CREATE_CONFIG, Common.PLAN) -> runWithDecodeToType config tableName False QPlan.create
+            (Common.CREATE_CONFIG, Common.PLAN_TRANSLATION) -> runWithDecodeToType config tableName False $ (\(val :: [PlanTrans.PlanTranslation]) -> forM_ val SQPT.create)
             (Common.UPDATE_CONFIG, Common.SUBSCRIPTION_CONFIG) -> runWithDecodeToType config tableName False QSC.updateByPrimaryKey
             (Common.UPDATE_CONFIG, Common.PLAN) -> runWithDecodeToType config tableName False QPlanE.updateByPrimaryKeyP
+            (Common.UPDATE_CONFIG, Common.PLAN_TRANSLATION) -> runWithDecodeToType config tableName False $ (\(val :: [PlanTrans.PlanTranslation]) -> forM_ val SQPT.updateByPrimaryKey)
           pure
             Common.UpsertPlanAndConfigResp
               { respCode = Success,

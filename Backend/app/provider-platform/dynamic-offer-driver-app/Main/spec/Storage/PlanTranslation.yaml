@@ -26,5 +26,9 @@ PlanTranslation:
       kvFunction: findOneWithKV
       where:
         eq: [planId, language]
+    findAllByPlanId:
+      kvFunction: findAllWithKV
+      where:
+        eq: [planId]
 
   excludedFields: [merchantId, merchantOperatingCityId]

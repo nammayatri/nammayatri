@@ -773,6 +773,7 @@ types:
     - waitingChargeInfo: Maybe WaitingChargeInfoAPIEntity
     - freeWaitingTime: Maybe Minutes
     - nightShiftCharge: Maybe NightShiftChargeAPIEntity
+    - petCharges: Maybe HighPrecMoney
     - derive: "'HideSecrets"
   WaitingChargeInfoAPIEntity:
     - freeWaitingTime: Minutes
@@ -839,7 +840,7 @@ types:
   Command:
     - enum: "COMMIT,VIEW_DIFF"
   TableName:
-    - enum: "SUBSCRIPTION_CONFIG,PLAN"
+    - enum: "SUBSCRIPTION_CONFIG,PLAN,PLAN_TRANSLATION"
   UpsertPlanAndConfigResp:
     - respCode: APISuccess
     - executedAction: Action
