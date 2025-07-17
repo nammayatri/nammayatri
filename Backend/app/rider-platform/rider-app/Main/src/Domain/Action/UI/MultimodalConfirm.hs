@@ -408,9 +408,9 @@ postMultimodalRiderLocation ::
 postMultimodalRiderLocation personOrMerchantId journeyId req = do
   addPoint journeyId req
   journeyStatus <- getMultimodalJourneyStatus personOrMerchantId journeyId
-  forM_ (zip journeyStatus.legs (drop 1 journeyStatus.legs)) $ \(currentLeg, nextLeg) -> do
-    when ((currentLeg.status == JL.Finishing || currentLeg.status == JL.Completed) && nextLeg.status == JL.InPlan && nextLeg.mode == DTrip.Taxi) $
-      void $ JM.startJourney [] (Just nextLeg.legOrder) journeyId
+  -- forM_ (zip journeyStatus.legs (drop 1 journeyStatus.legs)) $ \(currentLeg, nextLeg) -> do
+  --   when ((currentLeg.status == JL.Finishing || currentLeg.status == JL.Completed) && nextLeg.status == JL.InPlan && nextLeg.mode == DTrip.Taxi) $
+  --     void $ JM.startJourney [] (Just nextLeg.legOrder) journeyId
   return journeyStatus
 
 postMultimodalJourneyCancel ::

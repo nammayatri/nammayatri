@@ -755,12 +755,12 @@ mkWalkLegInfoFromWalkLegData legData@DWalkLeg.WalkLegMultimodal {..} entrance ex
 
 getFRFSLegStatusFromBooking :: DFRFSBooking.FRFSTicketBooking -> JourneyLegStatus
 getFRFSLegStatusFromBooking booking = case booking.status of
-  DFRFSBooking.NEW -> Assigning
-  DFRFSBooking.APPROVED -> Booked
+  DFRFSBooking.NEW -> InPlan
+  DFRFSBooking.APPROVED -> InPlan
   DFRFSBooking.PAYMENT_PENDING -> InPlan
   DFRFSBooking.CONFIRMING -> Assigning
-  DFRFSBooking.FAILED -> InPlan
   DFRFSBooking.CONFIRMED -> Booked
+  DFRFSBooking.FAILED -> InPlan
   DFRFSBooking.CANCELLED -> InPlan
   DFRFSBooking.COUNTER_CANCELLED -> InPlan
   DFRFSBooking.CANCEL_INITIATED -> InPlan
