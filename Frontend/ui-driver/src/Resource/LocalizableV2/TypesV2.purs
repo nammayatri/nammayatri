@@ -1883,6 +1883,13 @@ newtype Keymap = Keymap {
     , you_may_lose_some_coins_if_you_cancel_this_ride :: String
     , cancellation_compensation :: String
     , cancellation_penalisaton :: String
+    , i_agree_to :: String
+    , namma_kutumba :: String
+    , become_a_member_of_the_namma_driver_welfare_trust :: String
+    , never_raise_fraudulent_claim :: String
+    , ask_only_the_fair_price_shown_in_the_app :: String
+    , follow_safety_standards :: String
+    , provide_sakkath_service_to_the_customers :: String
   }
 
 derive instance ntL :: Newtype Languages _
@@ -1891,6 +1898,27 @@ derive instance ntK :: Newtype Keymap _
 
 a :: forall a. Proxy a
 a = Proxy
+
+i_agree_to :: Proxy "i_agree_to"
+i_agree_to = a
+
+namma_kutumba :: Proxy "namma_kutumba"
+namma_kutumba = a
+
+become_a_member_of_the_namma_driver_welfare_trust :: Proxy "become_a_member_of_the_namma_driver_welfare_trust"
+become_a_member_of_the_namma_driver_welfare_trust = a
+
+never_raise_fraudulent_claim :: Proxy "never_raise_fraudulent_claim"
+never_raise_fraudulent_claim = a
+
+ask_only_the_fair_price_shown_in_the_app :: Proxy "ask_only_the_fair_price_shown_in_the_app"
+ask_only_the_fair_price_shown_in_the_app = a
+
+follow_safety_standards :: Proxy "follow_safety_standards"
+follow_safety_standards = a
+
+provide_sakkath_service_to_the_customers :: Proxy "provide_sakkath_service_to_the_customers"
+provide_sakkath_service_to_the_customers = a
 
 odiya :: Proxy "odiya"
 odiya = a

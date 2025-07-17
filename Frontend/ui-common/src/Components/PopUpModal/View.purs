@@ -665,15 +665,15 @@ listView push state =
     ](map (\item-> 
         linearLayout
         [ height WRAP_CONTENT
-        , width MATCH_PARENT
+        , width state.listViewConfig.width
         , margin $ Margin 12 0 0 4
         , orientation HORIZONTAL
         ][  imageView
-            [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_circle"
-            , height $ V 6 
+            [ imageWithFallback $ fetchImage FF_COMMON_ASSET state.listViewConfig.bulletImage
+            , height $ state.listViewConfig.bulletPointSize
             , alpha 0.7
-            , width $ V 6
-            , margin $ MarginTop 8
+            , width $ state.listViewConfig.bulletPointSize
+            , margin $ MarginTop 6
             ]
           , textView $
             [ width WRAP_CONTENT
@@ -682,7 +682,7 @@ listView push state =
             , text item 
             , accessibility ENABLE
             , accessibilityHint item
-            ] <> (FontStyle.getFontStyle FontStyle.ParagraphText LanguageStyle)
+            ] <> (FontStyle.getFontStyle state.listViewConfig.fontStyle TypoGraphy)
 
         ]
         ) state.listViewArray)

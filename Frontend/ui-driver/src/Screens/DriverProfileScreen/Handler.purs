@@ -158,3 +158,6 @@ driverProfileScreen = do
       modifyScreenState $ DriverProfileScreenStateType (\_ -> state)
       modifyScreenState $ ExtraChargeInfoScreenStateType (\exState -> exState {driverInfoResp = state.data.driverInfoResponse})
       App.BackT $ App.BackPoint <$> pure GO_TO_EXTRA_CHARGE_INFO_SCREEN
+    GoToClubDetailsScreen state -> do
+      modifyScreenState $ DriverProfileScreenStateType (\_ -> state)
+      App.BackT $ App.BackPoint <$> pure GO_TO_CLUB_DETAILS_SCREEN

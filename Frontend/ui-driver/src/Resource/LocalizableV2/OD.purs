@@ -1869,4 +1869,11 @@ getOd =
     , you_may_lose_some_coins_if_you_cancel_this_ride : "ଆପଣଙ୍କର ଯାତ୍ରା ରଦ୍ଦୁ କରିବାରୁ, କିଛି କାଲି ହୋଇପାରିବ"
     , cancellation_compensation : "ରଦ୍ଦୁ ମାଡ଼ାଲୁ ସ୍କୋର"
     , cancellation_penalisaton : "ରଦ୍ଦୁ ମାଡ଼ାଲୁ ସ୍କୋର"
+    , i_agree_to : "ଆମେ ଏହି ଶର୍ତାବଲୀ ମେନେ ଚାହିଁ:"
+    , namma_kutumba : "ନମ୍ମ କୁତୁମା"
+    , become_a_member_of_the_namma_driver_welfare_trust : "ନମ୍ମ ଡ୍ରାଇଭର୍ ଉପଦେଶନ ଟ୍ରାସ୍ଟ୍ ର ଏକ ସଦସ୍ଯ ହନ"
+    , never_raise_fraudulent_claim : "ନମ୍ମ ଡ୍ରାଇଭର୍ ଉପଦେଶନ ଟ୍ରାସ୍ଟ୍ ର ଏକ ସଦସ୍ଯ ହନ"
+    , ask_only_the_fair_price_shown_in_the_app : "ନମ୍ମ ଡ୍ରାଇଭର୍ ଉପଦେଶନ ଟ୍ରାସ୍ଟ୍ ର ଏକ ସଦସ୍ଯ ହନ"
+    , follow_safety_standards : "ନମ୍ମ ଡ୍ରାଇଭର୍ ଉପଦେଶନ ଟ୍ରାସ୍ଟ୍ ର ଏକ ସଦସ୍ଯ ହନ"
+    , provide_sakkath_service_to_the_customers : "ନମ୍ମ ଡ୍ରାଇଭର୍ ଉପଦେଶନ ଟ୍ରାସ୍ଟ୍ ର ଏକ ସଦସ୍ଯ ହନ"
   }

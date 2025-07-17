@@ -262,6 +262,7 @@ baseAppFlow baseFlow event driverInfoResponse = do
       setValueToLocalStore ACCURACY_THRESHOLD "23.0"
       setValueToLocalStore LOGS_TRACKING "false"
       setValueToLocalStore FUNCTION_EXECUTED_IN_SESSION "false"
+      setValueToLocalStore NY_CLUB_POPUP_SHOWN "false"
       when baseFlow $ setValueToLocalStore APP_SESSION_TRACK_COUNT if (appSessionCount /= "false") then "false" else "true"
       if ((movedToOfflineDate /= "" && isYesterday movedToOfflineDate) || movedToOfflineDate == "__failed")
         then setValueToLocalStore MOVED_TO_OFFLINE_DUE_TO_HIGH_DUE ""
@@ -1650,6 +1651,7 @@ driverProfileFlow = do
     GO_TO_EXTRA_CHARGE_INFO_SCREEN -> do
       extraChargeInfoScreenFlow
       driverProfileFlow
+    GO_TO_CLUB_DETAILS_SCREEN -> driverProfileFlow -- call club details screen
 
 documentDetailsScreen :: FlowBT String Unit
 documentDetailsScreen = do
@@ -3103,6 +3105,21 @@ homeScreenFlow = do
       (GlobalState globalState) <- getState
       void $ getDriverInfoDataFromCache (GlobalState globalState) true
       modifyScreenState $ DriverProfileScreenStateType (\driverProfile -> driverProfile{ props { isPetModeEnabled = Just false } })
+    DRIVER_CONSENT_AGREED updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      void $ lift $ lift $ loaderText (getString LOADING) (getString PLEASE_WAIT)
+      void $ lift $ lift $ toggleLoader true
+      globalState <- getState
+      response <- lift $ lift $ HelpersAPI.callApi $ API.DriverConsentReq $ {consent : true}
+      case response of
+        Right (API.DriverConsentResp _) -> do
+          void $ getDriverInfoDataFromCache globalState true
+          void $ lift $ lift $ toggleLoader false
+          homeScreenFlow
+        Left err -> do
+          void $ lift $ lift $ toggleLoader false
+          pure $ toast $ Remote.getCorrespondingErrorMessage err
+      homeScreenFlow
   homeScreenFlow
 
 handleFcm :: String -> HomeScreenState -> NotificationBody -> FlowBT String Unit
@@ -4188,6 +4205,7 @@ updateBannerAndPopupFlags = do
                     freeTrialRides = getDriverInfoResp.freeTrialRides,
                     totalRidesTaken = getDriverInfoResp.totalRidesTaken
                   }
+                , nyClubTag = getDriverInfoResp.driverTags >>= \(API.DriverTags tags) -> tags."NYClubTag"
                 }
               , props
                 { autoPayBanner = autopayBannerType
@@ -4203,6 +4221,7 @@ updateBannerAndPopupFlags = do
                                           then getDriverInfoResp.checkIfACWorking
                                        else allState.homeScreen.props.showAcWorkingPopup
                 , coinWaitingThreshold = getCoinCancellationTimeThresholdConfig.cancellationTimeThresholdInSeconds
+                , nyClubConsent = getDriverInfoResp.nyClubConsent
                 }
               }
         )
