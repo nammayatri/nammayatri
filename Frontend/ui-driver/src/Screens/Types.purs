@@ -2163,6 +2163,29 @@ type DocumentDetailsScreenProps = {
 
 }
 
+type DriverClaimRewardScreenState = {
+  data :: DriverClaimRewardScreenData,
+  props :: DriverClaimRewardScreenProps
+}
+
+type DriverClaimRewardScreenData = {
+  config :: AppConfig
+  , numberOfRides :: Maybe Int
+  , safetyScore :: Maybe Int
+  , rating :: Maybe Number
+  , cancellationRateInWindow :: Maybe Int
+  , driverTag :: String
+}
+
+type DriverClaimRewardScreenProps = {
+  showAllBenefits :: Boolean
+  , showAllEligibility :: Boolean
+  , showNominationView :: Boolean
+  , showFaq :: Boolean
+  , openFaqIndex :: Maybe Int
+  , openBenefitIndex :: Maybe Int
+}
+
 type DriverCompleteProfileScreenState = {
   data :: DriverCompleteProfileScreenData,
   props :: DriverCompleteProfileScreenProps
