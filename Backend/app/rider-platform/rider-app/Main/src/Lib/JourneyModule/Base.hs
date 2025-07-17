@@ -4,10 +4,12 @@ import qualified API.Types.UI.FRFSTicketService as FRFSTicketService
 import qualified API.Types.UI.MultimodalConfirm as APITypes
 import qualified Beckn.OnDemand.Utils.Common as UCommon
 import qualified BecknV2.FRFS.Enums as Spec
+import qualified BecknV2.OnDemand.Enums as BecknSpec
 import Control.Monad.Extra (mapMaybeM)
 import Data.List (sortBy)
 import Data.List.NonEmpty (nonEmpty)
 import Data.Ord (comparing)
+import qualified Data.Text as Text
 import qualified Data.Time as Time
 import Domain.Action.UI.EditLocation as DEditLocation
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
@@ -19,6 +21,7 @@ import qualified Domain.Types.CancellationReason as SCR
 import Domain.Types.Extra.Ride as DRide
 import Domain.Types.FRFSRouteDetails
 import qualified Domain.Types.FRFSTicketBooking as DFRFSBooking
+import qualified Domain.Types.IntegratedBPPConfig as DTBC
 import qualified Domain.Types.Journey as DJourney
 import qualified Domain.Types.JourneyLeg as DJourneyLeg
 import qualified Domain.Types.Location as DLocation
@@ -30,6 +33,7 @@ import Domain.Types.MultimodalPreferences as DMP
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.RiderConfig
 import qualified Domain.Types.SearchRequest as SearchRequest
+import qualified Domain.Types.Station as DStation
 import qualified Domain.Types.Trip as DTrip
 import Environment
 import EulerHS.Prelude (safeHead)
@@ -209,10 +213,11 @@ getAllLegsInfo ::
 getAllLegsInfo journeyId skipAddLegFallback = do
   whenJourneyUpdateInProgress journeyId $ do
     allLegsRawData <- getJourneyLegs journeyId
+    let allLegsRawDataWithPrevNext = zipPreviousNextLegs allLegsRawData
     mapMaybeM
-      ( \leg -> do
+      ( \(mbPrevJourneyLeg, leg, mbNextJourneyLeg) -> do
           case leg.legSearchId of
-            Just legSearchIdText -> getLegInfo leg legSearchIdText
+            Just legSearchIdText -> getLegInfo leg mbPrevJourneyLeg mbNextJourneyLeg legSearchIdText
             Nothing -> do
               logError $ "LegId is null for JourneyLeg: " <> show leg.journeyId <> " JourneyLegId: " <> show leg.id
               if skipAddLegFallback
@@ -221,23 +226,90 @@ getAllLegsInfo journeyId skipAddLegFallback = do
                   addAllLegs journeyId (Just allLegsRawData) [leg]
                   updatedLeg <- QJourneyLeg.findByPrimaryKey leg.id >>= fromMaybeM (JourneyLegNotFound leg.id.getId)
                   legSearchIdText' <- updatedLeg.legSearchId & fromMaybeM (JourneyLegSearchIdNotFound leg.journeyId.getId leg.sequenceNumber)
-                  getLegInfo updatedLeg legSearchIdText'
+                  getLegInfo updatedLeg mbPrevJourneyLeg mbNextJourneyLeg legSearchIdText'
       )
-      allLegsRawData
+      allLegsRawDataWithPrevNext
   where
     getLegInfo ::
       JL.GetStateFlow m r c =>
       DJourneyLeg.JourneyLeg ->
+      Maybe DJourneyLeg.JourneyLeg ->
+      Maybe DJourneyLeg.JourneyLeg ->
       Text ->
       m (Maybe JL.LegInfo)
-    getLegInfo leg legSearchIdText = do
+    getLegInfo leg mbPrevJourneyLeg mbNextJourneyLeg legSearchIdText = do
       let legSearchId = Id legSearchIdText
       case leg.mode of
         DTrip.Taxi -> JL.getInfo $ TaxiLegRequestGetInfo $ TaxiLegRequestGetInfoData {searchId = cast legSearchId, journeyLeg = leg, ignoreOldSearchRequest = skipAddLegFallback}
-        DTrip.Walk -> JL.getInfo $ WalkLegRequestGetInfo $ WalkLegRequestGetInfoData {walkLegId = cast legSearchId, journeyLeg = leg, ignoreOldSearchRequest = skipAddLegFallback}
+        DTrip.Walk -> do
+          entrance <- getEntranceGate leg mbNextJourneyLeg
+          exit <- getExitGate leg mbPrevJourneyLeg
+          JL.getInfo $ WalkLegRequestGetInfo $ WalkLegRequestGetInfoData {walkLegId = cast legSearchId, journeyLeg = leg {DJourneyLeg.entrance = updateGateFromDomain leg.entrance entrance, DJourneyLeg.exit = updateGateFromDomain leg.exit exit}, ignoreOldSearchRequest = skipAddLegFallback}
         DTrip.Metro -> JL.getInfo $ MetroLegRequestGetInfo $ MetroLegRequestGetInfoData {searchId = cast legSearchId, fallbackFare = leg.estimatedMinFare, distance = leg.distance, duration = leg.duration, journeyLeg = leg, ignoreOldSearchRequest = skipAddLegFallback}
         DTrip.Subway -> JL.getInfo $ SubwayLegRequestGetInfo $ SubwayLegRequestGetInfoData {searchId = cast legSearchId, fallbackFare = leg.estimatedMinFare, distance = leg.distance, duration = leg.duration, journeyLeg = leg, ignoreOldSearchRequest = skipAddLegFallback}
         DTrip.Bus -> JL.getInfo $ BusLegRequestGetInfo $ BusLegRequestGetInfoData {searchId = cast legSearchId, fallbackFare = leg.estimatedMinFare, distance = leg.distance, duration = leg.duration, journeyLeg = leg, ignoreOldSearchRequest = skipAddLegFallback}
+
+    zipPreviousNextLegs :: [DJourneyLeg.JourneyLeg] -> [(Maybe DJourneyLeg.JourneyLeg, DJourneyLeg.JourneyLeg, Maybe DJourneyLeg.JourneyLeg)]
+    zipPreviousNextLegs allLegsRawData = zip3 prevs allLegsRawData nexts
+      where
+        prevs = Nothing : map Just allLegsRawData
+        nexts = map Just (drop 1 allLegsRawData) ++ [Nothing]
+
+    fetchStationGatesFromLeg :: JL.GetStateFlow m r c => DJourneyLeg.JourneyLeg -> m (Maybe [DStation.Gate])
+    fetchStationGatesFromLeg leg = runMaybeT $ do
+      merchantOperatingCityId <- MaybeT (pure leg.merchantOperatingCityId)
+      becknVehicleCategory <- MaybeT (pure (multiModalTravelModeToBecknVehicleCategory leg.mode))
+      let platformType = DTBC.MULTIMODAL
+      integratedBPPConfigs <- lift $ SIBC.findAllIntegratedBPPConfig merchantOperatingCityId becknVehicleCategory platformType
+      stopCode <- MaybeT (pure (leg.fromStopDetails >>= (.stopCode)))
+      mbStation <- MaybeT $
+        SIBC.fetchFirstIntegratedBPPConfigRightResult integratedBPPConfigs $
+          \ibpp -> OTPRest.getStationByGtfsIdAndStopCode stopCode ibpp
+      station <- MaybeT (pure mbStation)
+      gates <- MaybeT (pure station.gates)
+      pure gates
+
+    multiModalTravelModeToBecknVehicleCategory :: DTrip.MultimodalTravelMode -> Maybe BecknSpec.VehicleCategory
+    multiModalTravelModeToBecknVehicleCategory = \case
+      DTrip.Metro -> Just BecknSpec.METRO
+      DTrip.Bus -> Just BecknSpec.BUS
+      DTrip.Subway -> Just BecknSpec.SUBWAY
+      _ -> Nothing
+
+    getEntranceGate :: JL.GetStateFlow m r c => DJourneyLeg.JourneyLeg -> Maybe DJourneyLeg.JourneyLeg -> m (Maybe DStation.Gate)
+    getEntranceGate leg mbNext = case mbNext of
+      Just next | next.mode /= DTrip.Walk -> getNearestGateFromLeg next (LatLong leg.startLocation.latitude leg.startLocation.longitude)
+      _ -> pure Nothing
+
+    getExitGate :: JL.GetStateFlow m r c => DJourneyLeg.JourneyLeg -> Maybe DJourneyLeg.JourneyLeg -> m (Maybe DStation.Gate)
+    getExitGate leg mbPrev = case mbPrev of
+      Just prev | prev.mode /= DTrip.Walk -> getNearestGateFromLeg prev (LatLong leg.endLocation.latitude leg.endLocation.longitude)
+      _ -> pure Nothing
+
+    getNearestGateFromLeg :: JL.GetStateFlow m r c => DJourneyLeg.JourneyLeg -> LatLong -> m (Maybe DStation.Gate)
+    getNearestGateFromLeg leg point = do
+      mbGates <- fetchStationGatesFromLeg leg
+      pure $
+        mbGates >>= \gates ->
+          minimumByMay
+            ( \g1 g2 ->
+                compare
+                  (distanceBetweenInMeters point (LatLong g1.lat g1.lon))
+                  (distanceBetweenInMeters point (LatLong g2.lat g2.lon))
+            )
+            gates
+
+    updateGateFromDomain :: Maybe KEMIT.MultiModalLegGate -> Maybe DStation.Gate -> Maybe KEMIT.MultiModalLegGate
+    updateGateFromDomain oldGate domainGate =
+      case (oldGate, domainGate) of
+        (Just g, Just d) ->
+          Just
+            g
+              { lat = Just (d.lat),
+                lon = Just (d.lon),
+                streetName = Just (Text.pack d.gateName)
+              }
+        _ -> oldGate
 
 hasSignificantMovement :: [LatLong] -> Domain.Types.RiderConfig.BusTrackingConfig -> Bool
 hasSignificantMovement (p1 : p2 : _) busTrackingConfig =
