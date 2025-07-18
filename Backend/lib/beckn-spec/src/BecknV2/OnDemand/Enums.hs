@@ -51,6 +51,7 @@ data FulfillmentType
   | INTER_CITY
   | AMBULANCE_FLOW
   | METER_RIDE
+  | SCHEDULED_TRIP
   deriving (Show, Eq, Generic, ToJSON, FromJSON, Read)
 
 data StopType
