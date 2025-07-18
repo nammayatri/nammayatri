@@ -687,7 +687,7 @@ getVehicleVariantImage variant =
       "LOCAL"     -> "ny_ic_local_asset,https://assets.moving.tech/beckn/common/driver/images/ny_ic_local_asset.png"
       "ECO"       -> "ic_hatchback_ac," <> commonUrl <> "ic_hatchback_ac.png"
       "COMFY"     -> "ny_ic_sedan_ac," <> commonUrl <> "ny_ic_sedan_ac.png"
-      _ | DA.elem variant ["AUTO_RICKSHAW", "EV_AUTO_RICKSHAW"] ->
+      _ | DA.elem variant ["AUTO_RICKSHAW", "EV_AUTO_RICKSHAW", "AUTO_PLUS"] ->
         case city of
           _ | isKeralaCity city -> fetchImage FF_ASSET "ny_ic_single_estimate_auto_black"
           "Hyderabad" -> fetchImage FF_ASSET "ny_ic_black_yellow_auto1"
@@ -1065,6 +1065,7 @@ getVehicleMapping serviceTierType = case serviceTierType of
   SA.DELIVERY_BIKE -> "DELIVERY_BIKE"
   SA.EV_AUTO_RICKSHAW -> "EV_AUTO_RICKSHAW"
   SA.HERITAGE_CAB_TIER -> "HERITAGE_CAB"
+  SA.AUTO_PLUS -> "AUTO_PLUS"
 
 getVehicleServiceTierImage :: SA.ServiceTierType -> String
 getVehicleServiceTierImage vehicleServiceTier = case vehicleServiceTier of
@@ -1165,6 +1166,7 @@ driverVehicleToVechicleServiceTier vehicle =
         "XL Cab" -> SA.SUV_TIER
         "XL Plus" -> SA.SUV_PLUS_TIER
         "Heritage Cab" -> SA.HERITAGE_CAB_TIER
+        "AUTO_PLUS" -> SA.AUTO_PLUS
         _ ->SA.AUTO_RICKSHAW
 
 checkNotificationType :: String -> ST.NotificationType -> Boolean
