@@ -195,7 +195,12 @@ getFrfsRoute (_personId, _mId) routeCode mbIntegratedBPPConfigId _platformType _
   stops <-
     if isJust firstStop
       then do
-        frfsSchedule <- listToMaybe <$> QRouteStopTimeTable.findByRouteCodeAndStopCode integratedBPPConfig integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId [route.code] (fromJust firstStop).stopCode
+        now <- getCurrentTime
+        let currentTimeOfDay = utcToTimeOfDay now
+        allSchedules <- QRouteStopTimeTable.findByRouteCodeAndStopCode integratedBPPConfig integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId [route.code] (fromJust firstStop).stopCode
+        let futureSchedules = filter (\schedule -> schedule.timeOfDeparture > currentTimeOfDay) allSchedules
+            sortedFutureSchedules = sortBy (compare `on` (.timeOfDeparture)) futureSchedules
+        let frfsSchedule = listToMaybe sortedFutureSchedules
         tripInfo' <- maybe (pure Nothing) (\schedule -> OTPRest.getNandiTripInfo integratedBPPConfig schedule.tripId.getId) frfsSchedule
         case tripInfo' of
           Just tripInfo -> do
@@ -207,55 +212,42 @@ getFrfsRoute (_personId, _mId) routeCode mbIntegratedBPPConfigId _platformType _
               ( \processedStops stop -> do
                   let stopSchedule = HashMap.lookup stop.stopCode hashmapSchedule
                       stopInfo = HashMap.lookup stop.stopCode hashmapStop
-                  now <- getCurrentTime
-                  let currentTimeOfDay = utcToTimeOfDay now
                   let (_, timeTakenToTravelUpcomingStop) =
-                        case safeTail processedStops of
-                          Just (Just lastStopSchedule, _) ->
-                            let timeDiff =
-                                  fmap
-                                    ( \nextSchedule ->
-                                        let lastDepartureTime = secondsToTimeOfDay' lastStopSchedule.departureTime
-                                            nextArrivalTime = secondsToTimeOfDay' nextSchedule.arrivalTime
-                                         in diffTimeOfDay lastDepartureTime nextArrivalTime
-                                    )
-                                    stopSchedule
-                             in (stopSchedule, timeDiff)
-                          _ ->
-                            let timeDiff =
-                                  fmap
-                                    ( \nextSchedule ->
-                                        let nextArrivalTime = secondsToTimeOfDay' nextSchedule.arrivalTime
-                                         in diffTimeOfDay currentTimeOfDay nextArrivalTime
-                                    )
-                                    stopSchedule
-                             in (stopSchedule, timeDiff)
+                        case processedStops of
+                          (nextStopSchedule, _) : _ ->
+                            -- Calculate time from current stop to next stop
+                            case (stopSchedule, nextStopSchedule) of
+                              (Just currentSchedule, Just nextSchedule) ->
+                                let currentDepartureTime = secondsToTimeOfDay' currentSchedule.departureTime
+                                    nextArrivalTime = secondsToTimeOfDay' nextSchedule.arrivalTime
+                                 in (stopSchedule, Just $ diffTimeOfDay currentDepartureTime nextArrivalTime)
+                              _ -> (stopSchedule, Nothing)
+                          [] -> (stopSchedule, Just 0) -- Last stop (processed in reverse)
                   case stopInfo of
                     Just info ->
                       return $
+                        ( stopSchedule,
+                          FRFSStationAPI
+                            { name = Just info.stopName,
+                              code = info.stopCode,
+                              routeCodes = Just [route.code],
+                              lat = Just info.lat,
+                              lon = Just info.lon,
+                              timeTakenToTravelUpcomingStop = Seconds <$> timeTakenToTravelUpcomingStop,
+                              stationType = Nothing,
+                              sequenceNum = Just info.sequenceNum,
+                              address = Nothing,
+                              distance = Nothing,
+                              color = Nothing,
+                              towards = Nothing,
+                              integratedBppConfigId = integratedBPPConfig.id
+                            }
+                        ) :
                         processedStops
-                          <> [ ( stopSchedule,
-                                 FRFSStationAPI
-                                   { name = Just info.stopName,
-                                     code = info.stopCode,
-                                     routeCodes = Just [route.code],
-                                     lat = Just info.lat,
-                                     lon = Just info.lon,
-                                     timeTakenToTravelUpcomingStop = Seconds <$> timeTakenToTravelUpcomingStop,
-                                     stationType = Nothing,
-                                     sequenceNum = Just info.sequenceNum,
-                                     address = Nothing,
-                                     distance = Nothing,
-                                     color = Nothing,
-                                     towards = Nothing,
-                                     integratedBppConfigId = integratedBPPConfig.id
-                                   }
-                               )
-                             ]
                     Nothing -> return processedStops
               )
               []
-              stopsSortedBySequenceNumber
+              (reverse stopsSortedBySequenceNumber)
           Nothing -> return []
       else return []
 
