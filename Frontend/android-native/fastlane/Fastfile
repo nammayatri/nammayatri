@@ -23,11 +23,30 @@ flavoursNYP = ["nyDriverProd"]
 flavorsMYP = ["myDriverProd"]
 flavorsOYP = ["oyDriverProd"]
 
+
+
 platform :android do
   desc "Runs all the tests"
   lane :test do
     gradle(task: "test")
   end
+
+  desc "My awesome app"
+  lane :firebase_distribute do
+
+    gradle(
+      task: 'bundle' + 'nyUserProd' + 'Debug'
+    )
+    # build_android_app is a built-in fastlane action.
+    release = firebase_app_distribution(
+        app: "",
+        release_notes: "Lots of amazing new features to test out!",
+        android_artifact_type: "AAB",
+        service_credentials_file: "",
+        android_artifact_path: "./app/build/outputs/bundle/" + "nyUserProd" + "Debug/app-" + "nyUser-prod" + "-debug.aab"
+    )
+  end
+
 
   desc "Submit a new Beta Build to Crashlytics Beta"
   lane :beta do
