@@ -522,6 +522,7 @@ getTaxiLegStatusFromBooking :: GetStateFlow m r c => DBooking.Booking -> Maybe D
 getTaxiLegStatusFromBooking booking mRide journeyLegStatus = do
   case journeyLegStatus of
     Just Completed -> return (Completed, Nothing)
+    Just Skipped -> return (Skipped, Nothing)
     _ -> do
       if (fromMaybe False booking.isSkipped)
         then return (Skipped, Nothing)
@@ -544,6 +545,7 @@ getTaxiLegStatusFromSearch :: JourneySearchData -> Maybe DEstimate.EstimateStatu
 getTaxiLegStatusFromSearch journeyLegInfo mbEstimateStatus journeyLegStatus =
   case journeyLegStatus of
     Just Completed -> Completed
+    Just Skipped -> Skipped
     _ -> do
       if journeyLegInfo.skipBooking
         then Skipped
