@@ -88,11 +88,13 @@ transformEntry stopData timestamp entry = do
     }
 
 -- Convert seconds from midnight to HH:MM:SS format
+-- Wraps around for next-day times (>= 24 hours)
 secondsToTime :: Int -> LocalTime.TimeOfDay
 secondsToTime seconds =
-  let hours :: Int = seconds `div` 3600
-      minutes :: Int = (seconds `mod` 3600) `div` 60
-      secs = fromIntegral $ seconds `mod` 60
+  let totalSeconds = seconds `mod` 86400 -- Wrap around after 24 hours (86400 seconds)
+      hours :: Int = totalSeconds `div` 3600
+      minutes :: Int = (totalSeconds `mod` 3600) `div` 60
+      secs = fromIntegral $ totalSeconds `mod` 60
    in LocalTime.TimeOfDay hours minutes secs
 
 -- Map route codes to service tier types
