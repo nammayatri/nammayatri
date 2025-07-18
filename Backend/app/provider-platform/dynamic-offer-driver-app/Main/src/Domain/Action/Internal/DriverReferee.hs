@@ -227,7 +227,8 @@ linkReferee merchantId apiKey RefereeLinkInfoReq {..} = do
                       numDriversOnboarded = 0,
                       numFleetsOnboarded = 0,
                       merchantId = Just merchantId,
-                      merchantOperatingCityId = Just merchantOperatingCity.id
+                      merchantOperatingCityId = Just merchantOperatingCity.id,
+                      onlineDuration = Nothing
                     }
             QDailyStats.create dailyStatsOfDriver
             pure dailyStatsOfDriver

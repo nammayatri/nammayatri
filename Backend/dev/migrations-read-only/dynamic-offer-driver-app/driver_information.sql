@@ -223,3 +223,9 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN dl_number_hash 
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN dl_number_encrypted text ;
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN aadhaar_number_hash text ;
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN aadhaar_number_encrypted text ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN online_duration_refreshed_at timestamp with time zone  default CURRENT_TIMESTAMP;
