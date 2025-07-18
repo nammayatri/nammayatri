@@ -6,6 +6,7 @@ module Domain.Action.Dashboard.RideBooking.Select
   )
 where
 
+import qualified API.UI.CancelSearch
 import qualified API.UI.Select
 import qualified "this" Domain.Action.UI.Select
 import qualified "this" Domain.Types.Estimate
@@ -55,4 +56,4 @@ postSelectCancelSearch ::
   Environment.Flow Domain.Action.UI.Select.CancelAPIResponse
 postSelectCancelSearch merchantShortId _opCity personId estimateId = do
   m <- findMerchantByShortId merchantShortId
-  API.UI.Select.cancelSearch' (personId, m.id) estimateId
+  API.UI.CancelSearch.cancelSearch' (personId, m.id) estimateId
