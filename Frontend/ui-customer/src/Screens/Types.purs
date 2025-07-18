@@ -2435,7 +2435,8 @@ type SearchLocationScreenData =
     updatedRouteSearchedList :: Array FRFSRouteAPI,
     ticketServiceType :: API.TicketServiceType,
     rideType :: RideType,
-    searchRideType :: API.SearchRideType
+    searchRideType :: API.SearchRideType,
+    logField :: Object Foreign
   }
 
 type RideDetails = {
@@ -2903,7 +2904,8 @@ type MetroTicketStatusScreenData = {
   bookingId :: String,
   resp :: FRFSTicketBookingStatusAPIRes,
   timerId :: String,
-  quoteId :: String
+  quoteId :: String,
+  logField :: Object Foreign
 }
 
 type MetroTicketStatusScreenProps = {
@@ -3281,6 +3283,7 @@ type BusTicketBookingData = {
   , ticketDetailsState :: Maybe MetroMyTicketsScreenState
   , busDetailsArray :: Array BusDetails
   , closestBusDistance :: Number
+  , logField :: Object Foreign
 }
 
 type BusTicketBookingProps = {
