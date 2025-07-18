@@ -16,6 +16,7 @@ import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import Domain.Types.FRFSQuote
 import Domain.Types.FRFSRouteDetails
 import Domain.Types.FRFSSearch
+import qualified Domain.Types.FRFSTicketBooking as DFRFSBooking
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.JourneyLeg as DJourneyLeg
 import qualified Domain.Types.Merchant as DMerchant
@@ -48,6 +49,7 @@ import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import qualified Lib.JourneyLeg.Types as JPT
 import Lib.JourneyModule.Location
+import qualified Lib.JourneyModule.Types as JL
 import qualified Lib.JourneyModule.Types as JT
 import qualified Lib.JourneyModule.Utils as JMU
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -66,8 +68,47 @@ import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.FRFSSearch as QFRFSSearch
 import qualified Storage.Queries.FRFSTicketBooking as QTBooking
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
-import qualified Storage.Queries.JourneyRouteDetails as QJRD
+import Storage.Queries.JourneyRouteDetails as QJourneyRouteDetails
 import Tools.Error
+
+updateFRFSLegStatus :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Maybe JPT.JourneyLegStatus -> JL.LegInfo -> m ()
+updateFRFSLegStatus legStatus legInfo = do
+  case legStatus of
+    Just status' -> do
+      let subLegOrders = getSubLegOrders legInfo.legExtraInfo
+      when (null subLegOrders) $ logError $ "I'm empty, Search ID: " <> legInfo.searchId
+      mapM_
+        ( \subLegOrder ->
+            case legInfo.legExtraInfo of
+              JL.Metro _ -> QJourneyRouteDetails.updateJourneyStatus (Just status') (Id legInfo.searchId) (Just subLegOrder)
+              JL.Subway _ -> QJourneyRouteDetails.updateJourneyStatus (Just status') (Id legInfo.searchId) (Just subLegOrder)
+              JL.Bus _ -> QJourneyRouteDetails.updateJourneyStatus (Just status') (Id legInfo.searchId) (Just subLegOrder)
+              _ -> return ()
+        )
+        subLegOrders
+    Nothing -> return ()
+
+getSubLegOrders :: JL.LegExtraInfo -> [Int]
+getSubLegOrders legExtraInfo =
+  case legExtraInfo of
+    JL.Metro metroInfo -> mapMaybe (.subOrder) metroInfo.routeInfo
+    JL.Subway subwayInfo -> mapMaybe (.subOrder) subwayInfo.routeInfo
+    JL.Bus busInfo -> mapMaybe (.subOrder) busInfo.routeInfo
+    _ -> []
+
+getFRFSLegStatusFromBooking :: DFRFSBooking.FRFSTicketBooking -> JPT.JourneyLegStatus
+getFRFSLegStatusFromBooking frfsBooking = case frfsBooking.status of
+  DFRFSBooking.NEW -> JPT.InPlan
+  DFRFSBooking.APPROVED -> JPT.InPlan
+  DFRFSBooking.PAYMENT_PENDING -> JPT.InPlan
+  DFRFSBooking.CONFIRMING -> JPT.Assigning
+  DFRFSBooking.CONFIRMED -> JPT.Booked
+  DFRFSBooking.FAILED -> JPT.InPlan
+  DFRFSBooking.CANCELLED -> JPT.InPlan
+  DFRFSBooking.COUNTER_CANCELLED -> JPT.InPlan
+  DFRFSBooking.CANCEL_INITIATED -> JPT.InPlan
+  DFRFSBooking.TECHNICAL_CANCEL_REJECTED -> JPT.InPlan
+  DFRFSBooking.REFUND_INITIATED -> JPT.Cancelled
 
 -- getState and other functions from the original file...
 
@@ -100,7 +141,7 @@ getState mode searchId riderLastPoints isLastCompleted movementDetected routeCod
 
           let baseStateData =
                 JT.JourneyLegStateData
-                  { status = if newStatus == JPT.InPlan then JT.getFRFSLegStatusFromBooking booking else newStatus,
+                  { status = if newStatus == JPT.InPlan then getFRFSLegStatusFromBooking booking else newStatus,
                     userPosition,
                     JT.vehiclePositions = [], -- Will be populated based on status
                     legOrder = journeyLegOrder,
@@ -181,7 +222,7 @@ getState mode searchId riderLastPoints isLastCompleted movementDetected routeCod
                   vehicleTrackingAndPositions
           let journeyLegStates =
                 [ JT.JourneyLegStateData
-                    { status = if newStatus == JPT.InPlan then JT.getFRFSLegStatusFromBooking booking else newStatus,
+                    { status = if newStatus == JPT.InPlan then getFRFSLegStatusFromBooking booking else newStatus,
                       userPosition,
                       JT.vehiclePositions = vehiclePositions,
                       legOrder = journeyLegOrder,
@@ -415,7 +456,7 @@ getState mode searchId riderLastPoints isLastCompleted movementDetected routeCod
       let newStatuses = zipWith (\subRoute (changed, newStatus) -> (subRoute, changed, newStatus)) sortedSubRoutes processedStatuses'
       forM_ newStatuses $ \(subRoute, statusChanged, newStatus) -> do
         when statusChanged $ do
-          QJRD.updateJourneyStatus (Just newStatus) searchId' subRoute.subLegOrder
+          QJourneyRouteDetails.updateJourneyStatus (Just newStatus) searchId' subRoute.subLegOrder
       pure newStatuses
 
 getFare :: (CoreMetrics m, CacheFlow m r, EncFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv, HasKafkaProducer r, HasShortDurationRetryCfg r c) => Id DPerson.Person -> DMerchant.Merchant -> MerchantOperatingCity -> Spec.VehicleCategory -> [FRFSRouteDetails] -> Maybe UTCTime -> Maybe Text -> m (Bool, Maybe JT.GetFareResponse)
@@ -498,7 +539,6 @@ search vehicleCategory personId merchantId quantity city journeyLeg recentLocati
           { journeyId = journeyLeg.journeyId.getId,
             journeyLegOrder = journeyLeg.sequenceNumber,
             agency = journeyLeg.agency <&> (.name),
-            skipBooking = False,
             convenienceCost = 0,
             pricingId = Nothing,
             isDeleted = Just False,
@@ -575,19 +615,21 @@ confirm personId merchantId mbQuoteId ticketQuantity childTicketQuantity skipBoo
       (merchant', quote') <- DOnSelect.validateRequest onSelectReq
       DOnSelect.onSelect onSelectReq merchant' quote'
 
-cancel :: JT.CancelFlow m r c => Id FRFSSearch -> Spec.CancellationType -> Bool -> m ()
-cancel searchId cancellationType isSkipped = do
-  mbMetroBooking <- QTBooking.findBySearchId searchId
+cancel :: JT.CancelFlow m r c => Spec.CancellationType -> Bool -> JL.LegInfo -> m ()
+cancel cancellationType isSkipped legInfo = do
+  mbMetroBooking <- QTBooking.findBySearchId (Id legInfo.searchId)
   case mbMetroBooking of
     Just metroBooking -> do
       merchant <- CQM.findById metroBooking.merchantId >>= fromMaybeM (MerchantDoesNotExist metroBooking.merchantId.getId)
       merchantOperatingCity <- CQMOC.findById metroBooking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound metroBooking.merchantOperatingCityId.getId)
       bapConfig <- CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory metroBooking.vehicleType) >>= fromMaybeM (InternalError "Beckn Config not found")
       CallExternalBPP.cancel merchant merchantOperatingCity bapConfig cancellationType metroBooking
-      if isSkipped then QTBooking.updateIsSkipped metroBooking.id (Just True) else QTBooking.updateIsCancelled metroBooking.id (Just True)
-    Nothing -> do
-      if isSkipped then QFRFSSearch.updateSkipBooking searchId (Just True) else QFRFSSearch.updateIsCancelled searchId (Just True)
-  if isSkipped then QJourneyLeg.updateIsSkipped (Just True) (Just searchId.getId) else QJourneyLeg.updateIsDeleted (Just True) (Just searchId.getId)
+    Nothing -> pure ()
+  if isSkipped
+    then updateFRFSLegStatus (Just JPT.Skipped) legInfo
+    else do
+      updateFRFSLegStatus (Just JPT.Cancelled) legInfo
+      QJourneyLeg.updateIsDeleted (Just True) (Just legInfo.searchId)
 
 isCancellable :: JT.CancelFlow m r c => Id FRFSSearch -> m JT.IsCancellableResponse
 isCancellable searchId = do

@@ -68,7 +68,6 @@ data SearchRequestT f = SearchRequestT
     journeyLegOrder :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     onSearchFailed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     pricingId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    skipBooking :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     language :: B.C f (Kernel.Prelude.Maybe Kernel.External.Maps.Language),
     maxDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Utils.Common.Centesimal),
     maxDistanceValue :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance),

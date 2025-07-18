@@ -346,6 +346,7 @@ library
       Lib.JourneyLeg.Types.Subway
       Lib.JourneyLeg.Types.Taxi
       Lib.JourneyLeg.Types.Walk
+      Lib.JourneyLeg.Utils
       Lib.JourneyLeg.Walk
       Lib.JourneyModule.Base
       Lib.JourneyModule.Location

@@ -208,7 +208,6 @@ WalkLegMultimodal:
       journeyLegOrder: Maybe Int
       journeyId: Maybe Text
       agency: Maybe Text
-      skipBooking: Maybe Bool
       convenienceCost: Maybe Int
       pricingId: Maybe Text
       isDeleted: Maybe Bool
@@ -228,7 +227,6 @@ WalkLegMultimodal:
     journeyLegOrder: Kernel.Prelude.fmap (.journeyLegOrder)|I
     journeyId: Kernel.Prelude.fmap (.journeyId)|I
     agency: (journeyLegInfo >>= (.agency))|E
-    skipBooking: Kernel.Prelude.fmap (.skipBooking)|I
     convenienceCost: Kernel.Prelude.fmap (.convenienceCost)|I
     pricingId: (journeyLegInfo >>= (.pricingId))|E
     isDeleted: (journeyLegInfo >>= (.isDeleted))|E
@@ -294,10 +292,8 @@ JourneyLeg:
     sequenceNumber: Int
     serviceTypes: Maybe [ServiceTierType]
     legSearchId: Maybe Text
-    isDeleted: Maybe Bool
     changedBusesInSequence: "Maybe [Text]"
     finalBoardedBusNumber: Maybe Text
-    isSkipped: Maybe Bool
     entrance: Maybe MultiModalLegGate
     exit: Maybe MultiModalLegGate
     status: Maybe JourneyLegStatus
@@ -353,10 +349,6 @@ JourneyLeg:
     updateIsDeleted:
       kvFunction: updateOneWithKV
       params: [isDeleted]
-      where: legSearchId
-    updateIsSkipped:
-      kvFunction: updateOneWithKV
-      params: [isSkipped]
       where: legSearchId
     updateDistanceAndDuration:
       kvFunction: updateWithKV

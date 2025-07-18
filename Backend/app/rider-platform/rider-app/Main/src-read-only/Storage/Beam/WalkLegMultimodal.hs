@@ -25,7 +25,6 @@ data WalkLegMultimodalT f = WalkLegMultimodalT
     journeyLegOrder :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
     onSearchFailed :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
     pricingId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    skipBooking :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
     merchantId :: (B.C f Kernel.Prelude.Text),
     merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
     riderId :: (B.C f Kernel.Prelude.Text),

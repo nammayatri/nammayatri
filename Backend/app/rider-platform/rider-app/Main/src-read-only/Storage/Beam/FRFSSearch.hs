@@ -24,7 +24,6 @@ data FRFSSearchT f = FRFSSearchT
     journeyLegOrder :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     onSearchFailed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     pricingId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    skipBooking :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     journeyLegStatus :: B.C f (Kernel.Prelude.Maybe Lib.JourneyLeg.Types.JourneyLegStatus),
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,

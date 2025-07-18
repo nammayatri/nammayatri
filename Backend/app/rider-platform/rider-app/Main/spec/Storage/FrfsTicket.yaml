@@ -55,7 +55,6 @@ FRFSSearch:
     partnerOrgTransactionId: Maybe (Id PartnerOrgTransaction)
     partnerOrgId: Maybe (Id PartnerOrganization)
     journeyLegInfo: Maybe JourneySearchData
-    journeyLegStatus: Maybe JourneyLegStatus
     isOnSearchReceived: Maybe Bool
     journeyRouteDetails: "[MultiModalJourneyRouteDetails]"
     integratedBppConfigId: Id IntegratedBPPConfig
@@ -73,7 +72,6 @@ FRFSSearch:
       journeyLegOrder: Maybe Int
       journeyId: Maybe Text
       agency: Maybe Text
-      skipBooking: Maybe Bool
       convenienceCost: Maybe Int
       pricingId: Maybe Text
       isDeleted: Maybe Bool
@@ -84,7 +82,6 @@ FRFSSearch:
     journeyLegOrder: Kernel.Prelude.fmap (.journeyLegOrder)|I
     journeyId: Kernel.Prelude.fmap (.journeyId)|I
     agency: (journeyLegInfo >>= (.agency))|E
-    skipBooking: Kernel.Prelude.fmap (.skipBooking)|I
     convenienceCost: Kernel.Prelude.fmap (.convenienceCost)|I
     pricingId: (journeyLegInfo >>= (.pricingId))|E
     isDeleted: (journeyLegInfo >>= (.isDeleted))|E
@@ -110,10 +107,6 @@ FRFSSearch:
       where: merchantOperatingCityId
     findById:
       kvFunction: findOneWithKV
-      where: id
-    updateJourneyLegStatus:
-      kvFunction: updateOneWithKV
-      params: [journeyLegStatus]
       where: id
     updateIsOnSearchReceivedById:
       kvFunction: updateWithKV
@@ -333,10 +326,8 @@ FRFSTicketBooking:
     journeyId: Maybe (Id Journey)
     journeyOnInitDone: Maybe Bool
     startTime: Maybe UTCTime
-    journeyLegStatus: Maybe JourneyLegStatus
     isDeleted: Maybe Bool
     isFareChanged: Maybe Bool
-    isSkipped: Maybe Bool
     journeyRouteDetails: "[MultiModalJourneyRouteDetails]"
     integratedBppConfigId: Id IntegratedBPPConfig
     recentLocationId: Maybe (Id RecentLocation)
@@ -474,10 +465,6 @@ FRFSTicketBooking:
       kvFunction: updateOneWithKV
       params: [bppDelayedInterest]
       where: quoteId
-    updateJourneyLegStatus:
-      kvFunction: updateOneWithKV
-      params: [journeyLegStatus]
-      where: id
     updateGoogleWalletLinkById:
       kvFunction: updateOneWithKV
       params: [googleWalletJWTUrl]

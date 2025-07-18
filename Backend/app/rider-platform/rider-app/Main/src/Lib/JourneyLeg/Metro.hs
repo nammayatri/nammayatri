@@ -21,7 +21,7 @@ instance JT.JourneyLeg MetroLegRequest m where
   update (MetroLegRequestUpdate _) = return ()
   update _ = throwError (InternalError "Not supported")
 
-  cancel (MetroLegRequestCancel legData) = CFRFS.cancel legData.searchId legData.cancellationType legData.isSkipped
+  cancel (MetroLegRequestCancel legData) = CFRFS.cancel legData.cancellationType legData.isSkipped legData.leg
   cancel _ = throwError (InternalError "Not supported")
 
   isCancellable (MetroLegRequestIsCancellable legData) = CFRFS.isCancellable legData.searchId

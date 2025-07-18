@@ -237,7 +237,6 @@ Booking:
     disabilityTag: Maybe Text
     journeyLegOrder: Maybe Int
     isDeleted: Maybe Bool
-    isSkipped: Maybe Bool
     configInExperimentVersions: "[ConfigVersionMap]"
     journeyId: Maybe (Id Journey)
     journeyLegStatus: Maybe JourneyLegStatus

@@ -46,7 +46,6 @@ updateByPrimaryKey (Domain.Types.WalkLegMultimodal.WalkLegMultimodal {..}) = do
       Se.Set Beam.journeyLegOrder (Kernel.Prelude.fmap (.journeyLegOrder) journeyLegInfo),
       Se.Set Beam.onSearchFailed ((journeyLegInfo >>= (.onSearchFailed))),
       Se.Set Beam.pricingId ((journeyLegInfo >>= (.pricingId))),
-      Se.Set Beam.skipBooking (Kernel.Prelude.fmap (.skipBooking) journeyLegInfo),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.riderId (Kernel.Types.Id.getId riderId),

@@ -689,7 +689,6 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req crisSdkResponse
                 integratedBppConfigId = quote.integratedBppConfigId,
                 googleWalletJWTUrl = Nothing,
                 isDeleted = Just False,
-                isSkipped = Just False,
                 quantity = ticketQuantity',
                 childTicketQuantity,
                 bookingAuthCode = crisSdkResponse <&> (.bookAuthCode),

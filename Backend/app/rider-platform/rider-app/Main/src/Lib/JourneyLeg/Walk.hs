@@ -26,7 +26,7 @@ instance JT.JourneyLeg WalkLegRequest m where
             { journeyId = journeyLegData.journeyId.getId,
               journeyLegOrder = journeyLegData.sequenceNumber,
               agency = journeyLegData.agency <&> (.name),
-              skipBooking = False,
+              -- skipBooking = False,
               convenienceCost = 0,
               pricingId = Nothing,
               isDeleted = Just False,
