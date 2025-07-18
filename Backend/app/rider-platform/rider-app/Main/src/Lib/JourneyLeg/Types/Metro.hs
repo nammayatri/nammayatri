@@ -61,7 +61,8 @@ data MetroLegRequestGetInfoData = MetroLegRequestGetInfoData
     distance :: Maybe Distance,
     duration :: Maybe Seconds,
     journeyLeg :: DJourneyLeg.JourneyLeg,
-    ignoreOldSearchRequest :: Bool
+    ignoreOldSearchRequest :: Bool,
+    startTime :: Maybe UTCTime
   }
 
 data MetroLegRequest

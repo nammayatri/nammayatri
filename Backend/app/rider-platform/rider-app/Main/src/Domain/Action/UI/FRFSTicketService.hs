@@ -793,6 +793,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking booking' = do
     DFRFSTicketBooking.CONFIRMING -> do
       if addUTCTime 5 booking.validTill < now
         then do
+          logInfo $ "payment status api validTill passed"
           void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED bookingId
           void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.REFUND_PENDING bookingId
           riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCity.id Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCity.id.getId)
@@ -975,6 +976,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking booking' = do
         [transaction] -> return transaction.id
         _ -> throwError $ InvalidRequest "Multiple successful transactions found"
     refundOrderCall booking person = do
+      logInfo $ "payment status api refundOrderCall"
       let mbJourneyId = booking.journeyId
       allJourneyFrfsBookings <- case mbJourneyId of
         Just journeyId -> QFRFSTicketBooking.findAllByJourneyId (Just journeyId)
@@ -1333,6 +1335,7 @@ markAllRefundBookings ::
   Maybe (Id DJourney.Journey) ->
   m ()
 markAllRefundBookings allJourneyFrfsBookings personId mbJourneyId = do
+  logInfo $ "payment status api markAllRefundBookings: " <> show allJourneyFrfsBookings
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   payments <- concat <$> mapM (QFRFSTicketBookingPayment.findAllTicketBookingId . (.id)) allJourneyFrfsBookings
   orderShortId <- case listToMaybe payments of
@@ -1368,4 +1371,5 @@ markAllRefundBookings allJourneyFrfsBookings personId mbJourneyId = do
     case result of
       Left err -> logError $ "Refund service failed for journey " <> reqId <> ": " <> show err
       Right _ -> logInfo $ "Refund service completed successfully for journey " <> reqId
+    logInfo $ "payment status api markAllRefundBookings completed"
     pure ()

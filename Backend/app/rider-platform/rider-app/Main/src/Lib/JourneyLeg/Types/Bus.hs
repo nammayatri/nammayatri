@@ -55,7 +55,8 @@ data BusLegRequestGetInfoData = BusLegRequestGetInfoData
     distance :: Maybe Distance,
     duration :: Maybe Seconds,
     journeyLeg :: DJourneyLeg.JourneyLeg,
-    ignoreOldSearchRequest :: Bool
+    ignoreOldSearchRequest :: Bool,
+    startTime :: Maybe UTCTime
   }
 
 data BusLegRequestGetStateData = BusLegRequestGetStateData
