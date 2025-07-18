@@ -313,7 +313,7 @@ data TaxiLegExtraInfo = TaxiLegExtraInfo
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data MetroLegExtraInfo = MetroLegExtraInfo
-  { routeInfo :: [MetroLegRouteInfo],
+  { routeInfo :: [LegRouteInfo],
     bookingId :: Maybe (Id DFRFSBooking.FRFSTicketBooking),
     tickets :: Maybe [Text],
     ticketValidity :: Maybe [UTCTime],
@@ -326,22 +326,8 @@ data MetroLegExtraInfo = MetroLegExtraInfo
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data MetroLegRouteInfo = MetroLegRouteInfo
-  { originStop :: FRFSStationAPI,
-    destinationStop :: FRFSStationAPI,
-    routeCode :: Text,
-    subOrder :: Maybe Int,
-    platformNumber :: Maybe Text,
-    lineColor :: Maybe Text,
-    lineColorCode :: Maybe Text,
-    journeyStatus :: Maybe JourneyLegStatus,
-    frequency :: Maybe Seconds
-  }
-  deriving stock (Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
 data SubwayLegExtraInfo = SubwayLegExtraInfo
-  { routeInfo :: [SubwayLegRouteInfo],
+  { routeInfo :: [LegRouteInfo],
     bookingId :: Maybe (Id DFRFSBooking.FRFSTicketBooking),
     tickets :: Maybe [Text],
     ticketValidity :: Maybe [UTCTime],
@@ -360,7 +346,7 @@ data SubwayLegExtraInfo = SubwayLegExtraInfo
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data SubwayLegRouteInfo = SubwayLegRouteInfo
+data LegRouteInfo = LegRouteInfo
   { originStop :: FRFSStationAPI,
     destinationStop :: FRFSStationAPI,
     routeCode :: Text,
@@ -784,8 +770,7 @@ mkLegInfoFromFrfsBooking booking distance duration entrance exit = do
   let qrDataList = ticketsData <&> (.qrData)
   let qrValidity = ticketsData <&> (.validTill)
   let ticketNo = ticketsData <&> (.ticketNumber)
-  metroRouteInfo' <- getMetroLegRouteInfo journeyRouteDetails' integratedBPPConfig
-  subwayRouteInfo' <- getSubwayLegRouteInfo journeyRouteDetails' integratedBPPConfig
+  journeyLegInfo' <- getLegRouteInfo journeyRouteDetails' integratedBPPConfig
 
   now <- getCurrentTime
   legOrder <- fromMaybeM (InternalError "Leg Order is Nothing") (booking.journeyLegOrder)
@@ -803,7 +788,7 @@ mkLegInfoFromFrfsBooking booking distance duration entrance exit = do
             amountInt = Money $ roundToIntegral amountToBeUpdated,
             currency = booking.price.currency
           }
-  legExtraInfo <- mkLegExtraInfo qrDataList qrValidity ticketsCreatedAt journeyRouteDetails' metroRouteInfo' subwayRouteInfo' ticketNo integratedBPPConfig
+  legExtraInfo <- mkLegExtraInfo qrDataList qrValidity ticketsCreatedAt journeyRouteDetails' journeyLegInfo' ticketNo
   return $
     LegInfo
       { skipBooking,
@@ -831,13 +816,13 @@ mkLegInfoFromFrfsBooking booking distance duration entrance exit = do
         validTill = (if null qrValidity then Nothing else Just $ maximum qrValidity) <|> Just booking.validTill
       }
   where
-    mkLegExtraInfo qrDataList qrValidity ticketsCreatedAt journeyRouteDetails' metroRouteInfo' subwayRouteInfo' ticketNo integratedBPPConfig = do
+    mkLegExtraInfo qrDataList qrValidity ticketsCreatedAt journeyRouteDetails' journeyLegInfo' ticketNo = do
       case booking.vehicleType of
         Spec.METRO -> do
           return $
             Metro $
               MetroLegExtraInfo
-                { routeInfo = metroRouteInfo',
+                { routeInfo = journeyLegInfo',
                   bookingId = Just booking.id,
                   tickets = Just qrDataList,
                   ticketValidity = Just qrValidity,
@@ -848,24 +833,21 @@ mkLegInfoFromFrfsBooking booking distance duration entrance exit = do
                   childTicketQuantity = booking.childTicketQuantity
                 }
         Spec.BUS -> do
+          journeyLegDetail <- listToMaybe journeyLegInfo' & fromMaybeM (InternalError "Journey Leg Detail not found")
           journeyRouteDetail <- listToMaybe journeyRouteDetails' & fromMaybeM (InternalError "Journey Route Detail not found")
 
-          fromStationCode' <- fromMaybeM (InternalError "FromStationCode is missing") journeyRouteDetail.fromStationCode
-          toStationCode' <- fromMaybeM (InternalError "ToStationCode is missing") journeyRouteDetail.toStationCode
-          routeCode' <- fromMaybeM (InternalError "RouteCode is missing") journeyRouteDetail.routeCode
-
-          fromStation <- OTPRest.getStationByGtfsIdAndStopCode fromStationCode' integratedBPPConfig >>= fromMaybeM (InternalError $ "From Station not found in mkLegExtraInfo: " <> show fromStationCode')
-          toStation <- OTPRest.getStationByGtfsIdAndStopCode toStationCode' integratedBPPConfig >>= fromMaybeM (InternalError $ "To Station not found in mkLegExtraInfo: " <> show toStationCode')
-          route <- OTPRest.getRouteByRouteId integratedBPPConfig routeCode' >>= fromMaybeM (RouteNotFound routeCode')
+          let fromStation = journeyLegDetail.destinationStop
+          let toStation = journeyLegDetail.originStop
+          let routeCode = journeyLegDetail.routeCode
 
           mbQuote <- QFRFSQuote.findById booking.quoteId
           let mbSelectedServiceTier = getServiceTierFromQuote =<< mbQuote
           return $
             Bus $
               BusLegExtraInfo
-                { originStop = stationToStationAPI fromStation,
-                  destinationStop = stationToStationAPI toStation,
-                  routeCode = route.code,
+                { originStop = fromStation,
+                  destinationStop = toStation,
+                  routeCode = routeCode,
                   bookingId = Just booking.id,
                   tickets = Just qrDataList,
                   ticketValidity = Just qrValidity,
@@ -888,7 +870,7 @@ mkLegInfoFromFrfsBooking booking distance duration entrance exit = do
           return $
             Subway $
               SubwayLegExtraInfo
-                { routeInfo = subwayRouteInfo',
+                { routeInfo = journeyLegInfo',
                   bookingId = Just booking.id,
                   tickets = Just qrDataList,
                   ticketValidity = Just qrValidity,
@@ -908,38 +890,11 @@ mkLegInfoFromFrfsBooking booking distance duration entrance exit = do
     safeDiv x 0 = x
     safeDiv x y = x / y
 
-getMetroLegRouteInfo :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => [MultiModalJourneyRouteDetails] -> DIBC.IntegratedBPPConfig -> m [MetroLegRouteInfo]
-getMetroLegRouteInfo journeyRouteDetails integratedBPPConfig = do
+getLegRouteInfo :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => [MultiModalJourneyRouteDetails] -> DIBC.IntegratedBPPConfig -> m [LegRouteInfo]
+getLegRouteInfo journeyRouteDetails integratedBPPConfig = do
   mapM transformJourneyRouteDetails journeyRouteDetails
   where
-    transformJourneyRouteDetails :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => MultiModalJourneyRouteDetails -> m MetroLegRouteInfo
-    transformJourneyRouteDetails journeyRouteDetail = do
-      fromStationCode' <- fromMaybeM (InternalError "FromStationCode is missing") journeyRouteDetail.fromStationCode
-      toStationCode' <- fromMaybeM (InternalError "ToStationCode is missing") journeyRouteDetail.toStationCode
-      routeCode' <- fromMaybeM (InternalError "RouteCode is missing") journeyRouteDetail.routeCode
-
-      fromStation <- OTPRest.getStationByGtfsIdAndStopCode fromStationCode' integratedBPPConfig >>= fromMaybeM (InternalError $ "From Station not found in getMetroLegRouteInfo: " <> show fromStationCode')
-      toStation <- OTPRest.getStationByGtfsIdAndStopCode toStationCode' integratedBPPConfig >>= fromMaybeM (InternalError $ "To Station not found in getMetroLegRouteInfo: " <> show toStationCode')
-      route <- OTPRest.getRouteByRouteId integratedBPPConfig routeCode' >>= fromMaybeM (RouteNotFound routeCode')
-
-      return
-        MetroLegRouteInfo
-          { originStop = stationToStationAPI fromStation,
-            destinationStop = stationToStationAPI toStation,
-            routeCode = route.code,
-            subOrder = journeyRouteDetail.subLegOrder,
-            journeyStatus = journeyRouteDetail.journeyStatus,
-            platformNumber = journeyRouteDetail.platformNumber,
-            lineColor = journeyRouteDetail.lineColor,
-            lineColorCode = journeyRouteDetail.lineColorCode,
-            frequency = journeyRouteDetail.frequency
-          }
-
-getSubwayLegRouteInfo :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => [MultiModalJourneyRouteDetails] -> DIBC.IntegratedBPPConfig -> m [SubwayLegRouteInfo]
-getSubwayLegRouteInfo journeyRouteDetails integratedBPPConfig = do
-  mapM transformJourneyRouteDetails journeyRouteDetails
-  where
-    transformJourneyRouteDetails :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => MultiModalJourneyRouteDetails -> m SubwayLegRouteInfo
+    transformJourneyRouteDetails :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => MultiModalJourneyRouteDetails -> m LegRouteInfo
     transformJourneyRouteDetails journeyRouteDetail = do
       fromStationCode' <- fromMaybeM (InternalError "FromStationCode is missing") journeyRouteDetail.fromStationCode
       toStationCode' <- fromMaybeM (InternalError "ToStationCode is missing") journeyRouteDetail.toStationCode
@@ -950,7 +905,7 @@ getSubwayLegRouteInfo journeyRouteDetails integratedBPPConfig = do
       route <- OTPRest.getRouteByRouteId integratedBPPConfig routeCode' >>= fromMaybeM (RouteNotFound routeCode')
 
       return
-        SubwayLegRouteInfo
+        LegRouteInfo
           { originStop = stationToStationAPI fromStation,
             destinationStop = stationToStationAPI toStation,
             routeCode = route.code,
@@ -990,10 +945,9 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} fallbackFare di
           then do return (Nothing, Nothing)
           else return $ (mkPriceAPIEntity <$> (mkPrice Nothing <$> fallbackFare), Nothing)
 
-  metroRouteInfo' <- getMetroLegRouteInfo journeyRouteDetails integratedBPPConfig
-  subwayRouteInfo' <- getSubwayLegRouteInfo journeyRouteDetails integratedBPPConfig
+  journeyLegRouteInfo' <- getLegRouteInfo journeyRouteDetails integratedBPPConfig
 
-  legExtraInfo <- mkLegExtraInfo mbQuote metroRouteInfo' subwayRouteInfo' integratedBPPConfig
+  legExtraInfo <- mkLegExtraInfo mbQuote journeyLegRouteInfo'
 
   return $
     LegInfo
@@ -1022,13 +976,13 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} fallbackFare di
         validTill = (mbQuote <&> (.validTill)) <|> (frfsSearch.validTill)
       }
   where
-    mkLegExtraInfo mbQuote metroRouteInfo' subwayRouteInfo' integratedBPPConfig = do
+    mkLegExtraInfo mbQuote journeyLegInfo' = do
       case vehicleType of
         Spec.METRO -> do
           return $
             Metro $
               MetroLegExtraInfo
-                { routeInfo = metroRouteInfo',
+                { routeInfo = journeyLegInfo',
                   bookingId = Nothing,
                   tickets = Nothing,
                   ticketValidity = Nothing,
@@ -1039,22 +993,19 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} fallbackFare di
                   childTicketQuantity = mbQuote >>= (.childTicketQuantity)
                 }
         Spec.BUS -> do
+          journeyLegDetail <- listToMaybe journeyLegInfo' & fromMaybeM (InternalError "Journey Leg Detail not found")
           journeyRouteDetail <- listToMaybe journeyRouteDetails & fromMaybeM (InternalError "Journey Route Detail not found")
-          fromStationCode' <- fromMaybeM (InternalError "FromStationCode is missing") journeyRouteDetail.fromStationCode
-          toStationCode' <- fromMaybeM (InternalError "ToStationCode is missing") journeyRouteDetail.toStationCode
-          routeCode' <- fromMaybeM (InternalError "RouteCode is missing") journeyRouteDetail.routeCode
-
-          fromStation <- OTPRest.getStationByGtfsIdAndStopCode fromStationCode' integratedBPPConfig >>= fromMaybeM (InternalError $ "From Station not found in mkLegExtraInfo: " <> show fromStationCode')
-          toStation <- OTPRest.getStationByGtfsIdAndStopCode toStationCode' integratedBPPConfig >>= fromMaybeM (InternalError $ "To Station not found in mkLegExtraInfo: " <> show toStationCode')
-          route <- OTPRest.getRouteByRouteId integratedBPPConfig routeCode' >>= fromMaybeM (RouteNotFound routeCode')
+          let fromStation = journeyLegDetail.originStop
+          let toStation = journeyLegDetail.destinationStop
+          let routeCode' = journeyLegDetail.routeCode
 
           let mbSelectedServiceTier = getServiceTierFromQuote =<< mbQuote
           return $
             Bus $
               BusLegExtraInfo
-                { originStop = stationToStationAPI fromStation,
-                  destinationStop = stationToStationAPI toStation,
-                  routeCode = route.code,
+                { originStop = fromStation,
+                  destinationStop = toStation,
+                  routeCode = routeCode',
                   bookingId = Nothing,
                   tickets = Nothing,
                   ticketValidity = Nothing,
@@ -1073,7 +1024,7 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} fallbackFare di
           return $
             Subway $
               SubwayLegExtraInfo
-                { routeInfo = subwayRouteInfo',
+                { routeInfo = journeyLegInfo',
                   bookingId = Nothing,
                   tickets = Nothing,
                   ticketValidity = Nothing,
