@@ -51,6 +51,7 @@ import qualified API.UI.Booking as Booking
 import qualified API.UI.Call as Call
 import qualified API.UI.CallEvent as CallEvent
 import qualified API.UI.Cancel as Cancel
+import qualified API.UI.CancelSearch as CancelSearch
 import qualified API.UI.CancellationReason as CancellationReason
 import qualified API.UI.Confirm as Confirm
 import qualified API.UI.Disability as Disability
@@ -94,6 +95,7 @@ type API =
            :<|> Confirm.API
            :<|> Booking.API
            :<|> Cancel.API
+           :<|> CancelSearch.API
            :<|> Ride.API
            :<|> Call.API
            :<|> Support.API
@@ -158,6 +160,7 @@ handler =
     :<|> Confirm.handler
     :<|> Booking.handler
     :<|> Cancel.handler
+    :<|> CancelSearch.handler
     :<|> Ride.handler
     :<|> Call.handler
     :<|> Support.handler
