@@ -484,16 +484,3 @@ findAllActiveDriverByFleetOwnerIdWithDriverInfoMF fleetOwnerIds limit offset mbM
       let fleetDriverList = (\(fleetDriverAssociation, driver, driverInformation) -> (fleetDriverAssociation, driver, driverInformation)) <$> res'
       catMaybes <$> mapM (\(f, d, di) -> liftA3 (,,) <$> fromTType' f <*> fromTType' d <*> fromTType' di) fleetDriverList
     Left _ -> pure []
-
-findAllActiveDriverIdByFleetOwnerId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Text -> m [Id Person]
-findAllActiveDriverIdByFleetOwnerId fleetOwnerId = do
-  now <- getCurrentTime
-  res <-
-    findAllWithKV
-      [ Se.And
-          [ Se.Is BeamFDVA.fleetOwnerId $ Se.Eq fleetOwnerId,
-            Se.Is BeamFDVA.associatedTill $ Se.GreaterThan (Just now),
-            Se.Is BeamFDVA.isActive $ Se.Eq True
-          ]
-      ]
-  pure $ map (.driverId) res

@@ -1,7 +1,6 @@
 @token1 = {{driver-offer-bpp-auto-token1}}
 @token2 = {{driver-offer-bpp-auto-token2}}
-
-@driverId = favorit-auto1-0000000000000000000000
+@driverId = favorit-auto2-0000000000000000000000
 @driver-offer-bpp-host = http://localhost:8016
 @location-tracking-service-host = http://localhost:8081
 @merchantId = favorit0-0000-0000-0000-00000favorit
@@ -32,10 +31,13 @@ token: {{adminToken}}
 }
 
 ###
+
+# driverId is taken from token in DEV move
+
 # @name updateInitial
 POST {{location-tracking-service-host}}/ui/driver/location
-token: {{token2}}
-mId: {{merchantId}}
+token: {{driverId}}
+mid: {{merchantId}}
 vt: AUTO_RICKSHAW
 dm: ONLINE
 content-type: application/json
@@ -232,8 +234,8 @@ content-type: application/json
 
 # @name update1
 POST {{location-tracking-service-host}}/ui/driver/location
-token: {{token2}}
-mId: {{merchantId}}
+token: {{driverId}}
+mid: {{merchantId}}
 vt: AUTO_RICKSHAW
 dm: ONLINE
 content-type: application/json
@@ -276,10 +278,11 @@ content-type: application/json
 
 ###
 
+
 # @name update2
 POST {{location-tracking-service-host}}/ui/driver/location
-token: {{token2}}
-mId: {{merchantId}}
+token: {{driverId}}
+mid: {{merchantId}}
 vt: AUTO_RICKSHAW
 dm: ONLINE
 content-type: application/json
