@@ -118,9 +118,6 @@ DriverInformation:
     isBlockedForReferralPayout: Maybe Bool
     onboardingVehicleCategory: Maybe VehicleCategory
     servicesEnabledForSubscription: "[ServiceNames]"
-    panNumber: Maybe (EncryptedHashedField e Text)
-    aadhaarNumber: Maybe (EncryptedHashedField e Text)
-    dlNumber: Maybe (EncryptedHashedField e Text)
 
   default:
     active: "false"
@@ -143,6 +140,7 @@ DriverInformation:
     acRestrictionLiftCount: "0"
     hasAdvanceBooking: "false"
     isInteroperable: "false"
+    onlineDurationRefreshedAt: 'CURRENT_TIMESTAMP'
   constraints:
     driverId: PrimaryKey
 

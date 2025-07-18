@@ -55,6 +55,7 @@ module Domain.Action.ProviderPlatform.Fleet.Driver
     getDriverDashboardInternalHelperGetFleetOwnerId,
     getDriverDashboardInternalHelperGetFleetOwnerIds,
     postDriverFleetV2AccessMultiOwnerIdSelect,
+    getMbFleetOwnerAndRequestorIdMerchantBased,
   )
 where
 

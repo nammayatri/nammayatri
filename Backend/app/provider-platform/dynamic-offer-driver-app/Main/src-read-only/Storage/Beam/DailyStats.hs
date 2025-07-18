@@ -29,6 +29,7 @@ data DailyStatsT f = DailyStatsT
     numDriversOnboarded :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     numFleetsOnboarded :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     numRides :: B.C f Kernel.Prelude.Int,
+    onlineDuration :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     payoutOrderId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
     payoutOrderStatus :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payout.Juspay.Types.Payout.PayoutOrderStatus),
     payoutStatus :: B.C f (Kernel.Prelude.Maybe Domain.Types.DailyStats.PayoutStatus),

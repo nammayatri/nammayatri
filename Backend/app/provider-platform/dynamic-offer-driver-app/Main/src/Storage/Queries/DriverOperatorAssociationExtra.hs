@@ -180,3 +180,19 @@ findByDriverIdAndOperatorId driverId operatorId isActive = do
       (Se.Desc BeamDOA.createdAt)
       (Just 1)
       Nothing
+
+findAllActiveDriverIdByOperatorId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Kernel.Prelude.Text ->
+  m [Id DP.Person]
+findAllActiveDriverIdByOperatorId operatorId = do
+  now <- getCurrentTime
+  res <-
+    findAllWithKV
+      [ Se.And
+          [ Se.Is BeamDOA.operatorId $ Se.Eq operatorId,
+            Se.Is BeamDOA.associatedTill $ Se.GreaterThan (Just now),
+            Se.Is BeamDOA.isActive $ Se.Eq True
+          ]
+      ]
+  pure $ map (.driverId) res
