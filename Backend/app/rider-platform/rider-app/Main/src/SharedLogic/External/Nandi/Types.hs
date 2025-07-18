@@ -61,10 +61,82 @@ data VehicleServiceTypeResponse = VehicleServiceTypeResponse
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
-data StopCodeResponse = StopCodeResponse
+newtype StopCodeResponse = StopCodeResponse
   { stop_code :: Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+data TripInfoResponse = TripInfoResponse
+  { tripId :: Text,
+    routeId :: Text,
+    routeName :: Text,
+    direction :: Maybe Text,
+    stops :: [StopInfo],
+    schedule :: [StopSchedule],
+    lastUpdated :: UTCTime,
+    source :: Text
+  }
+  deriving (Show, Generic)
+
+instance FromJSON TripInfoResponse
+
+instance ToJSON TripInfoResponse
+
+data StopInfo = StopInfo
+  { stopId :: Text,
+    stopCode :: Text,
+    stopName :: Text,
+    sequenceNum :: Int,
+    lat :: Double,
+    lon :: Double
+  }
+  deriving (Show, Generic)
+
+instance FromJSON StopInfo where
+  parseJSON = withObject "StopInfo" $ \v ->
+    StopInfo
+      <$> v .: "stopId"
+      <*> v .: "stopCode"
+      <*> v .: "stopName"
+      <*> v .: "sequence"
+      <*> v .: "lat"
+      <*> v .: "lon"
+
+instance ToJSON StopInfo where
+  toJSON (StopInfo stopId stopCode stopName sequenceNum lat lon) =
+    object
+      [ "stopId" .= stopId,
+        "stopCode" .= stopCode,
+        "stopName" .= stopName,
+        "sequence" .= sequenceNum,
+        "lat" .= lat,
+        "lon" .= lon
+      ]
+
+data StopSchedule = StopSchedule
+  { stopCode :: Text,
+    arrivalTime :: Int,
+    departureTime :: Int,
+    sequenceNum :: Int
+  }
+  deriving (Show, Generic)
+
+instance FromJSON StopSchedule where
+  parseJSON = withObject "StopSchedule" $ \v ->
+    StopSchedule
+      <$> v .: "stopCode"
+      <*> v .: "arrivalTime"
+      <*> v .: "departureTime"
+      <*> v .: "sequence"
+
+instance ToJSON StopSchedule where
+  toJSON (StopSchedule stopCode arrivalTime departureTime sequenceNum) =
+    object
+      [ "stopCode" .= stopCode,
+        "arrivalTime" .= arrivalTime,
+        "departureTime" .= departureTime,
+        "sequence" .= sequenceNum
+      ]
 
 data RouteInfoNandi = RouteInfoNandi
   { id :: Text,

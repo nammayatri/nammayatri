@@ -7,6 +7,7 @@ import BecknV2.FRFS.Enums hiding (END, START)
 import qualified BecknV2.FRFS.Enums as Spec
 import BecknV2.FRFS.Utils
 import Control.Monad.Extra hiding (fromMaybeM)
+import qualified Data.HashMap.Strict as HashMap
 import Data.List (groupBy, nub, nubBy)
 import qualified Data.List.NonEmpty as NonEmpty hiding (groupBy, map, nub, nubBy)
 import Data.List.Split (chunksOf)
@@ -36,7 +37,6 @@ import qualified Domain.Types.Person
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Route as Route
 import qualified Domain.Types.RouteStopMapping as RouteStopMapping
-import Domain.Types.RouteStopTimeTable
 import Domain.Types.Station
 import Domain.Types.StationType
 import qualified Environment
@@ -191,45 +191,74 @@ getFrfsRoute (_personId, _mId) routeCode mbIntegratedBPPConfigId _platformType _
   currentTime <- getCurrentTime
   let serviceableStops = DTB.findBoundedDomain routeStops currentTime ++ filter (\stop -> stop.timeBounds == DTB.Unbounded) routeStops
       stopsSortedBySequenceNumber = sortBy (compare `on` RouteStopMapping.sequenceNum) serviceableStops
+      firstStop = listToMaybe stopsSortedBySequenceNumber
   stops <-
-    foldM
-      ( \processedStops stop -> do
-          routeStopTimeTables <- QRouteStopTimeTable.findByRouteCodeAndStopCode integratedBPPConfig integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId [route.code] stop.stopCode
-          now <- getCurrentTime
-          let currentTimeOfDay = utcToTimeOfDay now
-          let (upcomingSchedule, timeTakenToTravelUpcomingStop) =
-                case safeTail processedStops of
-                  Just (Just lastStopSchedule, _) ->
-                    let upcomingSchedule' = findJustGreaterThan lastStopSchedule.timeOfDeparture routeStopTimeTables
-                        timeDiff = fmap (\nextSchedule -> diffTimeOfDay lastStopSchedule.timeOfDeparture nextSchedule.timeOfArrival) upcomingSchedule'
-                     in (upcomingSchedule', timeDiff)
-                  _ ->
-                    let upcomingSchedule' = findJustGreaterThan currentTimeOfDay routeStopTimeTables
-                        timeDiff = fmap (\nextSchedule -> diffTimeOfDay currentTimeOfDay nextSchedule.timeOfArrival) upcomingSchedule'
-                     in (upcomingSchedule', timeDiff)
-          return $
-            processedStops
-              <> [ ( upcomingSchedule,
-                     FRFSStationAPI
-                       { name = Just stop.stopName,
-                         code = stop.stopCode,
-                         routeCodes = Nothing,
-                         lat = Just stop.stopPoint.lat,
-                         lon = Just stop.stopPoint.lon,
-                         timeTakenToTravelUpcomingStop = Seconds <$> timeTakenToTravelUpcomingStop,
-                         stationType = Nothing,
-                         sequenceNum = Just stop.sequenceNum,
-                         address = Nothing,
-                         distance = Nothing,
-                         color = Nothing,
-                         towards = Nothing,
-                         integratedBppConfigId = integratedBPPConfig.id
-                       }
-                   )
-                 ]
-      )
-      []
-      stopsSortedBySequenceNumber
+    if isJust firstStop
+      then do
+        frfsSchedule <- listToMaybe <$> QRouteStopTimeTable.findByRouteCodeAndStopCode integratedBPPConfig integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId [route.code] (fromJust firstStop).stopCode
+        tripInfo' <- maybe (pure Nothing) (\schedule -> OTPRest.getNandiTripInfo integratedBPPConfig schedule.tripId.getId) frfsSchedule
+        case tripInfo' of
+          Just tripInfo -> do
+            let stopSchedules = tripInfo.schedule
+                stopInfos = tripInfo.stops
+                hashmapSchedule = HashMap.fromList $ map (\stop -> (stop.stopCode, stop)) stopSchedules
+                hashmapStop = HashMap.fromList $ map (\stop -> (stop.stopCode, stop)) stopInfos
+            foldM
+              ( \processedStops stop -> do
+                  let stopSchedule = HashMap.lookup stop.stopCode hashmapSchedule
+                      stopInfo = HashMap.lookup stop.stopCode hashmapStop
+                  now <- getCurrentTime
+                  let currentTimeOfDay = utcToTimeOfDay now
+                  let (_, timeTakenToTravelUpcomingStop) =
+                        case safeTail processedStops of
+                          Just (Just lastStopSchedule, _) ->
+                            let timeDiff =
+                                  fmap
+                                    ( \nextSchedule ->
+                                        let lastDepartureTime = secondsToTimeOfDay' lastStopSchedule.departureTime
+                                            nextArrivalTime = secondsToTimeOfDay' nextSchedule.arrivalTime
+                                         in diffTimeOfDay lastDepartureTime nextArrivalTime
+                                    )
+                                    stopSchedule
+                             in (stopSchedule, timeDiff)
+                          _ ->
+                            let timeDiff =
+                                  fmap
+                                    ( \nextSchedule ->
+                                        let nextArrivalTime = secondsToTimeOfDay' nextSchedule.arrivalTime
+                                         in diffTimeOfDay currentTimeOfDay nextArrivalTime
+                                    )
+                                    stopSchedule
+                             in (stopSchedule, timeDiff)
+                  case stopInfo of
+                    Just info ->
+                      return $
+                        processedStops
+                          <> [ ( stopSchedule,
+                                 FRFSStationAPI
+                                   { name = Just info.stopName,
+                                     code = info.stopCode,
+                                     routeCodes = Just [route.code],
+                                     lat = Just info.lat,
+                                     lon = Just info.lon,
+                                     timeTakenToTravelUpcomingStop = Seconds <$> timeTakenToTravelUpcomingStop,
+                                     stationType = Nothing,
+                                     sequenceNum = Just info.sequenceNum,
+                                     address = Nothing,
+                                     distance = Nothing,
+                                     color = Nothing,
+                                     towards = Nothing,
+                                     integratedBppConfigId = integratedBPPConfig.id
+                                   }
+                               )
+                             ]
+                    Nothing -> return processedStops
+              )
+              []
+              stopsSortedBySequenceNumber
+          Nothing -> return []
+      else return []
+
   return $
     FRFSTicketService.FRFSRouteAPI
       { code = route.code,
@@ -247,12 +276,16 @@ getFrfsRoute (_personId, _mId) routeCode mbIntegratedBPPConfigId _platformType _
     utcToTimeOfDay :: UTCTime -> TimeOfDay
     utcToTimeOfDay = Time.timeToTimeOfDay . Time.utctDayTime
 
+    secondsToTimeOfDay' :: Int -> TimeOfDay
+    secondsToTimeOfDay' seconds =
+      let totalSeconds = seconds `mod` 86400
+          hours :: Int = totalSeconds `div` 3600
+          minutes :: Int = (totalSeconds `mod` 3600) `div` 60
+          secs = fromIntegral $ totalSeconds `mod` 60
+       in Time.TimeOfDay hours minutes secs
+
     diffTimeOfDay :: TimeOfDay -> TimeOfDay -> Int
     diffTimeOfDay t1 t2 = round $ toRational (Time.timeOfDayToTime t2 - Time.timeOfDayToTime t1)
-
-    findJustGreaterThan :: TimeOfDay -> [RouteStopTimeTable] -> Maybe RouteStopTimeTable
-    findJustGreaterThan currentTimeOfDay routeStopTimeTables =
-      listToMaybe $ filter (\entry -> entry.timeOfDeparture > currentTimeOfDay) routeStopTimeTables
 
 getFrfsStations ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
