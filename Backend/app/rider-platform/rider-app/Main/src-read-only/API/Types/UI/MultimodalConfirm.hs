@@ -101,6 +101,7 @@ data JourneyInfoResp = JourneyInfoResp
     legs :: [Lib.JourneyModule.Types.LegInfo],
     merchantOperatingCityName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     paymentOrderShortId :: Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder),
+    result :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     startTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     unifiedQR :: Kernel.Prelude.Maybe Lib.JourneyModule.Types.UnifiedTicketQR,
     unifiedQRV2 :: Kernel.Prelude.Maybe Lib.JourneyModule.Types.UnifiedTicketQRV2

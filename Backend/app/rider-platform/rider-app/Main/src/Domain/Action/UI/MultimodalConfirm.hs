@@ -31,6 +31,7 @@ where
 import API.Types.UI.FRFSTicketService as FRFSTicketService
 import qualified API.Types.UI.MultimodalConfirm
 import qualified API.Types.UI.MultimodalConfirm as ApiTypes
+import qualified API.UI.CancelSearch as CancelSearch
 import qualified API.UI.Select as Select
 import BecknV2.FRFS.Enums
 import qualified BecknV2.FRFS.Enums as Spec
@@ -299,7 +300,7 @@ postMultimodalOrderSwitchTaxi (_, _) journeyId legOrder req = do
   where
     cancelPrevSearch legSearchId estimateId = do
       searchReq <- QSearchRequest.findById legSearchId >>= fromMaybeM (SearchRequestNotFound $ "searchRequestId-" <> legSearchId.getId)
-      cancelResponse <- Select.cancelSearch' (searchReq.riderId, searchReq.merchantId) estimateId
+      cancelResponse <- CancelSearch.cancelSearch' (searchReq.riderId, searchReq.merchantId) estimateId
       case cancelResponse of
         Select.Success -> return ()
         Select.BookingAlreadyCreated -> throwError (InternalError $ "Cannot cancel search as booking is already created for searchId: " <> show legSearchId.getId)
@@ -395,10 +396,10 @@ postMultimodalSwitch ::
   ) ->
   Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
   ApiTypes.SwitchLegReq ->
-  Environment.Flow Kernel.Types.APISuccess.APISuccess
-postMultimodalSwitch (_, _) journeyId req = do
+  Environment.Flow ApiTypes.JourneyInfoResp
+postMultimodalSwitch userInfo journeyId req = do
   JM.switchLeg journeyId req
-  pure Kernel.Types.APISuccess.Success
+  getMultimodalBookingInfo userInfo journeyId
 
 postMultimodalRiderLocation ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -793,7 +794,7 @@ postMultimodalOrderSublegSetStatus (mbPersonId, merchantId) journeyId legOrder s
 
   -- refetch updated legs and journey
   updatedLegStatus <- JM.getAllLegsStatus journey
-  checkAndMarkJourneyAsFeedbackPending journey updatedLegStatus
+  checkAndMarkTerminalJourneyStatus journey updatedLegStatus
   updatedJourney <- JM.getJourney journeyId
   generateJourneyStatusResponse personId merchantId updatedJourney updatedLegStatus
 
@@ -863,6 +864,6 @@ postMultimodalComplete (mbPersonId, merchantId) journeyId = do
   mapM_ (\leg -> markAllSubLegsCompleted leg.legExtraInfo journeyId leg.order) legs
 
   updatedLegStatus <- JM.getAllLegsStatus journey
-  checkAndMarkJourneyAsFeedbackPending journey updatedLegStatus
+  checkAndMarkTerminalJourneyStatus journey updatedLegStatus
   updatedJourney <- JM.getJourney journeyId
   generateJourneyStatusResponse personId merchantId updatedJourney updatedLegStatus

@@ -12,7 +12,7 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Tools.Error (module Tools.Error) where
+module Tools.Error (module Tools.Error, SearchCancelErrors (..)) where
 
 import EulerHS.Prelude
 import Kernel.Types.Error as Tools.Error
@@ -937,3 +937,22 @@ instance IsHTTPError CustomAuthError where
     IpHitsLimitExceeded -> E429
 
 instance IsAPIError CustomAuthError
+
+data SearchCancelErrors = ActiveBookingPresent Text | FailedToCancelSearch Text deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''SearchCancelErrors
+
+instance IsBaseError SearchCancelErrors where
+  toMessage = \case
+    ActiveBookingPresent searchId -> Just $ "Active Booking Present for searchId: " <> searchId
+    FailedToCancelSearch searchId -> Just $ "Failed To Cancel for searchId: " <> searchId
+
+instance IsHTTPError SearchCancelErrors where
+  toErrorCode = \case
+    ActiveBookingPresent _ -> "ACTIVE_BOOKING_PRESENT"
+    FailedToCancelSearch _ -> "FAILED_TO_CANCEL"
+  toHttpCode = \case
+    ActiveBookingPresent _ -> E400
+    FailedToCancelSearch _ -> E400
+
+instance IsAPIError SearchCancelErrors

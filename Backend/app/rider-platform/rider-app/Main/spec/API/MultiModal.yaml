@@ -55,6 +55,7 @@ types:
     merchantOperatingCityName : Maybe Text
     crisSdkToken : Maybe Text
     paymentOrderShortId: Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder)
+    result: Maybe Text # for backward compatibility hardcoding to Success in response
     derive: "Show"
 
   LegStatus:
@@ -270,7 +271,7 @@ apis:
       request:
         type: SwitchLegReq
       response:
-        type: Kernel.Types.APISuccess.APISuccess # send new leg
+        type: JourneyInfoResp # send new leg
 
   - POST:
       endpoint: multimodal/journey/{journeyId}/leg/{legOrder}/skip

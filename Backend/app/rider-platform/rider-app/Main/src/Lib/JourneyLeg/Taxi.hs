@@ -3,25 +3,34 @@
 module Lib.JourneyLeg.Taxi where
 
 import qualified API.UI.Select as DSelect
-import qualified API.UI.Select as Select
 import qualified Beckn.ACL.Cancel as ACL
+import qualified Beckn.ACL.Cancel as CACL
 import qualified Beckn.ACL.Search as TaxiACL
 import Data.Aeson
+import qualified Data.HashMap.Strict as HM
 import Data.List (sortBy)
 import Data.Maybe ()
 import Data.Ord (comparing)
 import qualified Data.Text as T
+import qualified Domain.Action.Beckn.Common as DABC
 import Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Action.UI.Search as DSearch
 import Domain.Types.Booking
 import qualified Domain.Types.CancellationReason as SCR
 import qualified Domain.Types.Common as DTrip
 import qualified Domain.Types.Estimate as DEstimate
+import qualified Domain.Types.Merchant as Merchant
+import qualified Domain.Types.Person as DPerson
 import Domain.Types.ServiceTierType ()
+import qualified Kernel.Beam.Functions as B
 import Kernel.External.Maps.Types
+import Kernel.External.Slack.Types (SlackConfig)
 import Kernel.Prelude
-import Kernel.Types.Error
+import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
+import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Id
+import Kernel.Types.SlidingWindowLimiter
 import Kernel.Utils.Common
 import Lib.JourneyLeg.Types
 import Lib.JourneyLeg.Types.Taxi
@@ -31,10 +40,13 @@ import SharedLogic.CallBPPInternal as CallBPPInternal (CalculateFareReq (..), Fa
 import qualified SharedLogic.CreateFareForMultiModal as CFFM
 import SharedLogic.Search
 import qualified Storage.Queries.Booking as QBooking
+import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSearchRequest
+import Tools.Error
+import TransactionLogs.Types
 
 instance JT.JourneyLeg TaxiLegRequest m where
   search (TaxiLegRequestSearch TaxiLegRequestSearchData {..}) = do
@@ -161,28 +173,29 @@ instance JT.JourneyLeg TaxiLegRequest m where
     mbBooking <- QBooking.findByTransactionId legData.searchRequestId.getId
     case mbBooking of
       Just booking -> do
-        mbRide <- QRide.findByRBId booking.id
-        let cancelReq =
-              DCancel.CancelReq
-                { reasonCode = legData.reasonCode,
-                  reasonStage = SCR.OnAssign,
-                  additionalInfo = legData.additionalInfo,
-                  reallocate = legData.reallocate,
-                  blockOnCancellationRate = legData.blockOnCancellationRate
-                }
-        dCancelRes <- DCancel.cancel booking mbRide cancelReq legData.cancellationSource
-        void $ withShortRetry $ CallBPP.cancelV2 booking.merchantId dCancelRes.bppUrl =<< ACL.buildCancelReqV2 dCancelRes cancelReq.reallocate
+        maybe
+          ( do
+              mbRide <- QRide.findByRBId booking.id
+              let cancelReq =
+                    DCancel.CancelReq
+                      { reasonCode = legData.reasonCode,
+                        reasonStage = SCR.OnAssign,
+                        additionalInfo = legData.additionalInfo,
+                        reallocate = legData.reallocate,
+                        blockOnCancellationRate = legData.blockOnCancellationRate
+                      }
+              dCancelRes <- DCancel.cancel booking mbRide cancelReq legData.cancellationSource
+              void $ withShortRetry $ CallBPP.cancelV2 booking.merchantId dCancelRes.bppUrl =<< ACL.buildCancelReqV2 dCancelRes cancelReq.reallocate
+          )
+          (\estimateId -> void $ cancelSearch' (booking.riderId, booking.merchantId) estimateId)
+          legData.cancelEstimateId
         if legData.isSkipped then QBooking.updateisSkipped booking.id (Just True) else QBooking.updateIsCancelled booking.id (Just True)
       Nothing -> do
         searchReq <- QSearchRequest.findById legData.searchRequestId >>= fromMaybeM (SearchRequestNotFound $ "searchRequestId-" <> legData.searchRequestId.getId)
         journeySearchData <- searchReq.journeyLegInfo & fromMaybeM (InvalidRequest $ "JourneySearchData not found for search id: " <> searchReq.id.getId)
         case journeySearchData.pricingId of
           Just pricingId -> do
-            cancelResponse <- Select.cancelSearch' (searchReq.riderId, searchReq.merchantId) (Id pricingId)
-            case cancelResponse of
-              DSelect.Success -> return ()
-              DSelect.BookingAlreadyCreated -> throwError (InternalError $ "Cannot cancel search as booking is already created for searchId: " <> show searchReq.id.getId)
-              DSelect.FailedToCancel -> throwError (InvalidRequest $ "Failed to cancel search for searchId: " <> show searchReq.id.getId)
+            void $ cancelSearch' (searchReq.riderId, searchReq.merchantId) (Id pricingId)
           Nothing -> return ()
     if legData.isSkipped then QSearchRequest.updateSkipBooking legData.searchRequestId (Just True) else QSearchRequest.updateIsCancelled legData.searchRequestId (Just True)
     if legData.isSkipped then QJourneyLeg.updateIsSkipped (Just True) (Just legData.searchRequestId.getId) else QJourneyLeg.updateIsDeleted (Just True) (Just legData.searchRequestId.getId)
@@ -265,3 +278,68 @@ instance JT.JourneyLeg TaxiLegRequest m where
     let mbFare = listToMaybe $ sortBy (comparing CallBPPInternal.minFare <> comparing CallBPPInternal.maxFare) (CallBPPInternal.estimatedFares fareData)
     return (True, mbFare <&> \taxi -> JT.GetFareResponse {estimatedMinFare = taxi.minFare, estimatedMaxFare = taxi.maxFare, serviceTypes = Nothing})
   getFare _ = throwError (InternalError "Not Supported")
+
+-- moved these here to avoid cyclic dependencies
+cancelSearch' ::
+  ( DSearch.SearchRequestFlow m r,
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
+    Redis.HedisFlow m r,
+    HasFlowEnv m r '["slackCfg" ::: SlackConfig],
+    HasFlowEnv m r '["searchRateLimitOptions" ::: APIRateLimitOptions],
+    HasFlowEnv m r '["searchLimitExceedNotificationTemplate" ::: Text],
+    MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    CacheFlow m r,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
+    EsqDBFlow m r,
+    HasField "shortDurationRetryCfg" r RetryCfg,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
+  ) =>
+  (Id DPerson.Person, Id Merchant.Merchant) ->
+  Id DEstimate.Estimate ->
+  m DSelect.CancelAPIResponse
+cancelSearch' (personId, merchantId) estimateId = withPersonIdLogTag personId $ cancelSearchUtil (personId, merchantId) estimateId
+
+cancelSearchUtil ::
+  ( DSearch.SearchRequestFlow m r,
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
+    Redis.HedisFlow m r,
+    HasFlowEnv m r '["slackCfg" ::: SlackConfig],
+    HasFlowEnv m r '["searchRateLimitOptions" ::: APIRateLimitOptions],
+    HasFlowEnv m r '["searchLimitExceedNotificationTemplate" ::: Text],
+    MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    CacheFlow m r,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
+    EsqDBFlow m r,
+    HasField "shortDurationRetryCfg" r RetryCfg,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
+  ) =>
+  (Id DPerson.Person, Id Merchant.Merchant) ->
+  Id DEstimate.Estimate ->
+  m DSelect.CancelAPIResponse
+cancelSearchUtil (personId, merchantId) estimateId = do
+  estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
+  activeBooking <- B.runInReplica $ QRB.findByTransactionIdAndStatus estimate.requestId.getId activeBookingStatus
+  if isJust activeBooking
+    then do
+      logTagInfo "Booking already created while cancelling estimate." estimateId.getId
+      throwError (ActiveBookingPresent estimateId.getId)
+    else do
+      dCancelSearch <- DCancel.mkDomainCancelSearch personId estimateId
+      result <-
+        try @_ @SomeException $
+          when dCancelSearch.sendToBpp . void . withShortRetry $ do
+            CallBPP.cancelV2 merchantId dCancelSearch.providerUrl =<< CACL.buildCancelSearchReqV2 dCancelSearch
+      case result of
+        Left err -> do
+          logTagInfo "Failed to cancel" $ show err
+          throwError (FailedToCancelSearch estimateId.getId)
+        Right _ -> do
+          DCancel.cancelSearch personId dCancelSearch
+          DABC.cancelJourney (Id "") (\_ -> pure [])
+          pure DSelect.Success
