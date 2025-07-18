@@ -32,6 +32,7 @@ where
 
 import Data.OpenApi hiding (email, info, name, url)
 import Data.Text hiding (elem)
+import Domain.Action.UI.Driver (processingChangeOnline)
 import Domain.Action.UI.DriverReferral
 import qualified Domain.Action.UI.Person as SP
 import qualified Domain.Types.Common as DriverInfo
@@ -314,6 +315,7 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
             isBlockedForReferralPayout = Nothing,
             onboardingVehicleCategory = Nothing,
             servicesEnabledForSubscription = [DEP.YATRI_SUBSCRIPTION],
+            onlineDurationRefreshedAt = Just now,
             panNumber = Nothing,
             aadhaarNumber = Nothing,
             dlNumber = Nothing
@@ -575,12 +577,19 @@ logout ::
   ) =>
   (Id SP.Person, Id DO.Merchant, Id DMOC.MerchantOperatingCity) ->
   m APISuccess
-logout (personId, _, _) = do
+logout (personId, merchantId, merchantOperatingCityId) = do
   cleanCachedTokens personId
   uperson <-
     QP.findById personId
       >>= fromMaybeM (PersonNotFound personId.getId)
   _ <- QP.updateDeviceToken Nothing uperson.id
   QR.deleteByPersonId personId.getId
-  when (uperson.role == SP.DRIVER) $ void (QD.updateActivity False (Just DriverInfo.OFFLINE) (cast uperson.id))
+  when (uperson.role == SP.DRIVER) . void $ do
+    let mbMode = Just DriverInfo.OFFLINE
+    QD.updateActivity False mbMode (cast uperson.id)
+    transporterConfig <-
+      SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing
+        >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+    driverInfo <- QD.findByPrimaryKey personId >>= fromMaybeM DriverInfoNotFound
+    processingChangeOnline (personId, merchantId, merchantOperatingCityId) transporterConfig.timeDiffFromUtc transporterConfig.maxOnlineDurationDays driverInfo mbMode
   pure Success

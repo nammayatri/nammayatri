@@ -482,3 +482,8 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allow_duplicate
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN max_allowed_video_doc_size_in_mb integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN max_online_duration_days integer  default 10;
