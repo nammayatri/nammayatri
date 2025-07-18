@@ -371,8 +371,12 @@ instance Registry Flow where
       performRegistryLookup :: [Domain.Types.GatewayAndRegistryService] -> SimpleLookupRequest -> DM.Merchant -> Int -> Flow (Maybe Subscriber)
       performRegistryLookup priorityList sub merchant tryNumber = do
         fetchUrlFromList priorityList >>= \registryUrl -> do
-          bapConfig <- QBC.findByMerchantIdDomainAndVehicle (Just merchant.id) (show Spec.FRFS) BecknSpec.METRO >>= fromMaybeM (BecknConfigNotFound $ "MerchantId:" +|| merchant.id.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| BecknSpec.METRO ||+ "")
-          let selfSubId = if sub.domain == Domain.PUBLIC_TRANSPORT then bapConfig.subscriberId else merchant.bapId
+          selfSubId <-
+            if sub.domain == Domain.PUBLIC_TRANSPORT
+              then do
+                bapConfig <- QBC.findByMerchantIdDomainAndVehicle (Just merchant.id) (show Spec.FRFS) BecknSpec.METRO >>= fromMaybeM (BecknConfigNotFound $ "MerchantId:" +|| merchant.id.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| BecknSpec.METRO ||+ "")
+                pure bapConfig.subscriberId
+              else pure merchant.bapId
           Registry.registryLookup registryUrl sub selfSubId
             `catch` \e -> retryWithNextRegistry e registryUrl sub merchant (tryNumber + 1)
       reorderList :: [a] -> [a]

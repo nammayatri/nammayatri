@@ -1,0 +1,235 @@
+@location-tracking-service-host = http://localhost:8081
+@merchantId = favorit0-0000-0000-0000-00000favorit
+
+###
+
+# set DEV environment variable for DEV testing
+# export DEV=1
+# driverId is taken from token in DEV move
+
+# @name update_fleet_group
+
+POST {{location-tracking-service-host}}/ui/driver/location
+token: fleet_driver-00000000000000000000000
+mid: {{merchantId}}
+gid: favorit-fleet-owner-0000000000000000
+vt: AUTO_RICKSHAW
+dm: ONLINE
+content-type: application/json
+
+[
+    {
+        "pt": {
+            "lat": 14.445332,
+            "lon": 75.919028
+
+        },
+        "ts": "{{$localDatetime iso8601}}"
+    },
+    {
+        "pt": {
+            "lat": 14.445488,
+            "lon": 75.919687
+
+        },
+        "ts": "{{$localDatetime iso8601}}",
+        "aux": "Tharalabalu Badavane"
+    },
+    {
+        "pt": {
+            "lat": 14.445093,
+            "lon": 75.919955
+
+        },
+        "ts": "{{$localDatetime iso8601}}"
+    },
+    {
+        "pt": {
+            "lat": 14.444636,
+            "lon": 75.920288
+        },
+        "ts": "{{$localDatetime iso8601}}",
+        "aux": "1st Main Rd"
+    }
+]
+
+###
+
+# @name update_operator_group
+
+POST {{location-tracking-service-host}}/ui/driver/location
+token: operator_driver-00000000000000000000
+mid: {{merchantId}}
+gid2: favorit-operator-0-0000-000000000000
+vt: AUTO_RICKSHAW
+dm: ONLINE
+content-type: application/json
+
+[
+    {
+        "pt": {
+            "lat": 14.444491,
+            "lon": 75.920846
+        },
+        "ts": "{{$localDatetime iso8601}}",
+        "aux": "2nd Cross Rd"
+    },
+    {
+        "pt": {
+            "lat": 14.443816,
+            "lon": 75.921533
+        },
+        "ts": "{{$localDatetime iso8601}}",
+        "aux": "1, Hadadi Rd"
+    },
+    {
+        "pt": {
+            "lat": 14.441555,
+            "lon": 75.922259
+        },
+        "ts": "{{$localDatetime iso8601}}",
+        "aux": "1, Hadadi Rd"
+    }
+]
+
+###
+
+# @name update_fleet_operator_group
+
+POST {{location-tracking-service-host}}/ui/driver/location
+token: fleet_operator_driver-00000000000000
+mid: {{merchantId}}
+gid: favorit-fleet-owner-0000000000000000
+gid2: favorit-operator-0-0000-000000000000
+vt: AUTO_RICKSHAW
+dm: ONLINE
+content-type: application/json
+
+[
+    {
+        "pt": {
+            "lat": 14.444491,
+            "lon": 75.920846
+        },
+        "ts": "{{$localDatetime iso8601}}",
+        "aux": "2nd Cross Rd"
+    },
+    {
+        "pt": {
+            "lat": 14.443816,
+            "lon": 75.921533
+        },
+        "ts": "{{$localDatetime iso8601}}",
+        "aux": "1, Hadadi Rd"
+    },
+    {
+        "pt": {
+            "lat": 14.441555,
+            "lon": 75.922259
+        },
+        "ts": "{{$localDatetime iso8601}}",
+        "aux": "1, Hadadi Rd"
+    }
+]
+
+###
+
+# @name update_no_group
+
+POST {{location-tracking-service-host}}/ui/driver/location
+token: no_group__driver-0000000000000000000
+mid: {{merchantId}}
+vt: AUTO_RICKSHAW
+dm: ONLINE
+content-type: application/json
+
+[
+    {
+        "pt": {
+            "lat": 14.444491,
+            "lon": 75.920846
+        },
+        "ts": "{{$localDatetime iso8601}}",
+        "aux": "2nd Cross Rd"
+    },
+    {
+        "pt": {
+            "lat": 14.443816,
+            "lon": 75.921533
+        },
+        "ts": "{{$localDatetime iso8601}}",
+        "aux": "1, Hadadi Rd"
+    },
+    {
+        "pt": {
+            "lat": 14.441555,
+            "lon": 75.922259
+        },
+        "ts": "{{$localDatetime iso8601}}",
+        "aux": "1, Hadadi Rd"
+    }
+]
+
+###
+
+# @name nearby_fleet_group
+
+GET {{location-tracking-service-host}}/internal/drivers/nearby
+Content-Type: application/json
+
+{
+  "lat": 14.444491,
+  "lon": 75.920846,
+  "vehicle_type": ["AUTO_RICKSHAW", "SEDAN", "SUV"],
+  "radius": 10000,
+  "merchantId": "favorit0-0000-0000-0000-00000favorit",
+  "groupId": "favorit-fleet-owner-0000000000000000"
+}
+
+###
+
+# @name nearby_operator_group
+
+GET {{location-tracking-service-host}}/internal/drivers/nearby
+Content-Type: application/json
+
+{
+  "lat": 14.444491,
+  "lon": 75.920846,
+  "vehicle_type": ["AUTO_RICKSHAW", "SEDAN", "SUV"],
+  "radius": 10000,
+  "merchantId": "favorit0-0000-0000-0000-00000favorit",
+  "groupId2": "favorit-operator-0-0000-000000000000"
+}
+
+###
+
+# @name nearby_fleet_operator_group
+
+GET {{location-tracking-service-host}}/internal/drivers/nearby
+Content-Type: application/json
+
+{
+  "lat": 14.444491,
+  "lon": 75.920846,
+  "vehicle_type": ["AUTO_RICKSHAW", "SEDAN", "SUV"],
+  "radius": 10000,
+  "merchantId": "favorit0-0000-0000-0000-00000favorit",
+  "groupId": "favorit-fleet-owner-0000000000000000",
+  "groupId2": "favorit-operator-0-0000-000000000000"
+}
+
+###
+
+# @name nearby_no_group
+
+GET {{location-tracking-service-host}}/internal/drivers/nearby
+Content-Type: application/json
+
+{
+  "lat": 14.444491,
+  "lon": 75.920846,
+  "vehicle_type": ["AUTO_RICKSHAW", "SEDAN", "SUV"],
+  "radius": 10000,
+  "merchantId": "favorit0-0000-0000-0000-00000favorit"
+}
