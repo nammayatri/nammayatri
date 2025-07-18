@@ -32,6 +32,8 @@ type GtfsGraphQLAPI = "graphql" :> ReqBody '[JSON] GtfsGraphQLRequest :> Post '[
 
 type StopCodeAPI = "stop-code" :> Capture "gtfs_id" Text :> Capture "provider_stop_code" Text :> Get '[JSON] StopCodeResponse
 
+type TripInfoAPI = "trip" :> Capture "trip_id" Text :> Get '[JSON] TripInfoResponse
+
 nandiGetRouteStopMappingByRouteIdAPI :: Proxy RouteStopMappingByRouteIdAPI
 nandiGetRouteStopMappingByRouteIdAPI = Proxy
 
@@ -71,6 +73,9 @@ nandiGtfsGraphQLAPI = Proxy
 nandiStopCodeAPI :: Proxy StopCodeAPI
 nandiStopCodeAPI = Proxy
 
+nandiTripInfoAPI :: Proxy TripInfoAPI
+nandiTripInfoAPI = Proxy
+
 getNandiGetRouteStopMappingByRouteId :: Text -> Text -> ET.EulerClient [RouteStopMappingInMemoryServer]
 getNandiGetRouteStopMappingByRouteId = ET.client nandiGetRouteStopMappingByRouteIdAPI
 
@@ -109,3 +114,6 @@ postNandiGtfsGraphQL = ET.client nandiGtfsGraphQLAPI
 
 getNandiStopCode :: Text -> Text -> ET.EulerClient StopCodeResponse
 getNandiStopCode = ET.client nandiStopCodeAPI
+
+getNandiTripInfo :: Text -> ET.EulerClient TripInfoResponse
+getNandiTripInfo = ET.client nandiTripInfoAPI

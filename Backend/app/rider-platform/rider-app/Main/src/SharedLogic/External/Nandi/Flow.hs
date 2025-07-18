@@ -92,3 +92,12 @@ getStopCode baseUrl gtfsId providerStopCode = do
       Left err -> do
         logError $ "Error getting stop code: " <> show err
         pure Nothing
+
+getNandiTripInfo :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c) => BaseUrl -> Text -> m (Maybe TripInfoResponse)
+getNandiTripInfo baseUrl tripId = do
+  withShortRetry $
+    callAPI baseUrl (NandiAPI.getNandiTripInfo tripId) "getNandiTripInfo" NandiAPI.nandiTripInfoAPI >>= \case
+      Right response -> pure (Just response)
+      Left err -> do
+        logError $ "Error getting trip info: " <> show err
+        pure Nothing
