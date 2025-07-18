@@ -76,7 +76,7 @@ instance JT.JourneyLeg WalkLegRequest m where
     journeyLegInfo <- legData.journeyLegInfo & fromMaybeM (InvalidRequest "WalkLeg journey legInfo data missing")
     toLocation <- legData.toLocation & fromMaybeM (InvalidRequest "ToLocation of walkleg journey data is missing")
     let status = JT.getWalkLegStatusFromWalkLeg legData journeyLegInfo
-    let (statusChanged, newStatus) = updateJourneyLegStatus DTrip.Walk req.riderLastPoints (locationToLatLng toLocation) status req.isLastCompleted
+    let (statusChanged, newStatus) = updateJourneyLegStatus DTrip.Walk req.riderLastPoints (locationToLatLng toLocation) status req.isLastCompleted req.mbToStation
     when statusChanged $ do
       let walkLegStatus = JT.castWalkLegStatusFromLegStatus newStatus
       QWalkLeg.updateStatus walkLegStatus req.walkLegId

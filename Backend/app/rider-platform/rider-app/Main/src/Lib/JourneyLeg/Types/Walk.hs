@@ -3,6 +3,7 @@ module Lib.JourneyLeg.Types.Walk where
 import qualified API.Types.UI.MultimodalConfirm as ApiTypes
 import qualified Domain.Types.JourneyLeg as DJourneyLeg
 import qualified Domain.Types.SearchRequest as DSR
+import qualified Domain.Types.Station as Station
 import qualified Domain.Types.WalkLegMultimodal as DWalkLeg
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -18,7 +19,8 @@ data WalkLegRequestSearchData = WalkLegRequestSearchData
 data WalkLegRequestGetStateData = WalkLegRequestGetStateData
   { walkLegId :: Id DWalkLeg.WalkLegMultimodal,
     riderLastPoints :: [ApiTypes.RiderLocationReq],
-    isLastCompleted :: Bool
+    isLastCompleted :: Bool,
+    mbToStation :: Maybe Station.Station
   }
 
 data WalkLegRequestGetInfoData = WalkLegRequestGetInfoData

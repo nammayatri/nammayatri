@@ -205,6 +205,13 @@ getAllLegsInfoWithoutAddingSkipLeg journeyId = getAllLegsInfo journeyId False
 -- let filteredLegs = filter (\leg -> leg.isDeleted == Just False || leg.isDeleted == Nothing) legs
 -- return $ sortBy (comparing (.sequenceNumber)) filteredLegs
 
+multiModalTravelModeToBecknVehicleCategory :: DTrip.MultimodalTravelMode -> Maybe BecknSpec.VehicleCategory
+multiModalTravelModeToBecknVehicleCategory = \case
+  DTrip.Metro -> Just BecknSpec.METRO
+  DTrip.Bus -> Just BecknSpec.BUS
+  DTrip.Subway -> Just BecknSpec.SUBWAY
+  _ -> Nothing
+
 getAllLegsInfo ::
   (JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
   Id DJourney.Journey ->
@@ -262,19 +269,12 @@ getAllLegsInfo journeyId skipAddLegFallback = do
       let platformType = DTBC.MULTIMODAL
       integratedBPPConfigs <- lift $ SIBC.findAllIntegratedBPPConfig merchantOperatingCityId becknVehicleCategory platformType
       stopCode <- MaybeT (pure (leg.fromStopDetails >>= (.stopCode)))
-      mbStation <- MaybeT $
-        SIBC.fetchFirstIntegratedBPPConfigRightResult integratedBPPConfigs $
-          \ibpp -> OTPRest.getStationByGtfsIdAndStopCode stopCode ibpp
+      mbStation <-
+        MaybeT $
+          SIBC.fetchFirstIntegratedBPPConfigRightResult integratedBPPConfigs (OTPRest.getStationByGtfsIdAndStopCode stopCode)
       station <- MaybeT (pure mbStation)
       gates <- MaybeT (pure station.gates)
       pure gates
-
-    multiModalTravelModeToBecknVehicleCategory :: DTrip.MultimodalTravelMode -> Maybe BecknSpec.VehicleCategory
-    multiModalTravelModeToBecknVehicleCategory = \case
-      DTrip.Metro -> Just BecknSpec.METRO
-      DTrip.Bus -> Just BecknSpec.BUS
-      DTrip.Subway -> Just BecknSpec.SUBWAY
-      _ -> Nothing
 
     getEntranceGate :: JL.GetStateFlow m r c => DJourneyLeg.JourneyLeg -> Maybe DJourneyLeg.JourneyLeg -> m (Maybe DStation.Gate)
     getEntranceGate leg mbNext = case mbNext of
@@ -380,7 +380,8 @@ getAllLegsStatus journey = do
   riderConfig <- getRiderConfig journey
   let busTrackingConfig = fromMaybe defaultBusTrackingConfig riderConfig.busTrackingConfig
   let movementDetected = hasSignificantMovement (map (.latLong) riderLastPoints) busTrackingConfig
-  (_, _, legPairs) <- foldlM (processLeg riderLastPoints allLegsRawData movementDetected) (True, Nothing, []) allLegsRawData
+  let legsWithNext = zip allLegsRawData $ map Just (tail allLegsRawData) ++ [Nothing]
+  (_, _, legPairs) <- foldlM (processLeg riderLastPoints allLegsRawData movementDetected) (True, Nothing, []) legsWithNext
   let allLegsState = map snd legPairs
   -- Update journey expiry time to the next valid ticket expiry when a leg is completed
   whenJust (minimumTicketLegOrder legPairs) $ \nextLegOrder -> do
@@ -413,16 +414,24 @@ getAllLegsStatus journey = do
       [DJourneyLeg.JourneyLeg] ->
       Bool ->
       (Bool, Maybe DJourneyLeg.JourneyLeg, [(DJourneyLeg.JourneyLeg, JL.JourneyLegState)]) ->
-      DJourneyLeg.JourneyLeg ->
+      (DJourneyLeg.JourneyLeg, Maybe DJourneyLeg.JourneyLeg) ->
       m (Bool, Maybe DJourneyLeg.JourneyLeg, [(DJourneyLeg.JourneyLeg, JL.JourneyLegState)])
-    processLeg riderLastPoints allLegsRawData movementDetected (isLastCompleted, lastLeg, legsState) leg = do
+    processLeg riderLastPoints allLegsRawData movementDetected (isLastCompleted, lastLeg, legsState) (leg, mbNextLeg) = do
       case leg.legSearchId of
         Just legSearchIdText -> do
           let legSearchId = Id legSearchIdText
           legState <-
             case leg.mode of
               DTrip.Taxi -> JL.getState $ TaxiLegRequestGetState $ TaxiLegRequestGetStateData {searchId = cast legSearchId, riderLastPoints, isLastCompleted, journeyLegStatus = leg.status}
-              DTrip.Walk -> JL.getState $ WalkLegRequestGetState $ WalkLegRequestGetStateData {walkLegId = cast legSearchId, riderLastPoints, isLastCompleted}
+              DTrip.Walk -> do
+                mbToStation <- runMaybeT $ do
+                  nextLeg <- MaybeT $ pure mbNextLeg
+                  merchantOperatingCityId <- MaybeT $ pure leg.merchantOperatingCityId
+                  becknVehicleCategory <- MaybeT $ pure $ multiModalTravelModeToBecknVehicleCategory leg.mode
+                  integratedBPPConfigs <- lift $ SIBC.findAllIntegratedBPPConfig merchantOperatingCityId becknVehicleCategory DTBC.MULTIMODAL
+                  stopCode <- MaybeT $ pure $ nextLeg.fromStopDetails >>= (.stopCode)
+                  MaybeT $ join <$> SIBC.fetchFirstIntegratedBPPConfigRightResult integratedBPPConfigs (OTPRest.getStationByGtfsIdAndStopCode stopCode)
+                JL.getState $ WalkLegRequestGetState $ WalkLegRequestGetStateData {walkLegId = cast legSearchId, riderLastPoints, isLastCompleted, mbToStation}
               DTrip.Metro -> JL.getState $ MetroLegRequestGetState $ MetroLegRequestGetStateData {searchId = cast legSearchId, riderLastPoints, isLastCompleted}
               DTrip.Subway -> JL.getState $ SubwayLegRequestGetState $ SubwayLegRequestGetStateData {searchId = cast legSearchId, riderLastPoints, isLastCompleted}
               DTrip.Bus -> JL.getState $ BusLegRequestGetState $ BusLegRequestGetStateData {searchId = cast legSearchId, riderLastPoints, isLastCompleted, movementDetected, routeCodeForDetailedTracking = getRouteCodeToTrack leg}
@@ -439,7 +448,7 @@ getAllLegsStatus journey = do
           updatedLeg <- QJourneyLeg.findByPrimaryKey leg.id >>= fromMaybeM (JourneyLegNotFound leg.id.getId)
           case updatedLeg.legSearchId of
             Just _ -> do
-              processLeg riderLastPoints allLegsRawData movementDetected (isLastCompleted, lastLeg, legsState) updatedLeg
+              processLeg riderLastPoints allLegsRawData movementDetected (isLastCompleted, lastLeg, legsState) (updatedLeg, mbNextLeg)
             Nothing -> do
               throwError $ JourneyLegSearchIdNotFound leg.journeyId.getId leg.sequenceNumber
 
