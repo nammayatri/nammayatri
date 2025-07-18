@@ -4483,6 +4483,7 @@ data ServiceTierType
   | AMBULANCE_AC_OXY_TIER
   | AMBULANCE_VENTILATOR_TIER
   | EV_AUTO_RICKSHAW
+  | AUTO_PLUS
   | HERITAGE_CAB_TIER
 
 data AirConditionedRestrictionType
@@ -4565,6 +4566,7 @@ instance decodeServiceTierType :: Decode ServiceTierType
                   "AMBULANCE_VENTILATOR" -> except $ Right AMBULANCE_VENTILATOR_TIER
                   "EV_AUTO_RICKSHAW" -> except $ Right EV_AUTO_RICKSHAW
                   "HERITAGE_CAB"  -> except $ Right HERITAGE_CAB_TIER
+                  "AUTO_PLUS" -> except $ Right AUTO_PLUS
                   _              -> except $ Right COMFY
 instance encodeServiceTierType :: Encode ServiceTierType where encode = defaultEnumEncode
 instance eqServiceTierType :: Eq ServiceTierType where eq = genericEq
@@ -4592,7 +4594,8 @@ instance standardEncodeServiceTierType :: StandardEncode ServiceTierType
     standardEncode AMBULANCE_VENTILATOR_TIER = standardEncode "AMBULANCE_VENTILATOR"
     standardEncode EV_AUTO_RICKSHAW = standardEncode "EV_AUTO_RICKSHAW"
     standardEncode HERITAGE_CAB_TIER = standardEncode "HERITAGE_CAB"
-
+    standardEncode AUTO_PLUS = standardEncode "AUTO_PLUS"
+    
 derive instance genericAirConditionedRestrictionType :: Generic AirConditionedRestrictionType _
 instance showAirConditionedRestrictionType :: Show AirConditionedRestrictionType where show = genericShow
 instance decodeAirConditionedRestrictionType :: Decode AirConditionedRestrictionType
