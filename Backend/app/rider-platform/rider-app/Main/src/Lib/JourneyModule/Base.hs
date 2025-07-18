@@ -344,17 +344,31 @@ checkAndMarkJourneyAsFeedbackPending ::
   DJourney.Journey ->
   [JL.JourneyLegState] ->
   m ()
-checkAndMarkJourneyAsFeedbackPending journey allLegsState = do
-  when
-    ( all
-        ( \st -> case st of
-            JL.Single legState -> legState.status `elem` JL.allCompletedStatus
-            JL.Transit legStates -> all (\legState -> legState.status `elem` JL.allCompletedStatus) legStates
+checkAndMarkJourneyAsFeedbackPending journey journeyLegStates = go (length journeyLegStates == 1) $ concatLegStates journeyLegStates
+  where
+    concatLegStates =
+      foldl'
+        ( \acc st -> case st of
+            JL.Single legState -> [legState] <> acc
+            JL.Transit legStates -> legStates <> acc
         )
-        allLegsState
-        && journey.status /= DJourney.CANCELLED
-    )
-    $ updateJourneyStatus journey DJourney.FEEDBACK_PENDING
+        []
+    go isSingleLegInJourney allLegsState
+      | isSingleLegInJourney && all (\legState -> legState.status == JL.Skipped) allLegsState =
+        updateJourneyStatus journey DJourney.COMPLETED
+      | isSingleLegInJourney && all (\legState -> legState.status == JL.Completed) allLegsState && journey.status == DJourney.FEEDBACK_PENDING =
+        updateJourneyStatus journey DJourney.COMPLETED
+      | isSingleLegInJourney && all (\legState -> legState.status == JL.Completed) allLegsState =
+        updateJourneyStatus journey DJourney.FEEDBACK_PENDING
+      | isSingleLegInJourney && all (\legState -> legState.status == JL.Cancelled) allLegsState =
+        updateJourneyStatus journey DJourney.CANCELLED
+      | not isSingleLegInJourney && all (\legState -> legState.status `elem` [JL.Completed, JL.Skipped]) allLegsState && journey.status == DJourney.FEEDBACK_PENDING =
+        updateJourneyStatus journey DJourney.COMPLETED
+      | not isSingleLegInJourney && all (\legState -> legState.status `elem` [JL.Completed, JL.Skipped]) allLegsState =
+        updateJourneyStatus journey DJourney.FEEDBACK_PENDING
+      | not isSingleLegInJourney && all (\legState -> legState.status == JL.Cancelled) allLegsState && journey.status /= DJourney.CANCELLED =
+        updateJourneyStatus journey DJourney.CANCELLED
+      | otherwise = pure ()
 
 getAllLegsStatus ::
   (JL.GetStateFlow m r c, JL.SearchRequestFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
@@ -977,6 +991,11 @@ skipLeg journeyId legOrder skippedDuringConfirmation = do
       unless (cancellableStatus skippingLeg) $
         throwError $ JourneyLegCannotBeSkippedForStatus (show skippingLeg.status)
       cancelLeg skippingLeg (SCR.CancellationReasonCode "") True skippedDuringConfirmation
+  journey <- getJourney journeyId
+  updatedLegStatus <- getAllLegsStatus journey
+  if legOrder == length updatedLegStatus - 1
+    then checkAndMarkJourneyAsFeedbackPending journey updatedLegStatus
+    else pure ()
 
 addSkippedLeg ::
   (JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
