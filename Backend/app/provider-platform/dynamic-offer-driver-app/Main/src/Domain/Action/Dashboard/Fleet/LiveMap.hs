@@ -28,9 +28,6 @@ import SharedLogic.Merchant (findMerchantByShortId)
 import SharedLogic.WMB (getDriverCurrentLocation)
 import qualified Storage.Clickhouse.Booking as CHB
 import Storage.Queries.DriverInformationExtra (findAllByDriverIds)
-import Storage.Queries.DriverOperatorAssociationExtra (findAllActiveDriverIdByOperatorId)
-import Storage.Queries.FleetDriverAssociationExtra (findAllActiveDriverIdByFleetOwnerId)
-import Storage.Queries.FleetOperatorAssociationExtra (findAllActiveByOperatorId)
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QR
 import qualified Storage.Queries.Vehicle as QV
@@ -45,21 +42,16 @@ getLiveMapDrivers ::
   Kernel.Prelude.Maybe (ID.Id ATD.Driver) ->
   Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong ->
   Environment.Flow [Common.MapDriverInfoRes]
-getLiveMapDrivers merchantShortId _opCity radius requestorId mbFleetOwnerId mbDriverIdForRadius mbPoint = do
+getLiveMapDrivers merchantShortId _opCity radius requestorId mbReqFleetOwnerId mbDriverIdForRadius mbPoint = do
   latLong <- getPoint mbDriverIdForRadius mbPoint
   requestedPerson <- QP.findById (ID.Id requestorId) >>= fromMaybeM (PersonDoesNotExist requestorId)
-  (entityRole, entityId) <- validateRequestorRoleAndGetEntityId requestedPerson mbFleetOwnerId
-  driverIdAssocWithEntityIdLs <- case entityRole of
-    DP.FLEET_OWNER -> findAllActiveDriverIdByFleetOwnerId entityId
-    DP.OPERATOR -> do
-      dcoLs <- findAllActiveDriverIdByOperatorId entityId
-      fleetOperatorAssocLs <- findAllActiveByOperatorId entityId
-      dffoLs <- mapM (findAllActiveDriverIdByFleetOwnerId . (.fleetOwnerId)) fleetOperatorAssocLs
-      pure . concat $ dcoLs : dffoLs
+  (entityRole, entityId) <- validateRequestorRoleAndGetEntityId requestedPerson mbReqFleetOwnerId
+  (mbFleetOwnerId, mbOperatorId) <- case entityRole of
+    DP.FLEET_OWNER -> pure (Just entityId, Nothing)
+    DP.OPERATOR -> pure (mbReqFleetOwnerId, Just entityId)
     _ -> throwError (InvalidRequest "Invalid Data")
   merchant <- findMerchantByShortId merchantShortId
-  nearbyDriverLocations <- LF.nearBy latLong.lat latLong.lon Nothing (Just autoTypeLs) radius merchant.id Nothing
-  let filtredNearbyDriverLocations = filter (\location -> location.driverId `elem` driverIdAssocWithEntityIdLs) nearbyDriverLocations
+  filtredNearbyDriverLocations <- LF.nearBy latLong.lat latLong.lon Nothing (Just autoTypeLs) radius merchant.id mbFleetOwnerId mbOperatorId
   driverInfoList <- findAllByDriverIds $ (.driverId.getId) <$> filtredNearbyDriverLocations
   let mbPositionAndDriverInfoLs = mkTuple <$> filtredNearbyDriverLocations
       mkTuple location =
