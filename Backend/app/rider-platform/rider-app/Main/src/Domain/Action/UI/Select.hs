@@ -287,6 +287,7 @@ select2 personId estimateId req@DSelectReq {..} = do
   QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimateId, otherSelectedEstimates, validTill = searchRequest.validTill, providerId = Just estimate.providerId, tripCategory = estimate.tripCategory}
   QEstimate.updateStatus DEstimate.DRIVER_QUOTE_REQUESTED estimateId
   QDOffer.updateStatus DDO.INACTIVE estimateId
+  QSearchRequest.updatePricingId searchRequestId (Just estimateId.getId)
   let mbCustomerExtraFee = (mkPriceFromAPIEntity <$> req.customerExtraFeeWithCurrency) <|> (mkPriceFromMoney Nothing <$> req.customerExtraFee)
   Kernel.Prelude.whenJust req.customerExtraFeeWithCurrency $ \reqWithCurrency -> do
     unless (estimate.estimatedFare.currency == reqWithCurrency.currency) $

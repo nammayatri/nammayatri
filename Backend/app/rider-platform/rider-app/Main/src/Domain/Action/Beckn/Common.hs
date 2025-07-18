@@ -843,14 +843,7 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee getJou
       QRB.updateStatus booking.id DRB.CANCELLED
       QRB.updateJourneyLegStatus (Just JL.Cancelled) booking.id
       QBPL.makeAllInactiveByBookingId booking.id
-      whenJust booking.journeyId $ \journeyId -> do
-        journeyLegs <- getJourneyLegsCallbackFn journeyId
-        when (length journeyLegs == 1 || length (filter (\journeyLeg -> journeyLeg.status == JL.Cancelled) journeyLegs) == length journeyLegs - 1) $ -- means, there was only one leg in the journey, which is now sadly cancelled, so we can mark the journey itself as cancelled.
-          QJourney.updateStatus DJourney.CANCELLED journeyId
-        when (length journeyLegs > 1) $ do
-          let activeLegs = filter (\journeyLeg -> journeyLeg.status `notElem` [JL.Skipped, JL.Cancelled, JL.Completed]) journeyLegs
-          when (length activeLegs <= 1) $ do
-            QJourney.updateStatus DJourney.COMPLETED journeyId
+      whenJust booking.journeyId $ \journeyId -> cancelJourney journeyId getJourneyLegsCallbackFn
   whenJust mbRide $ \ride -> void $ do
     unless (ride.status == DRide.CANCELLED) $ void $ QRide.updateStatus ride.id DRide.CANCELLED
   riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow booking.merchantOperatingCityId booking.configInExperimentVersions >>= fromMaybeM (InternalError "RiderConfig not found")
@@ -896,6 +889,17 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee getJou
               rejectUpgradeTagWithExpiry <- Yudhishthira.fetchNammaTagExpiry rejectUpgradeTag
               QP.updateCustomerTags (Just $ personTags <> [rejectUpgradeTagWithExpiry]) person.id
         _ -> pure ()
+
+-- TODO: ideally we should handle this as well using checkAndMarkTerminalJourneyStatus!!
+cancelJourney :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id DJourney.Journey -> (Id DJourney.Journey -> m [JL.LegInfo]) -> m ()
+cancelJourney journeyId getJourneyLegsCallbackFn = do
+  journeyLegs <- getJourneyLegsCallbackFn journeyId
+  when (length journeyLegs == 1 || length (filter (\journeyLeg -> journeyLeg.status == JL.Cancelled) journeyLegs) == length journeyLegs - 1) $ -- means, there was only one leg in the journey, which is now sadly cancelled, so we can mark the journey itself as cancelled.
+    QJourney.updateStatus DJourney.CANCELLED journeyId
+  when (length journeyLegs > 1) $ do
+    let activeLegs = filter (\journeyLeg -> journeyLeg.status `notElem` [JL.Skipped, JL.Cancelled, JL.Completed]) journeyLegs
+    when (length activeLegs <= 1) $ do
+      QJourney.updateStatus DJourney.COMPLETED journeyId
 
 mkBookingCancellationReason ::
   (MonadFlow m) =>

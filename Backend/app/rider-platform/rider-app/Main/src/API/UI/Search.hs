@@ -30,7 +30,7 @@ module API.UI.Search
 where
 
 import qualified API.Types.UI.MultimodalConfirm as ApiTypes
-import qualified API.UI.Select as Select
+import qualified API.UI.CancelSearch as CancelSearch
 import qualified Beckn.ACL.Cancel as ACL
 import qualified Beckn.ACL.Search as TaxiACL
 import qualified BecknV2.OnDemand.Enums
@@ -81,6 +81,7 @@ import Kernel.Types.Version
 import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Version
+import qualified Lib.JourneyLeg.Taxi as JLT
 import qualified Lib.JourneyModule.Base as JM
 import qualified Lib.JourneyModule.Types as JMTypes
 import qualified Lib.JourneyModule.Utils as JMU
@@ -174,7 +175,7 @@ search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfi
             mbEstimate <- QEstimate.findBySRIdAndStatusesInKV sReq.id [Estimate.DRIVER_QUOTE_REQUESTED, Estimate.GOT_DRIVER_QUOTE]
             case mbEstimate of
               Just estimate -> do
-                resp <- try @_ @SomeException $ Select.cancelSearch' (personId, merchantId) estimate.id
+                resp <- try @_ @SomeException $ CancelSearch.cancelSearch' (personId, merchantId) estimate.id
                 case resp of
                   Left _ -> void $ handleBookingCancellation merchantId personId stuckRideAutoCancellationBuffer sReq.id req
                   Right _ -> pure ()
@@ -821,7 +822,7 @@ searchTrigger' (personId, merchantId) req mbBundleVersion mbClientVersion mbClie
             mbEstimate <- QEstimate.findBySRIdAndStatusesInKV sReq.id [Estimate.DRIVER_QUOTE_REQUESTED, Estimate.GOT_DRIVER_QUOTE]
             case mbEstimate of
               Just estimate -> do
-                resp <- try @_ @SomeException $ Select.cancelSearch'' (personId, merchantId) estimate.id
+                resp <- try @_ @SomeException $ JLT.cancelSearch' (personId, merchantId) estimate.id
                 case resp of
                   Left _ -> void $ handleBookingCancellation' merchantId personId stuckRideAutoCancellationBuffer sReq.id req
                   Right _ -> pure ()

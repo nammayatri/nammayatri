@@ -58,6 +58,7 @@ data TaxiLegRequestCancelData = TaxiLegRequestCancelData
     reallocate :: Maybe Bool,
     blockOnCancellationRate :: Maybe Bool,
     cancellationSource :: SBCR.CancellationSource,
+    cancelEstimateId :: Maybe (Id DE.Estimate),
     isSkipped :: Bool
   }
 
