@@ -59,7 +59,8 @@ data SubwayLegRequestGetInfoData = SubwayLegRequestGetInfoData
     fallbackFare :: Maybe HighPrecMoney,
     distance :: Maybe Distance,
     duration :: Maybe Seconds,
-    journeyLeg :: DJourneyLeg.JourneyLeg
+    journeyLeg :: DJourneyLeg.JourneyLeg,
+    ignoreOldSearchRequest :: Bool
   }
 
 data SubwayLegRequest
@@ -75,6 +76,7 @@ data SubwayLegRequest
 data SubwayLegRequestGetFareData = SubwayLegRequestGetFareData
   { startLocation :: LatLngV2,
     endLocation :: LatLngV2,
+    agencyGtfsId :: Maybe Text,
     routeDetails :: [FRFSRouteDetails],
     fromArrivalTime :: Maybe UTCTime,
     merchant :: DMerchant.Merchant,

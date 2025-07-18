@@ -30,6 +30,7 @@ imports:
   TableDataResp: Lib.Yudhishthira.Types
   ActionChangeRequest: Lib.Yudhishthira.Types
   UiConfigGetVersionResponse: Lib.Yudhishthira.Types
+  UiDevicePlatformReq: Lib.Yudhishthira.Types
 
 
 module: NammaTag
@@ -257,6 +258,33 @@ apis:
         type: TableDataResp
       migrate:
         userActionType: ApiAuth APP_BACKEND_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY
+  - GET:
+      endpoint: /configPilot/allUiConfigs
+      auth: ApiAuthV2
+      query:
+        underExperiment: Bool
+      response:
+        type: "[LogicDomain]"
+      migrate:
+        userActionType: ApiAuth APP_BACKEND_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY
+  - GET:
+      endpoint: /configPilot/uiConfigDetails
+      auth: ApiAuthV2
+      request:
+        type: UiDevicePlatformReq
+      response:
+        type: "[ConfigDetailsResp]"
+      migrate:
+        userActionType: ApiAuth APP_BACKEND_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY
+  - GET:
+      endpoint: /configPilot/getUiTableData
+      auth: ApiAuthV2
+      request:
+        type: UiDevicePlatformReq
+      response:
+        type: TableDataResp
+      migrate:
+        userActionType: ApiAuth APP_BACKEND_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY
   - POST:
       endpoint: /configPilot/actionChange
       auth: ApiAuthV2
@@ -266,4 +294,4 @@ apis:
         type: APISuccess
       migrate:
         endpointV2:
-        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY
+        userActionType: ApiAuth APP_BACKEND_MANAGEMENT NAMMA_TAG APP_DYNAMIC_LOGIC_VERIFY

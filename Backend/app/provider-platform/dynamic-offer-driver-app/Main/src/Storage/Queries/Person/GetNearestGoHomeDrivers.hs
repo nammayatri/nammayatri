@@ -11,6 +11,7 @@ import qualified Data.List as DL
 import qualified Data.Text as T
 import Domain.Types.Common
 import qualified Domain.Types.Common as DriverInfo
+import qualified Domain.Types.Driver.DriverInformation as DIAPI
 import Domain.Types.Merchant
 import Domain.Types.Person as Person
 import Domain.Types.VehicleServiceTier as DVST
@@ -90,7 +91,7 @@ getNearestGoHomeDrivers NearestGoHomeDriversReq {..} = do
   driverHomeLocs <- Int.getDriverGoHomeReqNearby (driverLocs <&> (.driverId))
   driverInfoWithoutSpecialLocWarrior <- Int.getDriverInfosWithCond (driverHomeLocs <&> (.driverId)) True False isRental isInterCity
   let driverInfos = specialLocWarriorDriverInfos <> driverInfoWithoutSpecialLocWarrior
-  logDebug $ "MetroWarriorDebugging getNearestGoHomeDrivers" <> show specialLocWarriorDriverInfos
+  logDebug $ "MetroWarriorDebugging getNearestGoHomeDrivers" <> show (DIAPI.convertToDriverInfoAPIEntity <$> specialLocWarriorDriverInfos)
   vehicle <- Int.getVehicles driverInfos
   drivers <- Int.getDrivers vehicle
   -- driverStats <- QDriverStats.findAllByDriverIds drivers

@@ -76,6 +76,7 @@ import Common.Types.App (CategoryListType)
 import Services.API
 import Screens.DocumentCaptureScreen.ScreenData as DocumentCaptureScreenData
 import Screens.DocumentDetailsScreen.ScreenData as DocumentDetailsScreenData
+import Screens.DriverClaimRewardScreen.ScreenData as DriverClaimRewardScreenData
 import Screens.DriverCompleteProfileScreen.ScreenData as DriverCompleteProfileScreenData
 import Screens.RateCardScreen.ScreenData as RateCardScreenData
 import Screens.CustomerReferralTrackerScreen.ScreenData as CustomerReferralTrackerScreenData
@@ -143,6 +144,7 @@ newtype GlobalState = GlobalState {
   , lmsVideoScreen :: LmsVideoScreenState
   , lmsQuizScreen :: LmsQuizScreenState
   , documentDetailsScreen :: DocumentDetailsScreenState
+  , driverClaimRewardScreen :: DriverClaimRewardScreenState
   , driverCompleteProfileScreen :: DriverCompleteProfileScreenState
   , rateCardScreen :: RateCardScreenState
   , customerReferralTrackerScreen :: CustomerReferralScreenTypes.CustomerReferralTrackerScreenState
@@ -209,6 +211,7 @@ defaultGlobalState = GlobalState {
 , lmsVideoScreen : LmsVideoScreenData.initData
 , lmsQuizScreen : LmsQuizScreenData.initData
 , documentDetailsScreen : DocumentDetailsScreenData.initData
+, driverClaimRewardScreen : DriverClaimRewardScreenData.initData
 , driverCompleteProfileScreen : DriverCompleteProfileScreenData.initData
 , rateCardScreen : RateCardScreenData.initData
 , customerReferralTrackerScreen : CustomerReferralTrackerScreenData.initData
@@ -285,6 +288,7 @@ data ScreenType =
   | LmsQuizScreenStateType (LmsQuizScreenState -> LmsQuizScreenState)
   | DocumentCaptureScreenStateType (DocumentCaptureScreenState -> DocumentCaptureScreenState)
   | DocumentDetailsScreenStateType (DocumentDetailsScreenState -> DocumentDetailsScreenState)
+  | DriverClaimRewardScreenStateType (DriverClaimRewardScreenState -> DriverClaimRewardScreenState)
   | DriverCompleteProfileScreenStateType (DriverCompleteProfileScreenState -> DriverCompleteProfileScreenState)
   | RateCardScreenStateType (RateCardScreenState -> RateCardScreenState)
   | CustomerReferralTrackerScreenStateType (CustomerReferralScreenTypes.CustomerReferralTrackerScreenState -> CustomerReferralScreenTypes.CustomerReferralTrackerScreenState)
@@ -302,6 +306,8 @@ data ScreenType =
 data ScreenStage = HomeScreenStage HomeScreenStage
 
 data DOCUMENT_DETAILS_SCREEN_OUTPUT = GO_TO_HOME_FROM_DOCUMENT_DETAILS DocumentDetailsScreenState
+
+data DRIVER_CLAIM_REWARD_SCREEN_OUTPUT = GO_TO_BENEFITS_FROM_CLAIM_REWARD
 
 data DRIVER_COMPLETE_PROFILE_SCREEN_OUTPUT = GO_TO_HOME_FROM_DRIVER_COMPLETE_PROFILE
 
@@ -375,6 +381,7 @@ data DRIVER_PROFILE_SCREEN_OUTPUT = DRIVER_DETAILS_SCREEN
                                     | GO_TO_METER_RIDE_SCREEN_FROM_PROFILE
 
                                     | GO_TO_EXTRA_CHARGE_INFO_SCREEN
+                                    | GO_TO_CLUB_DETAILS_SCREEN
 
 
 
@@ -480,7 +487,7 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN HomeScreenState
                           | HOMESCREEN_NAV NAVIGATION_ACTIONS
                           | GO_TO_VEHICLE_DETAILS_SCREEN
                           | GO_TO_COMPLETE_PROFILE_SCREEN
-                          | GO_TO_RIDE_DETAILS_SCREEN
+                          | GO_TO_RIDE_DETAILS_SCREEN String
                           | POST_RIDE_FEEDBACK HomeScreenState
                           | CLEAR_PENDING_DUES
                           | ENABLE_GOTO_API HomeScreenState String String
@@ -508,8 +515,10 @@ data HOME_SCREENOUTPUT = GO_TO_PROFILE_SCREEN HomeScreenState
                           | UPDATE_METRO_WARRIOR HomeScreenState
                           | GO_TO_METRO_WARRIOR HomeScreenState
                           | UPDATE_STOPS_STATUS HomeScreenState
+                          | UPDATE_DRIVER_INSURANCE HomeScreenState
                           | GO_TO_METER_RIDE_SCREEN
                           | ENABLE_PET_RIDES HomeScreenState
+                          | DRIVER_CONSENT_AGREED HomeScreenState
 
 data REPORT_ISSUE_CHAT_SCREEN_OUTPUT = GO_TO_HELP_AND_SUPPORT | SUBMIT_ISSUE ReportIssueChatScreenState | CALL_CUSTOMER ReportIssueChatScreenState
 
@@ -623,6 +632,7 @@ data BENEFITS_SCREEN_OUTPUT = DRIVER_REFERRAL_SCREEN_NAV NAVIGATION_ACTIONS
                               | DRIVER_CONTEST_SCREEN
                               | GO_TO_LMS_VIDEO_SCREEN BenefitsScreenState
                               | CUSTOMER_REFERRAL_TRACKER_NAV Boolean
+                              | GO_TO_DRIVER_CLAIM_REWARD_SCREEN BenefitsScreenState
 
 data LMS_VIDEO_SCREEN_OUTPUT = GO_TO_QUIZ_SCREEN LmsVideoScreenState | REFRESH_LMS_VIDEO_SCREEN LmsVideoScreenState | GO_TO_BENEFITS_SCREEN | SELECT_LANGUAGE_FOR_VIDEOS LmsVideoScreenState
 

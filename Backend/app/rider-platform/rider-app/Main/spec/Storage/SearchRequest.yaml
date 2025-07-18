@@ -90,7 +90,8 @@ SearchRequest:
     vehicleCategory: Maybe VehicleCategory
     configInExperimentVersions: "[ConfigVersionMap]"
     allJourneysLoaded: Maybe Bool
-
+    searchMode: Maybe SearchMode
+    isMultimodalSearch: Maybe Bool
 
   default:
     hasMultimodalSearch: "false"
@@ -101,6 +102,9 @@ SearchRequest:
       derive: "HttpInstance"
     RiderPreferredOption:
       enum: "Rental, OneWay, InterCity, Ambulance, Delivery, PublicTransport"
+      derive: "HttpInstance"
+    SearchMode:
+      enum: "NORMAL, RESERVE"
       derive: "HttpInstance"
 
   beamType:

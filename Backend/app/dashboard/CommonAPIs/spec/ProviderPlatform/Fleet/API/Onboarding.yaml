@@ -137,6 +137,7 @@ types:
     verifiedVehicleCategory: Maybe VehicleCategory
     isVerified: Bool
     isActive: Bool
+    isApproved: Bool
     vehicleModel: Maybe Text
     documents: [DocumentStatusItem]
     dateOfUpload: UTCTime

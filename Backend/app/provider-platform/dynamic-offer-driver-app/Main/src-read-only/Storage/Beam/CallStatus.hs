@@ -14,7 +14,8 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data CallStatusT f = CallStatusT
-  { callAttempt :: (B.C f (Kernel.Prelude.Maybe Domain.Types.CallStatus.CallAttemptStatus)),
+  { aiCallAnalyzed :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
+    callAttempt :: (B.C f (Kernel.Prelude.Maybe Domain.Types.CallStatus.CallAttemptStatus)),
     callError :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     callId :: (B.C f Kernel.Prelude.Text),
     callService :: (B.C f (Kernel.Prelude.Maybe Kernel.External.Call.Types.CallService)),

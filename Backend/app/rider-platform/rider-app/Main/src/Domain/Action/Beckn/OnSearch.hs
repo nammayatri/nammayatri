@@ -50,6 +50,7 @@ import qualified Domain.Types.InterCityDetails as DInterCityDetails
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantOperatingCity as DMerchantOperatingCity
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.NyRegularInstanceLog as DNyRegularInstanceLog
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.QuoteBreakup as DQuoteBreakup
 import qualified Domain.Types.RentalDetails as DRentalDetails
@@ -77,6 +78,7 @@ import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Estimate as QEstimate
+import qualified Storage.Queries.NyRegularInstanceLog as QNyRegularInstanceLog
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSearchReq
 import Tools.Error
@@ -292,8 +294,24 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
 
       whenJust mbRequiredEstimate $ \requiredEstimate -> do
         shouldAutoSelect <- SLCF.createFares requestId.getId searchRequest.journeyLegInfo (QSearchReq.updatePricingId requestId (Just requiredEstimate.id.getId))
-        when shouldAutoSelect $ autoSelectEstimate searchRequest.riderId requiredEstimate.id
+        let shouldAutoSelectForReserved = isReservedRideSearch searchRequest
+            shouldAutoSelectFinal = shouldAutoSelect || shouldAutoSelectForReserved
+
+        when shouldAutoSelectForReserved $ do
+          logTagInfo "onSearch" $ "Auto-selecting estimate for reserved ride: " <> show searchRequest.id.getId
+          -- Update NyRegularInstanceLog status to AUTO_SELECTED
+          void $
+            fork "Update NyRegularInstanceLog status" $
+              updateNyRegularInstanceLogStatus searchRequest.id.getId
+
+        when shouldAutoSelectFinal $ autoSelectEstimate searchRequest.riderId requiredEstimate.id
   where
+    isReservedRideSearch :: DSearchReq.SearchRequest -> Bool
+    isReservedRideSearch searchReq =
+      case searchReq.searchMode of
+        Just DSearchReq.RESERVE -> True
+        _ -> False
+
     autoSelectEstimate personId estimateId = do
       let selectReq =
             DSelect.DSelectReq
@@ -372,6 +390,11 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
         when (actualRiderPreferredOption == InterCity && searchRequest.riderPreferredOption /= actualRiderPreferredOption) $ QSearchReq.updateRiderPreferredOption InterCity quote.requestId
       _ -> pure ()
 
+    updateNyRegularInstanceLogStatus :: Text -> Flow ()
+    updateNyRegularInstanceLogStatus instanceTransactionId = do
+      logTagInfo "onSearch" $ "Updating NyRegularInstanceLog status to AUTO_SELECTED for instanceTransactionId: " <> instanceTransactionId
+      void $ QNyRegularInstanceLog.updateStatusByInstanceTransactionId DNyRegularInstanceLog.AUTO_SELECTED instanceTransactionId
+
 -- TODO(MultiModal): Add one more field in estimate for check if it is done or ongoing
 buildEstimate ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
@@ -437,6 +460,7 @@ buildEstimate providerInfo now searchRequest deploymentVersion EstimateInfo {..}
         distanceUnit = searchRequest.distanceUnit,
         tripCategory = Just tripCategory,
         insuredAmount = insuranceConfig >>= (.insuredAmount),
+        isMultimodalSearch = searchRequest.isMultimodalSearch,
         ..
       }
 

@@ -19,6 +19,7 @@ module API.UI.Select
     DSelect.SelectListRes (..),
     DSelect.QuotesResultResponse (..),
     DSelect.CancelAPIResponse (..),
+    DSelect.MultimodalSelectRes (..),
     API,
     select2',
     selectList',
@@ -40,7 +41,6 @@ import Environment
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
-import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
@@ -69,7 +69,7 @@ type API =
              :> Capture "estimateId" (Id DEstimate.Estimate)
              :> "select2"
              :> ReqBody '[JSON] DSelect.DSelectReq
-             :> Post '[JSON] APISuccess
+             :> Post '[JSON] DSelect.MultimodalSelectRes
            :<|> TokenAuth
              :> Capture "estimateId" (Id DEstimate.Estimate)
              :> "quotes"
@@ -120,16 +120,20 @@ select (personId, merchantId) estimateId req = withFlowHandlerAPI . withPersonId
       else pure selectTtl
   pure DSelect.DSelectResultRes {selectTtl = ttlInInt}
 
-select2 :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> DSelect.DSelectReq -> FlowHandler APISuccess
+select2 :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> DSelect.DSelectReq -> FlowHandler DSelect.MultimodalSelectRes
 select2 (personId, merchantId) estimateId = withFlowHandlerAPI . select2' (personId, merchantId) estimateId
 
-select2' :: DSelect.SelectFlow m r c => (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> DSelect.DSelectReq -> m APISuccess
+select2' :: DSelect.SelectFlow m r c => (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> DSelect.DSelectReq -> m DSelect.MultimodalSelectRes
 select2' (personId, merchantId) estimateId req = withPersonIdLogTag personId $ do
-  Redis.whenWithLockRedis (selectEstimateLockKey personId) 60 $ do
+  journeyID <- Redis.whenWithLockRedisAndReturnValue (selectEstimateLockKey personId) 60 $ do
     dSelectReq <- DSelect.select2 personId estimateId req
     becknReq <- ACL.buildSelectReqV2 dSelectReq
     void $ withShortRetry $ CallBPP.selectV2 dSelectReq.providerUrl becknReq merchantId
-  pure Success
+    let journeyId = dSelectReq.mbJourneyId
+    pure journeyId
+  case journeyID of
+    Right jId -> pure DSelect.MultimodalSelectRes {journeyId = jId, result = "Success"}
+    Left _ -> pure DSelect.MultimodalSelectRes {journeyId = Nothing, result = "Success"}
 
 selectList :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> FlowHandler DSelect.SelectListRes
 selectList (personId, merchantId) = withFlowHandlerAPI . selectList' (personId, merchantId)

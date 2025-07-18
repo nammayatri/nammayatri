@@ -41,36 +41,48 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.FRFSUtils as FRFSUtils
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
-import Storage.Queries.RouteStopMapping as QRouteStopMapping
 import Tools.Error
 
 getProviderName :: IntegratedBPPConfig -> Text
 getProviderName integrationBPPConfig =
-  case integrationBPPConfig.providerConfig of
-    CMRL _ -> "Chennai Metro Rail Limited"
-    EBIX _ -> "Kolkata Buses"
-    DIRECT _ -> "Direct Multimodal Services"
-    Domain.Types.IntegratedBPPConfig.ONDC _ -> "ONDC Services"
-    CRIS _ -> "CRIS Subway"
+  case (integrationBPPConfig.providerName, integrationBPPConfig.providerConfig) of
+    (Just name, _) -> name
+    (_, CMRL _) -> "Chennai Metro Rail Limited"
+    (_, EBIX _) -> "Kolkata Buses"
+    (_, DIRECT _) -> "Direct Multimodal Services"
+    (_, ONDC _) -> "ONDC Services"
+    (_, CRIS _) -> "CRIS Subway"
 
-getFares :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Id Person -> Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> Text -> Text -> Text -> Spec.VehicleCategory -> m [FRFSUtils.FRFSFare]
+getFares :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Id Person -> Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> Text -> Text -> Text -> Spec.VehicleCategory -> m (Bool, [FRFSUtils.FRFSFare])
 getFares riderId merchant merchanOperatingCity integrationBPPConfig routeCode startStopCode endStopCode vehicleCategory = do
+  let isFareMandatory =
+        case integrationBPPConfig.providerConfig of
+          ONDC _ -> False
+          _ -> True
   case integrationBPPConfig.providerConfig of
-    CMRL config' ->
-      CMRLFareByOriginDest.getFareByOriginDest config' $
-        CMRLFareByOriginDest.FareByOriginDestReq
-          { route = routeCode,
-            origin = startStopCode,
-            destination = endStopCode,
-            ticketType = "SJT"
-          }
-    ONDC _ -> FRFSUtils.getFares riderId vehicleCategory integrationBPPConfig merchant.id merchanOperatingCity.id routeCode startStopCode endStopCode
-    EBIX _ -> FRFSUtils.getFares riderId vehicleCategory integrationBPPConfig merchant.id merchanOperatingCity.id routeCode startStopCode endStopCode
-    DIRECT _ -> FRFSUtils.getFares riderId vehicleCategory integrationBPPConfig merchant.id merchanOperatingCity.id routeCode startStopCode endStopCode
+    CMRL config' -> do
+      fares <-
+        CMRLFareByOriginDest.getFareByOriginDest config' $
+          CMRLFareByOriginDest.FareByOriginDestReq
+            { route = routeCode,
+              origin = startStopCode,
+              destination = endStopCode,
+              ticketType = "SJT"
+            }
+      return (isFareMandatory, fares)
+    ONDC _ -> do
+      fares <- FRFSUtils.getFares riderId vehicleCategory integrationBPPConfig merchant.id merchanOperatingCity.id routeCode startStopCode endStopCode
+      return (isFareMandatory, fares)
+    EBIX _ -> do
+      fares <- FRFSUtils.getFares riderId vehicleCategory integrationBPPConfig merchant.id merchanOperatingCity.id routeCode startStopCode endStopCode
+      return (isFareMandatory, fares)
+    DIRECT _ -> do
+      fares <- FRFSUtils.getFares riderId vehicleCategory integrationBPPConfig merchant.id merchanOperatingCity.id routeCode startStopCode endStopCode
+      return (isFareMandatory, fares)
     CRIS config' -> do
       redisResp <- Redis.safeGet mkRouteFareKey
       case redisResp of
-        Just frfsFare -> return frfsFare
+        Just frfsFare -> return (isFareMandatory, frfsFare)
         Nothing -> do
           sessionId <- getRandomInRange (1, 1000000 :: Int) -- TODO: Fix it later
           intermediateStations <- buildStations routeCode startStopCode endStopCode integrationBPPConfig START END
@@ -89,21 +101,29 @@ getFares riderId merchant merchanOperatingCity integrationBPPConfig routeCode st
           case resp of
             Left err -> do
               logError $ "Error while calling CRIS API: " <> show err
-              return []
+              return (isFareMandatory, [])
             Right fares -> do
               Redis.setExp mkRouteFareKey fares 3600 -- 1 hour
-              return fares
+              return (isFareMandatory, fares)
   where
     mkRouteFareKey = "CRIS:" <> startStopCode <> "-" <> endStopCode
 
-createOrder :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasShortDurationRetryCfg r c) => IntegratedBPPConfig -> Seconds -> (Maybe Text, Maybe Text) -> FRFSTicketBooking -> m ProviderOrder
+createOrder :: (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c) => IntegratedBPPConfig -> Seconds -> (Maybe Text, Maybe Text) -> FRFSTicketBooking -> m ProviderOrder
 createOrder integrationBPPConfig qrTtl (_mRiderName, mRiderNumber) booking = do
   case integrationBPPConfig.providerConfig of
-    CMRL config' -> CMRLOrder.createOrder config' booking mRiderNumber
+    CMRL config' -> CMRLOrder.createOrder config' integrationBPPConfig booking mRiderNumber
     EBIX config' -> EBIXOrder.createOrder config' integrationBPPConfig qrTtl booking
     DIRECT config' -> DIRECTOrder.createOrder config' integrationBPPConfig qrTtl booking
-    CRIS config' -> CRISBookJourney.createOrder config' booking
+    CRIS config' -> CRISBookJourney.createOrder config' integrationBPPConfig booking
     _ -> throwError $ InternalError "Unimplemented!"
+
+getBppOrderId :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => IntegratedBPPConfig -> FRFSTicketBooking -> m (Maybe Text)
+getBppOrderId integratedBPPConfig booking = do
+  case integratedBPPConfig.providerConfig of
+    CMRL _ -> Just <$> CMRLOrder.getBppOrderId booking
+    EBIX _ -> Just <$> EBIXOrder.getBppOrderId booking
+    DIRECT _ -> Just <$> DIRECTOrder.getBppOrderId booking
+    _ -> return Nothing
 
 getTicketStatus :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => IntegratedBPPConfig -> FRFSTicketBooking -> m [ProviderTicket]
 getTicketStatus integrationBPPConfig booking = do
@@ -153,11 +173,11 @@ getStationList integrationBPPConfig = do
 getPaymentDetails :: Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> FRFSTicketBooking -> m BknPaymentParams
 getPaymentDetails _merchant _merchantOperatingCity _bapConfig (_mRiderName, _mRiderNumber) _booking = error "Unimplemented!"
 
-buildStations :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, HasShortDurationRetryCfg r c) => Text -> Text -> Text -> IntegratedBPPConfig -> StationType -> StationType -> m [DStation] -- to see
+buildStations :: (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c) => Text -> Text -> Text -> IntegratedBPPConfig -> StationType -> StationType -> m [DStation] -- to see
 buildStations routeCode startStationCode endStationCode integratedBPPConfig startStopType endStopType = do
-  fromStation <- OTPRest.findByStationCodeAndIntegratedBPPConfigId startStationCode integratedBPPConfig >>= fromMaybeM (StationNotFound startStationCode)
-  toStation <- OTPRest.findByStationCodeAndIntegratedBPPConfigId endStationCode integratedBPPConfig >>= fromMaybeM (StationNotFound endStationCode)
-  stops <- QRouteStopMapping.findByRouteCode routeCode integratedBPPConfig.id
+  fromStation <- OTPRest.getStationByGtfsIdAndStopCode startStationCode integratedBPPConfig >>= fromMaybeM (StationNotFound startStationCode)
+  toStation <- OTPRest.getStationByGtfsIdAndStopCode endStationCode integratedBPPConfig >>= fromMaybeM (StationNotFound endStationCode)
+  stops <- OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig
   mkStations fromStation toStation stops startStopType endStopType & fromMaybeM (StationsNotFound fromStation.id.getId toStation.id.getId)
 
 mkStations :: Station -> Station -> [RouteStopMapping] -> StationType -> StationType -> Maybe [DStation]

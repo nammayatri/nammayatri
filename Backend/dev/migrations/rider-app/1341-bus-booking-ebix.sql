@@ -85,6 +85,8 @@ INSERT INTO
   atlas_app.integrated_bpp_config(
     id,
     domain,
+    feed_key,
+    agency_key,
     merchant_id,
     merchant_operating_city_id,
     vehicle_category,
@@ -97,6 +99,8 @@ VALUES
   (
     'dabe23a5-3ce6-4c37-8b9b-41377c3c1a52',
     'FRFS',
+    'kolkata_bus',
+    'kolkata_bus:WBTC',
     'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
     'namma-yatri-0-0000-0000-00000000city',
     'BUS',
@@ -512,7 +516,6 @@ VALUES
 INSERT INTO
   atlas_app.route_stop_fare (
     fare_policy_id,
-    route_code,
     start_stop_code,
     end_stop_code,
     amount,
@@ -520,12 +523,12 @@ INSERT INTO
     merchant_id,
     merchant_operating_city_id,
     created_at,
-    updated_at
+    updated_at,
+    integrated_bpp_config_id
   )
 VALUES
   (
     '999e23a5-3ce6-4c37-8b9b-41377c3c1999',
-    'Route:1:SHUTTLE-U',
     'Stop:1:18465',
     'Stop:1:18024',
     10,
@@ -533,11 +536,11 @@ VALUES
     'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
     'namma-yatri-0-0000-0000-00000000city',
     now(),
-    now()
+    now(),
+    'dabe23a5-3ce6-4c37-8b9b-41377c3c1a52'
   ),
   (
     '999e23a5-3ce6-4c37-8b9b-41377c3c1999',
-    'Route:1:SHUTTLE-U',
     'Stop:1:18465',
     'Stop:1:18304',
     20,
@@ -545,11 +548,11 @@ VALUES
     'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
     'namma-yatri-0-0000-0000-00000000city',
     now(),
-    now()
+    now(),
+    'dabe23a5-3ce6-4c37-8b9b-41377c3c1a52'
   ),
   (
     '999e23a5-3ce6-4c37-8b9b-41377c3c1999',
-    'Route:1:SHUTTLE-U',
     'Stop:1:18465',
     'Stop:1:18705',
     30,
@@ -557,11 +560,11 @@ VALUES
     'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
     'namma-yatri-0-0000-0000-00000000city',
     now(),
-    now()
+    now(),
+    'dabe23a5-3ce6-4c37-8b9b-41377c3c1a52'
   ),
   (
     '999e23a5-3ce6-4c37-8b9b-41377c3c1999',
-    'Route:1:SHUTTLE-U',
     'Stop:1:18465',
     'Stop:1:18058',
     40,
@@ -569,11 +572,11 @@ VALUES
     'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
     'namma-yatri-0-0000-0000-00000000city',
     now(),
-    now()
+    now(),
+    'dabe23a5-3ce6-4c37-8b9b-41377c3c1a52'
   ),
   (
     '999e23a5-3ce6-4c37-8b9b-41377c3c1999',
-    'Route:1:SHUTTLE-U',
     'Stop:1:18024',
     'Stop:1:18304',
     10,
@@ -581,11 +584,11 @@ VALUES
     'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
     'namma-yatri-0-0000-0000-00000000city',
     now(),
-    now()
+    now(),
+    'dabe23a5-3ce6-4c37-8b9b-41377c3c1a52'
   ),
   (
     '999e23a5-3ce6-4c37-8b9b-41377c3c1999',
-    'Route:1:SHUTTLE-U',
     'Stop:1:18024',
     'Stop:1:18705',
     20,
@@ -593,11 +596,11 @@ VALUES
     'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
     'namma-yatri-0-0000-0000-00000000city',
     now(),
-    now()
+    now(),
+    'dabe23a5-3ce6-4c37-8b9b-41377c3c1a52'
   ),
   (
     '999e23a5-3ce6-4c37-8b9b-41377c3c1999',
-    'Route:1:SHUTTLE-U',
     'Stop:1:18024',
     'Stop:1:18058',
     30,
@@ -605,11 +608,11 @@ VALUES
     'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
     'namma-yatri-0-0000-0000-00000000city',
     now(),
-    now()
+    now(),
+    'dabe23a5-3ce6-4c37-8b9b-41377c3c1a52'
   ),
   (
     '999e23a5-3ce6-4c37-8b9b-41377c3c1999',
-    'Route:1:SHUTTLE-U',
     'Stop:1:18304',
     'Stop:1:18705',
     10,
@@ -617,11 +620,11 @@ VALUES
     'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
     'namma-yatri-0-0000-0000-00000000city',
     now(),
-    now()
+    now(),
+    'dabe23a5-3ce6-4c37-8b9b-41377c3c1a52'
   ),
   (
     '999e23a5-3ce6-4c37-8b9b-41377c3c1999',
-    'Route:1:SHUTTLE-U',
     'Stop:1:18304',
     'Stop:1:18058',
     20,
@@ -629,11 +632,11 @@ VALUES
     'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
     'namma-yatri-0-0000-0000-00000000city',
     now(),
-    now()
+    now(),
+    'dabe23a5-3ce6-4c37-8b9b-41377c3c1a52'
   ),
   (
     '999e23a5-3ce6-4c37-8b9b-41377c3c1999',
-    'Route:1:SHUTTLE-U',
     'Stop:1:18705',
     'Stop:1:18058',
     10,
@@ -641,7 +644,8 @@ VALUES
     'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
     'namma-yatri-0-0000-0000-00000000city',
     now(),
-    now()
+    now(),
+    'dabe23a5-3ce6-4c37-8b9b-41377c3c1a52'
   );
 
 -- ONLY FOR LOCAL

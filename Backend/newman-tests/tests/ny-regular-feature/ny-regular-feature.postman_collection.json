@@ -1,0 +1,989 @@
+{
+  "info": {
+    "_postman_id": "ny-regular-feature-collection",
+    "name": "NammaYatri | NY Regular Feature",
+    "description": "Postman collection for testing the NY Regular (recurring rides) feature APIs. This collection includes all endpoints for managing subscription-based rides with automated booking capabilities.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "nammayatri-ny-regular"
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Customer Auth",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Set customer credentials",
+                  "pm.environment.set(\"customer_mobile_number\", \"8888888888\");",
+                  "pm.environment.set(\"customer_merchant_id\", \"NAMMA_YATRI\");"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Assert if request was successful",
+                  "pm.test(\"Expect response code to be 200\", () => {",
+                  "    if (pm.response.code !== 200) {",
+                  "        console.log('req', pm.request);",
+                  "        console.log('res', pm.response.text());",
+                  "        pm.response.to.have.status(200);",
+                  "    }",
+                  "});",
+                  "",
+                  "var jsonData = JSON.parse(responseBody);",
+                  "pm.environment.set(\"customer_authId\", jsonData.authId);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json;charset=utf-8"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"mobileNumber\": \"{{customer_mobile_number}}\",\n    \"mobileCountryCode\": \"+91\",\n    \"merchantId\": \"{{customer_merchant_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl_app}}/auth",
+              "host": [
+                "{{baseUrl_app}}"
+              ],
+              "path": [
+                "auth"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Customer Auth Verification",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Assert if request was successful",
+                  "pm.test(\"Expect response code to be 200\", () => {",
+                  "    if (pm.response.code !== 200) {",
+                  "        console.log('req', pm.request);",
+                  "        console.log('res', pm.response.text());",
+                  "        pm.response.to.have.status(200);",
+                  "    }",
+                  "});",
+                  "",
+                  "var jsonData = JSON.parse(responseBody);",
+                  "const customer_token = jsonData.token;",
+                  "pm.environment.set(\"customer_token\", customer_token);",
+                  "console.log('customer_token', customer_token);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json;charset=utf-8"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"otp\": \"7891\",\n    \"deviceToken\": \"test-device-token-ny-regular\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl_app}}/auth/{{customer_authId}}/verify",
+              "host": [
+                "{{baseUrl_app}}"
+              ],
+              "path": [
+                "auth",
+                "{{customer_authId}}",
+                "verify"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "NY Regular Subscriptions",
+      "item": [
+        {
+          "name": "Create Subscription",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Set current time and future dates for subscription",
+                  "const now = new Date();",
+                  "const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);",
+                  "const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);",
+                  "",
+                  "pm.environment.set(\"start_datetime\", tomorrow.toISOString());",
+                  "pm.environment.set(\"recurrence_end_date\", nextWeek.toISOString().split('T')[0]);",
+                  "pm.environment.set(\"scheduled_time\", \"09:00:00\");"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Assert if request was successful",
+                  "pm.test(\"Expect response code to be 200\", () => {",
+                  "    if (pm.response.code !== 200) {",
+                  "        console.log('req', pm.request);",
+                  "        console.log('res', pm.response.text());",
+                  "        pm.response.to.have.status(200);",
+                  "    }",
+                  "});",
+                  "",
+                  "var jsonData = JSON.parse(responseBody);",
+                  "pm.environment.set(\"subscription_id\", jsonData.subscriptionId);",
+                  "pm.environment.set(\"search_request_id\", jsonData.searchRequestId);",
+                  "",
+                  "pm.test('Response should contain subscriptionId', () => {",
+                  "    pm.expect(jsonData).to.have.property('subscriptionId');",
+                  "});",
+                  "",
+                  "pm.test('Response should contain searchRequestId', () => {",
+                  "    pm.expect(jsonData).to.have.property('searchRequestId');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "apikey",
+              "apikey": [
+                {
+                  "key": "value",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                },
+                {
+                  "key": "key",
+                  "value": "token",
+                  "type": "string"
+                },
+                {
+                  "key": "in",
+                  "value": "header",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json;charset=utf-8"
+              },
+              {
+                "key": "is-dashboard-request",
+                "value": "false"
+              },
+              {
+                "key": "x-bundle-version",
+                "value": "1.0.0"
+              },
+              {
+                "key": "x-client-version",
+                "value": "1.0.0"
+              },
+              {
+                "key": "x-config-version",
+                "value": "1.0.0"
+              },
+              {
+                "key": "x-device",
+                "value": "postman-test"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"pickupLocation\": {\n        \"id\": \"pickup-location-id\",\n        \"lat\": 12.9421884,\n        \"lon\": 77.6194733,\n        \"address\": {\n            \"street\": \"Test Pickup Street\",\n            \"city\": \"Bangalore\",\n            \"state\": \"Karnataka\",\n            \"country\": \"India\",\n            \"building\": \"Test Building\",\n            \"areaCode\": \"560001\",\n            \"area\": \"Test Area\"\n        },\n        \"createdAt\": \"2024-06-07T12:00:00Z\",\n        \"updatedAt\": \"2024-06-07T12:00:00Z\"\n    },\n    \"dropoffLocation\": {\n        \"id\": \"dropoff-location-id\",\n        \"lat\": 12.9715987,\n        \"lon\": 77.5945627,\n        \"address\": {\n            \"street\": \"Test Dropoff Street\",\n            \"city\": \"Bangalore\",\n            \"state\": \"Karnataka\",\n            \"country\": \"India\",\n            \"building\": \"Office Building\",\n            \"areaCode\": \"560002\",\n            \"area\": \"Office Area\"\n        },\n        \"createdAt\": \"2024-06-07T12:00:00Z\",\n        \"updatedAt\": \"2024-06-07T12:00:00Z\"\n    },\n    \"vehicleServiceTier\": \"AUTO_RICKSHAW\",\n    \"startDatetime\": \"{{start_datetime}}\",\n    \"recurrenceRuleDays\": [\"Monday\", \"Tuesday\", \"Wednesday\", \"Thursday\", \"Friday\"],\n    \"scheduledTimeOfDay\": \"{{scheduled_time}}\",\n    \"recurrenceEndDate\": \"{{recurrence_end_date}}\",\n    \"bppId\": \"test-bpp-id\",\n    \"metadata\": {\n        \"note\": \"Test subscription for daily commute\"\n    },\n    \"oneWaySearchReqDetails\": {\n        \"isSourceManuallyMoved\": false,\n        \"isDestinationManuallyMoved\": false,\n        \"isSpecialLocation\": false,\n        \"startTime\": \"{{start_datetime}}\",\n        \"isReallocationEnabled\": true,\n        \"fareParametersInRateCard\": true,\n        \"quotesUnifiedFlow\": true,\n        \"sessionToken\": \"test-session-token\",\n        \"placeNameSource\": \"Test Source\",\n        \"driverIdentifier\": null,\n        \"isMeterRideSearch\": false,\n        \"recentLocationId\": null,\n        \"platformType\": \"APPLICATION\"\n    }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl_app}}/nyRegular/subscriptions/create",
+              "host": [
+                "{{baseUrl_app}}"
+              ],
+              "path": [
+                "nyRegular",
+                "subscriptions",
+                "create"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Subscription Estimate",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Assert if request was successful",
+                  "pm.test(\"Expect response code to be 200\", () => {",
+                  "    if (pm.response.code !== 200) {",
+                  "        console.log('req', pm.request);",
+                  "        console.log('res', pm.response.text());",
+                  "        pm.response.to.have.status(200);",
+                  "    }",
+                  "});",
+                  "",
+                  "var jsonData = JSON.parse(responseBody);",
+                  "if (jsonData.estimates && jsonData.estimates.length > 0) {",
+                  "    pm.environment.set(\"estimate_id\", jsonData.estimates[0].id);",
+                  "    postman.setNextRequest(\"Confirm Subscription\");",
+                  "} else {",
+                  "    console.log('No estimates found, skipping confirm and proceeding to Get All Subscriptions.');",
+                  "    postman.setNextRequest(\"Get All Subscriptions\");",
+                  "}",
+                  "",
+                  "pm.test('Response should contain estimates array', () => {",
+                  "    pm.expect(jsonData).to.have.property('estimates');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "apikey",
+              "apikey": [
+                {
+                  "key": "value",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                },
+                {
+                  "key": "key",
+                  "value": "token",
+                  "type": "string"
+                },
+                {
+                  "key": "in",
+                  "value": "header",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl_app}}/nyRegular/subscriptions/estimate/{{search_request_id}}?subscriptionId={{subscription_id}}",
+              "host": [
+                "{{baseUrl_app}}"
+              ],
+              "path": [
+                "nyRegular",
+                "subscriptions",
+                "estimate",
+                "{{search_request_id}}"
+              ],
+              "query": [
+                {
+                  "key": "subscriptionId",
+                  "value": "{{subscription_id}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Confirm Subscription",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Assert if request was successful",
+                  "pm.test(\"Expect response code to be 200\", () => {",
+                  "    if (pm.response.code !== 200) {",
+                  "        console.log('req', pm.request);",
+                  "        console.log('res', pm.response.text());",
+                  "        pm.response.to.have.status(200);",
+                  "    }",
+                  "});",
+                  "",
+                  "var jsonData = JSON.parse(responseBody);",
+                  "pm.test('Response should contain subscription details', () => {",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData).to.have.property('status');",
+                  "});",
+                  "",
+                  "pm.test('Subscription status should be ACTIVE', () => {",
+                  "    pm.expect(jsonData.status).to.equal('ACTIVE');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "apikey",
+              "apikey": [
+                {
+                  "key": "value",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                },
+                {
+                  "key": "key",
+                  "value": "token",
+                  "type": "string"
+                },
+                {
+                  "key": "in",
+                  "value": "header",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json;charset=utf-8"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"subscriptionId\": \"{{subscription_id}}\",\n    \"estimateId\": \"{{estimate_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl_app}}/nyRegular/subscriptions/confirm",
+              "host": [
+                "{{baseUrl_app}}"
+              ],
+              "path": [
+                "nyRegular",
+                "subscriptions",
+                "confirm"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Subscriptions",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Assert if request was successful",
+                  "pm.test(\"Expect response code to be 200\", () => {",
+                  "    if (pm.response.code !== 200) {",
+                  "        console.log('req', pm.request);",
+                  "        console.log('res', pm.response.text());",
+                  "        pm.response.to.have.status(200);",
+                  "    }",
+                  "});",
+                  "",
+                  "var jsonData = JSON.parse(responseBody);",
+                  "pm.test('Response should be an array', () => {",
+                  "    pm.expect(jsonData).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "apikey",
+              "apikey": [
+                {
+                  "key": "value",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                },
+                {
+                  "key": "key",
+                  "value": "token",
+                  "type": "string"
+                },
+                {
+                  "key": "in",
+                  "value": "header",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl_app}}/nyRegular/subscriptions?status=ACTIVE&limit=10&offset=0",
+              "host": [
+                "{{baseUrl_app}}"
+              ],
+              "path": [
+                "nyRegular",
+                "subscriptions"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "ACTIVE"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Subscription Details",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Assert if request was successful",
+                  "pm.test(\"Expect response code to be 200\", () => {",
+                  "    if (pm.response.code !== 200) {",
+                  "        console.log('req', pm.request);",
+                  "        console.log('res', pm.response.text());",
+                  "        pm.response.to.have.status(200);",
+                  "    }",
+                  "});",
+                  "",
+                  "var jsonData = JSON.parse(responseBody);",
+                  "pm.test('Response should contain subscription details', () => {",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData).to.have.property('pickupLocation');",
+                  "    pm.expect(jsonData).to.have.property('dropoffLocation');",
+                  "    pm.expect(jsonData).to.have.property('status');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "apikey",
+              "apikey": [
+                {
+                  "key": "value",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                },
+                {
+                  "key": "key",
+                  "value": "token",
+                  "type": "string"
+                },
+                {
+                  "key": "in",
+                  "value": "header",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl_app}}/nyRegular/subscriptionDetails/{{subscription_id}}",
+              "host": [
+                "{{baseUrl_app}}"
+              ],
+              "path": [
+                "nyRegular",
+                "subscriptionDetails",
+                "{{subscription_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Subscription",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Set updated time for subscription",
+                  "const now = new Date();",
+                  "const nextMonth = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);",
+                  "pm.environment.set(\"updated_recurrence_end_date\", nextMonth.toISOString().split('T')[0]);",
+                  "pm.environment.set(\"updated_scheduled_time\", \"10:00:00\");"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Assert if request was successful",
+                  "pm.test(\"Expect response code to be 200\", () => {",
+                  "    if (pm.response.code !== 200) {",
+                  "        console.log('req', pm.request);",
+                  "        console.log('res', pm.response.text());",
+                  "        pm.response.to.have.status(200);",
+                  "    }",
+                  "});",
+                  "",
+                  "var jsonData = JSON.parse(responseBody);",
+                  "pm.test('Response should contain updated subscription details', () => {",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData).to.have.property('scheduledTimeOfDay');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "apikey",
+              "apikey": [
+                {
+                  "key": "value",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                },
+                {
+                  "key": "key",
+                  "value": "token",
+                  "type": "string"
+                },
+                {
+                  "key": "in",
+                  "value": "header",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json;charset=utf-8"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"id\": \"{{subscription_id}}\",\n    \"scheduledTimeOfDay\": \"{{updated_scheduled_time}}\",\n    \"recurrenceEndDate\": \"{{updated_recurrence_end_date}}\",\n    \"metadata\": {\n        \"note\": \"Updated subscription - changed time to 10:00 AM\"\n    }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl_app}}/nyRegular/subscriptions/update",
+              "host": [
+                "{{baseUrl_app}}"
+              ],
+              "path": [
+                "nyRegular",
+                "subscriptions",
+                "update"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel Subscription",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Assert if request was successful",
+                  "pm.test(\"Expect response code to be 200\", () => {",
+                  "    if (pm.response.code !== 200) {",
+                  "        console.log('req', pm.request);",
+                  "        console.log('res', pm.response.text());",
+                  "        pm.response.to.have.status(200);",
+                  "    }",
+                  "});",
+                  "",
+                  "var jsonData = JSON.parse(responseBody);",
+                  "pm.test('Response should contain cancelled subscription details', () => {",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData).to.have.property('status');",
+                  "});",
+                  "",
+                  "pm.test('Subscription status should be CANCELLED', () => {",
+                  "    pm.expect(jsonData.status).to.equal('CANCELLED');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "apikey",
+              "apikey": [
+                {
+                  "key": "value",
+                  "value": "{{customer_token}}",
+                  "type": "string"
+                },
+                {
+                  "key": "key",
+                  "value": "token",
+                  "type": "string"
+                },
+                {
+                  "key": "in",
+                  "value": "header",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl_app}}/nyRegular/subscriptions/{{subscription_id}}/cancel",
+              "host": [
+                "{{baseUrl_app}}"
+              ],
+              "path": [
+                "nyRegular",
+                "subscriptions",
+                "{{subscription_id}}",
+                "cancel"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Test Scenarios",
+      "item": [
+        {
+          "name": "Complete Subscription Flow",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// This is a test scenario that can be run to test the complete flow",
+                  "pm.test(\"Complete subscription flow test\", () => {",
+                  "    pm.expect(pm.response.code).to.equal(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl_app}}/nyRegular/subscriptions",
+              "host": [
+                "{{baseUrl_app}}"
+              ],
+              "path": [
+                "nyRegular",
+                "subscriptions"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Subscriptions by Status",
+          "item": [
+            {
+              "name": "Get Active Subscriptions",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Expect response code to be 200\", () => {",
+                      "    pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "var jsonData = JSON.parse(responseBody);",
+                      "pm.test('All subscriptions should be ACTIVE', () => {",
+                      "    jsonData.forEach(subscription => {",
+                      "        pm.expect(subscription.status).to.equal('ACTIVE');",
+                      "    });",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "apikey",
+                  "apikey": [
+                    {
+                      "key": "value",
+                      "value": "{{customer_token}}",
+                      "type": "string"
+                    },
+                    {
+                      "key": "key",
+                      "value": "token",
+                      "type": "string"
+                    },
+                    {
+                      "key": "in",
+                      "value": "header",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl_app}}/nyRegular/subscriptions?status=ACTIVE",
+                  "host": [
+                    "{{baseUrl_app}}"
+                  ],
+                  "path": [
+                    "nyRegular",
+                    "subscriptions"
+                  ],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": "ACTIVE"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Get Paused Subscriptions",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Expect response code to be 200\", () => {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "apikey",
+                  "apikey": [
+                    {
+                      "key": "value",
+                      "value": "{{customer_token}}",
+                      "type": "string"
+                    },
+                    {
+                      "key": "key",
+                      "value": "token",
+                      "type": "string"
+                    },
+                    {
+                      "key": "in",
+                      "value": "header",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl_app}}/nyRegular/subscriptions?status=PAUSED",
+                  "host": [
+                    "{{baseUrl_app}}"
+                  ],
+                  "path": [
+                    "nyRegular",
+                    "subscriptions"
+                  ],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": "PAUSED"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Get Cancelled Subscriptions",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "pm.test(\"Expect response code to be 200\", () => {",
+                      "    pm.response.to.have.status(200);",
+                      "});"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "auth": {
+                  "type": "apikey",
+                  "apikey": [
+                    {
+                      "key": "value",
+                      "value": "{{customer_token}}",
+                      "type": "string"
+                    },
+                    {
+                      "key": "key",
+                      "value": "token",
+                      "type": "string"
+                    },
+                    {
+                      "key": "in",
+                      "value": "header",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl_app}}/nyRegular/subscriptions?status=CANCELLED",
+                  "host": [
+                    "{{baseUrl_app}}"
+                  ],
+                  "path": [
+                    "nyRegular",
+                    "subscriptions"
+                  ],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": "CANCELLED"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Global pre-request script for NY Regular collection",
+          "console.log('NY Regular Feature Collection - Pre-request');"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Global test script for NY Regular collection",
+          "console.log('NY Regular Feature Collection - Test completed');"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl_app",
+      "value": "http://localhost:8013/v2",
+      "type": "string"
+    },
+    {
+      "key": "customer_mobile_number",
+      "value": "8888888888",
+      "type": "string"
+    },
+    {
+      "key": "customer_merchant_id",
+      "value": "NAMMA_YATRI",
+      "type": "string"
+    },
+    {
+      "key": "subscription_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "search_request_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "estimate_id",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}

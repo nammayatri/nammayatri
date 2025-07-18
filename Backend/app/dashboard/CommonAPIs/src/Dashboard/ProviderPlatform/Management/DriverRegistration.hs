@@ -21,6 +21,7 @@ where
 
 import API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration as Reexport
 import Dashboard.Common as Reexport
+import Data.Aeson
 import Kernel.External.Notification.FCM.Types (FCMRecipientToken)
 import Kernel.Prelude
 

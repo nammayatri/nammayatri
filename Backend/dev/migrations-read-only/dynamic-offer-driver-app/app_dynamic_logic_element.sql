@@ -14,3 +14,9 @@ ALTER TABLE atlas_driver_offer_bpp.app_dynamic_logic_element ADD PRIMARY KEY ( d
 
 ALTER TABLE atlas_driver_offer_bpp.app_dynamic_logic_element ADD COLUMN merchant_id character varying(36) ;
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.app_dynamic_logic_element ADD COLUMN patched_element text ;

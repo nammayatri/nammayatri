@@ -1,5 +1,6 @@
 imports:
   Text: Data.Text
+  IntegratedBPPConfig: Domain.Types.IntegratedBPPConfig
 
 module: CRIS
 
@@ -21,6 +22,8 @@ types:
 apis:
   - POST:
       endpoint: cris/getSDKData
+      query:
+        integratedBppConfigId: Id IntegratedBPPConfig
       request:
         type: GetSDKDataRequest
       response:
@@ -28,11 +31,15 @@ apis:
 
   - GET:
       endpoint: cris/otp/generation
+      query:
+        integratedBppConfigId: Id IntegratedBPPConfig
       response:
         type: Kernel.Types.APISuccess.APISuccess
 
   - POST:
       endpoint: cris/change/device
+      query:
+        integratedBppConfigId: Id IntegratedBPPConfig
       request:
         type: CrisChangeDeviceRequest
       response:

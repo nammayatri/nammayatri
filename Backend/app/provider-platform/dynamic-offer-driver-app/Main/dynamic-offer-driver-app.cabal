@@ -56,6 +56,7 @@ library
       API.Internal.DriverReachedDestination
       API.Internal.DriverReferee
       API.Internal.DriverSourceDeparted
+      API.Internal.Estimate
       API.Internal.FavouriteDrivers
       API.Internal.FeedbackForm
       API.Internal.KnowYourDriver
@@ -159,6 +160,7 @@ library
       Domain.Action.Dashboard.Management.DriverReferral
       Domain.Action.Dashboard.Management.DriverRegistration
       Domain.Action.Dashboard.Management.Media
+      Domain.Action.Dashboard.Management.MediaFileDocument
       Domain.Action.Dashboard.Management.Merchant
       Domain.Action.Dashboard.Management.Message
       Domain.Action.Dashboard.Management.NammaTag
@@ -190,6 +192,7 @@ library
       Domain.Action.Internal.DriverReachedDestination
       Domain.Action.Internal.DriverReferee
       Domain.Action.Internal.DriverSourceDeparted
+      Domain.Action.Internal.Estimate
       Domain.Action.Internal.FavouriteDrivers
       Domain.Action.Internal.FeedbackForm
       Domain.Action.Internal.KnowYourDriver
@@ -258,6 +261,7 @@ library
       Domain.Action.UI.Ride
       Domain.Action.UI.Ride.CancelRide
       Domain.Action.UI.Ride.CancelRide.Internal
+      Domain.Action.UI.Ride.Common
       Domain.Action.UI.Ride.EndRide
       Domain.Action.UI.Ride.EndRide.Internal
       Domain.Action.UI.Ride.StartRide
@@ -287,6 +291,7 @@ library
       Domain.Types.Common
       Domain.Types.DeliveryDetails
       Domain.Types.DeliveryPersonDetails
+      Domain.Types.Driver.DriverInformation
       Domain.Types.DriverLocation
       Domain.Types.External.LiveEKD
       Domain.Types.Extra.ConditionalCharges
@@ -372,6 +377,7 @@ library
       SharedLogic.CallBAPInternal
       SharedLogic.CallIGMBAP
       SharedLogic.Cancel
+      SharedLogic.CancellationCoins
       SharedLogic.DeleteDriver
       SharedLogic.DriverFee
       SharedLogic.DriverFleetOperatorAssociation
@@ -400,6 +406,7 @@ library
       SharedLogic.KaalChakra.Actions
       SharedLogic.KaalChakra.Chakras
       SharedLogic.LocationMapping
+      SharedLogic.MediaFileDocument
       SharedLogic.Merchant
       SharedLogic.MerchantPaymentMethod
       SharedLogic.MessageBuilder
@@ -597,6 +604,7 @@ library
       Storage.Queries.LocationExtra
       Storage.Queries.LocationMappingExtra
       Storage.Queries.MandateExtra
+      Storage.Queries.MediaFileDocumentExtra
       Storage.Queries.MerchantExtra
       Storage.Queries.MerchantPaymentMethodExtra
       Storage.Queries.MerchantServiceConfigExtra
@@ -718,6 +726,7 @@ library
       API.Action.Dashboard.Management.DriverReferral
       API.Action.Dashboard.Management.DriverRegistration
       API.Action.Dashboard.Management.Media
+      API.Action.Dashboard.Management.MediaFileDocument
       API.Action.Dashboard.Management.Merchant
       API.Action.Dashboard.Management.Message
       API.Action.Dashboard.Management.NammaTag
@@ -887,6 +896,7 @@ library
       Domain.Types.Location
       Domain.Types.LocationMapping
       Domain.Types.Mandate
+      Domain.Types.MediaFileDocument
       Domain.Types.Merchant
       Domain.Types.MerchantMessage
       Domain.Types.MerchantOperatingCity
@@ -1034,6 +1044,7 @@ library
       Storage.Beam.Location
       Storage.Beam.LocationMapping
       Storage.Beam.Mandate
+      Storage.Beam.MediaFileDocument
       Storage.Beam.Merchant
       Storage.Beam.MerchantMessage
       Storage.Beam.MerchantOperatingCity
@@ -1184,6 +1195,7 @@ library
       Storage.Queries.Location
       Storage.Queries.LocationMapping
       Storage.Queries.Mandate
+      Storage.Queries.MediaFileDocument
       Storage.Queries.Merchant
       Storage.Queries.MerchantMessage
       Storage.Queries.MerchantOperatingCity
@@ -1243,6 +1255,7 @@ library
       Storage.Queries.OrphanInstances.Location
       Storage.Queries.OrphanInstances.LocationMapping
       Storage.Queries.OrphanInstances.Mandate
+      Storage.Queries.OrphanInstances.MediaFileDocument
       Storage.Queries.OrphanInstances.Merchant
       Storage.Queries.OrphanInstances.MerchantPaymentMethod
       Storage.Queries.OrphanInstances.MerchantServiceConfig

@@ -6,6 +6,7 @@ import qualified Data.List as DL
 import qualified Data.Text as T
 import Domain.Types
 import qualified Domain.Types.Common as DriverInfo
+import qualified Domain.Types.Driver.DriverInformation as DIAPI
 import Domain.Types.Merchant
 import Domain.Types.Person as Person
 import Domain.Types.VehicleServiceTier as DVST
@@ -83,7 +84,7 @@ getNearestDrivers NearestDriversReq {..} = do
   vehicle <- Int.getVehicles driverInfos
   drivers <- Int.getDrivers vehicle
   -- driverStats <- QDriverStats.findAllByDriverIds drivers
-  logDebug $ "MetroWarriorDebugging Result:- getNearestDrivers --------person tags driverInfos----" <> show driverInfos
+  logDebug $ "MetroWarriorDebugging Result:- getNearestDrivers --------person tags driverInfos----" <> show (DIAPI.convertToDriverInfoAPIEntity <$> driverInfos)
   driverBankAccounts <-
     if onlinePayment
       then QDBA.getDrivers (driverLocs <&> (.driverId))

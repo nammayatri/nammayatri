@@ -16,6 +16,7 @@ module Domain.Types.Booking.API where
 
 -- TODO:Move api entity of booking to UI
 
+import Data.Aeson (eitherDecode, encode)
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
 import qualified Domain.Action.UI.FareBreakup as DAFareBreakup
 import qualified Domain.Action.UI.Location as SLoc
@@ -27,6 +28,7 @@ import Domain.Types.CancellationReason
 import qualified Domain.Types.Exophone as DExophone
 import Domain.Types.Extra.Ride (RideAPIEntity (..))
 import Domain.Types.FareBreakup as DFareBreakup
+import qualified Domain.Types.Journey as DJourney
 import Domain.Types.Location (Location, LocationAPIEntity)
 import Domain.Types.ParcelDetails as DParcel
 import qualified Domain.Types.Person as Person
@@ -46,6 +48,7 @@ import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import SharedLogic.Booking (getfareBreakups)
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.Exophone as CQExophone
@@ -118,7 +121,8 @@ data BookingAPIEntity = BookingAPIEntity
     estimatedEndTimeRange :: Maybe DRide.EstimatedEndTimeRange,
     isSafetyPlus :: Bool,
     isInsured :: Maybe Bool,
-    insuredAmount :: Maybe Text
+    insuredAmount :: Maybe Text,
+    mbJourneyId :: Maybe (Id DJourney.Journey)
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -322,7 +326,8 @@ makeBookingAPIEntity requesterId booking activeRide allRides estimatedFareBreaku
         vehicleIconUrl = fmap showBaseUrl booking.vehicleIconUrl,
         isSafetyPlus = fromMaybe False $ activeRide <&> (.isSafetyPlus),
         isInsured = Just booking.isInsured,
-        insuredAmount = booking.insuredAmount
+        insuredAmount = booking.insuredAmount,
+        mbJourneyId = booking.journeyId
       }
   where
     getRideDuration :: Maybe DRide.Ride -> Maybe Seconds
@@ -515,3 +520,9 @@ buildRideAPIEntity DRide.Ride {..} = do
         isInsured = Just isInsured,
         ..
       }
+
+-- BOOKING REQUEST TYPE in ListV2 API
+data BookingRequestType = BookingRequest | JourneyRequest | RequestBoth
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
+
+$(mkHttpInstancesForEnum ''BookingRequestType)

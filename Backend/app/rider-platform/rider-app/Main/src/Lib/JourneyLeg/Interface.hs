@@ -35,20 +35,20 @@ getFare ::
   Id DMOC.MerchantOperatingCity ->
   EMInterface.MultiModalLeg ->
   DTrip.MultimodalTravelMode ->
-  m (Maybe JL.GetFareResponse)
+  m (Bool, Maybe JL.GetFareResponse)
 getFare fromArrivalTime riderId merchantId merchantOperatingCityId leg = \case
   DTrip.Taxi -> do
     getFareReq :: TaxiLegRequest <- mkTaxiGetFareReq
     JL.getFare getFareReq
   DTrip.Bus -> do
     getFareReq :: Maybe BusLegRequest <- mkBusGetFareReq
-    maybe (return Nothing) JL.getFare getFareReq
+    maybe (return (True, Nothing)) JL.getFare getFareReq
   DTrip.Metro -> do
     getFareReq :: Maybe MetroLegRequest <- mkMetroGetFareReq
-    maybe (return Nothing) JL.getFare getFareReq
+    maybe (return (True, Nothing)) JL.getFare getFareReq
   DTrip.Subway -> do
     getFareReq :: Maybe SubwayLegRequest <- mkSubwayGetFareReq
-    maybe (return Nothing) JL.getFare getFareReq
+    maybe (return (True, Nothing)) JL.getFare getFareReq
   DTrip.Walk -> do
     getFareReq :: WalkLegRequest <- mkWalkGetFareReq
     JL.getFare getFareReq
@@ -84,6 +84,7 @@ getFare fromArrivalTime riderId merchantId merchantOperatingCityId leg = \case
                 BusLegRequestGetFareData
                   { startLocation = leg.startLocation.latLng,
                     endLocation = leg.endLocation.latLng,
+                    agencyGtfsId = leg.agency >>= (.gtfsId),
                     ..
                   }
 
@@ -103,6 +104,7 @@ getFare fromArrivalTime riderId merchantId merchantOperatingCityId leg = \case
                 MetroLegRequestGetFareData
                   { startLocation = leg.startLocation.latLng,
                     endLocation = leg.endLocation.latLng,
+                    agencyGtfsId = leg.agency >>= (.gtfsId),
                     ..
                   }
 
@@ -122,6 +124,7 @@ getFare fromArrivalTime riderId merchantId merchantOperatingCityId leg = \case
                 SubwayLegRequestGetFareData
                   { startLocation = leg.startLocation.latLng,
                     endLocation = leg.endLocation.latLng,
+                    agencyGtfsId = leg.agency >>= (.gtfsId),
                     ..
                   }
 

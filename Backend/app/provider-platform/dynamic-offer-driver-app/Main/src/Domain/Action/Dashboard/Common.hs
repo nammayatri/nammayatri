@@ -62,6 +62,7 @@ castVehicleVariantDashboard = \case
   Just DV.HATCHBACK -> Just Common.HATCHBACK
   Just DV.SEDAN -> Just Common.SEDAN
   Just DV.AUTO_RICKSHAW -> Just Common.AUTO_RICKSHAW
+  Just DV.AUTO_PLUS -> Just Common.AUTO_PLUS
   Just DV.TAXI -> Just Common.TAXI
   Just DV.TAXI_PLUS -> Just Common.TAXI_PLUS
   Just DV.PREMIUM_SEDAN -> Just Common.PREMIUM_SEDAN
@@ -85,8 +86,8 @@ castVehicleVariantDashboard = \case
   Just DV.BUS_AC -> Just Common.BUS_AC
   _ -> Nothing
 
-runVerifyRCFlow :: Id DP.Person -> DM.Merchant -> Id DMOC.MerchantOperatingCity -> Context.City -> Common.AddVehicleReq -> Bool -> Flow ()
-runVerifyRCFlow personId merchant merchantOpCityId operatingCity req isFleet = do
+runVerifyRCFlow :: Id DP.Person -> DM.Merchant -> Id DMOC.MerchantOperatingCity -> Context.City -> Common.AddVehicleReq -> Bool -> Bool -> Flow ()
+runVerifyRCFlow personId merchant merchantOpCityId operatingCity req isFleet bulkUpload = do
   let imageId = maybe "" cast req.imageId
   let rcReq =
         DomainRC.DriverRCReq
@@ -101,7 +102,7 @@ runVerifyRCFlow personId merchant merchantOpCityId operatingCity req isFleet = d
             vehicleDetails = Nothing,
             vehicleCategory = req.vehicleCategory
           }
-  void $ DomainRC.verifyRC (not isFleet) (Just merchant) (personId, merchant.id, merchantOpCityId) rcReq
+  void $ DomainRC.verifyRC (not isFleet) (Just merchant) (personId, merchant.id, merchantOpCityId) rcReq bulkUpload
 
 notifyYatriRentalEventsToDriver :: Maybe Text -> MessageKey -> Id DP.Person -> TransporterConfig -> Maybe Text -> MediaChannel -> Flow ()
 notifyYatriRentalEventsToDriver vehicleId messageKey personId transporterConfig mbReason channel = do

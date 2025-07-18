@@ -62,6 +62,19 @@ apis:
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET FLEET_OWNER_ACCESS_SELECT
 
+  - POST:
+      endpoint: /fleet/v2/access/multiOwnerId/select
+      auth: ApiAuthV2
+      mandatoryQuery:
+        enable: Bool
+      query:
+        onlyCurrent: Bool
+        fleetMemberId: Text
+      request:
+        type: MultiOwnerSelect
+      response:
+        type: APISuccess
+
   - POST: # BulkUploadVehiclesForFleetAPI
       endpoint: /fleet/addVehicles
       auth: ApiAuthV2
@@ -109,6 +122,7 @@ apis:
               - mobileCountryCode: Text
               - fleetOwnerId : Text
               - mbRole: Role
+              - bulkUpload: Bool
             request:
               type: AddVehicleReq
             response:
@@ -1012,6 +1026,7 @@ types:
     - fleetOwnerId: Text
     - fleetOwnerName: Text
     - fleetGroup: Maybe FleetGroup
+    - groups: "[FleetGroup]"
     - order: Maybe Int
     - enabled: Bool
   TripTransactionDetail:
@@ -1201,6 +1216,13 @@ types:
     - vehicleFitness: Maybe VerificationStatus
     - vehicleInsurance: Maybe VerificationStatus
     - vehiclePUC: Maybe VerificationStatus
+    - vehicleLeft: Maybe VerificationStatus
+    - vehicleRight: Maybe VerificationStatus
+    - vehicleFront: Maybe VerificationStatus
+    - vehicleFrontInterior: Maybe VerificationStatus
+    - vehicleBackInterior: Maybe VerificationStatus
+    - vehicleBack: Maybe VerificationStatus
+    - odometer: Maybe VerificationStatus
     - driverLicense: Maybe VerificationStatus
     - panCard: Maybe VerificationStatus
     - aadhaarCard: Maybe VerificationStatus
@@ -1314,6 +1336,9 @@ types:
   APISuccessWithUnprocessedEntities:
     - recordType: NewType
     - unprocessedEntities: [Text]
+  MultiOwnerSelect:
+    - recordType: NewType
+    - fleetOwnerIds: [Text]
   StopInfo:
     name: Text
     code: Text

@@ -28,6 +28,7 @@ data DriverGstinE e = DriverGstin
     isProvisional :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     legalName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
+    panNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     tradeName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     typeOfRegistration :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     validFrom :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
@@ -40,9 +41,9 @@ data DriverGstinE e = DriverGstin
   }
   deriving (Generic)
 
-type DriverGstin = DriverGstinE ('AsEncrypted)
+type DriverGstin = DriverGstinE 'AsEncrypted
 
-type DecryptedDriverGstin = DriverGstinE ('AsUnencrypted)
+type DecryptedDriverGstin = DriverGstinE 'AsUnencrypted
 
 instance EncryptedItem DriverGstin where
   type Unencrypted DriverGstin = (DecryptedDriverGstin, HashSalt)
@@ -62,6 +63,7 @@ instance EncryptedItem DriverGstin where
           isProvisional = isProvisional entity,
           legalName = legalName entity,
           merchantOperatingCityId = merchantOperatingCityId entity,
+          panNumber = panNumber entity,
           tradeName = tradeName entity,
           typeOfRegistration = typeOfRegistration entity,
           validFrom = validFrom entity,
@@ -88,6 +90,7 @@ instance EncryptedItem DriverGstin where
             isProvisional = isProvisional entity,
             legalName = legalName entity,
             merchantOperatingCityId = merchantOperatingCityId entity,
+            panNumber = panNumber entity,
             tradeName = tradeName entity,
             typeOfRegistration = typeOfRegistration entity,
             validFrom = validFrom entity,

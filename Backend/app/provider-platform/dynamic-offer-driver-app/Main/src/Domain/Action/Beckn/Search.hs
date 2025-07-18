@@ -37,11 +37,13 @@ import qualified Data.List.NonEmpty as NE
 import qualified Data.Map as M
 import Data.Ord
 import qualified Data.Text as T
+import qualified Domain.Action.Internal.Estimate as DBppEstimate
 import qualified Domain.Action.UI.DemandHotspots as DemandHotspots
 import qualified Domain.Action.UI.Maps as DMaps
 import Domain.Types
 import Domain.Types.BapMetadata
 import qualified Domain.Types.Estimate as DEst
+import qualified Domain.Types.Extra.ConditionalCharges as DAC
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Location as DLoc
 import qualified Domain.Types.Merchant as DM
@@ -90,6 +92,7 @@ import SharedLogic.Ride
 import SharedLogic.TollsDetector
 import Storage.Beam.Yudhishthira ()
 import Storage.Cac.DriverPoolConfig as CDP
+import qualified Storage.Cac.FarePolicy as QFPolicy
 import Storage.Cac.TransporterConfig as CCT
 import qualified Storage.CachedQueries.BapMetadata as CQBapMetaData
 import qualified Storage.CachedQueries.InterCityTravelCities as CQITC
@@ -101,6 +104,7 @@ import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.DriverReferral as QDR
 import qualified Storage.Queries.Estimate as QEst
+import qualified Storage.Queries.FareParameters as QFP
 import qualified Storage.Queries.Geometry as QGeometry
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSR
@@ -141,8 +145,23 @@ data DSearchReq = DSearchReq
     isDashboardRequest :: Bool,
     multipleRoutes :: Maybe [Maps.RouteInfo],
     driverIdentifier :: Maybe DRL.DriverIdentifier,
-    isMultimodalSearch :: Maybe Bool
+    isMultimodalSearch :: Maybe Bool,
+    isReserveRide :: Maybe Bool,
+    mbAdditonalChargeCategories :: Maybe [DAC.ConditionalChargesCategories],
+    reserveRideEstimate :: Maybe DBppEstimate.BppEstimate
   }
+
+-- data EstimateExtraInfo = EstimateExtraInfo
+--   { congestionMultiplier :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
+--     currency :: Kernel.Types.Common.Currency,
+--     dpVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+--     eligibleForUpgrade :: Kernel.Prelude.Bool,
+--     fareParams :: Kernel.Prelude.Maybe Domain.Types.FareParameters.FareParameters,
+--     farePolicy :: Kernel.Prelude.Maybe Domain.Types.FarePolicy.FarePolicy,
+--     fromLocGeohash :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+--     isScheduled :: Kernel.Prelude.Bool,
+--     tollNames :: Kernel.Prelude.Maybe [Kernel.Prelude.Text]
+--   }
 
 data DSearchReqLocation = DSearchReqLocation
   { address :: Maybe BA.Address,
@@ -158,7 +177,9 @@ data ValidatedDSearchReq = ValidatedDSearchReq
     merchant :: DM.Merchant,
     isValueAddNP :: Bool,
     driverIdForSearch :: Maybe (Id DP.Person),
-    isMeterRideSearch :: Maybe Bool
+    isMeterRideSearch :: Maybe Bool,
+    isReserveRide :: Maybe Bool,
+    reserveRideEstimate :: Maybe DBppEstimate.BppEstimate
   }
 
 data DSearchRes = DSearchRes
@@ -175,7 +196,8 @@ data DSearchRes = DSearchRes
     estimates :: [(DEst.Estimate, DVST.VehicleServiceTier, Maybe NearestDriverInfo, Maybe BaseUrl)],
     transporterConfig :: DTMT.TransporterConfig,
     bapId :: Text,
-    fareParametersInRateCard :: Maybe Bool
+    fareParametersInRateCard :: Maybe Bool,
+    isMultimodalSearch :: Maybe Bool
   }
 
 data NearestDriverInfo = NearestDriverInfo
@@ -295,7 +317,13 @@ handler ValidatedDSearchReq {..} sReq = do
   (estimates', quotes) <- foldrM (\fp acc -> processPolicy buildEstimateHelper buildQuoteHelper fp configVersionMap acc) ([], []) selectedFarePolicies
 
   let mbAutoMaxFare = find (\est -> est.vehicleServiceTier == AUTO_RICKSHAW) estimates' <&> (.maxFare)
-  let estimates = maybe estimates' (\_ -> map (\DEst.Estimate {..} -> DEst.Estimate {eligibleForUpgrade = False, ..}) estimates') mbAutoMaxFare
+  estimates <-
+    if isNothing reserveRideEstimate
+      then do
+        return $ maybe estimates' (\_ -> map (\DEst.Estimate {..} -> DEst.Estimate {eligibleForUpgrade = False, ..}) estimates') mbAutoMaxFare
+      else do
+        est <- transformReserveRideEsttoEst (fromJust reserveRideEstimate)
+        return [est]
 
   QEst.createMany estimates
   for_ quotes QQuote.create
@@ -303,7 +331,7 @@ handler ValidatedDSearchReq {..} sReq = do
   forM_ estimates $ \est -> triggerEstimateEvent EstimateEventData {estimate = est, merchantId = merchantId'}
   driverInfoQuotes <- addNearestDriverInfo merchantOpCityId driverPool quotes configVersionMap
   driverInfoEstimates <- addNearestDriverInfo merchantOpCityId driverPool estimates configVersionMap
-  buildDSearchResp sReq.pickupLocation sReq.dropLocation (stopsLatLong sReq.stops) spcllocationTag searchMetricsMVar driverInfoQuotes driverInfoEstimates specialLocationName now sReq.fareParametersInRateCard
+  buildDSearchResp sReq.pickupLocation sReq.dropLocation (stopsLatLong sReq.stops) spcllocationTag searchMetricsMVar driverInfoQuotes driverInfoEstimates specialLocationName now sReq.fareParametersInRateCard sReq.isMultimodalSearch
   where
     stopsLatLong = map (.gps)
     getSpecialPickupZoneInfo :: Maybe Text -> DLoc.Location -> Flow (Maybe Text, Maybe HighPrecMoney)
@@ -341,7 +369,7 @@ handler ValidatedDSearchReq {..} sReq = do
           logError $ "Vehicle service tier not found for " <> show fp.vehicleServiceTier
           pure (estimates, quotes)
 
-    buildDSearchResp fromLocation toLocation stops specialLocationTag searchMetricsMVar quotes estimates specialLocationName now fareParametersInRateCard = do
+    buildDSearchResp fromLocation toLocation stops specialLocationTag searchMetricsMVar quotes estimates specialLocationName now fareParametersInRateCard isMultimodalSearch = do
       merchantPaymentMethods <- CQMPM.findAllByMerchantOpCityId merchantOpCityId
       let paymentMethodsInfo = DMPM.mkPaymentMethodInfo <$> merchantPaymentMethods
       return $
@@ -760,6 +788,8 @@ validateRequest merchant sReq = do
   now <- getCurrentTime
   let possibleTripOption = getPossibleTripOption now transporterConfig sReq isInterCity isCrossCity destinationTravelCityName
   let isMeterRideSearch = sReq.isMeterRideSearch
+  let isReserveRide = sReq.isReserveRide
+  let reserveRideEstimate = sReq.reserveRideEstimate
   driverIdForSearch <- mapM getDriverIdFromIdentifier $ bool Nothing sReq.driverIdentifier isValueAddNP
   return ValidatedDSearchReq {..}
 
@@ -809,7 +839,7 @@ checkForIntercityOrCrossCity transporterConfig mbDropLocation sourceCity merchan
 getPossibleTripOption :: UTCTime -> DTMT.TransporterConfig -> DSearchReq -> Bool -> Bool -> Maybe Text -> TripOption
 getPossibleTripOption now tConf dsReq isInterCity isCrossCity destinationTravelCityName = do
   let (schedule, isScheduled) =
-        if tConf.scheduleRideBufferTime `addUTCTime` now < dsReq.pickupTime
+        if maybe True not dsReq.isMultimodalSearch && tConf.scheduleRideBufferTime `addUTCTime` now < dsReq.pickupTime
           then (dsReq.pickupTime, True)
           else (now, False)
       tripCategories =
@@ -978,3 +1008,9 @@ decodeAddress BA.Address {..} = do
 
 isEmpty :: Maybe Text -> Bool
 isEmpty = maybe True (T.null . T.replace " " "")
+
+transformReserveRideEsttoEst :: (EsqDBFlow m r, CacheFlow m r, EsqDBReplicaFlow m r) => DBppEstimate.BppEstimate -> m DEst.Estimate
+transformReserveRideEsttoEst DBppEstimate.BppEstimate {..} = do
+  farePolicy <- QFPolicy.findById Nothing (fromMaybe "" farePolicyId)
+  fareParams <- QFP.findById (fromMaybe "" fareParamsId)
+  return DEst.Estimate {..}

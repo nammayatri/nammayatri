@@ -104,3 +104,13 @@ instance ToMultipart Tmp CreateDriverBusRouteMappingReq where
           Nothing -> []
           Just id -> [Input "fleetOwnerId" id]
     MultipartData inputArr [FileData "file" (T.pack form.file) "" (form.file)]
+
+validateUpdateFleetOwnerInfoReq :: Validate UpdateFleetOwnerInfoReq
+validateUpdateFleetOwnerInfoReq UpdateFleetOwnerInfoReq {..} =
+  sequenceA_
+    [ validateField "firstName" firstName $ InMaybe $ MinLength 1 `And` MaxLength 50 `And` P.name,
+      validateField "lastName" lastName $ InMaybe (MaxLength 50 `And` P.name),
+      validateField "mobileNo" mobileNo $ InMaybe $ P.indianMobileNumber,
+      validateField "mobileCountryCode" mobileCountryCode $ InMaybe P.mobileIndianCode,
+      validateField "email" email $ InMaybe P.email
+    ]

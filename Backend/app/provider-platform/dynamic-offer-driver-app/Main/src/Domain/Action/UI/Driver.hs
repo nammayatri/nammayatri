@@ -36,6 +36,7 @@ module Domain.Action.UI.Driver
     HistoryEntryDetailsEntityV2 (..),
     ClearDuesRes (..),
     GetCityReq (..),
+    GetConsentReq (..),
     GetCityResp (..),
     DriverFeeResp (..),
     UpdateProfileInfoPoints (..),
@@ -82,6 +83,7 @@ module Domain.Action.UI.Driver
     getSecurityDepositDfStatus,
     refundByPayoutDriverFee,
     mkPayoutLockKeyByDriverAndService,
+    consentResponse,
   )
 where
 
@@ -375,7 +377,9 @@ data DriverInformationRes = DriverInformationRes
     softBlockReasonFlag :: Maybe Text,
     onboardingVehicleCategory :: Maybe VehicleCategory,
     subscriptionDown :: Maybe Bool,
-    qrUrl :: Maybe Text
+    qrUrl :: Maybe Text,
+    driverTags :: Maybe DA.Value,
+    nyClubConsent :: Maybe Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -443,7 +447,9 @@ data DriverEntityRes = DriverEntityRes
     softBlockReasonFlag :: Maybe Text,
     onboardingVehicleCategory :: Maybe VehicleCategory,
     subscriptionDown :: Maybe Bool,
-    qrUrl :: Maybe Text
+    qrUrl :: Maybe Text,
+    driverTags :: Maybe DA.Value,
+    nyClubConsent :: Maybe Bool
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -676,6 +682,11 @@ data GetCityReq = GetCityReq
   { lat :: Double,
     lon :: Double,
     merchantId :: Maybe (Id DM.Merchant)
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+data GetConsentReq = GetConsentReq
+  { consent :: Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -1034,6 +1045,8 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) service
         softBlockReasonFlag = driverInfo.softBlockReasonFlag,
         onboardingVehicleCategory = driverInfo.onboardingVehicleCategory,
         qrUrl,
+        driverTags = Just driverTags,
+        nyClubConsent = person.nyClubConsent,
         ..
       }
   where
@@ -1137,6 +1150,7 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
               DV.DELIVERY_TRUCK_ULTRA_LARGE -> [DVST.DELIVERY_TRUCK_ULTRA_LARGE]
               DV.BUS_NON_AC -> [DVST.BUS_NON_AC]
               DV.BUS_AC -> [DVST.BUS_AC]
+              DV.AUTO_PLUS -> [DVST.AUTO_PLUS]
 
       QDriverInformation.updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi canSwitchToRental canSwitchToInterCity canSwitchToIntraCity availableUpiApps isPetModeEnabled person.id
       when (isJust req.canDowngradeToSedan || isJust req.canDowngradeToHatchback || isJust req.canDowngradeToTaxi) $
@@ -1152,7 +1166,7 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
           now <- getCurrentTime
           let reqDriverTagWithExpiry = Yudhishthira.addTagExpiry petTag (mbNammTag >>= (.validity)) now
           return $ Yudhishthira.replaceTagNameValue person.driverTag reqDriverTagWithExpiry
-        else return $ Yudhishthira.removeTagNameValue person.driverTag petTag
+        else return $ Yudhishthira.removeTagName person.driverTag petTag
     unless (Just (Yudhishthira.showRawTags tag) == (Yudhishthira.showRawTags <$> person.driverTag)) $
       QPerson.updateDriverTag (Just tag) personId
 
@@ -1175,14 +1189,14 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
     -- logic is deprecated, should be handle from driver service tier options now, kept it for backward compatibility
     checkIfCanDowngrade vehicle = do
       when
-        ( (vehicle.variant == DV.AUTO_RICKSHAW || vehicle.variant == DV.TAXI || vehicle.variant == DV.HATCHBACK)
+        ( (vehicle.variant == DV.AUTO_RICKSHAW || vehicle.variant == DV.AUTO_PLUS || vehicle.variant == DV.TAXI || vehicle.variant == DV.HATCHBACK)
             && (req.canDowngradeToSedan == Just True || req.canDowngradeToHatchback == Just True)
         )
         $ throwError $ InvalidRequest $ "Can't downgrade from " <> (show vehicle.variant)
       when (vehicle.variant == DV.SUV && req.canDowngradeToTaxi == Just True) $
         throwError $ InvalidRequest $ "Can't downgrade to NON-AC TAXI from " <> (show vehicle.variant)
       when
-        ( (vehicle.variant == DV.AUTO_RICKSHAW || vehicle.variant == DV.TAXI)
+        ( (vehicle.variant == DV.AUTO_RICKSHAW || vehicle.variant == DV.AUTO_PLUS || vehicle.variant == DV.TAXI)
             && (req.canDowngradeToSedan == Just True || req.canDowngradeToHatchback == Just True || req.canDowngradeToTaxi == Just True)
         )
         $ throwError $ InvalidRequest $ "Can't downgrade from " <> (show vehicle.variant)
@@ -1289,7 +1303,7 @@ getNearbySearchRequests (driverId, _, merchantOpCityId) searchTryIdReq = do
       let driverPickUpCharges = USRD.extractDriverPickupCharges farePolicy.farePolicyDetails
           parkingCharges = farePolicy.parkingCharge
       let safetyCharges = maybe 0 DCC.charge $ find (\ac -> DCC.SAFETY_PLUS_CHARGES == ac.chargeCategory) farePolicy.conditionalCharges
-      return $ USRD.makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata popupDelaySeconds Nothing (Seconds 0) nearbyReq.vehicleServiceTier False isValueAddNP useSilentFCMForForwardBatch driverPickUpCharges parkingCharges safetyCharges (estimate >>= (.fareParams) >>= (.congestionCharge)) (estimate >>= (.fareParams) >>= (.petCharges)) -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
+      return $ USRD.makeSearchRequestForDriverAPIEntity nearbyReq searchRequest searchTry bapMetadata popupDelaySeconds Nothing (Seconds 0) nearbyReq.vehicleServiceTier False isValueAddNP useSilentFCMForForwardBatch driverPickUpCharges parkingCharges safetyCharges (estimate >>= (.fareParams) >>= (.congestionCharge)) (estimate >>= (.fareParams) >>= (.petCharges)) (estimate >>= (.fareParams) >>= (.priorityCharges)) -- Seconds 0 as we don't know where he/she lies within the driver pool, anyways this API is not used in prod now.
     mkCancellationScoreRelatedConfig :: TransporterConfig -> CancellationScoreRelatedConfig
     mkCancellationScoreRelatedConfig tc = CancellationScoreRelatedConfig tc.popupDelayToAddAsPenalty tc.thresholdCancellationScore tc.minRidesForCancellationScore
 
@@ -2627,6 +2641,7 @@ clearDriverFeeWithCreate (personId, merchantId, opCityId) serviceName (fee', mbC
   let vendorFees = map SPayment.roundVendorFee vendorFees'
   resp <- do
     case sortedInvoices of
+      -- if no invoice is present, then create a new invoice for all the driver fees
       [] -> do mkClearDuesResp <$> SPayment.createOrder (personId, merchantId, opCityId) paymentService (driverFee, []) Nothing (feeTypeToInvoicetype feeType) Nothing vendorFees mbDeepLinkData splitEnabled
       (invoice_ : restinvoices) -> do
         mapM_ (QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE . (.id)) restinvoices
@@ -2911,3 +2926,9 @@ getDriverSpecificSubscriptionDataWithSubsConfig (personId, _, opCityId) transpor
   return $ DriverSpecificSubscriptionData {..}
   where
     isFreeTrialEnabled subscriptionConfig = (subscriptionConfig <&> (.isFreeTrialDaysApplicable)) == Just True
+
+consentResponse :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> GetConsentReq -> Flow APISuccess
+consentResponse (personId, _, _) req = do
+  logInfo $ "Driver consent request - Driver ID: " <> personId.getId <> ", Consent: " <> show req.consent
+  QPerson.updateNyClubConsent (Just req.consent) personId
+  pure APISuccess.Success

@@ -54,6 +54,8 @@ getEventName state event bulkUploadTitle = do
     API.GoldTierRideCompleted -> getString GOLD_TIER_RIDE_COMPLETED
     API.LeaderBoardTopFiveHundred -> getString TOP <> " " <> coinsConfig.leaderBoardThresholdForCoins <> " " <> getString IN_WEEKLY_LEADERBOARD
     API.TrainingCompleted -> getString TRAINING_COMPLTED
+    API.BookingCancellationPenalisaton -> getString CANCELLATION_PENALISATON
+    API.BookingCancellationCompensation -> getString CANCELLATION_COMPENSATION
     API.MetroRideCompleted metroRideType rideCount -> case rideCount of
       Just count -> show count <> " " <> show metroRideType <> " " <> getString RIDE_COMPLETED
       Nothing -> show metroRideType <> " " <> getString RIDE_COMPLETED

@@ -20,7 +20,6 @@ import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec
 import qualified BecknV2.FRFS.Utils as Utils
 import qualified Domain.Action.Beckn.FRFS.OnConfirm as DOnConfirm
-import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -29,9 +28,8 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Storage.Beam.SystemConfigs ()
-import qualified Storage.Queries.BecknConfig as QBC
+import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
-import qualified Storage.Queries.IntegratedBPPConfig as QIBP
 import qualified Tools.Metrics as Metrics
 import TransactionLogs.PushLogs
 
@@ -48,20 +46,13 @@ onConfirm _ req = withFlowHandlerAPI $ do
   transaction_id <- req.onConfirmReqContext.contextTransactionId & fromMaybeM (InvalidRequest "TransactionId not found")
   bookingId <- req.onConfirmReqContext.contextMessageId & fromMaybeM (InvalidRequest "MessageId not found")
   ticketBooking <- QFRFSTicketBooking.findById (Id bookingId) >>= fromMaybeM (InvalidRequest "Invalid booking id")
-  platformType' <- case (ticketBooking.integratedBppConfigId) of
-    Just integratedBppConfigId -> do
-      QIBP.findById integratedBppConfigId
-        >>= fromMaybeM (InvalidRequest "integratedBppConfig not found")
-        <&> (.platformType)
-    Nothing -> do
-      pure DIBC.APPLICATION
-  bapConfig <- QBC.findByMerchantIdDomainAndVehicle (Just ticketBooking.merchantId) (show Spec.FRFS) (Utils.frfsVehicleCategoryToBecknVehicleCategory ticketBooking.vehicleType) >>= fromMaybeM (InternalError "Beckn Config not found")
+  bapConfig <- CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback ticketBooking.merchantOperatingCityId ticketBooking.merchantId (show Spec.FRFS) (Utils.frfsVehicleCategoryToBecknVehicleCategory ticketBooking.vehicleType) >>= fromMaybeM (InternalError "Beckn Config not found")
   logDebug $ "Received OnConfirm request" <> encodeToText req
   withTransactionIdLogTag' transaction_id $ do
     dOnConfirmReq <- ACL.buildOnConfirmReq req
     case dOnConfirmReq of
       Just onConfirmReq -> do
-        (merchant, booking) <- DOnConfirm.validateRequest onConfirmReq platformType'
+        (merchant, booking) <- DOnConfirm.validateRequest onConfirmReq
         Metrics.finishMetrics Metrics.CONFIRM_FRFS merchant.name transaction_id booking.merchantOperatingCityId.getId
         fork "onConfirm request processing" $
           Redis.whenWithLockRedis (onConfirmProcessingLockKey onConfirmReq.bppOrderId) 60 $

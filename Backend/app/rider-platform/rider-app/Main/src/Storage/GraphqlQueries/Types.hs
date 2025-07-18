@@ -15,18 +15,22 @@
 module Storage.GraphqlQueries.Types where
 
 import qualified BecknV2.FRFS.Enums
+import Data.Aeson (Value (..), eitherDecodeStrict)
+import Data.Aeson.Types (Parser)
 import Data.Morpheus.Client.CodeGen.Internal
+import qualified Data.Text.Encoding as TE
 import qualified Data.Time.LocalTime as LocalTime
+import qualified Debug.Trace as Trace
 import EulerHS.Types (OptionEntity)
 import Kernel.Prelude
 import Network.HTTP.Client
 
 -- Data types for RouteStopTimeTable query
 data RouteStopTimeTableQueryVars = RouteStopTimeTableQueryVars
-  { routeCode :: [Text],
-    stopCode :: Text
+  { routeIds :: [Text],
+    stopId :: Text
   }
-  deriving (Show, Generic)
+  deriving (Show, Generic, ToJSON, FromJSON)
 
 -- Response structure from OpenTripPlanner
 newtype OTPResponse = OTPResponse
@@ -39,6 +43,15 @@ instance FromJSON OTPResponse where
   parseJSON = withObject "OTPResponse" $ \obj -> do
     dataObj <- obj .: "data"
     OTPResponse <$> dataObj .: "stop"
+
+newtype PlatformCode = PlatformCode
+  { platformCode :: Maybe Text
+  }
+  deriving (Show, Generic)
+
+instance FromJSON PlatformCode where
+  parseJSON = withObject "PlatformCode" $ \obj -> do
+    PlatformCode <$> obj .: "platformCode"
 
 data StopData = StopData
   { gtfsId :: Text,
@@ -54,25 +67,56 @@ instance FromJSON StopData where
       <*> obj .: "name"
       <*> obj .: "stoptimesWithoutPatterns"
 
+data ExtraInfo = ExtraInfo
+  { fareStageNumber :: Maybe Text,
+    providerStopCode :: Maybe Text
+  }
+  deriving (Show, Generic, FromJSON)
+
 data RouteStopTimeTableEntry = RouteStopTimeTableEntry
   { scheduledArrival :: Int,
     realtimeArrival :: Int,
     arrivalDelay :: Int,
     scheduledDeparture :: Int,
-    headsign :: Maybe Text,
-    trip :: TripData
+    extraInfo :: Maybe ExtraInfo,
+    trip :: TripData,
+    stop :: Maybe PlatformCode
   }
   deriving (Show, Generic)
 
 instance FromJSON RouteStopTimeTableEntry where
   parseJSON = withObject "RouteStopTimeTableEntry" $ \obj -> do
+    let headsignParser = do
+          headsignText <- obj .: "headsign" :: Parser Text
+          -- Try to parse headsign as JSON first
+          case eitherDecodeStrict (TE.encodeUtf8 headsignText) of
+            Right (Object headsignObj) -> do
+              -- Parse as ExtraInfo object
+              extraInfo <- parseJSON (Object headsignObj)
+              pure (Just extraInfo)
+            Right (String jsonString) -> do
+              -- The JSON string contains another JSON object, parse that
+              case eitherDecodeStrict (TE.encodeUtf8 jsonString) of
+                Right (Object headsignObj) -> do
+                  extraInfo <- parseJSON (Object headsignObj)
+                  pure (Just extraInfo)
+                _ -> do
+                  -- Fallback: treat as simple text for fareStageNumber
+                  Trace.trace ("nested JSON parsing failed for: " <> show jsonString) $ pure ()
+                  pure (Just (ExtraInfo {fareStageNumber = Just headsignText, providerStopCode = Nothing}))
+            other -> do
+              -- Debug: print what case we're hitting
+              Trace.trace ("headsign parsing case: " <> show other) $ pure ()
+              -- Fallback: treat as simple text for fareStageNumber
+              pure (Just (ExtraInfo {fareStageNumber = Just headsignText, providerStopCode = Nothing}))
     RouteStopTimeTableEntry
       <$> obj .: "scheduledArrival"
       <*> obj .: "realtimeArrival"
       <*> obj .: "arrivalDelay"
       <*> obj .: "scheduledDeparture"
-      <*> obj .:? "headsign"
+      <*> headsignParser
       <*> obj .: "trip"
+      <*> obj .:? "stop"
 
 data TripData = TripData
   { serviceId :: Text,
@@ -114,8 +158,10 @@ data TimetableEntry = TimetableEntry
     timeOfDeparture :: LocalTime.TimeOfDay,
     tripId :: Text,
     stage :: Maybe Int,
+    providerStopCode :: Maybe Text,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime
+    updatedAt :: UTCTime,
+    platformCode :: Maybe Text
   }
   deriving (Show, Generic, FromJSON, ToJSON)
 
@@ -140,6 +186,9 @@ instance RequestType RouteStopTimeTableQuery where
       ++ "        route {\n"
       ++ "          gtfsId\n"
       ++ "        }\n"
+      ++ "      }\n"
+      ++ "      stop {\n"
+      ++ "        platformCode\n"
       ++ "      }\n"
       ++ "    }\n"
       ++ "  }\n"

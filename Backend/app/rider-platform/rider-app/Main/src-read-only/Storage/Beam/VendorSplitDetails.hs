@@ -13,13 +13,14 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data VendorSplitDetailsT f = VendorSplitDetailsT
-  { id :: (B.C f Data.Text.Text),
-    integratedBPPConfigId :: (B.C f Data.Text.Text),
-    splitType :: (B.C f Domain.Types.VendorSplitDetails.SplitType),
-    vendorId :: (B.C f Data.Text.Text),
-    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Data.Text.Text))),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { id :: B.C f Data.Text.Text,
+    includeInSplit :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    integratedBPPConfigId :: B.C f Data.Text.Text,
+    splitType :: B.C f Domain.Types.VendorSplitDetails.SplitType,
+    vendorId :: B.C f Data.Text.Text,
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -29,6 +30,6 @@ instance B.Table VendorSplitDetailsT where
 
 type VendorSplitDetails = VendorSplitDetailsT Identity
 
-$(enableKVPG (''VendorSplitDetailsT) [('id)] [])
+$(enableKVPG ''VendorSplitDetailsT ['id] [])
 
-$(mkTableInstances (''VendorSplitDetailsT) "vendor_split_details")
+$(mkTableInstances ''VendorSplitDetailsT "vendor_split_details")

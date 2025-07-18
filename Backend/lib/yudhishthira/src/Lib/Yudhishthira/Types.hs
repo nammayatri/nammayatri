@@ -69,6 +69,8 @@ module Lib.Yudhishthira.Types
     PlatformType (..),
     ConfigHistory (..),
     UiConfigGetVersionResponse (..),
+    GetPatchedElementReq (..),
+    GetPatchedElementResp (..),
   )
 where
 
@@ -188,6 +190,7 @@ newtype YudhishthiraDecideResp = YudhishthiraDecideResp
 
 data LogicDomain
   = POOLING
+  | CANCELLATION_COIN_POLICY
   | FARE_POLICY
   | DYNAMIC_PRICING_UNIFIED
   | FRFS_DISCOUNTS
@@ -195,6 +198,8 @@ data LogicDomain
   | RIDER_CONFIG ConfigType
   | DRIVER_CONFIG ConfigType
   | RIDER_CONFIG_OVERRIDES ConfigType
+  | UI_DRIVER DeviceType PlatformType
+  | UI_RIDER DeviceType PlatformType
   deriving (Eq, Ord, Generic, ToJSON, FromJSON, ToSchema)
 
 instance Enumerable LogicDomain where
@@ -202,12 +207,15 @@ instance Enumerable LogicDomain where
     [ POOLING,
       FARE_POLICY,
       DYNAMIC_PRICING_UNIFIED,
-      FRFS_DISCOUNTS
+      FRFS_DISCOUNTS,
+      CANCELLATION_COIN_POLICY
     ]
       ++ map CONFIG [minBound .. maxBound]
       ++ map RIDER_CONFIG [minBound .. maxBound]
       ++ map DRIVER_CONFIG [minBound .. maxBound]
       ++ map RIDER_CONFIG_OVERRIDES [minBound .. maxBound]
+      ++ (UI_DRIVER <$> [minBound .. maxBound] <*> [minBound .. maxBound])
+      ++ (UI_RIDER <$> [minBound .. maxBound] <*> [minBound .. maxBound])
 
 instance Enumerable ConfigType where
   allValues = [minBound .. maxBound]
@@ -222,8 +230,13 @@ generateLogicDomainShowInstances =
     ++ [show (RIDER_CONFIG configType) | configType <- configTypes]
     ++ [show (DRIVER_CONFIG configType) | configType <- configTypes]
     ++ [show (RIDER_CONFIG_OVERRIDES configType) | configType <- configTypes]
+    ++ [show (UI_DRIVER a b) | a <- a', b <- b']
+    ++ [show (UI_RIDER a b) | a <- a', b <- b']
+    ++ [show CANCELLATION_COIN_POLICY]
   where
     configTypes = [minBound .. maxBound]
+    a' = [minBound .. maxBound]
+    b' = [minBound .. maxBound]
 
 instance ToParamSchema LogicDomain where
   toParamSchema _ =
@@ -242,6 +255,9 @@ instance Show LogicDomain where
   show (RIDER_CONFIG configType) = "RIDER-CONFIG_" ++ show configType
   show (DRIVER_CONFIG configType) = "DRIVER-CONFIG_" ++ show configType
   show (RIDER_CONFIG_OVERRIDES configType) = "RIDER-CONFIG-OVERRIDES_" ++ show configType
+  show (UI_DRIVER a b) = "UI-DRIVER_" ++ show a ++ "_" ++ show b
+  show (UI_RIDER a b) = "UI-RIDER_" ++ show a ++ "_" ++ show b
+  show CANCELLATION_COIN_POLICY = "CANCELLATION-COIN-POLICY"
 
 instance Read LogicDomain where
   readsPrec :: Int -> ReadS LogicDomain
@@ -256,6 +272,8 @@ instance Read LogicDomain where
             [(DYNAMIC_PRICING_UNIFIED, drop 1 rest)]
           "FRFS-DISCOUNTS" ->
             [(FRFS_DISCOUNTS, drop 1 rest)]
+          "CANCELLATION-COIN-POLICY" ->
+            [(CANCELLATION_COIN_POLICY, drop 1 rest)]
           "CONFIG" ->
             let (configType', rest1) = break (== '_') (drop 1 rest)
              in case readMaybe configType' of
@@ -275,6 +293,24 @@ instance Read LogicDomain where
             let (configType', rest1) = break (== '_') (drop 1 rest)
              in case readMaybe configType' of
                   Just configType -> [(RIDER_CONFIG_OVERRIDES configType, rest1)]
+                  Nothing -> []
+          "UI-DRIVER" ->
+            let (configType', rest1) = break (== '_') (drop 1 rest)
+             in case readMaybe configType' of
+                  Just configType'' ->
+                    let (configType''', rest2) = break (== '_') (drop 1 rest1)
+                     in case readMaybe configType''' of
+                          Just configType -> [(UI_DRIVER configType'' configType, rest2)]
+                          Nothing -> []
+                  Nothing -> []
+          "UI-RIDER" ->
+            let (configType', rest1) = break (== '_') (drop 1 rest)
+             in case readMaybe configType' of
+                  Just configType'' ->
+                    let (configType''', rest2) = break (== '_') (drop 1 rest1)
+                     in case readMaybe configType''' of
+                          Just configType -> [(UI_RIDER configType'' configType, rest2)]
+                          Nothing -> []
                   Nothing -> []
           _ -> []
 
@@ -332,6 +368,20 @@ data ConfigDetailsResp = ConfigDetailsResp
   deriving (Show, Read, Generic, ToSchema, ToJSON, FromJSON)
 
 data ConfigTypeChoice = DriverCfg | RiderCfg deriving (Eq, Ord, Generic, ToJSON, FromJSON, ToSchema, Enum, Read, Show)
+
+data GetPatchedElementReq = GetPatchedElementReq
+  { domain :: LogicDomain,
+    version :: Int
+  }
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets GetPatchedElementReq where
+  hideSecrets = identity
+
+data GetPatchedElementResp = GetPatchedElementResp
+  { patchedElement :: Maybe Value
+  }
+  deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data AppDynamicLogicReq = AppDynamicLogicReq
   { rules :: [Value],
@@ -604,15 +654,15 @@ data UiConfigRequest = UiConfigRequest
 
 data UiConfigResponse = UiConfigResponse
   { config :: Value,
-    version :: Maybe Text,
-    baseVersion :: Maybe Text,
+    version :: Text,
+    baseVersion :: Text,
     isExperimentRunning :: Bool
   }
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data UiConfigGetVersionResponse = UiConfigGetVersionResponse
-  { version :: Maybe Text,
-    baseVersion :: Maybe Text
+  { version :: Text,
+    baseVersion :: Text
   }
   deriving (Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 

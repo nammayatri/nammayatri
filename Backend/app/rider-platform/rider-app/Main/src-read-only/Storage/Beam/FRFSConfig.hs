@@ -23,6 +23,7 @@ data FRFSConfigT f = FRFSConfigT
     freeTicketInterval :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     isCancellationAllowed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isEventOngoing :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    isFRFSTestingEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     maxFreeTicketCashback :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,

@@ -78,8 +78,8 @@ findClosestStop routeCode loc = do
       let closestStop = minimumBy (EHS.comparing (KU.distanceBetweenInMeters loc . (.stopPoint))) allRTSList
       return $ Just (StopData closestStop.tripCode closestStop.routeCode closestStop.stopCode closestStop.stopPoint)
 
-checkFleetDriverAssociation :: Id Person -> Id Person -> Flow Bool
-checkFleetDriverAssociation driverId fleetOwnerId = do
+checkOnboardingCategoryForFleetDriverAssociation :: Id Person -> Id Person -> Flow Bool
+checkOnboardingCategoryForFleetDriverAssociation fleetOwnerId driverId = do
   mbFleetDriverAssociation <- QFDV.findByDriverIdAndFleetOwnerId driverId fleetOwnerId.getId True
   case mbFleetDriverAssociation of
     Nothing -> return False

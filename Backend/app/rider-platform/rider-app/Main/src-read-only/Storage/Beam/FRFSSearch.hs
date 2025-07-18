@@ -15,7 +15,7 @@ import Tools.Beam.UtilsTH
 data FRFSSearchT f = FRFSSearchT
   { fromStationId :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
-    integratedBppConfigId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    integratedBppConfigId :: B.C f Kernel.Prelude.Text,
     isOnSearchReceived :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     agency :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     convenienceCost :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
@@ -35,6 +35,7 @@ data FRFSSearchT f = FRFSSearchT
     riderId :: B.C f Kernel.Prelude.Text,
     routeId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     toStationId :: B.C f Kernel.Prelude.Text,
+    validTill :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     vehicleType :: B.C f BecknV2.FRFS.Enums.VehicleCategory,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime

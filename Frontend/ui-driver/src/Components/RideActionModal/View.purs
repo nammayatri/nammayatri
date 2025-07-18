@@ -186,7 +186,7 @@ rideActionViewWithLabel push config =
                       }
 
                     else 
-                    getRideLabelData config.specialLocationTag
+                    getRideLabelData config.specialLocationTag config.isInsured
       popupType = if config.bookingFromOtherPlatform then NoInfo
                   else if config.rideType == ST.Rental then RentalInfo
                   else if config.rideType == ST.Intercity then IntercityInfo
@@ -198,27 +198,44 @@ rideActionViewWithLabel push config =
   , background $ tagConfig.backgroundColor
   , cornerRadii $ Corners 25.0 true true false false
   , orientation VERTICAL
-  , padding $ PaddingTop 5
+  , padding $ PaddingTop tagConfig.paddingTop
     , gravity CENTER
   ][ linearLayout
       [ width MATCH_PARENT
       , height WRAP_CONTENT
-      , gravity CENTER
+      , gravity $ if tagConfig.gravity == "LEFT" then LEFT else CENTER
+      , padding $ PaddingLeft tagConfig.paddingLeft
       , id $ getNewIDWithTag "rideActionLabelLayout"
       ][ imageView
-          [ width $ V 18
-          , height $ V 18
+          [ width $ V tagConfig.imageView.width
+          , height $ V tagConfig.imageView.height
           , visibility if DS.null tagConfig.imageUrl then GONE else VISIBLE
           , imageWithFallback $ tagConfig.imageUrl
           ]
         , textView $
           [ width WRAP_CONTENT
           , height MATCH_PARENT
+          , textSize $ tagConfig.textView.textSize
           , text $ tagConfig.text
-          , gravity CENTER_VERTICAL
+          , gravity $ if tagConfig.textView.gravity == "LEFT" then LEFT else CENTER_VERTICAL
           , color tagConfig.textColor
-          , margin $ MarginLeft 5
+          , margin $ MarginLeft tagConfig.textView.marginLeft
           ] <> FontStyle.getFontStyle FontStyle.Tags TypoGraphy
+        , linearLayout[
+            width WRAP_CONTENT
+          , height MATCH_PARENT
+          , weight 1.0
+          , gravity RIGHT
+          , visibility if DS.null tagConfig.secondaryImageUrl then GONE else VISIBLE
+          ][
+            imageView
+            [ width $ V 23
+            , height $ V 23
+            , imageWithFallback $ tagConfig.secondaryImageUrl
+            , margin $ MarginRight 15
+            , onClick push $ const OpenInsuranceBanner
+            ]
+          ]
         , linearLayout
           [ width WRAP_CONTENT
           , height WRAP_CONTENT
@@ -340,7 +357,7 @@ openGoogleMap push config =
   ][  linearLayout
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
-      , background Color.blue900
+      , background $ if config.enableMapButton then Color.blue900 else Color.blueGrey
       , padding $ Padding 24 16 24 16
       , margin $ MarginRight 16
       , cornerRadius 30.0
@@ -679,17 +696,18 @@ cancelOrEndRide push config =
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , gravity CENTER
-  , background Color.white900
+  , background $ if showEndRide then Color.red else Color.white900
   , visibility $ boolToVisibility $ config.startRideActive || HU.checkIfStopsLeft config.stops
-  , padding $ PaddingBottom 16
+  , margin $ Margin 32 0 32 16
+  , cornerRadius 8.0
   ][  textView (
       [ width WRAP_CONTENT
       , height WRAP_CONTENT
-      , padding $ Padding 16 8 16 8
+      , padding (Padding 8 16 8 16)
       , text (getString if showEndRide then END_RIDE else CANCEL_RIDE)
-      , color Color.red
+      , color $ if showEndRide then Color.white900 else Color.red
       , onClick push (const if showEndRide then ShowEndRideWithStops else CancelRide)
-      ] <> FontStyle.body1 TypoGraphy
+      ] <> FontStyle.subHeading1 TypoGraphy
       )
   ]
   where
@@ -1305,7 +1323,7 @@ separatorConfig config =
     deliveryHasSourceInstruction config = maybe false (\delivery -> isJust delivery.sender.instructions) config.delivery
 
 showTag :: Config -> Boolean
-showTag config = ((Maybe.isJust config.specialLocationTag) && Maybe.isJust (getRequiredTag config.specialLocationTag)) || config.bookingFromOtherPlatform || config.rideType == ST.Rental || config.rideType == ST.Intercity || fromMaybe false config.isPetRide
+showTag config = ((Maybe.isJust config.specialLocationTag) && Maybe.isJust (getRequiredTag config.specialLocationTag false)) || config.bookingFromOtherPlatform || config.rideType == ST.Rental || config.rideType == ST.Intercity || config.isInsured || fromMaybe false config.isPetRide
 
 getAnimationDelay :: Config -> Int
 getAnimationDelay config = 50
@@ -1549,7 +1567,7 @@ rideActionButtonView push config =
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
-  , padding $ Padding 16 16 16 24
+  , padding $ Padding 16 16 16 16
   ][ 
     if config.startRideActive
       then startRide push config 

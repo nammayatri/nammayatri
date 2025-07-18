@@ -37,7 +37,7 @@ import Control.Transformers.Back.Trans (runBackT)
 import Data.Array (length, mapWithIndex, null, any, (!!), take, range)
 import Data.Either (Either(..))
 import Data.Enum (enumFromThenTo)
-import Data.Function.Uncurried (runFn2)
+import Data.Function.Uncurried (runFn2, runFn5)
 import Data.Int (toNumber, round)
 import Data.List (elem)
 import Data.Maybe
@@ -59,7 +59,7 @@ import Language.Types (STR(..))
 import MerchantConfig.Utils as MU
 import MerchantConfig.Types
 import Mobility.Prelude as MP
-import Prelude (Unit, ($), const, map, (+), (==), (<), (||), (/), (/=), unit, bind, (-), (<>), (<=), (>=), (<<<), (>), pure, discard, show, (&&), void, negate, not, (*), otherwise, show)
+import Prelude (Unit, ($), (>>=), const, map, (+), (==), (<), (||), (/), (/=), unit, bind, (-), (<>), (<=), (>=), (<<<), (>), pure, discard, show, (&&), void, negate, not, (*), otherwise, show)
 import Presto.Core.Types.Language.Flow (Flow, doAff)
 import PrestoDOM
 import PrestoDOM.Animation as PrestoAnim
@@ -72,7 +72,7 @@ import Screens.DriverProfileScreen.Controller (Action(..), ScreenOutput, eval, g
 import Screens.DriverProfileScreen.Transformer (fetchVehicles)
 import Screens.Types (MenuOptions(..), AutoPayStatus(..))
 import Screens.Types as ST
-import Services.API (DriverInfoReq(..), GetDriverInfoResp(..), DriverRegistrationStatusReq(..), DriverProfileDataReq(..),Vehicle(..))
+import Services.API (DriverInfoReq(..), GetDriverInfoResp(..), DriverRegistrationStatusReq(..), DriverProfileDataReq(..),Vehicle(..), DriverTags(..))
 import Services.Backend as Remote
 import Storage (KeyStore(..), getValueToLocalStore , setValueToLocalStore)
 import Storage (isLocalStageOn)
@@ -94,8 +94,8 @@ import Resource.Localizable.TypesV2
 import Components.DriverProfileScoreCard as DriverProfileScoreCard
 import PrestoDOM.Elements.Elements
 import Mobility.Prelude (capitalize)
-
-
+import Data.Tuple (Tuple(..))
+import Common.Types.App (YoutubeData, YoutubeVideoStatus(..))
 screen :: ST.DriverProfileScreenState -> LoggableScreen Action ST.DriverProfileScreenState ScreenOutput
 screen initialState =
   { initialState
@@ -108,6 +108,7 @@ screen initialState =
             else do
               void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT
                 $ do
+                    void $ pure $ runFn5 JB.setYoutubePlayer HU.youtubeData (getNewIDWithTag "youtubeView") (show PAUSE) push YoutubeVideoStatus
                     driverRegistrationStatusResp <- Remote.driverRegistrationStatusBT $ DriverRegistrationStatusReq true
                     lift $ lift $ doAff do liftEffect $ push $ RegStatusResponse driverRegistrationStatusResp
               void $ launchAff $ EHC.flowRunner defaultGlobalState $ do
@@ -488,6 +489,7 @@ profileView push state =
                       , completedProfile state push
                       ]
                     , nameAndMoreDetailsView state push
+                    , nyClubView state push
                     , verifiedVehiclesView state push
                     , pendingVehiclesVerificationList state push
                     ]
@@ -500,6 +502,43 @@ profileView push state =
         , if (length state.data.inactiveRCArray < 2) && state.props.screenType == ST.VEHICLE_DETAILS then addRcView state push else dummyTextView
         ]
 
+nyClubView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
+nyClubView state push =
+  let Tuple nyClubConsent nyClubTag = case state.data.driverInfoResponse of
+                    Just (GetDriverInfoResp res) -> Tuple (fromMaybe false res.nyClubConsent) (res.driverTags >>= \(API.DriverTags tags) -> tags."NYClubTag")
+                    Nothing -> Tuple false Nothing
+      nammaClubEnabled = state.props.nammaClubEnabled
+  in
+  linearLayout
+  [ height WRAP_CONTENT
+  , width WRAP_CONTENT
+  , orientation HORIZONTAL
+  , background Color.white900
+  , cornerRadius 40.0
+  , padding $ Padding 12 12 12 12
+  , margin $ MarginTop 16
+  , layoutGravity "center"
+  , gravity CENTER
+  , onClick push $ const ClubDetailsClick
+  , stroke "1,#339DFF"
+  , visibility $ boolToVisibility $ (nyClubTag == Just "ny_member" || nyClubTag == Just "ny_member_probation") && nyClubConsent && nammaClubEnabled
+  ][  imageView
+      [ width $ V 18
+      , height $ V 18
+      , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_shield"
+      ]
+    , textView $ 
+      [ text $ getStringV2 namma_kutumba
+      , color Color.black900
+      , margin $ MarginLeft 6
+      ] <> (FontStyle.body6 TypoGraphy)
+    , imageView
+      [ width $ V 18
+      , height $ V 18
+      , margin $ MarginTop 2
+      , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_right_grey"
+      ]
+  ]
 
 nameAndMoreDetailsView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 nameAndMoreDetailsView state push =
@@ -526,7 +565,9 @@ driverBlockedHeader state push =
   case state.data.driverInfoResponse of
     Just (GetDriverInfoResp res) ->
       let
-        isSuspended = res.overchargingTag == Just API.MediumOverCharging
+        isSuspended = case res.driverTags of
+          Just (API.DriverTags tags) -> tags."DriverChargingBehaviour" == Just API.MediumOverCharging
+          Nothing -> false
         timeFormat = EHC.convertUTCtoISC state.data.blockedExpiryTime "hh:mm A"
         dayFormat = EHC.convertUTCtoISC state.data.blockedExpiryTime "DD-MM-YYYY"
         blockedTitle = getString $ if isSuspended then SUSPENDED_TILL timeFormat dayFormat else BLOCKED_TILL timeFormat dayFormat
@@ -949,7 +990,7 @@ extraChargePenaltyView :: forall w. (Action -> Effect Unit) -> ST.DriverProfileS
 extraChargePenaltyView push state =
   case state.data.driverInfoResponse of
     Just (GetDriverInfoResp resp) ->
-       case resp.overchargingTag of
+       case resp.driverTags >>= \(DriverTags tags) -> tags."DriverChargingBehaviour" of
         Just overchargingTag ->
           linearLayout[
             width MATCH_PARENT,

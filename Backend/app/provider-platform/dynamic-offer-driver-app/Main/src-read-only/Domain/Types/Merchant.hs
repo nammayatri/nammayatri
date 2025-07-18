@@ -8,6 +8,7 @@ import qualified Domain.Types
 import Domain.Types.Common (UsageSafety (..))
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context
+import qualified Kernel.Types.Common
 import qualified Kernel.Types.Geofencing
 import qualified Kernel.Types.Id
 import Kernel.Utils.TH
@@ -29,6 +30,7 @@ data MerchantD (s :: UsageSafety) = Merchant
     id :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     info :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     internalApiKey :: Kernel.Prelude.Text,
+    mediaFileDocumentLinkExpires :: Kernel.Types.Common.Seconds,
     minimumDriverRatesCount :: Kernel.Prelude.Int,
     mobileCountryCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     mobileNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -61,7 +63,7 @@ data Status = PENDING_VERIFICATION | APPROVED | REJECTED deriving (Eq, Ord, Show
 
 data Subscriber = Subscriber {} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-type Merchant = MerchantD ('Safe)
+type Merchant = MerchantD 'Safe
 
 instance FromJSON (MerchantD 'Unsafe)
 
@@ -71,6 +73,6 @@ instance FromJSON (MerchantD 'Safe)
 
 instance ToJSON (MerchantD 'Safe)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''Status))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''Status)
 
-$(mkHttpInstancesForEnum (''Status))
+$(mkHttpInstancesForEnum ''Status)

@@ -427,7 +427,7 @@ serviceTierItem state push service enabled opacity index =
 
 serviceTierItemHorizontal :: forall w. ST.BookingOptionsScreenState -> (Action -> Effect Unit) -> ST.RidePreference -> Boolean -> Boolean -> Int -> Int -> Boolean -> PrestoDOM (Effect Unit) w
 serviceTierItemHorizontal state push service enabled opacity index totalPreferencesCount isPetRidesPreferenceView =
-  let 
+  let
     vehicleVariantImage = if isPetRidesPreferenceView
       then fetchImage FF_ASSET "ny_ic_pet_rides_preferences_icon"
       else getVehicleVariantImage $ HU.getVehicleMapping service.serviceTierType
@@ -438,8 +438,8 @@ serviceTierItemHorizontal state push service enabled opacity index totalPreferen
   linearLayout
   [ weight 1.0
   , height WRAP_CONTENT
-  , width $ V $ (EHC.screenWidth unit) / totalPreferencesCount - 30
-  , padding (Padding 12 8 8 8)
+  , width $ V $ (EHC.screenWidth unit) / totalPreferencesCount
+  , padding (Padding 8 8 8 8)
   , orientation VERTICAL
   , onClick push $ const $ action
   , cornerRadius 8.0
@@ -451,13 +451,13 @@ serviceTierItemHorizontal state push service enabled opacity index totalPreferen
     , margin $ MarginTop 8
     , height $ V 35
     ]
-  , textView
+  , textView $
     [ height WRAP_CONTENT
     , padding $ PaddingTop 8
     , textFromHtml $ service.name
     , color Color.black800
     , singleLine true
-    ]
+    ] <> FontStyle.body3 TypoGraphy
   , linearLayout
     [ width WRAP_CONTENT
     , height WRAP_CONTENT

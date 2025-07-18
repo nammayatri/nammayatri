@@ -39,7 +39,10 @@ defaultSearchReq =
         fareParametersInRateCard = Nothing,
         isMeterRideSearch = Just False,
         recentLocationId = Nothing,
-        platformType = Nothing
+        platformType = Nothing,
+        subscriptionId = Nothing,
+        isReserveRide = Nothing,
+        verifyBeforeCancellingOldBooking = Just True
       }
 
 defaultSearchReqAddress :: LocationAddress
@@ -109,7 +112,10 @@ searchReqFromUpdatesList updList =
               fareParametersInRateCard = Nothing,
               isMeterRideSearch = Just False,
               recentLocationId = Nothing,
-              platformType = Nothing
+              platformType = Nothing,
+              subscriptionId = Nothing,
+              isReserveRide = Nothing,
+              verifyBeforeCancellingOldBooking = Just True
             }
    in (origin, destination, req)
 
@@ -133,7 +139,10 @@ mkSearchReqFromLocations origin destination =
               fareParametersInRateCard = Nothing,
               isMeterRideSearch = Just False,
               recentLocationId = Nothing,
-              platformType = Nothing
+              platformType = Nothing,
+              subscriptionId = Nothing,
+              isReserveRide = Nothing,
+              verifyBeforeCancellingOldBooking = Just True
             }
    in (origin, destination, req)
 

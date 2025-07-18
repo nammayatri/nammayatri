@@ -10,9 +10,9 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Data.Time (NominalDiffTime)
 import Data.Time.Format
-import Domain.Types.Extra.IntegratedBPPConfig (CRISConfig)
 import Domain.Types.FRFSQuote as DFRFSQuote
 import Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
+import Domain.Types.IntegratedBPPConfig
 import EulerHS.Prelude hiding (find, readMaybe)
 import qualified EulerHS.Types as ET
 import ExternalBPP.ExternalAPI.Subway.CRIS.Auth (callCRISAPI)
@@ -25,10 +25,10 @@ import Kernel.Types.App
 import Kernel.Types.Error
 import Kernel.Utils.Common
 import Servant.API
+import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.FRFSTicketBokingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.Person as QPerson
-import qualified Storage.Queries.Station as QStation
 
 -- Encrypted request/response types for API
 data EncryptedRequest = EncryptedRequest
@@ -224,12 +224,12 @@ convertToBookingResponse ticketData encrypted =
       encryptedTicketData = encrypted
     }
 
-createOrder :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => CRISConfig -> DFRFSTicketBooking.FRFSTicketBooking -> m ProviderOrder
-createOrder config booking = do
+createOrder :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasShortDurationRetryCfg r c) => CRISConfig -> IntegratedBPPConfig -> DFRFSTicketBooking.FRFSTicketBooking -> m ProviderOrder
+createOrder config integratedBPPConfig booking = do
   person <- QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   mbMobileNumber <- decrypt `mapM` person.mobileNumber
-  fromStation <- QStation.findById booking.fromStationId >>= fromMaybeM (InternalError $ "From station not found in createOrder: " <> show booking.fromStationId)
-  toStation <- QStation.findById booking.toStationId >>= fromMaybeM (InternalError $ "To station not found in createOrder: " <> show booking.toStationId)
+  fromStation <- OTPRest.getStationByGtfsIdAndStopCode booking.fromStationCode integratedBPPConfig >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> booking.fromStationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
+  toStation <- OTPRest.getStationByGtfsIdAndStopCode booking.toStationCode integratedBPPConfig >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> booking.toStationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
   quote <- QFRFSQuote.findById booking.quoteId >>= fromMaybeM (QuoteNotFound booking.quoteId.getId)
 
   (osBuildVersion, osType, bookAuthCode) <- case (booking.osBuildVersion, booking.osType, booking.bookingAuthCode) of

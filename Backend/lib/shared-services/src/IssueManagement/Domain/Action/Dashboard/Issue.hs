@@ -124,24 +124,20 @@ createIssueReportV2 _merchantShortId _city Common.IssueReportReqV2 {..} issueHan
   config <- issueHandle.findMerchantConfig person.merchantId mocId (Just person.id)
   UIR.processIssueReportTypeActions (person.id, person.merchantId) issueReportType mbRide (Just config) True identifier issueHandle
   mbIssueChats <- QICT.findByTicketId ticketId
+  mbIssueReport <- QIR.findByTicketId ticketId
+  issueReport <- makeIssueReport mocId person
+  when (isNothing mbIssueReport) $ QIR.create issueReport
   case mbIssueChats of
-    Just issueChats -> do
-      let updatedChats = issueChats.chats ++ chats
-      let updateMediaFiles = issueChats.mediaFiles ++ mediaFiles
-      mbIssueReportId <-
-        if createIssue
-          then do
-            issueReport <- makeIssueReport mocId person
-            QIR.create issueReport
-            return $ Just issueReport.id
-          else return Nothing
-      QICT.updateChats ticketId updatedChats updateMediaFiles mbIssueReportId
     Nothing -> do
-      issueChat <- createIssueChat chats rideId mediaFiles
+      issueChat <- createIssueChat chats rideId mediaFiles (Just issueReport.id)
       QICT.create issueChat
+    Just issueChat -> do
+      let updatedChats = issueChat.chats ++ chats
+      let updateMediaFiles = issueChat.mediaFiles ++ mediaFiles
+      QICT.updateChats ticketId updatedChats updateMediaFiles
   pure Success
   where
-    createIssueChat chatList mbRide mediaFilesList = do
+    createIssueChat chatList mbRide mediaFilesList issueReportId = do
       now <- getCurrentTime
       issueChatId <- generateGUID
       pure $
@@ -150,7 +146,7 @@ createIssueReportV2 _merchantShortId _city Common.IssueReportReqV2 {..} issueHan
             rideId = mbRide,
             chats = chatList,
             mediaFiles = mediaFilesList,
-            issueReportId = Nothing,
+            issueReportId,
             createdAt = now,
             updatedAt = now,
             ..

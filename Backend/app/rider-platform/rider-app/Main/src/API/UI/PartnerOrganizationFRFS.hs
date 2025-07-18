@@ -39,8 +39,8 @@ import Kernel.Utils.Common hiding (withLogTag)
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import qualified Lib.JourneyLeg.Types as JPT
 import Servant hiding (route, throwError)
+import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import Storage.Beam.SystemConfigs ()
-import qualified Storage.CachedQueries.IntegratedBPPConfig as QIBC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.PartnerOrgConfig as CQPOC
@@ -53,6 +53,7 @@ type API =
     :> ( "partnerOrganization"
            :> PartnerOrganizationAPIKey
            :> ( "upsertPersonAndGetFare"
+                  :> QueryParam "integratedBppConfigId" (Id DIBC.IntegratedBPPConfig)
                   :> ReqBody '[JSON] DPOFRFS.GetFareReq
                   :> Post '[JSON] DPOFRFS.GetFareResp
                   :<|> "getConfig"
@@ -60,9 +61,11 @@ type API =
                            :> Capture "fromGMMStationId" Text
                            :> "toStation"
                            :> Capture "toGMMStationId" Text
+                           :> QueryParam "integratedBppConfigId" (Id DIBC.IntegratedBPPConfig)
                            :> Get '[JSON] DPOFRFS.GetConfigResp
                        )
                   :<|> "getFareV2"
+                    :> QueryParam "integratedBppConfigId" (Id DIBC.IntegratedBPPConfig)
                     :> ReqBody '[JSON] DPOFRFS.GetFareReqV2
                     :> Post '[JSON] DPOFRFS.GetFareRespV2
                   :<|> "upsertPersonAndQuoteConfirm"
@@ -93,26 +96,22 @@ handler =
         :<|> getFareV2 pOrg
         :<|> upsertPersonAndQuoteConfirm pOrg
 
-upsertPersonAndGetFare :: PartnerOrganization -> DPOFRFS.GetFareReq -> FlowHandler DPOFRFS.GetFareResp
-upsertPersonAndGetFare partnerOrg req = withFlowHandlerAPI . withLogTag $ do
+upsertPersonAndGetFare :: PartnerOrganization -> Maybe (Id DIBC.IntegratedBPPConfig) -> DPOFRFS.GetFareReq -> FlowHandler DPOFRFS.GetFareResp
+upsertPersonAndGetFare partnerOrg mbIntegratedBPPConfigId req = withFlowHandlerAPI . withLogTag $ do
   checkRateLimit partnerOrg.orgId getFareHitsCountKey
 
   let vehicleType = fromMaybe Spec.METRO req.vehicleType
   merchantOperatingCity <- CQMOC.findById req.cityId >>= fromMaybeM (MerchantOperatingCityNotFound req.cityId.getId)
-  integratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleType) DIBC.PARTNERORG >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOperatingCity.id.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory vehicleType ||+ "Platform Type:" +|| DIBC.PARTNERORG ||+ "")
-
-  fromStation <- B.runInReplica $ OTPRest.findByStationCodeAndIntegratedBPPConfigId req.fromStationCode integratedBPPConfig >>= fromMaybeM (StationDoesNotExist $ "StationCode:" +|| req.fromStationCode ||+ "integratedBPPConfigId:" +|| integratedBPPConfig.id.getId ||+ "")
-  toStation <- B.runInReplica $ OTPRest.findByStationCodeAndIntegratedBPPConfigId req.toStationCode integratedBPPConfig >>= fromMaybeM (StationDoesNotExist $ "StationCode:" +|| req.toStationCode ||+ "integratedBPPConfigId:" +|| integratedBPPConfig.id.getId ||+ "")
+  integratedBPPConfig <- SIBC.findIntegratedBPPConfig mbIntegratedBPPConfigId merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleType) DIBC.PARTNERORG
+  fromStation <- B.runInReplica $ OTPRest.getStationByGtfsIdAndStopCode req.fromStationCode integratedBPPConfig >>= fromMaybeM (StationDoesNotExist $ "StationCode:" +|| req.fromStationCode ||+ "integratedBPPConfigId:" +|| integratedBPPConfig.id.getId ||+ "")
+  toStation <- B.runInReplica $ OTPRest.getStationByGtfsIdAndStopCode req.toStationCode integratedBPPConfig >>= fromMaybeM (StationDoesNotExist $ "StationCode:" +|| req.toStationCode ||+ "integratedBPPConfigId:" +|| integratedBPPConfig.id.getId ||+ "")
   let merchantId = fromStation.merchantId
   unless (merchantId == partnerOrg.merchantId) $
     throwError . InvalidRequest $ "apiKey of partnerOrgId:" +|| partnerOrg.orgId ||+ " not valid for merchantId:" +|| merchantId ||+ ""
   route <-
     maybe
       (pure Nothing)
-      ( \routeCode' -> do
-          route' <- OTPRest.getRouteByRouteCodeWithFallback integratedBPPConfig routeCode'
-          return $ Just route'
-      )
+      (OTPRest.getRouteByRouteId integratedBPPConfig)
       req.routeCode
   pOrgCfg <- B.runInReplica $ CQPOC.findByIdAndCfgType partnerOrg.orgId DPOC.REGISTRATION >>= fromMaybeM (PartnerOrgConfigNotFound partnerOrg.orgId.getId $ show DPOC.REGISTRATION)
   regPOCfg <- DPOC.getRegistrationConfig pOrgCfg.config
@@ -130,7 +129,7 @@ upsertPersonAndGetFare partnerOrg req = withFlowHandlerAPI . withLogTag $ do
                 endStationCode = toStation.code
               }
           ]
-    res <- DFRFSTicketService.postFrfsSearchHandler (Just personId, merchantId) (Just merchantOperatingCity.city) frfsVehicleType frfsSearchReq frfsRouteDetails req.partnerOrgTransactionId (Just partnerOrg.orgId) [] DIBC.PARTNERORG
+    res <- DFRFSTicketService.postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPPConfig frfsVehicleType frfsSearchReq frfsRouteDetails req.partnerOrgTransactionId (Just partnerOrg.orgId) [] Nothing
     return $ DPOFRFS.GetFareResp {searchId = res.searchId, ..}
   where
     withLogTag = Log.withLogTag ("FRFS:UpsertPersonAndGetFare:PartnerOrgId:" <> getId partnerOrg.orgId)
@@ -141,11 +140,20 @@ upsertPersonAndGetFare partnerOrg req = withFlowHandlerAPI . withLogTag $ do
     buildFRFSSearchReq :: Text -> Text -> Maybe Text -> Int -> Maybe JPT.JourneySearchData -> DFRFSTypes.FRFSSearchAPIReq
     buildFRFSSearchReq fromStationCode toStationCode routeCode quantity journeySearchData = DFRFSTypes.FRFSSearchAPIReq {recentLocationId = Nothing, ..}
 
-getConfigByStationIds :: PartnerOrganization -> Text -> Text -> FlowHandler DPOFRFS.GetConfigResp
-getConfigByStationIds partnerOrg fromGMMStationId toGMMStationId = withFlowHandlerAPI . withLogTag $ do
-  void $ checkRateLimit partnerOrg.orgId getConfigHitsCountKey
+getConfigByStationIds :: PartnerOrganization -> Text -> Text -> Maybe (Id DIBC.IntegratedBPPConfig) -> FlowHandler DPOFRFS.GetConfigResp
+getConfigByStationIds partnerOrg fromGMMStationId toGMMStationId mbIntegratedBPPConfigId =
+  withFlowHandlerAPI . withLogTag $
+    do
+      void $ checkRateLimit partnerOrg.orgId getConfigHitsCountKey
 
-  DPOFRFS.getConfigByStationIds partnerOrg fromGMMStationId toGMMStationId
+      integratedBPPConfigs <-
+        case mbIntegratedBPPConfigId of
+          Just integratedBPPConfigId -> (: []) <$> SIBC.findIntegratedBPPConfigById integratedBPPConfigId
+          Nothing -> SIBC.findAllIntegratedBPPConfigAcrossCities (frfsVehicleCategoryToBecknVehicleCategory Spec.METRO) DIBC.PARTNERORG
+
+      SIBC.fetchFirstIntegratedBPPConfigRightResult integratedBPPConfigs $ \integratedBPPConfig ->
+        DPOFRFS.getConfigByStationIds partnerOrg fromGMMStationId toGMMStationId integratedBPPConfig
+      >>= fromMaybeM (InvalidRequest "No Config Found for the given station ids")
   where
     withLogTag = Log.withLogTag ("FRFS:GetConfig:PartnerOrgId:" <> getId partnerOrg.orgId)
 
@@ -172,23 +180,20 @@ checkRateLimit partnerOrgId apiHitsCountKey = Log.withLogTag "checkRateLimit" $ 
   rateLimitPOCfg <- DPOC.getRateLimitConfig pOrgCfg.config
   checkSlidingWindowLimitWithOptions apiHitsCountKey rateLimitPOCfg.rateLimitOptions
 
-getFareV2 :: PartnerOrganization -> DPOFRFS.GetFareReqV2 -> FlowHandler DPOFRFS.GetFareRespV2
-getFareV2 partnerOrg req = withFlowHandlerAPI . withLogTag $ do
+getFareV2 :: PartnerOrganization -> Maybe (Id DIBC.IntegratedBPPConfig) -> DPOFRFS.GetFareReqV2 -> FlowHandler DPOFRFS.GetFareRespV2
+getFareV2 partnerOrg mbIntegratedBPPConfigId req = withFlowHandlerAPI . withLogTag $ do
   checkRateLimit partnerOrg.orgId getFareV2HitsCountKey
 
   let vehicleType = fromMaybe Spec.METRO req.vehicleType
   merchantOperatingCity <- CQMOC.findById req.cityId >>= fromMaybeM (MerchantOperatingCityNotFound req.cityId.getId)
-  integratedBPPConfig <-
-    QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleType) DIBC.PARTNERORG
-      >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOperatingCity.id.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory vehicleType ||+ "Platform Type:" +|| DIBC.PARTNERORG ||+ "")
-
-  fromStation <- B.runInReplica $ OTPRest.findByStationCodeAndIntegratedBPPConfigId req.fromStationCode integratedBPPConfig >>= fromMaybeM (StationDoesNotExist $ "StationCode:" +|| req.fromStationCode ||+ "integratedBPPConfigId:" +|| integratedBPPConfig.id.getId ||+ "")
-  toStation <- B.runInReplica $ OTPRest.findByStationCodeAndIntegratedBPPConfigId req.toStationCode integratedBPPConfig >>= fromMaybeM (StationDoesNotExist $ "StationCode:" +|| req.fromStationCode ||+ "integratedBPPConfigId:" +|| integratedBPPConfig.id.getId ||+ "")
+  integratedBPPConfig <- SIBC.findIntegratedBPPConfig mbIntegratedBPPConfigId merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleType) DIBC.PARTNERORG
+  fromStation <- B.runInReplica $ OTPRest.getStationByGtfsIdAndStopCode req.fromStationCode integratedBPPConfig >>= fromMaybeM (StationDoesNotExist $ "StationCode:" +|| req.fromStationCode ||+ "integratedBPPConfigId:" +|| integratedBPPConfig.id.getId ||+ "")
+  toStation <- B.runInReplica $ OTPRest.getStationByGtfsIdAndStopCode req.toStationCode integratedBPPConfig >>= fromMaybeM (StationDoesNotExist $ "StationCode:" +|| req.fromStationCode ||+ "integratedBPPConfigId:" +|| integratedBPPConfig.id.getId ||+ "")
   let merchantId = fromStation.merchantId
   unless (merchantId == partnerOrg.merchantId) $
     throwError . InvalidRequest $ "apiKey of partnerOrgId:" +|| partnerOrg.orgId ||+ " not valid for merchantId:" +|| merchantId ||+ ""
 
-  DPOFRFS.getFareV2 partnerOrg fromStation toStation req.partnerOrgTransactionId req.routeCode
+  DPOFRFS.getFareV2 merchantOperatingCity partnerOrg fromStation toStation req.partnerOrgTransactionId req.routeCode integratedBPPConfig
   where
     withLogTag = Log.withLogTag ("FRFS:GetFareV2:PartnerOrgId:" <> partnerOrg.orgId.getId)
 

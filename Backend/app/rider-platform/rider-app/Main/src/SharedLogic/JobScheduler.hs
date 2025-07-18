@@ -24,6 +24,7 @@ import qualified Domain.Types.FRFSTicketBooking as DFTB
 import Domain.Types.IntegratedBPPConfig as DIntegratedBPPConfig
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.NyRegularSubscription as NyRegularSubscription
 import Domain.Types.Person
 import qualified Domain.Types.Ride as DR
 import qualified Domain.Types.Ride as DRide
@@ -58,7 +59,10 @@ data RiderJobType
   | QuarterlyUpdateTag
   | PostRideSafetyNotification
   | UpdateCrisUtsData
+  | CheckMultimodalConfirmFail
   | MetroBusinessHour
+  | NyRegularMaster
+  | NyRegularInstance
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''RiderJobType]
@@ -90,7 +94,10 @@ instance JobProcessor RiderJobType where
   restoreAnyJobInfo SQuarterlyUpdateTag jobData = AnyJobInfo <$> restoreJobInfo SQuarterlyUpdateTag jobData
   restoreAnyJobInfo SPostRideSafetyNotification jobData = AnyJobInfo <$> restoreJobInfo SPostRideSafetyNotification jobData
   restoreAnyJobInfo SUpdateCrisUtsData jobData = AnyJobInfo <$> restoreJobInfo SUpdateCrisUtsData jobData
+  restoreAnyJobInfo SCheckMultimodalConfirmFail jobData = AnyJobInfo <$> restoreJobInfo SCheckMultimodalConfirmFail jobData
   restoreAnyJobInfo SMetroBusinessHour jobData = AnyJobInfo <$> restoreJobInfo SMetroBusinessHour jobData
+  restoreAnyJobInfo SNyRegularMaster jobData = AnyJobInfo <$> restoreJobInfo SNyRegularMaster jobData
+  restoreAnyJobInfo SNyRegularInstance jobData = AnyJobInfo <$> restoreJobInfo SNyRegularInstance jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -189,6 +196,15 @@ data UpdateCrisUtsDataJobData = UpdateCrisUtsDataJobData
 instance JobInfoProcessor 'UpdateCrisUtsData
 
 type instance JobContent 'UpdateCrisUtsData = UpdateCrisUtsDataJobData
+
+data CheckMultimodalConfirmFailJobData = CheckMultimodalConfirmFailJobData
+  { bookingId :: Id DFTB.FRFSTicketBooking
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'CheckMultimodalConfirmFail
+
+type instance JobContent 'CheckMultimodalConfirmFail = CheckMultimodalConfirmFailJobData
 
 data OtherJobTypesJobData = OtherJobTypesJobData
   { bookingId :: Id Booking,
@@ -302,3 +318,19 @@ data MetroBusinessHourJobData = MetroBusinessHourJobData
 instance JobInfoProcessor 'MetroBusinessHour
 
 type instance JobContent 'MetroBusinessHour = MetroBusinessHourJobData
+
+data NyRegularInstanceJobData = NyRegularInstanceJobData
+  { nyRegularSubscriptionId :: Id NyRegularSubscription.NyRegularSubscription,
+    userId :: Id Person,
+    scheduledTime :: UTCTime,
+    expectedSchedulingHash :: Text
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'NyRegularInstance
+
+type instance JobContent 'NyRegularInstance = NyRegularInstanceJobData
+
+instance JobInfoProcessor 'NyRegularMaster
+
+type instance JobContent 'NyRegularMaster = ()

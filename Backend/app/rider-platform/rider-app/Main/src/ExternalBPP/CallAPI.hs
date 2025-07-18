@@ -20,12 +20,13 @@ import Domain.Types.FRFSRouteDetails
 import Domain.Types.FRFSSearch as DSearch
 import qualified Domain.Types.FRFSTicket as DFRFSTicket
 import qualified Domain.Types.FRFSTicketBooking as DBooking
+import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
 import Domain.Types.IntegratedBPPConfig
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.Station as DStation
 import Environment
-import EulerHS.Prelude ((+||), (||+))
 import qualified ExternalBPP.Flow as Flow
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
@@ -35,9 +36,12 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Payment.Storage.Beam.BeamFlow
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
+import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
-import Storage.CachedQueries.IntegratedBPPConfig as QIBC
-import qualified Storage.CachedQueries.Station as QStation
+import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
+import qualified Storage.Queries.FRFSQuote as QFRFSQuote
+import qualified Storage.Queries.FRFSTicketBokingPayment as QFRFSTicketBookingPayment
+import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import Tools.Error
 import qualified Tools.Metrics as Metrics
 
@@ -73,33 +77,53 @@ type FRFSSelectFlow m r c =
     HasField "isMetroTestTransaction" r Bool
   )
 
-discoverySearch :: FRFSSearchFlow m r => Merchant -> BecknConfig -> API.Types.UI.FRFSTicketService.FRFSDiscoverySearchAPIReq -> m ()
-discoverySearch merchant bapConfig req = do
+discoverySearch :: FRFSSearchFlow m r => Merchant -> BecknConfig -> IntegratedBPPConfig -> API.Types.UI.FRFSTicketService.FRFSDiscoverySearchAPIReq -> m ()
+discoverySearch merchant bapConfig _integratedBPPConfigId req = do
   transactionId <- generateGUID
   bknSearchReq <- ACL.buildSearchReq transactionId req.vehicleType bapConfig Nothing Nothing req.city
   logDebug $ "FRFS Discovery SearchReq " <> encodeToText bknSearchReq
   void $ CallFRFSBPP.search bapConfig.gatewayUrl bknSearchReq merchant.id
 
-search :: (FRFSSearchFlow m r, HasShortDurationRetryCfg r c) => Merchant -> MerchantOperatingCity -> BecknConfig -> DSearch.FRFSSearch -> [FRFSRouteDetails] -> IntegratedBPPConfig -> m ()
-search merchant merchantOperatingCity bapConfig searchReq routeDetails integratedBPPConfig = do
+search :: (FRFSSearchFlow m r, HasShortDurationRetryCfg r c) => Merchant -> MerchantOperatingCity -> BecknConfig -> DSearch.FRFSSearch -> Maybe HighPrecMoney -> [FRFSRouteDetails] -> IntegratedBPPConfig -> m ()
+search merchant merchantOperatingCity bapConfig searchReq mbFare routeDetails integratedBPPConfig = do
   case integratedBPPConfig.providerConfig of
-    ONDC _ -> do
+    ONDC ONDCBecknConfig {networkHostUrl, networkId, fareCachingAllowed} -> do
       fork ("FRFS ONDC SearchReq for " <> show bapConfig.vehicleCategory) $ do
-        fromStation <- QStation.findById searchReq.fromStationId >>= fromMaybeM (StationNotFound searchReq.fromStationId.getId)
-        toStation <- QStation.findById searchReq.toStationId >>= fromMaybeM (StationNotFound searchReq.toStationId.getId)
-        bknSearchReq <- ACL.buildSearchReq searchReq.id.getId searchReq.vehicleType bapConfig (Just fromStation) (Just toStation) merchantOperatingCity.city
-        logDebug $ "FRFS SearchReq " <> encodeToText bknSearchReq
-        Metrics.startMetrics Metrics.SEARCH_FRFS merchant.name searchReq.id.getId merchantOperatingCity.id.getId
-        void $ CallFRFSBPP.search bapConfig.gatewayUrl bknSearchReq merchant.id
+        case (fareCachingAllowed, networkHostUrl, networkId, mbFare) of
+          (Just True, Just _, Just _, Just _) ->
+            try @_ @SomeException (Flow.search merchant merchantOperatingCity integratedBPPConfig bapConfig networkHostUrl networkId searchReq routeDetails)
+              >>= \case
+                Left err -> do
+                  logError $ "Error in calling ONDC Search: " <> show err
+                  callOndcSearch networkHostUrl
+                Right onSearchReq ->
+                  if null onSearchReq.quotes
+                    then callOndcSearch networkHostUrl
+                    else processOnSearch onSearchReq
+          _ -> callOndcSearch networkHostUrl
     _ -> do
-      fork "FRFS External SearchReq" $ do
-        onSearchReq <- Flow.search merchant merchantOperatingCity integratedBPPConfig bapConfig searchReq routeDetails
+      fork "FRFS Direct SearchReq" $ do
+        onSearchReq <- Flow.search merchant merchantOperatingCity integratedBPPConfig bapConfig Nothing Nothing searchReq routeDetails
         processOnSearch onSearchReq
   where
     processOnSearch :: (FRFSSearchFlow m r, HasShortDurationRetryCfg r c) => DOnSearch.DOnSearch -> m ()
     processOnSearch onSearchReq = do
       validatedDOnSearch <- DOnSearch.validateRequest onSearchReq
       DOnSearch.onSearch onSearchReq validatedDOnSearch
+
+    callOndcSearch :: Maybe BaseUrl -> (FRFSSearchFlow m r, HasShortDurationRetryCfg r c) => m ()
+    callOndcSearch networkHostUrl = do
+      let providerUrl = fromMaybe bapConfig.gatewayUrl networkHostUrl
+      fromStation <- OTPRest.getStationByGtfsIdAndStopCode searchReq.fromStationCode integratedBPPConfig >>= fromMaybeM (StationNotFound searchReq.fromStationCode)
+      toStation <- OTPRest.getStationByGtfsIdAndStopCode searchReq.toStationCode integratedBPPConfig >>= fromMaybeM (StationNotFound searchReq.toStationCode)
+      routeStopMappingFromStation <- OTPRest.getRouteStopMappingByStopCode searchReq.fromStationCode integratedBPPConfig
+      routeStopMappingToStation <- OTPRest.getRouteStopMappingByStopCode searchReq.toStationCode integratedBPPConfig
+      let fromStationProviderCode = fromMaybe searchReq.fromStationCode (listToMaybe routeStopMappingFromStation <&> (.providerCode))
+          toStationProviderCode = fromMaybe searchReq.toStationCode (listToMaybe routeStopMappingToStation <&> (.providerCode))
+      bknSearchReq <- ACL.buildSearchReq searchReq.id.getId searchReq.vehicleType bapConfig (Just $ fromStation {DStation.code = fromStationProviderCode}) (Just $ toStation {DStation.code = toStationProviderCode}) merchantOperatingCity.city
+      logDebug $ "FRFS SearchReq " <> encodeToText bknSearchReq
+      Metrics.startMetrics Metrics.SEARCH_FRFS merchant.name searchReq.id.getId merchantOperatingCity.id.getId
+      void $ CallFRFSBPP.search providerUrl bknSearchReq merchant.id
 
 select ::
   FRFSSelectFlow m r c =>
@@ -108,26 +132,27 @@ select ::
   MerchantOperatingCity ->
   BecknConfig ->
   DQuote.FRFSQuote ->
-  DIBC.PlatformType ->
-  Spec.VehicleCategory ->
+  Maybe Int ->
+  Maybe Int ->
   m ()
-select processOnSelectHandler merchant merchantOperatingCity bapConfig quote platformType vehicleType = do
-  integratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleType) platformType >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOperatingCity.id.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory vehicleType ||+ "Platform Type:" +|| platformType ||+ "")
+select processOnSelectHandler merchant merchantOperatingCity bapConfig quote ticketQuantity childTicketQuantity = do
+  integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity quote
   case integratedBPPConfig.providerConfig of
     ONDC _ -> do
       fork ("FRFS ONDC SelectReq for " <> show bapConfig.vehicleCategory) $ do
+        void $ QFRFSQuote.updateTicketAndChildTicketQuantityById quote.id ticketQuantity childTicketQuantity
         providerUrl <- quote.bppSubscriberUrl & parseBaseUrl
         bknSelectReq <- ACL.buildSelectReq quote bapConfig Utils.BppData {bppId = quote.bppSubscriberId, bppUri = quote.bppSubscriberUrl} merchantOperatingCity.city
         logDebug $ "FRFS SelectReq " <> encodeToText bknSelectReq
         Metrics.startMetrics Metrics.SELECT_FRFS merchant.name quote.searchId.getId merchantOperatingCity.id.getId
         void $ CallFRFSBPP.select providerUrl bknSelectReq merchant.id
     _ -> do
-      onSelectReq <- Flow.select merchant merchantOperatingCity integratedBPPConfig bapConfig quote
+      onSelectReq <- Flow.select merchant merchantOperatingCity integratedBPPConfig bapConfig quote ticketQuantity childTicketQuantity
       processOnSelectHandler onSelectReq
 
-init :: FRFSConfirmFlow m r => Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> DBooking.FRFSTicketBooking -> DIBC.PlatformType -> m ()
-init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking platformType = do
-  integratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType) platformType >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOperatingCity.id.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType ||+ "Platform Type:" +|| platformType ||+ "")
+init :: FRFSConfirmFlow m r => Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> DBooking.FRFSTicketBooking -> m ()
+init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking = do
+  integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
   case integratedBPPConfig.providerConfig of
     ONDC _ -> do
       providerUrl <- booking.bppSubscriberUrl & parseBaseUrl & fromMaybeM (InvalidRequest "Invalid provider url")
@@ -144,9 +169,9 @@ init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking
       (merchant', booking') <- DOnInit.validateRequest onInitReq
       DOnInit.onInit onInitReq merchant' booking'
 
-cancel :: Merchant -> MerchantOperatingCity -> BecknConfig -> Spec.CancellationType -> DBooking.FRFSTicketBooking -> DIBC.PlatformType -> Flow ()
-cancel merchant merchantOperatingCity bapConfig cancellationType booking platformType = do
-  integratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType) platformType >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOperatingCity.id.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType ||+ "Platform Type:" +|| platformType ||+ "")
+cancel :: Merchant -> MerchantOperatingCity -> BecknConfig -> Spec.CancellationType -> DBooking.FRFSTicketBooking -> Flow ()
+cancel merchant merchantOperatingCity bapConfig cancellationType booking = do
+  integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
   case integratedBPPConfig.providerConfig of
     ONDC _ -> do
       fork "FRFS ONDC Cancel Req" $ do
@@ -161,9 +186,9 @@ cancel merchant merchantOperatingCity bapConfig cancellationType booking platfor
         void $ CallFRFSBPP.cancel providerUrl bknCancelReq merchant.id
     _ -> return ()
 
-confirm :: (DOrder -> Flow ()) -> Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> DBooking.FRFSTicketBooking -> DIBC.PlatformType -> Flow ()
-confirm onConfirmHandler merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking platformType = do
-  integratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType) platformType >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOperatingCity.id.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType ||+ "Platform Type:" +|| platformType ||+ "")
+confirm :: (DOrder -> Flow ()) -> Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> DBooking.FRFSTicketBooking -> Flow ()
+confirm onConfirmHandler merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking = do
+  integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
   case integratedBPPConfig.providerConfig of
     ONDC _ -> do
       fork "FRFS ONDC Confirm Req" $ do
@@ -174,15 +199,22 @@ confirm onConfirmHandler merchant merchantOperatingCity bapConfig (mRiderName, m
         void $ CallFRFSBPP.confirm providerUrl bknConfirmReq merchant.id
     _ -> do
       fork "FRFS External Confirm Req" $ do
-        frfsConfig <-
-          CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow merchantOperatingCity.id []
-            >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> merchantOperatingCity.id.getId)
-        onConfirmReq <- Flow.confirm merchant merchantOperatingCity frfsConfig integratedBPPConfig bapConfig (mRiderName, mRiderNumber) booking
-        onConfirmHandler onConfirmReq
+        result <- try @_ @SomeException $ do
+          frfsConfig <-
+            CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow merchantOperatingCity.id []
+              >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> merchantOperatingCity.id.getId)
+          onConfirmReq <- Flow.confirm merchant merchantOperatingCity frfsConfig integratedBPPConfig bapConfig (mRiderName, mRiderNumber) booking
+          onConfirmHandler onConfirmReq
+        case result of
+          Left err -> do
+            void $ QFRFSTicketBooking.updateStatusById DBooking.FAILED booking.id
+            void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.REFUND_PENDING booking.id
+            throwM err
+          Right _ -> return ()
 
-status :: Id Merchant -> MerchantOperatingCity -> BecknConfig -> DBooking.FRFSTicketBooking -> DIBC.PlatformType -> Flow ()
-status merchantId merchantOperatingCity bapConfig booking platformType = do
-  integratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType) platformType >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOperatingCity.id.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory booking.vehicleType ||+ "Platform Type:" +|| platformType ||+ "")
+status :: Id Merchant -> MerchantOperatingCity -> BecknConfig -> DBooking.FRFSTicketBooking -> Flow ()
+status merchantId merchantOperatingCity bapConfig booking = do
+  integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
   case integratedBPPConfig.providerConfig of
     ONDC _ -> do
       void $ CallFRFSBPP.callBPPStatus booking bapConfig merchantOperatingCity.city merchantId
@@ -197,7 +229,8 @@ status merchantId merchantOperatingCity bapConfig booking platformType = do
 
 verifyTicket :: Id Merchant -> MerchantOperatingCity -> BecknConfig -> Spec.VehicleCategory -> Text -> DIBC.PlatformType -> Flow DFRFSTicket.FRFSTicket
 verifyTicket merchantId merchantOperatingCity bapConfig vehicleCategory encryptedQrData platformType = do
-  integratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleCategory) platformType >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOperatingCity.id.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory vehicleCategory ||+ "Platform Type:" +|| platformType ||+ "")
+  -- TODO: Add support for multiple integratedBPPConfigs, when we have multiple integratedBPPConfigs integrating verifyTicket API
+  integratedBPPConfig <- SIBC.findIntegratedBPPConfig Nothing merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleCategory) platformType
   onStatusReq <- Flow.verifyTicket merchantId merchantOperatingCity integratedBPPConfig bapConfig encryptedQrData
   processOnStatus onStatusReq >>= \case
     DOnStatus.TicketVerificationSync ticket -> return ticket
@@ -206,5 +239,5 @@ verifyTicket merchantId merchantOperatingCity bapConfig vehicleCategory encrypte
     processOnStatus onStatusReq = do
       let verificationOnStatusReq = DOnStatus.TicketVerification onStatusReq
       (merchant', booking') <- DOnStatus.validateRequest verificationOnStatusReq
-      void $ status merchantId merchantOperatingCity bapConfig booking' platformType -- Doing one status call to sync the Ticket Status & Expiry Before Verifying
+      void $ status merchantId merchantOperatingCity bapConfig booking' -- Doing one status call to sync the Ticket Status & Expiry Before Verifying
       DOnStatus.onStatus merchant' booking' verificationOnStatusReq

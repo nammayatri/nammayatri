@@ -25,9 +25,11 @@ module Domain.Action.UI.Select
     select2,
     selectList,
     selectResult,
+    MultimodalSelectRes (..),
   )
 where
 
+import qualified Beckn.OnDemand.Utils.Common as UCommon
 import Control.Applicative ((<|>))
 import qualified Control.Lens as L
 import Control.Monad.Extra (anyM)
@@ -39,14 +41,14 @@ import qualified Data.HashMap.Strict.InsOrd as HMSIO
 import Data.OpenApi hiding (name)
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Estimate as UEstimate
-import Domain.Action.UI.Quote
-import qualified Domain.Action.UI.Quote as UQuote
 import qualified Domain.Action.UI.Registration as Reg
 import Domain.Types.Booking (Booking, BookingStatus (..))
 import Domain.Types.Common
 import qualified Domain.Types.DeliveryDetails as DTDD
 import qualified Domain.Types.DriverOffer as DDO
 import qualified Domain.Types.Estimate as DEstimate
+import qualified Domain.Types.Journey as DJ
+import qualified Domain.Types.JourneyLeg as DJL
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.ParcelDetails as DParcel
@@ -55,10 +57,13 @@ import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequestPartiesLink as DSRPL
 import qualified Domain.Types.ServiceTierType as DVSTT
+import qualified Domain.Types.Trip as DTrip
 import qualified Domain.Types.Trip as Trip
 import qualified Domain.Types.VehicleVariant as DV
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
+import Kernel.External.Maps.Google.MapsClient.Types (LatLngV2 (..))
+import Kernel.External.MultiModal.Interface.Types (MultiModalAgency (..))
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
@@ -72,7 +77,9 @@ import Kernel.Types.Predicate
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
+import qualified Lib.JourneyLeg.Types as JLT
 import Lib.SessionizerMetrics.Types.Event
+import SharedLogic.Quote
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -83,6 +90,8 @@ import qualified Storage.CachedQueries.ValueAddNP as CQVNP
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DriverOffer as QDOffer
 import qualified Storage.Queries.Estimate as QEstimate
+import qualified Storage.Queries.Journey as QJourney
+import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Location as QLoc
 import qualified Storage.Queries.ParcelDetails as QParcel
 import qualified Storage.Queries.Person as QP
@@ -168,7 +177,8 @@ data DSelectRes = DSelectRes
     tripCategory :: Maybe TripCategory,
     disabilityDisable :: Maybe Bool,
     selectResDetails :: Maybe DSelectResDetails,
-    preferSafetyPlus :: Bool
+    preferSafetyPlus :: Bool,
+    mbJourneyId :: Maybe (Id DJ.Journey)
   }
 
 data DSelectResDetails = DSelectResDelivery DParcel.ParcelDetails
@@ -241,7 +251,6 @@ select personId estimateId req = do
 select2 :: SelectFlow m r c => Id DPerson.Person -> Id DEstimate.Estimate -> DSelectReq -> m DSelectRes
 select2 personId estimateId req@DSelectReq {..} = do
   runRequestValidation validateDSelectReq req
-  now <- getCurrentTime
   estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
   Metrics.startGenericLatencyMetrics Metrics.SELECT_TO_SEND_REQUEST estimate.requestId.getId
   let searchRequestId = estimate.requestId
@@ -258,8 +267,8 @@ select2 personId estimateId req@DSelectReq {..} = do
   when merchant.onlinePayment $ do
     when (isNothing paymentMethodId) $ throwError PaymentMethodRequired
     QP.updateDefaultPaymentMethodId paymentMethodId personId -- Make payment method as default payment method for customer
-  when ((searchRequest.validTill) < now) $
-    throwError SearchRequestExpired
+    -- when ((searchRequest.validTill) < now) $
+    --   throwError SearchRequestExpired
   when (maybe False Trip.isDeliveryTrip (DEstimate.tripCategory estimate)) $ do
     validDeliveryDetails <- deliveryDetails & fromMaybeM (InvalidRequest "Delivery details not found for trip category Delivery")
     updateRequiredDeliveryDetails searchRequestId searchRequest.merchantId searchRequest.merchantOperatingCityId validDeliveryDetails
@@ -295,6 +304,7 @@ select2 personId estimateId req@DSelectReq {..} = do
   let merchantOperatingCityId = searchRequest.merchantOperatingCityId
   city <- CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
   let toUpdateDeviceIdInfo = (fromMaybe 0 person.totalRidesCount) == 0
+  mbJourneyId <- mkJourneyForSearch searchRequest estimate personId
   isMultipleOrNoDeviceIdExist <-
     maybe
       (return Nothing)
@@ -315,6 +325,7 @@ select2 personId estimateId req@DSelectReq {..} = do
         tripCategory = estimate.tripCategory,
         selectResDetails = dselectResDetails,
         preferSafetyPlus = fromMaybe False preferSafetyPlus,
+        mbJourneyId = Just mbJourneyId,
         ..
       }
   where
@@ -330,7 +341,7 @@ selectList estimateId = do
   selectedQuotes <- runInReplica $ QQuote.findAllByEstimateId estimateId DDO.ACTIVE
   bppDetailList <- forM ((.providerId) <$> selectedQuotes) (\bppId -> CQBPP.findBySubscriberIdAndDomain bppId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:-" <> bppId <> "and domain:-" <> show Context.MOBILITY))
   isValueAddNPList <- forM bppDetailList $ \bpp -> CQVAN.isValueAddNP bpp.subscriberId
-  pure $ SelectListRes $ UQuote.mkQAPIEntityList selectedQuotes bppDetailList isValueAddNPList
+  pure $ SelectListRes $ mkQAPIEntityList selectedQuotes bppDetailList isValueAddNPList
 
 selectResult :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DEstimate.Estimate -> m QuotesResultResponse
 selectResult estimateId = do
@@ -348,7 +359,7 @@ selectResult estimateId = do
       selectedQuotes <- runInReplica $ QQuote.findAllQuotesBySRId estimate.requestId DDO.ACTIVE
       bppDetailList <- forM ((.providerId) <$> selectedQuotes) (\bppId -> CQBPP.findBySubscriberIdAndDomain bppId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:-" <> bppId <> "and domain:-" <> show Context.MOBILITY))
       isValueAddNPList <- forM bppDetailList $ \bpp -> CQVAN.isValueAddNP bpp.subscriberId
-      return $ QuotesResultResponse {bookingId = Nothing, bookingIdV2 = Nothing, selectedQuotes = Just $ SelectListRes $ UQuote.mkQAPIEntityList selectedQuotes bppDetailList isValueAddNPList, ..}
+      return $ QuotesResultResponse {bookingId = Nothing, bookingIdV2 = Nothing, selectedQuotes = Just $ SelectListRes $ mkQAPIEntityList selectedQuotes bppDetailList isValueAddNPList, ..}
 
 updateRequiredDeliveryDetails :: SelectFlow m r c => Id DSearchReq.SearchRequest -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DTDD.DeliveryDetails -> m ()
 updateRequiredDeliveryDetails searchRequestId merchantId merchantOperatingCityId deliveryDetails = do
@@ -389,3 +400,111 @@ insertVehicleServiceTier :: Int -> DVSTT.ServiceTierType -> [ServiceTierType] ->
 insertVehicleServiceTier n newVehicle currentList
   | length currentList < n = currentList ++ [newVehicle]
   | otherwise = tail currentList ++ [newVehicle]
+
+mkJourneyForSearch :: SelectFlow m r c => DSearchReq.SearchRequest -> DEstimate.Estimate -> Id DPerson.Person -> m (Id DJ.Journey)
+mkJourneyForSearch searchRequest estimate personId = do
+  now <- getCurrentTime
+  let journeyId = searchRequest.journeyLegInfo <&> (.journeyId)
+      searchRequestId = searchRequest.id
+  case journeyId of
+    Just jId -> pure (Id jId)
+    Nothing -> do
+      journeyGuid <- generateGUID
+      journeyLegGuid <- generateGUID
+
+      let fromLocationAddress = UCommon.mkAddress searchRequest.fromLocation.address
+          toLocationAddress = UCommon.mkAddress <$> (searchRequest.toLocation <&> (.address))
+
+      let estimatedMinFare = Just estimate.estimatedFare.amount
+          estimatedMaxFare = Just estimate.estimatedFare.amount
+
+      let journey =
+            DJ.Journey
+              { id = journeyGuid,
+                convenienceCost = 0,
+                estimatedDistance = fromMaybe (Distance 0 Meter) searchRequest.distance,
+                estimatedDuration = searchRequest.estimatedRideDuration,
+                isPaymentSuccess = Just True,
+                totalLegs = 1,
+                modes = [DTrip.Taxi],
+                searchRequestId = searchRequest.id,
+                merchantId = Just searchRequest.merchantId,
+                status = DJ.INPROGRESS,
+                riderId = personId,
+                startTime = Just searchRequest.startTime,
+                endTime = Nothing,
+                merchantOperatingCityId = Just searchRequest.merchantOperatingCityId,
+                createdAt = now,
+                updatedAt = now,
+                recentLocationId = searchRequest.recentLocationId,
+                isPublicTransportIncluded = Just False,
+                relevanceScore = Nothing,
+                hasPreferredServiceTier = Nothing,
+                hasPreferredTransitModes = Just False,
+                fromLocationAddress = Just fromLocationAddress,
+                toLocationAddress = toLocationAddress,
+                paymentOrderShortId = Nothing,
+                journeyExpiryTime = Nothing
+              }
+
+      let journeyLeg =
+            DJL.JourneyLeg
+              { id = journeyLegGuid,
+                journeyId = journeyGuid,
+                sequenceNumber = 0,
+                mode = DTrip.Taxi,
+                startLocation = LatLngV2 searchRequest.fromLocation.lat searchRequest.fromLocation.lon,
+                endLocation = case searchRequest.toLocation of
+                  Just toLoc -> LatLngV2 toLoc.lat toLoc.lon
+                  Nothing -> LatLngV2 searchRequest.fromLocation.lat searchRequest.fromLocation.lon,
+                distance = searchRequest.distance,
+                duration = searchRequest.estimatedRideDuration,
+                agency = Just $ MultiModalAgency {name = "NAMMA_YATRI", gtfsId = Nothing},
+                fromArrivalTime = Nothing,
+                fromDepartureTime = Just searchRequest.startTime,
+                toArrivalTime =
+                  searchRequest.estimatedRideDuration >>= \duration ->
+                    Just $ addUTCTime (fromIntegral $ getSeconds duration) searchRequest.startTime,
+                toDepartureTime = Nothing,
+                fromStopDetails = Nothing,
+                toStopDetails = Nothing,
+                routeDetails = [],
+                serviceTypes = Nothing,
+                estimatedMinFare = estimatedMinFare,
+                estimatedMaxFare = estimatedMaxFare,
+                merchantId = Just searchRequest.merchantId,
+                merchantOperatingCityId = Just searchRequest.merchantOperatingCityId,
+                createdAt = now,
+                updatedAt = now,
+                legSearchId = Just searchRequestId.getId,
+                isDeleted = Just False,
+                isSkipped = Just False,
+                changedBusesInSequence = Nothing,
+                finalBoardedBusNumber = Nothing,
+                entrance = Nothing,
+                exit = Nothing,
+                status = Nothing
+              }
+
+      let journeySearchData =
+            JLT.JourneySearchData
+              { journeyId = journeyGuid.getId,
+                journeyLegOrder = 0,
+                agency = Nothing,
+                skipBooking = False,
+                convenienceCost = 0,
+                pricingId = Just estimate.id.getId,
+                onSearchFailed = Nothing,
+                isDeleted = Nothing
+              }
+
+      QJourney.create journey
+      QJourneyLeg.create journeyLeg
+      QSearchRequest.updateJourneyLegInfo searchRequestId (Just journeySearchData)
+      pure journeyGuid
+
+data MultimodalSelectRes = MultimodalSelectRes
+  { journeyId :: Maybe (Id DJ.Journey),
+    result :: Text
+  }
+  deriving (Generic, Show, Eq, ToJSON, FromJSON, ToSchema)

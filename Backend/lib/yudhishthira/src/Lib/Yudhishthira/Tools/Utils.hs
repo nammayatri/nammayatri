@@ -195,19 +195,32 @@ compareTagNameValue tag1 tag2 = convertToTagNameValue tag1 == convertToTagNameVa
 showRawTags :: [LYT.TagNameValueExpiry] -> String
 showRawTags = show
 
+-- | Match by tagName and tagValue
 elemTagNameValue :: (HasTagNameValue tag1, HasTagNameValue tag2) => tag1 -> [tag2] -> Bool
 elemTagNameValue tag tags = convertToTagNameValue tag `elem` (convertToTagNameValue <$> tags)
+
+-- | Match only by tagName
+elemTagName :: (HasTagNameValue tag1, HasTagNameValue tag2) => tag1 -> [tag2] -> Bool
+elemTagName tag tags = parseTagName tag `elem` (parseTagName <$> tags)
 
 -- this way older value will be replaced to new one with upated expiry
 replaceTagNameValue :: HasTagNameValue tag => Maybe [tag] -> tag -> [tag]
 replaceTagNameValue Nothing tag = [tag]
-replaceTagNameValue (Just tags) tag = removeTagNameValue (Just tags) tag ++ [tag]
+replaceTagNameValue (Just tags) tag = removeTagName (Just tags) tag ++ [tag]
 
+-- | Remove tag with current name and value, i.e tagName#tagValue
 removeTagNameValue :: (HasTagNameValue tag1, HasTagNameValue tag2) => Maybe [tag1] -> tag2 -> [tag1]
 removeTagNameValue Nothing _ = []
 removeTagNameValue (Just tags) tag = do
   let tag' = convertToTagNameValue tag
   filter ((/= tag') . convertToTagNameValue) tags
+
+-- | Remove all tags with current name, i.e tagName#tagValue1,tagName#tagValue2..
+removeTagName :: (HasTagNameValue tag1, HasTagNameValue tag2) => Maybe [tag1] -> tag2 -> [tag1]
+removeTagName Nothing _ = []
+removeTagName (Just tags) tag = case parseTagName tag of
+  Nothing -> tags
+  Just tagName -> filter ((/= Just tagName) . parseTagName) tags
 
 parseTagName :: (HasTagNameValue tag) => tag -> Maybe LYT.TagName
 parseTagName tag = case T.splitOn "#" . (.getTagNameValue) $ convertToTagNameValue tag of

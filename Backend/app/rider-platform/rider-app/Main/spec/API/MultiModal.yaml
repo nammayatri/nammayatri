@@ -9,11 +9,13 @@ imports:
   LocationAPIEntity: Domain.Types.Location
   LegInfo: Lib.JourneyModule.Types
   JourneyLeg: Domain.Types.JourneyLeg
+  IntegratedBPPConfig: Domain.Types.IntegratedBPPConfig
   LatLong: Kernel.External.Maps.Types
   LatLngV2: Kernel.External.Maps.Google.MapsClient.Types
   Price: Kernel.Types.Common
   JourneyLegStatus: Lib.JourneyLeg.Types
   UnifiedTicketQR: Lib.JourneyModule.Types
+  UnifiedTicketQRV2: Lib.JourneyModule.Types
   FRFSBookingPaymentStatusAPI: API.Types.UI.FRFSTicketService
   CreateOrderResp: Kernel.External.Payment.Juspay.Types
   ExtendLegStartPoint: Lib.JourneyModule.Types
@@ -31,6 +33,9 @@ imports:
   BusData: Storage.CachedQueries.Merchant.MultiModalBus
   PlatformType: Domain.Types.IntegratedBPPConfig
   VehicleCategory: BecknV2.FRFS.Enums
+  Provider: Lib.JourneyModule.Types
+  Value: Data.Aeson
+  Gate: Domain.Types.Station
 
 module: MultimodalConfirm
 
@@ -42,6 +47,7 @@ types:
     estimatedDistance: Distance
     journeyStatus: Domain.Types.Journey.JourneyStatus
     unifiedQR: Maybe UnifiedTicketQR
+    unifiedQRV2: Maybe UnifiedTicketQRV2
     journeyId: Id Journey
     legs: [LegInfo]
     startTime: Maybe UTCTime
@@ -89,10 +95,19 @@ types:
     destLatLong: LatLong
 
   MultimodalTicketVerifyReq:
-    qrData: Text
+    enum: "IntegratedQR IntegratedQRReq, SingleQR SingleQRReq"
+
+  IntegratedQRReq:
+    provider: Provider
+    integratedQR: UnifiedTicketQRV2
+
+  SingleQRReq:
+    provider: Provider
+    tickets: "[Text]"
 
   MultimodalTicketVerifyResp:
-    legInfo: LegInfo
+    provider: Provider
+    legInfo: "[LegInfo]"
 
   MultimodalTransitOptionData:
     travelModes: [MultimodalTravelMode]
@@ -161,6 +176,7 @@ types:
     osType: Text
     osBuildVersion: Text
     bookAuthCode: Text
+    derive: "Show"
 
   LegServiceTierOptionsResp:
     options: "[AvailableRoutesByTier]"
@@ -173,6 +189,7 @@ types:
     stC: Maybe Int
     vt: Text
     clr: Maybe Text
+    ibc: Id IntegratedBPPConfig
 
   TransportStation:
     cd: Text
@@ -184,11 +201,15 @@ types:
     rgn: Maybe Text
     hin: Maybe Text
     sgstdDest: Maybe [SuggestedStations]
+    gj: Maybe Value
+    gi: Maybe [Gate]
+    ibc: Id IntegratedBPPConfig
 
   TransportRouteStopMapping:
     rc: Text
     sc: Text
     sn: Int
+    ibc: Id IntegratedBPPConfig
 
   PublicTransportData:
     rs: [TransportRoute]
@@ -380,21 +401,26 @@ apis:
         type: LegServiceTierOptionsResp
 
   - POST:
-      endpoint: /multimodal/{journeyId}/order/{legOrder}/setStatus/{status}
+      endpoint: /multimodal/{journeyId}/order/{legOrder}/subleg/{subLegOrder}/setStatus/{status}
       params:
         journeyId: Id Journey
         legOrder: Int
+        subLegOrder: Int
         status: JourneyLegStatus
       response:
-        type: Kernel.Types.APISuccess.APISuccess
+        type: JourneyStatusResp
+
+  - POST:
+      endpoint: multimodal/{journeyId}/complete
+      params:
+        journeyId: Id Journey
+      response:
+        type: JourneyStatusResp
 
   - POST:
       endpoint: /multimodal/ticket/verify
       mandatoryQuery:
         city: City
-        vehicleType: VehicleCategory
-      query:
-        platformType: PlatformType
       auth: TokenAuth
       request:
         type: MultimodalTicketVerifyReq

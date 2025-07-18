@@ -22,7 +22,6 @@ module Domain.Action.UI.Frontend
   )
 where
 
-import Data.Ord (comparing)
 import Domain.Action.UI.Booking
 import qualified Domain.Action.UI.MultimodalConfirm as DMultimodal
 import Domain.Action.UI.Quote
@@ -32,6 +31,7 @@ import qualified Domain.Types.Journey as DJ
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.PersonFlowStatus as DPFS
+import qualified Domain.Types.Trip as DTrip
 import Environment
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude
@@ -39,7 +39,6 @@ import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.JourneyModule.Base (generateJourneyInfoResponse, getAllLegsInfo)
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.ValueAddNP as QNP
 import qualified Storage.Queries.Booking as QB
@@ -65,27 +64,47 @@ type NotifyEventResp = APISuccess
 
 getPersonFlowStatus :: Id DP.Person -> Id DM.Merchant -> Maybe Bool -> Maybe Bool -> Flow GetPersonFlowStatusRes
 getPersonFlowStatus personId merchantId _ pollActiveBooking = do
+  now <- getCurrentTime
   activeJourneys <- DMultimodal.getActiveJourneyIds personId
-  if not (null activeJourneys)
-    then do
-      let paymentSuccessJourneys = filter (\j -> j.isPaymentSuccess == Just True) activeJourneys
-      if null paymentSuccessJourneys
-        then return $ GetPersonFlowStatusRes Nothing (DPFS.ACTIVE_JOURNEYS {journeys = activeJourneys, currentJourney = Nothing}) Nothing
-        else do
-          let earliestActiveJourney = maximumBy (comparing (.startTime)) paymentSuccessJourneys
-          legs <- getAllLegsInfo earliestActiveJourney.id False
-          journeyInfoResp <- generateJourneyInfoResponse earliestActiveJourney legs
-          return $ GetPersonFlowStatusRes Nothing (DPFS.ACTIVE_JOURNEYS {journeys = activeJourneys, currentJourney = Just journeyInfoResp}) Nothing
+  updatedActiveJourneys <- processJourneys now activeJourneys
+  let activeJourneysMode = (not (null updatedActiveJourneys)) && (not (checkIfNormalRideJourney updatedActiveJourneys))
+  if activeJourneysMode
+    then return $ GetPersonFlowStatusRes Nothing (DPFS.ACTIVE_JOURNEYS {journeys = updatedActiveJourneys}) Nothing
     else do
       personStatus' <- QPFS.getStatus personId
       case personStatus' of
         Just personStatus -> do
           case personStatus of
-            DPFS.WAITING_FOR_DRIVER_OFFERS _ _ _ providerId _ -> findValueAddNP personStatus providerId
-            DPFS.WAITING_FOR_DRIVER_ASSIGNMENT _ _ _ _ -> expirePersonStatusIfNeeded personStatus Nothing
+            DPFS.WAITING_FOR_DRIVER_OFFERS _ _ _ providerId _ -> findValueAddNP personStatus providerId now
+            DPFS.WAITING_FOR_DRIVER_ASSIGNMENT _ _ _ _ -> expirePersonStatusIfNeeded personStatus Nothing now
             _ -> checkForActiveBooking
         Nothing -> checkForActiveBooking
   where
+    -- filter payment success journeys and update journey status if expired
+    processJourneys :: UTCTime -> [DJ.Journey] -> Flow [DJ.Journey]
+    processJourneys _ [] = return []
+    processJourneys now journeys = do
+      updatedJourneys <- mapM updateJourneyStatus journeys
+      return $ filter (\j -> j.status /= DJ.EXPIRED) updatedJourneys
+      where
+        updateJourneyStatus j = do
+          case j.journeyExpiryTime of
+            Just expiryTime ->
+              if now > expiryTime && j.status == DJ.INPROGRESS
+                then do
+                  _ <- QJourney.updateStatus DJ.EXPIRED j.id
+                  return j {DJ.status = DJ.EXPIRED}
+                else return j
+            Nothing -> return j
+    checkIfNormalRideJourney :: [DJ.Journey] -> Bool
+    checkIfNormalRideJourney journeys =
+      case listToMaybe journeys of
+        Just firstNormalRideJourney ->
+          case listToMaybe firstNormalRideJourney.modes of
+            Just firstMode ->
+              length journeys == 1 && length firstNormalRideJourney.modes == 1 && (firstMode == DTrip.Taxi)
+            Nothing -> False
+        Nothing -> False
     checkForActiveBooking :: Flow GetPersonFlowStatusRes
     checkForActiveBooking = do
       if isJust pollActiveBooking
@@ -105,12 +124,11 @@ getPersonFlowStatus personId merchantId _ pollActiveBooking = do
                 _ -> return $ GetPersonFlowStatusRes Nothing DPFS.IDLE Nothing
         else return $ GetPersonFlowStatusRes Nothing DPFS.IDLE Nothing
 
-    findValueAddNP personStatus providerId = do
+    findValueAddNP personStatus providerId now = do
       isValueAddNP_ <- maybe (pure True) QNP.isValueAddNP providerId
-      expirePersonStatusIfNeeded personStatus (Just isValueAddNP_)
+      expirePersonStatusIfNeeded personStatus (Just isValueAddNP_) now
 
-    expirePersonStatusIfNeeded personStatus isValueAddNp = do
-      now <- getCurrentTime
+    expirePersonStatusIfNeeded personStatus isValueAddNp now = do
       if now < personStatus.validTill
         then return $ GetPersonFlowStatusRes Nothing personStatus isValueAddNp
         else do

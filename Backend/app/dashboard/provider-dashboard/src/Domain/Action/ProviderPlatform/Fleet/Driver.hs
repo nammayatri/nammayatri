@@ -54,6 +54,7 @@ module Domain.Action.ProviderPlatform.Fleet.Driver
     postDriverFleetGetNearbyDrivers,
     getDriverDashboardInternalHelperGetFleetOwnerId,
     getDriverDashboardInternalHelperGetFleetOwnerIds,
+    postDriverFleetV2AccessMultiOwnerIdSelect,
   )
 where
 
@@ -227,7 +228,7 @@ postDriverFleetAddVehicle merchantShortId opCity apiTokenInfo phoneNo mbMobileCo
   runRequestValidation Common.validateAddVehicleReq req
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   (mbFleetOwnerId', requestorId) <- getMbFleetOwnerAndRequestorIdMerchantBased apiTokenInfo mbFleetOwnerId
-  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetAddVehicle) phoneNo requestorId mbFleetOwnerId' mbMobileCountryCode mbRole req -- apiTokenInfo may contain opertaor or fleet
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetAddVehicle) phoneNo requestorId mbFleetOwnerId' mbMobileCountryCode mbRole (Just False) req -- apiTokenInfo may contain opertaor or fleet
 
 postDriverFleetAddRCWithoutDriver :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Text -> Registration.RegisterRCReq -> Flow APISuccess
 postDriverFleetAddRCWithoutDriver merchantShortId opCity apiTokenInfo mbFleetOwnerId req = do
@@ -247,6 +248,7 @@ postDriverFleetVehicleDriverRcStatus merchantShortId opCity apiTokenInfo driverI
 
 postDriverUpdateFleetOwnerInfo :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Maybe Text -> Common.UpdateFleetOwnerInfoReq -> Flow APISuccess
 postDriverUpdateFleetOwnerInfo merchantShortId opCity apiTokenInfo driverId mbFleetOwnerId req = do
+  runRequestValidation Common.validateUpdateFleetOwnerInfoReq req
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just driverId) (Just req)
   T.withTransactionStoring transaction $ do
@@ -488,3 +490,9 @@ getDriverDashboardInternalHelperGetFleetOwnerId _ _ _ _ = throwError $ InternalE
 
 getDriverDashboardInternalHelperGetFleetOwnerIds :: (ShortId DM.Merchant -> City.City -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Text -> Environment.Flow [(Kernel.Prelude.Text, Kernel.Prelude.Text)])
 getDriverDashboardInternalHelperGetFleetOwnerIds _ _ _ _ = throwError $ InternalError "Unimplemented!"
+
+postDriverFleetV2AccessMultiOwnerIdSelect :: (ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Bool) -> Kernel.Prelude.Bool -> Common.MultiOwnerSelect -> Environment.Flow APISuccess)
+postDriverFleetV2AccessMultiOwnerIdSelect merchantShortId opCity apiTokenInfo _ onlyCurrent enable req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  let fleetMemberId = apiTokenInfo.personId.getId
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetV2AccessMultiOwnerIdSelect) (Just fleetMemberId) onlyCurrent enable req

@@ -27,6 +27,7 @@ import Control.Applicative (liftA2, (<|>))
 import qualified Data.Text as T
 import Data.Time (nominalDay)
 import Data.Tuple.Extra (both)
+import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as VC
 import Domain.Types.DocumentVerificationConfig (DocumentVerificationConfig)
 import qualified Domain.Types.DocumentVerificationConfig as DTO
 import qualified Domain.Types.DriverLicense as Domain
@@ -53,6 +54,7 @@ import Kernel.Types.Id
 import Kernel.Types.Predicate
 import Kernel.Types.Validation
 import Kernel.Utils.Common
+import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Kernel.Utils.Validation
 import SharedLogic.DriverOnboarding
 import qualified Storage.Cac.TransporterConfig as SCTC
@@ -104,6 +106,9 @@ verifyDL ::
   DriverDLReq ->
   Flow DriverDLRes
 verifyDL isDashboard mbMerchant (personId, merchantId, merchantOpCityId) req@DriverDLReq {..} = do
+  externalServiceRateLimitOptions <- asks (.externalServiceRateLimitOptions)
+  checkSlidingWindowLimitWithOptions (makeVerifyDLHitsCountKey req.driverLicenseNumber) externalServiceRateLimitOptions
+
   now <- getCurrentTime
   runRequestValidation (validateDriverDLReq now) req
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -113,9 +118,9 @@ verifyDL isDashboard mbMerchant (personId, merchantId, merchantOpCityId) req@Dri
     unless (merchant.id == person.merchantId) $ throwError (PersonNotFound personId.getId)
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverInfo.driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   documentVerificationConfig <- QODC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId DTO.DriverLicense (fromMaybe CAR req.vehicleCategory) Nothing >>= fromMaybeM (DocumentVerificationConfigNotFound merchantOpCityId.getId (show DTO.DriverLicense))
-  nameOnCard <-
+  (nameOnCard, dateOfBirth) <-
     if isJust nameOnCardFromSdk
-      then return nameOnCardFromSdk
+      then return (nameOnCardFromSdk, Nothing)
       else
         if isNothing dateOfIssue && documentVerificationConfig.checkExtraction && (not isDashboard || transporterConfig.checkImageExtractionForDashboard)
           then do
@@ -133,9 +138,14 @@ verifyDL isDashboard mbMerchant (personId, merchantId, merchantOpCityId) req@Dri
                 cacheExtractedDl person.id extractDLNumber operatingCity
                 unless (extractDLNumber == dlNumber) $
                   throwImageError imageId1 $ ImageDocumentNumberMismatch (maybe "null" maskText extractDLNumber) (maybe "null" maskText dlNumber)
-                return nameOnCard
+                return (nameOnCard, extractedDL.dateOfBirth)
               Nothing -> throwImageError imageId1 ImageExtractionFailed
-          else return Nothing
+          else return (Nothing, Nothing)
+  decryptedPanNumber <- mapM decrypt driverInfo.panNumber
+  decryptedAadhaarNumber <- mapM decrypt driverInfo.aadhaarNumber
+  decryptedDlNumber <- mapM decrypt driverInfo.dlNumber
+  when (isJust transporterConfig.validNameComparePercentage) $
+    VC.validateDocument merchantId merchantOpCityId person.id nameOnCard dateOfBirth Nothing DTO.DriverLicense VC.DriverDocument {panNumber = decryptedPanNumber, aadhaarNumber = decryptedAadhaarNumber, dlNumber = decryptedDlNumber, gstNumber = Nothing}
   mdriverLicense <- Query.findByDLNumber driverLicenseNumber
   whenJust transporterConfig.dlNumberVerification $ \dlNumberVerification -> do
     when dlNumberVerification $ do
@@ -196,6 +206,9 @@ verifyDL isDashboard mbMerchant (personId, merchantId, merchantOpCityId) req@Dri
           rideDescription = Nothing,
           becknIssueId = Nothing
         }
+
+    makeVerifyDLHitsCountKey :: Text -> Text
+    makeVerifyDLHitsCountKey dlNumber = "VerifyDL:dlNumberHits:" <> dlNumber <> ":hitsCount"
 
 verifyDLFlow :: Person.Person -> Id DMOC.MerchantOperatingCity -> DocumentVerificationConfig -> Text -> UTCTime -> Id Image.Image -> Maybe (Id Image.Image) -> Maybe UTCTime -> Maybe Text -> Maybe VehicleCategory -> Maybe Text -> Maybe Text -> Flow ()
 verifyDLFlow person merchantOpCityId documentVerificationConfig dlNumber driverDateOfBirth imageId1 imageId2 dateOfIssue nameOnCard mbVehicleCategory mbReqId mbTxnId = do
@@ -317,6 +330,10 @@ onVerifyDLHandler person dlNumber dlExpiry covDetails name dob documentVerificat
   case mDriverLicense of
     Just driverLicense -> do
       Query.upsert driverLicense
+      case person.role of
+        Person.DRIVER -> do
+          DriverInfo.updateDlNumber mEncryptedDL person.id
+        _ -> pure ()
       (image1, image2) <- uncurry (liftA2 (,)) $ both (maybe (return Nothing) ImageQuery.findById) (Just imageId1, imageId2)
       when (((image1 >>= (.verificationStatus)) /= Just Documents.VALID) && ((image2 >>= (.verificationStatus)) /= Just Documents.VALID)) $
         mapM_ (maybe (return ()) (ImageQuery.updateVerificationStatusAndFailureReason Documents.VALID (ImageNotValid "verificationStatus updated to VALID by dashboard."))) [Just imageId1, imageId2]

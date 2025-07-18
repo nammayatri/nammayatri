@@ -76,6 +76,9 @@ updateDriverInfo dummyString = (getBaseUrl "") <> "/driver/profile"
 listCancelReason :: String -> String
 listCancelReason dummyString = (getBaseUrl "") <> "/cancellationReason/list"
 
+getDriverInsurance :: String -> String
+getDriverInsurance rideId = (getBaseUrl "") <> "/insurance/" <> rideId
+
 getRoute :: String -> String
 getRoute routeType = (getBaseUrl "") <> "/" <> routeType <>"/route"
 
@@ -431,3 +434,6 @@ addDestination rideId = (getBaseUrl "dummy") <> "/meterRide/" <> rideId <> "/add
 
 getMeterPrice :: String -> String
 getMeterPrice rideId = (getBaseUrl "dummy") <> "/meterRide/price?rideId=" <> rideId
+
+driverConsent :: String -> String
+driverConsent _ = (getBaseUrl "") <> "/driver/consent/respond"

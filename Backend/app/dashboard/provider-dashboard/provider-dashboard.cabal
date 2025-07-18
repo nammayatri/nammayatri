@@ -53,6 +53,7 @@ library
       Domain.Action.ProviderPlatform.Management.DriverReferral
       Domain.Action.ProviderPlatform.Management.DriverRegistration
       Domain.Action.ProviderPlatform.Management.Media
+      Domain.Action.ProviderPlatform.Management.MediaFileDocument
       Domain.Action.ProviderPlatform.Management.Merchant
       Domain.Action.ProviderPlatform.Management.Message
       Domain.Action.ProviderPlatform.Management.NammaTag
@@ -98,6 +99,7 @@ library
       API.Action.ProviderPlatform.Management.DriverReferral
       API.Action.ProviderPlatform.Management.DriverRegistration
       API.Action.ProviderPlatform.Management.Media
+      API.Action.ProviderPlatform.Management.MediaFileDocument
       API.Action.ProviderPlatform.Management.Merchant
       API.Action.ProviderPlatform.Management.Message
       API.Action.ProviderPlatform.Management.NammaTag

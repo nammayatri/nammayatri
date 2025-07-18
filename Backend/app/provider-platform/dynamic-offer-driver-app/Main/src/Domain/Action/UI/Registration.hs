@@ -313,7 +313,10 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
             softBlockStiers = Nothing,
             isBlockedForReferralPayout = Nothing,
             onboardingVehicleCategory = Nothing,
-            servicesEnabledForSubscription = [DEP.YATRI_SUBSCRIPTION]
+            servicesEnabledForSubscription = [DEP.YATRI_SUBSCRIPTION],
+            panNumber = Nothing,
+            aadhaarNumber = Nothing,
+            dlNumber = Nothing
           }
   QDriverStats.createInitialDriverStats merchantOperatingCity.currency merchantOperatingCity.distanceUnit driverId
   QD.create driverInfo
@@ -399,7 +402,8 @@ makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigV
         useFakeOtp,
         clientId = Nothing,
         driverTag = Just [safetyCohortNewTag],
-        maskedMobileDigits = fmap (takeEnd 4) req.mobileNumber
+        maskedMobileDigits = fmap (takeEnd 4) req.mobileNumber,
+        nyClubConsent = Just False
       }
 
 makeSession ::

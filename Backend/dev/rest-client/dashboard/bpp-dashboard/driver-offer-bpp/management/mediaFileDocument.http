@@ -1,0 +1,55 @@
+# access tokens with different roles
+@customer = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/customer}}
+@driver = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/driver}}
+@juspay_ops = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/juspay_ops}}
+@juspay_admin = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/juspay_admin}}
+@customer_service = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/customer_service}}
+@operator = favorit-operator-token0-000000000000
+
+###
+
+# @name postMediaFileDocumentUploadLink
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/mediaFileDocument/uploadLink
+token: {{operator}}
+content-type: application/json
+
+{ "mediaFileDocumentType": "VehicleVideo",
+  "fileType": "Video",
+  "reqContentType": "video/mp4",
+  "rcNumber": "WB1234567"
+}
+
+###
+
+# @name getMediaFileDocumentDownloadLink
+
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/mediaFileDocument/downloadLink
+  ?mediaFileDocumentType="VehicleVideo"
+  &rcNumber=WB1234567
+token: {{operator}}
+content-type: application/json
+
+###
+
+# @name postMediaFileDocumentConfirm
+
+@mediaFileDocumentId = {{getMediaFileDocumentDownloadLink.response.body.mediaFileDocumentId}}
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/mediaFileDocument/confirm
+token: {{operator}}
+content-type: application/json
+
+{ "mediaFileDocumentId": "{{mediaFileDocumentId}}"
+}
+
+###
+
+# @name postMediaFileDocumentDelete
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/mediaFileDocument/delete
+token: {{operator}}
+content-type: application/json
+
+{ "mediaFileDocumentId": "{{mediaFileDocumentId}}"
+}

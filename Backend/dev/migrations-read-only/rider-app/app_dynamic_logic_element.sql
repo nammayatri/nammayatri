@@ -13,3 +13,8 @@ ALTER TABLE atlas_app.app_dynamic_logic_element ADD PRIMARY KEY ( domain, "order
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.app_dynamic_logic_element ADD COLUMN merchant_id character varying(36) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.app_dynamic_logic_element ADD COLUMN patched_element text ;

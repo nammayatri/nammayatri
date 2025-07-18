@@ -97,6 +97,8 @@ let cacConfig =
       , enableCac = False
       }
 
+let sendEmailRateLimitOptions = { limit = +3, limitResetTimeInSec = +600 }
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , hedisCfg = rcfg
@@ -123,6 +125,8 @@ in  { esqDBCfg
     , longDurationRetryCfg = common.longDurationRetryCfg
     , authTokenCacheExpiry = +600
     , registrationTokenExpiry = +365
+    , registrationTokenInactivityTimeout = None Integer
+    , sendEmailRateLimitOptions
     , encTools
     , exotelToken = sec.exotelToken
     , dataServers =
@@ -142,4 +146,6 @@ in  { esqDBCfg
     , cacConfig
     , kvConfigUpdateFrequency = +60
     , internalAuthAPIKey = "ae288466-2add-11ee-be56-0242ac120002"
+    , passwordExpiryDays = None Integer
+    , enforceStrongPasswordPolicy = False
     }

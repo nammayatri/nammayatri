@@ -6,10 +6,10 @@ module Storage.Queries.PartnerOrgStation where
 
 import qualified Domain.Types.PartnerOrgStation
 import qualified Domain.Types.PartnerOrganization
-import qualified Domain.Types.Station
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -27,16 +27,10 @@ findByPOrgIdAndPOrgStationId partnerOrgId partnerOrgStationId = do
         ]
     ]
 
-findByStationIdAndPOrgId ::
+findByStationCodeAndPOrgId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.Station.Station -> Kernel.Types.Id.Id Domain.Types.PartnerOrganization.PartnerOrganization -> m (Maybe Domain.Types.PartnerOrgStation.PartnerOrgStation))
-findByStationIdAndPOrgId stationId partnerOrgId = do
-  findOneWithKV
-    [ Se.And
-        [ Se.Is Beam.stationId $ Se.Eq (Kernel.Types.Id.getId stationId),
-          Se.Is Beam.partnerOrgId $ Se.Eq (Kernel.Types.Id.getId partnerOrgId)
-        ]
-    ]
+  (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.PartnerOrganization.PartnerOrganization -> m (Maybe Domain.Types.PartnerOrgStation.PartnerOrgStation))
+findByStationCodeAndPOrgId stationCode partnerOrgId = do findOneWithKV [Se.And [Se.Is Beam.stationId $ Se.Eq stationCode, Se.Is Beam.partnerOrgId $ Se.Eq (Kernel.Types.Id.getId partnerOrgId)]]
 
 instance FromTType' Beam.PartnerOrgStation Domain.Types.PartnerOrgStation.PartnerOrgStation where
   fromTType' (Beam.PartnerOrgStationT {..}) = do
@@ -46,7 +40,7 @@ instance FromTType' Beam.PartnerOrgStation Domain.Types.PartnerOrgStation.Partne
           { name = name,
             partnerOrgId = Kernel.Types.Id.Id partnerOrgId,
             partnerOrgStationId = Kernel.Types.Id.Id partnerOrgStationId,
-            stationId = Kernel.Types.Id.Id stationId,
+            stationCode = stationId,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -57,7 +51,7 @@ instance ToTType' Beam.PartnerOrgStation Domain.Types.PartnerOrgStation.PartnerO
       { Beam.name = name,
         Beam.partnerOrgId = Kernel.Types.Id.getId partnerOrgId,
         Beam.partnerOrgStationId = Kernel.Types.Id.getId partnerOrgStationId,
-        Beam.stationId = Kernel.Types.Id.getId stationId,
+        Beam.stationId = stationCode,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

@@ -12,16 +12,16 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data FRFSVehicleServiceTierT f = FRFSVehicleServiceTierT
-  { _type :: B.C f BecknV2.FRFS.Enums.ServiceTierType,
-    description :: B.C f Kernel.Prelude.Text,
-    id :: B.C f Kernel.Prelude.Text,
-    longName :: B.C f Kernel.Prelude.Text,
-    merchantId :: B.C f Kernel.Prelude.Text,
-    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
-    providerCode :: B.C f Kernel.Prelude.Text,
-    shortName :: B.C f Kernel.Prelude.Text,
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+  { _type :: (B.C f BecknV2.FRFS.Enums.ServiceTierType),
+    description :: (B.C f Kernel.Prelude.Text),
+    id :: (B.C f Kernel.Prelude.Text),
+    longName :: (B.C f Kernel.Prelude.Text),
+    merchantId :: (B.C f Kernel.Prelude.Text),
+    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
+    providerCode :: (B.C f Kernel.Prelude.Text),
+    shortName :: (B.C f Kernel.Prelude.Text),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 
@@ -31,6 +31,6 @@ instance B.Table FRFSVehicleServiceTierT where
 
 type FRFSVehicleServiceTier = FRFSVehicleServiceTierT Identity
 
-$(enableKVPG ''FRFSVehicleServiceTierT ['id] [])
+$(enableKVPG (''FRFSVehicleServiceTierT) [('id)] [])
 
-$(mkTableInstances ''FRFSVehicleServiceTierT "frfs_vehicle_service_tier")
+$(mkTableInstances (''FRFSVehicleServiceTierT) "frfs_vehicle_service_tier")

@@ -22,8 +22,9 @@ module Domain.Action.UI.MultimodalConfirm
     getPublicTransportData,
     getMultimodalOrderGetLegTierOptions,
     postMultimodalPaymentUpdateOrder,
-    postMultimodalOrderSetStatus,
+    postMultimodalOrderSublegSetStatus,
     postMultimodalTicketVerify,
+    postMultimodalComplete,
   )
 where
 
@@ -72,19 +73,16 @@ import qualified Lib.JourneyModule.Types as JMTypes
 import qualified Lib.JourneyModule.Utils as JLU
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
-import qualified SharedLogic.CreateFareForMultiModal as SMMFRFS
-import qualified Storage.CachedQueries.IntegratedBPPConfig as QIBC
+import qualified SharedLogic.IntegratedBPPConfig as SIBC
+import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
-import qualified Storage.Queries.BecknConfig as QBC
-import qualified Storage.Queries.BookingExtra as QBooking
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
-import qualified Storage.Queries.FRFSQuote as QQuote
 import Storage.Queries.FRFSSearch as QFRFSSearch
 import qualified Storage.Queries.FRFSTicketBokingPayment as QFRFSTicketBookingPayment
 import Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
-import qualified Storage.Queries.FRFSTicketBooking as QTBooking
 import Storage.Queries.Journey as QJourney
 import Storage.Queries.JourneyFeedback as SQJFB
 import qualified Storage.Queries.JourneyLegsFeedbacks as SQJLFB
@@ -92,11 +90,9 @@ import Storage.Queries.JourneyRouteDetails as QJourneyRouteDetails
 import Storage.Queries.MultimodalPreferences as QMP
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RiderConfig as QRiderConfig
-import qualified Storage.Queries.Route as QRoute
 import Storage.Queries.SearchRequest as QSearchRequest
-import qualified Storage.Queries.Station as QStation
-import qualified Storage.Queries.WalkLegMultimodal as QWalkLeg
 import Tools.Error
+import Tools.MultiModal as MM
 import qualified Tools.Payment as TPayment
 
 postMultimodalInitiate ::
@@ -109,7 +105,7 @@ postMultimodalInitiate ::
 postMultimodalInitiate (_personId, _merchantId) journeyId = do
   Redis.withLockRedisAndReturnValue lockKey 60 $ do
     journeyLegs <- getJourneyLegs journeyId
-    addAllLegs journeyId journeyLegs
+    addAllLegs journeyId (Just journeyLegs) journeyLegs
     journey <- JM.getJourney journeyId
     JM.updateJourneyStatus journey Domain.Types.Journey.INITIATED
     legs <- JM.getAllLegsInfo journeyId False
@@ -143,10 +139,19 @@ getMultimodalBookingInfo ::
     Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
     Environment.Flow ApiTypes.JourneyInfoResp
   )
-getMultimodalBookingInfo (_personId, _merchantId) journeyId = do
+getMultimodalBookingInfo (mbPersonId, _merchantId) journeyId = do
   journey <- JM.getJourney journeyId
   legs <- JM.getAllLegsInfo journeyId False
-  JM.updateJourneyStatus journey Domain.Types.Journey.INPROGRESS -- fix it properly
+  when (journey.status == Domain.Types.Journey.INITIATED) $ JM.updateJourneyStatus journey Domain.Types.Journey.INPROGRESS -- move it to payment success
+  allJourneyFrfsBookings <- QFRFSTicketBooking.findAllByJourneyId (Just journeyId)
+  let allMarked = all ((== DFRFSB.REFUND_INITIATED) . (.status)) allJourneyFrfsBookings
+  unless allMarked $
+    case find ((== DFRFSB.FAILED) . (.status)) allJourneyFrfsBookings of
+      Just frfsBooking -> do
+        personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
+        riderConfig <- QRC.findByMerchantOperatingCityId frfsBooking.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist frfsBooking.merchantOperatingCityId.getId)
+        when riderConfig.enableAutoJourneyRefund $ FRFSTicketService.markAllRefundBookings allJourneyFrfsBookings personId (Just journeyId)
+      Nothing -> pure ()
   generateJourneyInfoResponse journey legs
 
 getMultimodalBookingPaymentStatus ::
@@ -215,69 +220,19 @@ postMultimodalPaymentUpdateOrder ::
   )
 postMultimodalPaymentUpdateOrder (mbPersonId, _merchantId) journeyId req = do
   personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
-  person <- QP.findById personId >>= fromMaybeM (InvalidRequest "Person not found")
-  frfsBookingsArr <- QFRFSTicketBooking.findAllByJourneyIdCond (Just journeyId)
-  frfsBookingWithUpdatedPriceAndQty <-
-    mapM
-      ( \ticketBooking -> do
-          quote <- QQuote.findById ticketBooking.quoteId >>= fromMaybeM (FRFSQuoteNotFound $ show ticketBooking.quoteId)
-          let quantityRational = fromIntegral req.quantity :: Rational
-          let oldQuantityRational = fromIntegral ticketBooking.quantity :: Rational
-          let childTicketQuantityRational = fromIntegral req.childTicketQuantity :: Rational
-          let childPrice = maybe (getHighPrecMoney quote.price.amount) (\p -> getHighPrecMoney p.amount) quote.childPrice
-          let amountToBeUpdated = ((safeDiv (getHighPrecMoney ticketBooking.price.amount) oldQuantityRational) * quantityRational) + (childPrice * childTicketQuantityRational)
-          let totalPrice =
-                Price
-                  { amount = HighPrecMoney $ amountToBeUpdated,
-                    amountInt = Money $ roundToIntegral amountToBeUpdated,
-                    currency = ticketBooking.price.currency
-                  }
-          let fRFSTicketBooking =
-                ticketBooking
-                  { DFRFSB.quantity = req.quantity,
-                    DFRFSB.childTicketQuantity = Just req.childTicketQuantity,
-                    DFRFSB.finalPrice = Just totalPrice,
-                    DFRFSB.estimatedPrice = totalPrice,
-                    DFRFSB.price = totalPrice
-                  }
-          QFRFSTicketBooking.updateByPrimaryKey fRFSTicketBooking
-          pure $ ticketBooking{price = totalPrice, quantity = req.quantity}
-      )
-      frfsBookingsArr
-  frfsBookingsPaymentArr <- mapM (QFRFSTicketBookingPayment.findAllTicketBookingId . (.id)) frfsBookingWithUpdatedPriceAndQty
-  let paymentType = TPayment.FRFSMultiModalBooking
-  (_vendorSplitDetails, amountUpdated) <- SMMFRFS.createVendorSplitFromBookings frfsBookingWithUpdatedPriceAndQty _merchantId person.merchantOperatingCityId paymentType
-  isSplitEnabled <- TPayment.getIsSplitEnabled _merchantId person.merchantOperatingCityId Nothing paymentType
-  let splitDetails = TPayment.mkUnaggregatedSplitSettlementDetails isSplitEnabled amountUpdated _vendorSplitDetails
-  let flattenedPayments = concat frfsBookingsPaymentArr
-  let mbPaymentOrderId = paymentOrderId <$> listToMaybe flattenedPayments
-  case mbPaymentOrderId of
+  mbUpdatedOrder <- JLU.postMultimodalPaymentUpdateOrderUtil personId _merchantId (Just journeyId) req.quantity req.childTicketQuantity
+  case mbUpdatedOrder of
     Nothing ->
       return $
         ApiTypes.UpdatePaymentOrderResp
           { sdkPayload = Nothing
           }
-    Just paymentOrderId -> do
-      let updateReq =
-            KT.OrderUpdateReq
-              { amount = amountUpdated,
-                orderShortId = show paymentOrderId,
-                splitSettlementDetails = splitDetails
-              }
-      order <- QOrder.findById paymentOrderId >>= fromMaybeM (PaymentOrderNotFound paymentOrderId.getId)
-      _ <- TPayment.updateOrder person.merchantId person.merchantOperatingCityId Nothing TPayment.FRFSMultiModalBooking (Just person.id.getId) person.clientSdkVersion updateReq
-      QOrder.updateAmount order.id amountUpdated
-      let updatedOrder :: DOrder.PaymentOrder
-          updatedOrder = order {DOrder.amount = amountUpdated}
-      sdkPayload <- buildUpdateOrderSDKPayload amountUpdated updatedOrder
+    Just updatedOrder -> do
+      sdkPayload <- buildUpdateOrderSDKPayload updatedOrder.amount updatedOrder
       return $
         ApiTypes.UpdatePaymentOrderResp
           { sdkPayload = sdkPayload
           }
-  where
-    safeDiv :: (Eq a, Fractional a) => a -> a -> a
-    safeDiv x 0 = x
-    safeDiv x y = x / y
 
 buildUpdateOrderSDKPayload :: EncFlow m r => HighPrecMoney -> DOrder.PaymentOrder -> m (Maybe Juspay.SDKPayloadDetails)
 buildUpdateOrderSDKPayload amount order = do
@@ -455,9 +410,9 @@ postMultimodalRiderLocation ::
 postMultimodalRiderLocation personOrMerchantId journeyId req = do
   addPoint journeyId req
   journeyStatus <- getMultimodalJourneyStatus personOrMerchantId journeyId
-  forM_ (zip journeyStatus.legs (drop 1 journeyStatus.legs)) $ \(currentLeg, nextLeg) -> do
-    when ((currentLeg.status == JL.Finishing || currentLeg.status == JL.Completed) && nextLeg.status == JL.InPlan && nextLeg.mode == DTrip.Taxi) $
-      void $ JM.startJourney [] (Just nextLeg.legOrder) journeyId
+  -- forM_ (zip journeyStatus.legs (drop 1 journeyStatus.legs)) $ \(currentLeg, nextLeg) -> do
+  --   when ((currentLeg.status == JL.Finishing || currentLeg.status == JL.Completed) && nextLeg.status == JL.InPlan && nextLeg.mode == DTrip.Taxi) $
+  --     void $ JM.startJourney [] (Just nextLeg.legOrder) journeyId
   return journeyStatus
 
 postMultimodalJourneyCancel ::
@@ -524,40 +479,10 @@ getMultimodalJourneyStatus ::
   Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
   Environment.Flow ApiTypes.JourneyStatusResp
 getMultimodalJourneyStatus (mbPersonId, merchantId) journeyId = do
+  personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
   journey <- JM.getJourney journeyId
   legs <- JM.getAllLegsStatus journey
-  journeyChangeLogCounter <- JM.getJourneyChangeLogCounter journeyId
-  paymentStatus <-
-    if journey.isPaymentSuccess /= Just True
-      then do
-        personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
-        allJourneyFrfsBookings <- QFRFSTicketBooking.findAllByJourneyIdCond (Just journeyId)
-        frfsBookingStatusArr <- mapM (FRFSTicketService.frfsBookingStatus (personId, merchantId) True) allJourneyFrfsBookings
-        let anyFirstBooking = listToMaybe frfsBookingStatusArr
-            paymentOrder =
-              anyFirstBooking >>= (.payment)
-                <&> ( \p ->
-                        ApiTypes.PaymentOrder {sdkPayload = p.paymentOrder, status = p.status}
-                    )
-        return $ paymentOrder <&> (.status)
-      else return (Just FRFSTicketService.SUCCESS)
-  return $ ApiTypes.JourneyStatusResp {legs = concatMap transformLeg legs, journeyStatus = journey.status, journeyPaymentStatus = paymentStatus, journeyChangeLogCounter}
-  where
-    transformLeg :: JMTypes.JourneyLegState -> [ApiTypes.LegStatus]
-    transformLeg legState =
-      case legState of
-        JMTypes.Single legData -> [convert legData]
-        JMTypes.Transit legDataList -> map convert legDataList
-      where
-        convert legData =
-          ApiTypes.LegStatus
-            { legOrder = legData.legOrder,
-              subLegOrder = legData.subLegOrder,
-              status = legData.status,
-              userPosition = legData.userPosition,
-              vehiclePositions = legData.vehiclePositions,
-              mode = legData.mode
-            }
+  generateJourneyStatusResponse personId merchantId journey legs
 
 postMultimodalJourneyFeedback :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.Journey.Journey -> API.Types.UI.MultimodalConfirm.JourneyFeedBackForm -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postMultimodalJourneyFeedback (mbPersonId, mbMerchantId) journeyId journeyFeedbackForm = do
@@ -729,12 +654,11 @@ getPublicTransportData (mbPersonId, merchantId) mbCity _mbConfigVersion = do
   let merchantOperatingCityId = maybe person.merchantOperatingCityId (.id) mbRequestCity
   let vehicleTypes = [Enums.BUS, Enums.METRO, Enums.SUBWAY]
   integratedBPPConfigs <-
-    catMaybes
-      <$> forM
-        vehicleTypes
-        ( \vType ->
-            QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCityId vType DIBC.MULTIMODAL
-        )
+    forM
+      vehicleTypes
+      ( \vType ->
+          SIBC.findAllIntegratedBPPConfig merchantOperatingCityId vType DIBC.MULTIMODAL
+      )
 
   let mkResponse stations routes bppConfig =
         pure
@@ -753,7 +677,10 @@ getPublicTransportData (mbPersonId, merchantId) mbCity _mbConfigVersion = do
                               vt = show s.vehicleType,
                               rgn = s.regionalName,
                               sgstdDest = s.suggestedDestinations,
-                              hin = s.hindiName
+                              hin = s.hindiName,
+                              gj = s.geoJson,
+                              gi = s.gates,
+                              ibc = bppConfig.id
                             }
                       _ -> Nothing
                   )
@@ -768,12 +695,13 @@ getPublicTransportData (mbPersonId, merchantId) mbCity _mbConfigVersion = do
                           dTC = r.dailyTripCount,
                           stC = r.stopCount,
                           vt = show r.vehicleType,
-                          clr = r.color
+                          clr = r.color,
+                          ibc = bppConfig.id
                         }
                   )
                   routes,
               rsm = [],
-              ptcv = bppConfig.id.getId
+              ptcv = bppConfig.feedKey
             }
 
   let fetchData bppConfig = do
@@ -781,40 +709,28 @@ getPublicTransportData (mbPersonId, merchantId) mbCity _mbConfigVersion = do
         routes <- OTPRest.getRoutesByGtfsId bppConfig
         mkResponse stations routes bppConfig
 
-  let fetchDataDb bppConfig = do
-        routes <- QRoute.findAllByBppConfigId bppConfig.id
-        stations <- QStation.findAllByBppConfigId bppConfig.id
-        mkResponse stations routes bppConfig
-
   transportDataList <-
     try @_ @SomeException
       ( mapM
           ( \config -> do
-              (feedInfo, baseUrl) <- OTPRest.getFeedInfoVehicleTypeAndBaseUrl config
-              return (config, (feedInfo, baseUrl))
+              baseUrl <- MM.getOTPRestServiceReq config.merchantId config.merchantOperatingCityId
+              return (config, (config.feedKey, baseUrl))
           )
-          integratedBPPConfigs
+          (concat integratedBPPConfigs)
       )
       >>= \case
-        Left _ -> mapM fetchData integratedBPPConfigs
+        Left _ -> mapM fetchData (concat integratedBPPConfigs)
         Right configsWithFeedInfo -> do
           -- Group configs by feed_id and take first config for each feed_id
-          let configsByFeedId = HashMap.fromListWith (++) $ map (\(config, (feedInfo, _)) -> (feedInfo.feedId.getId, [config])) configsWithFeedInfo
+          let configsByFeedId = HashMap.fromListWith (++) $ map (\(config, (feedKey, _)) -> (feedKey, [config])) configsWithFeedInfo
               uniqueConfigs = map (head . snd) $ HashMap.toList configsByFeedId
-
-          -- Process only unique configs
-          try @_ @SomeException (mapM fetchData uniqueConfigs) >>= \case
-            Left error' -> do
-              logError $ "Error fetching data from OTPRest all public transport data: " <> show error'
-              mapM fetchDataDb integratedBPPConfigs
-            Right dataList -> pure dataList
-
+          mapM fetchData uniqueConfigs
   let transportData =
         ApiTypes.PublicTransportData
           { ss = concatMap (.ss) transportDataList,
             rs = concatMap (.rs) transportDataList,
             rsm = concatMap (.rsm) transportDataList,
-            ptcv = T.intercalate (T.pack "#") $ map (.id.getId) integratedBPPConfigs
+            ptcv = T.intercalate (T.pack "#") $ map (.feedKey) (concat integratedBPPConfigs)
           }
   return transportData
 
@@ -831,13 +747,14 @@ getMultimodalOrderGetLegTierOptions (mbPersonId, merchantId) journeyId legOrder 
   legs <- JM.getJourneyLegs journeyId
   now <- getCurrentTime
   journeyLegInfo <- find (\leg -> leg.sequenceNumber == legOrder) legs & fromMaybeM (InvalidRequest "No matching journey leg found for the given legOrder")
+  let mbAgencyId = journeyLegInfo.agency >>= (.gtfsId)
   let mbRouteDetail = journeyLegInfo.routeDetails & listToMaybe
   let mbFomStopCode = mbRouteDetail >>= (.fromStopDetails) >>= (.stopCode)
   let mbToStopCode = mbRouteDetail >>= (.toStopDetails) >>= (.stopCode)
   let vehicleCategory = castTravelModeToVehicleCategory journeyLegInfo.mode
   let mbArrivalTime = mbRouteDetail >>= (.fromArrivalTime)
   let arrivalTime = fromMaybe now mbArrivalTime
-  mbIntegratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) person.merchantOperatingCityId vehicleCategory DIBC.MULTIMODAL
+  mbIntegratedBPPConfig <- SIBC.findMaybeIntegratedBPPConfigFromAgency mbAgencyId person.merchantOperatingCityId vehicleCategory DIBC.MULTIMODAL
   case (mbFomStopCode, mbToStopCode, mbIntegratedBPPConfig) of
     (Just fromStopCode, Just toStopCode, Just integratedBPPConfig) -> do
       quotes <- maybe (pure []) (QFRFSQuote.findAllBySearchId . Id) journeyLegInfo.legSearchId
@@ -853,47 +770,99 @@ getMultimodalOrderGetLegTierOptions (mbPersonId, merchantId) journeyId legOrder 
     castTravelModeToVehicleCategory DTrip.Metro = Enums.METRO
     castTravelModeToVehicleCategory DTrip.Subway = Enums.SUBWAY
 
-postMultimodalOrderSetStatus ::
+postMultimodalOrderSublegSetStatus ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
   ) ->
   Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
   Kernel.Prelude.Int ->
+  Kernel.Prelude.Int ->
   JL.JourneyLegStatus ->
-  Environment.Flow Kernel.Types.APISuccess.APISuccess
-postMultimodalOrderSetStatus (_mbPersonId, _merchantId) journeyId legOrder newStatus = do
+  Environment.Flow ApiTypes.JourneyStatusResp
+postMultimodalOrderSublegSetStatus (mbPersonId, merchantId) journeyId legOrder subLegOrder newStatus = do
+  personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
+  journey <- JM.getJourney journeyId
+
+  -- Removed the 'unless' condition to allow updates for JL.Completed and JL.Cancelled statuses
+
   legs <- JM.getAllLegsInfo journeyId False
-  journeyLegInfo <- find (\leg -> leg.order == legOrder) legs & fromMaybeM (InvalidRequest $ "No matching journey leg found for the given legOrder")
-  case journeyLegInfo.legExtraInfo of
-    JMTypes.Taxi legExtraInfo -> do
-      let mbBookingId = legExtraInfo.bookingId
-      bookingId <- mbBookingId & fromMaybeM (InvalidRequest $ "BookingId for given journeyId: " <> journeyId.getId <> ", legOrder: " <> show legOrder <> " not found")
-      QBooking.updateJourneyLegStatus (Just newStatus) bookingId
-    JMTypes.Metro legExtraInfo -> updateJourneyLegInTicketBooking legExtraInfo.bookingId
-    JMTypes.Bus legExtraInfo -> updateJourneyLegInTicketBooking legExtraInfo.bookingId
-    JMTypes.Subway legExtraInfo -> updateJourneyLegInTicketBooking legExtraInfo.bookingId
-    JMTypes.Walk legExtraInfo -> do
-      QWalkLeg.updateStatus (JMTypes.castWalkLegStatusFromLegStatus newStatus) legExtraInfo.id
-  pure Kernel.Types.APISuccess.Success
-  where
-    updateJourneyLegInTicketBooking mbTicketBookingId = do
-      ticketBookingId <- mbTicketBookingId & fromMaybeM (InvalidRequest $ "BookingId for given journeyId: " <> journeyId.getId <> ", legOrder: " <> show legOrder <> " not found")
-      QTBooking.updateJourneyLegStatus (Just newStatus) ticketBookingId
+
+  journeyLegInfo <- find (\leg -> leg.order == legOrder) legs & fromMaybeM (InvalidRequest "No matching journey leg found for the given legOrder")
+
+  markLegStatus newStatus journeyLegInfo.legExtraInfo journeyId legOrder (Just subLegOrder)
+
+  -- refetch updated legs and journey
+  updatedLegStatus <- JM.getAllLegsStatus journey
+  checkAndMarkJourneyAsFeedbackPending journey updatedLegStatus
+  updatedJourney <- JM.getJourney journeyId
+  generateJourneyStatusResponse personId merchantId updatedJourney updatedLegStatus
 
 postMultimodalTicketVerify ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
   ) ->
-  Kernel.Prelude.Maybe DIBC.PlatformType ->
   Kernel.Types.Beckn.Context.City ->
-  BecknV2.FRFS.Enums.VehicleCategory ->
   API.Types.UI.MultimodalConfirm.MultimodalTicketVerifyReq ->
   Environment.Flow API.Types.UI.MultimodalConfirm.MultimodalTicketVerifyResp
-postMultimodalTicketVerify (_mbPersonId, merchantId) _platformType opCity vehicleCategory req = do
-  bapConfig <- QBC.findByMerchantIdDomainAndVehicle (Just merchantId) (show Spec.FRFS) (Utils.frfsVehicleCategoryToBecknVehicleCategory vehicleCategory) >>= fromMaybeM (InternalError "Beckn Config not found")
+postMultimodalTicketVerify (_mbPersonId, merchantId) opCity req = do
   merchantOperatingCity <- CQMOC.findByMerchantIdAndCity merchantId opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchantId.getId <> "-city-" <> show opCity)
-  let platformType = fromMaybe (DIBC.APPLICATION) _platformType
-  ticket <- CallExternalBPP.verifyTicket merchantId merchantOperatingCity bapConfig vehicleCategory req.qrData platformType
-  booking <- QFRFSTicketBooking.findById ticket.frfsTicketBookingId >>= fromMaybeM (BookingNotFound ticket.frfsTicketBookingId.getId)
-  legInfo <- JMTypes.mkLegInfoFromFrfsBooking booking Nothing Nothing Nothing Nothing
-  return $ API.Types.UI.MultimodalConfirm.MultimodalTicketVerifyResp {legInfo = legInfo}
+  bapConfig <- CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchantId (show Spec.FRFS) (Utils.frfsVehicleCategoryToBecknVehicleCategory BUS) >>= fromMaybeM (InternalError "Beckn Config not found")
+  let verifyTicketsAndBuildResponse provider tickets = do
+        legInfoList <- forM tickets $ \ticketQR -> do
+          ticket <- CallExternalBPP.verifyTicket merchantId merchantOperatingCity bapConfig BUS ticketQR DIBC.MULTIMODAL
+          booking <- QFRFSTicketBooking.findById ticket.frfsTicketBookingId >>= fromMaybeM (BookingNotFound ticket.frfsTicketBookingId.getId)
+          JMTypes.mkLegInfoFromFrfsBooking booking Nothing Nothing Nothing Nothing
+        return $
+          API.Types.UI.MultimodalConfirm.MultimodalTicketVerifyResp
+            { provider = provider,
+              legInfo = legInfoList
+            }
+
+  case req of
+    ApiTypes.IntegratedQR integratedQRData -> do
+      case integratedQRData.provider of
+        JMTypes.MTC -> do
+          let allTickets = concatMap (.ticketData) integratedQRData.integratedQR.mtc
+          verifyTicketsAndBuildResponse integratedQRData.provider allTickets
+        JMTypes.CMRL -> throwError $ InvalidRequest "CMRL provider not implemented yet"
+        JMTypes.CRIS -> throwError $ InvalidRequest "CRIS provider not implemented yet"
+        _ -> throwError $ InvalidRequest "Invalid provider"
+    ApiTypes.SingleQR singleQRData -> do
+      case singleQRData.provider of
+        JMTypes.MTC -> verifyTicketsAndBuildResponse singleQRData.provider singleQRData.tickets
+        JMTypes.CMRL -> throwError $ InvalidRequest "CMRL provider not implemented yet"
+        JMTypes.CRIS -> throwError $ InvalidRequest "CRIS provider not implemented yet"
+        _ -> throwError $ InvalidRequest "Invalid provider"
+
+-- Helper function to get sub-leg orders from Metro/Subway leg extra info
+getSubLegOrders :: JMTypes.LegExtraInfo -> [Int]
+getSubLegOrders legExtraInfo =
+  case legExtraInfo of
+    JMTypes.Metro metroInfo -> mapMaybe (.subOrder) metroInfo.routeInfo
+    JMTypes.Subway subwayInfo -> mapMaybe (.subOrder) subwayInfo.routeInfo
+    _ -> []
+
+-- Helper function to mark all sub-legs as completed for FRFS legs
+markAllSubLegsCompleted :: JMTypes.LegExtraInfo -> Kernel.Types.Id.Id Domain.Types.Journey.Journey -> Int -> Environment.Flow ()
+markAllSubLegsCompleted legExtraInfo journeyId legOrder = do
+  let subLegOrders = getSubLegOrders legExtraInfo
+  case subLegOrders of
+    [] -> markLegStatus JL.Completed legExtraInfo journeyId legOrder Nothing
+    orders -> mapM_ (\subOrder -> markLegStatus JL.Completed legExtraInfo journeyId legOrder (Just subOrder)) orders
+
+postMultimodalComplete ::
+  ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
+  Environment.Flow ApiTypes.JourneyStatusResp
+postMultimodalComplete (mbPersonId, merchantId) journeyId = do
+  personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
+  journey <- JM.getJourney journeyId
+  legs <- JM.getAllLegsInfo journeyId False
+  mapM_ (\leg -> markAllSubLegsCompleted leg.legExtraInfo journeyId leg.order) legs
+
+  updatedLegStatus <- JM.getAllLegsStatus journey
+  checkAndMarkJourneyAsFeedbackPending journey updatedLegStatus
+  updatedJourney <- JM.getJourney journeyId
+  generateJourneyStatusResponse personId merchantId updatedJourney updatedLegStatus

@@ -161,14 +161,16 @@ let eventStreamMappings =
 
 let apiRateLimitOptions = { limit = +20, limitResetTimeInSec = +1 }
 
+let sendOtpRateLimitOptions = { limit = +3, limitResetTimeInSec = +600 }
+
+let externalServiceRateLimitOptions = { limit = +3, limitResetTimeInSec = +600 }
+
 let encTools = { service = common.passetto, hashSalt = sec.encHashSalt }
 
 let slackCfg =
       { channelName = "beckn-driver-onboard-test"
       , slackToken = common.slackToken
       }
-
-let apiRateLimitOptions = { limit = +20, limitResetTimeInSec = +1 }
 
 let driverLocationUpdateRateLimitOptions =
       { limit = +100, limitResetTimeInSec = +1 }
@@ -233,6 +235,7 @@ let AllocatorJobType =
       | SendWebhookToExternal
       | ScheduledFCMS
       | CheckDashCamInstallationStatus
+      | MediaFileDocumentComplete
       >
 
 let jobInfoMapx =
@@ -283,6 +286,7 @@ let jobInfoMapx =
       , { mapKey = AllocatorJobType.CheckDashCamInstallationStatus
         , mapValue = True
         }
+      , { mapKey = AllocatorJobType.MediaFileDocumentComplete, mapValue = True }
       ]
 
 let LocationTrackingeServiceConfig = { url = "http://localhost:8081/" }
@@ -322,6 +326,8 @@ let modelNamesMap =
         , mapValue = "MARUTI ALTO"
         }
       ]
+
+let tsServiceConfig = { url = "http://0.0.0.0:3001/" }
 
 in  { esqDBCfg
     , esqDBReplicaCfg
@@ -368,6 +374,8 @@ in  { esqDBCfg
     , shortDurationRetryCfg = common.shortDurationRetryCfg
     , longDurationRetryCfg = common.longDurationRetryCfg
     , apiRateLimitOptions
+    , sendOtpRateLimitOptions
+    , externalServiceRateLimitOptions
     , slackCfg
     , jobInfoMapx
     , smsCfg = smsConfig
@@ -403,6 +411,7 @@ in  { esqDBCfg
     , internalEndPointMap = common.internalEndPointMap
     , _version = "2.0.0"
     , cacConfig
+    , tsServiceConfig
     , cacTenants
     , superPositionConfig
     , maxStraightLineRectificationThreshold = +800

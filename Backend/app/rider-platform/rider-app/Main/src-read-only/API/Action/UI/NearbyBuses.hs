@@ -41,10 +41,25 @@ type API =
       :> Get
            '[JSON]
            Lib.JourneyModule.Utils.UpcomingTripInfo
+      :<|> TokenAuth
+      :> "timetable"
+      :> Capture
+           "routeCode"
+           Data.Text.Text
+      :> "stop"
+      :> Capture
+           "stopCode"
+           Data.Text.Text
+      :> QueryParam
+           "vehicleType"
+           BecknV2.FRFS.Enums.VehicleCategory
+      :> Get
+           '[JSON]
+           API.Types.UI.NearbyBuses.TimetableResponse
   )
 
 handler :: Environment.FlowServer API
-handler = postNearbyBusBooking :<|> getNextVehicleDetails
+handler = postNearbyBusBooking :<|> getNextVehicleDetails :<|> getTimetableStop
 
 postNearbyBusBooking ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -65,3 +80,14 @@ getNextVehicleDetails ::
     Environment.FlowHandler Lib.JourneyModule.Utils.UpcomingTripInfo
   )
 getNextVehicleDetails a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.NearbyBuses.getNextVehicleDetails (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
+
+getTimetableStop ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Data.Text.Text ->
+    Data.Text.Text ->
+    Kernel.Prelude.Maybe BecknV2.FRFS.Enums.VehicleCategory ->
+    Environment.FlowHandler API.Types.UI.NearbyBuses.TimetableResponse
+  )
+getTimetableStop a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.NearbyBuses.getTimetableStop (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1

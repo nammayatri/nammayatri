@@ -153,6 +153,7 @@ data QuoteBreakupTitle
   | CANCELLATION_CHARGES
   | TOLL_CHARGES
   | PET_CHARGES
+  | PRIORITY_CHARGES
   | STATE_ENTRY_PERMIT_CHARGES
   | CONGESTION_CHARGE
   | -- Custom Titles not in ONDC Spec
@@ -178,6 +179,8 @@ data QuoteBreakupTitle
   | CARD_CHARGES_FIXED
   | SAFETY_PLUS_CHARGES
   | NO_CHARGES
+  | RIDE_STOP_CHARGES
+  | NYREGULAR_SUBSCRIPTION_CHARGE
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
 data CancellationReasonId

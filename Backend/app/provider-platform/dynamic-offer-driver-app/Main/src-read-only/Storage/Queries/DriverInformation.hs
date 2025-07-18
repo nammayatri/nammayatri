@@ -23,6 +23,7 @@ import qualified Sequelize as Se
 import qualified SharedLogic.BehaviourManagement.IssueBreach
 import qualified Storage.Beam.DriverInformation as Beam
 import Storage.Queries.DriverInformationExtra as ReExport
+import qualified Storage.Queries.Transformers.FleetOwnerInformation
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.DriverInformation.DriverInformation -> m ())
 create = createWithKV
@@ -322,7 +323,9 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.DriverInformation.DriverInformation {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.aadhaarVerified aadhaarVerified,
+    [ Se.Set Beam.aadhaarNumberEncrypted (Storage.Queries.Transformers.FleetOwnerInformation.mkFieldEncrypted aadhaarNumber),
+      Se.Set Beam.aadhaarNumberHash (Storage.Queries.Transformers.FleetOwnerInformation.mkFieldHash aadhaarNumber),
+      Se.Set Beam.aadhaarVerified aadhaarVerified,
       Se.Set Beam.acRestrictionLiftCount acRestrictionLiftCount,
       Se.Set Beam.acUsageRestrictionType (Kernel.Prelude.Just acUsageRestrictionType),
       Se.Set Beam.active active,
@@ -343,6 +346,8 @@ updateByPrimaryKey (Domain.Types.DriverInformation.DriverInformation {..}) = do
       Se.Set Beam.canSwitchToRental (Kernel.Prelude.Just canSwitchToRental),
       Se.Set Beam.compAadhaarImagePath compAadhaarImagePath,
       Se.Set Beam.dailyCancellationRateBlockingCooldown dailyCancellationRateBlockingCooldown,
+      Se.Set Beam.dlNumberEncrypted (Storage.Queries.Transformers.FleetOwnerInformation.mkFieldEncrypted dlNumber),
+      Se.Set Beam.dlNumberHash (Storage.Queries.Transformers.FleetOwnerInformation.mkFieldHash dlNumber),
       Se.Set Beam.driverDob driverDob,
       Se.Set Beam.driverTripEndLocationLat (Kernel.Prelude.fmap (.lat) driverTripEndLocation),
       Se.Set Beam.driverTripEndLocationLon (Kernel.Prelude.fmap (.lon) driverTripEndLocation),
@@ -368,6 +373,8 @@ updateByPrimaryKey (Domain.Types.DriverInformation.DriverInformation {..}) = do
       Se.Set Beam.onRide onRide,
       Se.Set Beam.onRideTripCategory onRideTripCategory,
       Se.Set Beam.onboardingVehicleCategory onboardingVehicleCategory,
+      Se.Set Beam.panNumberEncrypted (Storage.Queries.Transformers.FleetOwnerInformation.mkFieldEncrypted panNumber),
+      Se.Set Beam.panNumberHash (Storage.Queries.Transformers.FleetOwnerInformation.mkFieldHash panNumber),
       Se.Set Beam.payerVpa payerVpa,
       Se.Set Beam.paymentPending paymentPending,
       Se.Set Beam.payoutRegAmountRefunded payoutRegAmountRefunded,

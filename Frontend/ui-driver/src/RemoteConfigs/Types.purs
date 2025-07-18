@@ -231,3 +231,26 @@ type PetRidesFeatureConfig = {
   optOutPetRidesPopupConfig :: PetRidesPopupConfig,
   petRidesPopupDismissableUntil :: String
 }
+
+type CancellationTimeThresholdConfig = {
+  cancellationTimeThresholdInSeconds :: Int
+}
+
+type NominationViewConfig = {
+  visibility :: Boolean,
+  videoLink :: String,
+  formLink :: String
+}
+
+type ClaimButtonConfig = {
+  visibility :: Boolean
+}
+
+type DriverRewardConfig = {
+  nominationViewConfig :: NominationViewConfig,
+  visibility :: Boolean,
+  whatsappSupportNumber :: String,
+  youtubeVideoLink :: String,
+  termsAndConditionsLink :: String,
+  claimButtonConfig :: ClaimButtonConfig
+}

@@ -262,6 +262,8 @@ bottomSheetView push state =
   let etaTimeAndTimeStampTuple = calculateMinEtaTimeWithDelay state.data.vehicleData
       mbEtaTime = DT.fst etaTimeAndTimeStampTuple
       mbTimestamp = DT.snd etaTimeAndTimeStampTuple
+      wmbFlowConfig = RU.fetchWmbFlowConfig CT.FunctionCall
+      isTicketBookingEnabled = wmbFlowConfig.enableTicketBooking
   in 
     linearLayout
       [ width MATCH_PARENT
@@ -290,16 +292,34 @@ bottomSheetView push state =
                   ]
                   [ passengerBoardConfirmationPopup state push
                   , bikeTaxiNudgePopup state push mbEtaTime mbTimestamp
-                  , linearLayout
+                  , relativeLayout
+                    [ height WRAP_CONTENT
+                    , width MATCH_PARENT
+                    , orientation VERTICAL
+                    ]
+                    [ textView $
                       [ height WRAP_CONTENT
                       , width MATCH_PARENT
-                      , orientation VERTICAL
-                      , gravity CENTER
-                      , background if state.props.showRouteDetailsTab then Color.white900 else Color.grey700
+                      , background Color.blue900
+                      , color Color.white900
+                      , padding $ Padding 16 8 16 24
+                      , text "Ticket booking will be back soon. Keep tracking!"
                       , cornerRadii $ Corners 24.0 true true false false
-                      ]
-                      [ bottomSheetContentView push state
-                      ]
+                      , gravity CENTER
+                      , visibility $ boolToVisibility $ not isTicketBookingEnabled
+                      ] <> FontStyle.body1 CTA.TypoGraphy
+                    , linearLayout
+                        [ height WRAP_CONTENT
+                        , width MATCH_PARENT
+                        , orientation VERTICAL
+                        , gravity CENTER
+                        , background if state.props.showRouteDetailsTab then Color.white900 else Color.grey700
+                        , cornerRadii $ Corners 24.0 true true false false
+                        , margin $ MarginTop 34
+                        ]
+                        [ bottomSheetContentView push state
+                        ]
+                    ]
                   ]
               ]
           ]
@@ -311,13 +331,13 @@ bottomSheetView push state =
               , visibility $ boolToVisibility state.props.showRouteDetailsTab
               , background Color.white900
               ]
-              [ separatorView Color.grey900 (MarginTop 10)
+              [ separatorView Color.grey900 (MarginTop 0)
               , PrimaryButton.view
-            ( if (((Mb.isNothing mbEtaTime || not (Mb.isJust mbTimestamp))) && not state.props.individualBusTracking)
-                then push <<< BookTicketOnNoBus
-                else push <<< BookTicketButtonAction
-            )
-            (primaryButtonConfig state)
+                ( if (((Mb.isNothing mbEtaTime || not (Mb.isJust mbTimestamp))) && not state.props.individualBusTracking)
+                    then push <<< BookTicketOnNoBus
+                    else push <<< BookTicketButtonAction
+                )
+                (primaryButtonConfig state)
               ]
       ]
 

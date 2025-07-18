@@ -4,6 +4,7 @@ module SharedLogic.External.Nandi.Types where
 
 import qualified BecknV2.FRFS.Enums
 import Data.Aeson
+import Domain.Types.Station
 import qualified Kernel.External.Maps.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Time
@@ -46,7 +47,9 @@ data RouteStopMappingInMemoryServer = RouteStopMappingInMemoryServer
     stopCode :: Kernel.Prelude.Text,
     stopName :: Kernel.Prelude.Text,
     stopPoint :: Kernel.External.Maps.Types.LatLong,
-    vehicleType :: BecknV2.FRFS.Enums.VehicleCategory
+    vehicleType :: BecknV2.FRFS.Enums.VehicleCategory,
+    geoJson :: Maybe Value,
+    gates :: Maybe [Gate]
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
@@ -55,6 +58,11 @@ data VehicleServiceTypeResponse = VehicleServiceTypeResponse
     vehicle_no :: Text,
     last_updated :: Maybe UTCTime,
     schedule_no :: Text
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+data StopCodeResponse = StopCodeResponse
+  { stop_code :: Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
@@ -100,5 +108,14 @@ data RouteStopMappingNandi = RouteStopMappingNandi
     stopName :: Kernel.Prelude.Text,
     stopPoint :: Kernel.External.Maps.Types.LatLong,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+data GtfsGraphQLRequest = GtfsGraphQLRequest
+  { query :: Text,
+    variables :: Maybe Value,
+    operation_name :: Maybe Text,
+    city :: Maybe Text, -- todo: remove this
+    feedId :: Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)

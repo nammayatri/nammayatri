@@ -31,6 +31,7 @@ library
       Dashboard.Common.Driver
       Dashboard.Common.DriverCoins
       Dashboard.Common.Exotel
+      Dashboard.Common.MediaFileDocument
       Dashboard.Common.Merchant
       Dashboard.Common.Ride
       Dashboard.Common.SpecialZone
@@ -41,6 +42,7 @@ library
       Dashboard.ProviderPlatform.Management.DriverCoins
       Dashboard.ProviderPlatform.Management.DriverReferral
       Dashboard.ProviderPlatform.Management.DriverRegistration
+      Dashboard.ProviderPlatform.Management.MediaFileDocument
       Dashboard.ProviderPlatform.Management.Merchant
       Dashboard.ProviderPlatform.Management.Message
       Dashboard.ProviderPlatform.Management.Ride
@@ -74,6 +76,7 @@ library
       API.Types.ProviderPlatform.Management.Endpoints.DriverReferral
       API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration
       API.Types.ProviderPlatform.Management.Endpoints.Media
+      API.Types.ProviderPlatform.Management.Endpoints.MediaFileDocument
       API.Types.ProviderPlatform.Management.Endpoints.Merchant
       API.Types.ProviderPlatform.Management.Endpoints.Message
       API.Types.ProviderPlatform.Management.Endpoints.NammaTag
@@ -83,6 +86,7 @@ library
       API.Types.ProviderPlatform.Management.Endpoints.System
       API.Types.ProviderPlatform.Management.Endpoints.VehicleInfo
       API.Types.ProviderPlatform.Management.Media
+      API.Types.ProviderPlatform.Management.MediaFileDocument
       API.Types.ProviderPlatform.Management.Merchant
       API.Types.ProviderPlatform.Management.Message
       API.Types.ProviderPlatform.Management.NammaTag

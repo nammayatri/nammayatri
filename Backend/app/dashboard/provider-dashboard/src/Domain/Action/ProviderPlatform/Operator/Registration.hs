@@ -83,14 +83,16 @@ buildOperator req operatorId role = do
         verified = Just True,
         rejectionReason = Nothing,
         rejectedAt = Nothing,
-        dashboardType = PT.DEFAULT_DASHBOARD
+        dashboardType = PT.DEFAULT_DASHBOARD,
+        passwordUpdatedAt = Nothing
       }
 
 validateOperator :: Validate Common.OperatorRegisterReq
 validateOperator Common.OperatorRegisterReq {..} =
   sequenceA_
-    [ validateField "firstName" firstName $ MinLength 3 `And` P.name,
-      validateField "lastName" lastName $ NotEmpty `And` P.name,
-      validateField "mobileNumber" mobileNumber P.mobileNumber,
-      validateField "mobileCountryCode" mobileCountryCode P.mobileCountryCode
+    [ validateField "firstName" firstName $ MinLength 1 `And` MaxLength 50 `And` P.name,
+      validateField "lastName" lastName $ (MaxLength 50 `And` P.name),
+      validateField "mobileNumber" mobileNumber P.indianMobileNumber,
+      validateField "mobileCountryCode" mobileCountryCode P.mobileIndianCode,
+      validateField "email" email $ InMaybe P.email
     ]

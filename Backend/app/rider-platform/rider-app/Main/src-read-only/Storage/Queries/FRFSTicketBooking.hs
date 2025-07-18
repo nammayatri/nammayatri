@@ -57,6 +57,9 @@ updateBPPOrderIdAndStatusById bppOrderId status id = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.bppOrderId bppOrderId, Se.Set Beam.status status, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateBPPOrderIdById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
+updateBPPOrderIdById bppOrderId id = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.bppOrderId bppOrderId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateBppBankDetailsById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
@@ -177,9 +180,9 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.estimatedPrice ((.amount) estimatedPrice),
       Se.Set Beam.eventDiscountAmount eventDiscountAmount,
       Se.Set Beam.finalPrice (Kernel.Prelude.fmap (.amount) finalPrice),
-      Se.Set Beam.fromStationId (Kernel.Types.Id.getId fromStationId),
+      Se.Set Beam.fromStationId fromStationCode,
       Se.Set Beam.googleWalletJWTUrl googleWalletJWTUrl,
-      Se.Set Beam.integratedBppConfigId (Kernel.Types.Id.getId <$> integratedBppConfigId),
+      Se.Set Beam.integratedBppConfigId (Kernel.Types.Id.getId integratedBppConfigId),
       Se.Set Beam.isBookingCancellable isBookingCancellable,
       Se.Set Beam.isDeleted isDeleted,
       Se.Set Beam.isFareChanged isFareChanged,
@@ -211,7 +214,7 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.startTime startTime,
       Se.Set Beam.stationsJson stationsJson,
       Se.Set Beam.status status,
-      Se.Set Beam.toStationId (Kernel.Types.Id.getId toStationId),
+      Se.Set Beam.toStationId toStationCode,
       Se.Set Beam.validTill validTill,
       Se.Set Beam.vehicleType vehicleType,
       Se.Set Beam.createdAt createdAt,

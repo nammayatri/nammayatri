@@ -15,14 +15,9 @@ FleetMemberAssociation:
 
   constraints:
     fleetMemberId: PrimaryKey
-    fleetOwnerId: SecondaryKey
+    fleetOwnerId: PrimaryKey
 
   queries:
-    findOneByFleetOwnerId:
-      kvFunction: findOneWithKV
-      where:
-        and: [fleetOwnerId, isFleetOwner]
-
     findAllByfleetMemberId:
       kvFunction: findAllWithKV
       where:
@@ -53,6 +48,12 @@ FleetMemberAssociation:
       where:
         and:
           - eq: [fleetMemberId, groupCode]
+
+    findAllWithOwnerIds:
+      kvFunction: findAllWithKV
+      where:
+        and:
+          - in: [fleetOwnerId]
 
   extraOperations:
     - EXTRA_QUERY_FILE

@@ -37,15 +37,16 @@ imports:
   RecentLocation: Domain.Types.RecentLocation
   DayOfWeek: Data.Time
   CrisSearchData: Lib.JourneyLeg.Types
+  RouteStopTimeTable: Domain.Types.RouteStopTimeTable
 
 FRFSSearch:
   tableName: frfs_search
 
   fields:
     id: Id FRFSSearch
-    fromStationId: Id Station
-    toStationId: Id Station
-    routeId: Maybe Text
+    fromStationCode: Text
+    toStationCode: Text
+    routeCode: Maybe Text
     quantity: Int
     vehicleType: VehicleCategory
     riderId: Id Person
@@ -57,10 +58,17 @@ FRFSSearch:
     journeyLegStatus: Maybe JourneyLegStatus
     isOnSearchReceived: Maybe Bool
     journeyRouteDetails: "[MultiModalJourneyRouteDetails]"
-    integratedBppConfigId: Maybe (Id IntegratedBPPConfig)
+    integratedBppConfigId: Id IntegratedBPPConfig
     recentLocationId: Maybe (Id RecentLocation)
+    validTill: Maybe UTCTime
 
   beamFields:
+    fromStationCode:
+      fromStationId: Text
+    toStationCode:
+      toStationId: Text
+    routeCode:
+      routeId: Maybe Text
     journeyLegInfo:
       journeyLegOrder: Maybe Int
       journeyId: Maybe Text
@@ -129,10 +137,18 @@ JourneyRouteDetails:
     frequency: Maybe Seconds
     routeLongName: Maybe Text
     alternateShortNames: Maybe [Text]
-    fromStationId: Maybe (Id Station)
-    toStationId: Maybe (Id Station)
-    routeId: Maybe Text
+    fromStationCode: Maybe Text
+    toStationCode: Maybe Text
+    routeCode: Maybe Text
     journeyStatus: Maybe JourneyLegStatus
+
+  beamFields:
+    fromStationCode:
+      fromStationId: Maybe Text
+    toStationCode:
+      toStationId: Maybe Text
+    routeCode:
+      routeId: Maybe Text
 
   queries:
     findAllBySearchId:
@@ -155,69 +171,6 @@ JourneyRouteDetails:
     id: PrimaryKey
     searchId: "!SecondaryKey"
 
-Station:
-  tableName: station
-
-  fields:
-    id: Id Station
-    vehicleType: VehicleCategory
-    name: Text
-    regionalName: Maybe Text
-    hindiName: Maybe Text
-    code: Text
-    lat: Maybe Double
-    lon: Maybe Double
-    address: Maybe Text
-    merchantId: Id Merchant
-    timeBounds: TimeBound
-    possibleTypes: Maybe [StationType]
-    suggestedDestinations: Maybe [SuggestedStations]
-    merchantOperatingCityId: Id MerchantOperatingCity
-    integratedBppConfigId: Id IntegratedBPPConfig
-
-  default:
-    timeBounds: "'Unbounded'"
-
-  beamType:
-    timeBounds: Maybe TimeBound
-    suggestedDestinations: Maybe Text
-
-  constraints:
-    id: PrimaryKey
-    code: SecondaryKey
-
-  fromTType:
-    timeBounds: fromMaybe Kernel.Types.TimeBound.Unbounded timeBounds|E
-    suggestedDestinations: (Kernel.Utils.Text.decodeFromText =<< suggestedDestinations)|E
-
-  toTType:
-    timeBounds: Kernel.Prelude.Just|I
-    suggestedDestinations: (Kernel.Utils.Text.encodeToText <$> suggestedDestinations)|E
-
-  queries:
-    findAllByVehicleType:
-      kvFunction: findAllWithOptionsKV
-      where:
-        and: [vehicleType, integratedBppConfigId]
-    findAllByBppConfigId:
-      kvFunction: findAllWithKV
-      where:
-        and: [integratedBppConfigId]
-    findById:
-      kvFunction: findOneWithKV
-      where: id
-    findByStationCode:
-      kvFunction: findOneWithKV
-      where:
-        and: [code, integratedBppConfigId]
-    deleteByStationCode:
-      kvFunction: deleteWithKV
-      where:
-        and: [code, integratedBppConfigId]
-
-  extraOperations:
-    - EXTRA_QUERY_FILE
-
 FRFSQuote:
   tableName: frfs_quote
   derives: "Generic,Show"
@@ -226,8 +179,8 @@ FRFSQuote:
     bppItemId: Text
     searchId: Id FRFSSearch
     _type: FRFSQuoteType
-    fromStationId: Id Station
-    toStationId: Id Station
+    fromStationCode: Text
+    toStationCode: Text
     quantity: Int
     stationsJson: Text
     routeStationsJson: Maybe Text
@@ -247,7 +200,7 @@ FRFSQuote:
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     partnerOrgTransactionId: Maybe (Id PartnerOrgTransaction)
-    integratedBppConfigId: Maybe (Id IntegratedBPPConfig)
+    integratedBppConfigId: Id IntegratedBPPConfig
     partnerOrgId: Maybe (Id PartnerOrganization)
     eventDiscountAmount: Maybe HighPrecMoney
     discountedTickets: Maybe Int
@@ -255,6 +208,10 @@ FRFSQuote:
     oldCacheDump: Maybe Text
     childTicketQuantity: Maybe Int
   beamFields:
+    fromStationCode:
+      fromStationId: Text
+    toStationCode:
+      toStationId: Text
     price:
       currency: Maybe Currency
       price: HighPrecMoney
@@ -340,8 +297,8 @@ FRFSTicketBooking:
     discountsJson: Maybe Text
     bppItemId: Text
     _type: FRFSQuoteType
-    fromStationId: Id Station
-    toStationId: Id Station
+    fromStationCode: Text
+    toStationCode: Text
     quantity: Int
     childTicketQuantity: Maybe Int
     vehicleType: VehicleCategory
@@ -381,7 +338,7 @@ FRFSTicketBooking:
     isFareChanged: Maybe Bool
     isSkipped: Maybe Bool
     journeyRouteDetails: "[MultiModalJourneyRouteDetails]"
-    integratedBppConfigId: Maybe (Id IntegratedBPPConfig)
+    integratedBppConfigId: Id IntegratedBPPConfig
     recentLocationId: Maybe (Id RecentLocation)
     bookingAuthCode: Maybe Text
     osType: Maybe Text
@@ -391,6 +348,10 @@ FRFSTicketBooking:
     customerCancelled: "false"
 
   beamFields:
+    fromStationCode:
+      fromStationId: Text
+    toStationCode:
+      toStationId: Text
     price:
       currency: Maybe Currency
       price: HighPrecMoney
@@ -402,7 +363,7 @@ FRFSTicketBooking:
 
   types:
     FRFSTicketBookingStatus:
-      enum: "NEW, APPROVED, PAYMENT_PENDING, CONFIRMING, FAILED, CONFIRMED, CANCELLED, COUNTER_CANCELLED, CANCEL_INITIATED, TECHNICAL_CANCEL_REJECTED"
+      enum: "NEW, APPROVED, PAYMENT_PENDING, CONFIRMING, FAILED, CONFIRMED, CANCELLED, COUNTER_CANCELLED, CANCEL_INITIATED, TECHNICAL_CANCEL_REJECTED, REFUND_INITIATED"
     CashbackStatus:
       enum: "PENDING, PROCESSING, SUCCESSFUL, CASHBACK_FAILED, MANUAL_VERIFICATION"
 
@@ -461,6 +422,10 @@ FRFSTicketBooking:
     updateBPPOrderIdAndStatusById:
       kvFunction: updateWithKV
       params: [bppOrderId, status, updatedAt]
+      where: id
+    updateBPPOrderIdById:
+      kvFunction: updateWithKV
+      params: [bppOrderId, updatedAt]
       where: id
     updateFinalPriceById:
       kvFunction: updateWithKV
@@ -550,7 +515,7 @@ FRFSTicket:
 
   types:
     FRFSTicketStatus:
-      enum: "ACTIVE, EXPIRED, USED, CANCELLED, COUNTER_CANCELLED, CANCEL_INITIATED, TECHNICAL_CANCEL_REJECTED"
+      enum: "ACTIVE, EXPIRED, USED, CANCELLED, COUNTER_CANCELLED, CANCEL_INITIATED, TECHNICAL_CANCEL_REJECTED, REFUND_INITIATED"
 
   constraints:
     id: PrimaryKey
@@ -722,6 +687,7 @@ FRFSConfig:
     providerId: Maybe Text
     providerName: Maybe Text
     validTillSeconds: Seconds
+    isFRFSTestingEnabled: Bool
 
   beamType:
     isCancellationAllowed: Maybe Bool
@@ -729,6 +695,7 @@ FRFSConfig:
     straightLineDistance: Maybe Meters
     radius: Maybe Meters
     validTillSeconds: Maybe Seconds
+    isFRFSTestingEnabled: Maybe Bool
 
   queries:
     findByMerchantOperatingCityId:
@@ -747,6 +714,7 @@ FRFSConfig:
     straightLineDistance: "5000"
     radius: "3000"
     validTillSeconds: "300"
+    isFRFSTestingEnabled : "false"
 
   fromTType:
     isCancellationAllowed: Kernel.Prelude.fromMaybe True|I
@@ -754,6 +722,7 @@ FRFSConfig:
     straightLineDistance: Kernel.Prelude.fromMaybe  (Kernel.Types.Distance.Meters 5000)|I
     radius: Kernel.Prelude.fromMaybe (Kernel.Types.Distance.Meters 3000)|I
     validTillSeconds: Kernel.Prelude.fromMaybe (Kernel.Types.Time.Seconds 300)|I
+    isFRFSTestingEnabled: Kernel.Prelude.fromMaybe False|I
 
   toTType:
     isCancellationAllowed: Kernel.Prelude.Just|I
@@ -761,138 +730,7 @@ FRFSConfig:
     straightLineDistance: Kernel.Prelude.Just|I
     radius: Kernel.Prelude.Just|I
     validTillSeconds: Kernel.Prelude.Just|I
-
-Route:
-  tableName: route
-  derives: "Generic,Show,FromJSON,ToJSON"
-  fields:
-    id: Id Route
-    code: Text
-    shortName: Text
-    longName: Text
-    startPoint: LatLong
-    endPoint: LatLong
-    vehicleType: VehicleCategory
-    color: Maybe Text
-    polyline: Maybe Text
-    timeBounds: TimeBound
-    dailyTripCount: Maybe Int
-    stopCount: Maybe Int
-    merchantId: Id Merchant
-    merchantOperatingCityId: Id MerchantOperatingCity
-    integratedBppConfigId: Id IntegratedBPPConfig
-  default:
-    timeBounds: "'Unbounded'"
-  sqlType:
-    lat: double precision
-    lon: double precision
-  beamFields:
-    startPoint:
-      startLat: Double
-      startLon: Double
-    endPoint:
-      endLat: Double
-      endLon: Double
-  toTType:
-    startLat: (.lat) startPoint|E
-    startLon: (.lon) startPoint|E
-    endLat: (.lat) endPoint|E
-    endLon: (.lon) endPoint|E
-  fromTType:
-    startPoint: Kernel.External.Maps.Types.LatLong startLat startLon|E
-    endPoint: Kernel.External.Maps.Types.LatLong endLat endLon|E
-
-  constraints:
-    id: PrimaryKey
-    code: SecondaryKey
-
-  queries:
-    findByRouteCode:
-      kvFunction: findOneWithKV
-      where:
-        and: [code, integratedBppConfigId]
-    findByRouteId:
-      kvFunction: findOneWithKV
-      where: id
-    findAllByVehicleType:
-      kvFunction: findAllWithOptionsKV
-      where:
-        and: [vehicleType, integratedBppConfigId]
-    findAllByBppConfigId:
-      kvFunction: findAllWithKV
-      where:
-        and: [integratedBppConfigId]
-    findByRouteCodes:
-      kvFunction: findAllWithKV
-      where:
-        and:
-          - in: [code, integratedBppConfigId]
-    deleteByRouteCode:
-      kvFunction: deleteWithKV
-      where:
-        and: [code, integratedBppConfigId]
-  extraOperations:
-    - EXTRA_QUERY_FILE
-
-RouteStopMapping:
-  tableName: route_stop_mapping
-  derives: "Generic,Show,Eq,FromJSON,ToJSON,ToSchema,Ord"
-  fields:
-    routeCode: Text
-    stopCode: Text
-    providerCode: Text
-    stopName: Text
-    stopPoint: LatLong
-    sequenceNum: Int
-    estimatedTravelTimeFromPreviousStop: Maybe Seconds
-    vehicleType: VehicleCategory
-    timeBounds: TimeBound
-    merchantId: Id Merchant
-    merchantOperatingCityId: Id MerchantOperatingCity
-    integratedBppConfigId: Id IntegratedBPPConfig
-  beamFields:
-    stopPoint:
-      stopLat: Double
-      stopLon: Double
-  toTType:
-    stopLat: (.lat)|I
-    stopLon: (.lon)|I
-  fromTType:
-    stopPoint: Kernel.External.Maps.Types.LatLong stopLat stopLon|E
-  default:
-    timeBounds: "'Unbounded'"
-  constraints:
-    routeCode: PrimaryKey
-    stopCode: PrimaryKey
-    sequenceNum: PrimaryKey
-    integratedBppConfigId: PrimaryKey
-  queries:
-    findByRouteCode:
-      kvFunction: findAllWithKV
-      where:
-        and: [routeCode, integratedBppConfigId]
-    findByRouteCodeAndStopCode:
-      kvFunction: findAllWithKV
-      where:
-        and: [routeCode, stopCode, integratedBppConfigId]
-    findByStopCode:
-      kvFunction: findAllWithKV
-      where:
-        and: [stopCode, integratedBppConfigId]
-    findAllByBppConfigId:
-      kvFunction: findAllWithKV
-      where:
-        and: [integratedBppConfigId]
-    findByStopCodes:
-      kvFunction: findAllWithKV
-      where:
-        and:
-          - in: [stopCode, integratedBppConfigId]
-    findByRouteCodes:
-      kvFunction: findAllWithKV
-      where:
-        and:
-          - in: [routeCode, integratedBppConfigId]
+    isFRFSTestingEnabled: Kernel.Prelude.Just|I
 
 FRFSRouteFareProduct:
   tableName: frfs_route_fare_product
@@ -917,6 +755,10 @@ FRFSRouteFareProduct:
       kvFunction: findAllWithKV
       where:
         and: [integratedBppConfigId]
+    findAllByFarePoliyIdAndIntegratedBPPConfigId:
+      kvFunction: findAllWithKV
+      where:
+        and: [farePolicyId, integratedBppConfigId]
 
 FRFSFarePolicy:
   tableName: frfs_fare_policy
@@ -973,6 +815,10 @@ StopFare:
       kvFunction: findOneWithKV
       where:
         and: [farePolicyId, startStopCode, endStopCode]
+    findByStartAndEndStopCodeAndIntegratedBPPConfigId:
+      kvFunction: findOneWithKV
+      where:
+        and: [startStopCode, endStopCode, integratedBppConfigId]
     findAllByStartStopAndIntegratedBPPConfigId:
       kvFunction: findAllWithKV
       where:
@@ -1028,21 +874,6 @@ FRFSGtfsStageFare:
       kvFunction: findAllWithKV
       where:
         and: [vehicleType, stage, merchantOperatingCityId]
-
-GTFSFeedInfo:
-  tableName: gtfs_feed_info
-  fields:
-    feedId: Id GTFSFeedInfo
-    vehicleType: VehicleCategory
-    merchantId: Id Merchant
-    merchantOperatingCityId: Id MerchantOperatingCity
-  constraints:
-    feedId: PrimaryKey
-  queries:
-    findByVehicleTypeAndCity:
-      kvFunction: findOneWithKV
-      where:
-        and: [vehicleType, merchantId, merchantOperatingCityId]
 
 FRFSRouteStopStageFare:
   tableName: frfs_route_stop_stage_fare
@@ -1138,50 +969,6 @@ RouteTripMapping:
       kvFunction: findAllWithKV
       where:
         and: [routeCode, integratedBppConfigId]
-
-RouteStopTimeTable:
-  tableName: route_stop_time_table
-  fields:
-    tripId: Id RouteStopTimeTable
-    routeCode: Text
-    stopCode: Text
-    timeOfDeparture: TimeOfDay
-    timeOfArrival: TimeOfDay
-    serviceTierType: ServiceTierType
-    integratedBppConfigId: Id IntegratedBPPConfig
-    delay: Maybe Seconds
-    source: SourceType
-    stage: Maybe Int
-  beamType:
-    source: Maybe SourceType
-  types:
-    SourceType:
-      enum: "LIVE, GTFS"
-  fromTType:
-    source: Kernel.Prelude.fromMaybe Domain.Types.RouteStopTimeTable.GTFS|I
-  toTType:
-    source: Kernel.Prelude.Just|I
-
-  constraints:
-    tripId: PrimaryKey
-    integratedBppConfigId : PrimaryKey
-    stopCode: PrimaryKey
-    timeOfArrival: PrimaryKey
-    serviceTierType: PrimaryKey
-  queries:
-    findByRouteCodeAndStopCode:
-      kvFunction: findAllWithKV
-      where:
-        and:
-          - in: [ routeCode]
-          - eq: [stopCode, integratedBppConfigId]
-
-    findByRouteCode:
-      kvFunction: findAllWithKV
-      where:
-        and:
-          - in: [routeCode]
-          - eq: [integratedBppConfigId]
 
 RouteStopCalender:
   tableName: route_stop_calender

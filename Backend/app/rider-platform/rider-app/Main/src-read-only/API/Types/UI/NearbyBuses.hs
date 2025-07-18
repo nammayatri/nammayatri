@@ -45,3 +45,11 @@ data NearbyBusesResponse = NearbyBusesResponse {nearbyBuses :: [NearbyBus], rece
 data RecentRide = RecentRide {fare :: Kernel.Types.Price.Price, fromStopCode :: Data.Text.Text, routeCode :: Kernel.Prelude.Maybe Data.Text.Text, toStopCode :: Data.Text.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data TimetableEntry = TimetableEntry {serviceTierType :: BecknV2.FRFS.Enums.ServiceTierType, timeOfArrival :: Kernel.Prelude.TimeOfDay, timeOfDeparture :: Kernel.Prelude.TimeOfDay}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data TimetableResponse = TimetableResponse {timetable :: [TimetableEntry]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)

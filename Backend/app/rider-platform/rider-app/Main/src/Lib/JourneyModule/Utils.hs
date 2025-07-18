@@ -3,25 +3,28 @@ module Lib.JourneyModule.Utils where
 import BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.OnDemand.Enums as Enums
 import Control.Applicative ((<|>))
-import Control.Monad.Extra (maybeM)
 import qualified Data.Geohash as Geohash
 import Data.List (groupBy, nub, sort, sortBy)
+import qualified Data.Map.Strict as Map
 import Data.Ord (comparing)
 import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime, nominalDiffTimeToSeconds, secondsToNominalDiffTime)
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
+import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
+import Domain.Types.FRFSTicketBookingPayment (FRFSTicketBookingPayment (..))
 import qualified Domain.Types.IntegratedBPPConfig as DIntegratedBPPConfig
 import Domain.Types.Journey
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MultimodalPreferences as DMP
+import Domain.Types.Person
 import qualified Domain.Types.RecentLocation as DTRL
 import Domain.Types.Route
 import Domain.Types.RouteStopTimeTable
 import qualified Domain.Types.Trip as DTrip
-import Domain.Utils (utctTimeToDayOfWeek)
-import EulerHS.Prelude (concatMapM)
 import Kernel.External.MultiModal.Interface as MultiModal hiding (decode, encode)
+import qualified Kernel.External.Payment.Interface.Types as KT
+import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Hedis
@@ -29,19 +32,27 @@ import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
+import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
+import qualified SharedLogic.CreateFareForMultiModal as SMMFRFS
+import qualified SharedLogic.IntegratedBPPConfig as SIBC
+import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as MultiModalBus
 import qualified Storage.CachedQueries.Merchant.MultiModalSuburban as MultiModalSuburban
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.RouteStopTimeTable as GRSM
 import Storage.GraphqlQueries.Client (mapToServiceTierType)
+import qualified Storage.Queries.FRFSQuote as QQuote
+import qualified Storage.Queries.FRFSTicketBokingPayment as QFRFSTicketBookingPayment
+import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
+import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RecentLocation as SQRL
-import qualified Storage.Queries.Route as QRoute
-import qualified Storage.Queries.RouteStopCalender as QRouteCalendar
-import qualified Storage.Queries.RouteStopMapping as QRSM
 import qualified Storage.Queries.VehicleRouteMapping as QVehicleRouteMapping
 import qualified System.Environment as Se
+import Tools.Error
 import Tools.Maps (LatLong (..))
+import qualified Tools.Payment as TPayment
 
 mapWithIndex :: (MonadFlow m) => (Int -> a -> m b) -> [a] -> m [b]
 mapWithIndex f = go 0
@@ -154,24 +165,6 @@ getISTTimeInfo currentTime =
       currentTimeIST = addUTCTime (secondsToNominalDiffTime $ round istOffset) currentTime
    in (istOffset, currentTimeIST)
 
--- | Helper function to check which trips are serviceable on the current day
-filterServiceableTrips ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
-    EsqDBReplicaFlow m r,
-    Monad m
-  ) =>
-  [Id RouteStopTimeTable] -> -- List of trip IDs to check
-  UTCTime -> -- Current time
-  Id DIntegratedBPPConfig.IntegratedBPPConfig ->
-  m [Id RouteStopTimeTable] -- List of serviceable trip IDs
-filterServiceableTrips tripIds currentTime integratedBppConfigId = do
-  routeCalendars <- QRouteCalendar.findByTripIds tripIds integratedBppConfigId
-  let (_, currentTimeIST) = getISTTimeInfo currentTime
-      today = fromEnum $ utctTimeToDayOfWeek currentTimeIST
-      serviceableTrips = filter (\rc -> if length rc.serviceability > today then (rc.serviceability !! today) > 0 else False) routeCalendars
-  return $ map (.tripId) serviceableTrips
-
 fetchLiveBusTimings ::
   ( HasField "ltsHedisEnv" r Hedis.HedisEnv,
     CacheFlow m r,
@@ -190,13 +183,16 @@ fetchLiveBusTimings ::
   Id MerchantOperatingCity ->
   m [RouteStopTimeTable]
 fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid mocid = do
-  allRouteWithBuses <- MultiModalBus.getBusesForRoutes routeCodes
-  routeStopTimes <- mapM processRoute allRouteWithBuses
-  let flattenedRouteStopTimes = concat routeStopTimes
   disableLiveBuses <- fromMaybe False . (>>= readMaybe) <$> (liftIO $ Se.lookupEnv "DISABLE_LIVE_BUSES")
-  logDebug $ "allRouteWithBuses: " <> show allRouteWithBuses <> " routeStopTimes: " <> show routeStopTimes <> " flattenedRouteStopTimes: " <> show flattenedRouteStopTimes <> " disableLiveBuses: " <> show disableLiveBuses
-  if not (null flattenedRouteStopTimes) && not disableLiveBuses
-    then return flattenedRouteStopTimes
+  if not disableLiveBuses
+    then do
+      allRouteWithBuses <- MultiModalBus.getBusesForRoutes routeCodes
+      routeStopTimes <- mapM processRoute allRouteWithBuses
+      let flattenedRouteStopTimes = concat routeStopTimes
+      logDebug $ "allRouteWithBuses: " <> show allRouteWithBuses <> " routeStopTimes: " <> show routeStopTimes <> " flattenedRouteStopTimes: " <> show flattenedRouteStopTimes <> " disableLiveBuses: " <> show disableLiveBuses
+      if not (null flattenedRouteStopTimes)
+        then return flattenedRouteStopTimes
+        else measureLatency (GRSM.findByRouteCodeAndStopCode integratedBppConfig mid mocid routeCodes stopCode) "fetch route stop timing through graphql"
     else measureLatency (GRSM.findByRouteCodeAndStopCode integratedBppConfig mid mocid routeCodes stopCode) "fetch route stop timing through graphql"
   where
     processRoute routeWithBuses = do
@@ -241,7 +237,9 @@ fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid moci
               serviceTierType = serviceTierType,
               delay = Nothing,
               source = LIVE,
-              stage = Nothing
+              stage = Nothing,
+              platformCode = Nothing,
+              providerStopCode = Nothing
             }
 
 fetchLiveSubwayTimings ::
@@ -251,7 +249,8 @@ fetchLiveSubwayTimings ::
     EsqDBReplicaFlow m r,
     EncFlow m r,
     Monad m,
-    HasKafkaProducer r
+    HasKafkaProducer r,
+    HasShortDurationRetryCfg r c
   ) =>
   [Text] ->
   Text ->
@@ -287,7 +286,9 @@ fetchLiveSubwayTimings routeCodes stopCode currentTime integratedBppConfig mid m
           serviceTierType = Spec.SECOND_CLASS,
           delay = Just $ Seconds train.delayArrival,
           source = LIVE,
-          stage = Nothing
+          stage = Nothing,
+          platformCode = Nothing,
+          providerStopCode = Nothing
         }
 
 fetchLiveTimings ::
@@ -311,13 +312,6 @@ fetchLiveTimings ::
 fetchLiveTimings routeCodes stopCode currentTime integratedBppConfig mid mocid vc = case vc of
   Enums.SUBWAY -> fetchLiveSubwayTimings routeCodes stopCode currentTime integratedBppConfig mid mocid
   Enums.BUS -> fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid mocid
-  Enums.METRO -> do
-    logDebug $ "timetable for metro here for routeCodes: " <> show routeCodes <> " stopCode: " <> show stopCode
-    stopCodes <- OTPRest.getChildrenStationsCodes integratedBppConfig stopCode
-    logDebug $ "stopCodes for metro here: " <> show stopCodes
-    routeStopTimeTables <- measureLatency (concatMapM (GRSM.findByRouteCodeAndStopCode integratedBppConfig mid mocid routeCodes) stopCodes) "fetch route stop timing through graphql for metro"
-    logDebug $ "routeStopTimeTables: " <> show routeStopTimeTables
-    return routeStopTimeTables
   _ -> measureLatency (GRSM.findByRouteCodeAndStopCode integratedBppConfig mid mocid routeCodes stopCode) "fetch route stop timing through graphql"
 
 -- | Find all possible routes from originStop to destinationStop with trips in the next hour
@@ -343,31 +337,26 @@ findPossibleRoutes ::
   m (Maybe Text, [AvailableRoutesByTier])
 findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime integratedBppConfig mid mocid vc = do
   -- Get route mappings that contain the origin stop
-  fromRouteStopMappings <-
-    try @_ @SomeException (OTPRest.getRouteStopMappingByStopCode fromStopCode integratedBppConfig) >>= \case
-      Left _ -> QRSM.findByStopCode fromStopCode integratedBppConfig.id
-      Right stops -> pure stops
+  fromRouteStopMappings <- measureLatency (OTPRest.getRouteStopMappingByStopCode fromStopCode integratedBppConfig) ("getRouteStopMappingByStopCode" <> show fromStopCode)
 
   -- Get route mappings that contain the destination stop
-  toRouteStopMappings <-
-    try @_ @SomeException (OTPRest.getRouteStopMappingByStopCode toStopCode integratedBppConfig) >>= \case
-      Left _ -> QRSM.findByStopCode toStopCode integratedBppConfig.id
-      Right stops -> pure stops
+  toRouteStopMappings <- measureLatency (OTPRest.getRouteStopMappingByStopCode toStopCode integratedBppConfig) ("getRouteStopMappingByStopCode" <> show toStopCode)
 
   -- Find common routes that have both the origin and destination stops
   -- and ensure that from-stop comes before to-stop in the route sequence
   let fromRouteStopMap = map (\mapping -> (mapping.routeCode, mapping.sequenceNum)) fromRouteStopMappings
       toRouteStopMap = map (\mapping -> (mapping.routeCode, mapping.sequenceNum)) toRouteStopMappings
       validRoutes =
-        [ fromRouteCode
-          | (fromRouteCode, fromSeq) <- fromRouteStopMap,
-            (toRouteCode, toSeq) <- toRouteStopMap,
-            fromRouteCode == toRouteCode && fromSeq < toSeq -- Ensure correct sequence
-        ]
+        nub $
+          [ fromRouteCode
+            | (fromRouteCode, fromSeq) <- fromRouteStopMap,
+              (toRouteCode, toSeq) <- toRouteStopMap,
+              fromRouteCode == toRouteCode && fromSeq < toSeq -- Ensure correct sequence
+          ]
 
   -- Get the timing information for these routes at the origin stop
 
-  routeStopTimings <- fetchLiveTimings validRoutes fromStopCode currentTime integratedBppConfig mid mocid vc
+  routeStopTimings <- measureLatency (fetchLiveTimings validRoutes fromStopCode currentTime integratedBppConfig mid mocid vc) ("fetchLiveTimings" <> show validRoutes <> " fromStopCode: " <> show fromStopCode <> " toStopCode: " <> show toStopCode)
   -- Get IST time info
   let (_, currentTimeIST) = getISTTimeInfo currentTime
 
@@ -393,8 +382,7 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
     -- Get route details to include the short name
     routeDetails <-
       mapM
-        ( \routeCode ->
-            fmap Just $ OTPRest.getRouteByRouteCodeWithFallback integratedBppConfig routeCode
+        ( \routeCode -> OTPRest.getRouteByRouteId integratedBppConfig routeCode
         )
         routeCodesForTier
     let validRouteDetails = catMaybes routeDetails
@@ -459,20 +447,26 @@ findUpcomingTrips ::
     HasKafkaProducer r,
     HasShortDurationRetryCfg r c
   ) =>
-  [Text] ->
+  Text ->
   Text ->
   Maybe Spec.ServiceTierType ->
   UTCTime ->
-  DIntegratedBPPConfig.IntegratedBPPConfig ->
   Id Merchant ->
   Id MerchantOperatingCity ->
   Enums.VehicleCategory ->
   m UpcomingTripInfo
-findUpcomingTrips routeCodes stopCode mbServiceType currentTime integratedBppConfig mid mocid vc = do
+findUpcomingTrips routeCode stopCode mbServiceType currentTime mid mocid vc = do
+  integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig mocid vc DIntegratedBPPConfig.MULTIMODAL
+
   -- Get IST time info
   let (_, currentTimeIST) = getISTTimeInfo currentTime
 
-  routeStopTimings <- fetchLiveTimings routeCodes stopCode currentTime integratedBppConfig mid mocid vc
+  routeStopTimings <-
+    SIBC.fetchFirstIntegratedBPPConfigResult
+      integratedBPPConfigs
+      ( \integratedBPPConfig ->
+          fetchLiveTimings [routeCode] stopCode currentTime integratedBPPConfig mid mocid vc
+      )
   logDebug $ "routeStopTimings: " <> show routeStopTimings
 
   let filteredByService = case mbServiceType of
@@ -533,7 +527,8 @@ data StopDetails = StopDetails
     stopName :: Text,
     stopLat :: Double,
     stopLon :: Double,
-    stopArrivalTime :: UTCTime
+    stopArrivalTime :: UTCTime,
+    platformNumber :: Maybe Text
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
@@ -573,8 +568,8 @@ getSingleModeRouteDetails ::
   Enums.VehicleCategory ->
   m (Maybe SingleModeRouteDetails)
 getSingleModeRouteDetails mbRouteCode (Just originStopCode) (Just destinationStopCode) integratedBppConfig mid mocid vc = do
-  mbFromStop <- OTPRest.findByStationCodeAndIntegratedBPPConfigId originStopCode integratedBppConfig
-  mbToStop <- OTPRest.findByStationCodeAndIntegratedBPPConfigId destinationStopCode integratedBppConfig
+  mbFromStop <- OTPRest.getStationByGtfsIdAndStopCode originStopCode integratedBppConfig
+  mbToStop <- OTPRest.getStationByGtfsIdAndStopCode destinationStopCode integratedBppConfig
   currentTime <- getCurrentTime
   let (_, currentTimeIST) = getISTTimeInfo currentTime
 
@@ -588,17 +583,16 @@ getSingleModeRouteDetails mbRouteCode (Just originStopCode) (Just destinationSto
           mbRoute <-
             maybe
               (return Nothing)
-              ( \rc ->
-                  try @_ @SomeException (OTPRest.getRouteByRouteId integratedBppConfig rc) >>= \case
-                    Left _ -> QRoute.findByRouteCode rc integratedBppConfig.id
-                    Right route -> maybeM (QRoute.findByRouteCode rc integratedBppConfig.id) (pure . Just) (pure route)
-              )
+              (\rc -> OTPRest.getRouteByRouteId integratedBppConfig rc)
               routeCode
           case mbRoute of
             Just route -> do
+              routeStopMappings <- OTPRest.getRouteStopMappingByRouteCode route.code integratedBppConfig
               -- Get timing information for this route at the origin stop
               originStopTimings <- fetchLiveTimings [route.code] originStopCode currentTime integratedBppConfig mid mocid vc
               destStopTimings <- fetchLiveTimings [route.code] destinationStopCode currentTime integratedBppConfig mid mocid vc
+
+              let stopCodeToSequenceNum = Map.fromList $ map (\rst -> (rst.stopCode, rst.sequenceNum)) routeStopMappings
 
               let mbEarliestOriginTiming =
                     findEarliestTiming currentTimeIST currentTime $
@@ -610,20 +604,37 @@ getSingleModeRouteDetails mbRouteCode (Just originStopCode) (Just destinationSto
                         )
                         originStopTimings
 
-              -- Find the corresponding destination arrival for the same trip
               let mbDestinationTiming = do
                     originTiming <- mbEarliestOriginTiming
-                    find (\dt -> dt.tripId == originTiming.tripId) destStopTimings
+                    findMatchingDestinationTiming (.tripId) (.stopCode) originTiming destStopTimings stopCodeToSequenceNum
+
+              let mbFirstOriginTiming = listToMaybe originStopTimings
+              let mbFirstDestinationTiming = do
+                    originTiming <- mbFirstOriginTiming
+                    findMatchingDestinationTiming (.tripId) (.stopCode) originTiming destStopTimings stopCodeToSequenceNum
 
               let mbDepartureTime = getISTArrivalTime . (.timeOfDeparture) <$> mbEarliestOriginTiming <*> pure currentTime
                   mbArrivalTime = getISTArrivalTime . (.timeOfArrival) <$> mbDestinationTiming <*> pure currentTime
-                  fromStopDetails = StopDetails fromStop.code fromStop.name fromStopLat fromStopLon (fromMaybe currentTime mbDepartureTime)
-                  toStopDetails = StopDetails toStop.code toStop.name toStopLat toStopLon (fromMaybe currentTime mbArrivalTime)
-
+                  mbOriginPlatformCode = ((.platformCode) =<< mbEarliestOriginTiming) <|> ((.platformCode) =<< mbFirstOriginTiming) -- (.platformCode) =<< mbEarliestOriginTiming
+                  mbDestinationPlatformCode = ((.platformCode) =<< mbDestinationTiming) <|> ((.platformCode) =<< mbFirstDestinationTiming)
+                  fromStopDetails = StopDetails fromStop.code fromStop.name fromStopLat fromStopLon (fromMaybe currentTime mbDepartureTime) mbOriginPlatformCode
+                  toStopDetails = StopDetails toStop.code toStop.name toStopLat toStopLon (fromMaybe currentTime mbArrivalTime) mbDestinationPlatformCode
+              logDebug $ "fromStopDetails: " <> show fromStopDetails <> " toStopDetails: " <> show toStopDetails <> " route: " <> show route <> " possibleRoutes: " <> show possibleRoutes <> " mbEarliestOriginTiming: " <> show mbEarliestOriginTiming <> " mbDestinationTiming: " <> show mbDestinationTiming
               return $ Just $ SingleModeRouteDetails fromStopDetails toStopDetails route (concatMap (.availableRoutes) possibleRoutes)
             Nothing -> return Nothing
         _ -> return Nothing
     _ -> return Nothing
+  where
+    findMatchingDestinationTiming getTripId getStopCode originTiming destStopTimings stopCodeToSequenceNum =
+      let originSeq = Map.lookup (getStopCode originTiming) stopCodeToSequenceNum
+       in find
+            ( \dt ->
+                getTripId dt == getTripId originTiming
+                  && case (Map.lookup (getStopCode dt) stopCodeToSequenceNum, originSeq) of
+                    (Just destSeq, Just oSeq) -> destSeq > oSeq
+                    _ -> False
+            )
+            destStopTimings
 getSingleModeRouteDetails _ _ _ _ _ _ _ = return Nothing
 
 findEarliestTiming :: UTCTime -> UTCTime -> [RouteStopTimeTable] -> Maybe RouteStopTimeTable
@@ -688,3 +699,65 @@ createRecentLocationForMultimodal journey = do
                   }
           SQRL.create recentLocation
     _ -> return ()
+
+postMultimodalPaymentUpdateOrderUtil :: (ServiceFlow m r, EncFlow m r, EsqDBReplicaFlow m r, HasField "isMetroTestTransaction" r Bool) => Id Person -> Id Merchant -> Maybe (Id Journey) -> Int -> Int -> m (Maybe DOrder.PaymentOrder)
+postMultimodalPaymentUpdateOrderUtil personId _merchantId mbJourneyId quantity childTicketQuantity = do
+  person <- QP.findById personId >>= fromMaybeM (InvalidRequest "Person not found")
+  frfsBookingsArr <- QFRFSTicketBooking.findAllByJourneyIdCond mbJourneyId
+  frfsBookingWithUpdatedPriceAndQty <-
+    mapM
+      ( \ticketBooking -> do
+          quote <- QQuote.findById ticketBooking.quoteId >>= fromMaybeM (FRFSQuoteNotFound $ show ticketBooking.quoteId)
+          let quantityRational = fromIntegral quantity :: Rational
+          let oldQuantityRational = fromIntegral ticketBooking.quantity :: Rational
+          let childTicketQuantityRational = fromIntegral childTicketQuantity :: Rational
+          let childPrice = maybe (getHighPrecMoney quote.price.amount) (\p -> getHighPrecMoney p.amount) quote.childPrice
+          let amountToBeUpdated = ((safeDiv (getHighPrecMoney ticketBooking.price.amount) oldQuantityRational) * quantityRational) + (childPrice * childTicketQuantityRational)
+          let totalPrice =
+                Price
+                  { amount = HighPrecMoney amountToBeUpdated,
+                    amountInt = Money $ roundToIntegral amountToBeUpdated,
+                    currency = ticketBooking.price.currency
+                  }
+          let fRFSTicketBooking =
+                ticketBooking
+                  { DFRFSTicketBooking.quantity = quantity,
+                    DFRFSTicketBooking.childTicketQuantity = Just childTicketQuantity,
+                    DFRFSTicketBooking.finalPrice = Just totalPrice,
+                    DFRFSTicketBooking.estimatedPrice = totalPrice,
+                    DFRFSTicketBooking.price = totalPrice
+                  }
+          QFRFSTicketBooking.updateByPrimaryKey fRFSTicketBooking
+          pure $ ticketBooking{price = totalPrice, quantity = quantity}
+      )
+      frfsBookingsArr
+  frfsBookingsPaymentArr <- mapM (QFRFSTicketBookingPayment.findAllTicketBookingId . (.id)) frfsBookingWithUpdatedPriceAndQty
+  let paymentType = TPayment.FRFSMultiModalBooking
+  frfsConfig <-
+    CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow person.merchantOperatingCityId []
+      >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> show person.merchantOperatingCityId)
+  (_vendorSplitDetails, amountUpdated) <- SMMFRFS.createVendorSplitFromBookings frfsBookingWithUpdatedPriceAndQty _merchantId person.merchantOperatingCityId paymentType frfsConfig.isFRFSTestingEnabled
+  isSplitEnabled <- TPayment.getIsSplitEnabled _merchantId person.merchantOperatingCityId Nothing paymentType
+  let splitDetails = TPayment.mkUnaggregatedSplitSettlementDetails isSplitEnabled amountUpdated _vendorSplitDetails
+  let flattenedPayments = concat frfsBookingsPaymentArr
+  let mbPaymentOrderId = paymentOrderId <$> listToMaybe flattenedPayments
+  case mbPaymentOrderId of
+    Nothing ->
+      return Nothing
+    Just paymentOrderId -> do
+      order <- QOrder.findById paymentOrderId >>= fromMaybeM (PaymentOrderNotFound paymentOrderId.getId)
+      let updateReq =
+            KT.OrderUpdateReq
+              { amount = amountUpdated,
+                orderShortId = order.shortId.getShortId,
+                splitSettlementDetails = splitDetails
+              }
+      _ <- TPayment.updateOrder person.merchantId person.merchantOperatingCityId Nothing TPayment.FRFSMultiModalBooking (Just person.id.getId) person.clientSdkVersion updateReq
+      QOrder.updateAmount order.id amountUpdated
+      let updatedOrder :: DOrder.PaymentOrder
+          updatedOrder = order {DOrder.amount = amountUpdated}
+      return $ Just updatedOrder
+  where
+    safeDiv :: (Eq a, Fractional a) => a -> a -> a
+    safeDiv x 0 = x
+    safeDiv x y = x / y

@@ -101,6 +101,9 @@ homeScreen = do
           destLon = fromMaybe 0.0 updatedState.data.activeRide.nextStopLon
       LatLon lat lon ts <- getCurrentLocation updatedState.data.currentDriverLat updatedState.data.currentDriverLon  destLat destLon 700 false false
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_ARRIVED_AT_STOP {id : updatedState.data.activeRide.id, lat : lat, lon : lon, ts :ts} updatedState)
+    UpdateDriverInsurance updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ → updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ UPDATE_DRIVER_INSURANCE updatedState)
     SelectListModal updatedState -> do
       let rideData = getRideInfoEntityBasedOnBookingType updatedState
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
@@ -143,7 +146,7 @@ homeScreen = do
       App.BackT $ App.NoBack <$> (pure $ HOMESCREEN_NAV GoToSubscription)
     GoToRideDetailsScreen updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
-      App.BackT $ App.BackPoint <$> (pure $ GO_TO_RIDE_DETAILS_SCREEN)
+      App.BackT $ App.BackPoint <$> (pure $ GO_TO_RIDE_DETAILS_SCREEN updatedState.data.activeRide.id)
     PostRideFeedback updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ POST_RIDE_FEEDBACK updatedState)
@@ -235,3 +238,6 @@ homeScreen = do
     EnablePetRides updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ ENABLE_PET_RIDES updatedState)
+    DriverConsentAgree updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ DRIVER_CONSENT_AGREED updatedState)

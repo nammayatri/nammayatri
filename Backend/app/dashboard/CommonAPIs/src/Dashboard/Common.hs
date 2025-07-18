@@ -76,6 +76,8 @@ data CoinsConfig
 
 data Person
 
+data IntegratedBPPConfig
+
 data Role = DRIVER | FLEET
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)

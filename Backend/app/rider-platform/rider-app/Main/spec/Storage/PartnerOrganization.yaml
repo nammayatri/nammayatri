@@ -5,7 +5,6 @@ imports:
   EncryptedHashedField: Kernel.External.Encryption
   PartnerOrganizationConfig: Domain.Types.Extra.PartnerOrgConfig
   ConfigType: Domain.Types.Extra.PartnerOrgConfig
-  Station: Domain.Types.Station
 
 PartnerOrganization:
   tableName: partner_organization
@@ -102,15 +101,19 @@ PartnerOrgStation:
   tableName: partner_org_station
   derives: "Generic, Show, ToJSON, FromJSON"
   fields:
-    partnerOrgId: Id PartnerOrganization
-    stationId: Id Station
     partnerOrgStationId: Id PartnerOrgStation
+    partnerOrgId: Id PartnerOrganization
+    stationCode: Text
     name: Text
+
+  beamFields:
+    stationCode:
+      stationId: Text
 
   constraints:
     partnerOrgId: PrimaryKey
     partnerOrgStationId: PrimaryKey
-    stationId: SecondaryKey
+    stationCode: SecondaryKey
 
   queries:
     findByPOrgIdAndPOrgStationId:
@@ -118,10 +121,10 @@ PartnerOrgStation:
       where:
         and: [partnerOrgId, partnerOrgStationId]
 
-    findByStationIdAndPOrgId:
+    findByStationCodeAndPOrgId:
       kvFunction: findOneWithKV
       where:
-        and: [stationId, partnerOrgId]
+        and: [stationCode, partnerOrgId]
 
   excludedFields: [merchantId, merchantOperatingCityId]
 

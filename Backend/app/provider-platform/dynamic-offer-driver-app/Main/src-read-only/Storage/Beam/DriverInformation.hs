@@ -12,6 +12,7 @@ import qualified Domain.Types.Extra.Plan
 import qualified Domain.Types.ServiceTierType
 import qualified Domain.Types.VehicleCategory
 import Kernel.External.Encryption
+import qualified Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -19,7 +20,9 @@ import Tools.Beam.UtilsTH
 import qualified Tools.Error
 
 data DriverInformationT f = DriverInformationT
-  { aadhaarVerified :: B.C f Kernel.Prelude.Bool,
+  { aadhaarNumberEncrypted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    aadhaarNumberHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
+    aadhaarVerified :: B.C f Kernel.Prelude.Bool,
     acRestrictionLiftCount :: B.C f Kernel.Prelude.Int,
     acUsageRestrictionType :: B.C f (Kernel.Prelude.Maybe Domain.Types.DriverInformation.AirConditionedRestrictionType),
     active :: B.C f Kernel.Prelude.Bool,
@@ -40,6 +43,8 @@ data DriverInformationT f = DriverInformationT
     canSwitchToRental :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     compAadhaarImagePath :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     dailyCancellationRateBlockingCooldown :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    dlNumberEncrypted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    dlNumberHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
     driverDob :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     driverId :: B.C f Kernel.Prelude.Text,
     driverTripEndLocationLat :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
@@ -66,6 +71,8 @@ data DriverInformationT f = DriverInformationT
     onRide :: B.C f Kernel.Prelude.Bool,
     onRideTripCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.Common.TripCategory),
     onboardingVehicleCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory),
+    panNumberEncrypted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    panNumberHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
     payerVpa :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     paymentPending :: B.C f Kernel.Prelude.Bool,
     payoutRegAmountRefunded :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),

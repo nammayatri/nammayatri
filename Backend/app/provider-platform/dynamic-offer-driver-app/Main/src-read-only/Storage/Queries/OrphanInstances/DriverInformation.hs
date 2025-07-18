@@ -14,6 +14,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Storage.Beam.DriverInformation as Beam
 import qualified Storage.Queries.Transformers.DriverInformation
+import qualified Storage.Queries.Transformers.FleetOwnerInformation
 import qualified Storage.Queries.Transformers.Ride
 
 instance FromTType' Beam.DriverInformation Domain.Types.DriverInformation.DriverInformation where
@@ -22,7 +23,8 @@ instance FromTType' Beam.DriverInformation Domain.Types.DriverInformation.Driver
     pure $
       Just
         Domain.Types.DriverInformation.DriverInformation
-          { aadhaarVerified = aadhaarVerified,
+          { aadhaarNumber = Storage.Queries.Transformers.FleetOwnerInformation.mkEncryptedItem aadhaarNumberEncrypted aadhaarNumberHash,
+            aadhaarVerified = aadhaarVerified,
             acRestrictionLiftCount = acRestrictionLiftCount,
             acUsageRestrictionType = Kernel.Prelude.fromMaybe Domain.Types.DriverInformation.NoRestriction acUsageRestrictionType,
             active = active,
@@ -43,6 +45,7 @@ instance FromTType' Beam.DriverInformation Domain.Types.DriverInformation.Driver
             canSwitchToRental = Kernel.Prelude.fromMaybe Kernel.Prelude.False canSwitchToRental,
             compAadhaarImagePath = compAadhaarImagePath,
             dailyCancellationRateBlockingCooldown = dailyCancellationRateBlockingCooldown,
+            dlNumber = Storage.Queries.Transformers.FleetOwnerInformation.mkEncryptedItem dlNumberEncrypted dlNumberHash,
             driverDob = driverDob,
             driverId = Kernel.Types.Id.Id driverId,
             driverTripEndLocation = Storage.Queries.Transformers.Ride.mkLatLong driverTripEndLocationLat driverTripEndLocationLon,
@@ -67,6 +70,7 @@ instance FromTType' Beam.DriverInformation Domain.Types.DriverInformation.Driver
             onRide = onRide,
             onRideTripCategory = onRideTripCategory,
             onboardingVehicleCategory = onboardingVehicleCategory,
+            panNumber = Storage.Queries.Transformers.FleetOwnerInformation.mkEncryptedItem panNumberEncrypted panNumberHash,
             payerVpa = payerVpa,
             paymentPending = paymentPending,
             payoutRegAmountRefunded = payoutRegAmountRefunded,
@@ -99,7 +103,9 @@ instance FromTType' Beam.DriverInformation Domain.Types.DriverInformation.Driver
 instance ToTType' Beam.DriverInformation Domain.Types.DriverInformation.DriverInformation where
   toTType' (Domain.Types.DriverInformation.DriverInformation {..}) = do
     Beam.DriverInformationT
-      { Beam.aadhaarVerified = aadhaarVerified,
+      { Beam.aadhaarNumberEncrypted = Storage.Queries.Transformers.FleetOwnerInformation.mkFieldEncrypted aadhaarNumber,
+        Beam.aadhaarNumberHash = Storage.Queries.Transformers.FleetOwnerInformation.mkFieldHash aadhaarNumber,
+        Beam.aadhaarVerified = aadhaarVerified,
         Beam.acRestrictionLiftCount = acRestrictionLiftCount,
         Beam.acUsageRestrictionType = Kernel.Prelude.Just acUsageRestrictionType,
         Beam.active = active,
@@ -120,6 +126,8 @@ instance ToTType' Beam.DriverInformation Domain.Types.DriverInformation.DriverIn
         Beam.canSwitchToRental = Kernel.Prelude.Just canSwitchToRental,
         Beam.compAadhaarImagePath = compAadhaarImagePath,
         Beam.dailyCancellationRateBlockingCooldown = dailyCancellationRateBlockingCooldown,
+        Beam.dlNumberEncrypted = Storage.Queries.Transformers.FleetOwnerInformation.mkFieldEncrypted dlNumber,
+        Beam.dlNumberHash = Storage.Queries.Transformers.FleetOwnerInformation.mkFieldHash dlNumber,
         Beam.driverDob = driverDob,
         Beam.driverId = Kernel.Types.Id.getId driverId,
         Beam.driverTripEndLocationLat = Kernel.Prelude.fmap (.lat) driverTripEndLocation,
@@ -146,6 +154,8 @@ instance ToTType' Beam.DriverInformation Domain.Types.DriverInformation.DriverIn
         Beam.onRide = onRide,
         Beam.onRideTripCategory = onRideTripCategory,
         Beam.onboardingVehicleCategory = onboardingVehicleCategory,
+        Beam.panNumberEncrypted = Storage.Queries.Transformers.FleetOwnerInformation.mkFieldEncrypted panNumber,
+        Beam.panNumberHash = Storage.Queries.Transformers.FleetOwnerInformation.mkFieldHash panNumber,
         Beam.payerVpa = payerVpa,
         Beam.paymentPending = paymentPending,
         Beam.payoutRegAmountRefunded = payoutRegAmountRefunded,

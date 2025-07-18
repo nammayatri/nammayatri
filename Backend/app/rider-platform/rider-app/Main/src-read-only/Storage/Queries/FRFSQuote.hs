@@ -16,7 +16,6 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.FRFSQuote as Beam
 import Storage.Queries.FRFSQuoteExtra as ReExport
-import Storage.Queries.OrphanInstances.FRFSQuote
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSQuote.FRFSQuote -> m ())
 create = createWithKV
@@ -55,8 +54,8 @@ updateByPrimaryKey (Domain.Types.FRFSQuote.FRFSQuote {..}) = do
       Se.Set Beam.ticketTypeCode (fareDetails <&> (.ticketTypeCode)),
       Se.Set Beam.trainTypeCode (fareDetails <&> (.trainTypeCode)),
       Se.Set Beam.via (fareDetails <&> (.via)),
-      Se.Set Beam.fromStationId (Kernel.Types.Id.getId fromStationId),
-      Se.Set Beam.integratedBppConfigId (Kernel.Types.Id.getId <$> integratedBppConfigId),
+      Se.Set Beam.fromStationId fromStationCode,
+      Se.Set Beam.integratedBppConfigId (Kernel.Types.Id.getId integratedBppConfigId),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.oldCacheDump oldCacheDump,
@@ -72,7 +71,7 @@ updateByPrimaryKey (Domain.Types.FRFSQuote.FRFSQuote {..}) = do
       Se.Set Beam.routeStationsJson routeStationsJson,
       Se.Set Beam.searchId (Kernel.Types.Id.getId searchId),
       Se.Set Beam.stationsJson stationsJson,
-      Se.Set Beam.toStationId (Kernel.Types.Id.getId toStationId),
+      Se.Set Beam.toStationId toStationCode,
       Se.Set Beam.validTill validTill,
       Se.Set Beam.vehicleType vehicleType,
       Se.Set Beam.createdAt createdAt,

@@ -6,6 +6,7 @@ imports:
   FilePath: EulerHS.Prelude
   TimeBound: Kernel.Types.TimeBound
   StationType: Domain.Types.StationType
+  IntegratedBPPConfig: Dashboard.Common
 
 module: FRFSTicket
 types:
@@ -15,6 +16,7 @@ types:
     longName: Text
     startPoint: LatLong
     endPoint: LatLong
+    integratedBppConfigId: Id IntegratedBPPConfig
 
   FRFSRouteReq:
     shortName: Text
@@ -58,6 +60,7 @@ types:
     address: Maybe Text
     regionalName: Maybe Text
     hindiName: Maybe Text
+    integratedBppConfigId: Id IntegratedBPPConfig
     derive: "Show"
 
   FRFSStationReq:
@@ -91,34 +94,11 @@ apis:
         type: "[FRFSDashboardRouteAPI]"
       migrate:
         userActionType: ApiAuth APP_BACKEND FRFS LIST_FRFS_ROUTES
-  - POST: # Add new route
-      endpoint: /frfs/route/{code}/add
-      mandatoryQuery:
-        vehicleType: VehicleCategory
-      params:
-        code: Text
-      request:
-        type: FRFSRouteReq
-      auth: ApiAuthV2
-      response:
-        type: APISuccess
-      migrate:
-        userActionType: ApiAuth APP_BACKEND FRFS ADD_FRFS_ROUTE
-  - POST: # Delete a route
-      endpoint: /frfs/route/{code}/delete
-      mandatoryQuery:
-        vehicleType: VehicleCategory
-      params:
-        code: Text
-      auth: ApiAuthV2
-      response:
-        type: APISuccess
-      migrate:
-        userActionType: ApiAuth APP_BACKEND FRFS DELETE_FRFS_ROUTE
   - GET: # Get list of stop fares for a Route
       endpoint: /frfs/route/fare/{routeCode}/list
       mandatoryQuery:
         vehicleType: VehicleCategory
+        integratedBppConfigId: Id IntegratedBPPConfig
       params:
         routeCode: Text
       auth: ApiAuthV2
@@ -130,6 +110,7 @@ apis:
       endpoint: /frfs/route/fare/{routeCode}/upsert
       mandatoryQuery:
         vehicleType: VehicleCategory
+        integratedBppConfigId: Id IntegratedBPPConfig
       params:
         routeCode: Text
       multipart:
@@ -152,30 +133,6 @@ apis:
         type: "[FRFSStationAPI]"
       migrate:
         userActionType: ApiAuth APP_BACKEND FRFS LIST_FRFS_STATION
-  - POST: # Add new station
-      endpoint: /frfs/station/{code}/add
-      mandatoryQuery:
-        vehicleType: VehicleCategory
-      params:
-        code: Text
-      request:
-        type: FRFSStationReq
-      auth: ApiAuthV2
-      response:
-        type: APISuccess
-      migrate:
-        userActionType: ApiAuth APP_BACKEND FRFS ADD_FRFS_STATION
-  - POST: # Delete a station
-      endpoint: /frfs/station/{code}/delete
-      mandatoryQuery:
-        vehicleType: VehicleCategory
-      params:
-        code: Text
-      auth: ApiAuthV2
-      response:
-        type: APISuccess
-      migrate:
-        userActionType: ApiAuth APP_BACKEND FRFS DELETE_FRFS_STATION
 
 extraOperations:
   - EXTRA_API_TYPES_FILE

@@ -81,6 +81,7 @@ import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.MerchantConfig as QMC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.SavedReqLocation as CSavedLocation
+import qualified Storage.Queries.NyRegularSubscription as QNyRegularSubscription
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonDisability as PD
 import qualified Storage.Queries.SearchRequest as QSearchRequest
@@ -90,6 +91,8 @@ import Tools.Event
 import qualified Tools.Maps as Maps
 import qualified Tools.Metrics as Metrics
 import Tools.Metrics.BAPMetrics.Types
+
+-- import Kernel.Utils.Common (encodeToText)
 
 type SearchRequestFlow m r =
   ( MonadFlow m,
@@ -154,6 +157,7 @@ extractSearchDetails now = \case
         destinationStopCode = Nothing,
         originStopCode = Nothing,
         vehicleCategory = Nothing,
+        currentLocation = Nothing,
         ..
       }
   RentalSearch RentalSearchReq {..} ->
@@ -169,6 +173,7 @@ extractSearchDetails now = \case
         originStopCode = Nothing,
         platformType = Nothing,
         vehicleCategory = Nothing,
+        currentLocation = Nothing,
         ..
       }
   InterCitySearch InterCitySearchReq {..} ->
@@ -181,6 +186,7 @@ extractSearchDetails now = \case
         destinationStopCode = Nothing,
         originStopCode = Nothing,
         vehicleCategory = Nothing,
+        currentLocation = Nothing,
         ..
       }
   AmbulanceSearch OneWaySearchReq {..} ->
@@ -197,6 +203,7 @@ extractSearchDetails now = \case
         originStopCode = Nothing,
         platformType = Nothing,
         vehicleCategory = Nothing,
+        currentLocation = Nothing,
         ..
       }
   DeliverySearch OneWaySearchReq {..} ->
@@ -213,6 +220,7 @@ extractSearchDetails now = \case
         originStopCode = Nothing,
         platformType = Nothing,
         vehicleCategory = Nothing,
+        currentLocation = Nothing,
         ..
       }
   PTSearch PublicTransportSearchReq {..} ->
@@ -262,6 +270,9 @@ search ::
 search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion clientId device isDashboardRequest_ journeySearchData justMultimodalSearch = do
   now <- getCurrentTime
   let SearchDetails {..} = extractSearchDetails now req
+  let isReservedRideSearch = case req of
+        OneWaySearch OneWaySearchReq {isReserveRide} -> fromMaybe False isReserveRide
+        _ -> False
   validateStartAndReturnTime now startTime returnTime
 
   let isDashboardRequest = isDashboardRequest_ || isNothing quotesUnifiedFlow -- Don't get confused with this, it is done to handle backward compatibility so that in both dashboard request or mobile app request without quotesUnifiedFlow can be consider same
@@ -288,12 +299,11 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
         )
   let merchantOperatingCityId = merchantOperatingCity.id
   let isMeterRide = getIsMeterRideSearch req
-
+  searchRequestId <- generateGUID
   when (isMeterRide == Just True && person.role /= Person.METER_RIDE_DUMMY) $
     throwError (InvalidRequest $ "Only meter dummy guy is allowed to do this")
   configVersionMap <- getConfigVersionMapForStickiness (cast merchantOperatingCityId)
   riderCfg <- QRC.findByMerchantOperatingCityIdInRideFlow merchantOperatingCityId configVersionMap >>= fromMaybeM (RiderConfigNotFound merchantOperatingCityId.getId)
-  searchRequestId <- generateGUID
   RouteDetails {..} <- getRouteDetails person merchant merchantOperatingCity searchRequestId stopsLatLong now sourceLatLong roundTrip originCity riderCfg isMeterRide req
   fromLocation <- buildSearchReqLoc merchant.id merchantOperatingCityId origin
   stopLocations <- buildSearchReqLoc merchant.id merchantOperatingCityId `mapM` stops
@@ -335,6 +345,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
       destinationStopCode
       originStopCode
       vehicleCategory
+      isReservedRideSearch
 
   Metrics.incrementSearchRequestCount merchant.name merchantOperatingCity.id.getId
 
@@ -342,9 +353,20 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
   -- triggerSearchEvent SearchEventData {searchRequest = searchRequest}
   QSearchRequest.createDSReq searchRequest
   QPFS.clearCache person.id
-
   fork "updating search counters" $ fraudCheck person merchantOperatingCity searchRequest
   let updatedPerson = backfillCustomerNammaTags person
+  reservePricingTag <-
+    if isReservedRideSearch
+      then do
+        case req of
+          OneWaySearch OneWaySearchReq {subscriptionId} -> do
+            nyRegularSubscription <- QNyRegularSubscription.findById (fromMaybe "" subscriptionId)
+            let metadata = (.metadata) <$> nyRegularSubscription
+            if isJust metadata
+              then return [(Beckn.RESERVED_PRICING_TAG, Just (encodeToText (fromJust metadata)))]
+              else return []
+          _ -> return []
+      else return []
   gatewayUrl <-
     case merchant.gatewayAndRegistryPriorityList of
       (NY : _) -> asks (.nyGatewayUrl)
@@ -357,7 +379,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
         city = originCity,
         distance = shortestRouteDistance,
         duration = shortestRouteDuration,
-        taggings = getTags tag searchRequest updatedPerson shortestRouteDistance shortestRouteDuration returnTime roundTrip ((.points) <$> shortestRouteInfo) multipleRoutes txnCity isReallocationEnabled isDashboardRequest fareParametersInRateCard isMeterRide,
+        taggings = getTags tag searchRequest reservePricingTag updatedPerson shortestRouteDistance shortestRouteDuration returnTime roundTrip ((.points) <$> shortestRouteInfo) multipleRoutes txnCity isReallocationEnabled isDashboardRequest fareParametersInRateCard isMeterRide,
         ..
       }
   where
@@ -382,26 +404,31 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
           Person.Person {customerNammaTags = Just [genderTag], ..}
         else Person.Person {..}
 
-    getTags tag searchRequest person distance duration returnTime roundTrip mbPoints mbMultipleRoutes txnCity mbIsReallocationEnabled isDashboardRequest mbfareParametersInRateCard isMeterRideSearch = do
+    getTags tag searchRequest reservePricingTag person distance duration returnTime roundTrip mbPoints mbMultipleRoutes txnCity mbIsReallocationEnabled isDashboardRequest mbfareParametersInRateCard isMeterRideSearch = do
       let isReallocationEnabled = fromMaybe False mbIsReallocationEnabled
       let fareParametersInRateCard = fromMaybe False mbfareParametersInRateCard
       let isMultimodalSearch = case journeySearchData of
             Just _ -> True
             Nothing -> False
+      let reserveTag = case searchRequest.searchMode of
+            Just SearchRequest.RESERVE -> [(Beckn.RESERVED_RIDE_TAG, Just "true")]
+            _ -> []
       Just $
         def{Beckn.fulfillmentTags =
-              [ (Beckn.DISTANCE_INFO_IN_M, show . (.getMeters) <$> distance),
-                (Beckn.DURATION_INFO_IN_S, show . (.getSeconds) <$> duration),
-                (Beckn.RETURN_TIME, show <$> returnTime),
-                (Beckn.ROUND_TRIP, Just $ show roundTrip),
-                (Beckn.WAYPOINTS, LT.toStrict . TE.decodeUtf8 . encode <$> mbPoints),
-                (Beckn.MULTIPLE_ROUTES, LT.toStrict . TE.decodeUtf8 . encode <$> mbMultipleRoutes),
-                (Beckn.IS_METER_RIDE_SEARCH, show <$> isMeterRideSearch),
-                (Beckn.IS_REALLOCATION_ENABLED, Just $ show isReallocationEnabled),
-                (Beckn.FARE_PARAMETERS_IN_RATECARD, Just $ show fareParametersInRateCard),
-                (Beckn.DRIVER_IDENTITY, searchRequest.driverIdentifier <&> LT.toStrict . AT.encodeToLazyText),
-                (Beckn.IS_MULTIMODAL_SEARCH, Just $ show isMultimodalSearch)
-              ],
+              reserveTag
+                ++ reservePricingTag -- Add the reserve tag here
+                ++ [ (Beckn.DISTANCE_INFO_IN_M, show . (.getMeters) <$> distance),
+                     (Beckn.DURATION_INFO_IN_S, show . (.getSeconds) <$> duration),
+                     (Beckn.RETURN_TIME, show <$> returnTime),
+                     (Beckn.ROUND_TRIP, Just $ show roundTrip),
+                     (Beckn.WAYPOINTS, LT.toStrict . TE.decodeUtf8 . encode <$> mbPoints),
+                     (Beckn.MULTIPLE_ROUTES, LT.toStrict . TE.decodeUtf8 . encode <$> mbMultipleRoutes),
+                     (Beckn.IS_METER_RIDE_SEARCH, show <$> isMeterRideSearch),
+                     (Beckn.IS_REALLOCATION_ENABLED, Just $ show isReallocationEnabled),
+                     (Beckn.FARE_PARAMETERS_IN_RATECARD, Just $ show fareParametersInRateCard),
+                     (Beckn.DRIVER_IDENTITY, searchRequest.driverIdentifier <&> LT.toStrict . AT.encodeToLazyText),
+                     (Beckn.IS_MULTIMODAL_SEARCH, Just $ show isMultimodalSearch)
+                   ],
             Beckn.paymentTags =
               [ (Beckn.SETTLEMENT_AMOUNT, Nothing),
                 (Beckn.DELAY_INTEREST, Just "0"),
@@ -424,7 +451,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
     validateStartAndReturnTime now startTime returnTime = do
       whenJust returnTime $ \rt -> do
         when (rt <= startTime) $ throwError (InvalidRequest "Return time should be greater than start time")
-      unless ((120 `addUTCTime` startTime) >= now) $ throwError (InvalidRequest "Ride time should only be future time") -- 2 mins buffer
+      when ((120 `addUTCTime` startTime) < now && not justMultimodalSearch) $ throwError (InvalidRequest "Ride time should only be future time") -- 2 mins buffer
     getRouteDetails ::
       SearchRequestFlow m r =>
       DPerson.Person ->
@@ -543,8 +570,13 @@ buildSearchRequest ::
   Maybe Text ->
   Maybe Text ->
   Maybe Enums.VehicleCategory ->
+  Bool ->
   m SearchRequest.SearchRequest
-buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion clientRnVersion device disabilityTag duration staticDuration riderPreferredOption distanceUnit totalRidesCount isDashboardRequest mbPlaceNameSource hasStops stops journeySearchData mbDriverReferredInfo configVersionMap isMeterRide recentLocationId routeCode destinationStopCode originStopCode vehicleCategory = do
+buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion clientRnVersion device disabilityTag duration staticDuration riderPreferredOption distanceUnit totalRidesCount isDashboardRequest mbPlaceNameSource hasStops stops journeySearchData mbDriverReferredInfo configVersionMap isMeterRide recentLocationId routeCode destinationStopCode originStopCode vehicleCategory isReservedRideSearch = do
+  let searchMode =
+        if isReservedRideSearch
+          then Just SearchRequest.RESERVE
+          else Nothing
   now <- getCurrentTime
   validTill <- getSearchRequestExpiry startTime
   deploymentVersion <- asks (.version)
@@ -598,6 +630,8 @@ buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCit
         destinationStopCode = destinationStopCode,
         originStopCode = originStopCode,
         allJourneysLoaded = Just False,
+        searchMode = searchMode,
+        isMultimodalSearch = Just $ isJust journeySearchData,
         ..
       }
   where

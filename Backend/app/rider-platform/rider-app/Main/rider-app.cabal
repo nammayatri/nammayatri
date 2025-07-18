@@ -235,11 +235,13 @@ library
       Domain.Action.UI.MultimodalConfirm
       Domain.Action.UI.NearbyBuses
       Domain.Action.UI.NearbyDrivers
+      Domain.Action.UI.NyRegularSubscription
       Domain.Action.UI.PartnerOrganizationFRFS
       Domain.Action.UI.Payment
       Domain.Action.UI.Person
       Domain.Action.UI.PersonDefaultEmergencyNumber
       Domain.Action.UI.PersonStats
+      Domain.Action.UI.PickupInstructions
       Domain.Action.UI.Places
       Domain.Action.UI.PriceBreakup
       Domain.Action.UI.Profile
@@ -279,6 +281,7 @@ library
       Domain.Types.Extra.MerchantMessage
       Domain.Types.Extra.MerchantPaymentMethod
       Domain.Types.Extra.MerchantServiceConfig
+      Domain.Types.Extra.NyRegularSubscription
       Domain.Types.Extra.PartnerOrgConfig
       Domain.Types.Extra.PersonFlowStatus
       Domain.Types.Extra.PlaceNameCache
@@ -293,6 +296,10 @@ library
       Domain.Types.LocationAddress
       Domain.Types.MerchantOnboarding.Handler
       Domain.Types.RentalsIntercityCache
+      Domain.Types.Route
+      Domain.Types.RouteStopMapping
+      Domain.Types.RouteStopTimeTable
+      Domain.Types.Station
       Domain.Types.TicketDashboard
       Domain.Types.UtilsTH
       Environment
@@ -363,6 +370,7 @@ library
       SharedLogic.FRFSUtils
       SharedLogic.GoogleTranslate
       SharedLogic.Insurance
+      SharedLogic.IntegratedBPPConfig
       SharedLogic.JobScheduler
       SharedLogic.KaalChakra.Actions
       SharedLogic.LocationMapping
@@ -370,19 +378,25 @@ library
       SharedLogic.MerchantConfig
       SharedLogic.MessageBuilder
       SharedLogic.MetroOffer
+      SharedLogic.NyRegularSubscriptionHasher
+      SharedLogic.NySubscription
       SharedLogic.Payment
       SharedLogic.Person
       SharedLogic.PersonDefaultEmergencyNumber
       SharedLogic.PublicTransport
+      SharedLogic.Quote
       SharedLogic.Referral
       SharedLogic.Ride
       SharedLogic.ScheduledNotifications
       SharedLogic.Scheduler.Jobs.CallPoliceApi
       SharedLogic.Scheduler.Jobs.Chakras
       SharedLogic.Scheduler.Jobs.CheckExotelCallStatusAndNotifyBPP
+      SharedLogic.Scheduler.Jobs.CheckMultimodalConfirmFail
       SharedLogic.Scheduler.Jobs.CheckPNAndSendSMS
       SharedLogic.Scheduler.Jobs.ExecutePaymentIntent
       SharedLogic.Scheduler.Jobs.MetroBusinessHour
+      SharedLogic.Scheduler.Jobs.NyRegularInstance
+      SharedLogic.Scheduler.Jobs.NyRegularMaster
       SharedLogic.Scheduler.Jobs.Payout.MetroIncentivePayout
       SharedLogic.Scheduler.Jobs.PostRideSafetyNotification
       SharedLogic.Scheduler.Jobs.SafetyCSAlert
@@ -413,7 +427,6 @@ library
       Storage.CachedQueries.FollowRide
       Storage.CachedQueries.FRFSConfig
       Storage.CachedQueries.FRFSGtfsStageFare
-      Storage.CachedQueries.GTFSFeedInfo
       Storage.CachedQueries.HotSpotConfig
       Storage.CachedQueries.Maps.LocationMapCache
       Storage.CachedQueries.Maps.PlaceNameCache
@@ -430,6 +443,7 @@ library
       Storage.CachedQueries.Merchant.PayoutConfig
       Storage.CachedQueries.Merchant.RiderConfig
       Storage.CachedQueries.MerchantConfig
+      Storage.CachedQueries.OTPRest.Common
       Storage.CachedQueries.OTPRest.OTPRest
       Storage.CachedQueries.PartnerOrganization
       Storage.CachedQueries.PartnerOrgConfig
@@ -441,7 +455,6 @@ library
       Storage.CachedQueries.RouteStopTimeTable
       Storage.CachedQueries.SavedReqLocationExtra
       Storage.CachedQueries.Sos
-      Storage.CachedQueries.Station
       Storage.CachedQueries.UiRiderConfig
       Storage.CachedQueries.ValueAddNP
       Storage.CachedQueries.VehicleConfig
@@ -479,6 +492,7 @@ library
       Storage.Queries.FRFSTicketBokingPayment
       Storage.Queries.FRFSTicketBookingExtra
       Storage.Queries.Geometry
+      Storage.Queries.IntegratedBPPConfigExtra
       Storage.Queries.IssueExtra
       Storage.Queries.JourneyExtra
       Storage.Queries.JourneyLegExtra
@@ -487,6 +501,7 @@ library
       Storage.Queries.MerchantPaymentMethodExtra
       Storage.Queries.MerchantServiceConfigExtra
       Storage.Queries.MerchantServiceUsageConfigExtra
+      Storage.Queries.NyRegularSubscriptionExtra
       Storage.Queries.PartnerOrganizationExtra
       Storage.Queries.PartnerOrgConfigExtra
       Storage.Queries.PersonDefaultEmergencyNumberExtra
@@ -500,14 +515,12 @@ library
       Storage.Queries.RecentLocationExtra
       Storage.Queries.RegistrationTokenExtra
       Storage.Queries.RideExtra
-      Storage.Queries.RouteExtra
       Storage.Queries.RoutePolylinesExtra
       Storage.Queries.SafetySettingsExtra
       Storage.Queries.SavedReqLocationExtra
       Storage.Queries.SearchRequestExtra
       Storage.Queries.ServiceCategoryExtra
       Storage.Queries.ServicePeopleCategoryExtra
-      Storage.Queries.StationExtra
       Storage.Queries.StationsExtraInformationExtra
       Storage.Queries.TicketBookingExtra
       Storage.Queries.TicketBookingPeopleCategoryExtra
@@ -617,6 +630,8 @@ library
       API.Action.UI.MultimodalConfirm
       API.Action.UI.NearbyBuses
       API.Action.UI.NearbyDrivers
+      API.Action.UI.NyRegularSubscription
+      API.Action.UI.PickupInstructions
       API.Action.UI.Places
       API.Action.UI.PriceBreakup
       API.Action.UI.RidePayment
@@ -677,6 +692,8 @@ library
       API.Types.UI.MultimodalConfirm
       API.Types.UI.NearbyBuses
       API.Types.UI.NearbyDrivers
+      API.Types.UI.NyRegularSubscription
+      API.Types.UI.PickupInstructions
       API.Types.UI.Places
       API.Types.UI.PriceBreakup
       API.Types.UI.RidePayment
@@ -731,7 +748,6 @@ library
       Domain.Types.FRFSTicketBookingPayment
       Domain.Types.FRFSTicketDiscount
       Domain.Types.FRFSVehicleServiceTier
-      Domain.Types.GTFSFeedInfo
       Domain.Types.HotSpotConfig
       Domain.Types.Insurance
       Domain.Types.InsuranceConfig
@@ -760,6 +776,8 @@ library
       Domain.Types.MerchantState
       Domain.Types.MultimodalPreferences
       Domain.Types.NotificationSoundsConfig
+      Domain.Types.NyRegularInstanceLog
+      Domain.Types.NyRegularSubscription
       Domain.Types.OnSearchEvent
       Domain.Types.ParcelDetails
       Domain.Types.PartnerOrganization
@@ -773,6 +791,7 @@ library
       Domain.Types.PersonDisability
       Domain.Types.PersonFlowStatus
       Domain.Types.PersonStats
+      Domain.Types.PickupInstructions
       Domain.Types.PlaceBasedServiceConfig
       Domain.Types.PlaceNameCache
       Domain.Types.PopularLocation
@@ -785,12 +804,9 @@ library
       Domain.Types.Ride
       Domain.Types.RiderConfig
       Domain.Types.RideRelatedNotificationConfig
-      Domain.Types.Route
       Domain.Types.RouteDetails
       Domain.Types.RoutePolylines
       Domain.Types.RouteStopCalender
-      Domain.Types.RouteStopMapping
-      Domain.Types.RouteStopTimeTable
       Domain.Types.RouteTripMapping
       Domain.Types.SafetySettings
       Domain.Types.SavedReqLocation
@@ -803,7 +819,6 @@ library
       Domain.Types.Sos
       Domain.Types.SpecialOccasion
       Domain.Types.SpecialZoneQuote
-      Domain.Types.Station
       Domain.Types.StationsExtraInformation
       Domain.Types.StopFare
       Domain.Types.StopInformation
@@ -868,7 +883,6 @@ library
       Storage.Beam.FRFSTicketBookingPayment
       Storage.Beam.FRFSTicketDiscount
       Storage.Beam.FRFSVehicleServiceTier
-      Storage.Beam.GTFSFeedInfo
       Storage.Beam.HotSpotConfig
       Storage.Beam.Insurance
       Storage.Beam.InsuranceConfig
@@ -897,6 +911,8 @@ library
       Storage.Beam.MerchantState
       Storage.Beam.MultimodalPreferences
       Storage.Beam.NotificationSoundsConfig
+      Storage.Beam.NyRegularInstanceLog
+      Storage.Beam.NyRegularSubscription
       Storage.Beam.OnSearchEvent
       Storage.Beam.ParcelDetails
       Storage.Beam.PartnerOrganization
@@ -909,6 +925,7 @@ library
       Storage.Beam.PersonDefaultEmergencyNumber
       Storage.Beam.PersonDisability
       Storage.Beam.PersonStats
+      Storage.Beam.PickupInstructions
       Storage.Beam.PlaceBasedServiceConfig
       Storage.Beam.PlaceNameCache
       Storage.Beam.PopularLocation
@@ -921,12 +938,9 @@ library
       Storage.Beam.Ride
       Storage.Beam.RiderConfig
       Storage.Beam.RideRelatedNotificationConfig
-      Storage.Beam.Route
       Storage.Beam.RouteDetails
       Storage.Beam.RoutePolylines
       Storage.Beam.RouteStopCalender
-      Storage.Beam.RouteStopMapping
-      Storage.Beam.RouteStopTimeTable
       Storage.Beam.RouteTripMapping
       Storage.Beam.SafetySettings
       Storage.Beam.SavedReqLocation
@@ -939,7 +953,6 @@ library
       Storage.Beam.Sos
       Storage.Beam.SpecialOccasion
       Storage.Beam.SpecialZoneQuote
-      Storage.Beam.Station
       Storage.Beam.StationsExtraInformation
       Storage.Beam.StopFare
       Storage.Beam.StopInformation
@@ -1007,7 +1020,6 @@ library
       Storage.Queries.FRFSTicketBookingPayment
       Storage.Queries.FRFSTicketDiscount
       Storage.Queries.FRFSVehicleServiceTier
-      Storage.Queries.GTFSFeedInfo
       Storage.Queries.HotSpotConfig
       Storage.Queries.Insurance
       Storage.Queries.InsuranceConfig
@@ -1036,6 +1048,8 @@ library
       Storage.Queries.MerchantState
       Storage.Queries.MultimodalPreferences
       Storage.Queries.NotificationSoundsConfig
+      Storage.Queries.NyRegularInstanceLog
+      Storage.Queries.NyRegularSubscription
       Storage.Queries.OnSearchEvent
       Storage.Queries.OrphanInstances.AppInstalls
       Storage.Queries.OrphanInstances.BBPS
@@ -1054,6 +1068,7 @@ library
       Storage.Queries.OrphanInstances.FRFSQuote
       Storage.Queries.OrphanInstances.FRFSSearch
       Storage.Queries.OrphanInstances.FRFSTicketBooking
+      Storage.Queries.OrphanInstances.IntegratedBPPConfig
       Storage.Queries.OrphanInstances.Issue
       Storage.Queries.OrphanInstances.Journey
       Storage.Queries.OrphanInstances.JourneyLeg
@@ -1062,6 +1077,7 @@ library
       Storage.Queries.OrphanInstances.MerchantPaymentMethod
       Storage.Queries.OrphanInstances.MerchantServiceConfig
       Storage.Queries.OrphanInstances.MerchantServiceUsageConfig
+      Storage.Queries.OrphanInstances.NyRegularSubscription
       Storage.Queries.OrphanInstances.PartnerOrganization
       Storage.Queries.OrphanInstances.PartnerOrgConfig
       Storage.Queries.OrphanInstances.Person
@@ -1074,14 +1090,12 @@ library
       Storage.Queries.OrphanInstances.RecentLocation
       Storage.Queries.OrphanInstances.RegistrationToken
       Storage.Queries.OrphanInstances.Ride
-      Storage.Queries.OrphanInstances.Route
       Storage.Queries.OrphanInstances.RoutePolylines
       Storage.Queries.OrphanInstances.SafetySettings
       Storage.Queries.OrphanInstances.SavedReqLocation
       Storage.Queries.OrphanInstances.SearchRequest
       Storage.Queries.OrphanInstances.ServiceCategory
       Storage.Queries.OrphanInstances.ServicePeopleCategory
-      Storage.Queries.OrphanInstances.Station
       Storage.Queries.OrphanInstances.StationsExtraInformation
       Storage.Queries.OrphanInstances.TicketBooking
       Storage.Queries.OrphanInstances.TicketBookingPeopleCategory
@@ -1103,6 +1117,7 @@ library
       Storage.Queries.PersonDefaultEmergencyNumber
       Storage.Queries.PersonDisability
       Storage.Queries.PersonStats
+      Storage.Queries.PickupInstructions
       Storage.Queries.PlaceBasedServiceConfig
       Storage.Queries.PlaceNameCache
       Storage.Queries.PopularLocation
@@ -1115,12 +1130,9 @@ library
       Storage.Queries.Ride
       Storage.Queries.RiderConfig
       Storage.Queries.RideRelatedNotificationConfig
-      Storage.Queries.Route
       Storage.Queries.RouteDetails
       Storage.Queries.RoutePolylines
       Storage.Queries.RouteStopCalender
-      Storage.Queries.RouteStopMapping
-      Storage.Queries.RouteStopTimeTable
       Storage.Queries.RouteTripMapping
       Storage.Queries.SafetySettings
       Storage.Queries.SavedReqLocation
@@ -1133,7 +1145,6 @@ library
       Storage.Queries.Sos
       Storage.Queries.SpecialOccasion
       Storage.Queries.SpecialZoneQuote
-      Storage.Queries.Station
       Storage.Queries.StationsExtraInformation
       Storage.Queries.StopFare
       Storage.Queries.StopInformation
@@ -1197,7 +1208,6 @@ library
   ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=Fdep.Plugin -fplugin-opt=Fdep.Plugin:{"path":"./tmp/fdep/","port":4444,"host":"::1","log":false,"tc_funcs":false} -fplugin=FieldInspector.PluginFields -fplugin-opt=FieldInspector.PluginFields:{"path":"./tmp/fdep/","port":4444,"host":"::1","log":false,"tc_funcs":false} -fplugin=FieldInspector.PluginTypes -fplugin-opt=FieldInspector.PluginTypes:{"path":"./tmp/fdep/","port":4444,"host":"::1","log":false,"tc_funcs":false} -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
   build-depends:
       aeson
-    , amazonka
     , amazonka-core
     , amazonka-ses
     , base >=4.7 && <5
@@ -1338,7 +1348,6 @@ executable rider-app-exe
   ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=Fdep.Plugin -fplugin-opt=Fdep.Plugin:{"path":"./tmp/fdep/","port":4444,"host":"::1","log":false,"tc_funcs":false} -fplugin=FieldInspector.PluginFields -fplugin-opt=FieldInspector.PluginFields:{"path":"./tmp/fdep/","port":4444,"host":"::1","log":false,"tc_funcs":false} -fplugin=FieldInspector.PluginTypes -fplugin-opt=FieldInspector.PluginTypes:{"path":"./tmp/fdep/","port":4444,"host":"::1","log":false,"tc_funcs":false} -threaded -rtsopts "-with-rtsopts=-N -T"
   build-depends:
       aeson
-    , amazonka
     , amazonka-core
     , amazonka-ses
     , base >=4.7 && <5
@@ -1473,7 +1482,6 @@ test-suite rider-app-test
   ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=Fdep.Plugin -fplugin-opt=Fdep.Plugin:{"path":"./tmp/fdep/","port":4444,"host":"::1","log":false,"tc_funcs":false} -fplugin=FieldInspector.PluginFields -fplugin-opt=FieldInspector.PluginFields:{"path":"./tmp/fdep/","port":4444,"host":"::1","log":false,"tc_funcs":false} -fplugin=FieldInspector.PluginTypes -fplugin-opt=FieldInspector.PluginTypes:{"path":"./tmp/fdep/","port":4444,"host":"::1","log":false,"tc_funcs":false} -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       aeson
-    , amazonka
     , amazonka-core
     , amazonka-ses
     , base >=4.7 && <5

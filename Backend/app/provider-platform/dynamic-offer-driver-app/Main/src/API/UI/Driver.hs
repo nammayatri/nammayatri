@@ -68,185 +68,190 @@ type API =
            :> MandatoryQueryParam "active" Bool
            :> QueryParam "mode" DI.DriverMode
            :> Post '[JSON] APISuccess
-           :<|> "goHome"
-             :> ( "activate" :> TokenAuth
-                    :> MandatoryQueryParam "homeLocationId" (Id DDHL.DriverHomeLocation)
-                    :> MandatoryQueryParam "currentLocation" LatLong
-                    :> Post '[JSON] APISuccess
-                    :<|> "deactivate"
-                    :> TokenAuth
-                    :> Post '[JSON] APISuccess
-                    :<|> "add"
-                    :> TokenAuth
-                    :> ReqBody '[JSON] DDriver.AddHomeLocationReq
-                    :> Post '[JSON] APISuccess
-                    :<|> "get"
-                    :> TokenAuth
-                    :> Get '[JSON] DDriver.GetHomeLocationsRes
-                    :<|> "delete"
-                    :> TokenAuth
-                    :> MandatoryQueryParam "homeLocationId" (Id DDHL.DriverHomeLocation)
-                    :> Delete '[JSON] APISuccess
-                    :<|> "update"
-                    :> TokenAuth
-                    :> MandatoryQueryParam "homeLocationId" (Id DDHL.DriverHomeLocation)
-                    :> ReqBody '[JSON] DDriver.UpdateHomeLocationReq
-                    :> Post '[JSON] APISuccess
-                )
-           :<|> "nearbyRideRequest"
-             :> ( TokenAuth
-                    :> QueryParam "searchTryId" (Id DTST.SearchTry)
-                    :> Get '[JSON] DDriver.GetNearbySearchRequestsRes
-                )
-           :<|> "searchRequest"
-             :> TokenAuth
-             :> Header "x-package" Text
-             :> "quote"
-             :> "offer"
-             :> ReqBody '[JSON] DDriver.DriverOfferReq
-             :> Post '[JSON] APISuccess
-           :<|> "searchRequest"
-             :> TokenAuth
-             :> Header "x-package" Text
-             :> "quote"
-             :> "respond"
-             :> Header "x-bundle-version" Version
-             :> Header "x-client-version" Version
-             :> Header "x-config-version" Version
-             :> Header "x-device" Text
-             :> ReqBody '[JSON] DDriver.DriverRespondReq
-             :> Post '[JSON] APISuccess
-           :<|> "profile"
-             :> ( TokenAuth
+             :<|> "goHome"
+           :> ( "activate" :> TokenAuth
+                  :> MandatoryQueryParam "homeLocationId" (Id DDHL.DriverHomeLocation)
+                  :> MandatoryQueryParam "currentLocation" LatLong
+                  :> Post '[JSON] APISuccess
+                  :<|> "deactivate"
+                  :> TokenAuth
+                  :> Post '[JSON] APISuccess
+                  :<|> "add"
+                  :> TokenAuth
+                  :> ReqBody '[JSON] DDriver.AddHomeLocationReq
+                  :> Post '[JSON] APISuccess
+                  :<|> "get"
+                  :> TokenAuth
+                  :> Get '[JSON] DDriver.GetHomeLocationsRes
+                  :<|> "delete"
+                  :> TokenAuth
+                  :> MandatoryQueryParam "homeLocationId" (Id DDHL.DriverHomeLocation)
+                  :> Delete '[JSON] APISuccess
+                  :<|> "update"
+                  :> TokenAuth
+                  :> MandatoryQueryParam "homeLocationId" (Id DDHL.DriverHomeLocation)
+                  :> ReqBody '[JSON] DDriver.UpdateHomeLocationReq
+                  :> Post '[JSON] APISuccess
+              )
+             :<|> "nearbyRideRequest"
+           :> ( TokenAuth
+                  :> QueryParam "searchTryId" (Id DTST.SearchTry)
+                  :> Get '[JSON] DDriver.GetNearbySearchRequestsRes
+              )
+             :<|> "searchRequest"
+           :> TokenAuth
+           :> Header "x-package" Text
+           :> "quote"
+           :> "offer"
+           :> ReqBody '[JSON] DDriver.DriverOfferReq
+           :> Post '[JSON] APISuccess
+             :<|> "searchRequest"
+           :> TokenAuth
+           :> Header "x-package" Text
+           :> "quote"
+           :> "respond"
+           :> Header "x-bundle-version" Version
+           :> Header "x-client-version" Version
+           :> Header "x-config-version" Version
+           :> Header "x-device" Text
+           :> ReqBody '[JSON] DDriver.DriverRespondReq
+           :> Post '[JSON] APISuccess
+             :<|> "profile"
+           :> ( TokenAuth
+                  :> Header "x-package" Text
+                  :> QueryParam "toss" Int
+                  :> QueryParam "tenant" Text
+                  :> QueryParam "context" Text
+                  :> QueryParam "serviceName" DPlan.ServiceNames
+                  :> Get '[JSON] DDriver.DriverInformationRes
+                  :<|> TokenAuth
+                    :> "info"
                     :> Header "x-package" Text
                     :> QueryParam "toss" Int
                     :> QueryParam "tenant" Text
                     :> QueryParam "context" Text
                     :> QueryParam "serviceName" DPlan.ServiceNames
-                    :> Get '[JSON] DDriver.DriverInformationRes
-                    :<|> TokenAuth
-                      :> "info"
-                      :> Header "x-package" Text
-                      :> QueryParam "toss" Int
-                      :> QueryParam "tenant" Text
-                      :> QueryParam "context" Text
-                      :> QueryParam "serviceName" DPlan.ServiceNames
-                      :> ReqBody '[JSON] DDriver.UpdateProfileInfoPoints
-                      :> Post '[JSON] DDriver.DriverInformationRes
-                    :<|> TokenAuth
-                      :> Header "x-bundle-version" Version
-                      :> Header "x-client-version" Version
-                      :> Header "x-config-version" Version
-                      :> Header "x-device" Text
-                      :> ReqBody '[JSON] DDriver.UpdateDriverReq
-                      :> Post '[JSON] DDriver.UpdateDriverRes
-                    :<|> "stats"
-                      :> TokenAuth
-                      :> MandatoryQueryParam "day" Day
-                      :> Get '[JSON] DDriver.DriverStatsRes
-                    :<|> "earnings"
-                      :> TokenAuth
-                      :> MandatoryQueryParam "from" Day
-                      :> MandatoryQueryParam "to" Day
-                      :> MandatoryQueryParam "earningType" DCommon.EarningType
-                      :> Get '[JSON] DCommon.EarningPeriodStatsRes
-                    :<|> "images"
-                      :> TokenAuth
-                      :> Common.IssueUploadAPI
-                    :<|> "verify"
-                      :> "vpaStatus"
-                      :> TokenAuth
-                      :> Post '[JSON] APISuccess
-                    :<|> "photo"
-                      :> ( TokenAuth
-                             :> ReqBody '[JSON] DDriver.DriverPhotoUploadReq
-                             :> Post '[JSON] APISuccess
-                             :<|> "media"
-                               :> TokenAuth
-                               :> MandatoryQueryParam "filePath" Text
-                               :> Get '[JSON] Text
-                         )
-                )
-           :<|> "metaData"
-             :> TokenAuth
-             :> ReqBody '[JSON] DDriver.MetaDataReq
-             :> Post '[JSON] APISuccess
-           :<|> "alternateNumber"
-             :> ( "validate"
+                    :> ReqBody '[JSON] DDriver.UpdateProfileInfoPoints
+                    :> Post '[JSON] DDriver.DriverInformationRes
+                  :<|> TokenAuth
+                    :> Header "x-bundle-version" Version
+                    :> Header "x-client-version" Version
+                    :> Header "x-config-version" Version
+                    :> Header "x-device" Text
+                    :> ReqBody '[JSON] DDriver.UpdateDriverReq
+                    :> Post '[JSON] DDriver.UpdateDriverRes
+                  :<|> "stats"
+                    :> TokenAuth
+                    :> MandatoryQueryParam "day" Day
+                    :> Get '[JSON] DDriver.DriverStatsRes
+                  :<|> "earnings"
+                    :> TokenAuth
+                    :> MandatoryQueryParam "from" Day
+                    :> MandatoryQueryParam "to" Day
+                    :> MandatoryQueryParam "earningType" DCommon.EarningType
+                    :> Get '[JSON] DCommon.EarningPeriodStatsRes
+                  :<|> "images"
+                    :> TokenAuth
+                    :> Common.IssueUploadAPI
+                  :<|> "verify"
+                    :> "vpaStatus"
+                    :> TokenAuth
+                    :> Post '[JSON] APISuccess
+                  :<|> "photo"
+                    :> ( TokenAuth
+                           :> ReqBody '[JSON] DDriver.DriverPhotoUploadReq
+                           :> Post '[JSON] APISuccess
+                           :<|> "media"
+                             :> TokenAuth
+                             :> MandatoryQueryParam "filePath" Text
+                             :> Get '[JSON] Text
+                       )
+              )
+             :<|> "metaData"
+           :> TokenAuth
+           :> ReqBody '[JSON] DDriver.MetaDataReq
+           :> Post '[JSON] APISuccess
+             :<|> "alternateNumber"
+           :> ( "validate"
+                  :> TokenAuth
+                  :> ReqBody '[JSON] DDriver.DriverAlternateNumberReq
+                  :> Post '[JSON] DDriver.DriverAlternateNumberRes
+                  :<|> "verify"
+                    :> TokenAuth
+                    :> ReqBody '[JSON] DDriver.DriverAlternateNumberOtpReq
+                    :> Post '[JSON] APISuccess
+                  :<|> "resendOtp"
                     :> TokenAuth
                     :> ReqBody '[JSON] DDriver.DriverAlternateNumberReq
-                    :> Post '[JSON] DDriver.DriverAlternateNumberRes
-                    :<|> "verify"
-                      :> TokenAuth
-                      :> ReqBody '[JSON] DDriver.DriverAlternateNumberOtpReq
-                      :> Post '[JSON] APISuccess
-                    :<|> "resendOtp"
-                      :> TokenAuth
-                      :> ReqBody '[JSON] DDriver.DriverAlternateNumberReq
-                      :> Post '[JSON] DDriver.ResendAuth
-                    :<|> "remove"
-                      :> TokenAuth
-                      :> Delete '[JSON] APISuccess
-                )
-           :<|> "payments"
-             :> "history"
-             :> TokenAuth
-             :> QueryParam "from" Day -- rides with window start date >= from
-             :> QueryParam "to" Day -- rides with window end date <= to
-             :> QueryParam "status" DriverFeeStatus
-             :> QueryParam "limit" Int
-             :> QueryParam "offset" Int
-             :> Get '[JSON] [DDriver.DriverPaymentHistoryResp]
-           :<|> "cleardues"
-             :> TokenAuth
-             :> QueryParam "serviceName" DPlan.ServiceNames
-             :> Get '[JSON] DDriver.ClearDuesRes
-           :<|> "v2"
-             :> "payments"
-             :> "history"
-             :> TokenAuth
-             :> QueryParam "paymentMode" InvoicePaymentMode
-             :> QueryParam "limit" Int
-             :> QueryParam "offset" Int
-             :> QueryParam "serviceName" DPlan.ServiceNames
-             :> Get '[JSON] DDriver.HistoryEntityV2
-           :<|> "v2"
-             :> "payments"
-             :> "history"
-             :> Capture "invoiceId" Text
-             :> "entity"
-             :> TokenAuth
-             :> QueryParam "serviceName" DPlan.ServiceNames
-             :> Get '[JSON] DDriver.HistoryEntryDetailsEntityV2
-           :<|> ( "city"
-                    :> ReqBody '[JSON] DDriver.GetCityReq
-                    :> Post '[JSON] DDriver.GetCityResp
-                )
-           :<|> "invoice"
-             :> TokenAuth
-             :> MandatoryQueryParam "from" Day
-             :> QueryParam "to" Day
-             :> Get '[JSON] [DDriver.DriverFeeResp]
-           :<|> "getDummyRideRequest"
-             :> ( TokenAuth
-                    :> Get '[JSON] APISuccess
-                )
-           :<|> "scheduledBooking"
-             :> "list"
-             :> TokenAuth
-             :> QueryParam "limit" Integer
-             :> QueryParam "offset" Integer
-             :> QueryParam "from" Day
-             :> QueryParam "to" Day
-             :> QueryParam "tripCategory" TripCategory
-             :> QueryParam "currentLocation" LatLong
-             :> Get '[JSON] DDriver.ScheduledBookingRes
-           :<|> "accept"
-             :> "scheduledBooking"
-             :> TokenAuth
-             :> Header "x-package" Text
-             :> MandatoryQueryParam "bookingId" (Id DRB.Booking)
-             :> Post '[JSON] APISuccess
+                    :> Post '[JSON] DDriver.ResendAuth
+                  :<|> "remove"
+                    :> TokenAuth
+                    :> Delete '[JSON] APISuccess
+              )
+             :<|> "payments"
+           :> "history"
+           :> TokenAuth
+           :> QueryParam "from" Day -- rides with window start date >= from
+           :> QueryParam "to" Day -- rides with window end date <= to
+           :> QueryParam "status" DriverFeeStatus
+           :> QueryParam "limit" Int
+           :> QueryParam "offset" Int
+           :> Get '[JSON] [DDriver.DriverPaymentHistoryResp]
+             :<|> "cleardues"
+           :> TokenAuth
+           :> QueryParam "serviceName" DPlan.ServiceNames
+           :> Get '[JSON] DDriver.ClearDuesRes
+             :<|> "v2"
+           :> "payments"
+           :> "history"
+           :> TokenAuth
+           :> QueryParam "paymentMode" InvoicePaymentMode
+           :> QueryParam "limit" Int
+           :> QueryParam "offset" Int
+           :> QueryParam "serviceName" DPlan.ServiceNames
+           :> Get '[JSON] DDriver.HistoryEntityV2
+             :<|> "v2"
+           :> "payments"
+           :> "history"
+           :> Capture "invoiceId" Text
+           :> "entity"
+           :> TokenAuth
+           :> QueryParam "serviceName" DPlan.ServiceNames
+           :> Get '[JSON] DDriver.HistoryEntryDetailsEntityV2
+             :<|> ( "city"
+                      :> ReqBody '[JSON] DDriver.GetCityReq
+                      :> Post '[JSON] DDriver.GetCityResp
+                  )
+             :<|> "invoice"
+           :> TokenAuth
+           :> MandatoryQueryParam "from" Day
+           :> QueryParam "to" Day
+           :> Get '[JSON] [DDriver.DriverFeeResp]
+             :<|> "getDummyRideRequest"
+           :> ( TokenAuth
+                  :> Get '[JSON] APISuccess
+              )
+             :<|> "scheduledBooking"
+           :> "list"
+           :> TokenAuth
+           :> QueryParam "limit" Integer
+           :> QueryParam "offset" Integer
+           :> QueryParam "from" Day
+           :> QueryParam "to" Day
+           :> QueryParam "tripCategory" TripCategory
+           :> QueryParam "currentLocation" LatLong
+           :> Get '[JSON] DDriver.ScheduledBookingRes
+             :<|> "accept"
+           :> "scheduledBooking"
+           :> TokenAuth
+           :> Header "x-package" Text
+           :> MandatoryQueryParam "bookingId" (Id DRB.Booking)
+           :> Post '[JSON] APISuccess
+             :<|> "consent"
+           :> "respond"
+           :> TokenAuth
+           :> ReqBody '[JSON] DDriver.GetConsentReq
+           :> Post '[JSON] APISuccess
        )
 
 handler :: FlowServer API
@@ -287,6 +292,7 @@ handler =
     :<|> getDummyRideRequest
     :<|> listScheduledBookings
     :<|> acceptScheduledBooking
+    :<|> consentResponse
 
 getInformation :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Text -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe DPlan.ServiceNames -> FlowHandler DDriver.DriverInformationRes
 getInformation (personId, driverId, merchantOpCityId) mbClientId toss tenant context serviceName = withFlowHandlerAPI $ DDriver.getInformation (personId, driverId, merchantOpCityId) mbClientId toss tenant context serviceName Nothing
@@ -401,3 +407,6 @@ getInformationV2 (personId, driverId, merchantOpCityId) mbClientId toss tenant c
 
 getEarnings :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Day -> Day -> DCommon.EarningType -> FlowHandler DCommon.EarningPeriodStatsRes
 getEarnings (personId, merchantId, merchantOpCityId) from to earningType = withFlowHandlerAPI $ DDriver.getEarnings (personId, merchantId, merchantOpCityId) from to earningType
+
+consentResponse :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> DDriver.GetConsentReq -> FlowHandler APISuccess
+consentResponse ids req = withFlowHandlerAPI $ DDriver.consentResponse ids req

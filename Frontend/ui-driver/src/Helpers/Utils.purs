@@ -124,7 +124,9 @@ import Data.Tuple as DT
 import Resource.Constants (decodeAddress)
 import RemoteConfig
 import Storage as Storage
-
+import PrestoDOM (Padding(..), Gravity(..), Margin(..), Length(..))
+import Font.Size as FontSize
+import Common.Types.App (YoutubeData, YoutubeVideoStatus(..))
 
 type AffSuccess s = (s -> Effect Unit)
 
@@ -179,7 +181,7 @@ foreign import renewFile :: EffectFn3 String String (AffSuccess Boolean) Unit
 
 foreign import getDateAfterNDays :: Int -> String
 foreign import downloadQR  :: String -> Effect Unit
-
+foreign import convertEpochToDateFormat :: String -> String
 foreign import performHapticFeedback :: Unit -> Effect Unit
 foreign import rentalPickupTimeFormat :: String -> String
 
@@ -243,7 +245,20 @@ type LabelConfig = {
   imageUrl :: String,
   cancelText :: String,
   cancelConfirmImage :: String,
-  textColor :: String
+  textColor :: String,
+  secondaryImageUrl :: String,
+  paddingTop :: Int,
+  gravity :: String,
+  paddingLeft :: Int,
+  imageView :: {
+    width :: Int,
+    height :: Int
+  },
+  textView :: {
+    textSize :: Int,
+    gravity :: String,
+    marginLeft :: Int
+  }
 }
 
 type SpecialLocationMap = DM.Map String SpecialLocationList
@@ -264,7 +279,20 @@ dummyLabelConfig = {
   imageUrl : "",
   cancelText : "",
   cancelConfirmImage : "",
-  textColor : Color.white900
+  textColor : Color.white900,
+  secondaryImageUrl : "",
+  paddingTop : 5,
+  gravity : "CENTER",
+  paddingLeft : 0,
+  imageView : {
+    width : 18,
+    height : 18
+  },
+  textView : {
+    textSize : FontSize.a_14,
+    gravity : "CENTER_VERTICAL",
+    marginLeft : 5
+  }
 }
 
 otpRule :: Reader.OtpRule
@@ -380,11 +408,11 @@ getVehicleType vehicleType =
     "HERITAGE_CAB" -> "Heritage Cab"
     _ -> ""
 
-getRideLabelData :: Maybe String -> LabelConfig
-getRideLabelData maybeLabel = fromMaybe dummyLabelConfig (getRequiredTag maybeLabel)
+getRideLabelData :: Maybe String -> Boolean -> LabelConfig
+getRideLabelData maybeLabel isInsured = fromMaybe dummyLabelConfig (getRequiredTag maybeLabel isInsured)
 
-getRequiredTag :: Maybe String -> Maybe LabelConfig
-getRequiredTag maybeLabel  =
+getRequiredTag :: Maybe String -> Boolean -> Maybe LabelConfig
+getRequiredTag maybeLabel isInsured =
   case maybeLabel of
     Just label -> if DA.any (_ == label) ["Accessibility", "GOTO", "Safety", "SpecialZonePickup"] then
                     DA.head (DA.filter (\item -> item.label == label) (rideLabelConfig FunctionCall))
@@ -393,8 +421,13 @@ getRequiredTag maybeLabel  =
                     let pickup = fromMaybe "" (arr DA.!! 0)
                     let drop = fromMaybe "" (arr DA.!! 1)
                     let priority = fromMaybe "" (arr DA.!! 2)
-                    DA.head (DA.filter (\item -> item.label == (pickup <> "_Pickup")) (rideLabelConfig FunctionCall))
-    Nothing    -> Nothing
+                    let mbLabelConfig = DA.head (DA.filter (\item -> item.label == (pickup <> "_Pickup")) (rideLabelConfig FunctionCall))
+                    case mbLabelConfig of
+                      Just labelConfig -> Just labelConfig
+                      Nothing -> if isInsured then DA.head (DA.filter (\item -> item.label == "Insurance_Banner") (rideLabelConfig FunctionCall)) else Nothing
+    Nothing -> if isInsured then DA.head (DA.filter (\item -> item.label == "Insurance_Banner") (rideLabelConfig FunctionCall)) else Nothing
+
+
 
 rideLabelConfig :: LazyCheck -> Array LabelConfig
 rideLabelConfig _ = [
@@ -452,6 +485,29 @@ rideLabelConfig _ = [
       imageUrl = "ny_ic_location_pin_white,",
       cancelText = "ZONE_CANCEL_TEXT_DROP",
       cancelConfirmImage = fetchImage FF_ASSET "ny_ic_frequent_cancellation_blocking"
+    },
+    {
+      label : "Insurance_Banner",
+      backgroundColor : Color.blue900,
+      text : getString RIDE_ENSURED_AT_NO_EXTRA_COST,
+      secondaryText : "",
+      imageUrl : fetchImage FF_ASSET "ny_ic_white_shield",
+      cancelText : "",
+      cancelConfirmImage : "",
+      secondaryImageUrl : fetchImage FF_ASSET "ny_ic_info",
+      textColor : Color.white900,
+      paddingTop : 7,
+      gravity : "LEFT",
+      paddingLeft : 20,
+      imageView : {
+        width : 22,
+        height : 22
+      },
+      textView : {
+        textSize : FontSize.a_16,
+        gravity : "LEFT",
+        marginLeft : 10
+      }
     }
 ]
 
@@ -1344,3 +1400,17 @@ fetchAndUpdateLocationUpdateServiceVars stage frequentLocationUpdates tripType =
   void $ pure $ Storage.setValueToLocalStore LOCATION_MAX_BATCH_AGE locationUpdateServiceConfig.maxBatchAge
   void $ pure $ Storage.setValueToLocalStore LOCATION_MAX_TIME_THRESHOLD locationUpdateServiceConfig.maxTimeThreshold
   void $ pure $ Storage.setValueToLocalStore LOCATION_PRIORITY locationUpdateServiceConfig.priority
+
+youtubeData :: YoutubeData
+youtubeData =
+  { videoTitle: ""
+  , setVideoTitle: false
+  , showMenuButton: false
+  , showDuration: true
+  , showSeekBar: true
+  , videoId: ""
+  , videoType: ""
+  , videoHeight : 0
+  , showFullScreen : false
+  , hideFullScreenButton : false
+  } 

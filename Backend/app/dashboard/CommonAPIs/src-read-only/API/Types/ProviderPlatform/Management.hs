@@ -12,6 +12,7 @@ import qualified API.Types.ProviderPlatform.Management.DriverGoHome
 import qualified API.Types.ProviderPlatform.Management.DriverReferral
 import qualified API.Types.ProviderPlatform.Management.DriverRegistration
 import qualified API.Types.ProviderPlatform.Management.Media
+import qualified API.Types.ProviderPlatform.Management.MediaFileDocument
 import qualified API.Types.ProviderPlatform.Management.Merchant
 import qualified API.Types.ProviderPlatform.Management.Message
 import qualified API.Types.ProviderPlatform.Management.NammaTag
@@ -37,6 +38,7 @@ data ManagementUserActionType
   | DRIVER_REFERRAL API.Types.ProviderPlatform.Management.DriverReferral.DriverReferralUserActionType
   | DRIVER_REGISTRATION API.Types.ProviderPlatform.Management.DriverRegistration.DriverRegistrationUserActionType
   | MEDIA API.Types.ProviderPlatform.Management.Media.MediaUserActionType
+  | MEDIA_FILE_DOCUMENT API.Types.ProviderPlatform.Management.MediaFileDocument.MediaFileDocumentUserActionType
   | MERCHANT API.Types.ProviderPlatform.Management.Merchant.MerchantUserActionType
   | MESSAGE API.Types.ProviderPlatform.Management.Message.MessageUserActionType
   | NAMMA_TAG API.Types.ProviderPlatform.Management.NammaTag.NammaTagUserActionType
@@ -59,6 +61,7 @@ instance Text.Show.Show ManagementUserActionType where
     DRIVER_REFERRAL e -> "DRIVER_REFERRAL/" <> show e
     DRIVER_REGISTRATION e -> "DRIVER_REGISTRATION/" <> show e
     MEDIA e -> "MEDIA/" <> show e
+    MEDIA_FILE_DOCUMENT e -> "MEDIA_FILE_DOCUMENT/" <> show e
     MERCHANT e -> "MERCHANT/" <> show e
     MESSAGE e -> "MESSAGE/" <> show e
     NAMMA_TAG e -> "NAMMA_TAG/" <> show e
@@ -138,6 +141,15 @@ instance Text.Read.Read ManagementUserActionType where
                    r2
                  )
                  | r1 <- stripPrefix "MEDIA/" r,
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
+               ]
+            ++ [ ( MEDIA_FILE_DOCUMENT v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "MEDIA_FILE_DOCUMENT/" r,
                    ( v1,
                      r2
                      ) <-

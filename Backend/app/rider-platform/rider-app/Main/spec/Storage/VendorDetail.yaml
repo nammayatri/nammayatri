@@ -14,6 +14,7 @@ VendorSplitDetails:
     integratedBPPConfigId : Id IntegratedBPPConfig
     vendorId : Text
     splitType : SplitType
+    includeInSplit : Maybe Bool
 
   constraints:
     id: PrimaryKey
@@ -23,3 +24,8 @@ VendorSplitDetails:
     findAllByIntegratedBPPConfigId:
       kvFunction: findAllWithKV
       where: integratedBPPConfigId
+
+    findAllByMerchantOperatingCityIdAndIncludeInSplit:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOperatingCityId, includeInSplit]

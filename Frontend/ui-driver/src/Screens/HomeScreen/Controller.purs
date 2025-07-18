@@ -96,7 +96,7 @@ import Screens (ScreenName(..), getScreen)
 import Screens.Types as ST
 import Services.API (GetRidesHistoryResp, RidesInfo(..), Status(..), GetCurrentPlanResp(..), PlanEntity(..), PaymentBreakUp(..), GetRouteResp(..), Route(..), StopLocation(..),DriverProfileStatsResp(..), BookingTypes(..) , ScheduledBookingListResponse(..) , ScheduleBooking(..) , BookingAPIEntity(..))
 import Services.Accessor (_lat, _lon, _area, _extras, _instructions)
-import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, setValueToLocalNativeStore, setValueToLocalStore)
+import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, setValueToLocalNativeStore, setValueToLocalStore, getIntegerFromLocalStore)
 import Types.App (FlowBT, GlobalState(..), HOME_SCREENOUTPUT(..), ScreenType(..))
 import Types.ModifyScreenState (modifyScreenState)
 import Helpers.Utils as HU
@@ -152,6 +152,7 @@ import Data.Traversable (for_)
 import Engineering.Helpers.RippleCircles as EHR
 import Components.TripStageTopBar.Controller as TripStageTopBar
 import Data.Array as DA
+import Resource.Constants as Const
 
 
 instance showAction :: Show Action where
@@ -326,6 +327,12 @@ instance showAction :: Show Action where
   show (RideEndWithStopsPopupAction _) = "RideEndWithStopsPopupAction"
   show (UpdateRouteInState _) = "UpdateRouteInState"
   show (DriverBlockedPopUp _) = "DriverBlockedPopUp"
+  show (RideInsuranceCardAction _) = "RideInsuranceCardAction"
+  show (ConsentPopupTnC) = "ConsentPopupTnC"
+  show (ConsentPopupAccept _) = "ConsentPopupAccept"
+  show (ConsentPopupCallSupport) = "ConsentPopupCallSupport"
+  show (DismissConsentPopup) = "DismissConsentPopup"
+  show (ConsentPopupAfterRender) = "ConsentPopupAfterRender"
 
 instance loggableAction :: Loggable Action where
   performLog action appId = pure unit
@@ -514,7 +521,9 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | GoToMetroWarriors ST.HomeScreenState
                     | UpdateStopsStatus ST.HomeScreenState
                     | MeterRideScreen ST.HomeScreenState
+                    | UpdateDriverInsurance ST.HomeScreenState
                     | EnablePetRides ST.HomeScreenState
+                    | DriverConsentAgree ST.HomeScreenState
 
 data Action = NoAction
             | BackPressed
@@ -687,6 +696,12 @@ data Action = NoAction
             | UpdateRouteInState (Array Route)
             | GotoMeterRideScreen
             | DriverBlockedPopUp PopUpModal.Action
+            | RideInsuranceCardAction PopUpModal.Action
+            | ConsentPopupTnC
+            | ConsentPopupAccept PrimaryButtonController.Action
+            | ConsentPopupCallSupport
+            | DismissConsentPopup
+            | ConsentPopupAfterRender
 
 uploadFileConfig :: Common.UploadFileConfig
 uploadFileConfig = Common.UploadFileConfig {
@@ -706,6 +721,8 @@ eval (CompleteProfileAction PopUpModal.DismissPopup) state = do
   let currentTime = HU.getCurrentUTC ""
   void $ pure $ setValueToLocalStore LAST_EXECUTED_TIME currentTime
   continue state
+
+eval (RideInsuranceCardAction PopUpModal.OnButton1Click) state = continue state {props{showInsuranceBanner = false}}
 
 eval GotoMeterRideScreen state = exit $ MeterRideScreen state
 
@@ -1267,16 +1284,29 @@ eval (RideActionModalAction (RideActionModal.EndRide)) state = do
 eval (RideActionModalAction (RideActionModal.ArrivedAtStop)) state = do
   exit $ ArrivedAtStop state
 
+eval (RideActionModalAction (RideActionModal.OpenInsuranceBanner)) state = do
+  let startRideActive =
+        (state.props.currentStage == ST.RideAccepted)
+        || (state.props.currentStage == ST.ChatWithCustomer
+            && (Const.getHomeStageFromString $ getValueToLocalStore PREVIOUS_LOCAL_STAGE) /= ST.RideStarted)
+  if (startRideActive == false) then exit $ UpdateDriverInsurance state { props { showInsuranceBanner = true } }
+  else continue $ state { props { showInsuranceBanner = true } }
+
 eval (RideActionModalAction (RideActionModal.OnNavigate)) state = do
   let isRideStartActive = (state.props.currentStage == ST.RideAccepted || state.props.currentStage == ST.ChatWithCustomer) && ((getHomeStageFromString $ getValueToLocalStore PREVIOUS_LOCAL_STAGE) /= ST.RideStarted)
       srcLat = state.data.activeRide.src_lat
       srcLon = state.data.activeRide.src_lon
       _ = runFn2  EHC.updatePushInIdMap "PlayAudioAndLaunchMap" true
       upcomingStop = HU.getUpcomingStop state.data.activeRide.stops
+      stopToDepart = HU.getStopToDepart state.data.activeRide.stops
+      isStopToDepart = isJust stopToDepart
   void $ pure $ setValueToLocalStore TRIGGER_MAPS "false"
   void $ pure $ JB.clearAudioPlayer ""
-  if isRideStartActive then
+  if isRideStartActive && not isStopToDepart then
     action srcLat srcLon
+  else if isStopToDepart then do 
+    void $ pure $ toast $ StringsV2.getStringV2 LT2.please_resume_ride_to_continue
+    continue state
   else if state.data.activeRide.tripType == ST.Rental then do
    case state.data.activeRide.nextStopLat, state.data.activeRide.nextStopLon of
     Just nextStopLat,Just nextStopLon -> action nextStopLat nextStopLon
@@ -1516,6 +1546,24 @@ eval (PopUpModalCancelConfirmationAction (PopUpModal.CountDown seconds status ti
     _ <- pure $ TF.clearTimerWithId timerID
     continue state { data { cancelRideConfirmationPopUp{delayInSeconds = 0, timerID = "", continueEnabled = true}}}
     else continue state { data {cancelRideConfirmationPopUp{delayInSeconds = seconds, timerID = timerID, continueEnabled = false}}}
+
+eval (ConsentPopupTnC) state = do
+  let driverRewardConfig = RC.getDriverRewardConfig $ DS.toLower $ getValueToLocalStore DRIVER_LOCATION
+  continueWithCmd state [pure $ OpenLink driverRewardConfig.termsAndConditionsLink]
+
+eval (ConsentPopupCallSupport) state = do
+  _ <- pure $ showDialer state.data.cityConfig.supportNumber false
+  continue state
+
+eval (DismissConsentPopup) state = do
+  let currentDeclinedCount = getIntegerFromLocalStore NY_CLUB_POPUP_DECLINED_COUNT
+  void $ pure $ setValueToLocalStore NY_CLUB_POPUP_SHOWN "true"
+  void $ pure $ setValueToLocalNativeStore NY_CLUB_POPUP_DECLINED_COUNT $ show $ currentDeclinedCount + 1
+  continue state
+
+eval (ConsentPopupAccept PrimaryButtonController.OnClick) state = exit $ DriverConsentAgree state
+
+eval ConsentPopupAfterRender state = continue state { data { consentPopupPeakHeight = getConsentPopupPeakHeight state } }
 
 eval (CancelRideModalAction SelectListModal.NoAction) state = do
   _ <- pure $ printLog "CancelRideModalAction NoAction" state.data.cancelRideModal.selectionOptions
@@ -2227,6 +2275,8 @@ activeRideDetail state (RidesInfo ride) =
                               Just (API.StopInformation s1stopInfo), Just (API.StopInformation s2stopInfo) -> compare s1stopInfo.stopOrder s2stopInfo.stopOrder
                               _,_ -> LT
                             ) $ fromMaybe [] ride.stops,
+  isInsured : ride.isInsured,
+  insuredAmount : ride.insuredAmount           ,
   isPetRide : ride.isPetRide
 }
   where
@@ -2339,6 +2389,17 @@ getPeekHeight state =
       currentPeekHeight = headerLayout.height  + contentLayout.height + (if RideActionModal.showTag (rideActionModalConfig state) then (labelLayout.height + 6) else 0)
       requiredPeekHeight = ceil (((toNumber currentPeekHeight) /pixels) * density)
     in if requiredPeekHeight == 0 then 470 else requiredPeekHeight
+
+
+getConsentPopupPeakHeight :: ST.HomeScreenState -> Int
+getConsentPopupPeakHeight state = 
+  let consentPopup = runFn1 JB.getLayoutBounds $ getNewIDWithTag "driverConsentPopup"
+      declineButton = runFn1 JB.getLayoutBounds $ getNewIDWithTag "driverConsentPopupDeclineButton"
+      currentPeekHeight = consentPopup.height - declineButton.height
+      pixels = runFn1 HU.getPixels ""
+      density = (runFn1 HU.getDeviceDefaultDensity "")/  defaultDensity
+      requiredPeekHeight = ceil (((toNumber currentPeekHeight) /pixels) * density)
+    in requiredPeekHeight - 8
 
 getDriverSuggestions :: ST.HomeScreenState -> Array String-> Array String
 getDriverSuggestions state suggestions = case (Array.length suggestions == 0) of

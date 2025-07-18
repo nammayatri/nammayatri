@@ -1,6 +1,8 @@
 imports:
   Text: Data.Text
   TicketType: Kernel.External.Ticket.Interface.Types
+  APISuccess: Kernel.Types.APISuccess
+  Ride: Domain.Types.Ride
 
 module: TicketKapture
 
@@ -8,6 +10,13 @@ types:
   TicketKaptureResp:
     encryptedCc: Text
     encryptedIv: Text
+
+  ActiveTicketsRes:
+    rideId: Maybe (Id Ride)
+    ticketId: Text
+
+  GetAllActiveTicketsRes:
+    activeTickets: [ActiveTicketsRes]
 
 apis:
   - POST:
@@ -17,3 +26,15 @@ apis:
         ticketType: TicketType
       response:
         type: TicketKaptureResp
+  - POST:
+      endpoint: /kaptureCloseTicket
+      auth: TokenAuth
+      mandatoryQuery:
+        ticketId: Text
+      response:
+        type: APISuccess
+  - GET:
+      endpoint: /getAllActiveTickets
+      auth: TokenAuth
+      response:
+        type: "GetAllActiveTicketsRes"

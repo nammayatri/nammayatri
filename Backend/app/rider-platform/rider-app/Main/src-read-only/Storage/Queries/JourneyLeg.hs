@@ -19,6 +19,7 @@ import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Lib.JourneyLeg.Types
 import qualified Sequelize as Se
 import qualified Storage.Beam.JourneyLeg as Beam
 import Storage.Queries.JourneyLegExtra as ReExport
@@ -65,13 +66,6 @@ updateDistanceAndDuration distance duration id = do
     ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateEstimatedFaresBySearchId ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m ())
-updateEstimatedFaresBySearchId estimatedMinFare estimatedMaxFare legSearchId = do
-  _now <- getCurrentTime
-  updateWithKV [Se.Set Beam.estimatedMinFare estimatedMinFare, Se.Set Beam.estimatedMaxFare estimatedMaxFare, Se.Set Beam.updatedAt _now] [Se.Is Beam.legId $ Se.Eq legSearchId]
-
 updateEstimatedFaresByJourneyIdAndSequenceNumber ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.Journey.Journey -> Kernel.Prelude.Int -> m ())
@@ -83,6 +77,13 @@ updateEstimatedFaresByJourneyIdAndSequenceNumber estimatedMinFare estimatedMaxFa
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.journeyId $ Se.Eq (Kernel.Types.Id.getId journeyId), Se.Is Beam.sequenceNumber $ Se.Eq sequenceNumber]]
+
+updateEstimatedFaresBySearchId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m ())
+updateEstimatedFaresBySearchId estimatedMinFare estimatedMaxFare legSearchId = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.estimatedMinFare estimatedMinFare, Se.Set Beam.estimatedMaxFare estimatedMaxFare, Se.Set Beam.updatedAt _now] [Se.Is Beam.legId $ Se.Eq legSearchId]
 
 updateIsDeleted :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m ())
 updateIsDeleted isDeleted legSearchId = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.isDeleted isDeleted, Se.Set Beam.updatedAt _now] [Se.Is Beam.legId $ Se.Eq legSearchId]
@@ -96,6 +97,13 @@ updateLegSearchId legSearchId id = do _now <- getCurrentTime; updateOneWithKV [S
 updateMode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Common.MultimodalTravelMode -> Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg -> m ())
 updateMode mode id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.mode mode, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateStatusByJourneyIdAndSequenceNumber ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Lib.JourneyLeg.Types.JourneyLegStatus -> Kernel.Types.Id.Id Domain.Types.Journey.Journey -> Kernel.Prelude.Int -> m ())
+updateStatusByJourneyIdAndSequenceNumber status journeyId sequenceNumber = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.status status, Se.Set Beam.updatedAt _now] [Se.And [Se.Is Beam.journeyId $ Se.Eq (Kernel.Types.Id.getId journeyId), Se.Is Beam.sequenceNumber $ Se.Eq sequenceNumber]]
+
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg -> m (Maybe Domain.Types.JourneyLeg.JourneyLeg))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
@@ -103,7 +111,9 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.JourneyLeg.JourneyLeg {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.changedBusesInSequence changedBusesInSequence,
+    [ Se.Set Beam.agencyGtfsId (agency >>= (.gtfsId)),
+      Se.Set Beam.agencyName (agency <&> (.name)),
+      Se.Set Beam.changedBusesInSequence changedBusesInSequence,
       Se.Set Beam.distance ((.value) <$> distance),
       Se.Set Beam.distanceUnit ((.unit) <$> distance),
       Se.Set Beam.duration duration,
@@ -129,6 +139,7 @@ updateByPrimaryKey (Domain.Types.JourneyLeg.JourneyLeg {..}) = do
       Se.Set Beam.serviceTypes serviceTypes,
       Se.Set Beam.startLocationLat (startLocation & (.latitude)),
       Se.Set Beam.startLocationLon (startLocation & (.longitude)),
+      Se.Set Beam.status status,
       Se.Set Beam.toArrivalTime toArrivalTime,
       Se.Set Beam.toDepartureTime toDepartureTime,
       Se.Set Beam.toStopCode (toStopDetails >>= (.stopCode)),

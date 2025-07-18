@@ -28,6 +28,7 @@ data Journey = Journey
     id :: Kernel.Types.Id.Id Domain.Types.Journey.Journey,
     isPaymentSuccess :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isPublicTransportIncluded :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    journeyExpiryTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     modes :: [Domain.Types.Common.MultimodalTravelMode],
     paymentOrderShortId :: Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder),
     recentLocationId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.RecentLocation.RecentLocation),
@@ -45,7 +46,17 @@ data Journey = Journey
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data JourneyStatus = NEW | INITIATED | CONFIRMED | INPROGRESS | CANCELLED | FEEDBACK_PENDING | COMPLETED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data JourneyStatus
+  = NEW
+  | INITIATED
+  | CONFIRMED
+  | INPROGRESS
+  | CANCELLED
+  | FEEDBACK_PENDING
+  | COMPLETED
+  | FAILED
+  | EXPIRED
+  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''JourneyStatus)
 

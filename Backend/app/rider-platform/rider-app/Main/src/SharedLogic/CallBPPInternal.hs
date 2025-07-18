@@ -18,6 +18,7 @@ import API.Types.UI.FavouriteDriver
 import qualified Data.HashMap.Strict as HM
 import Data.Text as T
 import Domain.Types.Common
+-- import qualified Domain.Types.Estimate as Estimate
 import Domain.Types.FeedbackForm
 import Domain.Types.Merchant
 import qualified Domain.Types.RefereeLink as LibTypes
@@ -29,10 +30,15 @@ import Kernel.External.Slack.Types
 import Kernel.Prelude
 import Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context as Context
+import Kernel.Types.Id (Id)
 import Kernel.Utils.Common hiding (Error)
 import qualified Kernel.Utils.Servant.Client as EC
 import Servant hiding (throwError)
 import Tools.Metrics (CoreMetrics)
+
+-- import Kernel.Types.Common
+-- import Domain.Types.ServiceTierType
+-- import Domain.Types.Trip
 
 data RefereeLinkInfoReq = RefereeLinkInfoReq
   { referralCode :: Text,
@@ -655,3 +661,76 @@ getIsInterCity merchant req = do
   let merchantId = merchant.driverOfferMerchantId
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (getIsInterCityClient merchantId (Just apiKey) req) "GetIsInterCity" getIsInterCityApi
+
+type GetEstimateDetailsAPI =
+  "internal"
+    :> "estimates"
+    :> Capture "estimateId" Text
+    :> Header "token" Text
+    :> Get '[JSON] BppEstimate
+
+getEstimateDetailsClient :: Text -> Maybe Text -> EulerClient BppEstimate
+getEstimateDetailsClient = client getEstimateDetailsApi
+
+getEstimateDetailsApi :: Proxy GetEstimateDetailsAPI
+getEstimateDetailsApi = Proxy
+
+getEstimateDetails ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+  ) =>
+  Text ->
+  BaseUrl ->
+  Text ->
+  m BppEstimate
+getEstimateDetails apiKey internalUrl bppEstimateId = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (getEstimateDetailsClient bppEstimateId (Just apiKey)) "GetEstimateDetails" getEstimateDetailsApi
+
+data BppEstimate = BppEstimate
+  { congestionMultiplier :: Maybe Centesimal,
+    createdAt :: UTCTime,
+    currency :: Currency,
+    distanceUnit :: DistanceUnit,
+    dpVersion :: Maybe Text,
+    eligibleForUpgrade :: Bool,
+    estimatedDistance :: Maybe Meters,
+    estimatedDuration :: Maybe Seconds,
+    fareParamsId :: Maybe Text,
+    farePolicyId :: Maybe Text,
+    fromLocGeohash :: Maybe Text,
+    id :: Id BppEstimate,
+    isBlockedRoute :: Maybe Bool,
+    isCustomerPrefferedSearchRoute :: Maybe Bool,
+    isScheduled :: Bool,
+    maxFare :: HighPrecMoney,
+    mbActualQARCity :: Maybe Double,
+    mbActualQARCityPast :: Maybe Double,
+    mbActualQARFromLocGeohash :: Maybe Double,
+    mbActualQARFromLocGeohashDistance :: Maybe Double,
+    mbActualQARFromLocGeohashDistancePast :: Maybe Double,
+    mbActualQARFromLocGeohashPast :: Maybe Double,
+    mbCongestionCity :: Maybe Double,
+    mbCongestionCityPast :: Maybe Double,
+    mbCongestionFromLocGeohash :: Maybe Double,
+    mbCongestionFromLocGeohashDistance :: Maybe Double,
+    mbCongestionFromLocGeohashDistancePast :: Maybe Double,
+    mbCongestionFromLocGeohashPast :: Maybe Double,
+    merchantId :: Maybe Text,
+    merchantOperatingCityId :: Maybe Text,
+    minFare :: HighPrecMoney,
+    requestId :: Text,
+    smartTipReason :: Maybe Text,
+    smartTipSuggestion :: Maybe HighPrecMoney,
+    specialLocationTag :: Maybe Text,
+    supplyDemandRatioFromLoc :: Maybe Double,
+    supplyDemandRatioToLoc :: Maybe Double,
+    tipOptions :: Maybe [Int],
+    tollNames :: Maybe [Text],
+    tripCategory :: TripCategory,
+    updatedAt :: UTCTime,
+    vehicleServiceTier :: ServiceTierType,
+    vehicleServiceTierName :: Maybe Text
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

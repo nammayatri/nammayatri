@@ -54,6 +54,7 @@ instance showAction :: Show Action where
   show (MoreDetails) = "MoreDetails"
   show (StopActionButton _) = "StopActionButton"
   show (ShowEndRideWithStops) = "ShowEndRideWithStops"
+  show (OpenInsuranceBanner) = "OpenInsuranceBanner"
 
 data Action = StartRide 
             | EndRide 
@@ -73,6 +74,7 @@ data Action = StartRide
             | MoreDetails
             | StopActionButton PB.Action
             | ShowEndRideWithStops
+            | OpenInsuranceBanner
 
 type Config = { 
   startRideActive :: Boolean,
@@ -123,6 +125,8 @@ type Config = {
   isSourceDetailsExpanded :: Boolean,
   isDestinationDetailsExpanded :: Boolean,
   stops :: Array API.Stop,
+  isInsured :: Boolean,
+  enableMapButton :: Boolean,
   isPetRide :: Maybe Boolean
 }
 
@@ -205,6 +209,8 @@ config = {
   isSourceDetailsExpanded : false,
   isDestinationDetailsExpanded : false,
   stops : [],
+  isInsured : false,
+  enableMapButton : false,
   isPetRide : Nothing
 }
 

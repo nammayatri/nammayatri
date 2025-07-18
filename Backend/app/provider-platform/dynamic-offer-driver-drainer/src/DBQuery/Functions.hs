@@ -1,5 +1,6 @@
 module DBQuery.Functions where
 
+import Config.Env (getDbConnectionRetryDelay, getDbConnectionRetryMaxAttempts)
 import Control.Exception (throwIO)
 import DBQuery.Types
 import qualified Data.Map.Strict as M
@@ -64,8 +65,58 @@ executeQueryUsingConnectionPool :: Pool Pg.Connection -> Pg.Query -> IO ()
 executeQueryUsingConnectionPool pool query' = do
   res <- try $ withResource pool $ \conn -> Pg.execute_ conn query'
   case res of
-    Left (e :: SomeException) -> throwIO $ QueryError $ "Query execution failed: " <> T.pack (show e)
+    Left (e :: SomeException) ->
+      if isConnectionError e
+        then do
+          maxAttempts <- getDbConnectionRetryMaxAttempts
+          retryDelay <- getDbConnectionRetryDelay
+          executeQueryWithRetry pool query' maxAttempts retryDelay e
+        else throwIO $ QueryError $ "Query execution failed: " <> T.pack (show e)
     Right _ -> return ()
+
+executeQueryWithRetry :: Pool Pg.Connection -> Pg.Query -> Int -> Int -> SomeException -> IO ()
+executeQueryWithRetry pool query' maxAttempts retryDelay firstError = go (maxAttempts - 1) firstError
+  where
+    go attemptsLeft lastError = do
+      if attemptsLeft > 0
+        then do
+          let currentAttempt = maxAttempts - attemptsLeft
+          let backoffDelay = retryDelay * currentAttempt
+          putStrLn @String $ "[Retry] Database connection error - Error: " ++ show lastError ++ " - Attempts left: " ++ show attemptsLeft ++ " - Retry delay: " ++ show (backoffDelay `div` 1000000) ++ " seconds"
+          threadDelay backoffDelay
+          res <- try $ withResource pool $ \conn -> Pg.execute_ conn query'
+          case res of
+            Left (e :: SomeException) ->
+              if isConnectionError e
+                then go (attemptsLeft - 1) e
+                else throwIO $ QueryError $ "Query execution failed: " <> T.pack (show e)
+            Right _ -> return ()
+        else
+          throwIO $
+            QueryError $
+              T.pack $
+                "Query execution failed after " ++ show maxAttempts ++ " attempts. Last error: " ++ show lastError
+
+isConnectionError :: SomeException -> Bool
+isConnectionError e =
+  let errorMsg = T.toLower $ T.pack $ show e
+   in any (`T.isInfixOf` errorMsg) connectionErrorPatterns
+  where
+    connectionErrorPatterns =
+      [ "server closed the connection",
+        "server terminated abnormally",
+        "connection to server",
+        "timeout",
+        "network",
+        "host is unreachable",
+        "no route to host",
+        "connection reset by peer",
+        "broken pipe",
+        "connection timed out",
+        "connection refused",
+        "name resolution failed",
+        "connection closed"
+      ]
 
 textToSnakeCaseText :: Text -> Text
 textToSnakeCaseText = T.pack . quietSnake . T.unpack

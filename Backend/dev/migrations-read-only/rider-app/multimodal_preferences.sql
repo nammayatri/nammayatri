@@ -1,6 +1,5 @@
 CREATE TABLE atlas_app.multimodal_preferences ();
 
-ALTER TABLE atlas_app.multimodal_preferences ADD COLUMN allowed_transit_modes text NOT NULL;
 ALTER TABLE atlas_app.multimodal_preferences ADD COLUMN journey_options_sorting_type text NOT NULL;
 ALTER TABLE atlas_app.multimodal_preferences ADD COLUMN person_id character varying(36) NOT NULL;
 ALTER TABLE atlas_app.multimodal_preferences ADD COLUMN merchant_id character varying(36) ;
@@ -19,4 +18,4 @@ ALTER TABLE atlas_app.multimodal_preferences ADD COLUMN bus_transit_types text[]
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_app.multimodal_preferences ALTER COLUMN allowed_transit_modes TYPE text[];
+ALTER TABLE atlas_app.multimodal_preferences ADD COLUMN allowed_transit_modes text[] NOT NULL;

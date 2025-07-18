@@ -9,6 +9,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Sequelize as Se
 import qualified Storage.Beam.FRFSQuote as Beam
+import Storage.Queries.OrphanInstances.FRFSQuote ()
 
 -- Extra code goes here --
 

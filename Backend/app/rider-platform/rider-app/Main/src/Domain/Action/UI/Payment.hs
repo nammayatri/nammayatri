@@ -68,6 +68,7 @@ createOrder ::
   Id DRide.Ride ->
   Flow Payment.CreateOrderResp
 createOrder (personId, merchantId) rideId = do
+  logInfo $ "Order created for rideId" <> show rideId
   ride <- B.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   -- ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   unless (ride.status == DRide.COMPLETED) $ throwError (RideInvalidStatus $ show ride.status)

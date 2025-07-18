@@ -23,7 +23,6 @@ where
 import qualified BecknV2.FRFS.Enums
 import qualified BecknV2.OnDemand.Enums as VehicleCategory
 import Data.Text as Text
-import Domain.Types.GTFSFeedInfo (GTFSFeedInfo)
 import Domain.Types.IntegratedBPPConfig
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
@@ -35,12 +34,12 @@ import Kernel.Prelude as P
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Storage.CachedQueries.GTFSFeedInfo as GTFSFeedInfo
+import Storage.CachedQueries.OTPRest.Common as OTPRestCommon
 import qualified Storage.GraphqlQueries.RouteStopTimeTable as Queries
 import Tools.Error
 
-modifyCodesToGTFS :: GTFSFeedInfo -> Text -> Text
-modifyCodesToGTFS gtfsFeedInfo codes = gtfsFeedInfo.feedId.getId <> ":" <> codes
+modifyCodesToGTFS :: IntegratedBPPConfig -> Text -> Text
+modifyCodesToGTFS integratedBPPConfig codes = integratedBPPConfig.feedKey <> ":" <> codes
 
 castVehicleType :: MonadFlow m => VehicleCategory.VehicleCategory -> m BecknV2.FRFS.Enums.VehicleCategory
 castVehicleType vehicleType = do
@@ -52,7 +51,8 @@ castVehicleType vehicleType = do
 
 findByRouteCodeAndStopCode ::
   ( MonadFlow m,
-    ServiceFlow m r
+    ServiceFlow m r,
+    HasShortDurationRetryCfg r c
   ) =>
   IntegratedBPPConfig ->
   Id Merchant ->
@@ -62,14 +62,27 @@ findByRouteCodeAndStopCode ::
   m [RouteStopTimeTable]
 findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCodes' stopCode' = do
   vehicleType <- castVehicleType integratedBPPConfig.vehicleCategory
-  gtfsFeedInfo <- GTFSFeedInfo.findByVehicleTypeAndCity vehicleType integratedBPPConfig.merchantOperatingCityId integratedBPPConfig.merchantId
-  let routeCodes = P.map (modifyCodesToGTFS gtfsFeedInfo) routeCodes'
-      stopCode = modifyCodesToGTFS gtfsFeedInfo stopCode'
+  let routeCodes = P.map (modifyCodesToGTFS integratedBPPConfig) routeCodes'
+      stopCode = modifyCodesToGTFS integratedBPPConfig stopCode'
   allTrips <-
     Hedis.safeGet (routeTimeTableKey stopCode) >>= \case
-      Just a -> pure a
-      Nothing -> cacheRouteStopTimeInfo stopCode /=<< Queries.findByRouteCodeAndStopCode integratedBPPConfig.id merchantId merchantOpId routeCodes' stopCode vehicleType
-  logDebug $ "Fetched route stop time table cached: " <> show allTrips <> "for routeCodes:" <> show routeCodes <> " and stopCode:" <> show stopCode
+      Just a -> do
+        logDebug $ "Fetched route stop time table cached: " <> show a <> "for routeCodes:" <> show routeCodes <> " and stopCode:" <> show stopCode
+        pure a
+      Nothing -> do
+        stopCodes <-
+          P.map (modifyCodesToGTFS integratedBPPConfig)
+            <$> case vehicleType of
+              BecknV2.FRFS.Enums.METRO -> do
+                OTPRestCommon.getChildrenStationsCodes integratedBPPConfig stopCode'
+                  >>= \case
+                    [] -> pure [stopCode']
+                    stopCodes@(_ : _) -> pure stopCodes
+              _ -> pure [stopCode']
+        allTrips <- Queries.findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCodes' stopCodes vehicleType
+        logDebug $ "Fetched route stop time table graphql: " <> show allTrips <> " for routeCodes:" <> show routeCodes <> " and stopCode:" <> show stopCode
+        void $ cacheRouteStopTimeInfo stopCode allTrips
+        pure allTrips
   val <- L.getOptionLocal CalledForFare
   return $ P.filter (\trip -> (trip.routeCode `P.elem` routeCodes') || (val == Just True)) allTrips
 

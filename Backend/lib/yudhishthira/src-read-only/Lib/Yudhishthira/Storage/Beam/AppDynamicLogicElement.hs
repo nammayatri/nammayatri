@@ -17,6 +17,7 @@ data AppDynamicLogicElementT f = AppDynamicLogicElementT
     logic :: B.C f Data.Text.Text,
     merchantId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
     order :: B.C f Kernel.Prelude.Int,
+    patchedElement :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
     version :: B.C f Kernel.Prelude.Int,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime

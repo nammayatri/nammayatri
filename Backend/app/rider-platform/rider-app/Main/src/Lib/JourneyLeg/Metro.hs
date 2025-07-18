@@ -15,7 +15,7 @@ instance JT.JourneyLeg MetroLegRequest m where
   search (MetroLegRequestSearch MetroLegRequestSearchData {..}) = CFRFS.search Spec.METRO personId merchantId quantity city journeyLeg recentLocationId
   search _ = throwError (InternalError "Not supported")
 
-  confirm (MetroLegRequestConfirm MetroLegRequestConfirmData {..}) = CFRFS.confirm personId merchantId searchId quoteId quantity childTicketQuantity skipBooking bookingAllowed Nothing Spec.METRO
+  confirm (MetroLegRequestConfirm MetroLegRequestConfirmData {..}) = CFRFS.confirm personId merchantId quoteId quantity childTicketQuantity skipBooking bookingAllowed Nothing Spec.METRO
   confirm _ = throwError (InternalError "Not supported")
 
   update (MetroLegRequestUpdate _) = return ()
@@ -30,8 +30,8 @@ instance JT.JourneyLeg MetroLegRequest m where
   getState (MetroLegRequestGetState req) = CFRFS.getState DTrip.Metro req.searchId req.riderLastPoints req.isLastCompleted False Nothing
   getState _ = throwError (InternalError "Not supported")
 
-  getInfo (MetroLegRequestGetInfo req) = CFRFS.getInfo req.searchId req.fallbackFare req.distance req.duration req.journeyLeg.entrance req.journeyLeg.exit
+  getInfo (MetroLegRequestGetInfo req) = CFRFS.getInfo req.searchId req.fallbackFare req.distance req.duration req.journeyLeg.entrance req.journeyLeg.exit req.ignoreOldSearchRequest
   getInfo _ = throwError (InternalError "Not supported")
 
-  getFare (MetroLegRequestGetFare MetroLegRequestGetFareData {..}) = CFRFS.getFare riderId merchant merchantOpCity Spec.METRO routeDetails fromArrivalTime
+  getFare (MetroLegRequestGetFare MetroLegRequestGetFareData {..}) = CFRFS.getFare riderId merchant merchantOpCity Spec.METRO routeDetails fromArrivalTime agencyGtfsId
   getFare _ = throwError (InternalError "Not supported")

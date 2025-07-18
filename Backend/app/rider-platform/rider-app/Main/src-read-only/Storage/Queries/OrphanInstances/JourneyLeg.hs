@@ -23,11 +23,10 @@ import qualified Storage.Queries.Transformers.RouteDetails
 instance FromTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
   fromTType' (Beam.JourneyLegT {..}) = do
     routeDetailsList <- Storage.Queries.RouteDetails.findAllByJourneyLegId (Kernel.Types.Id.Id id)
-    let agencyDetails = Storage.Queries.Transformers.RouteDetails.getAgencyDetails routeDetailsList
     pure $
       Just
         Domain.Types.JourneyLeg.JourneyLeg
-          { agency = agencyDetails,
+          { agency = Kernel.External.MultiModal.Interface.Types.MultiModalAgency agencyGtfsId <$> agencyName,
             changedBusesInSequence = changedBusesInSequence,
             distance = Kernel.Types.Common.Distance <$> distance <*> distanceUnit,
             duration = duration,
@@ -50,6 +49,7 @@ instance FromTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
             sequenceNumber = sequenceNumber,
             serviceTypes = serviceTypes,
             startLocation = Kernel.External.Maps.Google.MapsClient.LatLngV2 startLocationLat startLocationLon,
+            status = status,
             toArrivalTime = toArrivalTime,
             toDepartureTime = toDepartureTime,
             toStopDetails = Just $ Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails toStopCode toStopPlatformCode toStopName toStopGtfsId,
@@ -62,7 +62,9 @@ instance FromTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
 instance ToTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
   toTType' (Domain.Types.JourneyLeg.JourneyLeg {..}) = do
     Beam.JourneyLegT
-      { Beam.changedBusesInSequence = changedBusesInSequence,
+      { Beam.agencyGtfsId = agency >>= (.gtfsId),
+        Beam.agencyName = agency <&> (.name),
+        Beam.changedBusesInSequence = changedBusesInSequence,
         Beam.distance = (.value) <$> distance,
         Beam.distanceUnit = (.unit) <$> distance,
         Beam.duration = duration,
@@ -89,6 +91,7 @@ instance ToTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
         Beam.serviceTypes = serviceTypes,
         Beam.startLocationLat = startLocation & (.latitude),
         Beam.startLocationLon = startLocation & (.longitude),
+        Beam.status = status,
         Beam.toArrivalTime = toArrivalTime,
         Beam.toDepartureTime = toDepartureTime,
         Beam.toStopCode = toStopDetails >>= (.stopCode),

@@ -15,6 +15,8 @@ imports:
   Value: Data.Aeson
   VehicleCategory: Domain.Types.VehicleCategory
   ServiceNames : Domain.Types.Extra.Plan
+  EncryptedHashedField: Kernel.External.Encryption
+  DbHash: Kernel.External.Encryption
 
 DriverInformation:
   tableName: driver_information
@@ -116,6 +118,9 @@ DriverInformation:
     isBlockedForReferralPayout: Maybe Bool
     onboardingVehicleCategory: Maybe VehicleCategory
     servicesEnabledForSubscription: "[ServiceNames]"
+    panNumber: Maybe (EncryptedHashedField e Text)
+    aadhaarNumber: Maybe (EncryptedHashedField e Text)
+    dlNumber: Maybe (EncryptedHashedField e Text)
 
   default:
     active: "false"
@@ -150,6 +155,15 @@ DriverInformation:
     driverTripEndLocation:
       driverTripEndLocationLat: Maybe Double
       driverTripEndLocationLon: Maybe Double
+    panNumber:
+      panNumberEncrypted: Maybe Text
+      panNumberHash: Maybe DbHash
+    aadhaarNumber:
+      aadhaarNumberEncrypted: Maybe Text
+      aadhaarNumberHash: Maybe DbHash
+    dlNumber:
+      dlNumberEncrypted: Maybe Text
+      dlNumberHash: Maybe DbHash
 
   beamType:
     canSwitchToRental: Maybe Bool
@@ -187,6 +201,9 @@ DriverInformation:
     issueBreachCooldownTimes: |-
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< issueBreachCooldownTimes|E
     servicesEnabledForSubscription: Storage.Queries.Transformers.DriverInformation.backfillServiceEnabledForSubscription driverId servicesEnabledForSubscription| EM
+    panNumber: Storage.Queries.Transformers.FleetOwnerInformation.mkEncryptedItem panNumberEncrypted panNumberHash|E
+    aadhaarNumber: Storage.Queries.Transformers.FleetOwnerInformation.mkEncryptedItem aadhaarNumberEncrypted aadhaarNumberHash|E
+    dlNumber: Storage.Queries.Transformers.FleetOwnerInformation.mkEncryptedItem dlNumberEncrypted dlNumberHash|E
 
   toTType:
     canSwitchToRental: Kernel.Prelude.Just|I
@@ -205,6 +222,12 @@ DriverInformation:
     driverTripEndLocationLon: Kernel.Prelude.fmap (.lon)|I
     issueBreachCooldownTimes: Kernel.Prelude.toJSON <$> issueBreachCooldownTimes|E
     servicesEnabledForSubscription: Kernel.Prelude.Just|I
+    panNumberEncrypted: Storage.Queries.Transformers.FleetOwnerInformation.mkFieldEncrypted
+    panNumberHash: Storage.Queries.Transformers.FleetOwnerInformation.mkFieldHash
+    aadhaarNumberEncrypted: Storage.Queries.Transformers.FleetOwnerInformation.mkFieldEncrypted
+    aadhaarNumberHash: Storage.Queries.Transformers.FleetOwnerInformation.mkFieldHash
+    dlNumberEncrypted: Storage.Queries.Transformers.FleetOwnerInformation.mkFieldEncrypted
+    dlNumberHash: Storage.Queries.Transformers.FleetOwnerInformation.mkFieldHash
 
   extraOperations:
     - EXTRA_QUERY_FILE

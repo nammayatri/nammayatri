@@ -22,6 +22,7 @@ import qualified Domain.Action.WebhookHandler as AWebhook
 import qualified Domain.Types.AlertRequest as DAR
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.DailyStats as DS
+import qualified Domain.Types.MediaFileDocument as DMFD
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.MerchantMessage
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -74,6 +75,7 @@ data AllocatorJobType
   | SendWebhookToExternal
   | ScheduledFCMS
   | CheckDashCamInstallationStatus
+  | MediaFileDocumentComplete
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''AllocatorJobType]
@@ -114,6 +116,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SSendWebhookToExternal jobData = AnyJobInfo <$> restoreJobInfo SSendWebhookToExternal jobData
   restoreAnyJobInfo SScheduledFCMS jobData = AnyJobInfo <$> restoreJobInfo SScheduledFCMS jobData
   restoreAnyJobInfo SCheckDashCamInstallationStatus jobData = AnyJobInfo <$> restoreJobInfo SCheckDashCamInstallationStatus jobData
+  restoreAnyJobInfo SMediaFileDocumentComplete jobData = AnyJobInfo <$> restoreJobInfo SMediaFileDocumentComplete jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -425,3 +428,12 @@ data CheckDashCamInstallationStatusJobData = CheckDashCamInstallationStatusJobDa
 instance JobInfoProcessor 'CheckDashCamInstallationStatus
 
 type instance JobContent 'CheckDashCamInstallationStatus = CheckDashCamInstallationStatusJobData
+
+newtype MediaFileDocumentCompleteJobData = MediaFileDocumentCompleteJobData
+  { mediaFileDocumentId :: Id DMFD.MediaFileDocument
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'MediaFileDocumentComplete
+
+type instance JobContent 'MediaFileDocumentComplete = MediaFileDocumentCompleteJobData

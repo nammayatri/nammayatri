@@ -15,7 +15,7 @@
 module Screens.TicketBookingFlow.BusTrackingScreen.ComponentConfig where
 
 import Components.PrimaryButton as PrimaryButton
-import Data.Array (find)
+import Data.Array (find, elem)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Engineering.Helpers.Commons as EHC
 import Font.Style as FontStyle
@@ -28,17 +28,22 @@ import PrestoDOM.Types.DomAttributes (Corners(..))
 import Components.PopUpModal as PopUpModal
 import Screens.Types as ST
 import Styles.Colors as Color
-import Debug (spy)
+import Common.RemoteConfig.Utils as RU
+import Common.Types.App as CT
 
 primaryButtonConfig :: ST.BusTrackingScreenState -> PrimaryButton.Config
 primaryButtonConfig state =
   let
     config = PrimaryButton.config
-
-
+    wmbFlowConfig = RU.fetchWmbFlowConfig CT.FunctionCall
+    isTicketBookingEnabled = wmbFlowConfig.enableTicketBooking
+    isTicketBookingDisabledInRoute = elem state.data.busRouteCode wmbFlowConfig.disableTicketBookingInRoutes
+    buttonText = case isTicketBookingEnabled, isTicketBookingDisabledInRoute of
+                  true, false -> getString BOOK_TICKET
+                  _, _ ->  getString GO_HOME_
     primaryButtonConfig' =
       config
-        { textConfig { text = getString BOOK_TICKET }
+        { textConfig { text = buttonText }
         , width = MATCH_PARENT
         , cornerRadius = 12.0
         , background = Color.black900

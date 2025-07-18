@@ -12,14 +12,14 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data JourneyLegsFeedbacksT f = JourneyLegsFeedbacksT
-  { isExperienceGood :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
-    journeyId :: B.C f Kernel.Prelude.Text,
-    legOrder :: B.C f Kernel.Prelude.Int,
-    travelMode :: B.C f (Kernel.Prelude.Maybe Domain.Types.Common.MultimodalTravelMode),
-    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+  { isExperienceGood :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
+    journeyId :: (B.C f Kernel.Prelude.Text),
+    legOrder :: (B.C f Kernel.Prelude.Int),
+    travelMode :: (B.C f (Kernel.Prelude.Maybe Domain.Types.Common.MultimodalTravelMode)),
+    merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
+    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 
@@ -29,6 +29,6 @@ instance B.Table JourneyLegsFeedbacksT where
 
 type JourneyLegsFeedbacks = JourneyLegsFeedbacksT Identity
 
-$(enableKVPG ''JourneyLegsFeedbacksT ['journeyId, 'legOrder] [])
+$(enableKVPG (''JourneyLegsFeedbacksT) [('journeyId), ('legOrder)] [])
 
-$(mkTableInstances ''JourneyLegsFeedbacksT "journey_legs_feedbacks")
+$(mkTableInstances (''JourneyLegsFeedbacksT) "journey_legs_feedbacks")

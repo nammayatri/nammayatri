@@ -6,7 +6,8 @@ import Kernel.Types.Common
 import Servant
 
 type TSServiceValidateAPI =
-  "config"
+  "provider"
+    :> "config"
     :> "validate"
     :> ReqBody '[JSON] Value
     :> Post '[JSON] TSServiceValidateResp

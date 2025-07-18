@@ -8,3 +8,9 @@ ALTER TABLE atlas_app.stations_extra_information ADD COLUMN merchant_operating_c
 ALTER TABLE atlas_app.stations_extra_information ADD COLUMN station_id text NOT NULL;
 ALTER TABLE atlas_app.stations_extra_information ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.stations_extra_information ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.stations_extra_information ADD COLUMN suggested_destinations text ;

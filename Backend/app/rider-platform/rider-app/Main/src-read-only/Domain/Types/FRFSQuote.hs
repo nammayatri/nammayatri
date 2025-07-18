@@ -11,7 +11,6 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.PartnerOrganization
 import qualified Domain.Types.Person
-import qualified Domain.Types.Station
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -30,9 +29,9 @@ data FRFSQuote = FRFSQuote
     estimatedPrice :: Kernel.Prelude.Maybe Kernel.Types.Common.Price,
     eventDiscountAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     fareDetails :: Kernel.Prelude.Maybe Domain.Types.FRFSQuote.FRFSFareDetails,
-    fromStationId :: Kernel.Types.Id.Id Domain.Types.Station.Station,
+    fromStationCode :: Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote,
-    integratedBppConfigId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig),
+    integratedBppConfigId :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     oldCacheDump :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -47,7 +46,7 @@ data FRFSQuote = FRFSQuote
     routeStationsJson :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     searchId :: Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch,
     stationsJson :: Kernel.Prelude.Text,
-    toStationId :: Kernel.Types.Id.Id Domain.Types.Station.Station,
+    toStationCode :: Kernel.Prelude.Text,
     validTill :: Kernel.Prelude.UTCTime,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory,
     createdAt :: Kernel.Prelude.UTCTime,

@@ -36,8 +36,10 @@ import Kernel.Types.Common hiding (id)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.Predicate
+import Kernel.Types.SlidingWindowLimiter
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
+import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Kernel.Utils.Validation
 import Storage.Beam.BeamFlow
 import qualified Storage.Queries.Merchant as QMerchant
@@ -118,13 +120,18 @@ login ::
     Redis.HedisFlow m r,
     HasFlowEnv m r '["authTokenCacheKeyPrefix" ::: Text],
     HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]],
+    HasFlowEnv m r '["sendEmailRateLimitOptions" ::: APIRateLimitOptions],
+    HasFlowEnv m r '["passwordExpiryDays" ::: Maybe Int],
     EncFlow m r
   ) =>
   LoginReq ->
   m LoginRes
 login LoginReq {..} = do
+  sendEmailRateLimitOptions <- asks (.sendEmailRateLimitOptions)
+  checkSlidingWindowLimitWithOptions (makeEmailHitsCountKey email) sendEmailRateLimitOptions
   email_ <- email & fromMaybeM (InvalidRequest "Email cannot be empty when login type is email")
   person <- QP.findByEmailAndPassword email_ password >>= fromMaybeM (PersonDoesNotExist email_)
+  Auth.checkPasswordExpiry person
   merchantAccessList <- B.runInReplica $ QAccess.findAllMerchantAccessByPersonId person.id
   (merchant', city') <- case merchantAccessList of
     [] -> throwError (InvalidRequest "No access to any merchant")
@@ -143,6 +150,9 @@ login LoginReq {..} = do
               city' = if defaultCityPresent then merchant.defaultOperatingCity else head merchantWithCityList
           pure (merchant, city')
   generateLoginRes person merchant' otp city'
+
+makeEmailHitsCountKey :: Maybe Text -> Text
+makeEmailHitsCountKey email = "Email:" <> fromMaybe "" email <> ":hitsCount"
 
 switchMerchant ::
   ( BeamFlow m r,
@@ -350,7 +360,8 @@ buildFleetOwner req pid roleId dashboardAccessType = do
         verified = Nothing,
         rejectionReason = Nothing,
         rejectedAt = Nothing,
-        dashboardType = DEFAULT_DASHBOARD
+        dashboardType = DEFAULT_DASHBOARD,
+        passwordUpdatedAt = Just now
       }
 
 validateFleetOwner :: Validate FleetRegisterReq
@@ -376,6 +387,6 @@ createFleetOwnerDashboardOnly fleetOwnerRole merchant req personId = do
   fleetOwner <- buildFleetOwner req personId fleetOwnerRole.id fleetOwnerRole.dashboardAccessType
   let city' = fromMaybe merchant.defaultOperatingCity req.city
   merchantAccess <- DP.buildMerchantAccess fleetOwner.id merchant.id merchant.shortId city'
-  let mbBoolVerified = Just (not (fromMaybe False merchant.requireAdminApprovalForFleetOnboarding))
+  let mbBoolVerified = Just (not (fromMaybe False merchant.requireAdminApprovalForFleetOnboarding) && (merchant.verifyFleetWhileLogin == Just True))
   QP.create fleetOwner{verified = mbBoolVerified}
   QAccess.create merchantAccess

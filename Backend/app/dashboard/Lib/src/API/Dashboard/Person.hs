@@ -115,6 +115,9 @@ type API =
              :<|> "getAccessMatrix"
                :> DashboardAuth 'DASHBOARD_USER
                :> Get '[JSON] DMatrix.AccessMatrixRowAPIEntity
+             :<|> "changePasswordAfterExpiry"
+               :> ReqBody '[JSON] DPerson.ChangePasswordAfterExpiryReq
+               :> Post '[JSON] APISuccess
          )
     :<|> "release"
       :> ( DashboardAuth 'DASHBOARD_RELEASE_ADMIN
@@ -154,6 +157,7 @@ handler =
              :<|> getCurrentMerchant
              :<|> changePassword
              :<|> getAccessMatrix
+             :<|> changePasswordAfterExpiry
          )
     :<|> ( registerRelease
              :<|> getProductSpecInfo
@@ -200,6 +204,10 @@ getCurrentMerchant =
 changePassword :: BeamFlow' => TokenInfo -> DPerson.ChangePasswordReq -> FlowHandler APISuccess
 changePassword req =
   withFlowHandlerAPI' . DPerson.changePassword req
+
+changePasswordAfterExpiry :: BeamFlow' => DPerson.ChangePasswordAfterExpiryReq -> FlowHandler APISuccess
+changePasswordAfterExpiry req =
+  withFlowHandlerAPI' $ DPerson.changePasswordAfterExpiry req
 
 getAccessMatrix :: BeamFlow' => TokenInfo -> FlowHandler AccessMatrixRowAPIEntity
 getAccessMatrix =

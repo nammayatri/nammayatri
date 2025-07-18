@@ -277,6 +277,7 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN ticketing_permission_config json ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN user_service_tier_order_config json ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN ny_regular_subscription_batch_size integer ;
 
 
 ------- SQL updates -------
@@ -288,3 +289,54 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN no_of_ride_requests_config integer
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN bus_tracking_config json  default '{"maxScoreDistanceInMeters":15.0,"goodScoreDistanceInMeters":30.0,"fairScoreDistanceInMeters":45.0,"maxScore":10.0,"goodScore":7.0,"fairScore":4.0,"thresholdFactor":0.5,"thresholdSeconds":30.0,"movementThresholdInMeters":25.0}';
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN pickup_instructions_threshold integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN enable_multi_modal_for_all_users boolean  default false;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN pickup_instructions_proximity_meters double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ALTER COLUMN pickup_instructions_proximity_meters TYPE integer;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN initiate_first_multimodal_journey boolean  default false;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN ny_regular_execution_time_offset_minutes integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN ny_regular_min_gap_seconds integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN enable_auto_journey_refund boolean  default false;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN filter_walk_and_unspecified_transit_modes boolean  default false;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN ny_regular_master_job_next_run_offset_seconds integer ;

@@ -207,7 +207,7 @@ customError _ =  { code : 400
 --------------------------------- triggerOTPBT---------------------------------------------------------------------------------------------------------------------------------
 triggerOTPBT :: TriggerOTPReq → FlowBT String TriggerOTPResp
 triggerOTPBT payload = do
-    _ <- lift $ lift $ doAff Readers.initiateSMSRetriever
+    -- _ <- lift $ lift $ doAff Readers.initiateSMSRetriever -- This is causing issue in the app, Disabled SMS Retriever for now
     headers <- getHeaders' "" false
     withAPIResultBT (EP.triggerOTP "") identity errorHandler (lift $ lift $ callAPI headers payload)
     where
@@ -678,6 +678,15 @@ listCancelReasonBT payload = do
                     pure $ toast (getString UNAUTHORIZED)
                 else pure $ toast "Some error occured in listCancelReasonBT"
             BackT $ pure GoBack
+
+-----------------------------------------------------------------------getDriverInsurance------------------------------------------------------------------------------
+
+getDriverInsurance :: String -> Flow GlobalState (Either ErrorResponse DriverInsuranceResp)
+getDriverInsurance rideId = do
+        headers <- getHeaders "" true
+        withAPIResult (EP.getDriverInsurance rideId) unwrapResponse $  callAPI headers (DriverInsuranceReq rideId)
+   where
+    unwrapResponse (x) = x
 
 --------------------------------- getRouteBT ---------------------------------------------------------------------------------------------------------------------------------
 

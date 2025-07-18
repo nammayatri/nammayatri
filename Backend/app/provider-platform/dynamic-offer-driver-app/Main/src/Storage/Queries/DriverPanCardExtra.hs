@@ -25,6 +25,11 @@ findUnInvalidByPanNumber panNumber = do
           ]
       ]
 
+findAllByEncryptedPanNumber :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DbHash -> m [DriverPanCard]
+findAllByEncryptedPanNumber panNumberHash = do
+  findAllWithKV
+    [Se.Is Beam.panCardNumberHash $ Se.Eq panNumberHash]
+
 findByPanNumberAndNotInValid :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> m (Maybe DriverPanCard)
 findByPanNumberAndNotInValid personId = do
   findOneWithKV

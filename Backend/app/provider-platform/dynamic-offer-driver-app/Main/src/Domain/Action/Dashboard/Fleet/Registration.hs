@@ -50,6 +50,7 @@ import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
+import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Kernel.Utils.Validation
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverOnboarding as DomainRC
@@ -208,6 +209,9 @@ fleetOwnerLogin req = do
       countryCode = req.mobileCountryCode
       merchantId = ShortId req.merchantId
 
+  sendOtpRateLimitOptions <- asks (.sendOtpRateLimitOptions)
+  checkSlidingWindowLimitWithOptions (makeMobileNumberHitsCountKey mobileNumber) sendOtpRateLimitOptions
+
   merchant <-
     QMerchant.findByShortId merchantId
       >>= fromMaybeM (MerchantNotFound merchantId.getShortId)
@@ -235,7 +239,7 @@ fleetOwnerLogin req = do
               }
         let sender = fromMaybe smsCfg.sender mbSender
         Sms.sendSMS merchant.id merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId)
-        >>= Sms.checkSmsResult
+          >>= Sms.checkSmsResult
   let key = makeMobileNumberOtpKey mobileNumber
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   Redis.setExp key otp expTime
@@ -295,6 +299,9 @@ fleetOwnerVerifyHandler h req = do
 
 makeMobileNumberOtpKey :: Text -> Text
 makeMobileNumberOtpKey mobileNumber = "MobileNumberOtp:mobileNumber-" <> mobileNumber
+
+makeMobileNumberHitsCountKey :: Text -> Text
+makeMobileNumberHitsCountKey mobileNumber = "MobileNumberOtp:mobileNumberHits-" <> mobileNumber <> ":hitsCount"
 
 validateInitiateLoginReq :: Validate FleetOwnerLoginReq
 validateInitiateLoginReq FleetOwnerLoginReq {..} =

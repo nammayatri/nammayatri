@@ -20,6 +20,7 @@ imports:
   PaymentOrder: Lib.Payment.Domain.Types.PaymentOrder
   AbsoluteDirection: Kernel.External.MultiModal.OpenTripPlanner.Types
   Value: Data.Aeson
+  JourneyLegStatus: Lib.JourneyLeg.Types
 
 # add journeyLegId (Maybe (Id JourneyLeg)) in SearchRequest
 Journey:
@@ -27,7 +28,7 @@ Journey:
 
   types:
     JourneyStatus:
-      enum: "NEW, INITIATED, CONFIRMED, INPROGRESS, CANCELLED, FEEDBACK_PENDING, COMPLETED"
+      enum: "NEW, INITIATED, CONFIRMED, INPROGRESS, CANCELLED, FEEDBACK_PENDING, COMPLETED, FAILED, EXPIRED"
       derive: "ToParamSchema"
 
   fields:
@@ -51,6 +52,7 @@ Journey:
     toLocationAddress: Maybe Text
     isPublicTransportIncluded: Maybe Bool
     paymentOrderShortId: Maybe (ShortId PaymentOrder)
+    journeyExpiryTime: Maybe UTCTime
 
   beamType:
     status: Maybe JourneyStatus
@@ -298,6 +300,7 @@ JourneyLeg:
     isSkipped: Maybe Bool
     entrance: Maybe MultiModalLegGate
     exit: Maybe MultiModalLegGate
+    status: Maybe JourneyLegStatus
 
   sqlType:
     serviceTypes: text[]
@@ -323,7 +326,9 @@ JourneyLeg:
       toStopGtfsId: Maybe Text
       toStopPlatformCode: Maybe Text
     routeDetails: {}
-    agency: {}
+    agency:
+      agencyGtfsId: Maybe Text
+      agencyName: Maybe Text
     startLocation:
       startLocationLat: Double
       startLocationLon: Double
@@ -376,20 +381,23 @@ JourneyLeg:
     updateEstimatedFaresBySearchId:
       kvFunction: updateWithKV
       params: [estimatedMinFare, estimatedMaxFare]
-      where: searchRequestId
       where: legSearchId
+    updateStatusByJourneyIdAndSequenceNumber:
+      kvFunction: updateWithKV
+      params: [status]
+      where:
+        and: [journeyId, sequenceNumber]
 
   intermediateTransformers:
     fromTType:
       - routeDetailsList: Storage.Queries.RouteDetails.findAllByJourneyLegId (Kernel.Types.Id.Id id)|EM
-      - agencyDetails: Storage.Queries.Transformers.RouteDetails.getAgencyDetails routeDetailsList|E
 
   fromTType:
     distance: (Kernel.Types.Common.Distance <$> distance <*> distanceUnit)|E
     fromStopDetails: (Just $ Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails fromStopCode fromStopPlatformCode fromStopName fromStopGtfsId)|E
     toStopDetails: (Just $ Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails toStopCode toStopPlatformCode toStopName toStopGtfsId)|E
     routeDetails: Storage.Queries.Transformers.RouteDetails.getTransformedRouteDetails routeDetailsList|E
-    agency: agencyDetails|E
+    agency: (Kernel.External.MultiModal.Interface.Types.MultiModalAgency agencyGtfsId <$> agencyName)|E
     startLocation: Kernel.External.Maps.Google.MapsClient.LatLngV2 startLocationLat startLocationLon|E
     endLocation: Kernel.External.Maps.Google.MapsClient.LatLngV2 endLocationLat endLocationLon|E
     legSearchId: legId|E
@@ -414,6 +422,8 @@ JourneyLeg:
     legId: legSearchId|E
     entrance: entrance >>= Just . Data.Aeson.toJSON|E
     exit: exit >>= Just . Data.Aeson.toJSON|E
+    agencyGtfsId: (agency >>= (.gtfsId))|E
+    agencyName: (agency <&> (.name))|E
 
   excludedDefaultQueries:
     - create

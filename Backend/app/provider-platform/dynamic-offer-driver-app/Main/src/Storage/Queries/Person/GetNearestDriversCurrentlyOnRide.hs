@@ -8,6 +8,7 @@ import qualified Data.List as DL
 import qualified Data.Text as T
 import Domain.Types as DVST
 import qualified Domain.Types.Common as DriverInfo
+import qualified Domain.Types.Driver.DriverInformation as DIAPI
 import Domain.Types.Merchant
 import Domain.Types.Person as Person
 import Domain.Types.VehicleServiceTier as DVST
@@ -90,7 +91,7 @@ getNearestDriversCurrentlyOnRide NearestDriversOnRideReq {..} = do
   driverLocs <- Int.getDriverLocsWithCond merchantId driverPositionInfoExpiry fromLocLatLong onRideRadius (Just allowedVehicleVariant)
   logDebug $ "GetNearestDriversCurrentlyOnRide - DLoc:- " <> show driverLocs
   driverInfos <- Int.getDriverInfosWithCond (driverLocs <&> (.driverId)) False True isRental isInterCity
-  logDebug $ "GetNearestDriversCurrentlyOnRide - DInfo:- " <> show driverInfos
+  logDebug $ "GetNearestDriversCurrentlyOnRide - DInfo:- " <> show (DIAPI.convertToDriverInfoAPIEntity <$> driverInfos)
   vehicles <- Int.getVehicles driverInfos
   drivers <- Int.getDrivers vehicles
   driverBankAccounts <-
@@ -99,7 +100,7 @@ getNearestDriversCurrentlyOnRide NearestDriversOnRideReq {..} = do
       else return []
   -- driverStats <- QDriverStats.findAllByDriverIds drivers
   let driversCurrentlyOnRideForForwardBatch = filter (\di -> (isJust di.onRideTripCategory && show (fromJust di.onRideTripCategory) `elem` currentRideTripCategoryValidForForwardBatching) && (isJust di.driverTripEndLocation) && (di.hasRideStarted == Just True)) driverInfos
-  logDebug $ "GetNearestDriversCurrentlyOnRide - DLoc:- " <> show (length driverLocs) <> " DInfo:- " <> show (length driverInfos) <> " Vehicle:- " <> show (length vehicles) <> " Drivers:- " <> show (length drivers) <> "driversCurrentlyOnRideForForwardBatch: " <> show driversCurrentlyOnRideForForwardBatch
+  logDebug $ "GetNearestDriversCurrentlyOnRide - DLoc:- " <> show (length driverLocs) <> " DInfo:- " <> show (length driverInfos) <> " Vehicle:- " <> show (length vehicles) <> " Drivers:- " <> show (length drivers) <> "driversCurrentlyOnRideForForwardBatch: " <> show (DIAPI.convertToDriverInfoAPIEntity <$> driversCurrentlyOnRideForForwardBatch)
   let res = linkArrayListForOnRide driverLocs driversCurrentlyOnRideForForwardBatch vehicles drivers driverBankAccounts (fromIntegral onRideRadius :: Double)
   logDebug $ "GetNearestDriversCurrentlyOnRide Result:- " <> show (length res)
   return res

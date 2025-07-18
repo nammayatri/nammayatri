@@ -55,7 +55,7 @@ import DecodeUtil (getAnyFromWindow)
 import Data.Function.Uncurried (runFn3)
 import Presto.Core.Types.Language.Flow (Flow)
 import Presto.Core.Types.API (ErrorResponse(..))
-import Data.Function.Uncurried (runFn2)
+import Data.Function.Uncurried (runFn2, runFn5)
 import Data.Either (Either(..))
 import Helpers.API as HelperAPI
 import Engineering.Helpers.Utils as EHU
@@ -65,6 +65,9 @@ import Helpers.Utils as HU
 import Services.API as API
 import Data.String as DS
 import Data.Array as DA
+import Resource.Localizable.StringsV2 (getStringV2)
+import Resource.Localizable.TypesV2 as LT2
+import Common.Types.App (YoutubeData, YoutubeVideoStatus(..))
 
 screen :: BenefitsScreenState -> LoggableScreen Action BenefitsScreenState ScreenOutput
 screen initialState =
@@ -76,6 +79,7 @@ screen initialState =
             _ <-
               launchAff $ flowRunner defaultGlobalState $ runExceptT $ runBackT
                 $ do
+                    void $ pure $ runFn5 JB.setYoutubePlayer HU.youtubeData (getNewIDWithTag "youtubeView") (show PAUSE) push YoutubeVideoStatus
                     (GetPerformanceRes referralInfoResp) <- Remote.getPerformanceBT (GetPerformanceReq {})
                     lift $ lift $ doAff do liftEffect $ push $ UpdateDriverPerformance (GetPerformanceRes referralInfoResp)
                     if (DA.any (_ == initialState.data.referralCode) ["__failed", "", "(null)"]) then do
@@ -87,6 +91,7 @@ screen initialState =
                     else pure unit
                     (LeaderBoardRes leaderBoardResp) <- Remote.leaderBoardBT $ DailyRequest (convertUTCtoISC (getCurrentUTC "") "YYYY-MM-DD")
                     lift $ lift $ doAff do liftEffect $ push $ UpdateLeaderBoard (LeaderBoardRes leaderBoardResp)
+                    pure unit
             void $ launchAff $ flowRunner defaultGlobalState do
                 moduleResp <- Remote.getAllLmsModules (HU.getLanguageTwoLetters $ Just (getLanguageLocale languageKey))
                 case moduleResp of
@@ -107,7 +112,6 @@ screen initialState =
   , parent : Nothing
   , logWhitelist : initialState.data.config.logWhitelistConfig.benefitsLogWhitelist.benefitsScreenLogWhitelist
   }
-
 view :: forall w. (Action -> Effect Unit) -> BenefitsScreenState -> PrestoDOM (Effect Unit) w
 view push state =
   relativeLayout
@@ -161,6 +165,7 @@ referralScreenInnerBody push state =
   , height $ WRAP_CONTENT
   , orientation VERTICAL
   ]([ GenericHeader.view (push <<< GenericHeaderActionController) (genericHeaderConfig state)
+    , nammaKutumbaCard push state
     , referralStatsView push state
     , linearLayout
       [ width MATCH_PARENT
@@ -215,6 +220,57 @@ referralStatsView push state =
         ]
      ]
   ]
+
+nammaKutumbaCard :: forall w. (Action -> Effect Unit) -> BenefitsScreenState -> PrestoDOM (Effect Unit) w
+nammaKutumbaCard push state =
+  let cityConfig = HU.getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+      nammaClubEnabled = state.props.nammaClubEnabled
+      nammaClubTag = state.data.nyClubTag
+  in
+  relativeLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , margin $ Margin 16 16 16 16
+    , visibility $ boolToVisibility $ nammaClubEnabled && (nammaClubTag == Just "ny_member" || nammaClubTag == Just "ny_member_probation") && state.props.nyClubConsent == Just true
+    , onClick push $ const GoToClaimReward
+    , orientation HORIZONTAL
+    ]
+    [ imageView
+        [ width $ V 410
+        , height $ V 120
+        , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_claim_background"
+        ]
+    , linearLayout
+        [ width MATCH_PARENT
+        , height $ V 110  -- Ensures enough height for the icon
+        , orientation HORIZONTAL
+        , gravity CENTER_VERTICAL
+        , padding $ Padding 0 10 0 0
+        ]
+        [ imageView
+            [ width $ V 90
+            , height $ V 95
+            , margin $ MarginLeft 5
+            , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_namma_kutumba"
+            ]
+        , linearLayout [ weight 1.0 ] []
+        , textView
+            [ text $ getStringV2 LT2.namma_kutumba
+            , color "#4B2E0E"
+            , textSize FontSize.a_24
+            , fontStyle $ FontStyle.semiBold LanguageStyle
+            , gravity CENTER_VERTICAL
+            ]
+        , linearLayout [ weight 1.0 ] []
+        , imageView
+            [ width $ V 35 -- Make arrow larger if it's a circular asset
+            , height $ V 35
+            , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_yellow_arrow_right"
+            , margin $ MarginRight 30
+            , margin $ MarginLeft 5
+            ]
+        ]
+    ]
 
 referralBonusView :: forall w. (Action -> Effect Unit) -> BenefitsScreenState -> PrestoDOM (Effect Unit) w
 referralBonusView push state =

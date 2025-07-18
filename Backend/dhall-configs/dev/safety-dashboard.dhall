@@ -41,6 +41,8 @@ let encTools = { service = common.passetto, hashSalt = sec.encHashSalt }
 
 let kvConfigUpdateFrequency = +10
 
+let sendEmailRateLimitOptions = { limit = +3, limitResetTimeInSec = +600 }
+
 let driverOfferBpp =
       { name = common.ServerName.DRIVER_OFFER_BPP
       , url = "http://localhost:8016/"
@@ -107,6 +109,8 @@ in  { esqDBCfg
     , longDurationRetryCfg = common.longDurationRetryCfg
     , authTokenCacheExpiry = +600
     , registrationTokenExpiry = +365
+    , registrationTokenInactivityTimeout = None Integer
+    , sendEmailRateLimitOptions
     , encTools
     , exotelToken = ""
     , dataServers = [ driverOfferBpp, driverOfferBppManagement ]
@@ -121,4 +125,6 @@ in  { esqDBCfg
     , kvConfigUpdateFrequency
     , kafkaProducerCfg
     , internalAuthAPIKey = "ae288466-2add-11ee-be56-0242ac120002"
+    , passwordExpiryDays = None Integer
+    , enforceStrongPasswordPolicy = False
     }

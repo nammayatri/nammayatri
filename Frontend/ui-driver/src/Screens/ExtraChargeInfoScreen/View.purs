@@ -29,7 +29,7 @@ import Data.Array as DA
 import JBridge
 import PrestoDOM.Core
 import Debug
-import Services.API
+import Services.API (DriverTags(..), GetDriverInfoResp(..))
 import Components.ExtraChargeCard as ExtraChargeCard
 import Animation as Anim
 import Resource.Localizable.StringsV2
@@ -161,7 +161,7 @@ gaugeMeterView :: forall w . (Action  -> Effect Unit) -> ExtraChargeInfoScreenSt
 gaugeMeterView push state =
   case state.driverInfoResp of
     Just (GetDriverInfoResp resp) ->
-       case resp.overchargingTag of
+       case resp.driverTags >>= \(DriverTags tags) -> tags."DriverChargingBehaviour" of
         Just overchargingTag -> ExtraChargeCard.view (push <<< ExtraChargeCardAC) $ ExtraChargeCard.extraChargesConfig overchargingTag resp.ridesWithFareIssues resp.totalRidesConsideredForFareIssues GONE
         Nothing -> linearLayout [width $ V 0, height $ V 0][]
     Nothing -> linearLayout [width $ V 0, height $ V 0][]

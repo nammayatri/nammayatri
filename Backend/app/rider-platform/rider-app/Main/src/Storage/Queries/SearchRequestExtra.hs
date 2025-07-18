@@ -12,6 +12,7 @@ import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.JourneyLeg.Types as JLT
 import qualified Sequelize as Se
 import qualified SharedLogic.LocationMapping as SLM
 import qualified Storage.Beam.SearchRequest as BeamSR
@@ -20,7 +21,8 @@ import qualified Storage.Queries.LocationMapping as QLM
 import Storage.Queries.OrphanInstances.SearchRequest ()
 
 createDSReq' :: (MonadFlow m, EsqDBFlow m r) => SearchRequest -> m ()
-createDSReq' = createWithKV
+createDSReq' searchReq = do
+  if fromMaybe False searchReq.isMultimodalSearch then createWithKVWithOptions Nothing True searchReq else createWithKV searchReq
 
 create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => SearchRequest -> m ()
 create dsReq = do
@@ -123,4 +125,18 @@ updateStartTime :: (MonadFlow m, EsqDBFlow m r) => Id SearchRequest -> UTCTime -
 updateStartTime (Id searchRequestId) startTime = do
   updateOneWithKV
     [Se.Set BeamSR.startTime startTime]
+    [Se.Is BeamSR.id (Se.Eq searchRequestId)]
+
+updateJourneyLegInfo :: (MonadFlow m, EsqDBFlow m r) => Id SearchRequest -> Maybe JLT.JourneySearchData -> m ()
+updateJourneyLegInfo (Id searchRequestId) journeyLegInfo = do
+  updateOneWithKV
+    [ Se.Set BeamSR.journeyId (journeyLegInfo <&> (.journeyId)),
+      Se.Set BeamSR.journeyLegOrder (journeyLegInfo <&> (.journeyLegOrder)),
+      Se.Set BeamSR.agency (journeyLegInfo >>= (.agency)),
+      Se.Set BeamSR.skipBooking (journeyLegInfo <&> (.skipBooking)),
+      Se.Set BeamSR.convenienceCost (journeyLegInfo <&> (.convenienceCost)),
+      Se.Set BeamSR.pricingId (journeyLegInfo >>= (.pricingId)),
+      Se.Set BeamSR.onSearchFailed (journeyLegInfo >>= (.onSearchFailed)),
+      Se.Set BeamSR.isDeleted (journeyLegInfo >>= (.isDeleted))
+    ]
     [Se.Is BeamSR.id (Se.Eq searchRequestId)]

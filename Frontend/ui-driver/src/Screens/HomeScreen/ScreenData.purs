@@ -26,6 +26,7 @@ import RemoteConfig.Utils as RU
 import MerchantConfig.DefaultConfig (defaultCityConfig)
 import Common.RemoteConfig.Utils as CommonRC
 import Engineering.Helpers.Commons(getPastYears)
+import Services.API as API
 
 initData :: HomeScreenState
 initData =
@@ -206,6 +207,15 @@ initData =
       , overchargingTag : Nothing
       , driverBlocked : false
       , blockedExpiryTime : ""
+      , insuranceData : {
+        certificateUrl : Nothing,
+        message : Nothing,
+        plan : Nothing,
+        policyId : Nothing,
+        policyNumber : Nothing
+      }
+      , nyClubTag : Nothing
+      , consentPopupPeakHeight : 0
     }
   , props:
       { isFreeRide: false
@@ -312,6 +322,9 @@ initData =
       , showEndRideWithStopPopup : false
       , triggerGMapsIntent : false
       , showBlockerPopup : false
+      , showInsuranceBanner : false
+      , coinWaitingThreshold : 0
+      , nyClubConsent : Nothing
       }
   }
 
@@ -431,6 +444,8 @@ dummyRideData = {
       , receiverPersonDetails : Nothing
       , notifiedReachedDestination : false
       , stops : []
+      , isInsured : Nothing
+      , insuredAmount : Nothing
       , isPetRide : Nothing
       }
 
@@ -442,3 +457,24 @@ initialParkingData = {
 
 
 data DriverStatusChangeEntry = DriverStatusChangeNormalEntry | DriverStatusChangeMeterRideEntry
+
+
+createDummyStop :: Number -> Number -> API.Stop
+createDummyStop lat lon = API.Stop {
+  location : API.LocationInfo {
+  area: Nothing,
+  state: Nothing,
+  country: Nothing,
+  building: Nothing,
+  door: Nothing,
+  street: Nothing,
+  lat: lat,
+  city: Nothing,
+  areaCode: Nothing,
+  lon: lon,
+  instructions: Nothing,
+  extras: Nothing,
+  id: Nothing
+},
+  stopInfo: Nothing
+}

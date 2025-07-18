@@ -29,6 +29,7 @@ module Domain.Action.Dashboard.Merchant
     postMerchantConfigFailover,
     postMerchantTicketConfigUpsert,
     postMerchantConfigSpecialLocationUpsert,
+    postMerchantSchedulerTrigger,
   )
 where
 
@@ -87,6 +88,7 @@ import qualified Lib.Queries.GateInfo as QGI
 import qualified Lib.Queries.GateInfoGeom as QGIG
 import qualified Lib.Queries.SpecialLocation as QSL
 import qualified Lib.Queries.SpecialLocationGeom as QSLG
+import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified Lib.Types.GateInfo as D
 import qualified Lib.Types.GateInfo as DGI
 import qualified Lib.Types.SpecialLocation as DSL
@@ -94,8 +96,10 @@ import qualified Lib.Types.SpecialLocation as SL
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Registry.Beckn.Interface as RegistryIF
 import qualified Registry.Beckn.Interface.Types as RegistryT
+import SharedLogic.JobScheduler (RiderJobType (NyRegularMaster))
 import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.Beam.IssueManagement ()
+import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as CQMM
@@ -1410,3 +1414,28 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
       mapM_
         (\(_, _, (_, gateInfo)) -> runTransaction $ QGIG.create $ gateInfo {DGI.specialLocationId = specialLocationId})
         specialLocationAndGates
+
+postMerchantSchedulerTrigger :: ShortId DM.Merchant -> Context.City -> Common.SchedulerTriggerReq -> Flow APISuccess
+postMerchantSchedulerTrigger merchantShortId opCity req = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+  now <- getCurrentTime
+  case req.scheduledAt of
+    Just utcTime -> do
+      let diffTimeS = diffUTCTime utcTime now
+      triggerScheduler req.jobName req.jobData diffTimeS merchant merchantOpCity
+    _ -> throwError $ InternalError "invalid scheduled at time"
+  where
+    triggerScheduler :: Maybe Common.JobName -> Text -> NominalDiffTime -> DM.Merchant -> DMOC.MerchantOperatingCity -> Flow APISuccess
+    triggerScheduler jobName _ diffTimeS merchant merchantOpCity = do
+      case jobName of
+        Just Common.NyRegularMasterTrigger -> do
+          let jobData' = Just ()
+          case jobData' of
+            Just jobData -> do
+              let mbMerchantOpCityId = Just merchantOpCity.id
+                  merchantId = Just merchant.id
+              createJobIn @_ @'NyRegularMaster merchantId mbMerchantOpCityId diffTimeS jobData
+              pure Success
+            Nothing -> throwError $ InternalError "invalid job data"
+        Nothing -> throwError $ InternalError "invalid job name"

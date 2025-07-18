@@ -4,6 +4,7 @@
 @juspay_ops = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/juspay_ops}}
 @juspay_admin = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/juspay_admin}}
 @customer_service = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/customer_service}}
+@operator = favorit-operator-token0-000000000000
 
 # @name healthcheck
 GET {{bpp-dashboard-host}}

@@ -597,22 +597,22 @@ instance IsHTTPError BecknConfigError where
 
 instance IsAPIError BecknConfigError
 
-newtype IntegratedBPPConfigError
-  = IntegratedBPPConfigNotFound Text
+data IntegratedBPPConfigError
+  = IntegratedBPPConfigNotFound
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''IntegratedBPPConfigError
 
 instance IsBaseError IntegratedBPPConfigError where
   toMessage = \case
-    IntegratedBPPConfigNotFound msg -> Just $ "IntegratedBPPConfig Config not found:-" <> msg
+    IntegratedBPPConfigNotFound -> Just "IntegratedBPPConfig not found"
 
 instance IsHTTPError IntegratedBPPConfigError where
   toErrorCode = \case
-    IntegratedBPPConfigNotFound _ -> "INTEGRATED_BPP_CONFIG_NOT_FOUND"
+    IntegratedBPPConfigNotFound -> "INTEGRATED_BPP_CONFIG_NOT_FOUND"
 
   toHttpCode = \case
-    IntegratedBPPConfigNotFound _ -> E500
+    IntegratedBPPConfigNotFound -> E500
 
 instance IsAPIError IntegratedBPPConfigError
 
@@ -807,8 +807,8 @@ instance IsBaseError JourneyLegError where
   toMessage = \case
     JourneyLegCannotBeSwitched journeyLegId -> Just ("JourneyLeg with id: " <> journeyLegId <> " can not be switched.")
     JourneyLegCannotBeCancelled journeyLegId -> Just ("Request data for journey leg number: " <> journeyLegId <> " can not be cancelled!")
-    JourneyLegCannotBeSkippedForMode journeyLegMode -> Just ("JourneyLeg csnnot be switched for mode: " <> journeyLegMode)
-    JourneyLegCannotBeSkippedForStatus journeyLegStatus -> Just ("JourneyLeg csnnot be switched for status: " <> journeyLegStatus)
+    JourneyLegCannotBeSkippedForMode journeyLegMode -> Just ("JourneyLeg cannot be switched for mode: " <> journeyLegMode)
+    JourneyLegCannotBeSkippedForStatus journeyLegStatus -> Just ("JourneyLeg cannot be switched for status: " <> journeyLegStatus)
 
 instance IsHTTPError JourneyLegError where
   toErrorCode = \case
@@ -937,19 +937,3 @@ instance IsHTTPError CustomAuthError where
     IpHitsLimitExceeded -> E429
 
 instance IsAPIError CustomAuthError
-
-data GTFSError = GTFSFeedInfoNotFound Text Text deriving (Eq, Show, IsBecknAPIError)
-
-instanceExceptionWithParent 'HTTPException ''GTFSError
-
-instance IsBaseError GTFSError where
-  toMessage = \case
-    GTFSFeedInfoNotFound vehicleType merchantOperatingCityId -> Just $ "GTFS feed info not found for vehicleType: " <> vehicleType <> " and merchantOperatingCityId: " <> merchantOperatingCityId
-
-instance IsHTTPError GTFSError where
-  toErrorCode = \case
-    GTFSFeedInfoNotFound _ _ -> "GTFS_FEED_INFO_NOT_FOUND"
-  toHttpCode = \case
-    GTFSFeedInfoNotFound _ _ -> E404
-
-instance IsAPIError GTFSError

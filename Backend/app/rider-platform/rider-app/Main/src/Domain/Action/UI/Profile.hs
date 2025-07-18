@@ -32,7 +32,6 @@ module Domain.Action.UI.Profile
   )
 where
 
-import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.OnDemand.Enums as BecknEnums
 import qualified BecknV2.OnDemand.Enums as Enums
 import Control.Applicative ((<|>))
@@ -57,6 +56,7 @@ import Domain.Types.SafetySettings
 import qualified Domain.Types.VehicleCategory as VehicleCategory
 import Environment
 import qualified EulerHS.Language as L
+import EulerHS.Prelude (concatMapM)
 import Kernel.Beam.Functions
 import qualified Kernel.Beam.Functions as B
 import qualified Kernel.Beam.Types as KBT
@@ -78,12 +78,14 @@ import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
 import Kernel.Utils.Version
 import Lib.SessionizerMetrics.Types.Event
+import qualified Lib.Yudhishthira.Tools.Utils as YUtils
+import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.Cac
+import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import SharedLogic.Person as SLP
 import SharedLogic.PersonDefaultEmergencyNumber as SPDEN
 import qualified SharedLogic.Referral as Referral
-import qualified Storage.CachedQueries.IntegratedBPPConfig as QIBC
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import Storage.Queries.Booking as QBooking
@@ -137,7 +139,8 @@ data ProfileRes = ProfileRes
     referralAmountPaid :: Maybe HighPrecMoney,
     cancellationRate :: Maybe Int,
     isPayoutEnabled :: Maybe Bool,
-    publicTransportVersion :: Maybe Text
+    publicTransportVersion :: Maybe Text,
+    isMultimodalRider :: Bool
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -225,6 +228,19 @@ newtype GetProfileDefaultEmergencyNumbersResp = GetProfileDefaultEmergencyNumber
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
+getIsMultimodalRider :: Maybe Bool -> Maybe [LYT.TagNameValueExpiry] -> [a] -> Bool
+getIsMultimodalRider enableMultiModalForAllUsers mbTags integratedBPPConfigs =
+  case enableMultiModalForAllUsers of
+    Just True -> not (null integratedBPPConfigs)
+    _ ->
+      let multimodalTagName = LYT.TagName "MultimodalRider"
+          currentTags = fromMaybe [] mbTags
+          isMultimodalRiderTag targetTagName customerTag =
+            case YUtils.parseTagName customerTag of
+              Just tagName -> tagName == targetTagName
+              Nothing -> False
+       in any (isMultimodalRiderTag multimodalTagName) currentTags && not (null integratedBPPConfigs)
+
 getPersonDetails ::
   (HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "version" ::: DeploymentVersion], CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) =>
   (Id Person.Person, Id Merchant.Merchant) ->
@@ -281,15 +297,15 @@ getPersonDetails (personId, _) toss tenant' context mbBundleVersion mbRnVersion 
   mbPayoutConfig <- CPC.findByCityIdAndVehicleCategory person.merchantOperatingCityId VehicleCategory.AUTO_CATEGORY Nothing
   let vehicleTypes = [Enums.BUS, Enums.METRO, Enums.SUBWAY]
   integratedBPPConfigs <-
-    catMaybes
-      <$> forM
-        vehicleTypes
-        ( \vType ->
-            QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) person.merchantOperatingCityId vType DIBC.MULTIMODAL
-        )
-  return $ makeProfileRes decPerson tag mbMd5Digest isSafetyCenterDisabled_ newCustomerReferralCode hasTakenValidFirstCabRide hasTakenValidFirstAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig integratedBPPConfigs
+    concatMapM
+      ( \vType ->
+          SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId vType DIBC.MULTIMODAL
+      )
+      vehicleTypes
+  let isMultimodalRider = getIsMultimodalRider riderConfig.enableMultiModalForAllUsers decPerson.customerNammaTags integratedBPPConfigs
+  return $ makeProfileRes decPerson tag mbMd5Digest isSafetyCenterDisabled_ newCustomerReferralCode hasTakenValidFirstCabRide hasTakenValidFirstAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig integratedBPPConfigs isMultimodalRider
   where
-    makeProfileRes Person.Person {..} disability md5DigestHash isSafetyCenterDisabled_ newCustomerReferralCode hasTakenCabRide hasTakenAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig integratedBPPConfigs = do
+    makeProfileRes Person.Person {..} disability md5DigestHash isSafetyCenterDisabled_ newCustomerReferralCode hasTakenCabRide hasTakenAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig integratedBPPConfigs isMultimodalRider = do
       ProfileRes
         { maskedMobileNumber = maskText <$> mobileNumber,
           maskedDeviceToken = maskText <$> deviceToken,
@@ -315,7 +331,7 @@ getPersonDetails (personId, _) toss tenant' context mbBundleVersion mbRnVersion 
           referralAmountPaid = Just personStats.referralAmountPaid,
           isPayoutEnabled = mbPayoutConfig <&> (.isPayoutEnabled),
           cancellationRate = cancellationPerc,
-          publicTransportVersion = if null integratedBPPConfigs then Nothing else Just (T.intercalate (T.pack "#") $ map (.id.getId) integratedBPPConfigs),
+          publicTransportVersion = if null integratedBPPConfigs then Nothing else Just (T.intercalate (T.pack "#") $ map (.feedKey) integratedBPPConfigs),
           ..
         }
 

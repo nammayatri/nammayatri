@@ -151,6 +151,8 @@ types:
     operationHubId: Id OperationHub
     operationHubName: Text
     driverPhoneNo: Maybe Text
+    creatorPhoneNo: Maybe Text
+    rcId: Maybe Text
     registrationNo: Text
     requestType: RequestType
     requestStatus: RequestStatus

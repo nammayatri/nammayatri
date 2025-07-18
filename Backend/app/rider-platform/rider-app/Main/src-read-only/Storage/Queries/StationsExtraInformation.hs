@@ -13,6 +13,7 @@ import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Kernel.Utils.Text
 import qualified Sequelize as Se
 import qualified Storage.Beam.StationsExtraInformation as Beam
 import Storage.Queries.StationsExtraInformationExtra as ReExport
@@ -48,6 +49,7 @@ updateByPrimaryKey (Domain.Types.StationsExtraInformation.StationsExtraInformati
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.stationId stationId,
+      Se.Set Beam.suggestedDestinations (Kernel.Utils.Text.encodeToText <$> suggestedDestinations),
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

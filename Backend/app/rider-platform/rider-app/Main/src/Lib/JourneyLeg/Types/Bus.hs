@@ -54,7 +54,8 @@ data BusLegRequestGetInfoData = BusLegRequestGetInfoData
     fallbackFare :: Maybe HighPrecMoney,
     distance :: Maybe Distance,
     duration :: Maybe Seconds,
-    journeyLeg :: DJourneyLeg.JourneyLeg
+    journeyLeg :: DJourneyLeg.JourneyLeg,
+    ignoreOldSearchRequest :: Bool
   }
 
 data BusLegRequestGetStateData = BusLegRequestGetStateData
@@ -68,6 +69,7 @@ data BusLegRequestGetStateData = BusLegRequestGetStateData
 data BusLegRequestGetFareData = BusLegRequestGetFareData
   { startLocation :: LatLngV2,
     endLocation :: LatLngV2,
+    agencyGtfsId :: Maybe Text,
     routeDetails :: [FRFSRouteDetails],
     merchant :: DMerchant.Merchant,
     riderId :: Id DPerson.Person,

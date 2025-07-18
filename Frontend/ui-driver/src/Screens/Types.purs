@@ -614,7 +614,8 @@ type DriverProfileScreenProps = {
   canSwitchToInterCity :: Maybe Boolean,
   showDriverBlockedPopup :: Boolean,
   skipGlobalEvents :: Boolean,
-  isPetModeEnabled :: Maybe Boolean
+  isPetModeEnabled :: Maybe Boolean,
+  nammaClubEnabled :: Boolean
 }
 data Gender = MALE | FEMALE | OTHER | PREFER_NOT_TO_SAY
 
@@ -879,6 +880,7 @@ type IndividualRideCardState =
     driverSelectedFare :: Int,
     vehicleColor :: String,
     id :: String,
+    rideId :: String,
     updatedAt :: String,
     source :: String,
     destination :: String,
@@ -900,7 +902,8 @@ type IndividualRideCardState =
     acRide :: Maybe Boolean,
     vehicleServiceTier :: String,
     parkingCharge :: Number,
-    stops :: Array API.Stop
+    stops :: Array API.Stop,
+    isInsured :: Boolean
   }
 
 
@@ -1129,10 +1132,20 @@ type HomeScreenData =  {
 , favPopUp :: FavouritePopUp
 , isSpecialLocWarrior :: Boolean
 , bus_number :: String
-
+, insuranceData :: InsuranceData
 , overchargingTag :: Maybe API.OverchargingTag
 , driverBlocked :: Boolean
 , blockedExpiryTime :: String
+, nyClubTag :: Maybe String
+, consentPopupPeakHeight :: Int
+}
+
+type InsuranceData = {
+  certificateUrl :: Maybe String,
+  message :: Maybe String,
+  plan :: Maybe String,
+  policyId :: Maybe String,
+  policyNumber :: Maybe String
 }
 
 type FavouritePopUp = {
@@ -1362,6 +1375,8 @@ type ActiveRide = {
   receiverPersonDetails :: Maybe API.PersonDetails,
   notifiedReachedDestination :: Boolean,
   stops :: Array API.Stop,
+  isInsured :: Maybe Boolean,
+  insuredAmount :: Maybe String,
   isPetRide :: Maybe Boolean
 }
 
@@ -1465,7 +1480,10 @@ type HomeScreenProps =  {
   bus_input_data :: String,
   showEndRideWithStopPopup :: Boolean,
   triggerGMapsIntent :: Boolean,
-  showBlockerPopup :: Boolean
+  showBlockerPopup :: Boolean,
+  showInsuranceBanner :: Boolean,
+  coinWaitingThreshold :: Int,
+  nyClubConsent :: Maybe Boolean
  }
 
 type RideRequestPill = {
@@ -1623,7 +1641,9 @@ type TripDetailsScreenData =
     vehicleServiceTier :: String,
     parkingCharge :: Number,
     tripType :: TripType,
-    stops :: Array String
+    stops :: Array String,
+    isInsured :: Boolean,
+    certificateUrl :: String
   }
 
 type TripDetailsScreenProps =
@@ -2145,6 +2165,31 @@ type DocumentDetailsScreenData = {
 
 type DocumentDetailsScreenProps = {
 
+}
+
+type DriverClaimRewardScreenState = {
+  data :: DriverClaimRewardScreenData,
+  props :: DriverClaimRewardScreenProps
+}
+
+type DriverClaimRewardScreenData = {
+  config :: AppConfig
+  , numberOfRides :: Maybe Int
+  , safetyScore :: Maybe Int
+  , rating :: Maybe Number
+  , cancellationRateInWindow :: Maybe Int
+  , driverTag :: String
+  , driverRewardConfig :: RC.DriverRewardConfig
+  , nyMemberProbationTill :: Maybe Int
+}
+
+type DriverClaimRewardScreenProps = {
+  showAllBenefits :: Boolean
+  , showAllEligibility :: Boolean
+  , showNominationView :: Boolean
+  , showFaq :: Boolean
+  , openFaqIndex :: Maybe Int
+  , openBenefitIndex :: Maybe Int
 }
 
 type DriverCompleteProfileScreenState = {
@@ -2975,6 +3020,7 @@ type BenefitsScreenData = {
   , payoutAmountPaid :: Int
   , payoutVpa :: Maybe String
   , payoutRewardAmount :: Maybe Int
+  , nyClubTag :: Maybe String
 }
 
 type BenefitsScreenProps = {
@@ -2987,6 +3033,8 @@ type BenefitsScreenProps = {
 , isPayoutEnabled :: Maybe Boolean
 , bannerLength :: Int
 , glBannerClickable :: Boolean
+, nammaClubEnabled :: Boolean
+, nyClubConsent :: Maybe Boolean
 }
 
 type LmsModuleList =

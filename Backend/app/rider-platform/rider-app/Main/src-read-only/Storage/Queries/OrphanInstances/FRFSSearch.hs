@@ -22,9 +22,9 @@ instance FromTType' Beam.FRFSSearch Domain.Types.FRFSSearch.FRFSSearch where
     pure $
       Just
         Domain.Types.FRFSSearch.FRFSSearch
-          { fromStationId = Kernel.Types.Id.Id fromStationId,
+          { fromStationCode = fromStationId,
             id = Kernel.Types.Id.Id id,
-            integratedBppConfigId = Kernel.Types.Id.Id <$> integratedBppConfigId,
+            integratedBppConfigId = Kernel.Types.Id.Id integratedBppConfigId,
             isOnSearchReceived = isOnSearchReceived,
             journeyLegInfo = mkJourneyLegInfo agency convenienceCost isDeleted journeyId journeyLegOrder onSearchFailed pricingId skipBooking,
             journeyLegStatus = journeyLegStatus,
@@ -36,8 +36,9 @@ instance FromTType' Beam.FRFSSearch Domain.Types.FRFSSearch.FRFSSearch where
             quantity = quantity,
             recentLocationId = Kernel.Types.Id.Id <$> recentLocationId,
             riderId = Kernel.Types.Id.Id riderId,
-            routeId = routeId,
-            toStationId = Kernel.Types.Id.Id toStationId,
+            routeCode = routeId,
+            toStationCode = toStationId,
+            validTill = validTill,
             vehicleType = vehicleType,
             createdAt = createdAt,
             updatedAt = updatedAt
@@ -46,9 +47,9 @@ instance FromTType' Beam.FRFSSearch Domain.Types.FRFSSearch.FRFSSearch where
 instance ToTType' Beam.FRFSSearch Domain.Types.FRFSSearch.FRFSSearch where
   toTType' (Domain.Types.FRFSSearch.FRFSSearch {..}) = do
     Beam.FRFSSearchT
-      { Beam.fromStationId = Kernel.Types.Id.getId fromStationId,
+      { Beam.fromStationId = fromStationCode,
         Beam.id = Kernel.Types.Id.getId id,
-        Beam.integratedBppConfigId = Kernel.Types.Id.getId <$> integratedBppConfigId,
+        Beam.integratedBppConfigId = Kernel.Types.Id.getId integratedBppConfigId,
         Beam.isOnSearchReceived = isOnSearchReceived,
         Beam.agency = journeyLegInfo >>= (.agency),
         Beam.convenienceCost = Kernel.Prelude.fmap (.convenienceCost) journeyLegInfo,
@@ -66,8 +67,9 @@ instance ToTType' Beam.FRFSSearch Domain.Types.FRFSSearch.FRFSSearch where
         Beam.quantity = quantity,
         Beam.recentLocationId = Kernel.Types.Id.getId <$> recentLocationId,
         Beam.riderId = Kernel.Types.Id.getId riderId,
-        Beam.routeId = routeId,
-        Beam.toStationId = Kernel.Types.Id.getId toStationId,
+        Beam.routeId = routeCode,
+        Beam.toStationId = toStationCode,
+        Beam.validTill = validTill,
         Beam.vehicleType = vehicleType,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt

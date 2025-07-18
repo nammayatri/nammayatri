@@ -32,6 +32,7 @@ import Domain.Types.EmptyDynamicParam
 import qualified Domain.Types.FarePolicy as DFP
 import Domain.Types.GoHomeConfig (GoHomeConfig)
 import qualified Domain.Types.Location as DLoc
+import qualified Domain.Types.Merchant as DM
 import Domain.Types.Person (Driver)
 import qualified Domain.Types.Plan as DPlan
 import Domain.Types.RiderDetails
@@ -157,10 +158,15 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
     let useSilentFCMForForwardBatch = transporterConfig.useSilentFCMForForwardBatch
     tripQuoteDetail <- HashMap.lookup dPoolRes.driverPoolResult.serviceTier tripQuoteDetailsHashMap & fromMaybeM (VehicleServiceTierNotFound $ show dPoolRes.driverPoolResult.serviceTier)
     let safetyCharges = maybe 0 DCC.charge $ find (\ac -> DCC.SAFETY_PLUS_CHARGES == ac.chargeCategory) tripQuoteDetail.conditionalCharges
-    let entityData = USRD.makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq searchTry bapMetadata dPoolRes.intelligentScores.rideRequestPopupDelayDuration dPoolRes.specialZoneExtraTip dPoolRes.keepHiddenForSeconds tripQuoteDetail.vehicleServiceTier needTranslation isValueAddNP useSilentFCMForForwardBatch tripQuoteDetail.driverPickUpCharge tripQuoteDetail.driverParkingCharge safetyCharges tripQuoteDetail.congestionCharges tripQuoteDetail.petCharges
+    let entityData = USRD.makeSearchRequestForDriverAPIEntity sReqFD translatedSearchReq searchTry bapMetadata dPoolRes.intelligentScores.rideRequestPopupDelayDuration dPoolRes.specialZoneExtraTip dPoolRes.keepHiddenForSeconds tripQuoteDetail.vehicleServiceTier needTranslation isValueAddNP useSilentFCMForForwardBatch tripQuoteDetail.driverPickUpCharge tripQuoteDetail.driverParkingCharge safetyCharges tripQuoteDetail.congestionCharges tripQuoteDetail.petCharges tripQuoteDetail.priorityCharges
     -- Notify.notifyOnNewSearchRequestAvailable searchReq.merchantOperatingCityId sReqFD.driverId dPoolRes.driverPoolResult.driverDeviceToken entityData
     notificationData <- Notify.buildSendSearchRequestNotificationData searchTry.merchantOperatingCityId sReqFD.driverId dPoolRes.driverPoolResult.driverDeviceToken entityData EmptyDynamicParam (Just searchTry.tripCategory)
-    let fallBackCity = Notify.getNewMerchantOpCityId sReqFD.clientSdkVersion sReqFD.merchantOperatingCityId
+    let otherMerchantIds = [Just (Id "840327a8-f17c-4d7c-8199-a583cfaadc5f"), Just (Id "7e6a2982-f8b5-4c67-b8af-bf41f1b4a2c9"), Just (Id "8c91f173-a0e3-4c5b-b3a1-2a58d00f29b2")] :: [Maybe (Id DM.Merchant)] -- Array Contents are : [Dev/Master , UAT , Prod]
+    let fallBackCity =
+          bool
+            (Notify.getNewMerchantOpCityId sReqFD.clientSdkVersion sReqFD.merchantOperatingCityId)
+            (Notify.cityFallback sReqFD.clientSdkVersion sReqFD.merchantOperatingCityId)
+            (searchTry.merchantId `elem` otherMerchantIds) -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
     Notify.sendSearchRequestToDriverNotification searchReq.providerId fallBackCity sReqFD.driverId notificationData
   where
     getBaseFare ::

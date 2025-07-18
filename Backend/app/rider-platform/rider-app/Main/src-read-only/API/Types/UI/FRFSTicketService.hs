@@ -10,6 +10,7 @@ import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSSearch
 import qualified Domain.Types.FRFSTicket
 import qualified Domain.Types.FRFSTicketBooking
+import qualified Domain.Types.IntegratedBPPConfig
 import qualified Domain.Types.RecentLocation
 import qualified Domain.Types.StationType
 import EulerHS.Prelude hiding (id)
@@ -109,6 +110,7 @@ data FRFSQuoteAPIRes = FRFSQuoteAPIRes
     discountedTickets :: Data.Maybe.Maybe Kernel.Prelude.Int,
     discounts :: Data.Maybe.Maybe [FRFSDiscountRes],
     eventDiscountAmount :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
+    integratedBppConfigId :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
     price :: Kernel.Types.Common.HighPrecMoney,
     priceWithCurrency :: Kernel.Types.Common.PriceAPIEntity,
     quantity :: Kernel.Prelude.Int,
@@ -121,13 +123,14 @@ data FRFSQuoteAPIRes = FRFSQuoteAPIRes
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data FRFSQuoteConfirmReq = FRFSQuoteConfirmReq {discounts :: [FRFSDiscountReq]}
+data FRFSQuoteConfirmReq = FRFSQuoteConfirmReq {childTicketQuantity :: Data.Maybe.Maybe Kernel.Prelude.Int, discounts :: [FRFSDiscountReq], ticketQuantity :: Data.Maybe.Maybe Kernel.Prelude.Int}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FRFSRouteAPI = FRFSRouteAPI
   { code :: Data.Text.Text,
     endPoint :: Kernel.External.Maps.Types.LatLong,
+    integratedBppConfigId :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
     longName :: Data.Text.Text,
     shortName :: Data.Text.Text,
     startPoint :: Kernel.External.Maps.Types.LatLong,
@@ -175,12 +178,14 @@ data FRFSStationAPI = FRFSStationAPI
     code :: Data.Text.Text,
     color :: Data.Maybe.Maybe Data.Text.Text,
     distance :: Data.Maybe.Maybe Kernel.Types.Common.Meters,
+    integratedBppConfigId :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
     lat :: Data.Maybe.Maybe Kernel.Prelude.Double,
     lon :: Data.Maybe.Maybe Kernel.Prelude.Double,
     name :: Data.Maybe.Maybe Data.Text.Text,
     routeCodes :: Data.Maybe.Maybe [Data.Text.Text],
     sequenceNum :: Data.Maybe.Maybe Kernel.Prelude.Int,
     stationType :: Data.Maybe.Maybe Domain.Types.StationType.StationType,
+    timeTakenToTravelUpcomingStop :: Data.Maybe.Maybe Kernel.Types.Common.Seconds,
     towards :: Data.Maybe.Maybe Data.Text.Text
   }
   deriving stock (Generic, Show)
@@ -207,6 +212,7 @@ data FRFSTicketBookingStatusAPIRes = FRFSTicketBookingStatusAPIRes
     discounts :: Data.Maybe.Maybe [FRFSDiscountRes],
     eventDiscountAmount :: Data.Maybe.Maybe Kernel.Types.Common.HighPrecMoney,
     googleWalletJWTUrl :: Data.Maybe.Maybe Data.Text.Text,
+    integratedBppConfigId :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
     isFareChanged :: Data.Maybe.Maybe Kernel.Prelude.Bool,
     payment :: Data.Maybe.Maybe FRFSBookingPaymentAPI,
     price :: Kernel.Types.Common.HighPrecMoney,

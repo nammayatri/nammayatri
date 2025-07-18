@@ -42,6 +42,7 @@ import Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import SharedLogic.Merchant (findMerchantByShortId)
@@ -126,22 +127,22 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
     when (req.status == API.Types.ProviderPlatform.Operator.Driver.REJECTED && opHubReq.requestType == ONBOARDING_INSPECTION) $ do
       void $ SQOHR.updateStatusWithDetails (castReqStatusToDomain req.status) (Just req.remarks) (Just now) (Just (Kernel.Types.Id.Id req.operatorId)) (Kernel.Types.Id.Id req.operationHubRequestId)
     when (req.status == API.Types.ProviderPlatform.Operator.Driver.APPROVED && opHubReq.requestType == ONBOARDING_INSPECTION) $ do
+      creator <- runInReplica $ QPerson.findById opHubReq.creatorId >>= fromMaybeM (PersonNotFound opHubReq.creatorId.getId)
+      rc <- QVRCE.findLastVehicleRCWrapper opHubReq.registrationNo >>= fromMaybeM (RCNotFound opHubReq.registrationNo)
+      personId <- case creator.role of
+        DP.DRIVER -> pure creator.id
+        _ -> do
+          drc <- SQDRA.findAllActiveAssociationByRCId rc.id
+          case drc of
+            [] -> throwError (InvalidRequest "No driver exist with this RC")
+            (assoc : _) -> pure assoc.driverId
+      merchant <- findMerchantByShortId merchantShortId
+      merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+      transporterConfig <- findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId) -- (Just (DriverId (cast personId)))
+      person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+      let language = fromMaybe merchantOpCity.language person.language
       fork "enable driver after inspection" $ do
-        creator <- runInReplica $ QPerson.findById opHubReq.creatorId >>= fromMaybeM (PersonNotFound opHubReq.creatorId.getId)
-        rc <- QVRCE.findLastVehicleRCWrapper opHubReq.registrationNo >>= fromMaybeM (RCNotFound opHubReq.registrationNo)
-        personId <- case creator.role of
-          DP.DRIVER -> pure creator.id
-          _ -> do
-            drc <- SQDRA.findAllActiveAssociationByRCId rc.id
-            case drc of
-              [] -> throwError (InvalidRequest "No driver exist with this RC")
-              (assoc : _) -> pure assoc.driverId
-        merchant <- findMerchantByShortId merchantShortId
-        merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
-        transporterConfig <- findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId) -- (Just (DriverId (cast personId)))
-        person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-        let language = fromMaybe merchantOpCity.language person.language
-        (driverDocuments, vehicleDocumentsUnverified) <- SStatus.fetchDriverVehicleDocuments personId merchantOpCity transporterConfig language (Just True) (Just opHubReq.registrationNo)
+        (driverDocuments, vehicleDocumentsUnverified) <- SStatus.fetchDriverVehicleDocuments person merchantOpCity transporterConfig language (Just True) (Just opHubReq.registrationNo)
         vehicleDoc <-
           find (\doc -> doc.registrationNo == opHubReq.registrationNo) vehicleDocumentsUnverified
             & fromMaybeM (InvalidRequest $ "Vehicle doc not found for driverId " <> personId.getId <> " with registartionNo " <> opHubReq.registrationNo)
@@ -163,14 +164,29 @@ opsHubRequestLockKey :: Text -> Text
 opsHubRequestLockKey reqId = "opsHub:Request:Id-" <> reqId
 
 castHubRequests :: (OperationHubRequests, DP.Person, DOH.OperationHub) -> Environment.Flow API.Types.ProviderPlatform.Operator.Driver.OperationHubDriverRequest
-castHubRequests (hubReq, person, hub) = do
-  driverPhoneNo <- mapM decrypt person.mobileNumber
+castHubRequests (hubReq, creator, hub) = do
+  creatorPhoneNo <- mapM decrypt creator.mobileNumber
+  mbRc <- QVRCE.findLastVehicleRCWrapper hubReq.registrationNo
+  (driverPhoneNo, rcId) <- case mbRc of
+    Just rc -> do
+      drc <- SQDRA.findAllActiveAssociationByRCId rc.id
+      case listToMaybe drc of
+        Just assoc -> do
+          QPerson.findById assoc.driverId >>= \case
+            Just person -> do
+              number <- mapM decrypt person.mobileNumber
+              pure (number, Just rc.id.getId)
+            Nothing -> pure (Nothing, Just rc.id.getId)
+        Nothing -> pure (Nothing, Just rc.id.getId)
+    Nothing -> pure (Nothing, Nothing)
   pure $
     API.Types.ProviderPlatform.Operator.Driver.OperationHubDriverRequest
       { id = hubReq.id.getId,
         operationHubId = cast @DOH.OperationHub @CommonDriver.OperationHub hubReq.operationHubId,
         operationHubName = hub.name,
         registrationNo = hubReq.registrationNo,
+        rcId,
+        creatorPhoneNo,
         driverPhoneNo,
         requestStatus = castReqStatus hubReq.requestStatus,
         requestTime = hubReq.createdAt,
@@ -300,6 +316,10 @@ postDriverOperatorSendJoiningOtp ::
   Common.AuthReq ->
   Flow Common.AuthRes
 postDriverOperatorSendJoiningOtp merchantShortId opCity requestorId req = do
+  let phoneNumber = req.mobileCountryCode <> req.mobileNumber
+  sendOtpRateLimitOptions <- asks (.sendOtpRateLimitOptions)
+  checkSlidingWindowLimitWithOptions (makeOperatorDriverHitsCountKey phoneNumber) sendOtpRateLimitOptions
+
   operator <- B.runInReplica $ QP.findById (Id requestorId :: Id DP.Person) >>= fromMaybeM (PersonNotFound requestorId)
   unless (operator.role == DP.OPERATOR) $
     throwError AccessDenied
@@ -315,7 +335,6 @@ postDriverOperatorSendJoiningOtp merchantShortId opCity requestorId req = do
       withLogTag ("personId_" <> getId person.id) $ do
         SA.checkForDriverAssociationOverwrite merchant person.id
         let useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
-            phoneNumber = req.mobileCountryCode <> req.mobileNumber
         otpCode <- maybe generateOTPCode return useFakeOtpM
         whenNothing_ useFakeOtpM $ do
           let operatorName = operator.firstName <> maybe "" (" " <>) operator.lastName
@@ -398,3 +417,6 @@ postDriverOperatorVerifyJoiningOtp merchantShortId opCity mbAuthId requestorId r
 
 makeOperatorDriverOtpKey :: Text -> Text
 makeOperatorDriverOtpKey phoneNo = "Operator:Driver:PhoneNo" <> phoneNo
+
+makeOperatorDriverHitsCountKey :: Text -> Text
+makeOperatorDriverHitsCountKey phoneNo = "Operator:Driver:PhoneNoHits" <> phoneNo <> ":hitsCount"

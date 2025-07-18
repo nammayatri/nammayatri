@@ -26,6 +26,6 @@ instance B.Table PartnerOrgStationT where
 
 type PartnerOrgStation = PartnerOrgStationT Identity
 
-$(enableKVPG ''PartnerOrgStationT ['partnerOrgId, 'partnerOrgStationId] [['stationId]])
+$(enableKVPG ''PartnerOrgStationT ['partnerOrgId, 'partnerOrgStationId] [])
 
 $(mkTableInstances ''PartnerOrgStationT "partner_org_station")

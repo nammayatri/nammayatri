@@ -54,7 +54,9 @@ initData = {
       vehicleServiceTier : "",
       tripType : ST.Rental,
       parkingCharge : 0.0,
-      stops : []
+      stops : [],
+      isInsured : false,
+      certificateUrl : ""
   },
   props: {
     rating : 4,

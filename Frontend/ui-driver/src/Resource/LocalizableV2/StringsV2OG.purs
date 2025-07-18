@@ -462,6 +462,7 @@ getProxy str = case str of
   FARE_UPDATED -> \a -> a @~ fare_updated
   FREQUENT_CANCELLATIONS_WILL_LEAD_TO_LESS_RIDES -> \a -> a @~ frequent_cancellations_will_lead_to_less_rides
   FREQUENT_CANCELLATIONS_WILL_LEAD_TO_BLOCKING -> \a -> a @~ frequent_cancellations_will_lead_to_blocking
+  YOU_MAY_LOSE_SOME_COINS_IF_YOU_CANCEL_THIS_RIDE -> \a -> a @~ you_may_lose_some_coins_if_you_cancel_this_ride
   CONTINUE -> \a -> a @~ continue
   CONFIRM_PASSWORD -> \a -> a @~ confirm_password
   DEMO_MODE -> \a -> a @~ demo_mode
@@ -1417,6 +1418,15 @@ getProxy str = case str of
   SPECIAL_PICKUP_ZONE_NEARBY -> \a -> a @~ special_pickup_zone_nearby
   ZONE_PICKUP -> \a -> a @~ zone_pickup
   SPECIAL_PICKUP_ZONE_RIDE -> \a -> a @~ special_pickup_zone_ride
+  RIDE_ENSURED_AT_NO_EXTRA_COST -> \a -> a @~ ride_ensured_at_no_extra_cost
+  POLICY_NUMBER -> \a -> a @~ policy_number
+  SUM_INSURED -> \a -> a @~ sum_insured
+  GENERATING_YOUR_POLICY -> \a -> a @~ generating_your_policy
+  PLEASE_TRY_AGAIN_IN_SOME_TIME -> \a -> a @~ please_try_again_in_some_time
+  POLICY_GENERATE_ONCE_RIDE_START -> \a -> a @~ policy_generate_once_ride_start
+  THIS_RIDE_IS_ENSURED_FOR_FREE -> \a -> a @~ this_ride_is_insured_for_free
+  THIS_RIDE_COME_WITH_COMPLIMENTARY_INSURANCE -> \a -> a @~ this_ride_come_with_complimentary_insurance
+  DOWNLOAD_INSURANCE_POLICY -> \a -> a @~ download_insurance_policy
   SPECIAL_PICKUP_ZONE -> \a -> a @~ special_pickup_zone
   SPECIAL_PICKUP_ZONE_POPUP_INFO -> \a -> a @~ special_pickup_zone_popup_info
   INSIDE_SPECIAL_PICKUP_ZONE_POPUP_INFO -> \a -> a @~ inside_special_pickup_zone_popup_info
@@ -1887,4 +1897,7 @@ getProxy str = case str of
   RESUME_RIDE -> \a -> a @~ resume_ride
   END_RIDE_WITH_STOPS -> \a -> a @~ end_ride_with_stops
   STOP arg1 -> \a -> (a @~ stop) arg1
+  CANCELLATION_COMPENSATION -> \a -> a @~ cancellation_compensation
+  CANCELLATION_PENALISATON -> \a -> a @~ cancellation_penalisaton
+  YOU_ARE_IN_PROBATION_PERIOD_TILL arg1 -> \a -> (a @~ you_are_in_probation_period_till) arg1
 

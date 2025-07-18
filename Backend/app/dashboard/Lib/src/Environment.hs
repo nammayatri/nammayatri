@@ -59,6 +59,8 @@ data AppCfg = AppCfg
     authTokenCacheExpiry :: Seconds,
     internalAuthAPIKey :: Text,
     registrationTokenExpiry :: Days,
+    registrationTokenInactivityTimeout :: Maybe Seconds,
+    sendEmailRateLimitOptions :: APIRateLimitOptions,
     encTools :: EncTools,
     exotelToken :: Text,
     dataServers :: [DataServer],
@@ -71,7 +73,9 @@ data AppCfg = AppCfg
     cacheConfig :: CacheConfig,
     cacConfig :: CacConfig,
     kafkaProducerCfg :: KafkaProducerCfg,
-    kvConfigUpdateFrequency :: Int
+    kvConfigUpdateFrequency :: Int,
+    passwordExpiryDays :: Maybe Int,
+    enforceStrongPasswordPolicy :: Bool
   }
   deriving (Generic, FromDhall)
 
@@ -96,6 +100,8 @@ data AppEnv = AppEnv
     authTokenCacheExpiry :: Seconds,
     internalAuthAPIKey :: Text,
     registrationTokenExpiry :: Days,
+    registrationTokenInactivityTimeout :: Maybe Seconds,
+    sendEmailRateLimitOptions :: APIRateLimitOptions,
     encTools :: EncTools,
     coreMetrics :: Metrics.CoreMetricsContainer,
     isShuttingDown :: Shutdown,
@@ -115,7 +121,9 @@ data AppEnv = AppEnv
     requestId :: Maybe Text,
     shouldLogRequestId :: Bool,
     kafkaProducerForART :: Maybe KafkaProducerTools,
-    passettoContext :: PassettoContext
+    passettoContext :: PassettoContext,
+    passwordExpiryDays :: Maybe Int,
+    enforceStrongPasswordPolicy :: Bool
   }
   deriving (Generic)
 

@@ -100,6 +100,9 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
       petChargesCaption = show Enums.PET_CHARGES
       mbPetChargesItem = mkBreakupItem petChargesCaption . mkPrice <$> fareParams.petCharges
 
+      priorityChargesCaption = show Enums.PRIORITY_CHARGES
+      mbPriorityChargesItem = mkBreakupItem priorityChargesCaption . mkPrice <$> fareParams.priorityCharges
+
       insuranceChargeCaption = show Enums.INSURANCE_CHARGES
       mbInsuranceChargeItem = mkBreakupItem insuranceChargeCaption . mkPrice <$> fareParams.insuranceCharge
 
@@ -108,6 +111,9 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
 
       cardChargesFixedCaption = show Enums.CARD_CHARGES_FIXED
       mbCardChargesFixedItem = fareParams.cardCharge >>= \cardCharge -> mkBreakupItem cardChargesFixedCaption . mkPrice <$> cardCharge.fixed
+
+      rideStopChargeCaption = show Enums.RIDE_STOP_CHARGES
+      mbRideStopChargeItem = mkBreakupItem rideStopChargeCaption . mkPrice <$> fareParams.stopCharges
 
       detailsBreakups = processFareParamsDetails dayPartRate fareParams.fareParametersDetails
       additionalChargesBreakup = map (\addCharges -> mkBreakupItem (show $ castAdditionalChargeCategoriesToEnum addCharges.chargeCategory) $ mkPrice addCharges.charge) fareParams.conditionalCharges
@@ -119,6 +125,7 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
       mbWaitingChargesItem,
       mbFixedGovtRateItem,
       mbPetChargesItem,
+      mbPriorityChargesItem,
       mbServiceChargeItem,
       mbSelectedFareItem,
       mkCustomerExtraFareItem,
@@ -127,13 +134,15 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
       mbCustomerCancellationDues,
       mbInsuranceChargeItem,
       mbCardChargesFareItem,
-      mbCardChargesFixedItem
+      mbCardChargesFixedItem,
+      mbRideStopChargeItem
     ]
     <> detailsBreakups
     <> additionalChargesBreakup
   where
     castAdditionalChargeCategoriesToEnum = \case
       DAC.SAFETY_PLUS_CHARGES -> Enums.SAFETY_PLUS_CHARGES
+      DAC.NYREGULAR_SUBSCRIPTION_CHARGE -> Enums.NYREGULAR_SUBSCRIPTION_CHARGE
       _ -> Enums.NO_CHARGES
     processFareParamsDetails dayPartRate = \case
       DFParams.ProgressiveDetails det -> mkFPProgressiveDetailsBreakupList dayPartRate det
@@ -232,6 +241,7 @@ pureFareSum fareParams conditionalChargeCategories = do
     + fromMaybe 0.0 fareParams.congestionCharge
     + fromMaybe 0.0 fareParams.petCharges
     + fromMaybe 0.0 fareParams.stopCharges
+    + fromMaybe 0.0 fareParams.priorityCharges
     + partOfNightShiftCharge
     + notPartOfNightShiftCharge
     + platformFee
@@ -325,6 +335,7 @@ calculateFareParameters params = do
           + finalCongestionCharge ----------Needs to be changed to congestionChargeResult
           + fromMaybe 0.0 params.petCharges
           + fromMaybe 0.0 fp.serviceCharge
+          + fromMaybe 0.0 fp.priorityCharges
           + fromMaybe 0.0 insuranceChargeResult
           + notPartOfNightShiftCharge
       govtCharges =
@@ -345,6 +356,7 @@ calculateFareParameters params = do
             serviceCharge = fp.serviceCharge,
             parkingCharge = fp.parkingCharge,
             petCharges = params.petCharges,
+            priorityCharges = fp.priorityCharges,
             congestionCharge = Just finalCongestionCharge,
             congestionChargeViaDp = congestionChargeByPerMin,
             stopCharges = stopCharges, --(\charges -> Just $ HighPrecMoney (toRational params.noOfStops * charges))=<< fp.perStopCharge,
@@ -660,6 +672,7 @@ calculateFareParameters params = do
             DELIVERY_TRUCK_ULTRA_LARGE -> avgSpeedOfVehicle.deliveryLightGoodsVehicle.getKilometers
             BUS_NON_AC -> avgSpeedOfVehicle.busNonAc.getKilometers
             BUS_AC -> avgSpeedOfVehicle.busAc.getKilometers
+            AUTO_PLUS -> avgSpeedOfVehicle.autorickshaw.getKilometers
       if avgSpeedOfVehicle' > 0
         then do
           let distanceInKilometer = realToFrac @_ @Double distance.getMeters / 1000

@@ -53,6 +53,7 @@ import qualified Domain.Types.FRFSSearch as DFRFSSearch
 import qualified Domain.Types.FRFSTicketBooking as DFTB
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant as DM
+import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.PartnerOrgConfig as DPOC
 import Domain.Types.PartnerOrganization
@@ -79,17 +80,16 @@ import Kernel.Utils.JSON (removeNullFields)
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
 import qualified SharedLogic.FRFSUtils as Utils
+import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
-import qualified Storage.CachedQueries.IntegratedBPPConfig as QIBC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.PartnerOrgConfig as CQPOC
 import qualified Storage.CachedQueries.PartnerOrgStation as CQPOS
 import qualified Storage.CachedQueries.Person as CQP
-import qualified Storage.CachedQueries.Station as CQS
 import qualified Storage.Queries.FRFSQuote as QQuote
 import qualified Storage.Queries.FRFSSearch as QSearch
 import qualified Storage.Queries.FRFSTicket as QFT
@@ -357,22 +357,22 @@ makeSession authMedium SmsSessionConfig {..} entityId merchantId fakeOtp partner
         createdViaPartnerOrgId = Just partnerOrgId
       }
 
-getConfigByStationIds :: PartnerOrganization -> Text -> Text -> Flow GetConfigResp
-getConfigByStationIds partnerOrg fromGMMStationId toGMMStationId = do
+getConfigByStationIds :: PartnerOrganization -> Text -> Text -> DIBC.IntegratedBPPConfig -> Flow GetConfigResp
+getConfigByStationIds partnerOrg fromGMMStationId toGMMStationId integratedBPPConfig = do
   let isGMMStationId = T.isPrefixOf "Ch" fromGMMStationId && T.isPrefixOf "Ch" toGMMStationId
   (fromStation', toStation') <-
     if isGMMStationId
       then do
         let fromPOrgStationId = Id fromGMMStationId
         let toPOrgStationId = Id toGMMStationId
-        fromStation' <- B.runInReplica $ CQPOS.findStationWithPOrgName partnerOrg.orgId fromPOrgStationId
-        toStation' <- B.runInReplica $ CQPOS.findStationWithPOrgName partnerOrg.orgId toPOrgStationId
+        fromStation' <- CQPOS.findStationWithPOrgName partnerOrg.orgId fromPOrgStationId integratedBPPConfig
+        toStation' <- CQPOS.findStationWithPOrgName partnerOrg.orgId toPOrgStationId integratedBPPConfig
         return (fromStation', toStation')
       else do
         let fromStationId' = Id fromGMMStationId
         let toStationId' = Id toGMMStationId
-        fromStation' <- B.runInReplica $ CQPOS.findStationWithPOrgIdAndStationId fromStationId' partnerOrg.orgId
-        toStation' <- B.runInReplica $ CQPOS.findStationWithPOrgIdAndStationId toStationId' partnerOrg.orgId
+        fromStation' <- CQPOS.findStationWithPOrgIdAndStationId fromStationId'.getId partnerOrg.orgId integratedBPPConfig
+        toStation' <- CQPOS.findStationWithPOrgIdAndStationId toStationId'.getId partnerOrg.orgId integratedBPPConfig
         return (fromStation', toStation')
   frfsConfig' <- B.runInReplica $ CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow fromStation'.merchantOperatingCityId [] >>= fromMaybeM (FRFSConfigNotFound fromStation'.merchantOperatingCityId.getId)
 
@@ -401,8 +401,9 @@ shareTicketInfo ticketBookingId = do
 
   ticketBooking <- B.runInReplica $ QFTB.findById ticketBookingId >>= fromMaybeM (FRFSTicketBookingNotFound ticketBookingId.getId)
   paymentBooking <- B.runInReplica $ QFTBP.findNewTBPByBookingId ticketBookingId >>= fromMaybeM (FRFSTicketBookingPaymentNotFound ticketBookingId.getId)
-  fromStation' <- B.runInReplica $ CQS.findById ticketBooking.fromStationId >>= fromMaybeM (StationNotFound $ "StationId:" +|| ticketBooking.fromStationId.getId ||+ "")
-  toStation' <- B.runInReplica $ CQS.findById ticketBooking.toStationId >>= fromMaybeM (StationNotFound $ "StationId:" +|| ticketBooking.toStationId.getId ||+ "")
+  integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity ticketBooking
+  fromStation' <- OTPRest.getStationByGtfsIdAndStopCode ticketBooking.fromStationCode integratedBPPConfig >>= fromMaybeM (StationNotFound $ "Station not found for fromStationCode:" +|| ticketBooking.fromStationCode ||+ "")
+  toStation' <- OTPRest.getStationByGtfsIdAndStopCode ticketBooking.toStationCode integratedBPPConfig >>= fromMaybeM (StationNotFound $ "Station not found for toStationCode:" +|| ticketBooking.toStationCode ||+ "")
   city <- CQMOC.findById fromStation'.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound fromStation'.merchantOperatingCityId.getId)
   pOrgId <- ticketBooking.partnerOrgId & fromMaybeM (InternalError $ "PartnerOrgId is missing for ticketBookingId:" +|| ticketBookingId.getId ||+ "")
 
@@ -436,28 +437,23 @@ shareTicketInfo ticketBookingId = do
       whenWithLockRedisWithoutUnlock statusTriggerLockKey bppStatusCallCfg.intervalInSec $ do
         bapConfig <-
           B.runInReplica $
-            CQBC.findByMerchantIdDomainAndVehicle merchantId (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory ticketBooking.vehicleType)
+            CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback city.id merchantId (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory ticketBooking.vehicleType)
               >>= fromMaybeM (BecknConfigNotFound $ "MerchantId:" +|| merchantId.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory ticketBooking.vehicleType ||+ "")
-        void $ CallExternalBPP.status merchantId city bapConfig ticketBooking DIBC.PARTNERORG
+        void $ CallExternalBPP.status merchantId city bapConfig ticketBooking
 
-getFareV2 :: PartnerOrganization -> Station -> Station -> Maybe (Id PartnerOrgTransaction) -> Maybe Text -> Flow GetFareRespV2
-getFareV2 partnerOrg fromStation toStation partnerOrgTransactionId routeCode = do
+getFareV2 :: MerchantOperatingCity -> PartnerOrganization -> Station -> Station -> Maybe (Id PartnerOrgTransaction) -> Maybe Text -> DIBC.IntegratedBPPConfig -> Flow GetFareRespV2
+getFareV2 merchantOperatingCity partnerOrg fromStation toStation partnerOrgTransactionId routeCode integratedBPPConfig = do
   let merchantId = fromStation.merchantId
       frfsVehicleType = fromStation.vehicleType
   frfsConfig <- CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow fromStation.merchantOperatingCityId [] >>= fromMaybeM (FRFSConfigNotFound fromStation.merchantOperatingCityId.getId)
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   bapConfig <-
-    CQBC.findByMerchantIdDomainAndVehicle merchantId (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory frfsVehicleType)
+    CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchantId (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory frfsVehicleType)
       >>= fromMaybeM (BecknConfigNotFound $ "MerchantId:" +|| merchantId.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory frfsVehicleType ||+ "")
-  merchantOperatingCity <- CQMOC.findById fromStation.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantOperatingCityId- " <> fromStation.merchantOperatingCityId.getId)
-  integratedBPPConfig <- QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory frfsVehicleType) DIBC.PARTNERORG >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOperatingCity.id.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| frfsVehicleCategoryToBecknVehicleCategory frfsVehicleType ||+ "Platform Type:" +|| DIBC.PARTNERORG ||+ "")
   route <-
     maybe
       (pure Nothing)
-      ( \routeCode' -> do
-          route' <- OTPRest.getRouteByRouteCodeWithFallback integratedBPPConfig routeCode'
-          return $ Just route'
-      )
+      (\routeCode' -> OTPRest.getRouteByRouteId integratedBPPConfig routeCode')
       routeCode
   let frfsRouteDetails =
         [ FRFSRouteDetails
@@ -466,10 +462,10 @@ getFareV2 partnerOrg fromStation toStation partnerOrgTransactionId routeCode = d
               endStationCode = toStation.code
             }
         ]
-  searchReq <- mkSearchReq frfsVehicleType partnerOrgTransactionId partnerOrg fromStation toStation route integratedBPPConfig
+  searchReq <- mkSearchReq bapConfig frfsVehicleType partnerOrgTransactionId partnerOrg fromStation toStation route
   fork ("FRFS Search: " <> searchReq.id.getId) $ do
     QSearch.create searchReq
-    CallExternalBPP.search merchant merchantOperatingCity bapConfig searchReq frfsRouteDetails integratedBPPConfig
+    CallExternalBPP.search merchant merchantOperatingCity bapConfig searchReq Nothing frfsRouteDetails integratedBPPConfig
   quotes <- mkQuoteFromCache fromStation toStation frfsConfig partnerOrg partnerOrgTransactionId searchReq.id
   whenJust quotes $ \quotes' -> QQuote.createMany quotes'
   case quotes of
@@ -487,8 +483,9 @@ getFareV2 partnerOrg fromStation toStation partnerOrgTransactionId routeCode = d
             quotes = Nothing
           }
   where
-    mkSearchReq frfsVehicleType partnerOrgTransactionId' partnerOrg' fromStation' toStation' route integratedBPPConfig = do
+    mkSearchReq bapConfig frfsVehicleType partnerOrgTransactionId' partnerOrg' fromStation' toStation' route = do
       now <- getCurrentTime
+      let validTill = addUTCTime (maybe 30 intToNominalDiffTime bapConfig.searchTTLSec) now
       uid <- generateGUID
       return
         DFRFSSearch.FRFSSearch
@@ -499,18 +496,19 @@ getFareV2 partnerOrg fromStation toStation partnerOrgTransactionId routeCode = d
             createdAt = now,
             updatedAt = now,
             quantity = 1,
-            fromStationId = fromStation'.id,
-            toStationId = toStation'.id,
-            routeId = route <&> (.code),
+            fromStationCode = fromStation'.code,
+            toStationCode = toStation'.code,
+            routeCode = route <&> (.code),
             riderId = Utils.partnerOrgRiderId,
             partnerOrgTransactionId = partnerOrgTransactionId',
             partnerOrgId = Just partnerOrg'.orgId,
             journeyLegInfo = Nothing,
             isOnSearchReceived = Nothing,
             journeyLegStatus = Nothing,
-            integratedBppConfigId = Just integratedBPPConfig.id,
+            integratedBppConfigId = integratedBPPConfig.id,
             journeyRouteDetails = [],
             recentLocationId = Nothing,
+            validTill = Just validTill,
             ..
           }
 
@@ -535,6 +533,7 @@ mkQuoteRes quote = do
         vehicleType = quote.vehicleType,
         discountedTickets = quote.discountedTickets,
         eventDiscountAmount = quote.eventDiscountAmount,
+        integratedBppConfigId = quote.integratedBppConfigId,
         ..
       }
 
@@ -566,8 +565,8 @@ mkQuoteFromCache fromStation toStation frfsConfig partnerOrg partnerOrgTransacti
     Just providerId -> do
       let cachedQuoteDataKey =
             FRFSCachedQuoteKey
-              { CachedQuote.fromStationId = fromStation.id,
-                CachedQuote.toStationId = toStation.id,
+              { CachedQuote.fromStationId = fromStation.code,
+                CachedQuote.toStationId = toStation.code,
                 CachedQuote.providerId = providerId,
                 CachedQuote.quoteType = DFRFSQuote.SingleJourney
               }
@@ -594,7 +593,8 @@ mkQuoteFromCache fromStation toStation frfsConfig partnerOrg partnerOrgTransacti
                 DFRFSQuote.bppItemId = Utils.partnerOrgBppItemId,
                 DFRFSQuote.bppSubscriberId = Utils.partnerOrgBppSubscriberId,
                 DFRFSQuote.bppSubscriberUrl = Utils.partnerOrgBppSubscriberUrl,
-                DFRFSQuote.fromStationId = fromStation'.id,
+                DFRFSQuote.fromStationCode = fromStation'.code,
+                DFRFSQuote.toStationCode = toStation'.code,
                 DFRFSQuote.id = quoteId,
                 DFRFSQuote.price = frfsCachedData.price,
                 DFRFSQuote.childPrice = Nothing,
@@ -608,7 +608,6 @@ mkQuoteFromCache fromStation toStation frfsConfig partnerOrg partnerOrgTransacti
                 DFRFSQuote.stationsJson = frfsCachedData.stationsJson,
                 DFRFSQuote.routeStationsJson = Nothing,
                 DFRFSQuote.discountsJson = Nothing,
-                DFRFSQuote.toStationId = toStation'.id,
                 DFRFSQuote.validTill = validTill',
                 DFRFSQuote.vehicleType = fromStation'.vehicleType,
                 DFRFSQuote.merchantId = fromStation'.merchantId,
@@ -620,7 +619,7 @@ mkQuoteFromCache fromStation toStation frfsConfig partnerOrg partnerOrgTransacti
                 DFRFSQuote.bppDelayedInterest = Nothing,
                 DFRFSQuote.discountedTickets = Nothing,
                 DFRFSQuote.eventDiscountAmount = Nothing,
-                DFRFSQuote.integratedBppConfigId = Just fromStation'.integratedBppConfigId,
+                DFRFSQuote.integratedBppConfigId = fromStation'.integratedBppConfigId,
                 DFRFSQuote.fareDetails = Nothing,
                 DFRFSQuote.childTicketQuantity = Nothing,
                 DFRFSQuote.oldCacheDump = Nothing
@@ -654,7 +653,8 @@ cretateBookingResIfBookingAlreadyCreated partnerOrg booking regPOCfg = do
             tickets = [],
             updatedAt = booking.updatedAt,
             validTill = booking.validTill,
-            vehicleType = booking.vehicleType
+            vehicleType = booking.vehicleType,
+            integratedBppConfigId = booking.integratedBppConfigId
           }
   (regToken, _) <- getRegToken booking.riderId partnerOrg.orgId regPOCfg booking.merchantId True
   let body = UpsertPersonAndQuoteConfirmResBody {bookingInfo = bookingRes, token = regToken.token}
@@ -667,8 +667,9 @@ cretateBookingResIfBookingAlreadyCreated partnerOrg booking regPOCfg = do
 createNewBookingAndTriggerInit :: PartnerOrganization -> UpsertPersonAndQuoteConfirmReq -> DPOC.RegistrationConfig -> Flow UpsertPersonAndQuoteConfirmRes
 createNewBookingAndTriggerInit partnerOrg req regPOCfg = do
   quote <- QQuote.findById req.quoteId >>= fromMaybeM (FRFSQuoteNotFound req.quoteId.getId)
-  fromStation <- CQS.findById quote.fromStationId >>= fromMaybeM (StationDoesNotExist $ "StationId: " <> quote.fromStationId.getId)
-  toStation <- CQS.findById quote.toStationId >>= fromMaybeM (StationDoesNotExist $ "StationId: " <> quote.toStationId.getId)
+  integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity quote
+  fromStation <- OTPRest.getStationByGtfsIdAndStopCode quote.fromStationCode integratedBPPConfig >>= fromMaybeM (StationNotFound $ "Station not found for fromStationCode:" +|| quote.fromStationCode ||+ "")
+  toStation <- OTPRest.getStationByGtfsIdAndStopCode quote.toStationCode integratedBPPConfig >>= fromMaybeM (StationNotFound $ "Station not found for toStationCode:" +|| quote.toStationCode ||+ "")
   frfsConfig <- CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow fromStation.merchantOperatingCityId [] >>= fromMaybeM (FRFSConfigNotFound fromStation.merchantOperatingCityId.getId)
   redisLockSearchId <- Redis.tryLockRedis lockKey 10
   if not redisLockSearchId
@@ -695,7 +696,7 @@ createNewBookingAndTriggerInit partnerOrg req regPOCfg = do
       let ticketsBookedInEvent = fromMaybe 0 stats.ticketsBookedInEvent
           (discountedTickets, eventDiscountAmount) = Utils.getDiscountInfo isEventOngoing frfsConfig.freeTicketInterval frfsConfig.maxFreeTicketCashback quote.price req.numberOfPassengers ticketsBookedInEvent
       QQuote.backfillQuotesForCachedQuoteFlow personId req.numberOfPassengers discountedTickets eventDiscountAmount frfsConfig.isEventOngoing req.searchId
-      bookingRes <- DFRFSTicketService.postFrfsQuoteConfirmPlatformType (Just personId, fromStation.merchantId) quote.id DIBC.PARTNERORG Nothing
+      bookingRes <- DFRFSTicketService.postFrfsQuoteV2ConfirmUtil (Just personId, fromStation.merchantId) quote.id (FRFSTypes.FRFSQuoteConfirmReq {discounts = [], ticketQuantity = Nothing, childTicketQuantity = Nothing}) Nothing
       let body = UpsertPersonAndQuoteConfirmResBody {bookingInfo = bookingRes, token}
       Redis.unlockRedis lockKey
       return

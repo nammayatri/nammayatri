@@ -50,6 +50,7 @@ data SearchRequest = SearchRequest
     isCustomerPrefferedSearchRoute :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isDashboardRequest :: Kernel.Prelude.Bool,
     isReallocationEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    isReserveRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isScheduled :: Kernel.Prelude.Bool,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     messageId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

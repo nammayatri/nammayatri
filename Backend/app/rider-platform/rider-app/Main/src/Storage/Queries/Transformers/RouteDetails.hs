@@ -60,20 +60,6 @@ getTransformedRouteDetails routeDetails = do
           toDepartureTime = RD.toDepartureTime rd
         }
 
-getAgencyDetails :: [RD.RouteDetails] -> Maybe MultiModalAgency
-getAgencyDetails routeDetails =
-  case routeDetails of
-    [] -> Nothing
-    (rd : _) ->
-      case RD.routeLongName rd of
-        Nothing -> Nothing
-        Just longName ->
-          Just $
-            MultiModalAgency
-              { gtfsId = RD.routeGtfsId rd,
-                name = longName
-              }
-
 getTransformedJourneyRouteDetails :: [JRD.JourneyRouteDetails] -> [MultiModalJourneyRouteDetails]
 getTransformedJourneyRouteDetails routeDetails = do
   let sortedRouteDetails = sortOn (\rd -> rd.subLegOrder) routeDetails
@@ -90,9 +76,9 @@ getTransformedJourneyRouteDetails routeDetails = do
           subLegOrder = JRD.subLegOrder rd,
           frequency = JRD.frequency rd,
           routeLongName = JRD.routeLongName rd,
-          fromStationId = JRD.fromStationId rd,
-          toStationId = JRD.toStationId rd,
-          routeId = JRD.routeId rd
+          fromStationCode = JRD.fromStationCode rd,
+          toStationCode = JRD.toStationCode rd,
+          routeCode = JRD.routeCode rd
         }
 
 getTransformedJourneyRouteDetailsT :: [JRD.JourneyRouteDetails] -> [MultiModalJourneyRouteDetails]
@@ -111,7 +97,7 @@ getTransformedJourneyRouteDetailsT routeDetails = do
           subLegOrder = JRD.subLegOrder rd,
           frequency = JRD.frequency rd,
           routeLongName = JRD.routeLongName rd,
-          fromStationId = JRD.fromStationId rd,
-          toStationId = JRD.toStationId rd,
-          routeId = JRD.routeId rd
+          fromStationCode = JRD.fromStationCode rd,
+          toStationCode = JRD.toStationCode rd,
+          routeCode = JRD.routeCode rd
         }

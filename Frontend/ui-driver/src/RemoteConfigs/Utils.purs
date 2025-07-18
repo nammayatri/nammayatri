@@ -579,3 +579,60 @@ getPetRidesFeatureConfig city =
     config = fetchRemoteConfigString "pet_rides_feature_config"
     value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultPetRidesFeatureConfig
   in getCityBasedConfig value $ toLower city
+
+
+---------------------------------- stop_validation_distance_threshold ----------------------------------
+type StopValidationDistanceThreshold = {
+  distance :: Number,
+  enableStopValidation :: Boolean
+}
+getStopValidationDistanceThreshold :: StopValidationDistanceThreshold
+getStopValidationDistanceThreshold =
+  let
+    config = fetchRemoteConfigString "stop_validation_distance_threshold"
+    value = decodeForeignObject (parseJSON config) defaultStopValidationDistanceThreshold
+  in
+    value
+
+defaultStopValidationDistanceThreshold :: StopValidationDistanceThreshold
+defaultStopValidationDistanceThreshold = {
+    distance : 200.0 -- in meters
+  , enableStopValidation : true
+}
+
+defaultCancellationTimeThresholdConfig :: CancellationTimeThresholdConfig
+defaultCancellationTimeThresholdConfig = {
+  cancellationTimeThresholdInSeconds : 120
+}
+
+getCoinCancellationTimeThresholdConfig :: CancellationTimeThresholdConfig
+getCoinCancellationTimeThresholdConfig  =
+  let config = fetchRemoteConfigString "coin_cancellation_time_threshold_config"
+      value = decodeForeignObject (parseJSON config) defaultCancellationTimeThresholdConfig
+  in value
+
+
+defaultDriverRewardConfig :: DriverRewardConfig 
+defaultDriverRewardConfig = {
+  nominationViewConfig : {  
+  visibility : false
+, videoLink : ""
+, formLink : ""
+  }
+  , visibility : false
+  , whatsappSupportNumber : ""
+  , youtubeVideoLink : ""
+  , termsAndConditionsLink : "https://docs.google.com/document/d/1xGvueVim40iEOVng4o1d1JejiLur1WEV9Ld6qAF_rR0/edit?usp=sharing"
+  , claimButtonConfig : {
+    visibility : false
+  }
+  }
+
+getDriverRewardConfig ::  String -> DriverRewardConfig
+getDriverRewardConfig city =
+  let
+    config = fetchRemoteConfigString "nomination_view_config"
+    value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultDriverRewardConfig
+    cityValue = getCityBasedConfig value $ toLower city
+  in cityValue
+  

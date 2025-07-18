@@ -98,6 +98,7 @@ data VehicleDocumentItem = VehicleDocumentItem
     verifiedVehicleCategory :: Maybe DVC.VehicleCategory,
     isVerified :: Bool,
     isActive :: Bool,
+    isApproved :: Bool,
     vehicleModel :: Maybe Text,
     documents :: [DocumentStatusItem],
     dateOfUpload :: UTCTime
@@ -146,19 +147,23 @@ data RCDetails = RCDetails
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
 fetchDriverVehicleDocuments ::
-  Id DP.Person ->
+  DP.Person ->
   DMOC.MerchantOperatingCity ->
   DTC.TransporterConfig ->
   Language ->
   Maybe Bool ->
   Maybe Text ->
   Flow ([DocumentStatusItem], [VehicleDocumentItem])
-fetchDriverVehicleDocuments personId merchantOperatingCity transporterConfig language useHVSdkForDL mbReqRegistrationNo = do
+fetchDriverVehicleDocuments person merchantOperatingCity transporterConfig language useHVSdkForDL mbReqRegistrationNo = do
+  let personId = person.id
   driverImages <- IQuery.findAllByPersonId transporterConfig personId
   now <- getCurrentTime
   let driverImagesInfo = IQuery.DriverImagesInfo {driverId = personId, merchantOperatingCity, driverImages, transporterConfig, now}
-  driverDocuments <- fetchDriverDocuments driverImagesInfo language useHVSdkForDL
-  vehicleDocumentsUnverified <- fetchVehicleDocuments driverImagesInfo language mbReqRegistrationNo
+  driverDocuments <- fetchDriverDocuments driverImagesInfo person.role language useHVSdkForDL
+  vehicleDocumentsUnverified <-
+    if isFleetRole person.role
+      then pure []
+      else fetchVehicleDocuments driverImagesInfo language mbReqRegistrationNo
   pure (driverDocuments, vehicleDocumentsUnverified)
 
 statusHandler' ::
@@ -179,9 +184,12 @@ statusHandler' driverImagesInfo makeSelfieAadhaarPanMandatory multipleRC prefill
   person <- runInReplica $ Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let language = fromMaybe merchantOperatingCity.language person.language
 
-  driverDocuments <- fetchDriverDocuments driverImagesInfo language useHVSdkForDL
+  driverDocuments <- fetchDriverDocuments driverImagesInfo person.role language useHVSdkForDL
   let mbReqRegistrationNo = Nothing
-  vehicleDocumentsUnverified <- fetchVehicleDocuments driverImagesInfo language mbReqRegistrationNo
+  vehicleDocumentsUnverified <-
+    if isFleetRole person.role
+      then pure []
+      else fetchVehicleDocuments driverImagesInfo language mbReqRegistrationNo
 
   whenJust (onboardingVehicleCategory <|> (mDL >>= (.vehicleCategory))) $ \vehicleCategory -> do
     documentVerificationConfigs <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId vehicleCategory Nothing
@@ -194,7 +202,7 @@ statusHandler' driverImagesInfo makeSelfieAadhaarPanMandatory multipleRC prefill
           DIIQuery.updateOnboardingVehicleCategory (Just category) personId
 
   -- check if driver is enabled if not then if all mandatory docs are verified then enable the driver
-  vehicleDocuments <- getVehicleDocuments driverDocuments vehicleDocumentsUnverified transporterConfig.requiresOnboardingInspection
+  vehicleDocuments <- getVehicleDocuments driverDocuments person.role vehicleDocumentsUnverified transporterConfig.requiresOnboardingInspection
 
   (dlDetails, rcDetails) <-
     case prefillData of
@@ -225,16 +233,18 @@ statusHandler' driverImagesInfo makeSelfieAadhaarPanMandatory multipleRC prefill
         vehicleRegistrationCertificateDetails = rcDetails
       }
   where
-    getVehicleDocuments driverDocuments vehicleDocumentsUnverified requiresOnboardingInspection = do
+    getVehicleDocuments driverDocuments role vehicleDocumentsUnverified requiresOnboardingInspection = do
       let merchantOpCityId = driverImagesInfo.merchantOperatingCity.id
           personId = driverImagesInfo.driverId
       vehicleDocumentsUnverified `forM` \vehicleDoc@VehicleDocumentItem {..} -> do
         allVehicleDocsVerified <- checkAllVehicleDocsVerified merchantOpCityId vehicleDoc makeSelfieAadhaarPanMandatory
         allDriverDocsVerified <- checkAllDriverDocsVerified merchantOpCityId driverDocuments vehicleDoc makeSelfieAadhaarPanMandatory
-        when (allVehicleDocsVerified && allDriverDocsVerified && requiresOnboardingInspection /= Just True) $ enableDriver merchantOpCityId personId mDL
+
+        let inspectionNotRequired = requiresOnboardingInspection /= Just True || vehicleDoc.isApproved
+        when (allVehicleDocsVerified && allDriverDocsVerified && inspectionNotRequired && role == DP.DRIVER) $ enableDriver merchantOpCityId personId mDL
 
         mbVehicle <- QVehicle.findById personId -- check everytime
-        when (isNothing mbVehicle && allVehicleDocsVerified && allDriverDocsVerified && isNothing multipleRC && requiresOnboardingInspection /= Just True) $
+        when (isNothing mbVehicle && allVehicleDocsVerified && allDriverDocsVerified && isNothing multipleRC && inspectionNotRequired && role == DP.DRIVER) $
           void $ try @_ @SomeException (activateRCAutomatically personId driverImagesInfo.merchantOperatingCity vehicleDoc.registrationNo)
         if allVehicleDocsVerified then return VehicleDocumentItem {isVerified = True, ..} else return vehicleDoc
 
@@ -274,13 +284,20 @@ statusHandler' driverImagesInfo makeSelfieAadhaarPanMandatory multipleRC prefill
             failedRules = rc.failedRules
           }
 
+isFleetRole :: DP.Role -> Bool
+isFleetRole DP.FLEET_OWNER = True
+isFleetRole DP.FLEET_BUSINESS = True
+isFleetRole _ = False
+
 fetchDriverDocuments ::
   IQuery.DriverImagesInfo ->
+  DP.Role ->
   Language ->
   Maybe Bool ->
   Flow [DocumentStatusItem]
-fetchDriverDocuments driverImagesInfo language useHVSdkForDL =
-  driverDocumentTypes `forM` \docType -> do
+fetchDriverDocuments driverImagesInfo role language useHVSdkForDL = do
+  let documentTypes = if isFleetRole role then fleetDocumentTypes else driverDocumentTypes
+  documentTypes `forM` \docType -> do
     (mbStatus, mbProcessedReason, mbProcessedUrl) <- getProcessedDriverDocuments driverImagesInfo docType useHVSdkForDL
     case mbStatus of
       Just status -> do
@@ -366,6 +383,7 @@ fetchProcessedVehicleDocumentsWithRC driverImagesInfo language mbReqRegistration
           verifiedVehicleCategory = DV.castVehicleVariantToVehicleCategory <$> processedVehicle.vehicleVariant,
           isVerified = False,
           isActive,
+          isApproved = fromMaybe False processedVehicle.approved,
           vehicleModel = processedVehicle.vehicleModel,
           documents,
           dateOfUpload
@@ -397,6 +415,7 @@ fetchProcessedVehicleDocumentsWithoutRC driverImagesInfo processedVehicleDocumen
                   verifiedVehicleCategory = Just $ DV.castVehicleVariantToVehicleCategory vehicle.variant,
                   isVerified = True,
                   isActive = True,
+                  isApproved = False,
                   vehicleModel = Just vehicle.model,
                   documents,
                   dateOfUpload = vehicle.createdAt
@@ -453,6 +472,7 @@ fetchInprogressVehicleDocuments driverImagesInfo language processedVehicleDocume
                           verifiedVehicleCategory = Nothing,
                           isVerified = False,
                           isActive = False,
+                          isApproved = False,
                           vehicleModel = Nothing,
                           documents,
                           dateOfUpload = verificationReqRecord.createdAt
@@ -501,13 +521,13 @@ checkIfDocumentValid ::
   ResponseStatus ->
   Maybe Bool ->
   Flow Bool
+checkIfDocumentValid _merchantOpCityId _docType _category VALID _makeSelfieAadhaarPanMandatory = pure True
 checkIfDocumentValid merchantOpCityId docType category status makeSelfieAadhaarPanMandatory = do
   mbVerificationConfig <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId docType category Nothing
   case mbVerificationConfig of
     Just verificationConfig -> do
       if verificationConfig.isMandatory && (not (fromMaybe False verificationConfig.filterForOldApks) || fromMaybe False makeSelfieAadhaarPanMandatory)
         then case status of
-          VALID -> return True
           MANUAL_VERIFICATION_REQUIRED -> return verificationConfig.isDefaultEnabledOnManualVerification
           _ -> return False
         else return True

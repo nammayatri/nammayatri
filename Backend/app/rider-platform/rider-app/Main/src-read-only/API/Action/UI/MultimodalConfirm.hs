@@ -8,10 +8,8 @@ module API.Action.UI.MultimodalConfirm
 where
 
 import qualified API.Types.UI.MultimodalConfirm
-import qualified BecknV2.FRFS.Enums
 import qualified Control.Lens
 import qualified Domain.Action.UI.MultimodalConfirm as Domain.Action.UI.MultimodalConfirm
-import qualified Domain.Types.IntegratedBPPConfig
 import qualified Domain.Types.Journey
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
@@ -294,26 +292,33 @@ type API =
       :> Capture
            "legOrder"
            Kernel.Prelude.Int
+      :> "subleg"
+      :> Capture
+           "subLegOrder"
+           Kernel.Prelude.Int
       :> "setStatus"
       :> Capture
            "status"
            Lib.JourneyLeg.Types.JourneyLegStatus
       :> Post
            '[JSON]
-           Kernel.Types.APISuccess.APISuccess
+           API.Types.UI.MultimodalConfirm.JourneyStatusResp
+      :<|> TokenAuth
+      :> "multimodal"
+      :> Capture
+           "journeyId"
+           (Kernel.Types.Id.Id Domain.Types.Journey.Journey)
+      :> "complete"
+      :> Post
+           '[JSON]
+           API.Types.UI.MultimodalConfirm.JourneyStatusResp
       :<|> TokenAuth
       :> "multimodal"
       :> "ticket"
       :> "verify"
-      :> QueryParam
-           "platformType"
-           Domain.Types.IntegratedBPPConfig.PlatformType
       :> MandatoryQueryParam
            "city"
            Kernel.Types.Beckn.Context.City
-      :> MandatoryQueryParam
-           "vehicleType"
-           BecknV2.FRFS.Enums.VehicleCategory
       :> ReqBody
            '[JSON]
            API.Types.UI.MultimodalConfirm.MultimodalTicketVerifyReq
@@ -323,7 +328,7 @@ type API =
   )
 
 handler :: Environment.FlowServer API
-handler = postMultimodalInitiate :<|> postMultimodalConfirm :<|> getMultimodalBookingInfo :<|> getMultimodalBookingPaymentStatus :<|> postMultimodalPaymentUpdateOrder :<|> postMultimodalSwitch :<|> postMultimodalJourneyLegSkip :<|> postMultimodalJourneyLegAddSkippedLeg :<|> postMultimodalExtendLeg :<|> postMultimodalExtendLegGetfare :<|> getMultimodalJourneyStatus :<|> postMultimodalJourneyCancel :<|> postMultimodalRiderLocation :<|> postMultimodalOrderSwitchTaxi :<|> postMultimodalOrderSwitchFRFSTier :<|> postMultimodalJourneyFeedback :<|> getMultimodalFeedback :<|> getMultimodalUserPreferences :<|> postMultimodalUserPreferences :<|> postMultimodalTransitOptionsLite :<|> getPublicTransportData :<|> getMultimodalOrderGetLegTierOptions :<|> postMultimodalOrderSetStatus :<|> postMultimodalTicketVerify
+handler = postMultimodalInitiate :<|> postMultimodalConfirm :<|> getMultimodalBookingInfo :<|> getMultimodalBookingPaymentStatus :<|> postMultimodalPaymentUpdateOrder :<|> postMultimodalSwitch :<|> postMultimodalJourneyLegSkip :<|> postMultimodalJourneyLegAddSkippedLeg :<|> postMultimodalExtendLeg :<|> postMultimodalExtendLegGetfare :<|> getMultimodalJourneyStatus :<|> postMultimodalJourneyCancel :<|> postMultimodalRiderLocation :<|> postMultimodalOrderSwitchTaxi :<|> postMultimodalOrderSwitchFRFSTier :<|> postMultimodalJourneyFeedback :<|> getMultimodalFeedback :<|> getMultimodalUserPreferences :<|> postMultimodalUserPreferences :<|> postMultimodalTransitOptionsLite :<|> getPublicTransportData :<|> getMultimodalOrderGetLegTierOptions :<|> postMultimodalOrderSublegSetStatus :<|> postMultimodalComplete :<|> postMultimodalTicketVerify
 
 postMultimodalInitiate ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -538,25 +543,33 @@ getMultimodalOrderGetLegTierOptions ::
   )
 getMultimodalOrderGetLegTierOptions a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.getMultimodalOrderGetLegTierOptions (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
-postMultimodalOrderSetStatus ::
+postMultimodalOrderSublegSetStatus ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
     Kernel.Prelude.Int ->
+    Kernel.Prelude.Int ->
     Lib.JourneyLeg.Types.JourneyLegStatus ->
-    Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
+    Environment.FlowHandler API.Types.UI.MultimodalConfirm.JourneyStatusResp
   )
-postMultimodalOrderSetStatus a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalOrderSetStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
+postMultimodalOrderSublegSetStatus a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalOrderSublegSetStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
+
+postMultimodalComplete ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
+    Environment.FlowHandler API.Types.UI.MultimodalConfirm.JourneyStatusResp
+  )
+postMultimodalComplete a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalComplete (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postMultimodalTicketVerify ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
-    Kernel.Prelude.Maybe Domain.Types.IntegratedBPPConfig.PlatformType ->
     Kernel.Types.Beckn.Context.City ->
-    BecknV2.FRFS.Enums.VehicleCategory ->
     API.Types.UI.MultimodalConfirm.MultimodalTicketVerifyReq ->
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.MultimodalTicketVerifyResp
   )
-postMultimodalTicketVerify a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalTicketVerify (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
+postMultimodalTicketVerify a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalTicketVerify (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1

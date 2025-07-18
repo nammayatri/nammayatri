@@ -1,21 +1,18 @@
 module SharedLogic.Scheduler.Jobs.MetroBusinessHour where
 
-import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.OnDemand.Enums as BecknSpec
 import qualified Data.Text as T
 import qualified Data.Time as Time
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.RiderConfig as RC
-import EulerHS.Prelude ((+||), (||+))
 import qualified ExternalBPP.ExternalAPI.CallAPI as CallAPI
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Utils.Common
 import Lib.Scheduler
+import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import SharedLogic.JobScheduler
-import qualified Storage.CachedQueries.IntegratedBPPConfig as CQIntBPP
 import qualified Storage.Queries.RiderConfig as QRC
-import Tools.Error
 
 updateMetroBusinessHour ::
   ( EsqDBFlow m r,
@@ -43,14 +40,12 @@ updateMetroBusinessHour Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
       localTime0030 = Time.LocalTime tomorrow (Time.TimeOfDay 0 30 0)
       tomorrowAt0030Local = Time.localTimeToUTC tz localTime0030
 
-  integBPPConfig <-
-    CQIntBPP.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOpCityId (BecknSpec.METRO) DIBC.MULTIMODAL
-      >>= fromMaybeM (IntegratedBPPConfigNotFound $ "MerchantOperatingCityId:" +|| merchantOpCityId.getId ||+ "Domain:" +|| Spec.FRFS ||+ "Vehicle:" +|| BecknSpec.METRO ||+ "Platform Type:" +|| DIBC.MULTIMODAL ||+ "")
+  integratedBppConfigs <- SIBC.findAllIntegratedBPPConfig merchantOpCityId (BecknSpec.METRO) DIBC.MULTIMODAL
 
-  if isCMRLConfig integBPPConfig
-    then do
+  case getCMRLConfig integratedBppConfigs of
+    Just integratedBppConfig -> do
       -- Get business hours from CMRL API
-      businessHourResult <- CallAPI.getBusinessHour integBPPConfig
+      businessHourResult <- CallAPI.getBusinessHour integratedBppConfig
       logInfo $ "Fetched business hours from CMRL API: " <> show businessHourResult
 
       case mbRiderConfig of
@@ -91,13 +86,12 @@ updateMetroBusinessHour Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
             _ -> do
               logError $ "Failed to parse restriction times: start=" <> startRestrictionTime <> ", end=" <> endRestrictionTime
               handleJobRetry retryKeyPrefix merchantOpCityId.getId maxRetries retryInterval timeDiffFromUtc tomorrowAt0030Local
-    else do
+    Nothing -> do
       logWarning $ "No CMRL integration found for merchant operating city: " <> merchantOpCityId.getId
       handleJobRetry retryKeyPrefix merchantOpCityId.getId maxRetries retryInterval timeDiffFromUtc tomorrowAt0030Local
   where
-    isCMRLConfig config = case config.providerConfig of
-      DIBC.CMRL _ -> True
-      _ -> False
+    getCMRLConfig :: [DIBC.IntegratedBPPConfig] -> Maybe DIBC.IntegratedBPPConfig
+    getCMRLConfig integratedBppConfigs = find (\config -> case config.providerConfig of DIBC.CMRL _ -> True; _ -> False) integratedBppConfigs
 
 handleJobRetry ::
   (MonadFlow m, CacheFlow m r) =>

@@ -60,7 +60,8 @@ data MetroLegRequestGetInfoData = MetroLegRequestGetInfoData
     fallbackFare :: Maybe HighPrecMoney,
     distance :: Maybe Distance,
     duration :: Maybe Seconds,
-    journeyLeg :: DJourneyLeg.JourneyLeg
+    journeyLeg :: DJourneyLeg.JourneyLeg,
+    ignoreOldSearchRequest :: Bool
   }
 
 data MetroLegRequest
@@ -76,6 +77,7 @@ data MetroLegRequest
 data MetroLegRequestGetFareData = MetroLegRequestGetFareData
   { startLocation :: LatLngV2,
     endLocation :: LatLngV2,
+    agencyGtfsId :: Maybe Text,
     routeDetails :: [FRFSRouteDetails],
     fromArrivalTime :: Maybe UTCTime,
     merchant :: DMerchant.Merchant,

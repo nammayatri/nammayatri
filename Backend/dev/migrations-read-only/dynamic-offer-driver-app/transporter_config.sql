@@ -456,3 +456,29 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN deactivate_rc_o
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN is_aa_enabled_for_recurring boolean  default false;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN aa_enabled_client_sdk_version text  default '999.999.999';
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN disable_driver_when_unlinking_vehicle boolean  default true;
+
+
+------- SQL updates -------
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN valid_name_compare_percentage integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allow_duplicate_pan boolean ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allow_duplicate_gst boolean ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allow_duplicate_aadhaar boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN max_allowed_video_doc_size_in_mb integer ;

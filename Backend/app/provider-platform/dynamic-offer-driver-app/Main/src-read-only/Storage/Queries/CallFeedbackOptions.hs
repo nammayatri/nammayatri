@@ -5,6 +5,7 @@
 module Storage.Queries.CallFeedbackOptions where
 
 import qualified Domain.Types.CallFeedbackOptions
+import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -32,6 +33,18 @@ findByCategoryAndMerchantOperatingCityId category merchantOperatingCityId = do
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.CallFeedbackOptions.CallFeedbackOptions -> m (Maybe Domain.Types.CallFeedbackOptions.CallFeedbackOptions))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+findByMessageKey ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> m (Maybe Domain.Types.CallFeedbackOptions.CallFeedbackOptions))
+findByMessageKey messageKey merchantId merchantOperatingCityId = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.messageKey $ Se.Eq messageKey,
+          Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId <$> merchantId),
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId <$> merchantOperatingCityId)
+        ]
+    ]
 
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

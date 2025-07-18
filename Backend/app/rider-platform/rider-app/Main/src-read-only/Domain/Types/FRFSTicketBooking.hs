@@ -14,7 +14,6 @@ import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.PartnerOrganization
 import qualified Domain.Types.Person
 import qualified Domain.Types.RecentLocation
-import qualified Domain.Types.Station
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -41,10 +40,10 @@ data FRFSTicketBooking = FRFSTicketBooking
     estimatedPrice :: Kernel.Types.Common.Price,
     eventDiscountAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     finalPrice :: Kernel.Prelude.Maybe Kernel.Types.Common.Price,
-    fromStationId :: Kernel.Types.Id.Id Domain.Types.Station.Station,
+    fromStationCode :: Kernel.Prelude.Text,
     googleWalletJWTUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking,
-    integratedBppConfigId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig),
+    integratedBppConfigId :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
     isBookingCancellable :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isDeleted :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isFareChanged :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -76,7 +75,7 @@ data FRFSTicketBooking = FRFSTicketBooking
     startTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     stationsJson :: Kernel.Prelude.Text,
     status :: Domain.Types.FRFSTicketBooking.FRFSTicketBookingStatus,
-    toStationId :: Kernel.Types.Id.Id Domain.Types.Station.Station,
+    toStationCode :: Kernel.Prelude.Text,
     validTill :: Kernel.Prelude.UTCTime,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory,
     createdAt :: Kernel.Prelude.UTCTime,
@@ -97,6 +96,7 @@ data FRFSTicketBookingStatus
   | COUNTER_CANCELLED
   | CANCEL_INITIATED
   | TECHNICAL_CANCEL_REJECTED
+  | REFUND_INITIATED
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CashbackStatus)

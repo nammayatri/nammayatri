@@ -36,7 +36,8 @@
         android:name="android.hardware.camera"
         android:required="true" />
 
-    <application>
+    <application
+        android:theme="@style/MaterialTheme">
         <activity
             android:name=".RideRequestActivity"
             android:exported="false"
@@ -86,7 +87,7 @@
             android:enabled="true"
             android:exported="false"
             android:permission="android.permission.SYSTEM_ALERT_WINDOW" />
-        <service android:name=".OverlayMessagingService"
+        <service android:name=".overlayMessage.Service"
             android:enabled="true"
             android:exported="true"
             android:largeHeap="true" />
@@ -137,7 +138,7 @@
             android:stopWithTask="false" />
        
 
-        <service android:name=".OverlayMessagingService"
+        <service android:name=".overlayMessage.Service"
             android:enabled="true"
             android:exported="true"
             android:largeHeap="true" />

@@ -19,6 +19,7 @@ import Domain.Types.AccessMatrix as Reexport (ApiEntity (..), UserActionType (..
 import qualified Domain.Types.AccessMatrix as DMatrix
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
+import qualified Domain.Types.Role as DRole
 import Domain.Types.ServerName as Reexport (ServerName (..))
 import qualified Domain.Types.ServerName as DSN
 import Kernel.Prelude
@@ -68,12 +69,18 @@ instance VerificationMethodWithPayload VerifyApi where
   type VerificationPayloadType VerifyApi = DMatrix.ApiAccessLevel
 
 verifyApiAction ::
-  (Common.AuthFlow m r, Redis.HedisFlow m r) =>
+  ( Common.AuthFlow m r,
+    Redis.HedisFlow m r,
+    HasFlowEnv m r '["passwordExpiryDays" ::: Maybe Int]
+  ) =>
   VerificationActionWithPayload VerifyApi m
 verifyApiAction = VerificationActionWithPayload verifyApi
 
 verifyApi ::
-  (Common.AuthFlow m r, Redis.HedisFlow m r) =>
+  ( Common.AuthFlow m r,
+    Redis.HedisFlow m r,
+    HasFlowEnv m r '["passwordExpiryDays" ::: Maybe Int]
+  ) =>
   DMatrix.ApiAccessLevel ->
   RegToken ->
   m ApiTokenInfo
@@ -103,9 +110,16 @@ instance
         userActionType = fromSing (sing @uat)
       }
 
-verifyAccessLevel :: BeamFlow m r => DMatrix.ApiAccessLevel -> Id DP.Person -> m DP.Person
+verifyAccessLevel ::
+  ( BeamFlow m r,
+    HasFlowEnv m r '["passwordExpiryDays" ::: Maybe Int]
+  ) =>
+  DMatrix.ApiAccessLevel ->
+  Id DP.Person ->
+  m DP.Person
 verifyAccessLevel requiredApiAccessLevel personId = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  maybe (pure ()) (\a -> when (a `elem` [DRole.DASHBOARD_ADMIN, DRole.DASHBOARD_USER]) $ Common.checkPasswordExpiry person) person.dashboardAccessType
   mbAccessMatrixItem <- QAccessMatrix.findByRoleIdAndEntityAndActionType person.roleId requiredApiAccessLevel.apiEntity $ DMatrix.UserActionTypeWrapper requiredApiAccessLevel.userActionType
   let userAccessType = maybe DMatrix.USER_NO_ACCESS (.userAccessType) mbAccessMatrixItem
   unless (checkUserAccess userAccessType) $

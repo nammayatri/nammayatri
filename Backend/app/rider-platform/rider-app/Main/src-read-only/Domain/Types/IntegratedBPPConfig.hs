@@ -17,12 +17,15 @@ import qualified Kernel.Utils.TH
 import qualified Tools.Beam.UtilsTH
 
 data IntegratedBPPConfig = IntegratedBPPConfig
-  { domain :: Kernel.Prelude.Text,
+  { agencyKey :: Kernel.Prelude.Text,
+    domain :: Kernel.Prelude.Text,
+    feedKey :: Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     platformType :: Domain.Types.IntegratedBPPConfig.PlatformType,
     providerConfig :: Domain.Types.IntegratedBPPConfig.ProviderConfig,
+    providerName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleCategory :: BecknV2.OnDemand.Enums.VehicleCategory,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime

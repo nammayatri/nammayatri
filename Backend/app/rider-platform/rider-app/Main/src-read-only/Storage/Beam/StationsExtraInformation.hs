@@ -11,13 +11,14 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data StationsExtraInformationT f = StationsExtraInformationT
-  { address :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    id :: (B.C f Kernel.Prelude.Text),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    stationId :: (B.C f Kernel.Prelude.Text),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { address :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    id :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    stationId :: B.C f Kernel.Prelude.Text,
+    suggestedDestinations :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -27,6 +28,6 @@ instance B.Table StationsExtraInformationT where
 
 type StationsExtraInformation = StationsExtraInformationT Identity
 
-$(enableKVPG (''StationsExtraInformationT) [('id)] [])
+$(enableKVPG ''StationsExtraInformationT ['id] [])
 
-$(mkTableInstances (''StationsExtraInformationT) "stations_extra_information")
+$(mkTableInstances ''StationsExtraInformationT "stations_extra_information")

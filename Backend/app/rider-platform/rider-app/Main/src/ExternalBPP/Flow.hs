@@ -26,21 +26,24 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.FRFSUtils
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
-import qualified Storage.Queries.RouteStopMapping as QRSM
+import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import Tools.Error
 
-getFares :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Id Person -> Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> Text -> Text -> Text -> Spec.VehicleCategory -> m [FRFSFare]
-getFares riderId merchant merchantOperatingCity integratedBPPConfig _bapConfig routeCode startStationCode endStationCode vehicleCategory = CallAPI.getFares riderId merchant merchantOperatingCity integratedBPPConfig routeCode startStationCode endStationCode vehicleCategory
+getFares :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Id Person -> Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> Text -> Text -> Text -> Spec.VehicleCategory -> m (Bool, [FRFSFare])
+getFares riderId merchant merchantOperatingCity integratedBPPConfig _bapConfig routeCode startStationCode endStationCode vehicleCategory = do
+  try @_ @SomeException (CallAPI.getFares riderId merchant merchantOperatingCity integratedBPPConfig routeCode startStationCode endStationCode vehicleCategory) >>= \case
+    Left _ -> return (True, [])
+    Right fares -> return fares
 
-search :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> DFRFSSearch.FRFSSearch -> [FRFSRouteDetails] -> m DOnSearch
-search merchant merchantOperatingCity integratedBPPConfig bapConfig searchReq routeDetails = do
+search :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> Maybe BaseUrl -> Maybe Text -> DFRFSSearch.FRFSSearch -> [FRFSRouteDetails] -> m DOnSearch
+search merchant merchantOperatingCity integratedBPPConfig bapConfig mbNetworkHostUrl mbNetworkId searchReq routeDetails = do
   quotes <- buildQuotes routeDetails
   validTill <- mapM (\ttl -> addUTCTime (intToNominalDiffTime ttl) <$> getCurrentTime) bapConfig.searchTTLSec
   messageId <- generateGUID
   return $
     DOnSearch
-      { bppSubscriberId = bapConfig.subscriberId,
-        bppSubscriberUrl = showBaseUrl bapConfig.subscriberUrl,
+      { bppSubscriberId = fromMaybe bapConfig.subscriberId mbNetworkId,
+        bppSubscriberUrl = showBaseUrl $ fromMaybe bapConfig.subscriberUrl mbNetworkHostUrl,
         providerDescription = Nothing,
         providerId = bapConfig.uniqueKeyId,
         providerName = CallAPI.getProviderName integratedBPPConfig,
@@ -60,7 +63,7 @@ search merchant merchantOperatingCity integratedBPPConfig bapConfig searchReq ro
     buildSingleTransitRouteQuote FRFSRouteDetails {..} = do
       case routeCode of
         Just routeCode' -> do
-          route <- OTPRest.getRouteByRouteCodeWithFallback integratedBPPConfig routeCode'
+          route <- OTPRest.getRouteByRouteId integratedBPPConfig routeCode' >>= fromMaybeM (RouteNotFound routeCode')
           let routeInfo =
                 RouteStopInfo
                   { route,
@@ -101,7 +104,7 @@ search merchant merchantOperatingCity integratedBPPConfig bapConfig searchReq ro
       let routeDetail = mergeFFRFSRouteDetails routesDetails
       case (routeDetail, routeDetail >>= (.routeCode)) of
         (Just routeDetail', Just routeCode') -> do
-          route <- OTPRest.getRouteByRouteCodeWithFallback integratedBPPConfig routeCode'
+          route <- OTPRest.getRouteByRouteId integratedBPPConfig routeCode' >>= fromMaybeM (RouteNotFound routeCode')
           let routeInfo =
                 RouteStopInfo
                   { route,
@@ -114,19 +117,16 @@ search merchant merchantOperatingCity integratedBPPConfig bapConfig searchReq ro
           mkSingleRouteQuote searchReq.vehicleType routeInfo stations
         _ -> return []
 
-    buildStations :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, HasShortDurationRetryCfg r c) => Text -> Text -> Text -> StationType -> StationType -> m [DStation]
+    buildStations :: (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c) => Text -> Text -> Text -> StationType -> StationType -> m [DStation]
     buildStations routeCode startStationCode endStationCode startStopType endStopType = do
-      fromStation <- OTPRest.findByStationCodeAndIntegratedBPPConfigId startStationCode integratedBPPConfig >>= fromMaybeM (StationNotFound startStationCode)
-      toStation <- OTPRest.findByStationCodeAndIntegratedBPPConfigId endStationCode integratedBPPConfig >>= fromMaybeM (StationNotFound endStationCode)
-      stops <-
-        try @_ @SomeException (OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig) >>= \case
-          Left _ -> QRSM.findByRouteCode routeCode integratedBPPConfig.id
-          Right stops' -> pure stops'
+      fromStation <- OTPRest.getStationByGtfsIdAndStopCode startStationCode integratedBPPConfig >>= fromMaybeM (StationNotFound startStationCode)
+      toStation <- OTPRest.getStationByGtfsIdAndStopCode endStationCode integratedBPPConfig >>= fromMaybeM (StationNotFound endStationCode)
+      stops <- OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig
       CallAPI.mkStations fromStation toStation stops startStopType endStopType & fromMaybeM (StationsNotFound fromStation.id.getId toStation.id.getId)
 
     mkSingleRouteQuote :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Spec.VehicleCategory -> RouteStopInfo -> [DStation] -> m [DQuote]
     mkSingleRouteQuote vehicleType routeInfo stations = do
-      fares <- CallAPI.getFares searchReq.riderId merchant merchantOperatingCity integratedBPPConfig routeInfo.route.code routeInfo.startStopCode routeInfo.endStopCode vehicleType
+      (_, fares) <- CallAPI.getFares searchReq.riderId merchant merchantOperatingCity integratedBPPConfig routeInfo.route.code routeInfo.startStopCode routeInfo.endStopCode vehicleType
       return $
         map
           ( \FRFSFare {..} ->
@@ -164,8 +164,9 @@ search merchant merchantOperatingCity integratedBPPConfig bapConfig searchReq ro
 
     mapWithIndexM f xs = zipWithM f [0 ..] xs
 
-select :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> DFRFSQuote.FRFSQuote -> m DOnSelect
-select _merchant _merchantOperatingCity _integratedBPPConfig _bapConfig quote = do
+select :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> DFRFSQuote.FRFSQuote -> Maybe Int -> Maybe Int -> m DOnSelect
+select _merchant _merchantOperatingCity _integratedBPPConfig _bapConfig quote ticketQuantity childTicketQuantity = do
+  void $ QFRFSQuote.updateTicketAndChildTicketQuantityById quote.id ticketQuantity childTicketQuantity
   return $
     DOnSelect
       { providerId = quote.providerId,
@@ -177,12 +178,13 @@ select _merchant _merchantOperatingCity _integratedBPPConfig _bapConfig quote = 
         messageId = quote.id.getId
       }
 
-init :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> (Maybe Text, Maybe Text) -> DFRFSTicketBooking.FRFSTicketBooking -> m DOnInit
+init :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> (Maybe Text, Maybe Text) -> DFRFSTicketBooking.FRFSTicketBooking -> m DOnInit
 init merchant merchantOperatingCity integratedBPPConfig bapConfig (mRiderName, mRiderNumber) booking = do
   validTill <- mapM (\ttl -> addUTCTime (intToNominalDiffTime ttl) <$> getCurrentTime) bapConfig.initTTLSec
   paymentDetails <- mkPaymentDetails bapConfig.collectedBy
   bankAccountNumber <- paymentDetails.bankAccNumber & fromMaybeM (InternalError "Bank Account Number Not Found")
   bankCode <- paymentDetails.bankCode & fromMaybeM (InternalError "Bank Code Not Found")
+  bppOrderId <- CallAPI.getBppOrderId integratedBPPConfig booking
   return $
     DOnInit
       { providerId = bapConfig.uniqueKeyId,
@@ -193,7 +195,8 @@ init merchant merchantOperatingCity integratedBPPConfig bapConfig (mRiderName, m
         transactionId = booking.searchId.getId,
         messageId = booking.id.getId,
         bankAccNum = bankAccountNumber,
-        bankCode = bankCode
+        bankCode = bankCode,
+        bppOrderId = bppOrderId
       }
   where
     mkPaymentDetails = \case
@@ -202,7 +205,7 @@ init merchant merchantOperatingCity integratedBPPConfig bapConfig (mRiderName, m
         paymentParams & fromMaybeM (InternalError "BknPaymentParams Not Found")
       Spec.BPP -> CallAPI.getPaymentDetails merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking
 
-confirm :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, HasShortDurationRetryCfg r c) => Merchant -> MerchantOperatingCity -> FRFSConfig -> IntegratedBPPConfig -> BecknConfig -> (Maybe Text, Maybe Text) -> DFRFSTicketBooking.FRFSTicketBooking -> m DOrder
+confirm :: (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c) => Merchant -> MerchantOperatingCity -> FRFSConfig -> IntegratedBPPConfig -> BecknConfig -> (Maybe Text, Maybe Text) -> DFRFSTicketBooking.FRFSTicketBooking -> m DOrder
 confirm _merchant _merchantOperatingCity frfsConfig integratedBPPConfig bapConfig (mRiderName, mRiderNumber) booking = do
   let qrTtl =
         case booking.vehicleType of

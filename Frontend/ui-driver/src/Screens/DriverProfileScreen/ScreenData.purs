@@ -148,7 +148,8 @@ initData =
     canSwitchToIntraCity : Nothing,
     showDriverBlockedPopup : false,
     skipGlobalEvents : false,
-    isPetModeEnabled : Nothing
+    isPetModeEnabled : Nothing,
+    nammaClubEnabled : false
    }
 , showDriverDetails : false
 }
@@ -279,10 +280,12 @@ dummyDriverInfo = GetDriverInfoResp {
     , isSubscriptionEnabledAtCategoryLevel : Nothing
     , isSpecialLocWarrior : Nothing
     , subscriptionDown : Nothing
-    , overchargingTag : Nothing
+    , safetyScore : Nothing
     , ridesWithFareIssues : Nothing
     , totalRidesConsideredForFareIssues : Nothing
     , isPetModeEnabled : Nothing
+    , driverTags : Nothing
+    , nyClubConsent : Nothing
 }
 
 organizationInfo :: OrganizationInfo

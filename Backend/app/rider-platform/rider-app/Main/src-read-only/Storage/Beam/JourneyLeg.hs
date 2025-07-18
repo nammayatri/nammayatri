@@ -12,10 +12,13 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
+import qualified Lib.JourneyLeg.Types
 import Tools.Beam.UtilsTH
 
 data JourneyLegT f = JourneyLegT
-  { changedBusesInSequence :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
+  { agencyGtfsId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    agencyName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    changedBusesInSequence :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     distance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance),
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),
     duration :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
@@ -42,6 +45,7 @@ data JourneyLegT f = JourneyLegT
     serviceTypes :: B.C f (Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceTierType]),
     startLocationLat :: B.C f Kernel.Prelude.Double,
     startLocationLon :: B.C f Kernel.Prelude.Double,
+    status :: B.C f (Kernel.Prelude.Maybe Lib.JourneyLeg.Types.JourneyLegStatus),
     toArrivalTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     toDepartureTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     toStopCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

@@ -88,6 +88,10 @@ dependencies:
   - unordered-containers
   - fdep
   - fieldInspector
+  - amazonka
+  - amazonka-s3
+  - lens
+
 ghc-options:
   - -fwrite-ide-info
   - -hiedir=.hie

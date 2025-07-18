@@ -27,7 +27,7 @@ import Lib.JourneyLeg.Types
 import Lib.JourneyLeg.Types.Taxi
 import qualified Lib.JourneyModule.Types as JT
 import qualified SharedLogic.CallBPP as CallBPP
-import qualified SharedLogic.CallBPPInternal as CallBPPInternal
+import SharedLogic.CallBPPInternal as CallBPPInternal (CalculateFareReq (..), FareData (..), GetFareResponse (..), getFare)
 import qualified SharedLogic.CreateFareForMultiModal as CFFM
 import SharedLogic.Search
 import qualified Storage.Queries.Booking as QBooking
@@ -52,7 +52,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
         parentSearchReq.device
         False
         (Just journeySearchData)
-        False
+        True
     QJourneyLeg.updateDistanceAndDuration (convertMetersToDistance Meter <$> dSearchRes.distance) dSearchRes.duration journeyLegData.id
     fork "search cabs" . withShortRetry $ do
       becknTaxiReqV2 <- TaxiACL.buildSearchReqV2 dSearchRes
@@ -86,6 +86,9 @@ instance JT.JourneyLeg TaxiLegRequest m where
                 isMeterRideSearch = Just False,
                 recentLocationId = Nothing,
                 platformType = Nothing,
+                isReserveRide = Just False,
+                subscriptionId = Nothing,
+                verifyBeforeCancellingOldBooking = Just True,
                 ..
               }
 
@@ -197,12 +200,13 @@ instance JT.JourneyLeg TaxiLegRequest m where
   isCancellable _ = throwError (InternalError "Not Supported")
 
   getState (TaxiLegRequestGetState req) = do
-    mbBooking <- QBooking.findByTransactionIdAndStatus req.searchId.getId (activeBookingStatus <> [COMPLETED])
+    mbBooking <- QBooking.findByTransactionIdAndStatus req.searchId.getId (activeBookingStatus <> [COMPLETED, CANCELLED])
     case mbBooking of
       Just booking -> do
         mbRide <- QRide.findByRBId booking.id
-        (journeyLegStatus, vehiclePosition) <- JT.getTaxiLegStatusFromBooking booking mbRide
+        (journeyLegStatus, vehiclePosition) <- JT.getTaxiLegStatusFromBooking booking mbRide req.journeyLegStatus
         journeyLegOrder <- booking.journeyLegOrder & fromMaybeM (BookingFieldNotPresent "journeyLegOrder")
+
         return $
           JT.Single $
             JT.JourneyLegStateData
@@ -218,7 +222,8 @@ instance JT.JourneyLeg TaxiLegRequest m where
         searchReq <- QSearchRequest.findById req.searchId >>= fromMaybeM (SearchRequestNotFound req.searchId.getId)
         journeyLegInfo <- searchReq.journeyLegInfo & fromMaybeM (InvalidRequest "JourneySearchData not found")
         mbEstimate <- maybe (pure Nothing) (QEstimate.findById . Id) journeyLegInfo.pricingId
-        let journeyLegStatus = JT.getTaxiLegStatusFromSearch journeyLegInfo (mbEstimate <&> (.status))
+        let journeyLegStatus = JT.getTaxiLegStatusFromSearch journeyLegInfo (mbEstimate <&> (.status)) req.journeyLegStatus
+
         return $
           JT.Single $
             JT.JourneyLegStateData
@@ -233,18 +238,18 @@ instance JT.JourneyLeg TaxiLegRequest m where
   getState _ = throwError (InternalError "Not Supported")
 
   getInfo (TaxiLegRequestGetInfo req) = do
-    mbBooking <- QBooking.findByTransactionIdAndStatus req.searchId.getId (activeBookingStatus <> [COMPLETED])
+    mbBooking <- QBooking.findByTransactionIdAndStatus req.searchId.getId (activeBookingStatus <> [COMPLETED, CANCELLED])
     case mbBooking of
       Just booking -> do
         mRide <- QRide.findByRBId booking.id
-        Just <$> JT.mkLegInfoFromBookingAndRide booking mRide req.journeyLeg.entrance req.journeyLeg.exit
+        Just <$> JT.mkLegInfoFromBookingAndRide booking mRide req.journeyLeg.entrance req.journeyLeg.exit req.journeyLeg.status
       Nothing -> do
         mbSearchReq <- QSearchRequest.findById req.searchId
         if isNothing mbSearchReq && req.ignoreOldSearchRequest
           then return Nothing
           else do
             searchReq <- fromMaybeM (SearchRequestNotFound req.searchId.getId) mbSearchReq
-            Just <$> JT.mkLegInfoFromSearchRequest searchReq req.journeyLeg.entrance req.journeyLeg.exit
+            Just <$> JT.mkLegInfoFromSearchRequest searchReq req.journeyLeg.entrance req.journeyLeg.exit req.journeyLeg.status
   getInfo _ = throwError (InternalError "Not Supported")
 
   getFare (TaxiLegRequestGetFare taxiGetFareData) = do
@@ -258,5 +263,5 @@ instance JT.JourneyLeg TaxiLegRequest m where
             }
     fareData <- CallBPPInternal.getFare taxiGetFareData.merchant taxiGetFareData.merchantOpCity.city calculateFareReq
     let mbFare = listToMaybe $ sortBy (comparing CallBPPInternal.minFare <> comparing CallBPPInternal.maxFare) (CallBPPInternal.estimatedFares fareData)
-    return $ mbFare <&> \taxi -> JT.GetFareResponse {estimatedMinFare = taxi.minFare, estimatedMaxFare = taxi.maxFare, serviceTypes = Nothing}
+    return (True, mbFare <&> \taxi -> JT.GetFareResponse {estimatedMinFare = taxi.minFare, estimatedMaxFare = taxi.maxFare, serviceTypes = Nothing})
   getFare _ = throwError (InternalError "Not Supported")

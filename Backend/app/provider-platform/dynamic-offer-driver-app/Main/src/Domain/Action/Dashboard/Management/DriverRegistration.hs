@@ -50,7 +50,7 @@ import qualified Domain.Types.VehiclePUC as DPUC
 import qualified Domain.Types.VehiclePermit as DVPermit
 import qualified Domain.Types.VehicleRegistrationCertificate as DRC
 import Environment
-import EulerHS.Prelude hiding (find, foldl', map, whenJust)
+import EulerHS.Prelude hiding (elem, find, foldl', map, whenJust)
 import Kernel.Beam.Functions
 import Kernel.External.AadhaarVerification.Interface.Types
 import Kernel.External.Encryption (decrypt, encrypt, hash)
@@ -290,6 +290,7 @@ postDriverRegistrationRegisterRc merchantShortId opCity driverId_ Common.Registe
           ..
         }
     )
+    False
 
 postDriverRegistrationRegisterAadhaar :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.AadhaarCardReq -> Flow APISuccess
 postDriverRegistrationRegisterAadhaar merchantShortId opCity driverId req = do
