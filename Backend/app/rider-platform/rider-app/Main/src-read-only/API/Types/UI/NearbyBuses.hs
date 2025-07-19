@@ -22,7 +22,8 @@ data NearbyBus = NearbyBus
     occupancy :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     routeCode :: Data.Text.Text,
     serviceType :: Kernel.Prelude.Maybe Data.Text.Text,
-    vehicleNumber :: Kernel.Prelude.Maybe Data.Text.Text
+    vehicleNumber :: Kernel.Prelude.Maybe Data.Text.Text,
+    shortName :: Kernel.Prelude.Maybe Data.Text.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

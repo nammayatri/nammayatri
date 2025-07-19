@@ -57,7 +57,8 @@ data VehicleServiceTypeResponse = VehicleServiceTypeResponse
   { service_type :: Text,
     vehicle_no :: Text,
     last_updated :: Maybe UTCTime,
-    schedule_no :: Text
+    schedule_no :: Text,
+    route_id :: Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
