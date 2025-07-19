@@ -144,6 +144,7 @@ getStationsByGtfsId ::
 getStationsByGtfsId integratedBPPConfig = do
   baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
   stations <- Flow.getStationsByGtfsId baseUrl integratedBPPConfig.feedKey
+  logDebug $ "stations from rest api for " <> show integratedBPPConfig.feedKey <> " : " <> show stations
   parseStationsFromInMemoryServer stations integratedBPPConfig
 
 getStationByGtfsIdAndStopCode ::
