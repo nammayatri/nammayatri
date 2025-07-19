@@ -538,8 +538,7 @@ rideStartedReqHandler ValidatedRideStartedReq {..} = do
   triggerRideStartedEvent RideEventData {ride = updRideForStartReq, personId = booking.riderId, merchantId = booking.merchantId}
   _ <- QRide.updateMultiple updRideForStartReq.id updRideForStartReq
   QPFS.clearCache booking.riderId
-  fork "create insurance" $ do
-    SI.createInsurance updRideForStartReq
+  when (updRideForStartReq.isInsured) $ fork "create insurance" $ SI.createInsurance updRideForStartReq
   now <- getCurrentTime
   rideRelatedNotificationConfigList <- CRRN.findAllByMerchantOperatingCityIdAndTimeDiffEventInRideFlow booking.merchantOperatingCityId DRN.START_TIME booking.configInExperimentVersions
   forM_ rideRelatedNotificationConfigList (SN.pushReminderUpdatesInScheduler booking updRideForStartReq (fromMaybe now rideStartTime))
