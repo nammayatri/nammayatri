@@ -24,6 +24,7 @@ data IssueChatT f = IssueChatT
     ticketId :: B.C f Text,
     chats :: B.C f [Text],
     mediaFiles :: B.C f [Text],
+    kaptureData :: B.C f (Maybe Text),
     personId :: B.C f Text,
     rideId :: B.C f (Maybe Text),
     issueReportId :: B.C f (Maybe Text),
