@@ -105,6 +105,18 @@ data Payload
         createdAt :: UTCTime,
         updatedAt :: UTCTime
       }
+  | MarketingParamsPreLogin
+      { gclId :: Maybe Text,
+        utmCampaign :: Maybe Text,
+        utmContent :: Maybe Text,
+        utmCreativeFormat :: Maybe Text,
+        utmMedium :: Maybe Text,
+        utmSource :: Maybe Text,
+        utmTerm :: Maybe Text,
+        merchantName :: Text,
+        createdAt :: UTCTime,
+        updatedAt :: UTCTime
+      }
   deriving (Show, Eq, Generic, ToSchema)
 
 instance ToJSON Payload where
@@ -175,6 +187,21 @@ data RouteDataEvent = RouteDataEvent
   }
   deriving (Show, Eq, Generic, FromJSON)
 
+data MarketingParamsEventPreLoginData = MarketingParamsEventPreLoginData
+  { gclId :: Maybe Text,
+    utmCampaign :: Maybe Text,
+    utmContent :: Maybe Text,
+    utmCreativeFormat :: Maybe Text,
+    utmMedium :: Maybe Text,
+    utmSource :: Maybe Text,
+    utmTerm :: Maybe Text,
+    merchantName :: Text,
+    userType :: Maybe UserType,
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime
+  }
+  deriving (Show, Eq, Generic, FromJSON, ToJSON)
+
 data MarketingParamsEventData = MarketingParamsEventData
   { personId :: Id Person,
     gclId :: Maybe Text,
@@ -186,10 +213,13 @@ data MarketingParamsEventData = MarketingParamsEventData
     utmTerm :: Maybe Text,
     merchantId :: Id Merchant,
     merchantOperatingCityId :: Id MerchantOperatingCity,
+    userType :: Maybe UserType,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
   deriving (Show, Eq, Generic, FromJSON, ToJSON)
+
+data UserType = OLD | NEW deriving (Show, Eq, Generic, FromJSON, ToJSON, ToSchema)
 
 newtype SearchEventData = SearchEventData
   { searchRequest :: DSearchRequest.SearchRequest
@@ -334,4 +364,14 @@ triggerMarketingParamEvent ::
 triggerMarketingParamEvent MarketingParamsEventData {..} = do
   let marketingParamsPayload = MarketingParams {..}
   event <- createEvent (Just $ getId marketingParamsPayload.personId) (getId marketingParamsPayload.merchantId) MarketingParamsData RIDER_APP System (Just marketingParamsPayload) Nothing Nothing
+  triggerEvent event
+
+triggerMarketingParamEventPreLogin ::
+  ( EventStreamFlow m r
+  ) =>
+  MarketingParamsEventPreLoginData ->
+  m ()
+triggerMarketingParamEventPreLogin MarketingParamsEventPreLoginData {..} = do
+  let marketingParamsPayload = MarketingParamsEventPreLoginData {..}
+  event <- createEvent (Just $ "") merchantName MarketingParamsPreLoginData RIDER_APP System (Just marketingParamsPayload) Nothing Nothing
   triggerEvent event

@@ -217,8 +217,6 @@ postNyRegularSubscriptionsConfirm (mPersonId, merchantId) req = do
     throwM (InvalidRequest "User does not own this subscription")
 
   -- Update status
-  QNyRegularSubscription.updateStatusById Domain.Types.NyRegularSubscription.ACTIVE subscriptionId
-
   merchant <- QMerchant.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
 
   -- Fetch the estimate by ID
@@ -227,7 +225,7 @@ postNyRegularSubscriptionsConfirm (mPersonId, merchantId) req = do
   estimateDetails <- getEstimateDetails merchant.driverOfferApiKey merchant.driverOfferBaseUrl estimate.bppEstimateId.getId
 
   -- Update the subscription's metadata field with the BppEstimate as JSON
-  let updatedSubscription' = subscription {Domain.Types.NyRegularSubscription.metadata = Just (toJSON estimateDetails)}
+  let updatedSubscription' = subscription {Domain.Types.NyRegularSubscription.metadata = Just (toJSON estimateDetails), Domain.Types.NyRegularSubscription.status = Domain.Types.NyRegularSubscription.ACTIVE}
   QNyRegularSubscription.updateByPrimaryKey updatedSubscription'
 
   -- Fetch updated subscription
