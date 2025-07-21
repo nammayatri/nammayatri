@@ -461,23 +461,32 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
 
     processRoute :: MultiModalTypes.MultiModalRoute -> ApiTypes.MultimodalUserPreferences -> Flow (Maybe Journey.Journey)
     processRoute r userPreferences = do
-      legs' <- mapM calculateLegProportionalDuration r.legs
+      updatedRoute <- updateRouteWithLegDurations r
       let initReq =
             JMTypes.JourneyInitData
               { parentSearchId = searchRequest.id,
                 merchantId = searchRequest.merchantId,
                 merchantOperatingCityId = searchRequest.merchantOperatingCityId,
                 personId = searchRequest.riderId,
-                legs = legs',
-                estimatedDistance = r.distance,
-                estimatedDuration = r.duration,
-                startTime = r.startTime,
-                endTime = r.endTime,
+                legs = updatedRoute.legs,
+                estimatedDistance = updatedRoute.distance,
+                estimatedDuration = updatedRoute.duration,
+                startTime = updatedRoute.startTime,
+                endTime = updatedRoute.endTime,
                 maximumWalkDistance = riderConfig.maximumWalkDistance,
                 straightLineThreshold = riderConfig.straightLineThreshold,
-                relevanceScore = r.relevanceScore
+                relevanceScore = updatedRoute.relevanceScore
               }
       JM.init initReq userPreferences
+
+    updateRouteWithLegDurations :: MultiModalTypes.MultiModalRoute -> Flow MultiModalTypes.MultiModalRoute
+    updateRouteWithLegDurations route_ = do
+      updatedLegs <- mapM calculateLegProportionalDuration route_.legs
+      let sumOfLegDurations = sum (map (.duration) updatedLegs)
+          totalDuration = min route_.duration sumOfLegDurations
+          route' = route_ {duration = totalDuration, legs = updatedLegs} :: MultiModalTypes.MultiModalRoute
+      return route'
+
     -- Calculate proportional duration only for Walk and Unspecified legs
     calculateLegProportionalDuration :: MultiModalTypes.MultiModalLeg -> Flow MultiModalTypes.MultiModalLeg
     calculateLegProportionalDuration leg = do
@@ -500,9 +509,9 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
                       }
               case res of
                 Right distResp -> do
-                  let newDistance = convertMetersToDistance Meter distResp.distance
-                  let newDuration = distResp.duration
-                  return (leg {distance = newDistance, duration = newDuration} :: MultiModalTypes.MultiModalLeg)
+                  let newDistance = if distResp.distance > 0 then convertMetersToDistance Meter distResp.distance else leg.distance
+                      updatedDurationLeg = updateDuration totalEstimatedDuration totalEstimatedDistance leg {distance = newDistance}
+                  return (updatedDurationLeg {duration = updatedDurationLeg.duration} :: MultiModalTypes.MultiModalLeg)
                 Left err -> do
                   logError $ "OSRM/Maps.getMultimodalWalkDistance failed: " <> show err <> ", falling back to proportional duration and distance" <> "latlong: " <> show (leg.startLocation.latLng.latitude, leg.startLocation.latLng.longitude) <> " " <> show (leg.endLocation.latLng.latitude, leg.endLocation.latLng.longitude)
                   return $ updateDuration totalEstimatedDuration totalEstimatedDistance leg
