@@ -52,7 +52,7 @@ import qualified Domain.Types.Merchant
 import Domain.Types.MultimodalPreferences as DMP
 import qualified Domain.Types.Person
 import Environment
-import EulerHS.Prelude hiding (all, concatMap, elem, find, forM_, id, map, mapM_, sum, whenJust)
+import EulerHS.Prelude hiding (all, any, concatMap, elem, find, forM_, id, length, map, mapM_, null, sum, whenJust)
 import qualified ExternalBPP.CallAPI as CallExternalBPP
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.MultiModal.Interface.Types as MultiModalTypes
@@ -144,14 +144,14 @@ getMultimodalBookingInfo (mbPersonId, _merchantId) journeyId = do
   legs <- JM.getAllLegsInfo journeyId False
   when (journey.status == Domain.Types.Journey.INITIATED) $ JM.updateJourneyStatus journey Domain.Types.Journey.INPROGRESS -- move it to payment success
   allJourneyFrfsBookings <- QFRFSTicketBooking.findAllByJourneyId (Just journeyId)
-  let allMarked = all ((== DFRFSB.REFUND_INITIATED) . (.status)) allJourneyFrfsBookings
-  unless allMarked $
-    case find ((== DFRFSB.FAILED) . (.status)) allJourneyFrfsBookings of
-      Just frfsBooking -> do
-        personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
-        riderConfig <- QRC.findByMerchantOperatingCityId frfsBooking.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist frfsBooking.merchantOperatingCityId.getId)
-        when riderConfig.enableAutoJourneyRefund $ FRFSTicketService.markAllRefundBookings allJourneyFrfsBookings personId (Just journeyId)
-      Nothing -> pure ()
+  let failedBookings = filter ((== DFRFSB.FAILED) . (.status)) allJourneyFrfsBookings
+      allFailed = not (null failedBookings) && length failedBookings == length allJourneyFrfsBookings
+  unless (any ((== DFRFSB.REFUND_INITIATED) . (.status)) allJourneyFrfsBookings) $
+    whenJust (listToMaybe failedBookings) $ \firstFailed -> do
+      personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
+      riderConfig <- QRC.findByMerchantOperatingCityId firstFailed.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist firstFailed.merchantOperatingCityId.getId)
+      when riderConfig.enableAutoJourneyRefund $
+        FRFSTicketService.markAllRefundBookings failedBookings personId (Just journeyId) allFailed
   generateJourneyInfoResponse journey legs
 
 getMultimodalBookingPaymentStatus ::

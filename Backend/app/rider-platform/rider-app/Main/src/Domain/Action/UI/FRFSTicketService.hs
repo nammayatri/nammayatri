@@ -750,7 +750,8 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req crisSdkResponse
         }
 
 postFrfsQuoteConfirm :: CallExternalBPP.FRFSConfirmFlow m r => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
-postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId = postFrfsQuoteV2Confirm (mbPersonId, merchantId_) quoteId (API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq {discounts = [], ticketQuantity = Nothing, childTicketQuantity = Nothing})
+postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId = do
+  postFrfsQuoteV2Confirm (mbPersonId, merchantId_) quoteId (API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq {discounts = [], ticketQuantity = Nothing, childTicketQuantity = Nothing})
 
 postFrfsQuotePaymentRetry :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 postFrfsQuotePaymentRetry = error "Logic yet to be decided"
@@ -1006,8 +1007,13 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking booking' = do
       allJourneyFrfsBookings <- case mbJourneyId of
         Just journeyId -> QFRFSTicketBooking.findAllByJourneyId (Just journeyId)
         Nothing -> return [booking]
-      let allMarked = all ((== DFRFSTicketBooking.REFUND_INITIATED) . (.status)) allJourneyFrfsBookings
-      unless allMarked $ markAllRefundBookings allJourneyFrfsBookings person.id mbJourneyId
+      let failedBookings = filter ((== DFRFSTicketBooking.FAILED) . (.status)) allJourneyFrfsBookings
+          allFailed = not (null failedBookings) && length failedBookings == length allJourneyFrfsBookings
+      unless (any ((== DFRFSTicketBooking.REFUND_INITIATED) . (.status)) allJourneyFrfsBookings) $
+        whenJust (listToMaybe failedBookings) $ \firstFailed -> do
+          riderConfig <- QRC.findByMerchantOperatingCityId firstFailed.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist firstFailed.merchantOperatingCityId.getId)
+          when riderConfig.enableAutoJourneyRefund $
+            markAllRefundBookings failedBookings person.id mbJourneyId allFailed
 
 updateTotalOrderValueAndSettlementAmount :: DFRFSTicketBooking.FRFSTicketBooking -> BecknConfig -> Environment.Flow ()
 updateTotalOrderValueAndSettlementAmount booking bapConfig = do
@@ -1358,11 +1364,13 @@ markAllRefundBookings ::
   [DFRFSTicketBooking.FRFSTicketBooking] ->
   Id DP.Person ->
   Maybe (Id DJourney.Journey) ->
+  Bool ->
   m ()
-markAllRefundBookings allJourneyFrfsBookings personId mbJourneyId = do
-  logInfo $ "payment status api markAllRefundBookings: " <> show allJourneyFrfsBookings
+markAllRefundBookings failedBookings personId mbJourneyId allFailed = do
+  logInfo $ "payment status api markAllRefundBookings: " <> show failedBookings
+  logInfo $ "allFailed flag in markAllRefundBookings: " <> show allFailed
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  payments <- concat <$> mapM (QFRFSTicketBookingPayment.findAllTicketBookingId . (.id)) allJourneyFrfsBookings
+  payments <- concat <$> mapM (QFRFSTicketBookingPayment.findAllTicketBookingId . (.id)) failedBookings
   orderShortId <- case listToMaybe payments of
     Just payment -> do
       order <- QPaymentOrder.findById payment.paymentOrderId >>= fromMaybeM (PaymentOrderNotFound payment.paymentOrderId.getId)
@@ -1371,19 +1379,19 @@ markAllRefundBookings allJourneyFrfsBookings personId mbJourneyId = do
   frfsConfig <-
     CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow person.merchantOperatingCityId []
       >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> show person.merchantOperatingCityId)
-  (vendorSplitDetails, amountUpdated) <- SMMFRFS.createVendorSplitFromBookings allJourneyFrfsBookings person.merchantId person.merchantOperatingCityId Payment.FRFSMultiModalBooking frfsConfig.isFRFSTestingEnabled
+  (vendorSplitDetails, amountUpdated) <- SMMFRFS.createVendorSplitFromBookings failedBookings person.merchantId person.merchantOperatingCityId Payment.FRFSMultiModalBooking frfsConfig.isFRFSTestingEnabled
   getIsRefundSplitEnabled <- Payment.getIsRefundSplitEnabled person.merchantId person.merchantOperatingCityId Nothing Payment.FRFSMultiModalBooking
   let splitDetails = Payment.mkUnaggregatedSplitSettlementDetails getIsRefundSplitEnabled amountUpdated vendorSplitDetails
   reqId <- case mbJourneyId of
     Just journeyId -> return journeyId.getId
-    Nothing -> fromMaybeM (InvalidRequest "booking not found in markAllRefundBookings") $ listToMaybe allJourneyFrfsBookings <&> (.id.getId)
+    Nothing -> fromMaybeM (InvalidRequest "booking not found in markAllRefundBookings") $ listToMaybe failedBookings <&> (.id.getId)
   let lockKey = "markAllRefundBookings:" <> reqId
   Redis.withLockRedis lockKey 5 $ do
-    forM_ allJourneyFrfsBookings $ \frfsBooking -> do
+    forM_ failedBookings $ \frfsBooking -> do
       void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.REFUND_INITIATED frfsBooking.id
       QFRFSTicket.updateAllStatusByBookingId DFRFSTicket.REFUND_INITIATED frfsBooking.id
       void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.REFUND_PENDING frfsBooking.id
-    whenJust mbJourneyId $ \journeyId -> QJourney.updateStatus DJourney.FAILED journeyId
+    when allFailed $ whenJust mbJourneyId $ \journeyId -> QJourney.updateStatus DJourney.FAILED journeyId
     let refundReq =
           Payment.AutoRefundReq
             { orderId = orderShortId,
