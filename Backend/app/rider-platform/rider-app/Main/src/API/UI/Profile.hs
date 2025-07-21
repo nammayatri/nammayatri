@@ -77,6 +77,11 @@ type API =
                       :<|> TokenAuth
                     :> Get '[JSON] DProfile.GetProfileDefaultEmergencyNumbersResp
                 )
+           :<|> "marketing"
+             :> ( "events"
+                    :> ReqBody '[JSON] DProfile.MarketEventReq
+                    :> Post '[JSON] APISuccess.APISuccess
+                )
        )
 
 handler :: FlowServer API
@@ -85,8 +90,8 @@ handler =
     :<|> updatePerson
     :<|> updateEmergencySettings
     :<|> getEmergencySettings
-    :<|> updateDefaultEmergencyNumbers
-    :<|> getDefaultEmergencyNumbers
+    :<|> (updateDefaultEmergencyNumbers :<|> getDefaultEmergencyNumbers)
+    :<|> marketingEvents
 
 getPersonDetails :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe Version -> Maybe Text -> Maybe Version -> Maybe Version -> Maybe Text -> FlowHandler DProfile.ProfileRes
 getPersonDetails (personId, merchantId) toss tenant context mbBundleVersion mbRnVersion mbClientVersion mbClientConfigVersion = withFlowHandlerAPI . getPersonDetails' (personId, merchantId) toss tenant context mbBundleVersion mbRnVersion mbClientVersion mbClientConfigVersion
@@ -111,3 +116,9 @@ updateEmergencySettings (personId, _) = withFlowHandlerAPI . withPersonIdLogTag 
 
 getEmergencySettings :: (Id Person.Person, Id Merchant.Merchant) -> FlowHandler DProfile.EmergencySettingsRes
 getEmergencySettings (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId $ DProfile.getEmergencySettings personId
+
+marketingEvents' :: DProfile.MarketEventReq -> Flow APISuccess.APISuccess
+marketingEvents' req = DProfile.marketingEvents req
+
+marketingEvents :: DProfile.MarketEventReq -> FlowHandler APISuccess.APISuccess
+marketingEvents req = withFlowHandlerAPI $ marketingEvents' req

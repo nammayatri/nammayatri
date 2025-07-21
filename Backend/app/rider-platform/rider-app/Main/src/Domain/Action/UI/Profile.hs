@@ -21,6 +21,7 @@ module Domain.Action.UI.Profile
     UpdateProfileDefaultEmergencyNumbersResp,
     GetProfileDefaultEmergencyNumbersResp (..),
     UpdateEmergencySettingsReq (..),
+    MarketEventReq (..),
     UpdateEmergencySettingsResp,
     EmergencySettingsRes,
     getPersonDetails,
@@ -29,6 +30,7 @@ module Domain.Action.UI.Profile
     getDefaultEmergencyNumbers,
     updateEmergencySettings,
     getEmergencySettings,
+    marketingEvents,
   )
 where
 
@@ -173,6 +175,12 @@ data UpdateProfileReq = UpdateProfileReq
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
+data MarketEventReq = MarketEventReq
+  { marketingParams :: MarketingParams,
+    merchantName :: Text
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
 data MarketingParams = MarketingParams
   { gclId :: Maybe Text,
     utmCampaign :: Maybe Text,
@@ -180,7 +188,8 @@ data MarketingParams = MarketingParams
     utmCreativeFormat :: Maybe Text,
     utmMedium :: Maybe Text,
     utmSource :: Maybe Text,
-    utmTerm :: Maybe Text
+    utmTerm :: Maybe Text,
+    userType :: Maybe UserType
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -341,6 +350,14 @@ validRideCount hasTakenValidRide vehicleCategory =
     Just info -> info.rideCount == 1
     Nothing -> False
 
+marketingEvents :: (HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "version" ::: DeploymentVersion], CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], EventStreamFlow m r) => MarketEventReq -> m APISuccess.APISuccess
+marketingEvents req = do
+  let params = req.marketingParams
+  now <- getCurrentTime
+  let marketingParams = MarketingParamsEventPreLoginData params.gclId params.utmCampaign params.utmContent params.utmCreativeFormat params.utmMedium params.utmSource params.utmTerm req.merchantName params.userType now now
+  triggerMarketingParamEventPreLogin marketingParams
+  pure APISuccess.Success
+
 updatePerson :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, EventStreamFlow m r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "version" ::: DeploymentVersion], HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]) => Id Person.Person -> Id Merchant.Merchant -> UpdateProfileReq -> Maybe Text -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> m APISuccess.APISuccess
 updatePerson personId merchantId req mbRnVersion mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice = do
   mPerson <- join <$> QPerson.findByEmailAndMerchantId merchantId `mapM` req.email
@@ -349,13 +366,12 @@ updatePerson personId merchantId req mbRnVersion mbBundleVersion mbClientVersion
   deploymentVersion <- asks (.version)
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   fork "Triggering kafka marketing params event for person" $
-    when (isNothing person.firstName) $ do
-      case req.marketingParams of
-        Just params -> do
-          now <- getCurrentTime
-          let marketingParams = MarketingParamsEventData person.id params.gclId params.utmCampaign params.utmContent params.utmCreativeFormat params.utmMedium params.utmSource params.utmTerm merchantId person.merchantOperatingCityId now now
-          triggerMarketingParamEvent marketingParams
-        Nothing -> pure ()
+    case req.marketingParams of
+      Just params -> do
+        now <- getCurrentTime
+        let marketingParams = MarketingParamsEventData person.id params.gclId params.utmCampaign params.utmContent params.utmCreativeFormat params.utmMedium params.utmSource params.utmTerm merchantId person.merchantOperatingCityId params.userType now now
+        triggerMarketingParamEvent marketingParams
+      Nothing -> pure ()
   -- TODO: Remove this part from here once UI stops using updatePerson api to apply referral code
   void $ mapM (\refCode -> Referral.applyReferralCode person False refCode Nothing) req.referralCode
   void $

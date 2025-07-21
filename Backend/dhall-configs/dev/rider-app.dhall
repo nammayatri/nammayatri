@@ -99,6 +99,12 @@ let marketingParamsKafkaConfig
       , kafkaKey = "rider-app-marketing-events"
       }
 
+let marketingParamsPreLoginKafkaConfig
+    : globalCommon.kafkaConfig
+    = { topicName = "MarketingParamsPreLoginData"
+      , kafkaKey = "rider-app-marketing-events"
+      }
+
 let routeDataKafkaConfig
     : globalCommon.kafkaConfig
     = { topicName = "RouteCollection"
@@ -167,6 +173,12 @@ let eventStreamMappings =
         , streamConfig =
             globalCommon.streamConfig.KafkaStream marketingParamsKafkaConfig
         , eventTypes = [ globalCommon.eventType.MarketingParamsData ]
+        }
+      , { streamName = globalCommon.eventStreamNameType.KAFKA_STREAM
+        , streamConfig =
+            globalCommon.streamConfig.KafkaStream
+              marketingParamsPreLoginKafkaConfig
+        , eventTypes = [ globalCommon.eventType.MarketingParamsPreLoginData ]
         }
       ]
 
