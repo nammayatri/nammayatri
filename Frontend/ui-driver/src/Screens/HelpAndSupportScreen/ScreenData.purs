@@ -34,13 +34,15 @@ initData = {
           issueListType : ST.HELP_AND_SUPPORT_SCREEN_MODAL,
           timerId : "",
           goBackTo : Screen.DRIVER_PROFILE_SCREEN,
-          cityConfig : defaultCityConfig
+          cityConfig : defaultCityConfig,
+          operationHubs : []
           },
   props: {
           isNoRides : false,
           enableDummyPopup : false,
           startTimerforDummyRides : false,
-          popupType : ST.TEST_RIDE_RECIEVED
+          popupType : ST.TEST_RIDE_RECIEVED,
+          showOperationsHub : false
          }
 }
 

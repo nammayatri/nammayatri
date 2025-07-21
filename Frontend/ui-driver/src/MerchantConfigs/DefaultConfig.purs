@@ -137,10 +137,14 @@ config =
           showNew : false
         },
       referral : 
-        { isVisible : true,
-          showNew : true
+        { isVisible : false,
+          showNew : false
         },
       notifications :
+        { isVisible : true,
+          showNew : false
+        },
+      trips : 
         { isVisible : true,
           showNew : false
         }
@@ -1069,7 +1073,6 @@ config =
     primaryStrokeColor : "#E5E7EB",
     openMapsStrokeColor : "#00FFFFFF",
     secondaryStrokeColor : "#B9BABE",
-    openMapsTextColor : "#FFFFFF",
     onlineStatusColor : "#53BB6F",
     onboardingHeaderTextColor : "#FFFFFF",
     onboardingHeaderStroke : "#FFFFFF",
@@ -1114,6 +1117,7 @@ config =
   , showFaqsWhileOnboarding : false
   , enableV2Registration : false
   , enableV2Earnings : false
+  , enableV2HelpAndSupport : false
   , enableDriverProfile : true
   }
   , showCorporateAddress : false

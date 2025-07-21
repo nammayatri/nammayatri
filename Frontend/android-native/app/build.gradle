@@ -78,7 +78,7 @@ android {
         debug {
             resValue "string", "local_ip", host
             resValue "bool", "debuggable", "true"
-            applicationIdSuffix '.debug'
+            // applicationIdSuffix '.debug'
             minifyEnabled false
 //            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
             signingConfig signingConfigs.debug
@@ -405,7 +405,7 @@ dependencies {
 
     implementation 'com.google.android.play:feature-delivery:2.1.0'
     implementation 'com.google.code.gson:gson:2.8.8'
-    implementation 'com.github.freshworks:freshchat-android:6.0.0'
+    implementation 'com.github.freshworks:freshchat-android:6.1.0'
     api(platform("com.squareup.okhttp3:okhttp-bom:4.12.0"))
     api("com.squareup.okhttp3:okhttp")
     compileOnly 'com.facebook.react:react-android:0.72.3'

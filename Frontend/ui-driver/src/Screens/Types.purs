@@ -1626,14 +1626,16 @@ type HelpAndSupportScreenData = {
   issueListType :: IssueModalType,
   timerId :: String,
   goBackTo :: ScreenName,
-  cityConfig :: CityConfig
+  cityConfig :: CityConfig,
+  operationHubs :: Array API.OperationHub
 }
 
 type HelpAndSupportScreenProps = {
   isNoRides :: Boolean,
   enableDummyPopup :: Boolean,
   startTimerforDummyRides :: Boolean,
-  popupType :: UpdateDummyTestPopUpType
+  popupType :: UpdateDummyTestPopUpType,
+  showOperationsHub :: Boolean
 }
 
 type ReportIssueChatScreenState = {

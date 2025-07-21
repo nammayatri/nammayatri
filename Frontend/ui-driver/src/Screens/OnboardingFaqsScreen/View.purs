@@ -57,6 +57,7 @@ screen initialState =
 
 view :: forall w. (Action -> Effect Unit) -> ST.OnboardingFaqsScreenState -> PrestoDOM (Effect Unit) w
 view push state = 
+    Anim.screenAnimation $
     linearLayout
     [ width MATCH_PARENT
     , height MATCH_PARENT
