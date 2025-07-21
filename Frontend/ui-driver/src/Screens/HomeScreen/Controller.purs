@@ -299,6 +299,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | OpenPaymentPage ST.HomeScreenState
                     | AadhaarVerificationFlow ST.HomeScreenState
                     | SubscriptionScreen ST.HomeScreenState
+                    | GoToRideRequestScreen ST.HomeScreenState
                     | GoToVehicleDetailScreen ST.HomeScreenState
                     | GoToRideDetailsScreen ST.HomeScreenState
                     | PostRideFeedback ST.HomeScreenState
@@ -870,6 +871,7 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
       _ <- pure $ metaLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
       let _ = unsafePerformEffect $ firebaseLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
       exit $ SubscriptionScreen state
+    "Trips" -> exit $ GoToRideRequestScreen state
     _ -> continue state
 
 eval (OfferPopupAC PopUpModal.OnButton1Click) state = do
@@ -1513,17 +1515,15 @@ eval (SafetyPillBottomSheetAC PopUpModal.OnImageClick) state = continue state { 
 eval (SafetyPillBottomSheetAC PopUpModal.DismissPopup) state = continue state { props { showSafetyPillBottomSheet = false } }
 
 eval (SafetyPillBottomSheetAC (PopUpModal.ListViewItemAction index )) state = do
-  case index of
-    0 -> do
-      void $ pure $ unsafePerformEffect $ contactSupportNumber ""
-      continue state { props { showSafetyPillBottomSheet = false } }
-    1 -> do
-      void $ pure $ unsafePerformEffect $ contactSupportNumber ""
-      continue state { props { showSafetyPillBottomSheet = false } }
-    2 -> do
-      void $ pure $ unsafePerformEffect $ contactSupportNumber "" 
-      continue state { props { showSafetyPillBottomSheet = false } } 
-    _ -> continue state { props { showSafetyPillBottomSheet = false } }
+  let helpAndSupportConfig = RC.getHelpAndSupportConfig (getValueToLocalStore DRIVER_LOCATION)
+      numberToDial = 
+        case index of
+          0 -> helpAndSupportConfig.policeNumber
+          1 -> helpAndSupportConfig.ambulanceNumber
+          2 -> helpAndSupportConfig.supportNumber
+          _ -> ""
+  void $ pure $ showDialer numberToDial false
+  continue state { props { showSafetyPillBottomSheet = false } }
 
 eval (BannerCarousal (BannerCarousel.OnClick index)) state =
   continueWithCmd state [do
