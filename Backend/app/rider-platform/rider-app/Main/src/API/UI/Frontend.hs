@@ -39,6 +39,7 @@ type API =
            :> TokenAuth
            :> QueryParam "isPolling" Bool
            :> QueryParam "checkForActiveBooking" Bool
+           :> QueryParam "isPaymentSuccess" Bool
            :> Get '[JSON] DFrontend.GetPersonFlowStatusRes
            :<|> "notifyEvent"
              :> TokenAuth
@@ -51,8 +52,8 @@ handler =
   getPersonFlowStatus
     :<|> notifyEvent
 
-getPersonFlowStatus :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Bool -> Maybe Bool -> FlowHandler DFrontend.GetPersonFlowStatusRes
-getPersonFlowStatus (personId, merchantId) checkForActiveBooking = withFlowHandlerAPI . DFrontend.getPersonFlowStatus personId merchantId checkForActiveBooking
+getPersonFlowStatus :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Bool -> Maybe Bool -> Maybe Bool -> FlowHandler DFrontend.GetPersonFlowStatusRes
+getPersonFlowStatus (personId, merchantId) checkForActiveBooking mbIsPaymentSuccess = withFlowHandlerAPI . DFrontend.getPersonFlowStatus personId merchantId checkForActiveBooking mbIsPaymentSuccess
 
 notifyEvent :: (Id Person.Person, Id Merchant.Merchant) -> DFrontend.NotifyEventReq -> FlowHandler DFrontend.NotifyEventResp
 notifyEvent (personId, merchantId) = withFlowHandlerAPI . DFrontend.notifyEvent personId merchantId

@@ -23,10 +23,11 @@ getFrontendFlowStatus ::
   Kernel.Types.Id.Id Domain.Types.Person.Person ->
   Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
   Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
   Environment.Flow Domain.Action.UI.Frontend.GetPersonFlowStatusRes
-getFrontendFlowStatus _merchantShortId _opCity personId isPolling checkForActiveBooking = do
+getFrontendFlowStatus _merchantShortId _opCity personId isPolling checkForActiveBooking mbIsPaymentSuccess = do
   person <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  Domain.Action.UI.Frontend.getPersonFlowStatus personId person.merchantId isPolling checkForActiveBooking
+  Domain.Action.UI.Frontend.getPersonFlowStatus personId person.merchantId isPolling checkForActiveBooking mbIsPaymentSuccess
 
 postFrontendNotifyEvent ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->

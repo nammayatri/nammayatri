@@ -384,9 +384,10 @@ getActiveJourneyIds ::
     Monad m
   ) =>
   Kernel.Types.Id.Id Domain.Types.Person.Person ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
   m [Domain.Types.Journey.Journey]
-getActiveJourneyIds riderId = do
-  activeJourneys <- QJourney.findAllActiveByRiderId riderId
+getActiveJourneyIds riderId mbIsPaymentSuccess = do
+  activeJourneys <- QJourney.findAllActiveByRiderId riderId mbIsPaymentSuccess
   return activeJourneys
 
 postMultimodalSwitch ::
