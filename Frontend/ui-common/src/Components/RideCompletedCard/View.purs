@@ -171,7 +171,7 @@ topPillAndSupportView config push =
               , accessibility config.accessibility
               , visibility $ boolToVisibility config.enableContactSupport
               , accessibilityHint "Contact Support : Button"
-              , imageWithFallback $ fetchImage FF_COMMON_ASSET $ if config.theme == LIGHT then "ny_ic_black_headphone" else "ny_ic_headphone"
+              , imageWithFallback $ fetchImage FF_COMMON_ASSET $ if config.theme == LIGHT then "ny_ic_headphone_blue" else "ny_ic_headphone"
               , onClick push $ const Support
               , rippleColor Color.rippleShade
               ]
@@ -256,6 +256,9 @@ priceAndDistanceUpdateView config push =
               , color Color.black800
               , visibility $ boolToVisibility (fromMaybe true invoiceConfig.isEnabled && config.isDriver)
               , margin $ MarginBottom 10
+              , cornerRadius 8.0
+              , padding $ Padding 12 8 12 8
+              , background config.driverInvoiceTextBgColor
             ] <> FontStyle.body1 TypoGraphy
         , linearLayout [
             height WRAP_CONTENT
@@ -886,61 +889,61 @@ driverFareBreakUpView config push =
   linearLayout[
     width MATCH_PARENT
   , height WRAP_CONTENT
-  , background Color.linen
+  , background Color.white900
   , stroke ("1," <> Color.grey900)
-  , orientation HORIZONTAL
   , cornerRadius 8.0
   , margin $ MarginBottom 24
   , padding $ Padding 12 12 12 12
   , gravity CENTER
-  ][
-    linearLayout[
-      width WRAP_CONTENT
+  , orientation VERTICAL
+  ][ textView $ [
+      height WRAP_CONTENT
+    , width MATCH_PARENT
+    , text $ "Fare Break-up"
+    , color Color.black800
+    , gravity LEFT
+    , padding $ PaddingHorizontal 8 8
+    , margin $ MarginBottom 4
+    ] <> FontStyle.paragraphText TypoGraphy
+    , linearLayout[
+      width MATCH_PARENT
     , height MATCH_PARENT
     , orientation VERTICAL
     , gravity CENTER
     ][linearLayout[
-          width WRAP_CONTENT
+          width MATCH_PARENT
         , height WRAP_CONTENT
         , orientation VERTICAL
         ](mapWithIndex (\ index item -> 
             linearLayout[
               height WRAP_CONTENT
-            , width WRAP_CONTENT
+            , width MATCH_PARENT
             , orientation VERTICAL
+            , margin $ MarginVertical 4 4
             ][
               linearLayout[
-                width WRAP_CONTENT
+                width MATCH_PARENT
               , height WRAP_CONTENT
               , orientation HORIZONTAL
               , gravity CENTER
               , padding $ PaddingHorizontal 8 8
               ][
                 textView $ [
-                  text $ currency <> (show item.amount)
-                , color Color.pigmentGreen
-                , margin $ MarginRight 8
-                ] <> FontStyle.h0 LanguageStyle
-              , textView $ [
                   text item.reason
+                , color Color.grey600
+                ] <> FontStyle.paragraphText LanguageStyle
+              , textView $ [
+                  text $ currency <> (show item.amount)
                 , color Color.black800
                 , singleLine false
                 , lineHeight "20"
-                ]<> FontStyle.body6 LanguageStyle
+                , margin $ MarginRight 8
+                , weight 1.0
+                , gravity RIGHT
+                ]<> FontStyle.body1 LanguageStyle
               ]
-              , if index /= ((length config.driverBottomCard.savedMoney)-1) then horizontalLine (Margin 12 8 12 8) Color.almond else dummyTextView
             ]
           ) config.driverBottomCard.savedMoney)
-      ]
-    , linearLayout[
-      height MATCH_PARENT,
-      weight 1.0
-      ][]
-    , imageView[
-        height $ V 100
-      , width $ V 100
-      , gravity CENTER
-      , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_wallet_with_coin"
       ]
   ]
 

@@ -67,6 +67,7 @@ import Data.Maybe
 import Data.Int
 import Services.API as SA
 import Components.RateCard.Controller 
+import Engineering.Helpers.Utils as EHU
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config = do
@@ -88,7 +89,7 @@ view push config = do
               , orientation HORIZONTAL
               , gravity CENTER
               ][ 
-                  messageButton push config,
+                  messageButton push config, -- // TODO: Shikhar -> handle chat flow
                   callButton push config,
                   openGoogleMap push config
               ]
@@ -375,7 +376,7 @@ openGoogleMap push config =
           , margin (MarginLeft 8)
           , text (getString MAPS)
           , gravity CENTER
-          , color appConfig'.themeColors.openMapsTextColor
+          , color Color.white900
           ] <> FontStyle.body1 TypoGraphy
           )
       ]
@@ -862,9 +863,10 @@ rideInfoView push config =
   linearLayout
     [ height WRAP_CONTENT
     , width MATCH_PARENT
-    , stroke $ "1," <> Color.grey900
+    , stroke $ "1," <> Color.blue600
     , cornerRadius 8.0
     , padding $ Padding 14 14 5 14
+    , background Color.blue600
     , afterRender push $ const NoAction
     ] [  horizontalScrollView
           [ width MATCH_PARENT
@@ -913,7 +915,7 @@ rideTierAndCapacity push config =
   linearLayout
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
-  , background Color.blue600 
+  , background $ EHU.getColorWithOpacity 8 Color.blue900
   , gravity CENTER
   , padding $ Padding paddingLeft 4 4 4
   , margin $ MarginBottom 12

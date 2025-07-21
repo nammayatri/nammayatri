@@ -571,7 +571,8 @@ completedProfile state push =
       width MATCH_PARENT,
       margin $ if ((state.data.profileCompletedModules*100)/4) /= 100 then Margin 0 7 0 12 else Margin 0 20 0 12,
       onClick push $ const CompleteProfile,
-      gravity CENTER
+      gravity CENTER,
+      visibility $ boolToVisibility $ state.data.config.feature.enableDriverProfile
     ][
       imageView
         [ width $ V 11
@@ -589,7 +590,6 @@ completedProfile state push =
             , textSize FontSize.a_14
             , fontStyle $ semiBold LanguageStyle
             , fontWeight $ FontWeight 600
-            , visibility $ boolToVisibility $ state.data.config.feature.enableDriverProfile
             ]
     ]
   ]
@@ -793,7 +793,7 @@ tabImageView state push =
       [ height WRAP_CONTENT
       , width MATCH_PARENT
       , gravity CENTER_HORIZONTAL
-      , padding $ PaddingVertical 32 $ if state.props.screenType == ST.DRIVER_DETAILS then 12 else 32
+      , padding $ PaddingVertical 32 $ if state.props.screenType == ST.DRIVER_DETAILS then 32 else 12
       , orientation HORIZONTAL
       ]
       [ PrestoAnim.animationSet

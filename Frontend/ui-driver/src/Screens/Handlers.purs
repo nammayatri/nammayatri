@@ -29,6 +29,7 @@ import Screens.EditBankDetailsScreen.Handler (editBankDetailsScreen) as UI
 import Screens.EnterMobileNumberScreen.Handler (enterMobileNumber) as UI
 import Screens.EnterOTPScreen.Handler (enterOTP) as UI
 import Screens.HelpAndSupportScreen.Handler (helpAndSupportScreen) as UI
+import Screens.HelpAndSupportScreenV2.Handler (helpAndSupportScreenV2) as UI
 import Screens.HomeScreen.Handler (homeScreen) as UI
 import Screens.NoInternetScreen.Handler (noInternetScreen) as UI
 import Screens.PermissionsScreen.Handler (permissions) as UI

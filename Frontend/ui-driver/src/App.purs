@@ -397,6 +397,13 @@ data HELP_AND_SUPPORT_SCREEN_OUTPUT = WRITE_TO_US_SCREEN
                                     | GO_BACK_TO_HOME_SCREEN_FROM_HELP HelpAndSupportScreenState
                                     | GO_BACK_TO_TRIP_DETAILS HelpAndSupportScreenState
 
+data HELP_AND_SUPPORT_SCREEN_V2_OUTPUT = DUMMY_RIDE_REQUEST_V2 HelpAndSupportScreenState
+                                    | GO_BACK_TO_PROFILE_SCREEN_V2 HelpAndSupportScreenState
+                                    | GO_BACK_TO_HELP_AND_SUPPORT_V2 HelpAndSupportScreenState
+                                    | GO_BACK_TO_HOME_SCREEN_FROM_HELP_V2 HelpAndSupportScreenState
+                                    | GO_BACK_TO_TRIP_DETAILS_V2 HelpAndSupportScreenState
+                                    | SHOW_OPERATION_HUBS HelpAndSupportScreenState
+                                    | GO_TO_ONBOARDING_FAQ_SCREEN HelpAndSupportScreenState
 
 data WRITE_TO_US_SCREEN_OUTPUT = GO_TO_HOME_SCREEN_FLOW
 data REGISTRATION_SCREEN_OUTPUT = UPLOAD_DRIVER_LICENSE RegistrationScreenState
@@ -607,6 +614,7 @@ data NAVIGATION_ACTIONS = HomeScreenNav
                           | GoToContest
                           | GoToAlerts
                           | GoToEarningsScreen Boolean
+                          | GoToRideRequest
 
 data PAYMENT_HISTORY_SCREEN_OUTPUT = GoToSetupAutoPay PaymentHistoryScreenState
                                     | EntityDetailsAPI PaymentHistoryScreenState String
