@@ -198,8 +198,6 @@ types:
     ln: Double
     vt: Text
     ad: Maybe Text
-    rgn: Maybe Text
-    hin: Maybe Text
     sgstdDest: Maybe [SuggestedStations]
     gj: Maybe Value
     gi: Maybe [Gate]

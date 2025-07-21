@@ -226,12 +226,10 @@ data TransportStation = TransportStation
     cd :: Kernel.Prelude.Text,
     gi :: Kernel.Prelude.Maybe [Domain.Types.Station.Gate],
     gj :: Kernel.Prelude.Maybe Data.Aeson.Value,
-    hin :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     ibc :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
     ln :: Kernel.Prelude.Double,
     lt :: Kernel.Prelude.Double,
     nm :: Kernel.Prelude.Text,
-    rgn :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     sgstdDest :: Kernel.Prelude.Maybe [Domain.Types.StationType.SuggestedStations],
     vt :: Kernel.Prelude.Text
   }
