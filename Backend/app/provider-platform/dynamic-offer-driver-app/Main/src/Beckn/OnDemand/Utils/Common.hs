@@ -1091,8 +1091,8 @@ buildAddressFromText fullAddress = do
   logDebug $ "Search Address:-" <> fullAddress
   if totalAddressComponents == 1
     then do
-      let addr = OS.Address Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing (Just fullAddress)
-      logDebug $ "Parsed Address Entity: " <> show addr
+      let addr = OS.Address {area_code = Nothing, building = Nothing, city = Nothing, country = Nothing, door = Nothing, locality = Nothing, state = Nothing, street = Nothing, ward = (Just fullAddress)}
+      logDebug $ "Parsed Single-Component Address Entity : " <> show addr
       pure addr
     else do
       let area_code_ = Nothing
