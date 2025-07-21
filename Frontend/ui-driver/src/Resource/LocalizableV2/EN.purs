@@ -493,6 +493,11 @@ getEn =
     , done: "Done"
     , record_voice_note: "Record Voice Note"
     , help_and_support: "Help & Support"
+    , faqs: "FAQs"
+    , whatsapp_chat: "WhatsApp Chat"
+    , mail_us: "Mail Us"
+    , call_us: "Call Us"
+    , operations_hub: "Operations Hub"
     , more_options: "More Options"
     , ongoing_issues: "Ongoing issues"
     , resolved_issues: "Resolved Issues"
@@ -1644,7 +1649,7 @@ getEn =
     , remove_eyewere: "Please remove eyewear or sunglasses if any"
     , image_validation_exceed_limit: "Image validation limit exceeded."
     , parking_charges_included: (\amount -> amount <> " Parking Charges included")
-    , invoice_generated_from_driver_to_rider: "Invoice generated from driver to rider"
+    , collect_from_the_customer_via_upi_qr_or_cash: "Collect from the customer via UPI QR or cash"
     , included: "included"
     , complete_your_profile: "Complete Your Profile"
     , add_photos: "Add your Photos"
@@ -1922,4 +1927,5 @@ getEn =
     , onboarding_faq_edit_vehicle_a : "To edit any vehicle details: <br>1. Click the 3 dots next to the vehicle on your dashboard <br>2. Choose \"Edit\" from the pop-up menu <br>3. You can then update vehicle information as needed. <br><br>Driver assigned to the vehicle can also edit the details throught the MSIL Fleetx app."
     , onboarding_faq_update_driver_status_q : "How to update the status of a certain driver as active/inactive?"
     , onboarding_faq_update_driver_status_a : "To update the status of driver: <br>1.Go to the Driver Dashboard <br>2. Click on the 3 dots next to the driver status to be changed and select \"Edit\" <br>3. Update the status and vehicle assignment to driver via the dropdown."
+    , contact_hub : "Contact Hub"
     }

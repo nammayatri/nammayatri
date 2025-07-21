@@ -36,6 +36,8 @@ import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.Types (BottomNavBarState)
 import Storage (getValueToLocalNativeStore, KeyStore(..))
 import Styles.Colors as Color
+import Resource.Localizable.StringsV2 (getStringV2)
+import Resource.Localizable.TypesV2 as LT2
 
 view :: forall w . (Action -> Effect Unit) -> BottomNavBarState -> PrestoDOM (Effect Unit) w
 view push state = 
@@ -100,6 +102,7 @@ view push state =
                               "Profile"       -> getString PROFILE
                               "Alert"         -> getString MESSAGES
                               "Join"          -> getString if getValueToLocalNativeStore DRIVER_SUBSCRIBED == "true" then MY_PLAN else PLANS
+                              "Trips"         -> getStringV2 LT2.trips
                               _               -> ""
                     ] <> FontStyle.tags TypoGraphy)
                 ]

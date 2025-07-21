@@ -53,4 +53,7 @@ driverEarningsScreenV2 = do
     RefreshScreen updatedState -> do
       modifyScreenState $ DriverEarningsScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ REFRESH_EARNINGS_SCREEN_V2 updatedState)
+    RideRequestScreen updatedState -> do
+      modifyScreenState $ DriverEarningsScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ EARNINGS_NAV_V2 GoToRideRequest updatedState)
 

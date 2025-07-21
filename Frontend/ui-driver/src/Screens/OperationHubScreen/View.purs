@@ -290,7 +290,7 @@ selectedHubItemView push state =
           , onClick push $ const $ OpenMaps
           ]
           [ imageView
-              [ imageWithFallback $ fetchImage FF_ASSET "ny_ic_locate_on_map_purple"
+              [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_locate_on_map_purple"
               , height $ V 20
               , width $ V 20
               , margin $ Margin 0 0 8 0

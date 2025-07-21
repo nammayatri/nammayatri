@@ -93,6 +93,11 @@ getKn =
     , terms_and_conditions: "ನಿಯಮ ಮತ್ತು ಶರತ್ತುಗಳು"
     , update_vehicle_details: "ವಾಹನದ ವಿವರಗಳನ್ನು ನವೀಕರಿಸಿ"
     , help_and_support: "ಸಹಾಯ ಮತ್ತು ಬೆಂಬಲ"
+    , faqs: "ಸಾಮಾನ್ಯ ಪ್ರಶ್ನೆಗಳು"
+    , whatsapp_chat: "ವಾಟ್ಸಾಪ್ ಚಾಟ್"
+    , mail_us: "ನಮಗೆ ಮೇಲ್ ಮಾಡಿ"
+    , call_us: "ನಮಗೆ ಕರೆ ಮಾಡಿ"
+    , operations_hub: "ಕಾರ್ಯಾಚರಣೆ ಕೇಂದ್ರ"
     , note: "ಗಮನಿಸಿ:"
     , visit_my_rides_screen_for_specific_complaints: "ನಿರ್ದಿಷ್ಟ ದೂರುಗಳಿಗಾಗಿ ನನ್ನ ರೈಡ್ಸ್ ವಿಭಾಗಕ್ಕೆ ಭೇಟಿ ನೀಡಿ"
     , thank_you_for_wrtitting_us: "ನಮಗೆ ಬರೆದಿದ್ದಕ್ಕಾಗಿ ಧನ್ಯವಾದಗಳು!"
@@ -1647,7 +1652,7 @@ getKn =
     , remove_eyewere: "ದಯವಿಟ್ಟು ಕನ್ನಡಕ ಅಥವಾ ಸನ್ಗ್ಲಾಸ್ ಯಾವುದಾದರೂ ಇದ್ದರೆ ತೆಗೆದುಹಾಕಿ"
     , image_validation_exceed_limit: "ಚಿತ್ರದ ಮೌಲ್ಯೀಕರಣವು ಮಿತಿಯನ್ನು ಮೀರಿದೆ"
     , parking_charges_included: (\amount -> amount <> " ಪಾರ್ಕಿಂಗ್ ಶುಲ್ಕಗಳು ಒಳಗೊಂಡಿವೆ")
-    , invoice_generated_from_driver_to_rider: "ಡ್ರೈವರ್‌ನಿಂದ ರೈಡರ್‌ಗೆ ಸರಕುಪಟ್ಟಿ ರಚಿಸಲಾಗಿದೆ"
+    , collect_from_the_customer_via_upi_qr_or_cash: "UPI QR ಅಥವಾ ಹಣದ ಮೂಲಕ ಗ್ರಾಹಕರಿಂದ ಸಂಗ್ರಹಿಸಿ"
     , included: "ಒಳಗೊಂಡಿದೆ"
     , db_check_and_name_match_failed: "ಪ್ಯಾನ್ ಪರಿಶೀಲನೆ ವಿಫಲವಾಗಿದೆ"
     , complete_your_profile: "ನಿಮ್ಮ ಪ್ರೊಫೈಲ್ ಪೂರ್ತಿಮಾಡಿ"
@@ -1921,4 +1926,5 @@ getKn =
     , onboarding_faq_edit_vehicle_a : "ವಿವರಗಳನ್ನು ಸಂಪಾದಿಸಲು: 3 ಚುಕ್ಕೆಗಳು, \"Edit\" ಆಯ್ಕೆಮಾಡಿ, ಅಗತ್ಯವಿದ್ದಂತೆ ಅಪ್‌ಡೇಟ್ ಮಾಡಿ. ಡ್ರೈವರ್ ಕೂಡ ಅಪ್ ಮೂಲಕ ಸಂಪಾದಿಸಬಹುದು."
     , onboarding_faq_update_driver_status_q : "ನಿರ್ದಿಷ್ಟ ಡ್ರೈವರ್ ಸ್ಥಿತಿಯನ್ನು ಸಕ್ರಿಯ/ನಿಷ್ಕ್ರಿಯವಾಗಿ ಹೇಗೆ ಅಪ್‌ಡೇಟ್ ಮಾಡುವುದು?"
     , onboarding_faq_update_driver_status_a : "Driver Dashboard, 3 ಚುಕ್ಕೆಗಳು, \"Edit\" ಆಯ್ಕೆಮಾಡಿ, ಸ್ಥಿತಿ ಮತ್ತು ವಾಹನ ನಿಯೋಜನೆ ಅಪ್‌ಡೇಟ್ ಮಾಡಿ."
+    , contact_hub : "ಹಬ್ ಸಂಪರ್ಕ ಮಾಡಿ"
     }
