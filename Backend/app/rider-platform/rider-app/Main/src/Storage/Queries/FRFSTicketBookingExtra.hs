@@ -62,12 +62,6 @@ updateIsCancelled (Id reqId) isDeleted = do
     [Se.Set Beam.isDeleted isDeleted]
     [Se.Is Beam.id (Se.Eq reqId)]
 
-updateIsSkipped :: (MonadFlow m, EsqDBFlow m r) => Id FRFSTicketBooking -> Maybe Bool -> m ()
-updateIsSkipped (Id reqId) isSkipped = do
-  updateOneWithKV
-    [Se.Set Beam.isSkipped isSkipped]
-    [Se.Is Beam.id (Se.Eq reqId)]
-
 findAllByJourneyIdAndRiderId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Text -> Int -> m [FRFSTicketBooking]
 findAllByJourneyIdAndRiderId riderId journeyId limit = do
   findAllWithOptionsKV

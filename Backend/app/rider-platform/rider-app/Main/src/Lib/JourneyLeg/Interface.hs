@@ -167,7 +167,7 @@ confirm forcedBooked ticketQuantity childTicketQuantity JL.LegInfo {..} crisSdkR
       return $
         TaxiLegRequestConfirm $
           TaxiLegRequestConfirmData
-            { skipBooking = skipBooking,
+            { skipBooking = False,
               forcedBooked,
               searchId,
               estimateId = Id <$> pricingId,
@@ -180,7 +180,7 @@ confirm forcedBooked ticketQuantity childTicketQuantity JL.LegInfo {..} crisSdkR
       return $
         MetroLegRequestConfirm $
           MetroLegRequestConfirmData
-            { skipBooking,
+            { skipBooking = False,
               bookingAllowed,
               searchId = Id searchId,
               quoteId = Id <$> pricingId,
@@ -195,7 +195,7 @@ confirm forcedBooked ticketQuantity childTicketQuantity JL.LegInfo {..} crisSdkR
       return $
         SubwayLegRequestConfirm $
           SubwayLegRequestConfirmData
-            { skipBooking,
+            { skipBooking = False,
               searchId = Id searchId,
               bookingAllowed,
               quoteId = Id <$> pricingId,
@@ -211,7 +211,7 @@ confirm forcedBooked ticketQuantity childTicketQuantity JL.LegInfo {..} crisSdkR
       return $
         BusLegRequestConfirm $
           BusLegRequestConfirmData
-            { skipBooking,
+            { skipBooking = False,
               bookingAllowed,
               searchId = Id searchId,
               quoteId = Id <$> pricingId,

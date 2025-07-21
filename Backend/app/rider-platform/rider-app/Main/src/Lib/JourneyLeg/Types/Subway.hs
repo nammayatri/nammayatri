@@ -15,6 +15,7 @@ import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.JourneyModule.Types as JL
 
 data SubwayLegRequestSearchData = SubwayLegRequestSearchData
   { quantity :: Int,
@@ -41,7 +42,7 @@ data SubwayLegRequestConfirmData = SubwayLegRequestConfirmData
   }
 
 data SubwayLegRequestCancelData = SubwayLegRequestCancelData
-  { searchId :: Id FRFSSearch.FRFSSearch,
+  { leg :: JL.LegInfo,
     cancellationType :: Spec.CancellationType,
     isSkipped :: Bool
   }

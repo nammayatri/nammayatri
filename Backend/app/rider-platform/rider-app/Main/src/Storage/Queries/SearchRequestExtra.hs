@@ -12,6 +12,7 @@ import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.JourneyLeg.Types as JL
 import qualified Lib.JourneyLeg.Types as JLT
 import qualified Sequelize as Se
 import qualified SharedLogic.LocationMapping as SLM
@@ -100,12 +101,6 @@ updatePricingId (Id searchRequestId) pricingId = do
     [Se.Set BeamSR.pricingId pricingId]
     [Se.Is BeamSR.id (Se.Eq searchRequestId)]
 
-updateSkipBooking :: (MonadFlow m, EsqDBFlow m r) => Id SearchRequest -> Maybe Bool -> m ()
-updateSkipBooking (Id searchRequestId) skipBooking = do
-  updateOneWithKV
-    [Se.Set BeamSR.skipBooking skipBooking]
-    [Se.Is BeamSR.id (Se.Eq searchRequestId)]
-
 updateDisability :: (MonadFlow m, EsqDBFlow m r) => Id SearchRequest -> Maybe Text -> m ()
 updateDisability (Id searchRequestId) disability = do
   updateOneWithKV
@@ -133,10 +128,19 @@ updateJourneyLegInfo (Id searchRequestId) journeyLegInfo = do
     [ Se.Set BeamSR.journeyId (journeyLegInfo <&> (.journeyId)),
       Se.Set BeamSR.journeyLegOrder (journeyLegInfo <&> (.journeyLegOrder)),
       Se.Set BeamSR.agency (journeyLegInfo >>= (.agency)),
-      Se.Set BeamSR.skipBooking (journeyLegInfo <&> (.skipBooking)),
       Se.Set BeamSR.convenienceCost (journeyLegInfo <&> (.convenienceCost)),
       Se.Set BeamSR.pricingId (journeyLegInfo >>= (.pricingId)),
       Se.Set BeamSR.onSearchFailed (journeyLegInfo >>= (.onSearchFailed)),
       Se.Set BeamSR.isDeleted (journeyLegInfo >>= (.isDeleted))
     ]
+    [Se.Is BeamSR.id (Se.Eq searchRequestId)]
+
+updateJourneyStatus :: (MonadFlow m, EsqDBFlow m r) => Maybe JL.JourneyLegStatus -> Id SearchRequest -> m ()
+updateJourneyStatus mbStatus (Id searchRequestId) = do
+  let isCancelled = case mbStatus of
+        Just JL.Cancelled -> Just True
+        Just JL.Skipped -> Just True
+        _ -> Just False
+  updateOneWithKV
+    [Se.Set BeamSR.isDeleted isCancelled]
     [Se.Is BeamSR.id (Se.Eq searchRequestId)]

@@ -35,7 +35,6 @@ data JourneySearchData = JourneySearchData
   { journeyId :: Text,
     journeyLegOrder :: Int,
     agency :: Maybe Text,
-    skipBooking :: Bool,
     convenienceCost :: Int,
     pricingId :: Maybe Text,
     onSearchFailed :: Maybe Bool,

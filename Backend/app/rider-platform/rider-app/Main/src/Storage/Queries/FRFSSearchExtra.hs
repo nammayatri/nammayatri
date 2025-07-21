@@ -59,12 +59,6 @@ updatePricingId (Id reqId) pricingId = do
     [Se.Set Beam.pricingId pricingId]
     [Se.Is Beam.id (Se.Eq reqId)]
 
-updateSkipBooking :: (MonadFlow m, EsqDBFlow m r) => Id FRFSSearch -> Maybe Bool -> m ()
-updateSkipBooking (Id reqId) skipBooking = do
-  updateOneWithKV
-    [Se.Set Beam.skipBooking skipBooking]
-    [Se.Is Beam.id (Se.Eq reqId)]
-
 updateIsCancelled :: (MonadFlow m, EsqDBFlow m r) => Id FRFSSearch -> Maybe Bool -> m ()
 updateIsCancelled (Id reqId) isDeleted = do
   updateOneWithKV

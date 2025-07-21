@@ -25,6 +25,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.JourneyLeg.Types
 import Lib.JourneyLeg.Types.Taxi
+import qualified Lib.JourneyLeg.Utils as JLU
 import qualified Lib.JourneyModule.Types as JT
 import qualified SharedLogic.CallBPP as CallBPP
 import SharedLogic.CallBPPInternal as CallBPPInternal (CalculateFareReq (..), FareData (..), GetFareResponse (..), getFare)
@@ -97,7 +98,6 @@ instance JT.JourneyLeg TaxiLegRequest m where
           { journeyId = journeyLegData.journeyId.getId,
             journeyLegOrder = journeyLegData.sequenceNumber,
             agency = journeyLegData.agency <&> (.name),
-            skipBooking = False,
             convenienceCost = 0,
             pricingId = Nothing,
             isDeleted = Just False,
@@ -158,7 +158,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
   --     QJourney.updateEstimatedFare (Just newEstimatedPrice) (Id journeyId)
 
   cancel (TaxiLegRequestCancel legData) = do
-    mbBooking <- QBooking.findByTransactionId legData.searchRequestId.getId
+    mbBooking <- QBooking.findByTransactionId legData.leg.searchId
     case mbBooking of
       Just booking -> do
         mbRide <- QRide.findByRBId booking.id
@@ -172,9 +172,9 @@ instance JT.JourneyLeg TaxiLegRequest m where
                 }
         dCancelRes <- DCancel.cancel booking mbRide cancelReq legData.cancellationSource
         void $ withShortRetry $ CallBPP.cancelV2 booking.merchantId dCancelRes.bppUrl =<< ACL.buildCancelReqV2 dCancelRes cancelReq.reallocate
-        if legData.isSkipped then QBooking.updateisSkipped booking.id (Just True) else QBooking.updateIsCancelled booking.id (Just True)
+        if legData.isSkipped then JLU.markLegStatus (Just Skipped) legData.leg else JLU.markLegStatus (Just Cancelled) legData.leg
       Nothing -> do
-        searchReq <- QSearchRequest.findById legData.searchRequestId >>= fromMaybeM (SearchRequestNotFound $ "searchRequestId-" <> legData.searchRequestId.getId)
+        searchReq <- QSearchRequest.findById (Id legData.leg.searchId) >>= fromMaybeM (SearchRequestNotFound $ "searchRequestId-" <> legData.leg.searchId)
         journeySearchData <- searchReq.journeyLegInfo & fromMaybeM (InvalidRequest $ "JourneySearchData not found for search id: " <> searchReq.id.getId)
         case journeySearchData.pricingId of
           Just pricingId -> do
@@ -184,8 +184,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
               DSelect.BookingAlreadyCreated -> throwError (InternalError $ "Cannot cancel search as booking is already created for searchId: " <> show searchReq.id.getId)
               DSelect.FailedToCancel -> throwError (InvalidRequest $ "Failed to cancel search for searchId: " <> show searchReq.id.getId)
           Nothing -> return ()
-    if legData.isSkipped then QSearchRequest.updateSkipBooking legData.searchRequestId (Just True) else QSearchRequest.updateIsCancelled legData.searchRequestId (Just True)
-    if legData.isSkipped then QJourneyLeg.updateIsSkipped (Just True) (Just legData.searchRequestId.getId) else QJourneyLeg.updateIsDeleted (Just True) (Just legData.searchRequestId.getId)
+        if legData.isSkipped then JLU.markLegStatus (Just Skipped) legData.leg else JLU.markLegStatus (Just Cancelled) legData.leg
   cancel _ = throwError (InternalError "Not Supported")
 
   isCancellable ((TaxiLegRequestIsCancellable legData)) = do
@@ -222,7 +221,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
         searchReq <- QSearchRequest.findById req.searchId >>= fromMaybeM (SearchRequestNotFound req.searchId.getId)
         journeyLegInfo <- searchReq.journeyLegInfo & fromMaybeM (InvalidRequest "JourneySearchData not found")
         mbEstimate <- maybe (pure Nothing) (QEstimate.findById . Id) journeyLegInfo.pricingId
-        let journeyLegStatus = JT.getTaxiLegStatusFromSearch journeyLegInfo (mbEstimate <&> (.status)) req.journeyLegStatus
+        let journeyLegStatus = JT.getTaxiLegStatusFromSearch (mbEstimate <&> (.status)) req.journeyLegStatus
 
         return $
           JT.Single $

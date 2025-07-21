@@ -31,6 +31,7 @@ imports:
   Value: Data.Aeson
   RecentLocation: Domain.Types.RecentLocation
   VehicleCategory: BecknV2.OnDemand.Enums
+  JourneyLegStatus: Lib.JourneyLeg.Types
 
 SearchRequest:
   tableName: search_request
@@ -92,6 +93,7 @@ SearchRequest:
     allJourneysLoaded: Maybe Bool
     searchMode: Maybe SearchMode
     isMultimodalSearch: Maybe Bool
+    journeyLegStatus: Maybe JourneyLegStatus
 
   default:
     hasMultimodalSearch: "false"
@@ -158,7 +160,6 @@ SearchRequest:
       journeyLegOrder: Maybe Int
       journeyId: Maybe Text
       agency: Maybe Text
-      skipBooking: Maybe Bool
       convenienceCost: Maybe Int
       pricingId: Maybe Text
       isDeleted: Maybe Bool
@@ -192,7 +193,6 @@ SearchRequest:
     journeyLegOrder: Kernel.Prelude.fmap (.journeyLegOrder)|I
     journeyId: Kernel.Prelude.fmap (.journeyId)|I
     agency: (journeyLegInfo >>= (.agency))|E
-    skipBooking: Kernel.Prelude.fmap (.skipBooking)|I
     convenienceCost: Kernel.Prelude.fmap (.convenienceCost)|I
     pricingId: (journeyLegInfo >>= (.pricingId))|E
     isDeleted:  (journeyLegInfo >>= (.isDeleted))|E
@@ -262,6 +262,11 @@ SearchRequest:
       kvFunction: updateOneWithKV
       where: id
       params: [isPetRide]
+
+    updateJourneyStatus:
+      kvFunction: updateOneWithKV
+      where: id
+      params: [journeyStatus]
 
   constraints:
     id: PrimaryKey

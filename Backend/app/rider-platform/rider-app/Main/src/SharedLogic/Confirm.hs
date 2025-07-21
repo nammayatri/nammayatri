@@ -14,7 +14,7 @@
 
 module SharedLogic.Confirm where
 
-import Control.Monad.Extra (anyM, maybeM)
+import Control.Monad.Extra (anyM, concatMapM, maybeM)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Map as M
 import qualified Domain.Action.UI.Estimate as UEstimate
@@ -47,6 +47,7 @@ import Kernel.Tools.Metrics.CoreMetrics
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.JourneyLeg.Types as JL
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Types as LYT
@@ -62,6 +63,8 @@ import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.BookingPartiesLink as QBPL
 import qualified Storage.Queries.Estimate as QEstimate
+import qualified Storage.Queries.FRFSSearch as QFRFSSearch
+import qualified Storage.Queries.JourneyRouteDetails as QJourneyRouteDetails
 import qualified Storage.Queries.ParcelDetails as QParcel
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.SearchRequest as QSReq
@@ -288,7 +291,24 @@ buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode
   bookingDetails <- buildBookingDetails
   bookingParties <- buildPartiesLinks id
   deploymentVersion <- asks (.version)
-  let (skipBooking, journeyId) = fromMaybe (Nothing, Nothing) $ (\j -> (Just j.skipBooking, Just (Id j.journeyId))) <$> searchRequest.journeyLegInfo
+  let journeyId = searchRequest.journeyLegInfo <&> (.journeyId)
+  routeDetails <- case journeyId of
+    Just jId -> do
+      frfsSearches <- QFRFSSearch.findAllByJourneyId (Id jId)
+      concatMapM (\frfsSearch -> QJourneyRouteDetails.findAllBySearchId frfsSearch.id) frfsSearches
+    Nothing -> return []
+  let (skipBookingValue, journeyIdValue) = case searchRequest.journeyLegInfo of
+        Just journeyLegInfo -> do
+          let innerJourneyId = Just (Id journeyLegInfo.journeyId)
+          let innerSkipBooking = case routeDetails of
+                [] -> Just False
+                _ -> do
+                  let statuses = mapMaybe (.journeyStatus) routeDetails
+                  case statuses of
+                    [] -> Just False
+                    _ -> Just (any (== JL.Skipped) statuses)
+          (innerSkipBooking, innerJourneyId)
+        Nothing -> (Nothing, Nothing)
   (isInsured, insuredAmount, driverInsuredAmount) <- isBookingInsured
   return $
     ( DRB.Booking
@@ -350,8 +370,8 @@ buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode
           isReferredRide = searchRequest.driverIdentifier $> True,
           journeyLegOrder = searchRequest.journeyLegInfo <&> (.journeyLegOrder),
           isDeleted = Just False,
-          isSkipped = skipBooking,
-          journeyId,
+          isSkipped = skipBookingValue,
+          journeyId = journeyIdValue,
           journeyLegStatus = Nothing,
           preferSafetyPlus = quote.isSafetyPlus,
           recentLocationId = searchRequest.recentLocationId,

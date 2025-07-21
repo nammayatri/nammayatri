@@ -16,6 +16,7 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.JourneyLeg.Types
+import qualified Lib.JourneyModule.Types as JL
 import SharedLogic.Search
 
 data TaxiLegRequestSearchData = TaxiLegRequestSearchData
@@ -51,7 +52,7 @@ data EditLocationRequest = EditLocationRequest
 data TaxiLegRequestUpdateData = EditLocation EditLocationRequest | ChangeServiceTier ChangeServiceTierData
 
 data TaxiLegRequestCancelData = TaxiLegRequestCancelData
-  { searchRequestId :: Id DSR.SearchRequest,
+  { leg :: JL.LegInfo,
     reasonCode :: SCR.CancellationReasonCode,
     -- reasonStage :: SCR.CancellationStage,
     additionalInfo :: Maybe Text,

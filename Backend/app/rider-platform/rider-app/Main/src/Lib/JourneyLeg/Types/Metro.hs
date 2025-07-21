@@ -15,6 +15,7 @@ import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.JourneyModule.Types as JL
 
 data MetroLegRequestSearchData = MetroLegRequestSearchData
   { quantity :: Int,
@@ -40,7 +41,7 @@ data MetroLegRequestConfirmData = MetroLegRequestConfirmData
   }
 
 data MetroLegRequestCancelData = MetroLegRequestCancelData
-  { searchId :: Id FRFSSearch.FRFSSearch,
+  { leg :: JL.LegInfo,
     cancellationType :: Spec.CancellationType,
     isSkipped :: Bool
   }
