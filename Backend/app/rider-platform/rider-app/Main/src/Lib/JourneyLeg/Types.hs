@@ -20,6 +20,7 @@ data JourneyLegStatus
   | Finishing
   | Cancelled
   | Completed
+  | Failed
   deriving stock (Eq, Ord, Show, Read, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)
 

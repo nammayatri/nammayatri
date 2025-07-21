@@ -49,10 +49,12 @@ checkMultimodalConfirmFailJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.get
     then do
       journeyId <- booking.journeyId & fromMaybeM (InvalidRequest $ "journey not found for bookingId: " <> show bookingId)
       allJourneyFrfsBookings <- QFRFSTicketBooking.findAllByJourneyId (Just journeyId)
-      let allMarked = all ((== DFRFSTicketBooking.REFUND_INITIATED) . (.status)) allJourneyFrfsBookings
-      riderConfig <- QRC.findByMerchantOperatingCityId booking.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
-      unless allMarked $
-        when riderConfig.enableAutoJourneyRefund $
-          FRFSTicketService.markAllRefundBookings allJourneyFrfsBookings booking.riderId (Just journeyId)
+      let failedBookings = filter ((== DFRFSTicketBooking.FAILED) . (.status)) allJourneyFrfsBookings
+          allFailed = not (null failedBookings) && length failedBookings == length allJourneyFrfsBookings
+      unless (any ((== DFRFSTicketBooking.REFUND_INITIATED) . (.status)) allJourneyFrfsBookings) $
+        whenJust (listToMaybe failedBookings) $ \firstFailed -> do
+          riderConfig <- QRC.findByMerchantOperatingCityId firstFailed.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist firstFailed.merchantOperatingCityId.getId)
+          when riderConfig.enableAutoJourneyRefund $
+            FRFSTicketService.markAllRefundBookings failedBookings booking.riderId (Just journeyId) allFailed
       return Complete
     else return Complete
