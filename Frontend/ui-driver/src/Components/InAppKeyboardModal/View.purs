@@ -154,8 +154,11 @@ editTextSingleBox push state =
   , orientation HORIZONTAL
   , gravity CENTER
   , visibility if state.modalType == KeyboardModalType.OTP && not state.otpAttemptsExceeded && state.enableDeviceKeyboard then VISIBLE else GONE
+  , stroke $ "1," <> state.appConfig.themeColors.primaryStrokeColor
+  , background state.appConfig.primaryBackground
+  , cornerRadius 8.0
   ][  editText $
-      [ width $ V 200
+      [ width $ V 150
       , height WRAP_CONTENT
       , color Color.greyTextColor
       , margin (MarginHorizontal 10 10)
@@ -207,11 +210,12 @@ singleTextBox push state =
   , orientation HORIZONTAL
   , gravity CENTER
   , cornerRadius 4.0
-  , visibility if any (_ == state.modalType) [KeyboardModalType.MOBILE__NUMBER, KeyboardModalType.REFERRAL__CODE] then VISIBLE else GONE
+  , visibility if any (_ == state.modalType) [KeyboardModalType.MOBILE__NUMBER, KeyboardModalType.REFERRAL__CODE, KeyboardModalType.OTP] then VISIBLE else GONE
   , clickable false
   , padding (Padding 8 8 8 8)
   , background state.inputTextConfig.background
   , stroke $  if not state.isValidAlternateNumber then ("1," <> Color.textDanger) else state.inputTextConfig.strokeColor
+  , margin $ Margin 12 0 12 0
   ][textView $
       [ width state.inputTextConfig.width
       , height state.inputTextConfig.height
@@ -246,7 +250,7 @@ otpView push state =
         (
           [
             case state.modalType of
-              KeyboardModalType.OTP -> if state.enableDeviceKeyboard then editTextSingleBox push state else textBoxes push state
+              -- KeyboardModalType.OTP -> if state.enableDeviceKeyboard then editTextSingleBox push state else textBoxes push state
               KeyboardModalType.ODOMETER -> appKeyboardOdometerInput push state
               _ -> textView[]
           ] <> 
@@ -296,7 +300,7 @@ keyboard push state =
   [ width MATCH_PARENT
   , height WRAP_CONTENT
   , orientation VERTICAL
-  , margin $ MarginTop 40
+  , margin $ MarginTop 25
   , padding (Padding 0 5 0 20)
   , gravity CENTER
   , background Color.grey800
@@ -364,7 +368,7 @@ keyboard push state =
     ) state.keyList )
   where
     isClickable state = case state.modalType of
-        KeyboardModalType.OTP -> length state.inputTextConfig.text == (DA.length state.textBoxConfig.textBoxesArray) && not state.otpIncorrect
+        KeyboardModalType.OTP -> length state.inputTextConfig.text == 4 && not state.otpIncorrect -- length state.inputTextConfig.text == (DA.length state.textBoxConfig.textBoxesArray) && not state.otpIncorrect
         KeyboardModalType.ODOMETER -> length state.inputTextConfig.text > 3
         KeyboardModalType.MOBILE__NUMBER -> length state.inputTextConfig.text == 10 && state.isValidAlternateNumber
         KeyboardModalType.REFERRAL__CODE -> length state.inputTextConfig.text >= 6 && state.isValidAlternateNumber

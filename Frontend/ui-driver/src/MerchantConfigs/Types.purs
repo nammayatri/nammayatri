@@ -125,7 +125,6 @@ type ThemeColors = {
   primaryStrokeColor :: String,
   openMapsStrokeColor :: String,
   secondaryStrokeColor :: String,
-  openMapsTextColor :: String,
   onlineStatusColor :: String,
   onboardingHeaderTextColor :: String,
   onboardingHeaderStroke :: String,
@@ -195,7 +194,8 @@ type BottomNavConfig = {
   subscription :: BottomNavItemConfig,
   referral :: BottomNavItemConfig,
   notifications :: BottomNavItemConfig,
-  driverEarnings :: BottomNavItemConfig
+  driverEarnings :: BottomNavItemConfig,
+  trips :: BottomNavItemConfig
 }
 
 type BottomNavItemConfig = {
@@ -248,6 +248,7 @@ type Features = {
 , showFaqsWhileOnboarding :: Boolean
 , enableV2Registration :: Boolean
 , enableV2Earnings :: Boolean
+, enableV2HelpAndSupport :: Boolean
 , enableDriverProfile :: Boolean
 }
  

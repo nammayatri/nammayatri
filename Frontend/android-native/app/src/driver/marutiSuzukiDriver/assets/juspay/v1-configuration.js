@@ -129,7 +129,6 @@ window.getMerchantConfig = function () {
       "primaryStrokeColor" : "#2E3494",
       "openMapsStrokeColor" : "#A8AEF0",
       "secondaryStrokeColor" : "#A8AEF0",
-      "openMapsTextColor" : "#A8AEF0",
       "onboardingHeaderTextColor" : "#0F1114",
       "onboardingHeaderStroke" : "#B2171C8F",
       "radioInactiveBackground" : "#F5F5F5",
@@ -220,7 +219,11 @@ window.getMerchantConfig = function () {
             },
       "referral" : 
       { 
-        "showNew" : true
+        "isVisible" : false
+      },
+      "trips" : 
+      { 
+        "isVisible" : true
       }
     }
     , "purpleRideConfig" : {
@@ -243,6 +246,7 @@ window.getMerchantConfig = function () {
       , "showFaqsWhileOnboarding" : true
       , "enableV2Registration" : true
       , "enableV2Earnings" : true
+      , "enableV2HelpAndSupport" : true
       , "enableDriverProfile" : false
     }
     , "appData" : {

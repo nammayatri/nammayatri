@@ -75,7 +75,7 @@ import RemoteConfig (RCCarousel(..))
 import Mobility.Prelude (boolToVisibility)
 import Constants 
 import LocalStorage.Cache (getValueFromCache)
-import Engineering.Helpers.Utils (getFixedTwoDecimals)
+import Engineering.Helpers.Utils (getFixedTwoDecimals, getColorWithOpacity)
 import Common.Resources.Constants
 import Data.Function.Uncurried (runFn3)
 import DecodeUtil (getAnyFromWindow)
@@ -873,6 +873,8 @@ enterOtpStateConfig state =
         text = state.props.rideOtp,
         focusIndex = state.props.enterOtpFocusIndex
         , textStyle = FontStyle.Heading1
+        , suffixImageVisibility = false
+        , strokeColor = "1," <> appConfig.themeColors.primaryStrokeColor
       },
       headingConfig {
         text = if state.props.endRideOtpModal then (getString ENTER_END_RIDE_OTP) else getString (ENTER_OTP)
@@ -885,14 +887,16 @@ enterOtpStateConfig state =
         text = getString (PLEASE_ASK_THE_CUSTOMER_FOR_THE_OTP),
         visibility = if (state.props.otpAttemptsExceeded) then GONE else VISIBLE
       , textStyle = FontStyle.Body1
+      , margin = MarginTop 12
       },
       imageConfig {
         alpha = if(DS.length state.props.rideOtp < 4) then 0.3 else 1.0
       },
       modalType = ST.OTP,
       showRetakeParcelImage = state.data.activeRide.tripType == ST.Delivery && state.props.currentStage == ST.RideAccepted,
-      enableDeviceKeyboard = appConfig.inAppKeyboardModalConfig.enableDeviceKeyboard,
-      confirmBtnColor = if state.props.endRideOtpModal then Color.red else Color.darkMint
+      enableDeviceKeyboard = false,-- appConfig.inAppKeyboardModalConfig.enableDeviceKeyboard,
+      confirmBtnColor = if state.props.endRideOtpModal then Color.red else Color.darkMint,
+      isValidAlternateNumber = not $ state.props.otpIncorrect
       }
       in inAppModalConfig'
 
@@ -1654,11 +1658,11 @@ getRideCompletedConfig state = let
       rippleColor = Color.rippleShade
     },
     topCard {
-      title = getString COLLECT_VIA_UPI_QR_OR_CASH,
+      -- title = getString COLLECT_VIA_UPI_QR_OR_CASH
       finalAmount = state.data.endRideData.finalAmount,
       initialAmount = state.data.endRideData.finalAmount,
       fareUpdatedVisiblity = state.props.isFreeRide,
-      gradient =  ["#F5F8FF","#E2EAFF"],
+      gradient =  [Color.white900,Color.white900],
       infoPill {
         text = getString COLLECT_VIA_CASE_UPI,
         color = Color.white900,
@@ -1672,7 +1676,8 @@ getRideCompletedConfig state = let
         visible = if state.props.isFreeRide then VISIBLE else GONE
       },
       topPill = topPillConfig,
-      bottomText = if state.data.activeRide.tripType == ST.Delivery then getString DELIVERY_DETAILS else getString RIDE_DETAILS
+      bottomText = if state.data.activeRide.tripType == ST.Delivery then getString DELIVERY_DETAILS else getString RIDE_DETAILS,
+      horizontalLineColor = Color.black500
     },
     driverBottomCard {
       visible = showDriverBottomCard,
@@ -1757,7 +1762,8 @@ getRideCompletedConfig state = let
   }
   , variant = getValueToLocalStore VEHICLE_VARIANT
   , driverCity = getValueToLocalStore DRIVER_LOCATION
-  , driverInvoiceText = StringsV2.getStringV2 LT2.invoice_generated_from_driver_to_rider
+  , driverInvoiceText = StringsV2.getStringV2 LT2.collect_from_the_customer_via_upi_qr_or_cash
+  , driverInvoiceTextBgColor = getColorWithOpacity 12 Color.blue900
   }
   in config'
 
@@ -2385,8 +2391,8 @@ bgLocPopup state =
       , margin = Margin 16 0 16 15 },
       option1 {
         text = getString ENABLE_PERMISSION_STR
-      , color = Color.yellow900
-      , background = Color.black900
+      , color = state.data.config.primaryTextColor
+      , background = state.data.config.primaryButtonBackground
       , strokeColor = Color.transparent
       , textStyle = FontStyle.SubHeading1
       , width = MATCH_PARENT

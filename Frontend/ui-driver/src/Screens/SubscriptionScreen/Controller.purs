@@ -135,6 +135,7 @@ data ScreenOutput = HomeScreen SubscriptionScreenState
                     | ClearDues SubscriptionScreenState
                     | SubscribeAPI SubscriptionScreenState
                     | EarningsScreen SubscriptionScreenState 
+                    | RideRequestScreen SubscriptionScreenState 
                     | SwitchPlanOnCityOrVehicleChange ST.PlanCardState ST.SubscriptionScreenState
 
 eval :: Action -> SubscriptionScreenState -> Eval Action ScreenOutput SubscriptionScreenState
@@ -227,6 +228,7 @@ eval (PopUpModalAC (PopUpModal.OnButton2Click)) state = case state.props.redirec
             "Rankings" -> do
               _ <- pure $ setValueToLocalNativeStore REFERRAL_ACTIVATED "false"
               exit $ Contest state{props { popUpState = Mb.Nothing, redirectToNav = ""}}
+            "Trips" -> exit $ RideRequestScreen state{props { popUpState = Mb.Nothing, redirectToNav = ""}}
             _ -> exit $ HomeScreen state{props { popUpState = Mb.Nothing, redirectToNav = ""}}
 
 eval (PopUpModalAC (PopUpModal.OptionWithHtmlClick)) state = continueWithCmd state [pure CallSupport]
@@ -275,6 +277,7 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate screen)) state = do
             "Rankings" -> do
               _ <- pure $ setValueToLocalNativeStore REFERRAL_ACTIVATED "false"
               exit $ Contest newState
+            "Trips" -> exit $ RideRequestScreen newState
             _ -> continue state
 
 eval ViewPaymentHistory state = exit $ PaymentHistory state{props{optionsMenuState = ALL_COLLAPSED}}
