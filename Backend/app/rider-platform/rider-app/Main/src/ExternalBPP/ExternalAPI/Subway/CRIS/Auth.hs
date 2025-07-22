@@ -1,5 +1,6 @@
 module ExternalBPP.ExternalAPI.Subway.CRIS.Auth where
 
+import qualified Data.Text.Encoding as DT
 import Domain.Types.Extra.IntegratedBPPConfig
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET
@@ -16,7 +17,7 @@ import Tools.Metrics (CoreMetrics)
 
 type AuthAPI =
   "token"
-    :> Header "Authorization" Text
+    :> BasicAuth "username-password" BasicAuthData
     :> Header "Content-Type" Text
     :> ReqBody '[FormUrlEncoded] [(Text, Text)]
     :> Post '[JSON] CRISTokenRes
@@ -31,6 +32,13 @@ data CRISTokenRes = CRISTokenRes
 authAPI :: Proxy AuthAPI
 authAPI = Proxy
 
+mkBasicAuthData :: Text -> Text -> BasicAuthData
+mkBasicAuthData userName password =
+  BasicAuthData
+    { basicAuthUsername = DT.encodeUtf8 userName,
+      basicAuthPassword = DT.encodeUtf8 password
+    }
+
 getCRISTokenKey :: Text
 getCRISTokenKey = "cris-token"
 
@@ -39,10 +47,11 @@ resetAuthToken ::
   CRISConfig ->
   m Text
 resetAuthToken config = do
-  clientSecret <- decrypt config.clientSecret
-  let basicAuth = "Basic " <> clientSecret
+  consumerKey <- decrypt config.consumerKey
+  consumerSecret <- decrypt config.consumerSecret
+  let basicAuthData = mkBasicAuthData consumerKey consumerSecret
   tokenRes <-
-    callAPI config.baseUrl (ET.client authAPI (Just basicAuth) (Just "application/x-www-form-urlencoded") [("grant_type", "client_credentials")]) "authCRIS" authAPI
+    callAPI config.baseUrl (ET.client authAPI basicAuthData (Just "application/x-www-form-urlencoded") [("grant_type", "client_credentials")]) "authCRIS" authAPI
       >>= fromEitherM (ExternalAPICallError (Just "CRIS_AUTH_API") config.baseUrl)
   Hedis.setExp getCRISTokenKey (tokenRes.access_token) (tokenRes.expires_in * 90 `div` 100)
   return $ tokenRes.access_token

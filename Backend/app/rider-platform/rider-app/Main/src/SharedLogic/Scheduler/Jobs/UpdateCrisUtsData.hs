@@ -58,7 +58,9 @@ updateCrisUtsDataJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
                   sourceZone = sourceZone config,
                   ticketType = ticketType config,
                   agentDataDecryptionKey = encryptedAgentDataKey,
-                  utsDataKey = utsDataKey config
+                  utsDataKey = utsDataKey config,
+                  consumerKey = consumerKey config,
+                  consumerSecret = consumerSecret config
                 }
       QIntegratedBPPConfig.updateByPrimaryKey integratedBppConfig {providerConfig = updatedProviderConfig}
       let scheduleAfter = secondsToNominalDiffTime (24 * 60 * 60)
