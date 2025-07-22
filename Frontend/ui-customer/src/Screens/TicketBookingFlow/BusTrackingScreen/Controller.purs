@@ -183,8 +183,6 @@ eval (UpdateStops (API.GetMetroStationResponse metroResponse)) state =
       ]
 
 eval (BookTicketButtonAction PrimaryButton.OnClick) state = do
-  let _ = unsafePerformEffect $ Events.addEventAggregate "ny_bus_user_book_ticket_initiated"
-      _ = unsafePerformEffect $ logEvent state.data.logField "ny_bus_user_book_ticket_initiated"
   if checkBusRouteEnabled state
     then exit $ GoToSearchLocation state
     else exit $ GoToHomeScreen state
@@ -269,14 +267,15 @@ eval (UpdateTracking (API.BusTrackingRouteResp resp) count cachedBusOnboardingIn
                 $ do
                     when state.props.gotMapReady $ updateBusLocationOnRoute state trackingData $ API.BusTrackingRouteResp resp
               if (count == 1) then do
-                let etaToStore =show $ Mb.fromMaybe 0 $ calculateMinETADistance trackingData
-                    params = [Tuple "Eta" etaToStore]
-                let _ = unsafePerformEffect $ Events.addEventData "External.WMB.ny_bus_user_Eta_seen" etaToStore
+                let etaToStore = Mb.fromMaybe 0 $ DT.fst $ calculateMinEtaTimeWithDelay trackingData
+                    minimumEtaDistance' = Mb.fromMaybe 0 $ state.props.minimumEtaDistance
+                let _ = unsafePerformEffect $ Events.addEventData "External.WMB.ny_bus_user_Eta_seen" (show $ etaToStore)
                 let vehicleTrackingDataSize = DA.length trackingData
                 let _ = unsafePerformEffect $ Events.addEventData "External.WMB.ny_bus_tracking_count" (show $ vehicleTrackingDataSize)
                 let _ = unsafePerformEffect $ Events.addEventData "External.WMB.ny_bus_minimum_eta_distance" (show $ state.props.minimumEtaDistance)
-                let _ = unsafePerformEffect $ logEventWithParams state.data.logField "ny_bus_user_Eta_seen" "eta" etaToStore
-                let _ = unsafePerformEffect $ logEventWithParams state.data.logField "ny_bus_tracking_count" "trackingCount" (show $ DA.length trackingData)
+                let _ = unsafePerformEffect $ logEvent state.data.logField "ny_bus_tracking_count"
+                when (etaToStore > 0 || minimumEtaDistance' > 0) $ do
+                  void $ pure $ unsafePerformEffect $ logEvent state.data.logField "ny_bus_user_Eta_seen" 
                 pure unit
               else
                 pure unit
