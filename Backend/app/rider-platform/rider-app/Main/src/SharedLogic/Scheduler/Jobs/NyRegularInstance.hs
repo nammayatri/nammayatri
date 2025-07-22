@@ -5,14 +5,18 @@ module SharedLogic.Scheduler.Jobs.NyRegularInstance where
 import qualified Data.HashMap.Strict as HM
 import qualified Domain.Types.NyRegularInstanceLog as NyRegularInstanceLog
 import Kernel.External.Encryption (EncFlow)
+import Kernel.External.Slack.Types (SlackConfig)
 import Kernel.Prelude
 import Kernel.Storage.Clickhouse.Config (ClickhouseFlow)
 import Kernel.Storage.Esqueleto.Config (EsqDBFlow, EsqDBReplicaFlow)
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
+import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.App (HasFlowEnv, MonadFlow)
 import Kernel.Types.Common (Seconds, getCurrentTime)
+import Kernel.Types.SlidingWindowLimiter
 import Kernel.Utils.Common (CacheFlow, type (:::))
 import Kernel.Utils.Logging (logError, logInfo, withLogTag)
+import Kernel.Utils.Servant.Client (RetryCfg)
 import Lib.Scheduler (ExecutionResult (..), Job (..))
 import Lib.SessionizerMetrics.Types.Event (EventStreamFlow)
 import SharedLogic.JobScheduler (RiderJobType (..))
@@ -39,7 +43,15 @@ runNyRegularInstanceJob ::
     HasFlowEnv m r '["collectRouteData" ::: Bool],
     HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
     HasField "hotSpotExpiry" r Seconds,
-    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig]
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
+    HasFlowEnv m r '["slackCfg" ::: SlackConfig],
+    HasFlowEnv m r '["searchRateLimitOptions" ::: APIRateLimitOptions],
+    HasFlowEnv m r '["searchLimitExceedNotificationTemplate" ::: Text],
+    MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    HasField "shortDurationRetryCfg" r RetryCfg,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
   ) =>
   Job 'NyRegularInstance ->
   m ExecutionResult

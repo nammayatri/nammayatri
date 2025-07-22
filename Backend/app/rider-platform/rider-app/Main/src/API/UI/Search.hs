@@ -25,6 +25,7 @@ module API.UI.Search
     search',
     search,
     handler,
+    searchTrigger',
   )
 where
 
@@ -34,6 +35,7 @@ import qualified Beckn.ACL.Cancel as ACL
 import qualified Beckn.ACL.Search as TaxiACL
 import qualified BecknV2.OnDemand.Enums
 import Data.Aeson
+import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Action.UI.MultimodalConfirm as DMC
@@ -69,6 +71,7 @@ import Kernel.External.Slack.Types (SlackConfig)
 import Kernel.Prelude
 import Kernel.Randomizer
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Error
@@ -97,6 +100,7 @@ import Tools.Auth
 import Tools.Error
 import qualified Tools.Maps as Maps
 import qualified Tools.MultiModal as TMultiModal
+import TransactionLogs.Types
 
 -------- Search Flow --------
 
@@ -773,3 +777,132 @@ updateVersions personId mbBundleVersion mbClientVersion mbClientConfigVersion mb
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound $ getId personId)
   deploymentVersion <- asks (.version)
   void $ Person.updatePersonVersions person mbBundleVersion mbClientVersion mbClientConfigVersion (getDeviceFromText mbDevice) deploymentVersion.getDeploymentVersion mbRnVersion
+
+searchTrigger' ::
+  ( DSearch.SearchRequestFlow m r,
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
+    Redis.HedisFlow m r,
+    HasFlowEnv m r '["slackCfg" ::: SlackConfig],
+    HasFlowEnv m r '["searchRateLimitOptions" ::: APIRateLimitOptions],
+    HasFlowEnv m r '["searchLimitExceedNotificationTemplate" ::: Text],
+    MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    CacheFlow m r,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
+    EsqDBFlow m r,
+    HasField "shortDurationRetryCfg" r RetryCfg,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
+  ) =>
+  (Id Person.Person, Id Merchant.Merchant) ->
+  DSearch.SearchReq ->
+  Maybe Version ->
+  Maybe Version ->
+  Maybe Version ->
+  Maybe Text ->
+  Maybe (Id DC.Client) ->
+  Maybe Text ->
+  Maybe Bool ->
+  m DSearch.SearchResp
+searchTrigger' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice mbIsDashboardRequest = withPersonIdLogTag personId $ do
+  checkSearchRateLimit personId
+  fork "updating person versions" $ updateVersions personId mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice
+  merchant <- CQM.findById (cast merchantId) >>= fromMaybeM (MerchantNotFound merchantId.getId)
+  -- TODO : remove this code after multiple search req issue get fixed from frontend
+  --BEGIN
+  whenJust merchant.stuckRideAutoCancellationBuffer $ \stuckRideAutoCancellationBuffer -> do
+    mbSReq <- QSearchRequest.findLastSearchRequestInKV personId
+    shouldCancelPrevSearch <- maybe (return False) (checkValidSearchReq merchant.scheduleRideBufferTime) mbSReq
+    when shouldCancelPrevSearch $ do
+      fork "handle multiple search request issue" $ do
+        case mbSReq of
+          Just sReq -> do
+            mbEstimate <- QEstimate.findBySRIdAndStatusesInKV sReq.id [Estimate.DRIVER_QUOTE_REQUESTED, Estimate.GOT_DRIVER_QUOTE]
+            case mbEstimate of
+              Just estimate -> do
+                resp <- try @_ @SomeException $ Select.cancelSearch'' (personId, merchantId) estimate.id
+                case resp of
+                  Left _ -> void $ handleBookingCancellation' merchantId personId stuckRideAutoCancellationBuffer sReq.id req
+                  Right _ -> pure ()
+              Nothing -> void $ handleBookingCancellation' merchantId personId stuckRideAutoCancellationBuffer sReq.id req
+          _ -> pure ()
+  -- TODO : remove this code after multiple search req issue get fixed from frontend
+  --END
+  dSearchRes <- DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice (fromMaybe False mbIsDashboardRequest) Nothing False
+  fork "search cabs" . withShortRetry $ do
+    becknTaxiReqV2 <- TaxiACL.buildSearchReqV2 dSearchRes
+    let generatedJson = encode becknTaxiReqV2
+    logDebug $ "Beckn Taxi Request V2: " <> T.pack (show generatedJson)
+    void $ CallBPP.searchV2 dSearchRes.gatewayUrl becknTaxiReqV2 merchantId
+  fork "Multimodal Search" $ do
+    riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow dSearchRes.searchRequest.merchantOperatingCityId dSearchRes.searchRequest.configInExperimentVersions >>= fromMaybeM (RiderConfigNotFound dSearchRes.searchRequest.merchantOperatingCityId.getId)
+    when riderConfig.makeMultiModalSearch $ throwError $ InvalidRequest "Multimodal not supported currently for Ny Regular" -------- will support multimodal in future
+  return $ DSearch.SearchResp dSearchRes.searchRequest.id dSearchRes.searchRequestExpiry dSearchRes.shortestRouteInfo
+  where
+    -- TODO : remove this code after multiple search req issue get fixed from frontend
+    --BEGIN
+    checkValidSearchReq scheduleRideBufferTime sReq = do
+      now <- getCurrentTime
+      let isNonScheduled = diffUTCTime sReq.startTime sReq.createdAt < scheduleRideBufferTime
+          isValid = sReq.validTill > now
+      return $ isNonScheduled && isValid
+
+handleBookingCancellation' ::
+  ( DSearch.SearchRequestFlow m r,
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
+    Redis.HedisFlow m r,
+    HasFlowEnv m r '["slackCfg" ::: SlackConfig],
+    HasFlowEnv m r '["searchRateLimitOptions" ::: APIRateLimitOptions],
+    HasFlowEnv m r '["searchLimitExceedNotificationTemplate" ::: Text],
+    MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    CacheFlow m r,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
+    EsqDBFlow m r,
+    HasField "shortDurationRetryCfg" r RetryCfg,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
+  ) =>
+  Id Merchant.Merchant ->
+  Id Person.Person ->
+  Seconds ->
+  Id SearchRequest.SearchRequest ->
+  DSearch.SearchReq ->
+  m ()
+handleBookingCancellation' merchantId _personId stuckRideAutoCancellationBuffer sReqId req = do
+  mbBooking <- QBooking.findByTransactionIdAndStatus sReqId.getId Booking.activeBookingStatus
+  case mbBooking of
+    Just booking -> do
+      let reasonCode = SCR.CancellationReasonCode "multiple search request issue"
+          reasonStage = SCR.OnSearch
+      let cancelReq =
+            DCancel.CancelReq
+              { additionalInfo = Nothing,
+                reallocate = Just False,
+                blockOnCancellationRate = Nothing,
+                ..
+              }
+      mRide <- QR.findActiveByRBId booking.id
+      whenJust mRide $ \ride -> do
+        isCancellingAllowed <- checkIfCancellingAllowed ride
+        when (ride.status `elem` [DRide.NEW, DRide.UPCOMING] && isCancellingAllowed) $ do
+          dCancelRes <- DCancel.cancel booking mRide cancelReq SBCR.ByUser
+          void $ withShortRetry $ CallBPP.cancelV2 merchantId dCancelRes.bppUrl =<< ACL.buildCancelReqV2 dCancelRes cancelReq.reallocate
+    _ -> pure ()
+  where
+    checkIfCancellingAllowed ride =
+      case req of
+        DSearch.OneWaySearch DSearch.OneWaySearchReq {verifyBeforeCancellingOldBooking} -> do
+          let verifyBeforeCancelling = fromMaybe False verifyBeforeCancellingOldBooking -- defaulting to old behaviour when flag is not sent from frontend
+          if verifyBeforeCancelling
+            then do
+              now <- getCurrentTime
+              if addUTCTime (fromIntegral stuckRideAutoCancellationBuffer) ride.createdAt < now
+                then return True
+                else throwError (InvalidRequest "ACTIVE_BOOKING_PRESENT") -- 2 mins buffer
+            else do
+              return True -- this is the old behaviour, to cancel automatically
+        _ -> do
+          return True
