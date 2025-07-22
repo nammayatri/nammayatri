@@ -59,6 +59,7 @@ let eventType =
       | RouteCollection
       | EventTracker
       | MarketingParamsData
+      | MarketingParamsPreLoginData
       >
 
 let httpClientOptions = { timeoutMs = +200000 }
