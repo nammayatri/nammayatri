@@ -149,6 +149,9 @@ login LoginReq {..} = do
               defaultCityPresent = elem merchant.defaultOperatingCity merchantWithCityList
               city' = if defaultCityPresent then merchant.defaultOperatingCity else head merchantWithCityList
           pure (merchant, city')
+  -- Remove existing registration token from cache and DB if found
+  Auth.cleanCachedTokensByMerchantIdAndCity person.id merchant'.id city'
+  QR.deleteAllByPersonIdAndMerchantIdAndCity person.id merchant'.id city'
   generateLoginRes person merchant' otp city'
 
 makeEmailHitsCountKey :: Maybe Text -> Text
