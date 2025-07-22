@@ -1,0 +1,314 @@
+# Shared Ride Database Design
+
+This document defines the schema for the new parent-level wrapper tables required to support the Shared Ride feature. The format is inspired by the `namma-dsl` YAML structure.
+
+---
+
+## rider-app Schema
+
+### Table: `SharedSearchRequest`
+
+Wraps multiple `SearchRequest` entities to represent a pool of customers waiting to be matched.
+
+**Schema:**
+- `id`: `Id SharedSearchRequest` :: `uuid` (Primary Key)
+- `status`: `SharedSearchRequestStatus` :: `character varying(255)`
+- `search_request_ids`: `[Id SearchRequest]` :: `uuid[]`
+- `merchant_id`: `Id Merchant` :: `character varying(36)`
+- `merchant_operating_city_id`: `Id MerchantOperatingCity` :: `character varying(36)`
+- `vehicle_category`: `VehicleCategory` :: `character varying(255)`
+- `waypoints`: `Value` :: `jsonb`
+- `max_distance`: `Maybe Distance` :: `double precision`
+- `total_customer_extra_fee`: `Maybe Price` :: `numeric(30,2)`
+- `valid_till`: `UTCTime` :: `timestamptz`
+- `created_at`: `UTCTime` :: `timestamptz`
+- `updated_at`: `UTCTime` :: `timestamptz`
+
+**Types:**
+```yaml
+SharedSearchRequestStatus:
+  enum: "POOLING, MATCHED, EXPIRED, CANCELLED"
+```
+
+**Sample for `waypoints`:**
+```json
+[
+  {
+    "type": "PICKUP",
+    "search_request_id": "uuid-for-search-req-1",
+    "lat": 12.9716,
+    "lon": 77.5946
+  },
+  {
+    "type": "PICKUP",
+    "search_request_id": "uuid-for-search-req-2",
+    "lat": 12.9721,
+    "lon": 77.5950
+  },
+  {
+    "type": "DROPOFF",
+    "search_request_id": "uuid-for-search-req-1",
+    "lat": 12.9816,
+    "lon": 77.6046
+  },
+  {
+    "type": "DROPOFF",
+    "search_request_id": "uuid-for-search-req-2",
+    "lat": 12.9821,
+    "lon": 77.6050
+  }
+]
+```
+
+---
+
+### Table: `SharedEstimate`
+
+Wraps multiple `Estimate` entities. Represents the combined fare estimate for a matched group.
+
+**Schema:**
+- `id`: `Id SharedEstimate` :: `uuid` (Primary Key)
+- `shared_search_request_id`: `Id SharedSearchRequest` :: `uuid` (Foreign Key to `SharedSearchRequest`)
+- `estimate_ids`: `[Id Estimate]` :: `uuid[]`
+- `merchant_id`: `Id Merchant` :: `character varying(36)`
+- `merchant_operating_city_id`: `Id MerchantOperatingCity` :: `character varying(36)`
+- `bpp_shared_estimate_id`: `Text` :: `text`
+- `provider_id`: `Text` :: `character varying(255)`
+- `provider_name`: `Text` :: `character varying(255)`
+- `provider_url`: `BaseUrl` :: `character varying(255)`
+- `service_tier_name`: `Maybe Text` :: `text`
+- `estimated_total_fare`: `Price` :: `numeric(30,2)`
+- `total_fare_range_min`: `Price` :: `numeric(30,2)`
+- `total_fare_range_max`: `Price` :: `numeric(30,2)`
+- `estimated_duration`: `Maybe Seconds` :: `integer`
+- `estimated_distance`: `Maybe Distance` :: `double precision`
+- `vehicle_service_tier_type`: `ServiceTierType` :: `character varying(255)`
+- `vehicle_service_tier_seating_capacity`: `Maybe Int` :: `integer`
+- `night_shift_charge`: `Maybe Money` :: `numeric(30,2)`
+- `night_shift_charge_amount`: `Maybe HighPrecMoney` :: `numeric(30,10)`
+- `old_night_shift_charge`: `Maybe Centesimal` :: `numeric(10,2)`
+- `night_shift_start`: `Maybe TimeOfDay` :: `time`
+- `night_shift_end`: `Maybe TimeOfDay` :: `time`
+- `status`: `EstimateStatus` :: `character varying(255)`
+- `trip_category`: `Maybe TripCategory` :: `character varying(255)`
+- `valid_till`: `UTCTime` :: `timestamptz`
+- `created_at`: `UTCTime` :: `timestamptz`
+- `updated_at`: `UTCTime` :: `timestamptz`
+
+**Types:**
+```yaml
+EstimateStatus:
+  enum: "NEW, DRIVER_QUOTE_REQUESTED, CANCELLED, GOT_DRIVER_QUOTE, DRIVER_QUOTE_CANCELLED, COMPLETED"
+```
+
+---
+
+### Table: `SharedBooking`
+
+Wraps multiple `Booking` entities. Represents the confirmed booking for a matched group before a driver is assigned.
+
+**Schema:**
+- `id`: `Id SharedBooking` :: `uuid` (Primary Key)
+- `shared_estimate_id`: `Id SharedEstimate` :: `uuid` (Foreign Key to `SharedEstimate`)
+- `booking_ids`: `[Id Booking]` :: `uuid[]`
+- `transaction_id`: `Text` :: `character varying(36)`
+- `bpp_shared_booking_id`: `Text` :: `text`
+- `status`: `BookingStatus` :: `character varying(255)`
+- `merchant_id`: `Id Merchant` :: `character varying(36)`
+- `merchant_operating_city_id`: `Id MerchantOperatingCity` :: `character varying(36)`
+- `driver_id`: `Maybe (Id Person)` :: `character varying(36)`
+- `provider_id`: `Text` :: `character varying(255)`
+- `provider_url`: `BaseUrl` :: `character varying(255)`
+- `vehicle_service_tier_type`: `ServiceTierType` :: `character varying(255)`
+- `estimated_total_fare`: `Price` :: `numeric(30,2)`
+- `estimated_duration`: `Maybe Seconds` :: `integer`
+- `estimated_distance`: `Maybe Distance` :: `double precision`
+- `pairing_time`: `UTCTime` :: `timestamptz`
+- `created_at`: `UTCTime` :: `timestamptz`
+- `updated_at`: `UTCTime` :: `timestamptz`
+
+**Types:**
+```yaml
+BookingStatus:
+  enum: "NEW, CONFIRMED, AWAITING_REASSIGNMENT, REALLOCATED, COMPLETED, CANCELLED, TRIP_ASSIGNED"
+```
+
+---
+
+### Table: `SharedRide`
+
+Wraps multiple `Ride` entities. Represents the active, in-progress shared ride after a driver has been assigned.
+
+**Schema:**
+- `id`: `Id SharedRide` :: `uuid` (Primary Key)
+- `shared_booking_id`: `Id SharedBooking` :: `uuid` (Foreign Key to `SharedBooking`)
+- `ride_ids`: `[Id Ride]` :: `uuid[]`
+- `bpp_shared_ride_id`: `Text` :: `text`
+- `status`: `SharedRideStatus` :: `character varying(255)`
+- `merchant_id`: `Id Merchant` :: `character varying(36)`
+- `merchant_operating_city_id`: `Id MerchantOperatingCity` :: `character varying(36)`
+- `driver_id`: `Id Person` :: `character varying(36)`
+- `vehicle_number`: `Text` :: `character varying(255)`
+- `vehicle_model`: `Text` :: `character varying(255)`
+- `vehicle_variant`: `VehicleVariant` :: `character varying(60)`
+- `vehicle_service_tier_type`: `Maybe ServiceTierType` :: `character varying(255)`
+- `waypoints`: `Value` :: `jsonb`
+- `tracking_url`: `Maybe BaseUrl` :: `character varying(255)`
+- `total_fare`: `Maybe Price` :: `numeric(30,2)`
+- `chargeable_distance_value`: `Maybe HighPrecDistance` :: `double precision`
+- `traveled_distance_value`: `Maybe HighPrecDistance` :: `double precision`
+- `ride_start_time`: `Maybe UTCTime` :: `timestamptz`
+- `ride_end_time`: `Maybe UTCTime` :: `timestamptz`
+- `created_at`: `UTCTime` :: `timestamptz`
+- `updated_at`: `UTCTime` :: `timestamptz`
+
+**Types:**
+```yaml
+SharedRideStatus:
+  enum: "UPCOMING, NEW, INPROGRESS, COMPLETED, CANCELLED"
+```
+
+---
+
+## dynamic-offer-driver-app Schema
+
+### Table: `SharedSearchRequest`
+
+Wraps multiple `SearchRequest` entities for the driver app. This table holds aggregated data for a potential shared ride offer.
+
+**Schema:**
+- `id`: `Id SharedSearchRequest` :: `uuid` (Primary Key)
+- `transaction_id`: `Text` :: `character varying(36)` (References `SharedSearchRequest.id` in rider-app)
+- `status`: `SearchRequestStatus` :: `character varying(255)`
+- `merchant_id`: `Id Merchant` :: `character varying(36)`
+- `merchant_operating_city_id`: `Id MerchantOperatingCity` :: `character varying(36)`
+- `from_location_ids`: `[Id Location]` :: `uuid[]`
+- `to_location_ids`: `[Id Location]` :: `uuid[]`
+- `estimated_distance`: `Maybe Meters` :: `double precision`
+- `estimated_duration`: `Maybe Seconds` :: `integer`
+- `vehicle_category`: `Maybe VehicleCategory` :: `character varying(255)`
+- `toll_charges`: `Maybe HighPrecMoney` :: `double precision`
+- `toll_names`: `Maybe [Text]` :: `text[]`
+- `trip_category`: `Maybe TripCategory` :: `character varying(255)`
+- `valid_till`: `UTCTime` :: `timestamptz`
+- `created_at`: `UTCTime` :: `timestamptz`
+- `updated_at`: `UTCTime` :: `timestamptz`
+
+**Types:**
+```yaml
+SearchRequestStatus:
+  enum: "NEW, INPROGRESS, CONFIRMED, COMPLETED, CLOSED"
+```
+
+---
+
+### Table: `SharedEstimate`
+
+Wraps multiple `Estimate` entities for the driver app.
+
+**Schema:**
+- `id`: `Id SharedEstimate` :: `uuid` (Primary Key)
+- `transaction_id`: `Text` :: `character varying(36)` (References `SharedSearchRequest.id` in rider-app)
+- `status`: `EstimateStatus` :: `character varying(255)`
+- `merchant_id`: `Id Merchant` :: `character varying(36)`
+- `merchant_operating_city_id`: `Id MerchantOperatingCity` :: `character varying(36)`
+- `total_min_fare`: `HighPrecMoney` :: `numeric(30,2)`
+- `total_max_fare`: `HighPrecMoney` :: `numeric(30,2)`
+- `currency`: `Currency` :: `character varying(255)`
+- `estimated_distance`: `Maybe Meters` :: `double precision`
+- `estimated_duration`: `Maybe Seconds` :: `integer`
+- `distance_unit`: `DistanceUnit` :: `character varying(255)`
+- `vehicle_service_tier`: `ServiceTierType` :: `character varying(255)`
+- `trip_category`: `TripCategory` :: `character varying(255)`
+- `toll_names`: `Maybe [Text]` :: `text[]`
+- `valid_till`: `UTCTime` :: `timestamptz`
+- `created_at`: `UTCTime` :: `timestamptz`
+- `updated_at`: `UTCTime` :: `timestamptz`
+
+**Types:**
+```yaml
+EstimateStatus:
+  enum: "NEW, DRIVER_QUOTE_REQUESTED, CANCELLED, GOT_DRIVER_QUOTE, DRIVER_QUOTE_CANCELLED, COMPLETED"
+```
+
+
+---
+
+### Table: `SharedBooking`
+
+Wraps multiple `Booking` entities for the driver app.
+
+**Schema:**
+- `id`: `Id SharedBooking` :: `uuid` (Primary Key)
+- `transaction_id`: `Text` :: `character varying(36)` (References `SharedSearchRequest.id` in rider-app)
+- `shared_estimate_id`: `Id SharedEstimate` :: `uuid` (Foreign Key to `SharedEstimate`)
+- `booking_ids`: `[Id Booking]` :: `uuid[]`
+- `status`: `BookingStatus` :: `character varying(255)`
+- `merchant_id`: `Id Merchant` :: `character varying(36)`
+- `merchant_operating_city_id`: `Id MerchantOperatingCity` :: `character varying(36)`
+- `provider_id`: `Text` :: `character varying(255)`
+- `provider_url`: `BaseUrl` :: `character varying(255)`
+- `driver_id`: `Maybe (Id Person)` :: `character varying(36)`
+- `from_location_ids`: `[Id Location]` :: `uuid[]`
+- `to_location_ids`: `[Id Location]` :: `uuid[]`
+- `vehicle_service_tier`: `ServiceTierType` :: `character varying(255)`
+- `estimated_total_fare`: `HighPrecMoney` :: `numeric(30,2)`
+- `estimated_duration`: `Maybe Seconds` :: `integer`
+- `estimated_distance`: `Maybe Meters` :: `double precision`
+- `toll_names`: `Maybe [Text]` :: `text[]`
+- `pairing_time`: `UTCTime` :: `timestamptz`
+- `created_at`: `UTCTime` :: `timestamptz`
+- `updated_at`: `UTCTime` :: `timestamptz`
+
+**Types:**
+```yaml
+BookingStatus:
+  enum: "NEW,TRIP_ASSIGNED,COMPLETED,CANCELLED,REALLOCATED"
+```
+
+---
+
+### Table: `SharedRide`
+
+Wraps multiple `Ride` entities for the driver app.
+
+**Schema:**
+- `id`: `Id SharedRide` :: `uuid` (Primary Key)
+- `transaction_id`: `Text` :: `character varying(36)` (References `SharedSearchRequest.id` in rider-app)
+- `shared_booking_id`: `Id SharedBooking` :: `uuid` (Foreign Key to `SharedBooking`)
+- `ride_ids`: `[Id Ride]` :: `uuid[]`
+- `status`: `SharedRideStatus` :: `character varying(255)`
+- `merchant_id`: `Id Merchant` :: `character varying(36)`
+- `merchant_operating_city_id`: `Id MerchantOperatingCity` :: `character varying(36)`
+- `driver_id`: `Id Person` :: `character varying(36)`
+- `vehicle_number`: `Text` :: `character varying(255)`
+- `vehicle_model`: `Text` :: `character varying(255)`
+- `vehicle_variant`: `VehicleVariant` :: `character varying(60)`
+- `vehicle_service_tier_type`: `Maybe ServiceTierType` :: `character varying(255)`
+- `waypoints`: `Value` :: `jsonb`
+- `tracking_url`: `Maybe BaseUrl` :: `character varying(255)`
+- `total_fare`: `Maybe Price` :: `numeric(30,2)`
+- `chargeable_distance`: `Maybe Meters` :: `double precision`
+- `traveled_distance`: `HighPrecMeters` :: `double precision`
+- `ride_start_time`: `Maybe UTCTime` :: `timestamptz`
+- `ride_end_time`: `Maybe UTCTime` :: `timestamptz`
+- `trip_category`: `TripCategory` :: `character varying(255)`
+- `number_of_snap_to_road_calls`: `Maybe Int` :: `integer`
+- `number_of_osrm_snap_to_road_calls`: `Maybe Int` :: `integer`
+- `number_of_self_tuned`: `Maybe Int` :: `integer`
+- `number_of_deviation`: `Maybe Bool` :: `boolean`
+- `estimated_toll_charges`: `Maybe HighPrecMoney` :: `double precision`
+- `estimated_toll_names`: `Maybe [Text]` :: `text[]`
+- `toll_charges`: `Maybe HighPrecMoney` :: `double precision`
+- `toll_names`: `Maybe [Text]` :: `text[]`
+- `ride_ended_by`: `Maybe RideEndedBy` :: `character varying(255)`
+- `passed_through_destination`: `Maybe Bool` :: `boolean`
+- `is_pickup_or_destination_edited`: `Maybe Bool` :: `boolean`
+- `created_at`: `UTCTime` :: `timestamptz`
+- `updated_at`: `UTCTime` :: `timestamptz`
+
+**Types:**
+```yaml
+SharedRideStatus:
+  enum: "UPCOMING, NEW, INPROGRESS, COMPLETED, CANCELLED"
+```
