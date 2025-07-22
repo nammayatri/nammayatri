@@ -28,6 +28,7 @@ import qualified Data.Map as M
 import Data.String.Conversions (cs)
 import "rider-app" Environment (AppCfg (..))
 import Kernel.External.Encryption (EncTools)
+import Kernel.External.Slack.Types (SlackConfig)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Clickhouse.Config
@@ -118,7 +119,9 @@ data HandlerEnv = HandlerEnv
     hotSpotExpiry :: Seconds,
     dashboardClickhouseEnv :: ClickhouseEnv,
     kafkaClickhouseEnv :: ClickhouseEnv,
-    kafkaClickhouseCfg :: ClickhouseCfg
+    kafkaClickhouseCfg :: ClickhouseCfg,
+    searchLimitExceedNotificationTemplate :: Text,
+    slackCfg :: SlackConfig
   }
   deriving (Generic)
 

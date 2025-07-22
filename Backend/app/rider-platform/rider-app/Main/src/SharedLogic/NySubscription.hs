@@ -15,22 +15,46 @@
 
 module SharedLogic.NySubscription where
 
+import qualified API.UI.Search as DSearch
 import qualified Data.HashMap.Strict as HM
-import qualified Domain.Action.UI.Search as DSearch
+import Domain.Action.UI.Search (SearchRequestFlow)
 import Domain.Types.Location as Location
 import qualified Domain.Types.NyRegularSubscription as NyRegularSubscription
 import qualified Domain.Types.SearchRequest as DSearchReq
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Maps.Interface as MapsInterface
-import Kernel.Types.App (HasFlowEnv)
+import Kernel.External.Slack.Types (SlackConfig)
+import Kernel.Prelude (HasField (..))
+import Kernel.Storage.Esqueleto (EsqDBFlow)
+import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
+import Kernel.Tools.Metrics.CoreMetrics
+import Kernel.Types.App (BaseUrl, HasFlowEnv, MonadFlow)
 import Kernel.Types.Id
-import Kernel.Utils.Common (type (:::))
+import Kernel.Types.SlidingWindowLimiter
+import Kernel.Utils.Common (CacheFlow, type (:::))
+import Kernel.Utils.Error
+import Kernel.Utils.Servant.Client (RetryCfg)
 import SharedLogic.Search (OneWaySearchReq (..), SearchReq (..), SearchReqLocation (..))
+import Tools.Error
 import TransactionLogs.Types
 
 triggerSubscriptionSearch ::
-  ( DSearch.SearchRequestFlow m r,
-    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig]
+  ( SearchRequestFlow m r,
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
+    Redis.HedisFlow m r,
+    HasFlowEnv m r '["slackCfg" ::: SlackConfig],
+    HasFlowEnv m r '["searchRateLimitOptions" ::: APIRateLimitOptions],
+    HasFlowEnv m r '["searchLimitExceedNotificationTemplate" ::: Text],
+    MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
+    CacheFlow m r,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
+    EsqDBFlow m r,
+    HasField "shortDurationRetryCfg" r RetryCfg,
+    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
   ) =>
   NyRegularSubscription.NyRegularSubscription ->
   m (Id DSearchReq.SearchRequest)
@@ -57,10 +81,10 @@ triggerSubscriptionSearch subscription = do
             subscriptionId = Just subscription.id,
             verifyBeforeCancellingOldBooking = Just True
           }
-
+  merchantId <- subscription.merchantId & fromMaybeM (InternalError $ "no merchant id for subscription id :" <> subscription.id.getId)
   searchResp <-
-    DSearch.search
-      subscription.userId
+    DSearch.searchTrigger'
+      (subscription.userId, merchantId)
       (OneWaySearch oneWaySearchReq)
       Nothing -- backendConfigVersion
       Nothing -- clientBundleVersion
@@ -68,10 +92,8 @@ triggerSubscriptionSearch subscription = do
       Nothing -- clientDevice
       Nothing -- clientId
       Nothing -- clientSdkVersion
-      False -- isDashboardRequest
-      Nothing -- journeySearchData
-      False -- isMeterRide
-  return searchResp.searchRequest.id
+      (Just False)
+  return searchResp.searchId
 
 toSearchReqLocation :: Location.Location -> SearchReqLocation
 toSearchReqLocation loc =
