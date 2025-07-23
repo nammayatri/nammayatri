@@ -18,10 +18,14 @@ import Servant.Client
 type API = ("frontend" :> (GetFrontendFlowStatus :<|> PostFrontendNotifyEvent))
 
 type GetFrontendFlowStatus =
-  ( "flowStatus" :> Capture "customerId" (Kernel.Types.Id.Id Domain.Types.Person.Person) :> QueryParam "isPolling" Kernel.Prelude.Bool
+  ( "flowStatus" :> Capture "customerId" (Kernel.Types.Id.Id Domain.Types.Person.Person)
+      :> QueryParam
+           "isPolling"
+           Kernel.Prelude.Bool
       :> QueryParam
            "checkForActiveBooking"
            Kernel.Prelude.Bool
+      :> QueryParam "isPaymentSuccess" Kernel.Prelude.Bool
       :> Get '[JSON] Domain.Action.UI.Frontend.GetPersonFlowStatusRes
   )
 
@@ -33,7 +37,7 @@ type PostFrontendNotifyEvent =
   )
 
 data FrontendAPIs = FrontendAPIs
-  { getFrontendFlowStatus :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> EulerHS.Types.EulerClient Domain.Action.UI.Frontend.GetPersonFlowStatusRes,
+  { getFrontendFlowStatus :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> EulerHS.Types.EulerClient Domain.Action.UI.Frontend.GetPersonFlowStatusRes,
     postFrontendNotifyEvent :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Action.UI.Frontend.NotifyEventReq -> EulerHS.Types.EulerClient Domain.Action.UI.Frontend.NotifyEventResp
   }
 
