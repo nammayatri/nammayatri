@@ -1076,8 +1076,8 @@ mkSearchReqLocation address latLng = do
       address = address
     }
 
-mkJourney :: MonadFlow m => Id DP.Person -> Maybe UTCTime -> Maybe UTCTime -> Distance -> Seconds -> Id DJ.Journey -> Id DSR.SearchRequest -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> [EMInterface.MultiModalLeg] -> Meters -> Meters -> Maybe (Id DRL.RecentLocation) -> Maybe Double -> Bool -> Bool -> Text -> Maybe Text -> m DJ.Journey
-mkJourney riderId startTime endTime estimatedDistance estiamtedDuration journeyId parentSearchId merchantId merchantOperatingCityId legs maximumWalkDistance straightLineThreshold mbRecentLocationId relevanceScore hasUserPreferredServiceTier hasUserPreferredTransitModes fromLocationAddress toLocationAddress = do
+mkJourney :: MonadFlow m => Id DP.Person -> Maybe UTCTime -> Maybe UTCTime -> Distance -> Seconds -> Id DJ.Journey -> Id DSR.SearchRequest -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> [EMInterface.MultiModalLeg] -> Meters -> Meters -> Maybe (Id DRL.RecentLocation) -> Maybe Double -> Bool -> Bool -> DLocation.Location -> Maybe DLocation.Location -> m DJ.Journey
+mkJourney riderId startTime endTime estimatedDistance estiamtedDuration journeyId parentSearchId merchantId merchantOperatingCityId legs maximumWalkDistance straightLineThreshold mbRecentLocationId relevanceScore hasUserPreferredServiceTier hasUserPreferredTransitModes fromLocation toLocation = do
   let journeyLegsCount = length legs
       modes = map (\x -> convertMultiModalModeToTripMode x.mode (straightLineDistance x) (distanceToMeters x.distance) maximumWalkDistance straightLineThreshold) legs
   let isPublicTransportIncluded = any (`elem` [DTrip.Bus, DTrip.Metro, DTrip.Subway]) modes
@@ -1092,12 +1092,12 @@ mkJourney riderId startTime endTime estimatedDistance estiamtedDuration journeyI
         totalLegs = journeyLegsCount,
         modes = modes,
         searchRequestId = parentSearchId,
-        merchantId = Just merchantId,
+        merchantId = merchantId,
         status = DJ.NEW,
         riderId,
         startTime,
         endTime,
-        merchantOperatingCityId = Just merchantOperatingCityId,
+        merchantOperatingCityId = merchantOperatingCityId,
         createdAt = now,
         updatedAt = now,
         DJ.recentLocationId = mbRecentLocationId, -- Fully qualify the field name
@@ -1105,7 +1105,6 @@ mkJourney riderId startTime endTime estimatedDistance estiamtedDuration journeyI
         relevanceScore,
         hasPreferredServiceTier = Just hasUserPreferredServiceTier,
         hasPreferredTransitModes = Just hasUserPreferredTransitModes,
-        fromLocationAddress = Just fromLocationAddress,
         paymentOrderShortId = Nothing,
         journeyExpiryTime = Nothing,
         ..

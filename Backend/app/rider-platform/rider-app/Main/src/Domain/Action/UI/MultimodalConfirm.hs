@@ -499,7 +499,7 @@ postMultimodalJourneyFeedback (mbPersonId, mbMerchantId) journeyId journeyFeedba
               rating = Just rating,
               riderId = riderId,
               merchantId = Just mbMerchantId,
-              merchantOperatingCityId = journey.merchantOperatingCityId,
+              merchantOperatingCityId = Just journey.merchantOperatingCityId,
               createdAt = now,
               updatedAt = now
             }
@@ -513,7 +513,7 @@ postMultimodalJourneyFeedback (mbPersonId, mbMerchantId) journeyId journeyFeedba
             travelMode = feedbackEntry.travelMode,
             legOrder = feedbackEntry.legOrder,
             merchantId = Just mbMerchantId,
-            merchantOperatingCityId = journey.merchantOperatingCityId,
+            merchantOperatingCityId = Just journey.merchantOperatingCityId,
             createdAt = now,
             updatedAt = now
           }

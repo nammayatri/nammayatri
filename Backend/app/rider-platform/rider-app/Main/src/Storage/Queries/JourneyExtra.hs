@@ -63,7 +63,7 @@ findAllByRiderIdAndStatusAndMOCId (Kernel.Types.Id.Id personId) status (Kernel.T
     [ Se.And
         [ Se.Is Beam.riderId $ Se.Eq personId,
           Se.Is Beam.status $ Se.Eq $ Just status,
-          Se.Is Beam.merchantOperatingCityId $ Se.Eq (Just mocId)
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq mocId
         ]
     ]
     (Se.Desc Beam.createdAt)

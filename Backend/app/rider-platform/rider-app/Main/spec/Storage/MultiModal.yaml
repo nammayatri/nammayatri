@@ -48,11 +48,13 @@ Journey:
     relevanceScore: Maybe Double
     hasPreferredServiceTier: Maybe Bool
     hasPreferredTransitModes: Maybe Bool
-    fromLocationAddress: Maybe Text
-    toLocationAddress: Maybe Text
+    fromLocation: Location
+    toLocation: Maybe Location
     isPublicTransportIncluded: Maybe Bool
     paymentOrderShortId: Maybe (ShortId PaymentOrder)
     journeyExpiryTime: Maybe UTCTime
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
 
   beamType:
     status: Maybe JourneyStatus
@@ -64,12 +66,24 @@ Journey:
     estimatedDistance:
       estimatedDistance: HighPrecDistance
       distanceUnit: DistanceUnit
+    fromLocation:
+      fromLocationId: Maybe Text
+      fromLocationAddress: Maybe Text
+    toLocation:
+      toLocationId: Maybe Text
+      toLocationAddress: Maybe Text
 
   fromTType:
+    fromLocation: Storage.Queries.Transformers.Journey.getLocation fromLocationId fromLocationAddress|EM
+    toLocation: Just <$> Storage.Queries.Transformers.Journey.getLocation toLocationId toLocationAddress|EM
     estimatedDistance: (Kernel.Types.Common.Distance estimatedDistance distanceUnit)|E
     status: (fromMaybe Domain.Types.Journey.NEW status)|E
 
   toTType:
+    fromLocationId: (Just $ Kernel.Types.Id.getId ((.id) fromLocation))|E
+    toLocationId: (Kernel.Types.Id.getId <$> (toLocation <&> (.id)))|E
+    fromLocationAddress: Nothing|E
+    toLocationAddress: Nothing|E
     estimatedDistance: ((.value))|I
     distanceUnit: ((.unit))|I
     status: (Just status)|E
@@ -101,6 +115,8 @@ Journey:
 
   sqlType:
     modes: "text[]"
+    fromLocationId: character varying(36)
+    toLocationId: character varying(36)
 
   extraOperations:
     - EXTRA_QUERY_FILE
