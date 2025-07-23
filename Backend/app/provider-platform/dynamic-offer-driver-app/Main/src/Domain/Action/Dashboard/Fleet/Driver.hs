@@ -2420,8 +2420,8 @@ postDriverFleetGetNearbyDrivers merchantShortId _ fleetOwnerId req = do
 getDriverFleetAccessList :: ShortId DM.Merchant -> Context.City -> Maybe Text -> Flow Common.FleetOwnerListRes
 getDriverFleetAccessList _ _ mbFleetMemberId = do
   fleetMemberId <- mbFleetMemberId & fromMaybeM (InvalidRequest "Fleet member ID is required")
-  fleetOwners <- FMA.findAllByfleetMemberId fleetMemberId
-  allFleetGroups <- FMA.findAllWithOwnerIds ((.fleetOwnerId) <$> fleetOwners)
+  fleetOwners <- B.runInMasterDbAndRedis $ FMA.findAllByfleetMemberId fleetMemberId
+  allFleetGroups <- B.runInMasterDbAndRedis $ FMA.findAllWithOwnerIds ((.fleetOwnerId) <$> fleetOwners)
   ownersList <-
     mapM
       ( \fleetMemberAssociation -> do
