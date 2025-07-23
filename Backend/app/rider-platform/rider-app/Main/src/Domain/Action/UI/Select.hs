@@ -29,7 +29,6 @@ module Domain.Action.UI.Select
   )
 where
 
-import qualified Beckn.OnDemand.Utils.Common as UCommon
 import Control.Applicative ((<|>))
 import qualified Control.Lens as L
 import Control.Monad.Extra (anyM)
@@ -412,9 +411,6 @@ mkJourneyForSearch searchRequest estimate personId = do
       journeyGuid <- generateGUID
       journeyLegGuid <- generateGUID
 
-      let fromLocationAddress = UCommon.mkAddress searchRequest.fromLocation.address
-          toLocationAddress = UCommon.mkAddress <$> (searchRequest.toLocation <&> (.address))
-
       let estimatedMinFare = Just estimate.estimatedFare.amount
           estimatedMaxFare = Just estimate.estimatedFare.amount
 
@@ -428,12 +424,12 @@ mkJourneyForSearch searchRequest estimate personId = do
                 totalLegs = 1,
                 modes = [DTrip.Taxi],
                 searchRequestId = searchRequest.id,
-                merchantId = Just searchRequest.merchantId,
+                merchantId = searchRequest.merchantId,
                 status = DJ.INPROGRESS,
                 riderId = personId,
                 startTime = Just searchRequest.startTime,
                 endTime = Nothing,
-                merchantOperatingCityId = Just searchRequest.merchantOperatingCityId,
+                merchantOperatingCityId = searchRequest.merchantOperatingCityId,
                 createdAt = now,
                 updatedAt = now,
                 recentLocationId = searchRequest.recentLocationId,
@@ -441,8 +437,8 @@ mkJourneyForSearch searchRequest estimate personId = do
                 relevanceScore = Nothing,
                 hasPreferredServiceTier = Nothing,
                 hasPreferredTransitModes = Just False,
-                fromLocationAddress = Just fromLocationAddress,
-                toLocationAddress = toLocationAddress,
+                fromLocation = searchRequest.fromLocation,
+                toLocation = searchRequest.toLocation,
                 paymentOrderShortId = Nothing,
                 journeyExpiryTime = Nothing
               }

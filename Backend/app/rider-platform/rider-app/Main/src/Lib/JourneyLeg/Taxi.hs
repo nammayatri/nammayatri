@@ -42,14 +42,14 @@ instance JT.JourneyLeg TaxiLegRequest m where
     legSearchReq <- mkOneWaySearchReq
     dSearchRes <-
       DSearch.search
-        parentSearchReq.riderId
+        journey.riderId
         legSearchReq
-        parentSearchReq.clientBundleVersion
-        parentSearchReq.clientSdkVersion
-        parentSearchReq.clientConfigVersion
-        parentSearchReq.clientReactNativeVersion
-        parentSearchReq.clientId
-        parentSearchReq.device
+        Nothing
+        Nothing
+        Nothing
+        Nothing
+        Nothing
+        Nothing
         False
         (Just journeySearchData)
         True
@@ -58,7 +58,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
       becknTaxiReqV2 <- TaxiACL.buildSearchReqV2 dSearchRes
       let generatedJson = encode becknTaxiReqV2
       logDebug $ "Beckn Taxi Request V2: " <> T.pack (show generatedJson)
-      void $ CallBPP.searchV2 dSearchRes.gatewayUrl becknTaxiReqV2 parentSearchReq.merchantId
+      void $ CallBPP.searchV2 dSearchRes.gatewayUrl becknTaxiReqV2 journey.merchantId
     return $ JT.SearchResponse {id = dSearchRes.searchRequest.id.getId}
     where
       lastAndRest :: [a] -> Maybe (a, [a])
@@ -79,7 +79,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
                 fareParametersInRateCard = Just True,
                 quotesUnifiedFlow = Just True,
                 sessionToken = Nothing,
-                placeNameSource = parentSearchReq.placeNameSource,
+                placeNameSource = Nothing,
                 driverIdentifier = Nothing,
                 stops = Just stops',
                 destination = Just destination,

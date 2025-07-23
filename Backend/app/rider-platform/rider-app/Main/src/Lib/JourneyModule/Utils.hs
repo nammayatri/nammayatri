@@ -1,5 +1,6 @@
 module Lib.JourneyModule.Utils where
 
+import qualified Beckn.OnDemand.Utils.Common as UCommon
 import BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.OnDemand.Enums as Enums
 import Control.Applicative ((<|>))
@@ -671,7 +672,7 @@ createRecentLocationForMultimodal journey = do
   case (mbFirstLeg, mbFirstStopCode, mbLastStopCode, mbEndLocation) of
     (Just firstLeg, Just firstStopCode, Just lastStopCode, Just endLocation) -> do
       uuid <- generateGUID
-      cityId <- journey.merchantOperatingCityId & fromMaybeM (InternalError $ "Merchant operating city id not found for journey: " <> journey.id.getId)
+      let cityId = journey.merchantOperatingCityId
       let fromGeohash = T.pack <$> Geohash.encode 6 (firstLeg.startLocation.latitude, firstLeg.startLocation.longitude)
       let toGeohash = T.pack <$> Geohash.encode 6 (endLocation.latitude, endLocation.longitude)
       mbRecentLocation <- SQRL.findByRiderIdAndGeohashAndEntityType journey.riderId toGeohash fromGeohash (if length legs > 1 then DTRL.MULTIMODAL else convertModeToEntityType firstLeg.mode)
@@ -684,7 +685,7 @@ createRecentLocationForMultimodal journey = do
                     riderId = journey.riderId,
                     frequency = 1,
                     entityType = if length legs > 1 then DTRL.MULTIMODAL else convertModeToEntityType firstLeg.mode,
-                    address = journey.toLocationAddress,
+                    address = UCommon.mkAddress <$> (journey.toLocation <&> (.address)),
                     fromLatLong = Just $ LatLong firstLeg.startLocation.latitude firstLeg.startLocation.longitude,
                     routeCode = if length legs > 1 then Nothing else mbRouteCode,
                     toStopCode = Just lastStopCode,

@@ -17,8 +17,8 @@ import qualified Storage.Queries.WalkLegMultimodal as QWalkLeg
 
 instance JT.JourneyLeg WalkLegRequest m where
   search (WalkLegRequestSearch WalkLegRequestSearchData {..}) = do
-    fromLocation <- buildSearchReqLoc parentSearchReq.merchantId parentSearchReq.merchantOperatingCityId origin
-    toLocation <- buildSearchReqLoc parentSearchReq.merchantId parentSearchReq.merchantOperatingCityId destination
+    fromLocation <- buildSearchReqLoc journey.merchantId journey.merchantOperatingCityId origin
+    toLocation <- buildSearchReqLoc journey.merchantId journey.merchantOperatingCityId destination
     now <- getCurrentTime
     id <- generateGUID
     let journeySearchData =
@@ -40,11 +40,11 @@ instance JT.JourneyLeg WalkLegRequest m where
               fromLocation = fromLocation,
               toLocation = Just toLocation,
               journeyLegInfo = Just journeySearchData,
-              riderId = parentSearchReq.riderId,
+              riderId = journey.riderId,
               startTime = fromMaybe now journeyLegData.fromArrivalTime,
-              merchantId = parentSearchReq.merchantId,
+              merchantId = journey.merchantId,
               status = DWalkLeg.InPlan,
-              merchantOperatingCityId = parentSearchReq.merchantOperatingCityId,
+              merchantOperatingCityId = journey.merchantOperatingCityId,
               createdAt = now,
               updatedAt = now
             }

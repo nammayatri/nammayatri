@@ -2,7 +2,6 @@ module Lib.JourneyModule.Base where
 
 import qualified API.Types.UI.FRFSTicketService as FRFSTicketService
 import qualified API.Types.UI.MultimodalConfirm as APITypes
-import qualified Beckn.OnDemand.Utils.Common as UCommon
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.OnDemand.Enums as BecknSpec
 import Control.Monad.Extra (mapMaybeM)
@@ -32,7 +31,6 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.MultimodalPreferences as DMP
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.RiderConfig
-import qualified Domain.Types.SearchRequest as SearchRequest
 import qualified Domain.Types.Station as DStation
 import qualified Domain.Types.Trip as DTrip
 import Environment
@@ -155,13 +153,11 @@ init journeyReq userPreferences = do
     then do return Nothing
     else do
       searchReq <- QSearchRequest.findById journeyReq.parentSearchId >>= fromMaybeM (SearchRequestNotFound journeyReq.parentSearchId.getId)
-      let fromLocationAddress = UCommon.mkAddress searchReq.fromLocation.address
-      let toLocationAddress = UCommon.mkAddress <$> (Just searchReq >>= (.toLocation) >>= (Just <$> (.address)))
       forM_ journeyLegs $ \leg -> do
         QJourneyLeg.create leg
       hasUserPreferredTransitTypesFlag <- hasUserPreferredTransitTypes journeyLegs userPreferences
       hasUserPreferredTransitModesFlag <- hasUserPreferredTransitModes journeyLegs userPreferences
-      journey <- JL.mkJourney journeyReq.personId journeyReq.startTime journeyReq.endTime journeyReq.estimatedDistance journeyReq.estimatedDuration journeyId journeyReq.parentSearchId journeyReq.merchantId journeyReq.merchantOperatingCityId journeyReq.legs journeyReq.maximumWalkDistance journeyReq.straightLineThreshold (searchReq.recentLocationId) journeyReq.relevanceScore hasUserPreferredTransitTypesFlag hasUserPreferredTransitModesFlag fromLocationAddress toLocationAddress
+      journey <- JL.mkJourney journeyReq.personId journeyReq.startTime journeyReq.endTime journeyReq.estimatedDistance journeyReq.estimatedDuration journeyId journeyReq.parentSearchId journeyReq.merchantId journeyReq.merchantOperatingCityId journeyReq.legs journeyReq.maximumWalkDistance journeyReq.straightLineThreshold (searchReq.recentLocationId) journeyReq.relevanceScore hasUserPreferredTransitTypesFlag hasUserPreferredTransitModesFlag searchReq.fromLocation searchReq.toLocation
       QJourney.create journey
       logDebug $ "journey for multi-modal: " <> show journey
       return $ Just journey
@@ -318,12 +314,7 @@ hasSignificantMovement (p1 : p2 : _) busTrackingConfig =
 hasSignificantMovement _ _ = False
 
 getRiderConfig :: (JL.GetStateFlow m r c, JL.SearchRequestFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) => DJourney.Journey -> m Domain.Types.RiderConfig.RiderConfig
-getRiderConfig journey' = do
-  case journey'.merchantOperatingCityId of
-    Just merchantOperatingCityId ->
-      QRiderConfig.findByMerchantOperatingCityId merchantOperatingCityId Nothing
-        >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
-    _ -> fromMaybeM (RiderConfigDoesNotExist "") Nothing
+getRiderConfig journey = QRiderConfig.findByMerchantOperatingCityId journey.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist journey.merchantOperatingCityId.getId)
 
 defaultBusTrackingConfig :: Domain.Types.RiderConfig.BusTrackingConfig
 defaultBusTrackingConfig =
@@ -568,11 +559,10 @@ addAllLegs ::
   m ()
 addAllLegs journeyId mbOldJourneyLegs newJourneyLegs = do
   journey <- getJourney journeyId
-  parentSearchReq <- QSearchRequest.findById journey.searchRequestId >>= fromMaybeM (SearchRequestNotFound journey.searchRequestId.getId)
   oldLegs <- maybe (getJourneyLegs journeyId) (\oldJourneyLegs -> return oldJourneyLegs) mbOldJourneyLegs
   let filteredOldLegs = filter (\leg1 -> all (\leg2 -> not (leg1.sequenceNumber == leg2.sequenceNumber)) newJourneyLegs) oldLegs
   let allLegs = sortBy (comparing (.sequenceNumber)) (filteredOldLegs ++ newJourneyLegs)
-  toLocation <- parentSearchReq.toLocation & fromMaybeM (InvalidRequest "To location nothing for parent search request")
+  toLocation <- journey.toLocation & fromMaybeM (InvalidRequest "To location nothing for Journey / Parent Search Request")
   forM_ (traverseWithTriplets allLegs) $ \(mbPrevJourneyLeg, journeyLeg, mbNextJourneyLeg) -> do
     when (isNothing journeyLeg.legSearchId) $ do
       -- In case of retry of this function, if search has already triggered then it will not do it again
@@ -580,19 +570,19 @@ addAllLegs journeyId mbOldJourneyLegs newJourneyLegs = do
         case journeyLeg.mode of
           DTrip.Taxi -> do
             snappedLeg <- snapJourneyLegToNearestGate journeyLeg
-            let originAddress = mkAddress (mbPrevJourneyLeg >>= (.toStopDetails)) journeyLeg.mode parentSearchReq.fromLocation.address
+            let originAddress = mkAddress (mbPrevJourneyLeg >>= (.toStopDetails)) journeyLeg.mode journey.fromLocation.address
             let destinationAddress = mkAddress (mbNextJourneyLeg >>= (.fromStopDetails)) journeyLeg.mode toLocation.address
-            addTaxiLeg parentSearchReq snappedLeg originAddress destinationAddress
+            addTaxiLeg journey snappedLeg originAddress destinationAddress
           DTrip.Metro -> do
-            addMetroLeg parentSearchReq journeyLeg
+            addMetroLeg journey journeyLeg
           DTrip.Subway -> do
-            addSubwayLeg parentSearchReq journeyLeg
+            addSubwayLeg journey journeyLeg
           DTrip.Walk -> do
-            let originAddress = mkAddress (mbPrevJourneyLeg >>= (.toStopDetails)) journeyLeg.mode parentSearchReq.fromLocation.address
+            let originAddress = mkAddress (mbPrevJourneyLeg >>= (.toStopDetails)) journeyLeg.mode journey.fromLocation.address
             let destinationAddress = mkAddress (mbNextJourneyLeg >>= (.fromStopDetails)) journeyLeg.mode toLocation.address
-            addWalkLeg parentSearchReq journeyLeg originAddress destinationAddress
+            addWalkLeg journey journeyLeg originAddress destinationAddress
           DTrip.Bus -> do
-            addBusLeg parentSearchReq journeyLeg
+            addBusLeg journey journeyLeg
       upsertJourneyLeg $ journeyLeg {DJourneyLeg.legSearchId = Just searchResp.id}
   where
     traverseWithTriplets :: [a] -> [(Maybe a, a, Maybe a)]
@@ -679,12 +669,12 @@ snapJourneyLegToNearestGate journeyLeg = do
 
 addTaxiLeg ::
   JL.SearchRequestFlow m r c =>
-  SearchRequest.SearchRequest ->
+  DJourney.Journey ->
   DJourneyLeg.JourneyLeg ->
   LA.LocationAddress ->
   LA.LocationAddress ->
   m JL.SearchResponse
-addTaxiLeg parentSearchReq journeyLeg originAddress destinationAddress = do
+addTaxiLeg journey journeyLeg originAddress destinationAddress = do
   let startLocation = JL.mkSearchReqLocation originAddress journeyLeg.startLocation
   let endLocation = JL.mkSearchReqLocation destinationAddress journeyLeg.endLocation
   let taxiSearchReq = mkTaxiSearchReq startLocation [endLocation]
@@ -700,12 +690,12 @@ addTaxiLeg parentSearchReq journeyLeg originAddress destinationAddress = do
 
 addWalkLeg ::
   JL.SearchRequestFlow m r c =>
-  SearchRequest.SearchRequest ->
+  DJourney.Journey ->
   DJourneyLeg.JourneyLeg ->
   LA.LocationAddress ->
   LA.LocationAddress ->
   m JL.SearchResponse
-addWalkLeg parentSearchReq journeyLeg originAddress destinationAddress = do
+addWalkLeg journey journeyLeg originAddress destinationAddress = do
   let startLocation = JL.mkSearchReqLocation originAddress journeyLeg.startLocation
   let endLocation = JL.mkSearchReqLocation destinationAddress journeyLeg.endLocation
   let walkSearchReq = mkWalkSearchReq startLocation endLocation
@@ -721,11 +711,11 @@ addWalkLeg parentSearchReq journeyLeg originAddress destinationAddress = do
 
 addMetroLeg ::
   (JL.SearchRequestFlow m r c, JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
-  SearchRequest.SearchRequest ->
+  DJourney.Journey ->
   DJourneyLeg.JourneyLeg ->
   m JL.SearchResponse
-addMetroLeg parentSearchReq journeyLeg = do
-  merchantOperatingCity <- QMerchOpCity.findById parentSearchReq.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound parentSearchReq.merchantOperatingCityId.getId)
+addMetroLeg journey journeyLeg = do
+  merchantOperatingCity <- QMerchOpCity.findById journey.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound journey.merchantOperatingCityId.getId)
   riderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCity.id Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCity.id.getId)
   let metroSearchReq = mkMetroLegReq merchantOperatingCity.city
   searchResp <- JL.search metroSearchReq
@@ -755,20 +745,20 @@ addMetroLeg parentSearchReq journeyLeg = do
       MetroLegRequestSearch $
         MetroLegRequestSearchData
           { quantity = 1,
-            personId = parentSearchReq.riderId,
-            merchantId = parentSearchReq.merchantId,
-            recentLocationId = parentSearchReq.recentLocationId,
+            personId = journey.riderId,
+            merchantId = journey.merchantId,
+            recentLocationId = journey.recentLocationId,
             city,
             journeyLeg
           }
 
 addSubwayLeg ::
   JL.SearchRequestFlow m r c =>
-  SearchRequest.SearchRequest ->
+  DJourney.Journey ->
   DJourneyLeg.JourneyLeg ->
   m JL.SearchResponse
-addSubwayLeg parentSearchReq journeyLeg = do
-  merchantOperatingCity <- QMerchOpCity.findById parentSearchReq.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound parentSearchReq.merchantOperatingCityId.getId)
+addSubwayLeg journey journeyLeg = do
+  merchantOperatingCity <- QMerchOpCity.findById journey.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound journey.merchantOperatingCityId.getId)
   let subwaySearchReq = mkSubwayLegReq merchantOperatingCity.city
   JL.search subwaySearchReq
   where
@@ -776,20 +766,20 @@ addSubwayLeg parentSearchReq journeyLeg = do
       SubwayLegRequestSearch $
         SubwayLegRequestSearchData
           { quantity = 1,
-            personId = parentSearchReq.riderId,
-            merchantId = parentSearchReq.merchantId,
-            recentLocationId = parentSearchReq.recentLocationId,
+            personId = journey.riderId,
+            merchantId = journey.merchantId,
+            recentLocationId = journey.recentLocationId,
             city,
             journeyLeg
           }
 
 addBusLeg ::
   JL.SearchRequestFlow m r c =>
-  SearchRequest.SearchRequest ->
+  DJourney.Journey ->
   DJourneyLeg.JourneyLeg ->
   m JL.SearchResponse
-addBusLeg parentSearchReq journeyLeg = do
-  merchantOperatingCity <- QMerchOpCity.findById parentSearchReq.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound parentSearchReq.merchantOperatingCityId.getId)
+addBusLeg journey journeyLeg = do
+  merchantOperatingCity <- QMerchOpCity.findById journey.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound journey.merchantOperatingCityId.getId)
   let busSearchReq = mkBusLegReq merchantOperatingCity.city
   JL.search busSearchReq
   where
@@ -797,9 +787,9 @@ addBusLeg parentSearchReq journeyLeg = do
       BusLegRequestSearch $
         BusLegRequestSearchData
           { quantity = 1,
-            personId = parentSearchReq.riderId,
-            merchantId = parentSearchReq.merchantId,
-            recentLocationId = parentSearchReq.recentLocationId,
+            personId = journey.riderId,
+            merchantId = journey.merchantId,
+            recentLocationId = journey.recentLocationId,
             city,
             journeyLeg
           }
@@ -1233,8 +1223,7 @@ extendLeg ::
   m ()
 extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newDuration bookingUpdateReqId = do
   journey <- getJourney journeyId
-  parentSearchReq <- QSearchRequest.findById journey.searchRequestId >>= fromMaybeM (SearchRequestNotFound journey.searchRequestId.getId)
-  endLocation <- maybe (fromMaybeM (InvalidRequest $ "toLocation not found for searchId: " <> show parentSearchReq.id.getId) parentSearchReq.toLocation >>= return . DLoc.makeLocationAPIEntity) return mbEndLocation
+  endLocation <- maybe (fromMaybeM (InvalidRequest $ "toLocation not found for journeyId: " <> show journey.id.getId) journey.toLocation >>= return . DLoc.makeLocationAPIEntity) return mbEndLocation
   allLegs <- getAllLegsInfo journeyId False
   case startPoint of
     JL.StartLegOrder startLegOrder -> do
@@ -1266,7 +1255,7 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
             else QJourneyLeg.updateIsDeleted (Just True) (Just currLeg.searchId)
         QJourneyLeg.create journeyLeg
         updateJourneyChangeLogCounter journeyId
-        searchResp <- addTaxiLeg parentSearchReq journeyLeg startLocationAddress (mkLocationAddress endLocation)
+        searchResp <- addTaxiLeg journey journeyLeg startLocationAddress (mkLocationAddress endLocation)
         QJourneyLeg.updateLegSearchId (Just searchResp.id) journeyLeg.id
         when (currentLeg.status /= JL.InPlan) $
           fork "Start journey thread" $ withShortRetry $ startJourney [] Nothing journeyId
@@ -1276,14 +1265,14 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
         (DTrip.Taxi, False) -> do
           bookingUpdateRequestId <- bookingUpdateReqId & fromMaybeM (InvalidRequest "bookingUpdateReqId not found")
           journeyLeg <- QJourneyLeg.findByLegSearchId (Just currentLeg.searchId) >>= fromMaybeM (InvalidRequest $ "JourneyLeg not found for searchId: " <> currentLeg.searchId)
-          void $ DEditLocation.postEditResultConfirm (Just parentSearchReq.riderId, parentSearchReq.merchantId) bookingUpdateRequestId
+          void $ DEditLocation.postEditResultConfirm (Just journey.riderId, journey.merchantId) bookingUpdateRequestId
           Redis.setExp mkExtendLegKey journeyLeg.id 300 --5 mins
-        (DTrip.Taxi, True) -> extendWalkLeg startlocation endLocation currentLeg parentSearchReq
-        (DTrip.Walk, _) -> extendWalkLeg startlocation endLocation currentLeg parentSearchReq
+        (DTrip.Taxi, True) -> extendWalkLeg journey startlocation endLocation currentLeg
+        (DTrip.Walk, _) -> extendWalkLeg journey startlocation endLocation currentLeg
         _ -> do
           throwError $ InvalidRequest ("Cannot extend leg for mode: " <> show currentLeg.travelMode)
   where
-    extendWalkLeg startlocation endLocation currentLeg parentSearchReq = do
+    extendWalkLeg journey startlocation endLocation currentLeg = do
       now <- getCurrentTime
       leg <- mkMultiModalLeg newDistance newDuration MultiModalTypes.Unspecified startlocation.location.lat startlocation.location.lon endLocation.lat endLocation.lon now
       riderConfig <- QRC.findByMerchantOperatingCityId currentLeg.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist currentLeg.merchantOperatingCityId.getId)
@@ -1291,7 +1280,7 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
       withJourneyUpdateInProgress journeyId $ do
         cancelRequiredLegs
         QJourneyLeg.create journeyLeg
-        searchResp <- addTaxiLeg parentSearchReq journeyLeg (mkLocationAddress startlocation.location) (mkLocationAddress endLocation)
+        searchResp <- addTaxiLeg journey journeyLeg (mkLocationAddress startlocation.location) (mkLocationAddress endLocation)
         QJourneyLeg.updateLegSearchId (Just searchResp.id) journeyLeg.id
         startJourney [] (Just currentLeg.order) journeyId
 
@@ -1448,8 +1437,7 @@ extendLegEstimatedFare journeyId startPoint mbEndLocation legOrder = do
   -- isLegsCancellable <- checkIfAllLegsCancellable remainingLegs
   -- if isLegsCancellable
   --   then do
-  parentSearchReq <- QSearchRequest.findById journey.searchRequestId >>= fromMaybeM (SearchRequestNotFound journey.searchRequestId.getId)
-  endLocation <- maybe (fromMaybeM (InvalidRequest $ "toLocation not found for searchId: " <> show parentSearchReq.id.getId) parentSearchReq.toLocation >>= return . DLoc.makeLocationAPIEntity) return mbEndLocation
+  endLocation <- maybe (fromMaybeM (InvalidRequest $ "toLocation not found for journeyId: " <> show journey.id.getId) journey.toLocation >>= return . DLoc.makeLocationAPIEntity) return mbEndLocation
 
   startLocation <- getStartLocation startPoint remainingLegs
   case (startPoint, currentLeg.travelMode) of
@@ -1626,7 +1614,7 @@ generateJourneyInfoResponse journey legs = do
   let estimatedMaxFareAmount = sum $ mapMaybe (\leg -> leg.estimatedMaxFare <&> (.amount)) legs
   let unifiedQR = getUnifiedQR journey legs
   let mbCurrency = listToMaybe legs >>= (\leg -> leg.estimatedMinFare <&> (.currency))
-  merchantOperatingCity <- maybe (pure Nothing) QMerchOpCity.findById journey.merchantOperatingCityId
+  merchantOperatingCity <- QMerchOpCity.findById journey.merchantOperatingCityId
   let merchantOperatingCityName = show . (.city) <$> merchantOperatingCity
   let unifiedQRV2 = getUnifiedQRV2 unifiedQR
   pure $
