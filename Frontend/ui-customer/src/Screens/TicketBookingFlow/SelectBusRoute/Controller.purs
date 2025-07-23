@@ -29,6 +29,7 @@ import Helpers.FrfsUtils (getFirstRoute, calculateEtaForBusRoutes)
 import Data.Foldable (minimum)
 import Control.Bind ((>>=))
 import Engineering.Helpers.Events as Events
+import Engineering.Helpers.LogEvent (logEvent)
 import Foreign.Object (empty)
 
 instance showAction :: Show Action where
@@ -65,7 +66,7 @@ eval EditStops state = continueWithCmd state [do pure BackPressed]
 eval (GenericHeaderAC (GenericHeader.PrefixImgOnClick)) state = continueWithCmd state [do pure BackPressed]
 
 eval SeeRouteButtonAction state = do
-  void $ pure $ firebaseLogEvent "ny_bus_user_stop_search_completed"
+  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_bus_user_stop_search_completed"
   exit $ TrackBus state 
   
 eval (SelectQuote quote) state =

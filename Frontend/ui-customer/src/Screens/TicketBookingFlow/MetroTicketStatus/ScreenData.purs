@@ -21,6 +21,7 @@ import ConfigProvider
 import Screens.Types 
 import Services.API 
 import Domain.Payments as PP
+import Foreign.Object (empty)
 
 initData :: MetroTicketStatusScreenState
 initData = 
@@ -32,7 +33,8 @@ initData =
       bookingId : "",
       resp : dummyMetroBookingStatus,
       timerId : "",
-      quoteId : ""
+      quoteId : "",
+      logField : empty
   }
   , props : {
       showShimmer : true,

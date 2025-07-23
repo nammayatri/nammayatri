@@ -86,11 +86,11 @@ import Language.Strings (getString, getVarString)
 import Language.Types (STR(..))
 import Screens (getScreen, ScreenName(..))
 import Engineering.Helpers.BackTrack (liftFlowBT)
-import Engineering.Helpers.LogEvent (logEventWithMultipleParams, logEvent)
+import Engineering.Helpers.LogEvent (logEventWithMultipleParams, logEvent, logEventWithParams)
 import Presto.Core.Types.Language.Flow (getLogFields)
 import Control.Monad.Except.Trans (lift)
 import Foreign (MultipleErrors, unsafeToForeign)
-import Engineering.Helpers.LogEvent (firebaseLogEventWithArrayOfKeyValue)
+import Engineering.Helpers.LogEvent (firebaseLogEventWithArrayOfKeyValue, logEvent)
 import Engineering.Helpers.Events as Events
 import Components.PopUpModal.Controller as PopUpModal
 
@@ -183,8 +183,6 @@ eval (UpdateStops (API.GetMetroStationResponse metroResponse)) state =
       ]
 
 eval (BookTicketButtonAction PrimaryButton.OnClick) state = do
-  let _ = unsafePerformEffect $ Events.addEventAggregate "ny_bus_user_book_ticket_initiated"
-  void $ pure $ logEvent state.data.logField "ny_bus_user_book_ticket_initiated"
   if checkBusRouteEnabled state
     then exit $ GoToSearchLocation state
     else exit $ GoToHomeScreen state
@@ -269,10 +267,15 @@ eval (UpdateTracking (API.BusTrackingRouteResp resp) count cachedBusOnboardingIn
                 $ do
                     when state.props.gotMapReady $ updateBusLocationOnRoute state trackingData $ API.BusTrackingRouteResp resp
               if (count == 1) then do
-                let etaToStore = show $ Mb.fromMaybe 0 $ calculateMinETADistance trackingData
-                void $ pure $ firebaseLogEventWithArrayOfKeyValue "ny_bus_user_Eta_seen" [Tuple "Eta" etaToStore]
-                void $ pure $ firebaseLogEventWithArrayOfKeyValue "ny_bus_tracking_count" [Tuple "busTrackingResponseCount" (show $ DA.length trackingData)]
-                void $ pure $ firebaseLogEventWithArrayOfKeyValue "ny_bus_minimum_eta_distance" [Tuple "minimum_eta_distance" (show $ state.props.minimumEtaDistance)]
+                let etaToStore = Mb.fromMaybe 0 $ DT.fst $ calculateMinEtaTimeWithDelay trackingData
+                    minimumEtaDistance' = Mb.fromMaybe 0 $ state.props.minimumEtaDistance
+                let _ = unsafePerformEffect $ Events.addEventData "External.WMB.ny_bus_user_Eta_seen" (show $ etaToStore)
+                let vehicleTrackingDataSize = DA.length trackingData
+                let _ = unsafePerformEffect $ Events.addEventData "External.WMB.ny_bus_tracking_count" (show $ vehicleTrackingDataSize)
+                let _ = unsafePerformEffect $ Events.addEventData "External.WMB.ny_bus_minimum_eta_distance" (show $ state.props.minimumEtaDistance)
+                let _ = unsafePerformEffect $ logEvent state.data.logField "ny_bus_tracking_count"
+                when (etaToStore > 0 || minimumEtaDistance' > 0) $ do
+                  void $ pure $ unsafePerformEffect $ logEvent state.data.logField "ny_bus_user_Eta_seen" 
                 pure unit
               else
                 pure unit

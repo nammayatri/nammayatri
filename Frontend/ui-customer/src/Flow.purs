@@ -4973,6 +4973,7 @@ metroTicketBookingFlow :: FlowBT String Unit
 metroTicketBookingFlow = do
   (GlobalState currentState) <- getState
   config <- getAppConfigFlowBT appConfig
+  logField_ <- lift $ lift $ getLogFields
   metroStationsList <-  lift $ lift $ getMetroStationsObjFromLocal ""
   let
     -- metroStationsList = []
@@ -5015,6 +5016,8 @@ metroTicketBookingFlow = do
     --  metroTicketBookingFlow
     METRO_FARE_AND_PAYMENT state -> do
       -- when (state.props.ticketServiceType == API.BUS) $ setValueToLocalStore CAN_HAVE_ACTIVE_TICKETS "true"
+      let _ = unsafePerformEffect $ logEvent logField_ "ny_bus_user_book_ticket_initiated"
+      let _ = unsafePerformEffect $ Events.addEventAggregate "ny_bus_user_book_ticket_initiated"
       modifyScreenState $ BusTicketBookingScreenStateType (\_ -> BusTicketBookingScreenData.initData)
       if state.props.currentStage == MetroTicketSelection || state.props.currentStage == BusTicketSelection then do
         if state.data.srcCode == state.data.destCode then do
@@ -6090,6 +6093,7 @@ searchLocationFlow = do
 predictionClickedFlow :: LocationListItemState -> SearchLocationScreenState -> FlowBT String Unit
 predictionClickedFlow prediction state = do
   (GlobalState currentState) <- getState
+  logField_ <- lift $ lift $ getLogFields
   if state.props.actionType == AddingStopAction then do
     void $ lift $ lift $ loaderText (getString STR.LOADING) (getString STR.PLEASE_WAIT_WHILE_IN_PROGRESS) -- TODO : Handlde Loader in IOS Side
     void $ lift $ lift $ toggleLoader true
@@ -6120,7 +6124,7 @@ predictionClickedFlow prediction state = do
                 _ = spy "searchRideType = " state.data.searchRideType
                 -- srcLocation = Just $ SearchLocationScreenData.dummyLocationInfo { busStopInfo = Just { stationName : state.props.stopNameSelected, stationCode : state.props.stopCodeSelected }, address =  state.props.stopNameSelected, stationCode = state.props.stopCodeSelected }
                 -- destLocation = Just $ SearchLocationScreenData.dummyLocationInfo { busStopInfo = Just { stationName : state.props.stopNameSelected, stationCode : "" }, address = "", stationCode = "" }
-              void $ pure $ firebaseLogEvent "ny_bus_user_route_based_flow"
+              void $ liftFlowBT $ logEvent logField_ "ny_bus_user_route_based_flow"
 
               (GetMetroStationResponse getBusStopResp) <- Remote.getMetroStationBT (show state.data.ticketServiceType) currentCity state.props.routeSelected "" (show currentState.homeScreen.props.sourceLat <> "," <> show currentState.homeScreen.props.sourceLong)
               pure $ setText (getNewIDWithTag (show SearchLocPickup)) ""

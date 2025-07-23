@@ -80,6 +80,8 @@ import DecodeUtil (stringifyJSON, decodeForeignAny, parseJSON, decodeForeignAnyI
 import Foreign.Class (encode)
 import Data.String as DS
 import Common.Types.App (City(..))
+import Engineering.Helpers.Events as Events
+import Engineering.Helpers.LogEvent (logEvent)
 
 instance showAction :: Show Action where 
   show _ = ""
@@ -289,6 +291,8 @@ eval (LocationListItemAC _ (LocationListItemController.OnClick item)) state = do
               newState = if (state.props.focussedTextField) == MB.Just SearchLocPickup then do
                           state { data { srcLoc = MB.Just updatedLoc , updatedStopsSearchedList = if not (DS.null state.props.routeSelected) then updatedStopsList else state.data.updatedStopsSearchedList}, props { isAutoComplete = false,  focussedTextField = MB.Just SearchLocDrop }} 
                           else state { data { destLoc = MB.Just updatedLoc , updatedStopsSearchedList = if not (DS.null state.props.routeSelected) then updatedStopsList else state.data.updatedStopsSearchedList}, props {isAutoComplete = false,  focussedTextField = MB.Just SearchLocPickup} }
+          let _ = unsafePerformEffect $ Events.addEventAggregate "ny_bus_user_search_completed"
+          let _ = unsafePerformEffect $ logEvent state.data.logField "ny_bus_user_search_completed"
           void $ pure $ hideKeyboardOnNavigation true
           updateAndExit newState $ PredictionClicked item newState
   else if state.props.actionType == BusRouteSelectionAction then do
@@ -304,6 +308,8 @@ eval (LocationListItemAC _ (LocationListItemController.OnClick item)) state = do
                   let busRouteSelected = item.tagName
                       busRouteName = item.title
                       newState = state {props {routeName = busRouteName , routeSelected = busRouteSelected , isAutoComplete = false}, data {searchRideType = BUS_ROUTE}}
+                  let _ = unsafePerformEffect $ Events.addEventAggregate "ny_bus_user_search_completed"
+                  let _ = unsafePerformEffect $ logEvent state.data.logField "ny_bus_user_search_completed"
                   void $ pure $ hideKeyboardOnNavigation true
                   updateAndExit newState $ PredictionClicked item newState
               else do
