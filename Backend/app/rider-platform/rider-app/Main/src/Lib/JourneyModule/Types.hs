@@ -214,7 +214,6 @@ data VehiclePosition = VehiclePosition
 
 data JourneyLegStateData = JourneyLegStateData
   { status :: JourneyLegStatus,
-    statusChanged :: Bool,
     userPosition :: Maybe LatLong,
     vehiclePositions :: [VehiclePosition], -- Uses the modified VehiclePosition
     subLegOrder :: Int,

@@ -227,7 +227,6 @@ instance JT.JourneyLeg TaxiLegRequest m where
                 vehiclePositions = maybe [] (\latLong -> [JT.VehiclePosition {position = latLong, vehicleId = "taxi", upcomingStops = []}]) vehiclePosition,
                 legOrder = journeyLegOrder,
                 subLegOrder = 1,
-                statusChanged = False,
                 mode = DTrip.Taxi
               }
       Nothing -> do
@@ -244,7 +243,6 @@ instance JT.JourneyLeg TaxiLegRequest m where
                 vehiclePositions = [],
                 legOrder = journeyLegInfo.journeyLegOrder,
                 subLegOrder = 1,
-                statusChanged = False,
                 mode = DTrip.Taxi
               }
   getState _ = throwError (InternalError "Not Supported")
