@@ -12,7 +12,6 @@ import Data.List (sortBy)
 import Data.Maybe ()
 import Data.Ord (comparing)
 import qualified Data.Text as T
-import qualified Domain.Action.Beckn.Common as DABC
 import Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Action.UI.Search as DSearch
 import Domain.Types.Booking
@@ -342,5 +341,4 @@ cancelSearchUtil (personId, merchantId) estimateId = do
           throwError (FailedToCancelSearch estimateId.getId)
         Right _ -> do
           DCancel.cancelSearch personId dCancelSearch
-          DABC.cancelJourney (Id "") (\_ -> pure [])
           pure DSelect.Success

@@ -894,12 +894,16 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee getJou
 cancelJourney :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id DJourney.Journey -> (Id DJourney.Journey -> m [JL.LegInfo]) -> m ()
 cancelJourney journeyId getJourneyLegsCallbackFn = do
   journeyLegs <- getJourneyLegsCallbackFn journeyId
-  when (length journeyLegs == 1 || length (filter (\journeyLeg -> journeyLeg.status == JL.Cancelled) journeyLegs) == length journeyLegs - 1) $ -- means, there was only one leg in the journey, which is now sadly cancelled, so we can mark the journey itself as cancelled.
+  when (length (filter (\journeyLeg -> journeyLeg.status == JL.Cancelled) journeyLegs) == length journeyLegs - 1) $ -- means, there was only one leg in the journey, which is now sadly cancelled, so we can mark the journey itself as cancelled.
     QJourney.updateStatus DJourney.CANCELLED journeyId
-  when (length journeyLegs > 1) $ do
-    let activeLegs = filter (\journeyLeg -> journeyLeg.status `notElem` [JL.Skipped, JL.Cancelled, JL.Completed]) journeyLegs
-    when (length activeLegs <= 1) $ do
-      QJourney.updateStatus DJourney.COMPLETED journeyId
+  when (length (filter (\journeyLeg -> journeyLeg.status == JL.Skipped) journeyLegs) == length journeyLegs - 1) $ -- means, there was only one leg in the journey, which is now sadly cancelled, so we can mark the journey itself as cancelled.
+    QJourney.updateStatus DJourney.CANCELLED journeyId
+  let notCancelledOrSkipedLegs = filter (\journeyLeg -> journeyLeg.status `notElem` [JL.Skipped, JL.Cancelled]) journeyLegs
+  when (length notCancelledOrSkipedLegs <= 1) $ do
+    QJourney.updateStatus DJourney.CANCELLED journeyId
+  let notCancelledOrSkipedOrCompletedLegs = filter (\journeyLeg -> journeyLeg.status `notElem` [JL.Skipped, JL.Cancelled, JL.Completed]) journeyLegs
+  when (length notCancelledOrSkipedOrCompletedLegs <= 1) $ do
+    QJourney.updateStatus DJourney.COMPLETED journeyId
 
 mkBookingCancellationReason ::
   (MonadFlow m) =>
