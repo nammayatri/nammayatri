@@ -946,7 +946,7 @@ cancelLeg journeyId journeyLeg cancellationReasonCode isSkipped skippedDuringCon
   when shouldUpdateJourneyStatus $ do
     journey <- getJourney journeyId
     updatedLegStatus <- getAllLegsStatus journey
-    checkAndMarkTerminalJourneyStatus journey updatedLegStatus
+    when (length updatedLegStatus == 1) $ checkAndMarkTerminalJourneyStatus journey updatedLegStatus
   return ()
 
 cancelRemainingLegs ::
@@ -991,7 +991,7 @@ skipLeg journeyId legOrder skippedDuringConfirmation = do
         throwError $ JourneyLegCannotBeSkippedForMode (show skippingLeg.travelMode)
       unless (cancellableStatus skippingLeg) $
         throwError $ JourneyLegCannotBeSkippedForStatus (show skippingLeg.status)
-      cancelLeg journeyId skippingLeg (SCR.CancellationReasonCode "") True skippedDuringConfirmation False Nothing
+      cancelLeg journeyId skippingLeg (SCR.CancellationReasonCode "") True skippedDuringConfirmation True Nothing
   journey <- getJourney journeyId
   updatedLegStatus <- getAllLegsStatus journey
   if legOrder == length updatedLegStatus - 1

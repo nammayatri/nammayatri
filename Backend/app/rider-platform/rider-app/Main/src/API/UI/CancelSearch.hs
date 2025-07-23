@@ -64,7 +64,7 @@ cancelSearchImpl (_personId, _merchantId) estimateId = do
   journeyLeg <- QJourneyLeg.findByLegSearchId (Just searchId.getId) >>= fromMaybeM (JourneyLegNotFound searchId.getId)
   legInfo <- JLT.getLegInfo journeyLeg Nothing Nothing searchId.getId False >>= fromMaybeM (InvalidRequest $ "LegInfo not found for searchId: " <> searchId.getId)
   let cancellationReasonCode = SCR.CancellationReasonCode "SEARCH_CANCELLED_BY_RIDER"
-  JLT.cancelLeg (journeyLeg.journeyId) legInfo cancellationReasonCode False True True (Just estimateId)
+  JLT.cancelLeg (journeyLeg.journeyId) legInfo cancellationReasonCode True True True (Just estimateId)
   return Success
 
 rejectUpgrade :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> FlowHandler DSelect.CancelAPIResponse
