@@ -6,6 +6,7 @@ module API.Types.Dashboard.AppManagement where
 import qualified API.Types.Dashboard.AppManagement.Driver
 import qualified API.Types.Dashboard.AppManagement.DriverSubscription
 import qualified API.Types.Dashboard.AppManagement.Overlay
+import qualified API.Types.Dashboard.AppManagement.Payment
 import qualified API.Types.Dashboard.AppManagement.Subscription
 import qualified Data.List
 import Data.OpenApi (ToSchema)
@@ -18,6 +19,7 @@ data AppManagementUserActionType
   = DRIVER API.Types.Dashboard.AppManagement.Driver.DriverUserActionType
   | DRIVER_SUBSCRIPTION API.Types.Dashboard.AppManagement.DriverSubscription.DriverSubscriptionUserActionType
   | OVERLAY API.Types.Dashboard.AppManagement.Overlay.OverlayUserActionType
+  | PAYMENT API.Types.Dashboard.AppManagement.Payment.PaymentUserActionType
   | SUBSCRIPTION API.Types.Dashboard.AppManagement.Subscription.SubscriptionUserActionType
   deriving stock (Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -27,6 +29,7 @@ instance Text.Show.Show AppManagementUserActionType where
     DRIVER e -> "DRIVER/" <> show e
     DRIVER_SUBSCRIPTION e -> "DRIVER_SUBSCRIPTION/" <> show e
     OVERLAY e -> "OVERLAY/" <> show e
+    PAYMENT e -> "PAYMENT/" <> show e
     SUBSCRIPTION e -> "SUBSCRIPTION/" <> show e
 
 instance Text.Read.Read AppManagementUserActionType where
@@ -45,6 +48,15 @@ instance Text.Read.Read AppManagementUserActionType where
                    r2
                  )
                  | r1 <- stripPrefix "OVERLAY/" r,
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
+               ]
+            ++ [ ( PAYMENT v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "PAYMENT/" r,
                    ( v1,
                      r2
                      ) <-

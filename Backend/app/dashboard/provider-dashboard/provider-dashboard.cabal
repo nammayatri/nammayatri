@@ -38,6 +38,7 @@ library
       Domain.Action.ProviderPlatform.AppManagement.Driver
       Domain.Action.ProviderPlatform.AppManagement.DriverSubscription
       Domain.Action.ProviderPlatform.AppManagement.Overlay
+      Domain.Action.ProviderPlatform.AppManagement.Payment
       Domain.Action.ProviderPlatform.AppManagement.Subscription
       Domain.Action.ProviderPlatform.CheckVerification
       Domain.Action.ProviderPlatform.Fleet.Driver
@@ -83,6 +84,7 @@ library
       API.Action.ProviderPlatform.AppManagement.Driver
       API.Action.ProviderPlatform.AppManagement.DriverSubscription
       API.Action.ProviderPlatform.AppManagement.Overlay
+      API.Action.ProviderPlatform.AppManagement.Payment
       API.Action.ProviderPlatform.AppManagement.Subscription
       API.Action.ProviderPlatform.Fleet
       API.Action.ProviderPlatform.Fleet.Driver
@@ -187,6 +189,7 @@ library
     , lib-dashboard
     , mobility-core
     , openapi3
+    , payment
     , persistent
     , persistent-postgresql
     , record-dot-preprocessor
@@ -269,6 +272,7 @@ executable provider-dashboard-exe
     , http-client-tls
     , mobility-core
     , openapi3
+    , payment
     , persistent
     , persistent-postgresql
     , provider-dashboard

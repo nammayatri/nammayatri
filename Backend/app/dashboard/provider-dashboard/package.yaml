@@ -90,6 +90,7 @@ dependencies:
   - shared-services
   - beam-core
   - sequelize
+  - payment
 
 ghc-options:
   - -Wall
