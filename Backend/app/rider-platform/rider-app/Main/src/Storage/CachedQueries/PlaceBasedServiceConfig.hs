@@ -12,6 +12,8 @@ import Domain.Types.PlaceBasedServiceConfig
 import Domain.Types.TicketPlace
 import qualified Kernel.External.AadhaarVerification.Interface as AadhaarVerification
 import qualified Kernel.External.Call as Call
+import qualified Kernel.External.ConversionEvent.Interface.Types as ConversionInterfaceType
+import qualified Kernel.External.ConversionEvent.Types as ConversionType
 import Kernel.External.IncidentReport.Interface.Types as IncidentReport
 import qualified Kernel.External.Insurance.Interface.Types as Insurance
 import qualified Kernel.External.Insurance.Types as Insurance
@@ -110,3 +112,5 @@ getServiceNameFromPlaceBasedConfigs msc = case msc.serviceConfig of
     MultiModal.OTPTransitConfig _ -> MultiModalStaticDataService MultiModal.OTPTransit
   InsuranceServiceConfig insuranceCfg -> case insuranceCfg of
     Insurance.AckoInsuranceConfig _ -> InsuranceService Insurance.Acko
+  ConversionEventServiceConfig conversionEventCfg -> case conversionEventCfg of
+    ConversionInterfaceType.MetaConfig _ -> ConversionEventService ConversionType.Meta

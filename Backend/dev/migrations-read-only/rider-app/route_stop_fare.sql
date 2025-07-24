@@ -4,7 +4,7 @@ ALTER TABLE atlas_app.route_stop_fare ADD COLUMN amount double precision NOT NUL
 ALTER TABLE atlas_app.route_stop_fare ADD COLUMN currency text NOT NULL default 'INR';
 ALTER TABLE atlas_app.route_stop_fare ADD COLUMN end_stop_code text NOT NULL;
 ALTER TABLE atlas_app.route_stop_fare ADD COLUMN fare_policy_id character varying(36) NOT NULL;
-ALTER TABLE atlas_app.route_stop_fare ADD COLUMN integrated_bpp_config_id character varying(36) NOT NULL;
+-- ALTER TABLE atlas_app.route_stop_fare ADD COLUMN integrated_bpp_config_id character varying(36) NOT NULL;
 ALTER TABLE atlas_app.route_stop_fare ADD COLUMN merchant_id character varying(36) NOT NULL;
 ALTER TABLE atlas_app.route_stop_fare ADD COLUMN merchant_operating_city_id character varying(36) NOT NULL;
 ALTER TABLE atlas_app.route_stop_fare ADD COLUMN start_stop_code text NOT NULL;

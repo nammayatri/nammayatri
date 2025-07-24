@@ -4,6 +4,8 @@ import qualified Data.Aeson as A
 import qualified Domain.Types.MerchantServiceConfig as Domain
 import qualified Kernel.External.AadhaarVerification.Interface as AadhaarVerification
 import qualified Kernel.External.Call as Call
+import qualified Kernel.External.ConversionEvent.Interface.Types as ConversionInterfaceType
+import qualified Kernel.External.ConversionEvent.Types as ConversionType
 import Kernel.External.IncidentReport.Interface.Types as IncidentReport
 import qualified Kernel.External.Insurance.Interface.Types as Insurance
 import qualified Kernel.External.Insurance.Types as Insurance
@@ -77,6 +79,7 @@ getServiceConfigFromDomain serviceName configJSON = do
     Domain.MultiModalStaticDataService MultiModal.GoogleTransit -> Domain.MultiModalStaticDataServiceConfig . MultiModal.GoogleTransitConfig <$> valueToMaybe configJSON
     Domain.MultiModalStaticDataService MultiModal.OTPTransit -> Domain.MultiModalStaticDataServiceConfig . MultiModal.OTPTransitConfig <$> valueToMaybe configJSON
     Domain.InsuranceService Insurance.Acko -> Domain.InsuranceServiceConfig . Insurance.AckoInsuranceConfig <$> valueToMaybe configJSON
+    Domain.ConversionEventService ConversionType.Meta -> Domain.ConversionEventServiceConfig . ConversionInterfaceType.MetaConfig <$> valueToMaybe configJSON
 
 getServiceNameConfigJson :: Domain.ServiceConfig -> (Domain.ServiceName, A.Value)
 getServiceNameConfigJson = \case
@@ -149,3 +152,5 @@ getServiceNameConfigJson = \case
     MultiModal.OTPTransitConfig cfg -> (Domain.MultiModalStaticDataService MultiModal.OTPTransit, toJSON cfg)
   Domain.InsuranceServiceConfig insuranceCfg -> case insuranceCfg of
     Insurance.AckoInsuranceConfig cfg -> (Domain.InsuranceService Insurance.Acko, toJSON cfg)
+  Domain.ConversionEventServiceConfig conversionEventCfg -> case conversionEventCfg of
+    ConversionInterfaceType.MetaConfig cfg -> (Domain.ConversionEventService ConversionType.Meta, toJSON cfg)

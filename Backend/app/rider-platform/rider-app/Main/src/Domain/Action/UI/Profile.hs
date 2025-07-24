@@ -60,6 +60,7 @@ import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import qualified Kernel.Beam.Functions as B
 import qualified Kernel.Beam.Types as KBT
+import qualified Kernel.External.ConversionEvent.Types as ConversionType
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.Notification as Notification
@@ -96,6 +97,7 @@ import qualified Storage.Queries.PersonStats as QPersonStats
 import qualified Storage.Queries.SafetySettings as QSafety
 import Tools.Error
 import Tools.Event
+import qualified Tools.Logs as Log
 
 data ProfileRes = ProfileRes
   { id :: Id Person.Person,
@@ -332,6 +334,7 @@ updatePerson personId merchantId req mbRnVersion mbBundleVersion mbClientVersion
   mbEncEmail <- encrypt `mapM` req.email
   deploymentVersion <- asks (.version)
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  Log.logEvent ConversionType.Meta merchantId person.merchantOperatingCityId "test_321"
   fork "Triggering kafka marketing params event for person" $
     when (isNothing person.firstName) $ do
       case req.marketingParams of

@@ -8,6 +8,8 @@ import qualified Domain.Types.MerchantServiceConfig as Domain
 import Kernel.Beam.Functions
 import qualified Kernel.External.AadhaarVerification as AadhaarVerification
 import qualified Kernel.External.Call as Call
+import qualified Kernel.External.ConversionEvent.Interface.Types as ConversionInterfaceType
+import qualified Kernel.External.ConversionEvent.Types as ConversionType
 import Kernel.External.IncidentReport.Interface.Types as IncidentReport
 import qualified Kernel.External.Insurance.Interface.Types as Insurance
 import qualified Kernel.External.Insurance.Types as Insurance
@@ -146,3 +148,5 @@ getServiceNameConfigJSON = \case
     MultiModal.OTPTransitConfig cfg -> (Domain.MultiModalStaticDataService MultiModal.OTPTransit, toJSON cfg)
   Domain.InsuranceServiceConfig insuranceCfg -> case insuranceCfg of
     Insurance.AckoInsuranceConfig cfg -> (Domain.InsuranceService Insurance.Acko, toJSON cfg)
+  Domain.ConversionEventServiceConfig conversionEventCfg -> case conversionEventCfg of
+    ConversionInterfaceType.MetaConfig cfg -> (Domain.ConversionEventService ConversionType.Meta, toJSON cfg)

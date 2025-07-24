@@ -512,7 +512,6 @@ VALUES
 INSERT INTO
   atlas_app.route_stop_fare (
     fare_policy_id,
-    route_code,
     start_stop_code,
     end_stop_code,
     amount,
@@ -525,7 +524,6 @@ INSERT INTO
 VALUES
   (
     '999e23a5-3ce6-4c37-8b9b-41377c3c1999',
-    'Route:1:SHUTTLE-U',
     'Stop:1:18465',
     'Stop:1:18024',
     10,
@@ -537,7 +535,6 @@ VALUES
   ),
   (
     '999e23a5-3ce6-4c37-8b9b-41377c3c1999',
-    'Route:1:SHUTTLE-U',
     'Stop:1:18465',
     'Stop:1:18304',
     20,
@@ -549,7 +546,6 @@ VALUES
   ),
   (
     '999e23a5-3ce6-4c37-8b9b-41377c3c1999',
-    'Route:1:SHUTTLE-U',
     'Stop:1:18465',
     'Stop:1:18705',
     30,
@@ -561,7 +557,6 @@ VALUES
   ),
   (
     '999e23a5-3ce6-4c37-8b9b-41377c3c1999',
-    'Route:1:SHUTTLE-U',
     'Stop:1:18465',
     'Stop:1:18058',
     40,
@@ -573,7 +568,6 @@ VALUES
   ),
   (
     '999e23a5-3ce6-4c37-8b9b-41377c3c1999',
-    'Route:1:SHUTTLE-U',
     'Stop:1:18024',
     'Stop:1:18304',
     10,
@@ -585,7 +579,6 @@ VALUES
   ),
   (
     '999e23a5-3ce6-4c37-8b9b-41377c3c1999',
-    'Route:1:SHUTTLE-U',
     'Stop:1:18024',
     'Stop:1:18705',
     20,
@@ -597,7 +590,6 @@ VALUES
   ),
   (
     '999e23a5-3ce6-4c37-8b9b-41377c3c1999',
-    'Route:1:SHUTTLE-U',
     'Stop:1:18024',
     'Stop:1:18058',
     30,
@@ -609,7 +601,6 @@ VALUES
   ),
   (
     '999e23a5-3ce6-4c37-8b9b-41377c3c1999',
-    'Route:1:SHUTTLE-U',
     'Stop:1:18304',
     'Stop:1:18705',
     10,
@@ -621,7 +612,6 @@ VALUES
   ),
   (
     '999e23a5-3ce6-4c37-8b9b-41377c3c1999',
-    'Route:1:SHUTTLE-U',
     'Stop:1:18304',
     'Stop:1:18058',
     20,
@@ -633,7 +623,6 @@ VALUES
   ),
   (
     '999e23a5-3ce6-4c37-8b9b-41377c3c1999',
-    'Route:1:SHUTTLE-U',
     'Stop:1:18705',
     'Stop:1:18058',
     10,

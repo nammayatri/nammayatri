@@ -6,6 +6,8 @@ import qualified Kernel.External.AadhaarVerification as AadhaarVerification
 import Kernel.External.AadhaarVerification.Interface.Types
 import qualified Kernel.External.Call as Call
 import Kernel.External.Call.Interface.Types
+import qualified Kernel.External.ConversionEvent.Interface.Types as ConversionInterfaceType
+import qualified Kernel.External.ConversionEvent.Types as ConversionType
 import qualified Kernel.External.IncidentReport.Interface.Types as IncidentReport
 import qualified Kernel.External.Insurance.Interface.Types as Insurance
 import qualified Kernel.External.Insurance.Types as Insurance
@@ -47,6 +49,7 @@ data ServiceName
   | WalletService GW.WalletService
   | MultiModalStaticDataService MultiModal.MultiModalService
   | InsuranceService Insurance.InsuranceService
+  | ConversionEventService ConversionType.ConversionEventService
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
@@ -72,6 +75,7 @@ instance Show ServiceName where
   show (WalletService s) = "Wallet_" <> show s
   show (MultiModalStaticDataService s) = "MultiModalStaticData_" <> show s
   show (InsuranceService s) = "Insurance_" <> show s
+  show (ConversionEventService s) = "ConversionEventService_" <> show s
 
 instance Read ServiceName where
   readsPrec d' =
@@ -154,6 +158,10 @@ instance Read ServiceName where
                  | r1 <- stripPrefix "Insurance_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (ConversionEventService v1, r2)
+                 | r1 <- stripPrefix "ConversionEventService_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
       )
     where
       app_prec = 10
@@ -179,6 +187,7 @@ data ServiceConfigD (s :: UsageSafety)
   | WalletServiceConfig !GW.WalletServiceConfig
   | MultiModalStaticDataServiceConfig !MultiModal.MultiModalServiceConfig
   | InsuranceServiceConfig !Insurance.InsuranceConfig
+  | ConversionEventServiceConfig !ConversionInterfaceType.ConversionEventServiceConfig
   deriving (Generic, Eq)
 
 type ServiceConfig = ServiceConfigD 'Safe
@@ -211,6 +220,7 @@ instance Show (ServiceConfigD 'Safe) where
   show (WalletServiceConfig cfg) = "WalletServiceConfig " <> show cfg
   show (MultiModalStaticDataServiceConfig cfg) = "MultiModalStaticDataServiceConfig " <> show cfg
   show (InsuranceServiceConfig cfg) = "InsuranceServiceConfig " <> show cfg
+  show (ConversionEventServiceConfig cfg) = "ConversionEventServiceConfig " <> show cfg
 
 instance Show (ServiceConfigD 'Unsafe) where
   show (MapsServiceConfig cfg) = "MapsServiceConfig " <> show cfg
@@ -232,3 +242,4 @@ instance Show (ServiceConfigD 'Unsafe) where
   show (WalletServiceConfig cfg) = "WalletServiceConfig " <> show cfg
   show (MultiModalStaticDataServiceConfig cfg) = "MultiModalStaticDataServiceConfig " <> show cfg
   show (InsuranceServiceConfig cfg) = "InsuranceServiceConfig " <> show cfg
+  show (ConversionEventServiceConfig cfg) = "ConversionEventServiceConfig " <> show cfg
