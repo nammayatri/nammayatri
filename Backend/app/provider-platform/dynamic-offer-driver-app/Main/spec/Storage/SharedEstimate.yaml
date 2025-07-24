@@ -1,0 +1,81 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  HighPrecMoney: Kernel.Types.Common
+  Currency: Kernel.Utils.Common
+  Meters: Kernel.Types.Common
+  Seconds: Kernel.Types.Common
+  DistanceUnit: Kernel.Types.Common
+  ServiceTierType: Domain.Types.ServiceTierType
+  TripCategory: Domain.Types.Common
+
+SharedEstimate:
+  tableName: shared_estimate
+  derives: "Generic,Show"
+
+  fields:
+    id: Id SharedEstimate
+    transactionId: Text
+    status: EstimateStatus
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    totalMinFare: HighPrecMoney
+    totalMaxFare: HighPrecMoney
+    currency: Currency
+    estimatedDistance: Maybe Meters
+    estimatedDuration: Maybe Seconds
+    distanceUnit: DistanceUnit
+    vehicleServiceTier: ServiceTierType|NoRelation
+    tripCategory: TripCategory|NoRelation
+    tollNames: "Maybe [Text]"
+    validTill: UTCTime
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+
+  sqlType:
+    transactionId: character varying(36)
+    status: character varying(255)
+    merchantId: character varying(36)
+    merchantOperatingCityId: character varying(36)
+    totalMinFare: numeric(30,2)
+    totalMaxFare: numeric(30,2)
+    currency: character varying(255)
+    estimatedDistance: double precision
+    estimatedDuration: integer
+    distanceUnit: character varying(255)
+    vehicleServiceTier: character varying(255)
+    tripCategory: character varying(255)
+    tollNames: "text[]"
+    validTill: timestamptz
+    createdAt: timestamptz
+    updatedAt: timestamptz
+
+  queries:
+    findByTransactionId:
+      kvFunction: findOneWithKV
+      where: transactionId
+
+    updateStatus:
+      kvFunction: updateOneWithKV
+      params: [status, updatedAt]
+      where: id
+
+    findByStatus:
+      kvFunction: findAllWithKV
+      where: status
+
+    findByVehicleServiceTier:
+      kvFunction: findAllWithKV
+      where: vehicleServiceTier
+
+    findActiveEstimates:
+      kvFunction: findAllWithKV
+      where: status
+
+  types:
+    EstimateStatus:
+      enum: "NEW, DRIVER_QUOTE_REQUESTED, CANCELLED, GOT_DRIVER_QUOTE, DRIVER_QUOTE_CANCELLED, COMPLETED"
+      derive: "HttpInstance"

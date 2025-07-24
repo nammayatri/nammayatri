@@ -944,6 +944,10 @@ library
       Domain.Types.SearchRequest
       Domain.Types.SearchRequestForDriver
       Domain.Types.SearchTry
+      Domain.Types.SharedBooking
+      Domain.Types.SharedEstimate
+      Domain.Types.SharedRide
+      Domain.Types.SharedSearchRequest
       Domain.Types.Station
       Domain.Types.StopInformation
       Domain.Types.SubscriptionConfig
@@ -1092,6 +1096,10 @@ library
       Storage.Beam.SearchRequest
       Storage.Beam.SearchRequestForDriver
       Storage.Beam.SearchTry
+      Storage.Beam.SharedBooking
+      Storage.Beam.SharedEstimate
+      Storage.Beam.SharedRide
+      Storage.Beam.SharedSearchRequest
       Storage.Beam.Station
       Storage.Beam.StopInformation
       Storage.Beam.SubscriptionConfig
@@ -1322,6 +1330,10 @@ library
       Storage.Queries.SearchRequest
       Storage.Queries.SearchRequestForDriver
       Storage.Queries.SearchTry
+      Storage.Queries.SharedBooking
+      Storage.Queries.SharedEstimate
+      Storage.Queries.SharedRide
+      Storage.Queries.SharedSearchRequest
       Storage.Queries.Station
       Storage.Queries.StopInformation
       Storage.Queries.SubscriptionConfig
