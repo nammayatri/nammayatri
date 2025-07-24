@@ -362,7 +362,10 @@ driverFeeSplitter paymentMode plan feeWithoutDiscount totalFee driverFee mandate
   case splittedFees of
     [] -> throwError (InternalError "No driver fee entity with non zero total fee")
     (firstFee : restFees) -> do
-      let adjustment = firstFee.platformFee.fee.getHighPrecMoney / driverFee.platformFee.fee.getHighPrecMoney
+      let adjustment =
+            if driverFee.platformFee.fee.getHighPrecMoney == 0
+              then 1.0
+              else firstFee.platformFee.fee.getHighPrecMoney / driverFee.platformFee.fee.getHighPrecMoney
       mapM_ (\dfee -> processRestFee paymentMode dfee subscriptionConfigs driverFee) restFees
       -- Reset The Original Fee Amount & adjust the vendor fee amount in proportion
       resetFee firstFee.id firstFee.govtCharges firstFee.platformFee (Just feeWithoutDiscount) firstFee.amountPaidByCoin now
