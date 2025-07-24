@@ -524,6 +524,46 @@ JourneyLegsFeedbacks:
     legOrder: Int
     isExperienceGood: Maybe Bool
     travelMode: Maybe MultimodalTravelMode
+    rating: Maybe Int
+    feedbackData: Maybe JourneyLegFeedbackData
+
+  types:
+    TaxiFeedbackData:
+      feedbackDetails: Maybe Text
+      wasRideSafe: Maybe Bool
+      shouldFavDriver: Maybe Bool
+      wasOfferedAssistance: Maybe Bool
+      mbAudio: Maybe Text
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+
+    SubwayFeedbackData:
+      feedbackDetails: Maybe Text
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+
+    WalkFeedbackData:
+      feedbackDetails: Maybe Text
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+
+    BusFeedbackData:
+      feedbackDetails: Maybe Text
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+
+    MetroFeedbackData:
+      feedbackDetails: Maybe Text
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+
+    JourneyLegFeedbackData:
+      enum: "Taxi TaxiFeedbackData, Bus BusFeedbackData, Walk WalkFeedbackData, Subway SubwayFeedbackData, Metro MetroFeedbackData"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
+
+  beamType:
+    feedbackData: Maybe Data.Aeson.Value
+
+  fromTType:
+    feedbackData: Storage.Queries.Transformers.JourneyLegsFeedback.getFeedbackData =<< feedbackData|E
+
+  toTType:
+    feedbackData: Storage.Queries.Transformers.JourneyLegsFeedback.getFeedbackDataJson <$> feedbackData|E
 
   queries:
     findAllByJourneyId:
@@ -533,3 +573,6 @@ JourneyLegsFeedbacks:
   constraints:
     journeyId: PrimaryKey
     legOrder: PrimaryKey
+
+  sqlType:
+    feedbackData: json
