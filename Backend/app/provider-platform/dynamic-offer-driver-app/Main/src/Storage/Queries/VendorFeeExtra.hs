@@ -4,9 +4,10 @@ import Domain.Types.DriverFee
 import Domain.Types.VendorFee
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.Price
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, getCurrentTime, throwError)
 import qualified Sequelize as Se
 import SharedLogic.Payment (roundToTwoDecimalPlaces)
 import qualified Storage.Beam.VendorFee as Beam
@@ -39,6 +40,7 @@ updateVendorFee vendorFee = do
 
 adjustVendorFee :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DriverFee -> Rational -> m ()
 adjustVendorFee driverFeeId adjustment = do
+  when (adjustment <= 0) $ throwError (InternalError "Adjustment ratio must be positive")
   oldVendorFees <- findAllByDriverFeeId driverFeeId
   for_ oldVendorFees $ \fee -> do
     now <- getCurrentTime
@@ -56,7 +58,11 @@ adjustVendorFee driverFeeId adjustment = do
 createChildVendorFee :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => DriverFee -> DriverFee -> m ()
 createChildVendorFee parentFee childFee = do
   now <- getCurrentTime
-  let adjustment = (getHighPrecMoney childFee.platformFee.fee) / (getHighPrecMoney parentFee.platformFee.fee)
+  let adjustment =
+        if (getHighPrecMoney parentFee.platformFee.fee) == 0
+          then 1.0
+          else (getHighPrecMoney childFee.platformFee.fee) / (getHighPrecMoney parentFee.platformFee.fee)
+
   vendorFees <- findAllByDriverFeeId parentFee.id
   let childVendorFees =
         map
