@@ -13,7 +13,13 @@ INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_acc
             'PROVIDER_OPERATOR/DRIVER/POST_DRIVER_OPERATOR_VERIFY_JOINING_OTP',
             'PROVIDER_FLEET/DRIVER/POST_DRIVER_FLEET_ADD_DRIVERS',
             'PROVIDER_OPERATOR/DRIVER/POST_DRIVER_OPERATOR_RESPOND_HUB_REQUEST'
+            'PROVIDER_FLEET/REGISTRATION_V2/POST_REGISTRATION_V2_REGISTER',
+            'PROVIDER_FLEET/LIVE_MAP/GET_LIVE_MAP_DRIVERS'
           ]
         )
     )
     ON CONFLICT DO NOTHING;
+
+-- ONLY FOR LOCAL:
+UPDATE atlas_bpp_dashboard.merchant
+SET has_fleet_member_hierarchy='false' WHERE short_id='NAMMA_YATRI_PARTNER';
