@@ -324,6 +324,7 @@ library
       ExternalBPP.ExternalAPI.Metro.CMRL.PassengerViewStatus
       ExternalBPP.ExternalAPI.Metro.CMRL.StationList
       ExternalBPP.ExternalAPI.Metro.CMRL.TicketStatus
+      ExternalBPP.ExternalAPI.Metro.CMRL.UpdateQrReceivedStatus
       ExternalBPP.ExternalAPI.Subway.CRIS.Auth
       ExternalBPP.ExternalAPI.Subway.CRIS.BookJourney
       ExternalBPP.ExternalAPI.Subway.CRIS.ChangeDevice
