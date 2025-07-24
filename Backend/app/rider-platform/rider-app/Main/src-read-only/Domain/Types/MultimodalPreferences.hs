@@ -24,8 +24,8 @@ data MultimodalPreferences = MultimodalPreferences
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
-  deriving (Generic, (Show))
+  deriving (Generic, Show)
 
 data JourneyOptionsSortingType = FASTEST | CHEAPEST | MINIMUM_TRANSITS | MOST_RELEVANT deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''JourneyOptionsSortingType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''JourneyOptionsSortingType)

@@ -29,8 +29,8 @@ data WalkLegMultimodal = WalkLegMultimodal
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
-  deriving (Generic, (Show))
+  deriving (Generic, Show)
 
 data WalkLegStatus = InPlan | Ongoing | Finishing | Completed deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''WalkLegStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''WalkLegStatus)
