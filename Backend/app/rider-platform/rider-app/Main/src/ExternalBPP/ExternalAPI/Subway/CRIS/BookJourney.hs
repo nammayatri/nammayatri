@@ -3,13 +3,14 @@ module ExternalBPP.ExternalAPI.Subway.CRIS.BookJourney where
 import qualified API.Types.UI.FRFSTicketService as FRFSTicketServiceAPI
 import BecknV2.FRFS.Enums as Enums
 import Data.Aeson
+import Data.Bits (shiftL, (.|.))
 import qualified Data.ByteString.Lazy as LBS
 import Data.Maybe
-import Data.Text
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Data.Time (NominalDiffTime)
 import Data.Time.Format
+import Data.UUID (UUID, fromText, toWords)
 import Domain.Types.FRFSQuote as DFRFSQuote
 import Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import Domain.Types.IntegratedBPPConfig
@@ -19,7 +20,7 @@ import ExternalBPP.ExternalAPI.Subway.CRIS.Auth (callCRISAPI)
 import ExternalBPP.ExternalAPI.Subway.CRIS.Encryption (decryptResponseData, encryptPayload)
 import ExternalBPP.ExternalAPI.Types
 import Kernel.External.Encryption
-import Kernel.Prelude (intToNominalDiffTime)
+import Kernel.Prelude (intToNominalDiffTime, (!!))
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.App
 import Kernel.Types.Error
@@ -27,7 +28,6 @@ import Kernel.Utils.Common
 import Servant.API
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
-import qualified Storage.Queries.FRFSTicketBokingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.Person as QPerson
 
 -- Encrypted request/response types for API
@@ -243,7 +243,9 @@ createOrder config integratedBPPConfig booking = do
       (Just trainTypeCode, Just distance, Just crisRouteId, Just appSession) -> return (trainTypeCode, distance, crisRouteId, appSession)
       _ -> throwError $ InternalError ("Invalid quote data: " <> show quote.fareDetails)
 
-  frfsTicketBookingPayment <- QFRFSTicketBookingPayment.findNewTBPByBookingId booking.id >>= fromMaybeM (InternalError "FRFS ticket booking payment not found")
+  orderId <- case booking.bppOrderId of
+    Just oid -> return oid
+    Nothing -> getBppOrderId booking
   classCode <- getFRFSVehicleServiceTier quote
   startTime <- fromMaybeM (InternalError "Start time not found") booking.startTime
 
@@ -285,7 +287,7 @@ createOrder config integratedBPPConfig booking = do
             tktTypeId = 1,
             agentAccountId = show config.tpAccountId,
             bookAuthCode = bookAuthCode,
-            agentAppTxnId = show frfsTicketBookingPayment.paymentOrderId,
+            agentAppTxnId = orderId,
             bankDeductedAmount = round booking.price.amount.getHighPrecMoney,
             tpBookType = 0
           }
@@ -372,3 +374,34 @@ getFRFSVehicleServiceTier quote = do
     Enums.FIRST_CLASS -> pure "FC"
     Enums.SECOND_CLASS -> pure "II"
     _ -> throwError $ InternalError "Invalid vehicle service tier"
+
+alphabet :: String
+alphabet = ['0' .. '9'] ++ ['a' .. 'z'] ++ ['A' .. 'Z']
+
+uuidToInteger :: UUID -> Integer
+uuidToInteger u =
+  let (w1, w2, w3, w4) = toWords u
+   in (fromIntegral w1 `shiftL` 96)
+        .|. (fromIntegral w2 `shiftL` 64)
+        .|. (fromIntegral w3 `shiftL` 32)
+        .|. fromIntegral w4
+
+intToBase62 :: Integer -> String
+intToBase62 0 = [alphabet !! 0]
+intToBase62 n = reverse $ go n
+  where
+    go 0 = []
+    go x = let (q, r) = x `divMod` 62 in (alphabet !! fromIntegral r) : go q
+
+normalizeLength :: Int -> String -> String
+normalizeLength l s
+  | length s < l = replicate (l - length s) (alphabet !! 0) ++ s
+  | otherwise = take l s
+
+uuidTo21CharString :: UUID -> Text
+uuidTo21CharString = T.pack . normalizeLength 21 . intToBase62 . uuidToInteger
+
+getBppOrderId :: (MonadFlow m) => FRFSTicketBooking -> m Text
+getBppOrderId booking = do
+  bookingUUID <- fromText booking.id.getId & fromMaybeM (InternalError "Booking Id not being able to parse into UUID")
+  return $ uuidTo21CharString bookingUUID --- The length should be 21 characters (alphanumeric)
