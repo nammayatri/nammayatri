@@ -821,6 +821,10 @@ library
       Domain.Types.SeatManagement
       Domain.Types.ServiceCategory
       Domain.Types.ServicePeopleCategory
+      Domain.Types.SharedBooking
+      Domain.Types.SharedEstimate
+      Domain.Types.SharedRide
+      Domain.Types.SharedSearchRequest
       Domain.Types.Sos
       Domain.Types.SpecialOccasion
       Domain.Types.SpecialZoneQuote
@@ -955,6 +959,10 @@ library
       Storage.Beam.SeatManagement
       Storage.Beam.ServiceCategory
       Storage.Beam.ServicePeopleCategory
+      Storage.Beam.SharedBooking
+      Storage.Beam.SharedEstimate
+      Storage.Beam.SharedRide
+      Storage.Beam.SharedSearchRequest
       Storage.Beam.Sos
       Storage.Beam.SpecialOccasion
       Storage.Beam.SpecialZoneQuote
@@ -1148,6 +1156,10 @@ library
       Storage.Queries.SeatManagement
       Storage.Queries.ServiceCategory
       Storage.Queries.ServicePeopleCategory
+      Storage.Queries.SharedBooking
+      Storage.Queries.SharedEstimate
+      Storage.Queries.SharedRide
+      Storage.Queries.SharedSearchRequest
       Storage.Queries.Sos
       Storage.Queries.SpecialOccasion
       Storage.Queries.SpecialZoneQuote
