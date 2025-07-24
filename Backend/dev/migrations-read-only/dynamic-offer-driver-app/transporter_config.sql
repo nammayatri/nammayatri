@@ -494,3 +494,9 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allow_cache_dri
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN cancellation_rate_slab_config json;
 
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN max_online_duration_days integer  default 10;
