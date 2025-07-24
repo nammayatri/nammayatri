@@ -14,7 +14,6 @@
 
 module SharedLogic.Scheduler.Jobs.CheckMultimodalConfirmFail where
 
-import Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
@@ -22,6 +21,7 @@ import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Error
 import Kernel.Utils.Common
 import Lib.Scheduler
+import SharedLogic.FRFSUtils as FRFSUtils
 import SharedLogic.JobScheduler
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
@@ -47,14 +47,8 @@ checkMultimodalConfirmFailJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.get
   frfsTickets <- QFRFSTicket.findAllByTicketBookingId bookingId
   if (booking.status == DFRFSTicketBooking.FAILED || null frfsTickets)
     then do
-      journeyId <- booking.journeyId & fromMaybeM (InvalidRequest $ "journey not found for bookingId: " <> show bookingId)
-      allJourneyFrfsBookings <- QFRFSTicketBooking.findAllByJourneyId (Just journeyId)
-      let failedBookings = filter ((== DFRFSTicketBooking.FAILED) . (.status)) allJourneyFrfsBookings
-          allFailed = not (null failedBookings) && length failedBookings == length allJourneyFrfsBookings
-      unless (any ((== DFRFSTicketBooking.REFUND_INITIATED) . (.status)) allJourneyFrfsBookings) $
-        whenJust (listToMaybe failedBookings) $ \firstFailed -> do
-          riderConfig <- QRC.findByMerchantOperatingCityId firstFailed.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist firstFailed.merchantOperatingCityId.getId)
-          when riderConfig.enableAutoJourneyRefund $
-            FRFSTicketService.markAllRefundBookings failedBookings booking.riderId (Just journeyId) allFailed
+      riderConfig <- QRC.findByMerchantOperatingCityId booking.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
+      when riderConfig.enableAutoJourneyRefund $
+        FRFSUtils.markAllRefundBookings booking booking.riderId
       return Complete
     else return Complete

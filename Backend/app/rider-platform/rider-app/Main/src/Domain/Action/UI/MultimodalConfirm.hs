@@ -75,6 +75,7 @@ import qualified Lib.JourneyModule.Types as JMTypes
 import qualified Lib.JourneyModule.Utils as JLU
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
+import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -150,13 +151,11 @@ getMultimodalBookingInfo (mbPersonId, _merchantId) journeyId = do
   when (journey.status == Domain.Types.Journey.INITIATED) $ JM.updateJourneyStatus journey Domain.Types.Journey.INPROGRESS -- move it to payment success
   allJourneyFrfsBookings <- QFRFSTicketBooking.findAllByJourneyId (Just journeyId)
   let failedBookings = filter ((== DFRFSB.FAILED) . (.status)) allJourneyFrfsBookings
-      allFailed = not (null failedBookings) && length failedBookings == length allJourneyFrfsBookings
-  unless (any ((== DFRFSB.REFUND_INITIATED) . (.status)) allJourneyFrfsBookings) $
-    whenJust (listToMaybe failedBookings) $ \firstFailed -> do
-      personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
-      riderConfig <- QRC.findByMerchantOperatingCityId firstFailed.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist firstFailed.merchantOperatingCityId.getId)
-      when riderConfig.enableAutoJourneyRefund $
-        FRFSTicketService.markAllRefundBookings failedBookings personId (Just journeyId) allFailed
+  whenJust (listToMaybe failedBookings) $ \firstFailed -> do
+    personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
+    riderConfig <- QRC.findByMerchantOperatingCityId firstFailed.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist firstFailed.merchantOperatingCityId.getId)
+    when riderConfig.enableAutoJourneyRefund $
+      FRFSUtils.markAllRefundBookings firstFailed personId
   generateJourneyInfoResponse journey legs
 
 getMultimodalBookingPaymentStatus ::

@@ -28,12 +28,17 @@ import qualified Domain.Types.FRFSFarePolicy as DFRFSFarePolicy
 import qualified Domain.Types.FRFSQuote as Quote
 import Domain.Types.FRFSRouteDetails
 import Domain.Types.FRFSRouteFareProduct
+import qualified Domain.Types.FRFSTicket as DFRFSTicket
 import qualified Domain.Types.FRFSTicket as DT
+import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
+import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
 import qualified Domain.Types.FRFSTicketBookingPayment as DTBP
 import Domain.Types.FRFSTicketDiscount as DFRFSTicketDiscount
 import Domain.Types.IntegratedBPPConfig
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
+import qualified Domain.Types.Journey as DJourney
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.PartnerOrganization as DPO
 import qualified Domain.Types.Person as DP
@@ -45,6 +50,7 @@ import EulerHS.Prelude (comparing, concatMapM, (+||), (||+))
 import Kernel.Beam.Functions as B
 import qualified Kernel.External.Maps.Google.PolyLinePoints as KEPP
 import Kernel.External.Maps.Types ()
+import qualified Kernel.External.Payment.Interface.Types as Payment
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -54,12 +60,17 @@ import Kernel.Types.Id
 import qualified Kernel.Types.TimeBound as DTB
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
+import qualified Lib.Payment.Domain.Action as DPayment
+import qualified Lib.Payment.Domain.Types.Common as DPayment
+import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types as LYT
+import qualified SharedLogic.CreateFareForMultiModal as SMMFRFS
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import Storage.Beam.Yudhishthira ()
+import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import qualified Storage.CachedQueries.FRFSGtfsStageFare as QFRFSGtfsStageFare
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
@@ -70,13 +81,19 @@ import Storage.Queries.FRFSFarePolicy as QFRFSFarePolicy
 import Storage.Queries.FRFSRouteFareProduct as QFRFSRouteFareProduct
 import Storage.Queries.FRFSRouteStopStageFare as QFRFSRouteStopStageFare
 import Storage.Queries.FRFSStageFare as QFRFSStageFare
+import qualified Storage.Queries.FRFSTicket as QFRFSTicket
+import qualified Storage.Queries.FRFSTicketBokingPayment as QFRFSTicketBookingPayment
+import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import Storage.Queries.FRFSTicketDiscount as QFRFSTicketDiscount
 import Storage.Queries.FRFSVehicleServiceTier as QFRFSVehicleServiceTier
+import qualified Storage.Queries.Journey as QJourney
+import qualified Storage.Queries.Person as QP
 import Storage.Queries.RouteTripMapping as QRouteTripMapping
 import Storage.Queries.StopFare as QRouteStopFare
 import Tools.DynamicLogic
 import Tools.Error
 import Tools.Maps as Maps
+import qualified Tools.Payment as Payment
 
 mkTicketAPI :: DT.FRFSTicket -> APITypes.FRFSTicketAPI
 mkTicketAPI DT.FRFSTicket {..} = APITypes.FRFSTicketAPI {..}
@@ -686,3 +703,61 @@ partnerOrgBppSubscriberId = "partnerOrg_bpp_subscriber_id"
 
 partnerOrgBppSubscriberUrl :: Text
 partnerOrgBppSubscriberUrl = "partnerOrg_bpp_subscriber_url"
+
+markAllRefundBookings ::
+  ( EsqDBFlow m r,
+    CacheFlow m r,
+    MonadFlow m,
+    EsqDBReplicaFlow m r,
+    ServiceFlow m r
+  ) =>
+  DFRFSTicketBooking.FRFSTicketBooking ->
+  Id DP.Person ->
+  m ()
+markAllRefundBookings booking personId = do
+  let mbJourneyId = booking.journeyId
+  allJourneyFrfsBookings <- case mbJourneyId of
+    Just journeyId -> QFRFSTicketBooking.findAllByJourneyId (Just journeyId)
+    Nothing -> return [booking]
+  let failedBookings = filter ((== DFRFSTicketBooking.FAILED) . (.status)) allJourneyFrfsBookings
+      allFailed = not (null failedBookings) && length failedBookings == length allJourneyFrfsBookings
+  whenJust (listToMaybe failedBookings) $ \_ -> do
+    logInfo $ "payment status api markAllRefundBookings: " <> show failedBookings
+    logInfo $ "allFailed flag in markAllRefundBookings: " <> show allFailed
+    person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+    payments <- concat <$> mapM (QFRFSTicketBookingPayment.findAllTicketBookingId . (.id)) failedBookings
+    orderShortId <- case listToMaybe payments of
+      Just payment -> do
+        order <- QPaymentOrder.findById payment.paymentOrderId >>= fromMaybeM (PaymentOrderNotFound payment.paymentOrderId.getId)
+        pure order.shortId.getShortId
+      Nothing -> throwError (InvalidRequest "orderShortId not found in markAllRefundBookings")
+    frfsConfig <-
+      CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow person.merchantOperatingCityId []
+        >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> show person.merchantOperatingCityId)
+    (vendorSplitDetails, amountUpdated) <- SMMFRFS.createVendorSplitFromBookings failedBookings person.merchantId person.merchantOperatingCityId Payment.FRFSMultiModalBooking frfsConfig.isFRFSTestingEnabled
+    isSplitEnabled <- Payment.getIsSplitEnabled person.merchantId person.merchantOperatingCityId Nothing Payment.FRFSMultiModalBooking
+    let splitDetails = Payment.mkUnaggregatedSplitSettlementDetails isSplitEnabled amountUpdated vendorSplitDetails
+    reqId <- case mbJourneyId of
+      Just journeyId -> return journeyId.getId
+      Nothing -> fromMaybeM (InvalidRequest "booking not found in markAllRefundBookings") $ listToMaybe failedBookings <&> (.id.getId)
+    let lockKey = "markAllRefundBookings:" <> reqId
+    Redis.withLockRedis lockKey 5 $ do
+      forM_ failedBookings $ \frfsBooking -> do
+        void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.REFUND_INITIATED frfsBooking.id
+        QFRFSTicket.updateAllStatusByBookingId DFRFSTicket.REFUND_INITIATED frfsBooking.id
+        void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.REFUND_PENDING frfsBooking.id
+      when allFailed $ whenJust mbJourneyId $ \journeyId -> QJourney.updateStatus DJourney.FAILED journeyId
+      let refundReq =
+            Payment.AutoRefundReq
+              { orderId = orderShortId,
+                requestId = reqId,
+                amount = amountUpdated,
+                splitSettlementDetails = splitDetails
+              }
+          createRefundCall refundReq' = Payment.refundOrder person.merchantId person.merchantOperatingCityId Nothing Payment.FRFSMultiModalBooking (Just person.id.getId) person.clientSdkVersion refundReq'
+      result <- try @_ @SomeException $ DPayment.refundService (refundReq, Kernel.Types.Id.Id {Kernel.Types.Id.getId = orderShortId}) (Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant person.merchantId) createRefundCall
+      case result of
+        Left err -> logError $ "Refund service failed for journey " <> reqId <> ": " <> show err
+        Right _ -> logInfo $ "Refund service completed successfully for journey " <> reqId
+      logInfo $ "payment status api markAllRefundBookings completed"
+      pure ()
