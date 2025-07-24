@@ -1,0 +1,20 @@
+CREATE TABLE atlas_driver_offer_bpp.shared_estimate ();
+
+ALTER TABLE atlas_driver_offer_bpp.shared_estimate ADD COLUMN created_at timestamptz NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_driver_offer_bpp.shared_estimate ADD COLUMN currency character varying(255) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.shared_estimate ADD COLUMN distance_unit character varying(255) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.shared_estimate ADD COLUMN estimated_distance double precision ;
+ALTER TABLE atlas_driver_offer_bpp.shared_estimate ADD COLUMN estimated_duration integer ;
+ALTER TABLE atlas_driver_offer_bpp.shared_estimate ADD COLUMN id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.shared_estimate ADD COLUMN merchant_id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.shared_estimate ADD COLUMN merchant_operating_city_id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.shared_estimate ADD COLUMN status character varying(255) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.shared_estimate ADD COLUMN toll_names text[] ;
+ALTER TABLE atlas_driver_offer_bpp.shared_estimate ADD COLUMN total_max_fare numeric(30,2) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.shared_estimate ADD COLUMN total_min_fare numeric(30,2) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.shared_estimate ADD COLUMN transaction_id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.shared_estimate ADD COLUMN trip_category character varying(255) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.shared_estimate ADD COLUMN updated_at timestamptz NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_driver_offer_bpp.shared_estimate ADD COLUMN valid_till timestamptz NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.shared_estimate ADD COLUMN vehicle_service_tier character varying(255) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.shared_estimate ADD PRIMARY KEY ( id);

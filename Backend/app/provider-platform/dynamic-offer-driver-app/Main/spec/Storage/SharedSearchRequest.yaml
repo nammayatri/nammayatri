@@ -1,0 +1,76 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Location: Domain.Types.Location
+  Meters: Kernel.Types.Common
+  Seconds: Kernel.Types.Common
+  VehicleCategory: BecknV2.OnDemand.Enums
+  HighPrecMoney: Kernel.Types.Common
+  TripCategory: Domain.Types.Common
+  Currency: Kernel.Utils.Common
+
+SharedSearchRequest:
+  tableName: shared_search_request
+  derives: "Generic,Show"
+
+  fields:
+    id: Id SharedSearchRequest
+    transactionId: Text
+    status: SearchRequestStatus
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    fromLocationIds: "[Id Location]"
+    toLocationIds: "[Id Location]"
+    estimatedDistance: Maybe Meters
+    estimatedDuration: Maybe Seconds
+    vehicleCategory: Maybe VehicleCategory
+    tollCharges: Maybe HighPrecMoney
+    tollNames: "Maybe [Text]"
+    tripCategory: Maybe TripCategory
+    validTill: UTCTime
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+
+
+  sqlType:
+    transactionId: character varying(36)
+    status: character varying(255)
+    merchantId: character varying(36)
+    merchantOperatingCityId: character varying(36)
+    fromLocationIds: "uuid[]"
+    toLocationIds: "uuid[]"
+    estimatedDistance: double precision
+    estimatedDuration: integer
+    vehicleCategory: character varying(255)
+    tollCharges: double precision
+    tollNames: "text[]"
+    tripCategory: character varying(255)
+    validTill: timestamptz
+    createdAt: timestamptz
+    updatedAt: timestamptz
+
+  queries:
+    findByTransactionId:
+      kvFunction: findOneWithKV
+      where: transactionId
+
+    updateStatus:
+      kvFunction: updateOneWithKV
+      params: [status, updatedAt]
+      where: id
+
+    findByStatus:
+      kvFunction: findAllWithKV
+      where: status
+
+    findActiveRequests:
+      kvFunction: findAllWithKV
+      where: status
+
+  types:
+    SearchRequestStatus:
+      enum: "NEW, INPROGRESS, CONFIRMED, COMPLETED, CLOSED"
+      derive: "HttpInstance"
