@@ -1,8 +1,12 @@
 module ExternalBPP.ExternalAPI.CallAPI where
 
 import qualified BecknV2.FRFS.Enums as Spec
+import Data.Aeson (decode, encode)
+import qualified Data.ByteString.Lazy as BL
 import Data.List (sortOn)
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
+import Data.Time.LocalTime (localTimeOfDay, makeTimeOfDayValid, minutesToTimeZone, utcToLocalTime)
 import Domain.Action.Beckn.FRFS.OnSearch
 import Domain.Types hiding (ONDC)
 import Domain.Types.BecknConfig
@@ -61,15 +65,32 @@ getFares riderId merchant merchanOperatingCity integrationBPPConfig routeCode st
           _ -> True
   case integrationBPPConfig.providerConfig of
     CMRL config' -> do
-      fares <-
-        CMRLFareByOriginDest.getFareByOriginDest config' $
-          CMRLFareByOriginDest.FareByOriginDestReq
-            { route = routeCode,
-              origin = startStopCode,
-              destination = endStopCode,
-              ticketType = "SJT"
-            }
-      return (isFareMandatory, fares)
+      businessHourResult <- getBusinessHourCached integrationBPPConfig
+      let parseTimeOfDay t =
+            case T.splitOn ":" t of
+              [h, m] -> makeTimeOfDayValid (read $ T.unpack h) (read $ T.unpack m) 0
+              _ -> Nothing
+      let mbStart = parseTimeOfDay businessHourResult.businessStartTime
+          mbEnd = parseTimeOfDay businessHourResult.businessEndTime
+      nowUtc <- getCurrentTime
+      let tzMinutes = 330 -- IST = 5*60 + 30 = 330 minutes
+          tz = minutesToTimeZone tzMinutes
+          nowTime = localTimeOfDay $ utcToLocalTime tz nowUtc
+      case (mbStart, mbEnd) of
+        (Just start, Just end) ->
+          if nowTime >= start && nowTime <= end
+            then do
+              fares <-
+                CMRLFareByOriginDest.getFareByOriginDest config' $
+                  CMRLFareByOriginDest.FareByOriginDestReq
+                    { route = routeCode,
+                      origin = startStopCode,
+                      destination = endStopCode,
+                      ticketType = "SJT"
+                    }
+              return (isFareMandatory, fares)
+            else return (isFareMandatory, [])
+        _ -> throwError $ InternalError "Failed to parse business hours"
     ONDC _ -> do
       fares <- FRFSUtils.getFares riderId vehicleCategory integrationBPPConfig merchant.id merchanOperatingCity.id routeCode startStopCode endStopCode
       return (isFareMandatory, fares)
@@ -139,6 +160,20 @@ verifyTicket integrationBPPConfig encryptedQrData = do
   case integrationBPPConfig.providerConfig of
     DIRECT config' -> DIRECTVerify.verifyTicket config' encryptedQrData
     _ -> throwError $ InternalError "Unimplemented!"
+
+getBusinessHourCached :: (MonadFlow m, CacheFlow m r, EncFlow m r) => IntegratedBPPConfig -> m CMRLBusinessHour.BusinessHourResult
+getBusinessHourCached integrationBPPConfig =
+  case integrationBPPConfig.providerConfig of
+    CMRL config' -> do
+      let redisKey = "CMRL:BusinessHour"
+      mbCached <- Redis.safeGet redisKey
+      case mbCached >>= (decode . BL.fromStrict . TE.encodeUtf8) of
+        Just bh -> return bh
+        Nothing -> do
+          bh <- CMRLBusinessHour.getBusinessHour config'
+          Redis.setExp redisKey (TE.decodeUtf8 . BL.toStrict $ encode bh) 600 -- 10 min expiry
+          return bh
+    _ -> throwError $ InternalError "getBusinessHourCached: Not a CMRL provider config"
 
 getBusinessHour :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, CacheFlow m r, EncFlow m r) => IntegratedBPPConfig -> m CMRLBusinessHour.BusinessHourResult
 getBusinessHour integrationBPPConfig = do
