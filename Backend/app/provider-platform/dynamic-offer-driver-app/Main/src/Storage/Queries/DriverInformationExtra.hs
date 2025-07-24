@@ -400,3 +400,17 @@ findByIdAndVerified (Id driverInformationId) mbVerified =
         [Se.Is BeamDI.driverId $ Se.Eq driverInformationId]
           <> [Se.Is BeamDI.verified $ Se.Eq (fromJust mbVerified) | isJust mbVerified]
     ]
+
+findAllByDriverIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Text] -> m [DriverInformation]
+findAllByDriverIds driverIds = do
+  dbConf <- getReplicaBeamConfig
+  res <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $
+          B.filter_'
+            (\driverInfo -> B.sqlBool_ $ driverInfo.driverId `B.in_` (B.val_ <$> driverIds))
+            $ B.all_ (SBC.driverInformation SBC.atlasDB)
+  case res of
+    Right driverInfoList -> catMaybes <$> mapM fromTType' driverInfoList
+    Left _ -> pure []
