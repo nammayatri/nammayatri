@@ -38,6 +38,7 @@ DailyStats:
     merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
     numDriversOnboarded: Int
     numFleetsOnboarded: Int
+    onlineDuration: Maybe Seconds
 
   beamType:
     distanceUnit: Maybe DistanceUnit

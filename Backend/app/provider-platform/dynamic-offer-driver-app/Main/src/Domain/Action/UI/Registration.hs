@@ -318,6 +318,7 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
             onboardingVehicleCategory = Nothing,
             servicesEnabledForSubscription = [DEP.YATRI_SUBSCRIPTION],
             driverFlowStatus = Just DriverFlowStatus.OFFLINE,
+            onlineDurationRefreshedAt = Just now,
             panNumber = Nothing,
             aadhaarNumber = Nothing,
             dlNumber = Nothing,

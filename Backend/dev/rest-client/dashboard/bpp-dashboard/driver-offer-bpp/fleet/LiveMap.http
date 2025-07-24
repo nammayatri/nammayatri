@@ -1,0 +1,24 @@
+# access tokens with different roles
+@operator = favorit-operator-token0-000000000000
+@fleet = 88ef2a2a-b014-4a86-b1c0-e453e8b0b688
+@fleetOwnerId = favorit-fleet-owner-0000000000000000
+@rentalFleet = favorit-rental_fleet-token-000000000
+@juspay_admin = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/juspay_admin}}
+
+@driver_Id = favorit-auto1-0000000000000000000000
+
+
+# @name healthcheck
+GET {{bpp-dashboard-host}}
+
+###
+
+# @name getLiveMapDrivers
+
+@radius = 5
+
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/liveMap/drivers/{{radius}}
+?fleetOwnerId={{fleetOwnerId}}
+#&driverIdForRadius={{driver_Id}}
+&point=14.445332,75.919028
+token: {{operator}}

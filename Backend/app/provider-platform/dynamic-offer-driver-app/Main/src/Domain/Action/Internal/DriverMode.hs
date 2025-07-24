@@ -15,6 +15,7 @@
 module Domain.Action.Internal.DriverMode where
 
 import Data.OpenApi (ToSchema)
+import Domain.Action.Internal.ProcessingChangeOnline (processingChangeOnline)
 import qualified Domain.Types.Common as DriverInfo
 import qualified Domain.Types.DriverFlowStatus as DDFS
 import qualified Domain.Types.DriverInformation as DI
@@ -28,10 +29,12 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.DriverFlowStatus as SDF
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.Queries.DriverInformation as QDriverInformation
 import qualified Storage.Queries.DriverOperatorAssociationExtra as QDriverOperatorAssociationExtra
 import qualified Storage.Queries.FleetDriverAssociationExtra as QFleetDriverAssociationExtra
 import qualified Storage.Queries.FleetOperatorAssociation as QFleetOperatorAssociation
+import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 
 data DriverModeReq = DriverModeReq
@@ -243,3 +246,10 @@ updateDriverModeAndFlowStatus driverId mbAllowCacheDriverFlowStatus isActive mbM
   QDriverInformation.updateActivity isActive mbMode (Just newFlowStatus) driverId
   when (mbAllowCacheDriverFlowStatus == Just True) $
     updateFleetOperatorStatusKeyForDriver driverId newFlowStatus mbDriverInfo
+  fork "update driver online duration" $ do
+    driver <- QPerson.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
+    transporterConfig <-
+      SCTC.findByMerchantOpCityId driver.merchantOperatingCityId Nothing
+        >>= fromMaybeM (TransporterConfigNotFound driver.merchantOperatingCityId.getId)
+    driverInfo <- fromMaybeM DriverInfoNotFound mbDriverInfo
+    processingChangeOnline (driverId, driver.merchantId, driver.merchantOperatingCityId) transporterConfig.timeDiffFromUtc transporterConfig.maxOnlineDurationDays driverInfo mbMode

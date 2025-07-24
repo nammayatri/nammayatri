@@ -383,6 +383,7 @@ updateByPrimaryKey (Domain.Types.DriverInformation.DriverInformation {..}) = do
       Se.Set Beam.onRide onRide,
       Se.Set Beam.onRideTripCategory onRideTripCategory,
       Se.Set Beam.onboardingVehicleCategory onboardingVehicleCategory,
+      Se.Set Beam.onlineDurationRefreshedAt onlineDurationRefreshedAt,
       Se.Set Beam.panNumberEncrypted (Storage.Queries.Transformers.FleetOwnerInformation.mkFieldEncrypted panNumber),
       Se.Set Beam.panNumberHash (Storage.Queries.Transformers.FleetOwnerInformation.mkFieldHash panNumber),
       Se.Set Beam.payerVpa payerVpa,

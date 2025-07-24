@@ -64,3 +64,17 @@ findAllInRangeByDriverId_ (Id driverId) from to = do
           Se.Is Beam.merchantLocalDate $ Se.LessThanOrEq to
         ]
     ]
+
+updateOnlineDurationByDriverId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id SP.Person ->
+  Day ->
+  Seconds ->
+  m ()
+updateOnlineDurationByDriverId driverId merchantLocalDate onlineDuration = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.updatedAt _now,
+      Se.Set Beam.onlineDuration $ Just onlineDuration
+    ]
+    [Se.And [Se.Is Beam.driverId $ Se.Eq (getId driverId), Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate]]

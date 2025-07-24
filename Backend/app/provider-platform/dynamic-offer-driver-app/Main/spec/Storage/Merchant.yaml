@@ -1061,6 +1061,7 @@ TransporterConfig:
     allowDuplicateAadhaar : Maybe Bool
     allowCacheDriverFlowStatus : Maybe Bool
     cancellationRateSlabConfig: Maybe CancellationRateSlabConfig
+    maxOnlineDurationDays : Maybe Int
 
   beamType:
     currency: Maybe Currency
@@ -1479,6 +1480,7 @@ TransporterConfig:
     isAAEnabledForRecurring : "false"
     disableDriverWhenUnlinkingVehicle : "true"
     allowCacheDriverFlowStatus : "false"
+    maxOnlineDurationDays : "10"
   excludedDefaultQueries:
     - findByPrimaryKey
     - updateByPrimaryKey
