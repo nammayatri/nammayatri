@@ -54,6 +54,7 @@ import qualified Kernel.External.Payment.Types as Payment
 import Kernel.External.Types (SchedulerType, ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto (EsqDBReplicaFlow, Transactionable)
+import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
@@ -364,13 +365,16 @@ notifyAndUpdateInvoiceStatusIfPaymentFailed driverId orderId orderStatus eventNa
     now <- getCurrentTime
     let paymentMode = if isJust activeExecutionInvoice then DP.AUTOPAY else DP.MANUAL
     let (notifyFailure, updateFailure) = toNotifyFailure (isJust activeExecutionInvoice) eventName orderStatus
+    logDebug $ "notifyFailure: " <> show notifyFailure <> " updateFailure: " <> show updateFailure <> " fromWebhook: " <> show fromWebhook
     when (updateFailure || (not fromWebhook && notifyFailure)) $ do
-      QIN.updateInvoiceStatusByInvoiceId INV.FAILED (cast orderId)
-      case activeExecutionInvoice of
-        Just invoice' -> do
-          QDF.updateAutoPayToManual invoice'.driverFeeId
-          QDF.updateAutopayPaymentStageById (Just EXECUTION_FAILED) (Just now) invoice'.driverFeeId
-        Nothing -> pure ()
+      logDebug $ "Updating Invoice Status To Failed & Driver Fee AutoPay To Manual"
+      ESQ.runTransaction $ do
+        QIN.updateInvoiceStatusByInvoiceId INV.FAILED (cast orderId)
+        case activeExecutionInvoice of
+          Just invoice' -> do
+            QDF.updateAutoPayToManual invoice'.driverFeeId
+            QDF.updateAutopayPaymentStageById (Just EXECUTION_FAILED) (Just now) invoice'.driverFeeId
+          Nothing -> pure ()
       when (subsConfig.sendInAppFcmNotifications) $ do
         notifyPaymentFailureIfNotNotified paymentMode
     let toNotify = notifyFailure && isJust mbBankErrorCode && subsConfig.sendInAppFcmNotifications
