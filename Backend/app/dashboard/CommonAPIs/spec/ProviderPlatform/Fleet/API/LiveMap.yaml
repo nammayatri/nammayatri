@@ -1,0 +1,50 @@
+imports:
+  LatLong: Kernel.External.Maps.Types
+  Driver: Dashboard.Common
+  VehicleVariant: Domain.Types.VehicleVariant
+
+module: LiveMap
+
+apis:
+  - GET:
+      endpoint: /drivers/{radius}
+      auth: ApiAuthV2
+      params:
+        radius: Meters
+      query:
+        - fleetOwnerId: Text
+        - driverIdForRadius: Id Driver
+        - point: LatLong
+      response:
+        type: "[MapDriverInfoRes]"
+      helperApi:
+        - GET:
+            endpoint: /drivers/{radius}/{requestorId}
+            auth: ApiAuthV2
+            params:
+              radius: Meters
+              requestorId: Text
+            query:
+              - fleetOwnerId: Text
+              - driverIdForRadius: Id Driver
+              - point: LatLong
+            response:
+              type: "[MapDriverInfoRes]"
+
+types:
+  MapDriverInfoRes:
+    - driverName: Text
+    - driverStatus: Maybe Status
+    - vehicleNumber: Text
+    - vehicleVariant: VehicleVariant
+    - position: LatLong
+    - mobileCountryCode: Text
+    - mobileNumber: Text
+    - rideRelatedInfo: RideRelatedInfo
+  Status:
+    - enum: ON_PICKUP, ON_RIDE, ACTIVE, INACTIVE, ONLINE, SILENT, OFFLINE
+  RideRelatedInfo:
+    - tripStartTime: Maybe UTCTime
+    - fare: Maybe HighPrecMoney
+    - source: Text
+    - destination: Text

@@ -54,7 +54,8 @@ data NearByReq = NearByReq
     vehicleType :: Maybe [VehicleVariant],
     radius :: Int,
     merchantId :: Id DM.Merchant,
-    groupId :: Maybe Text
+    groupId :: Maybe Text, -- fleetOwnerId
+    groupId2 :: Maybe Text -- operatorId
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema)
 
