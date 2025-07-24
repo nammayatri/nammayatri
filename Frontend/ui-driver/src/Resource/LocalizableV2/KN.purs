@@ -1337,7 +1337,7 @@ getKn =
     , please_try_again_in_some_time: "ದಯವಿಟ್ಟು ಸ್ವಲ್ಪ ಸಮಯದ ನಂತರ ಪುನಃ ಪ್ರಯತ್ನಿಸಿ."
     , policy_generate_once_ride_start: "ನಿಮ್ಮ ಪಾಲಿಸಿ ರಚಿಸಲಾಗುತ್ತದೆ \n ಪ್ರಯಾಣ ಪ್ರಾರಂಭವಾದಾಗ."
     , this_ride_is_insured_for_free: "ನೀವು ಸುರಕ್ಷಿತರಾಗಿದ್ದೀರಿ! ಈ ಸವಾರಿ\nಉಚಿತವಾಗಿ ವಿಮೆ ಹೊಂದಿದೆ."
-    , this_ride_come_with_complimentary_insurance: "ಈ ಸವಾರಿಗೆ ಜೊತೆಯಲ್ಲಿ\nಉಚಿತ ವಿಮೆ ನೀಡಲಾಗುತ್ತದೆ."
+    , this_ride_come_with_free_insurance: "ಈ ಸವಾರಿ ಉಚಿತ\nವಿಮೆಯೊಂದಿಗೆ ಬರುತ್ತದೆ."
     , download_insurance_policy: "ವಿಮೆ ಪಾಲಿಸಿಯನ್ನು ಡೌನ್‌ಲೋಡ್ ಮಾಡಿ"
     , special_pickup_zone: "ವಿಶೇಷ ಪಿಕಪ್ ಜೋನ್"
     , special_pickup_zone_popup_info: "ವಿಶೇಷ ಜೋನ್ ನಲ್ಲಿ, ನೀವು ಹತ್ತಿರದ ಗ್ರಾಹಕರಿಂದ ಆದ್ಯತೆಯ ರೈಡ್ ವಿನಂತಿಗಳನ್ನು ಪಡೆಯುತ್ತೀರಿ!”"

@@ -1866,7 +1866,7 @@ getProxy str = case str of
   PLEASE_TRY_AGAIN_IN_SOME_TIME -> \a -> a @~ please_try_again_in_some_time
   POLICY_GENERATE_ONCE_RIDE_START -> \a -> a @~ policy_generate_once_ride_start
   THIS_RIDE_IS_ENSURED_FOR_FREE -> \a -> a @~ this_ride_is_insured_for_free
-  THIS_RIDE_COME_WITH_COMPLIMENTARY_INSURANCE -> \a -> a @~ this_ride_come_with_complimentary_insurance
+  THIS_RIDE_COME_WITH_FREE_INSURANCE -> \a -> a @~ this_ride_come_with_free_insurance
   DOWNLOAD_INSURANCE_POLICY -> \a -> a @~ download_insurance_policy
   -- _ _ -> \a -> (a @~ stop) 0
   _ -> \a -> a @~ resume_ride
