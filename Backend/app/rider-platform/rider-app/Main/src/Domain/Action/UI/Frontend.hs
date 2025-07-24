@@ -90,7 +90,7 @@ getPersonFlowStatus personId merchantId _ pollActiveBooking = do
         updateJourneyStatus j = do
           case j.journeyExpiryTime of
             Just expiryTime ->
-              if now > expiryTime 
+              if now > expiryTime
                 then do
                   _ <- QJourney.updateStatus DJ.EXPIRED j.id
                   return j {DJ.status = DJ.EXPIRED}
