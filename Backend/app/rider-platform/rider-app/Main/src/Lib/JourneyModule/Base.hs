@@ -350,9 +350,9 @@ checkAndMarkTerminalJourneyStatus journey feedbackRequired = go . concatLegState
     go allLegsState
       | all (\legState -> legState.status == JL.Cancelled) allLegsState =
         updateJourneyStatus journey DJourney.CANCELLED
-      | all (\legState -> legState.status `elem` [JL.Completed, JL.Skipped, JL.Cancelled]) allLegsState && (journey.status == DJourney.FEEDBACK_PENDING || not feedbackRequired) =
+      | all (\legState -> legState.status == JL.Completed) allLegsState && (journey.status == DJourney.FEEDBACK_PENDING || not feedbackRequired) =
         updateJourneyStatus journey DJourney.COMPLETED
-      | all (\legState -> legState.status `elem` [JL.Completed, JL.Skipped, JL.Cancelled]) allLegsState =
+      | all (\legState -> legState.status == JL.Completed) allLegsState =
         updateJourneyStatus journey DJourney.FEEDBACK_PENDING
       | otherwise = pure ()
 
