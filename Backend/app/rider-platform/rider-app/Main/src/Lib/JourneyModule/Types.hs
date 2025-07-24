@@ -1176,6 +1176,9 @@ cannotCancelWalkStatus = [Skipped, Completed, Cancelled]
 cannotSwitchStatus :: [JourneyLegStatus]
 cannotSwitchStatus = [Booked, OnTheWay, Arriving, Arrived, Ongoing, Finishing, Completed, Cancelled]
 
+cannotCompleteJourneyIfTaxiLegIsInThisStatus :: [JourneyLegStatus]
+cannotCompleteJourneyIfTaxiLegIsInThisStatus = [Booked, OnTheWay, Arriving, Arrived, Ongoing, Finishing]
+
 cannotCancelExtendStatus :: [JourneyLegStatus]
 cannotCancelExtendStatus = [Ongoing, Finishing, Completed, Cancelled, Booked, OnTheWay, Arriving, Arrived]
 
