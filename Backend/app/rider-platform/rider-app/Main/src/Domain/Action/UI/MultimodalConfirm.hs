@@ -751,12 +751,14 @@ getPublicTransportData (mbPersonId, merchantId) mbCity _mbConfigVersion = do
           let configsByFeedId = HashMap.fromListWith (++) $ map (\(config, (feedKey, _)) -> (feedKey, [config])) configsWithFeedInfo
               uniqueConfigs = map (head . snd) $ HashMap.toList configsByFeedId
           mapM fetchData uniqueConfigs
+
+  gtfsVersion <- mapM OTPRest.getGtfsVersion (concat integratedBPPConfigs)
   let transportData =
         ApiTypes.PublicTransportData
           { ss = concatMap (.ss) transportDataList,
             rs = concatMap (.rs) transportDataList,
             rsm = concatMap (.rsm) transportDataList,
-            ptcv = T.intercalate (T.pack "#") $ map (.feedKey) (concat integratedBPPConfigs)
+            ptcv = if null gtfsVersion then Nothing else Just (T.intercalate (T.pack "#") gtfsVersion)
           }
   return transportData
 
