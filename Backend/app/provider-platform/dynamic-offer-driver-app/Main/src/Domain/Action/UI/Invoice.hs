@@ -1,4 +1,4 @@
-module Domain.Action.UI.Invoice (getInvoice) where
+module Domain.Action.UI.Invoice (getInvoice, getSourceAndDestination, notAvailableText) where
 
 import qualified API.Types.UI.Invoice
 import Control.Monad (msum)
@@ -62,11 +62,15 @@ getInvoice (mbPersonId, _merchantId, _merchantOpCityId) mbFromDate mbToDate mbRc
                 chargeableDistanceWithUnit = convertHighPrecMetersToDistance Meter chargeableDistance
               }
       pure $ invoiceResponse <$> mbVehicleNumber
-    getSourceAndDestination (Just booking) = do
-      let getFullAddress (Just locId) = fromMaybe notAvailableText <$> CHL.findFullAddressById locId booking.createdAt
-          getFullAddress _ = pure notAvailableText
-      source <- getFullAddress booking.fromLocationId
-      destination <- getFullAddress booking.toLocationId
-      pure (source, destination)
-    getSourceAndDestination _ = pure (notAvailableText, notAvailableText)
-    notAvailableText = "N/A"
+
+getSourceAndDestination :: Maybe CHB.Booking -> Environment.Flow (Kernel.Prelude.Text, Kernel.Prelude.Text)
+getSourceAndDestination (Just booking) = do
+  let getFullAddress (Just locId) = fromMaybe notAvailableText <$> CHL.findFullAddressById locId booking.createdAt
+      getFullAddress _ = pure notAvailableText
+  source <- getFullAddress booking.fromLocationId
+  destination <- getFullAddress booking.toLocationId
+  pure (source, destination)
+getSourceAndDestination _ = pure (notAvailableText, notAvailableText)
+
+notAvailableText :: Kernel.Prelude.Text
+notAvailableText = "N/A"
