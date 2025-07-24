@@ -367,11 +367,11 @@ notifyAndUpdateInvoiceStatusIfPaymentFailed driverId orderId orderStatus eventNa
     let (notifyFailure, updateFailure) = toNotifyFailure (isJust activeExecutionInvoice) eventName orderStatus
     logDebug $ "notifyFailure: " <> show notifyFailure <> " updateFailure: " <> show updateFailure <> " fromWebhook: " <> show fromWebhook
     when (updateFailure || (not fromWebhook && notifyFailure)) $ do
-      logDebug $ "Updating Invoice Status To Failed & Driver Fee AutoPay To Manual"
       ESQ.runTransaction $ do
         QIN.updateInvoiceStatusByInvoiceId INV.FAILED (cast orderId)
         case activeExecutionInvoice of
           Just invoice' -> do
+            logDebug $ "Updating Driver Fee Status To Failed & Driver Fee AutoPay To Manual"
             QDF.updateAutoPayToManual invoice'.driverFeeId
             QDF.updateAutopayPaymentStageById (Just EXECUTION_FAILED) (Just now) invoice'.driverFeeId
           Nothing -> pure ()
