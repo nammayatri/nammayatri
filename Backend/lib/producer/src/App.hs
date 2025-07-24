@@ -16,6 +16,7 @@
 module App (startProducer) where
 
 import Data.Function hiding (id)
+import Data.IORef (IORef, modifyIORef', newIORef, readIORef, writeIORef)
 import Debug.Trace as T
 import Environment
 import EulerHS.Interpreters (runFlow)
@@ -35,6 +36,8 @@ import qualified Kernel.Utils.FlowLogging as L
 import Kernel.Utils.Time ()
 import qualified Producer.Flow as PF
 import System.Environment (lookupEnv)
+
+-- import qualified EulerHS.Language as L
 
 getDhallName :: ProducerType -> String
 getDhallName = \case
@@ -67,6 +70,17 @@ startProducerWithEnv flowRt appCfg appEnv producerType = do
         >> L.setOption Tables KUC.defaultTableData
         >> L.setOption KVCM.KVMetricCfg appEnv.coreMetrics.kvRedisMetricsContainer
     )
-  let producers = map (\_ -> PF.runProducer) [1 .. appCfg.producersPerPod]
+  -- Create the counter in IO
+  redisStreamCounter <- newIORef 1
+
+  let producersWithCounter = map (wrapWithCounter PF.runProducer) [1 .. appCfg.producersPerPod]
+  let reviverWithCounter = wrapWithCounter (PF.runReviver producerType)
+
   runFlowR flowRt appEnv $ do
-    loopGracefully $ bool producers ([PF.runReviver producerType] <> producers) appEnv.runReviver
+    loopGracefully $
+      bool producersWithCounter (reviverWithCounter : producersWithCounter) appEnv.runReviver
+  where
+    wrapWithCounter action redisStreamCounter = do
+      liftIO $ modifyIORef' redisStreamCounter (\n -> if n > 16 then 1 else n + 1)
+      counterValue <- liftIO $ readIORef redisStreamCounter
+      action redisStreamCounter
