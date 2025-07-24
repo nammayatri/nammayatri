@@ -335,9 +335,10 @@ defaultBusTrackingConfig =
 checkAndMarkTerminalJourneyStatus ::
   (JL.GetStateFlow m r c, JL.SearchRequestFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
   DJourney.Journey ->
+  Bool ->
   [JL.JourneyLegState] ->
   m ()
-checkAndMarkTerminalJourneyStatus journey = go . concatLegStates
+checkAndMarkTerminalJourneyStatus journey feedbackRequired = go . concatLegStates
   where
     concatLegStates =
       foldl'
@@ -349,7 +350,7 @@ checkAndMarkTerminalJourneyStatus journey = go . concatLegStates
     go allLegsState
       | all (\legState -> legState.status == JL.Cancelled) allLegsState =
         updateJourneyStatus journey DJourney.CANCELLED
-      | all (\legState -> legState.status `elem` [JL.Completed, JL.Skipped, JL.Cancelled]) allLegsState && journey.status == DJourney.FEEDBACK_PENDING =
+      | all (\legState -> legState.status `elem` [JL.Completed, JL.Skipped, JL.Cancelled]) allLegsState && (journey.status == DJourney.FEEDBACK_PENDING || not feedbackRequired) =
         updateJourneyStatus journey DJourney.COMPLETED
       | all (\legState -> legState.status `elem` [JL.Completed, JL.Skipped, JL.Cancelled]) allLegsState =
         updateJourneyStatus journey DJourney.FEEDBACK_PENDING
@@ -371,7 +372,7 @@ getAllLegsStatus journey = do
   -- Update journey expiry time to the next valid ticket expiry when a leg is completed
   whenJust (minimumTicketLegOrder legPairs) $ \nextLegOrder -> do
     QJourneyExtra.updateJourneyToNextTicketExpiryTime journey.id nextLegOrder
-  checkAndMarkTerminalJourneyStatus journey allLegsState
+  checkAndMarkTerminalJourneyStatus journey True allLegsState
   return allLegsState
   where
     minimumTicketLegOrder = foldl' go Nothing
@@ -943,7 +944,7 @@ cancelLeg journeyId journeyLeg cancellationReasonCode isSkipped skippedDuringCon
   when shouldUpdateJourneyStatus $ do
     journey <- getJourney journeyId
     updatedLegStatus <- getAllLegsStatus journey
-    when (length updatedLegStatus == 1) $ checkAndMarkTerminalJourneyStatus journey updatedLegStatus
+    when (length updatedLegStatus == 1) $ checkAndMarkTerminalJourneyStatus journey (not isSkipped) updatedLegStatus
   return ()
 
 cancelRemainingLegs ::
@@ -992,7 +993,7 @@ skipLeg journeyId legOrder skippedDuringConfirmation = do
   journey <- getJourney journeyId
   updatedLegStatus <- getAllLegsStatus journey
   if legOrder == length updatedLegStatus - 1
-    then checkAndMarkTerminalJourneyStatus journey updatedLegStatus
+    then checkAndMarkTerminalJourneyStatus journey False updatedLegStatus
     else pure ()
 
 addSkippedLeg ::

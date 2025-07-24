@@ -819,7 +819,7 @@ postMultimodalOrderSublegSetStatus (mbPersonId, merchantId) journeyId legOrder s
 
   -- refetch updated legs and journey
   updatedLegStatus <- JM.getAllLegsStatus journey
-  checkAndMarkTerminalJourneyStatus journey updatedLegStatus
+  checkAndMarkTerminalJourneyStatus journey False updatedLegStatus
   updatedJourney <- JM.getJourney journeyId
   generateJourneyStatusResponse personId merchantId updatedJourney updatedLegStatus
 
@@ -889,6 +889,6 @@ postMultimodalComplete (mbPersonId, merchantId) journeyId = do
   mapM_ (\leg -> markAllSubLegsCompleted leg.legExtraInfo journeyId leg.order) legs
 
   updatedLegStatus <- JM.getAllLegsStatus journey
-  checkAndMarkTerminalJourneyStatus journey updatedLegStatus
+  checkAndMarkTerminalJourneyStatus journey True updatedLegStatus
   updatedJourney <- JM.getJourney journeyId
   generateJourneyStatusResponse personId merchantId updatedJourney updatedLegStatus
