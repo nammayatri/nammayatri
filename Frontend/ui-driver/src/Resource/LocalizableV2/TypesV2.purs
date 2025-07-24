@@ -1342,7 +1342,7 @@ newtype Keymap = Keymap {
   , please_try_again_in_some_time :: String
   , policy_generate_once_ride_start :: String
   , this_ride_is_insured_for_free :: String
-  , this_ride_come_with_complimentary_insurance :: String
+  , this_ride_come_with_free_insurance :: String
   , download_insurance_policy :: String
   , special_pickup_zone :: String
   , special_pickup_zone_popup_info :: String
@@ -5859,8 +5859,8 @@ policy_generate_once_ride_start = a
 this_ride_is_insured_for_free :: Proxy "this_ride_is_insured_for_free"
 this_ride_is_insured_for_free = a
 
-this_ride_come_with_complimentary_insurance :: Proxy "this_ride_come_with_complimentary_insurance"
-this_ride_come_with_complimentary_insurance = a
+this_ride_come_with_free_insurance :: Proxy "this_ride_come_with_free_insurance"
+this_ride_come_with_free_insurance = a
 
 download_insurance_policy :: Proxy "download_insurance_policy"
 download_insurance_policy = a

@@ -1341,7 +1341,7 @@ getHi =
     , please_try_again_in_some_time: "कृपया कुछ समय बाद पुनः प्रयास करें।"
     , policy_generate_once_ride_start: "आपकी पॉलिसी जनरेट होती है \n जब यात्रा शुरू होती है।"
     , this_ride_is_insured_for_free: "आप सुरक्षित हैं! यह सवारी\nबिना किसी लागत के बीमित है।"
-    , this_ride_come_with_complimentary_insurance: "इस सवारी के साथ\nएक मुफ्त बीमा शामिल है।"
+    , this_ride_come_with_free_insurance: "इस यात्रा के साथ\nनिःशुल्क बीमा भी शामिल है"
     , download_insurance_policy: "इंश्योरेंस पॉलिसी डाउनलोड करें"
     , special_pickup_zone: "विशेष पिकअप जोन"
     , special_pickup_zone_popup_info: "विशेष क्षेत्र में, आपको सबसे निकट ग्राहकों से प्राथमिकता राइड अनुरोध मिलता है!"

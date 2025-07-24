@@ -1336,7 +1336,7 @@ getBn =
     , please_try_again_in_some_time: "অনুগ্রহ করে কিছুক্ষণ পরে আবার চেষ্টা করুন।"
     , policy_generate_once_ride_start: "আপনার পলিসি তৈরি হবে \n যাত্রা শুরু হলে।"
     , this_ride_is_insured_for_free: "আপনি সুরক্ষিত! এই যাত্রাটি\nবিনা খরচে বীমাকৃত।"
-    , this_ride_come_with_complimentary_insurance: "এই যাত্রার সঙ্গে\nএকটি সম্পূর্ণ বিনামূল্যের বীমা রয়েছে।"
+    , this_ride_come_with_free_insurance: "এই যাত্রায় বিনামূল্যে\nবীমা দেওয়া হবে"
     , download_insurance_policy: "ইনশিয়োরেন্স পলিসি ডাউনলোড করুন"
     , special_pickup_zone: "বিশেষ পিকআপ জোন"
     , special_pickup_zone_popup_info: "বিশেষ জোনে, আপনি নিকটতম গ্রাহকদের থেকে প্রাথমিকতা অনুমোদন পান!"
