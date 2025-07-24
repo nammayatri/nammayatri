@@ -62,7 +62,6 @@ data BusLegRequestGetInfoData = BusLegRequestGetInfoData
 data BusLegRequestGetStateData = BusLegRequestGetStateData
   { searchId :: Id FRFSSearch.FRFSSearch,
     riderLastPoints :: [ApiTypes.RiderLocationReq],
-    isLastCompleted :: Bool,
     movementDetected :: Bool,
     routeCodeForDetailedTracking :: Maybe Text
   }

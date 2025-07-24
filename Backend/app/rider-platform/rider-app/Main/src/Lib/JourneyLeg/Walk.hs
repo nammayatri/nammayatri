@@ -9,7 +9,6 @@ import Kernel.Types.Error
 import Kernel.Utils.Common
 import qualified Lib.JourneyLeg.Types as JLT
 import Lib.JourneyLeg.Types.Walk
-import Lib.JourneyModule.Location
 import qualified Lib.JourneyModule.Types as JT
 import SharedLogic.Search
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
@@ -74,21 +73,15 @@ instance JT.JourneyLeg WalkLegRequest m where
   getState (WalkLegRequestGetState req) = do
     legData <- QWalkLeg.findById req.walkLegId >>= fromMaybeM (InvalidRequest "WalkLeg Data not found")
     journeyLegInfo <- legData.journeyLegInfo & fromMaybeM (InvalidRequest "WalkLeg journey legInfo data missing")
-    toLocation <- legData.toLocation & fromMaybeM (InvalidRequest "ToLocation of walkleg journey data is missing")
     let status = JT.getWalkLegStatusFromWalkLeg legData journeyLegInfo
-    let (statusChanged, newStatus) = updateJourneyLegStatus DTrip.Walk req.riderLastPoints (locationToLatLng toLocation) status req.isLastCompleted req.mbToStation
-    when statusChanged $ do
-      let walkLegStatus = JT.castWalkLegStatusFromLegStatus newStatus
-      QWalkLeg.updateStatus walkLegStatus req.walkLegId
     return $
       JT.Single $
         JT.JourneyLegStateData
-          { status = newStatus,
+          { status,
             userPosition = (.latLong) <$> listToMaybe req.riderLastPoints,
             vehiclePositions = [],
             legOrder = journeyLegInfo.journeyLegOrder,
             subLegOrder = 1,
-            statusChanged,
             mode = DTrip.Walk
           }
   getState _ = throwError (InternalError "Not supported")

@@ -214,7 +214,6 @@ data VehiclePosition = VehiclePosition
 
 data JourneyLegStateData = JourneyLegStateData
   { status :: JourneyLegStatus,
-    statusChanged :: Bool,
     userPosition :: Maybe LatLong,
     vehiclePositions :: [VehiclePosition], -- Uses the modified VehiclePosition
     subLegOrder :: Int,
@@ -1175,10 +1174,13 @@ cannotCancelWalkStatus :: [JourneyLegStatus]
 cannotCancelWalkStatus = [Skipped, Completed, Cancelled]
 
 cannotSwitchStatus :: [JourneyLegStatus]
-cannotSwitchStatus = [Skipped, Booked, OnTheWay, Arriving, Arrived, Ongoing, Finishing, Completed, Cancelled]
+cannotSwitchStatus = [Booked, OnTheWay, Arriving, Arrived, Ongoing, Finishing, Completed, Cancelled]
+
+cannotCompleteJourneyIfTaxiLegIsInThisStatus :: [JourneyLegStatus]
+cannotCompleteJourneyIfTaxiLegIsInThisStatus = [Booked, OnTheWay, Arriving, Arrived, Ongoing, Finishing]
 
 cannotCancelExtendStatus :: [JourneyLegStatus]
-cannotCancelExtendStatus = [Skipped, Ongoing, Finishing, Completed, Cancelled, Booked, OnTheWay, Arriving, Arrived]
+cannotCancelExtendStatus = [Ongoing, Finishing, Completed, Cancelled, Booked, OnTheWay, Arriving, Arrived]
 
 data ExtendLegStartPoint
   = StartLocation StartLocationType

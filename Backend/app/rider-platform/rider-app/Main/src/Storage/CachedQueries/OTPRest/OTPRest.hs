@@ -193,7 +193,7 @@ parseStationsFromInMemoryServer stations integratedBPPConfig = do
           Station.Station
             { address = join (fst <$> HM.lookup station.stopCode stationAddressMap),
               code = station.stopCode,
-              hindiName = Nothing,
+              hindiName = station.hindiName,
               id = Id station.stopCode,
               integratedBppConfigId = integratedBPPConfig.id,
               lat = Just station.stopPoint.lat,
@@ -202,7 +202,7 @@ parseStationsFromInMemoryServer stations integratedBPPConfig = do
               merchantOperatingCityId = integratedBPPConfig.merchantOperatingCityId,
               name = station.stopName,
               possibleTypes = Nothing,
-              regionalName = Nothing,
+              regionalName = station.regionalName,
               suggestedDestinations = join (snd <$> HM.lookup station.stopCode stationAddressMap),
               geoJson = station.geoJson,
               gates = station.gates,

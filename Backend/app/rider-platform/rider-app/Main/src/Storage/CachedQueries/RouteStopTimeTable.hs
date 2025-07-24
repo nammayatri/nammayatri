@@ -81,7 +81,7 @@ findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCode
               _ -> pure [stopCode']
         allTrips <- Queries.findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCodes' stopCodes vehicleType
         logDebug $ "Fetched route stop time table graphql: " <> show allTrips <> " for routeCodes:" <> show routeCodes <> " and stopCode:" <> show stopCode
-        void $ cacheRouteStopTimeInfo stopCode allTrips
+        unless (P.null allTrips) $ cacheRouteStopTimeInfo stopCode allTrips
         pure allTrips
   val <- L.getOptionLocal CalledForFare
   return $ P.filter (\trip -> (trip.routeCode `P.elem` routeCodes') || (val == Just True)) allTrips

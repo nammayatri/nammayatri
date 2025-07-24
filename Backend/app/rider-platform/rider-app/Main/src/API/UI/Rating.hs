@@ -15,6 +15,7 @@
 module API.UI.Rating
   ( API,
     handler,
+    processRating,
     DFeedback.FeedbackReq (..),
     DFeedback.DriverProfileResponse (..),
   )
@@ -64,6 +65,10 @@ handler =
 
 rating :: (Id Person.Person, Id Merchant.Merchant) -> DFeedback.FeedbackReq -> App.FlowHandler APISuccess
 rating (personId, merchantId) request = withFlowHandlerAPI . withPersonIdLogTag personId $ do
+  processRating (personId, merchantId) request
+
+processRating :: (Id Person.Person, Id Merchant.Merchant) -> DFeedback.FeedbackReq -> App.Flow APISuccess
+processRating (personId, merchantId) request = do
   dFeedbackRes <- DFeedback.feedback request personId
   becknReq <- ACL.buildRatingReqV2 dFeedbackRes
   fork "call bpp rating api" $ do

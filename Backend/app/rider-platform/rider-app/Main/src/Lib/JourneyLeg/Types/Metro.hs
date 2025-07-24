@@ -51,8 +51,7 @@ data MetroLegRequestIsCancellableData = MetroLegRequestIsCancellableData
 
 data MetroLegRequestGetStateData = MetroLegRequestGetStateData
   { searchId :: Id FRFSSearch.FRFSSearch,
-    riderLastPoints :: [ApiTypes.RiderLocationReq],
-    isLastCompleted :: Bool
+    riderLastPoints :: [ApiTypes.RiderLocationReq]
   }
 
 data MetroLegRequestGetInfoData = MetroLegRequestGetInfoData
