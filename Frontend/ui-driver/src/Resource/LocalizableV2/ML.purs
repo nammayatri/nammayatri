@@ -1339,7 +1339,7 @@ getMl =
     , please_try_again_in_some_time: "ദയവായി കുറച്ച് സമയത്തിന് ശേഷം വീണ്ടും ശ്രമിക്കുക."
     , policy_generate_once_ride_start: "യാത്ര ആരംഭിക്കുമ്പോൾ \n നിങ്ങളുടെ പോളിസി സൃഷ്ടിക്കപ്പെടും."
     , this_ride_is_insured_for_free: "നിങ്ങൾ കവർ ചെയ്തിരിക്കുന്നു! ഈ യാത്ര\nഉപഭോഗത്തിനില്ലാതെ ഇൻഷുറഡ് ആണ്."
-    , this_ride_come_with_complimentary_insurance: "ഈ യാത്രയ്ക്കൊപ്പം\nഒരു സൗജന്യ ഇൻഷുറൻസ് ഉണ്ട്."
+    , this_ride_come_with_free_insurance: "ഈ യാത്രയിൽ സൗജന്യ\nഇൻഷുറൻസ് ലഭിക്കും."
     , download_insurance_policy: "ഇൻഷുറൻസ് പോളിസി ഡൗൺലോഡ് ചെയ്യുക"
     , special_pickup_zone: "സ്പെഷ്യൽ പിക്കപ്പ് സോണ്‍"
     , special_pickup_zone_popup_info: "പ്രത്യേക വീട്ടില്‍, നികടിവിളിക്കുന്ന ഗ്രാഹകരുടെ പ്രാഥമിക റൈഡ് അഭ്യർത്ഥനകളും ലഭിക്കുന്നു!"

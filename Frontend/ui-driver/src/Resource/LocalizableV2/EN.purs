@@ -1340,7 +1340,7 @@ getEn =
     , please_try_again_in_some_time: "Please try again in some time."
     , policy_generate_once_ride_start: "You policy gets generates \n once the ride starts."
     , this_ride_is_insured_for_free: "You’re covered! This ride is\ninsured for free."
-    , this_ride_come_with_complimentary_insurance: "This ride comes with a\ncomplimentary insurance"
+    , this_ride_come_with_free_insurance: "This ride comes with a\nfree insurance"
     , download_insurance_policy: "Download Insurance Policy"
     , special_pickup_zone: "Special Pickup Zone"
     , special_pickup_zone_popup_info: "In the special zone, you get priority ride requests from the nearest customers!"

@@ -1325,7 +1325,7 @@ getOd =
     , please_try_again_in_some_time: "ଦୟାକରି କିଛି ସମୟ ପରେ ପুনଃଚେଷ୍ଟା କରନ୍ତୁ।"
     , policy_generate_once_ride_start: "ଆପଣଙ୍କର ପଲିସି \n ଯାତ୍ରା ଆରମ୍ଭ ହେବା ପରେ ତିଆରି ହୁଏ।"
     , this_ride_is_insured_for_free: "ଆପଣ ସୁରକ୍ଷିତ! ଏହି ଯାତ୍ରା\nନିଶ୍ଚିତ ଭାବେ ମାଗଣାରେ ବୀମା କରାଯାଇଛି।"
-    , this_ride_come_with_complimentary_insurance: "ଏହି ଯାତ୍ରା ସହିତ\nଏକ ମାଗଣା ବୀମା ମିଳିଛି।"
+    , this_ride_come_with_free_insurance: "ଏହି ଯାତ୍ରାରେ ମାଗଣା\nବୀମା ସହିତ ଆସେ"
     , download_insurance_policy: "ବୀମା ପଲିସି ଡାଉନଲୋଡ୍ କରନ୍ତୁ"
     , special_pickup_zone: "ବିଶେଷ ପିକଅପ୍ ଜୋନ୍"
     , special_pickup_zone_popup_info: "ବିଶେଷ ଜୋନ୍ରେ, ଆପଣ ନିକଟର ଗ୍ରାହକମାନଙ୍କୁ ପ୍ରାଥମିକତା ରାଇଡ୍ ଅନୁରୋଧ ପାଇପାରିବେ!"

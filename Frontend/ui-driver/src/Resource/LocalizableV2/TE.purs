@@ -1354,7 +1354,7 @@ getTe =
     , please_try_again_in_some_time: "దయచేసి కొంత సమయం తర్వాత మళ్లీ ప్రయత్నించండి."
     , policy_generate_once_ride_start: "మీ పాలసీ జనరేట్ అవుతుంది \n రైడ్ ప్రారంభమైన వెంటనే."
     , this_ride_is_insured_for_free: "మీరు కవర్ అయ్యారు! ఈ ప్రయాణం\nఉచితంగా ఇన్షూర్డ్ చేయబడింది."
-    , this_ride_come_with_complimentary_insurance: "ఈ ప్రయాణంతో\nఉచిత ఇన్షూరెన్స్ కలదు."
+    , this_ride_come_with_free_insurance: "ఈ రైడ్ ఉచిత\nబీమాతో వస్తుంది"
     , download_insurance_policy: "ఇన్షూరెన్స్ పాలసీని డౌన్‌లోడ్ చేయండి"
     , special_pickup_zone: "స్పెషల్ పికప్ జోన్"
     , special_pickup_zone_popup_info: "ప్రత్యేక జోన్‌లో, మీరు సమీప కస్టమర్‌ల నుండి ప్రాధాన్యత గల రైడ్ అభ్యర్థనలను పొందుతారు!"

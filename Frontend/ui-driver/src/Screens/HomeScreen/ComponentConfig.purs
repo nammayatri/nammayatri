@@ -3418,7 +3418,7 @@ rideInsuranceBannerConfig state = let
       imageConfig {
         width = V 200,
         height = V 200,
-        imageUrl = "ny_ic_shield",
+        imageUrl = fetchImage FF_ASSET "ny_ic_shield_icon",
         visibility = VISIBLE,
         margin = MarginTop 10
       },
@@ -3430,7 +3430,7 @@ rideInsuranceBannerConfig state = let
       visibility = false
     },
     primaryText {
-      text = if startRideActive == false && state.data.insuranceData.policyNumber /= Nothing then getString THIS_RIDE_IS_ENSURED_FOR_FREE else getString THIS_RIDE_COME_WITH_COMPLIMENTARY_INSURANCE,
+      text = if startRideActive == false && state.data.insuranceData.policyNumber /= Nothing then getString THIS_RIDE_IS_ENSURED_FOR_FREE else getString THIS_RIDE_COME_WITH_FREE_INSURANCE,
       margin = MarginTop 16,
       color = Color.white900,
       textStyle = Heading1,
