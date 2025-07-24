@@ -159,6 +159,7 @@ data TransporterConfigT f = TransporterConfigT
     mandateValidity :: B.C f Kernel.Prelude.Int,
     maxAllowedDocSizeInMB :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     maxAllowedVideoDocSizeInMB :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    maxOnlineDurationDays :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     maxPayoutReferralForADay :: B.C f Kernel.Prelude.Int,
     mediaFileSizeUpperLimit :: B.C f Kernel.Prelude.Int,
     mediaFileUrlPattern :: B.C f Kernel.Prelude.Text,

@@ -73,6 +73,7 @@ data DriverInformationT f = DriverInformationT
     onRide :: B.C f Kernel.Prelude.Bool,
     onRideTripCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.Common.TripCategory),
     onboardingVehicleCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory),
+    onlineDurationRefreshedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     panNumberEncrypted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     panNumberHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
     payerVpa :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
