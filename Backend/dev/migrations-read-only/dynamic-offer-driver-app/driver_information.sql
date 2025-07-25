@@ -228,3 +228,9 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN aadhaar_number_
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN driver_flow_status text ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN online_duration_refreshed_at timestamp with time zone  default CURRENT_TIMESTAMP;

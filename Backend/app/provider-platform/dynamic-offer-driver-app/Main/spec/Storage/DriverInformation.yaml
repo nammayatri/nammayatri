@@ -123,6 +123,8 @@ DriverInformation:
     aadhaarNumber: Maybe (EncryptedHashedField e Text)
     dlNumber: Maybe (EncryptedHashedField e Text)
     driverFlowStatus: Maybe DriverFlowStatus
+    onlineDurationRefreshedAt: Maybe UTCTime
+
   default:
     active: "false"
     verified: "false"
@@ -144,6 +146,7 @@ DriverInformation:
     acRestrictionLiftCount: "0"
     hasAdvanceBooking: "false"
     isInteroperable: "false"
+    onlineDurationRefreshedAt: 'CURRENT_TIMESTAMP'
   constraints:
     driverId: PrimaryKey
 

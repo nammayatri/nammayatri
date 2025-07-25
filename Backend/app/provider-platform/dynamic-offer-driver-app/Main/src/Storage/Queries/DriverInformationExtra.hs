@@ -431,3 +431,26 @@ updateDlNumber dlNumber driverId = do
       Se.Set BeamDI.updatedAt now
     ]
     [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
+
+updateOnlineDurationRefreshedAt :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> UTCTime -> m ()
+updateOnlineDurationRefreshedAt (Id driverId) onlineDurationRefreshedAt = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamDI.onlineDurationRefreshedAt $ Just onlineDurationRefreshedAt,
+      Se.Set BeamDI.updatedAt now
+    ]
+    [Se.Is BeamDI.driverId (Se.Eq driverId)]
+
+findAllByDriverIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Text] -> m [DriverInformation]
+findAllByDriverIds driverIds = do
+  dbConf <- getReplicaBeamConfig
+  res <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $
+          B.filter_'
+            (\driverInfo -> B.sqlBool_ $ driverInfo.driverId `B.in_` (B.val_ <$> driverIds))
+            $ B.all_ (SBC.driverInformation SBC.atlasDB)
+  case res of
+    Right driverInfoList -> catMaybes <$> mapM fromTType' driverInfoList
+    Left _ -> pure []

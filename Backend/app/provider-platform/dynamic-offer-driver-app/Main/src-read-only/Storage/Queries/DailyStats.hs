@@ -136,6 +136,7 @@ updateByPrimaryKey (Domain.Types.DailyStats.DailyStats {..}) = do
       Se.Set Beam.numDriversOnboarded (Kernel.Prelude.Just numDriversOnboarded),
       Se.Set Beam.numFleetsOnboarded (Kernel.Prelude.Just numFleetsOnboarded),
       Se.Set Beam.numRides numRides,
+      Se.Set Beam.onlineDuration onlineDuration,
       Se.Set Beam.payoutOrderId payoutOrderId,
       Se.Set Beam.payoutOrderStatus payoutOrderStatus,
       Se.Set Beam.payoutStatus (Kernel.Prelude.Just payoutStatus),
