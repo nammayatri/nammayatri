@@ -260,6 +260,11 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
   let req = DSearch.extractSearchDetails now req'
   let merchantOperatingCityId = searchRequest.merchantOperatingCityId
   let vehicleCategory = fromMaybe BecknV2.OnDemand.Enums.BUS searchRequest.vehicleCategory
+  let isSingleModeMetroSearch = vehicleCategory == BecknV2.OnDemand.Enums.METRO
+  let isOutsideMetroBusinessHours = case (riderConfig.qrTicketRestrictionStartTime, riderConfig.qrTicketRestrictionEndTime) of
+        (Just start, Just end) -> JM.isOutsideRestrictionTime start end now riderConfig.timeDiffFromUtc
+        _ -> False
+  when (isSingleModeMetroSearch && isOutsideMetroBusinessHours) $ throwError $ InvalidRequest "Metro booking not allowed outside business hours"
   mbIntegratedBPPConfig <- SIBC.findMaybeIntegratedBPPConfig Nothing merchantOperatingCityId vehicleCategory (fromMaybe DIBC.MULTIMODAL req.platformType)
   mbSingleModeRouteDetails <-
     case mbIntegratedBPPConfig of
@@ -346,7 +351,10 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
             }
         )
     _ -> do
-      let permissibleModesToUse = fromMaybe [] riderConfig.permissibleModes
+      let permissibleModesToUse =
+            if (not isSingleModeMetroSearch) && isOutsideMetroBusinessHours
+              then filter (/= MultiModalTypes.MetroRail) (fromMaybe [] riderConfig.permissibleModes)
+              else fromMaybe [] riderConfig.permissibleModes
       let sortingType = fromMaybe DMP.FASTEST userPreferences.journeyOptionsSortingType
       destination <- extractDest searchRequest.toLocation
       let transitRoutesReq =
