@@ -271,7 +271,13 @@ getLiveTicketDef placeId = do
                 openTimings = ticketPlace.openTimings,
                 closeTimings = ticketPlace.closeTimings,
                 customTabs = ticketPlace.customTabs,
-                rules = ticketPlace.rules
+                rules = ticketPlace.rules,
+                faqs = ticketPlace.faqs,
+                metadata = ticketPlace.metadata,
+                isRecurring = Just ticketPlace.isRecurring,
+                platformFee = ticketPlace.platformFee,
+                platformFeeVendor = ticketPlace.platformFeeVendor,
+                pricingOnwards = ticketPlace.pricingOnwards
               }
           serviceDefs = map (toTicketServiceDef linkedBusinessHours) services
           serviceCategoryDefs = map (toServiceCategoryDef linkedBusinessHours) linkedServiceCategories
@@ -575,7 +581,13 @@ applyDraftChanges draftChange = do
             createdAt = now,
             updatedAt = now,
             rules = ticketDef.basicInformation.rules,
-            recommend = fromMaybe False (existingTicketPlace <&> (.recommend))
+            recommend = fromMaybe False (existingTicketPlace <&> (.recommend)),
+            faqs = ticketDef.basicInformation.faqs,
+            metadata = ticketDef.basicInformation.metadata,
+            isRecurring = fromMaybe True ticketDef.basicInformation.isRecurring,
+            platformFee = ticketDef.basicInformation.platformFee,
+            platformFeeVendor = ticketDef.basicInformation.platformFeeVendor,
+            pricingOnwards = ticketDef.basicInformation.pricingOnwards
           }
   case existingTicketPlace of
     Just extTP -> do
