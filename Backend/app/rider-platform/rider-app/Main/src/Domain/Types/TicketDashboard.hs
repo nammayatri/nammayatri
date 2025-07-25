@@ -40,7 +40,13 @@ data TicketPlaceDashboardDetails = TicketPlaceDashboardDetails
     businessHours :: [BusinessHourDetails],
     serviceCategories :: [ServiceCategoryDetails],
     servicePeopleCategories :: [ServicePeopleCategoryDetails],
-    specialOccasions :: [SpecialOccasionDetails]
+    specialOccasions :: [SpecialOccasionDetails],
+    faqs :: Maybe [DTicketPlace.Faq],
+    metadata :: Maybe [DTicketPlace.Metadata],
+    isRecurring :: Maybe Bool,
+    platformFee :: Maybe DTicketPlace.Fee,
+    platformFeeVendor :: Maybe Text,
+    pricingOnwards :: Maybe Int
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
