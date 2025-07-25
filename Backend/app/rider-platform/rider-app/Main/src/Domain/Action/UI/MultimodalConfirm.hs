@@ -110,9 +110,17 @@ postMultimodalInitiate ::
   )
 postMultimodalInitiate (_personId, _merchantId) journeyId = do
   Redis.withLockRedisAndReturnValue lockKey 60 $ do
+    journey <- JM.getJourney journeyId
+    legs' <- JM.getAllLegsInfo journeyId False
+    riderConfig <- QRC.findByMerchantOperatingCityId journey.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist journey.merchantOperatingCityId.getId)
+    now <- getCurrentTime
+    let isOutsideMetroBusinessHours = case (riderConfig.qrTicketRestrictionStartTime, riderConfig.qrTicketRestrictionEndTime) of
+          (Just start, Just end) -> JM.isOutsideRestrictionTime start end now riderConfig.timeDiffFromUtc
+          _ -> False
+        hasMetroLeg = any (\leg -> leg.travelMode == DTrip.Metro) legs'
+    when (hasMetroLeg && isOutsideMetroBusinessHours) $ throwError $ InvalidRequest "Metro booking not allowed outside business hours"
     journeyLegs <- getJourneyLegs journeyId
     addAllLegs journeyId (Just journeyLegs) journeyLegs
-    journey <- JM.getJourney journeyId
     JM.updateJourneyStatus journey Domain.Types.Journey.INITIATED
     legs <- JM.getAllLegsInfo journeyId False
     generateJourneyInfoResponse journey legs
@@ -130,6 +138,14 @@ postMultimodalConfirm ::
   )
 postMultimodalConfirm (_, _) journeyId forcedBookLegOrder journeyConfirmReq = do
   journey <- JM.getJourney journeyId
+  legs <- JM.getAllLegsInfo journeyId False
+  riderConfig <- QRC.findByMerchantOperatingCityId journey.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist journey.merchantOperatingCityId.getId)
+  now <- getCurrentTime
+  let isOutsideMetroBusinessHours = case (riderConfig.qrTicketRestrictionStartTime, riderConfig.qrTicketRestrictionEndTime) of
+        (Just start, Just end) -> JM.isOutsideRestrictionTime start end now riderConfig.timeDiffFromUtc
+        _ -> False
+  let hasMetroLeg = any (\leg -> leg.travelMode == DTrip.Metro) legs
+  when (hasMetroLeg && isOutsideMetroBusinessHours) $ throwError $ InvalidRequest "Metro booking not allowed outside business hours"
   let confirmElements = journeyConfirmReq.journeyConfirmReqElements
   forM_ confirmElements $ \element -> do
     when element.skipBooking $ JM.skipLeg journeyId element.journeyLegOrder True
