@@ -703,7 +703,7 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} getJourneyLegsCallbackFn 
 
   when (isNothing booking.journeyId) $ do
     createRecentLocationForTaxi booking
-  whenJust booking.journeyId $ \journeyId -> checkAndUpdateJourneyTerminalStatus journeyId getJourneyLegsCallbackFn
+  whenJust booking.journeyId $ \journeyId -> checkAndUpdateJourneyTerminalStatusForNormalRide journeyId DJourney.COMPLETED getJourneyLegsCallbackFn
 
   -- uncomment for update api test; booking.paymentMethodId should be present
   -- whenJust booking.paymentMethodId $ \paymentMethodId -> do
@@ -846,7 +846,7 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee getJou
       QRB.updateStatus booking.id DRB.CANCELLED
       QRB.updateJourneyLegStatus (Just JL.Cancelled) booking.id
       QBPL.makeAllInactiveByBookingId booking.id
-      whenJust booking.journeyId $ \journeyId -> checkAndUpdateJourneyTerminalStatus journeyId getJourneyLegsCallbackFn
+      whenJust booking.journeyId $ \journeyId -> checkAndUpdateJourneyTerminalStatusForNormalRide journeyId DJourney.CANCELLED getJourneyLegsCallbackFn
   whenJust mbRide $ \ride -> void $ do
     unless (ride.status == DRide.CANCELLED) $ void $ QRide.updateStatus ride.id DRide.CANCELLED
   riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow booking.merchantOperatingCityId booking.configInExperimentVersions >>= fromMaybeM (InternalError "RiderConfig not found")
@@ -893,16 +893,12 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee getJou
               QP.updateCustomerTags (Just $ personTags <> [rejectUpgradeTagWithExpiry]) person.id
         _ -> pure ()
 
--- TODO: ideally we should handle this as well using checkAndMarkTerminalJourneyStatus!!
-checkAndUpdateJourneyTerminalStatus :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id DJourney.Journey -> (Id DJourney.Journey -> m [JL.LegInfo]) -> m ()
-checkAndUpdateJourneyTerminalStatus journeyId getJourneyLegsCallbackFn = do
+checkAndUpdateJourneyTerminalStatusForNormalRide :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id DJourney.Journey -> DJourney.JourneyStatus -> (Id DJourney.Journey -> m [JL.LegInfo]) -> m ()
+checkAndUpdateJourneyTerminalStatusForNormalRide journeyId journeyStatus getJourneyLegsCallbackFn = do
   journeyLegs <- getJourneyLegsCallbackFn journeyId
-  when (length journeyLegs == 1) $ do
-    when (length (filter (\journeyLeg -> journeyLeg.status == JL.Cancelled) journeyLegs) == length journeyLegs - 1) $ -- means, there was only one leg in the journey, which is now sadly cancelled, so we can mark the journey itself as cancelled.
-      QJourney.updateStatus DJourney.CANCELLED journeyId
-    let notCancelledOrCompletedLegs = filter (\journeyLeg -> journeyLeg.status `notElem` [JL.Cancelled, JL.Completed]) journeyLegs
-    when (length notCancelledOrCompletedLegs <= 1) $ do
-      QJourney.updateStatus DJourney.COMPLETED journeyId
+  case journeyLegs of
+    [_] -> QJourney.updateStatus journeyStatus journeyId -- only one element here means just taxi leg i.e. normal ride flow, so updating journeyStatus
+    _ -> pure ()
 
 mkBookingCancellationReason ::
   (MonadFlow m) =>
