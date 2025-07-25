@@ -1,0 +1,55 @@
+imports:
+  CreateOrderResp: Kernel.External.Payment.Juspay.Types.CreateOrder
+  Person: Dashboard.Common
+  PaymentOrderAPIEntity: Lib.Payment.Domain.Types.PaymentOrder
+  PaymentStatusResp: Domain.Action.UI.Payment
+
+importPackageOverrides:
+  Domain.Action.UI.Payment: "dynamic-offer-driver-app"
+
+module: Payment
+
+apis:
+  - POST:
+      endpoint: /order/create/{requestorId}/{invoiceId}
+      name: createPaymentOrder
+      auth: ApiAuthV2
+      params:
+        requestorId: Id Person
+        invoiceId: Text
+      response:
+        type: CreateOrderResp
+  - GET:
+      endpoint: /order/{orderId}
+      auth: ApiAuthV2
+      params:
+        orderId: Text
+      response:
+        type: PaymentOrderAPIEntity
+      helperApi:
+        - GET:
+            endpoint: /order/{orderId}/{requestorId}
+            auth: ApiAuthV2
+            params:
+              orderId: Text
+              requestorId: Id Person
+            response:
+              type: PaymentOrderAPIEntity
+  - GET:
+      endpoint: /order/status/{orderId}
+      auth: ApiAuthV2
+      params:
+        orderId: Text
+      response:
+        type: PaymentStatusResp
+      helperApi:
+        - GET:
+            endpoint: /order/status/{orderId}/{requestorId}
+            auth: ApiAuthV2
+            params:
+              orderId: Text
+              requestorId: Id Person
+            response:
+              type: PaymentStatusResp
+
+types: {}
