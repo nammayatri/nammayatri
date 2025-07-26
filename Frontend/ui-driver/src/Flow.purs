@@ -4122,11 +4122,14 @@ updateBannerAndPopupFlags = do
       else NO_SUBSCRIPTION_BANNER
     showFreeTrialPopupOnDays = any (_ == freeTrialDays) freeTrialPopupDaysList
     showFreeTrialPopupOnRides = any (_ == freeTrialRidesLeft) freeTrialPopupOnRidesList
+    dueLimitNotCrossed = pendingTotalManualDues < subscriptionRemoteConfig.low_dues_warning_limit
+    duesPopupType = if pendingTotalManualDues >= subscriptionRemoteConfig.max_dues_limit then NO_SUBSCRIPTION_POPUP else LOW_DUES_CLEAR_POPUP
     subscriptionPopupType =
       case isOnFreeTrial FunctionCall, autoPayNotActive, shouldShowPopup of
         true, true , true | showFreeTrialPopupOnDays -> FREE_TRIAL_POPUP
         true, true , true | showFreeTrialPopupOnRides -> FREE_TRIAL_RIDES_POPUP
-        false, _, true -> if pendingTotalManualDues >= subscriptionRemoteConfig.max_dues_limit then NO_SUBSCRIPTION_POPUP else LOW_DUES_CLEAR_POPUP
+        false, false, true ->  if dueLimitNotCrossed then NO_SUBSCRIPTION_POPUP else duesPopupType
+        false, _, true -> duesPopupType
         _, _, _ -> NO_SUBSCRIPTION_POPUP
 
     shouldMoveDriverOffline = (withinTimeRange "12:00:00" "23:59:59" (convertUTCtoISC (getCurrentUTC "") "HH:mm:ss"))
