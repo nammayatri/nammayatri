@@ -159,6 +159,9 @@ getISTArrivalTime timeOfDay currentTime = do
   where
     istOffset :: Double = 5.5 * 3600
 
+getUTCArrivalTime :: TimeOfDay -> UTCTime -> UTCTime
+getUTCArrivalTime timeOfDay currentTime = UTCTime (utctDay currentTime) (timeOfDayToTime timeOfDay)
+
 -- | Helper function to get IST offset and current time in IST timezone
 getISTTimeInfo :: UTCTime -> (Double, UTCTime)
 getISTTimeInfo currentTime =
@@ -614,8 +617,8 @@ getSingleModeRouteDetails mbRouteCode (Just originStopCode) (Just destinationSto
                     originTiming <- mbFirstOriginTiming
                     findMatchingDestinationTiming (.tripId) (.stopCode) originTiming destStopTimings stopCodeToSequenceNum
 
-              let mbDepartureTime = getISTArrivalTime . (.timeOfDeparture) <$> mbEarliestOriginTiming <*> pure currentTime
-                  mbArrivalTime = getISTArrivalTime . (.timeOfArrival) <$> mbDestinationTiming <*> pure currentTime
+              let mbDepartureTime = getUTCArrivalTime . (.timeOfDeparture) <$> mbEarliestOriginTiming <*> pure currentTime
+                  mbArrivalTime = getUTCArrivalTime . (.timeOfArrival) <$> mbDestinationTiming <*> pure currentTime
                   mbOriginPlatformCode = ((.platformCode) =<< mbEarliestOriginTiming) <|> ((.platformCode) =<< mbFirstOriginTiming) -- (.platformCode) =<< mbEarliestOriginTiming
                   mbDestinationPlatformCode = ((.platformCode) =<< mbDestinationTiming) <|> ((.platformCode) =<< mbFirstDestinationTiming)
                   fromStopDetails = StopDetails fromStop.code fromStop.name fromStopLat fromStopLon (fromMaybe currentTime mbDepartureTime) mbOriginPlatformCode
