@@ -22,7 +22,9 @@ where
 
 import Control.Monad.Catch
 import qualified Control.Monad.Catch as C
+import Control.Monad.IO.Class ()
 import qualified Data.ByteString as BS
+import Data.IORef (IORef, modifyIORef, newIORef, readIORef)
 import Data.Singletons (fromSing)
 import qualified Data.Time as T hiding (getCurrentTime)
 import Kernel.Beam.Lib.UtilsTH (HasSchemaName)
@@ -46,7 +48,7 @@ data SchedulerHandle t = SchedulerHandle
     getReadyTasks :: SchedulerM [(AnyJob t, BS.ByteString)],
     markAsComplete :: Text -> Id AnyJob -> SchedulerM (),
     markAsFailed :: Text -> Id AnyJob -> SchedulerM (),
-    getReadyTask :: SchedulerM [(AnyJob t, BS.ByteString)],
+    getReadyTask :: Text -> SchedulerM [(AnyJob t, BS.ByteString)],
     updateErrorCountAndFail :: Text -> Id AnyJob -> Int -> SchedulerM (),
     reSchedule :: Text -> AnyJob t -> UTCTime -> SchedulerM (),
     updateFailureCount :: Text -> Id AnyJob -> Int -> SchedulerM (),
@@ -57,8 +59,9 @@ handler :: forall t. (HasSchemaName BeamSC.SystemConfigsT, JobProcessor t, FromJ
 handler hnd = do
   schedulerType <- asks (.schedulerType)
   maxThreads <- asks (.maxThreads)
+  redisStreamCounter <- liftIO $ newIORef 1
   case schedulerType of
-    RedisBased -> loopGracefully $ replicate maxThreads (runnerIterationRedis hnd runTask)
+    RedisBased -> loopGracefully $ replicate maxThreads (runnerIterationRedis hnd redisStreamCounter runTask)
     DbBased -> loopGracefully $ replicate maxThreads (dbBasedHandlerLoop hnd runTask)
   where
     runTask :: AnyJob t -> SchedulerM ()
@@ -90,13 +93,17 @@ dbBasedHandlerLoop hnd runTask = do
 mapConcurrently :: Traversable t => (a -> SchedulerM ()) -> t a -> SchedulerM ()
 mapConcurrently action = mapM_ (fork "mapThread" . action)
 
-runnerIterationRedis :: forall t. (JobProcessor t, FromJSON t) => SchedulerHandle t -> (AnyJob t -> SchedulerM ()) -> SchedulerM ()
-runnerIterationRedis SchedulerHandle {..} runTask = do
+runnerIterationRedis :: forall t. (JobProcessor t, FromJSON t) => SchedulerHandle t -> IORef Int -> (AnyJob t -> SchedulerM ()) -> SchedulerM ()
+runnerIterationRedis SchedulerHandle {..} redisStreamCounter runTask = do
   logInfo "Starting runner iteration"
-  key <- asks (.streamName)
+  key' <- asks (.streamName)
+  streamNumber <- liftIO $ readIORef redisStreamCounter
+  liftIO $ modifyIORef redisStreamCounter (\x -> if x < 16 then x + 1 else 1)
+  let key = key' <> "_" <> show streamNumber
   groupName <- asks (.groupName)
-  readyTasks <- getReadyTask
+  readyTasks <- getReadyTask key
   logTagDebug "Available tasks - Count" . show $ length readyTasks
+  logTagDebug "Key" . show $ key
   mapM_ (runTask . fst) readyTasks
   let recordIds = map snd readyTasks
   fork "removingFromStream" . unless (null recordIds) $ do
