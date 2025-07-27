@@ -160,7 +160,11 @@ getISTArrivalTime timeOfDay currentTime = do
     istOffset :: Double = 5.5 * 3600
 
 getUTCArrivalTime :: TimeOfDay -> UTCTime -> UTCTime
-getUTCArrivalTime timeOfDay currentTime = UTCTime (utctDay currentTime) (timeOfDayToTime timeOfDay)
+getUTCArrivalTime timeOfDay currentTime =
+  let istTime = getISTArrivalTime timeOfDay currentTime
+   in addUTCTime (negate $ secondsToNominalDiffTime $ round istOffset) istTime
+  where
+    istOffset :: Double = 5.5 * 3600
 
 -- | Helper function to get IST offset and current time in IST timezone
 getISTTimeInfo :: UTCTime -> (Double, UTCTime)
