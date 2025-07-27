@@ -420,7 +420,7 @@ onUpdate = \case
   OUValidatedScheduledRideAssignedReq req -> Common.rideAssignedReqHandler req
   OUValidatedRideAssignedReq req -> Common.rideAssignedReqHandler req
   OUValidatedRideStartedReq req -> Common.rideStartedReqHandler req
-  OUValidatedRideCompletedReq req -> Common.rideCompletedReqHandler req
+  OUValidatedRideCompletedReq req -> Common.rideCompletedReqHandler req JM.getAllLegsInfoWithoutAddingSkipLeg
   OUValidatedFarePaidReq req -> Common.farePaidReqHandler req
   OUValidatedBookingCancelledReq req -> Common.bookingCancelledReqHandler req JM.getAllLegsInfoWithoutAddingSkipLeg
   OUValidatedBookingReallocationReq ValidatedBookingReallocationReq {..} -> do

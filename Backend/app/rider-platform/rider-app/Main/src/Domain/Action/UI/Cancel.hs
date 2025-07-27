@@ -216,7 +216,7 @@ cancel booking mRide req cancellationSource = do
 
 isBookingCancellable :: (CacheFlow m r, EsqDBFlow m r) => SRB.Booking -> Maybe Ride.Ride -> m Bool
 isBookingCancellable booking mbRide
-  | booking.status `elem` [SRB.CONFIRMED, SRB.AWAITING_REASSIGNMENT, SRB.NEW] = pure True
+  | booking.status `elem` [SRB.CONFIRMED, SRB.AWAITING_REASSIGNMENT, SRB.NEW, SRB.REALLOCATED] = pure True
   | booking.status == SRB.TRIP_ASSIGNED = do
     case mbRide of
       Just ride -> pure (ride.status `elem` [Ride.NEW, Ride.UPCOMING])

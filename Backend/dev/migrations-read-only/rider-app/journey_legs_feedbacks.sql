@@ -14,3 +14,14 @@ ALTER TABLE atlas_app.journey_legs_feedbacks ADD PRIMARY KEY ( journey_id, leg_o
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.journey_legs_feedbacks ADD COLUMN travel_mode text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.journey_legs_feedbacks ADD COLUMN rating integer ;
+ALTER TABLE atlas_app.journey_legs_feedbacks ADD COLUMN feedback_data text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.journey_legs_feedbacks ALTER COLUMN feedback_data TYPE json;

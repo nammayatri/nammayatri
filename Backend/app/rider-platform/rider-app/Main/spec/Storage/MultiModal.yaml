@@ -48,11 +48,13 @@ Journey:
     relevanceScore: Maybe Double
     hasPreferredServiceTier: Maybe Bool
     hasPreferredTransitModes: Maybe Bool
-    fromLocationAddress: Maybe Text
-    toLocationAddress: Maybe Text
+    fromLocation: Location
+    toLocation: Maybe Location
     isPublicTransportIncluded: Maybe Bool
     paymentOrderShortId: Maybe (ShortId PaymentOrder)
     journeyExpiryTime: Maybe UTCTime
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
 
   beamType:
     status: Maybe JourneyStatus
@@ -64,12 +66,24 @@ Journey:
     estimatedDistance:
       estimatedDistance: HighPrecDistance
       distanceUnit: DistanceUnit
+    fromLocation:
+      fromLocationId: Maybe Text
+      fromLocationAddress: Maybe Text
+    toLocation:
+      toLocationId: Maybe Text
+      toLocationAddress: Maybe Text
 
   fromTType:
+    fromLocation: Storage.Queries.Transformers.Journey.getLocation fromLocationId fromLocationAddress|EM
+    toLocation: Just <$> Storage.Queries.Transformers.Journey.getLocation toLocationId toLocationAddress|EM
     estimatedDistance: (Kernel.Types.Common.Distance estimatedDistance distanceUnit)|E
     status: (fromMaybe Domain.Types.Journey.NEW status)|E
 
   toTType:
+    fromLocationId: (Just $ Kernel.Types.Id.getId ((.id) fromLocation))|E
+    toLocationId: (Kernel.Types.Id.getId <$> (toLocation <&> (.id)))|E
+    fromLocationAddress: Nothing|E
+    toLocationAddress: Nothing|E
     estimatedDistance: ((.value))|I
     distanceUnit: ((.unit))|I
     status: (Just status)|E
@@ -101,6 +115,8 @@ Journey:
 
   sqlType:
     modes: "text[]"
+    fromLocationId: character varying(36)
+    toLocationId: character varying(36)
 
   extraOperations:
     - EXTRA_QUERY_FILE
@@ -508,6 +524,46 @@ JourneyLegsFeedbacks:
     legOrder: Int
     isExperienceGood: Maybe Bool
     travelMode: Maybe MultimodalTravelMode
+    rating: Maybe Int
+    feedbackData: Maybe JourneyLegFeedbackData
+
+  types:
+    TaxiFeedbackData:
+      feedbackDetails: Maybe Text
+      wasRideSafe: Maybe Bool
+      shouldFavDriver: Maybe Bool
+      wasOfferedAssistance: Maybe Bool
+      mbAudio: Maybe Text
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+
+    SubwayFeedbackData:
+      feedbackDetails: Maybe Text
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+
+    WalkFeedbackData:
+      feedbackDetails: Maybe Text
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+
+    BusFeedbackData:
+      feedbackDetails: Maybe Text
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+
+    MetroFeedbackData:
+      feedbackDetails: Maybe Text
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+
+    JourneyLegFeedbackData:
+      enum: "Taxi TaxiFeedbackData, Bus BusFeedbackData, Walk WalkFeedbackData, Subway SubwayFeedbackData, Metro MetroFeedbackData"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
+
+  beamType:
+    feedbackData: Maybe Data.Aeson.Value
+
+  fromTType:
+    feedbackData: Storage.Queries.Transformers.JourneyLegsFeedback.getFeedbackData =<< feedbackData|E
+
+  toTType:
+    feedbackData: Storage.Queries.Transformers.JourneyLegsFeedback.getFeedbackDataJson <$> feedbackData|E
 
   queries:
     findAllByJourneyId:
@@ -517,3 +573,6 @@ JourneyLegsFeedbacks:
   constraints:
     journeyId: PrimaryKey
     legOrder: PrimaryKey
+
+  sqlType:
+    feedbackData: json

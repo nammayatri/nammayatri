@@ -143,7 +143,6 @@ getRouteFare config merchantOperatingCityId request = do
     Left err -> throwError (InternalError $ "Failed to parse encrypted response: " <> T.pack (show err))
     Right encResp -> do
       logInfo $ "Got response code: " <> responseCode encResp
-      logInfo $ "Encrypted response data length: " <> show (T.length $ responseData encResp)
 
       if encResp.responseCode == "0"
         then do
@@ -152,9 +151,9 @@ getRouteFare config merchantOperatingCityId request = do
             Right decryptedJson -> do
               logInfo $ "Decrypted JSON: " <> decryptedJson
               case eitherDecode (LBS.fromStrict $ TE.encodeUtf8 decryptedJson) of
-                Left err -> throwError (InternalError $ "Failed to parse decrypted JSON: " <> T.pack (show err))
+                Left err -> throwError (InternalError $ "Failed to decode decrypted JSON: " <> T.pack (show err))
                 Right fareResponse -> pure fareResponse
-        else throwError (InternalError $ "Failed to parse decrypted JSON: " <> encResp.responseData)
+        else throwError (InternalError $ "Non-zero response code in routeFare: " <> encResp.responseCode <> " " <> encResp.responseData)
 
   let routeFareDetails = decryptedResponse.routeFareDetailsList
 

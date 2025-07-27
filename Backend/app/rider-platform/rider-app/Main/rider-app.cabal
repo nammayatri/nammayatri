@@ -68,6 +68,7 @@ library
       API.UI.CallEvent
       API.UI.Cancel
       API.UI.CancellationReason
+      API.UI.CancelSearch
       API.UI.Confirm
       API.UI.Disability
       API.UI.FeedbackForm
@@ -323,6 +324,7 @@ library
       ExternalBPP.ExternalAPI.Metro.CMRL.PassengerViewStatus
       ExternalBPP.ExternalAPI.Metro.CMRL.StationList
       ExternalBPP.ExternalAPI.Metro.CMRL.TicketStatus
+      ExternalBPP.ExternalAPI.Metro.CMRL.UpdateQrReceivedStatus
       ExternalBPP.ExternalAPI.Subway.CRIS.Auth
       ExternalBPP.ExternalAPI.Subway.CRIS.BookJourney
       ExternalBPP.ExternalAPI.Subway.CRIS.ChangeDevice
@@ -535,6 +537,8 @@ library
       Storage.Queries.Transformers.Estimate
       Storage.Queries.Transformers.FRFSSearch
       Storage.Queries.Transformers.IntegratedBPPConfig
+      Storage.Queries.Transformers.Journey
+      Storage.Queries.Transformers.JourneyLegsFeedback
       Storage.Queries.Transformers.Merchant
       Storage.Queries.Transformers.MerchantConfig
       Storage.Queries.Transformers.MerchantMessage

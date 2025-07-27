@@ -5,6 +5,7 @@ module Domain.Types.Journey where
 
 import Data.Aeson
 import qualified Domain.Types.Common
+import qualified Domain.Types.Location
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
@@ -22,13 +23,15 @@ data Journey = Journey
     endTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     estimatedDistance :: Kernel.Types.Common.Distance,
     estimatedDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
-    fromLocationAddress :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    fromLocation :: Domain.Types.Location.Location,
     hasPreferredServiceTier :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     hasPreferredTransitModes :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     id :: Kernel.Types.Id.Id Domain.Types.Journey.Journey,
     isPaymentSuccess :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isPublicTransportIncluded :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     journeyExpiryTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+    merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     modes :: [Domain.Types.Common.MultimodalTravelMode],
     paymentOrderShortId :: Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder),
     recentLocationId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.RecentLocation.RecentLocation),
@@ -37,10 +40,8 @@ data Journey = Journey
     searchRequestId :: Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest,
     startTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     status :: Domain.Types.Journey.JourneyStatus,
-    toLocationAddress :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    toLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location,
     totalLegs :: Kernel.Prelude.Int,
-    merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
-    merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
@@ -51,8 +52,8 @@ data JourneyStatus
   | INITIATED
   | CONFIRMED
   | INPROGRESS
-  | FEEDBACK_PENDING
   | CANCELLED
+  | FEEDBACK_PENDING
   | COMPLETED
   | FAILED
   | EXPIRED

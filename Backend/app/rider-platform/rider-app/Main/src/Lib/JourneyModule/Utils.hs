@@ -1,5 +1,6 @@
 module Lib.JourneyModule.Utils where
 
+import qualified Beckn.OnDemand.Utils.Common as UCommon
 import BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.OnDemand.Enums as Enums
 import Control.Applicative ((<|>))
@@ -155,6 +156,13 @@ getISTArrivalTime :: TimeOfDay -> UTCTime -> UTCTime
 getISTArrivalTime timeOfDay currentTime = do
   let currentTimeIST = addUTCTime (secondsToNominalDiffTime $ round istOffset) currentTime
   UTCTime (utctDay currentTimeIST) (timeOfDayToTime timeOfDay)
+  where
+    istOffset :: Double = 5.5 * 3600
+
+getUTCArrivalTime :: TimeOfDay -> UTCTime -> UTCTime
+getUTCArrivalTime timeOfDay currentTime =
+  let istTime = getISTArrivalTime timeOfDay currentTime
+   in addUTCTime (negate $ secondsToNominalDiffTime $ round istOffset) istTime
   where
     istOffset :: Double = 5.5 * 3600
 
@@ -613,8 +621,8 @@ getSingleModeRouteDetails mbRouteCode (Just originStopCode) (Just destinationSto
                     originTiming <- mbFirstOriginTiming
                     findMatchingDestinationTiming (.tripId) (.stopCode) originTiming destStopTimings stopCodeToSequenceNum
 
-              let mbDepartureTime = getISTArrivalTime . (.timeOfDeparture) <$> mbEarliestOriginTiming <*> pure currentTime
-                  mbArrivalTime = getISTArrivalTime . (.timeOfArrival) <$> mbDestinationTiming <*> pure currentTime
+              let mbDepartureTime = getUTCArrivalTime . (.timeOfDeparture) <$> mbEarliestOriginTiming <*> pure currentTime
+                  mbArrivalTime = getUTCArrivalTime . (.timeOfArrival) <$> mbDestinationTiming <*> pure currentTime
                   mbOriginPlatformCode = ((.platformCode) =<< mbEarliestOriginTiming) <|> ((.platformCode) =<< mbFirstOriginTiming) -- (.platformCode) =<< mbEarliestOriginTiming
                   mbDestinationPlatformCode = ((.platformCode) =<< mbDestinationTiming) <|> ((.platformCode) =<< mbFirstDestinationTiming)
                   fromStopDetails = StopDetails fromStop.code fromStop.name fromStopLat fromStopLon (fromMaybe currentTime mbDepartureTime) mbOriginPlatformCode
@@ -671,7 +679,7 @@ createRecentLocationForMultimodal journey = do
   case (mbFirstLeg, mbFirstStopCode, mbLastStopCode, mbEndLocation) of
     (Just firstLeg, Just firstStopCode, Just lastStopCode, Just endLocation) -> do
       uuid <- generateGUID
-      cityId <- journey.merchantOperatingCityId & fromMaybeM (InternalError $ "Merchant operating city id not found for journey: " <> journey.id.getId)
+      let cityId = journey.merchantOperatingCityId
       let fromGeohash = T.pack <$> Geohash.encode 6 (firstLeg.startLocation.latitude, firstLeg.startLocation.longitude)
       let toGeohash = T.pack <$> Geohash.encode 6 (endLocation.latitude, endLocation.longitude)
       mbRecentLocation <- SQRL.findByRiderIdAndGeohashAndEntityType journey.riderId toGeohash fromGeohash (if length legs > 1 then DTRL.MULTIMODAL else convertModeToEntityType firstLeg.mode)
@@ -684,7 +692,7 @@ createRecentLocationForMultimodal journey = do
                     riderId = journey.riderId,
                     frequency = 1,
                     entityType = if length legs > 1 then DTRL.MULTIMODAL else convertModeToEntityType firstLeg.mode,
-                    address = journey.toLocationAddress,
+                    address = UCommon.mkAddress <$> (journey.toLocation <&> (.address)),
                     fromLatLong = Just $ LatLong firstLeg.startLocation.latitude firstLeg.startLocation.longitude,
                     routeCode = if length legs > 1 then Nothing else mbRouteCode,
                     toStopCode = Just lastStopCode,

@@ -15,6 +15,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.JourneyLegsFeedbacks as Beam
+import qualified Storage.Queries.Transformers.JourneyLegsFeedback
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.JourneyLegsFeedbacks.JourneyLegsFeedbacks -> m ())
 create = createWithKV
@@ -22,7 +23,7 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.JourneyLegsFeedbacks.JourneyLegsFeedbacks] -> m ())
 createMany = traverse_ create
 
-findAllByJourneyId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Journey.Journey -> m ([Domain.Types.JourneyLegsFeedbacks.JourneyLegsFeedbacks]))
+findAllByJourneyId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Journey.Journey -> m [Domain.Types.JourneyLegsFeedbacks.JourneyLegsFeedbacks])
 findAllByJourneyId journeyId = do findAllWithKV [Se.Is Beam.journeyId $ Se.Eq (Kernel.Types.Id.getId journeyId)]
 
 findByPrimaryKey ::
@@ -34,7 +35,9 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.JourneyLegsFeedbacks.JourneyLegsFeedbacks {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.isExperienceGood isExperienceGood,
+    [ Se.Set Beam.feedbackData (Storage.Queries.Transformers.JourneyLegsFeedback.getFeedbackDataJson <$> feedbackData),
+      Se.Set Beam.isExperienceGood isExperienceGood,
+      Se.Set Beam.rating rating,
       Se.Set Beam.travelMode travelMode,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
@@ -48,9 +51,11 @@ instance FromTType' Beam.JourneyLegsFeedbacks Domain.Types.JourneyLegsFeedbacks.
     pure $
       Just
         Domain.Types.JourneyLegsFeedbacks.JourneyLegsFeedbacks
-          { isExperienceGood = isExperienceGood,
+          { feedbackData = Storage.Queries.Transformers.JourneyLegsFeedback.getFeedbackData =<< feedbackData,
+            isExperienceGood = isExperienceGood,
             journeyId = Kernel.Types.Id.Id journeyId,
             legOrder = legOrder,
+            rating = rating,
             travelMode = travelMode,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
@@ -61,9 +66,11 @@ instance FromTType' Beam.JourneyLegsFeedbacks Domain.Types.JourneyLegsFeedbacks.
 instance ToTType' Beam.JourneyLegsFeedbacks Domain.Types.JourneyLegsFeedbacks.JourneyLegsFeedbacks where
   toTType' (Domain.Types.JourneyLegsFeedbacks.JourneyLegsFeedbacks {..}) = do
     Beam.JourneyLegsFeedbacksT
-      { Beam.isExperienceGood = isExperienceGood,
+      { Beam.feedbackData = Storage.Queries.Transformers.JourneyLegsFeedback.getFeedbackDataJson <$> feedbackData,
+        Beam.isExperienceGood = isExperienceGood,
         Beam.journeyId = Kernel.Types.Id.getId journeyId,
         Beam.legOrder = legOrder,
+        Beam.rating = rating,
         Beam.travelMode = travelMode,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,

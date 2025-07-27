@@ -29,7 +29,6 @@ module Domain.Action.UI.Select
   )
 where
 
-import qualified Beckn.OnDemand.Utils.Common as UCommon
 import Control.Applicative ((<|>))
 import qualified Control.Lens as L
 import Control.Monad.Extra (anyM)
@@ -286,7 +285,11 @@ select2 personId estimateId req@DSelectReq {..} = do
   QSearchRequest.updateMultipleByRequestId searchRequestId autoAssignEnabled (fromMaybe False autoAssignEnabledV2) isAdvancedBookingEnabled
   QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimateId, otherSelectedEstimates, validTill = searchRequest.validTill, providerId = Just estimate.providerId, tripCategory = estimate.tripCategory}
   QEstimate.updateStatus DEstimate.DRIVER_QUOTE_REQUESTED estimateId
+  whenJust searchRequest.journeyLegInfo $ \journeyLegInfo -> do
+    QJourney.updateStatus DJ.INPROGRESS (Id journeyLegInfo.journeyId)
   QDOffer.updateStatus DDO.INACTIVE estimateId
+  whenJust searchRequest.journeyLegInfo $ \journeyLegInfo -> do
+    QSearchRequest.updateJourneyLegInfo searchRequestId (Just $ journeyLegInfo {JLT.skipBooking = False, JLT.pricingId = Just estimateId.getId, JLT.onSearchFailed = Just False})
   let mbCustomerExtraFee = (mkPriceFromAPIEntity <$> req.customerExtraFeeWithCurrency) <|> (mkPriceFromMoney Nothing <$> req.customerExtraFee)
   Kernel.Prelude.whenJust req.customerExtraFeeWithCurrency $ \reqWithCurrency -> do
     unless (estimate.estimatedFare.currency == reqWithCurrency.currency) $
@@ -412,9 +415,6 @@ mkJourneyForSearch searchRequest estimate personId = do
       journeyGuid <- generateGUID
       journeyLegGuid <- generateGUID
 
-      let fromLocationAddress = UCommon.mkAddress searchRequest.fromLocation.address
-          toLocationAddress = UCommon.mkAddress <$> (searchRequest.toLocation <&> (.address))
-
       let estimatedMinFare = Just estimate.estimatedFare.amount
           estimatedMaxFare = Just estimate.estimatedFare.amount
 
@@ -428,12 +428,12 @@ mkJourneyForSearch searchRequest estimate personId = do
                 totalLegs = 1,
                 modes = [DTrip.Taxi],
                 searchRequestId = searchRequest.id,
-                merchantId = Just searchRequest.merchantId,
+                merchantId = searchRequest.merchantId,
                 status = DJ.INPROGRESS,
                 riderId = personId,
                 startTime = Just searchRequest.startTime,
                 endTime = Nothing,
-                merchantOperatingCityId = Just searchRequest.merchantOperatingCityId,
+                merchantOperatingCityId = searchRequest.merchantOperatingCityId,
                 createdAt = now,
                 updatedAt = now,
                 recentLocationId = searchRequest.recentLocationId,
@@ -441,8 +441,8 @@ mkJourneyForSearch searchRequest estimate personId = do
                 relevanceScore = Nothing,
                 hasPreferredServiceTier = Nothing,
                 hasPreferredTransitModes = Just False,
-                fromLocationAddress = Just fromLocationAddress,
-                toLocationAddress = toLocationAddress,
+                fromLocation = searchRequest.fromLocation,
+                toLocation = searchRequest.toLocation,
                 paymentOrderShortId = Nothing,
                 journeyExpiryTime = Nothing
               }
