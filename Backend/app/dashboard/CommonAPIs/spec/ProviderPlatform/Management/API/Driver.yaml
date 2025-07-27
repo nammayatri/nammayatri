@@ -27,6 +27,8 @@ imports:
   MandatoryQueryParam: Kernel.Utils.Common
   DriverFeeStatus: Dashboard.Common.Driver
   TagNameValue: Lib.Yudhishthira.Types
+  UpdateTagBulkReq: Dashboard.Common
+  UpdateTagBulkRes: Dashboard.Common
 
 module: Driver
 
@@ -48,6 +50,16 @@ apis:
       migrate:
         endpointV2:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS PERSON_NUMBERS
+  - POST:
+      endpoint: /updateTagBulk
+      auth: ApiAuthV2
+      multipart:
+        type: UpdateTagBulkReq
+      response:
+        type: "[UpdateTagBulkRes]"
+      migrate:
+        endpointV2:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS UPDATE_TAG_BULK
   - POST: # PersonMobileNoAPI
       endpoint: /driverDataDecryption
       auth: ApiAuthV2
