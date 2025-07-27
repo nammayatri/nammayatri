@@ -46,6 +46,7 @@ data PaymentOrderT f = PaymentOrderT
     clientAuthTokenHash :: B.C f (Maybe DbHash),
     clientAuthTokenExpiry :: B.C f (Maybe UTCTime),
     getUpiDeepLinksOption :: B.C f (Maybe Bool),
+    gatewayReferenceId :: B.C f (Maybe Text),
     environment :: B.C f (Maybe Text),
     createMandate :: B.C f (Maybe Payment.MandateType),
     mandateMaxAmount :: B.C f (Maybe HighPrecMoney), -- FIXME Kernel.Types.Common.Price

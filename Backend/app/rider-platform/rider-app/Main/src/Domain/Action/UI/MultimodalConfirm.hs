@@ -253,6 +253,7 @@ buildUpdateOrderSDKPayload amount order = do
               clientAuthTokenExpiry = clientAuthTokenExpiry,
               environment = order.environment,
               options_getUpiDeepLinks = order.getUpiDeepLinksOption,
+              gatewayReferenceId = order.gatewayReferenceId,
               lastName = Nothing,
               action = Just "updateOrder",
               customerId = Just order.personId.getId,

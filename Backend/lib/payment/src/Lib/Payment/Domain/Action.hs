@@ -219,6 +219,7 @@ createPaymentIntentService merchantId mbMerchantOpCityId personId rideId rideSho
             clientAuthToken = Just clientAuthToken,
             clientAuthTokenExpiry = Just clientAuthTokenExpiry,
             getUpiDeepLinksOption = Nothing,
+            gatewayReferenceId = Nothing,
             environment = Nothing,
             createMandate = Nothing,
             mandateMaxAmount = Nothing,
@@ -456,6 +457,7 @@ buildSDKPayloadDetails req order = do
               mandateMaxAmount = show <$> order.mandateMaxAmount,
               mandateStartDate = show . utcTimeToPOSIXSeconds <$> (order.mandateStartDate),
               mandateEndDate = show . utcTimeToPOSIXSeconds <$> order.mandateEndDate
+              -- gatewayReferenceId = Nothing --order.gatewayReferenceId
             }
     (_, _) -> return Nothing
 
@@ -493,6 +495,7 @@ buildPaymentOrder merchantId mbMerchantOpCityId personId req resp = do
         clientAuthToken = Just clientAuthToken,
         clientAuthTokenExpiry = Just resp.sdk_payload.payload.clientAuthTokenExpiry,
         getUpiDeepLinksOption = resp.sdk_payload.payload.options_getUpiDeepLinks,
+        gatewayReferenceId = resp.sdk_payload.payload.gatewayReferenceId,
         environment = resp.sdk_payload.payload.environment,
         createMandate = resp.sdk_payload.payload.createMandate,
         mandateMaxAmount = read . T.unpack <$> resp.sdk_payload.payload.mandateMaxAmount,
@@ -794,6 +797,7 @@ createExecutionService (request, orderId) merchantId mbMerchantOpCityId executio
             clientAuthTokenExpiry = Nothing,
             serviceProvider = Payment.Juspay, -- fix it later
             getUpiDeepLinksOption = Nothing,
+            gatewayReferenceId = Nothing,
             environment = Nothing,
             createMandate = Nothing,
             mandateMaxAmount = Nothing,
