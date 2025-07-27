@@ -15,6 +15,8 @@
 module Domain.Action.Beckn.FRFS.OnInit where
 
 import qualified BecknV2.FRFS.Enums as Spec
+import Data.List (sortBy)
+import Data.Ord (Down (..), comparing)
 import Domain.Action.Beckn.FRFS.Common (DFareBreakUp)
 import qualified Domain.Types.FRFSTicketBooking as FTBooking
 import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
@@ -139,7 +141,9 @@ onInit onInitReq merchant booking_ = do
       return (orderId, updatedOrderShortId)
     markBookingApproved (ticketBookingPayment, booking) = do
       let price = if booking.id == booking_.id then onInitReq.totalPrice else booking.price
-      QFRFSTicketBookingPayment.findById ticketBookingPayment.id >>= \case
+      payments <- QFRFSTicketBookingPayment.findAllTicketBookingId booking.id
+      let latestPayment = listToMaybe $ sortBy (comparing (Down . (.updatedAt))) payments
+      case latestPayment of
         Nothing -> void $ QFRFSTicketBookingPayment.create ticketBookingPayment
         Just _ -> do
           quote <- QQuote.findById booking.quoteId >>= fromMaybeM (QuoteNotFound booking.quoteId.getId)
