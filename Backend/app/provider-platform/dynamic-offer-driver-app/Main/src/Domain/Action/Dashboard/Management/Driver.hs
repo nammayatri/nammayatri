@@ -55,11 +55,13 @@ module Domain.Action.Dashboard.Management.Driver
     getDriverStats,
     checkDriverOperatorAssociation,
     checkFleetOperatorAssociation,
+    postDriverUpdateTagBulk,
   )
 where
 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Driver as Common
 import Control.Applicative ((<|>))
+import qualified "dashboard-helper-api" Dashboard.Common
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import Data.Coerce
@@ -114,6 +116,7 @@ import Kernel.Utils.Validation (runRequestValidation)
 import Lib.Scheduler.JobStorageType.SchedulerType as JC
 import qualified Lib.Yudhishthira.Flow.Dashboard as Yudhishthira
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
+import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.Allocator
 import qualified SharedLogic.DeleteDriver as DeleteDriver
 import SharedLogic.DriverOnboarding
@@ -557,6 +560,66 @@ postDriverUpdatePhoneNumber merchantShortId opCity reqDriverId req = do
   QR.deleteByPersonId personId.getId
   logTagInfo "dashboard -> updatePhoneNumber : " (show personId)
   pure Success
+
+postDriverUpdateTagBulk :: ShortId DM.Merchant -> Context.City -> Common.UpdateTagBulkReq -> Flow [Dashboard.Common.UpdateTagBulkRes]
+postDriverUpdateTagBulk merchantShortId opCity req = do
+  csvData <- liftIO $ BS.readFile req.file
+  case decodeByName (LBS.fromStrict csvData) :: Either String (V.Vector BS.ByteString, V.Vector Dashboard.Common.DriverTagBulkCSVRow) of
+    Left err -> do
+      logInfo $ "CSV parse error: " <> show err
+      return [Dashboard.Common.UpdateTagBulkRes "parse-error" False (Just $ T.pack err)]
+    Right (_, v) -> do
+      results <- forM (V.toList v) $ \row -> do
+        res <- try @_ @SomeException (processDriverTagUpdate merchantShortId opCity row)
+        case res of
+          Left err -> do
+            let errorMsg = show err
+            logInfo $ "Error processing driver " <> row.driverId <> ": " <> T.pack errorMsg
+            return $ Dashboard.Common.UpdateTagBulkRes row.driverId False (Just $ T.pack errorMsg)
+          Right _ -> do
+            logInfo $ "Successfully processed driver " <> row.driverId
+            return $ Dashboard.Common.UpdateTagBulkRes row.driverId True Nothing
+      return results
+  where
+    processDriverTagUpdate :: ShortId DM.Merchant -> Context.City -> Dashboard.Common.DriverTagBulkCSVRow -> Flow ()
+    processDriverTagUpdate merchantShortId' opCity' row = do
+      merchant <- findMerchantByShortId merchantShortId'
+      merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity')
+
+      -- Convert driverId to Person ID
+      let personId = Id row.driverId
+      driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+
+      -- Check if driver has a valid merchant ID
+      when (driver.merchantId == Id "") $
+        throwError (InvalidRequest $ "Driver " <> row.driverId <> " has no merchant ID")
+
+      -- Merchant access checking
+      unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $
+        throwError (PersonDoesNotExist personId.getId)
+
+      -- Create tag name value using the same pattern as postDriverUpdateDriverTag
+      -- Use mkTagNameValue to ensure proper tag creation
+      let tagName = LYT.TagName row.tagName
+      let tagValue = LYT.TextValue row.tagValue
+      let tagNameValue = Yudhishthira.mkTagNameValue tagName tagValue
+
+      -- Check if tag already exists
+      when (maybe False (Yudhishthira.elemTagNameValue tagNameValue) driver.driverTag) $
+        logInfo "Tag already exists, updating expiry"
+
+      -- Verify tag
+      mbNammTag <- Yudhishthira.verifyTag tagNameValue
+      now <- getCurrentTime
+
+      -- Update tag (always add/replace)
+      let reqDriverTagWithExpiry = Yudhishthira.addTagExpiry tagNameValue (mbNammTag >>= (.validity)) now
+      let tag = Yudhishthira.replaceTagNameValue driver.driverTag reqDriverTagWithExpiry
+
+      -- Update database if tag changed
+      unless (Just (Yudhishthira.showRawTags tag) == (Yudhishthira.showRawTags <$> driver.driverTag)) $ do
+        QPerson.updateDriverTag (Just tag) personId
+        logInfo $ "Updated tag for driver " <> row.driverId <> ": " <> show tagNameValue
 
 ---------------------------------------------------------------------
 postDriverUpdateByPhoneNumber :: ShortId DM.Merchant -> Context.City -> Text -> Common.UpdateDriverDataReq -> Flow APISuccess
