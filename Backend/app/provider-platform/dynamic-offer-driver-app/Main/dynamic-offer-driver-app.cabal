@@ -147,6 +147,7 @@ library
       Domain.Action.Dashboard.DriverReferral
       Domain.Action.Dashboard.Exotel
       Domain.Action.Dashboard.Fleet.Registration
+      Domain.Action.Dashboard.Management.Driver
       Domain.Action.Dashboard.Merchant
       Domain.Action.Dashboard.Message
       Domain.Action.Dashboard.Overlay
@@ -577,6 +578,7 @@ library
       Tools.Ticket
       Tools.Verification
       Tools.Whatsapp
+      API.Action.Dashboard.Management.Driver
       API.Action.UI.Cac
       API.Action.UI.DriverOnboardingV2
       API.Action.UI.LmsModule

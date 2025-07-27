@@ -48,6 +48,7 @@ library
       API.ProviderPlatform.DynamicOfferDriver.Volunteer
       API.SpecialZone
       App
+      Domain.Action.ProviderPlatform.Management.Driver
       ProviderPlatformClient.DynamicOfferDriver.Exotel
       ProviderPlatformClient.DynamicOfferDriver.Fleet
       ProviderPlatformClient.DynamicOfferDriver.Operations
