@@ -8,7 +8,7 @@ module Producer.Flow where
 import qualified Data.Aeson as Ae
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as BSL
-import Data.IORef (IORef, readIORef)
+import Data.IORef (IORef, modifyIORef, readIORef)
 import qualified Data.Text.Encoding as TE
 import qualified Data.Time as T hiding (getCurrentTime)
 import qualified Data.UUID as UU
@@ -168,7 +168,9 @@ insertIntoStream :: [B.ByteString] -> IORef Int -> Flow ()
 insertIntoStream jobs streamNumberRef = do
   streamName' <- asks (.streamName)
   streamNumber <- liftIO $ readIORef streamNumberRef
+  liftIO $ modifyIORef streamNumberRef (\x -> if x < 16 then x + 1 else 1)
   let streamName = streamName' <> "_" <> show streamNumber
+  putStrLn $ "StreamName is now: " ++ show streamName
   entryId <- asks (.entryId)
   forM_ jobs $ \job -> fork "putting into stream" $ do
     eqId <- generateGUID

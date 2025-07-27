@@ -126,7 +126,14 @@ in
                 set -x
                 pwd
                 rm -f ./*.log # Clean up the log files
-                redis-cli -p 30001 -c XGROUP CREATE Available_Jobs_Rider myGroup_Rider  0 MKSTREAM # TODO: remove this once cluster funtions from euler are fixed
+                redis-cli -p 30001 -c XGROUP CREATE Available_Jobs_Rider_1 myGroup_Rider  0 MKSTREAM # TODO: remove this once cluster funtions from euler are fixed
+                redis-cli -p 30001 -c XGROUP CREATE Available_Jobs_Rider_2 myGroup_Rider  0
+                redis-cli -p 30001 -c XGROUP CREATE Available_Jobs_Rider_3 myGroup_Rider  0
+                redis-cli -p 30001 -c XGROUP CREATE Available_Jobs_Rider_4 myGroup_Rider  0
+                redis-cli -p 30001 -c XGROUP CREATE Available_Jobs_Rider_5 myGroup_Rider  0
+                redis-cli -p 30001 -c XGROUP CREATE Available_Jobs_Rider_6 myGroup_Rider  0
+                redis-cli -p 30001 -c XGROUP CREATE Available_Jobs_Rider_7 myGroup_Rider  0
+                redis-cli -p 30001 -c XGROUP CREATE Available_Jobs_Rider_8 myGroup_Rider  0
                 redis-cli -p 30001 -c XGROUP CREATE Available_Jobs myGroup  0 MKSTREAM # TODO: remove this once cluster funtions from euler are fixed
                 redis-cli -p 30001 -c XGROUP CREATE Available_Chakras myGroup_Chakras  0 MKSTREAM # TODO: remove this once cluster funtions from euler are fixed
                 redis-cli XGROUP CREATE Available_Jobs_Rider myGroup_Rider 0 MKSTREAM

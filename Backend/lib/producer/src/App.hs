@@ -16,7 +16,7 @@
 module App (startProducer) where
 
 import Data.Function hiding (id)
-import Data.IORef (IORef, modifyIORef', newIORef, readIORef, writeIORef)
+import Data.IORef (newIORef)
 import Debug.Trace as T
 import Environment
 import EulerHS.Interpreters (runFlow)
@@ -72,15 +72,9 @@ startProducerWithEnv flowRt appCfg appEnv producerType = do
     )
   -- Create the counter in IO
   redisStreamCounter <- newIORef 1
-
-  let producersWithCounter = map (wrapWithCounter PF.runProducer) [1 .. appCfg.producersPerPod]
-  let reviverWithCounter = wrapWithCounter (PF.runReviver producerType)
+  let producersWithCounter = map (\_ -> (PF.runProducer redisStreamCounter)) [1 .. appCfg.producersPerPod]
+  let reviverWithCounter = (PF.runReviver producerType redisStreamCounter)
 
   runFlowR flowRt appEnv $ do
     loopGracefully $
       bool producersWithCounter (reviverWithCounter : producersWithCounter) appEnv.runReviver
-  where
-    wrapWithCounter action redisStreamCounter = do
-      liftIO $ modifyIORef' redisStreamCounter (\n -> if n > 16 then 1 else n + 1)
-      counterValue <- liftIO $ readIORef redisStreamCounter
-      action redisStreamCounter
