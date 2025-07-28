@@ -753,8 +753,8 @@ getFRFSLegStatusFromBooking booking = case booking.status of
   DFRFSBooking.REFUND_INITIATED -> Cancelled
 
 mkLegInfoFromFrfsBooking ::
-  (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => DFRFSBooking.FRFSTicketBooking -> Maybe Distance -> Maybe Seconds -> Maybe MultiModalLegGate -> Maybe MultiModalLegGate -> m LegInfo
-mkLegInfoFromFrfsBooking booking distance duration entrance exit = do
+  (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => DFRFSBooking.FRFSTicketBooking -> Maybe Distance -> Maybe Seconds -> m LegInfo
+mkLegInfoFromFrfsBooking booking distance duration = do
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
   let journeyRouteDetails' = booking.journeyRouteDetails
   tickets <- QFRFSTicket.findAllByTicketBookingId (booking.id)
@@ -810,8 +810,8 @@ mkLegInfoFromFrfsBooking booking distance duration entrance exit = do
         legExtraInfo = legExtraInfo,
         actualDistance = distance,
         totalFare = mkPriceAPIEntity <$> (booking.finalPrice <|> Just booking.price),
-        entrance = entrance,
-        exit = exit,
+        entrance = Nothing,
+        exit = Nothing,
         validTill = (if null qrValidity then Nothing else Just $ maximum qrValidity) <|> Just booking.validTill
       }
   where
@@ -922,8 +922,8 @@ castCategoryToMode Spec.METRO = DTrip.Metro
 castCategoryToMode Spec.SUBWAY = DTrip.Subway
 castCategoryToMode Spec.BUS = DTrip.Bus
 
-mkLegInfoFromFrfsSearchRequest :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => FRFSSR.FRFSSearch -> Maybe HighPrecMoney -> Maybe Distance -> Maybe Seconds -> Maybe MultiModalLegGate -> Maybe MultiModalLegGate -> Maybe UTCTime -> m LegInfo
-mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} fallbackFare distance duration entrance exit startTime = do
+mkLegInfoFromFrfsSearchRequest :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => FRFSSR.FRFSSearch -> Maybe HighPrecMoney -> Maybe Distance -> Maybe Seconds -> Maybe UTCTime -> m LegInfo
+mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} fallbackFare distance duration startTime = do
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity frfsSearch
   journeyLegInfo' <- journeyLegInfo & fromMaybeM (InvalidRequest "Not a valid mulimodal search as no journeyLegInfo found")
   mRiderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId Nothing
@@ -970,8 +970,8 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} fallbackFare di
         legExtraInfo = legExtraInfo,
         actualDistance = Nothing,
         totalFare = Nothing,
-        entrance = entrance,
-        exit = exit,
+        entrance = Nothing,
+        exit = Nothing,
         validTill = (mbQuote <&> (.validTill)) <|> (frfsSearch.validTill)
       }
   where
