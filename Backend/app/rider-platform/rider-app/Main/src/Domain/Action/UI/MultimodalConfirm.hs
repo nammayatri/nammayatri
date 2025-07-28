@@ -813,7 +813,7 @@ postMultimodalTicketVerify (_mbPersonId, merchantId) opCity req = do
         legInfoList <- forM tickets $ \ticketQR -> do
           ticket <- CallExternalBPP.verifyTicket merchantId merchantOperatingCity bapConfig BUS ticketQR DIBC.MULTIMODAL
           booking <- QFRFSTicketBooking.findById ticket.frfsTicketBookingId >>= fromMaybeM (BookingNotFound ticket.frfsTicketBookingId.getId)
-          JMTypes.mkLegInfoFromFrfsBooking booking Nothing Nothing Nothing Nothing
+          JMTypes.mkLegInfoFromFrfsBooking booking Nothing Nothing
         return $
           API.Types.UI.MultimodalConfirm.MultimodalTicketVerifyResp
             { provider = provider,
