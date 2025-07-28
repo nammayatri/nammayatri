@@ -250,11 +250,13 @@ getLegInfo ::
   m (Maybe JL.LegInfo)
 getLegInfo journeyLeg mbPrevJourneyLeg mbNextJourneyLeg legSearchIdText skipAddLegFallback = do
   let legSearchId = Id legSearchIdText
+  logDebug $ "Entrance and exit for walk leg id from OTP:" <> show legSearchId <> show journeyLeg
   case journeyLeg.mode of
     DTrip.Taxi -> JL.getInfo $ TaxiLegRequestGetInfo $ TaxiLegRequestGetInfoData {searchId = cast legSearchId, journeyLeg, ignoreOldSearchRequest = skipAddLegFallback}
     DTrip.Walk -> do
       entrance <- getEntranceGate journeyLeg mbNextJourneyLeg
       exit <- getExitGate journeyLeg mbPrevJourneyLeg
+      logDebug $ "Entrance and exit for walk leg id from in-memory-server: " <> show legSearchId <> show journeyLeg <> show entrance <> show exit
       JL.getInfo $ WalkLegRequestGetInfo $ WalkLegRequestGetInfoData {walkLegId = cast legSearchId, journeyLeg = journeyLeg {DJourneyLeg.entrance = updateGateFromDomain journeyLeg.entrance entrance, DJourneyLeg.exit = updateGateFromDomain journeyLeg.exit exit}, ignoreOldSearchRequest = skipAddLegFallback}
     DTrip.Metro -> JL.getInfo $ MetroLegRequestGetInfo $ MetroLegRequestGetInfoData {searchId = cast legSearchId, fallbackFare = journeyLeg.estimatedMinFare, distance = journeyLeg.distance, duration = journeyLeg.duration, ignoreOldSearchRequest = skipAddLegFallback, startTime = journeyLeg.fromDepartureTime}
     DTrip.Subway -> JL.getInfo $ SubwayLegRequestGetInfo $ SubwayLegRequestGetInfoData {searchId = cast legSearchId, fallbackFare = journeyLeg.estimatedMinFare, distance = journeyLeg.distance, duration = journeyLeg.duration, ignoreOldSearchRequest = skipAddLegFallback, startTime = journeyLeg.fromDepartureTime}
