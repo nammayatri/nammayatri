@@ -316,7 +316,10 @@ getPersonDetails (personId, _) toss tenant' context mbBundleVersion mbRnVersion 
   makeProfileRes decPerson tag mbMd5Digest isSafetyCenterDisabled_ newCustomerReferralCode hasTakenValidFirstCabRide hasTakenValidFirstAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig integratedBPPConfigs isMultimodalRider
   where
     makeProfileRes Person.Person {..} disability md5DigestHash isSafetyCenterDisabled_ newCustomerReferralCode hasTakenCabRide hasTakenAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig integratedBPPConfigs isMultimodalRider = do
-      gtfsVersion <- mapM OTPRest.getGtfsVersion integratedBPPConfigs
+      gtfsVersion <-
+        try @_ @SomeException (mapM OTPRest.getGtfsVersion integratedBPPConfigs) >>= \case
+          Left _ -> return (map (.feedKey) integratedBPPConfigs)
+          Right gtfsVersions -> return gtfsVersions
       return $
         ProfileRes
           { maskedMobileNumber = maskText <$> mobileNumber,
@@ -343,7 +346,7 @@ getPersonDetails (personId, _) toss tenant' context mbBundleVersion mbRnVersion 
             referralAmountPaid = Just personStats.referralAmountPaid,
             isPayoutEnabled = mbPayoutConfig <&> (.isPayoutEnabled),
             cancellationRate = cancellationPerc,
-            publicTransportVersion = Just (T.intercalate (T.pack "#") gtfsVersion),
+            publicTransportVersion = if null gtfsVersion then Nothing else Just (T.intercalate (T.pack "#") gtfsVersion),
             ..
           }
 

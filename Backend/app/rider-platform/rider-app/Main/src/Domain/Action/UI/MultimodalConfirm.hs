@@ -652,7 +652,11 @@ getPublicTransportData (mbPersonId, merchantId) mbCity _mbConfigVersion = do
       )
       vehicleTypes
 
-  let mkResponse stations routes bppConfig =
+  let mkResponse stations routes bppConfig = do
+        gtfsVersion <-
+          try @_ @SomeException (OTPRest.getGtfsVersion bppConfig) >>= \case
+            Left _ -> return bppConfig.feedKey
+            Right gtfsVersion -> return gtfsVersion
         pure
           ApiTypes.PublicTransportData
             { ss =
@@ -693,7 +697,7 @@ getPublicTransportData (mbPersonId, merchantId) mbCity _mbConfigVersion = do
                   )
                   routes,
               rsm = [],
-              ptcv = bppConfig.feedKey
+              ptcv = gtfsVersion
             }
 
   let fetchData bppConfig = do
@@ -718,7 +722,10 @@ getPublicTransportData (mbPersonId, merchantId) mbCity _mbConfigVersion = do
               uniqueConfigs = map (head . snd) $ HashMap.toList configsByFeedId
           mapM fetchData uniqueConfigs
 
-  gtfsVersion <- mapM OTPRest.getGtfsVersion integratedBPPConfigs
+  gtfsVersion <-
+    try @_ @SomeException (mapM OTPRest.getGtfsVersion integratedBPPConfigs) >>= \case
+      Left _ -> return (map (.feedKey) integratedBPPConfigs)
+      Right gtfsVersions -> return gtfsVersions
   let transportData =
         ApiTypes.PublicTransportData
           { ss = concatMap (.ss) transportDataList,
