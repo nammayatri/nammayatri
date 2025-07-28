@@ -9,7 +9,6 @@ where
 
 import qualified "dynamic-offer-driver-app" API.Types.Dashboard.AppManagement
 import qualified "dynamic-offer-driver-app" API.Types.Dashboard.AppManagement.Payment
-import qualified Dashboard.Common
 import qualified Domain.Action.ProviderPlatform.AppManagement.Payment
 import qualified "dynamic-offer-driver-app" Domain.Action.UI.Payment
 import qualified "lib-dashboard" Domain.Types.Merchant
@@ -32,30 +31,30 @@ handler merchantId city = createPaymentOrder merchantId city :<|> getPaymentOrde
 
 type CreatePaymentOrder =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.PAYMENT) / ('API.Types.Dashboard.AppManagement.Payment.CREATE_PAYMENT_ORDER))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.PAYMENT / 'API.Types.Dashboard.AppManagement.Payment.CREATE_PAYMENT_ORDER)
       :> API.Types.Dashboard.AppManagement.Payment.CreatePaymentOrder
   )
 
 type GetPaymentOrder =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.PAYMENT) / ('API.Types.Dashboard.AppManagement.Payment.GET_PAYMENT_ORDER))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.PAYMENT / 'API.Types.Dashboard.AppManagement.Payment.GET_PAYMENT_ORDER)
       :> API.Types.Dashboard.AppManagement.Payment.GetPaymentOrder
   )
 
 type GetPaymentOrderStatus =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.PAYMENT) / ('API.Types.Dashboard.AppManagement.Payment.GET_PAYMENT_ORDER_STATUS))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.PAYMENT / 'API.Types.Dashboard.AppManagement.Payment.GET_PAYMENT_ORDER_STATUS)
       :> API.Types.Dashboard.AppManagement.Payment.GetPaymentOrderStatus
   )
 
-createPaymentOrder :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Dashboard.Common.Person -> Kernel.Prelude.Text -> Environment.FlowHandler Kernel.External.Payment.Juspay.Types.CreateOrder.CreateOrderResp)
-createPaymentOrder merchantShortId opCity apiTokenInfo requestorId invoiceId = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.AppManagement.Payment.createPaymentOrder merchantShortId opCity apiTokenInfo requestorId invoiceId
+createPaymentOrder :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Environment.FlowHandler Kernel.External.Payment.Juspay.Types.CreateOrder.CreateOrderResp)
+createPaymentOrder merchantShortId opCity apiTokenInfo invoiceId = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.AppManagement.Payment.createPaymentOrder merchantShortId opCity apiTokenInfo invoiceId
 
 getPaymentOrder :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Environment.FlowHandler Lib.Payment.Domain.Types.PaymentOrder.PaymentOrderAPIEntity)
 getPaymentOrder merchantShortId opCity apiTokenInfo orderId = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.AppManagement.Payment.getPaymentOrder merchantShortId opCity apiTokenInfo orderId

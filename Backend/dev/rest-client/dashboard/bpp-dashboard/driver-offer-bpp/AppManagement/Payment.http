@@ -1,0 +1,120 @@
+# access tokens with different roles
+@customer = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/customer}}
+@driver = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/driver}}
+@juspay_ops = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/juspay_ops}}
+@juspay_admin = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/juspay_admin}}
+@customer_service = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/customer_service}}
+
+@token1 = {{driver-offer-bpp-auto-token1}}
+@fleetOwnerId = favorit-fleet-owner-0000000000000000
+@orderId = ord_c4345b<HIDDEN>fe8299f5321f53
+
+# @name healthcheck
+GET {{bpp-dashboard-host}}
+
+###
+
+@driverId1 = favorit-auto1-0000000000000000000000
+
+# @name CreatePaymentOrderAPI
+
+# POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/payment/order/create/{{invoiceId}}
+# content-type: application/json
+# token: {{juspay_admin}}
+
+###
+
+# @name GetPaymentOrderAPI
+
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/payment/order/{{orderId}}
+content-type: application/json
+token: {{fleetOwnerId}}
+
+###
+
+# @name GetPaymentOrderStatusAPI
+
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/payment/order/status/{{orderId}}
+content-type: application/json
+token: {{juspay_admin}}
+
+
+# INSERT INTO atlas_driver_offer_bpp.payment_order (
+#     id,
+#     short_id,
+#     payment_service_order_id,
+#     person_id,
+#     merchant_id,
+#     payment_merchant_id,
+#     request_id,
+#     service,
+#     client_id,
+#     description,
+#     return_url,
+#     action,
+#     amount,
+#     currency,
+#     status,
+#     web_payment_link,
+#     iframe_payment_link,
+#     mobile_payment_link,
+#     deep_link,
+#     client_auth_token_encrypted,
+#     client_auth_token_hash,
+#     client_auth_token_expiry,
+#     get_upi_deep_links_option,
+#     environment,
+#     create_mandate,
+#     mandate_max_amount,
+#     is_retried,
+#     is_retargeted,
+#     retarget_link,
+#     mandate_start_date,
+#     mandate_end_date,
+#     bank_error_code,
+#     bank_error_message,
+#     service_provider,
+#     sdk_payload_dump,
+#     created_at,
+#     updated_at,
+#     merchant_operating_city_id
+# ) VALUES (
+#     'b1a2c3d4-e5f6-7890-abcd-ef1234567890', -- id
+#     'ORD-20240607-001',                     -- short_id
+#     'juspay-order-123',                     -- payment_service_order_id
+#     'person-uuid-1234',                     -- person_id
+#     'merchant-uuid-5678',                   -- merchant_id
+#     'pay-merchant-uuid-9999',               -- payment_merchant_id
+#     'request-uuid-9999',                    -- request_id
+#     'Juspay',                               -- service
+#     'client-001',                           -- client_id
+#     'Payment for ride',                     -- description
+#     'https://return.url',                   -- return_url
+#     'PAY',                                  -- action
+#     1000,                                   -- amount
+#     'INR',                                  -- currency
+#     'PENDING',                              -- status
+#     'https://web.payment.link',             -- web_payment_link
+#     'https://iframe.payment.link',          -- iframe_payment_link
+#     'https://mobile.payment.link',          -- mobile_payment_link
+#     'https://deep.link',                    -- deep_link
+#     'encrypted_token',                      -- client_auth_token_encrypted
+#     decode('aabbccddeeff', 'hex'),          -- client_auth_token_hash
+#     '2024-06-08 12:00:00+05:30',            -- client_auth_token_expiry
+#     true,                                   -- get_upi_deep_links_option
+#     'PRODUCTION',                           -- environment
+#     'MANDATE_TYPE',                         -- create_mandate
+#     5000,                                   -- mandate_max_amount
+#     false,                                  -- is_retried
+#     false,                                  -- is_retargeted
+#     'https://retarget.link',                -- retarget_link
+#     '2024-06-01 00:00:00+05:30',            -- mandate_start_date
+#     '2024-07-01 00:00:00+05:30',            -- mandate_end_date
+#     'BANK_ERR_001',                         -- bank_error_code
+#     'Bank error',                           -- bank_error_message
+#     'JUSPAY',                               -- service_provider
+#     '{"payload":"example"}',                -- sdk_payload_dump (JSON)
+#     now(),                                  -- created_at
+#     now(),                                  -- updated_at
+#     'operating-city-uuid-8888'              -- merchant_operating_city_id
+# );

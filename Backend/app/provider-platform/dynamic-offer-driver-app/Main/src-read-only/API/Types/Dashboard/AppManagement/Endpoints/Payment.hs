@@ -17,37 +17,39 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder
 import Servant
 import Servant.Client
 
-type API = ("payment" :> (CreatePaymentOrder :<|> GetPaymentOrderHelper :<|> GetPaymentOrderStatusHelper))
+type API = ("payment" :> (CreatePaymentOrderHelper :<|> GetPaymentOrderHelper :<|> GetPaymentOrderStatusHelper))
 
-type CreatePaymentOrder =
-  ( "order" :> "create" :> Capture "requestorId" (Kernel.Types.Id.Id Dashboard.Common.Person) :> Capture "invoiceId" Kernel.Prelude.Text
+type CreatePaymentOrder = ("order" :> "create" :> Capture "invoiceId" Kernel.Prelude.Text :> Post '[JSON] Kernel.External.Payment.Juspay.Types.CreateOrder.CreateOrderResp)
+
+type CreatePaymentOrderHelper =
+  ( "order" :> Capture "invoiceId" Kernel.Prelude.Text :> Capture "requestorId" (Kernel.Types.Id.Id Dashboard.Common.Person)
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.External.Payment.Juspay.Types.CreateOrder.CreateOrderResp
   )
 
-type GetPaymentOrder = ("order" :> Capture "orderId" Kernel.Prelude.Text :> Get ('[JSON]) Lib.Payment.Domain.Types.PaymentOrder.PaymentOrderAPIEntity)
+type GetPaymentOrder = ("order" :> Capture "orderId" Kernel.Prelude.Text :> Get '[JSON] Lib.Payment.Domain.Types.PaymentOrder.PaymentOrderAPIEntity)
 
 type GetPaymentOrderHelper =
   ( "order" :> Capture "orderId" Kernel.Prelude.Text :> Capture "requestorId" (Kernel.Types.Id.Id Dashboard.Common.Person)
       :> Get
-           ('[JSON])
+           '[JSON]
            Lib.Payment.Domain.Types.PaymentOrder.PaymentOrderAPIEntity
   )
 
-type GetPaymentOrderStatus = ("order" :> "status" :> Capture "orderId" Kernel.Prelude.Text :> Get ('[JSON]) Domain.Action.UI.Payment.PaymentStatusResp)
+type GetPaymentOrderStatus = ("order" :> "status" :> Capture "orderId" Kernel.Prelude.Text :> Get '[JSON] Domain.Action.UI.Payment.PaymentStatusResp)
 
 type GetPaymentOrderStatusHelper =
   ( "order" :> "status" :> Capture "orderId" Kernel.Prelude.Text :> Capture "requestorId" (Kernel.Types.Id.Id Dashboard.Common.Person)
       :> Get
-           ('[JSON])
+           '[JSON]
            Domain.Action.UI.Payment.PaymentStatusResp
   )
 
 data PaymentAPIs = PaymentAPIs
-  { createPaymentOrder :: (Kernel.Types.Id.Id Dashboard.Common.Person -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.External.Payment.Juspay.Types.CreateOrder.CreateOrderResp),
-    getPaymentOrder :: (Kernel.Prelude.Text -> Kernel.Types.Id.Id Dashboard.Common.Person -> EulerHS.Types.EulerClient Lib.Payment.Domain.Types.PaymentOrder.PaymentOrderAPIEntity),
-    getPaymentOrderStatus :: (Kernel.Prelude.Text -> Kernel.Types.Id.Id Dashboard.Common.Person -> EulerHS.Types.EulerClient Domain.Action.UI.Payment.PaymentStatusResp)
+  { createPaymentOrder :: Kernel.Prelude.Text -> Kernel.Types.Id.Id Dashboard.Common.Person -> EulerHS.Types.EulerClient Kernel.External.Payment.Juspay.Types.CreateOrder.CreateOrderResp,
+    getPaymentOrder :: Kernel.Prelude.Text -> Kernel.Types.Id.Id Dashboard.Common.Person -> EulerHS.Types.EulerClient Lib.Payment.Domain.Types.PaymentOrder.PaymentOrderAPIEntity,
+    getPaymentOrderStatus :: Kernel.Prelude.Text -> Kernel.Types.Id.Id Dashboard.Common.Person -> EulerHS.Types.EulerClient Domain.Action.UI.Payment.PaymentStatusResp
   }
 
 mkPaymentAPIs :: (Client EulerHS.Types.EulerClient API -> PaymentAPIs)
@@ -62,4 +64,4 @@ data PaymentUserActionType
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(Data.Singletons.TH.genSingletons [(''PaymentUserActionType)])
+$(Data.Singletons.TH.genSingletons [''PaymentUserActionType])

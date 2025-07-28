@@ -25,10 +25,10 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 createPaymentOrder ::
   ID.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
-  ID.Id Dashboard.Common.Person ->
   Text ->
+  ID.Id Dashboard.Common.Person ->
   Environment.Flow Kernel.External.Payment.Juspay.Types.CreateOrder.CreateOrderResp
-createPaymentOrder merchantShortId opCity requestorId invoiceId = do
+createPaymentOrder merchantShortId opCity invoiceId requestorId = do
   merchant <- findMerchantByShortId merchantShortId
   opCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   createOrder (ID.cast requestorId, merchant.id, opCityId) $ ID.Id invoiceId
