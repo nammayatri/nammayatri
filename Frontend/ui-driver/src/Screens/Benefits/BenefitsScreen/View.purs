@@ -250,24 +250,23 @@ nammaKutumbaCard push state =
         [ imageView
             [ width $ V 90
             , height $ V 95
-            , margin $ MarginLeft 5
+            , margin $ MarginLeft 2
             , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_namma_kutumba"
             ]
-        , linearLayout [ weight 1.0 ] []
         , textView
             [ text $ getStringV2 LT2.namma_kutumba
             , color "#4B2E0E"
             , textSize FontSize.a_24
             , fontStyle $ FontStyle.semiBold LanguageStyle
             , gravity CENTER_VERTICAL
+            , margin $ MarginRight 5 
             ]
         , linearLayout [ weight 1.0 ] []
         , imageView
-            [ width $ V 35 -- Make arrow larger if it's a circular asset
+            [ width $ V 35
             , height $ V 35
             , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_yellow_arrow_right"
-            , margin $ MarginRight 30
-            , margin $ MarginLeft 5
+            , margin $ MarginRight 40
             ]
         ]
     ]
