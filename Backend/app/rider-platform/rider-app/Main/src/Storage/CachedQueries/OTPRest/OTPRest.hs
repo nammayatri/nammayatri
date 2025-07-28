@@ -362,11 +362,3 @@ getNandiTripInfo integratedBPPConfig tripId = do
   baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
   let updatedTripId = integratedBPPConfig.feedKey <> ":" <> tripId
   Flow.getNandiTripInfo baseUrl updatedTripId
-
-getGtfsVersion ::
-  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
-  IntegratedBPPConfig ->
-  m Text
-getGtfsVersion integratedBPPConfig = do
-  baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
-  Flow.getGtfsVersion baseUrl integratedBPPConfig.feedKey

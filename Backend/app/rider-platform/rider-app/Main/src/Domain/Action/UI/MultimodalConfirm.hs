@@ -646,11 +646,11 @@ getPublicTransportData (mbPersonId, merchantId) mbCity _mbConfigVersion = do
   let merchantOperatingCityId = maybe person.merchantOperatingCityId (.id) mbRequestCity
   let vehicleTypes = [Enums.BUS, Enums.METRO, Enums.SUBWAY]
   integratedBPPConfigs <-
-    concatMapM
+    forM
+      vehicleTypes
       ( \vType ->
           SIBC.findAllIntegratedBPPConfig merchantOperatingCityId vType DIBC.MULTIMODAL
       )
-      vehicleTypes
 
   let mkResponse stations routes bppConfig =
         pure
@@ -708,23 +708,21 @@ getPublicTransportData (mbPersonId, merchantId) mbCity _mbConfigVersion = do
               baseUrl <- MM.getOTPRestServiceReq config.merchantId config.merchantOperatingCityId
               return (config, (config.feedKey, baseUrl))
           )
-          integratedBPPConfigs
+          (concat integratedBPPConfigs)
       )
       >>= \case
-        Left _ -> mapM fetchData integratedBPPConfigs
+        Left _ -> mapM fetchData (concat integratedBPPConfigs)
         Right configsWithFeedInfo -> do
           -- Group configs by feed_id and take first config for each feed_id
           let configsByFeedId = HashMap.fromListWith (++) $ map (\(config, (feedKey, _)) -> (feedKey, [config])) configsWithFeedInfo
               uniqueConfigs = map (head . snd) $ HashMap.toList configsByFeedId
           mapM fetchData uniqueConfigs
-
-  gtfsVersion <- mapM OTPRest.getGtfsVersion integratedBPPConfigs
   let transportData =
         ApiTypes.PublicTransportData
           { ss = concatMap (.ss) transportDataList,
             rs = concatMap (.rs) transportDataList,
             rsm = concatMap (.rsm) transportDataList,
-            ptcv = T.intercalate (T.pack "#") gtfsVersion
+            ptcv = T.intercalate (T.pack "#") $ map (.feedKey) (concat integratedBPPConfigs)
           }
   return transportData
 

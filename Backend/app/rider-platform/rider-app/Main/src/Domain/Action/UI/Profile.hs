@@ -90,7 +90,6 @@ import SharedLogic.PersonDefaultEmergencyNumber as SPDEN
 import qualified SharedLogic.Referral as Referral
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
-import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.ClientPersonInfo as QCP
 import qualified Storage.Queries.Disability as QD
@@ -252,7 +251,7 @@ getIsMultimodalRider enableMultiModalForAllUsers mbTags integratedBPPConfigs =
        in any (isMultimodalRiderTag multimodalTagName) currentTags && not (null integratedBPPConfigs)
 
 getPersonDetails ::
-  (HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "version" ::: DeploymentVersion], CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, HasShortDurationRetryCfg r c) =>
+  (HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl, "version" ::: DeploymentVersion], CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) =>
   (Id Person.Person, Id Merchant.Merchant) ->
   Maybe Int ->
   Maybe Text ->
@@ -313,39 +312,37 @@ getPersonDetails (personId, _) toss tenant' context mbBundleVersion mbRnVersion 
       )
       vehicleTypes
   let isMultimodalRider = getIsMultimodalRider riderConfig.enableMultiModalForAllUsers decPerson.customerNammaTags integratedBPPConfigs
-  makeProfileRes decPerson tag mbMd5Digest isSafetyCenterDisabled_ newCustomerReferralCode hasTakenValidFirstCabRide hasTakenValidFirstAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig integratedBPPConfigs isMultimodalRider
+  return $ makeProfileRes decPerson tag mbMd5Digest isSafetyCenterDisabled_ newCustomerReferralCode hasTakenValidFirstCabRide hasTakenValidFirstAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig integratedBPPConfigs isMultimodalRider
   where
     makeProfileRes Person.Person {..} disability md5DigestHash isSafetyCenterDisabled_ newCustomerReferralCode hasTakenCabRide hasTakenAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig integratedBPPConfigs isMultimodalRider = do
-      gtfsVersion <- mapM OTPRest.getGtfsVersion integratedBPPConfigs
-      return $
-        ProfileRes
-          { maskedMobileNumber = maskText <$> mobileNumber,
-            maskedDeviceToken = maskText <$> deviceToken,
-            hasTakenRide = hasTakenValidRide,
-            frontendConfigHash = md5DigestHash,
-            hasTakenValidAutoRide = hasTakenAutoRide,
-            hasTakenValidCabRide = hasTakenCabRide,
-            hasTakenValidBikeRide = hasTakenValidFirstBikeRide,
-            hasTakenValidAmbulanceRide = hasTakenValidAmbulanceRide,
-            hasTakenValidTruckRide = hasTakenValidTruckRide,
-            hasTakenValidBusRide = hasTakenValidBusRide,
-            isSafetyCenterDisabled = isSafetyCenterDisabled_,
-            customerReferralCode = newCustomerReferralCode,
-            bundleVersion = clientBundleVersion,
-            clientVersion = clientSdkVersion,
-            deviceId = maskText <$> deviceId,
-            androidId = maskText <$> androidId,
-            hasCompletedMockSafetyDrill = safetySettings.hasCompletedMockSafetyDrill,
-            hasCompletedSafetySetup = safetySettings.hasCompletedSafetySetup,
-            isBlocked = blocked,
-            referralEarnings = Just personStats.referralEarnings,
-            referredByEarnings = Just personStats.referredByEarnings,
-            referralAmountPaid = Just personStats.referralAmountPaid,
-            isPayoutEnabled = mbPayoutConfig <&> (.isPayoutEnabled),
-            cancellationRate = cancellationPerc,
-            publicTransportVersion = Just (T.intercalate (T.pack "#") gtfsVersion),
-            ..
-          }
+      ProfileRes
+        { maskedMobileNumber = maskText <$> mobileNumber,
+          maskedDeviceToken = maskText <$> deviceToken,
+          hasTakenRide = hasTakenValidRide,
+          frontendConfigHash = md5DigestHash,
+          hasTakenValidAutoRide = hasTakenAutoRide,
+          hasTakenValidCabRide = hasTakenCabRide,
+          hasTakenValidBikeRide = hasTakenValidFirstBikeRide,
+          hasTakenValidAmbulanceRide = hasTakenValidAmbulanceRide,
+          hasTakenValidTruckRide = hasTakenValidTruckRide,
+          hasTakenValidBusRide = hasTakenValidBusRide,
+          isSafetyCenterDisabled = isSafetyCenterDisabled_,
+          customerReferralCode = newCustomerReferralCode,
+          bundleVersion = clientBundleVersion,
+          clientVersion = clientSdkVersion,
+          deviceId = maskText <$> deviceId,
+          androidId = maskText <$> androidId,
+          hasCompletedMockSafetyDrill = safetySettings.hasCompletedMockSafetyDrill,
+          hasCompletedSafetySetup = safetySettings.hasCompletedSafetySetup,
+          isBlocked = blocked,
+          referralEarnings = Just personStats.referralEarnings,
+          referredByEarnings = Just personStats.referredByEarnings,
+          referralAmountPaid = Just personStats.referralAmountPaid,
+          isPayoutEnabled = mbPayoutConfig <&> (.isPayoutEnabled),
+          cancellationRate = cancellationPerc,
+          publicTransportVersion = if null integratedBPPConfigs then Nothing else Just (T.intercalate (T.pack "#") $ map (.feedKey) integratedBPPConfigs),
+          ..
+        }
 
 validRideCount :: [DCP.ClientPersonInfo] -> BecknEnums.VehicleCategory -> Bool
 validRideCount hasTakenValidRide vehicleCategory =
