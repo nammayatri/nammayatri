@@ -302,6 +302,7 @@ library
       Domain.Types.RouteStopTimeTable
       Domain.Types.Station
       Domain.Types.TicketDashboard
+      Domain.Types.TicketKapture
       Domain.Types.UtilsTH
       Environment
       ExternalBPP.CallAPI
