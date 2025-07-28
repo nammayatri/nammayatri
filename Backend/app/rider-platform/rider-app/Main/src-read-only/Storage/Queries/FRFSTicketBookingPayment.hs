@@ -2,7 +2,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.Queries.FRFSTicketBookingPayment where
+module Storage.Queries.FRFSTicketBookingPayment (module Storage.Queries.FRFSTicketBookingPayment, module ReExport) where
 
 import qualified Domain.Types.FRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingPayment
@@ -15,6 +15,7 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Lib.Payment.Domain.Types.PaymentOrder
 import qualified Sequelize as Se
 import qualified Storage.Beam.FRFSTicketBookingPayment as Beam
+import Storage.Queries.FRFSTicketBookingPaymentExtra as ReExport
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSTicketBookingPayment.FRFSTicketBookingPayment -> m ())
 create = createWithKV
@@ -26,11 +27,6 @@ findAllByStatus ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Domain.Types.FRFSTicketBookingPayment.FRFSTicketBookingPaymentStatus -> m [Domain.Types.FRFSTicketBookingPayment.FRFSTicketBookingPayment])
 findAllByStatus status = do findAllWithKV [Se.Is Beam.status $ Se.Eq status]
-
-findByBookingId ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m (Maybe Domain.Types.FRFSTicketBookingPayment.FRFSTicketBookingPayment))
-findByBookingId frfsTicketBookingId = do findOneWithKV [Se.Is Beam.frfsTicketBookingId $ Se.Eq (Kernel.Types.Id.getId frfsTicketBookingId)]
 
 findById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -67,31 +63,3 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBookingPayment.FRFSTicketBookingPayme
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
-
-instance FromTType' Beam.FRFSTicketBookingPayment Domain.Types.FRFSTicketBookingPayment.FRFSTicketBookingPayment where
-  fromTType' (Beam.FRFSTicketBookingPaymentT {..}) = do
-    pure $
-      Just
-        Domain.Types.FRFSTicketBookingPayment.FRFSTicketBookingPayment
-          { frfsTicketBookingId = Kernel.Types.Id.Id frfsTicketBookingId,
-            id = Kernel.Types.Id.Id id,
-            paymentOrderId = Kernel.Types.Id.Id paymentOrderId,
-            status = status,
-            merchantId = Kernel.Types.Id.Id <$> merchantId,
-            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
-            createdAt = createdAt,
-            updatedAt = updatedAt
-          }
-
-instance ToTType' Beam.FRFSTicketBookingPayment Domain.Types.FRFSTicketBookingPayment.FRFSTicketBookingPayment where
-  toTType' (Domain.Types.FRFSTicketBookingPayment.FRFSTicketBookingPayment {..}) = do
-    Beam.FRFSTicketBookingPaymentT
-      { Beam.frfsTicketBookingId = Kernel.Types.Id.getId frfsTicketBookingId,
-        Beam.id = Kernel.Types.Id.getId id,
-        Beam.paymentOrderId = Kernel.Types.Id.getId paymentOrderId,
-        Beam.status = status,
-        Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
-        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
-        Beam.createdAt = createdAt,
-        Beam.updatedAt = updatedAt
-      }

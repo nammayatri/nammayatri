@@ -45,4 +45,4 @@ data FRFSTicketStatus
   | REFUND_INITIATED
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FRFSTicketStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''FRFSTicketStatus))
