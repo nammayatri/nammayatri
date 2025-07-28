@@ -36,6 +36,7 @@ import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified SharedLogic.CreateFareForMultiModal as SMMFRFS
+import SharedLogic.FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as MultiModalBus
@@ -43,9 +44,8 @@ import qualified Storage.CachedQueries.Merchant.MultiModalSuburban as MultiModal
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.RouteStopTimeTable as GRSM
 import Storage.GraphqlQueries.Client (mapToServiceTierType)
-import qualified Storage.Queries.FRFSTicketBokingPayment as QFRFSTicketBookingPayment
+import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
-import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RecentLocation as SQRL
 import qualified Storage.Queries.VehicleRouteMapping as QVehicleRouteMapping
 import qualified System.Environment as Se
@@ -705,28 +705,30 @@ createRecentLocationForMultimodal journey = do
           SQRL.create recentLocation
     _ -> return ()
 
-postMultimodalPaymentUpdateOrderUtil :: (ServiceFlow m r, EncFlow m r, EsqDBReplicaFlow m r, HasField "isMetroTestTransaction" r Bool) => TPayment.PaymentServiceType -> Id Person -> Id Merchant -> [DFRFSTicketBooking.FRFSTicketBooking] -> m (Maybe DOrder.PaymentOrder)
-postMultimodalPaymentUpdateOrderUtil paymentType personId merchantId bookings = do
-  person <- QP.findById personId >>= fromMaybeM (InvalidRequest "Person not found")
+postMultimodalPaymentUpdateOrderUtil :: (ServiceFlow m r, EncFlow m r, EsqDBReplicaFlow m r, HasField "isMetroTestTransaction" r Bool) => TPayment.PaymentServiceType -> Person -> Id Merchant -> Id MerchantOperatingCity -> [DFRFSTicketBooking.FRFSTicketBooking] -> m (Maybe DOrder.PaymentOrder)
+postMultimodalPaymentUpdateOrderUtil paymentType person merchantId merchantOperatingCityId bookings = do
   frfsConfig <-
     CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow person.merchantOperatingCityId []
       >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> show person.merchantOperatingCityId)
-  frfsBookingsPayments <- mapMaybeM (QFRFSTicketBookingPayment.findByBookingId . (.id)) bookings
-  case listToMaybe frfsBookingsPayments of
-    Nothing -> return Nothing
-    Just frfsBookingPayment -> do
-      (_vendorSplitDetails, amountUpdated) <- SMMFRFS.createVendorSplitFromBookings bookings merchantId person.merchantOperatingCityId paymentType frfsConfig.isFRFSTestingEnabled
-      isSplitEnabled <- TPayment.getIsSplitEnabled merchantId person.merchantOperatingCityId Nothing paymentType -- TODO :: You can be moved inside :)
-      let splitDetails = TPayment.mkUnaggregatedSplitSettlementDetails isSplitEnabled amountUpdated _vendorSplitDetails
-      paymentOrder <- QOrder.findById frfsBookingPayment.paymentOrderId >>= fromMaybeM (PaymentOrderNotFound frfsBookingPayment.paymentOrderId.getId)
-      let updateReq =
-            KT.OrderUpdateReq
-              { amount = amountUpdated,
-                orderShortId = paymentOrder.shortId.getShortId,
-                splitSettlementDetails = splitDetails
-              }
-      _ <- TPayment.updateOrder person.merchantId person.merchantOperatingCityId Nothing TPayment.FRFSMultiModalBooking (Just person.id.getId) person.clientSdkVersion updateReq
-      QOrder.updateAmount paymentOrder.id amountUpdated
-      let updatedOrder :: DOrder.PaymentOrder
-          updatedOrder = paymentOrder {DOrder.amount = amountUpdated}
-      return $ Just updatedOrder
+  frfsBookingsPayments <- mapMaybeM (QFRFSTicketBookingPayment.findNewTBPByBookingId . (.id)) bookings
+  (vendorSplitDetails, amountUpdated) <- SMMFRFS.createVendorSplitFromBookings bookings merchantId person.merchantOperatingCityId paymentType frfsConfig.isFRFSTestingEnabled
+  isSplitEnabled <- TPayment.getIsSplitEnabled merchantId person.merchantOperatingCityId Nothing paymentType -- TODO :: You can be moved inside :)
+  let splitDetails = TPayment.mkUnaggregatedSplitSettlementDetails isSplitEnabled amountUpdated vendorSplitDetails
+  if frfsConfig.canUpdateExistingPaymentOrder
+    then do
+      case listToMaybe frfsBookingsPayments of
+        Nothing -> return Nothing
+        Just frfsBookingPayment -> do
+          paymentOrder <- QOrder.findById frfsBookingPayment.paymentOrderId >>= fromMaybeM (PaymentOrderNotFound frfsBookingPayment.paymentOrderId.getId)
+          let updateReq =
+                KT.OrderUpdateReq
+                  { amount = amountUpdated,
+                    orderShortId = paymentOrder.shortId.getShortId,
+                    splitSettlementDetails = splitDetails
+                  }
+          _ <- TPayment.updateOrder person.merchantId person.merchantOperatingCityId Nothing TPayment.FRFSMultiModalBooking (Just person.id.getId) person.clientSdkVersion updateReq
+          QOrder.updateAmount paymentOrder.id amountUpdated
+          let updatedOrder :: DOrder.PaymentOrder
+              updatedOrder = paymentOrder {DOrder.amount = amountUpdated}
+          return $ Just updatedOrder
+    else createPaymentOrder bookings merchantOperatingCityId merchantId amountUpdated person paymentType vendorSplitDetails
