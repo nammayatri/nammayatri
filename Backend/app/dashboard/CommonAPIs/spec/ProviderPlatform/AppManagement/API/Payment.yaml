@@ -11,14 +11,23 @@ module: Payment
 
 apis:
   - POST:
-      endpoint: /order/create/{requestorId}/{invoiceId}
+      endpoint: /order/create/{invoiceId}
       name: createPaymentOrder
       auth: ApiAuthV2
       params:
-        requestorId: Id Person
         invoiceId: Text
       response:
         type: CreateOrderResp
+      helperApi:
+        - POST:
+            endpoint: /order/{invoiceId}/{requestorId}
+            name: createPaymentOrder
+            auth: ApiAuthV2
+            params:
+              invoiceId: Text
+              requestorId: Id Person
+            response:
+              type: CreateOrderResp
   - GET:
       endpoint: /order/{orderId}
       auth: ApiAuthV2

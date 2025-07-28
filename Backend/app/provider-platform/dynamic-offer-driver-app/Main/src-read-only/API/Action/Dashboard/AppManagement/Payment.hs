@@ -26,7 +26,7 @@ import Tools.Auth
 handler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Environment.FlowServer API.Types.Dashboard.AppManagement.Payment.API)
 handler merchantId city = createPaymentOrder merchantId city :<|> getPaymentOrder merchantId city :<|> getPaymentOrderStatus merchantId city
 
-createPaymentOrder :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Dashboard.Common.Person -> Kernel.Prelude.Text -> Environment.FlowHandler Kernel.External.Payment.Juspay.Types.CreateOrder.CreateOrderResp)
+createPaymentOrder :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Kernel.Types.Id.Id Dashboard.Common.Person -> Environment.FlowHandler Kernel.External.Payment.Juspay.Types.CreateOrder.CreateOrderResp)
 createPaymentOrder a4 a3 a2 a1 = withDashboardFlowHandlerAPI $ Domain.Action.Dashboard.AppManagement.Payment.createPaymentOrder a4 a3 a2 a1
 
 getPaymentOrder :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.Text -> Kernel.Types.Id.Id Dashboard.Common.Person -> Environment.FlowHandler Lib.Payment.Domain.Types.PaymentOrder.PaymentOrderAPIEntity)
