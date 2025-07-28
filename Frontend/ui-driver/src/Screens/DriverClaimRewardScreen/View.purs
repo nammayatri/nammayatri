@@ -1,6 +1,6 @@
 module Screens.DriverClaimRewardScreen.View where
 
-import Prelude (Unit, const, map, not, ($), (<<<), (<>), (==), (>), show, (<=), pure,(>=),(<),unit,(-),(&&))
+import Prelude (Unit, const, map, not, ($), (<<<), (<>), (==), (>), show, (<=), pure,(>=),(<),unit,(-),(&&), bind, when, void, discard)
 import Effect (Effect)
 import Data.Array (length, take, drop, mapWithIndex,(!!))
 import Font.Size as FontSize
@@ -8,12 +8,12 @@ import Font.Style as FontStyle
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), rippleColor,PrestoDOM, LoggableScreen, Visibility(..),scrollView, scrollBarY, afterRender, alpha, background, color, cornerRadius, fontStyle,relativeLayout, gravity, height, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, stroke, text, textSize, textView, weight, width, frameLayout, visibility, clickable, singleLine, id,alignParentBottom,textFromHtml)
-import Screens.DriverClaimRewardScreen.Controller (Action(..), ScreenOutput, eval)
+import Screens.DriverClaimRewardScreen.Controller (Action(..), ScreenOutput, eval, getVideoBannerConfigs)
 import Screens.Types as ST
 import Styles.Colors as Color
 import Helpers.Utils (fetchImage, FetchImageFrom(..), convertEpochToDateFormat)
 import Debug
-import Data.Maybe (Maybe(..), fromMaybe)
+import Data.Maybe (Maybe(..), fromMaybe, maybe)
 import Data.Function.Uncurried (runFn5)
 import Common.Types.App (LazyCheck(..))
 import Common.Types.App (YoutubeData(..), YoutubeVideoStatus(..))
@@ -22,6 +22,15 @@ import JBridge (setYoutubePlayer, openUrlInApp)
 import Data.Int (toNumber)
 import Resource.Localizable.TypesV2 as LT2
 import Resource.Localizable.StringsV2 (getStringV2)
+import PrestoDOM.List (ListItem, preComputeListItem)
+import CarouselHolder as CarouselHolder
+import Components.BannerCarousel as Carousel
+import Data.Maybe (isNothing)
+import Effect.Aff (launchAff, launchAff_, apathize)
+import Engineering.Helpers.Commons (flowRunner, liftFlow)
+import Types.App (defaultGlobalState)
+import Presto.Core.Types.Language.Flow (Flow)
+import Types.App (GlobalState(..))
 
 type Benefit = { icon :: String, label :: String, description :: String }
 type FAQ = { question :: String, answer :: String }
@@ -31,7 +40,10 @@ screen initialState =
   { initialState
   , view
   , name: "DriverClaimRewardScreen"
-  , globalEvents: []
+  , globalEvents: [ \push -> do
+                    when (isNothing initialState.data.bannerData.bannerItem) $ void $ launchAff $ flowRunner defaultGlobalState $ computeListItem push
+                    pure $ pure unit
+  ]
   , eval:
       ( \state action -> do
           let _ = spy "DriverClaimRewardScreenState -----" state
@@ -41,6 +53,11 @@ screen initialState =
   , parent : Nothing
   , logWhitelist : []
   }
+
+computeListItem :: (Action -> Effect Unit) -> Flow GlobalState Unit
+computeListItem push = do
+  bannerItem <- preComputeListItem $ Carousel.view push (Carousel.config BannerCarousal)
+  liftFlow $ push (SetBannerItem bannerItem)
 
 view :: forall w. (Action -> Effect Unit) -> ST.DriverClaimRewardScreenState -> PrestoDOM (Effect Unit) w
 view push state =
@@ -137,6 +154,7 @@ scrollableContent push state =
     , infoCardForNonEligibility push state
     , benefitsSection push state
     , eligibilitySection push state
+    , maybe (linearLayout [] []) (\item -> getCarouselView item push state) state.data.bannerData.bannerItem
     , termsAndConditionsButton push state
     , linearLayout [ height $ V 100 ] []
     ]
@@ -585,6 +603,40 @@ faqQuestionView push state =
             ]
         ) (faqs state))
     ]
+
+getCarouselView :: forall w. ListItem -> (Action -> Effect Unit) -> ST.DriverClaimRewardScreenState -> PrestoDOM (Effect Unit) w
+getCarouselView view push state =
+  linearLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , orientation VERTICAL
+    , padding $ Padding 16 16 16 16
+    , visibility $ if state.data.driverRewardConfig.carouselVisibility then VISIBLE else GONE
+    ] [ textView $
+        [ text $ getString $ HOW_IT_WORKS ""
+        , color Color.black900
+        , margin $ MarginBottom 16
+        ] <> FontStyle.h2 TypoGraphy
+      , CarouselHolder.carouselView push $ getCarouselConfig view state]
+
+getCarouselConfig ∷ forall a. ListItem → ST.DriverClaimRewardScreenState → CarouselHolder.CarouselHolderConfig Carousel.PropConfig Action
+getCarouselConfig view state = {
+    view
+  , items : Carousel.bannerTransformer $ getVideoBannerConfigs state
+  , orientation : VERTICAL
+  , currentPage : state.data.bannerData.currentPage
+  , autoScroll : true
+  , autoScrollDelay : 5000.0
+  , id : "bannerCarousel"
+  , autoScrollAction : Just UpdateBanner
+  , onPageSelected : Just BannerChanged
+  , onPageScrollStateChanged : Just BannerStateChanged
+  , onPageScrolled : Nothing
+  , currentIndex : state.data.bannerData.currentBanner
+  , showScrollIndicator : true
+  , layoutHeight : V 100
+  , overlayScrollIndicator : true
+}
 
 termsAndConditionsButton :: forall w. (Action -> Effect Unit) -> ST.DriverClaimRewardScreenState -> PrestoDOM (Effect Unit) w
 termsAndConditionsButton push state =
