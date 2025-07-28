@@ -592,8 +592,6 @@ postFrfsQuoteV2ConfirmUtil :: CallExternalBPP.FRFSConfirmFlow m r => (Kernel.Pre
 postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req crisSdkResponse = do
   merchant <- CQM.findById merchantId_ >>= fromMaybeM (InvalidRequest "Invalid merchant id")
   (rider, dConfirmRes) <- confirm
-  -- handle (errHandler dConfirmRes.booking) $
-  --   void $ withShortRetry $ CallBPP.init dConfirmRes.bppSubscriberUrl becknInitReq
   merchantOperatingCity <- Common.getMerchantOperatingCityFromBooking dConfirmRes
   stations <- decodeFromText dConfirmRes.stationsJson & fromMaybeM (InternalError "Invalid stations jsons from db")
   let routeStations :: Maybe [FRFSRouteStationsAPI] = decodeFromText =<< dConfirmRes.routeStationsJson
@@ -615,6 +613,8 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req crisSdkResponse
     let validTill = addUTCTime (maybe 30 intToNominalDiffTime bapConfig.initTTLSec) now
     void $ QFRFSTicketBooking.updateValidTillById validTill dConfirmRes.id
     let dConfirmRes' = dConfirmRes {DFRFSTicketBooking.validTill = validTill}
+    when (dConfirmRes.status /= DFRFSTicketBooking.NEW) $ do
+      void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.NEW dConfirmRes.id
     CallExternalBPP.init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) dConfirmRes'
   return $ makeBookingStatusAPI dConfirmRes discounts routeStations stations merchantOperatingCity.city
   where

@@ -45,7 +45,6 @@ import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified Domain.Types.Common as DTrip
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.FRFSTicketBooking as DFRFSB
-import Domain.Types.FRFSTicketBookingPayment (FRFSTicketBookingPayment (..))
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Journey
 import qualified Domain.Types.JourneyFeedback as JFB
@@ -58,7 +57,6 @@ import EulerHS.Prelude hiding (all, any, concatMap, elem, find, forM_, id, lengt
 import qualified ExternalBPP.CallAPI as CallExternalBPP
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.MultiModal.Interface.Types as MultiModalTypes
-import qualified Kernel.External.Payment.Interface.Types as KT
 import qualified Kernel.External.Payment.Juspay.Types as Juspay
 import Kernel.Prelude hiding (foldl')
 import qualified Kernel.Storage.Hedis as Redis
@@ -74,7 +72,6 @@ import Lib.JourneyModule.Location
 import qualified Lib.JourneyModule.Types as JMTypes
 import qualified Lib.JourneyModule.Utils as JLU
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
-import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.BecknConfig as CQBC
@@ -85,7 +82,6 @@ import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import Storage.Queries.FRFSSearch as QFRFSSearch
-import qualified Storage.Queries.FRFSTicketBokingPayment as QFRFSTicketBookingPayment
 import Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import Storage.Queries.Journey as QJourney
 import Storage.Queries.JourneyFeedback as SQJFB
@@ -326,19 +322,6 @@ postMultimodalOrderSwitchTaxi (_, _) journeyId legOrder req = do
         Select.BookingAlreadyCreated -> throwError (InternalError $ "Cannot cancel search as booking is already created for searchId: " <> show legSearchId.getId)
         Select.FailedToCancel -> throwError (InvalidRequest $ "Failed to cancel search for searchId: " <> show legSearchId.getId)
 
-updateFRFSBookingAndPayment ::
-  Domain.Types.Person.Person ->
-  DFRFSB.FRFSTicketBooking ->
-  HighPrecMoney ->
-  FRFSTicketBookingPayment ->
-  Environment.Flow ()
-updateFRFSBookingAndPayment person booking totalPrice payment = do
-  QFRFSTicketBooking.updateByPrimaryKey booking
-  order <- QOrder.findById payment.paymentOrderId >>= fromMaybeM (PaymentOrderNotFound payment.paymentOrderId.getId)
-  let updateReq = KT.OrderUpdateReq {amount = totalPrice, orderShortId = order.shortId.getShortId, splitSettlementDetails = Nothing}
-  _ <- TPayment.updateOrder person.merchantId person.merchantOperatingCityId Nothing TPayment.FRFSMultiModalBooking (Just person.id.getId) person.clientSdkVersion updateReq
-  QOrder.updateAmount order.id totalPrice
-
 postMultimodalOrderSwitchFRFSTier ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
@@ -352,42 +335,8 @@ postMultimodalOrderSwitchFRFSTier (mbPersonId, merchantId) journeyId legOrder re
   journey <- JM.getJourney journeyId
   legs <- JM.getAllLegsInfo journeyId False
   journeyLegInfo <- find (\leg -> leg.order == legOrder) legs & fromMaybeM (InvalidRequest "No matching journey leg found for the given legOrder")
-  QFRFSSearch.updatePricingId (Id journeyLegInfo.searchId) (Just req.quoteId.getId)
-  personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
-  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  allJourneyFrfsBookings <- QFRFSTicketBooking.findAllByJourneyId (Just journeyId)
-  let mbBooking = find (\booking -> booking.searchId == Id journeyLegInfo.searchId) allJourneyFrfsBookings
-  whenJust mbBooking $ \booking -> do
-    quote <- QFRFSQuote.findById req.quoteId >>= fromMaybeM (InvalidRequest "Quote not found")
-    let quantity = booking.quantity
-        childTicketQuantity = fromMaybe 0 booking.childTicketQuantity
-        quantityRational = fromIntegral quantity :: Rational
-        childTicketQuantityRational = fromIntegral childTicketQuantity :: Rational
-        childPrice = fromMaybe quote.price quote.childPrice
-        totalPriceForSwitchLeg =
-          Price
-            { amount = HighPrecMoney $ (quote.price.amount.getHighPrecMoney * quantityRational) + (childPrice.amount.getHighPrecMoney * childTicketQuantityRational),
-              amountInt = Money $ (quote.price.amountInt.getMoney * quantity) + (childPrice.amountInt.getMoney * childTicketQuantity),
-              currency = quote.price.currency
-            }
-        updatedBooking =
-          booking
-            { DFRFSB.quoteId = req.quoteId,
-              DFRFSB.price = totalPriceForSwitchLeg,
-              DFRFSB.estimatedPrice = totalPriceForSwitchLeg
-            }
-        updatedTotalPrice =
-          foldl'
-            ( \acc booking' ->
-                if booking'.id == booking.id
-                  then acc + totalPriceForSwitchLeg.amount
-                  else acc + booking'.price.amount
-            )
-            (HighPrecMoney 0)
-            allJourneyFrfsBookings
-    mbPayment <- QFRFSTicketBookingPayment.findByBookingId booking.id
-    whenJust mbPayment $ \payment -> updateFRFSBookingAndPayment person updatedBooking updatedTotalPrice payment
   alternateShortNames <- getAlternateShortNames
+  QFRFSSearch.updatePricingId (Id journeyLegInfo.searchId) (Just req.quoteId.getId)
   QJourneyRouteDetails.updateAlternateShortNames alternateShortNames (Id journeyLegInfo.searchId)
   updatedLegs <- JM.getAllLegsInfo journeyId False
   generateJourneyInfoResponse journey updatedLegs
