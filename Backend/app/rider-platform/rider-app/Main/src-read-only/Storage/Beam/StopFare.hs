@@ -12,16 +12,16 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data StopFareT f = StopFareT
-  { amount :: (B.C f Kernel.Types.Common.HighPrecMoney),
-    currency :: (B.C f Kernel.Types.Common.Currency),
-    endStopCode :: (B.C f Kernel.Prelude.Text),
-    farePolicyId :: (B.C f Kernel.Prelude.Text),
-    integratedBppConfigId :: (B.C f Kernel.Prelude.Text),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    startStopCode :: (B.C f Kernel.Prelude.Text),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { amount :: B.C f Kernel.Types.Common.HighPrecMoney,
+    currency :: B.C f Kernel.Types.Common.Currency,
+    endStopCode :: B.C f Kernel.Prelude.Text,
+    farePolicyId :: B.C f Kernel.Prelude.Text,
+    integratedBppConfigId :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    startStopCode :: B.C f Kernel.Prelude.Text,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -31,6 +31,6 @@ instance B.Table StopFareT where
 
 type StopFare = StopFareT Identity
 
-$(enableKVPG (''StopFareT) [('endStopCode), ('farePolicyId), ('startStopCode)] [])
+$(enableKVPG ''StopFareT ['endStopCode, 'farePolicyId, 'startStopCode] [])
 
-$(mkTableInstances (''StopFareT) "route_stop_fare")
+$(mkTableInstances ''StopFareT "route_stop_fare")

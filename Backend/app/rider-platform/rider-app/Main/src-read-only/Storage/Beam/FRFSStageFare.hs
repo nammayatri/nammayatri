@@ -12,14 +12,14 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data FRFSStageFareT f = FRFSStageFareT
-  { amount :: (B.C f Kernel.Types.Common.HighPrecMoney),
-    currency :: (B.C f Kernel.Types.Common.Currency),
-    farePolicyId :: (B.C f Kernel.Prelude.Text),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    stage :: (B.C f Kernel.Prelude.Int),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { amount :: B.C f Kernel.Types.Common.HighPrecMoney,
+    currency :: B.C f Kernel.Types.Common.Currency,
+    farePolicyId :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    stage :: B.C f Kernel.Prelude.Int,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -29,6 +29,6 @@ instance B.Table FRFSStageFareT where
 
 type FRFSStageFare = FRFSStageFareT Identity
 
-$(enableKVPG (''FRFSStageFareT) [('farePolicyId), ('stage)] [])
+$(enableKVPG ''FRFSStageFareT ['farePolicyId, 'stage] [])
 
-$(mkTableInstances (''FRFSStageFareT) "frfs_stage_fare")
+$(mkTableInstances ''FRFSStageFareT "frfs_stage_fare")
