@@ -31,6 +31,7 @@ import Domain.Types.FRFSRouteFareProduct
 import qualified Domain.Types.FRFSTicket as DFRFSTicket
 import qualified Domain.Types.FRFSTicket as DT
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
+import qualified Domain.Types.FRFSTicketBooking as FTBooking
 import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
 import qualified Domain.Types.FRFSTicketBookingPayment as DTBP
 import Domain.Types.FRFSTicketDiscount as DFRFSTicketDiscount
@@ -48,6 +49,7 @@ import qualified Domain.Types.RouteTripMapping as DRTM
 import qualified Domain.Types.Station as Station
 import EulerHS.Prelude (comparing, concatMapM, (+||), (||+))
 import Kernel.Beam.Functions as B
+import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Maps.Google.PolyLinePoints as KEPP
 import Kernel.External.Maps.Types ()
 import qualified Kernel.External.Payment.Interface.Types as Payment
@@ -62,6 +64,9 @@ import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
+import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
+import qualified Lib.Payment.Domain.Types.PaymentOrder as PaymentOrder
+import Lib.Payment.Storage.Beam.BeamFlow
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types as LYT
@@ -82,8 +87,8 @@ import Storage.Queries.FRFSRouteFareProduct as QFRFSRouteFareProduct
 import Storage.Queries.FRFSRouteStopStageFare as QFRFSRouteStopStageFare
 import Storage.Queries.FRFSStageFare as QFRFSStageFare
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
-import qualified Storage.Queries.FRFSTicketBokingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
+import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
 import Storage.Queries.FRFSTicketDiscount as QFRFSTicketDiscount
 import Storage.Queries.FRFSVehicleServiceTier as QFRFSVehicleServiceTier
 import qualified Storage.Queries.Journey as QJourney
@@ -725,7 +730,7 @@ markAllRefundBookings booking personId = do
     logInfo $ "payment status api markAllRefundBookings: " <> show failedBookings
     logInfo $ "allFailed flag in markAllRefundBookings: " <> show allFailed
     person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-    payments <- mapM (QFRFSTicketBookingPayment.findByBookingId . (.id)) failedBookings
+    payments <- mapM (QFRFSTicketBookingPayment.findNewTBPByBookingId . (.id)) failedBookings
     orderShortId <- case listToMaybe (catMaybes payments) of
       Just payment -> do
         order <- QPaymentOrder.findById payment.paymentOrderId >>= fromMaybeM (PaymentOrderNotFound payment.paymentOrderId.getId)
@@ -761,3 +766,86 @@ markAllRefundBookings booking personId = do
         Right _ -> logInfo $ "Refund service completed successfully for journey " <> reqId
       logInfo $ "payment status api markAllRefundBookings completed"
       pure ()
+
+createPaymentOrder ::
+  ( EsqDBReplicaFlow m r,
+    BeamFlow m r,
+    EncFlow m r,
+    ServiceFlow m r,
+    HasField "isMetroTestTransaction" r Bool
+  ) =>
+  [FTBooking.FRFSTicketBooking] ->
+  Id DMOC.MerchantOperatingCity ->
+  Id Merchant.Merchant ->
+  HighPrecMoney ->
+  DP.Person ->
+  Payment.PaymentServiceType ->
+  [Payment.VendorSplitDetails] ->
+  m (Maybe DOrder.PaymentOrder)
+createPaymentOrder bookings merchantOperatingCityId merchantId amount person paymentType vendorSplitArr = do
+  logInfo $ "createPayments vendorSplitArr" <> show vendorSplitArr
+  personPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
+  personEmail <- mapM decrypt person.email
+  (orderId, orderShortId) <- getPaymentIds
+  ticketBookingPayments' <- processPayments orderId `mapM` bookings
+  QFRFSTicketBookingPayment.createMany ticketBookingPayments'
+  isSplitEnabled <- Payment.getIsSplitEnabled merchantId merchantOperatingCityId Nothing paymentType
+  let createOrderReq =
+        Payment.CreateOrderReq
+          { orderId = orderId.getId,
+            orderShortId = orderShortId,
+            amount = amount,
+            customerId = person.id.getId,
+            customerEmail = fromMaybe "test@gmail.com" personEmail,
+            customerPhone = personPhone,
+            customerFirstName = person.firstName,
+            customerLastName = person.lastName,
+            createMandate = Nothing,
+            mandateMaxAmount = Nothing,
+            mandateFrequency = Nothing,
+            mandateEndDate = Nothing,
+            mandateStartDate = Nothing,
+            optionsGetUpiDeepLinks = Nothing,
+            metadataExpiryInMins = Nothing,
+            metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
+            splitSettlementDetails = Payment.mkUnaggregatedSplitSettlementDetails isSplitEnabled amount vendorSplitArr
+          }
+  let mocId = merchantOperatingCityId
+      commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant merchantId
+      commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person person.id
+      commonMerchantOperatingCityId = Kernel.Types.Id.cast @DMOC.MerchantOperatingCity @DPayment.MerchantOperatingCity merchantOperatingCityId
+      createOrderCall = Payment.createOrder merchantId mocId Nothing paymentType (Just person.id.getId) person.clientSdkVersion
+  orderResp <- DPayment.createOrderService commonMerchantId (Just $ cast mocId) commonPersonId createOrderReq createOrderCall
+  mapM (DPayment.buildPaymentOrder commonMerchantId (Just commonMerchantOperatingCityId) commonPersonId createOrderReq) orderResp
+  where
+    getPaymentIds = do
+      orderShortId <- generateShortId
+      orderId <- generateGUID
+      isMetroTestTransaction <- asks (.isMetroTestTransaction)
+      let updatedOrderShortId = bool (orderShortId.getShortId) ("test-" <> orderShortId.getShortId) isMetroTestTransaction
+      return (orderId, updatedOrderShortId)
+
+    processPayments ::
+      ( EsqDBReplicaFlow m r,
+        BeamFlow m r,
+        EncFlow m r,
+        ServiceFlow m r
+      ) =>
+      Id PaymentOrder.PaymentOrder ->
+      FTBooking.FRFSTicketBooking ->
+      m DFRFSTicketBookingPayment.FRFSTicketBookingPayment
+    processPayments orderId booking = do
+      ticketBookingPaymentId <- generateGUID
+      now <- getCurrentTime
+      let ticketBookingPayment =
+            DFRFSTicketBookingPayment.FRFSTicketBookingPayment
+              { frfsTicketBookingId = booking.id,
+                id = ticketBookingPaymentId,
+                status = DFRFSTicketBookingPayment.PENDING,
+                merchantId = Just booking.merchantId,
+                merchantOperatingCityId = Just booking.merchantOperatingCityId,
+                createdAt = now,
+                updatedAt = now,
+                paymentOrderId = orderId
+              }
+      return ticketBookingPayment

@@ -236,8 +236,9 @@ postMultimodalPaymentUpdateOrder ::
   )
 postMultimodalPaymentUpdateOrder (mbPersonId, merchantId) journeyId _req = do
   personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
+  person <- QP.findById personId >>= fromMaybeM (InvalidRequest "Person not found")
   allJourneyBookings <- QFRFSTicketBooking.findAllByJourneyIdCond (Just journeyId)
-  mbUpdatedOrder <- JLU.postMultimodalPaymentUpdateOrderUtil TPayment.FRFSMultiModalBooking personId merchantId allJourneyBookings
+  mbUpdatedOrder <- JLU.postMultimodalPaymentUpdateOrderUtil TPayment.FRFSMultiModalBooking person merchantId person.merchantOperatingCityId allJourneyBookings
   case mbUpdatedOrder of
     Nothing ->
       return $

@@ -17,13 +17,10 @@ module Domain.Action.Beckn.FRFS.OnInit where
 import qualified BecknV2.FRFS.Enums as Spec
 import Domain.Action.Beckn.FRFS.Common (DFareBreakUp)
 import qualified Domain.Types.FRFSTicketBooking as FTBooking
-import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import Kernel.Beam.Functions
-import Kernel.External.Encryption (decrypt)
-import qualified Kernel.External.Payment.Interface.Types as Payment
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
@@ -32,11 +29,9 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.JourneyModule.Utils as JourneyUtils
-import qualified Lib.Payment.Domain.Action as DPayment
-import qualified Lib.Payment.Domain.Types.Common as DPayment
-import qualified Lib.Payment.Domain.Types.PaymentOrder as PaymentOrder
 import Lib.Payment.Storage.Beam.BeamFlow
 import SharedLogic.CreateFareForMultiModal (createVendorSplitFromBookings)
+import SharedLogic.FRFSUtils
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import qualified Storage.CachedQueries.Merchant as QMerch
@@ -114,31 +109,6 @@ onInit onInitReq merchant oldBooking = do
       Spec.SUBWAY -> Payment.FRFSBooking
     key journeyId = "initJourney-" <> journeyId.getId
 
-processPayments ::
-  ( EsqDBReplicaFlow m r,
-    BeamFlow m r,
-    EncFlow m r,
-    ServiceFlow m r
-  ) =>
-  Id PaymentOrder.PaymentOrder ->
-  FTBooking.FRFSTicketBooking ->
-  m DFRFSTicketBookingPayment.FRFSTicketBookingPayment
-processPayments orderId booking = do
-  ticketBookingPaymentId <- generateGUID
-  now <- getCurrentTime
-  let ticketBookingPayment =
-        DFRFSTicketBookingPayment.FRFSTicketBookingPayment
-          { frfsTicketBookingId = booking.id,
-            id = ticketBookingPaymentId,
-            status = DFRFSTicketBookingPayment.PENDING,
-            merchantId = Just booking.merchantId,
-            merchantOperatingCityId = Just booking.merchantOperatingCityId,
-            createdAt = now,
-            updatedAt = now,
-            paymentOrderId = orderId
-          }
-  return ticketBookingPayment
-
 createPayments ::
   ( EsqDBReplicaFlow m r,
     BeamFlow m r,
@@ -155,45 +125,14 @@ createPayments ::
   [Payment.VendorSplitDetails] ->
   m ()
 createPayments bookings merchantOperatingCityId merchantId amount person paymentType vendorSplitArr = do
-  ticketBookingPayments <- mapM (fmap isNothing . QFRFSTicketBookingPayment.findByBookingId . (.id)) bookings
+  ticketBookingPaymentsExist <- mapM (fmap isNothing . QFRFSTicketBookingPayment.findNewTBPByBookingId . (.id)) bookings
   isPaymentOrderProcessed <-
-    if and ticketBookingPayments
+    if and ticketBookingPaymentsExist
       then do
-        logInfo $ "createPayments vendorSplitArr" <> show vendorSplitArr
-        personPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
-        personEmail <- mapM decrypt person.email
-        (orderId, orderShortId) <- getPaymentIds
-        ticketBookingPayments' <- processPayments orderId `mapM` bookings
-        QFRFSTicketBookingPayment.createMany ticketBookingPayments'
-        isSplitEnabled <- Payment.getIsSplitEnabled merchantId merchantOperatingCityId Nothing paymentType
-        let createOrderReq =
-              Payment.CreateOrderReq
-                { orderId = orderId.getId,
-                  orderShortId = orderShortId,
-                  amount = amount,
-                  customerId = person.id.getId,
-                  customerEmail = fromMaybe "test@gmail.com" personEmail,
-                  customerPhone = personPhone,
-                  customerFirstName = person.firstName,
-                  customerLastName = person.lastName,
-                  createMandate = Nothing,
-                  mandateMaxAmount = Nothing,
-                  mandateFrequency = Nothing,
-                  mandateEndDate = Nothing,
-                  mandateStartDate = Nothing,
-                  optionsGetUpiDeepLinks = Nothing,
-                  metadataExpiryInMins = Nothing,
-                  metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
-                  splitSettlementDetails = Payment.mkUnaggregatedSplitSettlementDetails isSplitEnabled amount vendorSplitArr
-                }
-        let mocId = merchantOperatingCityId
-            commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant merchantId
-            commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person person.id
-            createOrderCall = Payment.createOrder merchantId mocId Nothing paymentType (Just person.id.getId) person.clientSdkVersion
-        orderResp <- DPayment.createOrderService commonMerchantId (Just $ cast mocId) commonPersonId createOrderReq createOrderCall
-        return $ isJust orderResp
+        paymentOrder <- createPaymentOrder bookings merchantOperatingCityId merchantId amount person paymentType vendorSplitArr
+        return $ isJust paymentOrder
       else do
-        updatedPaymentOrder <- JourneyUtils.postMultimodalPaymentUpdateOrderUtil paymentType person.id merchantId bookings
+        updatedPaymentOrder <- JourneyUtils.postMultimodalPaymentUpdateOrderUtil paymentType person merchantId merchantOperatingCityId bookings
         return $ isJust updatedPaymentOrder
   if isPaymentOrderProcessed
     then markBookingApproved `mapM_` bookings
@@ -201,12 +140,6 @@ createPayments bookings merchantOperatingCityId merchantId amount person payment
       markBookingFailed `mapM_` bookings
       throwError $ InternalError "Failed to create order with Euler after on_int in FRFS"
   where
-    getPaymentIds = do
-      orderShortId <- generateShortId
-      orderId <- generateGUID
-      isMetroTestTransaction <- asks (.isMetroTestTransaction)
-      let updatedOrderShortId = bool (orderShortId.getShortId) ("test-" <> orderShortId.getShortId) isMetroTestTransaction
-      return (orderId, updatedOrderShortId)
     markBookingApproved booking = do
       void $ QFRFSTicketBooking.updateBPPOrderIdAndStatusById booking.bppOrderId FTBooking.APPROVED booking.id
       void $ QFRFSTicketBooking.updateFinalPriceById (Just booking.price) booking.id
