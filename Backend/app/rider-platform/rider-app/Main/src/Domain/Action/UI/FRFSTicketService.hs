@@ -687,7 +687,7 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req crisSdkResponse
                 merchantId = quote.merchantId,
                 price = discountedPrice,
                 estimatedPrice = discountedPrice,
-                finalPrice = Nothing,
+                finalPrice = Nothing, -- TODO :: Analytics Kind of Pricing, not sent to UI
                 paymentTxnId = Nothing,
                 bppBankAccountNumber = Nothing,
                 bppBankCode = Nothing,

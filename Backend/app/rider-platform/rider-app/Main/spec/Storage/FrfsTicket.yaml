@@ -431,9 +431,9 @@ FRFSTicketBooking:
       kvFunction: updateWithKV
       params: [finalPrice, updatedAt]
       where: id
-    updatePriceById:
+    updatePriceAndQuantityById:
       kvFunction: updateWithKV
-      params: [price, updatedAt]
+      params: [price, quantity, childTicketQuantity, updatedAt]
       where: id
     updateBppBankDetailsById:
       kvFunction: updateWithKV
@@ -576,8 +576,8 @@ FRFSTicketBookingPayment:
     findById:
       kvFunction: findOneWithKV
       where: id
-    findAllTicketBookingId:
-      kvFunction: findAllWithKV
+    findByBookingId:
+      kvFunction: findOneWithKV
       where: frfsTicketBookingId
     findByPaymentOrderId:
       kvFunction: findOneWithKV

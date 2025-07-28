@@ -214,6 +214,7 @@ getMultimodalBookingPaymentStatus (mbPersonId, merchantId) journeyId = do
             paymentFareUpdate = Nothing
           }
 
+-- TODO :: To be deprecated @Kavyashree
 postMultimodalPaymentUpdateOrder ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
@@ -222,9 +223,10 @@ postMultimodalPaymentUpdateOrder ::
     API.Types.UI.MultimodalConfirm.UpdatePaymentOrderReq ->
     Environment.Flow API.Types.UI.MultimodalConfirm.UpdatePaymentOrderResp
   )
-postMultimodalPaymentUpdateOrder (mbPersonId, _merchantId) journeyId req = do
+postMultimodalPaymentUpdateOrder (mbPersonId, merchantId) journeyId _req = do
   personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
-  mbUpdatedOrder <- JLU.postMultimodalPaymentUpdateOrderUtil personId _merchantId (Just journeyId) req.quantity req.childTicketQuantity
+  allJourneyBookings <- QFRFSTicketBooking.findAllByJourneyIdCond (Just journeyId)
+  mbUpdatedOrder <- JLU.postMultimodalPaymentUpdateOrderUtil TPayment.FRFSMultiModalBooking personId merchantId allJourneyBookings
   case mbUpdatedOrder of
     Nothing ->
       return $
@@ -368,8 +370,8 @@ postMultimodalOrderSwitchFRFSTier (mbPersonId, merchantId) journeyId legOrder re
             )
             (HighPrecMoney 0)
             allJourneyFrfsBookings
-    payments <- QFRFSTicketBookingPayment.findAllTicketBookingId booking.id
-    whenJust (listToMaybe payments) $ \payment -> updateFRFSBookingAndPayment person updatedBooking updatedTotalPrice payment
+    mbPayment <- QFRFSTicketBookingPayment.findByBookingId booking.id
+    whenJust mbPayment $ \payment -> updateFRFSBookingAndPayment person updatedBooking updatedTotalPrice payment
   alternateShortNames <- getAlternateShortNames
   QJourneyRouteDetails.updateAlternateShortNames alternateShortNames (Id journeyLegInfo.searchId)
   updatedLegs <- JM.getAllLegsInfo journeyId False

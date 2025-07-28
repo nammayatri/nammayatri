@@ -725,8 +725,8 @@ markAllRefundBookings booking personId = do
     logInfo $ "payment status api markAllRefundBookings: " <> show failedBookings
     logInfo $ "allFailed flag in markAllRefundBookings: " <> show allFailed
     person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-    payments <- concat <$> mapM (QFRFSTicketBookingPayment.findAllTicketBookingId . (.id)) failedBookings
-    orderShortId <- case listToMaybe payments of
+    payments <- mapM (QFRFSTicketBookingPayment.findByBookingId . (.id)) failedBookings
+    orderShortId <- case listToMaybe (catMaybes payments) of
       Just payment -> do
         order <- QPaymentOrder.findById payment.paymentOrderId >>= fromMaybeM (PaymentOrderNotFound payment.paymentOrderId.getId)
         pure order.shortId.getShortId

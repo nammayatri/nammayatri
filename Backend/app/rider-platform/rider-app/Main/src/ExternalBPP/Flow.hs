@@ -189,6 +189,8 @@ init merchant merchantOperatingCity integratedBPPConfig bapConfig (mRiderName, m
     DOnInit
       { providerId = bapConfig.uniqueKeyId,
         totalPrice = booking.price,
+        totalQuantity = booking.quantity,
+        totalChildTicketQuantity = booking.childTicketQuantity,
         fareBreakUp = [],
         bppItemId = CallAPI.getProviderName integratedBPPConfig,
         validTill = validTill,
