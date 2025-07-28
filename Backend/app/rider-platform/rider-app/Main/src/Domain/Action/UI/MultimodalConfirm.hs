@@ -104,7 +104,7 @@ validateMetroBusinessHours journeyId = do
   riderConfig <- QRC.findByMerchantOperatingCityId journey.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist journey.merchantOperatingCityId.getId)
   now <- getCurrentTime
   let isOutsideMetroBusinessHours = case (riderConfig.qrTicketRestrictionStartTime, riderConfig.qrTicketRestrictionEndTime) of
-        (Just start, Just end) -> JM.isOutsideRestrictionTime start end now riderConfig.timeDiffFromUtc
+        (Just start, Just end) -> JM.isWithinTimeBound start end now riderConfig.timeDiffFromUtc
         _ -> False
       hasMetroLeg = any (\leg -> leg.travelMode == DTrip.Metro) legs
   when (hasMetroLeg && isOutsideMetroBusinessHours) $
