@@ -835,8 +835,8 @@ mkLegInfoFromFrfsBooking booking distance duration entrance exit = do
           journeyLegDetail <- listToMaybe journeyLegInfo' & fromMaybeM (InternalError "Journey Leg Detail not found")
           journeyRouteDetail <- listToMaybe journeyRouteDetails' & fromMaybeM (InternalError "Journey Route Detail not found")
 
-          let fromStation = journeyLegDetail.destinationStop
-          let toStation = journeyLegDetail.originStop
+          let fromStation = journeyLegDetail.originStop
+          let toStation = journeyLegDetail.destinationStop
           let routeCode = journeyLegDetail.routeCode
 
           mbQuote <- QFRFSQuote.findById booking.quoteId
