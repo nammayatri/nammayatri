@@ -2187,6 +2187,7 @@ type DriverClaimRewardScreenData = {
   , driverTag :: String
   , driverRewardConfig :: RC.DriverRewardConfig
   , nyMemberProbationTill :: Maybe Int
+  , bannerData :: BannerCarousalData
 }
 
 type DriverClaimRewardScreenProps = {
