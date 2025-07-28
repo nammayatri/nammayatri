@@ -784,7 +784,7 @@ mkLegInfoFromFrfsBooking booking distance duration entrance exit = do
   let singleAdultPrice = roundToTwoDecimalPlaces . HighPrecMoney $ safeDiv (getHighPrecMoney booking.price.amount) (fromIntegral booking.quantity) -- TODO :: To be handled as single price cannot be obtained from this if more than 1 fare breakup (Child Quantity / Discounts)
       estimatedPrice =
         Price
-          { amount = HighPrecMoney singleAdultPrice,
+          { amount = singleAdultPrice,
             amountInt = Money $ roundToIntegral singleAdultPrice,
             currency = booking.price.currency
           }
@@ -836,8 +836,8 @@ mkLegInfoFromFrfsBooking booking distance duration entrance exit = do
           journeyLegDetail <- listToMaybe journeyLegInfo' & fromMaybeM (InternalError "Journey Leg Detail not found")
           journeyRouteDetail <- listToMaybe journeyRouteDetails' & fromMaybeM (InternalError "Journey Route Detail not found")
 
-          let fromStation = journeyLegDetail.destinationStop
-          let toStation = journeyLegDetail.originStop
+          let fromStation = journeyLegDetail.originStop
+          let toStation = journeyLegDetail.destinationStop
           let routeCode = journeyLegDetail.routeCode
 
           mbQuote <- QFRFSQuote.findById booking.quoteId
