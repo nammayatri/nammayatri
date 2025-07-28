@@ -36,7 +36,8 @@ data MerchantE e = Merchant
     enabled :: Maybe Bool,
     requireAdminApprovalForFleetOnboarding :: Maybe Bool,
     verifyFleetWhileLogin :: Maybe Bool,
-    hasFleetMemberHierarchy :: Maybe Bool
+    hasFleetMemberHierarchy :: Maybe Bool,
+    isStrongNameCheckRequired :: Maybe Bool
   }
   deriving (Generic)
 
