@@ -367,7 +367,8 @@ type WmbFlowConfig = {
   radiusMultiplier :: Number,
   updatePollingRadiusToClosestBus :: Boolean,
   enableTicketBooking :: Boolean,
-  disableTicketBookingInRoutes :: Array String
+  disableTicketBookingInRoutes :: Array String,
+  showBikeBannerTimerConfigInSeconds :: Int
 }
 
 type PollingConfigList = {
