@@ -718,7 +718,7 @@ addMetroLeg journey journeyLeg = do
   now <- getCurrentTime
   shouldSkip <- case (riderConfig.qrTicketRestrictionStartTime, riderConfig.qrTicketRestrictionEndTime) of
     (Just startTime, Just endTime) -> do
-      let isOutsideRestrictedHours = isOutsideRestrictionTime startTime endTime now riderConfig.timeDiffFromUtc
+      let isOutsideRestrictedHours = not $ isWithinTimeBound startTime endTime now riderConfig.timeDiffFromUtc
       let isMetroBookingAllowed = fromMaybe True riderConfig.metroBookingAllowed
       return $ not (isOutsideRestrictedHours && isMetroBookingAllowed)
     _ -> do
@@ -789,8 +789,8 @@ addBusLeg journey journeyLeg = do
             journeyLeg
           }
 
-isOutsideRestrictionTime :: Time.TimeOfDay -> Time.TimeOfDay -> UTCTime -> Seconds -> Bool
-isOutsideRestrictionTime startTime endTime now timeDiffFromUtc =
+isWithinTimeBound :: Time.TimeOfDay -> Time.TimeOfDay -> UTCTime -> Seconds -> Bool
+isWithinTimeBound startTime endTime now timeDiffFromUtc =
   let tzMinutes = getSeconds timeDiffFromUtc `div` 60
       tz = Time.minutesToTimeZone tzMinutes
       nowAsLocal = Time.utcToLocalTime tz now
@@ -801,7 +801,7 @@ isOutsideRestrictionTime startTime endTime now timeDiffFromUtc =
         if startTime <= endTime
           then nowTOD >= startTime && nowTOD <= endTime
           else nowTOD >= startTime || nowTOD <= endTime
-   in not inWindow
+   in inWindow
 
 getRemainingLegs ::
   (JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
