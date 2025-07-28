@@ -101,6 +101,19 @@ import Tools.Error
 import Tools.MultiModal as MM
 import qualified Tools.Payment as TPayment
 
+validateMetroBusinessHours :: Id Domain.Types.Journey.Journey -> Environment.Flow ()
+validateMetroBusinessHours journeyId = do
+  journey <- JM.getJourney journeyId
+  legs <- JM.getAllLegsInfo journeyId False
+  riderConfig <- QRC.findByMerchantOperatingCityId journey.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist journey.merchantOperatingCityId.getId)
+  now <- getCurrentTime
+  let isOutsideMetroBusinessHours = case (riderConfig.qrTicketRestrictionStartTime, riderConfig.qrTicketRestrictionEndTime) of
+        (Just start, Just end) -> JM.isOutsideRestrictionTime start end now riderConfig.timeDiffFromUtc
+        _ -> False
+      hasMetroLeg = any (\leg -> leg.travelMode == DTrip.Metro) legs
+  when (hasMetroLeg && isOutsideMetroBusinessHours) $
+    throwError $ InvalidRequest "Metro booking not allowed outside business hours"
+
 postMultimodalInitiate ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
@@ -110,6 +123,7 @@ postMultimodalInitiate ::
   )
 postMultimodalInitiate (_personId, _merchantId) journeyId = do
   Redis.withLockRedisAndReturnValue lockKey 60 $ do
+    validateMetroBusinessHours journeyId
     journeyLegs <- getJourneyLegs journeyId
     addAllLegs journeyId (Just journeyLegs) journeyLegs
     journey <- JM.getJourney journeyId
@@ -129,6 +143,7 @@ postMultimodalConfirm ::
     Environment.Flow Kernel.Types.APISuccess.APISuccess
   )
 postMultimodalConfirm (_, _) journeyId forcedBookLegOrder journeyConfirmReq = do
+  validateMetroBusinessHours journeyId
   journey <- JM.getJourney journeyId
   let confirmElements = journeyConfirmReq.journeyConfirmReqElements
   forM_ confirmElements $ \element -> do
