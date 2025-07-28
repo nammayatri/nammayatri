@@ -44,6 +44,7 @@ import qualified Kernel.External.Ticket.Interface.Types as TIT
 import Kernel.External.Types (Language (..))
 import Kernel.Prelude
 import qualified Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
@@ -116,26 +117,27 @@ createIssueReportV2 ::
   Identifier ->
   m APISuccess
 createIssueReportV2 _merchantShortId _city Common.IssueReportReqV2 {..} issueHandle identifier = do
-  when (identifier == DRIVER) $ do
-    throwError $ InvalidRequest "Driver cannot create issue report v2"
-  person <- issueHandle.findPersonById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  mbRide <- forM rideId \justRideId -> do
-    B.runInReplica (issueHandle.findRideById justRideId person.merchantId) >>= fromMaybeM (RideNotFound justRideId.getId)
-  let mocId = maybe person.merchantOperatingCityId (.merchantOperatingCityId) mbRide
-  config <- issueHandle.findMerchantConfig person.merchantId mocId (Just person.id)
-  UIR.processIssueReportTypeActions (person.id, person.merchantId) issueReportType mbRide (Just config) True identifier issueHandle
-  mbIssueChats <- QICT.findByTicketId ticketId
-  mbIssueReport <- QIR.findByTicketId ticketId
-  issueReport <- makeIssueReport mocId person
-  when (isNothing mbIssueReport) $ QIR.create issueReport
-  case mbIssueChats of
-    Nothing -> do
-      issueChat <- createIssueChat chats rideId mediaFiles (Just issueReport.id)
-      QICT.create issueChat
-    Just issueChat -> do
-      let updatedChats = issueChat.chats ++ chats
-      let updateMediaFiles = issueChat.mediaFiles ++ mediaFiles
-      QICT.updateChats ticketId updatedChats updateMediaFiles
+  Redis.withWaitOnLockRedisWithExpiry (issueTicketExecLockKey ticketId) 10 20 $ do
+    when (identifier == DRIVER) $ do
+      throwError $ InvalidRequest "Driver cannot create issue report v2"
+    person <- issueHandle.findPersonById personId >>= fromMaybeM (PersonNotFound personId.getId)
+    mbRide <- forM rideId \justRideId -> do
+      B.runInReplica (issueHandle.findRideById justRideId person.merchantId) >>= fromMaybeM (RideNotFound justRideId.getId)
+    let mocId = maybe person.merchantOperatingCityId (.merchantOperatingCityId) mbRide
+    config <- issueHandle.findMerchantConfig person.merchantId mocId (Just person.id)
+    UIR.processIssueReportTypeActions (person.id, person.merchantId) issueReportType mbRide (Just config) True identifier issueHandle
+    mbIssueChats <- QICT.findByTicketId ticketId
+    mbIssueReport <- QIR.findByTicketId ticketId
+    issueReport <- makeIssueReport mocId person
+    when (isNothing mbIssueReport) $ QIR.create issueReport
+    case mbIssueChats of
+      Nothing -> do
+        issueChat <- createIssueChat chats rideId mediaFiles (Just issueReport.id)
+        QICT.create issueChat
+      Just issueChat -> do
+        let updatedChats = issueChat.chats ++ chats
+        let updateMediaFiles = issueChat.mediaFiles ++ mediaFiles
+        QICT.updateChats ticketId updatedChats updateMediaFiles
   pure Success
   where
     createIssueChat chatList mbRide mediaFilesList issueReportId = do
@@ -406,70 +408,71 @@ ticketStatusCallBack reqJson issueHandle identifier = do
   req <- A.decode (A.encode reqJson) & fromMaybeM (InvalidRequest "Failed to parse TicketStatusCallBackReq")
   logError ("Parsed TicketStatusCallBackReq - " <> show req)
   transformedStatus <- transformKaptureStatus req
-  case transformedStatus of
-    RESOLVED -> do
-      issueReport <- QIR.findByTicketId req.ticketId >>= fromMaybeM (TicketDoesNotExist req.ticketId)
-      person <- issueHandle.findPersonById issueReport.personId >>= fromMaybeM (PersonNotFound issueReport.personId.getId)
-      merchantOpCityId <-
-        maybe
-          (return person.merchantOperatingCityId)
-          return
-          issueReport.merchantOperatingCityId
-      issueConfig <- CQI.findByMerchantOpCityId merchantOpCityId identifier >>= fromMaybeM (IssueConfigNotFound merchantOpCityId.getId)
-      let shouldUseCloseMsgs = issueReport.reopenedCount >= issueConfig.reopenCount
-          selectedMsgs = if shouldUseCloseMsgs then issueConfig.onIssueCloseMsgs else issueConfig.onKaptMarkIssueResMsgs
-      mbIssueMessages <- mapM (`CQIM.findById` identifier) selectedMsgs
-      let issueMessageIds = mapMaybe ((.id) <$>) mbIssueMessages
-      now <- getCurrentTime
-      let updatedChats =
-            issueReport.chats
-              ++ map
-                ( \id ->
-                    Chat
-                      { chatType = IssueMessage,
-                        chatId = id.getId,
-                        timestamp = now
-                      }
-                )
-                issueMessageIds
-      -- Get ticket details and update issueChat
-      merchantId <- maybe (return person.merchantId) (const $ return person.merchantId) issueReport.merchantId
-      kaptureData <- case issueHandle.kaptureGetTicket of
-        Just getTicketFunc -> do
-          ticketDetails <- getTicketFunc merchantId merchantOpCityId (TIT.GetTicketReq req.ticketId "all")
-          return $ case ticketDetails of
-            (firstTicket : _) -> Just firstTicket.conversationType.chat
-            [] -> Nothing
-        Nothing -> return Nothing
-      -- First check if row exists, then decide to create or update
-      mbIssueChat <- QICT.findByTicketId req.ticketId
-      case mbIssueChat of
-        Just _ -> do
-          QICT.updateChatsWithKaptureData req.ticketId [] [] kaptureData
-        Nothing -> do
-          issueChatId <- generateGUID
-          let newIssueChat =
-                DICT.IssueChat
-                  { id = issueChatId,
-                    ticketId = req.ticketId,
-                    rideId = issueReport.rideId,
-                    personId = issueReport.personId,
-                    chats = [],
-                    mediaFiles = [],
-                    kaptureData = kaptureData,
-                    issueReportId = Just issueReport.id,
-                    createdAt = now,
-                    updatedAt = now
-                  }
-          QICT.create newIssueChat
-      QIR.updateChats issueReport.id updatedChats
-      QIR.updateIssueStatus req.ticketId (if shouldUseCloseMsgs then CLOSED else transformedStatus)
-    PENDING_EXTERNAL -> case (req.subStatus, req.queue, issueHandle.mbSendUnattendedTicketAlert) of
-      (Just "Unattended", Just "SOS", Just sendUnattendedTicketAlert) -> sendUnattendedTicketAlert req.ticketId
-      _ -> do
-        _issueReport <- QIR.findByTicketId req.ticketId >>= fromMaybeM (TicketDoesNotExist req.ticketId)
-        QIR.updateIssueStatus req.ticketId transformedStatus
-    _ -> return ()
+  Redis.withWaitOnLockRedisWithExpiry (issueTicketExecLockKey req.ticketId) 10 20 $ do
+    case transformedStatus of
+      RESOLVED -> do
+        issueReport <- QIR.findByTicketId req.ticketId >>= fromMaybeM (TicketDoesNotExist req.ticketId)
+        person <- issueHandle.findPersonById issueReport.personId >>= fromMaybeM (PersonNotFound issueReport.personId.getId)
+        merchantOpCityId <-
+          maybe
+            (return person.merchantOperatingCityId)
+            return
+            issueReport.merchantOperatingCityId
+        issueConfig <- CQI.findByMerchantOpCityId merchantOpCityId identifier >>= fromMaybeM (IssueConfigNotFound merchantOpCityId.getId)
+        let shouldUseCloseMsgs = issueReport.reopenedCount >= issueConfig.reopenCount
+            selectedMsgs = if shouldUseCloseMsgs then issueConfig.onIssueCloseMsgs else issueConfig.onKaptMarkIssueResMsgs
+        mbIssueMessages <- mapM (`CQIM.findById` identifier) selectedMsgs
+        let issueMessageIds = mapMaybe ((.id) <$>) mbIssueMessages
+        now <- getCurrentTime
+        let updatedChats =
+              issueReport.chats
+                ++ map
+                  ( \id ->
+                      Chat
+                        { chatType = IssueMessage,
+                          chatId = id.getId,
+                          timestamp = now
+                        }
+                  )
+                  issueMessageIds
+        -- Get ticket details and update issueChat
+        merchantId <- maybe (return person.merchantId) (const $ return person.merchantId) issueReport.merchantId
+        kaptureData <- case issueHandle.kaptureGetTicket of
+          Just getTicketFunc -> do
+            ticketDetails <- getTicketFunc merchantId merchantOpCityId (TIT.GetTicketReq req.ticketId "all")
+            return $ case ticketDetails of
+              (firstTicket : _) -> Just firstTicket.conversationType.chat
+              [] -> Nothing
+          Nothing -> return Nothing
+        -- First check if row exists, then decide to create or update
+        mbIssueChat <- QICT.findByTicketId req.ticketId
+        case mbIssueChat of
+          Just _ -> do
+            QICT.updateChatsWithKaptureData req.ticketId [] [] kaptureData
+          Nothing -> do
+            issueChatId <- generateGUID
+            let newIssueChat =
+                  DICT.IssueChat
+                    { id = issueChatId,
+                      ticketId = req.ticketId,
+                      rideId = issueReport.rideId,
+                      personId = issueReport.personId,
+                      chats = [],
+                      mediaFiles = [],
+                      kaptureData = kaptureData,
+                      issueReportId = Just issueReport.id,
+                      createdAt = now,
+                      updatedAt = now
+                    }
+            QICT.create newIssueChat
+        QIR.updateChats issueReport.id updatedChats
+        QIR.updateIssueStatus req.ticketId (if shouldUseCloseMsgs then CLOSED else transformedStatus)
+      PENDING_EXTERNAL -> case (req.subStatus, req.queue, issueHandle.mbSendUnattendedTicketAlert) of
+        (Just "Unattended", Just "SOS", Just sendUnattendedTicketAlert) -> sendUnattendedTicketAlert req.ticketId
+        _ -> do
+          _issueReport <- QIR.findByTicketId req.ticketId >>= fromMaybeM (TicketDoesNotExist req.ticketId)
+          QIR.updateIssueStatus req.ticketId transformedStatus
+      _ -> return ()
   return Success
 
 transformKaptureStatus :: BeamFlow m r => Common.TicketStatusCallBackReq -> m IssueStatus
@@ -1021,3 +1024,6 @@ getIssueMessageType DIC.Category currentIndex lastIndex
 
 defaultAllowedRideStatuses :: [RideStatus]
 defaultAllowedRideStatuses = [R_CANCELLED, R_COMPLETED]
+
+issueTicketExecLockKey :: Text -> Text
+issueTicketExecLockKey ticketId = "IssueTicketExec:TicketId-" <> ticketId
