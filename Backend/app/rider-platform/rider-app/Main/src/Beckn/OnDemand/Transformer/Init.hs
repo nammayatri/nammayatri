@@ -103,6 +103,7 @@ tfProvider uiConfirm = do
       providerPayments = Nothing
       providerDescriptor = Nothing
       providerFulfillments = Nothing
+      providerCategories = Nothing
 
   BecknV2.OnDemand.Types.Provider {..}
 
