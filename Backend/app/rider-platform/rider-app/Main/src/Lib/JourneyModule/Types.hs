@@ -780,7 +780,7 @@ mkLegInfoFromFrfsBooking booking distance duration entrance exit = do
           Just InPlan -> getFRFSLegStatusFromBooking booking
           Just status -> status
   let skipBooking = fromMaybe False booking.isSkipped
-  let amountToBeUpdated = safeDiv (getHighPrecMoney booking.estimatedPrice.amount) (fromIntegral booking.quantity)
+  let amountToBeUpdated = getHighPrecMoney booking.estimatedPrice.amount
       estimatedPrice =
         Price
           { amount = HighPrecMoney amountToBeUpdated,
