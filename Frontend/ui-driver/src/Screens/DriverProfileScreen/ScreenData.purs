@@ -148,7 +148,8 @@ initData =
     canSwitchToIntraCity : Nothing,
     showDriverBlockedPopup : false,
     skipGlobalEvents : false,
-    isPetModeEnabled : Nothing
+    isPetModeEnabled : Nothing,
+    showSettings: true
    }
 , showDriverDetails : false
 }

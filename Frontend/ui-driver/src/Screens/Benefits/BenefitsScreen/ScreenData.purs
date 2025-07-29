@@ -60,6 +60,7 @@ initData = {
       showShimmer : true,
       isPayoutEnabled: Nothing,
       bannerLength : 0,
-      glBannerClickable : true
+      glBannerClickable : true,
+      showGoBack: false
     }
 }

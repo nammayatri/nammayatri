@@ -614,7 +614,8 @@ type DriverProfileScreenProps = {
   canSwitchToInterCity :: Maybe Boolean,
   showDriverBlockedPopup :: Boolean,
   skipGlobalEvents :: Boolean,
-  isPetModeEnabled :: Maybe Boolean
+  isPetModeEnabled :: Maybe Boolean,
+  showSettings:: Boolean
 }
 data Gender = MALE | FEMALE | OTHER | PREFER_NOT_TO_SAY
 
@@ -2988,6 +2989,7 @@ type BenefitsScreenProps = {
 , isPayoutEnabled :: Maybe Boolean
 , bannerLength :: Int
 , glBannerClickable :: Boolean
+, showGoBack :: Boolean
 }
 
 type LmsModuleList =
