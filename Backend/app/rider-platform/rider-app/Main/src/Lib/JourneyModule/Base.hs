@@ -449,6 +449,14 @@ startJourney ::
   m ()
 startJourney confirmElements forcedBookedLegOrder journeyId = do
   allLegs <- getAllLegsInfo journeyId False
+  journey <- getJourney journeyId
+
+  let publicTransportLegs = filter (\leg -> leg.travelMode `elem` [DTrip.Bus, DTrip.Metro, DTrip.Subway]) allLegs
+      allPublicTransportSkipped = not (null publicTransportLegs) && all (\leg -> leg.status == JL.Skipped) publicTransportLegs
+
+  when allPublicTransportSkipped $ do
+    QJourney.updateByPrimaryKey journey {DJourney.allPublicTransportSkipped = Just True}
+
   mapM_
     ( \leg -> do
         let mElement = find (\element -> element.journeyLegOrder == leg.order) confirmElements

@@ -1098,6 +1098,7 @@ mkJourney riderId startTime endTime estimatedDistance estiamtedDuration journeyI
   let journeyLegsCount = length legs
       modes = map (\x -> convertMultiModalModeToTripMode x.mode (straightLineDistance x) (distanceToMeters x.distance) maximumWalkDistance straightLineThreshold) legs
   let isPublicTransportIncluded = any (`elem` [DTrip.Bus, DTrip.Metro, DTrip.Subway]) modes
+  let allPublicTransportSkipped = isPublicTransportIncluded && False
   now <- getCurrentTime
   return $
     DJ.Journey
@@ -1119,6 +1120,7 @@ mkJourney riderId startTime endTime estimatedDistance estiamtedDuration journeyI
         updatedAt = now,
         DJ.recentLocationId = mbRecentLocationId, -- Fully qualify the field name
         isPublicTransportIncluded = Just isPublicTransportIncluded,
+        allPublicTransportSkipped = Just allPublicTransportSkipped,
         relevanceScore,
         hasPreferredServiceTier = Just hasUserPreferredServiceTier,
         hasPreferredTransitModes = Just hasUserPreferredTransitModes,

@@ -44,9 +44,12 @@ findAllByRiderId (Kernel.Types.Id.Id personId) mbLimit mbOffset mbFromDate mbToD
               <> ([Se.Is Beam.status $ Se.In mbJourneyStatus | not (null mbJourneyStatus)])
               <> [ Se.Or
                      [ Se.Is Beam.isPublicTransportIncluded $ Se.Eq (Just False),
-                       Se.And
-                         [ Se.Is Beam.isPublicTransportIncluded $ Se.Eq (Just True),
-                           Se.Is Beam.isPaymentSuccess $ Se.Eq mbIsPaymentSuccess
+                       Se.Or
+                         [ Se.Is Beam.allPublicTransportSkipped $ Se.Eq (Just True),
+                           Se.And
+                             [ Se.Is Beam.isPublicTransportIncluded $ Se.Eq (Just True),
+                               Se.Is Beam.isPaymentSuccess $ Se.Eq mbIsPaymentSuccess
+                             ]
                          ]
                      ]
                  ]

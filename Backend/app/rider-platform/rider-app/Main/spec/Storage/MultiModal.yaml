@@ -50,6 +50,7 @@ Journey:
     fromLocationAddress: Maybe Text
     toLocationAddress: Maybe Text
     isPublicTransportIncluded: Maybe Bool
+    allPublicTransportSkipped: Maybe Bool
     paymentOrderShortId: Maybe (ShortId PaymentOrder)
     journeyExpiryTime: Maybe UTCTime
 

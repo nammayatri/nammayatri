@@ -92,8 +92,8 @@ getPersonFlowStatus personId merchantId _ pollActiveBooking = do
     processJourneys now journeys = do
       updatedJourneys <- mapM updateJourneyStatus journeys
       let activeJourneys = filter (\j -> j.status /= DJ.EXPIRED) updatedJourneys
-      let paymentSuccessJourneys = filter (\j -> j.isPaymentSuccess == Just True) activeJourneys
-      return (activeJourneys, paymentSuccessJourneys)
+      let activeDisplayJourneys = filter (\j -> j.isPaymentSuccess == Just True || j.allPublicTransportSkipped == Just True) activeJourneys
+      return (activeJourneys, activeDisplayJourneys)
       where
         updateJourneyStatus j = do
           case j.journeyExpiryTime of

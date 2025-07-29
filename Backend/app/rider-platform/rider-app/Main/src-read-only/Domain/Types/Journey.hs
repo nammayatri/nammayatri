@@ -28,6 +28,7 @@ data Journey = Journey
     id :: Kernel.Types.Id.Id Domain.Types.Journey.Journey,
     isPaymentSuccess :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isPublicTransportIncluded :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    allPublicTransportSkipped :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     journeyExpiryTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     modes :: [Domain.Types.Common.MultimodalTravelMode],
     paymentOrderShortId :: Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder),

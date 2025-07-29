@@ -127,3 +127,10 @@ ALTER TABLE atlas_app.journey ADD COLUMN payment_order_short_id character varyin
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.journey ADD COLUMN journey_expiry_time timestamp with time zone ;
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.journey ADD COLUMN all_public_transport_skipped boolean ;
+
+
+------- SQL updates -------
