@@ -2,6 +2,7 @@ module Beckn.OnDemand.Transformer.OnSearch where
 
 import qualified Beckn.OnDemand.Utils.Common
 import Beckn.OnDemand.Utils.OnSearch
+import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Types
 import qualified BecknV2.OnDemand.Utils.Common
 import qualified BecknV2.OnDemand.Utils.Context
@@ -57,7 +58,7 @@ tfCatalogProviders res bppConfig isValueAddNP = do
       pricings = (map (Beckn.OnDemand.Utils.Common.convertEstimateToPricing res.specialLocationName) res.estimates) <> (map (Beckn.OnDemand.Utils.Common.convertQuoteToPricing res.specialLocationName) res.quotes)
       providerFulfillments_ = map (tfProviderFulfillments res) pricings & Just
       providerItems_ = Just $ map (tfProviderItems res isValueAddNP) pricings
-      providerCategories_ = Nothing -- FIXME fix this and items.category_ids
+      providerCategories_ = map tfProviderCategories res.categoryCode -- FIXME items.category_ids
   BecknV2.OnDemand.Types.Provider {providerDescriptor = providerDescriptor_, providerFulfillments = providerFulfillments_, providerId = providerId_, providerItems = providerItems_, providerLocations = providerLocations_, providerPayments = providerPayments_, providerCategories = providerCategories_}
 
 tfItemPrice :: Beckn.OnDemand.Utils.Common.Pricing -> Maybe BecknV2.OnDemand.Types.Price
@@ -121,3 +122,14 @@ tfItemDescriptor pricing =
         descriptorShortDesc = pricing.serviceTierDescription,
         descriptorName = Just pricing.serviceTierName
       }
+
+tfProviderCategories :: Enums.CategoryCode -> [BecknV2.OnDemand.Types.Category]
+tfProviderCategories categoryCode = do
+  let descriptorCode_ = Just $ show categoryCode
+  let categoryId_ = descriptorCode_ -- the same as code for now
+  let categoryDescriptor_ = Just $ BecknV2.OnDemand.Types.Descriptor {descriptorCode = descriptorCode_, descriptorName = Nothing, descriptorShortDesc = Nothing}
+  [ BecknV2.OnDemand.Types.Category
+      { categoryDescriptor = categoryDescriptor_,
+        categoryId = categoryId_
+      }
+    ]
