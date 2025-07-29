@@ -4,6 +4,7 @@ import qualified API.Client.ProviderPlatform.Fleet as Client
 import qualified API.Types.ProviderPlatform.Fleet.Onboarding
 import qualified Dashboard.Common
 import Domain.Action.ProviderPlatform.Fleet.Driver (getFleetOwnerId)
+import qualified Domain.Action.ProviderPlatform.Management.Account as Common
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified Domain.Types.VehicleCategory
 import qualified "lib-dashboard" Environment
@@ -31,7 +32,8 @@ getOnboardingRegisterStatus merchantShortId opCity apiTokenInfo driverId makeSel
 postOnboardingVerify :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Fleet.Onboarding.VerifyType -> API.Types.ProviderPlatform.Fleet.Onboarding.VerifyReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postOnboardingVerify merchantShortId opCity apiTokenInfo verifyType req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callFleetAPI checkedMerchantId opCity (.onboardingDSL.postOnboardingVerify) verifyType req
+  let mbAccessType = Common.castDashboardAccessType <$> apiTokenInfo.person.dashboardAccessType
+  Client.callFleetAPI checkedMerchantId opCity (.onboardingDSL.postOnboardingVerify) verifyType mbAccessType req
 
 getOnboardingGetReferralDetails :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Environment.Flow API.Types.ProviderPlatform.Fleet.Onboarding.ReferralInfoRes)
 getOnboardingGetReferralDetails merchantShortId opCity apiTokenInfo referralCode = do
