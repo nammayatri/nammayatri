@@ -75,7 +75,7 @@ mkOnSelectMessageV2 isValueAddNP bppConfig merchant mbFarePolicy req@DOnSelectRe
           orderItems = Just $ map (\fulf -> mkItemV2 fulf vehicleServiceTierItem driverQuote mbFarePolicy taggings) fulfillments,
           orderQuote = Just $ mkQuoteV2 driverQuote req.now,
           orderPayments = Just [paymentV2],
-          orderProvider = mkProvider bppConfig,
+          orderProvider = Utils.tfProvider bppConfig,
           orderBilling = Nothing,
           orderCancellation = Nothing,
           orderCancellationTerms = Nothing,
@@ -261,16 +261,4 @@ mkQuotationPrice quote =
         priceMinimumValue = Nothing,
         priceOfferedValue = Just $ encodeToText quote.estimatedFare,
         priceValue = Just $ encodeToText quote.estimatedFare
-      }
-
-mkProvider :: DBC.BecknConfig -> Maybe Spec.Provider
-mkProvider becknConfig = do
-  return $
-    Spec.Provider
-      { providerDescriptor = Nothing,
-        providerFulfillments = Nothing,
-        providerId = Just $ becknConfig.subscriberId,
-        providerItems = Nothing,
-        providerLocations = Nothing,
-        providerPayments = Nothing
       }

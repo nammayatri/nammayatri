@@ -1728,7 +1728,8 @@ tfProvider becknConfig =
         providerId = Just $ becknConfig.subscriberId,
         providerItems = Nothing,
         providerLocations = Nothing,
-        providerPayments = Nothing
+        providerPayments = Nothing,
+        providerCategories = Nothing
       }
 
 mkFulfillmentV2SoftUpdate ::

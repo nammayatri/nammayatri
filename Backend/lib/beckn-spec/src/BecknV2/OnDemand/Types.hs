@@ -408,9 +408,11 @@ optionsCatalog =
       ]
 
 -- | Describes a category
-newtype Category = Category
+data Category = Category
   { -- | Describes the description of a category.
-    categoryDescriptor :: Maybe Descriptor
+    categoryDescriptor :: Maybe Descriptor,
+    -- |
+    categoryId :: Maybe Text
   }
   deriving (Show, Eq, Generic, Data, Read)
 
@@ -428,7 +430,8 @@ optionsCategory =
     }
   where
     table =
-      [ ("categoryDescriptor", "descriptor")
+      [ ("categoryId", "id"),
+        ("categoryDescriptor", "descriptor")
       ]
 
 -- | Describes a city
@@ -1560,6 +1563,8 @@ optionsPrice =
 -- | Describes the catalog of a business.
 data Provider = Provider
   { -- |
+    providerCategories :: Maybe [Category],
+    -- |
     providerDescriptor :: Maybe Descriptor,
     -- |
     providerFulfillments :: Maybe [Fulfillment],
