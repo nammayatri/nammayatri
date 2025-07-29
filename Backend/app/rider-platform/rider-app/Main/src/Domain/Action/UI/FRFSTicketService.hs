@@ -39,7 +39,7 @@ import qualified Domain.Types.RouteStopMapping as RouteStopMapping
 import Domain.Types.Station
 import Domain.Types.StationType
 import qualified Environment
-import EulerHS.Prelude hiding (all, and, any, concatMap, elem, find, foldr, forM_, fromList, groupBy, id, length, map, null, readMaybe, toList, whenJust)
+import EulerHS.Prelude hiding (all, and, any, concatMap, elem, find, foldr, forM_, fromList, groupBy, id, length, map, maximum, null, readMaybe, toList, whenJust)
 import qualified ExternalBPP.CallAPI as CallExternalBPP
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
@@ -907,7 +907,16 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking booking' = do
                     markJourneyPaymentSuccess booking.journeyId paymentOrder
                     void $ CallExternalBPP.confirm processOnConfirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) updatedBooking
                     when isMultiModalBooking do
-                      let scheduleAfter = secondsToNominalDiffTime (2 * 60) -- schedule job 2 mins after calling confirm
+                      riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCity.id Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCity.id.getId)
+                      becknConfigs <- CQBC.findByMerchantIdDomainandMerchantOperatingCityId merchantId_ "FRFS" merchantOperatingCity.id
+                      let initTTLs = map (.initTTLSec) becknConfigs
+                      let maxInitTTL = intToNominalDiffTime $ case catMaybes initTTLs of
+                            [] -> 0 -- 30 minutes in seconds if all are Nothing
+                            ttlList -> maximum ttlList
+                      let bufferTime = case riderConfig.refundBufferTTLSec of
+                            Just secs -> secs.getSeconds
+                            Nothing -> 2 * 60
+                      let scheduleAfter = maxInitTTL + (intToNominalDiffTime bufferTime) -- schedule job (maxInitTTL + bufferTime) after calling confirm
                           jobData = JobScheduler.CheckMultimodalConfirmFailJobData {JobScheduler.bookingId = bookingId}
                       createJobIn @_ @'CheckMultimodalConfirmFail (Just merchantId_) (Just merchantOperatingCity.id) scheduleAfter (jobData :: CheckMultimodalConfirmFailJobData)
                     buildFRFSTicketBookingStatusAPIRes updatedBooking paymentSuccess

@@ -93,6 +93,7 @@ data RiderConfig = RiderConfig
     postRideSafetyNotificationDelay :: Kernel.Prelude.NominalDiffTime,
     qrTicketRestrictionEndTime :: Kernel.Prelude.Maybe Data.Time.TimeOfDay,
     qrTicketRestrictionStartTime :: Kernel.Prelude.Maybe Data.Time.TimeOfDay,
+    refundBufferTTLSec :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     rentalsConfig :: Kernel.Prelude.Maybe [Domain.Types.RentalsIntercityCache.RentalsConfig],
     safetyCheckEndTime :: Kernel.Types.Common.Seconds,
     safetyCheckStartTime :: Kernel.Types.Common.Seconds,
