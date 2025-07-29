@@ -83,17 +83,6 @@ apis:
         stopCode: Text
       query:
         vehicleType: VehicleCategory
+        toCode: Text
       response:
         type: TimetableResponse
-
-  - POST:
-      endpoint: /allRoutesTimetable/stop/{stopCode}
-      auth: TokenAuth
-      params:
-        stopCode: Text
-      query:
-        vehicleType: VehicleCategory
-      response:
-        type: TimetableResponse
-      request:
-        type: RouteCodes

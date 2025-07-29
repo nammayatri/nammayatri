@@ -732,3 +732,38 @@ postMultimodalPaymentUpdateOrderUtil paymentType person merchantId merchantOpera
               updatedOrder = paymentOrder {DOrder.amount = amountUpdated}
           return $ Just updatedOrder
     else createPaymentOrder bookings merchantOperatingCityId merchantId amountUpdated person paymentType vendorSplitDetails
+
+makePossibleRoutesKey :: Text -> Text -> Id DIntegratedBPPConfig.IntegratedBPPConfig -> Text
+makePossibleRoutesKey fromCode toCode integratedBPPConfig = "PossibleRoutes:" <> fromCode <> ":" <> toCode <> ":" <> integratedBPPConfig.getId
+
+fetchPossibleRoutes :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => Text -> Text -> DIntegratedBPPConfig.IntegratedBPPConfig -> m [Text]
+fetchPossibleRoutes fromCode toCode integratedBPPConfig = do
+  -- Get route mappings that contain the origin stop
+  fromRouteStopMappings <- OTPRest.getRouteStopMappingByStopCode fromCode integratedBPPConfig
+
+  -- Get route mappings that contain the destination stop
+  toRouteStopMappings <- OTPRest.getRouteStopMappingByStopCode toCode integratedBPPConfig
+
+  -- Find common routes that have both the origin and destination stops
+  -- and ensure that from-stop comes before to-stop in the route sequence
+  let fromRouteStopMap = map (\mapping -> (mapping.routeCode, mapping.sequenceNum)) fromRouteStopMappings
+      toRouteStopMap = map (\mapping -> (mapping.routeCode, mapping.sequenceNum)) toRouteStopMappings
+      validRoutes =
+        nub $
+          [ fromRouteCode
+            | (fromRouteCode, fromSeq') <- fromRouteStopMap,
+              (toRouteCode, toSeq') <- toRouteStopMap,
+              fromRouteCode == toRouteCode && fromSeq' < toSeq' -- Ensure correct sequence
+          ]
+  pure validRoutes
+
+getRouteCodesFromTo :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => Text -> Text -> DIntegratedBPPConfig.IntegratedBPPConfig -> m [Text]
+getRouteCodesFromTo fromCode toCode integratedBPPConfig = do
+  let key = makePossibleRoutesKey fromCode toCode integratedBPPConfig.id
+  mbRoutes <- Hedis.safeGet key
+  case mbRoutes of
+    Just routeCodes -> return routeCodes
+    Nothing -> do
+      routeCodes <- fetchPossibleRoutes fromCode toCode integratedBPPConfig
+      Hedis.setExp key routeCodes 7200 -- 2 hours
+      return routeCodes
