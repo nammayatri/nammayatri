@@ -28,7 +28,6 @@ import qualified Kernel.Types.SlidingWindowCounters as SWC
 import Kernel.Utils.Common
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import Lib.Scheduler.Environment
-import qualified SharedLogic.DriverPool as SLD
 import SharedLogic.External.LocationTrackingService.Types
 import qualified SharedLogic.Person as SPerson
 import qualified Storage.Cac.TransporterConfig as CTC
@@ -230,16 +229,16 @@ nudgeOrBlockDriver transporterConfig driver driverInfo = do
             Nothing -> rule
 
     isDriverBlockableSlab cancellationRateThreshold rideAssignedThreshold cancellationRate assignedCount suspensionTimeInHours mbCooldown now =
-      let rule = (cancellationRate >= cancellationRateThreshold) && (assignedCount >= head rideAssignedThreshold) && (assignedCount <= last rideAssignedThreshold) && (suspensionTimeInHours > 0)
+      let rule = maybe False (\minRides -> maybe False (\maxRides -> (cancellationRate >= cancellationRateThreshold) && (assignedCount >= minRides) && (assignedCount <= maxRides) && (suspensionTimeInHours > 0)) (listToMaybe (reverse rideAssignedThreshold))) (listToMaybe rideAssignedThreshold)
        in case mbCooldown of
             Just cooldown -> rule && (cooldown <= now)
             Nothing -> rule
 
     getCancellationRateOfDays period windowSize = do
       let windowInt = toInteger windowSize
-      cancelledCount <- fmap (sum . map (fromMaybe 0)) $ Redis.withCrossAppRedis $ SWC.getCurrentWindowValuesUptoLast period (SLD.mkRideCancelledKey driver.id.getId) (SWC.SlidingWindowOptions windowInt SWC.Days)
+      cancelledCount <- fmap (sum . map (fromMaybe 0)) $ Redis.withCrossAppRedis $ SWC.getCurrentWindowValuesUptoLast period (mkRideCancelledKey driver.id.getId) (SWC.SlidingWindowOptions windowInt SWC.Days)
       assignedCount <- fmap (sum . map (fromMaybe 0)) $ Redis.withCrossAppRedis $ SWC.getCurrentWindowValuesUptoLast period (mkRideAssignedKey driver.id.getId) (SWC.SlidingWindowOptions windowInt SWC.Days)
-      let cancellationRate = ((cancelledCount + 1) * 100) `div` max 1 (assignedCount)
+      let cancellationRate = ((cancelledCount) * 100) `div` max 1 (assignedCount)
       return (cancellationRate, assignedCount)
 
     nudgeDriver cancellationRate fcmType pnKey = do
