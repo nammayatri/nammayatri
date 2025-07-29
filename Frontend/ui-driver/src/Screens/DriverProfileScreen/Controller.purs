@@ -485,6 +485,11 @@ eval (GetDriverInfoResponse resp@(SA.GetDriverInfoResp driverProfileResp)) state
                                       assignedRides = fromMaybe 0 driverProfileResp.assignedRidesCountInWindow,
                                       cancelledRides = fromMaybe 0 driverProfileResp.cancelledRidesCountInWindow,
                                       cancellationWindow = driverProfileResp.windowSize,
+                                      assignedRidesCountDaily = driverProfileResp.assignedRidesCountDaily,
+                                      cancelledRidesCountDaily = driverProfileResp.cancelledRidesCountDaily,
+                                      assignedRidesCountWeekly = driverProfileResp.assignedRidesCountWeekly,
+                                      cancelledRidesCountWeekly = driverProfileResp.cancelledRidesCountWeekly,
+                                      cancellationRateSlabConfig = driverProfileResp.cancellationRateSlabConfig,
                                       favCount = driverProfileResp.favCount,
                                       driverBlocked =  fromMaybe false driverProfileResp.blocked,
                                       blockedExpiryTime = fromMaybe "" driverProfileResp.blockExpiryTime

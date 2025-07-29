@@ -479,6 +479,10 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , cancelledRidesCountInWindow :: Maybe Int
     , assignedRidesCountInWindow :: Maybe Int
     , windowSize :: Maybe Int
+    , assignedRidesCountDaily :: Maybe Int
+    , cancelledRidesCountDaily :: Maybe Int
+    , assignedRidesCountWeekly :: Maybe Int
+    , cancelledRidesCountWeekly :: Maybe Int
     , favCount :: Maybe Int
     , isSubscriptionVehicleCategoryChanged :: Maybe Boolean
     , isOnFreeTrial :: Maybe Boolean
@@ -497,6 +501,7 @@ newtype GetDriverInfoResp = GetDriverInfoResp
     , isPetModeEnabled :: Maybe Boolean
     , driverTags :: Maybe DriverTags
     , nyClubConsent :: Maybe Boolean
+    , cancellationRateSlabConfig :: Maybe CancellationRateSlabConfig
     }
 
 data OverchargingTag =
@@ -514,6 +519,45 @@ instance decodeOverchargingTag :: Decode OverchargingTag where decode = defaultE
 instance encodeOverchargingTag :: Encode OverchargingTag where encode = defaultEnumEncode
 instance eqOverchargingTag :: Eq OverchargingTag where eq = genericEq
 instance standardEncodeOverchargingTag :: StandardEncode OverchargingTag where standardEncode _ = standardEncode {}
+
+-- Cancellation Rate Slab Config types
+newtype CancellationRateSlab = CancellationRateSlab {
+  cancellationPercentageThreshold :: Int,
+  suspensionTimeInHours :: Int
+}
+
+derive instance genericCancellationRateSlab :: Generic CancellationRateSlab _
+derive instance newtypeCancellationRateSlab :: Newtype CancellationRateSlab _
+instance showCancellationRateSlab :: Show CancellationRateSlab where show = genericShow
+instance decodeCancellationRateSlab :: Decode CancellationRateSlab where decode = defaultDecode
+instance encodeCancellationRateSlab :: Encode CancellationRateSlab where encode = defaultEncode
+instance eqCancellationRateSlab :: Eq CancellationRateSlab where eq = genericEq
+instance standardEncodeCancellationRateSlab :: StandardEncode CancellationRateSlab where standardEncode (CancellationRateSlab req) = standardEncode req
+
+newtype SlabType = SlabType {
+  minBookingsRange :: Array Int,
+  penalityForCancellation :: CancellationRateSlab
+}
+
+derive instance genericSlabType :: Generic SlabType _
+derive instance newtypeSlabType :: Newtype SlabType _
+instance showSlabType :: Show SlabType where show = genericShow
+instance decodeSlabType :: Decode SlabType where decode = defaultDecode
+instance encodeSlabType :: Encode SlabType where encode = defaultEncode
+instance eqSlabType :: Eq SlabType where eq = genericEq
+instance standardEncodeSlabType :: StandardEncode SlabType where standardEncode (SlabType req) = standardEncode req
+
+newtype CancellationRateSlabConfig = CancellationRateSlabConfig {
+  dailySlabs :: Array SlabType,
+  weeklySlabs :: Array SlabType
+}
+
+derive instance genericCancellationRateSlabConfig :: Generic CancellationRateSlabConfig _
+derive instance newtypeCancellationRateSlabConfig :: Newtype CancellationRateSlabConfig _
+instance standardEncodeCancellationRateSlabConfig :: StandardEncode CancellationRateSlabConfig where standardEncode (CancellationRateSlabConfig req) = standardEncode req
+instance showCancellationRateSlabConfig :: Show CancellationRateSlabConfig where show = genericShow
+instance decodeCancellationRateSlabConfig :: Decode CancellationRateSlabConfig where decode = defaultDecode
+instance encodeCancellationRateSlabConfig :: Encode CancellationRateSlabConfig where encode = defaultEncode
 
 newtype DriverGoHomeInfo = DriverGoHomeInfo {
   cnt :: Int,
