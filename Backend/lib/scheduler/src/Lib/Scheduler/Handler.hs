@@ -24,7 +24,6 @@ import Control.Monad.Catch
 import qualified Control.Monad.Catch as C
 import Control.Monad.IO.Class ()
 import qualified Data.ByteString as BS
-import Data.IORef (IORef, modifyIORef, newIORef, readIORef)
 import Data.Singletons (fromSing)
 import qualified Data.Time as T hiding (getCurrentTime)
 import Kernel.Beam.Lib.UtilsTH (HasSchemaName)
@@ -59,9 +58,8 @@ handler :: forall t. (HasSchemaName BeamSC.SystemConfigsT, JobProcessor t, FromJ
 handler hnd = do
   schedulerType <- asks (.schedulerType)
   maxThreads <- asks (.maxThreads)
-  redisStreamCounter <- liftIO $ newIORef 1
   case schedulerType of
-    RedisBased -> loopGracefully $ replicate maxThreads (runnerIterationRedis hnd redisStreamCounter runTask)
+    RedisBased -> loopGracefully $ concatMap (\_ -> map (\streamIndex -> runnerIterationRedis hnd streamIndex runTask) [1 .. 16]) [1 .. maxThreads]
     DbBased -> loopGracefully $ replicate maxThreads (dbBasedHandlerLoop hnd runTask)
   where
     runTask :: AnyJob t -> SchedulerM ()
@@ -93,12 +91,10 @@ dbBasedHandlerLoop hnd runTask = do
 mapConcurrently :: Traversable t => (a -> SchedulerM ()) -> t a -> SchedulerM ()
 mapConcurrently action = mapM_ (fork "mapThread" . action)
 
-runnerIterationRedis :: forall t. (JobProcessor t, FromJSON t) => SchedulerHandle t -> IORef Int -> (AnyJob t -> SchedulerM ()) -> SchedulerM ()
-runnerIterationRedis SchedulerHandle {..} redisStreamCounter runTask = do
+runnerIterationRedis :: forall t. (JobProcessor t, FromJSON t) => SchedulerHandle t -> Int -> (AnyJob t -> SchedulerM ()) -> SchedulerM ()
+runnerIterationRedis SchedulerHandle {..} streamNumber runTask = do
   logInfo "Starting runner iteration"
   key' <- asks (.streamName)
-  streamNumber <- liftIO $ readIORef redisStreamCounter
-  liftIO $ modifyIORef redisStreamCounter (\x -> if x < 16 then x + 1 else 1)
   let key = key' <> "_" <> show streamNumber
   groupName <- asks (.groupName)
   readyTasks <- getReadyTask key

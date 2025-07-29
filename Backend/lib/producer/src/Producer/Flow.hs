@@ -8,7 +8,6 @@ module Producer.Flow where
 import qualified Data.Aeson as Ae
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as BSL
--- import Data.IORef (IORef, modifyIORef, readIORef)
 import qualified Data.Text.Encoding as TE
 import qualified Data.Time as T hiding (getCurrentTime)
 import qualified Data.UUID as UU
