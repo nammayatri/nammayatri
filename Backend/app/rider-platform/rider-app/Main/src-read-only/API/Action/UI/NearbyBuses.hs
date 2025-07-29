@@ -51,6 +51,9 @@ type API =
            "stopCode"
            Data.Text.Text
       :> QueryParam
+           "toCode"
+           Data.Text.Text
+      :> QueryParam
            "vehicleType"
            BecknV2.FRFS.Enums.VehicleCategory
       :> Get
@@ -87,7 +90,8 @@ getTimetableStop ::
     ) ->
     Data.Text.Text ->
     Data.Text.Text ->
+    Kernel.Prelude.Maybe Data.Text.Text ->
     Kernel.Prelude.Maybe BecknV2.FRFS.Enums.VehicleCategory ->
     Environment.FlowHandler API.Types.UI.NearbyBuses.TimetableResponse
   )
-getTimetableStop a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.NearbyBuses.getTimetableStop (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
+getTimetableStop a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.NearbyBuses.getTimetableStop (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1

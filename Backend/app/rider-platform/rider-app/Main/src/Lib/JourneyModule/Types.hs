@@ -61,7 +61,6 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.Ride as DARide
 import SharedLogic.Search
--- import qualified Storage.CachedQueries.Merchant.MultiModalBus -- This was commented out in the provided content
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.Estimate as QEstimate
@@ -206,7 +205,7 @@ data NextStopDetails = NextStopDetails
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data VehiclePosition = VehiclePosition
-  { position :: LatLong, -- Bus's current lat/long
+  { position :: Maybe LatLong, -- Bus's current lat/long
     vehicleId :: Text, -- Bus's ID/number
     upcomingStops :: [NextStopDetails] -- List of upcoming stops for this vehicle
   }
@@ -356,7 +355,8 @@ data LegRouteInfo = LegRouteInfo
     lineColorCode :: Maybe Text,
     trainNumber :: Maybe Text,
     journeyStatus :: Maybe JourneyLegStatus,
-    frequency :: Maybe Seconds
+    frequency :: Maybe Seconds,
+    allAvailableRoutes :: [Text]
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -784,7 +784,7 @@ mkLegInfoFromFrfsBooking booking distance duration = do
   let singleAdultPrice = roundToTwoDecimalPlaces . HighPrecMoney $ safeDiv (getHighPrecMoney booking.price.amount) (fromIntegral booking.quantity) -- TODO :: To be handled as single price cannot be obtained from this if more than 1 fare breakup (Child Quantity / Discounts)
       estimatedPrice =
         Price
-          { amount = HighPrecMoney singleAdultPrice,
+          { amount = singleAdultPrice,
             amountInt = Money $ roundToIntegral singleAdultPrice,
             currency = booking.price.currency
           }
@@ -899,11 +899,10 @@ getLegRouteInfo journeyRouteDetails integratedBPPConfig = do
       fromStationCode' <- fromMaybeM (InternalError "FromStationCode is missing") journeyRouteDetail.fromStationCode
       toStationCode' <- fromMaybeM (InternalError "ToStationCode is missing") journeyRouteDetail.toStationCode
       routeCode' <- fromMaybeM (InternalError "RouteCode is missing") journeyRouteDetail.routeCode
-
-      fromStation <- OTPRest.getStationByGtfsIdAndStopCode fromStationCode' integratedBPPConfig >>= fromMaybeM (InternalError $ "From Station not found in getSubwayLegRouteInfo: " <> show fromStationCode')
-      toStation <- OTPRest.getStationByGtfsIdAndStopCode toStationCode' integratedBPPConfig >>= fromMaybeM (InternalError $ "To Station not found in getSubwayLegRouteInfo: " <> show toStationCode')
+      fromStation <- OTPRest.getStationByGtfsIdAndStopCode fromStationCode' integratedBPPConfig >>= fromMaybeM (InternalError $ "From Station not found in fetchPossibleRoutes: " <> show fromStationCode')
+      toStation <- OTPRest.getStationByGtfsIdAndStopCode toStationCode' integratedBPPConfig >>= fromMaybeM (InternalError $ "To Station not found in fetchPossibleRoutes: " <> show toStationCode')
       route <- OTPRest.getRouteByRouteId integratedBPPConfig routeCode' >>= fromMaybeM (RouteNotFound routeCode')
-
+      validRoutes <- getRouteCodesFromTo fromStation.code toStation.code integratedBPPConfig
       return
         LegRouteInfo
           { originStop = stationToStationAPI fromStation,
@@ -915,7 +914,8 @@ getLegRouteInfo journeyRouteDetails integratedBPPConfig = do
             lineColor = journeyRouteDetail.lineColor,
             lineColorCode = journeyRouteDetail.lineColorCode,
             trainNumber = Just route.shortName,
-            frequency = journeyRouteDetail.frequency
+            frequency = journeyRouteDetail.frequency,
+            allAvailableRoutes = validRoutes
           }
 
 castCategoryToMode :: Spec.VehicleCategory -> DTrip.MultimodalTravelMode
