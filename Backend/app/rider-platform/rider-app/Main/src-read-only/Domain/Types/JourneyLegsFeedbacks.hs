@@ -26,8 +26,7 @@ data JourneyLegsFeedbacks = JourneyLegsFeedbacks
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data BusFeedbackData = BusFeedbackData {feedbackDetails :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
-  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+data BusFeedbackData = BusFeedbackData {feedbackDetails :: Kernel.Prelude.Maybe Kernel.Prelude.Text} deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data JourneyLegFeedbackData
   = Taxi Domain.Types.JourneyLegsFeedbacks.TaxiFeedbackData
@@ -37,11 +36,9 @@ data JourneyLegFeedbackData
   | Metro Domain.Types.JourneyLegsFeedbacks.MetroFeedbackData
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data MetroFeedbackData = MetroFeedbackData {feedbackDetails :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
-  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+data MetroFeedbackData = MetroFeedbackData {feedbackDetails :: Kernel.Prelude.Maybe Kernel.Prelude.Text} deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data SubwayFeedbackData = SubwayFeedbackData {feedbackDetails :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
-  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+data SubwayFeedbackData = SubwayFeedbackData {feedbackDetails :: Kernel.Prelude.Maybe Kernel.Prelude.Text} deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data TaxiFeedbackData = TaxiFeedbackData
   { feedbackDetails :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -52,5 +49,4 @@ data TaxiFeedbackData = TaxiFeedbackData
   }
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data WalkFeedbackData = WalkFeedbackData {feedbackDetails :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
-  deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
+data WalkFeedbackData = WalkFeedbackData {feedbackDetails :: Kernel.Prelude.Maybe Kernel.Prelude.Text} deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
