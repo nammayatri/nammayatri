@@ -132,11 +132,6 @@
             android:exported="false"
             android:foregroundServiceType="location"
             android:stopWithTask="false" />
-        <service
-            android:name=".ChatService"
-            android:exported="false"
-            android:foregroundServiceType="remoteMessaging"
-            android:stopWithTask="false" />
        
 
         <service android:name=".overlayMessage.Service"
