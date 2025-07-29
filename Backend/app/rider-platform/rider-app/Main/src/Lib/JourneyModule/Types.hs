@@ -781,11 +781,11 @@ mkLegInfoFromFrfsBooking booking distance duration = do
           Just InPlan -> getFRFSLegStatusFromBooking booking
           Just status -> status
   let skipBooking = fromMaybe False booking.isSkipped
-  let amountToBeUpdated = roundToTwoDecimalPlaces . HighPrecMoney $ safeDiv (getHighPrecMoney booking.price.amount) (fromIntegral booking.quantity)
+  let singleAdultPrice = roundToTwoDecimalPlaces . HighPrecMoney $ safeDiv (getHighPrecMoney booking.price.amount) (fromIntegral booking.quantity) -- TODO :: To be handled as single price cannot be obtained from this if more than 1 fare breakup (Child Quantity / Discounts)
       estimatedPrice =
         Price
-          { amount = amountToBeUpdated,
-            amountInt = Money $ roundToIntegral amountToBeUpdated,
+          { amount = HighPrecMoney singleAdultPrice,
+            amountInt = Money $ roundToIntegral singleAdultPrice,
             currency = booking.price.currency
           }
   legExtraInfo <- mkLegExtraInfo qrDataList qrValidity ticketsCreatedAt journeyRouteDetails' journeyLegInfo' ticketNo
