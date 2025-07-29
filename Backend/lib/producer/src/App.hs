@@ -16,7 +16,6 @@
 module App (startProducer) where
 
 import Data.Function hiding (id)
--- import Data.IORef (newIORef)
 import Debug.Trace as T
 import Environment
 import EulerHS.Interpreters (runFlow)
