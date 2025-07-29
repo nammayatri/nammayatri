@@ -886,6 +886,9 @@ mkLegInfoFromFrfsBooking booking distance duration = do
                   adultTicketQuantity = Just booking.quantity,
                   childTicketQuantity = booking.childTicketQuantity
                 }
+    safeDiv :: (Eq a, Fractional a) => a -> a -> a
+    safeDiv x 0 = x
+    safeDiv x y = x / y
 
 getLegRouteInfo :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => [MultiModalJourneyRouteDetails] -> DIBC.IntegratedBPPConfig -> m [LegRouteInfo]
 getLegRouteInfo journeyRouteDetails integratedBPPConfig = do
