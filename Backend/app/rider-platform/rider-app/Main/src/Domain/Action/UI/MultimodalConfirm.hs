@@ -28,7 +28,6 @@ module Domain.Action.UI.MultimodalConfirm
   )
 where
 
-import API.Types.UI.FRFSTicketService as FRFSTicketService
 import qualified API.Types.UI.MultimodalConfirm
 import qualified API.Types.UI.MultimodalConfirm as ApiTypes
 import qualified API.UI.CancelSearch as CancelSearch
@@ -187,7 +186,6 @@ getMultimodalBookingPaymentStatus (mbPersonId, merchantId) journeyId = do
                   ApiTypes.PaymentOrder {sdkPayload = p.paymentOrder, status = p.status}
               )
       allLegsOnInitDone = all (\b -> b.journeyOnInitDone == Just True) allJourneyFrfsBookings
-  journey <- JM.getJourney journeyId
   let paymentFareUpdate =
         catMaybes $
           map
@@ -205,10 +203,6 @@ getMultimodalBookingPaymentStatus (mbPersonId, merchantId) journeyId = do
                   else Nothing
             )
             allJourneyFrfsBookings
-  when (journey.isPaymentSuccess /= Just True) $ do
-    let mbPaymentStatus = paymentOrder <&> (.status)
-    whenJust mbPaymentStatus $ \pstatus -> when (pstatus == FRFSTicketService.SUCCESS) $ void $ QJourney.updatePaymentStatus (Just True) journeyId
-  -- handle if on_init doesn't come for all bookings once ui designs are there
   if allLegsOnInitDone
     then do
       return $
@@ -338,6 +332,28 @@ postMultimodalOrderSwitchFRFSTier (mbPersonId, merchantId) journeyId legOrder re
   journeyLegInfo <- find (\leg -> leg.order == legOrder) legs & fromMaybeM (InvalidRequest "No matching journey leg found for the given legOrder")
   alternateShortNames <- getAlternateShortNames
   QFRFSSearch.updatePricingId (Id journeyLegInfo.searchId) (Just req.quoteId.getId)
+  allJourneyFrfsBookings <- QFRFSTicketBooking.findAllByJourneyId (Just journeyId)
+  let mbBooking = find (\booking -> booking.searchId == Id journeyLegInfo.searchId) allJourneyFrfsBookings
+  whenJust mbBooking $ \booking -> do
+    quote <- QFRFSQuote.findById req.quoteId >>= fromMaybeM (InvalidRequest "Quote not found")
+    let quantity = booking.quantity
+        childTicketQuantity = fromMaybe 0 booking.childTicketQuantity
+        quantityRational = fromIntegral quantity :: Rational
+        childTicketQuantityRational = fromIntegral childTicketQuantity :: Rational
+        childPrice = fromMaybe quote.price quote.childPrice
+        totalPriceForSwitchLeg =
+          Price
+            { amount = HighPrecMoney $ (quote.price.amount.getHighPrecMoney * quantityRational) + (childPrice.amount.getHighPrecMoney * childTicketQuantityRational),
+              amountInt = Money $ (quote.price.amountInt.getMoney * quantity) + (childPrice.amountInt.getMoney * childTicketQuantity),
+              currency = quote.price.currency
+            }
+        updatedBooking =
+          booking
+            { DFRFSB.quoteId = req.quoteId,
+              DFRFSB.price = totalPriceForSwitchLeg,
+              DFRFSB.estimatedPrice = totalPriceForSwitchLeg
+            }
+    void $ QFRFSTicketBooking.updateByPrimaryKey updatedBooking
   QJourneyRouteDetails.updateAlternateShortNames alternateShortNames (Id journeyLegInfo.searchId)
   updatedLegs <- JM.getAllLegsInfo journeyId False
   generateJourneyInfoResponse journey updatedLegs

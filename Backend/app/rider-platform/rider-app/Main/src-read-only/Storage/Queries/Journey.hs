@@ -29,15 +29,15 @@ findBySearchId searchRequestId = do findAllWithKV [Se.Is Beam.searchRequestId $ 
 
 updatePaymentOrderShortId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder) -> Kernel.Types.Id.Id Domain.Types.Journey.Journey -> m ())
-updatePaymentOrderShortId paymentOrderShortId id = do
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder) -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Journey.Journey -> m ())
+updatePaymentOrderShortId paymentOrderShortId isPaymentSuccess id = do
   _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.paymentOrderShortId (Kernel.Types.Id.getShortId <$> paymentOrderShortId), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
-
-updatePaymentStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Journey.Journey -> m ())
-updatePaymentStatus isPaymentSuccess id = do
-  _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.isPaymentSuccess isPaymentSuccess, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+  updateOneWithKV
+    [ Se.Set Beam.paymentOrderShortId (Kernel.Types.Id.getShortId <$> paymentOrderShortId),
+      Se.Set Beam.isPaymentSuccess isPaymentSuccess,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Journey.JourneyStatus -> Kernel.Types.Id.Id Domain.Types.Journey.Journey -> m ())
 updateStatus status id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.status (Just status), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
