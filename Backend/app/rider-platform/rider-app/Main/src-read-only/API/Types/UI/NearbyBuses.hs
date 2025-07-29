@@ -22,8 +22,8 @@ data NearbyBus = NearbyBus
     occupancy :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     routeCode :: Data.Text.Text,
     serviceType :: Kernel.Prelude.Maybe Data.Text.Text,
-    vehicleNumber :: Kernel.Prelude.Maybe Data.Text.Text,
-    shortName :: Kernel.Prelude.Maybe Data.Text.Text
+    shortName :: Kernel.Prelude.Maybe Data.Text.Text,
+    vehicleNumber :: Kernel.Prelude.Maybe Data.Text.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -48,6 +48,10 @@ data RecentRide = RecentRide {fare :: Kernel.Types.Price.Price, fromStopCode :: 
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data TimetableEntry = TimetableEntry {serviceTierType :: BecknV2.FRFS.Enums.ServiceTierType, timeOfArrival :: Kernel.Prelude.TimeOfDay, timeOfDeparture :: Kernel.Prelude.TimeOfDay}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data TimetableRequest = TimetableRequest {routeCodes :: [Data.Text.Text], stopCode :: Data.Text.Text, vehicleType :: BecknV2.FRFS.Enums.VehicleCategory}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

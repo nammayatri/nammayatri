@@ -23,7 +23,7 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.JourneyRouteDetails.JourneyRouteDetails] -> m ())
 createMany = traverse_ create
 
-findAllBySearchId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch -> m ([Domain.Types.JourneyRouteDetails.JourneyRouteDetails]))
+findAllBySearchId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch -> m [Domain.Types.JourneyRouteDetails.JourneyRouteDetails])
 findAllBySearchId searchId = do findAllWithKV [Se.Is Beam.searchId $ Se.Eq (Kernel.Types.Id.getId searchId)]
 
 updateAlternateShortNames :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe [Kernel.Prelude.Text] -> Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch -> m ())
@@ -53,7 +53,8 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.JourneyRouteDetails.JourneyRouteDetails {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.alternateShortNames alternateShortNames,
+    [ Se.Set Beam.alternateRouteCodes alternateRouteCodes,
+      Se.Set Beam.alternateShortNames alternateShortNames,
       Se.Set Beam.frequency frequency,
       Se.Set Beam.fromStationId fromStationCode,
       Se.Set Beam.journeyStatus journeyStatus,
@@ -77,7 +78,8 @@ instance FromTType' Beam.JourneyRouteDetails Domain.Types.JourneyRouteDetails.Jo
     pure $
       Just
         Domain.Types.JourneyRouteDetails.JourneyRouteDetails
-          { alternateShortNames = alternateShortNames,
+          { alternateRouteCodes = alternateRouteCodes,
+            alternateShortNames = alternateShortNames,
             frequency = frequency,
             fromStationCode = fromStationId,
             id = Kernel.Types.Id.Id id,
@@ -99,7 +101,8 @@ instance FromTType' Beam.JourneyRouteDetails Domain.Types.JourneyRouteDetails.Jo
 instance ToTType' Beam.JourneyRouteDetails Domain.Types.JourneyRouteDetails.JourneyRouteDetails where
   toTType' (Domain.Types.JourneyRouteDetails.JourneyRouteDetails {..}) = do
     Beam.JourneyRouteDetailsT
-      { Beam.alternateShortNames = alternateShortNames,
+      { Beam.alternateRouteCodes = alternateRouteCodes,
+        Beam.alternateShortNames = alternateShortNames,
         Beam.frequency = frequency,
         Beam.fromStationId = fromStationCode,
         Beam.id = Kernel.Types.Id.getId id,

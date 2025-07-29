@@ -55,7 +55,8 @@ data MultiModalJourneyRouteDetails = MultiModalJourneyRouteDetails
     routeLongName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     routeCode :: Kernel.Prelude.Maybe Text,
     fromStationCode :: Kernel.Prelude.Maybe Text,
-    toStationCode :: Kernel.Prelude.Maybe Text
+    toStationCode :: Kernel.Prelude.Maybe Text,
+    alternateRouteCodes :: [Text]
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 

@@ -78,7 +78,8 @@ getTransformedJourneyRouteDetails routeDetails = do
           routeLongName = JRD.routeLongName rd,
           fromStationCode = JRD.fromStationCode rd,
           toStationCode = JRD.toStationCode rd,
-          routeCode = JRD.routeCode rd
+          routeCode = JRD.routeCode rd,
+          alternateRouteCodes = fromMaybe [] (JRD.alternateRouteCodes rd)
         }
 
 getTransformedJourneyRouteDetailsT :: [JRD.JourneyRouteDetails] -> [MultiModalJourneyRouteDetails]
@@ -99,5 +100,6 @@ getTransformedJourneyRouteDetailsT routeDetails = do
           routeLongName = JRD.routeLongName rd,
           fromStationCode = JRD.fromStationCode rd,
           toStationCode = JRD.toStationCode rd,
-          routeCode = JRD.routeCode rd
+          routeCode = JRD.routeCode rd,
+          alternateRouteCodes = fromMaybe [] (JRD.alternateRouteCodes rd)
         }

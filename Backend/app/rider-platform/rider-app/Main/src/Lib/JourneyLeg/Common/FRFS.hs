@@ -45,6 +45,7 @@ import Kernel.Utils.Common
 import qualified Lib.JourneyLeg.Types as JPT
 import qualified Lib.JourneyModule.Types as JT
 import qualified Lib.JourneyModule.Utils as JMU
+import qualified Lib.JourneyModule.Utils as JourneyUtils
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
@@ -347,6 +348,7 @@ search vehicleCategory personId merchantId quantity city journeyLeg recentLocati
           fromStation <- OTPRest.getStationByGtfsIdAndStopCode fromStationCode integratedBPPConfig
           toStation <- OTPRest.getStationByGtfsIdAndStopCode toStationCode integratedBPPConfig
           route <- OTPRest.getRouteByRouteId integratedBPPConfig routeCode
+          validRoutes <- JourneyUtils.getValidRoutes fromStationCode toStationCode integratedBPPConfig
           return
             JPT.MultiModalJourneyRouteDetails
               { platformNumber = rd.fromStopDetails >>= (.platformCode),
@@ -359,7 +361,8 @@ search vehicleCategory personId merchantId quantity city journeyLeg recentLocati
                 routeLongName = EMTypes.longName rd,
                 fromStationCode = fmap (.code) fromStation,
                 toStationCode = fmap (.code) toStation,
-                routeCode = fmap (.code) route
+                routeCode = fmap (.code) route,
+                alternateRouteCodes = validRoutes
               }
 
     getFrfsRouteDetails :: JT.SearchRequestFlow m r c => [EMTypes.MultiModalRouteDetails] -> m [FRFSRouteDetails]

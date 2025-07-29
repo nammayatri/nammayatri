@@ -51,15 +51,26 @@ type API =
            "stopCode"
            Data.Text.Text
       :> QueryParam
+           "toStopCode"
+           Data.Text.Text
+      :> QueryParam
            "vehicleType"
            BecknV2.FRFS.Enums.VehicleCategory
       :> Get
            '[JSON]
            API.Types.UI.NearbyBuses.TimetableResponse
+      :<|> TokenAuth
+      :> "allRoutesTimetable"
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.NearbyBuses.TimetableRequest
+      :> Post
+           '[JSON]
+           API.Types.UI.NearbyBuses.TimetableResponse
   )
 
 handler :: Environment.FlowServer API
-handler = postNearbyBusBooking :<|> getNextVehicleDetails :<|> getTimetableStop
+handler = postNearbyBusBooking :<|> getNextVehicleDetails :<|> getTimetableStop :<|> postAllRoutesTimetable
 
 postNearbyBusBooking ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -87,7 +98,17 @@ getTimetableStop ::
     ) ->
     Data.Text.Text ->
     Data.Text.Text ->
+    Kernel.Prelude.Maybe Data.Text.Text ->
     Kernel.Prelude.Maybe BecknV2.FRFS.Enums.VehicleCategory ->
     Environment.FlowHandler API.Types.UI.NearbyBuses.TimetableResponse
   )
-getTimetableStop a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.NearbyBuses.getTimetableStop (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
+getTimetableStop a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.NearbyBuses.getTimetableStop (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
+
+postAllRoutesTimetable ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    API.Types.UI.NearbyBuses.TimetableRequest ->
+    Environment.FlowHandler API.Types.UI.NearbyBuses.TimetableResponse
+  )
+postAllRoutesTimetable a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.NearbyBuses.postAllRoutesTimetable (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
