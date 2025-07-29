@@ -52,7 +52,7 @@ genericHeaderConfig state = let
       , width = V 25
       , imageUrl = "ny_ic_chevron_left"
       , margin = Margin 12 12 12 12
-      , visibility = GONE
+      , visibility = if state.props.showGoBack then VISIBLE else GONE
       }
     , padding = Padding 16 16 0 16
     , textConfig {

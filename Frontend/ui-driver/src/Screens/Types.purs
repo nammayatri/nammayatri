@@ -620,7 +620,8 @@ type DriverProfileScreenProps = {
   showDriverBlockedPopup :: Boolean,
   skipGlobalEvents :: Boolean,
   isPetModeEnabled :: Maybe Boolean,
-  nammaClubEnabled :: Boolean
+  nammaClubEnabled :: Boolean,
+  showSettings:: Boolean
 }
 data Gender = MALE | FEMALE | OTHER | PREFER_NOT_TO_SAY
 
@@ -3042,6 +3043,7 @@ type BenefitsScreenProps = {
 , glBannerClickable :: Boolean
 , nammaClubEnabled :: Boolean
 , nyClubConsent :: Maybe Boolean
+, showGoBack :: Boolean
 }
 
 type LmsModuleList =
