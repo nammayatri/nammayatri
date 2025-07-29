@@ -72,6 +72,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Transformers.Booking as QTB
 import Tools.Error
 import Tools.Metrics.BAPMetrics.Types
+import Tools.Payment (roundToTwoDecimalPlaces)
 import qualified Tools.SharedRedisKeys as SharedRedisKeys
 import TransactionLogs.Types
 
@@ -780,10 +781,10 @@ mkLegInfoFromFrfsBooking booking distance duration entrance exit = do
           Just InPlan -> getFRFSLegStatusFromBooking booking
           Just status -> status
   let skipBooking = fromMaybe False booking.isSkipped
-  let amountToBeUpdated = getHighPrecMoney booking.estimatedPrice.amount
+  let amountToBeUpdated = roundToTwoDecimalPlaces . HighPrecMoney $ safeDiv (getHighPrecMoney booking.price.amount) (fromIntegral booking.quantity)
       estimatedPrice =
         Price
-          { amount = HighPrecMoney amountToBeUpdated,
+          { amount = amountToBeUpdated,
             amountInt = Money $ roundToIntegral amountToBeUpdated,
             currency = booking.price.currency
           }
