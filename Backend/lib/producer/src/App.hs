@@ -16,7 +16,7 @@
 module App (startProducer) where
 
 import Data.Function hiding (id)
-import Data.IORef (newIORef)
+-- import Data.IORef (newIORef)
 import Debug.Trace as T
 import Environment
 import EulerHS.Interpreters (runFlow)
@@ -70,11 +70,10 @@ startProducerWithEnv flowRt appCfg appEnv producerType = do
         >> L.setOption Tables KUC.defaultTableData
         >> L.setOption KVCM.KVMetricCfg appEnv.coreMetrics.kvRedisMetricsContainer
     )
-  -- Create the counter in IO
-  redisStreamCounter <- newIORef 1
-  let producersWithCounter = map (\_ -> (PF.runProducer redisStreamCounter)) [1 .. appCfg.producersPerPod]
-  let reviverWithCounter = (PF.runReviver producerType redisStreamCounter)
 
+  let producersWithCounter = concatMap (\_ -> map (\streamIndex -> PF.runProducer streamIndex) [1 .. 16]) [1 .. appCfg.producersPerPod]
+  let reviverWithCounter = map (\streamIndex -> PF.runReviver producerType streamIndex) [1 .. 16]
+  putStrLn $ ("StreamName is now: " :: String)
   runFlowR flowRt appEnv $ do
     loopGracefully $
-      bool producersWithCounter (reviverWithCounter : producersWithCounter) appEnv.runReviver
+      bool producersWithCounter (reviverWithCounter ++ producersWithCounter) appEnv.runReviver

@@ -8,7 +8,7 @@ module Producer.Flow where
 import qualified Data.Aeson as Ae
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as BSL
-import Data.IORef (IORef, modifyIORef, readIORef)
+-- import Data.IORef (IORef, modifyIORef, readIORef)
 import qualified Data.Text.Encoding as TE
 import qualified Data.Time as T hiding (getCurrentTime)
 import qualified Data.UUID as UU
@@ -18,6 +18,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Types.CacheFlow
 import Kernel.Types.Error
+-- import qualified EulerHS.Language as L
 import Kernel.Types.Flow ()
 import Kernel.Types.Id
 import Kernel.Types.MonadGuid
@@ -50,8 +51,9 @@ getMyShardKey = do
 getShardedKey :: Text -> Text -> Text
 getShardedKey key shardId = key <> "{" <> shardId <> "}"
 
-runProducer :: IORef Int -> Flow ()
+runProducer :: Int -> Flow ()
 runProducer redisStreamCounter = do
+  logDebug $ "StreamName is now: " <> show redisStreamCounter
   myShardId <- getMyShardKey
   Hedis.whenWithLockRedis (getShardedKey producerLockKey myShardId) 10 $ do
     someErr <-
@@ -75,7 +77,7 @@ runProducer redisStreamCounter = do
       Left err -> logError $ show err
       Right _ -> pure ()
 
-runReviver :: ProducerType -> IORef Int -> Flow ()
+runReviver :: ProducerType -> Int -> Flow ()
 runReviver producerType redisStreamCounter = do
   reviverInterval <- asks (.reviverInterval)
   T.UTCTime _ todaysDiffTime <- getCurrentTime
@@ -87,7 +89,7 @@ runReviver producerType redisStreamCounter = do
 mkRunningJobKey :: Text -> Text
 mkRunningJobKey jobId = "RunnningJob:" <> jobId
 
-runReviver' :: ProducerType -> IORef Int -> Flow ()
+runReviver' :: ProducerType -> Int -> Flow ()
 runReviver' producerType redisStreamCounter = do
   logDebug "Reviver is Running "
   case producerType of
@@ -164,13 +166,11 @@ runReviver' producerType redisStreamCounter = do
       result <- insertIntoStream newJobsToExecute_ redisStreamCounter
       logDebug $ "Job Revived and inserted into stream with timestamp" <> show result
 
-insertIntoStream :: [B.ByteString] -> IORef Int -> Flow ()
-insertIntoStream jobs streamNumberRef = do
+insertIntoStream :: [B.ByteString] -> Int -> Flow ()
+insertIntoStream jobs streamNumber = do
   streamName' <- asks (.streamName)
-  streamNumber <- liftIO $ readIORef streamNumberRef
-  liftIO $ modifyIORef streamNumberRef (\x -> if x < 16 then x + 1 else 1)
   let streamName = streamName' <> "_" <> show streamNumber
-  putStrLn $ "StreamName is now: " ++ show streamName
+  logDebug $ "StreamName is now: " <> show streamName
   entryId <- asks (.entryId)
   forM_ jobs $ \job -> fork "putting into stream" $ do
     eqId <- generateGUID
