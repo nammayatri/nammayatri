@@ -1068,8 +1068,8 @@ makeTicketBookingPaymentAPIStatus :: Payment.TransactionStatus -> FRFSTicketServ
 makeTicketBookingPaymentAPIStatus Payment.NEW = FRFSTicketService.NEW
 makeTicketBookingPaymentAPIStatus PENDING_VBV = FRFSTicketService.PENDING
 makeTicketBookingPaymentAPIStatus CHARGED = FRFSTicketService.SUCCESS
-makeTicketBookingPaymentAPIStatus AUTHENTICATION_FAILED = FRFSTicketService.FAILURE
-makeTicketBookingPaymentAPIStatus AUTHORIZATION_FAILED = FRFSTicketService.FAILURE
+makeTicketBookingPaymentAPIStatus AUTHENTICATION_FAILED = FRFSTicketService.PENDING -- FRFSTicketService.FAILURE
+makeTicketBookingPaymentAPIStatus AUTHORIZATION_FAILED = FRFSTicketService.PENDING -- FRFSTicketService.FAILURE
 makeTicketBookingPaymentAPIStatus JUSPAY_DECLINED = FRFSTicketService.FAILURE
 makeTicketBookingPaymentAPIStatus AUTHORIZING = FRFSTicketService.PENDING
 makeTicketBookingPaymentAPIStatus COD_INITIATED = FRFSTicketService.REFUNDED
