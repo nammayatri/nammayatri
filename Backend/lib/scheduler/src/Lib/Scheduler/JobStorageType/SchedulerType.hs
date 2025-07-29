@@ -177,12 +177,13 @@ getReadyTask ::
     HasField "block" r Integer,
     HasField "readCount" r Integer
   ) =>
+  Text ->
   m [(AnyJob t, BS.ByteString)]
-getReadyTask = do
+getReadyTask key = do
   schedulerType <- asks (.schedulerType)
   case schedulerType of
-    RedisBased -> RQ.getReadyTask
-    DbBased -> DBQ.getReadyTask
+    RedisBased -> RQ.getReadyTask key
+    DbBased -> DBQ.getReadyTask key
 
 updateStatus :: forall m r. (JobExecutor r m, HasField "jobInfoMap" r (M.Map Text Bool)) => Text -> JobStatus -> Id AnyJob -> m ()
 updateStatus jobType status id = do

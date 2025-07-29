@@ -177,8 +177,8 @@ getReadyTasks mbMaxShards = do
   res <- findAllWithOptionsKVScheduler [Se.And ([Se.Is BeamST.status $ Se.Eq Pending, Se.Is BeamST.scheduledAt $ Se.LessThanOrEq (T.utcToLocalTime T.utc now)] <> [Se.Is BeamST.shardId $ Se.Eq shardId | isJust mbMaxShards])] (Se.Asc BeamST.scheduledAt) Nothing Nothing
   return $ zip res (map (const "rndm") [1 .. length res])
 
-getReadyTask :: (MonadThrow m, Log m) => m [(AnyJob t, BS.ByteString)]
-getReadyTask = throwError (InvalidRequest "Not defined for Db_Based Scheduler") $> []
+getReadyTask :: (MonadThrow m, Log m) => Text -> m [(AnyJob t, BS.ByteString)]
+getReadyTask _Key = throwError (InvalidRequest "Not defined for Db_Based Scheduler") $> []
 
 updateStatus ::
   (JobMonad r m) =>
