@@ -685,7 +685,7 @@ handleDeepLinksFlow event activeRideResp isActiveRide = do
               -- liftFlowBT $ logEvent logField_ "ny_driver_profile_click"
               (GlobalState allState) <- getState
               let updatedState = allState.homeScreen
-              modifyScreenState $ DriverProfileScreenStateType $ \driverProfileScreen -> driverProfileScreen { props {showSettings = true}, data {profileCompletedModules = updatedState.data.completingProfileRes.completed, cachedVehicleCategory = fromMaybe ST.UnKnown $ RC.getCategoryFromVariant updatedState.data.vehicleType, cancellationRate = updatedState.data.cancellationRate}}
+              modifyScreenState $ DriverProfileScreenStateType $ \driverProfileScreen -> driverProfileScreen { props {showSettings = false}, data {profileCompletedModules = updatedState.data.completingProfileRes.completed, cachedVehicleCategory = fromMaybe ST.UnKnown $ RC.getCategoryFromVariant updatedState.data.vehicleType, cancellationRate = updatedState.data.cancellationRate}}
               hideSplashAndCallFlow driverProfileFlow
             "ride_request" -> do
               (GlobalState allState) <- getState
