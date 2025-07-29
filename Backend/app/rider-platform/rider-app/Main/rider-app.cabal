@@ -825,6 +825,7 @@ library
       Domain.Types.SharedBooking
       Domain.Types.SharedEstimate
       Domain.Types.SharedRide
+      Domain.Types.SharedRideConfigs
       Domain.Types.SharedSearchRequest
       Domain.Types.Sos
       Domain.Types.SpecialOccasion
@@ -963,6 +964,7 @@ library
       Storage.Beam.SharedBooking
       Storage.Beam.SharedEstimate
       Storage.Beam.SharedRide
+      Storage.Beam.SharedRideConfigs
       Storage.Beam.SharedSearchRequest
       Storage.Beam.Sos
       Storage.Beam.SpecialOccasion
@@ -1159,6 +1161,7 @@ library
       Storage.Queries.SharedBooking
       Storage.Queries.SharedEstimate
       Storage.Queries.SharedRide
+      Storage.Queries.SharedRideConfigs
       Storage.Queries.SharedSearchRequest
       Storage.Queries.Sos
       Storage.Queries.SpecialOccasion

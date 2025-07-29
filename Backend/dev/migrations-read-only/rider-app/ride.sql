@@ -297,3 +297,13 @@ ALTER TABLE atlas_app.ride ADD COLUMN insured_amount text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.ride ADD COLUMN is_pet_ride boolean ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ride ADD COLUMN shared_ride_id character varying(36) ;
+
+
+------- SQL updates -------
+

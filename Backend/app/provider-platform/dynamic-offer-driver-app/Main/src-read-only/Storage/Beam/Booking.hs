@@ -72,6 +72,7 @@ data BookingT f = BookingT
     senderId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     senderName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     senderPrimaryExophone :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    sharedBookingId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     specialLocationTag :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     specialZoneOtpCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     startTime :: B.C f Kernel.Prelude.UTCTime,

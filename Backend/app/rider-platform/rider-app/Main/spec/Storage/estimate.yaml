@@ -120,6 +120,7 @@ Estimate:
     isInsured: Bool
     insuredAmount: Maybe Text
     isMultimodalSearch: Maybe Bool
+    sharedEstimateId: Maybe Text
 
   constraints:
     id: PrimaryKey
@@ -256,6 +257,7 @@ Estimate:
     currency: character varying(255)
     estimatedPickupDuration: integer
     tipOptions: integer[]
+    sharedEstimateId: character varying(36)
 
   queries:
     findById:
@@ -280,6 +282,10 @@ Estimate:
       where:
         and: [status,requestId]
 
+    updateSharedEstimateId:
+      kvFunction: updateOneWithKV
+      where: id
+      params: [sharedEstimateId]
 
   extraOperations:
     - EXTRA_QUERY_FILE

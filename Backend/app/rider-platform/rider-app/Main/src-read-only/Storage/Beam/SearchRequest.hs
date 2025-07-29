@@ -84,6 +84,7 @@ data SearchRequestT f = SearchRequestT
     routeCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     searchMode :: B.C f (Kernel.Prelude.Maybe Domain.Types.SearchRequest.SearchMode),
     selectedPaymentMethodId :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.PaymentMethodId),
+    sharedSearchRequestId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     startTime :: B.C f Kernel.Prelude.UTCTime,
     toLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     totalRidesCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

@@ -120,6 +120,7 @@ Ride:
     isPickupOrDestinationEdited: Maybe Bool
     isInsured: Bool
     insuredAmount: Maybe Text
+    sharedRideId: Maybe Text
 
   sqlType:
     id: character(36)
@@ -138,6 +139,7 @@ Ride:
     endOdometerReadingFileId: character varying(36)
     deliveryFileIds: "text[]"
     rideTags: "text[]"
+    sharedRideId: character varying(36)
 
   default:
     traveledDistance: '0'
@@ -294,6 +296,11 @@ Ride:
       kvFunction: updateOneWithKV
       params: [isPickupOrDestinationEdited]
       where: id
+
+    updateSharedRideId:
+      kvFunction: updateOneWithKV
+      where: id
+      params: [sharedRideId]
 
   excludedDefaultQueries:
     - create

@@ -62,6 +62,7 @@ data EstimateT f = EstimateT
     requestId :: B.C f Kernel.Prelude.Text,
     serviceTierName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     serviceTierShortDesc :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    sharedEstimateId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     smartTipReason :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     smartTipSuggestion :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     specialLocationName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

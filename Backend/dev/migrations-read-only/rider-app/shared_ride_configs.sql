@@ -1,0 +1,20 @@
+CREATE TABLE atlas_app.shared_ride_configs ();
+
+ALTER TABLE atlas_app.shared_ride_configs ADD COLUMN actual_drop_distance_threshold double precision NOT NULL;
+ALTER TABLE atlas_app.shared_ride_configs ADD COLUMN actual_pickup_distance_threshold double precision NOT NULL;
+ALTER TABLE atlas_app.shared_ride_configs ADD COLUMN created_at timestamptz NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_app.shared_ride_configs ADD COLUMN customer_remaining_threshold_for_flow_continuation integer NOT NULL;
+ALTER TABLE atlas_app.shared_ride_configs ADD COLUMN drop_location_search_radius double precision NOT NULL;
+ALTER TABLE atlas_app.shared_ride_configs ADD COLUMN geo_hash_precision_for_route_matching integer NOT NULL;
+ALTER TABLE atlas_app.shared_ride_configs ADD COLUMN id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.shared_ride_configs ADD COLUMN merchant_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.shared_ride_configs ADD COLUMN merchant_operating_city_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.shared_ride_configs ADD COLUMN pickup_location_search_radius double precision NOT NULL;
+ALTER TABLE atlas_app.shared_ride_configs ADD COLUMN route_matching_threshold double precision NOT NULL;
+ALTER TABLE atlas_app.shared_ride_configs ADD COLUMN route_overlap_threshold double precision NOT NULL;
+ALTER TABLE atlas_app.shared_ride_configs ADD COLUMN search_expiry_buffer_seconds integer NOT NULL;
+ALTER TABLE atlas_app.shared_ride_configs ADD COLUMN search_request_expiry_seconds integer NOT NULL;
+ALTER TABLE atlas_app.shared_ride_configs ADD COLUMN search_threshold_for_shared_estimate integer NOT NULL;
+ALTER TABLE atlas_app.shared_ride_configs ADD COLUMN updated_at timestamptz NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_app.shared_ride_configs ADD COLUMN vehicle_category character varying(255) NOT NULL;
+ALTER TABLE atlas_app.shared_ride_configs ADD PRIMARY KEY ( id);

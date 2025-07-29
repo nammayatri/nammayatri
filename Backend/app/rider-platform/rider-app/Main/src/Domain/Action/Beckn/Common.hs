@@ -358,6 +358,7 @@ buildRide req@ValidatedRideAssignedReq {..} mbMerchant now status = do
         isSafetyPlus = isSafetyPlus,
         isInsured = booking.isInsured,
         insuredAmount = booking.insuredAmount,
+        sharedRideId = Nothing, -- VaibhavD : Re-evaluate
         ..
       }
 

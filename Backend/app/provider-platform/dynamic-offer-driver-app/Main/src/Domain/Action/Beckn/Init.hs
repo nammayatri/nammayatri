@@ -242,6 +242,7 @@ handler merchantId req validatedReq = do
             isSafetyPlus = DTCC.SAFETY_PLUS_CHARGES `elem` map (.chargeCategory) driverQuote.fareParams.conditionalCharges,
             isInsured = fromMaybe False req.isInsured,
             insuredAmount = req.insuredAmount,
+            sharedBookingId = Nothing, -- VaibhavD : Re-evaluate
             ..
           }
     makeBookingDeliveryDetails :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => DSR.SearchRequest -> DTDD.DeliveryDetails -> Id DM.Merchant -> m (Maybe TripParty, Maybe DTDPD.DeliveryPersonDetails, Maybe DTDPD.DeliveryPersonDetails)

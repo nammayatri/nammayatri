@@ -94,6 +94,7 @@ Booking:
     coinsRewardedOnGoldTierRide: Maybe Int
     isInsured: Bool
     insuredAmount: Maybe Text
+    sharedBookingId: Maybe Text
 
   excludedFields:
     - merchantId
@@ -212,6 +213,7 @@ Booking:
     tollNames: "text[]"
     estimateId: character varying(255)
     configInExperimentVersions: "json"
+    sharedBookingId: character varying(36)
 
   default:
     bookingType: "'NormalBooking'"
@@ -221,6 +223,11 @@ Booking:
       kvFunction: updateOneWithKV
       params: [estimatedFare, estimatedDistance]
       where: id
+
+    updateSharedBookingId:
+      kvFunction: updateOneWithKV
+      where: id
+      params: [sharedBookingId]
 
   constraints:
     id: PrimaryKey
