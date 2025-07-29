@@ -24,6 +24,7 @@ types:
       eta: Maybe UTCTime
       capacity: Maybe Int
       occupancy: Maybe Int
+      shortName: Maybe Text
 
   RecentRide:
       fromStopCode: Text
@@ -50,6 +51,9 @@ types:
 
   TimetableResponse:
     timetable: [TimetableEntry]
+
+  RouteCodes:
+    routeCodes: "[Text]"
 
 apis:
   - POST:
@@ -81,3 +85,15 @@ apis:
         vehicleType: VehicleCategory
       response:
         type: TimetableResponse
+
+  - POST:
+      endpoint: /allRoutesTimetable/stop/{stopCode}
+      auth: TokenAuth
+      params:
+        stopCode: Text
+      query:
+        vehicleType: VehicleCategory
+      response:
+        type: TimetableResponse
+      request:
+        type: RouteCodes

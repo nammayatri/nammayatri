@@ -6,6 +6,9 @@ import qualified BecknV2.FRFS.Enums as Spec
 import Control.Applicative (liftA2, (<|>))
 import Data.Aeson (object, withObject, (.:), (.=))
 import qualified Data.HashMap.Strict as HM
+-- import qualified Storage.CachedQueries.Merchant.MultiModalBus -- This was commented out in the provided content
+
+import Data.List (nub)
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Common as DTrip
 import qualified Domain.Types.Estimate as DEstimate
@@ -61,7 +64,6 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.Ride as DARide
 import SharedLogic.Search
--- import qualified Storage.CachedQueries.Merchant.MultiModalBus -- This was commented out in the provided content
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.Estimate as QEstimate
@@ -356,7 +358,8 @@ data LegRouteInfo = LegRouteInfo
     lineColorCode :: Maybe Text,
     trainNumber :: Maybe Text,
     journeyStatus :: Maybe JourneyLegStatus,
-    frequency :: Maybe Seconds
+    frequency :: Maybe Seconds,
+    allAvailableRoutes :: [Text]
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -903,6 +906,23 @@ getLegRouteInfo journeyRouteDetails integratedBPPConfig = do
       fromStation <- OTPRest.getStationByGtfsIdAndStopCode fromStationCode' integratedBPPConfig >>= fromMaybeM (InternalError $ "From Station not found in getSubwayLegRouteInfo: " <> show fromStationCode')
       toStation <- OTPRest.getStationByGtfsIdAndStopCode toStationCode' integratedBPPConfig >>= fromMaybeM (InternalError $ "To Station not found in getSubwayLegRouteInfo: " <> show toStationCode')
       route <- OTPRest.getRouteByRouteId integratedBPPConfig routeCode' >>= fromMaybeM (RouteNotFound routeCode')
+      -- Get route mappings that contain the origin stop
+      fromRouteStopMappings <- OTPRest.getRouteStopMappingByStopCode fromStation.code integratedBPPConfig
+
+      -- Get route mappings that contain the destination stop
+      toRouteStopMappings <- OTPRest.getRouteStopMappingByStopCode toStation.code integratedBPPConfig
+
+      -- Find common routes that have both the origin and destination stops
+      -- and ensure that from-stop comes before to-stop in the route sequence
+      let fromRouteStopMap = map (\mapping -> (mapping.routeCode, mapping.sequenceNum)) fromRouteStopMappings
+          toRouteStopMap = map (\mapping -> (mapping.routeCode, mapping.sequenceNum)) toRouteStopMappings
+          validRoutes =
+            nub $
+              [ fromRouteCode
+                | (fromRouteCode, fromSeq') <- fromRouteStopMap,
+                  (toRouteCode, toSeq') <- toRouteStopMap,
+                  fromRouteCode == toRouteCode && fromSeq' < toSeq' -- Ensure correct sequence
+              ]
 
       return
         LegRouteInfo
@@ -915,7 +935,8 @@ getLegRouteInfo journeyRouteDetails integratedBPPConfig = do
             lineColor = journeyRouteDetail.lineColor,
             lineColorCode = journeyRouteDetail.lineColorCode,
             trainNumber = Just route.shortName,
-            frequency = journeyRouteDetail.frequency
+            frequency = journeyRouteDetail.frequency,
+            allAvailableRoutes = validRoutes
           }
 
 castCategoryToMode :: Spec.VehicleCategory -> DTrip.MultimodalTravelMode
