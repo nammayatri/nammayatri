@@ -15,6 +15,7 @@ import qualified Data.Text as Text
 import Domain.Action.UI.DriverOnboarding.Referral
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DVRC
 import qualified Domain.Action.UI.DriverOnboardingV2 as DOnboarding
+import qualified Domain.Types.DriverPanCard as DPan
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Person
 import qualified Domain.Types.VehicleCategory as DVC
@@ -123,16 +124,21 @@ postOnboardingVerify ::
   ShortId DM.Merchant ->
   Context.City ->
   CommonOnboarding.VerifyType ->
+  Text ->
   CommonOnboarding.VerifyReq ->
   Environment.Flow APISuccess
-postOnboardingVerify merchantShortId opCity reqType req = do
+postOnboardingVerify merchantShortId opCity reqType requestorId req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
-  _transporterConfig <- findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
+  requestorPerson <- PersonQuery.findById (Id requestorId) >>= fromMaybeM (PersonNotFound requestorId)
+  let verifyBy = case requestorPerson.role of
+        ADMIN -> DPan.ADMIN
+        DRIVER -> DPan.FRONTEND_SDK
+        _ -> DPan.DASHBOARD
   case reqType of
-    CommonOnboarding.VERIFY_PAN -> DVRC.verifyPan True (Just merchant) (Id req.driverId, merchant.id, merchantOpCity.id) (DVRC.DriverPanReq {panNumber = req.identifierNumber, imageId = req.imageId, driverId = req.driverId})
-    CommonOnboarding.VERIFY_GST -> DVRC.verifyGstin True (Just merchant) (Id req.driverId, merchant.id, merchantOpCity.id) (DVRC.DriverGstinReq {gstin = req.identifierNumber, imageId = req.imageId, driverId = req.driverId})
-    CommonOnboarding.VERIFY_AADHAAR -> DVRC.verifyAadhaar True (Just merchant) (Id req.driverId, merchant.id, merchantOpCity.id) (DVRC.DriverAadhaarReq {aadhaarNumber = req.identifierNumber, aadhaarFrontImageId = req.imageId, aadhaarBackImageId = req.optionalImageId, consent = True, driverId = req.driverId})
+    CommonOnboarding.VERIFY_PAN -> DVRC.verifyPan verifyBy (Just merchant) (Id req.driverId, merchant.id, merchantOpCity.id) (DVRC.DriverPanReq {panNumber = req.identifierNumber, imageId = req.imageId, driverId = req.driverId})
+    CommonOnboarding.VERIFY_GST -> DVRC.verifyGstin verifyBy (Just merchant) (Id req.driverId, merchant.id, merchantOpCity.id) (DVRC.DriverGstinReq {gstin = req.identifierNumber, imageId = req.imageId, driverId = req.driverId})
+    CommonOnboarding.VERIFY_AADHAAR -> DVRC.verifyAadhaar verifyBy (Just merchant) (Id req.driverId, merchant.id, merchantOpCity.id) (DVRC.DriverAadhaarReq {aadhaarNumber = req.identifierNumber, aadhaarFrontImageId = req.imageId, aadhaarBackImageId = req.optionalImageId, consent = True, driverId = req.driverId})
 
 castStatusRes :: SStatus.StatusRes' -> CommonOnboarding.StatusRes
 castStatusRes SStatus.StatusRes' {..} =

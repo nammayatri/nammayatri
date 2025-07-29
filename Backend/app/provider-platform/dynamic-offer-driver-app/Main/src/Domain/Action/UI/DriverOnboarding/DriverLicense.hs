@@ -31,6 +31,7 @@ import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificat
 import Domain.Types.DocumentVerificationConfig (DocumentVerificationConfig)
 import qualified Domain.Types.DocumentVerificationConfig as DTO
 import qualified Domain.Types.DriverLicense as Domain
+import qualified Domain.Types.DriverPanCard as DPan
 import qualified Domain.Types.HyperVergeVerification as Domain
 import qualified Domain.Types.IdfyVerification as Domain
 import qualified Domain.Types.Image as Image
@@ -100,12 +101,13 @@ validateDriverDLReq now DriverDLReq {..} =
     yearsAgo i = negate (nominalDay * 365 * i) `addUTCTime` now
 
 verifyDL ::
-  Bool ->
+  DPan.VerifiedBy ->
   Maybe DM.Merchant ->
   (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   DriverDLReq ->
   Flow DriverDLRes
-verifyDL isDashboard mbMerchant (personId, merchantId, merchantOpCityId) req@DriverDLReq {..} = do
+verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@DriverDLReq {..} = do
+  let isDashboard = (verifyBy == DPan.DASHBOARD)
   externalServiceRateLimitOptions <- asks (.externalServiceRateLimitOptions)
   checkSlidingWindowLimitWithOptions (makeVerifyDLHitsCountKey req.driverLicenseNumber) externalServiceRateLimitOptions
 
@@ -144,7 +146,7 @@ verifyDL isDashboard mbMerchant (personId, merchantId, merchantOpCityId) req@Dri
   decryptedPanNumber <- mapM decrypt driverInfo.panNumber
   decryptedAadhaarNumber <- mapM decrypt driverInfo.aadhaarNumber
   decryptedDlNumber <- mapM decrypt driverInfo.dlNumber
-  when (isJust transporterConfig.validNameComparePercentage) $
+  when (isJust transporterConfig.validNameComparePercentage && verifyBy /= DPan.ADMIN) $
     VC.validateDocument merchantId merchantOpCityId person.id nameOnCard dateOfBirth Nothing DTO.DriverLicense VC.DriverDocument {panNumber = decryptedPanNumber, aadhaarNumber = decryptedAadhaarNumber, dlNumber = decryptedDlNumber, gstNumber = Nothing}
   mdriverLicense <- Query.findByDLNumber driverLicenseNumber
   whenJust transporterConfig.dlNumberVerification $ \dlNumberVerification -> do
@@ -432,5 +434,5 @@ dlNotFoundFallback issueDate (extractedDL, operatingCity) dob verificationReq pe
             requestId = Nothing,
             sdkTransactionId = Nothing
           }
-  void $ verifyDL False Nothing (person.id, person.merchantId, person.merchantOperatingCityId) dlreq
+  void $ verifyDL DPan.FRONTEND_SDK Nothing (person.id, person.merchantId, person.merchantOperatingCityId) dlreq
   return Ack

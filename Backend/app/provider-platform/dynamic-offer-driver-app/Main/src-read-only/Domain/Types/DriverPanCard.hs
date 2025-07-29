@@ -98,7 +98,7 @@ instance EncryptedItem' DriverPanCard where
 
 data PanType = INDIVIDUAL | BUSINESS deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data VerifiedBy = FRONTEND_SDK | DASHBOARD deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data VerifiedBy = FRONTEND_SDK | DASHBOARD | ADMIN deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PanType)
 

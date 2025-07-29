@@ -31,7 +31,7 @@ getOnboardingRegisterStatus merchantShortId opCity apiTokenInfo driverId makeSel
 postOnboardingVerify :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Fleet.Onboarding.VerifyType -> API.Types.ProviderPlatform.Fleet.Onboarding.VerifyReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postOnboardingVerify merchantShortId opCity apiTokenInfo verifyType req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callFleetAPI checkedMerchantId opCity (.onboardingDSL.postOnboardingVerify) verifyType req
+  Client.callFleetAPI checkedMerchantId opCity (.onboardingDSL.postOnboardingVerify) verifyType apiTokenInfo.personId.getId req
 
 getOnboardingGetReferralDetails :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Environment.Flow API.Types.ProviderPlatform.Fleet.Onboarding.ReferralInfoRes)
 getOnboardingGetReferralDetails merchantShortId opCity apiTokenInfo referralCode = do

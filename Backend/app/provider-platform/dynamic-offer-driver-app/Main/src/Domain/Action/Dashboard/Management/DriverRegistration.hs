@@ -262,7 +262,7 @@ postDriverRegistrationRegisterDl merchantShortId opCity driverId_ Common.Registe
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   verifyDL
-    True
+    DPan.DASHBOARD
     (Just merchant)
     (cast driverId_, cast merchant.id, merchantOpCityId)
     DriverDLReq

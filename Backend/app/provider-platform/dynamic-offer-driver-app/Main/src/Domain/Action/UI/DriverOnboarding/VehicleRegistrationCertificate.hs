@@ -339,12 +339,12 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req bulkUpload =
     makeVerifyRCHitsCountKey rcNumber = "VerifyRC:rcNumberHits:" <> rcNumber <> ":hitsCount"
 
 verifyPan ::
-  Bool ->
+  DPan.VerifiedBy ->
   Maybe DM.Merchant ->
   (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   DriverPanReq ->
   Flow DriverPanRes
-verifyPan isDashboard mbMerchant (personId, _, merchantOpCityId) req = do
+verifyPan verifyBy mbMerchant (personId, _, merchantOpCityId) req = do
   externalServiceRateLimitOptions <- asks (.externalServiceRateLimitOptions)
   checkSlidingWindowLimitWithOptions (makeVerifyPanHitsCountKey req.panNumber) externalServiceRateLimitOptions
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -427,13 +427,13 @@ verifyPan isDashboard mbMerchant (personId, _, merchantOpCityId) req = do
 
           resp <- Verification.extractPanImage person.merchantId merchantOpCityId extractReq
           extractedPan <- validateExtractedPan resp
-          when (isJust transporterConfig.validNameComparePercentage) $
+          when (isJust transporterConfig.validNameComparePercentage && verifyBy /= DPan.ADMIN) $
             validateDocument person.merchantId merchantOpCityId person.id extractedPan.name_on_card extractedPan.date_of_birth (Just req.panNumber) ODC.PanCard driverDocument
           DPQuery.updateVerificationStatus Documents.VALID person.id
         Nothing -> do
           resp <- Verification.extractPanImage person.merchantId merchantOpCityId extractReq
           extractedPan <- validateExtractedPan resp
-          when (isJust transporterConfig.validNameComparePercentage) $
+          when (isJust transporterConfig.validNameComparePercentage && verifyBy /= DPan.ADMIN) $
             validateDocument person.merchantId merchantOpCityId person.id extractedPan.name_on_card extractedPan.date_of_birth (Just req.panNumber) ODC.PanCard driverDocument
           panCardDetails <- buildPanCard person extractedPan.pan_type extractedPan.name_on_card extractedPan.date_of_birth
           DPQuery.create $ panCardDetails
@@ -465,7 +465,7 @@ verifyPan isDashboard mbMerchant (personId, _, merchantOpCityId) req = do
             driverName = Just person.firstName,
             driverNameOnGovtDB = panName,
             failedRules = [],
-            verifiedBy = Just (if isDashboard then DPan.DASHBOARD else DPan.FRONTEND_SDK)
+            verifiedBy = Just verifyBy
           }
 
     checkIfGenuineReq :: (ServiceFlow m r) => API.Types.UI.DriverOnboardingV2.DriverPanReq -> Person.Person -> m ()
@@ -498,12 +498,12 @@ verifyPan isDashboard mbMerchant (personId, _, merchantOpCityId) req = do
     makeVerifyPanHitsCountKey panNumber = "VerifyPan:panNumberHits:" <> panNumber <> ":hitsCount"
 
 verifyGstin ::
-  Bool ->
+  DPan.VerifiedBy ->
   Maybe DM.Merchant ->
   (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   DriverGstinReq ->
   Flow DriverPanRes
-verifyGstin isDashboard mbMerchant (personId, _, merchantOpCityId) req = do
+verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req = do
   externalServiceRateLimitOptions <- asks (.externalServiceRateLimitOptions)
   checkSlidingWindowLimitWithOptions (makeVerifyGstinHitsCountKey req.gstin) externalServiceRateLimitOptions
 
@@ -579,7 +579,7 @@ verifyGstin isDashboard mbMerchant (personId, _, merchantOpCityId) req = do
             typeOfRegistration = type_of_registration,
             validFrom = valid_from >>= parseDateTime,
             validUpto = valid_upto >>= parseDateTime,
-            verifiedBy = pure $ if isDashboard then DPan.DASHBOARD else DPan.FRONTEND_SDK
+            verifiedBy = pure $ verifyBy
           }
 
     callIdfy :: Person.Person -> Maybe DGst.DriverGstin -> DriverDocument -> DTC.TransporterConfig -> Flow APISuccess
@@ -611,13 +611,13 @@ verifyGstin isDashboard mbMerchant (personId, _, merchantOpCityId) req = do
 
           resp <- Verification.extractGSTImage person.merchantId merchantOpCityId extractReq
           extractedGst <- validateExtractedGst resp
-          when (isJust transporterConfig.validNameComparePercentage) $
+          when (isJust transporterConfig.validNameComparePercentage && verifyBy /= DPan.ADMIN) $
             validateDocument person.merchantId merchantOpCityId person.id Nothing Nothing extractedGst.pan_number ODC.GSTCertificate driverDocument
           DGQuery.updateVerificationStatus Documents.VALID person.id
         Nothing -> do
           resp <- Verification.extractGSTImage person.merchantId merchantOpCityId extractReq
           extractedGst <- validateExtractedGst resp
-          when (isJust transporterConfig.validNameComparePercentage) $
+          when (isJust transporterConfig.validNameComparePercentage && verifyBy /= DPan.ADMIN) $
             validateDocument person.merchantId merchantOpCityId person.id Nothing Nothing extractedGst.pan_number ODC.GSTCertificate driverDocument
           gstCardDetails <- buildGstinCard person extractedGst.address extractedGst.constitution_of_business extractedGst.date_of_liability extractedGst.is_provisional extractedGst.legal_name extractedGst.trade_name extractedGst.type_of_registration extractedGst.valid_from extractedGst.valid_upto extractedGst.pan_number
           DGQuery.create $ gstCardDetails
@@ -627,12 +627,12 @@ verifyGstin isDashboard mbMerchant (personId, _, merchantOpCityId) req = do
     makeVerifyGstinHitsCountKey gstin = "VerifyGstin:gstinHits:" <> gstin <> ":hitsCount"
 
 verifyAadhaar ::
-  Bool ->
+  DPan.VerifiedBy ->
   Maybe DM.Merchant ->
   (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   DriverAadhaarReq ->
   Flow DriverAadhaarRes
-verifyAadhaar _isDashboard mbMerchant (personId, merchantId, merchantOpCityId) req = do
+verifyAadhaar verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req = do
   externalServiceRateLimitOptions <- asks (.externalServiceRateLimitOptions)
   checkSlidingWindowLimitWithOptions (makeVerifyAadhaarHitsCountKey req.aadhaarNumber) externalServiceRateLimitOptions
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -676,7 +676,7 @@ verifyAadhaar _isDashboard mbMerchant (personId, merchantId, merchantOpCityId) r
           ImageDocumentNumberMismatch
             (maybe "null" maskText extractedAadhaarNumber)
             (maskText req.aadhaarNumber)
-      when (isJust transporterConfig.validNameComparePercentage) $
+      when (isJust transporterConfig.validNameComparePercentage && verifyBy /= DPan.ADMIN) $
         validateDocument person.merchantId merchantOpCityId person.id extractedAadhaarOutputData.name_on_card extractedAadhaarOutputData.date_of_birth Nothing ODC.AadhaarCard driverDocument
       aadhaarCard <- makeAadhaarCardEntity person.id extractedAadhaarOutputData req
       QAadhaarCard.upsertAadhaarRecord aadhaarCard

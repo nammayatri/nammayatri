@@ -63,6 +63,17 @@ apis:
         type: VerifyReq
       response:
         type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /verify/{verifyType}/{requestorId}
+            auth: ApiAuthV2
+            params:
+              verifyType: VerifyType
+              requestorId: Text
+            request:
+              type: VerifyReq
+            response:
+              type: APISuccess
 
   - GET:
       endpoint: /get/referralDetails

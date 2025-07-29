@@ -20,6 +20,7 @@ import qualified Domain.Action.UI.DriverOnboarding.Image as Image
 import qualified Domain.Action.UI.DriverOnboarding.Referral as DriverOnboarding
 import qualified Domain.Action.UI.DriverOnboarding.Status as DriverOnboarding
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DriverOnboarding
+import qualified Domain.Types.DriverPanCard as DPan
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DM
 import qualified Domain.Types.Person as DP
@@ -133,7 +134,7 @@ handler =
     :<|> getAllLinkedRCs
 
 verifyDL :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> DriverOnboarding.DriverDLReq -> FlowHandler DriverOnboarding.DriverDLRes
-verifyDL (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI . DriverOnboarding.verifyDL False Nothing (personId, merchantId, merchantOpCityId)
+verifyDL (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI . DriverOnboarding.verifyDL DPan.FRONTEND_SDK Nothing (personId, merchantId, merchantOpCityId)
 
 verifyRC :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> DriverOnboarding.DriverRCReq -> FlowHandler DriverOnboarding.DriverRCRes
 verifyRC (personId, merchantId, merchantOpCityId) req = withFlowHandlerAPI $ DriverOnboarding.verifyRC False Nothing (personId, merchantId, merchantOpCityId) req False
@@ -142,13 +143,13 @@ statusHandler :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> 
 statusHandler (personId, merchantId, merchantOpCityId) makeSelfieAadhaarPanMandatory prefillData onboardingVehicleCategory useHVSdkForDL = withFlowHandlerAPI $ DriverOnboarding.statusHandler (personId, merchantId, merchantOpCityId) makeSelfieAadhaarPanMandatory Nothing prefillData onboardingVehicleCategory useHVSdkForDL
 
 verifyPan :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> DriverOnboarding.DriverPanReq -> FlowHandler DriverOnboarding.DriverPanRes
-verifyPan (personId, merchantId, merchantOpCityId) req = withFlowHandlerAPI $ DriverOnboarding.verifyPan False Nothing (personId, merchantId, merchantOpCityId) req
+verifyPan (personId, merchantId, merchantOpCityId) req = withFlowHandlerAPI $ DriverOnboarding.verifyPan DPan.FRONTEND_SDK Nothing (personId, merchantId, merchantOpCityId) req
 
 verifyGstin :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> DriverOnboarding.DriverGstinReq -> FlowHandler DriverOnboarding.DriverGstinRes
-verifyGstin (personId, merchantId, merchantOpCityId) req = withFlowHandlerAPI $ DriverOnboarding.verifyGstin False Nothing (personId, merchantId, merchantOpCityId) req
+verifyGstin (personId, merchantId, merchantOpCityId) req = withFlowHandlerAPI $ DriverOnboarding.verifyGstin DPan.FRONTEND_SDK Nothing (personId, merchantId, merchantOpCityId) req
 
 verifyAadhaar :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> DriverOnboarding.DriverAadhaarReq -> FlowHandler DriverOnboarding.DriverAadhaarRes
-verifyAadhaar (personId, merchantId, merchantOpCityId) req = withFlowHandlerAPI $ DriverOnboarding.verifyAadhaar False Nothing (personId, merchantId, merchantOpCityId) req
+verifyAadhaar (personId, merchantId, merchantOpCityId) req = withFlowHandlerAPI $ DriverOnboarding.verifyAadhaar DPan.FRONTEND_SDK Nothing (personId, merchantId, merchantOpCityId) req
 
 validateImage :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> Image.ImageValidateRequest -> FlowHandler Image.ImageValidateResponse
 validateImage (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI . Image.validateImage False (personId, merchantId, merchantOpCityId)
