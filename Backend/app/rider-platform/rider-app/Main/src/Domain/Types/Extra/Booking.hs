@@ -19,6 +19,9 @@ import Tools.Beam.UtilsTH
 activeBookingStatus :: [BookingStatus]
 activeBookingStatus = [NEW, CONFIRMED, AWAITING_REASSIGNMENT, TRIP_ASSIGNED]
 
+terminalBookingStatus :: [BookingStatus]
+terminalBookingStatus = [COMPLETED, CANCELLED, REALLOCATED]
+
 activeScheduledBookingStatus :: [BookingStatus]
 activeScheduledBookingStatus = [AWAITING_REASSIGNMENT, TRIP_ASSIGNED]
 

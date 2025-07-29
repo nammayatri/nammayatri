@@ -49,6 +49,7 @@ module SharedLogic.DriverPool
     scheduledRideFilter,
     getVehicleAvgSpeed,
     getBatchSize,
+    mkRideCancelledKey,
     addSearchRequestInfoToCache,
     isLessThenNParallelRequests,
     removeExpiredSearchRequestInfoFromCache,
