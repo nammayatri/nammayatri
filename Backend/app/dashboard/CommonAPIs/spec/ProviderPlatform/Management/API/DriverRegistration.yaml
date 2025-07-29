@@ -1,4 +1,5 @@
 imports:
+  DashboardAccessType: API.Types.ProviderPlatform.Management.Endpoints.Account
   Driver: Dashboard.Common
   Summary: Dashboard.Common
   Image: Dashboard.Common
@@ -220,6 +221,7 @@ types:
     - imageId1: Id Image
     - imageId2: Maybe (Id Image)
     - dateOfIssue: Maybe UTCTime
+    - accessType: Maybe DashboardAccessType
     - derive: "'HideSecrets"
   AadhaarCardReq:
     aadhaarFrontImageId: Maybe (Id Image)

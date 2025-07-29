@@ -27,6 +27,7 @@ module Domain.Action.Dashboard.Management.DriverRegistration
   )
 where
 
+import qualified API.Types.ProviderPlatform.Management.Account as Common
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverRegistration as Common
 import qualified API.Types.UI.DriverOnboardingV2
 import qualified Data.HashMap.Strict as HM
@@ -261,8 +262,14 @@ postDriverRegistrationRegisterDl :: ShortId DM.Merchant -> Context.City -> Id Co
 postDriverRegistrationRegisterDl merchantShortId opCity driverId_ Common.RegisterDLReq {..} = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  let verifyBy = case accessType of
+        Just accessTypeValue -> case accessTypeValue of
+          Common.DASHBOARD_ADMIN -> DPan.DASHBOARD_ADMIN
+          Common.DASHBOARD_USER -> DPan.DASHBOARD_USER
+          _ -> DPan.DASHBOARD
+        Nothing -> DPan.DASHBOARD
   verifyDL
-    True
+    verifyBy
     (Just merchant)
     (cast driverId_, cast merchant.id, merchantOpCityId)
     DriverDLReq

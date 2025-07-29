@@ -2,6 +2,7 @@ module Domain.Action.ProviderPlatform.Management.Account
   ( getAccountFetchUnverifiedAccounts,
     postAccountVerifyAccount,
     putAccountUpdateRole,
+    castDashboardAccessType,
   )
 where
 
