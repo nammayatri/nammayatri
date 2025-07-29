@@ -57,7 +57,8 @@ tfCatalogProviders res bppConfig isValueAddNP = do
       pricings = (map (Beckn.OnDemand.Utils.Common.convertEstimateToPricing res.specialLocationName) res.estimates) <> (map (Beckn.OnDemand.Utils.Common.convertQuoteToPricing res.specialLocationName) res.quotes)
       providerFulfillments_ = map (tfProviderFulfillments res) pricings & Just
       providerItems_ = Just $ map (tfProviderItems res isValueAddNP) pricings
-  BecknV2.OnDemand.Types.Provider {providerDescriptor = providerDescriptor_, providerFulfillments = providerFulfillments_, providerId = providerId_, providerItems = providerItems_, providerLocations = providerLocations_, providerPayments = providerPayments_}
+      providerCategories_ = Nothing -- FIXME fix this and items.category_ids
+  BecknV2.OnDemand.Types.Provider {providerDescriptor = providerDescriptor_, providerFulfillments = providerFulfillments_, providerId = providerId_, providerItems = providerItems_, providerLocations = providerLocations_, providerPayments = providerPayments_, providerCategories = providerCategories_}
 
 tfItemPrice :: Beckn.OnDemand.Utils.Common.Pricing -> Maybe BecknV2.OnDemand.Types.Price
 tfItemPrice pricing = do

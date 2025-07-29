@@ -444,4 +444,5 @@ tfProvider res =
       providerLocations = Nothing
       providerPayments = Nothing
       providerId = Just res.providerId
+      providerCategories = Nothing
    in Spec.Provider {..}
