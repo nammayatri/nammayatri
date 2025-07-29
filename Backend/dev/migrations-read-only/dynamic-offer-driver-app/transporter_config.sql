@@ -486,6 +486,11 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN max_allowed_vid
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allow_cache_driver_flow_status boolean  default false;
+
+
+------- SQL updates -------
+
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN cancellation_rate_slab_config json;
 
 

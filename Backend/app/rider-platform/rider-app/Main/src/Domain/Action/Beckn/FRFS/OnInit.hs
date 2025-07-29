@@ -17,13 +17,10 @@ module Domain.Action.Beckn.FRFS.OnInit where
 import qualified BecknV2.FRFS.Enums as Spec
 import Domain.Action.Beckn.FRFS.Common (DFareBreakUp)
 import qualified Domain.Types.FRFSTicketBooking as FTBooking
-import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import Kernel.Beam.Functions
-import Kernel.External.Encryption (decrypt)
-import qualified Kernel.External.Payment.Interface.Types as Payment
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
@@ -32,15 +29,12 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.JourneyModule.Utils as JourneyUtils
-import qualified Lib.Payment.Domain.Action as DPayment
-import qualified Lib.Payment.Domain.Types.Common as DPayment
-import qualified Lib.Payment.Domain.Types.PaymentOrder as PaymentOrder
 import Lib.Payment.Storage.Beam.BeamFlow
 import SharedLogic.CreateFareForMultiModal (createVendorSplitFromBookings)
+import SharedLogic.FRFSUtils
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import qualified Storage.CachedQueries.Merchant as QMerch
-import qualified Storage.Queries.FRFSQuote as QQuote
 import qualified Storage.Queries.FRFSSearch as QSearch
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
@@ -51,6 +45,8 @@ import qualified Tools.Payment as Payment
 data DOnInit = DOnInit
   { providerId :: Text,
     totalPrice :: Price,
+    totalQuantity :: Int,
+    totalChildTicketQuantity :: Maybe Int,
     fareBreakUp :: [DFareBreakUp],
     bppItemId :: Text,
     validTill :: Maybe UTCTime,
@@ -80,14 +76,14 @@ onInit ::
   Merchant.Merchant ->
   FTBooking.FRFSTicketBooking ->
   m ()
-onInit onInitReq merchant booking_ = do
-  person <- QP.findById booking_.riderId >>= fromMaybeM (PersonNotFound booking_.riderId.getId)
-  whenJust (onInitReq.validTill) (\validity -> void $ QFRFSTicketBooking.updateValidTillById validity booking_.id)
-  void $ QFRFSTicketBooking.updatePriceById onInitReq.totalPrice booking_.id
-  void $ QFRFSTicketBooking.updateBppBankDetailsById (Just onInitReq.bankAccNum) (Just onInitReq.bankCode) booking_.id
-  frfsConfig <- CQFRFSConfig.findByMerchantOperatingCityId booking_.merchantOperatingCityId Nothing >>= fromMaybeM (FRFSConfigNotFound booking_.merchantOperatingCityId.getId)
-  whenJust onInitReq.bppOrderId (\bppOrderId -> void $ QFRFSTicketBooking.updateBPPOrderIdById (Just bppOrderId) booking_.id)
-  let booking = booking_ {FTBooking.price = onInitReq.totalPrice, FTBooking.journeyOnInitDone = Just True}
+onInit onInitReq merchant oldBooking = do
+  person <- QP.findById oldBooking.riderId >>= fromMaybeM (PersonNotFound oldBooking.riderId.getId)
+  whenJust (onInitReq.validTill) (\validity -> void $ QFRFSTicketBooking.updateValidTillById validity oldBooking.id)
+  void $ QFRFSTicketBooking.updatePriceAndQuantityById onInitReq.totalPrice onInitReq.totalQuantity onInitReq.totalChildTicketQuantity oldBooking.id -- Full Ticket Price (Multiplied By Quantity)
+  void $ QFRFSTicketBooking.updateBppBankDetailsById (Just onInitReq.bankAccNum) (Just onInitReq.bankCode) oldBooking.id
+  frfsConfig <- CQFRFSConfig.findByMerchantOperatingCityId oldBooking.merchantOperatingCityId Nothing >>= fromMaybeM (FRFSConfigNotFound oldBooking.merchantOperatingCityId.getId)
+  whenJust onInitReq.bppOrderId (\bppOrderId -> void $ QFRFSTicketBooking.updateBPPOrderIdById (Just bppOrderId) oldBooking.id)
+  let booking = oldBooking {FTBooking.price = onInitReq.totalPrice, FTBooking.journeyOnInitDone = Just True}
   isMetroTestTransaction <- asks (.isMetroTestTransaction)
   logInfo $ "onInit journeyId" <> show booking.journeyId
   case booking.journeyId of
@@ -98,123 +94,53 @@ onInit onInitReq merchant booking_ = do
       let allLegsOnInitDone = all (\b -> b.journeyOnInitDone == Just True) allJourneyBookings
       when allLegsOnInitDone $ do
         Redis.withLockRedis (key journeyId) 60 $ do
-          (orderId, orderShortId) <- getPaymentIds
-          ticketBookingPayments <- processPayments orderId `mapM` allJourneyBookings
           let paymentType = Payment.FRFSMultiModalBooking
-          (_vendorSplitDetails, amount) <- createVendorSplitFromBookings allJourneyBookings merchant.id person.merchantOperatingCityId paymentType (isMetroTestTransaction && frfsConfig.isFRFSTestingEnabled)
-          mCreateOrderRes <- createPayments booking.merchantOperatingCityId merchant.id orderId orderShortId amount person paymentType _vendorSplitDetails -- paymentVendorSplitDetailsList
-          logInfo $ "Order created in onInit for journeyId" <> show journeyId <> show mCreateOrderRes
-          case mCreateOrderRes of
-            Just _ -> do
-              let bookingAndPayments = zip ticketBookingPayments allJourneyBookings
-              markBookingApproved `mapM_` bookingAndPayments
-            Nothing -> do
-              markBookingFailed `mapM_` allJourneyBookings
-              throwError $ InternalError "Failed to create order with Euler after on_int in FRFS"
+          (vendorSplitDetails, amount) <- createVendorSplitFromBookings allJourneyBookings merchant.id oldBooking.merchantOperatingCityId paymentType (isMetroTestTransaction && frfsConfig.isFRFSTestingEnabled)
+          createPayments allJourneyBookings oldBooking.merchantOperatingCityId oldBooking.merchantId amount person paymentType vendorSplitDetails
     Nothing -> do
       logInfo $ "Booking with journeyId" <> show booking
-      (orderId, orderShortId) <- getPaymentIds
-      ticketBookingPayment <- processPayments orderId booking
       let paymentType = getPaymentType booking.vehicleType
-      let amt :: HighPrecMoney = if isMetroTestTransaction && frfsConfig.isFRFSTestingEnabled then 1 else booking.price.amount
-      mCreateOrderRes <- createPayments booking.merchantOperatingCityId merchant.id orderId orderShortId amt person paymentType []
-      logInfo $ "Order created in onInit" <> show mCreateOrderRes
-      case mCreateOrderRes of
-        Just _ -> do
-          markBookingApproved (ticketBookingPayment, booking)
-        Nothing -> do
-          markBookingFailed booking
-          throwError $ InternalError "Failed to create order with Euler after on_int in FRFS"
+      let amount :: HighPrecMoney = if isMetroTestTransaction && frfsConfig.isFRFSTestingEnabled then 1 else booking.price.amount
+      createPayments [booking] oldBooking.merchantOperatingCityId oldBooking.merchantId amount person paymentType []
   where
     getPaymentType = \case
       Spec.METRO -> Payment.FRFSBooking
       Spec.BUS -> Payment.FRFSBusBooking
       Spec.SUBWAY -> Payment.FRFSBooking
     key journeyId = "initJourney-" <> journeyId.getId
-    getPaymentIds = do
-      orderShortId <- generateShortId
-      orderId <- generateGUID
-      isMetroTestTransaction <- asks (.isMetroTestTransaction)
-      let updatedOrderShortId = bool (orderShortId.getShortId) ("test-" <> orderShortId.getShortId) isMetroTestTransaction
-      return (orderId, updatedOrderShortId)
-    markBookingApproved (ticketBookingPayment, booking) = do
-      let price = if booking.id == booking_.id then onInitReq.totalPrice else booking.price
-      QFRFSTicketBookingPayment.findById ticketBookingPayment.id >>= \case
-        Nothing -> void $ QFRFSTicketBookingPayment.create ticketBookingPayment
-        Just _ -> do
-          quote <- QQuote.findById booking.quoteId >>= fromMaybeM (QuoteNotFound booking.quoteId.getId)
-          void $ JourneyUtils.postMultimodalPaymentUpdateOrderUtil booking.riderId booking.merchantId booking.journeyId quote.quantity (fromMaybe 0 quote.childTicketQuantity)
-      void $ QFRFSTicketBooking.updateBPPOrderIdAndStatusById booking.bppOrderId FTBooking.APPROVED booking.id
-      void $ QFRFSTicketBooking.updateFinalPriceById (Just price) booking.id
-    markBookingFailed booking = void $ QFRFSTicketBooking.updateStatusById FTBooking.FAILED booking.id
-
-processPayments ::
-  ( EsqDBReplicaFlow m r,
-    BeamFlow m r,
-    EncFlow m r,
-    ServiceFlow m r
-  ) =>
-  Id PaymentOrder.PaymentOrder ->
-  FTBooking.FRFSTicketBooking ->
-  m DFRFSTicketBookingPayment.FRFSTicketBookingPayment
-processPayments orderId booking = do
-  ticketBookingPaymentId <- generateGUID
-  now <- getCurrentTime
-  let ticketBookingPayment =
-        DFRFSTicketBookingPayment.FRFSTicketBookingPayment
-          { frfsTicketBookingId = booking.id,
-            id = ticketBookingPaymentId,
-            status = DFRFSTicketBookingPayment.PENDING,
-            merchantId = Just booking.merchantId,
-            merchantOperatingCityId = Just booking.merchantOperatingCityId,
-            createdAt = now,
-            updatedAt = now,
-            paymentOrderId = orderId
-          }
-  return ticketBookingPayment
 
 createPayments ::
   ( EsqDBReplicaFlow m r,
     BeamFlow m r,
     EncFlow m r,
-    ServiceFlow m r
+    ServiceFlow m r,
+    HasField "isMetroTestTransaction" r Bool
   ) =>
+  [FTBooking.FRFSTicketBooking] ->
   Id DMOC.MerchantOperatingCity ->
   Id Merchant.Merchant ->
-  Id PaymentOrder.PaymentOrder ->
-  Text ->
   HighPrecMoney ->
   DP.Person ->
   Payment.PaymentServiceType ->
   [Payment.VendorSplitDetails] ->
-  m (Maybe Payment.CreateOrderResp)
-createPayments merchantOperatingCityId merchantId orderId orderShortId amount person paymentType vendorSplitArr = do
-  logInfo $ "createPayments vendorSplitArr" <> show vendorSplitArr
-  personPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
-  personEmail <- mapM decrypt person.email
-  isSplitEnabled <- Payment.getIsSplitEnabled merchantId merchantOperatingCityId Nothing paymentType
-  let createOrderReq =
-        Payment.CreateOrderReq
-          { orderId = orderId.getId,
-            orderShortId = orderShortId,
-            amount = amount,
-            customerId = person.id.getId,
-            customerEmail = fromMaybe "test@gmail.com" personEmail,
-            customerPhone = personPhone,
-            customerFirstName = person.firstName,
-            customerLastName = person.lastName,
-            createMandate = Nothing,
-            mandateMaxAmount = Nothing,
-            mandateFrequency = Nothing,
-            mandateEndDate = Nothing,
-            mandateStartDate = Nothing,
-            optionsGetUpiDeepLinks = Nothing,
-            metadataExpiryInMins = Nothing,
-            metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
-            splitSettlementDetails = Payment.mkUnaggregatedSplitSettlementDetails isSplitEnabled amount vendorSplitArr
-          }
-  let mocId = merchantOperatingCityId
-      commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant merchantId
-      commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person person.id
-      createOrderCall = Payment.createOrder merchantId mocId Nothing paymentType (Just person.id.getId) person.clientSdkVersion
-  DPayment.createOrderService commonMerchantId (Just $ cast mocId) commonPersonId createOrderReq createOrderCall
+  m ()
+createPayments bookings merchantOperatingCityId merchantId amount person paymentType vendorSplitArr = do
+  ticketBookingPaymentsExist <- mapM (fmap isNothing . QFRFSTicketBookingPayment.findNewTBPByBookingId . (.id)) bookings
+  isPaymentOrderProcessed <-
+    if and ticketBookingPaymentsExist
+      then do
+        paymentOrder <- createPaymentOrder bookings merchantOperatingCityId merchantId amount person paymentType vendorSplitArr
+        return $ isJust paymentOrder
+      else do
+        updatedPaymentOrder <- JourneyUtils.postMultimodalPaymentUpdateOrderUtil paymentType person merchantId merchantOperatingCityId bookings
+        return $ isJust updatedPaymentOrder
+  if isPaymentOrderProcessed
+    then markBookingApproved `mapM_` bookings
+    else do
+      markBookingFailed `mapM_` bookings
+      throwError $ InternalError "Failed to create order with Euler after on_int in FRFS"
+  where
+    markBookingApproved booking = do
+      void $ QFRFSTicketBooking.updateBPPOrderIdAndStatusById booking.bppOrderId FTBooking.APPROVED booking.id
+      void $ QFRFSTicketBooking.updateFinalPriceById (Just booking.price) booking.id
+    markBookingFailed booking = void $ QFRFSTicketBooking.updateStatusById FTBooking.FAILED booking.id

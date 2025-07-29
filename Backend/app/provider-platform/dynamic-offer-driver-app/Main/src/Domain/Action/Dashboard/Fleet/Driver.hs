@@ -52,6 +52,7 @@ module Domain.Action.Dashboard.Fleet.Driver
     postDriverFleetGetNearbyDrivers,
     getDriverDashboardInternalHelperGetFleetOwnerId,
     getDriverDashboardInternalHelperGetFleetOwnerIds,
+    getDriverFleetStatus,
     postDriverFleetV2AccessMultiOwnerIdSelect,
   )
 where
@@ -72,6 +73,7 @@ import Data.Time hiding (getCurrentTime)
 import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.Dashboard.Management.Driver as DDriver
 import qualified Domain.Action.Dashboard.RideBooking.DriverRegistration as DRBReg
+import qualified Domain.Action.Internal.DriverMode as DDriverMode
 import qualified Domain.Action.UI.DriverOnboarding.Referral as DOR
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Action.UI.FleetDriverAssociation as FDA
@@ -82,6 +84,7 @@ import Domain.Types.Alert.AlertRequestStatus
 import qualified Domain.Types.AlertRequest as DTR
 import qualified Domain.Types.Common as DrInfo
 import qualified Domain.Types.DocumentVerificationConfig as DDoc
+import qualified Domain.Types.DriverFlowStatus as DDF
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.DriverLocation as DDL
 import Domain.Types.DriverRCAssociation
@@ -120,6 +123,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Kernel.Utils.Validation
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
+import qualified SharedLogic.DriverFlowStatus as SDF
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LTST
@@ -835,10 +839,12 @@ postDriverFleetRemoveDriver ::
   Id Common.Driver ->
   Maybe Text ->
   Flow APISuccess
-postDriverFleetRemoveDriver merchantShortId _ requestorId driverId mbFleetOwnerId = do
+postDriverFleetRemoveDriver merchantShortId opCity requestorId driverId mbFleetOwnerId = do
   requestedPerson <- QPerson.findById (Id requestorId) >>= fromMaybeM (PersonDoesNotExist requestorId)
   (entityRole, entityId) <- validateRequestorRoleAndGetEntityId requestedPerson mbFleetOwnerId
   merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let personId = cast @Common.Driver @DP.Person driverId
   case entityRole of
     DP.FLEET_OWNER -> do
@@ -848,8 +854,14 @@ postDriverFleetRemoveDriver merchantShortId _ requestorId driverId mbFleetOwnerI
         rc <- RCQuery.findByRCIdAndFleetOwnerId assoc.rcId $ Just entityId
         when (isJust rc) $ throwError (InvalidRequest "Driver is linked to fleet Vehicle, first unlink then try")
       FDV.endFleetDriverAssociation entityId personId
+      when (transporterConfig.allowCacheDriverFlowStatus == Just True) $ do
+        driverInfo <- QDriverInfo.findById personId >>= fromMaybeM (DriverNotFound personId.getId)
+        DDriverMode.decrementFleetOperatorStatusKeyForDriver DP.FLEET_OWNER entityId driverInfo.driverFlowStatus
     DP.OPERATOR -> do
       DOV.endOperatorDriverAssociation entityId personId
+      when (transporterConfig.allowCacheDriverFlowStatus == Just True) $ do
+        driverInfo <- QDriverInfo.findById personId >>= fromMaybeM (DriverNotFound personId.getId)
+        DDriverMode.decrementFleetOperatorStatusKeyForDriver DP.OPERATOR entityId driverInfo.driverFlowStatus
     _ -> throwError (InvalidRequest "Invalid Data")
   pure Success
 
@@ -1038,6 +1050,29 @@ castDriverStatus = \case
   Just DrInfo.OFFLINE -> Common.OFFLINE
   Just DrInfo.SILENT -> Common.SILENT
   Nothing -> Common.OFFLINE
+
+---------------------------------------------------------------------
+getDriverFleetStatus :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Text -> Flow Common.DriverStatusRes
+getDriverFleetStatus _merchantShortId _opCity requestorId mbFleetOwnerId = do
+  requestedPerson <- QPerson.findById (Id requestorId) >>= fromMaybeM (PersonDoesNotExist requestorId)
+  (entityRole, entityId) <- validateRequestorRoleAndGetEntityId requestedPerson mbFleetOwnerId
+  let allKeys = DDF.allKeys entityId
+  logTagInfo "DriverStatus" $ "Checking Redis for keys: " <> show allKeys <> ", entityRole: " <> show entityRole <> ", entityId: " <> entityId
+  redisCounts <-
+    mapM
+      ( \key ->
+          Redis.get @Int key >>= \v -> do
+            logTagInfo "DriverStatus" $ "Redis.get " <> key <> " => " <> show v
+            pure v
+      )
+      allKeys
+  if all isJust redisCounts
+    then do
+      logTagInfo "DriverStatus" $ "Cache hit for all statuses for entityId: " <> entityId <> ", counts: " <> show redisCounts
+      pure $ SDF.toDriverStatusRes (zip (map Just DDF.statusList) (map (fromMaybe 0) redisCounts))
+    else do
+      logTagInfo "DriverStatus" $ "Cache miss for some statuses for entityId: " <> entityId <> ". Checking inProgress key. Redis counts: " <> show redisCounts
+      SDF.handleCacheMissForDriverFlowStatus entityRole entityId allKeys
 
 ---------------------------------------------------------------------
 getDriverFleetDriverVehicleAssociation ::
@@ -1588,14 +1623,15 @@ postDriverFleetVerifyJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId mbR
   mobileNumberHash <- getDbHash req.mobileNumber
   person <- B.runInReplica $ QP.findByMobileNumberAndMerchantAndRole req.mobileCountryCode mobileNumberHash merchant.id DP.DRIVER >>= fromMaybeM (PersonNotFound req.mobileNumber)
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   case mbAuthId of
     Just authId -> do
       smsCfg <- asks (.smsCfg)
       deviceToken <- fromMaybeM (DeviceTokenNotFound) $ req.deviceToken
 
-      SA.endDriverAssociationsIfAllowed merchant merchantOpCityId person
+      SA.endDriverAssociationsIfAllowed merchant merchantOpCityId transporterConfig person
 
-      void $ DRBReg.verify authId True fleetOwnerId (mbOperator <&> (.id)) Common.AuthVerifyReq {otp = req.otp, deviceToken = deviceToken}
+      void $ DRBReg.verify authId True fleetOwnerId (mbOperator <&> (.id)) transporterConfig Common.AuthVerifyReq {otp = req.otp, deviceToken = deviceToken}
 
       whenJust mbOperator $ \referredOperator -> do
         DOR.makeDriverReferredByOperator merchantOpCityId person.id referredOperator.id
@@ -1617,11 +1653,14 @@ postDriverFleetVerifyJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId mbR
       checkAssoc <- B.runInReplica $ QFDV.findByDriverIdAndFleetOwnerId person.id fleetOwnerId True
       when (isJust checkAssoc) $ throwError (InvalidRequest "Driver already associated with fleet")
 
-      SA.endDriverAssociationsIfAllowed merchant merchantOpCityId person
+      SA.endDriverAssociationsIfAllowed merchant merchantOpCityId transporterConfig person
 
       -- onboarded operator required only for new drivers
       assoc <- FDA.makeFleetDriverAssociation person.id fleetOwnerId Nothing (DomainRC.convertTextToUTC (Just "2099-12-12"))
       QFDV.create assoc
+      when (transporterConfig.allowCacheDriverFlowStatus == Just True) $ do
+        driverInfo <- QDriverInfo.findById person.id >>= fromMaybeM (DriverNotFound person.id.getId)
+        DDriverMode.incrementFleetOperatorStatusKeyForDriver DP.FLEET_OWNER fleetOwnerId driverInfo.driverFlowStatus
   pure Success
 
 makeFleetDriverOtpKey :: Text -> Text

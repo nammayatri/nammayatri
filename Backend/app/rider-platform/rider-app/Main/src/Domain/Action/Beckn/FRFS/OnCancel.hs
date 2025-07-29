@@ -33,8 +33,10 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.CachedQueries.Merchant as QMerch
+import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.PartnerOrgConfig as CQPOC
 import qualified Storage.CachedQueries.Person as CQP
 import qualified Storage.Queries.FRFSRecon as QFRFSRecon
@@ -93,6 +95,9 @@ onCancel _ booking' dOnCancel = do
           void $ QTBooking.updateIsBookingCancellableByBookingId (Just True) booking.id
           void $ QTBooking.updateCustomerCancelledByBookingId True booking.id
           void $ Redis.del (makecancelledTtlKey booking.id)
+          riderConfig <- QRC.findByMerchantOperatingCityId booking.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
+          when riderConfig.enableAutoJourneyRefund $
+            FRFSUtils.markAllRefundBookings booking booking.riderId
       void $ QPS.incrementTicketsBookedInEvent booking.riderId (- (booking.quantity))
       void $ CQP.clearPSCache booking.riderId
       void $ sendTicketCancelSMS mRiderNumber person.mobileCountryCode

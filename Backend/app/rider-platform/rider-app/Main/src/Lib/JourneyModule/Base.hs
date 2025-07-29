@@ -250,15 +250,17 @@ getLegInfo ::
   m (Maybe JL.LegInfo)
 getLegInfo journeyLeg mbPrevJourneyLeg mbNextJourneyLeg legSearchIdText skipAddLegFallback = do
   let legSearchId = Id legSearchIdText
+  logDebug $ "Entrance and exit for walk leg id from OTP:" <> show legSearchId <> show journeyLeg
   case journeyLeg.mode of
     DTrip.Taxi -> JL.getInfo $ TaxiLegRequestGetInfo $ TaxiLegRequestGetInfoData {searchId = cast legSearchId, journeyLeg, ignoreOldSearchRequest = skipAddLegFallback}
     DTrip.Walk -> do
       entrance <- getEntranceGate journeyLeg mbNextJourneyLeg
       exit <- getExitGate journeyLeg mbPrevJourneyLeg
+      logDebug $ "Entrance and exit for walk leg id from in-memory-server: " <> show legSearchId <> show journeyLeg <> show entrance <> show exit
       JL.getInfo $ WalkLegRequestGetInfo $ WalkLegRequestGetInfoData {walkLegId = cast legSearchId, journeyLeg = journeyLeg {DJourneyLeg.entrance = updateGateFromDomain journeyLeg.entrance entrance, DJourneyLeg.exit = updateGateFromDomain journeyLeg.exit exit}, ignoreOldSearchRequest = skipAddLegFallback}
-    DTrip.Metro -> JL.getInfo $ MetroLegRequestGetInfo $ MetroLegRequestGetInfoData {searchId = cast legSearchId, fallbackFare = journeyLeg.estimatedMinFare, distance = journeyLeg.distance, duration = journeyLeg.duration, journeyLeg, ignoreOldSearchRequest = skipAddLegFallback, startTime = journeyLeg.fromDepartureTime}
-    DTrip.Subway -> JL.getInfo $ SubwayLegRequestGetInfo $ SubwayLegRequestGetInfoData {searchId = cast legSearchId, fallbackFare = journeyLeg.estimatedMinFare, distance = journeyLeg.distance, duration = journeyLeg.duration, journeyLeg, ignoreOldSearchRequest = skipAddLegFallback, startTime = journeyLeg.fromDepartureTime}
-    DTrip.Bus -> JL.getInfo $ BusLegRequestGetInfo $ BusLegRequestGetInfoData {searchId = cast legSearchId, fallbackFare = journeyLeg.estimatedMinFare, distance = journeyLeg.distance, duration = journeyLeg.duration, journeyLeg, ignoreOldSearchRequest = skipAddLegFallback, startTime = journeyLeg.fromDepartureTime}
+    DTrip.Metro -> JL.getInfo $ MetroLegRequestGetInfo $ MetroLegRequestGetInfoData {searchId = cast legSearchId, fallbackFare = journeyLeg.estimatedMinFare, distance = journeyLeg.distance, duration = journeyLeg.duration, ignoreOldSearchRequest = skipAddLegFallback, startTime = journeyLeg.fromDepartureTime}
+    DTrip.Subway -> JL.getInfo $ SubwayLegRequestGetInfo $ SubwayLegRequestGetInfoData {searchId = cast legSearchId, fallbackFare = journeyLeg.estimatedMinFare, distance = journeyLeg.distance, duration = journeyLeg.duration, ignoreOldSearchRequest = skipAddLegFallback, startTime = journeyLeg.fromDepartureTime}
+    DTrip.Bus -> JL.getInfo $ BusLegRequestGetInfo $ BusLegRequestGetInfoData {searchId = cast legSearchId, fallbackFare = journeyLeg.estimatedMinFare, distance = journeyLeg.distance, duration = journeyLeg.duration, ignoreOldSearchRequest = skipAddLegFallback, startTime = journeyLeg.fromDepartureTime}
   where
     getEntranceGate :: JL.GetStateFlow m r c => DJourneyLeg.JourneyLeg -> Maybe DJourneyLeg.JourneyLeg -> m (Maybe DStation.Gate)
     getEntranceGate leg mbNext = case mbNext of
@@ -335,9 +337,11 @@ defaultBusTrackingConfig =
 checkAndMarkTerminalJourneyStatus ::
   (JL.GetStateFlow m r c, JL.SearchRequestFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
   DJourney.Journey ->
+  Bool ->
+  Bool ->
   [JL.JourneyLegState] ->
   m ()
-checkAndMarkTerminalJourneyStatus journey = go . concatLegStates
+checkAndMarkTerminalJourneyStatus journey feedbackRequired isCancelSearchApi = go . concatLegStates
   where
     concatLegStates =
       foldl'
@@ -349,11 +353,13 @@ checkAndMarkTerminalJourneyStatus journey = go . concatLegStates
     go allLegsState
       | all (\legState -> legState.status == JL.Cancelled) allLegsState =
         updateJourneyStatus journey DJourney.CANCELLED
-      | all (\legState -> legState.status `elem` [JL.Completed, JL.Skipped, JL.Cancelled]) allLegsState && journey.status == DJourney.FEEDBACK_PENDING =
+      | all (\legState -> legState.status `elem` journeyLegTerminalStatuses) allLegsState && (journey.status == DJourney.FEEDBACK_PENDING || not feedbackRequired) =
         updateJourneyStatus journey DJourney.COMPLETED
-      | all (\legState -> legState.status `elem` [JL.Completed, JL.Skipped, JL.Cancelled]) allLegsState =
+      | all (\legState -> legState.status `elem` journeyLegTerminalStatuses) allLegsState =
         updateJourneyStatus journey DJourney.FEEDBACK_PENDING
       | otherwise = pure ()
+
+    journeyLegTerminalStatuses = if isCancelSearchApi then [JL.Completed, JL.Cancelled, JL.Skipped] else [JL.Completed, JL.Cancelled]
 
 getAllLegsStatus ::
   (JL.GetStateFlow m r c, JL.SearchRequestFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
@@ -371,7 +377,7 @@ getAllLegsStatus journey = do
   -- Update journey expiry time to the next valid ticket expiry when a leg is completed
   whenJust (minimumTicketLegOrder legPairs) $ \nextLegOrder -> do
     QJourneyExtra.updateJourneyToNextTicketExpiryTime journey.id nextLegOrder
-  checkAndMarkTerminalJourneyStatus journey allLegsState
+  checkAndMarkTerminalJourneyStatus journey True False allLegsState
   return allLegsState
   where
     minimumTicketLegOrder = foldl' go Nothing
@@ -714,7 +720,7 @@ addMetroLeg journey journeyLeg = do
   now <- getCurrentTime
   shouldSkip <- case (riderConfig.qrTicketRestrictionStartTime, riderConfig.qrTicketRestrictionEndTime) of
     (Just startTime, Just endTime) -> do
-      let isOutsideRestrictedHours = isOutsideRestrictionTime startTime endTime now riderConfig.timeDiffFromUtc
+      let isOutsideRestrictedHours = not $ isWithinTimeBound startTime endTime now riderConfig.timeDiffFromUtc
       let isMetroBookingAllowed = fromMaybe True riderConfig.metroBookingAllowed
       return $ not (isOutsideRestrictedHours && isMetroBookingAllowed)
     _ -> do
@@ -785,8 +791,8 @@ addBusLeg journey journeyLeg = do
             journeyLeg
           }
 
-isOutsideRestrictionTime :: Time.TimeOfDay -> Time.TimeOfDay -> UTCTime -> Seconds -> Bool
-isOutsideRestrictionTime startTime endTime now timeDiffFromUtc =
+isWithinTimeBound :: Time.TimeOfDay -> Time.TimeOfDay -> UTCTime -> Seconds -> Bool
+isWithinTimeBound startTime endTime now timeDiffFromUtc =
   let tzMinutes = getSeconds timeDiffFromUtc `div` 60
       tz = Time.minutesToTimeZone tzMinutes
       nowAsLocal = Time.utcToLocalTime tz now
@@ -797,7 +803,7 @@ isOutsideRestrictionTime startTime endTime now timeDiffFromUtc =
         if startTime <= endTime
           then nowTOD >= startTime && nowTOD <= endTime
           else nowTOD >= startTime || nowTOD <= endTime
-   in not inWindow
+   in inWindow
 
 getRemainingLegs ::
   (JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
@@ -943,7 +949,9 @@ cancelLeg journeyId journeyLeg cancellationReasonCode isSkipped skippedDuringCon
   when shouldUpdateJourneyStatus $ do
     journey <- getJourney journeyId
     updatedLegStatus <- getAllLegsStatus journey
-    when (length updatedLegStatus == 1) $ checkAndMarkTerminalJourneyStatus journey updatedLegStatus
+    logError $ "Checking and marking terminal journey status for journey: " <> show journey.id.getId <> " with updatedLegStatus: " <> show (length updatedLegStatus)
+    when (length updatedLegStatus == 1) $ do
+      checkAndMarkTerminalJourneyStatus journey (not isSkipped) (isJust cancelEstimateId) updatedLegStatus
   return ()
 
 cancelRemainingLegs ::
@@ -992,7 +1000,7 @@ skipLeg journeyId legOrder skippedDuringConfirmation = do
   journey <- getJourney journeyId
   updatedLegStatus <- getAllLegsStatus journey
   if legOrder == length updatedLegStatus - 1
-    then checkAndMarkTerminalJourneyStatus journey updatedLegStatus
+    then checkAndMarkTerminalJourneyStatus journey False False updatedLegStatus
     else pure ()
 
 addSkippedLeg ::
