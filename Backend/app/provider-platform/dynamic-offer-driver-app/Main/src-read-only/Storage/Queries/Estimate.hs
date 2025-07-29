@@ -39,6 +39,11 @@ findEligibleForCabUpgrade requestId eligibleForUpgrade = do
     ]
     Nothing
 
+updateSharedEstimateId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> m ())
+updateSharedEstimateId sharedEstimateId id = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.sharedEstimateId sharedEstimateId, Se.Set Beam.updatedAt (Just _now)] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateSupplyDemandRatioByReqIdAndServiceTier ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Kernel.Prelude.Double -> Kernel.Prelude.Maybe Kernel.Prelude.Double -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> Domain.Types.Common.ServiceTierType -> m ())
@@ -95,6 +100,7 @@ updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
       Se.Set Beam.minFare (Kernel.Prelude.roundToIntegral minFare),
       Se.Set Beam.minFareAmount (Kernel.Prelude.Just minFare),
       Se.Set Beam.requestId (Kernel.Types.Id.getId requestId),
+      Se.Set Beam.sharedEstimateId sharedEstimateId,
       Se.Set Beam.smartTipReason smartTipReason,
       Se.Set Beam.smartTipSuggestion smartTipSuggestion,
       Se.Set Beam.specialLocationTag specialLocationTag,
@@ -148,6 +154,7 @@ instance FromTType' Beam.Estimate Domain.Types.Estimate.Estimate where
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             minFare = Kernel.Types.Common.mkAmountWithDefault minFareAmount minFare,
             requestId = Kernel.Types.Id.Id requestId,
+            sharedEstimateId = sharedEstimateId,
             smartTipReason = smartTipReason,
             smartTipSuggestion = smartTipSuggestion,
             specialLocationTag = specialLocationTag,
@@ -198,6 +205,7 @@ instance ToTType' Beam.Estimate Domain.Types.Estimate.Estimate where
         Beam.minFare = Kernel.Prelude.roundToIntegral minFare,
         Beam.minFareAmount = Kernel.Prelude.Just minFare,
         Beam.requestId = Kernel.Types.Id.getId requestId,
+        Beam.sharedEstimateId = sharedEstimateId,
         Beam.smartTipReason = smartTipReason,
         Beam.smartTipSuggestion = smartTipSuggestion,
         Beam.specialLocationTag = specialLocationTag,

@@ -74,6 +74,7 @@ data SearchRequest = SearchRequest
     routeCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     searchMode :: Kernel.Prelude.Maybe Domain.Types.SearchRequest.SearchMode,
     selectedPaymentMethodId :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.PaymentMethodId,
+    sharedSearchRequestId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     startTime :: Kernel.Prelude.UTCTime,
     stops :: [Domain.Types.Location.Location],
     toLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location,

@@ -80,6 +80,7 @@ SearchRequest:
     parcelQuantity: Maybe Int
     preferSafetyPlus: Bool
     isReserveRide: Maybe Bool
+    sharedSearchRequestId: Maybe Text
   beamType:
     startTime: Maybe UTCTime
     validTill: Maybe UTCTime
@@ -180,6 +181,7 @@ SearchRequest:
     pickupZoneGateId: character varying(36)
     transactionId: character varying(36)
     configInExperimentVersions: "json"
+    sharedSearchRequestId: character varying(36)
 
   default:
     autoAssignEnabled: "false"
@@ -226,6 +228,11 @@ SearchRequest:
       kvFunction: updateWithKV
       params: [ preferSafetyPlus ]
       where: id
+
+    updateSharedSearchRequestId:
+      kvFunction: updateWithKV
+      where: id
+      params: [sharedSearchRequestId]
 
   extraOperations:
   - EXTRA_QUERY_FILE

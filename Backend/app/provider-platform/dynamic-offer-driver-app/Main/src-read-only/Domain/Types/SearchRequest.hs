@@ -65,6 +65,7 @@ data SearchRequest = SearchRequest
     riderId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.RiderDetails.RiderDetails),
     roundTrip :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     searchTags :: Kernel.Prelude.Maybe [Lib.Yudhishthira.Types.TagNameValue],
+    sharedSearchRequestId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     specialLocationTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     startTime :: Kernel.Prelude.UTCTime,
     stops :: [Domain.Types.Location.Location],

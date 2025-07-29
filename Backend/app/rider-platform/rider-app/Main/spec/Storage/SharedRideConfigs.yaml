@@ -1,0 +1,69 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  VehicleCategory: BecknV2.OnDemand.Enums
+  Meters: Kernel.Types.Common
+  Seconds: Kernel.Types.Common
+
+SharedRideConfigs:
+  tableName: shared_ride_configs
+  derives: "Generic, Show"
+
+  fields:
+    id: Id SharedRideConfigs
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    vehicleCategory: VehicleCategory|NoRelation
+    pickupLocationSearchRadius: Meters
+    searchThresholdForSharedEstimate: Int
+    searchRequestExpirySeconds: Seconds
+    searchExpiryBufferSeconds: Seconds
+    customerRemainingThresholdForFlowContinuation: Int
+    dropLocationSearchRadius: Meters
+    actualPickupDistanceThreshold: Meters
+    actualDropDistanceThreshold: Meters
+    routeMatchingThreshold: Double
+    geoHashPrecisionForRouteMatching: Int
+    routeOverlapThreshold: Double
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+
+  sqlType:
+    merchantId: character varying(36)
+    merchantOperatingCityId: character varying(36)
+    vehicleCategory: character varying(255)
+    pickupLocationSearchRadius: double precision
+    searchThresholdForSharedEstimate: integer
+    searchRequestExpirySeconds: integer
+    searchExpiryBufferSeconds: integer
+    customerRemainingThresholdForFlowContinuation: integer
+    dropLocationSearchRadius: double precision
+    actualPickupDistanceThreshold: double precision
+    actualDropDistanceThreshold: double precision
+    routeMatchingThreshold: double precision
+    geoHashPrecisionForRouteMatching: integer
+    routeOverlapThreshold: double precision
+    createdAt: timestamptz
+    updatedAt: timestamptz
+
+  queries:
+    findByMerchantOperatingCityIdAndVehicleCategory:
+      kvFunction: findOneWithKV
+      where:
+        and: [merchantOperatingCityId, vehicleCategory]
+
+    findByMerchantOperatingCityId:
+      kvFunction: findAllWithKV
+      where: merchantOperatingCityId
+
+    updateConfigValues:
+      kvFunction: updateOneWithKV
+      params: [pickupLocationSearchRadius, searchThresholdForSharedEstimate, searchRequestExpirySeconds, searchExpiryBufferSeconds, customerRemainingThresholdForFlowContinuation, dropLocationSearchRadius, actualPickupDistanceThreshold, actualDropDistanceThreshold, routeMatchingThreshold, geoHashPrecisionForRouteMatching, routeOverlapThreshold, updatedAt]
+      where: id
+
+    findAllByMerchantId:
+      kvFunction: findAllWithKV
+      where: merchantId

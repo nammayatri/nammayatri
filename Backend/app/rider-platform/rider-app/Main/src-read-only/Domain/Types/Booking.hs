@@ -88,6 +88,7 @@ data Booking = Booking
     roundTrip :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     serviceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     serviceTierShortDesc :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    sharedBookingId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     specialLocationName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     specialLocationTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     startTime :: Kernel.Prelude.UTCTime,

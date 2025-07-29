@@ -81,6 +81,7 @@ data RideT f = RideT
     rideStartTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     safetyCheckStatus :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     safetyJourneyStatus :: B.C f (Kernel.Prelude.Maybe Domain.Types.Ride.SosJourneyStatus),
+    sharedRideId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     shortId :: B.C f Kernel.Prelude.Text,
     showDriversPreviousRideDropLoc :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     startOdometerReading :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal),

@@ -34,6 +34,11 @@ findBySRIdAndStatus ::
   (Domain.Types.Estimate.EstimateStatus -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m (Maybe Domain.Types.Estimate.Estimate))
 findBySRIdAndStatus status requestId = do findOneWithKV [Se.And [Se.Is Beam.status $ Se.Eq status, Se.Is Beam.requestId $ Se.Eq (Kernel.Types.Id.getId requestId)]]
 
+updateSharedEstimateId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> m ())
+updateSharedEstimateId sharedEstimateId id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.sharedEstimateId sharedEstimateId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Estimate.EstimateStatus -> Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> m ())
 updateStatus status id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.updatedAt _now, Se.Set Beam.status status] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
@@ -88,6 +93,7 @@ updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
       Se.Set Beam.requestId (Kernel.Types.Id.getId requestId),
       Se.Set Beam.serviceTierName serviceTierName,
       Se.Set Beam.serviceTierShortDesc serviceTierShortDesc,
+      Se.Set Beam.sharedEstimateId sharedEstimateId,
       Se.Set Beam.smartTipReason smartTipReason,
       Se.Set Beam.smartTipSuggestion smartTipSuggestion,
       Se.Set Beam.specialLocationName specialLocationName,

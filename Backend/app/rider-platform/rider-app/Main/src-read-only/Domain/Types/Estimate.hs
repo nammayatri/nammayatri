@@ -60,6 +60,7 @@ data Estimate = Estimate
     requestId :: Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest,
     serviceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     serviceTierShortDesc :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    sharedEstimateId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     smartTipReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     smartTipSuggestion :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     specialLocationName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

@@ -552,3 +552,13 @@ ALTER TABLE atlas_app.estimate ADD COLUMN is_multimodal_search boolean ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.estimate ADD COLUMN shared_estimate_id character varying(36) ;
+
+
+------- SQL updates -------
+

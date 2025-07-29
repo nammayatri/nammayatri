@@ -120,6 +120,7 @@ Ride:
     isSafetyPlus : Bool
     isInsured : Bool
     insuredAmount: Maybe Text
+    sharedRideId: Maybe Text
 
   sqlType:
     allowedEditLocationAttempts: int
@@ -151,6 +152,7 @@ Ride:
     driverNumberHash: bytea
     driverAlternateNumberHash: bytea
     tipAmount: numeric(30,2)
+    sharedRideId: character varying(36)
 
 # FIXME separate distanceUnit/currency for each column
   beamFields:
@@ -323,6 +325,11 @@ Ride:
       kvFunction: updateOneWithKV
       params: [talkedWithDriver]
       where: id
+
+    updateSharedRideId:
+      kvFunction: updateOneWithKV
+      where: id
+      params: [sharedRideId]
 
   excludedDefaultQueries:
     - create

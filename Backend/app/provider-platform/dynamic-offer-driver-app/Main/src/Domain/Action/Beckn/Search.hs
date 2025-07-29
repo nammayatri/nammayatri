@@ -575,6 +575,7 @@ buildSearchRequest DSearchReq {..} bapCity mbSpecialZoneGateId mbDefaultDriverEx
         parcelType = Nothing,
         parcelQuantity = Nothing,
         preferSafetyPlus = False,
+        sharedSearchRequestId = Nothing, --VaibhavD : Re-evaluate
         ..
       }
 
@@ -753,6 +754,7 @@ buildEstimate merchantId merchantOperatingCityId currency distanceUnit mbSearchR
         congestionMultiplier = DFP.congestionChargeMultiplierToCentesimal <$> fullFarePolicy.congestionChargeMultiplier,
         createdAt = now,
         updatedAt = now,
+        sharedEstimateId = Nothing, --VaibhavD : Re-evaluate
         eligibleForUpgrade = False,
         supplyDemandRatioToLoc = fullFarePolicy.mbSupplyDemandRatioToLoc,
         supplyDemandRatioFromLoc = fullFarePolicy.mbSupplyDemandRatioFromLoc,
