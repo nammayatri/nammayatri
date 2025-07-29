@@ -50,8 +50,7 @@ data SubwayLegRequestIsCancellableData = SubwayLegRequestIsCancellableData
 
 data SubwayLegRequestGetStateData = SubwayLegRequestGetStateData
   { searchId :: Id FRFSSearch.FRFSSearch,
-    riderLastPoints :: [ApiTypes.RiderLocationReq],
-    isLastCompleted :: Bool
+    riderLastPoints :: [ApiTypes.RiderLocationReq]
   }
 
 data SubwayLegRequestGetInfoData = SubwayLegRequestGetInfoData
@@ -59,7 +58,6 @@ data SubwayLegRequestGetInfoData = SubwayLegRequestGetInfoData
     fallbackFare :: Maybe HighPrecMoney,
     distance :: Maybe Distance,
     duration :: Maybe Seconds,
-    journeyLeg :: DJourneyLeg.JourneyLeg,
     ignoreOldSearchRequest :: Bool,
     startTime :: Maybe UTCTime
   }

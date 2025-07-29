@@ -32,6 +32,7 @@ module Lib.Payment.Domain.Action
     cancelPaymentIntentService,
     verifyVPAService,
     mkCreatePayoutOrderReq,
+    buildPaymentOrder,
   )
 where
 

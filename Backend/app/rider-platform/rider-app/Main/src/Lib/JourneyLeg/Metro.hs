@@ -27,10 +27,10 @@ instance JT.JourneyLeg MetroLegRequest m where
   isCancellable (MetroLegRequestIsCancellable legData) = CFRFS.isCancellable legData.searchId
   isCancellable _ = throwError (InternalError "Not Supported")
 
-  getState (MetroLegRequestGetState req) = CFRFS.getState DTrip.Metro req.searchId req.riderLastPoints req.isLastCompleted False Nothing
+  getState (MetroLegRequestGetState req) = CFRFS.getState DTrip.Metro req.searchId req.riderLastPoints False Nothing
   getState _ = throwError (InternalError "Not supported")
 
-  getInfo (MetroLegRequestGetInfo req) = CFRFS.getInfo req.searchId req.fallbackFare req.distance req.duration req.journeyLeg.entrance req.journeyLeg.exit req.ignoreOldSearchRequest req.startTime
+  getInfo (MetroLegRequestGetInfo req) = CFRFS.getInfo req.searchId req.fallbackFare req.distance req.duration req.ignoreOldSearchRequest req.startTime
   getInfo _ = throwError (InternalError "Not supported")
 
   getFare (MetroLegRequestGetFare MetroLegRequestGetFareData {..}) = CFRFS.getFare riderId merchant merchantOpCity Spec.METRO routeDetails fromArrivalTime agencyGtfsId

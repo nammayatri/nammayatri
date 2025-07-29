@@ -11,6 +11,7 @@ import qualified Domain.Types.Estimate
 import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.IntegratedBPPConfig
 import qualified Domain.Types.Journey
+import qualified Domain.Types.JourneyLegsFeedbacks
 import qualified Domain.Types.Location
 import qualified Domain.Types.LocationAddress
 import qualified Domain.Types.MultimodalPreferences
@@ -176,7 +177,13 @@ data PublicTransportData = PublicTransportData {ptcv :: Kernel.Prelude.Text, rs 
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data RateMultiModelTravelModes = RateMultiModelTravelModes {isExperienceGood :: Kernel.Prelude.Maybe Kernel.Prelude.Bool, legOrder :: Kernel.Prelude.Int, travelMode :: Kernel.Prelude.Maybe Domain.Types.Trip.MultimodalTravelMode}
+data RateMultiModelTravelModes = RateMultiModelTravelModes
+  { feedbackData :: Kernel.Prelude.Maybe Domain.Types.JourneyLegsFeedbacks.JourneyLegFeedbackData,
+    isExperienceGood :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    legOrder :: Kernel.Prelude.Int,
+    rating :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    travelMode :: Kernel.Prelude.Maybe Domain.Types.Trip.MultimodalTravelMode
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

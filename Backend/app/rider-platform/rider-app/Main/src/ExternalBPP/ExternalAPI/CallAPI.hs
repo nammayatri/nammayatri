@@ -87,7 +87,8 @@ getFares riderId merchant merchanOperatingCity integrationBPPConfig routeCode st
           sessionId <- getRandomInRange (1, 1000000 :: Int) -- TODO: Fix it later
           intermediateStations <- buildStations routeCode startStopCode endStopCode integrationBPPConfig START END
           let viaStations = T.intercalate "-" $ map (.stationCode) $ filter (\station -> station.stationType == INTERMEDIATE) intermediateStations
-          let request =
+              viaPoints = if T.null viaStations then " " else viaStations
+              request =
                 CRISRouteFare.CRISFareRequest
                   { mobileNo = Just "1111111111", -- dummy number and imei for all other requests to avoid sdkToken confusion
                     imeiNo = "abcdefgh",
@@ -95,7 +96,7 @@ getFares riderId merchant merchanOperatingCity integrationBPPConfig routeCode st
                     sourceCode = startStopCode,
                     changeOver = " ",
                     destCode = endStopCode,
-                    via = viaStations
+                    via = viaPoints
                   }
           resp <- try @_ @SomeException $ CRISRouteFare.getRouteFare config' merchanOperatingCity.id request
           case resp of
@@ -123,6 +124,7 @@ getBppOrderId integratedBPPConfig booking = do
     CMRL _ -> Just <$> CMRLOrder.getBppOrderId booking
     EBIX _ -> Just <$> EBIXOrder.getBppOrderId booking
     DIRECT _ -> Just <$> DIRECTOrder.getBppOrderId booking
+    CRIS _ -> Just <$> CRISBookJourney.getBppOrderId booking
     _ -> return Nothing
 
 getTicketStatus :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => IntegratedBPPConfig -> FRFSTicketBooking -> m [ProviderTicket]

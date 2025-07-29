@@ -138,3 +138,23 @@ ALTER TABLE atlas_app.journey ADD COLUMN from_location_id character varying(36) 
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

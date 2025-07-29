@@ -76,7 +76,6 @@ data TaxiLegRequestGetInfoData = TaxiLegRequestGetInfoData
 data TaxiLegRequestGetStateData = TaxiLegRequestGetStateData
   { searchId :: Id DSR.SearchRequest,
     riderLastPoints :: [ApiTypes.RiderLocationReq],
-    isLastCompleted :: Bool,
     journeyLegStatus :: Maybe JourneyLegStatus
   }
 

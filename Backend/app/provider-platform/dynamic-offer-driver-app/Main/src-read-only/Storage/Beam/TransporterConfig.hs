@@ -25,6 +25,7 @@ data TransporterConfigT f = TransporterConfigT
     acStatusCheckGap :: B.C f Kernel.Prelude.Int,
     actualRideDistanceDiffThreshold :: B.C f Kernel.Types.Common.HighPrecMeters,
     actualRideDistanceDiffThresholdIfWithinPickupDrop :: B.C f Kernel.Types.Common.HighPrecMeters,
+    allowCacheDriverFlowStatus :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     allowDefaultPlanAllocation :: B.C f Kernel.Prelude.Bool,
     allowDuplicateAadhaar :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     allowDuplicateGst :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

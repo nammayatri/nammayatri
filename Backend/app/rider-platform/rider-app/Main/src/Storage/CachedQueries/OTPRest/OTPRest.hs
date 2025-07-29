@@ -193,7 +193,7 @@ parseStationsFromInMemoryServer stations integratedBPPConfig = do
           Station.Station
             { address = join (fst <$> HM.lookup station.stopCode stationAddressMap),
               code = station.stopCode,
-              hindiName = Nothing,
+              hindiName = station.hindiName,
               id = Id station.stopCode,
               integratedBppConfigId = integratedBPPConfig.id,
               lat = Just station.stopPoint.lat,
@@ -202,7 +202,7 @@ parseStationsFromInMemoryServer stations integratedBPPConfig = do
               merchantOperatingCityId = integratedBPPConfig.merchantOperatingCityId,
               name = station.stopName,
               possibleTypes = Nothing,
-              regionalName = Nothing,
+              regionalName = station.regionalName,
               suggestedDestinations = join (snd <$> HM.lookup station.stopCode stationAddressMap),
               geoJson = station.geoJson,
               gates = station.gates,
@@ -362,3 +362,11 @@ getNandiTripInfo integratedBPPConfig tripId = do
   baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
   let updatedTripId = integratedBPPConfig.feedKey <> ":" <> tripId
   Flow.getNandiTripInfo baseUrl updatedTripId
+
+getGtfsVersion ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  IntegratedBPPConfig ->
+  m Text
+getGtfsVersion integratedBPPConfig = do
+  baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
+  Flow.getGtfsVersion baseUrl integratedBPPConfig.feedKey

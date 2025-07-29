@@ -196,9 +196,8 @@ instance JT.JourneyLeg TaxiLegRequest m where
           Just pricingId -> do
             void $ cancelSearch' (searchReq.riderId, searchReq.merchantId) (Id pricingId)
           Nothing -> return ()
-    when (legData.cancelEstimateId == Nothing) $ do
-      if legData.isSkipped then QSearchRequest.updateSkipBooking legData.searchRequestId (Just True) else QSearchRequest.updateIsCancelled legData.searchRequestId (Just True)
-      if legData.isSkipped then QJourneyLeg.updateIsSkipped (Just True) (Just legData.searchRequestId.getId) else QJourneyLeg.updateIsDeleted (Just True) (Just legData.searchRequestId.getId)
+    if legData.isSkipped then QSearchRequest.updateSkipBooking legData.searchRequestId (Just True) else QSearchRequest.updateIsCancelled legData.searchRequestId (Just True)
+    if legData.isSkipped then QJourneyLeg.updateIsSkipped (Just True) (Just legData.searchRequestId.getId) else QJourneyLeg.updateIsDeleted (Just True) (Just legData.searchRequestId.getId)
   cancel _ = throwError (InternalError "Not Supported")
 
   isCancellable ((TaxiLegRequestIsCancellable legData)) = do
@@ -228,7 +227,6 @@ instance JT.JourneyLeg TaxiLegRequest m where
                 vehiclePositions = maybe [] (\latLong -> [JT.VehiclePosition {position = latLong, vehicleId = "taxi", upcomingStops = []}]) vehiclePosition,
                 legOrder = journeyLegOrder,
                 subLegOrder = 1,
-                statusChanged = False,
                 mode = DTrip.Taxi
               }
       Nothing -> do
@@ -245,7 +243,6 @@ instance JT.JourneyLeg TaxiLegRequest m where
                 vehiclePositions = [],
                 legOrder = journeyLegInfo.journeyLegOrder,
                 subLegOrder = 1,
-                statusChanged = False,
                 mode = DTrip.Taxi
               }
   getState _ = throwError (InternalError "Not Supported")

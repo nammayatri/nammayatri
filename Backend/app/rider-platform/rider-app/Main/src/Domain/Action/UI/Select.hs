@@ -285,8 +285,11 @@ select2 personId estimateId req@DSelectReq {..} = do
   QSearchRequest.updateMultipleByRequestId searchRequestId autoAssignEnabled (fromMaybe False autoAssignEnabledV2) isAdvancedBookingEnabled
   QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimateId, otherSelectedEstimates, validTill = searchRequest.validTill, providerId = Just estimate.providerId, tripCategory = estimate.tripCategory}
   QEstimate.updateStatus DEstimate.DRIVER_QUOTE_REQUESTED estimateId
+  whenJust searchRequest.journeyLegInfo $ \journeyLegInfo -> do
+    QJourney.updateStatus DJ.INPROGRESS (Id journeyLegInfo.journeyId)
   QDOffer.updateStatus DDO.INACTIVE estimateId
-  QSearchRequest.updatePricingId searchRequestId (Just estimateId.getId)
+  whenJust searchRequest.journeyLegInfo $ \journeyLegInfo -> do
+    QSearchRequest.updateJourneyLegInfo searchRequestId (Just $ journeyLegInfo {JLT.skipBooking = False, JLT.pricingId = Just estimateId.getId, JLT.onSearchFailed = Just False})
   let mbCustomerExtraFee = (mkPriceFromAPIEntity <$> req.customerExtraFeeWithCurrency) <|> (mkPriceFromMoney Nothing <$> req.customerExtraFee)
   Kernel.Prelude.whenJust req.customerExtraFeeWithCurrency $ \reqWithCurrency -> do
     unless (estimate.estimatedFare.currency == reqWithCurrency.currency) $

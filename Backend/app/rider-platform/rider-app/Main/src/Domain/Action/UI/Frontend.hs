@@ -22,6 +22,7 @@ module Domain.Action.UI.Frontend
   )
 where
 
+import Data.List (partition)
 import Domain.Action.UI.Booking
 import qualified Domain.Action.UI.MultimodalConfirm as DMultimodal
 import Domain.Action.UI.Quote
@@ -39,10 +40,12 @@ import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.JourneyLeg.Types as JL
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.ValueAddNP as QNP
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.Journey as QJourney
+import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Ride as QR
 
 data GetPersonFlowStatusRes = GetPersonFlowStatusRes
@@ -66,8 +69,25 @@ getPersonFlowStatus :: Id DP.Person -> Id DM.Merchant -> Maybe Bool -> Maybe Boo
 getPersonFlowStatus personId merchantId _ pollActiveBooking = do
   now <- getCurrentTime
   activeJourneys <- DMultimodal.getActiveJourneyIds personId
-  updatedActiveJourneys <- processJourneys now activeJourneys
-  let activeJourneysMode = (not (null updatedActiveJourneys)) && (not (checkIfNormalRideJourney updatedActiveJourneys))
+  processedActiveJourneys <- processJourneys now activeJourneys
+  let (normalActiveRideJourneys, updatedActiveJourneys) = partition isNormalRideJourney processedActiveJourneys
+  when (not (null normalActiveRideJourneys)) $ do
+    fork "normalRideJourneys - Auto Fix" $ do
+      forM_ normalActiveRideJourneys $ \normalRideJourney -> do
+        mbJourneyLeg <- QJourneyLeg.findByJourneyIdAndSequenceNumber normalRideJourney.id 0
+        whenJust (mbJourneyLeg >>= (.legSearchId)) $ \legSearchId -> do
+          mbBooking <- QB.findByTransactionIdAndStatus legSearchId DB.terminalBookingStatus
+          whenJust mbBooking $ \booking -> do
+            case booking.status of
+              DB.COMPLETED -> do
+                void $ DMultimodal.postMultimodalOrderSublegSetStatus (Just personId, merchantId) normalRideJourney.id 0 1 JL.Completed
+              DB.CANCELLED -> do
+                void $ DMultimodal.postMultimodalOrderSublegSetStatus (Just personId, merchantId) normalRideJourney.id 0 1 JL.Cancelled
+              DB.REALLOCATED -> do
+                -- TODO :: Maybe Required to handle, please fix me !
+                pure ()
+              _ -> pure ()
+  let activeJourneysMode = not (null updatedActiveJourneys) && null normalActiveRideJourneys
   if activeJourneysMode
     then return $ GetPersonFlowStatusRes Nothing (DPFS.ACTIVE_JOURNEYS {journeys = updatedActiveJourneys}) Nothing
     else do
@@ -90,20 +110,16 @@ getPersonFlowStatus personId merchantId _ pollActiveBooking = do
         updateJourneyStatus j = do
           case j.journeyExpiryTime of
             Just expiryTime ->
-              if now > expiryTime && j.status == DJ.INPROGRESS
+              if now > expiryTime
                 then do
                   _ <- QJourney.updateStatus DJ.EXPIRED j.id
                   return j {DJ.status = DJ.EXPIRED}
                 else return j
             Nothing -> return j
-    checkIfNormalRideJourney :: [DJ.Journey] -> Bool
-    checkIfNormalRideJourney journeys =
-      case listToMaybe journeys of
-        Just firstNormalRideJourney ->
-          case listToMaybe firstNormalRideJourney.modes of
-            Just firstMode ->
-              length journeys == 1 && length firstNormalRideJourney.modes == 1 && (firstMode == DTrip.Taxi)
-            Nothing -> False
+    isNormalRideJourney :: DJ.Journey -> Bool
+    isNormalRideJourney journey =
+      case listToMaybe journey.modes of
+        Just firstMode -> length journey.modes == 1 && (firstMode == DTrip.Taxi)
         Nothing -> False
     checkForActiveBooking :: Flow GetPersonFlowStatusRes
     checkForActiveBooking = do
