@@ -126,8 +126,8 @@ createIssueReportV2 _merchantShortId _city Common.IssueReportReqV2 {..} issueHan
     let mocId = maybe person.merchantOperatingCityId (.merchantOperatingCityId) mbRide
     config <- issueHandle.findMerchantConfig person.merchantId mocId (Just person.id)
     UIR.processIssueReportTypeActions (person.id, person.merchantId) issueReportType mbRide (Just config) True identifier issueHandle
-    mbIssueChats <- QICT.findByTicketId ticketId
-    mbIssueReport <- QIR.findByTicketId ticketId
+    mbIssueChats <- B.runInMasterDbAndRedis $ QICT.findByTicketId ticketId
+    mbIssueReport <- B.runInMasterDbAndRedis $ QIR.findByTicketId ticketId
     issueReport <- makeIssueReport mocId person
     when (isNothing mbIssueReport) $ QIR.create issueReport
     case mbIssueChats of
@@ -411,7 +411,7 @@ ticketStatusCallBack reqJson issueHandle identifier = do
   Redis.withWaitOnLockRedisWithExpiry (issueTicketExecLockKey req.ticketId) 10 20 $ do
     case transformedStatus of
       RESOLVED -> do
-        issueReport <- QIR.findByTicketId req.ticketId >>= fromMaybeM (TicketDoesNotExist req.ticketId)
+        issueReport <- B.runInMasterDbAndRedis $ QIR.findByTicketId req.ticketId >>= fromMaybeM (TicketDoesNotExist req.ticketId)
         person <- issueHandle.findPersonById issueReport.personId >>= fromMaybeM (PersonNotFound issueReport.personId.getId)
         merchantOpCityId <-
           maybe
@@ -445,7 +445,7 @@ ticketStatusCallBack reqJson issueHandle identifier = do
               [] -> Nothing
           Nothing -> return Nothing
         -- First check if row exists, then decide to create or update
-        mbIssueChat <- QICT.findByTicketId req.ticketId
+        mbIssueChat <- B.runInMasterDbAndRedis $ QICT.findByTicketId req.ticketId
         case mbIssueChat of
           Just _ -> do
             QICT.updateChatsWithKaptureData req.ticketId [] [] kaptureData
