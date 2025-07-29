@@ -6,6 +6,8 @@ import qualified BecknV2.FRFS.Enums as Spec
 import Control.Applicative (liftA2, (<|>))
 import Data.Aeson (object, withObject, (.:), (.=))
 import qualified Data.HashMap.Strict as HM
+-- import qualified Storage.CachedQueries.Merchant.MultiModalBus -- This was commented out in the provided content
+
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Common as DTrip
 import qualified Domain.Types.Estimate as DEstimate
@@ -61,7 +63,6 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.Ride as DARide
 import SharedLogic.Search
--- import qualified Storage.CachedQueries.Merchant.MultiModalBus -- This was commented out in the provided content
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.Estimate as QEstimate
@@ -356,7 +357,8 @@ data LegRouteInfo = LegRouteInfo
     lineColorCode :: Maybe Text,
     trainNumber :: Maybe Text,
     journeyStatus :: Maybe JourneyLegStatus,
-    frequency :: Maybe Seconds
+    frequency :: Maybe Seconds,
+    allAvailableRoutes :: [Text]
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -784,7 +786,7 @@ mkLegInfoFromFrfsBooking booking distance duration = do
   let singleAdultPrice = roundToTwoDecimalPlaces . HighPrecMoney $ safeDiv (getHighPrecMoney booking.price.amount) (fromIntegral booking.quantity) -- TODO :: To be handled as single price cannot be obtained from this if more than 1 fare breakup (Child Quantity / Discounts)
       estimatedPrice =
         Price
-          { amount = HighPrecMoney singleAdultPrice,
+          { amount = singleAdultPrice,
             amountInt = Money $ roundToIntegral singleAdultPrice,
             currency = booking.price.currency
           }
@@ -915,7 +917,8 @@ getLegRouteInfo journeyRouteDetails integratedBPPConfig = do
             lineColor = journeyRouteDetail.lineColor,
             lineColorCode = journeyRouteDetail.lineColorCode,
             trainNumber = Just route.shortName,
-            frequency = journeyRouteDetail.frequency
+            frequency = journeyRouteDetail.frequency,
+            allAvailableRoutes = journeyRouteDetail.alternateRouteCodes
           }
 
 castCategoryToMode :: Spec.VehicleCategory -> DTrip.MultimodalTravelMode

@@ -319,6 +319,58 @@ fetchLiveTimings routeCodes stopCode currentTime integratedBppConfig mid mocid v
   Enums.BUS -> fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid mocid
   _ -> measureLatency (GRSM.findByRouteCodeAndStopCode integratedBppConfig mid mocid routeCodes stopCode) "fetch route stop timing through graphql"
 
+getValidRoutes ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    EncFlow m r,
+    Monad m,
+    HasShortDurationRetryCfg r c
+  ) =>
+  Text ->
+  Text ->
+  DIntegratedBPPConfig.IntegratedBPPConfig ->
+  m [Text]
+getValidRoutes fromStopCode toStopCode integratedBppConfig = do
+  fromRouteStopMappings <- measureLatency (OTPRest.getRouteStopMappingByStopCode fromStopCode integratedBppConfig) ("getRouteStopMappingByStopCode" <> show fromStopCode)
+
+  -- Get route mappings that contain the destination stop
+  toRouteStopMappings <- measureLatency (OTPRest.getRouteStopMappingByStopCode toStopCode integratedBppConfig) ("getRouteStopMappingByStopCode" <> show toStopCode)
+
+  -- Find common routes that have both the origin and destination stops
+  -- and ensure that from-stop comes before to-stop in the route sequence
+  let fromRouteStopMap = map (\mapping -> (mapping.routeCode, mapping.sequenceNum)) fromRouteStopMappings
+      toRouteStopMap = map (\mapping -> (mapping.routeCode, mapping.sequenceNum)) toRouteStopMappings
+  return $
+    nub $
+      [ fromRouteCode
+        | (fromRouteCode, fromSeq) <- fromRouteStopMap,
+          (toRouteCode, toSeq) <- toRouteStopMap,
+          fromRouteCode == toRouteCode && fromSeq < toSeq -- Ensure correct sequence
+      ]
+
+getValidRoutesCached ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    EncFlow m r,
+    Monad m,
+    HasShortDurationRetryCfg r c
+  ) =>
+  Text ->
+  Text ->
+  DIntegratedBPPConfig.IntegratedBPPConfig ->
+  m [Text]
+getValidRoutesCached fromStopCode toStopCode integratedBppConfig = do
+  let cacheKey = "CachedQueries:JourneyUtils:getValidRoutes:" <> ":fromStopCode-" <> fromStopCode <> ":toStopCode-" <> toStopCode
+  Hedis.safeGet cacheKey
+    >>= \case
+      Just a -> pure a
+      Nothing -> do
+        validRoutes <- getValidRoutes fromStopCode toStopCode integratedBppConfig
+        Hedis.setExp cacheKey validRoutes (10 * 60)
+        return validRoutes
+
 -- | Find all possible routes from originStop to destinationStop with trips in the next hour
 -- grouped by service tier type
 findPossibleRoutes ::
@@ -341,26 +393,8 @@ findPossibleRoutes ::
   Enums.VehicleCategory ->
   m (Maybe Text, [AvailableRoutesByTier])
 findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime integratedBppConfig mid mocid vc = do
-  -- Get route mappings that contain the origin stop
-  fromRouteStopMappings <- measureLatency (OTPRest.getRouteStopMappingByStopCode fromStopCode integratedBppConfig) ("getRouteStopMappingByStopCode" <> show fromStopCode)
-
-  -- Get route mappings that contain the destination stop
-  toRouteStopMappings <- measureLatency (OTPRest.getRouteStopMappingByStopCode toStopCode integratedBppConfig) ("getRouteStopMappingByStopCode" <> show toStopCode)
-
-  -- Find common routes that have both the origin and destination stops
-  -- and ensure that from-stop comes before to-stop in the route sequence
-  let fromRouteStopMap = map (\mapping -> (mapping.routeCode, mapping.sequenceNum)) fromRouteStopMappings
-      toRouteStopMap = map (\mapping -> (mapping.routeCode, mapping.sequenceNum)) toRouteStopMappings
-      validRoutes =
-        nub $
-          [ fromRouteCode
-            | (fromRouteCode, fromSeq) <- fromRouteStopMap,
-              (toRouteCode, toSeq) <- toRouteStopMap,
-              fromRouteCode == toRouteCode && fromSeq < toSeq -- Ensure correct sequence
-          ]
-
+  validRoutes <- getValidRoutes fromStopCode toStopCode integratedBppConfig
   -- Get the timing information for these routes at the origin stop
-
   routeStopTimings <- measureLatency (fetchLiveTimings validRoutes fromStopCode currentTime integratedBppConfig mid mocid vc) ("fetchLiveTimings" <> show validRoutes <> " fromStopCode: " <> show fromStopCode <> " toStopCode: " <> show toStopCode)
   -- Get IST time info
   let (_, currentTimeIST) = getISTTimeInfo currentTime

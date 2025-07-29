@@ -12,7 +12,6 @@ import qualified Domain.Types.Route as Route
 import Domain.Types.RouteStopMapping
 import qualified Domain.Types.Station as Station
 import GHC.Num (integerFromInt)
-import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Tools.Metrics.CoreMetrics
@@ -84,10 +83,7 @@ getRoutesByVehicleType integratedBPPConfig vehicleType = do
 -- Route Stop Mapping Queries
 
 getRouteStopMappingByRouteCode ::
-  ( MonadFlow m,
-    ServiceFlow m r,
-    HasShortDurationRetryCfg r c
-  ) =>
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
   Text ->
   IntegratedBPPConfig ->
   m [RouteStopMapping]
@@ -100,10 +96,7 @@ getRouteStopMappingByRouteCode routeCode integratedBPPConfig = do
   return routeStopMapping
 
 getRouteStopMappingByStopCode ::
-  ( MonadFlow m,
-    ServiceFlow m r,
-    HasShortDurationRetryCfg r c
-  ) =>
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
   Text ->
   IntegratedBPPConfig ->
   m [RouteStopMapping]
@@ -116,10 +109,7 @@ getRouteStopMappingByStopCode stopCode integratedBPPConfig = do
   return routeStopMapping
 
 getRouteStopMappingByStopCodeAndRouteCode ::
-  ( MonadFlow m,
-    ServiceFlow m r,
-    HasShortDurationRetryCfg r c
-  ) =>
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
   Text ->
   Text ->
   IntegratedBPPConfig ->
@@ -265,10 +255,7 @@ parseRouteFromInMemoryServer routeInfoNandi integratedBppConfigId merchantId mer
     _ -> throwError $ InternalError "Failed to parse route"
 
 parseRouteStopMappingInMemoryServer ::
-  ( MonadFlow m,
-    ServiceFlow m r,
-    HasShortDurationRetryCfg r c
-  ) =>
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
   [RouteStopMappingInMemoryServer] ->
   IntegratedBPPConfig ->
   Id Merchant ->

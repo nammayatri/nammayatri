@@ -41,7 +41,8 @@ create frfsSearchReq = do
               merchantId = Just frfsSearchReq.merchantId,
               merchantOperatingCityId = Just frfsSearchReq.merchantOperatingCityId,
               createdAt = _now,
-              updatedAt = _now
+              updatedAt = _now,
+              alternateRouteCodes = Just journeyRouteDetail.alternateRouteCodes
             }
     JRD.create journeyRouteDetails
 

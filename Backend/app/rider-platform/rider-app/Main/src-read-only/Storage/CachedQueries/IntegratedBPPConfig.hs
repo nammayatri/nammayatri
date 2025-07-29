@@ -28,3 +28,16 @@ findAllByDomainAndCityAndVehicleCategory domain merchantOperatingCityId vehicleC
               )
                 /=<< Queries.findAllByDomainAndCityAndVehicleCategory domain merchantOperatingCityId vehicleCategory platformType
         )
+
+findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m (Maybe Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig))
+findById id = do
+  (Hedis.safeGet $ "CachedQueries:IntegratedBPPConfig:" <> ":Id-" <> Kernel.Types.Id.getId id)
+    >>= ( \case
+            Just a -> pure a
+            Nothing ->
+              ( \dataToBeCached -> do
+                  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+                  Hedis.setExp ("CachedQueries:IntegratedBPPConfig:" <> ":Id-" <> Kernel.Types.Id.getId id) dataToBeCached expTime
+              )
+                /=<< Queries.findById id
+        )

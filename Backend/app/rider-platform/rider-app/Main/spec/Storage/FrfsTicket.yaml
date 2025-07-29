@@ -141,6 +141,7 @@ JourneyRouteDetails:
     toStationCode: Maybe Text
     routeCode: Maybe Text
     journeyStatus: Maybe JourneyLegStatus
+    alternateRouteCodes: Maybe [Text]
 
   beamFields:
     fromStationCode:

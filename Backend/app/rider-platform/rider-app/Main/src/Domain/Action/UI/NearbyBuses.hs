@@ -1,4 +1,4 @@
-module Domain.Action.UI.NearbyBuses (postNearbyBusBooking, getNextVehicleDetails, utcToIST, getTimetableStop) where
+module Domain.Action.UI.NearbyBuses (postNearbyBusBooking, getNextVehicleDetails, utcToIST, getTimetableStop, postAllRoutesTimetable) where
 
 import qualified API.Types.UI.NearbyBuses
 import qualified BecknV2.FRFS.Enums as Spe
@@ -37,6 +37,11 @@ import Tools.Error
 
 nearbyBusKey :: Text
 nearbyBusKey = "bus_locations"
+
+-- Common helper for timetable processing
+processTimetableEntries :: [RouteStopTimeTable] -> API.Types.UI.NearbyBuses.TimetableResponse
+processTimetableEntries routeStopTimeTables =
+  API.Types.UI.NearbyBuses.TimetableResponse $ map convertToTimetableEntry routeStopTimeTables
 
 postNearbyBusBooking ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -194,23 +199,45 @@ getTimetableStop ::
     ) ->
     Text ->
     Text ->
+    Kernel.Prelude.Maybe Text ->
     Kernel.Prelude.Maybe (Spe.VehicleCategory) ->
     Environment.Flow API.Types.UI.NearbyBuses.TimetableResponse
   )
-getTimetableStop (mbPersonId, mid) routeCode stopCode mbVehicleType = do
+getTimetableStop (mbPersonId, mid) routeCode fromStopCode mbToStopCode mbVehicleType = do
   riderId <- fromMaybeM (PersonNotFound "No person found") mbPersonId
   person <- QP.findById riderId >>= fromMaybeM (PersonNotFound riderId.getId)
   let vehicleType = maybe BecknV2.OnDemand.Enums.BUS castToOnDemandVehicleCategory mbVehicleType
   integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId vehicleType DIBC.MULTIMODAL
   routeStopTimeTables <-
     SIBC.fetchFirstIntegratedBPPConfigResult integratedBPPConfigs $ \integratedBPPConfig -> do
-      GRSM.findByRouteCodeAndStopCode integratedBPPConfig mid person.merchantOperatingCityId [routeCode] stopCode
-  return $ API.Types.UI.NearbyBuses.TimetableResponse $ map convertToTimetableEntry routeStopTimeTables
-  where
-    convertToTimetableEntry :: RouteStopTimeTable -> API.Types.UI.NearbyBuses.TimetableEntry
-    convertToTimetableEntry routeStopTimeTable = do
-      API.Types.UI.NearbyBuses.TimetableEntry
-        { timeOfArrival = routeStopTimeTable.timeOfArrival,
-          timeOfDeparture = routeStopTimeTable.timeOfDeparture,
-          serviceTierType = routeStopTimeTable.serviceTierType
-        }
+      if isJust mbToStopCode
+        then do
+          validRoutes <- JourneyUtils.getValidRoutesCached fromStopCode (Kernel.Prelude.fromJust mbToStopCode) integratedBPPConfig
+          GRSM.findByRouteCodeAndStopCode integratedBPPConfig mid person.merchantOperatingCityId validRoutes fromStopCode
+        else GRSM.findByRouteCodeAndStopCode integratedBPPConfig mid person.merchantOperatingCityId [routeCode] fromStopCode
+  return $ processTimetableEntries routeStopTimeTables
+
+convertToTimetableEntry :: RouteStopTimeTable -> API.Types.UI.NearbyBuses.TimetableEntry
+convertToTimetableEntry routeStopTimeTable = do
+  API.Types.UI.NearbyBuses.TimetableEntry
+    { timeOfArrival = routeStopTimeTable.timeOfArrival,
+      timeOfDeparture = routeStopTimeTable.timeOfDeparture,
+      serviceTierType = routeStopTimeTable.serviceTierType
+    }
+
+postAllRoutesTimetable ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    API.Types.UI.NearbyBuses.TimetableRequest ->
+    Environment.Flow API.Types.UI.NearbyBuses.TimetableResponse
+  )
+postAllRoutesTimetable (mbPersonId, mid) req = do
+  riderId <- fromMaybeM (PersonNotFound "No person found") mbPersonId
+  person <- QP.findById riderId >>= fromMaybeM (PersonNotFound riderId.getId)
+  let vehicleType = maybe BecknV2.OnDemand.Enums.BUS castToOnDemandVehicleCategory (Just req.vehicleType)
+  integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId vehicleType DIBC.MULTIMODAL
+  routeStopTimeTables <-
+    SIBC.fetchFirstIntegratedBPPConfigResult integratedBPPConfigs $ \integratedBPPConfig -> do
+      GRSM.findByRouteCodeAndStopCode integratedBPPConfig mid person.merchantOperatingCityId req.routeCodes req.stopCode
+  return $ processTimetableEntries routeStopTimeTables
