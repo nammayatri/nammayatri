@@ -345,3 +345,8 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN ny_regular_master_job_next_run_off
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN enable_igm_issue_flow boolean  default false;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN refund_buffer_ttl_sec integer ;
