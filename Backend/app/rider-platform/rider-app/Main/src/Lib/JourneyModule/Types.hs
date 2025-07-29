@@ -6,9 +6,6 @@ import qualified BecknV2.FRFS.Enums as Spec
 import Control.Applicative (liftA2, (<|>))
 import Data.Aeson (object, withObject, (.:), (.=))
 import qualified Data.HashMap.Strict as HM
--- import qualified Storage.CachedQueries.Merchant.MultiModalBus -- This was commented out in the provided content
-
-import Data.List (nub)
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Common as DTrip
 import qualified Domain.Types.Estimate as DEstimate
@@ -208,7 +205,7 @@ data NextStopDetails = NextStopDetails
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data VehiclePosition = VehiclePosition
-  { position :: LatLong, -- Bus's current lat/long
+  { position :: Maybe LatLong, -- Bus's current lat/long
     vehicleId :: Text, -- Bus's ID/number
     upcomingStops :: [NextStopDetails] -- List of upcoming stops for this vehicle
   }
@@ -902,28 +899,10 @@ getLegRouteInfo journeyRouteDetails integratedBPPConfig = do
       fromStationCode' <- fromMaybeM (InternalError "FromStationCode is missing") journeyRouteDetail.fromStationCode
       toStationCode' <- fromMaybeM (InternalError "ToStationCode is missing") journeyRouteDetail.toStationCode
       routeCode' <- fromMaybeM (InternalError "RouteCode is missing") journeyRouteDetail.routeCode
-
-      fromStation <- OTPRest.getStationByGtfsIdAndStopCode fromStationCode' integratedBPPConfig >>= fromMaybeM (InternalError $ "From Station not found in getSubwayLegRouteInfo: " <> show fromStationCode')
-      toStation <- OTPRest.getStationByGtfsIdAndStopCode toStationCode' integratedBPPConfig >>= fromMaybeM (InternalError $ "To Station not found in getSubwayLegRouteInfo: " <> show toStationCode')
+      fromStation <- OTPRest.getStationByGtfsIdAndStopCode fromStationCode' integratedBPPConfig >>= fromMaybeM (InternalError $ "From Station not found in fetchPossibleRoutes: " <> show fromStationCode')
+      toStation <- OTPRest.getStationByGtfsIdAndStopCode toStationCode' integratedBPPConfig >>= fromMaybeM (InternalError $ "To Station not found in fetchPossibleRoutes: " <> show toStationCode')
       route <- OTPRest.getRouteByRouteId integratedBPPConfig routeCode' >>= fromMaybeM (RouteNotFound routeCode')
-      -- Get route mappings that contain the origin stop
-      fromRouteStopMappings <- OTPRest.getRouteStopMappingByStopCode fromStation.code integratedBPPConfig
-
-      -- Get route mappings that contain the destination stop
-      toRouteStopMappings <- OTPRest.getRouteStopMappingByStopCode toStation.code integratedBPPConfig
-
-      -- Find common routes that have both the origin and destination stops
-      -- and ensure that from-stop comes before to-stop in the route sequence
-      let fromRouteStopMap = map (\mapping -> (mapping.routeCode, mapping.sequenceNum)) fromRouteStopMappings
-          toRouteStopMap = map (\mapping -> (mapping.routeCode, mapping.sequenceNum)) toRouteStopMappings
-          validRoutes =
-            nub $
-              [ fromRouteCode
-                | (fromRouteCode, fromSeq') <- fromRouteStopMap,
-                  (toRouteCode, toSeq') <- toRouteStopMap,
-                  fromRouteCode == toRouteCode && fromSeq' < toSeq' -- Ensure correct sequence
-              ]
-
+      validRoutes <- getRouteCodesFromTo fromStation.code toStation.code integratedBPPConfig
       return
         LegRouteInfo
           { originStop = stationToStationAPI fromStation,
