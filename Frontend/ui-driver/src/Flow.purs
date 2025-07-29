@@ -685,7 +685,7 @@ handleDeepLinksFlow event activeRideResp isActiveRide = do
               -- liftFlowBT $ logEvent logField_ "ny_driver_profile_click"
               (GlobalState allState) <- getState
               let updatedState = allState.homeScreen
-              modifyScreenState $ DriverProfileScreenStateType $ \driverProfileScreen -> driverProfileScreen { data {profileCompletedModules = updatedState.data.completingProfileRes.completed, cachedVehicleCategory = fromMaybe ST.UnKnown $ RC.getCategoryFromVariant updatedState.data.vehicleType, cancellationRate = updatedState.data.cancellationRate}}
+              modifyScreenState $ DriverProfileScreenStateType $ \driverProfileScreen -> driverProfileScreen { props {showSettings = true}, data {profileCompletedModules = updatedState.data.completingProfileRes.completed, cachedVehicleCategory = fromMaybe ST.UnKnown $ RC.getCategoryFromVariant updatedState.data.vehicleType, cancellationRate = updatedState.data.cancellationRate}}
               hideSplashAndCallFlow driverProfileFlow
             "ride_request" -> do
               (GlobalState allState) <- getState
@@ -703,6 +703,7 @@ handleDeepLinksFlow event activeRideResp isActiveRide = do
               modifyScreenState $ DriverSavedLocationScreenStateType (\state -> state {props { viewType = ST.SearchLocation} , data { predictions = [] }})
               hideSplashAndCallFlow goToLocationFlow
             "benefits" -> do
+              modifyScreenState $ BenefitsScreenStateType (\state -> state {props {showGoBack = true}})
               hideSplashAndCallFlow benefitsScreenFlow
             "goTo" -> do
               resp <- lift $ lift $ Remote.getDriverHomeLocation ""

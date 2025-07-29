@@ -680,6 +680,7 @@ headerView state push =
         , rippleColor Color.rippleShade
         , cornerRadius 20.0
         , padding $ PaddingHorizontal 3 6
+        , visibility $ boolToVisibility $ state.props.showSettings
         ]
         [ imageView
             [ height $ V 20
