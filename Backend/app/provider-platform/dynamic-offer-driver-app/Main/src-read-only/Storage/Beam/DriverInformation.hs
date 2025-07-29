@@ -7,6 +7,7 @@ import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.Common
+import qualified Domain.Types.DriverFlowStatus
 import qualified Domain.Types.DriverInformation
 import qualified Domain.Types.Extra.Plan
 import qualified Domain.Types.ServiceTierType
@@ -46,6 +47,7 @@ data DriverInformationT f = DriverInformationT
     dlNumberEncrypted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     dlNumberHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
     driverDob :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    driverFlowStatus :: B.C f (Kernel.Prelude.Maybe Domain.Types.DriverFlowStatus.DriverFlowStatus),
     driverId :: B.C f Kernel.Prelude.Text,
     driverTripEndLocationLat :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     driverTripEndLocationLon :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),

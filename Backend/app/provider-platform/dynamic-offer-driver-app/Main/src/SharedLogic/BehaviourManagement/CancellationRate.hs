@@ -28,6 +28,7 @@ import qualified Kernel.Types.SlidingWindowCounters as SWC
 import Kernel.Utils.Common
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import Lib.Scheduler.Environment
+import qualified SharedLogic.DriverPool as SLD
 import SharedLogic.External.LocationTrackingService.Types
 import qualified SharedLogic.Person as SPerson
 import qualified Storage.Cac.TransporterConfig as CTC
@@ -138,7 +139,7 @@ nudgeOrBlockDriver transporterConfig driver driverInfo = do
       (weeklyCancellationRate, weeklyAssignedCount) <- getCancellationRateOfDays 7 windowSize
       let mbCooldDownWeekly = driverInfo.weeklyCancellationRateBlockingCooldown
           mbCooldDownDaily = driverInfo.dailyCancellationRateBlockingCooldown
-      logDebug $ "All cancellation rate data for driverId: " <> driver.id.getId <> ": dailyCancellationRate: " <> show dailyCancellationRate <> " dailyAssignedCount: " <> show dailyAssignedCount <> " weeklyCancellationRate: " <> show weeklyCancellationRate <> " weeklyAssignedCount: " <> show weeklyAssignedCount
+      logDebug $ "All cancellation rate data for driverId: " <> driver.id.getId <> ": dailyCancellationRate: " <> show dailyCancellationRate <> " dailyAssignedCount: " <> show dailyAssignedCount <> " weeklyCancellationRate: " <> show weeklyCancellationRate <> " weeklyAssignedCount: " <> show weeklyAssignedCount <> "cancellationrateslabconfig" <> show cancellationRateSlabConfig
 
       (canBlockOnWeekly, canBlockOnDaily, weeklyOffenceSuspensionTimeHoursParam, dailyOffenceSuspensionTimeHoursParam) <- case cancellationRateSlabConfig of
         Nothing -> do
@@ -200,16 +201,16 @@ nudgeOrBlockDriver transporterConfig driver driverInfo = do
         Nothing -> calculatedCooldown
 
     isDriverBlockable cancellationRateThreshold rideAssignedThreshold cancellationRate assignedCount mbCooldown now =
-      let rule = (cancellationRate > cancellationRateThreshold) && (assignedCount > rideAssignedThreshold)
+      let rule = (cancellationRate >= cancellationRateThreshold) && (assignedCount >= rideAssignedThreshold)
        in case mbCooldown of
             Just cooldown -> rule && (cooldown <= now)
             Nothing -> rule
 
     getCancellationRateOfDays period windowSize = do
       let windowInt = toInteger windowSize
-      cancelledCount <- fmap (sum . map (fromMaybe 0)) $ Redis.withCrossAppRedis $ SWC.getCurrentWindowValuesUptoLast period (mkRideCancelledKey driver.id.getId) (SWC.SlidingWindowOptions windowInt SWC.Days)
+      cancelledCount <- fmap (sum . map (fromMaybe 0)) $ Redis.withCrossAppRedis $ SWC.getCurrentWindowValuesUptoLast period (SLD.mkRideCancelledKey driver.id.getId) (SWC.SlidingWindowOptions windowInt SWC.Days)
       assignedCount <- fmap (sum . map (fromMaybe 0)) $ Redis.withCrossAppRedis $ SWC.getCurrentWindowValuesUptoLast period (mkRideAssignedKey driver.id.getId) (SWC.SlidingWindowOptions windowInt SWC.Days)
-      let cancellationRate = (cancelledCount * 100) `div` max 1 assignedCount
+      let cancellationRate = ((cancelledCount + 1) * 100) `div` max 1 (assignedCount)
       return (cancellationRate, assignedCount)
 
     nudgeDriver cancellationRate fcmType pnKey = do
