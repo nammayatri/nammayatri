@@ -62,7 +62,13 @@ verifyTokenAction ::
   forall m r.
   (HasEsqEnv m r, Redis.HedisFlow m r, HasField "authTokenCacheExpiry" r Seconds, MonadFlow m, Utils.CacheFlow m r, Utils.EsqDBFlow m r) =>
   VerificationAction VerifyToken m
-verifyTokenAction = VerificationAction verifyPerson
+verifyTokenAction = VerificationAction verifyPersonWithSelectiveLogging
+  where
+    verifyPersonWithSelectiveLogging token = do
+      (personId, merchantId, merchantOperatingCityId) <- verifyPerson token
+      -- Apply selective logging for the entire request scope
+      withPersonIdSelectiveLogging personId $ do
+        pure (personId, merchantId, merchantOperatingCityId)
 
 -- | Verifies admin's token.
 type AdminTokenAuth = HeaderAuth "token" AdminVerifyToken

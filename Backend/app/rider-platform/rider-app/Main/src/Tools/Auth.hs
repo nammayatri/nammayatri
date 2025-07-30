@@ -98,7 +98,12 @@ verifyPersonAction ::
     HasField "authTokenCacheExpiry" r Seconds
   ) =>
   VerificationAction VerifyToken m
-verifyPersonAction = VerificationAction verifyPerson
+verifyPersonAction = VerificationAction verifyPersonWithSelectiveLogging
+  where
+    verifyPersonWithSelectiveLogging token = do
+      (personId, merchantId) <- verifyPerson token
+      withPersonIdSelectiveLogging personId $ do
+        pure (personId, merchantId)
 
 verifyToken :: (CacheFlow m r, EsqDBFlow m r) => RegToken -> m SR.RegistrationToken
 verifyToken token =
