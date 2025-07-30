@@ -43,7 +43,6 @@ RiderConfig:
   fields:
     merchantOperatingCityId: Id MerchantOperatingCity
     enableLocalPoliceSupport: Bool
-    enableIGMIssueFlow: Bool
     metroBookingAllowed: Maybe Bool
     suburbanBookingAllowed: Maybe Bool
     localPoliceNumber: Maybe Text
@@ -138,7 +137,6 @@ RiderConfig:
     hardLimitForSafetyJobs: Maybe Seconds
     exotelStatusCheckSchedulerDelay: Maybe Seconds
     incidentReportSupport: Maybe Bool
-    enableIGMIssueFlow: Maybe Bool
     csAlertTriggerDelay: Maybe Seconds
     avgSpeedInKmPerHr: Maybe Kilometers
     payoutBatchDelay: Maybe Seconds
@@ -189,7 +187,6 @@ RiderConfig:
     hardLimitForSafetyJobs: fromMaybe 21600 ((.getSeconds) <$> hardLimitForSafetyJobs)|E
     exotelStatusCheckSchedulerDelay: maybe 120 (.getSeconds) exotelStatusCheckSchedulerDelay|E
     incidentReportSupport: fromMaybe False incidentReportSupport|E
-    enableIGMIssueFlow: fromMaybe False enableIGMIssueFlow|E
     csAlertTriggerDelay: fromMaybe 60 (Kernel.Utils.Common.secondsToNominalDiffTime <$> csAlertTriggerDelay)|E
     avgSpeedInKmPerHr: fromMaybe 20 avgSpeedInKmPerHr|E
     payoutBatchDelay: fromMaybe 10 (Kernel.Utils.Common.secondsToNominalDiffTime <$> payoutBatchDelay)|E
@@ -231,7 +228,6 @@ RiderConfig:
     hardLimitForSafetyJobs: Just $ Kernel.Types.Common.Seconds hardLimitForSafetyJobs|E
     exotelStatusCheckSchedulerDelay: Just $ Kernel.Types.Common.Seconds exotelStatusCheckSchedulerDelay|E
     incidentReportSupport: Just incidentReportSupport|E
-    enableIGMIssueFlow: Just enableIGMIssueFlow|E
     csAlertTriggerDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
     avgSpeedInKmPerHr: Just avgSpeedInKmPerHr|E
     payoutBatchDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
@@ -267,7 +263,6 @@ RiderConfig:
 
   default:
     enableLocalPoliceSupport: "false"
-    enableIGMIssueFlow: "false"
     enableSupportForSafety: "false"
     videoFileSizeUpperLimit: "15000000"
     enableEmergencyContactAddedMessage: "true"

@@ -80,9 +80,7 @@ driverIssueHandle =
       mbSyncRide = Nothing,
       mbSendUnattendedTicketAlert = Nothing,
       findRideByRideShortId = castRideByRideShortId,
-      findByMobileNumberAndMerchantId = castPersonByMobileNumberAndMerchant,
-      mbFindFRFSTicketBookingById = Nothing,
-      mbFindStationByIdWithContext = Nothing
+      findByMobileNumberAndMerchantId = castPersonByMobileNumberAndMerchant
     }
 
 castPersonById :: Id Common.Person -> Flow (Maybe Common.Person)
