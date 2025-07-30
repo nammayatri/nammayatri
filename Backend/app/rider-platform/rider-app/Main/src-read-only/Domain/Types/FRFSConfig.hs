@@ -16,6 +16,7 @@ data FRFSConfig = FRFSConfig
   { bookingEndTime :: Kernel.Prelude.UTCTime,
     bookingStartTime :: Kernel.Prelude.UTCTime,
     busStationTtl :: Kernel.Types.Time.Seconds,
+    canUpdateExistingPaymentOrder :: Kernel.Prelude.Bool,
     cancellationReasonId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     customDates :: [Kernel.Prelude.Text],
     customEndTime :: Kernel.Prelude.Text,

@@ -25,3 +25,9 @@ ALTER TABLE atlas_app.frfs_config ADD COLUMN valid_till_seconds integer  default
 ALTER TABLE atlas_app.frfs_config ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.frfs_config ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.frfs_config ADD PRIMARY KEY ( merchant_operating_city_id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_config ADD COLUMN can_update_existing_payment_order boolean  default false;

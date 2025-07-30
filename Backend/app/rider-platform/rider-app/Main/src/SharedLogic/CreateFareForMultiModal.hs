@@ -80,22 +80,21 @@ createVendorSplitFromBookings allJourneyBookings merchantId merchantOperatingCit
               (0.0, [])
               allJourneyBookings
   isSplitEnabled <- Payment.getIsSplitEnabled merchantId merchantOperatingCityId Nothing paymentType
-  let booking = listToMaybe allJourneyBookings
-  case booking of
-    Just booking' -> do
+  case allJourneyBookings of
+    [] -> return ([], 0.0)
+    _ -> do
       if isSplitEnabled
         then do
           integratedBPPConfigList <-
             mapM
-              ( \vehicleType -> SIBC.findAllIntegratedBPPConfig booking'.merchantOperatingCityId (frfsVehicleCategoryToBecknVehicleCategory vehicleType) DIBC.MULTIMODAL
+              ( \vehicleType -> SIBC.findAllIntegratedBPPConfig merchantOperatingCityId (frfsVehicleCategoryToBecknVehicleCategory vehicleType) DIBC.MULTIMODAL
               )
               vehicleTypeList
           vendorSplitDetailsList <- mapM (QVendorSplitDetails.findAllByIntegratedBPPConfigId . (.id)) (concat integratedBPPConfigList)
-          vendorSplitDetailsListToIncludeInSplit <- QVendorSplitDetails.findAllByMerchantOperatingCityIdAndIncludeInSplit (Just booking'.merchantOperatingCityId) (Just True)
+          vendorSplitDetailsListToIncludeInSplit <- QVendorSplitDetails.findAllByMerchantOperatingCityIdAndIncludeInSplit (Just merchantOperatingCityId) (Just True)
           vendorSplitDetails <- convertVendorDetails (concat vendorSplitDetailsList ++ vendorSplitDetailsListToIncludeInSplit) allJourneyBookings isFRFSTestingEnabled
           return (vendorSplitDetails, amount)
         else return ([], amount)
-    Nothing -> return ([], 0.0)
 
 convertVendorDetails ::
   ( EsqDBReplicaFlow m r,

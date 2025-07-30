@@ -42,6 +42,8 @@ buildOnInitReq onInitReq = do
   providerId <- order.orderProvider >>= (.providerId) & fromMaybeM (InvalidRequest "Provider not found")
 
   item <- order.orderItems >>= listToMaybe & fromMaybeM (InvalidRequest "Item not found")
+  itemQuantity <- item.itemQuantity >>= (.itemQuantitySelected) >>= (.itemQuantitySelectedCount) & fromMaybeM (InvalidRequest "ItemQuantity not found")
+
   bppItemId <- item.itemId & fromMaybeM (InvalidRequest "BppItemId not found")
 
   quotation <- order.orderQuote & fromMaybeM (InvalidRequest "Quotation not found")
@@ -60,6 +62,8 @@ buildOnInitReq onInitReq = do
     Domain.DOnInit
       { providerId = providerId,
         totalPrice,
+        totalQuantity = itemQuantity,
+        totalChildTicketQuantity = Nothing,
         fareBreakUp = fareBreakUp,
         bppItemId,
         transactionId,

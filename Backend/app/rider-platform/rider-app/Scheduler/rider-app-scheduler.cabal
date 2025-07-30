@@ -81,6 +81,7 @@ library
     , external
     , extra
     , generic-lens
+    , haskell-cac
     , hspec
     , mobility-core
     , openapi3
@@ -167,6 +168,7 @@ executable rider-app-scheduler-exe
     , external
     , extra
     , generic-lens
+    , haskell-cac
     , hspec
     , mobility-core
     , openapi3

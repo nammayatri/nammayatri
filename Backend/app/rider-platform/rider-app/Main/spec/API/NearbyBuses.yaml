@@ -24,6 +24,7 @@ types:
       eta: Maybe UTCTime
       capacity: Maybe Int
       occupancy: Maybe Int
+      shortName: Maybe Text
 
   RecentRide:
       fromStopCode: Text
@@ -79,5 +80,6 @@ apis:
         stopCode: Text
       query:
         vehicleType: VehicleCategory
+        toCode: Text
       response:
         type: TimetableResponse

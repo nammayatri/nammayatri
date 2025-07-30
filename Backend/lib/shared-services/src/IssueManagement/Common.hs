@@ -21,7 +21,7 @@ import qualified Data.Vector as V
 import qualified Database.Beam as B
 import Database.Beam.Backend
 import Database.Beam.Postgres
-import Database.PostgreSQL.Simple.FromField
+import Database.PostgreSQL.Simple.FromField hiding (name)
 import Domain.Types.VehicleVariant
 import EulerHS.Prelude hiding (any, elem, id, map, state)
 import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum, mkBeamInstancesForEnumAndList)
@@ -73,13 +73,33 @@ data MerchantOperatingCity = MerchantOperatingCity
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
+data VehicleCategory = METRO | BUS | SUBWAY
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
+
+data FRFSTicketBookingStatus = FRFS_NEW | FRFS_CONFIRMED | FRFS_CANCELLED | FRFS_FAILED
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
+
 data FRFSTicketBooking = FRFSTicketBooking
   { id :: Id FRFSTicketBooking,
     merchantOperatingCityId :: Id MerchantOperatingCity,
     merchantId :: Id Merchant,
-    providerId :: Text,
-    providerUrl :: BaseUrl,
-    bppItemId :: Text
+    riderId :: Id Person,
+    fromStationCode :: Text,
+    toStationCode :: Text,
+    vehicleType :: VehicleCategory,
+    price :: Price,
+    quantity :: Int,
+    status :: FRFSTicketBookingStatus,
+    createdAt :: UTCTime,
+    updatedAt :: UTCTime,
+    stationsJson :: Text
+  }
+
+data Station = Station
+  { code :: Text,
+    name :: Text,
+    lat :: Maybe Double,
+    lon :: Maybe Double
   }
 
 data PersonE e = Person

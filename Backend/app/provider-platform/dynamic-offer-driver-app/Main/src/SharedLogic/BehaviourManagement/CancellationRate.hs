@@ -28,7 +28,6 @@ import qualified Kernel.Types.SlidingWindowCounters as SWC
 import Kernel.Utils.Common
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import Lib.Scheduler.Environment
-import qualified SharedLogic.DriverPool as SLD
 import SharedLogic.External.LocationTrackingService.Types
 import qualified SharedLogic.Person as SPerson
 import qualified Storage.Cac.TransporterConfig as CTC
@@ -42,7 +41,11 @@ data CancellationRateData = CancellationRateData
   { assignedCount :: Int,
     cancelledCount :: Int,
     cancellationRate :: Int,
-    windowSize :: Int
+    windowSize :: Int,
+    assignedCountDaily :: Int,
+    cancelledCountDaily :: Int,
+    assignedCountWeekly :: Int,
+    cancelledCountWeekly :: Int
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
@@ -111,18 +114,36 @@ getCancellationRateData mocId driverId = do
     then do
       cancelledCount <- getCancellationCount windowSize driverId
       let cancellationRate = (cancelledCount * 100) `div` max 1 assignedCount
+
+      (cancelledCountDaily, assignedCountDaily) <- getCancellationRateOfDaysStandalone driverId 1 windowSize
+      (cancelledCountWeekly, assignedCountWeekly) <- getCancellationRateOfDaysStandalone driverId 7 windowSize
       pure $
         Just $
           CancellationRateData
             { assignedCount = fromInteger assignedCount,
               cancelledCount = fromInteger cancelledCount,
               cancellationRate = fromInteger cancellationRate,
-              windowSize = fromMaybe 7 merchantConfig.cancellationRateWindow
+              windowSize = fromMaybe 7 merchantConfig.cancellationRateWindow,
+              assignedCountDaily = fromInteger assignedCountDaily,
+              cancelledCountDaily = fromInteger cancelledCountDaily,
+              assignedCountWeekly = fromInteger assignedCountWeekly,
+              cancelledCountWeekly = fromInteger cancelledCountWeekly
             }
     else pure Nothing
   where
     findWindowSize merchantConfig = toInteger $ fromMaybe 7 merchantConfig.cancellationRateWindow
     findMinimumRides merchantConfig = toInteger $ fromMaybe 5 merchantConfig.cancellationRateCalculationThreshold
+
+getCancellationRateOfDaysStandalone ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  Id DP.Person ->
+  Integer ->
+  Integer ->
+  m (Integer, Integer)
+getCancellationRateOfDaysStandalone driverId period windowSize = do
+  cancelledCount <- fmap (sum . map (fromMaybe 0)) $ Redis.withCrossAppRedis $ SWC.getCurrentWindowValuesUptoLast period (mkRideCancelledKey driverId.getId) (SWC.SlidingWindowOptions windowSize SWC.Days)
+  assignedCount <- fmap (sum . map (fromMaybe 0)) $ Redis.withCrossAppRedis $ SWC.getCurrentWindowValuesUptoLast period (mkRideAssignedKey driverId.getId) (SWC.SlidingWindowOptions windowSize SWC.Days)
+  return (cancelledCount, assignedCount)
 
 nudgeOrBlockDriver ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r, CoreMetrics m, HasLocationService m r, JobCreator r m, HasShortDurationRetryCfg r c) =>
@@ -150,7 +171,7 @@ nudgeOrBlockDriver transporterConfig driver driverInfo = do
               dailyOffenceSuspensionTimeHours
             )
         Just configData -> do
-          let matchingWeeklySlab = find (\slab -> isDriverBlockable (slab.penalityForCancellation.cancellationPercentageThreshold) (slab.minBookings) weeklyCancellationRate weeklyAssignedCount mbCooldDownWeekly now) (configData.weeklySlabs)
+          let matchingWeeklySlab = find (\slab -> isDriverBlockableSlab (slab.penalityForCancellation.cancellationPercentageThreshold) (slab.minBookingsRange) weeklyCancellationRate weeklyAssignedCount slab.penalityForCancellation.suspensionTimeInHours mbCooldDownWeekly now) (configData.weeklySlabs)
           (canBlockOnWeekly', weeklyOffenceSuspensionTimeHoursParam') <- case matchingWeeklySlab of
             Just slab -> return (True, slab.penalityForCancellation.suspensionTimeInHours)
             Nothing -> return (False, weeklyOffenceSuspensionTimeHours)
@@ -158,11 +179,12 @@ nudgeOrBlockDriver transporterConfig driver driverInfo = do
           let matchingDailySlab =
                 find
                   ( \slab ->
-                      isDriverBlockable
+                      isDriverBlockableSlab
                         slab.penalityForCancellation.cancellationPercentageThreshold
-                        slab.minBookings
+                        slab.minBookingsRange
                         dailyCancellationRate
                         dailyAssignedCount
+                        slab.penalityForCancellation.suspensionTimeInHours
                         mbCooldDownDaily
                         now
                   )
@@ -206,11 +228,17 @@ nudgeOrBlockDriver transporterConfig driver driverInfo = do
             Just cooldown -> rule && (cooldown <= now)
             Nothing -> rule
 
+    isDriverBlockableSlab cancellationRateThreshold rideAssignedThreshold cancellationRate assignedCount suspensionTimeInHours mbCooldown now =
+      let rule = maybe False (\minRides -> maybe False (\maxRides -> (cancellationRate >= cancellationRateThreshold) && (assignedCount >= minRides) && (assignedCount <= maxRides) && (suspensionTimeInHours > 0)) (listToMaybe (reverse rideAssignedThreshold))) (listToMaybe rideAssignedThreshold)
+       in case mbCooldown of
+            Just cooldown -> rule && (cooldown <= now)
+            Nothing -> rule
+
     getCancellationRateOfDays period windowSize = do
       let windowInt = toInteger windowSize
-      cancelledCount <- fmap (sum . map (fromMaybe 0)) $ Redis.withCrossAppRedis $ SWC.getCurrentWindowValuesUptoLast period (SLD.mkRideCancelledKey driver.id.getId) (SWC.SlidingWindowOptions windowInt SWC.Days)
+      cancelledCount <- fmap (sum . map (fromMaybe 0)) $ Redis.withCrossAppRedis $ SWC.getCurrentWindowValuesUptoLast period (mkRideCancelledKey driver.id.getId) (SWC.SlidingWindowOptions windowInt SWC.Days)
       assignedCount <- fmap (sum . map (fromMaybe 0)) $ Redis.withCrossAppRedis $ SWC.getCurrentWindowValuesUptoLast period (mkRideAssignedKey driver.id.getId) (SWC.SlidingWindowOptions windowInt SWC.Days)
-      let cancellationRate = ((cancelledCount + 1) * 100) `div` max 1 (assignedCount)
+      let cancellationRate = ((cancelledCount) * 100) `div` max 1 (assignedCount)
       return (cancellationRate, assignedCount)
 
     nudgeDriver cancellationRate fcmType pnKey = do

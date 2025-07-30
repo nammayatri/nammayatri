@@ -484,6 +484,7 @@ data UpdateFarePolicyReq = UpdateFarePolicyReq
     tollCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     petCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     priorityCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    pickupBufferInSecsForNightShiftCal :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     perMinuteRideExtraTimeChargeWithCurrency :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
     congestionChargeMultiplier :: Kernel.Prelude.Maybe CongestionChargeMultiplierAPIEntity,
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

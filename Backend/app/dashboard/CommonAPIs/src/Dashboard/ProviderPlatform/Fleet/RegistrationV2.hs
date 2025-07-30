@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Dashboard.ProviderPlatform.Fleet.RegistrationV2 (module ReExport, validateRegisterReqV2, validateInitiateLoginReqV2) where
+module Dashboard.ProviderPlatform.Fleet.RegistrationV2 (module ReExport, validateRegisterReqV2, validateRegisterReqWithLooseCheck, validateInitiateLoginReqV2) where
 
 import API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2
 import Dashboard.Common as ReExport
@@ -18,6 +18,14 @@ validateRegisterReqV2 FleetOwnerRegisterReqV2 {..} =
   sequenceA_
     [ validateField "firstName" firstName $ P.NotEmpty `P.And` P.name,
       validateField "lastName" lastName $ P.NotEmpty `P.And` P.name,
+      validateField "email" email $ P.InMaybe P.email
+    ]
+
+validateRegisterReqWithLooseCheck :: Validate FleetOwnerRegisterReqV2
+validateRegisterReqWithLooseCheck FleetOwnerRegisterReqV2 {..} =
+  sequenceA_
+    [ validateField "firstName" firstName $ P.NotEmpty `P.And` P.nameWithNumber,
+      validateField "lastName" lastName P.nameWithNumber,
       validateField "email" email $ P.InMaybe P.email
     ]
 

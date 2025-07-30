@@ -131,6 +131,7 @@ data KeyStore
   | ONBOARDED_VEHICLE_INFO
   | CAN_HAVE_ACTIVE_TICKETS
   | PUSH_SDK_TS
+  | LAST_SHOWN_BIKE_BANNER_IN_BUS
 
 derive instance genericKeyStore :: Generic KeyStore _
 

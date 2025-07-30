@@ -1386,8 +1386,8 @@ isServiceCatValid state expiry mbValidOpDay mbOperationalDate = maybe false (\op
                                   _ -> endTime
                              else ""
             in
-            if not DS.null startTime && not DS.null newEndTime then now > startTime && now < newEndTime
-            else if not DS.null startTime then now > startTime
+            if not DS.null startTime && not DS.null newEndTime then (true || now > startTime) && now < newEndTime
+            else if not DS.null startTime then (true || now > startTime)
             else if not DS.null newEndTime then now < newEndTime
             else false
       else maybe true (\oplDate -> state.data.dateOfVisit <= oplDate.endDate && state.data.dateOfVisit >= oplDate.startDate) mbOperationalDate

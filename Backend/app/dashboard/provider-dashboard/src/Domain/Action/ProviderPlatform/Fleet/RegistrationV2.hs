@@ -104,9 +104,10 @@ postRegistrationV2Register' ::
   Common.FleetOwnerRegisterReqV2 ->
   Flow APISuccess
 postRegistrationV2Register' clientCall merchantShortId opCity apiTokenInfo req = do
-  runRequestValidation Common.validateRegisterReqV2 req
-  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   merchant <- QMerchant.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+  let validateFn = if fromMaybe True merchant.isStrongNameCheckRequired then Common.validateRegisterReqV2 else Common.validateRegisterReqWithLooseCheck
+  runRequestValidation validateFn req
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   unless (opCity `elem` merchant.supportedOperatingCities) $ throwError (InvalidRequest "Invalid request city is not supported by Merchant")
   let req' = req{Common.adminApprovalRequired = merchant.requireAdminApprovalForFleetOnboarding}
   let requestorId = apiTokenInfo.personId.getId

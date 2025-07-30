@@ -2,12 +2,11 @@
 
 module API.Types.UI.TicketKapture where
 
-import qualified Data.Aeson as A
 import Data.OpenApi (ToSchema)
 import qualified Data.Text
 import qualified Domain.Types.Ride
+import qualified Domain.Types.TicketKapture as TaggedTypes
 import EulerHS.Prelude hiding (id)
-import qualified Kernel.External.Ticket.Kapture.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Id
 import Servant
@@ -25,7 +24,7 @@ data GetAllActiveTicketsRes = GetAllActiveTicketsRes {activeTickets :: [ActiveTi
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data GetClosedTicketDetailsRes = GetClosedTicketDetailsRes {chatMessages :: [Kernel.External.Ticket.Kapture.Types.ChatMessage]}
+data GetClosedTicketDetailsRes = GetClosedTicketDetailsRes {chatMessages :: [TaggedTypes.TaggedChatMessage]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

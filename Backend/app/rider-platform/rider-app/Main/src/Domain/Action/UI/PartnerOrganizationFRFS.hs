@@ -93,8 +93,8 @@ import qualified Storage.CachedQueries.Person as CQP
 import qualified Storage.Queries.FRFSQuote as QQuote
 import qualified Storage.Queries.FRFSSearch as QSearch
 import qualified Storage.Queries.FRFSTicket as QFT
-import qualified Storage.Queries.FRFSTicketBokingPayment as QFTBP
 import qualified Storage.Queries.FRFSTicketBooking as QFTB
+import qualified Storage.Queries.FRFSTicketBookingPayment as QFTBP
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.PersonStats as QPStats
 import qualified Storage.Queries.RegistrationToken as RegistrationToken

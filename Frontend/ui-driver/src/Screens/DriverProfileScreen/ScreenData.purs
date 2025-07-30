@@ -100,6 +100,11 @@ initData =
     assignedRides : 0,
     cancelledRides : 0,
     cancellationWindow : Nothing,
+    assignedRidesCountDaily : Nothing,
+    cancelledRidesCountDaily : Nothing,
+    assignedRidesCountWeekly : Nothing,
+    cancelledRidesCountWeekly : Nothing,
+    cancellationRateSlabConfig : Nothing,
     missedEarnings : 0,
     driverInfoResponse : Nothing,
     profileCompletedModules : 0,
@@ -268,6 +273,10 @@ dummyDriverInfo = GetDriverInfoResp {
     , cancelledRidesCountInWindow : Nothing
     , assignedRidesCountInWindow : Nothing
     , windowSize : Nothing
+    , assignedRidesCountDaily : Nothing
+    , cancelledRidesCountDaily : Nothing
+    , assignedRidesCountWeekly : Nothing
+    , cancelledRidesCountWeekly : Nothing
     , favCount : Nothing
     , isSubscriptionVehicleCategoryChanged : Nothing
     , isOnFreeTrial : Nothing
@@ -286,6 +295,7 @@ dummyDriverInfo = GetDriverInfoResp {
     , isPetModeEnabled : Nothing
     , driverTags : Nothing
     , nyClubConsent : Nothing
+    , cancellationRateSlabConfig : Nothing
 }
 
 organizationInfo :: OrganizationInfo

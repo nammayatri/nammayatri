@@ -32,6 +32,7 @@ data FarePolicyT f = FarePolicyT
     petCharges :: B.C f (Maybe HighPrecMoney),
     priorityCharges :: B.C f (Maybe HighPrecMoney),
     tollCharges :: B.C f (Maybe HighPrecMoney),
+    pickupBufferInSecsForNightShiftCal :: B.C f (Maybe Seconds),
     tipOptions :: B.C f (Maybe [Int]),
     currency :: B.C f (Maybe Currency),
     nightShiftStart :: B.C f (Maybe TimeOfDay),

@@ -194,17 +194,24 @@ getTimetableStop ::
     ) ->
     Text ->
     Text ->
+    Kernel.Prelude.Maybe Text ->
     Kernel.Prelude.Maybe (Spe.VehicleCategory) ->
     Environment.Flow API.Types.UI.NearbyBuses.TimetableResponse
   )
-getTimetableStop (mbPersonId, mid) routeCode stopCode mbVehicleType = do
+getTimetableStop (mbPersonId, mid) routeCode fromStopCode mbToCode mbVehicleType = do
   riderId <- fromMaybeM (PersonNotFound "No person found") mbPersonId
   person <- QP.findById riderId >>= fromMaybeM (PersonNotFound riderId.getId)
   let vehicleType = maybe BecknV2.OnDemand.Enums.BUS castToOnDemandVehicleCategory mbVehicleType
   integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId vehicleType DIBC.MULTIMODAL
+  -- Getting route codes according to user travel direction if toStop is given and ignoring the requested routeCode
   routeStopTimeTables <-
     SIBC.fetchFirstIntegratedBPPConfigResult integratedBPPConfigs $ \integratedBPPConfig -> do
-      GRSM.findByRouteCodeAndStopCode integratedBPPConfig mid person.merchantOperatingCityId [routeCode] stopCode
+      routeCodes <-
+        maybe
+          (pure [routeCode])
+          (\toCode -> JourneyUtils.getRouteCodesFromTo fromStopCode toCode integratedBPPConfig)
+          mbToCode
+      GRSM.findByRouteCodeAndStopCode integratedBPPConfig mid person.merchantOperatingCityId routeCodes fromStopCode
   return $ API.Types.UI.NearbyBuses.TimetableResponse $ map convertToTimetableEntry routeStopTimeTables
   where
     convertToTimetableEntry :: RouteStopTimeTable -> API.Types.UI.NearbyBuses.TimetableEntry

@@ -755,7 +755,7 @@ TransporterConfig:
       suspensionTimeInHours: Int
       derive': Generic, Show, ToJSON, FromJSON, ToSchema,Eq
     SlabType:
-      minBookings : Int
+      minBookingsRange : "[Int]"
       penalityForCancellation : CancellationRateSlab
       derive': Generic, Show, ToJSON, FromJSON, ToSchema,Eq
     CancellationRateSlabConfig:

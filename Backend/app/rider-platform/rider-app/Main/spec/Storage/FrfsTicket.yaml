@@ -431,9 +431,9 @@ FRFSTicketBooking:
       kvFunction: updateWithKV
       params: [finalPrice, updatedAt]
       where: id
-    updatePriceById:
+    updatePriceAndQuantityById:
       kvFunction: updateWithKV
-      params: [price, updatedAt]
+      params: [price, quantity, childTicketQuantity, updatedAt]
       where: id
     updateBppBankDetailsById:
       kvFunction: updateWithKV
@@ -576,9 +576,6 @@ FRFSTicketBookingPayment:
     findById:
       kvFunction: findOneWithKV
       where: id
-    findAllTicketBookingId:
-      kvFunction: findAllWithKV
-      where: frfsTicketBookingId
     findByPaymentOrderId:
       kvFunction: findOneWithKV
       where: paymentOrderId
@@ -589,6 +586,9 @@ FRFSTicketBookingPayment:
       kvFunction: updateWithKV
       params: [status, updatedAt]
       where: frfsTicketBookingId
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
 
 FRFSRecon:
   tableName: frfs_recon
@@ -688,6 +688,7 @@ FRFSConfig:
     providerName: Maybe Text
     validTillSeconds: Seconds
     isFRFSTestingEnabled: Bool
+    canUpdateExistingPaymentOrder: Bool
 
   beamType:
     isCancellationAllowed: Maybe Bool
@@ -696,6 +697,7 @@ FRFSConfig:
     radius: Maybe Meters
     validTillSeconds: Maybe Seconds
     isFRFSTestingEnabled: Maybe Bool
+    canUpdateExistingPaymentOrder: Maybe Bool
 
   queries:
     findByMerchantOperatingCityId:
@@ -715,6 +717,7 @@ FRFSConfig:
     radius: "3000"
     validTillSeconds: "300"
     isFRFSTestingEnabled : "false"
+    canUpdateExistingPaymentOrder: "false"
 
   fromTType:
     isCancellationAllowed: Kernel.Prelude.fromMaybe True|I
@@ -723,6 +726,7 @@ FRFSConfig:
     radius: Kernel.Prelude.fromMaybe (Kernel.Types.Distance.Meters 3000)|I
     validTillSeconds: Kernel.Prelude.fromMaybe (Kernel.Types.Time.Seconds 300)|I
     isFRFSTestingEnabled: Kernel.Prelude.fromMaybe False|I
+    canUpdateExistingPaymentOrder: Kernel.Prelude.fromMaybe False|I
 
   toTType:
     isCancellationAllowed: Kernel.Prelude.Just|I
@@ -731,6 +735,7 @@ FRFSConfig:
     radius: Kernel.Prelude.Just|I
     validTillSeconds: Kernel.Prelude.Just|I
     isFRFSTestingEnabled: Kernel.Prelude.Just|I
+    canUpdateExistingPaymentOrder: Kernel.Prelude.Just|I
 
 FRFSRouteFareProduct:
   tableName: frfs_route_fare_product

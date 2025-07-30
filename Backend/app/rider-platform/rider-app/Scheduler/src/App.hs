@@ -14,7 +14,10 @@
 
 module App where
 
+import qualified Client.Main as CM
+import qualified Data.Bool as B
 import Environment (HandlerCfg, HandlerEnv, buildHandlerEnv)
+import "rider-app" Environment (AppCfg (..), buildAppEnv)
 import EulerHS.Interpreters (runFlow)
 import qualified EulerHS.Language as L
 import qualified EulerHS.Runtime as R
@@ -23,15 +26,18 @@ import Kernel.Beam.Connection.Types (ConnectionConfigDriver (..))
 import Kernel.Beam.Types (KafkaConn (..))
 import qualified Kernel.Beam.Types as KBT
 import Kernel.Exit
+import Kernel.External.AadhaarVerification.Gridline.Config
+import Kernel.External.Tokenize
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Migration
 import Kernel.Storage.Queries.SystemConfigs as QSC
 import Kernel.Types.Error
 import Kernel.Types.Flow (runFlowR)
-import Kernel.Utils.App (getPodName, handleLeft)
+import Kernel.Utils.App (getPodName, handleLeft, handleLeftIO)
 import Kernel.Utils.Common
 import Kernel.Utils.Dhall
 import qualified Kernel.Utils.FlowLogging as L
+import Kernel.Utils.Servant.SignatureAuth (addAuthManagersToFlowRt, prepareAuthManagers)
 import Lib.Scheduler
 import qualified Lib.Scheduler.JobStorageType.SchedulerType as QAllJ
 import SharedLogic.JobScheduler
@@ -52,6 +58,8 @@ import "rider-app" SharedLogic.Scheduler.Jobs.ScheduledRideNotificationsToRider
 import "rider-app" SharedLogic.Scheduler.Jobs.ScheduledRidePopupToRider
 import "rider-app" SharedLogic.Scheduler.Jobs.UpdateCrisUtsData
 import Storage.Beam.SystemConfigs ()
+import qualified Storage.CachedQueries.BecknConfig as QBecknConfig
+import qualified Storage.CachedQueries.Merchant as QMerchant
 
 schedulerHandle :: R.FlowRuntime -> HandlerEnv -> SchedulerHandle RiderJobType
 schedulerHandle flowRt env =
@@ -102,7 +110,9 @@ runRiderAppScheduler configModifier = do
   handlerEnv <- buildHandlerEnv handlerCfg
   hostname <- getPodName
   let loggerRt = L.getEulerLoggerRuntime hostname handlerCfg.appCfg.loggerConfig
-
+  appEnv <-
+    try (buildAppEnv handlerCfg.appCfg)
+      >>= handleLeftIO @SomeException exitBuildingAppEnvFailure "Couldn't build AppEnv: "
   R.withFlowRuntime (Just loggerRt) $ \flowRt -> do
     runFlow
       flowRt
@@ -126,8 +136,44 @@ runRiderAppScheduler configModifier = do
           findById "kv_configs" >>= pure . decodeFromText' @Tables
             >>= fromMaybeM (InternalError "Couldn't find kv_configs table for driver app")
         L.setOption KBT.Tables kvConfigs
+        allBaps <-
+          try QMerchant.loadAllBaps
+            >>= handleLeft @SomeException exitLoadAllProvidersFailure "Exception thrown: "
+        let allSubscriberIds = map ((.bapId) &&& (.bapUniqueKeyId)) allBaps
+        _ <- liftIO $ createCAC handlerCfg.appCfg
+        -- Load FRFS BAPs
+        frfsBap <-
+          try QBecknConfig.findAll
+            >>= handleLeft @SomeException exitLoadAllProvidersFailure "Exception thrown: "
+        let allFRFSSubIds = map ((.subscriberId) &&& (.uniqueKeyId)) frfsBap
+        flowRt' <-
+          addAuthManagersToFlowRt
+            flowRt
+            $ catMaybes
+              [ Just (Nothing, prepareAuthManagers flowRt appEnv allSubscriberIds),
+                Just (Nothing, prepareAuthManagers flowRt appEnv allFRFSSubIds),
+                Just (Just 150000, prepareGridlineHttpManager 150000),
+                Just (Just 10000, prepareJourneyMonitoringHttpManager 10000)
+              ]
         logInfo ("Runtime created. Starting server at port " <> show (handlerCfg.schedulerConfig.port))
-        pure flowRt
-    managers <- managersFromManagersSettings handlerEnv.httpClientOptions.timeoutMs mempty -- default manager is created
-    let flowRt'' = flowRt' {R._httpClientManagers = managers}
-    runSchedulerService handlerCfg.schedulerConfig handlerEnv.jobInfoMap handlerEnv.kvConfigUpdateFrequency handlerEnv.maxShards $ schedulerHandle flowRt'' handlerEnv
+        pure flowRt'
+    runSchedulerService handlerCfg.schedulerConfig handlerEnv.jobInfoMap handlerEnv.kvConfigUpdateFrequency handlerEnv.maxShards $ schedulerHandle flowRt' handlerEnv
+
+createCAC :: Environment.AppCfg -> IO ()
+createCAC appCfg = do
+  when appCfg.cacConfig.enableCac $ do
+    cacStatus <- CM.initCACClient appCfg.cacConfig.host (fromIntegral appCfg.cacConfig.interval) appCfg.cacTenants appCfg.cacConfig.enablePolling
+    case cacStatus of
+      0 -> CM.startCACPolling appCfg.cacTenants
+      _ -> do
+        -- logError "CAC client failed to start"
+        threadDelay 1000000
+        B.bool (pure ()) (createCAC appCfg) appCfg.cacConfig.retryConnection
+  when appCfg.superPositionConfig.enableSuperPosition $ do
+    superPositionStatus <- CM.initSuperPositionClient appCfg.superPositionConfig.host (fromIntegral appCfg.superPositionConfig.interval) appCfg.superPositionConfig.tenants appCfg.superPositionConfig.enablePolling
+    case superPositionStatus of
+      0 -> CM.runSuperPositionPolling appCfg.superPositionConfig.tenants
+      _ -> do
+        -- logError "CAC super position client failed to start"
+        threadDelay 1000000
+        B.bool (pure ()) (createCAC appCfg) appCfg.cacConfig.retryConnection

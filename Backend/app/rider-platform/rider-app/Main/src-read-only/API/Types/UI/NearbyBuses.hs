@@ -22,8 +22,8 @@ data NearbyBus = NearbyBus
     occupancy :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     routeCode :: Data.Text.Text,
     serviceType :: Kernel.Prelude.Maybe Data.Text.Text,
-    vehicleNumber :: Kernel.Prelude.Maybe Data.Text.Text,
-    shortName :: Kernel.Prelude.Maybe Data.Text.Text
+    shortName :: Kernel.Prelude.Maybe Data.Text.Text,
+    vehicleNumber :: Kernel.Prelude.Maybe Data.Text.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -44,6 +44,10 @@ data NearbyBusesResponse = NearbyBusesResponse {nearbyBuses :: [NearbyBus], rece
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data RecentRide = RecentRide {fare :: Kernel.Types.Price.Price, fromStopCode :: Data.Text.Text, routeCode :: Kernel.Prelude.Maybe Data.Text.Text, toStopCode :: Data.Text.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data RouteCodes = RouteCodes {routeCodes :: [Data.Text.Text]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

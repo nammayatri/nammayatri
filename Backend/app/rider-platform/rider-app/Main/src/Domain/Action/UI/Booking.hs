@@ -210,7 +210,7 @@ getLegFare leg = do
             Nothing -> return defaultPrice
         _ -> do
           mbBooking <- QTBooking.findBySearchId legSearchId
-          return $ fromMaybe defaultPrice (mbBooking >>= \booking -> booking.finalPrice)
+          return $ fromMaybe defaultPrice (mbBooking >>= \booking -> booking.finalPrice <|> Just booking.price)
 
 bookingList :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> Maybe Integer -> Maybe Integer -> [SRB.BookingStatus] -> Flow BookingListRes
 bookingList (personId, merchantId) mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate' mbToDate' mbBookingStatusList = do

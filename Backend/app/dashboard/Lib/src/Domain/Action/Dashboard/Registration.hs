@@ -325,12 +325,14 @@ registerFleetOwner ::
   Id DP.Person ->
   m APISuccess
 registerFleetOwner req personId = do
-  runRequestValidation validateFleetOwner req
-  unlessM (isNothing <$> QP.findByMobileNumber req.mobileNumber req.mobileCountryCode) $ throwError (InvalidRequest "Phone already registered")
-  fleetOwnerRole <- QRole.findByDashboardAccessType (getFleetRole req.fleetType) >>= fromMaybeM (RoleDoesNotExist (show $ getFleetRole req.fleetType))
   merchant <-
     QMerchant.findByShortId req.merchantId
       >>= fromMaybeM (MerchantDoesNotExist req.merchantId.getShortId)
+  let validateFn = if fromMaybe True merchant.isStrongNameCheckRequired then validateFleetOwner else weakValidateFleetOwner
+  runRequestValidation validateFn req
+  unlessM (isNothing <$> QP.findByMobileNumber req.mobileNumber req.mobileCountryCode) $ throwError (InvalidRequest "Phone already registered")
+  fleetOwnerRole <- QRole.findByDashboardAccessType (getFleetRole req.fleetType) >>= fromMaybeM (RoleDoesNotExist (show $ getFleetRole req.fleetType))
+
   merchantServerAccessCheck merchant
   createFleetOwnerDashboardOnly fleetOwnerRole merchant req personId
   return Success
@@ -372,6 +374,14 @@ validateFleetOwner FleetRegisterReq {..} =
   sequenceA_
     [ validateField "firstName" firstName $ MinLength 3 `And` P.name,
       validateField "lastName" lastName $ NotEmpty `And` P.name,
+      validateField "mobileNumber" mobileNumber P.mobileNumber,
+      validateField "mobileCountryCode" mobileCountryCode P.mobileCountryCode
+    ]
+
+weakValidateFleetOwner :: Validate FleetRegisterReq
+weakValidateFleetOwner FleetRegisterReq {..} =
+  sequenceA_
+    [ validateField "firstName" firstName $ MinLength 3 `And` P.nameWithNumber,
       validateField "mobileNumber" mobileNumber P.mobileNumber,
       validateField "mobileCountryCode" mobileCountryCode P.mobileCountryCode
     ]
