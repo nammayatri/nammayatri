@@ -67,9 +67,7 @@ data ServiceHandle m = ServiceHandle
     mbSyncRide :: Maybe (Id Merchant -> Id Ride -> m ()),
     mbSendUnattendedTicketAlert :: Maybe (Text -> m ()),
     findRideByRideShortId :: Id Merchant -> ShortId Ride -> m (Maybe Ride),
-    findByMobileNumberAndMerchantId :: Text -> DbHash -> Id Merchant -> m (Maybe Person),
-    mbFindFRFSTicketBookingById :: Maybe (Id FRFSTicketBooking -> m (Maybe FRFSTicketBooking)),
-    mbFindStationByIdWithContext :: Maybe (Id MerchantOperatingCity -> VehicleCategory -> Text -> m (Maybe Station))
+    findByMobileNumberAndMerchantId :: Text -> DbHash -> Id Merchant -> m (Maybe Person)
   }
 
 getLanguage :: EsqDBReplicaFlow m r => Id Person -> Maybe Language -> ServiceHandle m -> m Language
@@ -385,16 +383,11 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
     return issueOption
   mbRide <- forM rideId \justRideId -> do
     B.runInReplica (issueHandle.findRideById justRideId merchantId) >>= fromMaybeM (RideNotFound justRideId.getId)
-  mbFRFSTicketBooking <- case (ticketBookingId, issueHandle.mbFindFRFSTicketBookingById) of
-    (Just justTicketBookingId, Just findFRFSTicketBookingById) ->
-      findFRFSTicketBookingById justTicketBookingId
-        >>= fromMaybeM (InternalError $ "FRFS Ticket Booking not found for ID: " <> justTicketBookingId.getId) <&> Just
-    _ -> pure Nothing
   uploadedMediaFiles <- forM mediaFiles $ \mediaFile ->
     CQMF.findById mediaFile identifier >>= fromMaybeM (FileDoesNotExist mediaFile.getId)
   person <- issueHandle.findPersonById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let mediaFileUrls = map (.url) uploadedMediaFiles
-      mocId = fromMaybe person.merchantOperatingCityId ((.merchantOperatingCityId) <$> mbRide <|> (.merchantOperatingCityId) <$> mbFRFSTicketBooking)
+      mocId = maybe person.merchantOperatingCityId (.merchantOperatingCityId) mbRide
   language <- getLanguage personId mbLanguage issueHandle
   issueConfig <- CQI.findByMerchantOpCityId mocId identifier >>= fromMaybeM (IssueConfigNotFound mocId.getId)
   let shouldCreateTicket = isNothing createTicket || fromJust createTicket
@@ -421,7 +414,7 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
       void $ L.runIO $ Slack.publishMessage sosAlertsTopicARN message
   _ <- QIR.create issueReport
   when shouldCreateTicket $ do
-    ticket <- buildTicket issueReport category mbOption mbRide mbRideInfoRes mbFRFSTicketBooking person mocId config mediaFileUrls now issueHandle
+    ticket <- buildTicket issueReport category mbOption mbRide mbRideInfoRes person mocId config mediaFileUrls now issueHandle
     ticketResponse <- try @_ @SomeException (issueHandle.createTicket merchantId mocId ticket)
     case ticketResponse of
       Right ticketResponse' -> do
@@ -535,9 +528,9 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
               <> show moCity.city
               <> "\n"
 
-    buildTicket :: (EncFlow m r, BeamFlow m r) => D.IssueReport -> D.IssueCategory -> Maybe D.IssueOption -> Maybe Ride -> Maybe RideInfoRes -> Maybe FRFSTicketBooking -> Person -> Id MerchantOperatingCity -> MerchantConfig -> [Text] -> UTCTime -> ServiceHandle m -> m TIT.CreateTicketReq
-    buildTicket issue category mbOption mbRide mbRideInfoRes mbFRFSTicketBooking person moCityId merchantCfg mediaFileUrls now iHandle = do
-      info <- buildRideInfo moCityId now mbRide mbRideInfoRes mbFRFSTicketBooking person iHandle
+    buildTicket :: (EncFlow m r, BeamFlow m r) => D.IssueReport -> D.IssueCategory -> Maybe D.IssueOption -> Maybe Ride -> Maybe RideInfoRes -> Person -> Id MerchantOperatingCity -> MerchantConfig -> [Text] -> UTCTime -> ServiceHandle m -> m TIT.CreateTicketReq
+    buildTicket issue category mbOption mbRide mbRideInfoRes person moCityId merchantCfg mediaFileUrls now iHandle = do
+      info <- buildRideInfo moCityId now mbRide mbRideInfoRes iHandle
       phoneNumber <- mapM decrypt person.mobileNumber
       return $
         TIT.CreateTicketReq
@@ -556,103 +549,28 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
             becknIssueId
           }
 
-    buildRideInfo :: (BeamFlow m r, EncFlow m r) => Id MerchantOperatingCity -> UTCTime -> Maybe Ride -> Maybe RideInfoRes -> Maybe FRFSTicketBooking -> Person -> ServiceHandle m -> m TIT.RideInfo
-    buildRideInfo moCityId now mbRide mbRideInfoRes mbFRFSTicketBooking person iHandle = do
+    buildRideInfo :: (BeamFlow m r, EncFlow m r) => Id MerchantOperatingCity -> UTCTime -> Maybe Ride -> Maybe RideInfoRes -> ServiceHandle m -> m TIT.RideInfo
+    buildRideInfo moCityId now mbRide mbRideInfoRes iHandle = do
       moCity <-
         iHandle.findMOCityById moCityId
           >>= fromMaybeM (MerchantOperatingCityNotFound $ "MerchantOpCityId - " <> show moCityId)
-
-      customerPhoneNumber <- mapM decrypt person.mobileNumber
-      let customerFullName = buildCustomerName person.firstName person.middleName person.lastName
-          cityName = show moCity.city
-
-      case mbFRFSTicketBooking of
-        Just frfsTicket -> buildFRFSRideInfo frfsTicket cityName customerFullName customerPhoneNumber iHandle
-        Nothing -> return $ buildRegularRideInfo cityName customerFullName customerPhoneNumber
-      where
-        buildCustomerName :: Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text
-        buildCustomerName firstName middleName lastName =
-          case (firstName, middleName, lastName) of
-            (Nothing, Nothing, Nothing) -> Nothing
-            _ -> Just $ T.unwords $ catMaybes [firstName, middleName, lastName]
-
-        buildFRFSRideInfo :: (BeamFlow m r, EncFlow m r) => FRFSTicketBooking -> Text -> Maybe Text -> Maybe Text -> ServiceHandle m -> m TIT.RideInfo
-        buildFRFSRideInfo frfsTicket cityName customerFullName customerPhoneNumber iHandle' = do
-          fromLocation <- mkStationLocationWithLookup frfsTicket frfsTicket.fromStationCode iHandle'
-          toLocation <- mkStationLocationWithLookup frfsTicket frfsTicket.toStationCode iHandle'
-          return
-            TIT.RideInfo
-              { rideShortId = frfsTicket.id.getId,
-                rideCity = cityName,
-                customerName = customerFullName,
-                customerPhoneNo = customerPhoneNumber,
-                driverName = Nothing,
-                driverPhoneNo = Nothing,
-                vehicleNo = "",
-                vehicleCategory = Just $ show frfsTicket.vehicleType,
-                vehicleServiceTier = Nothing,
-                status = show frfsTicket.status,
-                rideCreatedAt = frfsTicket.createdAt,
-                pickupLocation = fromLocation,
-                dropLocation = Just toLocation,
-                fare = Just frfsTicket.price.amountInt
-              }
-
-        buildRegularRideInfo :: Text -> Maybe Text -> Maybe Text -> TIT.RideInfo
-        buildRegularRideInfo cityName customerFullName customerPhoneNumber =
-          TIT.RideInfo
-            { rideShortId = maybe "" (.shortId.getShortId) mbRide,
-              rideCity = cityName,
-              customerName = ((.customerName) =<< mbRideInfoRes) <|> customerFullName,
-              customerPhoneNo = ((.customerPhoneNo) <$> mbRideInfoRes) <|> customerPhoneNumber,
-              driverName = (.driverName) <$> mbRideInfoRes,
-              driverPhoneNo = (.driverPhoneNo) =<< mbRideInfoRes,
-              vehicleNo = maybe "" (.vehicleNo) mbRideInfoRes,
-              vehicleCategory = show . fromJust . vehicleVariant <$> mbRideInfoRes,
-              vehicleServiceTier = (.vehicleServiceTierName) =<< mbRideInfoRes,
-              status = maybe "" (show . (.bookingStatus)) mbRideInfoRes,
-              rideCreatedAt = maybe now (.createdAt) mbRide,
-              pickupLocation = mkLocation ((.customerPickupLocation) <$> mbRideInfoRes),
-              dropLocation = mkLocation . (.customerDropLocation) <$> mbRideInfoRes,
-              fare = (.actualFare) =<< mbRideInfoRes
-            }
-
-    mkStationLocationWithLookup :: (BeamFlow m r, EncFlow m r) => FRFSTicketBooking -> Text -> ServiceHandle m -> m TIT.Location
-    mkStationLocationWithLookup frfsTicket stationId iHandle = do
-      mbStation <- case iHandle.mbFindStationByIdWithContext of
-        Just findStationByIdWithContext ->
-          findStationByIdWithContext frfsTicket.merchantOperatingCityId frfsTicket.vehicleType stationId
-        Nothing -> return Nothing
-
-      case mbStation of
-        Just station ->
-          return
-            TIT.Location
-              { lat = fromMaybe 0.00 station.lat,
-                lon = fromMaybe 0.00 station.lon,
-                street = Nothing,
-                city = Nothing,
-                state = Nothing,
-                country = Nothing,
-                building = Nothing,
-                areaCode = Just station.code,
-                area = Just station.name
-              }
-        Nothing -> return $ mkStationLocationFallback stationId
-
-    mkStationLocationFallback :: Text -> TIT.Location
-    mkStationLocationFallback stationId =
-      TIT.Location
-        { lat = 0.00,
-          lon = 0.00,
-          street = Nothing,
-          city = Nothing,
-          state = Nothing,
-          country = Nothing,
-          building = Nothing,
-          areaCode = Just stationId,
-          area = Just stationId
-        }
+      return
+        TIT.RideInfo
+          { rideShortId = maybe "" (.shortId.getShortId) mbRide,
+            rideCity = show moCity.city,
+            customerName = (.customerName) =<< mbRideInfoRes,
+            customerPhoneNo = (.customerPhoneNo) <$> mbRideInfoRes,
+            driverName = (.driverName) <$> mbRideInfoRes,
+            driverPhoneNo = (.driverPhoneNo) =<< mbRideInfoRes,
+            vehicleNo = maybe "" (.vehicleNo) mbRideInfoRes,
+            vehicleCategory = show . fromJust . vehicleVariant <$> mbRideInfoRes,
+            vehicleServiceTier = (.vehicleServiceTierName) =<< mbRideInfoRes,
+            status = maybe "" (show . (.bookingStatus)) mbRideInfoRes,
+            rideCreatedAt = maybe now (.createdAt) mbRide,
+            pickupLocation = mkLocation ((.customerPickupLocation) <$> mbRideInfoRes),
+            dropLocation = mkLocation . (.customerDropLocation) <$> mbRideInfoRes,
+            fare = (.actualFare) =<< mbRideInfoRes
+          }
 
     mkLocation :: Maybe Common.LocationAPIEntity -> TIT.Location
     mkLocation mbLocAPIEnt =

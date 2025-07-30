@@ -40,7 +40,6 @@ data RiderConfigT f = RiderConfigT
     enableAutoJourneyRefund :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableBusFiltering :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableEmergencyContactAddedMessage :: B.C f Kernel.Prelude.Bool,
-    enableIGMIssueFlow :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableLocalPoliceSupport :: B.C f Kernel.Prelude.Bool,
     enableMultiModalForAllUsers :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableSupportForSafety :: B.C f Kernel.Prelude.Bool,

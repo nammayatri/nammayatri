@@ -41,7 +41,6 @@ data RiderConfig = RiderConfig
     enableAutoJourneyRefund :: Kernel.Prelude.Bool,
     enableBusFiltering :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableEmergencyContactAddedMessage :: Kernel.Prelude.Bool,
-    enableIGMIssueFlow :: Kernel.Prelude.Bool,
     enableLocalPoliceSupport :: Kernel.Prelude.Bool,
     enableMultiModalForAllUsers :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableSupportForSafety :: Kernel.Prelude.Bool,

@@ -51,7 +51,7 @@ buildOnDemandIGMIssueReq rideId = do
     True -> pure Nothing
     False -> pure $ Just $ OnDemandIGMIssueReq OnDemandIGMIssueReqData {ride, booking, isValueAddNP = False}
 
-buildFRFSIGMIssueReq :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r) => Id Common.FRFSTicketBooking -> m (Maybe IGMIssueReq)
+buildFRFSIGMIssueReq :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r) => Id Common.TicketBooking -> m (Maybe IGMIssueReq)
 buildFRFSIGMIssueReq ticketBookingId = do
   ticketBooking <- QFTB.findById (cast ticketBookingId) >>= fromMaybeM (TicketBookingNotFound ticketBookingId.getId)
   pure $ Just $ FRFSIGMIssueReq FRFSIGMIssueReqData {ticketBooking = ticketBooking}
