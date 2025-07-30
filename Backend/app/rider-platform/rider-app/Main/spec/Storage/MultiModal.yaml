@@ -101,13 +101,9 @@ Journey:
         kvFunction: updateOneWithKV
         params: [status]
         where: id
-    updatePaymentStatus:
-        kvFunction: updateOneWithKV
-        params: [isPaymentSuccess]
-        where: id
     updatePaymentOrderShortId:
         kvFunction: updateOneWithKV
-        params: [paymentOrderShortId]
+        params: [paymentOrderShortId, isPaymentSuccess]
         where: id
 
   domainInstance:
@@ -554,7 +550,7 @@ JourneyLegsFeedbacks:
 
     JourneyLegFeedbackData:
       enum: "Taxi TaxiFeedbackData, Bus BusFeedbackData, Walk WalkFeedbackData, Subway SubwayFeedbackData, Metro MetroFeedbackData"
-      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
 
   beamType:
     feedbackData: Maybe Data.Aeson.Value

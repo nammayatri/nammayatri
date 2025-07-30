@@ -340,3 +340,13 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN filter_walk_and_unspecified_transi
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN ny_regular_master_job_next_run_offset_seconds integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN enable_igm_issue_flow boolean  default false;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN refund_buffer_ttl_sec integer ;

@@ -4,6 +4,7 @@ import qualified Beckn.OnDemand.Utils.Common as UCommon
 import BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.OnDemand.Enums as Enums
 import Control.Applicative ((<|>))
+import Control.Monad.Extra (mapMaybeM)
 import qualified Data.Geohash as Geohash
 import Data.List (groupBy, nub, sort, sortBy)
 import qualified Data.Map.Strict as Map
@@ -12,7 +13,6 @@ import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime, nominalDiffTimeToSeconds, secondsToNominalDiffTime)
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
-import Domain.Types.FRFSTicketBookingPayment (FRFSTicketBookingPayment (..))
 import qualified Domain.Types.IntegratedBPPConfig as DIntegratedBPPConfig
 import Domain.Types.Journey
 import Domain.Types.Merchant
@@ -36,6 +36,7 @@ import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified SharedLogic.CreateFareForMultiModal as SMMFRFS
+import SharedLogic.FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as MultiModalBus
@@ -43,15 +44,11 @@ import qualified Storage.CachedQueries.Merchant.MultiModalSuburban as MultiModal
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.RouteStopTimeTable as GRSM
 import Storage.GraphqlQueries.Client (mapToServiceTierType)
-import qualified Storage.Queries.FRFSQuote as QQuote
-import qualified Storage.Queries.FRFSTicketBokingPayment as QFRFSTicketBookingPayment
-import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
+import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
-import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RecentLocation as SQRL
 import qualified Storage.Queries.VehicleRouteMapping as QVehicleRouteMapping
 import qualified System.Environment as Se
-import Tools.Error
 import Tools.Maps (LatLong (..))
 import qualified Tools.Payment as TPayment
 
@@ -708,64 +705,65 @@ createRecentLocationForMultimodal journey = do
           SQRL.create recentLocation
     _ -> return ()
 
-postMultimodalPaymentUpdateOrderUtil :: (ServiceFlow m r, EncFlow m r, EsqDBReplicaFlow m r, HasField "isMetroTestTransaction" r Bool) => Id Person -> Id Merchant -> Maybe (Id Journey) -> Int -> Int -> m (Maybe DOrder.PaymentOrder)
-postMultimodalPaymentUpdateOrderUtil personId _merchantId mbJourneyId quantity childTicketQuantity = do
-  person <- QP.findById personId >>= fromMaybeM (InvalidRequest "Person not found")
-  frfsBookingsArr <- QFRFSTicketBooking.findAllByJourneyIdCond mbJourneyId
-  frfsBookingWithUpdatedPriceAndQty <-
-    mapM
-      ( \ticketBooking -> do
-          quote <- QQuote.findById ticketBooking.quoteId >>= fromMaybeM (FRFSQuoteNotFound $ show ticketBooking.quoteId)
-          let quantityRational = fromIntegral quantity :: Rational
-          let oldQuantityRational = fromIntegral ticketBooking.quantity :: Rational
-          let childTicketQuantityRational = fromIntegral childTicketQuantity :: Rational
-          let childPrice = maybe (getHighPrecMoney quote.price.amount) (\p -> getHighPrecMoney p.amount) quote.childPrice
-          let amountToBeUpdated = ((safeDiv (getHighPrecMoney ticketBooking.price.amount) oldQuantityRational) * quantityRational) + (childPrice * childTicketQuantityRational)
-          let totalPrice =
-                Price
-                  { amount = HighPrecMoney amountToBeUpdated,
-                    amountInt = Money $ roundToIntegral amountToBeUpdated,
-                    currency = ticketBooking.price.currency
-                  }
-          let fRFSTicketBooking =
-                ticketBooking
-                  { DFRFSTicketBooking.quantity = quantity,
-                    DFRFSTicketBooking.childTicketQuantity = Just childTicketQuantity,
-                    DFRFSTicketBooking.finalPrice = Just totalPrice,
-                    DFRFSTicketBooking.estimatedPrice = totalPrice,
-                    DFRFSTicketBooking.price = totalPrice
-                  }
-          QFRFSTicketBooking.updateByPrimaryKey fRFSTicketBooking
-          pure $ ticketBooking{price = totalPrice, quantity = quantity}
-      )
-      frfsBookingsArr
-  frfsBookingsPaymentArr <- mapM (QFRFSTicketBookingPayment.findAllTicketBookingId . (.id)) frfsBookingWithUpdatedPriceAndQty
-  let paymentType = TPayment.FRFSMultiModalBooking
+postMultimodalPaymentUpdateOrderUtil :: (ServiceFlow m r, EncFlow m r, EsqDBReplicaFlow m r, HasField "isMetroTestTransaction" r Bool) => TPayment.PaymentServiceType -> Person -> Id Merchant -> Id MerchantOperatingCity -> [DFRFSTicketBooking.FRFSTicketBooking] -> m (Maybe DOrder.PaymentOrder)
+postMultimodalPaymentUpdateOrderUtil paymentType person merchantId merchantOperatingCityId bookings = do
   frfsConfig <-
     CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow person.merchantOperatingCityId []
       >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> show person.merchantOperatingCityId)
-  (_vendorSplitDetails, amountUpdated) <- SMMFRFS.createVendorSplitFromBookings frfsBookingWithUpdatedPriceAndQty _merchantId person.merchantOperatingCityId paymentType frfsConfig.isFRFSTestingEnabled
-  isSplitEnabled <- TPayment.getIsSplitEnabled _merchantId person.merchantOperatingCityId Nothing paymentType
-  let splitDetails = TPayment.mkUnaggregatedSplitSettlementDetails isSplitEnabled amountUpdated _vendorSplitDetails
-  let flattenedPayments = concat frfsBookingsPaymentArr
-  let mbPaymentOrderId = paymentOrderId <$> listToMaybe flattenedPayments
-  case mbPaymentOrderId of
-    Nothing ->
-      return Nothing
-    Just paymentOrderId -> do
-      order <- QOrder.findById paymentOrderId >>= fromMaybeM (PaymentOrderNotFound paymentOrderId.getId)
-      let updateReq =
-            KT.OrderUpdateReq
-              { amount = amountUpdated,
-                orderShortId = order.shortId.getShortId,
-                splitSettlementDetails = splitDetails
-              }
-      _ <- TPayment.updateOrder person.merchantId person.merchantOperatingCityId Nothing TPayment.FRFSMultiModalBooking (Just person.id.getId) person.clientSdkVersion updateReq
-      QOrder.updateAmount order.id amountUpdated
-      let updatedOrder :: DOrder.PaymentOrder
-          updatedOrder = order {DOrder.amount = amountUpdated}
-      return $ Just updatedOrder
-  where
-    safeDiv :: (Eq a, Fractional a) => a -> a -> a
-    safeDiv x 0 = x
-    safeDiv x y = x / y
+  frfsBookingsPayments <- mapMaybeM (QFRFSTicketBookingPayment.findNewTBPByBookingId . (.id)) bookings
+  (vendorSplitDetails, amountUpdated) <- SMMFRFS.createVendorSplitFromBookings bookings merchantId person.merchantOperatingCityId paymentType frfsConfig.isFRFSTestingEnabled
+  isSplitEnabled <- TPayment.getIsSplitEnabled merchantId person.merchantOperatingCityId Nothing paymentType -- TODO :: You can be moved inside :)
+  let splitDetails = TPayment.mkUnaggregatedSplitSettlementDetails isSplitEnabled amountUpdated vendorSplitDetails
+  if frfsConfig.canUpdateExistingPaymentOrder
+    then do
+      case listToMaybe frfsBookingsPayments of
+        Nothing -> return Nothing
+        Just frfsBookingPayment -> do
+          paymentOrder <- QOrder.findById frfsBookingPayment.paymentOrderId >>= fromMaybeM (PaymentOrderNotFound frfsBookingPayment.paymentOrderId.getId)
+          let updateReq =
+                KT.OrderUpdateReq
+                  { amount = amountUpdated,
+                    orderShortId = paymentOrder.shortId.getShortId,
+                    splitSettlementDetails = splitDetails
+                  }
+          _ <- TPayment.updateOrder person.merchantId person.merchantOperatingCityId Nothing TPayment.FRFSMultiModalBooking (Just person.id.getId) person.clientSdkVersion updateReq
+          QOrder.updateAmount paymentOrder.id amountUpdated
+          let updatedOrder :: DOrder.PaymentOrder
+              updatedOrder = paymentOrder {DOrder.amount = amountUpdated}
+          return $ Just updatedOrder
+    else createPaymentOrder bookings merchantOperatingCityId merchantId amountUpdated person paymentType vendorSplitDetails
+
+makePossibleRoutesKey :: Text -> Text -> Id DIntegratedBPPConfig.IntegratedBPPConfig -> Text
+makePossibleRoutesKey fromCode toCode integratedBPPConfig = "PossibleRoutes:" <> fromCode <> ":" <> toCode <> ":" <> integratedBPPConfig.getId
+
+fetchPossibleRoutes :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => Text -> Text -> DIntegratedBPPConfig.IntegratedBPPConfig -> m [Text]
+fetchPossibleRoutes fromCode toCode integratedBPPConfig = do
+  -- Get route mappings that contain the origin stop
+  fromRouteStopMappings <- OTPRest.getRouteStopMappingByStopCode fromCode integratedBPPConfig
+
+  -- Get route mappings that contain the destination stop
+  toRouteStopMappings <- OTPRest.getRouteStopMappingByStopCode toCode integratedBPPConfig
+
+  -- Find common routes that have both the origin and destination stops
+  -- and ensure that from-stop comes before to-stop in the route sequence
+  let fromRouteStopMap = map (\mapping -> (mapping.routeCode, mapping.sequenceNum)) fromRouteStopMappings
+      toRouteStopMap = map (\mapping -> (mapping.routeCode, mapping.sequenceNum)) toRouteStopMappings
+      validRoutes =
+        nub $
+          [ fromRouteCode
+            | (fromRouteCode, fromSeq') <- fromRouteStopMap,
+              (toRouteCode, toSeq') <- toRouteStopMap,
+              fromRouteCode == toRouteCode && fromSeq' < toSeq' -- Ensure correct sequence
+          ]
+  pure validRoutes
+
+getRouteCodesFromTo :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => Text -> Text -> DIntegratedBPPConfig.IntegratedBPPConfig -> m [Text]
+getRouteCodesFromTo fromCode toCode integratedBPPConfig = do
+  let key = makePossibleRoutesKey fromCode toCode integratedBPPConfig.id
+  mbRoutes <- Hedis.safeGet key
+  case mbRoutes of
+    Just routeCodes -> return routeCodes
+    Nothing -> do
+      routeCodes <- fetchPossibleRoutes fromCode toCode integratedBPPConfig
+      Hedis.setExp key routeCodes 86400 -- 24 hours
+      return routeCodes

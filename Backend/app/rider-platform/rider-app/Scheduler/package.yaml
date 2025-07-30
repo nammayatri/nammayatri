@@ -127,6 +127,7 @@ library:
     - beckn-spec
     - sessionizer-metrics
     - external
+    - haskell-cac
 
 executables:
   rider-app-scheduler-exe:
@@ -153,4 +154,5 @@ executables:
     dependencies:
       - rider-app-scheduler
       - mobility-core
+      - haskell-cac
       - external
