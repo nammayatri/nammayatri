@@ -57,6 +57,7 @@ data RiderConfigT f = RiderConfigT
     placeNameCacheExpiryDays :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     policeTriggerDelay :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     postRideSafetyNotificationDelay :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
+    refundBufferTTLSec :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     safetyCheckEndTime :: B.C f Kernel.Types.Common.Seconds,
     safetyCheckStartTime :: B.C f Kernel.Types.Common.Seconds,
     sensitiveWords :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),

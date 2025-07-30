@@ -67,6 +67,7 @@ RiderConfig:
     minRidesToBlock: Maybe Int
     minRidesToShowCancellationRate: Maybe Int
     autoSendBookingDetailsViaWhatsapp: Maybe Bool
+    refundBufferTTLSec: Maybe Seconds
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
