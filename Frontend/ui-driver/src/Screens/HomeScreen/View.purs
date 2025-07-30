@@ -1336,7 +1336,7 @@ tripStageTopBar push state =
       height WRAP_CONTENT,
       scrollBarX false,
       background Color.white900,
-      visibility $ boolToVisibility $ DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] && state.data.cityConfig.enableAdvancedBooking && (isJust state.data.advancedRideData || not (isLocalStageOn RideAccepted && isJust state.data.activeRide.disabilityTag)) && not (HU.isAmbulance state.data.linkedVehicleVariant)
+      visibility $ boolToVisibility $ DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] 
     ][
       linearLayout[
         width MATCH_PARENT,
@@ -1347,13 +1347,12 @@ tripStageTopBar push state =
       ] $ [ advanceBookingSwitch] 
       <> ( 
             map (\(Tuple childs action) -> (tripStageTopBarPill action) childs) [
-              -- [
-              --   pillIcon  "ny_ic_blue_shield_white_plus",
-              --   pillText  "Safety Center"
-              -- ],
             ( Tuple [ pillIcon "ny_ic_red_triangle_warning",
-                pillText $ getString REPORT_ISSUE
-              ] (const HelpAndSupportScreen))
+                pillText $ getString HELP_CENTRE
+              ] (const HelpAndSupportScreen)),
+            ( Tuple [ pillIcon "ny_ic_safety_shield",
+                pillText $ getString LT.SAFETY
+              ] (const SafetyPillClicked))
             ]
           )
     ]
@@ -1379,7 +1378,7 @@ tripStageTopBar push state =
     pillText str = 
       textView $ [
         text str,
-        color Color.blue900,
+        color Color.black900,
         margin $ MarginLeft 8
       ] <> FontStyle.body6 TypoGraphy
 
@@ -1390,7 +1389,8 @@ tripStageTopBar push state =
         margin $ Margin 12 12 0 12,
         cornerRadius 32.0,
         background $ if isNothing state.data.advancedRideData then Color.grey700 else Color.blue600,
-        padding $ Padding 4 4 4 4 
+        padding $ Padding 4 4 4 4 ,
+        visibility $ boolToVisibility $ DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] && state.data.cityConfig.enableAdvancedBooking && (isJust state.data.advancedRideData || not (isLocalStageOn RideAccepted && isJust state.data.activeRide.disabilityTag)) && not (HU.isAmbulance state.data.linkedVehicleVariant)
       ]$[ swichBtn (getString CURRENT_BUTTON_TEXT) CURRENT false $ state.props.bookingStage /= CURRENT
         , swichBtn (getString ADVANCE) ADVANCED (isNothing state.data.advancedRideData) (state.props.bookingStage /= ADVANCED)
         ]

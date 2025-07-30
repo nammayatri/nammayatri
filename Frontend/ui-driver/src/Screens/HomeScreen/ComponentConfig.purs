@@ -393,8 +393,8 @@ newStopPopupConfig state = let
     option1 {
       text = (getString NAVIGATE_TO_LOCATION)
     , margin = Margin 16 0 16 8
-    , background = Color.black900
-    , color = Color.yellow900
+    , background = state.data.config.primaryButtonBackground
+    , color = state.data.config.primaryTextColor
     ,gravity = CENTER
       , width = MATCH_PARENT
     },
@@ -402,7 +402,7 @@ newStopPopupConfig state = let
       text = (getString CLOSE)
     , margin = Margin 16 0 16 8
     , background = Color.white900
-    , color = Color.black900
+    , color = Color.blue900
     , strokeColor = Color.white900
     , gravity = CENTER
     , width = MATCH_PARENT
@@ -620,7 +620,7 @@ paymentPendingPopupConfig state =
     , color = Color.black700
     , visibility = VISIBLE },
     secondaryText {
-      text = "<span style='color:#2194FF'><u>"<> getString WATCH_VIDEO_FOR_HELP <>"</u></span>"
+      text = "<span style='color:#171C8F'><u>"<> getString WATCH_VIDEO_FOR_HELP <>"</u></span>"
     , textStyle = SubHeading2
     , margin = MarginBottom 24
     , isClickable = true
@@ -722,9 +722,9 @@ cancelConfirmationConfig state = let
       text = (getString GO_BACK)
     , margin = MarginLeft 12
     , width = V $ (((EHC.screenWidth unit)-92)/2)
-    , color = Color.yellow900
-    , strokeColor = Color.black900
-    , background = Color.black900
+    , color = state.data.config.primaryTextColor
+    , strokeColor = state.data.config.primaryButtonBackground
+    , background = state.data.config.primaryButtonBackground
     , enableRipple = true
     },
     backgroundClickable = false,
@@ -875,6 +875,7 @@ enterOtpStateConfig state =
         , textStyle = FontStyle.Heading1
         , suffixImageVisibility = false
         , strokeColor = "1," <> appConfig.themeColors.primaryStrokeColor
+        , background = Color.grey100
       },
       headingConfig {
         text = if state.props.endRideOtpModal then (getString ENTER_END_RIDE_OTP) else getString (ENTER_OTP)
@@ -1271,7 +1272,7 @@ rentalInfoPopUpConfig state =
     rideInfo = (show tripDuration) <> "h / " <> (show tripDistance) <> "km"
     tripType = state.data.activeRide.tripType
     destinationCity = fromMaybe "" $state.data.activeRide.destinationCity
-    text  = if tripType == ST.Rental then ((getString $ THERE_MIGHT_BE_MULTIPLE_STOPS_IN_THIS_RENTAL_RIDE rideInfo) <>"<br></br><span style='color:#2194FF'><u>"<> getString WATCH_VIDEO_FOR_HELP <>"</u></span>") else (getString PLEASE_ENSURE_THAT_YOUR_VEHICLE_IS_READY_FOR_INTERCITY_TRIP <> destinationCity)
+    text  = if tripType == ST.Rental then ((getString $ THERE_MIGHT_BE_MULTIPLE_STOPS_IN_THIS_RENTAL_RIDE rideInfo) <>"<br></br><span style='color:#171C8F'><u>"<> getString WATCH_VIDEO_FOR_HELP <>"</u></span>") else (getString PLEASE_ENSURE_THAT_YOUR_VEHICLE_IS_READY_FOR_INTERCITY_TRIP <> destinationCity)
     config' = config
       {
         gravity = CENTER,
@@ -1297,8 +1298,8 @@ rentalInfoPopUpConfig state =
         },
         option1 {
           text = getString GOT_IT
-        , background = Color.black900
-        , color = Color.yellow900
+        , background = state.data.config.primaryButtonBackground
+        , color = state.data.config.primaryTextColor
         },
         option2 {
           visibility = false

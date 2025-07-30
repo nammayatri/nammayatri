@@ -108,7 +108,7 @@ window.getMerchantConfig = function () {
     , "colors" : {
         "black800" : "#3F4143"
       , "black900" : "#0F1114"
-      , "red" : "#E55454"
+      , "red" : "#F0373A"
       , "black700" : "#545454"
       , "black650" : "#A1A1A1"
       , "black600" : "#B2B2B2"
@@ -126,20 +126,20 @@ window.getMerchantConfig = function () {
       }
     , "themeColors" : {
       "navBarBackground" : "#F9FAFC",
-      "primaryStrokeColor" : "#2E3494",
-      "openMapsStrokeColor" : "#A8AEF0",
-      "secondaryStrokeColor" : "#A8AEF0",
+      "primaryStrokeColor" : "#171C8F",
+      "openMapsStrokeColor" : "#171C8F",
+      "secondaryStrokeColor" : "#B9BABE",
       "onboardingHeaderTextColor" : "#0F1114",
       "onboardingHeaderStroke" : "#B2171C8F",
       "radioInactiveBackground" : "#F5F5F5",
-      "radioActiveBackground" : "#1F171C8F",
+      "radioActiveBackground" : "#171C8F",
       "editTextFocusedStroke" : "#171C8F",
       "editTextNormalStroke" : "#F5F5F5",
       "mobileNumberScreenHeaderText" : "WELCOME_LETS_GET_STARTED",
       "defaultBackButton" : "ny_ic_arrow_left_black",
       "highlightedTextColor" : "#171C8F",
       "radioSelectedImage" : "ny_ic_radio_selected_purple",
-      "radioActiveStroke" : "#1F171C8F",
+      "radioActiveStroke" : "#171C8F",
       "onboardingStepImgBg" : "#0A171C8F",
       "welcomeScreenBackground" : "#F9FAFC",
       "quizButtonStrokeAndText" : "#171C8F",
