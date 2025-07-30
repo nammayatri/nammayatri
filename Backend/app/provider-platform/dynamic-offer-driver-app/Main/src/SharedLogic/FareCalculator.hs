@@ -306,19 +306,23 @@ calculateFareParameters params = do
         (Just duration, _) -> addUTCTime (secondsToNominalDiffTime duration) params.rideTime
         (_, Just duration) -> addUTCTime (secondsToNominalDiffTime duration) params.rideTime
         _ -> now
-      rideDur = fromMaybe 1 $ params.actualRideDuration <|> params.estimatedRideDuration
+      rideDur = fromMaybe 1 $ params.estimatedRideDuration <|> params.actualRideDuration
   id <- generateGUID
   let localTimeZoneSeconds = fromMaybe 19800 params.timeDiffFromUtc
-  let nightShiftBuffer = if isJust fp.pickupBufferInSecsForNightShiftCal then fromMaybe False (isNightShiftWithPickupBuffer <$> fp.nightShiftBounds <*> Just params.rideTime <*> Just rideEndTime) else False
-  let isNightShiftChargeIncluded = fromMaybe nightShiftBuffer (if params.nightShiftOverlapChecking then Just $ isNightAllowanceApplicable fp.nightShiftBounds params.rideTime rideEndTime localTimeZoneSeconds else isNightShift <$> fp.nightShiftBounds <*> Just params.rideTime)
+  let rideTimeWithBuffer = addUTCTime (secondsToNominalDiffTime (fromMaybe 0 fp.pickupBufferInSecsForNightShiftCal)) params.rideTime
+  let nightShiftBuffer = if isJust fp.pickupBufferInSecsForNightShiftCal then fromMaybe False (isNightShiftWithPickupBuffer <$> fp.nightShiftBounds <*> Just rideTimeWithBuffer <*> Just rideEndTime) else False
+  logDebug $ "NightShiftChanges : " <> "NightShiftBuffer: " <> show nightShiftBuffer
+  let isNightShiftChargeIncluded = nightShiftBuffer || fromMaybe nightShiftBuffer (if params.nightShiftOverlapChecking then Just $ isNightAllowanceApplicable fp.nightShiftBounds rideTimeWithBuffer rideEndTime localTimeZoneSeconds else isNightShift <$> fp.nightShiftBounds <*> Just params.rideTime)
       (debugLogs, baseFare, nightShiftCharge, waitingChargeInfo, fareParametersDetails) = processFarePolicyDetails fp.farePolicyDetails
       (partOfNightShiftCharge, notPartOfNightShiftCharge, _) = countFullFareOfParamsDetails fareParametersDetails
       fullRideCost {-without govtCharges, serviceCharge, platformFee, waitingCharge, notPartOfNightShiftCharge, nightShift, insuranceCharge, cardChargeOnFare and fixedCardCharge-} =
         baseFare
           + partOfNightShiftCharge
   let resultFullNightShiftCharge = if isNightShiftChargeIncluded then countNightShiftCharge fullRideCost <$> nightShiftCharge else Nothing
-      resultNightShiftCharge = if nightShiftBuffer then calNightShiftCharge fp.pickupBufferInSecsForNightShiftCal resultFullNightShiftCharge params.rideTime fp.nightShiftBounds rideDur else resultFullNightShiftCharge
-      resultWaitingCharge = countWaitingCharge =<< waitingChargeInfo
+  logDebug $ "NightShiftChanges : " <> "resultFullNightShiftCharge: " <> show resultFullNightShiftCharge
+  let resultNightShiftCharge = if nightShiftBuffer then calNightShiftCharge resultFullNightShiftCharge rideTimeWithBuffer fp.nightShiftBounds rideDur else resultFullNightShiftCharge
+  logDebug $ "NightShiftChanges : " <> "resultNightShiftCharge: " <> show resultNightShiftCharge
+  let resultWaitingCharge = countWaitingCharge =<< waitingChargeInfo
       congestionChargeByMultiplier =
         fp.congestionChargeMultiplier <&> \case
           DFP.BaseFareAndExtraDistanceFare congestionCharge -> HighPrecMoney (fullRideCost.getHighPrecMoney * toRational congestionCharge) - fullRideCost
@@ -711,15 +715,14 @@ addMaybes Nothing y = y
 addMaybes x Nothing = x
 addMaybes (Just x) (Just y) = Just (x + y)
 
-calNightShiftCharge :: Maybe Seconds -> Maybe HighPrecMoney -> UTCTime -> Maybe NightShiftBounds -> Seconds -> Maybe HighPrecMoney
-calNightShiftCharge pickupBufferInSecsForNightShiftCal resultFullNightShiftCharge rideTime (Just nightShiftBounds) duration = do
-  let pickupBufferInSecsForNightShiftCal' = fromMaybe 0 pickupBufferInSecsForNightShiftCal
+calNightShiftCharge :: Maybe HighPrecMoney -> UTCTime -> Maybe NightShiftBounds -> Seconds -> Maybe HighPrecMoney
+calNightShiftCharge resultFullNightShiftCharge rideTime (Just nightShiftBounds) duration = do
   let resultFullNightShiftCharge' = fromMaybe 0 resultFullNightShiftCharge
-  let rideStartTime = secondsFromTimeOfDay $ localTimeOfDay $ utcToLocalTime timeZoneIST $ addUTCTime (secondsToNominalDiffTime pickupBufferInSecsForNightShiftCal') rideTime
+  let rideStartTime = secondsFromTimeOfDay $ localTimeOfDay $ utcToLocalTime timeZoneIST rideTime
   let nightShiftStart = secondsFromTimeOfDay nightShiftBounds.nightShiftStart
   Just $
     toHighPrecMoney (int2Double (duration - (nightShiftStart - rideStartTime)).getSeconds / int2Double duration.getSeconds) * resultFullNightShiftCharge'
-calNightShiftCharge _ _ _ _ _ = Nothing
+calNightShiftCharge _ _ _ _ = Nothing
 
 isNightShift ::
   NightShiftBounds ->
