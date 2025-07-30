@@ -83,7 +83,8 @@ tfOrderItems uiConfirm = do
   let itemPaymentIds_ = Nothing
   let itemPrice_ = Nothing
   let itemTags_ = Just $ mkItemTags uiConfirm
-  BecknV2.OnDemand.Types.Item {itemDescriptor = itemDescriptor_, itemFulfillmentIds = itemFulfillmentIds_, itemId = itemId_, itemLocationIds = itemLocationIds_, itemPaymentIds = itemPaymentIds_, itemPrice = itemPrice_, itemTags = itemTags_}
+  let itemCategoryIds_ = Nothing
+  BecknV2.OnDemand.Types.Item {itemDescriptor = itemDescriptor_, itemFulfillmentIds = itemFulfillmentIds_, itemId = itemId_, itemLocationIds = itemLocationIds_, itemPaymentIds = itemPaymentIds_, itemPrice = itemPrice_, itemTags = itemTags_, itemCategoryIds = itemCategoryIds_}
 
 tfPrice :: SharedLogic.Confirm.DConfirmRes -> BecknV2.OnDemand.Types.Price
 tfPrice uiConfirm = do

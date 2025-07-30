@@ -18,7 +18,8 @@ import Data.Aeson
 import Data.Aeson.Types (typeMismatch)
 import Data.List.Extra (takeEnd)
 import Data.OpenApi
-import Kernel.Prelude
+import qualified Data.Text as T
+import Kernel.Prelude hiding (show)
 import Kernel.Utils.JSON
 import qualified Kernel.Utils.Schema as S
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
@@ -290,3 +291,10 @@ instance Read CategoryCode where
     "SCHEDULED_TRIP" -> [(CATEGORY_SCHEDULED_TRIP, "")]
     "SCHEDULED_RENTAL" -> [(CATEGORY_SCHEDULED_RENTAL, "")]
     _ -> []
+
+-- category id is the same as code for now
+categoryCodeToId :: CategoryCode -> Text
+categoryCodeToId = T.pack . show
+
+categoryIdToCode :: Text -> Maybe CategoryCode
+categoryIdToCode = readMaybe . T.unpack

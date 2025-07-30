@@ -178,7 +178,8 @@ mkItemV2 fulfillment vehicleServiceTierItem quote mbFarePolicy taggings = do
       itemTags = mkItemTagsV2 quote.estimatedFare quote.fareParams.congestionChargeViaDp mbFarePolicy taggings,
       itemDescriptor = mkItemDescriptor vehicleServiceTierItem,
       itemLocationIds = Nothing,
-      itemPaymentIds = Nothing
+      itemPaymentIds = Nothing,
+      itemCategoryIds = Nothing -- FIXME
     }
 
 mkItemDescriptor :: DVST.VehicleServiceTier -> Maybe Spec.Descriptor

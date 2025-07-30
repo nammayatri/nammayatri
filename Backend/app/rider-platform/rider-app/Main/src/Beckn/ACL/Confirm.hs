@@ -108,7 +108,8 @@ tfItems res =
           itemLocationIds = Nothing,
           itemPaymentIds = Nothing,
           itemPrice = Nothing,
-          itemTags = Nothing
+          itemTags = Nothing,
+          itemCategoryIds = Nothing
         }
     ]
 

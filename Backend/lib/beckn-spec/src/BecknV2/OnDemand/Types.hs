@@ -411,7 +411,7 @@ optionsCatalog =
 data Category = Category
   { -- | Describes the description of a category.
     categoryDescriptor :: Maybe Descriptor,
-    -- |
+    -- | ID of the category
     categoryId :: Maybe Text
   }
   deriving (Show, Eq, Generic, Data, Read)
@@ -927,7 +927,9 @@ optionsIntent =
 
 -- | Describes a product or a service offered to the end consumer by the provider. In the mobility sector, it can represent a fare product like one way journey. In the logistics sector, it can represent the delivery service offering. In the retail domain it can represent a product like a grocery item.
 data Item = Item
-  { -- |
+  { -- | Categories this item can be listed under
+    itemCategoryIds :: Maybe [Text],
+    -- | Physical description of the item
     itemDescriptor :: Maybe Descriptor,
     -- | Modes through which this item can be fulfilled
     itemFulfillmentIds :: Maybe [Text],
@@ -958,7 +960,8 @@ optionsItem =
     }
   where
     table =
-      [ ("itemDescriptor", "descriptor"),
+      [ ("itemCategoryIds", "categoryIds"),
+        ("itemDescriptor", "descriptor"),
         ("itemFulfillmentIds", "fulfillment_ids"),
         ("itemId", "id"),
         ("itemLocationIds", "location_ids"),
@@ -1593,7 +1596,8 @@ optionsProvider =
     }
   where
     table =
-      [ ("providerDescriptor", "descriptor"),
+      [ ("providerCategories", "categories"),
+        ("providerDescriptor", "descriptor"),
         ("providerFulfillments", "fulfillments"),
         ("providerId", "id"),
         ("providerItems", "items"),

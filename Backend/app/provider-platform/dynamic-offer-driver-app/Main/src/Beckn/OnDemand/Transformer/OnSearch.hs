@@ -58,7 +58,7 @@ tfCatalogProviders res bppConfig isValueAddNP = do
       pricings = (map (Beckn.OnDemand.Utils.Common.convertEstimateToPricing res.specialLocationName) res.estimates) <> (map (Beckn.OnDemand.Utils.Common.convertQuoteToPricing res.specialLocationName) res.quotes)
       providerFulfillments_ = map (tfProviderFulfillments res) pricings & Just
       providerItems_ = Just $ map (tfProviderItems res isValueAddNP) pricings
-      providerCategories_ = map tfProviderCategories res.categoryCode -- FIXME items.category_ids
+      providerCategories_ = map tfProviderCategories res.categoryCode
   BecknV2.OnDemand.Types.Provider {providerDescriptor = providerDescriptor_, providerFulfillments = providerFulfillments_, providerId = providerId_, providerItems = providerItems_, providerLocations = providerLocations_, providerPayments = providerPayments_, providerCategories = providerCategories_}
 
 tfItemPrice :: Beckn.OnDemand.Utils.Common.Pricing -> Maybe BecknV2.OnDemand.Types.Price
@@ -96,7 +96,8 @@ tfProviderItems res isValueAddNP pricing = do
       itemPaymentIds_ = Nothing
       itemTags_ = Beckn.OnDemand.Utils.OnSearch.mkItemTags res.transporterConfig pricing isValueAddNP res.fareParametersInRateCard
       itemPrice_ = tfItemPrice pricing
-  BecknV2.OnDemand.Types.Item {itemDescriptor = itemDescriptor_, itemFulfillmentIds = itemFulfillmentIds_, itemId = itemId_, itemLocationIds = itemLocationIds_, itemPaymentIds = itemPaymentIds_, itemPrice = itemPrice_, itemTags = itemTags_}
+      itemCategoryIds_ = map tfItemCategoryIds res.categoryCode
+  BecknV2.OnDemand.Types.Item {itemDescriptor = itemDescriptor_, itemFulfillmentIds = itemFulfillmentIds_, itemId = itemId_, itemLocationIds = itemLocationIds_, itemPaymentIds = itemPaymentIds_, itemPrice = itemPrice_, itemTags = itemTags_, itemCategoryIds = itemCategoryIds_}
 
 tfVehicle :: Beckn.OnDemand.Utils.Common.Pricing -> Maybe BecknV2.OnDemand.Types.Vehicle
 tfVehicle pricing = do
@@ -125,11 +126,14 @@ tfItemDescriptor pricing =
 
 tfProviderCategories :: Enums.CategoryCode -> [BecknV2.OnDemand.Types.Category]
 tfProviderCategories categoryCode = do
-  let descriptorCode_ = Just $ show categoryCode
-  let categoryId_ = descriptorCode_ -- the same as code for now
+  let descriptorCode_ = Just $ Kernel.Prelude.show categoryCode
+  let categoryId_ = Just $ Enums.categoryCodeToId categoryCode
   let categoryDescriptor_ = Just $ BecknV2.OnDemand.Types.Descriptor {descriptorCode = descriptorCode_, descriptorName = Nothing, descriptorShortDesc = Nothing}
   [ BecknV2.OnDemand.Types.Category
       { categoryDescriptor = categoryDescriptor_,
         categoryId = categoryId_
       }
     ]
+
+tfItemCategoryIds :: Enums.CategoryCode -> [Text]
+tfItemCategoryIds categoryCode = [Enums.categoryCodeToId categoryCode]
