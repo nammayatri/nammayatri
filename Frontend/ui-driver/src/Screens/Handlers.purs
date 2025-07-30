@@ -29,6 +29,7 @@ import Screens.EditBankDetailsScreen.Handler (editBankDetailsScreen) as UI
 import Screens.EnterMobileNumberScreen.Handler (enterMobileNumber) as UI
 import Screens.EnterOTPScreen.Handler (enterOTP) as UI
 import Screens.HelpAndSupportScreen.Handler (helpAndSupportScreen) as UI
+import Screens.HelpAndSupportScreenV2.Handler (helpAndSupportScreenV2) as UI
 import Screens.HomeScreen.Handler (homeScreen) as UI
 import Screens.NoInternetScreen.Handler (noInternetScreen) as UI
 import Screens.PermissionsScreen.Handler (permissions) as UI
@@ -59,6 +60,7 @@ import Screens.DriverSavedLocationScreen.Handler (driverSavedLocationScreen) as 
 import Screens.ChooseCityScreen.Handler (chooseCityScreen) as UI
 import Screens.WelcomeScreen.Handler (welcomeScreen) as UI
 import Screens.DriverEarningsScreen.Handler (driverEarningsScreen) as UI
+import Screens.DriverEarningsScreenV2.Handler (driverEarningsScreenV2) as UI
 import Screens.Benefits.BenefitsScreen.Handler (benefitsScreen) as UI
 import Screens.Benefits.LmsVideoScreen.Handler (lmsVideoScreen) as UI
 import Screens.Benefits.LmsQuizScreen.Handler (lmsQuizScreen) as UI

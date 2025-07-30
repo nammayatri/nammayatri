@@ -481,7 +481,7 @@ const sessionInfo = JSON.parse(JBridge.getDeviceInfo())
 const enableLogs = JBridge.fetchRemoteConfigBool && JBridge.fetchRemoteConfigBool("enable_logs")
 
 const JOSFlags = window.JOS.getJOSflags()
-if (sessionInfo.package_name.includes(".debug") || sessionInfo.package_name.includes(".staging") || enableLogs || JOSFlags.isCUGUser || JOSFlags.isDevQa.isDevQa) {
+if(true) { // (sessionInfo.package_name.includes(".debug") || sessionInfo.package_name.includes(".staging") || enableLogs || JOSFlags.isCUGUser || JOSFlags.isDevQa.isDevQa) {
   logger.enableLogger();
   Android.runInUI("android.webkit.WebView->setWebContentsDebuggingEnabled:b_true;", "null");
 } else {

@@ -8,6 +8,8 @@ import Data.Maybe
 import JBridge as JB
 import Data.Function.Uncurried (runFn2)
 import Engineering.Helpers.Commons (screenWidth, convertUTCtoISC, getNewIDWithTag , getCurrentUTC)
+import MerchantConfig.Types (AppConfig)
+import ConfigProvider
 
 
 type RideSummaryScreenState = {
@@ -21,7 +23,8 @@ type RideSummaryScreenData = {
   fareDetails :: Array RateCardItem,
   cancelRidePopUpData :: S.CancelRidePopUpData,
   activeRideData :: S.ActiveRide,
-  route :: Maybe Route
+  route :: Maybe Route,
+  config :: AppConfig
 }
 
 type RideSummaryScreenProps = {
@@ -196,6 +199,7 @@ initData = {
         }
     , activeRideData :dummyActiveRideData
     , route: Nothing
+    , config: getAppConfig appConfig
   },
   props: {
     pickUpOpen : true,

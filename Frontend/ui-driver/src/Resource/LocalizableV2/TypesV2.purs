@@ -134,6 +134,11 @@ newtype Keymap
   , terms_and_conditions :: String
   , update_vehicle_details :: String
   , help_and_support :: String
+  , faqs :: String
+  , whatsapp_chat :: String
+  , mail_us :: String
+  , call_us :: String
+  , operations_hub :: String
   , note :: String
   , visit_my_rides_screen_for_specific_complaints :: String
   , thank_you_for_wrtitting_us :: String
@@ -364,6 +369,12 @@ newtype Keymap
   , we_will_notify_you_when_we_go_live :: String
   , upload_again :: String
   , select_operation_hub :: String
+  , help_centre :: String
+  , all_time :: String
+  , subscription_amount_spent :: String
+  , ride_boost_received :: String
+  , cancellation_charges_received :: String
+  , todays :: String
   , currently_we_allow_only_karnataka_registered_number :: String -> String
   , re_enter_vehicle_registration_number :: String
   , re_enter_driving_license_number :: String
@@ -1657,7 +1668,7 @@ newtype Keymap
   , remove_eyewere :: String
   , image_validation_exceed_limit :: String
   , parking_charges_included :: String -> String
-  , invoice_generated_from_driver_to_rider :: String
+  , collect_from_the_customer_via_upi_qr_or_cash :: String
   , included :: String
   , db_check_and_name_match_failed :: String
   , complete_your_profile :: String
@@ -1930,6 +1941,7 @@ newtype Keymap
   , onboarding_faq_edit_vehicle_a :: String
   , onboarding_faq_update_driver_status_q :: String
   , onboarding_faq_update_driver_status_a :: String
+  , contact_hub :: String
   }
 
 derive instance ntL :: Newtype Languages _
@@ -2286,6 +2298,21 @@ update_vehicle_details = a
 
 help_and_support :: Proxy "help_and_support"
 help_and_support = a
+
+faqs :: Proxy "faqs"
+faqs = a
+
+whatsapp_chat :: Proxy "whatsapp_chat"
+whatsapp_chat = a
+
+mail_us :: Proxy "mail_us"
+mail_us = a
+
+call_us :: Proxy "call_us"
+call_us = a
+
+operations_hub :: Proxy "operations_hub"
+operations_hub = a
 
 note :: Proxy "note"
 note = a
@@ -2976,6 +3003,24 @@ upload_again = a
 
 select_operation_hub :: Proxy "select_operation_hub"
 select_operation_hub = a
+
+help_centre :: Proxy "help_centre"
+help_centre = a
+
+all_time :: Proxy "all_time"
+all_time = a
+
+subscription_amount_spent :: Proxy "subscription_amount_spent"
+subscription_amount_spent = a
+
+ride_boost_received :: Proxy "ride_boost_received"
+ride_boost_received = a
+
+cancellation_charges_received :: Proxy "cancellation_charges_received"
+cancellation_charges_received = a
+
+todays :: Proxy "todays"
+todays = a
 
 currently_we_allow_only_karnataka_registered_number :: Proxy "currently_we_allow_only_karnataka_registered_number"
 currently_we_allow_only_karnataka_registered_number = a
@@ -6847,8 +6892,8 @@ image_validation_exceed_limit = a
 parking_charges_included :: Proxy "parking_charges_included"
 parking_charges_included = a
 
-invoice_generated_from_driver_to_rider :: Proxy "invoice_generated_from_driver_to_rider"
-invoice_generated_from_driver_to_rider = a
+collect_from_the_customer_via_upi_qr_or_cash :: Proxy "collect_from_the_customer_via_upi_qr_or_cash"
+collect_from_the_customer_via_upi_qr_or_cash = a
 
 included :: Proxy "included"
 included = a
@@ -7665,3 +7710,6 @@ onboarding_faq_update_driver_status_q = a
 
 onboarding_faq_update_driver_status_a :: Proxy "onboarding_faq_update_driver_status_a"
 onboarding_faq_update_driver_status_a = a
+
+contact_hub :: Proxy "contact_hub"
+contact_hub = a
