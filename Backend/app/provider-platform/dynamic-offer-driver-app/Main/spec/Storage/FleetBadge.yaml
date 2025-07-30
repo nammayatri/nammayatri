@@ -33,6 +33,12 @@ FleetBadge:
       kvFunction: findOneWithKV
       where:
         and: [fleetOwnerId, badgeName, badgeType]
+    findAllBadgesByNameAndBadgeTypeAndFleetOwnerIds:
+      kvFunction: findAllWithKV
+      where:
+        and:
+          - in: [fleetOwnerId]
+          - eq: [badgeName, badgeType]
 
   extraOperations:
     - EXTRA_QUERY_FILE

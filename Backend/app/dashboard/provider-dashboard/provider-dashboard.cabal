@@ -122,11 +122,6 @@ library
       API.Client.ProviderPlatform.Management
       API.Client.ProviderPlatform.Operator
       API.Client.ProviderPlatform.RideBooking
-      Domain.Types.FleetMemberAssociation
-      Storage.Beam.FleetMemberAssociation
-      Storage.Queries.FleetMemberAssociation
-      Storage.Queries.FleetMemberAssociationExtra
-      Storage.Queries.OrphanInstances.FleetMemberAssociation
   other-modules:
       Paths_provider_dashboard
   hs-source-dirs:

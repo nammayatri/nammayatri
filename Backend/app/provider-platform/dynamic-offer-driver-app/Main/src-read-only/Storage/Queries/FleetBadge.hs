@@ -24,6 +24,18 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FleetBadge.FleetBadge] -> m ())
 createMany = traverse_ create
 
+findAllBadgesByNameAndBadgeTypeAndFleetOwnerIds ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  ([Kernel.Types.Id.Id Domain.Types.Person.Person] -> Kernel.Prelude.Text -> Domain.Types.FleetBadgeType.FleetBadgeType -> m [Domain.Types.FleetBadge.FleetBadge])
+findAllBadgesByNameAndBadgeTypeAndFleetOwnerIds fleetOwnerId badgeName badgeType = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.fleetOwnerId $ Se.In (Kernel.Types.Id.getId <$> fleetOwnerId),
+          Se.Is Beam.badgeName $ Se.Eq badgeName,
+          Se.Is Beam.badgeType $ Se.Eq badgeType
+        ]
+    ]
+
 findOneBadgeByNameAndBadgeTypeAndFleetOwnerId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Text -> Domain.Types.FleetBadgeType.FleetBadgeType -> m (Maybe Domain.Types.FleetBadge.FleetBadge))

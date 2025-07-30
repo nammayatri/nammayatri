@@ -4,6 +4,10 @@ FleetMemberAssociation:
   fields:
     fleetMemberId: Text
     fleetOwnerId: Text
+    level: Maybe Int
+    parentGroupCode: Maybe Text
+    groupCode: Maybe Text
+    order: Maybe Int
     isFleetOwner: Bool
     enabled: Bool
     createdAt: UTCTime
@@ -11,14 +15,9 @@ FleetMemberAssociation:
 
   constraints:
     fleetMemberId: PrimaryKey
-    fleetOwnerId: SecondaryKey
+    fleetOwnerId: PrimaryKey
 
   queries:
-    findOneByFleetOwnerId:
-      kvFunction: findOneWithKV
-      where:
-        and: [fleetOwnerId, isFleetOwner]
-
     findAllByfleetMemberId:
       kvFunction: findAllWithKV
       where:
@@ -41,6 +40,19 @@ FleetMemberAssociation:
       where:
         and:
           - eq: [fleetMemberId]
+          - in: [fleetOwnerId]
+
+    updateFleetMembersActiveStatusByGroupCode:
+      kvFunction: updateWithKV
+      params: [enabled]
+      where:
+        and:
+          - eq: [fleetMemberId, groupCode]
+
+    findAllWithOwnerIds:
+      kvFunction: findAllWithKV
+      where:
+        and:
           - in: [fleetOwnerId]
 
   extraOperations:

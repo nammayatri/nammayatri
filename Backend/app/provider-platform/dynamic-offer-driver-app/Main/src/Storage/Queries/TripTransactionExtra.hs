@@ -82,3 +82,19 @@ findAllTripTransactionByDriverIdWithinCreationRange fleetOwnerId limit offset dr
     (Se.Desc BeamT.createdAt)
     limit
     offset
+
+findAllTripTransactionByDriverIdWithinCreationRangeMultiFleetOwner ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  ([Text] -> Kernel.Prelude.Maybe Int -> Kernel.Prelude.Maybe Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m ([Domain.Types.TripTransaction.TripTransaction]))
+findAllTripTransactionByDriverIdWithinCreationRangeMultiFleetOwner fleetOwnerIds limit offset driverId mbFrom mbTo mbVehicleNumber = do
+  findAllWithOptionsKV
+    [ Se.And
+        ( [Se.Is BeamT.driverId $ Se.Eq (Kernel.Types.Id.getId driverId), Se.Is BeamT.fleetOwnerId $ Se.In fleetOwnerIds]
+            <> [Se.Is BeamT.createdAt $ Se.GreaterThanOrEq (fromJust mbFrom) | isJust mbFrom]
+            <> [Se.Is BeamT.createdAt $ Se.LessThanOrEq (fromJust mbTo) | isJust mbTo]
+            <> [Se.Is BeamT.vehicleNumber $ Se.Eq (fromJust mbVehicleNumber) | isJust mbVehicleNumber]
+        )
+    ]
+    (Se.Desc BeamT.createdAt)
+    limit
+    offset
