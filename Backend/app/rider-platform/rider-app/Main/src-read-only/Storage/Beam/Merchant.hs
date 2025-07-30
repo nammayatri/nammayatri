@@ -58,6 +58,7 @@ data MerchantT f = MerchantT
     publicMediaFileUrlPattern :: B.C f Kernel.Prelude.Text,
     registryUrl :: B.C f Kernel.Prelude.Text,
     scheduleRideBufferTime :: B.C f Kernel.Types.Common.Seconds,
+    sendBecknCategoryCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     shortId :: B.C f Kernel.Prelude.Text,
     signatureExpiry :: B.C f Kernel.Prelude.Int,
     signingPublicKey :: B.C f Kernel.Types.Base64.Base64,

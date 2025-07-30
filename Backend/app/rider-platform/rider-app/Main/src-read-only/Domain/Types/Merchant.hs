@@ -53,6 +53,7 @@ data MerchantD (s :: UsageSafety) = Merchant
     publicMediaFileUrlPattern :: Kernel.Prelude.Text,
     registryUrl :: Kernel.Types.Common.BaseUrl,
     scheduleRideBufferTime :: Kernel.Prelude.NominalDiffTime,
+    sendBecknCategoryCode :: Kernel.Prelude.Bool,
     shortId :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant,
     signatureExpiry :: Kernel.Prelude.Int,
     signingPublicKey :: Kernel.Types.Base64.Base64,

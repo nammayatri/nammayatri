@@ -82,6 +82,7 @@ Merchant:
     onlinePayment: Bool
     gatewayAndRegistryPriorityList: "[GatewayAndRegistryService]"
     stuckRideAutoCancellationBuffer: Maybe Seconds
+    sendBecknCategoryCode: Bool
 
   excludedFields:
     - merchantId
@@ -113,6 +114,7 @@ Merchant:
     arrivingPickupThreshold: HighPrecDistance
     gatewayAndRegistryPriorityList: Maybe [GatewayAndRegistryService]
     stuckRideAutoCancellationBuffer: Maybe Seconds
+    sendBecknCategoryCode: Maybe Bool
 
   toTType:
     city: defaultCity|E
@@ -133,6 +135,7 @@ Merchant:
     arrivedPickupThresholdValue: (Just $ Kernel.Utils.Common.distanceToHighPrecDistance ((.unit) editPickupDistanceThreshold) arrivedPickupThreshold)|E
     arrivingPickupThreshold: (Kernel.Utils.Common.distanceToHighPrecDistance ((.unit) editPickupDistanceThreshold) arrivingPickupThreshold)|E
     gatewayAndRegistryPriorityList: Kernel.Prelude.Just|I
+    sendBecknCategoryCode: Kernel.Prelude.Just|I
 
   fromTType:
     defaultCity: city|E
@@ -148,6 +151,7 @@ Merchant:
     driverDistanceThresholdFromPickup: Kernel.Utils.Common.mkDistanceWithDefault distanceUnit driverDistanceThresholdFromPickupValue driverDistanceThresholdFromPickup|E
     driverOnTheWayNotifyExpiry: (fromMaybe 3600 driverOnTheWayNotifyExpiry)|E
     gatewayAndRegistryPriorityList: fromMaybe [Domain.Types.ONDC, Domain.Types.NY] gatewayAndRegistryPriorityList|E
+    sendBecknCategoryCode: (fromMaybe False sendBecknCategoryCode)|E
 
   sqlType:
     editPickupDistanceThreshold: double precision
@@ -216,6 +220,7 @@ Merchant:
     city: "'Kochi'"
     onlinePayment: "false"
     gatewayAndRegistryPriorityList: "'{\"NY\"}'"
+    sendBecknCategoryCode: "false"
 
   constraints:
     shortId: SecondaryKey
