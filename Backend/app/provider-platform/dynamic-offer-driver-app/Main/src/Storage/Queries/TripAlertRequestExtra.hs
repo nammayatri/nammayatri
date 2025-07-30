@@ -41,3 +41,27 @@ findTripAlertRequestsByFleetOwnerId merchantOpCityId fleetOwnerId mbFrom mbTo mb
 findLatestTripAlertRequest :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> Text -> AlertRequestType -> Text -> Text -> m (Maybe TripAlertRequest)
 findLatestTripAlertRequest merchantOpCityId fleetOwnerId alertRequestType driverId routeCode = do
   findTripAlertRequestsByFleetOwnerId merchantOpCityId fleetOwnerId Nothing Nothing (Just alertRequestType) (Just driverId) Nothing (Just routeCode) (Just 1) (Just 0) <&> listToMaybe
+
+------------------------- multiple fleet owners -------------------------
+
+findTripAlertRequestsByFleetOwnerIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DMOC.MerchantOperatingCity -> [Text] -> Maybe UTCTime -> Maybe UTCTime -> Maybe AlertRequestType -> Maybe Text -> Maybe [Id DFB.FleetBadge] -> Maybe Text -> Maybe Int -> Maybe Int -> m [TripAlertRequest]
+findTripAlertRequestsByFleetOwnerIds merchantOpCityId fleetOwnerIds mbFrom mbTo mbAlertRequestType mbDriverId mbFleetBadgeIds mbRouteCode mbLimit mbOffset = do
+  findAllWithOptionsKV
+    [ Se.And
+        ( [Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOpCityId.getId]
+            <> [Se.Is Beam.fleetOwnerId $ Se.In fleetOwnerIds]
+            <> [Se.Is Beam.createdAt $ Se.GreaterThanOrEq (fromJust mbFrom) | isJust mbFrom]
+            <> [Se.Is Beam.createdAt $ Se.LessThanOrEq (fromJust mbTo) | isJust mbTo]
+            <> [Se.Is Beam.alertRequestType $ Se.Eq (fromJust mbAlertRequestType) | isJust mbAlertRequestType]
+            <> [Se.Is Beam.fleetBadgeId $ Se.In fleetBadgeIds | isJust mbFleetBadgeIds]
+            <> [Se.Is Beam.driverId $ Se.Eq (fromJust mbDriverId) | isJust mbDriverId]
+            <> [Se.Is Beam.routeCode $ Se.Eq (fromJust mbRouteCode) | isJust mbRouteCode]
+        )
+    ]
+    (Se.Desc Beam.createdAt)
+    (Just limitVal)
+    (Just offsetVal)
+  where
+    fleetBadgeIds = maybe [] (map (pure . (.getId))) mbFleetBadgeIds
+    limitVal = min (fromMaybe 10 mbLimit) 10
+    offsetVal = fromMaybe 0 mbOffset
