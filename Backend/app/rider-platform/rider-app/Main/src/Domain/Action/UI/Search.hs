@@ -377,6 +377,11 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
     case merchant.gatewayAndRegistryPriorityList of
       (NY : _) -> asks (.nyGatewayUrl)
       _ -> asks (.ondcGatewayUrl)
+  let isMultimodalSearch = isJust journeySearchData
+  let isRentalRideSearch = case req of
+        RentalSearch _ -> True
+        _ -> False
+  let categoryCode = getCategoryCode merchant now startTime isRentalRideSearch isMultimodalSearch
   return $
     SearchRes -- TODO: cleanup this reponse field based on what is not required for beckn type conversions
       { searchRequest = searchRequest,
@@ -385,7 +390,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
         city = originCity,
         distance = shortestRouteDistance,
         duration = shortestRouteDuration,
-        taggings = getTags tag searchRequest reservePricingTag updatedPerson shortestRouteDistance shortestRouteDuration returnTime roundTrip ((.points) <$> shortestRouteInfo) multipleRoutes txnCity isReallocationEnabled isDashboardRequest fareParametersInRateCard isMeterRide,
+        taggings = getTags tag searchRequest reservePricingTag updatedPerson shortestRouteDistance shortestRouteDuration returnTime roundTrip ((.points) <$> shortestRouteInfo) multipleRoutes txnCity isReallocationEnabled isDashboardRequest fareParametersInRateCard isMeterRide isMultimodalSearch,
         ..
       }
   where
@@ -410,12 +415,9 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
           Person.Person {customerNammaTags = Just [genderTag], ..}
         else Person.Person {..}
 
-    getTags tag searchRequest reservePricingTag person distance duration returnTime roundTrip mbPoints mbMultipleRoutes txnCity mbIsReallocationEnabled isDashboardRequest mbfareParametersInRateCard isMeterRideSearch = do
+    getTags tag searchRequest reservePricingTag person distance duration returnTime roundTrip mbPoints mbMultipleRoutes txnCity mbIsReallocationEnabled isDashboardRequest mbfareParametersInRateCard isMeterRideSearch isMultimodalSearch = do
       let isReallocationEnabled = fromMaybe False mbIsReallocationEnabled
       let fareParametersInRateCard = fromMaybe False mbfareParametersInRateCard
-      let isMultimodalSearch = case journeySearchData of
-            Just _ -> True
-            Nothing -> False
       let reserveTag = case searchRequest.searchMode of
             Just SearchRequest.RESERVE -> [(Beckn.RESERVED_RIDE_TAG, Just "true")]
             _ -> []
@@ -734,3 +736,16 @@ autoCompleteEvent riderConfig searchRequestId sessionToken isSourceManuallyMoved
           let updatedRecord = AutoCompleteEventData record.autocompleteInputs record.customerId record.id isDestinationManuallyMoved (Just searchRequestId) record.searchType record.sessionToken record.merchantId record.merchantOperatingCityId record.originLat record.originLon record.createdAt now
           -- let updatedRecord = record {DTA.searchRequestId = Just searchRequestId, DTA.isLocationSelectedOnMap = isDestinationManuallyMoved, DTA.updatedAt = now}
           triggerAutoCompleteEvent updatedRecord
+
+getCategoryCode :: DM.Merchant -> UTCTime -> UTCTime -> Bool -> Bool -> Maybe Enums.CategoryCode
+getCategoryCode merchant now startTime isRentalRideSearch isMultimodalSearch =
+  -- in case of Nothing tripCategory will be determined on bpp side, based on locations and start time (getPossibleTripOption)
+  if merchant.sendBecknCategoryCode
+    then do
+      let isScheduledRideSearch = not isMultimodalSearch && merchant.scheduleRideBufferTime `addUTCTime` now < startTime
+      Just $ case (isRentalRideSearch, isScheduledRideSearch) of
+        (False, False) -> Enums.CATEGORY_ON_DEMAND_TRIP
+        (True, False) -> Enums.CATEGORY_ON_DEMAND_RENTAL
+        (False, True) -> Enums.CATEGORY_SCHEDULED_TRIP
+        (True, True) -> Enums.CATEGORY_SCHEDULED_RENTAL
+    else Nothing

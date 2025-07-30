@@ -855,7 +855,7 @@ getPossibleTripOption now tConf dsReq isInterCity isCrossCity destinationTravelC
       schedule = if isScheduled then dsReq.pickupTime else now
       tripCategories =
         if checkIfMeterRideSearch dsReq.isMeterRideSearch
-          then [OneWay MeterRide]
+          then [OneWay MeterRide | isTripCategoryCode]
           else do
             case dsReq.dropLocation of
               Just _ -> do
