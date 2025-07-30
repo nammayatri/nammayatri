@@ -57,7 +57,7 @@ tfIntent res bapConfig = do
   let intentTags_ = Nothing
       intentFulfillment_ = tfFulfillment res
       intentPayment_ = tfPayment res bapConfig
-      intentCategory_ = tfCategory
+      intentCategory_ = tfCategory <$> res.categoryCode
       returnData = BecknV2.OnDemand.Types.Intent {intentFulfillment = intentFulfillment_, intentPayment = intentPayment_, intentTags = intentTags_, intentCategory = intentCategory_}
       allNothing = BecknV2.OnDemand.Utils.Common.allNothing returnData
   if allNothing
@@ -93,8 +93,8 @@ tfPerson taggings = do
     then Nothing
     else Just returnData
 
-tfCategory :: Maybe BecknV2.OnDemand.Types.Category
-tfCategory = do
-  let descriptorCode_ = Nothing -- in case of Nothing tripCategory will be determined on bpp side, based on locations and start time (getPossibleTripOption)
-  let categoryDescriptor_ = Just $ BecknV2.OnDemand.Types.Descriptor {descriptorCode = descriptorCode_, descriptorName = Nothing, descriptorShortDesc = Nothing}
-  Just $ BecknV2.OnDemand.Types.Category {categoryDescriptor = categoryDescriptor_, categoryId = Nothing}
+tfCategory :: Enums.CategoryCode -> BecknV2.OnDemand.Types.Category
+tfCategory categoryCode = do
+  let descriptorCode_ = show categoryCode
+  let categoryDescriptor_ = Just $ BecknV2.OnDemand.Types.Descriptor {descriptorCode = Just descriptorCode_, descriptorName = Nothing, descriptorShortDesc = Nothing}
+  BecknV2.OnDemand.Types.Category {categoryDescriptor = categoryDescriptor_, categoryId = Nothing}
