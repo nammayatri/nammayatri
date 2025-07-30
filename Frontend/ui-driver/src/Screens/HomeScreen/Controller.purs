@@ -955,7 +955,7 @@ eval (InAppKeyboardModalAction (InAppKeyboardModal.OnSelection key index)) state
     exitAction = if state.props.endRideOtpModal then EndRide newState else if state.props.zoneRideBooking then StartZoneRide newState else StartRide newState
   if ((length rideOtp) >= 4  && (not state.props.otpAttemptsExceeded)) then 
       if state.data.activeRide.tripType == ST.Rental then 
-        continue $ rentalNewState state
+        updateAndExit (rentalNewState state) exitAction
       else updateAndExit newState exitAction
   else continue newState
   where

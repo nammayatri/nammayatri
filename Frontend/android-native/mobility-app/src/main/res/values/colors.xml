@@ -18,7 +18,8 @@
     <color name="Black800">#454545</color>
     <color name="Black900">#2C2F3A</color>
     <color name="Black500">#B9BABE</color>
-    <color name="defaultAcceptButtonBG">#53BB6F</color>
+    <color name="defaultRRThemeColor">#53BB6F</color>
+    <color name="rrProgressTrackerColor">#FFFFFF</color>
     <color name="green">#268C6E</color>
     <color name="green900">#53BB6F</color>
     <color name="red900">#E55454</color>
@@ -38,4 +39,8 @@
     <color name="turquoise">#42B8BA</color>
     <color name="turquoise10">#1a42b8ba</color>
     <color name="yellow800">#FEEBB9</color>
+    <color name="rrIndicatorBackground">#E5E7EB</color>
+    <color name="rentalAcceptButtonBG">#42B8BA</color>
+    <color name="intercityAcceptButtonBG">#2194FF</color>
+    rentalAcceptButtonBG
 </resources>

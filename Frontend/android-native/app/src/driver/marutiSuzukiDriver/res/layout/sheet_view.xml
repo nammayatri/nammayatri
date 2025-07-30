@@ -63,7 +63,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:background="@color/grey900"
-                        android:visibility="visible"
+                        android:visibility="gone"
                         android:id="@+id/tags_block"
                         android:padding="10dp">
                         <HorizontalScrollView
@@ -72,8 +72,7 @@
                             android:background="@color/grey900">
                             <LinearLayout
                                 android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginBottom="6dp">
+                                android:layout_height="wrap_content">
 
                                 <LinearLayout
                                     android:layout_width="wrap_content"
@@ -363,6 +362,7 @@
                                     android:layout_marginLeft="5dp"
                                     android:background="@drawable/ic_goto_bg"
                                     android:gravity="center_vertical"
+                                    android:visibility="gone"
                                     android:orientation="horizontal">
 
                                     <ImageView
@@ -424,7 +424,7 @@
                         android:orientation="vertical">
 
                         <LinearLayout
-                            android:layout_marginTop="16dp"
+                            android:layout_marginTop="12dp"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:orientation="vertical">
@@ -444,12 +444,12 @@
                                         android:layout_height="wrap_content"
                                         android:layout_gravity="center_vertical"
                                         android:alpha="0.5"
-                                        android:fontFamily="@font/plus_jakarta_sans_bold"
+                                        android:fontFamily="@font/roboto_regular"
                                         android:lineHeight="20dp"
                                         android:text="@string/pickup"
                                         android:textColor="#2C2F3A"
                                         android:textFontWeight="600"
-                                        android:textSize="16dp" />
+                                        android:textSize="18dp" />
 
                                     <LinearLayout
                                         android:layout_width="wrap_content"
@@ -458,38 +458,38 @@
                                             android:id="@+id/distancePickUp"
                                             android:layout_width="wrap_content"
                                             android:layout_height="wrap_content"
-                                            android:fontFamily="@font/plus_jakarta_sans_bold"
+                                            android:fontFamily="@font/roboto_medium"
                                             android:lineHeight="28dp"
                                             android:text="1.2 km"
                                             android:textColor="@color/Black800"
-                                            android:textFontWeight="600"
-                                            android:textSize="24dp" />
+                                            android:textFontWeight="500"
+                                            android:textSize="18dp" />
                                         <TextView
                                             android:layout_width="wrap_content"
                                             android:layout_height="wrap_content"
                                             android:text="•"
                                             android:id="@+id/durationToPickupImage"
-                                            android:textSize="24dp"
-                                            android:visibility="gone"
-                                            android:textColor="#A7A7A7"
+                                            android:textSize="18dp"
+                                            android:visibility="visible"
+                                            android:textColor="#A1A1A1"
                                             android:layout_marginHorizontal="4dp"/>
 
                                         <TextView
                                             android:layout_width="wrap_content"
                                             android:layout_height="wrap_content"
-                                            android:fontFamily="@font/plus_jakarta_sans_bold"
+                                            android:fontFamily="@font/roboto_medium"
                                             android:lineHeight="28dp"
                                             android:id="@+id/durationToPickup"
                                             android:text="20 min"
-                                            android:visibility="gone"
+                                            android:visibility="visible"
                                             android:textColor="@color/Black800"
-                                            android:textFontWeight="600"
-                                            android:textSize="24dp"/>
+                                            android:textFontWeight="500"
+                                            android:textSize="18dp"/>
                                     </LinearLayout>
 
                                 </LinearLayout>
 
-                                <LinearLayout
+                                 <LinearLayout
                                     android:layout_width="match_parent"
                                     android:layout_height="wrap_content"
                                     android:orientation="vertical"
@@ -525,152 +525,57 @@
                                             android:textSize="18dp" />
                                     </LinearLayout>
 
-                                    <com.google.android.material.card.MaterialCardView
-                                        android:id="@+id/vcTierAndACView"
+                                    <LinearLayout
                                         android:layout_width="wrap_content"
-                                        android:layout_height="wrap_content"
-                                        app:cardBackgroundColor="#1A0066FF"
-                                        android:theme="@style/Theme.MaterialComponents.Light"
-                                        app:cardCornerRadius="28dp"
-                                        android:layout_marginTop="4dp"
-                                        app:cardElevation="0dp"
-                                        app:contentPaddingRight="10dp"
-                                        android:visibility="gone"
-                                        app:contentPadding="8dp">
-
+                                        android:id="@+id/ride_fare_view"
+                                        android:orientation="vertical"
+                                        android:gravity="right"
+                                        android:layout_height="wrap_content">
                                         <LinearLayout
-                                            android:layout_width="match_parent"
-                                            android:layout_height="wrap_content"
-                                            android:gravity="center_vertical"
-                                            android:orientation="horizontal">
-
-                                            <LinearLayout
-                                                android:layout_width="wrap_content"
-                                                android:layout_height="wrap_content"
-                                                android:id="@+id/acNonAcView"
-                                                android:orientation="horizontal">
-
-                                                <RelativeLayout
-                                                    android:layout_width="wrap_content"
-                                                    android:layout_height="wrap_content">
-
-                                                    <com.google.android.material.card.MaterialCardView
-                                                        android:id="@+id/acView"
-                                                        android:layout_width="wrap_content"
-                                                        android:layout_height="wrap_content"
-                                                        android:layout_gravity="center"
-                                                        app:cardBackgroundColor="@color/blue800"
-                                                        android:visibility="gone"
-                                                        android:theme="@style/Theme.MaterialComponents.Light"
-                                                        app:cardCornerRadius="28dp"
-                                                        android:layout_marginRight="6dp"
-                                                        app:contentPadding="5dp"
-                                                        app:cardElevation="0dp">
-
-                                                        <LinearLayout
-                                                            android:layout_width="match_parent"
-                                                            android:layout_height="match_parent"
-                                                            android:gravity="center_vertical"
-                                                            android:orientation="horizontal">
-
-                                                            <ImageView
-                                                                android:layout_width="16dp"
-                                                                android:layout_height="16dp"
-                                                                android:src="@drawable/ny_ic_ac_white" />
-
-                                                            <TextView
-                                                                android:layout_width="wrap_content"
-                                                                android:layout_height="wrap_content"
-                                                                android:textSize="18dp"
-                                                                android:layout_marginLeft="5dp"
-                                                                android:gravity="center"
-                                                                android:textColor="@color/white"
-                                                                android:layout_marginRight="4dp"
-                                                                android:textFontWeight="600"
-                                                                android:fontFamily="@font/dmsans_bold"
-                                                                android:text="AC"/>
-                                                        </LinearLayout>
-
-                                                    </com.google.android.material.card.MaterialCardView>
-                                                    <com.google.android.material.card.MaterialCardView
-                                                        android:id="@+id/nonAcView"
-                                                        android:layout_width="wrap_content"
-                                                        android:layout_height="wrap_content"
-                                                        android:layout_gravity="center"
-                                                        app:cardBackgroundColor="@color/Black700"
-                                                        android:theme="@style/Theme.MaterialComponents.Light"
-                                                        app:cardCornerRadius="28dp"
-                                                        android:layout_marginRight="6dp"
-                                                        android:visibility="gone"
-                                                        app:contentPadding="5dp"
-                                                        app:cardElevation="0dp">
-
-                                                        <LinearLayout
-                                                            android:layout_width="match_parent"
-                                                            android:layout_height="match_parent"
-                                                            android:gravity="center_vertical"
-                                                            android:orientation="horizontal">
-
-                                                            <ImageView
-                                                                android:layout_width="16dp"
-                                                                android:layout_height="16dp"
-                                                                android:src="@drawable/ny_ic_non_ac_white" />
-
-                                                            <TextView
-                                                                android:layout_width="wrap_content"
-                                                                android:layout_height="wrap_content"
-                                                                android:textSize="18dp"
-                                                                android:layout_marginLeft="5dp"
-                                                                android:gravity="center"
-                                                                android:textColor="@color/white"
-                                                                android:layout_marginRight="4dp"
-                                                                android:textFontWeight="600"
-                                                                android:fontFamily="@font/dmsans_bold"
-                                                                android:text="Non-AC"/>
-                                                        </LinearLayout>
-
-                                                    </com.google.android.material.card.MaterialCardView>
-                                                    <com.google.android.material.card.MaterialCardView
-                                                        android:id="@+id/ventilator"
-                                                        android:layout_width="wrap_content"
-                                                        android:layout_height="wrap_content"
-                                                        android:layout_gravity="center"
-                                                        app:cardBackgroundColor="@color/blue800"
-                                                        android:theme="@style/Theme.MaterialComponents.Light"
-                                                        app:cardCornerRadius="28dp"
-                                                        android:visibility="gone"
-                                                        android:layout_marginRight="6dp"
-                                                        app:contentPadding="5dp"
-                                                        app:cardElevation="0dp">
-
-                                                        <ImageView
-                                                            android:layout_width="16dp"
-                                                            android:layout_height="16dp"
-                                                            android:src="@drawable/ny_ic_ventilator" />
-
-                                                    </com.google.android.material.card.MaterialCardView>
-
-                                                </RelativeLayout>
-
-                                            </LinearLayout>
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="match_parent"
+                                            android:layout_weight="1"
+                                            android:gravity="center"
+                                            android:orientation="horizontal"
+                                            android:paddingHorizontal="10dp">
 
                                             <TextView
-                                                android:id="@+id/vehicleServiceTier"
-                                                android:layout_width="wrap_content"
+                                                android:id="@+id/currency"
+                                                android:layout_width="match_parent"
                                                 android:layout_height="wrap_content"
-                                                android:layout_marginLeft="1dp"
-                                                android:fontFamily="@font/plus_jakartasans_semibold"
-                                                android:gravity="center"
-                                                android:paddingBottom="2dp"
-                                                android:singleLine="false"
-                                                android:text="Comfy"
-                                                android:textColor="@color/blue800"
+                                                android:layout_gravity="center_vertical"
+                                                android:fontFamily="@font/roboto_semibold"
+                                                android:gravity="end"
+                                                android:text="₹ "
+                                                android:textColor="@color/Black800"
                                                 android:textFontWeight="600"
-                                                android:textSize="16dp" />
+                                                android:textSize="24dp" />
+
+                                            <TextView
+                                                android:id="@+id/basePrice"
+                                                android:layout_width="match_parent"
+                                                android:layout_height="wrap_content"
+                                                android:layout_gravity="center_vertical"
+                                                android:fontFamily="@font/roboto_semibold"
+                                                android:gravity="end"
+                                                android:text="248"
+                                                android:textColor="@color/Black800"
+                                                android:textFontWeight="600"
+                                                android:textSize="24dp" />
                                         </LinearLayout>
+                                        <TextView
+                                            android:id="@+id/rateText"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:fontFamily="@font/roboto_regular"
+                                            android:lineHeight="28dp"
+                                            android:text="Rate: ₹15/km"
+                                            android:layout_marginLeft="5dp"
+                                            android:textColor="@color/Black700"
+                                            android:textFontWeight="400"
+                                            android:textSize="14dp" />
 
-                                    </com.google.android.material.card.MaterialCardView>
-
+                                    </LinearLayout>
                                 </LinearLayout>
 
                                 <LinearLayout
@@ -754,11 +659,12 @@
                                         android:layout_height="wrap_content"
                                         android:layout_gravity="center_vertical"
                                         android:ellipsize="end"
-                                        android:fontFamily="@font/plus_jakartasans_medium"
+                                        android:fontFamily="@font/roboto_medium"
                                         android:gravity="bottom"
                                         android:lines="1"
                                         android:singleLine="false"
                                         android:text="Area"
+                                        android:textFontWeight="500"
                                         android:textColor="#454545"
                                         android:textSize="18dp"
                                         android:textStyle="bold" />
@@ -768,21 +674,22 @@
                                         android:layout_width="wrap_content"
                                         android:layout_height="match_parent"
                                         android:ellipsize="end"
-                                        android:fontFamily="@font/plus_jakartasans_medium"
+                                        android:fontFamily="@font/roboto_regular"
                                         android:lineHeight="18dp"
                                         android:lines="1"
                                         android:text="source Address"
                                         android:textColor="#868B98"
-                                        android:textFontWeight="500"
+                                        android:textFontWeight="400"
                                         android:textSize="14dp" />
                                     <TextView
                                         android:id="@+id/sourcePinCode"
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
                                         android:text="560065"
-                                        android:textColor="#454545"
-                                        android:textSize="14dp"
-                                        android:fontFamily="@font/plus_jakartasans_medium"
+                                        android:textColor="#3F4143"
+                                        android:textSize="16dp"
+                                        android:textFontWeight="500"
+                                        android:fontFamily="@font/roboto_medium"
                                         android:textStyle="bold"
                                         android:visibility="gone"
                                         />
@@ -910,9 +817,10 @@
                                         android:layout_height="wrap_content"
                                         android:layout_gravity="center_vertical"
                                         android:ellipsize="end"
-                                        android:fontFamily="@font/plus_jakartasans_medium"
+                                        android:fontFamily="@font/roboto_medium"
                                         android:maxLines="1"
                                         android:singleLine="false"
+                                        android:textFontWeight="500"
                                         android:text="Area"
                                         android:textColor="#454545"
                                         android:textSize="18dp"
@@ -924,21 +832,22 @@
                                         android:layout_height="wrap_content"
                                         android:layout_gravity="center_vertical"
                                         android:ellipsize="end"
-                                        android:fontFamily="@font/plus_jakartasans_medium"
+                                        android:fontFamily="@font/roboto_regular"
                                         android:lineHeight="18dp"
                                         android:lines="1"
                                         android:text="dest Address"
                                         android:textColor="#868B98"
-                                        android:textFontWeight="500"
+                                        android:textFontWeight="400"
                                         android:textSize="14dp" />
                                     <TextView
                                         android:id="@+id/destinationPinCode"
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
                                         android:text="560065"
-                                        android:textColor="#454545"
-                                        android:textSize="14dp"
-                                        android:fontFamily="@font/plus_jakartasans_medium"
+                                        android:textColor="#3F4143"
+                                        android:textSize="16dp"
+                                        android:textFontWeight="500"
+                                        android:fontFamily="@font/roboto_medium"
                                         android:textStyle="bold"
                                         android:visibility="gone"
                                         />
@@ -1075,7 +984,7 @@
                                         android:paddingHorizontal="10dp">
 
                                         <TextView
-                                            android:id="@+id/currency"
+                                            android:id="@+id/currency_2"
                                             android:layout_width="wrap_content"
                                             android:layout_height="wrap_content"
                                             android:fontFamily="@font/saira_semi_condensed_semi_bold"
@@ -1086,7 +995,7 @@
                                             android:textSize="25dp" />
 
                                         <TextView
-                                            android:id="@+id/basePrice"
+                                            android:id="@+id/basePrice_2"
                                             android:layout_width="wrap_content"
                                             android:layout_height="wrap_content"
                                             android:layout_marginLeft="2dp"
@@ -1159,7 +1068,7 @@
                                     android:text="Rate: "
                                     android:textColor="@color/Black700"
                                     android:textFontWeight="400"
-                                    android:id="@+id/rateText"
+                                    android:id="@+id/rateText_2"
                                     android:textSize="12dp" />
 
                                 <com.google.android.material.card.MaterialCardView
@@ -1191,7 +1100,6 @@
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="20dp"
                         android:paddingHorizontal="15dp"
                         android:orientation="horizontal">
 
@@ -1200,16 +1108,16 @@
                             style="?attr/materialButtonOutlinedStyle"
                             android:layout_width="wrap_content"
                             android:layout_height="match_parent"
-                            android:fontFamily="@font/plus_jakartasans_semibold"
+                            android:fontFamily="@font/roboto_medium"
                             android:letterSpacing="0"
                             android:text="@string/pass"
                             android:textAllCaps="false"
-                            android:textColor="@color/defaultAcceptButtonBG"
-                            android:textFontWeight="600"
+                            android:textColor="@color/defaultRRThemeColor"
+                            android:textFontWeight="500"
                             android:textSize="16dp"
                             android:theme="@style/Theme.MaterialComponents.Light"
                             app:cornerRadius="8dp"
-                            app:strokeColor="@color/defaultAcceptButtonBG" />
+                            app:strokeColor="@color/defaultRRThemeColor" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/reqButton"
@@ -1217,16 +1125,16 @@
                             android:layout_height="match_parent"
                             android:layout_marginLeft="8dp"
                             android:layout_weight="12"
-                            android:backgroundTint="@color/defaultAcceptButtonBG"
-                            android:fontFamily="@font/plus_jakartasans_semibold"
+                            android:backgroundTint="@color/defaultRRThemeColor"
+                            android:fontFamily="@font/roboto_medium"
                             android:letterSpacing="0"
                             android:paddingHorizontal="15dp"
                             android:paddingVertical="16dp"
                             android:shadowColor="@color/white"
                             android:text="@string/accept_offer"
                             android:textAllCaps="false"
-                            android:textFontWeight="700"
-                            android:textSize="18dp"
+                            android:textFontWeight="500"
+                            android:textSize="16dp"
                             android:theme="@style/Theme.MaterialComponents.Light"
                             app:cornerRadius="8dp" />
                     </LinearLayout>
