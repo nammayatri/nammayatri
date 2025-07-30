@@ -177,48 +177,49 @@ public class GRPCNotificationService extends Service implements NotificationList
     public void onMessage(NotificationPayload notification) {
         Log.e("GRPC", "[Processing]");
 
-        try {
-            JSONObject entity_payload = new JSONObject(notification.getEntity().getData());
-            Log.e("onMessageReceived GRPC", String.valueOf(entity_payload));
-            JSONObject payload = new JSONObject();
-            String notificationType = notification.getCategory();
-
-            String title = notification.getTitle();
-            String body = notification.getBody();
-            String notificationId = notification.getId();
-            String imageUrl = ""; // get icon
-
-            payload.put("notification_id", notificationId);
-            payload.put("notification_type", notification.getCategory());
-            payload.put("entity_ids", notification.getEntity().getId());
-            payload.put("entity_type", notification.getEntity().getType());
-            payload.put("show_notification", Objects.equals(notification.getShow(), "SHOW") ? "true" : "false");
-            payload.put("title", title);
-            payload.put("body", body);
-            payload.put("imageUrl", imageUrl);
-            SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-
-            if(notificationType.equals("NEW_RIDE_AVAILABLE")) {
-                JSONObject notificationData = new JSONObject();
-                notificationData.put("title", title)
-                        .put("msg", body);
-                NotificationUtils.triggerUICallbacks(notificationType, notificationData.toString());
-                RideRequestUtils.addRideReceivedEvent(entity_payload, null, null, "ride_request_fcm_received", this);
-                if (sharedPref.getString("DISABLE_WIDGET", "null").equals("true") && sharedPref.getString("REMOVE_CONDITION", "false").equals("false")) {
-                    if (sharedPref.getString("ACTIVITY_STATUS", "null").equals("onDestroy"))
-                        NotificationUtils.showRR(this, entity_payload, payload, NotificationUtils.RequestSource.GRPC);
-                    else {
-                        RideRequestUtils.addRideReceivedEvent(entity_payload, null, null, "ride_request_ignored", this);
-                        NotificationUtils.firebaseLogEventWithParams(this, "ride_ignored", "payload", entity_payload.toString());
-                    }
-                } else NotificationUtils.showRR(this, entity_payload, payload, NotificationUtils.RequestSource.GRPC);
-            }else {
-                NotificationUtils.handleNotifications(notificationType, payload, notificationId, this, sharedPref, true);
-            }
-
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
+        // Temporary Disabling
+//        try {
+//            JSONObject entity_payload = new JSONObject(notification.getEntity().getData());
+//            Log.e("onMessageReceived GRPC", String.valueOf(entity_payload));
+//            JSONObject payload = new JSONObject();
+//            String notificationType = notification.getCategory();
+//
+//            String title = notification.getTitle();
+//            String body = notification.getBody();
+//            String notificationId = notification.getId();
+//            String imageUrl = ""; // get icon
+//
+//            payload.put("notification_id", notificationId);
+//            payload.put("notification_type", notification.getCategory());
+//            payload.put("entity_ids", notification.getEntity().getId());
+//            payload.put("entity_type", notification.getEntity().getType());
+//            payload.put("show_notification", Objects.equals(notification.getShow(), "SHOW") ? "true" : "false");
+//            payload.put("title", title);
+//            payload.put("body", body);
+//            payload.put("imageUrl", imageUrl);
+//            SharedPreferences sharedPref = getApplicationContext().getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+//
+//            if(notificationType.equals("NEW_RIDE_AVAILABLE")) {
+//                JSONObject notificationData = new JSONObject();
+//                notificationData.put("title", title)
+//                        .put("msg", body);
+//                NotificationUtils.triggerUICallbacks(notificationType, notificationData.toString());
+//                RideRequestUtils.addRideReceivedEvent(entity_payload, null, null, "ride_request_fcm_received", this);
+//                if (sharedPref.getString("DISABLE_WIDGET", "null").equals("true") && sharedPref.getString("REMOVE_CONDITION", "false").equals("false")) {
+//                    if (sharedPref.getString("ACTIVITY_STATUS", "null").equals("onDestroy"))
+//                        NotificationUtils.showRR(this, entity_payload, payload, NotificationUtils.RequestSource.GRPC);
+//                    else {
+//                        RideRequestUtils.addRideReceivedEvent(entity_payload, null, null, "ride_request_ignored", this);
+//                        NotificationUtils.firebaseLogEventWithParams(this, "ride_ignored", "payload", entity_payload.toString());
+//                    }
+//                } else NotificationUtils.showRR(this, entity_payload, payload, NotificationUtils.RequestSource.GRPC);
+//            }else {
+//                NotificationUtils.handleNotifications(notificationType, payload, notificationId, this, sharedPref, true);
+//            }
+//
+//        } catch (JSONException e) {
+//            e.printStackTrace();
+//        }
     }
 }
 
