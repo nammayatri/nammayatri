@@ -95,6 +95,6 @@ tfPerson taggings = do
 
 tfCategory :: Maybe BecknV2.OnDemand.Types.Category
 tfCategory = do
-  let descriptorCode_ = Just $ show Enums.CATEGORY_ON_DEMAND_TRIP -- FIXME
+  let descriptorCode_ = Nothing -- in case of Nothing tripCategory will be determined on bpp side, based on locations and start time (getPossibleTripOption)
   let categoryDescriptor_ = Just $ BecknV2.OnDemand.Types.Descriptor {descriptorCode = descriptorCode_, descriptorName = Nothing, descriptorShortDesc = Nothing}
   Just $ BecknV2.OnDemand.Types.Category {categoryDescriptor = categoryDescriptor_, categoryId = Nothing}
