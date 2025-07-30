@@ -18,6 +18,7 @@ module Storage.CachedQueries.Merchant.RiderConfig
     clearCache,
     findByMerchantOperatingCityId,
     findByMerchantOperatingCityIdInRideFlow,
+    updateByPrimaryKey,
   )
 where
 
@@ -52,3 +53,8 @@ findByMerchantOperatingCityId id mbConfigInExperimentVersions = do
 
 clearCache :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m ()
 clearCache id = DynamicLogic.clearConfigCache (cast id) (LYT.RIDER_CONFIG LYT.RiderConfig) Nothing
+
+updateByPrimaryKey :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => RiderConfig -> m ()
+updateByPrimaryKey riderConfig = do
+  Queries.updateByPrimaryKey riderConfig
+  clearCache riderConfig.merchantOperatingCityId
