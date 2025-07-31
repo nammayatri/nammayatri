@@ -174,8 +174,9 @@ statusHandler' ::
   Maybe DVC.VehicleCategory ->
   Maybe DL.DriverLicense ->
   Maybe Bool ->
+  Bool ->
   Flow StatusRes'
-statusHandler' driverImagesInfo makeSelfieAadhaarPanMandatory multipleRC prefillData onboardingVehicleCategory mDL useHVSdkForDL = do
+statusHandler' driverImagesInfo makeSelfieAadhaarPanMandatory multipleRC prefillData onboardingVehicleCategory mDL useHVSdkForDL shouldActivateRc = do
   let merchantId = driverImagesInfo.merchantOperatingCity.merchantId
       merchantOperatingCity = driverImagesInfo.merchantOperatingCity
       merchantOpCityId = merchantOperatingCity.id
@@ -244,7 +245,7 @@ statusHandler' driverImagesInfo makeSelfieAadhaarPanMandatory multipleRC prefill
         when (allVehicleDocsVerified && allDriverDocsVerified && inspectionNotRequired && role == DP.DRIVER) $ enableDriver merchantOpCityId personId mDL
 
         mbVehicle <- QVehicle.findById personId -- check everytime
-        when (isNothing mbVehicle && allVehicleDocsVerified && allDriverDocsVerified && isNothing multipleRC && inspectionNotRequired && role == DP.DRIVER) $
+        when (shouldActivateRc && isNothing mbVehicle && allVehicleDocsVerified && allDriverDocsVerified && isNothing multipleRC && inspectionNotRequired && role == DP.DRIVER) $
           void $ try @_ @SomeException (activateRCAutomatically personId driverImagesInfo.merchantOperatingCity vehicleDoc.registrationNo)
         if allVehicleDocsVerified then return VehicleDocumentItem {isVerified = True, ..} else return vehicleDoc
 

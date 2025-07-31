@@ -628,7 +628,7 @@ postDriverRegisterPancard (mbPersonId, merchantId, merchantOpCityId) req = do
       imageMetadata <- ImageQuery.findById imageId >>= fromMaybeM (ImageNotFound imageId.getId)
       unless (imageMetadata.verificationStatus == Just Documents.VALID) $ throwError (ImageNotValid imageId.getId)
       unless (imageMetadata.imageType == DTO.PanCard) $
-        throwError (ImageInvalidType (show DTO.PanCard) (show imageMetadata.imageType))
+        throwError (ImageInvalidType (show DTO.PanCard) "")
       Redis.withLockRedisAndReturnValue (Image.imageS3Lock (imageMetadata.s3Path)) 5 $
         S3.get $ T.unpack imageMetadata.s3Path
     checkIfGenuineReq :: (ServiceFlow m r) => API.Types.UI.DriverOnboardingV2.DriverPanReq -> m ()
@@ -743,7 +743,7 @@ postDriverRegisterGstin (mbPersonId, merchantId, merchantOpCityId) req = do
       imageMetadata <- ImageQuery.findById imageId >>= fromMaybeM (ImageNotFound imageId.getId)
       unless (imageMetadata.verificationStatus == Just Documents.VALID) $ throwError (ImageNotValid imageId.getId)
       unless (imageMetadata.imageType == DTO.GSTCertificate) $
-        throwError (ImageInvalidType (show DTO.GSTCertificate) (show imageMetadata.imageType))
+        throwError (ImageInvalidType (show DTO.GSTCertificate) "")
       Redis.withLockRedisAndReturnValue (Image.imageS3Lock (imageMetadata.s3Path)) 5 $
         S3.get $ T.unpack imageMetadata.s3Path
     callIdfy :: Text -> Flow Documents.VerificationStatus

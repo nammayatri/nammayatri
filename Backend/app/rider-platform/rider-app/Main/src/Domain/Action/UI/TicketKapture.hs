@@ -8,6 +8,7 @@ import Data.Aeson (FromJSON, ToJSON, Value, fromJSON)
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Key as Key
 import qualified Data.Aeson.KeyMap as KM
+import Data.List (nubBy)
 import Data.OpenApi (ToSchema)
 import Data.Text
 import qualified Data.Vector as V
@@ -114,7 +115,8 @@ getGetClosedTicketIds (mbPersonId, _) = do
   issueChats <- QIssueChat.findAllByPersonId issuePersonId
   closedTicketsResult <- mapM extractClosedTicket issueChats
   let closedTickets = catMaybes closedTicketsResult
-  pure $ TicketKapture.GetClosedTicketIdsRes {TicketKapture.closedTicketIds = closedTickets}
+  let uniqueClosedTickets = nubBy (\a b -> a.ticketId == b.ticketId) closedTickets
+  pure $ TicketKapture.GetClosedTicketIdsRes {TicketKapture.closedTicketIds = uniqueClosedTickets}
   where
     extractClosedTicket :: ICT.IssueChat -> Environment.Flow (Maybe API.Types.UI.TicketKapture.CloseTicketResp)
     extractClosedTicket issueChat = do

@@ -138,6 +138,11 @@ verifyDL isDashboard mbMerchant (personId, merchantId, merchantOpCityId) req@Dri
                 cacheExtractedDl person.id extractDLNumber operatingCity
                 unless (extractDLNumber == dlNumber) $
                   throwImageError imageId1 $ ImageDocumentNumberMismatch (maybe "null" maskText extractDLNumber) (maybe "null" maskText dlNumber)
+                let extractedDob = VC.parseDateTime =<< extractedDL.dateOfBirth
+                validDob <- VC.compareDateOfBirth extractedDob (Just driverDateOfBirth)
+                unless validDob $ do
+                  logError $ "DOB Mismatch in DL: " <> (show driverDateOfBirth) <> " extracted: " <> (show extractedDob)
+                  throwImageError imageId1 $ ImageDocumentNumberMismatch (show driverDateOfBirth) (show extractedDob)
                 return (nameOnCard, extractedDL.dateOfBirth)
               Nothing -> throwImageError imageId1 ImageExtractionFailed
           else return (Nothing, Nothing)
@@ -187,7 +192,7 @@ verifyDL isDashboard mbMerchant (personId, merchantId, merchantOpCityId) req@Dri
       unless (imageMetadata.verificationStatus == Just Documents.VALID) $ throwError (ImageNotValid imageId.getId)
       unless (imageMetadata.personId == personId) $ throwError (ImageNotFound imageId.getId)
       unless (imageMetadata.imageType == DTO.DriverLicense) $
-        throwError (ImageInvalidType (show DTO.DriverLicense) (show imageMetadata.imageType))
+        throwError (ImageInvalidType (show DTO.DriverLicense) "")
       S3.get $ T.unpack imageMetadata.s3Path
 
     mkTicket description tConfig =

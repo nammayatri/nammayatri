@@ -37,7 +37,8 @@ newtype ResponseException = ResponseException
 
 data CMRLError
   = Unauthorized Text -- credentials missing or token has expired
-  | Forbidden Text -- ip is not whitelisted from cmrl side
+  | Forbidden Text -- IP is not whitelisted from CMRL side
+  | GateWayTimeOut Text -- Response timeout from CMRL side
   | SomethingWentWrong Text -- all other error codes
   deriving (Eq, Show, IsBecknAPIError)
 
@@ -53,23 +54,27 @@ instance FromResponse CMRLError where
     case statusCode (responseStatusCode resp) of
       401 -> Just $ Unauthorized errorMessage
       403 -> Just $ Forbidden errorMessage
+      504 -> Just $ GateWayTimeOut errorMessage
       _ -> Just $ SomethingWentWrong errorMessage
 
 instance IsBaseError CMRLError where
   toMessage = \case
     Unauthorized message -> Just $ "Unauthorized: " <> show message
     Forbidden message -> Just $ "Forbidden: " <> show message
+    GateWayTimeOut message -> Just $ "GateWayTimeOut: " <> show message
     SomethingWentWrong message -> Just $ "SomethingWentWrong: " <> show message
 
 instance IsHTTPError CMRLError where
   toErrorCode = \case
     Unauthorized _ -> "UNAUTHORIZED"
     Forbidden _ -> "FORBIDDEN"
+    GateWayTimeOut _ -> "GATEWAYTIMEOUT"
     SomethingWentWrong _ -> "SOMETHING_WENT_WRONG"
 
   toHttpCode = \case
     Unauthorized _ -> E401
     Forbidden _ -> E403
+    GateWayTimeOut _ -> E504
     SomethingWentWrong _ -> E500
 
 instance IsAPIError CMRLError

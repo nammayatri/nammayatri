@@ -26,6 +26,7 @@ module Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
     DriverAadhaarRes,
     verifyRC,
     verifyPan,
+    parseDateTime,
     verifyGstin,
     verifyAadhaar,
     onVerifyRC,
@@ -47,6 +48,7 @@ module Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
     checkDL,
     checkAadhaar,
     validateDocument,
+    compareDateOfBirth,
   )
 where
 
@@ -308,7 +310,7 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req bulkUpload =
       unless (imageMetadata.verificationStatus == Just Documents.VALID) $ throwError (ImageNotValid imageId_.getId)
       unless (imageMetadata.personId == personId) $ throwError (ImageNotFound imageId_.getId)
       unless (imageMetadata.imageType == ODC.VehicleRegistrationCertificate) $
-        throwError (ImageInvalidType (show ODC.VehicleRegistrationCertificate) (show imageMetadata.imageType))
+        throwError (ImageInvalidType (show ODC.VehicleRegistrationCertificate) "")
       Redis.withLockRedisAndReturnValue (Image.imageS3Lock (imageMetadata.s3Path)) 5 $
         S3.get $ T.unpack imageMetadata.s3Path
 
@@ -395,7 +397,7 @@ verifyPan isDashboard mbMerchant (personId, _, merchantOpCityId) req = do
       unless (imageMetadata.verificationStatus == Just Documents.VALID) $ throwError (ImageNotValid imageId_)
       unless (imageMetadata.personId == personId) $ throwError (ImageNotFound imageId_)
       unless (imageMetadata.imageType == ODC.PanCard) $
-        throwError (ImageInvalidType (show ODC.PanCard) (show imageMetadata.imageType))
+        throwError (ImageInvalidType (show ODC.PanCard) "")
       Redis.withLockRedisAndReturnValue (Image.imageS3Lock (imageMetadata.s3Path)) 5 $
         S3.get $ T.unpack imageMetadata.s3Path
     callIdfy :: Person.Person -> Maybe DPan.DriverPanCard -> DriverDocument -> DTC.TransporterConfig -> Flow APISuccess
@@ -548,7 +550,7 @@ verifyGstin isDashboard mbMerchant (personId, _, merchantOpCityId) req = do
       unless (imageMetadata.verificationStatus == Just Documents.VALID) $ throwError (ImageNotValid imageId_)
       unless (imageMetadata.personId == personId) $ throwError (ImageNotFound imageId_)
       unless (imageMetadata.imageType == ODC.GSTCertificate) $
-        throwError (ImageInvalidType (show ODC.GSTCertificate) (show imageMetadata.imageType))
+        throwError (ImageInvalidType (show ODC.GSTCertificate) "")
       Redis.withLockRedisAndReturnValue (Image.imageS3Lock (imageMetadata.s3Path)) 5 $
         S3.get $ T.unpack imageMetadata.s3Path
     buildGstinCard :: Person.Person -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Flow DGst.DriverGstin
@@ -722,8 +724,7 @@ verifyAadhaar _isDashboard mbMerchant (personId, merchantId, merchantOpCityId) r
       imageMetadata <- ImageQuery.findById (Id imageId_) >>= fromMaybeM (ImageNotFound imageId_)
       unless (imageMetadata.verificationStatus == Just Documents.VALID) $ throwError (ImageNotValid imageId_)
       unless (imageMetadata.personId == personId) $ throwError (ImageNotFound imageId_)
-      unless (imageMetadata.imageType == ODC.AadhaarCard) $
-        throwError (ImageInvalidType (show ODC.AadhaarCard) (show imageMetadata.imageType))
+      unless (imageMetadata.imageType == ODC.AadhaarCard) $ throwError (ImageInvalidType (show ODC.AadhaarCard) "")
       Redis.withLockRedisAndReturnValue (Image.imageS3Lock (imageMetadata.s3Path)) 5 $
         S3.get $ T.unpack imageMetadata.s3Path
 
