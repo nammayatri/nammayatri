@@ -34,6 +34,9 @@ import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.PermissionsScreen.ScreenData (Permissions(..))
 import Screens.Types (PermissionsScreenState, NotificationBody)
+import Helpers.Utils (isParentView, emitLogoutApp)
+import Data.Maybe (Maybe(..))
+import Common.Types.App (LazyCheck(..))
 
 instance showAction :: Show Action where
   show (BackPressed) = "BackPressed"
@@ -222,9 +225,16 @@ eval (AppOnboardingNavBarAC (AppOnboardingNavBar.Logout)) state = continue $ (st
 
 eval (AppOnboardingNavBarAC AppOnboardingNavBar.PrefixImgOnClick) state = continueWithCmd state [ do pure $ BackPressed]
 
-eval (PopUpModalLogoutAction (PopUpModal.OnButton2Click)) state = continue $ (state {props {logoutModalView= false}})
+eval (PopUpModalLogoutAction (PopUpModal.OnButton2Click)) state =  
+  continue $ (state {props {logoutModalView= false}})
 
-eval (PopUpModalLogoutAction (PopUpModal.OnButton1Click)) state = exit $ LogoutAccount
+eval (PopUpModalLogoutAction (PopUpModal.OnButton1Click)) state = do
+    if isParentView FunctionCall
+        then do
+            void $ pure $ emitLogoutApp Nothing
+            continue state
+        else do
+            exit LogoutAccount 
 
 eval (PopUpModalLogoutAction (PopUpModal.DismissPopup)) state = continue state {props {logoutModalView= false}}
 

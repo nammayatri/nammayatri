@@ -62,14 +62,11 @@ export const  killPP = function (services) {
 }
 
 export const initiatePP = function () {
-  if (ppInitiateStatus()) {
-    window.isPPInitiated = true;
+  if (window.isPPInitiated) {
     return;
   }
   try {
-    if (JBridge.initiatePP) {
-      JBridge.initiatePP(JSON.stringify(getInitiatPayload()));
-    }
+    JBridge.runInJuspayBrowser("onEvent", JSON.stringify({"event": "initiatePP", "payload": getInitiatPayload()}), "");
   } catch (err) {
     console.error("Hyperpay initiate Request not sent : ", err);
   }
@@ -166,7 +163,7 @@ export const consumeBP = function (unit){
 }
 
 export const checkPPInitiateStatus = function (cb,services = microapps) {
-  if (ppInitiateStatus() && window.isPPInitiated || (window.isPPInitiated && checkPPLoadStatus(services))) {
+  if (window.isPPInitiated) {
     cb()();
   } else {
     waitTillSeviceLoad(cb,services,checkPPInitiateStatus);
@@ -179,6 +176,7 @@ export const startPP = function (payload) {
       const cb = function (code) {
         return function (_response) {
           return function () {
+            window.isPPInitiated = false;
             const response = JSON.parse(_response);
             console.log("%cHyperpay Response ","background:darkblue;color:white;font-size:13px;padding:2px", response);                                                        
             sc(response.payload.status)();
@@ -198,7 +196,8 @@ export const startPP = function (payload) {
             window.processCallBack = cb;
             console.log("%cHyperpay Callback ", "background:darkblue;color:white;font-size:13px;padding:2px", cb);
             console.log("inside process call", JSON.stringify(payload));
-            JBridge.processPP(JSON.stringify(payload));
+            JBridge.runInJuspayBrowser("onEvent", JSON.stringify({"event": "processPP", "payload": payload}), "");
+            // JBridge.processPP(JSON.stringify(payload));
           } else {
             if (JOS.isMAppPresent("in.juspay.hyperpay")()){
               console.log("inside process call");

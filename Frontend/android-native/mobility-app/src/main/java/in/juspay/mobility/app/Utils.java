@@ -1,12 +1,15 @@
 package in.juspay.mobility.app;
 
 import android.app.Activity;
+import android.app.NotificationChannelGroup;
+import android.app.NotificationManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Base64;
 import android.util.Log;
@@ -161,6 +164,63 @@ public class Utils {
     // method to convert dp to pixels
     public static int dpToPx(Context context, float dp) {
         return Math.round(dp * context.getResources().getDisplayMetrics().density);
+    }
+
+
+    public static void initNotificationChannel(Context context) {
+        NotificationManager notificationManager = context.getSystemService(NotificationManager.class);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            try {
+                notificationManager.deleteNotificationChannel("RINGING_ALERT");
+                notificationManager.deleteNotificationChannel("TRIP_STARTED");
+                notificationManager.deleteNotificationChannel("General");
+                notificationManager.deleteNotificationChannel("FLOATING_NOTIFICATION");
+                notificationManager.deleteNotificationChannel("DRIVER_QUOTE_INCOMING");
+                notificationManager.deleteNotificationChannel("DRIVER_ASSIGNMENT");
+                notificationManager.deleteNotificationChannel("REALLOCATE_PRODUCT");
+                notificationManager.deleteNotificationChannel("GENERAL_NOTIFICATION");
+                notificationManager.deleteNotificationChannel("RIDE_STARTED");
+                notificationManager.deleteNotificationChannel("CANCELLED_PRODUCT");
+                notificationManager.deleteNotificationChannel("DRIVER_HAS_REACHED");
+                notificationManager.deleteNotificationChannel("TRIP_FINISHED");
+                notificationManager.deleteNotificationChannel("SOS_TRIGGERED");
+                notificationManager.deleteNotificationChannel("SOS_RESOLVED");
+            } catch(Exception e) {
+                System.out.println("Notification Channel doesn't exists");
+            }
+        }
+
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannelGroup safetyGroup = new NotificationChannelGroup("1_safety", "Enhanced Safety");
+            NotificationChannelGroup rideRelatedGroup = new NotificationChannelGroup("2_ride_related", "Essential - Ride related");
+            NotificationChannelGroup serviceGroup = new NotificationChannelGroup("3_services", "Services");
+            NotificationChannelGroup promotionalGroup = new NotificationChannelGroup("4_promotional", "Promotional");
+
+            if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.P){
+                safetyGroup.setDescription("Notifications related to Safety");
+                rideRelatedGroup.setDescription("Notifications related to ride starts, end");
+                serviceGroup.setDescription("Notifications related to Services");
+                promotionalGroup.setDescription("Notifications related to promotional");
+            }
+
+            notificationManager.createNotificationChannelGroup(safetyGroup);
+            notificationManager.createNotificationChannelGroup(rideRelatedGroup);
+            notificationManager.createNotificationChannelGroup(serviceGroup);
+            notificationManager.createNotificationChannelGroup(promotionalGroup);
+        }
+
+
+        NotificationUtils.createNotificationChannel(context, NotificationUtils.DRIVER_QUOTE_INCOMING);
+        NotificationUtils.createNotificationChannel(context, NotificationUtils.DRIVER_ASSIGNMENT);
+        NotificationUtils.createNotificationChannel(context, NotificationUtils.REALLOCATE_PRODUCT);
+        NotificationUtils.createNotificationChannel(context, NotificationUtils.GENERAL_NOTIFICATION);
+        NotificationUtils.createNotificationChannel(context, NotificationUtils.RIDE_STARTED);
+        NotificationUtils.createNotificationChannel(context, NotificationUtils.CANCELLED_PRODUCT);
+        NotificationUtils.createNotificationChannel(context, NotificationUtils.DRIVER_HAS_REACHED);
+        NotificationUtils.createNotificationChannel(context, NotificationUtils.SOS_TRIGGERED);
+        NotificationUtils.createNotificationChannel(context, NotificationUtils.SOS_RESOLVED);
+        NotificationUtils.createNotificationChannel(context, NotificationUtils.NOSOUND_NOTIFICATION);
     }
 
 }

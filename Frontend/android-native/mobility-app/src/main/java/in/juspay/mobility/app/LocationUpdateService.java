@@ -156,6 +156,8 @@ public class LocationUpdateService extends Service {
     private boolean isSpecialpickup = false;
     private String driverId = "empty";
 
+    private static final String GRPC_SERVICE_CLASS = "in.juspay.mobility.messaging.GRPCNotificationService";
+
 
     enum LocationSource {
         CurrentLocation,
@@ -270,9 +272,10 @@ public class LocationUpdateService extends Service {
             @Override
             public void onReceive(Context context, Intent intent) {
                 Log.i("LOCATION_UPDATE_SERVICE", "internet broadcast receiver received a callback");
-                if(isNetworkAvailable(context) && !isServiceRunning(context, GRPCNotificationService.class.getName()) && isServiceRunning(context, LocationUpdateService.class.getName())){
+                if(isNetworkAvailable(context) && !isServiceRunning(context, GRPC_SERVICE_CLASS) && isServiceRunning(context, LocationUpdateService.class.getName())){
                     Log.i("LOCATION_UPDATE_SERVICE", "internet broadcast receiver received a callback with network available state");
-                    Intent grpcServiceIntent = new Intent(context, GRPCNotificationService.class);
+                    Intent grpcServiceIntent = new Intent();
+                    grpcServiceIntent.setClassName(context,GRPC_SERVICE_CLASS);
                     context.startService(grpcServiceIntent);
                 }
             }
@@ -346,9 +349,10 @@ public class LocationUpdateService extends Service {
 
         try {
             // starting GRPC service
-            if (!isServiceRunning(context, GRPCNotificationService.class.getName())) {
+            if (!isServiceRunning(context, GRPC_SERVICE_CLASS)) {
                 Log.i("SERVICE", " Starting GRPC service from onStartCommand location update service ");
-                Intent grpcServiceIntent = new Intent(context, GRPCNotificationService.class);
+                Intent grpcServiceIntent = new Intent();
+                grpcServiceIntent.setClassName(context,GRPC_SERVICE_CLASS);
                 context.startService(grpcServiceIntent);
             }
         } catch(Exception e){
@@ -482,8 +486,9 @@ public class LocationUpdateService extends Service {
         try {
             // stopping GRPC service
             Log.i("SERVICE", " I am here to stop GRPC service ");
-            if (isServiceRunning(context, GRPCNotificationService.class.getName())) {
-                Intent grpcServiceIntent = new Intent(context, GRPCNotificationService.class);
+            if (isServiceRunning(context, GRPC_SERVICE_CLASS)) {
+                Intent grpcServiceIntent = new Intent();
+                grpcServiceIntent.setClassName(context,GRPC_SERVICE_CLASS);
                 context.stopService(grpcServiceIntent);
             }
         } catch(Exception e){

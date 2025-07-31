@@ -63,6 +63,7 @@ initData = {
       bannerLength : 0,
       glBannerClickable : true,
       nammaClubEnabled : false,
-      nyClubConsent : Nothing
+      nyClubConsent : Nothing,
+      showGoBack: false
     }
 }
