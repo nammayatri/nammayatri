@@ -28,8 +28,10 @@ import qualified Storage.Queries.BookingUpdateRequest as QBUR
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
+import qualified Storage.Queries.Person as SQP
 import qualified Storage.Queries.Ride as QR
 import qualified Storage.Queries.SearchRequest as QSR
+import qualified Tools.Notifications as Notify
 
 postEditResult ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -75,12 +77,14 @@ postEditResult (mbPersonId, _, _) bookingUpdateReqId EditBookingRespondAPIReq {.
           QB.updateMultipleById bookingUpdateReq.estimatedFare bookingUpdateReq.maxEstimatedDistance estimatedDistance bookingUpdateReq.fareParamsId.getId bookingUpdateReq.bookingId
           CallBAP.sendUpdateEditDestToBAP booking ride bookingUpdateReq Nothing Nothing OU.CONFIRM_UPDATE
           void $ Redis.unlockRedis (editDestinationLockKey driverId)
+          driver <- SQP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
           mbUpdatedloc <- QL.findById dropLocMapRide.locationId
           whenJust mbUpdatedloc $ \updatedloc -> do
             let (lat, lon) = (updatedloc.lat, updatedloc.lon)
             let mbGeohash = T.pack <$> DG.encode 9 (lat, lon)
             whenJust mbGeohash $ \geohash -> do
               Redis.setExp (editDestinationUpdatedLocGeohashKey driverId) geohash (2 * 60 * 60)
+          Notify.notifyEditDestination ride.merchantOperatingCityId driverId driver.deviceToken -- when ride.status in [INPROGRESS, NEW]
           return Success
     else do
       let (errorType, errorMessage) = errorMessageByBookingType lockEditDestination
