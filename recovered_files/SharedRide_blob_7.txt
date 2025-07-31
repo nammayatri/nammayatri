@@ -1,0 +1,178 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  SharedBooking: Domain.Types.SharedBooking
+  Ride: Domain.Types.Ride
+  Person: Domain.Types.Person
+  Price: Kernel.Types.Common
+  BaseUrl: Kernel.Types.Common
+  VehicleVariant: Domain.Types.VehicleVariant
+  ServiceTierType: Domain.Types.ServiceTierType
+  Value: Data.Aeson
+  Meters: Kernel.Types.Common
+  HighPrecMeters: Kernel.Types.Common
+  HighPrecMoney: Kernel.Types.Common
+  TripCategory: Domain.Types.Common
+  RideEndedBy: Domain.Types.Ride
+  Currency: Kernel.Utils.Common
+  parseBaseUrl: Kernel.Prelude
+  showBaseUrl: Kernel.Prelude
+
+SharedRide:
+  tableName: shared_ride
+  derives: "Generic,Show"
+
+  fields:
+    id: Id SharedRide
+    transactionId: Text
+    sharedBookingId: Id SharedBooking
+    rideIds: "[Id Ride]"
+    status: SharedRideStatus
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    driverId: Id Person
+    vehicleNumber: Text
+    vehicleModel: Text
+    vehicleVariant: VehicleVariant
+    vehicleServiceTierType: Maybe ServiceTierType
+    waypoints: Value
+    trackingUrl: Maybe BaseUrl
+    totalFare: Maybe Price
+    chargeableDistance: Maybe Meters
+    traveledDistance: HighPrecMeters
+    rideStartTime: Maybe UTCTime
+    rideEndTime: Maybe UTCTime
+    tripCategory: TripCategory
+    numberOfSnapToRoadCalls: Maybe Int
+    numberOfOsrmSnapToRoadCalls: Maybe Int
+    numberOfSelfTuned: Maybe Int
+    numberOfDeviation: Maybe Bool
+    estimatedTollCharges: Maybe HighPrecMoney
+    estimatedTollNames: Maybe "[Text]"
+    tollCharges: Maybe HighPrecMoney
+    tollNames: Maybe "[Text]"
+    rideEndedBy: Maybe RideEndedBy
+    passedThroughDestination: Maybe Bool
+    isPickupOrDestinationEdited: Maybe Bool
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    sharedBookingId: SecondaryKey
+
+  beamType:
+    trackingUrl: Maybe Text
+    totalFare: Maybe HighPrecMoney
+
+  beamFields:
+    totalFare:
+      totalFare: Maybe HighPrecMoney
+      currency: Maybe Currency
+    estimatedTollCharges:
+      estimatedTollCharges: Maybe HighPrecMoney
+      estimatedTollCurrency: Maybe Currency
+    tollCharges:
+      tollCharges: Maybe HighPrecMoney
+      tollCurrency: Maybe Currency
+
+  toTType:
+    trackingUrl: (Kernel.Prelude.fmap showBaseUrl)|I
+    currency: (totalFare <&> (.currency))|E
+    estimatedTollCurrency: (estimatedTollCharges <&> (.currency))|E
+    tollCurrency: (tollCharges <&> (.currency))|E
+
+  fromTType:
+    trackingUrl: (Kernel.Prelude.mapM parseBaseUrl)|MI
+    totalFare: Kernel.Utils.Common.mkPrice currency <$> totalFare|E
+    estimatedTollCharges: Kernel.Utils.Common.mkPrice estimatedTollCurrency <$> estimatedTollCharges|E
+    tollCharges: Kernel.Utils.Common.mkPrice tollCurrency <$> tollCharges|E
+
+  sqlType:
+    transactionId: character varying(36)
+    sharedBookingId: uuid
+    rideIds: "uuid[]"
+    status: character varying(255)
+    merchantId: character varying(36)
+    merchantOperatingCityId: character varying(36)
+    driverId: character varying(36)
+    vehicleNumber: character varying(255)
+    vehicleModel: character varying(255)
+    vehicleVariant: character varying(60)
+    vehicleServiceTierType: character varying(255)
+    waypoints: jsonb
+    trackingUrl: character varying(255)
+    totalFare: numeric(30,2)
+    chargeableDistance: double precision
+    traveledDistance: double precision
+    rideStartTime: timestamptz
+    rideEndTime: timestamptz
+    tripCategory: character varying(255)
+    numberOfSnapToRoadCalls: integer
+    numberOfOsrmSnapToRoadCalls: integer
+    numberOfSelfTuned: integer
+    numberOfDeviation: boolean
+    estimatedTollCharges: double precision
+    estimatedTollNames: "text[]"
+    tollCharges: double precision
+    tollNames: "text[]"
+    rideEndedBy: character varying(255)
+    passedThroughDestination: boolean
+    isPickupOrDestinationEdited: boolean
+    createdAt: timestamptz
+    updatedAt: timestamptz
+    currency: character varying(255)
+    estimatedTollCurrency: character varying(255)
+    tollCurrency: character varying(255)
+
+  queries:
+    findByTransactionId:
+      kvFunction: findOneWithKV
+      where: transactionId
+
+    findBySharedBookingId:
+      kvFunction: findOneWithKV
+      where: sharedBookingId
+
+    updateStatus:
+      kvFunction: updateOneWithKV
+      params: [status, updatedAt]
+      where: id
+
+    updateRideStartTime:
+      kvFunction: updateOneWithKV
+      params: [rideStartTime, updatedAt]
+      where: id
+
+    updateRideEndTime:
+      kvFunction: updateOneWithKV
+      params: [rideEndTime, updatedAt]
+      where: id
+
+    updateTotalFare:
+      kvFunction: updateOneWithKV
+      params: [totalFare, updatedAt]
+      where: id
+
+    updateTollCharges:
+      kvFunction: updateOneWithKV
+      params: [tollCharges, tollNames, updatedAt]
+      where: id
+
+    findByDriverId:
+      kvFunction: findAllWithKV
+      where: driverId
+
+    findByStatus:
+      kvFunction: findAllWithKV
+      where: status
+
+    findActiveRides:
+      kvFunction: findAllWithKV
+      where:
+        and: [driverId, status]
+
+  types:
+    SharedRideStatus:
+      enum: "UPCOMING, NEW, INPROGRESS, COMPLETED, CANCELLED"
+      derive: "HttpInstance"
