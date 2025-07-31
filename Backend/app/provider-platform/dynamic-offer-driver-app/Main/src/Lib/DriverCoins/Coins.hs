@@ -180,10 +180,20 @@ hEndRide driverId merchantId merchantOpCityId isDisabled coinsRewardedOnGoldTier
     DCT.MetroRideCompleted mRideType maybeCount -> do
       metroRideCount <- fromMaybe 0 <$> getMetroRideCountByDriverIdKey driverId mRideType
       logDebug $ "Metro Ride Type DB - " <> show mRideType <> "and count - " <> show maybeCount <> "Metro Ride Count from Redis - " <> show metroRideCount
-      let conditions = [pure (mRideType == metroRideType)] ++ maybe [] (\cnt -> [pure (metroRideCount == cnt)]) maybeCount
-      runActionWhenValidConditions
-        conditions
-        $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory
+      let conditionsForEveryRide = [pure (mRideType == metroRideType)]
+      let conditionsForXRide = maybe [pure False] (\cnt -> conditionsForEveryRide ++ [pure (metroRideCount == cnt)]) maybeCount
+      if isJust maybeCount
+        then
+          runActionWhenValidConditions
+            conditionsForXRide
+            $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory
+        else
+          if isNothing maybeCount
+            then
+              runActionWhenValidConditions
+                conditionsForEveryRide
+                $ updateEventAndGetCoinsvalue driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins entityId vehCategory
+            else pure 0
     _ -> pure 0
 
 hDriverReferral :: EventFlow m r => Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DR.Ride -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> TransporterConfig -> Maybe Text -> DTV.VehicleCategory -> m Int
