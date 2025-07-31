@@ -1,0 +1,99 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+  VehicleCategory: BecknV2.OnDemand.Enums
+  TripCategory: Domain.Types.Common
+  Value: Data.Aeson
+  SharedEntityStatus: Domain.Types.SharedEntity
+  SharedEntityType: Domain.Types.SharedEntity
+  TrackedEntity: Domain.Types.SharedEntity
+
+SharedEntity:
+  tableName: shared_entity
+
+  derives: "Generic, Show"
+
+  fields:
+    id: Id SharedEntity
+    status: SharedEntityStatus
+    entityType: SharedEntityType
+    searchRequestIds: "[TrackedEntity]"
+    estimateIds: "[TrackedEntity]"
+    bookingIds: "[TrackedEntity]"
+    rideIds: "[TrackedEntity]"
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    vehicleCategory: VehicleCategory
+    tripCategory: TripCategory
+    driverId: Maybe (Id Person)
+    bapSharedEntityId: Maybe Text
+    waypoints: Value
+    totalSeats: Int
+    pairingTime: Maybe UTCTime
+    validTill: UTCTime
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  beamType:
+    searchRequestIds: "[Text]"
+    estimateIds: "[Text]"
+    bookingIds: "[Text]"
+    rideIds: "[Text]"
+
+  fromTType:
+    searchRequestIds: Kernel.Prelude.mapM Kernel.Prelude.readMaybe searchRequestIds|EM
+    estimateIds: Kernel.Prelude.mapM Kernel.Prelude.readMaybe estimateIds|EM
+    bookingIds: Kernel.Prelude.mapM Kernel.Prelude.readMaybe bookingIds|EM
+    rideIds: Kernel.Prelude.mapM Kernel.Prelude.readMaybe rideIds|EM
+
+  toTType:
+    searchRequestIds: Kernel.Prelude.fmap Kernel.Prelude.show searchRequestIds|E
+    estimateIds: Kernel.Prelude.fmap Kernel.Prelude.show estimateIds|E
+    bookingIds: Kernel.Prelude.fmap Kernel.Prelude.show bookingIds|E
+    rideIds: Kernel.Prelude.fmap Kernel.Prelude.show rideIds|E
+
+  constraints:
+    id: PrimaryKey
+
+  sqlType:
+    searchRequestIds: text[]
+    estimateIds: text[]
+    bookingIds: text[]
+    rideIds: text[]
+    waypoints: jsonb
+
+  default:
+    tripCategory: "'RideShare'"
+
+  queries:
+    findByStatus:
+      kvFunction: findAllWithKV
+      where: status
+
+    findByDriverId:
+      kvFunction: findAllWithKV
+      where: driverId
+
+    findByMerchantOperatingCityId:
+      kvFunction: findAllWithKV
+      where: merchantOperatingCityId
+
+    findByBapSharedEntityId:
+      kvFunction: findOneWithKV
+      where: bapSharedEntityId
+
+    updateStatus:
+      kvFunction: updateWithKV
+      params: [status, updatedAt]
+      where: id
+
+    updateDriverAssignment:
+      kvFunction: updateWithKV
+      params: [driverId, updatedAt]
+      where: id
+
+    updateBapSharedEntityId:
+      kvFunction: updateWithKV
+      params: [bapSharedEntityId, updatedAt]
+      where: id
