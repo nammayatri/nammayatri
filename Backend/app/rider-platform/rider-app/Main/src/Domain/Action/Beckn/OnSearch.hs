@@ -488,7 +488,7 @@ buildEstimate providerInfo now searchRequest deploymentVersion EstimateInfo {..}
         tripCategory = Just tripCategory,
         insuredAmount = insuranceConfig >>= (.insuredAmount),
         isMultimodalSearch = searchRequest.isMultimodalSearch,
-        sharedEstimateId = Nothing, -- VaibhavD : Re-evaluate
+        sharedEntityId = Nothing, -- VaibhavD : Re-evaluate
         ..
       }
 

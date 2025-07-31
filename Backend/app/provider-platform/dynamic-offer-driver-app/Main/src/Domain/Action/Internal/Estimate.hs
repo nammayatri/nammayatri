@@ -74,7 +74,7 @@ data BppEstimate = BppEstimate
     updatedAt :: UTCTime,
     vehicleServiceTier :: ServiceTierType,
     vehicleServiceTierName :: Maybe Text,
-    sharedEstimateId :: Maybe Text --VaibhavD : Re-evaluate
+    sharedEntityId :: Maybe Text --VaibhavD : Re-evaluate
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 

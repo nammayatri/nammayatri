@@ -92,7 +92,7 @@ SearchRequest:
     allJourneysLoaded: Maybe Bool
     searchMode: Maybe SearchMode
     isMultimodalSearch: Maybe Bool
-    sharedSearchRequestId: Maybe Text
+    sharedEntityId: Maybe Text
 
   default:
     hasMultimodalSearch: "false"
@@ -128,7 +128,7 @@ SearchRequest:
     currency: character varying(255)
     fromLocationId: character varying(36)
     configInExperimentVersions: "json"
-    sharedSearchRequestId: character varying(36)
+    sharedEntityId: character varying(36)
 
   beamFields:
     distance:
@@ -265,10 +265,10 @@ SearchRequest:
       where: id
       params: [isPetRide]
 
-    updateSharedSearchRequestId:
+    updateSharedEntityId:
       kvFunction: updateOneWithKV
       where: id
-      params: [sharedSearchRequestId]
+      params: [sharedEntityId]
 
   constraints:
     id: PrimaryKey

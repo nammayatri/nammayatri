@@ -151,9 +151,3 @@ ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN is_insured boolean ;
 
 ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN insured_amount text ;
 ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN is_pet_ride boolean ;
-
-
-
-------- SQL updates -------
-
-ALTER TABLE atlas_driver_offer_bpp.booking ADD COLUMN shared_booking_id character varying(36) ;

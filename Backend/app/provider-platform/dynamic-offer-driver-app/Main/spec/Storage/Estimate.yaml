@@ -61,7 +61,7 @@ Estimate:
       updatedAt: UTCTime
       merchantId: Maybe (Id Merchant)
       merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
-      sharedEstimateId: Maybe Text
+      sharedEntityId: Maybe Text
 
     beamFields:
       farePolicy:
@@ -79,7 +79,7 @@ Estimate:
     sqlType:
       farePolicyId: character varying(36)
       tipOptions: integer[]
-      sharedEstimateId: character varying(36)
+      sharedEntityId: character varying(36)
     beamType:
       updatedAt: Maybe UTCTime
       isScheduled: Maybe Bool
@@ -130,7 +130,7 @@ Estimate:
         where:
           and: [requestId, eligibleForUpgrade]
 
-      updateSharedEstimateId:
+      updateSharedEntityId:
         kvFunction: updateWithKV
         where: id
-        params: [sharedEstimateId]
+        params: [sharedEntityId]

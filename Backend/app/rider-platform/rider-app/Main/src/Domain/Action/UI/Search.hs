@@ -632,7 +632,7 @@ buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCit
         allJourneysLoaded = Just False,
         searchMode = searchMode,
         isMultimodalSearch = Just $ isJust journeySearchData,
-        sharedSearchRequestId = Nothing, --VaibhavD : Re-evaluate
+        sharedEntityId = Nothing, --VaibhavD : Re-evaluate
         ..
       }
   where
