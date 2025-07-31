@@ -660,17 +660,27 @@ public  class MyFirebaseMessagingService {
 
     private static void addUpdateStop(Context context,JSONObject driverPayloadJsonObject){
         try {
+            SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+            String rideStatus = sharedPref.getString(context.getString(R.string.RIDE_STATUS), "");
+
             String stopTitle = driverPayloadJsonObject.has("isEdit") && driverPayloadJsonObject.getBoolean("isEdit") ? context.getString(R.string.customer_edited) : context.getString(R.string.customer_added); // TODO:: Temporary added until context data comes from backend
             driverPayloadJsonObject.put("title", stopTitle);
-            driverPayloadJsonObject.put("okButtonText", context.getString(R.string.navigate_to_location));
-            driverPayloadJsonObject.put("cancelButtonText", context.getString(R.string.close));
+
+            if (rideStatus.equals("DRIVER_ASSIGNMENT")) {
+                driverPayloadJsonObject.put("okButtonText", "Ok");
+                driverPayloadJsonObject.put("actions", new JSONArray());
+                driverPayloadJsonObject.put("buttonCancelVisibility", false);
+            } else {
+                driverPayloadJsonObject.put("okButtonText", context.getString(R.string.navigate_to_location));
+                driverPayloadJsonObject.put("cancelButtonText", context.getString(R.string.close));
+                driverPayloadJsonObject.put("actions", new JSONArray().put("NAVIGATE"));
+                driverPayloadJsonObject.put("buttonCancelVisibility", true);
+            }
             driverPayloadJsonObject.put("imageUrl", "https://firebasestorage.googleapis.com/v0/b/jp-beckn-dev.appspot.com/o/do_not%2Fadd_stop.png?alt=media&token=063c3661-3cfe-4950-a043-f7f49ed2c7fc");
             driverPayloadJsonObject.put("titleVisibility", true);
             driverPayloadJsonObject.put("buttonOkVisibility", true);
-            driverPayloadJsonObject.put("buttonCancelVisibility", true);
             driverPayloadJsonObject.put("imageVisibility", true);
             driverPayloadJsonObject.put("buttonLayoutVisibility", true);
-            driverPayloadJsonObject.put("actions", new JSONArray().put("NAVIGATE"));
             double editLat = Double.NaN;
             double editLon = Double.NaN;
             if (driverPayloadJsonObject.has("stop")) {
