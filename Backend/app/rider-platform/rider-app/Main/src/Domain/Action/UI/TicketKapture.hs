@@ -1,26 +1,34 @@
 {-# OPTIONS_GHC -Wwarn=unused-imports #-}
 
-module Domain.Action.UI.TicketKapture (postKaptureCustomerLogin, postKaptureCloseTicket, getGetAllActiveTickets) where
+module Domain.Action.UI.TicketKapture (postKaptureCustomerLogin, postKaptureCloseTicket, getGetAllActiveTickets, getGetClosedTicketDetails, getGetClosedTicketIds) where
 
 import qualified API.Types.UI.TicketKapture
 import qualified API.Types.UI.TicketKapture as TicketKapture
-import Data.OpenApi (ToSchema)
+import Data.Aeson (Value, fromJSON)
+import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Key as Key
+import qualified Data.Aeson.KeyMap as KM
+import Data.Text
+import qualified Data.Vector as V
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
-import qualified Domain.Types.Ride
 import qualified Environment
 import EulerHS.Prelude hiding (id)
+import IssueManagement.Common (IssueStatus (..))
+import qualified IssueManagement.Domain.Types.Issue.IssueChat as ICT
+import qualified IssueManagement.Storage.Queries.Issue.IssueChat as QIssueChat
+import qualified IssueManagement.Storage.Queries.Issue.IssueReport as QIssueReport
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import qualified Kernel.External.Ticket.Interface.Types as TIT
+import qualified Kernel.External.Ticket.Kapture.Types as Kapture
 import qualified Kernel.Prelude
-import Kernel.Types.APISuccess (APISuccess (..))
+import qualified Kernel.Types.APISuccess as API
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
-import Servant hiding (throwError)
+import Storage.Beam.IssueManagement ()
 import qualified Storage.Queries.Person as QPerson
-import Tools.Auth
 import Tools.Ticket
 
 postKaptureCustomerLogin ::
@@ -59,36 +67,14 @@ postKaptureCloseTicket ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
-    Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Ride.Ride) ->
-    Environment.Flow APISuccess
+    Data.Text.Text ->
+    Environment.Flow API.APISuccess
   )
-postKaptureCloseTicket (mbPersonId, _) mbRideId = do
+postKaptureCloseTicket (mbPersonId, _) ticketId = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  resp <- kapturePullTicket person.merchantId person.merchantOperatingCityId (TIT.KapturePullTicketReq personId.getId "P" "0" "100")
-  let matchedTicketIds = case mbRideId of
-        Nothing ->
-          [ ticketSummary.ticketId
-            | ticketSummary <- resp.message,
-              ticketSummary.status == "Pending",
-              case ticketSummary.additionalInfo of
-                Just (TIT.PullAdditionalDetails (TIT.RideIdObject mbR)) ->
-                  case mbR of
-                    Nothing -> True
-                    Just t -> t == "" || t == "null"
-                _ -> True
-          ]
-        Just rideId ->
-          [ ticketSummary.ticketId
-            | ticketSummary <- resp.message,
-              ticketSummary.status == "Pending",
-              case ticketSummary.additionalInfo of
-                Just (TIT.PullAdditionalDetails (TIT.RideIdObject (Just t))) -> t == rideId.getId
-                _ -> False
-          ]
-  forM_ matchedTicketIds $ \ticketId -> do
-    updateTicket person.merchantId person.merchantOperatingCityId (TIT.UpdateTicketReq "" ticketId TIT.RS)
-  pure Success
+  _ <- updateTicket person.merchantId person.merchantOperatingCityId (TIT.UpdateTicketReq "" ticketId TIT.RS)
+  pure API.Success
 
 getGetAllActiveTickets ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -104,7 +90,7 @@ getGetAllActiveTickets (mbPersonId, _) = do
         [ TicketKapture.ActiveTicketsRes
             { rideId =
                 case ticketSummary.additionalInfo of
-                  Just (TIT.PullAdditionalDetails (TIT.RideIdObject (Just ridText)))
+                  Just (TIT.PullAdditionalDetails (Just (TIT.RideIdObject (Just ridText))))
                     | ridText /= "" && ridText /= "null" -> Just (Kernel.Types.Id.Id ridText)
                   _ -> Nothing,
               ticketId = ticketSummary.ticketId
@@ -113,3 +99,54 @@ getGetAllActiveTickets (mbPersonId, _) = do
             ticketSummary.status == "Pending"
         ]
   pure $ TicketKapture.GetAllActiveTicketsRes {TicketKapture.activeTickets = activeTickets}
+
+getGetClosedTicketIds ::
+  ( (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) ->
+    Environment.Flow API.Types.UI.TicketKapture.GetClosedTicketIdsRes
+  )
+getGetClosedTicketIds (mbPersonId, _) = do
+  -- Convert Domain.Types.Person.Person Id to IssueManagement.Common.Person Id
+  personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  let issuePersonId = Kernel.Types.Id.cast personId
+  issueChats <- QIssueChat.findAllByPersonId issuePersonId
+  closedTicketsResult <- mapM extractClosedTicket issueChats
+  let closedTickets = catMaybes closedTicketsResult
+  pure $ TicketKapture.GetClosedTicketIdsRes {TicketKapture.closedTicketIds = closedTickets}
+  where
+    extractClosedTicket :: ICT.IssueChat -> Environment.Flow (Maybe API.Types.UI.TicketKapture.CloseTicketResp)
+    extractClosedTicket issueChat = do
+      case issueChat.issueReportId of
+        Nothing -> pure Nothing
+        Just issueReportId -> do
+          mbIssueReport <- QIssueReport.findById issueReportId
+          case mbIssueReport of
+            Nothing -> pure Nothing
+            Just issueReport ->
+              if issueReport.status == CLOSED || issueReport.status == RESOLVED
+                then
+                  pure $
+                    Just $
+                      TicketKapture.CloseTicketResp
+                        { TicketKapture.rideId = Kernel.Types.Id.cast <$> issueChat.rideId,
+                          TicketKapture.ticketId = issueChat.ticketId
+                        }
+                else pure Nothing
+
+getGetClosedTicketDetails ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Data.Text.Text ->
+    Environment.Flow API.Types.UI.TicketKapture.GetClosedTicketDetailsRes
+  )
+getGetClosedTicketDetails (_mbPersonId, _) ticketId = do
+  mbIssueChat <- QIssueChat.findByTicketId ticketId
+  case mbIssueChat of
+    Nothing -> do
+      pure $ TicketKapture.GetClosedTicketDetailsRes {TicketKapture.chatMessages = []}
+    Just issueChat -> do
+      case issueChat.kaptureData of
+        Nothing -> do
+          pure $ TicketKapture.GetClosedTicketDetailsRes {TicketKapture.chatMessages = []}
+        Just chatMessages -> do
+          pure $ TicketKapture.GetClosedTicketDetailsRes {TicketKapture.chatMessages = chatMessages}

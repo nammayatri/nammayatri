@@ -25,6 +25,7 @@ import qualified API.Action.UI.DriverOnboardingV2 as DriverOnboardingV2
 import qualified API.Action.UI.DriverProfileQuestions as DriverProfileQuestions
 import qualified API.Action.UI.EditBooking as EditBooking
 import qualified API.Action.UI.FareCalculator as FareCalculator
+import qualified API.Action.UI.Insurance as Insurance
 import qualified API.Action.UI.LmsModule as LmsModule
 import qualified API.Action.UI.Merchant as Merchant
 import qualified API.Action.UI.MeterRide as MeterRide
@@ -125,6 +126,7 @@ type API =
            :<|> CallFeedback.API
            :<|> OH.API
            :<|> Operator.API
+           :<|> Insurance.API
        )
 
 handler :: FlowServer API
@@ -179,3 +181,4 @@ handler =
     :<|> CallFeedback.handler
     :<|> OH.handler
     :<|> Operator.handler
+    :<|> Insurance.handler

@@ -9,6 +9,8 @@ import Kernel.Beam.Functions
 import qualified Kernel.External.AadhaarVerification as AadhaarVerification
 import qualified Kernel.External.Call as Call
 import Kernel.External.IncidentReport.Interface.Types as IncidentReport
+import qualified Kernel.External.Insurance.Interface.Types as Insurance
+import qualified Kernel.External.Insurance.Types as Insurance
 import qualified Kernel.External.Maps.Interface.Types as Maps
 import qualified Kernel.External.Maps.Types as Maps
 import Kernel.External.MultiModal.Interface.Types as MultiModal
@@ -139,3 +141,5 @@ getServiceNameConfigJSON = \case
     MultiModal.OTPTransitConfig cfg -> (Domain.MultiModalService MultiModal.OTPTransit, toJSON cfg)
   Domain.WalletServiceConfig walletCfg -> case walletCfg of
     GW.GoogleWalletConfig cfg -> (Domain.WalletService GW.GoogleWallet, toJSON cfg)
+  Domain.InsuranceServiceConfig insuranceCfg -> case insuranceCfg of
+    Insurance.AckoInsuranceConfig cfg -> (Domain.InsuranceService Insurance.Acko, toJSON cfg)

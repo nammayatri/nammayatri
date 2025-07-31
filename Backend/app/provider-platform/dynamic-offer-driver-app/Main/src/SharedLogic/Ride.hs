@@ -274,7 +274,9 @@ buildRide driver booking ghrId otp enableFrequentLocationUpdates clientId dinfo 
         estimatedEndTimeRange = Nothing,
         rideTags = Nothing,
         hasStops = booking.hasStops,
-        isPickupOrDestinationEdited = Just False
+        isPickupOrDestinationEdited = Just False,
+        isInsured = booking.isInsured,
+        insuredAmount = booking.insuredAmount
       }
 
 buildTrackingUrl :: Id DRide.Ride -> Flow BaseUrl

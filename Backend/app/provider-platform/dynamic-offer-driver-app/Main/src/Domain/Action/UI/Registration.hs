@@ -398,7 +398,8 @@ makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigV
         useFakeOtp,
         clientId = Nothing,
         driverTag = Just [safetyCohortNewTag],
-        maskedMobileDigits = fmap (takeEnd 4) req.mobileNumber
+        maskedMobileDigits = fmap (takeEnd 4) req.mobileNumber,
+        nyClubConsent = Just False
       }
 
 makeSession ::

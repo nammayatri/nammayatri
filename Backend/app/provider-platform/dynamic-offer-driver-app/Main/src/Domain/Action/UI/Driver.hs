@@ -36,6 +36,7 @@ module Domain.Action.UI.Driver
     HistoryEntryDetailsEntityV2 (..),
     ClearDuesRes (..),
     GetCityReq (..),
+    GetConsentReq (..),
     GetCityResp (..),
     DriverFeeResp (..),
     UpdateProfileInfoPoints (..),
@@ -81,6 +82,7 @@ module Domain.Action.UI.Driver
     getSecurityDepositDfStatus,
     refundByPayoutDriverFee,
     mkPayoutLockKeyByDriverAndService,
+    consentResponse,
   )
 where
 
@@ -369,7 +371,9 @@ data DriverInformationRes = DriverInformationRes
     softBlockExpiryTime :: Maybe UTCTime,
     softBlockReasonFlag :: Maybe Text,
     onboardingVehicleCategory :: Maybe VehicleCategory,
-    subscriptionDown :: Maybe Bool
+    subscriptionDown :: Maybe Bool,
+    driverTags :: Maybe DA.Value,
+    nyClubConsent :: Maybe Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -436,7 +440,9 @@ data DriverEntityRes = DriverEntityRes
     softBlockExpiryTime :: Maybe UTCTime,
     softBlockReasonFlag :: Maybe Text,
     onboardingVehicleCategory :: Maybe VehicleCategory,
-    subscriptionDown :: Maybe Bool
+    subscriptionDown :: Maybe Bool,
+    driverTags :: Maybe DA.Value,
+    nyClubConsent :: Maybe Bool
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -504,7 +510,9 @@ data BookingAPIEntity = BookingAPIEntity
     returnTime :: Maybe UTCTime,
     distanceToPickup :: Maybe Meters,
     isScheduled :: Bool,
-    coinsRewardedOnGoldTierRide :: Maybe Int
+    coinsRewardedOnGoldTierRide :: Maybe Int,
+    isInsured :: Maybe Bool,
+    insuredAmount :: Maybe Text
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -663,6 +671,11 @@ data GetCityReq = GetCityReq
   { lat :: Double,
     lon :: Double,
     merchantId :: Maybe (Id DM.Merchant)
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+data GetConsentReq = GetConsentReq
+  { consent :: Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -1024,6 +1037,8 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) service
         softBlockExpiryTime = driverInfo.softBlockExpiryTime,
         softBlockReasonFlag = driverInfo.softBlockReasonFlag,
         onboardingVehicleCategory = driverInfo.onboardingVehicleCategory,
+        driverTags = Just driverTags,
+        nyClubConsent = person.nyClubConsent,
         ..
       }
   where
@@ -2449,7 +2464,7 @@ listScheduledBookings (personId, _, cityId) mbLimit mbOffset mbFromDay mbToDay m
           pure Nothing
         Just quote -> do
           let farePolicyBreakups = maybe [] (mkFarePolicyBreakups Prelude.id mkBreakupItem estimatedDistance Nothing estimatedFare quote.fareParams.congestionChargeViaDp) quote.farePolicy
-          return $ Just $ ScheduleBooking BookingAPIEntity {distanceToPickup = distanceToPickup', ..} (catMaybes farePolicyBreakups)
+          return $ Just $ ScheduleBooking BookingAPIEntity {distanceToPickup = distanceToPickup', isInsured = Just isInsured, ..} (catMaybes farePolicyBreakups)
 
     mkBreakupItem :: Text -> Text -> Maybe DOVT.RateCardItem
     mkBreakupItem title valueInText = do
@@ -2833,3 +2848,9 @@ getDriverSpecificSubscriptionDataWithSubsConfig (personId, _, opCityId) transpor
   return $ DriverSpecificSubscriptionData {..}
   where
     isFreeTrialEnabled subscriptionConfig = (subscriptionConfig <&> (.isFreeTrialDaysApplicable)) == Just True
+
+consentResponse :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> GetConsentReq -> Flow APISuccess
+consentResponse (personId, _, _) req = do
+  logInfo $ "Driver consent request - Driver ID: " <> personId.getId <> ", Consent: " <> show req.consent
+  QPerson.updateNyClubConsent (Just req.consent) personId
+  pure APISuccess.Success

@@ -90,7 +90,7 @@ SearchRequest:
     vehicleCategory: Maybe VehicleCategory
     configInExperimentVersions: "[ConfigVersionMap]"
     allJourneysLoaded: Maybe Bool
-
+    isMultimodalSearch: Maybe Bool
 
   default:
     hasMultimodalSearch: "false"

@@ -4,6 +4,7 @@ import Data.Aeson
 import EulerHS.Prelude hiding (id)
 import IssueManagement.Common
 import IssueManagement.Domain.Types.Issue.IssueReport
+import qualified Kernel.External.Ticket.Kapture.Types as Kapture
 import qualified Kernel.Prelude as BP
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -15,8 +16,9 @@ data IssueChat = IssueChat
     personId :: Id Person,
     chats :: [Text],
     mediaFiles :: [Text],
+    kaptureData :: Maybe [Kapture.ChatMessage],
     issueReportId :: Maybe (Id IssueReport),
     createdAt :: UTCTime,
     updatedAt :: UTCTime
   }
-  deriving (Show, Generic, Read, Eq, Ord, ToJSON, FromJSON, BP.ToSchema)
+  deriving (Show, Generic, Eq, ToJSON, FromJSON, BP.ToSchema)

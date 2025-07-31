@@ -228,6 +228,7 @@ library
       Domain.Action.UI.ExotelEndRide
       Domain.Action.UI.FareCalculator
       Domain.Action.UI.FleetDriverAssociation
+      Domain.Action.UI.Insurance
       Domain.Action.UI.KioskLocation
       Domain.Action.UI.LeaderBoard
       Domain.Action.UI.LmsModule
@@ -255,6 +256,7 @@ library
       Domain.Action.UI.Ride
       Domain.Action.UI.Ride.CancelRide
       Domain.Action.UI.Ride.CancelRide.Internal
+      Domain.Action.UI.Ride.Common
       Domain.Action.UI.Ride.EndRide
       Domain.Action.UI.Ride.EndRide.Internal
       Domain.Action.UI.Ride.StartRide
@@ -735,6 +737,7 @@ library
       API.Action.UI.DriverProfileQuestions
       API.Action.UI.EditBooking
       API.Action.UI.FareCalculator
+      API.Action.UI.Insurance
       API.Action.UI.LmsModule
       API.Action.UI.Merchant
       API.Action.UI.MeterRide
@@ -780,6 +783,7 @@ library
       API.Types.UI.DriverProfileQuestions
       API.Types.UI.EditBooking
       API.Types.UI.FareCalculator
+      API.Types.UI.Insurance
       API.Types.UI.LmsModule
       API.Types.UI.Merchant
       API.Types.UI.MeterRide
