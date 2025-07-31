@@ -221,6 +221,7 @@ public class LocationUpdateServiceV2 extends Service {
     private long rateLimitTimeInSeconds = 2; // Default rate limiting time in seconds
     @Nullable
     private ExecutorService internetCheckExecutor;
+    private static final String GRPC_SERVICE_CLASS = "in.juspay.mobility.messaging.GRPCNotificationService";
     @Nullable
     private Object hyperServices;
 
@@ -394,9 +395,10 @@ public class LocationUpdateServiceV2 extends Service {
                         isCheckingInternet.set(false);
                         if (messageQueue != null) messageQueue.triggerBatchProcess();
                         // Start GRPC service if not running
-                        if (!isServiceRunning(context, GRPCNotificationService.class.getName())) {
+                        if (!isServiceRunning(context, GRPC_SERVICE_CLASS)) {
                             Log.i(TAG, "Starting GRPC service");
-                            Intent grpcServiceIntent = new Intent(context, GRPCNotificationService.class);
+                            Intent grpcServiceIntent = new Intent();
+                            grpcServiceIntent.setClassName(context,GRPC_SERVICE_CLASS);
                             context.startService(grpcServiceIntent);
                         }
                         startLocationUpdates();
@@ -545,8 +547,9 @@ public class LocationUpdateServiceV2 extends Service {
             }
 
             // Start GRPC service if not running
-            if (!isServiceRunning(context, GRPCNotificationService.class.getName())) {
-                Intent grpcServiceIntent = new Intent(context, GRPCNotificationService.class);
+            if (!isServiceRunning(context, GRPC_SERVICE_CLASS)) {
+                Intent grpcServiceIntent = new Intent();
+                grpcServiceIntent.setClassName(context,GRPC_SERVICE_CLASS);
                 context.startService(grpcServiceIntent);
             }
             if (messageQueue != null && messageQueue.size() > locationMaxBatchSize) {
@@ -1347,8 +1350,9 @@ public class LocationUpdateServiceV2 extends Service {
         }
 
         // Stop GRPC service if running
-        if (isServiceRunning(context, GRPCNotificationService.class.getName())) {
-            Intent grpcServiceIntent = new Intent(context, GRPCNotificationService.class);
+        if (isServiceRunning(context, GRPC_SERVICE_CLASS)) {
+            Intent grpcServiceIntent = new Intent();
+            grpcServiceIntent.setClassName(context,GRPC_SERVICE_CLASS);
             context.stopService(grpcServiceIntent);
         }
 
