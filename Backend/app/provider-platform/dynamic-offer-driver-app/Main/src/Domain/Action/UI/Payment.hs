@@ -370,7 +370,12 @@ notifyAndUpdateInvoiceStatusIfPaymentFailed driverId orderId orderStatus eventNa
         Just invoice' -> do
           QDF.updateAutoPayToManual invoice'.driverFeeId
           QDF.updateAutopayPaymentStageById (Just EXECUTION_FAILED) (Just now) invoice'.driverFeeId
-        Nothing -> pure ()
+        Nothing ->
+          logError $
+            "No active execution invoice found for order: "
+              <> orderId.getId
+                pure
+                ()
       when (subsConfig.sendInAppFcmNotifications) $ do
         notifyPaymentFailureIfNotNotified paymentMode
     let toNotify = notifyFailure && isJust mbBankErrorCode && subsConfig.sendInAppFcmNotifications
