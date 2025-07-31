@@ -813,10 +813,6 @@ emitTerminateApp screen exitApp = runFn3 emitJOSEvent "java" "onEvent" $ encode 
   , registration_token: Nothing
   }
 }
-getDeepLinkOptions :: LazyCheck -> Maybe DeeplinkOptions
-getDeepLinkOptions _ =
-  let mBPayload = getGlobalPayload globalPayload
-  in maybe Nothing (\payload -> payload ^. _payload ^. _deeplinkOptions) mBPayload
 
 emitLogoutApp :: Maybe String -> Unit
 emitLogoutApp screen = runFn3 emitJOSEvent "java" "onEvent" $ encode $  EventPayload {
