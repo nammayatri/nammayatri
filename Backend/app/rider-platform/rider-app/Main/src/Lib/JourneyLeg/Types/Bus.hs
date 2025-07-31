@@ -54,7 +54,6 @@ data BusLegRequestGetInfoData = BusLegRequestGetInfoData
     fallbackFare :: Maybe HighPrecMoney,
     distance :: Maybe Distance,
     duration :: Maybe Seconds,
-    journeyLeg :: DJourneyLeg.JourneyLeg,
     ignoreOldSearchRequest :: Bool,
     startTime :: Maybe UTCTime
   }
@@ -62,7 +61,6 @@ data BusLegRequestGetInfoData = BusLegRequestGetInfoData
 data BusLegRequestGetStateData = BusLegRequestGetStateData
   { searchId :: Id FRFSSearch.FRFSSearch,
     riderLastPoints :: [ApiTypes.RiderLocationReq],
-    isLastCompleted :: Bool,
     movementDetected :: Bool,
     routeCodeForDetailedTracking :: Maybe Text
   }

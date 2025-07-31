@@ -68,6 +68,7 @@ library
       API.UI.CallEvent
       API.UI.Cancel
       API.UI.CancellationReason
+      API.UI.CancelSearch
       API.UI.Confirm
       API.UI.Disability
       API.UI.FeedbackForm
@@ -301,6 +302,7 @@ library
       Domain.Types.RouteStopTimeTable
       Domain.Types.Station
       Domain.Types.TicketDashboard
+      Domain.Types.TicketKapture
       Domain.Types.UtilsTH
       Environment
       ExternalBPP.CallAPI
@@ -323,6 +325,7 @@ library
       ExternalBPP.ExternalAPI.Metro.CMRL.PassengerViewStatus
       ExternalBPP.ExternalAPI.Metro.CMRL.StationList
       ExternalBPP.ExternalAPI.Metro.CMRL.TicketStatus
+      ExternalBPP.ExternalAPI.Metro.CMRL.UpdateQrReceivedStatus
       ExternalBPP.ExternalAPI.Subway.CRIS.Auth
       ExternalBPP.ExternalAPI.Subway.CRIS.BookJourney
       ExternalBPP.ExternalAPI.Subway.CRIS.ChangeDevice
@@ -489,8 +492,8 @@ library
       Storage.Queries.FeedbackFormExtra
       Storage.Queries.FRFSQuoteExtra
       Storage.Queries.FRFSSearchExtra
-      Storage.Queries.FRFSTicketBokingPayment
       Storage.Queries.FRFSTicketBookingExtra
+      Storage.Queries.FRFSTicketBookingPaymentExtra
       Storage.Queries.Geometry
       Storage.Queries.IntegratedBPPConfigExtra
       Storage.Queries.IssueExtra
@@ -535,6 +538,8 @@ library
       Storage.Queries.Transformers.Estimate
       Storage.Queries.Transformers.FRFSSearch
       Storage.Queries.Transformers.IntegratedBPPConfig
+      Storage.Queries.Transformers.Journey
+      Storage.Queries.Transformers.JourneyLegsFeedback
       Storage.Queries.Transformers.Merchant
       Storage.Queries.Transformers.MerchantConfig
       Storage.Queries.Transformers.MerchantMessage
@@ -1068,6 +1073,7 @@ library
       Storage.Queries.OrphanInstances.FRFSQuote
       Storage.Queries.OrphanInstances.FRFSSearch
       Storage.Queries.OrphanInstances.FRFSTicketBooking
+      Storage.Queries.OrphanInstances.FRFSTicketBookingPayment
       Storage.Queries.OrphanInstances.IntegratedBPPConfig
       Storage.Queries.OrphanInstances.Issue
       Storage.Queries.OrphanInstances.Journey

@@ -10,6 +10,8 @@ import Domain.Types.FRFSTicketBooking
 import Domain.Types.IntegratedBPPConfig
 import EulerHS.Types as ET hiding (Log)
 import ExternalBPP.ExternalAPI.Metro.CMRL.Auth
+import ExternalBPP.ExternalAPI.Metro.CMRL.Error (CMRLError (..))
+import qualified ExternalBPP.ExternalAPI.Metro.CMRL.UpdateQrReceivedStatus as UpdateQr
 import ExternalBPP.ExternalAPI.Types
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -108,8 +110,24 @@ generateQRTickets :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r) =>
 generateQRTickets config qrReq = do
   let modifiedQrReq = qrReq {origin = getStationCode qrReq.origin, destination = getStationCode qrReq.destination}
       eulerClient = \accessToken -> ET.client generateQRAPI (Just $ "Bearer " <> accessToken) modifiedQrReq
-  qrResponse <- callCMRLAPI config eulerClient "generateQRTickets" generateQRAPI
-  return qrResponse.result
+  result <- try @_ @SomeException $ callCMRLAPI config eulerClient "generateQRTickets" generateQRAPI
+  case result of
+    Left err -> do
+      let mCMRLError = fromException @CMRLError err
+      case mCMRLError of
+        Just (GateWayTimeOut msg) -> do
+          let updateReq =
+                UpdateQr.UpdateQrReceivedStatusReq
+                  { UpdateQr.txnRefNo = qrReq.uniqueTxnRefNo,
+                    UpdateQr.appType = "CMRL_CUM_IQR",
+                    UpdateQr.isFailure = True,
+                    UpdateQr.failureReason = if T.null msg then "GateWayTimeOut Error (504)" else msg
+                  }
+          _ <- UpdateQr.updateQrReceivedStatus config updateReq
+          throwError $ InternalError $ "Generate QR Tickets API GateWayTimeOut Error (504): " <> updateReq.failureReason
+        _ -> do
+          throwError $ InternalError $ "Failed to fetch QR ticket: " <> T.pack (show err)
+    Right qrResponse -> return qrResponse.result
   where
     getStationCode :: Text -> Text
     getStationCode stationCode = fromMaybe stationCode (listToMaybe $ T.splitOn "|" stationCode)

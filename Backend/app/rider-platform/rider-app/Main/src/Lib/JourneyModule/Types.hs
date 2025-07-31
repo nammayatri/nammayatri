@@ -61,7 +61,6 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.Ride as DARide
 import SharedLogic.Search
--- import qualified Storage.CachedQueries.Merchant.MultiModalBus -- This was commented out in the provided content
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.Estimate as QEstimate
@@ -72,6 +71,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Transformers.Booking as QTB
 import Tools.Error
 import Tools.Metrics.BAPMetrics.Types
+import Tools.Payment (roundToTwoDecimalPlaces)
 import qualified Tools.SharedRedisKeys as SharedRedisKeys
 import TransactionLogs.Types
 
@@ -205,7 +205,7 @@ data NextStopDetails = NextStopDetails
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data VehiclePosition = VehiclePosition
-  { position :: LatLong, -- Bus's current lat/long
+  { position :: Maybe LatLong, -- Bus's current lat/long
     vehicleId :: Text, -- Bus's ID/number
     upcomingStops :: [NextStopDetails] -- List of upcoming stops for this vehicle
   }
@@ -214,7 +214,6 @@ data VehiclePosition = VehiclePosition
 
 data JourneyLegStateData = JourneyLegStateData
   { status :: JourneyLegStatus,
-    statusChanged :: Bool,
     userPosition :: Maybe LatLong,
     vehiclePositions :: [VehiclePosition], -- Uses the modified VehiclePosition
     subLegOrder :: Int,
@@ -356,7 +355,8 @@ data LegRouteInfo = LegRouteInfo
     lineColorCode :: Maybe Text,
     trainNumber :: Maybe Text,
     journeyStatus :: Maybe JourneyLegStatus,
-    frequency :: Maybe Seconds
+    frequency :: Maybe Seconds,
+    allAvailableRoutes :: [Text]
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -754,8 +754,8 @@ getFRFSLegStatusFromBooking booking = case booking.status of
   DFRFSBooking.REFUND_INITIATED -> Cancelled
 
 mkLegInfoFromFrfsBooking ::
-  (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => DFRFSBooking.FRFSTicketBooking -> Maybe Distance -> Maybe Seconds -> Maybe MultiModalLegGate -> Maybe MultiModalLegGate -> m LegInfo
-mkLegInfoFromFrfsBooking booking distance duration entrance exit = do
+  (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => DFRFSBooking.FRFSTicketBooking -> Maybe Distance -> Maybe Seconds -> m LegInfo
+mkLegInfoFromFrfsBooking booking distance duration = do
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
   let journeyRouteDetails' = booking.journeyRouteDetails
   tickets <- QFRFSTicket.findAllByTicketBookingId (booking.id)
@@ -781,11 +781,11 @@ mkLegInfoFromFrfsBooking booking distance duration entrance exit = do
           Just InPlan -> getFRFSLegStatusFromBooking booking
           Just status -> status
   let skipBooking = fromMaybe False booking.isSkipped
-  let amountToBeUpdated = safeDiv (getHighPrecMoney booking.estimatedPrice.amount) (fromIntegral booking.quantity)
+  let singleAdultPrice = roundToTwoDecimalPlaces . HighPrecMoney $ safeDiv (getHighPrecMoney booking.price.amount) (fromIntegral booking.quantity) -- TODO :: To be handled as single price cannot be obtained from this if more than 1 fare breakup (Child Quantity / Discounts)
       estimatedPrice =
         Price
-          { amount = HighPrecMoney amountToBeUpdated,
-            amountInt = Money $ roundToIntegral amountToBeUpdated,
+          { amount = singleAdultPrice,
+            amountInt = Money $ roundToIntegral singleAdultPrice,
             currency = booking.price.currency
           }
   legExtraInfo <- mkLegExtraInfo qrDataList qrValidity ticketsCreatedAt journeyRouteDetails' journeyLegInfo' ticketNo
@@ -810,9 +810,9 @@ mkLegInfoFromFrfsBooking booking distance duration entrance exit = do
         status = legStatus,
         legExtraInfo = legExtraInfo,
         actualDistance = distance,
-        totalFare = mkPriceAPIEntity <$> booking.finalPrice,
-        entrance = entrance,
-        exit = exit,
+        totalFare = mkPriceAPIEntity <$> (booking.finalPrice <|> Just booking.price),
+        entrance = Nothing,
+        exit = Nothing,
         validTill = (if null qrValidity then Nothing else Just $ maximum qrValidity) <|> Just booking.validTill
       }
   where
@@ -836,8 +836,8 @@ mkLegInfoFromFrfsBooking booking distance duration entrance exit = do
           journeyLegDetail <- listToMaybe journeyLegInfo' & fromMaybeM (InternalError "Journey Leg Detail not found")
           journeyRouteDetail <- listToMaybe journeyRouteDetails' & fromMaybeM (InternalError "Journey Route Detail not found")
 
-          let fromStation = journeyLegDetail.destinationStop
-          let toStation = journeyLegDetail.originStop
+          let fromStation = journeyLegDetail.originStop
+          let toStation = journeyLegDetail.destinationStop
           let routeCode = journeyLegDetail.routeCode
 
           mbQuote <- QFRFSQuote.findById booking.quoteId
@@ -899,11 +899,10 @@ getLegRouteInfo journeyRouteDetails integratedBPPConfig = do
       fromStationCode' <- fromMaybeM (InternalError "FromStationCode is missing") journeyRouteDetail.fromStationCode
       toStationCode' <- fromMaybeM (InternalError "ToStationCode is missing") journeyRouteDetail.toStationCode
       routeCode' <- fromMaybeM (InternalError "RouteCode is missing") journeyRouteDetail.routeCode
-
-      fromStation <- OTPRest.getStationByGtfsIdAndStopCode fromStationCode' integratedBPPConfig >>= fromMaybeM (InternalError $ "From Station not found in getSubwayLegRouteInfo: " <> show fromStationCode')
-      toStation <- OTPRest.getStationByGtfsIdAndStopCode toStationCode' integratedBPPConfig >>= fromMaybeM (InternalError $ "To Station not found in getSubwayLegRouteInfo: " <> show toStationCode')
+      fromStation <- OTPRest.getStationByGtfsIdAndStopCode fromStationCode' integratedBPPConfig >>= fromMaybeM (InternalError $ "From Station not found in fetchPossibleRoutes: " <> show fromStationCode')
+      toStation <- OTPRest.getStationByGtfsIdAndStopCode toStationCode' integratedBPPConfig >>= fromMaybeM (InternalError $ "To Station not found in fetchPossibleRoutes: " <> show toStationCode')
       route <- OTPRest.getRouteByRouteId integratedBPPConfig routeCode' >>= fromMaybeM (RouteNotFound routeCode')
-
+      validRoutes <- getRouteCodesFromTo fromStation.code toStation.code integratedBPPConfig
       return
         LegRouteInfo
           { originStop = stationToStationAPI fromStation,
@@ -915,7 +914,8 @@ getLegRouteInfo journeyRouteDetails integratedBPPConfig = do
             lineColor = journeyRouteDetail.lineColor,
             lineColorCode = journeyRouteDetail.lineColorCode,
             trainNumber = Just route.shortName,
-            frequency = journeyRouteDetail.frequency
+            frequency = journeyRouteDetail.frequency,
+            allAvailableRoutes = validRoutes
           }
 
 castCategoryToMode :: Spec.VehicleCategory -> DTrip.MultimodalTravelMode
@@ -923,8 +923,8 @@ castCategoryToMode Spec.METRO = DTrip.Metro
 castCategoryToMode Spec.SUBWAY = DTrip.Subway
 castCategoryToMode Spec.BUS = DTrip.Bus
 
-mkLegInfoFromFrfsSearchRequest :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => FRFSSR.FRFSSearch -> Maybe HighPrecMoney -> Maybe Distance -> Maybe Seconds -> Maybe MultiModalLegGate -> Maybe MultiModalLegGate -> Maybe UTCTime -> m LegInfo
-mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} fallbackFare distance duration entrance exit startTime = do
+mkLegInfoFromFrfsSearchRequest :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => FRFSSR.FRFSSearch -> Maybe HighPrecMoney -> Maybe Distance -> Maybe Seconds -> Maybe UTCTime -> m LegInfo
+mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} fallbackFare distance duration startTime = do
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity frfsSearch
   journeyLegInfo' <- journeyLegInfo & fromMaybeM (InvalidRequest "Not a valid mulimodal search as no journeyLegInfo found")
   mRiderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId Nothing
@@ -971,8 +971,8 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} fallbackFare di
         legExtraInfo = legExtraInfo,
         actualDistance = Nothing,
         totalFare = Nothing,
-        entrance = entrance,
-        exit = exit,
+        entrance = Nothing,
+        exit = Nothing,
         validTill = (mbQuote <&> (.validTill)) <|> (frfsSearch.validTill)
       }
   where
@@ -1076,8 +1076,8 @@ mkSearchReqLocation address latLng = do
       address = address
     }
 
-mkJourney :: MonadFlow m => Id DP.Person -> Maybe UTCTime -> Maybe UTCTime -> Distance -> Seconds -> Id DJ.Journey -> Id DSR.SearchRequest -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> [EMInterface.MultiModalLeg] -> Meters -> Meters -> Maybe (Id DRL.RecentLocation) -> Maybe Double -> Bool -> Bool -> Text -> Maybe Text -> m DJ.Journey
-mkJourney riderId startTime endTime estimatedDistance estiamtedDuration journeyId parentSearchId merchantId merchantOperatingCityId legs maximumWalkDistance straightLineThreshold mbRecentLocationId relevanceScore hasUserPreferredServiceTier hasUserPreferredTransitModes fromLocationAddress toLocationAddress = do
+mkJourney :: MonadFlow m => Id DP.Person -> Maybe UTCTime -> Maybe UTCTime -> Distance -> Seconds -> Id DJ.Journey -> Id DSR.SearchRequest -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> [EMInterface.MultiModalLeg] -> Meters -> Meters -> Maybe (Id DRL.RecentLocation) -> Maybe Double -> Bool -> Bool -> DLocation.Location -> Maybe DLocation.Location -> m DJ.Journey
+mkJourney riderId startTime endTime estimatedDistance estiamtedDuration journeyId parentSearchId merchantId merchantOperatingCityId legs maximumWalkDistance straightLineThreshold mbRecentLocationId relevanceScore hasUserPreferredServiceTier hasUserPreferredTransitModes fromLocation toLocation = do
   let journeyLegsCount = length legs
       modes = map (\x -> convertMultiModalModeToTripMode x.mode (straightLineDistance x) (distanceToMeters x.distance) maximumWalkDistance straightLineThreshold) legs
   let isPublicTransportIncluded = any (`elem` [DTrip.Bus, DTrip.Metro, DTrip.Subway]) modes
@@ -1092,12 +1092,12 @@ mkJourney riderId startTime endTime estimatedDistance estiamtedDuration journeyI
         totalLegs = journeyLegsCount,
         modes = modes,
         searchRequestId = parentSearchId,
-        merchantId = Just merchantId,
+        merchantId = merchantId,
         status = DJ.NEW,
         riderId,
         startTime,
         endTime,
-        merchantOperatingCityId = Just merchantOperatingCityId,
+        merchantOperatingCityId = merchantOperatingCityId,
         createdAt = now,
         updatedAt = now,
         DJ.recentLocationId = mbRecentLocationId, -- Fully qualify the field name
@@ -1105,7 +1105,6 @@ mkJourney riderId startTime endTime estimatedDistance estiamtedDuration journeyI
         relevanceScore,
         hasPreferredServiceTier = Just hasUserPreferredServiceTier,
         hasPreferredTransitModes = Just hasUserPreferredTransitModes,
-        fromLocationAddress = Just fromLocationAddress,
         paymentOrderShortId = Nothing,
         journeyExpiryTime = Nothing,
         ..
@@ -1176,10 +1175,13 @@ cannotCancelWalkStatus :: [JourneyLegStatus]
 cannotCancelWalkStatus = [Skipped, Completed, Cancelled]
 
 cannotSwitchStatus :: [JourneyLegStatus]
-cannotSwitchStatus = [Skipped, Booked, OnTheWay, Arriving, Arrived, Ongoing, Finishing, Completed, Cancelled]
+cannotSwitchStatus = [Booked, OnTheWay, Arriving, Arrived, Ongoing, Finishing, Completed, Cancelled]
+
+cannotCompleteJourneyIfTaxiLegIsInThisStatus :: [JourneyLegStatus]
+cannotCompleteJourneyIfTaxiLegIsInThisStatus = [Booked, OnTheWay, Arriving, Arrived, Ongoing, Finishing]
 
 cannotCancelExtendStatus :: [JourneyLegStatus]
-cannotCancelExtendStatus = [Skipped, Ongoing, Finishing, Completed, Cancelled, Booked, OnTheWay, Arriving, Arrived]
+cannotCancelExtendStatus = [Ongoing, Finishing, Completed, Cancelled, Booked, OnTheWay, Arriving, Arrived]
 
 data ExtendLegStartPoint
   = StartLocation StartLocationType

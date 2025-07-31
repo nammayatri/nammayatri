@@ -87,14 +87,14 @@ data RouteStopTimeTableEntry = RouteStopTimeTableEntry
 instance FromJSON RouteStopTimeTableEntry where
   parseJSON = withObject "RouteStopTimeTableEntry" $ \obj -> do
     let headsignParser = do
-          headsignText <- obj .: "headsign" :: Parser Text
+          headsignText <- obj .: "headsign" :: Parser (Maybe Text)
           -- Try to parse headsign as JSON first
-          case eitherDecodeStrict (TE.encodeUtf8 headsignText) of
-            Right (Object headsignObj) -> do
+          case fmap (eitherDecodeStrict . TE.encodeUtf8) headsignText of
+            Just (Right (Object headsignObj)) -> do
               -- Parse as ExtraInfo object
               extraInfo <- parseJSON (Object headsignObj)
               pure (Just extraInfo)
-            Right (String jsonString) -> do
+            Just (Right (String jsonString)) -> do
               -- The JSON string contains another JSON object, parse that
               case eitherDecodeStrict (TE.encodeUtf8 jsonString) of
                 Right (Object headsignObj) -> do
@@ -103,12 +103,12 @@ instance FromJSON RouteStopTimeTableEntry where
                 _ -> do
                   -- Fallback: treat as simple text for fareStageNumber
                   Trace.trace ("nested JSON parsing failed for: " <> show jsonString) $ pure ()
-                  pure (Just (ExtraInfo {fareStageNumber = Just headsignText, providerStopCode = Nothing}))
+                  pure (Just (ExtraInfo {fareStageNumber = headsignText, providerStopCode = Nothing}))
             other -> do
               -- Debug: print what case we're hitting
               Trace.trace ("headsign parsing case: " <> show other) $ pure ()
               -- Fallback: treat as simple text for fareStageNumber
-              pure (Just (ExtraInfo {fareStageNumber = Just headsignText, providerStopCode = Nothing}))
+              pure (Just (ExtraInfo {fareStageNumber = headsignText, providerStopCode = Nothing}))
     RouteStopTimeTableEntry
       <$> obj .: "scheduledArrival"
       <*> obj .: "realtimeArrival"

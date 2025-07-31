@@ -194,7 +194,7 @@ validateImage isDashboard (personId, _, merchantOpCityId) req@ImageValidateReque
     checkErrors id_ _ Nothing = throwImageError id_ ImageValidationFailed
     checkErrors id_ imgType (Just detectedImage) = do
       let outputImageType = detectedImage.imageType
-      unless (outputImageType == castImageType imgType) $ throwImageError id_ (ImageInvalidType (show imgType) (show outputImageType))
+      unless (outputImageType == castImageType imgType) $ throwImageError id_ (ImageInvalidType (show imgType) "")
 
       unless (fromMaybe False detectedImage.isReadable) $ throwImageError id_ ImageNotReadable
 

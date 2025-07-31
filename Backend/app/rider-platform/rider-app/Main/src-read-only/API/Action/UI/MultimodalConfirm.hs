@@ -89,7 +89,7 @@ type API =
            API.Types.UI.MultimodalConfirm.SwitchLegReq
       :> Post
            '[JSON]
-           Kernel.Types.APISuccess.APISuccess
+           API.Types.UI.MultimodalConfirm.JourneyInfoResp
       :<|> TokenAuth
       :> "multimodal"
       :> "journey"
@@ -384,7 +384,7 @@ postMultimodalSwitch ::
     ) ->
     Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
     API.Types.UI.MultimodalConfirm.SwitchLegReq ->
-    Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
+    Environment.FlowHandler API.Types.UI.MultimodalConfirm.JourneyInfoResp
   )
 postMultimodalSwitch a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalSwitch (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 

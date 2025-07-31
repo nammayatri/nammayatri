@@ -187,7 +187,7 @@ onStatus req = do
       pure ()
     ValidatedDriverArrivedDetails request -> DCommon.driverArrivedReqHandler request
     ValidatedRideStartedDetails request -> DCommon.rideStartedReqHandler request
-    ValidatedRideCompletedDetails request -> DCommon.rideCompletedReqHandler request
+    ValidatedRideCompletedDetails request -> DCommon.rideCompletedReqHandler request JM.getAllLegsInfoWithoutAddingSkipLeg
     ValidatedFarePaidDetails request -> DCommon.farePaidReqHandler request
     ValidatedBookingCancelledDetails request -> DCommon.bookingCancelledReqHandler request JM.getAllLegsInfoWithoutAddingSkipLeg
     ValidatedBookingReallocationDetails BookingReallocationReq {bookingDetails, reallocationSource} -> do

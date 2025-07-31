@@ -143,9 +143,9 @@ getReadyTask ::
     HasField "block" r Integer,
     HasField "readCount" r Integer
   ) =>
+  Text ->
   m [(AnyJob t, BS.ByteString)]
-getReadyTask = do
-  key <- asks (.streamName)
+getReadyTask key = do
   groupName <- asks (.groupName)
   consumerId <- asks (.consumerId)
   -- let lastEntryId :: Text = "$"

@@ -16,6 +16,7 @@ module Mobility.AppBackend.APICalls where
 
 import qualified "rider-app" API.UI.Booking as AppBooking
 import qualified "rider-app" API.UI.Cancel as CancelAPI
+import qualified "rider-app" API.UI.CancelSearch as AppCancelSearch
 import qualified "rider-app" API.UI.Confirm as ConfirmAPI
 import qualified "rider-app" API.UI.Rating as AppFeedback
 import qualified "rider-app" API.UI.Registration as Reg
@@ -46,7 +47,9 @@ selectList :: RegToken -> Id AbeEstimate.Estimate -> ClientM AppSelect.SelectLis
 selectResult :: RegToken -> Id AbeEstimate.Estimate -> ClientM AppSelect.QuotesResultResponse
 cancelSearch :: RegToken -> Id AbeEstimate.Estimate -> ClientM AppSelect.CancelAPIResponse
 selectEstimate :: RegToken -> Id AbeEstimate.Estimate -> AppSelect.DSelectReq -> ClientM AppSelect.DSelectResultRes
-selectEstimate :<|> selectQuote2 :<|> selectList :<|> selectResult :<|> cancelSearch :<|> _ = client (Proxy :: Proxy AppSelect.API)
+selectEstimate :<|> selectQuote2 :<|> selectList :<|> selectResult = client (Proxy :: Proxy AppSelect.API)
+
+cancelSearch :<|> _ :<|> _ = client (Proxy :: Proxy AppCancelSearch.API)
 
 cancelRide :: Id BRB.Booking -> Text -> CancelAPI.CancelReq -> ClientM APISuccess
 cancelRide = client (Proxy :: Proxy CancelAPI.CancelAPI)

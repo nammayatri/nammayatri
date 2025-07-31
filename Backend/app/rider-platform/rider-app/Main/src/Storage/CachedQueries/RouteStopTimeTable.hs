@@ -29,7 +29,6 @@ import Domain.Types.MerchantOperatingCity
 import Domain.Types.RouteStopTimeTable
 import qualified EulerHS.Language as L
 import EulerHS.Types (OptionEntity)
-import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude as P
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
@@ -51,7 +50,9 @@ castVehicleType vehicleType = do
 
 findByRouteCodeAndStopCode ::
   ( MonadFlow m,
-    ServiceFlow m r,
+    CacheFlow m r,
+    EncFlow m r,
+    EsqDBFlow m r,
     HasShortDurationRetryCfg r c
   ) =>
   IntegratedBPPConfig ->
@@ -73,7 +74,7 @@ findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCode
         stopCodes <-
           P.map (modifyCodesToGTFS integratedBPPConfig)
             <$> case vehicleType of
-              BecknV2.FRFS.Enums.METRO -> do
+              a | a `P.elem` [BecknV2.FRFS.Enums.METRO, BecknV2.FRFS.Enums.SUBWAY] -> do
                 OTPRestCommon.getChildrenStationsCodes integratedBPPConfig stopCode'
                   >>= \case
                     [] -> pure [stopCode']
@@ -81,7 +82,7 @@ findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCode
               _ -> pure [stopCode']
         allTrips <- Queries.findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCodes' stopCodes vehicleType
         logDebug $ "Fetched route stop time table graphql: " <> show allTrips <> " for routeCodes:" <> show routeCodes <> " and stopCode:" <> show stopCode
-        void $ cacheRouteStopTimeInfo stopCode allTrips
+        unless (P.null allTrips) $ cacheRouteStopTimeInfo stopCode allTrips
         pure allTrips
   val <- L.getOptionLocal CalledForFare
   return $ P.filter (\trip -> (trip.routeCode `P.elem` routeCodes') || (val == Just True)) allTrips
