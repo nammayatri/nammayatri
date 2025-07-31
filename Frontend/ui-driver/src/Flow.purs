@@ -189,6 +189,7 @@ import Screens (ScreenName(..)) as Screen
 import Resource.Localizable.StringsV2 (getStringV2)
 import Resource.Localizable.TypesV2 as LT2
 import Helpers.PrestoUtils 
+import Helpers.Utils (emitTerminateApp)
 
 
 baseAppFlow :: Boolean -> Maybe Event -> Maybe (Either ErrorResponse GetDriverInfoResp) -> FlowBT String Unit
@@ -1975,6 +1976,9 @@ goToLocationFlow = do
         Right _ -> do
           void $ pure $ toast $ getString GOTO_LOC_ADDED
           let (GlobalState defaultEpassState) = defaultGlobalState
+          if HU.isParentView FunctionCall then do
+            void $ pure $ emitTerminateApp Nothing true
+          else pure unit
           if state.props.gotBackToHomeScreen then do
             getLocations <- lift $ lift $ Remote.getDriverHomeLocation ""
             case getLocations of
