@@ -743,7 +743,7 @@ handleDeepLinksFlow event activeRideResp isActiveRide = do
                 Nothing -> pure unit
                 Just (RidesInfo response) -> do
                   let
-                    specialZoneConfig = HU.getRideLabelData response.specialLocationTag
+                    specialZoneConfig = HU.getRideLabelData response.specialLocationTag false
 
                     isSpecialPickUpZone = HU.checkSpecialPickupZone response.specialLocationTag
                   modifyScreenState
@@ -764,7 +764,7 @@ handleDeepLinksFlow event activeRideResp isActiveRide = do
                                 , customerExtraFee = response.customerExtraFee
                                 , purpleTagVisibility = isJust response.disabilityTag
                                 , gotoTagVisibility = isJust response.driverGoHomeRequestId
-                                , spLocTagVisibility = isJust response.specialLocationTag && isJust (HU.getRequiredTag response.specialLocationTag)
+                                , spLocTagVisibility = isJust response.specialLocationTag && isJust (HU.getRequiredTag response.specialLocationTag false)
                                 , specialZoneLayoutBackground = specialZoneConfig.backgroundColor
                                 , specialZoneImage = specialZoneConfig.imageUrl
                                 , specialZoneText = specialZoneConfig.text
@@ -783,7 +783,7 @@ handleDeepLinksFlow event activeRideResp isActiveRide = do
                                 }
                               }
                         )
-                  hideSplashAndCallFlow $ tripDetailsScreenFlow
+                  hideSplashAndCallFlow $ tripDetailsScreenFlow Nothing
             _ | startsWith "ginit" e.data -> hideSplashAndCallFlow $ gullakDeeplinkFlow e.data
             
             _ -> pure unit
