@@ -540,7 +540,8 @@ processBusLegState
   allBusDataForRoute
   journeyLegStatus
   movementDetected
-  updateStatusFn =
+  updateStatusFn = do
+    logDebug $ "movementDetected:" <> show movementDetected
     if (isOngoingJourneyLeg journeyLegStatus) && movementDetected
       then do
         let filteredBusData = case (mbUserBoardingStation, mbLegEndStation) of
@@ -554,15 +555,17 @@ processBusLegState
             let matchingBusesETA = filter (\x -> x.route_id == rc) nearbyBusesETA
             let nearbyFilteredBusesETA = filter (\bus -> highPrecMetersToMeters (distanceBetweenInMeters userPos.latLong (LatLong bus.latitude bus.longitude)) < 100) matchingBusesETA
             let scoresForBuses = scoreBusesByDistanceFRFS userPos busTrackingConfig nearbyFilteredBusesETA
-
+            logDebug $ "scoresForBuses: " <> show scoresForBuses
             votingSystemFRFS scoresForBuses legDetails busTrackingConfig
 
             topCandidatesRaw <- Hedis.zRangeWithScores (topVehicleCandidatesKeyFRFS (legDetails.id.getId)) 0 (-1)
+            logDebug $ "topCandidatesRaw: " <> show topCandidatesRaw
             let mbTopCandidateId = listToMaybe [TE.decodeUtf8 bs | (bs, _) <- topCandidatesRaw]
-
+            logDebug $ "mbTopCandidateId: " <> show mbTopCandidateId
             case mbTopCandidateId of
               Just topCandVehId -> do
                 let mbBestBusData = find (\bd -> bd.vehicle_number == Just topCandVehId) filteredBusData
+                logDebug $ "mbBestBusData:" <> show mbBestBusData
                 case mbBestBusData of
                   Just bestBusData -> do
                     let upcomingStops =
@@ -571,7 +574,7 @@ processBusLegState
                             else getUpcomingStopsForBus now mbLegEndStation bestBusData True -- Stops to destination for Ongoing/Finishing/Completed
                     when (journeyLegStatus `elem` [JPT.OnTheWay, JPT.Booked, JPT.Arriving]) $ do
                       updateStatusFn (Just JPT.Ongoing)
-
+                      logDebug $ "upcomingStops:" <> show upcomingStops <> " " <> show bestBusData.latitude <> " " <> show bestBusData.longitude
                     pure
                       [ JT.VehiclePosition
                           { position = Just $ LatLong bestBusData.latitude bestBusData.longitude,
@@ -587,6 +590,7 @@ processBusLegState
           then case mbCurrentLegDetails of
             Just legDetails -> do
               let changedBuses = fromMaybe [] legDetails.changedBusesInSequence
+              logDebug $ "changedBuses: " <> show changedBuses
               findVehiclePositionFromSequence (reverse changedBuses)
             Nothing -> pure []
           else
@@ -595,6 +599,7 @@ processBusLegState
                 let filteredBusData = case mbUserBoardingStation of
                       Just boardingStation -> filter (isYetToReachStop boardingStation.code) allBusDataForRoute
                       Nothing -> allBusDataForRoute
+                logDebug $ "filteredBusData: " <> show filteredBusData
                 pure $
                   map
                     ( \bd ->
@@ -613,6 +618,7 @@ processBusLegState
         case find (\bd -> bd.vehicle_number == Just busNum) allBusDataForRoute of
           Just bestBusData -> do
             let upcomingStops = getUpcomingStopsForBus now mbLegEndStation bestBusData True
+            logDebug $ "findVehiclePositionFromSequence upcomingStops: " <> show upcomingStops <> " " <> show bestBusData.latitude <> " " <> show bestBusData.longitude
             pure
               [ JT.VehiclePosition
                   { position = Just $ LatLong bestBusData.latitude bestBusData.longitude,
