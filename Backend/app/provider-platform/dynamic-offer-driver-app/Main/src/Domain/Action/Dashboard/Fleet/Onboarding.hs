@@ -117,7 +117,8 @@ getOnboardingRegisterStatus merchantShortId opCity fleetOwnerId mbPersonId makeS
   driverImages <- IQuery.findAllByPersonId transporterConfig (Id personId)
   now <- getCurrentTime
   let driverImagesInfo = IQuery.DriverImagesInfo {driverId = Id personId, merchantOperatingCity = merchantOpCity, driverImages, transporterConfig, now}
-  castStatusRes <$> SStatus.statusHandler' driverImagesInfo makeSelfieAadhaarPanMandatory multipleRC prefillData onboardingVehicleCategory mDL (Just True)
+  let shouldActivateRc = True
+  castStatusRes <$> SStatus.statusHandler' driverImagesInfo makeSelfieAadhaarPanMandatory multipleRC prefillData onboardingVehicleCategory mDL (Just True) shouldActivateRc
 
 postOnboardingVerify ::
   ShortId DM.Merchant ->
