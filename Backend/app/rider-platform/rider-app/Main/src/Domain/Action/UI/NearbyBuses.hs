@@ -129,7 +129,7 @@ getNearbyBuses merchantOperatingCityId nearbyDriverSearchRadius req = do
                   { capacity = Nothing,
                     currentLocation = Maps.LatLong bus.busData.latitude bus.busData.longitude,
                     distance = Nothing,
-                    eta = busEta >>= (\etaD -> Just (CQMMB.utcToIST etaD.arrivalTime)),
+                    eta = busEta >>= (\etaD -> Just etaD.arrivalTime),
                     nextStop = busEta >>= (\etaD -> Just etaD.stopName),
                     occupancy = Nothing,
                     routeCode = busData.routeId,
