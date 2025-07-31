@@ -61,7 +61,8 @@ statusHandler (personId, _merchantId, merchantOpCityId) makeSelfieAadhaarPanMand
   (dlStatus, mDL, dlVerficationMessage) <- SStatus.getDLAndStatus driverImagesInfo merchantOperatingCity.language useHVSdkForDL
   (rcStatus, _, rcVerficationMessage) <- SStatus.getRCAndStatus driverImagesInfo multipleRC merchantOperatingCity.language
   (aadhaarStatus, _) <- SStatus.getAadhaarStatus personId
-  SStatus.StatusRes' {..} <- SStatus.statusHandler' driverImagesInfo makeSelfieAadhaarPanMandatory multipleRC prefillData onboardingVehicleCategory mDL useHVSdkForDL
+  let shouldActivateRc = True
+  SStatus.StatusRes' {..} <- SStatus.statusHandler' driverImagesInfo makeSelfieAadhaarPanMandatory multipleRC prefillData onboardingVehicleCategory mDL useHVSdkForDL shouldActivateRc
   pure $
     StatusRes
       { dlVerificationStatus = dlStatus,

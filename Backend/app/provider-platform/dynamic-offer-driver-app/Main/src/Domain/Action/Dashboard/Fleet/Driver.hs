@@ -205,7 +205,7 @@ postDriverFleetAddVehicle merchantShortId opCity reqDriverPhoneNo requestorId mb
   case (getEntityData.role, getMbFleetOwnerId) of
     (DP.DRIVER, Nothing) -> do
       -- DCO case
-      whenJust rc $ \rcert -> void $ checkRCAssociationForDriver getEntityData.id rcert True
+      void $ checkRCAssociationForDriver getEntityData.id rc True
       void $ DCommon.runVerifyRCFlow getEntityData.id merchant merchantOpCityId opCity req True (fromMaybe False mbBulkUpload) -- Pass fleet.id if addvehicle under fleet or pass driver.id if addvehcile under driver
       logTagInfo "dashboard -> addVehicleUnderDCO : " (show getEntityData.id)
       pure Success
@@ -222,19 +222,28 @@ postDriverFleetAddVehicle merchantShortId opCity reqDriverPhoneNo requestorId mb
       pure Success
     _ -> throwError (InvalidRequest "Invalid Data")
 
-checkRCAssociationForDriver :: Id DP.Person -> VehicleRegistrationCertificate -> Bool -> Flow Bool
-checkRCAssociationForDriver driverId vehicleRC checkFleet = do
-  when (isJust vehicleRC.fleetOwnerId && checkFleet) $ throwError VehicleBelongsToFleet
-  now <- getCurrentTime
-  allAssociations <- DRCAE.findValidAssociationsForDriverOrRC driverId vehicleRC.id now
-  let exactMatch = find (\assoc -> assoc.driverId == driverId && assoc.rcId == vehicleRC.id) allAssociations
-      rcAssociations = filter (\assoc -> assoc.rcId == vehicleRC.id && assoc.driverId /= driverId && assoc.isRcActive) allAssociations
-      driverAssociations = filter (\assoc -> assoc.driverId == driverId && assoc.rcId /= vehicleRC.id && assoc.isRcActive) allAssociations
-  if (isJust exactMatch)
-    then return True
-    else do
-      unless (null rcAssociations) $ throwError VehicleAlreadyLinkedToAnotherDriver
-      unless (null driverAssociations) $ throwError DriverAlreadyLinkedToAnotherVehicle
+checkRCAssociationForDriver :: Id DP.Person -> Maybe VehicleRegistrationCertificate -> Bool -> Flow Bool
+checkRCAssociationForDriver driverId mbVehicleRC checkFleet = maybe checkAssociationWithDriver checkAssociationWithDriverAndVehicle mbVehicleRC
+  where
+    checkAssociationWithDriverAndVehicle :: VehicleRegistrationCertificate -> Flow Bool
+    checkAssociationWithDriverAndVehicle vehicleRC = do
+      when (isJust vehicleRC.fleetOwnerId && checkFleet) $ throwError VehicleBelongsToFleet
+      now <- getCurrentTime
+      allAssociations <- DRCAE.findValidAssociationsForDriverOrRC driverId vehicleRC.id now
+      let exactMatch = find (\assoc -> assoc.driverId == driverId && assoc.rcId == vehicleRC.id) allAssociations
+          rcAssociations = filter (\assoc -> assoc.rcId == vehicleRC.id && assoc.driverId /= driverId && assoc.isRcActive) allAssociations
+          driverAssociations = filter (\assoc -> assoc.driverId == driverId && assoc.rcId /= vehicleRC.id && assoc.isRcActive) allAssociations
+      if (isJust exactMatch)
+        then return True
+        else do
+          unless (null rcAssociations) $ throwError VehicleAlreadyLinkedToAnotherDriver
+          unless (null driverAssociations) $ throwError DriverAlreadyLinkedToAnotherVehicle
+          return False
+
+    checkAssociationWithDriver :: Flow Bool
+    checkAssociationWithDriver = do
+      isDriverAssociated <- QRCAssociation.findActiveAssociationByDriver driverId True
+      when (isJust isDriverAssociated) $ throwError DriverAlreadyLinkedToAnotherVehicle
       return False
 
 checkEnitiesAssociationValidation :: Text -> Maybe Text -> DP.Person -> Maybe Bool -> Flow (DP.Person, Maybe Text)
@@ -1691,7 +1700,7 @@ postDriverFleetLinkRCWithDriver merchantShortId opCity fleetOwnerId mbRequestorI
   when (isNothing rc.fleetOwnerId || (isJust rc.fleetOwnerId && rc.fleetOwnerId /= Just fleetOwnerId)) $ throwError VehicleNotPartOfFleet
   unless (rc.verificationStatus == Documents.VALID) $ throwError (RcNotValid)
   validateFleetDriverAssociation fleetOwnerId driver
-  isValidAssociation <- checkRCAssociationForDriver driver.id rc False
+  isValidAssociation <- checkRCAssociationForDriver driver.id (Just rc) False
   when (not isValidAssociation) $ do
     transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     createDriverRCAssociationIfPossible transporterConfig driver.id rc

@@ -11,7 +11,7 @@ import qualified API.Types.UI.PickupInstructions as API
 import AWS.S3 as S3
 import qualified Data.ByteString as BS
 import qualified Data.List as List
-import Data.Maybe (fromMaybe, isJust)
+import Data.Maybe (fromMaybe, isJust, isNothing)
 import Data.Ord (comparing)
 import qualified Data.Text as T
 import qualified Domain.Types.Merchant
@@ -175,55 +175,62 @@ postPickupinstructions (mbPersonId, merchantId) req = do
   logDebug $ "PickupInstructions: Received POST request - personId: " <> show personId.getId <> ", lat: " <> show req.lat <> ", lon: " <> show req.lon
   logDebug $ "PickupInstructions: Raw instruction field: " <> show req.instruction
 
-  -- Audio file is now required
-  audioFilePath <- req.file & fromMaybeM (InvalidRequest "Audio file is required for pickup instructions")
+  -- Handle optional audio file
+  mediaFileId <- case req.file of
+    Just audioFilePath -> do
+      logDebug $ "PickupInstructions: Processing audio file: " <> show audioFilePath
 
-  logDebug $ "PickupInstructions: Processing audio file: " <> show audioFilePath
+      -- Extract filename and actual file path from encoded path
+      let (originalFileName, actualFilePath) = case T.splitOn ":" (T.pack audioFilePath) of
+            (fname : rest) -> (fname, T.unpack $ T.intercalate ":" rest)
+            _ -> ("unknown.mp3", audioFilePath) -- Fallback
+          mimeType = detectMimeTypeFromExtension originalFileName
+          fileExtension = mimeTypeToExtension mimeType
+      logDebug $ "PickupInstructions: Original filename: " <> originalFileName
+      logDebug $ "PickupInstructions: Actual file path: " <> T.pack actualFilePath
+      logDebug $ "PickupInstructions: Detected MIME type from extension: " <> mimeType
+      logDebug $ "PickupInstructions: Mapped file extension: " <> fileExtension
 
-  -- Extract filename and actual file path from encoded path
-  let (originalFileName, actualFilePath) = case T.splitOn ":" (T.pack audioFilePath) of
-        (fname : rest) -> (fname, T.unpack $ T.intercalate ":" rest)
-        _ -> ("unknown.mp3", audioFilePath) -- Fallback
-      mimeType = detectMimeTypeFromExtension originalFileName
-      fileExtension = mimeTypeToExtension mimeType
-      actualInstruction = req.instruction -- Pure text now
-  logDebug $ "PickupInstructions: Original filename: " <> originalFileName
-  logDebug $ "PickupInstructions: Actual file path: " <> T.pack actualFilePath
-  logDebug $ "PickupInstructions: Detected MIME type from extension: " <> mimeType
-  logDebug $ "PickupInstructions: Mapped file extension: " <> fileExtension
-  logDebug $ "PickupInstructions: Actual instruction: " <> show actualInstruction
+      -- Validate file size
+      fileSize <- L.runIO $ withFile actualFilePath ReadMode hFileSize
+      logDebug $ "PickupInstructions: File size: " <> show fileSize
+      logDebug $ "PickupInstructions: File path length: " <> show (T.length (show actualFilePath))
+      when (fileSize > fromIntegral riderConfig.videoFileSizeUpperLimit) $
+        throwError $ FileSizeExceededError (show fileSize)
 
-  -- Validate file size
-  fileSize <- L.runIO $ withFile actualFilePath ReadMode hFileSize
-  logDebug $ "PickupInstructions: File size: " <> show fileSize
-  logDebug $ "PickupInstructions: File path length: " <> show (T.length (show actualFilePath))
-  when (fileSize > fromIntegral riderConfig.videoFileSizeUpperLimit) $
-    throwError $ FileSizeExceededError (show fileSize)
+      -- Read and encode file
+      audioData <- L.runIO $ base64Encode <$> BS.readFile actualFilePath
+      logDebug $ "PickupInstructions: Audio data length: " <> show (T.length (show audioData))
+      -- Create file path for S3
+      pickupInstructionsId :: Kernel.Types.Id.Id DMF.MediaFile <- generateGUID
+      filePath <- S3.createFilePath "/pickup-instructions/" ("pickup-" <> pickupInstructionsId.getId) S3.Audio fileExtension
+      logDebug $ "PickupInstructions: File path: " <> show filePath
+      -- Create file URL
+      let fileUrl =
+            merchantConfig.mediaFileUrlPattern
+              & T.replace "<DOMAIN>" "pickup-instructions"
+              & T.replace "<FILE_PATH>" filePath
+      logDebug $ "PickupInstructions: File URL: " <> show fileUrl
 
-  -- Read and encode file
-  audioData <- L.runIO $ base64Encode <$> BS.readFile actualFilePath
-  logDebug $ "PickupInstructions: Audio data length: " <> show (T.length (show audioData))
-  -- Create file path for S3
-  pickupInstructionsId :: Kernel.Types.Id.Id DMF.MediaFile <- generateGUID
-  filePath <- S3.createFilePath "/pickup-instructions/" ("pickup-" <> pickupInstructionsId.getId) S3.Audio fileExtension
-  logDebug $ "PickupInstructions: File path: " <> show filePath
-  -- Create file URL
-  let fileUrl =
-        merchantConfig.mediaFileUrlPattern
-          & T.replace "<DOMAIN>" "pickup-instructions"
-          & T.replace "<FILE_PATH>" filePath
-  logDebug $ "PickupInstructions: File URL: " <> show fileUrl
+      -- Upload to S3
+      result <- try @_ @SomeException $ S3.put (T.unpack filePath) audioData
+      case result of
+        Left err -> throwError $ InternalError ("S3 Upload Failed: " <> show err)
+        Right _ -> pure ()
+      logDebug $ "PickupInstructions: S3 upload successful"
+      -- Create media file entry
+      mediaFile <- createMediaFileEntry fileUrl filePath
+      MFQuery.create mediaFile
+      return $ Just mediaFile.id
+    Nothing -> do
+      logDebug "PickupInstructions: No audio file provided, creating text-only instruction"
+      return Nothing
 
-  -- Upload to S3
-  result <- try @_ @SomeException $ S3.put (T.unpack filePath) audioData
-  case result of
-    Left err -> throwError $ InternalError ("S3 Upload Failed: " <> show err)
-    Right _ -> pure ()
-  logDebug $ "PickupInstructions: S3 upload successful"
-  -- Create media file entry
-  mediaFile <- createMediaFileEntry fileUrl filePath
-  MFQuery.create mediaFile
-  let mediaFileId = Just mediaFile.id
+  let actualInstruction = req.instruction
+
+  -- Validate that at least instruction text or audio file is provided
+  when (T.null actualInstruction && isNothing mediaFileId) $
+    throwError $ InvalidRequest "Either instruction text or audio file must be provided"
 
   -- Get all existing instructions for this person
   existingInstructions <- QPI.findByPersonId personId
@@ -252,7 +259,10 @@ postPickupinstructions (mbPersonId, merchantId) req = do
           distanceInMeters = highPrecMetersToMeters distance
       logDebug $ "PickupInstructions: Found nearby instruction within " <> show distanceInMeters <> " meters. Updating existing instruction at lat: " <> show nearbyInstruction.lat <> ", lon: " <> show nearbyInstruction.lon
       -- Update existing instruction using the NEW coordinates and mediaFileId
-      let instructionText = if T.null actualInstruction then "Audio pickup instruction" else actualInstruction
+      let instructionText = case (T.null actualInstruction, mediaFileId) of
+            (True, Just _) -> "Audio pickup instruction" -- No text but has audio
+            (True, Nothing) -> "Pickup instruction" -- No text and no audio
+            (False, _) -> actualInstruction -- Has text
       QPI.updateByPersonIdAndLocation req.lat req.lon instructionText mediaFileId personId
     Nothing -> do
       logDebug $ "PickupInstructions: No nearby instruction found. Current count: " <> show (length existingInstructions) <> ", threshold: " <> show riderConfig.pickupInstructionsThreshold
@@ -272,7 +282,10 @@ postPickupinstructions (mbPersonId, merchantId) req = do
               -- Create new pickup instruction
               newPickupInstructionsId <- generateGUID
               now <- getCurrentTime
-              let instructionText = if T.null actualInstruction then "Audio pickup instruction" else actualInstruction
+              let instructionText = case (T.null actualInstruction, mediaFileId) of
+                    (True, Just _) -> "Audio pickup instruction" -- No text but has audio
+                    (True, Nothing) -> "Pickup instruction" -- No text and no audio
+                    (False, _) -> actualInstruction -- Has text
                   newInstruction =
                     DPI.PickupInstructions
                       { DPI.id = newPickupInstructionsId,
@@ -292,7 +305,10 @@ postPickupinstructions (mbPersonId, merchantId) req = do
           -- Create new pickup instruction
           newPickupInstructionsId <- generateGUID
           now <- getCurrentTime
-          let instructionText = if T.null actualInstruction then "Audio pickup instruction" else actualInstruction
+          let instructionText = case (T.null actualInstruction, mediaFileId) of
+                (True, Just _) -> "Audio pickup instruction" -- No text but has audio
+                (True, Nothing) -> "Pickup instruction" -- No text and no audio
+                (False, _) -> actualInstruction -- Has text
           let newInstruction =
                 DPI.PickupInstructions
                   { DPI.id = newPickupInstructionsId,
