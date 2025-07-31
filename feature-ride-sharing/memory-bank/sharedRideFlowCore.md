@@ -1,5 +1,39 @@
 # Shared Ride Flow - Core Logic Summary
 
+## 🔥 IMPORTANT ARCHITECTURAL CHANGE
+
+**Unified SharedEntity Design**: This implementation uses a **unified `shared_entity` table** instead of separate tables for shared ride components. The previous design with separate `shared_search_request`, `shared_estimate`, `shared_booking`, etc. tables has been **replaced** with a single unified entity approach.
+
+### Current SharedEntity Schema:
+```sql
+CREATE TABLE shared_entity (
+    id TEXT PRIMARY KEY,
+    status TEXT NOT NULL, -- SharedEntityActive, SharedEntityCancelled, SharedEntityOfferedQuote
+    entity_type TEXT NOT NULL, -- SEARCH_GROUP, ESTIMATE_GROUP, BOOKING_GROUP, RIDE_GROUP
+    search_request_ids JSONB NOT NULL DEFAULT '[]', -- Array of TrackedEntity {entityId: Text, isActive: Bool}
+    estimate_ids JSONB NOT NULL DEFAULT '[]', -- Array of TrackedEntity {entityId: Text, isActive: Bool}
+    booking_ids JSONB NOT NULL DEFAULT '[]', -- Array of TrackedEntity {entityId: Text, isActive: Bool}
+    ride_ids JSONB NOT NULL DEFAULT '[]', -- Array of TrackedEntity {entityId: Text, isActive: Bool}
+    merchant_id TEXT NOT NULL,
+    merchant_operating_city_id TEXT NOT NULL,
+    vehicle_category TEXT NOT NULL,
+    trip_category TEXT NOT NULL, -- RideShare
+    driver_id TEXT, -- Assigned driver (nullable)
+    pairing_time TIMESTAMP, -- When entities were grouped (nullable)
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+```
+
+### Key Benefits:
+- **Single Source of Truth**: All shared ride data in one unified table
+- **Simplified Queries**: No complex joins across multiple shared tables
+- **Flexible Entity Tracking**: TrackedEntity arrays can track any type of entity with active/inactive states
+- **Consistent Status Management**: Single status field for the entire shared ride batch
+- **Easy Lifecycle Management**: One entity to track from search → estimate → booking → ride
+
+---
+
 This document summarizes the core logic extracted from the shared ride feature flowchart. It will be populated as flowchart chunks are processed.
 
 ---

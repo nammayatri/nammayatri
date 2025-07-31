@@ -68,10 +68,10 @@ This approach leverages existing `fare_product_type` structure mentioned in sear
   ```haskell
   -- Add new helper function in OnSearch.hs
   checkNearbyRiders :: 
-    (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => 
+    (MonadFlow m, CacheFlow m r) => 
     LatLong -> 
     Id MerchantOperatingCity -> 
-    m (Bool, Int)
+    m Int
   checkNearbyRiders sourceLocation merchantOperatingCityId = do
     sharedRideConfig <- QSharedRideConfig.findByMerchantOpCityIdAndType 
                           merchantOperatingCityId OverlappingRoute
@@ -80,9 +80,8 @@ This approach leverages existing `fare_product_type` structure mentioned in sear
         let gsiKey = "searchHotSpots"
         nearbySearches <- Redis.geoRadius gsiKey sourceLocation.lon sourceLocation.lat 
                            (fromIntegral config.searchRadius.getMeters) "m"
-        let count = length nearbySearches
-        return (count >= config.minRidersThreshold, count)
-      _ -> return (False, 0) -- Shared ride not enabled
+        return $ length nearbySearches
+      _ -> return 0 -- Shared ride not enabled
   ```
 - **Dependencies**:
   - Import `Storage.CachedQueries.SharedRideConfig as QSharedRideConfig` in OnSearch.hs
@@ -92,35 +91,63 @@ This approach leverages existing `fare_product_type` structure mentioned in sear
 - **API**: `Backend/app/rider-platform/rider-app/Main/src/Domain/Action/Beckn/OnSearch.hs` - when processing estimates from BPP
 - **Implementation**:
   ```haskell
-  -- Add new filter function after filterEstimtesByPrefference
+  -- 1. Add in onSearch handler - call checkNearbyRiders once and update searchRequest
+  -- Add this early in onSearch handler after searchRequest is available
+  nearbyRidersCount <- checkNearbyRiders searchRequest.fromLocation.gps 
+                         searchRequest.merchantOperatingCityId
+  QSearchRequest.updateNearbyRidersCount searchRequest.id nearbyRidersCount
+  
+  -- 2. Add common helper function to determine if shared rides should be shown
+  shouldShowSharedRides :: 
+    SearchRequestFlow m r => 
+    Int -> 
+    Id MerchantOperatingCity -> 
+    m Bool
+  shouldShowSharedRides nearbyRidersCount merchantOperatingCityId = do
+    sharedRideConfig <- QSharedRideConfig.findByMerchantOpCityIdAndType 
+                          merchantOperatingCityId OverlappingRoute
+    let featureEnabled = maybe False (.enableSharedRide) sharedRideConfig
+    let minThreshold = maybe 2 (.minRidersThreshold) sharedRideConfig
+    let hotspotCheck = nearbyRidersCount >= minThreshold
+    return (featureEnabled && hotspotCheck)
+  
+  -- 3. Add filter functions that use the common helper
   filterSharedRideEstimates :: 
     SearchRequestFlow m r => 
     [EstimateInfo] -> 
-    SearchRequest -> 
+    Int -> 
+    Id MerchantOperatingCity -> 
     m [EstimateInfo]
-  filterSharedRideEstimates estimatesInfo searchRequest = do
-    (hotspotCheck, _) <- checkNearbyRiders searchRequest.fromLocation.gps 
-                           searchRequest.merchantOperatingCityId
-    sharedRideConfig <- QSharedRideConfig.findByMerchantOpCityIdAndType 
-                          searchRequest.merchantOperatingCityId OverlappingRoute
-    let featureEnabled = maybe False (.enableSharedRide) sharedRideConfig
-    
-    if featureEnabled && hotspotCheck
+  filterSharedRideEstimates estimatesInfo nearbyRidersCount merchantOperatingCityId = do
+    showSharedRides <- shouldShowSharedRides nearbyRidersCount merchantOperatingCityId
+    if showSharedRides
       then return estimatesInfo  -- Keep all estimates including RideShare
       else return $ filter (\est -> est.tripCategory /= RideShare) estimatesInfo
   
-  -- Update existing onSearch handler lines:
+  filterSharedRideQuotes :: 
+    SearchRequestFlow m r => 
+    [QuoteInfo] -> 
+    Int -> 
+    Id MerchantOperatingCity -> 
+    m [QuoteInfo]
+  filterSharedRideQuotes quotesInfo nearbyRidersCount merchantOperatingCityId = do
+    showSharedRides <- shouldShowSharedRides nearbyRidersCount merchantOperatingCityId
+    if showSharedRides
+      then return quotesInfo  -- Keep all quotes including RideShare
+      else return $ filter (\quote -> quote.tripCategory /= RideShare) quotesInfo
+  
+  -- 4. Update existing onSearch handler lines:
   -- FROM: estimates <- traverse (buildEstimate providerInfo now searchRequest deploymentVersion) (filterEstimtesByPrefference estimatesInfo blackListedVehicles)
   -- TO:
   filteredEstimates <- filterEstimtesByPrefference estimatesInfo blackListedVehicles
-  sharedRideFilteredEstimates <- filterSharedRideEstimates filteredEstimates searchRequest
+  sharedRideFilteredEstimates <- filterSharedRideEstimates filteredEstimates nearbyRidersCount searchRequest.merchantOperatingCityId
   estimates <- traverse (buildEstimate providerInfo now searchRequest deploymentVersion) sharedRideFilteredEstimates
   
   -- Similarly for quotes:
   -- FROM: quotes <- traverse (buildQuote requestId providerInfo now searchRequest deploymentVersion) (filterQuotesByPrefference quotesInfo blackListedVehicles)  
   -- TO:
   filteredQuotes <- filterQuotesByPrefference quotesInfo blackListedVehicles
-  sharedRideFilteredQuotes <- filterSharedRideQuotes filteredQuotes searchRequest  -- Similar function for quotes
+  sharedRideFilteredQuotes <- filterSharedRideQuotes filteredQuotes nearbyRidersCount searchRequest.merchantOperatingCityId
   quotes <- traverse (buildQuote requestId providerInfo now searchRequest deploymentVersion) sharedRideFilteredQuotes
   ```
 
@@ -188,6 +215,21 @@ ADD COLUMN kyc_verified BOOLEAN DEFAULT FALSE;
 ```sql
 ALTER TABLE atlas_app.search_request 
 ADD COLUMN nearby_riders_count INTEGER;
+```
+
+### Storage Query Function
+Add to `Storage.Queries.SearchRequest`:
+```haskell
+updateNearbyRidersCount :: 
+  Id SearchRequest -> 
+  Int -> 
+  SqlDB ()
+updateNearbyRidersCount searchRequestId count = do
+  now <- getCurrentTime
+  update $ \tbl -> do
+    set tbl [SearchRequestNearbyRidersCount =. val (Just count), 
+             SearchRequestUpdatedAt =. val now]
+    where_ $ tbl ^. SearchRequestId ==. val searchRequestId.getId
 ```
 
 ## Redis Data Structures
