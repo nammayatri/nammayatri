@@ -1477,3 +1477,30 @@ sendDriverEKDLiveFCM merchantOpCityId driverId mbDeviceToken language entityData
     (pure entityData)
     []
     Nothing
+
+notifyEditDestination ::
+  ( CacheFlow m r,
+    EsqDBFlow m r
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  Id Person ->
+  Maybe FCM.FCMRecipientToken ->
+  m ()
+notifyEditDestination merchantOpCityId personId mbDeviceToken = do
+  logDebug $ "We are in edit destination when driver accepted edited location"
+  transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) (clearDeviceToken personId) notificationData (FCMNotificationRecipient personId.getId mbDeviceToken) EulerHS.Prelude.id
+  where
+    notificationData =
+      FCM.FCMData
+        { fcmNotificationType = FCM.DRIVER_ACCEPTED_EDITED_LOCATION,
+          fcmShowNotification = FCM.SHOW,
+          fcmEntityType = FCM.Person,
+          fcmEntityIds = getId personId,
+          fcmEntityData = (),
+          fcmNotificationJSON = FCM.createAndroidNotification title body FCM.DRIVER_ACCEPTED_EDITED_LOCATION Nothing,
+          fcmOverlayNotificationJSON = Nothing,
+          fcmNotificationId = Nothing
+        }
+    title = FCM.FCMNotificationTitle "Edit Destination"
+    body = FCMNotificationBody "Driver accepted edited destination."
