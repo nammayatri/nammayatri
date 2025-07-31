@@ -14,7 +14,3 @@ ALTER TABLE atlas_app.vendor_split_details ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.vendor_split_details ADD COLUMN include_in_split boolean ;
-
-------- SQL updates -------
-
-ALTER TABLE atlas_app.vendor_split_details ADD COLUMN split_share text ;

@@ -9,15 +9,12 @@ VendorSplitDetails:
   types:
     SplitType:
       enum: "FIXED, FLEXIBLE"
-    SplitShare:
-      enum: "Percentage Double, FixedValue Int"
   fields:
     id : Id VendorSplitDetails
     integratedBPPConfigId : Id IntegratedBPPConfig
     vendorId : Text
     splitType : SplitType
     includeInSplit : Maybe Bool
-    splitShare : Maybe SplitShare
 
   constraints:
     id: PrimaryKey
