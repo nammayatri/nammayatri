@@ -204,40 +204,42 @@ onSearchHelper onSearchReq validatedReq integratedBPPConfig = do
   QSearch.updateIsOnSearchReceivedById (Just True) validatedReq.search.id
   fork "Updating Route Stop Fare" $ do
     forM_ onSearchReq.quotes $ \quote -> do
-      -- This `null quote.routeStation` check is to ensure that we only update the fare for the route stations if they are present in the quote.
-      dStartStation <- getStartStation quote.stations & fromMaybeM (InternalError "Start station not found")
-      dEndStation <- getEndStation quote.stations & fromMaybeM (InternalError "End station not found")
-      if null quote.routeStations
-        then do
-          if quote.vehicleType == Spec.METRO
-            then do
-              QRSF.findAllByStartStopAndIntegratedBPPConfigId dStartStation.stationCode dEndStation.stationCode integratedBPPConfig.id >>= \case
-                routeStopFares@(_ : _) -> do
-                  let farePolicyIds = map (.farePolicyId) routeStopFares
-                  traverse_ (\fp -> QRSF.updateFareByStopCodes quote.price.amount fp dStartStation.stationCode dEndStation.stationCode) farePolicyIds
-                [] -> do
-                  QFRFP.findAllByIntegratedBPPConfigId integratedBPPConfig.id >>= \case
-                    fareProducts@(_ : _) -> do
-                      let farePolicyIds = map (.farePolicyId) fareProducts
-                      traverse_ (\farePolicyId -> createStopFare farePolicyId dStartStation.stationCode dEndStation.stationCode quote search.merchantId search.merchantOperatingCityId integratedBPPConfig.id) farePolicyIds
-                    [] -> do
-                      createEntriesInFareTables search.merchantId search.merchantOperatingCityId quote integratedBPPConfig.id
-            else do
-              QFRFP.findByRouteCode quote.routeCode integratedBPPConfig.id >>= \case
-                fareProducts@(_ : _) -> do
-                  let farePolicyIds = map (.farePolicyId) fareProducts
-                  farePolicies <- QFFP.findAllByIds farePolicyIds
-                  let filteredFarePolicies = filter (\fp -> fp._type == FRFSFarePolicy.MatrixBased) farePolicies
-                  traverse_ (\fp -> QRSF.updateFareByStopCodes quote.price.amount fp.id dStartStation.stationCode dEndStation.stationCode) filteredFarePolicies
-                [] -> do
-                  createEntriesInFareTables search.merchantId search.merchantOperatingCityId quote integratedBPPConfig.id
-        else do
-          forM_ quote.routeStations $ \routeStation -> do
-            let price = routeStation.routePrice.amount
-                mbStartStopCode = find (\station -> station.stationType == Station.START) routeStation.routeStations <&> (.stationCode)
-                mbEndStopCode = find (\station -> station.stationType == Station.END) routeStation.routeStations <&> (.stationCode)
-            whenJust ((,,) <$> routeStation.routeFarePolicyId <*> mbStartStopCode <*> mbEndStopCode) $ \(farePolicyId, startStopCode, endStopCode) ->
-              QRSF.updateFareByStopCodes price farePolicyId startStopCode endStopCode
+      -- Only cache Single Journey tickets, ignore Return Journey tickets
+      when (quote._type == Quote.SingleJourney) $ do
+        -- This `null quote.routeStation` check is to ensure that we only update the fare for the route stations if they are present in the quote.
+        dStartStation <- getStartStation quote.stations & fromMaybeM (InternalError "Start station not found")
+        dEndStation <- getEndStation quote.stations & fromMaybeM (InternalError "End station not found")
+        if null quote.routeStations
+          then do
+            if quote.vehicleType == Spec.METRO
+              then do
+                QRSF.findAllByStartStopAndIntegratedBPPConfigId dStartStation.stationCode dEndStation.stationCode integratedBPPConfig.id >>= \case
+                  routeStopFares@(_ : _) -> do
+                    let farePolicyIds = map (.farePolicyId) routeStopFares
+                    traverse_ (\fp -> QRSF.updateFareByStopCodes quote.price.amount fp dStartStation.stationCode dEndStation.stationCode) farePolicyIds
+                  [] -> do
+                    QFRFP.findAllByIntegratedBPPConfigId integratedBPPConfig.id >>= \case
+                      fareProducts@(_ : _) -> do
+                        let farePolicyIds = map (.farePolicyId) fareProducts
+                        traverse_ (\farePolicyId -> createStopFare farePolicyId dStartStation.stationCode dEndStation.stationCode quote search.merchantId search.merchantOperatingCityId integratedBPPConfig.id) farePolicyIds
+                      [] -> do
+                        createEntriesInFareTables search.merchantId search.merchantOperatingCityId quote integratedBPPConfig.id
+              else do
+                QFRFP.findByRouteCode quote.routeCode integratedBPPConfig.id >>= \case
+                  fareProducts@(_ : _) -> do
+                    let farePolicyIds = map (.farePolicyId) fareProducts
+                    farePolicies <- QFFP.findAllByIds farePolicyIds
+                    let filteredFarePolicies = filter (\fp -> fp._type == FRFSFarePolicy.MatrixBased) farePolicies
+                    traverse_ (\fp -> QRSF.updateFareByStopCodes quote.price.amount fp.id dStartStation.stationCode dEndStation.stationCode) filteredFarePolicies
+                  [] -> do
+                    createEntriesInFareTables search.merchantId search.merchantOperatingCityId quote integratedBPPConfig.id
+          else do
+            forM_ quote.routeStations $ \routeStation -> do
+              let price = routeStation.routePrice.amount
+                  mbStartStopCode = find (\station -> station.stationType == Station.START) routeStation.routeStations <&> (.stationCode)
+                  mbEndStopCode = find (\station -> station.stationType == Station.END) routeStation.routeStations <&> (.stationCode)
+              whenJust ((,,) <$> routeStation.routeFarePolicyId <*> mbStartStopCode <*> mbEndStopCode) $ \(farePolicyId, startStopCode, endStopCode) ->
+                QRSF.updateFareByStopCodes price farePolicyId startStopCode endStopCode
   return ()
   where
     cacheQuote quote = do
