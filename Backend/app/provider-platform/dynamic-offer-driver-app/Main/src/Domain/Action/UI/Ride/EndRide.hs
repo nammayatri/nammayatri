@@ -565,12 +565,8 @@ determineMetroRideType mbSplLocTag sureMetro sureWarriorMetro =
   case mbSplLocTag of
     Just splLocTag ->
       case (fromMetro, toMetro, priorityTag) of
-        (True, True, Just "PriorityPickup") -> DCT.FromMetro
-        (True, True, Just "PriorityDrop") -> DCT.ToMetro
-        (True, _, Just "PriorityPickup") -> DCT.FromMetro
-        (_, True, Just "PriorityDrop") -> DCT.ToMetro
-        (True, _, _) -> DCT.FromMetro
-        (_, True, _) -> DCT.ToMetro
+        (True, _, _) -> DCT.FromOrToMetro
+        (_, True, _) -> DCT.FromOrToMetro
         _ -> DCT.None
       where
         tagArr = Text.splitOn "_" splLocTag
