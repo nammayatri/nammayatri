@@ -123,9 +123,3 @@ ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN mb_actual_qar_city_past d
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.estimate ALTER COLUMN congestion_multiplier TYPE text;
-
-
-
-------- SQL updates -------
-
-ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN shared_estimate_id character varying(36) ;

@@ -247,7 +247,7 @@ Booking:
     insuredAmount: Maybe Text
     driverInsuredAmount: Maybe Text
     isMultimodalSearch: Maybe Bool
-    sharedBookingId: Maybe Text
+    sharedEntityId: Maybe Text
 
   beamFields:
     estimatedDistance:
@@ -357,7 +357,7 @@ Booking:
     estimatedDistanceValue: double precision
     vehicleIconUrl: character varying(255)
     configInExperimentVersions: "json"
-    sharedBookingId: character varying(36)
+    sharedEntityId: character varying(36)
 
   default:
     fareProductType: "'ONE_WAY'"
@@ -461,10 +461,10 @@ Booking:
       kvFunction: findOneWithKV
       where: quoteId
 
-    updateSharedBookingId:
+    updateSharedEntityId:
       kvFunction: updateOneWithKV
       where: id
-      params: [sharedBookingId]
+      params: [sharedEntityId]
 
 BookingPartiesLink:
   fields:
