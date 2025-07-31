@@ -1,6 +1,6 @@
 plugins {
     id 'com.android.library'
-    id 'com.google.protobuf'
+//    id 'com.google.protobuf'
 }
 
 android {
@@ -51,25 +51,25 @@ android {
 
 def cameraxVersion = "1.1.0-alpha05"
 
-protobuf {
-    protoc { artifact = 'com.google.protobuf:protoc:3.21.7' }
-    plugins {
-        grpc { artifact = 'io.grpc:protoc-gen-grpc-java:1.61.0' }
-    }
-
-    generateProtoTasks {
-        all().each { task ->
-            task.builtins {
-                java { option 'lite' }
-            }
-            task.plugins {
-                grpc {
-                    option 'lite'
-                }
-            }
-        }
-    }
-}
+//protobuf {
+//    protoc { artifact = 'com.google.protobuf:protoc:3.21.7' }
+//    plugins {
+//        grpc { artifact = 'io.grpc:protoc-gen-grpc-java:1.61.0' }
+//    }
+//
+//    generateProtoTasks {
+//        all().each { task ->
+//            task.builtins {
+//                java { option 'lite' }
+//            }
+//            task.plugins {
+//                grpc {
+//                    option 'lite'
+//                }
+//            }
+//        }
+//    }
+//}
 
 dependencies {
     implementation project(':mobility-common')
@@ -121,10 +121,10 @@ dependencies {
     implementation "androidx.camera:camera-lifecycle:${cameraxVersion}"
     compileOnly 'com.facebook.react:react-android:0.79.2'
 
-    // GRPC Dependencies
-    implementation 'io.grpc:grpc-okhttp:1.61.0' // CURRENT_GRPC_VERSION
-    implementation 'io.grpc:grpc-protobuf-lite:1.61.0' // CURRENT_GRPC_VERSION
-    implementation 'io.grpc:grpc-stub:1.61.0' // CURRENT_GRPC_VERSION
+//    // GRPC Dependencies
+//    implementation 'io.grpc:grpc-okhttp:1.61.0' // CURRENT_GRPC_VERSION
+//    implementation 'io.grpc:grpc-protobuf-lite:1.61.0' // CURRENT_GRPC_VERSION
+//    implementation 'io.grpc:grpc-stub:1.61.0' // CURRENT_GRPC_VERSION
     implementation 'org.apache.tomcat:annotations-api:6.0.53'
     implementation 'com.google.android.flexbox:flexbox:3.0.0'
     implementation 'com.google.code.gson:gson:2.10.1'

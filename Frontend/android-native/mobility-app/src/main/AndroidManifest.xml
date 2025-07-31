@@ -79,11 +79,6 @@
             android:largeHeap="true"
             android:stopWithTask="false" />
         <service
-            android:name=".GRPCNotificationService"
-            android:exported="false"
-            android:largeHeap="true"
-            android:stopWithTask="false" />
-        <service
             android:name=".WidgetService"
             android:enabled="true"
             android:exported="false"
