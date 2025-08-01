@@ -173,7 +173,8 @@ buildTicketDashboardUser req mbPersonId roleId dashboardAccessType = do
         rejectionReason = Nothing,
         rejectedAt = Nothing,
         dashboardType = PT.TICKET_DASHBOARD,
-        passwordUpdatedAt = Nothing
+        passwordUpdatedAt = Nothing,
+        approvedBy = Nothing
       }
 
 registerTicketDashboard :: (BeamFlow m r, EncFlow m r, HasFlowEnv m r '["dataServers" ::: [DTServer.DataServer]]) => API.Types.Dashboard.AppManagement.Tickets.TicketDashboardRegisterReq -> Maybe Text -> m API.Types.Dashboard.AppManagement.Tickets.TicketDashboardRegisterResp

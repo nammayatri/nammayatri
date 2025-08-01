@@ -75,10 +75,9 @@ import qualified Storage.Queries.BusinessLicense as QBL
 import qualified Storage.Queries.DriverGstin as QGstin
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverLicense as QDL
-import qualified Storage.Queries.DriverLicense as QDriverLicense
 import qualified Storage.Queries.DriverPanCard as QPan
-import qualified Storage.Queries.DriverPanCard as QPanCard
 import qualified Storage.Queries.DriverSSN as QSSN
+import qualified Storage.Queries.FleetOwnerDocumentVerificationConfig as QFODVC
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import Storage.Queries.Image as QImage
 import qualified Storage.Queries.Person as QDriver
@@ -268,7 +267,7 @@ postDriverRegistrationDocumentUpload merchantShortId opCity driverId_ req = do
         }
   pure $ Common.UploadDocumentResp {imageId = cast res.imageId}
 
-postDriverRegistrationUnlinkDocument :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.DocumentType -> Maybe Text -> Flow APISuccess
+postDriverRegistrationUnlinkDocument :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.DocumentType -> Maybe Text -> Flow Common.UnlinkDocumentResp
 postDriverRegistrationUnlinkDocument merchantShortId opCity personId documentType mbRequestorId = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
@@ -281,11 +280,14 @@ postDriverRegistrationUnlinkDocument merchantShortId opCity personId documentTyp
       unless isValid $ throwError (InvalidRequest "Driver is not associated with the entity")
       pure entity
     Nothing -> runInReplica $ QPerson.findById (cast personId) >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  removeDriverDocument merchantOpCityId person
-  pure Success
+  res <- unlinkPersonDocument merchantOpCityId person
+  return
+    Common.UnlinkDocumentResp
+      { mandatoryDocumentRemoved = res
+      }
   where
-    removeDriverDocument :: Id DMOC.MerchantOperatingCity -> DP.Person -> Flow ()
-    removeDriverDocument merchantOpCityId person = do
+    unlinkPersonDocument :: Id DMOC.MerchantOperatingCity -> DP.Person -> Flow Bool
+    unlinkPersonDocument merchantOpCityId person = do
       case person.role of
         DP.FLEET_OWNER -> do
           case documentType of
@@ -293,23 +295,40 @@ postDriverRegistrationUnlinkDocument merchantShortId opCity personId documentTyp
             Common.GSTCertificate -> QFOI.updateGstImage Nothing Nothing person.id
             Common.AadhaarCard -> QFOI.updateAadhaarImage Nothing Nothing Nothing person.id
             _ -> throwError (InvalidRequest "Invalid document type")
+        DP.DRIVER -> do
+          case documentType of
+            Common.PanCard -> QDriverInfo.updatePanNumber Nothing person.id
+            Common.AadhaarCard -> QDriverInfo.updateAadhaarNumber Nothing person.id
+            _ -> throwError (InvalidRequest "Invalid document type")
         _ -> pure ()
       case documentType of
-        Common.PanCard -> QPanCard.deleteByDriverId person.id
+        Common.PanCard -> QPan.deleteByDriverId person.id
         Common.GSTCertificate -> QGstin.deleteByDriverId person.id
         Common.AadhaarCard -> QAadhaarCard.deleteByPersonId person.id
-        Common.DriverLicense -> QDriverLicense.deleteByDriverId person.id
+        Common.DriverLicense -> QDL.deleteByDriverId person.id
         _ -> throwError (InvalidRequest "Invalid document type")
       checkAndUpdateEnabledStatus merchantOpCityId documentType person
 
-    checkAndUpdateEnabledStatus :: Id DMOC.MerchantOperatingCity -> Common.DocumentType -> DP.Person -> Flow ()
+    checkAndUpdateEnabledStatus :: Id DMOC.MerchantOperatingCity -> Common.DocumentType -> DP.Person -> Flow Bool
     checkAndUpdateEnabledStatus merchantOpCityId docType person = do
-      mbVerificationConfig <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId (mapDocumentType docType) DVC.CAR Nothing
-      let isMandatory = maybe False (\verificationConfig -> verificationConfig.isMandatory) mbVerificationConfig
-      when isMandatory $ case person.role of
-        DP.FLEET_OWNER -> QFOI.updateFleetOwnerEnabledStatus False person.id
-        DP.DRIVER -> QDriverInfo.updateEnabledVerifiedState person.id False Nothing
-        _ -> pure ()
+      case person.role of
+        role | isFleetOwnerRole role -> do
+          mbFleetVerificationConfig <- QFODVC.findByPrimaryKey (mapDocumentType docType) merchantOpCityId person.role
+          let isMandatory = maybe False (.isMandatory) mbFleetVerificationConfig
+          if isMandatory
+            then do
+              QFOI.updateFleetOwnerEnabledStatus False person.id
+              pure True
+            else pure False
+        DP.DRIVER -> do
+          mbVerificationConfig <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId (mapDocumentType docType) DVC.CAR Nothing
+          let isMandatory = maybe False (.isMandatory) mbVerificationConfig
+          when isMandatory $ do
+            QDriverInfo.updateEnabledVerifiedState person.id False Nothing
+          pure False
+        _ -> pure False
+    isFleetOwnerRole :: DP.Role -> Bool
+    isFleetOwnerRole role = role `elem` [DP.FLEET_OWNER, DP.FLEET_BUSINESS]
 
 postDriverRegistrationRegisterDl :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.RegisterDLReq -> Flow APISuccess
 postDriverRegistrationRegisterDl merchantShortId opCity driverId_ Common.RegisterDLReq {..} = do

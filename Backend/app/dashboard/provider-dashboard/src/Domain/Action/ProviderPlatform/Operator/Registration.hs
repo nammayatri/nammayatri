@@ -84,7 +84,8 @@ buildOperator req operatorId role = do
         rejectionReason = Nothing,
         rejectedAt = Nothing,
         dashboardType = PT.DEFAULT_DASHBOARD,
-        passwordUpdatedAt = Nothing
+        passwordUpdatedAt = Nothing,
+        approvedBy = Nothing
       }
 
 validateOperator :: Validate Common.OperatorRegisterReq

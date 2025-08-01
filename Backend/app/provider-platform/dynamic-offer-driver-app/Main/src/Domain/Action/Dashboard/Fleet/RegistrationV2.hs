@@ -7,6 +7,8 @@ module Domain.Action.Dashboard.Fleet.RegistrationV2
     createFleetOwnerDetails,
     createFleetOwnerInfo,
     fleetOwnerLogin,
+    enableFleetIfPossible,
+    castRoleToFleetType,
   )
 where
 
@@ -155,41 +157,47 @@ fleetOwnerRegister _merchantShortId _opCity mbRequestorId req = do
       image <- Image.validateImage True (fleetOwnerId, person.merchantId, person.merchantOperatingCityId) req'
       businessLicenseNumber <- forM req.businessLicenseNumber encrypt
       QFOI.updateBusinessLicenseImageAndNumber (Just image.imageId.getId) businessLicenseNumber fleetOwnerId
-  enabled <- enableFleetIfPossible fleetOwnerId
+  enabled <- enableFleetIfPossible fleetOwnerId req.adminApprovalRequired (castFleetType <$> req.fleetType)
   return $ Common.FleetOwnerRegisterResV2 enabled
-  where
-    enableFleetIfPossible :: Id DP.Person -> Flow Bool
-    enableFleetIfPossible fleetOwnerId = do
-      if (req.adminApprovalRequired /= Just True)
-        then do
-          aadhaarCard <- QAadhaarCard.findByPrimaryKey fleetOwnerId -- TODO: Take from DVC
-          panCard <- QPanCard.findByDriverId fleetOwnerId
-          gstIn <- QGST.findByDriverId fleetOwnerId
-          case castFleetType <$> req.fleetType of
-            Just FOI.NORMAL_FLEET ->
-              case (panCard, aadhaarCard) of
-                (Just pan, Just aadhaar) | pan.verificationStatus == Documents.VALID
-                                             && aadhaar.verificationStatus == Documents.VALID -> do
-                  void $ QFOI.updateFleetOwnerEnabledStatus True fleetOwnerId
-                  pure True
-                _ -> pure False
-            Just FOI.BUSINESS_FLEET ->
-              case (aadhaarCard, panCard, gstIn) of
-                (Just aadhaar, Just pan, Just gst)
-                  | pan.verificationStatus == Documents.VALID
-                      && gst.verificationStatus == Documents.VALID
-                      && aadhaar.verificationStatus == Documents.VALID -> do
-                    void $ QFOI.updateFleetOwnerEnabledStatus True fleetOwnerId
-                    pure True
-                _ -> pure False
+
+enableFleetIfPossible :: Id DP.Person -> Maybe Bool -> Maybe FOI.FleetType -> Flow Bool
+enableFleetIfPossible fleetOwnerId adminApprovalRequired mbfleetType = do
+  if adminApprovalRequired /= Just True
+    then do
+      aadhaarCard <- QAadhaarCard.findByPrimaryKey fleetOwnerId -- TODO: Take from DVC
+      panCard <- QPanCard.findByDriverId fleetOwnerId
+      gstIn <- QGST.findByDriverId fleetOwnerId
+      case mbfleetType of
+        Just FOI.NORMAL_FLEET ->
+          case (panCard, aadhaarCard) of
+            (Just pan, Just aadhaar) | pan.verificationStatus == Documents.VALID
+                                         && aadhaar.verificationStatus == Documents.VALID -> do
+              void $ QFOI.updateFleetOwnerEnabledStatus True fleetOwnerId
+              pure True
             _ -> pure False
-        else pure False
+        Just FOI.BUSINESS_FLEET ->
+          case (aadhaarCard, panCard, gstIn) of
+            (Just aadhaar, Just pan, Just gst)
+              | pan.verificationStatus == Documents.VALID
+                  && gst.verificationStatus == Documents.VALID
+                  && aadhaar.verificationStatus == Documents.VALID -> do
+                void $ QFOI.updateFleetOwnerEnabledStatus True fleetOwnerId
+                pure True
+            _ -> pure False
+        _ -> pure False
+    else pure False
 
 castFleetType :: Common.FleetType -> FOI.FleetType
 castFleetType = \case
   Common.RENTAL_FLEET -> FOI.RENTAL_FLEET
   Common.NORMAL_FLEET -> FOI.NORMAL_FLEET
   Common.BUSINESS_FLEET -> FOI.BUSINESS_FLEET
+
+castRoleToFleetType :: DP.Role -> Maybe FOI.FleetType
+castRoleToFleetType = \case
+  DP.FLEET_OWNER -> Just FOI.NORMAL_FLEET
+  DP.FLEET_BUSINESS -> Just FOI.BUSINESS_FLEET
+  _ -> Nothing
 
 castFleetTypeToDomain :: FOI.FleetType -> Common.FleetType
 castFleetTypeToDomain = \case
