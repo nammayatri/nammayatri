@@ -3,6 +3,7 @@
 
 module Lib.Payment.Storage.Beam.Refunds where
 
+import qualified Data.Aeson
 import qualified Database.Beam as B
 import Kernel.Beam.Lib.UtilsTH
 import Kernel.External.Encryption
@@ -22,6 +23,7 @@ data RefundsT f = RefundsT
     orderId :: B.C f Kernel.Prelude.Text,
     refundAmount :: B.C f Kernel.Types.Common.HighPrecMoney,
     shortId :: B.C f Kernel.Prelude.Text,
+    split :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     status :: B.C f Kernel.External.Payment.Interface.RefundStatus,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }

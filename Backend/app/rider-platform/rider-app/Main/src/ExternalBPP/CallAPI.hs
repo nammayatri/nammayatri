@@ -35,8 +35,10 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Payment.Storage.Beam.BeamFlow
 import qualified SharedLogic.CallFRFSBPP as CallFRFSBPP
+import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
+import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
@@ -209,6 +211,9 @@ confirm onConfirmHandler merchant merchantOperatingCity bapConfig (mRiderName, m
           Left err -> do
             void $ QFRFSTicketBooking.updateStatusById DBooking.FAILED booking.id
             void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.REFUND_PENDING booking.id
+            riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCity.id Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCity.id.getId)
+            when riderConfig.enableAutoJourneyRefund $
+              FRFSUtils.markAllRefundBookings booking booking.riderId
             throwM err
           Right _ -> return ()
 
