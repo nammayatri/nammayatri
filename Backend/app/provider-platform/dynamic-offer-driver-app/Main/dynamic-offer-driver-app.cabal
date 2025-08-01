@@ -226,9 +226,11 @@ library
       Domain.Action.UI.DriverHomeLocation
       Domain.Action.UI.DriverOnboarding.AadhaarVerification
       Domain.Action.UI.DriverOnboarding.DriverLicense
+      Domain.Action.UI.DriverOnboarding.GstVerification
       Domain.Action.UI.DriverOnboarding.HyperVergeWebhook
       Domain.Action.UI.DriverOnboarding.IdfyWebhook
       Domain.Action.UI.DriverOnboarding.Image
+      Domain.Action.UI.DriverOnboarding.PanVerification
       Domain.Action.UI.DriverOnboarding.Referral
       Domain.Action.UI.DriverOnboarding.Status
       Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
