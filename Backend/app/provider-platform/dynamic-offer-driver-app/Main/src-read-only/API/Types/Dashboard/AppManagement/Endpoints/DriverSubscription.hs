@@ -7,6 +7,7 @@ import qualified Dashboard.Common
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
 import qualified Domain.Types.MerchantMessage
+import qualified Domain.Types.VendorFee
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
 import qualified Kernel.Prelude
@@ -52,6 +53,7 @@ instance Kernel.Types.HideSecrets.HideSecrets SendSmsReq where
 data SubscriptionDriverFeesAndInvoicesToUpdate = SubscriptionDriverFeesAndInvoicesToUpdate
   { driverFees :: Kernel.Prelude.Maybe [DriverFeeInfoToUpdate],
     invoices :: Kernel.Prelude.Maybe [InvoiceInfoToUpdate],
+    vendorFees :: Kernel.Prelude.Maybe [Domain.Types.VendorFee.VendorFee],
     mkDuesToAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     mkDuesToAmountWithCurrency :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
     subscribed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
