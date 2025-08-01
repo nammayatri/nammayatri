@@ -3,6 +3,7 @@ imports:
   ServiceNames: Dashboard.Common
   MediaChannel: Domain.Types.MerchantMessage
   MessageKey: Domain.Types.MerchantMessage
+  VendorFee: Domain.Types.VendorFee
 
 importPackageOverrides:
   Domain.Action.Dashboard.Driver: "dynamic-offer-driver-app"
@@ -54,6 +55,7 @@ types:
   SubscriptionDriverFeesAndInvoicesToUpdate:
     - driverFees: Maybe [DriverFeeInfoToUpdate]
     - invoices: Maybe [InvoiceInfoToUpdate]
+    - vendorFees: Maybe [VendorFee]
     - mkDuesToAmount: Maybe HighPrecMoney
     - mkDuesToAmountWithCurrency: Maybe PriceAPIEntity
     - subscribed: Maybe Bool
