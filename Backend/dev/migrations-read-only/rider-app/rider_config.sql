@@ -350,3 +350,9 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN enable_igm_issue_flow boolean  def
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN refund_buffer_ttl_sec integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN refund_status_update_retries integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN refund_status_update_interval integer ;

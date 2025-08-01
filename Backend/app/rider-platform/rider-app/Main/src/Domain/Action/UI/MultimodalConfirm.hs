@@ -47,6 +47,7 @@ import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified Domain.Types.Common as DTrip
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.FRFSTicketBooking as DFRFSB
+import Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Journey
 import qualified Domain.Types.JourneyFeedback as JFB
@@ -55,7 +56,7 @@ import qualified Domain.Types.Merchant
 import Domain.Types.MultimodalPreferences as DMP
 import qualified Domain.Types.Person
 import Environment
-import EulerHS.Prelude hiding (all, any, concatMap, elem, find, forM_, id, length, map, mapM_, null, sum, whenJust)
+import EulerHS.Prelude hiding (all, any, catMaybes, concatMap, elem, find, forM_, id, length, map, mapM_, null, sum, whenJust)
 import qualified ExternalBPP.CallAPI as CallExternalBPP
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.MultiModal.Interface.Types as MultiModalTypes
@@ -73,7 +74,11 @@ import qualified Lib.JourneyModule.Base as JM
 import Lib.JourneyModule.Location
 import qualified Lib.JourneyModule.Types as JMTypes
 import qualified Lib.JourneyModule.Utils as JLU
+import qualified Lib.Payment.Domain.Action as DPayment
+import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
+import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
+import qualified Lib.Payment.Storage.Queries.Refunds as QRefunds
 import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.BecknConfig as CQBC
@@ -87,6 +92,7 @@ import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import Storage.Queries.FRFSSearch as QFRFSSearch
 import Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
+import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
 import Storage.Queries.Journey as QJourney
 import Storage.Queries.JourneyFeedback as SQJFB
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
@@ -99,6 +105,7 @@ import qualified Storage.Queries.RiderConfig as QRiderConfig
 import Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Error
 import Tools.MultiModal as MM
+import qualified Tools.Payment as Payment
 import qualified Tools.Payment as TPayment
 
 validateMetroBusinessHours :: Id Domain.Types.Journey.Journey -> Environment.Flow ()
@@ -165,13 +172,100 @@ getMultimodalBookingInfo (mbPersonId, _merchantId) journeyId = do
   legs <- JM.getAllLegsInfo journeyId False
   when (journey.status == Domain.Types.Journey.INITIATED) $ JM.updateJourneyStatus journey Domain.Types.Journey.INPROGRESS -- move it to payment success
   allJourneyFrfsBookings <- QFRFSTicketBooking.findAllByJourneyId (Just journeyId)
+  personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
+
+  allPaymentBookings <- mapM (QFRFSTicketBookingPayment.findNewTBPByBookingId . (.id)) allJourneyFrfsBookings
+  let paymentBookings = catMaybes allPaymentBookings
+
   let failedBookings = filter ((== DFRFSB.FAILED) . (.status)) allJourneyFrfsBookings
-  whenJust (listToMaybe failedBookings) $ \firstFailed -> do
-    personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
+      refundInitiatedBookings =
+        filter
+          ( \booking ->
+              any
+                ( \paymentBooking ->
+                    paymentBooking.frfsTicketBookingId == booking.id
+                      && paymentBooking.status == DFRFSTicketBookingPayment.REFUND_INITIATED
+                )
+                paymentBookings
+          )
+          failedBookings
+      nonRefundInitiatedBookings =
+        filter
+          ( \booking ->
+              ( any
+                  ( \paymentBooking ->
+                      paymentBooking.frfsTicketBookingId == booking.id
+                        && paymentBooking.status == DFRFSTicketBookingPayment.REFUND_PENDING
+                  )
+                  paymentBookings
+              )
+          )
+          failedBookings
+  updatedLegs <-
+    if not (null refundInitiatedBookings)
+      then updateLegsWithRefundInfo legs refundInitiatedBookings personId
+      else return legs
+  whenJust (listToMaybe nonRefundInitiatedBookings) $ \firstFailed -> do
     riderConfig <- QRC.findByMerchantOperatingCityId firstFailed.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist firstFailed.merchantOperatingCityId.getId)
     when riderConfig.enableAutoJourneyRefund $
       FRFSUtils.markAllRefundBookings firstFailed personId
-  generateJourneyInfoResponse journey legs
+  generateJourneyInfoResponse journey updatedLegs
+
+updateLegsWithRefundInfo :: [JMTypes.LegInfo] -> [DFRFSB.FRFSTicketBooking] -> Id Domain.Types.Person.Person -> Flow [JMTypes.LegInfo]
+updateLegsWithRefundInfo legs refundInitiatedBookings personId = do
+  firstBooking <- listToMaybe refundInitiatedBookings & fromMaybeM (InvalidRequest "No refund initiated bookings found")
+  paymentBooking <- QFRFSTicketBookingPayment.findNewTBPByBookingId firstBooking.id >>= fromMaybeM (InvalidRequest "Payment booking not found for approved TicketBookingId")
+  person <- QP.findById personId >>= fromMaybeM (InvalidRequest "Person not found")
+  paymentOrder <- QPaymentOrder.findById paymentBooking.paymentOrderId >>= fromMaybeM (InvalidRequest "Payment order not found")
+
+  let orderStatusCall = Payment.orderStatus person.merchantId person.merchantOperatingCityId Nothing Payment.FRFSMultiModalBooking (Just personId.getId) person.clientSdkVersion
+      commonPersonId = Kernel.Types.Id.cast @Domain.Types.Person.Person @DPayment.Person personId
+  paymentStatusResp <- DPayment.orderStatusService commonPersonId paymentOrder.id orderStatusCall
+  logInfo $ "paymentStatusResp: " <> show paymentStatusResp
+
+  allSplitData <- forM paymentStatusResp.refunds $ \refund -> do
+    refundEntry <- QRefunds.findById (Id refund.requestId) >>= fromMaybeM (InvalidRequest "Refund entry not found")
+    case refundEntry.split of
+      Just splits -> return $ map (\split -> (split.frfsBookingId, split.splitAmount, refund.status)) splits
+      Nothing -> return []
+
+  let allSplitDataFlat = concat allSplitData
+
+  forM legs $ \leg -> do
+    let updatedLegExtraInfo = case leg.legExtraInfo of
+          JMTypes.Metro metroInfo ->
+            case metroInfo.bookingId of
+              Just bookingId ->
+                case find (\(bookingId', _, _) -> bookingId' == bookingId.getId) allSplitDataFlat of
+                  Just (_, amount, status) ->
+                    JMTypes.Metro $ metroInfo {JMTypes.refund = Just $ JMTypes.LegSplitInfo {JMTypes.amount = amount, JMTypes.status = status}}
+                  Nothing ->
+                    JMTypes.Metro metroInfo
+              Nothing ->
+                JMTypes.Metro metroInfo
+          JMTypes.Bus busInfo ->
+            case busInfo.bookingId of
+              Just bookingId ->
+                case find (\(bookingId', _, _) -> bookingId' == bookingId.getId) allSplitDataFlat of
+                  Just (_, amount, status) ->
+                    JMTypes.Bus $ busInfo {JMTypes.refund = Just $ JMTypes.LegSplitInfo {JMTypes.amount = amount, JMTypes.status = status}}
+                  Nothing ->
+                    JMTypes.Bus busInfo
+              Nothing ->
+                JMTypes.Bus busInfo
+          JMTypes.Subway subwayInfo ->
+            case subwayInfo.bookingId of
+              Just bookingId ->
+                case find (\(bookingId', _, _) -> bookingId' == bookingId.getId) allSplitDataFlat of
+                  Just (_, amount, status) ->
+                    JMTypes.Subway $ subwayInfo {JMTypes.refund = Just $ JMTypes.LegSplitInfo {JMTypes.amount = amount, JMTypes.status = status}}
+                  Nothing ->
+                    JMTypes.Subway subwayInfo
+              Nothing ->
+                JMTypes.Subway subwayInfo
+          other -> other
+
+    return $ leg {JMTypes.legExtraInfo = updatedLegExtraInfo}
 
 getMultimodalBookingPaymentStatus ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

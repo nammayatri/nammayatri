@@ -132,6 +132,8 @@ RiderConfig:
     refundBufferTTLSec: Maybe Seconds
     filterWalkAndUnspecifiedTransitModes: Bool
     nyRegularMasterJobNextRunOffsetSeconds: NominalDiffTime
+    refundStatusUpdateInterval: NominalDiffTime
+    refundStatusUpdateRetries: Int
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
@@ -174,6 +176,8 @@ RiderConfig:
     enableAutoJourneyRefund: Maybe Bool
     filterWalkAndUnspecifiedTransitModes: Maybe Bool
     nyRegularMasterJobNextRunOffsetSeconds: Maybe Seconds
+    refundStatusUpdateInterval: Maybe Seconds
+    refundStatusUpdateRetries: Maybe Int
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -223,6 +227,8 @@ RiderConfig:
     nyRegularMinGapSeconds: fromMaybe 900 nyRegularMinGapSeconds|E
     filterWalkAndUnspecifiedTransitModes: fromMaybe False filterWalkAndUnspecifiedTransitModes|E
     nyRegularMasterJobNextRunOffsetSeconds: fromMaybe 86400 (Kernel.Utils.Common.secondsToNominalDiffTime <$> nyRegularMasterJobNextRunOffsetSeconds)| E
+    refundStatusUpdateInterval: fromMaybe 43200 (Kernel.Utils.Common.secondsToNominalDiffTime <$> refundStatusUpdateInterval)| E
+    refundStatusUpdateRetries: fromMaybe 5 refundStatusUpdateRetries|E
 
   toTType:
     ivrTriggerDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
@@ -265,6 +271,8 @@ RiderConfig:
     nyRegularMinGapSeconds: Just nyRegularMinGapSeconds|E
     filterWalkAndUnspecifiedTransitModes: Just filterWalkAndUnspecifiedTransitModes|E
     nyRegularMasterJobNextRunOffsetSeconds: (Just  . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
+    refundStatusUpdateInterval: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
+    refundStatusUpdateRetries: Just refundStatusUpdateRetries|E
 
   default:
     enableLocalPoliceSupport: "false"

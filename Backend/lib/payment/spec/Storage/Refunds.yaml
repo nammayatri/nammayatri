@@ -5,6 +5,7 @@ imports:
   HighPrecMoney: Kernel.Types.Common
   PaymentOrder: Lib.Payment.Domain.Types.PaymentOrder
   RefundStatus: Kernel.External.Payment.Interface
+  Value: Data.Aeson
 
 Refunds:
   tableName: refunds
@@ -21,6 +22,12 @@ Refunds:
     initiatedBy : Maybe Text
     createdAt : UTCTime
     updatedAt : UTCTime
+    split: Maybe [Split]
+
+  types:
+    Split:
+      splitAmount: HighPrecMoney
+      frfsBookingId: Text
 
   constraints:
     orderId: SecondaryKey
@@ -30,6 +37,16 @@ Refunds:
     refund_amount: double precision
     createdAt: timestamp with time zone
     updatedAt: timestamp with time zone
+    split: "json"
+
+  beamType:
+    split: Maybe Value
+
+  fromTType:
+    split: split >>= Kernel.Utils.JSON.valueToMaybe|E
+
+  toTType:
+    split: split >>= Just . Data.Aeson.toJSON|E
 
   queries:
     findById:
