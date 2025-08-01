@@ -25,9 +25,9 @@ module Domain.Action.UI.MultimodalConfirm
     postMultimodalOrderSublegSetStatus,
     postMultimodalTicketVerify,
     postMultimodalComplete,
-    getMultimodalOrderCanCancel,
+    postMultimodalOrderSoftCancel,
     getMultimodalOrderCancelStatus,
-    getMultimodalOrderCancel,
+    postMultimodalOrderCancel,
   )
 where
 
@@ -884,7 +884,7 @@ postMultimodalComplete (mbPersonId, merchantId) journeyId = do
   updatedJourney <- JM.getJourney journeyId
   generateJourneyStatusResponse personId merchantId updatedJourney updatedLegStatus
 
-getMultimodalOrderCanCancel ::
+postMultimodalOrderSoftCancel ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
@@ -892,7 +892,7 @@ getMultimodalOrderCanCancel ::
     Kernel.Prelude.Int ->
     Environment.Flow Kernel.Types.APISuccess.APISuccess
   )
-getMultimodalOrderCanCancel (_, merchantId) journeyId legOrder = do
+postMultimodalOrderSoftCancel (_, merchantId) journeyId legOrder = do
   merchant <- CQM.findById merchantId >>= fromMaybeM (InvalidRequest "Invalid merchant id")
   ticketBooking <- QFRFSTicketBooking.findByJourneyIdAndLegOrder journeyId legOrder >>= fromMaybeM (InvalidRequest "No FRFS booking found for the leg")
   merchantOperatingCity <- CQMOC.findById ticketBooking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantOperatingCityId- " <> show ticketBooking.merchantOperatingCityId)
@@ -923,7 +923,7 @@ getMultimodalOrderCancelStatus (_, __) journeyId legOrder = do
         bookingStatus = ticketBooking.status
       }
 
-getMultimodalOrderCancel ::
+postMultimodalOrderCancel ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
@@ -931,7 +931,7 @@ getMultimodalOrderCancel ::
     Kernel.Prelude.Int ->
     Environment.Flow Kernel.Types.APISuccess.APISuccess
   )
-getMultimodalOrderCancel (_, merchantId) journeyId legOrder = do
+postMultimodalOrderCancel (_, merchantId) journeyId legOrder = do
   merchant <- CQM.findById merchantId >>= fromMaybeM (InvalidRequest "Invalid merchant id")
   ticketBooking <- QFRFSTicketBooking.findByJourneyIdAndLegOrder journeyId legOrder >>= fromMaybeM (InvalidRequest "No FRFS booking found for the leg")
   merchantOperatingCity <- CQMOC.findById ticketBooking.merchantOperatingCityId >>= fromMaybeM (InvalidRequest $ "Invalid merchant operating city id" <> ticketBooking.merchantOperatingCityId.getId)
