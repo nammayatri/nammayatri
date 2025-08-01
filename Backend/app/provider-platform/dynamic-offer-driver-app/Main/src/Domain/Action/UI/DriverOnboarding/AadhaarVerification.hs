@@ -145,7 +145,8 @@ verifyAadhaarOtp mbMerchant personId merchantOpCityId req = do
               QAadhaarCard.create aadhaarEntity
               DriverInfo.updateAadhaarVerifiedState True (cast personId)
               let onlyMandatoryDocs = Just True
-              void $ Status.statusHandler (person.id, person.merchantId, merchantOpCityId) (Just True) Nothing Nothing Nothing (Just False) onlyMandatoryDocs
+                  useMessageTranslation = Just False
+              void $ Status.statusHandler (person.id, person.merchantId, merchantOpCityId) (Just True) Nothing Nothing Nothing (Just False) onlyMandatoryDocs useMessageTranslation
               uploadCompressedAadhaarImage person merchantOpCityId res.image imageType >> pure ()
         else throwError $ InternalError "Aadhaar Verification failed, Please try again"
       pure res

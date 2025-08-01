@@ -148,10 +148,11 @@ checkAllDriverVehicleDocsVerified ::
   DP.Person ->
   DMOC.MerchantOperatingCity ->
   DTC.TransporterConfig ->
+  Maybe Bool ->
   Language ->
   Text ->
   Flow Bool
-checkAllDriverVehicleDocsVerified person merchantOperatingCity transporterConfig language reqRegistrationNo = do
+checkAllDriverVehicleDocsVerified person merchantOperatingCity transporterConfig useMessageTranslation language reqRegistrationNo = do
   let personId = person.id
   let onlyMandatoryDocs = Just True
   let useHVSdkForDL = Just True
@@ -162,12 +163,12 @@ checkAllDriverVehicleDocsVerified person merchantOperatingCity transporterConfig
   vehicleDocumentsUnverified <-
     if isFleetRole person.role
       then pure []
-      else fetchVehicleDocuments driverImagesInfo allDocumentVerificationConfigs language (Just reqRegistrationNo) onlyMandatoryDocs
+      else fetchVehicleDocuments driverImagesInfo allDocumentVerificationConfigs useMessageTranslation language (Just reqRegistrationNo) onlyMandatoryDocs
 
   let possibleVehicleCategories = nub $ do
         vehicleDocumentsUnverified <&> \vehicleDoc -> do
           fromMaybe vehicleDoc.userSelectedVehicleCategory vehicleDoc.verifiedVehicleCategory
-  driverDocuments <- fetchDriverDocuments driverImagesInfo allDocumentVerificationConfigs possibleVehicleCategories person.role language useHVSdkForDL onlyMandatoryDocs
+  driverDocuments <- fetchDriverDocuments driverImagesInfo allDocumentVerificationConfigs possibleVehicleCategories person.role useMessageTranslation language useHVSdkForDL onlyMandatoryDocs
   vehicleDoc <-
     find (\doc -> doc.registrationNo == reqRegistrationNo) vehicleDocumentsUnverified
       & fromMaybeM (InvalidRequest $ "Vehicle doc not found for driverId " <> personId.getId <> " with registartionNo " <> reqRegistrationNo)
@@ -186,8 +187,9 @@ statusHandler' ::
   Maybe Bool ->
   Bool ->
   Maybe Bool ->
+  Maybe Bool ->
   Flow StatusRes'
-statusHandler' driverImagesInfo makeSelfieAadhaarPanMandatory multipleRC prefillData onboardingVehicleCategory mDL useHVSdkForDL shouldActivateRc onlyMandatoryDocs = do
+statusHandler' driverImagesInfo makeSelfieAadhaarPanMandatory multipleRC prefillData onboardingVehicleCategory mDL useHVSdkForDL shouldActivateRc onlyMandatoryDocs useMessageTranslation = do
   let merchantId = driverImagesInfo.merchantOperatingCity.merchantId
       merchantOperatingCity = driverImagesInfo.merchantOperatingCity
       merchantOpCityId = merchantOperatingCity.id
@@ -201,7 +203,7 @@ statusHandler' driverImagesInfo makeSelfieAadhaarPanMandatory multipleRC prefill
   vehicleDocumentsUnverified <-
     if isFleetRole person.role
       then pure []
-      else fetchVehicleDocuments driverImagesInfo allDocumentVerificationConfigs language mbReqRegistrationNo onlyMandatoryDocs
+      else fetchVehicleDocuments driverImagesInfo allDocumentVerificationConfigs useMessageTranslation language mbReqRegistrationNo onlyMandatoryDocs
 
   let vehicleCategoryWithoutMandatoryConfigs = case onboardingVehicleCategory <|> (mDL >>= (.vehicleCategory)) of
         Just vehicleCategory -> do
@@ -215,7 +217,7 @@ statusHandler' driverImagesInfo makeSelfieAadhaarPanMandatory multipleRC prefill
           vehicleDocumentsUnverified <&> \vehicleDoc -> do
             fromMaybe vehicleDoc.userSelectedVehicleCategory vehicleDoc.verifiedVehicleCategory
 
-  driverDocuments <- fetchDriverDocuments driverImagesInfo allDocumentVerificationConfigs possibleVehicleCategories person.role language useHVSdkForDL onlyMandatoryDocs
+  driverDocuments <- fetchDriverDocuments driverImagesInfo allDocumentVerificationConfigs possibleVehicleCategories person.role useMessageTranslation language useHVSdkForDL onlyMandatoryDocs
 
   whenJust vehicleCategoryWithoutMandatoryConfigs $ \vehicleCategory -> do
     let allDriverDocsVerified = all (\doc -> checkIfDocumentValid allDocumentVerificationConfigs doc.documentType vehicleCategory doc.verificationStatus makeSelfieAadhaarPanMandatory) driverDocuments
@@ -317,48 +319,50 @@ fetchDriverDocuments ::
   [DVC.DocumentVerificationConfig] ->
   [DVC.VehicleCategory] ->
   DP.Role ->
+  Maybe Bool ->
   Language ->
   Maybe Bool ->
   Maybe Bool ->
   Flow [DocumentStatusItem]
-fetchDriverDocuments driverImagesInfo allDocumentVerificationConfigs possibleVehicleCategories role language useHVSdkForDL onlyMandatoryDocs = do
+fetchDriverDocuments driverImagesInfo allDocumentVerificationConfigs possibleVehicleCategories role useMessageTranslation language useHVSdkForDL onlyMandatoryDocs = do
   let merchantOpCityId = driverImagesInfo.merchantOperatingCity.id
   driverDocumentTypes <- getDriverDocTypes merchantOpCityId allDocumentVerificationConfigs possibleVehicleCategories role onlyMandatoryDocs
   driverDocumentTypes `forM` \docType -> do
     (mbStatus, mbProcessedReason, mbProcessedUrl) <- getProcessedDriverDocuments driverImagesInfo docType useHVSdkForDL
     case mbStatus of
       Just status -> do
-        message <- documentStatusMessage status Nothing docType mbProcessedUrl language
+        message <- documentStatusMessage status Nothing docType mbProcessedUrl useMessageTranslation language
         return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = mbProcessedReason <|> Just message, verificationUrl = mbProcessedUrl}
       Nothing -> do
         (status, mbReason, mbUrl) <- getInProgressDriverDocuments driverImagesInfo docType
-        message <- documentStatusMessage status mbReason docType mbUrl language
+        message <- documentStatusMessage status mbReason docType mbUrl useMessageTranslation language
         return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message, verificationUrl = mbUrl}
 
 fetchVehicleDocuments ::
   IQuery.DriverImagesInfo ->
   [DVC.DocumentVerificationConfig] ->
+  Maybe Bool ->
   Language ->
   Maybe Text ->
   Maybe Bool ->
   Flow [VehicleDocumentItem]
-fetchVehicleDocuments driverImagesInfo allDocumentVerificationConfigs language Nothing onlyMandatoryDocs = do
+fetchVehicleDocuments driverImagesInfo allDocumentVerificationConfigs useMessageTranslation language Nothing onlyMandatoryDocs = do
   -- All items required
-  processedVehicleDocumentsWithRC <- fetchProcessedVehicleDocumentsWithRC driverImagesInfo allDocumentVerificationConfigs language Nothing onlyMandatoryDocs
+  processedVehicleDocumentsWithRC <- fetchProcessedVehicleDocumentsWithRC driverImagesInfo allDocumentVerificationConfigs useMessageTranslation language Nothing onlyMandatoryDocs
   processedVehicleDocumentsWithoutRC <- fetchProcessedVehicleDocumentsWithoutRC driverImagesInfo allDocumentVerificationConfigs processedVehicleDocumentsWithRC Nothing onlyMandatoryDocs
   let processedVehicleDocuments = processedVehicleDocumentsWithoutRC <> processedVehicleDocumentsWithRC
-  inprogressVehicleDocuments <- fetchInprogressVehicleDocuments driverImagesInfo allDocumentVerificationConfigs language processedVehicleDocuments Nothing onlyMandatoryDocs
+  inprogressVehicleDocuments <- fetchInprogressVehicleDocuments driverImagesInfo allDocumentVerificationConfigs useMessageTranslation language processedVehicleDocuments Nothing onlyMandatoryDocs
   pure $ processedVehicleDocuments <> inprogressVehicleDocuments
-fetchVehicleDocuments driverImagesInfo allDocumentVerificationConfigs language (Just reqRegistrationNo) onlyMandatoryDocs = do
+fetchVehicleDocuments driverImagesInfo allDocumentVerificationConfigs useMessageTranslation language (Just reqRegistrationNo) onlyMandatoryDocs = do
   -- Only one item required with specific registrationNo
-  processedVehicleDocumentsWithRC <- fetchProcessedVehicleDocumentsWithRC driverImagesInfo allDocumentVerificationConfigs language (Just reqRegistrationNo) onlyMandatoryDocs
+  processedVehicleDocumentsWithRC <- fetchProcessedVehicleDocumentsWithRC driverImagesInfo allDocumentVerificationConfigs useMessageTranslation language (Just reqRegistrationNo) onlyMandatoryDocs
   let driverId = driverImagesInfo.driverId
   if null processedVehicleDocumentsWithRC
     then do
       processedVehicleDocumentsWithoutRC <- fetchProcessedVehicleDocumentsWithoutRC driverImagesInfo allDocumentVerificationConfigs processedVehicleDocumentsWithRC (Just reqRegistrationNo) onlyMandatoryDocs
       if null processedVehicleDocumentsWithoutRC
         then do
-          docs <- fetchInprogressVehicleDocuments driverImagesInfo allDocumentVerificationConfigs language [] (Just reqRegistrationNo) onlyMandatoryDocs
+          docs <- fetchInprogressVehicleDocuments driverImagesInfo allDocumentVerificationConfigs useMessageTranslation language [] (Just reqRegistrationNo) onlyMandatoryDocs
           if null docs
             then logWarning $ "No docs found for rcNo and driverId: " <> show driverId
             else logInfo $ "Inprogress vehicle docs found for rcNo and driverId: " <> show driverId
@@ -423,11 +427,12 @@ getDriverDocTypes merchantOpCityId allDocumentVerificationConfigs possibleVehicl
 fetchProcessedVehicleDocumentsWithRC ::
   IQuery.DriverImagesInfo ->
   [DVC.DocumentVerificationConfig] ->
+  Maybe Bool ->
   Language ->
   Maybe Text ->
   Maybe Bool ->
   Flow [VehicleDocumentItem]
-fetchProcessedVehicleDocumentsWithRC driverImagesInfo allDocumentVerificationConfigs language mbReqRegistrationNo onlyMandatoryDocs = do
+fetchProcessedVehicleDocumentsWithRC driverImagesInfo allDocumentVerificationConfigs useMessageTranslation language mbReqRegistrationNo onlyMandatoryDocs = do
   let personId = driverImagesInfo.driverId
       merchantOpCityId = driverImagesInfo.merchantOperatingCity.id
   associations <- DRAQuery.findAllLinkedByDriverId personId
@@ -456,11 +461,11 @@ fetchProcessedVehicleDocumentsWithRC driverImagesInfo allDocumentVerificationCon
         (mbStatus, mbProcessedReason, mbProcessedUrl) <- getProcessedVehicleDocuments driverImagesInfo docType processedVehicle
         case mbStatus of
           Just status -> do
-            message <- documentStatusMessage status Nothing docType mbProcessedUrl language
+            message <- documentStatusMessage status Nothing docType mbProcessedUrl useMessageTranslation language
             return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = mbProcessedReason <|> Just message, verificationUrl = mbProcessedUrl}
           Nothing -> do
             (status, mbReason, mbUrl) <- getInProgressVehicleDocuments driverImagesInfo (Just rcImagesInfo) docType
-            message <- documentStatusMessage status mbReason docType mbUrl language
+            message <- documentStatusMessage status mbReason docType mbUrl useMessageTranslation language
             return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message, verificationUrl = mbUrl}
     return
       VehicleDocumentItem
@@ -519,12 +524,13 @@ fetchProcessedVehicleDocumentsWithoutRC driverImagesInfo allDocumentVerification
 fetchInprogressVehicleDocuments ::
   IQuery.DriverImagesInfo ->
   [DVC.DocumentVerificationConfig] ->
+  Maybe Bool ->
   Language ->
   [VehicleDocumentItem] ->
   Maybe Text ->
   Maybe Bool ->
   Flow [VehicleDocumentItem]
-fetchInprogressVehicleDocuments driverImagesInfo allDocumentVerificationConfigs language processedVehicleDocuments mbReqRegistrationNo onlyMandatoryDocs = do
+fetchInprogressVehicleDocuments driverImagesInfo allDocumentVerificationConfigs useMessageTranslation language processedVehicleDocuments mbReqRegistrationNo onlyMandatoryDocs = do
   let merchantOpCityId = driverImagesInfo.merchantOperatingCity.id
       personId = driverImagesInfo.driverId
   inprogressVehicleIdfy <- listToMaybe <$> IVQuery.findLatestByDriverIdAndDocType Nothing Nothing personId DVC.VehicleRegistrationCertificate
@@ -563,7 +569,7 @@ fetchInprogressVehicleDocuments driverImagesInfo allDocumentVerificationConfigs 
                   documents <-
                     vehicleDocumentTypes `forM` \docType -> do
                       (status, mbReason, mbUrl) <- getInProgressVehicleDocuments driverImagesInfo mbRcImagesInfo docType
-                      message <- documentStatusMessage status mbReason docType mbUrl language
+                      message <- documentStatusMessage status mbReason docType mbUrl useMessageTranslation language
                       return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message, verificationUrl = mbUrl}
                   return
                     [ VehicleDocumentItem
@@ -852,35 +858,35 @@ extractImageFailReason imageError =
     Just (ImageNotValid reason) -> Just reason -- only this because we are inserting this type only in manual reject request in update documents dashboard api
     _ -> Nothing
 
-documentStatusMessage :: ResponseStatus -> Maybe Text -> DDVC.DocumentType -> Maybe BaseUrl -> Language -> Flow Text
-documentStatusMessage status mbReason docType mbVerificationUrl language = do
+documentStatusMessage :: ResponseStatus -> Maybe Text -> DDVC.DocumentType -> Maybe BaseUrl -> Maybe Bool -> Language -> Flow Text
+documentStatusMessage status mbReason docType mbVerificationUrl useMessageTranslation language = do
   case (status, docType, mbVerificationUrl) of
-    (VALID, _, _) -> toVerificationMessage DocumentValid language
-    (MANUAL_VERIFICATION_REQUIRED, _, _) -> toVerificationMessage UnderManualReview language
-    (PENDING, DDVC.BackgroundVerification, Just _) -> toVerificationMessage VerificationPendingOnUserInput language
-    (PENDING, _, _) -> toVerificationMessage VerificationInProgress language
-    (LIMIT_EXCEED, _, _) -> toVerificationMessage LimitExceed language
-    (NO_DOC_AVAILABLE, _, _) -> toVerificationMessage NoDcoumentFound language
+    (VALID, _, _) -> toVerificationMessage DocumentValid useMessageTranslation language
+    (MANUAL_VERIFICATION_REQUIRED, _, _) -> toVerificationMessage UnderManualReview useMessageTranslation language
+    (PENDING, DDVC.BackgroundVerification, Just _) -> toVerificationMessage VerificationPendingOnUserInput useMessageTranslation language
+    (PENDING, _, _) -> toVerificationMessage VerificationInProgress useMessageTranslation language
+    (LIMIT_EXCEED, _, _) -> toVerificationMessage LimitExceed useMessageTranslation language
+    (NO_DOC_AVAILABLE, _, _) -> toVerificationMessage NoDcoumentFound useMessageTranslation language
     (INVALID, DDVC.DriverLicense, _) -> do
-      msg <- toVerificationMessage DLInvalid language
+      msg <- toVerificationMessage DLInvalid useMessageTranslation language
       return $ fromMaybe msg mbReason
     (INVALID, DDVC.VehicleRegistrationCertificate, _) -> do
-      msg <- toVerificationMessage RCInvalid language
+      msg <- toVerificationMessage RCInvalid useMessageTranslation language
       return $ fromMaybe msg mbReason
     (INVALID, _, _) -> do
-      msg <- toVerificationMessage DocumentInvalid language
+      msg <- toVerificationMessage DocumentInvalid useMessageTranslation language
       return $ fromMaybe msg mbReason
-    (UNAUTHORIZED, _, _) -> toVerificationMessage Unauthorized language
+    (UNAUTHORIZED, _, _) -> toVerificationMessage Unauthorized useMessageTranslation language
     (FAILED, _, _) -> do
       case mbReason of
         Just res
-          | "id_not_found" `T.isInfixOf` res -> toVerificationMessage InvalidDocumentNumber language
-          | "source_down" `T.isInfixOf` res -> toVerificationMessage VerificationInProgress language
-          | "TIMEOUT" `T.isInfixOf` res -> toVerificationMessage VerficationFailed language
-          | "BAD_REQUEST" `T.isInfixOf` res -> toVerificationMessage InvalidDocumentNumber language
-          | "422" `T.isInfixOf` res -> toVerificationMessage InvalidDocumentNumber language
-          | otherwise -> toVerificationMessage Other language
-        Nothing -> toVerificationMessage Other language
+          | "id_not_found" `T.isInfixOf` res -> toVerificationMessage InvalidDocumentNumber useMessageTranslation language
+          | "source_down" `T.isInfixOf` res -> toVerificationMessage VerificationInProgress useMessageTranslation language
+          | "TIMEOUT" `T.isInfixOf` res -> toVerificationMessage VerficationFailed useMessageTranslation language
+          | "BAD_REQUEST" `T.isInfixOf` res -> toVerificationMessage InvalidDocumentNumber useMessageTranslation language
+          | "422" `T.isInfixOf` res -> toVerificationMessage InvalidDocumentNumber useMessageTranslation language
+          | otherwise -> toVerificationMessage Other useMessageTranslation language
+        Nothing -> toVerificationMessage Other useMessageTranslation language
 
 getAadhaarStatus :: Id DP.Person -> Flow (ResponseStatus, Maybe DAadhaarCard.AadhaarCard)
 getAadhaarStatus personId = do
@@ -892,8 +898,8 @@ getAadhaarStatus personId = do
         else return (MANUAL_VERIFICATION_REQUIRED, Just aadhaarCard)
     Nothing -> return (NO_DOC_AVAILABLE, Nothing)
 
-getDLAndStatus :: IQuery.DriverImagesInfo -> Language -> Maybe Bool -> Flow (ResponseStatus, Maybe DL.DriverLicense, Text)
-getDLAndStatus driverImagesInfo language useHVSdkForDL = do
+getDLAndStatus :: IQuery.DriverImagesInfo -> Maybe Bool -> Language -> Maybe Bool -> Flow (ResponseStatus, Maybe DL.DriverLicense, Text)
+getDLAndStatus driverImagesInfo useMessageTranslation language useHVSdkForDL = do
   let driverId = driverImagesInfo.driverId
       merchantOpCityId = driverImagesInfo.merchantOperatingCity.id
   mDriverLicense <- do
@@ -910,20 +916,20 @@ getDLAndStatus driverImagesInfo language useHVSdkForDL = do
     case mDriverLicense of
       Just driverLicense -> do
         let status = mapStatus driverLicense.verificationStatus
-        msg <- verificationStatusCheck status language DVC.DriverLicense
+        msg <- verificationStatusCheck status useMessageTranslation language DVC.DriverLicense
         return (status, msg)
       Nothing -> do
-        (status, message) <- checkIfInVerification driverImagesInfo DVC.DriverLicense language
+        (status, message) <- checkIfInVerification driverImagesInfo DVC.DriverLicense useMessageTranslation language
         return (status, message)
   return (status, mDriverLicense, message)
 
-getRCAndStatus :: IQuery.DriverImagesInfo -> Maybe Bool -> Language -> Flow (ResponseStatus, Maybe RC.VehicleRegistrationCertificate, Text)
-getRCAndStatus driverImagesInfo multipleRC language = do
+getRCAndStatus :: IQuery.DriverImagesInfo -> Maybe Bool -> Maybe Bool -> Language -> Flow (ResponseStatus, Maybe RC.VehicleRegistrationCertificate, Text)
+getRCAndStatus driverImagesInfo multipleRC useMessageTranslation language = do
   let driverId = driverImagesInfo.driverId
   associations <- DRAQuery.findAllLinkedByDriverId driverId
   if null associations
     then do
-      (status, message) <- checkIfInVerification driverImagesInfo DVC.VehicleRegistrationCertificate language
+      (status, message) <- checkIfInVerification driverImagesInfo DVC.VehicleRegistrationCertificate useMessageTranslation language
       return (status, Nothing, message)
     else do
       mVehicleRCs <- RCQuery.findById `mapM` ((.rcId) <$> associations)
@@ -934,26 +940,26 @@ getRCAndStatus driverImagesInfo multipleRC language = do
           case firstRC of
             Just vehicleRC -> do
               let status = mapStatus vehicleRC.verificationStatus
-              message <- verificationStatusCheck status language DVC.VehicleRegistrationCertificate
+              message <- verificationStatusCheck status useMessageTranslation language DVC.VehicleRegistrationCertificate
               return (status, Just vehicleRC, message)
             Nothing -> do
-              msg <- toVerificationMessage NoDcoumentFound language
+              msg <- toVerificationMessage NoDcoumentFound useMessageTranslation language
               return (NO_DOC_AVAILABLE, Nothing, msg)
         else do
           let mValidVehicleRC = find (\rc -> rc.verificationStatus == Documents.VALID) vehicleRCs
           case mValidVehicleRC of
             Just validVehicleRC -> do
-              msg <- toVerificationMessage DocumentValid language
+              msg <- toVerificationMessage DocumentValid useMessageTranslation language
               return (VALID, Just validVehicleRC, msg)
             Nothing -> do
               let mVehicleRC = listToMaybe vehicleRCs
               case mVehicleRC of
                 Just vehicleRC -> do
                   let status = mapStatus vehicleRC.verificationStatus
-                  message <- verificationStatusCheck status language DVC.VehicleRegistrationCertificate
+                  message <- verificationStatusCheck status useMessageTranslation language DVC.VehicleRegistrationCertificate
                   return (status, Just vehicleRC, message)
                 Nothing -> do
-                  msg <- toVerificationMessage NoDcoumentFound language
+                  msg <- toVerificationMessage NoDcoumentFound useMessageTranslation language
                   return (NO_DOC_AVAILABLE, Nothing, msg)
 
 mapStatus :: Documents.VerificationStatus -> ResponseStatus
@@ -964,54 +970,54 @@ mapStatus = \case
   Documents.INVALID -> INVALID
   Documents.UNAUTHORIZED -> UNAUTHORIZED
 
-verificationStatusCheck :: ResponseStatus -> Language -> DVC.DocumentType -> Flow Text
-verificationStatusCheck status language img = do
+verificationStatusCheck :: ResponseStatus -> Maybe Bool -> Language -> DVC.DocumentType -> Flow Text
+verificationStatusCheck status useMessageTranslation language img = do
   case (status, img) of
-    (INVALID, DVC.DriverLicense) -> toVerificationMessage DLInvalid language
-    (INVALID, DVC.VehicleRegistrationCertificate) -> toVerificationMessage RCInvalid language
-    _ -> toVerificationMessage DocumentValid language
+    (INVALID, DVC.DriverLicense) -> toVerificationMessage DLInvalid useMessageTranslation language
+    (INVALID, DVC.VehicleRegistrationCertificate) -> toVerificationMessage RCInvalid useMessageTranslation language
+    _ -> toVerificationMessage DocumentValid useMessageTranslation language
 
-checkIfInVerification :: IQuery.DriverImagesInfo -> DVC.DocumentType -> Language -> Flow (ResponseStatus, Text)
-checkIfInVerification driverImagesInfo docType language = do
+checkIfInVerification :: IQuery.DriverImagesInfo -> DVC.DocumentType -> Maybe Bool -> Language -> Flow (ResponseStatus, Text)
+checkIfInVerification driverImagesInfo docType useMessageTranslation language = do
   let driverId = driverImagesInfo.driverId
       onboardingTryLimit = driverImagesInfo.transporterConfig.onboardingTryLimit
   idfyVerificationReq <- listToMaybe <$> IVQuery.findLatestByDriverIdAndDocType Nothing Nothing driverId docType
   hvVerificationReq <- listToMaybe <$> HVQuery.findLatestByDriverIdAndDocType Nothing Nothing driverId docType
   let mbVerificationReqRecord = getLatestVerificationRecord idfyVerificationReq hvVerificationReq
   let images = IQuery.filterRecentByPersonIdAndImageType driverImagesInfo docType
-  verificationStatusWithMessage onboardingTryLimit (length images) mbVerificationReqRecord language docType
+  verificationStatusWithMessage onboardingTryLimit (length images) mbVerificationReqRecord useMessageTranslation language docType
 
-verificationStatusWithMessage :: Int -> Int -> Maybe SDO.VerificationReqRecord -> Language -> DVC.DocumentType -> Flow (ResponseStatus, Text)
-verificationStatusWithMessage onboardingTryLimit imagesNum mbVerificationReqRecord language docType =
+verificationStatusWithMessage :: Int -> Int -> Maybe SDO.VerificationReqRecord -> Maybe Bool -> Language -> DVC.DocumentType -> Flow (ResponseStatus, Text)
+verificationStatusWithMessage onboardingTryLimit imagesNum mbVerificationReqRecord useMessageTranslation language docType =
   case mbVerificationReqRecord of
     Just req -> do
       if req.status == "pending" || req.status == "source_down_retrying"
         then do
-          msg <- toVerificationMessage VerificationInProgress language
+          msg <- toVerificationMessage VerificationInProgress useMessageTranslation language
           return (PENDING, msg)
         else do
-          message <- getMessageFromResponse language req.verificaitonResponse
+          message <- getMessageFromResponse useMessageTranslation language req.verificaitonResponse
           return (FAILED, message)
     Nothing -> do
       if imagesNum > onboardingTryLimit * bool 1 2 (docType == DVC.DriverLicense)
         then do
-          msg <- toVerificationMessage LimitExceed language
+          msg <- toVerificationMessage LimitExceed useMessageTranslation language
           return (LIMIT_EXCEED, msg)
         else do
-          msg <- toVerificationMessage NoDcoumentFound language
+          msg <- toVerificationMessage NoDcoumentFound useMessageTranslation language
           return (NO_DOC_AVAILABLE, msg)
 
-getMessageFromResponse :: Language -> Maybe Text -> Flow Text
-getMessageFromResponse language response = do
+getMessageFromResponse :: Maybe Bool -> Language -> Maybe Text -> Flow Text
+getMessageFromResponse useMessageTranslation language response = do
   case response of
     Just res
-      | "id_not_found" `T.isInfixOf` res -> toVerificationMessage InvalidDocumentNumber language
-      | "source_down" `T.isInfixOf` res -> toVerificationMessage VerificationInProgress language
-      | "TIMEOUT" `T.isInfixOf` res -> toVerificationMessage VerficationFailed language
-      | "BAD_REQUEST" `T.isInfixOf` res -> toVerificationMessage InvalidDocumentNumber language
-      | "422" `T.isInfixOf` res -> toVerificationMessage InvalidDocumentNumber language
-      | otherwise -> toVerificationMessage Other language
-    Nothing -> toVerificationMessage Other language
+      | "id_not_found" `T.isInfixOf` res -> toVerificationMessage InvalidDocumentNumber useMessageTranslation language
+      | "source_down" `T.isInfixOf` res -> toVerificationMessage VerificationInProgress useMessageTranslation language
+      | "TIMEOUT" `T.isInfixOf` res -> toVerificationMessage VerficationFailed useMessageTranslation language
+      | "BAD_REQUEST" `T.isInfixOf` res -> toVerificationMessage InvalidDocumentNumber useMessageTranslation language
+      | "422" `T.isInfixOf` res -> toVerificationMessage InvalidDocumentNumber useMessageTranslation language
+      | otherwise -> toVerificationMessage Other useMessageTranslation language
+    Nothing -> toVerificationMessage Other useMessageTranslation language
 
 data VerificationMessage
   = InvalidDocumentNumber
@@ -1029,12 +1035,14 @@ data VerificationMessage
   | Other
   deriving (Show, Eq, Ord)
 
-toVerificationMessage :: VerificationMessage -> Language -> Flow Text
-toVerificationMessage msg lang = do
-  errorTranslations <- MTQuery.findByErrorAndLanguage (T.pack (show msg)) lang
-  case errorTranslations of
-    Just errorTranslation -> return $ errorTranslation.message
-    Nothing -> return "Something went wrong"
+toVerificationMessage :: VerificationMessage -> Maybe Bool -> Language -> Flow Text
+toVerificationMessage msg useMessageTranslation lang = case useMessageTranslation of
+  Just False -> pure (show msg)
+  _ -> do
+    errorTranslations <- MTQuery.findByErrorAndLanguage (T.pack (show msg)) lang
+    case errorTranslations of
+      Just errorTranslation -> return $ errorTranslation.message
+      Nothing -> return "Something went wrong"
 
 getLatestVerificationRecord :: Maybe IV.IdfyVerification -> Maybe HV.HyperVergeVerification -> Maybe SDO.VerificationReqRecord
 getLatestVerificationRecord mbIdfyVerificationReq mbHvVerificationReq = do

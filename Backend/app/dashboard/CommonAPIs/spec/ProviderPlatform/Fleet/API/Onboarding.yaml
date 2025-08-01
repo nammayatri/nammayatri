@@ -40,6 +40,7 @@ apis:
         - onboardingVehicleCategory: VehicleCategory
         - providePrefillDetails: Bool
         - onlyMandatoryDocs: Bool
+        - useMessageTranslation: Bool
       response:
         type: StatusRes
       helperApi:
@@ -54,6 +55,7 @@ apis:
               - onboardingVehicleCategory: VehicleCategory
               - providePrefillDetails: Bool
               - onlyMandatoryDocs: Bool
+              - useMessageTranslation: Bool
             response:
               type: StatusRes
   - POST:
