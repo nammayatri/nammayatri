@@ -18,6 +18,7 @@ module Domain.Action.Dashboard.AppManagement.EventManagement
     postEventManagementTicketdashboardTicketplaceRecommend,
     getTicketDef,
     checkAccess,
+    invalidateTicketPlaceAvailabilityCache,
   )
 where
 
@@ -26,10 +27,8 @@ import qualified API.Types.Dashboard.AppManagement.EventManagement
 import API.Types.Dashboard.AppManagement.TicketDashboard as DTD
 import Control.Monad.Extra (concatMapM)
 import Data.List (nub, nubBy, (\\))
-import qualified Data.List as List
 import Data.Map (Map)
 import qualified Data.Map as Map
-import qualified Data.Maybe as Maybe
 import Data.OpenApi (ToSchema)
 import Domain.Action.Dashboard.AppManagement.EventManagement.Utils (deleteAsset)
 import qualified Domain.Types.BusinessHour as DBusinessHour
@@ -52,8 +51,8 @@ import qualified Domain.Types.TicketService as DTicketService
 import qualified "this" Domain.Types.TicketService
 import qualified Environment
 import Kernel.Prelude
-import qualified Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
+import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Id (Id (..))
@@ -61,18 +60,15 @@ import qualified Kernel.Types.Id
 import qualified Kernel.Types.TimeBound as TB
 import Kernel.Utils.Common
 import SharedLogic.Merchant (findMerchantByShortId)
-import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.BusinessHour as QBusinessHour
 import qualified Storage.Queries.DraftTicketChange as QDTC
 import qualified Storage.Queries.DraftTicketChangeHistory as QDTCH
 import qualified Storage.Queries.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.RiderConfig as QRC
-import qualified Storage.Queries.RiderConfig as QRiderConfig
 import qualified Storage.Queries.ServiceCategory as QServiceCategory
 import qualified Storage.Queries.ServicePeopleCategory as QServicePeopleCategory
 import qualified Storage.Queries.TicketPlace as QTicketPlace
 import qualified Storage.Queries.TicketService as QTicketService
-import Tools.Auth
 import Tools.Error
 
 getEventManagementTicketdashboardTicketplaceDef :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Domain.Types.MerchantOnboarding.RequestorRole) -> Environment.Flow Domain.Types.EventManagement.TicketPlaceDef)
@@ -271,7 +267,13 @@ getLiveTicketDef placeId = do
                 openTimings = ticketPlace.openTimings,
                 closeTimings = ticketPlace.closeTimings,
                 customTabs = ticketPlace.customTabs,
-                rules = ticketPlace.rules
+                rules = ticketPlace.rules,
+                faqs = ticketPlace.faqs,
+                metadata = ticketPlace.metadata,
+                isRecurring = Just ticketPlace.isRecurring,
+                platformFee = ticketPlace.platformFee,
+                platformFeeVendor = ticketPlace.platformFeeVendor,
+                pricingOnwards = ticketPlace.pricingOnwards
               }
           serviceDefs = map (toTicketServiceDef linkedBusinessHours) services
           serviceCategoryDefs = map (toServiceCategoryDef linkedBusinessHours) linkedServiceCategories
@@ -384,6 +386,11 @@ updateBasicInfo ticketPlaceId basicInfo = do
   isDraftEqual <- checkTicketDraftEquality ticketPlaceId
   let updatedTicketDef = ticketDef {DEM.basicInformation = basicInfo, DEM.isDraft = not isDraftEqual}
   QDTC.updateDraftById (Just updatedTicketDef) False ticketPlaceId
+
+  -- Invalidate cache when rules are updated
+  when (isJust basicInfo.rules) $ do
+    invalidateTicketPlaceAvailabilityCache ticketPlaceId
+
   return updatedTicketDef
 
 upsertServiceCategoryDef :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Types.Id.Id Domain.Types.TicketService.TicketService -> Domain.Types.EventManagement.ServiceCategoryDef -> Environment.Flow Domain.Types.EventManagement.TicketPlaceDef
@@ -549,6 +556,10 @@ applyDraftChanges draftChange = do
   mocityId <- draftChange.merchantOperatingCityId & fromMaybeM (InvalidRequest "Merchant operating city id is required")
   now <- getCurrentTime
   existingTicketPlace <- QTicketPlace.findById draftChange.id
+
+  -- Invalidate cache when changes with rules are applied
+  whenJust ticketDef.basicInformation.rules $ \_ -> do
+    invalidateTicketPlaceAvailabilityCache draftChange.id
   let ticketPlaceData =
         DTicketPlace.TicketPlace
           { id = ticketDef.id,
@@ -575,7 +586,17 @@ applyDraftChanges draftChange = do
             createdAt = now,
             updatedAt = now,
             rules = ticketDef.basicInformation.rules,
-            recommend = fromMaybe False (existingTicketPlace <&> (.recommend))
+            recommend = fromMaybe False (existingTicketPlace <&> (.recommend)),
+            faqs = ticketDef.basicInformation.faqs,
+            metadata = ticketDef.basicInformation.metadata,
+            isRecurring = fromMaybe True ticketDef.basicInformation.isRecurring,
+            platformFee = ticketDef.basicInformation.platformFee,
+            platformFeeVendor = ticketDef.basicInformation.platformFeeVendor,
+            pricingOnwards = ticketDef.basicInformation.pricingOnwards,
+            endDate = Nothing,
+            isClosed = False,
+            startDate = Nothing,
+            venue = Nothing
           }
   case existingTicketPlace of
     Just extTP -> do
@@ -722,3 +743,15 @@ applyDraftChanges draftChange = do
         Just _ -> QTicketService.updateByPrimaryKey updatedService
         Nothing -> QTicketService.create updatedService
       return relevantBusinessHourIds
+
+invalidateTicketPlaceAvailabilityCache :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Environment.Flow ()
+invalidateTicketPlaceAvailabilityCache placeId = do
+  forM_ [1 .. 12] $ \month -> do
+    let cacheKey = mkTicketPlaceAvailabilityCacheKey placeId month
+    Redis.del cacheKey
+
+  logInfo $ "Invalidated availability cache for place: " <> placeId.getId
+  where
+    mkTicketPlaceAvailabilityCacheKey :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Int -> Text
+    mkTicketPlaceAvailabilityCacheKey placeId' month =
+      placeId'.getId <> "<>" <> show month

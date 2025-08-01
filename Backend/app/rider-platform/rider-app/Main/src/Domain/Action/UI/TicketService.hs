@@ -1585,3 +1585,89 @@ convertDomainBHTtoCoreBHT (Domain.Types.BusinessHour.Duration st ed) = SharedLog
 
 sha1 :: ToJSON a => a -> Text
 sha1 = T.pack . show . Hash.hashWith Hash.SHA1 . BS.toStrict . encode
+
+mkTicketPlaceAvailabilityCacheKey :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Int -> Text
+mkTicketPlaceAvailabilityCacheKey placeId month =
+  "TicketPlace" <> ":" <> placeId.getId <> ":" <> show month
+
+getDaysInMonth :: Int -> Int -> [Day]
+getDaysInMonth year month =
+  let startDay = fromGregorian (fromIntegral year) month 1
+      nextMonth = if month == 12 then fromGregorian (fromIntegral year + 1) 1 1 else fromGregorian (fromIntegral year) (month + 1) 1
+      lastDay = addDays (-1) nextMonth
+   in [startDay .. lastDay]
+
+isTicketPlaceClosed :: Domain.Types.TicketPlace.TicketPlace -> Day -> Environment.Flow Bool
+isTicketPlaceClosed ticketPlace day = do
+  -- For rule evaluation, we need to pass the specific day we're checking
+  context <- TicketRule.getCurrentContext 330 (Just day) Nothing
+  let processedPlace = TicketRule.processEntity context ticketPlace
+  pure $ processedPlace.status == Domain.Types.TicketPlace.Inactive
+
+calculateClosedDaysSimple :: Domain.Types.TicketPlace.TicketPlace -> Int -> Int -> Environment.Flow [Int]
+calculateClosedDaysSimple ticketPlace year month = do
+  let allDays = getDaysInMonth year month
+  closedDays <- filterM (isTicketPlaceClosed ticketPlace) allDays
+  pure $ map (\day -> fromIntegral $ toModifiedJulianDay day - toModifiedJulianDay (fromGregorian (fromIntegral year) month 1) + 1) closedDays
+
+getCachedOrCalculateClosedDays :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Int -> Int -> Environment.Flow [Int]
+getCachedOrCalculateClosedDays placeId year month = do
+  let cacheKey = mkTicketPlaceAvailabilityCacheKey placeId month
+
+  mbCachedResult <- Redis.safeGet cacheKey
+  case mbCachedResult of
+    Just cachedClosedDays -> do
+      logDebug $ "Cached closed days: " <> show cachedClosedDays
+      pure cachedClosedDays
+    Nothing -> do
+      ticketPlace <- QTP.findById placeId >>= fromMaybeM (TicketPlaceNotFound placeId.getId)
+      logDebug $ "Found ticket place: " <> show ticketPlace.id
+      logDebug $ "Ticket place rules: " <> show ticketPlace.rules
+      closedDays <- calculateClosedDaysSimple ticketPlace year month
+      logDebug $ "Calculated closed days: " <> show closedDays
+
+      -- Cache the result for 7 days (604800 seconds)
+      Redis.setExp cacheKey closedDays 604800
+      logDebug $ "Cached result for key: " <> cacheKey
+
+      pure closedDays
+
+getTicketPlaceAvailability :: (Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Maybe Bool -> Maybe Bool -> Environment.Flow [TicketPlaceAvailability]
+getTicketPlaceAvailability (_, _merchantId) placeId mbForceFresh _mbIsClosed = do
+  now <- getCurrentTime
+  let (currentYear, currentMonth, _) = toGregorian $ utctDay now
+      year = fromIntegral currentYear
+      month = currentMonth
+      nextMonth = if month == 12 then 1 else month + 1
+      nextYear = if month == 12 then year + 1 else year
+
+  logDebug $ "Getting availability for place: " <> placeId.getId
+  logDebug $ "Current year: " <> show year <> ", month: " <> show month
+  logDebug $ "Next year: " <> show nextYear <> ", month: " <> show nextMonth
+
+  whenJust mbForceFresh $ \forceFresh -> do
+    if forceFresh
+      then do
+        invalidateTicketPlaceAvailabilityCache placeId
+        logInfo $ "Invalidated cache for place: " <> placeId.getId
+      else do
+        logInfo $ "Not invalidating cache for place: " <> placeId.getId
+
+  currentMonthClosedDays <- getCachedOrCalculateClosedDays placeId year month
+  nextMonthClosedDays <- getCachedOrCalculateClosedDays placeId nextYear nextMonth
+
+  pure $ TicketPlaceAvailability {closedDays = currentMonthClosedDays, month = month} : TicketPlaceAvailability {closedDays = nextMonthClosedDays, month = nextMonth} : []
+
+invalidateTicketPlaceAvailabilityCache :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Environment.Flow ()
+invalidateTicketPlaceAvailabilityCache placeId = do
+  forM_ [1 .. 12] $ \month -> do
+    let cacheKey = mkTicketPlaceAvailabilityCacheKey placeId month
+    Redis.del cacheKey
+
+  logInfo $ "Invalidated availability cache for place: " <> placeId.getId
+
+-- Call this function when ticket place rules are updated
+invalidateCacheForTicketPlace :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Environment.Flow ()
+invalidateCacheForTicketPlace placeId = do
+  logInfo $ "Invalidating cache for ticket place: " <> placeId.getId
+  invalidateTicketPlaceAvailabilityCache placeId

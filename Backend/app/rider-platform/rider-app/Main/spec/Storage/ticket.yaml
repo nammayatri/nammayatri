@@ -54,6 +54,16 @@ TicketPlace:
     customTabs: "Maybe [CustomTab]"
     rules: "Maybe [Rule]"
     recommend: Bool
+    metadata: "Maybe [Metadata]"
+    pricingOnwards: Maybe Int
+    isRecurring: Bool
+    platformFee: Maybe Fee
+    platformFeeVendor: Maybe Text
+    faqs: "Maybe [Faq]"
+    startDate: Maybe Day
+    endDate: Maybe Day
+    venue: Maybe Text
+    isClosed: Bool
 
   types:
     PlaceType:
@@ -64,27 +74,54 @@ TicketPlace:
       header: Text
       body: Text
       derive: "Eq,Ord"
+    Metadata:
+      key: Text
+      value: Text
+      icon: Maybe Text
+      derive: "Eq,Ord"
+    Fee:
+      enum: "Percentage Int,Flat Double"
+    Faq:
+      question: Text
+      answer: Text
+      derive: "Eq,Ord"
 
   beamType:
     priority: Maybe Int
     customTabs: "Maybe Value"
     rules: "Maybe Value"
     recommend: Maybe Bool
+    metadata: "Maybe Value"
+    faqs: "Maybe Value"
+    isRecurring: Maybe Bool
+    isClosed: Maybe Bool
 
   sqlType:
     customTabs: json
+    metadata: json
     rules: json
+    faqs: json
 
   fromTType:
     priority: Kernel.Prelude.fromMaybe 0|I
     customTabs: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< customTabs|E
     rules: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< rules|E
     recommend: fromMaybe False recommend|E
+    metadata: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< metadata|E
+    faqs: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< faqs|E
+    isRecurring: Kernel.Prelude.fromMaybe True|I
+    isClosed: Kernel.Prelude.fromMaybe False|I
+
   toTType:
     priority: Kernel.Prelude.Just|I
     customTabs: Data.Aeson.toJSON <$> customTabs|E
     rules: Data.Aeson.toJSON <$> rules|E
     recommend: Kernel.Prelude.Just|I
+    metadata: Data.Aeson.toJSON <$> metadata|E
+    faqs: Data.Aeson.toJSON <$> faqs|E
+    isRecurring: Kernel.Prelude.Just|I
+    isClosed: Kernel.Prelude.Just isClosed|E
+
   default:
     termsAndConditions: "'{}'"
     placeType: "'Other'"
@@ -92,6 +129,8 @@ TicketPlace:
     status: "'Active'"
     allowSameDayBooking: "true"
     priority: "0"
+    isRecurring: "true"
+    isClosed: 'false'
 
   queries:
     getTicketPlaces:

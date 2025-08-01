@@ -193,6 +193,9 @@ types:
     name: Text
     pricePerUnit: HighPrecMoney
     pricePerUnitWithCurrency: PriceAPIEntity
+  TicketPlaceAvailability:
+    month: Int
+    closedDays: [Int]
 
 apis:
   # GET /ticket/places
@@ -289,3 +292,14 @@ apis:
         type: API.Types.UI.TicketService.TicketServiceCancelReq
       response:
         type: APISuccess
+
+  - GET:
+      endpoint: /ticket/place/{placeId}/availability
+      auth: TokenAuth
+      query:
+        isClosed: Bool
+        forceFresh: Bool
+      params:
+        placeId: Id TicketPlace
+      response:
+        type: "[TicketPlaceAvailability]"
