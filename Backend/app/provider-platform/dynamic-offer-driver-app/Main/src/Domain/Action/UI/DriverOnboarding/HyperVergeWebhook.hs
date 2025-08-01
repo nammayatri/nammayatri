@@ -124,7 +124,6 @@ hyperVergeVerificaitonWebhookHandler authData payload = do
           -- running statusHandler to enable Driver
           let onlyMandatoryDocs = Just True
               useMessageTranslation = Just False
-          -- FIXME use statusHandler' instead for void version?
           void $ Status.statusHandler (verificationReq.driverId, person.merchantId, person.merchantOperatingCityId) (Just True) verificationReq.multipleRC Nothing Nothing (Just False) onlyMandatoryDocs useMessageTranslation
           return ack_
         _ -> throwError $ InternalError "Document and apiEndpoint mismatch occurred !!!!!!!!"

@@ -58,11 +58,20 @@ statusHandler (personId, _merchantId, merchantOpCityId) makeSelfieAadhaarPanMand
   driverImages <- IQuery.findAllByPersonId transporterConfig personId
   now <- getCurrentTime
   let driverImagesInfo = IQuery.DriverImagesInfo {driverId = personId, merchantOperatingCity, driverImages, transporterConfig, now}
-  (dlStatus, mDL, dlVerficationMessage) <- SStatus.getDLAndStatus driverImagesInfo useMessageTranslation merchantOperatingCity.language useHVSdkForDL
-  (rcStatus, _, rcVerficationMessage) <- SStatus.getRCAndStatus driverImagesInfo multipleRC useMessageTranslation merchantOperatingCity.language
+  let statusHandlerOptions =
+        SStatus.StatusHandlerOptions
+          { makeSelfieAadhaarPanMandatory,
+            multipleRC,
+            prefillData,
+            useHVSdkForDL,
+            shouldActivateRc = True,
+            onlyMandatoryDocs,
+            useMessageTranslation
+          }
+  (dlStatus, mDL, dlVerficationMessage) <- SStatus.getDLAndStatus driverImagesInfo statusHandlerOptions merchantOperatingCity.language
+  (rcStatus, _, rcVerficationMessage) <- SStatus.getRCAndStatus driverImagesInfo statusHandlerOptions merchantOperatingCity.language
   (aadhaarStatus, _) <- SStatus.getAadhaarStatus personId
-  let shouldActivateRc = True
-  SStatus.StatusRes' {..} <- SStatus.statusHandler' driverImagesInfo makeSelfieAadhaarPanMandatory multipleRC prefillData onboardingVehicleCategory mDL useHVSdkForDL shouldActivateRc onlyMandatoryDocs useMessageTranslation
+  SStatus.StatusRes' {..} <- SStatus.statusHandler' driverImagesInfo statusHandlerOptions onboardingVehicleCategory mDL
   pure $
     StatusRes
       { dlVerificationStatus = dlStatus,
