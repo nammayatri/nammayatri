@@ -300,7 +300,7 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
 
       whenJust mbRequiredEstimate $ \requiredEstimate -> do
         shouldAutoSelect <- SLCF.createFares requestId.getId searchRequest.journeyLegInfo (QSearchReq.updatePricingId requestId (Just requiredEstimate.id.getId))
-        let shouldAutoSelectForReserved = isReservedSearch
+        let shouldAutoSelectForReserved = isReservedSearch && isJust mbNySubscription
             shouldAutoSelectFinal = shouldAutoSelect || shouldAutoSelectForReserved
 
         when shouldAutoSelectForReserved $ do
@@ -418,8 +418,8 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
     getNyRegularSubs isReservedSearch = do
       if isReservedSearch
         then do
-          nyTransaction <- QNyRegularInstanceLog.findByInstanceTransactionId searchRequest.id.getId >>= fromMaybeM (InternalError $ "No Instance log for search request :" <> searchRequest.id.getId)
-          QNyRegularSubscription.findById nyTransaction.nyRegularSubscriptionId
+          nyTransaction <- QNyRegularInstanceLog.findByInstanceTransactionId searchRequest.id.getId
+          maybe (pure Nothing) QNyRegularSubscription.findById $ nyTransaction <&> (.nyRegularSubscriptionId)
         else pure Nothing
 
 -- TODO(MultiModal): Add one more field in estimate for check if it is done or ongoing
