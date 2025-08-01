@@ -88,10 +88,14 @@ getFleetManagementFleets merchantShortId opCity mbIsActive mbVerified mbEnabled 
       transporterConfig <- findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
       driverImages <- IQuery.findAllByPersonId transporterConfig person.id
       let driverImagesInfo = IQuery.DriverImagesInfo {driverId = person.id, merchantOperatingCity = merchantOpCity, driverImages, transporterConfig, now}
-      let shouldActivateRc = False
+      let statusHandlerOptions =
+            SStatus.defaultStatusHandlerOptions{shouldActivateRc = False,
+                                                onlyMandatoryDocs = Nothing, -- no matter for fleets
+                                                useMessageTranslation = useMessageTranslation
+                                               }
       statusRes <-
         castStatusRes
-          <$> SStatus.statusHandler' driverImagesInfo Nothing Nothing Nothing Nothing Nothing (Just True) shouldActivateRc Nothing useMessageTranslation
+          <$> SStatus.statusHandler' driverImagesInfo statusHandlerOptions Nothing Nothing
       pure $
         Common.FleetInfo
           { id = ID.cast fleetOwnerPersonId,

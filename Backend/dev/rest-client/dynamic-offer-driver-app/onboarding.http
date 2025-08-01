@@ -17,6 +17,6 @@ token: {{token2}}
 
 # @name statusHandler
 
-GET {{driver-offer-bpp-host}}/ui/driver/register/status?onlyMandatoryDocs=true
+GET {{driver-offer-bpp-host}}/ui/driver/register/status?onlyMandatoryDocs=true&useMessageTranslation=false
 content-type: application/json
 token: {{token2}}
