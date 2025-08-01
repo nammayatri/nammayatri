@@ -94,6 +94,11 @@ updateIsBookingCancellableByBookingId isBookingCancellable id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.isBookingCancellable isBookingCancellable, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateIsRefundInitiated :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
+updateIsRefundInitiated isRefundInitiated id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.isRefundInitiated isRefundInitiated, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateJourneyLegStatus ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Maybe Lib.JourneyLeg.Types.JourneyLegStatus -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
@@ -195,6 +200,7 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.isBookingCancellable isBookingCancellable,
       Se.Set Beam.isDeleted isDeleted,
       Se.Set Beam.isFareChanged isFareChanged,
+      Se.Set Beam.isRefundInitiated isRefundInitiated,
       Se.Set Beam.isSkipped isSkipped,
       Se.Set Beam.journeyId (Kernel.Types.Id.getId <$> journeyId),
       Se.Set Beam.journeyLegOrder journeyLegOrder,
