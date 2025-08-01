@@ -109,8 +109,8 @@ mkRideCompletedQuote ride fareParams = do
                      Just (show Enums.PET_CHARGES),
                      Just (show Enums.TOLL_CHARGES),
                      Just (show Enums.PARKING_CHARGE),
-                     Just (show Enums.RIDE_STOP_CHARGES)
-                     --  Just (show Enums.NIGHT_SHIFT_CHARGE)
+                     Just (show Enums.RIDE_STOP_CHARGES),
+                     Just (show Enums.NIGHT_SHIFT_CHARGE)
                    ]
         DFParams.Slab ->
           title
@@ -124,7 +124,7 @@ mkRideCompletedQuote ride fareParams = do
                      Just (show Enums.FIXED_GOVERNMENT_RATE),
                      Just (show Enums.TOTAL_FARE),
                      Just (show Enums.CUSTOMER_SELECTED_FARE),
-                     --  Just (show Enums.NIGHT_SHIFT_CHARGE),
+                     Just (show Enums.NIGHT_SHIFT_CHARGE),
                      Just (show Enums.EXTRA_TIME_FARE),
                      Just (show Enums.CANCELLATION_CHARGES),
                      Just (show Enums.TOLL_CHARGES),

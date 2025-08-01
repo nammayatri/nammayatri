@@ -53,8 +53,8 @@ import Kernel.Utils.Common hiding (isTimeWithinBounds, mkPrice)
 
 mkFareParamsBreakups :: (HighPrecMoney -> breakupItemPrice) -> (Text -> breakupItemPrice -> breakupItem) -> FareParameters -> [breakupItem]
 mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
-  let dayPartRate = fromMaybe 1.0 fareParams.nightShiftRateIfApplies -- Temp fix :: have to fix properly
-      baseFareFinal = HighPrecMoney $ fareParams.baseFare.getHighPrecMoney * toRational dayPartRate -- Temp fix :: have to fix properly
+  -- let dayPartRate = fromMaybe 1.0 fareParams.nightShiftRateIfApplies -- Temp fix :: have to fix properly
+  let baseFareFinal = HighPrecMoney $ fareParams.baseFare.getHighPrecMoney -- Temp fix :: have to fix properly
       baseFareCaption = show Enums.BASE_FARE
       baseFareItem = mkBreakupItem baseFareCaption (mkPrice baseFareFinal)
 
@@ -116,7 +116,7 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
       rideStopChargeCaption = show Enums.RIDE_STOP_CHARGES
       mbRideStopChargeItem = mkBreakupItem rideStopChargeCaption . mkPrice <$> fareParams.stopCharges
 
-      detailsBreakups = processFareParamsDetails dayPartRate fareParams.fareParametersDetails
+      detailsBreakups = processFareParamsDetails fareParams.fareParametersDetails
       additionalChargesBreakup = map (\addCharges -> mkBreakupItem (show $ castAdditionalChargeCategoriesToEnum addCharges.chargeCategory) $ mkPrice addCharges.charge) fareParams.conditionalCharges
   catMaybes
     [ Just baseFareItem,
@@ -145,19 +145,19 @@ mkFareParamsBreakups mkPrice mkBreakupItem fareParams = do
       DAC.SAFETY_PLUS_CHARGES -> Enums.SAFETY_PLUS_CHARGES
       DAC.NYREGULAR_SUBSCRIPTION_CHARGE -> Enums.NYREGULAR_SUBSCRIPTION_CHARGE
       _ -> Enums.NO_CHARGES
-    processFareParamsDetails dayPartRate = \case
-      DFParams.ProgressiveDetails det -> mkFPProgressiveDetailsBreakupList dayPartRate det
+    processFareParamsDetails = \case
+      DFParams.ProgressiveDetails det -> mkFPProgressiveDetailsBreakupList det
       DFParams.SlabDetails det -> mkFPSlabDetailsBreakupList det
       DFParams.RentalDetails det -> mkFPRentalDetailsBreakupList det
       DFParams.InterCityDetails det -> mkFPInterCityDetailsBreakupList det
       DFParams.AmbulanceDetails det -> mkFPAmbulanceDetailsBreakupList det
 
-    mkFPProgressiveDetailsBreakupList dayPartRate det = do
+    mkFPProgressiveDetailsBreakupList det = do
       let deadKmFareCaption = show Enums.DEAD_KILOMETER_FARE
           deadKmFareItem = mkBreakupItem deadKmFareCaption (mkPrice det.deadKmFare)
 
           extraDistanceFareCaption = show Enums.DISTANCE_FARE
-          mbExtraKmFare = det.extraKmFare <&> HighPrecMoney . (* toRational dayPartRate) . (.getHighPrecMoney) -- temp fix :: have to fix properly
+          mbExtraKmFare = det.extraKmFare
           extraDistanceFareItem =
             mbExtraKmFare <&> \extraKmFareRounded ->
               mkBreakupItem extraDistanceFareCaption (mkPrice extraKmFareRounded) -- temp fix :: MOVE CONGESTION CHARGE TO PROPER PLACE
@@ -371,7 +371,13 @@ calculateFareParameters params = do
             waitingCharge = resultWaitingCharge,
             nightShiftCharge = resultNightShiftCharge,
             rideExtraTimeFare = extraTimeFareInfo,
-            nightShiftRateIfApplies = if isNightShiftChargeIncluded then getNightShiftRate nightShiftCharge else Nothing, -- Temp fix :: have to fix properly
+            nightShiftRateIfApplies =
+              if nightShiftBuffer
+                then Just $ realToFrac ((fromMaybe (HighPrecMoney 0.0) resultNightShiftCharge + partOfNightShiftCharge).getHighPrecMoney / partOfNightShiftCharge.getHighPrecMoney)
+                else
+                  if isNightShiftChargeIncluded
+                    then getNightShiftRate nightShiftCharge
+                    else Nothing, -- Temp fix :: have to fix properly
             fareParametersDetails = case fp.farePolicyDetails of
               DFP.ProgressiveDetails _ -> fareParametersDetails
               DFP.SlabsDetails det ->
