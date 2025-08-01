@@ -28,10 +28,12 @@ import Domain.Types.DriverFee as DDF
 import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.MerchantMessage (MediaChannel (..))
+import qualified Domain.Types.MerchantOperatingCity as DMC
 import qualified Domain.Types.Message as Domain
 import qualified Domain.Types.Person as DP
 import Domain.Types.Plan
 import Domain.Types.TransporterConfig
+import qualified Domain.Types.VendorFee as DVF
 import Environment
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
@@ -50,6 +52,7 @@ import qualified SharedLogic.Merchant as SMerchant
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.Cac.TransporterConfig as CTC
+import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.Overlay as CMP
@@ -60,6 +63,8 @@ import qualified Storage.Queries.Message as MQuery
 import qualified Storage.Queries.MessageTranslation as MTQuery
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Vehicle as QVehicle
+import qualified Storage.Queries.VendorFee as QVF
+import qualified Storage.Queries.VendorFeeExtra as QVFE
 import Tools.Error
 import qualified Tools.Notifications as TN
 import qualified Tools.SMS as Sms
@@ -189,10 +194,14 @@ postDriverSubscriptionUpdateDriverFeeAndInvoiceInfo merchantShortId opCity drive
   driver <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
   maybe (pure ()) (`QDriverInfo.updateSubscription` personId) subscribed
+  transporterConfig <- SCTC.findByMerchantOpCityId driver.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound driver.merchantOperatingCityId.getId)
+  localTime <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
   dueDriverFees <- QDF.findAllFeeByTypeServiceStatusAndDriver serviceName personId [RECURRING_INVOICE, RECURRING_EXECUTION_INVOICE] [PAYMENT_PENDING, PAYMENT_OVERDUE]
   let invoicesDataToUpdate = maybe [] mapToInvoiceInfoToUpdateAfterParse invoices
   mapM_ (\inv -> QINV.updateStatusAndTypeByMbdriverFeeIdAndInvoiceId inv.invoiceId inv.invoiceStatus Nothing inv.driverFeeId) invoicesDataToUpdate
   allDriverFeeByIds <- QDF.findAllByDriverFeeIds (maybe [] (map (\df -> cast (Id df.driverFeeId))) driverFees)
+  -- Process vendor fees if provided
+  vendorFeeExistingData <- upsertVendorFees localTime vendorFees merchantOpCityId
   let reqMkDuesToAmount = (mkDuesToAmountWithCurrency <&> (.amount)) <|> mkDuesToAmount
   currency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
   SMerchant.checkCurrencies currency $ do
@@ -207,15 +216,34 @@ postDriverSubscriptionUpdateDriverFeeAndInvoiceInfo merchantShortId opCity drive
     then do
       let amount = maybe 0.0 (/ (fromIntegral $ length dueDriverFees)) reqMkDuesToAmount
       mapM_ (\fee -> QDF.resetFee fee.id 0 (PlatformFee {fee = amount, cgst = 0.0, sgst = 0.0, currency = fee.currency}) Nothing Nothing now) dueDriverFees
-      return $ mkResponse dueDriverFees
+      return $ mkResponse dueDriverFees vendorFeeExistingData
     else do
       maybe (pure ()) (updateAccordingToProvidedFeeState currency now) driverFees
-      return $ mkResponse allDriverFeeByIds
+      return $ mkResponse allDriverFeeByIds vendorFeeExistingData
   where
-    mkResponse driverFees' =
+    upsertVendorFees :: UTCTime -> Maybe [DVF.VendorFee] -> Id DMC.MerchantOperatingCity -> Flow [DVF.VendorFee]
+    upsertVendorFees now vendorFeesToUpsert merchantOpCityId = do
+      case vendorFeesToUpsert of
+        Nothing -> pure []
+        Just vendorFees' -> do
+          mapM
+            ( \vendorFee -> do
+                mbVendorFeeExisting <- QVFE.findByVendorAndDriverFeeId vendorFee.vendorId vendorFee.driverFeeId
+                case mbVendorFeeExisting of
+                  Just vendorFeeExisting -> do
+                    let vendorFeeWithTimestamp = vendorFee {DVF.updatedAt = now}
+                    QVF.updateVendorFee merchantOpCityId vendorFeeWithTimestamp
+                    return vendorFeeExisting
+                  Nothing -> do
+                    QVF.create vendorFee
+                    return $ vendorFee
+            )
+            vendorFees'
+    mkResponse driverFees' vendorFeeExistingData =
       DriverSubscription.SubscriptionDriverFeesAndInvoicesToUpdate
         { driverFees = Just $ mapToDriverFeeToUpdate driverFees',
           invoices = Nothing,
+          vendorFees = Just vendorFeeExistingData,
           mkDuesToAmount = Nothing,
           mkDuesToAmountWithCurrency = Nothing,
           subscribed = Nothing
