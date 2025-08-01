@@ -6,6 +6,7 @@ module Storage.Queries.SearchRequest (module Storage.Queries.SearchRequest, modu
 
 import qualified Domain.Types.Person
 import qualified Domain.Types.SearchRequest
+import qualified Domain.Types.SharedEntity
 import qualified Domain.Types.Trip
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -34,10 +35,12 @@ updatePetRide :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.
 updatePetRide isPetRide id = do updateOneWithKV [Se.Set Beam.isPetRide isPetRide] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateRiderPreferredOption :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.SearchRequest.RiderPreferredOption -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m ())
-updateRiderPreferredOption riderPreferredOption id = do updateOneWithKV [Se.Set Beam.riderPreferredOption (Just riderPreferredOption)] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+updateRiderPreferredOption riderPreferredOption id = do updateOneWithKV [Se.Set Beam.riderPreferredOption ((Just riderPreferredOption))] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateSharedSearchRequestId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m ())
-updateSharedSearchRequestId sharedSearchRequestId id = do updateOneWithKV [Se.Set Beam.sharedSearchRequestId sharedSearchRequestId] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+updateSharedEntityId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.SharedEntity.SharedEntity) -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m ())
+updateSharedEntityId sharedEntityId id = do updateOneWithKV [Se.Set Beam.sharedEntityId (Kernel.Types.Id.getId <$> sharedEntityId)] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateTotalRidesCount ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

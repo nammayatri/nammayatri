@@ -21,6 +21,7 @@ imports:
   Value: Data.Aeson
   TagNameValue: Lib.Yudhishthira.Types
   ParcelType: Domain.Types.DeliveryDetails
+  SharedEntity: Domain.Types.SharedEntity
 
 SearchRequest:
   derives: Generic,Show,ToJSON,FromJSON
@@ -80,7 +81,7 @@ SearchRequest:
     parcelQuantity: Maybe Int
     preferSafetyPlus: Bool
     isReserveRide: Maybe Bool
-    sharedEntityId: Maybe Text
+    sharedEntityId: Maybe (Id SharedEntity)
   beamType:
     startTime: Maybe UTCTime
     validTill: Maybe UTCTime

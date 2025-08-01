@@ -1,0 +1,149 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+  SearchRequest: Domain.Types.SearchRequest
+  Estimate: Domain.Types.Estimate
+  Booking: Domain.Types.Booking
+  Ride: Domain.Types.Ride
+  VehicleCategory: BecknV2.OnDemand.Enums
+  TripCategory: Domain.Types.Common
+  Value: Data.Aeson
+  TrackedEntity: Domain.Types.TrackedEntity
+
+SharedEntity:
+  tableName: shared_entity
+  derives: "Generic, Show"
+
+  types:
+    SharedEntityStatus:
+      enum: "SEARCHING,MATCHED,ESTIMATED,BOOKED,DRIVER_ASSIGNED,ONGOING,COMPLETED,CANCELLED,EXPIRED"
+      derive: "HttpInstance"
+
+    SharedEntityType:
+      enum: "SEARCH_GROUP,ESTIMATE_GROUP,BOOKING_GROUP,RIDE_GROUP"
+      derive: "HttpInstance"
+
+  fields:
+    id: Id SharedEntity
+    status: SharedEntityStatus
+    entityType: SharedEntityType
+    searchRequestIds: Maybe [TrackedEntity]
+    estimateIds: Maybe [TrackedEntity]
+    bookingIds: Maybe [TrackedEntity]
+    rideIds: Maybe [TrackedEntity]
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    vehicleCategory: VehicleCategory|NoRelation
+    tripCategory: TripCategory|NoRelation
+    driverId: Maybe (Id Person)
+    transactionId: Maybe Text
+    counterAppSharedEntityId: Maybe Text
+    waypoints: Value
+    totalSeats: Int
+    pairingTime: Maybe UTCTime
+    validTill: UTCTime
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+
+  constraints:
+    id: PrimaryKey
+    driverId: SecondaryKey
+    transactionId: SecondaryKey
+
+  beamType:
+    searchRequestIds: Maybe Value
+    estimateIds: Maybe Value
+    bookingIds: Maybe Value
+    rideIds: Maybe Value
+
+  toTType:
+    searchRequestIds: Data.Aeson.toJSON <$> searchRequestIds|E
+    estimateIds: Data.Aeson.toJSON <$> estimateIds|E
+    bookingIds: Data.Aeson.toJSON <$> bookingIds|E
+    rideIds: Data.Aeson.toJSON <$> rideIds|E
+
+  fromTType:
+    searchRequestIds: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< searchRequestIds|E
+    estimateIds: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< estimateIds|E
+    bookingIds: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< bookingIds|E
+    rideIds: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< rideIds|E
+
+  sqlType:
+    merchantId: character varying(36)
+    merchantOperatingCityId: character varying(36)
+    driverId: character varying(36)
+    searchRequestIds: json
+    estimateIds: json
+    bookingIds: json
+    rideIds: json
+    transactionId: character varying(255)
+    counterAppSharedEntityId: character varying(255)
+    waypoints: jsonb
+    vehicleCategory: character varying(255)
+    tripCategory: character varying(255)
+    status: character varying(255)
+    entityType: character varying(255)
+    validTill: timestamptz
+    pairingTime: timestamptz
+    createdAt: timestamptz
+    updatedAt: timestamptz
+
+  queries:
+    findByStatus:
+      kvFunction: findAllWithKV
+      where: status
+
+    findByDriverId:
+      kvFunction: findAllWithKV
+      where: driverId
+
+    findByMerchantOperatingCityId:
+      kvFunction: findAllWithKV
+      where: merchantOperatingCityId
+
+    findByTransactionId:
+      kvFunction: findOneWithKV
+      where: transactionId
+
+    findByCounterAppSharedEntityId:
+      kvFunction: findOneWithKV
+      where: counterAppSharedEntityId
+
+    updateStatus:
+      kvFunction: updateOneWithKV
+      params: [status, updatedAt]
+      where: id
+
+    updateDriverAssignment:
+      kvFunction: updateOneWithKV
+      params: [driverId, updatedAt]
+      where: id
+
+    updateCounterAppEntityId:
+      kvFunction: updateOneWithKV
+      params: [counterAppSharedEntityId, updatedAt]
+      where: id
+
+    updateEstimateIds:
+      kvFunction: updateOneWithKV
+      params: [estimateIds, updatedAt]
+      where: id
+
+    updateBookingIds:
+      kvFunction: updateOneWithKV
+      params: [bookingIds, updatedAt]
+      where: id
+
+    updateRideIds:
+      kvFunction: updateOneWithKV
+      params: [rideIds, updatedAt]
+      where: id
+
+  extraOperations:
+  - EXTRA_QUERY_FILE
+
+  excludedDefaultQueries:
+  - create
+  - createMany

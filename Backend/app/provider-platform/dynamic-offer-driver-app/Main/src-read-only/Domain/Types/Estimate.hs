@@ -10,6 +10,7 @@ import qualified Domain.Types.FarePolicy
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.SearchRequest
+import qualified Domain.Types.SharedEntity
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -48,7 +49,7 @@ data Estimate = Estimate
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     minFare :: Kernel.Types.Common.HighPrecMoney,
     requestId :: Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest,
-    sharedEstimateId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    sharedEntityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.SharedEntity.SharedEntity),
     smartTipReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     smartTipSuggestion :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     specialLocationTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

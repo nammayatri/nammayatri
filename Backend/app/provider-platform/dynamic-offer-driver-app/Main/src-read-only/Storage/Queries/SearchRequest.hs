@@ -7,6 +7,7 @@ module Storage.Queries.SearchRequest (module Storage.Queries.SearchRequest, modu
 import qualified Domain.Types.DeliveryDetails
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.SearchRequest
+import qualified Domain.Types.SharedEntity
 import qualified Domain.Types.Trip
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -52,8 +53,10 @@ updateSafetyPlus preferSafetyPlus id = do updateWithKV [Se.Set Beam.preferSafety
 updateSearchTags :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe [Lib.Yudhishthira.Types.TagNameValue] -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m ())
 updateSearchTags searchTags id = do updateWithKV [Se.Set Beam.searchTags (Lib.Yudhishthira.Tools.Utils.tagsNameValueToTType searchTags)] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateSharedSearchRequestId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m ())
-updateSharedSearchRequestId sharedSearchRequestId id = do updateWithKV [Se.Set Beam.sharedSearchRequestId sharedSearchRequestId] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+updateSharedEntityId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.SharedEntity.SharedEntity) -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m ())
+updateSharedEntityId sharedEntityId id = do updateWithKV [Se.Set Beam.sharedEntityId (Kernel.Types.Id.getId <$> sharedEntityId)] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateTripCategory :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Domain.Types.Trip.TripCategory -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m ())
 updateTripCategory tripCategory id = do updateWithKV [Se.Set Beam.tripCategory tripCategory] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]

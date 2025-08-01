@@ -5,6 +5,7 @@
 module Storage.Queries.Ride (module Storage.Queries.Ride, module ReExport) where
 
 import qualified Domain.Types.Ride
+import qualified Domain.Types.SharedEntity
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps
@@ -59,8 +60,12 @@ updateRideTags rideTags id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.rideTags (Lib.Yudhishthira.Tools.Utils.tagsNameValueToTType rideTags), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateSharedRideId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
-updateSharedRideId sharedRideId id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.sharedRideId sharedRideId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+updateSharedEntityId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.SharedEntity.SharedEntity) -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
+updateSharedEntityId sharedEntityId id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.sharedEntityId (Kernel.Types.Id.getId <$> sharedEntityId), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateTipAmountField :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.Ride.Ride -> m ())
 updateTipAmountField tipAmount id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.tipAmount tipAmount, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]

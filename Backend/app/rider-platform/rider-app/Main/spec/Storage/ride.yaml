@@ -22,6 +22,7 @@ imports:
   AccountId: Kernel.External.Payment.Interface.Types
   Months: Kernel.Types.Time
   DbHash: Kernel.External.Encryption
+  SharedEntity: Domain.Types.SharedEntity
 
 Ride:
   tableName: ride
@@ -120,7 +121,7 @@ Ride:
     isSafetyPlus : Bool
     isInsured : Bool
     insuredAmount: Maybe Text
-    sharedEntityId: Maybe Text
+    sharedEntityId: Maybe (Id SharedEntity)
 
   sqlType:
     allowedEditLocationAttempts: int
