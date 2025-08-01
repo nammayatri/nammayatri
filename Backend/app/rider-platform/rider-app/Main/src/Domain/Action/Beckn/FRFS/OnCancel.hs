@@ -76,9 +76,11 @@ onCancel _ booking' dOnCancel = do
   let booking = booking' {Booking.bppOrderId = Just dOnCancel.bppOrderId}
   person <- runInReplica $ QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   mRiderNumber <- mapM decrypt person.mobileNumber
+  let refundAmount = fromMaybe dOnCancel.baseFare dOnCancel.refundAmount
+  let cancellationCharges = fromMaybe 0 dOnCancel.cancellationCharges
   case dOnCancel.orderStatus of
     Spec.SOFT_CANCELLED -> do
-      void $ QTBooking.updateRefundCancellationChargesAndIsCancellableByBookingId dOnCancel.refundAmount dOnCancel.cancellationCharges (Just True) booking.id
+      void $ QTBooking.updateRefundCancellationChargesAndIsCancellableByBookingId (Just refundAmount) (Just cancellationCharges) (Just True) booking.id
     Spec.CANCELLED -> do
       val :: Maybe Bool <- Redis.get (makecancelledTtlKey booking.id)
       case val of
@@ -87,7 +89,7 @@ onCancel _ booking' dOnCancel = do
           void $ QTicket.updateAllStatusByBookingId DFRFSTicket.COUNTER_CANCELLED booking.id
           void $ QFRFSRecon.updateStatusByTicketBookingId (Just DFRFSTicket.COUNTER_CANCELLED) booking.id
         Just _ -> do
-          void $ checkRefundAndCancellationCharges booking.id
+          void $ checkRefundAndCancellationCharges booking.id refundAmount cancellationCharges
           void $ QTBooking.updateStatusById FTBooking.CANCELLED booking.id
           void $ QTicket.updateAllStatusByBookingId DFRFSTicket.CANCELLED booking.id
           void $ QFRFSRecon.updateStatusByTicketBookingId (Just DFRFSTicket.CANCELLED) booking.id
@@ -129,13 +131,13 @@ onCancel _ booking' dOnCancel = do
               return ()
   return ()
   where
-    checkRefundAndCancellationCharges bookingId = do
+    checkRefundAndCancellationCharges bookingId refundAmount cancellationCharges = do
       booking <- runInReplica $ QTBooking.findById bookingId >>= fromMaybeM (BookingDoesNotExist bookingId.getId)
       case booking of
         Booking.FRFSTicketBooking {refundAmount = Just rfAmount, cancellationCharges = Just charges} -> do
-          when (Just rfAmount /= dOnCancel.refundAmount) $
+          when (Just rfAmount /= Just refundAmount) $
             throwError $ InternalError "Refund Amount mismatch in onCancel Req"
-          when (Just charges /= dOnCancel.cancellationCharges) $
+          when (Just charges /= Just cancellationCharges) $
             throwError $ InternalError "Cancellation Charges mismatch in onCancel Req"
         _ -> throwError $ InternalError "Refund Amount or Cancellation Charges not found in booking"
     sendTicketCancelSMS :: Maybe Text -> Maybe Text -> Flow ()
