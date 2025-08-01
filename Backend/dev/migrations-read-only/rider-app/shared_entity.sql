@@ -10,6 +10,7 @@ ALTER TABLE atlas_app.shared_entity ADD COLUMN id character varying(36) NOT NULL
 ALTER TABLE atlas_app.shared_entity ADD COLUMN merchant_id character varying(36) NOT NULL;
 ALTER TABLE atlas_app.shared_entity ADD COLUMN merchant_operating_city_id character varying(36) NOT NULL;
 ALTER TABLE atlas_app.shared_entity ADD COLUMN pairing_time timestamptz ;
+ALTER TABLE atlas_app.shared_entity ADD COLUMN pooled_using_customer character varying(36) ;
 ALTER TABLE atlas_app.shared_entity ADD COLUMN ride_ids json ;
 ALTER TABLE atlas_app.shared_entity ADD COLUMN search_request_ids json ;
 ALTER TABLE atlas_app.shared_entity ADD COLUMN status character varying(255) NOT NULL;

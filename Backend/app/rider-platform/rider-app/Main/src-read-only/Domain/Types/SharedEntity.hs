@@ -26,6 +26,7 @@ data SharedEntity = SharedEntity
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     pairingTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    pooledUsingCustomer :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     rideIds :: Kernel.Prelude.Maybe [Domain.Types.TrackedEntity.TrackedEntity],
     searchRequestIds :: Kernel.Prelude.Maybe [Domain.Types.TrackedEntity.TrackedEntity],
     status :: Domain.Types.SharedEntity.SharedEntityStatus,
@@ -43,6 +44,7 @@ data SharedEntityStatus
   = SEARCHING
   | MATCHED
   | ESTIMATED
+  | OFFERED_QUOTE
   | BOOKED
   | DRIVER_ASSIGNED
   | ONGOING

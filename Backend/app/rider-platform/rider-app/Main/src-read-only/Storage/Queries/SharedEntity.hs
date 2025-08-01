@@ -31,6 +31,9 @@ findByMerchantOperatingCityId ::
   (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.SharedEntity.SharedEntity])
 findByMerchantOperatingCityId merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
+findByPooledUsingCustomer :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> m [Domain.Types.SharedEntity.SharedEntity])
+findByPooledUsingCustomer pooledUsingCustomer = do findAllWithKV [Se.Is Beam.pooledUsingCustomer $ Se.Eq (Kernel.Types.Id.getId <$> pooledUsingCustomer)]
+
 findByStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.SharedEntity.SharedEntityStatus -> m [Domain.Types.SharedEntity.SharedEntity])
 findByStatus status = do findAllWithKV [Se.Is Beam.status $ Se.Eq status]
 
@@ -63,6 +66,13 @@ updateEstimateIds estimateIds id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.estimateIds (Data.Aeson.toJSON <$> estimateIds), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updatePooledUsingCustomer ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> Kernel.Types.Id.Id Domain.Types.SharedEntity.SharedEntity -> m ())
+updatePooledUsingCustomer pooledUsingCustomer id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.pooledUsingCustomer (Kernel.Types.Id.getId <$> pooledUsingCustomer), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateRideIds :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe [Domain.Types.TrackedEntity.TrackedEntity] -> Kernel.Types.Id.Id Domain.Types.SharedEntity.SharedEntity -> m ())
 updateRideIds rideIds id = do
   _now <- getCurrentTime
@@ -87,6 +97,7 @@ updateByPrimaryKey (Domain.Types.SharedEntity.SharedEntity {..}) = do
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.pairingTime pairingTime,
+      Se.Set Beam.pooledUsingCustomer (Kernel.Types.Id.getId <$> pooledUsingCustomer),
       Se.Set Beam.rideIds (Data.Aeson.toJSON <$> rideIds),
       Se.Set Beam.searchRequestIds (Data.Aeson.toJSON <$> searchRequestIds),
       Se.Set Beam.status status,

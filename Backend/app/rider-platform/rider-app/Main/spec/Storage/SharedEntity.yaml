@@ -17,7 +17,7 @@ SharedEntity:
 
   types:
     SharedEntityStatus:
-      enum: "SEARCHING,MATCHED,ESTIMATED,BOOKED,DRIVER_ASSIGNED,ONGOING,COMPLETED,CANCELLED,EXPIRED"
+      enum: "SEARCHING,MATCHED,ESTIMATED,OFFERED_QUOTE,BOOKED,DRIVER_ASSIGNED,ONGOING,COMPLETED,CANCELLED,EXPIRED"
       derive: "HttpInstance"
 
     SharedEntityType:
@@ -37,6 +37,7 @@ SharedEntity:
     vehicleCategory: VehicleCategory|NoRelation
     tripCategory: TripCategory|NoRelation
     driverId: Maybe (Id Person)
+    pooledUsingCustomer: Maybe (Id Person)
     transactionId: Maybe Text
     counterAppSharedEntityId: Maybe Text
     waypoints: Value
@@ -74,6 +75,7 @@ SharedEntity:
     merchantId: character varying(36)
     merchantOperatingCityId: character varying(36)
     driverId: character varying(36)
+    pooledUsingCustomer: character varying(36)
     searchRequestIds: json
     estimateIds: json
     bookingIds: json
@@ -99,6 +101,10 @@ SharedEntity:
       kvFunction: findAllWithKV
       where: driverId
 
+    findByPooledUsingCustomer:
+      kvFunction: findAllWithKV
+      where: pooledUsingCustomer
+
     findByMerchantOperatingCityId:
       kvFunction: findAllWithKV
       where: merchantOperatingCityId
@@ -119,6 +125,11 @@ SharedEntity:
     updateDriverAssignment:
       kvFunction: updateOneWithKV
       params: [driverId, updatedAt]
+      where: id
+
+    updatePooledUsingCustomer:
+      kvFunction: updateOneWithKV
+      params: [pooledUsingCustomer, updatedAt]
       where: id
 
     updateCounterAppEntityId:
