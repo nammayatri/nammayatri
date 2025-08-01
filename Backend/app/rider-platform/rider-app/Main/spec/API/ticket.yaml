@@ -16,6 +16,7 @@ imports:
   APISuccess: Kernel.Types.APISuccess
   TicketBooking: Domain.Types.TicketBooking
   BookingStatus: Domain.Types.TicketBooking
+  PeopleTicketQuantity: Domain.Types.TicketBooking
   TicketBookingService: Domain.Types.TicketBookingService
   TicketBookingServiceCategory: Domain.Types.TicketBookingServiceCategory
   TicketBookingPeopleCategory: Domain.Types.TicketBookingPeopleCategory
@@ -92,6 +93,17 @@ types:
     visitDate: Day
     status: BookingStatus
 
+  TicketBookingAPIEntityV2:
+    ticketShortId: Text
+    ticketPlaceId: Text
+    ticketPlaceName: Text
+    personId: Text
+    amount: HighPrecMoney
+    amountWithCurrency: PriceAPIEntity
+    visitDate: Day
+    status: BookingStatus
+    peopleTicketQuantity: "Maybe [PeopleTicketQuantity]"
+
   TicketBookingDetails:
     ticketShortId: Text
     ticketPlaceId: Text
@@ -101,6 +113,8 @@ types:
     amountWithCurrency: PriceAPIEntity
     visitDate: Day
     status: BookingStatus
+    lat: Double
+    lon: Double
     services: [TicketBookingServiceDetails]
     refundDetails: [Refunds]
 
@@ -193,6 +207,7 @@ types:
     name: Text
     pricePerUnit: HighPrecMoney
     pricePerUnitWithCurrency: PriceAPIEntity
+
   TicketPlaceAvailability:
     month: Int
     closedDays: [Int]
@@ -237,6 +252,17 @@ apis:
         status: BookingStatus
       response:
         type: "[API.Types.UI.TicketService.TicketBookingAPIEntity]"
+
+  # # GET /ticket/bookings
+  - GET:
+      endpoint: /ticket/bookings/v2
+      auth: TokenAuth
+      query:
+        limit: Int
+        offset: Int
+        status: BookingStatus
+      response:
+        type: "[API.Types.UI.TicketService.TicketBookingAPIEntityV2]"
 
   # # GET /ticket/bookings/{ticketBookingShortId}/details
   - GET:

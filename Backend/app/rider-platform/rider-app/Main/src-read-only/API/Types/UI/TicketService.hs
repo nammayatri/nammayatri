@@ -82,6 +82,20 @@ data TicketBookingAPIEntity = TicketBookingAPIEntity
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data TicketBookingAPIEntityV2 = TicketBookingAPIEntityV2
+  { amount :: Kernel.Types.Common.HighPrecMoney,
+    amountWithCurrency :: Kernel.Types.Common.PriceAPIEntity,
+    peopleTicketQuantity :: Kernel.Prelude.Maybe [Domain.Types.TicketBooking.PeopleTicketQuantity],
+    personId :: Data.Text.Text,
+    status :: Domain.Types.TicketBooking.BookingStatus,
+    ticketPlaceId :: Data.Text.Text,
+    ticketPlaceName :: Data.Text.Text,
+    ticketShortId :: Data.Text.Text,
+    visitDate :: Data.Time.Calendar.Day
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data TicketBookingCancelReq = TicketBookingCancelReq {ticketBookingServices :: [TicketBookingServiceCancelReq], ticketBookingShortId :: Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -107,6 +121,8 @@ data TicketBookingCategoryReq = TicketBookingCategoryReq {categoryId :: Kernel.T
 data TicketBookingDetails = TicketBookingDetails
   { amount :: Kernel.Types.Common.HighPrecMoney,
     amountWithCurrency :: Kernel.Types.Common.PriceAPIEntity,
+    lat :: Kernel.Prelude.Double,
+    lon :: Kernel.Prelude.Double,
     personId :: Data.Text.Text,
     refundDetails :: [Lib.Payment.Domain.Types.Refunds.Refunds],
     services :: [TicketBookingServiceDetails],
