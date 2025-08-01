@@ -15,6 +15,7 @@
 module SharedLogic.CreateFareForMultiModal where
 
 import BecknV2.FRFS.Utils
+import Data.List (nubBy)
 import qualified Data.Map as Map
 import qualified Domain.Types.FRFSTicketBooking as FTBooking
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
@@ -107,26 +108,50 @@ convertVendorDetails ::
   Bool ->
   m [Payment.VendorSplitDetails]
 convertVendorDetails vendorDetails bookings isFRFSTestingEnabled = do
-  let vendorDetailsMap = Map.fromList [(vd.integratedBPPConfigId, vd) | vd <- vendorDetails]
-      requiredVendors = filter (\vd -> fromMaybe False vd.includeInSplit) vendorDetails
-      validVendorSplitDetails = mapMaybe (createVendorSplitForBooking vendorDetailsMap) bookings
+  -- Deduplicate vendor details based on (integratedBPPConfigId, vendorId) combination, assuming that in same city, same vehicle type booking, there are unique vendor's
+  let uniqueVendorDetails =
+        nubBy (\a b -> a.integratedBPPConfigId == b.integratedBPPConfigId && a.vendorId == b.vendorId) vendorDetails
+      vendorDetailsMap =
+        Map.fromListWith
+          (++)
+          [(vd.integratedBPPConfigId, [vd]) | vd <- uniqueVendorDetails]
+      requiredVendors = filter (\vd -> fromMaybe False vd.includeInSplit) uniqueVendorDetails
+      validVendorSplitDetails = concatMap (createVendorSplitsForBooking vendorDetailsMap) bookings
       finalSplits =
         ensureAllRequiredVendorsExist requiredVendors validVendorSplitDetails
   logInfo $ "finalSplits" <> show finalSplits
   return finalSplits
   where
-    createVendorSplitForBooking vendorDetailsMap booking =
+    -- Updated this to handle multiple vendor splits per booking
+    createVendorSplitsForBooking vendorDetailsMap booking =
       case Map.lookup booking.integratedBppConfigId vendorDetailsMap of
-        Just vd -> Just $ toPaymentVendorDetails vd booking
-        Nothing -> Nothing
+        Just vendorSplitList ->
+          -- Processed All vendor splits per booking
+          map (toPaymentVendorDetails booking) vendorSplitList
+        Nothing -> []
 
-    toPaymentVendorDetails vd booking =
-      Payment.VendorSplitDetails
-        { splitAmount = if isFRFSTestingEnabled then (1 :: HighPrecMoney) else booking.price.amount,
-          splitType = vendorSplitDetailSplitTypeToPaymentSplitType vd.splitType,
-          vendorId = vd.vendorId,
-          ticketId = Just $ booking.id.getId
-        }
+    toPaymentVendorDetails booking vd =
+      let totalAmount = if isFRFSTestingEnabled then (1 :: HighPrecMoney) else booking.price.amount
+          splitAmount =
+            if vd.splitType == VendorSplitDetails.FLEXIBLE
+              then calculateSplitAmount vd.splitShare totalAmount
+              else totalAmount
+       in Payment.VendorSplitDetails
+            { splitAmount = splitAmount,
+              splitType = vendorSplitDetailSplitTypeToPaymentSplitType vd.splitType,
+              vendorId = vd.vendorId,
+              ticketId = Just $ booking.id.getId
+            }
+
+    calculateSplitAmount :: Maybe VendorSplitDetails.SplitShare -> HighPrecMoney -> HighPrecMoney
+    calculateSplitAmount mbSplitPercentage totalAmount =
+      case mbSplitPercentage of
+        Just (VendorSplitDetails.Percentage percentage) ->
+          totalAmount * (fromRational (toRational percentage) / 100.0)
+        Just (VendorSplitDetails.FixedValue fixedValue) ->
+          fromIntegral fixedValue
+        Nothing ->
+          totalAmount
 
     ensureAllRequiredVendorsExist :: [VendorSplitDetails.VendorSplitDetails] -> [Payment.VendorSplitDetails] -> [Payment.VendorSplitDetails]
     ensureAllRequiredVendorsExist requiredVendors existingVendorSplits =
