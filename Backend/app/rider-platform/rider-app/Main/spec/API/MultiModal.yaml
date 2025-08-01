@@ -437,8 +437,8 @@ apis:
       response:
         type: MultimodalTicketVerifyResp
 
-  - GET:
-      endpoint: /multimodal/{journeyId}/order/{legOrder}/canCancel
+  - POST:
+      endpoint: /multimodal/{journeyId}/order/{legOrder}/softCancel
       params:
         journeyId: Id Journey
         legOrder: Int
@@ -453,7 +453,7 @@ apis:
       response:
         type: MultimodalCancelStatusResp
 
-  - GET:
+  - POST:
       endpoint: /multimodal/{journeyId}/order/{legOrder}/cancel
       params:
         journeyId: Id Journey
