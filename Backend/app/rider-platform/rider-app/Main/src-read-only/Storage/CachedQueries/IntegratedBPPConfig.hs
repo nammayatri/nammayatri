@@ -18,6 +18,19 @@ findAllByDomainAndCityAndVehicleCategory ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> BecknV2.OnDemand.Enums.VehicleCategory -> Domain.Types.IntegratedBPPConfig.PlatformType -> m [Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig])
 findAllByDomainAndCityAndVehicleCategory domain merchantOperatingCityId vehicleCategory platformType = do
+  (Hedis.safeGet $ "CachedQueries:IntegratedBPPConfig:" <> ":Domain-" <> show domain <> ":MerchantOperatingCityId-" <> Kernel.Types.Id.getId merchantOperatingCityId <> ":VehicleCategory-" <> show vehicleCategory <> ":PlatformType-" <> show platformType <> ":All")
+    >>= ( \case
+            Just a -> pure a
+            Nothing ->
+              ( \dataToBeCached -> do
+                  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+                  Hedis.setExp ("CachedQueries:IntegratedBPPConfig:" <> ":Domain-" <> show domain <> ":MerchantOperatingCityId-" <> Kernel.Types.Id.getId merchantOperatingCityId <> ":VehicleCategory-" <> show vehicleCategory <> ":PlatformType-" <> show platformType <> ":All") dataToBeCached expTime
+              )
+                /=<< Queries.findAllByDomainAndCityAndVehicleCategory domain merchantOperatingCityId vehicleCategory platformType
+        )
+
+findByDomainAndCityAndVehicleCategory :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> BecknV2.OnDemand.Enums.VehicleCategory -> Domain.Types.IntegratedBPPConfig.PlatformType -> m (Maybe Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig))
+findByDomainAndCityAndVehicleCategory domain merchantOperatingCityId vehicleCategory platformType = do
   (Hedis.safeGet $ "CachedQueries:IntegratedBPPConfig:" <> ":Domain-" <> show domain <> ":MerchantOperatingCityId-" <> Kernel.Types.Id.getId merchantOperatingCityId <> ":VehicleCategory-" <> show vehicleCategory <> ":PlatformType-" <> show platformType)
     >>= ( \case
             Just a -> pure a
@@ -26,5 +39,44 @@ findAllByDomainAndCityAndVehicleCategory domain merchantOperatingCityId vehicleC
                   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
                   Hedis.setExp ("CachedQueries:IntegratedBPPConfig:" <> ":Domain-" <> show domain <> ":MerchantOperatingCityId-" <> Kernel.Types.Id.getId merchantOperatingCityId <> ":VehicleCategory-" <> show vehicleCategory <> ":PlatformType-" <> show platformType) dataToBeCached expTime
               )
-                /=<< Queries.findAllByDomainAndCityAndVehicleCategory domain merchantOperatingCityId vehicleCategory platformType
+                /=<< Queries.findByDomainAndCityAndVehicleCategory domain merchantOperatingCityId vehicleCategory platformType
+        )
+
+findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m (Maybe Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig))
+findById integratedBPPConfigId = do
+  (Hedis.safeGet $ "CachedQueries:IntegratedBPPConfig:" <> ":Id-" <> Kernel.Types.Id.getId integratedBPPConfigId)
+    >>= ( \case
+            Just a -> pure (Just a)
+            Nothing ->
+              ( \dataToBeCached -> do
+                  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+                  Hedis.setExp ("CachedQueries:IntegratedBPPConfig:" <> ":Id-" <> Kernel.Types.Id.getId integratedBPPConfigId) dataToBeCached expTime
+              )
+                /=<< Queries.findById integratedBPPConfigId
+        )
+
+findByAgencyId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m (Maybe Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig))
+findByAgencyId agencyKey = do
+  (Hedis.safeGet $ "CachedQueries:IntegratedBPPConfig:" <> ":AgencyId-" <> agencyKey)
+    >>= ( \case
+            Just a -> pure (Just a)
+            Nothing ->
+              ( \dataToBeCached -> do
+                  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+                  Hedis.setExp ("CachedQueries:IntegratedBPPConfig:" <> ":AgencyId-" <> agencyKey) dataToBeCached expTime
+              )
+                /=<< Queries.findByAgencyId agencyKey
+        )
+
+findAllByPlatformAndVehicleCategory :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> BecknV2.OnDemand.Enums.VehicleCategory -> Domain.Types.IntegratedBPPConfig.PlatformType -> m [Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig])
+findAllByPlatformAndVehicleCategory domain vehicleCategory platformType = do
+  (Hedis.safeGet $ "CachedQueries:IntegratedBPPConfig:" <> ":Platform-" <> show domain <> ":VehicleCategory-" <> show vehicleCategory <> ":PlatformType-" <> show platformType <> ":AllCities")
+    >>= ( \case
+            Just a -> pure a
+            Nothing ->
+              ( \dataToBeCached -> do
+                  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+                  Hedis.setExp ("CachedQueries:IntegratedBPPConfig:" <> ":Platform-" <> show domain <> ":VehicleCategory-" <> show vehicleCategory <> ":PlatformType-" <> show platformType <> ":AllCities") dataToBeCached expTime
+              )
+                /=<< Queries.findAllByPlatformAndVehicleCategory domain vehicleCategory platformType
         )

@@ -7,7 +7,7 @@ import Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Storage.Queries.IntegratedBPPConfig as QIBC
+import qualified Storage.CachedQueries.IntegratedBPPConfig as CQIBC
 import Tools.Error
 
 findMaybeIntegratedBPPConfig ::
@@ -18,8 +18,8 @@ findMaybeIntegratedBPPConfig ::
   PlatformType ->
   m (Maybe IntegratedBPPConfig)
 findMaybeIntegratedBPPConfig mbIntegratedBPPConfigId merchantOperatingCityId vehicleCategory platformType =
-  let fallback = QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCityId vehicleCategory platformType
-   in maybe fallback (\id -> QIBC.findById id |<|>| fallback) mbIntegratedBPPConfigId
+  let fallback = CQIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCityId vehicleCategory platformType
+   in maybe fallback (\id -> CQIBC.findById id |<|>| fallback) mbIntegratedBPPConfigId
 
 findMaybeIntegratedBPPConfigFromEntity ::
   (HasField "integratedBppConfigId" r (Maybe (Id IntegratedBPPConfig)), EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -29,8 +29,8 @@ findMaybeIntegratedBPPConfigFromEntity ::
   PlatformType ->
   m (Maybe IntegratedBPPConfig)
 findMaybeIntegratedBPPConfigFromEntity entity merchantOperatingCityId vehicleCategory platformType =
-  let fallback = QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCityId vehicleCategory platformType
-   in maybe fallback (\id -> QIBC.findById id |<|>| fallback) entity.integratedBppConfigId
+  let fallback = CQIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCityId vehicleCategory platformType
+   in maybe fallback (\id -> CQIBC.findById id |<|>| fallback) entity.integratedBppConfigId
 
 findMaybeIntegratedBPPConfigFromAgency ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -40,14 +40,14 @@ findMaybeIntegratedBPPConfigFromAgency ::
   PlatformType ->
   m (Maybe IntegratedBPPConfig)
 findMaybeIntegratedBPPConfigFromAgency agencyId merchantOperatingCityId vehicleCategory platformType =
-  let fallback = QIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCityId vehicleCategory platformType
-   in maybe fallback (\agencyId' -> QIBC.findByAgencyId agencyId' |<|>| fallback) agencyId
+  let fallback = CQIBC.findByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCityId vehicleCategory platformType
+   in maybe fallback (\agencyId' -> CQIBC.findByAgencyId agencyId' |<|>| fallback) agencyId
 
 findIntegratedBPPConfigById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Id IntegratedBPPConfig ->
   m IntegratedBPPConfig
-findIntegratedBPPConfigById integratedBPPConfigId = QIBC.findById integratedBPPConfigId >>= fromMaybeM IntegratedBPPConfigNotFound
+findIntegratedBPPConfigById integratedBPPConfigId = CQIBC.findById integratedBPPConfigId >>= fromMaybeM IntegratedBPPConfigNotFound
 
 findIntegratedBPPConfig ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -65,7 +65,7 @@ findIntegratedBPPConfigFromEntity ::
   a ->
   m IntegratedBPPConfig
 findIntegratedBPPConfigFromEntity entity =
-  QIBC.findById entity.integratedBppConfigId >>= fromMaybeM IntegratedBPPConfigNotFound
+  CQIBC.findById entity.integratedBppConfigId >>= fromMaybeM IntegratedBPPConfigNotFound
 
 findIntegratedBPPConfigFromAgency ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -85,7 +85,7 @@ findAllIntegratedBPPConfig ::
   PlatformType ->
   m [IntegratedBPPConfig]
 findAllIntegratedBPPConfig merchantOperatingCityId vehicleCategory platformType =
-  QIBC.findAllByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCityId vehicleCategory platformType
+  CQIBC.findAllByDomainAndCityAndVehicleCategory (show Spec.FRFS) merchantOperatingCityId vehicleCategory platformType
 
 fetchFirstIntegratedBPPConfigRightResult ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -145,4 +145,4 @@ findAllIntegratedBPPConfigAcrossCities ::
   PlatformType ->
   m [IntegratedBPPConfig]
 findAllIntegratedBPPConfigAcrossCities vehicleCategory platformType = do
-  QIBC.findAllByPlatformAndVehicleCategory (show Spec.FRFS) vehicleCategory platformType
+  CQIBC.findAllByPlatformAndVehicleCategory (show Spec.FRFS) vehicleCategory platformType
