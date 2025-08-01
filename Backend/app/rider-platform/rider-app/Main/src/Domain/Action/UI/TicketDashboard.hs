@@ -157,7 +157,13 @@ getTicketPlaceDashboardDetails placeId requestorId requestorRole = do
         businessHours = businessHourDetails,
         serviceCategories = serviceCategoryDetails,
         servicePeopleCategories = servicePeopleCategoryDetails,
-        specialOccasions = specialOccasionDetails
+        specialOccasions = specialOccasionDetails,
+        faqs = ticketPlace.faqs,
+        isRecurring = Just ticketPlace.isRecurring,
+        metadata = ticketPlace.metadata,
+        platformFee = ticketPlace.platformFee,
+        platformFeeVendor = ticketPlace.platformFeeVendor,
+        pricingOnwards = ticketPlace.pricingOnwards
       }
   where
     toTicketServiceDetails :: DTicketService.TicketService -> TicketServiceDetails
@@ -275,7 +281,13 @@ createTicketPlace placeDetails creatorId merchantId merchantOpCityId = do
         DTicketPlace.createdAt = now,
         DTicketPlace.updatedAt = now,
         DTicketPlace.rules = Nothing,
-        DTicketPlace.recommend = False
+        DTicketPlace.recommend = False,
+        DTicketPlace.faqs = placeDetails.faqs,
+        DTicketPlace.isRecurring = fromMaybe True placeDetails.isRecurring,
+        DTicketPlace.metadata = placeDetails.metadata,
+        DTicketPlace.platformFee = placeDetails.platformFee,
+        DTicketPlace.platformFeeVendor = placeDetails.platformFeeVendor,
+        DTicketPlace.pricingOnwards = placeDetails.pricingOnwards
       }
 
 updateTicketService :: DTicketService.TicketService -> TicketServiceDetails -> DTicketService.TicketService

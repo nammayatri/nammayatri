@@ -68,3 +68,17 @@ ALTER TABLE atlas_app.ticket_place ADD COLUMN rules json ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.ticket_place ADD COLUMN recommend boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ticket_place ADD COLUMN pricing_onwards integer ;
+ALTER TABLE atlas_app.ticket_place ADD COLUMN platform_fee text ;
+ALTER TABLE atlas_app.ticket_place ADD COLUMN metadata json ;
+ALTER TABLE atlas_app.ticket_place ADD COLUMN is_recurring boolean  default true;
+ALTER TABLE atlas_app.ticket_place ADD COLUMN faqs json ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ticket_place ADD COLUMN platform_fee_vendor text ;

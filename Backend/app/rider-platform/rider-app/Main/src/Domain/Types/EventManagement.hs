@@ -50,7 +50,13 @@ data BasicInformation = BasicInformation
     openTimings :: Maybe TimeOfDay,
     closeTimings :: Maybe TimeOfDay,
     customTabs :: Maybe [DTicketPlace.CustomTab],
-    rules :: Maybe [Rule]
+    rules :: Maybe [Rule],
+    faqs :: Maybe [DTicketPlace.Faq],
+    isRecurring :: Maybe Bool,
+    metadata :: Maybe [DTicketPlace.Metadata],
+    platformFee :: Maybe DTicketPlace.Fee,
+    platformFeeVendor :: Maybe Text,
+    pricingOnwards :: Maybe Int
   }
   deriving (Generic, Show, Ord, Eq, ToJSON, FromJSON, ToSchema)
 
