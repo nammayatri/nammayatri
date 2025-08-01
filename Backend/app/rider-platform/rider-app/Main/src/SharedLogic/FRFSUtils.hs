@@ -66,6 +66,7 @@ import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Domain.Types.PaymentOrder as PaymentOrder
+import Lib.Payment.Domain.Types.Refunds as Refunds
 import Lib.Payment.Storage.Beam.BeamFlow
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
@@ -86,7 +87,6 @@ import Storage.Queries.FRFSFarePolicy as QFRFSFarePolicy
 import Storage.Queries.FRFSRouteFareProduct as QFRFSRouteFareProduct
 import Storage.Queries.FRFSRouteStopStageFare as QFRFSRouteStopStageFare
 import Storage.Queries.FRFSStageFare as QFRFSStageFare
-import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
 import Storage.Queries.FRFSTicketDiscount as QFRFSTicketDiscount
@@ -725,12 +725,13 @@ markAllRefundBookings booking personId = do
     Just journeyId -> QFRFSTicketBooking.findAllByJourneyId (Just journeyId)
     Nothing -> return [booking]
   let failedBookings = filter ((== DFRFSTicketBooking.FAILED) . (.status)) allJourneyFrfsBookings
+      refundInitiatedBookings = filter (\bkg -> fromMaybe False bkg.isRefundInitiated) failedBookings
       allFailed = not (null failedBookings) && length failedBookings == length allJourneyFrfsBookings
-  whenJust (listToMaybe failedBookings) $ \_ -> do
-    logInfo $ "payment status api markAllRefundBookings: " <> show failedBookings
+  whenJust (listToMaybe refundInitiatedBookings) $ \_ -> do
+    logInfo $ "payment status api markAllRefundBookings: " <> show refundInitiatedBookings
     logInfo $ "allFailed flag in markAllRefundBookings: " <> show allFailed
     person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-    payments <- mapM (QFRFSTicketBookingPayment.findNewTBPByBookingId . (.id)) failedBookings
+    payments <- mapM (QFRFSTicketBookingPayment.findNewTBPByBookingId . (.id)) refundInitiatedBookings
     orderShortId <- case listToMaybe (catMaybes payments) of
       Just payment -> do
         order <- QPaymentOrder.findById payment.paymentOrderId >>= fromMaybeM (PaymentOrderNotFound payment.paymentOrderId.getId)
@@ -739,33 +740,42 @@ markAllRefundBookings booking personId = do
     frfsConfig <-
       CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow person.merchantOperatingCityId []
         >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> show person.merchantOperatingCityId)
-    (vendorSplitDetails, amountUpdated) <- SMMFRFS.createVendorSplitFromBookings failedBookings person.merchantId person.merchantOperatingCityId Payment.FRFSMultiModalBooking frfsConfig.isFRFSTestingEnabled
+    (vendorSplitDetails, amountUpdated) <- SMMFRFS.createVendorSplitFromBookings refundInitiatedBookings person.merchantId person.merchantOperatingCityId Payment.FRFSMultiModalBooking frfsConfig.isFRFSTestingEnabled
     isSplitEnabled <- Payment.getIsSplitEnabled person.merchantId person.merchantOperatingCityId Nothing Payment.FRFSMultiModalBooking
     let splitDetails = Payment.mkUnaggregatedSplitSettlementDetails isSplitEnabled amountUpdated vendorSplitDetails
-    reqId <- case mbJourneyId of
-      Just journeyId -> return journeyId.getId
-      Nothing -> fromMaybeM (InvalidRequest "booking not found in markAllRefundBookings") $ listToMaybe failedBookings <&> (.id.getId)
-    let lockKey = "markAllRefundBookings:" <> reqId
+    let refundSplitDetails = mkRefundSplitDetails refundInitiatedBookings
+    refundId <- generateGUID
+    let lockKey = "markAllRefundBookings:" <> refundId
     Redis.withLockRedis lockKey 5 $ do
-      forM_ failedBookings $ \frfsBooking -> do
-        void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.REFUND_INITIATED frfsBooking.id
-        QFRFSTicket.updateAllStatusByBookingId DFRFSTicket.REFUND_INITIATED frfsBooking.id
+      forM_ refundInitiatedBookings $ \frfsBooking -> do
+        void $ QFRFSTicketBooking.updateIsRefundInitiated (Just True) frfsBooking.id
         void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.REFUND_PENDING frfsBooking.id
       when allFailed $ whenJust mbJourneyId $ \journeyId -> QJourney.updateStatus DJourney.FAILED journeyId
       let refundReq =
             Payment.AutoRefundReq
               { orderId = orderShortId,
-                requestId = reqId,
+                requestId = refundId,
                 amount = amountUpdated,
                 splitSettlementDetails = splitDetails
               }
           createRefundCall refundReq' = Payment.refundOrder person.merchantId person.merchantOperatingCityId Nothing Payment.FRFSMultiModalBooking (Just person.id.getId) person.clientSdkVersion refundReq'
-      result <- try @_ @SomeException $ DPayment.refundService (refundReq, Kernel.Types.Id.Id {Kernel.Types.Id.getId = orderShortId}) (Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant person.merchantId) createRefundCall
+      result <- try @_ @SomeException $ DPayment.refundService (refundReq, Kernel.Types.Id.Id {Kernel.Types.Id.getId = refundId}) (Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant person.merchantId) (Just refundSplitDetails) createRefundCall
       case result of
-        Left err -> logError $ "Refund service failed for journey " <> reqId <> ": " <> show err
-        Right _ -> logInfo $ "Refund service completed successfully for journey " <> reqId
+        Left err -> logError $ "Refund service failed for journey " <> refundId <> ": " <> show err
+        Right _ -> logInfo $ "Refund service completed successfully for journey " <> refundId
       logInfo $ "payment status api markAllRefundBookings completed"
       pure ()
+  where
+    mkRefundSplitDetails :: [DFRFSTicketBooking.FRFSTicketBooking] -> [Refunds.Split]
+    mkRefundSplitDetails bookings =
+      map
+        ( \bkg ->
+            Refunds.Split
+              { splitAmount = bkg.price.amount,
+                frfsBookingId = bkg.id.getId
+              }
+        )
+        bookings
 
 createPaymentOrder ::
   ( EsqDBReplicaFlow m r,

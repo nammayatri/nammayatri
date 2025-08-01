@@ -47,6 +47,7 @@ data FRFSTicketBooking = FRFSTicketBooking
     isBookingCancellable :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isDeleted :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isFareChanged :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    isRefundInitiated :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isSkipped :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     journeyId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Journey.Journey),
     journeyLegOrder :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -81,7 +82,7 @@ data FRFSTicketBooking = FRFSTicketBooking
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
-  deriving (Generic, (Show))
+  deriving (Generic, Show)
 
 data CashbackStatus = PENDING | PROCESSING | SUCCESSFUL | CASHBACK_FAILED | MANUAL_VERIFICATION deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -96,9 +97,8 @@ data FRFSTicketBookingStatus
   | COUNTER_CANCELLED
   | CANCEL_INITIATED
   | TECHNICAL_CANCEL_REJECTED
-  | REFUND_INITIATED
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''CashbackStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CashbackStatus)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''FRFSTicketBookingStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FRFSTicketBookingStatus)

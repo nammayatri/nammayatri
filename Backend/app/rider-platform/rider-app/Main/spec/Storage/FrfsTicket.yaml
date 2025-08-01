@@ -343,6 +343,7 @@ FRFSTicketBooking:
     bookingAuthCode: Maybe Text
     osType: Maybe Text
     osBuildVersion: Maybe Text
+    isRefundInitiated: Maybe Bool
 
   default:
     customerCancelled: "false"
@@ -363,7 +364,7 @@ FRFSTicketBooking:
 
   types:
     FRFSTicketBookingStatus:
-      enum: "NEW, APPROVED, PAYMENT_PENDING, CONFIRMING, FAILED, CONFIRMED, CANCELLED, COUNTER_CANCELLED, CANCEL_INITIATED, TECHNICAL_CANCEL_REJECTED, REFUND_INITIATED"
+      enum: "NEW, APPROVED, PAYMENT_PENDING, CONFIRMING, FAILED, CONFIRMED, CANCELLED, COUNTER_CANCELLED, CANCEL_INITIATED, TECHNICAL_CANCEL_REJECTED"
     CashbackStatus:
       enum: "PENDING, PROCESSING, SUCCESSFUL, CASHBACK_FAILED, MANUAL_VERIFICATION"
 
@@ -486,6 +487,10 @@ FRFSTicketBooking:
       kvFunction: updateWithKV
       params: [quantity, updatedAt]
       where: id
+    updateIsRefundInitiated:
+      kvFunction: updateOneWithKV
+      params: [isRefundInitiated]
+      where: id
 
   extraOperations:
     - EXTRA_QUERY_FILE
@@ -515,7 +520,7 @@ FRFSTicket:
 
   types:
     FRFSTicketStatus:
-      enum: "ACTIVE, EXPIRED, USED, CANCELLED, COUNTER_CANCELLED, CANCEL_INITIATED, TECHNICAL_CANCEL_REJECTED, REFUND_INITIATED"
+      enum: "ACTIVE, EXPIRED, USED, CANCELLED, COUNTER_CANCELLED, CANCEL_INITIATED, TECHNICAL_CANCEL_REJECTED"
 
   constraints:
     id: PrimaryKey

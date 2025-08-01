@@ -21,7 +21,10 @@ data Refunds = Refunds
     orderId :: Kernel.Types.Id.Id Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder,
     refundAmount :: Kernel.Types.Common.HighPrecMoney,
     shortId :: Kernel.Prelude.Text,
+    split :: Kernel.Prelude.Maybe [Lib.Payment.Domain.Types.Refunds.Split],
     status :: Kernel.External.Payment.Interface.RefundStatus,
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data Split = Split {frfsBookingId :: Kernel.Prelude.Text, splitAmount :: Kernel.Types.Common.HighPrecMoney} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

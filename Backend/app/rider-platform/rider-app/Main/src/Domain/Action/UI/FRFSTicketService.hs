@@ -718,6 +718,7 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req crisSdkResponse
                 osType = crisSdkResponse <&> (.osType),
                 osBuildVersion = crisSdkResponse <&> (.osBuildVersion),
                 recentLocationId = mbSearch >>= (.recentLocationId),
+                isRefundInitiated = Nothing,
                 ..
               }
       QFRFSTicketBooking.create booking
@@ -789,7 +790,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking booking' = do
     DFRFSTicketBooking.FAILED -> do
       paymentBooking <- B.runInReplica $ QFRFSTicketBookingPayment.findNewTBPByBookingId bookingId >>= fromMaybeM (InvalidRequest "Payment booking not found for approved TicketBookingId")
       paymentOrder <- QPaymentOrder.findById paymentBooking.paymentOrderId >>= fromMaybeM (InvalidRequest "Payment order not found for approved TicketBookingId")
-      paymentStatusResp <- DPayment.orderStatusService commonPersonId paymentOrder.id (orderStatusCall merchantOperatingCity.id booking (Just person.id.getId) person.clientSdkVersion)
+      paymentStatusResp <- DPayment.orderStatusService commonPersonId paymentOrder.id (orderStatusCall merchantOperatingCity.id booking (Just person.id.getId) person.clientSdkVersion) -- to see
       logInfo $ "payment status resp: " <> show paymentStatusResp
       let paymentBookingStatus = makeTicketBookingPaymentAPIStatus paymentStatusResp.status
       logInfo $ "payment booking status: " <> show paymentBookingStatus
@@ -934,10 +935,6 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking booking' = do
       buildFRFSTicketBookingStatusAPIRes booking Nothing
     DFRFSTicketBooking.CANCEL_INITIATED -> do
       buildFRFSTicketBookingStatusAPIRes booking Nothing
-    DFRFSTicketBooking.REFUND_INITIATED -> do
-      let paymentStatusAPI = Just $ Utils.mkTBPStatusAPI DFRFSTicketBookingPayment.REFUND_PENDING
-      let mbPaymentObj = paymentStatusAPI <&> \status -> FRFSTicketService.FRFSBookingPaymentAPI {status, paymentOrder = Nothing, transactionId = Nothing}
-      buildFRFSTicketBookingStatusAPIRes booking mbPaymentObj
     DFRFSTicketBooking.TECHNICAL_CANCEL_REJECTED -> do
       buildFRFSTicketBookingStatusAPIRes booking Nothing
   where

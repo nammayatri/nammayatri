@@ -13,3 +13,9 @@ ALTER TABLE atlas_driver_offer_bpp.refunds ADD COLUMN short_id text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.refunds ADD COLUMN status text NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.refunds ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.refunds ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.refunds ADD COLUMN split json ;

@@ -28,11 +28,14 @@ import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.FRFSUtils as FRFSUtils
 import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.Merchant as QMerch
+import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.Queries.FRFSRecon as QFRFSRecon
 import qualified Storage.Queries.FRFSTicketBooking as QTBooking
 import qualified Storage.Queries.FRFSTicketBookingPayment as QTBP
+import Tools.Error
 
 data DOnUpdate = DOnUpdate
   { providerId :: Text,
@@ -66,6 +69,9 @@ onUpdate merchant booking' dOnUpdate = do
       void $ QTBooking.updateStatusById FTBooking.CANCELLED booking.id
       void $ QFRFSRecon.updateStatusByTicketBookingId (Just DFRFSTicket.CANCELLED) booking.id
       void $ QTBP.updateStatusByTicketBookingId DTBP.REFUND_PENDING booking.id
+      riderConfig <- QRC.findByMerchantOperatingCityId booking.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
+      when riderConfig.enableAutoJourneyRefund $
+        FRFSUtils.markAllRefundBookings booking booking.riderId
       DFRFSTicketService.updateTotalOrderValueAndSettlementAmount booking bapConfig
       void $ QTBooking.updateRefundCancellationChargesAndIsCancellableByBookingId dOnUpdate.refundAmount dOnUpdate.cancellationCharges (Just False) booking.id
     _ -> throwError $ InvalidRequest "Unexpected orderStatus received"
