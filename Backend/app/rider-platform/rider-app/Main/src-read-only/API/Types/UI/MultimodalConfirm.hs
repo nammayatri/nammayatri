@@ -9,6 +9,7 @@ import Data.OpenApi (ToSchema)
 import qualified Domain.Types.BookingUpdateRequest
 import qualified Domain.Types.Estimate
 import qualified Domain.Types.FRFSQuote
+import qualified Domain.Types.FRFSTicketBooking
 import qualified Domain.Types.IntegratedBPPConfig
 import qualified Domain.Types.Journey
 import qualified Domain.Types.JourneyLegsFeedbacks
@@ -130,6 +131,15 @@ data LegStatus = LegStatus
     subLegOrder :: Kernel.Prelude.Int,
     userPosition :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
     vehiclePositions :: [Lib.JourneyModule.Types.VehiclePosition]
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data MultimodalCancelStatusResp = MultimodalCancelStatusResp
+  { bookingStatus :: Domain.Types.FRFSTicketBooking.FRFSTicketBookingStatus,
+    cancellationCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    isCancellable :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    refundAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

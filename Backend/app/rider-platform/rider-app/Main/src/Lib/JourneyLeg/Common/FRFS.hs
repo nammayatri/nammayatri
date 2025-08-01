@@ -547,7 +547,7 @@ processBusLegState
   journeyLegStatus
   movementDetected
   updateStatusFn = do
-    logDebug $ "movementDetected:" <> show movementDetected <> " journeyLegStatus: " <> show journeyLegStatus
+    logDebug $ "movementDetected: " <> show movementDetected <> " journeyLegStatus: " <> show journeyLegStatus
     if (isOngoingJourneyLeg journeyLegStatus) && movementDetected
       then do
         let filteredBusData = case (mbUserBoardingStation, mbLegEndStation) of
@@ -571,7 +571,7 @@ processBusLegState
             case mbTopCandidateId of
               Just topCandVehId -> do
                 let mbBestBusData = find (\bd -> bd.vehicle_number == Just topCandVehId) filteredBusData
-                logDebug $ "mbBestBusData:" <> show mbBestBusData
+                logDebug $ "mbBestBusData: " <> show mbBestBusData
                 case mbBestBusData of
                   Just bestBusData -> do
                     let upcomingStops =
@@ -580,7 +580,7 @@ processBusLegState
                             else getUpcomingStopsForBus now mbLegEndStation bestBusData True -- Stops to destination for Ongoing/Finishing/Completed
                     when (journeyLegStatus `elem` [JPT.OnTheWay, JPT.Booked, JPT.Arriving]) $ do
                       updateStatusFn (Just JPT.Ongoing)
-                      logDebug $ "upcomingStops:" <> show upcomingStops <> " " <> show bestBusData.latitude <> " " <> show bestBusData.longitude
+                      logDebug $ "upcomingStops: " <> show upcomingStops <> " " <> show bestBusData.latitude <> " " <> show bestBusData.longitude
                     pure
                       [ JT.VehiclePosition
                           { position = Just $ LatLong bestBusData.latitude bestBusData.longitude,

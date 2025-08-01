@@ -166,16 +166,22 @@ becknVehicleCategoryToFrfsVehicleCategory = \case
   _ -> Spec.METRO
 
 getAndValidateCancellationParams :: [Spec.QuotationBreakupInner] -> Spec.OrderStatus -> Either Text (HighPrecMoney, Maybe HighPrecMoney, Maybe HighPrecMoney)
-getAndValidateCancellationParams quoteBreakup orderStatus = do
+getAndValidateCancellationParams quoteBreakup _ = do
   baseFare <- findCancellationParams Spec.BASE_FARE & maybe (Left "CancellationParams baseFare not found") Right
   let refundAmount = findCancellationParams Spec.REFUND
       cancellationCharges = findCancellationParams Spec.CANCELLATION_CHARGES
-  when
-    ( (isNothing refundAmount || isNothing cancellationCharges)
-        && (orderStatus == Spec.CANCELLED || orderStatus == Spec.SOFT_CANCELLED)
-    )
-    $ Left "Missing cancellation params refundAmount or cancellationChargs"
-  Right (baseFare, refundAmount, cancellationCharges)
+
+  case (refundAmount, cancellationCharges) of
+    (Just refund, Just charges) -> Right (baseFare, Just refund, Just charges)
+    (Just refund, Nothing) ->
+      if baseFare >= refund
+        then Right (baseFare, Just refund, Just (baseFare - refund))
+        else Left "Refund amount is greater than base fare"
+    (Nothing, Just charges) ->
+      if baseFare >= charges
+        then Right (baseFare, Just (baseFare - charges), Just charges)
+        else Left "Cancellation charges are greater than base fare"
+    (Nothing, Nothing) -> Right (baseFare, Just baseFare, Just 0)
   where
     findCancellationParams :: Spec.CancellationParams -> Maybe HighPrecMoney
     findCancellationParams titleToFind =

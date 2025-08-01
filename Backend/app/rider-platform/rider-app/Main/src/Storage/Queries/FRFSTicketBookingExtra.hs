@@ -2,6 +2,7 @@ module Storage.Queries.FRFSTicketBookingExtra where
 
 import qualified BecknV2.FRFS.Enums as Spec
 import Domain.Types.FRFSTicketBooking
+import Domain.Types.Journey
 import Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.Prelude
@@ -86,3 +87,12 @@ updateTicketAndChildTicketQuantityById id quantity childTicketQuantity = do
   updateOneWithKV
     ([Se.Set Beam.updatedAt _now] <> [Se.Set Beam.quantity (fromJust quantity) | isJust quantity] <> [Se.Set Beam.childTicketQuantity childTicketQuantity | isJust childTicketQuantity])
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+findByJourneyIdAndLegOrder :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id Journey -> Int -> m (Maybe FRFSTicketBooking)
+findByJourneyIdAndLegOrder journeyId legOrder = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.journeyId $ Se.Eq (Just $ getId journeyId),
+          Se.Is Beam.journeyLegOrder $ Se.Eq (Just legOrder)
+        ]
+    ]
