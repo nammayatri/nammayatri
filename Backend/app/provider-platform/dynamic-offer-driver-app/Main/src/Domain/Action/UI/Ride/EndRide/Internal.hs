@@ -637,7 +637,7 @@ createDriverFee merchantId merchantOpCityId driverId rideFare currency newFarePa
               let vendorAmounts = DL.map (\vendor -> (vendor.vendorId, toRational vendor.splitValue)) vendorSplitDetails
                   vendorFees = DL.map (mkVendorFee (maybe driverFee.id (.id) lastDriverFee) now) vendorAmounts
               case lastDriverFee of
-                Just ldFee | now >= ldFee.startTime && now < ldFee.endTime -> QVF.updateManyVendorFee vendorFees
+                Just ldFee | now >= ldFee.startTime && now < ldFee.endTime -> QVF.updateManyVendorFee merchantOpCityId vendorFees
                 _ -> QVF.createMany vendorFees
 
         plan <- getPlan mbDriverPlan serviceName merchantOpCityId Nothing currentVehicleCategory
