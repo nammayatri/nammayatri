@@ -68,6 +68,7 @@ import Tools.Error
 
 getState :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig], HasField "ltsHedisEnv" r Redis.HedisEnv, HasShortDurationRetryCfg r c, HasKafkaProducer r) => DTrip.MultimodalTravelMode -> Id FRFSSearch -> [APITypes.RiderLocationReq] -> Bool -> Maybe Text -> m JT.JourneyLegState
 getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTracking = do
+  logDebug $ "CFRFS getState: searchId: " <> searchId.getId <> ", mode: " <> show mode
   mbBooking <- QTBooking.findBySearchId searchId
   now <- getCurrentTime
   let userPosition = (.latLong) <$> listToMaybe riderLastPoints
@@ -76,6 +77,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
       integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
       case mode of
         DTrip.Bus -> do
+          logDebug $ "CFRFS getState: Processing Bus leg for booking with searchId: " <> show searchId.getId
           journeyLegOrder <- booking.journeyLegOrder & fromMaybeM (BookingFieldNotPresent "journeyLegOrder")
           let journeyLegStatus = fromMaybe JPT.InPlan booking.journeyLegStatus
           mbCurrentLegDetails <- QJourneyLeg.findByLegSearchId (Just searchId.getId)
@@ -90,7 +92,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
           -- Fetch user's boarding station and leg's end station details
           mbUserBoardingStation <- OTPRest.getStationByGtfsIdAndStopCode booking.fromStationCode integratedBppConfig
           mbLegEndStation <- OTPRest.getStationByGtfsIdAndStopCode booking.toStationCode integratedBppConfig
-
+          logDebug $ "CFRFS getState: Processing Bus leg for booking with mbUserBoardingStation:" <> show mbUserBoardingStation <> "mbLegEndStation: " <> show mbLegEndStation
           let baseStateData =
                 JT.JourneyLegStateData
                   { status = journeyLegStatus,
@@ -130,13 +132,16 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
                           QJourneyLeg.updateByPrimaryKey legToUpdate {DJourneyLeg.finalBoardedBusNumber = Just bestVehicleNumber}
                     pure detailedStateData
                   Nothing -> do
-                    logError $ "CFRFS.getState: Could not find leg to update finalBoardedBusNumber for searchId: " <> searchId.getId
+                    logError $ "CFRFS getState: Could not find leg to update finalBoardedBusNumber for searchId: " <> searchId.getId
                     pure detailedStateData
-              else pure detailedStateData
+              else do
+                logDebug $ "CFRFS getState: Not finalizing state for booking with searchId: " <> show detailedStateData
+                pure detailedStateData
 
           return $ JT.Single finalStateData
         _ -> do
           let routeStatuses = getStatusForMetroAndSubway booking.journeyRouteDetails
+          logDebug $ "CFRFS getState: Processing non-Bus leg for booking with searchId: " <> show searchId.getId
           journeyLegOrder <- booking.journeyLegOrder & fromMaybeM (BookingFieldNotPresent "journeyLegOrder")
           vehiclePositions :: [JT.VehiclePosition] <-
             concatMapM
@@ -202,6 +207,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
               (flip QFRFSSearch.updateJourneyLegStatus searchId)
 
           let detailedStateData = baseStateData {JT.vehiclePositions = vehiclePositionsToReturn}
+          logDebug $ "CFRFS getState: Detailed state data for without booking: " <> show vehiclePositionsToReturn
 
           finalStateData <-
             if detailedStateData.status `elem` [JPT.Finishing, JPT.Completed]
@@ -541,7 +547,7 @@ processBusLegState
   journeyLegStatus
   movementDetected
   updateStatusFn = do
-    logDebug $ "movementDetected:" <> show movementDetected
+    logDebug $ "movementDetected:" <> show movementDetected <> " journeyLegStatus: " <> show journeyLegStatus
     if (isOngoingJourneyLeg journeyLegStatus) && movementDetected
       then do
         let filteredBusData = case (mbUserBoardingStation, mbLegEndStation) of
@@ -582,18 +588,29 @@ processBusLegState
                             upcomingStops = upcomingStops
                           }
                       ]
-                  Nothing -> pure []
-              Nothing -> pure []
-          _ -> pure []
-      else
+                  Nothing -> do
+                    logDebug "No best bus data available, returning empty list"
+                    pure []
+              Nothing -> do
+                logDebug "No top candidate vehicle ID available, returning empty list"
+                pure []
+          _ -> do
+            logDebug "No top candidate vehicle ID available, returning empty list"
+            pure []
+      else do
         if isOngoingJourneyLeg journeyLegStatus && not movementDetected
-          then case mbCurrentLegDetails of
-            Just legDetails -> do
-              let changedBuses = fromMaybe [] legDetails.changedBusesInSequence
-              logDebug $ "changedBuses: " <> show changedBuses
-              findVehiclePositionFromSequence (reverse changedBuses)
-            Nothing -> pure []
-          else
+          then do
+            logDebug $ "No current leg details available" <> show journeyLegStatus
+            case mbCurrentLegDetails of
+              Just legDetails -> do
+                let changedBuses = fromMaybe [] legDetails.changedBusesInSequence
+                logDebug $ "changedBuses: " <> show changedBuses
+                findVehiclePositionFromSequence (reverse changedBuses)
+              Nothing -> do
+                logDebug "No current leg details available, returning empty list"
+                pure []
+          else do
+            logDebug $ "Journey leg is not ongoing or movement is not detected, returning empty list" <> show journeyLegStatus
             if journeyLegStatus `elem` [JPT.InPlan, JPT.OnTheWay, JPT.Booked, JPT.Arriving]
               then do
                 let filteredBusData = case mbUserBoardingStation of
@@ -610,11 +627,14 @@ processBusLegState
                           }
                     )
                     filteredBusData
-              else pure []
+              else do
+                logDebug "No filtered bus data available, returning empty list"
+                pure []
     where
       findVehiclePositionFromSequence :: (MonadFlow m) => [Text] -> m [JT.VehiclePosition]
       findVehiclePositionFromSequence [] = pure []
       findVehiclePositionFromSequence (busNum : rest) = do
+        logDebug $ "Looking for bus number: " <> show busNum
         case find (\bd -> bd.vehicle_number == Just busNum) allBusDataForRoute of
           Just bestBusData -> do
             let upcomingStops = getUpcomingStopsForBus now mbLegEndStation bestBusData True
@@ -626,7 +646,9 @@ processBusLegState
                     upcomingStops = upcomingStops
                   }
               ]
-          Nothing -> findVehiclePositionFromSequence rest
+          Nothing -> do
+            logDebug $ "No bus data found for vehicle number: " <> show rest
+            findVehiclePositionFromSequence rest
 
 getUpcomingStopsForBus ::
   UTCTime -> -- Current time (`now`)
