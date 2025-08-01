@@ -7,6 +7,7 @@ module Storage.Queries.Estimate where
 import qualified Domain.Types.Common
 import qualified Domain.Types.Estimate
 import qualified Domain.Types.SearchRequest
+import qualified Domain.Types.SharedEntity
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -29,7 +30,7 @@ createMany = traverse_ create
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> m (Maybe Domain.Types.Estimate.Estimate))
 findById id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
-findEligibleForCabUpgrade :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> Kernel.Prelude.Bool -> m [Domain.Types.Estimate.Estimate])
+findEligibleForCabUpgrade :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> Kernel.Prelude.Bool -> m ([Domain.Types.Estimate.Estimate]))
 findEligibleForCabUpgrade requestId eligibleForUpgrade = do
   findAllWithKVAndConditionalDB
     [ Se.And
@@ -39,10 +40,12 @@ findEligibleForCabUpgrade requestId eligibleForUpgrade = do
     ]
     Nothing
 
-updateSharedEstimateId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> m ())
-updateSharedEstimateId sharedEstimateId id = do
+updateSharedEntityId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.SharedEntity.SharedEntity) -> Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> m ())
+updateSharedEntityId sharedEntityId id = do
   _now <- getCurrentTime
-  updateWithKV [Se.Set Beam.sharedEstimateId sharedEstimateId, Se.Set Beam.updatedAt (Just _now)] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+  updateWithKV [Se.Set Beam.sharedEntityId (Kernel.Types.Id.getId <$> sharedEntityId), Se.Set Beam.updatedAt (Just _now)] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateSupplyDemandRatioByReqIdAndServiceTier ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -76,7 +79,7 @@ updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
       Se.Set Beam.estimatedDistance estimatedDistance,
       Se.Set Beam.estimatedDuration estimatedDuration,
       Se.Set Beam.fareParamsId ((Kernel.Types.Id.getId . (.id) <$>) fareParams),
-      Se.Set Beam.farePolicyId ((Kernel.Types.Id.getId . (.id) <$>) farePolicy),
+      Se.Set Beam.farePolicyId (((Kernel.Types.Id.getId . (.id) <$>)) farePolicy),
       Se.Set Beam.fromLocGeohash fromLocGeohash,
       Se.Set Beam.isBlockedRoute isBlockedRoute,
       Se.Set Beam.isCustomerPrefferedSearchRoute isCustomerPrefferedSearchRoute,
@@ -100,7 +103,7 @@ updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
       Se.Set Beam.minFare (Kernel.Prelude.roundToIntegral minFare),
       Se.Set Beam.minFareAmount (Kernel.Prelude.Just minFare),
       Se.Set Beam.requestId (Kernel.Types.Id.getId requestId),
-      Se.Set Beam.sharedEstimateId sharedEstimateId,
+      Se.Set Beam.sharedEntityId (Kernel.Types.Id.getId <$> sharedEntityId),
       Se.Set Beam.smartTipReason smartTipReason,
       Se.Set Beam.smartTipSuggestion smartTipSuggestion,
       Se.Set Beam.specialLocationTag specialLocationTag,
@@ -117,7 +120,7 @@ updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
 
 instance FromTType' Beam.Estimate Domain.Types.Estimate.Estimate where
   fromTType' (Beam.EstimateT {..}) = do
-    farePolicy' <- maybe (pure Nothing) (Storage.Cac.FarePolicy.findById Nothing . Kernel.Types.Id.Id) farePolicyId
+    farePolicy' <- (maybe (pure Nothing) ((Storage.Cac.FarePolicy.findById Nothing) . Kernel.Types.Id.Id)) farePolicyId
     fareParams' <- maybe (pure Nothing) (Storage.Queries.FareParameters.findById . Kernel.Types.Id.Id) fareParamsId
     pure $
       Just
@@ -154,7 +157,7 @@ instance FromTType' Beam.Estimate Domain.Types.Estimate.Estimate where
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             minFare = Kernel.Types.Common.mkAmountWithDefault minFareAmount minFare,
             requestId = Kernel.Types.Id.Id requestId,
-            sharedEstimateId = sharedEstimateId,
+            sharedEntityId = Kernel.Types.Id.Id <$> sharedEntityId,
             smartTipReason = smartTipReason,
             smartTipSuggestion = smartTipSuggestion,
             specialLocationTag = specialLocationTag,
@@ -179,8 +182,8 @@ instance ToTType' Beam.Estimate Domain.Types.Estimate.Estimate where
         Beam.eligibleForUpgrade = Kernel.Prelude.Just eligibleForUpgrade,
         Beam.estimatedDistance = estimatedDistance,
         Beam.estimatedDuration = estimatedDuration,
-        Beam.fareParamsId = (Kernel.Types.Id.getId . (.id) <$>) fareParams,
-        Beam.farePolicyId = (Kernel.Types.Id.getId . (.id) <$>) farePolicy,
+        Beam.fareParamsId = ((Kernel.Types.Id.getId . (.id) <$>) fareParams),
+        Beam.farePolicyId = ((Kernel.Types.Id.getId . (.id) <$>)) farePolicy,
         Beam.fromLocGeohash = fromLocGeohash,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isBlockedRoute = isBlockedRoute,
@@ -205,7 +208,7 @@ instance ToTType' Beam.Estimate Domain.Types.Estimate.Estimate where
         Beam.minFare = Kernel.Prelude.roundToIntegral minFare,
         Beam.minFareAmount = Kernel.Prelude.Just minFare,
         Beam.requestId = Kernel.Types.Id.getId requestId,
-        Beam.sharedEstimateId = sharedEstimateId,
+        Beam.sharedEntityId = Kernel.Types.Id.getId <$> sharedEntityId,
         Beam.smartTipReason = smartTipReason,
         Beam.smartTipSuggestion = smartTipSuggestion,
         Beam.specialLocationTag = specialLocationTag,

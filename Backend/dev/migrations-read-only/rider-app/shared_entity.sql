@@ -1,0 +1,23 @@
+CREATE TABLE atlas_app.shared_entity ();
+
+ALTER TABLE atlas_app.shared_entity ADD COLUMN booking_ids json ;
+ALTER TABLE atlas_app.shared_entity ADD COLUMN counter_app_shared_entity_id character varying(255) ;
+ALTER TABLE atlas_app.shared_entity ADD COLUMN created_at timestamptz NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_app.shared_entity ADD COLUMN driver_id character varying(36) ;
+ALTER TABLE atlas_app.shared_entity ADD COLUMN entity_type character varying(255) NOT NULL;
+ALTER TABLE atlas_app.shared_entity ADD COLUMN estimate_ids json ;
+ALTER TABLE atlas_app.shared_entity ADD COLUMN id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.shared_entity ADD COLUMN merchant_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.shared_entity ADD COLUMN merchant_operating_city_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.shared_entity ADD COLUMN pairing_time timestamptz ;
+ALTER TABLE atlas_app.shared_entity ADD COLUMN ride_ids json ;
+ALTER TABLE atlas_app.shared_entity ADD COLUMN search_request_ids json ;
+ALTER TABLE atlas_app.shared_entity ADD COLUMN status character varying(255) NOT NULL;
+ALTER TABLE atlas_app.shared_entity ADD COLUMN total_seats integer NOT NULL;
+ALTER TABLE atlas_app.shared_entity ADD COLUMN transaction_id character varying(255) ;
+ALTER TABLE atlas_app.shared_entity ADD COLUMN trip_category character varying(255) NOT NULL;
+ALTER TABLE atlas_app.shared_entity ADD COLUMN updated_at timestamptz NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_app.shared_entity ADD COLUMN valid_till timestamptz NOT NULL;
+ALTER TABLE atlas_app.shared_entity ADD COLUMN vehicle_category character varying(255) NOT NULL;
+ALTER TABLE atlas_app.shared_entity ADD COLUMN waypoints jsonb NOT NULL;
+ALTER TABLE atlas_app.shared_entity ADD PRIMARY KEY ( id);

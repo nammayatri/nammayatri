@@ -9,6 +9,7 @@ imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   Centesimal: Kernel.Types.Common
+  SharedEntity: Domain.Types.SharedEntity
 
 Estimate:
     tableName: estimate
@@ -61,7 +62,7 @@ Estimate:
       updatedAt: UTCTime
       merchantId: Maybe (Id Merchant)
       merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
-      sharedEntityId: Maybe Text
+      sharedEntityId: Maybe (Id SharedEntity)
 
     beamFields:
       farePolicy:

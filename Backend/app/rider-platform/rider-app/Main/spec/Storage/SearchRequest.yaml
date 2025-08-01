@@ -31,6 +31,7 @@ imports:
   Value: Data.Aeson
   RecentLocation: Domain.Types.RecentLocation
   VehicleCategory: BecknV2.OnDemand.Enums
+  SharedEntity: Domain.Types.SharedEntity
 
 SearchRequest:
   tableName: search_request
@@ -92,7 +93,7 @@ SearchRequest:
     allJourneysLoaded: Maybe Bool
     searchMode: Maybe SearchMode
     isMultimodalSearch: Maybe Bool
-    sharedEntityId: Maybe Text
+    sharedEntityId: Maybe (Id SharedEntity)
 
   default:
     hasMultimodalSearch: "false"

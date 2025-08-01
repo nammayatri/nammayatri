@@ -331,6 +331,7 @@ library
       Domain.Types.OnUpdate
       Domain.Types.Quote
       Domain.Types.RideRoute
+      Domain.Types.TrackedEntity
       Domain.Types.UtilsTH
       Domain.Types.Yudhishthira
       Environment
@@ -638,6 +639,7 @@ library
       Storage.Queries.SearchRequestExtra
       Storage.Queries.SearchRequestForDriverExtra
       Storage.Queries.SearchTryExtra
+      Storage.Queries.SharedEntityExtra
       Storage.Queries.StationExtra
       Storage.Queries.Status
       Storage.Queries.Transformers.Booking
@@ -944,6 +946,7 @@ library
       Domain.Types.SearchRequest
       Domain.Types.SearchRequestForDriver
       Domain.Types.SearchTry
+      Domain.Types.SharedEntity
       Domain.Types.Station
       Domain.Types.StopInformation
       Domain.Types.SubscriptionConfig
@@ -1092,6 +1095,7 @@ library
       Storage.Beam.SearchRequest
       Storage.Beam.SearchRequestForDriver
       Storage.Beam.SearchTry
+      Storage.Beam.SharedEntity
       Storage.Beam.Station
       Storage.Beam.StopInformation
       Storage.Beam.SubscriptionConfig
@@ -1283,6 +1287,7 @@ library
       Storage.Queries.OrphanInstances.SearchRequest
       Storage.Queries.OrphanInstances.SearchRequestForDriver
       Storage.Queries.OrphanInstances.SearchTry
+      Storage.Queries.OrphanInstances.SharedEntity
       Storage.Queries.OrphanInstances.Station
       Storage.Queries.OrphanInstances.Translations
       Storage.Queries.OrphanInstances.TransporterConfig
@@ -1322,6 +1327,7 @@ library
       Storage.Queries.SearchRequest
       Storage.Queries.SearchRequestForDriver
       Storage.Queries.SearchTry
+      Storage.Queries.SharedEntity
       Storage.Queries.Station
       Storage.Queries.StopInformation
       Storage.Queries.SubscriptionConfig

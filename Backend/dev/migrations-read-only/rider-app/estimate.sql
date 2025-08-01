@@ -543,3 +543,18 @@ ALTER TABLE atlas_app.estimate ADD COLUMN insured_amount text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.estimate ADD COLUMN is_multimodal_search boolean ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.estimate ADD COLUMN shared_entity_id character varying(36) ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

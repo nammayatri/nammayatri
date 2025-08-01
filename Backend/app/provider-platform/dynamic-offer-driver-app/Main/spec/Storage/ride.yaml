@@ -23,6 +23,7 @@ imports:
   VehicleVariant: Domain.Types.VehicleVariant
   ServiceTierType: Domain.Types.Common
   TagNameValue: Lib.Yudhishthira.Types
+  SharedEntity: Domain.Types.SharedEntity
 
 Ride:
   tableName: ride
@@ -120,7 +121,7 @@ Ride:
     isPickupOrDestinationEdited: Maybe Bool
     isInsured: Bool
     insuredAmount: Maybe Text
-    sharedEntityId: Maybe Text
+    sharedEntityId: Maybe (Id SharedEntity)
 
   sqlType:
     id: character(36)

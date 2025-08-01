@@ -6,6 +6,7 @@ module Storage.Queries.Booking (module Storage.Queries.Booking, module ReExport)
 
 import qualified Domain.Types.Booking
 import qualified Domain.Types.Quote
+import qualified Domain.Types.SharedEntity
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -24,12 +25,14 @@ findByQuoteId quoteId = do findOneWithKV [Se.Is Beam.quoteId $ Se.Eq (Kernel.Typ
 updateIsBookingUpdated :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Booking.Booking -> m ())
 updateIsBookingUpdated isBookingUpdated id = do
   _now <- getCurrentTime
-  updateWithKV [Se.Set Beam.isBookingUpdated (Just isBookingUpdated), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+  updateWithKV [Se.Set Beam.isBookingUpdated ((Just isBookingUpdated)), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateSharedBookingId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.Booking.Booking -> m ())
-updateSharedBookingId sharedBookingId id = do
+updateSharedEntityId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.SharedEntity.SharedEntity) -> Kernel.Types.Id.Id Domain.Types.Booking.Booking -> m ())
+updateSharedEntityId sharedEntityId id = do
   _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.sharedBookingId sharedBookingId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+  updateOneWithKV [Se.Set Beam.sharedEntityId (Kernel.Types.Id.getId <$> sharedEntityId), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Booking.Booking -> m (Maybe Domain.Types.Booking.Booking))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

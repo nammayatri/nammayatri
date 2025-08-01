@@ -21,6 +21,7 @@ import Domain.Types.FarePolicy
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.SearchRequest
+import Domain.Types.SharedEntity
 import Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Prelude
@@ -74,7 +75,7 @@ data BppEstimate = BppEstimate
     updatedAt :: UTCTime,
     vehicleServiceTier :: ServiceTierType,
     vehicleServiceTierName :: Maybe Text,
-    sharedEntityId :: Maybe Text --VaibhavD : Re-evaluate
+    sharedEntityId :: Maybe (Id SharedEntity) --VaibhavD : Re-evaluate
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 

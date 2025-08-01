@@ -18,6 +18,7 @@ imports:
   Version: Kernel.Types.Version
   Minutes: Kernel.Types.Common
   TripCategory: Domain.Types.Common
+  SharedEntity: Domain.Types.SharedEntity
 
 Estimate:
   tableName: estimate
@@ -120,7 +121,7 @@ Estimate:
     isInsured: Bool
     insuredAmount: Maybe Text
     isMultimodalSearch: Maybe Bool
-    sharedEntityId: Maybe Text
+    sharedEntityId: Maybe (Id SharedEntity)
 
   constraints:
     id: PrimaryKey

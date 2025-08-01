@@ -13,6 +13,7 @@ import qualified Domain.Types.MerchantPaymentMethod
 import qualified Domain.Types.Person
 import qualified Domain.Types.RecentLocation
 import qualified Domain.Types.RefereeLink
+import qualified Domain.Types.SharedEntity
 import qualified Domain.Types.Trip
 import qualified Kernel.External.Maps
 import qualified Kernel.External.Payment.Interface.Types
@@ -74,7 +75,7 @@ data SearchRequest = SearchRequest
     routeCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     searchMode :: Kernel.Prelude.Maybe Domain.Types.SearchRequest.SearchMode,
     selectedPaymentMethodId :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.PaymentMethodId,
-    sharedSearchRequestId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    sharedEntityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.SharedEntity.SharedEntity),
     startTime :: Kernel.Prelude.UTCTime,
     stops :: [Domain.Types.Location.Location],
     toLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location,
@@ -82,7 +83,7 @@ data SearchRequest = SearchRequest
     validTill :: Kernel.Prelude.UTCTime,
     vehicleCategory :: Kernel.Prelude.Maybe BecknV2.OnDemand.Enums.VehicleCategory
   }
-  deriving (Generic, Show)
+  deriving (Generic, (Show))
 
 data RiderPreferredOption = Rental | OneWay | InterCity | Ambulance | Delivery | PublicTransport deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
@@ -90,14 +91,14 @@ data SearchMode = NORMAL | RESERVE deriving (Eq, Ord, Show, Read, Generic, ToJSO
 
 data SearchRequestStatus = NEW | INPROGRESS | CONFIRMED | COMPLETED | CLOSED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RiderPreferredOption)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RiderPreferredOption))
 
-$(mkHttpInstancesForEnum ''RiderPreferredOption)
+$(mkHttpInstancesForEnum (''RiderPreferredOption))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SearchMode)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SearchMode))
 
-$(mkHttpInstancesForEnum ''SearchMode)
+$(mkHttpInstancesForEnum (''SearchMode))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SearchRequestStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SearchRequestStatus))
 
-$(mkHttpInstancesForEnum ''SearchRequestStatus)
+$(mkHttpInstancesForEnum (''SearchRequestStatus))

@@ -14,6 +14,7 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MerchantPaymentMethod
 import qualified Domain.Types.RiderDetails
+import qualified Domain.Types.SharedEntity
 import qualified Domain.Types.Trip
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context
@@ -74,7 +75,7 @@ data Booking = Booking
     riderName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     roundTrip :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     senderDetails :: Kernel.Prelude.Maybe Domain.Types.DeliveryPersonDetails.DeliveryPersonDetails,
-    sharedBookingId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    sharedEntityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.SharedEntity.SharedEntity),
     specialLocationTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     specialZoneOtpCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     startTime :: Kernel.Prelude.UTCTime,
@@ -98,8 +99,8 @@ data BookingStatus = NEW | TRIP_ASSIGNED | COMPLETED | CANCELLED | REALLOCATED d
 
 data BookingType = SpecialZoneBooking | NormalBooking deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''BookingStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''BookingStatus))
 
-$(mkHttpInstancesForEnum ''BookingStatus)
+$(mkHttpInstancesForEnum (''BookingStatus))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''BookingType)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''BookingType))

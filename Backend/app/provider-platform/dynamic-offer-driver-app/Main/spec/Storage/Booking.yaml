@@ -19,6 +19,7 @@ imports:
   ConfigVersionMap: Lib.Yudhishthira.Types
   Value: Data.Aeson
   ParcelType: Domain.Types.DeliveryDetails
+  SharedEntity: Domain.Types.SharedEntity
 
 Booking:
   derives: "Generic,Show,FromJSON,ToJSON"
@@ -94,7 +95,7 @@ Booking:
     coinsRewardedOnGoldTierRide: Maybe Int
     isInsured: Bool
     insuredAmount: Maybe Text
-    sharedEntityId: Maybe Text
+    sharedEntityId: Maybe (Id SharedEntity)
 
   excludedFields:
     - merchantId

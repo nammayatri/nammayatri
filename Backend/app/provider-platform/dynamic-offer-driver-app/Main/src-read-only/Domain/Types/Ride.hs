@@ -12,6 +12,7 @@ import qualified Domain.Types.Location
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
+import qualified Domain.Types.SharedEntity
 import qualified Domain.Types.VehicleVariant
 import qualified IssueManagement.Domain.Types.MediaFile
 import qualified Kernel.External.Maps
@@ -81,7 +82,7 @@ data Ride = Ride
     rideEndedBy :: Kernel.Prelude.Maybe Domain.Types.Ride.RideEndedBy,
     rideTags :: Kernel.Prelude.Maybe [Lib.Yudhishthira.Types.TagNameValue],
     safetyAlertTriggered :: Kernel.Prelude.Bool,
-    sharedRideId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    sharedEntityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.SharedEntity.SharedEntity),
     shortId :: Kernel.Types.Id.ShortId Domain.Types.Ride.Ride,
     startOdometerReading :: Kernel.Prelude.Maybe Domain.Types.Ride.OdometerReading,
     status :: Domain.Types.Ride.RideStatus,
@@ -117,8 +118,8 @@ data RideEndedBy = Driver | Dashboard | CallBased | CronJob | Allocator deriving
 
 data RideStatus = UPCOMING | NEW | INPROGRESS | COMPLETED | CANCELLED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideEndedBy)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RideEndedBy))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RideStatus))
 
-$(mkHttpInstancesForEnum ''RideStatus)
+$(mkHttpInstancesForEnum (''RideStatus))

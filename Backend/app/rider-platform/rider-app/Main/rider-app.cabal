@@ -303,6 +303,7 @@ library
       Domain.Types.Station
       Domain.Types.TicketDashboard
       Domain.Types.TicketKapture
+      Domain.Types.TrackedEntity
       Domain.Types.UtilsTH
       Environment
       ExternalBPP.CallAPI
@@ -525,6 +526,7 @@ library
       Storage.Queries.SearchRequestExtra
       Storage.Queries.ServiceCategoryExtra
       Storage.Queries.ServicePeopleCategoryExtra
+      Storage.Queries.SharedEntityExtra
       Storage.Queries.StationsExtraInformationExtra
       Storage.Queries.TicketBookingExtra
       Storage.Queries.TicketBookingPeopleCategoryExtra
@@ -822,6 +824,7 @@ library
       Domain.Types.SeatManagement
       Domain.Types.ServiceCategory
       Domain.Types.ServicePeopleCategory
+      Domain.Types.SharedEntity
       Domain.Types.SharedRideConfigs
       Domain.Types.Sos
       Domain.Types.SpecialOccasion
@@ -957,6 +960,7 @@ library
       Storage.Beam.SeatManagement
       Storage.Beam.ServiceCategory
       Storage.Beam.ServicePeopleCategory
+      Storage.Beam.SharedEntity
       Storage.Beam.SharedRideConfigs
       Storage.Beam.Sos
       Storage.Beam.SpecialOccasion
@@ -1104,6 +1108,7 @@ library
       Storage.Queries.OrphanInstances.SearchRequest
       Storage.Queries.OrphanInstances.ServiceCategory
       Storage.Queries.OrphanInstances.ServicePeopleCategory
+      Storage.Queries.OrphanInstances.SharedEntity
       Storage.Queries.OrphanInstances.StationsExtraInformation
       Storage.Queries.OrphanInstances.TicketBooking
       Storage.Queries.OrphanInstances.TicketBookingPeopleCategory
@@ -1150,6 +1155,7 @@ library
       Storage.Queries.SeatManagement
       Storage.Queries.ServiceCategory
       Storage.Queries.ServicePeopleCategory
+      Storage.Queries.SharedEntity
       Storage.Queries.SharedRideConfigs
       Storage.Queries.Sos
       Storage.Queries.SpecialOccasion

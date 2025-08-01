@@ -10,6 +10,7 @@ import qualified Domain.Types.Location
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.ServiceTierType
+import qualified Domain.Types.SharedEntity
 import qualified Domain.Types.VehicleVariant
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps
@@ -77,7 +78,7 @@ data RideE e = Ride
     rideStartTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     safetyCheckStatus :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     safetyJourneyStatus :: Kernel.Prelude.Maybe Domain.Types.Ride.SosJourneyStatus,
-    sharedRideId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    sharedEntityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.SharedEntity.SharedEntity),
     shortId :: Kernel.Types.Id.ShortId Domain.Types.Ride.Ride,
     showDriversPreviousRideDropLoc :: Kernel.Prelude.Bool,
     startOdometerReading :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
@@ -101,9 +102,9 @@ data RideE e = Ride
   }
   deriving (Generic)
 
-type Ride = RideE 'AsEncrypted
+type Ride = RideE ('AsEncrypted)
 
-type DecryptedRide = RideE 'AsUnencrypted
+type DecryptedRide = RideE ('AsUnencrypted)
 
 instance EncryptedItem Ride where
   type Unencrypted Ride = (DecryptedRide, HashSalt)
@@ -165,7 +166,7 @@ instance EncryptedItem Ride where
           rideStartTime = rideStartTime entity,
           safetyCheckStatus = safetyCheckStatus entity,
           safetyJourneyStatus = safetyJourneyStatus entity,
-          sharedRideId = sharedRideId entity,
+          sharedEntityId = sharedEntityId entity,
           shortId = shortId entity,
           showDriversPreviousRideDropLoc = showDriversPreviousRideDropLoc entity,
           startOdometerReading = startOdometerReading entity,
@@ -245,7 +246,7 @@ instance EncryptedItem Ride where
             rideStartTime = rideStartTime entity,
             safetyCheckStatus = safetyCheckStatus entity,
             safetyJourneyStatus = safetyJourneyStatus entity,
-            sharedRideId = sharedRideId entity,
+            sharedEntityId = sharedEntityId entity,
             shortId = shortId entity,
             showDriversPreviousRideDropLoc = showDriversPreviousRideDropLoc entity,
             startOdometerReading = startOdometerReading entity,
@@ -293,12 +294,12 @@ data SosJourneyStatus
 
 data UnexpectedConditionStage = DriverDeviated | UnusualStop | UnsafeArea deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PaymentStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''PaymentStatus))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RideStatus))
 
-$(mkHttpInstancesForEnum ''RideStatus)
+$(mkHttpInstancesForEnum (''RideStatus))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SosJourneyStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SosJourneyStatus))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''UnexpectedConditionStage)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''UnexpectedConditionStage))

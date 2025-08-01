@@ -37,6 +37,7 @@ imports:
   ParcelType: Domain.Types.ParcelDetails
   JourneyLegStatus: Lib.JourneyLeg.Types
   RecentLocation: Domain.Types.RecentLocation
+  SharedEntity: Domain.Types.SharedEntity
 
 BookingLocation:
   tableName: booking_location
@@ -247,7 +248,7 @@ Booking:
     insuredAmount: Maybe Text
     driverInsuredAmount: Maybe Text
     isMultimodalSearch: Maybe Bool
-    sharedEntityId: Maybe Text
+    sharedEntityId: Maybe (Id SharedEntity)
 
   beamFields:
     estimatedDistance:
