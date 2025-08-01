@@ -157,7 +157,7 @@ apis:
             query:
               - requestorId: Text
             response:
-              type: APISuccess
+              type: Bool
 
 types:
   ValidationStatus:
