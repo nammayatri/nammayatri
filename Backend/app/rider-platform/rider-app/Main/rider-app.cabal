@@ -431,6 +431,7 @@ library
       Storage.CachedQueries.FRFSConfig
       Storage.CachedQueries.FRFSGtfsStageFare
       Storage.CachedQueries.HotSpotConfig
+      Storage.CachedQueries.IntegratedBPPConfig
       Storage.CachedQueries.Maps.LocationMapCache
       Storage.CachedQueries.Maps.PlaceNameCache
       Storage.CachedQueries.Merchant
@@ -978,7 +979,6 @@ library
       Storage.Beam.WhiteListOrg
       Storage.CachedQueries.FeedbackForm
       Storage.CachedQueries.InsuranceConfig
-      Storage.CachedQueries.IntegratedBPPConfig
       Storage.CachedQueries.SavedReqLocation
       Storage.Queries.AadhaarOtpReq
       Storage.Queries.AadhaarOtpVerify

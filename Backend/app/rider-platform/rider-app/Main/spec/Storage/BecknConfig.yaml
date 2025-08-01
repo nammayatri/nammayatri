@@ -156,9 +156,3 @@ IntegratedBPPConfig:
       where:
         and: [agencyKey]
 
-  cachedQueries:
-    findAllByDomainAndCityAndVehicleCategory:
-      keyParams: [domain, merchantOperatingCityId, vehicleCategory, platformType]
-      dbQuery: findAllByDomainAndCityAndVehicleCategory
-      dbQueryParams: [domain, merchantOperatingCityId, vehicleCategory, platformType]
-      queryType: FindAndCache
