@@ -157,12 +157,14 @@ apis:
             query:
               - requestorId: Text
             response:
-              type: APISuccess
+              type: UnlinkDocumentResp
 
 types:
   ValidationStatus:
     enum: "APPROVED,DECLINED,AUTO_APPROVED,AUTO_DECLINED,NEEDS_REVIEW"
     derive: "Read"
+  UnlinkDocumentResp:
+    mandatoryDocumentRemoved : Bool
   DLDetails:
     - driverName: Maybe Text
     - driverLicenseNumber: Text

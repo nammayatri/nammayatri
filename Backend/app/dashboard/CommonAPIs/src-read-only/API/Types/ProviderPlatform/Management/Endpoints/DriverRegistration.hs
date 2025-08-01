@@ -307,6 +307,10 @@ data UnderReviewDriversListResponse = UnderReviewDriversListResponse {drivers ::
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data UnlinkDocumentResp = UnlinkDocumentResp {mandatoryDocumentRemoved :: Kernel.Prelude.Bool}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data UpdateDocumentRequest
   = Approve ApproveDetails
   | Reject RejectDetails
@@ -476,7 +480,7 @@ type PostDriverRegistrationUnlinkDocumentHelper =
            "documentType"
            DocumentType
       :> QueryParam "requestorId" Kernel.Prelude.Text
-      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+      :> Post '[JSON] UnlinkDocumentResp
   )
 
 data DriverRegistrationAPIs = DriverRegistrationAPIs
@@ -491,7 +495,7 @@ data DriverRegistrationAPIs = DriverRegistrationAPIs
     getDriverRegistrationUnderReviewDrivers :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> EulerHS.Types.EulerClient UnderReviewDriversListResponse,
     getDriverRegistrationDocumentsInfo :: Kernel.Types.Id.Id Dashboard.Common.Driver -> EulerHS.Types.EulerClient [DriverDocument],
     postDriverRegistrationDocumentsUpdate :: UpdateDocumentRequest -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postDriverRegistrationUnlinkDocument :: Kernel.Types.Id.Id Dashboard.Common.Driver -> DocumentType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
+    postDriverRegistrationUnlinkDocument :: Kernel.Types.Id.Id Dashboard.Common.Driver -> DocumentType -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient UnlinkDocumentResp
   }
 
 mkDriverRegistrationAPIs :: (Client EulerHS.Types.EulerClient API -> DriverRegistrationAPIs)

@@ -386,6 +386,7 @@ instance FromTType' BeamP.Person Person.Person where
               _ -> Nothing,
             mobileNumber = EncryptedHashed (Encrypted mobileNumberEncrypted) mobileNumberHash,
             dashboardType = dashboardType,
+            approvedBy = approvedBy <&> Id,
             ..
           }
 
@@ -399,6 +400,7 @@ instance ToTType' BeamP.Person Person.Person where
         mobileNumberEncrypted = mobileNumber & unEncrypted . (.encrypted),
         mobileNumberHash = mobileNumber.hash,
         dashboardType = dashboardType,
+        approvedBy = approvedBy <&> getId,
         ..
       }
 
