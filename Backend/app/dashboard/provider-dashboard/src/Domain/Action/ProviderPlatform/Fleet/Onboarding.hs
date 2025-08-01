@@ -10,10 +10,14 @@ import qualified Domain.Types.VehicleCategory
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude
 import qualified Kernel.Prelude
-import qualified Kernel.Types.APISuccess
+import Kernel.Types.APISuccess (APISuccess (..))
 import qualified Kernel.Types.Beckn.Context
-import qualified Kernel.Types.Id
+import Kernel.Types.Error
+import Kernel.Types.Id
+import Kernel.Utils.Common
 import Storage.Beam.CommonInstances ()
+import qualified "lib-dashboard" Storage.Queries.Merchant as QMerchant
+import qualified "lib-dashboard" Storage.Queries.Person as QP
 import Tools.Auth.Api
 import Tools.Auth.Merchant
 
@@ -31,9 +35,18 @@ getOnboardingRegisterStatus merchantShortId opCity apiTokenInfo driverId makeSel
 
 postOnboardingVerify :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Fleet.Onboarding.VerifyType -> API.Types.ProviderPlatform.Fleet.Onboarding.VerifyReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postOnboardingVerify merchantShortId opCity apiTokenInfo verifyType req = do
+  merchant <- QMerchant.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   let mbAccessType = Common.castDashboardAccessType <$> apiTokenInfo.person.dashboardAccessType
-  Client.callFleetAPI checkedMerchantId opCity (.onboardingDSL.postOnboardingVerify) verifyType mbAccessType req
+  person <- QP.findById (Id req.driverId)
+  let adminApprovalRequiredNow =
+        case (person, merchant.requireAdminApprovalForFleetOnboarding) of
+          (Just p, Just True) -> isNothing (p.approvedBy)
+          _ -> False
+  res <- Client.callFleetAPI checkedMerchantId opCity (.onboardingDSL.postOnboardingVerify) verifyType mbAccessType (Just adminApprovalRequiredNow) req
+  when res.enableFleetOwner $ do
+    QP.updatePersonVerifiedStatus (Id req.driverId) True
+  pure Success
 
 getOnboardingGetReferralDetails :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Environment.Flow API.Types.ProviderPlatform.Fleet.Onboarding.ReferralInfoRes)
 getOnboardingGetReferralDetails merchantShortId opCity apiTokenInfo referralCode = do
