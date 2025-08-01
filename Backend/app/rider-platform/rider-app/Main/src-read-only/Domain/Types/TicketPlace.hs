@@ -4,6 +4,7 @@
 module Domain.Types.TicketPlace where
 
 import Data.Aeson
+import qualified Data.Time
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
@@ -16,10 +17,12 @@ data TicketPlace = TicketPlace
     closeTimings :: Kernel.Prelude.Maybe Kernel.Prelude.TimeOfDay,
     customTabs :: Kernel.Prelude.Maybe [Domain.Types.TicketPlace.CustomTab],
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    endDate :: Kernel.Prelude.Maybe Data.Time.Day,
     faqs :: Kernel.Prelude.Maybe [Domain.Types.TicketPlace.Faq],
     gallery :: [Kernel.Prelude.Text],
     iconUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace,
+    isClosed :: Kernel.Prelude.Bool,
     isRecurring :: Kernel.Prelude.Bool,
     lat :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     lon :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
@@ -36,10 +39,12 @@ data TicketPlace = TicketPlace
     recommend :: Kernel.Prelude.Bool,
     rules :: Kernel.Prelude.Maybe [SharedLogic.TicketRule.Core.Rule],
     shortDesc :: Kernel.Prelude.Text,
+    startDate :: Kernel.Prelude.Maybe Data.Time.Day,
     status :: Domain.Types.TicketPlace.PlaceStatus,
     termsAndConditions :: [Kernel.Prelude.Text],
     termsAndConditionsUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     ticketMerchantId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    venue :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime

@@ -82,3 +82,11 @@ ALTER TABLE atlas_app.ticket_place ADD COLUMN faqs json ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.ticket_place ADD COLUMN platform_fee_vendor text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ticket_place ADD COLUMN venue text ;
+ALTER TABLE atlas_app.ticket_place ADD COLUMN start_date date ;
+ALTER TABLE atlas_app.ticket_place ADD COLUMN is_closed boolean  default false;
+ALTER TABLE atlas_app.ticket_place ADD COLUMN end_date date ;

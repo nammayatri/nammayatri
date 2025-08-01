@@ -6,6 +6,7 @@ import Control.Monad.Extra (concatMapM)
 import Data.List (nubBy)
 import qualified Data.Map as Map
 import qualified Data.Text as T
+import qualified Domain.Action.UI.TicketService as TicketService
 import qualified Domain.Types.BusinessHour as DBusinessHour
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOnboarding as MO
@@ -163,7 +164,10 @@ getTicketPlaceDashboardDetails placeId requestorId requestorRole = do
         metadata = ticketPlace.metadata,
         platformFee = ticketPlace.platformFee,
         platformFeeVendor = ticketPlace.platformFeeVendor,
-        pricingOnwards = ticketPlace.pricingOnwards
+        pricingOnwards = ticketPlace.pricingOnwards,
+        startDate = ticketPlace.startDate,
+        endDate = ticketPlace.endDate,
+        venue = ticketPlace.venue
       }
   where
     toTicketServiceDetails :: DTicketService.TicketService -> TicketServiceDetails
@@ -249,7 +253,10 @@ updateTicketPlace existingPlace placeDetails = do
       DTicketPlace.termsAndConditionsUrl = placeDetails.termsAndConditionsUrl,
       DTicketPlace.openTimings = placeDetails.openTimings,
       DTicketPlace.closeTimings = placeDetails.closeTimings,
-      DTicketPlace.rules = existingPlace.rules
+      DTicketPlace.rules = existingPlace.rules,
+      DTicketPlace.startDate = placeDetails.startDate,
+      DTicketPlace.endDate = placeDetails.endDate,
+      DTicketPlace.venue = placeDetails.venue
     }
 
 createTicketPlace :: TicketPlaceDashboardDetails -> Maybe Text -> Id Merchant.Merchant -> Id MOCity.MerchantOperatingCity -> Environment.Flow DTicketPlace.TicketPlace
@@ -287,7 +294,11 @@ createTicketPlace placeDetails creatorId merchantId merchantOpCityId = do
         DTicketPlace.metadata = placeDetails.metadata,
         DTicketPlace.platformFee = placeDetails.platformFee,
         DTicketPlace.platformFeeVendor = placeDetails.platformFeeVendor,
-        DTicketPlace.pricingOnwards = placeDetails.pricingOnwards
+        DTicketPlace.pricingOnwards = placeDetails.pricingOnwards,
+        DTicketPlace.endDate = placeDetails.endDate,
+        DTicketPlace.isClosed = False,
+        DTicketPlace.startDate = placeDetails.startDate,
+        DTicketPlace.venue = placeDetails.venue
       }
 
 updateTicketService :: DTicketService.TicketService -> TicketServiceDetails -> DTicketService.TicketService
@@ -469,6 +480,8 @@ postUpsertTicketPlaceDashboardDetails (merchantId, merchantOpCityId) placeDetail
       when (isJust existingPlace.ticketMerchantId && (existingPlace.ticketMerchantId /= requestorId && requestorRole /= Just MO.TICKET_DASHBOARD_ADMIN)) $ throwError $ InvalidRequest "Don't have access"
       let updatedPlace = updateTicketPlace existingPlace placeDetails
       QTicketPlace.updateByPrimaryKey updatedPlace
+      -- Invalidate cache when ticket place is updated
+      TicketService.invalidateCacheForTicketPlace updatedPlace.id
       return updatedPlace
     Nothing -> do
       -- Create new place

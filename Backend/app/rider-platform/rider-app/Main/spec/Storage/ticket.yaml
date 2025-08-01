@@ -60,6 +60,10 @@ TicketPlace:
     platformFee: Maybe Fee
     platformFeeVendor: Maybe Text
     faqs: "Maybe [Faq]"
+    startDate: Maybe Day
+    endDate: Maybe Day
+    venue: Maybe Text
+    isClosed: Bool
 
   types:
     PlaceType:
@@ -90,6 +94,7 @@ TicketPlace:
     metadata: "Maybe Value"
     faqs: "Maybe Value"
     isRecurring: Maybe Bool
+    isClosed: Maybe Bool
 
   sqlType:
     customTabs: json
@@ -105,6 +110,7 @@ TicketPlace:
     metadata: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< metadata|E
     faqs: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< faqs|E
     isRecurring: Kernel.Prelude.fromMaybe True|I
+    isClosed: Kernel.Prelude.fromMaybe False|I
 
   toTType:
     priority: Kernel.Prelude.Just|I
@@ -114,6 +120,7 @@ TicketPlace:
     metadata: Data.Aeson.toJSON <$> metadata|E
     faqs: Data.Aeson.toJSON <$> faqs|E
     isRecurring: Kernel.Prelude.Just|I
+    isClosed: Kernel.Prelude.Just isClosed|E
 
   default:
     termsAndConditions: "'{}'"
@@ -123,6 +130,7 @@ TicketPlace:
     allowSameDayBooking: "true"
     priority: "0"
     isRecurring: "true"
+    isClosed: 'false'
 
   queries:
     getTicketPlaces:

@@ -46,7 +46,10 @@ data TicketPlaceDashboardDetails = TicketPlaceDashboardDetails
     isRecurring :: Maybe Bool,
     platformFee :: Maybe DTicketPlace.Fee,
     platformFeeVendor :: Maybe Text,
-    pricingOnwards :: Maybe Int
+    pricingOnwards :: Maybe Int,
+    startDate :: Maybe Time.Day,
+    endDate :: Maybe Time.Day,
+    venue :: Maybe Text
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
