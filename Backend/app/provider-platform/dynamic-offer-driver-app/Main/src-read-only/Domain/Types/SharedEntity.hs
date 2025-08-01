@@ -45,6 +45,7 @@ data SharedEntityStatus
   = SEARCHING
   | MATCHED
   | ESTIMATED
+  | OFFERED_QUOTE
   | BOOKED
   | DRIVER_ASSIGNED
   | ONGOING

@@ -25,6 +25,7 @@ data SharedEntityT f = SharedEntityT
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     pairingTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    pooledUsingCustomer :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     rideIds :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     searchRequestIds :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     status :: B.C f Domain.Types.SharedEntity.SharedEntityStatus,
