@@ -605,7 +605,10 @@ processBusLegState
               Just legDetails -> do
                 let changedBuses = fromMaybe [] legDetails.changedBusesInSequence
                 logDebug $ "changedBuses: " <> show changedBuses
-                findVehiclePositionFromSequence (reverse changedBuses)
+                if null changedBuses
+                  then do
+                    findfilteredBusData mbUserBoardingStation allBusDataForRoute
+                  else findVehiclePositionFromSequence (reverse changedBuses)
               Nothing -> do
                 logDebug "No current leg details available, returning empty list"
                 pure []
@@ -613,20 +616,7 @@ processBusLegState
             logDebug $ "Journey leg is not ongoing or movement is not detected, returning empty list" <> show journeyLegStatus
             if journeyLegStatus `elem` [JPT.InPlan, JPT.OnTheWay, JPT.Booked, JPT.Arriving]
               then do
-                let filteredBusData = case mbUserBoardingStation of
-                      Just boardingStation -> filter (isYetToReachStop boardingStation.code) allBusDataForRoute
-                      Nothing -> allBusDataForRoute
-                logDebug $ "filteredBusData: " <> show filteredBusData
-                pure $
-                  map
-                    ( \bd ->
-                        JT.VehiclePosition
-                          { position = Just $ LatLong bd.latitude bd.longitude,
-                            vehicleId = fromMaybe "UNKNOWN" bd.vehicle_number,
-                            upcomingStops = getUpcomingStopsForBus now mbUserBoardingStation bd False
-                          }
-                    )
-                    filteredBusData
+                findfilteredBusData mbUserBoardingStation allBusDataForRoute
               else do
                 logDebug "No filtered bus data available, returning empty list"
                 pure []
@@ -649,6 +639,22 @@ processBusLegState
           Nothing -> do
             logDebug $ "No bus data found for vehicle number: " <> show rest
             findVehiclePositionFromSequence rest
+      findfilteredBusData :: (MonadFlow m) => Maybe Station -> [BusData] -> m [JT.VehiclePosition]
+      findfilteredBusData mbBoardingStation allBusData = do
+        let filteredBusData = case mbBoardingStation of
+              Just boardingStation -> filter (isYetToReachStop boardingStation.code) allBusData
+              Nothing -> allBusData
+        logDebug $ "filteredBusData: " <> show filteredBusData
+        pure $
+          map
+            ( \bd ->
+                JT.VehiclePosition
+                  { position = Just $ LatLong bd.latitude bd.longitude,
+                    vehicleId = fromMaybe "UNKNOWN" bd.vehicle_number,
+                    upcomingStops = getUpcomingStopsForBus now mbBoardingStation bd False
+                  }
+            )
+            filteredBusData
 
 getUpcomingStopsForBus ::
   UTCTime -> -- Current time (`now`)
