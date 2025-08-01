@@ -429,3 +429,4 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN local_ambulance
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN live_ekd boolean  default false;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN is_ml_based_dynamic_pricing_enabled boolean ;

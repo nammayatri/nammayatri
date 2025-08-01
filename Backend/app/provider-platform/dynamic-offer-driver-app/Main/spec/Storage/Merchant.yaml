@@ -843,6 +843,7 @@ TransporterConfig:
     minRidesToUnlist: Maybe Int
     mediaFileUrlPattern: Text
     mediaFileSizeUpperLimit: Int
+    isMLBasedDynamicPricingEnabled: Bool
     referralLinkPassword: Text
     dpWhiteListedGeohash: Maybe [Text]
     dpBlackListedGeohash: Maybe [Text]
@@ -1088,6 +1089,7 @@ TransporterConfig:
     bulkWaiveOffLimit : Maybe Int
     requireRouteMappingInVehicle: Maybe Bool
     enableExistingVehicleInBulkUpload: Maybe Bool
+    isMLBasedDynamicPricingEnabled: Maybe Bool
 
   beamFields:
     fcmConfig:
@@ -1155,6 +1157,7 @@ TransporterConfig:
     bulkWaiveOffLimit : Just bulkWaiveOffLimit|E
     requireRouteMappingInVehicle: Just requireRouteMappingInVehicle|E
     enableExistingVehicleInBulkUpload: Just enableExistingVehicleInBulkUpload|E
+    isMLBasedDynamicPricingEnabled: Just isMLBasedDynamicPricingEnabled|E
 
   intermediateTransformers:
     fromTType:
@@ -1228,6 +1231,7 @@ TransporterConfig:
     bulkWaiveOffLimit : fromMaybe 200 bulkWaiveOffLimit|E
     requireRouteMappingInVehicle: fromMaybe False requireRouteMappingInVehicle|E
     enableExistingVehicleInBulkUpload: fromMaybe False enableExistingVehicleInBulkUpload|E
+    isMLBasedDynamicPricingEnabled: fromMaybe False isMLBasedDynamicPricingEnabled|E
 
   constraints:
     merchantOperatingCityId: PrimaryKey
