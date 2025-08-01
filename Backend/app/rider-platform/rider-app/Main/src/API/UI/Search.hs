@@ -497,7 +497,11 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
       updatedLegs <- mapM calculateLegProportionalDuration route_.legs
       let sumOfLegDurations = sum (map (.duration) updatedLegs)
           totalDuration = min route_.duration sumOfLegDurations
-          route' = route_ {duration = totalDuration, legs = updatedLegs} :: MultiModalTypes.MultiModalRoute
+          -- Update endTime based on the new duration
+          updatedEndTime =
+            route_.startTime >>= \startTime ->
+              Just $ addUTCTime (secondsToNominalDiffTime totalDuration) startTime
+          route' = route_ {duration = totalDuration, legs = updatedLegs, endTime = updatedEndTime} :: MultiModalTypes.MultiModalRoute
       return route'
 
     -- Calculate proportional duration only for Walk and Unspecified legs
