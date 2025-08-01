@@ -495,8 +495,7 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
     updateRouteWithLegDurations :: MultiModalTypes.MultiModalRoute -> Flow MultiModalTypes.MultiModalRoute
     updateRouteWithLegDurations route_ = do
       updatedLegs <- mapM calculateLegProportionalDuration route_.legs
-      let sumOfLegDurations = sum (map (.duration) updatedLegs)
-          totalDuration = min route_.duration sumOfLegDurations
+      let totalDuration = sum (map (.duration) updatedLegs)
           -- Update endTime based on the new duration
           updatedEndTime =
             route_.startTime >>= \startTime ->
@@ -548,7 +547,37 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
                         propSecs = if totalMeters > 0 then totalSecs * legMeters / totalMeters else 0
                      in Seconds $ round propSecs
                   else leg.duration
-           in leg' {duration = proportionalDuration}
+
+              updateTimingWithBuffer mbFromTime mbToArrival mbToDeparture =
+                case (mbFromTime, mbToArrival, mbToDeparture) of
+                  (Just fromTime, Just arrival, Just departure) ->
+                    let newToArrival = Just $ addUTCTime (secondsToNominalDiffTime proportionalDuration) fromTime
+                        originalBuffer = abs (diffUTCTime departure arrival)
+                        newToDeparture = Just $ addUTCTime originalBuffer (fromJust newToArrival)
+                     in (newToArrival, newToDeparture)
+                  _ -> (mbToArrival, mbToDeparture)
+
+              updatedRouteDetails = map updateRouteDetailTiming leg.routeDetails
+              updateRouteDetailTiming :: MultiModalTypes.MultiModalRouteDetails -> MultiModalTypes.MultiModalRouteDetails
+              updateRouteDetailTiming routeDetail =
+                let (newToArrival, newToDeparture) =
+                      updateTimingWithBuffer
+                        routeDetail.fromDepartureTime
+                        routeDetail.toArrivalTime
+                        routeDetail.toDepartureTime
+                 in routeDetail
+                      { toArrivalTime = newToArrival,
+                        toDepartureTime = newToDeparture
+                      }
+
+              -- Update leg timing
+              (newLegToArrival, newLegToDeparture) = updateTimingWithBuffer leg.fromDepartureTime leg.toArrivalTime leg.toDepartureTime
+           in leg'
+                { duration = proportionalDuration,
+                  toArrivalTime = newLegToArrival,
+                  toDepartureTime = newLegToDeparture,
+                  routeDetails = updatedRouteDetails
+                }
 
     eitherWalkOrSingleMode :: BecknV2.OnDemand.Enums.VehicleCategory -> MultiModalTypes.MultiModalLeg -> Bool
     eitherWalkOrSingleMode selectedMode leg = isLegModeIn [MultiModalTypes.Walk, MultiModalTypes.Unspecified, castVehicleCategoryToGeneralVehicleType selectedMode] leg
