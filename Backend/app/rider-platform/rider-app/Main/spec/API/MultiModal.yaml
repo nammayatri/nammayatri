@@ -37,6 +37,7 @@ imports:
   Value: Data.Aeson
   Gate: Domain.Types.Station
   JourneyLegFeedbackData: Domain.Types.JourneyLegsFeedbacks
+  FRFSTicketBookingStatus: Domain.Types.FRFSTicketBooking
 
 module: MultimodalConfirm
 
@@ -183,6 +184,12 @@ types:
 
   LegServiceTierOptionsResp:
     options: "[AvailableRoutesByTier]"
+
+  MultimodalCancelStatusResp:
+    cancellationCharges : Maybe HighPrecMoney
+    refundAmount : Maybe HighPrecMoney
+    isCancellable : Maybe Bool
+    bookingStatus : FRFSTicketBookingStatus
 
   TransportRoute:
     cd: Text
@@ -429,3 +436,27 @@ apis:
         type: MultimodalTicketVerifyReq
       response:
         type: MultimodalTicketVerifyResp
+
+  - GET:
+      endpoint: /multimodal/{journeyId}/order/{legOrder}/canCancel
+      params:
+        journeyId: Id Journey
+        legOrder: Int
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+  - GET:
+      endpoint: /multimodal/{journeyId}/order/{legOrder}/cancel/status
+      params:
+        journeyId: Id Journey
+        legOrder: Int
+      response:
+        type: MultimodalCancelStatusResp
+
+  - GET:
+      endpoint: /multimodal/{journeyId}/order/{legOrder}/cancel
+      params:
+        journeyId: Id Journey
+        legOrder: Int
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
