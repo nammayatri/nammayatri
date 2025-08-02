@@ -3,9 +3,12 @@ module Lib.JourneyModule.Types where
 import API.Types.RiderPlatform.Management.FRFSTicket
 import qualified API.Types.UI.FRFSTicketService as FRFSTicketServiceAPI
 import qualified BecknV2.FRFS.Enums as Spec
+import qualified BecknV2.OnDemand.Enums as BecknSpec
 import Control.Applicative (liftA2, (<|>))
 import Data.Aeson (object, withObject, (.:), (.=))
 import qualified Data.HashMap.Strict as HM
+import qualified Data.List.NonEmpty as NE
+import qualified Data.Text as Text
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Common as DTrip
 import qualified Domain.Types.Estimate as DEstimate
@@ -15,8 +18,10 @@ import qualified Domain.Types.FRFSSearch as FRFSSR
 import qualified Domain.Types.FRFSTicketBooking as DFRFSBooking
 import qualified Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
+import qualified Domain.Types.IntegratedBPPConfig as DTBC
 import qualified Domain.Types.Journey as DJ
 import qualified Domain.Types.JourneyLeg as DJL
+import qualified Domain.Types.JourneyLeg as DJourneyLeg
 import Domain.Types.Location
 import qualified Domain.Types.Location as DLocation
 import Domain.Types.LocationAddress
@@ -27,6 +32,7 @@ import qualified Domain.Types.RecentLocation as DRL
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.Station as DTS
+import qualified Domain.Types.Station as DStation
 import qualified Domain.Types.WalkLegMultimodal as DWalkLeg
 import Environment
 import EulerHS.Prelude (safeHead)
@@ -35,6 +41,7 @@ import qualified Kernel.External.Maps.Google.MapsClient.Types as Maps
 import Kernel.External.Maps.Types
 import qualified Kernel.External.MultiModal.Interface as EMInterface
 import Kernel.External.MultiModal.Interface.Types (MultiModalLegGate)
+import qualified Kernel.External.MultiModal.Interface.Types as KEMIT
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
@@ -70,6 +77,7 @@ import qualified Storage.Queries.FRFSVehicleServiceTier as QFRFSVehicleServiceTi
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Transformers.Booking as QTB
 import Tools.Error
+import Tools.Maps as Maps
 import Tools.Metrics.BAPMetrics.Types
 import Tools.Payment (roundToTwoDecimalPlaces)
 import qualified Tools.SharedRedisKeys as SharedRedisKeys
@@ -1112,45 +1120,50 @@ mkJourney riderId startTime endTime estimatedDistance estiamtedDuration journeyI
   where
     straightLineDistance leg = highPrecMetersToMeters $ distanceBetweenInMeters (LatLong leg.startLocation.latLng.latitude leg.startLocation.latLng.longitude) (LatLong leg.endLocation.latLng.latitude leg.endLocation.latLng.longitude)
 
-mkJourneyLeg :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => Int -> EMInterface.MultiModalLeg -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id DJ.Journey -> Meters -> Meters -> Maybe GetFareResponse -> m DJL.JourneyLeg
-mkJourneyLeg idx leg merchantId merchantOpCityId journeyId maximumWalkDistance straightLineThreshold fare = do
+mkJourneyLeg :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasShortDurationRetryCfg r c) => Int -> EMInterface.MultiModalLeg -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Id DJ.Journey -> Meters -> Meters -> Maybe GetFareResponse -> Maybe EMInterface.MultiModalLeg -> Maybe EMInterface.MultiModalLeg -> m DJL.JourneyLeg
+mkJourneyLeg idx leg merchantId merchantOpCityId journeyId maximumWalkDistance straightLineThreshold fare mbPrev mbNext = do
   now <- getCurrentTime
   journeyLegId <- generateGUID
-  return $
-    DJL.JourneyLeg
-      { agency = leg.agency,
-        distance = Just leg.distance,
-        duration = Just leg.duration,
-        endLocation = leg.endLocation.latLng,
-        fromArrivalTime = leg.fromArrivalTime,
-        fromDepartureTime = leg.fromDepartureTime,
-        fromStopDetails = leg.fromStopDetails,
-        id = journeyLegId,
-        journeyId,
-        mode = convertMultiModalModeToTripMode leg.mode straightLineDistance (distanceToMeters leg.distance) maximumWalkDistance straightLineThreshold,
-        -- polylinePoints = leg.polyline.encodedPolyline,
-        routeDetails = leg.routeDetails,
-        sequenceNumber = idx,
-        startLocation = leg.startLocation.latLng,
-        toArrivalTime = leg.toArrivalTime,
-        toDepartureTime = leg.toDepartureTime,
-        toStopDetails = leg.toStopDetails,
-        serviceTypes = fare >>= (.serviceTypes),
-        estimatedMinFare = fare <&> (.estimatedMinFare),
-        estimatedMaxFare = fare <&> (.estimatedMaxFare),
-        merchantId = Just merchantId,
-        merchantOperatingCityId = Just merchantOpCityId,
-        createdAt = now,
-        updatedAt = now,
-        legSearchId = Nothing,
-        isDeleted = Just False,
-        isSkipped = Just False,
-        changedBusesInSequence = Nothing,
-        finalBoardedBusNumber = Nothing,
-        entrance = leg.entrance,
-        exit = leg.exit,
-        status = Nothing
-      }
+  let journeyLeg =
+        DJL.JourneyLeg
+          { agency = leg.agency,
+            distance = Just leg.distance,
+            duration = Just leg.duration,
+            endLocation = leg.endLocation.latLng,
+            fromArrivalTime = leg.fromArrivalTime,
+            fromDepartureTime = leg.fromDepartureTime,
+            fromStopDetails = leg.fromStopDetails,
+            id = journeyLegId,
+            journeyId,
+            mode = convertMultiModalModeToTripMode leg.mode straightLineDistance (distanceToMeters leg.distance) maximumWalkDistance straightLineThreshold,
+            -- polylinePoints = leg.polyline.encodedPolyline,
+            routeDetails = leg.routeDetails,
+            sequenceNumber = idx,
+            startLocation = leg.startLocation.latLng,
+            toArrivalTime = leg.toArrivalTime,
+            toDepartureTime = leg.toDepartureTime,
+            toStopDetails = leg.toStopDetails,
+            serviceTypes = fare >>= (.serviceTypes),
+            estimatedMinFare = fare <&> (.estimatedMinFare),
+            estimatedMaxFare = fare <&> (.estimatedMaxFare),
+            merchantId = Just merchantId,
+            merchantOperatingCityId = Just merchantOpCityId,
+            createdAt = now,
+            updatedAt = now,
+            legSearchId = Nothing,
+            isDeleted = Just False,
+            isSkipped = Just False,
+            changedBusesInSequence = Nothing,
+            finalBoardedBusNumber = Nothing,
+            entrance = leg.entrance,
+            exit = leg.exit,
+            osmEntrance = Nothing,
+            osmExit = Nothing,
+            straightLineEntrance = Nothing,
+            straightLineExit = Nothing,
+            status = Nothing
+          }
+  getUpdatedLeg journeyLeg mbPrev mbNext merchantId merchantOpCityId
   where
     straightLineDistance = highPrecMetersToMeters $ distanceBetweenInMeters (LatLong leg.startLocation.latLng.latitude leg.startLocation.latLng.longitude) (LatLong leg.endLocation.latLng.latitude leg.endLocation.latLng.longitude)
 
@@ -1195,3 +1208,176 @@ data StartLocationType = StartLocationType
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data GateFieldSpec = GateFieldSpec
+  { getEntrance :: DJourneyLeg.JourneyLeg -> Maybe KEMIT.MultiModalLegGate,
+    getExit :: DJourneyLeg.JourneyLeg -> Maybe KEMIT.MultiModalLegGate,
+    setEntrance :: DJourneyLeg.JourneyLeg -> Maybe KEMIT.MultiModalLegGate -> DJourneyLeg.JourneyLeg,
+    setExit :: DJourneyLeg.JourneyLeg -> Maybe KEMIT.MultiModalLegGate -> DJourneyLeg.JourneyLeg,
+    otherMode :: DTrip.MultimodalTravelMode,
+    label :: Text
+  }
+
+getUpdatedLeg ::
+  (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasShortDurationRetryCfg r c) =>
+  DJourneyLeg.JourneyLeg ->
+  Maybe KEMIT.MultiModalLeg ->
+  Maybe KEMIT.MultiModalLeg ->
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  m DJourneyLeg.JourneyLeg
+getUpdatedLeg journeyLeg' mbNext mbPrev merchantId merchantOpCityId = do
+  osmLeg <- updateGatesGeneric journeyLeg' mbNext mbPrev taxiSpec updateGateFromDomain merchantId merchantOpCityId
+  updateGatesGeneric osmLeg mbNext mbPrev walkSpec updateGateFromDomain merchantId merchantOpCityId
+
+updateGatesGeneric ::
+  (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasShortDurationRetryCfg r c) =>
+  DJourneyLeg.JourneyLeg ->
+  Maybe KEMIT.MultiModalLeg ->
+  Maybe KEMIT.MultiModalLeg ->
+  GateFieldSpec ->
+  (Maybe KEMIT.MultiModalLegGate -> Maybe DStation.Gate -> Maybe KEMIT.MultiModalLegGate) ->
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  m DJourneyLeg.JourneyLeg
+updateGatesGeneric leg mbNext mbPrev spec transformGate merchantId merchantOpCityId = do
+  let oldEntrance = spec.getEntrance leg
+  let oldExit = spec.getExit leg
+  entrance <- case oldEntrance of
+    Just _ -> pure oldEntrance
+    Nothing -> do
+      e <- getGate leg.mode (LatLong leg.startLocation.latitude leg.startLocation.longitude) mbNext spec.otherMode merchantId merchantOpCityId
+      pure $ transformGate leg.entrance e
+  exit <- case oldExit of
+    Just _ -> pure oldExit
+    Nothing -> do
+      e <- getGate leg.mode (LatLong leg.endLocation.latitude leg.endLocation.longitude) mbPrev spec.otherMode merchantId merchantOpCityId
+      pure $ transformGate leg.exit e
+  let updatedLeg = spec.setEntrance (spec.setExit leg exit) entrance
+  when (oldEntrance /= entrance || oldExit /= exit) $ do
+    logDebug $
+      "Updating " <> spec.label
+        <> ": legId="
+        <> show leg.id
+        <> " mode="
+        <> show leg.mode
+        <> " oldEntrance="
+        <> show oldEntrance
+        <> " oldExit="
+        <> show oldExit
+        <> " entrance="
+        <> show entrance
+        <> " exit="
+        <> show exit
+  pure updatedLeg
+
+taxiSpec :: GateFieldSpec
+taxiSpec =
+  GateFieldSpec
+    { getEntrance = DJourneyLeg.osmEntrance,
+      getExit = DJourneyLeg.osmExit,
+      setEntrance = \leg g -> leg {DJourneyLeg.osmEntrance = g},
+      setExit = \leg g -> leg {DJourneyLeg.osmExit = g},
+      otherMode = DTrip.Walk,
+      label = "OSM gates"
+    }
+
+walkSpec :: GateFieldSpec
+walkSpec =
+  GateFieldSpec
+    { getEntrance = DJourneyLeg.straightLineEntrance,
+      getExit = DJourneyLeg.straightLineExit,
+      setEntrance = \leg g -> leg {DJourneyLeg.straightLineEntrance = g},
+      setExit = \leg g -> leg {DJourneyLeg.straightLineExit = g},
+      otherMode = DTrip.Taxi,
+      label = "Straight line gates"
+    }
+
+generalVehicleTypeToBecknVehicleCategory :: KEMIT.GeneralVehicleType -> Maybe BecknSpec.VehicleCategory
+generalVehicleTypeToBecknVehicleCategory = \case
+  KEMIT.MetroRail -> Just BecknSpec.METRO
+  KEMIT.Bus -> Just BecknSpec.BUS
+  KEMIT.Subway -> Just BecknSpec.SUBWAY
+  _ -> Nothing
+
+generalVehicleTypeToMultiModalTravelMode :: KEMIT.GeneralVehicleType -> DTrip.MultimodalTravelMode
+generalVehicleTypeToMultiModalTravelMode = \case
+  KEMIT.MetroRail -> DTrip.Metro
+  KEMIT.Bus -> DTrip.Bus
+  KEMIT.Subway -> DTrip.Subway
+  _ -> DTrip.Walk
+
+getGate :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasShortDurationRetryCfg r c) => DTrip.MultimodalTravelMode -> LatLong -> Maybe KEMIT.MultiModalLeg -> DTrip.MultimodalTravelMode -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m (Maybe DStation.Gate)
+getGate mode point mbOther otherMode merchantId merchantOpCityId = case mbOther of
+  Just other | not (generalVehicleTypeToMultiModalTravelMode other.mode `elem` [mode, otherMode]) -> getNearestGateFromLeg mode other point merchantId merchantOpCityId
+  _ -> pure Nothing
+
+getNearestGateFromLeg :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasShortDurationRetryCfg r c) => DTrip.MultimodalTravelMode -> KEMIT.MultiModalLeg -> LatLong -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m (Maybe DStation.Gate)
+getNearestGateFromLeg mode leg point merchantId merchantOpCityId = do
+  mbGates <- fetchStationGatesFromLeg leg merchantOpCityId
+  case mbGates of
+    Nothing -> pure Nothing
+    Just gates ->
+      if mode == DTrip.Taxi
+        then getNearestOSMGate point gates merchantId merchantOpCityId
+        else pure $ minimumByMay (compareDist point) gates
+  where
+    compareDist p g1 g2 =
+      compare
+        (distanceBetweenInMeters p (LatLong g1.lat g1.lon))
+        (distanceBetweenInMeters p (LatLong g2.lat g2.lon))
+
+fetchStationGatesFromLeg :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasShortDurationRetryCfg r c) => KEMIT.MultiModalLeg -> Id DMOC.MerchantOperatingCity -> m (Maybe [DStation.Gate])
+fetchStationGatesFromLeg leg merchantOpCityId = runMaybeT $ do
+  lift $
+    logDebug $
+      "fetchStationGatesFromLeg: legId=" <> show leg
+        <> " mode="
+        <> show leg.mode
+        <> " merchantOperatingCityId="
+        <> show merchantOpCityId
+        <> " fromStopDetails="
+        <> show leg.fromStopDetails
+  becknVehicleCategory <- hoistMaybe $ generalVehicleTypeToBecknVehicleCategory leg.mode
+  let platformType = DTBC.MULTIMODAL
+  integratedBPPConfigs <- lift $ SIBC.findAllIntegratedBPPConfig merchantOpCityId becknVehicleCategory platformType
+  lift $ logDebug $ "IntegratedBPPConfigs count=" <> show (length integratedBPPConfigs)
+  stopCode <- hoistMaybe (leg.fromStopDetails >>= (.stopCode))
+  lift $ logDebug $ "StopCode=" <> show stopCode
+  mbStation <-
+    MaybeT $
+      SIBC.fetchFirstIntegratedBPPConfigRightResult integratedBPPConfigs (OTPRest.getStationByGtfsIdAndStopCode stopCode)
+  station <- hoistMaybe mbStation
+  lift $ logDebug $ "Station found with gates? " <> show (isJust station.gates)
+  gates <- hoistMaybe station.gates
+  lift $ logDebug $ "Fetched gates count=" <> show (length gates)
+  pure gates
+
+updateGateFromDomain :: Maybe KEMIT.MultiModalLegGate -> Maybe DStation.Gate -> Maybe KEMIT.MultiModalLegGate
+updateGateFromDomain oldGate domainGate =
+  case (oldGate, domainGate) of
+    (Just g, Just d) ->
+      Just
+        g
+          { KEMIT.lat = Just (d.lat),
+            KEMIT.lon = Just (d.lon),
+            KEMIT.streetName = Just (Text.pack d.gateName)
+          }
+    _ -> oldGate
+
+getNearestOSMGate :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasShortDurationRetryCfg r c) => LatLong -> [DStation.Gate] -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> m (Maybe DStation.Gate)
+getNearestOSMGate point gates merchantId merchantOpCityId =
+  case NE.nonEmpty gates of
+    Nothing -> pure Nothing
+    Just gates' -> runMaybeT $ do
+      let req =
+            GetDistancesReq
+              { origins = pure point,
+                destinations = gates',
+                travelMode = Just Maps.CAR,
+                sourceDestinationMapping = Nothing,
+                distanceUnit = Meter
+              }
+      distances <- lift $ Maps.getDistances merchantId merchantOpCityId (Nothing) req
+      nearest <- hoistMaybe $ minimumByMay (\r1 r2 -> compare r1.distance r2.distance) (toList distances)
+      pure (nearest.destination)
