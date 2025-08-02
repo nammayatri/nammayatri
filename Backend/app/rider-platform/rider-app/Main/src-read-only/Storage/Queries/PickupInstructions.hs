@@ -35,10 +35,15 @@ findByPersonId personId = do findAllWithKV [Se.Is Beam.personId $ Se.Eq (Kernel.
 findOldestByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ([Domain.Types.PickupInstructions.PickupInstructions]))
 findOldestByPersonId personId = do findAllWithKV [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)]
 
-updateByPersonIdAndLocation ::
+updateInstructionById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Double -> Kernel.Prelude.Double -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile) -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
-updateByPersonIdAndLocation lat lon instruction mediaFileId personId = do
+  Kernel.Prelude.Double ->
+  Kernel.Prelude.Double ->
+  Kernel.Prelude.Text ->
+  Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile) ->
+  Kernel.Types.Id.Id Domain.Types.PickupInstructions.PickupInstructions ->
+  m ()
+updateInstructionById lat lon instruction mediaFileId id = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.lat lat,
@@ -47,7 +52,8 @@ updateByPersonIdAndLocation lat lon instruction mediaFileId personId = do
       Se.Set Beam.mediaFileId (Kernel.Types.Id.getId <$> mediaFileId),
       Se.Set Beam.updatedAt _now
     ]
-    [Se.And [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId), Se.Is Beam.lat $ Se.Eq lat, Se.Is Beam.lon $ Se.Eq lon]]
+    [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
+    ]
 
 instance FromTType' Beam.PickupInstructions Domain.Types.PickupInstructions.PickupInstructions where
   fromTType' (Beam.PickupInstructionsT {..}) = do
