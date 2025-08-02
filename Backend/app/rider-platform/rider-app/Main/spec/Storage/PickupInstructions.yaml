@@ -40,12 +40,10 @@ PickupInstructions:
       kvFunction: findAllWithKV
       where: personId
 
-    updateByPersonIdAndLocation:
+    updateInstructionById:
       kvFunction: updateWithKV
       params: [lat, lon, instruction, mediaFileId]
-      where:
-        and: [personId, lat, lon]
-
+      where: id
     deleteByPersonIdAndLocation:
       kvFunction: deleteWithKV
       where:

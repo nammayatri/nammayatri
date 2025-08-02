@@ -263,7 +263,7 @@ postPickupinstructions (mbPersonId, merchantId) req = do
             (True, Just _) -> "Audio pickup instruction" -- No text but has audio
             (True, Nothing) -> "Pickup instruction" -- No text and no audio
             (False, _) -> actualInstruction -- Has text
-      QPI.updateByPersonIdAndLocation req.lat req.lon instructionText mediaFileId personId
+      QPI.updateInstructionById req.lat req.lon instructionText mediaFileId nearbyInstruction.id
     Nothing -> do
       logDebug $ "PickupInstructions: No nearby instruction found. Current count: " <> show (length existingInstructions) <> ", threshold: " <> show riderConfig.pickupInstructionsThreshold
 
