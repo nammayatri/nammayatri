@@ -15,6 +15,7 @@ import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Types.TimeBound (TimeBound (..))
+import SharedLogic.TicketRule.Core (Rule)
 import qualified Tools.Payment as Payment
 
 data TicketPlaceDashboardDetails = TicketPlaceDashboardDetails
@@ -49,7 +50,8 @@ data TicketPlaceDashboardDetails = TicketPlaceDashboardDetails
     pricingOnwards :: Maybe Int,
     startDate :: Maybe Time.Day,
     endDate :: Maybe Time.Day,
-    venue :: Maybe Text
+    venue :: Maybe Text,
+    rules :: Maybe [Rule]
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -63,7 +65,8 @@ data TicketServiceDetails = TicketServiceDetails
     allowFutureBooking :: Bool,
     allowCancellation :: Bool,
     expiry :: DTicketService.ExpiryType,
-    businessHours :: [Id DBusinessHour.BusinessHour]
+    businessHours :: [Id DBusinessHour.BusinessHour],
+    rules :: Maybe [Rule]
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -82,7 +85,8 @@ data ServiceCategoryDetails = ServiceCategoryDetails
     description :: Text,
     allowedSeats :: Maybe Int,
     availableSeats :: Maybe Int,
-    peopleCategory :: [Id DServicePeopleCategory.ServicePeopleCategory]
+    peopleCategory :: [Id DServicePeopleCategory.ServicePeopleCategory],
+    rules :: Maybe [Rule]
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -94,7 +98,8 @@ data ServicePeopleCategoryDetails = ServicePeopleCategoryDetails
     priceAmount :: HighPrecMoney,
     priceCurrency :: Currency,
     timeBounds :: TimeBound,
-    vendorSplitDetails :: Maybe [Payment.VendorSplitDetails]
+    vendorSplitDetails :: Maybe [Payment.VendorSplitDetails],
+    rules :: Maybe [Rule]
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 

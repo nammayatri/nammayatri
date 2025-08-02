@@ -167,7 +167,8 @@ getTicketPlaceDashboardDetails placeId requestorId requestorRole = do
         pricingOnwards = ticketPlace.pricingOnwards,
         startDate = ticketPlace.startDate,
         endDate = ticketPlace.endDate,
-        venue = ticketPlace.venue
+        venue = ticketPlace.venue,
+        rules = ticketPlace.rules
       }
   where
     toTicketServiceDetails :: DTicketService.TicketService -> TicketServiceDetails
@@ -182,7 +183,8 @@ getTicketPlaceDashboardDetails placeId requestorId requestorRole = do
           allowFutureBooking = svc.allowFutureBooking,
           allowCancellation = svc.allowCancellation,
           expiry = svc.expiry,
-          businessHours = svc.businessHours
+          businessHours = svc.businessHours,
+          rules = svc.rules
         }
 
     toBusinessHourDetails :: DBusinessHour.BusinessHour -> BusinessHourDetails
@@ -203,7 +205,8 @@ getTicketPlaceDashboardDetails placeId requestorId requestorRole = do
           description = sc.description,
           allowedSeats = sc.allowedSeats,
           availableSeats = sc.availableSeats,
-          peopleCategory = sc.peopleCategory
+          peopleCategory = sc.peopleCategory,
+          rules = sc.rules
         }
 
     toServicePeopleCategoryDetails :: DServicePeopleCategory.ServicePeopleCategory -> ServicePeopleCategoryDetails
@@ -216,7 +219,8 @@ getTicketPlaceDashboardDetails placeId requestorId requestorRole = do
           priceAmount = spc.pricePerUnit.amount,
           priceCurrency = spc.pricePerUnit.currency,
           timeBounds = spc.timeBounds,
-          vendorSplitDetails = spc.vendorSplitDetails
+          vendorSplitDetails = spc.vendorSplitDetails,
+          rules = spc.rules
         }
 
     toSpecialOccasionDetails :: DSpecialOccasion.SpecialOccasion -> SpecialOccasionDetails
@@ -253,7 +257,7 @@ updateTicketPlace existingPlace placeDetails = do
       DTicketPlace.termsAndConditionsUrl = placeDetails.termsAndConditionsUrl,
       DTicketPlace.openTimings = placeDetails.openTimings,
       DTicketPlace.closeTimings = placeDetails.closeTimings,
-      DTicketPlace.rules = existingPlace.rules,
+      DTicketPlace.rules = placeDetails.rules,
       DTicketPlace.startDate = placeDetails.startDate,
       DTicketPlace.endDate = placeDetails.endDate,
       DTicketPlace.venue = placeDetails.venue
@@ -313,7 +317,7 @@ updateTicketService existingService serviceDetails = do
       DTicketService.expiry = serviceDetails.expiry,
       DTicketService.allowCancellation = serviceDetails.allowCancellation,
       DTicketService.businessHours = serviceDetails.businessHours,
-      DTicketService.rules = existingService.rules
+      DTicketService.rules = serviceDetails.rules
     }
 
 createTicketService :: (Id Merchant.Merchant, Id MOCity.MerchantOperatingCity) -> TicketServiceDetails -> Id DTicketPlace.TicketPlace -> Flow DTicketService.TicketService
@@ -376,7 +380,7 @@ updateServiceCategory existingSC scDetails = do
       DServiceCategory.availableSeats = scDetails.availableSeats,
       DServiceCategory.allowedSeats = scDetails.allowedSeats,
       DServiceCategory.peopleCategory = scDetails.peopleCategory,
-      DServiceCategory.rules = existingSC.rules
+      DServiceCategory.rules = scDetails.rules
     }
 
 createServiceCategory :: (Id Merchant.Merchant, Id MOCity.MerchantOperatingCity) -> ServiceCategoryDetails -> Id DTicketPlace.TicketPlace -> Environment.Flow DServiceCategory.ServiceCategory
@@ -409,7 +413,7 @@ updateServicePeopleCategory existingSPC spcDetails = do
       DServicePeopleCategory.pricePerUnit = mkPrice (pure spcDetails.priceCurrency) spcDetails.priceAmount,
       DServicePeopleCategory.timeBounds = spcDetails.timeBounds,
       DServicePeopleCategory.vendorSplitDetails = spcDetails.vendorSplitDetails,
-      DServicePeopleCategory.rules = existingSPC.rules
+      DServicePeopleCategory.rules = spcDetails.rules
     }
 
 createServicePeopleCategory :: (Id Merchant.Merchant, Id MOCity.MerchantOperatingCity) -> ServicePeopleCategoryDetails -> Id DTicketPlace.TicketPlace -> Environment.Flow DServicePeopleCategory.ServicePeopleCategory

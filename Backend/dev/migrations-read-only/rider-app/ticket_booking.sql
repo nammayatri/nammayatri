@@ -44,3 +44,8 @@ ALTER TABLE atlas_app.ticket_booking ADD COLUMN vendor_split_details json ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.ticket_booking ADD COLUMN block_expiration_time double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ticket_booking ADD COLUMN people_ticket_quantity json ;

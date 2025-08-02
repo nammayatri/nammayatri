@@ -36,8 +36,22 @@ findByShortId shortId = do findOneWithKV [Se.Is Beam.shortId $ Se.Eq (Kernel.Typ
 
 getAllBookingsByPersonId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.TicketBooking.TicketBooking])
+getAllBookingsByPersonId limit offset personId merchantOperatingCityId = do
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId),
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)
+        ]
+    ]
+    (Se.Desc Beam.createdAt)
+    limit
+    offset
+
+getAllBookingsByPersonIdAndStatus ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Extra.TicketBooking.BookingStatus -> m [Domain.Types.TicketBooking.TicketBooking])
-getAllBookingsByPersonId limit offset personId merchantOperatingCityId status = do
+getAllBookingsByPersonIdAndStatus limit offset personId merchantOperatingCityId status = do
   findAllWithOptionsKV
     [ Se.And
         [ Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId),
@@ -87,6 +101,7 @@ updateByPrimaryKey (Domain.Types.TicketBooking.TicketBooking {..}) = do
       Se.Set Beam.cancelledSeats cancelledSeats,
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
+      Se.Set Beam.peopleTicketQuantity (Data.Aeson.toJSON <$> peopleTicketQuantity),
       Se.Set Beam.personId (Kernel.Types.Id.getId personId),
       Se.Set Beam.shortId (Kernel.Types.Id.getShortId shortId),
       Se.Set Beam.status status,
