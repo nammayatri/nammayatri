@@ -206,10 +206,13 @@ instance Enumerable LogicDomain where
       FRFS_DISCOUNTS,
       CANCELLATION_COIN_POLICY
     ]
-      ++ map CONFIG Reexport.allValuesConfigTypes
-      ++ map RIDER_CONFIG Reexport.allValuesConfigTypes
-      ++ map DRIVER_CONFIG Reexport.allValuesConfigTypes
-      ++ map RIDER_CONFIG_OVERRIDES Reexport.allValuesConfigTypes
+      ++ map CONFIG [minBound .. maxBound]
+      ++ map RIDER_CONFIG [minBound .. maxBound]
+      ++ map DRIVER_CONFIG [minBound .. maxBound]
+      ++ map RIDER_CONFIG_OVERRIDES [minBound .. maxBound]
+
+instance Enumerable ConfigType where
+  allValues = [minBound .. maxBound]
 
 generateLogicDomainShowInstances :: [String]
 generateLogicDomainShowInstances =
@@ -223,7 +226,7 @@ generateLogicDomainShowInstances =
     ++ [show (RIDER_CONFIG_OVERRIDES configType) | configType <- configTypes]
     ++ [show CANCELLATION_COIN_POLICY]
   where
-    configTypes = Reexport.allValuesConfigTypes
+    configTypes = [minBound .. maxBound]
 
 instance ToParamSchema LogicDomain where
   toParamSchema _ =
