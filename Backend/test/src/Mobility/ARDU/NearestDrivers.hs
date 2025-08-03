@@ -56,6 +56,8 @@ createNearestDriverReq nearestRadius now =
       isInterCity = False,
       isValueAddNP = True,
       onlinePayment = False,
+      prepaidSubscriptionThreshold = Nothing,
+      rideFare = Nothing,
       ..
     }
 

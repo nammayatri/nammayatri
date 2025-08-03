@@ -46,6 +46,7 @@ mapServiceName :: Common.ServiceNames -> ServiceNames
 mapServiceName common = case common of
   Common.YATRI_SUBSCRIPTION -> YATRI_SUBSCRIPTION
   Common.YATRI_RENTAL -> YATRI_RENTAL
+  Common.PREPAID_SUBSCRIPTION -> PREPAID_SUBSCRIPTION
   Common.DASHCAM_RENTAL_CAUTIO -> DASHCAM_RENTAL CAUTIO
 
 castVerificationStatus :: Documents.VerificationStatus -> Common.VerificationStatus

@@ -481,6 +481,7 @@ selectDriversAndMatchFarePolicies merchant merchantOpCityId mbDistance fromLocat
             mRadiusStep = Nothing,
             isRental = False,
             isInterCity = False,
+            rideFare = Nothing,
             ..
           }
   (driverPoolNotOnRide, _) <- calculateDriverPool calculateDriverPoolReq

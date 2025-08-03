@@ -22,6 +22,7 @@ instance FromTType' Beam.Plan Domain.Types.Plan.Plan where
         Domain.Types.Plan.Plan
           { allowStrikeOff = Kernel.Prelude.fromMaybe True allowStrikeOff,
             basedOnEntity = basedOnEntity,
+            billingType = billingType,
             cgstPercentage = cgstPercentage,
             description = description,
             eligibleForCoinDiscount = eligibleForCoinDiscount,
@@ -45,6 +46,7 @@ instance FromTType' Beam.Plan Domain.Types.Plan.Plan where
             serviceName = serviceName,
             sgstPercentage = sgstPercentage,
             subscribedFlagToggleAllowed = subscribedFlagToggleAllowed,
+            validityInDays = validityInDays,
             vehicleCategory = vehicleCategory',
             vehicleVariant = vehicleVariant
           }
@@ -54,6 +56,7 @@ instance ToTType' Beam.Plan Domain.Types.Plan.Plan where
     Beam.PlanT
       { Beam.allowStrikeOff = Kernel.Prelude.Just allowStrikeOff,
         Beam.basedOnEntity = basedOnEntity,
+        Beam.billingType = billingType,
         Beam.cgstPercentage = cgstPercentage,
         Beam.description = description,
         Beam.eligibleForCoinDiscount = eligibleForCoinDiscount,
@@ -77,6 +80,7 @@ instance ToTType' Beam.Plan Domain.Types.Plan.Plan where
         Beam.serviceName = serviceName,
         Beam.sgstPercentage = sgstPercentage,
         Beam.subscribedFlagToggleAllowed = subscribedFlagToggleAllowed,
+        Beam.validityInDays = validityInDays,
         Beam.vehicleCategory = Kernel.Prelude.Just vehicleCategory,
         Beam.vehicleVariant = vehicleVariant
       }

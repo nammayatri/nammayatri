@@ -320,7 +320,9 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
             driverFlowStatus = Just DriverFlowStatus.OFFLINE,
             panNumber = Nothing,
             aadhaarNumber = Nothing,
-            dlNumber = Nothing
+            dlNumber = Nothing,
+            planExpiryDate = Nothing,
+            prepaidSubscriptionBalance = Nothing
           }
   QDriverStats.createInitialDriverStats merchantOperatingCity.currency merchantOperatingCity.distanceUnit driverId
   QD.create driverInfo

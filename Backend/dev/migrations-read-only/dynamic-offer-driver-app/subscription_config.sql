@@ -105,3 +105,12 @@ ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN generic_next_j
 
 ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN waive_off_offer_title text ;
 ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN waive_off_offer_description text ;
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN autopay_enabled boolean  default true;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.subscription_config ADD COLUMN show_manual_plans_in_ui boolean  default false;

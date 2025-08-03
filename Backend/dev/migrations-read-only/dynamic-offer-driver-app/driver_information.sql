@@ -227,4 +227,10 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN aadhaar_number_
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN prepaid_subscription_balance double precision ;
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN plan_expiry_date timestamp with time zone ;
+
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN driver_flow_status text ;

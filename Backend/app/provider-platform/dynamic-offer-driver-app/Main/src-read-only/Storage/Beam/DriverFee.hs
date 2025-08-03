@@ -61,6 +61,7 @@ data DriverFeeT f = DriverFeeT
     totalEarnings :: B.C f Kernel.Types.Common.Money,
     totalEarningsAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    validDays :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     vehicleCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory),
     vehicleNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)
   }

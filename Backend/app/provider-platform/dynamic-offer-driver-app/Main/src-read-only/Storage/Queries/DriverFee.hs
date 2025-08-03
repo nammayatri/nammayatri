@@ -5,6 +5,7 @@
 module Storage.Queries.DriverFee (module Storage.Queries.DriverFee, module ReExport) where
 
 import qualified Domain.Types.DriverFee
+import qualified Domain.Types.Person
 import qualified Domain.Types.Plan
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -23,6 +24,19 @@ create = createWithKV
 
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.DriverFee.DriverFee] -> m ())
 createMany = traverse_ create
+
+findAllFeeByTypeServiceStatusAndDriver ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Domain.Types.Plan.ServiceNames -> Kernel.Types.Id.Id Domain.Types.Person.Driver -> [Domain.Types.DriverFee.FeeType] -> [Domain.Types.DriverFee.DriverFeeStatus] -> m [Domain.Types.DriverFee.DriverFee])
+findAllFeeByTypeServiceStatusAndDriver serviceName driverId feeType status = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.serviceName $ Se.Eq (Just serviceName),
+          Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId),
+          Se.Is Beam.feeType $ Se.In feeType,
+          Se.Is Beam.status $ Se.In status
+        ]
+    ]
 
 updateAmountPaidByCoins :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.DriverFee.DriverFee -> m ())
 updateAmountPaidByCoins amountPaidByCoin id = do
@@ -65,9 +79,6 @@ updateOfferAndPlanDetails offerId planOfferTitle planId planMode id = do
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
-
-updateOfferId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.DriverFee.DriverFee -> m ())
-updateOfferId offerId id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.offerId offerId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateRetryCount :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.DriverFee.DriverFee -> m ())
 updateRetryCount schedulerTryCount id = do
@@ -126,6 +137,7 @@ updateByPrimaryKey (Domain.Types.DriverFee.DriverFee {..}) = do
       Se.Set Beam.totalEarnings (Kernel.Prelude.roundToIntegral totalEarnings),
       Se.Set Beam.totalEarningsAmount (Kernel.Prelude.Just totalEarnings),
       Se.Set Beam.updatedAt _now,
+      Se.Set Beam.validDays validDays,
       Se.Set Beam.vehicleCategory (Kernel.Prelude.Just vehicleCategory),
       Se.Set Beam.vehicleNumber vehicleNumber
     ]

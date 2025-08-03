@@ -15,7 +15,7 @@ Plan:
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema,ToParamSchema"
 
     Frequency:
-      enum: "DAILY, WEEKLY, MONTHLY"
+      enum: "DAILY, WEEKLY, MONTHLY, FLEXIBLE"
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema,ToParamSchema"
 
     PlanType:
@@ -27,6 +27,9 @@ Plan:
       enum: "RIDE, NONE, VEHICLE, VEHICLE_AND_RIDE"
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema,ToParamSchema"
 
+    BillingType:
+      enum: "PREPAID, POSTPAID"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema,ToParamSchema"
 
 
   fields:
@@ -44,6 +47,7 @@ Plan:
     freeRideCount : Int
     frequency : Frequency
     planType : PlanType
+    billingType: Maybe BillingType
     cgstPercentage : HighPrecMoney
     sgstPercentage : HighPrecMoney
     subscribedFlagToggleAllowed : Bool
@@ -55,6 +59,7 @@ Plan:
     vehicleVariant : Maybe VehicleVariant|NoRelation
     vehicleCategory : VehicleCategory|NoRelation
     listingPriority : Maybe  Int
+    validityInDays : Maybe Int
     allowStrikeOff: Bool
     productOwnershipAmount : HighPrecMoney
 
@@ -67,6 +72,8 @@ Plan:
     - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <PlanType>
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <BasedOnEntity>
     - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <BasedOnEntity>
+    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <BillingType>
+    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <BillingType>
 
   constraints:
     id: PrimaryKey
@@ -85,12 +92,17 @@ Plan:
     findByMerchantOpCityIdAndTypeWithServiceName:
       kvFunction: findAllWithKV
       where:
-        and: [merchantOpCityId, planType, serviceName, vehicleCategory]
+        and: [merchantOpCityId, planType, serviceName, vehicleCategory, isDeprecated]
 
     findByMerchantOpCityIdTypeServiceNameVehicle:
       kvFunction: findAllWithKV
       where:
         and: [merchantOpCityId, paymentMode, serviceName, vehicleCategory, isDeprecated]
+
+    findByCityServiceAndVehicle:
+      kvFunction: findAllWithKV
+      where:
+        and: [merchantOpCityId, serviceName, vehicleCategory, isDeprecated]
 
     findByMerchantOpCityIdAndTypeWithServiceNameAndVariant:
       kvFunction: findAllWithKV

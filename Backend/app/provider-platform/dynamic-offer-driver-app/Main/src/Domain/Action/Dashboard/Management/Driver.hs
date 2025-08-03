@@ -812,9 +812,8 @@ toggleDriverSubscriptionByService (driverId, mId, mOpCityId) serviceName mbPlanT
         Just planId -> pure planId
     callSubscribeFlowForDriver :: Id Plan -> Flow ()
     callSubscribeFlowForDriver planId = do
-      driverInfo' <- QDriverInfo.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
       let serviceSpecificData = maybe DDPlan.NoData DDPlan.RentedVehicleNumber mbVehicleNo
-      _ <- DTPlan.planSubscribe serviceName planId (True, Just WHATSAPP) (cast driverId, mId, mOpCityId) driverInfo' serviceSpecificData
+      void $ DTPlan.planSubscribe serviceName planId (True, Just WHATSAPP) (cast driverId, mId, mOpCityId) serviceSpecificData
       pure ()
 
 ---------------------------------------------------------------------

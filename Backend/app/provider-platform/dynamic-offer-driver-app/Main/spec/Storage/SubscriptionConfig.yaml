@@ -65,6 +65,8 @@ SubscriptionConfig:
     enableServiceUsageChargeDefault : Bool
     waiveOffOfferTitle : Text
     waiveOffOfferDescription : Text
+    autopayEnabled: Maybe Bool
+    showManualPlansInUI: Maybe Bool
   domainInstance:
     - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <CurrentPlanEntites>
 
@@ -149,6 +151,8 @@ SubscriptionConfig:
     isTriggeredAtEndRide: "true"
     allowDriverFeeCalcSchedule: "false"
     payoutServiceName: "'Payout_Juspay'"
+    autopayEnabled: "true"
+    showManualPlansInUI: "false"
 
   sqlType:
    executionEnabledForVehicleCategories: text[]

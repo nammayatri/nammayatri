@@ -4,6 +4,7 @@ module Storage.CachedQueries.PlanExtra where
 
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Plan
+import Domain.Types.VehicleCategory
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleVariant as Vehicle
 import Kernel.Prelude
@@ -48,6 +49,29 @@ findByMerchantOpCityIdAndPaymentModeWithServiceName (Id merchantOperatingCityId)
     Just a -> pure a
     Nothing -> cacheByMerchantIdAndPaymentMode (Id merchantOperatingCityId) paymentMode serviceName mbIsDeprecated /=<< Queries.findByMerchantOpCityIdAndPaymentModeWithServiceName (Id merchantOperatingCityId) paymentMode serviceName mbIsDeprecated
 
+------------------- -----------------------
+findByMerchantOpCityIdAndServiceName ::
+  (CacheFlow m r, MonadFlow m, EsqDBFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  ServiceNames ->
+  Maybe Bool ->
+  m [Plan]
+findByMerchantOpCityIdAndServiceName merchantOperatingCityId serviceName mbIsDeprecated =
+  Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantIdAndServiceNameKey merchantOperatingCityId serviceName mbIsDeprecated) >>= \case
+    Just a -> pure a
+    Nothing -> cacheByMerchantIdAndServiceName merchantOperatingCityId serviceName mbIsDeprecated /=<< Queries.findByMerchantOpCityIdAndServiceName merchantOperatingCityId serviceName mbIsDeprecated
+
+cacheByMerchantIdAndServiceName ::
+  (CacheFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  ServiceNames ->
+  Maybe Bool ->
+  [Plan] ->
+  m ()
+cacheByMerchantIdAndServiceName merchantOperatingCityId serviceName mbIsDeprecated plans = do
+  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+  Hedis.withCrossAppRedis $ Hedis.setExp (makeMerchantIdAndServiceNameKey merchantOperatingCityId serviceName mbIsDeprecated) plans expTime
+
 cacheByMerchantIdAndPaymentMode ::
   (CacheFlow m r) =>
   Id DMOC.MerchantOperatingCity ->
@@ -83,6 +107,21 @@ findByMerchantOpCityIdAndTypeWithServiceNameAndVariant (Id merchantOperatingCity
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantIdAndPaymentModeAndVariantKey (Id merchantOperatingCityId) paymentMode serviceName mbVehicleVariant mbIsDeprecated) >>= \case
     Just a -> pure a
     Nothing -> cacheByMerchantIdAndTypeAndVariant (Id merchantOperatingCityId) paymentMode serviceName mbVehicleVariant mbIsDeprecated /=<< Queries.findByMerchantOpCityIdAndTypeWithServiceNameAndVariant (Id merchantOperatingCityId) paymentMode serviceName mbVehicleVariant
+
+findByCityServiceAndVehicle ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Id DMOC.MerchantOperatingCity -> ServiceNames -> VehicleCategory -> Bool -> m [Plan])
+findByCityServiceAndVehicle merchantOpCityId serviceName vehicleCategory isDeprecated = do
+  Hedis.safeGet (makeCityServiceAndVehicleKey merchantOpCityId serviceName vehicleCategory isDeprecated)
+    >>= ( \case
+            Just a -> pure a
+            Nothing ->
+              ( \dataToBeCached -> do
+                  expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
+                  Hedis.setExp (makeCityServiceAndVehicleKey merchantOpCityId serviceName vehicleCategory isDeprecated) dataToBeCached expTime
+              )
+                /=<< Queries.findByCityServiceAndVehicle merchantOpCityId serviceName vehicleCategory isDeprecated
+        )
 
 cacheByMerchantIdAndTypeAndVariant ::
   (CacheFlow m r) =>
@@ -126,6 +165,15 @@ makeMerchantIdAndPaymentModeKey merchantOpCityId paymentMode serviceName mbIsDep
     <> ":IsDeprecated-"
     <> show mbIsDeprecated
 
+makeMerchantIdAndServiceNameKey :: Id DMOC.MerchantOperatingCity -> ServiceNames -> Maybe Bool -> Text
+makeMerchantIdAndServiceNameKey merchantOpCityId serviceName mbIsDeprecated =
+  "driver-offer:CachedQueries:Plan:MerchantOperatingCityId-"
+    <> merchantOpCityId.getId
+    <> ":ServiceName-"
+    <> show serviceName
+    <> ":IsDeprecated-"
+    <> show mbIsDeprecated
+
 makeMerchantIdAndTypeKey :: Id DMOC.MerchantOperatingCity -> PlanType -> ServiceNames -> DVC.VehicleCategory -> Bool -> Text
 makeMerchantIdAndTypeKey merchantOpCityId planType serviceName vehicleCategory isDeprecated = "driver-offer:CachedQueries:Plan:MerchantOperatingCityId-" <> merchantOpCityId.getId <> ":PlanType-" <> show planType <> ":ServiceName-" <> show serviceName <> ":IsDeprecated-" <> show isDeprecated <> ":VehicleCategory-" <> show vehicleCategory
 
@@ -147,3 +195,6 @@ makeMerchantIdAndPaymentModeAndVariantKey merchantOpCityId paymentMode serviceNa
 
 makeIdKey :: Id DMOC.MerchantOperatingCity -> PaymentMode -> ServiceNames -> DVC.VehicleCategory -> Bool -> Text
 makeIdKey merchantOpCityId planMode serviceName vehicleCategory isDeprecated = "driver-offer:CachedQueries:Plan:MerchantOperatingCityId-" <> merchantOpCityId.getId <> ":PlanMode-" <> show planMode <> ":ServiceName-" <> show serviceName <> ":IsDeprecated-" <> show isDeprecated <> ":VehicleCategory-" <> show vehicleCategory
+
+makeCityServiceAndVehicleKey :: Id DMOC.MerchantOperatingCity -> ServiceNames -> DVC.VehicleCategory -> Bool -> Text
+makeCityServiceAndVehicleKey merchantOpCityId serviceName vehicleCategory isDeprecated = "driver-offer:CachedQueries:Plan:MerchantOperatingCityId-" <> merchantOpCityId.getId <> ":ServiceName-" <> show serviceName <> ":IsDeprecated-" <> show isDeprecated <> ":VehicleCategory-" <> show vehicleCategory
