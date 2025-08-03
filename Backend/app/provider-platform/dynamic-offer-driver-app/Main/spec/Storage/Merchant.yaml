@@ -887,6 +887,7 @@ TransporterConfig:
     driverFeeMandateNotificationBatchSize: Int
     driverFeeMandateExecutionBatchSize: Int
     mandateNotificationRescheduleInterval: NominalDiffTime
+    prepaidSubscriptionThreshold: Maybe HighPrecMoney
     mandateExecutionRescheduleInterval: NominalDiffTime
     driverFeeCalculationTime: Maybe NominalDiffTime
     driverFeeCalculatorBatchSize: Maybe Int
@@ -1478,7 +1479,6 @@ TransporterConfig:
     isAAEnabledForRecurring : "false"
     disableDriverWhenUnlinkingVehicle : "true"
     allowCacheDriverFlowStatus : "false"
-    cancellationRateSlabConfig: '{}'
   excludedDefaultQueries:
     - findByPrimaryKey
     - updateByPrimaryKey

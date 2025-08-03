@@ -84,6 +84,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as QDI
+import qualified Storage.Queries.DriverInformationExtra as QDIExtra
 import Storage.Queries.DriverPlan (findByDriverIdWithServiceName)
 import qualified Storage.Queries.DriverPlan as QDP
 import qualified Storage.Queries.Invoice as QIN
@@ -310,8 +311,20 @@ processPayment _ driver orderId sendNotification (serviceName, subsConfig) invoi
   Redis.whenWithLockRedis (paymentProcessingLockKey driver.id.getId) 60 $ do
     when ((invoice <&> (.paymentMode)) == Just INV.AUTOPAY_INVOICE && (invoice <&> (.invoiceStatus)) == Just INV.ACTIVE_INVOICE) $ do
       maybe (pure ()) (QDF.updateAutopayPaymentStageById (Just EXECUTION_SUCCESS) (Just now)) (invoice <&> (.driverFeeId))
-    Redis.whenWithLockRedis (DADriver.mkPayoutLockKeyByDriverAndService driver.id serviceName) 60 $
+    Redis.whenWithLockRedis (DADriver.mkPayoutLockKeyByDriverAndService driver.id serviceName) 60 $ do
+      driverFees <- QDF.findAllByDriverFeeIds driverFeeIds
+      let nonClearedDriverFees = filter (\df -> df.status /= CLEARED) driverFees
       QDF.updateStatusByIds CLEARED driverFeeIds now
+      mapM_
+        ( \driverFee ->
+            when (driverFee.feeType == PREPAID_RECHARGE) $ do
+              driverInfo <- QDI.findById (cast driverFee.driverId) >>= fromMaybeM (PersonNotFound driverFee.driverId.getId)
+              let currentExpiry = fromMaybe now driverInfo.planExpiryDate
+                  newExpiry = addUTCTime (fromIntegral (fromMaybe 0 driverFee.validDays) * 24 * 60 * 60) now
+                  finalExpiry = max currentExpiry newExpiry
+              QDIExtra.updatePrepaidSubscriptionBalanceAndExpiry driverFee.driverId driverFee.totalEarnings (Just finalExpiry)
+        )
+        nonClearedDriverFees
     QIN.updateInvoiceStatusByInvoiceId INV.SUCCESS (cast orderId)
     updatePaymentStatus driver.id driver.merchantOperatingCityId serviceName
     when (sendNotification && subsConfig.sendInAppFcmNotifications) $ notifyPaymentSuccessIfNotNotified driver orderId
@@ -323,7 +336,7 @@ updatePaymentStatus ::
   DP.ServiceNames ->
   m ()
 updatePaymentStatus driverId merchantOpCityId serviceName = do
-  dueInvoices <- runInMasterDb $ QDF.findAllPendingAndDueDriverFeeByDriverIdForServiceName (cast driverId) serviceName
+  dueInvoices <- runInMasterDb $ QDF.findAllFeeByTypeServiceStatusAndDriver serviceName (cast driverId) [RECURRING_INVOICE, RECURRING_EXECUTION_INVOICE] [PAYMENT_PENDING, PAYMENT_OVERDUE]
   let totalDue = sum $ calcDueAmount dueInvoices
   when (totalDue <= 0) $ QDI.updatePendingPayment False (cast driverId)
   mbDriverPlan <- findByDriverIdWithServiceName (cast driverId) serviceName -- what if its changed? needed inside lock?

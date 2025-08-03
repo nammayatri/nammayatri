@@ -21,6 +21,7 @@ import qualified Tools.Beam.UtilsTH
 data Plan = Plan
   { allowStrikeOff :: Kernel.Prelude.Bool,
     basedOnEntity :: Domain.Types.Plan.BasedOnEntity,
+    billingType :: Kernel.Prelude.Maybe Domain.Types.Plan.BillingType,
     cgstPercentage :: Kernel.Types.Common.HighPrecMoney,
     description :: Kernel.Prelude.Text,
     eligibleForCoinDiscount :: Kernel.Prelude.Bool,
@@ -44,6 +45,7 @@ data Plan = Plan
     serviceName :: Domain.Types.Extra.Plan.ServiceNames,
     sgstPercentage :: Kernel.Types.Common.HighPrecMoney,
     subscribedFlagToggleAllowed :: Kernel.Prelude.Bool,
+    validityInDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     vehicleCategory :: Domain.Types.VehicleCategory.VehicleCategory,
     vehicleVariant :: Kernel.Prelude.Maybe Domain.Types.VehicleVariant.VehicleVariant
   }
@@ -51,7 +53,9 @@ data Plan = Plan
 
 data BasedOnEntity = RIDE | NONE | VEHICLE | VEHICLE_AND_RIDE deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data Frequency = DAILY | WEEKLY | MONTHLY deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data BillingType = PREPAID | POSTPAID deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+data Frequency = DAILY | WEEKLY | MONTHLY | FLEXIBLE deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 data PaymentMode = MANUAL | AUTOPAY deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
@@ -72,3 +76,7 @@ $(Kernel.Utils.TH.mkHttpInstancesForEnum ''PlanType)
 $(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''BasedOnEntity)
 
 $(Kernel.Utils.TH.mkHttpInstancesForEnum ''BasedOnEntity)
+
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''BillingType)
+
+$(Kernel.Utils.TH.mkHttpInstancesForEnum ''BillingType)

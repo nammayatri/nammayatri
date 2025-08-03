@@ -2582,6 +2582,7 @@ postMerchantConfigClearCacheSubscription merchantShortId opCity req = do
     castServiceName = \case
       Common.YATRI_RENTAL -> Plan.YATRI_RENTAL
       Common.YATRI_SUBSCRIPTION -> Plan.YATRI_SUBSCRIPTION
+      Common.PREPAID_SUBSCRIPTION -> Plan.PREPAID_SUBSCRIPTION
       Common.DASHCAM_RENTAL_CAUTIO -> Plan.DASHCAM_RENTAL Plan.CAUTIO
 
 postMerchantConfigUpsertPlanAndConfigSubscription :: ShortId DM.Merchant -> Context.City -> Common.UpsertPlanAndConfigReq -> Flow Common.UpsertPlanAndConfigResp

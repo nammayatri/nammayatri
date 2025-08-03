@@ -114,6 +114,7 @@ import qualified Storage.Queries.CancellationCharges as QCC
 import qualified Storage.Queries.DailyStats as QDailyStats
 import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverInformation as QDI
+import qualified Storage.Queries.DriverInformationExtra as QDIE
 import Storage.Queries.DriverPlan (findByDriverIdWithServiceName)
 import qualified Storage.Queries.DriverPlan as QDPlan
 import qualified Storage.Queries.DriverStats as QDriverStats
@@ -121,6 +122,7 @@ import qualified Storage.Queries.FareParameters as QFare
 import Storage.Queries.FleetDriverAssociationExtra as QFDAE
 import Storage.Queries.FleetOwnerInformation as QFOI
 import Storage.Queries.Person as SQP
+import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.Vehicle as QV
@@ -177,7 +179,12 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   Hedis.del $ searchRequestKey booking.transactionId
   clearCachedFarePolicyByEstOrQuoteId booking.quoteId
   clearTollStartGateBatchCache ride.driverId
+  when (isJust thresholdConfig.prepaidSubscriptionThreshold) $ do
+    case ride.fare of
+      Just fare -> fork "update driver's prepaid balance" $ updateBalance fare driverInfo
+      Nothing -> logWarning $ "Fare is not present for ride: " <> show ride.id.getId
   when (thresholdConfig.subscription) $ do
+    -- Turn this off for only prepaid subscriptions
     let serviceName = YATRI_SUBSCRIPTION
     createDriverFee booking.providerId booking.merchantOperatingCityId driverId ride.fare ride.currency newFareParams driverInfo booking serviceName
 
@@ -215,6 +222,15 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   now <- getCurrentTime
   rideRelatedNotificationConfigList <- CRN.findAllByMerchantOperatingCityIdAndTimeDiffEventInRideFlow booking.merchantOperatingCityId DRN.END_TIME booking.configInExperimentVersions
   forM_ rideRelatedNotificationConfigList (SN.pushReminderUpdatesInScheduler booking ride now driverId)
+  where
+    updateBalance fare driverInfo = do
+      QDIE.updatePrepaidSubscriptionBalance (cast ride.driverId) (-1 * fare) -- check gst etc
+      when ((fromMaybe 0 driverInfo.prepaidSubscriptionBalance) - fare < fromMaybe 0 thresholdConfig.prepaidSubscriptionThreshold) $ do
+        logInfo $ "Prepaid subscription balance is less than threshold for driver: " <> show driverId.getId
+        let unsubscribedMessage = "Recharge Alert!"
+            unsubscribedTitle = "Your subscription balance is low. Please recharge to get rides"
+        driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+        sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.DRIVER_UNSUBSCRIBED unsubscribedTitle unsubscribedMessage driver driver.deviceToken
 
 sendReferralFCM ::
   ( CacheFlow m r,
@@ -807,6 +823,7 @@ mkDriverFee serviceName now startTime' endTime' merchantId driverId rideFare gov
         hasSibling = Just False,
         siblingFeeId = Nothing,
         splitOfDriverFeeId = Nothing,
+        validDays = Nothing,
         ..
       }
   where

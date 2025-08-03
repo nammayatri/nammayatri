@@ -63,6 +63,7 @@ data CalculateGoHomeDriverPoolReq a = CalculateGoHomeDriverPoolReq
     isInterCity :: Bool,
     isValueAddNP :: Bool,
     onlinePayment :: Bool,
+    rideFare :: Maybe HighPrecMoney,
     currentSearchInfo :: DTS.CurrentSearchInfo,
     transporterConfig :: DTC.TransporterConfig,
     configsInExperimentVersions :: [LYT.ConfigVersionMap]

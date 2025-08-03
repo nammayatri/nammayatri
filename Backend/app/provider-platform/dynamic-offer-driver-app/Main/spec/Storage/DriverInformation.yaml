@@ -81,6 +81,8 @@ DriverInformation:
     mode: Maybe DriverMode
     aadhaarVerified: Bool
     autoPayStatus: Maybe DriverAutoPayStatus
+    prepaidSubscriptionBalance: Maybe HighPrecMoney
+    planExpiryDate: Maybe UTCTime
     blockedReason: Maybe Text
     blockExpiryTime: Maybe UTCTime
     payerVpa: Maybe Text

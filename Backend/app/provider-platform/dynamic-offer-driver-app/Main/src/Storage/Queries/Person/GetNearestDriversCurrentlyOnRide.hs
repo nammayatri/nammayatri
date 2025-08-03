@@ -74,6 +74,8 @@ data NearestDriversOnRideReq = NearestDriversOnRideReq
     isRental :: Bool,
     isInterCity :: Bool,
     isValueAddNP :: Bool,
+    prepaidSubscriptionThreshold :: Maybe HighPrecMoney,
+    rideFare :: Maybe HighPrecMoney,
     onlinePayment :: Bool,
     now :: UTCTime
   }
@@ -90,7 +92,7 @@ getNearestDriversCurrentlyOnRide NearestDriversOnRideReq {..} = do
       allowedVehicleVariant = DL.nub $ concatMap (.allowedVehicleVariant) allowedCityServiceTiers
   driverLocs <- Int.getDriverLocsWithCond merchantId driverPositionInfoExpiry fromLocLatLong onRideRadius (Just allowedVehicleVariant)
   logDebug $ "GetNearestDriversCurrentlyOnRide - DLoc:- " <> show driverLocs
-  driverInfos <- Int.getDriverInfosWithCond (driverLocs <&> (.driverId)) False True isRental isInterCity
+  driverInfos <- Int.getDriverInfosWithCond (driverLocs <&> (.driverId)) False True isRental isInterCity prepaidSubscriptionThreshold rideFare
   logDebug $ "GetNearestDriversCurrentlyOnRide - DInfo:- " <> show (DIAPI.convertToDriverInfoAPIEntity <$> driverInfos)
   vehicles <- Int.getVehicles driverInfos
   drivers <- Int.getDrivers vehicles

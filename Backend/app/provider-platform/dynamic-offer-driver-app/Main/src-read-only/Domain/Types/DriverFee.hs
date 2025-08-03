@@ -61,6 +61,7 @@ data DriverFee = DriverFee
     status :: Domain.Types.DriverFee.DriverFeeStatus,
     totalEarnings :: Kernel.Types.Common.HighPrecMoney,
     updatedAt :: Kernel.Prelude.UTCTime,
+    validDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     vehicleCategory :: Domain.Types.VehicleCategory.VehicleCategory,
     vehicleNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
@@ -99,6 +100,7 @@ data FeeType
   | RECURRING_EXECUTION_INVOICE
   | PAYOUT_REGISTRATION
   | ONE_TIME_SECURITY_DEPOSIT
+  | PREPAID_RECHARGE
   deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord, Enum)
 
 data PlatformFee = PlatformFee {cgst :: Kernel.Types.Common.HighPrecMoney, currency :: Kernel.Types.Common.Currency, fee :: Kernel.Types.Common.HighPrecMoney, sgst :: Kernel.Types.Common.HighPrecMoney}

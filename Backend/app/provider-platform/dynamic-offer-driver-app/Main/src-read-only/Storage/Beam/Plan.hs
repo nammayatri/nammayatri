@@ -18,6 +18,7 @@ import Tools.Beam.UtilsTH
 data PlanT f = PlanT
   { allowStrikeOff :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     basedOnEntity :: B.C f Domain.Types.Plan.BasedOnEntity,
+    billingType :: B.C f (Kernel.Prelude.Maybe Domain.Types.Plan.BillingType),
     cgstPercentage :: B.C f Kernel.Types.Common.HighPrecMoney,
     description :: B.C f Kernel.Prelude.Text,
     eligibleForCoinDiscount :: B.C f Kernel.Prelude.Bool,
@@ -41,6 +42,7 @@ data PlanT f = PlanT
     serviceName :: B.C f Domain.Types.Extra.Plan.ServiceNames,
     sgstPercentage :: B.C f Kernel.Types.Common.HighPrecMoney,
     subscribedFlagToggleAllowed :: B.C f Kernel.Prelude.Bool,
+    validityInDays :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     vehicleCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory),
     vehicleVariant :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleVariant.VehicleVariant)
   }

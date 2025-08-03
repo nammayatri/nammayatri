@@ -23,6 +23,7 @@ where
 
 import Data.Ord
 import qualified Data.Text as T
+import qualified Domain.Types.DriverFee as DF
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.DriverPlan as DPlan
 import qualified Domain.Types.Overlay as DOverlay
@@ -166,7 +167,7 @@ notifyPaymentFailure ::
   m ()
 notifyPaymentFailure driverId paymentMode mbBankErrorCode serviceName = do
   driver <- B.runInReplica $ QDP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
-  dueDriverFees <- B.runInReplica $ QDF.findAllPendingAndDueDriverFeeByDriverIdForServiceName (cast driverId) serviceName
+  dueDriverFees <- B.runInReplica $ QDF.findAllFeeByTypeServiceStatusAndDriver serviceName (cast driverId) [DF.RECURRING_INVOICE, DF.RECURRING_EXECUTION_INVOICE] [DF.PAYMENT_PENDING, DF.PAYMENT_OVERDUE]
   let totalDues = sum $ map (\dueInvoice -> roundToHalf dueInvoice.currency (dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) dueDriverFees
 
   let pnKey = if paymentMode == AUTOPAY then autopayPaymentFailedNudgeKey else maunalPaymentFailedNudgeKey
