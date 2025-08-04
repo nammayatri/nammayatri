@@ -645,6 +645,8 @@ updateSubscriptionForVehicleVariant (GetDriverInfoResp getDriverInfoResp) appCon
 handleDeepLinksFlow :: Maybe Event -> Maybe GetRidesHistoryResp -> Maybe Boolean -> FlowBT String Unit
 handleDeepLinksFlow event activeRideResp isActiveRide = do
   liftFlowBT $ markPerformance "HANDLE_DEEP_LINKS_FLOW"
+  (GlobalState globalstate) <- getState
+  (GetDriverInfoResp driverInfoResp) <- getDriverInfoDataFromCache (GlobalState globalstate) false
   let _ = spy "handleDeepLinksFlow event" event
   case event of -- TODO:: Need to handle in generic way for all screens. Could be part of flow refactoring
         Just e ->
@@ -661,8 +663,6 @@ handleDeepLinksFlow event activeRideResp isActiveRide = do
               changeDriverStatus Online
               pure unit
             "pref" -> do
-                globalState <- getState
-                void $ getDriverInfoDataFromCache globalState false
                 modifyScreenState $ BookingOptionsScreenType (\bookingOptions ->  bookingOptions{ props{ fromDeepLink = true } })
                 bookingOptionsFlow
             "addupi" -> do
@@ -674,7 +674,7 @@ handleDeepLinksFlow event activeRideResp isActiveRide = do
             "earnings" -> do              
               (GlobalState globalState) <- getState
               appConfig <- getAppConfigFlowBT Constants.appConfig              
-              modifyScreenState $ DriverEarningsScreenStateType (\driverEarningsScreen -> driverEarningsScreen{data{hasActivePlan = globalState.homeScreen.data.paymentState.autoPayStatus /= NO_AUTOPAY, config = appConfig}, props{showShimmer = true}})
+              modifyScreenState $ DriverEarningsScreenStateType (\driverEarningsScreen -> driverEarningsScreen{data{hasActivePlan = isJust driverInfoResp.autoPayStatus, config = appConfig}, props{showShimmer = true}})
               hideSplashAndCallFlow driverEarningsFlow
             "registration" -> hideSplashAndCallFlow onBoardingFlow
             "onboarding" -> do
