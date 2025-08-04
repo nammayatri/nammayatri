@@ -19,6 +19,10 @@ types:
     instruction: "Maybe Text"
     audioBase64: "Maybe Text"
 
+  DeleteTarget:
+    enum: "Instruction,Audio"
+    derive: "HttpInstance"
+
 apis:
   # POST /pickupinstructions - Save pickup instructions (with optional media)
   - POST:
@@ -38,3 +42,14 @@ apis:
         lon: Double
       response:
         type: API.Types.UI.PickupInstructions.ClosestPickupInstructionResp
+
+  # DELETE /pickupinstructions - Delete specific content from pickup instruction
+  - DELETE:
+      endpoint: /pickupinstructions
+      auth: TokenAuth
+      query:
+        lat: Double
+        lon: Double
+        target: API.Types.UI.PickupInstructions.DeleteTarget
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
