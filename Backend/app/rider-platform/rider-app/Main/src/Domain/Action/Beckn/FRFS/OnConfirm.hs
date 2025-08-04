@@ -229,14 +229,6 @@ buildReconTable merchant booking _dOrder tickets mRiderNumber integratedBPPConfi
   reconEntries <- mapM (buildRecon reconEntry) tickets
   void $ QRecon.createMany reconEntries
 
-totalOrderValue :: DFRFSTicketBookingPayment.FRFSTicketBookingPaymentStatus -> Booking.FRFSTicketBooking -> Flow Price
-totalOrderValue paymentBookingStatus booking =
-  if paymentBookingStatus == DFRFSTicketBookingPayment.REFUND_PENDING || paymentBookingStatus == DFRFSTicketBookingPayment.REFUNDED
-    then booking.price `addPrice` refundAmountToPrice -- Here the `refundAmountToPrice` value is in Negative
-    else pure $ booking.price
-  where
-    refundAmountToPrice = mkPrice (Just INR) (fromMaybe (HighPrecMoney $ toRational (0 :: Int)) booking.refundAmount)
-
 mkTicket :: Booking.FRFSTicketBooking -> DTicket -> Bool -> Flow Ticket.FRFSTicket
 mkTicket booking dTicket isTicketFree = do
   now <- getCurrentTime
