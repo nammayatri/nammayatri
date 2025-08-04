@@ -11,11 +11,9 @@ import qualified Data.HashMap.Strict as HashMap
 import Data.List (groupBy, nub, nubBy)
 import qualified Data.List.NonEmpty as NonEmpty hiding (groupBy, map, nub, nubBy)
 import Data.List.Split (chunksOf)
-import qualified Data.Text as T
 import qualified Data.Time as Time
-import qualified Domain.Action.Beckn.FRFS.Common as Common
+import qualified Domain.Action.Beckn.FRFS.Common as FRFSCommon
 import qualified Domain.Action.Beckn.FRFS.OnConfirm as DACFOC
-import Domain.Types.BecknConfig
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import Domain.Types.FRFSConfig
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
@@ -593,7 +591,7 @@ postFrfsQuoteV2ConfirmUtil :: CallExternalBPP.FRFSConfirmFlow m r => (Kernel.Pre
 postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req crisSdkResponse = do
   merchant <- CQM.findById merchantId_ >>= fromMaybeM (InvalidRequest "Invalid merchant id")
   (rider, dConfirmRes) <- confirm
-  merchantOperatingCity <- Common.getMerchantOperatingCityFromBooking dConfirmRes
+  merchantOperatingCity <- getMerchantOperatingCityFromBooking dConfirmRes
   stations <- decodeFromText dConfirmRes.stationsJson & fromMaybeM (InternalError "Invalid stations jsons from db")
   let routeStations :: Maybe [FRFSRouteStationsAPI] = decodeFromText =<< dConfirmRes.routeStationsJson
       discounts :: Maybe [FRFSDiscountRes] = decodeFromText =<< dConfirmRes.discountsJson
@@ -781,7 +779,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking booking' = do
   when (booking'.status /= DFRFSTicketBooking.CONFIRMED && booking'.status /= DFRFSTicketBooking.FAILED && booking'.status /= DFRFSTicketBooking.CANCELLED && booking'.validTill < now) $
     void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED bookingId
   booking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Invalid booking id")
-  merchantOperatingCity <- Common.getMerchantOperatingCityFromBooking booking
+  merchantOperatingCity <- getMerchantOperatingCityFromBooking booking
   let commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person person.id
   logInfo $ "Booking status: " <> show booking.status
   case booking.status of
@@ -925,12 +923,12 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking booking' = do
                             }
                   buildFRFSTicketBookingStatusAPIRes booking paymentObj
     DFRFSTicketBooking.CANCELLED -> do
-      updateTotalOrderValueAndSettlementAmount booking bapConfig
+      FRFSCommon.updateTotalOrderValueAndSettlementAmount booking bapConfig
       paymentBooking <- B.runInReplica $ QFRFSTicketBookingPayment.findNewTBPByBookingId booking.id
       let mbPaymentObj = paymentBooking <&> \tbp -> FRFSTicketService.FRFSBookingPaymentAPI {status = Utils.mkTBPStatusAPI tbp.status, paymentOrder = Nothing, transactionId = Nothing}
       buildFRFSTicketBookingStatusAPIRes booking mbPaymentObj
     DFRFSTicketBooking.COUNTER_CANCELLED -> do
-      updateTotalOrderValueAndSettlementAmount booking bapConfig
+      FRFSCommon.updateTotalOrderValueAndSettlementAmount booking bapConfig
       buildFRFSTicketBookingStatusAPIRes booking Nothing
     DFRFSTicketBooking.CANCEL_INITIATED -> do
       buildFRFSTicketBookingStatusAPIRes booking Nothing
@@ -1016,16 +1014,6 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking booking' = do
       when riderConfig.enableAutoJourneyRefund $
         FRFSUtils.markAllRefundBookings booking person.id
 
-updateTotalOrderValueAndSettlementAmount :: DFRFSTicketBooking.FRFSTicketBooking -> BecknConfig -> Environment.Flow ()
-updateTotalOrderValueAndSettlementAmount booking bapConfig = do
-  paymentBooking <- B.runInReplica $ QFRFSTicketBookingPayment.findNewTBPByBookingId booking.id >>= fromMaybeM (InvalidRequest "Payment booking not found for approved TicketBookingId")
-  let finderFee :: Price = Common.mkPrice Nothing $ fromMaybe 0 $ (readMaybe . T.unpack) =<< bapConfig.buyerFinderFee
-      finderFeeForEachTicket = modifyPrice finderFee $ \p -> HighPrecMoney $ (p.getHighPrecMoney) / (toRational booking.quantity)
-  tOrderPrice <- DACFOC.totalOrderValue paymentBooking.status booking
-  let tOrderValue = modifyPrice tOrderPrice $ \p -> HighPrecMoney $ (p.getHighPrecMoney) / (toRational booking.quantity)
-  settlementAmount <- tOrderValue `subtractPrice` finderFeeForEachTicket
-  void $ QFRFSRecon.updateTOrderValueAndSettlementAmountById settlementAmount tOrderValue booking.id
-
 getFrfsBookingList :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Maybe Spec.VehicleCategory -> Environment.Flow [API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes]
 getFrfsBookingList (mbPersonId, merchantId) mbLimit mbOffset mbVehicleCategory = do
   personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
@@ -1040,7 +1028,7 @@ buildFRFSTicketBookingStatusAPIRes booking payment = do
   stations <- mapM (Utils.mkPOrgStationAPI booking.partnerOrgId integratedBppConfig) =<< (decodeFromText booking.stationsJson & fromMaybeM (InternalError "Invalid stations jsons from db"))
   let routeStations :: Maybe [FRFSRouteStationsAPI] = decodeFromText =<< booking.routeStationsJson
       discounts :: Maybe [FRFSDiscountRes] = decodeFromText =<< booking.discountsJson
-  merchantOperatingCity <- Common.getMerchantOperatingCityFromBooking booking
+  merchantOperatingCity <- getMerchantOperatingCityFromBooking booking
   tickets' <- B.runInReplica $ QFRFSTicket.findAllByTicketBookingId booking.id
   let tickets =
         map
@@ -1354,3 +1342,8 @@ tryStationsAPIWithOSRMDistances merchantId merchantOpCity origin stops integrate
           towards = Nothing,
           integratedBppConfigId = integratedBPPConfig.id
         }
+
+getMerchantOperatingCityFromBooking :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DFRFSTicketBooking.FRFSTicketBooking -> m DMOC.MerchantOperatingCity
+getMerchantOperatingCityFromBooking tBooking = do
+  let moCityId = tBooking.merchantOperatingCityId
+  CQMOC.findById moCityId >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantOperatingCityId- " <> show moCityId)
