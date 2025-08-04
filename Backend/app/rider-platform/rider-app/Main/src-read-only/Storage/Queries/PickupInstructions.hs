@@ -23,11 +23,11 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.PickupInstructions.PickupInstructions] -> m ())
 createMany = traverse_ create
 
-deleteById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.PickupInstructions.PickupInstructions -> m ())
-deleteById id = do deleteWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
-
 deleteByPersonIdAndLocation :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Double -> Kernel.Prelude.Double -> m ())
 deleteByPersonIdAndLocation personId lat lon = do deleteWithKV [Se.And [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId), Se.Is Beam.lat $ Se.Eq lat, Se.Is Beam.lon $ Se.Eq lon]]
+
+deleteInstructionById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.PickupInstructions.PickupInstructions -> m ())
+deleteInstructionById id = do deleteWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ([Domain.Types.PickupInstructions.PickupInstructions]))
 findByPersonId personId = do findAllWithKV [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)]
@@ -37,12 +37,7 @@ findOldestByPersonId personId = do findAllWithKV [Se.Is Beam.personId $ Se.Eq (K
 
 updateInstructionById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  Kernel.Prelude.Double ->
-  Kernel.Prelude.Double ->
-  Kernel.Prelude.Text ->
-  Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile) ->
-  Kernel.Types.Id.Id Domain.Types.PickupInstructions.PickupInstructions ->
-  m ()
+  (Kernel.Prelude.Double -> Kernel.Prelude.Double -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile) -> Kernel.Types.Id.Id Domain.Types.PickupInstructions.PickupInstructions -> m ())
 updateInstructionById lat lon instruction mediaFileId id = do
   _now <- getCurrentTime
   updateWithKV
@@ -52,8 +47,14 @@ updateInstructionById lat lon instruction mediaFileId id = do
       Se.Set Beam.mediaFileId (Kernel.Types.Id.getId <$> mediaFileId),
       Se.Set Beam.updatedAt _now
     ]
-    [ Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
-    ]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateMediaFileById ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile) -> Kernel.Types.Id.Id Domain.Types.PickupInstructions.PickupInstructions -> m ())
+updateMediaFileById mediaFileId id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.mediaFileId (Kernel.Types.Id.getId <$> mediaFileId), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 instance FromTType' Beam.PickupInstructions Domain.Types.PickupInstructions.PickupInstructions where
   fromTType' (Beam.PickupInstructionsT {..}) = do

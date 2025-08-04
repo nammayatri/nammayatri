@@ -4,6 +4,7 @@
 module Domain.Action.UI.PickupInstructions
   ( postPickupinstructions,
     getPickupinstructionsClosest,
+    deletePickupinstructions,
   )
 where
 
@@ -278,7 +279,7 @@ postPickupinstructions (mbPersonId, merchantId) req = do
             (oldestInstruction : _) -> do
               logDebug $ "PickupInstructions: At threshold limit. Deleting oldest instruction id: " <> show oldestInstruction.id.getId <> " at lat: " <> show oldestInstruction.lat <> ", lon: " <> show oldestInstruction.lon <> " and creating new instruction"
               -- Delete the oldest instruction by its ID
-              QPI.deleteById oldestInstruction.id
+              QPI.deleteInstructionById oldestInstruction.id
               -- Create new pickup instruction
               newPickupInstructionsId <- generateGUID
               now <- getCurrentTime
@@ -445,3 +446,111 @@ getPickupinstructionsClosest (mbPersonId, _) mbLat mbLon = do
                   { instruction = Just closestInstruction.instruction,
                     audioBase64 = mbAudioBase64
                   }
+
+deletePickupinstructions ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Prelude.Maybe (Kernel.Prelude.Double) ->
+    Kernel.Prelude.Maybe (Kernel.Prelude.Double) ->
+    Kernel.Prelude.Maybe API.DeleteTarget ->
+    Environment.Flow Kernel.Types.APISuccess.APISuccess
+  )
+deletePickupinstructions (mbPersonId, _) mbLat mbLon mbTarget = do
+  personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  lat <- mbLat & fromMaybeM (InvalidRequest "Missing required parameter: lat")
+  lon <- mbLon & fromMaybeM (InvalidRequest "Missing required parameter: lon")
+  target <- mbTarget & fromMaybeM (InvalidRequest "Missing required parameter: target")
+
+  person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+
+  let queryLocation = LatLong lat lon
+      proximityThreshold = fromIntegral riderConfig.pickupInstructionsProximityMeters
+
+  logDebug $ "PickupInstructions: DELETE request for personId: " <> show personId.getId <> ", lat: " <> show lat <> ", lon: " <> show lon <> ", target: " <> show target <> ", proximityThreshold: " <> show proximityThreshold <> "m"
+
+  -- Get all pickup instructions for this person
+  pickupInstructions <- QPI.findByPersonId personId
+
+  if null pickupInstructions
+    then do
+      logDebug "PickupInstructions: No instructions found for user"
+      throwError $ InvalidRequest "No pickup instructions found for this user"
+    else do
+      -- Find instructions within proximity threshold
+      let instructionsWithinProximity =
+            List.filter
+              ( \instruction ->
+                  let instructionLocation = LatLong instruction.lat instruction.lon
+                      distance = distanceBetweenInMeters queryLocation instructionLocation
+                      distanceInMeters = highPrecMetersToMeters distance
+                   in distanceInMeters <= proximityThreshold
+              )
+              pickupInstructions
+
+      case instructionsWithinProximity of
+        [] -> do
+          logDebug $ "PickupInstructions: No instructions found within proximity threshold of " <> show proximityThreshold <> "m"
+          throwError $ InvalidRequest "No pickup instructions found near the specified location"
+        proximityInstructions -> do
+          -- Among instructions within proximity, find the closest one
+          let instructionsWithDistance =
+                map
+                  ( \instruction ->
+                      let instructionLocation = LatLong instruction.lat instruction.lon
+                          distance = distanceBetweenInMeters queryLocation instructionLocation
+                          distanceInMeters = highPrecMetersToMeters distance
+                       in (instruction, distanceInMeters)
+                  )
+                  proximityInstructions
+
+              -- Sort by distance and get the closest one
+              sortedInstructions = List.sortBy (comparing snd) instructionsWithDistance
+
+          case sortedInstructions of
+            [] -> do
+              logDebug "PickupInstructions: No instructions in sorted list (unexpected)"
+              throwError $ InternalError "No instructions found in sorted list"
+            ((closestInstruction, distanceToClosest) : _) -> do
+              logDebug $ "PickupInstructions: Found closest instruction within proximity at distance " <> show distanceToClosest <> "m, id: " <> show closestInstruction.id.getId
+
+              case target of
+                API.Instruction -> do
+                  logDebug $ "PickupInstructions: Deleting entire instruction with id: " <> show closestInstruction.id.getId
+                  QPI.deleteInstructionById closestInstruction.id
+                  logDebug $ "PickupInstructions: Successfully deleted instruction"
+                API.Audio -> do
+                  logDebug $ "PickupInstructions: Clearing audio from instruction with id: " <> show closestInstruction.id.getId
+
+                  -- Delete media file from media table and S3 if it exists
+                  case closestInstruction.mediaFileId of
+                    Just mediaFileId -> do
+                      logDebug $ "PickupInstructions: Deleting media file with id: " <> show mediaFileId.getId
+
+                      -- Get media file details before deleting from DB
+                      mbMediaFile <- MFQuery.findById mediaFileId
+                      case mbMediaFile of
+                        Just mediaFile -> do
+                          -- Delete actual file from S3 if path exists
+                          case mediaFile.s3FilePath of
+                            Just s3Path -> do
+                              logDebug $ "PickupInstructions: Deleting S3 file: " <> show s3Path
+                              void $ fork "S3 delete audio file" $ S3.delete (T.unpack s3Path)
+                              logDebug $ "PickupInstructions: Successfully deleted S3 file"
+                            Nothing ->
+                              logDebug "PickupInstructions: No S3 path found for media file"
+                        Nothing ->
+                          logDebug $ "PickupInstructions: Media file not found for ID: " <> show mediaFileId.getId
+
+                      -- Delete media file record from database
+                      MFQuery.deleteById mediaFileId
+                      logDebug $ "PickupInstructions: Successfully deleted media file from database"
+                    Nothing ->
+                      logDebug "PickupInstructions: No media file to delete"
+
+                  -- Update instruction to clear mediaFileId
+                  QPI.updateMediaFileById Nothing closestInstruction.id
+                  logDebug $ "PickupInstructions: Successfully cleared audio from instruction"
+
+  pure Kernel.Types.APISuccess.Success
