@@ -10,7 +10,6 @@ import qualified Beckn.ACL.FRFS.Utils as Utils
 import qualified BecknV2.FRFS.Enums as Spec
 import BecknV2.FRFS.Utils
 import Domain.Action.Beckn.FRFS.Common hiding (status)
-import qualified Domain.Action.Beckn.FRFS.OnCancel as DOnCancel
 import qualified Domain.Action.Beckn.FRFS.OnInit as DOnInit
 import qualified Domain.Action.Beckn.FRFS.OnSearch as DOnSearch
 import qualified Domain.Action.Beckn.FRFS.OnStatus as DOnStatus
@@ -180,8 +179,9 @@ cancel merchant merchantOperatingCity bapConfig cancellationType booking = do
             >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> merchantOperatingCity.id.getId)
         providerUrl <- booking.bppSubscriberUrl & parseBaseUrl & fromMaybeM (InvalidRequest "Invalid provider url")
         ttl <- bapConfig.cancelTTLSec & fromMaybeM (InternalError "Invalid ttl")
-        when (cancellationType == Spec.CONFIRM_CANCEL) $ Redis.setExp (DOnCancel.makecancelledTtlKey booking.id) True ttl
-        bknCancelReq <- ACL.buildCancelReq booking bapConfig Utils.BppData {bppId = booking.bppSubscriberId, bppUri = booking.bppSubscriberUrl} frfsConfig.cancellationReasonId cancellationType merchantOperatingCity.city
+        messageId <- generateGUID
+        when (cancellationType == Spec.CONFIRM_CANCEL) $ Redis.setExp (makecancelledTtlKey booking.id) messageId ttl
+        bknCancelReq <- ACL.buildCancelReq messageId booking bapConfig Utils.BppData {bppId = booking.bppSubscriberId, bppUri = booking.bppSubscriberUrl} frfsConfig.cancellationReasonId cancellationType merchantOperatingCity.city
         logDebug $ "FRFS CancelReq " <> encodeToText bknCancelReq
         void $ CallFRFSBPP.cancel providerUrl bknCancelReq merchant.id
     _ -> return ()
