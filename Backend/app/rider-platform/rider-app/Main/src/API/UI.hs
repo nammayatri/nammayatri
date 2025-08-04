@@ -18,6 +18,7 @@ module API.UI
   )
 where
 
+import qualified API.Action.UI.AttractionRecommend as AttractionRecommend
 import qualified API.Action.UI.BBPS as BBPS
 import qualified API.Action.UI.CRIS as CRIS
 import qualified API.Action.UI.Cac as Cac
@@ -145,6 +146,7 @@ type API =
            :<|> Insurance.API
            :<|> PickupInstructions.API
            :<|> NYRegular.API
+           :<|> AttractionRecommend.API
        )
 
 handler :: FlowServer API
@@ -210,3 +212,4 @@ handler =
     :<|> Insurance.handler
     :<|> PickupInstructions.handler
     :<|> NYRegular.handler
+    :<|> AttractionRecommend.handler
