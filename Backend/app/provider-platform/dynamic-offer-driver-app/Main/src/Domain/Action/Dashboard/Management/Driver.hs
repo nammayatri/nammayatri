@@ -128,7 +128,7 @@ import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import qualified SharedLogic.EventTracking as SEVT
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
-import SharedLogic.Merchant (findMerchantByShortId, getCurrencyByMerchantOpCity)
+import SharedLogic.Merchant (findMerchantByShortId)
 import SharedLogic.Ride
 import SharedLogic.VehicleServiceTier
 import Storage.Beam.SystemConfigs ()
@@ -139,13 +139,11 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.PlanExtra as CQP
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
-import qualified Storage.Queries.DailyStats as QDailyStats
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverLicense as QDriverLicense
 import qualified Storage.Queries.DriverOperatorAssociation as QDriverOperator
 import qualified Storage.Queries.DriverPanCard as QPanCard
 import qualified Storage.Queries.DriverPlan as QDP
-import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FleetDriverAssociation as QFleetDriver
 import qualified Storage.Queries.FleetOperatorAssociation as QFleetOperator
 import qualified Storage.Queries.HyperVergeSdkLogs as QSdkLogs
@@ -1198,95 +1196,7 @@ getDriverStats merchantShortId opCity mbEntityId mbFromDate mbToDate requestorId
       unless isValid $ throwError AccessDenied
 
   let personId = cast @Common.Driver @DP.Person $ fromMaybe (Id requestorId) mbEntityId
-  findOnboardedDriversOrFleets personId merchantOpCityId mbFromDate mbToDate
-  where
-    -- TODO: Need to implement clickhouse aggregated query to fetch data for the given date range
-    findOnboardedDriversOrFleets :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DP.Person -> Id DMOC.MerchantOperatingCity -> Maybe Day -> Maybe Day -> m Common.DriverStatsRes
-    findOnboardedDriversOrFleets personId merchantOpCityId maybeFrom maybeTo = do
-      currency <- getCurrencyByMerchantOpCity merchantOpCityId
-      transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-      let defaultStats =
-            Common.DriverStatsRes
-              { numDriversOnboarded = 0,
-                numFleetsOnboarded = 0,
-                totalRides = 0,
-                totalEarnings = Money 0,
-                totalDistance = Meters 0,
-                bonusEarnings = Money 0,
-                totalEarningsWithCurrency = PriceAPIEntity 0.0 currency,
-                totalEarningsPerKm = Money 0,
-                totalEarningsPerKmWithCurrency = PriceAPIEntity 0.0 currency,
-                bonusEarningsWithCurrency = PriceAPIEntity 0.0 currency
-              }
-      case (maybeFrom, maybeTo) of
-        (Nothing, Nothing) -> do
-          stats <- B.runInReplica $ QDriverStats.findByPrimaryKey personId >>= fromMaybeM (InternalError $ "Driver Stats data not found for entity " <> show personId.getId)
-          let totalEarningsPerKm = calculateEarningsPerKm stats.totalDistance stats.totalEarnings
-          return $
-            Common.DriverStatsRes
-              { numDriversOnboarded = stats.numDriversOnboarded,
-                numFleetsOnboarded = stats.numFleetsOnboarded,
-                totalRides = stats.totalRides,
-                totalEarnings = roundToIntegral stats.totalEarnings,
-                totalDistance = stats.totalDistance,
-                bonusEarnings = roundToIntegral stats.bonusEarned,
-                totalEarningsWithCurrency = PriceAPIEntity stats.totalEarnings currency,
-                totalEarningsPerKm = roundToIntegral totalEarningsPerKm,
-                totalEarningsPerKmWithCurrency = PriceAPIEntity totalEarningsPerKm currency,
-                bonusEarningsWithCurrency = PriceAPIEntity stats.bonusEarned currency
-              }
-        (Just fromDate, Just toDate) | fromDate == toDate -> do
-          mbStats <- B.runInReplica $ QDailyStats.findByDriverIdAndDate personId fromDate
-          case mbStats of
-            Nothing -> return defaultStats
-            Just stats -> do
-              let totalEarningsPerKm = calculateEarningsPerKm stats.totalDistance stats.totalEarnings
-              return $
-                Common.DriverStatsRes
-                  { numDriversOnboarded = stats.numDriversOnboarded,
-                    numFleetsOnboarded = stats.numFleetsOnboarded,
-                    totalRides = stats.numRides,
-                    totalEarnings = roundToIntegral stats.totalEarnings,
-                    totalDistance = stats.totalDistance,
-                    bonusEarnings = roundToIntegral stats.bonusEarnings,
-                    totalEarningsWithCurrency = PriceAPIEntity stats.totalEarnings currency,
-                    totalEarningsPerKm = roundToIntegral totalEarningsPerKm,
-                    totalEarningsPerKmWithCurrency = PriceAPIEntity totalEarningsPerKm currency,
-                    bonusEarningsWithCurrency = PriceAPIEntity stats.bonusEarnings currency
-                  }
-        (Just fromDate, Just toDate) | fromIntegral (diffDays toDate fromDate) <= transporterConfig.earningsWindowSize -> do
-          statsList <- B.runInReplica $ QDailyStats.findAllInRangeByDriverId_ personId fromDate toDate
-          if null statsList
-            then return defaultStats
-            else do
-              let agg f = sum (map f statsList)
-                  aggMoney f = HighPrecMoney $ sum (map (getHighPrecMoney . f) statsList)
-                  aggMeters f = Meters $ sum (map (getMeters . f) statsList)
-                  totalEarnings = aggMoney (.totalEarnings)
-                  totalDistance = aggMeters (.totalDistance)
-                  bonusEarnings = aggMoney (.bonusEarnings)
-                  totalEarningsPerKm = calculateEarningsPerKm totalDistance totalEarnings
-              return $
-                Common.DriverStatsRes
-                  { numDriversOnboarded = agg (.numDriversOnboarded),
-                    numFleetsOnboarded = agg (.numFleetsOnboarded),
-                    totalRides = agg (.numRides),
-                    totalEarnings = roundToIntegral totalEarnings,
-                    totalDistance = totalDistance,
-                    bonusEarnings = roundToIntegral bonusEarnings,
-                    totalEarningsWithCurrency = PriceAPIEntity totalEarnings currency,
-                    totalEarningsPerKm = roundToIntegral totalEarningsPerKm,
-                    totalEarningsPerKmWithCurrency = PriceAPIEntity totalEarningsPerKm currency,
-                    bonusEarningsWithCurrency = PriceAPIEntity bonusEarnings currency
-                  }
-        _ -> throwError (InvalidRequest "Invalid date range: Dates must be empty, same day, or max 7 days apart.")
-
-    calculateEarningsPerKm :: Meters -> HighPrecMoney -> HighPrecMoney
-    calculateEarningsPerKm distance earnings =
-      let distanceInKm = distance `div` 1000
-       in if distanceInKm.getMeters == 0
-            then HighPrecMoney 0.0
-            else toHighPrecMoney $ roundToIntegral earnings `div` distanceInKm.getMeters
+  DDriver.findOnboardedDriversOrFleets personId merchantOpCityId mbFromDate mbToDate
 
 isAssociationBetweenTwoPerson :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => DP.Person -> DP.Person -> m Bool
 isAssociationBetweenTwoPerson requestedPersonDetails personDetails = do

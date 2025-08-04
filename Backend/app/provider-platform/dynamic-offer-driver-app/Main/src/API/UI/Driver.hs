@@ -144,6 +144,10 @@ type API =
                     :> TokenAuth
                     :> MandatoryQueryParam "day" Day
                     :> Get '[JSON] DDriver.DriverStatsRes
+                  :<|> "stats"
+                    :> "alltime"
+                    :> TokenAuth
+                    :> Get '[JSON] DCommon.DriverStatsRes
                   :<|> "earnings"
                     :> TokenAuth
                     :> MandatoryQueryParam "from" Day
@@ -271,6 +275,7 @@ handler =
              :<|> getInformationV2
              :<|> updateDriver
              :<|> getStats
+             :<|> getStatsAllTime
              :<|> getEarnings
              :<|> driverProfileImagesUpload
              :<|> verifyVpaStatus
@@ -347,6 +352,9 @@ respondQuote (personId, driverId, merchantOpCityId) clientId mbBundleVersion mbC
 
 getStats :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Day -> FlowHandler DDriver.DriverStatsRes
 getStats day = withFlowHandlerAPI . DDriver.getStats day
+
+getStatsAllTime :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler DCommon.DriverStatsRes
+getStatsAllTime = withFlowHandlerAPI . DDriver.getStatsAllTime
 
 updateMetaData :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> DDriver.MetaDataReq -> FlowHandler APISuccess
 updateMetaData req = withFlowHandlerAPI . DDriver.updateMetaData req
