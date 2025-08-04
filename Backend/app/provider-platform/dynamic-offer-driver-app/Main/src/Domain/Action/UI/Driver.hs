@@ -58,6 +58,7 @@ module Domain.Action.UI.Driver
     respondQuote,
     offerQuoteLockKey,
     getStats,
+    getStatsAllTime,
     getEarnings,
     driverPhotoUpload,
     driverProfileImagesUpload,
@@ -84,6 +85,7 @@ module Domain.Action.UI.Driver
     refundByPayoutDriverFee,
     mkPayoutLockKeyByDriverAndService,
     consentResponse,
+    findOnboardedDriversOrFleets,
   )
 where
 
@@ -2947,3 +2949,98 @@ consentResponse (personId, _, _) req = do
   logInfo $ "Driver consent request - Driver ID: " <> personId.getId <> ", Consent: " <> show req.consent
   QPerson.updateNyClubConsent (Just req.consent) personId
   pure APISuccess.Success
+
+-- | Returns all-time stats for a driver (for /driver/stats/alltime endpoint)
+getStatsAllTime ::
+  (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) =>
+  (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
+  m DCommon.DriverStatsRes
+getStatsAllTime (driverId, _, merchantOpCityId) = findOnboardedDriversOrFleets driverId merchantOpCityId Nothing Nothing
+
+-- TODO: Need to implement clickhouse aggregated query to fetch data for the given date range
+findOnboardedDriversOrFleets :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id SP.Person -> Id DMOC.MerchantOperatingCity -> Maybe Day -> Maybe Day -> m DCommon.DriverStatsRes
+findOnboardedDriversOrFleets personId merchantOpCityId maybeFrom maybeTo = do
+  currency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
+  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  let defaultStats =
+        DCommon.DriverStatsRes
+          { numDriversOnboarded = 0,
+            numFleetsOnboarded = 0,
+            totalRides = 0,
+            totalEarnings = Money 0,
+            totalDistance = Meters 0,
+            bonusEarnings = Money 0,
+            totalEarningsWithCurrency = PriceAPIEntity 0.0 currency,
+            totalEarningsPerKm = Money 0,
+            totalEarningsPerKmWithCurrency = PriceAPIEntity 0.0 currency,
+            bonusEarningsWithCurrency = PriceAPIEntity 0.0 currency
+          }
+  case (maybeFrom, maybeTo) of
+    (Nothing, Nothing) -> do
+      stats <- runInReplica $ QDriverStats.findByPrimaryKey personId >>= fromMaybeM (InternalError $ "Driver Stats data not found for entity " <> show personId.getId)
+      let totalEarningsPerKm = calculateEarningsPerKm stats.totalDistance stats.totalEarnings
+      return $
+        DCommon.DriverStatsRes
+          { numDriversOnboarded = stats.numDriversOnboarded,
+            numFleetsOnboarded = stats.numFleetsOnboarded,
+            totalRides = stats.totalRides,
+            totalEarnings = roundToIntegral stats.totalEarnings,
+            totalDistance = stats.totalDistance,
+            bonusEarnings = roundToIntegral stats.bonusEarned,
+            totalEarningsWithCurrency = PriceAPIEntity stats.totalEarnings currency,
+            totalEarningsPerKm = roundToIntegral totalEarningsPerKm,
+            totalEarningsPerKmWithCurrency = PriceAPIEntity totalEarningsPerKm currency,
+            bonusEarningsWithCurrency = PriceAPIEntity stats.bonusEarned currency
+          }
+    (Just fromDate, Just toDate) | fromDate == toDate -> do
+      mbStats <- runInReplica $ SQDS.findByDriverIdAndDate personId fromDate
+      case mbStats of
+        Nothing -> return defaultStats
+        Just stats -> do
+          let totalEarningsPerKm = calculateEarningsPerKm stats.totalDistance stats.totalEarnings
+          return $
+            DCommon.DriverStatsRes
+              { numDriversOnboarded = stats.numDriversOnboarded,
+                numFleetsOnboarded = stats.numFleetsOnboarded,
+                totalRides = stats.numRides,
+                totalEarnings = roundToIntegral stats.totalEarnings,
+                totalDistance = stats.totalDistance,
+                bonusEarnings = roundToIntegral stats.bonusEarnings,
+                totalEarningsWithCurrency = PriceAPIEntity stats.totalEarnings currency,
+                totalEarningsPerKm = roundToIntegral totalEarningsPerKm,
+                totalEarningsPerKmWithCurrency = PriceAPIEntity totalEarningsPerKm currency,
+                bonusEarningsWithCurrency = PriceAPIEntity stats.bonusEarnings currency
+              }
+    (Just fromDate, Just toDate) | fromIntegral (diffDays toDate fromDate) <= transporterConfig.earningsWindowSize -> do
+      statsList <- runInReplica $ SQDS.findAllInRangeByDriverId_ personId fromDate toDate
+      if null statsList
+        then return defaultStats
+        else do
+          let agg f = sum (map f statsList)
+              aggMoney f = HighPrecMoney $ sum (map (getHighPrecMoney . f) statsList)
+              aggMeters f = Meters $ sum (map (getMeters . f) statsList)
+              totalEarnings = aggMoney (.totalEarnings)
+              totalDistance = aggMeters (.totalDistance)
+              bonusEarnings = aggMoney (.bonusEarnings)
+              totalEarningsPerKm = calculateEarningsPerKm totalDistance totalEarnings
+          return $
+            DCommon.DriverStatsRes
+              { numDriversOnboarded = agg (.numDriversOnboarded),
+                numFleetsOnboarded = agg (.numFleetsOnboarded),
+                totalRides = agg (.numRides),
+                totalEarnings = roundToIntegral totalEarnings,
+                totalDistance = totalDistance,
+                bonusEarnings = roundToIntegral bonusEarnings,
+                totalEarningsWithCurrency = PriceAPIEntity totalEarnings currency,
+                totalEarningsPerKm = roundToIntegral totalEarningsPerKm,
+                totalEarningsPerKmWithCurrency = PriceAPIEntity totalEarningsPerKm currency,
+                bonusEarningsWithCurrency = PriceAPIEntity bonusEarnings currency
+              }
+    _ -> throwError (InvalidRequest "Invalid date range: Dates must be empty, same day, or max 7 days apart.")
+  where
+    calculateEarningsPerKm :: Meters -> HighPrecMoney -> HighPrecMoney
+    calculateEarningsPerKm distance earnings =
+      let distanceInKm = distance `div` 1000
+       in if distanceInKm.getMeters == 0
+            then HighPrecMoney 0.0
+            else toHighPrecMoney $ roundToIntegral earnings `div` distanceInKm.getMeters
