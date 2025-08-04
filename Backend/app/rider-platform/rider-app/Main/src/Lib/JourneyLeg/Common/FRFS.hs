@@ -614,7 +614,7 @@ processBusLegState
                 pure []
           else do
             logDebug $ "Journey leg is not ongoing or movement is not detected, returning empty list" <> show journeyLegStatus
-            if journeyLegStatus `elem` [JPT.InPlan, JPT.OnTheWay, JPT.Booked, JPT.Arriving]
+            if journeyLegStatus `elem` [JPT.InPlan, JPT.OnTheWay, JPT.Booked, JPT.Arriving, JPT.Arrived]
               then do
                 findfilteredBusData mbUserBoardingStation allBusDataForRoute
               else do
@@ -695,10 +695,9 @@ getUpcomingStopsForBus now mbTargetStation busData filterFromCurrentTime =
 getNearbyBusesFRFS :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig], HasField "ltsHedisEnv" r Redis.HedisEnv, HasShortDurationRetryCfg r c, HasKafkaProducer r) => LatLong -> DomainRiderConfig.RiderConfig -> m [BusDataWithoutETA]
 getNearbyBusesFRFS userPos' riderConfig = do
   let nearbyDriverSearchRadius :: Double = fromMaybe 0.5 riderConfig.nearbyDriverSearchRadius
-  vehicleNumbers :: [Text] <-
-    CQMMB.withCrossAppRedisNew $ -- Assuming CQMMB is available or can be made available
-      Hedis.geoSearchDecoded nearbyBusKeyFRFS (Hedis.FromLonLat userPos'.lon userPos'.lat) (Hedis.ByRadius nearbyDriverSearchRadius "km")
-  catMaybes <$> Hedis.hmGet vehicleMetaKey vehicleNumbers
+  busesBS <- mapM (pure . decodeUtf8) =<< (CQMMB.withCrossAppRedisNew $ Hedis.geoSearch nearbyBusKeyFRFS (Hedis.FromLonLat userPos'.lon userPos'.lat) (Hedis.ByRadius nearbyDriverSearchRadius "km"))
+  logDebug $ "busesBS: " <> show busesBS
+  catMaybes <$> Hedis.hmGet vehicleMetaKey busesBS
 
 scoreByDistanceFRFS :: Double -> DomainRiderConfig.BusTrackingConfig -> Double
 scoreByDistanceFRFS distance busTrackingConfig
