@@ -1,11 +1,19 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-deprecations #-}
 
 module Tools.ConfigPilot where
 
 import qualified ConfigPilotFrontend.Types as CPT
 import qualified Data.Aeson as A
-import Data.List (sortOn)
+import qualified Data.Aeson.KeyMap as KM
+import qualified Data.ByteString.Char8 as B
+import Data.List (sortOn, (\\))
+import qualified Domain.Types.DriverPoolConfig as DTD
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
+import qualified Domain.Types.MerchantPushNotification as DTPN
+import qualified Domain.Types.PayoutConfig as DTP
+import qualified Domain.Types.RideRelatedNotificationConfig as DTRN
 import qualified Domain.Types.UiDriverConfig as DTU
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
@@ -180,3 +188,33 @@ getTSServiceUrl :: (CoreMetrics m, MonadFlow m, CPT.HasTSServiceConfig m r) => m
 getTSServiceUrl = do
   tsServiceConfig <- asks (.tsServiceConfig)
   pure tsServiceConfig.url
+
+-- Helper function to decode and validate JSON with extra field checking
+decodeStrictWithValidation :: forall a. (A.FromJSON a, A.ToJSON a) => B.ByteString -> Either String A.Value
+decodeStrictWithValidation bs = do
+  -- First decode as generic Value to get input object
+  inputValue <- A.eitherDecodeStrict bs
+  case inputValue of
+    A.Object inputObj -> do
+      -- Then decode as the specific type
+      parsed <- A.eitherDecodeStrict @a bs
+      case A.toJSON parsed of
+        A.Object expectedObj ->
+          let extraKeys = KM.keys inputObj \\ KM.keys expectedObj
+           in if null extraKeys
+                then Right (A.toJSON parsed)
+                else Left $ "Unknown fields: " ++ show extraKeys
+        _ -> Left "Unexpected JSON structure after decoding"
+    _ -> Left "Expected a JSON object"
+
+parseByDomain :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => LYT.ConfigType -> B.ByteString -> m (Either String Value)
+parseByDomain domain bs = case domain of
+  LYT.PayoutConfig ->
+    return $ decodeStrictWithValidation @DTP.PayoutConfig bs
+  LYT.DriverPoolConfig ->
+    return $ decodeStrictWithValidation @DTD.DriverPoolConfig bs
+  LYT.RideRelatedNotificationConfig ->
+    return $ decodeStrictWithValidation @DTRN.RideRelatedNotificationConfig bs
+  LYT.MerchantPushNotification ->
+    return $ decodeStrictWithValidation @DTPN.MerchantPushNotification bs
+  _ -> throwError $ InvalidRequest "Logic Domain not supported"

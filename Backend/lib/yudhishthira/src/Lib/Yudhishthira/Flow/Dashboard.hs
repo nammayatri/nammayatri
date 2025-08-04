@@ -6,6 +6,8 @@ import qualified ConfigPilotFrontend.Types as CPT
 import Control.Applicative ((<|>))
 import Data.Aeson
 import qualified Data.Aeson as A
+import qualified Data.ByteString.Char8 as B
+import qualified Data.ByteString.Lazy.Char8 as BL
 import Data.List (groupBy, nub, sortBy)
 import qualified Data.List.NonEmpty as DLNE
 import qualified Data.List.NonEmpty as NE
@@ -321,14 +323,16 @@ verifyEventLogic event logics data_ = do
 
 verifyAndUpdateDynamicLogic ::
   forall m r a b.
-  (BeamFlow m r, ToJSON a, FromJSON b, Show a) =>
+  (BeamFlow m r, ToJSON a, FromJSON a, FromJSON b, Show a, Show b, CacheFlow m r, EsqDBFlow m r) =>
   Maybe (Id Lib.Yudhishthira.Types.Merchant) ->
   Proxy b ->
   Text ->
   Lib.Yudhishthira.Types.AppDynamicLogicReq ->
   a ->
+  Maybe (LYT.ConfigType -> B.ByteString -> m (Either String Value)) ->
+  Maybe (LYT.ConfigType -> B.ByteString -> m (Either String Value)) ->
   m Lib.Yudhishthira.Types.AppDynamicLogicResp
-verifyAndUpdateDynamicLogic mbMerchantId _ referralLinkPassword req logicData = do
+verifyAndUpdateDynamicLogic mbMerchantId _ referralLinkPassword req logicData mbParseByDomainDriver mbParseByDomainRider = do
   resp <- runLogics req.rules logicData
   let shouldUpdateRule = fromMaybe False req.shouldUpdateRule
   let shouldVerifyOutput = fromMaybe False req.verifyOutput
@@ -338,12 +342,49 @@ verifyAndUpdateDynamicLogic mbMerchantId _ referralLinkPassword req logicData = 
       then do
         if null errors
           then do
+            performConfigValidation resp.result
             verifyPassword req.updatePassword -- Using referralLinkPassword as updatePassword, could be changed to a new field in future
             updateDynamicLogic req.rules req.domain
           else throwError $ InvalidRequest $ "Errors found in the rules" <> show errors
-      else return (False, Nothing)
+      else do
+        performConfigValidation resp.result
+        return (False, Nothing)
   return $ Lib.Yudhishthira.Types.AppDynamicLogicResp resp.result isRuleUpdated req.domain version errors
   where
+    performConfigValidation :: BeamFlow m r => A.Value -> m ()
+    performConfigValidation resultValue = do
+      when (isDriverOrRiderConfig req.domain) $ do
+        case (A.fromJSON resultValue :: A.Result (LYT.Config Value)) of
+          A.Success cfg -> do
+            validateConfigByDomain req.domain cfg.config
+          A.Error err -> throwError $ InvalidRequest $ "Error in applying dynamic logic: " <> T.pack err
+    validateConfigByDomain :: BeamFlow m r => LYT.LogicDomain -> A.Value -> m ()
+    validateConfigByDomain domain configValue = do
+      let configByteString = A.encode configValue
+          strictConfigByteString = BL.toStrict configByteString
+      case domain of
+        LYT.DRIVER_CONFIG cfgType -> do
+          logDebug $ "Validating driver config: " <> show configValue
+          case mbParseByDomainDriver of
+            Just parseByDomain -> do
+              result <- parseByDomain cfgType strictConfigByteString
+              case result of
+                Left err -> throwError $ InvalidRequest $ "Error parsing driver config: " <> T.pack err
+                Right _ -> return ()
+            Nothing -> throwError $ InvalidRequest "parseByDomainDriver is not set"
+        LYT.RIDER_CONFIG cfgType -> do
+          logDebug $ "Validating rider config: " <> show configValue
+          case mbParseByDomainRider of
+            Just parseByDomain -> do
+              result <- parseByDomain cfgType strictConfigByteString
+              case result of
+                Left err -> throwError $ InvalidRequest $ "Error parsing rider config: " <> T.pack err
+                Right _ -> return ()
+            Nothing -> throwError $ InvalidRequest "parseByDomainRider is not set"
+        _ -> do
+          logDebug $ "Config validation not implemented for domain: " <> show domain
+          return ()
+
     verifyPassword :: BeamFlow m r => Maybe Text -> m ()
     verifyPassword Nothing = throwError $ InvalidRequest "Password not provided"
     verifyPassword (Just updatePassword) =
@@ -378,7 +419,7 @@ verifyAndUpdateDynamicLogic mbMerchantId _ referralLinkPassword req logicData = 
 
 verifyAndUpdateUIDynamicLogic ::
   forall m r a b.
-  (BeamFlow m r, ToJSON a, FromJSON b, Show a) =>
+  (BeamFlow m r, ToJSON a, FromJSON a, FromJSON b, Show a, Show b) =>
   Maybe (Id Lib.Yudhishthira.Types.Merchant) ->
   Proxy b ->
   Text ->
@@ -398,7 +439,7 @@ verifyAndUpdateUIDynamicLogic mbMerchantId proxy referralLinkPassword req logicD
     CPT.VALID_CONFIG -> pure ()
     CPT.INVALID_CONFIG -> throwError $ InvalidRequest "Invalid config"
     CPT.INVALID_REQUEST -> throwError $ InvalidRequest "Invalid request"
-  verifyAndUpdateDynamicLogic mbMerchantId proxy referralLinkPassword req logicData
+  verifyAndUpdateDynamicLogic mbMerchantId proxy referralLinkPassword req logicData Nothing Nothing
 
 getAppDynamicLogicForDomain :: BeamFlow m r => Maybe Int -> Lib.Yudhishthira.Types.LogicDomain -> m [Lib.Yudhishthira.Types.GetLogicsResp]
 getAppDynamicLogicForDomain mbVersion domain = do
