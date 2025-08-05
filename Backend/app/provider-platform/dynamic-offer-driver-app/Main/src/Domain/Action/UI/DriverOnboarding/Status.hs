@@ -50,19 +50,28 @@ data StatusRes = StatusRes
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
-statusHandler :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe DVC.VehicleCategory -> Maybe Bool -> Maybe Bool -> Flow StatusRes
-statusHandler (personId, _merchantId, merchantOpCityId) makeSelfieAadhaarPanMandatory multipleRC prefillData onboardingVehicleCategory useHVSdkForDL onlyMandatoryDocs = do
+statusHandler :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Maybe DVC.VehicleCategory -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Flow StatusRes
+statusHandler (personId, _merchantId, merchantOpCityId) makeSelfieAadhaarPanMandatory multipleRC prefillData onboardingVehicleCategory useHVSdkForDL onlyMandatoryDocs useMessageTranslation = do
   -- multipleRC flag is temporary to support backward compatibility
   merchantOperatingCity <- SMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
   transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   driverImages <- IQuery.findAllByPersonId transporterConfig personId
   now <- getCurrentTime
   let driverImagesInfo = IQuery.DriverImagesInfo {driverId = personId, merchantOperatingCity, driverImages, transporterConfig, now}
-  (dlStatus, mDL, dlVerficationMessage) <- SStatus.getDLAndStatus driverImagesInfo merchantOperatingCity.language useHVSdkForDL
-  (rcStatus, _, rcVerficationMessage) <- SStatus.getRCAndStatus driverImagesInfo multipleRC merchantOperatingCity.language
+  let statusHandlerOptions =
+        SStatus.StatusHandlerOptions
+          { makeSelfieAadhaarPanMandatory,
+            multipleRC,
+            prefillData,
+            useHVSdkForDL,
+            shouldActivateRc = True,
+            onlyMandatoryDocs,
+            useMessageTranslation
+          }
+  (dlStatus, mDL, dlVerficationMessage) <- SStatus.getDLAndStatus driverImagesInfo statusHandlerOptions merchantOperatingCity.language
+  (rcStatus, _, rcVerficationMessage) <- SStatus.getRCAndStatus driverImagesInfo statusHandlerOptions merchantOperatingCity.language
   (aadhaarStatus, _) <- SStatus.getAadhaarStatus personId
-  let shouldActivateRc = True
-  SStatus.StatusRes' {..} <- SStatus.statusHandler' driverImagesInfo makeSelfieAadhaarPanMandatory multipleRC prefillData onboardingVehicleCategory mDL useHVSdkForDL shouldActivateRc onlyMandatoryDocs
+  SStatus.StatusRes' {..} <- SStatus.statusHandler' driverImagesInfo statusHandlerOptions onboardingVehicleCategory mDL
   pure $
     StatusRes
       { dlVerificationStatus = dlStatus,

@@ -23,6 +23,7 @@ apis:
         - limit: Int
         - offset: Int
         - mbSearchString: Text
+        - useMessageTranslation: Bool
       response:
         type: FleetInfoRes
       helperApi:
@@ -36,6 +37,7 @@ apis:
               - limit: Int
               - offset: Int
               - mbSearchString: Text
+              - useMessageTranslation: Bool
             mandatoryQuery:
               - requestorId: Text
             response:

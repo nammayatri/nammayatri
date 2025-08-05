@@ -156,6 +156,9 @@ type GetOnboardingRegisterStatus =
       :> QueryParam
            "onlyMandatoryDocs"
            Kernel.Prelude.Bool
+      :> QueryParam
+           "useMessageTranslation"
+           Kernel.Prelude.Bool
       :> Get
            '[JSON]
            StatusRes
@@ -176,6 +179,9 @@ type GetOnboardingRegisterStatusHelper =
       :> QueryParam
            "onlyMandatoryDocs"
            Kernel.Prelude.Bool
+      :> QueryParam
+           "useMessageTranslation"
+           Kernel.Prelude.Bool
       :> Get
            '[JSON]
            StatusRes
@@ -194,7 +200,7 @@ type GetOnboardingGetReferralDetailsHelper =
 
 data OnboardingAPIs = OnboardingAPIs
   { getOnboardingDocumentConfigs :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Role -> EulerHS.Types.EulerClient DocumentVerificationConfigList,
-    getOnboardingRegisterStatus :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> EulerHS.Types.EulerClient StatusRes,
+    getOnboardingRegisterStatus :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> EulerHS.Types.EulerClient StatusRes,
     postOnboardingVerify :: VerifyType -> VerifyReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getOnboardingGetReferralDetails :: Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient ReferralInfoRes
   }

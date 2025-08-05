@@ -143,7 +143,7 @@ postDriverOperatorRespondHubRequest merchantShortId opCity req = withLogTag ("op
       person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
       let language = fromMaybe merchantOpCity.language person.language
       fork "enable driver after inspection" $ do
-        allDriverVehicleDocsVerified <- SStatus.checkAllDriverVehicleDocsVerified person merchantOpCity transporterConfig language opHubReq.registrationNo
+        allDriverVehicleDocsVerified <- SStatus.checkAllDriverVehicleDocsVerified SStatus.voidStatusHandlerOptions person merchantOpCity transporterConfig language opHubReq.registrationNo
         when allDriverVehicleDocsVerified $ do
           QVRC.updateApproved (Just True) rc.id
           void $ postDriverEnable merchantShortId opCity $ cast @DP.Person @Common.Driver personId
@@ -218,9 +218,10 @@ getDriverOperatorList ::
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
   Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
   Kernel.Prelude.Text ->
   Environment.Flow API.Types.ProviderPlatform.Operator.Driver.DriverInfoResp
-getDriverOperatorList _merchantShortId _opCity mbIsActive mbLimit mbOffset mbVehicleNo mbSearchString onlyMandatoryDocs requestorId = do
+getDriverOperatorList _merchantShortId _opCity mbIsActive mbLimit mbOffset mbVehicleNo mbSearchString onlyMandatoryDocs useMessageTranslation requestorId = do
   requestor <- QPerson.findById (Id requestorId) >>= fromMaybeM (PersonNotFound requestorId)
   unless (requestor.role == DP.OPERATOR) $
     Kernel.Utils.Common.throwError (InvalidRequest "Requestor role is not OPERATOR")
@@ -284,10 +285,14 @@ getDriverOperatorList _merchantShortId _opCity mbIsActive mbLimit mbOffset mbVeh
       driverImages <- IQuery.findAllByPersonId transporterConfig driverId
       let driverImagesInfo = IQuery.DriverImagesInfo {driverId, merchantOperatingCity = merchantOpCity, driverImages, transporterConfig, now}
       driverInfo <- QDI.findById driverId >>= fromMaybeM DriverInfoNotFound
-      let shouldActivateRc = False
+      let statusHandlerOptions =
+            SStatus.defaultStatusHandlerOptions{shouldActivateRc = False,
+                                                onlyMandatoryDocs = onlyMandatoryDocs,
+                                                useMessageTranslation = useMessageTranslation
+                                               }
       statusRes <-
         castStatusRes
-          <$> SStatus.statusHandler' driverImagesInfo Nothing Nothing Nothing Nothing Nothing (Just True) shouldActivateRc onlyMandatoryDocs -- FIXME: Need to change
+          <$> SStatus.statusHandler' driverImagesInfo statusHandlerOptions Nothing Nothing -- FIXME: Need to change
       pure $
         API.Types.ProviderPlatform.Operator.Driver.DriverInfo
           { driverId = cast drvOpAsn.driverId,
