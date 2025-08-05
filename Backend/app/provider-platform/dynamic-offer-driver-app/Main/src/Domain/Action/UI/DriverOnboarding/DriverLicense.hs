@@ -107,10 +107,9 @@ verifyDL ::
   DriverDLReq ->
   Flow DriverDLRes
 verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@DriverDLReq {..} = do
-  let isDashboard = (verifyBy == DPan.DASHBOARD)
+  let isDashboard = verifyBy == DPan.DASHBOARD
   externalServiceRateLimitOptions <- asks (.externalServiceRateLimitOptions)
   checkSlidingWindowLimitWithOptions (makeVerifyDLHitsCountKey req.driverLicenseNumber) externalServiceRateLimitOptions
-
   now <- getCurrentTime
   runRequestValidation (validateDriverDLReq now) req
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -151,16 +150,12 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
   decryptedPanNumber <- mapM decrypt driverInfo.panNumber
   decryptedAadhaarNumber <- mapM decrypt driverInfo.aadhaarNumber
   decryptedDlNumber <- mapM decrypt driverInfo.dlNumber
-  when (isJust transporterConfig.validNameComparePercentage && verifyBy /= DPan.DASHBOARD_ADMIN && verifyBy /= DPan.DASHBOARD_USER) $
-    VC.validateDocument merchantId merchantOpCityId person.id nameOnCard dateOfBirth Nothing DTO.DriverLicense VC.DriverDocument {panNumber = decryptedPanNumber, aadhaarNumber = decryptedAadhaarNumber, dlNumber = decryptedDlNumber, gstNumber = Nothing}
-  mdriverLicense <- Query.findByDLNumber driverLicenseNumber
   whenJust transporterConfig.dlNumberVerification $ \dlNumberVerification -> do
     when dlNumberVerification $ do
       fork "driver license verification in safety portal" $ do
         dlVerificationRes <-
           DriverBackgroundVerification.searchAgent person.merchantId merchantOpCityId $
             Agent {dl = Just driverLicenseNumber, voterId = Nothing}
-
         case dlVerificationRes.suspect of
           [] -> return ()
           res -> do
@@ -169,23 +164,29 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
             ticket <- TT.createTicket merchantId merchantOpCityId (mkTicket description transporterConfig)
             logInfo $ "Ticket: " <> show ticket
             return ()
-
-  case mdriverLicense of
-    Just driverLicense -> do
-      unless (driverLicense.driverId == personId) $ throwImageError imageId1 DLAlreadyLinked
-      unless (driverLicense.licenseExpiry > now) $ throwImageError imageId1 DLAlreadyUpdated
-      when (driverLicense.verificationStatus == Documents.VALID) $ throwError DLAlreadyUpdated
-      if documentVerificationConfig.doStrictVerifcation
-        then do
-          when (driverLicense.verificationStatus == Documents.INVALID) $ throwError DLInvalid
-          verifyDLFlow person merchantOpCityId documentVerificationConfig driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue nameOnCard req.vehicleCategory req.requestId sdkTransactionId
-        else onVerifyDLHandler person (Just driverLicenseNumber) (Just "2099-12-12") Nothing Nothing Nothing documentVerificationConfig req.imageId1 req.imageId2 nameOnCard dateOfIssue req.vehicleCategory
-    Nothing -> do
-      mDriverDL <- Query.findByDriverId personId
-      when (isJust mDriverDL) $ throwImageError imageId1 DriverAlreadyLinked
-      if documentVerificationConfig.doStrictVerifcation
-        then verifyDLFlow person merchantOpCityId documentVerificationConfig driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue nameOnCard req.vehicleCategory req.requestId sdkTransactionId
-        else onVerifyDLHandler person (Just driverLicenseNumber) (Just "2099-12-12") Nothing Nothing Nothing documentVerificationConfig req.imageId1 req.imageId2 nameOnCard dateOfIssue req.vehicleCategory
+  let runBody = do
+        when (VC.isNameCompareRequired transporterConfig verifyBy) $
+          VC.validateDocument merchantId merchantOpCityId person.id nameOnCard dateOfBirth Nothing DTO.DriverLicense VC.DriverDocument {panNumber = decryptedPanNumber, aadhaarNumber = decryptedAadhaarNumber, dlNumber = decryptedDlNumber, gstNumber = Nothing}
+        mdriverLicense <- Query.findByDLNumber driverLicenseNumber
+        case mdriverLicense of
+          Just driverLicense -> do
+            unless (driverLicense.driverId == personId) $ throwImageError imageId1 DLAlreadyLinked
+            unless (driverLicense.licenseExpiry > now) $ throwImageError imageId1 DLAlreadyUpdated
+            when (driverLicense.verificationStatus == Documents.VALID) $ throwError DLAlreadyUpdated
+            if documentVerificationConfig.doStrictVerifcation
+              then do
+                when (driverLicense.verificationStatus == Documents.INVALID) $ throwError DLInvalid
+                verifyDLFlow person merchantOpCityId documentVerificationConfig driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue nameOnCard req.vehicleCategory req.requestId sdkTransactionId
+              else onVerifyDLHandler person (Just driverLicenseNumber) (Just "2099-12-12") Nothing Nothing Nothing documentVerificationConfig req.imageId1 req.imageId2 nameOnCard dateOfIssue req.vehicleCategory
+          Nothing -> do
+            mDriverDL <- Query.findByDriverId personId
+            when (isJust mDriverDL) $ throwImageError imageId1 DriverAlreadyLinked
+            if documentVerificationConfig.doStrictVerifcation
+              then verifyDLFlow person merchantOpCityId documentVerificationConfig driverLicenseNumber driverDateOfBirth imageId1 imageId2 dateOfIssue nameOnCard req.vehicleCategory req.requestId sdkTransactionId
+              else onVerifyDLHandler person (Just driverLicenseNumber) (Just "2099-12-12") Nothing Nothing Nothing documentVerificationConfig req.imageId1 req.imageId2 nameOnCard dateOfIssue req.vehicleCategory
+  if VC.isNameCompareRequired transporterConfig verifyBy
+    then Redis.withWaitOnLockRedisWithExpiry (VC.makeDocumentVerificationLockKey personId.getId) 10 10 runBody
+    else runBody
   return Success
   where
     getImage :: Id Image.Image -> Flow Text
