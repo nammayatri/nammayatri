@@ -352,6 +352,8 @@ library
       Lib.JourneyLeg.Walk
       Lib.JourneyModule.Base
       Lib.JourneyModule.Location
+      Lib.JourneyModule.State.Types
+      Lib.JourneyModule.State.Utils
       Lib.JourneyModule.Types
       Lib.JourneyModule.Utils
       SharedLogic.Booking

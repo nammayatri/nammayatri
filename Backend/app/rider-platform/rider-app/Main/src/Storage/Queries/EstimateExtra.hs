@@ -1,6 +1,7 @@
 module Storage.Queries.EstimateExtra where
 
 import Domain.Types.Estimate as DE
+import Domain.Types.EstimateStatus
 import Domain.Types.SearchRequest (SearchRequest)
 import Kernel.Beam.Functions
 import Kernel.Prelude

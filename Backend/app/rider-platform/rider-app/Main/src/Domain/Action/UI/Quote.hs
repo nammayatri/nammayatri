@@ -47,8 +47,9 @@ import qualified Domain.Types.Journey as DJ
 import qualified Domain.Types.JourneyLeg as DJL
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Quote as SQuote
-import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.RideStatus as DRide
 import Domain.Types.RiderConfig (VehicleServiceTierOrderConfig)
+import Domain.Types.RouteDetails
 import qualified Domain.Types.SearchRequest as SSR
 import Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.Trip as DTrip
@@ -56,7 +57,6 @@ import Environment
 import EulerHS.Prelude hiding (find, group, id, length, map, maximumBy, sum)
 import Kernel.Beam.Functions
 import Kernel.External.Maps.Types
-import Kernel.External.MultiModal.Interface.Types
 import Kernel.Prelude hiding (whenJust)
 import Kernel.Storage.Esqueleto (EsqDBReplicaFlow)
 import Kernel.Storage.Hedis as Hedis
@@ -296,7 +296,7 @@ getJourneys :: SSR.SearchRequest -> Maybe Bool -> Flow (Maybe [JourneyData])
 getJourneys searchRequest hasMultimodalSearch = do
   case hasMultimodalSearch of
     Just True -> do
-      allJourneys :: [DJ.Journey] <- QJourney.findBySearchId searchRequest.id
+      allJourneys :: [DJ.Journey] <- QJourney.findBySearchId searchRequest.id.getId
       journeyData <-
         forM allJourneys \journey -> do
           journeyLegsFromOtp <- QJourneyLeg.findAllByJourneyId journey.id
@@ -313,8 +313,8 @@ getJourneys searchRequest hasMultimodalSearch = do
                     toLatLong = LatLong {lat = journeyLeg.endLocation.latitude, lon = journeyLeg.endLocation.longitude},
                     fromStationCode = journeyLeg.fromStopDetails >>= (.stopCode),
                     toStationCode = journeyLeg.toStopDetails >>= (.stopCode),
-                    color = listToMaybe $ catMaybes $ map (.shortName) journeyLeg.routeDetails,
-                    colorCode = listToMaybe $ catMaybes $ map (.color) journeyLeg.routeDetails,
+                    color = listToMaybe $ catMaybes $ map (.routeShortName) journeyLeg.routeDetails,
+                    colorCode = listToMaybe $ catMaybes $ map (.routeColorCode) journeyLeg.routeDetails,
                     routeDetails = map mkRouteDetail journeyLeg.routeDetails,
                     duration = journeyLeg.duration,
                     serviceTypes = journeyLeg.serviceTypes,
@@ -343,27 +343,27 @@ getJourneys searchRequest hasMultimodalSearch = do
       return . Just $ sortOn (.relevanceScore) journeyData
     _ -> return Nothing
   where
-    mkRouteDetail :: MultiModalRouteDetails -> RouteDetail
+    mkRouteDetail :: RouteDetails -> RouteDetail
     mkRouteDetail routeDetail =
       RouteDetail
-        { routeCode = gtfsIdtoDomainCode <$> routeDetail.gtfsId,
-          fromStationCode = gtfsIdtoDomainCode <$> (routeDetail.fromStopDetails >>= (.stopCode)) <|> gtfsIdtoDomainCode <$> (routeDetail.fromStopDetails >>= (.gtfsId)),
-          toStationCode = gtfsIdtoDomainCode <$> (routeDetail.toStopDetails >>= (.stopCode)) <|> gtfsIdtoDomainCode <$> (routeDetail.toStopDetails >>= (.gtfsId)),
-          color = routeDetail.shortName,
-          colorCode = routeDetail.shortName,
+        { routeCode = gtfsIdtoDomainCode <$> routeDetail.routeGtfsId,
+          fromStationCode = (gtfsIdtoDomainCode <$> (routeDetail.fromStopCode)) <|> (gtfsIdtoDomainCode <$> routeDetail.fromStopGtfsId),
+          toStationCode = (gtfsIdtoDomainCode <$> (routeDetail.toStopCode)) <|> (gtfsIdtoDomainCode <$> routeDetail.toStopGtfsId),
+          color = routeDetail.routeShortName,
+          colorCode = routeDetail.routeShortName,
           alternateShortNames = routeDetail.alternateShortNames,
           fromStationLatLong =
             LatLong
-              { lat = routeDetail.startLocation.latLng.latitude,
-                lon = routeDetail.startLocation.latLng.longitude
+              { lat = routeDetail.startLocationLat,
+                lon = routeDetail.startLocationLon
               },
           toStationLatLong =
             LatLong
-              { lat = routeDetail.endLocation.latLng.latitude,
-                lon = routeDetail.endLocation.latLng.longitude
+              { lat = routeDetail.endLocationLat,
+                lon = routeDetail.endLocationLon
               },
-          fromStationPlatformCode = routeDetail.fromStopDetails >>= (.platformCode),
-          toStationPlatformCode = routeDetail.toStopDetails >>= (.platformCode)
+          fromStationPlatformCode = routeDetail.fromStopPlatformCode,
+          toStationPlatformCode = routeDetail.toStopPlatformCode
         }
 
 -- Get the most frequent element in the list

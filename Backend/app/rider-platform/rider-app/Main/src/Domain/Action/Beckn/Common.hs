@@ -28,9 +28,10 @@ import Data.Time hiding (getCurrentTime)
 import Domain.Action.UI.Cancel (makeCustomerBlockingKey)
 import Domain.Action.UI.HotSpot
 import Domain.Action.UI.RidePayment as Reexport
-import qualified Domain.Types.Booking as BT
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
+import qualified Domain.Types.BookingStatus as BT
+import qualified Domain.Types.BookingStatus as DRB
 import qualified Domain.Types.Client as DC
 import qualified Domain.Types.ClientPersonInfo as DPCI
 import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
@@ -46,6 +47,7 @@ import qualified Domain.Types.PersonStats as DPS
 import qualified Domain.Types.RecentLocation as DTRL
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideRelatedNotificationConfig as DRN
+import qualified Domain.Types.RideStatus as DRide
 import qualified Domain.Types.RiderConfig as DRC
 import qualified Domain.Types.Trip as Trip
 import qualified Domain.Types.VehicleVariant as DV

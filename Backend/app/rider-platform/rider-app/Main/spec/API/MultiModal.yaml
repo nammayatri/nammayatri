@@ -8,6 +8,7 @@ imports:
   MultimodalTravelMode: Domain.Types.Trip
   LocationAPIEntity: Domain.Types.Location
   LegInfo: Lib.JourneyModule.Types
+  TrackingStatus: Lib.JourneyModule.State.Types
   JourneyLeg: Domain.Types.JourneyLeg
   IntegratedBPPConfig: Domain.Types.IntegratedBPPConfig
   LatLong: Kernel.External.Maps.Types
@@ -37,7 +38,7 @@ imports:
   Value: Data.Aeson
   Gate: Domain.Types.Station
   JourneyLegFeedbackData: Domain.Types.JourneyLegsFeedbacks
-  FRFSTicketBookingStatus: Domain.Types.FRFSTicketBooking
+  FRFSTicketBookingStatus: Domain.Types.FRFSTicketBookingStatus
 
 module: MultimodalConfirm
 
@@ -417,6 +418,16 @@ apis:
         legOrder: Int
         subLegOrder: Int
         status: JourneyLegStatus
+      response:
+        type: JourneyStatusResp
+
+  - POST:
+      endpoint: /multimodal/{journeyId}/order/{legOrder}/subleg/{subLegOrder}/setStatusV2/{trackingStatus}
+      params:
+        journeyId: Id Journey
+        legOrder: Int
+        subLegOrder: Int
+        trackingStatus: TrackingStatus
       response:
         type: JourneyStatusResp
 

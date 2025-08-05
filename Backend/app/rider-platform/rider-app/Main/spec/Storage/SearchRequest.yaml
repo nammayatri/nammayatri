@@ -28,6 +28,8 @@ imports:
   DriverIdentifierType: Domain.Types.RefereeLink
   DriverIdentifier: Domain.Types.RefereeLink
   ConfigVersionMap: Lib.Yudhishthira.Types
+  JourneyLeg: Domain.Types.JourneyLeg
+  RouteDetails: Domain.Types.RouteDetails
   Value: Data.Aeson
   RecentLocation: Domain.Types.RecentLocation
   VehicleCategory: BecknV2.OnDemand.Enums
@@ -92,6 +94,8 @@ SearchRequest:
     allJourneysLoaded: Maybe Bool
     searchMode: Maybe SearchMode
     isMultimodalSearch: Maybe Bool
+    journeyLegId: Maybe (Id JourneyLeg)
+    journeyRouteDetails: Maybe RouteDetails
 
   default:
     hasMultimodalSearch: "false"
@@ -166,6 +170,11 @@ SearchRequest:
     driverIdentifier:
       driverIdentifierType: Maybe DriverIdentifierType
       driverIdentifierValue: Maybe Text
+    journeyRouteDetails: {}
+
+  intermediateTransformers:
+    fromTType:
+      - journeyRouteDetails': Storage.Queries.Transformers.RouteDetails.getJourneyRouteDetails id journeyLegId|EM
 
   # distanceUnit should be the same for all fields
   toTType:
@@ -219,6 +228,8 @@ SearchRequest:
     journeyLegInfo: Storage.Queries.Transformers.SearchRequest.mkJourneyLegInfo
     driverIdentifier: Domain.Types.RefereeLink.mkDriverIdentifier
     configInExperimentVersions: fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< configInExperimentVersions)|E
+    journeyRouteDetails: listToMaybe journeyRouteDetails'|E
+
   excludedFields: [updatedAt]
 
   excludedDefaultQueries:

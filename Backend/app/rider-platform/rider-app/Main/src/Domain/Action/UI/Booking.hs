@@ -29,11 +29,10 @@ import Domain.Action.UI.Serviceability
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Booking.API as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
+import qualified Domain.Types.BookingStatus as SRB
 import Domain.Types.CancellationReason
 import qualified Domain.Types.Client as DC
-import Domain.Types.Extra.Booking
 import qualified Domain.Types.Journey as DJ
-import qualified Domain.Types.JourneyLeg as DJourneyLeg
 import Domain.Types.Location
 import Domain.Types.LocationAddress
 import qualified Domain.Types.LocationMapping as DLM
@@ -43,7 +42,6 @@ import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as DTR
-import qualified Domain.Types.Trip as DTrip
 import Environment
 import EulerHS.Prelude hiding (id, pack, safeHead)
 import Kernel.Beam.Functions as B
@@ -55,7 +53,6 @@ import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Common
 import Kernel.Types.Flow
 import Kernel.Types.Id
-import Kernel.Types.Price as KTP
 import Kernel.Utils.Common
 import Lib.JourneyModule.Base (generateJourneyInfoResponse, getAllLegsInfo)
 import Lib.JourneyModule.Types (GetStateFlow)
@@ -64,14 +61,11 @@ import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.Merchant as CQMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
-import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Booking as QRB
-import qualified Storage.Queries.FRFSTicketBooking as QTBooking
 import Storage.Queries.JourneyExtra as SQJ
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Ride as QR
-import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 
 data StopReq = StopReq
@@ -189,28 +183,6 @@ getJourneyList personId mbLimit mbOffset mbFromDate' mbToDate' mbJourneyStatusLi
   let mbFromDate = millisecondsToUTC <$> mbFromDate'
       mbToDate = millisecondsToUTC <$> mbToDate'
   SQJ.findAllByRiderId personId mbLimit mbOffset mbFromDate mbToDate mbJourneyStatusList mbIsPaymentSuccess
-
-getLegFare :: DJourneyLeg.JourneyLeg -> Flow Price
-getLegFare leg = do
-  let defaultPrice = Price {amount = HighPrecMoney 0, amountInt = Money 0, currency = KTP.INR}
-  case leg.legSearchId of
-    Nothing -> do
-      logError $ "LegId is null for JourneyLeg: " <> show leg.journeyId <> " JourneyLegId: " <> show leg.id
-      return defaultPrice
-    Just legSearchIdText -> do
-      let legSearchId = Id legSearchIdText
-      case leg.mode of
-        DTrip.Walk -> return defaultPrice
-        DTrip.Taxi -> do
-          mbBooking <- QBooking.findByTransactionIdAndStatus legSearchId.getId (activeBookingStatus <> [COMPLETED])
-          case mbBooking of
-            Just booking -> do
-              mRide <- QRide.findByRBId booking.id
-              return $ fromMaybe defaultPrice (mRide >>= \ride -> ride.totalFare)
-            Nothing -> return defaultPrice
-        _ -> do
-          mbBooking <- QTBooking.findBySearchId legSearchId
-          return $ fromMaybe defaultPrice (mbBooking >>= \booking -> booking.finalPrice <|> Just booking.price)
 
 bookingList :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe SRB.BookingStatus -> Maybe (Id DC.Client) -> Maybe Integer -> Maybe Integer -> [SRB.BookingStatus] -> Flow BookingListRes
 bookingList (personId, merchantId) mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate' mbToDate' mbBookingStatusList = do

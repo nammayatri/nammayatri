@@ -14,11 +14,11 @@ imports:
   Money: Kernel.Utils.Common
   Centesimal: Kernel.Utils.Common
   LocationAddress: Domain.Types.LocationAddress
-  BookingStatus: Domain.Types.Extra.Booking
+  BookingStatus: Domain.Types.BookingStatus
   Quote: Domain.Types.Quote
   MerchantPaymentMethod: Domain.Types.MerchantPaymentMethod
   TripTerms: Domain.Types.TripTerms
-  PaymentStatus: BecknV2.OnDemand.Enums
+  PaymentStatus: Domain.Types.Extra.Booking
   BaseUrl: Kernel.Types.Common
   FareProductType: Domain.Types.FarePolicy.FareProductType
   TripCategory: Domain.Types.Common
@@ -34,8 +34,10 @@ imports:
   ConfigVersionMap: Lib.Yudhishthira.Types
   Value: Data.Aeson
   Journey: Domain.Types.Journey
-  ParcelType: Domain.Types.ParcelDetails
+  ParcelType: Domain.Types.ParcelType
   JourneyLegStatus: Lib.JourneyLeg.Types
+  RouteDetails: Domain.Types.RouteDetails
+  JourneyLeg: Domain.Types.JourneyLeg
   RecentLocation: Domain.Types.RecentLocation
 
 BookingLocation:
@@ -186,7 +188,7 @@ Booking:
     quoteId: Maybe (Id Quote)
     paymentMethodId: Maybe PaymentMethodId
     paymentUrl: Maybe Text
-    status: BookingStatus
+    status: BookingStatus|NoRelation
     providerId: Text
     providerUrl: BaseUrl
     bppEstimateId: Text
@@ -247,6 +249,8 @@ Booking:
     insuredAmount: Maybe Text
     driverInsuredAmount: Maybe Text
     isMultimodalSearch: Maybe Bool
+    journeyLegId: Maybe (Id JourneyLeg)
+    journeyRouteDetails: Maybe RouteDetails
 
   beamFields:
     estimatedDistance:
@@ -284,6 +288,8 @@ Booking:
       clientManufacturer: Maybe Text
     bppEstimateId:
       itemId: Text
+    journeyRouteDetails: {}
+
   beamInstance: MakeTableInstancesWithTModifier [("bppBookingId", "bpp_ride_booking_id"), ("riderTransactionId", "transaction_id")]
   beamType:
     discount: Maybe HighPrecMoney
@@ -408,6 +414,7 @@ Booking:
     fromTType:
       - mappings: Storage.Queries.LocationMapping.findByEntityId id|EM
       - toBookingDetailsAndFromLocation': Storage.Queries.Transformers.Booking.toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings distance fareProductType tripCategory toLocationId fromLocationId stopLocationId otpCode isUpgradedToCab distanceUnit distanceValue hasStops parcelType parcelQuantity|EM
+      - journeyRouteDetails': Storage.Queries.Transformers.RouteDetails.getJourneyRouteDetails riderTransactionId journeyLegId|EM
   fromTType:
     providerUrl: parseBaseUrl providerUrl|EM
     isBookingUpdated: (fromMaybe False isBookingUpdated)|E
@@ -433,6 +440,7 @@ Booking:
     isInsured: fromMaybe False isInsured|E
     preferSafetyPlus : fromMaybe False preferSafetyPlus | E
     isPetRide: fromMaybe False isPetRide | E
+    journeyRouteDetails: listToMaybe journeyRouteDetails'|E
 
   extraOperations:
     - EXTRA_QUERY_FILE

@@ -39,6 +39,7 @@ updateByPrimaryKey (Domain.Types.WalkLegMultimodal.WalkLegMultimodal {..}) = do
       Se.Set Beam.estimatedDistance ((.value) <$> estimatedDistance),
       Se.Set Beam.estimatedDuration estimatedDuration,
       Se.Set Beam.fromLocationId (Just $ Kernel.Types.Id.getId ((.id) fromLocation)),
+      Se.Set Beam.journeyLegId (Kernel.Types.Id.getId <$> journeyLegId),
       Se.Set Beam.agency (journeyLegInfo >>= (.agency)),
       Se.Set Beam.convenienceCost (Kernel.Prelude.fmap (.convenienceCost) journeyLegInfo),
       Se.Set Beam.isDeleted (journeyLegInfo >>= (.isDeleted)),

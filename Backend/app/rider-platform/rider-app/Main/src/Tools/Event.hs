@@ -16,12 +16,14 @@
 module Tools.Event where
 
 import qualified Domain.Types.Booking as DBooking
+import qualified Domain.Types.BookingStatus as DBooking
 import qualified Domain.Types.Estimate as ES
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.Person
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.RideStatus as DRide
 import qualified Domain.Types.SearchRequest as DSearchRequest
 import Domain.Types.VehicleVariant (VehicleVariant)
 import qualified Domain.Types.VehicleVariant as DV

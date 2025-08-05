@@ -28,6 +28,7 @@ import qualified "rider-app" Domain.Action.UI.Quote as AppQuote
 import qualified "dynamic-offer-driver-app" Domain.Action.UI.SearchRequestForDriver as DSRD
 import qualified "dynamic-offer-driver-app" Domain.Types.Booking as TRB
 import qualified "rider-app" Domain.Types.Booking as AppRB
+import qualified "beckn-spec" Domain.Types.BookingStatus as AppRB
 import qualified "dynamic-offer-driver-app" Domain.Types.CancellationReason as SCR
 import qualified "rider-app" Domain.Types.CancellationReason as AppCR
 import "dynamic-offer-driver-app" Domain.Types.Common as SearchReqInfo
@@ -40,6 +41,7 @@ import "dynamic-offer-driver-app" Domain.Types.Person as TPerson
 import qualified "rider-app" Domain.Types.Quote as AppQuote
 import qualified "dynamic-offer-driver-app" Domain.Types.Ride as TRide
 import qualified "rider-app" Domain.Types.Ride as BRide
+import qualified "beckn-spec" Domain.Types.RideStatus as BRide
 import qualified "rider-app" Domain.Types.SearchRequest as AppSearchReq
 import qualified "dynamic-offer-driver-app" Domain.Types.SearchTry as ArduSStep
 import HSpec

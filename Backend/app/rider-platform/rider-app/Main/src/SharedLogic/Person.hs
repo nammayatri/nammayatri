@@ -16,7 +16,7 @@ module SharedLogic.Person where
 
 import Data.Time hiding (getCurrentTime)
 import Data.Time.Calendar.WeekDate
-import qualified Domain.Types.Booking as DB
+import qualified Domain.Types.BookingStatus as DB
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.PersonStats as DPS

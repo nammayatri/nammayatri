@@ -8,6 +8,7 @@ import qualified Data.Singletons.TH
 import qualified "this" Domain.Action.UI.Booking
 import qualified "this" Domain.Types.Booking
 import qualified "this" Domain.Types.Booking.API
+import qualified Domain.Types.BookingStatus
 import qualified "this" Domain.Types.Person
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Prelude
@@ -36,7 +37,7 @@ type GetBookingList =
       :> QueryParam "onlyActive" Kernel.Prelude.Bool
       :> QueryParam
            "status"
-           Domain.Types.Booking.BookingStatus
+           Domain.Types.BookingStatus.BookingStatus
       :> Get
            '[JSON]
            Domain.Action.UI.Booking.BookingListRes
@@ -44,7 +45,7 @@ type GetBookingList =
 
 data BookingAPIs = BookingAPIs
   { postBookingStatus :: Kernel.Types.Id.Id Domain.Types.Booking.Booking -> Kernel.Types.Id.Id Domain.Types.Person.Person -> EulerHS.Types.EulerClient Domain.Types.Booking.API.BookingAPIEntity,
-    getBookingList :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Domain.Types.Booking.BookingStatus -> EulerHS.Types.EulerClient Domain.Action.UI.Booking.BookingListRes
+    getBookingList :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Domain.Types.BookingStatus.BookingStatus -> EulerHS.Types.EulerClient Domain.Action.UI.Booking.BookingListRes
   }
 
 mkBookingAPIs :: (Client EulerHS.Types.EulerClient API -> BookingAPIs)

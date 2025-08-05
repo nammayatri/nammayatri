@@ -3,14 +3,14 @@
 
 module Storage.Beam.Booking where
 
-import qualified BecknV2.OnDemand.Enums
 import qualified Data.Aeson
 import qualified Database.Beam as B
+import qualified Domain.Types.BookingStatus
 import Domain.Types.Common ()
 import qualified Domain.Types.Common
 import qualified Domain.Types.Extra.Booking
 import qualified Domain.Types.FarePolicy.FareProductType
-import qualified Domain.Types.ParcelDetails
+import qualified Domain.Types.ParcelType
 import qualified Domain.Types.ServiceTierType
 import qualified Domain.Types.Trip
 import Kernel.External.Encryption
@@ -31,7 +31,7 @@ data BookingT f = BookingT
     isUpgradedToCab :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     otpCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     parcelQuantity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    parcelType :: B.C f (Kernel.Prelude.Maybe Domain.Types.ParcelDetails.ParcelType),
+    parcelType :: B.C f (Kernel.Prelude.Maybe Domain.Types.ParcelType.ParcelType),
     stopLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     toLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     bppBookingId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -75,12 +75,13 @@ data BookingT f = BookingT
     isScheduled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isSkipped :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     journeyId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    journeyLegId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     journeyLegOrder :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     journeyLegStatus :: B.C f (Kernel.Prelude.Maybe Lib.JourneyLeg.Types.JourneyLegStatus),
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     paymentMethodId :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.PaymentMethodId),
-    paymentStatus :: B.C f (Kernel.Prelude.Maybe BecknV2.OnDemand.Enums.PaymentStatus),
+    paymentStatus :: B.C f (Kernel.Prelude.Maybe Domain.Types.Extra.Booking.PaymentStatus),
     paymentUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     preferSafetyPlus :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     primaryExophone :: B.C f Kernel.Prelude.Text,
@@ -96,7 +97,7 @@ data BookingT f = BookingT
     specialLocationName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     specialLocationTag :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     startTime :: B.C f Kernel.Prelude.UTCTime,
-    status :: B.C f Domain.Types.Extra.Booking.BookingStatus,
+    status :: B.C f Domain.Types.BookingStatus.BookingStatus,
     riderTransactionId :: B.C f Kernel.Prelude.Text,
     tripCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.Common.TripCategory),
     tripTermsId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

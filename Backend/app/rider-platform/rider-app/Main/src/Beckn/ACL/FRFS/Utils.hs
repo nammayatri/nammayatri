@@ -25,8 +25,8 @@ import Domain.Action.Beckn.FRFS.Common
 import qualified Domain.Action.Beckn.FRFS.Common as Domain
 import Domain.Types
 import Domain.Types.BecknConfig
-import qualified Domain.Types.FRFSTicket as Ticket
 import qualified Domain.Types.FRFSTicketBooking as Booking
+import qualified Domain.Types.FRFSTicketStatus as Ticket
 import Kernel.Prelude
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error

@@ -93,6 +93,7 @@ dependencies:
   - sequelize
   - warp
   - uuid
+  - beckn-spec
 
 ghc-options:
   - -Wall
@@ -153,3 +154,4 @@ executables:
     dependencies:
       - kafka-consumers
       - mobility-core
+      - beckn-spec

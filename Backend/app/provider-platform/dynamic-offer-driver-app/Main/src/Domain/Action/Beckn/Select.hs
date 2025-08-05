@@ -22,10 +22,10 @@ import Data.Either.Extra (eitherToMaybe)
 import Data.Text as Text hiding (find)
 import qualified Domain.Action.UI.SearchRequestForDriver as USRD
 import qualified Domain.Types.ConditionalCharges as DAC
-import qualified Domain.Types.DeliveryDetails as DParcel
 import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.ParcelType as DParcel
 import qualified Domain.Types.RiderDetails as DRD
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.Yudhishthira as Y

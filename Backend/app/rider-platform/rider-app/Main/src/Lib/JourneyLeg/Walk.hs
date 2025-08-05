@@ -39,6 +39,8 @@ instance JT.JourneyLeg WalkLegRequest m where
               fromLocation = fromLocation,
               toLocation = Just toLocation,
               journeyLegInfo = Just journeySearchData,
+              journeyRouteDetails = listToMaybe journeyLegData.routeDetails,
+              journeyLegId = Just journeyLegData.id,
               riderId = journey.riderId,
               startTime = fromMaybe now journeyLegData.fromArrivalTime,
               merchantId = journey.merchantId,

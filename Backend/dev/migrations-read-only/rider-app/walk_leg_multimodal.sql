@@ -28,3 +28,8 @@ ALTER TABLE atlas_app.walk_leg_multimodal ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.walk_leg_multimodal ADD COLUMN on_search_failed boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.walk_leg_multimodal ADD COLUMN journey_leg_id character varying(36) ;

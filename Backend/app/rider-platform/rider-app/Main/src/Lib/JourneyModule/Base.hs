@@ -4,6 +4,7 @@ import qualified API.Types.UI.FRFSTicketService as FRFSTicketService
 import qualified API.Types.UI.MultimodalConfirm as APITypes
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.OnDemand.Enums as BecknSpec
+import Control.Applicative ((<|>))
 import Control.Monad.Extra (mapMaybeM)
 import Data.List (sortBy)
 import Data.List.NonEmpty (nonEmpty)
@@ -67,6 +68,8 @@ import Lib.JourneyLeg.Types.Taxi
 import Lib.JourneyLeg.Types.Walk
 import Lib.JourneyLeg.Walk ()
 import Lib.JourneyModule.Location
+import qualified Lib.JourneyModule.State.Types as JMState
+import qualified Lib.JourneyModule.State.Utils as JMStateUtils
 import qualified Lib.JourneyModule.Types as JL
 import Lib.JourneyModule.Utils
 import Lib.Queries.SpecialLocation as QSpecialLocation
@@ -398,7 +401,7 @@ getAllLegsStatus journey = do
           any (\legData -> legData.status `notElem` JL.allCompletedStatus) legDataList
 
     getRouteCodeToTrack :: DJourneyLeg.JourneyLeg -> Maybe Text
-    getRouteCodeToTrack leg = safeHead leg.routeDetails >>= ((gtfsId :: KEMIT.MultiModalRouteDetails -> Maybe Text) >=> (pure . gtfsIdtoDomainCode))
+    getRouteCodeToTrack leg = safeHead leg.routeDetails >>= ((.routeGtfsId) >=> (pure . gtfsIdtoDomainCode))
 
     processLeg ::
       (JL.GetStateFlow m r c, JL.SearchRequestFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
@@ -955,6 +958,9 @@ cancelLeg journeyId journeyLeg cancellationReasonCode isSkipped skippedDuringCon
     logError $ "Checking and marking terminal journey status for journey: " <> show journey.id.getId <> " with updatedLegStatus: " <> show (length updatedLegStatus)
     when (length updatedLegStatus == 1) $ do
       checkAndMarkTerminalJourneyStatus journey (not isSkipped) (isJust cancelEstimateId) updatedLegStatus
+  whenJust journeyLeg.journeyLegId $ \journeyLegId -> do
+    when isSkipped $ do
+      JMStateUtils.setJourneyLegTrackingStatus journeyLegId Nothing JMState.Finished
   return ()
 
 cancelRemainingLegs ::
@@ -1727,13 +1733,30 @@ updateFRFSLegStatus status mbBookingId mbSubLegOrder = do
               QTBooking.updateJourneyLegStatus (Just status) bookingId
     Nothing -> whenJust mbBookingId $ QTBooking.updateJourneyLegStatus (Just status)
 
-markLegStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => JL.JourneyLegStatus -> JL.LegExtraInfo -> Id DJourney.Journey -> Int -> Maybe Int -> m ()
-markLegStatus status journeyLegExtraInfo journeyId legOrder mbSubLegOrder = do
-  case journeyLegExtraInfo of
-    JL.Metro legExtraInfo -> updateFRFSLegStatus status legExtraInfo.bookingId mbSubLegOrder
-    JL.Subway legExtraInfo -> updateFRFSLegStatus status legExtraInfo.bookingId mbSubLegOrder
-    JL.Bus legExtraInfo -> whenJust legExtraInfo.bookingId $ QTBooking.updateJourneyLegStatus (Just status)
-    JL.Walk legExtraInfo -> QWalkLeg.updateStatus (JL.castWalkLegStatusFromLegStatus status) legExtraInfo.id
-    JL.Taxi legExtraInfo -> do
-      QJourneyLeg.updateStatusByJourneyIdAndSequenceNumber (Just status) journeyId legOrder
-      whenJust legExtraInfo.bookingId $ QBooking.updateJourneyLegStatus (Just status)
+markLegStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Maybe JL.JourneyLegStatus -> Maybe JMState.TrackingStatus -> JL.LegInfo -> Id DJourney.Journey -> Maybe Int -> m ()
+markLegStatus mbStatus trackingStatus leg journeyId mbSubLegOrder = do
+  whenJust ((,) <$> trackingStatus <*> leg.journeyLegId) $ \(status, journeyLegId) -> do
+    JMStateUtils.setJourneyLegTrackingStatus journeyLegId mbSubLegOrder status
+  -- TODO :: Deprecate the below code when Replaced with setJourneyLegTrackingStatus (trackingStatus)
+  let mbStatus' = mbStatus <|> (castTrackingStatusToLegStatus <$> trackingStatus)
+  whenJust mbStatus' $ \status -> do
+    case leg.legExtraInfo of
+      JL.Metro legExtraInfo -> updateFRFSLegStatus status legExtraInfo.bookingId mbSubLegOrder
+      JL.Subway legExtraInfo -> updateFRFSLegStatus status legExtraInfo.bookingId mbSubLegOrder
+      JL.Bus legExtraInfo -> whenJust legExtraInfo.bookingId $ QTBooking.updateJourneyLegStatus (Just status)
+      JL.Walk legExtraInfo -> QWalkLeg.updateStatus (JL.castWalkLegStatusFromLegStatus status) legExtraInfo.id
+      JL.Taxi legExtraInfo -> do
+        QJourneyLeg.updateStatusByJourneyIdAndSequenceNumber (Just status) journeyId leg.order
+        whenJust legExtraInfo.bookingId $ QBooking.updateJourneyLegStatus (Just status)
+  where
+    -- TODO :: For Backward Compatibility till UI is not sending the `trackingStatus` in setStatus API
+    castTrackingStatusToLegStatus = \case
+      JMState.InPlan -> JL.InPlan
+      JMState.Arriving -> JL.OnTheWay
+      JMState.AlmostArrived -> JL.Arriving
+      JMState.Arrived -> JL.Arrived
+      JMState.Ongoing -> JL.Ongoing
+      JMState.Finishing -> JL.Finishing
+      JMState.ExitingStation -> JL.Finishing
+      JMState.FeedbackPending -> JL.Completed
+      JMState.Finished -> JL.Completed

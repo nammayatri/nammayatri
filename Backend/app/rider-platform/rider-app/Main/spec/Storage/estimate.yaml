@@ -15,6 +15,7 @@ imports:
   showBaseUrl: Kernel.Prelude
   Device : Kernel.Types.Version
   DeviceType: Kernel.Types.Version
+  EstimateStatus: Domain.Types.EstimateStatus
   Version: Kernel.Types.Version
   Minutes: Kernel.Types.Common
   TripCategory: Domain.Types.Common
@@ -56,10 +57,6 @@ Estimate:
       tollNames: "[Text]"
       derive': "Generic, Show"
 
-    EstimateStatus:
-      enum: "NEW, DRIVER_QUOTE_REQUESTED, CANCELLED, GOT_DRIVER_QUOTE, DRIVER_QUOTE_CANCELLED, COMPLETED"
-      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema,ToParamSchema"
-
     WaitingCharges:
       waitingChargePerMin: Maybe Price
       derive': "Generic, Show"
@@ -92,7 +89,7 @@ Estimate:
     tripTerms : Maybe TripTerms
     estimateBreakupList : "[EstimateBreakup]"
     nightShiftInfo : Maybe NightShiftInfo
-    status : EstimateStatus
+    status : EstimateStatus|NoRelation
     waitingCharges : WaitingCharges
     driversLocation : "[LatLong]"
     specialLocationTag : Maybe Text
@@ -125,10 +122,6 @@ Estimate:
     id: PrimaryKey
     requestId: SecondaryKey
     bppEstimateId: SecondaryKey
-
-  domainInstance:
-    - Custom Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList <EstimateStatus>
-    - Custom Kernel.Utils.TH.mkHttpInstancesForEnum <EstimateStatus>
 
   beamFields:
     totalFareRange:

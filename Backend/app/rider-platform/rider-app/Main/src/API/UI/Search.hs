@@ -45,14 +45,14 @@ import qualified Domain.Types.Booking as Booking
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.CancellationReason as SCR
 import qualified Domain.Types.Client as DC
-import qualified Domain.Types.Estimate as Estimate
+import qualified Domain.Types.EstimateStatus as Estimate
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Journey as Journey
 import qualified Domain.Types.Merchant as Merchant
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.MultimodalPreferences as DMP
 import qualified Domain.Types.Person as Person
-import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.RideStatus as DRide
 import qualified Domain.Types.RiderConfig as DRC
 import qualified Domain.Types.SearchRequest as SearchRequest
 import qualified Domain.Types.StationType as Station
@@ -183,7 +183,7 @@ search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfi
           _ -> pure ()
   -- TODO : remove this code after multiple search req issue get fixed from frontend
   --END
-  dSearchRes <- DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice (fromMaybe False mbIsDashboardRequest) Nothing False
+  dSearchRes <- DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice (fromMaybe False mbIsDashboardRequest) Nothing Nothing Nothing False
   fork "search cabs" . withShortRetry $ do
     becknTaxiReqV2 <- TaxiACL.buildSearchReqV2 dSearchRes
     let generatedJson = encode becknTaxiReqV2
@@ -248,7 +248,7 @@ multimodalSearchHandler (personId, _merchantId) req mbInitiateJourney mbBundleVe
     whenJust mbImeiNumber $ \imeiNumber -> do
       encryptedImeiNumber <- encrypt imeiNumber
       Person.updateImeiNumber (Just encryptedImeiNumber) personId
-    dSearchRes <- DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice (fromMaybe False mbIsDashboardRequest) Nothing True
+    dSearchRes <- DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice (fromMaybe False mbIsDashboardRequest) Nothing Nothing Nothing True
     riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow dSearchRes.searchRequest.merchantOperatingCityId dSearchRes.searchRequest.configInExperimentVersions >>= fromMaybeM (RiderConfigNotFound dSearchRes.searchRequest.merchantOperatingCityId.getId)
     let initiateJourney = fromMaybe False mbInitiateJourney
     multiModalSearch dSearchRes.searchRequest riderConfig initiateJourney False req personId
@@ -294,7 +294,7 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
       let duration = nominalDiffTimeToSeconds $ diffUTCTime singleModeRouteDetails.toStop.stopArrivalTime singleModeRouteDetails.fromStop.stopArrivalTime
       let currentLocation = fmap latLongToLocationV2 req.currentLocation
       mbPreliminaryLeg <- getPreliminaryLeg now currentLocation fromStopLocation
-      let subLegOrder = if isJust mbPreliminaryLeg then 1 else 0
+      let subLegOrder = if isJust mbPreliminaryLeg then 2 else 1
       let leg =
             MultiModalTypes.MultiModalLeg
               { distance = distance,
@@ -373,7 +373,7 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
               }
       transitServiceReq <- TMultiModal.getTransitServiceReq searchRequest.merchantId merchantOperatingCityId
       otpResponse' <- JMU.measureLatency (MultiModal.getTransitRoutes (Just searchRequest.id.getId) transitServiceReq transitRoutesReq >>= fromMaybeM (InternalError "routes dont exist")) "getTransitRoutes"
-      let otpResponse'' = MInterface.MultiModalResponse otpResponse'.routes
+      let otpResponse'' = MInterface.MultiModalResponse (map mkRouteDetailsForWalkLegs otpResponse'.routes)
       logDebug $ "[Multimodal - OTP Response]" <> show otpResponse''
       -- Add default auto leg if no routes are found
       if null otpResponse''.routes
@@ -621,6 +621,40 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
       BecknV2.OnDemand.Enums.SUBWAY -> MultiModalTypes.Subway
       _ -> MultiModalTypes.Unspecified
 
+    mkRouteDetailsForWalkLegs :: MultiModalTypes.MultiModalRoute -> MultiModalTypes.MultiModalRoute
+    mkRouteDetailsForWalkLegs MultiModalTypes.MultiModalRoute {..} =
+      let mkRouteDetail leg =
+            [ MultiModalTypes.MultiModalRouteDetails
+                { gtfsId = Nothing,
+                  longName = Nothing,
+                  shortName = Nothing,
+                  alternateShortNames = [],
+                  color = Nothing,
+                  fromStopDetails = leg.fromStopDetails,
+                  toStopDetails = leg.toStopDetails,
+                  startLocation = leg.startLocation,
+                  endLocation = leg.endLocation,
+                  subLegOrder = 1,
+                  fromArrivalTime = leg.fromArrivalTime,
+                  fromDepartureTime = leg.fromDepartureTime,
+                  toArrivalTime = leg.toArrivalTime,
+                  toDepartureTime = leg.toDepartureTime
+                }
+            ]
+       in MultiModalTypes.MultiModalRoute
+            { legs =
+                map
+                  ( \leg ->
+                      leg{routeDetails =
+                            if null leg.routeDetails
+                              then mkRouteDetail leg
+                              else leg.routeDetails
+                         }
+                  )
+                  legs,
+              ..
+            }
+
     mkAutoOrWalkLeg :: UTCTime -> Maybe LocationV2 -> LocationV2 -> MultiModalTypes.GeneralVehicleType -> Distance -> Seconds -> Flow (MultiModalTypes.MultiModalLeg, UTCTime, UTCTime)
     mkAutoOrWalkLeg now fromLocation toLocation mode distance duration = do
       let fromStopLocation = LocationV2 {latLng = LatLngV2 {latitude = searchRequest.fromLocation.lat, longitude = searchRequest.fromLocation.lon}}
@@ -649,7 +683,7 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
                       toStopDetails = Nothing,
                       startLocation,
                       endLocation = toStopLocation,
-                      subLegOrder = 0,
+                      subLegOrder = 1,
                       fromArrivalTime = Just startTime,
                       fromDepartureTime = Just startTime,
                       toArrivalTime = Just endTime,
@@ -871,7 +905,7 @@ searchTrigger' (personId, merchantId) req mbBundleVersion mbClientVersion mbClie
           _ -> pure ()
   -- TODO : remove this code after multiple search req issue get fixed from frontend
   --END
-  dSearchRes <- DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice (fromMaybe False mbIsDashboardRequest) Nothing False
+  dSearchRes <- DSearch.search personId req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbClientId mbDevice (fromMaybe False mbIsDashboardRequest) Nothing Nothing Nothing False
   fork "search cabs" . withShortRetry $ do
     becknTaxiReqV2 <- TaxiACL.buildSearchReqV2 dSearchRes
     let generatedJson = encode becknTaxiReqV2

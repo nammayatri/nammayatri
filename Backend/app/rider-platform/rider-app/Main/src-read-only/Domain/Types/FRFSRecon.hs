@@ -4,8 +4,8 @@
 module Domain.Types.FRFSRecon where
 
 import Data.Aeson
-import qualified Domain.Types.FRFSTicket
 import qualified Domain.Types.FRFSTicketBooking
+import qualified Domain.Types.FRFSTicketStatus
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
@@ -37,7 +37,7 @@ data FRFSRecon = FRFSRecon
     sourceStationCode :: Kernel.Prelude.Text,
     ticketNumber :: Kernel.Prelude.Text,
     ticketQty :: Kernel.Prelude.Int,
-    ticketStatus :: Kernel.Prelude.Maybe Domain.Types.FRFSTicket.FRFSTicketStatus,
+    ticketStatus :: Kernel.Prelude.Maybe Domain.Types.FRFSTicketStatus.FRFSTicketStatus,
     time :: Kernel.Prelude.Text,
     totalOrderValue :: Kernel.Types.Common.Price,
     transactionRefNumber :: Kernel.Prelude.Text,

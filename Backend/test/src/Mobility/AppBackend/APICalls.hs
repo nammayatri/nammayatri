@@ -25,6 +25,7 @@ import qualified "rider-app" API.UI.Serviceability as AppServ
 import qualified "rider-app" Domain.Action.UI.Cancel as CancelAPI
 import qualified "rider-app" Domain.Types.Booking as BRB
 import qualified "rider-app" Domain.Types.Booking.API as AbeBooking
+import qualified "beckn-spec" Domain.Types.BookingStatus as BRB
 import qualified "rider-app" Domain.Types.CancellationReason as AbeCRC
 import qualified "rider-app" Domain.Types.Client as DC
 import qualified "rider-app" Domain.Types.Estimate as AbeEstimate

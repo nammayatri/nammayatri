@@ -4,7 +4,7 @@
 module Domain.Types.RideRelatedNotificationConfig where
 
 import Data.Aeson
-import qualified Domain.Types.Extra.Booking
+import qualified Domain.Types.BookingStatus
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
@@ -18,7 +18,7 @@ data RideRelatedNotificationConfig = RideRelatedNotificationConfig
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     notificationKey :: Kernel.Prelude.Text,
     notificationType :: Domain.Types.RideRelatedNotificationConfig.NotificationType,
-    onBookingStatus :: Domain.Types.Extra.Booking.BookingStatus,
+    onBookingStatus :: Domain.Types.BookingStatus.BookingStatus,
     onScheduledBooking :: Kernel.Prelude.Bool,
     timeDiff :: Kernel.Prelude.NominalDiffTime,
     timeDiffEvent :: Domain.Types.RideRelatedNotificationConfig.TimeDiffEvent,

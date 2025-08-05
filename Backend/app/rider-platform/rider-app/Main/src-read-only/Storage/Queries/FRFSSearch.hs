@@ -26,7 +26,7 @@ createMany = traverse_ create
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch -> m (Maybe Domain.Types.FRFSSearch.FRFSSearch))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-getTicketPlaces :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.FRFSSearch.FRFSSearch]))
+getTicketPlaces :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.FRFSSearch.FRFSSearch])
 getTicketPlaces merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
 updateIsOnSearchReceivedById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch -> m ())
@@ -54,13 +54,14 @@ updateByPrimaryKey (Domain.Types.FRFSSearch.FRFSSearch {..}) = do
     [ Se.Set Beam.fromStationId fromStationCode,
       Se.Set Beam.integratedBppConfigId (Kernel.Types.Id.getId integratedBppConfigId),
       Se.Set Beam.isOnSearchReceived isOnSearchReceived,
-      Se.Set Beam.agency ((journeyLegInfo >>= (.agency))),
+      Se.Set Beam.journeyLegId (Kernel.Types.Id.getId <$> journeyLegId),
+      Se.Set Beam.agency (journeyLegInfo >>= (.agency)),
       Se.Set Beam.convenienceCost (Kernel.Prelude.fmap (.convenienceCost) journeyLegInfo),
-      Se.Set Beam.isDeleted ((journeyLegInfo >>= (.isDeleted))),
+      Se.Set Beam.isDeleted (journeyLegInfo >>= (.isDeleted)),
       Se.Set Beam.journeyId (Kernel.Prelude.fmap (.journeyId) journeyLegInfo),
       Se.Set Beam.journeyLegOrder (Kernel.Prelude.fmap (.journeyLegOrder) journeyLegInfo),
-      Se.Set Beam.onSearchFailed ((journeyLegInfo >>= (.onSearchFailed))),
-      Se.Set Beam.pricingId ((journeyLegInfo >>= (.pricingId))),
+      Se.Set Beam.onSearchFailed (journeyLegInfo >>= (.onSearchFailed)),
+      Se.Set Beam.pricingId (journeyLegInfo >>= (.pricingId)),
       Se.Set Beam.skipBooking (Kernel.Prelude.fmap (.skipBooking) journeyLegInfo),
       Se.Set Beam.journeyLegStatus journeyLegStatus,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),

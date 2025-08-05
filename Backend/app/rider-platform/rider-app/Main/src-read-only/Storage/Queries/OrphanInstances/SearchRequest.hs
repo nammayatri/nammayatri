@@ -18,10 +18,12 @@ import qualified Kernel.Utils.Common
 import qualified Kernel.Utils.JSON
 import qualified Kernel.Utils.Version
 import qualified Storage.Beam.SearchRequest as Beam
+import qualified Storage.Queries.Transformers.RouteDetails
 import qualified Storage.Queries.Transformers.SearchRequest
 
 instance FromTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest where
   fromTType' (Beam.SearchRequestT {..}) = do
+    journeyRouteDetails' <- Storage.Queries.Transformers.RouteDetails.getJourneyRouteDetails id journeyLegId
     backendConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion)
     clientBundleVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion)
     clientConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion)
@@ -66,7 +68,9 @@ instance FromTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest 
             isMeterRideSearch = isMeterRideSearch,
             isMultimodalSearch = isMultimodalSearch,
             isPetRide = isPetRide,
+            journeyLegId = Kernel.Types.Id.Id <$> journeyLegId,
             journeyLegInfo = Storage.Queries.Transformers.SearchRequest.mkJourneyLegInfo agency convenienceCost isDeleted journeyId journeyLegOrder onSearchFailed pricingId skipBooking,
+            journeyRouteDetails = listToMaybe journeyRouteDetails',
             language = language,
             maxDistance = Kernel.Utils.Common.mkDistanceWithDefault distanceUnit maxDistanceValue . Kernel.Types.Common.HighPrecMeters <$> maxDistance,
             merchantId = Kernel.Types.Id.Id merchantId,
@@ -132,6 +136,7 @@ instance ToTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest wh
         Beam.isMeterRideSearch = isMeterRideSearch,
         Beam.isMultimodalSearch = isMultimodalSearch,
         Beam.isPetRide = isPetRide,
+        Beam.journeyLegId = Kernel.Types.Id.getId <$> journeyLegId,
         Beam.agency = journeyLegInfo >>= (.agency),
         Beam.convenienceCost = Kernel.Prelude.fmap (.convenienceCost) journeyLegInfo,
         Beam.isDeleted = journeyLegInfo >>= (.isDeleted),
