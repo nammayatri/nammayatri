@@ -117,6 +117,7 @@ import qualified Data.Tuple.Extra as DTE
 import Domain.Action.Beckn.Search
 import Domain.Action.Dashboard.Driver.Notification as DriverNotify (triggerDummyRideRequest)
 import qualified Domain.Action.Internal.DriverMode as DDriverMode
+import qualified Domain.Action.Internal.ProcessingChangeOnline as DOnlineDuration
 import qualified Domain.Action.UI.DriverGoHomeRequest as DDGR
 import qualified Domain.Action.UI.DriverHomeLocation as DDHL
 import Domain.Action.UI.DriverOnboarding.AadhaarVerification (fetchAndCacheAadhaarImage)
@@ -2962,6 +2963,7 @@ findOnboardedDriversOrFleets :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => I
 findOnboardedDriversOrFleets personId merchantOpCityId maybeFrom maybeTo = do
   currency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
   transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  DOnlineDuration.updateOnlineDurationDuringFetchingDailyStats personId transporterConfig
   let defaultStats =
         DCommon.DriverStatsRes
           { numDriversOnboarded = 0,
@@ -2973,7 +2975,8 @@ findOnboardedDriversOrFleets personId merchantOpCityId maybeFrom maybeTo = do
             totalEarningsWithCurrency = PriceAPIEntity 0.0 currency,
             totalEarningsPerKm = Money 0,
             totalEarningsPerKmWithCurrency = PriceAPIEntity 0.0 currency,
-            bonusEarningsWithCurrency = PriceAPIEntity 0.0 currency
+            bonusEarningsWithCurrency = PriceAPIEntity 0.0 currency,
+            onlineDuration = Seconds 0
           }
   case (maybeFrom, maybeTo) of
     (Nothing, Nothing) -> do
@@ -2990,7 +2993,8 @@ findOnboardedDriversOrFleets personId merchantOpCityId maybeFrom maybeTo = do
             totalEarningsWithCurrency = PriceAPIEntity stats.totalEarnings currency,
             totalEarningsPerKm = roundToIntegral totalEarningsPerKm,
             totalEarningsPerKmWithCurrency = PriceAPIEntity totalEarningsPerKm currency,
-            bonusEarningsWithCurrency = PriceAPIEntity stats.bonusEarned currency
+            bonusEarningsWithCurrency = PriceAPIEntity stats.bonusEarned currency,
+            onlineDuration = Seconds 0 -- FIXME add onlineDuration to driverStats?
           }
     (Just fromDate, Just toDate) | fromDate == toDate -> do
       mbStats <- runInReplica $ SQDS.findByDriverIdAndDate personId fromDate
@@ -3009,7 +3013,8 @@ findOnboardedDriversOrFleets personId merchantOpCityId maybeFrom maybeTo = do
                 totalEarningsWithCurrency = PriceAPIEntity stats.totalEarnings currency,
                 totalEarningsPerKm = roundToIntegral totalEarningsPerKm,
                 totalEarningsPerKmWithCurrency = PriceAPIEntity totalEarningsPerKm currency,
-                bonusEarningsWithCurrency = PriceAPIEntity stats.bonusEarnings currency
+                bonusEarningsWithCurrency = PriceAPIEntity stats.bonusEarnings currency,
+                onlineDuration = fromMaybe (Seconds 0) stats.onlineDuration
               }
     (Just fromDate, Just toDate) | fromIntegral (diffDays toDate fromDate) <= transporterConfig.earningsWindowSize -> do
       statsList <- runInReplica $ SQDS.findAllInRangeByDriverId_ personId fromDate toDate
@@ -3019,6 +3024,7 @@ findOnboardedDriversOrFleets personId merchantOpCityId maybeFrom maybeTo = do
           let agg f = sum (map f statsList)
               aggMoney f = HighPrecMoney $ sum (map (getHighPrecMoney . f) statsList)
               aggMeters f = Meters $ sum (map (getMeters . f) statsList)
+              aggMbSeconds f = Seconds $ sum (map (getSeconds . fromMaybe (Seconds 0) . f) statsList)
               totalEarnings = aggMoney (.totalEarnings)
               totalDistance = aggMeters (.totalDistance)
               bonusEarnings = aggMoney (.bonusEarnings)
@@ -3034,7 +3040,8 @@ findOnboardedDriversOrFleets personId merchantOpCityId maybeFrom maybeTo = do
                 totalEarningsWithCurrency = PriceAPIEntity totalEarnings currency,
                 totalEarningsPerKm = roundToIntegral totalEarningsPerKm,
                 totalEarningsPerKmWithCurrency = PriceAPIEntity totalEarningsPerKm currency,
-                bonusEarningsWithCurrency = PriceAPIEntity bonusEarnings currency
+                bonusEarningsWithCurrency = PriceAPIEntity bonusEarnings currency,
+                onlineDuration = aggMbSeconds (.onlineDuration)
               }
     _ -> throwError (InvalidRequest "Invalid date range: Dates must be empty, same day, or max 7 days apart.")
   where

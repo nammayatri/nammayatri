@@ -751,6 +751,7 @@ types:
     - totalEarningsPerKm: Money
     - totalEarningsPerKmWithCurrency: PriceAPIEntity
     - bonusEarningsWithCurrency: PriceAPIEntity
+    - onlineDuration: Seconds
   EarningPeriodStatsRes:
     - earnings: [EarningPeriodStats]
   EarningPeriodStats:
