@@ -560,6 +560,7 @@ processBusLegState
             nearbyBusesETA <- getNearbyBusesFRFS userPos.latLong riderConfig
             let matchingBusesETA = filter (\x -> x.route_id == rc) nearbyBusesETA
             let nearbyFilteredBusesETA = filter (\bus -> highPrecMetersToMeters (distanceBetweenInMeters userPos.latLong (LatLong bus.latitude bus.longitude)) < 100) matchingBusesETA
+            logDebug $ "matchingBusesETA: " <> show matchingBusesETA <> " filtered from: " <> show nearbyBusesETA <> "for route_id: " <> show rc <> " and buses filtered on distance from user: " <> show nearbyFilteredBusesETA
             let scoresForBuses = scoreBusesByDistanceFRFS userPos busTrackingConfig nearbyFilteredBusesETA
             logDebug $ "scoresForBuses: " <> show scoresForBuses
             votingSystemFRFS scoresForBuses legDetails busTrackingConfig
@@ -697,7 +698,9 @@ getNearbyBusesFRFS userPos' riderConfig = do
   let nearbyDriverSearchRadius :: Double = fromMaybe 0.5 riderConfig.nearbyDriverSearchRadius
   busesBS <- mapM (pure . decodeUtf8) =<< (CQMMB.withCrossAppRedisNew $ Hedis.geoSearch nearbyBusKeyFRFS (Hedis.FromLonLat userPos'.lon userPos'.lat) (Hedis.ByRadius nearbyDriverSearchRadius "km"))
   logDebug $ "busesBS: " <> show busesBS
-  catMaybes <$> Hedis.hmGet vehicleMetaKey busesBS
+  buses <- Hedis.hmGet vehicleMetaKey busesBS
+  logDebug $ "buses: " <> show buses
+  pure $ catMaybes buses
 
 scoreByDistanceFRFS :: Double -> DomainRiderConfig.BusTrackingConfig -> Double
 scoreByDistanceFRFS distance busTrackingConfig
