@@ -1912,4 +1912,5 @@ getMl =
     , view_less : "കാണುവುള്ളുദര്‍ കമ്പാക്കുക"
     , you_are_in_probation_period_till : (\date -> "നിങ്ങളുടെ " <> date <> " വര്‍ഷദല്‍ലി പ്രയോഗദ അവധിയല്‍ലിദ്ദീരിക്കുന്നു")
     , pass_all_eligibility_criteria_to_continue_being_a_member : "നമ്മ കുടുംബദ സദസ്യരാഗി ജാരിഗെ സമസ്ത യോഗ്യതാ മാനദംഡ് പാലിസി"
+    , metro : "മെട്രോ"
     }

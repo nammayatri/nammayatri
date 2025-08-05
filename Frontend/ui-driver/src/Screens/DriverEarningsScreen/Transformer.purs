@@ -57,8 +57,8 @@ getEventName state event bulkUploadTitle = do
     API.BookingCancellationPenalisaton -> getString CANCELLATION_PENALISATON
     API.BookingCancellationCompensation -> getString CANCELLATION_COMPENSATION
     API.MetroRideCompleted metroRideType rideCount -> case rideCount of
-      Just count -> show count <> " " <> show metroRideType <> " " <> getString RIDE_COMPLETED
-      Nothing -> show metroRideType <> " " <> getString RIDE_COMPLETED
+      Just count -> show count <> " " <> getString METRO <> " " <> getString RIDE_COMPLETED
+      Nothing -> getString METRO <> " " <> getString RIDE_COMPLETED
     API.BulkUploadFunction -> case bulkUploadTitle of
       Just (API.BulkCoinTitleTranslations title) -> case getLanguageLocale languageKey of
                         "HI_IN" -> title.hi
