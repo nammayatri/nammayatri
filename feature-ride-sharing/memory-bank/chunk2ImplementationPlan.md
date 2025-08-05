@@ -11,91 +11,55 @@ Based on the sharedRideFlowCore.md analysis, Chunk 2 implements the **"Pre-Pooli
 4. **GSI Management** - Add customer to waiting pool for future matching
 5. **Pooling Result Handling** - Process sync/async outcomes
 
-**Note**: The actual **Rider Pooling Logic implementation** is deferred to **Chunk 4**, and **Async Cron Pooling** to **Chunk 9**.
+**Note**: The actual **Rider Pooling Logic implementation** is deferred to **Chunks 5-7**, and **Async Cron Pooling** to **Chunk 9**.
 
 ## 🔴 IMPORTANT CLARIFICATIONS
 
-### Estimate Flow Understanding
+### Estimate Flow Understanding (REVISED)
 - **`/rideSearch/:searchId/results`** is a **GET API** that returns `GetQuotesRes` with estimates
 - **Estimates come from Driver App** via BPP network and are stored in rider-app database
-- **Filtering happens in rider-app** at `getEstimates` function level in `Domain.Action.UI.Quote.hs:284`
-- **No need to inform driver app** - filtering is done when serving estimates to frontend
+- **PRIMARY filtering happens in OnSearch.hs** before estimates are stored in database (following existing pattern)
+- **SECONDARY validation happens in Select.hs** for user-specific prerequisites (KYC, etc.)
+- **UX Strategy**: Show shared ride estimates to eligible customers, handle KYC at selection time for better conversion
 
 ### Domain Structure (from Chunk 1)
 - **TripCategory**: `RideShare` identifies shared ride estimates
 - **VehicleVariant**: `Auto Share`, `Cab Share`, `Cab Premium Share`, etc.
 - **No additional flags needed**: Identification via `tripCategory == RideShare`
 
+## ✅ Chunk 2 Implementation Summary
+
+### What We've Implemented:
+1. **Enhanced DSelectReq** - Added `numSeats` and `sharedEntityId` fields for shared ride selection
+2. **Shared Ride Validation** - KYC verification and seat validation in select2 function
+3. **Smart Sync/Async Flow Routing** - Config-based decision making with conditional GSI management
+4. **Redis GSI Management** - Customer waiting pool with config-based TTL and estimateId tracking
+5. **Progressive Disclosure UX** - Show estimates to eligible customers, handle prerequisites at selection
+6. **Sync Pooling Handler Interface** - `handleSyncRiderPooling` function ready for Chunk 4 implementation
+7. **Enhanced DSelectRes** - Added SharedEntity context for driver-app via Beckn protocol
+8. **Smart Resource Management** - Only add to GSI when no immediate match found
+
+### Key Design Decisions:
+- **Leverage Chunk 1 filtering** - Use OnSearch.hs filtering instead of duplicating in Quote.hs
+- **Progressive disclosure UX** - Show shared ride estimates, handle KYC at selection time for better conversion
+- **Config-driven expiry** - Use `searchRequestExpirySeconds - searchExpiryBufferSeconds` for TTL
+- **EstimateId tracking** - Use estimateId instead of searchRequestId in GSI for better tracking
+- **Graceful degradation** - Clear error messages guide users through prerequisites
+- **Smart GSI usage** - Only use waiting pool when sync pooling finds no immediate match
+- **Beckn integration ready** - SharedEntity ID and numSeats available for driver-app communication
+
 ## API Mapping and Implementation Details
 
-### 1. Shared Ride Estimate Filtering in GetQuotes
-- **Status**: 🔧 Requires Implementation
-- **API**: `/rideSearch/:searchId/results` (existing GET endpoint)
-- **Location**: `Backend/app/rider-platform/rider-app/Main/src/Domain/Action/UI/Quote.hs:284-288`
-- **Implementation**:
-  ```haskell
-  -- Update getEstimates function to filter shared ride estimates based on eligibility
-  getEstimates :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id SSR.SearchRequest -> Bool -> m [UEstimate.EstimateAPIEntity]
-  getEstimates searchRequestId isReferredRide = do
-    estimateList <- runInReplica $ QEstimate.findAllBySRId searchRequestId
-    estimates <- mapM (UEstimate.mkEstimateAPIEntity isReferredRide) (sortByEstimatedFare estimateList)
-    
-    -- Filter shared ride estimates based on eligibility
-    filteredEstimates <- filterSharedRideEstimates searchRequestId estimates
-    
-    return . sortBy (compare `on` (.createdAt)) $ filteredEstimates
+### 1. Leverage Chunk 1 Infrastructure (Already Implemented)
+- **Status**: ✅ Chunk 1 Completed
+- **Available Functions**:
+  - Route caching in Search.hs
+  - Geospatial indexing for hotspots 
+  - `checkNearbyRiders` function in OnSearch.hs
+  - `filterSharedRideEstimates` function in OnSearch.hs
+- **Result**: Shared ride estimates are already filtered at OnSearch level based on hotspot eligibility and configuration
 
-  filterSharedRideEstimates :: 
-    (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => 
-    Id SSR.SearchRequest -> 
-    [UEstimate.EstimateAPIEntity] -> 
-    m [UEstimate.EstimateAPIEntity]
-  filterSharedRideEstimates searchRequestId estimates = do
-    searchRequest <- runInReplica $ QSR.findById searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist searchRequestId.getId)
-    
-    -- Check if shared ride is enabled for this merchant/city/vehicle category
-    sharedRideConfig <- QSharedRideConfig.findByMerchantOperatingCityIdAndVehicleCategory 
-                          searchRequest.merchantOperatingCityId 
-                          searchRequest.vehicleCategory
-    
-    case sharedRideConfig of
-      Just config | config.enableSharedRide -> do
-        -- Check if customer meets minimum threshold for shared rides
-        (hotspotEligible, nearbyCount) <- checkNearbyRiders searchRequest.fromLocation.gps 
-                                            searchRequest.merchantOperatingCityId
-                                            searchRequest.vehicleCategory
-        
-        -- Check KYC status
-        person <- QP.findById searchRequest.riderId >>= fromMaybeM (PersonNotFound searchRequest.riderId.getId)
-        let kycVerified = fromMaybe False person.kycVerified
-        
-        if hotspotEligible && kycVerified
-          then return estimates  -- Keep all estimates including shared ride
-          else return $ filter (\est -> est.tripCategory /= Just RideShare) estimates
-      _ -> 
-        -- Shared ride not enabled or no config, filter out shared ride estimates
-        return $ filter (\est -> est.tripCategory /= Just RideShare) estimates
-
-  checkNearbyRiders :: 
-    (MonadFlow m, CacheFlow m r) => 
-    LatLong -> 
-    Id MerchantOperatingCity -> 
-    VehicleCategory -> 
-    m (Bool, Int)
-  checkNearbyRiders sourceLocation merchantOperatingCityId vehicleCategory = do
-    sharedRideConfig <- QSharedRideConfig.findByMerchantOperatingCityIdAndVehicleCategory 
-                          merchantOperatingCityId vehicleCategory
-    case sharedRideConfig of
-      Just config -> do
-        let gsiKey = "searchHotSpots"
-        nearbySearches <- Redis.geoRadius gsiKey sourceLocation.lon sourceLocation.lat 
-                           (fromIntegral config.pickupLocationSearchRadius.getMeters) "m"
-        let count = length nearbySearches
-        return (count >= config.searchThresholdForSharedEstimate, count)
-      Nothing -> return (False, 0)
-  ```
-
-### 2. Shared Ride Estimate Selection with Seat Validation
+### 2. Shared Ride Estimate Selection with KYC and Seat Validation
 - **Status**: 🔧 Requires Enhancement of Existing API
 - **API**: Existing `/estimates/:estimateId/select2` endpoint
 - **Location**: `Backend/app/rider-platform/rider-app/Main/src/Domain/Action/UI/Select.hs:120-132`
@@ -115,8 +79,7 @@ Based on the sharedRideFlowCore.md analysis, Chunk 2 implements the **"Pre-Pooli
       disabilityDisable :: Maybe Bool,
       preferSafetyPlus :: Maybe Bool,
       numSeats :: Maybe Int,  -- New field for shared ride seat selection
-      sharedSearchRequestId :: Maybe (Id SharedSearchRequest),  -- Created during pooling
-      sharedEstimateId :: Maybe (Id SharedEstimate)  -- Created during pooling
+      sharedEntityId :: Maybe (Id SharedEntity)  -- Created during pooling (SEARCH_GROUP type)
     }
     deriving stock (Generic, Show)
     deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -131,126 +94,54 @@ Based on the sharedRideFlowCore.md analysis, Chunk 2 implements the **"Pre-Pooli
       ]
   ```
 
-### 3. Shared Ride Flow Detection and Pre-Processing
-- **Status**: 🔧 Requires Pre-Processing Before select2 Function  
-- **Location**: Add interceptor before `select2` in `Backend/app/rider-platform/rider-app/Main/src/API/UI/Select.hs:108`
-- **Implementation**:
+### 3. Shared Ride Selection Validation and Smart Pooling in select2 Function
+- **Status**: ✅ Implemented 
+- **Location**: `Backend/app/rider-platform/rider-app/Main/src/Domain/Action/UI/Select.hs:277-314`
+- **Implementation**: Added shared ride validation, sync/async flow routing, and smart pooling logic in `select2` function
   ```haskell
-  -- Update existing select2' function to handle shared ride pre-processing
-  select2' :: DSelect.SelectFlow m r c => (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> DSelect.DSelectReq -> m DSelect.MultimodalSelectRes
-  select2' (personId, merchantId) estimateId req = withPersonIdLogTag personId $ do
-    estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateNotFound estimateId.getId)
-    
-    -- Check if this is a shared ride estimate
-    case estimate.tripCategory of
-      Just RideShare -> do
-        -- Handle shared ride flow with sync/async decision
-        processedReq <- handleSharedRidePreProcessing personId estimateId req estimate
-        dSelectReq <- DSelect.select2 personId estimateId processedReq
-        return $ DSelect.buildMultimodalSelectRes dSelectReq
-      _ -> do
-        -- Regular flow - call select2 as usual
-        dSelectReq <- DSelect.select2 personId estimateId req
-        return $ DSelect.buildMultimodalSelectRes dSelectReq
-
-  -- Shared ride pre-processing function
-  handleSharedRidePreProcessing :: 
-    (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) =>
-    Id DPerson.Person -> 
-    Id DEstimate.Estimate -> 
-    DSelectReq -> 
-    DEstimate.Estimate -> 
-    m DSelectReq
-  handleSharedRidePreProcessing personId estimateId req estimate = do
-    -- Validate numSeats is provided for shared rides
-    requestedSeats <- case req.numSeats of
-      Just seats -> return seats
-      Nothing -> throwError $ InvalidRequest "Number of seats is required for shared ride selection"
-    
-    -- Validate seat count and estimate status
-    validateSeatCount estimate requestedSeats
-    validateEstimateStatus estimate
-    
-    -- Get shared ride config to determine sync vs async flow
-    searchRequest <- QSR.findById estimate.requestId >>= fromMaybeM (SearchRequestNotFound estimate.requestId.getId)
-    sharedRideConfig <- QSharedRideConfig.findByMerchantOperatingCityIdAndVehicleCategory 
-                          searchRequest.merchantOperatingCityId 
-                          searchRequest.vehicleCategory
-    
-    case sharedRideConfig of
-      Just config -> do
-        if config.enableSyncPooling  -- New config field
-          then handleSyncPooling searchRequest requestedSeats req
-          else handleAsyncPooling searchRequest requestedSeats req
-      Nothing -> throwError $ InvalidRequest "Shared ride not configured for this city/vehicle"
-
-  -- Sync pooling flow - invoke immediate pooling (implemented in Chunk 4)
-  handleSyncPooling :: 
-    SSR.SearchRequest -> 
-    Int -> 
-    DSelectReq -> 
-    Flow DSelectReq
-  handleSyncPooling searchRequest requestedSeats req = do
-    -- Add to GSI for immediate pooling attempt
-    addToSharedRideGSI searchRequest []
-    
-    -- Call Rider Pooling Logic (to be implemented in Chunk 4)
-    poolingResult <- invokeRiderPoolingLogic searchRequest requestedSeats
-    
-    case poolingResult of
-      PoolingSuccess (sharedSearchRequestId, sharedEstimateId) -> do
-        -- Successful match found, continue with regular select2 flow
-        return $ req { sharedSearchRequestId = Just sharedSearchRequestId
-                     , sharedEstimateId = Just sharedEstimateId }
-      PoolingNoMatch -> do
-        -- No immediate match, customer added to waiting pool
-        throwError $ InvalidRequest "No compatible riders found. You will be matched shortly."
-      PoolingError errorMsg -> 
-        throwError $ InvalidRequest errorMsg
-
-  -- Async pooling flow - add to queue for cron processing (Chunk 9)
-  handleAsyncPooling :: 
-    SSR.SearchRequest -> 
-    Int -> 
-    DSelectReq -> 
-    Flow DSelectReq
-  handleAsyncPooling searchRequest requestedSeats req = do
-    -- Add to GSI and pooling queue for cron to process
-    addToSharedRideGSI searchRequest []
-    addToPoolingQueue searchRequest requestedSeats
-    
-    -- Return success indication - customer will be notified via push notification
-    throwError $ InvalidRequest "Your shared ride request has been queued. You will be notified when a match is found."
-
-  -- Helper validation functions
-  validateSeatCount :: DEstimate.Estimate -> Int -> Flow ()
-  validateSeatCount estimate numSeats = do
-    let vehicleCapacity = getVehicleCapacity estimate.vehicleVariant
-    let maxAllowedSeats = vehicleCapacity - 1  -- Reserve 1 seat for driver
-    when (numSeats >= maxAllowedSeats) $
-      throwError $ InvalidRequest $ 
-        "Seats requested (" <> show numSeats <> ") exceeds maximum allowed (" 
-        <> show maxAllowedSeats <> ") for " <> show estimate.vehicleVariant
-
-  getVehicleCapacity :: VehicleVariant -> Int
-  getVehicleCapacity = \case
-    AUTO_RICKSHAW -> 3    -- For Auto Share
-    HATCHBACK -> 4        -- For Cab Share  
-    SEDAN -> 4            -- For Cab Share
-    SUV -> 6              -- For larger shared vehicles
-    _ -> 4                -- Default fallback
-
-  validateEstimateStatus :: DEstimate.Estimate -> Flow ()
-  validateEstimateStatus estimate = do
-    when (estimate.status == DEstimate.CANCELLED) $
-      throwError $ InvalidRequest "Cannot select a cancelled estimate"
-    
-    when (estimate.status `notElem` [DEstimate.NEW, DEstimate.GOT_DRIVER_QUOTE]) $
-      throwError $ InvalidRequest "Estimate is not available for selection"
+  -- Handle shared ride specific logic and capture result (implemented)
+  (mbSharedEntityId, validatedNumSeats) <- case estimate.tripCategory of
+    Just RideShare -> do
+      -- Ensure numSeats is provided for shared rides (required field for shared rides)
+      validatedSeats <- numSeats & fromMaybeM (InvalidRequest "Number of seats required for shared ride selection")
+      
+      -- Check KYC status (user-specific prerequisite)
+      unless (fromMaybe False person.kycVerified) $ 
+        throwError (InvalidRequest "Please complete KYC verification to book shared rides")
+      
+      -- Get shared ride config to determine sync vs async flow
+      sharedRideConfig <- CQSharedRideConfig.findByMerchantOperatingCityIdAndVehicleCategory 
+                            searchRequest.merchantOperatingCityId 
+                            searchRequest.vehicleCategory
+      
+      case sharedRideConfig of
+        Just config -> do
+          if config.enableSyncPooling
+            then do
+              -- Sync pooling: Call rider pooling logic directly
+              logInfo $ "Attempting sync pooling for searchRequest: " <> searchRequest.id.getId
+              poolingResult <- handleSyncRiderPooling config searchRequest estimate validatedSeats
+              case poolingResult of
+                Nothing -> do
+                  -- No immediate match found, add to GSI for future matching
+                  logInfo $ "No immediate pool match, adding to waiting pool: " <> searchRequest.id.getId
+                  addToSharedRideGSI config searchRequest estimate validatedSeats
+                  return (Nothing, Just validatedSeats)
+                Just sharedEntityId -> do
+                  -- Match found, proceed with the shared entity
+                  logInfo $ "Pool match found, using shared entity: " <> sharedEntityId.getId
+                  return (Just sharedEntityId, Just validatedSeats)
+            else do
+              -- Async pooling: Just add to Redis GSI for cron processing
+              logInfo $ "Adding to async pooling queue for searchRequest: " <> searchRequest.id.getId
+              addToSharedRideGSI config searchRequest estimate validatedSeats
+              return (Nothing, Just validatedSeats)
+        Nothing -> throwError (InvalidRequest "Shared ride configuration not found for this location/vehicle")
+    _ -> return (Nothing, numSeats) -- Non-shared ride
   ```
 
 ### 4. Pooling Interface and Helper Functions
-- **Status**: 🔧 Requires Interface Definition (Logic in Chunk 4)
+- **Status**: 🔧 Requires Interface Definition (Logic in Chunks 5-7)
 - **Location**: New module `Backend/app/rider-platform/rider-app/Main/src/Domain/Action/UI/SharedRide/Pooling.hs`
 - **Implementation**:
   ```haskell
@@ -260,7 +151,7 @@ Based on the sharedRideFlowCore.md analysis, Chunk 2 implements the **"Pre-Pooli
 
   -- Result type for pooling operations
   data PoolingResult 
-    = PoolingSuccess (Id SharedSearchRequest, Id SharedEstimate)
+    = PoolingSuccess (Id SharedEntity)  -- Single unified SharedEntity ID
     | PoolingNoMatch
     | PoolingError Text
     deriving (Show, Eq)
@@ -272,7 +163,7 @@ Based on the sharedRideFlowCore.md analysis, Chunk 2 implements the **"Pre-Pooli
     Int -> 
     m PoolingResult
   invokeRiderPoolingLogic searchRequest numSeats = do
-    -- TODO: Implement in Chunk 4
+    -- TODO: Implement in Chunks 5-7
     -- This will contain the full filtering cascade from sharedRideFlowCore.md:
     -- 1. Initial GSI query for nearby riders
     -- 2. Filter 1: Locked Searches
@@ -313,50 +204,81 @@ Based on the sharedRideFlowCore.md analysis, Chunk 2 implements the **"Pre-Pooli
   ```
 
 ### 5. Geospatial Index Management
-- **Status**: 🔧 Requires Implementation
-- **Location**: Update `Backend/app/rider-platform/rider-app/Main/src/Domain/Action/UI/Select.hs`
-- **Implementation**:
+- **Status**: ✅ Implemented
+- **Location**: `Backend/app/rider-platform/rider-app/Main/src/Domain/Action/UI/Select.hs:550-574`
+- **Implementation**: Added `addToSharedRideGSI` function with config-based TTL and estimateId tracking
   ```haskell
-  -- Add customer to waiting pool in GSI (per sharedRideFlowCore.md Chunk 2 Step 4)
+  -- Add customer to shared ride GSI for pooling (implemented)
   addToSharedRideGSI :: 
-    SSR.SearchRequest -> 
-    [Id SSR.SearchRequest] -> 
-    Flow ()
-  addToSharedRideGSI searchRequest _pairableCustomers = do
-    let gsiKey = "ShareRideCustomerLoc"  -- Key from sharedRideFlowCore.md
+    (MonadFlow m, CacheFlow m r) => 
+    SharedRideConfigs -> 
+    DSearchReq.SearchRequest -> 
+    DEstimate.Estimate -> 
+    Int -> 
+    m ()
+  addToSharedRideGSI config searchRequest estimate numSeats = do
+    let gsiKey = "ShareRideCustomerLoc"  -- GSI key from sharedRideFlowCore.md
     now <- getCurrentTime
-    let validTill = addUTCTime (5 * 60) now -- 5 minutes TTL as per core logic
-    let numSeats = 1  -- Default, will be enhanced to use actual numSeats
-    let memberKey = searchRequest.id.getId <> ":" <> show validTill <> ":" <> show numSeats
+    
+    -- Calculate expiry time: config time - buffer time
+    let expirySeconds = config.searchRequestExpirySeconds.getSeconds - config.searchExpiryBufferSeconds.getSeconds
+    let validTill = addUTCTime (fromIntegral expirySeconds) now
+    
+    -- Use estimateId instead of searchRequestId for better tracking
+    let memberKey = estimate.id.getId <> ":" <> show validTill <> ":" <> show numSeats
     let lat = searchRequest.fromLocation.lat  
     let lon = searchRequest.fromLocation.lon
     
-    -- Add to GSI with format: searchId:validTill:numSeats (per core logic)
+    -- Add to GSI with format: estimateId:validTill:numSeats (updated format)
     Redis.geoAdd gsiKey [(lon, lat, memberKey)]
     
     -- Set TTL for auto-cleanup
     Redis.expireAt memberKey (round $ utcTimeToPOSIXSeconds validTill)
+  ```
 
-  -- Placeholder functions for shared entity creation (implemented by Chunk 4)
-  createSharedSearchRequest :: 
-    SSR.SearchRequest -> 
-    [Id SSR.SearchRequest] -> 
+### 6. Sync Rider Pooling Handler
+- **Status**: ✅ Interface Implemented (Logic for Chunks 5-7)
+- **Location**: `Backend/app/rider-platform/rider-app/Main/src/Domain/Action/UI/Select.hs:584-602`
+- **Implementation**: Smart pooling handler with conditional GSI management
+  ```haskell
+  -- Sync rider pooling handler (implemented interface, logic for Chunks 5-7)
+  handleSyncRiderPooling :: 
+    (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => 
+    SharedRideConfigs -> 
+    DSearchReq.SearchRequest -> 
+    DEstimate.Estimate -> 
     Int -> 
-    Flow (Id SharedSearchRequest)
-  createSharedSearchRequest primarySearch otherSearchIds numSeats = do
-    -- TODO: Implement in Chunk 4 when actual pooling logic is ready
-    -- This will create SharedSearchRequest with proper batch grouping
-    error "createSharedSearchRequest: Implementation deferred to Chunk 4"
+    m (Maybe (Id DSE.SharedEntity))
+  handleSyncRiderPooling config searchRequest estimate numSeats = do
+    -- TODO: Implement in Chunks 5-7
+    -- This will contain the full rider pooling logic:
+    -- 1. Search for compatible riders in GSI
+    -- 2. Apply filtering cascade (proximity, route overlap, etc.)
+    -- 3. Create SharedEntity if match found
+    -- 4. Return SharedEntity ID or Nothing
+    
+    -- For now, always return Nothing (no match found)
+    logInfo $ "handleSyncRiderPooling called for estimate: " <> estimate.id.getId <> " with " <> show numSeats <> " seats"
+    return Nothing
+  ```
 
-  createSharedEstimate :: 
-    Id SharedSearchRequest -> 
-    SSR.SearchRequest -> 
-    [Id SSR.SearchRequest] -> 
-    Flow (Id SharedEstimate)
-  createSharedEstimate sharedSearchRequestId primarySearch otherSearchIds = do
-    -- TODO: Implement in Chunk 4 when cumulative estimates are ready
-    -- This will create SharedEstimate with combined fare calculations
-    error "createSharedEstimate: Implementation deferred to Chunk 4"
+### 7. Enhanced DSelectRes for Driver-App Communication
+- **Status**: ✅ Implemented
+- **Location**: `Backend/app/rider-platform/rider-app/Main/src/Domain/Action/UI/Select.hs:166-191`
+- **Implementation**: Added SharedEntity context for Beckn protocol
+  ```haskell
+  data DSelectRes = DSelectRes
+    { -- ... existing fields
+      sharedEntityId :: Maybe (Id DSE.SharedEntity),  -- New: SharedEntity ID for driver-app
+      numSeats :: Maybe Int                           -- New: Seat selection for shared rides
+    }
+  
+  -- DSelectRes construction includes shared ride context (lines 383-384)
+  DSelectRes {
+    sharedEntityId = mbSharedEntityId,     -- From pooling result
+    numSeats = validatedNumSeats,          -- From customer selection
+    -- ... other fields
+  }
   ```
 
 ## Database Schema Updates
@@ -501,7 +423,7 @@ data SharedRideError
 ## Cross-Chunk Dependencies
 
 - **Depends on Chunk 1**: Route caching, estimate filtering, GSI setup
-- **Provides to Chunk 4**: Pooling interfaces, validated requests, GSI data structure
+- **Provides to Chunks 5-7**: Pooling interfaces, validated requests, GSI data structure
 - **Provides to Chunk 9**: Async queue management, pooling queue data types
 
 ## Rollback Plan
@@ -511,16 +433,45 @@ data SharedRideError
 - **Graceful fallback**: Individual bookings if pooling fails
 - **Redis cleanup**: Background job to clean stale GSI entries
 
+## Future Work & Pending Tasks
+
+### For Chunks 5-7 (Rider Pooling Logic Implementation):
+1. **Complete `handleSyncRiderPooling` function**:
+   - Implement GSI queries for compatible riders
+   - Apply filtering cascade (proximity, route overlap, etc.)
+   - Create SharedEntity when matches found
+   - Handle complex pooling algorithms
+
+### For Beckn Protocol Integration (Later Chunks):
+1. **Modify Beckn select request** to include shared ride parameters:
+   - Add `sharedEntityId` to select request payload
+   - Add `numSeats` to select request payload
+   - Update ACL layer to handle shared ride context
+   - Ensure driver-app receives SharedEntity information
+
+2. **Update rider-app to driver-app communication**:
+   - Modify select ACL to include SharedEntity fields
+   - Update driver-app to handle shared ride context
+   - Ensure proper SharedEntity ID propagation
+
+### For Chunk 9 (Async Pooling):
+1. **Cron job implementation** for async pooling processing
+2. **Notification system** for successful matches
+3. **Queue management** for waiting customers
+
 ## Success Metrics
 
 - **Estimate filtering accuracy**: Correct shared ride estimates shown based on eligibility
 - **Pooling success rate**: Percentage of shared selections that find matches  
 - **Customer wait time**: Time from selection to successful match or timeout
 - **System performance**: Response times for estimate retrieval and selection
+- **SharedEntity creation rate**: Successful pooling matches per hour
+- **GSI efficiency**: Redis performance with concurrent shared ride requests
 
 ## Dependencies
 
-- **Chunk 1**: Route caching, GSI setup, and configuration infrastructure
-- **SharedRideConfig**: Updated YAML with `enableSharedRide` field
-- **Person.kycVerified**: KYC status field in person table
-- **Redis Geospatial**: Redis version supporting geo commands
+- **Chunk 1**: Route caching, GSI setup, and configuration infrastructure ✅
+- **SharedRideConfig**: Updated YAML with `enableSharedRide` and `enableSyncPooling` fields ✅
+- **Person.kycVerified**: KYC status field in person table ✅
+- **Redis Geospatial**: Redis version supporting geo commands ✅
+- **SharedEntity**: Unified table design with proper status tracking ✅

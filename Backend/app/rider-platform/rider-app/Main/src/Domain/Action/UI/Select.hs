@@ -56,6 +56,8 @@ import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequestPartiesLink as DSRPL
 import qualified Domain.Types.ServiceTierType as DVSTT
+import qualified Domain.Types.SharedEntity as DSE
+import Domain.Types.SharedRideConfigs (SharedRideConfigs)
 import qualified Domain.Types.Trip as DTrip
 import qualified Domain.Types.Trip as Trip
 import qualified Domain.Types.VehicleVariant as DV
@@ -84,6 +86,7 @@ import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
+import qualified Storage.CachedQueries.SharedRideConfigs as CQSharedRideConfig
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.ValueAddNP as CQVNP
 import qualified Storage.Queries.Booking as QBooking
@@ -97,6 +100,7 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import qualified Storage.Queries.SearchRequestPartiesLink as QSRPL
+import qualified Storage.Queries.SharedEntity as QSharedEntity
 import Tools.Error
 import qualified Tools.SharedRedisKeys as SharedRedisKeys
 import TransactionLogs.Types
@@ -128,7 +132,9 @@ data DSelectReq = DSelectReq
     isAdvancedBookingEnabled :: Maybe Bool,
     deliveryDetails :: Maybe DTDD.DeliveryDetails,
     disabilityDisable :: Maybe Bool,
-    preferSafetyPlus :: Maybe Bool
+    preferSafetyPlus :: Maybe Bool,
+    numSeats :: Maybe Int,
+    sharedEntityId :: Maybe (Id DSE.SharedEntity)
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -145,7 +151,9 @@ validateDSelectReq DSelectReq {..} =
           [ validateObject "senderDetails" senderDetails validatePersonDetails,
             validateObject "receiverDetails" receiverDetails validatePersonDetails,
             validateField "parcelQuantity" parcelQuantity $ InMaybe $ InRange @Int 1 100000
-          ]
+          ],
+      -- VaibhavD : Re-evaluate this check!
+      validateField "numSeats" numSeats $ InMaybe $ InRange @Int 1 8
     ]
 
 validatePersonDetails :: Validate DTDD.PersonDetails
@@ -177,7 +185,9 @@ data DSelectRes = DSelectRes
     disabilityDisable :: Maybe Bool,
     selectResDetails :: Maybe DSelectResDetails,
     preferSafetyPlus :: Bool,
-    mbJourneyId :: Maybe (Id DJ.Journey)
+    mbJourneyId :: Maybe (Id DJ.Journey),
+    sharedEntityId :: Maybe (Id DSE.SharedEntity),
+    numSeats :: Maybe Int
   }
 
 data DSelectResDetails = DSelectResDelivery DParcel.ParcelDetails
@@ -262,6 +272,47 @@ select2 personId estimateId req@DSelectReq {..} = do
   searchRequest <- QSearchRequest.findByPersonId personId searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist personId.getId)
   riderConfig <- QRC.findByMerchantOperatingCityId (cast searchRequest.merchantOperatingCityId) Nothing
   when (disabilityDisable == Just True) $ QSearchRequest.updateDisability searchRequest.id Nothing
+
+  -- Handle shared ride specific logic and capture result
+  (mbSharedEntityId, validatedNumSeats) <- case estimate.tripCategory of
+    Just RideShare -> do
+      -- Ensure numSeats is provided for shared rides (required field for shared rides)
+      validatedSeats <- numSeats & fromMaybeM (InvalidRequest "Number of seats required for shared ride selection")
+
+      -- Check KYC status (user-specific prerequisite)
+      unless (fromMaybe False person.kycVerified) $
+        throwError (InvalidRequest "Please complete KYC verification to book shared rides")
+
+      -- Get shared ride config to determine sync vs async flow
+      sharedRideConfig <-
+        CQSharedRideConfig.findByMerchantOperatingCityIdAndVehicleCategory
+          searchRequest.merchantOperatingCityId
+          searchRequest.vehicleCategory
+
+      case sharedRideConfig of
+        Just config -> do
+          if config.enableSyncPooling
+            then do
+              -- Sync pooling: Call rider pooling logic directly
+              logInfo $ "Attempting sync pooling for searchRequest: " <> searchRequest.id.getId
+              poolingResult <- handleSyncRiderPooling config searchRequest estimate validatedSeats
+              case poolingResult of
+                Nothing -> do
+                  -- No immediate match found, add to GSI for future matching
+                  logInfo $ "No immediate pool match, adding to waiting pool: " <> searchRequest.id.getId
+                  addToSharedRideGSI config searchRequest estimate validatedSeats
+                  return (Nothing, Just validatedSeats)
+                Just sharedEntityId -> do
+                  -- Match found, proceed with the shared entity
+                  logInfo $ "Pool match found, using shared entity: " <> sharedEntityId.getId
+                  return (Just sharedEntityId, Just validatedSeats)
+            else do
+              -- Async pooling: Just add to Redis GSI for cron processing
+              logInfo $ "Adding to async pooling queue for searchRequest: " <> searchRequest.id.getId
+              addToSharedRideGSI config searchRequest estimate validatedSeats
+              return (Nothing, Just validatedSeats)
+        Nothing -> throwError (InvalidRequest "Shared ride configuration not found for this location/vehicle")
+    _ -> return (Nothing, numSeats) -- Non-shared ride
   merchant <- QM.findById searchRequest.merchantId >>= fromMaybeM (MerchantNotFound searchRequest.merchantId.getId)
   when merchant.onlinePayment $ do
     when (isNothing paymentMethodId) $ throwError PaymentMethodRequired
@@ -329,6 +380,8 @@ select2 personId estimateId req@DSelectReq {..} = do
         selectResDetails = dselectResDetails,
         preferSafetyPlus = fromMaybe False preferSafetyPlus,
         mbJourneyId = Just mbJourneyId,
+        sharedEntityId = mbSharedEntityId,
+        numSeats = validatedNumSeats,
         ..
       }
   where
@@ -508,3 +561,50 @@ data MultimodalSelectRes = MultimodalSelectRes
     result :: Text
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON, ToSchema)
+
+-- Add customer to shared ride GSI for pooling
+addToSharedRideGSI ::
+  (MonadFlow m, CacheFlow m r) =>
+  SharedRideConfigs ->
+  DSearchReq.SearchRequest ->
+  DEstimate.Estimate ->
+  Int ->
+  m ()
+addToSharedRideGSI config searchRequest estimate numSeats = do
+  let gsiKey = "ShareRideCustomerLoc" -- GSI key from sharedRideFlowCore.md
+  now <- getCurrentTime
+
+  -- Calculate expiry time: config time - buffer time
+  let expirySeconds = config.searchRequestExpirySeconds.getSeconds - config.searchExpiryBufferSeconds.getSeconds
+  let validTill = addUTCTime (fromIntegral expirySeconds) now
+
+  -- Use estimateId instead of searchRequestId for better tracking
+  let memberKey = estimate.id.getId <> ":" <> show validTill <> ":" <> show numSeats
+  let lat = searchRequest.fromLocation.lat
+  let lon = searchRequest.fromLocation.lon
+
+  -- Add to GSI with format: estimateId:validTill:numSeats (updated format)
+  Redis.geoAdd gsiKey [(lon, lat, memberKey)]
+
+  -- Set TTL for auto-cleanup
+  Redis.expireAt memberKey (round $ utcTimeToPOSIXSeconds validTill)
+
+-- Sync rider pooling handler (to be implemented in Chunk 4)
+handleSyncRiderPooling ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) =>
+  SharedRideConfigs ->
+  DSearchReq.SearchRequest ->
+  DEstimate.Estimate ->
+  Int ->
+  m (Maybe (Id DSE.SharedEntity))
+handleSyncRiderPooling config searchRequest estimate numSeats = do
+  -- TODO: Implement in Chunk 4
+  -- This will contain the full rider pooling logic:
+  -- 1. Search for compatible riders in GSI
+  -- 2. Apply filtering cascade (proximity, route overlap, etc.)
+  -- 3. Create SharedEntity if match found
+  -- 4. Return SharedEntity ID or Nothing
+
+  -- For now, always return Nothing (no match found)
+  logInfo $ "handleSyncRiderPooling called for estimate: " <> estimate.id.getId <> " with " <> show numSeats <> " seats"
+  return Nothing
