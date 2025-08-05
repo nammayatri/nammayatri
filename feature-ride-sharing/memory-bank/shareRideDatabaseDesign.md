@@ -43,7 +43,7 @@ The `SharedEntity` tables manage all shared ride state and relationships for eac
 
 ### **State Flow:**
 ```
-SEARCHING → MATCHED → ESTIMATED → BOOKED → ONGOING → COMPLETED/CANCELLED
+SEARCHING → MATCHED → ESTIMATED → OFFERED_QUOTE → BOOKED → DRIVER_ASSIGNED → ONGOING → COMPLETED/CANCELLED
 ```
 
 ### **Common Domain Fields:**
@@ -257,6 +257,8 @@ Configuration parameters for shared ride feature in the rider app.
 - `merchantId`: `Id Merchant`
 - `merchantOperatingCityId`: `Id MerchantOperatingCity` (Secondary Key)
 - `vehicleCategory`: `VehicleCategory`
+- `enableSharedRide`: `Bool` (Master feature flag for shared rides)
+- `enableSyncPooling`: `Bool` (True=sync flow, False=async flow)
 - `pickupLocationSearchRadius`: `Meters`
 - `searchThresholdForSharedEstimate`: `Int`
 - `searchRequestExpirySeconds`: `Seconds`
@@ -278,6 +280,8 @@ CREATE TABLE atlas_app.shared_ride_configs (
     merchant_id VARCHAR(36) NOT NULL,
     merchant_operating_city_id VARCHAR(36) NOT NULL,
     vehicle_category VARCHAR(255) NOT NULL,
+    enable_shared_ride BOOLEAN NOT NULL DEFAULT FALSE,
+    enable_sync_pooling BOOLEAN NOT NULL DEFAULT TRUE,
     pickup_location_search_radius DOUBLE PRECISION NOT NULL,
     search_threshold_for_shared_estimate INT NOT NULL,
     search_request_expiry_seconds INT NOT NULL,
@@ -477,7 +481,7 @@ FROM atlas_app.shared_search_request;
 
 ```yaml
 SharedEntityStatus:
-  enum: "SEARCHING, MATCHED, ESTIMATED, BOOKED, DRIVER_ASSIGNED, ONGOING, COMPLETED, CANCELLED, EXPIRED"
+  enum: "SEARCHING, MATCHED, ESTIMATED, OFFERED_QUOTE, BOOKED, DRIVER_ASSIGNED, ONGOING, COMPLETED, CANCELLED, EXPIRED"
   derive: "HttpInstance"
 
 SharedEntityType:  
@@ -577,7 +581,8 @@ validStatusTransitions :: SharedEntityStatus -> [SharedEntityStatus]
 validStatusTransitions = \case
   SEARCHING -> [MATCHED, EXPIRED, CANCELLED]
   MATCHED -> [ESTIMATED, CANCELLED]  
-  ESTIMATED -> [BOOKED, CANCELLED]
+  ESTIMATED -> [OFFERED_QUOTE, CANCELLED]
+  OFFERED_QUOTE -> [BOOKED, CANCELLED]
   BOOKED -> [DRIVER_ASSIGNED, CANCELLED]
   DRIVER_ASSIGNED -> [ONGOING, CANCELLED]
   ONGOING -> [COMPLETED, CANCELLED]

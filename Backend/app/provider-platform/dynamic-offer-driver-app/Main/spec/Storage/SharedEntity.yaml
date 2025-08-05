@@ -12,6 +12,7 @@ imports:
   TripCategory: Domain.Types.Common
   Value: Data.Aeson
   TrackedEntity: Domain.Types.TrackedEntity
+  UTCTime: Kernel.Prelude
 
 SharedEntity:
   tableName: shared_entity
@@ -23,7 +24,7 @@ SharedEntity:
       derive: "HttpInstance"
 
     SharedEntityType:
-      enum: "SEARCH_GROUP,ESTIMATE_GROUP,BOOKING_GROUP,RIDE_GROUP"
+      enum: "OVERLAPPING,FIXED_ROUTE"
       derive: "HttpInstance"
 
   fields:
@@ -42,7 +43,7 @@ SharedEntity:
     tripCategory: TripCategory|NoRelation
     driverId: Maybe (Id Person)
     transactionId: Maybe Text
-    counterAppSharedEntityId: Maybe Text
+    bapSharedEntityId: Maybe Text
     waypoints: Value
     totalSeats: Int
     pairingTime: Maybe UTCTime
@@ -98,7 +99,7 @@ SharedEntity:
     driverQuoteIds: json
     searchRequestForDriverIds: json
     transactionId: character varying(255)
-    counterAppSharedEntityId: character varying(255)
+    bapSharedEntityId: character varying(255)
     waypoints: jsonb
     vehicleCategory: character varying(255)
     tripCategory: character varying(255)
@@ -126,9 +127,9 @@ SharedEntity:
       kvFunction: findOneWithKV
       where: transactionId
 
-    findByCounterAppSharedEntityId:
+    findByBapSharedEntityId:
       kvFunction: findOneWithKV
-      where: counterAppSharedEntityId
+      where: bapSharedEntityId
 
     updateStatus:
       kvFunction: updateOneWithKV
@@ -140,9 +141,9 @@ SharedEntity:
       params: [driverId, updatedAt]
       where: id
 
-    updateCounterAppEntityId:
+    updateBapSharedEntityId:
       kvFunction: updateOneWithKV
-      params: [counterAppSharedEntityId, updatedAt]
+      params: [bapSharedEntityId, updatedAt]
       where: id
 
     updateEstimateIds:

@@ -15,8 +15,8 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data SharedEntityT f = SharedEntityT
-  { bookingIds :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
-    counterAppSharedEntityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+  { bapSharedEntityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    bookingIds :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     driverId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     driverQuoteIds :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),

@@ -129,22 +129,22 @@ This document summarizes the core logic extracted from the shared ride feature f
 
 1.  **GSI Structure**: The logic relies on a Geospatial Index with the following structure:
     *   **Key**: `ShareRideCustomerLoc`
-    *   **Member**: `searchId:validTill:numSeats`
+    *   **Member**: `estimateId:validTill:numSeats`
     *   **Coordinates**: Latitude and Longitude of the customer's pickup location.
 
 2.  **Initial Query**:
     *   The logic starts by querying the GSI to find all waiting customers within a radius `R` of the current customer's pickup location.
 
 3.  **Filtering Cascade**: The returned list of potential matches is passed through a series of filters:
-    *   **Filter 1: Locked Searches**: Remove any `searchIds` that are already locked (i.e., are part of another pending batch).
-    *   **Filter 2: Expiry Time**: Remove searches where the `validTill` timestamp is less than `Y` seconds away. `Y` is a buffer to ensure there's enough time to complete the batching and driver pooling process. (Note: The exact calculation of `Y` is marked as "Under Review").
-    *   **Filter 3: Seat Availability**: Remove searches where the requested `numSeats` is greater than the number of available seats in the current customer's potential vehicle.
-    *   **Filter 4: Destination Proximity**: Remove searches whose destination is outside a radius `x1` of the current customer's destination.
-    *   **Filter 5: Pickup Proximity**: Remove searches whose pickup location is more than `x2` units of actual travel distance (not just radius) away from the current customer's pickup.
-    *   **Filter 6: Drop-off Proximity**: Remove searches whose drop-off location is more than `x6` units of actual travel distance away from the current customer's drop-off.
+    *   **Filter 1: Locked Searches**: Remove any `estimateIds` that are already locked (i.e., are part of another pending batch).
+    *   **Filter 2: Expiry Time**: Remove estimates where the `validTill` timestamp is less than `Y` seconds away. `Y` is a buffer to ensure there's enough time to complete the batching and driver pooling process. (Note: The exact calculation of `Y` is marked as "Under Review").
+    *   **Filter 3: Seat Availability**: Remove estimates where the requested `numSeats` is greater than the number of available seats in the current customer's potential vehicle.
+    *   **Filter 4: Destination Proximity**: Remove estimates whose destination is outside a radius `x1` of the current customer's destination.
+    *   **Filter 5: Pickup Proximity**: Remove estimates whose pickup location is more than `x2` units of actual travel distance (not just radius) away from the current customer's pickup.
+    *   **Filter 6: Drop-off Proximity**: Remove estimates whose drop-off location is more than `x6` units of actual travel distance away from the current customer's drop-off.
 
 4.  **Output**:
-    *   The logic returns the list of `searchIds` that survive the filtering cascade. This list is then used in the subsequent "Handle Pooling Results" step (Chunk 2, Step 4).
+    *   The logic returns the list of `estimateIds` that survive the filtering cascade. This list is then used in the subsequent "Handle Pooling Results" step (Chunk 2, Step 4).
 
 ---
 
@@ -159,22 +159,23 @@ This document summarizes the core logic extracted from the shared ride feature f
 
 2.  **Route Overlap Analysis (Geo-hashing)**:
     *   **Step A: Hashing the Primary Route**: The system iterates through all coordinate points of the *current customer's* route, calculates a geo-hash (precision 9) for each point, and stores them in a HashSet for efficient lookup.
-    *   **Step B: Comparing Potential Matches**: For each remaining `searchId` in the potential match list:
-        *   The system iterates through the points of that search's route.
+    *   **Step B: Comparing Potential Matches**: For each remaining `estimateId` in the potential match list:
+        *   The system iterates through the points of that estimate's route.
         *   It counts how many of its geo-hashes are present in the primary customer's HashSet (`matchCnt`).
     *   **Step C: Overlap Threshold Check**: A match is only considered valid if the percentage of overlapping route points exceeds a configurable threshold `x4`. `((matchCnt / total_points_in_route) * 100 > x4)`.
-    *   Searches that fail this check are rejected.
+    *   Estimates that fail this check are rejected.
+    *   **Note**: This is a preliminary check; the final detailed geo-hash analysis occurs in Chunk 7.
 
 3.  **Final Grouping and Lock Acquisition**:
-    *   For each search that passes all filters, the system attempts to acquire a lock on the `searchId`.
-    *   **If lock fails**: The search is rejected.
-    *   **If lock succeeds**: The search is added to the final list of matched riders.
+    *   For each estimate that passes all filters, the system attempts to acquire a lock on the `estimateId`.
+    *   **If lock fails**: The estimate is rejected.
+    *   **If lock succeeds**: The estimate is added to the final list of matched riders.
 
 4.  **Final Vehicle Capacity Check**:
     *   The system performs a final check based on vehicle type:
         *   **For AUTO**: The final list size must be `== 1`.
         *   **For CAR**: The final list size must be `== 2`, and the sum of `numSeats` for all riders must be less than or equal to the remaining capacity.
-    *   If these conditions are not met, the process breaks, and the system moves on. If they are met, the final list of `searchIds` is returned, and the flow proceeds to Batch Creation (Chunk 3).
+    *   If these conditions are not met, the process breaks, and the system moves on. If they are met, the final list of `estimateIds` is returned, and the flow proceeds to Batch Creation (Chunk 3).
 
 ---
 
@@ -182,23 +183,30 @@ This document summarizes the core logic extracted from the shared ride feature f
 
 *This section details the final filtering stages within the Rider Pooling Logic, occurring after the initial filters from Chunk 5 & 6.*
 
-1.  **Drop-off Proximity (x6 units)**:
-    *   Filters out `searchIds` whose drop-off points are more than `x6` travel units away from the current search's drop-off.
+1.  **Route Overlap Analysis with Geo-hashing (Enhanced Implementation)**:
+    *   **Step A - Primary Route Hashing**: Iterate through all points of the current customer's route and generate geo-hash precision 9 for each point, storing them in a HashSet for efficient lookup.
+    *   **Step B - Match Counting**: For each potential estimate in the filtered list:
+        *   Iterate through all points of that estimate's route
+        *   Count how many points have geo-hash precision 9 values that exist in the primary customer's HashSet (`matchCnt`)
+    *   **Step C - Overlap Threshold Check**: Calculate percentage as `((matchCnt) / (total number of points in estimate's route)) * 100 > x4`
+        *   If threshold not met → Reject estimate (Not Matched)
+        *   If threshold met → Include estimate as potential match
 
-2.  **Drop-off Deviation Ratio (x3 threshold)**:
-    *   For remaining pairs, it calculates a deviation ratio: `((distance between drops) / min ride distance) * 100`.
-    *   If this ratio is greater than a configurable threshold `x3`, the pair is rejected.
+2.  **Lock Acquisition and Final List Building**:
+    *   **For each estimateId in the resultant filtered list**:
+        *   Attempt to acquire a lock on the `estimateId`
+        *   **If lock acquisition fails**: Reject that estimateId (don't add it to the final return list)
+        *   **If lock acquisition succeeds**: Add it to the final list to be returned
 
-3.  **Route Overlap via Geo-hashing (x4 threshold)**:
-    *   The primary customer's route is converted into a HashSet of geo-hashes (precision 9).
-    *   For each potential match, the system calculates the percentage of its route's geo-hashes that exist in the primary customer's HashSet.
-    *   If this overlap percentage is not greater than a threshold `x4`, the match is rejected.
+3.  **Final Vehicle Capacity Validation**:
+    *   **Vehicle Category Check**:
+        *   **For AUTO**: Final list size must == 1
+        *   **For CAR**: Final list size must == 2, AND sum of `numSeats` for all riders must be ≤ remaining vehicle capacity
+    *   **Flow Control**:
+        *   **If capacity conditions are met**: Break the processing loop and return the final list of estimateIds
+        *   **If capacity conditions are NOT met**: Continue processing until a valid group is formed or the list is exhausted
 
-4.  **Final Grouping and Capacity Check**:
-    *   The logic iterates through the final filtered list of potential `searchIds`.
-    *   It attempts to acquire a lock on each `searchId`. If successful, it adds the search to the final list to be returned.
-    *   It performs a final check on the list size based on vehicle category (`AUTO` size == 1, `CAR` size == 2) and total `numSeats`.
-    *   If the conditions are met, the loop breaks, and the final list is returned. Otherwise, the process continues until a valid group is formed or the list is exhausted.
+4.  **Final Output**: Return estimateIds in the final list for batch creation (Chunk 3)
 
 ---
 
@@ -237,17 +245,17 @@ This document summarizes the core logic extracted from the shared ride feature f
 2.  **Fetch Waiting Riders**: The job fetches all members from the `ShareRideCustomerLoc` Geospatial Index.
 
 3.  **Initial Filtering**:
-    *   It filters out any `searchIds` that are already locked or are about to expire.
-    *   The remaining `searchIds` are stored in a HashMap for efficient processing.
+    *   It filters out any `estimateIds` that are already locked or are about to expire.
+    *   The remaining `estimateIds` are stored in a HashMap for efficient processing.
 
 4.  **Iterative Matching Loop**: The job iterates through the HashMap of waiting riders.
-    *   For each `searchId` (if it hasn't already been processed/matched in the current run):
-        *   It marks the current `searchId` and all other fetched `searchIds` as `1` in the HashMap to signify they are being processed.
-        *   It then **invokes the Rider Pooling Logic** (as detailed in Chunks 5, 6, and 7) for the current `searchId`.
+    *   For each `estimateId` (if it hasn't already been processed/matched in the current run):
+        *   It marks the current `estimateId` and all other fetched `estimateIds` as `1` in the HashMap to signify they are being processed.
+        *   It then **invokes the Rider Pooling Logic** (as detailed in Chunks 5, 6, and 7) for the current `estimateId`.
         *   This triggers the entire filtering cascade (proximity checks, route overlap, etc.) against the other waiting riders.
 
 5.  **Handle Match Found**:
-    *   If the Rider Pooling Logic returns a successful match (a list of `searchIds`), the cron job's responsibility for these riders is complete.
+    *   If the Rider Pooling Logic returns a successful match (a list of `estimateIds`), the cron job's responsibility for these riders is complete.
     *   The flow for the matched riders proceeds to **Batch Creation** (Chunk 3), which is now initiated asynchronously.
 
-6.  **Loop Continuation**: The process repeats for the next unprocessed `searchId` in the HashMap until all waiting riders have had a match attempted in the current cron cycle.
+6.  **Loop Continuation**: The process repeats for the next unprocessed `estimateId` in the HashMap until all waiting riders have had a match attempted in the current cron cycle.

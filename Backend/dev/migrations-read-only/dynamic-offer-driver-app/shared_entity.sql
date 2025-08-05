@@ -1,7 +1,7 @@
 CREATE TABLE atlas_driver_offer_bpp.shared_entity ();
 
+ALTER TABLE atlas_driver_offer_bpp.shared_entity ADD COLUMN bap_shared_entity_id character varying(255) ;
 ALTER TABLE atlas_driver_offer_bpp.shared_entity ADD COLUMN booking_ids json ;
-ALTER TABLE atlas_driver_offer_bpp.shared_entity ADD COLUMN counter_app_shared_entity_id character varying(255) ;
 ALTER TABLE atlas_driver_offer_bpp.shared_entity ADD COLUMN created_at timestamptz NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.shared_entity ADD COLUMN driver_id character varying(36) ;
 ALTER TABLE atlas_driver_offer_bpp.shared_entity ADD COLUMN driver_quote_ids json ;

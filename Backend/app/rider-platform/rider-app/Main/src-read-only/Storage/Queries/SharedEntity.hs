@@ -20,21 +20,18 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.SharedEntity as Beam
 import Storage.Queries.SharedEntityExtra as ReExport
 
-findByCounterAppSharedEntityId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe Domain.Types.SharedEntity.SharedEntity))
-findByCounterAppSharedEntityId counterAppSharedEntityId = do findOneWithKV [Se.Is Beam.counterAppSharedEntityId $ Se.Eq counterAppSharedEntityId]
-
-findByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> m [Domain.Types.SharedEntity.SharedEntity])
+findByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> m ([Domain.Types.SharedEntity.SharedEntity]))
 findByDriverId driverId = do findAllWithKV [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId <$> driverId)]
 
 findByMerchantOperatingCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.SharedEntity.SharedEntity])
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.SharedEntity.SharedEntity]))
 findByMerchantOperatingCityId merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
-findByPooledUsingCustomer :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> m [Domain.Types.SharedEntity.SharedEntity])
+findByPooledUsingCustomer :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person) -> m ([Domain.Types.SharedEntity.SharedEntity]))
 findByPooledUsingCustomer pooledUsingCustomer = do findAllWithKV [Se.Is Beam.pooledUsingCustomer $ Se.Eq (Kernel.Types.Id.getId <$> pooledUsingCustomer)]
 
-findByStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.SharedEntity.SharedEntityStatus -> m [Domain.Types.SharedEntity.SharedEntity])
+findByStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.SharedEntity.SharedEntityStatus -> m ([Domain.Types.SharedEntity.SharedEntity]))
 findByStatus status = do findAllWithKV [Se.Is Beam.status $ Se.Eq status]
 
 findByTransactionId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe Domain.Types.SharedEntity.SharedEntity))
@@ -46,11 +43,6 @@ updateBookingIds ::
 updateBookingIds bookingIds id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.bookingIds (Data.Aeson.toJSON <$> bookingIds), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
-
-updateCounterAppEntityId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.SharedEntity.SharedEntity -> m ())
-updateCounterAppEntityId counterAppSharedEntityId id = do
-  _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.counterAppSharedEntityId counterAppSharedEntityId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateDriverAssignment ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -89,7 +81,6 @@ updateByPrimaryKey (Domain.Types.SharedEntity.SharedEntity {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.bookingIds (Data.Aeson.toJSON <$> bookingIds),
-      Se.Set Beam.counterAppSharedEntityId counterAppSharedEntityId,
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.driverId (Kernel.Types.Id.getId <$> driverId),
       Se.Set Beam.entityType entityType,

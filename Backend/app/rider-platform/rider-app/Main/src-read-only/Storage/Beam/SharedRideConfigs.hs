@@ -13,23 +13,25 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data SharedRideConfigsT f = SharedRideConfigsT
-  { actualDropDistanceThreshold :: (B.C f Kernel.Types.Common.Meters),
-    actualPickupDistanceThreshold :: (B.C f Kernel.Types.Common.Meters),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    customerRemainingThresholdForFlowContinuation :: (B.C f Kernel.Prelude.Int),
-    dropLocationSearchRadius :: (B.C f Kernel.Types.Common.Meters),
-    geoHashPrecisionForRouteMatching :: (B.C f Kernel.Prelude.Int),
-    id :: (B.C f Kernel.Prelude.Text),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    pickupLocationSearchRadius :: (B.C f Kernel.Types.Common.Meters),
-    routeMatchingThreshold :: (B.C f Kernel.Prelude.Double),
-    routeOverlapThreshold :: (B.C f Kernel.Prelude.Double),
-    searchExpiryBufferSeconds :: (B.C f Kernel.Types.Common.Seconds),
-    searchRequestExpirySeconds :: (B.C f Kernel.Types.Common.Seconds),
-    searchThresholdForSharedEstimate :: (B.C f Kernel.Prelude.Int),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime),
-    vehicleCategory :: (B.C f BecknV2.OnDemand.Enums.VehicleCategory)
+  { actualDropDistanceThreshold :: B.C f Kernel.Types.Common.Meters,
+    actualPickupDistanceThreshold :: B.C f Kernel.Types.Common.Meters,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    customerRemainingThresholdForFlowContinuation :: B.C f Kernel.Prelude.Int,
+    dropLocationSearchRadius :: B.C f Kernel.Types.Common.Meters,
+    enableSharedRide :: B.C f Kernel.Prelude.Bool,
+    enableSyncPooling :: B.C f Kernel.Prelude.Bool,
+    geoHashPrecisionForRouteMatching :: B.C f Kernel.Prelude.Int,
+    id :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    pickupLocationSearchRadius :: B.C f Kernel.Types.Common.Meters,
+    routeMatchingThreshold :: B.C f Kernel.Prelude.Double,
+    routeOverlapThreshold :: B.C f Kernel.Prelude.Double,
+    searchExpiryBufferSeconds :: B.C f Kernel.Types.Common.Seconds,
+    searchRequestExpirySeconds :: B.C f Kernel.Types.Common.Seconds,
+    searchThresholdForSharedEstimate :: B.C f Kernel.Prelude.Int,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    vehicleCategory :: B.C f BecknV2.OnDemand.Enums.VehicleCategory
   }
   deriving (Generic, B.Beamable)
 
@@ -39,6 +41,6 @@ instance B.Table SharedRideConfigsT where
 
 type SharedRideConfigs = SharedRideConfigsT Identity
 
-$(enableKVPG (''SharedRideConfigsT) [('id)] [])
+$(enableKVPG ''SharedRideConfigsT ['id] [])
 
-$(mkTableInstances (''SharedRideConfigsT) "shared_ride_configs")
+$(mkTableInstances ''SharedRideConfigsT "shared_ride_configs")

@@ -1,7 +1,6 @@
 CREATE TABLE atlas_app.shared_entity ();
 
 ALTER TABLE atlas_app.shared_entity ADD COLUMN booking_ids json ;
-ALTER TABLE atlas_app.shared_entity ADD COLUMN counter_app_shared_entity_id character varying(255) ;
 ALTER TABLE atlas_app.shared_entity ADD COLUMN created_at timestamptz NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.shared_entity ADD COLUMN driver_id character varying(36) ;
 ALTER TABLE atlas_app.shared_entity ADD COLUMN entity_type character varying(255) NOT NULL;

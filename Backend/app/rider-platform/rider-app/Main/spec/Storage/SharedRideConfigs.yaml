@@ -14,6 +14,8 @@ SharedRideConfigs:
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     vehicleCategory: VehicleCategory|NoRelation
+    enableSharedRide: Bool
+    enableSyncPooling: Bool
     pickupLocationSearchRadius: Meters
     searchThresholdForSharedEstimate: Int
     searchRequestExpirySeconds: Seconds
@@ -35,6 +37,8 @@ SharedRideConfigs:
     merchantId: character varying(36)
     merchantOperatingCityId: character varying(36)
     vehicleCategory: character varying(255)
+    enableSharedRide: boolean
+    enableSyncPooling: boolean
     pickupLocationSearchRadius: double precision
     searchThresholdForSharedEstimate: integer
     searchRequestExpirySeconds: integer
@@ -61,7 +65,7 @@ SharedRideConfigs:
 
     updateConfigValues:
       kvFunction: updateOneWithKV
-      params: [pickupLocationSearchRadius, searchThresholdForSharedEstimate, searchRequestExpirySeconds, searchExpiryBufferSeconds, customerRemainingThresholdForFlowContinuation, dropLocationSearchRadius, actualPickupDistanceThreshold, actualDropDistanceThreshold, routeMatchingThreshold, geoHashPrecisionForRouteMatching, routeOverlapThreshold, updatedAt]
+      params: [enableSharedRide, enableSyncPooling, pickupLocationSearchRadius, searchThresholdForSharedEstimate, searchRequestExpirySeconds, searchExpiryBufferSeconds, customerRemainingThresholdForFlowContinuation, dropLocationSearchRadius, actualPickupDistanceThreshold, actualDropDistanceThreshold, routeMatchingThreshold, geoHashPrecisionForRouteMatching, routeOverlapThreshold, updatedAt]
       where: id
 
     findAllByMerchantId:

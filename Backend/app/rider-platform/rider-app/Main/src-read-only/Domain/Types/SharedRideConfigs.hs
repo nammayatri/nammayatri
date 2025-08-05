@@ -18,6 +18,8 @@ data SharedRideConfigs = SharedRideConfigs
     createdAt :: Kernel.Prelude.UTCTime,
     customerRemainingThresholdForFlowContinuation :: Kernel.Prelude.Int,
     dropLocationSearchRadius :: Kernel.Types.Common.Meters,
+    enableSharedRide :: Kernel.Prelude.Bool,
+    enableSyncPooling :: Kernel.Prelude.Bool,
     geoHashPrecisionForRouteMatching :: Kernel.Prelude.Int,
     id :: Kernel.Types.Id.Id Domain.Types.SharedRideConfigs.SharedRideConfigs,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
@@ -31,4 +33,4 @@ data SharedRideConfigs = SharedRideConfigs
     updatedAt :: Kernel.Prelude.UTCTime,
     vehicleCategory :: BecknV2.OnDemand.Enums.VehicleCategory
   }
-  deriving (Generic, (Show))
+  deriving (Generic, Show)

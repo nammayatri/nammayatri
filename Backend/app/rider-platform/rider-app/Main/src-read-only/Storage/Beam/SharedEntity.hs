@@ -15,27 +15,26 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data SharedEntityT f = SharedEntityT
-  { bookingIds :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
-    counterAppSharedEntityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    driverId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    entityType :: B.C f Domain.Types.SharedEntity.SharedEntityType,
-    estimateIds :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
-    id :: B.C f Kernel.Prelude.Text,
-    merchantId :: B.C f Kernel.Prelude.Text,
-    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
-    pairingTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
-    pooledUsingCustomer :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    rideIds :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
-    searchRequestIds :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
-    status :: B.C f Domain.Types.SharedEntity.SharedEntityStatus,
-    totalSeats :: B.C f Kernel.Prelude.Int,
-    transactionId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    tripCategory :: B.C f Domain.Types.Common.TripCategory,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime,
-    validTill :: B.C f Kernel.Prelude.UTCTime,
-    vehicleCategory :: B.C f BecknV2.OnDemand.Enums.VehicleCategory,
-    waypoints :: B.C f Data.Aeson.Value
+  { bookingIds :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    driverId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
+    entityType :: (B.C f Domain.Types.SharedEntity.SharedEntityType),
+    estimateIds :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
+    id :: (B.C f Kernel.Prelude.Text),
+    merchantId :: (B.C f Kernel.Prelude.Text),
+    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
+    pairingTime :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
+    pooledUsingCustomer :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
+    rideIds :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
+    searchRequestIds :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
+    status :: (B.C f Domain.Types.SharedEntity.SharedEntityStatus),
+    totalSeats :: (B.C f Kernel.Prelude.Int),
+    transactionId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    tripCategory :: (B.C f Domain.Types.Common.TripCategory),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime),
+    validTill :: (B.C f Kernel.Prelude.UTCTime),
+    vehicleCategory :: (B.C f BecknV2.OnDemand.Enums.VehicleCategory),
+    waypoints :: (B.C f Data.Aeson.Value)
   }
   deriving (Generic, B.Beamable)
 
@@ -45,6 +44,6 @@ instance B.Table SharedEntityT where
 
 type SharedEntity = SharedEntityT Identity
 
-$(enableKVPG ''SharedEntityT ['id] [['driverId], ['transactionId]])
+$(enableKVPG (''SharedEntityT) [('id)] [[('driverId)], [('transactionId)]])
 
-$(mkTableInstances ''SharedEntityT "shared_entity")
+$(mkTableInstances (''SharedEntityT) "shared_entity")

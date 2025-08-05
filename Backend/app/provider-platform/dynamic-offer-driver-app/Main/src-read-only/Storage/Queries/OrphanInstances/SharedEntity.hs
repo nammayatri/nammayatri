@@ -18,8 +18,8 @@ instance FromTType' Beam.SharedEntity Domain.Types.SharedEntity.SharedEntity whe
     pure $
       Just
         Domain.Types.SharedEntity.SharedEntity
-          { bookingIds = (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< bookingIds,
-            counterAppSharedEntityId = counterAppSharedEntityId,
+          { bapSharedEntityId = bapSharedEntityId,
+            bookingIds = (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< bookingIds,
             createdAt = createdAt,
             driverId = Kernel.Types.Id.Id <$> driverId,
             driverQuoteIds = (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< driverQuoteIds,
@@ -45,8 +45,8 @@ instance FromTType' Beam.SharedEntity Domain.Types.SharedEntity.SharedEntity whe
 instance ToTType' Beam.SharedEntity Domain.Types.SharedEntity.SharedEntity where
   toTType' (Domain.Types.SharedEntity.SharedEntity {..}) = do
     Beam.SharedEntityT
-      { Beam.bookingIds = Data.Aeson.toJSON <$> bookingIds,
-        Beam.counterAppSharedEntityId = counterAppSharedEntityId,
+      { Beam.bapSharedEntityId = bapSharedEntityId,
+        Beam.bookingIds = Data.Aeson.toJSON <$> bookingIds,
         Beam.createdAt = createdAt,
         Beam.driverId = Kernel.Types.Id.getId <$> driverId,
         Beam.driverQuoteIds = Data.Aeson.toJSON <$> driverQuoteIds,

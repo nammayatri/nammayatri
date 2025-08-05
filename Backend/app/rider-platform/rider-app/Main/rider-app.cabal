@@ -459,6 +459,7 @@ library
       Storage.CachedQueries.RideRelatedNotificationConfig
       Storage.CachedQueries.RouteStopTimeTable
       Storage.CachedQueries.SavedReqLocationExtra
+      Storage.CachedQueries.SharedRideConfigs
       Storage.CachedQueries.Sos
       Storage.CachedQueries.UiRiderConfig
       Storage.CachedQueries.ValueAddNP

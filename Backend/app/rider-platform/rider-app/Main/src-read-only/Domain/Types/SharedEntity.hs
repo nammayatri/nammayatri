@@ -17,7 +17,6 @@ import qualified Tools.Beam.UtilsTH
 
 data SharedEntity = SharedEntity
   { bookingIds :: Kernel.Prelude.Maybe [Domain.Types.TrackedEntity.TrackedEntity],
-    counterAppSharedEntityId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,
     driverId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     entityType :: Domain.Types.SharedEntity.SharedEntityType,
@@ -38,7 +37,7 @@ data SharedEntity = SharedEntity
     vehicleCategory :: BecknV2.OnDemand.Enums.VehicleCategory,
     waypoints :: Data.Aeson.Value
   }
-  deriving (Generic, Show)
+  deriving (Generic, (Show))
 
 data SharedEntityStatus
   = SEARCHING
@@ -53,12 +52,12 @@ data SharedEntityStatus
   | EXPIRED
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data SharedEntityType = SEARCH_GROUP | ESTIMATE_GROUP | BOOKING_GROUP | RIDE_GROUP deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data SharedEntityType = OVERLAPPING | FIXED_ROUTE deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SharedEntityStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SharedEntityStatus))
 
-$(mkHttpInstancesForEnum ''SharedEntityStatus)
+$(mkHttpInstancesForEnum (''SharedEntityStatus))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SharedEntityType)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SharedEntityType))
 
-$(mkHttpInstancesForEnum ''SharedEntityType)
+$(mkHttpInstancesForEnum (''SharedEntityType))

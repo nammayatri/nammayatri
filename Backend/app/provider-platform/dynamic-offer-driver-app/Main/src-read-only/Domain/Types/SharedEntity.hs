@@ -16,8 +16,8 @@ import Kernel.Utils.TH
 import qualified Tools.Beam.UtilsTH
 
 data SharedEntity = SharedEntity
-  { bookingIds :: Kernel.Prelude.Maybe [Domain.Types.TrackedEntity.TrackedEntity],
-    counterAppSharedEntityId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+  { bapSharedEntityId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    bookingIds :: Kernel.Prelude.Maybe [Domain.Types.TrackedEntity.TrackedEntity],
     createdAt :: Kernel.Prelude.UTCTime,
     driverId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     driverQuoteIds :: Kernel.Prelude.Maybe [Domain.Types.TrackedEntity.TrackedEntity],
@@ -54,7 +54,7 @@ data SharedEntityStatus
   | EXPIRED
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data SharedEntityType = SEARCH_GROUP | ESTIMATE_GROUP | BOOKING_GROUP | RIDE_GROUP deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+data SharedEntityType = OVERLAPPING | FIXED_ROUTE deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SharedEntityStatus)
 

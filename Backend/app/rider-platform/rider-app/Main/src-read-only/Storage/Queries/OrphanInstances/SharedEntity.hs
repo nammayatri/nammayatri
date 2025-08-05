@@ -19,7 +19,6 @@ instance FromTType' Beam.SharedEntity Domain.Types.SharedEntity.SharedEntity whe
       Just
         Domain.Types.SharedEntity.SharedEntity
           { bookingIds = (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< bookingIds,
-            counterAppSharedEntityId = counterAppSharedEntityId,
             createdAt = createdAt,
             driverId = Kernel.Types.Id.Id <$> driverId,
             entityType = entityType,
@@ -45,7 +44,6 @@ instance ToTType' Beam.SharedEntity Domain.Types.SharedEntity.SharedEntity where
   toTType' (Domain.Types.SharedEntity.SharedEntity {..}) = do
     Beam.SharedEntityT
       { Beam.bookingIds = Data.Aeson.toJSON <$> bookingIds,
-        Beam.counterAppSharedEntityId = counterAppSharedEntityId,
         Beam.createdAt = createdAt,
         Beam.driverId = Kernel.Types.Id.getId <$> driverId,
         Beam.entityType = entityType,

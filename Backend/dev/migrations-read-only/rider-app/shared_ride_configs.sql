@@ -5,6 +5,8 @@ ALTER TABLE atlas_app.shared_ride_configs ADD COLUMN actual_pickup_distance_thre
 ALTER TABLE atlas_app.shared_ride_configs ADD COLUMN created_at timestamptz NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.shared_ride_configs ADD COLUMN customer_remaining_threshold_for_flow_continuation integer NOT NULL;
 ALTER TABLE atlas_app.shared_ride_configs ADD COLUMN drop_location_search_radius double precision NOT NULL;
+ALTER TABLE atlas_app.shared_ride_configs ADD COLUMN enable_shared_ride boolean NOT NULL;
+ALTER TABLE atlas_app.shared_ride_configs ADD COLUMN enable_sync_pooling boolean NOT NULL;
 ALTER TABLE atlas_app.shared_ride_configs ADD COLUMN geo_hash_precision_for_route_matching integer NOT NULL;
 ALTER TABLE atlas_app.shared_ride_configs ADD COLUMN id character varying(36) NOT NULL;
 ALTER TABLE atlas_app.shared_ride_configs ADD COLUMN merchant_id character varying(36) NOT NULL;

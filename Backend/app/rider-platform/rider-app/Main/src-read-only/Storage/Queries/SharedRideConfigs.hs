@@ -25,12 +25,12 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.SharedRideConfigs.SharedRideConfigs] -> m ())
 createMany = traverse_ create
 
-findAllByMerchantId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> m ([Domain.Types.SharedRideConfigs.SharedRideConfigs]))
+findAllByMerchantId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> m [Domain.Types.SharedRideConfigs.SharedRideConfigs])
 findAllByMerchantId merchantId = do findAllWithKV [Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId merchantId)]
 
 findByMerchantOperatingCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.SharedRideConfigs.SharedRideConfigs]))
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.SharedRideConfigs.SharedRideConfigs])
 findByMerchantOperatingCityId merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
 findByMerchantOperatingCityIdAndVehicleCategory ::
@@ -46,11 +46,13 @@ findByMerchantOperatingCityIdAndVehicleCategory merchantOperatingCityId vehicleC
 
 updateConfigValues ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Common.Meters -> Kernel.Prelude.Int -> Kernel.Types.Common.Seconds -> Kernel.Types.Common.Seconds -> Kernel.Prelude.Int -> Kernel.Types.Common.Meters -> Kernel.Types.Common.Meters -> Kernel.Types.Common.Meters -> Kernel.Prelude.Double -> Kernel.Prelude.Int -> Kernel.Prelude.Double -> Kernel.Types.Id.Id Domain.Types.SharedRideConfigs.SharedRideConfigs -> m ())
-updateConfigValues pickupLocationSearchRadius searchThresholdForSharedEstimate searchRequestExpirySeconds searchExpiryBufferSeconds customerRemainingThresholdForFlowContinuation dropLocationSearchRadius actualPickupDistanceThreshold actualDropDistanceThreshold routeMatchingThreshold geoHashPrecisionForRouteMatching routeOverlapThreshold id = do
+  (Kernel.Prelude.Bool -> Kernel.Prelude.Bool -> Kernel.Types.Common.Meters -> Kernel.Prelude.Int -> Kernel.Types.Common.Seconds -> Kernel.Types.Common.Seconds -> Kernel.Prelude.Int -> Kernel.Types.Common.Meters -> Kernel.Types.Common.Meters -> Kernel.Types.Common.Meters -> Kernel.Prelude.Double -> Kernel.Prelude.Int -> Kernel.Prelude.Double -> Kernel.Types.Id.Id Domain.Types.SharedRideConfigs.SharedRideConfigs -> m ())
+updateConfigValues enableSharedRide enableSyncPooling pickupLocationSearchRadius searchThresholdForSharedEstimate searchRequestExpirySeconds searchExpiryBufferSeconds customerRemainingThresholdForFlowContinuation dropLocationSearchRadius actualPickupDistanceThreshold actualDropDistanceThreshold routeMatchingThreshold geoHashPrecisionForRouteMatching routeOverlapThreshold id = do
   _now <- getCurrentTime
   updateOneWithKV
-    [ Se.Set Beam.pickupLocationSearchRadius pickupLocationSearchRadius,
+    [ Se.Set Beam.enableSharedRide enableSharedRide,
+      Se.Set Beam.enableSyncPooling enableSyncPooling,
+      Se.Set Beam.pickupLocationSearchRadius pickupLocationSearchRadius,
       Se.Set Beam.searchThresholdForSharedEstimate searchThresholdForSharedEstimate,
       Se.Set Beam.searchRequestExpirySeconds searchRequestExpirySeconds,
       Se.Set Beam.searchExpiryBufferSeconds searchExpiryBufferSeconds,
@@ -77,6 +79,8 @@ updateByPrimaryKey (Domain.Types.SharedRideConfigs.SharedRideConfigs {..}) = do
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.customerRemainingThresholdForFlowContinuation customerRemainingThresholdForFlowContinuation,
       Se.Set Beam.dropLocationSearchRadius dropLocationSearchRadius,
+      Se.Set Beam.enableSharedRide enableSharedRide,
+      Se.Set Beam.enableSyncPooling enableSyncPooling,
       Se.Set Beam.geoHashPrecisionForRouteMatching geoHashPrecisionForRouteMatching,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
@@ -101,6 +105,8 @@ instance FromTType' Beam.SharedRideConfigs Domain.Types.SharedRideConfigs.Shared
             createdAt = createdAt,
             customerRemainingThresholdForFlowContinuation = customerRemainingThresholdForFlowContinuation,
             dropLocationSearchRadius = dropLocationSearchRadius,
+            enableSharedRide = enableSharedRide,
+            enableSyncPooling = enableSyncPooling,
             geoHashPrecisionForRouteMatching = geoHashPrecisionForRouteMatching,
             id = Kernel.Types.Id.Id id,
             merchantId = Kernel.Types.Id.Id merchantId,
@@ -123,6 +129,8 @@ instance ToTType' Beam.SharedRideConfigs Domain.Types.SharedRideConfigs.SharedRi
         Beam.createdAt = createdAt,
         Beam.customerRemainingThresholdForFlowContinuation = customerRemainingThresholdForFlowContinuation,
         Beam.dropLocationSearchRadius = dropLocationSearchRadius,
+        Beam.enableSharedRide = enableSharedRide,
+        Beam.enableSyncPooling = enableSyncPooling,
         Beam.geoHashPrecisionForRouteMatching = geoHashPrecisionForRouteMatching,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
