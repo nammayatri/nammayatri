@@ -671,7 +671,7 @@ createRecentLocationForMultimodal journey = do
   let mbLastLeg = listToMaybe (reverse legs)
   let mbFirstStopCode = mbFirstLeg >>= (.fromStopDetails) >>= (.stopCode)
   let mbLastStopCode = mbLastLeg >>= (.toStopDetails) >>= (.stopCode)
-  let mbRouteCode = mbFirstLeg <&> (.routeDetails) >>= listToMaybe >>= (.gtfsId)
+  let mbRouteCode = mbFirstLeg <&> (.routeDetails) >>= listToMaybe >>= (.routeGtfsId)
   let mbEndLocation = mbLastLeg <&> (.endLocation)
   case (mbFirstLeg, mbFirstStopCode, mbLastStopCode, mbEndLocation) of
     (Just firstLeg, Just firstStopCode, Just lastStopCode, Just endLocation) -> do

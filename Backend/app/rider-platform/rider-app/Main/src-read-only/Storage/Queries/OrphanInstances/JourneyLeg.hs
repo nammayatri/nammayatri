@@ -18,11 +18,10 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Kernel.Utils.JSON
 import qualified Storage.Beam.JourneyLeg as Beam
 import qualified Storage.Queries.RouteDetails
-import qualified Storage.Queries.Transformers.RouteDetails
 
 instance FromTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
   fromTType' (Beam.JourneyLegT {..}) = do
-    routeDetailsList <- Storage.Queries.RouteDetails.findAllByJourneyLegId (Kernel.Types.Id.Id id)
+    routeDetails' <- Storage.Queries.RouteDetails.findAllByJourneyLegId id
     pure $
       Just
         Domain.Types.JourneyLeg.JourneyLeg
@@ -45,7 +44,7 @@ instance FromTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
             journeyId = Kernel.Types.Id.Id journeyId,
             legSearchId = legId,
             mode = mode,
-            routeDetails = Storage.Queries.Transformers.RouteDetails.getTransformedRouteDetails routeDetailsList,
+            routeDetails = routeDetails',
             sequenceNumber = sequenceNumber,
             serviceTypes = serviceTypes,
             startLocation = Kernel.External.Maps.Google.MapsClient.LatLngV2 startLocationLat startLocationLon,

@@ -4,8 +4,8 @@
 
 module Storage.Queries.SearchRequest (module Storage.Queries.SearchRequest, module ReExport) where
 
-import qualified Domain.Types.DeliveryDetails
 import qualified Domain.Types.Merchant
+import qualified Domain.Types.ParcelType
 import qualified Domain.Types.SearchRequest
 import qualified Domain.Types.Trip
 import Kernel.Beam.Functions
@@ -37,7 +37,7 @@ updateIsReallocationEnabled isReallocationEnabled id = do updateWithKV [Se.Set B
 
 updateParcelDetails ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Domain.Types.DeliveryDetails.ParcelType -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m ())
+  (Kernel.Prelude.Maybe Domain.Types.ParcelType.ParcelType -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m ())
 updateParcelDetails parcelType parcelQuantity id = do updateWithKV [Se.Set Beam.parcelType parcelType, Se.Set Beam.parcelQuantity parcelQuantity] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updatePoolingConfigVersion :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m ())

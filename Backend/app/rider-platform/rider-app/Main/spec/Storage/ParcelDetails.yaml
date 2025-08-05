@@ -2,14 +2,12 @@ imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   SearchRequest: Domain.Types.SearchRequest
+  ParcelType: Domain.Types.ParcelType
 
 ParcelDetails:
-  types:
-    ParcelType:
-      enum: Household,Electronics,Perishables,Fragile,ConstructionMaterials,Others Text
   fields:
     searchRequestId : Id SearchRequest
-    parcelType: ParcelType
+    parcelType: ParcelType|NoRelation
     quantity: Maybe Int
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity

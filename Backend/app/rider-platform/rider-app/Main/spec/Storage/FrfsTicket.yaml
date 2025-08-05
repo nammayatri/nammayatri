@@ -12,14 +12,15 @@ imports:
   ServiceTierType: BecknV2.FRFS.Enums
   FRFSSearch: Domain.Types.FRFSSearch
   FRFSQuote: Domain.Types.FRFSQuote
+  RouteDetails: Domain.Types.RouteDetails
   FRFSTicketBooking: Domain.Types.FRFSTicketBooking
   FRFSTicket: Domain.Types.FRFSTicket
   FRFSTicketBookingPayment: Domain.Types.FRFSTicketBookingPayment
   Station: Domain.Types.Station
   FRFSQuoteType: Domain.Types.FRFSQuote
   FRFSRoutes: Domain.Types.FRFSQuote
-  FRFSTicketBookingStatus: Domain.Types.FRFSTicketBooking
-  FRFSTicketStatus: Domain.Types.FRFSTicket
+  FRFSTicketBookingStatus: Domain.Types.FRFSTicketBookingStatus
+  FRFSTicketStatus: Domain.Types.FRFSTicketStatus
   PaymentOrder: Lib.Payment.Domain.Types.PaymentOrder
   Person: Domain.Types.Person
   City: Kernel.Types.Beckn.Context
@@ -29,10 +30,10 @@ imports:
   LatLong: Kernel.External.Maps.Types
   JourneySearchData: Lib.JourneyLeg.Types
   Journey: Domain.Types.Journey
+  JourneyLeg: Domain.Types.JourneyLeg
   JourneyLegStatus: Lib.JourneyLeg.Types
   StationType: Domain.Types.StationType
   SuggestedStations: Domain.Types.StationType
-  MultiModalJourneyRouteDetails: Lib.JourneyLeg.Types
   IntegratedBPPConfig: Domain.Types.IntegratedBPPConfig
   RecentLocation: Domain.Types.RecentLocation
   DayOfWeek: Data.Time
@@ -55,9 +56,10 @@ FRFSSearch:
     partnerOrgTransactionId: Maybe (Id PartnerOrgTransaction)
     partnerOrgId: Maybe (Id PartnerOrganization)
     journeyLegInfo: Maybe JourneySearchData
+    journeyLegId: Maybe (Id JourneyLeg)
     journeyLegStatus: Maybe JourneyLegStatus
     isOnSearchReceived: Maybe Bool
-    journeyRouteDetails: "[MultiModalJourneyRouteDetails]"
+    journeyRouteDetails: "[RouteDetails]"
     integratedBppConfigId: Id IntegratedBPPConfig
     recentLocationId: Maybe (Id RecentLocation)
     validTill: Maybe UTCTime
@@ -90,13 +92,9 @@ FRFSSearch:
     isDeleted: (journeyLegInfo >>= (.isDeleted))|E
     onSearchFailed: (journeyLegInfo >>= (.onSearchFailed))|E
 
-  intermediateTransformers:
-    fromTType:
-      - journeyRouteDetailsList: Storage.Queries.JourneyRouteDetails.findAllBySearchId (Kernel.Types.Id.Id id)|EM
-
   fromTType:
     journeyLegInfo: mkJourneyLegInfo
-    journeyRouteDetails: Storage.Queries.Transformers.RouteDetails.getTransformedJourneyRouteDetailsT journeyRouteDetailsList|E
+    journeyRouteDetails: Storage.Queries.Transformers.RouteDetails.getJourneyRouteDetails id journeyLegId|EM
 
   excludedDefaultQueries:
     - create
@@ -126,6 +124,7 @@ FRFSSearch:
   extraOperations:
     - EXTRA_QUERY_FILE
 
+# TODO :: Kept for Backward Compatibility, remove this once UI starts using legStatus from RouteDetails table
 JourneyRouteDetails:
   fields:
     id: Id JourneyRouteDetails
@@ -290,7 +289,7 @@ FRFSTicketBooking:
     searchId: Id FRFSSearch
     bppOrderId: Maybe Text
     quoteId: Id FRFSQuote
-    status: FRFSTicketBookingStatus
+    status: FRFSTicketBookingStatus|NoRelation
     riderId: Id Person
     stationsJson: Text
     routeStationsJson: Maybe Text
@@ -337,12 +336,13 @@ FRFSTicketBooking:
     isDeleted: Maybe Bool
     isFareChanged: Maybe Bool
     isSkipped: Maybe Bool
-    journeyRouteDetails: "[MultiModalJourneyRouteDetails]"
+    journeyRouteDetails: "[RouteDetails]"
     integratedBppConfigId: Id IntegratedBPPConfig
     recentLocationId: Maybe (Id RecentLocation)
     bookingAuthCode: Maybe Text
     osType: Maybe Text
     osBuildVersion: Maybe Text
+    journeyLegId: Maybe (Id JourneyLeg)
 
   default:
     customerCancelled: "false"
@@ -362,20 +362,14 @@ FRFSTicketBooking:
     journeyRouteDetails: {}
 
   types:
-    FRFSTicketBookingStatus:
-      enum: "NEW, APPROVED, PAYMENT_PENDING, CONFIRMING, FAILED, CONFIRMED, CANCELLED, COUNTER_CANCELLED, CANCEL_INITIATED, TECHNICAL_CANCEL_REJECTED"
     CashbackStatus:
       enum: "PENDING, PROCESSING, SUCCESSFUL, CASHBACK_FAILED, MANUAL_VERIFICATION"
-
-  intermediateTransformers:
-    fromTType:
-      - journeyRouteDetailsList: Storage.Queries.JourneyRouteDetails.findAllBySearchId (Kernel.Types.Id.Id searchId)|EM
 
   fromTType:
     price: Kernel.Types.Common.mkPrice currency price|E
     estimatedPrice: Kernel.Types.Common.mkPrice currency estimatedPrice|E
     finalPrice: Kernel.Prelude.fmap (Kernel.Types.Common.mkPrice currency) finalPrice|E
-    journeyRouteDetails: Storage.Queries.Transformers.RouteDetails.getTransformedJourneyRouteDetails journeyRouteDetailsList|E
+    journeyRouteDetails: Storage.Queries.Transformers.RouteDetails.getJourneyRouteDetails searchId journeyLegId|EM
 
   toTType:
     price: (.amount)|I
@@ -501,7 +495,7 @@ FRFSTicket:
     description: Maybe Text
     frfsTicketBookingId: Id FRFSTicketBooking
     riderId: Id Person
-    status: FRFSTicketStatus
+    status: FRFSTicketStatus|NoRelation
     qrData: Text
     validTill: UTCTime
     ticketNumber: Text
@@ -512,10 +506,6 @@ FRFSTicket:
     partnerOrgTransactionId: Maybe (Id PartnerOrgTransaction)
     partnerOrgId: Maybe (Id PartnerOrganization)
     isTicketFree: Maybe Bool
-
-  types:
-    FRFSTicketStatus:
-      enum: "ACTIVE, EXPIRED, USED, CANCELLED, COUNTER_CANCELLED, CANCEL_INITIATED, TECHNICAL_CANCEL_REJECTED"
 
   constraints:
     id: PrimaryKey
@@ -1006,9 +996,11 @@ FRFSTicketBookingFeedback:
     updatedAt: UTCTime
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
-    isFareAccepted: Bool
+    isFareAccepted: Maybe Bool
+    feedbackDetails: Maybe Text
   constraints:
     id: PrimaryKey
+    bookingId: SecondaryKey
   queries:
     findByBookingId:
       kvFunction: findOneWithKV
@@ -1020,6 +1012,6 @@ FRFSTicketBookingFeedback:
         and: [merchantId, merchantOperatingCityId]
     updateByBookingId:
       kvFunction: updateOneWithKV
-      params: [isFareAccepted, updatedAt]
+      params: [isFareAccepted, feedbackDetails, updatedAt]
       where:
         and: [bookingId]

@@ -41,16 +41,19 @@ import Data.OpenApi hiding (name)
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Estimate as UEstimate
 import qualified Domain.Action.UI.Registration as Reg
-import Domain.Types.Booking (Booking, BookingStatus (..))
+import Domain.Types.Booking
+import Domain.Types.BookingStatus
 import Domain.Types.Common
 import qualified Domain.Types.DeliveryDetails as DTDD
 import qualified Domain.Types.DriverOffer as DDO
 import qualified Domain.Types.Estimate as DEstimate
+import qualified Domain.Types.EstimateStatus as DEstimate
 import qualified Domain.Types.Journey as DJ
 import qualified Domain.Types.JourneyLeg as DJL
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.ParcelDetails as DParcel
+import qualified Domain.Types.ParcelType as DParcel
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.SearchRequest as DSearchReq
@@ -427,7 +430,7 @@ mkJourneyForSearch searchRequest estimate personId = do
                 isPaymentSuccess = Just True,
                 totalLegs = 1,
                 modes = [DTrip.Taxi],
-                searchRequestId = searchRequest.id,
+                searchRequestId = searchRequest.id.getId,
                 merchantId = searchRequest.merchantId,
                 status = DJ.INPROGRESS,
                 riderId = personId,

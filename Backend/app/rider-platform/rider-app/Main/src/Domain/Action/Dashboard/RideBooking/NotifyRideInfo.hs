@@ -8,6 +8,7 @@ import qualified Domain.Action.Beckn.Common as Common
 import qualified Domain.Types.Merchant as DM
 import qualified "this" Domain.Types.Person
 import qualified Domain.Types.Ride as DR
+import qualified Domain.Types.RideStatus as DR
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Prelude

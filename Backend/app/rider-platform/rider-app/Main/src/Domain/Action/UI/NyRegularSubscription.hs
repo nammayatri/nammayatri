@@ -135,6 +135,8 @@ postNyRegularSubscriptionsCreate (mPersonId, merchantId) mbClientId mbIsDashboar
       mbDevice
       (fromMaybe False mbIsDashboardRequest)
       Nothing
+      Nothing
+      Nothing
       False
   logInfo $ "New subscription created with id: " <> subscriptionId.getId
   fork "search cabs" . withShortRetry $ do

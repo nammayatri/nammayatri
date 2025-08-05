@@ -5,6 +5,7 @@
 module Storage.Queries.Estimate (module Storage.Queries.Estimate, module ReExport) where
 
 import qualified Domain.Types.Estimate
+import qualified Domain.Types.EstimateStatus
 import qualified Domain.Types.SearchRequest
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -31,10 +32,10 @@ findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
 
 findBySRIdAndStatus ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Domain.Types.Estimate.EstimateStatus -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m (Maybe Domain.Types.Estimate.Estimate))
+  (Domain.Types.EstimateStatus.EstimateStatus -> Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m (Maybe Domain.Types.Estimate.Estimate))
 findBySRIdAndStatus status requestId = do findOneWithKV [Se.And [Se.Is Beam.status $ Se.Eq status, Se.Is Beam.requestId $ Se.Eq (Kernel.Types.Id.getId requestId)]]
 
-updateStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Estimate.EstimateStatus -> Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> m ())
+updateStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.EstimateStatus.EstimateStatus -> Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> m ())
 updateStatus status id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.updatedAt _now, Se.Set Beam.status status] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> m (Maybe Domain.Types.Estimate.Estimate))

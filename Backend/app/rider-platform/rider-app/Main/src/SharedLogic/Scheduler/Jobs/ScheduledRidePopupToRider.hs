@@ -13,7 +13,7 @@
 -- -}
 module SharedLogic.Scheduler.Jobs.ScheduledRidePopupToRider where
 
-import qualified Domain.Types.Booking as DTB
+import qualified Domain.Types.BookingStatus as DTB
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude

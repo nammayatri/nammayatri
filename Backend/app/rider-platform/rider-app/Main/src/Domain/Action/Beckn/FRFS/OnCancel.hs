@@ -16,9 +16,10 @@ module Domain.Action.Beckn.FRFS.OnCancel where
 
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified Domain.Action.Beckn.FRFS.Common as Common
-import qualified Domain.Types.FRFSTicket as DFRFSTicket
 import qualified Domain.Types.FRFSTicketBooking as Booking
 import qualified Domain.Types.FRFSTicketBooking as FTBooking
+import qualified Domain.Types.FRFSTicketBookingStatus as FTBooking
+import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
 import Domain.Types.Merchant as Merchant
 import Environment
 import Kernel.Beam.Functions

@@ -2,6 +2,7 @@ module SharedLogic.Booking where
 
 import Control.Applicative (pure)
 import qualified Domain.Types.Booking as DBooking
+import qualified Domain.Types.BookingStatus as DBooking
 import qualified Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.Ride as DRide
 import Kernel.Beam.Functions (runInReplica)

@@ -19,7 +19,7 @@ module SharedLogic.JobScheduler where
 
 import Data.Singletons.TH
 import Domain.Types.Booking
-import qualified Domain.Types.Extra.Booking as DEB
+import qualified Domain.Types.BookingStatus as DEB
 import qualified Domain.Types.FRFSTicketBooking as DFTB
 import Domain.Types.IntegratedBPPConfig as DIntegratedBPPConfig
 import qualified Domain.Types.Merchant as DM

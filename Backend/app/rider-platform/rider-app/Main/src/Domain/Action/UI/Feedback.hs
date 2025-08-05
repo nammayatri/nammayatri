@@ -36,6 +36,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.RideStatus as DRide
 import qualified Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.VehicleVariant as DVeh
 import Environment

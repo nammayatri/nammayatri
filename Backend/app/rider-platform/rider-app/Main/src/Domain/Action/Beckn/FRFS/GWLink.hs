@@ -8,7 +8,7 @@ import Data.Time hiding (getCurrentTime)
 import Data.Time.Clock.POSIX
 import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import qualified Domain.Types.Extra.MerchantServiceConfig as DMSC
-import qualified Domain.Types.FRFSTicket as FRFS
+import qualified Domain.Types.FRFSTicketStatus as FRFS
 import Domain.Types.Merchant as M
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import EulerHS.Prelude hiding (exp)

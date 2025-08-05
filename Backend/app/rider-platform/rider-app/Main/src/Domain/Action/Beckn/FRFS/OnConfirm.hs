@@ -32,8 +32,9 @@ import qualified Domain.Types.FRFSQuote as FQ
 import qualified Domain.Types.FRFSRecon as Recon
 import qualified Domain.Types.FRFSTicket as Ticket
 import qualified Domain.Types.FRFSTicketBooking as Booking
-import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
+import qualified Domain.Types.FRFSTicketBookingStatus as Booking
+import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBooking
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import Domain.Types.Merchant as Merchant
 import qualified Domain.Types.PartnerOrgConfig as DPOC

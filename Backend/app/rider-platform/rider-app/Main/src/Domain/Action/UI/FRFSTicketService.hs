@@ -25,7 +25,9 @@ import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBooking as DFTB
 import qualified Domain.Types.FRFSTicketBookingFeedback as DFRFSTicketBookingFeedback
 import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
+import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBooking
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
+import qualified Domain.Types.JourneyLeg as DJL
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant as Merchant
 import Domain.Types.MerchantOperatingCity as DMOC
@@ -33,6 +35,7 @@ import qualified Domain.Types.PartnerOrganization as DPO
 import qualified Domain.Types.Person
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Route as Route
+import qualified Domain.Types.RouteDetails as RD
 import qualified Domain.Types.RouteStopMapping as RouteStopMapping
 import Domain.Types.Station
 import Domain.Types.StationType
@@ -487,7 +490,7 @@ postFrfsSearch (mbPersonId, merchantId) mbCity mbIntegratedBPPConfigId vehicleTy
 
   merchantOperatingCity <- CQMOC.findById merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist merchantOperatingCityId.getId)
   integratedBPPConfig <- SIBC.findIntegratedBPPConfig mbIntegratedBPPConfigId merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleType_) DIBC.APPLICATION
-  postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPPConfig vehicleType_ req frfsRouteDetails Nothing Nothing [] Nothing
+  postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPPConfig vehicleType_ req frfsRouteDetails Nothing Nothing Nothing [] Nothing
 
 postFrfsDiscoverySearch :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id DIBC.IntegratedBPPConfig) -> API.Types.UI.FRFSTicketService.FRFSDiscoverySearchAPIReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postFrfsDiscoverySearch (_, merchantId) mbIntegratedBPPConfigId req = do
@@ -508,10 +511,11 @@ postFrfsSearchHandler ::
   [FRFSRouteDetails] ->
   Maybe (Id DPO.PartnerOrgTransaction) ->
   Maybe (Id DPO.PartnerOrganization) ->
-  [JLT.MultiModalJourneyRouteDetails] ->
+  Maybe (Id DJL.JourneyLeg) ->
+  [RD.RouteDetails] ->
   Maybe HighPrecMoney ->
   m API.Types.UI.FRFSTicketService.FRFSSearchAPIRes
-postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPPConfig vehicleType_ FRFSSearchAPIReq {..} frfsRouteDetails mbPOrgTxnId mbPOrgId mbJourneyRouteDetails mbFare = do
+postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPPConfig vehicleType_ FRFSSearchAPIReq {..} frfsRouteDetails mbPOrgTxnId mbPOrgId mbJourneyLegId mbRouteDetails mbFare = do
   merchant <- CQM.findById merchantId >>= fromMaybeM (InvalidRequest "Invalid merchant id")
   bapConfig <- CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory vehicleType_) >>= fromMaybeM (InternalError "Beckn Config not found")
   (fromStation, toStation) <- do
@@ -526,8 +530,7 @@ postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPP
 
   searchReqId <- generateGUID
   now <- getCurrentTime
-  let updatedJourneyRouteDetails = map (\multiModalJourneyRouteDetails -> multiModalJourneyRouteDetails {JLT.journeyStatus = Just JLT.InPlan}) mbJourneyRouteDetails
-      validTill = addUTCTime (maybe 30 intToNominalDiffTime bapConfig.searchTTLSec) now
+  let validTill = addUTCTime (maybe 30 intToNominalDiffTime bapConfig.searchTTLSec) now
       searchReq =
         DFRFSSearch.FRFSSearch
           { id = searchReqId,
@@ -544,7 +547,8 @@ postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPP
             partnerOrgId = mbPOrgId,
             journeyLegInfo = journeySearchData,
             journeyLegStatus = Just JLT.InPlan,
-            journeyRouteDetails = updatedJourneyRouteDetails,
+            journeyRouteDetails = mbRouteDetails,
+            journeyLegId = mbJourneyLegId,
             integratedBppConfigId = integratedBPPConfig.id,
             isOnSearchReceived = Nothing,
             validTill = Just validTill,
@@ -716,6 +720,7 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req crisSdkResponse
                 osType = crisSdkResponse <&> (.osType),
                 osBuildVersion = crisSdkResponse <&> (.osBuildVersion),
                 recentLocationId = mbSearch >>= (.recentLocationId),
+                journeyLegId = mbSearch >>= (.journeyLegId),
                 ..
               }
       QFRFSTicketBooking.create booking
@@ -891,18 +896,19 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking booking' = do
             else
               if paymentBookingStatus == FRFSTicketService.SUCCESS
                 then do
-                  Hedis.withLockRedisAndReturnValue (mkPaymentSuccessLockKey bookingId) 5 $ do
-                    -- Add default TTL of 1 min or the value provided in the config
-                    let updatedTTL = addUTCTime (maybe 60 intToNominalDiffTime bapConfig.confirmTTLSec) now
-                    transactions <- QPaymentTransaction.findAllByOrderId paymentOrder.id
-                    txnId <- getSuccessTransactionId transactions
-                    void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.SUCCESS booking.id
-                    void $ QFRFSTicketBooking.updateStatusValidTillAndPaymentTxnById DFRFSTicketBooking.CONFIRMING updatedTTL (Just txnId.getId) booking.id
-                    let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.CONFIRMING (Just updatedTTL) (Just txnId.getId)
-                    let mRiderName = person.firstName <&> (\fName -> person.lastName & maybe fName (\lName -> fName <> " " <> lName))
-                    mRiderNumber <- mapM decrypt person.mobileNumber
+                  -- Add default TTL of 1 min or the value provided in the config
+                  let updatedTTL = addUTCTime (maybe 60 intToNominalDiffTime bapConfig.confirmTTLSec) now
+                  transactions <- QPaymentTransaction.findAllByOrderId paymentOrder.id
+                  txnId <- getSuccessTransactionId transactions
+                  void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.SUCCESS booking.id
+                  void $ QFRFSTicketBooking.updateStatusValidTillAndPaymentTxnById DFRFSTicketBooking.CONFIRMING updatedTTL (Just txnId.getId) booking.id
+                  markJourneyPaymentSuccess booking.journeyId paymentOrder
+                  let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.CONFIRMING (Just updatedTTL) (Just txnId.getId)
+                  let mRiderName = person.firstName <&> (\fName -> person.lastName & maybe fName (\lName -> fName <> " " <> lName))
+                  mRiderNumber <- mapM decrypt person.mobileNumber
+                  whenWithLockRedis (mkPaymentSuccessLockKey bookingId) 60 $ do
+                    -- setNxExpire
                     void $ QFRFSTicketBooking.insertPayerVpaIfNotPresent paymentStatusResp.payerVpa bookingId
-                    markJourneyPaymentSuccess booking.journeyId paymentOrder
                     void $ CallExternalBPP.confirm processOnConfirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) updatedBooking
                     when isMultiModalBooking do
                       riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCity.id Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCity.id.getId)
@@ -917,7 +923,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking booking' = do
                       let scheduleAfter = maxInitTTL + (intToNominalDiffTime bufferTime) -- schedule job (maxInitTTL + bufferTime) after calling confirm
                           jobData = JobScheduler.CheckMultimodalConfirmFailJobData {JobScheduler.bookingId = bookingId}
                       createJobIn @_ @'CheckMultimodalConfirmFail (Just merchantId_) (Just merchantOperatingCity.id) scheduleAfter (jobData :: CheckMultimodalConfirmFailJobData)
-                    buildFRFSTicketBookingStatusAPIRes updatedBooking paymentSuccess
+                  buildFRFSTicketBookingStatusAPIRes updatedBooking paymentSuccess
                 else do
                   logInfo $ "payment success in payment pending: " <> show booking
                   paymentOrder_ <- buildCreateOrderResp paymentOrder person commonPersonId merchantOperatingCity.id booking
@@ -947,7 +953,9 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking booking' = do
     markJourneyPaymentSuccess mbJourneyId paymentOrder = do
       whenJust mbJourneyId $ \journeyId -> do
         void $ QJourney.updatePaymentOrderShortId (Just paymentOrder.shortId) (Just True) journeyId
+
     mkPaymentSuccessLockKey bookingId = "frfsPaymentSuccess:" <> bookingId.getId
+
     paymentSuccess =
       Just $
         FRFSTicketService.FRFSBookingPaymentAPI
@@ -1266,26 +1274,28 @@ postFrfsBookingFeedback (_mbPersonId, merchantId) bookingId req = do
   void $ CQM.findById merchantId >>= fromMaybeM (InvalidRequest "Invalid merchant id")
   booking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Invalid booking id")
 
-  case req of
-    API.Types.UI.FRFSTicketService.BookingFareAccepted API.Types.UI.FRFSTicketService.BookingFareAcceptedReq {..} -> do
-      -- Try to find existing feedback first, then update or create accordingly
-      existingFeedback <- QFRFSTicketBookingFeedback.findByBookingId bookingId
-      case existingFeedback of
-        Just _ -> void $ QFRFSTicketBookingFeedback.updateByBookingId isFareAccepted bookingId
-        Nothing -> do
-          feedbackId <- generateGUID
-          now <- getCurrentTime
-          let feedback =
-                DFRFSTicketBookingFeedback.FRFSTicketBookingFeedback
-                  { id = feedbackId,
-                    bookingId = bookingId,
-                    isFareAccepted = isFareAccepted,
-                    merchantId = merchantId,
-                    merchantOperatingCityId = booking.merchantOperatingCityId,
-                    createdAt = now,
-                    updatedAt = now
-                  }
-          void $ QFRFSTicketBookingFeedback.create feedback
+  let (isFareAccepted, feedbackDetails) = case req of
+        API.Types.UI.FRFSTicketService.BookingFareAccepted fareAcceptedReq -> (Just fareAcceptedReq.isFareAccepted, Nothing)
+        API.Types.UI.FRFSTicketService.BookingFeedback feedbackReq -> (Nothing, Just feedbackReq.feedbackDetails)
+
+  existingFeedback <- QFRFSTicketBookingFeedback.findByBookingId bookingId
+  case existingFeedback of
+    Just _ -> void $ QFRFSTicketBookingFeedback.updateByBookingId isFareAccepted feedbackDetails bookingId
+    Nothing -> do
+      feedbackId <- generateGUID
+      now <- getCurrentTime
+      let feedback =
+            DFRFSTicketBookingFeedback.FRFSTicketBookingFeedback
+              { id = feedbackId,
+                bookingId = bookingId,
+                isFareAccepted = isFareAccepted,
+                feedbackDetails = feedbackDetails,
+                merchantId = merchantId,
+                merchantOperatingCityId = booking.merchantOperatingCityId,
+                createdAt = now,
+                updatedAt = now
+              }
+      void $ QFRFSTicketBookingFeedback.create feedback
 
   return APISuccess.Success
 

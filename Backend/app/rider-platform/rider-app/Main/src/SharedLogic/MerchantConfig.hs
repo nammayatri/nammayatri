@@ -32,7 +32,7 @@ module SharedLogic.MerchantConfig
 where
 
 import Data.Foldable.Extra
-import qualified Domain.Types.Booking as BT
+import qualified Domain.Types.BookingStatus as BT
 import qualified Domain.Types.MerchantConfig as DMC
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person

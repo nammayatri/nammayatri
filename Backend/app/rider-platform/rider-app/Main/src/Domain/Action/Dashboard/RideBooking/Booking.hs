@@ -7,6 +7,7 @@ where
 import qualified "this" Domain.Action.UI.Booking
 import qualified "this" Domain.Types.Booking
 import qualified "this" Domain.Types.Booking.API
+import qualified Domain.Types.BookingStatus
 import qualified Domain.Types.Merchant
 import qualified "this" Domain.Types.Person
 import qualified Environment
@@ -33,7 +34,7 @@ getBookingList ::
   Kernel.Prelude.Maybe EulerHS.Prelude.Integer ->
   Kernel.Prelude.Maybe EulerHS.Prelude.Integer ->
   Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
-  Kernel.Prelude.Maybe Domain.Types.Booking.BookingStatus ->
+  Kernel.Prelude.Maybe Domain.Types.BookingStatus.BookingStatus ->
   Environment.Flow Domain.Action.UI.Booking.BookingListRes
 getBookingList merchantShortId _opCity personId mbLimit mbOffset mbOnlyActive bookingStatus = do
   m <- findMerchantByShortId merchantShortId

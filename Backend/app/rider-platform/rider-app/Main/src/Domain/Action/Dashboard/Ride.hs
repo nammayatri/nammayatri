@@ -40,6 +40,7 @@ import qualified Domain.Action.UI.EstimateBP as EstimateBP
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.Booking as DTB
 import qualified Domain.Types.BookingCancellationReason as DBCReason
+import qualified Domain.Types.BookingStatus as DTB
 import Domain.Types.CancellationReason
 import Domain.Types.Common
 import qualified Domain.Types.FareBreakup as DFareBreakup
@@ -49,6 +50,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.RideStatus as DRide
 import qualified Domain.Types.Sos as DSos
 import Environment
 import Kernel.Beam.Functions as B

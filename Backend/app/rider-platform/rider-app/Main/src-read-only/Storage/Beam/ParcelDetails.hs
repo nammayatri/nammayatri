@@ -5,20 +5,20 @@ module Storage.Beam.ParcelDetails where
 
 import qualified Database.Beam as B
 import Domain.Types.Common ()
-import qualified Domain.Types.ParcelDetails
+import qualified Domain.Types.ParcelType
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data ParcelDetailsT f = ParcelDetailsT
-  { merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    parcelType :: (B.C f Domain.Types.ParcelDetails.ParcelType),
-    quantity :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
-    searchRequestId :: (B.C f Kernel.Prelude.Text),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    parcelType :: B.C f Domain.Types.ParcelType.ParcelType,
+    quantity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    searchRequestId :: B.C f Kernel.Prelude.Text,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -28,6 +28,6 @@ instance B.Table ParcelDetailsT where
 
 type ParcelDetails = ParcelDetailsT Identity
 
-$(enableKVPG (''ParcelDetailsT) [('searchRequestId)] [])
+$(enableKVPG ''ParcelDetailsT ['searchRequestId] [])
 
-$(mkTableInstances (''ParcelDetailsT) "parcel_details")
+$(mkTableInstances ''ParcelDetailsT "parcel_details")

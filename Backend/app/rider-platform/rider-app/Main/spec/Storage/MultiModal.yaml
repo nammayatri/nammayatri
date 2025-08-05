@@ -12,7 +12,6 @@ imports:
   PolylinePoints: Kernel.External.Maps.Google.MapsClient.Types
   LatLngV2: Kernel.External.Maps.Google.MapsClient.Types
   MultiModalStopDetails: Kernel.External.MultiModal.Interface.Types
-  MultiModalRouteDetails: Kernel.External.MultiModal.Interface.Types
   MultiModalAgency: Kernel.External.MultiModal.Interface.Types
   MultiModalLegGate: Kernel.External.MultiModal.Interface.Types
   RecentLocation: Domain.Types.RecentLocation
@@ -21,6 +20,8 @@ imports:
   AbsoluteDirection: Kernel.External.MultiModal.OpenTripPlanner.Types
   Value: Data.Aeson
   JourneyLegStatus: Lib.JourneyLeg.Types
+  RouteDetails: Domain.Types.RouteDetails
+  TrackingStatus: Lib.JourneyModule.State.Types
 
 # add journeyLegId (Maybe (Id JourneyLeg)) in SearchRequest
 Journey:
@@ -33,7 +34,7 @@ Journey:
 
   fields:
     id: Id Journey
-    searchRequestId: Id SearchRequest
+    searchRequestId: Text
     riderId: Id Person
     startTime: Maybe UTCTime
     endTime: Maybe UTCTime
@@ -194,6 +195,8 @@ WalkLegMultimodal:
     merchantOperatingCityId: Id MerchantOperatingCity
     # clientDevice: Maybe Device
     journeyLegInfo: Maybe JourneySearchData
+    journeyLegId: Maybe (Id JourneyLeg)
+    journeyRouteDetails: Maybe RouteDetails
 
   sqlType:
     toLocationId: character varying(36)
@@ -225,12 +228,18 @@ WalkLegMultimodal:
       pricingId: Maybe Text
       isDeleted: Maybe Bool
       onSearchFailed: Maybe Bool
+    journeyRouteDetails: {}
+
+  intermediateTransformers:
+    fromTType:
+      - journeyRouteDetails': Storage.Queries.Transformers.RouteDetails.getJourneyRouteDetails id journeyLegId|EM
 
   fromTType:
     estimatedDistance: (Kernel.Types.Common.Distance <$> estimatedDistance <*> distanceUnit)|E
     fromLocation: Storage.Queries.Transformers.MultiModal.getFromLocation id|EM
     toLocation: Storage.Queries.Transformers.MultiModal.getToLocation id|EM
     journeyLegInfo: Storage.Queries.Transformers.MultiModal.mkJourneyLegInfo
+    journeyRouteDetails: listToMaybe journeyRouteDetails'|E
 
   toTType:
     estimatedDistance: (.value) <$> |I
@@ -295,7 +304,7 @@ JourneyLeg:
     endLocation: LatLngV2 #LocationV2
     fromStopDetails: Maybe MultiModalStopDetails
     toStopDetails: Maybe MultiModalStopDetails
-    routeDetails: "[MultiModalRouteDetails]"
+    routeDetails: "[RouteDetails]"
     agency: Maybe MultiModalAgency
     fromArrivalTime: Maybe UTCTime
     fromDepartureTime: Maybe UTCTime
@@ -400,15 +409,11 @@ JourneyLeg:
       where:
         and: [journeyId, sequenceNumber]
 
-  intermediateTransformers:
-    fromTType:
-      - routeDetailsList: Storage.Queries.RouteDetails.findAllByJourneyLegId (Kernel.Types.Id.Id id)|EM
-
   fromTType:
     distance: (Kernel.Types.Common.Distance <$> distance <*> distanceUnit)|E
     fromStopDetails: (Just $ Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails fromStopCode fromStopPlatformCode fromStopName fromStopGtfsId)|E
     toStopDetails: (Just $ Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails toStopCode toStopPlatformCode toStopName toStopGtfsId)|E
-    routeDetails: Storage.Queries.Transformers.RouteDetails.getTransformedRouteDetails routeDetailsList|E
+    routeDetails: Storage.Queries.RouteDetails.findAllByJourneyLegId id|EM
     agency: (Kernel.External.MultiModal.Interface.Types.MultiModalAgency agencyGtfsId <$> agencyName)|E
     startLocation: Kernel.External.Maps.Google.MapsClient.LatLngV2 startLocationLat startLocationLon|E
     endLocation: Kernel.External.Maps.Google.MapsClient.LatLngV2 endLocationLat endLocationLon|E
@@ -451,13 +456,14 @@ JourneyLeg:
 RouteDetails:
   fields:
     id: Id RouteDetails
-    journeyLegId: Id JourneyLeg
+    journeyLegId: Text
     routeGtfsId: Maybe Text
+    routeCode: Maybe Text
     routeLongName: Maybe Text
     routeShortName: Maybe Text
     routeColorName: Maybe Text
     routeColorCode: Maybe Text
-    alternateShortNames: Maybe [Text]
+    alternateShortNames: "[Text]"
     frequency: Maybe Seconds
     agencyGtfsId: Maybe Text
     agencyName: Maybe Text
@@ -478,18 +484,29 @@ RouteDetails:
     toArrivalTime: Maybe UTCTime
     toDepartureTime: Maybe UTCTime
     # startLocation:
-    startLocationLat: Maybe Double
-    startLocationLon: Maybe Double
+    startLocationLat: Double
+    startLocationLon: Double
     # endLocation:
-    endLocationLat: Maybe Double
-    endLocationLon: Maybe Double
+    endLocationLat: Double
+    endLocationLon: Double
+    # Tracking --
+    trackingStatus: Maybe TrackingStatus
+    journeyStatus: Maybe JourneyLegStatus # TODO :: Remove this field when `trackingStatus` is added to the database and consumed
   queries:
     findAllByJourneyLegId:
       kvFunction: findAllWithKV
       where: journeyLegId
+    updateTrackingStatus:
+      kvFunction: updateOneWithKV
+      params: [trackingStatus]
+      where: id
+    updateAlternateShortNames:
+      kvFunction: updateWithKV
+      params: [alternateShortNames]
+      where: journeyLegId
 
   sqlType:
-    alternateShortNames: text[]
+    alternateShortNames: "text[]"
 
   constraints:
     id: PrimaryKey
@@ -565,6 +582,11 @@ JourneyLegsFeedbacks:
     findAllByJourneyId:
       kvFunction: findAllWithKV
       where: journeyId
+
+    findByJourneyIdAndLegOrder:
+      kvFunction: findOneWithKV
+      where:
+        and: [journeyId, legOrder]
 
   constraints:
     journeyId: PrimaryKey

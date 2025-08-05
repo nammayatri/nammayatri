@@ -47,6 +47,7 @@ import qualified Domain.Action.UI.Quote as DQ (estimateBuildLockKey)
 import qualified Domain.Types as DT
 import Domain.Types.BppDetails
 import qualified Domain.Types.Estimate as DEstimate
+import qualified Domain.Types.EstimateStatus as DEstimate
 import qualified Domain.Types.InterCityDetails as DInterCityDetails
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantOperatingCity as DMerchantOperatingCity

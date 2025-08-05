@@ -43,8 +43,9 @@ import qualified Domain.Types.LocationMapping as DLM
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SPerson
-import Domain.Types.Ride
 import qualified Domain.Types.Ride as SRide
+import Domain.Types.RideStatus
+import qualified Domain.Types.RideStatus as SRide
 import Environment
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption

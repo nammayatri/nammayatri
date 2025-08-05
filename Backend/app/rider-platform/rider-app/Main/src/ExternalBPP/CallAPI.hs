@@ -20,6 +20,7 @@ import Domain.Types.FRFSSearch as DSearch
 import qualified Domain.Types.FRFSTicket as DFRFSTicket
 import qualified Domain.Types.FRFSTicketBooking as DBooking
 import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
+import qualified Domain.Types.FRFSTicketBookingStatus as DBooking
 import Domain.Types.IntegratedBPPConfig
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import Domain.Types.Merchant

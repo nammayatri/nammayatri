@@ -6,6 +6,7 @@ module Storage.Beam.Ride where
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.Ride
+import qualified Domain.Types.RideStatus
 import qualified Domain.Types.ServiceTierType
 import qualified Domain.Types.VehicleVariant
 import Kernel.External.Encryption
@@ -84,7 +85,7 @@ data RideT f = RideT
     shortId :: B.C f Kernel.Prelude.Text,
     showDriversPreviousRideDropLoc :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     startOdometerReading :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal),
-    status :: B.C f Domain.Types.Ride.RideStatus,
+    status :: B.C f Domain.Types.RideStatus.RideStatus,
     talkedWithDriver :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     tipAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     tollConfidence :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Confidence.Confidence),

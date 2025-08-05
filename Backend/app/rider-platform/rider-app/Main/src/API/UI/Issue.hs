@@ -14,7 +14,7 @@ import Domain.Action.UI.IGM
 import qualified Domain.Action.UI.Sos as Sos
 import Domain.Types.Booking
 import Domain.Types.FRFSTicketBooking
-import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
+import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBooking
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC

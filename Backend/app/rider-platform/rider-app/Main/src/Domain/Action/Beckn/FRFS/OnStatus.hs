@@ -23,6 +23,8 @@ import qualified Domain.Action.Beckn.FRFS.GWLink as GWSA
 import qualified Domain.Types.Extra.MerchantServiceConfig as DEMSC
 import qualified Domain.Types.FRFSTicket as Ticket
 import qualified Domain.Types.FRFSTicketBooking as Booking
+import qualified Domain.Types.FRFSTicketBookingStatus as Booking
+import qualified Domain.Types.FRFSTicketStatus as Ticket
 import Domain.Types.Merchant as Merchant
 import qualified Domain.Types.PartnerOrgConfig as DPOC
 import Environment

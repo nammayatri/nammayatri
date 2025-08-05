@@ -23,6 +23,7 @@ import qualified Domain.Action.UI.Location as SLoc
 import Domain.Types
 import Domain.Types.Booking
 import Domain.Types.BookingCancellationReason
+import Domain.Types.BookingStatus
 import qualified Domain.Types.BppDetails as DBppDetails
 import Domain.Types.CancellationReason
 import qualified Domain.Types.Exophone as DExophone
@@ -30,9 +31,10 @@ import Domain.Types.Extra.Ride (RideAPIEntity (..))
 import Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.Journey as DJourney
 import Domain.Types.Location (Location, LocationAPIEntity)
-import Domain.Types.ParcelDetails as DParcel
+import Domain.Types.ParcelType as DParcel
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.RideStatus as DRide
 import qualified Domain.Types.ServiceTierType as DVST
 import Domain.Types.Sos as DSos
 import qualified Domain.Types.StopInformation as DSI
