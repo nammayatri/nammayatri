@@ -14,22 +14,27 @@
 
 module Main where
 
-import qualified Dashboard (documentTests, fleetOwnerInfoTests, onboardingTests, profileTests, registrationTests)
+import qualified Dashboard (dashboardUnitTests)
 import Test.Tasty (defaultMain, testGroup)
 import Prelude
 
 main :: IO ()
-main =
+main = do
+  putStrLn "🧪 Running HUnit Dashboard Tests..."
+
   defaultMain $
     testGroup
-      "All Tests"
+      "Unit Tests"
       [ testGroup
-          "Dashboard Tests"
-          [ Dashboard.registrationTests,
-            Dashboard.profileTests,
-            Dashboard.fleetOwnerInfoTests,
-            Dashboard.documentTests,
-            Dashboard.onboardingTests
+          "Dashboard Unit Tests"
+          [ Dashboard.dashboardUnitTests -- This is the main test suite for all dashboard unit tests
           ]
-          -- Future test groups will go here
+          -- testGroup
+          --   "Integration Tests (Requires Services)"
+          --   [ Dashboard.registrationTests,
+          --     Dashboard.profileTests,
+          --     Dashboard.fleetOwnerInfoTests,
+          --     Dashboard.fleetDriverOnboardingTests,
+          --     Dashboard.documentTests
+          --   ]
       ]
