@@ -2043,6 +2043,7 @@ public class LocationUpdateServiceV2 extends Service {
 
                             case "LANGUAGE_KEY":
                                 in.juspay.mobility.common.utils.Utils.updateLocaleResource(prefs.getString("LANGUAGE_KEY", "EN_US"),context);
+                                break;
                             case LOCATION_RATE_LIMIT_SECONDS:
                                 String rateLimitStr = prefs.getString(key, "2");
                                 rateLimitTimeInSeconds = Long.parseLong(rateLimitStr); // Update local variable
