@@ -49,6 +49,8 @@ module Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
     checkAadhaar,
     validateDocument,
     compareDateOfBirth,
+    makeDocumentVerificationLockKey,
+    isNameCompareRequired,
   )
 where
 
@@ -362,33 +364,36 @@ verifyPan verifyBy mbMerchant (personId, _, merchantOpCityId) req = do
       let getRoles = map (.role) panPersonDetails
       when (person.role `elem` getRoles) $ throwError PanAlreadyLinked
     _ -> pure ()
-
   merchantServiceUsageConfig <-
     CQMSUC.findByMerchantOpCityId merchantOpCityId Nothing
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   let mbPanVerificationService = merchantServiceUsageConfig.panVerificationService
-  mdriverPanInformation <- DPQuery.findByDriverId person.id
   whenJust mbMerchant $ \merchant -> do
     unless (merchant.id == person.merchantId) $ throwError (PersonNotFound personId.getId)
-  case mbPanVerificationService of
-    Just VI.HyperVerge -> do
-      let panReq = DO.DriverPanReq {panNumber = req.panNumber, imageId1 = (Id req.imageId), imageId2 = Nothing, consent = True, nameOnCard = Nothing, dateOfBirth = Nothing, consentTimestamp = Nothing, validationStatus = Nothing, verifiedBy = Nothing, transactionId = Nothing, nameOnGovtDB = Nothing, docType = Nothing}
-      void $ checkIfGenuineReq panReq person
-      panCardDetails <- buildPanCard person Nothing Nothing Nothing
-      DPQuery.create $ panCardDetails
-    Just VI.Idfy -> do
-      void $ callIdfy person mdriverPanInformation driverDocument transporterConfig
-    _ -> do
-      panCardDetails <- buildPanCard person Nothing Nothing Nothing
-      DPQuery.create $ panCardDetails
-  case person.role of
-    Person.FLEET_OWNER -> do
-      encryptedPanNumber <- encrypt req.panNumber
-      QFOI.updatePanImage (Just encryptedPanNumber) (Just req.imageId) person.id
-    Person.DRIVER -> do
-      encryptedPanNumber <- encrypt req.panNumber
-      DIQuery.updatePanNumber (Just encryptedPanNumber) person.id
-    _ -> pure ()
+  let runBody = do
+        mdriverPanInformation <- DPQuery.findByDriverId person.id
+        case mbPanVerificationService of
+          Just VI.HyperVerge -> do
+            let panReq = DO.DriverPanReq {panNumber = req.panNumber, imageId1 = Id req.imageId, imageId2 = Nothing, consent = True, nameOnCard = Nothing, dateOfBirth = Nothing, consentTimestamp = Nothing, validationStatus = Nothing, verifiedBy = Nothing, transactionId = Nothing, nameOnGovtDB = Nothing, docType = Nothing}
+            void $ checkIfGenuineReq panReq person
+            panCardDetails <- buildPanCard person Nothing Nothing Nothing
+            DPQuery.create panCardDetails
+          Just VI.Idfy -> do
+            void $ callIdfy person mdriverPanInformation driverDocument transporterConfig
+          _ -> do
+            panCardDetails <- buildPanCard person Nothing Nothing Nothing
+            DPQuery.create panCardDetails
+        case person.role of
+          Person.FLEET_OWNER -> do
+            encryptedPanNumber <- encrypt req.panNumber
+            QFOI.updatePanImage (Just encryptedPanNumber) (Just req.imageId) person.id
+          Person.DRIVER -> do
+            encryptedPanNumber <- encrypt req.panNumber
+            DIQuery.updatePanNumber (Just encryptedPanNumber) person.id
+          _ -> pure ()
+  if isNameCompareRequired transporterConfig verifyBy
+    then Redis.withWaitOnLockRedisWithExpiry (makeDocumentVerificationLockKey personId.getId) 10 10 runBody
+    else runBody
   return Success
   where
     getImage :: Text -> Flow Text
@@ -429,13 +434,13 @@ verifyPan verifyBy mbMerchant (personId, _, merchantOpCityId) req = do
 
           resp <- Verification.extractPanImage person.merchantId merchantOpCityId extractReq
           extractedPan <- validateExtractedPan resp
-          when (isJust transporterConfig.validNameComparePercentage && verifyBy /= DPan.DASHBOARD_ADMIN && verifyBy /= DPan.DASHBOARD_USER) $
+          when (isNameCompareRequired transporterConfig verifyBy) $
             validateDocument person.merchantId merchantOpCityId person.id extractedPan.name_on_card extractedPan.date_of_birth (Just req.panNumber) ODC.PanCard driverDocument
           DPQuery.updateVerificationStatus Documents.VALID person.id
         Nothing -> do
           resp <- Verification.extractPanImage person.merchantId merchantOpCityId extractReq
           extractedPan <- validateExtractedPan resp
-          when (isJust transporterConfig.validNameComparePercentage && verifyBy /= DPan.DASHBOARD_ADMIN && verifyBy /= DPan.DASHBOARD_USER) $
+          when (isNameCompareRequired transporterConfig verifyBy) $
             validateDocument person.merchantId merchantOpCityId person.id extractedPan.name_on_card extractedPan.date_of_birth (Just req.panNumber) ODC.PanCard driverDocument
           panCardDetails <- buildPanCard person extractedPan.pan_type extractedPan.name_on_card extractedPan.date_of_birth
           DPQuery.create $ panCardDetails
@@ -528,20 +533,22 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req = do
     CQMSUC.findByMerchantOpCityId merchantOpCityId Nothing
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
   let mbGstVerificationService = merchantServiceUsageConfig.gstVerificationService
-  mdriverGstInformation <- DGQuery.findByDriverId person.id
-
-  case mbGstVerificationService of
-    Just VI.Idfy -> do
-      void $ callIdfy person mdriverGstInformation driverDocument transporterConfig
-    _ -> do
-      gstCardDetails <- buildGstinCard person Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
-      DGQuery.create $ gstCardDetails
-
-  case person.role of
-    Person.FLEET_OWNER -> do
-      gstin <- encrypt req.gstin
-      QFOI.updateGstImage (Just gstin) (Just req.imageId) person.id
-    _ -> pure ()
+  let runBody = do
+        mdriverGstInformation <- DGQuery.findByDriverId person.id
+        case mbGstVerificationService of
+          Just VI.Idfy -> do
+            void $ callIdfy person mdriverGstInformation driverDocument transporterConfig
+          _ -> do
+            gstCardDetails <- buildGstinCard person Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+            DGQuery.create gstCardDetails
+        case person.role of
+          Person.FLEET_OWNER -> do
+            gstin <- encrypt req.gstin
+            QFOI.updateGstImage (Just gstin) (Just req.imageId) person.id
+          _ -> pure ()
+  if isNameCompareRequired transporterConfig verifyBy
+    then Redis.withWaitOnLockRedisWithExpiry (makeDocumentVerificationLockKey personId.getId) 10 10 runBody
+    else runBody
   return Success
   where
     getImage :: Text -> Flow Text
@@ -581,7 +588,7 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req = do
             typeOfRegistration = type_of_registration,
             validFrom = valid_from >>= parseDateTime,
             validUpto = valid_upto >>= parseDateTime,
-            verifiedBy = pure $ verifyBy
+            verifiedBy = pure verifyBy
           }
 
     callIdfy :: Person.Person -> Maybe DGst.DriverGstin -> DriverDocument -> DTC.TransporterConfig -> Flow APISuccess
@@ -613,16 +620,16 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req = do
 
           resp <- Verification.extractGSTImage person.merchantId merchantOpCityId extractReq
           extractedGst <- validateExtractedGst resp
-          when (isJust transporterConfig.validNameComparePercentage && verifyBy /= DPan.DASHBOARD_ADMIN && verifyBy /= DPan.DASHBOARD_USER) $
+          when (isNameCompareRequired transporterConfig verifyBy) $
             validateDocument person.merchantId merchantOpCityId person.id Nothing Nothing extractedGst.pan_number ODC.GSTCertificate driverDocument
           DGQuery.updateVerificationStatus Documents.VALID person.id
         Nothing -> do
           resp <- Verification.extractGSTImage person.merchantId merchantOpCityId extractReq
           extractedGst <- validateExtractedGst resp
-          when (isJust transporterConfig.validNameComparePercentage && verifyBy /= DPan.DASHBOARD_ADMIN && verifyBy /= DPan.DASHBOARD_USER) $
+          when (isNameCompareRequired transporterConfig verifyBy) $
             validateDocument person.merchantId merchantOpCityId person.id Nothing Nothing extractedGst.pan_number ODC.GSTCertificate driverDocument
           gstCardDetails <- buildGstinCard person extractedGst.address extractedGst.constitution_of_business extractedGst.date_of_liability extractedGst.is_provisional extractedGst.legal_name extractedGst.trade_name extractedGst.type_of_registration extractedGst.valid_from extractedGst.valid_upto extractedGst.pan_number
-          DGQuery.create $ gstCardDetails
+          DGQuery.create gstCardDetails
       pure Success
 
     makeVerifyGstinHitsCountKey :: Text -> Text
@@ -652,9 +659,6 @@ verifyAadhaar verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req =
     _ -> pure ()
   whenJust mbMerchant $ \merchant -> do
     unless (merchant.id == person.merchantId) $ throwError (PersonNotFound personId.getId)
-  aadhaarInfo <- QAadhaarCard.findByPrimaryKey person.id
-  whenJust aadhaarInfo $ \aadhaarInfoData -> do
-    when (aadhaarInfoData.verificationStatus == Documents.VALID) $ throwError AadhaarAlreadyLinked
   image1 <- getImage req.aadhaarFrontImageId
   image2 <- case req.aadhaarBackImageId of
     Just backImageId -> do
@@ -668,30 +672,36 @@ verifyAadhaar verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req =
             driverId = person.id.getId,
             consent = if req.consent then "yes" else "no"
           }
-  resp <- Verification.extractAadhaarImage person.merchantId merchantOpCityId extractReq
-  case resp.extractedAadhaar of
-    Just extractedAadhaarData -> do
-      let extractedAadhaarOutputData = extractedAadhaarData.extraction_output
-      let extractedAadhaarNumber = removeSpaceAndDash <$> extractedAadhaarOutputData.id_number
-      unless (extractedAadhaarNumber == Just req.aadhaarNumber) $
-        throwImageError (Id req.aadhaarFrontImageId) $
-          ImageDocumentNumberMismatch
-            (maybe "null" maskText extractedAadhaarNumber)
-            (maskText req.aadhaarNumber)
-      when (isJust transporterConfig.validNameComparePercentage && verifyBy /= DPan.DASHBOARD_ADMIN && verifyBy /= DPan.DASHBOARD_USER) $
-        validateDocument person.merchantId merchantOpCityId person.id extractedAadhaarOutputData.name_on_card extractedAadhaarOutputData.date_of_birth Nothing ODC.AadhaarCard driverDocument
-      aadhaarCard <- makeAadhaarCardEntity person.id extractedAadhaarOutputData req
-      QAadhaarCard.upsertAadhaarRecord aadhaarCard
-      pure extractedAadhaarData
-    Nothing -> throwImageError (Id req.aadhaarFrontImageId) ImageExtractionFailed
-  case person.role of
-    Person.FLEET_OWNER -> do
-      encryptedAadhaarNumber <- encrypt req.aadhaarNumber
-      QFOI.updateAadhaarImage (Just encryptedAadhaarNumber) (Just req.aadhaarFrontImageId) req.aadhaarBackImageId person.id
-    Person.DRIVER -> do
-      encryptedAadhaarNumber <- encrypt req.aadhaarNumber
-      DIQuery.updateAadhaarNumber (Just encryptedAadhaarNumber) person.id
-    _ -> pure ()
+  let runBody = do
+        aadhaarInfo <- QAadhaarCard.findByPrimaryKey person.id
+        whenJust aadhaarInfo $ \aadhaarInfoData -> do
+          when (aadhaarInfoData.verificationStatus == Documents.VALID) $ throwError AadhaarAlreadyLinked
+        resp <- Verification.extractAadhaarImage person.merchantId merchantOpCityId extractReq
+        case resp.extractedAadhaar of
+          Just extractedAadhaarData -> do
+            let extractedAadhaarOutputData = extractedAadhaarData.extraction_output
+            let extractedAadhaarNumber = removeSpaceAndDash <$> extractedAadhaarOutputData.id_number
+            unless (extractedAadhaarNumber == Just req.aadhaarNumber) $
+              throwImageError (Id req.aadhaarFrontImageId) $
+                ImageDocumentNumberMismatch
+                  (maybe "null" maskText extractedAadhaarNumber)
+                  (maskText req.aadhaarNumber)
+            when (isNameCompareRequired transporterConfig verifyBy) $
+              validateDocument person.merchantId merchantOpCityId person.id extractedAadhaarOutputData.name_on_card extractedAadhaarOutputData.date_of_birth Nothing ODC.AadhaarCard driverDocument
+            aadhaarCard <- makeAadhaarCardEntity person.id extractedAadhaarOutputData req
+            QAadhaarCard.upsertAadhaarRecord aadhaarCard
+          Nothing -> throwImageError (Id req.aadhaarFrontImageId) ImageExtractionFailed
+        case person.role of
+          Person.FLEET_OWNER -> do
+            encryptedAadhaarNumber <- encrypt req.aadhaarNumber
+            QFOI.updateAadhaarImage (Just encryptedAadhaarNumber) (Just req.aadhaarFrontImageId) req.aadhaarBackImageId person.id
+          Person.DRIVER -> do
+            encryptedAadhaarNumber <- encrypt req.aadhaarNumber
+            DIQuery.updateAadhaarNumber (Just encryptedAadhaarNumber) person.id
+          _ -> pure ()
+  if isNameCompareRequired transporterConfig verifyBy
+    then Redis.withWaitOnLockRedisWithExpiry (makeDocumentVerificationLockKey personId.getId) 10 10 runBody
+    else runBody
   return Success
   where
     makeAadhaarCardEntity driverId extractedAadhaar aadhaarReq = do
@@ -730,6 +740,9 @@ verifyAadhaar verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req =
 
     makeVerifyAadhaarHitsCountKey :: Text -> Text
     makeVerifyAadhaarHitsCountKey aadhaarNumber = "VerifyAadhaar:aadhaarNumberHits:" <> aadhaarNumber <> ":hitsCount"
+
+makeDocumentVerificationLockKey :: Text -> Text
+makeDocumentVerificationLockKey personId = "DocumentVerificationLock:" <> personId
 
 isNameComparePercentageValid :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Verification.NameCompareReq -> Flow Bool
 isNameComparePercentageValid merchantId merchantOpCityId req = do
@@ -1293,3 +1306,8 @@ validateNameAndDOB merchantId merchantOpCityId mbExtractedName mbVerifiedName mb
   isNameValid <- compareNames merchantId merchantOpCityId mbExtractedName mbVerifiedName personId
   isDateOfBirthValid <- compareDateOfBirth mbExtractedDOB mbVerifiedDOB
   return (isNameValid && isDateOfBirthValid)
+
+-- | Returns True if name compare is required for the given transporterConfig and verifyBy
+isNameCompareRequired :: DTC.TransporterConfig -> DPan.VerifiedBy -> Bool
+isNameCompareRequired transporterConfig verifyBy =
+  isJust transporterConfig.validNameComparePercentage && verifyBy /= DPan.DASHBOARD_ADMIN && verifyBy /= DPan.DASHBOARD_USER
