@@ -3558,6 +3558,7 @@ data DriverCoinsFunctionType
 data MetroRideType
   = ToMetro
   | FromMetro
+  | FromOrToMetro
   | None
 
 instance makeCoinTransactionReq :: RestEndpoint CoinTransactionReq where

@@ -1917,6 +1917,7 @@ newtype Keymap = Keymap {
     , view_less :: String
     , you_are_in_probation_period_till :: String -> String
     , pass_all_eligibility_criteria_to_continue_being_a_member :: String
+    , metro :: String
 
 }
 
@@ -7611,3 +7612,6 @@ you_are_in_probation_period_till = a
 
 pass_all_eligibility_criteria_to_continue_being_a_member :: Proxy "pass_all_eligibility_criteria_to_continue_being_a_member"
 pass_all_eligibility_criteria_to_continue_being_a_member = a
+
+metro :: Proxy "metro"
+metro = a

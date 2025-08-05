@@ -1903,4 +1903,5 @@ getEn =
     , view_less : "View Less"
     , you_are_in_probation_period_till : (\date -> "You are in probation period till " <> date)
     , pass_all_eligibility_criteria_to_continue_being_a_member : "Pass all Eligibility Criteria to continue being a member"
+    , metro : "Metro"
     }

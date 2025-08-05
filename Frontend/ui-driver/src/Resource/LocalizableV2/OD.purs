@@ -1903,4 +1903,5 @@ getOd =
     , view_less : "କମ ଦେଖନ୍ତୁ"
     , you_are_in_probation_period_till : (\date -> "ଆପଣ " <> date <> " ପର୍ଯ୍ୟନ୍ତ ପ୍ରଯୋଗ ଅବଧି ଅଛି")
     , pass_all_eligibility_criteria_to_continue_being_a_member : "ନମ୍ମ କୁତୁମା ସଦସ୍ଯ ହନ ପାଇଁ ସମସ୍ତ ଯୋଗ୍ଯତା ମାନଦଣ୍ଡଗୁଡ଼ିକୁ ପାଲନ କରନ୍ତୁ"
+    , metro : "ମେଟ୍ରୋ"
   }
