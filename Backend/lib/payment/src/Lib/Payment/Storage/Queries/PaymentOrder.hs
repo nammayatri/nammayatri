@@ -114,6 +114,7 @@ instance FromTType' BeamPO.PaymentOrder DOrder.PaymentOrder where
               (Just encryptedToken, Just hash) -> Just $ EncryptedHashed (Encrypted encryptedToken) hash
               (_, _) -> Nothing,
             merchantOperatingCityId = Id <$> merchantOperatingCityId,
+            gatewayReferenceId = gatewayReferenceId,
             ..
           }
     where

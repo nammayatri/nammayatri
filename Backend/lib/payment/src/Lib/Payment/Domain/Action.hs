@@ -234,7 +234,8 @@ createPaymentIntentService merchantId mbMerchantOpCityId personId rideId rideSho
             sdkPayloadDump = Nothing,
             createdAt = now,
             updatedAt = now,
-            merchantOperatingCityId = mbMerchantOpCityId
+            merchantOperatingCityId = mbMerchantOpCityId,
+            gatewayReferenceId = Nothing
           }
 
     buildTransaction ::
@@ -456,7 +457,8 @@ buildSDKPayloadDetails req order = do
               createMandate = order.createMandate,
               mandateMaxAmount = show <$> order.mandateMaxAmount,
               mandateStartDate = show . utcTimeToPOSIXSeconds <$> (order.mandateStartDate),
-              mandateEndDate = show . utcTimeToPOSIXSeconds <$> order.mandateEndDate
+              mandateEndDate = show . utcTimeToPOSIXSeconds <$> order.mandateEndDate,
+              gatewayReferenceId = order.gatewayReferenceId
             }
     (_, _) -> return Nothing
 
@@ -508,7 +510,8 @@ buildPaymentOrder merchantId mbMerchantOpCityId personId req resp = do
         sdkPayloadDump = resp.sdk_payload_json,
         createdAt = now,
         updatedAt = now,
-        merchantOperatingCityId = mbMerchantOpCityId
+        merchantOperatingCityId = mbMerchantOpCityId,
+        gatewayReferenceId = resp.sdk_payload.payload.gatewayReferenceId
       }
 
 -- order status -----------------------------------------------------
@@ -808,7 +811,8 @@ createExecutionService (request, orderId) merchantId mbMerchantOpCityId executio
             sdkPayloadDump = Nothing,
             createdAt = now,
             updatedAt = now,
-            merchantOperatingCityId = mbMerchantOpCityId
+            merchantOperatingCityId = mbMerchantOpCityId,
+            gatewayReferenceId = Nothing
           }
 
 --- refunds api ----
