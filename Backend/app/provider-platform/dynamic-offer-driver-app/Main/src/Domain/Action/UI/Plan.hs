@@ -493,7 +493,7 @@ prepaidPlanSubscribe serviceName planId (isDashboard, channel) (driverId, mercha
   (subscriptionConfig, plan, mbDeepLinkData) <- prepareSubscriptionData merchantOpCityId serviceName planId isDashboard
   driverPlan <- QDPlan.findByDriverIdWithServiceName driverId serviceName
   when (isNothing driverPlan) $ createDriverPlan serviceName (driverId, merchantId, merchantOpCityId) plan subscriptionServiceRelatedData subscriptionConfig
-  QDPlan.updatePlanIdByDriverIdAndServiceName driverId planId serviceName (Just plan.vehicleCategory) plan.merchantOpCityId
+  when (isJust driverPlan) $ QDPlan.updatePlanIdByDriverIdAndServiceName driverId planId serviceName (Just plan.vehicleCategory) plan.merchantOpCityId
   (createOrderResp, orderId) <- createPrepaidInvoiceAndOrder serviceName driverId merchantId merchantOpCityId plan mbDeepLinkData
   when isDashboard $ sendSubscriptionLink createOrderResp driverId channel (isJust mbDeepLinkData)
   return $
