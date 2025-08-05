@@ -1,0 +1,175 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.35.2.
+--
+-- see: https://github.com/sol/hpack
+
+name:           hunit-tests
+version:        0.1.0.0
+description:    NammaYatri HUnit tests
+homepage:       https://github.com/nammayatri/nammayatri#readme
+bug-reports:    https://github.com/nammayatri/nammayatri/issues
+author:         nammayatri
+maintainer:     nammayatri
+copyright:      2023 Juspay Technologies Private Limited
+license:        AllRightsReserved
+build-type:     Simple
+
+source-repository head
+  type: git
+  location: https://github.com/nammayatri/nammayatri
+
+library
+  exposed-modules:
+      Dashboard
+  other-modules:
+      RegistrationUnitTests
+      VehicleAssociationUnitTests
+      DriverDocumentUploadUnitTests
+      AddVehicleUnitTests
+      DriverOperationHubUnitTests
+      CreateRequestUnitTests
+  hs-source-dirs:
+      src
+  default-extensions:
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveAnyClass
+      DeriveFunctor
+      DeriveGeneric
+      DuplicateRecordFields
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedStrings
+      PackageImports
+      PatternSynonyms
+      PolyKinds
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      ViewPatterns
+  build-depends:
+      HUnit
+    , aeson
+    , base >=4.7 && <5
+    , beckn-spec
+    , bytestring
+    , containers
+    , dashboard-helper-api
+    , data-default-class
+    , directory
+    , dynamic-offer-driver-app
+    , euler-hs
+    , hspec
+    , hspec-core
+    , http-conduit
+    , http-types
+    , lens
+    , lib-dashboard
+    , mobility-core
+    , mock-sms
+    , mtl
+    , provider-dashboard
+    , record-dot-preprocessor
+    , record-hasfield
+    , rider-app
+    , string-conversions
+    , tasty
+    , tasty-hspec
+    , tasty-hunit
+    , text
+    , time
+    , transformers
+    , unix
+    , unordered-containers
+    , uuid
+    , vector
+    , yudhishthira
+  default-language: Haskell2010
+
+executable hunit-tests
+  main-is: Main.hs
+  other-modules:
+      Paths_hunit_tests
+  hs-source-dirs:
+      app
+  default-extensions:
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveAnyClass
+      DeriveFunctor
+      DeriveGeneric
+      DuplicateRecordFields
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      NoImplicitPrelude
+      OverloadedStrings
+      PackageImports
+      PatternSynonyms
+      PolyKinds
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      ViewPatterns
+  build-depends:
+      HUnit
+    , aeson
+    , base >=4.7 && <5
+    , beckn-spec
+    , bytestring
+    , containers
+    , dashboard-helper-api
+    , data-default-class
+    , directory
+    , dynamic-offer-driver-app
+    , euler-hs
+    , hspec
+    , hspec-core
+    , http-conduit
+    , http-types
+    , hunit-tests
+    , lens
+    , lib-dashboard
+    , mobility-core
+    , mock-sms
+    , mtl
+    , provider-dashboard
+    , record-dot-preprocessor
+    , record-hasfield
+    , rider-app
+    , string-conversions
+    , tasty
+    , tasty-hspec
+    , tasty-hunit
+    , text
+    , time
+    , transformers
+    , unix
+    , unordered-containers
+    , uuid
+    , vector
+    , yudhishthira
+  default-language: Haskell2010

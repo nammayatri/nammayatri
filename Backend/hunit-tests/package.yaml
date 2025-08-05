@@ -13,11 +13,38 @@ dependencies:
 - aeson
 - bytestring
 - containers
+- data-default-class
+- dashboard-helper-api
+- directory
+- dynamic-offer-driver-app
+- euler-hs
 - http-conduit
+- http-types
+- HUnit
+- hspec
+- hspec-core
+- lens
+- lib-dashboard
+- mobility-core
+- mock-sms
+- provider-dashboard
+- record-dot-preprocessor
+- record-hasfield
+- rider-app
+- string-conversions
 - tasty
+- tasty-hspec
 - tasty-hunit
 - text
 - time
+- unix
+- uuid
+- vector
+- unordered-containers
+- mtl
+- transformers
+- yudhishthira
+- beckn-spec
 
 default-extensions:
 - ConstraintKinds
@@ -37,6 +64,7 @@ default-extensions:
 - NamedFieldPuns
 - NoImplicitPrelude
 - OverloadedStrings
+- PackageImports
 - PatternSynonyms
 - PolyKinds
 - RankNTypes
@@ -52,8 +80,15 @@ library:
   source-dirs: src
   exposed-modules:
   - Dashboard
+  other-modules:
+  - RegistrationUnitTests
+  - VehicleAssociationUnitTests
+  - DriverDocumentUploadUnitTests
+  - AddVehicleUnitTests
+  - DriverOperationHubUnitTests
+  - CreateRequestUnitTests
 
-tests:
+executables:
   hunit-tests:
     main: Main.hs
     source-dirs: app
