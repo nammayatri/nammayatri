@@ -26,3 +26,8 @@ ALTER TABLE atlas_app.service_category ADD COLUMN rules json ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.service_category ADD COLUMN is_closed boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.service_category ADD COLUMN inclusion_points json ;

@@ -17,6 +17,7 @@ data ServiceCategory = ServiceCategory
     availableSeats :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     description :: Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory,
+    inclusionPoints :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     isClosed :: Kernel.Prelude.Bool,
     name :: Kernel.Prelude.Text,
     peopleCategory :: [Kernel.Types.Id.Id Domain.Types.ServicePeopleCategory.ServicePeopleCategory],

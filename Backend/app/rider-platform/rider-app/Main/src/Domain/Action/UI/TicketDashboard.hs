@@ -184,7 +184,8 @@ getTicketPlaceDashboardDetails placeId requestorId requestorRole = do
           allowCancellation = svc.allowCancellation,
           expiry = svc.expiry,
           businessHours = svc.businessHours,
-          rules = svc.rules
+          rules = svc.rules,
+          serviceDetails = svc.serviceDetails
         }
 
     toBusinessHourDetails :: DBusinessHour.BusinessHour -> BusinessHourDetails
@@ -206,6 +207,7 @@ getTicketPlaceDashboardDetails placeId requestorId requestorRole = do
           allowedSeats = sc.allowedSeats,
           availableSeats = sc.availableSeats,
           peopleCategory = sc.peopleCategory,
+          inclusionPoints = sc.inclusionPoints,
           rules = sc.rules
         }
 
@@ -341,7 +343,8 @@ createTicketService (merchantId, merchantOpCityId) serviceDetails placeId = do
         DTicketService.createdAt = now,
         DTicketService.updatedAt = now,
         DTicketService.rules = Nothing,
-        DTicketService.isClosed = False
+        DTicketService.isClosed = False,
+        DTicketService.serviceDetails = serviceDetails.serviceDetails
       }
 
 updateBusinessHour :: DBusinessHour.BusinessHour -> BusinessHourDetails -> DBusinessHour.BusinessHour
@@ -401,7 +404,8 @@ createServiceCategory (merchantId, merchantOpCityId) scDetails placeId = do
         DServiceCategory.updatedAt = now,
         DServiceCategory.rules = Nothing,
         DServiceCategory.isClosed = False,
-        DServiceCategory.remainingActions = Nothing
+        DServiceCategory.remainingActions = Nothing,
+        DServiceCategory.inclusionPoints = scDetails.inclusionPoints
       }
 
 updateServicePeopleCategory :: DServicePeopleCategory.ServicePeopleCategory -> ServicePeopleCategoryDetails -> DServicePeopleCategory.ServicePeopleCategory

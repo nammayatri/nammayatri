@@ -13,6 +13,7 @@ imports:
   ShortId: Kernel.Types.Id
   UTCTime: Kernel.Prelude
   TicketPlace: Domain.Types.TicketPlace
+  PlaceType: Domain.Types.TicketPlace
   APISuccess: Kernel.Types.APISuccess
   TicketBooking: Domain.Types.TicketBooking
   BookingStatus: Domain.Types.TicketBooking
@@ -36,6 +37,7 @@ types:
     expiry: ExpiryType
     businessHours: [BusinessHourResp]
     shortDesc: Maybe Text
+    serviceDetails: "Maybe [Text]"
     allowCancellation: Bool
 
   BusinessHourResp:
@@ -56,6 +58,7 @@ types:
     allowedSeats: Maybe Int
     bookedSeats: Int
     isClosed: Bool
+    inclusionPoints: "Maybe [Text]"
     peopleCategories: [PeopleCategoriesResp]
 
   PeopleCategoriesResp:
@@ -87,6 +90,8 @@ types:
     ticketShortId: Text
     ticketPlaceId: Text
     ticketPlaceName: Text
+    placeType: PlaceType
+    iconUrl: Maybe Text
     personId: Text
     amount: HighPrecMoney
     amountWithCurrency: PriceAPIEntity
@@ -97,6 +102,8 @@ types:
     ticketShortId: Text
     ticketPlaceId: Text
     ticketPlaceName: Text
+    placeType: PlaceType
+    iconUrl: Maybe Text
     personId: Text
     amount: HighPrecMoney
     amountWithCurrency: PriceAPIEntity

@@ -176,7 +176,8 @@ getTicketPlacesServices _ placeId mbDate = do
                   expiry = service.expiry,
                   businessHours,
                   shortDesc = service.shortDesc,
-                  allowCancellation = service.allowCancellation
+                  allowCancellation = service.allowCancellation,
+                  serviceDetails = service.serviceDetails
                 }
         )
         ticketServices
@@ -246,6 +247,7 @@ getTicketPlacesServices _ placeId mbDate = do
               bookedSeats = maybe 0 (.booked) mBeatManagement,
               allowedSeats = calcAllowedSeats serviceCategory mBeatManagement,
               peopleCategories,
+              inclusionPoints = serviceCategory.inclusionPoints,
               isClosed = isClosed || serviceCategory.isClosed || null peopleCategories
             },
           serviceCategory.remainingActions
@@ -535,6 +537,8 @@ getTicketBookings (mbPersonId, merchantId_) mbLimit mbOffset status_ = do
             ticketPlaceId = Kernel.Types.Id.getId ticketPlaceId,
             personId = personId.getId,
             ticketPlaceName = ticketPlace.name,
+            placeType = ticketPlace.placeType,
+            iconUrl = ticketPlace.iconUrl,
             amount = amount.amount,
             amountWithCurrency = mkPriceAPIEntity amount,
             ..
@@ -561,6 +565,8 @@ getTicketBookingsV2 (mbPersonId, merchantId_) mbLimit mbOffset mbStatus = do
             ticketPlaceId = Kernel.Types.Id.getId ticketPlaceId,
             personId = personId.getId,
             ticketPlaceName = ticketPlace.name,
+            placeType = ticketPlace.placeType,
+            iconUrl = ticketPlace.iconUrl,
             amount = amount.amount,
             amountWithCurrency = mkPriceAPIEntity amount,
             peopleTicketQuantity = peopleTicketQuantity,

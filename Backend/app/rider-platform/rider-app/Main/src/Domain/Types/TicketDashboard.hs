@@ -64,6 +64,7 @@ data TicketServiceDetails = TicketServiceDetails
     maxVerification :: Int,
     allowFutureBooking :: Bool,
     allowCancellation :: Bool,
+    serviceDetails :: Maybe [Text],
     expiry :: DTicketService.ExpiryType,
     businessHours :: [Id DBusinessHour.BusinessHour],
     rules :: Maybe [Rule]
@@ -85,6 +86,7 @@ data ServiceCategoryDetails = ServiceCategoryDetails
     description :: Text,
     allowedSeats :: Maybe Int,
     availableSeats :: Maybe Int,
+    inclusionPoints :: Maybe [Text],
     peopleCategory :: [Id DServicePeopleCategory.ServicePeopleCategory],
     rules :: Maybe [Rule]
   }
