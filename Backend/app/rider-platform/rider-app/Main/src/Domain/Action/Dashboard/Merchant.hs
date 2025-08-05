@@ -1092,6 +1092,7 @@ postMerchantTicketConfigUpsert merchantShortId opCity request = do
                 merchantOperatingCityId = Just merchantOperatingCityId,
                 rules = Nothing,
                 isClosed = False,
+                serviceDetails = Nothing,
                 ..
               }
 
@@ -1125,6 +1126,7 @@ postMerchantTicketConfigUpsert merchantShortId opCity request = do
                 rules = Nothing,
                 isClosed = False,
                 remainingActions = Nothing,
+                inclusionPoints = Nothing,
                 ..
               }
 

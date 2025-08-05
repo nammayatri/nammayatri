@@ -16,6 +16,7 @@ data ServiceCategoryT f = ServiceCategoryT
     availableSeats :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     description :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
+    inclusionPoints :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     isClosed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     name :: B.C f Kernel.Prelude.Text,
     peopleCategory :: B.C f [Kernel.Prelude.Text],

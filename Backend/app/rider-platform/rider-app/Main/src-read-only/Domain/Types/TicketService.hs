@@ -26,6 +26,7 @@ data TicketService = TicketService
     placesId :: Kernel.Prelude.Text,
     rules :: Kernel.Prelude.Maybe [SharedLogic.TicketRule.Core.Rule],
     service :: Kernel.Prelude.Text,
+    serviceDetails :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     shortDesc :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),

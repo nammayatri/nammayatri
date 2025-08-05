@@ -295,6 +295,7 @@ getLiveTicketDef placeId = do
         { id = svc.id,
           service = svc.service,
           shortDesc = svc.shortDesc,
+          serviceDetails = svc.serviceDetails,
           operationalDays = svc.operationalDays,
           operationalDate = svc.operationalDate,
           maxVerification = svc.maxVerification,
@@ -310,6 +311,7 @@ getLiveTicketDef placeId = do
         { id = sc.id,
           name = sc.name,
           description = sc.description,
+          inclusionPoints = sc.inclusionPoints,
           allowedSeats = sc.allowedSeats,
           businessHours = nub $ map toBusinessHourDef $ filter (\bh -> any (\cid -> cid == sc.id) bh.categoryId) linkedBusinessHours,
           peopleCategory = sc.peopleCategory,
@@ -670,7 +672,8 @@ applyDraftChanges draftChange = do
                 updatedAt = now,
                 rules = scDef.rules,
                 isClosed = fromMaybe False (existingSC <&> (.isClosed)),
-                remainingActions = fromMaybe Nothing (existingSC <&> (.remainingActions))
+                remainingActions = fromMaybe Nothing (existingSC <&> (.remainingActions)),
+                inclusionPoints = scDef.inclusionPoints
               }
       case existingSC of
         Just _ -> QServiceCategory.updateByPrimaryKey serviceCategory
@@ -737,7 +740,8 @@ applyDraftChanges draftChange = do
                 createdAt = now,
                 updatedAt = now,
                 rules = existingService >>= (.rules),
-                isClosed = fromMaybe False (existingService <&> (.isClosed))
+                isClosed = fromMaybe False (existingService <&> (.isClosed)),
+                serviceDetails = serviceDef.serviceDetails
               }
       case existingService of
         Just _ -> QTicketService.updateByPrimaryKey updatedService

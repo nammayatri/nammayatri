@@ -170,6 +170,7 @@ TicketService:
     placesId: Text
     service: Text
     shortDesc: Maybe Text
+    serviceDetails: "Maybe [Text]"
     operationalDays: "[Text]"
     operationalDate: "Maybe OperationalDate"
     maxVerification: Int
@@ -188,6 +189,7 @@ TicketService:
       derive: "Eq,Ord"
 
   beamType:
+    serviceDetails: "Maybe Value"
     rules: "Maybe Value"
     isClosed: Maybe Bool
 
@@ -198,14 +200,17 @@ TicketService:
 
   sqlType:
     operationalDates: text[]
+    serviceDetails: json
     rules: json
   fromTType:
     operationalDate: ((,) <$> operationalStartDate <*> operationalEndDate) <&> \(operationalStartDate', operationalEndDate') -> Domain.Types.TicketService.OperationalDate operationalEndDate' operationalStartDate'|E
+    serviceDetails: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< serviceDetails|E
     rules: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< rules|E
     isClosed: fromMaybe False isClosed|E
   toTType:
     operationalStartDate: operationalDate <&> (.startDate)|E
     operationalEndDate: operationalDate <&> (.eneDate)|E
+    serviceDetails: Data.Aeson.toJSON <$> serviceDetails|E
     rules: Data.Aeson.toJSON <$> rules|E
     isClosed: Kernel.Prelude.Just isClosed|E
   default:
@@ -324,6 +329,7 @@ ServiceCategory:
     id: Id ServiceCategory
     name: Text
     description: Text
+    inclusionPoints: "Maybe [Text]"
     availableSeats: Maybe Int
     allowedSeats: Maybe Int
     peopleCategory: "[Id ServicePeopleCategory]"
@@ -334,15 +340,19 @@ ServiceCategory:
   beamFields:
     remainingActions: {}
   sqlType:
+    inclusionPoints: json
     rules: json
   beamType:
+    inclusionPoints: "Maybe Value"
     rules: "Maybe Value"
     isClosed: Maybe Bool
   fromTType:
+    inclusionPoints: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< inclusionPoints|E
     rules: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< rules|E
     isClosed: fromMaybe False isClosed|E
     remainingActions: Nothing|E
   toTType:
+    inclusionPoints: Data.Aeson.toJSON <$> inclusionPoints|E
     rules: Data.Aeson.toJSON <$> rules|E
     isClosed: Kernel.Prelude.Just isClosed|E
   queries:

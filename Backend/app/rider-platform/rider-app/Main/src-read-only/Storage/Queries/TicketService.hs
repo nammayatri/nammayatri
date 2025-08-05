@@ -51,6 +51,7 @@ updateByPrimaryKey (Domain.Types.TicketService.TicketService {..}) = do
       Se.Set Beam.placesId placesId,
       Se.Set Beam.rules (Data.Aeson.toJSON <$> rules),
       Se.Set Beam.service service,
+      Se.Set Beam.serviceDetails (Data.Aeson.toJSON <$> serviceDetails),
       Se.Set Beam.shortDesc shortDesc,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
