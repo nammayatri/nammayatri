@@ -986,9 +986,12 @@ postMultimodalOrderSoftCancel ::
     Kernel.Prelude.Int ->
     Environment.Flow Kernel.Types.APISuccess.APISuccess
   )
-postMultimodalOrderSoftCancel (_, merchantId) journeyId legOrder = do
+postMultimodalOrderSoftCancel (_, merchantId) journeyId _ = do
   merchant <- CQM.findById merchantId >>= fromMaybeM (InvalidRequest "Invalid merchant id")
-  ticketBooking <- QFRFSTicketBooking.findByJourneyIdAndLegOrder journeyId legOrder >>= fromMaybeM (InvalidRequest "No FRFS booking found for the leg")
+  ticketBookings <- QFRFSTicketBooking.findAllByJourneyId (Just journeyId)
+  when (null ticketBookings) $ throwError (InvalidRequest "No FRFS bookings found for this journey")
+  unless (length ticketBookings == 1) $ throwError (InvalidRequest "Multiple FRFS bookings found for this journey")
+  let ticketBooking = head ticketBookings
   merchantOperatingCity <- CQMOC.findById ticketBooking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantOperatingCityId- " <> show ticketBooking.merchantOperatingCityId)
   bapConfig <- CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (Utils.frfsVehicleCategoryToBecknVehicleCategory ticketBooking.vehicleType) >>= fromMaybeM (InternalError "Beckn Config not found")
   frfsConfig <-
