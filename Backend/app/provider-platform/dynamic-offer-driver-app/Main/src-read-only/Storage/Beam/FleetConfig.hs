@@ -21,6 +21,7 @@ data FleetConfigT f = FleetConfigT
     fleetOwnerId :: (B.C f Data.Text.Text),
     rideEndApproval :: (B.C f Kernel.Prelude.Bool),
     unlinkDriverAndVehicleOnTripTermination :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
+    verificationSkippable :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
     merchantId :: (B.C f (Kernel.Prelude.Maybe (Data.Text.Text))),
     merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Data.Text.Text))),
     createdAt :: (B.C f Kernel.Prelude.UTCTime),
