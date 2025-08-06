@@ -1,6 +1,6 @@
 imports:
   Booking: Domain.Types.Booking
-  BookingStatus: Domain.Types.Booking
+  BookingStatus: Domain.Types.BookingStatus
   Person: Domain.Types.Person
   BookingAPIEntity: Domain.Types.Booking.API
   BookingListRes: Domain.Action.UI.Booking

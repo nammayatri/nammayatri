@@ -5,7 +5,6 @@
 module Storage.Queries.Journey (module Storage.Queries.Journey, module ReExport) where
 
 import qualified Domain.Types.Journey
-import qualified Domain.Types.SearchRequest
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -24,8 +23,8 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Journey.Journey] -> m ())
 createMany = traverse_ create
 
-findBySearchId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m [Domain.Types.Journey.Journey])
-findBySearchId searchRequestId = do findAllWithKV [Se.Is Beam.searchRequestId $ Se.Eq (Kernel.Types.Id.getId searchRequestId)]
+findBySearchId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m [Domain.Types.Journey.Journey])
+findBySearchId searchRequestId = do findAllWithKV [Se.Is Beam.searchRequestId $ Se.Eq searchRequestId]
 
 updatePaymentOrderShortId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -68,7 +67,7 @@ updateByPrimaryKey (Domain.Types.Journey.Journey {..}) = do
       Se.Set Beam.recentLocationId (Kernel.Types.Id.getId <$> recentLocationId),
       Se.Set Beam.relevanceScore relevanceScore,
       Se.Set Beam.riderId (Kernel.Types.Id.getId riderId),
-      Se.Set Beam.searchRequestId (Kernel.Types.Id.getId searchRequestId),
+      Se.Set Beam.searchRequestId searchRequestId,
       Se.Set Beam.startTime startTime,
       Se.Set Beam.status (Just status),
       Se.Set Beam.toLocationAddress Nothing,

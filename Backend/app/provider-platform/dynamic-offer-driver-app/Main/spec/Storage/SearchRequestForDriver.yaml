@@ -17,7 +17,7 @@ imports:
   LocalTime: Data.Time
   Months: Kernel.Types.Time
   Value: Data.Aeson
-  ParcelType: Domain.Types.DeliveryDetails
+  ParcelType: Domain.Types.ParcelType
   ConditionalChargesCategories: Domain.Types.ConditionalCharges
   VehicleCategory: Domain.Types.VehicleCategory
 

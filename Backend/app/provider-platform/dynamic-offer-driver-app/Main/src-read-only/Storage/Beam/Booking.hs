@@ -8,7 +8,7 @@ import qualified Database.Beam as B
 import qualified Domain.Types.Booking
 import Domain.Types.Common ()
 import qualified Domain.Types.Common
-import qualified Domain.Types.DeliveryDetails
+import qualified Domain.Types.ParcelType
 import qualified Domain.Types.Trip
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -55,7 +55,7 @@ data BookingT f = BookingT
     maxEstimatedDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     parcelQuantity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    parcelType :: B.C f (Kernel.Prelude.Maybe Domain.Types.DeliveryDetails.ParcelType),
+    parcelType :: B.C f (Kernel.Prelude.Maybe Domain.Types.ParcelType.ParcelType),
     paymentId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     paymentMethodId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     paymentUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

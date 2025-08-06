@@ -4,8 +4,8 @@
 module Storage.Beam.RideRelatedNotificationConfig where
 
 import qualified Database.Beam as B
+import qualified Domain.Types.BookingStatus
 import Domain.Types.Common ()
-import qualified Domain.Types.Extra.Booking
 import qualified Domain.Types.RideRelatedNotificationConfig
 import qualified Domain.Types.UtilsTH
 import Kernel.External.Encryption
@@ -21,7 +21,7 @@ data RideRelatedNotificationConfigT f = RideRelatedNotificationConfigT
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     notificationKey :: B.C f Kernel.Prelude.Text,
     notificationType :: B.C f Domain.Types.RideRelatedNotificationConfig.NotificationType,
-    onBookingStatus :: B.C f Domain.Types.Extra.Booking.BookingStatus,
+    onBookingStatus :: B.C f Domain.Types.BookingStatus.BookingStatus,
     onScheduledBooking :: B.C f Kernel.Prelude.Bool,
     timeDiff :: B.C f Kernel.Types.Common.Seconds,
     timeDiffEvent :: B.C f Domain.Types.RideRelatedNotificationConfig.TimeDiffEvent,

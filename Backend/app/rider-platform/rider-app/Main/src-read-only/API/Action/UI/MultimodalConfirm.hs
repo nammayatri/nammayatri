@@ -21,6 +21,7 @@ import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.JourneyLeg.Types
+import qualified Lib.JourneyModule.State.Types
 import Servant
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
@@ -308,6 +309,26 @@ type API =
       :> Capture
            "journeyId"
            (Kernel.Types.Id.Id Domain.Types.Journey.Journey)
+      :> "order"
+      :> Capture
+           "legOrder"
+           Kernel.Prelude.Int
+      :> "subleg"
+      :> Capture
+           "subLegOrder"
+           Kernel.Prelude.Int
+      :> "setStatusV2"
+      :> Capture
+           "trackingStatus"
+           Lib.JourneyModule.State.Types.TrackingStatus
+      :> Post
+           '[JSON]
+           API.Types.UI.MultimodalConfirm.JourneyStatusResp
+      :<|> TokenAuth
+      :> "multimodal"
+      :> Capture
+           "journeyId"
+           (Kernel.Types.Id.Id Domain.Types.Journey.Journey)
       :> "complete"
       :> Post
            '[JSON]
@@ -368,7 +389,7 @@ type API =
   )
 
 handler :: Environment.FlowServer API
-handler = postMultimodalInitiate :<|> postMultimodalConfirm :<|> getMultimodalBookingInfo :<|> getMultimodalBookingPaymentStatus :<|> postMultimodalPaymentUpdateOrder :<|> postMultimodalSwitch :<|> postMultimodalJourneyLegSkip :<|> postMultimodalJourneyLegAddSkippedLeg :<|> postMultimodalExtendLeg :<|> postMultimodalExtendLegGetfare :<|> getMultimodalJourneyStatus :<|> postMultimodalJourneyCancel :<|> postMultimodalRiderLocation :<|> postMultimodalOrderSwitchTaxi :<|> postMultimodalOrderSwitchFRFSTier :<|> postMultimodalJourneyFeedback :<|> getMultimodalFeedback :<|> getMultimodalUserPreferences :<|> postMultimodalUserPreferences :<|> postMultimodalTransitOptionsLite :<|> getPublicTransportData :<|> getMultimodalOrderGetLegTierOptions :<|> postMultimodalOrderSublegSetStatus :<|> postMultimodalComplete :<|> postMultimodalTicketVerify :<|> postMultimodalOrderSoftCancel :<|> getMultimodalOrderCancelStatus :<|> postMultimodalOrderCancel
+handler = postMultimodalInitiate :<|> postMultimodalConfirm :<|> getMultimodalBookingInfo :<|> getMultimodalBookingPaymentStatus :<|> postMultimodalPaymentUpdateOrder :<|> postMultimodalSwitch :<|> postMultimodalJourneyLegSkip :<|> postMultimodalJourneyLegAddSkippedLeg :<|> postMultimodalExtendLeg :<|> postMultimodalExtendLegGetfare :<|> getMultimodalJourneyStatus :<|> postMultimodalJourneyCancel :<|> postMultimodalRiderLocation :<|> postMultimodalOrderSwitchTaxi :<|> postMultimodalOrderSwitchFRFSTier :<|> postMultimodalJourneyFeedback :<|> getMultimodalFeedback :<|> getMultimodalUserPreferences :<|> postMultimodalUserPreferences :<|> postMultimodalTransitOptionsLite :<|> getPublicTransportData :<|> getMultimodalOrderGetLegTierOptions :<|> postMultimodalOrderSublegSetStatus :<|> postMultimodalOrderSublegSetStatusV2 :<|> postMultimodalComplete :<|> postMultimodalTicketVerify :<|> postMultimodalOrderSoftCancel :<|> getMultimodalOrderCancelStatus :<|> postMultimodalOrderCancel
 
 postMultimodalInitiate ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -594,6 +615,18 @@ postMultimodalOrderSublegSetStatus ::
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.JourneyStatusResp
   )
 postMultimodalOrderSublegSetStatus a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalOrderSublegSetStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
+
+postMultimodalOrderSublegSetStatusV2 ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
+    Kernel.Prelude.Int ->
+    Kernel.Prelude.Int ->
+    Lib.JourneyModule.State.Types.TrackingStatus ->
+    Environment.FlowHandler API.Types.UI.MultimodalConfirm.JourneyStatusResp
+  )
+postMultimodalOrderSublegSetStatusV2 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalOrderSublegSetStatusV2 (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
 
 postMultimodalComplete ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

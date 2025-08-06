@@ -89,6 +89,7 @@ library
     , beam-core
     , beam-mysql
     , beam-postgres
+    , beckn-spec
     , bytestring
     , cereal
     , containers
@@ -174,6 +175,7 @@ executable kafka-consumers-exe
     , beam-core
     , beam-mysql
     , beam-postgres
+    , beckn-spec
     , bytestring
     , cereal
     , containers

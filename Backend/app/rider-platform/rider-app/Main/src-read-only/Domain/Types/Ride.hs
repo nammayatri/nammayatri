@@ -9,6 +9,7 @@ import qualified Domain.Types.Client
 import qualified Domain.Types.Location
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.RideStatus
 import qualified Domain.Types.ServiceTierType
 import qualified Domain.Types.VehicleVariant
 import Kernel.External.Encryption
@@ -20,7 +21,7 @@ import qualified Kernel.Types.Confidence
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.Time
 import qualified Kernel.Types.Version
-import Kernel.Utils.TH
+import qualified Kernel.Utils.TH
 import qualified Tools.Beam.UtilsTH
 
 data RideE e = Ride
@@ -80,7 +81,7 @@ data RideE e = Ride
     shortId :: Kernel.Types.Id.ShortId Domain.Types.Ride.Ride,
     showDriversPreviousRideDropLoc :: Kernel.Prelude.Bool,
     startOdometerReading :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
-    status :: Domain.Types.Ride.RideStatus,
+    status :: Domain.Types.RideStatus.RideStatus,
     stops :: [Domain.Types.Location.Location],
     talkedWithDriver :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     tipAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.Price,
@@ -278,8 +279,6 @@ data EstimatedEndTimeRange = EstimatedEndTimeRange {end :: Kernel.Prelude.UTCTim
 
 data PaymentStatus = Completed | NotInitiated | Initiated | Cancelled | Failed deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data RideStatus = UPCOMING | NEW | INPROGRESS | COMPLETED | CANCELLED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
-
 data SosJourneyStatus
   = Safe
   | UnexpectedCondition Domain.Types.Ride.UnexpectedConditionStage
@@ -292,10 +291,8 @@ data UnexpectedConditionStage = DriverDeviated | UnusualStop | UnsafeArea derivi
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PaymentStatus)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideStatus)
-
-$(mkHttpInstancesForEnum ''RideStatus)
-
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SosJourneyStatus)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''UnexpectedConditionStage)
+
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''PaymentStatus)

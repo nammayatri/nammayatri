@@ -10,7 +10,6 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Domain.Types.RecentLocation
-import qualified Domain.Types.SearchRequest
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -37,7 +36,7 @@ data Journey = Journey
     recentLocationId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.RecentLocation.RecentLocation),
     relevanceScore :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
-    searchRequestId :: Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest,
+    searchRequestId :: Kernel.Prelude.Text,
     startTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     status :: Domain.Types.Journey.JourneyStatus,
     toLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location,

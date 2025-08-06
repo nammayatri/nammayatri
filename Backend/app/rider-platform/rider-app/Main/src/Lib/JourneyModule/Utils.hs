@@ -244,7 +244,8 @@ fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid moci
               source = LIVE,
               stage = Nothing,
               platformCode = Nothing,
-              providerStopCode = Nothing
+              providerStopCode = Nothing,
+              isStageStop = False -- Default to False for LIVE data
             }
 
 fetchLiveSubwayTimings ::
@@ -293,7 +294,8 @@ fetchLiveSubwayTimings routeCodes stopCode currentTime integratedBppConfig mid m
           source = LIVE,
           stage = Nothing,
           platformCode = Nothing,
-          providerStopCode = Nothing
+          providerStopCode = Nothing,
+          isStageStop = False -- Default to False for LIVE data
         }
 
 fetchLiveTimings ::
@@ -671,7 +673,7 @@ createRecentLocationForMultimodal journey = do
   let mbLastLeg = listToMaybe (reverse legs)
   let mbFirstStopCode = mbFirstLeg >>= (.fromStopDetails) >>= (.stopCode)
   let mbLastStopCode = mbLastLeg >>= (.toStopDetails) >>= (.stopCode)
-  let mbRouteCode = mbFirstLeg <&> (.routeDetails) >>= listToMaybe >>= (.gtfsId)
+  let mbRouteCode = mbFirstLeg <&> (.routeDetails) >>= listToMaybe >>= (.routeGtfsId)
   let mbEndLocation = mbLastLeg <&> (.endLocation)
   case (mbFirstLeg, mbFirstStopCode, mbLastStopCode, mbEndLocation) of
     (Just firstLeg, Just firstStopCode, Just lastStopCode, Just endLocation) -> do

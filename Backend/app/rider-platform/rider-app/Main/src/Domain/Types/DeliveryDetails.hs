@@ -1,7 +1,7 @@
 module Domain.Types.DeliveryDetails where
 
 import Domain.Types.LocationAddress
-import Domain.Types.ParcelDetails
+import Domain.Types.ParcelType
 import Domain.Types.Trip
 import Kernel.Prelude
 

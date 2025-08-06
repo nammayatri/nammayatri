@@ -61,6 +61,7 @@ data SearchRequestT f = SearchRequestT
     isMeterRideSearch :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isMultimodalSearch :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isPetRide :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    journeyLegId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     agency :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     convenienceCost :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     isDeleted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

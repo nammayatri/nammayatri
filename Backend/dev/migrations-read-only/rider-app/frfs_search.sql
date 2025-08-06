@@ -39,3 +39,8 @@ ALTER TABLE atlas_app.frfs_search ALTER COLUMN from_station_id TYPE text;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.frfs_search ADD COLUMN valid_till timestamp with time zone ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_search ADD COLUMN journey_leg_id character varying(36) ;

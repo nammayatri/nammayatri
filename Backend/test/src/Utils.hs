@@ -18,7 +18,8 @@ import Control.Exception (throwIO)
 import Data.Aeson (decode)
 import Data.String.Conversions
 import qualified "rider-app" Domain.Types.Booking as BDB
-import qualified "rider-app" Domain.Types.Ride as BDRide
+import qualified "beckn-spec" Domain.Types.BookingStatus as BDB
+import qualified "beckn-spec" Domain.Types.RideStatus as BDRide
 import qualified "dynamic-offer-driver-app" Environment as ARDU
 import qualified "rider-app" Environment as BecknApp
 import EulerHS.Prelude

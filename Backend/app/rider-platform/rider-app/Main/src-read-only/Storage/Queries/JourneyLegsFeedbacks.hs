@@ -26,6 +26,11 @@ createMany = traverse_ create
 findAllByJourneyId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Journey.Journey -> m [Domain.Types.JourneyLegsFeedbacks.JourneyLegsFeedbacks])
 findAllByJourneyId journeyId = do findAllWithKV [Se.Is Beam.journeyId $ Se.Eq (Kernel.Types.Id.getId journeyId)]
 
+findByJourneyIdAndLegOrder ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.Journey.Journey -> Kernel.Prelude.Int -> m (Maybe Domain.Types.JourneyLegsFeedbacks.JourneyLegsFeedbacks))
+findByJourneyIdAndLegOrder journeyId legOrder = do findOneWithKV [Se.And [Se.Is Beam.journeyId $ Se.Eq (Kernel.Types.Id.getId journeyId), Se.Is Beam.legOrder $ Se.Eq legOrder]]
+
 findByPrimaryKey ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.Journey.Journey -> Kernel.Prelude.Int -> m (Maybe Domain.Types.JourneyLegsFeedbacks.JourneyLegsFeedbacks))

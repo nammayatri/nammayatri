@@ -4,14 +4,15 @@
 
 module Storage.Queries.RouteDetails where
 
-import qualified Domain.Types.JourneyLeg
 import qualified Domain.Types.RouteDetails
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Lib.JourneyModule.State.Types
 import qualified Sequelize as Se
 import qualified Storage.Beam.RouteDetails as Beam
 
@@ -21,8 +22,20 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.RouteDetails.RouteDetails] -> m ())
 createMany = traverse_ create
 
-findAllByJourneyLegId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg -> m [Domain.Types.RouteDetails.RouteDetails])
-findAllByJourneyLegId journeyLegId = do findAllWithKV [Se.Is Beam.journeyLegId $ Se.Eq (Kernel.Types.Id.getId journeyLegId)]
+findAllByJourneyLegId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m [Domain.Types.RouteDetails.RouteDetails])
+findAllByJourneyLegId journeyLegId = do findAllWithKV [Se.Is Beam.journeyLegId $ Se.Eq journeyLegId]
+
+updateAlternateShortNames :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Kernel.Prelude.Text] -> Kernel.Prelude.Text -> m ())
+updateAlternateShortNames alternateShortNames journeyLegId = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.alternateShortNames alternateShortNames, Se.Set Beam.updatedAt _now] [Se.Is Beam.journeyLegId $ Se.Eq journeyLegId]
+
+updateTrackingStatus ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Lib.JourneyModule.State.Types.TrackingStatus -> Kernel.Types.Id.Id Domain.Types.RouteDetails.RouteDetails -> m ())
+updateTrackingStatus trackingStatus id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.trackingStatus trackingStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.RouteDetails.RouteDetails -> m (Maybe Domain.Types.RouteDetails.RouteDetails))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
@@ -43,7 +56,9 @@ updateByPrimaryKey (Domain.Types.RouteDetails.RouteDetails {..}) = do
       Se.Set Beam.fromStopGtfsId fromStopGtfsId,
       Se.Set Beam.fromStopName fromStopName,
       Se.Set Beam.fromStopPlatformCode fromStopPlatformCode,
-      Se.Set Beam.journeyLegId (Kernel.Types.Id.getId journeyLegId),
+      Se.Set Beam.journeyLegId journeyLegId,
+      Se.Set Beam.journeyStatus journeyStatus,
+      Se.Set Beam.routeCode routeCode,
       Se.Set Beam.routeColorCode routeColorCode,
       Se.Set Beam.routeColorName routeColorName,
       Se.Set Beam.routeGtfsId routeGtfsId,
@@ -58,6 +73,7 @@ updateByPrimaryKey (Domain.Types.RouteDetails.RouteDetails {..}) = do
       Se.Set Beam.toStopGtfsId toStopGtfsId,
       Se.Set Beam.toStopName toStopName,
       Se.Set Beam.toStopPlatformCode toStopPlatformCode,
+      Se.Set Beam.trackingStatus trackingStatus,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.createdAt createdAt,
@@ -83,7 +99,9 @@ instance FromTType' Beam.RouteDetails Domain.Types.RouteDetails.RouteDetails whe
             fromStopName = fromStopName,
             fromStopPlatformCode = fromStopPlatformCode,
             id = Kernel.Types.Id.Id id,
-            journeyLegId = Kernel.Types.Id.Id journeyLegId,
+            journeyLegId = journeyLegId,
+            journeyStatus = journeyStatus,
+            routeCode = routeCode,
             routeColorCode = routeColorCode,
             routeColorName = routeColorName,
             routeGtfsId = routeGtfsId,
@@ -98,6 +116,7 @@ instance FromTType' Beam.RouteDetails Domain.Types.RouteDetails.RouteDetails whe
             toStopGtfsId = toStopGtfsId,
             toStopName = toStopName,
             toStopPlatformCode = toStopPlatformCode,
+            trackingStatus = trackingStatus,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             createdAt = createdAt,
@@ -120,7 +139,9 @@ instance ToTType' Beam.RouteDetails Domain.Types.RouteDetails.RouteDetails where
         Beam.fromStopName = fromStopName,
         Beam.fromStopPlatformCode = fromStopPlatformCode,
         Beam.id = Kernel.Types.Id.getId id,
-        Beam.journeyLegId = Kernel.Types.Id.getId journeyLegId,
+        Beam.journeyLegId = journeyLegId,
+        Beam.journeyStatus = journeyStatus,
+        Beam.routeCode = routeCode,
         Beam.routeColorCode = routeColorCode,
         Beam.routeColorName = routeColorName,
         Beam.routeGtfsId = routeGtfsId,
@@ -135,6 +156,7 @@ instance ToTType' Beam.RouteDetails Domain.Types.RouteDetails.RouteDetails where
         Beam.toStopGtfsId = toStopGtfsId,
         Beam.toStopName = toStopName,
         Beam.toStopPlatformCode = toStopPlatformCode,
+        Beam.trackingStatus = trackingStatus,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.createdAt = createdAt,

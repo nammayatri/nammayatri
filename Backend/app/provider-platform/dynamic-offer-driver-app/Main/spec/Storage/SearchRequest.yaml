@@ -20,7 +20,7 @@ imports:
   ConfigVersionMap: Lib.Yudhishthira.Types
   Value: Data.Aeson
   TagNameValue: Lib.Yudhishthira.Types
-  ParcelType: Domain.Types.DeliveryDetails
+  ParcelType: Domain.Types.ParcelType
 
 SearchRequest:
   derives: Generic,Show,ToJSON,FromJSON

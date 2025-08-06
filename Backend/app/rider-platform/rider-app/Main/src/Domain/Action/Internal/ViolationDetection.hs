@@ -5,6 +5,7 @@ import Data.OpenApi (ToSchema)
 import Domain.Types.Alert.DetectionData as DTD
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.RideStatus as DRide
 import qualified Domain.Types.Trip as DTC
 import Environment
 import EulerHS.Prelude

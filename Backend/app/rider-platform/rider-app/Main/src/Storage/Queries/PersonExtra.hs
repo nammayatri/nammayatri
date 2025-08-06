@@ -2,14 +2,11 @@ module Storage.Queries.PersonExtra where
 
 import Control.Applicative ((<|>))
 import qualified Data.Time as T
-import qualified Database.Beam as B
 import Domain.Action.UI.Person
-import qualified Domain.Types.Booking as Booking
 import Domain.Types.Merchant (Merchant)
 import qualified Domain.Types.MerchantConfig as DMC
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person
-import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.External.Maps (Language)
@@ -20,7 +17,6 @@ import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.Common
 import qualified Sequelize as Se
-import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.Person as BeamP
 import Storage.Queries.OrphanInstances.Person ()
 
@@ -257,22 +253,6 @@ findAllCustomers merchant moCity limitVal offsetVal mbEnabled mbBlocked mbSearch
     (Se.Asc BeamP.firstName)
     (Just limitVal)
     (Just offsetVal)
-
-fetchRidesCount :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m (Maybe Int)
-fetchRidesCount personId = do
-  dbConf <- getReplicaBeamConfig
-  res <- L.runDB dbConf $
-    L.findRows $
-      B.select $
-        B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $
-          B.filter_'
-            ( \booking ->
-                B.sqlBool_ (booking.status `B.in_` (B.val_ <$> [Booking.COMPLETED, Booking.TRIP_ASSIGNED]))
-                  B.&&?. booking.riderId B.==?. B.val_ (getId personId)
-            )
-            do
-              B.all_ (BeamCommon.booking BeamCommon.atlasDB)
-  pure $ either (const Nothing) (\r -> if null r then Nothing else Just (head r)) res
 
 findCityInfoById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m (Maybe PersonCityInformation)
 findCityInfoById personId = do

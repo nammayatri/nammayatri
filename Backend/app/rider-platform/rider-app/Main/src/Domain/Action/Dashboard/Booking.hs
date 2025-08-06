@@ -23,11 +23,13 @@ import qualified "dashboard-helper-api" Dashboard.Common.Booking as Common
 import Data.Coerce (coerce)
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.BookingCancellationReason as DBCR
+import qualified Domain.Types.BookingStatus as DBooking
 import qualified Domain.Types.CancellationReason as DCR
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.RideStatus as DRide
 import Environment
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude

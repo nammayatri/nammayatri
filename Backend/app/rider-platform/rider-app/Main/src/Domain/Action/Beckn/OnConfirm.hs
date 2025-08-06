@@ -27,6 +27,7 @@ where
 import qualified Data.HashMap.Strict as HM
 import qualified Domain.Action.Beckn.Common as DCommon
 import qualified Domain.Types.Booking as DRB
+import qualified Domain.Types.BookingStatus as DRB
 import qualified Domain.Types.Ride as DRide
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions

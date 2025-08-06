@@ -21,15 +21,16 @@ import qualified Domain.Action.UI.Estimate as UEstimate
 import qualified Domain.Action.UI.Quote as DQuote
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingPartiesLink as DBPL
+import qualified Domain.Types.BookingStatus as DRB
 import Domain.Types.CancellationReason
 import qualified Domain.Types.DeliveryDetails as DTDD
-import qualified Domain.Types.Estimate as DEstimate
+import qualified Domain.Types.EstimateStatus as DEstimate
 import qualified Domain.Types.Exophone as DExophone
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
-import qualified Domain.Types.ParcelDetails as DParcel
+import qualified Domain.Types.ParcelType as DParcel
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.Quote as DQuote
@@ -356,6 +357,8 @@ buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode
           preferSafetyPlus = quote.isSafetyPlus,
           recentLocationId = searchRequest.recentLocationId,
           isMultimodalSearch = searchRequest.isMultimodalSearch,
+          journeyRouteDetails = searchRequest.journeyRouteDetails,
+          journeyLegId = searchRequest.journeyLegId,
           ..
         },
       bookingParties

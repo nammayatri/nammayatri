@@ -6,11 +6,13 @@ module Domain.Types.FRFSSearch where
 import qualified BecknV2.FRFS.Enums
 import Data.Aeson
 import qualified Domain.Types.IntegratedBPPConfig
+import qualified Domain.Types.JourneyLeg
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.PartnerOrganization
 import qualified Domain.Types.Person
 import qualified Domain.Types.RecentLocation
+import qualified Domain.Types.RouteDetails
 import Kernel.Prelude
 import qualified Kernel.Types.Id
 import qualified Lib.JourneyLeg.Types
@@ -21,9 +23,10 @@ data FRFSSearch = FRFSSearch
     id :: Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch,
     integratedBppConfigId :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
     isOnSearchReceived :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    journeyLegId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg),
     journeyLegInfo :: Kernel.Prelude.Maybe Lib.JourneyLeg.Types.JourneySearchData,
     journeyLegStatus :: Kernel.Prelude.Maybe Lib.JourneyLeg.Types.JourneyLegStatus,
-    journeyRouteDetails :: [Lib.JourneyLeg.Types.MultiModalJourneyRouteDetails],
+    journeyRouteDetails :: [Domain.Types.RouteDetails.RouteDetails],
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     partnerOrgId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PartnerOrganization.PartnerOrganization),

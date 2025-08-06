@@ -17,6 +17,7 @@ module Domain.Action.Beckn.FRFS.OnInit where
 import qualified BecknV2.FRFS.Enums as Spec
 import Domain.Action.Beckn.FRFS.Common (DFareBreakUp)
 import qualified Domain.Types.FRFSTicketBooking as FTBooking
+import qualified Domain.Types.FRFSTicketBookingStatus as FTBooking
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP

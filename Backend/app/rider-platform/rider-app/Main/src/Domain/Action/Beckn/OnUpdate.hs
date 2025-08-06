@@ -48,14 +48,17 @@ import Data.Time hiding (getCurrentTime)
 import qualified Domain.Action.Beckn.Common as Common
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
+import qualified Domain.Types.BookingStatus as DRB
+import qualified Domain.Types.BookingStatus as SRB
 import qualified Domain.Types.BookingUpdateRequest as DBUR
 import qualified Domain.Types.Estimate as DEstimate
-import qualified Domain.Types.Extra.Booking as SRB
+import qualified Domain.Types.EstimateStatus as DEstimate
 import qualified Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.LocationMapping as DLM
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.RideStatus as DRide
 import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.VehicleVariant
 import Environment

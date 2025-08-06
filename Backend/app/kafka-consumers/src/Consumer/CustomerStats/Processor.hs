@@ -18,7 +18,7 @@ module Consumer.CustomerStats.Processor
 where
 
 import "rider-app" Domain.Types.BookingCancellationReason as SBCR
-import "rider-app" Domain.Types.Ride as DDR
+import "beckn-spec" Domain.Types.RideStatus as DDR
 import Environment
 import Kernel.Beam.Functions
 import Kernel.Prelude

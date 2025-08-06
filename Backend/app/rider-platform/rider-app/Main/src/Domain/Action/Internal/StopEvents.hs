@@ -17,6 +17,7 @@ module Domain.Action.Internal.StopEvents where
 import Data.Foldable ()
 import Data.OpenApi (ToSchema)
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.RideStatus as DRide
 import qualified Domain.Types.StopInformation as DSI
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions as B

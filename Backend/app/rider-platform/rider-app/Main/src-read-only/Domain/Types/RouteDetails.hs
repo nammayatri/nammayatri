@@ -4,20 +4,21 @@
 module Domain.Types.RouteDetails where
 
 import Data.Aeson
-import qualified Domain.Types.JourneyLeg
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
+import qualified Lib.JourneyLeg.Types
+import qualified Lib.JourneyModule.State.Types
 import qualified Tools.Beam.UtilsTH
 
 data RouteDetails = RouteDetails
   { agencyGtfsId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     agencyName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    alternateShortNames :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
-    endLocationLat :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
-    endLocationLon :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    alternateShortNames :: [Kernel.Prelude.Text],
+    endLocationLat :: Kernel.Prelude.Double,
+    endLocationLon :: Kernel.Prelude.Double,
     frequency :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     fromArrivalTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     fromDepartureTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
@@ -26,14 +27,16 @@ data RouteDetails = RouteDetails
     fromStopName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     fromStopPlatformCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.RouteDetails.RouteDetails,
-    journeyLegId :: Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg,
+    journeyLegId :: Kernel.Prelude.Text,
+    journeyStatus :: Kernel.Prelude.Maybe Lib.JourneyLeg.Types.JourneyLegStatus,
+    routeCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     routeColorCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     routeColorName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     routeGtfsId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     routeLongName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     routeShortName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    startLocationLat :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
-    startLocationLon :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    startLocationLat :: Kernel.Prelude.Double,
+    startLocationLon :: Kernel.Prelude.Double,
     subLegOrder :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     toArrivalTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     toDepartureTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
@@ -41,6 +44,7 @@ data RouteDetails = RouteDetails
     toStopGtfsId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     toStopName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     toStopPlatformCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    trackingStatus :: Kernel.Prelude.Maybe Lib.JourneyModule.State.Types.TrackingStatus,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     createdAt :: Kernel.Prelude.UTCTime,

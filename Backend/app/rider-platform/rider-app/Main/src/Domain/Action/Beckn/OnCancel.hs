@@ -27,7 +27,9 @@ import qualified Data.Text as T
 import qualified Domain.Action.Beckn.Common as Common
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
+import qualified Domain.Types.BookingStatus as SRB
 import qualified Domain.Types.Ride as SRide
+import qualified Domain.Types.RideStatus as SRide
 import Environment
 import Environment ()
 import Kernel.Beam.Functions

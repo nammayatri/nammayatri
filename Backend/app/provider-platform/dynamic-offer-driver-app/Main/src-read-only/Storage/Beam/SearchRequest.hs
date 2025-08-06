@@ -6,7 +6,7 @@ module Storage.Beam.SearchRequest where
 import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
-import qualified Domain.Types.DeliveryDetails
+import qualified Domain.Types.ParcelType
 import qualified Domain.Types.Trip
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -53,7 +53,7 @@ data SearchRequestT f = SearchRequestT
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     messageId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     parcelQuantity :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    parcelType :: B.C f (Kernel.Prelude.Maybe Domain.Types.DeliveryDetails.ParcelType),
+    parcelType :: B.C f (Kernel.Prelude.Maybe Domain.Types.ParcelType.ParcelType),
     pickupZoneGateId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     poolingConfigVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     poolingLogicVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

@@ -28,6 +28,7 @@ data RouteStopTimeTable = RouteStopTimeTable
     tripId :: Kernel.Types.Id.Id Domain.Types.RouteStopTimeTable.RouteStopTimeTable,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
+    isStageStop :: Kernel.Prelude.Bool,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }

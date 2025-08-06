@@ -6,6 +6,7 @@ import qualified Domain.Types.Booking
 import qualified Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Ride
+import qualified Domain.Types.RideStatus
 import Kernel.Beam.Functions
 import qualified Kernel.External.Maps
 import Kernel.Prelude
@@ -25,7 +26,7 @@ findByRBIdLite :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.I
 findByRBIdLite bookingId = findOneWithKV [Se.Is Beam.bookingId $ Se.Eq (Kernel.Types.Id.getId bookingId)]
 
 findActiveByRBIdLite :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Booking.Booking -> m (Maybe RideLite)
-findActiveByRBIdLite (Kernel.Types.Id.Id rbId) = findOneWithKV [Se.And [Se.Is Beam.bookingId $ Se.Eq rbId, Se.Is Beam.status $ Se.Not $ Se.Eq Domain.Types.Ride.CANCELLED]]
+findActiveByRBIdLite (Kernel.Types.Id.Id rbId) = findOneWithKV [Se.And [Se.Is Beam.bookingId $ Se.Eq rbId, Se.Is Beam.status $ Se.Not $ Se.Eq Domain.Types.RideStatus.CANCELLED]]
 
 findRideByRideShortIdLite :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.ShortId RideLite -> m (Maybe RideLite))
 findRideByRideShortIdLite shortId = findOneWithKV [Se.Is Beam.shortId $ Se.Eq (Kernel.Types.Id.getShortId shortId)]
@@ -41,7 +42,7 @@ data RideLite = RideLite
     rideRating :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     shortId :: Kernel.Types.Id.ShortId Domain.Types.Ride.Ride,
     talkedWithDriver :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    status :: Domain.Types.Ride.RideStatus,
+    status :: Domain.Types.RideStatus.RideStatus,
     driverArrivalTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     destinationReachedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     driversPreviousRideDropLoc :: Kernel.Prelude.Maybe Kernel.External.Maps.LatLong,

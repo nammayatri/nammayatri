@@ -19,6 +19,7 @@ import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Call as DCall
 import qualified Domain.Types.Booking as DB
+import qualified Domain.Types.BookingStatus as DB
 import Domain.Types.CallStatus
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity

@@ -14,9 +14,11 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Storage.Beam.WalkLegMultimodal as Beam
 import qualified Storage.Queries.Transformers.MultiModal
+import qualified Storage.Queries.Transformers.RouteDetails
 
 instance FromTType' Beam.WalkLegMultimodal Domain.Types.WalkLegMultimodal.WalkLegMultimodal where
   fromTType' (Beam.WalkLegMultimodalT {..}) = do
+    journeyRouteDetails' <- Storage.Queries.Transformers.RouteDetails.getJourneyRouteDetails id journeyLegId
     fromLocation' <- Storage.Queries.Transformers.MultiModal.getFromLocation id
     toLocation' <- Storage.Queries.Transformers.MultiModal.getToLocation id
     pure $
@@ -26,7 +28,9 @@ instance FromTType' Beam.WalkLegMultimodal Domain.Types.WalkLegMultimodal.WalkLe
             estimatedDuration = estimatedDuration,
             fromLocation = fromLocation',
             id = Kernel.Types.Id.Id id,
+            journeyLegId = Kernel.Types.Id.Id <$> journeyLegId,
             journeyLegInfo = Storage.Queries.Transformers.MultiModal.mkJourneyLegInfo agency convenienceCost isDeleted journeyId journeyLegOrder onSearchFailed pricingId skipBooking,
+            journeyRouteDetails = listToMaybe journeyRouteDetails',
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             riderId = Kernel.Types.Id.Id riderId,
@@ -45,6 +49,7 @@ instance ToTType' Beam.WalkLegMultimodal Domain.Types.WalkLegMultimodal.WalkLegM
         Beam.estimatedDuration = estimatedDuration,
         Beam.fromLocationId = Just $ Kernel.Types.Id.getId ((.id) fromLocation),
         Beam.id = Kernel.Types.Id.getId id,
+        Beam.journeyLegId = Kernel.Types.Id.getId <$> journeyLegId,
         Beam.agency = journeyLegInfo >>= (.agency),
         Beam.convenienceCost = Kernel.Prelude.fmap (.convenienceCost) journeyLegInfo,
         Beam.isDeleted = journeyLegInfo >>= (.isDeleted),

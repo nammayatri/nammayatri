@@ -13,6 +13,7 @@ import qualified Domain.Action.RiderPlatform.RideBooking.Booking
 import qualified "rider-app" Domain.Action.UI.Booking
 import qualified "rider-app" Domain.Types.Booking
 import qualified "rider-app" Domain.Types.Booking.API
+import qualified Domain.Types.BookingStatus
 import qualified "lib-dashboard" Domain.Types.Merchant
 import qualified "rider-app" Domain.Types.Person
 import qualified "lib-dashboard" Environment
@@ -50,5 +51,5 @@ type GetBookingList =
 postBookingStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Booking.Booking -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Environment.FlowHandler Domain.Types.Booking.API.BookingAPIEntity)
 postBookingStatus merchantShortId opCity apiTokenInfo rideBookingId customerId = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.RideBooking.Booking.postBookingStatus merchantShortId opCity apiTokenInfo rideBookingId customerId
 
-getBookingList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Domain.Types.Booking.BookingStatus -> Environment.FlowHandler Domain.Action.UI.Booking.BookingListRes)
+getBookingList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe EulerHS.Prelude.Integer -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Domain.Types.BookingStatus.BookingStatus -> Environment.FlowHandler Domain.Action.UI.Booking.BookingListRes)
 getBookingList merchantShortId opCity apiTokenInfo customerId limit offset onlyActive status = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.RideBooking.Booking.getBookingList merchantShortId opCity apiTokenInfo customerId limit offset onlyActive status

@@ -18,6 +18,7 @@ data WalkLegMultimodalT f = WalkLegMultimodalT
     estimatedDuration :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     fromLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,
+    journeyLegId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     agency :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     convenienceCost :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     isDeleted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

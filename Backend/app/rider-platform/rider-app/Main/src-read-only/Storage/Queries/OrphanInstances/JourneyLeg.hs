@@ -18,11 +18,10 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Kernel.Utils.JSON
 import qualified Storage.Beam.JourneyLeg as Beam
 import qualified Storage.Queries.RouteDetails
-import qualified Storage.Queries.Transformers.RouteDetails
 
 instance FromTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
   fromTType' (Beam.JourneyLegT {..}) = do
-    routeDetailsList <- Storage.Queries.RouteDetails.findAllByJourneyLegId (Kernel.Types.Id.Id id)
+    routeDetails' <- Storage.Queries.RouteDetails.findAllByJourneyLegId id
     pure $
       Just
         Domain.Types.JourneyLeg.JourneyLeg
@@ -45,11 +44,15 @@ instance FromTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
             journeyId = Kernel.Types.Id.Id journeyId,
             legSearchId = legId,
             mode = mode,
-            routeDetails = Storage.Queries.Transformers.RouteDetails.getTransformedRouteDetails routeDetailsList,
+            osmEntrance = osmEntrance >>= Kernel.Utils.JSON.valueToMaybe,
+            osmExit = osmExit >>= Kernel.Utils.JSON.valueToMaybe,
+            routeDetails = routeDetails',
             sequenceNumber = sequenceNumber,
             serviceTypes = serviceTypes,
             startLocation = Kernel.External.Maps.Google.MapsClient.LatLngV2 startLocationLat startLocationLon,
             status = status,
+            straightLineEntrance = straightLineEntrance >>= Kernel.Utils.JSON.valueToMaybe,
+            straightLineExit = straightLineExit >>= Kernel.Utils.JSON.valueToMaybe,
             toArrivalTime = toArrivalTime,
             toDepartureTime = toDepartureTime,
             toStopDetails = Just $ Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails toStopCode toStopPlatformCode toStopName toStopGtfsId,
@@ -87,11 +90,15 @@ instance ToTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
         Beam.journeyId = Kernel.Types.Id.getId journeyId,
         Beam.legId = legSearchId,
         Beam.mode = mode,
+        Beam.osmEntrance = osmEntrance >>= Just . Data.Aeson.toJSON,
+        Beam.osmExit = osmExit >>= Just . Data.Aeson.toJSON,
         Beam.sequenceNumber = sequenceNumber,
         Beam.serviceTypes = serviceTypes,
         Beam.startLocationLat = startLocation & (.latitude),
         Beam.startLocationLon = startLocation & (.longitude),
         Beam.status = status,
+        Beam.straightLineEntrance = straightLineEntrance >>= Just . Data.Aeson.toJSON,
+        Beam.straightLineExit = straightLineExit >>= Just . Data.Aeson.toJSON,
         Beam.toArrivalTime = toArrivalTime,
         Beam.toDepartureTime = toDepartureTime,
         Beam.toStopCode = toStopDetails >>= (.stopCode),

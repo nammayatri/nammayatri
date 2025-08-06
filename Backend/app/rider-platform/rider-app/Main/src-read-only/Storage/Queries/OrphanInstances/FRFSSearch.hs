@@ -12,13 +12,12 @@ import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Storage.Beam.FRFSSearch as Beam
-import qualified Storage.Queries.JourneyRouteDetails
 import Storage.Queries.Transformers.FRFSSearch
 import qualified Storage.Queries.Transformers.RouteDetails
 
 instance FromTType' Beam.FRFSSearch Domain.Types.FRFSSearch.FRFSSearch where
   fromTType' (Beam.FRFSSearchT {..}) = do
-    journeyRouteDetailsList <- Storage.Queries.JourneyRouteDetails.findAllBySearchId (Kernel.Types.Id.Id id)
+    journeyRouteDetails' <- Storage.Queries.Transformers.RouteDetails.getJourneyRouteDetails id journeyLegId
     pure $
       Just
         Domain.Types.FRFSSearch.FRFSSearch
@@ -26,9 +25,10 @@ instance FromTType' Beam.FRFSSearch Domain.Types.FRFSSearch.FRFSSearch where
             id = Kernel.Types.Id.Id id,
             integratedBppConfigId = Kernel.Types.Id.Id integratedBppConfigId,
             isOnSearchReceived = isOnSearchReceived,
+            journeyLegId = Kernel.Types.Id.Id <$> journeyLegId,
             journeyLegInfo = mkJourneyLegInfo agency convenienceCost isDeleted journeyId journeyLegOrder onSearchFailed pricingId skipBooking,
             journeyLegStatus = journeyLegStatus,
-            journeyRouteDetails = Storage.Queries.Transformers.RouteDetails.getTransformedJourneyRouteDetailsT journeyRouteDetailsList,
+            journeyRouteDetails = journeyRouteDetails',
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             partnerOrgId = Kernel.Types.Id.Id <$> partnerOrgId,
@@ -51,13 +51,14 @@ instance ToTType' Beam.FRFSSearch Domain.Types.FRFSSearch.FRFSSearch where
         Beam.id = Kernel.Types.Id.getId id,
         Beam.integratedBppConfigId = Kernel.Types.Id.getId integratedBppConfigId,
         Beam.isOnSearchReceived = isOnSearchReceived,
-        Beam.agency = (journeyLegInfo >>= (.agency)),
+        Beam.journeyLegId = Kernel.Types.Id.getId <$> journeyLegId,
+        Beam.agency = journeyLegInfo >>= (.agency),
         Beam.convenienceCost = Kernel.Prelude.fmap (.convenienceCost) journeyLegInfo,
-        Beam.isDeleted = (journeyLegInfo >>= (.isDeleted)),
+        Beam.isDeleted = journeyLegInfo >>= (.isDeleted),
         Beam.journeyId = Kernel.Prelude.fmap (.journeyId) journeyLegInfo,
         Beam.journeyLegOrder = Kernel.Prelude.fmap (.journeyLegOrder) journeyLegInfo,
-        Beam.onSearchFailed = (journeyLegInfo >>= (.onSearchFailed)),
-        Beam.pricingId = (journeyLegInfo >>= (.pricingId)),
+        Beam.onSearchFailed = journeyLegInfo >>= (.onSearchFailed),
+        Beam.pricingId = journeyLegInfo >>= (.pricingId),
         Beam.skipBooking = Kernel.Prelude.fmap (.skipBooking) journeyLegInfo,
         Beam.journeyLegStatus = journeyLegStatus,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,

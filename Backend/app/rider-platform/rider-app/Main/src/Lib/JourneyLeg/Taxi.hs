@@ -15,9 +15,11 @@ import qualified Data.Text as T
 import Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Action.UI.Search as DSearch
 import Domain.Types.Booking
+import Domain.Types.BookingStatus
 import qualified Domain.Types.CancellationReason as SCR
 import qualified Domain.Types.Common as DTrip
 import qualified Domain.Types.Estimate as DEstimate
+import qualified Domain.Types.EstimateStatus as DEstimate
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as DPerson
 import Domain.Types.ServiceTierType ()
@@ -63,6 +65,8 @@ instance JT.JourneyLeg TaxiLegRequest m where
         Nothing
         False
         (Just journeySearchData)
+        (Just journeyLegData.id)
+        (listToMaybe journeyLegData.routeDetails)
         True
     QJourneyLeg.updateDistanceAndDuration (convertMetersToDistance Meter <$> dSearchRes.distance) dSearchRes.duration journeyLegData.id
     fork "search cabs" . withShortRetry $ do

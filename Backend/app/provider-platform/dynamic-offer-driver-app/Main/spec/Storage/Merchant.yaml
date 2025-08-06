@@ -1619,7 +1619,7 @@ RideRelatedNotificationConfig:
     timeDiffEvent: TimeDiffEvent
     notificationType: NotificationType
     notificationKey: Text
-    onBookingStatus: BookingStatus
+    onBookingStatus: BookingStatus|NoRelation
     onScheduledBooking: Bool
     onlyIfOffline: Bool
     eventTime: EventTime

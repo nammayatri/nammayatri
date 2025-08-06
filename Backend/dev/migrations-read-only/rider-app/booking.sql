@@ -331,3 +331,9 @@ ALTER TABLE atlas_app.booking ADD COLUMN is_pet_ride boolean ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.booking ADD COLUMN is_multimodal_search boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.booking ADD COLUMN journey_leg_id character varying(36) ;
+

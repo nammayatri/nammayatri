@@ -14,6 +14,8 @@ import qualified Database.Beam.Backend as BeamBackend
 import Domain.Types
 import Domain.Types.Booking as Booking
 import qualified Domain.Types.Booking as DRB
+import Domain.Types.BookingStatus
+import qualified Domain.Types.BookingStatus as DRB
 import qualified Domain.Types.Client as DC
 import qualified Domain.Types.FarePolicy.FareProductType as DQuote
 import qualified Domain.Types.LocationMapping as DLM
@@ -21,6 +23,7 @@ import Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person
 import Domain.Types.Ride as Ride
+import Domain.Types.RideStatus as Ride
 import qualified EulerHS.Language as L
 import EulerHS.Prelude (ByteString, forM_, whenNothingM_)
 import EulerHS.Types (KVDBAnswer)

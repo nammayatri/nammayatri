@@ -23,7 +23,7 @@ imports:
   Distance: Kernel.Types.Common
   HighPrecDistance: Kernel.Types.Common
   DistanceUnit: Kernel.Types.Common
-  BookingStatus: Domain.Types.Extra.Booking
+  BookingStatus: Domain.Types.BookingStatus
   Language: Kernel.External.Types
   Category: Kernel.External.Notification.Interface.Types
   SubCategory: Kernel.External.Notification.Interface.Types
@@ -519,7 +519,7 @@ RideRelatedNotificationConfig:
     id: Id RideRelatedNotificationConfig
     timeDiff : NominalDiffTime
     timeDiffEvent: TimeDiffEvent
-    onBookingStatus: BookingStatus
+    onBookingStatus: BookingStatus|NoRelation
     notificationType: NotificationType
     notificationKey: Text
     onScheduledBooking: Bool

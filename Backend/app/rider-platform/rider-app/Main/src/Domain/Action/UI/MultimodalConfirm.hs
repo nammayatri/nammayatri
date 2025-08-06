@@ -23,6 +23,7 @@ module Domain.Action.UI.MultimodalConfirm
     getMultimodalOrderGetLegTierOptions,
     postMultimodalPaymentUpdateOrder,
     postMultimodalOrderSublegSetStatus,
+    postMultimodalOrderSublegSetStatusV2,
     postMultimodalTicketVerify,
     postMultimodalComplete,
     postMultimodalOrderSoftCancel,
@@ -31,6 +32,7 @@ module Domain.Action.UI.MultimodalConfirm
   )
 where
 
+import qualified API.Types.UI.FRFSTicketService as FRFSTicketService
 import qualified API.Types.UI.MultimodalConfirm
 import qualified API.Types.UI.MultimodalConfirm as ApiTypes
 import qualified API.UI.CancelSearch as CancelSearch
@@ -45,9 +47,10 @@ import qualified Data.Text as T
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified Domain.Types.Common as DTrip
-import qualified Domain.Types.Estimate as DEst
+import qualified Domain.Types.EstimateStatus as DEst
 import qualified Domain.Types.FRFSTicketBooking as DFRFSB
 import Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
+import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSB
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Journey
 import qualified Domain.Types.JourneyFeedback as JFB
@@ -72,6 +75,7 @@ import qualified Lib.JourneyLeg.Types as JL
 import Lib.JourneyModule.Base
 import qualified Lib.JourneyModule.Base as JM
 import Lib.JourneyModule.Location
+import qualified Lib.JourneyModule.State.Types as JMState
 import qualified Lib.JourneyModule.Types as JMTypes
 import qualified Lib.JourneyModule.Utils as JLU
 import qualified Lib.Payment.Domain.Action as DPayment
@@ -620,6 +624,9 @@ postMultimodalJourneyFeedback (mbPersonId, merchantId) journeyId journeyFeedback
                       logError $ "Error in rating the ride: " <> show err
                       pure ()
               _ -> pure ()
+          Just (JLFB.Metro JLFB.MetroFeedbackData {..}) -> frfsFeedback journeyLegFeedback feedbackDetails
+          Just (JLFB.Subway JLFB.SubwayFeedbackData {..}) -> frfsFeedback journeyLegFeedback feedbackDetails
+          Just (JLFB.Bus JLFB.BusFeedbackData {..}) -> frfsFeedback journeyLegFeedback feedbackDetails
           _ -> pure ()
     )
     $ map mkJourneyLegsFeedback journeyFeedbackForm.rateTravelMode
@@ -629,6 +636,19 @@ postMultimodalJourneyFeedback (mbPersonId, merchantId) journeyId journeyFeedback
     findAndUpdate [] legRating = SQJLFB.create legRating
     findAndUpdate (ratingForLegs : nextRatingForLegs) legRating =
       if ratingForLegs.legOrder == legRating.legOrder then SQJLFB.updateByPrimaryKey legRating else findAndUpdate nextRatingForLegs legRating
+
+    frfsFeedback journeyLegFeedback mbFeedbackDetails = do
+      mbJourneyLeg <- QJourneyLeg.findByJourneyIdAndSequenceNumber journeyId journeyLegFeedback.legOrder
+      mbBooking <- maybe (pure Nothing) QFRFSTicketBooking.findBySearchId (Id <$> (mbJourneyLeg >>= (.legSearchId)))
+      case (mbBooking, mbFeedbackDetails) of
+        (Just booking, Just feedbackDetails) -> do
+          try @_ @SomeException (FRFSTicketService.postFrfsBookingFeedback (mbPersonId, merchantId) booking.id (FRFSTicketService.BookingFeedback FRFSTicketService.BookingFeedbackReq {feedbackDetails}))
+            >>= \case
+              Right _ -> pure ()
+              Left err -> do
+                logError $ "Error in rating the frfs booking: " <> show err
+                pure ()
+        _ -> pure ()
 
 getMultimodalFeedback :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.Journey.Journey -> Environment.Flow (Kernel.Prelude.Maybe ApiTypes.JourneyFeedBackForm)
 getMultimodalFeedback (mbPersonId, _) journeyId = do
@@ -866,8 +886,8 @@ getMultimodalOrderGetLegTierOptions (mbPersonId, merchantId) journeyId legOrder 
   journeyLegInfo <- find (\leg -> leg.sequenceNumber == legOrder) legs & fromMaybeM (InvalidRequest "No matching journey leg found for the given legOrder")
   let mbAgencyId = journeyLegInfo.agency >>= (.gtfsId)
   let mbRouteDetail = journeyLegInfo.routeDetails & listToMaybe
-  let mbFomStopCode = mbRouteDetail >>= (.fromStopDetails) >>= (.stopCode)
-  let mbToStopCode = mbRouteDetail >>= (.toStopDetails) >>= (.stopCode)
+  let mbFomStopCode = mbRouteDetail >>= (.fromStopCode)
+  let mbToStopCode = mbRouteDetail >>= (.toStopCode)
   let vehicleCategory = castTravelModeToVehicleCategory journeyLegInfo.mode
   let mbArrivalTime = mbRouteDetail >>= (.fromArrivalTime)
   let arrivalTime = fromMaybe now mbArrivalTime
@@ -887,6 +907,7 @@ getMultimodalOrderGetLegTierOptions (mbPersonId, merchantId) journeyId legOrder 
     castTravelModeToVehicleCategory DTrip.Metro = Enums.METRO
     castTravelModeToVehicleCategory DTrip.Subway = Enums.SUBWAY
 
+-- TODO :: For Backward compatibility, remove this post `postMultimodalOrderSublegSetStatusV2` release
 postMultimodalOrderSublegSetStatus ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
@@ -906,7 +927,34 @@ postMultimodalOrderSublegSetStatus (mbPersonId, merchantId) journeyId legOrder s
 
   journeyLegInfo <- find (\leg -> leg.order == legOrder) legs & fromMaybeM (InvalidRequest "No matching journey leg found for the given legOrder")
 
-  markLegStatus newStatus journeyLegInfo.legExtraInfo journeyId legOrder (Just subLegOrder)
+  markLegStatus (Just newStatus) Nothing journeyLegInfo journeyId (Just subLegOrder)
+
+  -- refetch updated legs and journey
+  updatedLegStatus <- JM.getAllLegsStatus journey
+  checkAndMarkTerminalJourneyStatus journey False False updatedLegStatus
+  updatedJourney <- JM.getJourney journeyId
+  generateJourneyStatusResponse personId merchantId updatedJourney updatedLegStatus
+
+postMultimodalOrderSublegSetStatusV2 ::
+  ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
+  Kernel.Prelude.Int ->
+  Kernel.Prelude.Int ->
+  JMState.TrackingStatus ->
+  Environment.Flow ApiTypes.JourneyStatusResp
+postMultimodalOrderSublegSetStatusV2 (mbPersonId, merchantId) journeyId legOrder subLegOrder trackingStatus = do
+  personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
+  journey <- JM.getJourney journeyId
+
+  -- Removed the 'unless' condition to allow updates for JL.Completed and JL.Cancelled statuses
+
+  legs <- JM.getAllLegsInfo journeyId False
+
+  journeyLegInfo <- find (\leg -> leg.order == legOrder) legs & fromMaybeM (InvalidRequest "No matching journey leg found for the given legOrder")
+
+  markLegStatus Nothing (Just trackingStatus) journeyLegInfo journeyId (Just subLegOrder)
 
   -- refetch updated legs and journey
   updatedLegStatus <- JM.getAllLegsStatus journey
@@ -960,12 +1008,12 @@ getSubLegOrders legExtraInfo =
     _ -> []
 
 -- Helper function to mark all sub-legs as completed for FRFS legs
-markAllSubLegsCompleted :: JMTypes.LegExtraInfo -> Kernel.Types.Id.Id Domain.Types.Journey.Journey -> Int -> Environment.Flow ()
-markAllSubLegsCompleted legExtraInfo journeyId legOrder = do
-  let subLegOrders = getSubLegOrders legExtraInfo
+markAllSubLegsCompleted :: JMTypes.LegInfo -> Kernel.Types.Id.Id Domain.Types.Journey.Journey -> Environment.Flow ()
+markAllSubLegsCompleted leg journeyId = do
+  let subLegOrders = getSubLegOrders leg.legExtraInfo
   case subLegOrders of
-    [] -> markLegStatus JL.Completed legExtraInfo journeyId legOrder Nothing
-    orders -> mapM_ (\subOrder -> markLegStatus JL.Completed legExtraInfo journeyId legOrder (Just subOrder)) orders
+    [] -> markLegStatus (Just JL.Completed) (Just JMState.Finished) leg journeyId Nothing
+    orders -> mapM_ (\subOrder -> markLegStatus (Just JL.Completed) (Just JMState.Finished) leg journeyId (Just subOrder)) orders
 
 postMultimodalComplete ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -979,7 +1027,7 @@ postMultimodalComplete (mbPersonId, merchantId) journeyId = do
   legs <- JM.getAllLegsInfo journeyId False
   let isTaxiLegOngoing = any (\leg -> leg.travelMode == DTrip.Taxi && leg.status `elem` JMTypes.cannotCompleteJourneyIfTaxiLegIsInThisStatus) legs
   when isTaxiLegOngoing $ throwError (InvalidRequest "Taxi leg is ongoing, cannot complete journey")
-  mapM_ (\leg -> markAllSubLegsCompleted leg.legExtraInfo journeyId leg.order) legs
+  mapM_ (\leg -> markAllSubLegsCompleted leg journeyId) legs
   updatedLegStatus <- JM.getAllLegsStatus journey
   checkAndMarkTerminalJourneyStatus journey True False updatedLegStatus
   updatedJourney <- JM.getJourney journeyId

@@ -34,6 +34,7 @@ import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBooking as FTBooking
 import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
 import qualified Domain.Types.FRFSTicketBookingPayment as DTBP
+import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBooking
 import Domain.Types.FRFSTicketDiscount as DFRFSTicketDiscount
 import Domain.Types.IntegratedBPPConfig
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
@@ -381,13 +382,16 @@ getFareThroughGTFS :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFl
 getFareThroughGTFS riderId vehicleType integratedBPPConfig merchantId merchantOperatingCityId routeCode startStopCode endStopCode = do
   routeStopTimeTableStartStop <- listToMaybe <$> QRouteStopTimeTable.findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOperatingCityId [routeCode] startStopCode
   routeStopTimeTableEndStop <- listToMaybe <$> QRouteStopTimeTable.findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOperatingCityId [routeCode] endStopCode
-  logDebug $ "routeStopTimeTableStartStop: " <> show routeStopTimeTableStartStop <> " routeStopTimeTableEndStop: " <> show routeStopTimeTableEndStop
   case (routeStopTimeTableStartStop, routeStopTimeTableEndStop) of
     (Just startStop, Just endStop) -> do
       case (startStop.stage, endStop.stage) of
         (Just startStage, Just endStage) -> do
           let stage = abs (endStage - startStage)
-          fares <- QFRFSGtfsStageFare.findAllByVehicleTypeAndStageAndMerchantOperatingCityId vehicleType (max 1 stage) merchantOperatingCityId
+          logDebug $ "isStageStop flags: startStop=" <> show startStop.isStageStop <> " endStop=" <> show endStop.isStageStop
+          let adjustedStage = case endStop.isStageStop of
+                True -> max 1 (stage - 1) -- Reduce stage by 1 if found, but ensure minimum is 1
+                False -> max 1 stage -- Use original stage if not found
+          fares <- QFRFSGtfsStageFare.findAllByVehicleTypeAndStageAndMerchantOperatingCityId vehicleType adjustedStage merchantOperatingCityId
           forM fares $ \fare -> do
             vehicleServiceTier <- QFRFSVehicleServiceTier.findById fare.vehicleServiceTierId >>= fromMaybeM (InternalError $ "FRFS Vehicle Service Tier Not Found " <> fare.vehicleServiceTierId.getId)
             let price = Price {amountInt = round (fare.amount + fromMaybe 0 fare.cessCharge), amount = fare.amount + fromMaybe 0 fare.cessCharge, currency = fare.currency}

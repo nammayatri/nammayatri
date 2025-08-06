@@ -30,8 +30,10 @@ import qualified Data.HashMap.Strict as HM
 import qualified Domain.Action.Beckn.Common as DCommon
 import qualified Domain.Types.Booking as DB
 import qualified Domain.Types.BookingCancellationReason as DBCR
+import qualified Domain.Types.BookingStatus as DB
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.RideStatus as DRide
 import qualified Domain.Types.VehicleVariant as DV
 import Environment
 import EulerHS.Prelude hiding (id)

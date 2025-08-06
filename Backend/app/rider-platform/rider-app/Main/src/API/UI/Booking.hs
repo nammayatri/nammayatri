@@ -24,6 +24,7 @@ where
 import qualified Domain.Action.UI.Booking as DBooking
 import qualified Domain.Types.Booking as SRB
 import Domain.Types.Booking.API (BookingAPIEntity, BookingRequestType, BookingStatusAPIEntity)
+import qualified Domain.Types.BookingStatus as SRB
 import qualified Domain.Types.Client as DC
 import qualified Domain.Types.Journey as DJ
 import qualified Domain.Types.Merchant as Merchant

@@ -2,8 +2,8 @@ CREATE TABLE atlas_app.route_details ();
 
 ALTER TABLE atlas_app.route_details ADD COLUMN agency_gtfs_id text ;
 ALTER TABLE atlas_app.route_details ADD COLUMN agency_name text ;
-ALTER TABLE atlas_app.route_details ADD COLUMN end_location_lat double precision ;
-ALTER TABLE atlas_app.route_details ADD COLUMN end_location_lon double precision ;
+ALTER TABLE atlas_app.route_details ADD COLUMN end_location_lat double precision NOT NULL;
+ALTER TABLE atlas_app.route_details ADD COLUMN end_location_lon double precision NOT NULL;
 ALTER TABLE atlas_app.route_details ADD COLUMN frequency integer ;
 ALTER TABLE atlas_app.route_details ADD COLUMN from_arrival_time timestamp with time zone ;
 ALTER TABLE atlas_app.route_details ADD COLUMN from_departure_time timestamp with time zone ;
@@ -18,8 +18,8 @@ ALTER TABLE atlas_app.route_details ADD COLUMN route_color_name text ;
 ALTER TABLE atlas_app.route_details ADD COLUMN route_gtfs_id text ;
 ALTER TABLE atlas_app.route_details ADD COLUMN route_long_name text ;
 ALTER TABLE atlas_app.route_details ADD COLUMN route_short_name text ;
-ALTER TABLE atlas_app.route_details ADD COLUMN start_location_lat double precision ;
-ALTER TABLE atlas_app.route_details ADD COLUMN start_location_lon double precision ;
+ALTER TABLE atlas_app.route_details ADD COLUMN start_location_lat double precision NOT NULL;
+ALTER TABLE atlas_app.route_details ADD COLUMN start_location_lon double precision NOT NULL;
 ALTER TABLE atlas_app.route_details ADD COLUMN to_arrival_time timestamp with time zone ;
 ALTER TABLE atlas_app.route_details ADD COLUMN to_departure_time timestamp with time zone ;
 ALTER TABLE atlas_app.route_details ADD COLUMN to_stop_code text ;
@@ -41,4 +41,12 @@ ALTER TABLE atlas_app.route_details ADD COLUMN sub_leg_order integer ;
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_app.route_details ADD COLUMN alternate_short_names text[] ;
+ALTER TABLE atlas_app.route_details ADD COLUMN alternate_short_names text[] NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.route_details ALTER COLUMN journey_leg_id TYPE text;
+ALTER TABLE atlas_app.route_details ADD COLUMN tracking_status text ;
+ALTER TABLE atlas_app.route_details ADD COLUMN route_code text ;
+ALTER TABLE atlas_app.route_details ADD COLUMN journey_status text ;

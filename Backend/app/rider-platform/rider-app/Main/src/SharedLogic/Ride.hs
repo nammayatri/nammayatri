@@ -4,8 +4,8 @@ import qualified Beckn.OnDemand.Utils.Common as Common
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as Text
 import qualified Domain.Action.Beckn.OnTrack as OnTrack
-import Domain.Types.Ride
 import qualified Domain.Types.Ride as SRide
+import Domain.Types.RideStatus
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps as Maps

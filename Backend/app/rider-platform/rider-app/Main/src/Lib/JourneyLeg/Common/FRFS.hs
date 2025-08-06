@@ -24,13 +24,13 @@ import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.RecentLocation as DRL
 import qualified Domain.Types.RiderConfig as DomainRiderConfig
+import qualified Domain.Types.RouteDetails as RD
 import Domain.Types.Station
 import Domain.Types.Trip as DTrip
 import qualified EulerHS.Language as L
 import ExternalBPP.CallAPI as CallExternalBPP
 import qualified ExternalBPP.Flow as Flow
 import Kernel.External.Maps.Types
-import qualified Kernel.External.MultiModal.Interface.Types as EMTypes
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto hiding (isNothing)
 import qualified Kernel.Storage.Esqueleto as DB
@@ -82,7 +82,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
           let journeyLegStatus = fromMaybe JPT.InPlan booking.journeyLegStatus
           mbCurrentLegDetails <- QJourneyLeg.findByLegSearchId (Just searchId.getId)
 
-          let routeCodeToUseForTrackVehicles = routeCodeForDetailedTracking <|> (mbCurrentLegDetails >>= (listToMaybe . (.routeDetails)) >>= (.gtfsId) <&> gtfsIdtoDomainCode)
+          let routeCodeToUseForTrackVehicles = routeCodeForDetailedTracking <|> (mbCurrentLegDetails >>= (listToMaybe . (.routeDetails)) >>= (.routeGtfsId) <&> gtfsIdtoDomainCode)
 
           -- Fetch all bus data for the route using getRoutesBuses
           allBusDataForRoute <- case routeCodeToUseForTrackVehicles of
@@ -146,8 +146,8 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
           vehiclePositions :: [JT.VehiclePosition] <-
             concatMapM
               ( \journeyRouteDetails -> do
-                  fromStationCode <- journeyRouteDetails.fromStationCode & fromMaybeM (InvalidRequest $ "From station code not found in booking with id: " <> booking.id.getId)
-                  toStationCode <- journeyRouteDetails.toStationCode & fromMaybeM (InvalidRequest $ "To station code not found in booking with id: " <> booking.id.getId)
+                  fromStationCode <- journeyRouteDetails.fromStopCode & fromMaybeM (InvalidRequest $ "From station code not found in booking with id: " <> booking.id.getId)
+                  toStationCode <- journeyRouteDetails.toStopCode & fromMaybeM (InvalidRequest $ "To station code not found in booking with id: " <> booking.id.getId)
                   getVehiclePositionsIfAvailable mode fromStationCode toStationCode integratedBppConfig
               )
               booking.journeyRouteDetails
@@ -171,7 +171,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
           journeyLegInfo <- searchReq.journeyLegInfo & fromMaybeM (InvalidRequest "JourneySearchData not found")
           mbCurrentLegDetails <- QJourneyLeg.findByLegSearchId (Just searchId.getId)
 
-          let routeCodeToUseForTrackVehicles = routeCodeForDetailedTracking <|> (mbCurrentLegDetails >>= (listToMaybe . (.routeDetails)) >>= (.gtfsId) <&> gtfsIdtoDomainCode)
+          let routeCodeToUseForTrackVehicles = routeCodeForDetailedTracking <|> (mbCurrentLegDetails >>= (listToMaybe . (.routeDetails)) >>= (.routeGtfsId) <&> gtfsIdtoDomainCode)
 
           -- Fetch all bus data for the route using getRoutesBuses
           allBusDataForRoute <- case routeCodeToUseForTrackVehicles of
@@ -290,7 +290,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
         _ -> do
           return []
 
-    getStatusForMetroAndSubway :: [JPT.MultiModalJourneyRouteDetails] -> [(Int, JPT.JourneyLegStatus)]
+    getStatusForMetroAndSubway :: [RD.RouteDetails] -> [(Int, JPT.JourneyLegStatus)]
     getStatusForMetroAndSubway journeyRouteDetails = do
       let sortedSubRoutes = sortOn (.subLegOrder) journeyRouteDetails
       map (\sr -> (fromMaybe 1 sr.subLegOrder, fromMaybe JPT.InPlan sr.journeyStatus)) sortedSubRoutes
@@ -385,9 +385,8 @@ search vehicleCategory personId merchantId quantity city journeyLeg recentLocati
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromAgency journeySearchData.agency merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleCategory) DIBC.MULTIMODAL
   frfsSearchReq <- buildFRFSSearchReq (Just journeySearchData)
   frfsRouteDetails <- getFrfsRouteDetails journeyLeg.routeDetails
-  journeyRouteDetails <- getJourneyRouteDetails journeyLeg.routeDetails integratedBPPConfig
   let mbFare = journeyLeg.estimatedMinFare <|> journeyLeg.estimatedMaxFare
-  res <- FRFSTicketService.postFrfsSearchHandler (personId, merchantId) merchantOpCity integratedBPPConfig vehicleCategory frfsSearchReq frfsRouteDetails Nothing Nothing journeyRouteDetails mbFare
+  res <- FRFSTicketService.postFrfsSearchHandler (personId, merchantId) merchantOpCity integratedBPPConfig vehicleCategory frfsSearchReq frfsRouteDetails Nothing Nothing (Just journeyLeg.id) journeyLeg.routeDetails mbFare
   return $ JT.SearchResponse {id = res.searchId.getId}
   where
     buildFRFSSearchReq journeySearchData = do
@@ -396,40 +395,13 @@ search vehicleCategory personId merchantId quantity city journeyLeg recentLocati
       let routeCode = Nothing
       return $ API.FRFSSearchAPIReq {..}
 
-    getJourneyRouteDetails :: JT.SearchRequestFlow m r c => [EMTypes.MultiModalRouteDetails] -> DIBC.IntegratedBPPConfig -> m [JPT.MultiModalJourneyRouteDetails]
-    getJourneyRouteDetails routeDetails integratedBPPConfig = do
-      mapM transformJourneyRouteDetails routeDetails
-      where
-        transformJourneyRouteDetails :: JT.SearchRequestFlow m r c => EMTypes.MultiModalRouteDetails -> m JPT.MultiModalJourneyRouteDetails
-        transformJourneyRouteDetails rd = do
-          fromStationCode <- ((rd.fromStopDetails >>= (.stopCode)) <|> ((rd.fromStopDetails >>= (.gtfsId)) <&> gtfsIdtoDomainCode)) & fromMaybeM (InvalidRequest "From station gtfsId not found")
-          toStationCode <- ((rd.toStopDetails >>= (.stopCode)) <|> ((rd.toStopDetails >>= (.gtfsId)) <&> gtfsIdtoDomainCode)) & fromMaybeM (InvalidRequest "To station gtfsId not found")
-          routeCode <- (rd.gtfsId <&> gtfsIdtoDomainCode) & fromMaybeM (InvalidRequest "Route gtfsId not found")
-          fromStation <- OTPRest.getStationByGtfsIdAndStopCode fromStationCode integratedBPPConfig
-          toStation <- OTPRest.getStationByGtfsIdAndStopCode toStationCode integratedBPPConfig
-          route <- OTPRest.getRouteByRouteId integratedBPPConfig routeCode
-          return
-            JPT.MultiModalJourneyRouteDetails
-              { platformNumber = rd.fromStopDetails >>= (.platformCode),
-                lineColorCode = EMTypes.color rd,
-                lineColor = EMTypes.shortName rd,
-                alternateShortNames = EMTypes.alternateShortNames rd,
-                frequency = Nothing,
-                subLegOrder = Just (EMTypes.subLegOrder rd),
-                journeyStatus = Nothing,
-                routeLongName = EMTypes.longName rd,
-                fromStationCode = fmap (.code) fromStation,
-                toStationCode = fmap (.code) toStation,
-                routeCode = fmap (.code) route
-              }
-
-    getFrfsRouteDetails :: JT.SearchRequestFlow m r c => [EMTypes.MultiModalRouteDetails] -> m [FRFSRouteDetails]
+    getFrfsRouteDetails :: JT.SearchRequestFlow m r c => [RD.RouteDetails] -> m [FRFSRouteDetails]
     getFrfsRouteDetails routeDetails = do
       mapM
         ( \rd -> do
-            startStationCode <- ((rd.fromStopDetails >>= (.stopCode)) <|> ((rd.fromStopDetails >>= (.gtfsId)) <&> gtfsIdtoDomainCode)) & fromMaybeM (InvalidRequest "From station gtfsId not found")
-            endStationCode <- ((rd.toStopDetails >>= (.stopCode)) <|> ((rd.toStopDetails >>= (.gtfsId)) <&> gtfsIdtoDomainCode)) & fromMaybeM (InvalidRequest "To station gtfsId not found")
-            routeCode <- (rd.gtfsId <&> gtfsIdtoDomainCode) & fromMaybeM (InvalidRequest "Route gtfsId not found")
+            startStationCode <- (rd.fromStopCode <|> (rd.fromStopGtfsId <&> gtfsIdtoDomainCode)) & fromMaybeM (InvalidRequest "From station gtfsId not found")
+            endStationCode <- (rd.toStopCode <|> (rd.toStopGtfsId <&> gtfsIdtoDomainCode)) & fromMaybeM (InvalidRequest "To station gtfsId not found")
+            routeCode <- (rd.routeGtfsId <&> gtfsIdtoDomainCode) & fromMaybeM (InvalidRequest "Route gtfsId not found")
             return $ FRFSRouteDetails {routeCode = Just routeCode, ..}
         )
         routeDetails

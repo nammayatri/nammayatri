@@ -28,6 +28,7 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.RideStatus as DRide
 import Environment
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions as B

@@ -7,6 +7,7 @@ import Domain.Types
 import Domain.Types.Booking as Domain
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingLocation as DBBL
+import Domain.Types.BookingStatus as Domain
 import qualified Domain.Types.FarePolicy.FareProductType as DQuote
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationMapping as DLM
@@ -375,3 +376,19 @@ findAllByRiderIdAndStatusAndMOCId (Id personId) status (Id mocId) = do
     (Se.Desc BeamB.createdAt)
     (Just 10)
     Nothing
+
+fetchRidesCount :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> m (Maybe Int)
+fetchRidesCount personId = do
+  dbConf <- getReplicaBeamConfig
+  res <- L.runDB dbConf $
+    L.findRows $
+      B.select $
+        B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $
+          B.filter_'
+            ( \booking ->
+                B.sqlBool_ (booking.status `B.in_` (B.val_ <$> [Domain.COMPLETED, Domain.TRIP_ASSIGNED]))
+                  B.&&?. booking.riderId B.==?. B.val_ (getId personId)
+            )
+            do
+              B.all_ (BeamCommon.booking BeamCommon.atlasDB)
+  pure $ either (const Nothing) (\r -> if null r then Nothing else Just (head r)) res

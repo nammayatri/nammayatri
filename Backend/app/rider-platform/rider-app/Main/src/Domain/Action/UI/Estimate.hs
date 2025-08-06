@@ -18,6 +18,7 @@ import qualified BecknV2.OnDemand.Enums as Enums
 import Data.Aeson
 import Domain.Types.BppDetails
 import Domain.Types.Estimate
+import Domain.Types.EstimateStatus
 import qualified Domain.Types.ServiceTierType as DVST
 import Domain.Types.Trip (TripCategory)
 import qualified Domain.Types.VehicleVariant as Vehicle

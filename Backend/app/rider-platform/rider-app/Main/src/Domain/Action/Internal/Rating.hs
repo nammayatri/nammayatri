@@ -20,8 +20,9 @@ import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Rating as DRating
-import Domain.Types.Ride (RideStatus (..))
 import qualified Domain.Types.Ride as DRide
+import Domain.Types.RideStatus
+import qualified Domain.Types.RideStatus as DRide
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import IssueManagement.Domain.Types.MediaFile as D

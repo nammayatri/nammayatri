@@ -34,7 +34,7 @@ import Data.Csv
 import Data.List.Split (chunksOf)
 import qualified Data.Vector as V
 import qualified Domain.Action.UI.Cancel as DCancel
-import qualified Domain.Types.Booking as DRB
+import qualified Domain.Types.BookingStatus as DRB
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import Environment
@@ -138,7 +138,7 @@ getCustomerInfo merchantShortId opCity customerId = do
   let merchantId = customer.merchantId
   unless (merchant.id == merchantId && customer.merchantOperatingCityId == merchantOpCity.id) $ throwError (PersonDoesNotExist personId.getId)
 
-  numberOfRides <- fromMaybe 0 <$> runInReplica (QP.fetchRidesCount personId)
+  numberOfRides <- fromMaybe 0 <$> runInReplica (QRB.fetchRidesCount personId)
   sos <- CHSos.findAllByPersonId personId
   let totalSosCount = length sos
   pure $

@@ -48,7 +48,7 @@ Ride:
     clientId: Maybe Text
     merchantId: Maybe (Id Merchant)
     merchantOperatingCityId: Id MerchantOperatingCity
-    status: RideStatus
+    status: RideStatus|NoRelation
     driverId: Id Person
     otp: Text
     endOtp: Maybe Text

@@ -31,15 +31,18 @@ import qualified BecknV2.OnDemand.Enums as Enums
 import qualified Data.HashMap.Strict as HM
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
+import qualified Domain.Types.BookingStatus as SRB
 import qualified Domain.Types.CancellationReason as SCR
 import qualified Domain.Types.DriverOffer as DDO
 import qualified Domain.Types.Estimate as DEstimate
+import qualified Domain.Types.EstimateStatus as DEstimate
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.Ride as Ride
+import qualified Domain.Types.RideStatus as Ride
 import Domain.Types.SearchRequest (SearchRequest)
 import qualified Domain.Types.VehicleVariant as DVeh
 import Environment

@@ -7,6 +7,7 @@ module Storage.Queries.FRFSTicketBooking (module Storage.Queries.FRFSTicketBooki
 import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSSearch
 import qualified Domain.Types.FRFSTicketBooking
+import qualified Domain.Types.FRFSTicketBookingStatus
 import qualified Domain.Types.Journey
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -35,7 +36,7 @@ findAllByJourneyIdCond ::
   (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Journey.Journey) -> m [Domain.Types.FRFSTicketBooking.FRFSTicketBooking])
 findAllByJourneyIdCond journeyId = do findAllWithKVAndConditionalDB [Se.Is Beam.journeyId $ Se.Eq (Kernel.Types.Id.getId <$> journeyId)] Nothing
 
-findAllByStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSTicketBooking.FRFSTicketBookingStatus -> m [Domain.Types.FRFSTicketBooking.FRFSTicketBooking])
+findAllByStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSTicketBookingStatus.FRFSTicketBookingStatus -> m [Domain.Types.FRFSTicketBooking.FRFSTicketBooking])
 findAllByStatus status = do findAllWithKV [Se.Is Beam.status $ Se.Eq status]
 
 findByBppOrderId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe Domain.Types.FRFSTicketBooking.FRFSTicketBooking))
@@ -52,7 +53,7 @@ findBySearchId searchId = do findOneWithKV [Se.Is Beam.searchId $ Se.Eq (Kernel.
 
 updateBPPOrderIdAndStatusById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Domain.Types.FRFSTicketBooking.FRFSTicketBookingStatus -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
+  (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Domain.Types.FRFSTicketBookingStatus.FRFSTicketBookingStatus -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
 updateBPPOrderIdAndStatusById bppOrderId status id = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.bppOrderId bppOrderId, Se.Set Beam.status status, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
@@ -150,12 +151,12 @@ updateRefundCancellationChargesAndIsCancellableByBookingId refundAmount cancella
 
 updateStatusById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Domain.Types.FRFSTicketBooking.FRFSTicketBookingStatus -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
+  (Domain.Types.FRFSTicketBookingStatus.FRFSTicketBookingStatus -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
 updateStatusById status id = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.status status, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateStatusValidTillAndPaymentTxnById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Domain.Types.FRFSTicketBooking.FRFSTicketBookingStatus -> Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
+  (Domain.Types.FRFSTicketBookingStatus.FRFSTicketBookingStatus -> Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
 updateStatusValidTillAndPaymentTxnById status validTill paymentTxnId id = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.status status, Se.Set Beam.validTill validTill, Se.Set Beam.paymentTxnId paymentTxnId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
@@ -197,6 +198,7 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.isFareChanged isFareChanged,
       Se.Set Beam.isSkipped isSkipped,
       Se.Set Beam.journeyId (Kernel.Types.Id.getId <$> journeyId),
+      Se.Set Beam.journeyLegId (Kernel.Types.Id.getId <$> journeyLegId),
       Se.Set Beam.journeyLegOrder journeyLegOrder,
       Se.Set Beam.journeyLegStatus journeyLegStatus,
       Se.Set Beam.journeyOnInitDone journeyOnInitDone,

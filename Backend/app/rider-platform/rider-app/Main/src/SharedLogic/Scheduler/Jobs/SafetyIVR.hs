@@ -19,6 +19,7 @@ import qualified Domain.Action.UI.Call as DCall
 import Domain.Types.CallStatus
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.RideStatus as DRide
 import Domain.Types.RiderConfig
 import qualified Kernel.Beam.Functions as B
 import qualified Kernel.External.Call.Interface.Types as Call

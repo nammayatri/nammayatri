@@ -9,6 +9,7 @@ import qualified Domain.Types.Common
 import qualified Domain.Types.Journey
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.RouteDetails
 import qualified Kernel.External.Maps.Google.MapsClient.Types
 import qualified Kernel.External.MultiModal.Interface.Types
 import Kernel.Prelude
@@ -37,11 +38,15 @@ data JourneyLeg = JourneyLeg
     journeyId :: Kernel.Types.Id.Id Domain.Types.Journey.Journey,
     legSearchId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     mode :: Domain.Types.Common.MultimodalTravelMode,
-    routeDetails :: [Kernel.External.MultiModal.Interface.Types.MultiModalRouteDetails],
+    osmEntrance :: Kernel.Prelude.Maybe Kernel.External.MultiModal.Interface.Types.MultiModalLegGate,
+    osmExit :: Kernel.Prelude.Maybe Kernel.External.MultiModal.Interface.Types.MultiModalLegGate,
+    routeDetails :: [Domain.Types.RouteDetails.RouteDetails],
     sequenceNumber :: Kernel.Prelude.Int,
     serviceTypes :: Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceTierType],
     startLocation :: Kernel.External.Maps.Google.MapsClient.Types.LatLngV2,
     status :: Kernel.Prelude.Maybe Lib.JourneyLeg.Types.JourneyLegStatus,
+    straightLineEntrance :: Kernel.Prelude.Maybe Kernel.External.MultiModal.Interface.Types.MultiModalLegGate,
+    straightLineExit :: Kernel.Prelude.Maybe Kernel.External.MultiModal.Interface.Types.MultiModalLegGate,
     toArrivalTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     toDepartureTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     toStopDetails :: Kernel.Prelude.Maybe Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails,

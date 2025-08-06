@@ -8,6 +8,7 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.PaymentCustomer as DPaymentCustomer
 import qualified Domain.Types.Person
 import qualified Domain.Types.Ride
+import qualified Domain.Types.RideStatus
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Beam.Functions
@@ -211,7 +212,7 @@ postPaymentAddTip (mbPersonId, merchantId) rideId tipRequest = do
     personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
     person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
     ride <- runInReplica $ QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
-    unless (ride.status == Domain.Types.Ride.COMPLETED) $
+    unless (ride.status == Domain.Types.RideStatus.COMPLETED) $
       throwError $ RideInvalidStatus ("Ride is not completed yet." <> Text.pack (show ride.status))
     fareBreakups <- runInReplica $ QFareBreakup.findAllByEntityIdAndEntityType rideId.getId Domain.Types.FareBreakup.RIDE
     when (any (\fb -> fb.description == tipFareBreakupTitle) fareBreakups) $ throwError $ InvalidRequest "Tip already added"

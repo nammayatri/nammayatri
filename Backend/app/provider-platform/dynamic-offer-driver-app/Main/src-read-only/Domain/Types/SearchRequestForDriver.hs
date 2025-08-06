@@ -6,10 +6,10 @@ module Domain.Types.SearchRequestForDriver where
 import Data.Aeson
 import qualified Domain.Types.Common
 import qualified Domain.Types.ConditionalCharges
-import qualified Domain.Types.DeliveryDetails
 import qualified Domain.Types.DriverGoHomeRequest
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.ParcelType
 import qualified Domain.Types.Person
 import qualified Domain.Types.SearchRequest
 import qualified Domain.Types.SearchTry
@@ -70,7 +70,7 @@ data SearchRequestForDriver = SearchRequestForDriver
     notificationSource :: Kernel.Prelude.Maybe Domain.Types.SearchRequestForDriver.NotificationSource,
     parallelSearchRequestCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     parcelQuantity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    parcelType :: Kernel.Prelude.Maybe Domain.Types.DeliveryDetails.ParcelType,
+    parcelType :: Kernel.Prelude.Maybe Domain.Types.ParcelType.ParcelType,
     pickupZone :: Kernel.Prelude.Bool,
     poolingConfigVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     poolingLogicVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

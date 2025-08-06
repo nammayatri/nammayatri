@@ -27,6 +27,7 @@ import Domain.Action.UI.Booking
 import qualified Domain.Action.UI.MultimodalConfirm as DMultimodal
 import Domain.Action.UI.Quote
 import qualified Domain.Types.Booking as DB
+import qualified Domain.Types.BookingStatus as DB
 import Domain.Types.CancellationReason
 import qualified Domain.Types.Journey as DJ
 import qualified Domain.Types.Merchant as DM
@@ -41,6 +42,7 @@ import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.JourneyLeg.Types as JL
+import qualified Lib.JourneyModule.State.Types as JMState
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.ValueAddNP as QNP
 import qualified Storage.Queries.Booking as QB
@@ -80,8 +82,12 @@ getPersonFlowStatus personId merchantId _ pollActiveBooking = do
           whenJust mbBooking $ \booking -> do
             case booking.status of
               DB.COMPLETED -> do
+                void $ DMultimodal.postMultimodalOrderSublegSetStatusV2 (Just personId, merchantId) normalRideJourney.id 0 1 JMState.Finished
+                -- TODO :: For Backward compatibility, remove this post release
                 void $ DMultimodal.postMultimodalOrderSublegSetStatus (Just personId, merchantId) normalRideJourney.id 0 1 JL.Completed
               DB.CANCELLED -> do
+                void $ DMultimodal.postMultimodalOrderSublegSetStatusV2 (Just personId, merchantId) normalRideJourney.id 0 1 JMState.Finished
+                -- TODO :: For Backward compatibility, remove this post release
                 void $ DMultimodal.postMultimodalOrderSublegSetStatus (Just personId, merchantId) normalRideJourney.id 0 1 JL.Cancelled
               DB.REALLOCATED -> do
                 -- TODO :: Maybe Required to handle, please fix me !

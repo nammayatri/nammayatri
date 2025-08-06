@@ -4,20 +4,22 @@
 
 module Domain.Types.Booking (module Domain.Types.Booking, module ReExport) where
 
-import qualified BecknV2.OnDemand.Enums
 import Data.Aeson
+import qualified Domain.Types.BookingStatus
 import qualified Domain.Types.Client
 import qualified Domain.Types.Common
 import Domain.Types.Extra.Booking as ReExport
 import qualified Domain.Types.Extra.Booking
 import qualified Domain.Types.Journey
+import qualified Domain.Types.JourneyLeg
 import qualified Domain.Types.Location
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
-import qualified Domain.Types.ParcelDetails
+import qualified Domain.Types.ParcelType
 import qualified Domain.Types.Person
 import qualified Domain.Types.Quote
 import qualified Domain.Types.RecentLocation
+import qualified Domain.Types.RouteDetails
 import qualified Domain.Types.ServiceTierType
 import qualified Domain.Types.Trip
 import qualified Domain.Types.TripTerms
@@ -70,12 +72,14 @@ data Booking = Booking
     isScheduled :: Kernel.Prelude.Bool,
     isSkipped :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     journeyId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Journey.Journey),
+    journeyLegId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg),
     journeyLegOrder :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     journeyLegStatus :: Kernel.Prelude.Maybe Lib.JourneyLeg.Types.JourneyLegStatus,
+    journeyRouteDetails :: Kernel.Prelude.Maybe Domain.Types.RouteDetails.RouteDetails,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     paymentMethodId :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.PaymentMethodId,
-    paymentStatus :: Kernel.Prelude.Maybe BecknV2.OnDemand.Enums.PaymentStatus,
+    paymentStatus :: Kernel.Prelude.Maybe Domain.Types.Extra.Booking.PaymentStatus,
     paymentUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     preferSafetyPlus :: Kernel.Prelude.Bool,
     primaryExophone :: Kernel.Prelude.Text,
@@ -91,7 +95,7 @@ data Booking = Booking
     specialLocationName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     specialLocationTag :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     startTime :: Kernel.Prelude.UTCTime,
-    status :: Domain.Types.Extra.Booking.BookingStatus,
+    status :: Domain.Types.BookingStatus.BookingStatus,
     transactionId :: Kernel.Prelude.Text,
     tripCategory :: Kernel.Prelude.Maybe Domain.Types.Common.TripCategory,
     tripTerms :: Kernel.Prelude.Maybe Domain.Types.TripTerms.TripTerms,
@@ -122,7 +126,7 @@ data DeliveryBookingDetails = DeliveryBookingDetails
   { distance :: Kernel.Types.Common.Distance,
     otpCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     parcelQuantity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    parcelType :: Domain.Types.ParcelDetails.ParcelType,
+    parcelType :: Domain.Types.ParcelType.ParcelType,
     toLocation :: Domain.Types.Location.Location
   }
   deriving (Generic, Show)

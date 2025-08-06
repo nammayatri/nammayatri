@@ -20,10 +20,10 @@ import Domain.Types as DTC
 import qualified Domain.Types as DVST
 import qualified Domain.Types.BapMetadata as DSM
 import qualified Domain.Types.ConditionalCharges as DAC
-import qualified Domain.Types.DeliveryDetails as DParcel
 import Domain.Types.DriverGoHomeRequest (DriverGoHomeRequest)
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Location as DLoc
+import qualified Domain.Types.ParcelType as DParcel
 import qualified Domain.Types.SearchReqLocation as DSSL
 import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.SearchRequestForDriver

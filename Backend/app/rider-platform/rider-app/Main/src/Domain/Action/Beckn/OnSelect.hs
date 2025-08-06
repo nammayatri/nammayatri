@@ -22,6 +22,7 @@ import qualified Domain.Action.UI.Confirm as DConfirm
 import Domain.Types
 import qualified Domain.Types.DriverOffer as DDriverOffer
 import qualified Domain.Types.Estimate as DEstimate
+import qualified Domain.Types.EstimateStatus as DEstimate
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.SearchRequest as DSearchRequest
