@@ -35,6 +35,7 @@ import qualified Kernel.External.Maps.Google.MapsClient.Types as Maps
 import Kernel.External.Maps.Types
 import qualified Kernel.External.MultiModal.Interface as EMInterface
 import Kernel.External.MultiModal.Interface.Types (MultiModalLegGate)
+import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
@@ -55,6 +56,7 @@ import Kernel.Utils.JSON (stripPrefixUnderscoreIfAny)
 import Lib.JourneyLeg.Types
 import Lib.JourneyModule.Utils
 import Lib.Payment.Storage.Beam.BeamFlow
+import qualified Lib.Payment.Storage.Queries.Refunds as QRefunds
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Booking (getfareBreakups)
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -66,6 +68,7 @@ import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
+import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.FRFSVehicleServiceTier as QFRFSVehicleServiceTier
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Transformers.Booking as QTB
@@ -277,6 +280,13 @@ data LegExtraInfo = Walk WalkLegExtraInfo | Taxi TaxiLegExtraInfo | Metro MetroL
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data LegSplitInfo = LegSplitInfo
+  { amount :: HighPrecMoney,
+    status :: Payment.RefundStatus
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data WalkLegExtraInfo = WalkLegExtraInfo
   { origin :: Location,
     destination :: Location,
@@ -320,7 +330,8 @@ data MetroLegExtraInfo = MetroLegExtraInfo
     providerName :: Maybe Text,
     ticketNo :: Maybe [Text],
     adultTicketQuantity :: Maybe Int,
-    childTicketQuantity :: Maybe Int
+    childTicketQuantity :: Maybe Int,
+    refund :: Maybe LegSplitInfo
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -340,7 +351,8 @@ data SubwayLegExtraInfo = SubwayLegExtraInfo
     selectedServiceTier :: Maybe LegServiceTier,
     ticketNo :: Maybe [Text],
     adultTicketQuantity :: Maybe Int,
-    childTicketQuantity :: Maybe Int
+    childTicketQuantity :: Maybe Int,
+    refund :: Maybe LegSplitInfo
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -376,7 +388,8 @@ data BusLegExtraInfo = BusLegExtraInfo
     alternateShortNames :: [Text],
     ticketNo :: Maybe [Text],
     adultTicketQuantity :: Maybe Int,
-    childTicketQuantity :: Maybe Int
+    childTicketQuantity :: Maybe Int,
+    refund :: Maybe LegSplitInfo
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -751,7 +764,6 @@ getFRFSLegStatusFromBooking booking = case booking.status of
   DFRFSBooking.COUNTER_CANCELLED -> Cancelled
   DFRFSBooking.CANCEL_INITIATED -> CancelInitiated
   DFRFSBooking.TECHNICAL_CANCEL_REJECTED -> InPlan
-  DFRFSBooking.REFUND_INITIATED -> Cancelled
 
 mkLegInfoFromFrfsBooking ::
   (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => DFRFSBooking.FRFSTicketBooking -> Maybe Distance -> Maybe Seconds -> Maybe MultiModalLegGate -> Maybe MultiModalLegGate -> m LegInfo
@@ -817,6 +829,28 @@ mkLegInfoFromFrfsBooking booking distance duration entrance exit = do
       }
   where
     mkLegExtraInfo qrDataList qrValidity ticketsCreatedAt journeyRouteDetails' journeyLegInfo' ticketNo = do
+      mbBookingPayment <- QFRFSTicketBookingPayment.findNewTBPByBookingId booking.id
+      refundBloc <- case mbBookingPayment of
+        Just bookingPayment -> do
+          refundEntries <- QRefunds.findAllByOrderId bookingPayment.paymentOrderId
+          let matchingRefundEntry =
+                find
+                  ( \refundEntry ->
+                      case refundEntry.split of
+                        Just splits -> any (\split -> split.frfsBookingId == booking.id.getId) splits
+                        Nothing -> False
+                  )
+                  refundEntries
+          case matchingRefundEntry of
+            Just refundEntry -> do
+              let amount = case refundEntry.split of
+                    Just splits -> find (\split -> split.frfsBookingId == booking.id.getId) splits <&> (.splitAmount)
+                    Nothing -> Just refundEntry.refundAmount
+              case amount of
+                Just amount' -> return $ Just $ LegSplitInfo {amount = amount', status = refundEntry.status}
+                Nothing -> return Nothing
+            Nothing -> return Nothing
+        Nothing -> return Nothing
       case booking.vehicleType of
         Spec.METRO -> do
           return $
@@ -830,7 +864,8 @@ mkLegInfoFromFrfsBooking booking distance duration entrance exit = do
                   providerName = Just booking.providerName,
                   ticketNo = Just ticketNo,
                   adultTicketQuantity = Just booking.quantity,
-                  childTicketQuantity = booking.childTicketQuantity
+                  childTicketQuantity = booking.childTicketQuantity,
+                  refund = refundBloc
                 }
         Spec.BUS -> do
           journeyLegDetail <- listToMaybe journeyLegInfo' & fromMaybeM (InternalError "Journey Leg Detail not found")
@@ -859,7 +894,8 @@ mkLegInfoFromFrfsBooking booking distance duration entrance exit = do
                   selectedServiceTier = mbSelectedServiceTier,
                   ticketNo = Just ticketNo,
                   adultTicketQuantity = Just booking.quantity,
-                  childTicketQuantity = booking.childTicketQuantity
+                  childTicketQuantity = booking.childTicketQuantity,
+                  refund = refundBloc
                 }
         Spec.SUBWAY -> do
           mbQuote <- QFRFSQuote.findById booking.quoteId
@@ -884,7 +920,8 @@ mkLegInfoFromFrfsBooking booking distance duration entrance exit = do
                   selectedServiceTier = mbSelectedServiceTier,
                   ticketNo = Just ticketNo,
                   adultTicketQuantity = Just booking.quantity,
-                  childTicketQuantity = booking.childTicketQuantity
+                  childTicketQuantity = booking.childTicketQuantity,
+                  refund = refundBloc
                 }
     safeDiv :: (Eq a, Fractional a) => a -> a -> a
     safeDiv x 0 = x
@@ -990,7 +1027,8 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} fallbackFare di
                   providerName = Nothing,
                   ticketNo = Nothing,
                   adultTicketQuantity = mbQuote <&> (.quantity),
-                  childTicketQuantity = mbQuote >>= (.childTicketQuantity)
+                  childTicketQuantity = mbQuote >>= (.childTicketQuantity),
+                  refund = Nothing
                 }
         Spec.BUS -> do
           journeyLegDetail <- listToMaybe journeyLegInfo' & fromMaybeM (InternalError "Journey Leg Detail not found")
@@ -1017,7 +1055,8 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} fallbackFare di
                   frequency = listToMaybe $ catMaybes $ map (.frequency) journeyRouteDetails,
                   ticketNo = Nothing,
                   adultTicketQuantity = mbQuote <&> (.quantity),
-                  childTicketQuantity = mbQuote >>= (.childTicketQuantity)
+                  childTicketQuantity = mbQuote >>= (.childTicketQuantity),
+                  refund = Nothing
                 }
         Spec.SUBWAY -> do
           let mbSelectedServiceTier = getServiceTierFromQuote =<< mbQuote
@@ -1038,7 +1077,8 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} fallbackFare di
                   selectedServiceTier = mbSelectedServiceTier,
                   ticketNo = Nothing,
                   adultTicketQuantity = mbQuote <&> (.quantity),
-                  childTicketQuantity = mbQuote >>= (.childTicketQuantity)
+                  childTicketQuantity = mbQuote >>= (.childTicketQuantity),
+                  refund = Nothing
                 }
 
 getServiceTierFromQuote :: DFRFSQuote.FRFSQuote -> Maybe LegServiceTier

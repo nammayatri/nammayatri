@@ -53,6 +53,8 @@ data FRFSBookingPaymentStatusAPI
   | FAILURE
   | REFUND_PENDING
   | REFUNDED
+  | REFUND_FAILED
+  | REFUND_INITIATED
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

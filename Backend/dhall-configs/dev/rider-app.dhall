@@ -241,6 +241,7 @@ let RiderJobType =
       | PostRideSafetyNotification
       | UpdateCrisUtsData
       | CheckMultimodalConfirmFail
+      | CheckRefundStatus
       | MetroBusinessHour
       | NyRegularMaster
       | NyRegularInstance
@@ -276,6 +277,7 @@ let jobInfoMapx =
       , { mapKey = RiderJobType.PostRideSafetyNotification, mapValue = False }
       , { mapKey = RiderJobType.UpdateCrisUtsData, mapValue = True }
       , { mapKey = RiderJobType.CheckMultimodalConfirmFail, mapValue = True }
+      , { mapKey = RiderJobType.CheckRefundStatus, mapValue = True }
       , { mapKey = RiderJobType.MetroBusinessHour, mapValue = True }
       , { mapKey = RiderJobType.NyRegularInstance, mapValue = True }
       , { mapKey = RiderJobType.NyRegularMaster, mapValue = True }
