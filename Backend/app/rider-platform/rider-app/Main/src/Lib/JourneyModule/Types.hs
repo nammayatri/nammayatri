@@ -747,9 +747,9 @@ getFRFSLegStatusFromBooking booking = case booking.status of
   DFRFSBooking.CONFIRMING -> Assigning
   DFRFSBooking.CONFIRMED -> Booked
   DFRFSBooking.FAILED -> Failed
-  DFRFSBooking.CANCELLED -> InPlan
-  DFRFSBooking.COUNTER_CANCELLED -> InPlan
-  DFRFSBooking.CANCEL_INITIATED -> InPlan
+  DFRFSBooking.CANCELLED -> Cancelled
+  DFRFSBooking.COUNTER_CANCELLED -> Cancelled
+  DFRFSBooking.CANCEL_INITIATED -> CancelInitiated
   DFRFSBooking.TECHNICAL_CANCEL_REJECTED -> InPlan
   DFRFSBooking.REFUND_INITIATED -> Cancelled
 
