@@ -115,7 +115,6 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
               allBusDataForRoute
               journeyLegStatus
               movementDetected
-              (flip QTBooking.updateJourneyLegStatus booking.id)
 
           let detailedStateData = baseStateData {JT.vehiclePositions = vehiclePositionsToReturn}
 
@@ -204,7 +203,6 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
               allBusDataForRoute
               (fromMaybe JPT.InPlan searchReq.journeyLegStatus)
               movementDetected
-              (flip QFRFSSearch.updateJourneyLegStatus searchId)
 
           let detailedStateData = baseStateData {JT.vehiclePositions = vehiclePositionsToReturn}
           logDebug $ "CFRFS getState: Detailed state data for without booking: " <> show vehiclePositionsToReturn
@@ -505,7 +503,6 @@ processBusLegState ::
   [BusData] ->
   JPT.JourneyLegStatus ->
   Bool ->
-  (Maybe JPT.JourneyLegStatus -> m ()) ->
   m [JT.VehiclePosition]
 processBusLegState
   now
@@ -517,8 +514,7 @@ processBusLegState
   mbLegEndStation
   allBusDataForRoute
   journeyLegStatus
-  movementDetected
-  updateStatusFn = do
+  movementDetected = do
     logDebug $ "movementDetected: " <> show movementDetected <> " journeyLegStatus: " <> show journeyLegStatus
     if (isOngoingJourneyLeg journeyLegStatus) && movementDetected
       then do
@@ -551,9 +547,6 @@ processBusLegState
                           if journeyLegStatus `elem` [JPT.OnTheWay, JPT.Booked, JPT.Arriving]
                             then getUpcomingStopsForBus now mbUserBoardingStation bestBusData False -- Stops up to boarding for OnTheWay
                             else getUpcomingStopsForBus now mbLegEndStation bestBusData True -- Stops to destination for Ongoing/Finishing/Completed
-                    when (journeyLegStatus `elem` [JPT.OnTheWay, JPT.Booked, JPT.Arriving]) $ do
-                      updateStatusFn (Just JPT.Ongoing)
-                      logDebug $ "upcomingStops: " <> show upcomingStops <> " " <> show bestBusData.latitude <> " " <> show bestBusData.longitude
                     pure
                       [ JT.VehiclePosition
                           { position = Just $ LatLong bestBusData.latitude bestBusData.longitude,
