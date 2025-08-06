@@ -75,6 +75,7 @@ data SearchRequestT f = SearchRequestT
     maxDistanceValue :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance),
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    multiModalSearchRequestId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     originStopCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     placeNameSource :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     recentLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

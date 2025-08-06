@@ -24,12 +24,14 @@ data JourneyT f = JourneyT
     hasPreferredServiceTier :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     hasPreferredTransitModes :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     id :: B.C f Kernel.Prelude.Text,
+    isNormalRideJourney :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isPaymentSuccess :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isPublicTransportIncluded :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     journeyExpiryTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     modes :: B.C f [Domain.Types.Common.MultimodalTravelMode],
+    multimodalSearchRequestId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     paymentOrderShortId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     recentLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     relevanceScore :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
@@ -51,6 +53,6 @@ instance B.Table JourneyT where
 
 type Journey = JourneyT Identity
 
-$(enableKVPG ''JourneyT ['id] [['riderId], ['searchRequestId]])
+$(enableKVPG ''JourneyT ['id] [['multimodalSearchRequestId], ['riderId], ['searchRequestId]])
 
 $(mkTableInstances ''JourneyT "journey")

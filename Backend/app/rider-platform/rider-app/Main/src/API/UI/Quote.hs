@@ -23,6 +23,7 @@ where
 
 import qualified Domain.Action.UI.Quote as DQuote
 import qualified Domain.Types.Merchant as Merchant
+import qualified Domain.Types.MultiModalSearchRequest as DMSR
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.SearchRequest as SSR
 import Environment
@@ -40,13 +41,26 @@ type API =
     :> "results"
     :> QueryParam "allowMultiple" Bool
     :> Get '[JSON] DQuote.GetQuotesRes
+    -- MIGRATION CHANGES --
+    :<|> "rideSearch"
+      :> Capture "multimodalSearchId" (Id DMSR.MultiModalSearchRequest)
+      :> TokenAuth
+      :> "results"
+      :> QueryParam "allowMultiple" Bool
+      :> Get '[JSON] DQuote.GetQuotesRes
 
 handler :: FlowServer API
 handler =
-  getQuotes
+  getQuotes :<|> getQuotesForMultimodal
 
 getQuotes :: Id SSR.SearchRequest -> (Id Person.Person, Id Merchant.Merchant) -> Maybe Bool -> FlowHandler DQuote.GetQuotesRes
 getQuotes searchRequestId token = withFlowHandlerAPI . getQuotes' searchRequestId token
 
 getQuotes' :: Id SSR.SearchRequest -> (Id Person.Person, Id Merchant.Merchant) -> Maybe Bool -> Flow DQuote.GetQuotesRes
 getQuotes' searchRequestId _ mbAllowMultiple = DQuote.getQuotes searchRequestId mbAllowMultiple
+
+getQuotesForMultimodal :: Id DMSR.MultiModalSearchRequest -> (Id Person.Person, Id Merchant.Merchant) -> Maybe Bool -> FlowHandler DQuote.GetQuotesRes
+getQuotesForMultimodal multimodalSearchRequestId token = withFlowHandlerAPI . getQuotesForMultimodal' multimodalSearchRequestId token
+
+getQuotesForMultimodal' :: Id DMSR.MultiModalSearchRequest -> (Id Person.Person, Id Merchant.Merchant) -> Maybe Bool -> Flow DQuote.GetQuotesRes
+getQuotesForMultimodal' multimodalSearchRequestId _ mbAllowMultiple = DQuote.getQuotesForMultimodal multimodalSearchRequestId mbAllowMultiple

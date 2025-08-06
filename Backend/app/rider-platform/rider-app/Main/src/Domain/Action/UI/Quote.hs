@@ -25,6 +25,8 @@ module Domain.Action.UI.Quote
     JourneyData (..),
     JourneyLeg (..),
     getJourneys,
+    getJourneysForMultimodal,
+    getQuotesForMultimodal,
   )
 where
 
@@ -46,6 +48,7 @@ import Domain.Types.FRFSRouteDetails
 import qualified Domain.Types.Journey as DJ
 import qualified Domain.Types.JourneyLeg as DJL
 import qualified Domain.Types.Location as DL
+import qualified Domain.Types.MultiModalSearchRequest as DMSR
 import qualified Domain.Types.Quote as SQuote
 import qualified Domain.Types.RideStatus as DRide
 import Domain.Types.RiderConfig (VehicleServiceTierOrderConfig)
@@ -81,6 +84,7 @@ import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
+import qualified Storage.Queries.MultiModalSearchRequest as QMultiModalSearchRequest
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.Ride as QRide
@@ -204,6 +208,40 @@ getQuotes searchRequestId mbAllowMultiple = do
           journey = journeyData
         }
 
+getQuotesForMultimodal :: Id DMSR.MultiModalSearchRequest -> Maybe Bool -> Flow GetQuotesRes
+getQuotesForMultimodal multimodalSearchRequestId mbAllowMultiple = do
+  multimodalSearchRequest <- runInReplica $ QMultiModalSearchRequest.findById multimodalSearchRequestId >>= fromMaybeM (SearchRequestDoesNotExist multimodalSearchRequestId.getId)
+  unless (mbAllowMultiple == Just True) $ do
+    activeBooking <- runInReplica $ QBooking.findLatestSelfAndPartyBookingByRiderId multimodalSearchRequest.riderId
+    whenJust activeBooking $ \booking -> processActiveBooking booking OnSearch
+  logDebug $ "multimodal Search Request is : " <> show multimodalSearchRequest
+  (journeyData, allJourneys) <- getJourneysForMultimodal multimodalSearchRequest
+  filteredNormalJourney <- case listToMaybe $ filter (\journey -> journey.isNormalRideJourney == Just True) allJourneys of
+    Just normalJourney -> pure normalJourney
+    Nothing -> throwError (InternalError "No normal ride journey found")
+  -- this search request will be constructed only for the normal ride journey
+  searchRequest <- runInReplica $ QSR.findByTextId filteredNormalJourney.searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist filteredNormalJourney.searchRequestId)
+  person <- QP.findById multimodalSearchRequest.riderId >>= fromMaybeM (PersonDoesNotExist searchRequest.riderId.getId)
+  let mostFrequentVehicleCategory = mostFrequent person.lastUsedVehicleServiceTiers
+  let lockKey = estimateBuildLockKey searchRequest.id.getId
+  Redis.withLockRedisAndReturnValue lockKey 5 $ do
+    offers <- getOffers searchRequest
+    estimates' <- getEstimates searchRequest.id (isJust searchRequest.driverIdentifier) -- TODO(MultiModal): only check for estimates which are done
+    riderConfig <- QRC.findByMerchantOperatingCityId (cast searchRequest.merchantOperatingCityId) Nothing
+    let vehicleServiceTierOrderConfig = maybe [] (.userServiceTierOrderConfig) riderConfig
+        estimates = estimatesSorting estimates' (mostFrequentVehicleCategoryConfig mostFrequentVehicleCategory vehicleServiceTierOrderConfig)
+    return $
+      GetQuotesRes
+        { fromLocation = DL.makeLocationAPIEntity searchRequest.fromLocation,
+          toLocation = DL.makeLocationAPIEntity <$> searchRequest.toLocation,
+          stops = DL.makeLocationAPIEntity <$> searchRequest.stops,
+          quotes = offers,
+          estimates,
+          paymentMethods = [],
+          allJourneysLoaded = fromMaybe False searchRequest.allJourneysLoaded,
+          journey = journeyData
+        }
+
 processActiveBooking :: (CacheFlow m r, HasField "shortDurationRetryCfg" r RetryCfg, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl], HasFlowEnv m r '["nwAddress" ::: BaseUrl], EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r, HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig]) => Booking -> CancellationStage -> m ()
 processActiveBooking booking cancellationStage = do
   mbRide <- QRide.findActiveByRBId booking.id
@@ -298,73 +336,84 @@ getJourneys searchRequest hasMultimodalSearch = do
     Just True -> do
       allJourneys :: [DJ.Journey] <- QJourney.findBySearchId searchRequest.id.getId
       journeyData <-
-        forM allJourneys \journey -> do
-          journeyLegsFromOtp <- QJourneyLeg.findAllByJourneyId journey.id
-          legsInfo <- JM.getAllLegsInfo journey.id True
-          journeyLegs <- do
-            forM journeyLegsFromOtp \journeyLeg -> do
-              let legInfo = find (\leg -> Just leg.searchId == journeyLeg.legSearchId) legsInfo
-              return $
-                JourneyLeg
-                  { journeyLegOrder = journeyLeg.sequenceNumber,
-                    journeyMode = journeyLeg.mode,
-                    journeyLegId = journeyLeg.id,
-                    fromLatLong = LatLong {lat = journeyLeg.startLocation.latitude, lon = journeyLeg.startLocation.longitude},
-                    toLatLong = LatLong {lat = journeyLeg.endLocation.latitude, lon = journeyLeg.endLocation.longitude},
-                    fromStationCode = journeyLeg.fromStopDetails >>= (.stopCode),
-                    toStationCode = journeyLeg.toStopDetails >>= (.stopCode),
-                    color = listToMaybe $ catMaybes $ map (.routeShortName) journeyLeg.routeDetails,
-                    colorCode = listToMaybe $ catMaybes $ map (.routeColorCode) journeyLeg.routeDetails,
-                    routeDetails = map mkRouteDetail journeyLeg.routeDetails,
-                    duration = journeyLeg.duration,
-                    serviceTypes = journeyLeg.serviceTypes,
-                    distance = journeyLeg.distance,
-                    estimatedMinFare = (legInfo >>= (.estimatedMinFare) <&> (.amount)) <|> journeyLeg.estimatedMinFare,
-                    estimatedMaxFare = (legInfo >>= (.estimatedMaxFare) <&> (.amount)) <|> journeyLeg.estimatedMaxFare,
-                    validTill = legInfo >>= (.validTill)
-                  }
-          let estimatedMinFare = sum $ mapMaybe (.estimatedMinFare) journeyLegs
-          let estimatedMaxFare = sum $ mapMaybe (.estimatedMaxFare) journeyLegs
-          return $
-            JourneyData
-              { totalMinFare = estimatedMinFare,
-                totalMaxFare = estimatedMaxFare,
-                modes = journey.modes,
-                journeyLegs = sortOn (.journeyLegOrder) journeyLegs,
-                startTime = journey.startTime,
-                endTime = journey.endTime,
-                journeyId = journey.id,
-                duration = journey.estimatedDuration,
-                distance = journey.estimatedDistance,
-                relevanceScore = fromMaybe 1 journey.relevanceScore, -- 1 is the max possible score.
-                hasPreferredServiceTier = journey.hasPreferredServiceTier,
-                hasPreferredTransitModes = journey.hasPreferredTransitModes
-              }
+        buildJourneys allJourneys
       return . Just $ sortOn (.relevanceScore) journeyData
     _ -> return Nothing
-  where
-    mkRouteDetail :: RouteDetails -> RouteDetail
-    mkRouteDetail routeDetail =
-      RouteDetail
-        { routeCode = gtfsIdtoDomainCode <$> routeDetail.routeGtfsId,
-          fromStationCode = (gtfsIdtoDomainCode <$> (routeDetail.fromStopCode)) <|> (gtfsIdtoDomainCode <$> routeDetail.fromStopGtfsId),
-          toStationCode = (gtfsIdtoDomainCode <$> (routeDetail.toStopCode)) <|> (gtfsIdtoDomainCode <$> routeDetail.toStopGtfsId),
-          color = routeDetail.routeShortName,
-          colorCode = routeDetail.routeShortName,
-          alternateShortNames = routeDetail.alternateShortNames,
-          fromStationLatLong =
-            LatLong
-              { lat = routeDetail.startLocationLat,
-                lon = routeDetail.startLocationLon
-              },
-          toStationLatLong =
-            LatLong
-              { lat = routeDetail.endLocationLat,
-                lon = routeDetail.endLocationLon
-              },
-          fromStationPlatformCode = routeDetail.fromStopPlatformCode,
-          toStationPlatformCode = routeDetail.toStopPlatformCode
+
+getJourneysForMultimodal :: DMSR.MultiModalSearchRequest -> Flow (Maybe [JourneyData], [DJ.Journey])
+getJourneysForMultimodal multimodalSearchRequest = do
+  allJourneys :: [DJ.Journey] <- QJourney.findByMultiModalSearchId (Just multimodalSearchRequest.id)
+  journeyData <-
+    buildJourneys allJourneys
+  return (Just $ sortOn (.relevanceScore) journeyData, allJourneys)
+
+buildJourneys :: [DJ.Journey] -> Flow [JourneyData]
+buildJourneys allJourneys = do
+  forM allJourneys \journey -> do
+    journeyLegsFromOtp <- QJourneyLeg.findAllByJourneyId journey.id
+    legsInfo <- JM.getAllLegsInfo journey.id True
+    journeyLegs <- do
+      forM journeyLegsFromOtp \journeyLeg -> do
+        let legInfo = find (\leg -> Just leg.searchId == journeyLeg.legSearchId) legsInfo
+        return $
+          JourneyLeg
+            { journeyLegOrder = journeyLeg.sequenceNumber,
+              journeyMode = journeyLeg.mode,
+              journeyLegId = journeyLeg.id,
+              fromLatLong = LatLong {lat = journeyLeg.startLocation.latitude, lon = journeyLeg.startLocation.longitude},
+              toLatLong = LatLong {lat = journeyLeg.endLocation.latitude, lon = journeyLeg.endLocation.longitude},
+              fromStationCode = journeyLeg.fromStopDetails >>= (.stopCode),
+              toStationCode = journeyLeg.toStopDetails >>= (.stopCode),
+              color = listToMaybe $ catMaybes $ map (.routeShortName) journeyLeg.routeDetails,
+              colorCode = listToMaybe $ catMaybes $ map (.routeColorCode) journeyLeg.routeDetails,
+              routeDetails = map mkRouteDetail journeyLeg.routeDetails,
+              duration = journeyLeg.duration,
+              serviceTypes = journeyLeg.serviceTypes,
+              distance = journeyLeg.distance,
+              estimatedMinFare = (legInfo >>= (.estimatedMinFare) <&> (.amount)) <|> journeyLeg.estimatedMinFare,
+              estimatedMaxFare = (legInfo >>= (.estimatedMaxFare) <&> (.amount)) <|> journeyLeg.estimatedMaxFare,
+              validTill = legInfo >>= (.validTill)
+            }
+    let estimatedMinFare = sum $ mapMaybe (.estimatedMinFare) journeyLegs
+    let estimatedMaxFare = sum $ mapMaybe (.estimatedMaxFare) journeyLegs
+    return $
+      JourneyData
+        { totalMinFare = estimatedMinFare,
+          totalMaxFare = estimatedMaxFare,
+          modes = journey.modes,
+          journeyLegs = sortOn (.journeyLegOrder) journeyLegs,
+          startTime = journey.startTime,
+          endTime = journey.endTime,
+          journeyId = journey.id,
+          duration = journey.estimatedDuration,
+          distance = journey.estimatedDistance,
+          relevanceScore = fromMaybe 1 journey.relevanceScore, -- 1 is the max possible score.
+          hasPreferredServiceTier = journey.hasPreferredServiceTier,
+          hasPreferredTransitModes = journey.hasPreferredTransitModes
         }
+
+mkRouteDetail :: RouteDetails -> RouteDetail
+mkRouteDetail routeDetail =
+  RouteDetail
+    { routeCode = gtfsIdtoDomainCode <$> routeDetail.routeGtfsId,
+      fromStationCode = (gtfsIdtoDomainCode <$> (routeDetail.fromStopCode)) <|> (gtfsIdtoDomainCode <$> routeDetail.fromStopGtfsId),
+      toStationCode = (gtfsIdtoDomainCode <$> (routeDetail.toStopCode)) <|> (gtfsIdtoDomainCode <$> routeDetail.toStopGtfsId),
+      color = routeDetail.routeShortName,
+      colorCode = routeDetail.routeShortName,
+      alternateShortNames = routeDetail.alternateShortNames,
+      fromStationLatLong =
+        LatLong
+          { lat = routeDetail.startLocationLat,
+            lon = routeDetail.startLocationLon
+          },
+      toStationLatLong =
+        LatLong
+          { lat = routeDetail.endLocationLat,
+            lon = routeDetail.endLocationLon
+          },
+      fromStationPlatformCode = routeDetail.fromStopPlatformCode,
+      toStationPlatformCode = routeDetail.toStopPlatformCode
+    }
 
 -- Get the most frequent element in the list
 mostFrequent :: [DVST.ServiceTierType] -> Maybe DVST.ServiceTierType

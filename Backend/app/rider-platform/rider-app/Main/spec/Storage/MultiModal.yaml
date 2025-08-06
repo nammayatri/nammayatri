@@ -20,6 +20,12 @@ imports:
   AbsoluteDirection: Kernel.External.MultiModal.OpenTripPlanner.Types
   Value: Data.Aeson
   JourneyLegStatus: Lib.JourneyLeg.Types
+  MultiModalSearchRequest: Domain.Types.MultiModalSearchRequest
+  ConfigVersionMap: Lib.Yudhishthira.Types
+  Version: Kernel.Types.Version
+  Device: Kernel.Types.Version
+  DeviceType: Kernel.Types.Version
+  Client: Domain.Types.Client
   RouteDetails: Domain.Types.RouteDetails
   TrackingStatus: Lib.JourneyModule.State.Types
 
@@ -34,6 +40,7 @@ Journey:
 
   fields:
     id: Id Journey
+    multimodalSearchRequestId: Maybe (Id MultiModalSearchRequest)
     searchRequestId: Text
     riderId: Id Person
     startTime: Maybe UTCTime
@@ -56,6 +63,7 @@ Journey:
     journeyExpiryTime: Maybe UTCTime
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
+    isNormalRideJourney : Maybe Bool
 
   beamType:
     status: Maybe JourneyStatus
@@ -89,12 +97,19 @@ Journey:
     distanceUnit: ((.unit))|I
     status: (Just status)|E
 
+  default:
+    multimodalSearchRequestId: null
+
   constraints:
     id: PrimaryKey
+    multimodalSearchRequestId: SecondaryKey
     searchRequestId: "!SecondaryKey"
     riderId: "!SecondaryKey"
 
   queries:
+    findByMultiModalSearchId:
+      kvFunction: findAllWithKV
+      where: multimodalSearchRequestId
     findBySearchId:
       kvFunction: findAllWithKV
       where: searchRequestId
@@ -614,3 +629,78 @@ JourneyLegsFeedbacks:
 
   sqlType:
     feedbackData: json
+
+MultiModalSearchRequest:
+  tableName: multimodal_search_request
+
+  derives: "Generic, Show"
+
+  fields:
+    id: Id MultiModalSearchRequest
+    riderId: Id Person
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    clientId: Maybe (Id Client)
+    recentLocationId: Maybe (Id RecentLocation)
+    startTime: UTCTime
+    validTill: UTCTime
+    createdAt: UTCTime
+    configInExperimentVersions: "[ConfigVersionMap]"
+    clientBundleVersion: Maybe Version
+    clientSdkVersion: Maybe Version
+    clientConfigVersion: Maybe Version
+    clientReactNativeVersion: Maybe Text
+    clientDevice: Maybe Device
+    backendConfigVersion: Maybe Version
+    backendAppVersion: Maybe Text
+    isDashboardRequest: Maybe Bool
+
+  beamType:
+    clientBundleVersion: Maybe Text
+    clientSdkVersion: Maybe Text
+    clientConfigVersion: Maybe Text
+    backendConfigVersion: Maybe Text
+    clientModelName: Maybe Text
+    clientManufacturer: Maybe Text
+    configInExperimentVersions: Maybe Value
+
+  sqlType:
+    configInExperimentVersions: "json"
+
+  beamFields:
+    clientDevice:
+      clientOsType: Maybe DeviceType
+      clientOsVersion: Maybe Text
+      clientModelName: Maybe Text
+      clientManufacturer: Maybe Text
+
+  toTType:
+    clientOsType: clientDevice <&> (.deviceType)|E
+    clientOsVersion: clientDevice <&> (.deviceVersion)|E
+    clientModelName: (clientDevice <&> (.deviceModel))|E
+    clientManufacturer: (clientDevice >>= (.deviceManufacturer))|E
+    clientBundleVersion: Kernel.Utils.Version.versionToText <$> clientBundleVersion|E
+    clientSdkVersion: Kernel.Utils.Version.versionToText <$> clientSdkVersion|E
+    clientConfigVersion: Kernel.Utils.Version.versionToText <$> clientConfigVersion|E
+    backendConfigVersion: Kernel.Utils.Version.versionToText <$> backendConfigVersion|E
+    configInExperimentVersions: Just $ toJSON configInExperimentVersions|E
+
+  fromTType:
+    clientBundleVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion)|EM
+    clientSdkVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)|EM
+    clientConfigVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion)|EM
+    clientDevice: Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer|E
+    backendConfigVersion: mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion)|EM
+    configInExperimentVersions: fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< configInExperimentVersions)|E
+
+  constraints:
+    id: PrimaryKey
+    riderId: SecondaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByRiderId:
+      kvFunction: findAllWithKV
+      where: riderId

@@ -1,0 +1,25 @@
+CREATE TABLE atlas_app.multimodal_search_request ();
+
+ALTER TABLE atlas_app.multimodal_search_request ADD COLUMN backend_app_version text ;
+ALTER TABLE atlas_app.multimodal_search_request ADD COLUMN backend_config_version text ;
+ALTER TABLE atlas_app.multimodal_search_request ADD COLUMN client_bundle_version text ;
+ALTER TABLE atlas_app.multimodal_search_request ADD COLUMN client_config_version text ;
+ALTER TABLE atlas_app.multimodal_search_request ADD COLUMN client_manufacturer text ;
+ALTER TABLE atlas_app.multimodal_search_request ADD COLUMN client_model_name text ;
+ALTER TABLE atlas_app.multimodal_search_request ADD COLUMN client_os_type text ;
+ALTER TABLE atlas_app.multimodal_search_request ADD COLUMN client_os_version text ;
+ALTER TABLE atlas_app.multimodal_search_request ADD COLUMN client_id character varying(36) ;
+ALTER TABLE atlas_app.multimodal_search_request ADD COLUMN client_react_native_version text ;
+ALTER TABLE atlas_app.multimodal_search_request ADD COLUMN client_sdk_version text ;
+ALTER TABLE atlas_app.multimodal_search_request ADD COLUMN config_in_experiment_versions json ;
+ALTER TABLE atlas_app.multimodal_search_request ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_app.multimodal_search_request ADD COLUMN id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.multimodal_search_request ADD COLUMN is_dashboard_request boolean ;
+ALTER TABLE atlas_app.multimodal_search_request ADD COLUMN merchant_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.multimodal_search_request ADD COLUMN merchant_operating_city_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.multimodal_search_request ADD COLUMN recent_location_id character varying(36) ;
+ALTER TABLE atlas_app.multimodal_search_request ADD COLUMN rider_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.multimodal_search_request ADD COLUMN start_time timestamp with time zone NOT NULL;
+ALTER TABLE atlas_app.multimodal_search_request ADD COLUMN valid_till timestamp with time zone NOT NULL;
+ALTER TABLE atlas_app.multimodal_search_request ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_app.multimodal_search_request ADD PRIMARY KEY ( id);

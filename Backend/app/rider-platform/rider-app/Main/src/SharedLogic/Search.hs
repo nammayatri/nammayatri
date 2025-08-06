@@ -10,6 +10,7 @@ import Domain.Types.Location as Location
 import Domain.Types.LocationAddress
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.MultiModalSearchRequest as MultimodalSearchRequest
 import qualified Domain.Types.NyRegularSubscription as DNyRegularSubscription
 import qualified Domain.Types.RecentLocation as DTRL
 import qualified Domain.Types.RefereeLink as DRL
@@ -46,7 +47,8 @@ data SearchRes = SearchRes
     fareParametersInRateCard :: Maybe Bool,
     multipleRoutes :: Maybe [Maps.RouteInfo],
     taggings :: Maybe Beckn.Taggings,
-    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity
+    merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    multimodalSearchId :: Maybe (Id MultimodalSearchRequest.MultiModalSearchRequest)
   }
 
 data SearchReq = OneWaySearch OneWaySearchReq | RentalSearch RentalSearchReq | InterCitySearch InterCitySearchReq | AmbulanceSearch OneWaySearchReq | DeliverySearch OneWaySearchReq | PTSearch PublicTransportSearchReq
@@ -78,7 +80,8 @@ fareProductSchemaOptions =
 data SearchResp = SearchResp
   { searchId :: Id SearchRequest.SearchRequest,
     searchExpiry :: UTCTime,
-    routeInfo :: Maybe Maps.RouteInfo
+    routeInfo :: Maybe Maps.RouteInfo,
+    multimodalSearchId :: Maybe (Id MultimodalSearchRequest.MultiModalSearchRequest)
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 

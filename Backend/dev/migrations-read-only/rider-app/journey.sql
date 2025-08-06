@@ -146,3 +146,10 @@ ALTER TABLE atlas_app.journey ALTER COLUMN search_request_id TYPE text;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.journey ADD COLUMN multimodal_search_request_id character varying(36) ;
+ALTER TABLE atlas_app.journey ADD COLUMN is_normal_ride_journey boolean ;
