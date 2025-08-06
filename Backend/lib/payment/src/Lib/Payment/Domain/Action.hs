@@ -33,6 +33,7 @@ module Lib.Payment.Domain.Action
     verifyVPAService,
     mkCreatePayoutOrderReq,
     buildPaymentOrder,
+    updateRefundStatus,
   )
 where
 
@@ -63,7 +64,7 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Domain.Types.PaymentTransaction as DTransaction
 import qualified Lib.Payment.Domain.Types.PayoutOrder as Payment
 import qualified Lib.Payment.Domain.Types.PayoutTransaction as PT
-import Lib.Payment.Domain.Types.Refunds (Refunds (..))
+import Lib.Payment.Domain.Types.Refunds (Refunds (..), Split (..))
 import Lib.Payment.Storage.Beam.BeamFlow
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified Lib.Payment.Storage.Queries.PaymentTransaction as QTransaction
@@ -819,9 +820,10 @@ refundService ::
   ) =>
   (Payment.AutoRefundReq, Id Refunds) ->
   Id Merchant ->
+  Maybe [Split] ->
   (Payment.AutoRefundReq -> m Payment.AutoRefundResp) ->
   m Payment.AutoRefundResp
-refundService (request, refundId) merchantId refundsCall = do
+refundService (request, refundId) merchantId splitDetails refundsCall = do
   now <- getCurrentTime
   QRefunds.create $ mkRefundsEntry now
   response <- refundsCall request
@@ -841,7 +843,8 @@ refundService (request, refundId) merchantId refundsCall = do
           idAssignedByServiceProvider = Nothing,
           initiatedBy = Nothing,
           createdAt = now,
-          updatedAt = now
+          updatedAt = now,
+          split = splitDetails
         }
 
 updateRefundStatus :: (BeamFlow m r) => Payment.RefundsData -> m ()

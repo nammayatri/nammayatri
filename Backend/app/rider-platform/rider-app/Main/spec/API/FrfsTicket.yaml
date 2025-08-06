@@ -142,7 +142,7 @@ types:
     derive: "Show"
 
   FRFSBookingPaymentStatusAPI:
-    enum: "NEW, PENDING, SUCCESS, FAILURE, REFUND_PENDING, REFUNDED"
+    enum: "NEW, PENDING, SUCCESS, FAILURE, REFUND_PENDING, REFUNDED, REFUND_FAILED, REFUND_INITIATED"
 
   FRFSStationAPI:
     name: Maybe Text

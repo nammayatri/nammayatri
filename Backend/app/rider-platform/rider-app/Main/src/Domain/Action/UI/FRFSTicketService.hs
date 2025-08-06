@@ -932,10 +932,6 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking booking' = do
       buildFRFSTicketBookingStatusAPIRes booking Nothing
     DFRFSTicketBooking.CANCEL_INITIATED -> do
       buildFRFSTicketBookingStatusAPIRes booking Nothing
-    DFRFSTicketBooking.REFUND_INITIATED -> do
-      let paymentStatusAPI = Just $ Utils.mkTBPStatusAPI DFRFSTicketBookingPayment.REFUND_PENDING
-      let mbPaymentObj = paymentStatusAPI <&> \status -> FRFSTicketService.FRFSBookingPaymentAPI {status, paymentOrder = Nothing, transactionId = Nothing}
-      buildFRFSTicketBookingStatusAPIRes booking mbPaymentObj
     DFRFSTicketBooking.TECHNICAL_CANCEL_REJECTED -> do
       buildFRFSTicketBookingStatusAPIRes booking Nothing
   where

@@ -396,6 +396,7 @@ library
       SharedLogic.Scheduler.Jobs.CheckExotelCallStatusAndNotifyBPP
       SharedLogic.Scheduler.Jobs.CheckMultimodalConfirmFail
       SharedLogic.Scheduler.Jobs.CheckPNAndSendSMS
+      SharedLogic.Scheduler.Jobs.CheckRefundStatus
       SharedLogic.Scheduler.Jobs.ExecutePaymentIntent
       SharedLogic.Scheduler.Jobs.MetroBusinessHour
       SharedLogic.Scheduler.Jobs.NyRegularInstance

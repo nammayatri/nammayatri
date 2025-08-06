@@ -363,7 +363,7 @@ FRFSTicketBooking:
 
   types:
     FRFSTicketBookingStatus:
-      enum: "NEW, APPROVED, PAYMENT_PENDING, CONFIRMING, FAILED, CONFIRMED, CANCELLED, COUNTER_CANCELLED, CANCEL_INITIATED, TECHNICAL_CANCEL_REJECTED, REFUND_INITIATED"
+      enum: "NEW, APPROVED, PAYMENT_PENDING, CONFIRMING, FAILED, CONFIRMED, CANCELLED, COUNTER_CANCELLED, CANCEL_INITIATED, TECHNICAL_CANCEL_REJECTED"
     CashbackStatus:
       enum: "PENDING, PROCESSING, SUCCESSFUL, CASHBACK_FAILED, MANUAL_VERIFICATION"
 
@@ -515,7 +515,7 @@ FRFSTicket:
 
   types:
     FRFSTicketStatus:
-      enum: "ACTIVE, EXPIRED, USED, CANCELLED, COUNTER_CANCELLED, CANCEL_INITIATED, TECHNICAL_CANCEL_REJECTED, REFUND_INITIATED"
+      enum: "ACTIVE, EXPIRED, USED, CANCELLED, COUNTER_CANCELLED, CANCEL_INITIATED, TECHNICAL_CANCEL_REJECTED"
 
   constraints:
     id: PrimaryKey
@@ -565,7 +565,7 @@ FRFSTicketBookingPayment:
 
   types:
     FRFSTicketBookingPaymentStatus:
-      enum: "PENDING, SUCCESS, FAILED, REFUND_PENDING, REFUNDED"
+      enum: "PENDING, SUCCESS, FAILED, REFUND_PENDING, REFUNDED, REFUND_FAILED, REFUND_INITIATED"
 
   constraints:
     id: PrimaryKey
@@ -578,6 +578,9 @@ FRFSTicketBookingPayment:
       where: id
     findByPaymentOrderId:
       kvFunction: findOneWithKV
+      where: paymentOrderId
+    findAllByOrderId:
+      kvFunction: findAllWithKV
       where: paymentOrderId
     findAllByStatus:
       kvFunction: findAllWithKV
