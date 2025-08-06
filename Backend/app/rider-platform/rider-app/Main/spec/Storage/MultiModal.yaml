@@ -321,16 +321,28 @@ JourneyLeg:
     isSkipped: Maybe Bool
     entrance: Maybe MultiModalLegGate
     exit: Maybe MultiModalLegGate
+    straightLineEntrance: Maybe MultiModalLegGate
+    straightLineExit: Maybe MultiModalLegGate
+    osmEntrance: Maybe MultiModalLegGate
+    osmExit: Maybe MultiModalLegGate
     status: Maybe JourneyLegStatus
 
   sqlType:
     serviceTypes: text[]
     entrance: "json"
     exit: "json"
+    straightLineEntrance: "json"
+    straightLineExit: "json"
+    osmEntrance: "json"
+    osmExit: "json"
 
   beamType:
     entrance: Maybe Value
     exit: Maybe Value
+    straightLineEntrance: Maybe Value
+    straightLineExit: Maybe Value
+    osmEntrance: Maybe Value
+    osmExit: Maybe Value
 
   beamFields:
     distance:
@@ -420,6 +432,10 @@ JourneyLeg:
     legSearchId: legId|E
     entrance: entrance >>= Kernel.Utils.JSON.valueToMaybe|E
     exit: exit >>= Kernel.Utils.JSON.valueToMaybe|E
+    straightLineEntrance: straightLineEntrance >>= Kernel.Utils.JSON.valueToMaybe|E
+    straightLineExit: straightLineExit >>= Kernel.Utils.JSON.valueToMaybe|E
+    osmEntrance: osmEntrance >>= Kernel.Utils.JSON.valueToMaybe|E
+    osmExit: osmExit >>= Kernel.Utils.JSON.valueToMaybe|E
 
   toTType:
     distance: (.value) <$> |I
@@ -439,6 +455,10 @@ JourneyLeg:
     legId: legSearchId|E
     entrance: entrance >>= Just . Data.Aeson.toJSON|E
     exit: exit >>= Just . Data.Aeson.toJSON|E
+    straightLineEntrance: straightLineEntrance >>= Just . Data.Aeson.toJSON|E
+    straightLineExit: straightLineExit >>= Just . Data.Aeson.toJSON|E
+    osmEntrance: osmEntrance >>= Just . Data.Aeson.toJSON|E
+    osmExit: osmExit >>= Just . Data.Aeson.toJSON|E
     agencyGtfsId: (agency >>= (.gtfsId))|E
     agencyName: (agency <&> (.name))|E
 

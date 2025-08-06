@@ -141,3 +141,8 @@ ALTER TABLE atlas_app.journey ADD COLUMN from_location_id character varying(36) 
 
 ALTER TABLE atlas_app.journey ALTER COLUMN search_request_id TYPE text;
 
+
+
+
+------- SQL updates -------
+
