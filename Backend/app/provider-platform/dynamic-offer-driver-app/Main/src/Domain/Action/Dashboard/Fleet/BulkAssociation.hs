@@ -71,7 +71,7 @@ fetchOrCreatePerson moc req_ = do
             merchantOperatingCity = Just moc.city,
             email = Nothing,
             name = Just $ driverName req_,
-            identifierType = Just DP.MOBILENUMBER,
+            identifierType = Just DP.DEVICEID,
             registrationLat = Nothing,
             registrationLon = Nothing
           }
@@ -276,6 +276,7 @@ handleBulkRow merchantShortId opCity i row = do
           when (isJust row.conductor_badge_name) $ do
             conductorBadge <- validateBadgeAssignment entityDetails.id merchant.id merchantOpCityId.id entityDetails.id.getId (fromJust row.conductor_badge_name) DFBT.CONDUCTOR
             linkFleetBadge entityDetails.id merchant.id merchantOpCityId.id entityDetails.id.getId conductorBadge DFBT.CONDUCTOR
+          -- To check if driver or merchant has to be associated with the fleet, for fleet badges
           pure $ BulkFleetAssociationResult i (Just $ entityDetails.id.getId) (Just $ T.intercalate "," successfulRoutes) (Just $ show entityDetails.id) Nothing Nothing "success" Nothing
         else pure $ BulkFleetAssociationResult i (Just $ entityDetails.id.getId) Nothing (Just $ show entityDetails.id) Nothing Nothing "failure" (Just $ T.intercalate ", " routeErrors)
 
