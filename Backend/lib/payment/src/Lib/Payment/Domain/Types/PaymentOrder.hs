@@ -56,8 +56,7 @@ data PaymentOrderE e = PaymentOrder
     sdkPayloadDump :: Maybe Value,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
-    merchantOperatingCityId :: Maybe (Id MerchantOperatingCity),
-    gatewayReferenceId :: Maybe Text
+    merchantOperatingCityId :: Maybe (Id MerchantOperatingCity)
   }
   deriving (Generic)
 
@@ -85,8 +84,7 @@ data PaymentOrderAPIEntity = PaymentOrderAPIEntity
     mandateStartDate :: Maybe UTCTime,
     mandateEndDate :: Maybe UTCTime,
     createdAt :: UTCTime,
-    updatedAt :: UTCTime,
-    gatewayReferenceId :: Maybe Text
+    updatedAt :: UTCTime
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 

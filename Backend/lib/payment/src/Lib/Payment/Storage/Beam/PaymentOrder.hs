@@ -60,8 +60,7 @@ data PaymentOrderT f = PaymentOrderT
     sdkPayloadDump :: B.C f (Maybe Value),
     createdAt :: B.C f UTCTime,
     updatedAt :: B.C f UTCTime,
-    merchantOperatingCityId :: B.C f (Maybe Text),
-    gatewayReferenceId :: B.C f (Maybe Text)
+    merchantOperatingCityId :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
 

@@ -373,8 +373,7 @@ buildUpdateOrderSDKPayload amount order = do
               createMandate = order.createMandate,
               mandateMaxAmount = show <$> order.mandateMaxAmount,
               mandateStartDate = show . utcTimeToPOSIXSeconds <$> (order.mandateStartDate),
-              mandateEndDate = show . utcTimeToPOSIXSeconds <$> order.mandateEndDate,
-              gatewayReferenceId = order.gatewayReferenceId
+              mandateEndDate = show . utcTimeToPOSIXSeconds <$> order.mandateEndDate
             }
     (_, _) -> return Nothing
 
