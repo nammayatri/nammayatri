@@ -99,7 +99,11 @@ screen initialState =
                             anyRidesAssignedEver = either (\_ -> false) (\(DriverProfileSummaryRes profileSummaryResponse) -> profileSummaryResponse.totalRidesAssigned > 0) profileSummaryResponse
                           liftFlowBT $ push $ UpdateRidesEver anyRidesAssignedEver
                     case initialState.props.subView of
-                      ST.ALL_TIME_EARNINGS_VIEW -> pure unit
+                      ST.ALL_TIME_EARNINGS_VIEW -> do 
+                        (API.DriverStatsRes driverStatsRes) <- Remote.getAllTimeStatsBT (API.DriverStatsReq)
+                        let _ = spy "printing Shikhar -> " driverStatsRes
+                        liftFlowBT $ push $ UpdateAllTimeEarnings (API.DriverStatsRes driverStatsRes) "2025-01-01" (getcurrentdate "")
+                        pure unit
                       _ -> do
                         let dates = if DS.null initialState.props.toDate then getDates initialState.props.subView initialState else {fromDate: initialState.props.fromDate, toDate: initialState.props.toDate}
                             period = getPeriodFromSubView initialState.props.subView
@@ -417,7 +421,7 @@ totalEarningsView push state =
                   else
                     convertUTCtoISC totalEarningsData.fromDate "DD MMM" <> " - " <> convertUTCtoISC (getFutureDate totalEarningsData.toDate 6) "DD MMM, YYYY"
               ST.MONTHLY_EARNINGS_VIEW -> convertUTCtoISC totalEarningsData.fromDate "MMM, YYYY" <> (if DS.null totalEarningsData.toDate then "" else " - " <> convertUTCtoISC totalEarningsData.toDate "MMM, YYYY")
-              _ -> "yyyy-mm-dd"
+              _ -> convertUTCtoISC totalEarningsData.fromDate "DD MMM YYYY" <> " - " <> convertUTCtoISC totalEarningsData.toDate "DD MMM YYYY"
 
 
 horizontalLine :: forall w. PrestoDOM (Effect Unit) w
@@ -582,7 +586,7 @@ earningsSummaryView push state =
               ]
             <> FontStyle.paragraphText TypoGraphy
         , textView
-            $ [ text $ "₹" <> (formatCurrencyWithCommas (show $ state.props.totalEarningsData.totalEarnings / state.props.totalEarningsData.totalDistanceTravelled)) <> "/km"
+            $ [ text $ "₹" <> (formatCurrencyWithCommas (show ((state.props.totalEarningsData.totalEarnings * 1000)/ state.props.totalEarningsData.totalDistanceTravelled))) <> "/km"
               , color Color.black800
               ]
             <> FontStyle.h2 TypoGraphy
@@ -885,6 +889,7 @@ totalEarningsShimmerView push state =
             , gravity CENTER
             , width $ V (((screenWidth unit) - 75) / 2)
             , gravity CENTER_VERTICAL
+            , margin $ MarginLeft 16
             ]
             [ textView
                 $ [ height WRAP_CONTENT
@@ -915,6 +920,7 @@ totalEarningsShimmerView push state =
             [ height WRAP_CONTENT
             , gravity CENTER
             , width $ V (((screenWidth unit) - 75) / 2)
+            , margin $ MarginLeft 16
             , gravity CENTER_VERTICAL
             ]
             [ textView

@@ -81,6 +81,7 @@ instance loggableAction :: Loggable Action where
     LeftChevronClicked -> trackAppActionClick appId (getScreen DRIVER_EARNINGS_SCREEN) "left_chevron_clicked" "left_chevron_clicked"
     RightChevronClicked -> trackAppActionClick appId (getScreen DRIVER_EARNINGS_SCREEN) "right_chevron_clicked" "right_chevron_clicked"
     (EarningPeriodStatsAPIResponseAction _ _ _) -> trackAppActionClick appId (getScreen DRIVER_EARNINGS_SCREEN) "earning_period_stats_api_response_action" "earning_period_stats_api_response_action"
+    (UpdateAllTimeEarnings _ _ _) -> trackAppActionClick appId (getScreen DRIVER_EARNINGS_SCREEN) "update_all_time_earnings" "update_all_time_earnings"
 
 data ScreenOutput
   = GoBack
@@ -106,6 +107,7 @@ data Action
   | LeftChevronClicked
   | RightChevronClicked
   | EarningPeriodStatsAPIResponseAction (Array API.EarningPeriodStats) String String
+  | UpdateAllTimeEarnings API.DriverStatsRes String String
 
 eval :: Action -> DriverEarningsScreenState -> Eval Action ScreenOutput DriverEarningsScreenState
 eval BackPressed state = 
@@ -190,6 +192,8 @@ eval (EarningPeriodStatsAPIResponseAction earningPeriodStats fromDate toDate) st
       currWeekMaxEarning = foldl getMax 0 earningPeriodStatsWithPercentage
   continue state { props { currWeekData = earningPeriodStatsWithPercentage, totalEarningsData = getTotalCurrentWeekData earningPeriodStatsWithPercentage, currentWeekMaxEarning = currWeekMaxEarning, fromDate = fromDate, toDate = toDate, showShimmer = false } }
 
+eval (UpdateAllTimeEarnings allTimeEarnings fromDate toDate) state = continue state { props {totalEarningsData =  mapAllTimeToTotalEarningsData allTimeEarnings fromDate toDate, fromDate = fromDate, toDate = toDate, showShimmer = false } }
+
 eval _ state = update state
 
 getEarningListWithMissingDates :: Array ST.WeeklyEarning -> Array String -> Array ST.WeeklyEarning
@@ -268,3 +272,14 @@ getDatesList state fromDate toDate =
       DA.reverse (DA.mapWithIndex (\index item -> EHC.getPastDateFromDate firstDateOfWeek (index * 7)) [1,2,3,4,5,6,7])
     ST.MONTHLY_EARNINGS_VIEW -> (map (\x -> convertUTCtoISC x.utcDate "YYYY-MM-DD") (EHC.getPastMonthsFromDate toDate 6)) <> [toDate]
     _ -> []
+
+mapAllTimeToTotalEarningsData :: API.DriverStatsRes -> String -> String -> ST.TotalEarningsData
+mapAllTimeToTotalEarningsData (API.DriverStatsRes driverStatsRes) fromDate toDate = {
+  fromDate: fromDate,
+  toDate: toDate,
+  totalEarnings: driverStatsRes.totalEarnings,
+  totalRides: driverStatsRes.totalRides,
+  totalDistanceTravelled: driverStatsRes.totalDistance,
+  cancellationCharges: 0, -- TODO: yet to recieve cancellation charges from backend
+  tipAmount: driverStatsRes.bonusEarnings
+}

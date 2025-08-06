@@ -440,3 +440,6 @@ specialLocationListCategory category = (getBaseUrl "") <> "/specialLocation/list
 
 getEarningPeriodStats :: String -> String -> String -> String
 getEarningPeriodStats fromDate toDate earningType = (getBaseUrl "") <> "/driver/profile/earnings?from=" <> fromDate <> "&to=" <> toDate <> "&earningType=" <> show earningType
+
+getAllTimeStats :: String -> String
+getAllTimeStats _ = (getBaseUrl "") <> "/driver/profile/stats/alltime"
