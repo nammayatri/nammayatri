@@ -1912,4 +1912,5 @@ getHi =
     , view_less : "कम देखें"
     , you_are_in_probation_period_till : (\date -> "आप " <> date <> " तक प्रयोग कर रहे हैं")
     , pass_all_eligibility_criteria_to_continue_being_a_member : "सभी योग्यता मानदंड पालन करें और एक सदस्य बनने के लिए जारी रखें"
+    , metro : "मेट्रो"
     }
