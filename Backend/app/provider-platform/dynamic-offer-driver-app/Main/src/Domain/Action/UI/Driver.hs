@@ -2994,7 +2994,7 @@ findOnboardedDriversOrFleets personId merchantOpCityId maybeFrom maybeTo = do
             totalEarningsPerKm = roundToIntegral totalEarningsPerKm,
             totalEarningsPerKmWithCurrency = PriceAPIEntity totalEarningsPerKm currency,
             bonusEarningsWithCurrency = PriceAPIEntity stats.bonusEarned currency,
-            onlineDuration = Seconds 0 -- FIXME add onlineDuration to driverStats?
+            onlineDuration = stats.onlineDuration
           }
     (Just fromDate, Just toDate) | fromDate == toDate -> do
       mbStats <- runInReplica $ SQDS.findByDriverIdAndDate personId fromDate
