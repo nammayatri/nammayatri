@@ -26,6 +26,8 @@ import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.JourneyLeg.Types as JL
+import qualified Lib.JourneyModule.Base as JM
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.FRFSRecon as QFRFSRecon
 import qualified Storage.Queries.FRFSTicketBooking as QTBooking
@@ -63,4 +65,12 @@ onCancel merchant booking' dOnCancel = do
     Spec.CANCEL_INITIATED -> do
       void $ QTBooking.updateStatusById FTBooking.CANCEL_INITIATED booking.id
       void $ QFRFSRecon.updateStatusByTicketBookingId (Just DFRFSTicket.CANCEL_INITIATED) booking.id
+      whenJust booking.journeyId $ \journeyId -> do
+        allLegsInfo <- JM.getAllLegsInfo journeyId False
+        forM_ allLegsInfo $ \journeyLegInfo -> do
+          forM_ booking.journeyRouteDetails $ \routeDetails -> do
+            JM.markLegStatus JL.Cancelled journeyLegInfo.legExtraInfo journeyId journeyLegInfo.order routeDetails.subLegOrder
+        journey <- JM.getJourney journeyId
+        updatedLegStatus <- JM.getAllLegsStatus journey
+        JM.checkAndMarkTerminalJourneyStatus journey False False updatedLegStatus
     _ -> throwError $ InvalidRequest "Unexpected orderStatus received"
