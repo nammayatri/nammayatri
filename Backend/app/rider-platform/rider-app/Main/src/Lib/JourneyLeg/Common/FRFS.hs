@@ -663,7 +663,7 @@ getNearbyBusesFRFS userPos' riderConfig = do
   let nearbyDriverSearchRadius :: Double = fromMaybe 0.5 riderConfig.nearbyDriverSearchRadius
   busesBS <- mapM (pure . decodeUtf8) =<< (CQMMB.withCrossAppRedisNew $ Hedis.geoSearch nearbyBusKeyFRFS (Hedis.FromLonLat userPos'.lon userPos'.lat) (Hedis.ByRadius nearbyDriverSearchRadius "km"))
   logDebug $ "getNearbyBusesFRFS: busesBS: " <> show busesBS
-  buses <- Hedis.hmGet vehicleMetaKey busesBS
+  buses <- CQMMB.withCrossAppRedisNew $ Hedis.hmGet vehicleMetaKey busesBS
   logDebug $ "getNearbyBusesFRFS: buses: " <> show buses
   pure $ catMaybes buses
 
