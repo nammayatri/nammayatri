@@ -244,7 +244,8 @@ fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid moci
               source = LIVE,
               stage = Nothing,
               platformCode = Nothing,
-              providerStopCode = Nothing
+              providerStopCode = Nothing,
+              isStageStop = Nothing
             }
 
 fetchLiveSubwayTimings ::
@@ -293,7 +294,8 @@ fetchLiveSubwayTimings routeCodes stopCode currentTime integratedBppConfig mid m
           source = LIVE,
           stage = Nothing,
           platformCode = Nothing,
-          providerStopCode = Nothing
+          providerStopCode = Nothing,
+          isStageStop = Nothing
         }
 
 fetchLiveTimings ::
