@@ -65,6 +65,18 @@ apis:
         type: VerifyReq
       response:
         type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /verify/{verifyType}
+            auth: ApiAuthV2
+            params:
+              verifyType: VerifyType
+            request:
+              type: VerifyReq
+            query:
+              - adminApprovalRequired: Bool
+            response:
+              type: VerifyDocumentRes
 
   - GET:
       endpoint: /get/referralDetails
@@ -89,6 +101,8 @@ types:
     imageId: Text
     optionalImageId: Maybe Text
     identifierNumber: Text
+  VerifyDocumentRes:
+    enableFleetOwner: Bool
   VerifyType:
     enum: "VERIFY_PAN,VERIFY_GST,VERIFY_AADHAAR"
     derive: "HttpInstance"

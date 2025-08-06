@@ -24,6 +24,7 @@ module Domain.Action.ProviderPlatform.Management.DriverRegistration
     getDriverRegistrationDocumentsInfo,
     postDriverRegistrationDocumentsUpdate,
     postDriverRegistrationRegisterAadhaar,
+    postDriverRegistrationUnlinkDocument,
   )
 where
 
@@ -34,12 +35,13 @@ import qualified "lib-dashboard" Domain.Types.Person as DP
 import qualified Domain.Types.Transaction as DT
 import "lib-dashboard" Environment
 import Kernel.Prelude
-import Kernel.Types.APISuccess (APISuccess)
+import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.Transaction as T
 import Storage.Beam.CommonInstances ()
+import qualified "lib-dashboard" Storage.Queries.Person as QP
 import "lib-dashboard" Tools.Auth
 import "lib-dashboard" Tools.Auth.Merchant
 
@@ -143,3 +145,14 @@ postDriverRegistrationRegisterAadhaar merchantShortId opCity apiTokenInfo driver
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo Nothing (Just req)
   T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationRegisterAadhaar) driverId req
+
+postDriverRegistrationUnlinkDocument :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.DocumentType -> Flow APISuccess
+postDriverRegistrationUnlinkDocument merchantShortId opCity apiTokenInfo personId documentType = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  let mbRequestorId = determineRequestorId apiTokenInfo personId
+  transaction <- buildTransaction apiTokenInfo (Just personId) (Just documentType)
+  T.withTransactionStoring transaction $ do
+    res <- Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationUnlinkDocument) personId documentType mbRequestorId
+    when res.mandatoryDocumentRemoved $ do
+      QP.updatePersonVerifiedStatus (cast personId) False
+    pure Success
