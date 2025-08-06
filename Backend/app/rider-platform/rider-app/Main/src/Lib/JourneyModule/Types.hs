@@ -844,7 +844,7 @@ getFRFSLegStatusFromBooking booking = case booking.status of
   DFRFSBooking.FAILED -> Failed
   DFRFSBooking.CANCELLED -> Cancelled
   DFRFSBooking.COUNTER_CANCELLED -> Cancelled
-  DFRFSBooking.CANCEL_INITIATED -> InPlan
+  DFRFSBooking.CANCEL_INITIATED -> CancelInitiated
   DFRFSBooking.TECHNICAL_CANCEL_REJECTED -> InPlan
 
 mkLegInfoFromFrfsBooking ::
