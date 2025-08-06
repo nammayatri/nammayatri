@@ -112,7 +112,7 @@ bulkUpdateByDriverId merchantId merchantOpCityId driverId eventFunction coinsVal
                         vehicleCategory = Just $ VecVarient.castVehicleVariantToVehicleCategory vehicle.variant
                       }
               CHistory.updateCoinEvent driverCoinEvent
-              Coins.sendCoinsNotification merchantOpCityId driverId coinsValue eventFunction
+              Coins.sendCoinsNotification merchantOpCityId driverId coinsValue eventFunction Nothing
               pure Nothing
             Nothing -> pure $ Just $ Common.BulkUploadFailedItem {driverId = driverId.getId, errorMessage = "Vehicle not found for driverId: " <> driverId.getId}
 
