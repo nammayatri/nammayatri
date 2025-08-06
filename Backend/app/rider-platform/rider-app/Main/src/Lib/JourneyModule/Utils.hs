@@ -339,8 +339,9 @@ findPossibleRoutes ::
   Id Merchant ->
   Id MerchantOperatingCity ->
   Enums.VehicleCategory ->
+  Bool ->
   m (Maybe Text, [AvailableRoutesByTier])
-findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime integratedBppConfig mid mocid vc = do
+findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime integratedBppConfig mid mocid vc sendWithoutFare = do
   -- Get route mappings that contain the origin stop
   fromRouteStopMappings <- measureLatency (OTPRest.getRouteStopMappingByStopCode fromStopCode integratedBppConfig) ("getRouteStopMappingByStopCode" <> show fromStopCode)
 
@@ -438,7 +439,7 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
         }
 
   -- Only return service tiers that have available routes
-  return $ ((listToMaybe sortedTimings) <&> (.routeCode), filter (\r -> not (null $ r.availableRoutes)) results)
+  return $ ((listToMaybe sortedTimings) <&> (.routeCode), filter (\r -> not (null $ r.availableRoutes) && (r.fare /= PriceAPIEntity 0.0 INR || sendWithoutFare)) results)
 
 -- | Find the top upcoming trips for a given route code and stop code
 -- Returns arrival times in seconds for the upcoming trips along with route ID and service type
@@ -582,7 +583,7 @@ getSingleModeRouteDetails mbRouteCode (Just originStopCode) (Just destinationSto
     (Just fromStop, Just toStop) -> do
       case (fromStop.lat, fromStop.lon, toStop.lat, toStop.lon) of
         (Just fromStopLat, Just fromStopLon, Just toStopLat, Just toStopLon) -> do
-          (nextAvailableRouteCode, possibleRoutes) <- measureLatency (findPossibleRoutes Nothing originStopCode destinationStopCode currentTime integratedBppConfig mid mocid vc) "findPossibleRoutes"
+          (nextAvailableRouteCode, possibleRoutes) <- measureLatency (findPossibleRoutes Nothing originStopCode destinationStopCode currentTime integratedBppConfig mid mocid vc True) "findPossibleRoutes"
 
           let routeCode = mbRouteCode <|> nextAvailableRouteCode
           mbRoute <-
