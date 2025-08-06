@@ -331,3 +331,18 @@ ALTER TABLE atlas_app.booking ADD COLUMN is_pet_ride boolean ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.booking ADD COLUMN is_multimodal_search boolean ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.booking ADD COLUMN shared_entity_id character varying(36) ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

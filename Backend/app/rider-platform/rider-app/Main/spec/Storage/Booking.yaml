@@ -37,6 +37,7 @@ imports:
   ParcelType: Domain.Types.ParcelDetails
   JourneyLegStatus: Lib.JourneyLeg.Types
   RecentLocation: Domain.Types.RecentLocation
+  SharedEntity: Domain.Types.SharedEntity
 
 BookingLocation:
   tableName: booking_location
@@ -247,6 +248,7 @@ Booking:
     insuredAmount: Maybe Text
     driverInsuredAmount: Maybe Text
     isMultimodalSearch: Maybe Bool
+    sharedEntityId: Maybe (Id SharedEntity)
 
   beamFields:
     estimatedDistance:
@@ -356,6 +358,7 @@ Booking:
     estimatedDistanceValue: double precision
     vehicleIconUrl: character varying(255)
     configInExperimentVersions: "json"
+    sharedEntityId: character varying(36)
 
   default:
     fareProductType: "'ONE_WAY'"
@@ -458,6 +461,11 @@ Booking:
     findByQuoteId:
       kvFunction: findOneWithKV
       where: quoteId
+
+    updateSharedEntityId:
+      kvFunction: updateOneWithKV
+      where: id
+      params: [sharedEntityId]
 
 BookingPartiesLink:
   fields:

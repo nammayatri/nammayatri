@@ -21,6 +21,7 @@ imports:
   Value: Data.Aeson
   TagNameValue: Lib.Yudhishthira.Types
   ParcelType: Domain.Types.DeliveryDetails
+  SharedEntity: Domain.Types.SharedEntity
 
 SearchRequest:
   derives: Generic,Show,ToJSON,FromJSON
@@ -80,6 +81,7 @@ SearchRequest:
     parcelQuantity: Maybe Int
     preferSafetyPlus: Bool
     isReserveRide: Maybe Bool
+    sharedEntityId: Maybe (Id SharedEntity)
   beamType:
     startTime: Maybe UTCTime
     validTill: Maybe UTCTime
@@ -180,6 +182,7 @@ SearchRequest:
     pickupZoneGateId: character varying(36)
     transactionId: character varying(36)
     configInExperimentVersions: "json"
+    sharedEntityId: character varying(36)
 
   default:
     autoAssignEnabled: "false"
@@ -226,6 +229,11 @@ SearchRequest:
       kvFunction: updateWithKV
       params: [ preferSafetyPlus ]
       where: id
+
+    updateSharedEntityId:
+      kvFunction: updateWithKV
+      where: id
+      params: [sharedEntityId]
 
   extraOperations:
   - EXTRA_QUERY_FILE

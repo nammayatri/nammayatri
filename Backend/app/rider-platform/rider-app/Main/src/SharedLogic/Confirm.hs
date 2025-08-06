@@ -356,6 +356,7 @@ buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode
           preferSafetyPlus = quote.isSafetyPlus,
           recentLocationId = searchRequest.recentLocationId,
           isMultimodalSearch = searchRequest.isMultimodalSearch,
+          sharedEntityId = Nothing, -- VaibhavD : Re-evaluate
           ..
         },
       bookingParties

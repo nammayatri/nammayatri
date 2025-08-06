@@ -9,6 +9,7 @@ imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   Centesimal: Kernel.Types.Common
+  SharedEntity: Domain.Types.SharedEntity
 
 Estimate:
     tableName: estimate
@@ -61,6 +62,7 @@ Estimate:
       updatedAt: UTCTime
       merchantId: Maybe (Id Merchant)
       merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
+      sharedEntityId: Maybe (Id SharedEntity)
 
     beamFields:
       farePolicy:
@@ -78,6 +80,7 @@ Estimate:
     sqlType:
       farePolicyId: character varying(36)
       tipOptions: integer[]
+      sharedEntityId: character varying(36)
     beamType:
       updatedAt: Maybe UTCTime
       isScheduled: Maybe Bool
@@ -127,3 +130,8 @@ Estimate:
         kvFunction: findAllWithKVAndConditionalDB
         where:
           and: [requestId, eligibleForUpgrade]
+
+      updateSharedEntityId:
+        kvFunction: updateWithKV
+        where: id
+        params: [sharedEntityId]

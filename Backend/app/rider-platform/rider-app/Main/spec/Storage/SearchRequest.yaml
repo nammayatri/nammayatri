@@ -31,6 +31,7 @@ imports:
   Value: Data.Aeson
   RecentLocation: Domain.Types.RecentLocation
   VehicleCategory: BecknV2.OnDemand.Enums
+  SharedEntity: Domain.Types.SharedEntity
 
 SearchRequest:
   tableName: search_request
@@ -92,6 +93,7 @@ SearchRequest:
     allJourneysLoaded: Maybe Bool
     searchMode: Maybe SearchMode
     isMultimodalSearch: Maybe Bool
+    sharedEntityId: Maybe (Id SharedEntity)
 
   default:
     hasMultimodalSearch: "false"
@@ -127,6 +129,7 @@ SearchRequest:
     currency: character varying(255)
     fromLocationId: character varying(36)
     configInExperimentVersions: "json"
+    sharedEntityId: character varying(36)
 
   beamFields:
     distance:
@@ -262,6 +265,11 @@ SearchRequest:
       kvFunction: updateOneWithKV
       where: id
       params: [isPetRide]
+
+    updateSharedEntityId:
+      kvFunction: updateOneWithKV
+      where: id
+      params: [sharedEntityId]
 
   constraints:
     id: PrimaryKey

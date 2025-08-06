@@ -285,5 +285,16 @@ ALTER TABLE atlas_app.search_request ADD COLUMN search_mode text ;
 ALTER TABLE atlas_app.search_request ADD COLUMN is_multimodal_search boolean ;
 
 
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.search_request ADD COLUMN shared_entity_id character varying(36) ;
+
+
+------- SQL updates -------
+
+
+
+
 ------- SQL updates -------
 

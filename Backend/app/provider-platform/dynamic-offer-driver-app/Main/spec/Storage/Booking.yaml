@@ -19,6 +19,7 @@ imports:
   ConfigVersionMap: Lib.Yudhishthira.Types
   Value: Data.Aeson
   ParcelType: Domain.Types.DeliveryDetails
+  SharedEntity: Domain.Types.SharedEntity
 
 Booking:
   derives: "Generic,Show,FromJSON,ToJSON"
@@ -94,6 +95,7 @@ Booking:
     coinsRewardedOnGoldTierRide: Maybe Int
     isInsured: Bool
     insuredAmount: Maybe Text
+    sharedEntityId: Maybe (Id SharedEntity)
 
   excludedFields:
     - merchantId
@@ -212,6 +214,7 @@ Booking:
     tollNames: "text[]"
     estimateId: character varying(255)
     configInExperimentVersions: "json"
+    sharedEntityId: character varying(36)
 
   default:
     bookingType: "'NormalBooking'"
@@ -221,6 +224,11 @@ Booking:
       kvFunction: updateOneWithKV
       params: [estimatedFare, estimatedDistance]
       where: id
+
+    updateSharedEntityId:
+      kvFunction: updateOneWithKV
+      where: id
+      params: [sharedEntityId]
 
   constraints:
     id: PrimaryKey
