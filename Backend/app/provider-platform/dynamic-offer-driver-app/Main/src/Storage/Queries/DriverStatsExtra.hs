@@ -61,7 +61,8 @@ createInitialDriverStats currency distanceUnit driverId = do
             numDriversOnboarded = 0,
             numFleetsOnboarded = 0,
             safetyPlusEarnings = 0.0,
-            safetyPlusRideCount = 0
+            safetyPlusRideCount = 0,
+            onlineDuration = Seconds 0
           }
   createWithKV dStats
 

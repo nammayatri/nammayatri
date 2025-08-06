@@ -23,6 +23,7 @@ data DriverStats = DriverStats
     lateNightTrips :: Kernel.Prelude.Int,
     numDriversOnboarded :: Kernel.Prelude.Int,
     numFleetsOnboarded :: Kernel.Prelude.Int,
+    onlineDuration :: Kernel.Types.Common.Seconds,
     rating :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
     ridesCancelled :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     safetyPlusEarnings :: Kernel.Types.Common.HighPrecMoney,
