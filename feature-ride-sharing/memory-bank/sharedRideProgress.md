@@ -20,10 +20,10 @@ This document tracks the development progress of the Shared Ride feature.
 ## Received Flowchart Chunks
 
 - **Chunk 1:** ✅ **IMPLEMENTED** - Initial Search and Pre-Pooling Checks
-- **Chunk 2:** 🚧 **CURRENT FOCUS** - Pre-Pooling Validation and Rider Pooling Logic
+- **Chunk 2:** ✅ **COMPLETED** - Pre-Pooling Validation and Rider Pooling Logic
 - **Chunk 3:** ⏳ **PENDING** - Batch Creation and Driver Pooling
 - **Chunk 4:** ⏳ **PENDING** - Booking, Fulfillment, and Exception Handling
-- **Chunk 5:** ⏳ **PENDING** - Rider Pooling Logic (Detailed Drill-Down)
+- **Chunk 5:** ✅ **COMPLETED** - Rider Pooling Logic (Detailed Drill-Down)
 - **Chunk 6:** ⏳ **PENDING** - Rider Pooling Logic (Advanced Filtering)
 - **Chunk 7:** ⏳ **PENDING** - Rider Pooling Logic (Final Filters & Grouping)
 - **Chunk 8:** ⏳ **PENDING** - Driver Pooling Logic (Detailed Drill-Down)
@@ -95,14 +95,35 @@ This document tracks the development progress of the Shared Ride feature.
 
 ---
 
+### Chunk 5 - Rider Pooling Logic (✅ COMPLETED)
+- [x] **Complete `handleSyncRiderPooling` Implementation** ✅
+  - GSI queries for nearby riders within pickup radius (`geoSearchDecoded`)
+  - 4-step modular filtering cascade replacing nested if-else statements:
+    - **Lock Check**: Using `Redis.safeGet` for thread safety
+    - **Expiry Check**: Validate estimate hasn't expired
+    - **Seat Availability**: Check vehicle capacity constraints (AUTO=1, CAR=2)
+    - **Dropoff Compatibility**: Staged distance validation with optimization
+  - SharedEntity creation for matched riders with OVERLAPPING type
+  - Optimized distance calculations with staged validation to reduce API calls
+- [x] **Enhanced Distance Calculation Strategy** ✅
+  - Straight-line distance filtering first (using `calculateDistanceFromCoords`)
+  - Actual route distance using `Tools.Maps.getDistance` for precision
+  - Pickup distance compatibility check before expensive route calls
+  - Only calculate drop-to-drop distance when pickup distances are compatible
+  - Concrete `Location` types instead of generic parameters for better performance
+- [x] **Robust Error Handling & Logging** ✅
+  - Proper `fromMaybeM` usage with specific error types (`EstimateDoesNotExist`, `SearchRequestDoesNotExist`)
+  - Detailed validation failure logging with specific reasons
+  - Clean separation of concerns with `ValidationStep` data type
+  - Performance-aware staged validation to minimize expensive operations
+
 ## Next Phase: Pending Tasks for Future Chunks
 
-### Chunk 5-7 - Complete Rider Pooling Logic
-- [ ] **Complete `handleSyncRiderPooling` Implementation**
-  - Implement GSI queries for compatible riders
-  - Apply filtering cascade (proximity, route overlap, seat availability)
-  - Create SharedEntity when matches found
-  - Handle complex pooling algorithms from sharedRideFlowCore.md
+### Chunk 6-7 - Advanced Rider Pooling Logic
+- [ ] **Route Overlap Analysis**
+  - Implement geo-hashing with precision 9 for route matching
+  - Advanced filtering for route compatibility beyond distance thresholds
+  - Multi-waypoint route optimization algorithms
 
 ### Beckn Protocol Integration (Cross-Chunk Task)
 - [ ] **Modify Beckn Select Request ACL**
@@ -164,6 +185,6 @@ This document tracks the development progress of the Shared Ride feature.
 
 ---
 
-**Last Updated:** 2025-01-31  
-**Status:** Active Development - Chunk 2 Focus  
+**Last Updated:** 2025-08-05  
+**Status:** Active Development - Chunks 1,2,5 Completed - Focus on Chunks 6-7  
 **Current Developer:** Claude Code Assistant

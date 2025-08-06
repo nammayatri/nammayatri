@@ -35,10 +35,13 @@ import Control.Monad.Extra (anyM)
 import Data.Aeson ((.:), (.=))
 import qualified Data.Aeson as A
 import Data.Aeson.Types (parseFail, typeMismatch)
+import qualified Data.Geohash as Geohash
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.HashMap.Strict.InsOrd as HMSIO
 import Data.OpenApi hiding (name)
+import qualified Data.Set as Set
 import qualified Data.Text as T
+import qualified Database.Redis as Hedis
 import qualified Domain.Action.UI.Estimate as UEstimate
 import qualified Domain.Action.UI.Registration as Reg
 import Domain.Types.Booking (Booking, BookingStatus (..))
@@ -48,6 +51,7 @@ import qualified Domain.Types.DriverOffer as DDO
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Journey as DJ
 import qualified Domain.Types.JourneyLeg as DJL
+import qualified Domain.Types.Location as DLocation
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.ParcelDetails as DParcel
@@ -64,6 +68,7 @@ import qualified Domain.Types.VehicleVariant as DV
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.External.Maps.Google.MapsClient.Types (LatLngV2 (..))
+import Kernel.External.Maps.HasCoordinates (getCoordinates)
 import Kernel.External.MultiModal.Interface.Types (MultiModalAgency (..))
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.Prelude
@@ -75,12 +80,14 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Types.Predicate
+import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
 import qualified Lib.JourneyLeg.Types as JLT
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Quote
+import qualified SharedLogic.RiderPooling as RiderPooling
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -102,6 +109,8 @@ import qualified Storage.Queries.SearchRequest as QSearchRequest
 import qualified Storage.Queries.SearchRequestPartiesLink as QSRPL
 import qualified Storage.Queries.SharedEntity as QSharedEntity
 import Tools.Error
+import Tools.Maps (GetRoutesResp)
+import qualified Tools.Maps as Maps
 import qualified Tools.SharedRedisKeys as SharedRedisKeys
 import TransactionLogs.Types
 
@@ -250,17 +259,15 @@ instance ToSchema CancelAPIResponse where
           & enum_ L.?~ map (A.String . T.pack . show) allCancelAPIResponse
           & Inline
 
-select :: SelectFlow m r c => Id DPerson.Person -> Id DEstimate.Estimate -> DSelectReq -> m DSelectRes
-select personId estimateId req = do
+select :: SelectFlow m r c => Id DPerson.Person -> DEstimate.Estimate -> DSelectReq -> m DSelectRes
+select personId estimate req = do
   now <- getCurrentTime
-  estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
   when (estimate.validTill < now) $ throwError (InvalidRequest $ "Estimate expired " <> show estimate.id) -- select validation check
-  select2 personId estimateId req
+  select2 personId estimate req
 
-select2 :: SelectFlow m r c => Id DPerson.Person -> Id DEstimate.Estimate -> DSelectReq -> m DSelectRes
-select2 personId estimateId req@DSelectReq {..} = do
+select2 :: SelectFlow m r c => Id DPerson.Person -> DEstimate.Estimate -> DSelectReq -> m DSelectRes
+select2 personId estimate req@DSelectReq {..} = do
   runRequestValidation validateDSelectReq req
-  estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
   Metrics.startGenericLatencyMetrics Metrics.SELECT_TO_SEND_REQUEST estimate.requestId.getId
   let searchRequestId = estimate.requestId
   remainingEstimates <- catMaybes <$> (QEstimate.findById `mapM` filter ((/=) estimate.id) (fromMaybe [] otherSelectedEstimates))
@@ -272,10 +279,11 @@ select2 personId estimateId req@DSelectReq {..} = do
   searchRequest <- QSearchRequest.findByPersonId personId searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist personId.getId)
   riderConfig <- QRC.findByMerchantOperatingCityId (cast searchRequest.merchantOperatingCityId) Nothing
   when (disabilityDisable == Just True) $ QSearchRequest.updateDisability searchRequest.id Nothing
-
+  ----------------------------------------------------------------------------------------------------------
   -- Handle shared ride specific logic and capture result
   (mbSharedEntityId, validatedNumSeats) <- case estimate.tripCategory of
-    Just RideShare -> do
+    -- VaibhavD : NEW : check data TripCategory to find out the type of RideShare.
+    Just (Trip.RideShare _) -> do
       -- Ensure numSeats is provided for shared rides (required field for shared rides)
       validatedSeats <- numSeats & fromMaybeM (InvalidRequest "Number of seats required for shared ride selection")
 
@@ -295,12 +303,12 @@ select2 personId estimateId req@DSelectReq {..} = do
             then do
               -- Sync pooling: Call rider pooling logic directly
               logInfo $ "Attempting sync pooling for searchRequest: " <> searchRequest.id.getId
-              poolingResult <- handleSyncRiderPooling config searchRequest estimate validatedSeats
+              poolingResult <- RiderPooling.handleSyncRiderPooling config searchRequest estimate validatedSeats
               case poolingResult of
                 Nothing -> do
                   -- No immediate match found, add to GSI for future matching
                   logInfo $ "No immediate pool match, adding to waiting pool: " <> searchRequest.id.getId
-                  addToSharedRideGSI config searchRequest estimate validatedSeats
+                  RiderPooling.addToSharedRideGSI config searchRequest estimate validatedSeats
                   return (Nothing, Just validatedSeats)
                 Just sharedEntityId -> do
                   -- Match found, proceed with the shared entity
@@ -309,10 +317,11 @@ select2 personId estimateId req@DSelectReq {..} = do
             else do
               -- Async pooling: Just add to Redis GSI for cron processing
               logInfo $ "Adding to async pooling queue for searchRequest: " <> searchRequest.id.getId
-              addToSharedRideGSI config searchRequest estimate validatedSeats
+              RiderPooling.addToSharedRideGSI config searchRequest estimate validatedSeats
               return (Nothing, Just validatedSeats)
         Nothing -> throwError (InvalidRequest "Shared ride configuration not found for this location/vehicle")
     _ -> return (Nothing, numSeats) -- Non-shared ride
+    --------------------------------------------------------------------------------------------------------------------------------
   merchant <- QM.findById searchRequest.merchantId >>= fromMaybeM (MerchantNotFound searchRequest.merchantId.getId)
   when merchant.onlinePayment $ do
     when (isNothing paymentMethodId) $ throwError PaymentMethodRequired
@@ -561,50 +570,3 @@ data MultimodalSelectRes = MultimodalSelectRes
     result :: Text
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON, ToSchema)
-
--- Add customer to shared ride GSI for pooling
-addToSharedRideGSI ::
-  (MonadFlow m, CacheFlow m r) =>
-  SharedRideConfigs ->
-  DSearchReq.SearchRequest ->
-  DEstimate.Estimate ->
-  Int ->
-  m ()
-addToSharedRideGSI config searchRequest estimate numSeats = do
-  let gsiKey = "ShareRideCustomerLoc" -- GSI key from sharedRideFlowCore.md
-  now <- getCurrentTime
-
-  -- Calculate expiry time: config time - buffer time
-  let expirySeconds = config.searchRequestExpirySeconds.getSeconds - config.searchExpiryBufferSeconds.getSeconds
-  let validTill = addUTCTime (fromIntegral expirySeconds) now
-
-  -- Use estimateId instead of searchRequestId for better tracking
-  let memberKey = estimate.id.getId <> ":" <> show validTill <> ":" <> show numSeats
-  let lat = searchRequest.fromLocation.lat
-  let lon = searchRequest.fromLocation.lon
-
-  -- Add to GSI with format: estimateId:validTill:numSeats (updated format)
-  Redis.geoAdd gsiKey [(lon, lat, memberKey)]
-
-  -- Set TTL for auto-cleanup
-  Redis.expireAt memberKey (round $ utcTimeToPOSIXSeconds validTill)
-
--- Sync rider pooling handler (to be implemented in Chunk 4)
-handleSyncRiderPooling ::
-  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) =>
-  SharedRideConfigs ->
-  DSearchReq.SearchRequest ->
-  DEstimate.Estimate ->
-  Int ->
-  m (Maybe (Id DSE.SharedEntity))
-handleSyncRiderPooling config searchRequest estimate numSeats = do
-  -- TODO: Implement in Chunk 4
-  -- This will contain the full rider pooling logic:
-  -- 1. Search for compatible riders in GSI
-  -- 2. Apply filtering cascade (proximity, route overlap, etc.)
-  -- 3. Create SharedEntity if match found
-  -- 4. Return SharedEntity ID or Nothing
-
-  -- For now, always return Nothing (no match found)
-  logInfo $ "handleSyncRiderPooling called for estimate: " <> estimate.id.getId <> " with " <> show numSeats <> " seats"
-  return Nothing
