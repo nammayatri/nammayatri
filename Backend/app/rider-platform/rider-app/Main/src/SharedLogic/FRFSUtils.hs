@@ -388,7 +388,11 @@ getFareThroughGTFS riderId vehicleType integratedBPPConfig merchantId merchantOp
       case (startStop.stage, endStop.stage) of
         (Just startStage, Just endStage) -> do
           let stage = abs (endStage - startStage)
-          fares <- QFRFSGtfsStageFare.findAllByVehicleTypeAndStageAndMerchantOperatingCityId vehicleType (max 1 stage) merchantOperatingCityId
+          logDebug $ "isStageStop flags: startStop=" <> show startStop.isStageStop <> " endStop=" <> show endStop.isStageStop
+          let adjustedStage = case endStop.isStageStop of
+                Just True -> stage - 1 -- Reduce stage by 1 if found, but ensure minimum is 1
+                _ -> stage -- Use original stage if not found or Nothing
+          fares <- QFRFSGtfsStageFare.findAllByVehicleTypeAndStageAndMerchantOperatingCityId vehicleType (max 0 adjustedStage) merchantOperatingCityId
           forM fares $ \fare -> do
             vehicleServiceTier <- QFRFSVehicleServiceTier.findById fare.vehicleServiceTierId >>= fromMaybeM (InternalError $ "FRFS Vehicle Service Tier Not Found " <> fare.vehicleServiceTierId.getId)
             let price = Price {amountInt = round (fare.amount + fromMaybe 0 fare.cessCharge), amount = fare.amount + fromMaybe 0 fare.cessCharge, currency = fare.currency}
