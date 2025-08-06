@@ -1,6 +1,6 @@
 module Domain.Action.Internal.ProcessingChangeOnline (processingChangeOnline, updateOnlineDurationDuringFetchingDailyStats) where
 
-import Data.Time (Day (..), UTCTime (..), addUTCTime, diffUTCTime)
+import Data.Time (Day (..), DiffTime, UTCTime (..), addUTCTime, diffUTCTime)
 import qualified Domain.Types.Common as DriverInfo
 import qualified Domain.Types.DailyStats as DDS
 import qualified Domain.Types.DriverInformation as DriverInfo
@@ -126,7 +126,7 @@ updateOnlineDuration (driverId, merchantId, merchantOpCityId) timeDiffFromUtc dr
           }
 
     addDataToDriverStats lastOnlineFrom = do
-      let newOnlineDuration = Seconds (floor $ diffUTCTime localTime lastOnlineFrom)
+      let newOnlineDuration = diffUTCTimeInSeconds localTime lastOnlineFrom
       QDriverStats.findById driverId >>= \case
         Just driverStats -> do
           let totalOnlineDuration = driverStats.onlineDuration + newOnlineDuration
@@ -147,7 +147,7 @@ calcOnlineDuration localTime mbDailyStats lastOnlineFrom =
       lastOnlineFrom' = max startDayTime lastOnlineFrom
       mbLastOnlineDuration = mbDailyStats >>= (.onlineDuration)
       onlineDuration = if lastOnlineFrom < startDayTime then Seconds 0 else fromMaybe (Seconds 0) mbLastOnlineDuration
-   in onlineDuration + Seconds (floor $ diffUTCTime lastOnlineTo lastOnlineFrom')
+   in onlineDuration + diffUTCTimeInSeconds lastOnlineTo lastOnlineFrom'
 
 calcPreviousDayOnlineDuration ::
   UTCTime ->
@@ -156,7 +156,7 @@ calcPreviousDayOnlineDuration ::
   Seconds
 calcPreviousDayOnlineDuration endDayTime lastOnlineFrom mbPrevDayDailyStats =
   let prevDayOnlineDuration = fromMaybe (Seconds 0) $ mbPrevDayDailyStats >>= (.onlineDuration)
-   in prevDayOnlineDuration + Seconds (floor $ diffUTCTime endDayTime lastOnlineFrom)
+   in prevDayOnlineDuration + diffUTCTimeInSeconds endDayTime lastOnlineFrom
 
 updateOnlineDurationDuringFetchingDailyStats ::
   (CacheFlow m r, EsqDBFlow m r) =>
@@ -173,3 +173,10 @@ updateOnlineDurationDuringFetchingDailyStats driverId transporterConfig = do
         merchantLocalDate = utctDay localTime
     mbDailyStats <- SQDS.findByDriverIdAndDate driver.id merchantLocalDate
     updateOnlineDuration (driverId, driver.merchantId, driver.merchantOperatingCityId) transporterConfig.timeDiffFromUtc driverInfo now localTime merchantLocalDate transporterConfig.maxOnlineDurationDays mbDailyStats
+
+-- To avoid rounding error accumulation, each value was rounded to whole seconds
+diffUTCTimeInSeconds :: UTCTime -> UTCTime -> Seconds
+diffUTCTimeInSeconds to from = Seconds (round $ diffUTCTime (roundUTCTimeToSecond to) (roundUTCTimeToSecond from))
+
+roundUTCTimeToSecond :: UTCTime -> UTCTime
+roundUTCTimeToSecond (UTCTime day dt) = UTCTime day (fromIntegral $ floor @DiffTime @Integer dt)
