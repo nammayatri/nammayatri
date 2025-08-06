@@ -388,7 +388,8 @@ data DriverInformationRes = DriverInformationRes
     qrUrl :: Maybe Text,
     driverTags :: Maybe DA.Value,
     nyClubConsent :: Maybe Bool,
-    cancellationRateSlabConfig :: Maybe Domain.Types.TransporterConfig.CancellationRateSlabConfig
+    cancellationRateSlabConfig :: Maybe Domain.Types.TransporterConfig.CancellationRateSlabConfig,
+    enabledAt :: Maybe UTCTime
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -458,7 +459,8 @@ data DriverEntityRes = DriverEntityRes
     subscriptionDown :: Maybe Bool,
     qrUrl :: Maybe Text,
     driverTags :: Maybe DA.Value,
-    nyClubConsent :: Maybe Bool
+    nyClubConsent :: Maybe Bool,
+    enabledAt :: Maybe UTCTime
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -1058,6 +1060,7 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) service
         qrUrl,
         driverTags = Just driverTags,
         nyClubConsent = person.nyClubConsent,
+        enabledAt = driverInfo.enabledAt,
         ..
       }
   where
