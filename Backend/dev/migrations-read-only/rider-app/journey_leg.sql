@@ -82,3 +82,12 @@ ALTER TABLE atlas_app.journey_leg ADD COLUMN entrance json ;
 ALTER TABLE atlas_app.journey_leg ADD COLUMN status text ;
 
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.journey_leg ADD COLUMN straight_line_exit json ;
+ALTER TABLE atlas_app.journey_leg ADD COLUMN straight_line_entrance json ;
+ALTER TABLE atlas_app.journey_leg ADD COLUMN osm_exit json ;
+ALTER TABLE atlas_app.journey_leg ADD COLUMN osm_entrance json ;
