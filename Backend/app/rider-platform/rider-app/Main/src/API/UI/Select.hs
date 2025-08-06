@@ -33,6 +33,7 @@ import qualified Domain.Action.UI.Select as DSelect
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as DPerson
+import qualified Domain.Types.Trip as Trip
 import Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
@@ -108,8 +109,15 @@ select2' :: DSelect.SelectFlow m r c => (Id DPerson.Person, Id Merchant.Merchant
 select2' (personId, merchantId) estimateId req = withPersonIdLogTag personId $ do
   journeyID <- Redis.whenWithLockRedisAndReturnValue (selectEstimateLockKey personId) 60 $ do
     dSelectReq <- DSelect.select2 personId estimateId req
-    becknReq <- ACL.buildSelectReqV2 dSelectReq
-    void $ withShortRetry $ CallBPP.selectV2 dSelectReq.providerUrl becknReq merchantId
+    -- VaibhavD : NEW : In case of shared-ride, We only need to call beckn selectV2 API in case if successful match is found. If not no need to call becknAPI.
+    -- Check if we need to call Beckn API based on trip type and shared ride status
+    estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
+    let shouldCallBeckn = case estimate.tripCategory of
+          Just (Trip.RideShare _) -> isJust dSelectReq.sharedEntityId -- Only call if shared ride has successful match
+          _ -> True -- Always call for non-shared rides
+    when shouldCallBeckn $ do
+      becknReq <- ACL.buildSelectReqV2 dSelectReq
+      void $ withShortRetry $ CallBPP.selectV2 dSelectReq.providerUrl becknReq merchantId
     let journeyId = dSelectReq.mbJourneyId
     pure journeyId
   case journeyID of

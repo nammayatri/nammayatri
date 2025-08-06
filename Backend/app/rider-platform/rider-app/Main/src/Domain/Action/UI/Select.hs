@@ -35,10 +35,13 @@ import Control.Monad.Extra (anyM)
 import Data.Aeson ((.:), (.=))
 import qualified Data.Aeson as A
 import Data.Aeson.Types (parseFail, typeMismatch)
+import qualified Data.Geohash as Geohash
 import qualified Data.HashMap.Strict as HMS
 import qualified Data.HashMap.Strict.InsOrd as HMSIO
 import Data.OpenApi hiding (name)
+import qualified Data.Set as Set
 import qualified Data.Text as T
+import qualified Database.Redis as Hedis
 import qualified Domain.Action.UI.Estimate as UEstimate
 import qualified Domain.Action.UI.Registration as Reg
 import Domain.Types.Booking (Booking, BookingStatus (..))
@@ -48,6 +51,7 @@ import qualified Domain.Types.DriverOffer as DDO
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Journey as DJ
 import qualified Domain.Types.JourneyLeg as DJL
+import qualified Domain.Types.Location as DLocation
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.ParcelDetails as DParcel
@@ -56,12 +60,15 @@ import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequestPartiesLink as DSRPL
 import qualified Domain.Types.ServiceTierType as DVSTT
+import qualified Domain.Types.SharedEntity as DSE
+import Domain.Types.SharedRideConfigs (SharedRideConfigs)
 import qualified Domain.Types.Trip as DTrip
 import qualified Domain.Types.Trip as Trip
 import qualified Domain.Types.VehicleVariant as DV
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.External.Maps.Google.MapsClient.Types (LatLngV2 (..))
+import Kernel.External.Maps.HasCoordinates (getCoordinates)
 import Kernel.External.MultiModal.Interface.Types (MultiModalAgency (..))
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.Prelude
@@ -73,17 +80,20 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Types.Predicate
+import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
 import qualified Lib.JourneyLeg.Types as JLT
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Quote
+import qualified SharedLogic.RiderPooling as RiderPooling
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
+import qualified Storage.CachedQueries.SharedRideConfigs as CQSharedRideConfig
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.CachedQueries.ValueAddNP as CQVNP
 import qualified Storage.Queries.Booking as QBooking
@@ -97,7 +107,10 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import qualified Storage.Queries.SearchRequestPartiesLink as QSRPL
+import qualified Storage.Queries.SharedEntity as QSharedEntity
 import Tools.Error
+import Tools.Maps (GetRoutesResp)
+import qualified Tools.Maps as Maps
 import qualified Tools.SharedRedisKeys as SharedRedisKeys
 import TransactionLogs.Types
 
@@ -128,7 +141,9 @@ data DSelectReq = DSelectReq
     isAdvancedBookingEnabled :: Maybe Bool,
     deliveryDetails :: Maybe DTDD.DeliveryDetails,
     disabilityDisable :: Maybe Bool,
-    preferSafetyPlus :: Maybe Bool
+    preferSafetyPlus :: Maybe Bool,
+    numSeats :: Maybe Int,
+    sharedEntityId :: Maybe (Id DSE.SharedEntity)
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -145,7 +160,9 @@ validateDSelectReq DSelectReq {..} =
           [ validateObject "senderDetails" senderDetails validatePersonDetails,
             validateObject "receiverDetails" receiverDetails validatePersonDetails,
             validateField "parcelQuantity" parcelQuantity $ InMaybe $ InRange @Int 1 100000
-          ]
+          ],
+      -- VaibhavD : Re-evaluate this check!
+      validateField "numSeats" numSeats $ InMaybe $ InRange @Int 1 8
     ]
 
 validatePersonDetails :: Validate DTDD.PersonDetails
@@ -177,7 +194,9 @@ data DSelectRes = DSelectRes
     disabilityDisable :: Maybe Bool,
     selectResDetails :: Maybe DSelectResDetails,
     preferSafetyPlus :: Bool,
-    mbJourneyId :: Maybe (Id DJ.Journey)
+    mbJourneyId :: Maybe (Id DJ.Journey),
+    sharedEntityId :: Maybe (Id DSE.SharedEntity),
+    numSeats :: Maybe Int
   }
 
 data DSelectResDetails = DSelectResDelivery DParcel.ParcelDetails
@@ -240,17 +259,15 @@ instance ToSchema CancelAPIResponse where
           & enum_ L.?~ map (A.String . T.pack . show) allCancelAPIResponse
           & Inline
 
-select :: SelectFlow m r c => Id DPerson.Person -> Id DEstimate.Estimate -> DSelectReq -> m DSelectRes
-select personId estimateId req = do
+select :: SelectFlow m r c => Id DPerson.Person -> DEstimate.Estimate -> DSelectReq -> m DSelectRes
+select personId estimate req = do
   now <- getCurrentTime
-  estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
   when (estimate.validTill < now) $ throwError (InvalidRequest $ "Estimate expired " <> show estimate.id) -- select validation check
-  select2 personId estimateId req
+  select2 personId estimate req
 
-select2 :: SelectFlow m r c => Id DPerson.Person -> Id DEstimate.Estimate -> DSelectReq -> m DSelectRes
-select2 personId estimateId req@DSelectReq {..} = do
+select2 :: SelectFlow m r c => Id DPerson.Person -> DEstimate.Estimate -> DSelectReq -> m DSelectRes
+select2 personId estimate req@DSelectReq {..} = do
   runRequestValidation validateDSelectReq req
-  estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
   Metrics.startGenericLatencyMetrics Metrics.SELECT_TO_SEND_REQUEST estimate.requestId.getId
   let searchRequestId = estimate.requestId
   remainingEstimates <- catMaybes <$> (QEstimate.findById `mapM` filter ((/=) estimate.id) (fromMaybe [] otherSelectedEstimates))
@@ -262,6 +279,49 @@ select2 personId estimateId req@DSelectReq {..} = do
   searchRequest <- QSearchRequest.findByPersonId personId searchRequestId >>= fromMaybeM (SearchRequestDoesNotExist personId.getId)
   riderConfig <- QRC.findByMerchantOperatingCityId (cast searchRequest.merchantOperatingCityId) Nothing
   when (disabilityDisable == Just True) $ QSearchRequest.updateDisability searchRequest.id Nothing
+  ----------------------------------------------------------------------------------------------------------
+  -- Handle shared ride specific logic and capture result
+  (mbSharedEntityId, validatedNumSeats) <- case estimate.tripCategory of
+    -- VaibhavD : NEW : check data TripCategory to find out the type of RideShare.
+    Just (Trip.RideShare _) -> do
+      -- Ensure numSeats is provided for shared rides (required field for shared rides)
+      validatedSeats <- numSeats & fromMaybeM (InvalidRequest "Number of seats required for shared ride selection")
+
+      -- Check KYC status (user-specific prerequisite)
+      unless (fromMaybe False person.kycVerified) $
+        throwError (InvalidRequest "Please complete KYC verification to book shared rides")
+
+      -- Get shared ride config to determine sync vs async flow
+      sharedRideConfig <-
+        CQSharedRideConfig.findByMerchantOperatingCityIdAndVehicleCategory
+          searchRequest.merchantOperatingCityId
+          searchRequest.vehicleCategory
+
+      case sharedRideConfig of
+        Just config -> do
+          if config.enableSyncPooling
+            then do
+              -- Sync pooling: Call rider pooling logic directly
+              logInfo $ "Attempting sync pooling for searchRequest: " <> searchRequest.id.getId
+              poolingResult <- RiderPooling.handleSyncRiderPooling config searchRequest estimate validatedSeats
+              case poolingResult of
+                Nothing -> do
+                  -- No immediate match found, add to GSI for future matching
+                  logInfo $ "No immediate pool match, adding to waiting pool: " <> searchRequest.id.getId
+                  RiderPooling.addToSharedRideGSI config searchRequest estimate validatedSeats
+                  return (Nothing, Just validatedSeats)
+                Just sharedEntityId -> do
+                  -- Match found, proceed with the shared entity
+                  logInfo $ "Pool match found, using shared entity: " <> sharedEntityId.getId
+                  return (Just sharedEntityId, Just validatedSeats)
+            else do
+              -- Async pooling: Just add to Redis GSI for cron processing
+              logInfo $ "Adding to async pooling queue for searchRequest: " <> searchRequest.id.getId
+              RiderPooling.addToSharedRideGSI config searchRequest estimate validatedSeats
+              return (Nothing, Just validatedSeats)
+        Nothing -> throwError (InvalidRequest "Shared ride configuration not found for this location/vehicle")
+    _ -> return (Nothing, numSeats) -- Non-shared ride
+    --------------------------------------------------------------------------------------------------------------------------------
   merchant <- QM.findById searchRequest.merchantId >>= fromMaybeM (MerchantNotFound searchRequest.merchantId.getId)
   when merchant.onlinePayment $ do
     when (isNothing paymentMethodId) $ throwError PaymentMethodRequired
@@ -329,6 +389,8 @@ select2 personId estimateId req@DSelectReq {..} = do
         selectResDetails = dselectResDetails,
         preferSafetyPlus = fromMaybe False preferSafetyPlus,
         mbJourneyId = Just mbJourneyId,
+        sharedEntityId = mbSharedEntityId,
+        numSeats = validatedNumSeats,
         ..
       }
   where

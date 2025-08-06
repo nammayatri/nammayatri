@@ -391,6 +391,7 @@ library
       SharedLogic.Quote
       SharedLogic.Referral
       SharedLogic.Ride
+      SharedLogic.RiderPooling
       SharedLogic.ScheduledNotifications
       SharedLogic.Scheduler.Jobs.CallPoliceApi
       SharedLogic.Scheduler.Jobs.Chakras
