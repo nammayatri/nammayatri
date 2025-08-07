@@ -72,8 +72,8 @@ onCancel merchant booking' dOnCancel = do
         allLegsInfo <- JM.getAllLegsInfo journeyId False
         forM_ allLegsInfo $ \journeyLegInfo -> do
           case journeyLegInfo.travelMode of
-            DTrip.Walk -> JM.markLegStatus JL.Cancelled (Just JMState.Finished) journeyLegInfo.legExtraInfo journeyId journeyLegInfo.order Nothing
-            DTrip.Taxi -> JM.markLegStatus JL.Cancelled (Just JMState.Finished) journeyLegInfo.legExtraInfo journeyId journeyLegInfo.order Nothing
+            DTrip.Walk -> JM.markLegStatus (Just JL.Cancelled) (Just JMState.Finished) journeyLegInfo journeyId Nothing
+            DTrip.Taxi -> JM.markLegStatus (Just JL.Cancelled) (Just JMState.Finished) journeyLegInfo journeyId Nothing
             _ -> do
               unless (null booking'.journeyRouteDetails) $ do
                 forM_ booking'.journeyRouteDetails $ \routeDetails -> do
