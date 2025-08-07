@@ -591,7 +591,7 @@ postFrfsQuoteV2ConfirmUtil :: CallExternalBPP.FRFSConfirmFlow m r => (Kernel.Pre
 postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req crisSdkResponse = do
   merchant <- CQM.findById merchantId_ >>= fromMaybeM (InvalidRequest "Invalid merchant id")
   quote <- B.runInReplica $ QFRFSQuote.findById quoteId >>= fromMaybeM (InvalidRequest "Invalid quote id")
-  mbBooking <- QFRFSTicketBooking.findByQuoteId quoteId
+  mbBooking <- QFRFSTicketBooking.findBySearchId quote.searchId
   integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity quote
   let isMultiInitAllowed =
         case mbBooking of
@@ -651,7 +651,16 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req crisSdkResponse
                 then do
                   let mBookAuthCode = crisSdkResponse <&> (.bookAuthCode)
                   void $ QFRFSTicketBooking.updateBookingAuthCodeById mBookAuthCode booking.id
-                  return $ booking {DFRFSTicketBooking.bookingAuthCode = mBookAuthCode, DFRFSTicketBooking.quantity = ticketQuantity, DFRFSTicketBooking.childTicketQuantity = childTicketQuantity}
+                  void $ QFRFSTicketBooking.updateQuoteAndBppItemId updatedQuote.id updatedQuote.bppItemId booking.id
+                  let totalDiscount =
+                        foldr
+                          (\selectedDiscount discountAmount -> discountAmount + selectedDiscount.price.amount)
+                          (HighPrecMoney 0.0)
+                          selectedDiscounts
+                  let childPriceAmount = maybe updatedQuote.price.amount (.amount) updatedQuote.childPrice
+                  let discountedPrice = modifyPrice updatedQuote.price $ \p -> max (HighPrecMoney 0.0) $ HighPrecMoney ((p.getHighPrecMoney * (toRational updatedQuote.quantity)) + (childPriceAmount.getHighPrecMoney * (toRational (fromMaybe 0 updatedQuote.childTicketQuantity)))) - totalDiscount
+                  void $ QFRFSTicketBooking.updatePriceAndQuantityById discountedPrice updatedQuote.quantity updatedQuote.childTicketQuantity booking.id
+                  return $ booking {DFRFSTicketBooking.quoteId = quoteId, DFRFSTicketBooking.bppItemId = updatedQuote.bppItemId, DFRFSTicketBooking.bookingAuthCode = mBookAuthCode, DFRFSTicketBooking.quantity = ticketQuantity, DFRFSTicketBooking.childTicketQuantity = childTicketQuantity}
                 else return booking
             pure (rider, updatedBooking)
         )

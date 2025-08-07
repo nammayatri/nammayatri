@@ -460,7 +460,7 @@ startJourney ::
   m ()
 startJourney confirmElements forcedBookedLegOrder journeyId = do
   allLegs <- getAllLegsInfo journeyId False
-  mapM_ (\leg -> QTBooking.updateOnInitDoneBySearchId (Just False) leg.searchId) allLegs
+  mapM_ (\leg -> QTBooking.updateOnInitDoneBySearchId (Just False) (Id leg.searchId)) allLegs -- TODO :: Handle the case where isMultiAllowed is False
   mapM_
     ( \leg -> do
         let mElement = find (\element -> element.journeyLegOrder == leg.order) confirmElements
