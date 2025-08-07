@@ -44,6 +44,7 @@ import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import qualified Lib.JourneyLeg.Types as JPT
+import qualified Lib.JourneyModule.State.Utils as JMStateUtils
 import qualified Lib.JourneyModule.Types as JT
 import qualified Lib.JourneyModule.Utils as JMU
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -72,9 +73,11 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
   mbBooking <- QTBooking.findBySearchId searchId
   now <- getCurrentTime
   let userPosition = (.latLong) <$> listToMaybe riderLastPoints
+  let mbLegSearchId = Just searchId.getId
   case mbBooking of
     Just booking -> do
       integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
+      journeyLegsStatus <- getJourneyLegStatus booking.journeyRouteDetails mbLegSearchId
       case mode of
         DTrip.Bus -> do
           logDebug $ "CFRFS getState: Processing Bus leg for booking with searchId: " <> show searchId.getId
@@ -96,6 +99,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
           let baseStateData =
                 JT.JourneyLegStateData
                   { status = journeyLegStatus,
+                    legStatus = castToLegStatus <$> (listToMaybe journeyLegsStatus),
                     userPosition,
                     JT.vehiclePositions = [], -- Will be populated based on status
                     legOrder = journeyLegOrder,
@@ -153,6 +157,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
           let journeyLegStates =
                 [ JT.JourneyLegStateData
                     { status = if newStatus == JPT.InPlan then JT.getFRFSLegStatusFromBooking booking else newStatus,
+                      legStatus = castToLegStatus <$> (find (\legStatus -> maybe False (== subLegOrder) legStatus.subLegOrder) journeyLegsStatus),
                       userPosition,
                       JT.vehiclePositions = vehiclePositions,
                       legOrder = journeyLegOrder,
@@ -165,6 +170,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
     Nothing -> do
       searchReq <- QFRFSSearch.findById searchId >>= fromMaybeM (SearchRequestNotFound searchId.getId)
       integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity searchReq
+      journeyLegsStatus <- getJourneyLegStatus searchReq.journeyRouteDetails mbLegSearchId
       case mode of
         DTrip.Bus -> do
           journeyLegInfo <- searchReq.journeyLegInfo & fromMaybeM (InvalidRequest "JourneySearchData not found")
@@ -184,6 +190,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
           let baseStateData =
                 JT.JourneyLegStateData
                   { status = fromMaybe JPT.InPlan searchReq.journeyLegStatus,
+                    legStatus = castToLegStatus <$> (listToMaybe journeyLegsStatus),
                     userPosition,
                     JT.vehiclePositions = [], -- Will be populated based on status
                     legOrder = journeyLegInfo.journeyLegOrder,
@@ -230,9 +237,11 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
           let routeStatuses = getStatusForMetroAndSubway searchReq.journeyRouteDetails
           journeyLegInfo <- searchReq.journeyLegInfo & fromMaybeM (InvalidRequest "JourneySearchData not found")
           vehiclePositions <- getVehiclePositionsIfAvailable mode searchReq.fromStationCode searchReq.toStationCode integratedBppConfig
+
           let journeyLegStates =
                 [ JT.JourneyLegStateData
                     { status = newStatus,
+                      legStatus = castToLegStatus <$> (find (\legStatus -> maybe False (== subLegOrder) legStatus.subLegOrder) journeyLegsStatus),
                       userPosition,
                       JT.vehiclePositions = vehiclePositions,
                       legOrder = journeyLegInfo.journeyLegOrder,
@@ -292,6 +301,24 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
     getStatusForMetroAndSubway journeyRouteDetails = do
       let sortedSubRoutes = sortOn (.subLegOrder) journeyRouteDetails
       map (\sr -> (fromMaybe 1 sr.subLegOrder, fromMaybe JPT.InPlan sr.journeyStatus)) sortedSubRoutes
+
+    getJourneyLegStatus :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => [RD.RouteDetails] -> Maybe Text -> m [JT.JourneyFRFSLegStatusElement]
+    getJourneyLegStatus journeyRouteDetails mbLegSearchId = do
+      mapM
+        ( \routeDetails -> do
+            bookingStatus <- JMStateUtils.getFRFSJourneyBookingStatus mbLegSearchId
+            trackingStatus <- JMStateUtils.getFRFSJourneyLegTrackingStatus mbLegSearchId routeDetails
+            return $ JT.JourneyFRFSLegStatusElement {trackingStatus = trackingStatus, bookingStatus = bookingStatus, subLegOrder = routeDetails.subLegOrder}
+        )
+        journeyRouteDetails
+
+    castToLegStatus :: JT.JourneyFRFSLegStatusElement -> JT.LegStatusElement
+    castToLegStatus journeyFRFSLegStatusElement = do
+      case mode of
+        DTrip.Metro -> JT.MetroStatusElement journeyFRFSLegStatusElement
+        DTrip.Subway -> JT.SubwayStatusElement journeyFRFSLegStatusElement
+        DTrip.Bus -> JT.BusStatusElement journeyFRFSLegStatusElement
+        _ -> JT.MetroStatusElement journeyFRFSLegStatusElement
 
 getFare :: (CoreMetrics m, CacheFlow m r, EncFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv, HasKafkaProducer r, HasShortDurationRetryCfg r c) => Id DPerson.Person -> DMerchant.Merchant -> MerchantOperatingCity -> Spec.VehicleCategory -> [FRFSRouteDetails] -> Maybe UTCTime -> Maybe Text -> m (Bool, Maybe JT.GetFareResponse)
 getFare riderId merchant merchantOperatingCity vehicleCategory routeDetails mbFromArrivalTime agencyGtfsId = do

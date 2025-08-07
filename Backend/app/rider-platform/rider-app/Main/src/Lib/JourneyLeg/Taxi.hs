@@ -22,6 +22,7 @@ import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.EstimateStatus as DEstimate
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as DPerson
+import qualified Domain.Types.RouteDetails as RD
 import Domain.Types.ServiceTierType ()
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Maps.Types
@@ -35,6 +36,7 @@ import Kernel.Types.SlidingWindowLimiter
 import Kernel.Utils.Common
 import Lib.JourneyLeg.Types
 import Lib.JourneyLeg.Types.Taxi
+import qualified Lib.JourneyModule.State.Utils as JMStateUtils
 import qualified Lib.JourneyModule.Types as JT
 import qualified SharedLogic.CallBPP as CallBPP
 import SharedLogic.CallBPPInternal as CallBPPInternal (CalculateFareReq (..), FareData (..), GetFareResponse (..), getFare)
@@ -222,11 +224,13 @@ instance JT.JourneyLeg TaxiLegRequest m where
         mbRide <- QRide.findByRBId booking.id
         (journeyLegStatus, vehiclePosition) <- JT.getTaxiLegStatusFromBooking booking mbRide req.journeyLegStatus
         journeyLegOrder <- booking.journeyLegOrder & fromMaybeM (BookingFieldNotPresent "journeyLegOrder")
+        journeyLegsStatus <- getJourneyLegStatus booking.journeyRouteDetails (Just booking.transactionId) Nothing
 
         return $
           JT.Single $
             JT.JourneyLegStateData
               { status = journeyLegStatus,
+                legStatus = JT.TaxiStatusElement <$> journeyLegsStatus,
                 userPosition = (.latLong) <$> listToMaybe req.riderLastPoints,
                 vehiclePositions = maybe [] (\latLong -> [JT.VehiclePosition {position = Just latLong, vehicleId = "taxi", upcomingStops = []}]) vehiclePosition,
                 legOrder = journeyLegOrder,
@@ -238,17 +242,29 @@ instance JT.JourneyLeg TaxiLegRequest m where
         journeyLegInfo <- searchReq.journeyLegInfo & fromMaybeM (InvalidRequest "JourneySearchData not found")
         mbEstimate <- maybe (pure Nothing) (QEstimate.findById . Id) journeyLegInfo.pricingId
         let journeyLegStatus = JT.getTaxiLegStatusFromSearch journeyLegInfo (mbEstimate <&> (.status)) req.journeyLegStatus
+        journeyLegsStatus <- getJourneyLegStatus searchReq.journeyRouteDetails (Just searchReq.id.getId) (mbEstimate <&> (.id.getId))
 
         return $
           JT.Single $
             JT.JourneyLegStateData
               { status = journeyLegStatus,
+                legStatus = JT.TaxiStatusElement <$> journeyLegsStatus,
                 userPosition = (.latLong) <$> listToMaybe req.riderLastPoints,
                 vehiclePositions = [],
                 legOrder = journeyLegInfo.journeyLegOrder,
                 subLegOrder = 1,
                 mode = DTrip.Taxi
               }
+    where
+      getJourneyLegStatus :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => Maybe RD.RouteDetails -> Maybe Text -> Maybe Text -> m (Maybe JT.JourneyTaxiLegStatus)
+      getJourneyLegStatus journeyRouteDetails mbLegSearchId mbPricingId = do
+        bookingStatus <- JMStateUtils.getTaxiJourneyBookingStatus mbLegSearchId mbPricingId
+        mapM
+          ( \routeDetails -> do
+              trackingStatus <- JMStateUtils.getTaxiJourneyLegTrackingStatus mbLegSearchId mbPricingId routeDetails
+              return $ JT.JourneyTaxiLegStatus {trackingStatus = trackingStatus, bookingStatus = bookingStatus}
+          )
+          journeyRouteDetails
   getState _ = throwError (InternalError "Not Supported")
 
   getInfo (TaxiLegRequestGetInfo req) = do

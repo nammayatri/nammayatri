@@ -27,6 +27,7 @@ import qualified Domain.Types.FRFSTicketBookingFeedback as DFRFSTicketBookingFee
 import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBooking
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
+import qualified Domain.Types.Journey as DJ
 import qualified Domain.Types.JourneyLeg as DJL
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant as Merchant
@@ -973,6 +974,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking booking' = do
     markJourneyPaymentSuccess mbJourneyId paymentOrder = do
       whenJust mbJourneyId $ \journeyId -> do
         void $ QJourney.updatePaymentOrderShortId (Just paymentOrder.shortId) (Just True) journeyId
+        void $ QJourney.updateStatus DJ.INPROGRESS journeyId
 
     mkPaymentSuccessLockKey bookingId = "frfsPaymentSuccess:" <> bookingId.getId
 

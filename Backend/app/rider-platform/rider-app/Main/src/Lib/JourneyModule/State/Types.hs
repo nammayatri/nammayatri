@@ -24,7 +24,7 @@ instance FromJSON EmptyParam where
   parseJSON _ = return EmptyParam
 
 instance ToJSON EmptyParam where
-  toJSON EmptyParam = object []
+  toJSON EmptyParam = String "EmptyParam"
 
 data FeedbackStatus = FEEDBACK_PENDING
   deriving (Generic, ToSchema, Show, Eq, Ord)
@@ -53,7 +53,6 @@ data TrackingStatus
   | Ongoing -- (Taxi - Ride NEW)
   | Finishing
   | ExitingStation -- (FRFS - At Destination Station)
-  | FeedbackPending -- (Taxi - Feedback, FRFS - Feedback)
   -- Terminal Status
   | Finished -- (Taxi - Ride COMPLETED)
   deriving (Generic, ToSchema, Eq, Ord, Show, Read, FromJSON, ToJSON, ToParamSchema)
