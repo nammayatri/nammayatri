@@ -23,6 +23,7 @@ import qualified Tools.Beam.UtilsTH
 data Estimate = Estimate
   { backendAppVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     backendConfigVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
+    boostSearchPreSelectionServiceTierConfig :: Kernel.Prelude.Maybe [Domain.Types.ServiceTierType.ServiceTierType],
     bppEstimateId :: Kernel.Types.Id.Id Domain.Types.Estimate.BPPEstimate,
     clientBundleVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     clientConfigVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,

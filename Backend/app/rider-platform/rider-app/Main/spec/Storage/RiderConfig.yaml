@@ -119,6 +119,7 @@ RiderConfig:
     qrTicketRestrictionEndTime: Maybe TimeOfDay
     ticketingPermissionConfig: Maybe Value
     userServiceTierOrderConfig: "[VehicleServiceTierOrderConfig]"
+    boostSearchPreSelectionServiceTierConfig: "[VehicleServiceTierOrderConfig]"
     noOfRideRequestsConfig: Int
     busTrackingConfig: "Maybe BusTrackingConfig"
     pickupInstructionsThreshold: Int
@@ -167,6 +168,7 @@ RiderConfig:
     fareCacheRentalsConfig : Maybe Value
     fareCacheInterCitySearchLocations : Maybe Value
     userServiceTierOrderConfig: Maybe Value
+    boostSearchPreSelectionServiceTierConfig: Maybe Value
     noOfRideRequestsConfig: Maybe Int
     busTrackingConfig: Maybe Value
     pickupInstructionsThreshold: Maybe Int
@@ -218,6 +220,7 @@ RiderConfig:
     fareCacheRentalsConfig : fareCacheRentalsConfig >>= Kernel.Utils.JSON.valueToMaybe|E
     fareCacheInterCitySearchLocations : fareCacheInterCitySearchLocations >>= Kernel.Utils.JSON.valueToMaybe|E
     userServiceTierOrderConfig: fromMaybe [] (userServiceTierOrderConfig >>= Kernel.Utils.JSON.valueToMaybe)|E
+    boostSearchPreSelectionServiceTierConfig: fromMaybe [] (boostSearchPreSelectionServiceTierConfig >>= Kernel.Utils.JSON.valueToMaybe)|E
     noOfRideRequestsConfig: fromMaybe 5 noOfRideRequestsConfig|E
     busTrackingConfig: busTrackingConfig >>= Kernel.Utils.JSON.valueToMaybe|E
     pickupInstructionsThreshold: fromMaybe 4 pickupInstructionsThreshold|E
@@ -262,6 +265,7 @@ RiderConfig:
     fareCacheRentalsConfig : fareCacheRentalsConfig >>= Just . Data.Aeson.toJSON|E
     fareCacheInterCitySearchLocations : fareCacheInterCitySearchLocations >>= Just . Data.Aeson.toJSON|E
     userServiceTierOrderConfig: (Just . Data.Aeson.toJSON)|I
+    boostSearchPreSelectionServiceTierConfig: (Just . Data.Aeson.toJSON)|I
     noOfRideRequestsConfig: Just noOfRideRequestsConfig|E
     busTrackingConfig: busTrackingConfig >>= Just . Data.Aeson.toJSON|E
     pickupInstructionsThreshold: Just pickupInstructionsThreshold|E
@@ -340,6 +344,7 @@ RiderConfig:
     fareCacheRentalsConfig : "json"
     fareCacheInterCitySearchLocations : "json"
     userServiceTierOrderConfig : "json"
+    boostSearchPreSelectionServiceTierConfig: "json"
     blockedUntilInMins: int
     ticketingPermissionConfig: "json"
     busTrackingConfig: "json"
