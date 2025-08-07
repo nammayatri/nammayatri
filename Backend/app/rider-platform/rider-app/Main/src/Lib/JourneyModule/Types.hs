@@ -543,6 +543,7 @@ getTaxiLegStatusFromSearch :: JourneySearchData -> Maybe DEstimate.EstimateStatu
 getTaxiLegStatusFromSearch journeyLegInfo mbEstimateStatus journeyLegStatus =
   case journeyLegStatus of
     Just Completed -> Completed
+    Just Cancelled -> Cancelled
     _ -> do
       if journeyLegInfo.skipBooking
         then Skipped
@@ -762,7 +763,7 @@ getFRFSLegStatusFromBooking booking = case booking.status of
   DFRFSBooking.FAILED -> Failed
   DFRFSBooking.CANCELLED -> Cancelled
   DFRFSBooking.COUNTER_CANCELLED -> Cancelled
-  DFRFSBooking.CANCEL_INITIATED -> CancelInitiated
+  DFRFSBooking.CANCEL_INITIATED -> Cancelled
   DFRFSBooking.TECHNICAL_CANCEL_REJECTED -> InPlan
 
 mkLegInfoFromFrfsBooking ::
@@ -1217,8 +1218,8 @@ cannotCancelWalkStatus = [Skipped, Completed, Cancelled]
 cannotSwitchStatus :: [JourneyLegStatus]
 cannotSwitchStatus = [Booked, OnTheWay, Arriving, Arrived, Ongoing, Finishing, Completed, Cancelled]
 
-cannotCompleteJourneyIfTaxiLegIsInThisStatus :: [JourneyLegStatus]
-cannotCompleteJourneyIfTaxiLegIsInThisStatus = [Booked, OnTheWay, Arriving, Arrived, Ongoing, Finishing]
+cannotCompleteOrCancelJourneyIfTaxiLegIsInThisStatus :: [JourneyLegStatus]
+cannotCompleteOrCancelJourneyIfTaxiLegIsInThisStatus = [Booked, OnTheWay, Arriving, Arrived, Ongoing, Finishing]
 
 cannotCancelExtendStatus :: [JourneyLegStatus]
 cannotCancelExtendStatus = [Ongoing, Finishing, Completed, Cancelled, Booked, OnTheWay, Arriving, Arrived]
