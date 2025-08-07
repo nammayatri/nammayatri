@@ -1025,7 +1025,7 @@ postMultimodalComplete (mbPersonId, merchantId) journeyId = do
   personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
   journey <- JM.getJourney journeyId
   legs <- JM.getAllLegsInfo journeyId False
-  let isTaxiLegOngoing = any (\leg -> leg.travelMode == DTrip.Taxi && leg.status `elem` JMTypes.cannotCompleteJourneyIfTaxiLegIsInThisStatus) legs
+  let isTaxiLegOngoing = any (\leg -> leg.travelMode == DTrip.Taxi && leg.status `elem` JMTypes.cannotCompleteOrCancelJourneyIfTaxiLegIsInThisStatus) legs
   when isTaxiLegOngoing $ throwError (InvalidRequest "Taxi leg is ongoing, cannot complete journey")
   mapM_ (\leg -> markAllSubLegsCompleted leg journeyId) legs
   updatedLegStatus <- JM.getAllLegsStatus journey
@@ -1043,6 +1043,9 @@ postMultimodalOrderSoftCancel ::
   )
 postMultimodalOrderSoftCancel (_, merchantId) journeyId _ = do
   merchant <- CQM.findById merchantId >>= fromMaybeM (InvalidRequest "Invalid merchant id")
+  legs <- JM.getAllLegsInfo journeyId False
+  let isTaxiLegOngoing = any (\leg -> leg.travelMode == DTrip.Taxi && leg.status `elem` JMTypes.cannotCompleteOrCancelJourneyIfTaxiLegIsInThisStatus) legs
+  when isTaxiLegOngoing $ throwError (InvalidRequest "Taxi leg is ongoing, cannot cancel journey")
   ticketBookings <- QFRFSTicketBooking.findAllByJourneyId (Just journeyId)
   when (null ticketBookings) $ throwError (InvalidRequest "No FRFS bookings found for this journey")
   unless (length ticketBookings == 1) $ throwError (InvalidRequest "Multiple FRFS bookings found for this journey")
@@ -1066,6 +1069,9 @@ getMultimodalOrderCancelStatus ::
     Environment.Flow API.Types.UI.MultimodalConfirm.MultimodalCancelStatusResp
   )
 getMultimodalOrderCancelStatus (_, __) journeyId legOrder = do
+  legs <- JM.getAllLegsInfo journeyId False
+  let isTaxiLegOngoing = any (\leg -> leg.travelMode == DTrip.Taxi && leg.status `elem` JMTypes.cannotCompleteOrCancelJourneyIfTaxiLegIsInThisStatus) legs
+  when isTaxiLegOngoing $ throwError (InvalidRequest "Taxi leg is ongoing, cannot cancel journey")
   ticketBooking <- QFRFSTicketBooking.findByJourneyIdAndLegOrder journeyId legOrder >>= fromMaybeM (InvalidRequest "No FRFS booking found for the leg")
   return $
     ApiTypes.MultimodalCancelStatusResp

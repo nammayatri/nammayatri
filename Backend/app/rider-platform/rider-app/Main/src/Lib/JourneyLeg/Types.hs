@@ -19,7 +19,6 @@ data JourneyLegStatus
   | Skipped
   | Finishing
   | Cancelled
-  | CancelInitiated
   | Completed
   | Failed
   deriving stock (Eq, Ord, Show, Read, Generic)
