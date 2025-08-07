@@ -1289,7 +1289,8 @@ tfItems booking shortId estimatedDistance mbFarePolicy mbPaymentId =
           itemLocationIds = Nothing,
           itemPaymentIds = tfPaymentId mbPaymentId,
           itemPrice = tfItemPrice $ booking.estimatedFare,
-          itemTags = mkRateCardTag estimatedDistance Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp mbFarePolicy Nothing Nothing
+          itemTags = mkRateCardTag estimatedDistance Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp mbFarePolicy Nothing Nothing,
+          itemCategoryIds = Nothing -- FIXME send in on_init
         }
     ]
 
@@ -1304,7 +1305,8 @@ tfItemsSoftUpdate booking shortId estimatedDistance mbFarePolicy mbPaymentId upd
           itemLocationIds = Nothing,
           itemPaymentIds = tfPaymentId mbPaymentId,
           itemPrice = tfItemPrice updatedBooking.estimatedFare,
-          itemTags = mkRateCardTag estimatedDistance' Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp mbFarePolicy Nothing Nothing
+          itemTags = mkRateCardTag estimatedDistance' Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp mbFarePolicy Nothing Nothing,
+          itemCategoryIds = Nothing
         }
     ]
 
@@ -1725,7 +1727,8 @@ tfProvider becknConfig =
         providerId = Just $ becknConfig.subscriberId,
         providerItems = Nothing,
         providerLocations = Nothing,
-        providerPayments = Nothing
+        providerPayments = Nothing,
+        providerCategories = Nothing
       }
 
 mkFulfillmentV2SoftUpdate ::
