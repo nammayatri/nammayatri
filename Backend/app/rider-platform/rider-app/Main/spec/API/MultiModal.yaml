@@ -39,6 +39,7 @@ imports:
   Gate: Domain.Types.Station
   JourneyLegFeedbackData: Domain.Types.JourneyLegsFeedbacks
   FRFSTicketBookingStatus: Domain.Types.FRFSTicketBookingStatus
+  LegStatusElement: Lib.JourneyModule.Types
 
 module: MultimodalConfirm
 
@@ -65,6 +66,7 @@ types:
     legOrder: Int
     subLegOrder: Int
     status: JourneyLegStatus
+    legStatus: Maybe LegStatusElement
     vehiclePositions: "[VehiclePosition]"
     userPosition: Maybe LatLong
     mode: MultimodalTravelMode

@@ -126,6 +126,7 @@ data LegServiceTierOptionsResp = LegServiceTierOptionsResp {options :: [Lib.Jour
 
 data LegStatus = LegStatus
   { legOrder :: Kernel.Prelude.Int,
+    legStatus :: Kernel.Prelude.Maybe Lib.JourneyModule.Types.LegStatusElement,
     mode :: Domain.Types.Trip.MultimodalTravelMode,
     status :: Lib.JourneyLeg.Types.JourneyLegStatus,
     subLegOrder :: Kernel.Prelude.Int,
