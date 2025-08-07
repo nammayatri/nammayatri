@@ -58,13 +58,13 @@ adjustVendorFee driverFeeId adjustment = do
           ]
       ]
 
-createChildVendorFee :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => DriverFee -> DriverFee -> m ()
-createChildVendorFee parentFee childFee = do
+createChildVendorFee :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => DriverFee -> DriverFee -> HighPrecMoney -> m ()
+createChildVendorFee parentFee childFee totalFee = do
   now <- getCurrentTime
   let adjustment =
-        if (getHighPrecMoney parentFee.platformFee.fee) == 0
+        if (getHighPrecMoney totalFee) == 0
           then 1.0
-          else (getHighPrecMoney childFee.platformFee.fee) / (getHighPrecMoney parentFee.platformFee.fee)
+          else (getHighPrecMoney childFee.platformFee.fee) / (getHighPrecMoney totalFee)
 
   vendorFees <- findAllByDriverFeeId parentFee.id
   let childVendorFees =
