@@ -106,6 +106,11 @@ updateOnInitDone journeyOnInitDone id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.journeyOnInitDone journeyOnInitDone, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+updateOnInitDoneBySearchId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch -> m ())
+updateOnInitDoneBySearchId journeyOnInitDone searchId = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.journeyOnInitDone journeyOnInitDone, Se.Set Beam.updatedAt _now] [Se.Is Beam.searchId $ Se.Eq (Kernel.Types.Id.getId searchId)]
+
 updatePayoutOrderId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
 updatePayoutOrderId cashbackPayoutOrderId id = do
   _now <- getCurrentTime

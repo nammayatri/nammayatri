@@ -470,6 +470,10 @@ FRFSTicketBooking:
       kvFunction: updateOneWithKV
       params: [journeyOnInitDone]
       where: id
+    updateOnInitDoneBySearchId:
+      kvFunction: updateOneWithKV
+      params: [journeyOnInitDone]
+      where: searchId
     updateInterestDelayedByQuoteId:
       kvFunction: updateOneWithKV
       params: [bppDelayedInterest]
