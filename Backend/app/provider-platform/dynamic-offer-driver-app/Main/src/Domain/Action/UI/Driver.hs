@@ -788,9 +788,9 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
         void $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
         let driverId = cast personId
         driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
+        transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
         when (isActive || (isJust mode && (mode == Just DriverInfo.SILENT || mode == Just DriverInfo.ONLINE))) $ do
           merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-          transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
           mbVehicle <- QVehicle.findById personId
           DriverSpecificSubscriptionData {..} <- getDriverSpecificSubscriptionDataWithSubsConfig (personId, merchantId, merchantOpCityId) transporterConfig driverInfo mbVehicle Plan.YATRI_SUBSCRIPTION
           let commonSubscriptionChecks = not isOnFreeTrial && not transporterConfig.allowDefaultPlanAllocation
@@ -822,7 +822,7 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
               Nothing -> throwError $ DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag)
         when (driverInfo.active /= isActive || driverInfo.mode /= mode) $ do
           let newFlowStatus = DDriverMode.getDriverFlowStatus (mode <|> Just DriverInfo.OFFLINE) isActive
-          DDriverMode.updateDriverModeAndFlowStatus driverId Nothing isActive (mode <|> Just DriverInfo.OFFLINE) newFlowStatus (Just driverInfo) -- Need to discuss in allowCacheDriverFlowStatus value in this situation. In this funcytion, we get transporterConfig from many places.
+          DDriverMode.updateDriverModeAndFlowStatus driverId transporterConfig.allowCacheDriverFlowStatus isActive (mode <|> Just DriverInfo.OFFLINE) newFlowStatus (Just driverInfo)
         pure APISuccess.Success
     )
     ( Redis.unlockRedis (buildSetActivityLockKey personId)
