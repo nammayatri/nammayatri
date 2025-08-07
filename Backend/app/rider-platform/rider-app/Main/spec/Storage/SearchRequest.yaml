@@ -33,6 +33,7 @@ imports:
   Value: Data.Aeson
   RecentLocation: Domain.Types.RecentLocation
   VehicleCategory: BecknV2.OnDemand.Enums
+  MultiModalSearchRequest: Domain.Types.MultiModalSearchRequest
 
 SearchRequest:
   tableName: search_request
@@ -94,6 +95,7 @@ SearchRequest:
     allJourneysLoaded: Maybe Bool
     searchMode: Maybe SearchMode
     isMultimodalSearch: Maybe Bool
+    multiModalSearchRequestId: Maybe (Id MultiModalSearchRequest)
     journeyLegId: Maybe (Id JourneyLeg)
     journeyRouteDetails: Maybe RouteDetails
 

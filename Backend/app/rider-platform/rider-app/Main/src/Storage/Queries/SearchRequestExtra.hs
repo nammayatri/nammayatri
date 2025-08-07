@@ -49,6 +49,9 @@ createDSReq searchRequest = do
 findById :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id SearchRequest -> m (Maybe SearchRequest)
 findById (Id searchRequestId) = findOneWithKV [Se.Is BeamSR.id $ Se.Eq searchRequestId]
 
+findByTextId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> m (Maybe SearchRequest)
+findByTextId searchRequestId = findOneWithKV [Se.Is BeamSR.id $ Se.Eq searchRequestId]
+
 findByPersonId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Id SearchRequest -> m (Maybe SearchRequest)
 findByPersonId (Id personId) (Id searchRequestId) = findOneWithKV [Se.And [Se.Is BeamSR.id $ Se.Eq searchRequestId, Se.Is BeamSR.riderId $ Se.Eq personId]]
 

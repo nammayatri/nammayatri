@@ -8,6 +8,7 @@ import qualified Domain.Types.Common
 import qualified Domain.Types.Location
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.MultiModalSearchRequest
 import qualified Domain.Types.Person
 import qualified Domain.Types.RecentLocation
 import Kernel.Prelude
@@ -26,12 +27,14 @@ data Journey = Journey
     hasPreferredServiceTier :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     hasPreferredTransitModes :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     id :: Kernel.Types.Id.Id Domain.Types.Journey.Journey,
+    isNormalRideJourney :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isPaymentSuccess :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isPublicTransportIncluded :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     journeyExpiryTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     modes :: [Domain.Types.Common.MultimodalTravelMode],
+    multimodalSearchRequestId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MultiModalSearchRequest.MultiModalSearchRequest),
     paymentOrderShortId :: Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder),
     recentLocationId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.RecentLocation.RecentLocation),
     relevanceScore :: Kernel.Prelude.Maybe Kernel.Prelude.Double,

@@ -43,6 +43,7 @@ import SharedLogic.Search
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Estimate as QEstimate
+import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSearchRequest
@@ -53,6 +54,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
   search (TaxiLegRequestSearch TaxiLegRequestSearchData {..}) = do
     let journeySearchData = mkJourneySearchData
     legSearchReq <- mkOneWaySearchReq
+    mbMultiModalSearchRequestId <- QJourney.findMultiModalSearchIdByJourneyId journeyLegData.journeyId
     dSearchRes <-
       DSearch.search
         journey.riderId
@@ -68,6 +70,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
         (Just journeyLegData.id)
         (listToMaybe journeyLegData.routeDetails)
         True
+        mbMultiModalSearchRequestId
     QJourneyLeg.updateDistanceAndDuration (convertMetersToDistance Meter <$> dSearchRes.distance) dSearchRes.duration journeyLegData.id
     fork "search cabs" . withShortRetry $ do
       becknTaxiReqV2 <- TaxiACL.buildSearchReqV2 dSearchRes

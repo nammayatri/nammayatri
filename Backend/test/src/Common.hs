@@ -23,6 +23,7 @@ import qualified Data.ByteString.UTF8 as B
 import Data.Maybe (fromJust)
 import Data.Time.Clock.POSIX
 import qualified "rider-app" Domain.Types.Client as DC
+import qualified "rider-app" Domain.Types.MultiModalSearchRequest as DMSR
 import qualified "rider-app" Domain.Types.SearchRequest as BSearchRequest
 import EulerHS.Prelude
 import Kernel.Types.Base64
@@ -30,6 +31,7 @@ import Kernel.Types.Id
 import Kernel.Types.Version
 import qualified Kernel.Utils.SignatureAuth as HttpSig
 import Network.HTTP.Types.Status
+import Servant hiding (Context)
 import Servant.Client
 import Test.Hspec hiding (context)
 import Utils (defaultManager, runClient')
@@ -63,7 +65,8 @@ searchServices ::
 searchServices = client (Proxy :: Proxy AppBESearch.SearchAPI)
 
 getQuotes :: Id BSearchRequest.SearchRequest -> Text -> Maybe Bool -> ClientM AbeQuoteAPI.GetQuotesRes
-getQuotes = client (Proxy :: Proxy AbeQuoteAPI.API)
+getQuotesForMultimodal :: Id DMSR.MultiModalSearchRequest -> Text -> Maybe Bool -> ClientM AbeQuoteAPI.GetQuotesRes
+getQuotes :<|> getQuotesForMultimodal = client (Proxy :: Proxy AbeQuoteAPI.API)
 
 gatewayBaseUrl :: BaseUrl
 gatewayBaseUrl =

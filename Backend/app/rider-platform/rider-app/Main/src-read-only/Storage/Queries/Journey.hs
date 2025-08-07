@@ -5,6 +5,7 @@
 module Storage.Queries.Journey (module Storage.Queries.Journey, module ReExport) where
 
 import qualified Domain.Types.Journey
+import qualified Domain.Types.MultiModalSearchRequest
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -22,6 +23,11 @@ create = createWithKV
 
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Journey.Journey] -> m ())
 createMany = traverse_ create
+
+findByMultiModalSearchId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MultiModalSearchRequest.MultiModalSearchRequest) -> m [Domain.Types.Journey.Journey])
+findByMultiModalSearchId multimodalSearchRequestId = do findAllWithKV [Se.Is Beam.multimodalSearchRequestId $ Se.Eq (Kernel.Types.Id.getId <$> multimodalSearchRequestId)]
 
 findBySearchId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m [Domain.Types.Journey.Journey])
 findBySearchId searchRequestId = do findAllWithKV [Se.Is Beam.searchRequestId $ Se.Eq searchRequestId]
@@ -57,12 +63,14 @@ updateByPrimaryKey (Domain.Types.Journey.Journey {..}) = do
       Se.Set Beam.fromLocationId (Just $ Kernel.Types.Id.getId ((.id) fromLocation)),
       Se.Set Beam.hasPreferredServiceTier hasPreferredServiceTier,
       Se.Set Beam.hasPreferredTransitModes hasPreferredTransitModes,
+      Se.Set Beam.isNormalRideJourney isNormalRideJourney,
       Se.Set Beam.isPaymentSuccess isPaymentSuccess,
       Se.Set Beam.isPublicTransportIncluded isPublicTransportIncluded,
       Se.Set Beam.journeyExpiryTime journeyExpiryTime,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.modes modes,
+      Se.Set Beam.multimodalSearchRequestId (Kernel.Types.Id.getId <$> multimodalSearchRequestId),
       Se.Set Beam.paymentOrderShortId (Kernel.Types.Id.getShortId <$> paymentOrderShortId),
       Se.Set Beam.recentLocationId (Kernel.Types.Id.getId <$> recentLocationId),
       Se.Set Beam.relevanceScore relevanceScore,

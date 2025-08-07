@@ -6,13 +6,17 @@ module Storage.Queries.JourneyExtra where
 import Data.List (minimumBy, sortBy)
 import Data.Ord (comparing)
 import Data.Time hiding (getCurrentTime)
+import Domain.Types.Common (MultimodalTravelMode)
 import qualified Domain.Types.FRFSTicket as DTicket
 import qualified Domain.Types.Journey as DJ
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import Domain.Types.MultiModalSearchRequest
 import qualified Domain.Types.Person
+import qualified Domain.Types.SearchRequest as DSR
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import Kernel.Types.Common (Distance, HighPrecMoney, Seconds)
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -103,3 +107,14 @@ updateJourneyToNextTicketExpiryTime journeyId nextLegSequence = do
   tickets <- fmap concat $ mapM QTicket.findAllByTicketBookingId upcomingBookingIds
   -- Find the earliest ticket expiry
   updateShortestJourneyExpiryTimeWithTickets journeyId tickets
+
+updateEstimatedDistanceAndDuration :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id DJ.Journey -> Distance -> Seconds -> m ()
+updateEstimatedDistanceAndDuration journeyId distance duration = do
+  updateOneWithKV [Se.Set Beam.estimatedDistance $ distance.value, Se.Set Beam.estimatedDuration $ Just duration] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId journeyId)]
+
+findMultiModalSearchIdByJourneyId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id DJ.Journey -> m (Maybe (Kernel.Types.Id.Id Domain.Types.MultiModalSearchRequest.MultiModalSearchRequest))
+findMultiModalSearchIdByJourneyId journeyId = do
+  journey <- findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId journeyId)]
+  case journey of
+    Just journeyData -> pure journeyData.multimodalSearchRequestId
+    Nothing -> pure Nothing

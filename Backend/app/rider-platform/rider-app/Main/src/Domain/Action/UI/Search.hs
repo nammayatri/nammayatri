@@ -31,12 +31,14 @@ import Domain.Types (GatewayAndRegistryService (..))
 import qualified Domain.Types.Client as DC
 import Domain.Types.HotSpot hiding (address, updatedAt)
 import Domain.Types.HotSpotConfig
+import qualified Domain.Types.Journey as DJ
 import qualified Domain.Types.JourneyLeg as DJL
 import qualified Domain.Types.Location as Location
 import Domain.Types.Merchant
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.MerchantServiceConfig as DMSC
+import qualified Domain.Types.MultiModalSearchRequest as DMSR
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.RecentLocation as DTRL
@@ -46,14 +48,17 @@ import qualified Domain.Types.RouteDetails as DRD
 import Domain.Types.SavedReqLocation
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequest as SearchRequest
+import qualified Domain.Types.Trip as DTrip
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import Kernel.External.Maps
 import qualified Kernel.External.Maps as MapsK
+import qualified Kernel.External.Maps.Google.MapsClient.Types as MapsClient
 import qualified Kernel.External.Maps.Interface as MapsRoutes
 import qualified Kernel.External.Maps.Interface.NextBillion as NextBillion
 import qualified Kernel.External.Maps.NextBillion.Types as NBT
 import qualified Kernel.External.Maps.Utils as Search
+import Kernel.External.MultiModal.Interface.Types (MultiModalAgency (..))
 import Kernel.Prelude hiding (drop)
 import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto hiding (isNothing)
@@ -83,6 +88,9 @@ import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.MerchantConfig as QMC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.SavedReqLocation as CSavedLocation
+import qualified Storage.Queries.Journey as QJourney
+import qualified Storage.Queries.JourneyLeg as QJourneyLeg
+import qualified Storage.Queries.MultiModalSearchRequest as QMSR
 import qualified Storage.Queries.NyRegularSubscription as QNyRegularSubscription
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonDisability as PD
@@ -270,8 +278,9 @@ search ::
   Maybe (Id DJL.JourneyLeg) ->
   Maybe DRD.RouteDetails ->
   Bool ->
+  Maybe (Id DMSR.MultiModalSearchRequest) ->
   m SearchRes
-search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion clientId device isDashboardRequest_ journeySearchData journeyLegId journeyRouteDetails justMultimodalSearch = do
+search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion clientId device isDashboardRequest_ journeySearchData journeyLegId journeyRouteDetails justMultimodalSearch mbMultiModalSearchRequestId = do
   now <- getCurrentTime
   let SearchDetails {..} = extractSearchDetails now req
   let isReservedRideSearch = case req of
@@ -312,6 +321,18 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
   fromLocation <- buildSearchReqLoc merchant.id merchantOperatingCityId origin
   stopLocations <- buildSearchReqLoc merchant.id merchantOperatingCityId `mapM` stops
   let driverIdentifier' = driverIdentifier_ <|> (person.referralCode >>= \refCode -> bool Nothing (mkDriverIdentifier refCode) $ shouldPriortiseDriver person riderCfg refCode)
+
+  -- create entry into multi modal search request
+  newMultiModalSearchRequestId <-
+    case mbMultiModalSearchRequestId of
+      Just multiModalSearchRequestId -> pure multiModalSearchRequestId
+      Nothing -> do
+        multiModalSearchRequestId <- generateGUID
+        validTill <- getSearchRequestExpiry startTime
+        let multiModalSearchRequest = buildMultiModalSearchRequest multiModalSearchRequestId person now startTime validTill
+        QMSR.create multiModalSearchRequest
+        pure multiModalSearchRequestId
+
   searchRequest <-
     buildSearchRequest
       searchRequestId
@@ -352,12 +373,29 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
       originStopCode
       vehicleCategory
       isReservedRideSearch
+      (Just newMultiModalSearchRequestId)
 
   Metrics.incrementSearchRequestCount merchant.name merchantOperatingCity.id.getId
 
   Metrics.startSearchMetrics merchant.name searchRequest.id.getId
   -- triggerSearchEvent SearchEventData {searchRequest = searchRequest}
   QSearchRequest.createDSReq searchRequest
+
+  -- create entry into journey
+  -- case journeySearchData of
+  --   Just journeySearchData -> pure unit
+  --   Nothing -> do
+  _ <- case mbMultiModalSearchRequestId of
+    Just _ -> pure unit
+    Nothing -> do
+      journeyId <- generateGUID
+      let journey = buildJourneyForSearch journeyId person newMultiModalSearchRequestId now searchRequest
+      QJourney.create journey
+      journeyLegIdNew <- generateGUID
+      let journeyLeg = buildJourneyLegForSearch journeyLegIdNew journeyId now searchRequest
+      QJourneyLeg.create journeyLeg
+      pure unit
+
   QPFS.clearCache person.id
   fork "updating search counters" $ fraudCheck person merchantOperatingCity searchRequest
   let updatedPerson = backfillCustomerNammaTags person
@@ -386,6 +424,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
         distance = shortestRouteDistance,
         duration = shortestRouteDuration,
         taggings = getTags tag searchRequest reservePricingTag updatedPerson shortestRouteDistance shortestRouteDuration returnTime roundTrip ((.points) <$> shortestRouteInfo) multipleRoutes txnCity isReallocationEnabled isDashboardRequest fareParametersInRateCard isMeterRide,
+        multimodalSearchId = Just newMultiModalSearchRequestId,
         ..
       }
   where
@@ -579,8 +618,9 @@ buildSearchRequest ::
   Maybe Text ->
   Maybe Enums.VehicleCategory ->
   Bool ->
+  Maybe (Id DMSR.MultiModalSearchRequest) ->
   m SearchRequest.SearchRequest
-buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion clientRnVersion device disabilityTag duration staticDuration riderPreferredOption distanceUnit totalRidesCount isDashboardRequest mbPlaceNameSource hasStops stops journeySearchData journeyLegId journeyRouteDetails mbDriverReferredInfo configVersionMap isMeterRide recentLocationId routeCode destinationStopCode originStopCode vehicleCategory isReservedRideSearch = do
+buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion clientRnVersion device disabilityTag duration staticDuration riderPreferredOption distanceUnit totalRidesCount isDashboardRequest mbPlaceNameSource hasStops stops journeySearchData journeyLegId journeyRouteDetails mbDriverReferredInfo configVersionMap isMeterRide recentLocationId routeCode destinationStopCode originStopCode vehicleCategory isReservedRideSearch mbMultiModalSearchRequestId = do
   let searchMode =
         if isReservedRideSearch
           then Just SearchRequest.RESERVE
@@ -640,13 +680,132 @@ buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCit
         allJourneysLoaded = Just False,
         searchMode = searchMode,
         isMultimodalSearch = Just $ isJust journeySearchData,
+        multiModalSearchRequestId = mbMultiModalSearchRequestId,
         ..
       }
-  where
-    getSearchRequestExpiry :: SearchRequestFlow m r => UTCTime -> m UTCTime
-    getSearchRequestExpiry time = do
-      searchRequestExpiry <- maybe 1800 fromIntegral <$> asks (.searchRequestExpiry)
-      pure $ addUTCTime (fromInteger searchRequestExpiry) time
+
+getSearchRequestExpiry :: SearchRequestFlow m r => UTCTime -> m UTCTime
+getSearchRequestExpiry time = do
+  searchRequestExpiry <- maybe 1800 fromIntegral <$> asks (.searchRequestExpiry)
+  pure $ addUTCTime (fromInteger searchRequestExpiry) time
+
+buildMultiModalSearchRequest ::
+  Id DMSR.MultiModalSearchRequest ->
+  Person.Person ->
+  UTCTime ->
+  UTCTime ->
+  UTCTime ->
+  DMSR.MultiModalSearchRequest
+buildMultiModalSearchRequest multiModalSearchRequestId person now startTime validTill =
+  DMSR.MultiModalSearchRequest
+    { id = multiModalSearchRequestId,
+      riderId = person.id,
+      merchantId = person.merchantId,
+      merchantOperatingCityId = person.merchantOperatingCityId,
+      clientId = Nothing,
+      recentLocationId = Nothing,
+      startTime = startTime,
+      validTill = validTill,
+      createdAt = now,
+      configInExperimentVersions = [],
+      clientBundleVersion = Nothing,
+      clientSdkVersion = Nothing,
+      clientConfigVersion = Nothing,
+      clientReactNativeVersion = Nothing,
+      clientDevice = Nothing,
+      backendConfigVersion = Nothing,
+      backendAppVersion = Nothing,
+      isDashboardRequest = Nothing,
+      updatedAt = now
+    }
+
+buildJourneyForSearch ::
+  Id DJ.Journey ->
+  Person.Person ->
+  Id DMSR.MultiModalSearchRequest ->
+  UTCTime ->
+  SearchRequest.SearchRequest ->
+  DJ.Journey
+buildJourneyForSearch journeyId person multiModalSearchRequestId now searchRequest =
+  DJ.Journey
+    { id = journeyId,
+      convenienceCost = 0,
+      estimatedDistance = fromMaybe (Distance 0 Meter) searchRequest.distance,
+      estimatedDuration = searchRequest.estimatedRideDuration,
+      isPaymentSuccess = Just True,
+      totalLegs = 1,
+      modes = [DTrip.Taxi],
+      searchRequestId = searchRequest.id.getId,
+      merchantId = searchRequest.merchantId,
+      status = DJ.NEW,
+      riderId = person.id,
+      startTime = Just searchRequest.startTime,
+      endTime = Nothing,
+      merchantOperatingCityId = searchRequest.merchantOperatingCityId,
+      createdAt = now,
+      updatedAt = now,
+      recentLocationId = searchRequest.recentLocationId,
+      isPublicTransportIncluded = Just False,
+      relevanceScore = Nothing,
+      hasPreferredServiceTier = Nothing,
+      hasPreferredTransitModes = Just False,
+      fromLocation = searchRequest.fromLocation,
+      toLocation = searchRequest.toLocation,
+      paymentOrderShortId = Nothing,
+      journeyExpiryTime = Nothing,
+      isNormalRideJourney = Just True,
+      multimodalSearchRequestId = Just multiModalSearchRequestId,
+      ..
+    }
+
+buildJourneyLegForSearch ::
+  Id DJL.JourneyLeg ->
+  Id DJ.Journey ->
+  UTCTime ->
+  SearchRequest.SearchRequest ->
+  DJL.JourneyLeg
+buildJourneyLegForSearch journeyLegId journeyId now searchRequest =
+  DJL.JourneyLeg
+    { id = journeyLegId,
+      journeyId = journeyId,
+      sequenceNumber = 0,
+      mode = DTrip.Taxi,
+      startLocation = MapsClient.LatLngV2 searchRequest.fromLocation.lat searchRequest.fromLocation.lon,
+      endLocation = case searchRequest.toLocation of
+        Just toLoc -> MapsClient.LatLngV2 toLoc.lat toLoc.lon
+        Nothing -> MapsClient.LatLngV2 searchRequest.fromLocation.lat searchRequest.fromLocation.lon,
+      distance = searchRequest.distance,
+      duration = searchRequest.estimatedRideDuration,
+      agency = Just $ MultiModalAgency {name = "NAMMA_YATRI", gtfsId = Nothing},
+      fromArrivalTime = Nothing,
+      fromDepartureTime = Just searchRequest.startTime,
+      toArrivalTime =
+        searchRequest.estimatedRideDuration >>= \duration ->
+          Just $ addUTCTime (fromIntegral $ getSeconds duration) searchRequest.startTime,
+      toDepartureTime = Nothing,
+      fromStopDetails = Nothing,
+      toStopDetails = Nothing,
+      routeDetails = [],
+      serviceTypes = Nothing,
+      estimatedMinFare = Nothing,
+      estimatedMaxFare = Nothing,
+      merchantId = Just searchRequest.merchantId,
+      merchantOperatingCityId = Just searchRequest.merchantOperatingCityId,
+      createdAt = now,
+      updatedAt = now,
+      legSearchId = Just searchRequest.id.getId,
+      isDeleted = Just False,
+      isSkipped = Just False,
+      changedBusesInSequence = Nothing,
+      finalBoardedBusNumber = Nothing,
+      entrance = Nothing,
+      exit = Nothing,
+      status = Nothing,
+      osmEntrance = Nothing,
+      osmExit = Nothing,
+      straightLineEntrance = Nothing,
+      straightLineExit = Nothing
+    }
 
 calculateDistanceAndRoutes ::
   SearchRequestFlow m r =>

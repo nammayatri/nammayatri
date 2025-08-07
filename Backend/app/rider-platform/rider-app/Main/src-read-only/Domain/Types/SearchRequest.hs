@@ -11,6 +11,7 @@ import qualified Domain.Types.Location
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MerchantPaymentMethod
+import qualified Domain.Types.MultiModalSearchRequest
 import qualified Domain.Types.Person
 import qualified Domain.Types.RecentLocation
 import qualified Domain.Types.RefereeLink
@@ -68,6 +69,7 @@ data SearchRequest = SearchRequest
     maxDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
+    multiModalSearchRequestId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MultiModalSearchRequest.MultiModalSearchRequest),
     originStopCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     placeNameSource :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     recentLocationId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.RecentLocation.RecentLocation),

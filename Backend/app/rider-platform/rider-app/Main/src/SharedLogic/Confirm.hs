@@ -26,6 +26,8 @@ import Domain.Types.CancellationReason
 import qualified Domain.Types.DeliveryDetails as DTDD
 import qualified Domain.Types.EstimateStatus as DEstimate
 import qualified Domain.Types.Exophone as DExophone
+import qualified Domain.Types.Journey as DJ
+import qualified Domain.Types.JourneyLeg as DJL
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -38,6 +40,8 @@ import qualified Domain.Types.SearchRequest as DSReq
 import qualified Domain.Types.Trip as Trip
 import qualified Domain.Types.VehicleVariant as DV
 import Kernel.External.Encryption (decrypt)
+import Kernel.External.Maps.Google.MapsClient.Types (LatLngV2 (..))
+import Kernel.External.MultiModal.Interface.Types (MultiModalAgency (..))
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.External.Types
 import Kernel.Prelude
@@ -48,6 +52,7 @@ import Kernel.Tools.Metrics.CoreMetrics
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.JourneyLeg.Types as JLT
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Types as LYT
@@ -63,9 +68,13 @@ import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QRideB
 import qualified Storage.Queries.BookingPartiesLink as QBPL
 import qualified Storage.Queries.Estimate as QEstimate
+import qualified Storage.Queries.Journey as QJourney
+import qualified Storage.Queries.JourneyExtra as QJourneyExtra
+import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.ParcelDetails as QParcel
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.SearchRequest as QSReq
+import qualified Storage.Queries.SearchRequest as QSearchRequest
 import qualified Storage.Queries.SearchRequestPartiesLink as QSRPL
 import qualified Storage.Queries.Transformers.Booking as QTB
 import Tools.Error
@@ -98,7 +107,8 @@ data DConfirmRes = DConfirmRes
     confirmResDetails :: Maybe DConfirmResDetails,
     isAdvanceBookingEnabled :: Maybe Bool,
     isInsured :: Maybe Bool,
-    insuredAmount :: Maybe Text
+    insuredAmount :: Maybe Text,
+    mbJourneyId :: Maybe (Id DJ.Journey)
   }
   deriving (Show, Generic)
 
@@ -178,6 +188,9 @@ confirm DConfirmReq {..} = do
   confirmResDetails <- case quote.tripCategory of
     Just (Trip.Delivery _) -> Just <$> makeDeliveryDetails booking bookingParties
     _ -> return Nothing
+  -- can we do something
+  mbJourneyId <- mkJourneyForQuote searchRequest quote personId isScheduled
+  logDebug $ "mbJourneyId: " <> show mbJourneyId
   return $
     DConfirmRes
       { booking,
@@ -195,6 +208,7 @@ confirm DConfirmReq {..} = do
         isAdvanceBookingEnabled = searchRequest.isAdvanceBookingEnabled,
         isInsured = Just $ booking.isInsured,
         insuredAmount = booking.driverInsuredAmount,
+        mbJourneyId = Just $ mbJourneyId,
         ..
       }
   where
@@ -453,3 +467,154 @@ findRandomExophone merchantOperatingCityId = do
     [] -> throwError $ ExophoneNotFound merchantOperatingCityId.getId
     e : es -> pure $ e :| es
   getRandomElement nonEmptyExophones
+
+mkJourneyForQuote :: (CacheFlow m r, EsqDBFlow m r) => DSReq.SearchRequest -> DQuote.Quote -> Id DP.Person -> Bool -> m (Id DJ.Journey)
+mkJourneyForQuote searchRequest quote personId isScheduled = do
+  let journeyId = searchRequest.journeyLegInfo <&> (.journeyId)
+  case journeyId of
+    Just jId -> pure (Id jId)
+    Nothing -> do
+      case searchRequest.multiModalSearchRequestId of
+        Just mmSearchId -> do
+          existingJourneys <- QJourney.findByMultiModalSearchId (Just mmSearchId)
+          case existingJourneys of
+            -- filter based on isNormalRideJourney
+            existingJourneys' -> do
+              let normalRideJourneys = filter (\journey -> fromMaybe False journey.isNormalRideJourney) existingJourneys'
+              case normalRideJourneys of
+                (existingJourney : _) -> do
+                  updateJourneyWithQuote existingJourney.id quote searchRequest isScheduled
+                  return existingJourney.id
+                [] -> do
+                  createNewJourneyForTaxiQuote searchRequest quote personId
+        Nothing -> do
+          existingJourneys <- QJourney.findBySearchId searchRequest.id.getId
+          case existingJourneys of
+            (existingJourney : _) -> do
+              updateJourneyWithQuote existingJourney.id quote searchRequest isScheduled
+              return existingJourney.id
+            [] -> do
+              createNewJourneyForTaxiQuote searchRequest quote personId
+
+-- fallback code for backward compatibility
+createNewJourneyForTaxiQuote :: (CacheFlow m r, EsqDBFlow m r) => DSReq.SearchRequest -> DQuote.Quote -> Id DP.Person -> m (Id DJ.Journey)
+createNewJourneyForTaxiQuote searchRequest quote personId = do
+  journeyGuid <- generateGUID
+  journeyLegGuid <- generateGUID
+  now <- getCurrentTime
+
+  let estimatedMinFare = Just quote.estimatedFare.amount
+      estimatedMaxFare = Just quote.estimatedFare.amount
+
+  let journey =
+        DJ.Journey
+          { id = journeyGuid,
+            convenienceCost = 0,
+            estimatedDistance = fromMaybe (Distance 0 Meter) searchRequest.distance,
+            estimatedDuration = searchRequest.estimatedRideDuration,
+            isPaymentSuccess = Just True,
+            totalLegs = 1,
+            modes = [Trip.Taxi],
+            searchRequestId = searchRequest.id.getId,
+            multimodalSearchRequestId = searchRequest.multiModalSearchRequestId,
+            merchantId = searchRequest.merchantId,
+            status = DJ.INPROGRESS,
+            riderId = personId,
+            startTime = Just searchRequest.startTime,
+            endTime = Nothing,
+            merchantOperatingCityId = searchRequest.merchantOperatingCityId,
+            createdAt = now,
+            updatedAt = now,
+            recentLocationId = searchRequest.recentLocationId,
+            isPublicTransportIncluded = Just False,
+            relevanceScore = Nothing,
+            hasPreferredServiceTier = Nothing,
+            hasPreferredTransitModes = Just False,
+            fromLocation = searchRequest.fromLocation,
+            toLocation = searchRequest.toLocation,
+            paymentOrderShortId = Nothing,
+            journeyExpiryTime = Nothing,
+            isNormalRideJourney = Just True
+          }
+
+  let journeyLeg =
+        DJL.JourneyLeg
+          { id = journeyLegGuid,
+            journeyId = journeyGuid,
+            sequenceNumber = 0,
+            mode = Trip.Taxi,
+            startLocation = LatLngV2 searchRequest.fromLocation.lat searchRequest.fromLocation.lon,
+            endLocation = case searchRequest.toLocation of
+              Just toLoc -> LatLngV2 toLoc.lat toLoc.lon
+              Nothing -> LatLngV2 searchRequest.fromLocation.lat searchRequest.fromLocation.lon,
+            distance = searchRequest.distance,
+            duration = searchRequest.estimatedRideDuration,
+            agency = Just $ MultiModalAgency {name = "NAMMA_YATRI", gtfsId = Nothing},
+            fromArrivalTime = Nothing,
+            fromDepartureTime = Just searchRequest.startTime,
+            toArrivalTime =
+              searchRequest.estimatedRideDuration >>= \duration ->
+                Just $ addUTCTime (fromIntegral $ getSeconds duration) searchRequest.startTime,
+            toDepartureTime = Nothing,
+            fromStopDetails = Nothing,
+            toStopDetails = Nothing,
+            routeDetails = [],
+            serviceTypes = Nothing,
+            estimatedMinFare = estimatedMinFare,
+            estimatedMaxFare = estimatedMaxFare,
+            merchantId = Just searchRequest.merchantId,
+            merchantOperatingCityId = Just searchRequest.merchantOperatingCityId,
+            createdAt = now,
+            updatedAt = now,
+            legSearchId = Just searchRequest.id.getId,
+            isDeleted = Just False,
+            isSkipped = Just False,
+            changedBusesInSequence = Nothing,
+            finalBoardedBusNumber = Nothing,
+            entrance = Nothing,
+            exit = Nothing,
+            status = Nothing,
+            osmEntrance = Nothing,
+            osmExit = Nothing,
+            straightLineEntrance = Nothing,
+            straightLineExit = Nothing
+          }
+
+  let journeySearchData =
+        JLT.JourneySearchData
+          { journeyId = journeyGuid.getId,
+            journeyLegOrder = 0,
+            agency = Nothing,
+            skipBooking = False,
+            convenienceCost = 0,
+            pricingId = Just quote.id.getId,
+            onSearchFailed = Nothing,
+            isDeleted = Nothing
+          }
+
+  QJourney.create journey
+  QJourneyLeg.create journeyLeg
+  QSearchRequest.updateJourneyLegInfo searchRequest.id (Just journeySearchData)
+  pure journeyGuid
+
+updateJourneyWithQuote :: (CacheFlow m r, EsqDBFlow m r) => Id DJ.Journey -> DQuote.Quote -> DSReq.SearchRequest -> Bool -> m ()
+updateJourneyWithQuote journeyId quote searchRequest isScheduled = do
+  case isScheduled of
+    True -> QJourney.updateStatus DJ.CONFIRMED journeyId
+    False -> QJourney.updateStatus DJ.INPROGRESS journeyId
+  let estimatedDistance = fromMaybe (Distance 0 Meter) searchRequest.distance
+      estimatedDuration = fromMaybe (Seconds 0) searchRequest.estimatedRideDuration
+      searchRequestId = searchRequest.id
+  QJourneyExtra.updateEstimatedDistanceAndDuration journeyId estimatedDistance estimatedDuration
+  let journeySearchData =
+        JLT.JourneySearchData
+          { journeyId = journeyId.getId,
+            journeyLegOrder = 0,
+            agency = Nothing,
+            skipBooking = False,
+            convenienceCost = 0,
+            pricingId = Just quote.id.getId,
+            onSearchFailed = Nothing,
+            isDeleted = Nothing
+          }
+  QSearchRequest.updateJourneyLegInfo searchRequestId (Just journeySearchData)

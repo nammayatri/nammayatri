@@ -784,6 +784,7 @@ library
       Domain.Types.MerchantServiceUsageConfig
       Domain.Types.MerchantState
       Domain.Types.MultimodalPreferences
+      Domain.Types.MultiModalSearchRequest
       Domain.Types.NotificationSoundsConfig
       Domain.Types.NyRegularInstanceLog
       Domain.Types.NyRegularSubscription
@@ -919,6 +920,7 @@ library
       Storage.Beam.MerchantServiceUsageConfig
       Storage.Beam.MerchantState
       Storage.Beam.MultimodalPreferences
+      Storage.Beam.MultiModalSearchRequest
       Storage.Beam.NotificationSoundsConfig
       Storage.Beam.NyRegularInstanceLog
       Storage.Beam.NyRegularSubscription
@@ -1055,6 +1057,7 @@ library
       Storage.Queries.MerchantServiceUsageConfig
       Storage.Queries.MerchantState
       Storage.Queries.MultimodalPreferences
+      Storage.Queries.MultiModalSearchRequest
       Storage.Queries.NotificationSoundsConfig
       Storage.Queries.NyRegularInstanceLog
       Storage.Queries.NyRegularSubscription
