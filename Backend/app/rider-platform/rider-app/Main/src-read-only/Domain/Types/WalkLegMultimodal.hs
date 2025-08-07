@@ -31,6 +31,6 @@ data WalkLegMultimodal = WalkLegMultimodal
   }
   deriving (Generic, Show)
 
-data WalkLegStatus = InPlan | Ongoing | Finishing | Completed deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data WalkLegStatus = InPlan | Ongoing | Finishing | Completed | Cancelled deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''WalkLegStatus)

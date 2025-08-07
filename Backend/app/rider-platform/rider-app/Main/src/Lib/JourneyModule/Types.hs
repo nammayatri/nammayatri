@@ -722,12 +722,14 @@ castLegStatusFromWalkLegStatus DWalkLeg.InPlan = InPlan
 castLegStatusFromWalkLegStatus DWalkLeg.Ongoing = Ongoing
 castLegStatusFromWalkLegStatus DWalkLeg.Finishing = Finishing
 castLegStatusFromWalkLegStatus DWalkLeg.Completed = Completed
+castLegStatusFromWalkLegStatus DWalkLeg.Cancelled = Cancelled
 
 castWalkLegStatusFromLegStatus :: JourneyLegStatus -> DWalkLeg.WalkLegStatus
 castWalkLegStatusFromLegStatus InPlan = DWalkLeg.InPlan
 castWalkLegStatusFromLegStatus Ongoing = DWalkLeg.Ongoing
 castWalkLegStatusFromLegStatus Finishing = DWalkLeg.Finishing
 castWalkLegStatusFromLegStatus Completed = DWalkLeg.Completed
+castWalkLegStatusFromLegStatus Cancelled = DWalkLeg.Cancelled
 castWalkLegStatusFromLegStatus _ = DWalkLeg.InPlan
 
 mkWalkLegInfoFromWalkLegData :: MonadFlow m => DWalkLeg.WalkLegMultimodal -> Maybe MultiModalLegGate -> Maybe MultiModalLegGate -> m LegInfo

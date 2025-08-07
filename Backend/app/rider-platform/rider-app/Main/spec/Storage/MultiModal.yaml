@@ -178,7 +178,7 @@ WalkLegMultimodal:
 
   types:
     WalkLegStatus:
-      enum: "InPlan, Ongoing, Finishing, Completed"
+      enum: "InPlan, Ongoing, Finishing, Completed, Cancelled"
 
   fields:
     id: Id WalkLegMultimodal
