@@ -356,3 +356,8 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN refund_buffer_ttl_sec integer ;
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN refund_status_update_retries integer ;
 ALTER TABLE atlas_app.rider_config ADD COLUMN refund_status_update_interval integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN boost_search_pre_selection_service_tier_config json ;

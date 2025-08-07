@@ -28,6 +28,7 @@ data RiderConfig = RiderConfig
     avgSpeedInKmPerHr :: Kernel.Types.Common.Kilometers,
     blockedUntilInMins :: Kernel.Prelude.Maybe Kernel.Types.Common.Minutes,
     bookingSyncStatusCallSecondsDiffThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    boostSearchPreSelectionServiceTierConfig :: [Domain.Types.Extra.RiderConfig.VehicleServiceTierOrderConfig],
     busTrackingConfig :: Kernel.Prelude.Maybe Domain.Types.RiderConfig.BusTrackingConfig,
     cancellationPaymentDelay :: Kernel.Prelude.NominalDiffTime,
     collectAutoCompleteData :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,

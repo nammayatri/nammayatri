@@ -47,6 +47,7 @@ updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
   updateWithKV
     [ Se.Set Beam.backendAppVersion backendAppVersion,
       Se.Set Beam.backendConfigVersion (fmap Kernel.Utils.Version.versionToText backendConfigVersion),
+      Se.Set Beam.boostSearchPreSelectionServiceTierConfig boostSearchPreSelectionServiceTierConfig,
       Se.Set Beam.bppEstimateId (Kernel.Types.Id.getId bppEstimateId),
       Se.Set Beam.clientBundleVersion (fmap Kernel.Utils.Version.versionToText clientBundleVersion),
       Se.Set Beam.clientConfigVersion (fmap Kernel.Utils.Version.versionToText clientConfigVersion),
