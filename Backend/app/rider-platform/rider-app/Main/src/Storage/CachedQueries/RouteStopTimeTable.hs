@@ -65,12 +65,13 @@ findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCode
   vehicleType <- castVehicleType integratedBPPConfig.vehicleCategory
   let routeCodes = P.map (modifyCodesToGTFS integratedBPPConfig) routeCodes'
       stopCode = modifyCodesToGTFS integratedBPPConfig stopCode'
+  routeStopTimeTable <- Hedis.safeGet (routeTimeTableKey stopCode)
   allTrips <-
-    Hedis.safeGet (routeTimeTableKey stopCode) >>= \case
-      Just a -> do
+    case (routeStopTimeTable, vehicleType == BecknV2.FRFS.Enums.SUBWAY) of
+      (Just a, False) -> do
         logDebug $ "Fetched route stop time table cached: " <> show a <> "for routeCodes:" <> show routeCodes <> " and stopCode:" <> show stopCode
         pure a
-      Nothing -> do
+      _ -> do
         stopCodes <-
           P.map (modifyCodesToGTFS integratedBPPConfig)
             <$> case vehicleType of
