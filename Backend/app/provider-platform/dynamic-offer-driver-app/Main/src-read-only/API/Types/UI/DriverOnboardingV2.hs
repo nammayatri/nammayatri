@@ -69,6 +69,7 @@ data DocumentVerificationConfigList = DocumentVerificationConfigList
   { ambulances :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity],
     autos :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity],
     bikes :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity],
+    boat :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity],
     bus :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity],
     cabs :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity],
     trucks :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity]

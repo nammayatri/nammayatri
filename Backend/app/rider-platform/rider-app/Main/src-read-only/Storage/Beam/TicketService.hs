@@ -29,6 +29,7 @@ data TicketServiceT f = TicketServiceT
     service :: B.C f Kernel.Prelude.Text,
     serviceDetails :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     shortDesc :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    subPlaceId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,

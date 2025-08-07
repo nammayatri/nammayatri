@@ -330,6 +330,7 @@ createTicketService (merchantId, merchantOpCityId) serviceDetails placeId = do
       { DTicketService.id = serviceDetails.id,
         DTicketService.service = serviceDetails.service,
         DTicketService.shortDesc = serviceDetails.shortDesc,
+        DTicketService.subPlaceId = serviceDetails.subPlaceId,
         DTicketService.operationalDays = serviceDetails.operationalDays,
         DTicketService.operationalDate = serviceDetails.operationalDate,
         DTicketService.maxVerification = serviceDetails.maxVerification,

@@ -11,6 +11,7 @@ import qualified Domain.Types.ServicePeopleCategory as DServicePeopleCategory
 import qualified Domain.Types.SpecialOccasion as DSpecialOccasion
 import qualified Domain.Types.TicketPlace as DTicketPlace
 import qualified Domain.Types.TicketService as DTicketService
+import qualified Domain.Types.TicketSubPlace as DTicketSubPlace
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -65,6 +66,7 @@ data TicketServiceDetails = TicketServiceDetails
     allowFutureBooking :: Bool,
     allowCancellation :: Bool,
     serviceDetails :: Maybe [Text],
+    subPlaceId :: Maybe (Id DTicketSubPlace.TicketSubPlace),
     expiry :: DTicketService.ExpiryType,
     businessHours :: [Id DBusinessHour.BusinessHour],
     rules :: Maybe [Rule]

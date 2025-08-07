@@ -14,6 +14,8 @@ imports:
   UTCTime: Kernel.Prelude
   TicketPlace: Domain.Types.TicketPlace
   PlaceType: Domain.Types.TicketPlace
+  TicketSubPlace: Domain.Types.TicketSubPlace
+  SubPlaceType: Domain.Types.TicketSubPlace
   APISuccess: Kernel.Types.APISuccess
   TicketBooking: Domain.Types.TicketBooking
   BookingStatus: Domain.Types.TicketBooking
@@ -25,12 +27,14 @@ imports:
   ExpiryType: Domain.Types.TicketService
   CancellationCharge: Domain.Types.ServicePeopleCategory
   Refunds: Lib.Payment.Domain.Types.Refunds
+  Person: Domain.Types.Person
 
 module: TicketService
 types:
   TicketServiceResp:
     id: Id TicketService
     placesId: Id TicketPlace
+    subPlaceId: Maybe (Id TicketSubPlace)
     name: Text
     maxVerification: Int
     allowFutureBooking: Bool
@@ -219,6 +223,24 @@ types:
     month: Int
     closedDays: [Int]
 
+  TicketSubPlaceResp:
+    id: Id TicketSubPlace
+    name: Text
+    description: Maybe Text
+    subPlaceType: SubPlaceType
+    isActive: Bool
+
+
+  TicketFleetVehicleResp:
+    fleetOwnerId: Text
+    fleetOwnerName: Text
+    vehicleNumber: Text
+    vehicleType: Text
+
+  TicketPlaceResp:
+    ticketPlace: TicketPlace
+    subPlaces: "[TicketSubPlace]"
+
 apis:
   # GET /ticket/places
   - GET:
@@ -336,3 +358,21 @@ apis:
         placeId: Id TicketPlace
       response:
         type: "[TicketPlaceAvailability]"
+
+  # GET /ticket/places/{placeId}/sub-places
+  - GET:
+      endpoint: /ticket/places/v2
+      name: getTicketPlacesV2
+      auth: TokenAuth
+      response:
+        type: "[TicketPlaceResp]"
+
+  # GET /ticket/bookings/{ticketServiceShortId}/fleet-vehicles
+  - GET:
+      endpoint: /ticket/bookings/{placeId}/fleet-vehicles
+      name: getTicketFleetVehicles
+      auth: TokenAuth
+      params:
+        placeId: Id TicketPlace
+      response:
+        type: "[TicketFleetVehicleResp]"

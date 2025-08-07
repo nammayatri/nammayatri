@@ -8,6 +8,7 @@ import qualified Data.Time
 import qualified Domain.Types.BusinessHour
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.TicketSubPlace
 import Kernel.Prelude
 import qualified Kernel.Types.Id
 import qualified SharedLogic.TicketRule.Core
@@ -28,6 +29,7 @@ data TicketService = TicketService
     service :: Kernel.Prelude.Text,
     serviceDetails :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     shortDesc :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    subPlaceId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.TicketSubPlace.TicketSubPlace),
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     createdAt :: Kernel.Prelude.UTCTime,

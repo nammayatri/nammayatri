@@ -9,6 +9,7 @@ import qualified API.Action.UI.MeterRideInternal as MeterRideInternal
 import qualified API.Internal.Cac as Cac
 import qualified API.Internal.DriverArrivalNotf as DriverArrivalNotf
 import qualified API.Internal.FRFS as FRFS
+import qualified API.Internal.FleetVehicleAssignment as FleetVehicleAssignment
 import qualified API.Internal.FrequentLocUser as FrequentLocUser
 import qualified API.Internal.Rating as Rating
 import qualified API.Internal.RideSearchExpired as RideSearchExpired
@@ -30,6 +31,7 @@ type API =
            :<|> InsuranceInternal.API
            :<|> ViolationDetection.API
            :<|> RideSearchExpired.API
+           :<|> FleetVehicleAssignment.API
        )
 
 handler :: FlowServer API
@@ -44,3 +46,4 @@ handler =
     :<|> InsuranceInternal.handler
     :<|> ViolationDetection.handler
     :<|> RideSearchExpired.handler
+    :<|> FleetVehicleAssignment.handler

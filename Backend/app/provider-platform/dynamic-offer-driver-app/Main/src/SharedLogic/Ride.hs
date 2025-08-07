@@ -401,3 +401,4 @@ getArrivalTimeBufferOfVehicle bufferJson serviceTier =
     DST.BUS_NON_AC -> buffer.busNonAc
     DST.BUS_AC -> buffer.busAc
     DST.AUTO_PLUS -> buffer.autorickshaw
+    DST.BOAT -> buffer.boat

@@ -12,6 +12,7 @@ imports:
   TicketBookingPeopleCategory: Domain.Types.TicketBookingPeopleCategory
   TicketBooking: Domain.Types.TicketBooking
   TicketPlace: Domain.Types.TicketPlace
+  TicketSubPlace: Domain.Types.TicketSubPlace
   TicketService: Domain.Types.TicketService
   BusinessHour: Domain.Types.BusinessHour
   SpecialOccasion: Domain.Types.SpecialOccasion
@@ -67,7 +68,7 @@ TicketPlace:
 
   types:
     PlaceType:
-      enum: "Museum,ThemePark,AmusementPark,WaterPark,WildLifeSanctuary,ArtGallery,HeritageSite,ReligiousSite,Other"
+      enum: "Museum,ThemePark,AmusementPark,WaterPark,WildLifeSanctuary,ArtGallery,HeritageSite,ReligiousSite,Boating,Other"
     PlaceStatus:
       enum: "Active,Inactive,ComingSoon,Ended,Unpublished"
     CustomTab:
@@ -168,6 +169,7 @@ TicketService:
   fields:
     id: Id TicketService
     placesId: Text
+    subPlaceId: Maybe (Id TicketSubPlace)
     service: Text
     shortDesc: Maybe Text
     serviceDetails: "Maybe [Text]"
@@ -237,6 +239,55 @@ TicketService:
 
   extraOperations:
   - EXTRA_QUERY_FILE
+
+TicketSubPlace:
+  tableName: ticket_sub_place
+
+  fields:
+    id: Id TicketSubPlace
+    ticketPlaceId: Id TicketPlace
+    name: Text
+    description: Maybe Text
+    subPlaceType: SubPlaceType
+    isActive: Bool
+    rules: "Maybe [Rule]"
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  types:
+    SubPlaceType:
+      enum: "Venue,Terminal,Dock,Screen,Hall,Platform"
+
+  beamType:
+    rules: "Maybe Value"
+
+  sqlType:
+    rules: json
+
+  fromTType:
+    rules: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< rules|E
+
+  toTType:
+    rules: Data.Aeson.toJSON <$> rules|E
+
+  constraints:
+    id: PrimaryKey
+    ticketPlaceId: SecondaryKey
+
+  default:
+    isActive: "true"
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findAllByTicketPlaceId:
+      kvFunction: findAllWithKV
+      where: ticketPlaceId
+    findActiveByTicketPlaceId:
+      kvFunction: findAllWithKV
+      where:
+        and: [ticketPlaceId, isActive]
 
 SpecialOccasion:
   tableName: special_occasion

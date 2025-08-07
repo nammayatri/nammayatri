@@ -59,6 +59,7 @@ library
       API.Internal.Estimate
       API.Internal.FavouriteDrivers
       API.Internal.FeedbackForm
+      API.Internal.FleetVehicleAssignment
       API.Internal.KnowYourDriver
       API.Internal.Multimodal
       API.Internal.PopulateTipAmount
@@ -676,6 +677,7 @@ library
       Storage.Queries.TripTransactionExtra
       Storage.Queries.UiDriverConfigExtra
       Storage.Queries.Vehicle.Internal
+      Storage.Queries.VehicleAssignmentExtra
       Storage.Queries.VehicleDetailsExtra
       Storage.Queries.VehicleExtra
       Storage.Queries.VehicleInsuranceExtra
@@ -959,6 +961,7 @@ library
       Domain.Types.UiDriverConfig
       Domain.Types.ValueAddNP
       Domain.Types.Vehicle
+      Domain.Types.VehicleAssignment
       Domain.Types.VehicleDetails
       Domain.Types.VehicleFitnessCertificate
       Domain.Types.VehicleInfo
@@ -1107,6 +1110,7 @@ library
       Storage.Beam.UiDriverConfig
       Storage.Beam.ValueAddNP
       Storage.Beam.Vehicle
+      Storage.Beam.VehicleAssignment
       Storage.Beam.VehicleDetails
       Storage.Beam.VehicleFitnessCertificate
       Storage.Beam.VehicleInfo
@@ -1293,6 +1297,7 @@ library
       Storage.Queries.OrphanInstances.TripTransaction
       Storage.Queries.OrphanInstances.UiDriverConfig
       Storage.Queries.OrphanInstances.Vehicle
+      Storage.Queries.OrphanInstances.VehicleAssignment
       Storage.Queries.OrphanInstances.VehicleDetails
       Storage.Queries.OrphanInstances.VehicleInsurance
       Storage.Queries.OrphanInstances.VehicleRegistrationCertificate
@@ -1337,6 +1342,7 @@ library
       Storage.Queries.UiDriverConfig
       Storage.Queries.ValueAddNP
       Storage.Queries.Vehicle
+      Storage.Queries.VehicleAssignment
       Storage.Queries.VehicleDetails
       Storage.Queries.VehicleFitnessCertificate
       Storage.Queries.VehicleInfo

@@ -727,6 +727,7 @@ applyDraftChanges draftChange = do
               { id = serviceDef.id,
                 service = serviceDef.service,
                 shortDesc = serviceDef.shortDesc,
+                subPlaceId = serviceDef.subPlaceId,
                 operationalDays = serviceDef.operationalDays,
                 operationalDate = serviceDef.operationalDate,
                 maxVerification = serviceDef.maxVerification,
