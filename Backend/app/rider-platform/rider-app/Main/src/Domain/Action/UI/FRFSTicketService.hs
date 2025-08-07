@@ -594,21 +594,25 @@ postFrfsQuoteV2Confirm (mbPersonId, merchantId_) quoteId req = do
 postFrfsQuoteV2ConfirmUtil :: CallExternalBPP.FRFSConfirmFlow m r => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq -> Maybe MultimodalConfirm.CrisSdkResponse -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req crisSdkResponse = do
   merchant <- CQM.findById merchantId_ >>= fromMaybeM (InvalidRequest "Invalid merchant id")
-  (rider, dConfirmRes) <- confirm
+  quote <- B.runInReplica $ QFRFSQuote.findById quoteId >>= fromMaybeM (InvalidRequest "Invalid quote id")
+  mbBooking <- QFRFSTicketBooking.findByQuoteId quoteId
+  integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity quote
+  let isMultiInitAllowed =
+        case mbBooking of
+          Just booking ->
+            case integratedBppConfig.providerConfig of
+              DIBC.ONDC DIBC.ONDCBecknConfig {multiInitAllowed} ->
+                multiInitAllowed == Just True
+                  && booking.status `elem` [DFRFSTicketBooking.APPROVED, DFRFSTicketBooking.PAYMENT_PENDING]
+              _ -> booking.status `elem` [DFRFSTicketBooking.APPROVED, DFRFSTicketBooking.PAYMENT_PENDING]
+          Nothing -> True
+  (rider, dConfirmRes) <- confirm isMultiInitAllowed quote mbBooking
   merchantOperatingCity <- getMerchantOperatingCityFromBooking dConfirmRes
   stations <- decodeFromText dConfirmRes.stationsJson & fromMaybeM (InternalError "Invalid stations jsons from db")
   let routeStations :: Maybe [FRFSRouteStationsAPI] = decodeFromText =<< dConfirmRes.routeStationsJson
       discounts :: Maybe [FRFSDiscountRes] = decodeFromText =<< dConfirmRes.discountsJson
   now <- getCurrentTime
-  integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity dConfirmRes
-  let multiInitAllowedOrNotAllowed = case integratedBppConfig.providerConfig of
-        DIBC.ONDC DIBC.ONDCBecknConfig {multiInitAllowed} ->
-          ( multiInitAllowed == Just True
-              && (dConfirmRes.status == DFRFSTicketBooking.NEW || dConfirmRes.status == DFRFSTicketBooking.APPROVED || dConfirmRes.status == DFRFSTicketBooking.PAYMENT_PENDING)
-          )
-            || (multiInitAllowed /= Just True && dConfirmRes.status == DFRFSTicketBooking.NEW)
-        _ -> dConfirmRes.status == DFRFSTicketBooking.NEW
-  when (multiInitAllowedOrNotAllowed && dConfirmRes.validTill > now) $ do
+  when (isMultiInitAllowed && dConfirmRes.validTill > now) $ do
     bapConfig <- CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory dConfirmRes.vehicleType) >>= fromMaybeM (InternalError "Beckn Config not found")
     let mRiderName = rider.firstName <&> (\fName -> rider.lastName & maybe fName (\lName -> fName <> " " <> lName))
     mRiderNumber <- mapM decrypt rider.mobileNumber
@@ -625,15 +629,18 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req crisSdkResponse
     --   | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = cancelFRFSTicketBooking booking
     --   | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc = cancelFRFSTicketBooking booking
     --   | otherwise = throwM exc
-    confirm :: CallExternalBPP.FRFSConfirmFlow m r => m (Domain.Types.Person.Person, DFRFSTicketBooking.FRFSTicketBooking)
-    confirm = do
+    confirm :: CallExternalBPP.FRFSConfirmFlow m r => Bool -> DFRFSQuote.FRFSQuote -> Maybe DFRFSTicketBooking.FRFSTicketBooking -> m (Domain.Types.Person.Person, DFRFSTicketBooking.FRFSTicketBooking)
+    confirm isMultiInitAllowed quote mbBooking = do
       personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
       rider <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-      quote <- B.runInReplica $ QFRFSQuote.findById quoteId >>= fromMaybeM (InvalidRequest "Invalid quote id")
       let ticketQuantity = fromMaybe quote.quantity req.ticketQuantity
           childTicketQuantity = req.childTicketQuantity <|> quote.childTicketQuantity
-      void $ QFRFSQuote.updateTicketAndChildTicketQuantityById quoteId (Just ticketQuantity) childTicketQuantity
-      let updatedQuote = quote {DFRFSQuote.quantity = ticketQuantity, DFRFSQuote.childTicketQuantity = childTicketQuantity}
+      updatedQuote <-
+        if isMultiInitAllowed
+          then do
+            void $ QFRFSQuote.updateTicketAndChildTicketQuantityById quoteId (Just ticketQuantity) childTicketQuantity
+            return $ quote {DFRFSQuote.quantity = ticketQuantity, DFRFSQuote.childTicketQuantity = childTicketQuantity}
+          else return quote
       unless (personId == quote.riderId) $ throwError AccessDenied
       let discounts :: Maybe [FRFSDiscountRes] = decodeFromText =<< quote.discountsJson
       selectedDiscounts <- validateDiscounts req.discounts (fromMaybe [] discounts)
@@ -643,12 +650,16 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req crisSdkResponse
       maybeM
         (buildAndCreateBooking rider updatedQuote selectedDiscounts)
         ( \booking -> do
-            let mBookAuthCode = crisSdkResponse <&> (.bookAuthCode)
-            void $ QFRFSTicketBooking.updateBookingAuthCodeById mBookAuthCode booking.id
-            let updatedBooking = booking {DFRFSTicketBooking.bookingAuthCode = mBookAuthCode, DFRFSTicketBooking.quantity = ticketQuantity, DFRFSTicketBooking.childTicketQuantity = childTicketQuantity}
+            updatedBooking <-
+              if isMultiInitAllowed
+                then do
+                  let mBookAuthCode = crisSdkResponse <&> (.bookAuthCode)
+                  void $ QFRFSTicketBooking.updateBookingAuthCodeById mBookAuthCode booking.id
+                  return $ booking {DFRFSTicketBooking.bookingAuthCode = mBookAuthCode, DFRFSTicketBooking.quantity = ticketQuantity, DFRFSTicketBooking.childTicketQuantity = childTicketQuantity}
+                else return booking
             pure (rider, updatedBooking)
         )
-        (QFRFSTicketBooking.findByQuoteId quoteId)
+        (pure mbBooking)
 
     validateDiscounts :: (MonadFlow m) => [FRFSDiscountReq] -> [FRFSDiscountRes] -> m [FRFSDiscountRes]
     validateDiscounts selectedDiscounts allDiscounts = do
