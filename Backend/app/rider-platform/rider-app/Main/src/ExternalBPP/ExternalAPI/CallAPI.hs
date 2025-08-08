@@ -180,7 +180,7 @@ buildStations routeCode startStationCode endStationCode integratedBPPConfig star
   fromStation <- OTPRest.getStationByGtfsIdAndStopCode startStationCode integratedBPPConfig >>= fromMaybeM (StationNotFound startStationCode)
   toStation <- OTPRest.getStationByGtfsIdAndStopCode endStationCode integratedBPPConfig >>= fromMaybeM (StationNotFound endStationCode)
   stops <- OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig
-  mkStations fromStation toStation stops startStopType endStopType & fromMaybeM (StationsNotFound fromStation.id.getId toStation.id.getId)
+  return $ fromMaybe [] (mkStations fromStation toStation stops startStopType endStopType)
 
 mkStations :: Station -> Station -> [RouteStopMapping] -> StationType -> StationType -> Maybe [DStation]
 mkStations fromStation toStation stops startStopType endStopType =
