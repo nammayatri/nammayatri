@@ -115,7 +115,7 @@ data TicketBookingCategoryDetails = TicketBookingCategoryDetails
     id :: Kernel.Types.Id.Id Domain.Types.TicketBookingServiceCategory.TicketBookingServiceCategory,
     name :: Data.Text.Text,
     peopleCategories :: [TicketBookingPeopleCategoryDetails],
-    serviceCategoryId :: Kernel.Prelude.Maybe Data.Text.Text
+    serviceCategoryId :: Kernel.Prelude.Maybe (Data.Text.Text)
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

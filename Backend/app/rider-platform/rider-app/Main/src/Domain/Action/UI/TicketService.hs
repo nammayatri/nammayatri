@@ -3,7 +3,6 @@ module Domain.Action.UI.TicketService where
 import qualified API.Types.Dashboard.AppManagement.Tickets
 import qualified API.Types.Dashboard.AppManagement.Tickets as Tickets
 import API.Types.UI.TicketService
-import Control.Exception (SomeException, try)
 import qualified Crypto.Hash as Hash
 import Data.Aeson (encode)
 import qualified Data.ByteString as BS
@@ -27,7 +26,6 @@ import qualified Domain.Types.SeatManagement as Domain.Types.SeatManagement
 import qualified Domain.Types.ServiceCategory as Domain.Types.ServiceCategory
 import qualified Domain.Types.ServicePeopleCategory as Domain.Types.ServicePeopleCategory
 import qualified Domain.Types.SpecialOccasion as Domain.Types.SpecialOccasion
-import qualified Domain.Types.TicketAssignment as Domain.Types.TicketAssignment
 import qualified Domain.Types.TicketBooking as DTTB
 import qualified Domain.Types.TicketBooking as Domain.Types.TicketBooking
 import qualified Domain.Types.TicketBookingPeopleCategory as DTB
@@ -73,7 +71,6 @@ import qualified Storage.Queries.SeatManagement as QTSM
 import qualified Storage.Queries.ServiceCategory as QSC
 import qualified Storage.Queries.ServicePeopleCategory as QPC
 import qualified Storage.Queries.SpecialOccasion as QSO
-import qualified Storage.Queries.TicketAssignment as QTicketAssignment
 import qualified Storage.Queries.TicketBooking as QTB
 import qualified Storage.Queries.TicketBookingPeopleCategory as QTBPC
 import qualified Storage.Queries.TicketBookingService as QTicketBookingService
@@ -681,64 +678,69 @@ getTicketBookingsDetails (_mbPersonId, merchantId') shortId_ = do
             ..
           }
 
-postTicketBookingsVerify :: (Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.TicketService.TicketService -> Kernel.Types.Id.ShortId Domain.Types.TicketBookingService.TicketBookingService -> Environment.Flow API.Types.UI.TicketService.TicketServiceVerificationResp
+postTicketBookingsVerify :: (Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.TicketService.TicketService -> Kernel.Types.Id.ShortId Domain.Types.TicketBookingService.TicketBookingService -> Maybe Text -> Maybe Text -> Environment.Flow API.Types.UI.TicketService.TicketServiceVerificationResp
 postTicketBookingsVerify _ = processBookingService
   where
-    processBookingService :: Kernel.Types.Id.Id Domain.Types.TicketService.TicketService -> Kernel.Types.Id.ShortId Domain.Types.TicketBookingService.TicketBookingService -> Environment.Flow API.Types.UI.TicketService.TicketServiceVerificationResp
-    processBookingService ticketServiceId bookingServiceShortId = do
+    processBookingService :: Kernel.Types.Id.Id Domain.Types.TicketService.TicketService -> Kernel.Types.Id.ShortId Domain.Types.TicketBookingService.TicketBookingService -> Maybe Text -> Maybe Text -> Environment.Flow API.Types.UI.TicketService.TicketServiceVerificationResp
+    processBookingService ticketServiceId bookingServiceShortId mbFleetOwnerId mbVehicleId = do
       mBookingService <- QTicketBookingService.findByShortId bookingServiceShortId
       case mBookingService of
         Just bookingService -> do
           (mbTicketService, mbBooking) <- liftM2 (,) (QTicketService.findById bookingService.ticketServiceId) (QTB.findById bookingService.ticketBookingId)
           case (mbTicketService, mbBooking) of
-            (Just ticketService, Just booking) -> processValidBooking bookingService ticketService booking ticketServiceId
+            (Just ticketService, Just booking) -> processValidBooking bookingService ticketService booking ticketServiceId mbFleetOwnerId mbVehicleId
             _ -> createVerificationResp InvalidBooking Nothing Nothing Nothing
         Nothing -> createVerificationResp InvalidBooking Nothing Nothing Nothing
 
-    processValidBooking :: DTB.TicketBookingService -> Domain.Types.TicketService.TicketService -> DTTB.TicketBooking -> Kernel.Types.Id.Id Domain.Types.TicketService.TicketService -> Environment.Flow TicketServiceVerificationResp
-    processValidBooking bookingService ticketService booking ticketServiceId
+    processValidBooking :: DTB.TicketBookingService -> Domain.Types.TicketService.TicketService -> DTTB.TicketBooking -> Kernel.Types.Id.Id Domain.Types.TicketService.TicketService -> Maybe Text -> Maybe Text -> Environment.Flow TicketServiceVerificationResp
+    processValidBooking bookingService ticketService booking ticketServiceId mbFleetOwnerId mbVehicleId
       | bookingService.ticketServiceId /= ticketServiceId = createVerificationResp DifferentService Nothing (Just ticketService) Nothing
       | otherwise = case bookingService.status of
         DTB.Pending -> createVerificationResp PaymentPending (Just bookingService) (Just ticketService) (Just booking)
         DTB.Failed -> createVerificationResp InvalidBooking (Just bookingService) (Just ticketService) (Just booking)
-        DTB.Verified -> handleConfirmedBooking bookingService ticketService booking
-        DTB.Confirmed -> handleConfirmedBooking bookingService ticketService booking
+        DTB.Verified -> handleConfirmedBooking bookingService ticketService booking mbFleetOwnerId mbVehicleId
+        DTB.Confirmed -> handleConfirmedBooking bookingService ticketService booking mbFleetOwnerId mbVehicleId
         DTB.Cancelled -> createVerificationResp CancelledBooking (Just bookingService) (Just ticketService) (Just booking)
 
-    handleConfirmedBooking :: DTB.TicketBookingService -> Domain.Types.TicketService.TicketService -> DTTB.TicketBooking -> Environment.Flow TicketServiceVerificationResp
-    handleConfirmedBooking bookingService ticketServiceConfig booking = do
+    handleConfirmedBooking :: DTB.TicketBookingService -> Domain.Types.TicketService.TicketService -> DTTB.TicketBooking -> Maybe Text -> Maybe Text -> Environment.Flow TicketServiceVerificationResp
+    handleConfirmedBooking bookingService ticketServiceConfig booking mbFleetOwnerId mbVehicleId = do
       now <- getCurrentTime
       case bookingService.expiryDate of
         Just expiry ->
           if expiry < now
             then createVerificationResp BookingExpired (Just bookingService) (Just ticketServiceConfig) (Just booking)
-            else handleConfirmedNonExpiredBooking bookingService ticketServiceConfig booking
-        Nothing -> handleConfirmedNonExpiredBooking bookingService ticketServiceConfig booking
+            else handleConfirmedNonExpiredBooking bookingService ticketServiceConfig booking mbFleetOwnerId mbVehicleId
+        Nothing -> handleConfirmedNonExpiredBooking bookingService ticketServiceConfig booking mbFleetOwnerId mbVehicleId
 
-    handleConfirmedNonExpiredBooking :: DTB.TicketBookingService -> Domain.Types.TicketService.TicketService -> DTTB.TicketBooking -> Environment.Flow TicketServiceVerificationResp
-    handleConfirmedNonExpiredBooking bookingService ticketServiceConfig booking = do
+    handleConfirmedNonExpiredBooking :: DTB.TicketBookingService -> Domain.Types.TicketService.TicketService -> DTTB.TicketBooking -> Maybe Text -> Maybe Text -> Environment.Flow TicketServiceVerificationResp
+    handleConfirmedNonExpiredBooking bookingService ticketServiceConfig booking mbFleetOwnerId mbVehicleId = do
       now <- getCurrentTime
       if booking.visitDate > utctDay now
         then do createVerificationResp BookingFuture (Just bookingService) (Just ticketServiceConfig) (Just booking)
-        else do handleVerifiedBooking bookingService ticketServiceConfig booking
+        else do handleVerifiedBooking bookingService ticketServiceConfig booking mbFleetOwnerId mbVehicleId
 
-    handleVerifiedBooking :: DTB.TicketBookingService -> Domain.Types.TicketService.TicketService -> DTTB.TicketBooking -> Environment.Flow TicketServiceVerificationResp
-    handleVerifiedBooking bookingService ticketServiceConfig booking
+    handleVerifiedBooking :: DTB.TicketBookingService -> Domain.Types.TicketService.TicketService -> DTTB.TicketBooking -> Maybe Text -> Maybe Text -> Environment.Flow TicketServiceVerificationResp
+    handleVerifiedBooking bookingService ticketServiceConfig booking mbFleetOwnerId mbVehicleId
       | bookingService.verificationCount >= ticketServiceConfig.maxVerification =
         createVerificationResp BookingAlreadyVerified (Just bookingService) (Just ticketServiceConfig) (Just booking)
       | otherwise = do
-        -- Create vehicle assignment with status NEW and no fleet owner
-        merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-        let vehicleAssignmentReq =
-              CallBPPInternal.VehicleAssignmentReq
-                { ticketId = booking.id.getId,
-                  fleetOwnerId = Kernel.Types.Id.Id "", -- No fleet owner assigned yet
-                  vehicleId = Kernel.Types.Id.Id "", -- No vehicle assigned yet
-                  placeId = booking.ticketPlaceId.getId,
-                  amount = booking.amount.amount
-                }
-        void $ try @_ @SomeException $ CallBPPInternal.assignFleetVehicle merchant vehicleAssignmentReq
-
+        -- Create vehicle assignment (optional assignee info)
+        fork "insert fleet assignment" $ do
+          when ((isJust mbFleetOwnerId) && (isJust mbVehicleId)) $ do
+            ticketPlace <- QTicketPlace.findById (Kernel.Types.Id.Id ticketServiceConfig.placesId) >>= fromMaybeM (TicketPlaceNotFound ticketServiceConfig.placesId)
+            case ticketPlace.ticketMerchantId of
+              Just merchantId -> do
+                merchant <- CQM.findById (Kernel.Types.Id.Id merchantId) >>= fromMaybeM (MerchantNotFound merchantId)
+                let updateReq =
+                      CallBPPInternal.UpdateFleetVehicleAssignmentReq
+                        { ticketBookingId = booking.id.getId,
+                          ticketBookingServiceId = bookingService.id.getId,
+                          fleetOwnerId = mbFleetOwnerId,
+                          vehicleId = mbVehicleId,
+                          assignmentStatus = "ASSIGNED"
+                        }
+                void $ CallBPPInternal.updateVehicleAssignment merchant updateReq
+              _ -> pure ()
         QTicketBookingService.updateVerificationById DTB.Verified (bookingService.verificationCount + 1) bookingService.id
         createVerificationResp BookingSuccess (Just bookingService) (Just ticketServiceConfig) (Just booking)
 
@@ -838,27 +840,24 @@ getTicketBookingsStatus (mbPersonId, merchantId) _shortId@(Kernel.Types.Id.Short
       case paymentStatus of
         DPayment.PaymentStatus {..} -> do
           when (status == Payment.CHARGED) $ do
-            -- Update vehicle assignment with assigned status and fleet owner
-            merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-
-            -- Get fleet vehicles for this place to assign one
-            fleetVehiclesResp <- try @_ @SomeException $ CallBPPInternal.getFleetVehicles merchant (Just ticketBooking'.ticketPlaceId.getId)
-            case fleetVehiclesResp of
-              Right resp -> do
-                case resp.vehicles of
-                  (fleetVehicle : _) -> do
-                    -- Assign the first available fleet vehicle
-                    let updateVehicleAssignmentReq =
-                          CallBPPInternal.VehicleAssignmentReq
-                            { ticketId = ticketBooking'.id.getId,
-                              fleetOwnerId = Kernel.Types.Id.Id fleetVehicle.fleetOwnerId,
-                              vehicleId = Kernel.Types.Id.Id fleetVehicle.vehicleNumber, -- Using vehicle number as vehicle ID for now
-                              placeId = ticketBooking'.ticketPlaceId.getId,
-                              amount = ticketBooking'.amount.amount
-                            }
-                    void $ try @_ @SomeException $ CallBPPInternal.assignFleetVehicle merchant updateVehicleAssignmentReq
-                  [] -> logInfo "No fleet vehicles available for assignment"
-              Left _ -> logInfo "Failed to get fleet vehicles for assignment"
+            fork "insert assignment for ticket booking " $ do
+              ticketPlace <- QTicketPlace.findById ticketBooking'.ticketPlaceId >>= fromMaybeM (TicketPlaceNotFound ticketBooking'.ticketPlaceId.getId)
+              -- Update vehicle assignment with assigned status and fleet owner
+              when (ticketPlace.placeType == Domain.Types.TicketPlace.Boating) $ do
+                merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+                mapM_
+                  ( \ticketBookingService -> do
+                      let createReq =
+                            CallBPPInternal.CreateFleetVehicleAssignmentReq
+                              { ticketBookingServiceId = ticketBookingService.id.getId,
+                                ticketPlaceId = ticketBooking'.ticketPlaceId.getId,
+                                fleetOwnerId = Nothing,
+                                vehicleId = Nothing,
+                                amount = ticketBookingService.amount.amount
+                              }
+                      void $ CallBPPInternal.createVehicleAssignment merchant createReq
+                  )
+                  ticketBookingServices
 
             -- checking here if blockExpiryTime is passed
             currentTimeWithBuffer <- (10000 +) <$> getCurrentTimestamp
@@ -1812,7 +1811,7 @@ getTicketPlacesV2 (_, merchantId) = do
 getTicketFleetVehicles ::
   (Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) ->
   Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace ->
-  Environment.Flow [API.Types.UI.TicketService.FleetVehicleResp]
+  Environment.Flow [API.Types.UI.TicketService.TicketFleetVehicleResp]
 getTicketFleetVehicles (_, merchantId) placeId = do
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
 
@@ -1823,7 +1822,7 @@ getTicketFleetVehicles (_, merchantId) placeId = do
   return $ map convertToFleetVehicleResp fleetVehicleListResp.vehicles
   where
     convertToFleetVehicleResp fleetVehicleInfo =
-      API.Types.UI.TicketService.FleetVehicleResp
+      API.Types.UI.TicketService.TicketFleetVehicleResp
         { fleetOwnerId = fleetVehicleInfo.fleetOwnerId,
           fleetOwnerName = fleetVehicleInfo.fleetOwnerName,
           vehicleNumber = fleetVehicleInfo.vehicleNumber,

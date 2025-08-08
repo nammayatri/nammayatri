@@ -52,7 +52,6 @@ library
       API.Internal
       API.Internal.Cac
       API.Internal.DriverArrivalNotf
-      API.Internal.FleetVehicleAssignment
       API.Internal.FrequentLocUser
       API.Internal.FRFS
       API.Internal.Rating

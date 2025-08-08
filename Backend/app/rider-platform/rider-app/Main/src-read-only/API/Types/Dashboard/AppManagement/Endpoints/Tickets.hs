@@ -86,6 +86,12 @@ type PostTicketsVerify =
            "ticketBookingShortId"
            (Kernel.Types.Id.ShortId Domain.Types.TicketBookingService.TicketBookingService)
       :> "verify"
+      :> QueryParam
+           "fleetOwnerId"
+           Kernel.Prelude.Text
+      :> QueryParam
+           "vehicleId"
+           Kernel.Prelude.Text
       :> Post
            '[JSON]
            API.Types.UI.TicketService.TicketServiceVerificationResp
@@ -180,7 +186,7 @@ type GetTicketsTicketdashboardTicketplaces =
   )
 
 data TicketsAPIs = TicketsAPIs
-  { postTicketsVerify :: Kernel.Types.Id.Id Domain.Types.TicketService.TicketService -> Kernel.Types.Id.ShortId Domain.Types.TicketBookingService.TicketBookingService -> EulerHS.Types.EulerClient API.Types.UI.TicketService.TicketServiceVerificationResp,
+  { postTicketsVerify :: Kernel.Types.Id.Id Domain.Types.TicketService.TicketService -> Kernel.Types.Id.ShortId Domain.Types.TicketBookingService.TicketBookingService -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient API.Types.UI.TicketService.TicketServiceVerificationResp,
     postTicketsServices :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Prelude.Maybe Data.Time.Calendar.Day -> EulerHS.Types.EulerClient [API.Types.UI.TicketService.TicketServiceResp],
     getTicketsPlaces :: EulerHS.Types.EulerClient [Domain.Types.TicketPlace.TicketPlace],
     postTicketsUpdate :: API.Types.UI.TicketService.TicketBookingUpdateSeatsReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,

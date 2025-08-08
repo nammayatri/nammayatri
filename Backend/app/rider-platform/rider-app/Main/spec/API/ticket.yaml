@@ -309,6 +309,9 @@ apis:
       params:
         personServiceId: Id TicketService
         ticketServiceShortId: ShortId TicketBookingService
+      query:
+        fleetOwnerId: Text
+        vehicleId: Text
       response:
         type: API.Types.UI.TicketService.TicketServiceVerificationResp
 

@@ -29,19 +29,18 @@ import qualified Storage.Queries.FleetVehicleAssignment as QFVA
 -- ticketBookingId is required; serviceId/placeId optional per schema
 
 data CreateFleetVehicleAssignmentReq = CreateFleetVehicleAssignmentReq
-  { ticketBookingId :: Text,
-    ticketBookingServiceId :: Maybe Text,
-    ticketPlaceId :: Maybe Text,
+  { ticketBookingServiceId :: Text,
+    ticketPlaceId :: Text,
     fleetOwnerId :: Maybe (Id DP.Person),
     vehicleId :: Maybe (Id DV.Vehicle),
-    amount :: Maybe HighPrecMoney
+    amount :: HighPrecMoney
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
 -- Update allows changing assignee and status
 
 data UpdateFleetVehicleAssignmentReq = UpdateFleetVehicleAssignmentReq
-  { id :: Id DFVA.FleetVehicleAssignment,
+  { ticketBookingServiceId :: Id DFVA.FleetVehicleAssignment,
     fleetOwnerId :: Maybe (Id DP.Person),
     vehicleId :: Maybe (Id DV.Vehicle),
     assignmentStatus :: Maybe DFVA.AssignmentStatus

@@ -185,7 +185,8 @@ getTicketPlaceDashboardDetails placeId requestorId requestorRole = do
           expiry = svc.expiry,
           businessHours = svc.businessHours,
           rules = svc.rules,
-          serviceDetails = svc.serviceDetails
+          serviceDetails = svc.serviceDetails,
+          subPlaceId = svc.subPlaceId
         }
 
     toBusinessHourDetails :: DBusinessHour.BusinessHour -> BusinessHourDetails
