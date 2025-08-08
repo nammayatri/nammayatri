@@ -130,6 +130,7 @@ tfCustomer res =
         BecknV2.OnDemand.Types.Person
           { personId = Nothing,
             personImage = Nothing,
+            personLanguages = Nothing,
             personName = Just riderName,
             personTags = Nothing
           }

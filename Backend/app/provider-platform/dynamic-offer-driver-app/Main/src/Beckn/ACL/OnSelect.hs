@@ -130,7 +130,8 @@ mkAgentPersonV2 quote isValueAddNP =
     { personId = Nothing,
       personImage = Nothing,
       personName = Just quote.driverName,
-      personTags = if isValueAddNP then mkAgentTagsV2 quote else Nothing
+      personTags = if isValueAddNP then mkAgentTagsV2 quote else Nothing,
+      personLanguages = Nothing
     }
 
 mkAgentTagsV2 :: DQuote.DriverQuote -> Maybe [Spec.TagGroup]
