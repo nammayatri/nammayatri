@@ -39,7 +39,7 @@ import Engineering.Helpers.Commons (getCurrentUTC, getFutureDate, getDayName, co
 import Engineering.Helpers.LogEvent (logEvent)
 import Engineering.Helpers.Utils (initializeCalendar, saveObject, getCurrentDay)
 import Foreign.Generic (decodeJSON)
-import Helpers.Utils (checkSpecialPickupZone, getcurrentdate, getDayOfWeek, incrementValueOfLocalStoreKey, getRideLabelData, parseFloat, getRequiredTag, transformBapName ,dummyLocationInfo )
+import Helpers.Utils (checkSpecialPickupZone, getcurrentdate, getDayOfWeek, incrementValueOfLocalStoreKey, getRideLabelData, parseFloat, getRequiredTag, transformBapName ,dummyLocationInfo , emitTerminateApp, isParentView )
 import JBridge (pauseYoutubeVideo)
 import Language.Strings (getString)
 import RemoteConfig.Utils
@@ -201,8 +201,14 @@ eval BackPressed state =
       FAQ_VIEW -> exit $ ChangeDriverEarningsTab USE_COINS_VIEW state
       FAQ_QUESTON_VIEW -> do
         void $ pure $ pauseYoutubeVideo unit
-        exit $ ChangeDriverEarningsTab FAQ_VIEW state
-      _ -> exit $ HomeScreen (updateToState state)
+        exit $ ChangeDriverEarningsTab FAQ_VIEW state        
+      _ -> do        
+        if isParentView FunctionCall 
+          then do 
+            void $ pure $ emitTerminateApp Nothing true
+            continue state
+        else do 
+          exit $ HomeScreen (updateToState state)
 
 eval (PrimaryButtonActionController PrimaryButtonController.OnClick) state = do
   let _ = unsafePerformEffect $ logEventWithMultipleParams state.data.logField  "ny_driver_convert_coins_click" $ [{key : "Number of Coins", value : unsafeToForeign state.data.coinsToUse}]

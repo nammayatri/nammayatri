@@ -129,9 +129,11 @@ import RemoteConfig.Utils (getPerfConfigData)
 import Screens.HomeScreen.ScreenData
 import Resource.Localizable.StringsV2
 import Resource.Localizable.TypesV2
-
+ 
 screen :: HomeScreenState -> GlobalState -> LoggableScreen Action HomeScreenState ScreenOutput
 screen initialState (GlobalState globalState) =
+  let _ = if HU.isParentView FunctionCall then HU.emitTerminateApp Nothing true else unit
+  in
   { initialState
   , view
   , name : "HomeScreen"

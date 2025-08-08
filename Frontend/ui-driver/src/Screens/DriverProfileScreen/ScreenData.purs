@@ -154,7 +154,8 @@ initData =
     showDriverBlockedPopup : false,
     skipGlobalEvents : false,
     isPetModeEnabled : Nothing,
-    nammaClubEnabled : false
+    nammaClubEnabled : false,
+    showSettings: true
    }
 , showDriverDetails : false
 }

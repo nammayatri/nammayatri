@@ -43,6 +43,7 @@
             android:exported="false"
             android:excludeFromRecents="true"
             android:resizeableActivity="false"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar"
             android:screenOrientation="portrait" />
 
         <activity
@@ -75,11 +76,6 @@
             android:name=".LocationUpdateServiceV2"
             android:exported="false"
             android:foregroundServiceType="location"
-            android:largeHeap="true"
-            android:stopWithTask="false" />
-        <service
-            android:name=".GRPCNotificationService"
-            android:exported="false"
             android:largeHeap="true"
             android:stopWithTask="false" />
         <service
@@ -130,11 +126,6 @@
             android:name=".GpsListeningService"
             android:exported="false"
             android:foregroundServiceType="location"
-            android:stopWithTask="false" />
-        <service
-            android:name=".ChatService"
-            android:exported="false"
-            android:foregroundServiceType="dataSync"
             android:stopWithTask="false" />
        
 

@@ -167,6 +167,27 @@ public class TranslatorMLKit {
 
     }
 
+    public interface TranslationCallBack {
+        void onSuccess(String string);
+        void onError();
+    }
+
+    public void translateString(String initialAddress,TranslationCallBack callback) {
+        if (translator != null) {
+            translator.translate(initialAddress)
+                    .addOnSuccessListener(
+                            translatedText -> {
+                                callback.onSuccess(translatedText);
+                            })
+                    .addOnFailureListener(
+                            e -> {
+                                callback.onError();
+                            });
+        } else {
+            callback.onError();
+        }
+    }
+
     public void listDownloadedModels(String callback, BridgeComponents bridgeComponents) {
         remoteModelManager.getDownloadedModels(TranslateRemoteModel.class)
                 .addOnSuccessListener(
