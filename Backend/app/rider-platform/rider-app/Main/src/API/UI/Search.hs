@@ -92,6 +92,7 @@ import SharedLogic.Search as DSearch
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
+import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Person as Person
@@ -357,9 +358,34 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
               else fromMaybe [] riderConfig.permissibleModes
       let sortingType = fromMaybe DMP.FASTEST userPreferences.journeyOptionsSortingType
       destination <- extractDest searchRequest.toLocation
+      -- Get stop information if integrated BPP config is available
+      fromStopInfo <- case (mbIntegratedBPPConfig, searchRequest.originStopCode) of
+        (Just integratedBPPConfig, Just originStopCode) ->
+          OTPRest.getStationByGtfsIdAndStopCode originStopCode integratedBPPConfig
+        _ ->
+          return Nothing
+
+      let searchReqLoc :: LatLngV2 =
+            LatLngV2
+              { latitude = searchRequest.fromLocation.lat,
+                longitude = searchRequest.fromLocation.lon
+              }
+
+      -- Determine the from location based on request type and stop info
+      let fromLocation :: LatLngV2 = case (req', fromStopInfo) of
+            (DSearch.PTSearch _, Just stopInfo) ->
+              case (stopInfo.lat, stopInfo.lon) of
+                (Just lat, Just lon) ->
+                  LatLngV2
+                    { latitude = lat,
+                      longitude = lon
+                    }
+                _ -> searchReqLoc
+            _ -> searchReqLoc
+
       let transitRoutesReq =
             GetTransitRoutesReq
-              { origin = WayPointV2 {location = LocationV2 {latLng = LatLngV2 {latitude = searchRequest.fromLocation.lat, longitude = searchRequest.fromLocation.lon}}},
+              { origin = WayPointV2 {location = LocationV2 {latLng = LatLngV2 {latitude = fromLocation.latitude, longitude = fromLocation.longitude}}},
                 destination = WayPointV2 {location = LocationV2 {latLng = LatLngV2 {latitude = destination.lat, longitude = destination.lon}}},
                 arrivalTime = Nothing,
                 departureTime = Nothing,
@@ -392,8 +418,10 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
             DSearch.PTSearch _ -> do
               let onlySingleModeRoutes = filter (\r -> (all (eitherWalkOrSingleMode vehicleCategory) r.legs) && (any (onlySingleMode vehicleCategory) r.legs)) otpResponse''.routes
               let filterFirstAndLastMileWalks = map filterWalkLegs onlySingleModeRoutes
-              let warningType = if null onlySingleModeRoutes then Just NoSingleModeRoutes else Nothing
-              filteredRoutes <- JM.filterTransitRoutes riderConfig (if null onlySingleModeRoutes then otpResponse''.routes else filterFirstAndLastMileWalks)
+              let routesWithCorrectStops = map filterRoutesWithCorrectFromAndToLocations filterFirstAndLastMileWalks
+              let validRoutes = filter (\r -> not (null r.legs)) routesWithCorrectStops
+              let warningType = if null validRoutes then Just NoSingleModeRoutes else Nothing
+              filteredRoutes <- JM.filterTransitRoutes riderConfig (if null validRoutes then otpResponse''.routes else validRoutes)
               return (warningType, MInterface.MultiModalResponse {routes = filteredRoutes})
             _ -> do
               filteredRoutes <- JM.filterTransitRoutes riderConfig otpResponse''.routes
@@ -595,6 +623,28 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
             ]
       MultiModalTypes.MultiModalRoute {legs = if null filteredLegs then legs else filteredLegs, ..}
 
+    filterRoutesWithCorrectFromAndToLocations :: MultiModalTypes.MultiModalRoute -> MultiModalTypes.MultiModalRoute
+    filterRoutesWithCorrectFromAndToLocations multiModalRoute = do
+      let routeLegs = multiModalRoute.legs
+      case (listToMaybe routeLegs, listToMaybe $ reverse routeLegs) of
+        (Just firstLeg, Just lastLeg) -> do
+          let originStopCode = searchRequest.originStopCode
+              destinationStopCode = searchRequest.destinationStopCode
+              firstLegFromStopCode = firstLeg.fromStopDetails >>= (.stopCode)
+              lastLegToStopCode = lastLeg.toStopDetails >>= (.stopCode)
+
+          -- Check if the route starts from the correct origin stop and ends at the correct destination stop
+          let isValidRoute = case (originStopCode, destinationStopCode) of
+                (Just originCode, Just destCode) ->
+                  firstLegFromStopCode == Just originCode && lastLegToStopCode == Just destCode
+                (Just originCode, Nothing) ->
+                  firstLegFromStopCode == Just originCode -- Only check origin if destination not specified
+                (Nothing, Just destCode) ->
+                  lastLegToStopCode == Just destCode -- Only check destination if origin not specified
+                (Nothing, Nothing) ->
+                  True -- If neither stop codes are provided, consider route valid
+          if isValidRoute then multiModalRoute else multiModalRoute {MultiModalTypes.legs = []} -- Return empty legs if route doesn't match
+        _ -> multiModalRoute -- If no legs, return as is
     processRestOfRoutes :: [MultiModalTypes.MultiModalRoute] -> ApiTypes.MultimodalUserPreferences -> Flow ()
     processRestOfRoutes routes userPreferences = do
       forM_ routes $ \route' -> processRoute route' userPreferences
