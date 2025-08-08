@@ -190,12 +190,13 @@ getFrfsRoute (_personId, _mId) routeCode mbIntegratedBPPConfigId _platformType _
   stops <-
     if isJust firstStop
       then do
-        now <- getCurrentTime
-        let currentTimeOfDay = utcToTimeOfDay now
+        -- now <- getCurrentTime
+        -- let currentTimeOfDay = utcToTimeOfDay now
         allSchedules <- QRouteStopTimeTable.findByRouteCodeAndStopCode integratedBPPConfig integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId [route.code] (fromJust firstStop).stopCode
-        let futureSchedules = filter (\schedule -> schedule.timeOfDeparture > currentTimeOfDay) allSchedules
-            sortedFutureSchedules = sortBy (compare `on` (.timeOfDeparture)) futureSchedules
-        let frfsSchedule = listToMaybe sortedFutureSchedules
+        -- TODO: Do we actually need to filter based on time. Timetable api we have for this.
+        -- let futureSchedules = filter (\schedule -> schedule.timeOfDeparture > currentTimeOfDay) allSchedules
+        --     sortedFutureSchedules = sortBy (compare `on` (.timeOfDeparture)) futureSchedules
+        let frfsSchedule = listToMaybe allSchedules
         tripInfo' <- maybe (pure Nothing) (\schedule -> OTPRest.getNandiTripInfo integratedBPPConfig schedule.tripId.getId) frfsSchedule
         case tripInfo' of
           Just tripInfo -> do
@@ -260,8 +261,8 @@ getFrfsRoute (_personId, _mId) routeCode mbIntegratedBPPConfigId _platformType _
         integratedBppConfigId = integratedBPPConfig.id
       }
   where
-    utcToTimeOfDay :: UTCTime -> TimeOfDay
-    utcToTimeOfDay = Time.timeToTimeOfDay . Time.utctDayTime
+    -- utcToTimeOfDay :: UTCTime -> TimeOfDay
+    -- utcToTimeOfDay = Time.timeToTimeOfDay . Time.utctDayTime
 
     secondsToTimeOfDay' :: Int -> TimeOfDay
     secondsToTimeOfDay' seconds =
