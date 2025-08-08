@@ -154,7 +154,9 @@ onNewIntent event = do
         setValueToLocalStore REFERRER_URL event.data
         Flow.baseAppFlow true Nothing Nothing
       _ -> Flow.baseAppFlow false Nothing Nothing
+  assetsFiber <- launchAff $ flowRunner defaultGlobalState $ fetchAssets
   void $ storeFiber $ mainFiber
+  void $ storeFiber $ assetsFiber
   pure unit
 
 updateEventData :: Event -> FlowBT String Unit
