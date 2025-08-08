@@ -66,7 +66,8 @@ data IntegratedQRReq = IntegratedQRReq {integratedQR :: Lib.JourneyModule.Types.
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data JourneyBookingPaymentStatus = JourneyBookingPaymentStatus
-  { journeyId :: Kernel.Types.Id.Id Domain.Types.Journey.Journey,
+  { gatewayReferenceId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    journeyId :: Kernel.Types.Id.Id Domain.Types.Journey.Journey,
     paymentFareUpdate :: Kernel.Prelude.Maybe [PaymentFareUpdate],
     paymentOrder :: Kernel.Prelude.Maybe PaymentOrder
   }

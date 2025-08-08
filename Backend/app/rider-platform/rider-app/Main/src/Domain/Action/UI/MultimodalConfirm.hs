@@ -280,8 +280,11 @@ getMultimodalBookingPaymentStatus ::
   )
 getMultimodalBookingPaymentStatus (mbPersonId, merchantId) journeyId = do
   personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
+  person <- QP.findById personId >>= fromMaybeM (InvalidRequest "Person not found")
   allJourneyFrfsBookings <- QFRFSTicketBooking.findAllByJourneyId (Just journeyId)
   frfsBookingStatusArr <- mapM (FRFSTicketService.frfsBookingStatus (personId, merchantId) True) allJourneyFrfsBookings
+  paymentGateWayId <- Payment.fetchGatewayReferenceId merchantId person.merchantOperatingCityId Nothing Payment.FRFSMultiModalBooking
+  logInfo $ "paymentGateWayId: " <> show paymentGateWayId
   let anyFirstBooking = listToMaybe frfsBookingStatusArr
       paymentOrder =
         anyFirstBooking >>= (.payment)
@@ -312,14 +315,16 @@ getMultimodalBookingPaymentStatus (mbPersonId, merchantId) journeyId = do
         ApiTypes.JourneyBookingPaymentStatus
           { journeyId,
             paymentOrder,
-            paymentFareUpdate = Just paymentFareUpdate
+            paymentFareUpdate = Just paymentFareUpdate,
+            gatewayReferenceId = paymentGateWayId
           }
     else do
       return $
         ApiTypes.JourneyBookingPaymentStatus
           { journeyId,
             paymentOrder = Nothing,
-            paymentFareUpdate = Nothing
+            paymentFareUpdate = Nothing,
+            gatewayReferenceId = paymentGateWayId
           }
 
 -- TODO :: To be deprecated @Kavyashree
