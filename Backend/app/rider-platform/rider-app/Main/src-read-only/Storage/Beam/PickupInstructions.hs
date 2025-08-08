@@ -12,10 +12,9 @@ import Tools.Beam.UtilsTH
 
 data PickupInstructionsT f = PickupInstructionsT
   { createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    geohash :: (B.C f Kernel.Prelude.Text),
     id :: (B.C f Kernel.Prelude.Text),
     instruction :: (B.C f Kernel.Prelude.Text),
-    lat :: (B.C f Kernel.Prelude.Double),
-    lon :: (B.C f Kernel.Prelude.Double),
     mediaFileId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
     merchantId :: (B.C f Kernel.Prelude.Text),
     merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
