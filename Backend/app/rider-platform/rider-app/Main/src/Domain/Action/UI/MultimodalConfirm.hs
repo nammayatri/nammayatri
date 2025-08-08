@@ -59,7 +59,7 @@ import qualified Domain.Types.Merchant
 import Domain.Types.MultimodalPreferences as DMP
 import qualified Domain.Types.Person
 import Environment
-import EulerHS.Prelude hiding (all, any, catMaybes, concatMap, elem, find, forM_, id, length, map, mapM_, null, sum, whenJust)
+import EulerHS.Prelude hiding (all, any, catMaybes, concatMap, elem, find, forM_, id, length, map, mapM_, null, sum, toList, whenJust)
 import qualified ExternalBPP.CallAPI as CallExternalBPP
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.MultiModal.Interface.Types as MultiModalTypes
@@ -889,19 +889,30 @@ getMultimodalOrderGetLegTierOptions (mbPersonId, merchantId) journeyId legOrder 
   now <- getCurrentTime
   journeyLegInfo <- find (\leg -> leg.sequenceNumber == legOrder) legs & fromMaybeM (InvalidRequest "No matching journey leg found for the given legOrder")
   let mbAgencyId = journeyLegInfo.agency >>= (.gtfsId)
+  let vehicleCategory = castTravelModeToVehicleCategory journeyLegInfo.mode
+  quotes <- maybe (pure []) (QFRFSQuote.findAllBySearchId . Id) journeyLegInfo.legSearchId
+  let availableServiceTiers = mapMaybe JMTypes.getServiceTierFromQuote quotes
+  mbIntegratedBPPConfig <- SIBC.findMaybeIntegratedBPPConfigFromAgency mbAgencyId person.merchantOperatingCityId vehicleCategory DIBC.MULTIMODAL
   let mbRouteDetail = journeyLegInfo.routeDetails & listToMaybe
   let mbFomStopCode = mbRouteDetail >>= (.fromStopCode)
   let mbToStopCode = mbRouteDetail >>= (.toStopCode)
-  let vehicleCategory = castTravelModeToVehicleCategory journeyLegInfo.mode
   let mbArrivalTime = mbRouteDetail >>= (.fromArrivalTime)
   let arrivalTime = fromMaybe now mbArrivalTime
-  mbIntegratedBPPConfig <- SIBC.findMaybeIntegratedBPPConfigFromAgency mbAgencyId person.merchantOperatingCityId vehicleCategory DIBC.MULTIMODAL
+
+  -- Group quotes by via field
+  let groupedServiceTiers = map toList $ groupBy (\a b -> a.via == b.via) $ sortBy (comparing (.via)) availableServiceTiers
+
   case (mbFomStopCode, mbToStopCode, mbIntegratedBPPConfig) of
     (Just fromStopCode, Just toStopCode, Just integratedBPPConfig) -> do
-      quotes <- maybe (pure []) (QFRFSQuote.findAllBySearchId . Id) journeyLegInfo.legSearchId
-      let availableServiceTiers = mapMaybe JMTypes.getServiceTierFromQuote quotes
-      (_, availableRoutesByTier) <- JLU.findPossibleRoutes (Just availableServiceTiers) fromStopCode toStopCode arrivalTime integratedBPPConfig merchantId person.merchantOperatingCityId vehicleCategory (vehicleCategory /= Enums.SUBWAY)
-      return $ ApiTypes.LegServiceTierOptionsResp {options = availableRoutesByTier}
+      -- For each group of service tiers with same via
+      allRoutes <- forM groupedServiceTiers $ \serviceTierGroup -> do
+        let stopCode = case listToMaybe serviceTierGroup >>= (.via) of
+              Nothing -> toStopCode -- If via is null use toStopCode
+              Just via -> T.takeWhile (/= '-') via -- Split via on '-' and take first element
+        (_, availableRoutesByTier) <- JLU.findPossibleRoutes (Just serviceTierGroup) fromStopCode stopCode arrivalTime integratedBPPConfig merchantId person.merchantOperatingCityId vehicleCategory (vehicleCategory /= Enums.SUBWAY)
+        return availableRoutesByTier
+
+      return $ ApiTypes.LegServiceTierOptionsResp {options = concat allRoutes}
     _ -> return $ ApiTypes.LegServiceTierOptionsResp {options = []}
   where
     castTravelModeToVehicleCategory :: DTrip.MultimodalTravelMode -> Enums.VehicleCategory
