@@ -4794,7 +4794,8 @@ driverEarningsFlow = do
   appConfig <- getAppConfigFlowBT Constants.appConfig
   logField_ <- lift $ lift $ getLogFields
   let earningScreenState = globalState.driverEarningsScreen
-  modifyScreenState $ DriverEarningsScreenStateType (\driverEarningsScreen -> driverEarningsScreen{data{hasActivePlan = globalState.homeScreen.data.paymentState.autoPayStatus /= NO_AUTOPAY, config = appConfig}, props{showShimmer = true}})
+  (GetDriverInfoResp driverInfoResp) <- getDriverInfoDataFromCache (GlobalState globalState) false
+  modifyScreenState $ DriverEarningsScreenStateType (\driverEarningsScreen -> driverEarningsScreen{data{hasActivePlan = isJust driverInfoResp.autoPayStatus, config = appConfig}, props{showShimmer = true}})
   uiAction <- UI.driverEarningsScreen
   case uiAction of
     EARNINGS_NAV HomeScreenNav state -> do
