@@ -19,6 +19,7 @@ import qualified Tools.Notifications as Notify
 data RideNotificationStatus
   = IDLE
   | DRIVER_ON_THE_WAY
+  | DRIVER_PICKUP_INSTRUCTION
   | DRIVER_REACHING
   | DRIVER_REACHED
   deriving (Show, Eq, Generic, ToSchema, ToJSON, FromJSON)
@@ -40,6 +41,8 @@ driverArrivalNotfHandler (DANTypeValidationReq bppRideId _ status) = do
     DRIVER_ON_THE_WAY -> do
       QRBE.updateJourneyLegStatus (Just LJT.OnTheWay) booking.id
       Notify.notifyDriverOnTheWay booking.riderId booking.tripCategory ride
+    DRIVER_PICKUP_INSTRUCTION -> do
+      pure ()
     DRIVER_REACHING -> do
       QRBE.updateJourneyLegStatus (Just LJT.Arriving) booking.id
       Notify.notifyDriverReaching booking.riderId booking.tripCategory ride.otp ride.vehicleNumber ride
