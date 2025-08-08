@@ -141,6 +141,7 @@ types:
     journeyId: Id Journey
     paymentOrder: Maybe PaymentOrder
     paymentFareUpdate: Maybe [PaymentFareUpdate]
+    gatewayReferenceId: Maybe Text
 
   PaymentFareUpdate:
     journeyLegOrder: Int
