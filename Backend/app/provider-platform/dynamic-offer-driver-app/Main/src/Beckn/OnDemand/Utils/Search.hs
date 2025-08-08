@@ -20,6 +20,8 @@ import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.Utils as Utils
 import Control.Lens
 import Data.Aeson
+import Data.Either.Extra (eitherToMaybe)
+import Data.Maybe (listToMaybe)
 import qualified Data.Text as T
 import qualified Data.Time
 import qualified Domain.Types.RefereeLink as DRL
@@ -28,6 +30,7 @@ import Kernel.External.Maps as Maps
 import Kernel.Types.Common
 import Kernel.Utils.Common
 import qualified Lib.Yudhishthira.Types as LYT
+import Servant.API (FromHttpApiData (parseUrlPiece))
 import Tools.Error (GenericError (InvalidRequest))
 
 getPickUpTime :: Spec.SearchReqMessage -> Maybe Data.Time.UTCTime
@@ -126,10 +129,22 @@ getRoundTrip req = do
   readMaybe . T.unpack =<< tagValue
 
 buildCustomerLanguage :: Spec.SearchReqMessage -> Maybe Language
-buildCustomerLanguage req = do
-  let tagGroups = req.searchReqMessageIntent >>= (.intentFulfillment) >>= (.fulfillmentCustomer) >>= (.customerPerson) >>= (.personTags)
-  let tagValue = Utils.getTagV2 Tag.CUSTOMER_INFO Tag.CUSTOMER_LANGUAGE tagGroups
-  readMaybe . T.unpack =<< tagValue
+buildCustomerLanguage req = customerLanguageFromCustomer <|> customerLanguageFromTag
+  where
+    customerLanguageFromCustomer =
+      req.searchReqMessageIntent
+        >>= (.intentFulfillment)
+        >>= (.fulfillmentCustomer)
+        >>= (.customerPerson)
+        >>= (.personLanguages)
+        >>= listToMaybe
+        >>= (.languageCode)
+        >>= (eitherToMaybe . parseUrlPiece)
+    -- for backward compatibility
+    customerLanguageFromTag = do
+      let tagGroups = req.searchReqMessageIntent >>= (.intentFulfillment) >>= (.fulfillmentCustomer) >>= (.customerPerson) >>= (.personTags)
+      let tagValue = Utils.getTagV2 Tag.CUSTOMER_INFO Tag.CUSTOMER_LANGUAGE tagGroups
+      readMaybe . T.unpack =<< tagValue
 
 buildCustomerNammaTags :: Spec.SearchReqMessage -> Maybe [LYT.TagNameValue]
 buildCustomerNammaTags req = do

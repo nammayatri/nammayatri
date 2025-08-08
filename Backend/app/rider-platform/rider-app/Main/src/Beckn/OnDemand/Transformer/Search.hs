@@ -32,7 +32,7 @@ tfCustomer :: Maybe Tags.Taggings -> Maybe Maps.Language -> Maybe BecknV2.OnDema
 tfCustomer taggings mbLanguage = do
   let customerContact_ = Nothing
       customerPerson_ = tfPerson taggings mbLanguage
-      returnData = BecknV2.OnDemand.Types.Customer {customerContact = customerContact_, customerPerson = customerPerson_} -- FIXME contact.phone
+      returnData = BecknV2.OnDemand.Types.Customer {customerContact = customerContact_, customerPerson = customerPerson_}
       allNothing = BecknV2.OnDemand.Utils.Common.allNothing returnData
   if allNothing
     then Nothing
