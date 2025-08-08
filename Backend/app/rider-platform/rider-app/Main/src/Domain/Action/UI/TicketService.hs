@@ -3,6 +3,7 @@ module Domain.Action.UI.TicketService where
 import qualified API.Types.Dashboard.AppManagement.Tickets
 import qualified API.Types.Dashboard.AppManagement.Tickets as Tickets
 import API.Types.UI.TicketService
+import Control.Exception (SomeException, try)
 import qualified Crypto.Hash as Hash
 import Data.Aeson (encode)
 import qualified Data.ByteString as BS
@@ -56,6 +57,7 @@ import qualified Lib.Payment.Domain.Types.Common as DPayment
 import Lib.Payment.Domain.Types.Refunds (Refunds (..), Split (..))
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified Lib.Payment.Storage.Queries.Refunds as QRefunds
+import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.TicketRule.Apply as TicketRule
 import qualified SharedLogic.TicketRule.Core
@@ -725,7 +727,18 @@ postTicketBookingsVerify _ = processBookingService
       | bookingService.verificationCount >= ticketServiceConfig.maxVerification =
         createVerificationResp BookingAlreadyVerified (Just bookingService) (Just ticketServiceConfig) (Just booking)
       | otherwise = do
-        -- TODO: Add code to send vehicleAssignment to bpp
+        -- Create vehicle assignment with status NEW and no fleet owner
+        merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+        let vehicleAssignmentReq =
+              CallBPPInternal.VehicleAssignmentReq
+                { ticketId = booking.id.getId,
+                  fleetOwnerId = Kernel.Types.Id.Id "", -- No fleet owner assigned yet
+                  vehicleId = Kernel.Types.Id.Id "", -- No vehicle assigned yet
+                  placeId = booking.ticketPlaceId.getId,
+                  amount = booking.amount.amount
+                }
+        void $ try @_ @SomeException $ CallBPPInternal.assignFleetVehicle merchant vehicleAssignmentReq
+
         QTicketBookingService.updateVerificationById DTB.Verified (bookingService.verificationCount + 1) bookingService.id
         createVerificationResp BookingSuccess (Just bookingService) (Just ticketServiceConfig) (Just booking)
 
@@ -825,7 +838,28 @@ getTicketBookingsStatus (mbPersonId, merchantId) _shortId@(Kernel.Types.Id.Short
       case paymentStatus of
         DPayment.PaymentStatus {..} -> do
           when (status == Payment.CHARGED) $ do
-            -- TODO: Add code to update vehicleAssignment to bpp
+            -- Update vehicle assignment with assigned status and fleet owner
+            merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+
+            -- Get fleet vehicles for this place to assign one
+            fleetVehiclesResp <- try @_ @SomeException $ CallBPPInternal.getFleetVehicles merchant (Just ticketBooking'.ticketPlaceId.getId)
+            case fleetVehiclesResp of
+              Right resp -> do
+                case resp.vehicles of
+                  (fleetVehicle : _) -> do
+                    -- Assign the first available fleet vehicle
+                    let updateVehicleAssignmentReq =
+                          CallBPPInternal.VehicleAssignmentReq
+                            { ticketId = ticketBooking'.id.getId,
+                              fleetOwnerId = Kernel.Types.Id.Id fleetVehicle.fleetOwnerId,
+                              vehicleId = Kernel.Types.Id.Id fleetVehicle.vehicleNumber, -- Using vehicle number as vehicle ID for now
+                              placeId = ticketBooking'.ticketPlaceId.getId,
+                              amount = ticketBooking'.amount.amount
+                            }
+                    void $ try @_ @SomeException $ CallBPPInternal.assignFleetVehicle merchant updateVehicleAssignmentReq
+                  [] -> logInfo "No fleet vehicles available for assignment"
+              Left _ -> logInfo "Failed to get fleet vehicles for assignment"
+
             -- checking here if blockExpiryTime is passed
             currentTimeWithBuffer <- (10000 +) <$> getCurrentTimestamp
             let windowTimePassed = maybe False (\expTime -> currentTimeWithBuffer > expTime) ticketBooking'.blockExpirationTime
@@ -1779,6 +1813,19 @@ getTicketFleetVehicles ::
   (Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) ->
   Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace ->
   Environment.Flow [API.Types.UI.TicketService.FleetVehicleResp]
-getTicketFleetVehicles (_, _) placeId = do
-  -- call internal api to get fleet vehicles
-  pure []
+getTicketFleetVehicles (_, merchantId) placeId = do
+  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+
+  -- Call BPP internal API to get fleet vehicles
+  fleetVehicleListResp <- CallBPPInternal.getFleetVehicles merchant (Just placeId.getId)
+
+  -- Convert to API response format
+  return $ map convertToFleetVehicleResp fleetVehicleListResp.vehicles
+  where
+    convertToFleetVehicleResp fleetVehicleInfo =
+      API.Types.UI.TicketService.FleetVehicleResp
+        { fleetOwnerId = fleetVehicleInfo.fleetOwnerId,
+          fleetOwnerName = fleetVehicleInfo.fleetOwnerName,
+          vehicleNumber = fleetVehicleInfo.vehicleNumber,
+          vehicleType = fleetVehicleInfo.vehicleType
+        }

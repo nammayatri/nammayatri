@@ -18,6 +18,7 @@ import qualified API.Internal.Estimate as Estimate
 import qualified API.Internal.FavouriteDrivers as FavouriteDrivers
 import qualified API.Internal.FeedbackForm as FeedbackForm
 import qualified API.Internal.FleetVehicleAssignment as FleetVehicleAssignment
+import qualified API.Internal.FleetVehiclesAssociation as FleetVehiclesAssociation
 import qualified API.Internal.KnowYourDriver as KnowYourDriver
 import qualified API.Internal.Multimodal as Multimodal
 import qualified API.Internal.PopulateTipAmount as PopulateTipAmount
@@ -56,6 +57,7 @@ type API =
            :<|> ViolationDetection.API
            :<|> Estimate.API
            :<|> FleetVehicleAssignment.API
+           :<|> FleetVehiclesAssociation.API
        )
 
 handler :: FlowServer API
@@ -83,3 +85,4 @@ handler =
     :<|> ViolationDetection.handler
     :<|> Estimate.handler
     :<|> FleetVehicleAssignment.handler
+    :<|> FleetVehiclesAssociation.handler

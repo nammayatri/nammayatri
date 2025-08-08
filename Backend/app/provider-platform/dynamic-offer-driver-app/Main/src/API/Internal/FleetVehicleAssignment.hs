@@ -19,24 +19,22 @@ import Environment (FlowHandler, FlowServer)
 import Kernel.Prelude
 import Kernel.Types.APISuccess
 import Kernel.Utils.Common (withFlowHandlerAPI)
-import Kernel.Utils.Error.Throwing (throwError)
-import Servant hiding (throwError)
-import Tools.Error
+import Servant
 
 type API =
-  "fleet-vehicle-assignment"
-    :> Header "token" Text
-    :> ( "assign"
-           :> ReqBody '[JSON] Domain.VehicleAssignmentReq
-           :> Post '[JSON] Domain.VehicleAssignmentResp
-       )
+  "fleet" :> (CreateVehicleAssignment :<|> UpdateVehicleAssignment)
+
+type CreateVehicleAssignment =
+  "create" :> "VehicleAssignment" :> ReqBody '[JSON] Domain.CreateFleetVehicleAssignmentReq :> Post '[JSON] APISuccess
+
+type UpdateVehicleAssignment =
+  "update" :> "VehicleAssignment" :> ReqBody '[JSON] Domain.UpdateFleetVehicleAssignmentReq :> Post '[JSON] APISuccess
 
 handler :: FlowServer API
-handler = assignVehicleHandler
+handler = createVehicleAssignment :<|> updateVehicleAssignment
 
-assignVehicleHandler :: Maybe Text -> Domain.VehicleAssignmentReq -> FlowHandler Domain.VehicleAssignmentResp
-assignVehicleHandler apiKey req = withFlowHandlerAPI $ do
-  internalAPIKey <- asks (.internalAPIKey)
-  unless (Just internalAPIKey == apiKey) $
-    throwError $ AuthBlocked "Invalid internal API key"
-  Domain.assignVehicle req
+createVehicleAssignment :: Domain.CreateFleetVehicleAssignmentReq -> FlowHandler APISuccess
+createVehicleAssignment = withFlowHandlerAPI . Domain.createVehicleAssignment
+
+updateVehicleAssignment :: Domain.UpdateFleetVehicleAssignmentReq -> FlowHandler APISuccess
+updateVehicleAssignment = withFlowHandlerAPI . Domain.updateVehicleAssignment

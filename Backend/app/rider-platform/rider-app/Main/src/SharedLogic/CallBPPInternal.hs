@@ -690,6 +690,51 @@ data IsIntercityResp = IsIntercityResp
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
+-- Fleet Vehicle List Types
+data FleetVehicleInfo = FleetVehicleInfo
+  { fleetOwnerId :: Text,
+    fleetOwnerName :: Text,
+    vehicleNumber :: Text,
+    vehicleType :: Text
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FleetVehicleListResp = FleetVehicleListResp
+  { vehicles :: [FleetVehicleInfo]
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+-- Fleet Vehicle List API
+type FleetVehicleListAPI =
+  "internal"
+    :> "fleet-vehicles"
+    :> "list"
+    :> QueryParam "placeId" Text
+    :> Header "token" Text
+    :> Get '[JSON] FleetVehicleListResp
+
+fleetVehicleListClient :: Maybe Text -> Maybe Text -> EulerClient FleetVehicleListResp
+fleetVehicleListClient = client fleetVehicleListApi
+
+fleetVehicleListApi :: Proxy FleetVehicleListAPI
+fleetVehicleListApi = Proxy
+
+getFleetVehicles ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+  ) =>
+  Merchant ->
+  Maybe Text ->
+  m FleetVehicleListResp
+getFleetVehicles merchant mbPlaceId = do
+  let apiKey = merchant.driverOfferApiKey
+  let internalUrl = merchant.driverOfferBaseUrl
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (fleetVehicleListClient mbPlaceId (Just apiKey)) "FleetVehicleList" fleetVehicleListApi
+
 type GetIsInterCityAPI =
   "internal"
     :> Capture "merchantId" Text

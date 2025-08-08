@@ -6,36 +6,37 @@ imports:
   HighPrecMoney: Kernel.Types.Common
   UTCTime: Kernel.Prelude
 
-VehicleAssignment:
-  tableName: vehicle_assignment
+FleetVehicleAssignment:
+  tableName: fleet_vehicle_assignment
   fields:
-    id: Id VehicleAssignment
-    merchantId: Id Merchant
-    merchantOperatingCityId: Id MerchantOperatingCity
-    ticketId: Text
-    fleetOwnerId: Id Person
-    vehicleId: Id Vehicle
-    placeId: Text
-    amount: HighPrecMoney
+    id: Id FleetVehicleAssignment
+    merchantId: Maybe (Id Merchant)
+    merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
+    ticketBookingId: Text
+    ticketBookingServiceId: Maybe Text
+    ticketPlaceId: Maybe Text
+    fleetOwnerId: Maybe (Id Person)
+    vehicleId: Maybe (Id Vehicle)
+    amount: Maybe HighPrecMoney
     assignmentStatus: AssignmentStatus
     assignedAt: UTCTime
     createdAt: UTCTime
-    updatedAt: UTCTime
 
   types:
     AssignmentStatus:
-      enum: "ASSIGNED,COMPLETED,CANCELLED"
-      derive: "Show,Eq,Ord"
+      enum: "NEW,ASSIGNED,COMPLETED,CANCELLED"
 
   constraints:
     id: PrimaryKey
-    ticketId: SecondaryKey
     fleetOwnerId: SecondaryKey
 
   queries:
-    findByTicketId:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByTicketBookingId:
       kvFunction: findAllWithKV
-      where: ticketId
+      where: ticketBookingId
     findByFleetOwnerId:
       kvFunction: findAllWithKV
       where: fleetOwnerId
@@ -44,7 +45,7 @@ VehicleAssignment:
       where: vehicleId
     updateAssignmentStatus:
       kvFunction: updateOneWithKV
-      params: [assignmentStatus, updatedAt]
+      params: [fleetOwnerId, vehicleId, assignmentStatus]
       where: id
 
   extraOperations:

@@ -17,7 +17,10 @@ module SharedLogic.CallBAPInternal where
 import API.Types.UI.MeterRide
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text
+import Domain.Types.FleetVehicleAssignment
+import Domain.Types.Person
 import Domain.Types.Ride as DRide
+import Domain.Types.Vehicle
 import EulerHS.Types (EulerClient, client)
 import Kernel.External.Slack.Types
 import Kernel.Prelude
@@ -249,18 +252,15 @@ data VehicleAssignmentReq = VehicleAssignmentReq
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 data VehicleAssignmentResp = VehicleAssignmentResp
-  { assignmentId :: Id VehicleAssignment,
+  { assignmentId :: Id FleetVehicleAssignment,
     ticketId :: Text,
     fleetOwnerId :: Id Person,
     vehicleId :: Id Vehicle,
     placeId :: Text,
     amount :: HighPrecMoney,
-    assignmentStatus :: AssignmentStatus,
+    assignmentStatus :: Domain.Types.FleetVehicleAssignment.AssignmentStatus,
     assignedAt :: UTCTime
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
-
-data AssignmentStatus = ASSIGNED | COMPLETED | CANCELLED
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 -- Fleet Vehicle Assignment API

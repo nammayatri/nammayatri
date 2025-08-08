@@ -38,7 +38,7 @@ data FleetOwnerInformationT f = FleetOwnerInformationT
     panNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     referredByOperatorId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     registeredAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
-    ticketPlace :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    ticketPlaceId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     verified :: B.C f Kernel.Prelude.Bool,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
