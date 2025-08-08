@@ -17,7 +17,10 @@ module SharedLogic.CallBAPInternal where
 import API.Types.UI.MeterRide
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text
+import Domain.Types.FleetVehicleAssignment
+import Domain.Types.Person
 import Domain.Types.Ride as DRide
+import Domain.Types.Vehicle
 import EulerHS.Types (EulerClient, client)
 import Kernel.External.Slack.Types
 import Kernel.Prelude

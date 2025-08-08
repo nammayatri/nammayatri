@@ -1,0 +1,52 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+  Vehicle: Domain.Types.Vehicle
+  HighPrecMoney: Kernel.Types.Common
+  UTCTime: Kernel.Prelude
+
+FleetVehicleAssignment:
+  tableName: fleet_vehicle_assignment
+  fields:
+    id: Id FleetVehicleAssignment
+    merchantId: Maybe (Id Merchant)
+    merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
+    ticketBookingId: Text
+    ticketBookingServiceId: Maybe Text
+    ticketPlaceId: Maybe Text
+    fleetOwnerId: Maybe (Id Person)
+    vehicleId: Maybe (Id Vehicle)
+    amount: Maybe HighPrecMoney
+    assignmentStatus: AssignmentStatus
+    assignedAt: UTCTime
+    createdAt: UTCTime
+
+  types:
+    AssignmentStatus:
+      enum: "NEW,ASSIGNED,COMPLETED,CANCELLED"
+
+  constraints:
+    id: PrimaryKey
+    fleetOwnerId: SecondaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByTicketBookingId:
+      kvFunction: findAllWithKV
+      where: ticketBookingId
+    findByFleetOwnerId:
+      kvFunction: findAllWithKV
+      where: fleetOwnerId
+    findByVehicleId:
+      kvFunction: findAllWithKV
+      where: vehicleId
+    updateAssignmentStatus:
+      kvFunction: updateOneWithKV
+      params: [fleetOwnerId, vehicleId, assignmentStatus]
+      where: id
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

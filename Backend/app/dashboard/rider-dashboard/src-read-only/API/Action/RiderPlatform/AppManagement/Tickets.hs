@@ -147,8 +147,8 @@ type GetTicketsTicketdashboardTicketplaces =
       :> API.Types.Dashboard.AppManagement.Tickets.GetTicketsTicketdashboardTicketplaces
   )
 
-postTicketsVerify :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.TicketService.TicketService -> Kernel.Types.Id.ShortId Domain.Types.TicketBookingService.TicketBookingService -> Environment.FlowHandler API.Types.UI.TicketService.TicketServiceVerificationResp)
-postTicketsVerify merchantShortId opCity apiTokenInfo personServiceId ticketBookingShortId = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.Tickets.postTicketsVerify merchantShortId opCity apiTokenInfo personServiceId ticketBookingShortId
+postTicketsVerify :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.TicketService.TicketService -> Kernel.Types.Id.ShortId Domain.Types.TicketBookingService.TicketBookingService -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler API.Types.UI.TicketService.TicketServiceVerificationResp)
+postTicketsVerify merchantShortId opCity apiTokenInfo personServiceId ticketBookingShortId fleetOwnerId vehicleId = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.Tickets.postTicketsVerify merchantShortId opCity apiTokenInfo personServiceId ticketBookingShortId fleetOwnerId vehicleId
 
 postTicketsServices :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Prelude.Maybe Data.Time.Calendar.Day -> Environment.FlowHandler [API.Types.UI.TicketService.TicketServiceResp])
 postTicketsServices merchantShortId opCity apiTokenInfo ticketPlaceId date = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.AppManagement.Tickets.postTicketsServices merchantShortId opCity apiTokenInfo ticketPlaceId date

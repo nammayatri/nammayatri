@@ -185,7 +185,8 @@ getTicketPlaceDashboardDetails placeId requestorId requestorRole = do
           expiry = svc.expiry,
           businessHours = svc.businessHours,
           rules = svc.rules,
-          serviceDetails = svc.serviceDetails
+          serviceDetails = svc.serviceDetails,
+          subPlaceId = svc.subPlaceId
         }
 
     toBusinessHourDetails :: DBusinessHour.BusinessHour -> BusinessHourDetails
@@ -330,6 +331,7 @@ createTicketService (merchantId, merchantOpCityId) serviceDetails placeId = do
       { DTicketService.id = serviceDetails.id,
         DTicketService.service = serviceDetails.service,
         DTicketService.shortDesc = serviceDetails.shortDesc,
+        DTicketService.subPlaceId = serviceDetails.subPlaceId,
         DTicketService.operationalDays = serviceDetails.operationalDays,
         DTicketService.operationalDate = serviceDetails.operationalDate,
         DTicketService.maxVerification = serviceDetails.maxVerification,

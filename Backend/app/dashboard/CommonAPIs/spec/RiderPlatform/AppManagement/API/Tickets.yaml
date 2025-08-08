@@ -38,6 +38,9 @@ apis:
       params:
         personServiceId: Id TicketService
         ticketBookingShortId: ShortId TicketBookingService
+      query:
+        - fleetOwnerId: Text
+        - vehicleId: Text
       response:
         type: TicketServiceVerificationResp
       migrate:

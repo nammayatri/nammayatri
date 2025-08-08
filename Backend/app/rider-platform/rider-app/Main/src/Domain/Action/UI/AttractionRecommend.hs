@@ -27,6 +27,7 @@ import Tools.Auth
 data CachedAttraction = CachedAttraction
   { id :: Kernel.Types.Id.Id DTicketPlace.TicketPlace,
     name :: Text,
+    iconUrl :: Maybe Text,
     lat :: Double,
     lon :: Double
   }
@@ -66,7 +67,7 @@ postAttractionsRecommend (_, merchantId) req = do
     filterWithInRadius userpos radiusInKm = filter (\(_, dist) -> dist <= radiusInKm) . map (\place -> (place, getKm $ distanceBetweenInMeters userpos (LatLong place.lat place.lon)))
 
     mkCachedAttraction :: DTicketPlace.TicketPlace -> Maybe CachedAttraction
-    mkCachedAttraction place = if isJust place.lat && isJust place.lon then Just CachedAttraction {id = place.id, name = place.name, lat = fromMaybe 0 place.lat, lon = fromMaybe 0 place.lon} else Nothing
+    mkCachedAttraction place = if isJust place.lat && isJust place.lon then Just CachedAttraction {id = place.id, name = place.name, iconUrl = place.iconUrl, lat = fromMaybe 0 place.lat, lon = fromMaybe 0 place.lon} else Nothing
 
     mkAttractions :: [(CachedAttraction, Double)] -> [API.Attraction]
-    mkAttractions = map (\(place, dist) -> API.Attraction {id = place.id, name = place.name, distanceInKm = dist})
+    mkAttractions = map (\(place, dist) -> API.Attraction {id = place.id, iconUrl = place.iconUrl, name = place.name, distanceInKm = dist})

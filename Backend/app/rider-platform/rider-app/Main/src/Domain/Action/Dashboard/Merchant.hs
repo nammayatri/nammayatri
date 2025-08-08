@@ -1089,6 +1089,7 @@ postMerchantTicketConfigUpsert merchantShortId opCity request = do
               { id = Id ticketServiceId,
                 businessHours = [],
                 shortDesc = svcShortDesc,
+                subPlaceId = Nothing,
                 merchantOperatingCityId = Just merchantOperatingCityId,
                 rules = Nothing,
                 isClosed = False,

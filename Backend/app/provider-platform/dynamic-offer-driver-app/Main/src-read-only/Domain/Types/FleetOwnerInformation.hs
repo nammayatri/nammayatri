@@ -33,6 +33,7 @@ data FleetOwnerInformationE e = FleetOwnerInformation
     panNumberDec :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     referredByOperatorId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     registeredAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    ticketPlaceId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     verified :: Kernel.Prelude.Bool,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
@@ -73,6 +74,7 @@ instance EncryptedItem FleetOwnerInformation where
           panNumberDec = panNumberDec entity,
           referredByOperatorId = referredByOperatorId entity,
           registeredAt = registeredAt entity,
+          ticketPlaceId = ticketPlaceId entity,
           verified = verified entity,
           createdAt = createdAt entity,
           updatedAt = updatedAt entity
@@ -105,6 +107,7 @@ instance EncryptedItem FleetOwnerInformation where
             panNumberDec = panNumberDec entity,
             referredByOperatorId = referredByOperatorId entity,
             registeredAt = registeredAt entity,
+            ticketPlaceId = ticketPlaceId entity,
             verified = verified entity,
             createdAt = createdAt entity,
             updatedAt = updatedAt entity

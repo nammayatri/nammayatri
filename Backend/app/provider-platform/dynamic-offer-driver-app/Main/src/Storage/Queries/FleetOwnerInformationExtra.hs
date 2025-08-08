@@ -163,3 +163,15 @@ updateByPrimaryKey fleetOwnerInfo = do
           Se.Set Beam.updatedAt _now
         ]
         [Se.And [Se.Is Beam.fleetOwnerPersonId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerPersonId)]]
+
+getFleetOwnerByTicketPlaceId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Maybe Text ->
+  m [Domain.Types.FleetOwnerInformation.FleetOwnerInformation]
+getFleetOwnerByTicketPlaceId mbTicketPlaceId = do
+  findAllWithKV
+    [ Se.And $
+        [Se.Is Beam.enabled $ Se.Eq True]
+          <> [Se.Is Beam.verified $ Se.Eq True]
+          <> [Se.Is Beam.ticketPlaceId $ Se.Eq mbTicketPlaceId]
+    ]

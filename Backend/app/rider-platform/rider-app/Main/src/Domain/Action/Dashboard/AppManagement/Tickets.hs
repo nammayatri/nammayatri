@@ -47,10 +47,12 @@ postTicketsVerify ::
   Kernel.Types.Beckn.Context.City ->
   Kernel.Types.Id.Id Domain.Types.TicketService.TicketService ->
   Kernel.Types.Id.ShortId Domain.Types.TicketBookingService.TicketBookingService ->
+  Maybe Text ->
+  Maybe Text ->
   Environment.Flow API.Types.UI.TicketService.TicketServiceVerificationResp
-postTicketsVerify merchantShortId _opCity personServiceId ticketBookingServiceShortId = do
+postTicketsVerify merchantShortId _opCity personServiceId ticketBookingServiceShortId mbFleetOwnerId mbVehicleId = do
   m <- findMerchantByShortId merchantShortId
-  Domain.Action.UI.TicketService.postTicketBookingsVerify (Nothing, m.id) personServiceId ticketBookingServiceShortId
+  Domain.Action.UI.TicketService.postTicketBookingsVerify (Nothing, m.id) personServiceId ticketBookingServiceShortId mbFleetOwnerId mbVehicleId
 
 postTicketsServices ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->

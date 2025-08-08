@@ -128,6 +128,7 @@ getOnboardingConfigs' personLanguage merchantOpCityId makeSelfieAadhaarPanMandat
   bikeConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DVC.MOTORCYCLE Nothing
   ambulanceConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DVC.AMBULANCE Nothing
   truckConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DVC.TRUCK Nothing
+  boatConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DVC.BOAT Nothing
   busConfigsRaw <- CQDVC.findByMerchantOpCityIdAndCategory merchantOpCityId DVC.BUS Nothing
   cabConfigs <- SDO.filterInCompatibleFlows makeSelfieAadhaarPanMandatory <$> mapM (mkDocumentVerificationConfigAPIEntity personLanguage) (SDO.filterVehicleDocuments cabConfigsRaw mbOnlyVehicle)
   autoConfigs <- SDO.filterInCompatibleFlows makeSelfieAadhaarPanMandatory <$> mapM (mkDocumentVerificationConfigAPIEntity personLanguage) (SDO.filterVehicleDocuments autoConfigsRaw mbOnlyVehicle)
@@ -135,6 +136,7 @@ getOnboardingConfigs' personLanguage merchantOpCityId makeSelfieAadhaarPanMandat
   ambulanceConfigs <- SDO.filterInCompatibleFlows makeSelfieAadhaarPanMandatory <$> mapM (mkDocumentVerificationConfigAPIEntity personLanguage) (SDO.filterVehicleDocuments ambulanceConfigsRaw mbOnlyVehicle)
   truckConfigs <- SDO.filterInCompatibleFlows makeSelfieAadhaarPanMandatory <$> mapM (mkDocumentVerificationConfigAPIEntity personLanguage) (SDO.filterVehicleDocuments truckConfigsRaw mbOnlyVehicle)
   busConfigs <- SDO.filterInCompatibleFlows makeSelfieAadhaarPanMandatory <$> mapM (mkDocumentVerificationConfigAPIEntity personLanguage) (SDO.filterVehicleDocuments busConfigsRaw mbOnlyVehicle)
+  boatConfigs <- SDO.filterInCompatibleFlows makeSelfieAadhaarPanMandatory <$> mapM (mkDocumentVerificationConfigAPIEntity personLanguage) (SDO.filterVehicleDocuments boatConfigsRaw mbOnlyVehicle)
   return $
     API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigList
       { cabs = SDO.toMaybe cabConfigs,
@@ -142,7 +144,8 @@ getOnboardingConfigs' personLanguage merchantOpCityId makeSelfieAadhaarPanMandat
         bikes = SDO.toMaybe bikeConfigs,
         ambulances = SDO.toMaybe ambulanceConfigs,
         trucks = SDO.toMaybe truckConfigs,
-        bus = SDO.toMaybe busConfigs
+        bus = SDO.toMaybe busConfigs,
+        boat = SDO.toMaybe boatConfigs
       }
 
 getDriverVehiclePhotos ::

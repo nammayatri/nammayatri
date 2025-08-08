@@ -303,7 +303,8 @@ getLiveTicketDef placeId = do
           allowCancellation = svc.allowCancellation,
           expiry = svc.expiry,
           serviceCategoryId = nub $ concatMap (.categoryId) $ filter (\bh -> any (\bhId -> bhId == bh.id) svc.businessHours) linkedBusinessHours,
-          rules = svc.rules
+          rules = svc.rules,
+          subPlaceId = svc.subPlaceId
         }
     toServiceCategoryDef :: [DBusinessHour.BusinessHour] -> DServiceCategory.ServiceCategory -> DEM.ServiceCategoryDef
     toServiceCategoryDef linkedBusinessHours sc =
@@ -727,6 +728,7 @@ applyDraftChanges draftChange = do
               { id = serviceDef.id,
                 service = serviceDef.service,
                 shortDesc = serviceDef.shortDesc,
+                subPlaceId = serviceDef.subPlaceId,
                 operationalDays = serviceDef.operationalDays,
                 operationalDate = serviceDef.operationalDate,
                 maxVerification = serviceDef.maxVerification,

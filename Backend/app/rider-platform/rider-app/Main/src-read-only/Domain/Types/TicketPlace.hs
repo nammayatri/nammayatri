@@ -70,6 +70,7 @@ data PlaceType
   | ArtGallery
   | HeritageSite
   | ReligiousSite
+  | Boating
   | Other
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 

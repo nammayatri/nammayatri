@@ -59,6 +59,8 @@ library
       API.Internal.Estimate
       API.Internal.FavouriteDrivers
       API.Internal.FeedbackForm
+      API.Internal.FleetVehicleAssignment
+      API.Internal.FleetVehiclesAssociation
       API.Internal.KnowYourDriver
       API.Internal.Multimodal
       API.Internal.PopulateTipAmount
@@ -196,6 +198,8 @@ library
       Domain.Action.Internal.Estimate
       Domain.Action.Internal.FavouriteDrivers
       Domain.Action.Internal.FeedbackForm
+      Domain.Action.Internal.FleetVehicleAssignment
+      Domain.Action.Internal.FleetVehiclesAssociation
       Domain.Action.Internal.KnowYourDriver
       Domain.Action.Internal.PopulateTipAmount
       Domain.Action.Internal.ProcessingChangeOnline
@@ -604,6 +608,7 @@ library
       Storage.Queries.FleetOperatorAssociationExtra
       Storage.Queries.FleetOwnerInformationExtra
       Storage.Queries.FleetRCAssociationExtra
+      Storage.Queries.FleetVehicleAssignmentExtra
       Storage.Queries.Geometry
       Storage.Queries.ImageExtra
       Storage.Queries.InterCityTravelCities
@@ -886,6 +891,7 @@ library
       Domain.Types.FleetOwnerInformation
       Domain.Types.FleetRCAssociation
       Domain.Types.FleetRouteAssociation
+      Domain.Types.FleetVehicleAssignment
       Domain.Types.FullFarePolicyProgressiveDetailsPerMinRateSection
       Domain.Types.GoHomeConfig
       Domain.Types.HyperVergeSdkLogs
@@ -1034,6 +1040,7 @@ library
       Storage.Beam.FleetOwnerInformation
       Storage.Beam.FleetRCAssociation
       Storage.Beam.FleetRouteAssociation
+      Storage.Beam.FleetVehicleAssignment
       Storage.Beam.FullFarePolicyProgressiveDetailsPerMinRateSection
       Storage.Beam.GoHomeConfig
       Storage.Beam.HyperVergeSdkLogs
@@ -1185,6 +1192,7 @@ library
       Storage.Queries.FleetOwnerInformation
       Storage.Queries.FleetRCAssociation
       Storage.Queries.FleetRouteAssociation
+      Storage.Queries.FleetVehicleAssignment
       Storage.Queries.FullFarePolicyProgressiveDetailsPerMinRateSection
       Storage.Queries.GoHomeConfig
       Storage.Queries.HyperVergeSdkLogs
@@ -1258,6 +1266,7 @@ library
       Storage.Queries.OrphanInstances.FleetOperatorAssociation
       Storage.Queries.OrphanInstances.FleetOwnerInformation
       Storage.Queries.OrphanInstances.FleetRCAssociation
+      Storage.Queries.OrphanInstances.FleetVehicleAssignment
       Storage.Queries.OrphanInstances.Image
       Storage.Queries.OrphanInstances.Invoice
       Storage.Queries.OrphanInstances.KioskLocation

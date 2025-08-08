@@ -9,6 +9,7 @@ where
 
 import qualified API.Types.UI.TicketService
 import qualified Control.Lens
+import qualified Data.Text
 import qualified Data.Time.Calendar
 import qualified Domain.Action.UI.TicketService as Domain.Action.UI.TicketService
 import qualified Domain.Types.Merchant
@@ -29,14 +30,14 @@ import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =
-  ( TokenAuth :> "ticket" :> "places" :> Get '[JSON] [Domain.Types.TicketPlace.TicketPlace] :<|> TokenAuth :> "ticket" :> "places"
+  ( TokenAuth :> "ticket" :> "places" :> Get ('[JSON]) [Domain.Types.TicketPlace.TicketPlace] :<|> TokenAuth :> "ticket" :> "places"
       :> Capture
            "placeId"
            (Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace)
       :> "services"
       :> QueryParam "date" Data.Time.Calendar.Day
       :> Get
-           '[JSON]
+           ('[JSON])
            [API.Types.UI.TicketService.TicketServiceResp]
       :<|> TokenAuth
       :> "ticket"
@@ -46,10 +47,10 @@ type API =
            (Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace)
       :> "book"
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            API.Types.UI.TicketService.TicketBookingReq
       :> Post
-           '[JSON]
+           ('[JSON])
            Kernel.External.Payment.Interface.Types.CreateOrderResp
       :<|> TokenAuth
       :> "ticket"
@@ -64,7 +65,7 @@ type API =
            "status"
            Domain.Types.TicketBooking.BookingStatus
       :> Get
-           '[JSON]
+           ('[JSON])
            [API.Types.UI.TicketService.TicketBookingAPIEntity]
       :<|> TokenAuth
       :> "ticket"
@@ -80,7 +81,7 @@ type API =
            "status"
            Domain.Types.TicketBooking.BookingStatus
       :> Get
-           '[JSON]
+           ('[JSON])
            [API.Types.UI.TicketService.TicketBookingAPIEntityV2]
       :<|> TokenAuth
       :> "ticket"
@@ -90,7 +91,7 @@ type API =
            (Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking)
       :> "details"
       :> Get
-           '[JSON]
+           ('[JSON])
            API.Types.UI.TicketService.TicketBookingDetails
       :<|> TokenAuth
       :> "ticket"
@@ -102,8 +103,14 @@ type API =
            "ticketServiceShortId"
            (Kernel.Types.Id.ShortId Domain.Types.TicketBookingService.TicketBookingService)
       :> "verify"
+      :> QueryParam
+           "fleetOwnerId"
+           Data.Text.Text
+      :> QueryParam
+           "vehicleId"
+           Data.Text.Text
       :> Post
-           '[JSON]
+           ('[JSON])
            API.Types.UI.TicketService.TicketServiceVerificationResp
       :<|> TokenAuth
       :> "ticket"
@@ -113,17 +120,17 @@ type API =
            (Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking)
       :> "status"
       :> Get
-           '[JSON]
+           ('[JSON])
            Domain.Types.TicketBooking.BookingStatus
       :<|> TokenAuth
       :> "ticket"
       :> "booking"
       :> "cancel"
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            API.Types.UI.TicketService.TicketBookingCancelReq
       :> Post
-           '[JSON]
+           ('[JSON])
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "ticket"
@@ -131,20 +138,20 @@ type API =
       :> "update"
       :> "seats"
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            API.Types.UI.TicketService.TicketBookingUpdateSeatsReq
       :> Post
-           '[JSON]
+           ('[JSON])
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "ticket"
       :> "service"
       :> "cancel"
       :> ReqBody
-           '[JSON]
+           ('[JSON])
            API.Types.UI.TicketService.TicketServiceCancelReq
       :> Post
-           '[JSON]
+           ('[JSON])
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "ticket"
@@ -160,12 +167,29 @@ type API =
            "isClosed"
            Kernel.Prelude.Bool
       :> Get
-           '[JSON]
+           ('[JSON])
            [API.Types.UI.TicketService.TicketPlaceAvailability]
+      :<|> TokenAuth
+      :> "ticket"
+      :> "places"
+      :> "v2"
+      :> Get
+           ('[JSON])
+           [API.Types.UI.TicketService.TicketPlaceResp]
+      :<|> TokenAuth
+      :> "ticket"
+      :> "bookings"
+      :> Capture
+           "placeId"
+           (Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace)
+      :> "fleet-vehicles"
+      :> Get
+           ('[JSON])
+           [API.Types.UI.TicketService.TicketFleetVehicleResp]
   )
 
 handler :: Environment.FlowServer API
-handler = getTicketPlaces :<|> getTicketPlacesServices :<|> postTicketPlacesBook :<|> getTicketBookings :<|> getTicketBookingsV2 :<|> getTicketBookingsDetails :<|> postTicketBookingsVerify :<|> getTicketBookingsStatus :<|> postTicketBookingCancel :<|> postTicketBookingsUpdateSeats :<|> postTicketServiceCancel :<|> getTicketPlaceAvailability
+handler = getTicketPlaces :<|> getTicketPlacesServices :<|> postTicketPlacesBook :<|> getTicketBookings :<|> getTicketBookingsV2 :<|> getTicketBookingsDetails :<|> postTicketBookingsVerify :<|> getTicketBookingsStatus :<|> postTicketBookingCancel :<|> postTicketBookingsUpdateSeats :<|> postTicketServiceCancel :<|> getTicketPlaceAvailability :<|> getTicketPlacesV2 :<|> getTicketFleetVehicles
 
 getTicketPlaces :: ((Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Environment.FlowHandler [Domain.Types.TicketPlace.TicketPlace])
 getTicketPlaces a1 = withFlowHandlerAPI $ Domain.Action.UI.TicketService.getTicketPlaces (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
@@ -175,7 +199,7 @@ getTicketPlacesServices ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace ->
-    Kernel.Prelude.Maybe Data.Time.Calendar.Day ->
+    Kernel.Prelude.Maybe (Data.Time.Calendar.Day) ->
     Environment.FlowHandler [API.Types.UI.TicketService.TicketServiceResp]
   )
 getTicketPlacesServices a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.TicketService.getTicketPlacesServices (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
@@ -194,8 +218,8 @@ getTicketBookings ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
+    Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
+    Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
     Domain.Types.TicketBooking.BookingStatus ->
     Environment.FlowHandler [API.Types.UI.TicketService.TicketBookingAPIEntity]
   )
@@ -205,9 +229,9 @@ getTicketBookingsV2 ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
-    Kernel.Prelude.Maybe Domain.Types.TicketBooking.BookingStatus ->
+    Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
+    Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
+    Kernel.Prelude.Maybe (Domain.Types.TicketBooking.BookingStatus) ->
     Environment.FlowHandler [API.Types.UI.TicketService.TicketBookingAPIEntityV2]
   )
 getTicketBookingsV2 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.TicketService.getTicketBookingsV2 (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
@@ -227,9 +251,11 @@ postTicketBookingsVerify ::
     ) ->
     Kernel.Types.Id.Id Domain.Types.TicketService.TicketService ->
     Kernel.Types.Id.ShortId Domain.Types.TicketBookingService.TicketBookingService ->
+    Kernel.Prelude.Maybe (Data.Text.Text) ->
+    Kernel.Prelude.Maybe (Data.Text.Text) ->
     Environment.FlowHandler API.Types.UI.TicketService.TicketServiceVerificationResp
   )
-postTicketBookingsVerify a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.TicketService.postTicketBookingsVerify (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
+postTicketBookingsVerify a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.TicketService.postTicketBookingsVerify (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
 
 getTicketBookingsStatus ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -272,8 +298,20 @@ getTicketPlaceAvailability ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+    Kernel.Prelude.Maybe (Kernel.Prelude.Bool) ->
+    Kernel.Prelude.Maybe (Kernel.Prelude.Bool) ->
     Environment.FlowHandler [API.Types.UI.TicketService.TicketPlaceAvailability]
   )
 getTicketPlaceAvailability a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.TicketService.getTicketPlaceAvailability (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
+
+getTicketPlacesV2 :: ((Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Environment.FlowHandler [API.Types.UI.TicketService.TicketPlaceResp])
+getTicketPlacesV2 a1 = withFlowHandlerAPI $ Domain.Action.UI.TicketService.getTicketPlacesV2 (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+
+getTicketFleetVehicles ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace ->
+    Environment.FlowHandler [API.Types.UI.TicketService.TicketFleetVehicleResp]
+  )
+getTicketFleetVehicles a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.TicketService.getTicketFleetVehicles (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

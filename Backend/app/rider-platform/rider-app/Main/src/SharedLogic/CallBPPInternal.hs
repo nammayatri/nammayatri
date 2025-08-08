@@ -633,6 +633,51 @@ data IsIntercityResp = IsIntercityResp
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
+-- Fleet Vehicle List Types
+data FleetVehicleInfo = FleetVehicleInfo
+  { fleetOwnerId :: Text,
+    fleetOwnerName :: Text,
+    vehicleNumber :: Text,
+    vehicleType :: Text
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FleetVehicleListResp = FleetVehicleListResp
+  { vehicles :: [FleetVehicleInfo]
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+-- Fleet Vehicle List API
+type FleetVehicleListAPI =
+  "internal"
+    :> "fleet-vehicles"
+    :> "list"
+    :> QueryParam "placeId" Text
+    :> Header "token" Text
+    :> Get '[JSON] FleetVehicleListResp
+
+fleetVehicleListClient :: Maybe Text -> Maybe Text -> EulerClient FleetVehicleListResp
+fleetVehicleListClient = client fleetVehicleListApi
+
+fleetVehicleListApi :: Proxy FleetVehicleListAPI
+fleetVehicleListApi = Proxy
+
+getFleetVehicles ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+  ) =>
+  Merchant ->
+  Maybe Text ->
+  m FleetVehicleListResp
+getFleetVehicles merchant mbPlaceId = do
+  let apiKey = merchant.driverOfferApiKey
+  let internalUrl = merchant.driverOfferBaseUrl
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (fleetVehicleListClient mbPlaceId (Just apiKey)) "FleetVehicleList" fleetVehicleListApi
+
 type GetIsInterCityAPI =
   "internal"
     :> Capture "merchantId" Text
@@ -661,6 +706,87 @@ getIsInterCity merchant req = do
   let merchantId = merchant.driverOfferMerchantId
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (getIsInterCityClient merchantId (Just apiKey) req) "GetIsInterCity" getIsInterCityApi
+
+-- Fleet Vehicle Assignment (Create/Update) - provider internal "fleet" APIs
+
+-- Requests mirror provider's Domain.Action.Internal.FleetVehicleAssignment types
+data CreateFleetVehicleAssignmentReq = CreateFleetVehicleAssignmentReq
+  { ticketBookingServiceId :: Text,
+    ticketPlaceId :: Text,
+    fleetOwnerId :: Maybe Text,
+    vehicleId :: Maybe Text,
+    amount :: HighPrecMoney
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
+data UpdateFleetVehicleAssignmentReq = UpdateFleetVehicleAssignmentReq
+  { ticketBookingId :: Text,
+    ticketBookingServiceId :: Text,
+    fleetOwnerId :: Maybe Text,
+    vehicleId :: Maybe Text,
+    assignmentStatus :: Text
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
+-- API = "fleet" :> (CreateVehicleAssignment :<|> UpdateVehicleAssignment)
+
+type CreateVehicleAssignmentAPI =
+  "internal"
+    :> "fleet"
+    :> "create"
+    :> "VehicleAssignment"
+    :> Header "token" Text
+    :> ReqBody '[JSON] CreateFleetVehicleAssignmentReq
+    :> Post '[JSON] APISuccess
+
+type UpdateVehicleAssignmentAPI =
+  "internal"
+    :> "fleet"
+    :> "update"
+    :> "VehicleAssignment"
+    :> Header "token" Text
+    :> ReqBody '[JSON] UpdateFleetVehicleAssignmentReq
+    :> Post '[JSON] APISuccess
+
+createVehicleAssignmentClient :: Maybe Text -> CreateFleetVehicleAssignmentReq -> EulerClient APISuccess
+createVehicleAssignmentClient = client createVehicleAssignmentApi
+
+updateVehicleAssignmentClient :: Maybe Text -> UpdateFleetVehicleAssignmentReq -> EulerClient APISuccess
+updateVehicleAssignmentClient = client updateVehicleAssignmentApi
+
+createVehicleAssignmentApi :: Proxy CreateVehicleAssignmentAPI
+createVehicleAssignmentApi = Proxy
+
+updateVehicleAssignmentApi :: Proxy UpdateVehicleAssignmentAPI
+updateVehicleAssignmentApi = Proxy
+
+createVehicleAssignment ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+  ) =>
+  Merchant ->
+  CreateFleetVehicleAssignmentReq ->
+  m APISuccess
+createVehicleAssignment merchant req = do
+  let apiKey = merchant.driverOfferApiKey
+  let internalUrl = merchant.driverOfferBaseUrl
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (createVehicleAssignmentClient (Just apiKey) req) "CreateVehicleAssignment" createVehicleAssignmentApi
+
+updateVehicleAssignment ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+  ) =>
+  Merchant ->
+  UpdateFleetVehicleAssignmentReq ->
+  m APISuccess
+updateVehicleAssignment merchant req = do
+  let apiKey = merchant.driverOfferApiKey
+  let internalUrl = merchant.driverOfferBaseUrl
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (updateVehicleAssignmentClient (Just apiKey) req) "UpdateVehicleAssignment" updateVehicleAssignmentApi
 
 type GetEstimateDetailsAPI =
   "internal"

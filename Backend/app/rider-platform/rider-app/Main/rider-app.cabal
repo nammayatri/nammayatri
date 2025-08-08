@@ -720,6 +720,7 @@ library
       Domain.Types.BBPSConfig
       Domain.Types.BecknConfig
       Domain.Types.BlackListOrg
+      Domain.Types.BoatAssignment
       Domain.Types.Booking
       Domain.Types.BookingCancellationReason
       Domain.Types.BookingLocation
@@ -831,6 +832,7 @@ library
       Domain.Types.StationsExtraInformation
       Domain.Types.StopFare
       Domain.Types.StopInformation
+      Domain.Types.TicketAssignment
       Domain.Types.TicketBooking
       Domain.Types.TicketBookingPeopleCategory
       Domain.Types.TicketBookingService
@@ -838,6 +840,7 @@ library
       Domain.Types.TicketMerchantDetails
       Domain.Types.TicketPlace
       Domain.Types.TicketService
+      Domain.Types.TicketSubPlace
       Domain.Types.TripTerms
       Domain.Types.UiRiderConfig
       Domain.Types.ValueAddNP
@@ -855,6 +858,7 @@ library
       Storage.Beam.BBPSConfig
       Storage.Beam.BecknConfig
       Storage.Beam.BlackListOrg
+      Storage.Beam.BoatAssignment
       Storage.Beam.Booking
       Storage.Beam.BookingCancellationReason
       Storage.Beam.BookingLocation
@@ -965,6 +969,7 @@ library
       Storage.Beam.StationsExtraInformation
       Storage.Beam.StopFare
       Storage.Beam.StopInformation
+      Storage.Beam.TicketAssignment
       Storage.Beam.TicketBooking
       Storage.Beam.TicketBookingPeopleCategory
       Storage.Beam.TicketBookingService
@@ -972,6 +977,7 @@ library
       Storage.Beam.TicketMerchantDetails
       Storage.Beam.TicketPlace
       Storage.Beam.TicketService
+      Storage.Beam.TicketSubPlace
       Storage.Beam.TripTerms
       Storage.Beam.UiRiderConfig
       Storage.Beam.ValueAddNP
@@ -991,6 +997,7 @@ library
       Storage.Queries.BBPSConfig
       Storage.Queries.BecknConfig
       Storage.Queries.BlackListOrg
+      Storage.Queries.BoatAssignment
       Storage.Queries.Booking
       Storage.Queries.BookingCancellationReason
       Storage.Queries.BookingLocation
@@ -1157,6 +1164,7 @@ library
       Storage.Queries.StationsExtraInformation
       Storage.Queries.StopFare
       Storage.Queries.StopInformation
+      Storage.Queries.TicketAssignment
       Storage.Queries.TicketBooking
       Storage.Queries.TicketBookingPeopleCategory
       Storage.Queries.TicketBookingService
@@ -1164,6 +1172,7 @@ library
       Storage.Queries.TicketMerchantDetails
       Storage.Queries.TicketPlace
       Storage.Queries.TicketService
+      Storage.Queries.TicketSubPlace
       Storage.Queries.TripTerms
       Storage.Queries.UiRiderConfig
       Storage.Queries.ValueAddNP
