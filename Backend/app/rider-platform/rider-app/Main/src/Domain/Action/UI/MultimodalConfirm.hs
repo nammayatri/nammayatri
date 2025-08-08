@@ -906,8 +906,9 @@ getMultimodalOrderGetLegTierOptions (mbPersonId, merchantId) journeyId legOrder 
     (Just fromStopCode, Just toStopCode, Just integratedBPPConfig) -> do
       -- For each group of service tiers with same via
       allRoutes <- forM groupedServiceTiers $ \serviceTierGroup -> do
-        let stopCode = case listToMaybe serviceTierGroup >>= (.via) of
+        let stopCode = case listToMaybe serviceTierGroup >>= (.via) >>= (Just . T.strip) of
               Nothing -> toStopCode -- If via is null use toStopCode
+              Just "" -> toStopCode -- if there is no via point
               Just via -> T.takeWhile (/= '-') via -- Split via on '-' and take first element
         (_, availableRoutesByTier) <- JLU.findPossibleRoutes (Just serviceTierGroup) fromStopCode stopCode arrivalTime integratedBPPConfig merchantId person.merchantOperatingCityId vehicleCategory (vehicleCategory /= Enums.SUBWAY)
         return availableRoutesByTier
