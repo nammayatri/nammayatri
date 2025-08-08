@@ -14,10 +14,9 @@ import qualified Tools.Beam.UtilsTH
 
 data PickupInstructions = PickupInstructions
   { createdAt :: Kernel.Prelude.UTCTime,
+    geohash :: Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.PickupInstructions.PickupInstructions,
     instruction :: Kernel.Prelude.Text,
-    lat :: Kernel.Prelude.Double,
-    lon :: Kernel.Prelude.Double,
     mediaFileId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile),
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
