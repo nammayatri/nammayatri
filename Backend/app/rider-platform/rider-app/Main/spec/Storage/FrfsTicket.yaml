@@ -464,6 +464,10 @@ FRFSTicketBooking:
       kvFunction: updateOneWithKV
       params: [journeyOnInitDone]
       where: id
+    updateOnInitDoneBySearchId:
+      kvFunction: updateOneWithKV
+      params: [journeyOnInitDone]
+      where: searchId
     updateInterestDelayedByQuoteId:
       kvFunction: updateOneWithKV
       params: [bppDelayedInterest]
@@ -475,6 +479,10 @@ FRFSTicketBooking:
     updateGoogleWalletLinkById:
       kvFunction: updateOneWithKV
       params: [googleWalletJWTUrl]
+      where: id
+    updateQuoteAndBppItemId:
+      kvFunction: updateOneWithKV
+      params: [quoteId, bppItemId]
       where: id
     updateQuantity:
       kvFunction: updateWithKV

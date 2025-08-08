@@ -26,6 +26,7 @@ data DriverStatsT f = DriverStatsT
     lateNightTrips :: B.C f Kernel.Prelude.Int,
     numDriversOnboarded :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     numFleetsOnboarded :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    onlineDuration :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     ridesCancelled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     safetyPlusEarnings :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     safetyPlusRideCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

@@ -251,5 +251,4 @@ updateDriverModeAndFlowStatus driverId mbAllowCacheDriverFlowStatus isActive mbM
     transporterConfig <-
       SCTC.findByMerchantOpCityId driver.merchantOperatingCityId Nothing
         >>= fromMaybeM (TransporterConfigNotFound driver.merchantOperatingCityId.getId)
-    driverInfo <- fromMaybeM DriverInfoNotFound mbDriverInfo
-    processingChangeOnline (driverId, driver.merchantId, driver.merchantOperatingCityId) transporterConfig.timeDiffFromUtc transporterConfig.maxOnlineDurationDays driverInfo mbMode
+    processingChangeOnline (driverId, driver.merchantId, driver.merchantOperatingCityId) transporterConfig.timeDiffFromUtc transporterConfig.maxOnlineDurationDays mbMode

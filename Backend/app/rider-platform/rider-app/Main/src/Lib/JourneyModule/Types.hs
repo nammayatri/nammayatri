@@ -586,6 +586,7 @@ getTaxiLegStatusFromSearch :: JourneySearchData -> Maybe DEstimate.EstimateStatu
 getTaxiLegStatusFromSearch journeyLegInfo mbEstimateStatus journeyLegStatus =
   case journeyLegStatus of
     Just Completed -> Completed
+    Just Cancelled -> Cancelled
     _ -> do
       if journeyLegInfo.skipBooking
         then Skipped
@@ -785,12 +786,14 @@ castLegStatusFromWalkLegStatus DWalkLeg.InPlan = InPlan
 castLegStatusFromWalkLegStatus DWalkLeg.Ongoing = Ongoing
 castLegStatusFromWalkLegStatus DWalkLeg.Finishing = Finishing
 castLegStatusFromWalkLegStatus DWalkLeg.Completed = Completed
+castLegStatusFromWalkLegStatus DWalkLeg.Cancelled = Cancelled
 
 castWalkLegStatusFromLegStatus :: JourneyLegStatus -> DWalkLeg.WalkLegStatus
 castWalkLegStatusFromLegStatus InPlan = DWalkLeg.InPlan
 castWalkLegStatusFromLegStatus Ongoing = DWalkLeg.Ongoing
 castWalkLegStatusFromLegStatus Finishing = DWalkLeg.Finishing
 castWalkLegStatusFromLegStatus Completed = DWalkLeg.Completed
+castWalkLegStatusFromLegStatus Cancelled = DWalkLeg.Cancelled
 castWalkLegStatusFromLegStatus _ = DWalkLeg.InPlan
 
 mkWalkLegInfoFromWalkLegData :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => DWalkLeg.WalkLegMultimodal -> Maybe MultiModalLegGate -> Maybe MultiModalLegGate -> m LegInfo
@@ -844,7 +847,7 @@ getFRFSLegStatusFromBooking booking = case booking.status of
   DFRFSBooking.FAILED -> Failed
   DFRFSBooking.CANCELLED -> Cancelled
   DFRFSBooking.COUNTER_CANCELLED -> Cancelled
-  DFRFSBooking.CANCEL_INITIATED -> CancelInitiated
+  DFRFSBooking.CANCEL_INITIATED -> Cancelled
   DFRFSBooking.TECHNICAL_CANCEL_REJECTED -> InPlan
 
 mkLegInfoFromFrfsBooking ::
@@ -1386,8 +1389,8 @@ cannotCancelWalkStatus = [Skipped, Completed, Cancelled]
 cannotSwitchStatus :: [JourneyLegStatus]
 cannotSwitchStatus = [Booked, OnTheWay, Arriving, Arrived, Ongoing, Finishing, Completed, Cancelled]
 
-cannotCompleteJourneyIfTaxiLegIsInThisStatus :: [JourneyLegStatus]
-cannotCompleteJourneyIfTaxiLegIsInThisStatus = [Booked, OnTheWay, Arriving, Arrived, Ongoing, Finishing]
+cannotCompleteOrCancelJourneyIfTaxiLegIsInThisStatus :: [JourneyLegStatus]
+cannotCompleteOrCancelJourneyIfTaxiLegIsInThisStatus = [Booked, OnTheWay, Arriving, Arrived, Ongoing, Finishing]
 
 cannotCancelExtendStatus :: [JourneyLegStatus]
 cannotCancelExtendStatus = [Ongoing, Finishing, Completed, Cancelled, Booked, OnTheWay, Arriving, Arrived]

@@ -99,8 +99,6 @@ DailyStats:
     id: PrimaryKey
     driverId: SecondaryKey
 
-
-
   queries:
     findByDriverIdAndDate:
       kvFunction: findOneWithKV

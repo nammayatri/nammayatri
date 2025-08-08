@@ -21,6 +21,7 @@ import qualified Domain.Types.FRFSTicketBooking as FTBooking
 import qualified Domain.Types.FRFSTicketBookingStatus as FTBooking
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
 import Domain.Types.Merchant as Merchant
+import qualified Domain.Types.Trip as DTrip
 import Environment
 import Kernel.Beam.Functions
 import Kernel.Prelude
@@ -70,8 +71,13 @@ onCancel merchant booking' dOnCancel = do
       whenJust booking.journeyId $ \journeyId -> do
         allLegsInfo <- JM.getAllLegsInfo journeyId False
         forM_ allLegsInfo $ \journeyLegInfo -> do
-          forM_ booking.journeyRouteDetails $ \routeDetails -> do
-            JM.markLegStatus (Just JL.Cancelled) (Just JMState.Finished) journeyLegInfo journeyId routeDetails.subLegOrder
+          case journeyLegInfo.travelMode of
+            DTrip.Walk -> JM.markLegStatus (Just JL.Cancelled) (Just JMState.Finished) journeyLegInfo journeyId Nothing
+            DTrip.Taxi -> JM.markLegStatus (Just JL.Cancelled) (Just JMState.Finished) journeyLegInfo journeyId Nothing
+            _ -> do
+              unless (null booking'.journeyRouteDetails) $ do
+                forM_ booking'.journeyRouteDetails $ \routeDetails -> do
+                  JM.markLegStatus (Just JL.Cancelled) (Just JMState.Finished) journeyLegInfo journeyId routeDetails.subLegOrder
         journey <- JM.getJourney journeyId
         updatedLegStatus <- JM.getAllLegsStatus journey
         JM.checkAndMarkTerminalJourneyStatus journey False False updatedLegStatus
