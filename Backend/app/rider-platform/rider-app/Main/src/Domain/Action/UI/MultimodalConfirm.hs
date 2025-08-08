@@ -863,8 +863,8 @@ getMultimodalOrderGetLegTierOptions (mbPersonId, merchantId) journeyId legOrder 
   let availableServiceTiers = mapMaybe JMTypes.getServiceTierFromQuote quotes
   mbIntegratedBPPConfig <- SIBC.findMaybeIntegratedBPPConfigFromAgency mbAgencyId person.merchantOperatingCityId vehicleCategory DIBC.MULTIMODAL
   let mbRouteDetail = journeyLegInfo.routeDetails & listToMaybe
-  let mbFomStopCode = mbRouteDetail >>= (.fromStopCode)
-  let mbToStopCode = mbRouteDetail >>= (.toStopCode)
+  let mbFomStopCode = mbRouteDetail >>= (.fromStopDetails) >>= (.stopCode)
+  let mbToStopCode = mbRouteDetail >>= (.toStopDetails) >>= (.stopCode)
   let mbArrivalTime = mbRouteDetail >>= (.fromArrivalTime)
   let arrivalTime = fromMaybe now mbArrivalTime
 
