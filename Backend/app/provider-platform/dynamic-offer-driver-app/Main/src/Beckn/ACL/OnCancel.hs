@@ -279,7 +279,8 @@ tfAgent _booking driverName driverPhone = do
               { personId = Nothing,
                 personImage = Nothing,
                 personName = driverName,
-                personTags = Nothing
+                personTags = Nothing,
+                personLanguages = Nothing
               }
       }
 
@@ -298,7 +299,8 @@ tfCustomer booking customerPhoneNo = do
               { personId = Nothing,
                 personImage = Nothing,
                 personName = booking.riderName,
-                personTags = Nothing
+                personTags = Nothing,
+                personLanguages = Nothing
               }
       }
 

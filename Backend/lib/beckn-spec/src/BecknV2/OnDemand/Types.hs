@@ -49,6 +49,7 @@ module BecknV2.OnDemand.Types
     InitReq (..),
     Intent (..),
     Item (..),
+    Language (..),
     Location (..),
     OnCancelReq (..),
     OnConfirmReq (..),
@@ -970,6 +971,33 @@ optionsItem =
         ("itemTags", "tags")
       ]
 
+-- | Describes a language
+data Language = Language
+  { -- | Language code
+    languageCode :: Maybe Text,
+    -- | Name of the language
+    languageName :: Maybe Text
+  }
+  deriving (Show, Eq, Generic, Data, Read)
+
+instance FromJSON Language where
+  parseJSON = genericParseJSON optionsLanguage
+
+instance ToJSON Language where
+  toJSON = genericToJSON optionsLanguage
+
+optionsLanguage :: Options
+optionsLanguage =
+  defaultOptions
+    { omitNothingFields = True,
+      fieldLabelModifier = \s -> fromMaybe ("did not find JSON field name for " ++ show s) $ lookup s table
+    }
+  where
+    table =
+      [ ("languageCode", "code"),
+        ("languageName", "name")
+      ]
+
 -- | The physical location of something
 data Location = Location
   { -- | Describes a postal address.
@@ -1497,6 +1525,8 @@ data Person = Person
     personId :: Maybe Text,
     -- |
     personImage :: Maybe Image,
+    -- |
+    personLanguages :: Maybe [Language],
     -- | the name of the person
     personName :: Maybe Text,
     -- |

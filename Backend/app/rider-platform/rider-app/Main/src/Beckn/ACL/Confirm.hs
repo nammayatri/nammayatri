@@ -162,6 +162,7 @@ tfCustomer res =
         Spec.Person
           { personId = Nothing,
             personImage = Nothing,
+            personLanguages = Nothing,
             personName = res.mbRiderName,
             personTags = mkPersonTags
           }
