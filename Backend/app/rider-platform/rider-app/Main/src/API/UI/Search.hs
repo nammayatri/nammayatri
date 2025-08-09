@@ -34,6 +34,7 @@ import qualified API.UI.CancelSearch as CancelSearch
 import qualified Beckn.ACL.Cancel as ACL
 import qualified Beckn.ACL.Search as TaxiACL
 import qualified BecknV2.OnDemand.Enums
+import Control.Applicative ((<|>))
 import Data.Aeson
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
@@ -46,6 +47,7 @@ import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.CancellationReason as SCR
 import qualified Domain.Types.Client as DC
 import qualified Domain.Types.Estimate as Estimate
+import Domain.Types.FRFSRouteDetails (gtfsIdtoDomainCode)
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Journey as Journey
 import qualified Domain.Types.Merchant as Merchant
@@ -449,7 +451,7 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
     - This is done because user can have only one valid sdk token at a time
     - We are calling routeFare with dummy details for rest of the legs just to get the fare details
   -}
-  mbCrisSdkToken <- getCrisSdkToken merchantOperatingCityId journeys
+  mbCrisSdkToken <- getCrisSdkToken merchantOperatingCityId indexedRoutesToProcess
   let mbFirstJourney = listToMaybe (fromMaybe [] journeys)
   firstJourneyInfo <-
     if initiateJourney
@@ -464,7 +466,7 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
                   return Nothing
                 else do
                   res <- DMC.postMultimodalInitiate (Just searchRequest.riderId, searchRequest.merchantId) firstJourney.id
-                  return $ Just res {ApiTypes.crisSdkToken = mbCrisSdkToken}
+                  return $ Just res
             fork "Rest of the routes Init" $ processRestOfRoutes [route' | (j, route') <- indexedRoutesToProcess, j /= idx] userPreferences
             return resp
           Nothing -> do
@@ -689,29 +691,28 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
     isLegModeIn :: [GeneralVehicleType] -> MultiModalTypes.MultiModalLeg -> Bool
     isLegModeIn modes leg = leg.mode `elem` modes
 
-    getCrisSdkToken :: Id MerchantOperatingCity -> Maybe [DQuote.JourneyData] -> Flow (Maybe Text)
-    getCrisSdkToken _ Nothing = return Nothing
-    getCrisSdkToken merchantOperatingCityId (Just journeys) = do
+    getCrisSdkToken :: Id MerchantOperatingCity -> [(Int, MultiModalTypes.MultiModalRoute)] -> Flow (Maybe Text)
+    getCrisSdkToken merchantOperatingCityId indexedRoutes = do
       person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-      let subwayJourneys = filter (\j -> any (\leg -> leg.journeyMode == DTrip.Subway) j.journeyLegs) journeys
-      if null subwayJourneys
+      let subwayRoutes = filter (\(_, multiModalRoute) -> any (\leg -> leg.mode == MultiModalTypes.Subway) multiModalRoute.legs) indexedRoutes
+      if null subwayRoutes
         then return Nothing
         else do
           mbMobileNumber <- mapM decrypt person.mobileNumber
           mbImeiNumber <- mapM decrypt person.imeiNumber
           sessionId <- getRandomInRange (1, 1000000 :: Int)
-          findValidSdkToken subwayJourneys mbMobileNumber mbImeiNumber sessionId
+          findValidSdkToken subwayRoutes mbMobileNumber mbImeiNumber sessionId
       where
-        findValidSdkToken :: [DQuote.JourneyData] -> Maybe Text -> Maybe Text -> Int -> Flow (Maybe Text)
+        findValidSdkToken :: [(Int, MultiModalTypes.MultiModalRoute)] -> Maybe Text -> Maybe Text -> Int -> Flow (Maybe Text)
         findValidSdkToken [] _ _ _ = return Nothing
-        findValidSdkToken (journey : restJourneys) mbMobileNumber mbImeiNumber sessionId = do
-          let subwayLegs = filter (\leg -> leg.journeyMode == DTrip.Subway) journey.journeyLegs
+        findValidSdkToken ((_, multiModalRoute) : restRoutes) mbMobileNumber mbImeiNumber sessionId = do
+          let subwayLegs = filter (\leg -> leg.mode == MultiModalTypes.Subway) multiModalRoute.legs
           mbSdkToken <- findValidSdkTokenFromLegs subwayLegs mbMobileNumber mbImeiNumber sessionId
           case mbSdkToken of
             Just token -> return $ Just token
-            Nothing -> findValidSdkToken restJourneys mbMobileNumber mbImeiNumber sessionId
+            Nothing -> findValidSdkToken restRoutes mbMobileNumber mbImeiNumber sessionId
 
-        findValidSdkTokenFromLegs :: [DQuote.JourneyLeg] -> Maybe Text -> Maybe Text -> Int -> Flow (Maybe Text)
+        findValidSdkTokenFromLegs :: [MultiModalTypes.MultiModalLeg] -> Maybe Text -> Maybe Text -> Int -> Flow (Maybe Text)
         findValidSdkTokenFromLegs [] _ _ _ = return Nothing
         findValidSdkTokenFromLegs (leg : restLegs) mbMobileNumber mbImeiNumber sessionId = do
           mbSdkToken <- tryGetSdkTokenFromLeg leg mbMobileNumber mbImeiNumber sessionId
@@ -719,10 +720,12 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
             Just token -> return $ Just token
             Nothing -> findValidSdkTokenFromLegs restLegs mbMobileNumber mbImeiNumber sessionId
 
-        tryGetSdkTokenFromLeg :: DQuote.JourneyLeg -> Maybe Text -> Maybe Text -> Int -> Flow (Maybe Text)
+        tryGetSdkTokenFromLeg :: MultiModalTypes.MultiModalLeg -> Maybe Text -> Maybe Text -> Int -> Flow (Maybe Text)
         tryGetSdkTokenFromLeg leg mbMobileNumber mbImeiNumber sessionId = do
-          let mbRouteCode = listToMaybe leg.routeDetails >>= (.routeCode)
-          case (leg.fromStationCode, leg.toStationCode, mbRouteCode) of
+          let mbRouteCode = listToMaybe leg.routeDetails >>= (.gtfsId) <&> gtfsIdtoDomainCode
+              mbFromStopCode = (leg.fromStopDetails >>= (.stopCode)) <|> ((leg.fromStopDetails >>= (.gtfsId)) <&> gtfsIdtoDomainCode)
+              mbToStopCode = (leg.toStopDetails >>= (.stopCode)) <|> ((leg.toStopDetails >>= (.gtfsId)) <&> gtfsIdtoDomainCode)
+          case (mbFromStopCode, mbToStopCode, mbRouteCode) of
             (Just fromCode, Just toCode, Just routeCode) -> do
               SIBC.findMaybeIntegratedBPPConfig Nothing merchantOperatingCityId BecknV2.OnDemand.Enums.SUBWAY DIBC.MULTIMODAL
                 >>= \case

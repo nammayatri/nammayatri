@@ -1568,7 +1568,6 @@ generateJourneyInfoResponse journey legs = do
         startTime = journey.startTime,
         endTime = journey.endTime,
         merchantOperatingCityName,
-        crisSdkToken = Nothing,
         paymentOrderShortId = journey.paymentOrderShortId,
         unifiedQRV2,
         result = Just "Success"
