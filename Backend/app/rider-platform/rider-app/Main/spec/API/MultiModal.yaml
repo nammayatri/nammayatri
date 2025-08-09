@@ -55,7 +55,6 @@ types:
     startTime: Maybe UTCTime
     endTime: Maybe UTCTime
     merchantOperatingCityName : Maybe Text
-    crisSdkToken : Maybe Text
     paymentOrderShortId: Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder)
     result: Maybe Text # for backward compatibility hardcoding to Success in response
     derive: "Show"
