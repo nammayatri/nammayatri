@@ -65,7 +65,7 @@ convertMultiModalModeToTripMode :: MultiModal.GeneralVehicleType -> Meters -> Me
 convertMultiModalModeToTripMode input straightLineDistance distance maximumWalkDistance straightLineThreshold = case input of
   MultiModal.MetroRail -> DTrip.Metro
   MultiModal.Subway -> DTrip.Subway
-  MultiModal.Walk -> if distance > maximumWalkDistance && straightLineDistance > straightLineThreshold then DTrip.Taxi else DTrip.Walk
+  MultiModal.Walk -> if straightLineDistance < straightLineThreshold && distance < maximumWalkDistance then DTrip.Walk else DTrip.Taxi
   MultiModal.Bus -> DTrip.Bus
   MultiModal.Unspecified -> DTrip.Taxi
 
