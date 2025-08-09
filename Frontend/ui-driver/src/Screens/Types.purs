@@ -55,7 +55,7 @@ import Presto.Core.Utils.Encoding (defaultEncode)
 import Prim.TypeError as String
 import RemoteConfig.Types as RC
 import Screens (ScreenName)
-import Services.API (LmsTranslatedModuleInfoRes(..), QuizQuestion(..), QuizOptions(..), LmsQuizHistory(..), LmsQuestionRes(..), LmsModuleRes(..), LmsVideoRes(..), LmsEntityCompletionStatus(..), LmsBonus(..), LmsReward(..), LmsCategory(..), ModuleCompletionStatus(..), AutopayPaymentStage, BankError(..), FeeType, GetDriverInfoResp(..), MediaType, PaymentBreakUp, Route, Status, DriverProfileStatsResp(..), LastPaymentType(..), RidesSummary, RidesInfo(..), GetAllRcDataResp(..), GetAllRcDataRecords(..), TripCategory(..), QuestionConfirmRes(..), ServiceTierType(..))
+import Services.API (LmsTranslatedModuleInfoRes(..), QuizQuestion(..), QuizOptions(..), LmsQuizHistory(..), LmsQuestionRes(..), LmsModuleRes(..), LmsVideoRes(..), LmsEntityCompletionStatus(..), LmsBonus(..), LmsReward(..), LmsCategory(..), ModuleCompletionStatus(..), AutopayPaymentStage, BankError(..), FeeType, GetDriverInfoResp(..), MediaType, PaymentBreakUp, Route, Status, DriverProfileStatsResp(..), LastPaymentType(..), RidesSummary, RidesInfo(..), GetAllRcDataResp(..), GetAllRcDataRecords(..), TripCategory(..), QuestionConfirmRes(..), ServiceTierType(..), CancellationRateSlabConfig(..))
 import Services.API (QuestionConfirmRes(..), GetDriverInfoResp(..), Route, Status, MediaType, PaymentBreakUp, BookingTypes(..))
 import Services.API as API
 import Styles.Types (FontSize)
@@ -491,6 +491,11 @@ type DriverProfileScreenData = {
   assignedRides :: Int,
   cancelledRides :: Int,
   cancellationWindow :: Maybe Int,
+  assignedRidesCountDaily :: Maybe Int,
+  cancelledRidesCountDaily :: Maybe Int,
+  assignedRidesCountWeekly :: Maybe Int,
+  cancelledRidesCountWeekly :: Maybe Int,
+  cancellationRateSlabConfig :: Maybe CancellationRateSlabConfig,
   missedEarnings :: Int,
   driverInfoResponse :: Maybe GetDriverInfoResp,
   profileCompletedModules :: Int,

@@ -5,8 +5,8 @@
 module Storage.Queries.FRFSRecon where
 
 import qualified Domain.Types.FRFSRecon
-import qualified Domain.Types.FRFSTicket
 import qualified Domain.Types.FRFSTicketBooking
+import qualified Domain.Types.FRFSTicketStatus
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -26,7 +26,7 @@ createMany = traverse_ create
 
 updateStatusByTicketBookingId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Domain.Types.FRFSTicket.FRFSTicketStatus -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
+  (Kernel.Prelude.Maybe Domain.Types.FRFSTicketStatus.FRFSTicketStatus -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
 updateStatusByTicketBookingId ticketStatus frfsTicketBookingId = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.ticketStatus ticketStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.frfsTicketBookingId $ Se.Eq (Kernel.Types.Id.getId frfsTicketBookingId)]
@@ -58,7 +58,7 @@ updateByPrimaryKey (Domain.Types.FRFSRecon.FRFSRecon {..}) = do
       Se.Set Beam.date date,
       Se.Set Beam.destinationStationCode destinationStationCode,
       Se.Set Beam.differenceAmount (Kernel.Prelude.fmap (.amount) differenceAmount),
-      Se.Set Beam.currency (((Kernel.Prelude.Just . (.currency))) fare),
+      Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) fare),
       Se.Set Beam.fare ((.amount) fare),
       Se.Set Beam.frfsTicketBookingId (Kernel.Types.Id.getId frfsTicketBookingId),
       Se.Set Beam.message message,
@@ -137,7 +137,7 @@ instance ToTType' Beam.FRFSRecon Domain.Types.FRFSRecon.FRFSRecon where
         Beam.date = date,
         Beam.destinationStationCode = destinationStationCode,
         Beam.differenceAmount = Kernel.Prelude.fmap (.amount) differenceAmount,
-        Beam.currency = ((Kernel.Prelude.Just . (.currency))) fare,
+        Beam.currency = (Kernel.Prelude.Just . (.currency)) fare,
         Beam.fare = (.amount) fare,
         Beam.frfsTicketBookingId = Kernel.Types.Id.getId frfsTicketBookingId,
         Beam.id = Kernel.Types.Id.getId id,

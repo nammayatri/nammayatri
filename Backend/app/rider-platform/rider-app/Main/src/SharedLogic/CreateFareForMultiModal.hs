@@ -15,7 +15,6 @@
 module SharedLogic.CreateFareForMultiModal where
 
 import BecknV2.FRFS.Utils
-import qualified Data.Map as Map
 import qualified Domain.Types.FRFSTicketBooking as FTBooking
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant as Merchant
@@ -71,31 +70,33 @@ createVendorSplitFromBookings ::
   Bool ->
   m ([Payment.VendorSplitDetails], HighPrecMoney)
 createVendorSplitFromBookings allJourneyBookings merchantId merchantOperatingCityId paymentType isFRFSTestingEnabled = do
-  let (amount, vehicleTypeList) =
+  let amount =
         if isFRFSTestingEnabled
-          then foldl (\(accAmt, accVehicles) item -> (accAmt + 1.0, item.vehicleType : accVehicles)) (0.0, []) allJourneyBookings
+          then 1.0 * (HighPrecMoney $ toRational $ length allJourneyBookings)
           else
             foldl
-              (\(accAmt, accVehicles) item -> (accAmt + item.price.amount, item.vehicleType : accVehicles))
-              (0.0, [])
+              (\accAmt item -> (accAmt + item.price.amount))
+              0.0
               allJourneyBookings
   isSplitEnabled <- Payment.getIsSplitEnabled merchantId merchantOperatingCityId Nothing paymentType
-  let booking = listToMaybe allJourneyBookings
-  case booking of
-    Just booking' -> do
+  case allJourneyBookings of
+    [] -> return ([], 0.0)
+    _ -> do
       if isSplitEnabled
         then do
-          integratedBPPConfigList <-
+          splitDetailsZippedByBooking <- do
             mapM
-              ( \vehicleType -> SIBC.findAllIntegratedBPPConfig booking'.merchantOperatingCityId (frfsVehicleCategoryToBecknVehicleCategory vehicleType) DIBC.MULTIMODAL
+              ( \item -> do
+                  integBppConfigs <- SIBC.findAllIntegratedBPPConfig merchantOperatingCityId (frfsVehicleCategoryToBecknVehicleCategory item.vehicleType) DIBC.MULTIMODAL
+                  vendorSplitDetailsList <- mapM (QVendorSplitDetails.findAllByIntegratedBPPConfigId . (.id)) integBppConfigs
+                  let amountPerBooking = if isFRFSTestingEnabled then 1.0 else item.price.amount
+                  return (item.id, (amountPerBooking, concat vendorSplitDetailsList))
               )
-              vehicleTypeList
-          vendorSplitDetailsList <- mapM (QVendorSplitDetails.findAllByIntegratedBPPConfigId . (.id)) (concat integratedBPPConfigList)
-          vendorSplitDetailsListToIncludeInSplit <- QVendorSplitDetails.findAllByMerchantOperatingCityIdAndIncludeInSplit (Just booking'.merchantOperatingCityId) (Just True)
-          vendorSplitDetails <- convertVendorDetails (concat vendorSplitDetailsList ++ vendorSplitDetailsListToIncludeInSplit) allJourneyBookings isFRFSTestingEnabled
+              allJourneyBookings
+          vendorSplitDetailsListToIncludeInSplit <- QVendorSplitDetails.findAllByMerchantOperatingCityIdAndIncludeInSplit (Just merchantOperatingCityId) (Just True)
+          vendorSplitDetails <- convertVendorDetails splitDetailsZippedByBooking vendorSplitDetailsListToIncludeInSplit isFRFSTestingEnabled
           return (vendorSplitDetails, amount)
         else return ([], amount)
-    Nothing -> return ([], 0.0)
 
 convertVendorDetails ::
   ( EsqDBReplicaFlow m r,
@@ -103,36 +104,45 @@ convertVendorDetails ::
     EncFlow m r,
     ServiceFlow m r
   ) =>
+  [(Id FTBooking.FRFSTicketBooking, (HighPrecMoney, [VendorSplitDetails.VendorSplitDetails]))] ->
   [VendorSplitDetails.VendorSplitDetails] ->
-  [FTBooking.FRFSTicketBooking] ->
   Bool ->
   m [Payment.VendorSplitDetails]
-convertVendorDetails vendorDetails bookings isFRFSTestingEnabled = do
-  let vendorDetailsMap = Map.fromList [(vd.integratedBPPConfigId, vd) | vd <- vendorDetails]
-      requiredVendors = filter (\vd -> fromMaybe False vd.includeInSplit) vendorDetails
-      validVendorSplitDetails = mapMaybe (createVendorSplitForBooking vendorDetailsMap) bookings
-      finalSplits =
-        ensureAllRequiredVendorsExist requiredVendors validVendorSplitDetails
+convertVendorDetails splitDetailsZippedByBooking vendorDetailsToIncludeByDefault isFRFSTestingEnabled = do
+  let validVendorSplitDetails = concat $ map (\ele -> createVendorSplitForBooking ele) splitDetailsZippedByBooking
+      finalSplits = ensureAllRequiredVendorsExist validVendorSplitDetails
+  logInfo $ "validVendorSplitDetails" <> show validVendorSplitDetails
   logInfo $ "finalSplits" <> show finalSplits
   return finalSplits
   where
-    createVendorSplitForBooking vendorDetailsMap booking =
-      case Map.lookup booking.integratedBppConfigId vendorDetailsMap of
-        Just vd -> Just $ toPaymentVendorDetails vd booking
-        Nothing -> Nothing
+    createVendorSplitForBooking (bookingId, (amount, vd)) = map (\splitDetails -> toPaymentVendorDetails bookingId.getId amount splitDetails) vd
+    toPaymentVendorDetails bookingId amount vd =
+      let totalAmount = if isFRFSTestingEnabled then (1 :: HighPrecMoney) else amount
+          splitAmount =
+            if vd.splitType == VendorSplitDetails.FLEXIBLE
+              then calculateSplitAmount vd.splitShare totalAmount
+              else totalAmount
+       in Payment.VendorSplitDetails
+            { splitAmount = splitAmount,
+              splitType = vendorSplitDetailSplitTypeToPaymentSplitType vd.splitType,
+              vendorId = vd.vendorId,
+              ticketId = Just $ bookingId
+            }
 
-    toPaymentVendorDetails vd booking =
-      Payment.VendorSplitDetails
-        { splitAmount = if isFRFSTestingEnabled then (1 :: HighPrecMoney) else booking.price.amount,
-          splitType = vendorSplitDetailSplitTypeToPaymentSplitType vd.splitType,
-          vendorId = vd.vendorId,
-          ticketId = Just $ booking.id.getId
-        }
+    calculateSplitAmount :: Maybe VendorSplitDetails.SplitShare -> HighPrecMoney -> HighPrecMoney
+    calculateSplitAmount mbSplitPercentage totalAmount =
+      case mbSplitPercentage of
+        Just (VendorSplitDetails.Percentage percentage) ->
+          totalAmount * (fromRational (toRational percentage) / 100.0)
+        Just (VendorSplitDetails.FixedValue fixedValue) ->
+          fromIntegral fixedValue
+        Nothing ->
+          totalAmount
 
-    ensureAllRequiredVendorsExist :: [VendorSplitDetails.VendorSplitDetails] -> [Payment.VendorSplitDetails] -> [Payment.VendorSplitDetails]
-    ensureAllRequiredVendorsExist requiredVendors existingVendorSplits =
+    ensureAllRequiredVendorsExist :: [Payment.VendorSplitDetails] -> [Payment.VendorSplitDetails]
+    ensureAllRequiredVendorsExist existingVendorSplits =
       let existingVendorIds = map (.vendorId) existingVendorSplits
-          missingVendors = filter (\vd -> vd.vendorId `notElem` existingVendorIds) requiredVendors
+          missingVendors = filter (\vd -> vd.vendorId `notElem` existingVendorIds) vendorDetailsToIncludeByDefault
           missingVendorSplits = map createDefaultVendorSplit missingVendors
        in existingVendorSplits ++ missingVendorSplits
 

@@ -67,3 +67,7 @@ ALTER TABLE atlas_driver_offer_bpp.driver_fee ADD COLUMN has_child_driver_fees b
 ALTER TABLE atlas_driver_offer_bpp.driver_fee ADD COLUMN split_of_driver_fee_id character varying(36) ;
 ALTER TABLE atlas_driver_offer_bpp.driver_fee ADD COLUMN sibling_fee_id character varying(36) ;
 ALTER TABLE atlas_driver_offer_bpp.driver_fee ADD COLUMN has_sibling boolean ;
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_fee ADD COLUMN valid_days integer ;

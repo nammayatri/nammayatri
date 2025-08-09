@@ -8,6 +8,7 @@ import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSTicketBooking
+import qualified Domain.Types.FRFSTicketBookingStatus
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -44,6 +45,7 @@ data FRFSTicketBookingT f = FRFSTicketBookingT
     isFareChanged :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isSkipped :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     journeyId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    journeyLegId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     journeyLegOrder :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     journeyLegStatus :: B.C f (Kernel.Prelude.Maybe Lib.JourneyLeg.Types.JourneyLegStatus),
     journeyOnInitDone :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
@@ -69,7 +71,7 @@ data FRFSTicketBookingT f = FRFSTicketBookingT
     searchId :: B.C f Kernel.Prelude.Text,
     startTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     stationsJson :: B.C f Kernel.Prelude.Text,
-    status :: B.C f Domain.Types.FRFSTicketBooking.FRFSTicketBookingStatus,
+    status :: B.C f Domain.Types.FRFSTicketBookingStatus.FRFSTicketBookingStatus,
     toStationId :: B.C f Kernel.Prelude.Text,
     validTill :: B.C f Kernel.Prelude.UTCTime,
     vehicleType :: B.C f BecknV2.FRFS.Enums.VehicleCategory,

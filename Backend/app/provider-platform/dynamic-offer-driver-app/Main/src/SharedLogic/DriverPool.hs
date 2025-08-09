@@ -543,8 +543,9 @@ calculateGoHomeDriverPool ::
   ) =>
   CalculateGoHomeDriverPoolReq a ->
   Id DMOC.MerchantOperatingCity ->
+  Maybe HighPrecMoney ->
   m [DriverPoolWithActualDistResult]
-calculateGoHomeDriverPool req@CalculateGoHomeDriverPoolReq {..} merchantOpCityId = do
+calculateGoHomeDriverPool req@CalculateGoHomeDriverPoolReq {..} merchantOpCityId prepaidSubscriptionThreshold = do
   now <- getCurrentTime
   cityServiceTiers <- CQVST.findAllByMerchantOpCityIdInRideFlow merchantOpCityId configsInExperimentVersions
   approxDriverPool <-
@@ -558,6 +559,8 @@ calculateGoHomeDriverPool req@CalculateGoHomeDriverPoolReq {..} merchantOpCityId
             homeRadius = goHomeCfg.goHomeWayPointRadius,
             merchantId,
             driverPositionInfoExpiry = driverPoolCfg.driverPositionInfoExpiry,
+            prepaidSubscriptionThreshold,
+            rideFare,
             isRental,
             isInterCity,
             onlinePayment,
@@ -738,6 +741,7 @@ data CalculateDriverPoolReq a = CalculateDriverPoolReq
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     transporterConfig :: DTC.TransporterConfig,
     mRadiusStep :: Maybe PoolRadiusStep,
+    rideFare :: Maybe HighPrecMoney,
     isRental :: Bool,
     isInterCity :: Bool,
     isValueAddNP :: Bool,
@@ -769,6 +773,8 @@ calculateDriverPool CalculateDriverPoolReq {..} = do
           { fromLocLatLong = coord,
             nearestRadius = radius,
             driverPositionInfoExpiry = driverPoolCfg.driverPositionInfoExpiry,
+            prepaidSubscriptionThreshold = transporterConfig.prepaidSubscriptionThreshold,
+            rideFare,
             ..
           }
   driversWithLessThanNParallelRequests <- case poolStage of
@@ -1025,6 +1031,8 @@ calculateDriverPoolCurrentlyOnRide CalculateDriverPoolReq {..} mbBatchNum = do
               nearestRadius = radius,
               driverPositionInfoExpiry = driverPoolCfg.driverPositionInfoExpiry,
               currentRideTripCategoryValidForForwardBatching = driverPoolCfg.currentRideTripCategoryValidForForwardBatching,
+              prepaidSubscriptionThreshold = transporterConfig.prepaidSubscriptionThreshold,
+              rideFare,
               ..
             }
   driversWithLessThanNParallelRequests <- case poolStage of

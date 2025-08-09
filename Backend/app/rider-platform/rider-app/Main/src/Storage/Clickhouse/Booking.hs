@@ -15,6 +15,7 @@
 module Storage.Clickhouse.Booking where
 
 import qualified Domain.Types.Booking as DB
+import qualified Domain.Types.BookingStatus as DB
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP

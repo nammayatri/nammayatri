@@ -26,12 +26,10 @@ import qualified Domain.Types.VehicleVariant as Vehicle
 import Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.Types.APISuccess
-import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 import Storage.Beam.SystemConfigs ()
-import qualified Storage.Queries.DriverInformation as DI
 import Tools.Auth
 
 type API =
@@ -94,14 +92,16 @@ currentPlan (driverId, merchantId, merchantOpCityId) mbServiceName = withFlowHan
 
 planSubscribe :: Id DPlan.Plan -> (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe DPlan.ServiceNames -> FlowHandler DPlan.PlanSubscribeRes
 planSubscribe planId (personId, merchantId, merchantOpCityId) mbServiceName = withFlowHandlerAPI $ do
-  driverInfo <- DI.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
-  autoPayStatus <- fst <$> DPlan.getSubcriptionStatusWithPlan (fromMaybe DPlan.YATRI_SUBSCRIPTION mbServiceName) personId
-  if autoPayStatus == Just DI.SUSPENDED
-    then do
-      void $ DPlan.planResume (fromMaybe DPlan.YATRI_SUBSCRIPTION mbServiceName) (personId, merchantId, merchantOpCityId)
-      Driver.ClearDuesRes {..} <- Driver.clearDriverDues (personId, merchantId, merchantOpCityId) (fromMaybe DPlan.YATRI_SUBSCRIPTION mbServiceName) Nothing Nothing
-      return $ DPlan.PlanSubscribeRes {..}
-    else do DPlan.planSubscribe (fromMaybe DPlan.YATRI_SUBSCRIPTION mbServiceName) planId (False, Nothing) (personId, merchantId, merchantOpCityId) driverInfo DPlan.NoData
+  case mbServiceName of
+    Just DPlan.PREPAID_SUBSCRIPTION -> DPlan.planSubscribe DPlan.PREPAID_SUBSCRIPTION planId (False, Nothing) (personId, merchantId, merchantOpCityId) DPlan.NoData
+    _ -> do
+      autoPayStatus <- fst <$> DPlan.getSubcriptionStatusWithPlan (fromMaybe DPlan.YATRI_SUBSCRIPTION mbServiceName) personId
+      if autoPayStatus == Just DI.SUSPENDED
+        then do
+          void $ DPlan.planResume (fromMaybe DPlan.YATRI_SUBSCRIPTION mbServiceName) (personId, merchantId, merchantOpCityId)
+          Driver.ClearDuesRes {..} <- Driver.clearDriverDues (personId, merchantId, merchantOpCityId) (fromMaybe DPlan.YATRI_SUBSCRIPTION mbServiceName) Nothing Nothing
+          return $ DPlan.PlanSubscribeRes {..}
+        else do DPlan.planSubscribe (fromMaybe DPlan.YATRI_SUBSCRIPTION mbServiceName) planId (False, Nothing) (personId, merchantId, merchantOpCityId) DPlan.NoData
 
 planSelect :: Id DPlan.Plan -> Maybe DPlan.ServiceNames -> (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> FlowHandler APISuccess
 planSelect planId mbServiceName (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI $ DPlan.planSwitch (fromMaybe DPlan.YATRI_SUBSCRIPTION mbServiceName) planId (personId, merchantId, merchantOpCityId)

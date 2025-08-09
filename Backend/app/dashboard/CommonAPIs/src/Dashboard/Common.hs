@@ -153,11 +153,31 @@ newtype PersonIdsCsvRow = PersonIdsCsvRow
 instance Csv.FromNamedRecord PersonIdsCsvRow where
   parseNamedRecord r = PersonIdsCsvRow <$> r Csv..: "personId"
 
+data DriverTagBulkCSVRow = DriverTagBulkCSVRow
+  { driverId :: Text,
+    tagName :: Text,
+    tagValue :: Text
+  }
+
+instance Csv.FromNamedRecord DriverTagBulkCSVRow where
+  parseNamedRecord r =
+    DriverTagBulkCSVRow
+      <$> r Csv..: "driverId"
+      <*> r Csv..: "tagName"
+      <*> r Csv..: "tagValue"
+
 newtype PersonIdsReq = PersonIdsReq {file :: FilePath}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 instance Kernel.Types.HideSecrets.HideSecrets PersonIdsReq where
+  hideSecrets = Kernel.Prelude.identity
+
+newtype UpdateTagBulkReq = UpdateTagBulkReq {file :: FilePath}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Kernel.Types.HideSecrets.HideSecrets UpdateTagBulkReq where
   hideSecrets = Kernel.Prelude.identity
 
 newtype PersonMobileNumberIdsCsvRow = PersonMobileNumberIdsCsvRow
@@ -183,6 +203,26 @@ data PersonRes = PersonRes
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data UpdateTagBulkRes = UpdateTagBulkRes
+  { id :: Text,
+    isSuccess :: Bool,
+    errorReason :: Maybe Text
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (FromJSON, ToSchema)
+
+instance ToJSON UpdateTagBulkRes where
+  toJSON = genericToJSON defaultOptions {omitNothingFields = True}
+
+instance FromMultipart Tmp UpdateTagBulkReq where
+  fromMultipart form = do
+    UpdateTagBulkReq
+      <$> fmap fdPayload (lookupFile "file" form)
+
+instance ToMultipart Tmp UpdateTagBulkReq where
+  toMultipart form =
+    MultipartData [] [FileData "file" (T.pack form.file) "" (form.file)]
+
 instance FromMultipart Tmp PersonIdsReq where
   fromMultipart form = do
     PersonIdsReq
@@ -201,7 +241,7 @@ instance ToMultipart Tmp PersonMobileNoReq where
   toMultipart form =
     MultipartData [] [FileData "file" (T.pack form.file) "" (form.file)]
 
-data ServiceNames = YATRI_SUBSCRIPTION | YATRI_RENTAL | DASHCAM_RENTAL_CAUTIO
+data ServiceNames = YATRI_SUBSCRIPTION | YATRI_RENTAL | DASHCAM_RENTAL_CAUTIO | PREPAID_SUBSCRIPTION
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema, ToParamSchema)
 
 $(mkHttpInstancesForEnum ''ServiceNames)

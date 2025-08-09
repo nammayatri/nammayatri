@@ -39,6 +39,7 @@ import qualified API.UI.Confirm as DConfirm
 import qualified API.UI.Select as DSelect
 import qualified Beckn.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Enums as Enums
+import qualified Data.Aeson
 import Data.List (sortBy)
 import Data.Maybe ()
 import Data.Ord (comparing)
@@ -46,14 +47,17 @@ import qualified Domain.Action.UI.Quote as DQ (estimateBuildLockKey)
 import qualified Domain.Types as DT
 import Domain.Types.BppDetails
 import qualified Domain.Types.Estimate as DEstimate
+import qualified Domain.Types.EstimateStatus as DEstimate
 import qualified Domain.Types.InterCityDetails as DInterCityDetails
 import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantOperatingCity as DMerchantOperatingCity
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.NyRegularInstanceLog as DNyRegularInstanceLog
+import qualified Domain.Types.NyRegularSubscription as NyRegularSubscription
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.QuoteBreakup as DQuoteBreakup
 import qualified Domain.Types.RentalDetails as DRentalDetails
+import qualified Domain.Types.RiderConfig as DRiderConfig
 import Domain.Types.SearchRequest
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.ServiceTierType as DVST
@@ -70,15 +74,18 @@ import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.CallBPPInternal as Est
 import qualified SharedLogic.CreateFareForMultiModal as SLCF
 import Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.BppDetails as CQBppDetails
 import qualified Storage.CachedQueries.InsuranceConfig as CQInsuranceConfig
 import qualified Storage.CachedQueries.Merchant as QMerch
+import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.NyRegularInstanceLog as QNyRegularInstanceLog
+import qualified Storage.Queries.NyRegularSubscription as QNyRegularSubscription
 import qualified Storage.Queries.Quote as QQuote
 import qualified Storage.Queries.SearchRequest as QSearchReq
 import Tools.Error
@@ -265,7 +272,9 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
   now <- getCurrentTime
 
   mkBppDetails >>= CQBppDetails.createIfNotPresent
-
+  riderConfig <- QRC.findByMerchantOperatingCityId (cast searchRequest.merchantOperatingCityId) Nothing
+  let isReservedSearch = isReservedRideSearch searchRequest
+  mbNySubscription <- getNyRegularSubs isReservedSearch
   isValueAddNP <- CQVAN.isValueAddNP providerInfo.providerId
   becknConfigs <- CQBC.findByMerchantIdDomainandMerchantOperatingCityId searchRequest.merchantId (show Domain.MOBILITY) searchRequest.merchantOperatingCityId
   becknConfig <- listToMaybe becknConfigs & fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show searchRequest.merchantId.getId <> " merchantOperatingCityId " <> show searchRequest.merchantOperatingCityId.getId) -- Using findAll for backward compatibility, TODO : Remove findAll and use findOne
@@ -277,8 +286,8 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
     else do
       deploymentVersion <- asks (.version)
 
-      estimates <- traverse (buildEstimate providerInfo now searchRequest deploymentVersion) (filterEstimtesByPrefference estimatesInfo blackListedVehicles) -- add to SR
-      quotes <- traverse (buildQuote requestId providerInfo now searchRequest deploymentVersion) (filterQuotesByPrefference quotesInfo blackListedVehicles)
+      estimates <- traverse (buildEstimate providerInfo now searchRequest deploymentVersion (fromMaybe [] ((Just . (.boostSearchPreSelectionServiceTierConfig)) =<< riderConfig))) (filterEstimtesByPrefference estimatesInfo blackListedVehicles mbNySubscription) -- add to SR
+      quotes <- traverse (buildQuote requestId providerInfo now searchRequest deploymentVersion) (filterQuotesByPrefference quotesInfo blackListedVehicles mbNySubscription)
       updateRiderPreferredOption quotes
       let mbRequiredEstimate = listToMaybe $ sortBy (comparing ((DEstimate.minFare . DEstimate.totalFareRange) <&> (.amount)) <> comparing ((DEstimate.maxFare . DEstimate.totalFareRange) <&> (.amount))) estimates
       forM_ estimates $ \est -> do
@@ -295,7 +304,7 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
 
       whenJust mbRequiredEstimate $ \requiredEstimate -> do
         shouldAutoSelect <- SLCF.createFares requestId.getId searchRequest.journeyLegInfo (QSearchReq.updatePricingId requestId (Just requiredEstimate.id.getId))
-        let shouldAutoSelectForReserved = isReservedRideSearch searchRequest
+        let shouldAutoSelectForReserved = isReservedSearch && isJust mbNySubscription
             shouldAutoSelectFinal = shouldAutoSelect || shouldAutoSelectForReserved
 
         when shouldAutoSelectForReserved $ do
@@ -335,8 +344,13 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
       Ideally, rental options should also be available for one-way preferences, but frontend limitations prevent this.
       Once the frontend is updated for compatibility, we can extend this feature.
     -}
-    filterQuotesByPrefference :: [QuoteInfo] -> [Enums.VehicleCategory] -> [QuoteInfo]
-    filterQuotesByPrefference _quotesInfo blackListedVehicles =
+    filterQuotesByPrefference :: [QuoteInfo] -> [Enums.VehicleCategory] -> Maybe NyRegularSubscription.NyRegularSubscription -> [QuoteInfo]
+    filterQuotesByPrefference _quotesInfo blackListedVehicles mbNySubscription = do
+      let filtersPreferenceQuote = filterQuotesByPrefference' _quotesInfo blackListedVehicles
+      filter (\estOrQ -> maybe True (\nySubs -> maybe False (\metaData -> estOrQ.serviceTierName == metaData.vehicleServiceTierName) $ parseMetaDataFromSubs nySubs.metadata) mbNySubscription) $ filtersPreferenceQuote
+
+    filterQuotesByPrefference' :: [QuoteInfo] -> [Enums.VehicleCategory] -> [QuoteInfo]
+    filterQuotesByPrefference' _quotesInfo blackListedVehicles =
       case searchRequest.riderPreferredOption of
         Rental -> filter (\qInfo -> not (qInfo.vehicleVariant `elem` ambulanceVariants) && (not $ isNotRental qInfo)) _quotesInfo
         OneWay -> filter (\quote -> isNotRental quote && isNotBlackListed blackListedVehicles quote.vehicleCategory && not (quote.vehicleVariant `elem` ambulanceVariants)) _quotesInfo
@@ -344,14 +358,22 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
         Delivery -> []
         _ -> filter isNotRental _quotesInfo
 
-    filterEstimtesByPrefference :: [EstimateInfo] -> [Enums.VehicleCategory] -> [EstimateInfo]
-    filterEstimtesByPrefference _estimateInfo blackListedVehicles =
+    filterEstimtesByPrefference :: [EstimateInfo] -> [Enums.VehicleCategory] -> Maybe NyRegularSubscription.NyRegularSubscription -> [EstimateInfo]
+    filterEstimtesByPrefference _estimateInfo blackListedVehicles mbNySubscription = do
+      let filtersPreferenceEst = filterEstimtesByPrefference' _estimateInfo blackListedVehicles
+      filter (\estOrQ -> maybe True (\nySubs -> maybe False (\metaData -> estOrQ.serviceTierName == metaData.vehicleServiceTierName) $ parseMetaDataFromSubs nySubs.metadata) mbNySubscription) $ filtersPreferenceEst
+
+    filterEstimtesByPrefference' :: [EstimateInfo] -> [Enums.VehicleCategory] -> [EstimateInfo]
+    filterEstimtesByPrefference' _estimateInfo blackListedVehicles =
       case searchRequest.riderPreferredOption of
         OneWay -> filter (\eInfo -> not (eInfo.vehicleVariant `elem` ambulanceVariants || isDeliveryEstimate eInfo) && (isNotBlackListed blackListedVehicles eInfo.vehicleCategory)) _estimateInfo
         InterCity -> filter (\eInfo -> not (eInfo.vehicleVariant `elem` ambulanceVariants || isDeliveryEstimate eInfo) && (isNotBlackListed blackListedVehicles eInfo.vehicleCategory)) _estimateInfo
         Ambulance -> filter (\eInfo -> eInfo.vehicleVariant `elem` ambulanceVariants) _estimateInfo
         Delivery -> filter isDeliveryEstimate _estimateInfo
         _ -> []
+
+    parseMetaDataFromSubs mbMetaData =
+      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success (x :: Est.BppEstimate) -> Just x; Data.Aeson.Error _ -> Nothing) =<< mbMetaData
 
     ambulanceVariants = [AMBULANCE_TAXI, AMBULANCE_TAXI_OXY, AMBULANCE_AC, AMBULANCE_AC_OXY, AMBULANCE_VENTILATOR]
 
@@ -396,6 +418,14 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
       logTagInfo "onSearch" $ "Updating NyRegularInstanceLog status to AUTO_SELECTED for instanceTransactionId: " <> instanceTransactionId
       void $ QNyRegularInstanceLog.updateStatusByInstanceTransactionId DNyRegularInstanceLog.AUTO_SELECTED instanceTransactionId
 
+    getNyRegularSubs :: Bool -> Flow (Maybe NyRegularSubscription.NyRegularSubscription)
+    getNyRegularSubs isReservedSearch = do
+      if isReservedSearch
+        then do
+          nyTransaction <- QNyRegularInstanceLog.findByInstanceTransactionId searchRequest.id.getId
+          maybe (pure Nothing) QNyRegularSubscription.findById $ nyTransaction <&> (.nyRegularSubscriptionId)
+        else pure Nothing
+
 -- TODO(MultiModal): Add one more field in estimate for check if it is done or ongoing
 buildEstimate ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
@@ -403,11 +433,14 @@ buildEstimate ::
   UTCTime ->
   SearchRequest ->
   DeploymentVersion ->
+  [DRiderConfig.VehicleServiceTierOrderConfig] ->
   EstimateInfo ->
   m DEstimate.Estimate
-buildEstimate providerInfo now searchRequest deploymentVersion EstimateInfo {..} = do
+buildEstimate providerInfo now searchRequest deploymentVersion boostSearchPreSelectionServiceTiersConfig EstimateInfo {..} = do
   uid <- generateGUID
   tripTerms <- buildTripTerms descriptions
+  let vehicleServiceTierType = fromMaybe (DV.castVariantToServiceTier vehicleVariant) serviceTierType
+  let boostSearchPreSelectionServiceTier = find (\boostSearchConfig -> boostSearchConfig.vehicle == vehicleServiceTierType) boostSearchPreSelectionServiceTiersConfig
   estimateBreakupList' <- buildEstimateBreakUp estimateBreakupList uid
   insuranceConfig <- CQInsuranceConfig.getInsuranceConfig searchRequest.merchantId searchRequest.merchantOperatingCityId tripCategory (DV.castVehicleVariantToVehicleCategory vehicleVariant)
   let isInsured = maybe False (\inc -> case inc.allowedVehicleServiceTiers of Just allowedTiers -> fromMaybe (DV.castVariantToServiceTier vehicleVariant) serviceTierType `elem` allowedTiers; Nothing -> True) insuranceConfig
@@ -424,7 +457,7 @@ buildEstimate providerInfo now searchRequest deploymentVersion EstimateInfo {..}
         providerUrl = providerInfo.url,
         estimatedDistance = searchRequest.distance,
         serviceTierName = serviceTierName,
-        vehicleServiceTierType = fromMaybe (DV.castVariantToServiceTier vehicleVariant) serviceTierType,
+        vehicleServiceTierType = vehicleServiceTierType,
         serviceTierShortDesc = serviceTierShortDesc,
         estimatedDuration = searchRequest.estimatedRideDuration,
         estimatedStaticDuration = searchRequest.estimatedRideStaticDuration,
@@ -462,6 +495,7 @@ buildEstimate providerInfo now searchRequest deploymentVersion EstimateInfo {..}
         tripCategory = Just tripCategory,
         insuredAmount = insuranceConfig >>= (.insuredAmount),
         isMultimodalSearch = searchRequest.isMultimodalSearch,
+        boostSearchPreSelectionServiceTierConfig = (Just . (.orderArray)) =<< boostSearchPreSelectionServiceTier,
         ..
       }
 

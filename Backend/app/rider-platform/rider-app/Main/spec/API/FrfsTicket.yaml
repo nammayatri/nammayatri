@@ -7,10 +7,10 @@ imports:
   DiscountValue: Domain.Types.FRFSTicketDiscount
   FRFSTicketDiscount: Domain.Types.FRFSTicketDiscount
   FRFSQuote: Domain.Types.FRFSQuote
-  FRFSTicketBookingStatus: Domain.Types.FRFSTicketBooking
+  FRFSTicketBookingStatus: Domain.Types.FRFSTicketBookingStatus
   FRFSTicketBooking: Domain.Types.FRFSTicketBooking
   TimeBound: Kernel.Types.TimeBound
-  FRFSTicketStatus: Domain.Types.FRFSTicket
+  FRFSTicketStatus: Domain.Types.FRFSTicketStatus
   HighPrecMoney: Kernel.Types.Common
   PriceAPIEntity: Kernel.Types.Common
   FRFSSearch: Domain.Types.FRFSSearch
@@ -142,7 +142,7 @@ types:
     derive: "Show"
 
   FRFSBookingPaymentStatusAPI:
-    enum: "NEW, PENDING, SUCCESS, FAILURE, REFUND_PENDING, REFUNDED"
+    enum: "NEW, PENDING, SUCCESS, FAILURE, REFUND_PENDING, REFUNDED, REFUND_FAILED, REFUND_INITIATED"
 
   FRFSStationAPI:
     name: Maybe Text
@@ -208,8 +208,11 @@ types:
   BookingFareAcceptedReq:
     isFareAccepted: Bool
 
+  BookingFeedbackReq:
+    feedbackDetails: Text
+
   FRFSBookingFeedbackReq:
-    enum: "BookingFareAccepted BookingFareAcceptedReq"
+    enum: "BookingFareAccepted BookingFareAcceptedReq, BookingFeedback BookingFeedbackReq"
 
 apis:
   # Get FRFS Config

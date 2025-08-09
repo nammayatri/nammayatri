@@ -3,6 +3,7 @@
 
 module API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration where
 
+import qualified API.Types.ProviderPlatform.Management.Endpoints.Account
 import qualified Dashboard.Common
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
@@ -252,7 +253,8 @@ data RegisterDLReq = RegisterDLReq
     driverDateOfBirth :: Kernel.Prelude.UTCTime,
     imageId1 :: Kernel.Types.Id.Id Dashboard.Common.Image,
     imageId2 :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Image),
-    dateOfIssue :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime
+    dateOfIssue :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    accessType :: Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.Endpoints.Account.DashboardAccessType
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

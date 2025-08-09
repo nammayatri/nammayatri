@@ -40,7 +40,6 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.Queries.DriverInformation as DI
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
 
@@ -84,13 +83,11 @@ postSubscriptionSubscribePlan ::
 postSubscriptionSubscribePlan merchantShortId opCity driverId planId = do
   m <- findMerchantByShortId merchantShortId
   mOCityId <- CQMOC.getMerchantOpCityId Nothing m (Just opCity)
-  driverInfo <- DI.findById (Kernel.Types.Id.cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   Domain.Action.UI.Plan.planSubscribe
     Domain.Types.Plan.YATRI_SUBSCRIPTION
     planId
     (True, Just DMM.WHATSAPP)
     (Kernel.Types.Id.cast driverId, m.id, mOCityId)
-    driverInfo
     DDPlan.NoData
 
 getSubscriptionCurrentPlan ::
@@ -148,7 +145,6 @@ postSubscriptionSubscribePlanV2 ::
 postSubscriptionSubscribePlanV2 merchantShortId opCity driverId planId serviceName req = do
   m <- findMerchantByShortId merchantShortId
   mOCityId <- CQMOC.getMerchantOpCityId Nothing m (Just opCity)
-  driverInfo <- DI.findById (Kernel.Types.Id.cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
   subscriptionRelatedData <- case req.vehicleNumber of
     Nothing -> return DDPlan.NoData
     Just vehicleNumber -> return $ DDPlan.RentedVehicleNumber vehicleNumber
@@ -157,7 +153,6 @@ postSubscriptionSubscribePlanV2 merchantShortId opCity driverId planId serviceNa
     planId
     (True, Just DMM.WHATSAPP)
     (Kernel.Types.Id.cast driverId, m.id, mOCityId)
-    driverInfo
     subscriptionRelatedData
 
 getSubscriptionCurrentPlanV2 ::

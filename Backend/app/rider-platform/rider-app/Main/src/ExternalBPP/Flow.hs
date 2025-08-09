@@ -122,7 +122,7 @@ search merchant merchantOperatingCity integratedBPPConfig bapConfig mbNetworkHos
       fromStation <- OTPRest.getStationByGtfsIdAndStopCode startStationCode integratedBPPConfig >>= fromMaybeM (StationNotFound startStationCode)
       toStation <- OTPRest.getStationByGtfsIdAndStopCode endStationCode integratedBPPConfig >>= fromMaybeM (StationNotFound endStationCode)
       stops <- OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig
-      CallAPI.mkStations fromStation toStation stops startStopType endStopType & fromMaybeM (StationsNotFound fromStation.id.getId toStation.id.getId)
+      return $ fromMaybe [] (CallAPI.mkStations fromStation toStation stops startStopType endStopType)
 
     mkSingleRouteQuote :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Spec.VehicleCategory -> RouteStopInfo -> [DStation] -> m [DQuote]
     mkSingleRouteQuote vehicleType routeInfo stations = do
@@ -189,6 +189,8 @@ init merchant merchantOperatingCity integratedBPPConfig bapConfig (mRiderName, m
     DOnInit
       { providerId = bapConfig.uniqueKeyId,
         totalPrice = booking.price,
+        totalQuantity = booking.quantity,
+        totalChildTicketQuantity = booking.childTicketQuantity,
         fareBreakUp = [],
         bppItemId = CallAPI.getProviderName integratedBPPConfig,
         validTill = validTill,

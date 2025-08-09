@@ -7,13 +7,16 @@ import qualified BecknV2.FRFS.Enums
 import Data.Aeson
 import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSSearch
+import qualified Domain.Types.FRFSTicketBookingStatus
 import qualified Domain.Types.IntegratedBPPConfig
 import qualified Domain.Types.Journey
+import qualified Domain.Types.JourneyLeg
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.PartnerOrganization
 import qualified Domain.Types.Person
 import qualified Domain.Types.RecentLocation
+import qualified Domain.Types.RouteDetails
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -49,10 +52,11 @@ data FRFSTicketBooking = FRFSTicketBooking
     isFareChanged :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isSkipped :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     journeyId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Journey.Journey),
+    journeyLegId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg),
     journeyLegOrder :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     journeyLegStatus :: Kernel.Prelude.Maybe Lib.JourneyLeg.Types.JourneyLegStatus,
     journeyOnInitDone :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    journeyRouteDetails :: [Lib.JourneyLeg.Types.MultiModalJourneyRouteDetails],
+    journeyRouteDetails :: [Domain.Types.RouteDetails.RouteDetails],
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     osBuildVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -74,7 +78,7 @@ data FRFSTicketBooking = FRFSTicketBooking
     searchId :: Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch,
     startTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     stationsJson :: Kernel.Prelude.Text,
-    status :: Domain.Types.FRFSTicketBooking.FRFSTicketBookingStatus,
+    status :: Domain.Types.FRFSTicketBookingStatus.FRFSTicketBookingStatus,
     toStationCode :: Kernel.Prelude.Text,
     validTill :: Kernel.Prelude.UTCTime,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory,
@@ -85,20 +89,4 @@ data FRFSTicketBooking = FRFSTicketBooking
 
 data CashbackStatus = PENDING | PROCESSING | SUCCESSFUL | CASHBACK_FAILED | MANUAL_VERIFICATION deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data FRFSTicketBookingStatus
-  = NEW
-  | APPROVED
-  | PAYMENT_PENDING
-  | CONFIRMING
-  | FAILED
-  | CONFIRMED
-  | CANCELLED
-  | COUNTER_CANCELLED
-  | CANCEL_INITIATED
-  | TECHNICAL_CANCEL_REJECTED
-  | REFUND_INITIATED
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
-
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CashbackStatus)
-
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FRFSTicketBookingStatus)

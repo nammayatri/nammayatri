@@ -18,7 +18,7 @@ imports:
   TripParty: Domain.Types.Trip
   ConfigVersionMap: Lib.Yudhishthira.Types
   Value: Data.Aeson
-  ParcelType: Domain.Types.DeliveryDetails
+  ParcelType: Domain.Types.ParcelType
 
 Booking:
   derives: "Generic,Show,FromJSON,ToJSON"

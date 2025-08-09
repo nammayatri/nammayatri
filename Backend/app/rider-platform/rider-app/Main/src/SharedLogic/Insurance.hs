@@ -4,6 +4,7 @@ import Control.Monad.Extra (maybeM)
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Insurance as DI
 import qualified Domain.Types.Ride as DRide
+import qualified Domain.Types.RideStatus as DRide
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleVariant as DV
 import Kernel.Beam.Functions (runInReplica)

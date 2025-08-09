@@ -1912,4 +1912,5 @@ getBn =
     , view_less : "দেখুন কম"
     , you_are_in_probation_period_till : (\date -> "আপনি " <> date <> " পর্যন্ত প্রার্থীতার অবধি রয়েছেন")
     , pass_all_eligibility_criteria_to_continue_being_a_member : "সমস্ত যোগ্যতার মানদণ্ড পালন করুন নাম্মা কুতুমার একজন সদস্য হন"
+    , metro : "মেট্রো"
     }

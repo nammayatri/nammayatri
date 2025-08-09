@@ -318,9 +318,12 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
             onboardingVehicleCategory = Nothing,
             servicesEnabledForSubscription = [DEP.YATRI_SUBSCRIPTION],
             driverFlowStatus = Just DriverFlowStatus.OFFLINE,
+            onlineDurationRefreshedAt = Just now,
             panNumber = Nothing,
             aadhaarNumber = Nothing,
-            dlNumber = Nothing
+            dlNumber = Nothing,
+            planExpiryDate = Nothing,
+            prepaidSubscriptionBalance = Nothing
           }
   QDriverStats.createInitialDriverStats merchantOperatingCity.currency merchantOperatingCity.distanceUnit driverId
   QD.create driverInfo

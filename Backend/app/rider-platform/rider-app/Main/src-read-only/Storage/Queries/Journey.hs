@@ -5,7 +5,6 @@
 module Storage.Queries.Journey (module Storage.Queries.Journey, module ReExport) where
 
 import qualified Domain.Types.Journey
-import qualified Domain.Types.SearchRequest
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -24,20 +23,20 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Journey.Journey] -> m ())
 createMany = traverse_ create
 
-findBySearchId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest -> m [Domain.Types.Journey.Journey])
-findBySearchId searchRequestId = do findAllWithKV [Se.Is Beam.searchRequestId $ Se.Eq (Kernel.Types.Id.getId searchRequestId)]
+findBySearchId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m [Domain.Types.Journey.Journey])
+findBySearchId searchRequestId = do findAllWithKV [Se.Is Beam.searchRequestId $ Se.Eq searchRequestId]
 
 updatePaymentOrderShortId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder) -> Kernel.Types.Id.Id Domain.Types.Journey.Journey -> m ())
-updatePaymentOrderShortId paymentOrderShortId id = do
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder) -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Journey.Journey -> m ())
+updatePaymentOrderShortId paymentOrderShortId isPaymentSuccess id = do
   _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.paymentOrderShortId (Kernel.Types.Id.getShortId <$> paymentOrderShortId), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
-
-updatePaymentStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Journey.Journey -> m ())
-updatePaymentStatus isPaymentSuccess id = do
-  _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.isPaymentSuccess isPaymentSuccess, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+  updateOneWithKV
+    [ Se.Set Beam.paymentOrderShortId (Kernel.Types.Id.getShortId <$> paymentOrderShortId),
+      Se.Set Beam.isPaymentSuccess isPaymentSuccess,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Journey.JourneyStatus -> Kernel.Types.Id.Id Domain.Types.Journey.Journey -> m ())
 updateStatus status id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.status (Just status), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
@@ -68,7 +67,7 @@ updateByPrimaryKey (Domain.Types.Journey.Journey {..}) = do
       Se.Set Beam.recentLocationId (Kernel.Types.Id.getId <$> recentLocationId),
       Se.Set Beam.relevanceScore relevanceScore,
       Se.Set Beam.riderId (Kernel.Types.Id.getId riderId),
-      Se.Set Beam.searchRequestId (Kernel.Types.Id.getId searchRequestId),
+      Se.Set Beam.searchRequestId searchRequestId,
       Se.Set Beam.startTime startTime,
       Se.Set Beam.status (Just status),
       Se.Set Beam.toLocationAddress Nothing,

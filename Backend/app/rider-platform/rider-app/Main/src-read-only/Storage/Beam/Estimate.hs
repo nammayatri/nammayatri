@@ -6,7 +6,7 @@ module Storage.Beam.Estimate where
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.Common
-import qualified Domain.Types.Estimate
+import qualified Domain.Types.EstimateStatus
 import qualified Domain.Types.ServiceTierType
 import Kernel.External.Encryption
 import qualified Kernel.External.Maps
@@ -19,6 +19,7 @@ import Tools.Beam.UtilsTH
 data EstimateT f = EstimateT
   { backendAppVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     backendConfigVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    boostSearchPreSelectionServiceTierConfig :: B.C f (Kernel.Prelude.Maybe [Domain.Types.ServiceTierType.ServiceTierType]),
     bppEstimateId :: B.C f Kernel.Prelude.Text,
     clientBundleVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     clientConfigVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -66,7 +67,7 @@ data EstimateT f = EstimateT
     smartTipSuggestion :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     specialLocationName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     specialLocationTag :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    status :: B.C f Domain.Types.Estimate.EstimateStatus,
+    status :: B.C f Domain.Types.EstimateStatus.EstimateStatus,
     tipOptions :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Int]),
     tollCharges :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     tollNames :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),

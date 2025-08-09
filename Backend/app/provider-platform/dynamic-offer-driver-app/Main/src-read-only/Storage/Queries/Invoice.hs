@@ -23,18 +23,6 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Invoice.Invoice] -> m ())
 createMany = traverse_ create
 
-findActiveMandateSetupInvoiceByFeeId ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.DriverFee.DriverFee -> Domain.Types.Invoice.InvoicePaymentMode -> Domain.Types.Invoice.InvoiceStatus -> m [Domain.Types.Invoice.Invoice])
-findActiveMandateSetupInvoiceByFeeId driverFeeId paymentMode invoiceStatus = do
-  findAllWithKV
-    [ Se.And
-        [ Se.Is Beam.driverFeeId $ Se.Eq (Kernel.Types.Id.getId driverFeeId),
-          Se.Is Beam.paymentMode $ Se.Eq paymentMode,
-          Se.Is Beam.invoiceStatus $ Se.Eq invoiceStatus
-        ]
-    ]
-
 findActiveManualInvoiceByFeeId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.DriverFee.DriverFee -> Domain.Types.Invoice.InvoicePaymentMode -> Domain.Types.Invoice.InvoiceStatus -> m [Domain.Types.Invoice.Invoice])
@@ -52,6 +40,18 @@ findAllByInvoiceId id = do findAllWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id
 
 findAllByInvoiceShortId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m [Domain.Types.Invoice.Invoice])
 findAllByInvoiceShortId invoiceShortId = do findAllWithKV [Se.Is Beam.invoiceShortId $ Se.Eq invoiceShortId]
+
+findByDriverFeePaymentModeAndInvoiceStatus ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.DriverFee.DriverFee -> Domain.Types.Invoice.InvoicePaymentMode -> Domain.Types.Invoice.InvoiceStatus -> m [Domain.Types.Invoice.Invoice])
+findByDriverFeePaymentModeAndInvoiceStatus driverFeeId paymentMode invoiceStatus = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.driverFeeId $ Se.Eq (Kernel.Types.Id.getId driverFeeId),
+          Se.Is Beam.paymentMode $ Se.Eq paymentMode,
+          Se.Is Beam.invoiceStatus $ Se.Eq invoiceStatus
+        ]
+    ]
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Invoice.Invoice -> m [Domain.Types.Invoice.Invoice])
 findById id = do findAllWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]

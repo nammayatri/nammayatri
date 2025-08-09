@@ -9,6 +9,7 @@ import Kernel.Types.Error
 import Kernel.Utils.Common
 import qualified Lib.JourneyLeg.Types as JLT
 import Lib.JourneyLeg.Types.Walk
+import qualified Lib.JourneyModule.State.Utils as JMStateUtils
 import qualified Lib.JourneyModule.Types as JT
 import SharedLogic.Search
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
@@ -39,6 +40,8 @@ instance JT.JourneyLeg WalkLegRequest m where
               fromLocation = fromLocation,
               toLocation = Just toLocation,
               journeyLegInfo = Just journeySearchData,
+              journeyRouteDetails = listToMaybe journeyLegData.routeDetails,
+              journeyLegId = Just journeyLegData.id,
               riderId = journey.riderId,
               startTime = fromMaybe now journeyLegData.fromArrivalTime,
               merchantId = journey.merchantId,
@@ -74,10 +77,18 @@ instance JT.JourneyLeg WalkLegRequest m where
     legData <- QWalkLeg.findById req.walkLegId >>= fromMaybeM (InvalidRequest "WalkLeg Data not found")
     journeyLegInfo <- legData.journeyLegInfo & fromMaybeM (InvalidRequest "WalkLeg journey legInfo data missing")
     let status = JT.getWalkLegStatusFromWalkLeg legData journeyLegInfo
+    journeyLegsStatus <-
+      mapM
+        ( \routeDetails -> do
+            trackingStatus <- JMStateUtils.getWalkJourneyLegStatus routeDetails
+            return $ JT.JourneyWalkLegStatus {trackingStatus = trackingStatus}
+        )
+        legData.journeyRouteDetails
     return $
       JT.Single $
         JT.JourneyLegStateData
           { status,
+            legStatus = JT.WalkStatusElement <$> journeyLegsStatus,
             userPosition = (.latLong) <$> listToMaybe req.riderLastPoints,
             vehiclePositions = [],
             legOrder = journeyLegInfo.journeyLegOrder,

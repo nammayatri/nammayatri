@@ -217,11 +217,17 @@ library
       Domain.Types.Alert.AlertRequestStatus
       Domain.Types.Alert.AlertRequestType
       Domain.Types.Alert.DetectionData
+      Domain.Types.BookingStatus
       Domain.Types.EmptyDynamicParam
+      Domain.Types.EstimateStatus
       Domain.Types.FareProductType
       Domain.Types.FleetBadgeType
       Domain.Types.FRFSRouteDetails
+      Domain.Types.FRFSTicketBookingStatus
+      Domain.Types.FRFSTicketStatus
+      Domain.Types.ParcelType
       Domain.Types.RefereeLink
+      Domain.Types.RideStatus
       Domain.Types.ServiceTierType
       Domain.Types.StationType
       Domain.Types.Trip

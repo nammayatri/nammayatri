@@ -34,6 +34,25 @@ findByMerchantOpCityIdAndPaymentModeWithServiceName (Id merchantOpCityId) paymen
         )
     ]
 
+findByMerchantOpCityIdAndServiceName ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id DMOC.MerchantOperatingCity ->
+  ServiceNames ->
+  Maybe Bool ->
+  m [Plan]
+findByMerchantOpCityIdAndServiceName (Id merchantOpCityId) serviceName mbIsDeprecated = do
+  findAllWithKV
+    [ Se.And
+        ( [ Se.Is BeamP.merchantOpCityId $ Se.Eq merchantOpCityId,
+            Se.Is BeamP.serviceName $ Se.Eq serviceName
+          ]
+            <> ( case mbIsDeprecated of
+                   Nothing -> []
+                   Just isDeprecated -> [Se.Is BeamP.isDeprecated $ Se.Eq isDeprecated]
+               )
+        )
+    ]
+
 fetchAllPlan :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => m [Plan]
 fetchAllPlan = findAllWithKV [Se.Is BeamP.id $ Se.Not $ Se.Eq $ getId ""]
 

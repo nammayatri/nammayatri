@@ -4,10 +4,12 @@
 module Domain.Types.WalkLegMultimodal where
 
 import Data.Aeson
+import qualified Domain.Types.JourneyLeg
 import qualified Domain.Types.Location
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
+import qualified Domain.Types.RouteDetails
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -19,7 +21,9 @@ data WalkLegMultimodal = WalkLegMultimodal
     estimatedDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     fromLocation :: Domain.Types.Location.Location,
     id :: Kernel.Types.Id.Id Domain.Types.WalkLegMultimodal.WalkLegMultimodal,
+    journeyLegId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg),
     journeyLegInfo :: Kernel.Prelude.Maybe Lib.JourneyLeg.Types.JourneySearchData,
+    journeyRouteDetails :: Kernel.Prelude.Maybe Domain.Types.RouteDetails.RouteDetails,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -31,6 +35,6 @@ data WalkLegMultimodal = WalkLegMultimodal
   }
   deriving (Generic, Show)
 
-data WalkLegStatus = InPlan | Ongoing | Finishing | Completed deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data WalkLegStatus = InPlan | Ongoing | Finishing | Completed | Cancelled deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''WalkLegStatus)

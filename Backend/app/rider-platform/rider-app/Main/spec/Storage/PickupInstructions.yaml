@@ -40,20 +40,15 @@ PickupInstructions:
       kvFunction: findAllWithKV
       where: personId
 
-    updateByPersonIdAndLocation:
+    updateInstructionById:
       kvFunction: updateWithKV
       params: [lat, lon, instruction, mediaFileId]
-      where:
-        and: [personId, lat, lon]
+      where: id
 
     deleteByPersonIdAndLocation:
       kvFunction: deleteWithKV
       where:
         and: [personId, lat, lon]
-
-    deleteById:
-      kvFunction: deleteWithKV
-      where: id
 
     findOldestByPersonId:
       kvFunction: findAllWithKV
@@ -62,3 +57,12 @@ PickupInstructions:
         field: updatedAt
         order: asc
       limit: 1
+
+    deleteInstructionById:
+      kvFunction: deleteWithKV
+      where: id
+
+    updateMediaFileById:
+      kvFunction: updateOneWithKV
+      params: [mediaFileId]
+      where: id

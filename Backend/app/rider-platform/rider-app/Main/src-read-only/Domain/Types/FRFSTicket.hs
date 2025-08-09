@@ -5,6 +5,7 @@ module Domain.Types.FRFSTicket where
 
 import Data.Aeson
 import qualified Domain.Types.FRFSTicketBooking
+import qualified Domain.Types.FRFSTicketStatus
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.PartnerOrganization
@@ -26,23 +27,10 @@ data FRFSTicket = FRFSTicket
     qrRefreshAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     scannedByVehicleNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    status :: Domain.Types.FRFSTicket.FRFSTicketStatus,
+    status :: Domain.Types.FRFSTicketStatus.FRFSTicketStatus,
     ticketNumber :: Kernel.Prelude.Text,
     validTill :: Kernel.Prelude.UTCTime,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
-
-data FRFSTicketStatus
-  = ACTIVE
-  | EXPIRED
-  | USED
-  | CANCELLED
-  | COUNTER_CANCELLED
-  | CANCEL_INITIATED
-  | TECHNICAL_CANCEL_REJECTED
-  | REFUND_INITIATED
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
-
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''FRFSTicketStatus))

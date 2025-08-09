@@ -68,3 +68,9 @@ ALTER TABLE atlas_app.frfs_ticket_booking ADD PRIMARY KEY ( id);
 
 ALTER TABLE atlas_app.frfs_ticket_booking ALTER COLUMN to_station_id TYPE text;
 ALTER TABLE atlas_app.frfs_ticket_booking ALTER COLUMN from_station_id TYPE text;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN journey_leg_id character varying(36) ;

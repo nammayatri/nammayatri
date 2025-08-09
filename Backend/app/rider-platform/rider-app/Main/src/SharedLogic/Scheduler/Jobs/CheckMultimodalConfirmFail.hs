@@ -14,7 +14,8 @@
 
 module SharedLogic.Scheduler.Jobs.CheckMultimodalConfirmFail where
 
-import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
+import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
+import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBooking
 import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -27,6 +28,7 @@ import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
+import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
 import Tools.Error
 
 checkMultimodalConfirmFailJob ::
@@ -45,7 +47,14 @@ checkMultimodalConfirmFailJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.get
       bookingId = jobData.bookingId
   booking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest $ "booking not found for id: " <> show bookingId)
   frfsTickets <- QFRFSTicket.findAllByTicketBookingId bookingId
-  if (booking.status == DFRFSTicketBooking.FAILED || null frfsTickets)
+
+  paymentBooking <- QFRFSTicketBookingPayment.findNewTBPByBookingId bookingId
+
+  let isPaymentInTerminalState = case paymentBooking of
+        Just pb -> pb.status == DFRFSTicketBookingPayment.SUCCESS || pb.status == DFRFSTicketBookingPayment.REFUND_PENDING
+        Nothing -> False
+
+  if ((booking.status == DFRFSTicketBooking.FAILED || null frfsTickets) && isPaymentInTerminalState)
     then do
       riderConfig <- QRC.findByMerchantOperatingCityId booking.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist booking.merchantOperatingCityId.getId)
       when riderConfig.enableAutoJourneyRefund $

@@ -13,9 +13,11 @@ imports:
   ShortId: Kernel.Types.Id
   UTCTime: Kernel.Prelude
   TicketPlace: Domain.Types.TicketPlace
+  PlaceType: Domain.Types.TicketPlace
   APISuccess: Kernel.Types.APISuccess
   TicketBooking: Domain.Types.TicketBooking
   BookingStatus: Domain.Types.TicketBooking
+  PeopleTicketQuantity: Domain.Types.TicketBooking
   TicketBookingService: Domain.Types.TicketBookingService
   TicketBookingServiceCategory: Domain.Types.TicketBookingServiceCategory
   TicketBookingPeopleCategory: Domain.Types.TicketBookingPeopleCategory
@@ -35,6 +37,7 @@ types:
     expiry: ExpiryType
     businessHours: [BusinessHourResp]
     shortDesc: Maybe Text
+    serviceDetails: "Maybe [Text]"
     allowCancellation: Bool
 
   BusinessHourResp:
@@ -55,6 +58,7 @@ types:
     allowedSeats: Maybe Int
     bookedSeats: Int
     isClosed: Bool
+    inclusionPoints: "Maybe [Text]"
     peopleCategories: [PeopleCategoriesResp]
 
   PeopleCategoriesResp:
@@ -86,11 +90,26 @@ types:
     ticketShortId: Text
     ticketPlaceId: Text
     ticketPlaceName: Text
+    placeType: PlaceType
+    iconUrl: Maybe Text
     personId: Text
     amount: HighPrecMoney
     amountWithCurrency: PriceAPIEntity
     visitDate: Day
     status: BookingStatus
+
+  TicketBookingAPIEntityV2:
+    ticketShortId: Text
+    ticketPlaceId: Text
+    ticketPlaceName: Text
+    placeType: PlaceType
+    iconUrl: Maybe Text
+    personId: Text
+    amount: HighPrecMoney
+    amountWithCurrency: PriceAPIEntity
+    visitDate: Day
+    status: BookingStatus
+    peopleTicketQuantity: "Maybe [PeopleTicketQuantity]"
 
   TicketBookingDetails:
     ticketShortId: Text
@@ -101,6 +120,8 @@ types:
     amountWithCurrency: PriceAPIEntity
     visitDate: Day
     status: BookingStatus
+    lat: Double
+    lon: Double
     services: [TicketBookingServiceDetails]
     refundDetails: [Refunds]
 
@@ -194,6 +215,10 @@ types:
     pricePerUnit: HighPrecMoney
     pricePerUnitWithCurrency: PriceAPIEntity
 
+  TicketPlaceAvailability:
+    month: Int
+    closedDays: [Int]
+
 apis:
   # GET /ticket/places
   - GET:
@@ -234,6 +259,17 @@ apis:
         status: BookingStatus
       response:
         type: "[API.Types.UI.TicketService.TicketBookingAPIEntity]"
+
+  # # GET /ticket/bookings
+  - GET:
+      endpoint: /ticket/bookings/v2
+      auth: TokenAuth
+      query:
+        limit: Int
+        offset: Int
+        status: BookingStatus
+      response:
+        type: "[API.Types.UI.TicketService.TicketBookingAPIEntityV2]"
 
   # # GET /ticket/bookings/{ticketBookingShortId}/details
   - GET:
@@ -289,3 +325,14 @@ apis:
         type: API.Types.UI.TicketService.TicketServiceCancelReq
       response:
         type: APISuccess
+
+  - GET:
+      endpoint: /ticket/place/{placeId}/availability
+      auth: TokenAuth
+      query:
+        isClosed: Bool
+        forceFresh: Bool
+      params:
+        placeId: Id TicketPlace
+      response:
+        type: "[TicketPlaceAvailability]"

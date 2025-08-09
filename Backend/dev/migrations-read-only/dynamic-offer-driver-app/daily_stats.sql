@@ -75,3 +75,10 @@ ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN num_drivers_onboarded 
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.daily_stats ADD COLUMN online_duration integer ;
+

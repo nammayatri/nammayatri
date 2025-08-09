@@ -42,6 +42,7 @@ data CategoriesResp = CategoriesResp
     availableSeats :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     bookedSeats :: Kernel.Prelude.Int,
     id :: Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory,
+    inclusionPoints :: Kernel.Prelude.Maybe [Data.Text.Text],
     isClosed :: Kernel.Prelude.Bool,
     name :: Data.Text.Text,
     peopleCategories :: [PeopleCategoriesResp]
@@ -72,7 +73,25 @@ data PeopleCategoriesVerificationRes = PeopleCategoriesVerificationRes
 data TicketBookingAPIEntity = TicketBookingAPIEntity
   { amount :: Kernel.Types.Common.HighPrecMoney,
     amountWithCurrency :: Kernel.Types.Common.PriceAPIEntity,
+    iconUrl :: Kernel.Prelude.Maybe Data.Text.Text,
     personId :: Data.Text.Text,
+    placeType :: Domain.Types.TicketPlace.PlaceType,
+    status :: Domain.Types.TicketBooking.BookingStatus,
+    ticketPlaceId :: Data.Text.Text,
+    ticketPlaceName :: Data.Text.Text,
+    ticketShortId :: Data.Text.Text,
+    visitDate :: Data.Time.Calendar.Day
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data TicketBookingAPIEntityV2 = TicketBookingAPIEntityV2
+  { amount :: Kernel.Types.Common.HighPrecMoney,
+    amountWithCurrency :: Kernel.Types.Common.PriceAPIEntity,
+    iconUrl :: Kernel.Prelude.Maybe Data.Text.Text,
+    peopleTicketQuantity :: Kernel.Prelude.Maybe [Domain.Types.TicketBooking.PeopleTicketQuantity],
+    personId :: Data.Text.Text,
+    placeType :: Domain.Types.TicketPlace.PlaceType,
     status :: Domain.Types.TicketBooking.BookingStatus,
     ticketPlaceId :: Data.Text.Text,
     ticketPlaceName :: Data.Text.Text,
@@ -107,6 +126,8 @@ data TicketBookingCategoryReq = TicketBookingCategoryReq {categoryId :: Kernel.T
 data TicketBookingDetails = TicketBookingDetails
   { amount :: Kernel.Types.Common.HighPrecMoney,
     amountWithCurrency :: Kernel.Types.Common.PriceAPIEntity,
+    lat :: Kernel.Prelude.Double,
+    lon :: Kernel.Prelude.Double,
     personId :: Data.Text.Text,
     refundDetails :: [Lib.Payment.Domain.Types.Refunds.Refunds],
     services :: [TicketBookingServiceDetails],
@@ -195,6 +216,10 @@ data TicketBookingUpdateSeatsReq = TicketBookingUpdateSeatsReq
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data TicketPlaceAvailability = TicketPlaceAvailability {closedDays :: [Kernel.Prelude.Int], month :: Kernel.Prelude.Int}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data TicketServiceCancelReq = TicketServiceCancelReq
   { businessHourId :: Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour,
     date :: Data.Time.Calendar.Day,
@@ -214,6 +239,7 @@ data TicketServiceResp = TicketServiceResp
     maxVerification :: Kernel.Prelude.Int,
     name :: Data.Text.Text,
     placesId :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace,
+    serviceDetails :: Kernel.Prelude.Maybe [Data.Text.Text],
     shortDesc :: Kernel.Prelude.Maybe Data.Text.Text
   }
   deriving stock (Generic)

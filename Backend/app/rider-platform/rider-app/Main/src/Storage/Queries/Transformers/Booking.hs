@@ -11,7 +11,7 @@ import qualified Domain.Types.Location as DL
 import qualified Domain.Types.LocationMapping as DLM
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
-import qualified Domain.Types.ParcelDetails as DParcel
+import qualified Domain.Types.ParcelType as DParcelType
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Error
@@ -62,7 +62,7 @@ getParcelQuantity = \case
   DRB.DeliveryDetails details -> details.parcelQuantity
   _ -> Nothing
 
-getParcelType :: Domain.Types.Booking.BookingDetails -> Kernel.Prelude.Maybe DParcel.ParcelType
+getParcelType :: Domain.Types.Booking.BookingDetails -> Kernel.Prelude.Maybe DParcelType.ParcelType
 getParcelType = \case
   DRB.DeliveryDetails details -> Just details.parcelType
   _ -> Nothing
@@ -142,7 +142,7 @@ toBookingDetailsAndFromLocation ::
   Maybe DistanceUnit ->
   Maybe HighPrecDistance ->
   Maybe Bool ->
-  Maybe DParcel.ParcelType ->
+  Maybe DParcelType.ParcelType ->
   Maybe Int ->
   m (DL.Location, BookingDetails)
 toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings distance fareProductType mbTripCategory toLocationId fromLocationId stopLocationId otpCode isUpgradedToCab distanceUnit distanceValue hasStops parcelType parcelQuantity = do
@@ -274,7 +274,7 @@ toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings d
           { toLocation = toLocation,
             distance = distance',
             parcelQuantity = parcelQuantity,
-            parcelType = fromMaybe (DParcel.Others "Unknown") parcelType,
+            parcelType = fromMaybe (DParcelType.Others "Unknown") parcelType,
             ..
           }
 

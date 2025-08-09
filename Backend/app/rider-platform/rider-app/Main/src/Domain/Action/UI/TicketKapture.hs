@@ -4,14 +4,17 @@ module Domain.Action.UI.TicketKapture (postKaptureCustomerLogin, postKaptureClos
 
 import qualified API.Types.UI.TicketKapture
 import qualified API.Types.UI.TicketKapture as TicketKapture
-import Data.Aeson (Value, fromJSON)
+import Data.Aeson (FromJSON, ToJSON, Value, fromJSON)
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Key as Key
 import qualified Data.Aeson.KeyMap as KM
+import Data.List (nubBy)
+import Data.OpenApi (ToSchema)
 import Data.Text
 import qualified Data.Vector as V
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
+import Domain.Types.TicketKapture (TaggedChatMessage (..), TaggedChatMessageContent (..))
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import IssueManagement.Common (IssueStatus (..))
@@ -22,6 +25,7 @@ import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import qualified Kernel.External.Ticket.Interface.Types as TIT
 import qualified Kernel.External.Ticket.Kapture.Types as Kapture
+import Kernel.Prelude (Generic)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess as API
 import Kernel.Types.Error
@@ -111,7 +115,8 @@ getGetClosedTicketIds (mbPersonId, _) = do
   issueChats <- QIssueChat.findAllByPersonId issuePersonId
   closedTicketsResult <- mapM extractClosedTicket issueChats
   let closedTickets = catMaybes closedTicketsResult
-  pure $ TicketKapture.GetClosedTicketIdsRes {TicketKapture.closedTicketIds = closedTickets}
+  let uniqueClosedTickets = nubBy (\a b -> a.ticketId == b.ticketId) closedTickets
+  pure $ TicketKapture.GetClosedTicketIdsRes {TicketKapture.closedTicketIds = uniqueClosedTickets}
   where
     extractClosedTicket :: ICT.IssueChat -> Environment.Flow (Maybe API.Types.UI.TicketKapture.CloseTicketResp)
     extractClosedTicket issueChat = do
@@ -132,6 +137,21 @@ getGetClosedTicketIds (mbPersonId, _) = do
                         }
                 else pure Nothing
 
+transformChatMessageToTagged :: Kapture.ChatMessage -> TaggedChatMessage
+transformChatMessageToTagged (Kapture.ChatMessage {..}) =
+  TaggedChatMessage
+    { chatMessage = transformChatContentToTagged chatMessage,
+      senderName = senderName,
+      receiverName = receiverName,
+      sentDate = sentDate
+    }
+
+transformChatContentToTagged :: Kapture.ChatMessageContent -> TaggedChatMessageContent
+transformChatContentToTagged (Kapture.TextMessage txt) =
+  TextMessage txt
+transformChatContentToTagged (Kapture.FileAttachments files) =
+  FileAttachments files
+
 getGetClosedTicketDetails ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
@@ -149,4 +169,5 @@ getGetClosedTicketDetails (_mbPersonId, _) ticketId = do
         Nothing -> do
           pure $ TicketKapture.GetClosedTicketDetailsRes {TicketKapture.chatMessages = []}
         Just chatMessages -> do
-          pure $ TicketKapture.GetClosedTicketDetailsRes {TicketKapture.chatMessages = chatMessages}
+          let taggedMessages = EulerHS.Prelude.map transformChatMessageToTagged chatMessages
+          pure $ TicketKapture.GetClosedTicketDetailsRes {TicketKapture.chatMessages = taggedMessages}

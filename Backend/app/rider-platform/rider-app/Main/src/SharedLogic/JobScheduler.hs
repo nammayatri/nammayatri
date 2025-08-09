@@ -19,7 +19,7 @@ module SharedLogic.JobScheduler where
 
 import Data.Singletons.TH
 import Domain.Types.Booking
-import qualified Domain.Types.Extra.Booking as DEB
+import qualified Domain.Types.BookingStatus as DEB
 import qualified Domain.Types.FRFSTicketBooking as DFTB
 import Domain.Types.IntegratedBPPConfig as DIntegratedBPPConfig
 import qualified Domain.Types.Merchant as DM
@@ -60,6 +60,7 @@ data RiderJobType
   | PostRideSafetyNotification
   | UpdateCrisUtsData
   | CheckMultimodalConfirmFail
+  | CheckRefundStatus
   | MetroBusinessHour
   | NyRegularMaster
   | NyRegularInstance
@@ -95,6 +96,7 @@ instance JobProcessor RiderJobType where
   restoreAnyJobInfo SPostRideSafetyNotification jobData = AnyJobInfo <$> restoreJobInfo SPostRideSafetyNotification jobData
   restoreAnyJobInfo SUpdateCrisUtsData jobData = AnyJobInfo <$> restoreJobInfo SUpdateCrisUtsData jobData
   restoreAnyJobInfo SCheckMultimodalConfirmFail jobData = AnyJobInfo <$> restoreJobInfo SCheckMultimodalConfirmFail jobData
+  restoreAnyJobInfo SCheckRefundStatus jobData = AnyJobInfo <$> restoreJobInfo SCheckRefundStatus jobData
   restoreAnyJobInfo SMetroBusinessHour jobData = AnyJobInfo <$> restoreJobInfo SMetroBusinessHour jobData
   restoreAnyJobInfo SNyRegularMaster jobData = AnyJobInfo <$> restoreJobInfo SNyRegularMaster jobData
   restoreAnyJobInfo SNyRegularInstance jobData = AnyJobInfo <$> restoreJobInfo SNyRegularInstance jobData
@@ -205,6 +207,16 @@ data CheckMultimodalConfirmFailJobData = CheckMultimodalConfirmFailJobData
 instance JobInfoProcessor 'CheckMultimodalConfirmFail
 
 type instance JobContent 'CheckMultimodalConfirmFail = CheckMultimodalConfirmFailJobData
+
+data CheckRefundStatusJobData = CheckRefundStatusJobData
+  { refundId :: Text,
+    numberOfRetries :: Int
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'CheckRefundStatus
+
+type instance JobContent 'CheckRefundStatus = CheckRefundStatusJobData
 
 data OtherJobTypesJobData = OtherJobTypesJobData
   { bookingId :: Id Booking,

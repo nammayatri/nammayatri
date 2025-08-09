@@ -8,8 +8,9 @@ import Data.OpenApi (ToSchema)
 import qualified Data.Text
 import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSSearch
-import qualified Domain.Types.FRFSTicket
 import qualified Domain.Types.FRFSTicketBooking
+import qualified Domain.Types.FRFSTicketBookingStatus
+import qualified Domain.Types.FRFSTicketStatus
 import qualified Domain.Types.IntegratedBPPConfig
 import qualified Domain.Types.RecentLocation
 import qualified Domain.Types.StationType
@@ -33,8 +34,13 @@ data BookingFareAcceptedReq = BookingFareAcceptedReq {isFareAccepted :: Kernel.P
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data BookingFeedbackReq = BookingFeedbackReq {feedbackDetails :: Data.Text.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data FRFSBookingFeedbackReq
   = BookingFareAccepted BookingFareAcceptedReq
+  | BookingFeedback BookingFeedbackReq
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -53,6 +59,8 @@ data FRFSBookingPaymentStatusAPI
   | FAILURE
   | REFUND_PENDING
   | REFUNDED
+  | REFUND_FAILED
+  | REFUND_INITIATED
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -196,7 +204,7 @@ data FRFSTicketAPI = FRFSTicketAPI
     description :: Data.Maybe.Maybe Data.Text.Text,
     qrData :: Data.Text.Text,
     scannedByVehicleNumber :: Data.Maybe.Maybe Data.Text.Text,
-    status :: Domain.Types.FRFSTicket.FRFSTicketStatus,
+    status :: Domain.Types.FRFSTicketStatus.FRFSTicketStatus,
     ticketNumber :: Data.Text.Text,
     validTill :: Kernel.Prelude.UTCTime
   }
@@ -220,7 +228,7 @@ data FRFSTicketBookingStatusAPIRes = FRFSTicketBookingStatusAPIRes
     quantity :: Kernel.Prelude.Int,
     routeStations :: Data.Maybe.Maybe [FRFSRouteStationsAPI],
     stations :: [FRFSStationAPI],
-    status :: Domain.Types.FRFSTicketBooking.FRFSTicketBookingStatus,
+    status :: Domain.Types.FRFSTicketBookingStatus.FRFSTicketBookingStatus,
     tickets :: [FRFSTicketAPI],
     updatedAt :: Kernel.Prelude.UTCTime,
     validTill :: Kernel.Prelude.UTCTime,

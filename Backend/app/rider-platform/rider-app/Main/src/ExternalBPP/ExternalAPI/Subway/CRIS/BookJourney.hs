@@ -8,8 +8,8 @@ import qualified Data.ByteString.Lazy as LBS
 import Data.Maybe
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
-import Data.Time (NominalDiffTime)
 import Data.Time.Format
+import Data.Time.LocalTime
 import Data.UUID (UUID, fromText, toWords)
 import Domain.Types.FRFSQuote as DFRFSQuote
 import Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
@@ -20,7 +20,7 @@ import ExternalBPP.ExternalAPI.Subway.CRIS.Auth (callCRISAPI)
 import ExternalBPP.ExternalAPI.Subway.CRIS.Encryption (decryptResponseData, encryptPayload)
 import ExternalBPP.ExternalAPI.Types
 import Kernel.External.Encryption
-import Kernel.Prelude (intToNominalDiffTime, (!!))
+import Kernel.Prelude ((!!))
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.App
 import Kernel.Types.Error
@@ -123,7 +123,8 @@ data CRISBookingResponse = CRISBookingResponse
     journeyDate :: Maybe Text, -- journeyDate
     routeMessage :: Maybe Text,
     chargeableAmount :: Maybe HighPrecMoney,
-    encryptedTicketData :: Text
+    encryptedTicketData :: Text,
+    showTicketValidity :: Text
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
@@ -142,7 +143,7 @@ data CRISTicketData = CRISTicketData
     serviceTax :: Maybe Text,
     txnTime :: Maybe Text,
     jrnyCommencingString :: Maybe Text,
-    -- showTicketValidity :: Text,
+    showTicketValidity :: Text,
     journeyDate :: Maybe Text,
     routeMessage :: Maybe Text,
     chargeableAmount :: Maybe HighPrecMoney,
@@ -221,7 +222,8 @@ convertToBookingResponse ticketData encrypted =
       journeyDate = ticketData.journeyDate,
       routeMessage = ticketData.routeMessage,
       chargeableAmount = ticketData.chargeableAmount,
-      encryptedTicketData = encrypted
+      encryptedTicketData = encrypted,
+      showTicketValidity = ticketData.showTicketValidity
     }
 
 createOrder :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasShortDurationRetryCfg r c) => CRISConfig -> IntegratedBPPConfig -> DFRFSTicketBooking.FRFSTicketBooking -> m ProviderOrder
@@ -257,7 +259,7 @@ createOrder config integratedBPPConfig booking = do
             sessionId = appSession,
             source = fromStation.code,
             destination = toStation.code,
-            via = " ",
+            via = fromMaybe " " $ quote.fareDetails <&> (.via),
             routeId = crisRouteId,
             classCode = classCode,
             trainType = trainTypeCode,
@@ -294,9 +296,7 @@ createOrder config integratedBPPConfig booking = do
   logInfo $ "GetBookJourney: " <> show bookJourneyReq
   bookJourneyResp <- getBookJourney config bookJourneyReq
 
-  let journeyCommencingHours = intToNominalDiffTime $ fromMaybe 3 bookJourneyResp.validUntil
-  now <- getCurrentTime
-  let hoursFromNow = addUTCTime (journeyCommencingHours * 60 * 60 :: NominalDiffTime) now
+  qrValidityTime <- parseTicketValidity bookJourneyResp.showTicketValidity
 
   return $
     ProviderOrder
@@ -308,7 +308,7 @@ createOrder config integratedBPPConfig booking = do
                 description = bookJourneyResp.journeyComment,
                 qrData = bookJourneyResp.encryptedTicketData,
                 qrStatus = "UNCLAIMED",
-                qrValidity = hoursFromNow,
+                qrValidity = qrValidityTime,
                 qrRefreshAt = Nothing
               }
           ]
@@ -405,3 +405,14 @@ getBppOrderId :: (MonadFlow m) => FRFSTicketBooking -> m Text
 getBppOrderId booking = do
   bookingUUID <- fromText booking.id.getId & fromMaybeM (InternalError "Booking Id not being able to parse into UUID")
   return $ uuidTo21CharString bookingUUID --- The length should be 21 characters (alphanumeric)
+
+-- Parse IST datetime string to UTCTime
+parseTicketValidity :: (MonadFlow m) => Text -> m UTCTime
+parseTicketValidity validityStr = do
+  let timeFormat = "%d/%m/%Y %H:%M:%S" --Parse format: "04/08/2025 23:59:00" in IST
+  case parseTimeM True defaultTimeLocale timeFormat (T.unpack validityStr) of
+    Nothing -> throwError $ InternalError $ "Failed to parse ticket validity: " <> validityStr
+    Just localTime -> do
+      let istTimeZone = TimeZone (5 * 60 + 30) False "IST" -- IST is UTC+5:30
+      let zonedTime = ZonedTime localTime istTimeZone
+      return $ zonedTimeToUTC zonedTime

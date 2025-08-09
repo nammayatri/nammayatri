@@ -35,3 +35,8 @@ ALTER TABLE atlas_app.ticket_service ADD COLUMN rules json ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.ticket_service ADD COLUMN is_closed boolean  default false;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ticket_service ADD COLUMN service_details json ;

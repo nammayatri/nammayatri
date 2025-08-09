@@ -81,6 +81,8 @@ DriverInformation:
     mode: Maybe DriverMode
     aadhaarVerified: Bool
     autoPayStatus: Maybe DriverAutoPayStatus
+    prepaidSubscriptionBalance: Maybe HighPrecMoney
+    planExpiryDate: Maybe UTCTime
     blockedReason: Maybe Text
     blockExpiryTime: Maybe UTCTime
     payerVpa: Maybe Text
@@ -123,6 +125,8 @@ DriverInformation:
     aadhaarNumber: Maybe (EncryptedHashedField e Text)
     dlNumber: Maybe (EncryptedHashedField e Text)
     driverFlowStatus: Maybe DriverFlowStatus
+    onlineDurationRefreshedAt: Maybe UTCTime
+
   default:
     active: "false"
     verified: "false"
@@ -144,6 +148,7 @@ DriverInformation:
     acRestrictionLiftCount: "0"
     hasAdvanceBooking: "false"
     isInteroperable: "false"
+    onlineDurationRefreshedAt: 'CURRENT_TIMESTAMP'
   constraints:
     driverId: PrimaryKey
 

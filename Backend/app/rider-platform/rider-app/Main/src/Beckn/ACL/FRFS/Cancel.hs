@@ -29,6 +29,7 @@ import Kernel.Utils.Common
 
 buildCancelReq ::
   (MonadFlow m) =>
+  Text ->
   DBooking.FRFSTicketBooking ->
   BecknConfig ->
   Utils.BppData ->
@@ -36,12 +37,11 @@ buildCancelReq ::
   Spec.CancellationType ->
   Context.City ->
   m (Spec.CancelReq)
-buildCancelReq booking bapConfig bppData mbCancellationReasonId cancellationType city = do
+buildCancelReq messageId booking bapConfig bppData mbCancellationReasonId cancellationType city = do
   now <- getCurrentTime
   let transactionId = booking.searchId.getId
       validTill = addUTCTime (intToNominalDiffTime (fromMaybe 30 bapConfig.cancelTTLSec)) now
       ttl = diffUTCTime validTill now
-  messageId <- generateGUID
 
   context <- Utils.buildContext Spec.CANCEL bapConfig transactionId messageId (Just $ Utils.durationToText ttl) (Just bppData) city booking.vehicleType
 

@@ -8,6 +8,7 @@ imports:
   MultimodalTravelMode: Domain.Types.Trip
   LocationAPIEntity: Domain.Types.Location
   LegInfo: Lib.JourneyModule.Types
+  TrackingStatus: Lib.JourneyModule.State.Types
   JourneyLeg: Domain.Types.JourneyLeg
   IntegratedBPPConfig: Domain.Types.IntegratedBPPConfig
   LatLong: Kernel.External.Maps.Types
@@ -37,6 +38,8 @@ imports:
   Value: Data.Aeson
   Gate: Domain.Types.Station
   JourneyLegFeedbackData: Domain.Types.JourneyLegsFeedbacks
+  FRFSTicketBookingStatus: Domain.Types.FRFSTicketBookingStatus
+  LegStatusElement: Lib.JourneyModule.Types
 
 module: MultimodalConfirm
 
@@ -54,7 +57,6 @@ types:
     startTime: Maybe UTCTime
     endTime: Maybe UTCTime
     merchantOperatingCityName : Maybe Text
-    crisSdkToken : Maybe Text
     paymentOrderShortId: Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder)
     result: Maybe Text # for backward compatibility hardcoding to Success in response
     derive: "Show"
@@ -63,6 +65,7 @@ types:
     legOrder: Int
     subLegOrder: Int
     status: JourneyLegStatus
+    legStatus: Maybe LegStatusElement
     vehiclePositions: "[VehiclePosition]"
     userPosition: Maybe LatLong
     mode: MultimodalTravelMode
@@ -137,6 +140,7 @@ types:
     journeyId: Id Journey
     paymentOrder: Maybe PaymentOrder
     paymentFareUpdate: Maybe [PaymentFareUpdate]
+    gatewayReferenceId: Maybe Text
 
   PaymentFareUpdate:
     journeyLegOrder: Int
@@ -183,6 +187,12 @@ types:
 
   LegServiceTierOptionsResp:
     options: "[AvailableRoutesByTier]"
+
+  MultimodalCancelStatusResp:
+    cancellationCharges : Maybe HighPrecMoney
+    refundAmount : Maybe HighPrecMoney
+    isCancellable : Maybe Bool
+    bookingStatus : FRFSTicketBookingStatus
 
   TransportRoute:
     cd: Text
@@ -414,6 +424,16 @@ apis:
         type: JourneyStatusResp
 
   - POST:
+      endpoint: /multimodal/{journeyId}/order/{legOrder}/subleg/{subLegOrder}/setStatusV2/{trackingStatus}
+      params:
+        journeyId: Id Journey
+        legOrder: Int
+        subLegOrder: Int
+        trackingStatus: TrackingStatus
+      response:
+        type: JourneyStatusResp
+
+  - POST:
       endpoint: multimodal/{journeyId}/complete
       params:
         journeyId: Id Journey
@@ -429,3 +449,27 @@ apis:
         type: MultimodalTicketVerifyReq
       response:
         type: MultimodalTicketVerifyResp
+
+  - POST:
+      endpoint: /multimodal/{journeyId}/order/{legOrder}/softCancel
+      params:
+        journeyId: Id Journey
+        legOrder: Int
+      response:
+        type: Kernel.Types.APISuccess.APISuccess
+
+  - GET:
+      endpoint: /multimodal/{journeyId}/order/{legOrder}/cancel/status
+      params:
+        journeyId: Id Journey
+        legOrder: Int
+      response:
+        type: MultimodalCancelStatusResp
+
+  - POST:
+      endpoint: /multimodal/{journeyId}/order/{legOrder}/cancel
+      params:
+        journeyId: Id Journey
+        legOrder: Int
+      response:
+        type: Kernel.Types.APISuccess.APISuccess

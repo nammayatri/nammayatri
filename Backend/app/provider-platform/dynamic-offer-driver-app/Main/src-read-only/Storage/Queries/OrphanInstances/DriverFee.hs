@@ -65,6 +65,7 @@ instance FromTType' Beam.DriverFee Domain.Types.DriverFee.DriverFee where
             status = status,
             totalEarnings = Kernel.Types.Common.mkAmountWithDefault totalEarningsAmount totalEarnings,
             updatedAt = updatedAt,
+            validDays = validDays,
             vehicleCategory = vehicleCategory',
             vehicleNumber = vehicleNumber
           }
@@ -118,6 +119,7 @@ instance ToTType' Beam.DriverFee Domain.Types.DriverFee.DriverFee where
         Beam.totalEarnings = Kernel.Prelude.roundToIntegral totalEarnings,
         Beam.totalEarningsAmount = Kernel.Prelude.Just totalEarnings,
         Beam.updatedAt = updatedAt,
+        Beam.validDays = validDays,
         Beam.vehicleCategory = Kernel.Prelude.Just vehicleCategory,
         Beam.vehicleNumber = vehicleNumber
       }

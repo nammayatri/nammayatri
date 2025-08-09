@@ -74,8 +74,8 @@ rideEnd rideId lat lon merchantId driverId mbNextRideId rideInfo = do
   logDebug $ "lts rideEnd: " <> show rideEndRes
   return rideEndRes
 
-nearBy :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig], HasShortDurationRetryCfg r c) => Double -> Double -> Maybe Bool -> Maybe [VehicleVariant] -> Int -> Id DM.Merchant -> Maybe Text -> m [DriverLocation]
-nearBy lat lon onRide vt radius merchantId groupId = do
+nearBy :: (CoreMetrics m, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LocationTrackingeServiceConfig], HasShortDurationRetryCfg r c) => Double -> Double -> Maybe Bool -> Maybe [VehicleVariant] -> Int -> Id DM.Merchant -> Maybe Text -> Maybe Text -> m [DriverLocation]
+nearBy lat lon onRide vt radius merchantId groupId groupId2 = do
   ltsCfg <- asks (.ltsCfg)
   let url = ltsCfg.url
   let req =
@@ -86,7 +86,8 @@ nearBy lat lon onRide vt radius merchantId groupId = do
             radius,
             vehicleType = vt,
             merchantId = merchantId,
-            groupId
+            groupId,
+            groupId2
           }
   nearByRes <-
     withShortRetry $

@@ -29,7 +29,6 @@ import Domain.Types.MerchantOperatingCity
 import Domain.Types.RouteStopTimeTable
 import qualified EulerHS.Language as L
 import EulerHS.Types (OptionEntity)
-import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude as P
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
@@ -51,7 +50,9 @@ castVehicleType vehicleType = do
 
 findByRouteCodeAndStopCode ::
   ( MonadFlow m,
-    ServiceFlow m r,
+    CacheFlow m r,
+    EncFlow m r,
+    EsqDBFlow m r,
     HasShortDurationRetryCfg r c
   ) =>
   IntegratedBPPConfig ->
@@ -64,16 +65,17 @@ findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCode
   vehicleType <- castVehicleType integratedBPPConfig.vehicleCategory
   let routeCodes = P.map (modifyCodesToGTFS integratedBPPConfig) routeCodes'
       stopCode = modifyCodesToGTFS integratedBPPConfig stopCode'
+  routeStopTimeTable <- Hedis.safeGet (routeTimeTableKey stopCode)
   allTrips <-
-    Hedis.safeGet (routeTimeTableKey stopCode) >>= \case
-      Just a -> do
+    case (routeStopTimeTable, vehicleType == BecknV2.FRFS.Enums.SUBWAY) of
+      (Just a, False) -> do
         logDebug $ "Fetched route stop time table cached: " <> show a <> "for routeCodes:" <> show routeCodes <> " and stopCode:" <> show stopCode
         pure a
-      Nothing -> do
+      _ -> do
         stopCodes <-
           P.map (modifyCodesToGTFS integratedBPPConfig)
             <$> case vehicleType of
-              BecknV2.FRFS.Enums.METRO -> do
+              a | a `P.elem` [BecknV2.FRFS.Enums.METRO, BecknV2.FRFS.Enums.SUBWAY] -> do
                 OTPRestCommon.getChildrenStationsCodes integratedBPPConfig stopCode'
                   >>= \case
                     [] -> pure [stopCode']

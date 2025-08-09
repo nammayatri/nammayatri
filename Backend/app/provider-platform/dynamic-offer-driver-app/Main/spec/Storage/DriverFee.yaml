@@ -16,7 +16,7 @@ DriverFee:
       derive': "Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord"
 
     FeeType:
-      enum: "MANDATE_REGISTRATION, RECURRING_INVOICE, RECURRING_EXECUTION_INVOICE, PAYOUT_REGISTRATION, ONE_TIME_SECURITY_DEPOSIT"
+      enum: "MANDATE_REGISTRATION, RECURRING_INVOICE, RECURRING_EXECUTION_INVOICE, PAYOUT_REGISTRATION, ONE_TIME_SECURITY_DEPOSIT, PREPAID_RECHARGE"
       derive': "Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord, Enum"
 
     RefundedBy:
@@ -89,6 +89,7 @@ DriverFee:
     siblingFeeId : Maybe (Id DriverFee)
     hasSibling : Maybe Bool
     splitOfDriverFeeId : Maybe (Id DriverFee)
+    validDays: Maybe Int
 
   derives: "Generic, Show, Eq"
 
@@ -169,10 +170,12 @@ DriverFee:
     merchantId: "'96dd7f78-787e-4a0b-8675-e9e6fe93bb8f'"
 
   queries:
-    updateOfferId:
-      kvFunction: updateOneWithKV
-      params: [offerId, updatedAt]
-      where: id
+    findAllFeeByTypeServiceStatusAndDriver:
+      kvFunction: findAllWithKV
+      where:
+        and:
+          - eq: [serviceName, driverId]
+          - in: [feeType, status]
 
     updateOfferAndPlanDetails:
       kvFunction: updateOneWithKV

@@ -977,6 +977,7 @@ postMerchantConfigFarePolicyUpdate _ _ reqFarePolicyId req = do
             tollCharges = req.tollCharges <|> tollCharges,
             petCharges = req.petCharges <|> petCharges,
             priorityCharges = req.priorityCharges <|> priorityCharges,
+            pickupBufferInSecsForNightShiftCal = req.pickupBufferInSecsForNightShiftCal <|> pickupBufferInSecsForNightShiftCal,
             farePolicyDetails = fPDetails,
             congestionChargeMultiplier = FarePolicy.mkCongestionChargeMultiplier <$> req.congestionChargeMultiplier <|> congestionChargeMultiplier,
             description = req.description <|> description,
@@ -1103,6 +1104,7 @@ data FarePolicyCSVRow = FarePolicyCSVRow
     perDayMaxAllowanceInMins :: Text,
     defaultWaitTimeAtDestination :: Text,
     enabled :: Text,
+    pickupBufferInSecsForNightShiftCal :: Text,
     disableRecompute :: Text,
     stateEntryPermitCharges :: Text,
     conditionalCharges :: Text
@@ -1191,6 +1193,7 @@ instance FromNamedRecord FarePolicyCSVRow where
       <*> r .: "per_day_max_allowance_in_mins"
       <*> r .: "default_wait_time_at_destination"
       <*> r .: "enabled"
+      <*> r .: "pickup_buffer_in_secs_for_night_shift_cal"
       <*> r .: "disable_recompute"
       <*> r .: "state_entry_permit_charges"
       <*> r .: "additional_charges"
@@ -1396,6 +1399,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
       let tollCharges :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.tollCharges "Toll Charge"
       let petCharges :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.petCharges "Pet Charges"
       let priorityCharges :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.priorityCharges "Priority Charges"
+      let pickupBufferInSecsForNightShiftCal :: (Maybe Seconds) = readMaybeCSVField idx row.pickupBufferInSecsForNightShiftCal "Pickup Buffer In Secs For Night Shift Cal"
       let tipOptions :: (Maybe [Int]) = readMaybeCSVField idx row.tipOptions "Tip Options"
       let perMinuteRideExtraTimeCharge :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.perMinuteRideExtraTimeCharge "Per Minute Ride Extra Time Charge"
       let govtCharges :: (Maybe Double) = readMaybeCSVField idx row.govtCharges "Govt Charges"
@@ -2578,6 +2582,7 @@ postMerchantConfigClearCacheSubscription merchantShortId opCity req = do
     castServiceName = \case
       Common.YATRI_RENTAL -> Plan.YATRI_RENTAL
       Common.YATRI_SUBSCRIPTION -> Plan.YATRI_SUBSCRIPTION
+      Common.PREPAID_SUBSCRIPTION -> Plan.PREPAID_SUBSCRIPTION
       Common.DASHCAM_RENTAL_CAUTIO -> Plan.DASHCAM_RENTAL Plan.CAUTIO
 
 postMerchantConfigUpsertPlanAndConfigSubscription :: ShortId DM.Merchant -> Context.City -> Common.UpsertPlanAndConfigReq -> Flow Common.UpsertPlanAndConfigResp

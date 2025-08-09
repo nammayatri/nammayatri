@@ -54,6 +54,7 @@ updateByPrimaryKey (Domain.Types.FRFSSearch.FRFSSearch {..}) = do
     [ Se.Set Beam.fromStationId fromStationCode,
       Se.Set Beam.integratedBppConfigId (Kernel.Types.Id.getId integratedBppConfigId),
       Se.Set Beam.isOnSearchReceived isOnSearchReceived,
+      Se.Set Beam.journeyLegId (Kernel.Types.Id.getId <$> journeyLegId),
       Se.Set Beam.agency (journeyLegInfo >>= (.agency)),
       Se.Set Beam.convenienceCost (Kernel.Prelude.fmap (.convenienceCost) journeyLegInfo),
       Se.Set Beam.isDeleted (journeyLegInfo >>= (.isDeleted)),

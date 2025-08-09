@@ -26,6 +26,7 @@ data TicketBooking = TicketBooking
     createdAt :: Kernel.Prelude.UTCTime,
     id :: Kernel.Types.Id.Id Domain.Types.TicketBooking.TicketBooking,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
+    peopleTicketQuantity :: Kernel.Prelude.Maybe [Domain.Types.TicketBooking.PeopleTicketQuantity],
     personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     shortId :: Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking,
     status :: Domain.Types.Extra.TicketBooking.BookingStatus,
@@ -36,3 +37,5 @@ data TicketBooking = TicketBooking
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant)
   }
   deriving (Generic, Show)
+
+data PeopleTicketQuantity = PeopleTicketQuantity {bookedSeats :: Kernel.Prelude.Int, name :: Kernel.Prelude.Text} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

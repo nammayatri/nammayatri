@@ -54,8 +54,10 @@ library
       API.Types.ProviderPlatform.Fleet
       API.Types.ProviderPlatform.Fleet.Driver
       API.Types.ProviderPlatform.Fleet.Endpoints.Driver
+      API.Types.ProviderPlatform.Fleet.Endpoints.LiveMap
       API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding
       API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2
+      API.Types.ProviderPlatform.Fleet.LiveMap
       API.Types.ProviderPlatform.Fleet.Onboarding
       API.Types.ProviderPlatform.Fleet.RegistrationV2
       API.Types.ProviderPlatform.Management

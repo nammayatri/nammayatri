@@ -6,12 +6,16 @@ import qualified "dashboard-helper-api" API.Types.RiderPlatform.Management.Ride 
 import qualified Beckn.ACL.IGM.Issue as ACL
 import qualified Beckn.ACL.IGM.IssueStatus as ACL
 import Beckn.ACL.IGM.Utils
+import qualified BecknV2.FRFS.Enums
+import qualified BecknV2.OnDemand.Enums as OnDemandSpec
 import qualified Data.Set as Set
 import qualified Domain.Action.Dashboard.Ride as DRide
 import Domain.Action.UI.IGM
 import qualified Domain.Action.UI.Sos as Sos
 import Domain.Types.Booking
 import Domain.Types.FRFSTicketBooking
+import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBooking
+import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
@@ -45,12 +49,14 @@ import Kernel.Utils.Common
 import Servant hiding (throwError)
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import qualified SharedLogic.CallIGMBPP as CallBPP
+import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import Storage.Beam.IssueManagement ()
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
+import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.Person as CQPerson
 import qualified Storage.Queries.Booking as QB
 import qualified Storage.Queries.BookingExtra as QBE
@@ -105,8 +111,68 @@ customerIssueHandle =
       findByMerchantId = castMerchantById,
       mbSendUnattendedTicketAlert = Just Sos.sendUnattendedSosTicketAlert,
       findRideByRideShortId = castRideByRideShortId,
-      findByMobileNumberAndMerchantId = castPersonByMobileNumberAndMerchant
+      findByMobileNumberAndMerchantId = castPersonByMobileNumberAndMerchant,
+      mbFindFRFSTicketBookingById = Just castFindFRFSTicketBookingById,
+      mbFindStationByIdWithContext = Just castFindStationByIdWithContext
     }
+
+castFindFRFSTicketBookingById :: Id Common.FRFSTicketBooking -> Flow (Maybe Common.FRFSTicketBooking)
+castFindFRFSTicketBookingById ticketBookingId = do
+  frfsTicketBooking <- runInReplica $ QFTB.findById (cast ticketBookingId)
+  return $ fmap castFRFSTicketBooking frfsTicketBooking
+  where
+    castFRFSTicketBooking booking =
+      Common.FRFSTicketBooking
+        { id = cast booking.id,
+          merchantOperatingCityId = cast booking.merchantOperatingCityId,
+          merchantId = cast booking.merchantId,
+          riderId = cast booking.riderId,
+          fromStationCode = booking.fromStationCode,
+          toStationCode = booking.toStationCode,
+          vehicleType = castVehicleType booking.vehicleType,
+          price = booking.price,
+          quantity = booking.quantity,
+          status = castFRFSStatus booking.status,
+          createdAt = booking.createdAt,
+          updatedAt = booking.updatedAt,
+          stationsJson = booking.stationsJson
+        }
+
+    castVehicleType :: BecknV2.FRFS.Enums.VehicleCategory -> Common.VehicleCategory
+    castVehicleType = \case
+      BecknV2.FRFS.Enums.METRO -> Common.METRO
+      BecknV2.FRFS.Enums.BUS -> Common.BUS
+      _ -> Common.METRO
+
+    castFRFSStatus :: DFRFSTicketBooking.FRFSTicketBookingStatus -> Common.FRFSTicketBookingStatus
+    castFRFSStatus = \case
+      DFRFSTicketBooking.NEW -> Common.FRFS_NEW
+      DFRFSTicketBooking.CONFIRMED -> Common.FRFS_CONFIRMED
+      DFRFSTicketBooking.CANCELLED -> Common.FRFS_CANCELLED
+      _ -> Common.FRFS_NEW
+
+castFindStationByIdWithContext :: Id Common.MerchantOperatingCity -> Common.VehicleCategory -> Text -> Flow (Maybe Common.Station)
+castFindStationByIdWithContext merchantOpCityId vehicleType stationId = do
+  integratedBPPConfig <- SIBC.findIntegratedBPPConfig Nothing (cast merchantOpCityId) (castVehicleCategoryToOnDemand vehicleType) DIBC.APPLICATION
+  mbStation <- OTPRest.getStationByGtfsIdAndStopCode stationId integratedBPPConfig
+
+  case mbStation of
+    Just station ->
+      return $
+        Just $
+          Common.Station
+            { code = station.code,
+              name = station.name,
+              lat = station.lat,
+              lon = station.lon
+            }
+    Nothing -> return Nothing
+  where
+    castVehicleCategoryToOnDemand :: Common.VehicleCategory -> OnDemandSpec.VehicleCategory
+    castVehicleCategoryToOnDemand = \case
+      Common.METRO -> OnDemandSpec.METRO
+      Common.BUS -> OnDemandSpec.BUS
+      Common.SUBWAY -> OnDemandSpec.SUBWAY
 
 castBookingById :: Id Common.Booking -> Flow (Maybe Common.Booking)
 castBookingById bookingId = do
@@ -367,18 +433,23 @@ createIssueReport (personId, merchantId) mbLanguage req = withFlowHandlerAPI $ d
     throwError $ InvalidRequest "Only one issue can be raised at a time."
 
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+
   mbIGMReq <- case (req.rideId, req.ticketBookingId) of
     (Just rideId, _) -> buildOnDemandIGMIssueReq rideId
     (_, Just ticketBookingId) -> buildFRFSIGMIssueReq ticketBookingId
     _ -> pure Nothing
 
-  becknIssueId <- case mbIGMReq of
-    Just (OnDemandIGMIssueReq onDemandReq) ->
-      if not (onDemandReq.isValueAddNP)
-        then processIssueRequest (OnDemandIGMIssueReq onDemandReq) person req
-        else return Nothing
-    Just (FRFSIGMIssueReq frfsReq) -> processIssueRequest (FRFSIGMIssueReq frfsReq) person req
-    Nothing -> return Nothing
+  becknIssueId <-
+    if riderConfig.enableIGMIssueFlow
+      then case mbIGMReq of
+        Just (OnDemandIGMIssueReq onDemandReq) ->
+          if not (onDemandReq.isValueAddNP)
+            then processIssueRequest (OnDemandIGMIssueReq onDemandReq) person req
+            else return Nothing
+        Just (FRFSIGMIssueReq frfsReq) -> processIssueRequest (FRFSIGMIssueReq frfsReq) person req
+        Nothing -> return Nothing
+      else return Nothing
 
   Common.createIssueReport (cast personId, cast merchantId) mbLanguage req customerIssueHandle CUSTOMER becknIssueId
   where

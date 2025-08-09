@@ -36,6 +36,8 @@ import Kernel.Utils.Time ()
 import qualified Producer.Flow as PF
 import System.Environment (lookupEnv)
 
+-- import qualified EulerHS.Language as L
+
 getDhallName :: ProducerType -> String
 getDhallName = \case
   Driver -> "producer"
@@ -67,6 +69,10 @@ startProducerWithEnv flowRt appCfg appEnv producerType = do
         >> L.setOption Tables KUC.defaultTableData
         >> L.setOption KVCM.KVMetricCfg appEnv.coreMetrics.kvRedisMetricsContainer
     )
-  let producers = map (\_ -> PF.runProducer) [1 .. appCfg.producersPerPod]
+
+  let producersWithCounter = concatMap (\_ -> map (\streamIndex -> PF.runProducer streamIndex) [1 .. 16]) [1 .. appCfg.producersPerPod]
+  let reviverWithCounter = map (\streamIndex -> PF.runReviver producerType streamIndex) [1 .. 16]
+  putStrLn $ ("StreamName is now: " :: String)
   runFlowR flowRt appEnv $ do
-    loopGracefully $ bool producers ([PF.runReviver producerType] <> producers) appEnv.runReviver
+    loopGracefully $
+      bool producersWithCounter (reviverWithCounter ++ producersWithCounter) appEnv.runReviver

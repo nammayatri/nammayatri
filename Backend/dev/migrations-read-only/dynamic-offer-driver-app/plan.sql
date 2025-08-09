@@ -65,3 +65,17 @@ ALTER TABLE atlas_driver_offer_bpp.plan ADD COLUMN allow_strike_off boolean ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.plan ADD COLUMN product_ownership_amount double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.plan ADD COLUMN payment_type text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.plan ADD COLUMN billing_type text ;
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.plan ADD COLUMN validity_in_days integer ;

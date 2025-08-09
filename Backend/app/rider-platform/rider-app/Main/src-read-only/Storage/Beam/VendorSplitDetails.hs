@@ -16,6 +16,7 @@ data VendorSplitDetailsT f = VendorSplitDetailsT
   { id :: B.C f Data.Text.Text,
     includeInSplit :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     integratedBPPConfigId :: B.C f Data.Text.Text,
+    splitShare :: B.C f (Kernel.Prelude.Maybe Domain.Types.VendorSplitDetails.SplitShare),
     splitType :: B.C f Domain.Types.VendorSplitDetails.SplitType,
     vendorId :: B.C f Data.Text.Text,
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),

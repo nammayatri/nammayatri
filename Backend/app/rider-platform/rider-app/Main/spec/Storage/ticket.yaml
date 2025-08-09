@@ -54,6 +54,16 @@ TicketPlace:
     customTabs: "Maybe [CustomTab]"
     rules: "Maybe [Rule]"
     recommend: Bool
+    metadata: "Maybe [Metadata]"
+    pricingOnwards: Maybe Int
+    isRecurring: Bool
+    platformFee: Maybe Fee
+    platformFeeVendor: Maybe Text
+    faqs: "Maybe [Faq]"
+    startDate: Maybe Day
+    endDate: Maybe Day
+    venue: Maybe Text
+    isClosed: Bool
 
   types:
     PlaceType:
@@ -64,27 +74,54 @@ TicketPlace:
       header: Text
       body: Text
       derive: "Eq,Ord"
+    Metadata:
+      key: Text
+      value: Text
+      icon: Maybe Text
+      derive: "Eq,Ord"
+    Fee:
+      enum: "Percentage Int,Flat Double"
+    Faq:
+      question: Text
+      answer: Text
+      derive: "Eq,Ord"
 
   beamType:
     priority: Maybe Int
     customTabs: "Maybe Value"
     rules: "Maybe Value"
     recommend: Maybe Bool
+    metadata: "Maybe Value"
+    faqs: "Maybe Value"
+    isRecurring: Maybe Bool
+    isClosed: Maybe Bool
 
   sqlType:
     customTabs: json
+    metadata: json
     rules: json
+    faqs: json
 
   fromTType:
     priority: Kernel.Prelude.fromMaybe 0|I
     customTabs: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< customTabs|E
     rules: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< rules|E
     recommend: fromMaybe False recommend|E
+    metadata: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< metadata|E
+    faqs: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< faqs|E
+    isRecurring: Kernel.Prelude.fromMaybe True|I
+    isClosed: Kernel.Prelude.fromMaybe False|I
+
   toTType:
     priority: Kernel.Prelude.Just|I
     customTabs: Data.Aeson.toJSON <$> customTabs|E
     rules: Data.Aeson.toJSON <$> rules|E
     recommend: Kernel.Prelude.Just|I
+    metadata: Data.Aeson.toJSON <$> metadata|E
+    faqs: Data.Aeson.toJSON <$> faqs|E
+    isRecurring: Kernel.Prelude.Just|I
+    isClosed: Kernel.Prelude.Just isClosed|E
+
   default:
     termsAndConditions: "'{}'"
     placeType: "'Other'"
@@ -92,6 +129,8 @@ TicketPlace:
     status: "'Active'"
     allowSameDayBooking: "true"
     priority: "0"
+    isRecurring: "true"
+    isClosed: 'false'
 
   queries:
     getTicketPlaces:
@@ -131,6 +170,7 @@ TicketService:
     placesId: Text
     service: Text
     shortDesc: Maybe Text
+    serviceDetails: "Maybe [Text]"
     operationalDays: "[Text]"
     operationalDate: "Maybe OperationalDate"
     maxVerification: Int
@@ -149,6 +189,7 @@ TicketService:
       derive: "Eq,Ord"
 
   beamType:
+    serviceDetails: "Maybe Value"
     rules: "Maybe Value"
     isClosed: Maybe Bool
 
@@ -159,14 +200,17 @@ TicketService:
 
   sqlType:
     operationalDates: text[]
+    serviceDetails: json
     rules: json
   fromTType:
     operationalDate: ((,) <$> operationalStartDate <*> operationalEndDate) <&> \(operationalStartDate', operationalEndDate') -> Domain.Types.TicketService.OperationalDate operationalEndDate' operationalStartDate'|E
+    serviceDetails: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< serviceDetails|E
     rules: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< rules|E
     isClosed: fromMaybe False isClosed|E
   toTType:
     operationalStartDate: operationalDate <&> (.startDate)|E
     operationalEndDate: operationalDate <&> (.eneDate)|E
+    serviceDetails: Data.Aeson.toJSON <$> serviceDetails|E
     rules: Data.Aeson.toJSON <$> rules|E
     isClosed: Kernel.Prelude.Just isClosed|E
   default:
@@ -285,6 +329,7 @@ ServiceCategory:
     id: Id ServiceCategory
     name: Text
     description: Text
+    inclusionPoints: "Maybe [Text]"
     availableSeats: Maybe Int
     allowedSeats: Maybe Int
     peopleCategory: "[Id ServicePeopleCategory]"
@@ -295,15 +340,19 @@ ServiceCategory:
   beamFields:
     remainingActions: {}
   sqlType:
+    inclusionPoints: json
     rules: json
   beamType:
+    inclusionPoints: "Maybe Value"
     rules: "Maybe Value"
     isClosed: Maybe Bool
   fromTType:
+    inclusionPoints: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< inclusionPoints|E
     rules: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< rules|E
     isClosed: fromMaybe False isClosed|E
     remainingActions: Nothing|E
   toTType:
+    inclusionPoints: Data.Aeson.toJSON <$> inclusionPoints|E
     rules: Data.Aeson.toJSON <$> rules|E
     isClosed: Kernel.Prelude.Just isClosed|E
   queries:
@@ -489,9 +538,16 @@ TicketBooking:
     cancelledSeats: Maybe Int
     vendorSplitDetails: "Maybe [VendorSplitDetails]"
     blockExpirationTime: Maybe Double
+    peopleTicketQuantity: "Maybe [PeopleTicketQuantity]"
+
+  types:
+    PeopleTicketQuantity:
+      name: Text
+      bookedSeats: Int
 
   beamType:
     vendorSplitDetails: Maybe Value
+    peopleTicketQuantity: Maybe Value
   beamFields:
     amount:
       currency: Maybe Currency
@@ -501,14 +557,18 @@ TicketBooking:
     amount: Kernel.Types.Common.mkPrice currency amount|E
     vendorSplitDetails: |-
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< vendorSplitDetails|E
+    peopleTicketQuantity: |-
+      (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< peopleTicketQuantity|E
 
   toTType:
     amount: (.amount)|I
     currency: (Kernel.Prelude.Just . (.currency))|I
     vendorSplitDetails: Data.Aeson.toJSON <$> vendorSplitDetails|E
+    peopleTicketQuantity: Data.Aeson.toJSON <$> peopleTicketQuantity|E
 
   sqlType:
     vendorSplitDetails: json
+    peopleTicketQuantity: json
 
   constraints:
     id: PrimaryKey
@@ -529,7 +589,7 @@ TicketBooking:
     findByShortId:
       kvFunction: findOneWithKV
       where: shortId
-    getAllBookingsByPersonId:
+    getAllBookingsByPersonIdAndStatus:
       kvFunction: findAllWithOptionsKV
       where:
         and: [personId, merchantOperatingCityId, status]
@@ -541,6 +601,13 @@ TicketBooking:
       kvFunction: updateOneWithKV
       params: [status, cancelledSeats, updatedAt]
       where: id
+    getAllBookingsByPersonId:
+      kvFunction: findAllWithOptionsKV
+      where:
+        and: [personId, merchantOperatingCityId]
+      orderBy:
+        field: createdAt
+        order: desc
 
   extraOperations:
   - EXTRA_QUERY_FILE

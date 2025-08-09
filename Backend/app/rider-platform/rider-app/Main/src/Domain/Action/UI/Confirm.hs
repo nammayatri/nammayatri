@@ -22,6 +22,7 @@ import qualified Data.HashMap.Strict as HM
 import qualified Data.Map as M
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
+import qualified Domain.Types.BookingStatus as DRB
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Quote as DQuote
 import qualified Kernel.External.Payment.Interface.Types as Payment

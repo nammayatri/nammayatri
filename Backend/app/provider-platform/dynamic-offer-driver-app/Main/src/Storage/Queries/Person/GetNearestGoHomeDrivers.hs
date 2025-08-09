@@ -44,6 +44,8 @@ data NearestGoHomeDriversReq = NearestGoHomeDriversReq
     homeRadius :: Meters,
     merchantId :: Id Merchant,
     driverPositionInfoExpiry :: Maybe Seconds,
+    prepaidSubscriptionThreshold :: Maybe HighPrecMoney,
+    rideFare :: Maybe HighPrecMoney,
     isRental :: Bool,
     isInterCity :: Bool,
     onlinePayment :: Bool,
@@ -89,7 +91,7 @@ getNearestGoHomeDrivers NearestGoHomeDriversReq {..} = do
   driverLocs <- Int.getDriverLocsWithCond merchantId driverPositionInfoExpiry fromLocation nearestRadius (Just allowedVehicleVariant)
   specialLocWarriorDriverInfos <- Int.getSpecialLocWarriorDriverInfoWithCond (driverLocs <&> (.driverId)) True False isRental isInterCity
   driverHomeLocs <- Int.getDriverGoHomeReqNearby (driverLocs <&> (.driverId))
-  driverInfoWithoutSpecialLocWarrior <- Int.getDriverInfosWithCond (driverHomeLocs <&> (.driverId)) True False isRental isInterCity
+  driverInfoWithoutSpecialLocWarrior <- Int.getDriverInfosWithCond (driverHomeLocs <&> (.driverId)) True False isRental isInterCity prepaidSubscriptionThreshold rideFare
   let driverInfos = specialLocWarriorDriverInfos <> driverInfoWithoutSpecialLocWarrior
   logDebug $ "MetroWarriorDebugging getNearestGoHomeDrivers" <> show (DIAPI.convertToDriverInfoAPIEntity <$> specialLocWarriorDriverInfos)
   vehicle <- Int.getVehicles driverInfos

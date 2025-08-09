@@ -3586,3 +3586,75 @@ UPDATE atlas_driver_offer_bpp.fleet_owner_document_verification_config set docum
 -- ]'
 -- where document_type = 'VehicleRegistrationCertificate' and vehicle_category = 'CAR' and merchant_operating_city_id in (select id from atlas_driver_offer_bpp.merchant_operating_city where
 -- merchant_short_id = 'MSIL_PARTNER' and city = 'Delhi');
+
+
+-- Subscriptions --
+
+-- Master --
+INSERT INTO atlas_driver_offer_bpp.plan (id, merchant_id, payment_mode, frequency, plan_base_amount, name, description, max_amount, registration_amount, is_offer_applicable, max_credit_limit, free_ride_count, plan_type, cgst_percentage, max_mandate_amount, merchant_op_city_id, sgst_percentage, billing_type, validity_in_days, service_name, vehicle_category, allow_strike_off)
+SELECT 'a35ffc7c-qe0d-4dcc-83a8-e36a5a29cc1c', m.merchant_id, 'MANUAL', 'FLEXIBLE', 'RECHARGE_5000.0', 'STANDARD' , 'Enjoy rides worth 5K in 500!', 0, 500, true, 0, 0, 'SUBSCRIPTION', 0.09, 0.0, m.id, 0.09, 'PREPAID', 365, 'PREPAID_SUBSCRIPTION', 'CAR', true FROM atlas_driver_offer_bpp.merchant_operating_city AS m where m.city = 'Delhi' and m.merchant_short_id = 'NAMMA_YATRI_PARTNER';
+
+INSERT INTO atlas_driver_offer_bpp.plan (id, merchant_id, payment_mode, frequency, plan_base_amount, name, description, max_amount, registration_amount, is_offer_applicable, max_credit_limit, free_ride_count, plan_type, cgst_percentage, max_mandate_amount, merchant_op_city_id, sgst_percentage, billing_type, validity_in_days, service_name, vehicle_category, allow_strike_off)
+SELECT '28911beb-38ba-456d-8cca-4d019461d2b1', m.merchant_id, 'MANUAL', 'FLEXIBLE', 'RECHARGE_500.0', 'ECONOMY' , 'Enjoy rides worth 500 in 50!', 0, 50, true, 0, 0, 'SUBSCRIPTION', 0.09, 0.0, m.id, 0.09, 'PREPAID', 365, 'PREPAID_SUBSCRIPTION', 'CAR', true FROM atlas_driver_offer_bpp.merchant_operating_city AS m where m.city = 'Delhi' and m.merchant_short_id = 'NAMMA_YATRI_PARTNER';
+
+-- Prod --
+INSERT INTO atlas_driver_offer_bpp.plan (id, merchant_id, payment_mode, frequency, plan_base_amount, name, description, max_amount, registration_amount, is_offer_applicable, max_credit_limit, free_ride_count, plan_type, cgst_percentage, max_mandate_amount, merchant_op_city_id, sgst_percentage, billing_type, validity_in_days, service_name, vehicle_category, allow_strike_off)
+SELECT 'a35ffc7c-qe0d-4dcc-83a8-e36a5a29cc1c', m.merchant_id, 'MANUAL', 'FLEXIBLE', 'RECHARGE_5000.0', 'STANDARD' , 'Enjoy rides worth 5K in 500!', 0, 500, true, 0, 0, 'SUBSCRIPTION', 0.09, 0.0, m.id, 0.09, 'PREPAID', 365, 'PREPAID_SUBSCRIPTION', 'CAR', true FROM atlas_driver_offer_bpp.merchant_operating_city AS m where m.city = 'Delhi' and m.merchant_short_id = 'MSIL_PARTNER';
+
+INSERT INTO atlas_driver_offer_bpp.plan (id, merchant_id, payment_mode, frequency, plan_base_amount, name, description, max_amount, registration_amount, is_offer_applicable, max_credit_limit, free_ride_count, plan_type, cgst_percentage, max_mandate_amount, merchant_op_city_id, sgst_percentage, billing_type, validity_in_days, service_name, vehicle_category, allow_strike_off)
+SELECT '28911beb-38ba-456d-8cca-4d019461d2b1', m.merchant_id, 'MANUAL', 'FLEXIBLE', 'RECHARGE_500.0', 'ECONOMY' , 'Enjoy rides worth 500 in 50!', 0, 50, true, 0, 0, 'SUBSCRIPTION', 0.09, 0.0, m.id, 0.09, 'PREPAID', 365, 'PREPAID_SUBSCRIPTION', 'CAR', true FROM atlas_driver_offer_bpp.merchant_operating_city AS m where m.city = 'Delhi' and m.merchant_short_id = 'MSIL_PARTNER';
+
+-- Local --
+INSERT INTO atlas_driver_offer_bpp.plan (id, merchant_id, payment_mode, frequency, plan_base_amount, name, description, max_amount, registration_amount, is_offer_applicable, max_credit_limit, free_ride_count, plan_type, cgst_percentage, max_mandate_amount, merchant_op_city_id, sgst_percentage, billing_type, validity_in_days, service_name, vehicle_category, allow_strike_off)
+SELECT 'a35ffc7c-qe0d-4dcc-83a8-e36a5a29cc1c', m.merchant_id, 'MANUAL', 'FLEXIBLE', 'RECHARGE_5000.0', 'STANDARD' , 'Enjoy rides worth 5K in 500!', 0, 500, true, 0, 0, 'SUBSCRIPTION', 0.09, 0.0, m.id, 0.09, 'PREPAID', 365, 'PREPAID_SUBSCRIPTION', 'CAR', true FROM atlas_driver_offer_bpp.merchant_operating_city AS m where m.city = 'Kochi' and m.merchant_short_id = 'NAMMA_YATRI_PARTNER';
+
+INSERT INTO atlas_driver_offer_bpp.plan (id, merchant_id, payment_mode, frequency, plan_base_amount, name, description, max_amount, registration_amount, is_offer_applicable, max_credit_limit, free_ride_count, plan_type, cgst_percentage, max_mandate_amount, merchant_op_city_id, sgst_percentage, billing_type, validity_in_days, service_name, vehicle_category, allow_strike_off)
+SELECT '28911beb-38ba-456d-8cca-4d019461d2b1', m.merchant_id, 'MANUAL', 'FLEXIBLE', 'RECHARGE_500.0', 'ECONOMY' , 'Enjoy rides worth 500 in 50!', 0, 50, true, 0, 0, 'SUBSCRIPTION', 0.09, 0.0, m.id, 0.09, 'PREPAID', 365, 'PREPAID_SUBSCRIPTION', 'CAR', true FROM atlas_driver_offer_bpp.merchant_operating_city AS m where m.city = 'Kochi' and m.merchant_short_id = 'NAMMA_YATRI_PARTNER';
+
+-- Transporter Config --
+
+-- Prod --
+UPDATE atlas_driver_offer_bpp.transporter_config
+SET subscription = false, prepaid_subscription_threshold = 100.0
+WHERE merchant_operating_city_id in (select id from atlas_driver_offer_bpp.merchant_operating_city where merchant_short_id = 'MSIL_PARTNER' and city = 'Delhi');
+
+-- Master --
+UPDATE atlas_driver_offer_bpp.transporter_config
+SET subscription = false, prepaid_subscription_threshold = 100.0
+WHERE merchant_operating_city_id in (select id from atlas_driver_offer_bpp.merchant_operating_city where merchant_short_id = 'NAMMA_YATRI_PARTNER' and city = 'Delhi');
+
+-- Local --
+UPDATE atlas_driver_offer_bpp.transporter_config
+SET subscription = false, prepaid_subscription_threshold = 100.0
+WHERE merchant_operating_city_id in (select id from atlas_driver_offer_bpp.merchant_operating_city where merchant_short_id = 'NAMMA_YATRI_PARTNER' and city = 'Kochi');
+
+-- Fare Policy --
+
+-- Prod --
+UPDATE atlas_driver_offer_bpp.fare_policy set platform_fee_charges_by = 'None' where id in (
+select fare_policy_id from atlas_driver_offer_bpp.fare_product where merchant_operating_city_id in (select id from atlas_driver_offer_bpp.merchant_operating_city where city = 'Delhi' and merchant_short_id = 'MSIL_PARTNER'));
+
+-- Master --
+UPDATE atlas_driver_offer_bpp.fare_policy set platform_fee_charges_by = 'None' where id in (
+select fare_policy_id from atlas_driver_offer_bpp.fare_product where merchant_operating_city_id in (select id from atlas_driver_offer_bpp.merchant_operating_city where city = 'Delhi' and merchant_short_id = 'NAMMA_YATRI_PARTNER'));
+
+-- Local --
+UPDATE atlas_driver_offer_bpp.fare_policy set platform_fee_charges_by = 'None' where id in (
+select fare_policy_id from atlas_driver_offer_bpp.fare_product where merchant_operating_city_id in (select id from atlas_driver_offer_bpp.merchant_operating_city where city = 'Kochi' and merchant_short_id = 'NAMMA_YATRI_PARTNER'));
+
+-- Subscription Config --
+
+-- Local --
+insert into atlas_driver_offer_bpp.subscription_config (subscription_enabled_for_vehicle_categories, autopay_enabled, free_trial_rides_applicable, number_of_free_trial_rides, default_city_vehicle_category, show_manual_plans_in_ui, allow_manual_payment_links, payment_link_channel, payment_link_job_time, generic_job_reschedule_time, use_overlay_service, generic_batch_size_for_jobs, deep_link_expiry_time_in_minutes, max_retry_count, service_name,send_in_app_fcm_notifications , allow_due_addition, payment_service_name,send_deep_link, merchant_id, merchant_operating_city_id, allow_driver_fee_calc_schedule, is_triggered_at_end_ride , created_at, updated_at)
+select '{CAR}', false, false, 0, 'CAR', true, false, 'WHATSAPP', 21600, 60, true, 30, 15, 4, 'PREPAID_SUBSCRIPTION', true, false, 'Payment_Juspay' , false, m.merchant_id, m.id, false, true,now(), now()
+from atlas_driver_offer_bpp.merchant_operating_city as m where m.city = 'Kochi' and m.merchant_short_id = 'NAMMA_YATRI_PARTNER';
+
+-- Master --
+insert into atlas_driver_offer_bpp.subscription_config (subscription_enabled_for_vehicle_categories, autopay_enabled, free_trial_rides_applicable, number_of_free_trial_rides, default_city_vehicle_category, show_manual_plans_in_ui, allow_manual_payment_links, payment_link_channel, payment_link_job_time, generic_job_reschedule_time, use_overlay_service, generic_batch_size_for_jobs, deep_link_expiry_time_in_minutes, max_retry_count, service_name,send_in_app_fcm_notifications , allow_due_addition, payment_service_name,send_deep_link, merchant_id, merchant_operating_city_id, allow_driver_fee_calc_schedule, is_triggered_at_end_ride , created_at, updated_at)
+select '{CAR}', false, false, 0, 'CAR', true, false, 'WHATSAPP', 21600, 60, true, 30, 15, 4, 'PREPAID_SUBSCRIPTION', true, false, 'Payment_Juspay' , false, m.merchant_id, m.id, false, true,now(), now()
+from atlas_driver_offer_bpp.merchant_operating_city as m where m.city = 'Delhi' and m.merchant_short_id = 'NAMMA_YATRI_PARTNER';
+
+-- Prod --
+insert into atlas_driver_offer_bpp.subscription_config (subscription_enabled_for_vehicle_categories, autopay_enabled, free_trial_rides_applicable, number_of_free_trial_rides, default_city_vehicle_category, show_manual_plans_in_ui, allow_manual_payment_links, payment_link_channel, payment_link_job_time, generic_job_reschedule_time, use_overlay_service, generic_batch_size_for_jobs, deep_link_expiry_time_in_minutes, max_retry_count, service_name,send_in_app_fcm_notifications , allow_due_addition, payment_service_name,send_deep_link, merchant_id, merchant_operating_city_id, allow_driver_fee_calc_schedule, is_triggered_at_end_ride , created_at, updated_at)
+select '{CAR}', false, false, 0, 'CAR', true, false, 'WHATSAPP', 21600, 60, true, 30, 15, 4, 'PREPAID_SUBSCRIPTION', true, false, 'Payment_Juspay' , false, m.merchant_id, m.id, false, true,now(), now()
+from atlas_driver_offer_bpp.merchant_operating_city as m where m.city = 'Delhi' and m.merchant_short_id = 'MSIL_PARTNER';

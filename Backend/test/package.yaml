@@ -102,6 +102,7 @@ dependencies:
   - driver-offer-allocator
   - dashboard-helper-api
   - sequelize
+  - beckn-spec
 
 ghc-options:
   - -fwrite-ide-info
@@ -145,6 +146,7 @@ tests:
       - app
     dependencies:
       - beckn-test
+      - beckn-spec
     when:
     - condition: flag(Local)
       then:

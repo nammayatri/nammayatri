@@ -588,6 +588,7 @@ defaultWmbFlowConfig =
   , updatePollingRadiusToClosestBus : false
   , enableTicketBooking : false
   , disableTicketBookingInRoutes : []
+  , showBikeBannerTimerConfigInSeconds : 8640
   }
 
 -- Generic Polling Config can be used to fetch the polling config for any function as per functionName also can be used to remotely disable after a certain time :)

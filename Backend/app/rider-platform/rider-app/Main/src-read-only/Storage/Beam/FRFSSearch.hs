@@ -17,6 +17,7 @@ data FRFSSearchT f = FRFSSearchT
     id :: B.C f Kernel.Prelude.Text,
     integratedBppConfigId :: B.C f Kernel.Prelude.Text,
     isOnSearchReceived :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    journeyLegId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     agency :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     convenienceCost :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     isDeleted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

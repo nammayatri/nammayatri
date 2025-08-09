@@ -11,6 +11,7 @@ imports:
   BaseUrl: Kernel.Types.Common
   VehicleVariant: Domain.Types.VehicleVariant
   Booking: Domain.Types.Booking
+  RideStatus: Domain.Types.RideStatus
   Client: Domain.Types.Client
   ServiceTierType: Domain.Types.ServiceTierType
   Device: Kernel.Types.Version
@@ -27,10 +28,6 @@ Ride:
   tableName: ride
   derives: "Generic"
   types:
-    RideStatus:
-      enum: "UPCOMING,NEW,INPROGRESS,COMPLETED,CANCELLED"
-      derive: "HttpInstance"
-
     BPPRide: {}
 
     UnexpectedConditionStage:
@@ -46,6 +43,9 @@ Ride:
     PaymentStatus:
       enum: "Completed,NotInitiated,Initiated,Cancelled,Failed"
 
+  domainInstance:
+    - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <PaymentStatus>
+
   fields:
     id: Id Ride
     bppRideId: Id BPPRide
@@ -58,7 +58,7 @@ Ride:
     stops: "[Location]"
     toLocation: Maybe Location
     merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
-    status: RideStatus
+    status: RideStatus|NoRelation
     driverName: Text
     driverRating: Maybe Centesimal
     driverMobileNumber: Text

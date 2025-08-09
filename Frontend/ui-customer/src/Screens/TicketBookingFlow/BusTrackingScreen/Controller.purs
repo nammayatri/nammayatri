@@ -185,7 +185,7 @@ eval (UpdateStops (API.GetMetroStationResponse metroResponse)) state =
 eval (BookTicketButtonAction PrimaryButton.OnClick) state = do
   if checkBusRouteEnabled state
     then exit $ GoToSearchLocation state
-    else exit $ GoToHomeScreen state
+    else exit $ GoToBusTicketBookingScreen state
 
 eval BackPressed state =
     case state.props.fromScreen of
@@ -258,8 +258,8 @@ eval (UpdateTracking (API.BusTrackingRouteResp resp) count cachedBusOnboardingIn
               , minimumEtaDistance = calculateMinETADistance trackingData
               , isMinimumEtaDistanceAvailable = 
                   if (count == 0) then Mb.Nothing else Mb.Just $ Mb.isJust $ calculateMinETADistance trackingData
-              , showBikeTaxiPopUp = if (count == 0 ) then false
-                                    else if state.props.isBikeTaxiCrossClicked then false else true
+              , showBikeTaxiPopUp = (checkShownTimeConfig "") && 
+                                    (if (count == 0 ) then false else if state.props.isBikeTaxiCrossClicked then false else true)
               }
             }
           [ do
@@ -462,14 +462,16 @@ eval UpdateToExpandView state = continue state {props{expandStopsView = true}}
 eval (BookTicketOnNoBus PrimaryButton.OnClick) state = 
   if checkBusRouteEnabled state 
     then continue state {data{isNoBusAvailable = true}}
-    else exit $ GoToHomeScreen state
+    else exit $ GoToBusTicketBookingScreen state
 
 eval (PopUpModalAction PopUpModal.OnButton1Click) state = exit $ GoToSearchLocation state
 eval (PopUpModalAction PopUpModal.OnButton2Click) state = continue state {data{isNoBusAvailable = false}}
 
 eval BikeTaxiNudgeClicked state = exit $ GoToSearchLocationScreen state
 
-eval CloseBikeTaxiPopUp state = continue state{props{showBikeTaxiPopUp = false, isBikeTaxiCrossClicked = true}}
+eval CloseBikeTaxiPopUp state = do
+  void $ pure $ setValueToLocalStore LAST_SHOWN_BIKE_BANNER_IN_BUS $ EHC.getCurrentUTC ""
+  continue state{props{showBikeTaxiPopUp = false, isBikeTaxiCrossClicked = true}}
 
 eval _ state = update state
 
@@ -500,26 +502,8 @@ drawDriverRoute resp state = do
   void $ pure $ JB.removeAllMarkers ""
   EHC.liftFlow $ JB.drawRoute [ routeConfig {routeWidth = 10} ] (EHC.getNewIDWithTag "BusTrackingScreenMap")
 
-  -- Redundant code to draw route on map might be needed in future
-  -- case destinationStation, sourceStation, DS.null state.data.bookingId of
-  --   Mb.Just (API.FRFSStationAPI dest), Mb.Just(API.FRFSStationAPI src), false -> do
-  --     -- Not Showing route till just the stop location
-  --     -- locationResp <- EHC.liftFlow $ JB.isCoordOnPath ({points: DA.reverse route.points}) (Mb.fromMaybe 0.0 dest.lat) (Mb.fromMaybe 0.0 dest.lon) 1
-  --     -- pure $ if locationResp.isInPath then { points: locationResp.points } else route
-      
-  --     -- Breaking route drawing into 2 parts on top of each other
-  --     EHC.liftFlow $ JB.drawRoute [ routeConfig {routeWidth = 10, routeColor = "#919191"} ] (EHC.getNewIDWithTag "BusTrackingScreenMap")
-
-  --     sourceToDestinationRoute <- EHC.liftFlow $ JB.isCoordOnPath ({points: DA.reverse route.points}) (Mb.fromMaybe 0.0 dest.lat) (Mb.fromMaybe 0.0 dest.lon) 1
-  --     pickupToDestinationRoute <- EHC.liftFlow $ JB.isCoordOnPath ({points: DA.reverse sourceToDestinationRoute.points}) (Mb.fromMaybe 0.0 src.lat) (Mb.fromMaybe 0.0 src.lon) 1 
-  --     EHC.liftFlow $ JB.drawRoute [ routeConfig {routeWidth = 8, routeColor = Color.black900, locations = {points : pickupToDestinationRoute.points} }] (EHC.getNewIDWithTag "BusTrackingScreenMap")
-  --   _, _, _ ->
-  --     EHC.liftFlow $ JB.drawRoute [ routeConfig {routeWidth = 10} ] (EHC.getNewIDWithTag "BusTrackingScreenMap")
-  
   EHC.liftFlow $ JB.setMapPadding 0 0 0 300
-  void $ foldM processStop 0 state.data.stopsList
-  where
-  processStop index (API.FRFSStationAPI item) = do
+  void $ foldM (\index (API.FRFSStationAPI item) -> do
     let
       lat = Mb.fromMaybe 0.0 item.lat
       lon = Mb.fromMaybe 0.0 item.lon
@@ -527,17 +511,21 @@ drawDriverRoute resp state = do
       pointertype = getStopType item.code index state
       size = getStopMarkerSize pointertype state.data.rideType index
       markerZIndex = getZIndex pointertype
-    void $ EHC.liftFlow $ JB.showMarker JB.defaultMarkerConfig { markerId = item.code, pointerIcon = getStopMarker pointertype state.data.rideType index, primaryText = item.name, markerSize = DI.toNumber size, zIndex = markerZIndex } lat lon size 0.5 (if pointertype == NORMAL_STOP then 0.5 else 0.9) (EHC.getNewIDWithTag "BusTrackingScreenMap")
+      stopLatLongOnRoute = calculateNearestWaypoint (API.LatLong {lat: lat, lon: lon}) route.points 1000.0
+      snappedLat = stopLatLongOnRoute.vehicleLocationOnRoute ^._lat
+      snappedLon = stopLatLongOnRoute.vehicleLocationOnRoute ^._lon
+    void $ EHC.liftFlow $ JB.showMarker JB.defaultMarkerConfig { markerId = item.code, pointerIcon = getStopMarker pointertype state.data.rideType index, primaryText = item.name, markerSize = DI.toNumber size, zIndex = markerZIndex } snappedLat snappedLon size 0.5 (if pointertype == NORMAL_STOP then 0.5 else 0.9) (EHC.getNewIDWithTag "BusTrackingScreenMap")
     when (DA.elem pointertype [SOURCE_STOP, DESTINATION_STOP] && (state.data.rideType == Mb.Just ST.STOP || index /= 0)) $ EHC.liftFlow $ runEffectFn1 
       EHR.upsertMarkerLabel 
         { id: item.code <> "label"
         , title: item.name
         , actionImage: ""
         , actionCallBack: ""
-        , position: {lat : lat , lng : lon}
+        , position: {lat : snappedLat , lng : snappedLon}
         , markerImage : ""
         }
     pure (index + 1)
+  ) 0 state.data.stopsList
 
 getPoint :: API.GetDriverLocationResp -> CTA.Paths
 getPoint (API.GetDriverLocationResp resp) = { lat: resp ^. _lat, lng: resp ^. _lon }
@@ -661,3 +649,12 @@ checkBusRouteEnabled state =
     isTicketBookingDisabledInRoute = DA.elem state.data.busRouteCode wmbFlowConfig.disableTicketBookingInRoutes
     _ = spy "Ticket Booking Enabled" $ Tuple isTicketBookingEnabled $ not isTicketBookingDisabledInRoute
   in isTicketBookingEnabled && (not isTicketBookingDisabledInRoute)
+
+checkShownTimeConfig :: String -> Boolean
+checkShownTimeConfig _ =
+  let currentTimeStamp = EHC.getCurrentUTC ""
+      oldTimeStampWhenClosed = getValueToLocalStore LAST_SHOWN_BIKE_BANNER_IN_BUS
+      checkOldimeOlderThanCurrentTime = EHC.compareUTCDate currentTimeStamp oldTimeStampWhenClosed
+      wmbFlowConfig = RU.fetchWmbFlowConfig CT.FunctionCall
+  in 
+  (oldTimeStampWhenClosed == "__failed") || checkOldimeOlderThanCurrentTime > wmbFlowConfig.showBikeBannerTimerConfigInSeconds

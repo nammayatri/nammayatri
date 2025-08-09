@@ -390,6 +390,29 @@ updateServicesEnabled driverIds services = do
     ]
     [Se.Is BeamDI.driverId (Se.In driverIds)]
 
+updatePrepaidSubscriptionBalanceAndExpiry :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> HighPrecMoney -> Maybe UTCTime -> m ()
+updatePrepaidSubscriptionBalanceAndExpiry driverId amount expiryDate = do
+  driverInfo <- findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
+  let currentBalance = fromMaybe 0.0 driverInfo.prepaidSubscriptionBalance
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamDI.prepaidSubscriptionBalance (Just (currentBalance + amount)),
+      Se.Set BeamDI.planExpiryDate expiryDate,
+      Se.Set BeamDI.updatedAt now
+    ]
+    [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
+
+updatePrepaidSubscriptionBalance :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> HighPrecMoney -> m ()
+updatePrepaidSubscriptionBalance driverId amount = do
+  driverInfo <- findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
+  let currentBalance = fromMaybe 0.0 driverInfo.prepaidSubscriptionBalance
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamDI.prepaidSubscriptionBalance (Just (currentBalance + amount)),
+      Se.Set BeamDI.updatedAt now
+    ]
+    [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
+
 findByIdAndVerified ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Id Person.Driver ->
@@ -431,3 +454,26 @@ updateDlNumber dlNumber driverId = do
       Se.Set BeamDI.updatedAt now
     ]
     [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
+
+updateOnlineDurationRefreshedAt :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> UTCTime -> m ()
+updateOnlineDurationRefreshedAt (Id driverId) onlineDurationRefreshedAt = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set BeamDI.onlineDurationRefreshedAt $ Just onlineDurationRefreshedAt,
+      Se.Set BeamDI.updatedAt now
+    ]
+    [Se.Is BeamDI.driverId (Se.Eq driverId)]
+
+findAllByDriverIds :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Text] -> m [DriverInformation]
+findAllByDriverIds driverIds = do
+  dbConf <- getReplicaBeamConfig
+  res <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $
+          B.filter_'
+            (\driverInfo -> B.sqlBool_ $ driverInfo.driverId `B.in_` (B.val_ <$> driverIds))
+            $ B.all_ (SBC.driverInformation SBC.atlasDB)
+  case res of
+    Right driverInfoList -> catMaybes <$> mapM fromTType' driverInfoList
+    Left _ -> pure []

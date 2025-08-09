@@ -12,6 +12,7 @@ import Kernel.Utils.Common
 import Lib.Scheduler
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import SharedLogic.JobScheduler
+import qualified Storage.CachedQueries.Merchant.RiderConfig as QRCR
 import qualified Storage.Queries.RiderConfig as QRC
 
 updateMetroBusinessHour ::
@@ -77,7 +78,7 @@ updateMetroBusinessHour Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
                       { RC.qrTicketRestrictionEndTime = Just endTime,
                         RC.qrTicketRestrictionStartTime = Just startTime
                       }
-              QRC.updateByPrimaryKey updatedConfig
+              QRCR.updateByPrimaryKey updatedConfig
 
               -- Reset retry counter on success
               resetRetryCounter retryKeyPrefix merchantOpCityId.getId

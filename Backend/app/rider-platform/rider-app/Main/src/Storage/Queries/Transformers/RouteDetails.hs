@@ -3,101 +3,62 @@ module Storage.Queries.Transformers.RouteDetails where
 import Data.List (sortOn)
 import qualified Domain.Types.JourneyRouteDetails as JRD
 import qualified Domain.Types.RouteDetails as RD
-import Kernel.External.Maps.Google.MapsClient.Types
-import Kernel.External.MultiModal.Interface.Types
 import Kernel.Prelude
-import Lib.JourneyLeg.Types
+import Kernel.Types.Id
+import Kernel.Utils.Common
+import qualified Storage.Queries.JourneyRouteDetails as QJRD
+import qualified Storage.Queries.RouteDetails as QRD
 
-getTransformedRouteDetails :: [RD.RouteDetails] -> [MultiModalRouteDetails]
-getTransformedRouteDetails routeDetails = do
-  let sortedRouteDetails = sortOn (.subLegOrder) routeDetails
-  map transformRouteDetails sortedRouteDetails
+getJourneyRouteDetails :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Text -> Maybe Text -> m [RD.RouteDetails]
+getJourneyRouteDetails searchRequestId journeyLegId = do
+  routeDetails <-
+    case journeyLegId of
+      Just jlId -> do
+        QRD.findAllByJourneyLegId jlId
+          >>= \case
+            rd@(_ : _) -> return rd
+            -- TODO :: For Backward Compatibility, remove this once we have all the journeyLegId in the database
+            [] -> do
+              journeyRouteDetails <- QJRD.findAllBySearchId (Id searchRequestId)
+              return (transformJourneyRouteDetails <$> journeyRouteDetails)
+      -- TODO :: For Backward Compatibility, remove this once we have all the journeyLegId in the database
+      Nothing -> do
+        journeyRouteDetails <- QJRD.findAllBySearchId (Id searchRequestId)
+        return (transformJourneyRouteDetails <$> journeyRouteDetails)
+  return $ sortOn (.subLegOrder) routeDetails
   where
-    transformRouteDetails :: RD.RouteDetails -> MultiModalRouteDetails
-    transformRouteDetails rd =
-      MultiModalRouteDetails
-        { gtfsId = RD.routeGtfsId rd,
-          longName = RD.routeLongName rd,
-          shortName = RD.routeShortName rd,
-          color = RD.routeColorCode rd,
-          alternateShortNames = fromMaybe [] (RD.alternateShortNames rd),
-          fromStopDetails =
-            Just $
-              MultiModalStopDetails
-                { stopCode = RD.fromStopCode rd,
-                  name = RD.fromStopName rd,
-                  gtfsId = RD.fromStopGtfsId rd,
-                  platformCode = RD.fromStopPlatformCode rd
-                },
-          toStopDetails =
-            Just $
-              MultiModalStopDetails
-                { stopCode = RD.toStopCode rd,
-                  name = RD.toStopName rd,
-                  gtfsId = RD.toStopGtfsId rd,
-                  platformCode = RD.toStopPlatformCode rd
-                },
-          startLocation =
-            LocationV2
-              { latLng =
-                  LatLngV2
-                    { latitude = fromMaybe (error "Missing start location latitude") (RD.startLocationLat rd),
-                      longitude = fromMaybe (error "Missing start location latitude") (RD.startLocationLon rd)
-                    }
-              },
-          endLocation =
-            LocationV2
-              { latLng =
-                  LatLngV2
-                    { latitude = fromMaybe (error "Missing start location latitude") (RD.endLocationLat rd),
-                      longitude = fromMaybe (error "Missing start location latitude") (RD.endLocationLon rd)
-                    }
-              },
-          subLegOrder = fromMaybe 1 (RD.subLegOrder rd),
-          fromArrivalTime = RD.fromArrivalTime rd,
-          fromDepartureTime = RD.fromDepartureTime rd,
-          toArrivalTime = RD.toArrivalTime rd,
-          toDepartureTime = RD.toDepartureTime rd
-        }
-
-getTransformedJourneyRouteDetails :: [JRD.JourneyRouteDetails] -> [MultiModalJourneyRouteDetails]
-getTransformedJourneyRouteDetails routeDetails = do
-  let sortedRouteDetails = sortOn (\rd -> rd.subLegOrder) routeDetails
-  map transformJourneyRouteDetails sortedRouteDetails
-  where
-    transformJourneyRouteDetails :: JRD.JourneyRouteDetails -> MultiModalJourneyRouteDetails
-    transformJourneyRouteDetails rd =
-      MultiModalJourneyRouteDetails
-        { platformNumber = JRD.platformNumber rd,
-          lineColorCode = JRD.lineColorCode rd,
-          lineColor = JRD.lineColor rd,
-          alternateShortNames = fromMaybe [] (JRD.alternateShortNames rd),
-          journeyStatus = JRD.journeyStatus rd,
-          subLegOrder = JRD.subLegOrder rd,
-          frequency = JRD.frequency rd,
-          routeLongName = JRD.routeLongName rd,
-          fromStationCode = JRD.fromStationCode rd,
-          toStationCode = JRD.toStationCode rd,
-          routeCode = JRD.routeCode rd
-        }
-
-getTransformedJourneyRouteDetailsT :: [JRD.JourneyRouteDetails] -> [MultiModalJourneyRouteDetails]
-getTransformedJourneyRouteDetailsT routeDetails = do
-  let sortedRouteDetails = sortOn (\rd -> rd.subLegOrder) routeDetails
-  map transformJourneyRouteDetails sortedRouteDetails
-  where
-    transformJourneyRouteDetails :: JRD.JourneyRouteDetails -> MultiModalJourneyRouteDetails
-    transformJourneyRouteDetails rd =
-      MultiModalJourneyRouteDetails
-        { platformNumber = JRD.platformNumber rd,
-          lineColorCode = JRD.lineColorCode rd,
-          lineColor = JRD.lineColor rd,
-          alternateShortNames = fromMaybe [] (JRD.alternateShortNames rd),
-          journeyStatus = JRD.journeyStatus rd,
-          subLegOrder = JRD.subLegOrder rd,
-          frequency = JRD.frequency rd,
-          routeLongName = JRD.routeLongName rd,
-          fromStationCode = JRD.fromStationCode rd,
-          toStationCode = JRD.toStationCode rd,
-          routeCode = JRD.routeCode rd
+    -- TODO :: For Backward Compatibility, remove this once we have all the journeyLegId in the database
+    transformJourneyRouteDetails :: JRD.JourneyRouteDetails -> RD.RouteDetails
+    transformJourneyRouteDetails JRD.JourneyRouteDetails {..} =
+      RD.RouteDetails
+        { agencyGtfsId = Nothing,
+          agencyName = Nothing,
+          endLocationLat = 0.0,
+          endLocationLon = 0.0,
+          fromArrivalTime = Nothing,
+          fromDepartureTime = Nothing,
+          fromStopCode = fromStationCode,
+          fromStopGtfsId = fromStationCode,
+          fromStopName = fromStationCode,
+          fromStopPlatformCode = platformNumber,
+          id = cast id,
+          journeyLegId = fromMaybe "BackwardCompatibility" journeyLegId,
+          routeColorCode = lineColorCode,
+          routeColorName = lineColor,
+          routeGtfsId = routeCode,
+          routeCode = routeCode,
+          routeLongName = routeLongName,
+          routeShortName = routeCode,
+          startLocationLat = 0.0,
+          startLocationLon = 0.0,
+          toArrivalTime = Nothing,
+          toDepartureTime = Nothing,
+          toStopCode = toStationCode,
+          toStopGtfsId = toStationCode,
+          toStopName = toStationCode,
+          toStopPlatformCode = platformNumber,
+          trackingStatus = Nothing,
+          journeyStatus, -- TODO :: Remove this field when `trackingStatus` is added to the database and consumed
+          alternateShortNames = fromMaybe [] alternateShortNames,
+          ..
         }

@@ -208,6 +208,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                               isInterCity = isInterCityTrip searchTry.tripCategory,
                               onlinePayment = merchant.onlinePayment,
                               configsInExperimentVersions = searchReq.configInExperimentVersions,
+                              rideFare = Just searchTry.baseFare,
                               ..
                             }
                     filterOutGoHomeDriversAccordingToHomeLocation (map (convertDriverPoolWithActualDistResultToNearestGoHomeDriversResult False True) driversInQueue) goHomeReq merchantOpCityId_
@@ -445,10 +446,12 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                         isInterCity = isInterCityTrip searchTry.tripCategory,
                         onlinePayment = merchant.onlinePayment,
                         configsInExperimentVersions = searchReq.configInExperimentVersions,
+                        rideFare = Just searchTry.baseFare,
                         ..
                       }
                   )
                   opCityId
+                  transporterConfig.prepaidSubscriptionThreshold
               let res' = filterSpecialDrivers specialDrivers calculateGoHomeDriverPoolBatch
                   merchantId = searchReq.providerId
                   isRental = isRentalTrip searchTry.tripCategory
@@ -474,6 +477,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                     isRental = isRentalTrip searchTry.tripCategory,
                     isInterCity = isInterCityTrip searchTry.tripCategory,
                     onlinePayment = merchant.onlinePayment,
+                    rideFare = Just searchTry.baseFare,
                     ..
                   }
           calculateDriverPoolWithActualDist driverPoolReq poolType currentSearchInfo batchNum
@@ -497,6 +501,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                         isRental = isRentalTrip searchTry.tripCategory,
                         isInterCity = isInterCityTrip searchTry.tripCategory,
                         onlinePayment = merchant.onlinePayment,
+                        rideFare = Just searchTry.baseFare,
                         ..
                       }
               calculateDriverCurrentlyOnRideWithActualDist driverPoolReq poolType (toInteger batchNum') currentSearchInfo

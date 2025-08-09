@@ -9,6 +9,7 @@ import Data.OpenApi (ToSchema)
 import qualified Domain.Types.BookingUpdateRequest
 import qualified Domain.Types.Estimate
 import qualified Domain.Types.FRFSQuote
+import qualified Domain.Types.FRFSTicketBookingStatus
 import qualified Domain.Types.IntegratedBPPConfig
 import qualified Domain.Types.Journey
 import qualified Domain.Types.JourneyLegsFeedbacks
@@ -65,7 +66,8 @@ data IntegratedQRReq = IntegratedQRReq {integratedQR :: Lib.JourneyModule.Types.
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data JourneyBookingPaymentStatus = JourneyBookingPaymentStatus
-  { journeyId :: Kernel.Types.Id.Id Domain.Types.Journey.Journey,
+  { gatewayReferenceId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    journeyId :: Kernel.Types.Id.Id Domain.Types.Journey.Journey,
     paymentFareUpdate :: Kernel.Prelude.Maybe [PaymentFareUpdate],
     paymentOrder :: Kernel.Prelude.Maybe PaymentOrder
   }
@@ -91,8 +93,7 @@ data JourneyFeedBackForm = JourneyFeedBackForm {additionalFeedBack :: Kernel.Pre
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data JourneyInfoResp = JourneyInfoResp
-  { crisSdkToken :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    endTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+  { endTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     estimatedDistance :: Kernel.Types.Common.Distance,
     estimatedDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     estimatedMaxFare :: Kernel.Types.Common.PriceAPIEntity,
@@ -125,11 +126,21 @@ data LegServiceTierOptionsResp = LegServiceTierOptionsResp {options :: [Lib.Jour
 
 data LegStatus = LegStatus
   { legOrder :: Kernel.Prelude.Int,
+    legStatus :: Kernel.Prelude.Maybe Lib.JourneyModule.Types.LegStatusElement,
     mode :: Domain.Types.Trip.MultimodalTravelMode,
     status :: Lib.JourneyLeg.Types.JourneyLegStatus,
     subLegOrder :: Kernel.Prelude.Int,
     userPosition :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
     vehiclePositions :: [Lib.JourneyModule.Types.VehiclePosition]
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data MultimodalCancelStatusResp = MultimodalCancelStatusResp
+  { bookingStatus :: Domain.Types.FRFSTicketBookingStatus.FRFSTicketBookingStatus,
+    cancellationCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    isCancellable :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    refundAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

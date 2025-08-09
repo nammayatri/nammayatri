@@ -177,7 +177,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
                 SLOSO.addSendOverlaySchedulerDriverIds merchantOpCityId (Just driverFee.vehicleCategory) (Just "PaymentOverdueBetween") nonEmptyDriverId
           -------------------------------------------------------------------------------
           -- blocking
-          dueDriverFees <- QDF.findAllPendingAndDueDriverFeeByDriverIdForServiceName (cast driverFee.driverId) serviceName -- Problem with lazy evaluation?
+          dueDriverFees <- QDF.findAllFeeByTypeServiceStatusAndDriver serviceName (cast driverFee.driverId) [RECURRING_INVOICE, RECURRING_EXECUTION_INVOICE] [PAYMENT_PENDING, PAYMENT_OVERDUE]
           let driverFeeIds = map (.id) dueDriverFees
               due = sum $ map (\fee -> if (fee.startTime /= startTime && fee.endTime /= endTime) then roundToHalf driverFee.currency $ fee.govtCharges + fee.platformFee.fee + fee.platformFee.cgst + fee.platformFee.sgst else 0) dueDriverFees
           if roundToHalf driverFee.currency (due + totalFee - min coinCashLeft totalFee) >= fromMaybe plan.maxCreditLimit maxCreditLimitLinkedToDPlan
@@ -236,8 +236,9 @@ processRestFee ::
   DriverFee ->
   SubscriptionConfig ->
   DriverFee ->
+  HighPrecMoney ->
   m ()
-processRestFee paymentMode DriverFee {..} subscriptionConfig parentDriverFee = do
+processRestFee paymentMode DriverFee {..} subscriptionConfig parentDriverFee totalFee = do
   id_ <- generateGUID
   let driverFee =
         DriverFee
@@ -247,7 +248,7 @@ processRestFee paymentMode DriverFee {..} subscriptionConfig parentDriverFee = d
             ..
           }
   QDF.create driverFee
-  QVF.createChildVendorFee parentDriverFee driverFee
+  QVF.createChildVendorFee parentDriverFee driverFee totalFee
   processDriverFee paymentMode driverFee subscriptionConfig
   updateSerialOrderForInvoicesInWindow driverFee.id merchantOperatingCityId startTime endTime driverFee.serviceName
 
@@ -339,6 +340,7 @@ getFreqAndBaseAmountcase planBaseAmount = case planBaseAmount of
   DAILY_BASE amount -> ("DAILY" :: Text, amount)
   WEEKLY_BASE amount -> ("WEEKLY" :: Text, amount)
   MONTHLY_BASE amount -> ("MONTHLY" :: Text, amount)
+  RECHARGE_BASE amount -> ("RECHARGE" :: Text, amount)
 
 driverFeeSplitter ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasKafkaProducer r) =>
@@ -362,10 +364,10 @@ driverFeeSplitter paymentMode plan feeWithoutDiscount totalFee driverFee mandate
     [] -> throwError (InternalError "No driver fee entity with non zero total fee")
     (firstFee : restFees) -> do
       let adjustment =
-            if driverFee.platformFee.fee.getHighPrecMoney == 0
+            if totalFee.getHighPrecMoney == 0
               then 1.0
-              else firstFee.platformFee.fee.getHighPrecMoney / driverFee.platformFee.fee.getHighPrecMoney
-      mapM_ (\dfee -> processRestFee paymentMode dfee subscriptionConfigs driverFee) restFees
+              else firstFee.platformFee.fee.getHighPrecMoney / totalFee.getHighPrecMoney
+      mapM_ (\dfee -> processRestFee paymentMode dfee subscriptionConfigs driverFee totalFee) restFees
       -- Reset The Original Fee Amount & adjust the vendor fee amount in proportion
       resetFee firstFee.id firstFee.govtCharges firstFee.platformFee (Just feeWithoutDiscount) firstFee.amountPaidByCoin now
       QVF.adjustVendorFee firstFee.id adjustment
@@ -414,6 +416,7 @@ getOrGenerateDriverFeeDataBasedOnServiceName serviceName startTime endTime merch
       return $ filter (\dfee -> dfee.merchantOperatingCityId == merchantOperatingCityId) $ nubBy (\x y -> x.id == y.id) $ driverFeeElderSiblings <> driverFeeRestSiblings
     YATRI_RENTAL -> generateDriverFee now enableCityBasedFeeSwitch
     DASHCAM_RENTAL _ -> generateDriverFee now enableCityBasedFeeSwitch
+    PREPAID_SUBSCRIPTION -> pure []
   where
     generateDriverFee now enableCityBasedFeeSwitch = do
       when (startTime >= endTime) $ throwError (InternalError "Invalid time range for driver fee calculation")

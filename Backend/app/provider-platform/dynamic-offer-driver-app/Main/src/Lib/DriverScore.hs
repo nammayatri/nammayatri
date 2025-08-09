@@ -214,7 +214,8 @@ updateDailyStats driverId merchantOpCityId ride fareParameter = do
                 numDriversOnboarded = 0,
                 numFleetsOnboarded = 0,
                 merchantId = DR.merchantId ride,
-                merchantOperatingCityId = Just merchantOpCityId
+                merchantOperatingCityId = Just merchantOpCityId,
+                onlineDuration = Nothing
               }
       SQDS.create dailyStatsOfDriver'
     Just dailyStats -> do
@@ -273,7 +274,8 @@ createDriverStat currency distanceUnit driverId = do
             numDriversOnboarded = 0,
             numFleetsOnboarded = 0,
             safetyPlusEarnings = 0.0,
-            safetyPlusRideCount = 0
+            safetyPlusRideCount = 0,
+            onlineDuration = Seconds 0
           }
   _ <- DSQ.create driverStat
   pure driverStat

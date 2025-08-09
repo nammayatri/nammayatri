@@ -25,7 +25,6 @@ import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.RouteStopTimeTable
 import EulerHS.Prelude (concatMapM)
-import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -33,7 +32,9 @@ import qualified Storage.GraphqlQueries.Client as Client
 
 findByRouteCodeAndStopCode ::
   ( MonadFlow m,
-    ServiceFlow m r,
+    CacheFlow m r,
+    EncFlow m r,
+    EsqDBFlow m r,
     HasShortDurationRetryCfg r c
   ) =>
   IntegratedBPPConfig ->
@@ -90,7 +91,8 @@ parseToRouteStopTimeTable integratedBPPConfigId mid mocid vehicleCategory entry 
             source = GTFS,
             stage = entry.stage,
             providerStopCode = entry.providerStopCode,
-            platformCode = entry.platformCode
+            platformCode = entry.platformCode,
+            isStageStop = entry.isStageStop
           },
         RouteStopTimeTable
           { integratedBppConfigId = integratedBPPConfigId,
@@ -108,7 +110,8 @@ parseToRouteStopTimeTable integratedBPPConfigId mid mocid vehicleCategory entry 
             source = GTFS,
             stage = entry.stage,
             providerStopCode = entry.providerStopCode,
-            platformCode = entry.platformCode
+            platformCode = entry.platformCode,
+            isStageStop = entry.isStageStop
           }
       ]
     _ ->
@@ -128,6 +131,7 @@ parseToRouteStopTimeTable integratedBPPConfigId mid mocid vehicleCategory entry 
             source = GTFS,
             stage = entry.stage,
             providerStopCode = entry.providerStopCode,
-            platformCode = entry.platformCode
+            platformCode = entry.platformCode,
+            isStageStop = entry.isStageStop
           }
       ]

@@ -58,6 +58,7 @@ module Domain.Action.UI.Driver
     respondQuote,
     offerQuoteLockKey,
     getStats,
+    getStatsAllTime,
     getEarnings,
     driverPhotoUpload,
     driverProfileImagesUpload,
@@ -84,6 +85,7 @@ module Domain.Action.UI.Driver
     refundByPayoutDriverFee,
     mkPayoutLockKeyByDriverAndService,
     consentResponse,
+    findOnboardedDriversOrFleets,
   )
 where
 
@@ -115,6 +117,7 @@ import qualified Data.Tuple.Extra as DTE
 import Domain.Action.Beckn.Search
 import Domain.Action.Dashboard.Driver.Notification as DriverNotify (triggerDummyRideRequest)
 import qualified Domain.Action.Internal.DriverMode as DDriverMode
+import qualified Domain.Action.Internal.ProcessingChangeOnline as DOnlineDuration
 import qualified Domain.Action.UI.DriverGoHomeRequest as DDGR
 import qualified Domain.Action.UI.DriverHomeLocation as DDHL
 import Domain.Action.UI.DriverOnboarding.AadhaarVerification (fetchAndCacheAadhaarImage)
@@ -264,7 +267,6 @@ import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DailyStats as SQDS
 import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.DriverFee as QDF
-import qualified Storage.Queries.DriverFeeExtra as QDFE
 import qualified Storage.Queries.DriverGoHomeRequest as QDGR
 import qualified Storage.Queries.DriverHomeLocation as QDHL
 import qualified Storage.Queries.DriverInformation as QDriverInformation
@@ -357,6 +359,10 @@ data DriverInformationRes = DriverInformationRes
     cancelledRidesCountInWindow :: Maybe Int,
     assignedRidesCountInWindow :: Maybe Int,
     windowSize :: Maybe Int,
+    assignedRidesCountDaily :: Maybe Int,
+    cancelledRidesCountDaily :: Maybe Int,
+    assignedRidesCountWeekly :: Maybe Int,
+    cancelledRidesCountWeekly :: Maybe Int,
     isSubscriptionVehicleCategoryChanged :: Bool,
     isOnFreeTrial :: Bool,
     planMandatoryForCategory :: Bool,
@@ -381,7 +387,9 @@ data DriverInformationRes = DriverInformationRes
     subscriptionDown :: Maybe Bool,
     qrUrl :: Maybe Text,
     driverTags :: Maybe DA.Value,
-    nyClubConsent :: Maybe Bool
+    nyClubConsent :: Maybe Bool,
+    cancellationRateSlabConfig :: Maybe Domain.Types.TransporterConfig.CancellationRateSlabConfig,
+    enabledAt :: Maybe UTCTime
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -451,7 +459,8 @@ data DriverEntityRes = DriverEntityRes
     subscriptionDown :: Maybe Bool,
     qrUrl :: Maybe Text,
     driverTags :: Maybe DA.Value,
-    nyClubConsent :: Maybe Bool
+    nyClubConsent :: Maybe Bool,
+    enabledAt :: Maybe UTCTime
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -757,7 +766,7 @@ getInformation (personId, merchantId, merchantOpCityId) mbClientId toss tnant' c
     Just opId -> QDR.findById (cast (Id opId))
     Nothing -> pure Nothing
   driverEntity <- buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) serviceName
-  dues <- QDF.findAllPendingAndDueDriverFeeByDriverIdForServiceName driverId serviceName
+  dues <- QDF.findAllFeeByTypeServiceStatusAndDriver serviceName driverId [DDF.RECURRING_INVOICE, DDF.RECURRING_EXECUTION_INVOICE] [DDF.PAYMENT_PENDING, DDF.PAYMENT_OVERDUE]
   let currentDues = sum $ map (\dueInvoice -> SLDriverFee.roundToHalf dueInvoice.currency (dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) dues
   let manualDues = sum $ map (\dueInvoice -> SLDriverFee.roundToHalf dueInvoice.currency (dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) $ filter (\due -> due.status == DDF.PAYMENT_OVERDUE) dues
   logDebug $ "alternateNumber-" <> show driverEntity.alternateNumber
@@ -777,9 +786,9 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
   void $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let driverId = cast personId
   driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   when (isActive || (isJust mode && (mode == Just DriverInfo.SILENT || mode == Just DriverInfo.ONLINE))) $ do
     merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-    transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     mbVehicle <- QVehicle.findById personId
     DriverSpecificSubscriptionData {..} <- getDriverSpecificSubscriptionDataWithSubsConfig (personId, merchantId, merchantOpCityId) transporterConfig driverInfo mbVehicle Plan.YATRI_SUBSCRIPTION
     let commonSubscriptionChecks = not isOnFreeTrial && not transporterConfig.allowDefaultPlanAllocation
@@ -811,7 +820,7 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
         Nothing -> throwError $ DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag)
   when (driverInfo.active /= isActive || driverInfo.mode /= mode) $ do
     let newFlowStatus = DDriverMode.getDriverFlowStatus (mode <|> Just DriverInfo.OFFLINE) isActive
-    DDriverMode.updateDriverModeAndFlowStatus driverId Nothing isActive (mode <|> Just DriverInfo.OFFLINE) newFlowStatus (Just driverInfo) -- Need to discuss in allowCacheDriverFlowStatus value in this situation. In this funcytion, we get transporterConfig from many places.
+    DDriverMode.updateDriverModeAndFlowStatus driverId transporterConfig.allowCacheDriverFlowStatus isActive (mode <|> Just DriverInfo.OFFLINE) newFlowStatus (Just driverInfo)
   pure APISuccess.Success
 
 activateGoHomeFeature :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id DDHL.DriverHomeLocation -> LatLong -> Flow APISuccess.APISuccess
@@ -1051,6 +1060,7 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) service
         qrUrl,
         driverTags = Just driverTags,
         nyClubConsent = person.nyClubConsent,
+        enabledAt = driverInfo.enabledAt,
         ..
       }
   where
@@ -1230,6 +1240,7 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} merchant referral
   let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
   mbPayoutConfig <- CPC.findByPrimaryKey merchantOpCityId vehicleCategory Nothing
   cancellationRateData <- SCR.getCancellationRateData merchantOpCityId id
+  merchantConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   bankDetails <-
     if merchant.onlinePayment
       then do
@@ -1269,6 +1280,11 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} merchant referral
           cancelledRidesCountInWindow = (.cancelledCount) <$> cancellationRateData,
           assignedRidesCountInWindow = (.assignedCount) <$> cancellationRateData,
           windowSize = (.windowSize) <$> cancellationRateData,
+          assignedRidesCountDaily = (.assignedCountDaily) <$> cancellationRateData,
+          cancelledRidesCountDaily = (.cancelledCountDaily) <$> cancellationRateData,
+          assignedRidesCountWeekly = (.assignedCountWeekly) <$> cancellationRateData,
+          cancelledRidesCountWeekly = (.cancelledCountWeekly) <$> cancellationRateData,
+          cancellationRateSlabConfig = merchantConfig.cancellationRateSlabConfig,
           favCount = Just driverStats.favRiderCount,
           operatorReferralCode = (.referralCode.getId) <$> operatorReferral,
           ..
@@ -2617,7 +2633,7 @@ clearDriverFeeWithCreate ::
   Bool ->
   m ClearDuesRes
 clearDriverFeeWithCreate (personId, merchantId, opCityId) serviceName (fee', mbCgst, mbSgst) feeType currency mbDeepLinkData sendPaymentLink = do
-  dueDriverFee <- QDFE.findAllByStatusAndDriverIdWithServiceNameFeetype personId [DDF.PAYMENT_PENDING] feeType serviceName
+  dueDriverFee <- QDF.findAllFeeByTypeServiceStatusAndDriver serviceName personId [feeType] [DDF.PAYMENT_PENDING]
   subscriptionConfig <-
     CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName opCityId Nothing serviceName
       >>= fromMaybeM (NoSubscriptionConfigForService opCityId.getId $ show serviceName)
@@ -2721,6 +2737,7 @@ clearDriverFeeWithCreate (personId, merchantId, opCityId) serviceName (fee', mbC
             siblingFeeId = Nothing,
             splitOfDriverFeeId = Nothing,
             vehicleCategory = vehicleCategory,
+            validDays = Nothing,
             currency
           }
     mkClearDuesResp (orderResp, orderId) = ClearDuesRes {orderId = orderId, orderResp}
@@ -2757,7 +2774,7 @@ getSecurityDepositDfStatus ::
   ServiceNames ->
   m [SecurityDepositDfStatusRes]
 getSecurityDepositDfStatus (personId, _, _) serviceName = do
-  driverFees <- runInReplica $ QDFE.findAllByStatusAndDriverIdWithServiceNameFeetype personId [DDF.PAYMENT_PENDING, DDF.CLEARED, DDF.PAYMENT_OVERDUE, DDF.EXEMPTED, DDF.COLLECTED_CASH] DDF.ONE_TIME_SECURITY_DEPOSIT serviceName
+  driverFees <- runInReplica $ QDF.findAllFeeByTypeServiceStatusAndDriver serviceName personId [DDF.ONE_TIME_SECURITY_DEPOSIT] [DDF.PAYMENT_PENDING, DDF.CLEARED, DDF.PAYMENT_OVERDUE, DDF.EXEMPTED, DDF.COLLECTED_CASH]
   mapM buildSecurityDepositDfStatus $ sortOn (.createdAt) driverFees
   where
     buildSecurityDepositDfStatus dfee = do
@@ -2795,9 +2812,9 @@ refundByPayoutDriverFee (personId, _, opCityId) refundByPayoutReq = do
     let mbVpa = refundByPayoutReq.payerVpa <|> driverInfo.payoutVpa <|> (mDriverPlan >>= (.payerVpa))
     unless (isJust mbVpa) $ throwError (InternalError $ "payer vpa not present for " <> personId.getId)
     whenJust mbVpa $ \vpa -> do
-      pendingDriverFees <- runInReplica $ QDFE.findAllByStatusAndDriverIdWithServiceNameFeetype personId [DDF.PAYMENT_PENDING] DDF.RECURRING_EXECUTION_INVOICE serviceName
+      pendingDriverFees <- runInReplica $ QDF.findAllFeeByTypeServiceStatusAndDriver serviceName personId [DDF.RECURRING_EXECUTION_INVOICE] [DDF.PAYMENT_PENDING]
       unless (null pendingDriverFees) $ throwError (InternalError "some driver fee currently in auto pay execution")
-      driverFees <- runInReplica $ QDFE.findAllByStatusAndDriverIdWithServiceNameFeetype personId [DDF.CLEARED, DDF.REFUND_FAILED, DDF.COLLECTED_CASH] driverFeeType serviceName
+      driverFees <- runInReplica $ QDF.findAllFeeByTypeServiceStatusAndDriver serviceName personId [driverFeeType] [DDF.CLEARED, DDF.REFUND_FAILED, DDF.COLLECTED_CASH]
       dueDriverFees <- QDF.findAllByStatusAndDriverIdWithServiceName personId [DDF.PAYMENT_OVERDUE] Nothing serviceName
       let totalSecurityDeposit = sum $ map mapToAmount driverFees
           dueDriverFeesAmount = sum $ map mapToAmount dueDriverFees
@@ -2936,3 +2953,104 @@ consentResponse (personId, _, _) req = do
   logInfo $ "Driver consent request - Driver ID: " <> personId.getId <> ", Consent: " <> show req.consent
   QPerson.updateNyClubConsent (Just req.consent) personId
   pure APISuccess.Success
+
+-- | Returns all-time stats for a driver (for /driver/stats/alltime endpoint)
+getStatsAllTime ::
+  (EsqDBReplicaFlow m r, EsqDBFlow m r, EncFlow m r, CacheFlow m r) =>
+  (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
+  m DCommon.DriverStatsRes
+getStatsAllTime (driverId, _, merchantOpCityId) = findOnboardedDriversOrFleets driverId merchantOpCityId Nothing Nothing
+
+-- TODO: Need to implement clickhouse aggregated query to fetch data for the given date range
+findOnboardedDriversOrFleets :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id SP.Person -> Id DMOC.MerchantOperatingCity -> Maybe Day -> Maybe Day -> m DCommon.DriverStatsRes
+findOnboardedDriversOrFleets personId merchantOpCityId maybeFrom maybeTo = do
+  currency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
+  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  DOnlineDuration.updateOnlineDurationDuringFetchingDailyStats personId transporterConfig
+  let defaultStats =
+        DCommon.DriverStatsRes
+          { numDriversOnboarded = 0,
+            numFleetsOnboarded = 0,
+            totalRides = 0,
+            totalEarnings = Money 0,
+            totalDistance = Meters 0,
+            bonusEarnings = Money 0,
+            totalEarningsWithCurrency = PriceAPIEntity 0.0 currency,
+            totalEarningsPerKm = Money 0,
+            totalEarningsPerKmWithCurrency = PriceAPIEntity 0.0 currency,
+            bonusEarningsWithCurrency = PriceAPIEntity 0.0 currency,
+            onlineDuration = Seconds 0
+          }
+  case (maybeFrom, maybeTo) of
+    (Nothing, Nothing) -> do
+      stats <- runInReplica $ QDriverStats.findByPrimaryKey personId >>= fromMaybeM (InternalError $ "Driver Stats data not found for entity " <> show personId.getId)
+      let totalEarningsPerKm = calculateEarningsPerKm stats.totalDistance stats.totalEarnings
+      return $
+        DCommon.DriverStatsRes
+          { numDriversOnboarded = stats.numDriversOnboarded,
+            numFleetsOnboarded = stats.numFleetsOnboarded,
+            totalRides = stats.totalRides,
+            totalEarnings = roundToIntegral stats.totalEarnings,
+            totalDistance = stats.totalDistance,
+            bonusEarnings = roundToIntegral stats.bonusEarned,
+            totalEarningsWithCurrency = PriceAPIEntity stats.totalEarnings currency,
+            totalEarningsPerKm = roundToIntegral totalEarningsPerKm,
+            totalEarningsPerKmWithCurrency = PriceAPIEntity totalEarningsPerKm currency,
+            bonusEarningsWithCurrency = PriceAPIEntity stats.bonusEarned currency,
+            onlineDuration = stats.onlineDuration
+          }
+    (Just fromDate, Just toDate) | fromDate == toDate -> do
+      mbStats <- runInReplica $ SQDS.findByDriverIdAndDate personId fromDate
+      case mbStats of
+        Nothing -> return defaultStats
+        Just stats -> do
+          let totalEarningsPerKm = calculateEarningsPerKm stats.totalDistance stats.totalEarnings
+          return $
+            DCommon.DriverStatsRes
+              { numDriversOnboarded = stats.numDriversOnboarded,
+                numFleetsOnboarded = stats.numFleetsOnboarded,
+                totalRides = stats.numRides,
+                totalEarnings = roundToIntegral stats.totalEarnings,
+                totalDistance = stats.totalDistance,
+                bonusEarnings = roundToIntegral stats.bonusEarnings,
+                totalEarningsWithCurrency = PriceAPIEntity stats.totalEarnings currency,
+                totalEarningsPerKm = roundToIntegral totalEarningsPerKm,
+                totalEarningsPerKmWithCurrency = PriceAPIEntity totalEarningsPerKm currency,
+                bonusEarningsWithCurrency = PriceAPIEntity stats.bonusEarnings currency,
+                onlineDuration = fromMaybe (Seconds 0) stats.onlineDuration
+              }
+    (Just fromDate, Just toDate) | fromIntegral (diffDays toDate fromDate) <= transporterConfig.earningsWindowSize -> do
+      statsList <- runInReplica $ SQDS.findAllInRangeByDriverId_ personId fromDate toDate
+      if null statsList
+        then return defaultStats
+        else do
+          let agg f = sum (map f statsList)
+              aggMoney f = HighPrecMoney $ sum (map (getHighPrecMoney . f) statsList)
+              aggMeters f = Meters $ sum (map (getMeters . f) statsList)
+              aggMbSeconds f = Seconds $ sum (map (getSeconds . fromMaybe (Seconds 0) . f) statsList)
+              totalEarnings = aggMoney (.totalEarnings)
+              totalDistance = aggMeters (.totalDistance)
+              bonusEarnings = aggMoney (.bonusEarnings)
+              totalEarningsPerKm = calculateEarningsPerKm totalDistance totalEarnings
+          return $
+            DCommon.DriverStatsRes
+              { numDriversOnboarded = agg (.numDriversOnboarded),
+                numFleetsOnboarded = agg (.numFleetsOnboarded),
+                totalRides = agg (.numRides),
+                totalEarnings = roundToIntegral totalEarnings,
+                totalDistance = totalDistance,
+                bonusEarnings = roundToIntegral bonusEarnings,
+                totalEarningsWithCurrency = PriceAPIEntity totalEarnings currency,
+                totalEarningsPerKm = roundToIntegral totalEarningsPerKm,
+                totalEarningsPerKmWithCurrency = PriceAPIEntity totalEarningsPerKm currency,
+                bonusEarningsWithCurrency = PriceAPIEntity bonusEarnings currency,
+                onlineDuration = aggMbSeconds (.onlineDuration)
+              }
+    _ -> throwError (InvalidRequest "Invalid date range: Dates must be empty, same day, or max 7 days apart.")
+  where
+    calculateEarningsPerKm :: Meters -> HighPrecMoney -> HighPrecMoney
+    calculateEarningsPerKm distance earnings =
+      let distanceInKm = distance `div` 1000
+       in if distanceInKm.getMeters == 0
+            then HighPrecMoney 0.0
+            else toHighPrecMoney $ roundToIntegral earnings `div` distanceInKm.getMeters

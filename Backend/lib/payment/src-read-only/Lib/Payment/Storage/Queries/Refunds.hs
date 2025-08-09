@@ -4,6 +4,7 @@
 
 module Lib.Payment.Storage.Queries.Refunds where
 
+import qualified Data.Aeson
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface
@@ -12,6 +13,7 @@ import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import qualified Kernel.Utils.JSON
 import qualified Lib.Payment.Domain.Types.PaymentOrder
 import qualified Lib.Payment.Domain.Types.Refunds
 import qualified Lib.Payment.Storage.Beam.BeamFlow
@@ -60,6 +62,7 @@ instance FromTType' Beam.Refunds Lib.Payment.Domain.Types.Refunds.Refunds where
             orderId = Kernel.Types.Id.Id orderId,
             refundAmount = refundAmount,
             shortId = shortId,
+            split = split >>= Kernel.Utils.JSON.valueToMaybe,
             status = status,
             updatedAt = updatedAt
           }
@@ -77,6 +80,7 @@ instance ToTType' Beam.Refunds Lib.Payment.Domain.Types.Refunds.Refunds where
         Beam.orderId = Kernel.Types.Id.getId orderId,
         Beam.refundAmount = refundAmount,
         Beam.shortId = shortId,
+        Beam.split = split >>= Just . Data.Aeson.toJSON,
         Beam.status = status,
         Beam.updatedAt = updatedAt
       }

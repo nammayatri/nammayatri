@@ -58,7 +58,7 @@ import qualified Domain.Types.MerchantServiceUsageConfig as DMSUC
 import qualified Domain.Types.RiderConfig as DRC
 import Domain.Types.ServiceCategory
 import Domain.Types.ServicePeopleCategory
-import Domain.Types.TicketPlace
+import Domain.Types.TicketPlace hiding (Fee (..))
 import Domain.Types.TicketService
 import Environment
 import qualified EulerHS.Language as L
@@ -1060,7 +1060,7 @@ postMerchantTicketConfigUpsert merchantShortId opCity request = do
           lon :: Maybe Double = readMaybeCSVField idx row.lon "Longitude"
           mapImageUrl :: Maybe Text = cleanMaybeCSVField idx row.mapImageUrl "Map Image URL"
           termsAndConditionsUrl :: Maybe Text = cleanMaybeCSVField idx row.termsAndConditionsUrl "Terms and conditions URL"
-          ticketPlace = TicketPlace {id = ticketPlaceId, priority = 0, ticketMerchantId = Nothing, customTabs = Nothing, rules = Nothing, recommend = False, ..}
+          ticketPlace = TicketPlace {id = ticketPlaceId, priority = 0, ticketMerchantId = Nothing, customTabs = Nothing, rules = Nothing, recommend = False, faqs = Nothing, isRecurring = True, metadata = Nothing, platformFee = Nothing, platformFeeVendor = Nothing, pricingOnwards = Nothing, endDate = Nothing, isClosed = False, startDate = Nothing, venue = Nothing, ..}
 
       ------------- TicketService --------------------------------------------------
       service <- cleanCSVField idx row.svc "Service"
@@ -1092,6 +1092,7 @@ postMerchantTicketConfigUpsert merchantShortId opCity request = do
                 merchantOperatingCityId = Just merchantOperatingCityId,
                 rules = Nothing,
                 isClosed = False,
+                serviceDetails = Nothing,
                 ..
               }
 
@@ -1125,6 +1126,7 @@ postMerchantTicketConfigUpsert merchantShortId opCity request = do
                 rules = Nothing,
                 isClosed = False,
                 remainingActions = Nothing,
+                inclusionPoints = Nothing,
                 ..
               }
 

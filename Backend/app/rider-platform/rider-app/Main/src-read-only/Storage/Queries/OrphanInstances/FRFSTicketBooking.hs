@@ -13,12 +13,11 @@ import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Storage.Beam.FRFSTicketBooking as Beam
-import qualified Storage.Queries.JourneyRouteDetails
 import qualified Storage.Queries.Transformers.RouteDetails
 
 instance FromTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTicketBooking where
   fromTType' (Beam.FRFSTicketBookingT {..}) = do
-    journeyRouteDetailsList <- Storage.Queries.JourneyRouteDetails.findAllBySearchId (Kernel.Types.Id.Id searchId)
+    journeyRouteDetails' <- Storage.Queries.Transformers.RouteDetails.getJourneyRouteDetails searchId journeyLegId
     pure $
       Just
         Domain.Types.FRFSTicketBooking.FRFSTicketBooking
@@ -50,10 +49,11 @@ instance FromTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTi
             isFareChanged = isFareChanged,
             isSkipped = isSkipped,
             journeyId = Kernel.Types.Id.Id <$> journeyId,
+            journeyLegId = Kernel.Types.Id.Id <$> journeyLegId,
             journeyLegOrder = journeyLegOrder,
             journeyLegStatus = journeyLegStatus,
             journeyOnInitDone = journeyOnInitDone,
-            journeyRouteDetails = Storage.Queries.Transformers.RouteDetails.getTransformedJourneyRouteDetails journeyRouteDetailsList,
+            journeyRouteDetails = journeyRouteDetails',
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             osBuildVersion = osBuildVersion,
@@ -114,6 +114,7 @@ instance ToTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTick
         Beam.isFareChanged = isFareChanged,
         Beam.isSkipped = isSkipped,
         Beam.journeyId = Kernel.Types.Id.getId <$> journeyId,
+        Beam.journeyLegId = Kernel.Types.Id.getId <$> journeyLegId,
         Beam.journeyLegOrder = journeyLegOrder,
         Beam.journeyLegStatus = journeyLegStatus,
         Beam.journeyOnInitDone = journeyOnInitDone,

@@ -43,6 +43,7 @@ RiderConfig:
   fields:
     merchantOperatingCityId: Id MerchantOperatingCity
     enableLocalPoliceSupport: Bool
+    enableIGMIssueFlow: Bool
     metroBookingAllowed: Maybe Bool
     suburbanBookingAllowed: Maybe Bool
     localPoliceNumber: Maybe Text
@@ -118,6 +119,7 @@ RiderConfig:
     qrTicketRestrictionEndTime: Maybe TimeOfDay
     ticketingPermissionConfig: Maybe Value
     userServiceTierOrderConfig: "[VehicleServiceTierOrderConfig]"
+    boostSearchPreSelectionServiceTierConfig: "[VehicleServiceTierOrderConfig]"
     noOfRideRequestsConfig: Int
     busTrackingConfig: "Maybe BusTrackingConfig"
     pickupInstructionsThreshold: Int
@@ -128,8 +130,11 @@ RiderConfig:
     nyRegularMinGapSeconds: Seconds
     initiateFirstMultimodalJourney: Bool
     enableAutoJourneyRefund: Bool
+    refundBufferTTLSec: Maybe Seconds
     filterWalkAndUnspecifiedTransitModes: Bool
     nyRegularMasterJobNextRunOffsetSeconds: NominalDiffTime
+    refundStatusUpdateInterval: NominalDiffTime
+    refundStatusUpdateRetries: Int
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
@@ -137,6 +142,7 @@ RiderConfig:
     hardLimitForSafetyJobs: Maybe Seconds
     exotelStatusCheckSchedulerDelay: Maybe Seconds
     incidentReportSupport: Maybe Bool
+    enableIGMIssueFlow: Maybe Bool
     csAlertTriggerDelay: Maybe Seconds
     avgSpeedInKmPerHr: Maybe Kilometers
     payoutBatchDelay: Maybe Seconds
@@ -162,6 +168,7 @@ RiderConfig:
     fareCacheRentalsConfig : Maybe Value
     fareCacheInterCitySearchLocations : Maybe Value
     userServiceTierOrderConfig: Maybe Value
+    boostSearchPreSelectionServiceTierConfig: Maybe Value
     noOfRideRequestsConfig: Maybe Int
     busTrackingConfig: Maybe Value
     pickupInstructionsThreshold: Maybe Int
@@ -171,6 +178,8 @@ RiderConfig:
     enableAutoJourneyRefund: Maybe Bool
     filterWalkAndUnspecifiedTransitModes: Maybe Bool
     nyRegularMasterJobNextRunOffsetSeconds: Maybe Seconds
+    refundStatusUpdateInterval: Maybe Seconds
+    refundStatusUpdateRetries: Maybe Int
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -187,6 +196,7 @@ RiderConfig:
     hardLimitForSafetyJobs: fromMaybe 21600 ((.getSeconds) <$> hardLimitForSafetyJobs)|E
     exotelStatusCheckSchedulerDelay: maybe 120 (.getSeconds) exotelStatusCheckSchedulerDelay|E
     incidentReportSupport: fromMaybe False incidentReportSupport|E
+    enableIGMIssueFlow: fromMaybe False enableIGMIssueFlow|E
     csAlertTriggerDelay: fromMaybe 60 (Kernel.Utils.Common.secondsToNominalDiffTime <$> csAlertTriggerDelay)|E
     avgSpeedInKmPerHr: fromMaybe 20 avgSpeedInKmPerHr|E
     payoutBatchDelay: fromMaybe 10 (Kernel.Utils.Common.secondsToNominalDiffTime <$> payoutBatchDelay)|E
@@ -210,6 +220,7 @@ RiderConfig:
     fareCacheRentalsConfig : fareCacheRentalsConfig >>= Kernel.Utils.JSON.valueToMaybe|E
     fareCacheInterCitySearchLocations : fareCacheInterCitySearchLocations >>= Kernel.Utils.JSON.valueToMaybe|E
     userServiceTierOrderConfig: fromMaybe [] (userServiceTierOrderConfig >>= Kernel.Utils.JSON.valueToMaybe)|E
+    boostSearchPreSelectionServiceTierConfig: fromMaybe [] (boostSearchPreSelectionServiceTierConfig >>= Kernel.Utils.JSON.valueToMaybe)|E
     noOfRideRequestsConfig: fromMaybe 5 noOfRideRequestsConfig|E
     busTrackingConfig: busTrackingConfig >>= Kernel.Utils.JSON.valueToMaybe|E
     pickupInstructionsThreshold: fromMaybe 4 pickupInstructionsThreshold|E
@@ -219,6 +230,8 @@ RiderConfig:
     nyRegularMinGapSeconds: fromMaybe 900 nyRegularMinGapSeconds|E
     filterWalkAndUnspecifiedTransitModes: fromMaybe False filterWalkAndUnspecifiedTransitModes|E
     nyRegularMasterJobNextRunOffsetSeconds: fromMaybe 86400 (Kernel.Utils.Common.secondsToNominalDiffTime <$> nyRegularMasterJobNextRunOffsetSeconds)| E
+    refundStatusUpdateInterval: fromMaybe 43200 (Kernel.Utils.Common.secondsToNominalDiffTime <$> refundStatusUpdateInterval)| E
+    refundStatusUpdateRetries: fromMaybe 5 refundStatusUpdateRetries|E
 
   toTType:
     ivrTriggerDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
@@ -228,6 +241,7 @@ RiderConfig:
     hardLimitForSafetyJobs: Just $ Kernel.Types.Common.Seconds hardLimitForSafetyJobs|E
     exotelStatusCheckSchedulerDelay: Just $ Kernel.Types.Common.Seconds exotelStatusCheckSchedulerDelay|E
     incidentReportSupport: Just incidentReportSupport|E
+    enableIGMIssueFlow: Just enableIGMIssueFlow|E
     csAlertTriggerDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
     avgSpeedInKmPerHr: Just avgSpeedInKmPerHr|E
     payoutBatchDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
@@ -251,6 +265,7 @@ RiderConfig:
     fareCacheRentalsConfig : fareCacheRentalsConfig >>= Just . Data.Aeson.toJSON|E
     fareCacheInterCitySearchLocations : fareCacheInterCitySearchLocations >>= Just . Data.Aeson.toJSON|E
     userServiceTierOrderConfig: (Just . Data.Aeson.toJSON)|I
+    boostSearchPreSelectionServiceTierConfig: (Just . Data.Aeson.toJSON)|I
     noOfRideRequestsConfig: Just noOfRideRequestsConfig|E
     busTrackingConfig: busTrackingConfig >>= Just . Data.Aeson.toJSON|E
     pickupInstructionsThreshold: Just pickupInstructionsThreshold|E
@@ -260,9 +275,12 @@ RiderConfig:
     nyRegularMinGapSeconds: Just nyRegularMinGapSeconds|E
     filterWalkAndUnspecifiedTransitModes: Just filterWalkAndUnspecifiedTransitModes|E
     nyRegularMasterJobNextRunOffsetSeconds: (Just  . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
+    refundStatusUpdateInterval: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
+    refundStatusUpdateRetries: Just refundStatusUpdateRetries|E
 
   default:
     enableLocalPoliceSupport: "false"
+    enableIGMIssueFlow: "false"
     enableSupportForSafety: "false"
     videoFileSizeUpperLimit: "15000000"
     enableEmergencyContactAddedMessage: "true"
@@ -326,6 +344,7 @@ RiderConfig:
     fareCacheRentalsConfig : "json"
     fareCacheInterCitySearchLocations : "json"
     userServiceTierOrderConfig : "json"
+    boostSearchPreSelectionServiceTierConfig: "json"
     blockedUntilInMins: int
     ticketingPermissionConfig: "json"
     busTrackingConfig: "json"

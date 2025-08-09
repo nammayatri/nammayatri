@@ -148,6 +148,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     isAvoidToll :: Kernel.Prelude.Bool,
     isDeviceIdChecksRequired :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isDynamicPricingQARCalEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    isMLBasedDynamicPricingEnabled :: Kernel.Prelude.Bool,
     isPlanMandatory :: Kernel.Prelude.Bool,
     issueBreachConfig :: Kernel.Prelude.Maybe [SharedLogic.BehaviourManagement.IssueBreach.IssueBreachConfig],
     kaptureDisposition :: Kernel.Prelude.Text,
@@ -162,6 +163,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     mandateValidity :: Kernel.Prelude.Int,
     maxAllowedDocSizeInMB :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     maxAllowedVideoDocSizeInMB :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    maxOnlineDurationDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     maxPayoutReferralForADay :: Kernel.Prelude.Int,
     mediaFileSizeUpperLimit :: Kernel.Prelude.Int,
     mediaFileUrlPattern :: Kernel.Prelude.Text,
@@ -196,6 +198,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     pickupLocThreshold :: Kernel.Types.Common.Meters,
     placeNameCacheExpiryDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     popupDelayToAddAsPenalty :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    prepaidSubscriptionThreshold :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     qarCalRadiusInKm :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     ratingAsDecimal :: Kernel.Prelude.Bool,
     rcExpiryChecks :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -328,7 +331,7 @@ data DemandHotspotsConfig = DemandHotspotsConfig
 data DistanceRecomputeConfigs = DistanceRecomputeConfigs {estimatedDistanceUpper :: Kernel.Types.Common.Meters, minThresholdDistance :: Kernel.Types.Common.Meters, minThresholdPercentage :: Kernel.Prelude.Int}
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
-data SlabType = SlabType {minBookings :: Kernel.Prelude.Int, penalityForCancellation :: Domain.Types.TransporterConfig.CancellationRateSlab}
+data SlabType = SlabType {minBookingsRange :: [Kernel.Prelude.Int], penalityForCancellation :: Domain.Types.TransporterConfig.CancellationRateSlab}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
 type TransporterConfig = TransporterConfigD 'Safe

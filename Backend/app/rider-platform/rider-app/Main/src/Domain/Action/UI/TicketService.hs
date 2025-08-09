@@ -52,7 +52,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
-import Lib.Payment.Domain.Types.Refunds (Refunds (..))
+import Lib.Payment.Domain.Types.Refunds (Refunds (..), Split (..))
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified Lib.Payment.Storage.Queries.Refunds as QRefunds
 import qualified SharedLogic.MessageBuilder as MessageBuilder
@@ -176,7 +176,8 @@ getTicketPlacesServices _ placeId mbDate = do
                   expiry = service.expiry,
                   businessHours,
                   shortDesc = service.shortDesc,
-                  allowCancellation = service.allowCancellation
+                  allowCancellation = service.allowCancellation,
+                  serviceDetails = service.serviceDetails
                 }
         )
         ticketServices
@@ -246,6 +247,7 @@ getTicketPlacesServices _ placeId mbDate = do
               bookedSeats = maybe 0 (.booked) mBeatManagement,
               allowedSeats = calcAllowedSeats serviceCategory mBeatManagement,
               peopleCategories,
+              inclusionPoints = serviceCategory.inclusionPoints,
               isClosed = isClosed || serviceCategory.isClosed || null peopleCategories
             },
           serviceCategory.remainingActions
@@ -288,15 +290,17 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
   mbBlockExpiryTime <- case res of BlockFailed msg -> throwError (InvalidRequest msg); BlockSuccess expTime -> return expTime
 
   ticketBookingId <- generateGUID
-  ticketBookingServices <- mapM (createTicketBookingService merchantOpCity.id ticketBookingId req.visitDate) req.services
-
+  ticketBookingServicesWithPeopleTicketQuantity <- mapM (createTicketBookingService merchantOpCity.id ticketBookingId req.visitDate) req.services
+  let (ticketBookingServices, peopleTicketQuantityActions) = unzip ticketBookingServicesWithPeopleTicketQuantity
+  peopleTicketQuantityLists <- sequence peopleTicketQuantityActions
+  let peopleTicketQuantity = concat peopleTicketQuantityLists
   amount <- withCurrencyCheckingList (ticketBookingServices <&> (.amount)) $ \mbCurrency as ->
     mkPrice mbCurrency $ sum as
 
   let bookedSeats = sum $ ticketBookingServices <&> (.bookedSeats)
       vendorSplits = accumulateVendorSplits (ticketBookingServices <&> (.vendorSplitDetails))
 
-  ticketBooking <- createTicketBooking personId_ merchantOpCity.id ticketBookingId amount bookedSeats vendorSplits mbBlockExpiryTime
+  ticketBooking <- createTicketBooking personId_ merchantOpCity.id ticketBookingId amount bookedSeats vendorSplits mbBlockExpiryTime (Just peopleTicketQuantity)
 
   QTBS.createMany ticketBookingServices
   QTB.create ticketBooking
@@ -334,7 +338,7 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
       throwError $ InternalError "Failed to create order"
   where
     accumulateVendorSplits mbSplits = mbSplits & catMaybes & concat & Payment.groupSumVendorSplits & \l -> bool (pure l) (Nothing) (null l)
-    createTicketBooking personId_ merchantOperatingCityId ticketBookingId amount bookedSeats vendorSplits mbBlockExpiryTime = do
+    createTicketBooking personId_ merchantOperatingCityId ticketBookingId amount bookedSeats vendorSplits mbBlockExpiryTime peopleTicketQuantity = do
       shortId <- generateShortId
       now <- getCurrentTime
       return $
@@ -353,7 +357,8 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
             bookedSeats,
             cancelledSeats = Nothing,
             vendorSplitDetails = vendorSplits,
-            blockExpirationTime = mbBlockExpiryTime
+            blockExpirationTime = mbBlockExpiryTime,
+            peopleTicketQuantity = peopleTicketQuantity
           }
 
     createTicketBookingService merchantOperatingCityId ticketBookingId visitDate ticketServicesReq = do
@@ -378,33 +383,38 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
         Nothing -> return ()
       when (visitDateTime < now) $ throwError $ InvalidRequest "Cannot book for past date"
 
-      tBookingSCats <- mapM (createTicketBookingServiceCategory merchantOperatingCityId id visitDate businessHour) categories
+      tBookingSCatsWithPeopleTicketQuantity <- mapM (createTicketBookingServiceCategory merchantOperatingCityId id visitDate businessHour) categories
+      let (tBookingSCats, peopleTicketQuantityActions) = unzip tBookingSCatsWithPeopleTicketQuantity
+      peopleTicketQuantityLists <- sequence peopleTicketQuantityActions
+      let peopleTicketQuantity = concat peopleTicketQuantityLists
       QTBSC.createMany tBookingSCats
       amount <- withCurrencyCheckingList (tBookingSCats <&> (.amount)) $ \mbCurrency as ->
         mkPrice mbCurrency $ sum as
       let bookedSeats = sum $ tBookingSCats <&> (.bookedSeats)
       let expiry = calcExpiry ticketService.expiry req.visitDate now
       return $
-        DTB.TicketBookingService
-          { id,
-            shortId,
-            ticketBookingId,
-            ticketServiceId,
-            amount,
-            btype = businessHour.btype,
-            bHourId = Just businessHour.id,
-            status = DTB.Pending,
-            verificationCount = 0,
-            expiryDate = Just expiry,
-            merchantId = Just merchantId,
-            merchantOperatingCityId = merchantOperatingCityId,
-            createdAt = now,
-            updatedAt = now,
-            visitDate = Just visitDate,
-            bookedSeats,
-            cancelledSeats = Nothing,
-            vendorSplitDetails = accumulateVendorSplits ((.vendorSplitDetails) <$> tBookingSCats)
-          }
+        ( DTB.TicketBookingService
+            { id,
+              shortId,
+              ticketBookingId,
+              ticketServiceId,
+              amount,
+              btype = businessHour.btype,
+              bHourId = Just businessHour.id,
+              status = DTB.Pending,
+              verificationCount = 0,
+              expiryDate = Just expiry,
+              merchantId = Just merchantId,
+              merchantOperatingCityId = merchantOperatingCityId,
+              createdAt = now,
+              updatedAt = now,
+              visitDate = Just visitDate,
+              bookedSeats,
+              cancelledSeats = Nothing,
+              vendorSplitDetails = accumulateVendorSplits ((.vendorSplitDetails) <$> tBookingSCats)
+            },
+          pure peopleTicketQuantity
+        )
 
     createTicketBookingServiceCategory merchantOperatingCityId ticketBookingServiceId visitDate businessHour ticketServiceCReq = do
       id <- generateGUID
@@ -415,8 +425,10 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
       let serviceCatId = ticketServiceCReq.categoryId
       tBookingSC' <- QSC.findById serviceCatId >>= fromMaybeM (ServiceCategoryNotFound serviceCatId.getId)
       let tBookingSC = TicketRule.processEntity context tBookingSC'
-      tBookingPCats <- mapM (createTicketBookingPeopleCategory now merchantOperatingCityId id visitDate) ticketServiceCReq.peopleCategories
+      tBookingPCatsWithPeopleTicketQuantity <- mapM (createTicketBookingPeopleCategory now merchantOperatingCityId id visitDate) ticketServiceCReq.peopleCategories
+      let (tBookingPCats, peopleTicketQuantityList) = unzip tBookingPCatsWithPeopleTicketQuantity
       (amount, bookedSeats) <- calculateAmountAndSeats tBookingPCats
+      let groupedPeopleTicketQuantity = peopleTicketQuantityList
       QTBPC.createMany tBookingPCats
 
       mbSeatM <- QTSM.findByTicketServiceCategoryIdAndDate serviceCatId req.visitDate
@@ -440,24 +452,26 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
           QTSM.create seatM
 
       return $
-        DTB.TicketBookingServiceCategory
-          { id,
-            name = tBookingSC.name,
-            ticketBookingServiceId,
-            bookedSeats,
-            amount,
-            serviceCategoryId = Just $ Kernel.Types.Id.getId tBookingSC.id,
-            merchantId = Just merchantId,
-            merchantOperatingCityId = Just merchantOperatingCityId,
-            createdAt = now,
-            updatedAt = now,
-            cancelledSeats = Nothing,
-            eventCancelledBy = Nothing,
-            amountToRefund = Nothing,
-            visitDate = Just visitDate,
-            btype = Just businessHour.btype,
-            vendorSplitDetails = accumulateVendorSplits ((.vendorSplitDetails) <$> tBookingPCats)
-          }
+        ( DTB.TicketBookingServiceCategory
+            { id,
+              name = tBookingSC.name,
+              ticketBookingServiceId,
+              bookedSeats,
+              amount,
+              serviceCategoryId = Just $ Kernel.Types.Id.getId tBookingSC.id,
+              merchantId = Just merchantId,
+              merchantOperatingCityId = Just merchantOperatingCityId,
+              createdAt = now,
+              updatedAt = now,
+              cancelledSeats = Nothing,
+              eventCancelledBy = Nothing,
+              amountToRefund = Nothing,
+              visitDate = Just visitDate,
+              btype = Just businessHour.btype,
+              vendorSplitDetails = accumulateVendorSplits ((.vendorSplitDetails) <$> tBookingPCats)
+            },
+          pure groupedPeopleTicketQuantity
+        )
 
     createTicketBookingPeopleCategory now merchantOperatingCityId ticketBookingServiceCategoryId visitDate ticketServicePCReq = do
       id <- generateGUID
@@ -468,21 +482,23 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
       let numberOfUnits = ticketServicePCReq.numberOfUnits
           pricePerUnit = tServicePCat.pricePerUnit
       return $
-        DTB.TicketBookingPeopleCategory
-          { id,
-            name = tServicePCat.name,
-            ticketBookingServiceCategoryId,
-            numberOfUnits,
-            pricePerUnit,
-            merchantId = Just merchantId,
-            merchantOperatingCityId = Just merchantOperatingCityId,
-            numberOfUnitsCancelled = Nothing,
-            amountToRefund = Nothing,
-            createdAt = now,
-            updatedAt = now,
-            peopleCategoryId = Just tPCatId,
-            vendorSplitDetails = (map (multiplyVendorSplits numberOfUnits)) <$> tServicePCat.vendorSplitDetails
-          }
+        ( DTB.TicketBookingPeopleCategory
+            { id,
+              name = tServicePCat.name,
+              ticketBookingServiceCategoryId,
+              numberOfUnits,
+              pricePerUnit,
+              merchantId = Just merchantId,
+              merchantOperatingCityId = Just merchantOperatingCityId,
+              numberOfUnitsCancelled = Nothing,
+              amountToRefund = Nothing,
+              createdAt = now,
+              updatedAt = now,
+              peopleCategoryId = Just tPCatId,
+              vendorSplitDetails = (map (multiplyVendorSplits numberOfUnits)) <$> tServicePCat.vendorSplitDetails
+            },
+          DTTB.PeopleTicketQuantity {name = tServicePCat.name, bookedSeats = numberOfUnits}
+        )
 
     multiplyVendorSplits :: Int -> Payment.VendorSplitDetails -> Payment.VendorSplitDetails
     multiplyVendorSplits count vendorSplitDetail = vendorSplitDetail {Payment.splitAmount = Payment.roundToTwoDecimalPlaces (vendorSplitDetail.splitAmount * (Payment.roundToTwoDecimalPlaces $ fromIntegral count))}
@@ -509,7 +525,7 @@ getTicketBookings :: (Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Ker
 getTicketBookings (mbPersonId, merchantId_) mbLimit mbOffset status_ = do
   personId_ <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   merchantOpCity <- CQM.getDefaultMerchantOperatingCity merchantId_
-  ticketBookings <- QTB.getAllBookingsByPersonId mbLimit mbOffset personId_ merchantOpCity.id status_
+  ticketBookings <- QTB.getAllBookingsByPersonIdAndStatus mbLimit mbOffset personId_ merchantOpCity.id status_
   convertToApiEntity `mapM` ticketBookings
   where
     convertToApiEntity :: DTTB.TicketBooking -> Environment.Flow TicketBookingAPIEntity
@@ -521,9 +537,41 @@ getTicketBookings (mbPersonId, merchantId_) mbLimit mbOffset status_ = do
             ticketPlaceId = Kernel.Types.Id.getId ticketPlaceId,
             personId = personId.getId,
             ticketPlaceName = ticketPlace.name,
+            placeType = ticketPlace.placeType,
+            iconUrl = ticketPlace.iconUrl,
             amount = amount.amount,
             amountWithCurrency = mkPriceAPIEntity amount,
             ..
+          }
+
+getTicketBookingsV2 :: (Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe Domain.Types.TicketBooking.BookingStatus -> Environment.Flow [API.Types.UI.TicketService.TicketBookingAPIEntityV2]
+getTicketBookingsV2 (mbPersonId, merchantId_) mbLimit mbOffset mbStatus = do
+  personId_ <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+  merchantOpCity <- CQM.getDefaultMerchantOperatingCity merchantId_
+
+  -- Use different query based on whether status is provided
+  ticketBookings <- case mbStatus of
+    Just status -> QTB.getAllBookingsByPersonIdAndStatus mbLimit mbOffset personId_ merchantOpCity.id status
+    Nothing -> QTB.getAllBookingsByPersonId mbLimit mbOffset personId_ merchantOpCity.id
+
+  convertToApiEntityV2 `mapM` ticketBookings
+  where
+    convertToApiEntityV2 :: DTTB.TicketBooking -> Environment.Flow TicketBookingAPIEntityV2
+    convertToApiEntityV2 DTTB.TicketBooking {..} = do
+      ticketPlace <- QTP.findById ticketPlaceId >>= fromMaybeM (TicketPlaceNotFound ticketPlaceId.getId)
+      return $
+        TicketBookingAPIEntityV2
+          { ticketShortId = Kernel.Types.Id.getShortId shortId,
+            ticketPlaceId = Kernel.Types.Id.getId ticketPlaceId,
+            personId = personId.getId,
+            ticketPlaceName = ticketPlace.name,
+            placeType = ticketPlace.placeType,
+            iconUrl = ticketPlace.iconUrl,
+            amount = amount.amount,
+            amountWithCurrency = mkPriceAPIEntity amount,
+            peopleTicketQuantity = peopleTicketQuantity,
+            status = status,
+            visitDate = visitDate
           }
 
 getTicketBookingsDetails :: (Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking -> Environment.Flow API.Types.UI.TicketService.TicketBookingDetails
@@ -553,6 +601,8 @@ getTicketBookingsDetails (_mbPersonId, merchantId') shortId_ = do
             ticketPlaceId = ticketPlaceId.getId,
             personId = personId.getId,
             ticketPlaceName = ticketPlace.name,
+            lat = fromMaybe 0.0 ticketPlace.lat,
+            lon = fromMaybe 0.0 ticketPlace.lon,
             amount = amount.amount,
             amountWithCurrency = mkPriceAPIEntity amount,
             refundDetails,
@@ -621,6 +671,7 @@ getTicketBookingsDetails (_mbPersonId, merchantId') shortId_ = do
             initiatedBy = Nothing,
             createdAt = now,
             updatedAt = now,
+            split = Nothing,
             ..
           }
 
@@ -790,7 +841,7 @@ getTicketBookingsStatus (mbPersonId, merchantId) _shortId@(Kernel.Types.Id.Short
                   )
                   ticketBookingServiceCategories
               LockBookingFailed -> do
-                intializeRefundProcess ticketBooking'.shortId (Just ticketBooking'.ticketPlaceId) totalRefundAmount merchantId ticketBooking'.merchantOperatingCityId (Just person.id.getId) person.clientSdkVersion
+                intializeRefundProcess ticketBooking'.shortId (Just ticketBooking'.ticketPlaceId) totalRefundAmount merchantId ticketBooking'.merchantOperatingCityId (Just person.id.getId) person.clientSdkVersion Nothing
                 QTB.updateStatusByShortId DTTB.RefundInitiated _shortId
                 QTBS.updateAllStatusByBookingId DTB.Failed ticketBooking'.id
           when (status `elem` [Payment.AUTHENTICATION_FAILED, Payment.AUTHORIZATION_FAILED, Payment.JUSPAY_DECLINED]) $ do
@@ -913,7 +964,7 @@ postTicketServiceCancel (_mbPersonId, merchantId) req = do
           updateStatusForBooking ticketBooking ticketBookingService tbServiceCategory.bookedSeats
           case Map.lookup ticketBooking.personId personMap of
             Just person -> do
-              let refundCall = when (refundAmount > 0) $ intializeRefundProcess ticketBooking.shortId (Just ticketBooking.ticketPlaceId) refundAmount person.merchantId person.merchantOperatingCityId (Just person.id.getId) person.clientSdkVersion
+              let refundCall = when (refundAmount > 0) $ intializeRefundProcess ticketBooking.shortId (Just ticketBooking.ticketPlaceId) refundAmount person.merchantId person.merchantOperatingCityId (Just person.id.getId) person.clientSdkVersion Nothing
               let notificationCall = Notifications.notifyTicketCancelled ticketBooking.id.getId tbServiceCategory.name person
               pure (refundCall, notificationCall)
             Nothing -> pure (unit, unit)
@@ -966,7 +1017,7 @@ postTicketBookingCancel (mbPersonId, merchantId) req = do
 
     QTB.updateStatusAndCancelledSeatsById status (Just totalNoOfCancelledSeats) ticketBooking.id
 
-    when (totalRefundAmount > 0) $ intializeRefundProcess ticketBooking.shortId (Just ticketBooking.ticketPlaceId) totalRefundAmount merchantId ticketBooking.merchantOperatingCityId (Just person.id.getId) person.clientSdkVersion
+    when (totalRefundAmount > 0) $ intializeRefundProcess ticketBooking.shortId (Just ticketBooking.ticketPlaceId) totalRefundAmount merchantId ticketBooking.merchantOperatingCityId (Just person.id.getId) person.clientSdkVersion Nothing
 
   pure Kernel.Types.APISuccess.Success
   where
@@ -1087,8 +1138,8 @@ updateCancelledSeatsInSeatManagement categoryId noOfSeatsToCancel date = do
   mbSeatM <- QTSM.findByTicketServiceCategoryIdAndDate categoryId date
   whenJust mbSeatM $ \seatM -> QTSM.updateBookedSeats (max 0 $ seatM.booked - noOfSeatsToCancel) categoryId date
 
-intializeRefundProcess :: Kernel.Types.Id.ShortId DTTB.TicketBooking -> Maybe $ Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> HighPrecMoney -> Kernel.Types.Id.Id Merchant.Merchant -> Kernel.Types.Id.Id MerchantOperatingCity.MerchantOperatingCity -> Maybe Text -> Maybe Version -> Environment.Flow ()
-intializeRefundProcess ticketBookingShortId ticketPlaceId amountToRefund personMerchantId personMerchantOperatingCityId mRoutingId mSdkVersion = do
+intializeRefundProcess :: Kernel.Types.Id.ShortId DTTB.TicketBooking -> Maybe $ Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> HighPrecMoney -> Kernel.Types.Id.Id Merchant.Merchant -> Kernel.Types.Id.Id MerchantOperatingCity.MerchantOperatingCity -> Maybe Text -> Maybe Version -> Maybe [Split] -> Environment.Flow ()
+intializeRefundProcess ticketBookingShortId ticketPlaceId amountToRefund personMerchantId personMerchantOperatingCityId mRoutingId mSdkVersion splitDetails = do
   refundId <- generateGUID
   let autoRefundReq =
         Payment.AutoRefundReq
@@ -1099,7 +1150,7 @@ intializeRefundProcess ticketBookingShortId ticketPlaceId amountToRefund personM
           }
       commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant personMerchantId
       createRefundCall = Payment.refundOrder personMerchantId personMerchantOperatingCityId ticketPlaceId Payment.Normal mRoutingId mSdkVersion
-  void $ try @_ @SomeException $ DPayment.refundService (autoRefundReq, Kernel.Types.Id.Id {Kernel.Types.Id.getId = refundId}) commonMerchantId createRefundCall
+  void $ try @_ @SomeException $ DPayment.refundService (autoRefundReq, Kernel.Types.Id.Id {Kernel.Types.Id.getId = refundId}) commonMerchantId splitDetails createRefundCall
 
 tryUserTicketCancellationLock :: Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour -> Data.Time.Calendar.Day -> Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory -> Environment.Flow () -> Environment.Flow ()
 tryUserTicketCancellationLock businessHourId date serviceCategoryId executeFunction = do
@@ -1585,3 +1636,89 @@ convertDomainBHTtoCoreBHT (Domain.Types.BusinessHour.Duration st ed) = SharedLog
 
 sha1 :: ToJSON a => a -> Text
 sha1 = T.pack . show . Hash.hashWith Hash.SHA1 . BS.toStrict . encode
+
+mkTicketPlaceAvailabilityCacheKey :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Int -> Text
+mkTicketPlaceAvailabilityCacheKey placeId month =
+  "TicketPlace" <> ":" <> placeId.getId <> ":" <> show month
+
+getDaysInMonth :: Int -> Int -> [Day]
+getDaysInMonth year month =
+  let startDay = fromGregorian (fromIntegral year) month 1
+      nextMonth = if month == 12 then fromGregorian (fromIntegral year + 1) 1 1 else fromGregorian (fromIntegral year) (month + 1) 1
+      lastDay = addDays (-1) nextMonth
+   in [startDay .. lastDay]
+
+isTicketPlaceClosed :: Domain.Types.TicketPlace.TicketPlace -> Day -> Environment.Flow Bool
+isTicketPlaceClosed ticketPlace day = do
+  -- For rule evaluation, we need to pass the specific day we're checking
+  context <- TicketRule.getCurrentContext 330 (Just day) Nothing
+  let processedPlace = TicketRule.processEntity context ticketPlace
+  pure $ processedPlace.status == Domain.Types.TicketPlace.Inactive
+
+calculateClosedDaysSimple :: Domain.Types.TicketPlace.TicketPlace -> Int -> Int -> Environment.Flow [Int]
+calculateClosedDaysSimple ticketPlace year month = do
+  let allDays = getDaysInMonth year month
+  closedDays <- filterM (isTicketPlaceClosed ticketPlace) allDays
+  pure $ map (\day -> fromIntegral $ toModifiedJulianDay day - toModifiedJulianDay (fromGregorian (fromIntegral year) month 1) + 1) closedDays
+
+getCachedOrCalculateClosedDays :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Int -> Int -> Environment.Flow [Int]
+getCachedOrCalculateClosedDays placeId year month = do
+  let cacheKey = mkTicketPlaceAvailabilityCacheKey placeId month
+
+  mbCachedResult <- Redis.safeGet cacheKey
+  case mbCachedResult of
+    Just cachedClosedDays -> do
+      logDebug $ "Cached closed days: " <> show cachedClosedDays
+      pure cachedClosedDays
+    Nothing -> do
+      ticketPlace <- QTP.findById placeId >>= fromMaybeM (TicketPlaceNotFound placeId.getId)
+      logDebug $ "Found ticket place: " <> show ticketPlace.id
+      logDebug $ "Ticket place rules: " <> show ticketPlace.rules
+      closedDays <- calculateClosedDaysSimple ticketPlace year month
+      logDebug $ "Calculated closed days: " <> show closedDays
+
+      -- Cache the result for 7 days (604800 seconds)
+      Redis.setExp cacheKey closedDays 604800
+      logDebug $ "Cached result for key: " <> cacheKey
+
+      pure closedDays
+
+getTicketPlaceAvailability :: (Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Maybe Bool -> Maybe Bool -> Environment.Flow [TicketPlaceAvailability]
+getTicketPlaceAvailability (_, _merchantId) placeId mbForceFresh _mbIsClosed = do
+  now <- getCurrentTime
+  let (currentYear, currentMonth, _) = toGregorian $ utctDay now
+      year = fromIntegral currentYear
+      month = currentMonth
+      nextMonth = if month == 12 then 1 else month + 1
+      nextYear = if month == 12 then year + 1 else year
+
+  logDebug $ "Getting availability for place: " <> placeId.getId
+  logDebug $ "Current year: " <> show year <> ", month: " <> show month
+  logDebug $ "Next year: " <> show nextYear <> ", month: " <> show nextMonth
+
+  whenJust mbForceFresh $ \forceFresh -> do
+    if forceFresh
+      then do
+        invalidateTicketPlaceAvailabilityCache placeId
+        logInfo $ "Invalidated cache for place: " <> placeId.getId
+      else do
+        logInfo $ "Not invalidating cache for place: " <> placeId.getId
+
+  currentMonthClosedDays <- getCachedOrCalculateClosedDays placeId year month
+  nextMonthClosedDays <- getCachedOrCalculateClosedDays placeId nextYear nextMonth
+
+  pure $ TicketPlaceAvailability {closedDays = currentMonthClosedDays, month = month} : TicketPlaceAvailability {closedDays = nextMonthClosedDays, month = nextMonth} : []
+
+invalidateTicketPlaceAvailabilityCache :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Environment.Flow ()
+invalidateTicketPlaceAvailabilityCache placeId = do
+  forM_ [1 .. 12] $ \month -> do
+    let cacheKey = mkTicketPlaceAvailabilityCacheKey placeId month
+    Redis.del cacheKey
+
+  logInfo $ "Invalidated availability cache for place: " <> placeId.getId
+
+-- Call this function when ticket place rules are updated
+invalidateCacheForTicketPlace :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Environment.Flow ()
+invalidateCacheForTicketPlace placeId = do
+  logInfo $ "Invalidating cache for ticket place: " <> placeId.getId
+  invalidateTicketPlaceAvailabilityCache placeId

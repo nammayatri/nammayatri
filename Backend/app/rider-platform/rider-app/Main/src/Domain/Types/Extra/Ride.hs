@@ -5,6 +5,7 @@ module Domain.Types.Extra.Ride where
 import Data.Aeson
 import qualified Domain.Types.LocationAddress as DLA
 import qualified Domain.Types.Ride
+import qualified Domain.Types.RideStatus
 import qualified Domain.Types.ServiceTierType
 import qualified Domain.Types.StopInformation as DSI
 import qualified Domain.Types.VehicleVariant
@@ -52,7 +53,7 @@ data RideAPIEntity = RideAPIEntity
     rideStartTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     shortRideId :: Kernel.Types.Id.ShortId Domain.Types.Ride.Ride,
     startOdometerReading :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
-    status :: Domain.Types.Ride.RideStatus,
+    status :: Domain.Types.RideStatus.RideStatus,
     tollConfidence :: Kernel.Prelude.Maybe Kernel.Types.Confidence.Confidence,
     traveledRideDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
     updatedAt :: Kernel.Prelude.UTCTime,
