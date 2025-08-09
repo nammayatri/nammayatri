@@ -521,7 +521,7 @@ driverBLockedPopup state =
     isOverCharging = maybe false (\overchargingTag -> overchargingTag `elem` [MediumOverCharging, SuperOverCharging, HighOverCharging]) mbOverchargingTag
     isSuspended = maybe false (\overchargingTag -> overchargingTag == MediumOverCharging) mbOverchargingTag
 
-    title = if isOverCharging  && isSuspended then getString $  SUSPENDED_TILL (EHC.convertUTCtoISC state.data.blockedExpiryTime "hh:mm A") (EHC.convertUTCtoISC state.data.blockedExpiryTime "DD-MM-YYYY")
+    title = if isOverCharging && isSuspended then getString $  SUSPENDED_TILL (EHC.convertUTCtoISC state.data.blockedExpiryTime "hh:mm A") (EHC.convertUTCtoISC state.data.blockedExpiryTime "DD-MM-YYYY")
       else getString $ BLOCKED_TILL (EHC.convertUTCtoISC state.data.blockedExpiryTime "hh:mm A") (EHC.convertUTCtoISC state.data.blockedExpiryTime "DD-MM-YYYY")
 
     description = if isOverCharging && isSuspended then getStringV2 overcharging_suspended_desc
