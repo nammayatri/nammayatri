@@ -64,7 +64,7 @@ createChildVendorFee parentFee childFee totalFee = do
   let adjustment =
         if (getHighPrecMoney totalFee) == 0
           then 1.0
-          else (getHighPrecMoney childFee.platformFee.fee) / (getHighPrecMoney totalFee)
+          else (getHighPrecMoney childFee.platformFee.fee + getHighPrecMoney childFee.platformFee.cgst + getHighPrecMoney childFee.platformFee.sgst) / (getHighPrecMoney totalFee)
 
   vendorFees <- findAllByDriverFeeId parentFee.id
   let childVendorFees =
