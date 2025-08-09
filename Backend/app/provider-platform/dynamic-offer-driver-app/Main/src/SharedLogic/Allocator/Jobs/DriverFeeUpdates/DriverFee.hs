@@ -366,11 +366,13 @@ driverFeeSplitter paymentMode plan feeWithoutDiscount totalFee driverFee mandate
       let adjustment =
             if totalFee.getHighPrecMoney == 0
               then 1.0
-              else firstFee.platformFee.fee.getHighPrecMoney / totalFee.getHighPrecMoney
+              else (firstFee.platformFee.fee.getHighPrecMoney + firstFee.platformFee.cgst.getHighPrecMoney + firstFee.platformFee.sgst.getHighPrecMoney) / totalFee.getHighPrecMoney
       mapM_ (\dfee -> processRestFee paymentMode dfee subscriptionConfigs driverFee totalFee) restFees
       -- Reset The Original Fee Amount & adjust the vendor fee amount in proportion
       resetFee firstFee.id firstFee.govtCharges firstFee.platformFee (Just feeWithoutDiscount) firstFee.amountPaidByCoin now
-      QVF.adjustVendorFee firstFee.id adjustment
+      if restFees /= []
+        then QVF.adjustVendorFee firstFee.id adjustment
+        else return ()
 
 getRescheduledTime :: (MonadFlow m) => NominalDiffTime -> m UTCTime
 getRescheduledTime gap = addUTCTime gap <$> getCurrentTime
