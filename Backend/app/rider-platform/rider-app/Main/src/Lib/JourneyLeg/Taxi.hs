@@ -149,30 +149,8 @@ instance JT.JourneyLeg TaxiLegRequest m where
         Nothing -> CFFM.setConfirmOnceGetFare req.searchId
   confirm _ = throwError (InternalError "Not Supported")
 
-  update (TaxiLegRequestUpdate _taxiLegUpdateRequest) = return ()
+  update (TaxiLegRequestUpdate _) = return ()
   update _ = throwError (InternalError "Not Supported")
-
-  -- case taxiLegUpdateRequest of
-  --   EditLocation editLocationRequest -> do
-  --     let editLocationReq =
-  --           DRide.EditLocationReq
-  --             { origin = editLocationRequest.origin,
-  --               destination = editLocationRequest.destination
-  --             }
-  --     void $ editLocation editLocationRequest.rideId (editLocationRequest.personId, editLocationRequest.merchantId) editLocationReq
-  --   UpdateVariant taxiLegUpdateVariant -> do
-  --     searchRequest <- QSearchRequest.findById taxiLegUpdateVariant.searchRequestId >>= fromMaybeM (InvalidRequest "SearchRequest not found")
-  --     journeyLegInfo <- searchRequest.x & fromMaybeM (InvalidRequest "Journey Leg for SearchRequest not found")
-  --     oldEstimateId <- journeyLegInfo.pricingId & fromMaybeM (InternalError "Old estimate id not found for search request")
-  --     oldEstimate <- QEstimate.findById (Id oldEstimateId) >>= fromMaybeM (InternalError "Old estimate not found for search request")
-  --     newEstimate <- QEstimate.findById taxiLegUpdateVariant.estimateId >>= fromMaybeM (InvalidRequest "New Estimate requested not found")
-  --     QSearchRequest.updatePricingId taxiLegUpdateVariant.searchRequestId (Just (taxiLegUpdateVariant.estimateId).getId)
-  --     let journeyId = journeyLegInfo.journeyId
-  --     journey <- QJourney.findByPrimaryKey (Id journeyId) >>= fromMaybeM (InvalidRequest "Journey not found")
-  --     initialFare <- journey.estimatedFare & fromMaybeM (InvalidRequest "Journey for SearchRequest not found")
-  --     price1 <- initialFare `subtractPrice` oldEstimate.estimatedTotalFare
-  --     newEstimatedPrice <- price1 `addPrice` newEstimate.estimatedTotalFare
-  --     QJourney.updateEstimatedFare (Just newEstimatedPrice) (Id journeyId)
 
   cancel (TaxiLegRequestCancel legData) = do
     mbBooking <- QBooking.findByTransactionId legData.searchRequestId.getId
@@ -217,52 +195,27 @@ instance JT.JourneyLeg TaxiLegRequest m where
 
   getState (TaxiLegRequestGetState req) = do
     mbBooking <- QBooking.findByTransactionIdAndStatus req.searchId.getId (activeBookingStatus <> [COMPLETED, CANCELLED])
-    case mbBooking of
-      Just booking -> do
-        mbRide <- QRide.findByRBId booking.id
-        (journeyLegStatus, vehiclePosition) <- JT.getTaxiLegStatusFromBooking booking mbRide
-        journeyLegOrder <- booking.journeyLegOrder & fromMaybeM (BookingFieldNotPresent "journeyLegOrder")
-        journeyLegsStatus <- getJourneyLegStatus booking.journeyRouteDetails (Just booking.transactionId) Nothing
+    mbRide <- maybe (pure Nothing) (QRide.findByRBId . (.id)) mbBooking
+    mbEstimate <-
+      case mbBooking of
+        Just booking -> return Nothing
+        Nothing -> do
+          searchReq <- QSearchRequest.findById req.searchId >>= fromMaybeM (SearchRequestNotFound req.searchId.getId)
+          return $ maybe (pure Nothing) (QEstimate.findById . Id) journeyLegInfo.pricingId
 
-        return $
-          JT.Single $
-            JT.JourneyLegStateData
-              { status = journeyLegStatus,
-                legStatus = JT.TaxiStatusElement <$> journeyLegsStatus,
-                userPosition = (.latLong) <$> listToMaybe req.riderLastPoints,
-                vehiclePositions = maybe [] (\latLong -> [JT.VehiclePosition {position = Just latLong, vehicleId = "taxi", route_state = Nothing, upcomingStops = []}]) vehiclePosition,
-                legOrder = journeyLegOrder,
-                subLegOrder = 1,
-                mode = DTrip.Taxi
-              }
-      Nothing -> do
-        searchReq <- QSearchRequest.findById req.searchId >>= fromMaybeM (SearchRequestNotFound req.searchId.getId)
-        journeyLegInfo <- searchReq.journeyLegInfo & fromMaybeM (InvalidRequest "JourneySearchData not found")
-        mbEstimate <- maybe (pure Nothing) (QEstimate.findById . Id) journeyLegInfo.pricingId
-        journeyLegStatus <- JT.getTaxiLegStatusFromSearch searchReq
-        journeyLegsStatus <- getJourneyLegStatus searchReq.journeyRouteDetails (Just searchReq.id.getId) (mbEstimate <&> (.id.getId))
-
-        return $
-          JT.Single $
-            JT.JourneyLegStateData
-              { status = journeyLegStatus,
-                legStatus = JT.TaxiStatusElement <$> journeyLegsStatus,
-                userPosition = (.latLong) <$> listToMaybe req.riderLastPoints,
-                vehiclePositions = [],
-                legOrder = journeyLegInfo.journeyLegOrder,
-                subLegOrder = 1,
-                mode = DTrip.Taxi
-              }
-    where
-      getJourneyLegStatus :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => Maybe RD.RouteDetails -> Maybe Text -> Maybe Text -> m (Maybe JT.JourneyTaxiLegStatus)
-      getJourneyLegStatus journeyRouteDetails mbLegSearchId mbPricingId = do
-        bookingStatus <- JMStateUtils.getTaxiJourneyBookingStatus mbLegSearchId mbPricingId
-        mapM
-          ( \routeDetails -> do
-              trackingStatus <- JMStateUtils.getTaxiJourneyLegTrackingStatus mbLegSearchId mbPricingId routeDetails
-              return $ JT.JourneyTaxiLegStatus {trackingStatus = trackingStatus, bookingStatus = bookingStatus}
-          )
-          journeyRouteDetails
+    vehiclePosition <- JT.getTaxiVehiclePosition mbRide
+    (oldStatus, bookingStatus, mbTrackingStatus) <- getTaxiAllStatuses req.journeyLeg mbBooking mbRide mbEstimate
+    return $
+      JT.Single $
+        JT.JourneyLegStateData
+          { status = oldStatus,
+            legStatus = JT.TaxiStatusElement $ JT.JourneyTaxiLegStatus {trackingStatus = mbTrackingStatus, bookingStatus = bookingStatus},
+            userPosition = (.latLong) <$> listToMaybe req.riderLastPoints,
+            vehiclePositions = maybe [] (\latLong -> [JT.VehiclePosition {position = Just latLong, vehicleId = "taxi", upcomingStops = [], route_state = Nothing}]) vehiclePosition,
+            legOrder = req.journeyLeg.sequenceNumber,
+            subLegOrder = 1,
+            mode = DTrip.Taxi
+          }
   getState _ = throwError (InternalError "Not Supported")
 
   getInfo (TaxiLegRequestGetInfo req) = do
@@ -270,14 +223,10 @@ instance JT.JourneyLeg TaxiLegRequest m where
     case mbBooking of
       Just booking -> do
         mRide <- QRide.findByRBId booking.id
-        Just <$> JT.mkLegInfoFromBookingAndRide booking mRide req.journeyLeg.entrance req.journeyLeg.exit
+        Just <$> JT.mkLegInfoFromBookingAndRide booking mRide req.journeyLeg
       Nothing -> do
-        mbSearchReq <- QSearchRequest.findById req.searchId
-        if isNothing mbSearchReq && req.ignoreOldSearchRequest
-          then return Nothing
-          else do
-            searchReq <- fromMaybeM (SearchRequestNotFound req.searchId.getId) mbSearchReq
-            Just <$> JT.mkLegInfoFromSearchRequest searchReq req.journeyLeg.entrance req.journeyLeg.exit
+        searchReq <- QSearchRequest.findById req.searchId >>= fromMaybeM (SearchRequestNotFound req.searchId.getId)
+        Just <$> JT.mkLegInfoFromSearchRequest searchReq req.journeyLeg
   getInfo _ = throwError (InternalError "Not Supported")
 
   getFare (TaxiLegRequestGetFare taxiGetFareData) = do

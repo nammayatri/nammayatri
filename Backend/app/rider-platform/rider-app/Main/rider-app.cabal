@@ -568,7 +568,6 @@ library
       Storage.Queries.Transformers.WhiteListOrg
       Storage.Queries.UiRiderConfigExtra
       Storage.Queries.VehicleRouteMappingExtra
-      Storage.Queries.WalkLegMultimodalExtra
       Storage.Queries.WhiteListOrgExtra
       Tools.AadhaarVerification
       Tools.Auth
@@ -774,7 +773,6 @@ library
       Domain.Types.JourneyFeedback
       Domain.Types.JourneyLeg
       Domain.Types.JourneyLegsFeedbacks
-      Domain.Types.JourneyRouteDetails
       Domain.Types.Location
       Domain.Types.LocationMapping
       Domain.Types.Merchant
@@ -851,7 +849,6 @@ library
       Domain.Types.VehicleConfig
       Domain.Types.VehicleRouteMapping
       Domain.Types.VendorSplitDetails
-      Domain.Types.WalkLegMultimodal
       Domain.Types.WhiteListOrg
       Storage.Beam.AadhaarOtpReq
       Storage.Beam.AadhaarOtpVerify
@@ -910,7 +907,6 @@ library
       Storage.Beam.JourneyFeedback
       Storage.Beam.JourneyLeg
       Storage.Beam.JourneyLegsFeedbacks
-      Storage.Beam.JourneyRouteDetails
       Storage.Beam.Location
       Storage.Beam.LocationMapping
       Storage.Beam.Merchant
@@ -986,7 +982,6 @@ library
       Storage.Beam.VehicleConfig
       Storage.Beam.VehicleRouteMapping
       Storage.Beam.VendorSplitDetails
-      Storage.Beam.WalkLegMultimodal
       Storage.Beam.WhiteListOrg
       Storage.CachedQueries.FeedbackForm
       Storage.CachedQueries.InsuranceConfig
@@ -1047,7 +1042,6 @@ library
       Storage.Queries.JourneyFeedback
       Storage.Queries.JourneyLeg
       Storage.Queries.JourneyLegsFeedbacks
-      Storage.Queries.JourneyRouteDetails
       Storage.Queries.Location
       Storage.Queries.LocationMapping
       Storage.Queries.Merchant
@@ -1121,7 +1115,6 @@ library
       Storage.Queries.OrphanInstances.TicketService
       Storage.Queries.OrphanInstances.UiRiderConfig
       Storage.Queries.OrphanInstances.VehicleRouteMapping
-      Storage.Queries.OrphanInstances.WalkLegMultimodal
       Storage.Queries.OrphanInstances.WhiteListOrg
       Storage.Queries.ParcelDetails
       Storage.Queries.PartnerOrganization
@@ -1179,7 +1172,6 @@ library
       Storage.Queries.VehicleConfig
       Storage.Queries.VehicleRouteMapping
       Storage.Queries.VendorSplitDetails
-      Storage.Queries.WalkLegMultimodal
       Storage.Queries.WhiteListOrg
   other-modules:
       Paths_rider_app

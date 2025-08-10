@@ -16,7 +16,6 @@ import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.PartnerOrganization
 import qualified Domain.Types.Person
 import qualified Domain.Types.RecentLocation
-import qualified Domain.Types.RouteDetails
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -53,7 +52,6 @@ data FRFSTicketBooking = FRFSTicketBooking
     journeyLegId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg),
     journeyLegOrder :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     journeyOnInitDone :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    journeyRouteDetails :: [Domain.Types.RouteDetails.RouteDetails],
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     osBuildVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

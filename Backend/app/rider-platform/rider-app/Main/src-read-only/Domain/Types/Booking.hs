@@ -11,7 +11,6 @@ import qualified Domain.Types.Common
 import Domain.Types.Extra.Booking as ReExport
 import qualified Domain.Types.Extra.Booking
 import qualified Domain.Types.Journey
-import qualified Domain.Types.JourneyLeg
 import qualified Domain.Types.Location
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -19,7 +18,6 @@ import qualified Domain.Types.ParcelType
 import qualified Domain.Types.Person
 import qualified Domain.Types.Quote
 import qualified Domain.Types.RecentLocation
-import qualified Domain.Types.RouteDetails
 import qualified Domain.Types.ServiceTierType
 import qualified Domain.Types.Trip
 import qualified Domain.Types.TripTerms
@@ -70,9 +68,7 @@ data Booking = Booking
     isReferredRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isScheduled :: Kernel.Prelude.Bool,
     journeyId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Journey.Journey),
-    journeyLegId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg),
     journeyLegOrder :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    journeyRouteDetails :: Kernel.Prelude.Maybe Domain.Types.RouteDetails.RouteDetails,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     paymentMethodId :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.PaymentMethodId,

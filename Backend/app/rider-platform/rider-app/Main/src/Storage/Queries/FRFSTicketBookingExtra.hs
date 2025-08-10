@@ -57,12 +57,6 @@ findAllByRiderId limit offset riderId mbVehicleCategory = do
     limit
     offset
 
-updateIsSkipped :: (MonadFlow m, EsqDBFlow m r) => Id FRFSTicketBooking -> Maybe Bool -> m ()
-updateIsSkipped (Id reqId) isSkipped = do
-  updateOneWithKV
-    [Se.Set Beam.isSkipped isSkipped]
-    [Se.Is Beam.id (Se.Eq reqId)]
-
 findAllByJourneyIdAndRiderId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Text -> Int -> m [FRFSTicketBooking]
 findAllByJourneyIdAndRiderId riderId journeyId limit = do
   findAllWithOptionsKV

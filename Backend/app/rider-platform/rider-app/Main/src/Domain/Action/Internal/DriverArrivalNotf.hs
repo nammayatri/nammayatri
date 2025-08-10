@@ -10,11 +10,9 @@ import Kernel.Prelude
 import Kernel.Types.APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Error
-import qualified Lib.JourneyLeg.Types as LJT
 import qualified Lib.JourneyModule.State.Types as JMState
 import qualified Lib.JourneyModule.State.Utils as JMState
 import qualified Storage.Queries.Booking as QRB
-import qualified Storage.Queries.BookingExtra as QRBE
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 import qualified Tools.Notifications as Notify

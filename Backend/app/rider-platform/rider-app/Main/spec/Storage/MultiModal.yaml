@@ -172,92 +172,6 @@ PassengerDetails:
     lastName: Maybe Text
     age: Maybe Int
 
-WalkLegMultimodal:
-  tableName: walk_leg_multimodal
-
-  derives: "Generic, Show"
-
-  types:
-    WalkLegStatus:
-      enum: "InPlan, Ongoing, Finishing, Completed, Cancelled"
-
-  fields:
-    id: Id WalkLegMultimodal
-    startTime: UTCTime
-    # validTill: UTCTime
-    riderId: Id Person
-    fromLocation: Location
-    toLocation: Maybe Location
-    estimatedDistance: Maybe Distance
-    estimatedDuration: Maybe Seconds
-    status: WalkLegStatus
-    merchantId: Id Merchant
-    merchantOperatingCityId: Id MerchantOperatingCity
-    # clientDevice: Maybe Device
-    journeyLegInfo: Maybe JourneySearchData
-    journeyLegId: Maybe (Id JourneyLeg)
-    journeyRouteDetails: Maybe RouteDetails
-
-  sqlType:
-    toLocationId: character varying(36)
-    fromLocationId: character varying(36)
-
-  queries:
-    findById:
-      kvFunction: findOneWithKV
-      where: id
-    updateStatus:
-      kvFunction: updateOneWithKV
-      params: [status]
-      where: id
-
-  beamFields:
-    estimatedDistance:
-      estimatedDistance: Maybe HighPrecDistance
-      distanceUnit: Maybe DistanceUnit
-    fromLocation:
-      fromLocationId: Maybe Text
-    toLocation:
-      toLocationId: Maybe Text
-    journeyLegInfo:
-      journeyLegOrder: Maybe Int
-      journeyId: Maybe Text
-      agency: Maybe Text
-      skipBooking: Maybe Bool
-      convenienceCost: Maybe Int
-      pricingId: Maybe Text
-      isDeleted: Maybe Bool
-      onSearchFailed: Maybe Bool
-    journeyRouteDetails: {}
-
-  intermediateTransformers:
-    fromTType:
-      - journeyRouteDetails': Storage.Queries.Transformers.RouteDetails.getJourneyRouteDetails journeyLegId|EM
-
-  fromTType:
-    estimatedDistance: (Kernel.Types.Common.Distance <$> estimatedDistance <*> distanceUnit)|E
-    fromLocation: Storage.Queries.Transformers.MultiModal.getFromLocation id|EM
-    toLocation: Storage.Queries.Transformers.MultiModal.getToLocation id|EM
-    journeyLegInfo: Storage.Queries.Transformers.MultiModal.mkJourneyLegInfo
-    journeyRouteDetails: listToMaybe journeyRouteDetails'|E
-
-  toTType:
-    estimatedDistance: (.value) <$> |I
-    distanceUnit: (.unit) <$> |I
-    fromLocationId: (Just $ Kernel.Types.Id.getId ((.id) fromLocation))|E
-    toLocationId: (Kernel.Types.Id.getId <$> (toLocation <&> (.id)))|E
-    journeyLegOrder: Kernel.Prelude.fmap (.journeyLegOrder)|I
-    journeyId: Kernel.Prelude.fmap (.journeyId)|I
-    agency: (journeyLegInfo >>= (.agency))|E
-    skipBooking: Kernel.Prelude.fmap (.skipBooking)|I
-    convenienceCost: Kernel.Prelude.fmap (.convenienceCost)|I
-    pricingId: (journeyLegInfo >>= (.pricingId))|E
-    isDeleted: (journeyLegInfo >>= (.isDeleted))|E
-    onSearchFailed: (journeyLegInfo >>= (.onSearchFailed))|E
-
-  extraOperations:
-    - EXTRA_QUERY_FILE
-
 MultimodalPreferences:
   tableName: multimodal_preferences
 
@@ -319,29 +233,25 @@ JourneyLeg:
     changedBusesInSequence: "Maybe [Text]"
     finalBoardedBusNumber: Maybe Text
     isSkipped: Maybe Bool
-    entrance: Maybe MultiModalLegGate
-    exit: Maybe MultiModalLegGate
     straightLineEntrance: Maybe MultiModalLegGate
     straightLineExit: Maybe MultiModalLegGate
     osmEntrance: Maybe MultiModalLegGate
-    osmExit: Maybe MultiModalLegGate    
+    osmExit: Maybe MultiModalLegGate
+    routeGroupId: Text
 
   sqlType:
     serviceTypes: text[]
-    entrance: "json"
-    exit: "json"
     straightLineEntrance: "json"
     straightLineExit: "json"
     osmEntrance: "json"
     osmExit: "json"
 
   beamType:
-    entrance: Maybe Value
-    exit: Maybe Value
     straightLineEntrance: Maybe Value
     straightLineExit: Maybe Value
     osmEntrance: Maybe Value
     osmExit: Maybe Value
+    routeGroupId: Maybe Text
 
   beamFields:
     distance:
@@ -420,12 +330,11 @@ JourneyLeg:
     startLocation: Kernel.External.Maps.Google.MapsClient.LatLngV2 startLocationLat startLocationLon|E
     endLocation: Kernel.External.Maps.Google.MapsClient.LatLngV2 endLocationLat endLocationLon|E
     legSearchId: legId|E
-    entrance: entrance >>= Kernel.Utils.JSON.valueToMaybe|E
-    exit: exit >>= Kernel.Utils.JSON.valueToMaybe|E
     straightLineEntrance: straightLineEntrance >>= Kernel.Utils.JSON.valueToMaybe|E
     straightLineExit: straightLineExit >>= Kernel.Utils.JSON.valueToMaybe|E
     osmEntrance: osmEntrance >>= Kernel.Utils.JSON.valueToMaybe|E
     osmExit: osmExit >>= Kernel.Utils.JSON.valueToMaybe|E
+    routeGroupId: fromMaybe "default-group-id" routeGroupId|E
 
   toTType:
     distance: (.value) <$> |I
@@ -443,14 +352,13 @@ JourneyLeg:
     endLocationLat: (endLocation & (.latitude))|E
     endLocationLon: (endLocation & (.longitude))|E
     legId: legSearchId|E
-    entrance: entrance >>= Just . Data.Aeson.toJSON|E
-    exit: exit >>= Just . Data.Aeson.toJSON|E
     straightLineEntrance: straightLineEntrance >>= Just . Data.Aeson.toJSON|E
     straightLineExit: straightLineExit >>= Just . Data.Aeson.toJSON|E
     osmEntrance: osmEntrance >>= Just . Data.Aeson.toJSON|E
     osmExit: osmExit >>= Just . Data.Aeson.toJSON|E
     agencyGtfsId: (agency >>= (.gtfsId))|E
     agencyName: (agency <&> (.name))|E
+    routeGroupId: Just routeGroupId|E
 
   excludedDefaultQueries:
     - create
@@ -466,6 +374,7 @@ JourneyLeg:
 RouteDetails:
   fields:
     id: Id RouteDetails
+    routeGroupId: Text
     journeyLegId: Text
     routeGtfsId: Maybe Text
     routeCode: Maybe Text
@@ -501,6 +410,16 @@ RouteDetails:
     endLocationLon: Double
     # Tracking --
     trackingStatus: Maybe TrackingStatus
+
+  beamType:
+    routeGroupId: Maybe Text
+
+  fromTType:
+    routeGroupId: fromMaybe "default-group-id" routeGroupId|E
+
+  toTType:
+    routeGroupId: Just routeGroupId|E
+
   queries:
     findAllByJourneyLegId:
       kvFunction: findAllWithKV

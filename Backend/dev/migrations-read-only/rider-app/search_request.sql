@@ -330,3 +330,8 @@ ALTER TABLE atlas_app.search_request ADD COLUMN journey_leg_id character varying
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+

@@ -94,8 +94,6 @@ SearchRequest:
     allJourneysLoaded: Maybe Bool
     searchMode: Maybe SearchMode
     isMultimodalSearch: Maybe Bool
-    journeyLegId: Maybe (Id JourneyLeg)
-    journeyRouteDetails: Maybe RouteDetails
 
   default:
     hasMultimodalSearch: "false"
@@ -170,11 +168,6 @@ SearchRequest:
     driverIdentifier:
       driverIdentifierType: Maybe DriverIdentifierType
       driverIdentifierValue: Maybe Text
-    journeyRouteDetails: {}
-
-  intermediateTransformers:
-    fromTType:
-      - journeyRouteDetails': Storage.Queries.Transformers.RouteDetails.getJourneyRouteDetails journeyLegId|EM
 
   # distanceUnit should be the same for all fields
   toTType:
@@ -228,7 +221,6 @@ SearchRequest:
     journeyLegInfo: Storage.Queries.Transformers.SearchRequest.mkJourneyLegInfo
     driverIdentifier: Domain.Types.RefereeLink.mkDriverIdentifier
     configInExperimentVersions: fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< configInExperimentVersions)|E
-    journeyRouteDetails: listToMaybe journeyRouteDetails'|E
 
   excludedFields: [updatedAt]
 

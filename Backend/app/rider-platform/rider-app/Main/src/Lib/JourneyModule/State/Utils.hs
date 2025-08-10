@@ -1,27 +1,58 @@
 module Lib.JourneyModule.State.Utils where
 
+import Domain.Types.Booking as DBooking
+import Domain.Types.Estimate as DEstimate
+import Domain.Types.FRFSTicketBooking as DFRFSBooking
 import Domain.Types.FRFSTicketBookingStatus as DFRFSBooking
 import Domain.Types.FRFSTicketStatus as DFRFSTicket
 import Domain.Types.JourneyLeg as DJourneyLeg
+import Domain.Types.Ride as DRide
 import Domain.Types.RideStatus as DTaxiRide
 import Domain.Types.RouteDetails as DRouteDetails
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.JourneyLeg.Types as JLTypes
 import Lib.JourneyModule.State.Types
-import Storage.Queries.Booking as QTaxiBooking
-import Storage.Queries.Estimate as QTaxiEstimate
 import Storage.Queries.FRFSTicket as QFRFSTicket
-import Storage.Queries.FRFSTicketBooking as QFRFSBooking
 import Storage.Queries.FRFSTicketBookingFeedback as QFRFSTicketBookingFeedback
 import Storage.Queries.JourneyLegsFeedbacks as SQJLFB
-import Storage.Queries.Ride as QTaxiRide
 import Storage.Queries.RouteDetails as QRouteDetails
 
-getTaxiJourneyBookingStatus :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => Maybe Text -> Maybe Text -> m TaxiJourneyLegStatus
-getTaxiJourneyBookingStatus mbLegSearchId mbPricingId = do
-  mbBooking <- maybe (return Nothing) (QTaxiBooking.findByTransactionId) mbLegSearchId
-  mbRide <- maybe (return Nothing) (QTaxiRide.findActiveByRBId) (mbBooking <&> (.id))
+getFRFSAllStatuses :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => DJourneyLeg.JourneyLeg -> Maybe DFRFSBooking.FRFSTicketBooking -> m (JLTypes.JourneyLegStatus, FRFSJourneyLegStatus, [JourneyFRFSLegStatusElement])
+getFRFSAllStatuses journeyLeg mbBooking = do
+  bookingStatus <- getFRFSJourneyBookingStatus mbBooking
+  trackingStatuses <-
+    mapM
+      ( \routeDetail -> do
+          trackingStatus <- getFRFSJourneyLegTrackingStatus mbBooking routeDetail
+          return $ JourneyFRFSLegStatusElement {trackingStatus = trackingStatus, bookingStatus = bookingStatus, subLegOrder = routeDetail.subLegOrder}
+      )
+      journeyLeg.routeDetails
+  let oldStatus =
+        if journeyLeg.isSkipped == Just True
+          then JLTypes.Skipped
+          else maybe JLTypes.InPlan castTrackingStatusToJourneyLegStatus ((listToMaybe trackingStatuses) >>= (.trackingStatus)) -- for UI backward compatibility
+  return (oldStatus, bookingStatus, trackingStatuses)
+
+getWalkAllStatuses :: DJourneyLeg.JourneyLeg -> (JLTypes.JourneyLegStatus, Maybe TrackingStatus)
+getWalkAllStatuses journeyLeg = do
+  case (listToMaybe journeyLeg.routeDetails) of
+    Just routeDetail -> (maybe JLTypes.InPlan castTrackingStatusToJourneyLegStatus routeDetail.trackingStatus, routeDetail.trackingStatus)
+    Nothing -> (JLTypes.InPlan, Nothing)
+
+getTaxiAllStatuses :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => DJourneyLeg.JourneyLeg -> Maybe DBooking.Booking -> Maybe DRide.Ride -> Maybe DEstimate.Estimate -> m (JLTypes.JourneyLegStatus, TaxiJourneyLegStatus, Maybe TrackingStatus)
+getTaxiAllStatuses journeyLeg mbBooking mbRide mbEstimate = do
+  bookingStatus <- getTaxiJourneyBookingStatus mbBooking mbRide mbEstimate
+  mbTrackingStatus <- getTaxiJourneyLegTrackingStatus mbBooking mbRide mbEstimate (listToMaybe journeyLeg.routeDetails)
+  let oldStatus =
+        if journeyLeg.isSkipped == Just True
+          then JLTypes.Skipped
+          else maybe JLTypes.InPlan castTrackingStatusToJourneyLegStatus mbTrackingStatus -- for UI backward compatibility
+  return (oldStatus, bookingStatus, mbTrackingStatus)
+
+getTaxiJourneyBookingStatus :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => Maybe DBooking.Booking -> Maybe DRide.Ride -> Maybe DEstimate.Estimate -> m TaxiJourneyLegStatus
+getTaxiJourneyBookingStatus mbBooking mbRide mbEstimate = do
   case mbRide of
     Just ride -> do
       case ride.status of
@@ -41,14 +72,12 @@ getTaxiJourneyBookingStatus mbLegSearchId mbPricingId = do
       case mbBooking of
         Just booking -> return $ TaxiBooking booking.status
         Nothing -> do
-          mbEstimate <- maybe (return Nothing) (QTaxiEstimate.findById) (Id <$> mbPricingId)
           case mbEstimate of
             Just estimate -> return $ TaxiEstimate estimate.status
             Nothing -> return $ TaxiInitial EmptyParam
 
-getFRFSJourneyBookingStatus :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => Maybe Text -> m FRFSJourneyLegStatus
-getFRFSJourneyBookingStatus mbLegSearchId = do
-  mbBooking <- maybe (return Nothing) (QFRFSBooking.findBySearchId) (Id <$> mbLegSearchId)
+getFRFSJourneyBookingStatus :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => Maybe DFRFSBooking.FRFSTicketBooking -> m FRFSJourneyLegStatus
+getFRFSJourneyBookingStatus mbBooking = do
   case mbBooking of
     Just booking -> do
       case booking.status of
@@ -103,9 +132,10 @@ setJourneyLegTrackingStatus journeyLegId subLegOrder trackingStatus = do
     )
     routeDetails
 
-getTaxiJourneyLegTrackingStatus :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => Maybe Text -> Maybe Text -> DRouteDetails.RouteDetails -> m (Maybe TrackingStatus)
-getTaxiJourneyLegTrackingStatus mbLegSearchId mbPricingId journeyRouteDetails = do
-  taxiJourneyLegStatus <- getTaxiJourneyBookingStatus mbLegSearchId mbPricingId
+getTaxiJourneyLegTrackingStatus :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => Maybe DBooking.Booking -> Maybe DRide.Ride -> Maybe DEstimate.Estimate -> Maybe DRouteDetails.RouteDetails -> m (Maybe TrackingStatus)
+getTaxiJourneyLegTrackingStatus _ _ _ Nothing = return Nothing
+getTaxiJourneyLegTrackingStatus mbBooking mbRide mbEstimate (Just journeyRouteDetails) = do
+  taxiJourneyLegStatus <- getTaxiJourneyBookingStatus mbBooking mbRide mbEstimate
   case taxiJourneyLegStatus of
     TaxiRide DTaxiRide.INPROGRESS -> do
       when (journeyRouteDetails.trackingStatus /= Just Ongoing) $ do
@@ -117,24 +147,23 @@ getTaxiJourneyLegTrackingStatus mbLegSearchId mbPricingId journeyRouteDetails = 
       return $ Just Finished
     _ -> return journeyRouteDetails.trackingStatus
 
-getFRFSJourneyLegTrackingStatus :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => Maybe Text -> DRouteDetails.RouteDetails -> m (Maybe TrackingStatus)
-getFRFSJourneyLegTrackingStatus mbLegSearchId journeyRouteDetails = do
-  frfsJourneyLegStatus <- getFRFSJourneyBookingStatus mbLegSearchId
+getFRFSJourneyLegTrackingStatus :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => Maybe DFRFSBooking.FRFSTicketBooking -> DRouteDetails.RouteDetails -> m (Maybe TrackingStatus)
+getFRFSJourneyLegTrackingStatus mbBooking journeyRouteDetails = do
+  frfsJourneyLegStatus <- getFRFSJourneyBookingStatus mbBooking
   case frfsJourneyLegStatus of
-    FRFSBooking DFRFSBooking.CONFIRMED -> do
-      when (journeyRouteDetails.trackingStatus /= Just Ongoing) $ do
-        void $ QRouteDetails.updateTrackingStatus (Just Ongoing) journeyRouteDetails.id
-      return $ Just Ongoing
-    FRFSTicket DFRFSTicket.ACTIVE -> do
-      when (journeyRouteDetails.trackingStatus /= Just Ongoing) $ do
-        void $ QRouteDetails.updateTrackingStatus (Just Ongoing) journeyRouteDetails.id
-      return $ Just Ongoing
     FRFSTicket DFRFSTicket.USED -> do
       when (journeyRouteDetails.trackingStatus /= Just Finished) $ do
         void $ QRouteDetails.updateTrackingStatus (Just Finished) journeyRouteDetails.id
       return $ Just Finished
     _ -> return journeyRouteDetails.trackingStatus
 
-getWalkJourneyLegStatus :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => DRouteDetails.RouteDetails -> m (Maybe TrackingStatus)
-getWalkJourneyLegStatus journeyRouteDetails = do
-  return journeyRouteDetails.trackingStatus
+castTrackingStatusToJourneyLegStatus :: TrackingStatus -> JLTypes.JourneyLegStatus
+castTrackingStatusToJourneyLegStatus = \case
+  InPlan -> JLTypes.InPlan
+  Arriving -> JLTypes.OnTheWay
+  AlmostArrived -> JLTypes.Arriving
+  Arrived -> JLTypes.Arrived
+  Ongoing -> JLTypes.Ongoing
+  Finishing -> JLTypes.Finishing
+  ExitingStation -> JLTypes.Finishing
+  Finished -> JLTypes.Completed

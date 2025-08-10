@@ -16,7 +16,6 @@ import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.JourneyLeg.Types
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QRB
@@ -28,7 +27,6 @@ import TransactionLogs.Types
 data GetDriverLocResp = GetDriverLocResp
   { lat :: Double,
     lon :: Double,
-    pickupStage :: Maybe JourneyLegStatus,
     lastUpdate :: UTCTime
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
@@ -68,6 +66,5 @@ getDriverLoc rideId = do
     GetDriverLocResp
       { lat = res.currPoint.lat,
         lon = res.currPoint.lon,
-        lastUpdate = res.lastUpdate,
-        pickupStage = booking.journeyLegStatus
+        lastUpdate = res.lastUpdate
       }

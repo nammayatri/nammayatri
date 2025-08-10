@@ -6,7 +6,6 @@ module Domain.Types.SearchRequest where
 import qualified BecknV2.OnDemand.Enums
 import Data.Aeson
 import qualified Domain.Types.Client
-import qualified Domain.Types.JourneyLeg
 import qualified Domain.Types.Location
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -14,7 +13,6 @@ import qualified Domain.Types.MerchantPaymentMethod
 import qualified Domain.Types.Person
 import qualified Domain.Types.RecentLocation
 import qualified Domain.Types.RefereeLink
-import qualified Domain.Types.RouteDetails
 import qualified Domain.Types.Trip
 import qualified Kernel.External.Maps
 import qualified Kernel.External.Payment.Interface.Types
@@ -61,9 +59,7 @@ data SearchRequest = SearchRequest
     isMeterRideSearch :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isMultimodalSearch :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isPetRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    journeyLegId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg),
     journeyLegInfo :: Kernel.Prelude.Maybe Lib.JourneyLeg.Types.JourneySearchData,
-    journeyRouteDetails :: Kernel.Prelude.Maybe Domain.Types.RouteDetails.RouteDetails,
     language :: Kernel.Prelude.Maybe Kernel.External.Maps.Language,
     maxDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
