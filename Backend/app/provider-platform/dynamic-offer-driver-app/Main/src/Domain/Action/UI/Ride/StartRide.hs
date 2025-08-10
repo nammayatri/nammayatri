@@ -191,8 +191,8 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
 
   void $ Redis.del (StopDetection.mkStopCountRedisKey rideId.getId)
   whenWithLocationUpdatesLock driverId $ do
-    withTimeAPI "startRide" "startRideAndUpdateLocation" $ startRideAndUpdateLocation driverId updatedRide booking.id point booking.providerId odometer
     withTimeAPI "startRide" "initializeDistanceCalculation" $ initializeDistanceCalculation updatedRide.id driverId point
+    withTimeAPI "startRide" "startRideAndUpdateLocation" $ startRideAndUpdateLocation driverId updatedRide booking.id point booking.providerId odometer
 
   fork "notify customer for ride start" $ notifyBAPRideStarted booking updatedRide (Just point)
   fork "startRide - Notify driver" $ Notify.notifyOnRideStarted ride booking
