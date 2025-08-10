@@ -201,7 +201,6 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.isDeleted isDeleted,
       Se.Set Beam.isFareChanged isFareChanged,
       Se.Set Beam.journeyId (Kernel.Types.Id.getId <$> journeyId),
-      Se.Set Beam.journeyLegId (Kernel.Types.Id.getId <$> journeyLegId),
       Se.Set Beam.journeyLegOrder journeyLegOrder,
       Se.Set Beam.journeyOnInitDone journeyOnInitDone,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),

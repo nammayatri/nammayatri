@@ -18,9 +18,11 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Kernel.Utils.JSON
 import qualified Storage.Beam.JourneyLeg as Beam
 import qualified Storage.Queries.RouteDetails
+import qualified Storage.Queries.Transformers.JourneyLeg
 
 instance FromTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
   fromTType' (Beam.JourneyLegT {..}) = do
+    riderId' <- Storage.Queries.Transformers.JourneyLeg.getRiderId journeyId riderId
     routeDetails' <- Storage.Queries.RouteDetails.findAllByJourneyLegId id
     pure $
       Just
@@ -41,9 +43,12 @@ instance FromTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
             isSkipped = isSkipped,
             journeyId = Kernel.Types.Id.Id journeyId,
             legSearchId = legId,
+            merchantId = Kernel.Types.Id.Id merchantId,
+            merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             mode = mode,
             osmEntrance = osmEntrance >>= Kernel.Utils.JSON.valueToMaybe,
             osmExit = osmExit >>= Kernel.Utils.JSON.valueToMaybe,
+            riderId = riderId',
             routeDetails = routeDetails',
             routeGroupId = fromMaybe "default-group-id" routeGroupId,
             sequenceNumber = sequenceNumber,
@@ -54,8 +59,6 @@ instance FromTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
             toArrivalTime = toArrivalTime,
             toDepartureTime = toDepartureTime,
             toStopDetails = Just $ Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails toStopCode toStopPlatformCode toStopName toStopGtfsId,
-            merchantId = Kernel.Types.Id.Id <$> merchantId,
-            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -85,9 +88,12 @@ instance ToTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
         Beam.isSkipped = isSkipped,
         Beam.journeyId = Kernel.Types.Id.getId journeyId,
         Beam.legId = legSearchId,
+        Beam.merchantId = Kernel.Types.Id.getId merchantId,
+        Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.mode = mode,
         Beam.osmEntrance = osmEntrance >>= Just . Data.Aeson.toJSON,
         Beam.osmExit = osmExit >>= Just . Data.Aeson.toJSON,
+        Beam.riderId = Just (Kernel.Types.Id.getId riderId),
         Beam.routeGroupId = Just routeGroupId,
         Beam.sequenceNumber = sequenceNumber,
         Beam.serviceTypes = serviceTypes,
@@ -101,8 +107,6 @@ instance ToTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
         Beam.toStopGtfsId = (toStopDetails >>= (.gtfsId)) <&> Domain.Types.FRFSRouteDetails.gtfsIdtoDomainCode,
         Beam.toStopName = toStopDetails >>= (.name),
         Beam.toStopPlatformCode = toStopDetails >>= (.platformCode),
-        Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
-        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

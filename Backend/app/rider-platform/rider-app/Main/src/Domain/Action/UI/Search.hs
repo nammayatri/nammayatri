@@ -31,7 +31,6 @@ import Domain.Types (GatewayAndRegistryService (..))
 import qualified Domain.Types.Client as DC
 import Domain.Types.HotSpot hiding (address, updatedAt)
 import Domain.Types.HotSpotConfig
-import qualified Domain.Types.JourneyLeg as DJL
 import qualified Domain.Types.Location as Location
 import Domain.Types.Merchant
 import qualified Domain.Types.Merchant as DM
@@ -42,7 +41,6 @@ import qualified Domain.Types.Person as Person
 import qualified Domain.Types.RecentLocation as DTRL
 import qualified Domain.Types.RefereeLink as DRL
 import Domain.Types.RiderConfig
-import qualified Domain.Types.RouteDetails as DRD
 import Domain.Types.SavedReqLocation
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequest as SearchRequest
@@ -267,11 +265,9 @@ search ::
   Maybe Text ->
   Bool ->
   Maybe JPT.JourneySearchData ->
-  Maybe (Id DJL.JourneyLeg) ->
-  Maybe DRD.RouteDetails ->
   Bool ->
   m SearchRes
-search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion clientId device isDashboardRequest_ journeySearchData journeyLegId journeyRouteDetails justMultimodalSearch = do
+search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion clientId device isDashboardRequest_ journeySearchData justMultimodalSearch = do
   now <- getCurrentTime
   let SearchDetails {..} = extractSearchDetails now req
   let isReservedRideSearch = case req of
@@ -341,8 +337,6 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
       hasStops
       (safeInit stopLocations)
       journeySearchData
-      journeyLegId
-      journeyRouteDetails
       driverIdentifier'
       configVersionMap
       isMeterRide
@@ -568,8 +562,6 @@ buildSearchRequest ::
   Maybe Bool ->
   [Location.Location] ->
   Maybe JPT.JourneySearchData ->
-  Maybe (Id DJL.JourneyLeg) ->
-  Maybe DRD.RouteDetails ->
   Maybe DRL.DriverIdentifier ->
   [LYT.ConfigVersionMap] ->
   Maybe Bool ->
@@ -580,7 +572,7 @@ buildSearchRequest ::
   Maybe Enums.VehicleCategory ->
   Bool ->
   m SearchRequest.SearchRequest
-buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion clientRnVersion device disabilityTag duration staticDuration riderPreferredOption distanceUnit totalRidesCount isDashboardRequest mbPlaceNameSource hasStops stops journeySearchData journeyLegId journeyRouteDetails mbDriverReferredInfo configVersionMap isMeterRide recentLocationId routeCode destinationStopCode originStopCode vehicleCategory isReservedRideSearch = do
+buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion clientRnVersion device disabilityTag duration staticDuration riderPreferredOption distanceUnit totalRidesCount isDashboardRequest mbPlaceNameSource hasStops stops journeySearchData mbDriverReferredInfo configVersionMap isMeterRide recentLocationId routeCode destinationStopCode originStopCode vehicleCategory isReservedRideSearch = do
   let searchMode =
         if isReservedRideSearch
           then Just SearchRequest.RESERVE

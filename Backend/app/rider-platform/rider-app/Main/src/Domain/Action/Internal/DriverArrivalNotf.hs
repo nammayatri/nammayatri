@@ -13,6 +13,7 @@ import Kernel.Utils.Error
 import qualified Lib.JourneyModule.State.Types as JMState
 import qualified Lib.JourneyModule.State.Utils as JMState
 import qualified Storage.Queries.Booking as QRB
+import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
 import qualified Tools.Notifications as Notify
@@ -38,17 +39,18 @@ driverArrivalNotfHandler (DANTypeValidationReq bppRideId driverIdValue status) =
   when (ride.status == COMPLETED || ride.status == CANCELLED) $
     throwError $ RideInvalidStatus ("Cannot track this ride: " <> pack (show ride.status))
   booking <- B.runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+  mbJourneyLeg <- QJourneyLeg.findByLegSearchId (Just booking.transactionId)
   case status of
     DRIVER_ON_THE_WAY -> do
-      whenJust booking.journeyLegId $ \journeyLegId -> JMState.setJourneyLegTrackingStatus journeyLegId Nothing JMState.Arriving
+      whenJust mbJourneyLeg $ \journeyLeg -> JMState.setJourneyLegTrackingStatus journeyLeg.id Nothing JMState.Arriving
       Notify.notifyDriverOnTheWay booking.riderId booking.tripCategory ride
     DRIVER_PICKUP_INSTRUCTION -> do
       PIHandler.handlePickupInstruction ride booking driverIdValue
     DRIVER_REACHING -> do
-      whenJust booking.journeyLegId $ \journeyLegId -> JMState.setJourneyLegTrackingStatus journeyLegId Nothing JMState.AlmostArrived
+      whenJust mbJourneyLeg $ \journeyLeg -> JMState.setJourneyLegTrackingStatus journeyLeg.id Nothing JMState.AlmostArrived
       Notify.notifyDriverReaching booking.riderId booking.tripCategory ride.otp ride.vehicleNumber ride
     DRIVER_REACHED -> do
-      whenJust booking.journeyLegId $ \journeyLegId -> JMState.setJourneyLegTrackingStatus journeyLegId Nothing JMState.Arrived
+      whenJust mbJourneyLeg $ \journeyLeg -> JMState.setJourneyLegTrackingStatus journeyLeg.id Nothing JMState.Arrived
       Notify.notifyDriverHasReached booking.riderId booking.tripCategory ride.otp ride.vehicleNumber ride.vehicleColor ride.vehicleModel ride.vehicleVariant
     _ -> throwError $ InvalidRequest "Unexpected ride notification status"
 

@@ -43,7 +43,6 @@ data FRFSTicketBookingT f = FRFSTicketBookingT
     isDeleted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isFareChanged :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     journeyId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    journeyLegId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     journeyLegOrder :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     journeyOnInitDone :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     merchantId :: B.C f Kernel.Prelude.Text,

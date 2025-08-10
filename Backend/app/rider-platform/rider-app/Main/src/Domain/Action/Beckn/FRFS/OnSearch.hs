@@ -175,11 +175,12 @@ onSearch onSearchReq validatedReq = do
 onSearchHelper :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, HasShortDurationRetryCfg r c) => DOnSearch -> ValidatedDOnSearch -> DIBC.IntegratedBPPConfig -> m ()
 onSearchHelper onSearchReq validatedReq integratedBPPConfig = do
   quotesCreatedByCache <- QQuote.findAllBySearchId (Id onSearchReq.transactionId)
+  mbJourneyLeg <- QJourneyLeg.findByLegSearchId (Just onSearchReq.transactionId)
   filteredQuotes <-
     if validatedReq.search.vehicleType /= Spec.BUS
       then pure onSearchReq.quotes
       else do
-        routeCodes <- mapM (\routeCode -> OTPRest.getRouteByRouteId integratedBPPConfig routeCode >>= fromMaybeM (RouteNotFound routeCode)) (catMaybes ((map (.routeCode) validatedReq.search.journeyRouteDetails) <> [validatedReq.search.routeCode]))
+        routeCodes <- mapM (\routeCode -> OTPRest.getRouteByRouteId integratedBPPConfig routeCode >>= fromMaybeM (RouteNotFound routeCode)) (catMaybes ((map (.routeCode) (maybe [] (.routeDetails) mbJourneyLeg)) <> [validatedReq.search.routeCode]))
         pure $ case routeCodes of
           [] -> onSearchReq.quotes
           routesCodes' -> filter (\quote -> quote.routeCode `elem` map (.code) routesCodes') onSearchReq.quotes

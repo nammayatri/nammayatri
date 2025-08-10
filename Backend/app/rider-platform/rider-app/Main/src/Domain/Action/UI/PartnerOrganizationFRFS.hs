@@ -504,10 +504,7 @@ getFareV2 merchantOperatingCity partnerOrg fromStation toStation partnerOrgTrans
             partnerOrgId = Just partnerOrg'.orgId,
             journeyLegInfo = Nothing,
             isOnSearchReceived = Nothing,
-            journeyLegStatus = Nothing,
             integratedBppConfigId = integratedBPPConfig.id,
-            journeyRouteDetails = [],
-            journeyLegId = Nothing,
             recentLocationId = Nothing,
             validTill = Just validTill,
             ..

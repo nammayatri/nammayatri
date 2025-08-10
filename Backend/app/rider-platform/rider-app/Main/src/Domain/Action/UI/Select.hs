@@ -417,6 +417,7 @@ mkJourneyForSearch searchRequest estimate personId = do
     Nothing -> do
       journeyGuid <- generateGUID
       journeyLegGuid <- generateGUID
+      journeyLegRouteGroupGuid <- generateGUID
 
       let estimatedMinFare = Just estimate.estimatedFare.amount
           estimatedMaxFare = Just estimate.estimatedFare.amount
@@ -454,6 +455,7 @@ mkJourneyForSearch searchRequest estimate personId = do
             DJL.JourneyLeg
               { id = journeyLegGuid,
                 journeyId = journeyGuid,
+                routeGroupId = journeyLegRouteGroupGuid,
                 isSkipped = Just False,
                 sequenceNumber = 0,
                 mode = DTrip.Taxi,
@@ -476,20 +478,19 @@ mkJourneyForSearch searchRequest estimate personId = do
                 serviceTypes = Nothing,
                 estimatedMinFare = estimatedMinFare,
                 estimatedMaxFare = estimatedMaxFare,
-                merchantId = Just searchRequest.merchantId,
-                merchantOperatingCityId = Just searchRequest.merchantOperatingCityId,
+                merchantId = searchRequest.merchantId,
+                merchantOperatingCityId = searchRequest.merchantOperatingCityId,
                 createdAt = now,
                 updatedAt = now,
                 legSearchId = Just searchRequestId.getId,
                 isDeleted = Just False,
                 changedBusesInSequence = Nothing,
                 finalBoardedBusNumber = Nothing,
-                entrance = Nothing,
-                exit = Nothing,
                 osmEntrance = Nothing,
                 osmExit = Nothing,
                 straightLineEntrance = Nothing,
-                straightLineExit = Nothing
+                straightLineExit = Nothing,
+                riderId = personId
               }
 
       let journeySearchData =

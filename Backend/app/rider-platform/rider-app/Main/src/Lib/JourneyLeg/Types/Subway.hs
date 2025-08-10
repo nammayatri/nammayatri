@@ -14,7 +14,6 @@ import Kernel.External.Maps.Google.MapsClient.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
-import Kernel.Utils.Common
 
 data SubwayLegRequestSearchData = SubwayLegRequestSearchData
   { quantity :: Int,
@@ -50,16 +49,13 @@ data SubwayLegRequestIsCancellableData = SubwayLegRequestIsCancellableData
 
 data SubwayLegRequestGetStateData = SubwayLegRequestGetStateData
   { searchId :: Id FRFSSearch.FRFSSearch,
-    riderLastPoints :: [ApiTypes.RiderLocationReq]
+    riderLastPoints :: [ApiTypes.RiderLocationReq],
+    journeyLeg :: DJourneyLeg.JourneyLeg
   }
 
 data SubwayLegRequestGetInfoData = SubwayLegRequestGetInfoData
   { searchId :: Id FRFSSearch.FRFSSearch,
-    fallbackFare :: Maybe HighPrecMoney,
-    distance :: Maybe Distance,
-    duration :: Maybe Seconds,
-    ignoreOldSearchRequest :: Bool,
-    startTime :: Maybe UTCTime
+    journeyLeg :: DJourneyLeg.JourneyLeg
   }
 
 data SubwayLegRequest

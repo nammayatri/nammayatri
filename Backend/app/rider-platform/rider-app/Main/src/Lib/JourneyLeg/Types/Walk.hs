@@ -3,9 +3,9 @@ module Lib.JourneyLeg.Types.Walk where
 import qualified API.Types.UI.MultimodalConfirm as ApiTypes
 import qualified Domain.Types.Journey as DJourney
 import qualified Domain.Types.JourneyLeg as DJourneyLeg
-import qualified Domain.Types.WalkLegMultimodal as DWalkLeg
 import Kernel.Prelude
 import Kernel.Types.Id
+import Lib.JourneyModule.Types
 import SharedLogic.Search
 
 data WalkLegRequestSearchData = WalkLegRequestSearchData
@@ -16,8 +16,8 @@ data WalkLegRequestSearchData = WalkLegRequestSearchData
   }
 
 data WalkLegRequestGetStateData = WalkLegRequestGetStateData
-  { walkLegId :: Id DWalkLeg.WalkLegMultimodal,
-    riderLastPoints :: [ApiTypes.RiderLocationReq]
+  { riderLastPoints :: [ApiTypes.RiderLocationReq],
+    journeyLeg :: DJourneyLeg.JourneyLeg
   }
 
 data WalkLegRequestGetInfoData = WalkLegRequestGetInfoData
@@ -29,11 +29,11 @@ data WalkLegRequestConfirmData = WalkLegRequestConfirmData
 data WalkLegRequestGetFareData = WalkLegRequestGetFareData
 
 data WalkLegRequestCancelData = WalkLegRequestCancelData
-  { walkLegId :: Id DWalkLeg.WalkLegMultimodal
+  { journeyLegId :: Id DJourneyLeg.JourneyLeg
   }
 
 data WalkLegRequestIsCancellableData = WalkLegRequestIsCancellableData
-  { walkLegId :: Id DWalkLeg.WalkLegMultimodal
+  { legInfo :: LegInfo
   }
 
 data WalkLegRequestUpdateData = WalkLegRequestUpdateData

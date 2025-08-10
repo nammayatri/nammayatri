@@ -21,7 +21,6 @@ import qualified Domain.Types.FRFSTicketBooking as FTBooking
 import qualified Domain.Types.FRFSTicketBookingStatus as FTBooking
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
 import Domain.Types.Merchant as Merchant
-import qualified Domain.Types.Trip as DTrip
 import Environment
 import Kernel.Beam.Functions
 import Kernel.Prelude
@@ -31,6 +30,7 @@ import Kernel.Utils.Common
 import qualified Lib.JourneyLeg.Types as JL
 import qualified Lib.JourneyModule.Base as JM
 import qualified Lib.JourneyModule.State.Types as JMState
+import qualified Lib.JourneyModule.Types as JT
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.FRFSRecon as QFRFSRecon
 import qualified Storage.Queries.FRFSTicketBooking as QTBooking
@@ -69,15 +69,19 @@ onCancel merchant booking' dOnCancel = do
       void $ QTBooking.updateStatusById FTBooking.CANCEL_INITIATED booking.id
       void $ QFRFSRecon.updateStatusByTicketBookingId (Just DFRFSTicket.CANCEL_INITIATED) booking.id
       whenJust booking.journeyId $ \journeyId -> do
-        allLegsInfo <- JM.getAllLegsInfo journeyId False
+        allLegsInfo <- JM.getAllLegsInfo journeyId
         forM_ allLegsInfo $ \journeyLegInfo -> do
-          case journeyLegInfo.travelMode of
-            DTrip.Walk -> JM.markLegStatus (Just JL.Cancelled) (Just JMState.Finished) journeyLegInfo journeyId Nothing
-            DTrip.Taxi -> JM.markLegStatus (Just JL.Cancelled) (Just JMState.Finished) journeyLegInfo journeyId Nothing
-            _ -> do
-              unless (null booking'.journeyRouteDetails) $ do
-                forM_ booking'.journeyRouteDetails $ \routeDetails -> do
-                  JM.markLegStatus (Just JL.Cancelled) (Just JMState.Finished) journeyLegInfo journeyId routeDetails.subLegOrder
+          let mbLegs =
+                case journeyLegInfo.legStatus of
+                  JT.BusStatus busStatus -> Just busStatus.legs
+                  JT.MetroStatus metroStatus -> Just metroStatus.legs
+                  JT.SubwayStatus subwayStatus -> Just subwayStatus.legs
+                  _ -> Nothing
+          case mbLegs of
+            Just legs -> do
+              forM_ legs $ \leg -> do
+                JM.markLegStatus (Just JL.Cancelled) (Just JMState.Finished) journeyLegInfo leg.subLegOrder
+            Nothing -> JM.markLegStatus (Just JL.Cancelled) (Just JMState.Finished) journeyLegInfo Nothing
         journey <- JM.getJourney journeyId
         updatedLegStatus <- JM.getAllLegsStatus journey
         JM.checkAndMarkTerminalJourneyStatus journey False False updatedLegStatus

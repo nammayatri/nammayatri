@@ -68,17 +68,16 @@ import Tools.Error
 
 -- getState and other functions from the original file...
 
-getState :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig], HasField "ltsHedisEnv" r Redis.HedisEnv, HasShortDurationRetryCfg r c, HasKafkaProducer r) => DTrip.MultimodalTravelMode -> Id FRFSSearch -> [APITypes.RiderLocationReq] -> Bool -> Maybe Text -> m JT.JourneyLegState
-getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTracking = do
+getState :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig], HasField "ltsHedisEnv" r Redis.HedisEnv, HasShortDurationRetryCfg r c, HasKafkaProducer r) => DTrip.MultimodalTravelMode -> Id FRFSSearch -> [APITypes.RiderLocationReq] -> Bool -> Maybe Text -> DJourneyLeg.JourneyLeg -> m JT.JourneyLegState
+getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTracking journeyLeg = do
   logDebug $ "CFRFS getState: searchId: " <> searchId.getId <> ", mode: " <> show mode
   mbBooking <- QTBooking.findBySearchId searchId
   now <- getCurrentTime
   let userPosition = (.latLong) <$> listToMaybe riderLastPoints
-  let mbLegSearchId = Just searchId.getId
   case mbBooking of
     Just booking -> do
       integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
-      (oldStatus, bookingStatus, trackingStatuses) <- JMStateUtils.getFRFSAllStatuses journeyLeg (Just booking)
+      (oldStatus, _, trackingStatuses) <- JMStateUtils.getFRFSAllStatuses journeyLeg (Just booking)
       case mode of
         DTrip.Bus -> do
           logDebug $ "CFRFS getState: Processing Bus leg for booking with searchId: " <> show searchId.getId
@@ -116,7 +115,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
               mbUserBoardingStation
               mbLegEndStation
               allBusDataForRoute
-              journeyLegStatus
+              (fromMaybe JMStateTypes.InPlan ((listToMaybe trackingStatuses) >>= (.trackingStatus)))
               movementDetected
 
           let detailedStateData = baseStateData {JT.vehiclePositions = vehiclePositionsToReturn}
@@ -144,15 +143,15 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
         _ -> do
           vehiclePositions :: [JT.VehiclePosition] <-
             concatMapM
-              ( \journeyRouteDetails -> do
-                  fromStationCode <- journeyRouteDetails.fromStopCode & fromMaybeM (InvalidRequest $ "From station code not found in booking with id: " <> booking.id.getId)
-                  toStationCode <- journeyRouteDetails.toStopCode & fromMaybeM (InvalidRequest $ "To station code not found in booking with id: " <> booking.id.getId)
+              ( \routeDetails -> do
+                  fromStationCode <- routeDetails.fromStopCode & fromMaybeM (InvalidRequest $ "From station code not found in booking with id: " <> booking.id.getId)
+                  toStationCode <- routeDetails.toStopCode & fromMaybeM (InvalidRequest $ "To station code not found in booking with id: " <> booking.id.getId)
                   getVehiclePositionsIfAvailable mode fromStationCode toStationCode integratedBppConfig
               )
-              booking.journeyRouteDetails
+              journeyLeg.routeDetails
           let journeyLegStates =
                 [ JT.JourneyLegStateData
-                    { status = maybe InPlan JMStateUtils.castTrackingStatusToJourneyLegStatus statusElement.trackingStatus,
+                    { status = maybe JPT.InPlan JMStateUtils.castTrackingStatusToJourneyLegStatus statusElement.trackingStatus,
                       legStatus = Just $ castToLegStatus statusElement,
                       userPosition,
                       JT.vehiclePositions = vehiclePositions,
@@ -166,7 +165,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
     Nothing -> do
       searchReq <- QFRFSSearch.findById searchId >>= fromMaybeM (SearchRequestNotFound searchId.getId)
       integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity searchReq
-      (oldStatus, _, trackingStatuses) <- JMStateUtils.getFRFSAllStatuses journeyLeg (Just booking)
+      (oldStatus, _, trackingStatuses) <- JMStateUtils.getFRFSAllStatuses journeyLeg Nothing
       case mode of
         DTrip.Bus -> do
           journeyLegInfo <- searchReq.journeyLegInfo & fromMaybeM (InvalidRequest "JourneySearchData not found")
@@ -204,7 +203,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
               mbUserBoardingStation
               mbLegEndStation
               allBusDataForRoute
-              (fromMaybe JPT.InPlan searchReq.journeyLegStatus)
+              (fromMaybe JMStateTypes.InPlan ((listToMaybe trackingStatuses) >>= (.trackingStatus)))
               movementDetected
 
           let detailedStateData = baseStateData {JT.vehiclePositions = vehiclePositionsToReturn}
@@ -234,7 +233,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
 
           let journeyLegStates =
                 [ JT.JourneyLegStateData
-                    { status = maybe InPlan JMStateUtils.castTrackingStatusToJourneyLegStatus statusElement.trackingStatus,
+                    { status = maybe JPT.InPlan JMStateUtils.castTrackingStatusToJourneyLegStatus statusElement.trackingStatus,
                       legStatus = Just $ castToLegStatus statusElement,
                       userPosition,
                       JT.vehiclePositions = vehiclePositions,
@@ -387,7 +386,7 @@ search vehicleCategory personId merchantId quantity city journeyLeg recentLocati
   frfsSearchReq <- buildFRFSSearchReq (Just journeySearchData)
   frfsRouteDetails <- getFrfsRouteDetails journeyLeg.routeDetails
   let mbFare = journeyLeg.estimatedMinFare <|> journeyLeg.estimatedMaxFare
-  res <- FRFSTicketService.postFrfsSearchHandler (personId, merchantId) merchantOpCity integratedBPPConfig vehicleCategory frfsSearchReq frfsRouteDetails Nothing Nothing (Just journeyLeg.id) journeyLeg.routeDetails mbFare
+  res <- FRFSTicketService.postFrfsSearchHandler (personId, merchantId) merchantOpCity integratedBPPConfig vehicleCategory frfsSearchReq frfsRouteDetails Nothing Nothing mbFare
   return $ JT.SearchResponse {id = res.searchId.getId}
   where
     buildFRFSSearchReq journeySearchData = do
@@ -435,20 +434,21 @@ cancel searchId cancellationType isSkipped = do
     CallExternalBPP.cancel merchant merchantOperatingCity bapConfig cancellationType metroBooking
   if isSkipped then QJourneyLeg.updateIsSkipped (Just True) (Just searchId.getId) else QJourneyLeg.updateIsDeleted (Just True) (Just searchId.getId)
 
-isCancellable :: JT.CancelFlow m r c => Id FRFSSearch -> m JT.IsCancellableResponse
-isCancellable searchId = do
+isCancellable :: JT.CancelFlow m r c => Id FRFSSearch -> JT.LegInfo -> m JT.IsCancellableResponse
+isCancellable searchId leg = do
   mbMetroBooking <- QTBooking.findBySearchId searchId
   case mbMetroBooking of
     Just metroBooking -> do
       frfsConfig <- CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow metroBooking.merchantOperatingCityId [] >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> show metroBooking.merchantOperatingCityId)
-      case metroBooking.journeyLegStatus of
-        Just journeyLegStatus -> do
-          let isBookingCancellable = journeyLegStatus `elem` JT.cannotCancelStatus
-          case isBookingCancellable of
-            True -> return $ JT.IsCancellableResponse {canCancel = False}
-            False -> return $ JT.IsCancellableResponse {canCancel = frfsConfig.isCancellationAllowed}
-        Nothing -> do
-          return $ JT.IsCancellableResponse {canCancel = frfsConfig.isCancellationAllowed}
+      let isBookingCancellable =
+            case leg.legStatus of
+              JT.SubwayStatus subwayStatus -> any (maybe False (`elem` JT.cannotCancelStatus) . (.trackingStatus)) subwayStatus.legs
+              JT.BusStatus busStatus -> any (maybe False (`elem` JT.cannotCancelStatus) . (.trackingStatus)) busStatus.legs
+              JT.MetroStatus metroStatus -> any (maybe False (`elem` JT.cannotCancelStatus) . (.trackingStatus)) metroStatus.legs
+              _ -> False
+      case isBookingCancellable of
+        True -> return $ JT.IsCancellableResponse {canCancel = False}
+        False -> return $ JT.IsCancellableResponse {canCancel = frfsConfig.isCancellationAllowed}
     Nothing -> do
       return $ JT.IsCancellableResponse {canCancel = True}
 
@@ -500,7 +500,7 @@ processBusLegState ::
   Maybe Station ->
   Maybe Station ->
   [BusData] ->
-  JPT.JourneyLegStatus ->
+  JMStateTypes.TrackingStatus ->
   Bool ->
   m [JT.VehiclePosition]
 processBusLegState
@@ -512,10 +512,10 @@ processBusLegState
   mbUserBoardingStation
   mbLegEndStation
   allBusDataForRoute
-  journeyLegStatus
+  journeyLegTrackingStatus
   movementDetected = do
-    logDebug $ "movementDetected: " <> show movementDetected <> " journeyLegStatus: " <> show journeyLegStatus
-    if (isOngoingJourneyLeg journeyLegStatus) && movementDetected
+    logDebug $ "movementDetected: " <> show movementDetected <> " journeyLegTrackingStatus: " <> show journeyLegTrackingStatus
+    if (isOngoingJourneyLeg journeyLegTrackingStatus) && movementDetected
       then do
         let filteredBusData = case (mbUserBoardingStation, mbLegEndStation) of
               (_, Just destStation) -> filter (isYetToReachStop destStation.code) allBusDataForRoute
@@ -543,7 +543,7 @@ processBusLegState
                 case mbBestBusData of
                   Just bestBusData -> do
                     let upcomingStops =
-                          if journeyLegStatus `elem` [JPT.OnTheWay, JPT.Booked, JPT.Arriving]
+                          if journeyLegTrackingStatus `elem` [JMStateTypes.Arriving, JMStateTypes.AlmostArrived, JMStateTypes.Arrived]
                             then getUpcomingStopsForBus now mbUserBoardingStation bestBusData False -- Stops up to boarding for OnTheWay
                             else getUpcomingStopsForBus now mbLegEndStation bestBusData True -- Stops to destination for Ongoing/Finishing/Completed
                     pure
@@ -564,9 +564,9 @@ processBusLegState
             logDebug "No top candidate vehicle ID available, returning empty list"
             pure []
       else do
-        if isOngoingJourneyLeg journeyLegStatus && not movementDetected
+        if isOngoingJourneyLeg journeyLegTrackingStatus && not movementDetected
           then do
-            logDebug $ "No current leg details available" <> show journeyLegStatus
+            logDebug $ "No current leg details available" <> show journeyLegTrackingStatus
             case mbCurrentLegDetails of
               Just legDetails -> do
                 let changedBuses = fromMaybe [] legDetails.changedBusesInSequence
@@ -579,8 +579,8 @@ processBusLegState
                 logDebug "No current leg details available, returning empty list"
                 pure []
           else do
-            logDebug $ "Journey leg is not ongoing or movement is not detected, returning empty list" <> show journeyLegStatus
-            if journeyLegStatus `elem` [JPT.InPlan, JPT.OnTheWay, JPT.Booked, JPT.Arriving, JPT.Arrived]
+            logDebug $ "Journey leg is not ongoing or movement is not detected, returning empty list" <> show journeyLegTrackingStatus
+            if journeyLegTrackingStatus `elem` [JMStateTypes.InPlan, JMStateTypes.Arriving, JMStateTypes.AlmostArrived, JMStateTypes.Arrived]
               then do
                 findfilteredBusData mbUserBoardingStation allBusDataForRoute
               else do
@@ -746,5 +746,5 @@ votingSystemFRFS scoredBuses leg busTrackingConfig = do
       removeWorstMembersFRFS currentResultMembers allCandidates leg bestScore busTrackingConfig
       addBetterMembersFRFS allCandidates leg bestScore busTrackingConfig
 
-isOngoingJourneyLeg :: JPT.JourneyLegStatus -> Bool
-isOngoingJourneyLeg legStatus = legStatus `elem` [JPT.OnTheWay, JPT.Ongoing, JPT.Finishing]
+isOngoingJourneyLeg :: JMStateTypes.TrackingStatus -> Bool
+isOngoingJourneyLeg legStatus = legStatus `elem` [JMStateTypes.Arriving, JMStateTypes.AlmostArrived, JMStateTypes.Arrived, JMStateTypes.Ongoing, JMStateTypes.Finishing]
