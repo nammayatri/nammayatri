@@ -101,7 +101,6 @@ import Storage.Queries.Journey as QJourney
 import Storage.Queries.JourneyFeedback as SQJFB
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.JourneyLegsFeedbacks as SQJLFB
-import Storage.Queries.JourneyRouteDetails as QJourneyRouteDetails
 import Storage.Queries.MultimodalPreferences as QMP
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
@@ -461,7 +460,8 @@ postMultimodalOrderSwitchFRFSTier (mbPersonId, merchantId) journeyId legOrder re
               DFRFSB.estimatedPrice = totalPriceForSwitchLeg
             }
     void $ QFRFSTicketBooking.updateByPrimaryKey updatedBooking
-  QJourneyRouteDetails.updateAlternateShortNames alternateShortNames (Id journeyLegInfo.searchId)
+  whenJust (journeyLegInfo.journeyLegId) $ \journeyLegId -> do
+    QRouteDetails.updateAlternateShortNames alternateShortNames journeyLegId.getId
   updatedLegs <- JM.getAllLegsInfo journeyId False
   generateJourneyInfoResponse journey updatedLegs
   where

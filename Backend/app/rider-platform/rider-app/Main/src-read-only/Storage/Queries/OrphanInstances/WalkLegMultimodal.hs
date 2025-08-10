@@ -18,7 +18,7 @@ import qualified Storage.Queries.Transformers.RouteDetails
 
 instance FromTType' Beam.WalkLegMultimodal Domain.Types.WalkLegMultimodal.WalkLegMultimodal where
   fromTType' (Beam.WalkLegMultimodalT {..}) = do
-    journeyRouteDetails' <- Storage.Queries.Transformers.RouteDetails.getJourneyRouteDetails id journeyLegId
+    journeyRouteDetails' <- Storage.Queries.Transformers.RouteDetails.getJourneyRouteDetails journeyLegId
     fromLocation' <- Storage.Queries.Transformers.MultiModal.getFromLocation id
     toLocation' <- Storage.Queries.Transformers.MultiModal.getToLocation id
     pure $

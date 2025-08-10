@@ -23,7 +23,7 @@ import qualified Storage.Queries.Transformers.SearchRequest
 
 instance FromTType' Beam.SearchRequest Domain.Types.SearchRequest.SearchRequest where
   fromTType' (Beam.SearchRequestT {..}) = do
-    journeyRouteDetails' <- Storage.Queries.Transformers.RouteDetails.getJourneyRouteDetails id journeyLegId
+    journeyRouteDetails' <- Storage.Queries.Transformers.RouteDetails.getJourneyRouteDetails journeyLegId
     backendConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion)
     clientBundleVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion)
     clientConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion)

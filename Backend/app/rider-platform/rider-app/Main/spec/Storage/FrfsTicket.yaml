@@ -57,7 +57,6 @@ FRFSSearch:
     partnerOrgId: Maybe (Id PartnerOrganization)
     journeyLegInfo: Maybe JourneySearchData
     journeyLegId: Maybe (Id JourneyLeg)
-    journeyLegStatus: Maybe JourneyLegStatus
     isOnSearchReceived: Maybe Bool
     journeyRouteDetails: "[RouteDetails]"
     integratedBppConfigId: Id IntegratedBPPConfig
@@ -94,7 +93,7 @@ FRFSSearch:
 
   fromTType:
     journeyLegInfo: mkJourneyLegInfo
-    journeyRouteDetails: Storage.Queries.Transformers.RouteDetails.getJourneyRouteDetails id journeyLegId|EM
+    journeyRouteDetails: Storage.Queries.Transformers.RouteDetails.getJourneyRouteDetails journeyLegId|EM
 
   excludedDefaultQueries:
     - create
@@ -109,10 +108,6 @@ FRFSSearch:
     findById:
       kvFunction: findOneWithKV
       where: id
-    updateJourneyLegStatus:
-      kvFunction: updateOneWithKV
-      params: [journeyLegStatus]
-      where: id
     updateIsOnSearchReceivedById:
       kvFunction: updateWithKV
       params: [isOnSearchReceived]
@@ -123,52 +118,6 @@ FRFSSearch:
       where: id
   extraOperations:
     - EXTRA_QUERY_FILE
-
-# TODO :: Kept for Backward Compatibility, remove this once UI starts using legStatus from RouteDetails table
-JourneyRouteDetails:
-  fields:
-    id: Id JourneyRouteDetails
-    searchId: Id FRFSSearch
-    lineColor: Maybe Text
-    lineColorCode: Maybe Text
-    platformNumber: Maybe Text
-    subLegOrder: Maybe Int
-    frequency: Maybe Seconds
-    routeLongName: Maybe Text
-    alternateShortNames: Maybe [Text]
-    fromStationCode: Maybe Text
-    toStationCode: Maybe Text
-    routeCode: Maybe Text
-    journeyStatus: Maybe JourneyLegStatus
-
-  beamFields:
-    fromStationCode:
-      fromStationId: Maybe Text
-    toStationCode:
-      toStationId: Maybe Text
-    routeCode:
-      routeId: Maybe Text
-
-  queries:
-    findAllBySearchId:
-      kvFunction: findAllWithKV
-      where: searchId
-    updateJourneyStatus:
-      kvFunction: updateOneWithKV
-      params: [journeyStatus]
-      where:
-        and: [searchId, subLegOrder]
-    updateAlternateShortNames:
-      kvFunction: updateWithKV
-      params: [alternateShortNames]
-      where: searchId
-
-  sqlType:
-    alternateShortNames: "text[]"
-
-  constraints:
-    id: PrimaryKey
-    searchId: "!SecondaryKey"
 
 FRFSQuote:
   tableName: frfs_quote
@@ -332,10 +281,8 @@ FRFSTicketBooking:
     journeyId: Maybe (Id Journey)
     journeyOnInitDone: Maybe Bool
     startTime: Maybe UTCTime
-    journeyLegStatus: Maybe JourneyLegStatus
     isDeleted: Maybe Bool
-    isFareChanged: Maybe Bool
-    isSkipped: Maybe Bool
+    isFareChanged: Maybe Bool    
     journeyRouteDetails: "[RouteDetails]"
     integratedBppConfigId: Id IntegratedBPPConfig
     recentLocationId: Maybe (Id RecentLocation)
@@ -369,7 +316,7 @@ FRFSTicketBooking:
     price: Kernel.Types.Common.mkPrice currency price|E
     estimatedPrice: Kernel.Types.Common.mkPrice currency estimatedPrice|E
     finalPrice: Kernel.Prelude.fmap (Kernel.Types.Common.mkPrice currency) finalPrice|E
-    journeyRouteDetails: Storage.Queries.Transformers.RouteDetails.getJourneyRouteDetails searchId journeyLegId|EM
+    journeyRouteDetails: Storage.Queries.Transformers.RouteDetails.getJourneyRouteDetails journeyLegId|EM
 
   toTType:
     price: (.amount)|I
@@ -472,10 +419,6 @@ FRFSTicketBooking:
       kvFunction: updateOneWithKV
       params: [bppDelayedInterest]
       where: quoteId
-    updateJourneyLegStatus:
-      kvFunction: updateOneWithKV
-      params: [journeyLegStatus]
-      where: id
     updateGoogleWalletLinkById:
       kvFunction: updateOneWithKV
       params: [googleWalletJWTUrl]

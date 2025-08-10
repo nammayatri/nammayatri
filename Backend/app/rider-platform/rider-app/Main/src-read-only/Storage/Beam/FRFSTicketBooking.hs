@@ -13,7 +13,6 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
-import qualified Lib.JourneyLeg.Types
 import Tools.Beam.UtilsTH
 
 data FRFSTicketBookingT f = FRFSTicketBookingT
@@ -43,11 +42,9 @@ data FRFSTicketBookingT f = FRFSTicketBookingT
     isBookingCancellable :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isDeleted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isFareChanged :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
-    isSkipped :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     journeyId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     journeyLegId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     journeyLegOrder :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    journeyLegStatus :: B.C f (Kernel.Prelude.Maybe Lib.JourneyLeg.Types.JourneyLegStatus),
     journeyOnInitDone :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,

@@ -20,7 +20,6 @@ import qualified Domain.Types.RouteDetails
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
-import qualified Lib.JourneyLeg.Types
 import qualified Tools.Beam.UtilsTH
 
 data FRFSTicketBooking = FRFSTicketBooking
@@ -50,11 +49,9 @@ data FRFSTicketBooking = FRFSTicketBooking
     isBookingCancellable :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isDeleted :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isFareChanged :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    isSkipped :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     journeyId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Journey.Journey),
     journeyLegId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg),
     journeyLegOrder :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    journeyLegStatus :: Kernel.Prelude.Maybe Lib.JourneyLeg.Types.JourneyLegStatus,
     journeyOnInitDone :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     journeyRouteDetails :: [Domain.Types.RouteDetails.RouteDetails],
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,

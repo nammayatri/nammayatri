@@ -95,3 +95,43 @@ ALTER TABLE atlas_app.journey_leg ADD COLUMN osm_entrance json ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

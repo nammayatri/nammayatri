@@ -27,7 +27,7 @@ instance FromTType' Beam.Booking Domain.Types.Booking.Booking where
   fromTType' (Beam.BookingT {..}) = do
     mappings <- Storage.Queries.LocationMapping.findByEntityId id
     toBookingDetailsAndFromLocation' <- Storage.Queries.Transformers.Booking.toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings distance fareProductType tripCategory toLocationId fromLocationId stopLocationId otpCode isUpgradedToCab distanceUnit distanceValue hasStops parcelType parcelQuantity
-    journeyRouteDetails' <- Storage.Queries.Transformers.RouteDetails.getJourneyRouteDetails riderTransactionId journeyLegId
+    journeyRouteDetails' <- Storage.Queries.Transformers.RouteDetails.getJourneyRouteDetails journeyLegId
     backendConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion)
     clientBundleVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion)
     clientConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion)
@@ -77,11 +77,9 @@ instance FromTType' Beam.Booking Domain.Types.Booking.Booking where
             isPetRide = fromMaybe False isPetRide,
             isReferredRide = isReferredRide,
             isScheduled = fromMaybe False isScheduled,
-            isSkipped = isSkipped,
             journeyId = Kernel.Types.Id.Id <$> journeyId,
             journeyLegId = Kernel.Types.Id.Id <$> journeyLegId,
             journeyLegOrder = journeyLegOrder,
-            journeyLegStatus = journeyLegStatus,
             journeyRouteDetails = listToMaybe journeyRouteDetails',
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = merchantOperatingCityId',
@@ -166,11 +164,9 @@ instance ToTType' Beam.Booking Domain.Types.Booking.Booking where
         Beam.isPetRide = Kernel.Prelude.Just isPetRide,
         Beam.isReferredRide = isReferredRide,
         Beam.isScheduled = Just isScheduled,
-        Beam.isSkipped = isSkipped,
         Beam.journeyId = Kernel.Types.Id.getId <$> journeyId,
         Beam.journeyLegId = Kernel.Types.Id.getId <$> journeyLegId,
         Beam.journeyLegOrder = journeyLegOrder,
-        Beam.journeyLegStatus = journeyLegStatus,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Just $ Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.paymentMethodId = paymentMethodId,

@@ -22,7 +22,6 @@ import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Lib.JourneyLeg.Types as LJT
 import qualified Sequelize as Se
 import qualified SharedLogic.LocationMapping as SLM
 import qualified Storage.Beam.Booking as BeamB
@@ -343,25 +342,6 @@ updateMultipleById isBookingUpdated estimatedFare estimatedTotalFare mbEstimated
 
 findAllByTransactionId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> m [Booking]
 findAllByTransactionId transactionId = findAllWithKVAndConditionalDB [Se.Is BeamB.riderTransactionId $ Se.Eq transactionId] (Just (Se.Desc BeamB.createdAt))
-
-updateIsCancelled :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> Maybe Bool -> m ()
-updateIsCancelled (Id reqId) isDeleted = do
-  updateOneWithKV
-    [Se.Set BeamB.isDeleted isDeleted]
-    [Se.Is BeamB.id (Se.Eq reqId)]
-
-updateisSkipped :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> Maybe Bool -> m ()
-updateisSkipped (Id reqId) isSkipped = do
-  updateOneWithKV
-    [Se.Set BeamB.isSkipped isSkipped]
-    [Se.Is BeamB.id (Se.Eq reqId)]
-
-updateJourneyLegStatus :: (MonadFlow m, EsqDBFlow m r) => Maybe LJT.JourneyLegStatus -> Id Booking -> m ()
-updateJourneyLegStatus status bookingId = do
-  updateOneWithKV
-    [ Se.Set BeamB.journeyLegStatus status
-    ]
-    [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
 
 findAllByRiderIdAndStatusAndMOCId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> BookingStatus -> Id DMOC.MerchantOperatingCity -> m [Booking]
 findAllByRiderIdAndStatusAndMOCId (Id personId) status (Id mocId) = do

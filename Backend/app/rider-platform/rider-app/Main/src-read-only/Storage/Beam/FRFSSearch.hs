@@ -9,7 +9,6 @@ import Domain.Types.Common ()
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
-import qualified Lib.JourneyLeg.Types
 import Tools.Beam.UtilsTH
 
 data FRFSSearchT f = FRFSSearchT
@@ -26,7 +25,6 @@ data FRFSSearchT f = FRFSSearchT
     onSearchFailed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     pricingId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     skipBooking :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
-    journeyLegStatus :: B.C f (Kernel.Prelude.Maybe Lib.JourneyLeg.Types.JourneyLegStatus),
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     partnerOrgId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

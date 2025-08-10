@@ -194,7 +194,6 @@ instance JT.JourneyLeg TaxiLegRequest m where
           )
           (\estimateId -> void $ cancelSearch' (booking.riderId, booking.merchantId) estimateId)
           legData.cancelEstimateId
-        if legData.isSkipped then QBooking.updateisSkipped booking.id (Just True) else QBooking.updateIsCancelled booking.id (Just True)
       Nothing -> do
         searchReq <- QSearchRequest.findById legData.searchRequestId >>= fromMaybeM (SearchRequestNotFound $ "searchRequestId-" <> legData.searchRequestId.getId)
         journeySearchData <- searchReq.journeyLegInfo & fromMaybeM (InvalidRequest $ "JourneySearchData not found for search id: " <> searchReq.id.getId)
@@ -202,7 +201,6 @@ instance JT.JourneyLeg TaxiLegRequest m where
           Just pricingId -> do
             void $ cancelSearch' (searchReq.riderId, searchReq.merchantId) (Id pricingId)
           Nothing -> return ()
-    if legData.isSkipped then QSearchRequest.updateSkipBooking legData.searchRequestId (Just True) else QSearchRequest.updateIsCancelled legData.searchRequestId (Just True)
     if legData.isSkipped then QJourneyLeg.updateIsSkipped (Just True) (Just legData.searchRequestId.getId) else QJourneyLeg.updateIsDeleted (Just True) (Just legData.searchRequestId.getId)
   cancel _ = throwError (InternalError "Not Supported")
 
@@ -222,7 +220,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
     case mbBooking of
       Just booking -> do
         mbRide <- QRide.findByRBId booking.id
-        (journeyLegStatus, vehiclePosition) <- JT.getTaxiLegStatusFromBooking booking mbRide req.journeyLegStatus
+        (journeyLegStatus, vehiclePosition) <- JT.getTaxiLegStatusFromBooking booking mbRide
         journeyLegOrder <- booking.journeyLegOrder & fromMaybeM (BookingFieldNotPresent "journeyLegOrder")
         journeyLegsStatus <- getJourneyLegStatus booking.journeyRouteDetails (Just booking.transactionId) Nothing
 
@@ -241,7 +239,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
         searchReq <- QSearchRequest.findById req.searchId >>= fromMaybeM (SearchRequestNotFound req.searchId.getId)
         journeyLegInfo <- searchReq.journeyLegInfo & fromMaybeM (InvalidRequest "JourneySearchData not found")
         mbEstimate <- maybe (pure Nothing) (QEstimate.findById . Id) journeyLegInfo.pricingId
-        let journeyLegStatus = JT.getTaxiLegStatusFromSearch journeyLegInfo (mbEstimate <&> (.status)) req.journeyLegStatus
+        journeyLegStatus <- JT.getTaxiLegStatusFromSearch searchReq
         journeyLegsStatus <- getJourneyLegStatus searchReq.journeyRouteDetails (Just searchReq.id.getId) (mbEstimate <&> (.id.getId))
 
         return $
@@ -272,14 +270,14 @@ instance JT.JourneyLeg TaxiLegRequest m where
     case mbBooking of
       Just booking -> do
         mRide <- QRide.findByRBId booking.id
-        Just <$> JT.mkLegInfoFromBookingAndRide booking mRide req.journeyLeg.entrance req.journeyLeg.exit req.journeyLeg.status
+        Just <$> JT.mkLegInfoFromBookingAndRide booking mRide req.journeyLeg.entrance req.journeyLeg.exit
       Nothing -> do
         mbSearchReq <- QSearchRequest.findById req.searchId
         if isNothing mbSearchReq && req.ignoreOldSearchRequest
           then return Nothing
           else do
             searchReq <- fromMaybeM (SearchRequestNotFound req.searchId.getId) mbSearchReq
-            Just <$> JT.mkLegInfoFromSearchRequest searchReq req.journeyLeg.entrance req.journeyLeg.exit req.journeyLeg.status
+            Just <$> JT.mkLegInfoFromSearchRequest searchReq req.journeyLeg.entrance req.journeyLeg.exit
   getInfo _ = throwError (InternalError "Not Supported")
 
   getFare (TaxiLegRequestGetFare taxiGetFareData) = do

@@ -846,7 +846,6 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee getJou
   unless (booking.status == DRB.CANCELLED) $
     void $ do
       QRB.updateStatus booking.id DRB.CANCELLED
-      QRB.updateJourneyLegStatus (Just JL.Cancelled) booking.id
       QBPL.makeAllInactiveByBookingId booking.id
       whenJust booking.journeyId $ \journeyId -> checkAndUpdateJourneyTerminalStatusForNormalRide journeyId DJourney.CANCELLED getJourneyLegsCallbackFn
   whenJust mbRide $ \ride -> void $ do

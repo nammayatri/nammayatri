@@ -17,7 +17,7 @@ import qualified Storage.Queries.Transformers.RouteDetails
 
 instance FromTType' Beam.FRFSSearch Domain.Types.FRFSSearch.FRFSSearch where
   fromTType' (Beam.FRFSSearchT {..}) = do
-    journeyRouteDetails' <- Storage.Queries.Transformers.RouteDetails.getJourneyRouteDetails id journeyLegId
+    journeyRouteDetails' <- Storage.Queries.Transformers.RouteDetails.getJourneyRouteDetails journeyLegId
     pure $
       Just
         Domain.Types.FRFSSearch.FRFSSearch
@@ -27,7 +27,6 @@ instance FromTType' Beam.FRFSSearch Domain.Types.FRFSSearch.FRFSSearch where
             isOnSearchReceived = isOnSearchReceived,
             journeyLegId = Kernel.Types.Id.Id <$> journeyLegId,
             journeyLegInfo = mkJourneyLegInfo agency convenienceCost isDeleted journeyId journeyLegOrder onSearchFailed pricingId skipBooking,
-            journeyLegStatus = journeyLegStatus,
             journeyRouteDetails = journeyRouteDetails',
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
@@ -60,7 +59,6 @@ instance ToTType' Beam.FRFSSearch Domain.Types.FRFSSearch.FRFSSearch where
         Beam.onSearchFailed = journeyLegInfo >>= (.onSearchFailed),
         Beam.pricingId = journeyLegInfo >>= (.pricingId),
         Beam.skipBooking = Kernel.Prelude.fmap (.skipBooking) journeyLegInfo,
-        Beam.journeyLegStatus = journeyLegStatus,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.partnerOrgId = Kernel.Types.Id.getId <$> partnerOrgId,

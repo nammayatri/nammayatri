@@ -12,7 +12,6 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
-import qualified Lib.JourneyLeg.Types
 import Tools.Beam.UtilsTH
 
 data JourneyLegT f = JourneyLegT
@@ -47,7 +46,6 @@ data JourneyLegT f = JourneyLegT
     serviceTypes :: B.C f (Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceTierType]),
     startLocationLat :: B.C f Kernel.Prelude.Double,
     startLocationLon :: B.C f Kernel.Prelude.Double,
-    status :: B.C f (Kernel.Prelude.Maybe Lib.JourneyLeg.Types.JourneyLegStatus),
     straightLineEntrance :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     straightLineExit :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     toArrivalTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),

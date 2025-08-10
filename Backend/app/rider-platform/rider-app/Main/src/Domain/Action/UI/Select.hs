@@ -481,7 +481,6 @@ mkJourneyForSearch searchRequest estimate personId = do
                 updatedAt = now,
                 legSearchId = Just searchRequestId.getId,
                 isDeleted = Just False,
-                isSkipped = Just False,
                 changedBusesInSequence = Nothing,
                 finalBoardedBusNumber = Nothing,
                 entrance = Nothing,

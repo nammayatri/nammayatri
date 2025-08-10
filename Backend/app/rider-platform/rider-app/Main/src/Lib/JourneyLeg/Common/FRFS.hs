@@ -82,7 +82,11 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
         DTrip.Bus -> do
           logDebug $ "CFRFS getState: Processing Bus leg for booking with searchId: " <> show searchId.getId
           journeyLegOrder <- booking.journeyLegOrder & fromMaybeM (BookingFieldNotPresent "journeyLegOrder")
-          let journeyLegStatus = fromMaybe JPT.InPlan booking.journeyLegStatus
+          journeyLegStatus <-
+            case safeTail booking.journeyRouteDetails of
+              Just routeDetail -> getJourneyLegStatusFromRouteDetails routeDetail booking.quoteId
+              Nothing -> return JPT.InPlan
+
           mbCurrentLegDetails <- QJourneyLeg.findByLegSearchId (Just searchId.getId)
 
           let routeCodeToUseForTrackVehicles = routeCodeForDetailedTracking <|> (mbCurrentLegDetails >>= (listToMaybe . (.routeDetails)) >>= (.routeGtfsId) <&> gtfsIdtoDomainCode)
@@ -98,7 +102,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
           logDebug $ "CFRFS getState: Processing Bus leg for booking with mbUserBoardingStation:" <> show mbUserBoardingStation <> "mbLegEndStation: " <> show mbLegEndStation
           let baseStateData =
                 JT.JourneyLegStateData
-                  { status = journeyLegStatus,
+                  { status = fromMaybe JPT.InPlan journeyLegStatus,
                     legStatus = castToLegStatus <$> (listToMaybe journeyLegsStatus),
                     userPosition,
                     JT.vehiclePositions = [], -- Will be populated based on status
@@ -143,7 +147,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
 
           return $ JT.Single finalStateData
         _ -> do
-          let routeStatuses = getStatusForMetroAndSubway booking.journeyRouteDetails
+          routeStatuses <- getStatusForMetroAndSubway booking.journeyRouteDetails
           logDebug $ "CFRFS getState: Processing non-Bus leg for booking with searchId: " <> show searchId.getId
           journeyLegOrder <- booking.journeyLegOrder & fromMaybeM (BookingFieldNotPresent "journeyLegOrder")
           vehiclePositions :: [JT.VehiclePosition] <-
@@ -175,6 +179,11 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
         DTrip.Bus -> do
           journeyLegInfo <- searchReq.journeyLegInfo & fromMaybeM (InvalidRequest "JourneySearchData not found")
           mbCurrentLegDetails <- QJourneyLeg.findByLegSearchId (Just searchId.getId)
+          
+          journeyLegStatus <-
+            case safeTail searchReq.journeyRouteDetails of
+              Just routeDetail -> getJourneyLegStatusFromRouteDetails routeDetail Nothing
+              Nothing -> return JPT.InPlan
 
           let routeCodeToUseForTrackVehicles = routeCodeForDetailedTracking <|> (mbCurrentLegDetails >>= (listToMaybe . (.routeDetails)) >>= (.routeGtfsId) <&> gtfsIdtoDomainCode)
 
@@ -189,7 +198,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
 
           let baseStateData =
                 JT.JourneyLegStateData
-                  { status = fromMaybe JPT.InPlan searchReq.journeyLegStatus,
+                  { status = fromMaybe JPT.InPlan journeyLegStatus,
                     legStatus = castToLegStatus <$> (listToMaybe journeyLegsStatus),
                     userPosition,
                     JT.vehiclePositions = [], -- Will be populated based on status
@@ -234,7 +243,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
           return $ JT.Single finalStateData
         _ -> do
           -- Other modes (Metro, Subway, etc.)
-          let routeStatuses = getStatusForMetroAndSubway searchReq.journeyRouteDetails
+          routeStatuses <- getStatusForMetroAndSubway searchReq.journeyRouteDetails
           journeyLegInfo <- searchReq.journeyLegInfo & fromMaybeM (InvalidRequest "JourneySearchData not found")
           vehiclePositions <- getVehiclePositionsIfAvailable mode searchReq.fromStationCode searchReq.toStationCode integratedBppConfig
 
@@ -297,10 +306,15 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
         _ -> do
           return []
 
-    getStatusForMetroAndSubway :: [RD.RouteDetails] -> [(Int, JPT.JourneyLegStatus)]
-    getStatusForMetroAndSubway journeyRouteDetails = do
+    getStatusForMetroAndSubway :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => [RD.RouteDetails] -> m [(Int, JPT.JourneyLegStatus)]
+    getStatusForMetroAndSubway journeyRouteDetails = do      
       let sortedSubRoutes = sortOn (.subLegOrder) journeyRouteDetails
-      map (\sr -> (fromMaybe 1 sr.subLegOrder, fromMaybe JPT.InPlan sr.journeyStatus)) sortedSubRoutes
+      mapM 
+        (\routeDetail -> do
+            status <- getJourneyLegStatusFromRouteDetails routeDetail Nothing
+            return (fromMaybe 1 routeDetail.subLegOrder, fromMaybe JPT.InPlan status)
+        ) 
+        sortedSubRoutes      
 
     getJourneyLegStatus :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => [RD.RouteDetails] -> Maybe Text -> m [JT.JourneyFRFSLegStatusElement]
     getJourneyLegStatus journeyRouteDetails mbLegSearchId = do
@@ -452,15 +466,11 @@ confirm personId merchantId mbQuoteId ticketQuantity childTicketQuantity skipBoo
 cancel :: JT.CancelFlow m r c => Id FRFSSearch -> Spec.CancellationType -> Bool -> m ()
 cancel searchId cancellationType isSkipped = do
   mbMetroBooking <- QTBooking.findBySearchId searchId
-  case mbMetroBooking of
-    Just metroBooking -> do
-      merchant <- CQM.findById metroBooking.merchantId >>= fromMaybeM (MerchantDoesNotExist metroBooking.merchantId.getId)
-      merchantOperatingCity <- CQMOC.findById metroBooking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound metroBooking.merchantOperatingCityId.getId)
-      bapConfig <- CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory metroBooking.vehicleType) >>= fromMaybeM (InternalError "Beckn Config not found")
-      CallExternalBPP.cancel merchant merchantOperatingCity bapConfig cancellationType metroBooking
-      if isSkipped then QTBooking.updateIsSkipped metroBooking.id (Just True) else QTBooking.updateIsCancelled metroBooking.id (Just True)
-    Nothing -> do
-      if isSkipped then QFRFSSearch.updateSkipBooking searchId (Just True) else QFRFSSearch.updateIsCancelled searchId (Just True)
+  whenJust mbMetroBooking $ \metroBooking -> do
+    merchant <- CQM.findById metroBooking.merchantId >>= fromMaybeM (MerchantDoesNotExist metroBooking.merchantId.getId)
+    merchantOperatingCity <- CQMOC.findById metroBooking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound metroBooking.merchantOperatingCityId.getId)
+    bapConfig <- CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory metroBooking.vehicleType) >>= fromMaybeM (InternalError "Beckn Config not found")
+    CallExternalBPP.cancel merchant merchantOperatingCity bapConfig cancellationType metroBooking
   if isSkipped then QJourneyLeg.updateIsSkipped (Just True) (Just searchId.getId) else QJourneyLeg.updateIsDeleted (Just True) (Just searchId.getId)
 
 isCancellable :: JT.CancelFlow m r c => Id FRFSSearch -> m JT.IsCancellableResponse

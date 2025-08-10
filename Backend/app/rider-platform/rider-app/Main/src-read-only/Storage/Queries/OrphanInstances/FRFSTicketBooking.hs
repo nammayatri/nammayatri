@@ -17,7 +17,7 @@ import qualified Storage.Queries.Transformers.RouteDetails
 
 instance FromTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTicketBooking where
   fromTType' (Beam.FRFSTicketBookingT {..}) = do
-    journeyRouteDetails' <- Storage.Queries.Transformers.RouteDetails.getJourneyRouteDetails searchId journeyLegId
+    journeyRouteDetails' <- Storage.Queries.Transformers.RouteDetails.getJourneyRouteDetails journeyLegId
     pure $
       Just
         Domain.Types.FRFSTicketBooking.FRFSTicketBooking
@@ -47,11 +47,9 @@ instance FromTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTi
             isBookingCancellable = isBookingCancellable,
             isDeleted = isDeleted,
             isFareChanged = isFareChanged,
-            isSkipped = isSkipped,
             journeyId = Kernel.Types.Id.Id <$> journeyId,
             journeyLegId = Kernel.Types.Id.Id <$> journeyLegId,
             journeyLegOrder = journeyLegOrder,
-            journeyLegStatus = journeyLegStatus,
             journeyOnInitDone = journeyOnInitDone,
             journeyRouteDetails = journeyRouteDetails',
             merchantId = Kernel.Types.Id.Id merchantId,
@@ -112,11 +110,9 @@ instance ToTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTick
         Beam.isBookingCancellable = isBookingCancellable,
         Beam.isDeleted = isDeleted,
         Beam.isFareChanged = isFareChanged,
-        Beam.isSkipped = isSkipped,
         Beam.journeyId = Kernel.Types.Id.getId <$> journeyId,
         Beam.journeyLegId = Kernel.Types.Id.getId <$> journeyLegId,
         Beam.journeyLegOrder = journeyLegOrder,
-        Beam.journeyLegStatus = journeyLegStatus,
         Beam.journeyOnInitDone = journeyOnInitDone,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
