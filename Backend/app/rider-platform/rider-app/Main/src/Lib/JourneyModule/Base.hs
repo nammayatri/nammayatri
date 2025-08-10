@@ -93,7 +93,6 @@ import qualified Storage.Queries.JourneyExtra as QJourneyExtra
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSearchRequest
-import qualified Storage.Queries.WalkLegMultimodal as QWalkLeg
 import Tools.Error
 import Tools.Maps as Maps
 import qualified Tools.MultiModal as TMultiModal
@@ -147,7 +146,7 @@ init journeyReq userPreferences = do
       ( \idx (mbPrev, leg, mbNext) -> do
           let travelMode = convertMultiModalModeToTripMode leg.mode (straightLineDistance leg) (distanceToMeters leg.distance) journeyReq.maximumWalkDistance journeyReq.straightLineThreshold
           legFare@(_, mbTotalLegFare) <- measureLatency (JLI.getFare leg.fromArrivalTime journeyReq.personId journeyReq.merchantId journeyReq.merchantOperatingCityId leg travelMode) "multimodal getFare"
-          journeyLeg <- JL.mkJourneyLeg idx leg journeyReq.merchantId journeyReq.merchantOperatingCityId journeyId journeyReq.maximumWalkDistance journeyReq.straightLineThreshold mbTotalLegFare mbPrev mbNext
+          journeyLeg <- JL.mkJourneyLeg idx (mbPrev, leg, mbNext) journeyReq.merchantId journeyReq.merchantOperatingCityId journeyId journeyReq.maximumWalkDistance journeyReq.straightLineThreshold mbTotalLegFare
           return (legFare, journeyLeg)
       )
       legsWithContext
@@ -218,39 +217,26 @@ getAllLegsInfo ::
   Id DJourney.Journey ->
   Bool ->
   m [JL.LegInfo]
-getAllLegsInfo journeyId skipAddLegFallback = do
+getAllLegsInfo journeyId = do
   whenJourneyUpdateInProgress journeyId $ do
     allLegsRawData <- getJourneyLegs journeyId
-    mapMaybeM
-      ( \leg -> do
-          case leg.legSearchId of
-            Just legSearchIdText -> getLegInfo leg legSearchIdText skipAddLegFallback
-            Nothing -> do
-              logError $ "LegId is null for JourneyLeg: " <> show leg.journeyId <> " JourneyLegId: " <> show leg.id
-              if skipAddLegFallback
-                then return Nothing
-                else do
-                  addAllLegs journeyId (Just allLegsRawData) [leg]
-                  updatedLeg <- QJourneyLeg.findByPrimaryKey leg.id >>= fromMaybeM (JourneyLegNotFound leg.id.getId)
-                  legSearchIdText' <- updatedLeg.legSearchId & fromMaybeM (JourneyLegSearchIdNotFound leg.journeyId.getId leg.sequenceNumber)
-                  getLegInfo updatedLeg legSearchIdText' skipAddLegFallback
-      )
-      allLegsRawData
+    mapMaybeM getLegInfo allLegsRawData
 
 getLegInfo ::
   JL.GetStateFlow m r c =>
   DJourneyLeg.JourneyLeg ->
-  Text ->
-  Bool ->
   m (Maybe JL.LegInfo)
-getLegInfo journeyLeg legSearchIdText skipAddLegFallback = do
-  let legSearchId = Id legSearchIdText
-  case journeyLeg.mode of
-    DTrip.Taxi -> JL.getInfo $ TaxiLegRequestGetInfo $ TaxiLegRequestGetInfoData {searchId = cast legSearchId, journeyLeg = journeyLeg {DJourneyLeg.entrance = journeyLeg.osmEntrance, DJourneyLeg.exit = journeyLeg.osmExit}, ignoreOldSearchRequest = skipAddLegFallback}
-    DTrip.Walk -> JL.getInfo $ WalkLegRequestGetInfo $ WalkLegRequestGetInfoData {walkLegId = cast legSearchId, journeyLeg = journeyLeg {DJourneyLeg.entrance = journeyLeg.straightLineEntrance, DJourneyLeg.exit = journeyLeg.straightLineExit}, ignoreOldSearchRequest = skipAddLegFallback}
-    DTrip.Metro -> JL.getInfo $ MetroLegRequestGetInfo $ MetroLegRequestGetInfoData {searchId = cast legSearchId, fallbackFare = journeyLeg.estimatedMinFare, distance = journeyLeg.distance, duration = journeyLeg.duration, ignoreOldSearchRequest = skipAddLegFallback, startTime = journeyLeg.fromDepartureTime}
-    DTrip.Subway -> JL.getInfo $ SubwayLegRequestGetInfo $ SubwayLegRequestGetInfoData {searchId = cast legSearchId, fallbackFare = journeyLeg.estimatedMinFare, distance = journeyLeg.distance, duration = journeyLeg.duration, ignoreOldSearchRequest = skipAddLegFallback, startTime = journeyLeg.fromDepartureTime}
-    DTrip.Bus -> JL.getInfo $ BusLegRequestGetInfo $ BusLegRequestGetInfoData {searchId = cast legSearchId, fallbackFare = journeyLeg.estimatedMinFare, distance = journeyLeg.distance, duration = journeyLeg.duration, ignoreOldSearchRequest = skipAddLegFallback, startTime = journeyLeg.fromDepartureTime}
+getLegInfo journeyLeg = do
+  case journeyLeg.legSearchId of
+    Just legSearchIdText -> do
+      let legSearchId = Id legSearchIdText
+      case journeyLeg.mode of
+        DTrip.Taxi -> JL.getInfo $ TaxiLegRequestGetInfo $ TaxiLegRequestGetInfoData {searchId = cast legSearchId, journeyLeg}
+        DTrip.Walk -> JL.getInfo $ WalkLegRequestGetInfo $ WalkLegRequestGetInfoData {journeyLeg = journeyLeg}
+        DTrip.Metro -> JL.getInfo $ MetroLegRequestGetInfo $ MetroLegRequestGetInfoData {searchId = cast legSearchId, journeyLeg = journeyLeg}
+        DTrip.Subway -> JL.getInfo $ SubwayLegRequestGetInfo $ SubwayLegRequestGetInfoData {searchId = cast legSearchId, fallbackFare = journeyLeg.estimatedMinFare, distance = journeyLeg.distance, duration = journeyLeg.duration, startTime = journeyLeg.fromDepartureTime}
+        DTrip.Bus -> JL.getInfo $ BusLegRequestGetInfo $ BusLegRequestGetInfoData {searchId = cast legSearchId, fallbackFare = journeyLeg.estimatedMinFare, distance = journeyLeg.distance, duration = journeyLeg.duration, startTime = journeyLeg.fromDepartureTime}
+    Nothing -> return Nothing
 
 hasSignificantMovement :: [LatLong] -> Domain.Types.RiderConfig.BusTrackingConfig -> Bool
 hasSignificantMovement (p1 : p2 : _) busTrackingConfig =
@@ -391,7 +377,7 @@ getAllLegsStatus journey = do
           let legSearchId = Id legSearchIdText
           legState <-
             case leg.mode of
-              DTrip.Taxi -> JL.getState $ TaxiLegRequestGetState $ TaxiLegRequestGetStateData {searchId = cast legSearchId, riderLastPoints, journeyLegStatus = leg.status}
+              DTrip.Taxi -> JL.getState $ TaxiLegRequestGetState $ TaxiLegRequestGetStateData {searchId = cast legSearchId, riderLastPoints, journeyLeg = leg}
               DTrip.Walk -> JL.getState $ WalkLegRequestGetState $ WalkLegRequestGetStateData {walkLegId = cast legSearchId, riderLastPoints}
               DTrip.Metro -> JL.getState $ MetroLegRequestGetState $ MetroLegRequestGetStateData {searchId = cast legSearchId, riderLastPoints}
               DTrip.Subway -> JL.getState $ SubwayLegRequestGetState $ SubwayLegRequestGetStateData {searchId = cast legSearchId, riderLastPoints}
@@ -547,10 +533,7 @@ addAllLegs journeyId mbOldJourneyLegs newJourneyLegs = do
             addMetroLeg journey journeyLeg
           DTrip.Subway -> do
             addSubwayLeg journey journeyLeg
-          DTrip.Walk -> do
-            let originAddress = mkAddress (mbPrevJourneyLeg >>= (.toStopDetails)) journeyLeg.mode journey.fromLocation.address
-            let destinationAddress = mkAddress (mbNextJourneyLeg >>= (.fromStopDetails)) journeyLeg.mode toLocation.address
-            addWalkLeg journey journeyLeg originAddress destinationAddress
+          DTrip.Walk -> return {id = journeyLeg.id}
           DTrip.Bus -> do
             addBusLeg journey journeyLeg
       upsertJourneyLeg $ journeyLeg {DJourneyLeg.legSearchId = Just searchResp.id}
@@ -669,27 +652,6 @@ addTaxiLeg journey journeyLeg originAddress destinationAddress = do
     mkTaxiSearchReq origin stops =
       TaxiLegRequestSearch $
         TaxiLegRequestSearchData
-          { journeyLegData = journeyLeg,
-            ..
-          }
-
-addWalkLeg ::
-  JL.SearchRequestFlow m r c =>
-  DJourney.Journey ->
-  DJourneyLeg.JourneyLeg ->
-  LA.LocationAddress ->
-  LA.LocationAddress ->
-  m JL.SearchResponse
-addWalkLeg journey journeyLeg originAddress destinationAddress = do
-  let startLocation = mkLocationWithGate journeyLeg.exit originAddress journeyLeg.startLocation
-  let endLocation = mkLocationWithGate journeyLeg.entrance destinationAddress journeyLeg.endLocation
-  let walkSearchReq = mkWalkSearchReq startLocation endLocation
-  JL.search walkSearchReq
-  where
-    mkWalkSearchReq :: SearchReqLocation -> SearchReqLocation -> WalkLegRequest
-    mkWalkSearchReq origin destination =
-      WalkLegRequestSearch $
-        WalkLegRequestSearchData
           { journeyLegData = journeyLeg,
             ..
           }
@@ -1238,7 +1200,7 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
       (newOriginLat, newOriginLon) <- getNewOriginLatLon currentLeg.legExtraInfo
       leg <- mkMultiModalLeg newDistance newDuration MultiModalTypes.Unspecified newOriginLat newOriginLon endLocation.lat endLocation.lon currentLeg.startTime
       riderConfig <- QRC.findByMerchantOperatingCityId currentLeg.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist currentLeg.merchantOperatingCityId.getId)
-      journeyLeg <- JL.mkJourneyLeg startLegOrder leg currentLeg.merchantId currentLeg.merchantOperatingCityId journeyId riderConfig.maximumWalkDistance riderConfig.straightLineThreshold (Just fare) Nothing Nothing
+      journeyLeg <- JL.mkJourneyLeg startLegOrder (Nothing, leg, Nothing) currentLeg.merchantId currentLeg.merchantOperatingCityId journeyId riderConfig.maximumWalkDistance riderConfig.straightLineThreshold (Just fare)
       startLocationAddress <-
         case currentLeg.legExtraInfo of
           JL.Walk walkLegExtraInfo -> return walkLegExtraInfo.origin.address
@@ -1277,7 +1239,7 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
       now <- getCurrentTime
       leg <- mkMultiModalLeg newDistance newDuration MultiModalTypes.Unspecified startlocation.location.lat startlocation.location.lon endLocation.lat endLocation.lon now
       riderConfig <- QRC.findByMerchantOperatingCityId currentLeg.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist currentLeg.merchantOperatingCityId.getId)
-      journeyLeg <- JL.mkJourneyLeg currentLeg.order leg currentLeg.merchantId currentLeg.merchantOperatingCityId journeyId riderConfig.maximumWalkDistance riderConfig.straightLineThreshold (Just fare) Nothing Nothing
+      journeyLeg <- JL.mkJourneyLeg currentLeg.order (Nothing, leg, Nothing) currentLeg.merchantId currentLeg.merchantOperatingCityId journeyId riderConfig.maximumWalkDistance riderConfig.straightLineThreshold (Just fare)
       withJourneyUpdateInProgress journeyId $ do
         cancelRequiredLegs
         QJourneyLeg.create journeyLeg

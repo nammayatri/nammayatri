@@ -238,17 +238,15 @@ Booking:
     isReferredRide: Maybe Bool
     disabilityTag: Maybe Text
     journeyLegOrder: Maybe Int
-    isDeleted: Maybe Bool    
+    isDeleted: Maybe Bool
     configInExperimentVersions: "[ConfigVersionMap]"
-    journeyId: Maybe (Id Journey)    
+    journeyId: Maybe (Id Journey)
     preferSafetyPlus: Bool
     recentLocationId: Maybe (Id RecentLocation)
     isInsured: Bool
     insuredAmount: Maybe Text
     driverInsuredAmount: Maybe Text
     isMultimodalSearch: Maybe Bool
-    journeyLegId: Maybe (Id JourneyLeg)
-    journeyRouteDetails: Maybe RouteDetails
 
   beamFields:
     estimatedDistance:
@@ -286,7 +284,6 @@ Booking:
       clientManufacturer: Maybe Text
     bppEstimateId:
       itemId: Text
-    journeyRouteDetails: {}
 
   beamInstance: MakeTableInstancesWithTModifier [("bppBookingId", "bpp_ride_booking_id"), ("riderTransactionId", "transaction_id")]
   beamType:
@@ -412,7 +409,6 @@ Booking:
     fromTType:
       - mappings: Storage.Queries.LocationMapping.findByEntityId id|EM
       - toBookingDetailsAndFromLocation': Storage.Queries.Transformers.Booking.toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings distance fareProductType tripCategory toLocationId fromLocationId stopLocationId otpCode isUpgradedToCab distanceUnit distanceValue hasStops parcelType parcelQuantity|EM
-      - journeyRouteDetails': Storage.Queries.Transformers.RouteDetails.getJourneyRouteDetails journeyLegId|EM
   fromTType:
     providerUrl: parseBaseUrl providerUrl|EM
     isBookingUpdated: (fromMaybe False isBookingUpdated)|E
@@ -438,7 +434,6 @@ Booking:
     isInsured: fromMaybe False isInsured|E
     preferSafetyPlus : fromMaybe False preferSafetyPlus | E
     isPetRide: fromMaybe False isPetRide | E
-    journeyRouteDetails: listToMaybe journeyRouteDetails'|E
 
   extraOperations:
     - EXTRA_QUERY_FILE

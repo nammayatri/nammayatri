@@ -13,11 +13,9 @@ import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Storage.Beam.FRFSTicketBooking as Beam
-import qualified Storage.Queries.Transformers.RouteDetails
 
 instance FromTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTicketBooking where
   fromTType' (Beam.FRFSTicketBookingT {..}) = do
-    journeyRouteDetails' <- Storage.Queries.Transformers.RouteDetails.getJourneyRouteDetails journeyLegId
     pure $
       Just
         Domain.Types.FRFSTicketBooking.FRFSTicketBooking
@@ -51,7 +49,6 @@ instance FromTType' Beam.FRFSTicketBooking Domain.Types.FRFSTicketBooking.FRFSTi
             journeyLegId = Kernel.Types.Id.Id <$> journeyLegId,
             journeyLegOrder = journeyLegOrder,
             journeyOnInitDone = journeyOnInitDone,
-            journeyRouteDetails = journeyRouteDetails',
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
             osBuildVersion = osBuildVersion,

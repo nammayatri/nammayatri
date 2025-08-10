@@ -454,6 +454,7 @@ mkJourneyForSearch searchRequest estimate personId = do
             DJL.JourneyLeg
               { id = journeyLegGuid,
                 journeyId = journeyGuid,
+                isSkipped = Just False,
                 sequenceNumber = 0,
                 mode = DTrip.Taxi,
                 startLocation = LatLngV2 searchRequest.fromLocation.lat searchRequest.fromLocation.lon,
@@ -485,7 +486,6 @@ mkJourneyForSearch searchRequest estimate personId = do
                 finalBoardedBusNumber = Nothing,
                 entrance = Nothing,
                 exit = Nothing,
-                status = Nothing,
                 osmEntrance = Nothing,
                 osmExit = Nothing,
                 straightLineEntrance = Nothing,

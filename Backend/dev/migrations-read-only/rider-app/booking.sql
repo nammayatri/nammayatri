@@ -377,3 +377,8 @@ ALTER TABLE atlas_app.booking ADD COLUMN journey_leg_id character varying(36) ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+

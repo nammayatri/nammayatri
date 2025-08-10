@@ -30,6 +30,7 @@ data RouteDetailsT f = RouteDetailsT
     routeCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     routeColorCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     routeColorName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    routeGroupId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     routeGtfsId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     routeLongName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     routeShortName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

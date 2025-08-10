@@ -56,9 +56,7 @@ FRFSSearch:
     partnerOrgTransactionId: Maybe (Id PartnerOrgTransaction)
     partnerOrgId: Maybe (Id PartnerOrganization)
     journeyLegInfo: Maybe JourneySearchData
-    journeyLegId: Maybe (Id JourneyLeg)
     isOnSearchReceived: Maybe Bool
-    journeyRouteDetails: "[RouteDetails]"
     integratedBppConfigId: Id IntegratedBPPConfig
     recentLocationId: Maybe (Id RecentLocation)
     validTill: Maybe UTCTime
@@ -79,7 +77,6 @@ FRFSSearch:
       pricingId: Maybe Text
       isDeleted: Maybe Bool
       onSearchFailed: Maybe Bool
-    journeyRouteDetails: {}
 
   toTType:
     journeyLegOrder: Kernel.Prelude.fmap (.journeyLegOrder)|I
@@ -93,7 +90,6 @@ FRFSSearch:
 
   fromTType:
     journeyLegInfo: mkJourneyLegInfo
-    journeyRouteDetails: Storage.Queries.Transformers.RouteDetails.getJourneyRouteDetails journeyLegId|EM
 
   excludedDefaultQueries:
     - create
@@ -282,8 +278,7 @@ FRFSTicketBooking:
     journeyOnInitDone: Maybe Bool
     startTime: Maybe UTCTime
     isDeleted: Maybe Bool
-    isFareChanged: Maybe Bool    
-    journeyRouteDetails: "[RouteDetails]"
+    isFareChanged: Maybe Bool
     integratedBppConfigId: Id IntegratedBPPConfig
     recentLocationId: Maybe (Id RecentLocation)
     bookingAuthCode: Maybe Text
@@ -306,7 +301,6 @@ FRFSTicketBooking:
       estimatedPrice: HighPrecMoney
     finalPrice:
       finalPrice: Maybe HighPrecMoney
-    journeyRouteDetails: {}
 
   types:
     CashbackStatus:
@@ -316,7 +310,6 @@ FRFSTicketBooking:
     price: Kernel.Types.Common.mkPrice currency price|E
     estimatedPrice: Kernel.Types.Common.mkPrice currency estimatedPrice|E
     finalPrice: Kernel.Prelude.fmap (Kernel.Types.Common.mkPrice currency) finalPrice|E
-    journeyRouteDetails: Storage.Queries.Transformers.RouteDetails.getJourneyRouteDetails journeyLegId|EM
 
   toTType:
     price: (.amount)|I

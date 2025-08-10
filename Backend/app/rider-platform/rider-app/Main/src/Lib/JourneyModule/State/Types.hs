@@ -59,3 +59,11 @@ data TrackingStatus
 
 $(mkHttpInstancesForEnum ''TrackingStatus)
 $(mkBeamInstancesForEnum ''TrackingStatus)
+
+data JourneyFRFSLegStatusElement = JourneyFRFSLegStatusElement
+  { trackingStatus :: Maybe TrackingStatus,
+    bookingStatus :: FRFSJourneyLegStatus,
+    subLegOrder :: Maybe Int
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)

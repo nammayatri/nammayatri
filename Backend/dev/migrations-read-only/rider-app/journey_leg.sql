@@ -135,3 +135,13 @@ ALTER TABLE atlas_app.journey_leg ADD COLUMN osm_entrance json ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.journey_leg ADD COLUMN route_group_id text ;
+
+
+------- SQL updates -------
+

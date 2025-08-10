@@ -69,14 +69,13 @@ data TaxiLegRequestIsCancellableData = TaxiLegRequestIsCancellableData
 
 data TaxiLegRequestGetInfoData = TaxiLegRequestGetInfoData
   { searchId :: Id DSR.SearchRequest,
-    journeyLeg :: DJourneyLeg.JourneyLeg,
-    ignoreOldSearchRequest :: Bool
+    journeyLeg :: DJourneyLeg.JourneyLeg
   }
 
 data TaxiLegRequestGetStateData = TaxiLegRequestGetStateData
   { searchId :: Id DSR.SearchRequest,
     riderLastPoints :: [ApiTypes.RiderLocationReq],
-    journeyLegStatus :: Maybe JourneyLegStatus
+    journeyLeg :: DJourneyLeg.JourneyLeg
   }
 
 data TaxiLegRequestGetFareData = TaxiLegRequestGetFareData
