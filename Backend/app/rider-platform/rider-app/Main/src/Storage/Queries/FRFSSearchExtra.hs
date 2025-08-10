@@ -1,7 +1,6 @@
 module Storage.Queries.FRFSSearchExtra where
 
 import Domain.Types.FRFSSearch
-import qualified Domain.Types.FRFSSearch as FS
 import Domain.Types.Journey
 import Kernel.Beam.Functions
 import Kernel.Prelude
@@ -10,17 +9,13 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow)
 import qualified Sequelize as Se
 import qualified Storage.Beam.FRFSSearch as Beam
 import Storage.Queries.OrphanInstances.FRFSSearch ()
-import qualified Storage.Queries.RouteDetails as QRD
 
 -- Extra code goes here --
 create' :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSSearch.FRFSSearch -> m ())
 create' = createWithKV
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSSearch.FRFSSearch -> m ())
-create frfsSearchReq = do
-  forM_ (FS.journeyRouteDetails frfsSearchReq) $ \journeyRouteDetail -> do
-    QRD.create journeyRouteDetail
-  create' frfsSearchReq
+create frfsSearchReq = create' frfsSearchReq
 
 findAllByJourneyId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.Journey.Journey -> m [Domain.Types.FRFSSearch.FRFSSearch]
 findAllByJourneyId journeyId =

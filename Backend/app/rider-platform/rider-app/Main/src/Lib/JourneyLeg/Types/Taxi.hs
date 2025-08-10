@@ -16,7 +16,6 @@ import Kernel.External.Maps.Google.MapsClient.Types
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.JourneyLeg.Types
 import SharedLogic.Search
 
 data TaxiLegRequestSearchData = TaxiLegRequestSearchData

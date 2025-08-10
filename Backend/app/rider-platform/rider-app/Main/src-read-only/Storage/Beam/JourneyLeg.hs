@@ -37,9 +37,12 @@ data JourneyLegT f = JourneyLegT
     isSkipped :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     journeyId :: B.C f Kernel.Prelude.Text,
     legId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     mode :: B.C f Domain.Types.Common.MultimodalTravelMode,
     osmEntrance :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     osmExit :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    riderId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     routeGroupId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     sequenceNumber :: B.C f Kernel.Prelude.Int,
     serviceTypes :: B.C f (Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceTierType]),
@@ -53,8 +56,6 @@ data JourneyLegT f = JourneyLegT
     toStopGtfsId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     toStopName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     toStopPlatformCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }

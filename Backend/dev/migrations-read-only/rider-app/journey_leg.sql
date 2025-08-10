@@ -33,8 +33,8 @@ ALTER TABLE atlas_app.journey_leg ADD COLUMN to_departure_time timestamp with ti
 ALTER TABLE atlas_app.journey_leg ADD COLUMN to_stop_code text ;
 ALTER TABLE atlas_app.journey_leg ADD COLUMN to_stop_gtfs_id text ;
 ALTER TABLE atlas_app.journey_leg ADD COLUMN to_stop_name text ;
-ALTER TABLE atlas_app.journey_leg ADD COLUMN merchant_id character varying(36) ;
-ALTER TABLE atlas_app.journey_leg ADD COLUMN merchant_operating_city_id character varying(36) ;
+ALTER TABLE atlas_app.journey_leg ADD COLUMN merchant_id character varying(36) NOT NULL;
+ALTER TABLE atlas_app.journey_leg ADD COLUMN merchant_operating_city_id character varying(36) NOT NULL;
 ALTER TABLE atlas_app.journey_leg ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.journey_leg ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.journey_leg ADD PRIMARY KEY ( id);
@@ -141,6 +141,41 @@ ALTER TABLE atlas_app.journey_leg ADD COLUMN osm_entrance json ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.journey_leg ADD COLUMN route_group_id text ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.journey_leg ADD COLUMN rider_id character varying(36) ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
 
 
 ------- SQL updates -------

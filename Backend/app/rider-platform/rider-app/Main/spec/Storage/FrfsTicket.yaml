@@ -284,7 +284,6 @@ FRFSTicketBooking:
     bookingAuthCode: Maybe Text
     osType: Maybe Text
     osBuildVersion: Maybe Text
-    journeyLegId: Maybe (Id JourneyLeg)
 
   default:
     customerCancelled: "false"

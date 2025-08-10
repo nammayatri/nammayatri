@@ -72,7 +72,6 @@ import qualified Kernel.Types.SlidingWindowCounters as SW
 import Kernel.Utils.Common
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import qualified Kernel.Utils.Time as KUT
-import qualified Lib.JourneyLeg.Types as JL
 import qualified Lib.JourneyModule.Types as JL
 import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DLP

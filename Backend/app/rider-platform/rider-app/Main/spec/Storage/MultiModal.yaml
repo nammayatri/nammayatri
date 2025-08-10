@@ -238,6 +238,9 @@ JourneyLeg:
     osmEntrance: Maybe MultiModalLegGate
     osmExit: Maybe MultiModalLegGate
     routeGroupId: Text
+    riderId: Id Person
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
 
   sqlType:
     serviceTypes: text[]
@@ -252,6 +255,7 @@ JourneyLeg:
     osmEntrance: Maybe Value
     osmExit: Maybe Value
     routeGroupId: Maybe Text
+    riderId: Maybe Text
 
   beamFields:
     distance:
@@ -281,6 +285,9 @@ JourneyLeg:
       legId: Maybe Text
 
   queries:
+    findByLegSearchId:
+      kvFunction: findOneWithKV
+      where: legSearchId
     findAllByJourneyId:
       kvFunction: findAllWithKV
       where: journeyId
@@ -292,6 +299,10 @@ JourneyLeg:
       kvFunction: updateOneWithKV
       params: [mode]
       where: id
+    updateIsSkipped:
+      kvFunction: updateOneWithKV
+      params: [isSkipped]
+      where: legSearchId
     updateIsDeleted:
       kvFunction: updateOneWithKV
       params: [isDeleted]
@@ -300,9 +311,6 @@ JourneyLeg:
       kvFunction: updateWithKV
       params: [distance, duration]
       where: id
-    findByLegSearchId:
-      kvFunction: findOneWithKV
-      where: legSearchId
     updateAfterEditLocation:
       kvFunction: updateWithKV
       params: [duration, distance, endLocation]
@@ -335,6 +343,7 @@ JourneyLeg:
     osmEntrance: osmEntrance >>= Kernel.Utils.JSON.valueToMaybe|E
     osmExit: osmExit >>= Kernel.Utils.JSON.valueToMaybe|E
     routeGroupId: fromMaybe "default-group-id" routeGroupId|E
+    riderId: Storage.Queries.Transformers.JourneyLeg.getRiderId journeyId riderId|EM
 
   toTType:
     distance: (.value) <$> |I
@@ -359,6 +368,7 @@ JourneyLeg:
     agencyGtfsId: (agency >>= (.gtfsId))|E
     agencyName: (agency <&> (.name))|E
     routeGroupId: Just routeGroupId|E
+    riderId: Just (Kernel.Types.Id.getId riderId)|E
 
   excludedDefaultQueries:
     - create

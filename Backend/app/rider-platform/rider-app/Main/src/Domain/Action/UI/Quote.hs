@@ -300,7 +300,7 @@ getJourneys searchRequest hasMultimodalSearch = do
       journeyData <-
         forM allJourneys \journey -> do
           journeyLegsFromOtp <- QJourneyLeg.findAllByJourneyId journey.id
-          legsInfo <- JM.getAllLegsInfo journey.id True
+          legsInfo <- JM.getAllLegsInfo journey.id
           journeyLegs <- do
             forM journeyLegsFromOtp \journeyLeg -> do
               let legInfo = find (\leg -> Just leg.searchId == journeyLeg.legSearchId) legsInfo

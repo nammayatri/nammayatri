@@ -14,7 +14,7 @@ import Kernel.External.Maps.Google.MapsClient.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
-import Kernel.Utils.Common
+import Lib.JourneyModule.Types
 
 data MetroLegRequestSearchData = MetroLegRequestSearchData
   { quantity :: Int,
@@ -46,12 +46,14 @@ data MetroLegRequestCancelData = MetroLegRequestCancelData
   }
 
 data MetroLegRequestIsCancellableData = MetroLegRequestIsCancellableData
-  { searchId :: Id FRFSSearch.FRFSSearch
+  { searchId :: Id FRFSSearch.FRFSSearch,
+    legInfo :: LegInfo
   }
 
 data MetroLegRequestGetStateData = MetroLegRequestGetStateData
   { searchId :: Id FRFSSearch.FRFSSearch,
-    riderLastPoints :: [ApiTypes.RiderLocationReq]
+    riderLastPoints :: [ApiTypes.RiderLocationReq],
+    journeyLeg :: DJourneyLeg.JourneyLeg
   }
 
 data MetroLegRequestGetInfoData = MetroLegRequestGetInfoData

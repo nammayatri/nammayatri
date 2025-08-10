@@ -22,7 +22,6 @@ import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.EstimateStatus as DEstimate
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as DPerson
-import qualified Domain.Types.RouteDetails as RD
 import Domain.Types.ServiceTierType ()
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Maps.Types
@@ -67,8 +66,6 @@ instance JT.JourneyLeg TaxiLegRequest m where
         Nothing
         False
         (Just journeySearchData)
-        (Just journeyLegData.id)
-        (listToMaybe journeyLegData.routeDetails)
         True
     QJourneyLeg.updateDistanceAndDuration (convertMetersToDistance Meter <$> dSearchRes.distance) dSearchRes.duration journeyLegData.id
     fork "search cabs" . withShortRetry $ do
@@ -198,18 +195,19 @@ instance JT.JourneyLeg TaxiLegRequest m where
     mbRide <- maybe (pure Nothing) (QRide.findByRBId . (.id)) mbBooking
     mbEstimate <-
       case mbBooking of
-        Just booking -> return Nothing
+        Just _ -> return Nothing
         Nothing -> do
           searchReq <- QSearchRequest.findById req.searchId >>= fromMaybeM (SearchRequestNotFound req.searchId.getId)
-          return $ maybe (pure Nothing) (QEstimate.findById . Id) journeyLegInfo.pricingId
+          journeySearchData <- searchReq.journeyLegInfo & fromMaybeM (InvalidRequest $ "JourneySearchData not found for search id: " <> searchReq.id.getId)
+          maybe (pure Nothing) (QEstimate.findById . Id) journeySearchData.pricingId
 
     vehiclePosition <- JT.getTaxiVehiclePosition mbRide
-    (oldStatus, bookingStatus, mbTrackingStatus) <- getTaxiAllStatuses req.journeyLeg mbBooking mbRide mbEstimate
+    (oldStatus, bookingStatus, mbTrackingStatus) <- JMStateUtils.getTaxiAllStatuses req.journeyLeg mbBooking mbRide mbEstimate
     return $
       JT.Single $
         JT.JourneyLegStateData
           { status = oldStatus,
-            legStatus = JT.TaxiStatusElement $ JT.JourneyTaxiLegStatus {trackingStatus = mbTrackingStatus, bookingStatus = bookingStatus},
+            legStatus = Just (JT.TaxiStatusElement $ JT.JourneyTaxiLegStatus {trackingStatus = mbTrackingStatus, bookingStatus = bookingStatus}),
             userPosition = (.latLong) <$> listToMaybe req.riderLastPoints,
             vehiclePositions = maybe [] (\latLong -> [JT.VehiclePosition {position = Just latLong, vehicleId = "taxi", upcomingStops = [], route_state = Nothing}]) vehiclePosition,
             legOrder = req.journeyLeg.sequenceNumber,
