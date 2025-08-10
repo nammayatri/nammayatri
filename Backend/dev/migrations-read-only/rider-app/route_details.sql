@@ -50,3 +50,37 @@ ALTER TABLE atlas_app.route_details ALTER COLUMN journey_leg_id TYPE text;
 ALTER TABLE atlas_app.route_details ADD COLUMN tracking_status text ;
 ALTER TABLE atlas_app.route_details ADD COLUMN route_code text ;
 ALTER TABLE atlas_app.route_details ADD COLUMN journey_status text ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

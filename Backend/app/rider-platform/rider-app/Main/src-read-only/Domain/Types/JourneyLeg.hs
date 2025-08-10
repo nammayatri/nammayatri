@@ -15,7 +15,6 @@ import qualified Kernel.External.MultiModal.Interface.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
-import qualified Lib.JourneyLeg.Types
 import qualified Tools.Beam.UtilsTH
 
 data JourneyLeg = JourneyLeg
@@ -44,7 +43,6 @@ data JourneyLeg = JourneyLeg
     sequenceNumber :: Kernel.Prelude.Int,
     serviceTypes :: Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceTierType],
     startLocation :: Kernel.External.Maps.Google.MapsClient.Types.LatLngV2,
-    status :: Kernel.Prelude.Maybe Lib.JourneyLeg.Types.JourneyLegStatus,
     straightLineEntrance :: Kernel.Prelude.Maybe Kernel.External.MultiModal.Interface.Types.MultiModalLegGate,
     straightLineExit :: Kernel.Prelude.Maybe Kernel.External.MultiModal.Interface.Types.MultiModalLegGate,
     toArrivalTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,

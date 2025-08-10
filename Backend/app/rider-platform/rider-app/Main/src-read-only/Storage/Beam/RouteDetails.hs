@@ -9,7 +9,6 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
-import qualified Lib.JourneyLeg.Types
 import qualified Lib.JourneyModule.State.Types
 import Tools.Beam.UtilsTH
 
@@ -28,7 +27,6 @@ data RouteDetailsT f = RouteDetailsT
     fromStopPlatformCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,
     journeyLegId :: B.C f Kernel.Prelude.Text,
-    journeyStatus :: B.C f (Kernel.Prelude.Maybe Lib.JourneyLeg.Types.JourneyLegStatus),
     routeCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     routeColorCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     routeColorName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

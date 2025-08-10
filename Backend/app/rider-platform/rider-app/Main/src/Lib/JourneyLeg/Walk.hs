@@ -61,7 +61,6 @@ instance JT.JourneyLeg WalkLegRequest m where
   update _ = throwError (InternalError "Not supported")
 
   cancel (WalkLegRequestCancel legData) = do
-    QWalkLeg.updateIsCancelled legData.walkLegId (Just True)
     QJourneyLeg.updateIsDeleted (Just True) (Just legData.walkLegId.getId)
   cancel _ = throwError (InternalError "Not supported")
 

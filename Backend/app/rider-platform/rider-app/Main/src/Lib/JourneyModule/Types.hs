@@ -88,6 +88,7 @@ import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.FRFSVehicleServiceTier as QFRFSVehicleServiceTier
+import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Transformers.Booking as QTB
 import Tools.Error
@@ -557,60 +558,29 @@ data IsCancellableResponse = IsCancellableResponse
   { canCancel :: Bool
   }
 
-mapTaxiRideStatusToJourneyLegStatus :: DRide.RideStatus -> JourneyLegStatus
-mapTaxiRideStatusToJourneyLegStatus status = case status of
-  DRide.UPCOMING -> InPlan
-  DRide.NEW -> Booked
-  DRide.INPROGRESS -> Ongoing
-  DRide.COMPLETED -> Completed
-  DRide.CANCELLED -> Cancelled
+getTaxiLegStatusFromBooking :: GetStateFlow m r c => DBooking.Booking -> Maybe DRide.Ride -> m (JourneyLegStatus, Maybe LatLong)
+getTaxiLegStatusFromBooking booking mRide = do
+  journeyLegStatus <-
+    case booking.journeyRouteDetails of
+      Just routeDetails -> getJourneyLegStatusFromRouteDetails routeDetails mbPricingId
+      Nothing -> return Nothing
+  case mRide of
+    Just ride -> do
+      driverLocationResp <- try @_ @SomeException $ DARide.getDriverLoc ride.id
+      case driverLocationResp of
+        Left err -> do
+          logError $ "location fetch failed: " <> show err
+          return (fromMaybe InPlan journeyLegStatus, Nothing)
+        Right driverLocation -> return (journeyLegStatus, Just $ LatLong driverLocation.lat driverLocation.lon)
+    Nothing -> return (fromMaybe InPlan journeyLegStatus, Nothing)
 
-mapTaxiBookingStatusToJourneyLegStatus :: DBooking.BookingStatus -> JourneyLegStatus
-mapTaxiBookingStatusToJourneyLegStatus status = case status of
-  DBooking.NEW -> InPlan
-  DBooking.CONFIRMED -> InPlan
-  DBooking.AWAITING_REASSIGNMENT -> Assigning
-  DBooking.REALLOCATED -> Cancelled
-  DBooking.COMPLETED -> Completed
-  DBooking.CANCELLED -> Cancelled
-  DBooking.TRIP_ASSIGNED -> Booked
-
-getTaxiLegStatusFromBooking :: GetStateFlow m r c => DBooking.Booking -> Maybe DRide.Ride -> Maybe JourneyLegStatus -> m (JourneyLegStatus, Maybe LatLong)
-getTaxiLegStatusFromBooking booking mRide journeyLegStatus = do
-  case journeyLegStatus of
-    Just Completed -> return (Completed, Nothing)
-    _ -> do
-      if (fromMaybe False booking.isSkipped)
-        then return (Skipped, Nothing)
-        else case mRide of
-          Just ride -> do
-            driverLocationResp <- try @_ @SomeException $ DARide.getDriverLoc ride.id
-            case driverLocationResp of
-              Left err -> do
-                logError $ "location fetch failed: " <> show err
-                return $ (mapTaxiRideStatusToJourneyLegStatus ride.status, Nothing)
-              Right driverLocation -> do
-                let journeyStatus =
-                      case (ride.status, driverLocation.pickupStage) of
-                        (DRide.NEW, Just stage) -> stage
-                        _ -> mapTaxiRideStatusToJourneyLegStatus ride.status
-                return $ (journeyStatus, Just $ LatLong driverLocation.lat driverLocation.lon)
-          Nothing -> return $ (mapTaxiBookingStatusToJourneyLegStatus booking.status, Nothing)
-
-getTaxiLegStatusFromSearch :: JourneySearchData -> Maybe DEstimate.EstimateStatus -> Maybe JourneyLegStatus -> JourneyLegStatus
-getTaxiLegStatusFromSearch journeyLegInfo mbEstimateStatus journeyLegStatus =
-  case journeyLegStatus of
-    Just Completed -> Completed
-    Just Cancelled -> Cancelled
-    _ -> do
-      if journeyLegInfo.skipBooking
-        then Skipped
-        else case mbEstimateStatus of
-          Nothing -> InPlan
-          Just DEstimate.NEW -> InPlan
-          Just DEstimate.COMPLETED -> Booked
-          Just DEstimate.CANCELLED -> Cancelled
-          _ -> Assigning
+getTaxiLegStatusFromSearch :: GetStateFlow m r c => DSearchRequest.SearchRequest -> m JourneyLegStatus
+getTaxiLegStatusFromSearch search = do
+  journeyLegStatus <-
+    case booking.journeyRouteDetails of
+      Just routeDetails -> getJourneyLegStatusFromRouteDetails routeDetails mbPricingId
+      Nothing -> return Nothing
+  return $ fromMaybe InPlan journeyLegStatus
 
 getTollDifference :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r) => [DFareBreakup.FareBreakup] -> [DFareBreakup.FareBreakup] -> m Kernel.Types.Common.Price
 getTollDifference fareBreakups estimatedFareBreakups = do
@@ -630,10 +600,9 @@ getDistance = \case
   DBooking.MeterRideDetails _ -> 0
   DBooking.RentalDetails _ -> 0
 
-mkLegInfoFromBookingAndRide :: GetStateFlow m r c => DBooking.Booking -> Maybe DRide.Ride -> Maybe MultiModalLegGate -> Maybe MultiModalLegGate -> Maybe JourneyLegStatus -> m LegInfo
-mkLegInfoFromBookingAndRide booking mRide entrance exit journeyStatus = do
+mkLegInfoFromBookingAndRide :: GetStateFlow m r c => DBooking.Booking -> Maybe DRide.Ride -> Maybe MultiModalLegGate -> Maybe MultiModalLegGate -> m LegInfo
+mkLegInfoFromBookingAndRide booking mRide entrance exit = do
   toLocation <- QTB.getToLocation booking.bookingDetails & fromMaybeM (InvalidRequest "To Location not found")
-  (status, _) <- getTaxiLegStatusFromBooking booking mRide journeyStatus
   (fareBreakups, estimatedFareBreakups) <- getfareBreakups booking mRide
   tollDifference <- getTollDifference fareBreakups estimatedFareBreakups
   batchConfig <- SharedRedisKeys.getBatchConfig booking.transactionId
@@ -647,9 +616,12 @@ mkLegInfoFromBookingAndRide booking mRide entrance exit journeyStatus = do
           return $ JourneyTaxiLegStatus {trackingStatus = trackingStatus, bookingStatus = bookingStatus}
       )
       booking.journeyRouteDetails
-  let skipBooking =
-        fromMaybe False booking.isSkipped -- TODO :: For backward compatibility, remove this first condition once 2nd condition is stable in Production
-          || bookingStatus `elem` [JMState.TaxiRide DRide.CANCELLED, JMState.TaxiBooking DBooking.CANCELLED, JMState.TaxiEstimate DEstimate.CANCELLED]
+  -- TODO :: For backward compatibility, remove this when UI stops consuming legInfo.status
+  status <-
+    case booking.journeyRouteDetails of
+      Just routeDetails -> getJourneyLegStatusFromRouteDetails routeDetails mbPricingId
+      Nothing -> return Nothing
+  let skipBooking = bookingStatus `elem` [JMState.TaxiRide DRide.CANCELLED, JMState.TaxiBooking DBooking.CANCELLED, JMState.TaxiEstimate DEstimate.CANCELLED]
   return $
     LegInfo
       { journeyLegId = booking.journeyLegId,
@@ -669,7 +641,7 @@ mkLegInfoFromBookingAndRide booking mRide entrance exit journeyStatus = do
         merchantId = booking.merchantId,
         merchantOperatingCityId = booking.merchantOperatingCityId,
         personId = booking.riderId,
-        status,
+        status = fromMaybe InPlan status,
         legStatus = TaxiStatus <$> legStatus,
         legExtraInfo =
           Taxi $
@@ -713,15 +685,15 @@ mkLegInfoFromBookingAndRide booking mRide entrance exit journeyStatus = do
     getBookingDetailsConstructor (DBooking.DeliveryDetails _) = "DeliveryDetails"
     getBookingDetailsConstructor (DBooking.MeterRideDetails _) = "MeterRideDetails"
 
-mkLegInfoFromSearchRequest :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => DSR.SearchRequest -> Maybe MultiModalLegGate -> Maybe MultiModalLegGate -> Maybe JourneyLegStatus -> m LegInfo
-mkLegInfoFromSearchRequest DSR.SearchRequest {..} entrance exit journeyLegStatus = do
+mkLegInfoFromSearchRequest :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => DSR.SearchRequest -> Maybe MultiModalLegGate -> Maybe MultiModalLegGate -> m LegInfo
+mkLegInfoFromSearchRequest DSR.SearchRequest {..} entrance exit = do
   journeyLegInfo' <- journeyLegInfo & fromMaybeM (InvalidRequest "Not a valid mulimodal search as no journeyLegInfo found")
-  (mbFareRange, mbEstimateStatus, mbEstimate) <-
+  (mbFareRange, mbEstimate) <-
     case journeyLegInfo'.pricingId of
       Just estId -> do
         mbEst <- QEstimate.findById (Id estId)
-        return $ (mbEst <&> (.totalFareRange), mbEst <&> (.status), mbEst)
-      Nothing -> return (Nothing, Nothing, Nothing)
+        return $ (mbEst <&> (.totalFareRange), mbEst)
+      Nothing -> return (Nothing, Nothing)
   toLocation' <- toLocation & fromMaybeM (InvalidRequest "To location not found") -- make it proper
   batchConfig <- SharedRedisKeys.getBatchConfig id.getId
   let mbLegSearchId = Just id.getId
@@ -734,9 +706,12 @@ mkLegInfoFromSearchRequest DSR.SearchRequest {..} entrance exit journeyLegStatus
           return $ JourneyTaxiLegStatus {trackingStatus = trackingStatus, bookingStatus = bookingStatus}
       )
       journeyRouteDetails
-  let skipBooking =
-        journeyLegInfo'.skipBooking -- TODO :: For backward compatibility, remove this first condition once 2nd condition is stable in Production
-          || bookingStatus `elem` [JMState.TaxiRide DRide.CANCELLED, JMState.TaxiBooking DBooking.CANCELLED, JMState.TaxiEstimate DEstimate.CANCELLED]
+  let skipBooking = bookingStatus `elem` [JMState.TaxiRide DRide.CANCELLED, JMState.TaxiBooking DBooking.CANCELLED, JMState.TaxiEstimate DEstimate.CANCELLED]
+  -- TODO :: To be Deprecated, remove this once UI stops consuming legInfo.status
+  status <-
+    case journeyRouteDetails of
+      Just routeDetails -> getJourneyLegStatusFromRouteDetails routeDetails mbPricingId
+      Nothing -> return Nothing
   return $
     LegInfo
       { journeyLegId = journeyLegId,
@@ -756,7 +731,7 @@ mkLegInfoFromSearchRequest DSR.SearchRequest {..} entrance exit journeyLegStatus
         merchantId = merchantId,
         merchantOperatingCityId = merchantOperatingCityId,
         personId = riderId,
-        status = getTaxiLegStatusFromSearch journeyLegInfo' mbEstimateStatus journeyLegStatus,
+        status = fromMaybe InPlan status,
         legStatus = TaxiStatus <$> legStatus,
         legExtraInfo =
           Taxi $
@@ -852,19 +827,6 @@ mkWalkLegInfoFromWalkLegData legData@DWalkLeg.WalkLegMultimodal {..} entrance ex
         validTill = Nothing
       }
 
-getFRFSLegStatusFromBooking :: DFRFSBooking.FRFSTicketBooking -> JourneyLegStatus
-getFRFSLegStatusFromBooking booking = case booking.status of
-  DFRFSBooking.NEW -> InPlan
-  DFRFSBooking.APPROVED -> InPlan
-  DFRFSBooking.PAYMENT_PENDING -> InPlan
-  DFRFSBooking.CONFIRMING -> Assigning
-  DFRFSBooking.CONFIRMED -> Booked
-  DFRFSBooking.FAILED -> Failed
-  DFRFSBooking.CANCELLED -> Cancelled
-  DFRFSBooking.COUNTER_CANCELLED -> Cancelled
-  DFRFSBooking.CANCEL_INITIATED -> Cancelled
-  DFRFSBooking.TECHNICAL_CANCEL_REJECTED -> InPlan
-
 mkLegInfoFromFrfsBooking ::
   (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => DFRFSBooking.FRFSTicketBooking -> Maybe Distance -> Maybe Seconds -> m LegInfo
 mkLegInfoFromFrfsBooking booking distance duration = do
@@ -882,17 +844,12 @@ mkLegInfoFromFrfsBooking booking distance duration = do
   let qrDataList = ticketsData <&> (.qrData)
   let qrValidity = ticketsData <&> (.validTill)
   let ticketNo = ticketsData <&> (.ticketNumber)
+
   journeyLegInfo' <- getLegRouteInfo journeyRouteDetails' integratedBPPConfig
 
   now <- getCurrentTime
   legOrder <- fromMaybeM (InternalError "Leg Order is Nothing") (booking.journeyLegOrder)
   let startTime = fromMaybe now booking.startTime
-  -- TODO :: To be Deprecated, remove this once UI starts consuming `legExtraInfo.legStatus` instead.
-  let legStatus =
-        case booking.journeyLegStatus of
-          Nothing -> getFRFSLegStatusFromBooking booking
-          Just InPlan -> getFRFSLegStatusFromBooking booking
-          Just status -> status
   let singleAdultPrice = roundToTwoDecimalPlaces . HighPrecMoney $ safeDiv (getHighPrecMoney booking.price.amount) (fromIntegral booking.quantity) -- TODO :: To be handled as single price cannot be obtained from this if more than 1 fare breakup (Child Quantity / Discounts)
       estimatedPrice =
         Price
@@ -910,9 +867,12 @@ mkLegInfoFromFrfsBooking booking distance duration = do
       )
       journeyRouteDetails'
   legExtraInfo <- mkLegExtraInfo qrDataList qrValidity ticketsCreatedAt journeyRouteDetails' journeyLegInfo' ticketNo
-  let skipBooking =
-        fromMaybe False booking.isSkipped -- TODO :: For backward compatibility, remove this first condition once 2nd condition is stable in Production
-          || bookingStatus `elem` [JMState.FRFSTicket DFRFSTicket.CANCELLED, JMState.FRFSBooking DFRFSBooking.CANCELLED]
+  -- TODO :: To be Deprecated, remove this once UI stops consuming legInfo.status
+  legStatus <-
+    case safeTail booking.journeyRouteDetails of
+      Just routeDetails -> getJourneyLegStatusFromRouteDetails routeDetails Nothing
+      Nothing -> return Nothing
+  let skipBooking = bookingStatus `elem` [JMState.FRFSTicket DFRFSTicket.CANCELLED, JMState.FRFSBooking DFRFSBooking.CANCELLED]
   return $
     LegInfo
       { journeyLegId = booking.journeyLegId,
@@ -932,7 +892,7 @@ mkLegInfoFromFrfsBooking booking distance duration = do
         merchantId = booking.merchantId,
         merchantOperatingCityId = booking.merchantOperatingCityId,
         personId = booking.riderId,
-        status = legStatus,
+        status = fromMaybe InPlan legStatus,
         legStatus = Just $
           case booking.vehicleType of
             Spec.METRO -> MetroStatus $ JourneyFRFSLegStatus journeyLegStatusElements
@@ -1062,6 +1022,7 @@ getLegRouteInfo journeyRouteDetails integratedBPPConfig = do
       toStation <- OTPRest.getStationByGtfsIdAndStopCode toStationCode' integratedBPPConfig >>= fromMaybeM (InternalError $ "To Station not found in fetchPossibleRoutes: " <> show toStationCode')
       route <- OTPRest.getRouteByRouteId integratedBPPConfig routeCode' >>= fromMaybeM (RouteNotFound routeCode')
       validRoutes <- getRouteCodesFromTo fromStation.code toStation.code integratedBPPConfig
+      journeyLegStatus <- getJourneyLegStatusFromRouteDetails journeyRouteDetail Nothing
       return
         LegRouteInfo
           { originStop = stationToStationAPI fromStation,
@@ -1069,13 +1030,93 @@ getLegRouteInfo journeyRouteDetails integratedBPPConfig = do
             routeCode = route.code,
             subOrder = journeyRouteDetail.subLegOrder,
             platformNumber = journeyRouteDetail.fromStopPlatformCode,
-            journeyStatus = journeyRouteDetail.journeyStatus,
+            journeyStatus = journeyLegStatus,
             lineColor = journeyRouteDetail.routeColorName,
             lineColorCode = journeyRouteDetail.routeColorCode,
             trainNumber = Just route.shortName,
             frequency = journeyRouteDetail.frequency,
             allAvailableRoutes = validRoutes
           }
+
+-- TODO :: This function is used to cast the journeyLegStatus from the route details, to be deprecated once UI is updated to use `trackingStatus` and `bookingStatus`.
+getJourneyLegStatusFromRouteDetails :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => RouteDetails -> Maybe Text -> m (Maybe JourneyLegStatus)
+getJourneyLegStatusFromRouteDetails routeDetail mbPricingId = do
+  mbJourneyLeg <- QJourneyLeg.findByPrimaryKey (Id routeDetail.journeyLegId)
+  case mbJourneyLeg of
+    Just journeyLeg -> do
+      let journeyLegStatus = castTrackingStatusToJourneyLegStatus routeDetail.trackingStatus
+      case journeyLeg.mode of
+        DTrip.Taxi -> do
+          domainStatus <- JMStateUtils.getTaxiJourneyBookingStatus journeyLeg.legSearchId mbPricingId
+          return $
+            case (domainStatus, journeyLegStatus) of
+              (_, Just OnTheWay) -> Just OnTheWay
+              (_, Just Arriving) -> Just Arriving
+              (_, Just Arrived) -> Just Arrived
+              (_, Just Completed) -> Just Completed
+              (JMState.TaxiRide rideStatus, _) -> Just $ mapTaxiRideStatusToJourneyLegStatus rideStatus
+              (JMState.TaxiBooking bookingStatus, _) -> Just $ mapTaxiBookingStatusToJourneyLegStatus bookingStatus
+              (JMState.TaxiEstimate estimateStatus, _) -> Just $ mapTaxiEstimateStatusToJourneyLegStatus estimateStatus
+              _ -> journeyLegStatus
+        DTrip.Walk -> return journeyLegStatus
+        _ -> do
+          domainStatus <- JMStateUtils.getFRFSJourneyBookingStatus journeyLeg.legSearchId
+          return $
+            case (domainStatus, journeyLegStatus) of
+              (_, Just Completed) -> Just Completed
+              (JMState.FRFSBooking bookingStatus, _) -> Just $ getFRFSLegStatusFromBooking bookingStatus
+              _ -> journeyLegStatus
+    Nothing -> return Nothing
+  where
+    castTrackingStatusToJourneyLegStatus :: Maybe JMState.TrackingStatus -> Maybe JourneyLegStatus
+    castTrackingStatusToJourneyLegStatus = \case
+      Just JMState.InPlan -> Just InPlan
+      Just JMState.Arriving -> Just OnTheWay
+      Just JMState.AlmostArrived -> Just Arriving
+      Just JMState.Arrived -> Just Arrived
+      Just JMState.Ongoing -> Just Ongoing
+      Just JMState.Finishing -> Just Finishing
+      Just JMState.Finished -> Just Completed
+      Nothing -> Nothing
+
+    mapTaxiEstimateStatusToJourneyLegStatus :: DEstimate.EstimateStatus -> JourneyLegStatus
+    mapTaxiEstimateStatusToJourneyLegStatus estimateStatus =
+      case estimateStatus of
+        DEstimate.NEW -> InPlan
+        DEstimate.COMPLETED -> Booked
+        DEstimate.CANCELLED -> Skipped
+        _ -> Assigning
+
+    mapTaxiRideStatusToJourneyLegStatus :: DRide.RideStatus -> JourneyLegStatus
+    mapTaxiRideStatusToJourneyLegStatus status = case status of
+      DRide.UPCOMING -> InPlan
+      DRide.NEW -> Booked
+      DRide.INPROGRESS -> Ongoing
+      DRide.COMPLETED -> Completed
+      DRide.CANCELLED -> Skipped
+
+    mapTaxiBookingStatusToJourneyLegStatus :: DBooking.BookingStatus -> JourneyLegStatus
+    mapTaxiBookingStatusToJourneyLegStatus status = case status of
+      DBooking.NEW -> InPlan
+      DBooking.CONFIRMED -> InPlan
+      DBooking.AWAITING_REASSIGNMENT -> Assigning
+      DBooking.REALLOCATED -> Skipped
+      DBooking.COMPLETED -> Completed
+      DBooking.CANCELLED -> Skipped
+      DBooking.TRIP_ASSIGNED -> Skipped
+
+    getFRFSLegStatusFromBooking :: DFRFSBooking.FRFSTicketBookingStatus -> JourneyLegStatus
+    getFRFSLegStatusFromBooking status = case status of
+      DFRFSBooking.NEW -> InPlan
+      DFRFSBooking.APPROVED -> InPlan
+      DFRFSBooking.PAYMENT_PENDING -> InPlan
+      DFRFSBooking.CONFIRMING -> Assigning
+      DFRFSBooking.CONFIRMED -> Booked
+      DFRFSBooking.FAILED -> Failed
+      DFRFSBooking.CANCELLED -> Cancelled
+      DFRFSBooking.COUNTER_CANCELLED -> Cancelled
+      DFRFSBooking.CANCEL_INITIATED -> Cancelled
+      DFRFSBooking.TECHNICAL_CANCEL_REJECTED -> InPlan
 
 castCategoryToMode :: Spec.VehicleCategory -> DTrip.MultimodalTravelMode
 castCategoryToMode Spec.METRO = DTrip.Metro
@@ -1119,6 +1160,12 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} fallbackFare di
           return $ JourneyFRFSLegStatusElement {trackingStatus = trackingStatus, bookingStatus = bookingStatus, subLegOrder = routeDetails.subLegOrder}
       )
       journeyRouteDetails
+
+  -- TODO :: To be Deprecated, remove this once UI starts consuming `legExtraInfo.legStatus` instead.
+  journeyLegStatus <-
+    case safeTail journeyRouteDetails of
+      Just routeDetails -> getJourneyLegStatusFromRouteDetails routeDetails journeyLegInfo'.pricingId
+      Nothing -> return Nothing
 
   return $
     LegInfo
@@ -1385,7 +1432,6 @@ mkJourneyLeg idx leg merchantId merchantOpCityId journeyId maximumWalkDistance s
             merchantId = Just merchantId,
             merchantOperatingCityId = Just merchantOpCityId,
             trackingStatus = Nothing,
-            journeyStatus = Nothing, -- TODO :: Remove this field when `trackingStatus` is added to the database and consumed
             createdAt = now,
             updatedAt = now
           }
@@ -1609,3 +1655,8 @@ getNearestOSMGate point gates merchantId merchantOpCityId =
       distances <- lift $ Maps.getMultimodalJourneyDistances merchantId merchantOpCityId Nothing req
       nearest <- hoistMaybe $ minimumByMay (\r1 r2 -> compare r1.distance r2.distance) (toList distances)
       pure (nearest.destination)
+
+safeTail :: [a] -> Maybe a
+safeTail [] = Nothing
+safeTail [_] = Nothing
+safeTail xs = Just (last xs)

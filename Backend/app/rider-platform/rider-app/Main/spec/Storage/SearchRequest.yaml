@@ -174,7 +174,7 @@ SearchRequest:
 
   intermediateTransformers:
     fromTType:
-      - journeyRouteDetails': Storage.Queries.Transformers.RouteDetails.getJourneyRouteDetails id journeyLegId|EM
+      - journeyRouteDetails': Storage.Queries.Transformers.RouteDetails.getJourneyRouteDetails journeyLegId|EM
 
   # distanceUnit should be the same for all fields
   toTType:

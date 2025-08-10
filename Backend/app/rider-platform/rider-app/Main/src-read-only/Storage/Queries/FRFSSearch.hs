@@ -14,7 +14,6 @@ import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
-import qualified Lib.JourneyLeg.Types
 import qualified Sequelize as Se
 import qualified Storage.Beam.FRFSSearch as Beam
 import Storage.Queries.FRFSSearchExtra as ReExport
@@ -33,11 +32,6 @@ updateIsOnSearchReceivedById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (
 updateIsOnSearchReceivedById isOnSearchReceived id = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.isOnSearchReceived isOnSearchReceived, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
-
-updateJourneyLegStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Lib.JourneyLeg.Types.JourneyLegStatus -> Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch -> m ())
-updateJourneyLegStatus journeyLegStatus id = do
-  _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.journeyLegStatus journeyLegStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateRiderIdById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch -> m ())
 updateRiderIdById riderId id = do
@@ -63,7 +57,6 @@ updateByPrimaryKey (Domain.Types.FRFSSearch.FRFSSearch {..}) = do
       Se.Set Beam.onSearchFailed (journeyLegInfo >>= (.onSearchFailed)),
       Se.Set Beam.pricingId (journeyLegInfo >>= (.pricingId)),
       Se.Set Beam.skipBooking (Kernel.Prelude.fmap (.skipBooking) journeyLegInfo),
-      Se.Set Beam.journeyLegStatus journeyLegStatus,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.partnerOrgId (Kernel.Types.Id.getId <$> partnerOrgId),

@@ -232,7 +232,7 @@ WalkLegMultimodal:
 
   intermediateTransformers:
     fromTType:
-      - journeyRouteDetails': Storage.Queries.Transformers.RouteDetails.getJourneyRouteDetails id journeyLegId|EM
+      - journeyRouteDetails': Storage.Queries.Transformers.RouteDetails.getJourneyRouteDetails journeyLegId|EM
 
   fromTType:
     estimatedDistance: (Kernel.Types.Common.Distance <$> estimatedDistance <*> distanceUnit)|E
@@ -324,8 +324,7 @@ JourneyLeg:
     straightLineEntrance: Maybe MultiModalLegGate
     straightLineExit: Maybe MultiModalLegGate
     osmEntrance: Maybe MultiModalLegGate
-    osmExit: Maybe MultiModalLegGate
-    status: Maybe JourneyLegStatus
+    osmExit: Maybe MultiModalLegGate    
 
   sqlType:
     serviceTypes: text[]
@@ -387,10 +386,6 @@ JourneyLeg:
       kvFunction: updateOneWithKV
       params: [isDeleted]
       where: legSearchId
-    updateIsSkipped:
-      kvFunction: updateOneWithKV
-      params: [isSkipped]
-      where: legSearchId
     updateDistanceAndDuration:
       kvFunction: updateWithKV
       params: [distance, duration]
@@ -415,11 +410,6 @@ JourneyLeg:
       kvFunction: updateWithKV
       params: [estimatedMinFare, estimatedMaxFare]
       where: legSearchId
-    updateStatusByJourneyIdAndSequenceNumber:
-      kvFunction: updateWithKV
-      params: [status]
-      where:
-        and: [journeyId, sequenceNumber]
 
   fromTType:
     distance: (Kernel.Types.Common.Distance <$> distance <*> distanceUnit)|E
@@ -511,7 +501,6 @@ RouteDetails:
     endLocationLon: Double
     # Tracking --
     trackingStatus: Maybe TrackingStatus
-    journeyStatus: Maybe JourneyLegStatus # TODO :: Remove this field when `trackingStatus` is added to the database and consumed
   queries:
     findAllByJourneyLegId:
       kvFunction: findAllWithKV

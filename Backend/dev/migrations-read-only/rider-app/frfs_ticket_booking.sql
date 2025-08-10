@@ -74,3 +74,32 @@ ALTER TABLE atlas_app.frfs_ticket_booking ALTER COLUMN from_station_id TYPE text
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN journey_leg_id character varying(36) ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

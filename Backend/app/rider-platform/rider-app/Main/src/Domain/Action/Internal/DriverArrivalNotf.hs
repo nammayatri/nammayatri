@@ -43,17 +43,14 @@ driverArrivalNotfHandler (DANTypeValidationReq bppRideId driverIdValue status) =
   case status of
     DRIVER_ON_THE_WAY -> do
       whenJust booking.journeyLegId $ \journeyLegId -> JMState.setJourneyLegTrackingStatus journeyLegId Nothing JMState.Arriving
-      QRBE.updateJourneyLegStatus (Just LJT.OnTheWay) booking.id -- TODO :: Deprecate once UI consumes `legExtraInfo.trackingStatus`
       Notify.notifyDriverOnTheWay booking.riderId booking.tripCategory ride
     DRIVER_PICKUP_INSTRUCTION -> do
       PIHandler.handlePickupInstruction ride booking driverIdValue
     DRIVER_REACHING -> do
       whenJust booking.journeyLegId $ \journeyLegId -> JMState.setJourneyLegTrackingStatus journeyLegId Nothing JMState.AlmostArrived
-      QRBE.updateJourneyLegStatus (Just LJT.Arriving) booking.id -- TODO :: Deprecate once UI consumes `legExtraInfo.trackingStatus`
       Notify.notifyDriverReaching booking.riderId booking.tripCategory ride.otp ride.vehicleNumber ride
     DRIVER_REACHED -> do
       whenJust booking.journeyLegId $ \journeyLegId -> JMState.setJourneyLegTrackingStatus journeyLegId Nothing JMState.Arrived
-      QRBE.updateJourneyLegStatus (Just LJT.Arrived) booking.id -- TODO :: Deprecate once UI consumes `legExtraInfo.trackingStatus`
       Notify.notifyDriverHasReached booking.riderId booking.tripCategory ride.otp ride.vehicleNumber ride.vehicleColor ride.vehicleModel ride.vehicleVariant
     _ -> throwError $ InvalidRequest "Unexpected ride notification status"
 

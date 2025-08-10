@@ -91,7 +91,6 @@ import qualified Storage.Queries.FRFSTicketBooking as QTBooking
 import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.JourneyExtra as QJourneyExtra
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
-import qualified Storage.Queries.JourneyRouteDetails as QJourneyRouteDetails
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import qualified Storage.Queries.WalkLegMultimodal as QWalkLeg
@@ -1700,48 +1699,27 @@ generateJourneyStatusResponse personId merchantId journey legs = do
               mode = legData.mode
             }
 
--- Helper function for FRFS (Metro/Subway) status updates with sub-leg support
-updateFRFSLegStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => JL.JourneyLegStatus -> Maybe (Id DFRFSBooking.FRFSTicketBooking) -> Maybe Int -> m ()
-updateFRFSLegStatus status mbBookingId mbSubLegOrder = do
-  case mbSubLegOrder of
-    Just subLegOrder ->
-      whenJust mbBookingId $ \bookingId -> do
-        mbBooking <- QTBooking.findById bookingId
-        whenJust mbBooking $ \booking -> do
-          -- Update the specific sub-leg in journey route details
-          QJourneyRouteDetails.updateJourneyStatus (Just status) booking.searchId (Just subLegOrder)
-          -- Check if this is the last sub-leg and update main booking if so
-          allRouteDetails <- QJourneyRouteDetails.findAllBySearchId booking.searchId
-          let subLegOrders = mapMaybe (.subLegOrder) allRouteDetails
-          when (not (null subLegOrders)) $ do
-            let maxSubLegOrder = maximum subLegOrders
-            when (subLegOrder == maxSubLegOrder) $ do
-              QTBooking.updateJourneyLegStatus (Just status) bookingId
-    Nothing -> whenJust mbBookingId $ QTBooking.updateJourneyLegStatus (Just status)
-
 markLegStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Maybe JL.JourneyLegStatus -> Maybe JMState.TrackingStatus -> JL.LegInfo -> Id DJourney.Journey -> Maybe Int -> m ()
 markLegStatus mbStatus trackingStatus leg journeyId mbSubLegOrder = do
-  whenJust ((,) <$> trackingStatus <*> leg.journeyLegId) $ \(status, journeyLegId) -> do
+  let finalStatus = trackingStatus <|> castJourneyLegStatusToTrackingStatus mbStatus
+  whenJust ((,) <$> finalStatus <*> leg.journeyLegId) $ \(status, journeyLegId) -> do
     JMStateUtils.setJourneyLegTrackingStatus journeyLegId mbSubLegOrder status
-  -- TODO :: Deprecate the below code when Replaced with setJourneyLegTrackingStatus (trackingStatus)
-  let mbStatus' = mbStatus <|> (castTrackingStatusToLegStatus <$> trackingStatus)
-  whenJust mbStatus' $ \status -> do
-    case leg.legExtraInfo of
-      JL.Metro legExtraInfo -> updateFRFSLegStatus status legExtraInfo.bookingId mbSubLegOrder
-      JL.Subway legExtraInfo -> updateFRFSLegStatus status legExtraInfo.bookingId mbSubLegOrder
-      JL.Bus legExtraInfo -> whenJust legExtraInfo.bookingId $ QTBooking.updateJourneyLegStatus (Just status)
-      JL.Walk legExtraInfo -> QWalkLeg.updateStatus (JL.castWalkLegStatusFromLegStatus status) legExtraInfo.id
-      JL.Taxi legExtraInfo -> do
-        QJourneyLeg.updateStatusByJourneyIdAndSequenceNumber (Just status) journeyId leg.order
-        whenJust legExtraInfo.bookingId $ QBooking.updateJourneyLegStatus (Just status)
   where
-    -- TODO :: For Backward Compatibility till UI is not sending the `trackingStatus` in setStatus API
-    castTrackingStatusToLegStatus = \case
-      JMState.InPlan -> JL.InPlan
-      JMState.Arriving -> JL.OnTheWay
-      JMState.AlmostArrived -> JL.Arriving
-      JMState.Arrived -> JL.Arrived
-      JMState.Ongoing -> JL.Ongoing
-      JMState.Finishing -> JL.Finishing
-      JMState.ExitingStation -> JL.Finishing
-      JMState.Finished -> JL.Completed
+    castJourneyLegStatusToTrackingStatus :: Maybe JL.JourneyLegStatus -> Maybe JMState.TrackingStatus
+    castJourneyLegStatusToTrackingStatus = \case
+      Just JL.InPlan -> Just JMState.InPlan
+      Just JL.Assigning -> Just JMState.InPlan
+      Just JL.Booked -> Just JMState.InPlan
+      Just JL.AtRiskOfMissing -> Just JMState.InPlan
+      Just JL.Missed -> Just JMState.InPlan
+      Just JL.Delayed -> Just JMState.InPlan
+      Just JL.OnTheWay -> Just JMState.Arriving
+      Just JL.Arriving -> Just JMState.AlmostArrived
+      Just JL.Arrived -> Just JMState.Arrived
+      Just JL.Ongoing -> Just JMState.Ongoing
+      Just JL.Finishing -> Just JMState.Finishing
+      Just JL.Skipped -> Just JMState.Finished
+      Just JL.Cancelled -> Just JMState.Finished
+      Just JL.Completed -> Just JMState.Finished
+      Just JL.Failed -> Just JMState.Finished
+      Nothing -> Nothing

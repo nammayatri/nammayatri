@@ -9,7 +9,6 @@ import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
-import qualified Lib.JourneyLeg.Types
 import qualified Lib.JourneyModule.State.Types
 import qualified Tools.Beam.UtilsTH
 
@@ -28,7 +27,6 @@ data RouteDetails = RouteDetails
     fromStopPlatformCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.RouteDetails.RouteDetails,
     journeyLegId :: Kernel.Prelude.Text,
-    journeyStatus :: Kernel.Prelude.Maybe Lib.JourneyLeg.Types.JourneyLegStatus,
     routeCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     routeColorCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     routeColorName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

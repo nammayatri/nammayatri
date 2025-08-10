@@ -238,11 +238,9 @@ Booking:
     isReferredRide: Maybe Bool
     disabilityTag: Maybe Text
     journeyLegOrder: Maybe Int
-    isDeleted: Maybe Bool
-    isSkipped: Maybe Bool
+    isDeleted: Maybe Bool    
     configInExperimentVersions: "[ConfigVersionMap]"
-    journeyId: Maybe (Id Journey)
-    journeyLegStatus: Maybe JourneyLegStatus
+    journeyId: Maybe (Id Journey)    
     preferSafetyPlus: Bool
     recentLocationId: Maybe (Id RecentLocation)
     isInsured: Bool
@@ -414,7 +412,7 @@ Booking:
     fromTType:
       - mappings: Storage.Queries.LocationMapping.findByEntityId id|EM
       - toBookingDetailsAndFromLocation': Storage.Queries.Transformers.Booking.toBookingDetailsAndFromLocation id merchantId merchantOperatingCityId mappings distance fareProductType tripCategory toLocationId fromLocationId stopLocationId otpCode isUpgradedToCab distanceUnit distanceValue hasStops parcelType parcelQuantity|EM
-      - journeyRouteDetails': Storage.Queries.Transformers.RouteDetails.getJourneyRouteDetails riderTransactionId journeyLegId|EM
+      - journeyRouteDetails': Storage.Queries.Transformers.RouteDetails.getJourneyRouteDetails journeyLegId|EM
   fromTType:
     providerUrl: parseBaseUrl providerUrl|EM
     isBookingUpdated: (fromMaybe False isBookingUpdated)|E

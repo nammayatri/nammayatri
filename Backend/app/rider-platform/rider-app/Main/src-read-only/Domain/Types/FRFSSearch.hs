@@ -25,7 +25,6 @@ data FRFSSearch = FRFSSearch
     isOnSearchReceived :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     journeyLegId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg),
     journeyLegInfo :: Kernel.Prelude.Maybe Lib.JourneyLeg.Types.JourneySearchData,
-    journeyLegStatus :: Kernel.Prelude.Maybe Lib.JourneyLeg.Types.JourneyLegStatus,
     journeyRouteDetails :: [Domain.Types.RouteDetails.RouteDetails],
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,

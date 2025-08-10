@@ -20,7 +20,6 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Version
 import qualified Kernel.Utils.Common
-import qualified Lib.JourneyLeg.Types
 import Tools.Beam.UtilsTH
 
 data BookingT f = BookingT
@@ -73,11 +72,9 @@ data BookingT f = BookingT
     isPetRide :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isReferredRide :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isScheduled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
-    isSkipped :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     journeyId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     journeyLegId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     journeyLegOrder :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    journeyLegStatus :: B.C f (Kernel.Prelude.Maybe Lib.JourneyLeg.Types.JourneyLegStatus),
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     paymentMethodId :: B.C f (Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.PaymentMethodId),

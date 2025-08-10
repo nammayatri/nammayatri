@@ -17,7 +17,6 @@ import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
-import qualified Lib.JourneyLeg.Types
 import qualified Sequelize as Se
 import qualified Storage.Beam.FRFSTicketBooking as Beam
 import Storage.Queries.FRFSTicketBookingExtra as ReExport
@@ -95,13 +94,6 @@ updateIsBookingCancellableByBookingId isBookingCancellable id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.isBookingCancellable isBookingCancellable, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateJourneyLegStatus ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Lib.JourneyLeg.Types.JourneyLegStatus -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
-updateJourneyLegStatus journeyLegStatus id = do
-  _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.journeyLegStatus journeyLegStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
-
 updateOnInitDone :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
 updateOnInitDone journeyOnInitDone id = do
   _now <- getCurrentTime
@@ -141,7 +133,9 @@ updatePriceAndQuantityById price quantity childTicketQuantity id = do
 updateQuantity :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
 updateQuantity quantity id = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.quantity quantity, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateQuoteAndBppItemId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
+updateQuoteAndBppItemId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
 updateQuoteAndBppItemId quoteId bppItemId id = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.quoteId (Kernel.Types.Id.getId quoteId), Se.Set Beam.bppItemId bppItemId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
@@ -206,11 +200,9 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.isBookingCancellable isBookingCancellable,
       Se.Set Beam.isDeleted isDeleted,
       Se.Set Beam.isFareChanged isFareChanged,
-      Se.Set Beam.isSkipped isSkipped,
       Se.Set Beam.journeyId (Kernel.Types.Id.getId <$> journeyId),
       Se.Set Beam.journeyLegId (Kernel.Types.Id.getId <$> journeyLegId),
       Se.Set Beam.journeyLegOrder journeyLegOrder,
-      Se.Set Beam.journeyLegStatus journeyLegStatus,
       Se.Set Beam.journeyOnInitDone journeyOnInitDone,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
