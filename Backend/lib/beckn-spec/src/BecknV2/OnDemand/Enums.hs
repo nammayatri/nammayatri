@@ -181,6 +181,7 @@ data QuoteBreakupTitle
   | SAFETY_PLUS_CHARGES
   | NO_CHARGES
   | RIDE_STOP_CHARGES
+  | PER_STOP_CHARGES
   | NYREGULAR_SUBSCRIPTION_CHARGE
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
