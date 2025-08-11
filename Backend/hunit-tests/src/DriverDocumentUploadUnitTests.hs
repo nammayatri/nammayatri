@@ -139,7 +139,8 @@ testPostDriverRegistrationRegisterDlWithRealExecution =
                   Common.driverDateOfBirth = UTCTime (fromGregorian 1990 1 1) 0,
                   Common.imageId1 = Kernel.Types.Id.Id "image-1",
                   Common.imageId2 = Just (Kernel.Types.Id.Id "image-2"),
-                  Common.dateOfIssue = Just (UTCTime (fromGregorian 2020 1 1) 0)
+                  Common.dateOfIssue = Just (UTCTime (fromGregorian 2020 1 1) 0),
+                  Common.accessType = Nothing
                 }
 
         -- Actually execute the Flow action and handle any exceptions
@@ -170,8 +171,8 @@ testPostDriverRegistrationRegisterDlWithRealExecution =
                 Environment.Flow Kernel.Types.APISuccess.APISuccess
         True @? "Function should return APISuccess",
       testCase "Executes with different DL numbers and validates request handling" $ do
-        let req1 = Common.RegisterDLReq "DL123456789" "Delhi" (UTCTime (fromGregorian 1990 1 1) 0) (Kernel.Types.Id.Id "image-1") (Just (Kernel.Types.Id.Id "image-2")) (Just (UTCTime (fromGregorian 2020 1 1) 0))
-            req2 = Common.RegisterDLReq "DL987654321" "Mumbai" (UTCTime (fromGregorian 1990 1 1) 0) (Kernel.Types.Id.Id "image-3") Nothing (Just (UTCTime (fromGregorian 2020 1 1) 0))
+        let req1 = Common.RegisterDLReq "DL123456789" "Delhi" (UTCTime (fromGregorian 1990 1 1) 0) (Kernel.Types.Id.Id "image-1") (Just (Kernel.Types.Id.Id "image-2")) (Just (UTCTime (fromGregorian 2020 1 1) 0)) Nothing
+            req2 = Common.RegisterDLReq "DL987654321" "Mumbai" (UTCTime (fromGregorian 1990 1 1) 0) (Kernel.Types.Id.Id "image-3") Nothing (Just (UTCTime (fromGregorian 2020 1 1) 0)) Nothing
             merchantShortId = Kernel.Types.Id.ShortId "test-merchant"
             opCity = Context.Delhi
             driverId = Kernel.Types.Id.Id "driver-123" :: Kernel.Types.Id.Id DDriver.Driver
