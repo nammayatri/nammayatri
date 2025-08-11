@@ -506,20 +506,13 @@ postFleetManagementFleetMemberAssociationCreate ::
 postFleetManagementFleetMemberAssociationCreate merchantShortId _opCity req = do
   _merchant <- findMerchantByShortId merchantShortId
   now <- getCurrentTime
-
-  fleetOwner <- B.runInReplica $ QP.findById (Id req.fleetOwnerId :: Id DP.Person) >>= fromMaybeM (PersonNotFound req.fleetOwnerId)
-
-  unless (fleetOwner.role == DP.FLEET_OWNER) $
-    throwError (InvalidRequest "Fleet owner must have FLEET_OWNER role")
-
-  existingAssociation <- B.runInReplica $ QFMA.findByPrimaryKey req.fleetMemberId req.fleetOwnerId
-  when (isJust existingAssociation) $
-    throwError (InvalidRequest "Fleet member association already exists")
-
-  let fleetMemberAssociation =
+  existingAssociation' <- QFMA.findByPrimaryKey req.fleetMemberId req.fleetOwnerId
+  case existingAssociation' of
+    Just existingAssociation -> do
+      QFMA.updateByPrimaryKey $
         DFMA.FleetMemberAssociation
-          { fleetMemberId = req.fleetMemberId,
-            fleetOwnerId = req.fleetOwnerId,
+          { fleetMemberId = existingAssociation.fleetMemberId,
+            fleetOwnerId = existingAssociation.fleetOwnerId,
             enabled = req.enabled,
             isFleetOwner = req.isFleetOwner,
             level = req.level,
@@ -529,8 +522,21 @@ postFleetManagementFleetMemberAssociationCreate merchantShortId _opCity req = do
             createdAt = now,
             updatedAt = now
           }
-
-  QFMA.create fleetMemberAssociation
+    Nothing -> do
+      let fleetMemberAssociation =
+            DFMA.FleetMemberAssociation
+              { fleetMemberId = req.fleetMemberId,
+                fleetOwnerId = req.fleetOwnerId,
+                enabled = req.enabled,
+                isFleetOwner = req.isFleetOwner,
+                level = req.level,
+                parentGroupCode = req.parentGroupCode,
+                groupCode = req.groupCode,
+                order = req.order,
+                createdAt = now,
+                updatedAt = now
+              }
+      QFMA.create fleetMemberAssociation
   pure Kernel.Types.APISuccess.Success
 
 makeFleetLinkOtpKey :: Text -> Text
