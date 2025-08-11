@@ -234,7 +234,7 @@ postPickupinstructions (mbPersonId, merchantId) req = do
   when (T.null actualInstruction && isNothing mediaFileId) $
     throwError $ InvalidRequest "Either instruction text or audio file must be provided"
 
-  newLocationGeohash <- Geohash.encode 9 (req.lat, req.lon) & (fromMaybeM (InvalidRequest "Invalid location"))
+  newLocationGeohash <- Geohash.encode 8 (req.lat, req.lon) & (fromMaybeM (InvalidRequest "Invalid location"))
   logDebug $ "PickupInstructions: New location geohash: " <> show newLocationGeohash
 
   mbNearbyInstruction <- QPI.findByPersonIdAndGeohash personId (T.pack newLocationGeohash)
@@ -264,7 +264,7 @@ postPickupinstructions (mbPersonId, merchantId) req = do
               -- Create new pickup instruction
               newPickupInstructionsId <- generateGUID
               now <- getCurrentTime
-              geohash <- Geohash.encode 9 (req.lat, req.lon) & (fromMaybeM (InvalidRequest "Invalid location"))
+              geohash <- Geohash.encode 8 (req.lat, req.lon) & (fromMaybeM (InvalidRequest "Invalid location"))
               let instructionText = case (T.null actualInstruction, mediaFileId) of
                     (True, Just _) -> "Audio pickup instruction" -- No text but has audio
                     (True, Nothing) -> "Pickup instruction" -- No text and no audio
@@ -287,7 +287,7 @@ postPickupinstructions (mbPersonId, merchantId) req = do
           -- Create new pickup instruction
           newPickupInstructionsId <- generateGUID
           now <- getCurrentTime
-          geohash <- Geohash.encode 9 (req.lat, req.lon) & (fromMaybeM (InvalidRequest "Invalid location"))
+          geohash <- Geohash.encode 8 (req.lat, req.lon) & (fromMaybeM (InvalidRequest "Invalid location"))
           let instructionText = case (T.null actualInstruction, mediaFileId) of
                 (True, Just _) -> "Audio pickup instruction" -- No text but has audio
                 (True, Nothing) -> "Pickup instruction" -- No text and no audio
@@ -349,36 +349,31 @@ getPickupinstructionsClosest (mbPersonId, _) mbLat mbLon = do
             audioBase64 = Nothing
           }
     else do
-      -- Find instructions within proximity threshold
-      queryGeohash <- Geohash.encode 9 (lat, lon) & (fromMaybeM (InvalidRequest "Invalid location"))
-      let instructionsWithinProximity = List.filter (\instruction -> instruction.geohash == (T.pack queryGeohash)) pickupInstructions
+      -- Calculate distance to all instructions
+      let instructionsWithDistance =
+            mapMaybe
+              ( \instruction -> do
+                  case Geohash.decode (T.unpack instruction.geohash) of
+                    Just (instructionLat, instructionLon) -> do
+                      let instructionLocation = LatLong instructionLat instructionLon
+                          distance = distanceBetweenInMeters queryLocation instructionLocation
+                          distanceInMeters = highPrecMetersToMeters distance
+                      Just (instruction, distanceInMeters)
+                    Nothing -> Nothing
+              )
+              pickupInstructions
 
-      case instructionsWithinProximity of
+      case instructionsWithDistance of
         [] -> do
+          logDebug "PickupInstructions: No valid instructions with decodable geohash found"
           return $
             API.ClosestPickupInstructionResp
               { instruction = Nothing,
                 audioBase64 = Nothing
               }
-        proximityInstructions -> do
-          -- Among instructions within proximity, find the closest one
-          let instructionsWithDistance =
-                map
-                  ( \instruction -> do
-                      let mbInsructionLoc = Geohash.decode (T.unpack instruction.geohash)
-                      case mbInsructionLoc of
-                        Just (instructionLat, instructionLon) -> do
-                          let instructionLocation = LatLong instructionLat instructionLon
-                              distance = distanceBetweenInMeters queryLocation instructionLocation
-                              distanceInMeters = highPrecMetersToMeters distance
-                          (instruction, distanceInMeters)
-                        Nothing -> do
-                          (instruction, 1000000000) -- Return 1000000000 distance for invalid geohashes
-                  )
-                  proximityInstructions
-
-              -- Sort by distance and get the closest one
-              sortedInstructions = List.sortBy (comparing snd) instructionsWithDistance
+        allInstructions -> do
+          -- Sort by distance and get the closest one
+          let sortedInstructions = List.sortBy (comparing snd) allInstructions
 
           case sortedInstructions of
             [] -> do
@@ -389,7 +384,7 @@ getPickupinstructionsClosest (mbPersonId, _) mbLat mbLon = do
                     audioBase64 = Nothing
                   }
             ((closestInstruction, distanceToClosest) : _) -> do
-              logDebug $ "PickupInstructions: Found closest instruction within proximity at distance " <> show distanceToClosest <> "m with text: " <> show closestInstruction.instruction
+              logDebug $ "PickupInstructions: Found closest instruction at distance " <> show distanceToClosest <> "m with text: " <> show closestInstruction.instruction
 
               -- Get media file content from S3 if available
               mbAudioBase64 <- case closestInstruction.mediaFileId of
@@ -439,7 +434,7 @@ deletePickupinstructions (mbPersonId, _) mbLat mbLon mbTarget = do
   logDebug $ "PickupInstructions: DELETE request for personId: " <> show personId.getId <> ", lat: " <> show lat <> ", lon: " <> show lon <> ", target: " <> show target
 
   -- Convert query location to geohash and find exact match first
-  queryGeohash <- Geohash.encode 9 (lat, lon) & (fromMaybeM (InvalidRequest "Invalid location"))
+  queryGeohash <- Geohash.encode 8 (lat, lon) & (fromMaybeM (InvalidRequest "Invalid location"))
   mbPickupInstruction <- QPI.findByPersonIdAndGeohash personId (T.pack queryGeohash)
 
   case mbPickupInstruction of
