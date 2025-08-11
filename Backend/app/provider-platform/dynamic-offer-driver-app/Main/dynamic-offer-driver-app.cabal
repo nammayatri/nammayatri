@@ -59,6 +59,8 @@ library
       API.Internal.Estimate
       API.Internal.FavouriteDrivers
       API.Internal.FeedbackForm
+      API.Internal.FleetBookingInformation
+      API.Internal.FleetVehiclesAssociation
       API.Internal.KnowYourDriver
       API.Internal.Multimodal
       API.Internal.PopulateTipAmount
@@ -196,6 +198,8 @@ library
       Domain.Action.Internal.Estimate
       Domain.Action.Internal.FavouriteDrivers
       Domain.Action.Internal.FeedbackForm
+      Domain.Action.Internal.FleetBookingInformation
+      Domain.Action.Internal.FleetVehiclesAssociation
       Domain.Action.Internal.KnowYourDriver
       Domain.Action.Internal.PopulateTipAmount
       Domain.Action.Internal.ProcessingChangeOnline
@@ -599,6 +603,7 @@ library
       Storage.Queries.FeedbackExtra
       Storage.Queries.FleetBadgeAssociationExtra
       Storage.Queries.FleetBadgeExtra
+      Storage.Queries.FleetBookingInformationExtra
       Storage.Queries.FleetDriverAssociationExtra
       Storage.Queries.FleetMemberAssociationExtra
       Storage.Queries.FleetOperatorAssociationExtra
@@ -878,6 +883,7 @@ library
       Domain.Types.Feedback
       Domain.Types.FleetBadge
       Domain.Types.FleetBadgeAssociation
+      Domain.Types.FleetBookingInformation
       Domain.Types.FleetConfig
       Domain.Types.FleetDriverAssociation
       Domain.Types.FleetMemberAssociation
@@ -1026,6 +1032,7 @@ library
       Storage.Beam.Feedback
       Storage.Beam.FleetBadge
       Storage.Beam.FleetBadgeAssociation
+      Storage.Beam.FleetBookingInformation
       Storage.Beam.FleetConfig
       Storage.Beam.FleetDriverAssociation
       Storage.Beam.FleetMemberAssociation
@@ -1177,6 +1184,7 @@ library
       Storage.Queries.Feedback
       Storage.Queries.FleetBadge
       Storage.Queries.FleetBadgeAssociation
+      Storage.Queries.FleetBookingInformation
       Storage.Queries.FleetConfig
       Storage.Queries.FleetDriverAssociation
       Storage.Queries.FleetMemberAssociation
@@ -1253,6 +1261,7 @@ library
       Storage.Queries.OrphanInstances.Feedback
       Storage.Queries.OrphanInstances.FleetBadge
       Storage.Queries.OrphanInstances.FleetBadgeAssociation
+      Storage.Queries.OrphanInstances.FleetBookingInformation
       Storage.Queries.OrphanInstances.FleetDriverAssociation
       Storage.Queries.OrphanInstances.FleetMemberAssociation
       Storage.Queries.OrphanInstances.FleetOperatorAssociation

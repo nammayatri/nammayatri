@@ -168,7 +168,8 @@ getTicketPlaceDashboardDetails placeId requestorId requestorRole = do
         startDate = ticketPlace.startDate,
         endDate = ticketPlace.endDate,
         venue = ticketPlace.venue,
-        rules = ticketPlace.rules
+        rules = ticketPlace.rules,
+        assignTicketToBpp = ticketPlace.assignTicketToBpp
       }
   where
     toTicketServiceDetails :: DTicketService.TicketService -> TicketServiceDetails
@@ -185,7 +186,8 @@ getTicketPlaceDashboardDetails placeId requestorId requestorRole = do
           expiry = svc.expiry,
           businessHours = svc.businessHours,
           rules = svc.rules,
-          serviceDetails = svc.serviceDetails
+          serviceDetails = svc.serviceDetails,
+          subPlaceId = svc.subPlaceId
         }
 
     toBusinessHourDetails :: DBusinessHour.BusinessHour -> BusinessHourDetails
@@ -262,7 +264,8 @@ updateTicketPlace existingPlace placeDetails = do
       DTicketPlace.rules = placeDetails.rules,
       DTicketPlace.startDate = placeDetails.startDate,
       DTicketPlace.endDate = placeDetails.endDate,
-      DTicketPlace.venue = placeDetails.venue
+      DTicketPlace.venue = placeDetails.venue,
+      DTicketPlace.assignTicketToBpp = placeDetails.assignTicketToBpp
     }
 
 createTicketPlace :: TicketPlaceDashboardDetails -> Maybe Text -> Id Merchant.Merchant -> Id MOCity.MerchantOperatingCity -> Environment.Flow DTicketPlace.TicketPlace
@@ -304,7 +307,8 @@ createTicketPlace placeDetails creatorId merchantId merchantOpCityId = do
         DTicketPlace.endDate = placeDetails.endDate,
         DTicketPlace.isClosed = False,
         DTicketPlace.startDate = placeDetails.startDate,
-        DTicketPlace.venue = placeDetails.venue
+        DTicketPlace.venue = placeDetails.venue,
+        DTicketPlace.assignTicketToBpp = placeDetails.assignTicketToBpp
       }
 
 updateTicketService :: DTicketService.TicketService -> TicketServiceDetails -> DTicketService.TicketService
@@ -330,6 +334,7 @@ createTicketService (merchantId, merchantOpCityId) serviceDetails placeId = do
       { DTicketService.id = serviceDetails.id,
         DTicketService.service = serviceDetails.service,
         DTicketService.shortDesc = serviceDetails.shortDesc,
+        DTicketService.subPlaceId = serviceDetails.subPlaceId,
         DTicketService.operationalDays = serviceDetails.operationalDays,
         DTicketService.operationalDate = serviceDetails.operationalDate,
         DTicketService.maxVerification = serviceDetails.maxVerification,

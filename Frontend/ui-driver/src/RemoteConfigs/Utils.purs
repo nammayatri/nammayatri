@@ -626,6 +626,8 @@ defaultDriverRewardConfig = {
   , claimButtonConfig : {
     visibility : false
   }
+  , carouselVisibility : false
+  , carousel: []
   }
 
 getDriverRewardConfig ::  String -> DriverRewardConfig
@@ -635,4 +637,5 @@ getDriverRewardConfig city =
     value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultDriverRewardConfig
     cityValue = getCityBasedConfig value $ toLower city
   in cityValue
+
   

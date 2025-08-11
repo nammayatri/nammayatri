@@ -13,6 +13,7 @@ types:
     attractions: [Attraction]
   Attraction:
     id: Id TicketPlace
+    iconUrl: Maybe Text
     name: Text
     distanceInKm: Double
 

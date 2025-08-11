@@ -838,6 +838,7 @@ library
       Domain.Types.TicketMerchantDetails
       Domain.Types.TicketPlace
       Domain.Types.TicketService
+      Domain.Types.TicketSubPlace
       Domain.Types.TripTerms
       Domain.Types.UiRiderConfig
       Domain.Types.ValueAddNP
@@ -972,6 +973,7 @@ library
       Storage.Beam.TicketMerchantDetails
       Storage.Beam.TicketPlace
       Storage.Beam.TicketService
+      Storage.Beam.TicketSubPlace
       Storage.Beam.TripTerms
       Storage.Beam.UiRiderConfig
       Storage.Beam.ValueAddNP
@@ -1164,6 +1166,7 @@ library
       Storage.Queries.TicketMerchantDetails
       Storage.Queries.TicketPlace
       Storage.Queries.TicketService
+      Storage.Queries.TicketSubPlace
       Storage.Queries.TripTerms
       Storage.Queries.UiRiderConfig
       Storage.Queries.ValueAddNP

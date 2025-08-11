@@ -508,3 +508,8 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN is_ml_based_dyn
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN max_online_duration_days integer  default 10;
+
+
+
+------- SQL updates -------
+

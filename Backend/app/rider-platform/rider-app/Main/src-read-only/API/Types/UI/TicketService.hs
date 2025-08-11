@@ -15,6 +15,7 @@ import qualified Domain.Types.TicketBookingService
 import qualified Domain.Types.TicketBookingServiceCategory
 import qualified Domain.Types.TicketPlace
 import qualified Domain.Types.TicketService
+import qualified Domain.Types.TicketSubPlace
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -80,6 +81,7 @@ data TicketBookingAPIEntity = TicketBookingAPIEntity
     ticketPlaceId :: Data.Text.Text,
     ticketPlaceName :: Data.Text.Text,
     ticketShortId :: Data.Text.Text,
+    ticketSubPlaceId :: Kernel.Prelude.Maybe Data.Text.Text,
     visitDate :: Data.Time.Calendar.Day
   }
   deriving stock (Generic)
@@ -96,6 +98,7 @@ data TicketBookingAPIEntityV2 = TicketBookingAPIEntityV2
     ticketPlaceId :: Data.Text.Text,
     ticketPlaceName :: Data.Text.Text,
     ticketShortId :: Data.Text.Text,
+    ticketSubPlaceId :: Kernel.Prelude.Maybe Data.Text.Text,
     visitDate :: Data.Time.Calendar.Day
   }
   deriving stock (Generic)
@@ -135,6 +138,7 @@ data TicketBookingDetails = TicketBookingDetails
     ticketPlaceId :: Data.Text.Text,
     ticketPlaceName :: Data.Text.Text,
     ticketShortId :: Data.Text.Text,
+    ticketSubPlaceId :: Kernel.Prelude.Maybe Data.Text.Text,
     visitDate :: Data.Time.Calendar.Day
   }
   deriving stock (Generic)
@@ -157,7 +161,11 @@ data TicketBookingPeopleCategoryReq = TicketBookingPeopleCategoryReq {numberOfUn
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data TicketBookingReq = TicketBookingReq {services :: [TicketBookingServicesReq], visitDate :: Data.Time.Calendar.Day}
+data TicketBookingReq = TicketBookingReq
+  { services :: [TicketBookingServicesReq],
+    ticketSubPlaceId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.TicketSubPlace.TicketSubPlace),
+    visitDate :: Data.Time.Calendar.Day
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -216,7 +224,24 @@ data TicketBookingUpdateSeatsReq = TicketBookingUpdateSeatsReq
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data TicketFleetVehicleResp = TicketFleetVehicleResp
+  { driverId :: Kernel.Prelude.Maybe Data.Text.Text,
+    driverName :: Kernel.Prelude.Maybe Data.Text.Text,
+    fleetOwnerId :: Data.Text.Text,
+    fleetOwnerName :: Data.Text.Text,
+    isActive :: Kernel.Prelude.Bool,
+    rcId :: Data.Text.Text,
+    vehicleNo :: Data.Text.Text,
+    vehicleType :: Data.Text.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data TicketPlaceAvailability = TicketPlaceAvailability {closedDays :: [Kernel.Prelude.Int], month :: Kernel.Prelude.Int}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data TicketPlaceResp = TicketPlaceResp {subPlaces :: [Domain.Types.TicketSubPlace.TicketSubPlace], ticketPlace :: Domain.Types.TicketPlace.TicketPlace}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -240,7 +265,8 @@ data TicketServiceResp = TicketServiceResp
     name :: Data.Text.Text,
     placesId :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace,
     serviceDetails :: Kernel.Prelude.Maybe [Data.Text.Text],
-    shortDesc :: Kernel.Prelude.Maybe Data.Text.Text
+    shortDesc :: Kernel.Prelude.Maybe Data.Text.Text,
+    subPlaceId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.TicketSubPlace.TicketSubPlace)
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

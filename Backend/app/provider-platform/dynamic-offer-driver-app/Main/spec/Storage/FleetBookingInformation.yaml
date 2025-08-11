@@ -1,0 +1,41 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+  Vehicle: Domain.Types.Vehicle
+  HighPrecMoney: Kernel.Types.Common
+  UTCTime: Kernel.Prelude
+  Day: Data.Time
+
+FleetBookingInformation:
+  tableName: fleet_booking_information
+  fields:
+    id: Id FleetBookingInformation
+    merchantId: Maybe (Id Merchant)
+    merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
+    bookingId: Text
+    serviceId: Maybe Text
+    placeName: Maybe Text
+    serviceName: Maybe Text
+    fleetOwnerId: Maybe (Id Person)
+    vehicleNo: Maybe Text
+    personId: Maybe (Id Person)
+    amount: Maybe HighPrecMoney
+    visitDate: Maybe Day
+    bookedSeats: Maybe Int
+    status: Maybe Text
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+
+    findByServiceId:
+      kvFunction: findOneWithKV
+      where: serviceId
+

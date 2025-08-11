@@ -37,3 +37,8 @@ ALTER TABLE atlas_app.ticket_booking_service ADD COLUMN b_hour_id character vary
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.ticket_booking_service ADD COLUMN vendor_split_details json ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ticket_booking_service ADD COLUMN assignment_id text ;

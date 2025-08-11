@@ -540,6 +540,9 @@ handleDeepLinks mBGlobalPayload skipDefaultCase = do
               })
               homeScreenFlow
         "bt" -> do
+          logField_ <- lift $ lift $ getLogFields
+          let _ = unsafePerformEffect $ Events.addEventAggregate "bus_ticketing_clicked"
+              _ = unsafePerformEffect $ logEvent logField_ "bus_ticketing_clicked"
           modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props { sourceLong =  (fromMaybe 0.0 $ fromString $ getValueToLocalNativeStore LAST_KNOWN_LON) ,sourceLat =  (fromMaybe 0.0 $ fromString $ getValueToLocalNativeStore LAST_KNOWN_LAT)  } })
           (GlobalState getstate)<- getState
           setValueToLocalStore SESSION_ID (generateSessionId unit)

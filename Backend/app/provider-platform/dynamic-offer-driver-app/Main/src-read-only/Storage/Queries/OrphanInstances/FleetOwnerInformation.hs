@@ -39,6 +39,7 @@ instance FromTType' Beam.FleetOwnerInformation Domain.Types.FleetOwnerInformatio
             panNumberDec = panNumber,
             referredByOperatorId = referredByOperatorId,
             registeredAt = registeredAt,
+            ticketPlaceId = ticketPlaceId,
             verified = verified,
             createdAt = createdAt,
             updatedAt = updatedAt
@@ -72,6 +73,7 @@ instance ToTType' Beam.FleetOwnerInformation Domain.Types.FleetOwnerInformation.
         Beam.panNumber = Nothing,
         Beam.referredByOperatorId = referredByOperatorId,
         Beam.registeredAt = registeredAt,
+        Beam.ticketPlaceId = ticketPlaceId,
         Beam.verified = verified,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt

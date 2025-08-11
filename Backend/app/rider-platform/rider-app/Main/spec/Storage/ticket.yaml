@@ -12,6 +12,7 @@ imports:
   TicketBookingPeopleCategory: Domain.Types.TicketBookingPeopleCategory
   TicketBooking: Domain.Types.TicketBooking
   TicketPlace: Domain.Types.TicketPlace
+  TicketSubPlace: Domain.Types.TicketSubPlace
   TicketService: Domain.Types.TicketService
   BusinessHour: Domain.Types.BusinessHour
   SpecialOccasion: Domain.Types.SpecialOccasion
@@ -64,10 +65,11 @@ TicketPlace:
     endDate: Maybe Day
     venue: Maybe Text
     isClosed: Bool
+    assignTicketToBpp: Bool
 
   types:
     PlaceType:
-      enum: "Museum,ThemePark,AmusementPark,WaterPark,WildLifeSanctuary,ArtGallery,HeritageSite,ReligiousSite,Other"
+      enum: "Museum,ThemePark,AmusementPark,WaterPark,WildLifeSanctuary,ArtGallery,HeritageSite,ReligiousSite,Boating,Other"
     PlaceStatus:
       enum: "Active,Inactive,ComingSoon,Ended,Unpublished"
     CustomTab:
@@ -95,6 +97,7 @@ TicketPlace:
     faqs: "Maybe Value"
     isRecurring: Maybe Bool
     isClosed: Maybe Bool
+    assignTicketToBpp: Maybe Bool
 
   sqlType:
     customTabs: json
@@ -111,6 +114,7 @@ TicketPlace:
     faqs: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< faqs|E
     isRecurring: Kernel.Prelude.fromMaybe True|I
     isClosed: Kernel.Prelude.fromMaybe False|I
+    assignTicketToBpp: Kernel.Prelude.fromMaybe False|I
 
   toTType:
     priority: Kernel.Prelude.Just|I
@@ -121,6 +125,7 @@ TicketPlace:
     faqs: Data.Aeson.toJSON <$> faqs|E
     isRecurring: Kernel.Prelude.Just|I
     isClosed: Kernel.Prelude.Just isClosed|E
+    assignTicketToBpp: Kernel.Prelude.Just assignTicketToBpp|E
 
   default:
     termsAndConditions: "'{}'"
@@ -131,6 +136,7 @@ TicketPlace:
     priority: "0"
     isRecurring: "true"
     isClosed: 'false'
+    assignTicketToBpp: "false"
 
   queries:
     getTicketPlaces:
@@ -168,6 +174,7 @@ TicketService:
   fields:
     id: Id TicketService
     placesId: Text
+    subPlaceId: Maybe (Id TicketSubPlace)
     service: Text
     shortDesc: Maybe Text
     serviceDetails: "Maybe [Text]"
@@ -234,9 +241,62 @@ TicketService:
     getTicketServicesByPlaceId:
       kvFunction: findAllWithKV
       where: placesId
+    getTicketServicesByPlaceIdAndSubPlaceId:
+      kvFunction: findAllWithKV
+      where:
+        and: [placesId, subPlaceId]
 
   extraOperations:
   - EXTRA_QUERY_FILE
+
+TicketSubPlace:
+  tableName: ticket_sub_place
+
+  fields:
+    id: Id TicketSubPlace
+    ticketPlaceId: Id TicketPlace
+    name: Text
+    description: Maybe Text
+    subPlaceType: SubPlaceType
+    isActive: Bool
+    rules: "Maybe [Rule]"
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  types:
+    SubPlaceType:
+      enum: "Venue,Terminal,Dock,Screen,Hall,Platform"
+
+  beamType:
+    rules: "Maybe Value"
+
+  sqlType:
+    rules: json
+
+  fromTType:
+    rules: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< rules|E
+
+  toTType:
+    rules: Data.Aeson.toJSON <$> rules|E
+
+  constraints:
+    id: PrimaryKey
+    ticketPlaceId: SecondaryKey
+
+  default:
+    isActive: "true"
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findAllByTicketPlaceId:
+      kvFunction: findAllWithKV
+      where: ticketPlaceId
+    findActiveByTicketPlaceId:
+      kvFunction: findAllWithKV
+      where:
+        and: [ticketPlaceId, isActive]
 
 SpecialOccasion:
   tableName: special_occasion
@@ -528,6 +588,7 @@ TicketBooking:
     shortId: ShortId TicketBooking
     merchantOperatingCityId: Id MerchantOperatingCity
     ticketPlaceId: Id TicketPlace
+    ticketSubPlaceId: Maybe (Id TicketSubPlace)
     personId: Id Person
     amount: Price
     visitDate: Day
@@ -634,6 +695,7 @@ TicketBookingService:
     bookedSeats: Int
     cancelledSeats: Maybe Int
     vendorSplitDetails: "Maybe [VendorSplitDetails]"
+    assignmentId: Maybe Text
 
   beamType:
     vendorSplitDetails: Maybe Value
@@ -684,6 +746,10 @@ TicketBookingService:
     updateStatusAndCancelledSeatsById:
       kvFunction: updateOneWithKV
       params: [status, cancelledSeats, updatedAt]
+      where: id
+    updateAssignmentById:
+      kvFunction: updateOneWithKV
+      params: [assignmentId, updatedAt]
       where: id
 
   extraOperations:

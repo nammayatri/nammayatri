@@ -132,6 +132,22 @@ apis:
             response:
               type: APISuccess
 
+  - POST:
+      endpoint: /fleet/member/association/create
+      auth: ApiAuthV2
+      request:
+        type: FleetMemberAssociationCreateReq
+      response:
+        type: APISuccess
+      helperApi:
+        - POST:
+            endpoint: /fleet/member/association/create
+            auth: ApiAuthV2
+            request:
+              type: FleetMemberAssociationCreateReq
+            response:
+              type: APISuccess
+
 types:
   FleetInfoRes:
     - listItem: [FleetInfo]
@@ -158,4 +174,14 @@ types:
   FleetOwnerVerifyOtpReq:
     - fleetOwnerId: Id Person
     - otp: Text
+    - derive: "'HideSecrets"
+  FleetMemberAssociationCreateReq:
+    - fleetMemberId: Text
+    - fleetOwnerId: Text
+    - enabled: Bool
+    - isFleetOwner: Bool
+    - level: Maybe Int
+    - parentGroupCode: Maybe Text
+    - groupCode: Maybe Text
+    - order: Maybe Int
     - derive: "'HideSecrets"

@@ -638,6 +638,21 @@ snapJourneyLegToNearestGate journeyLeg = do
                     find (\g -> g.point == nearestResp.origin) (toList nonEmptyGates)
           return nearestGateLocation
 
+mkLocationWithGate ::
+  Maybe MultiModalLegGate ->
+  LA.LocationAddress ->
+  LatLngV2 ->
+  SearchReqLocation
+mkLocationWithGate mGate baseAddr fallbackLoc =
+  case mGate of
+    Just gate ->
+      let lat = fromMaybe fallbackLoc.latitude gate.lat
+          lon = fromMaybe fallbackLoc.longitude gate.lon
+       in JL.mkSearchReqLocation
+            (if isJust (gate.streetName) then baseAddr {LA.street = gate.streetName} else baseAddr)
+            (LatLngV2 lat lon)
+    Nothing -> JL.mkSearchReqLocation baseAddr fallbackLoc
+
 addTaxiLeg ::
   JL.SearchRequestFlow m r c =>
   DJourney.Journey ->
@@ -646,8 +661,8 @@ addTaxiLeg ::
   LA.LocationAddress ->
   m JL.SearchResponse
 addTaxiLeg journey journeyLeg originAddress destinationAddress = do
-  let startLocation = JL.mkSearchReqLocation originAddress journeyLeg.startLocation
-  let endLocation = JL.mkSearchReqLocation destinationAddress journeyLeg.endLocation
+  let startLocation = mkLocationWithGate journeyLeg.exit originAddress journeyLeg.startLocation
+  let endLocation = mkLocationWithGate journeyLeg.entrance destinationAddress journeyLeg.endLocation
   let taxiSearchReq = mkTaxiSearchReq startLocation [endLocation]
   JL.search taxiSearchReq
   where
@@ -667,8 +682,8 @@ addWalkLeg ::
   LA.LocationAddress ->
   m JL.SearchResponse
 addWalkLeg journey journeyLeg originAddress destinationAddress = do
-  let startLocation = JL.mkSearchReqLocation originAddress journeyLeg.startLocation
-  let endLocation = JL.mkSearchReqLocation destinationAddress journeyLeg.endLocation
+  let startLocation = mkLocationWithGate journeyLeg.exit originAddress journeyLeg.startLocation
+  let endLocation = mkLocationWithGate journeyLeg.entrance destinationAddress journeyLeg.endLocation
   let walkSearchReq = mkWalkSearchReq startLocation endLocation
   JL.search walkSearchReq
   where
@@ -1617,7 +1632,6 @@ generateJourneyInfoResponse journey legs = do
         startTime = journey.startTime,
         endTime = journey.endTime,
         merchantOperatingCityName,
-        crisSdkToken = Nothing,
         paymentOrderShortId = journey.paymentOrderShortId,
         unifiedQRV2,
         result = Just "Success"
