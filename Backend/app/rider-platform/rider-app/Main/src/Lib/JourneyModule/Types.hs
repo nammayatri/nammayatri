@@ -359,7 +359,8 @@ data MetroLegExtraInfo = MetroLegExtraInfo
     ticketNo :: Maybe [Text],
     adultTicketQuantity :: Maybe Int,
     childTicketQuantity :: Maybe Int,
-    refund :: Maybe LegSplitInfo
+    refund :: Maybe LegSplitInfo,
+    qrRefreshTime :: Maybe Seconds
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -800,7 +801,7 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
 
   (oldStatus, bookingStatus, trackingStatuses) <- JMStateUtils.getFRFSAllStatuses journeyLeg (Just booking)
   journeyLegInfo' <- getLegRouteInfo (zip journeyLeg.routeDetails (map snd trackingStatuses)) integratedBPPConfig
-  legExtraInfo <- mkLegExtraInfo qrDataList qrValidity ticketsCreatedAt journeyLeg.routeDetails journeyLegInfo' ticketNo
+  legExtraInfo <- mkLegExtraInfo qrDataList qrValidity ticketsCreatedAt journeyLeg.routeDetails journeyLegInfo' ticketNo integratedBPPConfig
   let skipBooking = maybe False (\status -> status `elem` [JMState.FRFSTicket DFRFSTicket.CANCELLED, JMState.FRFSBooking DFRFSBooking.CANCELLED]) bookingStatus
   journeyLegMapping <- QJourneyLegMapping.findByJourneyLegId journeyLeg.id
   return $
@@ -832,7 +833,7 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
         validTill = (if null qrValidity then Nothing else Just $ maximum qrValidity) <|> Just booking.validTill
       }
   where
-    mkLegExtraInfo qrDataList qrValidity ticketsCreatedAt journeyRouteDetails journeyLegInfo' ticketNo = do
+    mkLegExtraInfo qrDataList qrValidity ticketsCreatedAt journeyRouteDetails journeyLegInfo' ticketNo integratedBPPConfig = do
       mbBookingPayment <- QFRFSTicketBookingPayment.findNewTBPByBookingId booking.id
       refundBloc <- case mbBookingPayment of
         Just bookingPayment -> do
@@ -873,7 +874,10 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
                   ticketNo = Just ticketNo,
                   adultTicketQuantity = Just booking.quantity,
                   childTicketQuantity = booking.childTicketQuantity,
-                  refund = refundBloc
+                  refund = refundBloc,
+                  qrRefreshTime = case integratedBPPConfig.providerConfig of
+                    DIBC.ONDC config -> config.qrRefreshTime
+                    _ -> Nothing
                 }
         Spec.BUS -> do
           journeyLegDetail <- listToMaybe journeyLegInfo' & fromMaybeM (InternalError "Journey Leg Detail not found")
@@ -1051,7 +1055,8 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg = do
                   ticketNo = Nothing,
                   adultTicketQuantity = mbQuote <&> (.quantity),
                   childTicketQuantity = mbQuote >>= (.childTicketQuantity),
-                  refund = Nothing
+                  refund = Nothing,
+                  qrRefreshTime = Nothing
                 }
         Spec.BUS -> do
           journeyLegDetail <- listToMaybe journeyLegInfo' & fromMaybeM (InternalError "Journey Leg Detail not found")
