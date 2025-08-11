@@ -1630,11 +1630,11 @@ generateJourneyStatusResponse personId merchantId journey legs = do
               mode = legData.mode
             }
 
-markLegStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Maybe JL.JourneyLegStatus -> Maybe JMState.TrackingStatus -> JL.LegInfo -> Maybe Int -> m ()
-markLegStatus mbStatus trackingStatus leg mbSubLegOrder = do
+markLegStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Maybe JL.JourneyLegStatus -> Maybe JMState.TrackingStatus -> DJourneyLeg.JourneyLeg -> Maybe Int -> m ()
+markLegStatus mbStatus trackingStatus journeyLeg mbSubLegOrder = do
   let finalStatus = trackingStatus <|> castJourneyLegStatusToTrackingStatus mbStatus
   whenJust finalStatus $ \status -> do
-    JMStateUtils.setJourneyLegTrackingStatus leg.journeyLegId mbSubLegOrder status
+    JMStateUtils.setJourneyLegTrackingStatus journeyLeg mbSubLegOrder status
   where
     castJourneyLegStatusToTrackingStatus :: Maybe JL.JourneyLegStatus -> Maybe JMState.TrackingStatus
     castJourneyLegStatusToTrackingStatus = \case

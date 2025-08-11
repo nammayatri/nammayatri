@@ -10,7 +10,6 @@ import Domain.Types.Ride as DRide
 import Domain.Types.RideStatus as DTaxiRide
 import Domain.Types.RouteDetails as DRouteDetails
 import Kernel.Prelude
-import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.JourneyLeg.Types as JLTypes
 import Lib.JourneyModule.State.Types
@@ -115,16 +114,15 @@ getFRFSJourneyBookingStatus mbBooking = do
         bookingStatus -> return $ Just (FRFSBooking bookingStatus)
     Nothing -> return Nothing
 
-setJourneyLegTrackingStatus :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id DJourneyLeg.JourneyLeg -> Maybe Int -> TrackingStatus -> m ()
-setJourneyLegTrackingStatus journeyLegId subLegOrder trackingStatus = do
-  journeyRouteDetails <- QRouteDetails.findAllByJourneyLegId journeyLegId.getId
+setJourneyLegTrackingStatus :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => DJourneyLeg.JourneyLeg -> Maybe Int -> TrackingStatus -> m ()
+setJourneyLegTrackingStatus journeyLeg subLegOrder trackingStatus = do
   let routeDetails =
         case subLegOrder of
           Just subLegOrder' ->
-            case find (\rd -> maybe False (== subLegOrder') rd.subLegOrder) journeyRouteDetails of
+            case find (\rd -> maybe False (== subLegOrder') rd.subLegOrder) journeyLeg.routeDetails of
               Just rd -> [rd]
               Nothing -> []
-          Nothing -> journeyRouteDetails
+          Nothing -> journeyLeg.routeDetails
   mapM_
     ( \rd -> do
         when (maybe True (trackingStatus >) rd.trackingStatus) $ do

@@ -559,7 +559,6 @@ library
       Storage.Queries.Transformers.Person
       Storage.Queries.Transformers.Quote
       Storage.Queries.Transformers.RentalDetails
-      Storage.Queries.Transformers.RouteDetails
       Storage.Queries.Transformers.SearchReqLocation
       Storage.Queries.Transformers.SearchRequest
       Storage.Queries.Transformers.ServicePeopleCategory
