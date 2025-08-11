@@ -37,7 +37,8 @@ data ONDCBecknConfig = ONDCBecknConfig
     networkId :: Maybe Text,
     multiInitAllowed :: Maybe Bool,
     fareCachingAllowed :: Maybe Bool,
-    singleTicketForMultiplePassengers :: Maybe Bool
+    singleTicketForMultiplePassengers :: Maybe Bool,
+    qrRefreshTime :: Maybe Seconds
   }
   deriving stock (Eq, Generic)
   deriving anyclass (FromJSON, ToJSON)
