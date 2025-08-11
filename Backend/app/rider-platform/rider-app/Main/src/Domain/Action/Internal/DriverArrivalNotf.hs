@@ -42,15 +42,15 @@ driverArrivalNotfHandler (DANTypeValidationReq bppRideId driverIdValue status) =
   mbJourneyLeg <- QJourneyLeg.findByLegSearchId (Just booking.transactionId)
   case status of
     DRIVER_ON_THE_WAY -> do
-      whenJust mbJourneyLeg $ \journeyLeg -> JMState.setJourneyLegTrackingStatus journeyLeg.id Nothing JMState.Arriving
+      whenJust mbJourneyLeg $ \journeyLeg -> JMState.setJourneyLegTrackingStatus journeyLeg Nothing JMState.Arriving
       Notify.notifyDriverOnTheWay booking.riderId booking.tripCategory ride
     DRIVER_PICKUP_INSTRUCTION -> do
       PIHandler.handlePickupInstruction ride booking driverIdValue
     DRIVER_REACHING -> do
-      whenJust mbJourneyLeg $ \journeyLeg -> JMState.setJourneyLegTrackingStatus journeyLeg.id Nothing JMState.AlmostArrived
+      whenJust mbJourneyLeg $ \journeyLeg -> JMState.setJourneyLegTrackingStatus journeyLeg Nothing JMState.AlmostArrived
       Notify.notifyDriverReaching booking.riderId booking.tripCategory ride.otp ride.vehicleNumber ride
     DRIVER_REACHED -> do
-      whenJust mbJourneyLeg $ \journeyLeg -> JMState.setJourneyLegTrackingStatus journeyLeg.id Nothing JMState.Arrived
+      whenJust mbJourneyLeg $ \journeyLeg -> JMState.setJourneyLegTrackingStatus journeyLeg Nothing JMState.Arrived
       Notify.notifyDriverHasReached booking.riderId booking.tripCategory ride.otp ride.vehicleNumber ride.vehicleColor ride.vehicleModel ride.vehicleVariant
     _ -> throwError $ InvalidRequest "Unexpected ride notification status"
 

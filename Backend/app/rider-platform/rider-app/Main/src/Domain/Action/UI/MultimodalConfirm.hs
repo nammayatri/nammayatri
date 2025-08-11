@@ -47,6 +47,7 @@ import qualified Data.Text as T
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified Domain.Types.Common as DTrip
+import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.EstimateStatus as DEst
 import qualified Domain.Types.FRFSTicketBooking as DFRFSB
 import Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPayment
@@ -54,10 +55,12 @@ import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSB
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Journey
 import qualified Domain.Types.JourneyFeedback as JFB
+import qualified Domain.Types.JourneyLeg as DJourneyLeg
 import qualified Domain.Types.JourneyLegsFeedbacks as JLFB
 import qualified Domain.Types.Merchant
 import Domain.Types.MultimodalPreferences as DMP
 import qualified Domain.Types.Person
+import qualified Domain.Types.SearchRequest as DSR
 import Environment
 import EulerHS.Prelude hiding (all, any, catMaybes, concatMap, elem, find, forM_, id, length, map, mapM_, null, sum, toList, whenJust)
 import qualified ExternalBPP.CallAPI as CallExternalBPP
@@ -70,8 +73,8 @@ import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Lib.JourneyLeg.Interface as JLI
 import qualified Lib.JourneyLeg.Types as JL
+import Lib.JourneyLeg.Types.Taxi
 import Lib.JourneyModule.Base
 import qualified Lib.JourneyModule.Base as JM
 import Lib.JourneyModule.Location
@@ -115,13 +118,13 @@ import qualified Tools.Payment as TPayment
 validateMetroBusinessHours :: Id Domain.Types.Journey.Journey -> Environment.Flow ()
 validateMetroBusinessHours journeyId = do
   journey <- JM.getJourney journeyId
-  legs <- JM.getAllLegsInfo journeyId
+  legs <- JM.getJourneyLegs journeyId
   riderConfig <- QRC.findByMerchantOperatingCityId journey.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist journey.merchantOperatingCityId.getId)
   now <- getCurrentTime
   let isOutsideMetroBusinessHours = case (riderConfig.qrTicketRestrictionStartTime, riderConfig.qrTicketRestrictionEndTime) of
         (Just start, Just end) -> JM.isWithinTimeBound start end now riderConfig.timeDiffFromUtc
         _ -> False
-      hasMetroLeg = any (\leg -> leg.travelMode == DTrip.Metro) legs
+      hasMetroLeg = any (\leg -> leg.mode == DTrip.Metro) legs
   when (hasMetroLeg && isOutsideMetroBusinessHours) $
     throwError $ InvalidRequest "Metro booking not allowed outside business hours"
 
@@ -396,33 +399,43 @@ postMultimodalOrderSwitchTaxi ::
   )
 postMultimodalOrderSwitchTaxi (_, _) journeyId legOrder req = do
   journey <- JM.getJourney journeyId
-  legs <- JM.getAllLegsInfo journeyId
-  journeyLegInfo <- find (\leg -> leg.order == legOrder) legs & fromMaybeM (InvalidRequest "No matching journey leg found for the given legOrder")
-  unless (journeyLegInfo.travelMode == DTrip.Taxi) $
-    throwError (JourneyLegCannotBeCancelled (show journeyLegInfo.order))
-  when (journeyLegInfo.status `elem` JMTypes.cannotSwitchStatus) $
-    throwError (JourneyLegCannotBeCancelled (show journeyLegInfo.order))
-  let mbPricingId = Id <$> journeyLegInfo.pricingId
-  let legSearchId = Id journeyLegInfo.searchId
-  mbEstimate <- maybe (pure Nothing) QEstimate.findById mbPricingId
-  QSearchRequest.updatePricingId legSearchId (Just req.estimateId.getId)
+  legs <- JM.getJourneyLegs journeyId
+  journeyLeg <- find (\leg -> leg.sequenceNumber == legOrder) legs & fromMaybeM (InvalidRequest "No matching journey leg found for the given legOrder")
+  unless (journeyLeg.mode == DTrip.Taxi) $
+    throwError (JourneyLegCannotBeCancelled (show journeyLeg.sequenceNumber))
 
-  whenJust mbEstimate $ \estimate -> do
-    when (estimate.status `elem` [DEst.COMPLETED, DEst.CANCELLED, DEst.GOT_DRIVER_QUOTE, DEst.DRIVER_QUOTE_CANCELLED]) $
-      throwError $ InvalidRequest "Can't switch vehicle if driver has already being assigned"
-    when (estimate.status == DEst.DRIVER_QUOTE_REQUESTED) $ do
-      cancelPrevSearch legSearchId estimate.id
-      JLI.confirm True Nothing Nothing journeyLegInfo{pricingId = Just req.estimateId.getId} Nothing
+  whenJust journeyLeg.legSearchId $ \legSearchId -> do
+    searchReq <- QSearchRequest.findById (Id legSearchId) >>= fromMaybeM (SearchRequestNotFound $ "searchRequestId-" <> legSearchId)
+    mbEstimate <- maybe (pure Nothing) (QEstimate.findById . Id) (searchReq.journeyLegInfo >>= (.pricingId))
+    whenJust mbEstimate $ \estimate -> do
+      when (estimate.status `elem` [DEst.COMPLETED, DEst.CANCELLED, DEst.GOT_DRIVER_QUOTE, DEst.DRIVER_QUOTE_CANCELLED]) $
+        throwError $ InvalidRequest "Can't switch vehicle if driver has already being assigned"
+      QSearchRequest.updatePricingId (Id legSearchId) (Just req.estimateId.getId)
+      when (estimate.status == DEst.DRIVER_QUOTE_REQUESTED) $ do
+        cancelPrevSearch searchReq legSearchId estimate.id
+        JMTypes.confirm (mkTaxiLegConfirmReq searchReq req.estimateId)
+
   updatedLegs <- JM.getAllLegsInfo journeyId
   generateJourneyInfoResponse journey updatedLegs
   where
-    cancelPrevSearch legSearchId estimateId = do
-      searchReq <- QSearchRequest.findById legSearchId >>= fromMaybeM (SearchRequestNotFound $ "searchRequestId-" <> legSearchId.getId)
+    mkTaxiLegConfirmReq :: DSR.SearchRequest -> Id DEstimate.Estimate -> TaxiLegRequest
+    mkTaxiLegConfirmReq searchReq estimateId = do
+      TaxiLegRequestConfirm $
+        TaxiLegRequestConfirmData
+          { skipBooking = False,
+            forcedBooked = True,
+            searchId = searchReq.id.getId,
+            estimateId = Just estimateId,
+            startTime = searchReq.startTime,
+            personId = searchReq.riderId,
+            merchantId = searchReq.merchantId
+          }
+    cancelPrevSearch searchReq legSearchId estimateId = do
       cancelResponse <- CancelSearch.cancelSearch' (searchReq.riderId, searchReq.merchantId) estimateId
       case cancelResponse of
         Select.Success -> return ()
-        Select.BookingAlreadyCreated -> throwError (InternalError $ "Cannot cancel search as booking is already created for searchId: " <> show legSearchId.getId)
-        Select.FailedToCancel -> throwError (InvalidRequest $ "Failed to cancel search for searchId: " <> show legSearchId.getId)
+        Select.BookingAlreadyCreated -> throwError (InternalError $ "Cannot cancel search as booking is already created for searchId: " <> show legSearchId)
+        Select.FailedToCancel -> throwError (InvalidRequest $ "Failed to cancel search for searchId: " <> show legSearchId)
 
 postMultimodalOrderSwitchFRFSTier ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -435,34 +448,36 @@ postMultimodalOrderSwitchFRFSTier ::
   )
 postMultimodalOrderSwitchFRFSTier (mbPersonId, merchantId) journeyId legOrder req = do
   journey <- JM.getJourney journeyId
-  legs <- JM.getAllLegsInfo journeyId
-  journeyLegInfo <- find (\leg -> leg.order == legOrder) legs & fromMaybeM (InvalidRequest "No matching journey leg found for the given legOrder")
-  mbAlternateShortNames <- getAlternateShortNames
-  QFRFSSearch.updatePricingId (Id journeyLegInfo.searchId) (Just req.quoteId.getId)
-  allJourneyFrfsBookings <- QFRFSTicketBooking.findAllByJourneyId (Just journeyId)
-  let mbBooking = find (\booking -> booking.searchId == Id journeyLegInfo.searchId) allJourneyFrfsBookings
-  whenJust mbBooking $ \booking -> do
-    quote <- QFRFSQuote.findById req.quoteId >>= fromMaybeM (InvalidRequest "Quote not found")
-    let quantity = booking.quantity
-        childTicketQuantity = fromMaybe 0 booking.childTicketQuantity
-        quantityRational = fromIntegral quantity :: Rational
-        childTicketQuantityRational = fromIntegral childTicketQuantity :: Rational
-        childPrice = fromMaybe quote.price quote.childPrice
-        totalPriceForSwitchLeg =
-          Price
-            { amount = HighPrecMoney $ (quote.price.amount.getHighPrecMoney * quantityRational) + (childPrice.amount.getHighPrecMoney * childTicketQuantityRational),
-              amountInt = Money $ (quote.price.amountInt.getMoney * quantity) + (childPrice.amountInt.getMoney * childTicketQuantity),
-              currency = quote.price.currency
-            }
-        updatedBooking =
-          booking
-            { DFRFSB.quoteId = req.quoteId,
-              DFRFSB.price = totalPriceForSwitchLeg,
-              DFRFSB.estimatedPrice = totalPriceForSwitchLeg
-            }
-    void $ QFRFSTicketBooking.updateByPrimaryKey updatedBooking
-  whenJust mbAlternateShortNames $ \alternateShortNames -> do
-    QRouteDetails.updateAlternateShortNames alternateShortNames journeyLegInfo.journeyLegId.getId
+  legs <- JM.getJourneyLegs journeyId
+  journeyLeg <- find (\leg -> leg.sequenceNumber == legOrder) legs & fromMaybeM (InvalidRequest "No matching journey leg found for the given legOrder")
+
+  whenJust journeyLeg.legSearchId $ \legSearchId -> do
+    mbAlternateShortNames <- getAlternateShortNames
+    let searchId = Id legSearchId
+    QFRFSSearch.updatePricingId searchId (Just req.quoteId.getId)
+    mbBooking <- QFRFSTicketBooking.findBySearchId searchId
+    whenJust mbBooking $ \booking -> do
+      quote <- QFRFSQuote.findById req.quoteId >>= fromMaybeM (InvalidRequest "Quote not found")
+      let quantity = booking.quantity
+          childTicketQuantity = fromMaybe 0 booking.childTicketQuantity
+          quantityRational = fromIntegral quantity :: Rational
+          childTicketQuantityRational = fromIntegral childTicketQuantity :: Rational
+          childPrice = fromMaybe quote.price quote.childPrice
+          totalPriceForSwitchLeg =
+            Price
+              { amount = HighPrecMoney $ (quote.price.amount.getHighPrecMoney * quantityRational) + (childPrice.amount.getHighPrecMoney * childTicketQuantityRational),
+                amountInt = Money $ (quote.price.amountInt.getMoney * quantity) + (childPrice.amountInt.getMoney * childTicketQuantity),
+                currency = quote.price.currency
+              }
+          updatedBooking =
+            booking
+              { DFRFSB.quoteId = req.quoteId,
+                DFRFSB.price = totalPriceForSwitchLeg,
+                DFRFSB.estimatedPrice = totalPriceForSwitchLeg
+              }
+      void $ QFRFSTicketBooking.updateByPrimaryKey updatedBooking
+    whenJust mbAlternateShortNames $ \alternateShortNames -> do
+      QRouteDetails.updateAlternateShortNames alternateShortNames journeyLeg.id.getId
   updatedLegs <- JM.getAllLegsInfo journeyId
   generateJourneyInfoResponse journey updatedLegs
   where
@@ -938,13 +953,10 @@ postMultimodalOrderSublegSetStatus (mbPersonId, merchantId) journeyId legOrder s
   personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
   journey <- JM.getJourney journeyId
 
-  -- Removed the 'unless' condition to allow updates for JL.Completed and JL.Cancelled statuses
+  legs <- JM.getJourneyLegs journeyId
+  journeyLeg <- find (\leg -> leg.sequenceNumber == legOrder) legs & fromMaybeM (InvalidRequest "No matching journey leg found for the given legOrder")
 
-  legs <- JM.getAllLegsInfo journeyId
-
-  journeyLegInfo <- find (\leg -> leg.order == legOrder) legs & fromMaybeM (InvalidRequest "No matching journey leg found for the given legOrder")
-
-  markLegStatus (Just newStatus) Nothing journeyLegInfo (Just subLegOrder)
+  markLegStatus (Just newStatus) Nothing journeyLeg (Just subLegOrder)
 
   -- refetch updated legs and journey
   updatedLegStatus <- JM.getAllLegsStatus journey
@@ -965,13 +977,11 @@ postMultimodalOrderSublegSetStatusV2 (mbPersonId, merchantId) journeyId legOrder
   personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
   journey <- JM.getJourney journeyId
 
-  -- Removed the 'unless' condition to allow updates for JL.Completed and JL.Cancelled statuses
+  legs <- JM.getJourneyLegs journeyId
 
-  legs <- JM.getAllLegsInfo journeyId
+  journeyLeg <- find (\leg -> leg.sequenceNumber == legOrder) legs & fromMaybeM (InvalidRequest "No matching journey leg found for the given legOrder")
 
-  journeyLegInfo <- find (\leg -> leg.order == legOrder) legs & fromMaybeM (InvalidRequest "No matching journey leg found for the given legOrder")
-
-  markLegStatus Nothing (Just trackingStatus) journeyLegInfo (Just subLegOrder)
+  markLegStatus Nothing (Just trackingStatus) journeyLeg (Just subLegOrder)
 
   -- refetch updated legs and journey
   updatedLegStatus <- JM.getAllLegsStatus journey
@@ -1017,21 +1027,13 @@ postMultimodalTicketVerify (_mbPersonId, merchantId) opCity req = do
         JMTypes.CRIS -> throwError $ InvalidRequest "CRIS provider not implemented yet"
         _ -> throwError $ InvalidRequest "Invalid provider"
 
--- Helper function to get sub-leg orders from Metro/Subway leg extra info
-getSubLegOrders :: JMTypes.LegExtraInfo -> [Int]
-getSubLegOrders legExtraInfo =
-  case legExtraInfo of
-    JMTypes.Metro metroInfo -> mapMaybe (.subOrder) metroInfo.routeInfo
-    JMTypes.Subway subwayInfo -> mapMaybe (.subOrder) subwayInfo.routeInfo
-    _ -> []
-
 -- Helper function to mark all sub-legs as completed for FRFS legs
-markAllSubLegsCompleted :: JMTypes.LegInfo -> Environment.Flow ()
-markAllSubLegsCompleted leg = do
-  let subLegOrders = getSubLegOrders leg.legExtraInfo
+markAllSubLegsCompleted :: DJourneyLeg.JourneyLeg -> Environment.Flow ()
+markAllSubLegsCompleted journeyLeg = do
+  let subLegOrders = map (\r -> fromMaybe 1 r.subLegOrder) journeyLeg.routeDetails
   case subLegOrders of
-    [] -> markLegStatus (Just JL.Completed) (Just JMState.Finished) leg Nothing
-    orders -> mapM_ (\subOrder -> markLegStatus (Just JL.Completed) (Just JMState.Finished) leg (Just subOrder)) orders
+    [] -> markLegStatus (Just JL.Completed) (Just JMState.Finished) journeyLeg Nothing
+    orders -> mapM_ (\subOrder -> markLegStatus (Just JL.Completed) (Just JMState.Finished) journeyLeg (Just subOrder)) orders
 
 postMultimodalComplete ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -1042,9 +1044,9 @@ postMultimodalComplete ::
 postMultimodalComplete (mbPersonId, merchantId) journeyId = do
   personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
   journey <- JM.getJourney journeyId
-  legs <- JM.getAllLegsInfo journeyId
-  let isTaxiLegOngoing = any (\leg -> leg.travelMode == DTrip.Taxi && leg.status `elem` JMTypes.cannotCompleteOrCancelJourneyIfTaxiLegIsInThisStatus) legs
-  when isTaxiLegOngoing $ throwError (InvalidRequest "Taxi leg is ongoing, cannot complete journey")
+  legs <- JM.getJourneyLegs journeyId
+  JMTypes.checkIfAnyTaxiLegOngoing legs
+
   mapM_ (\leg -> markAllSubLegsCompleted leg) legs
   updatedLegStatus <- JM.getAllLegsStatus journey
   checkAndMarkTerminalJourneyStatus journey True False updatedLegStatus
@@ -1061,9 +1063,9 @@ postMultimodalOrderSoftCancel ::
   )
 postMultimodalOrderSoftCancel (_, merchantId) journeyId _ = do
   merchant <- CQM.findById merchantId >>= fromMaybeM (InvalidRequest "Invalid merchant id")
-  legs <- JM.getAllLegsInfo journeyId
-  let isTaxiLegOngoing = any (\leg -> leg.travelMode == DTrip.Taxi && leg.status `elem` JMTypes.cannotCompleteOrCancelJourneyIfTaxiLegIsInThisStatus) legs
-  when isTaxiLegOngoing $ throwError (InvalidRequest "Taxi leg is ongoing, cannot cancel journey")
+  legs <- JM.getJourneyLegs journeyId
+  JMTypes.checkIfAnyTaxiLegOngoing legs
+
   ticketBookings <- QFRFSTicketBooking.findAllByJourneyId (Just journeyId)
   when (null ticketBookings) $ throwError (InvalidRequest "No FRFS bookings found for this journey")
   unless (length ticketBookings == 1) $ throwError (InvalidRequest "Multiple FRFS bookings found for this journey")
@@ -1087,9 +1089,9 @@ getMultimodalOrderCancelStatus ::
     Environment.Flow API.Types.UI.MultimodalConfirm.MultimodalCancelStatusResp
   )
 getMultimodalOrderCancelStatus (_, __) journeyId legOrder = do
-  legs <- JM.getAllLegsInfo journeyId
-  let isTaxiLegOngoing = any (\leg -> leg.travelMode == DTrip.Taxi && leg.status `elem` JMTypes.cannotCompleteOrCancelJourneyIfTaxiLegIsInThisStatus) legs
-  when isTaxiLegOngoing $ throwError (InvalidRequest "Taxi leg is ongoing, cannot cancel journey")
+  legs <- JM.getJourneyLegs journeyId
+  JMTypes.checkIfAnyTaxiLegOngoing legs
+
   ticketBooking <- QFRFSTicketBooking.findByJourneyIdAndLegOrder journeyId legOrder >>= fromMaybeM (InvalidRequest "No FRFS booking found for the leg")
   return $
     ApiTypes.MultimodalCancelStatusResp

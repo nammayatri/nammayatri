@@ -12,7 +12,6 @@ imports:
   ServiceTierType: BecknV2.FRFS.Enums
   FRFSSearch: Domain.Types.FRFSSearch
   FRFSQuote: Domain.Types.FRFSQuote
-  RouteDetails: Domain.Types.RouteDetails
   FRFSTicketBooking: Domain.Types.FRFSTicketBooking
   FRFSTicket: Domain.Types.FRFSTicket
   FRFSTicketBookingPayment: Domain.Types.FRFSTicketBookingPayment

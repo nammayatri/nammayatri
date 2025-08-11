@@ -29,7 +29,6 @@ imports:
   DriverIdentifier: Domain.Types.RefereeLink
   ConfigVersionMap: Lib.Yudhishthira.Types
   JourneyLeg: Domain.Types.JourneyLeg
-  RouteDetails: Domain.Types.RouteDetails
   Value: Data.Aeson
   RecentLocation: Domain.Types.RecentLocation
   VehicleCategory: BecknV2.OnDemand.Enums

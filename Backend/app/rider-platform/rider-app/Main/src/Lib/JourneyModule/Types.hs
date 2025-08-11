@@ -81,12 +81,14 @@ import qualified SharedLogic.Search as SLSearch
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
+import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.FRFSVehicleServiceTier as QFRFSVehicleServiceTier
 import qualified Storage.Queries.Person as QPerson
+import qualified Storage.Queries.SearchRequest as QSearchRequest
 import qualified Storage.Queries.Transformers.Booking as QTB
 import Tools.Error
 import Tools.Maps as Maps
@@ -1330,12 +1332,6 @@ cannotCancelStatus = [JMState.Ongoing, JMState.Finishing, JMState.Finished] -- T
 cannotCancelWalkStatus :: [JMState.TrackingStatus]
 cannotCancelWalkStatus = [JMState.Finished] -- TODO :: Booking Status Cancelled To be included
 
-cannotSwitchStatus :: [JourneyLegStatus]
-cannotSwitchStatus = [Booked, OnTheWay, Arriving, Arrived, Ongoing, Finishing, Completed, Cancelled]
-
-cannotCompleteOrCancelJourneyIfTaxiLegIsInThisStatus :: [JourneyLegStatus]
-cannotCompleteOrCancelJourneyIfTaxiLegIsInThisStatus = [Booked, OnTheWay, Arriving, Arrived, Ongoing, Finishing]
-
 cannotCancelExtendStatus :: [JMState.TrackingStatus]
 cannotCancelExtendStatus = [JMState.Ongoing, JMState.Finishing, JMState.Finished, JMState.Arriving, JMState.AlmostArrived, JMState.Arrived] -- TODO :: Booking Status Cancelled To be included
 
@@ -1475,3 +1471,25 @@ safeTail :: [a] -> Maybe a
 safeTail [] = Nothing
 safeTail [_] = Nothing
 safeTail xs = Just (last xs)
+
+checkIfAnyTaxiLegOngoing :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => [DJourneyLeg.JourneyLeg] -> m ()
+checkIfAnyTaxiLegOngoing legs = do
+  ongoings <- mapM isTaxiLegOngoing legs
+  when (or ongoings) $
+    throwError (InvalidRequest "Ongoing Taxi Leg. Can't perfom the Action")
+
+isTaxiLegOngoing :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => DJourneyLeg.JourneyLeg -> m Bool
+isTaxiLegOngoing journeyLeg = do
+  case (journeyLeg.legSearchId, journeyLeg.mode) of
+    (Just legSearchId, DTrip.Taxi) -> do
+      mbBooking <- QBooking.findByTransactionIdAndStatus legSearchId DBooking.activeBookingStatus
+      case mbBooking of
+        Just _ -> return True
+        Nothing -> do
+          mbSearchReq <- QSearchRequest.findById (Id legSearchId)
+          mbEstimate <- maybe (pure Nothing) (QEstimate.findById . Id) (mbSearchReq >>= (.journeyLegInfo) >>= (.pricingId))
+          case mbEstimate of
+            Just estimate -> do
+              return $ estimate.status `elem` [DEstimate.COMPLETED, DEstimate.DRIVER_QUOTE_REQUESTED, DEstimate.GOT_DRIVER_QUOTE, DEstimate.DRIVER_QUOTE_CANCELLED]
+            Nothing -> return False
+    _ -> return False

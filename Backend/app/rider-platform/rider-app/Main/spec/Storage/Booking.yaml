@@ -35,8 +35,6 @@ imports:
   Value: Data.Aeson
   Journey: Domain.Types.Journey
   ParcelType: Domain.Types.ParcelType
-  JourneyLegStatus: Lib.JourneyLeg.Types
-  RouteDetails: Domain.Types.RouteDetails
   JourneyLeg: Domain.Types.JourneyLeg
   RecentLocation: Domain.Types.RecentLocation
 
