@@ -56,6 +56,7 @@ import qualified Domain.Types.ParcelDetails as DParcel
 import qualified Domain.Types.ParcelType as DParcel
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.PersonFlowStatus as DPFS
+import qualified Domain.Types.RouteDetails as DRD
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequestPartiesLink as DSRPL
 import qualified Domain.Types.ServiceTierType as DVSTT
@@ -417,6 +418,7 @@ mkJourneyForSearch searchRequest estimate personId = do
     Nothing -> do
       journeyGuid <- generateGUID
       journeyLegGuid <- generateGUID
+      journeyRouteDetailsId <- generateGUID
       journeyLegRouteGroupGuid <- generateGUID
 
       let estimatedMinFare = Just estimate.estimatedFare.amount
@@ -455,7 +457,7 @@ mkJourneyForSearch searchRequest estimate personId = do
             DJL.JourneyLeg
               { id = journeyLegGuid,
                 journeyId = journeyGuid,
-                routeGroupId = journeyLegRouteGroupGuid,
+                routeGroupId = Just journeyLegRouteGroupGuid,
                 isSkipped = Just False,
                 sequenceNumber = 0,
                 mode = DTrip.Taxi,
@@ -474,7 +476,47 @@ mkJourneyForSearch searchRequest estimate personId = do
                 toDepartureTime = Nothing,
                 fromStopDetails = Nothing,
                 toStopDetails = Nothing,
-                routeDetails = [],
+                routeDetails =
+                  [ DRD.RouteDetails
+                      { agencyGtfsId = Nothing,
+                        agencyName = Nothing,
+                        alternateShortNames = [],
+                        endLocationLat = fromMaybe searchRequest.fromLocation.lat (searchRequest.toLocation <&> (.lat)),
+                        endLocationLon = fromMaybe searchRequest.fromLocation.lon (searchRequest.toLocation <&> (.lon)),
+                        frequency = Nothing,
+                        fromArrivalTime = Nothing,
+                        fromDepartureTime = Just searchRequest.startTime,
+                        fromStopCode = Nothing,
+                        fromStopGtfsId = Nothing,
+                        fromStopName = Nothing,
+                        fromStopPlatformCode = Nothing,
+                        id = journeyRouteDetailsId,
+                        journeyLegId = journeyLegGuid.getId,
+                        routeCode = Nothing,
+                        routeColorCode = Nothing,
+                        routeColorName = Nothing,
+                        routeGroupId = Just journeyLegRouteGroupGuid,
+                        routeGtfsId = Nothing,
+                        routeLongName = Nothing,
+                        routeShortName = Nothing,
+                        startLocationLat = searchRequest.fromLocation.lat,
+                        startLocationLon = searchRequest.fromLocation.lon,
+                        subLegOrder = Just 1,
+                        toArrivalTime =
+                          searchRequest.estimatedRideDuration >>= \duration ->
+                            Just $ addUTCTime (fromIntegral $ getSeconds duration) searchRequest.startTime,
+                        toDepartureTime = Nothing,
+                        toStopCode = Nothing,
+                        toStopGtfsId = Nothing,
+                        toStopName = Nothing,
+                        toStopPlatformCode = Nothing,
+                        trackingStatus = Nothing,
+                        merchantId = Just searchRequest.merchantId,
+                        merchantOperatingCityId = Just searchRequest.merchantOperatingCityId,
+                        createdAt = now,
+                        updatedAt = now
+                      }
+                  ],
                 serviceTypes = Nothing,
                 estimatedMinFare = estimatedMinFare,
                 estimatedMaxFare = estimatedMaxFare,

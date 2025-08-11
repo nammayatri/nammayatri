@@ -272,6 +272,7 @@ data JourneyInitData = JourneyInitData
 
 data LegInfo = LegInfo
   { journeyLegId :: Id DJL.JourneyLeg,
+    routeGroupId :: Maybe Text,
     skipBooking :: Bool,
     bookingAllowed :: Bool,
     pricingId :: Maybe Text,
@@ -568,6 +569,7 @@ mkLegInfoFromBookingAndRide booking mRide journeyLeg = do
   return $
     LegInfo
       { journeyLegId = journeyLeg.id,
+        routeGroupId = journeyLeg.routeGroupId,
         skipBooking,
         bookingAllowed = True,
         searchId = booking.transactionId,
@@ -645,6 +647,7 @@ mkLegInfoFromSearchRequest DSR.SearchRequest {..} journeyLeg = do
   return $
     LegInfo
       { journeyLegId = journeyLeg.id,
+        routeGroupId = journeyLeg.routeGroupId,
         skipBooking = skipBooking,
         bookingAllowed = True,
         searchId = id.getId,
@@ -703,6 +706,7 @@ mkWalkLegInfoFromWalkLegData legData@DJL.JourneyLeg {..} = do
   return $
     LegInfo
       { journeyLegId = id,
+        routeGroupId,
         skipBooking = fromMaybe False isSkipped,
         bookingAllowed = False,
         searchId = id.getId,
@@ -799,6 +803,7 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
   return $
     LegInfo
       { journeyLegId = journeyLeg.id,
+        routeGroupId = journeyLeg.routeGroupId,
         skipBooking,
         bookingAllowed = True,
         searchId = booking.searchId.getId,
@@ -999,6 +1004,7 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg = do
   return $
     LegInfo
       { journeyLegId = journeyLeg.id,
+        routeGroupId = journeyLeg.routeGroupId,
         skipBooking = journeyLegInfo'.skipBooking,
         bookingAllowed,
         searchId = id.getId,
@@ -1210,7 +1216,7 @@ mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation r
         fromStopDetails = fromStopDetails,
         id = journeyLegId,
         journeyId,
-        routeGroupId = routeGroupId,
+        routeGroupId = Just routeGroupId,
         mode = travelMode,
         routeDetails,
         sequenceNumber = idx,
@@ -1272,7 +1278,7 @@ mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation r
         RouteDetails
           { routeGtfsId = routeDetail.gtfsId <&> gtfsIdtoDomainCode,
             routeCode = routeDetail.gtfsId <&> gtfsIdtoDomainCode,
-            routeGroupId = routeGroupId,
+            routeGroupId = Just routeGroupId,
             id = newId,
             routeLongName = routeDetail.longName,
             routeShortName = routeDetail.shortName,

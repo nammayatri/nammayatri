@@ -1112,7 +1112,7 @@ createJourneyLegFromCancelledLeg journeyLeg newMode startLocation newDistance ne
         id = journeyLegId,
         journeyId = journeyLeg.journeyId,
         mode = newMode,
-        routeDetails = [],
+        routeDetails = journeyLeg.routeDetails,
         serviceTypes = Nothing,
         sequenceNumber = journeyLeg.sequenceNumber,
         startLocation = startLocation,
@@ -1160,7 +1160,7 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
           Nothing -> return $ filter (\leg -> leg.order >= startLegOrder) allLegs
       -- checkIfRemainingLegsAreCancellable legsToCancel
       (newOriginLat, newOriginLon) <- getNewOriginLatLon currentLeg.legExtraInfo
-      leg <- mkMultiModalLeg newDistance newDuration MultiModalTypes.Unspecified newOriginLat newOriginLon endLocation.lat endLocation.lon currentLeg.startTime
+      leg <- mkMultiModalTaxiLeg newDistance newDuration MultiModalTypes.Unspecified newOriginLat newOriginLon endLocation.lat endLocation.lon currentLeg.startTime
       riderConfig <- QRC.findByMerchantOperatingCityId currentLeg.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist currentLeg.merchantOperatingCityId.getId)
       journeyLeg <- JL.mkJourneyLeg startLegOrder (Nothing, leg, Nothing) journey.fromLocation journey.toLocation journey.riderId currentLeg.merchantId currentLeg.merchantOperatingCityId journeyId riderConfig.maximumWalkDistance riderConfig.straightLineThreshold (Just fare)
       startLocationAddress <-
@@ -1199,7 +1199,7 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
   where
     extendWalkLeg journey startlocation endLocation currentLeg = do
       now <- getCurrentTime
-      leg <- mkMultiModalLeg newDistance newDuration MultiModalTypes.Unspecified startlocation.location.lat startlocation.location.lon endLocation.lat endLocation.lon now
+      leg <- mkMultiModalTaxiLeg newDistance newDuration MultiModalTypes.Unspecified startlocation.location.lat startlocation.location.lon endLocation.lat endLocation.lon now
       riderConfig <- QRC.findByMerchantOperatingCityId currentLeg.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist currentLeg.merchantOperatingCityId.getId)
       journeyLeg <- JL.mkJourneyLeg currentLeg.order (Nothing, leg, Nothing) journey.fromLocation journey.toLocation journey.riderId currentLeg.merchantId currentLeg.merchantOperatingCityId journeyId riderConfig.maximumWalkDistance riderConfig.straightLineThreshold (Just fare)
       withJourneyUpdateInProgress journeyId $ do
@@ -1244,7 +1244,7 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
       lon <- fromMaybeM (InvalidRequest $ label <> " longitude not found") mLon
       return (lat, lon)
 
-    mkMultiModalLeg distance duration mode originLat originLon destLat destLon startTime = do
+    mkMultiModalTaxiLeg distance duration mode originLat originLon destLat destLon startTime = do
       now <- getCurrentTime
       let newStartTime = max now startTime
       return $
@@ -1257,7 +1257,24 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
             endLocation = LocationV2 {latLng = LatLngV2 {latitude = destLat, longitude = destLon}},
             fromStopDetails = Nothing,
             toStopDetails = Nothing,
-            routeDetails = [],
+            routeDetails =
+              [ MultiModalTypes.MultiModalRouteDetails
+                  { gtfsId = Nothing,
+                    longName = Nothing,
+                    shortName = Nothing,
+                    alternateShortNames = [],
+                    color = Nothing,
+                    fromStopDetails = Nothing,
+                    toStopDetails = Nothing,
+                    startLocation = LocationV2 {latLng = LatLngV2 {latitude = originLat, longitude = originLon}},
+                    endLocation = LocationV2 {latLng = LatLngV2 {latitude = destLat, longitude = destLon}},
+                    subLegOrder = 1,
+                    fromArrivalTime = Just newStartTime,
+                    fromDepartureTime = Just newStartTime,
+                    toArrivalTime = Nothing,
+                    toDepartureTime = Nothing
+                  }
+              ],
             serviceTypes = [],
             agency = Nothing,
             fromArrivalTime = Just newStartTime,
@@ -1399,7 +1416,7 @@ extendLegEstimatedFare journeyId startPoint mbEndLocation legOrder = do
             }
       let distance = convertMetersToDistance Meter distResp.distance
       now <- getCurrentTime
-      let multiModalLeg = mkMultiModalLeg distance distResp.duration MultiModalTypes.Unspecified startLocation.lat startLocation.lon endLocation.lat endLocation.lon
+      let multiModalLeg = mkMultiModalTaxiLeg distance distResp.duration MultiModalTypes.Unspecified startLocation.lat startLocation.lon endLocation.lat endLocation.lon
       (isFareMandatory, estimatedFare) <- JLI.getFare (Just now) journey.riderId currentLeg.merchantId currentLeg.merchantOperatingCityId multiModalLeg DTrip.Taxi
       when (isFareMandatory && isNothing estimatedFare) $ throwError (InvalidRequest "Fare is mandatory for this leg, but unavailable")
       return $
@@ -1454,7 +1471,7 @@ extendLegEstimatedFare journeyId startPoint mbEndLocation legOrder = do
                 bookingUpdateRequestId = Just bookingUpdateReq.id
               }
 
-    mkMultiModalLeg distance duration mode originLat originLon destLat destLon =
+    mkMultiModalTaxiLeg distance duration mode originLat originLon destLat destLon =
       MultiModalTypes.MultiModalLeg
         { distance,
           duration,
@@ -1464,7 +1481,24 @@ extendLegEstimatedFare journeyId startPoint mbEndLocation legOrder = do
           endLocation = LocationV2 {latLng = LatLngV2 {latitude = destLat, longitude = destLon}},
           fromStopDetails = Nothing,
           toStopDetails = Nothing,
-          routeDetails = [],
+          routeDetails =
+            [ MultiModalTypes.MultiModalRouteDetails
+                { gtfsId = Nothing,
+                  longName = Nothing,
+                  shortName = Nothing,
+                  alternateShortNames = [],
+                  color = Nothing,
+                  fromStopDetails = Nothing,
+                  toStopDetails = Nothing,
+                  startLocation = LocationV2 {latLng = LatLngV2 {latitude = originLat, longitude = originLon}},
+                  endLocation = LocationV2 {latLng = LatLngV2 {latitude = destLat, longitude = destLon}},
+                  subLegOrder = 1,
+                  fromArrivalTime = Nothing,
+                  fromDepartureTime = Nothing,
+                  toArrivalTime = Nothing,
+                  toDepartureTime = Nothing
+                }
+            ],
           serviceTypes = [],
           agency = Nothing,
           fromArrivalTime = Nothing,

@@ -237,7 +237,7 @@ JourneyLeg:
     straightLineExit: Maybe MultiModalLegGate
     osmEntrance: Maybe MultiModalLegGate
     osmExit: Maybe MultiModalLegGate
-    routeGroupId: Text
+    routeGroupId: Maybe Text
     riderId: Id Person
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
@@ -333,7 +333,7 @@ JourneyLeg:
     distance: (Kernel.Types.Common.Distance <$> distance <*> distanceUnit)|E
     fromStopDetails: (Just $ Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails fromStopCode fromStopPlatformCode fromStopName fromStopGtfsId)|E
     toStopDetails: (Just $ Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails toStopCode toStopPlatformCode toStopName toStopGtfsId)|E
-    routeDetails: Storage.Queries.RouteDetails.findAllByJourneyLegId id|EM
+    routeDetails: Storage.Queries.RouteDetails.findAllByJourneyLegIdAndRouteGroupId id routeGroupId|EM
     agency: (Kernel.External.MultiModal.Interface.Types.MultiModalAgency agencyGtfsId <$> agencyName)|E
     startLocation: Kernel.External.Maps.Google.MapsClient.LatLngV2 startLocationLat startLocationLon|E
     endLocation: Kernel.External.Maps.Google.MapsClient.LatLngV2 endLocationLat endLocationLon|E
@@ -342,7 +342,6 @@ JourneyLeg:
     straightLineExit: straightLineExit >>= Kernel.Utils.JSON.valueToMaybe|E
     osmEntrance: osmEntrance >>= Kernel.Utils.JSON.valueToMaybe|E
     osmExit: osmExit >>= Kernel.Utils.JSON.valueToMaybe|E
-    routeGroupId: fromMaybe "default-group-id" routeGroupId|E
     riderId: Storage.Queries.Transformers.JourneyLeg.getRiderId journeyId riderId|EM
 
   toTType:
@@ -367,7 +366,6 @@ JourneyLeg:
     osmExit: osmExit >>= Just . Data.Aeson.toJSON|E
     agencyGtfsId: (agency >>= (.gtfsId))|E
     agencyName: (agency <&> (.name))|E
-    routeGroupId: Just routeGroupId|E
     riderId: Just (Kernel.Types.Id.getId riderId)|E
 
   excludedDefaultQueries:
@@ -384,7 +382,7 @@ JourneyLeg:
 RouteDetails:
   fields:
     id: Id RouteDetails
-    routeGroupId: Text
+    routeGroupId: Maybe Text
     journeyLegId: Text
     routeGtfsId: Maybe Text
     routeCode: Maybe Text
@@ -421,19 +419,11 @@ RouteDetails:
     # Tracking --
     trackingStatus: Maybe TrackingStatus
 
-  beamType:
-    routeGroupId: Maybe Text
-
-  fromTType:
-    routeGroupId: fromMaybe "default-group-id" routeGroupId|E
-
-  toTType:
-    routeGroupId: Just routeGroupId|E
-
   queries:
-    findAllByJourneyLegId:
+    findAllByJourneyLegIdAndRouteGroupId:
       kvFunction: findAllWithKV
-      where: journeyLegId
+      where:
+        and: [journeyLegId, routeGroupId]
       orderBy:
         field: subLegOrder
         order: asc
@@ -452,6 +442,7 @@ RouteDetails:
   constraints:
     id: PrimaryKey
     journeyLegId: "!SecondaryKey"
+    routeGroupId: "!SecondaryKey"
 
 JourneyFeedback:
   fields:

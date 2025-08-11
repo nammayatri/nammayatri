@@ -22,8 +22,8 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.RouteDetails.RouteDetails] -> m ())
 createMany = traverse_ create
 
-findAllByJourneyLegId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m ([Domain.Types.RouteDetails.RouteDetails]))
-findAllByJourneyLegId journeyLegId = do findAllWithKV [Se.Is Beam.journeyLegId $ Se.Eq journeyLegId]
+findAllByJourneyLegIdAndRouteGroupId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m [Domain.Types.RouteDetails.RouteDetails])
+findAllByJourneyLegIdAndRouteGroupId journeyLegId routeGroupId = do findAllWithKV [Se.And [Se.Is Beam.journeyLegId $ Se.Eq journeyLegId, Se.Is Beam.routeGroupId $ Se.Eq routeGroupId]]
 
 updateAlternateShortNames :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Kernel.Prelude.Text] -> Kernel.Prelude.Text -> m ())
 updateAlternateShortNames alternateShortNames journeyLegId = do
@@ -60,7 +60,7 @@ updateByPrimaryKey (Domain.Types.RouteDetails.RouteDetails {..}) = do
       Se.Set Beam.routeCode routeCode,
       Se.Set Beam.routeColorCode routeColorCode,
       Se.Set Beam.routeColorName routeColorName,
-      Se.Set Beam.routeGroupId (Just routeGroupId),
+      Se.Set Beam.routeGroupId routeGroupId,
       Se.Set Beam.routeGtfsId routeGtfsId,
       Se.Set Beam.routeLongName routeLongName,
       Se.Set Beam.routeShortName routeShortName,
@@ -103,7 +103,7 @@ instance FromTType' Beam.RouteDetails Domain.Types.RouteDetails.RouteDetails whe
             routeCode = routeCode,
             routeColorCode = routeColorCode,
             routeColorName = routeColorName,
-            routeGroupId = fromMaybe "default-group-id" routeGroupId,
+            routeGroupId = routeGroupId,
             routeGtfsId = routeGtfsId,
             routeLongName = routeLongName,
             routeShortName = routeShortName,
@@ -143,7 +143,7 @@ instance ToTType' Beam.RouteDetails Domain.Types.RouteDetails.RouteDetails where
         Beam.routeCode = routeCode,
         Beam.routeColorCode = routeColorCode,
         Beam.routeColorName = routeColorName,
-        Beam.routeGroupId = Just routeGroupId,
+        Beam.routeGroupId = routeGroupId,
         Beam.routeGtfsId = routeGtfsId,
         Beam.routeLongName = routeLongName,
         Beam.routeShortName = routeShortName,

@@ -42,7 +42,7 @@ data JourneyLeg = JourneyLeg
     osmExit :: Kernel.Prelude.Maybe Kernel.External.MultiModal.Interface.Types.MultiModalLegGate,
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     routeDetails :: [Domain.Types.RouteDetails.RouteDetails],
-    routeGroupId :: Kernel.Prelude.Text,
+    routeGroupId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     sequenceNumber :: Kernel.Prelude.Int,
     serviceTypes :: Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceTierType],
     startLocation :: Kernel.External.Maps.Google.MapsClient.Types.LatLngV2,
