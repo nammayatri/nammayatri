@@ -46,8 +46,8 @@ getTaxiJourneyBookingStatus mbLegSearchId mbPricingId = do
             Just estimate -> return $ TaxiEstimate estimate.status
             Nothing -> return $ TaxiInitial EmptyParam
 
-getFRFSJourneyBookingStatus :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => Maybe Text -> Maybe Text -> m FRFSJourneyLegStatus
-getFRFSJourneyBookingStatus mbLegSearchId _mbPricingId = do
+getFRFSJourneyBookingStatus :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => Maybe Text -> m FRFSJourneyLegStatus
+getFRFSJourneyBookingStatus mbLegSearchId = do
   mbBooking <- maybe (return Nothing) (QFRFSBooking.findBySearchId) (Id <$> mbLegSearchId)
   case mbBooking of
     Just booking -> do
@@ -111,24 +111,16 @@ getTaxiJourneyLegTrackingStatus mbLegSearchId mbPricingId journeyRouteDetails = 
       when (journeyRouteDetails.trackingStatus /= Just Ongoing) $ do
         void $ QRouteDetails.updateTrackingStatus (Just Ongoing) journeyRouteDetails.id
       return $ Just Ongoing
-    TaxiFeedback FEEDBACK_PENDING -> do
-      when (journeyRouteDetails.trackingStatus /= Just FeedbackPending) $ do
-        void $ QRouteDetails.updateTrackingStatus (Just FeedbackPending) journeyRouteDetails.id
-      return $ Just FeedbackPending
     TaxiRide DTaxiRide.COMPLETED -> do
       when (journeyRouteDetails.trackingStatus /= Just Finished) $ do
         void $ QRouteDetails.updateTrackingStatus (Just Finished) journeyRouteDetails.id
       return $ Just Finished
     _ -> return journeyRouteDetails.trackingStatus
 
-getFRFSJourneyLegTrackingStatus :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => Maybe Text -> Maybe Text -> DRouteDetails.RouteDetails -> m (Maybe TrackingStatus)
-getFRFSJourneyLegTrackingStatus mbLegSearchId mbPricingId journeyRouteDetails = do
-  frfsJourneyLegStatus <- getFRFSJourneyBookingStatus mbLegSearchId mbPricingId
+getFRFSJourneyLegTrackingStatus :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => Maybe Text -> DRouteDetails.RouteDetails -> m (Maybe TrackingStatus)
+getFRFSJourneyLegTrackingStatus mbLegSearchId journeyRouteDetails = do
+  frfsJourneyLegStatus <- getFRFSJourneyBookingStatus mbLegSearchId
   case frfsJourneyLegStatus of
-    FRFSFeedback FEEDBACK_PENDING -> do
-      when (journeyRouteDetails.trackingStatus /= Just FeedbackPending) $ do
-        void $ QRouteDetails.updateTrackingStatus (Just FeedbackPending) journeyRouteDetails.id
-      return $ Just FeedbackPending
     FRFSBooking DFRFSBooking.CONFIRMED -> do
       when (journeyRouteDetails.trackingStatus /= Just Ongoing) $ do
         void $ QRouteDetails.updateTrackingStatus (Just Ongoing) journeyRouteDetails.id
@@ -143,6 +135,6 @@ getFRFSJourneyLegTrackingStatus mbLegSearchId mbPricingId journeyRouteDetails = 
       return $ Just Finished
     _ -> return journeyRouteDetails.trackingStatus
 
-getWalkJourneyLegStatus :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => Maybe Text -> Maybe Text -> DRouteDetails.RouteDetails -> m (Maybe TrackingStatus)
-getWalkJourneyLegStatus _mbLegSearchId _mbPricingId journeyRouteDetails = do
+getWalkJourneyLegStatus :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => DRouteDetails.RouteDetails -> m (Maybe TrackingStatus)
+getWalkJourneyLegStatus journeyRouteDetails = do
   return journeyRouteDetails.trackingStatus

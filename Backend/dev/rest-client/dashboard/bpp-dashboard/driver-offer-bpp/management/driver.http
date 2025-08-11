@@ -172,3 +172,11 @@ content-type: application/json
 { "driverTag" : "DriverSpeed#FAST_DRIVER",
   "isAddingTag" : true
 }
+
+###
+
+# @name getDriverStats
+
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/driver/stats?entityId={{driverId2}}
+token: {{juspay_admin}}
+content-type: application/json

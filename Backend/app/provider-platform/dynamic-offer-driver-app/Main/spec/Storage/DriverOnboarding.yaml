@@ -708,7 +708,7 @@ DriverPanCard:
   tableName: driver_pan_card
   types:
     VerifiedBy:
-      enum: "FRONTEND_SDK,DASHBOARD"
+      enum: "FRONTEND_SDK,DASHBOARD,DASHBOARD_ADMIN,DASHBOARD_USER"
     PanType:
       enum: "INDIVIDUAL,BUSINESS"
   fields:

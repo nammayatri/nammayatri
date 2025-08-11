@@ -15,12 +15,16 @@ import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified Domain.Action.UI.Location as DLoc
 import Domain.Action.UI.Ride as DRide
 import qualified Domain.Types.BookingCancellationReason as SBCR
+import qualified Domain.Types.BookingStatus as DTaxiBooking
 import qualified Domain.Types.BookingUpdateRequest as DBUR
 import qualified Domain.Types.CancellationReason as SCR
 import qualified Domain.Types.Estimate as DEstimate
+import qualified Domain.Types.EstimateStatus as DTaxiEstimate
 import Domain.Types.Extra.Ride as DRide
 import Domain.Types.FRFSRouteDetails
 import qualified Domain.Types.FRFSTicketBooking as DFRFSBooking
+import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSBooking
+import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
 import qualified Domain.Types.Journey as DJourney
 import qualified Domain.Types.JourneyLeg as DJourneyLeg
 import qualified Domain.Types.Location as DLocation
@@ -30,6 +34,7 @@ import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.MultimodalPreferences as DMP
 import qualified Domain.Types.Person as DPerson
+import qualified Domain.Types.RideStatus as DTaxiRide
 import qualified Domain.Types.RiderConfig
 import qualified Domain.Types.Trip as DTrip
 import Environment
@@ -287,12 +292,48 @@ checkAndMarkTerminalJourneyStatus journey feedbackRequired isCancelSearchApi = g
             JL.Transit legStates -> legStates <> acc
         )
         []
+
+    isCancelled :: JL.JourneyLegStateData -> Bool
+    isCancelled legState =
+      legState.status == JL.Cancelled -- TODO: Remove this once below is used always
+        || case legState.legStatus of
+          Just (JL.TaxiStatusElement legStatus) -> legStatus.bookingStatus `elem` [JMState.TaxiEstimate DTaxiEstimate.CANCELLED, JMState.TaxiBooking DTaxiBooking.CANCELLED, JMState.TaxiRide DTaxiRide.CANCELLED]
+          Just (JL.WalkStatusElement legStatus) -> legStatus.trackingStatus == Just JMState.Finished
+          Just (JL.MetroStatusElement legStatus) -> legStatus.bookingStatus `elem` [JMState.FRFSBooking DFRFSBooking.CANCELLED, JMState.FRFSTicket DFRFSTicket.CANCELLED]
+          Just (JL.BusStatusElement legStatus) -> legStatus.bookingStatus `elem` [JMState.FRFSBooking DFRFSBooking.CANCELLED, JMState.FRFSTicket DFRFSTicket.CANCELLED]
+          Just (JL.SubwayStatusElement legStatus) -> legStatus.bookingStatus `elem` [JMState.FRFSBooking DFRFSBooking.CANCELLED, JMState.FRFSTicket DFRFSTicket.CANCELLED]
+          Nothing -> False
+
+    isCompleted :: JL.JourneyLegStateData -> Bool
+    isCompleted legState =
+      legState.status `elem` journeyLegTerminalStatuses -- TODO: Remove this once below is used always
+        || case legState.legStatus of
+          Just (JL.TaxiStatusElement legStatus) -> legStatus.bookingStatus `elem` [JMState.TaxiBooking DTaxiBooking.COMPLETED, JMState.TaxiRide DTaxiRide.COMPLETED] || (not feedbackRequired && legStatus.bookingStatus == JMState.TaxiFeedback JMState.FEEDBACK_PENDING)
+          Just (JL.WalkStatusElement legStatus) -> legStatus.trackingStatus == Just JMState.Finished
+          Just (JL.MetroStatusElement legStatus) -> legStatus.bookingStatus `elem` [JMState.FRFSTicket DFRFSTicket.USED] || (not feedbackRequired && legStatus.bookingStatus == JMState.FRFSFeedback JMState.FEEDBACK_PENDING)
+          Just (JL.BusStatusElement legStatus) -> legStatus.bookingStatus `elem` [JMState.FRFSTicket DFRFSTicket.USED] || (not feedbackRequired && legStatus.bookingStatus == JMState.FRFSFeedback JMState.FEEDBACK_PENDING)
+          Just (JL.SubwayStatusElement legStatus) -> legStatus.bookingStatus `elem` [JMState.FRFSTicket DFRFSTicket.USED] || (not feedbackRequired && legStatus.bookingStatus == JMState.FRFSFeedback JMState.FEEDBACK_PENDING)
+          Nothing -> False
+
+    isFeedbackPending :: JL.JourneyLegStateData -> Bool
+    isFeedbackPending legState =
+      legState.status `elem` journeyLegTerminalStatuses -- TODO: Remove this once below is used always
+        || ( feedbackRequired
+               && case legState.legStatus of
+                 Just (JL.TaxiStatusElement legStatus) -> legStatus.bookingStatus == JMState.TaxiFeedback JMState.FEEDBACK_PENDING
+                 Just (JL.WalkStatusElement legStatus) -> legStatus.trackingStatus == Just JMState.Finished
+                 Just (JL.MetroStatusElement legStatus) -> legStatus.bookingStatus == JMState.FRFSFeedback JMState.FEEDBACK_PENDING
+                 Just (JL.BusStatusElement legStatus) -> legStatus.bookingStatus == JMState.FRFSFeedback JMState.FEEDBACK_PENDING
+                 Just (JL.SubwayStatusElement legStatus) -> legStatus.bookingStatus == JMState.FRFSFeedback JMState.FEEDBACK_PENDING
+                 Nothing -> False
+           )
+
     go allLegsState
-      | all (\legState -> legState.status == JL.Cancelled) allLegsState =
+      | all isCancelled allLegsState =
         updateJourneyStatus journey DJourney.CANCELLED
-      | all (\legState -> legState.status `elem` journeyLegTerminalStatuses) allLegsState && (journey.status == DJourney.FEEDBACK_PENDING || not feedbackRequired) =
+      | all isCompleted allLegsState && (journey.status == DJourney.FEEDBACK_PENDING || not feedbackRequired) =
         updateJourneyStatus journey DJourney.COMPLETED
-      | all (\legState -> legState.status `elem` journeyLegTerminalStatuses) allLegsState =
+      | all isFeedbackPending allLegsState =
         updateJourneyStatus journey DJourney.FEEDBACK_PENDING
       | otherwise = pure ()
 
@@ -465,6 +506,7 @@ startJourney ::
   m ()
 startJourney confirmElements forcedBookedLegOrder journeyId = do
   allLegs <- getAllLegsInfo journeyId False
+  mapM_ (\leg -> QTBooking.updateOnInitDoneBySearchId (Just False) (Id leg.searchId)) allLegs -- TODO :: Handle the case where isMultiAllowed is False
   mapM_
     ( \leg -> do
         let mElement = find (\element -> element.journeyLegOrder == leg.order) confirmElements
@@ -596,6 +638,21 @@ snapJourneyLegToNearestGate journeyLeg = do
                     find (\g -> g.point == nearestResp.origin) (toList nonEmptyGates)
           return nearestGateLocation
 
+mkLocationWithGate ::
+  Maybe MultiModalLegGate ->
+  LA.LocationAddress ->
+  LatLngV2 ->
+  SearchReqLocation
+mkLocationWithGate mGate baseAddr fallbackLoc =
+  case mGate of
+    Just gate ->
+      let lat = fromMaybe fallbackLoc.latitude gate.lat
+          lon = fromMaybe fallbackLoc.longitude gate.lon
+       in JL.mkSearchReqLocation
+            (if isJust (gate.streetName) then baseAddr {LA.street = gate.streetName} else baseAddr)
+            (LatLngV2 lat lon)
+    Nothing -> JL.mkSearchReqLocation baseAddr fallbackLoc
+
 addTaxiLeg ::
   JL.SearchRequestFlow m r c =>
   DJourney.Journey ->
@@ -604,8 +661,8 @@ addTaxiLeg ::
   LA.LocationAddress ->
   m JL.SearchResponse
 addTaxiLeg journey journeyLeg originAddress destinationAddress = do
-  let startLocation = JL.mkSearchReqLocation originAddress journeyLeg.startLocation
-  let endLocation = JL.mkSearchReqLocation destinationAddress journeyLeg.endLocation
+  let startLocation = mkLocationWithGate journeyLeg.exit originAddress journeyLeg.startLocation
+  let endLocation = mkLocationWithGate journeyLeg.entrance destinationAddress journeyLeg.endLocation
   let taxiSearchReq = mkTaxiSearchReq startLocation [endLocation]
   JL.search taxiSearchReq
   where
@@ -625,8 +682,8 @@ addWalkLeg ::
   LA.LocationAddress ->
   m JL.SearchResponse
 addWalkLeg journey journeyLeg originAddress destinationAddress = do
-  let startLocation = JL.mkSearchReqLocation originAddress journeyLeg.startLocation
-  let endLocation = JL.mkSearchReqLocation destinationAddress journeyLeg.endLocation
+  let startLocation = mkLocationWithGate journeyLeg.exit originAddress journeyLeg.startLocation
+  let endLocation = mkLocationWithGate journeyLeg.entrance destinationAddress journeyLeg.endLocation
   let walkSearchReq = mkWalkSearchReq startLocation endLocation
   JL.search walkSearchReq
   where
@@ -884,9 +941,9 @@ cancelLeg journeyId journeyLeg cancellationReasonCode isSkipped skippedDuringCon
     logError $ "Checking and marking terminal journey status for journey: " <> show journey.id.getId <> " with updatedLegStatus: " <> show (length updatedLegStatus)
     when (length updatedLegStatus == 1) $ do
       checkAndMarkTerminalJourneyStatus journey (not isSkipped) (isJust cancelEstimateId) updatedLegStatus
-  whenJust journeyLeg.journeyLegId $ \journeyLegId -> do
-    when isSkipped $ do
-      JMStateUtils.setJourneyLegTrackingStatus journeyLegId Nothing JMState.Finished
+  -- whenJust journeyLeg.journeyLegId $ \journeyLegId -> do
+  --   when isSkipped $ do
+  --     JMStateUtils.setJourneyLegTrackingStatus journeyLegId Nothing JMState.Finished
   return ()
 
 cancelRemainingLegs ::
@@ -1575,7 +1632,6 @@ generateJourneyInfoResponse journey legs = do
         startTime = journey.startTime,
         endTime = journey.endTime,
         merchantOperatingCityName,
-        crisSdkToken = Nothing,
         paymentOrderShortId = journey.paymentOrderShortId,
         unifiedQRV2,
         result = Just "Success"
@@ -1638,6 +1694,7 @@ generateJourneyStatusResponse personId merchantId journey legs = do
             { legOrder = legData.legOrder,
               subLegOrder = legData.subLegOrder,
               status = legData.status,
+              legStatus = legData.legStatus,
               userPosition = legData.userPosition,
               vehiclePositions = legData.vehiclePositions,
               mode = legData.mode
@@ -1687,5 +1744,4 @@ markLegStatus mbStatus trackingStatus leg journeyId mbSubLegOrder = do
       JMState.Ongoing -> JL.Ongoing
       JMState.Finishing -> JL.Finishing
       JMState.ExitingStation -> JL.Finishing
-      JMState.FeedbackPending -> JL.Completed
       JMState.Finished -> JL.Completed

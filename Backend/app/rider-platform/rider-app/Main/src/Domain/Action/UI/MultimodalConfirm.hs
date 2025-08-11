@@ -59,7 +59,7 @@ import qualified Domain.Types.Merchant
 import Domain.Types.MultimodalPreferences as DMP
 import qualified Domain.Types.Person
 import Environment
-import EulerHS.Prelude hiding (all, any, catMaybes, concatMap, elem, find, forM_, id, length, map, mapM_, null, sum, whenJust)
+import EulerHS.Prelude hiding (all, any, catMaybes, concatMap, elem, find, forM_, id, length, map, mapM_, null, sum, toList, whenJust)
 import qualified ExternalBPP.CallAPI as CallExternalBPP
 import Kernel.External.Encryption (decrypt)
 import Kernel.External.MultiModal.Interface.Types as MultiModalTypes
@@ -174,7 +174,6 @@ getMultimodalBookingInfo ::
 getMultimodalBookingInfo (mbPersonId, _merchantId) journeyId = do
   journey <- JM.getJourney journeyId
   legs <- JM.getAllLegsInfo journeyId False
-  when (journey.status == Domain.Types.Journey.INITIATED) $ JM.updateJourneyStatus journey Domain.Types.Journey.INPROGRESS -- move it to payment success
   allJourneyFrfsBookings <- QFRFSTicketBooking.findAllByJourneyId (Just journeyId)
   personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
 
@@ -280,8 +279,11 @@ getMultimodalBookingPaymentStatus ::
   )
 getMultimodalBookingPaymentStatus (mbPersonId, merchantId) journeyId = do
   personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
+  person <- QP.findById personId >>= fromMaybeM (InvalidRequest "Person not found")
   allJourneyFrfsBookings <- QFRFSTicketBooking.findAllByJourneyId (Just journeyId)
   frfsBookingStatusArr <- mapM (FRFSTicketService.frfsBookingStatus (personId, merchantId) True) allJourneyFrfsBookings
+  paymentGateWayId <- Payment.fetchGatewayReferenceId merchantId person.merchantOperatingCityId Nothing Payment.FRFSMultiModalBooking
+  logInfo $ "paymentGateWayId: " <> show paymentGateWayId
   let anyFirstBooking = listToMaybe frfsBookingStatusArr
       paymentOrder =
         anyFirstBooking >>= (.payment)
@@ -312,14 +314,16 @@ getMultimodalBookingPaymentStatus (mbPersonId, merchantId) journeyId = do
         ApiTypes.JourneyBookingPaymentStatus
           { journeyId,
             paymentOrder,
-            paymentFareUpdate = Just paymentFareUpdate
+            paymentFareUpdate = Just paymentFareUpdate,
+            gatewayReferenceId = paymentGateWayId
           }
     else do
       return $
         ApiTypes.JourneyBookingPaymentStatus
           { journeyId,
             paymentOrder = Nothing,
-            paymentFareUpdate = Nothing
+            paymentFareUpdate = Nothing,
+            gatewayReferenceId = paymentGateWayId
           }
 
 -- TODO :: To be deprecated @Kavyashree
@@ -885,19 +889,31 @@ getMultimodalOrderGetLegTierOptions (mbPersonId, merchantId) journeyId legOrder 
   now <- getCurrentTime
   journeyLegInfo <- find (\leg -> leg.sequenceNumber == legOrder) legs & fromMaybeM (InvalidRequest "No matching journey leg found for the given legOrder")
   let mbAgencyId = journeyLegInfo.agency >>= (.gtfsId)
+  let vehicleCategory = castTravelModeToVehicleCategory journeyLegInfo.mode
+  quotes <- maybe (pure []) (QFRFSQuote.findAllBySearchId . Id) journeyLegInfo.legSearchId
+  let availableServiceTiers = mapMaybe JMTypes.getServiceTierFromQuote quotes
+  mbIntegratedBPPConfig <- SIBC.findMaybeIntegratedBPPConfigFromAgency mbAgencyId person.merchantOperatingCityId vehicleCategory DIBC.MULTIMODAL
   let mbRouteDetail = journeyLegInfo.routeDetails & listToMaybe
   let mbFomStopCode = mbRouteDetail >>= (.fromStopCode)
   let mbToStopCode = mbRouteDetail >>= (.toStopCode)
-  let vehicleCategory = castTravelModeToVehicleCategory journeyLegInfo.mode
   let mbArrivalTime = mbRouteDetail >>= (.fromArrivalTime)
   let arrivalTime = fromMaybe now mbArrivalTime
-  mbIntegratedBPPConfig <- SIBC.findMaybeIntegratedBPPConfigFromAgency mbAgencyId person.merchantOperatingCityId vehicleCategory DIBC.MULTIMODAL
+
+  -- Group quotes by via field
+  let groupedServiceTiers = map toList $ groupBy (\a b -> a.via == b.via) $ sortBy (comparing (.via)) availableServiceTiers
+
   case (mbFomStopCode, mbToStopCode, mbIntegratedBPPConfig) of
     (Just fromStopCode, Just toStopCode, Just integratedBPPConfig) -> do
-      quotes <- maybe (pure []) (QFRFSQuote.findAllBySearchId . Id) journeyLegInfo.legSearchId
-      let availableServiceTiers = mapMaybe JMTypes.getServiceTierFromQuote quotes
-      (_, availableRoutesByTier) <- JLU.findPossibleRoutes (Just availableServiceTiers) fromStopCode toStopCode arrivalTime integratedBPPConfig merchantId person.merchantOperatingCityId vehicleCategory
-      return $ ApiTypes.LegServiceTierOptionsResp {options = availableRoutesByTier}
+      -- For each group of service tiers with same via
+      allRoutes <- forM groupedServiceTiers $ \serviceTierGroup -> do
+        let stopCode = case listToMaybe serviceTierGroup >>= (.via) >>= (Just . T.strip) of
+              Nothing -> toStopCode -- If via is null use toStopCode
+              Just "" -> toStopCode -- if there is no via point
+              Just via -> T.takeWhile (/= '-') via -- Split via on '-' and take first element
+        (_, availableRoutesByTier) <- JLU.findPossibleRoutes (Just serviceTierGroup) fromStopCode stopCode arrivalTime integratedBPPConfig merchantId person.merchantOperatingCityId vehicleCategory (vehicleCategory /= Enums.SUBWAY)
+        return availableRoutesByTier
+
+      return $ ApiTypes.LegServiceTierOptionsResp {options = concat allRoutes}
     _ -> return $ ApiTypes.LegServiceTierOptionsResp {options = []}
   where
     castTravelModeToVehicleCategory :: DTrip.MultimodalTravelMode -> Enums.VehicleCategory
@@ -1025,7 +1041,7 @@ postMultimodalComplete (mbPersonId, merchantId) journeyId = do
   personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
   journey <- JM.getJourney journeyId
   legs <- JM.getAllLegsInfo journeyId False
-  let isTaxiLegOngoing = any (\leg -> leg.travelMode == DTrip.Taxi && leg.status `elem` JMTypes.cannotCompleteJourneyIfTaxiLegIsInThisStatus) legs
+  let isTaxiLegOngoing = any (\leg -> leg.travelMode == DTrip.Taxi && leg.status `elem` JMTypes.cannotCompleteOrCancelJourneyIfTaxiLegIsInThisStatus) legs
   when isTaxiLegOngoing $ throwError (InvalidRequest "Taxi leg is ongoing, cannot complete journey")
   mapM_ (\leg -> markAllSubLegsCompleted leg journeyId) legs
   updatedLegStatus <- JM.getAllLegsStatus journey
@@ -1041,9 +1057,15 @@ postMultimodalOrderSoftCancel ::
     Kernel.Prelude.Int ->
     Environment.Flow Kernel.Types.APISuccess.APISuccess
   )
-postMultimodalOrderSoftCancel (_, merchantId) journeyId legOrder = do
+postMultimodalOrderSoftCancel (_, merchantId) journeyId _ = do
   merchant <- CQM.findById merchantId >>= fromMaybeM (InvalidRequest "Invalid merchant id")
-  ticketBooking <- QFRFSTicketBooking.findByJourneyIdAndLegOrder journeyId legOrder >>= fromMaybeM (InvalidRequest "No FRFS booking found for the leg")
+  legs <- JM.getAllLegsInfo journeyId False
+  let isTaxiLegOngoing = any (\leg -> leg.travelMode == DTrip.Taxi && leg.status `elem` JMTypes.cannotCompleteOrCancelJourneyIfTaxiLegIsInThisStatus) legs
+  when isTaxiLegOngoing $ throwError (InvalidRequest "Taxi leg is ongoing, cannot cancel journey")
+  ticketBookings <- QFRFSTicketBooking.findAllByJourneyId (Just journeyId)
+  when (null ticketBookings) $ throwError (InvalidRequest "No FRFS bookings found for this journey")
+  unless (length ticketBookings == 1) $ throwError (InvalidRequest "Multiple FRFS bookings found for this journey")
+  let ticketBooking = head ticketBookings
   merchantOperatingCity <- CQMOC.findById ticketBooking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantOperatingCityId- " <> show ticketBooking.merchantOperatingCityId)
   bapConfig <- CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (Utils.frfsVehicleCategoryToBecknVehicleCategory ticketBooking.vehicleType) >>= fromMaybeM (InternalError "Beckn Config not found")
   frfsConfig <-
@@ -1063,6 +1085,9 @@ getMultimodalOrderCancelStatus ::
     Environment.Flow API.Types.UI.MultimodalConfirm.MultimodalCancelStatusResp
   )
 getMultimodalOrderCancelStatus (_, __) journeyId legOrder = do
+  legs <- JM.getAllLegsInfo journeyId False
+  let isTaxiLegOngoing = any (\leg -> leg.travelMode == DTrip.Taxi && leg.status `elem` JMTypes.cannotCompleteOrCancelJourneyIfTaxiLegIsInThisStatus) legs
+  when isTaxiLegOngoing $ throwError (InvalidRequest "Taxi leg is ongoing, cannot cancel journey")
   ticketBooking <- QFRFSTicketBooking.findByJourneyIdAndLegOrder journeyId legOrder >>= fromMaybeM (InvalidRequest "No FRFS booking found for the leg")
   return $
     ApiTypes.MultimodalCancelStatusResp

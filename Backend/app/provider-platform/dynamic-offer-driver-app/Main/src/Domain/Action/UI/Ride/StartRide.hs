@@ -207,7 +207,7 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
 
   pure APISuccess.Success
   where
-    isValidRideStatus status = status == DRide.NEW
+    isValidRideStatus status = (status == DRide.NEW || status == DRide.INPROGRESS)
 
 makeStartRideIdKey :: Id DP.Person -> Text
 makeStartRideIdKey driverId = "StartRideKey:PersonId-" <> driverId.getId

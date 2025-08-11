@@ -33,6 +33,7 @@ instance FromTType' Beam.Estimate Domain.Types.Estimate.Estimate where
         Domain.Types.Estimate.Estimate
           { backendAppVersion = backendAppVersion,
             backendConfigVersion = backendConfigVersion',
+            boostSearchPreSelectionServiceTierConfig = boostSearchPreSelectionServiceTierConfig,
             bppEstimateId = Kernel.Types.Id.Id bppEstimateId,
             clientBundleVersion = clientBundleVersion',
             clientConfigVersion = clientConfigVersion',
@@ -93,6 +94,7 @@ instance ToTType' Beam.Estimate Domain.Types.Estimate.Estimate where
     Beam.EstimateT
       { Beam.backendAppVersion = backendAppVersion,
         Beam.backendConfigVersion = fmap Kernel.Utils.Version.versionToText backendConfigVersion,
+        Beam.boostSearchPreSelectionServiceTierConfig = boostSearchPreSelectionServiceTierConfig,
         Beam.bppEstimateId = Kernel.Types.Id.getId bppEstimateId,
         Beam.clientBundleVersion = fmap Kernel.Utils.Version.versionToText clientBundleVersion,
         Beam.clientConfigVersion = fmap Kernel.Utils.Version.versionToText clientConfigVersion,

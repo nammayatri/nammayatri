@@ -3,6 +3,7 @@
 
 module API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding where
 
+import qualified API.Types.ProviderPlatform.Management.Endpoints.Account
 import qualified API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration
 import qualified Dashboard.Common
 import Data.Aeson
@@ -125,7 +126,7 @@ data VerifyType
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, Kernel.Prelude.ToParamSchema)
 
-type API = ("onboarding" :> (GetOnboardingDocumentConfigsHelper :<|> GetOnboardingRegisterStatusHelper :<|> PostOnboardingVerify :<|> GetOnboardingGetReferralDetailsHelper))
+type API = ("onboarding" :> (GetOnboardingDocumentConfigsHelper :<|> GetOnboardingRegisterStatusHelper :<|> PostOnboardingVerifyHelper :<|> GetOnboardingGetReferralDetailsHelper))
 
 type GetOnboardingDocumentConfigs =
   ( "document" :> "configs" :> QueryParam "makeSelfieAadhaarPanMandatory" Kernel.Prelude.Bool :> QueryParam "onlyVehicle" Kernel.Prelude.Bool
@@ -184,6 +185,15 @@ type GetOnboardingRegisterStatusHelper =
 
 type PostOnboardingVerify = ("verify" :> Capture "verifyType" VerifyType :> ReqBody '[JSON] VerifyReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
+type PostOnboardingVerifyHelper =
+  ( "verify" :> Capture "verifyType" VerifyType
+      :> QueryParam
+           "accessType"
+           API.Types.ProviderPlatform.Management.Endpoints.Account.DashboardAccessType
+      :> ReqBody '[JSON] VerifyReq
+      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+  )
+
 type GetOnboardingGetReferralDetails = ("get" :> "referralDetails" :> MandatoryQueryParam "referralCode" Kernel.Prelude.Text :> Get '[JSON] ReferralInfoRes)
 
 type GetOnboardingGetReferralDetailsHelper =
@@ -196,7 +206,7 @@ type GetOnboardingGetReferralDetailsHelper =
 data OnboardingAPIs = OnboardingAPIs
   { getOnboardingDocumentConfigs :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Role -> EulerHS.Types.EulerClient DocumentVerificationConfigList,
     getOnboardingRegisterStatus :: Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> EulerHS.Types.EulerClient StatusRes,
-    postOnboardingVerify :: VerifyType -> VerifyReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postOnboardingVerify :: VerifyType -> Kernel.Prelude.Maybe API.Types.ProviderPlatform.Management.Endpoints.Account.DashboardAccessType -> VerifyReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getOnboardingGetReferralDetails :: Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient ReferralInfoRes
   }
 

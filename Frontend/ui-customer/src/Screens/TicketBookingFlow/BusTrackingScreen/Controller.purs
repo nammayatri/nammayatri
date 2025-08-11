@@ -185,7 +185,7 @@ eval (UpdateStops (API.GetMetroStationResponse metroResponse)) state =
 eval (BookTicketButtonAction PrimaryButton.OnClick) state = do
   if checkBusRouteEnabled state
     then exit $ GoToSearchLocation state
-    else exit $ GoToHomeScreen state
+    else exit $ GoToBusTicketBookingScreen state
 
 eval BackPressed state =
     case state.props.fromScreen of
@@ -462,7 +462,7 @@ eval UpdateToExpandView state = continue state {props{expandStopsView = true}}
 eval (BookTicketOnNoBus PrimaryButton.OnClick) state = 
   if checkBusRouteEnabled state 
     then continue state {data{isNoBusAvailable = true}}
-    else exit $ GoToHomeScreen state
+    else exit $ GoToBusTicketBookingScreen state
 
 eval (PopUpModalAction PopUpModal.OnButton1Click) state = exit $ GoToSearchLocation state
 eval (PopUpModalAction PopUpModal.OnButton2Click) state = continue state {data{isNoBusAvailable = false}}
@@ -503,9 +503,7 @@ drawDriverRoute resp state = do
   EHC.liftFlow $ JB.drawRoute [ routeConfig {routeWidth = 10} ] (EHC.getNewIDWithTag "BusTrackingScreenMap")
 
   EHC.liftFlow $ JB.setMapPadding 0 0 0 300
-  void $ foldM processStop 0 state.data.stopsList
-  where
-  processStop index (API.FRFSStationAPI item) = do
+  void $ foldM (\index (API.FRFSStationAPI item) -> do
     let
       lat = Mb.fromMaybe 0.0 item.lat
       lon = Mb.fromMaybe 0.0 item.lon
@@ -513,17 +511,21 @@ drawDriverRoute resp state = do
       pointertype = getStopType item.code index state
       size = getStopMarkerSize pointertype state.data.rideType index
       markerZIndex = getZIndex pointertype
-    void $ EHC.liftFlow $ JB.showMarker JB.defaultMarkerConfig { markerId = item.code, pointerIcon = getStopMarker pointertype state.data.rideType index, primaryText = item.name, markerSize = DI.toNumber size, zIndex = markerZIndex } lat lon size 0.5 (if pointertype == NORMAL_STOP then 0.5 else 0.9) (EHC.getNewIDWithTag "BusTrackingScreenMap")
+      stopLatLongOnRoute = calculateNearestWaypoint (API.LatLong {lat: lat, lon: lon}) route.points 1000.0
+      snappedLat = stopLatLongOnRoute.vehicleLocationOnRoute ^._lat
+      snappedLon = stopLatLongOnRoute.vehicleLocationOnRoute ^._lon
+    void $ EHC.liftFlow $ JB.showMarker JB.defaultMarkerConfig { markerId = item.code, pointerIcon = getStopMarker pointertype state.data.rideType index, primaryText = item.name, markerSize = DI.toNumber size, zIndex = markerZIndex } snappedLat snappedLon size 0.5 (if pointertype == NORMAL_STOP then 0.5 else 0.9) (EHC.getNewIDWithTag "BusTrackingScreenMap")
     when (DA.elem pointertype [SOURCE_STOP, DESTINATION_STOP] && (state.data.rideType == Mb.Just ST.STOP || index /= 0)) $ EHC.liftFlow $ runEffectFn1 
       EHR.upsertMarkerLabel 
         { id: item.code <> "label"
         , title: item.name
         , actionImage: ""
         , actionCallBack: ""
-        , position: {lat : lat , lng : lon}
+        , position: {lat : snappedLat , lng : snappedLon}
         , markerImage : ""
         }
     pure (index + 1)
+  ) 0 state.data.stopsList
 
 getPoint :: API.GetDriverLocationResp -> CTA.Paths
 getPoint (API.GetDriverLocationResp resp) = { lat: resp ^. _lat, lng: resp ^. _lon }

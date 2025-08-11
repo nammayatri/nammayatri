@@ -57,6 +57,7 @@ import qualified Domain.Types.NyRegularSubscription as NyRegularSubscription
 import qualified Domain.Types.Quote as DQuote
 import qualified Domain.Types.QuoteBreakup as DQuoteBreakup
 import qualified Domain.Types.RentalDetails as DRentalDetails
+import qualified Domain.Types.RiderConfig as DRiderConfig
 import Domain.Types.SearchRequest
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.ServiceTierType as DVST
@@ -79,6 +80,7 @@ import Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.BppDetails as CQBppDetails
 import qualified Storage.CachedQueries.InsuranceConfig as CQInsuranceConfig
 import qualified Storage.CachedQueries.Merchant as QMerch
+import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Estimate as QEstimate
@@ -270,6 +272,7 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
   now <- getCurrentTime
 
   mkBppDetails >>= CQBppDetails.createIfNotPresent
+  riderConfig <- QRC.findByMerchantOperatingCityId (cast searchRequest.merchantOperatingCityId) Nothing
   let isReservedSearch = isReservedRideSearch searchRequest
   mbNySubscription <- getNyRegularSubs isReservedSearch
   isValueAddNP <- CQVAN.isValueAddNP providerInfo.providerId
@@ -283,7 +286,7 @@ onSearch transactionId ValidatedOnSearchReq {..} = do
     else do
       deploymentVersion <- asks (.version)
 
-      estimates <- traverse (buildEstimate providerInfo now searchRequest deploymentVersion) (filterEstimtesByPrefference estimatesInfo blackListedVehicles mbNySubscription) -- add to SR
+      estimates <- traverse (buildEstimate providerInfo now searchRequest deploymentVersion (fromMaybe [] ((Just . (.boostSearchPreSelectionServiceTierConfig)) =<< riderConfig))) (filterEstimtesByPrefference estimatesInfo blackListedVehicles mbNySubscription) -- add to SR
       quotes <- traverse (buildQuote requestId providerInfo now searchRequest deploymentVersion) (filterQuotesByPrefference quotesInfo blackListedVehicles mbNySubscription)
       updateRiderPreferredOption quotes
       let mbRequiredEstimate = listToMaybe $ sortBy (comparing ((DEstimate.minFare . DEstimate.totalFareRange) <&> (.amount)) <> comparing ((DEstimate.maxFare . DEstimate.totalFareRange) <&> (.amount))) estimates
@@ -430,11 +433,14 @@ buildEstimate ::
   UTCTime ->
   SearchRequest ->
   DeploymentVersion ->
+  [DRiderConfig.VehicleServiceTierOrderConfig] ->
   EstimateInfo ->
   m DEstimate.Estimate
-buildEstimate providerInfo now searchRequest deploymentVersion EstimateInfo {..} = do
+buildEstimate providerInfo now searchRequest deploymentVersion boostSearchPreSelectionServiceTiersConfig EstimateInfo {..} = do
   uid <- generateGUID
   tripTerms <- buildTripTerms descriptions
+  let vehicleServiceTierType = fromMaybe (DV.castVariantToServiceTier vehicleVariant) serviceTierType
+  let boostSearchPreSelectionServiceTier = find (\boostSearchConfig -> boostSearchConfig.vehicle == vehicleServiceTierType) boostSearchPreSelectionServiceTiersConfig
   estimateBreakupList' <- buildEstimateBreakUp estimateBreakupList uid
   insuranceConfig <- CQInsuranceConfig.getInsuranceConfig searchRequest.merchantId searchRequest.merchantOperatingCityId tripCategory (DV.castVehicleVariantToVehicleCategory vehicleVariant)
   let isInsured = maybe False (\inc -> case inc.allowedVehicleServiceTiers of Just allowedTiers -> fromMaybe (DV.castVariantToServiceTier vehicleVariant) serviceTierType `elem` allowedTiers; Nothing -> True) insuranceConfig
@@ -451,7 +457,7 @@ buildEstimate providerInfo now searchRequest deploymentVersion EstimateInfo {..}
         providerUrl = providerInfo.url,
         estimatedDistance = searchRequest.distance,
         serviceTierName = serviceTierName,
-        vehicleServiceTierType = fromMaybe (DV.castVariantToServiceTier vehicleVariant) serviceTierType,
+        vehicleServiceTierType = vehicleServiceTierType,
         serviceTierShortDesc = serviceTierShortDesc,
         estimatedDuration = searchRequest.estimatedRideDuration,
         estimatedStaticDuration = searchRequest.estimatedRideStaticDuration,
@@ -489,6 +495,7 @@ buildEstimate providerInfo now searchRequest deploymentVersion EstimateInfo {..}
         tripCategory = Just tripCategory,
         insuredAmount = insuranceConfig >>= (.insuredAmount),
         isMultimodalSearch = searchRequest.isMultimodalSearch,
+        boostSearchPreSelectionServiceTierConfig = (Just . (.orderArray)) =<< boostSearchPreSelectionServiceTier,
         ..
       }
 

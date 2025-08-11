@@ -72,6 +72,7 @@ data EstimateAPIEntity = EstimateAPIEntity
     vehicleServiceTierSeatingCapacity :: Maybe Int,
     validTill :: UTCTime,
     vehicleIconUrl :: Maybe Text,
+    boostSearchPreSelectionServiceTierConfig :: Maybe [DVST.ServiceTierType],
     smartTipSuggestion :: Maybe HighPrecMoney,
     smartTipReason :: Maybe Text,
     isReferredRide :: Bool,

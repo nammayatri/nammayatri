@@ -21,12 +21,16 @@ import qualified Domain.Types.FRFSTicketBooking as FTBooking
 import qualified Domain.Types.FRFSTicketBookingStatus as FTBooking
 import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
 import Domain.Types.Merchant as Merchant
+import qualified Domain.Types.Trip as DTrip
 import Environment
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.JourneyLeg.Types as JL
+import qualified Lib.JourneyModule.Base as JM
+import qualified Lib.JourneyModule.State.Types as JMState
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.FRFSRecon as QFRFSRecon
 import qualified Storage.Queries.FRFSTicketBooking as QTBooking
@@ -64,4 +68,17 @@ onCancel merchant booking' dOnCancel = do
     Spec.CANCEL_INITIATED -> do
       void $ QTBooking.updateStatusById FTBooking.CANCEL_INITIATED booking.id
       void $ QFRFSRecon.updateStatusByTicketBookingId (Just DFRFSTicket.CANCEL_INITIATED) booking.id
+      whenJust booking.journeyId $ \journeyId -> do
+        allLegsInfo <- JM.getAllLegsInfo journeyId False
+        forM_ allLegsInfo $ \journeyLegInfo -> do
+          case journeyLegInfo.travelMode of
+            DTrip.Walk -> JM.markLegStatus (Just JL.Cancelled) (Just JMState.Finished) journeyLegInfo journeyId Nothing
+            DTrip.Taxi -> JM.markLegStatus (Just JL.Cancelled) (Just JMState.Finished) journeyLegInfo journeyId Nothing
+            _ -> do
+              unless (null booking'.journeyRouteDetails) $ do
+                forM_ booking'.journeyRouteDetails $ \routeDetails -> do
+                  JM.markLegStatus (Just JL.Cancelled) (Just JMState.Finished) journeyLegInfo journeyId routeDetails.subLegOrder
+        journey <- JM.getJourney journeyId
+        updatedLegStatus <- JM.getAllLegsStatus journey
+        JM.checkAndMarkTerminalJourneyStatus journey False False updatedLegStatus
     _ -> throwError $ InvalidRequest "Unexpected orderStatus received"

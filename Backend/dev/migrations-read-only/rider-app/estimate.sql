@@ -552,3 +552,9 @@ ALTER TABLE atlas_app.estimate ADD COLUMN is_multimodal_search boolean ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.estimate ADD COLUMN boost_search_pre_selection_service_tier_config text[] ;

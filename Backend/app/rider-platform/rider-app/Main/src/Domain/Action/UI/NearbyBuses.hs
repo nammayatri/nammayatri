@@ -78,19 +78,29 @@ getNearbyBuses merchantOperatingCityId nearbyDriverSearchRadius req = do
   busesBS :: [ByteString] <- CQMMB.withCrossAppRedisNew $ Hedis.geoSearch nearbyBusKey (Hedis.FromLonLat req.userLon req.userLat) (Hedis.ByRadius nearbyDriverSearchRadius "km")
   let buses = map decodeUtf8 busesBS
   logDebug $ "BusesBS: " <> show busesBS
-  logDebug $ "Buses: " <> show buses
+  logDebug $ "Buses List: " <> show buses
+  logDebug $ "User location: lat=" <> show req.userLat <> ", lon=" <> show req.userLon <> ", radius=" <> show nearbyDriverSearchRadius
+
   let vehicleCategory = castToOnDemandVehicleCategory req.vehicleType
   integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig merchantOperatingCityId vehicleCategory req.platformType
+
+  logDebug $ "Vehicle category: " <> show vehicleCategory
 
   busRouteMapping <- forM buses $ \vehicleNumber -> do
     mbResult <- SIBC.fetchFirstIntegratedBPPConfigResult integratedBPPConfigs $ \config ->
       maybeToList <$> OTPRest.getVehicleServiceType config vehicleNumber
+    logDebug $ "Vehicle " <> vehicleNumber <> " route mapping result: " <> show mbResult
     pure $ Kernel.Prelude.listToMaybe mbResult
+
+  logDebug $ "Bus route mapping: " <> show busRouteMapping
 
   let successfulMappings = catMaybes busRouteMapping
   let routeIds :: [Text] = nub $ map (.route_id) successfulMappings
 
+  logDebug $ "Successful mappings: " <> show successfulMappings
   logDebug $ "Route IDs: " <> show routeIds
+  logDebug $ "Number of unique routes found: " <> show (length routeIds)
+
   allBusesForRides <- mapM CQMMB.getRoutesBuses routeIds
   logDebug $ "All buses for rides: " <> show allBusesForRides
 
@@ -101,9 +111,14 @@ getNearbyBuses merchantOperatingCityId nearbyDriverSearchRadius req = do
           <$> SIBC.fetchFirstIntegratedBPPConfigResult
             integratedBPPConfigs
             ( \config -> do
-                maybeToList . fmap Route.shortName <$> OTPRest.getRouteByRouteId config routeId
+                routeShortNames <- maybeToList . fmap Route.shortName <$> OTPRest.getRouteByRouteId config routeId
+                logDebug $ "OTP getRouteByRouteId: " <> show routeShortNames
+                pure routeShortNames
             )
+      logDebug $ "Route " <> routeId <> " short name: " <> show mbShortName
       return $ (routeId,) <$> mbShortName
+
+  logDebug $ "Route short name map: " <> show routeShortNameMap
 
   let allBusesData =
         map
@@ -113,17 +128,23 @@ getNearbyBuses merchantOperatingCityId nearbyDriverSearchRadius req = do
           )
           allBusesForRides
   logDebug $ "All buses data: " <> show allBusesData
+  logDebug $ "Number of routes with buses: " <> show (length $ filter (not . null . (.buses)) allBusesData)
+  logDebug $ "Total buses found: " <> show (sum $ map (length . (.buses)) allBusesData)
 
   let serviceTypeMap :: HashMap.HashMap Text Text
       serviceTypeMap = HashMap.fromList $ map (\m -> (m.vehicle_no, m.service_type)) successfulMappings
 
+  logDebug $ "Service type map: " <> show serviceTypeMap
+
   mapM
     ( \busData -> do
+        logDebug $ "Processing route " <> busData.routeId <> " with " <> show (length busData.buses) <> " buses"
         mapM
           ( \bus -> do
               let mbShortName = HashMap.lookup busData.routeId routeShortNameMap
               let maybeServiceType = HashMap.lookup (bus.vehicleNumber) serviceTypeMap
               let busEta = Kernel.Prelude.listToMaybe $ fromMaybe [] bus.busData.eta_data
+              logDebug $ "Processing bus " <> bus.vehicleNumber <> " for route " <> busData.routeId
               return $
                 API.Types.UI.NearbyBuses.NearbyBus
                   { capacity = Nothing,

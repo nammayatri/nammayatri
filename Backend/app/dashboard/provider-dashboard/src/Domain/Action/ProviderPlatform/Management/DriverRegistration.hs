@@ -29,6 +29,7 @@ where
 
 import qualified API.Client.ProviderPlatform.Management as Client
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverRegistration as Common
+import qualified Domain.Action.ProviderPlatform.Management.Account as Common
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "lib-dashboard" Domain.Types.Person as DP
 import qualified Domain.Types.Transaction as DT
@@ -97,8 +98,9 @@ postDriverRegistrationRegisterDl :: ShortId DM.Merchant -> City.City -> ApiToken
 postDriverRegistrationRegisterDl merchantShortId opCity apiTokenInfo driverId req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just driverId) (Just req)
+  let mbAccessType = Common.castDashboardAccessType <$> apiTokenInfo.person.dashboardAccessType
   T.withTransactionStoring transaction $
-    Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationRegisterDl) driverId req
+    Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationRegisterDl) driverId req{accessType = mbAccessType}
 
 postDriverRegistrationRegisterRc :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.RegisterRCReq -> Flow APISuccess
 postDriverRegistrationRegisterRc merchantShortId opCity apiTokenInfo driverId req = do
