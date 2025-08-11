@@ -434,6 +434,9 @@ RouteDetails:
     findAllByJourneyLegId:
       kvFunction: findAllWithKV
       where: journeyLegId
+      orderBy:
+        field: subLegOrder
+        order: asc
     updateTrackingStatus:
       kvFunction: updateOneWithKV
       params: [trackingStatus]

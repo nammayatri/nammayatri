@@ -22,7 +22,7 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.RouteDetails.RouteDetails] -> m ())
 createMany = traverse_ create
 
-findAllByJourneyLegId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m [Domain.Types.RouteDetails.RouteDetails])
+findAllByJourneyLegId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m ([Domain.Types.RouteDetails.RouteDetails]))
 findAllByJourneyLegId journeyLegId = do findAllWithKV [Se.Is Beam.journeyLegId $ Se.Eq journeyLegId]
 
 updateAlternateShortNames :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Kernel.Prelude.Text] -> Kernel.Prelude.Text -> m ())

@@ -9,6 +9,7 @@ imports:
   LocationAPIEntity: Domain.Types.Location
   LegInfo: Lib.JourneyModule.Types
   TrackingStatus: Lib.JourneyModule.State.Types
+  JourneyBookingStatus: Lib.JourneyModule.State.Types
   JourneyLeg: Domain.Types.JourneyLeg
   IntegratedBPPConfig: Domain.Types.IntegratedBPPConfig
   LatLong: Kernel.External.Maps.Types
@@ -39,7 +40,6 @@ imports:
   Gate: Domain.Types.Station
   JourneyLegFeedbackData: Domain.Types.JourneyLegsFeedbacks
   FRFSTicketBookingStatus: Domain.Types.FRFSTicketBookingStatus
-  LegStatusElement: Lib.JourneyModule.Types
 
 module: MultimodalConfirm
 
@@ -65,7 +65,8 @@ types:
     legOrder: Int
     subLegOrder: Int
     status: JourneyLegStatus
-    legStatus: Maybe LegStatusElement
+    bookingStatus: Maybe JourneyBookingStatus
+    trackingStatus: Maybe TrackingStatus
     vehiclePositions: "[VehiclePosition]"
     userPosition: Maybe LatLong
     mode: MultimodalTravelMode

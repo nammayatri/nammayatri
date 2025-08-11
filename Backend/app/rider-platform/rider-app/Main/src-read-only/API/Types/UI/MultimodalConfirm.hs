@@ -27,6 +27,7 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Lib.JourneyLeg.Types
+import qualified Lib.JourneyModule.State.Types
 import qualified Lib.JourneyModule.Types
 import qualified Lib.JourneyModule.Utils
 import qualified Lib.Payment.Domain.Types.PaymentOrder
@@ -125,11 +126,12 @@ data LegServiceTierOptionsResp = LegServiceTierOptionsResp {options :: [Lib.Jour
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data LegStatus = LegStatus
-  { legOrder :: Kernel.Prelude.Int,
-    legStatus :: Kernel.Prelude.Maybe Lib.JourneyModule.Types.LegStatusElement,
+  { bookingStatus :: Kernel.Prelude.Maybe Lib.JourneyModule.State.Types.JourneyBookingStatus,
+    legOrder :: Kernel.Prelude.Int,
     mode :: Domain.Types.Trip.MultimodalTravelMode,
     status :: Lib.JourneyLeg.Types.JourneyLegStatus,
     subLegOrder :: Kernel.Prelude.Int,
+    trackingStatus :: Kernel.Prelude.Maybe Lib.JourneyModule.State.Types.TrackingStatus,
     userPosition :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
     vehiclePositions :: [Lib.JourneyModule.Types.VehiclePosition]
   }
