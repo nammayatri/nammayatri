@@ -58,9 +58,7 @@ putAccountUpdateRole _merchantShortId _opCity personId' accessType = do
   let personId = Kernel.Types.Id.cast personId'
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
   mbFleetOwnerInfo <- QFOI.findByPrimaryKey personId
-  when (accessType == Common.FLEET_OWNER && isNothing mbFleetOwnerInfo)
-    . DFleetManagement.createFleetOwnerInfo personId person.merchantId
-    $ Just False
+  when (accessType == Common.FLEET_OWNER && isNothing mbFleetOwnerInfo) $ DFleetManagement.createFleetOwnerInfo personId person.merchantId (Just False) Nothing
   updatePersonRole personId =<< castRole accessType
   pure Kernel.Types.APISuccess.Success
   where
