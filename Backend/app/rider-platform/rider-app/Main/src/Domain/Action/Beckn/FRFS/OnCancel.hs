@@ -71,17 +71,16 @@ onCancel merchant booking' dOnCancel = do
       whenJust booking.journeyId $ \journeyId -> do
         allLegsInfo <- JM.getAllLegsInfo journeyId
         forM_ allLegsInfo $ \journeyLegInfo -> do
-          let mbLegs =
-                case journeyLegInfo.legStatus of
-                  JT.BusStatus busStatus -> Just busStatus.legs
-                  JT.MetroStatus metroStatus -> Just metroStatus.legs
-                  JT.SubwayStatus subwayStatus -> Just subwayStatus.legs
-                  _ -> Nothing
-          case mbLegs of
-            Just legs -> do
-              forM_ legs $ \leg -> do
-                JM.markLegStatus (Just JL.Cancelled) (Just JMState.Finished) journeyLegInfo leg.subLegOrder
-            Nothing -> JM.markLegStatus (Just JL.Cancelled) (Just JMState.Finished) journeyLegInfo Nothing
+          case journeyLegInfo.legExtraInfo of
+            JT.Walk _ -> JM.markLegStatus (Just JL.Cancelled) (Just JMState.Finished) journeyLegInfo Nothing
+            JT.Taxi _ -> JM.markLegStatus (Just JL.Cancelled) (Just JMState.Finished) journeyLegInfo Nothing
+            JT.Bus _ -> JM.markLegStatus (Just JL.Cancelled) (Just JMState.Finished) journeyLegInfo Nothing
+            JT.Metro extraInfo -> do
+              forM_ extraInfo.routeInfo $ \routeInfo -> do
+                JM.markLegStatus (Just JL.Cancelled) (Just JMState.Finished) journeyLegInfo routeInfo.subOrder
+            JT.Subway extraInfo -> do
+              forM_ extraInfo.routeInfo $ \routeInfo -> do
+                JM.markLegStatus (Just JL.Cancelled) (Just JMState.Finished) journeyLegInfo routeInfo.subOrder
         journey <- JM.getJourney journeyId
         updatedLegStatus <- JM.getAllLegsStatus journey
         JM.checkAndMarkTerminalJourneyStatus journey False False updatedLegStatus

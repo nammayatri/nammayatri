@@ -33,7 +33,8 @@ instance JT.JourneyLeg WalkLegRequest m where
       JT.Single $
         JT.JourneyLegStateData
           { status = oldStatus,
-            legStatus = Just (JT.WalkStatusElement $ JT.JourneyWalkLegStatus {trackingStatus = trackingStatus}),
+            bookingStatus = Nothing,
+            trackingStatus = trackingStatus,
             userPosition = (.latLong) <$> listToMaybe req.riderLastPoints,
             vehiclePositions = [],
             legOrder = req.journeyLeg.sequenceNumber,

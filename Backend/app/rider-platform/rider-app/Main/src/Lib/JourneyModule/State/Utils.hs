@@ -19,20 +19,20 @@ import Storage.Queries.FRFSTicketBookingFeedback as QFRFSTicketBookingFeedback
 import Storage.Queries.JourneyLegsFeedbacks as SQJLFB
 import Storage.Queries.RouteDetails as QRouteDetails
 
-getFRFSAllStatuses :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => DJourneyLeg.JourneyLeg -> Maybe DFRFSBooking.FRFSTicketBooking -> m (JLTypes.JourneyLegStatus, FRFSJourneyLegStatus, [JourneyFRFSLegStatusElement])
+getFRFSAllStatuses :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => DJourneyLeg.JourneyLeg -> Maybe DFRFSBooking.FRFSTicketBooking -> m (JLTypes.JourneyLegStatus, Maybe JourneyBookingStatus, [(Int, Maybe TrackingStatus)])
 getFRFSAllStatuses journeyLeg mbBooking = do
   bookingStatus <- getFRFSJourneyBookingStatus mbBooking
   trackingStatuses <-
     mapM
       ( \routeDetail -> do
           trackingStatus <- getFRFSJourneyLegTrackingStatus mbBooking routeDetail
-          return $ JourneyFRFSLegStatusElement {trackingStatus = trackingStatus, bookingStatus = bookingStatus, subLegOrder = routeDetail.subLegOrder}
+          return (fromMaybe 1 routeDetail.subLegOrder, trackingStatus)
       )
       journeyLeg.routeDetails
   let oldStatus =
         if journeyLeg.isSkipped == Just True
           then JLTypes.Skipped
-          else maybe JLTypes.InPlan castTrackingStatusToJourneyLegStatus ((listToMaybe trackingStatuses) >>= (.trackingStatus)) -- for UI backward compatibility
+          else maybe JLTypes.InPlan castTrackingStatusToJourneyLegStatus ((listToMaybe trackingStatuses) >>= snd) -- for UI backward compatibility
   return (oldStatus, bookingStatus, trackingStatuses)
 
 getWalkAllStatuses :: DJourneyLeg.JourneyLeg -> (JLTypes.JourneyLegStatus, Maybe TrackingStatus)
@@ -41,7 +41,7 @@ getWalkAllStatuses journeyLeg = do
     Just routeDetail -> (maybe JLTypes.InPlan castTrackingStatusToJourneyLegStatus routeDetail.trackingStatus, routeDetail.trackingStatus)
     Nothing -> (JLTypes.InPlan, Nothing)
 
-getTaxiAllStatuses :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => DJourneyLeg.JourneyLeg -> Maybe DBooking.Booking -> Maybe DRide.Ride -> Maybe DEstimate.Estimate -> m (JLTypes.JourneyLegStatus, TaxiJourneyLegStatus, Maybe TrackingStatus)
+getTaxiAllStatuses :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => DJourneyLeg.JourneyLeg -> Maybe DBooking.Booking -> Maybe DRide.Ride -> Maybe DEstimate.Estimate -> m (JLTypes.JourneyLegStatus, Maybe JourneyBookingStatus, Maybe TrackingStatus)
 getTaxiAllStatuses journeyLeg mbBooking mbRide mbEstimate = do
   bookingStatus <- getTaxiJourneyBookingStatus mbBooking mbRide mbEstimate
   mbTrackingStatus <- getTaxiJourneyLegTrackingStatus mbBooking mbRide mbEstimate (listToMaybe journeyLeg.routeDetails)
@@ -51,32 +51,32 @@ getTaxiAllStatuses journeyLeg mbBooking mbRide mbEstimate = do
           else maybe JLTypes.InPlan castTrackingStatusToJourneyLegStatus mbTrackingStatus -- for UI backward compatibility
   return (oldStatus, bookingStatus, mbTrackingStatus)
 
-getTaxiJourneyBookingStatus :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => Maybe DBooking.Booking -> Maybe DRide.Ride -> Maybe DEstimate.Estimate -> m TaxiJourneyLegStatus
+getTaxiJourneyBookingStatus :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => Maybe DBooking.Booking -> Maybe DRide.Ride -> Maybe DEstimate.Estimate -> m (Maybe JourneyBookingStatus)
 getTaxiJourneyBookingStatus mbBooking mbRide mbEstimate = do
   case mbRide of
     Just ride -> do
       case ride.status of
         DTaxiRide.COMPLETED ->
           case (ride.feedbackSkipped, ride.rideRating) of
-            (True, _) -> return $ TaxiRide DTaxiRide.COMPLETED
-            (_, Just _) -> return $ TaxiRide DTaxiRide.COMPLETED
+            (True, _) -> return $ Just (TaxiRide DTaxiRide.COMPLETED)
+            (_, Just _) -> return $ Just (TaxiRide DTaxiRide.COMPLETED)
             _ -> do
               -- TODO :: Below `SQJLFB` will be deprecated once UI is updated to send the feedback details
               result <-
                 case (mbBooking >>= (.journeyId), mbBooking >>= (.journeyLegOrder)) of
                   (Just journeyId, Just legOrder) -> SQJLFB.findByJourneyIdAndLegOrder journeyId legOrder
                   _ -> return Nothing
-              return $ if isNothing result then TaxiFeedback FEEDBACK_PENDING else TaxiRide DTaxiRide.COMPLETED
-        rideStatus -> return $ TaxiRide rideStatus
+              return $ if isNothing result then Just (Feedback FEEDBACK_PENDING) else Just (TaxiRide DTaxiRide.COMPLETED)
+        rideStatus -> return $ Just (TaxiRide rideStatus)
     Nothing -> do
       case mbBooking of
-        Just booking -> return $ TaxiBooking booking.status
+        Just booking -> return $ Just (TaxiBooking booking.status)
         Nothing -> do
           case mbEstimate of
-            Just estimate -> return $ TaxiEstimate estimate.status
-            Nothing -> return $ TaxiInitial EmptyParam
+            Just estimate -> return $ Just (TaxiEstimate estimate.status)
+            Nothing -> return Nothing
 
-getFRFSJourneyBookingStatus :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => Maybe DFRFSBooking.FRFSTicketBooking -> m FRFSJourneyLegStatus
+getFRFSJourneyBookingStatus :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => Maybe DFRFSBooking.FRFSTicketBooking -> m (Maybe JourneyBookingStatus)
 getFRFSJourneyBookingStatus mbBooking = do
   case mbBooking of
     Just booking -> do
@@ -100,20 +100,20 @@ getFRFSJourneyBookingStatus mbBooking = do
                         return $ isJust result
                       _ -> return False
               if isFeedbackGiven
-                then return $ FRFSTicket DFRFSTicket.USED
-                else return $ FRFSFeedback FEEDBACK_PENDING
+                then return $ Just (FRFSTicket DFRFSTicket.USED)
+                else return $ Just (Feedback FEEDBACK_PENDING)
             else
               if anyTicketActive
-                then return $ FRFSTicket DFRFSTicket.ACTIVE
+                then return $ Just (FRFSTicket DFRFSTicket.ACTIVE)
                 else
                   if allTicketExpired
-                    then return $ FRFSTicket DFRFSTicket.EXPIRED
+                    then return $ Just (FRFSTicket DFRFSTicket.EXPIRED)
                     else
                       if allTicketCancelled
-                        then return $ FRFSTicket DFRFSTicket.CANCELLED
-                        else return $ FRFSBooking DFRFSBooking.CONFIRMED
-        bookingStatus -> return $ FRFSBooking bookingStatus
-    Nothing -> return $ FRFSInitial EmptyParam
+                        then return $ Just (FRFSTicket DFRFSTicket.CANCELLED)
+                        else return $ Just (FRFSBooking DFRFSBooking.CONFIRMED)
+        bookingStatus -> return $ Just (FRFSBooking bookingStatus)
+    Nothing -> return Nothing
 
 setJourneyLegTrackingStatus :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id DJourneyLeg.JourneyLeg -> Maybe Int -> TrackingStatus -> m ()
 setJourneyLegTrackingStatus journeyLegId subLegOrder trackingStatus = do
@@ -137,11 +137,11 @@ getTaxiJourneyLegTrackingStatus _ _ _ Nothing = return Nothing
 getTaxiJourneyLegTrackingStatus mbBooking mbRide mbEstimate (Just journeyRouteDetails) = do
   taxiJourneyLegStatus <- getTaxiJourneyBookingStatus mbBooking mbRide mbEstimate
   case taxiJourneyLegStatus of
-    TaxiRide DTaxiRide.INPROGRESS -> do
+    Just (TaxiRide DTaxiRide.INPROGRESS) -> do
       when (journeyRouteDetails.trackingStatus /= Just Ongoing) $ do
         void $ QRouteDetails.updateTrackingStatus (Just Ongoing) journeyRouteDetails.id
       return $ Just Ongoing
-    TaxiRide DTaxiRide.COMPLETED -> do
+    Just (TaxiRide DTaxiRide.COMPLETED) -> do
       when (journeyRouteDetails.trackingStatus /= Just Finished) $ do
         void $ QRouteDetails.updateTrackingStatus (Just Finished) journeyRouteDetails.id
       return $ Just Finished
@@ -151,7 +151,7 @@ getFRFSJourneyLegTrackingStatus :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, M
 getFRFSJourneyLegTrackingStatus mbBooking journeyRouteDetails = do
   frfsJourneyLegStatus <- getFRFSJourneyBookingStatus mbBooking
   case frfsJourneyLegStatus of
-    FRFSTicket DFRFSTicket.USED -> do
+    Just (FRFSTicket DFRFSTicket.USED) -> do
       when (journeyRouteDetails.trackingStatus /= Just Finished) $ do
         void $ QRouteDetails.updateTrackingStatus (Just Finished) journeyRouteDetails.id
       return $ Just Finished

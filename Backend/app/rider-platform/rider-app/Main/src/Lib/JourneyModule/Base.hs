@@ -282,36 +282,18 @@ checkAndMarkTerminalJourneyStatus journey feedbackRequired isCancelSearchApi = g
     isCancelled :: JL.JourneyLegStateData -> Bool
     isCancelled legState =
       legState.status == JL.Cancelled -- TODO: Remove this once below is used always
-        || case legState.legStatus of
-          Just (JL.TaxiStatusElement legStatus) -> legStatus.bookingStatus `elem` [JMState.TaxiEstimate DTaxiEstimate.CANCELLED, JMState.TaxiBooking DTaxiBooking.CANCELLED, JMState.TaxiRide DTaxiRide.CANCELLED]
-          Just (JL.WalkStatusElement legStatus) -> legStatus.trackingStatus == Just JMState.Finished
-          Just (JL.MetroStatusElement legStatus) -> legStatus.bookingStatus `elem` [JMState.FRFSBooking DFRFSBooking.CANCELLED, JMState.FRFSTicket DFRFSTicket.CANCELLED]
-          Just (JL.BusStatusElement legStatus) -> legStatus.bookingStatus `elem` [JMState.FRFSBooking DFRFSBooking.CANCELLED, JMState.FRFSTicket DFRFSTicket.CANCELLED]
-          Just (JL.SubwayStatusElement legStatus) -> legStatus.bookingStatus `elem` [JMState.FRFSBooking DFRFSBooking.CANCELLED, JMState.FRFSTicket DFRFSTicket.CANCELLED]
-          Nothing -> False
+        || (if legState.mode == DTrip.Walk then legState.trackingStatus == Just JMState.Finished else maybe False (\status -> status `elem` [JMState.TaxiEstimate DTaxiEstimate.CANCELLED, JMState.TaxiBooking DTaxiBooking.CANCELLED, JMState.TaxiRide DTaxiRide.CANCELLED, JMState.FRFSBooking DFRFSBooking.CANCELLED, JMState.FRFSTicket DFRFSTicket.CANCELLED]) legState.bookingStatus)
 
     isCompleted :: JL.JourneyLegStateData -> Bool
     isCompleted legState =
       legState.status `elem` journeyLegTerminalStatuses -- TODO: Remove this once below is used always
-        || case legState.legStatus of
-          Just (JL.TaxiStatusElement legStatus) -> legStatus.bookingStatus `elem` [JMState.TaxiBooking DTaxiBooking.COMPLETED, JMState.TaxiRide DTaxiRide.COMPLETED] || (not feedbackRequired && legStatus.bookingStatus == JMState.TaxiFeedback JMState.FEEDBACK_PENDING)
-          Just (JL.WalkStatusElement legStatus) -> legStatus.trackingStatus == Just JMState.Finished
-          Just (JL.MetroStatusElement legStatus) -> legStatus.bookingStatus `elem` [JMState.FRFSTicket DFRFSTicket.USED] || (not feedbackRequired && legStatus.bookingStatus == JMState.FRFSFeedback JMState.FEEDBACK_PENDING)
-          Just (JL.BusStatusElement legStatus) -> legStatus.bookingStatus `elem` [JMState.FRFSTicket DFRFSTicket.USED] || (not feedbackRequired && legStatus.bookingStatus == JMState.FRFSFeedback JMState.FEEDBACK_PENDING)
-          Just (JL.SubwayStatusElement legStatus) -> legStatus.bookingStatus `elem` [JMState.FRFSTicket DFRFSTicket.USED] || (not feedbackRequired && legStatus.bookingStatus == JMState.FRFSFeedback JMState.FEEDBACK_PENDING)
-          Nothing -> False
+        || (if legState.mode == DTrip.Walk then legState.trackingStatus == Just JMState.Finished else maybe False (\status -> status `elem` [JMState.TaxiBooking DTaxiBooking.COMPLETED, JMState.TaxiRide DTaxiRide.COMPLETED, JMState.FRFSTicket DFRFSTicket.USED] || (not feedbackRequired && legState.bookingStatus == Just (JMState.Feedback JMState.FEEDBACK_PENDING))) legState.bookingStatus)
 
     isFeedbackPending :: JL.JourneyLegStateData -> Bool
     isFeedbackPending legState =
       legState.status `elem` journeyLegTerminalStatuses -- TODO: Remove this once below is used always
         || ( feedbackRequired
-               && case legState.legStatus of
-                 Just (JL.TaxiStatusElement legStatus) -> legStatus.bookingStatus == JMState.TaxiFeedback JMState.FEEDBACK_PENDING
-                 Just (JL.WalkStatusElement legStatus) -> legStatus.trackingStatus == Just JMState.Finished
-                 Just (JL.MetroStatusElement legStatus) -> legStatus.bookingStatus == JMState.FRFSFeedback JMState.FEEDBACK_PENDING
-                 Just (JL.BusStatusElement legStatus) -> legStatus.bookingStatus == JMState.FRFSFeedback JMState.FEEDBACK_PENDING
-                 Just (JL.SubwayStatusElement legStatus) -> legStatus.bookingStatus == JMState.FRFSFeedback JMState.FEEDBACK_PENDING
-                 Nothing -> False
+               && (if legState.mode == DTrip.Walk then legState.trackingStatus == Just JMState.Finished else legState.bookingStatus == Just (JMState.Feedback JMState.FEEDBACK_PENDING))
            )
 
     go allLegsState
@@ -774,21 +756,21 @@ getRemainingLegsForExtend journeyId = do
 
 cancellableExtendStatus :: JL.LegInfo -> Bool
 cancellableExtendStatus leg =
-  case leg.legStatus of
-    JL.WalkStatus walkStatus -> maybe True (\status -> not (status `elem` JL.cannotCancelWalkStatus)) walkStatus.trackingStatus
-    JL.TaxiStatus taxiStatus -> maybe True (\status -> not (status `elem` JL.cannotCancelExtendStatus)) taxiStatus.trackingStatus
-    JL.SubwayStatus subwayStatus -> all (maybe True (not . (`elem` JL.cannotCancelExtendStatus)) . (.trackingStatus)) subwayStatus.legs
-    JL.BusStatus busStatus -> all (maybe True (not . (`elem` JL.cannotCancelExtendStatus)) . (.trackingStatus)) busStatus.legs
-    JL.MetroStatus metroStatus -> all (maybe True (not . (`elem` JL.cannotCancelExtendStatus)) . (.trackingStatus)) metroStatus.legs
+  case leg.legExtraInfo of
+    JL.Walk extraInfo -> maybe True (\status -> not (status `elem` JL.cannotCancelWalkStatus)) extraInfo.trackingStatus
+    JL.Taxi extraInfo -> maybe True (\status -> not (status `elem` JL.cannotCancelExtendStatus)) extraInfo.trackingStatus
+    JL.Bus extraInfo -> maybe True (not . (`elem` JL.cannotCancelExtendStatus)) extraInfo.trackingStatus
+    JL.Subway extraInfo -> all (maybe True (not . (`elem` JL.cannotCancelExtendStatus)) . (.trackingStatus)) extraInfo.routeInfo
+    JL.Metro extraInfo -> all (maybe True (not . (`elem` JL.cannotCancelExtendStatus)) . (.trackingStatus)) extraInfo.routeInfo
 
 cancellableStatus :: JL.LegInfo -> Bool
 cancellableStatus leg =
-  case leg.legStatus of
-    JL.WalkStatus walkStatus -> maybe True (\status -> not (status `elem` JL.cannotCancelWalkStatus)) walkStatus.trackingStatus
-    JL.TaxiStatus taxiStatus -> maybe True (\status -> not (status `elem` JL.cannotCancelStatus)) taxiStatus.trackingStatus
-    JL.SubwayStatus subwayStatus -> all (maybe True (not . (`elem` JL.cannotCancelStatus)) . (.trackingStatus)) subwayStatus.legs
-    JL.BusStatus busStatus -> all (maybe True (not . (`elem` JL.cannotCancelStatus)) . (.trackingStatus)) busStatus.legs
-    JL.MetroStatus metroStatus -> all (maybe True (not . (`elem` JL.cannotCancelStatus)) . (.trackingStatus)) metroStatus.legs
+  case leg.legExtraInfo of
+    JL.Walk extraInfo -> maybe True (\status -> not (status `elem` JL.cannotCancelWalkStatus)) extraInfo.trackingStatus
+    JL.Taxi extraInfo -> maybe True (\status -> not (status `elem` JL.cannotCancelStatus)) extraInfo.trackingStatus
+    JL.Bus extraInfo -> maybe True (not . (`elem` JL.cannotCancelStatus)) extraInfo.trackingStatus
+    JL.Subway extraInfo -> all (maybe True (not . (`elem` JL.cannotCancelStatus)) . (.trackingStatus)) extraInfo.routeInfo
+    JL.Metro extraInfo -> all (maybe True (not . (`elem` JL.cannotCancelStatus)) . (.trackingStatus)) extraInfo.routeInfo
 
 getUnifiedQR :: DJourney.Journey -> [JL.LegInfo] -> Maybe JL.UnifiedTicketQR
 getUnifiedQR journey legs = do
@@ -1354,12 +1336,12 @@ getExtendLegs journeyId legOrder = do
   return remainingLegs
   where
     isCannotCancelStatus leg =
-      case leg.legStatus of
-        JL.WalkStatus walkStatus -> maybe True (\status -> not (status `elem` JL.cannotCancelWalkStatus)) walkStatus.trackingStatus
-        JL.TaxiStatus taxiStatus -> maybe True (\status -> not (status `elem` JL.cannotCancelStatus)) taxiStatus.trackingStatus
-        JL.SubwayStatus subwayStatus -> all (maybe True (not . (`elem` JL.cannotCancelStatus)) . (.trackingStatus)) subwayStatus.legs
-        JL.BusStatus busStatus -> all (maybe True (not . (`elem` JL.cannotCancelStatus)) . (.trackingStatus)) busStatus.legs
-        JL.MetroStatus metroStatus -> all (maybe True (not . (`elem` JL.cannotCancelStatus)) . (.trackingStatus)) metroStatus.legs
+      case leg.legExtraInfo of
+        JL.Walk extraInfo -> maybe True (\status -> not (status `elem` JL.cannotCancelWalkStatus)) extraInfo.trackingStatus
+        JL.Taxi extraInfo -> maybe True (\status -> not (status `elem` JL.cannotCancelStatus)) extraInfo.trackingStatus
+        JL.Bus extraInfo -> maybe True (\status -> not (status `elem` JL.cannotCancelStatus)) extraInfo.trackingStatus
+        JL.Subway extraInfo -> all (maybe True (not . (`elem` JL.cannotCancelStatus)) . (.trackingStatus)) extraInfo.routeInfo
+        JL.Metro extraInfo -> all (maybe True (not . (`elem` JL.cannotCancelStatus)) . (.trackingStatus)) extraInfo.routeInfo
 
 extendLegEstimatedFare ::
   ( CacheFlow m r,
@@ -1641,7 +1623,8 @@ generateJourneyStatusResponse personId merchantId journey legs = do
             { legOrder = legData.legOrder,
               subLegOrder = legData.subLegOrder,
               status = legData.status,
-              legStatus = legData.legStatus,
+              bookingStatus = legData.bookingStatus,
+              trackingStatus = legData.trackingStatus,
               userPosition = legData.userPosition,
               vehiclePositions = legData.vehiclePositions,
               mode = legData.mode

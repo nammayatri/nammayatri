@@ -10,21 +10,14 @@ import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
 
-data FRFSJourneyLegStatus
-  = FRFSInitial EmptyParam
+data JourneyBookingStatus
+  = TaxiEstimate DTaxiEstimate.EstimateStatus
+  | TaxiBooking DTaxiBooking.BookingStatus
+  | TaxiRide DTaxiRide.RideStatus
   | FRFSBooking DFRFSBooking.FRFSTicketBookingStatus
   | FRFSTicket DFRFSTicket.FRFSTicketStatus
-  | FRFSFeedback FeedbackStatus
-  deriving (Generic, ToSchema, FromJSON, ToJSON, Show, Eq, Ord)
-
-data EmptyParam = EmptyParam
-  deriving (Generic, ToSchema, Show, Eq, Ord)
-
-instance FromJSON EmptyParam where
-  parseJSON _ = return EmptyParam
-
-instance ToJSON EmptyParam where
-  toJSON EmptyParam = String "EmptyParam"
+  | Feedback FeedbackStatus
+  deriving (Generic, ToSchema, ToJSON, FromJSON, Show, Eq, Ord)
 
 data FeedbackStatus = FEEDBACK_PENDING
   deriving (Generic, ToSchema, Show, Eq, Ord)
@@ -34,14 +27,6 @@ instance FromJSON FeedbackStatus where
 
 instance ToJSON FeedbackStatus where
   toJSON FEEDBACK_PENDING = "FEEDBACK_PENDING"
-
-data TaxiJourneyLegStatus
-  = TaxiInitial EmptyParam
-  | TaxiEstimate DTaxiEstimate.EstimateStatus
-  | TaxiBooking DTaxiBooking.BookingStatus
-  | TaxiRide DTaxiRide.RideStatus
-  | TaxiFeedback FeedbackStatus
-  deriving (Generic, ToSchema, ToJSON, FromJSON, Show, Eq, Ord)
 
 data TrackingStatus
   = InPlan
@@ -59,11 +44,3 @@ data TrackingStatus
 
 $(mkHttpInstancesForEnum ''TrackingStatus)
 $(mkBeamInstancesForEnum ''TrackingStatus)
-
-data JourneyFRFSLegStatusElement = JourneyFRFSLegStatusElement
-  { trackingStatus :: Maybe TrackingStatus,
-    bookingStatus :: FRFSJourneyLegStatus,
-    subLegOrder :: Maybe Int
-  }
-  deriving stock (Show, Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
