@@ -55,6 +55,7 @@ data ServiceTierType
   | BUS_AC
   | HERITAGE_CAB
   | EV_AUTO_RICKSHAW
+  | BOAT
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema, EulerHS.Prelude.Hashable, Enum, Bounded)
 
 allServiceTiersTypes :: [ServiceTierType]
