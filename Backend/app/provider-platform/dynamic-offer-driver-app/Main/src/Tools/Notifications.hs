@@ -1094,23 +1094,45 @@ notifyStopModification ::
   ( CacheFlow m r,
     EsqDBFlow m r
   ) =>
+  DRide.RideStatus ->
   Person ->
   StopReq ->
   Trip.TripCategory ->
   m ()
-notifyStopModification person entityData tripCategory = do
+notifyStopModification rideStatus person entityData tripCategory = do
   let newCityId = cityFallback person.clientBundleVersion person.merchantOperatingCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
-      notificationKey = if entityData.isEdit then "EDIT_STOP" else "ADD_STOP"
-  dynamicFCMNotifyPerson
-    newCityId
-    person.id
-    person.deviceToken
-    (fromMaybe ENGLISH person.language)
-    (Just tripCategory)
-    (createFCMReq notificationKey entityData.bookingId.getId FCM.Person identity)
-    (Just entityData)
-    []
-    Nothing
+  if rideStatus == DRide.NEW
+    then do
+      transporterConfig <- findByMerchantOpCityId newCityId (Just (DriverId (cast person.id))) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
+      let notificationType = if entityData.isEdit then FCM.EDIT_STOP else FCM.ADD_STOP
+          titleText = if entityData.isEdit then "Stop Edited" else "Stop Added"
+          bodyText = if entityData.isEdit then "Customer has edited the stop." else "Customer has added a new stop."
+          title = FCM.FCMNotificationTitle titleText
+          body = FCM.FCMNotificationBody bodyText
+      let notificationData =
+            FCM.FCMData
+              { fcmNotificationType = notificationType,
+                fcmShowNotification = FCM.SHOW,
+                fcmEntityType = FCM.Product,
+                fcmEntityIds = entityData.bookingId.getId,
+                fcmEntityData = Just entityData,
+                fcmNotificationJSON = FCM.createAndroidNotification title body notificationType Nothing,
+                fcmOverlayNotificationJSON = Nothing,
+                fcmNotificationId = Nothing
+              }
+      FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) (clearDeviceToken person.id) notificationData (FCMNotificationRecipient person.id.getId person.deviceToken) EulerHS.Prelude.id
+    else do
+      let notificationKey = if entityData.isEdit then "EDIT_STOP" else "ADD_STOP"
+      dynamicFCMNotifyPerson
+        newCityId
+        person.id
+        person.deviceToken
+        (fromMaybe ENGLISH person.language)
+        (Just tripCategory)
+        (createFCMReq notificationKey entityData.bookingId.getId FCM.Product identity)
+        (Just entityData)
+        []
+        Nothing
 
 -- notifType = if entityData.isEdit then FCM.EDIT_STOP else FCM.ADD_STOP
 -- title = FCMNotificationTitle (if entityData.isEdit then "Stop Edited" else "Stop Added")
@@ -1453,3 +1475,30 @@ sendDriverEKDLiveFCM merchantOpCityId driverId mbDeviceToken language entityData
     (pure entityData)
     []
     Nothing
+
+notifyEditDestination ::
+  ( CacheFlow m r,
+    EsqDBFlow m r
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  Id Person ->
+  Maybe FCM.FCMRecipientToken ->
+  m ()
+notifyEditDestination merchantOpCityId personId mbDeviceToken = do
+  logDebug $ "We are in edit destination when driver accepted edited location"
+  transporterConfig <- findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) (clearDeviceToken personId) notificationData (FCMNotificationRecipient personId.getId mbDeviceToken) EulerHS.Prelude.id
+  where
+    notificationData =
+      FCM.FCMData
+        { fcmNotificationType = FCM.DRIVER_ACCEPTED_EDITED_LOCATION,
+          fcmShowNotification = FCM.SHOW,
+          fcmEntityType = FCM.Person,
+          fcmEntityIds = getId personId,
+          fcmEntityData = (),
+          fcmNotificationJSON = FCM.createAndroidNotification title body FCM.DRIVER_ACCEPTED_EDITED_LOCATION Nothing,
+          fcmOverlayNotificationJSON = Nothing,
+          fcmNotificationId = Nothing
+        }
+    title = FCM.FCMNotificationTitle "Edit Destination"
+    body = FCMNotificationBody "Driver accepted edited destination."
