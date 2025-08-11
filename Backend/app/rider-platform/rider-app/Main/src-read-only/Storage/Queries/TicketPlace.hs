@@ -61,6 +61,7 @@ updateByPrimaryKey (Domain.Types.TicketPlace.TicketPlace {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.allowSameDayBooking allowSameDayBooking,
+      Se.Set Beam.assignTicketToBpp (Kernel.Prelude.Just assignTicketToBpp),
       Se.Set Beam.closeTimings closeTimings,
       Se.Set Beam.customTabs (Data.Aeson.toJSON <$> customTabs),
       Se.Set Beam.description description,
@@ -103,6 +104,7 @@ instance FromTType' Beam.TicketPlace Domain.Types.TicketPlace.TicketPlace where
       Just
         Domain.Types.TicketPlace.TicketPlace
           { allowSameDayBooking = allowSameDayBooking,
+            assignTicketToBpp = Kernel.Prelude.fromMaybe False assignTicketToBpp,
             closeTimings = closeTimings,
             customTabs = (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< customTabs,
             description = description,
@@ -143,6 +145,7 @@ instance ToTType' Beam.TicketPlace Domain.Types.TicketPlace.TicketPlace where
   toTType' (Domain.Types.TicketPlace.TicketPlace {..}) = do
     Beam.TicketPlaceT
       { Beam.allowSameDayBooking = allowSameDayBooking,
+        Beam.assignTicketToBpp = Kernel.Prelude.Just assignTicketToBpp,
         Beam.closeTimings = closeTimings,
         Beam.customTabs = Data.Aeson.toJSON <$> customTabs,
         Beam.description = description,

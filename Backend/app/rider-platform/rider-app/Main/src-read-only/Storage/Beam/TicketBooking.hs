@@ -28,6 +28,7 @@ data TicketBookingT f = TicketBookingT
     shortId :: B.C f Kernel.Prelude.Text,
     status :: B.C f Domain.Types.Extra.TicketBooking.BookingStatus,
     ticketPlaceId :: B.C f Kernel.Prelude.Text,
+    ticketSubPlaceId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
     vendorSplitDetails :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     visitDate :: B.C f Data.Time.Day,

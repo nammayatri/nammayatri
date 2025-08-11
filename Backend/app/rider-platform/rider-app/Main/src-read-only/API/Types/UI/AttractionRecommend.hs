@@ -10,7 +10,7 @@ import qualified Kernel.Types.Id
 import Servant
 import Tools.Auth
 
-data Attraction = Attraction {distanceInKm :: Kernel.Prelude.Double, id :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace, name :: Kernel.Prelude.Text}
+data Attraction = Attraction {distanceInKm :: Kernel.Prelude.Double, iconUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text, id :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace, name :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

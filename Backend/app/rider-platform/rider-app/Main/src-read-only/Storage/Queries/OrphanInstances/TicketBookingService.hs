@@ -21,6 +21,7 @@ instance FromTType' Beam.TicketBookingService Domain.Types.TicketBookingService.
       Just
         Domain.Types.TicketBookingService.TicketBookingService
           { amount = Kernel.Types.Common.mkPrice currency amount,
+            assignmentId = assignmentId,
             bHourId = Kernel.Types.Id.Id <$> bHourId,
             bookedSeats = bookedSeats,
             btype = btype,
@@ -45,6 +46,7 @@ instance ToTType' Beam.TicketBookingService Domain.Types.TicketBookingService.Ti
     Beam.TicketBookingServiceT
       { Beam.amount = (.amount) amount,
         Beam.currency = (Kernel.Prelude.Just . (.currency)) amount,
+        Beam.assignmentId = assignmentId,
         Beam.bHourId = Kernel.Types.Id.getId <$> bHourId,
         Beam.bookedSeats = bookedSeats,
         Beam.btype = btype,

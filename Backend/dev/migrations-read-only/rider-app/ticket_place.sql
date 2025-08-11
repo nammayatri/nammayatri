@@ -90,3 +90,8 @@ ALTER TABLE atlas_app.ticket_place ADD COLUMN venue text ;
 ALTER TABLE atlas_app.ticket_place ADD COLUMN start_date date ;
 ALTER TABLE atlas_app.ticket_place ADD COLUMN is_closed boolean  default false;
 ALTER TABLE atlas_app.ticket_place ADD COLUMN end_date date ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ticket_place ADD COLUMN assign_ticket_to_bpp boolean  default false;

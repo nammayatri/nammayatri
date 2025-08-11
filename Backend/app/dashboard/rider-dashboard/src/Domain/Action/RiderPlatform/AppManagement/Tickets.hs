@@ -2,6 +2,7 @@ module Domain.Action.RiderPlatform.AppManagement.Tickets
   ( postTicketsVerify,
     postTicketsServices,
     getTicketsPlaces,
+    getTicketFleetVehicles,
     postTicketsUpdate,
     postTicketsBookingsCancel,
     postTicketsServiceCancel,
@@ -37,6 +38,7 @@ import qualified "rider-app" Domain.Types.TicketBookingService
 import qualified "rider-app" Domain.Types.TicketDashboard
 import qualified "rider-app" Domain.Types.TicketPlace
 import qualified "rider-app" Domain.Types.TicketService
+import qualified "rider-app" Domain.Types.TicketSubPlace
 import qualified Domain.Types.Transaction
 import qualified "lib-dashboard" Environment
 import Kernel.External.Encryption
@@ -59,11 +61,11 @@ import Tools.Auth.Api
 import Tools.Auth.Merchant
 import "lib-dashboard" Tools.Error
 
-postTicketsVerify :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.TicketService.TicketService -> Kernel.Types.Id.ShortId Domain.Types.TicketBookingService.TicketBookingService -> Environment.Flow API.Types.UI.TicketService.TicketServiceVerificationResp)
-postTicketsVerify merchantShortId opCity apiTokenInfo personServiceId ticketBookingShortId = do
+postTicketsVerify :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.TicketService.TicketService -> Kernel.Types.Id.ShortId Domain.Types.TicketBookingService.TicketBookingService -> Maybe Text -> Maybe Text -> Environment.Flow API.Types.UI.TicketService.TicketServiceVerificationResp)
+postTicketsVerify merchantShortId opCity apiTokenInfo personServiceId ticketBookingShortId mbFleetOwnerId mbVehicleNumber = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just APP_BACKEND_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing SharedLogic.Transaction.emptyRequest
-  SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.ticketsDSL.postTicketsVerify) personServiceId ticketBookingShortId)
+  SharedLogic.Transaction.withTransactionStoring transaction $ (do API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.ticketsDSL.postTicketsVerify) personServiceId ticketBookingShortId mbFleetOwnerId mbVehicleNumber)
 
 postTicketsServices ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -71,15 +73,29 @@ postTicketsServices ::
   ApiTokenInfo ->
   Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace ->
   Kernel.Prelude.Maybe Data.Time.Calendar.Day ->
+  Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.TicketSubPlace.TicketSubPlace) ->
   Environment.Flow [API.Types.UI.TicketService.TicketServiceResp]
-postTicketsServices merchantShortId opCity apiTokenInfo ticketPlaceId date = do
+postTicketsServices merchantShortId opCity apiTokenInfo ticketPlaceId date subPlaceId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.ticketsDSL.postTicketsServices) ticketPlaceId date
+  API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.ticketsDSL.postTicketsServices) ticketPlaceId date subPlaceId
 
 getTicketsPlaces :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Environment.Flow [Domain.Types.TicketPlace.TicketPlace])
 getTicketsPlaces merchantShortId opCity apiTokenInfo = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.ticketsDSL.getTicketsPlaces)
+
+getTicketFleetVehicles ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  ApiTokenInfo ->
+  Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe Text ->
+  Environment.Flow [API.Types.UI.TicketService.TicketFleetVehicleResp]
+getTicketFleetVehicles merchantShortId opCity apiTokenInfo placeId mbLimit mbOffset mbSearchString = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.ticketsDSL.getTicketFleetVehicles) placeId mbLimit mbOffset mbSearchString
 
 postTicketsUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.UI.TicketService.TicketBookingUpdateSeatsReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postTicketsUpdate merchantShortId opCity apiTokenInfo req = do

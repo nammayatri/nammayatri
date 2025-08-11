@@ -15,6 +15,7 @@ import Tools.Beam.UtilsTH
 
 data TicketPlaceT f = TicketPlaceT
   { allowSameDayBooking :: B.C f Kernel.Prelude.Bool,
+    assignTicketToBpp :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     closeTimings :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.TimeOfDay),
     customTabs :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     description :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
