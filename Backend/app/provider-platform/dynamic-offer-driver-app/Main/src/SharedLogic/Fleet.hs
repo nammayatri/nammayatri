@@ -34,8 +34,7 @@ getFleetOwnerIds memberPersonId mbFleetOwnerId = do
           fleetMemberAssociations -> do
             mapM
               ( \DFMA.FleetMemberAssociation {..} -> do
-                  fleetMemberAssociation <- FMA.findOneByFleetOwnerId fleetOwnerId True >>= fromMaybeM (PersonNotFound fleetOwnerId)
-                  person <- QP.findById (Id fleetMemberAssociation.fleetMemberId) >>= fromMaybeM (PersonNotFound fleetMemberAssociation.fleetMemberId)
+                  person <- QP.findById (Id fleetOwnerId) >>= fromMaybeM (PersonNotFound fleetOwnerId)
                   return (fleetOwnerId, person.firstName <> maybe "" (" " <>) person.lastName)
               )
               fleetMemberAssociations
@@ -43,7 +42,7 @@ getFleetOwnerIds memberPersonId mbFleetOwnerId = do
     identity
     ( ( \fleetOwnerId -> do
           fleetMemberAssociation <- FMA.findOneByFleetOwnerId fleetOwnerId True >>= fromMaybeM (PersonNotFound fleetOwnerId)
-          person <- QP.findById (Id fleetMemberAssociation.fleetMemberId) >>= fromMaybeM (PersonNotFound fleetMemberAssociation.fleetMemberId)
+          person <- QP.findById (Id fleetMemberAssociation.fleetOwnerId) >>= fromMaybeM (PersonNotFound fleetMemberAssociation.fleetOwnerId)
           return [(fleetOwnerId, person.firstName <> maybe "" (" " <>) person.lastName)]
       )
         <$> mbFleetOwnerId
