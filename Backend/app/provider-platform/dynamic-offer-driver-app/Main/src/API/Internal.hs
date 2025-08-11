@@ -17,6 +17,8 @@ import qualified API.Internal.DriverSourceDeparted as DriverSourceDeparted
 import qualified API.Internal.Estimate as Estimate
 import qualified API.Internal.FavouriteDrivers as FavouriteDrivers
 import qualified API.Internal.FeedbackForm as FeedbackForm
+import qualified API.Internal.FleetBookingInformation as FleetBookingInformation
+import qualified API.Internal.FleetVehiclesAssociation as FleetVehiclesAssociation
 import qualified API.Internal.KnowYourDriver as KnowYourDriver
 import qualified API.Internal.Multimodal as Multimodal
 import qualified API.Internal.PopulateTipAmount as PopulateTipAmount
@@ -54,6 +56,8 @@ type API =
            :<|> DriverSourceDeparted.API
            :<|> ViolationDetection.API
            :<|> Estimate.API
+           :<|> FleetBookingInformation.API
+           :<|> FleetVehiclesAssociation.API
        )
 
 handler :: FlowServer API
@@ -80,3 +84,5 @@ handler =
     :<|> DriverSourceDeparted.handler
     :<|> ViolationDetection.handler
     :<|> Estimate.handler
+    :<|> FleetBookingInformation.handler
+    :<|> FleetVehiclesAssociation.handler

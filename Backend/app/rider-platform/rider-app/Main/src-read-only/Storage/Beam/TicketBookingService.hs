@@ -18,6 +18,7 @@ import Tools.Beam.UtilsTH
 data TicketBookingServiceT f = TicketBookingServiceT
   { amount :: B.C f Kernel.Types.Common.HighPrecMoney,
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
+    assignmentId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     bHourId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     bookedSeats :: B.C f Kernel.Prelude.Int,
     btype :: B.C f Domain.Types.BusinessHour.BusinessHourType,

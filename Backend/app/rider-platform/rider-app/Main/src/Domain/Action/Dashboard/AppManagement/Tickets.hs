@@ -2,6 +2,7 @@ module Domain.Action.Dashboard.AppManagement.Tickets
   ( postTicketsVerify,
     postTicketsServices,
     getTicketsPlaces,
+    getTicketFleetVehicles,
     postTicketsUpdate,
     postTicketsBookingsCancel,
     postTicketsServiceCancel,
@@ -31,6 +32,7 @@ import qualified "this" Domain.Types.TicketBookingService
 import qualified "this" Domain.Types.TicketDashboard
 import qualified "this" Domain.Types.TicketPlace
 import qualified "this" Domain.Types.TicketService
+import qualified "this" Domain.Types.TicketSubPlace
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
@@ -47,20 +49,25 @@ postTicketsVerify ::
   Kernel.Types.Beckn.Context.City ->
   Kernel.Types.Id.Id Domain.Types.TicketService.TicketService ->
   Kernel.Types.Id.ShortId Domain.Types.TicketBookingService.TicketBookingService ->
+  Maybe Text ->
+  Maybe Text ->
   Environment.Flow API.Types.UI.TicketService.TicketServiceVerificationResp
-postTicketsVerify merchantShortId _opCity personServiceId ticketBookingServiceShortId = do
+postTicketsVerify merchantShortId _opCity personServiceId ticketBookingServiceShortId mbFleetOwnerId mbVehicleId = do
   m <- findMerchantByShortId merchantShortId
-  Domain.Action.UI.TicketService.postTicketBookingsVerify (Nothing, m.id) personServiceId ticketBookingServiceShortId
+  Domain.Action.UI.TicketService.postTicketBookingsVerify (Nothing, m.id) personServiceId ticketBookingServiceShortId mbFleetOwnerId mbVehicleId
 
 postTicketsServices ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
   Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace ->
   Kernel.Prelude.Maybe Data.Time.Calendar.Day ->
-  Environment.Flow [API.Types.UI.TicketService.TicketServiceResp]
-postTicketsServices merchantShortId _opCity ticketPlaceId date = do
+  Kernel.Prelude.Maybe
+    (Kernel.Types.Id.Id Domain.Types.TicketSubPlace.TicketSubPlace) ->
+  Environment.Flow
+    [API.Types.UI.TicketService.TicketServiceResp]
+postTicketsServices merchantShortId _opCity ticketPlaceId date ticketSubPlaceId = do
   m <- findMerchantByShortId merchantShortId
-  Domain.Action.UI.TicketService.getTicketPlacesServices (Nothing, m.id) ticketPlaceId date
+  Domain.Action.UI.TicketService.getTicketPlacesServices (Nothing, m.id) ticketPlaceId date ticketSubPlaceId
 
 getTicketsPlaces ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
@@ -69,6 +76,18 @@ getTicketsPlaces ::
 getTicketsPlaces merchantShortId _opCity = do
   m <- findMerchantByShortId merchantShortId
   Domain.Action.UI.TicketService.getTicketPlaces (Nothing, m.id)
+
+getTicketFleetVehicles ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe Text ->
+  Environment.Flow [API.Types.UI.TicketService.TicketFleetVehicleResp]
+getTicketFleetVehicles merchantShortId _opCity placeId mbLimit mbOffset mbSearchString = do
+  m <- findMerchantByShortId merchantShortId
+  Domain.Action.UI.TicketService.getTicketFleetVehicles (Nothing, m.id) placeId mbLimit mbOffset mbSearchString
 
 postTicketsUpdate ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->

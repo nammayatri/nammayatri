@@ -14,6 +14,7 @@ import qualified "this" Domain.Types.TicketDashboard
 import qualified "this" Domain.Types.TicketMerchantDetails
 import qualified "this" Domain.Types.TicketPlace
 import qualified "this" Domain.Types.TicketService
+import qualified Domain.Types.TicketSubPlace
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
 import qualified Kernel.Prelude
@@ -78,7 +79,7 @@ data TicketDashboardUserInfo = TicketDashboardUserInfo
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = (PostTicketsVerify :<|> PostTicketsServices :<|> GetTicketsPlaces :<|> PostTicketsUpdate :<|> PostTicketsBookingsCancel :<|> PostTicketsServiceCancel :<|> GetTicketsBookingDetails :<|> PostTicketsTicketdashboardRegister :<|> PostTicketsTicketdashboardLoginAuth :<|> PostTicketsTicketdashboardLoginVerify :<|> GetTicketsTicketdashboardAgreement :<|> GetTicketsTicketdashboardUserInfo :<|> GetTicketsTicketdashboardFile :<|> PostTicketsTicketdashboardSendverifyotp :<|> GetTicketsTicketdashboardTicketplaceInfo :<|> PostTicketsTicketdashboardTicketplaceUpdate :<|> GetTicketsTicketdashboardTicketplaces)
+type API = (PostTicketsVerify :<|> PostTicketsServices :<|> GetTicketsPlaces :<|> PostTicketsUpdate :<|> PostTicketsBookingsCancel :<|> PostTicketsServiceCancel :<|> GetTicketsBookingDetails :<|> PostTicketsTicketdashboardRegister :<|> PostTicketsTicketdashboardLoginAuth :<|> PostTicketsTicketdashboardLoginVerify :<|> GetTicketsTicketdashboardAgreement :<|> GetTicketsTicketdashboardUserInfo :<|> GetTicketsTicketdashboardFile :<|> PostTicketsTicketdashboardSendverifyotp :<|> GetTicketsTicketdashboardTicketplaceInfo :<|> PostTicketsTicketdashboardTicketplaceUpdate :<|> GetTicketsTicketdashboardTicketplaces :<|> GetTicketFleetVehicles)
 
 type PostTicketsVerify =
   ( "tickets" :> Capture "personServiceId" (Kernel.Types.Id.Id Domain.Types.TicketService.TicketService)
@@ -86,6 +87,12 @@ type PostTicketsVerify =
            "ticketBookingShortId"
            (Kernel.Types.Id.ShortId Domain.Types.TicketBookingService.TicketBookingService)
       :> "verify"
+      :> QueryParam
+           "fleetOwnerId"
+           Kernel.Prelude.Text
+      :> QueryParam
+           "vehicleId"
+           Kernel.Prelude.Text
       :> Post
            '[JSON]
            API.Types.UI.TicketService.TicketServiceVerificationResp
@@ -93,6 +100,9 @@ type PostTicketsVerify =
 
 type PostTicketsServices =
   ( Capture "ticketPlaceId" (Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace) :> "services" :> QueryParam "date" Data.Time.Calendar.Day
+      :> QueryParam
+           "subPlaceId"
+           (Kernel.Types.Id.Id Domain.Types.TicketSubPlace.TicketSubPlace)
       :> Post
            '[JSON]
            [API.Types.UI.TicketService.TicketServiceResp]
@@ -179,9 +189,23 @@ type GetTicketsTicketdashboardTicketplaces =
       :> Get '[JSON] [Domain.Types.TicketPlace.TicketPlace]
   )
 
+type GetTicketFleetVehicles =
+  ( "ticket" :> "places" :> Capture "placeId" (Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace) :> "fleet" :> "VehicleAssociation" :> "list"
+      :> QueryParam
+           "limit"
+           Kernel.Prelude.Int
+      :> QueryParam "offset" Kernel.Prelude.Int
+      :> QueryParam
+           "searchString"
+           Kernel.Prelude.Text
+      :> Get
+           '[JSON]
+           [API.Types.UI.TicketService.TicketFleetVehicleResp]
+  )
+
 data TicketsAPIs = TicketsAPIs
-  { postTicketsVerify :: Kernel.Types.Id.Id Domain.Types.TicketService.TicketService -> Kernel.Types.Id.ShortId Domain.Types.TicketBookingService.TicketBookingService -> EulerHS.Types.EulerClient API.Types.UI.TicketService.TicketServiceVerificationResp,
-    postTicketsServices :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Prelude.Maybe Data.Time.Calendar.Day -> EulerHS.Types.EulerClient [API.Types.UI.TicketService.TicketServiceResp],
+  { postTicketsVerify :: Kernel.Types.Id.Id Domain.Types.TicketService.TicketService -> Kernel.Types.Id.ShortId Domain.Types.TicketBookingService.TicketBookingService -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient API.Types.UI.TicketService.TicketServiceVerificationResp,
+    postTicketsServices :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Prelude.Maybe Data.Time.Calendar.Day -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.TicketSubPlace.TicketSubPlace) -> EulerHS.Types.EulerClient [API.Types.UI.TicketService.TicketServiceResp],
     getTicketsPlaces :: EulerHS.Types.EulerClient [Domain.Types.TicketPlace.TicketPlace],
     postTicketsUpdate :: API.Types.UI.TicketService.TicketBookingUpdateSeatsReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postTicketsBookingsCancel :: API.Types.UI.TicketService.TicketBookingCancelReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
@@ -196,13 +220,14 @@ data TicketsAPIs = TicketsAPIs
     postTicketsTicketdashboardSendverifyotp :: SendVerifyOtpReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     getTicketsTicketdashboardTicketplaceInfo :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> EulerHS.Types.EulerClient Domain.Types.TicketDashboard.TicketPlaceDashboardDetails,
     postTicketsTicketdashboardTicketplaceUpdate :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> Domain.Types.TicketDashboard.TicketPlaceDashboardDetails -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    getTicketsTicketdashboardTicketplaces :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> EulerHS.Types.EulerClient [Domain.Types.TicketPlace.TicketPlace]
+    getTicketsTicketdashboardTicketplaces :: Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole -> EulerHS.Types.EulerClient [Domain.Types.TicketPlace.TicketPlace],
+    getTicketFleetVehicles :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> EulerHS.Types.EulerClient [API.Types.UI.TicketService.TicketFleetVehicleResp]
   }
 
 mkTicketsAPIs :: (Client EulerHS.Types.EulerClient API -> TicketsAPIs)
 mkTicketsAPIs ticketsClient = (TicketsAPIs {..})
   where
-    postTicketsVerify :<|> postTicketsServices :<|> getTicketsPlaces :<|> postTicketsUpdate :<|> postTicketsBookingsCancel :<|> postTicketsServiceCancel :<|> getTicketsBookingDetails :<|> postTicketsTicketdashboardRegister :<|> postTicketsTicketdashboardLoginAuth :<|> postTicketsTicketdashboardLoginVerify :<|> getTicketsTicketdashboardAgreement :<|> getTicketsTicketdashboardUserInfo :<|> getTicketsTicketdashboardFile :<|> postTicketsTicketdashboardSendverifyotp :<|> getTicketsTicketdashboardTicketplaceInfo :<|> postTicketsTicketdashboardTicketplaceUpdate :<|> getTicketsTicketdashboardTicketplaces = ticketsClient
+    postTicketsVerify :<|> postTicketsServices :<|> getTicketsPlaces :<|> postTicketsUpdate :<|> postTicketsBookingsCancel :<|> postTicketsServiceCancel :<|> getTicketsBookingDetails :<|> postTicketsTicketdashboardRegister :<|> postTicketsTicketdashboardLoginAuth :<|> postTicketsTicketdashboardLoginVerify :<|> getTicketsTicketdashboardAgreement :<|> getTicketsTicketdashboardUserInfo :<|> getTicketsTicketdashboardFile :<|> postTicketsTicketdashboardSendverifyotp :<|> getTicketsTicketdashboardTicketplaceInfo :<|> postTicketsTicketdashboardTicketplaceUpdate :<|> getTicketsTicketdashboardTicketplaces :<|> getTicketFleetVehicles = ticketsClient
 
 data TicketsUserActionType
   = POST_TICKETS_VERIFY
@@ -222,6 +247,7 @@ data TicketsUserActionType
   | GET_TICKETS_TICKETDASHBOARD_TICKETPLACE_INFO
   | POST_TICKETS_TICKETDASHBOARD_TICKETPLACE_UPDATE
   | GET_TICKETS_TICKETDASHBOARD_TICKETPLACES
+  | GET_TICKET_FLEET_VEHICLES
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

@@ -103,6 +103,7 @@ types:
     ambulances: Maybe [DocumentVerificationConfigAPIEntity]
     trucks: Maybe [DocumentVerificationConfigAPIEntity]
     bus: Maybe [DocumentVerificationConfigAPIEntity]
+    boat: Maybe [DocumentVerificationConfigAPIEntity]
   DocumentVerificationConfigAPIEntity:
     documentType: DocumentType
     title: Text
