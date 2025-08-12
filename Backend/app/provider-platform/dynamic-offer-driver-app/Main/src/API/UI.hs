@@ -23,6 +23,7 @@ import qualified API.Action.UI.CallFeedback as CallFeedback
 import qualified API.Action.UI.DemandHotspots as DemandHotspots
 import qualified API.Action.UI.DriverOnboardingV2 as DriverOnboardingV2
 import qualified API.Action.UI.DriverProfileQuestions as DriverProfileQuestions
+import qualified API.Action.UI.DriverWallet as DriverWallet
 import qualified API.Action.UI.EditBooking as EditBooking
 import qualified API.Action.UI.FareCalculator as FareCalculator
 import qualified API.Action.UI.Insurance as Insurance
@@ -38,6 +39,7 @@ import qualified API.Action.UI.ReferralPayout as ReferralPayout
 import qualified API.Action.UI.SocialLogin as SocialLogin
 import qualified API.Action.UI.SpecialLocation as SpecialLocation
 import qualified API.Action.UI.SpecialLocationWarrior as SpecialLocationWarrior
+import qualified API.Action.UI.SubscriptionTransaction as SubscriptionTransaction
 import qualified API.Action.UI.Tokenization as Tokenization
 import qualified API.Action.UI.VehicleDetails as VehicleDetails
 import qualified API.Action.UI.WMB as WMB
@@ -129,6 +131,8 @@ type API =
            :<|> CallFeedback.API
            :<|> Invoice.API
            :<|> Insurance.API
+           :<|> DriverWallet.API
+           :<|> SubscriptionTransaction.API
        )
 
 handler :: FlowServer API
@@ -185,3 +189,5 @@ handler =
     :<|> CallFeedback.handler
     :<|> Invoice.handler
     :<|> Insurance.handler
+    :<|> DriverWallet.handler
+    :<|> SubscriptionTransaction.handler

@@ -323,7 +323,8 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
             aadhaarNumber = Nothing,
             dlNumber = Nothing,
             planExpiryDate = Nothing,
-            prepaidSubscriptionBalance = Nothing
+            prepaidSubscriptionBalance = Nothing,
+            walletBalance = Nothing
           }
   QDriverStats.createInitialDriverStats merchantOperatingCity.currency merchantOperatingCity.distanceUnit driverId
   QD.create driverInfo

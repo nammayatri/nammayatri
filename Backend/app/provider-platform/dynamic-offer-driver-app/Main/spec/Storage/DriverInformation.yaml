@@ -125,6 +125,7 @@ DriverInformation:
     aadhaarNumber: Maybe (EncryptedHashedField e Text)
     dlNumber: Maybe (EncryptedHashedField e Text)
     driverFlowStatus: Maybe DriverFlowStatus
+    walletBalance: Maybe HighPrecMoney
     onlineDurationRefreshedAt: Maybe UTCTime
 
   default:
@@ -407,4 +408,8 @@ DriverInformation:
     updateDrunkAndDriveViolationCount:
       kvFunction: updateOneWithKV
       params: [drunkAndDriveViolationCount]
+      where: driverId
+    updateWalletBalance:
+      kvFunction: updateOneWithKV
+      params: [walletBalance]
       where: driverId

@@ -208,7 +208,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                               isInterCity = isInterCityTrip searchTry.tripCategory,
                               onlinePayment = merchant.onlinePayment,
                               configsInExperimentVersions = searchReq.configInExperimentVersions,
-                              rideFare = Just searchTry.baseFare,
+                              rideFare = Just searchTry.baseFare, -- TODO: add walletBalance check
                               ..
                             }
                     filterOutGoHomeDriversAccordingToHomeLocation (map (convertDriverPoolWithActualDistResultToNearestGoHomeDriversResult False True) driversInQueue) goHomeReq merchantOpCityId_

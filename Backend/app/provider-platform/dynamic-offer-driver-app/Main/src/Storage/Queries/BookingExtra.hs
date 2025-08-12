@@ -214,3 +214,10 @@ updatePaymentId bookingId paymentId = do
 
 findBookingsFromDB :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => [Id Booking] -> m [Booking]
 findBookingsFromDB bookingIds = findAllWithKV [Se.Is BeamB.id $ Se.In (getId <$> bookingIds)]
+
+findByIds ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  [Id Booking] ->
+  m [Booking]
+findByIds bookingIds = do
+  findAllWithKV [Se.Is BeamB.id $ Se.In $ getId <$> bookingIds]
