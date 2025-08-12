@@ -279,7 +279,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
                                 }
                           )
                           (reverse stopSchedulesToUse)
-                  JT.VehiclePosition {position = Nothing, vehicleId = tripInfo.tripId, upcomingStops = upcomingStops}
+                  JT.VehiclePosition {position = Nothing, vehicleId = tripInfo.tripId, route_state = Nothing, upcomingStops = upcomingStops}
               )
               allTripsInfo
         _ -> do
@@ -577,6 +577,7 @@ processBusLegState
                       [ JT.VehiclePosition
                           { position = Just $ LatLong bestBusData.latitude bestBusData.longitude,
                             vehicleId = topCandVehId,
+                            route_state = bestBusData.route_state,
                             upcomingStops = upcomingStops
                           }
                       ]
@@ -610,6 +611,7 @@ processBusLegState
               [ JT.VehiclePosition
                   { position = Just $ LatLong bestBusData.latitude bestBusData.longitude,
                     vehicleId = busNum,
+                    route_state = bestBusData.route_state,
                     upcomingStops = upcomingStops
                   }
               ]
@@ -625,6 +627,7 @@ processBusLegState
                 JT.VehiclePosition
                   { position = Just $ LatLong bd.latitude bd.longitude,
                     vehicleId = fromMaybe "UNKNOWN" bd.vehicle_number,
+                    route_state = bd.route_state,
                     upcomingStops = getUpcomingStopsForBus now mbBoardingStation bd False
                   }
             )
