@@ -53,12 +53,12 @@ checkRefundStatusJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
       refundId = (Id jobData.refundId)
       currentRetries = jobData.numberOfRetries
   refundEntry <- QRefunds.findById refundId >>= fromMaybeM (InvalidRequest $ "refund not found for id: " <> show refundId)
-  paymentOrder <- QPaymentOrder.findById refundEntry.orderId >>= fromMaybeM (InvalidRequest $ "payment order not found for refund: " <> show refundId)
+  paymentOrder <- QPaymentOrder.findByShortId refundEntry.orderId >>= fromMaybeM (InvalidRequest $ "payment order not found for refund: " <> show refundId)
   frfsTicketBookingPayments <- QFRFSTicketBookingPayment.findAllByOrderId paymentOrder.id
   person <- QP.findById (cast paymentOrder.personId) >>= fromMaybeM (PersonNotFound paymentOrder.personId.getId)
   let orderStatusCall = Payment.orderStatus person.merchantId person.merchantOperatingCityId Nothing Payment.FRFSMultiModalBooking (Just person.id.getId) person.clientSdkVersion
       commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person person.id
-  paymentStatusResp <- DPayment.orderStatusService commonPersonId refundEntry.orderId orderStatusCall
+  paymentStatusResp <- DPayment.orderStatusService commonPersonId paymentOrder.id orderStatusCall
   riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
   let matchingRefund = find (\refund -> refund.requestId == refundId.getId) paymentStatusResp.refunds
   case matchingRefund of

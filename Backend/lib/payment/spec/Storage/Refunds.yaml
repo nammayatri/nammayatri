@@ -11,8 +11,8 @@ Refunds:
   tableName: refunds
   fields:
     id : Id Refunds
-    shortId : Text
-    orderId : Id PaymentOrder
+    shortId : ShortId Refunds
+    orderId : ShortId PaymentOrder
     refundAmount : HighPrecMoney
     idAssignedByServiceProvider : Maybe Text
     merchantId : Text

@@ -834,9 +834,9 @@ refundService (request, refundId) merchantId splitDetails refundsCall = do
       Refunds
         { id = refundId,
           merchantId = merchantId.getId,
-          shortId = request.requestId,
+          shortId = ShortId request.requestId,
           status = REFUND_PENDING,
-          orderId = Id request.orderId,
+          orderId = ShortId request.orderId,
           refundAmount = request.amount,
           errorMessage = Nothing,
           errorCode = Nothing,
