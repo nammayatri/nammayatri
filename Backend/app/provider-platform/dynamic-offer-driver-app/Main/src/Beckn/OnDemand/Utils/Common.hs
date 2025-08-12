@@ -1424,6 +1424,7 @@ mkGeneralInfoTagGroup transporterConfig pricing isValueAddNP =
             <> tollNamesSingleton pricing.tollNames
             <> tipOptionSingleton pricing.tipOptions
             <> durationToNearestDriverTagSingleton
+            <> etaToNearestDriverTagSingleton
             <> smartTipSuggestionTagSingleton
             <> smartTipReasonTagSingleton
       }
@@ -1563,7 +1564,14 @@ mkGeneralInfoTagGroup transporterConfig pricing isValueAddNP =
                     },
               tagValue = show <$> tipOptions
             }
-    durationToNearestDriverTagSingleton
+
+    -- for backward compatibility
+    durationToNearestDriverTagSingleton = mkDurationToNearestDriverTagSingleton Tags.DURATION_TO_NEAREST_DRIVER_MINUTES
+
+    -- ONDC compliant
+    etaToNearestDriverTagSingleton = mkDurationToNearestDriverTagSingleton Tags.ETA_TO_NEAREST_DRIVER_MIN
+
+    mkDurationToNearestDriverTagSingleton tagName
       | isNothing pricing.distanceToNearestDriver || not isValueAddNP = Nothing
       | otherwise =
         Just . List.singleton $
@@ -1572,7 +1580,7 @@ mkGeneralInfoTagGroup transporterConfig pricing isValueAddNP =
               tagDescriptor =
                 Just
                   Spec.Descriptor
-                    { descriptorCode = Just $ show Tags.DURATION_TO_NEAREST_DRIVER_MINUTES,
+                    { descriptorCode = Just $ show tagName,
                       descriptorName = Just $ show pricing.vehicleVariant,
                       descriptorShortDesc = Nothing
                     },
@@ -1612,7 +1620,6 @@ mkGeneralInfoTagGroup transporterConfig pricing isValueAddNP =
                 Variant.BUS_AC -> avgSpeed.busAc.getKilometers
                 Variant.BOAT -> avgSpeed.boat.getKilometers
                 Variant.AUTO_PLUS -> avgSpeed.autorickshaw.getKilometers
-
           getDuration pricing.distanceToNearestDriver variantSpeed
 
         getDuration :: Maybe Meters -> Int -> Maybe Text
