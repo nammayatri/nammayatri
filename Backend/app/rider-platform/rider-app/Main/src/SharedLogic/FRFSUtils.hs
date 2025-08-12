@@ -772,7 +772,7 @@ markAllRefundBookings booking personId = do
     let splitDetails = Payment.mkUnaggregatedSplitSettlementDetails isSplitEnabled amountUpdated vendorSplitDetails
     let refundSplitDetails = mkRefundSplitDetails nonRefundInitiatedBookings
     refundId <- generateGUID
-    let lockKey = "markAllRefundBookings:" <> refundId
+    let lockKey = "markAllRefundBookings:" <> orderShortId
     Redis.withLockRedis lockKey 5 $ do
       when allFailed $ whenJust mbJourneyId $ \journeyId -> QJourney.updateStatus DJourney.FAILED journeyId
       let refundReq =
