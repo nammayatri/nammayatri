@@ -402,7 +402,7 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
       transitServiceReq <- TMultiModal.getTransitServiceReq searchRequest.merchantId merchantOperatingCityId
       otpResponse' <- JMU.measureLatency (MultiModal.getTransitRoutes (Just searchRequest.id.getId) transitServiceReq transitRoutesReq >>= fromMaybeM (InternalError "routes dont exist")) "getTransitRoutes"
       let otpResponse'' = MInterface.MultiModalResponse (map mkRouteDetailsForWalkLegs otpResponse'.routes)
-      logDebug $ "[Multimodal - OTP Response]" <> show otpResponse''
+      logDebug $ "[Multimodal - OTP Response]" <> show otpResponse'' <> show searchRequest.id.getId
       -- Add default auto leg if no routes are found
       if null otpResponse''.routes
         then do
