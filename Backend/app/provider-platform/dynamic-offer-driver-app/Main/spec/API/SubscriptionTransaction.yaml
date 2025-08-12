@@ -1,0 +1,36 @@
+imports:
+  Id: Kernel.Types.Id
+  UTCTime: Data.Time
+  SubscriptionTransaction: Domain.Types.SubscriptionTransaction
+  TransactionType: Domain.Types.SubscriptionTransaction
+  Location: Domain.Types.Location
+  HighPrecMoney: Kernel.Types.Common
+  TransactionStatus: Kernel.External.Payment.Juspay.Types.Common
+
+module: SubscriptionTransaction
+types:
+  SubscriptionTransactionEntity:
+    driverId: Text
+    entityId: Maybe Text
+    transactionType: TransactionType
+    amount: HighPrecMoney
+    status: TransactionStatus
+    runningBalance: HighPrecMoney
+    fromLocation: Maybe Location
+    toLocation: Maybe Location
+    createdAt: UTCTime
+    updatedAt: UTCTime
+apis:
+  - GET:
+      endpoint: /subscription/transactions
+      query:
+        fromDate: UTCTime
+        toDate: UTCTime
+        status: TransactionStatus
+        minAmount: HighPrecMoney
+        maxAmount: HighPrecMoney
+        limit: Int
+        offset: Int
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: "[SubscriptionTransactionEntity]"

@@ -505,6 +505,13 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN prepaid_subscri
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN is_ml_based_dynamic_pricing_enabled boolean ;
 
 
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN gst_percentage double precision ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_driver_wallet boolean ;
+
+
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN max_online_duration_days integer  default 10;

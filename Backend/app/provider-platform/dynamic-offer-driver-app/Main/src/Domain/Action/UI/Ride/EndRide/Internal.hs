@@ -14,6 +14,7 @@
 
 module Domain.Action.UI.Ride.EndRide.Internal
   ( endRideTransaction,
+    createDriverWalletTransaction,
     putDiffMetric,
     getRouteAndDistanceBetweenPoints,
     safeMod,
@@ -36,6 +37,8 @@ module Domain.Action.UI.Ride.EndRide.Internal
     getMonth,
     pickedWaypointsForEditDestination,
     pickNWayPoints,
+    makeWalletRunningBalanceLockKey,
+    makeSubscriptionRunningBalanceLockKey,
   )
 where
 
@@ -53,6 +56,8 @@ import Domain.Types.DailyStats as DDS
 import qualified Domain.Types.DriverFee as DF
 import qualified Domain.Types.DriverInformation as DI
 import Domain.Types.DriverPlan
+import qualified Domain.Types.DriverWallet as DW
+import Domain.Types.Extra.MerchantPaymentMethod
 import qualified Domain.Types.FareParameters as DFare
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.LeaderBoardConfigs as LConfig
@@ -65,6 +70,7 @@ import qualified Domain.Types.Ride as Ride
 import qualified Domain.Types.RideRelatedNotificationConfig as DRN
 import qualified Domain.Types.RiderDetails as RD
 import Domain.Types.SubscriptionConfig
+import qualified Domain.Types.SubscriptionTransaction as SubscriptionTransaction
 import Domain.Types.TransporterConfig
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleVariant as Variant
@@ -74,6 +80,7 @@ import GHC.Float (double2Int)
 import GHC.Num.Integer (integerFromInt, integerToInt)
 import Kernel.External.Maps
 import qualified Kernel.External.Notification.FCM.Types as FCM
+import Kernel.External.Payment.Juspay.Types.Common
 import Kernel.Prelude hiding (find, forM_, map, whenJust)
 import qualified Kernel.Storage.Clickhouse.Config as CH
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -104,6 +111,7 @@ import SharedLogic.TollsDetector
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.CachedQueries.Merchant.LeaderBoardConfig as QLeaderConfig
+import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as CQMPM
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
 import qualified Storage.CachedQueries.PlanExtra as CQP
@@ -118,6 +126,8 @@ import qualified Storage.Queries.DriverInformationExtra as QDIE
 import Storage.Queries.DriverPlan (findByDriverIdWithServiceName)
 import qualified Storage.Queries.DriverPlan as QDPlan
 import qualified Storage.Queries.DriverStats as QDriverStats
+import qualified Storage.Queries.DriverWallet as QDW
+import qualified Storage.Queries.DriverWalletExtra as QDWE
 import qualified Storage.Queries.FareParameters as QFare
 import Storage.Queries.FleetDriverAssociationExtra as QFDAE
 import Storage.Queries.FleetOwnerInformation as QFOI
@@ -125,6 +135,7 @@ import Storage.Queries.Person as SQP
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRD
+import qualified Storage.Queries.SubscriptionTransaction as QSubscriptionTransaction
 import qualified Storage.Queries.Vehicle as QV
 import qualified Storage.Queries.VendorFee as QVF
 import qualified Storage.Queries.VendorSplitDetails as QVSD
@@ -182,12 +193,15 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   clearTollStartGateBatchCache ride.driverId
   when (fromMaybe False merchant.enforceSufficientDriverBalance && isJust thresholdConfig.prepaidSubscriptionThreshold) $ do
     case ride.fare of
-      Just fare -> fork "update driver's prepaid balance" $ updateBalance fare driverInfo
+      Just fare -> fork "update driver's prepaid balance" $ updateBalance fare
       Nothing -> logWarning $ "Fare is not present for ride: " <> show ride.id.getId
   when (thresholdConfig.subscription) $ do
     -- Turn this off for only prepaid subscriptions
     let serviceName = YATRI_SUBSCRIPTION
     createDriverFee booking.providerId booking.merchantOperatingCityId driverId ride.fare ride.currency newFareParams driverInfo booking serviceName
+
+  when (fromMaybe False thresholdConfig.enableDriverWallet) $ do
+    fork "createDriverWalletTransaction" $ createDriverWalletTransaction ride booking thresholdConfig
 
   triggerRideEndEvent RideEventData {ride = ride{status = Ride.COMPLETED}, personId = cast driverId, merchantId = booking.providerId}
   triggerBookingCompletedEvent BookingEventData {booking = booking{status = SRB.COMPLETED}, personId = cast driverId, merchantId = booking.providerId}
@@ -224,14 +238,108 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   rideRelatedNotificationConfigList <- CRN.findAllByMerchantOperatingCityIdAndTimeDiffEventInRideFlow booking.merchantOperatingCityId DRN.END_TIME booking.configInExperimentVersions
   forM_ rideRelatedNotificationConfigList (SN.pushReminderUpdatesInScheduler booking ride now driverId)
   where
-    updateBalance fare driverInfo = do
-      QDIE.updatePrepaidSubscriptionBalance (cast ride.driverId) (-1 * fare) -- check gst etc
-      when ((fromMaybe 0 driverInfo.prepaidSubscriptionBalance) - fare < fromMaybe 0 thresholdConfig.prepaidSubscriptionThreshold) $ do
-        logInfo $ "Prepaid subscription balance is less than threshold for driver: " <> show driverId.getId
-        let unsubscribedMessage = "Recharge Alert!"
-            unsubscribedTitle = "Your subscription balance is low. Please recharge to get rides"
-        driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-        sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.DRIVER_UNSUBSCRIBED unsubscribedTitle unsubscribedMessage driver driver.deviceToken
+    updateBalance fare = do
+      Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey ride.driverId.getId) 10 10 $ do
+        -- Fetching again to avoid race conditions
+        freshDriverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+        let newBalance = fromMaybe 0 freshDriverInfo.prepaidSubscriptionBalance - fare
+        QDIE.updatePrepaidSubscriptionBalance (cast ride.driverId) newBalance
+        createSubscriptionTransaction ride newBalance booking
+        when (newBalance < fromMaybe 0 thresholdConfig.prepaidSubscriptionThreshold) $ do
+          logInfo $ "Prepaid subscription balance is less than threshold for driver: " <> show driverId.getId
+          let unsubscribedMessage = "Recharge Alert!"
+              unsubscribedTitle = "Your subscription balance is low. Please recharge to get rides"
+          driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+          sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.DRIVER_UNSUBSCRIBED unsubscribedTitle unsubscribedMessage driver driver.deviceToken
+
+createSubscriptionTransaction ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    CacheFlow m r
+  ) =>
+  Ride.Ride ->
+  HighPrecMoney ->
+  SRB.Booking ->
+  m ()
+createSubscriptionTransaction ride runningBalance booking = do
+  now <- getCurrentTime
+  id <- generateGUID
+  let transaction =
+        SubscriptionTransaction.SubscriptionTransaction
+          { id = id,
+            merchantId = ride.merchantId,
+            merchantOperatingCityId = ride.merchantOperatingCityId,
+            driverId = ride.driverId,
+            entityId = Just ride.id.getId,
+            transactionType = SubscriptionTransaction.RIDE,
+            amount = fromMaybe 0 ride.fare,
+            status = CHARGED,
+            runningBalance = runningBalance,
+            fromLocationId = Just booking.fromLocation.id,
+            toLocationId = (.id) <$> booking.toLocation,
+            createdAt = now,
+            updatedAt = now
+          }
+  QSubscriptionTransaction.create transaction
+
+createDriverWalletTransaction ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    CacheFlow m r
+  ) =>
+  Ride.Ride ->
+  SRB.Booking ->
+  TransporterConfig ->
+  m ()
+createDriverWalletTransaction ride booking transporterConfig = do
+  now <- getCurrentTime
+  newId <- generateGUID
+  let collectionAmount = fromMaybe 0 ride.fare
+      gstPercentage = fromMaybe 0.0 transporterConfig.gstPercentage
+      gstDeduction = collectionAmount * (realToFrac gstPercentage / 100)
+
+  Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey ride.driverId.getId) 10 10 $ do
+    lastTransaction <- QDWE.findLatestByDriverId ride.driverId
+    let lastRunningBalance = maybe 0 (.runningBalance) lastTransaction
+
+    (merchantPayable, driverPayable) <- do
+      mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId ->
+        do
+          CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
+          >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
+      case mbPaymentMethod of
+        Nothing -> pure (0, gstDeduction) -- Considering OFFLINE. To be tested
+        Just paymentMethod -> do
+          case paymentMethod.paymentInstrument of
+            Cash -> pure (0, gstDeduction) -- OFFLINE
+            _ -> pure (collectionAmount - gstDeduction, 0) -- ONLINE
+    let newRunningBalance = lastRunningBalance + merchantPayable - driverPayable
+    let driverWallet =
+          DW.DriverWallet
+            { id = newId,
+              merchantId = ride.merchantId,
+              merchantOperatingCityId = ride.merchantOperatingCityId,
+              driverId = ride.driverId,
+              rideId = Just ride.id,
+              transactionType = DW.RIDE_TRANSACTION,
+              collectionAmount = Just collectionAmount,
+              gstDeduction = Just gstDeduction,
+              merchantPayable = Just merchantPayable,
+              driverPayable = Just driverPayable,
+              runningBalance = newRunningBalance,
+              payoutOrderId = Nothing,
+              payoutStatus = Nothing,
+              createdAt = now,
+              updatedAt = now
+            }
+    QDI.updateWalletBalance (Just newRunningBalance) ride.driverId
+    QDW.create driverWallet
+
+makeWalletRunningBalanceLockKey :: Text -> Text
+makeWalletRunningBalanceLockKey personId = "WalletRunningBalanceLockKey:" <> personId
+
+makeSubscriptionRunningBalanceLockKey :: Text -> Text
+makeSubscriptionRunningBalanceLockKey personId = "SubscriptionRunningBalanceLockKey:" <> personId
 
 sendReferralFCM ::
   ( CacheFlow m r,

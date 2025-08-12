@@ -320,6 +320,11 @@ updateTripEndLocation driverTripEndLocation driverId = do
     ]
     [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
+updateWalletBalance :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateWalletBalance walletBalance driverId = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.walletBalance walletBalance, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+
 updateWeeklyCancellationRateBlockingCooldown :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateWeeklyCancellationRateBlockingCooldown weeklyCancellationRateBlockingCooldown driverId = do
   _now <- getCurrentTime
@@ -410,6 +415,7 @@ updateByPrimaryKey (Domain.Types.DriverInformation.DriverInformation {..}) = do
       Se.Set Beam.tollRelatedIssueCount tollRelatedIssueCount,
       Se.Set Beam.totalReferred totalReferred,
       Se.Set Beam.verified verified,
+      Se.Set Beam.walletBalance walletBalance,
       Se.Set Beam.weeklyCancellationRateBlockingCooldown weeklyCancellationRateBlockingCooldown,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
