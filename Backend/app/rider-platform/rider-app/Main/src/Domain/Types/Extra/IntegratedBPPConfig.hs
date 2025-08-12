@@ -53,6 +53,8 @@ data CRISConfig = CRISConfig
     tpAccountId :: Int,
     sourceZone :: Text,
     ticketType :: Text,
+    changeOverIndirectStations :: Maybe [Text],
+    changeOverDirectStations :: Maybe [Text],
     agentDataDecryptionKey :: EncryptedField 'AsEncrypted Text,
     utsDataKey :: EncryptedField 'AsEncrypted Text
   }

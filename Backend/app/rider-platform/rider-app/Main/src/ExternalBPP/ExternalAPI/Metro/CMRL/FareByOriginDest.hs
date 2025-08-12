@@ -15,12 +15,11 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.App
 import Kernel.Utils.Common
-import Servant hiding (route)
+import Servant
 import qualified SharedLogic.FRFSUtils as FRFSUtils
 
 data FareByOriginDestReq = FareByOriginDestReq
-  { route :: T.Text,
-    origin :: T.Text,
+  { origin :: T.Text,
     destination :: T.Text,
     ticketType :: T.Text
   }

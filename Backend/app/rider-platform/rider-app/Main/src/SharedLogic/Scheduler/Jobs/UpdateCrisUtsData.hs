@@ -60,6 +60,8 @@ updateCrisUtsDataJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
                   agentDataDecryptionKey = encryptedAgentDataKey,
                   utsDataKey = utsDataKey config,
                   consumerKey = consumerKey config,
+                  changeOverIndirectStations = changeOverIndirectStations config,
+                  changeOverDirectStations = changeOverDirectStations config,
                   consumerSecret = consumerSecret config
                 }
       QIntegratedBPPConfig.updateByPrimaryKey integratedBppConfig {providerConfig = updatedProviderConfig}
