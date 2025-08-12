@@ -15,6 +15,7 @@
 module SharedLogic.CallBAPInternal where
 
 import API.Types.UI.MeterRide
+import qualified API.Types.UI.PickupInstructions as PickupInstructions
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text
 import Domain.Types.Ride as DRide
@@ -237,6 +238,33 @@ rideSearchExpired apiKey internalUrl request = do
   logInfo "BPP handle rideSearchExpired callBAPInternal"
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (rideSearchExpiredClient (Just apiKey) request) "rideSearchExpired" rideSearchExpiredAPI
+
+type GetPickupInstructionsAPI =
+  "internal"
+    :> Capture "riderId" Text
+    :> "pickupInstructions"
+    :> Header "token" Text
+    :> Get '[JSON] PickupInstructions.PickupInstructionResp
+
+getPickupInstructionsClient :: Text -> Maybe Text -> EulerClient PickupInstructions.PickupInstructionResp
+getPickupInstructionsClient = client (Proxy @GetPickupInstructionsAPI)
+
+getPickupInstructionsAPI :: Proxy GetPickupInstructionsAPI
+getPickupInstructionsAPI = Proxy
+
+getPickupInstructions ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+  ) =>
+  Text ->
+  BaseUrl ->
+  Text ->
+  m PickupInstructions.PickupInstructionResp
+getPickupInstructions apiKey internalUrl riderId = do
+  logInfo $ "CallBAPInternal: Calling BAP internal API for pickup instructions, riderId: " <> riderId
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (getPickupInstructionsClient riderId (Just apiKey)) "GetPickupInstructions" getPickupInstructionsAPI
 
 type GetRiderMobileNumberAPI =
   "internal"

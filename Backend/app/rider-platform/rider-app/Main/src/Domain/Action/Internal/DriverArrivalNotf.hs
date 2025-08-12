@@ -2,6 +2,7 @@ module Domain.Action.Internal.DriverArrivalNotf where
 
 import Data.Aeson
 import Data.Text (pack)
+import qualified Domain.Action.Internal.PickupInstructionHandler as PIHandler
 import Domain.Types.RideStatus
 import Environment
 import Kernel.Beam.Functions as B
@@ -34,7 +35,7 @@ data DANTypeValidationReq = DANTypeValidationReq
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
 driverArrivalNotfHandler :: DANTypeValidationReq -> Flow APISuccess
-driverArrivalNotfHandler (DANTypeValidationReq bppRideId _ status) = do
+driverArrivalNotfHandler (DANTypeValidationReq bppRideId driverIdValue status) = do
   ride <- B.runInReplica $ QRide.findByBPPRideId (Id bppRideId) >>= fromMaybeM (RideDoesNotExist bppRideId)
   when (ride.status == COMPLETED || ride.status == CANCELLED) $
     throwError $ RideInvalidStatus ("Cannot track this ride: " <> pack (show ride.status))
@@ -45,7 +46,7 @@ driverArrivalNotfHandler (DANTypeValidationReq bppRideId _ status) = do
       QRBE.updateJourneyLegStatus (Just LJT.OnTheWay) booking.id -- TODO :: Deprecate once UI consumes `legExtraInfo.trackingStatus`
       Notify.notifyDriverOnTheWay booking.riderId booking.tripCategory ride
     DRIVER_PICKUP_INSTRUCTION -> do
-      pure ()
+      PIHandler.handlePickupInstruction ride booking driverIdValue
     DRIVER_REACHING -> do
       whenJust booking.journeyLegId $ \journeyLegId -> JMState.setJourneyLegTrackingStatus journeyLegId Nothing JMState.AlmostArrived
       QRBE.updateJourneyLegStatus (Just LJT.Arriving) booking.id -- TODO :: Deprecate once UI consumes `legExtraInfo.trackingStatus`
