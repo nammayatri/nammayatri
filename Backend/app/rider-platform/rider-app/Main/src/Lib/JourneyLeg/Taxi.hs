@@ -232,7 +232,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
               { status = journeyLegStatus,
                 legStatus = JT.TaxiStatusElement <$> journeyLegsStatus,
                 userPosition = (.latLong) <$> listToMaybe req.riderLastPoints,
-                vehiclePositions = maybe [] (\latLong -> [JT.VehiclePosition {position = Just latLong, vehicleId = "taxi", upcomingStops = []}]) vehiclePosition,
+                vehiclePositions = maybe [] (\latLong -> [JT.VehiclePosition {position = Just latLong, vehicleId = "taxi", route_state = Nothing, upcomingStops = []}]) vehiclePosition,
                 legOrder = journeyLegOrder,
                 subLegOrder = 1,
                 mode = DTrip.Taxi
