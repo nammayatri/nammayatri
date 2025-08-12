@@ -5,9 +5,9 @@ import qualified BecknV2.FRFS.Enums as Spe
 import qualified BecknV2.OnDemand.Enums
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant
-import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Domain.Types.RecentLocation
+import qualified Domain.Types.RiderConfig as DomainRiderConfig
 import Domain.Types.RouteStopTimeTable
 import qualified Environment
 import EulerHS.Prelude hiding (decodeUtf8, id)
@@ -44,10 +44,10 @@ postNearbyBusBooking (mbPersonId, _) req = do
   riderId <- fromMaybeM (PersonNotFound "No person found") mbPersonId
   person <- QP.findById riderId >>= fromMaybeM (PersonNotFound "No person found")
   riderConfig <- QRiderConfig.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
-  let radius :: Double = fromMaybe 0.5 riderConfig.nearbyDriverSearchRadius --TODO: To be moved to config.
+  -- let radius :: Double = fromMaybe 0.5 riderConfig.nearbyDriverSearchRadius --TODO: To be moved to config.
   nearbyBuses <-
     if req.requireNearbyBuses
-      then getNearbyBuses person.merchantOperatingCityId radius req
+      then getNearbyBuses riderConfig req
       else return []
 
   recentRides <-
@@ -70,10 +70,9 @@ castToOnDemandVehicleCategory Spe.SUBWAY = BecknV2.OnDemand.Enums.SUBWAY
 
 -- Need to change the return type since the type it's returning has more data than we need.
 -- Only need the vechicle number, current location and possibly the route number. Unsure if route id is necessary.
-getNearbyBuses :: Id MerchantOperatingCity -> Double -> API.Types.UI.NearbyBuses.NearbyBusesRequest -> Environment.Flow [API.Types.UI.NearbyBuses.NearbyBus]
-getNearbyBuses merchantOperatingCityId _ req = do
-  riderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
-  buses <- getNearbyBusesFRFS (Maps.LatLong req.userLon req.userLat) riderConfig
+getNearbyBuses :: DomainRiderConfig.RiderConfig -> API.Types.UI.NearbyBuses.NearbyBusesRequest -> Environment.Flow [API.Types.UI.NearbyBuses.NearbyBus]
+getNearbyBuses riderConfig req = do
+  buses <- getNearbyBusesFRFS (Maps.LatLong req.userLat req.userLon) riderConfig
   logDebug $ "Nearby buses: " <> show buses
   pure $
     map
