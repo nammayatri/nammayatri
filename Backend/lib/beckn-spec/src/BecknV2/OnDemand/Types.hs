@@ -386,7 +386,9 @@ data Catalog = Catalog
   { -- |
     catalogDescriptor :: Maybe Descriptor,
     -- |
-    catalogProviders :: Maybe [Provider]
+    catalogProviders :: Maybe [Provider],
+    -- |
+    catalogTags :: Maybe [TagGroup]
   }
   deriving (Show, Eq, Generic, Data, Read)
 
@@ -405,7 +407,8 @@ optionsCatalog =
   where
     table =
       [ ("catalogDescriptor", "descriptor"),
-        ("catalogProviders", "providers")
+        ("catalogProviders", "providers"),
+        ("catalogTags", "tags")
       ]
 
 -- | Describes a category

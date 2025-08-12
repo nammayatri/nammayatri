@@ -96,6 +96,7 @@ data BecknTagGroup
   | RIDE_DETAILS_INFO
   | SAFETY_PLUS_INFO
   | INSURANCE_INFO
+  | BPP_TERMS
   deriving (Show, Eq, Ord, Generic, ToJSON, FromJSON)
 
 instance CompleteTagGroup BecknTagGroup where
