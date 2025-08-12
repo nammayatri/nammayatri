@@ -740,7 +740,7 @@ markAllRefundBookings booking personId = do
   allPaymentBookings <- mapM (QFRFSTicketBookingPayment.findNewTBPByBookingId . (.id)) allJourneyFrfsBookings
   let paymentBookings = catMaybes allPaymentBookings
 
-  let failedBookings = filter ((== DFRFSTicketBooking.FAILED) . (.status)) allJourneyFrfsBookings
+  let failedBookings = filter (\frfsBookings -> frfsBookings.status `elem` [DFRFSTicketBooking.FAILED, DFRFSTicketBooking.CANCELLED]) allJourneyFrfsBookings
       nonRefundInitiatedBookings =
         filter
           ( \bkg ->
