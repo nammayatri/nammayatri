@@ -234,7 +234,7 @@ postPickupinstructions (mbPersonId, merchantId) req = do
   when (T.null actualInstruction && isNothing mediaFileId) $
     throwError $ InvalidRequest "Either instruction text or audio file must be provided"
 
-  newLocationGeohash <- Geohash.encode 9 (req.lat, req.lon) & (fromMaybeM (InvalidRequest "Invalid location"))
+  newLocationGeohash <- Geohash.encode 8 (req.lat, req.lon) & (fromMaybeM (InvalidRequest "Invalid location"))
   logDebug $ "PickupInstructions: New location geohash: " <> show newLocationGeohash
 
   mbNearbyInstruction <- QPI.findByPersonIdAndGeohash personId (T.pack newLocationGeohash)
@@ -264,7 +264,7 @@ postPickupinstructions (mbPersonId, merchantId) req = do
               -- Create new pickup instruction
               newPickupInstructionsId <- generateGUID
               now <- getCurrentTime
-              geohash <- Geohash.encode 9 (req.lat, req.lon) & (fromMaybeM (InvalidRequest "Invalid location"))
+              geohash <- Geohash.encode 8 (req.lat, req.lon) & (fromMaybeM (InvalidRequest "Invalid location"))
               let instructionText = case (T.null actualInstruction, mediaFileId) of
                     (True, Just _) -> "Audio pickup instruction" -- No text but has audio
                     (True, Nothing) -> "Pickup instruction" -- No text and no audio
@@ -287,7 +287,7 @@ postPickupinstructions (mbPersonId, merchantId) req = do
           -- Create new pickup instruction
           newPickupInstructionsId <- generateGUID
           now <- getCurrentTime
-          geohash <- Geohash.encode 9 (req.lat, req.lon) & (fromMaybeM (InvalidRequest "Invalid location"))
+          geohash <- Geohash.encode 8 (req.lat, req.lon) & (fromMaybeM (InvalidRequest "Invalid location"))
           let instructionText = case (T.null actualInstruction, mediaFileId) of
                 (True, Just _) -> "Audio pickup instruction" -- No text but has audio
                 (True, Nothing) -> "Pickup instruction" -- No text and no audio
@@ -337,87 +337,51 @@ getPickupinstructionsClosest (mbPersonId, _) mbLat mbLon = do
 
   _person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
 
-  let queryLocation = LatLong lat lon
-  pickupInstructions <- QPI.findByPersonId personId
+  -- Generate geohash 8 for query location to filter instructions
+  queryGeohash <- Geohash.encode 8 (lat, lon) & (fromMaybeM (InvalidRequest "Invalid location"))
+  logDebug $ "PickupInstructions: Query location geohash: " <> show queryGeohash
 
-  if null pickupInstructions
-    then do
-      logDebug "PickupInstructions: No instructions found for user"
+  -- Find instructions only in the same geohash 8 cell
+  mbPickupInstruction <- QPI.findByPersonIdAndGeohash personId (T.pack queryGeohash)
+
+  case mbPickupInstruction of
+    Nothing -> do
+      logDebug $ "PickupInstructions: No instruction found in geohash cell: " <> T.pack queryGeohash
       return $
         API.ClosestPickupInstructionResp
           { instruction = Nothing,
             audioBase64 = Nothing
           }
-    else do
-      -- Find instructions within proximity threshold
-      queryGeohash <- Geohash.encode 9 (lat, lon) & (fromMaybeM (InvalidRequest "Invalid location"))
-      let instructionsWithinProximity = List.filter (\instruction -> instruction.geohash == (T.pack queryGeohash)) pickupInstructions
+    Just foundInstruction -> do
+      logDebug $ "PickupInstructions: Found instruction in geohash cell with text: " <> show foundInstruction.instruction
 
-      case instructionsWithinProximity of
-        [] -> do
-          return $
-            API.ClosestPickupInstructionResp
-              { instruction = Nothing,
-                audioBase64 = Nothing
-              }
-        proximityInstructions -> do
-          -- Among instructions within proximity, find the closest one
-          let instructionsWithDistance =
-                map
-                  ( \instruction -> do
-                      let mbInsructionLoc = Geohash.decode (T.unpack instruction.geohash)
-                      case mbInsructionLoc of
-                        Just (instructionLat, instructionLon) -> do
-                          let instructionLocation = LatLong instructionLat instructionLon
-                              distance = distanceBetweenInMeters queryLocation instructionLocation
-                              distanceInMeters = highPrecMetersToMeters distance
-                          (instruction, distanceInMeters)
-                        Nothing -> do
-                          (instruction, 1000000000) -- Return 1000000000 distance for invalid geohashes
-                  )
-                  proximityInstructions
-
-              -- Sort by distance and get the closest one
-              sortedInstructions = List.sortBy (comparing snd) instructionsWithDistance
-
-          case sortedInstructions of
-            [] -> do
-              logDebug "PickupInstructions: No instructions in sorted list (unexpected)"
-              return $
-                API.ClosestPickupInstructionResp
-                  { instruction = Nothing,
-                    audioBase64 = Nothing
-                  }
-            ((closestInstruction, distanceToClosest) : _) -> do
-              logDebug $ "PickupInstructions: Found closest instruction within proximity at distance " <> show distanceToClosest <> "m with text: " <> show closestInstruction.instruction
-
-              -- Get media file content from S3 if available
-              mbAudioBase64 <- case closestInstruction.mediaFileId of
-                Just mediaFileId -> do
-                  mbMediaFile <- MFQuery.findById mediaFileId
-                  case mbMediaFile of
-                    Just mediaFile -> do
-                      case mediaFile.s3FilePath of
-                        Just s3Path -> do
-                          logDebug $ "PickupInstructions: Fetching audio file from S3: " <> show s3Path
-                          audioContent <- S3.get (T.unpack s3Path)
-                          logDebug $ "PickupInstructions: Successfully retrieved audio content from S3"
-                          return (Just audioContent)
-                        Nothing -> do
-                          logDebug $ "PickupInstructions: No S3 path found for media file: " <> show mediaFileId.getId
-                          return Nothing
-                    Nothing -> do
-                      logDebug $ "PickupInstructions: Media file not found for ID: " <> show mediaFileId.getId
-                      return Nothing
+      -- Get media file content from S3 if available
+      mbAudioBase64 <- case foundInstruction.mediaFileId of
+        Just mediaFileId -> do
+          mbMediaFile <- MFQuery.findById mediaFileId
+          case mbMediaFile of
+            Just mediaFile -> do
+              case mediaFile.s3FilePath of
+                Just s3Path -> do
+                  logDebug $ "PickupInstructions: Fetching audio file from S3: " <> show s3Path
+                  audioContent <- S3.get (T.unpack s3Path)
+                  logDebug $ "PickupInstructions: Successfully retrieved audio content from S3"
+                  return (Just audioContent)
                 Nothing -> do
-                  logDebug "PickupInstructions: No media file associated with this instruction"
+                  logDebug $ "PickupInstructions: No S3 path found for media file: " <> show mediaFileId.getId
                   return Nothing
+            Nothing -> do
+              logDebug $ "PickupInstructions: Media file not found for ID: " <> show mediaFileId.getId
+              return Nothing
+        Nothing -> do
+          logDebug "PickupInstructions: No media file associated with this instruction"
+          return Nothing
 
-              return $
-                API.ClosestPickupInstructionResp
-                  { instruction = Just closestInstruction.instruction,
-                    audioBase64 = mbAudioBase64
-                  }
+      return $
+        API.ClosestPickupInstructionResp
+          { instruction = Just foundInstruction.instruction,
+            audioBase64 = mbAudioBase64
+          }
 
 deletePickupinstructions ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -439,7 +403,7 @@ deletePickupinstructions (mbPersonId, _) mbLat mbLon mbTarget = do
   logDebug $ "PickupInstructions: DELETE request for personId: " <> show personId.getId <> ", lat: " <> show lat <> ", lon: " <> show lon <> ", target: " <> show target
 
   -- Convert query location to geohash and find exact match first
-  queryGeohash <- Geohash.encode 9 (lat, lon) & (fromMaybeM (InvalidRequest "Invalid location"))
+  queryGeohash <- Geohash.encode 8 (lat, lon) & (fromMaybeM (InvalidRequest "Invalid location"))
   mbPickupInstruction <- QPI.findByPersonIdAndGeohash personId (T.pack queryGeohash)
 
   case mbPickupInstruction of
