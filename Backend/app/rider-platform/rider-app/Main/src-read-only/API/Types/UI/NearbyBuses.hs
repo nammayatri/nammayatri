@@ -13,13 +13,12 @@ import qualified Kernel.Types.Price
 import Servant
 import Tools.Auth
 
--- data NearbyBus = NearbyBus
---   { currentLocation :: Kernel.External.Maps.Types.LatLong,
---     shortName :: Kernel.Prelude.Maybe Data.Text.Text,
---     vehicleNumber :: Kernel.Prelude.Maybe Data.Text.Text
---   }
---   deriving stock (Generic)
---   deriving anyclass (ToJSON, FromJSON, ToSchema)
+data NearbyBus = NearbyBus
+  { currentLocation :: Kernel.External.Maps.Types.LatLong,
+    vehicleNumber :: Kernel.Prelude.Maybe Data.Text.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FilteredNearbyBus = FilteredNearbyBus
   { capacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -47,7 +46,7 @@ data NearbyBusesRequest = NearbyBusesRequest
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data NearbyBusesResponse = NearbyBusesResponse {nearbyBuses :: [FilteredNearbyBus], recentRides :: [RecentRide]}
+data NearbyBusesResponse = NearbyBusesResponse {nearbyBuses :: [NearbyBus], recentRides :: [RecentRide]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

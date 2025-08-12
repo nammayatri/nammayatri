@@ -22,6 +22,7 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.JourneyLeg.Common.FRFS (getNearbyBusesFRFS)
 import Lib.JourneyModule.Utils as JourneyUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.BecknConfig as CQBC
@@ -35,8 +36,8 @@ import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.RecentLocation as QRecentLocation
 import Tools.Error
 
-nearbyBusKey :: Text
-nearbyBusKey = "bus_locations"
+-- filteredNearbyBusKey :: Text
+-- filteredNearbyBusKey = "bus_locations"
 
 postNearbyBusBooking ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -52,7 +53,7 @@ postNearbyBusBooking (mbPersonId, _) req = do
   let radius :: Double = fromMaybe 0.5 riderConfig.nearbyDriverSearchRadius --TODO: To be moved to config.
   nearbyBuses <-
     if req.requireNearbyBuses
-      then getFilteredNearbyBuses person.merchantOperatingCityId radius req
+      then getNearbyBuses person.merchantOperatingCityId radius req
       else return []
 
   recentRides <-
@@ -61,7 +62,7 @@ postNearbyBusBooking (mbPersonId, _) req = do
       else return []
 
   -- Return the complete response
-  return $ API.Types.UI.NearbyBuses.NearbyBusesResponse (concat nearbyBuses) (catMaybes recentRides)
+  return $ API.Types.UI.NearbyBuses.NearbyBusesResponse nearbyBuses (catMaybes recentRides)
 
 castToEntityType :: Spe.VehicleCategory -> Domain.Types.RecentLocation.EntityType
 castToEntityType Spe.BUS = Domain.Types.RecentLocation.BUS
@@ -75,14 +76,25 @@ castToOnDemandVehicleCategory Spe.SUBWAY = BecknV2.OnDemand.Enums.SUBWAY
 
 -- Need to change the return type since the type it's returning has more data than we need.
 -- Only need the vechicle number, current location and possibly the route number. Unsure if route id is necessary.
--- getNearbyBuses :: Id MerchantOperatingCity -> Double -> API.Types.UI.NearbyBuses.NearbyBusesRequest -> Environment.Flow [[API.Types.UI.NearbyBuses.NearbyBus]]
--- getNearbyBuses geFilteredNearbyBuses merchantOperatingCityId nearbyDriverSearchRadius req = do
---   busesBS :: [ByteString] <- CQMMB.withCrossAppRedisNew $ Hedis.geoSearch nearbyBusKey (Hedis.FromLonLat req.userLon req.userLat) (Hedis.ByRadius nearbyDriverSearchRadius "km")
---   let buses = map decodeUtf8 busesBS
+getNearbyBuses :: Id MerchantOperatingCity -> Double -> API.Types.UI.NearbyBuses.NearbyBusesRequest -> Environment.Flow [API.Types.UI.NearbyBuses.NearbyBus]
+getNearbyBuses merchantOperatingCityId _ req = do
+  riderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
+  buses <- getNearbyBusesFRFS (Maps.LatLong req.userLon req.userLat) riderConfig
+  logDebug $ "Nearby buses: " <> show buses
+  mapM
+    ( \bus -> do
+        return
+          API.Types.UI.NearbyBuses.NearbyBus
+            { currentLocation = Maps.LatLong bus.latitude bus.longitude,
+              vehicleNumber = bus.vehicle_number
+            }
+    )
+    buses
 
+{-
 getFilteredNearbyBuses :: Id MerchantOperatingCity -> Double -> API.Types.UI.NearbyBuses.NearbyBusesRequest -> Environment.Flow [[API.Types.UI.NearbyBuses.FilteredNearbyBus]]
 getFilteredNearbyBuses merchantOperatingCityId nearbyDriverSearchRadius req = do
-  busesBS :: [ByteString] <- CQMMB.withCrossAppRedisNew $ Hedis.geoSearch nearbyBusKey (Hedis.FromLonLat req.userLon req.userLat) (Hedis.ByRadius nearbyDriverSearchRadius "km")
+  busesBS :: [ByteString] <- CQMMB.withCrossAppRedisNew $ Hedis.geoSearch filteredNearbyBusKey (Hedis.FromLonLat req.userLon req.userLat) (Hedis.ByRadius nearbyDriverSearchRadius "km")
   let buses = map decodeUtf8 busesBS
   logDebug $ "BusesBS: " <> show busesBS
   logDebug $ "Buses List: " <> show buses
@@ -169,6 +181,7 @@ getFilteredNearbyBuses merchantOperatingCityId nearbyDriverSearchRadius req = do
           busData.buses
     )
     allBusesData
+-}
 
 getRecentRides :: Domain.Types.Person.Person -> API.Types.UI.NearbyBuses.NearbyBusesRequest -> Environment.Flow [Maybe API.Types.UI.NearbyBuses.RecentRide]
 getRecentRides person req = do
