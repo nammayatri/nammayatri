@@ -44,10 +44,11 @@ getFleetManagementFleets ::
   Kernel.Prelude.Maybe Kernel.Prelude.Int ->
   Kernel.Prelude.Maybe Kernel.Prelude.Int ->
   Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+  Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
   Environment.Flow API.Types.ProviderPlatform.Operator.FleetManagement.FleetInfoRes
-getFleetManagementFleets merchantShortId opCity apiTokenInfo mbIsActive mbVerified mbEnabled mbLimit mbOffset mbSearchString = do
+getFleetManagementFleets merchantShortId opCity apiTokenInfo mbIsActive mbVerified mbEnabled mbLimit mbOffset mbSearchString useMessageTranslation = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  Client.callOperatorAPI checkedMerchantId opCity (.fleetManagementDSL.getFleetManagementFleets) mbIsActive mbVerified mbEnabled mbLimit mbOffset mbSearchString apiTokenInfo.personId.getId
+  Client.callOperatorAPI checkedMerchantId opCity (.fleetManagementDSL.getFleetManagementFleets) mbIsActive mbVerified mbEnabled mbLimit mbOffset mbSearchString useMessageTranslation apiTokenInfo.personId.getId
 
 postFleetManagementFleetRegisterClientCall :: DRegistrationV2.RegisterClientCall
 postFleetManagementFleetRegisterClientCall checkedMerchantId opCity requestorId req' =

@@ -60,6 +60,7 @@ apis:
         - vehicleNo: Text
         - mbSearchString: Text
         - onlyMandatoryDocs: Bool
+        - useMessageTranslation: Bool
       response:
         type: DriverInfoResp
       helperApi:
@@ -73,6 +74,7 @@ apis:
               - vehicleNo: Text
               - mbSearchString: Text
               - onlyMandatoryDocs: Bool
+              - useMessageTranslation: Bool
             mandatoryQuery:
               - requestorId: Text
             response:

@@ -146,7 +146,8 @@ onVerify rsp respDump = do
       ack_ <- maybe (pure Ack) (flip (verifyDocument person verificationReq) mbRemPriorityList) rsp.result
       -- running statusHandler to enable Driver
       let onlyMandatoryDocs = Just True
-      void $ Status.statusHandler (verificationReq.driverId, person.merchantId, person.merchantOperatingCityId) (Just True) verificationReq.multipleRC Nothing Nothing (Just False) onlyMandatoryDocs
+          useMessageTranslation = Just False
+      void $ Status.statusHandler (verificationReq.driverId, person.merchantId, person.merchantOperatingCityId) (Just True) verificationReq.multipleRC Nothing Nothing (Just False) onlyMandatoryDocs useMessageTranslation
       return ack_
   where
     getResultStatus mbResult = mbResult >>= (\rslt -> (rslt.extraction_output >>= (.status)) <|> (rslt.source_output >>= (.status)))
