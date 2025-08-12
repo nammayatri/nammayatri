@@ -101,7 +101,9 @@ data DriverPoolResult = DriverPoolResult
     latestScheduledPickup :: Maybe Maps.LatLong,
     customerTags :: Maybe A.Value,
     driverTags :: A.Value,
-    score :: Maybe A.Value
+    score :: Maybe A.Value,
+    minRideDistance :: Maybe Meters,
+    maxRideDistance :: Maybe Meters
   }
   deriving (Generic, Show, HasCoordinates, FromJSON, ToJSON)
 
@@ -131,7 +133,9 @@ instance Default DriverPoolResult where
         latestScheduledPickup = Nothing,
         customerTags = Nothing,
         driverTags = A.emptyObject,
-        score = Nothing
+        score = Nothing,
+        minRideDistance = Nothing,
+        maxRideDistance = Nothing
       }
 
 data DriverPoolResultCurrentlyOnRide = DriverPoolResultCurrentlyOnRide
@@ -159,7 +163,9 @@ data DriverPoolResultCurrentlyOnRide = DriverPoolResultCurrentlyOnRide
     latestScheduledBooking :: Maybe UTCTime,
     latestScheduledPickup :: Maybe Maps.LatLong,
     driverTags :: A.Value,
-    score :: Maybe A.Value
+    score :: Maybe A.Value,
+    minRideDistance :: Maybe Meters,
+    maxRideDistance :: Maybe Meters
   }
   deriving (Generic, Show, HasCoordinates, FromJSON, ToJSON)
 

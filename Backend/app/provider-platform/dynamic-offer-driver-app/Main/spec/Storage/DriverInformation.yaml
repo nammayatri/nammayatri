@@ -18,7 +18,7 @@ imports:
   ServiceNames : Domain.Types.Extra.Plan
   EncryptedHashedField: Kernel.External.Encryption
   DbHash: Kernel.External.Encryption
-
+  Meters: Kernel.Types.Common
 DriverInformation:
   tableName: driver_information
   types:
@@ -127,6 +127,11 @@ DriverInformation:
     driverFlowStatus: Maybe DriverFlowStatus
     walletBalance: Maybe HighPrecMoney
     onlineDurationRefreshedAt: Maybe UTCTime
+    maxPickupRadius: Maybe Meters
+    tripDistanceMaxThreshold: Maybe Meters
+    tripDistanceMinThreshold: Maybe Meters
+    rideRequestVolume: Maybe Int
+    isSilentModeEnabled: Maybe Bool
 
   default:
     active: "false"
@@ -276,6 +281,11 @@ DriverInformation:
           canSwitchToIntraCity,
           availableUpiApps,
           isPetModeEnabled,
+          tripDistanceMaxThreshold,
+          tripDistanceMinThreshold,
+          maxPickupRadius,
+          isSilentModeEnabled,
+          rideRequestVolume,
         ]
       where: driverId
     updateRentalInterCityAndIntraCitySwitch:

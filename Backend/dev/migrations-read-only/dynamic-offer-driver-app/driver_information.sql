@@ -245,3 +245,17 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN wallet_balance 
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN online_duration_refreshed_at timestamp with time zone  default CURRENT_TIMESTAMP;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN trip_distance_min_threshold integer ;
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN trip_distance_max_threshold integer ;
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN ride_request_volume integer ;
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN max_pickup_radius integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN is_silent_mode_enabled boolean ;
