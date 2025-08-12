@@ -144,7 +144,11 @@ getTicketPlaces (_, merchantId) = do
 
 getTicketPlacesServices :: (Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Prelude.Maybe (Data.Time.Calendar.Day) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.TicketSubPlace.TicketSubPlace) -> Environment.Flow [API.Types.UI.TicketService.TicketServiceResp]
 getTicketPlacesServices _ placeId mbDate mbSubPlaceId = do
-  ticketServices <- QTicketService.getTicketServicesByPlaceIdAndSubPlaceId placeId.getId mbSubPlaceId
+  ticketServices <-
+    if isJust mbSubPlaceId
+      then QTicketService.getTicketServicesByPlaceIdAndSubPlaceId placeId.getId mbSubPlaceId
+      else QTicketService.getTicketServicesByPlaceId placeId.getId
+
   now <- getCurrentTime
   let bookingDate = fromMaybe (utctDay now) mbDate
   context <- TicketRule.getCurrentContext 330 mbDate Nothing
