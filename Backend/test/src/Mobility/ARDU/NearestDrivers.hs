@@ -66,7 +66,7 @@ testOrder = do
   now <- getCurrentTime
   res <-
     runARDUFlow "Test ordering" $
-      S.getNearestDrivers (createNearestDriverReq 5000 now) <&> getIds
+      (S.getNearestDrivers (createNearestDriverReq 5000 now) <&> getIds)
   res `shouldSatisfy` equals [closestDriver, furthestDriver]
 
 testInRadius :: IO ()
@@ -74,7 +74,7 @@ testInRadius = do
   now <- getCurrentTime
   res <-
     runARDUFlow "Test radius filtration" $
-      S.getNearestDrivers (createNearestDriverReq 800 now) <&> getIds
+      (S.getNearestDrivers (createNearestDriverReq 800 now) <&> getIds)
   res `shouldSatisfy` equals [closestDriver]
 
 testNotInRadius :: IO ()
@@ -82,7 +82,7 @@ testNotInRadius = do
   now <- getCurrentTime
   res <-
     runARDUFlow "Test outside radius filtration" $
-      S.getNearestDrivers (createNearestDriverReq 10 now) <&> getIds
+      (S.getNearestDrivers (createNearestDriverReq 10 now) <&> getIds)
   res `shouldSatisfy` equals []
 
 getIds :: [Q.NearestDriversResult] -> [Text]

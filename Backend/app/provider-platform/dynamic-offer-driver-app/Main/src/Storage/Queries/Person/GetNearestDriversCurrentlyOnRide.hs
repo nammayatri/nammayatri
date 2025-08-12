@@ -59,7 +59,9 @@ data NearestDriversResultCurrentlyOnRide = NearestDriversResultCurrentlyOnRide
     latestScheduledBooking :: Maybe UTCTime,
     latestScheduledPickup :: Maybe LatLong,
     driverTags :: A.Value,
-    score :: Maybe A.Value
+    score :: Maybe A.Value,
+    tripDistanceMinThreshold :: Maybe Meters,
+    tripDistanceMaxThreshold :: Maybe Meters
   }
   deriving (Generic, Show, HasCoordinates)
 
@@ -186,5 +188,7 @@ getNearestDriversCurrentlyOnRide NearestDriversOnRideReq {..} = do
                 latestScheduledBooking = info.latestScheduledBooking,
                 latestScheduledPickup = info.latestScheduledPickup,
                 driverTags = Yudhishthira.convertTags $ LYT.TagNameValueExpiry "OnRideDriver#true" : fromMaybe [] person.driverTag,
-                score = Nothing
+                score = Nothing,
+                tripDistanceMinThreshold = info.tripDistanceMinThreshold,
+                tripDistanceMaxThreshold = info.tripDistanceMaxThreshold
               }
