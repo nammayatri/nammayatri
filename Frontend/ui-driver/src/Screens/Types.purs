@@ -1382,7 +1382,8 @@ type ActiveRide = {
   stops :: Array API.Stop,
   isInsured :: Maybe Boolean,
   insuredAmount :: Maybe String,
-  isPetRide :: Maybe Boolean
+  isPetRide :: Maybe Boolean,
+  riderMobileNumbers :: Maybe (Array (Maybe String))
 }
 
 type HomeScreenProps =  {

@@ -448,6 +448,7 @@ dummyRideData = {
       , isInsured : Nothing
       , insuredAmount : Nothing
       , isPetRide : Nothing
+      , riderMobileNumbers : Nothing
       }
 
 initialParkingData :: ParkingData

@@ -2864,7 +2864,10 @@ homeScreenFlow = do
       modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> driverProfileScreen{props{alternateNumberView = true, isEditAlternateMobile = true, mNumberEdtFocused = true}, data {fromHomeScreen = true}})
       driverProfileFlow
     ON_CALL state exophoneNumber -> do
-      (API.ApiSuccessResult resp) <- Remote.onCallBT (Remote.makeOnCallReq state.data.activeRide.id exophoneNumber)
+      _ <- getPhoneNumber exophoneNumber state.data.activeRide.riderMobileNumbers
+      when ( state.data.activeRide.exoPhone == fromMaybe "" (join (head =<< state.data.activeRide.riderMobileNumbers))) $ do
+        (API.ApiSuccessResult resp) <- Remote.onCallBT (Remote.makeOnCallReq state.data.activeRide.id exophoneNumber)
+        pure unit
       homeScreenFlow
     OPEN_PAYMENT_PAGE state -> ysPaymentFlow
     HOMESCREEN_NAV GoToSubscription -> do
@@ -4863,7 +4866,10 @@ rideSummaryScreenFlow = do
     BACK_HOME -> homeScreenFlow
     GO_TO_HOME_SCREEN_FROM_BANNER -> homeScreenFlow
     ON_CALLING state exophoneNumber -> do
-      (API.ApiSuccessResult  resp) <- Remote.onCallBT (Remote.makeOnCallReq state.data.activeRideData.id exophoneNumber)
+      _ <- getPhoneNumber exophoneNumber state.data.activeRideData.riderMobileNumbers
+      when ( state.data.activeRideData.exoPhone == fromMaybe "" (join (head =<< state.data.activeRideData.riderMobileNumbers))) $ do
+        (API.ApiSuccessResult  resp) <- Remote.onCallBT (Remote.makeOnCallReq state.data.activeRideData.id exophoneNumber)
+        pure unit
       rideSummaryScreenFlow
     GO_TO_OPEN_GOOGLE_MAP state -> do
       void $ pure $ openNavigation state.data.activeRideData.src_lat state.data.activeRideData.src_lon "DRIVE"
@@ -5139,3 +5145,9 @@ buildStartOpenMeterConfig mbOpenMeterConfig = {
   addDestination : maybe false (\openMeterConfig -> openMeterConfig.addDestination) mbOpenMeterConfig,
   shareRideTracking : maybe false (\openMeterConfig -> openMeterConfig.shareRideTracking) mbOpenMeterConfig
 }
+
+
+getPhoneNumber :: String -> Maybe (Array (Maybe String)) -> FlowBT String Unit
+getPhoneNumber exoNumber maybeList = do
+  let callingNumber = fromMaybe exoNumber (join (find (_ /= Nothing) =<< maybeList))
+  void $ pure $ JB.showDialer callingNumber false

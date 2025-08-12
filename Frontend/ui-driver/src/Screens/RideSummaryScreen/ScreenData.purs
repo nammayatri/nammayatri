@@ -186,7 +186,8 @@ dummyActiveRideData = {
   stops : [],
   isInsured : Nothing,
   insuredAmount : Nothing,
-  isPetRide : Nothing
+  isPetRide : Nothing,
+  riderMobileNumbers : Nothing
 }
 
 

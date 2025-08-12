@@ -1340,7 +1340,6 @@ eval (RideActionModalAction (RideActionModal.CallCustomer)) state = do
   else do
     let exophoneNumber = getExoPhoneNumber state
     updateWithCmdAndExit state [ do
-      void $ pure $ showDialer exophoneNumber false -- TODO: FIX_DIALER
       _ <- logEventWithTwoParams state.data.logField "call_customer" "trip_id" (state.data.activeRide.id) "user_id" (getValueToLocalStore DRIVER_ID)
       pure NoAction
     ] $ CallCustomer state exophoneNumber
@@ -1373,7 +1372,6 @@ eval (DeliveryCall item) state =  do
   let exoPhoneNumber = if (take 1 exoPhoneNo) == "0" then exoPhoneNo else "0" <> exoPhoneNo
   let newState = state { props { showDeliveryCallPopup = false } }
   updateWithCmdAndExit newState [ do
-    void $ pure $ showDialer exoPhoneNumber false
     _ <- logEventWithTwoParams state.data.logField "call_customer" "trip_id" (state.data.activeRide.id) "user_id" (getValueToLocalStore DRIVER_ID)
     pure NoAction
     ] $ CallCustomer newState exoPhoneNumber
@@ -2286,8 +2284,9 @@ activeRideDetail state (RidesInfo ride) =
                               _,_ -> LT
                             ) $ fromMaybe [] ride.stops,
   isInsured : ride.isInsured,
-  insuredAmount : ride.insuredAmount           ,
-  isPetRide : ride.isPetRide
+  insuredAmount : ride.insuredAmount,
+  isPetRide : ride.isPetRide,
+  riderMobileNumbers : ride.riderMobileNumbers
 }
   where
     getAddressFromStopLocation :: Maybe API.StopLocation -> Maybe String

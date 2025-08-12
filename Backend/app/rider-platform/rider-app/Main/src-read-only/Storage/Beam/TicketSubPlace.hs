@@ -13,17 +13,18 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data TicketSubPlaceT f = TicketSubPlaceT
-  { createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    description :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    id :: (B.C f Kernel.Prelude.Text),
-    isActive :: (B.C f Kernel.Prelude.Bool),
-    name :: (B.C f Kernel.Prelude.Text),
-    rules :: (B.C f (Kernel.Prelude.Maybe Data.Aeson.Value)),
-    subPlaceType :: (B.C f Domain.Types.TicketSubPlace.SubPlaceType),
-    ticketPlaceId :: (B.C f Kernel.Prelude.Text),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime),
-    merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)))
+  { createdAt :: B.C f Kernel.Prelude.UTCTime,
+    description :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    enforcedTicketPlaceId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    id :: B.C f Kernel.Prelude.Text,
+    isActive :: B.C f Kernel.Prelude.Bool,
+    name :: B.C f Kernel.Prelude.Text,
+    rules :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    subPlaceType :: B.C f Domain.Types.TicketSubPlace.SubPlaceType,
+    ticketPlaceId :: B.C f Kernel.Prelude.Text,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)
   }
   deriving (Generic, B.Beamable)
 
@@ -33,6 +34,6 @@ instance B.Table TicketSubPlaceT where
 
 type TicketSubPlace = TicketSubPlaceT Identity
 
-$(enableKVPG (''TicketSubPlaceT) [('id)] [[('ticketPlaceId)]])
+$(enableKVPG ''TicketSubPlaceT ['id] [['ticketPlaceId]])
 
-$(mkTableInstances (''TicketSubPlaceT) "ticket_sub_place")
+$(mkTableInstances ''TicketSubPlaceT "ticket_sub_place")

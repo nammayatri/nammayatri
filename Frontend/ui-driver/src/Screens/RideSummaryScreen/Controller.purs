@@ -220,7 +220,6 @@ eval (PopUpModalErrorAction (PopUpModal.OnButton2Click)) state  = updateAndExit 
 eval (Call) state = do
   let exophoneNumber = if (take 1 state.data.activeRideData.exoPhone) == "0" then state.data.activeRideData.exoPhone else "0" <> state.data.activeRideData.exoPhone
   updateWithCmdAndExit state [ do
-    void $ pure $ JB.showDialer exophoneNumber false
     pure NoAction
     ] $ CallingCustomer state exophoneNumber
 
