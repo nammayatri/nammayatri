@@ -21,6 +21,7 @@ import qualified API.Internal.FleetBookingInformation as FleetBookingInformation
 import qualified API.Internal.FleetVehiclesAssociation as FleetVehiclesAssociation
 import qualified API.Internal.KnowYourDriver as KnowYourDriver
 import qualified API.Internal.Multimodal as Multimodal
+import qualified API.Internal.PickupInstruction as PickupInstruction
 import qualified API.Internal.PopulateTipAmount as PopulateTipAmount
 import qualified API.Internal.ProdLoopStatus as ProdLoopStatus
 import qualified API.Internal.ReportACIssue as ReportACIssue
@@ -47,6 +48,7 @@ type API =
            :<|> FavouriteDrivers.API
            :<|> KnowYourDriver.API
            :<|> DriverCoordinates.API
+           :<|> PickupInstruction.API
            :<|> PopulateTipAmount.API
            :<|> Ride.API
            :<|> StopDetection.API
@@ -75,6 +77,7 @@ handler =
     :<|> FavouriteDrivers.handler
     :<|> KnowYourDriver.handler
     :<|> DriverCoordinates.handler
+    :<|> PickupInstruction.handler
     :<|> PopulateTipAmount.handler
     :<|> Ride.handler
     :<|> StopDetection.handler

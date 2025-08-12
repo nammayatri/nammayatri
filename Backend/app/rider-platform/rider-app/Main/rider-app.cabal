@@ -54,6 +54,7 @@ library
       API.Internal.DriverArrivalNotf
       API.Internal.FrequentLocUser
       API.Internal.FRFS
+      API.Internal.GetPickupInstructions
       API.Internal.Rating
       API.Internal.RideSearchExpired
       API.Internal.StopEvents
@@ -191,7 +192,9 @@ library
       Domain.Action.Internal.DriverArrivalNotf
       Domain.Action.Internal.FrequentLocUser
       Domain.Action.Internal.FRFS
+      Domain.Action.Internal.GetPickupInstructions
       Domain.Action.Internal.Payout
+      Domain.Action.Internal.PickupInstructionHandler
       Domain.Action.Internal.Rating
       Domain.Action.Internal.RideSearchExpired
       Domain.Action.Internal.StopEvents

@@ -886,3 +886,39 @@ data BppEstimate = BppEstimate
     vehicleServiceTierName :: Maybe Text
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data PickupInstructionReq = PickupInstructionReq
+  { driverId :: Text,
+    instruction :: Maybe Text,
+    audioBase64 :: Maybe Text
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+type SendPickupInstructionAPI =
+  "internal"
+    :> Capture "driverId" Text
+    :> "pickupInstruction"
+    :> Header "token" Text
+    :> ReqBody '[JSON] PickupInstructionReq
+    :> Post '[JSON] APISuccess
+
+sendPickupInstructionClient :: Text -> Maybe Text -> PickupInstructionReq -> EulerClient APISuccess
+sendPickupInstructionClient = client sendPickupInstructionApi
+
+sendPickupInstructionApi :: Proxy SendPickupInstructionAPI
+sendPickupInstructionApi = Proxy
+
+sendPickupInstruction ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+  ) =>
+  Text ->
+  BaseUrl ->
+  Text ->
+  Maybe Text ->
+  Maybe Text ->
+  m APISuccess
+sendPickupInstruction apiKey internalUrl driverId instruction audioBase64 = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (sendPickupInstructionClient driverId (Just apiKey) (PickupInstructionReq driverId instruction audioBase64)) "SendPickupInstruction" sendPickupInstructionApi
