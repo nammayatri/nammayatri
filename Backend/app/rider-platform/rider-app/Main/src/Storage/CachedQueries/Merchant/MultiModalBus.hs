@@ -22,7 +22,7 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Utils.Common
 
 -- Route state enum for bus routes
-data RouteState = Confirmed | Alternate | All
+data RouteState = ConfirmedHigh | Alternate | All | Schedule | ConfirmedMed
   deriving stock (Show, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
