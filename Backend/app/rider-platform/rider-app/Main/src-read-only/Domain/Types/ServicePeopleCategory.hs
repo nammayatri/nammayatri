@@ -17,6 +17,7 @@ import qualified Tools.Payment
 data ServicePeopleCategory = ServicePeopleCategory
   { cancellationCharges :: Kernel.Prelude.Maybe [Domain.Types.ServicePeopleCategory.CancellationCharge],
     description :: Kernel.Prelude.Text,
+    iconUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.ServicePeopleCategory.ServicePeopleCategory,
     isClosed :: Kernel.Prelude.Bool,
     name :: Kernel.Prelude.Text,

@@ -73,6 +73,7 @@ updateByPrimaryKey (Domain.Types.ServicePeopleCategory.ServicePeopleCategory {..
   updateWithKV
     [ Se.Set Beam.cancellationCharges (convertCancellationChargesToTable cancellationCharges),
       Se.Set Beam.description description,
+      Se.Set Beam.iconUrl iconUrl,
       Se.Set Beam.isClosed (Kernel.Prelude.Just isClosed),
       Se.Set Beam.name name,
       Se.Set Beam.placeId placeId,

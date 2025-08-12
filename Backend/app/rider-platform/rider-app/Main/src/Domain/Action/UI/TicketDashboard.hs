@@ -2,6 +2,7 @@ module Domain.Action.UI.TicketDashboard where
 
 import qualified API.Types.Dashboard.AppManagement.Tickets as Tickets
 import qualified AWS.S3 as S3
+import Control.Applicative ((<|>))
 import Control.Monad.Extra (concatMapM)
 import Data.List (nubBy)
 import qualified Data.Map as Map
@@ -169,7 +170,10 @@ getTicketPlaceDashboardDetails placeId requestorId requestorRole = do
         endDate = ticketPlace.endDate,
         venue = ticketPlace.venue,
         rules = ticketPlace.rules,
-        assignTicketToBpp = ticketPlace.assignTicketToBpp
+        assignTicketToBpp = Just ticketPlace.assignTicketToBpp,
+        customTabs = ticketPlace.customTabs,
+        recommend = Just ticketPlace.recommend,
+        enforcedAsSubPlace = Just ticketPlace.enforcedAsSubPlace
       }
   where
     toTicketServiceDetails :: DTicketService.TicketService -> TicketServiceDetails
@@ -224,7 +228,8 @@ getTicketPlaceDashboardDetails placeId requestorId requestorRole = do
           priceCurrency = spc.pricePerUnit.currency,
           timeBounds = spc.timeBounds,
           vendorSplitDetails = spc.vendorSplitDetails,
-          rules = spc.rules
+          rules = spc.rules,
+          iconUrl = spc.iconUrl
         }
 
     toSpecialOccasionDetails :: DSpecialOccasion.SpecialOccasion -> SpecialOccasionDetails
@@ -265,7 +270,16 @@ updateTicketPlace existingPlace placeDetails = do
       DTicketPlace.startDate = placeDetails.startDate,
       DTicketPlace.endDate = placeDetails.endDate,
       DTicketPlace.venue = placeDetails.venue,
-      DTicketPlace.assignTicketToBpp = placeDetails.assignTicketToBpp
+      DTicketPlace.assignTicketToBpp = fromMaybe existingPlace.assignTicketToBpp placeDetails.assignTicketToBpp,
+      DTicketPlace.faqs = placeDetails.faqs,
+      DTicketPlace.metadata = placeDetails.metadata,
+      DTicketPlace.isRecurring = fromMaybe True placeDetails.isRecurring,
+      DTicketPlace.platformFee = placeDetails.platformFee,
+      DTicketPlace.platformFeeVendor = placeDetails.platformFeeVendor,
+      DTicketPlace.pricingOnwards = placeDetails.pricingOnwards,
+      DTicketPlace.customTabs = placeDetails.customTabs <|> existingPlace.customTabs,
+      DTicketPlace.recommend = fromMaybe existingPlace.recommend placeDetails.recommend,
+      DTicketPlace.enforcedAsSubPlace = fromMaybe existingPlace.enforcedAsSubPlace placeDetails.enforcedAsSubPlace
     }
 
 createTicketPlace :: TicketPlaceDashboardDetails -> Maybe Text -> Id Merchant.Merchant -> Id MOCity.MerchantOperatingCity -> Environment.Flow DTicketPlace.TicketPlace
@@ -308,7 +322,8 @@ createTicketPlace placeDetails creatorId merchantId merchantOpCityId = do
         DTicketPlace.isClosed = False,
         DTicketPlace.startDate = placeDetails.startDate,
         DTicketPlace.venue = placeDetails.venue,
-        DTicketPlace.assignTicketToBpp = placeDetails.assignTicketToBpp
+        DTicketPlace.assignTicketToBpp = fromMaybe False placeDetails.assignTicketToBpp,
+        DTicketPlace.enforcedAsSubPlace = False
       }
 
 updateTicketService :: DTicketService.TicketService -> TicketServiceDetails -> DTicketService.TicketService
@@ -323,7 +338,8 @@ updateTicketService existingService serviceDetails = do
       DTicketService.expiry = serviceDetails.expiry,
       DTicketService.allowCancellation = serviceDetails.allowCancellation,
       DTicketService.businessHours = serviceDetails.businessHours,
-      DTicketService.rules = serviceDetails.rules
+      DTicketService.rules = serviceDetails.rules,
+      DTicketService.serviceDetails = serviceDetails.serviceDetails
     }
 
 createTicketService :: (Id Merchant.Merchant, Id MOCity.MerchantOperatingCity) -> TicketServiceDetails -> Id DTicketPlace.TicketPlace -> Flow DTicketService.TicketService
@@ -388,7 +404,8 @@ updateServiceCategory existingSC scDetails = do
       DServiceCategory.availableSeats = scDetails.availableSeats,
       DServiceCategory.allowedSeats = scDetails.allowedSeats,
       DServiceCategory.peopleCategory = scDetails.peopleCategory,
-      DServiceCategory.rules = scDetails.rules
+      DServiceCategory.rules = scDetails.rules,
+      DServiceCategory.inclusionPoints = scDetails.inclusionPoints
     }
 
 createServiceCategory :: (Id Merchant.Merchant, Id MOCity.MerchantOperatingCity) -> ServiceCategoryDetails -> Id DTicketPlace.TicketPlace -> Environment.Flow DServiceCategory.ServiceCategory
@@ -422,7 +439,8 @@ updateServicePeopleCategory existingSPC spcDetails = do
       DServicePeopleCategory.pricePerUnit = mkPrice (pure spcDetails.priceCurrency) spcDetails.priceAmount,
       DServicePeopleCategory.timeBounds = spcDetails.timeBounds,
       DServicePeopleCategory.vendorSplitDetails = spcDetails.vendorSplitDetails,
-      DServicePeopleCategory.rules = spcDetails.rules
+      DServicePeopleCategory.rules = spcDetails.rules,
+      DServicePeopleCategory.iconUrl = spcDetails.iconUrl
     }
 
 createServicePeopleCategory :: (Id Merchant.Merchant, Id MOCity.MerchantOperatingCity) -> ServicePeopleCategoryDetails -> Id DTicketPlace.TicketPlace -> Environment.Flow DServicePeopleCategory.ServicePeopleCategory
@@ -444,7 +462,8 @@ createServicePeopleCategory (merchantId, merchantOpCityId) spcDetails placeId = 
         DServicePeopleCategory.updatedAt = now,
         DServicePeopleCategory.cancellationCharges = Nothing,
         DServicePeopleCategory.rules = Nothing,
-        DServicePeopleCategory.isClosed = False
+        DServicePeopleCategory.isClosed = False,
+        DServicePeopleCategory.iconUrl = Nothing
       }
 
 updateSpecialOccasion :: DSpecialOccasion.SpecialOccasion -> SpecialOccasionDetails -> DSpecialOccasion.SpecialOccasion
