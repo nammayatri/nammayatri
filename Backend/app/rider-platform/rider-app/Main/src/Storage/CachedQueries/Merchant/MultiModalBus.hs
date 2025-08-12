@@ -4,6 +4,7 @@ module Storage.CachedQueries.Merchant.MultiModalBus
     BusDataWithoutETA (..),
     RouteWithBuses (..),
     FullBusData (..),
+    RouteState (..),
     getRoutesBuses,
     getBusesForRoutes,
     mkRouteKey,
@@ -19,6 +20,11 @@ import EulerHS.Prelude hiding (encodeUtf8, fromStrict, id, map)
 import Kernel.Prelude hiding (encodeUtf8)
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Utils.Common
+
+-- Route state enum for bus routes
+data RouteState = ConfirmedHigh | Alternate | All | Schedule | ConfirmedMed
+  deriving stock (Show, Generic, Eq, Ord)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 utcToIST :: UTCTime -> UTCTime
 utcToIST = addUTCTime 19800
@@ -70,6 +76,7 @@ data BusData = BusData
     device_id :: Text,
     eta_data :: Maybe [BusStopETA],
     route_id :: Text,
+    route_state :: Maybe RouteState,
     vehicle_number :: Maybe Text
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
@@ -82,6 +89,7 @@ data BusDataWithoutETA = BusDataWithoutETA
     speed :: Double,
     device_id :: Text,
     route_id :: Text,
+    route_state :: Maybe RouteState,
     vehicle_number :: Maybe Text
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)

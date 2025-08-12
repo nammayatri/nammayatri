@@ -80,6 +80,7 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.Ride as DARide
 import qualified SharedLogic.Search as SLSearch
+import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.Estimate as QEstimate
@@ -228,6 +229,7 @@ data NextStopDetails = NextStopDetails
 data VehiclePosition = VehiclePosition
   { position :: Maybe LatLong, -- Bus's current lat/long
     vehicleId :: Text, -- Bus's ID/number
+    route_state :: Maybe CQMMB.RouteState,
     upcomingStops :: [NextStopDetails] -- List of upcoming stops for this vehicle
   }
   deriving stock (Show, Generic)
