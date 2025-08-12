@@ -14,6 +14,7 @@ import qualified Tools.Beam.UtilsTH
 
 data TicketPlace = TicketPlace
   { allowSameDayBooking :: Kernel.Prelude.Bool,
+    assignTicketToBpp :: Kernel.Prelude.Bool,
     closeTimings :: Kernel.Prelude.Maybe Kernel.Prelude.TimeOfDay,
     customTabs :: Kernel.Prelude.Maybe [Domain.Types.TicketPlace.CustomTab],
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -70,6 +71,7 @@ data PlaceType
   | ArtGallery
   | HeritageSite
   | ReligiousSite
+  | Boating
   | Other
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 

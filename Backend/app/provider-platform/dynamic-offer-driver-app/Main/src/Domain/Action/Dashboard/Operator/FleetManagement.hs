@@ -5,6 +5,7 @@ module Domain.Action.Dashboard.Operator.FleetManagement
     postFleetManagementFleetUnlink,
     postFleetManagementFleetLinkSendOtp,
     postFleetManagementFleetLinkVerifyOtp,
+    postFleetManagementFleetMemberAssociationCreate,
   )
 where
 
@@ -15,6 +16,7 @@ import Domain.Action.Dashboard.Fleet.Onboarding
 import qualified Domain.Action.Dashboard.Fleet.RegistrationV2 as DRegistrationV2
 import qualified Domain.Action.Internal.DriverMode as DriverMode
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
+import qualified Domain.Types.FleetMemberAssociation as DFMA
 import qualified Domain.Types.FleetOwnerInformation as FOI
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person as DP
@@ -44,6 +46,7 @@ import SharedLogic.MessageBuilder
   )
 import Storage.Cac.TransporterConfig
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.Queries.FleetMemberAssociation as QFMA
 import qualified Storage.Queries.FleetOperatorAssociation as QFOA
 import Storage.Queries.FleetOperatorAssociationExtra (findAllActiveByOperatorIdWithLimitOffsetSearch)
 import qualified Storage.Queries.Image as IQuery
@@ -283,6 +286,48 @@ postFleetManagementFleetLinkVerifyOtp merchantShortId opCity requestorId req = d
     Right () -> pure ()
 
   Redis.del key
+  pure Kernel.Types.APISuccess.Success
+
+---------------------------------------------------------------------
+postFleetManagementFleetMemberAssociationCreate ::
+  ID.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Common.FleetMemberAssociationCreateReq ->
+  Environment.Flow Kernel.Types.APISuccess.APISuccess
+postFleetManagementFleetMemberAssociationCreate merchantShortId _opCity req = do
+  _merchant <- findMerchantByShortId merchantShortId
+  now <- getCurrentTime
+  existingAssociation' <- QFMA.findByPrimaryKey req.fleetMemberId req.fleetOwnerId
+  case existingAssociation' of
+    Just existingAssociation -> do
+      QFMA.updateByPrimaryKey $
+        DFMA.FleetMemberAssociation
+          { fleetMemberId = existingAssociation.fleetMemberId,
+            fleetOwnerId = existingAssociation.fleetOwnerId,
+            enabled = req.enabled,
+            isFleetOwner = req.isFleetOwner,
+            level = req.level,
+            parentGroupCode = req.parentGroupCode,
+            groupCode = req.groupCode,
+            order = req.order,
+            createdAt = now,
+            updatedAt = now
+          }
+    Nothing -> do
+      let fleetMemberAssociation =
+            DFMA.FleetMemberAssociation
+              { fleetMemberId = req.fleetMemberId,
+                fleetOwnerId = req.fleetOwnerId,
+                enabled = req.enabled,
+                isFleetOwner = req.isFleetOwner,
+                level = req.level,
+                parentGroupCode = req.parentGroupCode,
+                groupCode = req.groupCode,
+                order = req.order,
+                createdAt = now,
+                updatedAt = now
+              }
+      QFMA.create fleetMemberAssociation
   pure Kernel.Types.APISuccess.Success
 
 makeFleetLinkOtpKey :: Text -> Text

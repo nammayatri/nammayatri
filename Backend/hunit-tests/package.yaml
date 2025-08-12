@@ -1,0 +1,96 @@
+name: hunit-tests
+version: 0.1.0.0
+github: "nammayatri/nammayatri"
+license: AllRightsReserved
+author: "nammayatri"
+maintainer: "nammayatri"
+copyright: "2023 Juspay Technologies Private Limited"
+
+description: NammaYatri HUnit tests
+
+dependencies:
+- base >= 4.7 && < 5
+- aeson
+- bytestring
+- containers
+- data-default-class
+- dashboard-helper-api
+- directory
+- dynamic-offer-driver-app
+- euler-hs
+- http-conduit
+- http-types
+- HUnit
+- hspec
+- hspec-core
+- lens
+- lib-dashboard
+- mobility-core
+- mock-sms
+- provider-dashboard
+- record-dot-preprocessor
+- record-hasfield
+- rider-app
+- string-conversions
+- tasty
+- tasty-hspec
+- tasty-hunit
+- text
+- time
+- unix
+- uuid
+- vector
+- unordered-containers
+- mtl
+- transformers
+- yudhishthira
+- beckn-spec
+
+default-extensions:
+- ConstraintKinds
+- DataKinds
+- DefaultSignatures
+- DeriveAnyClass
+- DeriveFunctor
+- DeriveGeneric
+- DuplicateRecordFields
+- FlexibleContexts
+- FlexibleInstances
+- FunctionalDependencies
+- GADTs
+- LambdaCase
+- MultiParamTypeClasses
+- MultiWayIf
+- NamedFieldPuns
+- NoImplicitPrelude
+- OverloadedStrings
+- PackageImports
+- PatternSynonyms
+- PolyKinds
+- RankNTypes
+- RecordWildCards
+- ScopedTypeVariables
+- TupleSections
+- TypeApplications
+- TypeFamilies
+- TypeOperators
+- ViewPatterns
+
+library:
+  source-dirs: src
+  exposed-modules:
+  - Dashboard
+  other-modules:
+  - RegistrationUnitTests
+  - VehicleAssociationUnitTests
+  - DriverDocumentUploadUnitTests
+  - AddVehicleUnitTests
+  - DriverOperationHubUnitTests
+  - CreateRequestUnitTests
+
+executables:
+  hunit-tests:
+    main: Main.hs
+    source-dirs: app
+    dependencies:
+    - hunit-tests

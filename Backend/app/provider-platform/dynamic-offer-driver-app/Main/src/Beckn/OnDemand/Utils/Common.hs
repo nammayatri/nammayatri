@@ -239,6 +239,7 @@ castVariant Variant.DELIVERY_TRUCK_LARGE = (show Enums.TRUCK, "DELIVERY_TRUCK_LA
 castVariant Variant.DELIVERY_TRUCK_ULTRA_LARGE = (show Enums.TRUCK, "DELIVERY_TRUCK_ULTRA_LARGE")
 castVariant Variant.BUS_NON_AC = (show Enums.BUS, "BUS_NON_AC")
 castVariant Variant.BUS_AC = (show Enums.BUS, "BUS_AC")
+castVariant Variant.BOAT = (show Enums.BOAT, "BOAT")
 castVariant Variant.AUTO_PLUS = (show Enums.AUTO_RICKSHAW, "AUTO_PLUS")
 
 rationaliseMoney :: Money -> Text
@@ -1248,6 +1249,7 @@ mkQuotationBreakup fareParams =
             || breakup.quotationBreakupInnerTitle == Just (show Enums.TOLL_CHARGES)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.NIGHT_SHIFT_CHARGE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.RIDE_STOP_CHARGES)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.PER_STOP_CHARGES)
         DFParams.Slab ->
           breakup.quotationBreakupInnerTitle == Just (show Enums.BASE_FARE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.SERVICE_CHARGE)
@@ -1604,6 +1606,7 @@ mkGeneralInfoTagGroup transporterConfig pricing isValueAddNP =
                 Variant.DELIVERY_TRUCK_ULTRA_LARGE -> avgSpeed.deliveryLightGoodsVehicle.getKilometers
                 Variant.BUS_NON_AC -> avgSpeed.busNonAc.getKilometers
                 Variant.BUS_AC -> avgSpeed.busAc.getKilometers
+                Variant.BOAT -> avgSpeed.boat.getKilometers
                 Variant.AUTO_PLUS -> avgSpeed.autorickshaw.getKilometers
 
           getDuration pricing.distanceToNearestDriver variantSpeed

@@ -71,3 +71,8 @@ ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN aadhaar_nu
 
 ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ALTER COLUMN referred_by_operator_id TYPE text;
 ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN is_eligible_for_subscription boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN ticket_place_id text ;

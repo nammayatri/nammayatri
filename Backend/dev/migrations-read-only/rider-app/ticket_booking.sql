@@ -49,3 +49,8 @@ ALTER TABLE atlas_app.ticket_booking ADD COLUMN block_expiration_time double pre
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.ticket_booking ADD COLUMN people_ticket_quantity json ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ticket_booking ADD COLUMN ticket_sub_place_id character varying(36) ;

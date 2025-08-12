@@ -17,6 +17,12 @@ initData = {
     ,driverTag: ""
     , driverRewardConfig: dummyDriverRewardConfig
     , nyMemberProbationTill : Nothing
+    , bannerData: {
+      bannerItem: Nothing
+    , currentBanner: 0
+    , bannerScrollState: ""
+    , currentPage: 0
+    }
 
   },
   props: { 
@@ -43,4 +49,6 @@ dummyDriverRewardConfig = {
   , claimButtonConfig : {
     visibility : false
   }
+  , carouselVisibility : false
+  , carousel : []
 }

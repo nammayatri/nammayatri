@@ -222,6 +222,10 @@ VehicleRegistrationCertificate:
       kvFunction: findAllWithOptionsKV
       where: fleetOwnerId
       orderBy: updatedAt
+    findAllByFleetOwnerIds:
+      kvFunction: findAllWithOptionsKV
+      where:
+         in: [fleetOwnerId]
     updateAirConditioned:
       kvFunction: updateOneWithKV
       params: [airConditioned]

@@ -43,7 +43,7 @@ import PrestoDOM.Types.DomAttributes  (Corners(..))
 import Prelude hiding (zero)
 import Screens.DriverProfileScreen.Controller
 import Effect (Effect)
-import Helpers.Utils (getPeriod, fetchImage, FetchImageFrom(..))
+import Helpers.Utils (getPeriod, fetchImage, FetchImageFrom(..), getCityConfig)
 import Font.Style (Style(..))
 import ConfigProvider
 import Components.ExtraChargeCard as ExtraChargeCard
@@ -521,7 +521,7 @@ driverBLockedPopup state =
     isOverCharging = maybe false (\overchargingTag -> overchargingTag `elem` [MediumOverCharging, SuperOverCharging, HighOverCharging]) mbOverchargingTag
     isSuspended = maybe false (\overchargingTag -> overchargingTag == MediumOverCharging) mbOverchargingTag
 
-    title = if isOverCharging  && isSuspended then getString $  SUSPENDED_TILL (EHC.convertUTCtoISC state.data.blockedExpiryTime "hh:mm A") (EHC.convertUTCtoISC state.data.blockedExpiryTime "DD-MM-YYYY")
+    title = if isOverCharging && isSuspended then getString $  SUSPENDED_TILL (EHC.convertUTCtoISC state.data.blockedExpiryTime "hh:mm A") (EHC.convertUTCtoISC state.data.blockedExpiryTime "DD-MM-YYYY")
       else getString $ BLOCKED_TILL (EHC.convertUTCtoISC state.data.blockedExpiryTime "hh:mm A") (EHC.convertUTCtoISC state.data.blockedExpiryTime "DD-MM-YYYY")
 
     description = if isOverCharging && isSuspended then getStringV2 overcharging_suspended_desc
@@ -722,24 +722,30 @@ safetyBadgeConfig state =
 
 overchargingBadgeConfig :: ST.DriverProfileScreenState -> Maybe DriverProfileScoreCard.DriverProfileScoreCardType
 overchargingBadgeConfig state =
-  case state.data.driverInfoResponse of
-    Just (GetDriverInfoResp driverProfileResp) ->
-      let
-        city = getValueToLocalStore DRIVER_LOCATION
-        config = spy "getExtraChargeConfig" $ RC.getExtraChargeConfig city
-        percentage = ((fromMaybe 0 driverProfileResp.ridesWithFareIssues) * 100) / (fromMaybe 1 driverProfileResp.totalRidesConsideredForFareIssues)
-        overchargingTag = driverProfileResp.driverTags >>= \(DriverTags tags) -> tags."DriverChargingBehaviour"
-      in
-        case overchargingTag of
-          Just NoOverCharging -> Just $ zeroConfig percentage config
-          Just VeryLowOverCharging -> Just $ lowConfig percentage
-          Just LowOverCharging -> Just $ lowConfig percentage
-          Just ModerateOverCharging ->  Just $ highConfig percentage
-          Just MediumOverCharging -> Just $ suspendedConfig percentage
-          Just HighOverCharging -> Just $ blockedConfig percentage
-          Just SuperOverCharging -> Just $ blockedConfig percentage
-          Nothing -> Nothing
-    _ ->
+  let
+    cityConfig = getCityConfig state.data.config.cityConfig (getValueToLocalNativeStore DRIVER_LOCATION)
+  in
+    if (fromMaybe false cityConfig.overChargingFlow) then
+      case state.data.driverInfoResponse of
+        Just (GetDriverInfoResp driverProfileResp) ->
+          let
+            city = getValueToLocalStore DRIVER_LOCATION
+            config = spy "getExtraChargeConfig" $ RC.getExtraChargeConfig city
+            percentage = ((fromMaybe 0 driverProfileResp.ridesWithFareIssues) * 100) / (fromMaybe 1 driverProfileResp.totalRidesConsideredForFareIssues)
+            overchargingTag = driverProfileResp.driverTags >>= \(DriverTags tags) -> tags."DriverChargingBehaviour"
+          in
+            case overchargingTag of
+              Just NoOverCharging -> Just $ zeroConfig percentage config
+              Just VeryLowOverCharging -> Just $ lowConfig percentage
+              Just LowOverCharging -> Just $ lowConfig percentage
+              Just ModerateOverCharging ->  Just $ highConfig percentage
+              Just MediumOverCharging -> Just $ suspendedConfig percentage
+              Just HighOverCharging -> Just $ blockedConfig percentage
+              Just SuperOverCharging -> Just $ blockedConfig percentage
+              Nothing -> Nothing
+        _ ->
+          Nothing
+    else
       Nothing
   where
     zeroConfig percentage config = {

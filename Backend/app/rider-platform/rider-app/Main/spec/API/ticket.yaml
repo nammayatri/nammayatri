@@ -14,6 +14,8 @@ imports:
   UTCTime: Kernel.Prelude
   TicketPlace: Domain.Types.TicketPlace
   PlaceType: Domain.Types.TicketPlace
+  TicketSubPlace: Domain.Types.TicketSubPlace
+  SubPlaceType: Domain.Types.TicketSubPlace
   APISuccess: Kernel.Types.APISuccess
   TicketBooking: Domain.Types.TicketBooking
   BookingStatus: Domain.Types.TicketBooking
@@ -25,12 +27,14 @@ imports:
   ExpiryType: Domain.Types.TicketService
   CancellationCharge: Domain.Types.ServicePeopleCategory
   Refunds: Lib.Payment.Domain.Types.Refunds
+  Person: Domain.Types.Person
 
 module: TicketService
 types:
   TicketServiceResp:
     id: Id TicketService
     placesId: Id TicketPlace
+    subPlaceId: Maybe (Id TicketSubPlace)
     name: Text
     maxVerification: Int
     allowFutureBooking: Bool
@@ -71,6 +75,7 @@ types:
 
   TicketBookingReq:
     visitDate: Day
+    ticketSubPlaceId: Maybe (Id TicketSubPlace)
     services: [TicketBookingServicesReq]
 
   TicketBookingServicesReq:
@@ -89,6 +94,7 @@ types:
   TicketBookingAPIEntity:
     ticketShortId: Text
     ticketPlaceId: Text
+    ticketSubPlaceId: Maybe Text
     ticketPlaceName: Text
     placeType: PlaceType
     iconUrl: Maybe Text
@@ -101,6 +107,7 @@ types:
   TicketBookingAPIEntityV2:
     ticketShortId: Text
     ticketPlaceId: Text
+    ticketSubPlaceId: Maybe Text
     ticketPlaceName: Text
     placeType: PlaceType
     iconUrl: Maybe Text
@@ -115,6 +122,7 @@ types:
     ticketShortId: Text
     ticketPlaceId: Text
     ticketPlaceName: Text
+    ticketSubPlaceId: Maybe Text
     personId: Text
     amount: HighPrecMoney
     amountWithCurrency: PriceAPIEntity
@@ -219,6 +227,21 @@ types:
     month: Int
     closedDays: [Int]
 
+
+  TicketFleetVehicleResp:
+    fleetOwnerId: Text
+    fleetOwnerName: Text
+    vehicleNo: Text
+    rcId: Text
+    vehicleType: Text
+    driverId: Maybe Text
+    driverName: Maybe Text
+    isActive: Bool
+
+  TicketPlaceResp:
+    ticketPlace: TicketPlace
+    subPlaces: "[TicketSubPlace]"
+
 apis:
   # GET /ticket/places
   - GET:
@@ -232,6 +255,7 @@ apis:
       auth: TokenAuth
       query:
         date: Day
+        subPlaceId: Id TicketSubPlace
       params:
         placeId: Id TicketPlace
       response:
@@ -287,6 +311,9 @@ apis:
       params:
         personServiceId: Id TicketService
         ticketServiceShortId: ShortId TicketBookingService
+      query:
+        fleetOwnerId: Text
+        vehicleNo: Text
       response:
         type: API.Types.UI.TicketService.TicketServiceVerificationResp
 
@@ -336,3 +363,25 @@ apis:
         placeId: Id TicketPlace
       response:
         type: "[TicketPlaceAvailability]"
+
+  # GET /ticket/places/v2
+  - GET:
+      endpoint: /ticket/places/v2
+      name: getTicketPlacesV2
+      auth: TokenAuth
+      response:
+        type: "[TicketPlaceResp]"
+
+  # GET /ticket/bookings/{ticketServiceShortId}/fleet-vehicles
+  - GET:
+      endpoint: /ticket/places/{placeId}/fleet/VehicleAssociation/list
+      name: getTicketFleetVehicles
+      auth: TokenAuth
+      params:
+        placeId: Id TicketPlace
+      query:
+        - limit: Int
+        - offset: Int
+        - searchString: Text
+      response:
+        type: "[TicketFleetVehicleResp]"

@@ -18,6 +18,7 @@ import qualified Tools.Payment
 
 data TicketBookingService = TicketBookingService
   { amount :: Kernel.Types.Common.Price,
+    assignmentId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     bHourId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.BusinessHour.BusinessHour),
     bookedSeats :: Kernel.Prelude.Int,
     btype :: Domain.Types.BusinessHour.BusinessHourType,

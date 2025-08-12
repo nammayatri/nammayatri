@@ -246,11 +246,18 @@ type ClaimButtonConfig = {
   visibility :: Boolean
 }
 
+type CarouselItem = {
+  videoUrl :: String,
+  imageUrl :: String
+}
+
 type DriverRewardConfig = {
   nominationViewConfig :: NominationViewConfig,
   visibility :: Boolean,
   whatsappSupportNumber :: String,
   youtubeVideoLink :: String,
+  carouselVisibility :: Boolean,
   termsAndConditionsLink :: String,
-  claimButtonConfig :: ClaimButtonConfig
+  claimButtonConfig :: ClaimButtonConfig,
+  carousel :: Array CarouselItem
 }

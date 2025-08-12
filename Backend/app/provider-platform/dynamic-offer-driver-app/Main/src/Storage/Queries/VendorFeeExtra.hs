@@ -1,5 +1,6 @@
 module Storage.Queries.VendorFeeExtra where
 
+import qualified Data.Map as M
 import Domain.Types.DriverFee
 import qualified Domain.Types.MerchantOperatingCity as DMC
 import Domain.Types.VendorFee
@@ -58,13 +59,36 @@ adjustVendorFee driverFeeId adjustment = do
           ]
       ]
 
+-- Adjust original vendor fee by subtracting the sum of vendor fees created for child driver fees
+adjustVendorFeeSubtractingChildren :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DriverFee -> [Id DriverFee] -> m ()
+adjustVendorFeeSubtractingChildren parentDriverFeeId childDriverFeeIds = do
+  when (null childDriverFeeIds) $ pure ()
+  oldVendorFees <- findAllByDriverFeeId parentDriverFeeId
+  childVendorFees <- concat <$> mapM findAllByDriverFeeId childDriverFeeIds
+  let childSums :: M.Map Text Rational
+      childSums = M.fromListWith (+) [(v.vendorId, v.amount.getHighPrecMoney) | v <- childVendorFees]
+  now <- getCurrentTime
+  for_ oldVendorFees $ \fee -> do
+    let childSum = M.findWithDefault 0 fee.vendorId childSums
+        remaining = max 0 (fee.amount.getHighPrecMoney - childSum)
+        newAmount = roundToTwoDecimalPlaces $ HighPrecMoney remaining
+    updateWithKV
+      [ Se.Set Beam.amount newAmount,
+        Se.Set Beam.updatedAt now
+      ]
+      [ Se.And
+          [ Se.Is Beam.driverFeeId $ Se.Eq parentDriverFeeId.getId,
+            Se.Is Beam.vendorId $ Se.Eq fee.vendorId
+          ]
+      ]
+
 createChildVendorFee :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => DriverFee -> DriverFee -> HighPrecMoney -> m ()
 createChildVendorFee parentFee childFee totalFee = do
   now <- getCurrentTime
   let adjustment =
         if (getHighPrecMoney totalFee) == 0
           then 1.0
-          else (getHighPrecMoney childFee.platformFee.fee) / (getHighPrecMoney totalFee)
+          else (getHighPrecMoney childFee.platformFee.fee + getHighPrecMoney childFee.platformFee.cgst + getHighPrecMoney childFee.platformFee.sgst) / (getHighPrecMoney totalFee)
 
   vendorFees <- findAllByDriverFeeId parentFee.id
   let childVendorFees =

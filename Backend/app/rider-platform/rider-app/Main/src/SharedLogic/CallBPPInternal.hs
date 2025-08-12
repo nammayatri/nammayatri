@@ -17,8 +17,10 @@ module SharedLogic.CallBPPInternal where
 import API.Types.UI.FavouriteDriver
 import qualified Data.HashMap.Strict as HM
 import Data.Text as T
-import Domain.Types.Common
 -- import qualified Domain.Types.Estimate as Estimate
+
+import Data.Time.Calendar (Day)
+import Domain.Types.Common
 import Domain.Types.FeedbackForm
 import Domain.Types.Merchant
 import qualified Domain.Types.RefereeLink as LibTypes
@@ -633,6 +635,62 @@ data IsIntercityResp = IsIntercityResp
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
+-- Fleet Vehicle List Types
+data FleetVehicleInfo = FleetVehicleInfo
+  { fleetOwnerId :: Text,
+    fleetOwnerName :: Text,
+    rcId :: Text,
+    vehicleNo :: Text,
+    vehicleType :: Text,
+    driverId :: Maybe Text,
+    driverName :: Maybe Text,
+    isActive :: Bool
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FleetVehicleListResp = FleetVehicleListResp
+  { vehicles :: [FleetVehicleInfo]
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+-- Fleet Vehicle List API
+type FleetVehicleListAPI =
+  "internal"
+    :> "fleet"
+    :> "VehicleAssociation"
+    :> "list"
+    :> MandatoryQueryParam "ticketPlaceId" Text
+    :> QueryParam "limit" Int
+    :> QueryParam "offset" Int
+    :> QueryParam "searchString" Text
+    :> Header "token" Text
+    :> Get '[JSON] FleetVehicleListResp
+
+fleetVehicleListClient :: Text -> Maybe Int -> Maybe Int -> Maybe Text -> Maybe Text -> EulerClient FleetVehicleListResp
+fleetVehicleListClient = client fleetVehicleListApi
+
+fleetVehicleListApi :: Proxy FleetVehicleListAPI
+fleetVehicleListApi = Proxy
+
+getFleetVehicles ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+  ) =>
+  Merchant ->
+  Text ->
+  Maybe Int ->
+  Maybe Int ->
+  Maybe Text ->
+  m FleetVehicleListResp
+getFleetVehicles merchant placeId mbLimit mbOffset mbSearchString = do
+  let apiKey = merchant.driverOfferApiKey
+  let internalUrl = merchant.driverOfferBaseUrl
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (fleetVehicleListClient placeId mbLimit mbOffset mbSearchString (Just apiKey)) "FleetVehicleList" fleetVehicleListApi
+
 type GetIsInterCityAPI =
   "internal"
     :> Capture "merchantId" Text
@@ -661,6 +719,100 @@ getIsInterCity merchant req = do
   let merchantId = merchant.driverOfferMerchantId
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (getIsInterCityClient merchantId (Just apiKey) req) "GetIsInterCity" getIsInterCityApi
+
+-- Fleet Booking Information (Create/Update) - provider internal "fleet" APIs
+
+-- Requests mirror provider's Domain.Action.Internal.FleetVehicleAssignment types
+data CreateFleetBookingInformationReq = CreateFleetBookingInformationReq
+  { bookingId :: Text,
+    serviceId :: Text,
+    placeName :: Maybe Text,
+    serviceName :: Maybe Text,
+    personId :: Maybe Text,
+    amount :: Maybe HighPrecMoney,
+    visitDate :: Maybe Day,
+    bookedSeats :: Maybe Int,
+    status :: Maybe Text
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
+data UpdateFleetBookingInformationReq = UpdateFleetBookingInformationReq
+  { id :: Maybe Text,
+    bookingId :: Text,
+    serviceId :: Text,
+    fleetOwnerId :: Maybe Text,
+    vehicleNo :: Text,
+    personId :: Maybe Text,
+    status :: Maybe Text,
+    visitDate :: Maybe Day,
+    bookedSeats :: Maybe Int,
+    amount :: Maybe HighPrecMoney
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
+data FleetBookingInformationResp = FleetBookingInformationResp
+  {assignmentId :: Text}
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
+-- API = "fleet" :> (CreateVehicleAssignment :<|> UpdateVehicleAssignment)
+
+type CreateFleetBookingInformationAPI =
+  "internal"
+    :> "fleet"
+    :> "bookingInformation"
+    :> "create"
+    :> Header "token" Text
+    :> ReqBody '[JSON] CreateFleetBookingInformationReq
+    :> Post '[JSON] FleetBookingInformationResp
+
+type UpdateFleetBookingInformationAPI =
+  "internal"
+    :> "fleet"
+    :> "bookingInformation"
+    :> "update"
+    :> Header "token" Text
+    :> ReqBody '[JSON] UpdateFleetBookingInformationReq
+    :> Post '[JSON] FleetBookingInformationResp
+
+createFleetBookingInformationClient :: Maybe Text -> CreateFleetBookingInformationReq -> EulerClient FleetBookingInformationResp
+createFleetBookingInformationClient = client createFleetBookingInformationApi
+
+updateFleetBookingInformationClient :: Maybe Text -> UpdateFleetBookingInformationReq -> EulerClient FleetBookingInformationResp
+updateFleetBookingInformationClient = client updateFleetBookingInformationApi
+
+createFleetBookingInformationApi :: Proxy CreateFleetBookingInformationAPI
+createFleetBookingInformationApi = Proxy
+
+updateFleetBookingInformationApi :: Proxy UpdateFleetBookingInformationAPI
+updateFleetBookingInformationApi = Proxy
+
+createFleetBookingInformation ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+  ) =>
+  Merchant ->
+  CreateFleetBookingInformationReq ->
+  m FleetBookingInformationResp
+createFleetBookingInformation merchant req = do
+  let apiKey = merchant.driverOfferApiKey
+  let internalUrl = merchant.driverOfferBaseUrl
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (createFleetBookingInformationClient (Just apiKey) req) "CreateFleetBookingInformation" createFleetBookingInformationApi
+
+updateFleetBookingInformation ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+  ) =>
+  Merchant ->
+  UpdateFleetBookingInformationReq ->
+  m FleetBookingInformationResp
+updateFleetBookingInformation merchant req = do
+  let apiKey = merchant.driverOfferApiKey
+  let internalUrl = merchant.driverOfferBaseUrl
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (updateFleetBookingInformationClient (Just apiKey) req) "UpdateFleetBookingInformation" updateFleetBookingInformationApi
 
 type GetEstimateDetailsAPI =
   "internal"

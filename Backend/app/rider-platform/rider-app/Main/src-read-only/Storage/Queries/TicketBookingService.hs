@@ -42,6 +42,11 @@ updateAllStatusByBookingId status ticketBookingId = do
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.status status, Se.Set Beam.updatedAt _now] [Se.Is Beam.ticketBookingId $ Se.Eq (Kernel.Types.Id.getId ticketBookingId)]
 
+updateAssignmentById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.TicketBookingService.TicketBookingService -> m ())
+updateAssignmentById assignmentId id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.assignmentId assignmentId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateStatusAndCancelledSeatsById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Domain.Types.TicketBookingService.ServiceStatus -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.TicketBookingService.TicketBookingService -> m ())
@@ -67,6 +72,7 @@ updateByPrimaryKey (Domain.Types.TicketBookingService.TicketBookingService {..})
   updateWithKV
     [ Se.Set Beam.amount ((.amount) amount),
       Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) amount),
+      Se.Set Beam.assignmentId assignmentId,
       Se.Set Beam.bHourId (Kernel.Types.Id.getId <$> bHourId),
       Se.Set Beam.bookedSeats bookedSeats,
       Se.Set Beam.btype btype,

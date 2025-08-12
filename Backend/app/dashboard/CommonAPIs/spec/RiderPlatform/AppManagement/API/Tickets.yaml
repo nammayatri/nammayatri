@@ -6,9 +6,11 @@ imports:
   TicketServiceCancelReq: API.Types.UI.TicketService
   TicketBookingDetails: API.Types.UI.TicketService
   TicketServiceVerificationResp: API.Types.UI.TicketService
+  TicketFleetVehicleResp: API.Types.UI.TicketService
   TicketService: Domain.Types.TicketService
   TicketBookingService: Domain.Types.TicketBookingService
   TicketPlace: Domain.Types.TicketPlace
+  TicketSubPlace: Domain.Types.TicketSubPlace
   TicketBooking: Domain.Types.TicketBooking
   BankAccountType: Domain.Types.TicketMerchantDetails
   ContactDetails: Domain.Types.TicketMerchantDetails
@@ -38,6 +40,9 @@ apis:
       params:
         personServiceId: Id TicketService
         ticketBookingShortId: ShortId TicketBookingService
+      query:
+        - fleetOwnerId: Text
+        - vehicleId: Text
       response:
         type: TicketServiceVerificationResp
       migrate:
@@ -50,6 +55,7 @@ apis:
         ticketPlaceId: Id TicketPlace
       query:
         - date: Day
+        - subPlaceId: Id TicketSubPlace
       response:
         type: "[TicketServiceResp]"
       migrate:
@@ -181,6 +187,19 @@ apis:
         - requestorRole: RequestorRole
       response:
         type: "[TicketPlace]"
+
+  - GET: # GetTicketFleetVehiclesAPI
+      endpoint: /ticket/places/{placeId}/fleet/VehicleAssociation/list
+      name: GetTicketFleetVehicles
+      auth: ApiAuthV2
+      params:
+        placeId: Id TicketPlace
+      query:
+        - limit: Int
+        - offset: Int
+        - searchString: Text
+      response:
+        type: "[TicketFleetVehicleResp]"
 
 
 

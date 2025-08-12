@@ -243,7 +243,8 @@ createFleetOwnerInfo personId merchantId enabled = do
             createdAt = now,
             updatedAt = now,
             registeredAt = Nothing,
-            isEligibleForSubscription = True
+            isEligibleForSubscription = True,
+            ticketPlaceId = Nothing
           }
   QFOI.create fleetOwnerInfo
 

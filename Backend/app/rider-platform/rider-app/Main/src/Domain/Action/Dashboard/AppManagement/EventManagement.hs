@@ -273,7 +273,12 @@ getLiveTicketDef placeId = do
                 isRecurring = Just ticketPlace.isRecurring,
                 platformFee = ticketPlace.platformFee,
                 platformFeeVendor = ticketPlace.platformFeeVendor,
-                pricingOnwards = ticketPlace.pricingOnwards
+                pricingOnwards = ticketPlace.pricingOnwards,
+                endDate = ticketPlace.endDate,
+                isClosed = ticketPlace.isClosed,
+                startDate = ticketPlace.startDate,
+                venue = ticketPlace.venue,
+                assignTicketToBpp = ticketPlace.assignTicketToBpp
               }
           serviceDefs = map (toTicketServiceDef linkedBusinessHours) services
           serviceCategoryDefs = map (toServiceCategoryDef linkedBusinessHours) linkedServiceCategories
@@ -303,7 +308,8 @@ getLiveTicketDef placeId = do
           allowCancellation = svc.allowCancellation,
           expiry = svc.expiry,
           serviceCategoryId = nub $ concatMap (.categoryId) $ filter (\bh -> any (\bhId -> bhId == bh.id) svc.businessHours) linkedBusinessHours,
-          rules = svc.rules
+          rules = svc.rules,
+          subPlaceId = svc.subPlaceId
         }
     toServiceCategoryDef :: [DBusinessHour.BusinessHour] -> DServiceCategory.ServiceCategory -> DEM.ServiceCategoryDef
     toServiceCategoryDef linkedBusinessHours sc =
@@ -595,10 +601,11 @@ applyDraftChanges draftChange = do
             platformFee = ticketDef.basicInformation.platformFee,
             platformFeeVendor = ticketDef.basicInformation.platformFeeVendor,
             pricingOnwards = ticketDef.basicInformation.pricingOnwards,
-            endDate = Nothing,
-            isClosed = False,
-            startDate = Nothing,
-            venue = Nothing
+            endDate = ticketDef.basicInformation.endDate,
+            isClosed = ticketDef.basicInformation.isClosed,
+            startDate = ticketDef.basicInformation.startDate,
+            venue = ticketDef.basicInformation.venue,
+            assignTicketToBpp = ticketDef.basicInformation.assignTicketToBpp
           }
   case existingTicketPlace of
     Just extTP -> do
@@ -727,6 +734,7 @@ applyDraftChanges draftChange = do
               { id = serviceDef.id,
                 service = serviceDef.service,
                 shortDesc = serviceDef.shortDesc,
+                subPlaceId = serviceDef.subPlaceId,
                 operationalDays = serviceDef.operationalDays,
                 operationalDate = serviceDef.operationalDate,
                 maxVerification = serviceDef.maxVerification,

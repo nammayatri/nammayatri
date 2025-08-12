@@ -12,8 +12,7 @@ PickupInstructions:
     personId: Id Person
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
-    lat: Double
-    lon: Double
+    geohash: Text
     instruction: Text
     mediaFileId: "Maybe (Id MediaFile)"
     createdAt: UTCTime
@@ -24,6 +23,7 @@ PickupInstructions:
     personId: character(36)
     merchantId: character(36)
     merchantOperatingCityId: character(36)
+    geohash: character(12)
     instruction: character(150)
     mediaFileId: character(36)
 
@@ -41,14 +41,23 @@ PickupInstructions:
       where: personId
 
     updateInstructionById:
-      kvFunction: updateWithKV
-      params: [lat, lon, instruction, mediaFileId]
+      kvFunction: updateOneWithKV
+      params: [geohash, instruction, mediaFileId]
       where: id
 
     deleteByPersonIdAndLocation:
       kvFunction: deleteWithKV
       where:
-        and: [personId, lat, lon]
+        and: [personId, geohash]
+
+    deleteById:
+      kvFunction: deleteWithKV
+      where: id
+
+    findByPersonIdAndGeohash:
+      kvFunction: findOneWithKV
+      where:
+        and: [personId, geohash]
 
     findOldestByPersonId:
       kvFunction: findAllWithKV
@@ -57,10 +66,6 @@ PickupInstructions:
         field: updatedAt
         order: asc
       limit: 1
-
-    deleteInstructionById:
-      kvFunction: deleteWithKV
-      where: id
 
     updateMediaFileById:
       kvFunction: updateOneWithKV
