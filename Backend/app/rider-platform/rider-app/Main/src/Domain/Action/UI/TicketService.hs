@@ -138,9 +138,10 @@ getTicketPlaces (_, merchantId) = do
   context <- TicketRule.getCurrentContext 330 Nothing Nothing
   ticketPlaces' <- QTicketPlace.getTicketPlaces merchantOpCity.id
   let ticketPlaces = TicketRule.processEntity context <$> ticketPlaces'
-  pure $ sortBy (comparing (Down . (.priority))) $ filterEndedOrUnPublishedPlaces ticketPlaces
+  pure $ sortBy (comparing (Down . (.priority))) $ filterEnforcedAsSubPlace $ filterEndedOrUnPublishedPlaces ticketPlaces
   where
     filterEndedOrUnPublishedPlaces = filter (\place -> place.status `notElem` [Domain.Types.TicketPlace.Ended, Domain.Types.TicketPlace.Unpublished])
+    filterEnforcedAsSubPlace = filter (\place -> not place.enforcedAsSubPlace)
 
 getTicketPlacesServices :: (Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Prelude.Maybe (Data.Time.Calendar.Day) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.TicketSubPlace.TicketSubPlace) -> Environment.Flow [API.Types.UI.TicketService.TicketServiceResp]
 getTicketPlacesServices _ placeId mbDate mbSubPlaceId = do
@@ -1784,6 +1785,25 @@ invalidateCacheForTicketPlace placeId = do
   logInfo $ "Invalidating cache for ticket place: " <> placeId.getId
   invalidateTicketPlaceAvailabilityCache placeId
 
+getTicketPlace ::
+  (Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) ->
+  Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace ->
+  Environment.Flow API.Types.UI.TicketService.TicketPlaceResp
+getTicketPlace _ placeId = do
+  context <- TicketRule.getCurrentContext 330 Nothing Nothing
+  ticketPlace' <- QTicketPlace.findById placeId >>= fromMaybeM (InvalidRequest $ "Ticket place not found: " <> placeId.getId)
+  let ticketPlace = TicketRule.processEntity context ticketPlace'
+  buildTicketPlaceResp ticketPlace
+  where
+    buildTicketPlaceResp place = do
+      subPlaces <- QTicketSubPlace.findAllByTicketPlaceId place.id
+      let activeSubPlaces = filter (.isActive) subPlaces
+      pure $
+        API.Types.UI.TicketService.TicketPlaceResp
+          { ticketPlace = place,
+            subPlaces = activeSubPlaces
+          }
+
 getTicketPlacesV2 ::
   (Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) ->
   Environment.Flow [API.Types.UI.TicketService.TicketPlaceResp]
@@ -1792,11 +1812,12 @@ getTicketPlacesV2 (_, merchantId) = do
   context <- TicketRule.getCurrentContext 330 Nothing Nothing
   ticketPlaces' <- QTicketPlace.getTicketPlaces merchantOpCity.id
   let ticketPlaces = TicketRule.processEntity context <$> ticketPlaces'
-  let filteredPlaces = sortBy (comparing (Down . (.priority))) $ filterEndedOrUnPublishedPlaces ticketPlaces
+  let filteredPlaces = sortBy (comparing (Down . (.priority))) $ filterEnforcedAsSubPlace $ filterEndedOrUnPublishedPlaces ticketPlaces
   -- Transform to TicketPlaceResp with subPlaces
   mapM buildTicketPlaceResp filteredPlaces
   where
     filterEndedOrUnPublishedPlaces = filter (\place -> place.status `notElem` [Domain.Types.TicketPlace.Ended, Domain.Types.TicketPlace.Unpublished])
+    filterEnforcedAsSubPlace = filter (\place -> not place.enforcedAsSubPlace)
 
     buildTicketPlaceResp place = do
       subPlaces <- QTicketSubPlace.findAllByTicketPlaceId place.id
