@@ -159,51 +159,51 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
     DashboardReq dashboardReq -> do
       unless (booking.providerId == dashboardReq.merchantId && booking.merchantOperatingCityId == dashboardReq.merchantOperatingCityId) $ throwError (RideDoesNotExist ride.id.getId)
 
-  when (isInProgress ride.status) $ pure APISuccess.Success
-  unless (isValidRideStatus (ride.status)) $ throwError $ RideInvalidStatus ("This ride cannot be started" <> Text.pack (show ride.status))
+  if (isInProgress ride.status)
+    then pure APISuccess.Success
+    else do
+      unless (isValidRideStatus (ride.status)) $ throwError $ RideInvalidStatus ("This ride cannot be started" <> Text.pack (show ride.status))
+      (point, odometer) <- case req of
+        DriverReq driverReq -> do
+          when (DTC.isOdometerReadingsRequired booking.tripCategory && isNothing driverReq.odometer) $ throwError $ OdometerReadingRequired (show booking.tripCategory)
+          when (not (fromMaybe False ride.enableOtpLessRide) && driverReq.rideOtp /= ride.otp) $ throwError IncorrectOTP
+          logTagInfo "driver -> startRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
+          pure (driverReq.point, driverReq.odometer)
+        DashboardReq dashboardReq -> do
+          when (DTC.isOdometerReadingsRequired booking.tripCategory && isNothing dashboardReq.odometer) $ throwError $ OdometerReadingRequired (show booking.tripCategory)
+          logTagInfo "dashboard -> startRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
+          case dashboardReq.point of
+            Just point -> pure (point, dashboardReq.odometer)
+            Nothing -> do
+              driverLocation <- do
+                driverLocations <- LF.driversLocation [driverId]
+                listToMaybe driverLocations & fromMaybeM LocationNotFound
+              pure (getCoordinates driverLocation, dashboardReq.odometer)
+      now <- getCurrentTime
+      -- create first entry of eta here
+      let estimatedEndTimeRange = booking.estimatedDuration >>= \estDuration -> calculateEstimatedEndTimeRange now estDuration transporterConfig.arrivalTimeBufferOfVehicle booking.vehicleServiceTier
+      when (isJust estimatedEndTimeRange) $ QRide.updateEstimatedEndTimeRange estimatedEndTimeRange ride.id
+      updatedRide <-
+        if DTC.isEndOtpRequired booking.tripCategory
+          then do
+            endOtp <- Just <$> generateOTPCode
+            QRide.updateEndRideOtp ride.id endOtp
+            return $ ride {DRide.endOtp = endOtp, DRide.startOdometerReading = odometer, DRide.tripStartTime = Just now, DRide.estimatedEndTimeRange = estimatedEndTimeRange}
+          else pure ride {DRide.tripStartTime = Just now, DRide.estimatedEndTimeRange = estimatedEndTimeRange}
 
-  (point, odometer) <- case req of
-    DriverReq driverReq -> do
-      when (DTC.isOdometerReadingsRequired booking.tripCategory && isNothing driverReq.odometer) $ throwError $ OdometerReadingRequired (show booking.tripCategory)
-      when (not (fromMaybe False ride.enableOtpLessRide) && driverReq.rideOtp /= ride.otp) $ throwError IncorrectOTP
-      logTagInfo "driver -> startRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
-      pure (driverReq.point, driverReq.odometer)
-    DashboardReq dashboardReq -> do
-      when (DTC.isOdometerReadingsRequired booking.tripCategory && isNothing dashboardReq.odometer) $ throwError $ OdometerReadingRequired (show booking.tripCategory)
-      logTagInfo "dashboard -> startRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
-      case dashboardReq.point of
-        Just point -> pure (point, dashboardReq.odometer)
-        Nothing -> do
-          driverLocation <- do
-            driverLocations <- LF.driversLocation [driverId]
-            listToMaybe driverLocations & fromMaybeM LocationNotFound
-          pure (getCoordinates driverLocation, dashboardReq.odometer)
-  now <- getCurrentTime
-  -- create first entry of eta here
-  let estimatedEndTimeRange = booking.estimatedDuration >>= \estDuration -> calculateEstimatedEndTimeRange now estDuration transporterConfig.arrivalTimeBufferOfVehicle booking.vehicleServiceTier
-  when (isJust estimatedEndTimeRange) $ QRide.updateEstimatedEndTimeRange estimatedEndTimeRange ride.id
-  updatedRide <-
-    if DTC.isEndOtpRequired booking.tripCategory
-      then do
-        endOtp <- Just <$> generateOTPCode
-        QRide.updateEndRideOtp ride.id endOtp
-        return $ ride {DRide.endOtp = endOtp, DRide.startOdometerReading = odometer, DRide.tripStartTime = Just now, DRide.estimatedEndTimeRange = estimatedEndTimeRange}
-      else pure ride {DRide.tripStartTime = Just now, DRide.estimatedEndTimeRange = estimatedEndTimeRange}
+      rideRelatedNotificationConfigList <- CRN.findAllByMerchantOperatingCityIdAndTimeDiffEventInRideFlow booking.merchantOperatingCityId DRN.START_TIME booking.configInExperimentVersions
+      forM_ rideRelatedNotificationConfigList (SN.pushReminderUpdatesInScheduler booking updatedRide now driverId)
 
-  rideRelatedNotificationConfigList <- CRN.findAllByMerchantOperatingCityIdAndTimeDiffEventInRideFlow booking.merchantOperatingCityId DRN.START_TIME booking.configInExperimentVersions
-  forM_ rideRelatedNotificationConfigList (SN.pushReminderUpdatesInScheduler booking updatedRide now driverId)
+      void $ Redis.del (StopDetection.mkStopCountRedisKey rideId.getId)
+      whenWithLocationUpdatesLock driverId $ do
+        logTagInfo "startRide" ("Updating driver_flow_status to ON_RIDE for DriverId " <> getId driverId)
+        DDriverMode.updateDriverModeAndFlowStatus driverId transporterConfig.allowCacheDriverFlowStatus driverInfo.active driverInfo.mode DDFS.ON_RIDE (Just driverInfo)
+        withTimeAPI "startRide" "initializeDistanceCalculation" $ initializeDistanceCalculation updatedRide.id driverId point
+        withTimeAPI "startRide" "startRideAndUpdateLocation" $ startRideAndUpdateLocation driverId updatedRide booking.id point booking.providerId odometer
 
-  void $ Redis.del (StopDetection.mkStopCountRedisKey rideId.getId)
-  whenWithLocationUpdatesLock driverId $ do
-    logTagInfo "startRide" ("Updating driver_flow_status to ON_RIDE for DriverId " <> getId driverId)
-    DDriverMode.updateDriverModeAndFlowStatus driverId transporterConfig.allowCacheDriverFlowStatus driverInfo.active driverInfo.mode DDFS.ON_RIDE (Just driverInfo)
-    withTimeAPI "startRide" "initializeDistanceCalculation" $ initializeDistanceCalculation updatedRide.id driverId point
-    withTimeAPI "startRide" "startRideAndUpdateLocation" $ startRideAndUpdateLocation driverId updatedRide booking.id point booking.providerId odometer
-
-  fork "notify customer for ride start" $ notifyBAPRideStarted booking updatedRide (Just point)
-  fork "startRide - Notify driver" $ Notify.notifyOnRideStarted ride booking
-
-  pure APISuccess.Success
+      fork "notify customer for ride start" $ notifyBAPRideStarted booking updatedRide (Just point)
+      fork "startRide - Notify driver" $ Notify.notifyOnRideStarted ride booking
+      pure APISuccess.Success
   where
     isValidRideStatus status = (status == DRide.NEW)
     isInProgress status = (status == DRide.INPROGRESS)
