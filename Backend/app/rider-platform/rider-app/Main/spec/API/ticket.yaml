@@ -371,6 +371,14 @@ apis:
       auth: TokenAuth
       response:
         type: "[TicketPlaceResp]"
+  - GET:
+      endpoint: /ticket/place/{placeId}
+      name: getTicketPlace
+      auth: TokenAuth
+      params:
+        placeId: Id TicketPlace
+      response:
+        type: "TicketPlaceResp"
 
   # GET /ticket/bookings/{ticketServiceShortId}/fleet-vehicles
   - GET:
