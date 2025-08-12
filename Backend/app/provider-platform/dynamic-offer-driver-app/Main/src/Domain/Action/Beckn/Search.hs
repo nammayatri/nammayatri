@@ -484,7 +484,7 @@ selectDriversAndMatchFarePolicies merchant merchantOpCityId mbDistance fromLocat
             rideFare = Nothing,
             ..
           }
-  (driverPoolNotOnRide, _) <- calculateDriverPool calculateDriverPoolReq
+  (driverPoolNotOnRide, _, driverInfos) <- calculateDriverPool calculateDriverPoolReq
   logDebug $ "Driver Pool not on ride " <> show driverPoolNotOnRide
   driverPoolCurrentlyOnRide <-
     if null driverPoolNotOnRide
@@ -495,7 +495,34 @@ selectDriversAndMatchFarePolicies merchant merchantOpCityId mbDistance fromLocat
       else pure []
   let driverPool =
         driverPoolNotOnRide
-          <> map (\DriverPoolResultCurrentlyOnRide {..} -> DriverPoolResult {customerTags = Nothing, ..}) driverPoolCurrentlyOnRide
+          <> map
+            ( \DriverPoolResultCurrentlyOnRide {..} ->
+                let matchingDriverInfo = find (\di -> di.driverId == driverId) driverInfos
+                    rideDistance = case matchingDriverInfo of
+                      Just driverInfo -> case driverInfo.isAboveActive of
+                        Just True -> driverInfo.tripDistanceMinThreshold
+                        Just False -> driverInfo.tripDistanceMaxThreshold
+                        Nothing -> Nothing
+                      Nothing -> Nothing
+                    isPriorityRidesEnabled = matchingDriverInfo >>= (.isPriorityRidesEnabled)
+                    isPetModeEnabled = maybe False (.isPetModeEnabled) matchingDriverInfo
+                    isIntercity = maybe False (.canSwitchToInterCity) matchingDriverInfo
+                    isRental = maybe False (.canSwitchToRental) matchingDriverInfo
+                    isAcRidesEnabled = matchingDriverInfo >>= (.isAcRidesEnabled)
+                    isSilentModeEnabled = matchingDriverInfo >>= (.isSilentModeEnabled)
+                 in DriverPoolResult
+                      { customerTags = Nothing,
+                        rideDistance = rideDistance,
+                        isPriorityRidesEnabled = isPriorityRidesEnabled,
+                        isPetModeEnabled = isPetModeEnabled,
+                        isIntercity = isIntercity,
+                        isRental = isRental,
+                        isAcRidesEnabled = isAcRidesEnabled,
+                        isSilentModeEnabled = isSilentModeEnabled,
+                        ..
+                      }
+            )
+            driverPoolCurrentlyOnRide
   logDebug $ "Search handler: driver pool " <> show driverPool
   let onlyFPWithDrivers = filter (\fp -> (isScheduled || (skipDriverPoolCheck fp.tripCategory) || isJust (find (\dp -> dp.serviceTier == fp.vehicleServiceTier) driverPool)) && (isValueAddNP || fp.vehicleServiceTier `elem` offUsVariants)) farePolicies
   return (driverPool, onlyFPWithDrivers)

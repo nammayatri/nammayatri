@@ -323,7 +323,15 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
             aadhaarNumber = Nothing,
             dlNumber = Nothing,
             planExpiryDate = Nothing,
-            prepaidSubscriptionBalance = Nothing
+            prepaidSubscriptionBalance = Nothing,
+            maxPickupRadius = Nothing,
+            tripDistanceMaxThreshold = Nothing,
+            tripDistanceMinThreshold = Nothing,
+            isPriorityRidesEnabled = Nothing,
+            isAboveActive = Nothing,
+            isAcRidesEnabled = Nothing,
+            rideRequestVolume = Nothing,
+            isSilentModeEnabled = Nothing
           }
   QDriverStats.createInitialDriverStats merchantOperatingCity.currency merchantOperatingCity.distanceUnit driverId
   QD.create driverInfo
