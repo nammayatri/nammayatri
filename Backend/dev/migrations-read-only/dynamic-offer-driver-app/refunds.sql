@@ -19,3 +19,8 @@ ALTER TABLE atlas_driver_offer_bpp.refunds ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.refunds ADD COLUMN split json ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.refunds ALTER COLUMN short_id TYPE character varying(36);

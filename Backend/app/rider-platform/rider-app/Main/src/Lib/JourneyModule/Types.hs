@@ -71,6 +71,7 @@ import qualified Lib.JourneyModule.State.Types as JMState
 import qualified Lib.JourneyModule.State.Utils as JMStateUtils
 import Lib.JourneyModule.Utils
 import Lib.Payment.Storage.Beam.BeamFlow
+import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified Lib.Payment.Storage.Queries.Refunds as QRefunds
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Booking (getfareBreakups)
@@ -946,22 +947,26 @@ mkLegInfoFromFrfsBooking booking distance duration = do
       mbBookingPayment <- QFRFSTicketBookingPayment.findNewTBPByBookingId booking.id
       refundBloc <- case mbBookingPayment of
         Just bookingPayment -> do
-          refundEntries <- QRefunds.findAllByOrderId bookingPayment.paymentOrderId
-          let matchingRefundEntry =
-                find
-                  ( \refundEntry ->
-                      case refundEntry.split of
-                        Just splits -> any (\split -> split.frfsBookingId == booking.id.getId) splits
-                        Nothing -> False
-                  )
-                  refundEntries
-          case matchingRefundEntry of
-            Just refundEntry -> do
-              let amount = case refundEntry.split of
-                    Just splits -> find (\split -> split.frfsBookingId == booking.id.getId) splits <&> (.splitAmount)
-                    Nothing -> Just refundEntry.refundAmount
-              case amount of
-                Just amount' -> return $ Just $ LegSplitInfo {amount = amount', status = refundEntry.status}
+          mbPaymentOrder <- QPaymentOrder.findById bookingPayment.paymentOrderId
+          case mbPaymentOrder of
+            Just paymentOrder -> do
+              refundEntries <- QRefunds.findAllByOrderId paymentOrder.shortId
+              let matchingRefundEntry =
+                    find
+                      ( \refundEntry ->
+                          case refundEntry.split of
+                            Just splits -> any (\split -> split.frfsBookingId == booking.id.getId) splits
+                            Nothing -> False
+                      )
+                      refundEntries
+              case matchingRefundEntry of
+                Just refundEntry -> do
+                  let amount = case refundEntry.split of
+                        Just splits -> find (\split -> split.frfsBookingId == booking.id.getId) splits <&> (.splitAmount)
+                        Nothing -> Just refundEntry.refundAmount
+                  case amount of
+                    Just amount' -> return $ Just $ LegSplitInfo {amount = amount', status = refundEntry.status}
+                    Nothing -> return Nothing
                 Nothing -> return Nothing
             Nothing -> return Nothing
         Nothing -> return Nothing

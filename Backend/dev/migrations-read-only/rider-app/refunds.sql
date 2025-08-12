@@ -18,3 +18,8 @@ ALTER TABLE atlas_app.refunds ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.refunds ADD COLUMN split json ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.refunds ALTER COLUMN short_id TYPE character varying(36);

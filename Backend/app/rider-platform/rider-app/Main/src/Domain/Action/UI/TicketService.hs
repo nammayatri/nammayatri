@@ -594,7 +594,7 @@ getTicketBookingsDetails (_mbPersonId, merchantId') shortId_ = do
   mkTicketBookingDetails ticketBooking services
   where
     mkTicketBookingDetails DTTB.TicketBooking {..} services = do
-      refunds <- QRefunds.findAllByOrderId $ Kernel.Types.Id.Id shortId.getShortId
+      refunds <- QRefunds.findAllByOrderId (Kernel.Types.Id.ShortId shortId.getShortId)
       person <- QP.findById personId >>= fromMaybeM (InvalidRequest "Person not found")
       let isAnyRefundPending = any (\refund -> refund.status == Kernel.External.Payment.Interface.Types.REFUND_PENDING) refunds
       refundDetails <-
@@ -676,9 +676,9 @@ getTicketBookingsDetails (_mbPersonId, merchantId') shortId_ = do
         Refunds
           { id = Kernel.Types.Id.Id requestId,
             merchantId = merchantId.getId,
-            shortId = requestId,
+            shortId = Kernel.Types.Id.ShortId requestId,
             status = status,
-            orderId = Kernel.Types.Id.Id orderId.getShortId,
+            orderId = Kernel.Types.Id.ShortId orderId.getShortId,
             refundAmount = amount,
             idAssignedByServiceProvider = Nothing,
             initiatedBy = Nothing,

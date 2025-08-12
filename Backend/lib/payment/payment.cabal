@@ -44,7 +44,6 @@ library
       Lib.Payment.Storage.Beam.PayoutTransaction
       Lib.Payment.Storage.Beam.Refunds
       Lib.Payment.Storage.Queries.OrphanInstances.PayoutOrder
-      Lib.Payment.Storage.Queries.OrphanInstances.Refunds
       Lib.Payment.Storage.Queries.PayoutOrder
       Lib.Payment.Storage.Queries.PayoutTransaction
       Lib.Payment.Storage.Queries.Refunds

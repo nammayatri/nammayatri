@@ -18,9 +18,9 @@ data Refunds = Refunds
     idAssignedByServiceProvider :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     initiatedBy :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     merchantId :: Kernel.Prelude.Text,
-    orderId :: Kernel.Types.Id.Id Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder,
+    orderId :: Kernel.Types.Id.ShortId Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder,
     refundAmount :: Kernel.Types.Common.HighPrecMoney,
-    shortId :: Kernel.Prelude.Text,
+    shortId :: Kernel.Types.Id.ShortId Lib.Payment.Domain.Types.Refunds.Refunds,
     split :: Kernel.Prelude.Maybe [Lib.Payment.Domain.Types.Refunds.Split],
     status :: Kernel.External.Payment.Interface.RefundStatus,
     updatedAt :: Kernel.Prelude.UTCTime

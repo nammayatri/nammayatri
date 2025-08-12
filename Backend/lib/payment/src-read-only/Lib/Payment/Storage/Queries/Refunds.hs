@@ -23,14 +23,14 @@ import qualified Sequelize as Se
 create :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Lib.Payment.Domain.Types.Refunds.Refunds -> m ())
 create = createWithKV
 
-findAllByOrderId :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Types.Id.Id Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder -> m [Lib.Payment.Domain.Types.Refunds.Refunds])
-findAllByOrderId orderId = do findAllWithKV [Se.Is Beam.orderId $ Se.Eq (Kernel.Types.Id.getId orderId)]
+findAllByOrderId :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Types.Id.ShortId Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder -> m [Lib.Payment.Domain.Types.Refunds.Refunds])
+findAllByOrderId orderId = do findAllWithKV [Se.Is Beam.orderId $ Se.Eq (Kernel.Types.Id.getShortId orderId)]
 
 findById :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Types.Id.Id Lib.Payment.Domain.Types.Refunds.Refunds -> m (Maybe Lib.Payment.Domain.Types.Refunds.Refunds))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-findByShortId :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Prelude.Text -> m (Maybe Lib.Payment.Domain.Types.Refunds.Refunds))
-findByShortId shortId = do findOneWithKV [Se.Is Beam.shortId $ Se.Eq shortId]
+findByShortId :: (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) => (Kernel.Types.Id.ShortId Lib.Payment.Domain.Types.Refunds.Refunds -> m (Maybe Lib.Payment.Domain.Types.Refunds.Refunds))
+findByShortId shortId = do findOneWithKV [Se.Is Beam.shortId $ Se.Eq (Kernel.Types.Id.getShortId shortId)]
 
 updateRefundsEntryByResponse ::
   (Lib.Payment.Storage.Beam.BeamFlow.BeamFlow m r) =>
@@ -59,9 +59,9 @@ instance FromTType' Beam.Refunds Lib.Payment.Domain.Types.Refunds.Refunds where
             idAssignedByServiceProvider = idAssignedByServiceProvider,
             initiatedBy = initiatedBy,
             merchantId = merchantId,
-            orderId = Kernel.Types.Id.Id orderId,
+            orderId = Kernel.Types.Id.ShortId orderId,
             refundAmount = refundAmount,
-            shortId = shortId,
+            shortId = Kernel.Types.Id.ShortId shortId,
             split = split >>= Kernel.Utils.JSON.valueToMaybe,
             status = status,
             updatedAt = updatedAt
@@ -77,9 +77,9 @@ instance ToTType' Beam.Refunds Lib.Payment.Domain.Types.Refunds.Refunds where
         Beam.idAssignedByServiceProvider = idAssignedByServiceProvider,
         Beam.initiatedBy = initiatedBy,
         Beam.merchantId = merchantId,
-        Beam.orderId = Kernel.Types.Id.getId orderId,
+        Beam.orderId = Kernel.Types.Id.getShortId orderId,
         Beam.refundAmount = refundAmount,
-        Beam.shortId = shortId,
+        Beam.shortId = Kernel.Types.Id.getShortId shortId,
         Beam.split = split >>= Just . Data.Aeson.toJSON,
         Beam.status = status,
         Beam.updatedAt = updatedAt
