@@ -74,6 +74,7 @@ import Lib.Payment.Storage.Beam.BeamFlow
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified Lib.Payment.Storage.Queries.Refunds as QRefunds
 import Lib.SessionizerMetrics.Types.Event
+import qualified Lib.Yudhishthira.Types as YTypes
 import SharedLogic.Booking (getfareBreakups)
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
@@ -1084,12 +1085,14 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} fallbackFare di
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity frfsSearch
   journeyLegInfo' <- journeyLegInfo & fromMaybeM (InvalidRequest "Not a valid mulimodal search as no journeyLegInfo found")
   mRiderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId Nothing
+  person <- QPerson.findById riderId >>= fromMaybeM (PersonNotFound riderId.getId)
+  let isPTBookingAllowedForUser = ("PTBookingAllowed#Yes" `elem` (maybe [] (map YTypes.getTagNameValueExpiry) person.customerNammaTags))
   let isSearchFailed = fromMaybe False (journeyLegInfo >>= (.onSearchFailed))
   let bookingAllowed =
         case vehicleType of
-          Spec.METRO -> not isSearchFailed && fromMaybe False (mRiderConfig >>= (.metroBookingAllowed))
-          Spec.SUBWAY -> not isSearchFailed && fromMaybe False (mRiderConfig >>= (.suburbanBookingAllowed))
-          Spec.BUS -> not isSearchFailed
+          Spec.METRO -> not isSearchFailed && (fromMaybe False (mRiderConfig >>= (.metroBookingAllowed)) || isPTBookingAllowedForUser)
+          Spec.SUBWAY -> not isSearchFailed && (fromMaybe False (mRiderConfig >>= (.suburbanBookingAllowed)) || isPTBookingAllowedForUser)
+          Spec.BUS -> not isSearchFailed && (fromMaybe False (mRiderConfig >>= (.busBookingAllowed)) || isPTBookingAllowedForUser)
   now <- getCurrentTime
   (mbEstimatedFare, mbQuote) <-
     case journeyLegInfo'.pricingId of

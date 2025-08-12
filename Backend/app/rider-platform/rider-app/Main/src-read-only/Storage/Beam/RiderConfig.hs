@@ -28,6 +28,7 @@ data RiderConfigT f = RiderConfigT
     blockedUntilInMins :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Minutes),
     bookingSyncStatusCallSecondsDiffThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     boostSearchPreSelectionServiceTierConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    busBookingAllowed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     busTrackingConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     cancellationPaymentDelay :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     collectAutoCompleteData :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

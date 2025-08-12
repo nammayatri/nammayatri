@@ -46,6 +46,7 @@ RiderConfig:
     enableIGMIssueFlow: Bool
     metroBookingAllowed: Maybe Bool
     suburbanBookingAllowed: Maybe Bool
+    busBookingAllowed: Maybe Bool
     localPoliceNumber: Maybe Text
     enableSupportForSafety: Bool
     videoFileSizeUpperLimit: Int
