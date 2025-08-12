@@ -588,6 +588,7 @@ listItem push item state =
       compClickable state item = dependentDocAvailable item state && not item.isDisabled && not 
         case item.stage of
           ST.DRIVING_LICENSE_OPTION -> state.props.limitReachedFor == Just "DL" || any (_ == state.data.drivingLicenseStatus) [COMPLETED, IN_PROGRESS]
+          ST.VEHICLE_DETAILS_OPTION -> state.props.limitReachedFor == Just "RC" || any (_ == state.data.vehicleDetailsStatus) [COMPLETED, IN_PROGRESS, MANUAL_VERIFICATION_REQUIRED] -- Todo Shikhar test once
           ST.GRANT_PERMISSION -> statusCompOrManual state.data.permissionsStatus
           _ -> statusCompOrManual (getStatus item.stage state)
 

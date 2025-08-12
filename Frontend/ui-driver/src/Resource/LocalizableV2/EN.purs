@@ -654,7 +654,7 @@ getEn =
     , customer_added_a_stop: "Customer added a stop!"
     , aadhaar_linking_required_description: (\_ -> "To start driving for our app, please \n link your Aadhaar ID")
     , by_clicking_this_you_will_be_agreeing_to_our_tc: "By clicking Continue, you agree to our &nbsp; <a href=\"\">T&Cs</a>"
-    , by_clicking_this_you_will_be_agreeing_to_our: "By clicking \"Continue\"," <> "<br><b>you agree to our" <> "<span style='color:#171C8F'> " <> "Terms & Conditions" <> "</span></b>"
+    , by_clicking_this_you_will_be_agreeing_to_our: "By clicking Continue," <> "<br><b>you agree to our" <> "<span style='color:#171C8F'> " <> "Terms & Conditions" <> "</span></b>"
     , terms_and_conditions_short: "T&C"
     , tc_tail: ""
     , otp_sent_to_aadhaar_number: "OTP sent to mobile number linked with your aadhar"
@@ -1062,7 +1062,7 @@ getEn =
     , no_charges_till: "No charges till {}"
     , and: " and "
     , direct_payment_no_commissions: "Direct payment.\nNo commissions"
-    , customer_pays_directly: "Customer pays you directly via \ncash or UPI"
+    , customer_pays_directly: "Customer pays to you directly via \ncash or UPI"
     , hundred_percent_fare_goes_to_you: "100% of the fare\ngoes to you!"
     , fare_shown_is_fare_you_get: "The fare shown is the fare you get.\nNo hidden charges."
     , be_a_part_of_open_mobility_revolution: "Be a part of the Open\nMobility Revolution!"
@@ -1242,6 +1242,7 @@ getEn =
     , yatri_points_faqs_ques2_ans1: (\days -> "All Yatri Points earned should be converted into Discount Points within " <> days <> " days from the date of earning.")
     , yatri_points_faqs_ques2_ans2: (\_ -> "The Discount Points must be utilized within the same period.")
     , yatri_points_faqs_ques2_ans3: "If the conversion or utilization does not occur within this timeframe, the points will be forfeited."
+    , faqs_str: "FAQs"
     , hotspots: "Hotspots"
     , very_high: "Very High"
     , high: "High"

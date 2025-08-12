@@ -133,6 +133,13 @@ transformStageNameFromTitle title doctype =
         _ , "InspectionHub" -> getString OPERATION_HUB_STR
         "Vehicle Registration Certificate" , _ -> getString VEHICLE_REGISTERATON_CERTIFICATE
         "Driving License" , _ -> getString DRIVING_LICENSE
+        "Profile Photo" , _ -> getString PROFILE_PHOTO_STR
+        "Aadhaar Card" , _ -> getString AADHAAR_CARD_STR
+        "PAN Card" , _ -> getString PAN_CARD_STR
+        "Vehicle Permit" , _ -> getString VEHICLE_PERMIT_STR
+        "Fitness Certificate (FC)" , _ -> getString FITNESS_CERTIFICATE_STR
+        "Vehicle Insurance" , _ -> getString VEHICLE_INSURANCE_STR
+        "Vehicle PUC Certificate" , _ -> getString VEHICLE_PUC_STR
         _ , _ -> title
 
 

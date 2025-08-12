@@ -1616,6 +1616,7 @@ newtype Keymap
   , yatri_points_faqs_ques1_ans4 :: String -> String
   , yatri_points_tnc :: String
   , yatri_points_faqs_ques2_ans3 :: String
+  , faqs_str :: String
   , hotspots :: String
   , very_high :: String
   , high :: String
@@ -6723,6 +6724,9 @@ yatri_points_tnc = a
 
 yatri_points_faqs_ques2_ans3 :: Proxy "yatri_points_faqs_ques2_ans3"
 yatri_points_faqs_ques2_ans3 = a
+
+faqs_str :: Proxy "faqs_str"
+faqs_str = a
 
 hotspots :: Proxy "hotspots"
 hotspots = a

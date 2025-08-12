@@ -526,6 +526,7 @@ getProxy str = case str of
   ACTIVATED_CUSTOMERS -> \a -> a @~ activated_customers
   REFERRAL_CODE_LINKING -> \a -> a @~ referral_code_linking
   CONTACT_SUPPORT -> \a -> a @~ contact_support
+  FAQS_STR -> \a -> a @~ faqs_str
   AC_CHECK_TITILE -> \a -> a @~ ac_check_titile
   CALL_SUPPORT -> \a -> a @~ call_support
   YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT arg1 -> \a -> (a @~ you_are_about_to_call_namma_yatri_support) arg1

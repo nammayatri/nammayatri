@@ -50,7 +50,7 @@ genericHeaderConfig state =
             if state.props.showAns 
             then "" 
             else if isJust state.props.selectedCategory then fromMaybe "" state.props.selectedCategory
-            else "FAQs"
+            else getString FAQS_STR
     in
     GenericHeaderConfig.config
       { height = WRAP_CONTENT
