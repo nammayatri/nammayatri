@@ -49,3 +49,8 @@ ALTER TABLE atlas_app.service_people_category ADD COLUMN rules json ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.service_people_category ADD COLUMN is_closed boolean  default false;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.service_people_category ADD COLUMN icon_url text ;
