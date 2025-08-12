@@ -52,7 +52,7 @@ postNearbyBusBooking (mbPersonId, _) req = do
   let radius :: Double = fromMaybe 0.5 riderConfig.nearbyDriverSearchRadius --TODO: To be moved to config.
   nearbyBuses <-
     if req.requireNearbyBuses
-      then getNearbyBuses person.merchantOperatingCityId radius req
+      then getFilteredNearbyBuses person.merchantOperatingCityId radius req
       else return []
 
   recentRides <-
@@ -73,8 +73,15 @@ castToOnDemandVehicleCategory Spe.BUS = BecknV2.OnDemand.Enums.BUS
 castToOnDemandVehicleCategory Spe.METRO = BecknV2.OnDemand.Enums.METRO
 castToOnDemandVehicleCategory Spe.SUBWAY = BecknV2.OnDemand.Enums.SUBWAY
 
-getNearbyBuses :: Id MerchantOperatingCity -> Double -> API.Types.UI.NearbyBuses.NearbyBusesRequest -> Environment.Flow [[API.Types.UI.NearbyBuses.NearbyBus]]
-getNearbyBuses merchantOperatingCityId nearbyDriverSearchRadius req = do
+-- Need to change the return type since the type it's returning has more data than we need.
+-- Only need the vechicle number, current location and possibly the route number. Unsure if route id is necessary.
+-- getNearbyBuses :: Id MerchantOperatingCity -> Double -> API.Types.UI.NearbyBuses.NearbyBusesRequest -> Environment.Flow [[API.Types.UI.NearbyBuses.NearbyBus]]
+-- getNearbyBuses geFilteredNearbyBuses merchantOperatingCityId nearbyDriverSearchRadius req = do
+--   busesBS :: [ByteString] <- CQMMB.withCrossAppRedisNew $ Hedis.geoSearch nearbyBusKey (Hedis.FromLonLat req.userLon req.userLat) (Hedis.ByRadius nearbyDriverSearchRadius "km")
+--   let buses = map decodeUtf8 busesBS
+
+getFilteredNearbyBuses :: Id MerchantOperatingCity -> Double -> API.Types.UI.NearbyBuses.NearbyBusesRequest -> Environment.Flow [[API.Types.UI.NearbyBuses.FilteredNearbyBus]]
+getFilteredNearbyBuses merchantOperatingCityId nearbyDriverSearchRadius req = do
   busesBS :: [ByteString] <- CQMMB.withCrossAppRedisNew $ Hedis.geoSearch nearbyBusKey (Hedis.FromLonLat req.userLon req.userLat) (Hedis.ByRadius nearbyDriverSearchRadius "km")
   let buses = map decodeUtf8 busesBS
   logDebug $ "BusesBS: " <> show busesBS
@@ -146,7 +153,7 @@ getNearbyBuses merchantOperatingCityId nearbyDriverSearchRadius req = do
               let busEta = Kernel.Prelude.listToMaybe $ fromMaybe [] bus.busData.eta_data
               logDebug $ "Processing bus " <> bus.vehicleNumber <> " for route " <> busData.routeId
               return $
-                API.Types.UI.NearbyBuses.NearbyBus
+                API.Types.UI.NearbyBuses.FilteredNearbyBus
                   { capacity = Nothing,
                     currentLocation = Maps.LatLong bus.busData.latitude bus.busData.longitude,
                     distance = Nothing,
