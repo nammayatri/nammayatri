@@ -20,20 +20,20 @@ data NearbyBus = NearbyBus
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data FilteredNearbyBus = FilteredNearbyBus
-  { capacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    currentLocation :: Kernel.External.Maps.Types.LatLong,
-    distance :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
-    eta :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
-    nextStop :: Kernel.Prelude.Maybe Data.Text.Text,
-    occupancy :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    routeCode :: Data.Text.Text,
-    serviceType :: Kernel.Prelude.Maybe Data.Text.Text,
-    shortName :: Kernel.Prelude.Maybe Data.Text.Text,
-    vehicleNumber :: Kernel.Prelude.Maybe Data.Text.Text
-  }
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
+-- data FilteredNearbyBus = FilteredNearbyBus
+--   { capacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+--     currentLocation :: Kernel.External.Maps.Types.LatLong,
+--     distance :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+--     eta :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+--     nextStop :: Kernel.Prelude.Maybe Data.Text.Text,
+--     occupancy :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+--     routeCode :: Data.Text.Text,
+--     serviceType :: Kernel.Prelude.Maybe Data.Text.Text,
+--     shortName :: Kernel.Prelude.Maybe Data.Text.Text,
+--     vehicleNumber :: Kernel.Prelude.Maybe Data.Text.Text
+--   }
+--   deriving stock (Generic)
+--   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data NearbyBusesRequest = NearbyBusesRequest
   { platformType :: Domain.Types.IntegratedBPPConfig.PlatformType,

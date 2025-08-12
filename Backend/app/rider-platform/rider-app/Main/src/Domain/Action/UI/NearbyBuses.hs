@@ -3,22 +3,17 @@ module Domain.Action.UI.NearbyBuses (postNearbyBusBooking, getNextVehicleDetails
 import qualified API.Types.UI.NearbyBuses
 import qualified BecknV2.FRFS.Enums as Spe
 import qualified BecknV2.OnDemand.Enums
-import qualified Data.HashMap.Strict as HashMap
-import Data.List (nub)
-import Data.Text.Encoding (decodeUtf8)
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Domain.Types.RecentLocation
-import qualified Domain.Types.Route as Route
 import Domain.Types.RouteStopTimeTable
 import qualified Environment
 import EulerHS.Prelude hiding (decodeUtf8, id)
 import qualified ExternalBPP.Flow as Flow
 import qualified Kernel.External.Maps.Types as Maps
 import qualified Kernel.Prelude
-import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -28,7 +23,6 @@ import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.BecknConfig as CQBC
 import Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
-import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.RouteStopTimeTable as GRSM
 import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.MerchantOperatingCity as QMerchantOperatingCity
@@ -81,15 +75,15 @@ getNearbyBuses merchantOperatingCityId _ req = do
   riderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
   buses <- getNearbyBusesFRFS (Maps.LatLong req.userLon req.userLat) riderConfig
   logDebug $ "Nearby buses: " <> show buses
-  mapM
-    ( \bus -> do
-        return
+  pure $
+    map
+      ( \bus ->
           API.Types.UI.NearbyBuses.NearbyBus
             { currentLocation = Maps.LatLong bus.latitude bus.longitude,
               vehicleNumber = bus.vehicle_number
             }
-    )
-    buses
+      )
+      buses
 
 {-
 getFilteredNearbyBuses :: Id MerchantOperatingCity -> Double -> API.Types.UI.NearbyBuses.NearbyBusesRequest -> Environment.Flow [[API.Types.UI.NearbyBuses.FilteredNearbyBus]]
