@@ -238,6 +238,7 @@ library
       Domain.Action.UI.DriverProfileQuestions
       Domain.Action.UI.DriverProfileSummary
       Domain.Action.UI.DriverReferral
+      Domain.Action.UI.DriverWallet
       Domain.Action.UI.EditBooking
       Domain.Action.UI.ExotelEndRide
       Domain.Action.UI.FareCalculator
@@ -287,6 +288,7 @@ library
       Domain.Action.UI.SocialLogin
       Domain.Action.UI.SpecialLocation
       Domain.Action.UI.SpecialLocationWarrior
+      Domain.Action.UI.SubscriptionTransaction
       Domain.Action.UI.Tokenization
       Domain.Action.UI.Transporter
       Domain.Action.UI.VehicleDetails
@@ -584,6 +586,7 @@ library
       Storage.Queries.DriverReferralExtra
       Storage.Queries.DriverSSNExtra
       Storage.Queries.DriverStatsExtra
+      Storage.Queries.DriverWalletExtra
       Storage.Queries.ExophoneExtra
       Storage.Queries.FareParameters
       Storage.Queries.FareParameters.FareParametersAmbulanceDetails
@@ -654,6 +657,7 @@ library
       Storage.Queries.SearchTryExtra
       Storage.Queries.StationExtra
       Storage.Queries.Status
+      Storage.Queries.SubscriptionTransactionExtra
       Storage.Queries.Transformers.Booking
       Storage.Queries.Transformers.BookingLocation
       Storage.Queries.Transformers.CancellationReason
@@ -773,6 +777,7 @@ library
       API.Action.UI.DemandHotspots
       API.Action.UI.DriverOnboardingV2
       API.Action.UI.DriverProfileQuestions
+      API.Action.UI.DriverWallet
       API.Action.UI.EditBooking
       API.Action.UI.FareCalculator
       API.Action.UI.Insurance
@@ -789,6 +794,7 @@ library
       API.Action.UI.SocialLogin
       API.Action.UI.SpecialLocation
       API.Action.UI.SpecialLocationWarrior
+      API.Action.UI.SubscriptionTransaction
       API.Action.UI.Tokenization
       API.Action.UI.VehicleDetails
       API.Action.UI.VehicleInfo
@@ -821,6 +827,7 @@ library
       API.Types.UI.DemandHotspots
       API.Types.UI.DriverOnboardingV2
       API.Types.UI.DriverProfileQuestions
+      API.Types.UI.DriverWallet
       API.Types.UI.EditBooking
       API.Types.UI.FareCalculator
       API.Types.UI.Insurance
@@ -835,6 +842,7 @@ library
       API.Types.UI.ReferralPayout
       API.Types.UI.SocialLogin
       API.Types.UI.SpecialLocationWarrior
+      API.Types.UI.SubscriptionTransaction
       API.Types.UI.Tokenization
       API.Types.UI.VehicleDetails
       API.Types.UI.VehicleInfo
@@ -886,6 +894,7 @@ library
       Domain.Types.DriverReferral
       Domain.Types.DriverSSN
       Domain.Types.DriverStats
+      Domain.Types.DriverWallet
       Domain.Types.Estimate
       Domain.Types.Exophone
       Domain.Types.FareProduct
@@ -966,6 +975,7 @@ library
       Domain.Types.Station
       Domain.Types.StopInformation
       Domain.Types.SubscriptionConfig
+      Domain.Types.SubscriptionTransaction
       Domain.Types.SurgePricing
       Domain.Types.Toll
       Domain.Types.Translations
@@ -1036,6 +1046,7 @@ library
       Storage.Beam.DriverReferral
       Storage.Beam.DriverSSN
       Storage.Beam.DriverStats
+      Storage.Beam.DriverWallet
       Storage.Beam.Estimate
       Storage.Beam.Exophone
       Storage.Beam.FareProduct
@@ -1116,6 +1127,7 @@ library
       Storage.Beam.Station
       Storage.Beam.StopInformation
       Storage.Beam.SubscriptionConfig
+      Storage.Beam.SubscriptionTransaction
       Storage.Beam.SurgePricing
       Storage.Beam.Toll
       Storage.Beam.Translations
@@ -1189,6 +1201,7 @@ library
       Storage.Queries.DriverReferral
       Storage.Queries.DriverSSN
       Storage.Queries.DriverStats
+      Storage.Queries.DriverWallet
       Storage.Queries.Estimate
       Storage.Queries.Exophone
       Storage.Queries.FareProduct
@@ -1268,6 +1281,7 @@ library
       Storage.Queries.OrphanInstances.DriverReferral
       Storage.Queries.OrphanInstances.DriverSSN
       Storage.Queries.OrphanInstances.DriverStats
+      Storage.Queries.OrphanInstances.DriverWallet
       Storage.Queries.OrphanInstances.Exophone
       Storage.Queries.OrphanInstances.FareProduct
       Storage.Queries.OrphanInstances.Feedback
@@ -1309,6 +1323,7 @@ library
       Storage.Queries.OrphanInstances.SearchRequestForDriver
       Storage.Queries.OrphanInstances.SearchTry
       Storage.Queries.OrphanInstances.Station
+      Storage.Queries.OrphanInstances.SubscriptionTransaction
       Storage.Queries.OrphanInstances.Translations
       Storage.Queries.OrphanInstances.TransporterConfig
       Storage.Queries.OrphanInstances.TripAlertRequest
@@ -1350,6 +1365,7 @@ library
       Storage.Queries.Station
       Storage.Queries.StopInformation
       Storage.Queries.SubscriptionConfig
+      Storage.Queries.SubscriptionTransaction
       Storage.Queries.SurgePricing
       Storage.Queries.Toll
       Storage.Queries.Translations

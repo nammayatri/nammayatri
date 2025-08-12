@@ -1066,6 +1066,8 @@ TransporterConfig:
     allowDuplicateAadhaar : Maybe Bool
     allowCacheDriverFlowStatus : Maybe Bool
     cancellationRateSlabConfig: Maybe CancellationRateSlabConfig
+    enableDriverWallet: Maybe Bool
+    gstPercentage: Maybe Double
     maxOnlineDurationDays : Maybe Int
     distanceWeightage: Maybe Int
     driverCallingOption: "Maybe CallingOption"
