@@ -6,10 +6,12 @@ import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Types
 import qualified BecknV2.OnDemand.Utils.Common
 import qualified BecknV2.OnDemand.Utils.Context
+import qualified BecknV2.OnDemand.Utils.Tags as UTag
 import qualified Data.List
 import qualified Data.Text
 import qualified Domain.Action.Beckn.Search
 import Domain.Types.BecknConfig as DBC
+import qualified Domain.Types.Merchant as DM
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.App
@@ -36,7 +38,8 @@ tfCatalog :: Domain.Action.Beckn.Search.DSearchRes -> DBC.BecknConfig -> Bool ->
 tfCatalog res bppConfig isValueAddNP = do
   let catalogDescriptor_ = tfCatalogDescriptor res
       catalogProviders_ = tfCatalogProviders res bppConfig isValueAddNP & Just . Data.List.singleton
-  BecknV2.OnDemand.Types.Catalog {catalogDescriptor = catalogDescriptor_, catalogProviders = catalogProviders_}
+      catalogTags_ = tfCatalogTags res.provider bppConfig
+  BecknV2.OnDemand.Types.Catalog {catalogDescriptor = catalogDescriptor_, catalogProviders = catalogProviders_, catalogTags = Just catalogTags_}
 
 tfCatalogDescriptor :: Domain.Action.Beckn.Search.DSearchRes -> Maybe BecknV2.OnDemand.Types.Descriptor
 tfCatalogDescriptor res = do
@@ -137,3 +140,7 @@ tfProviderCategories categoryCode = do
 
 tfItemCategoryIds :: Enums.CategoryCode -> [Text]
 tfItemCategoryIds categoryCode = [Enums.categoryCodeToId categoryCode]
+
+tfCatalogTags :: DM.Merchant -> DBC.BecknConfig -> [BecknV2.OnDemand.Types.TagGroup]
+tfCatalogTags merchant bppConfig =
+  [UTag.mkBppTermsTagGroup (show merchant.city) bppConfig.settlementType Nothing bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee]
