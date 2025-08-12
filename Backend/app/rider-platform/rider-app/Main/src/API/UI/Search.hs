@@ -57,7 +57,6 @@ import qualified Domain.Types.Person as Person
 import qualified Domain.Types.RideStatus as DRide
 import qualified Domain.Types.RiderConfig as DRC
 import qualified Domain.Types.SearchRequest as SearchRequest
-import qualified Domain.Types.StationType as Station
 import qualified Domain.Types.Trip as DTrip
 import Environment
 import ExternalBPP.ExternalAPI.CallAPI as CallAPI
@@ -800,18 +799,14 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
                   Just integratedBPPConfig -> do
                     case integratedBPPConfig.providerConfig of
                       DIBC.CRIS config' -> do
-                        intermediateStations <- CallAPI.buildStations routeCode fromCode toCode integratedBPPConfig Station.START Station.END
-
-                        let viaStations = T.intercalate "-" $ map (.stationCode) $ filter (\station -> station.stationType == Station.INTERMEDIATE) intermediateStations
-                            viaPoints = if T.null viaStations then " " else viaStations
-
+                        (viaPoints, changeOver) <- getChangeOverAndViaPoints [BasicRouteDetail {routeCode = routeCode, startStopCode = fromCode, endStopCode = toCode}] integratedBPPConfig
                         let routeFareReq =
                               CRISRouteFare.CRISFareRequest
                                 { mobileNo = mbMobileNumber,
                                   imeiNo = fromMaybe "ed409d8d764c04f7" mbImeiNumber,
                                   appSession = sessionId,
                                   sourceCode = fromCode,
-                                  changeOver = " ",
+                                  changeOver = changeOver,
                                   destCode = toCode,
                                   via = viaPoints
                                 }

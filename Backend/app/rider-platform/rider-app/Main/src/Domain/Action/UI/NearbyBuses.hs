@@ -11,6 +11,7 @@ import qualified Domain.Types.RiderConfig as DomainRiderConfig
 import Domain.Types.RouteStopTimeTable
 import qualified Environment
 import EulerHS.Prelude hiding (decodeUtf8, id)
+import ExternalBPP.ExternalAPI.CallAPI as CallAPI
 import qualified ExternalBPP.Flow as Flow
 import qualified Kernel.External.Maps.Types as Maps
 import qualified Kernel.Prelude
@@ -204,7 +205,8 @@ getRecentRides person req = do
               mbFare <-
                 Kernel.Prelude.listToMaybe
                   <$> ( SIBC.fetchFirstIntegratedBPPConfigResult integratedBPPConfigs $ \integratedBPPConfig -> do
-                          snd <$> Flow.getFares person.id merchant merchantOperatingCity integratedBPPConfig becknConfig routeCode fromStopCode toStopCode req.vehicleType
+                          let fareRouteDetails = fromList [CallAPI.BasicRouteDetail {routeCode, startStopCode = fromStopCode, endStopCode = toStopCode}]
+                          snd <$> Flow.getFares person.id merchant merchantOperatingCity integratedBPPConfig becknConfig fareRouteDetails req.vehicleType
                       )
               return $
                 mbFare <&> \fare -> do

@@ -1,7 +1,8 @@
 module ExternalBPP.ExternalAPI.CallAPI where
 
 import qualified BecknV2.FRFS.Enums as Spec
-import Data.List (sortOn)
+import Data.List (nub, sortOn)
+import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as T
 import Domain.Action.Beckn.FRFS.OnSearch
 import Domain.Types hiding (ONDC)
@@ -53,8 +54,16 @@ getProviderName integrationBPPConfig =
     (_, ONDC _) -> "ONDC Services"
     (_, CRIS _) -> "CRIS Subway"
 
-getFares :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Id Person -> Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> Text -> Text -> Text -> Spec.VehicleCategory -> m (Bool, [FRFSUtils.FRFSFare])
-getFares riderId merchant merchanOperatingCity integrationBPPConfig routeCode startStopCode endStopCode vehicleCategory = do
+data BasicRouteDetail = BasicRouteDetail
+  { routeCode :: Text,
+    startStopCode :: Text,
+    endStopCode :: Text
+  }
+  deriving (Show)
+
+getFares :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Id Person -> Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> NonEmpty BasicRouteDetail -> Spec.VehicleCategory -> m (Bool, [FRFSUtils.FRFSFare])
+getFares riderId merchant merchanOperatingCity integrationBPPConfig fareRouteDetails vehicleCategory = do
+  let (routeCode, startStopCode, endStopCode) = getRouteCodeAndStartAndStop
   let isFareMandatory =
         case integrationBPPConfig.providerConfig of
           ONDC _ -> False
@@ -64,8 +73,7 @@ getFares riderId merchant merchanOperatingCity integrationBPPConfig routeCode st
       fares <-
         CMRLFareByOriginDest.getFareByOriginDest config' $
           CMRLFareByOriginDest.FareByOriginDestReq
-            { route = routeCode,
-              origin = startStopCode,
+            { origin = startStopCode,
               destination = endStopCode,
               ticketType = "SJT"
             }
@@ -80,21 +88,19 @@ getFares riderId merchant merchanOperatingCity integrationBPPConfig routeCode st
       fares <- FRFSUtils.getFares riderId vehicleCategory integrationBPPConfig merchant.id merchanOperatingCity.id routeCode startStopCode endStopCode
       return (isFareMandatory, fares)
     CRIS config' -> do
-      redisResp <- Redis.safeGet mkRouteFareKey
+      redisResp <- Redis.safeGet (mkRouteFareKey startStopCode endStopCode)
       case redisResp of
         Just frfsFare -> return (isFareMandatory, frfsFare)
         Nothing -> do
-          sessionId <- getRandomInRange (1, 1000000 :: Int) -- TODO: Fix it later
-          intermediateStations <- buildStations routeCode startStopCode endStopCode integrationBPPConfig START END
-          let viaStations = T.intercalate "-" $ map (.stationCode) $ filter (\station -> station.stationType == INTERMEDIATE) intermediateStations
-              viaPoints = if T.null viaStations then " " else viaStations
-              request =
+          sessionId <- getRandomInRange (1, 1000000 :: Int)
+          (viaPoints, changeOver) <- getChangeOverAndViaPoints (NE.toList fareRouteDetails) integrationBPPConfig
+          let request =
                 CRISRouteFare.CRISFareRequest
                   { mobileNo = Just "1111111111", -- dummy number and imei for all other requests to avoid sdkToken confusion
                     imeiNo = "abcdefgh",
                     appSession = sessionId,
                     sourceCode = startStopCode,
-                    changeOver = " ",
+                    changeOver = changeOver,
                     destCode = endStopCode,
                     via = viaPoints
                   }
@@ -104,10 +110,19 @@ getFares riderId merchant merchanOperatingCity integrationBPPConfig routeCode st
               logError $ "Error while calling CRIS API: " <> show err
               return (isFareMandatory, [])
             Right fares -> do
-              Redis.setExp mkRouteFareKey fares 3600 -- 1 hour
+              Redis.setExp (mkRouteFareKey startStopCode endStopCode) fares 3600 -- 1 hour
               return (isFareMandatory, fares)
   where
-    mkRouteFareKey = "CRIS:" <> startStopCode <> "-" <> endStopCode
+    mkRouteFareKey startStopCode endStopCode = "CRIS:" <> startStopCode <> "-" <> endStopCode
+
+    getRouteCodeAndStartAndStop :: (Text, Text, Text)
+    getRouteCodeAndStartAndStop = do
+      let firstFareRouteDetail = NE.head fareRouteDetails
+      let lastFareRouteDetail = NE.last fareRouteDetails
+      let routeCode = firstFareRouteDetail.routeCode
+      let startStopCode = firstFareRouteDetail.startStopCode
+      let endStopCode = lastFareRouteDetail.endStopCode
+      (routeCode, startStopCode, endStopCode)
 
 createOrder :: (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c) => IntegratedBPPConfig -> Seconds -> (Maybe Text, Maybe Text) -> FRFSTicketBooking -> m ProviderOrder
 createOrder integrationBPPConfig qrTtl (_mRiderName, mRiderNumber) booking = do
@@ -175,12 +190,39 @@ getStationList integrationBPPConfig = do
 getPaymentDetails :: Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> FRFSTicketBooking -> m BknPaymentParams
 getPaymentDetails _merchant _merchantOperatingCity _bapConfig (_mRiderName, _mRiderNumber) _booking = error "Unimplemented!"
 
-buildStations :: (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c) => Text -> Text -> Text -> IntegratedBPPConfig -> StationType -> StationType -> m [DStation] -- to see
-buildStations routeCode startStationCode endStationCode integratedBPPConfig startStopType endStopType = do
-  fromStation <- OTPRest.getStationByGtfsIdAndStopCode startStationCode integratedBPPConfig >>= fromMaybeM (StationNotFound startStationCode)
-  toStation <- OTPRest.getStationByGtfsIdAndStopCode endStationCode integratedBPPConfig >>= fromMaybeM (StationNotFound endStationCode)
-  stops <- OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig
-  return $ fromMaybe [] (mkStations fromStation toStation stops startStopType endStopType)
+getChangeOverAndViaPoints :: (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c) => [BasicRouteDetail] -> IntegratedBPPConfig -> m (Text, Text)
+getChangeOverAndViaPoints fareRouteDetails integrationBPPConfig = do
+  allStations <- buildStations fareRouteDetails integrationBPPConfig
+  let viaStations = nub $ map (.stationCode) allStations
+      viaPoints = if null viaStations then " " else T.intercalate "-" viaStations
+      changeOverStation = filter (\code -> code `elem` changeOverStations) viaStations
+      changeOver = if null changeOverStation then " " else T.intercalate "-" changeOverStation
+  return (viaPoints, changeOver)
+  where
+    changeOverStations :: [Text]
+    changeOverStations =
+      case integrationBPPConfig.providerConfig of
+        CRIS config ->
+          fromMaybe [] config.changeOverIndirectStations <> fromMaybe [] config.changeOverDirectStations
+        _ -> []
+
+buildStations :: (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c) => [BasicRouteDetail] -> IntegratedBPPConfig -> m [DStation]
+buildStations basicRouteDetails integratedBPPConfig = do
+  let lastStopIndex = length basicRouteDetails - 1
+  stationsArray <- do
+    mapWithIndexM
+      ( \idx routeDetail -> do
+          let startStopType = if idx == 0 then START else TRANSIT
+          let endStopType = if idx == lastStopIndex then END else TRANSIT
+          fromStation <- OTPRest.getStationByGtfsIdAndStopCode routeDetail.startStopCode integratedBPPConfig >>= fromMaybeM (StationNotFound routeDetail.startStopCode)
+          toStation <- OTPRest.getStationByGtfsIdAndStopCode routeDetail.endStopCode integratedBPPConfig >>= fromMaybeM (StationNotFound routeDetail.endStopCode)
+          stops <- OTPRest.getRouteStopMappingByRouteCode routeDetail.routeCode integratedBPPConfig
+          return $ fromMaybe [] (mkStations fromStation toStation stops startStopType endStopType)
+      )
+      basicRouteDetails
+  return $ concat stationsArray
+  where
+    mapWithIndexM f xs = zipWithM f [0 ..] xs
 
 mkStations :: Station -> Station -> [RouteStopMapping] -> StationType -> StationType -> Maybe [DStation]
 mkStations fromStation toStation stops startStopType endStopType =

@@ -8,6 +8,7 @@ import qualified BecknV2.OnDemand.Enums as Enums
 import Control.Applicative ((<|>))
 import Control.Monad.Extra (concatMapM, mapMaybeM)
 import Data.List (sortOn)
+import qualified Data.List.NonEmpty as NE
 import qualified Data.Text.Encoding as TE
 import qualified Data.Time as Time
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
@@ -29,6 +30,7 @@ import Domain.Types.Station
 import Domain.Types.Trip as DTrip
 import qualified EulerHS.Language as L
 import ExternalBPP.CallAPI as CallExternalBPP
+import ExternalBPP.ExternalAPI.CallAPI as CallAPI
 import qualified ExternalBPP.Flow as Flow
 import Kernel.External.Maps.Types
 import Kernel.Prelude
@@ -296,14 +298,17 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
 
 getFare :: (CoreMetrics m, CacheFlow m r, EncFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv, HasKafkaProducer r, HasShortDurationRetryCfg r c) => Id DPerson.Person -> DMerchant.Merchant -> MerchantOperatingCity -> Spec.VehicleCategory -> [FRFSRouteDetails] -> Maybe UTCTime -> Maybe Text -> m (Bool, Maybe JT.GetFareResponse)
 getFare riderId merchant merchantOperatingCity vehicleCategory routeDetails mbFromArrivalTime agencyGtfsId = do
-  let mbRouteDetail = mergeFFRFSRouteDetails routeDetails
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromAgency agencyGtfsId merchantOperatingCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleCategory) DIBC.MULTIMODAL
-  case (mbRouteDetail >>= (.routeCode), mbRouteDetail <&> (.startStationCode), mbRouteDetail <&> (.endStationCode)) of
-    (Just routeCode, Just startStationCode, Just endStationCode) -> do
+  case routeDetails of
+    [] -> do
+      logError $ "No Route Details Found for Vehicle Category : " <> show vehicleCategory <> "for riderId: " <> show riderId
+      return (True, Nothing)
+    _ -> do
       CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory vehicleCategory)
         >>= \case
           Just bapConfig -> do
-            JMU.measureLatency (try @_ @SomeException $ Flow.getFares riderId merchant merchantOperatingCity integratedBPPConfig bapConfig routeCode startStationCode endStationCode vehicleCategory) ("getFares" <> show vehicleCategory <> " routeCode: " <> show routeCode <> " startStationCode: " <> show startStationCode <> " endStationCode: " <> show endStationCode)
+            let fareRouteDetails = NE.fromList $ mapMaybe (\rd -> (\rc -> CallAPI.BasicRouteDetail {routeCode = rc, startStopCode = rd.startStationCode, endStopCode = rd.endStationCode}) <$> rd.routeCode) routeDetails
+            JMU.measureLatency (try @_ @SomeException $ Flow.getFares riderId merchant merchantOperatingCity integratedBPPConfig bapConfig fareRouteDetails vehicleCategory) ("getFares" <> show vehicleCategory <> " routeDetails: " <> show fareRouteDetails)
               >>= \case
                 Right (isFareMandatory, []) -> do
                   logError $ "Getting Empty Fares for Vehicle Category : " <> show vehicleCategory <> "for riderId: " <> show riderId
@@ -312,7 +317,7 @@ getFare riderId merchant merchantOperatingCity vehicleCategory routeDetails mbFr
                   now <- getCurrentTime
                   let arrivalTime = fromMaybe now mbFromArrivalTime
                   L.setOptionLocal QRSTT.CalledForFare True
-                  (possibleServiceTiers, availableFares) <- JMU.measureLatency (filterAvailableBuses arrivalTime startStationCode endStationCode integratedBPPConfig fares) ("filterAvailableBuses" <> show vehicleCategory <> " routeCode: " <> show routeCode <> " startStationCode: " <> show startStationCode <> " endStationCode: " <> show endStationCode)
+                  (possibleServiceTiers, availableFares) <- JMU.measureLatency (filterAvailableBuses arrivalTime fareRouteDetails integratedBPPConfig fares) ("filterAvailableBuses" <> show vehicleCategory <> " routeDetails: " <> show fareRouteDetails)
                   L.setOptionLocal QRSTT.CalledForFare False
                   let mbMinFarePerRoute = selectMinFare availableFares
                   let mbMaxFarePerRoute = selectMaxFare availableFares
@@ -329,16 +334,15 @@ getFare riderId merchant merchantOperatingCity vehicleCategory routeDetails mbFr
           Nothing -> do
             logError $ "Did not get Beckn Config for Vehicle Category : " <> show vehicleCategory <> "for riderId: " <> show riderId
             return (False, Nothing)
-    _ -> do
-      logError $ "No Route Details Found for Vehicle Category : " <> show vehicleCategory <> "for riderId: " <> show riderId
-      return (True, Nothing)
   where
-    filterAvailableBuses :: (EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, MonadFlow m, CacheFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv, HasKafkaProducer r, HasShortDurationRetryCfg r c) => UTCTime -> Text -> Text -> DIBC.IntegratedBPPConfig -> [FRFSFare] -> m (Maybe [Spec.ServiceTierType], [FRFSFare])
-    filterAvailableBuses arrivalTime startStationCode endStationCode integratedBPPConfig fares = do
+    filterAvailableBuses :: (EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, MonadFlow m, CacheFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv, HasKafkaProducer r, HasShortDurationRetryCfg r c) => UTCTime -> NE.NonEmpty CallAPI.BasicRouteDetail -> DIBC.IntegratedBPPConfig -> [FRFSFare] -> m (Maybe [Spec.ServiceTierType], [FRFSFare])
+    filterAvailableBuses arrivalTime fareRouteDetails integratedBPPConfig fares = do
       case vehicleCategory of
         Spec.BUS -> do
           -- Above getFares function return fares for all types of buses (e.g. AC, Non-AC, Ordinary, etc.) but instead of showing all types of buses to user,
           -- Check for all possible buses available in next hour and just show fares for those buses to avoid confusion
+          let startStationCode = (NE.head fareRouteDetails).startStopCode
+          let endStationCode = (NE.last fareRouteDetails).endStopCode
           (_, possibleRoutes) <- JMU.findPossibleRoutes Nothing startStationCode endStationCode arrivalTime integratedBPPConfig merchant.id merchantOperatingCity.id Enums.BUS True
           let possibleServiceTiers = map (.serviceTier) possibleRoutes
           return $ (Just possibleServiceTiers, filter (\fare -> fare.vehicleServiceTier.serviceTierType `elem` possibleServiceTiers) fares)
