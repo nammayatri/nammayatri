@@ -1201,8 +1201,8 @@ mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation r
   let (fromStopDetails, toStopDetails) =
         case travelMode of
           DTrip.Walk -> do
-            let fromStopDetails' = mkStopDetails (mbPrev >>= (.toStopDetails)) (Just journeyStartLocation.address)
-            let toStopDetails' = mkStopDetails (mbNext >>= (.fromStopDetails)) (journeyEndLocation <&> (.address))
+            let fromStopDetails' = mkStopDetails (gates >>= (.straightLineExit) >>= (.streetName)) (mbPrev >>= (.toStopDetails)) (Just journeyStartLocation.address)
+            let toStopDetails' = mkStopDetails (gates >>= (.straightLineEntrance) >>= (.streetName)) (mbNext >>= (.fromStopDetails)) (journeyEndLocation <&> (.address))
             (fromStopDetails', toStopDetails')
           _ -> (leg.fromStopDetails, leg.toStopDetails)
   return $
@@ -1210,7 +1210,7 @@ mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation r
       { agency = leg.agency,
         distance = Just leg.distance,
         duration = Just leg.duration,
-        endLocation = leg.endLocation.latLng,
+        endLocation = mkLocationWithGate (gates >>= (.straightLineEntrance)) leg.endLocation.latLng,
         fromArrivalTime = leg.fromArrivalTime,
         fromDepartureTime = leg.fromDepartureTime,
         fromStopDetails = fromStopDetails,
@@ -1220,7 +1220,7 @@ mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation r
         mode = travelMode,
         routeDetails,
         sequenceNumber = idx,
-        startLocation = leg.startLocation.latLng,
+        startLocation = mkLocationWithGate (gates >>= (.straightLineExit)) leg.startLocation.latLng,
         toArrivalTime = leg.toArrivalTime,
         toDepartureTime = leg.toDepartureTime,
         toStopDetails = toStopDetails,
@@ -1245,16 +1245,26 @@ mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation r
   where
     straightLineDistance = highPrecMetersToMeters $ distanceBetweenInMeters (LatLong leg.startLocation.latLng.latitude leg.startLocation.latLng.longitude) (LatLong leg.endLocation.latLng.latitude leg.endLocation.latLng.longitude)
 
-    mkStopDetails :: Maybe EMInterface.MultiModalStopDetails -> Maybe LocationAddress -> Maybe EMInterface.MultiModalStopDetails
-    mkStopDetails (Just stopDetails) _ =
+    mkLocationWithGate :: Maybe KEMIT.MultiModalLegGate -> Maps.LatLngV2 -> Maps.LatLngV2
+    mkLocationWithGate mGate fallbackLoc =
+      case (mGate >>= (.lat), mGate >>= (.lon)) of
+        (Just lat, Just lon) -> Maps.LatLngV2 lat lon
+        _ -> fallbackLoc
+
+    mkStopDetails :: Maybe Text -> Maybe EMInterface.MultiModalStopDetails -> Maybe LocationAddress -> Maybe EMInterface.MultiModalStopDetails
+    mkStopDetails mbGateName (Just stopDetails) _ =
       Just $
         EMInterface.MultiModalStopDetails
           { stopCode = Nothing,
             platformCode = Nothing,
-            name = stopDetails.name,
+            name = case (mbGateName, stopDetails.name) of
+              (Just gName, Just sName) -> Just $ gName <> ", " <> sName
+              (Just gName, Nothing) -> Just gName
+              (Nothing, Just sName) -> Just sName
+              (Nothing, Nothing) -> Nothing,
             gtfsId = Nothing
           }
-    mkStopDetails _ (Just parentAddress) =
+    mkStopDetails _ _ (Just parentAddress) =
       Just $
         EMInterface.MultiModalStopDetails
           { stopCode = Nothing,
@@ -1266,7 +1276,7 @@ mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation r
               (Nothing, Nothing) -> Nothing,
             gtfsId = Nothing
           }
-    mkStopDetails _ _ = Nothing
+    mkStopDetails _ _ _ = Nothing
 
     mkRouteDetail :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => Id DJL.JourneyLeg -> Text -> EMInterface.MultiModalRouteDetails -> m RouteDetails
     mkRouteDetail journeyLegId routeGroupId routeDetail = do

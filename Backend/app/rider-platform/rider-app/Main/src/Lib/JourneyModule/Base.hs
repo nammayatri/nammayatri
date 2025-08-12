@@ -624,8 +624,8 @@ addTaxiLeg ::
   LA.LocationAddress ->
   m JL.SearchResponse
 addTaxiLeg journey journeyLeg originAddress destinationAddress = do
-  let startLocation = mkLocationWithGate journeyLeg.exit originAddress journeyLeg.startLocation
-  let endLocation = mkLocationWithGate journeyLeg.entrance destinationAddress journeyLeg.endLocation
+  let startLocation = mkLocationWithGate journeyLeg.osmExit originAddress journeyLeg.startLocation
+  let endLocation = mkLocationWithGate journeyLeg.osmEntrance destinationAddress journeyLeg.endLocation
   let taxiSearchReq = mkTaxiSearchReq startLocation [endLocation]
   JL.search taxiSearchReq
   where
