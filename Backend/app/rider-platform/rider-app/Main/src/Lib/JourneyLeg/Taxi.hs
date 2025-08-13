@@ -108,9 +108,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
 
       mkJourneySearchData =
         JourneySearchData
-          { journeyId = journeyLegData.journeyId.getId,
-            journeyLegOrder = journeyLegData.sequenceNumber,
-            agency = journeyLegData.agency <&> (.name),
+          { agency = journeyLegData.agency <&> (.name),
             skipBooking = False,
             convenienceCost = 0,
             pricingId = Nothing,

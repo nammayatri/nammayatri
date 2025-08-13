@@ -3,11 +3,13 @@
 
 module Storage.Queries.JourneyExtra where
 
+import Control.Monad.Extra (mapMaybeM)
 import Data.List (minimumBy, sortBy)
 import Data.Ord (comparing)
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Types.FRFSTicket as DTicket
 import qualified Domain.Types.Journey as DJ
+import qualified Domain.Types.JourneyLeg as JL
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person
 import Kernel.Beam.Functions
@@ -93,12 +95,13 @@ updateShortestJourneyExpiryTimeWithTickets journeyId tickets =
 updateJourneyToNextTicketExpiryTime ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Kernel.Types.Id.Id DJ.Journey ->
+  [JL.JourneyLeg] ->
   Int ->
   m ()
-updateJourneyToNextTicketExpiryTime journeyId nextLegSequence = do
+updateJourneyToNextTicketExpiryTime journeyId allLegs nextLegSequence = do
   -- Get all bookings for the journey and filter upcoming ones
-  bookings <- QTicketBooking.findAllByJourneyId (Just journeyId)
-  let upcomingBookingIds = mapMaybe (\b -> b.journeyLegOrder >>= \o -> if o >= nextLegSequence then Just b.id else Nothing) bookings
+  bookings <- mapMaybeM (QTicketBooking.findBySearchId . Kernel.Types.Id.Id) (mapMaybe (.legSearchId) $ filter (\leg -> leg.sequenceNumber >= nextLegSequence) allLegs)
+  let upcomingBookingIds = map (.id) bookings
   -- Fetch all tickets from those bookings
   tickets <- fmap concat $ mapM QTicket.findAllByTicketBookingId upcomingBookingIds
   -- Find the earliest ticket expiry

@@ -68,8 +68,6 @@ FRFSSearch:
     routeCode:
       routeId: Maybe Text
     journeyLegInfo:
-      journeyLegOrder: Maybe Int
-      journeyId: Maybe Text
       agency: Maybe Text
       skipBooking: Maybe Bool
       convenienceCost: Maybe Int
@@ -78,8 +76,6 @@ FRFSSearch:
       onSearchFailed: Maybe Bool
 
   toTType:
-    journeyLegOrder: Kernel.Prelude.fmap (.journeyLegOrder)|I
-    journeyId: Kernel.Prelude.fmap (.journeyId)|I
     agency: (journeyLegInfo >>= (.agency))|E
     skipBooking: Kernel.Prelude.fmap (.skipBooking)|I
     convenienceCost: Kernel.Prelude.fmap (.convenienceCost)|I
@@ -272,8 +268,6 @@ FRFSTicketBooking:
     cashbackPayoutOrderId: Maybe Text
     bppDelayedInterest: Maybe Int
     googleWalletJWTUrl: Maybe Text
-    journeyLegOrder: Maybe Int
-    journeyId: Maybe (Id Journey)
     journeyOnInitDone: Maybe Bool
     startTime: Maybe UTCTime
     isDeleted: Maybe Bool
@@ -321,7 +315,6 @@ FRFSTicketBooking:
     bppOrderId: SecondaryKey
     riderId: "!SecondaryKey"
     quoteId: SecondaryKey
-    journeyId: "!SecondaryKey"
 
   queries:
     findById:
@@ -392,12 +385,6 @@ FRFSTicketBooking:
       kvFunction: updateOneWithKV
       params: [cashbackPayoutOrderId]
       where: id
-    findAllByJourneyId:
-      kvFunction: findAllWithKV
-      where: journeyId
-    findAllByJourneyIdCond:
-      kvFunction: findAllWithKVAndConditionalDB
-      where: journeyId
     updateOnInitDone:
       kvFunction: updateOneWithKV
       params: [journeyOnInitDone]

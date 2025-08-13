@@ -172,7 +172,6 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
       (oldStatus, bookingStatus, trackingStatuses) <- JMStateUtils.getFRFSAllStatuses journeyLeg Nothing
       case mode of
         DTrip.Bus -> do
-          journeyLegInfo <- searchReq.journeyLegInfo & fromMaybeM (InvalidRequest "JourneySearchData not found")
           mbCurrentLegDetails <- QJourneyLeg.findByLegSearchId (Just searchId.getId)
 
           let routeCodeToUseForTrackVehicles = routeCodeForDetailedTracking <|> (mbCurrentLegDetails >>= (listToMaybe . (.routeDetails)) >>= (.routeGtfsId) <&> gtfsIdtoDomainCode)
@@ -193,7 +192,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
                     trackingStatus = snd =<< (listToMaybe trackingStatuses),
                     userPosition,
                     JT.vehiclePositions = [], -- Will be populated based on status
-                    legOrder = journeyLegInfo.journeyLegOrder,
+                    legOrder = journeyLeg.sequenceNumber,
                     subLegOrder = 1,
                     mode
                   }
@@ -372,9 +371,7 @@ search :: JT.SearchRequestFlow m r c => Spec.VehicleCategory -> Id DPerson.Perso
 search vehicleCategory personId merchantId quantity city journeyLeg recentLocationId = do
   let journeySearchData =
         JPT.JourneySearchData
-          { journeyId = journeyLeg.journeyId.getId,
-            journeyLegOrder = journeyLeg.sequenceNumber,
-            agency = journeyLeg.agency <&> (.name),
+          { agency = journeyLeg.agency <&> (.name),
             skipBooking = False,
             convenienceCost = 0,
             pricingId = Nothing,

@@ -1,7 +1,6 @@
 module Storage.Queries.FRFSSearchExtra where
 
 import Domain.Types.FRFSSearch
-import Domain.Types.Journey
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -16,12 +15,6 @@ create' = createWithKV
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSSearch.FRFSSearch -> m ())
 create frfsSearchReq = create' frfsSearchReq
-
-findAllByJourneyId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Domain.Types.Journey.Journey -> m [Domain.Types.FRFSSearch.FRFSSearch]
-findAllByJourneyId journeyId =
-  findAllWithKVAndConditionalDB
-    [Se.Is Beam.journeyId $ Se.Eq (Just journeyId.getId)]
-    Nothing
 
 updatePricingId :: (MonadFlow m, EsqDBFlow m r) => Id FRFSSearch -> Maybe Text -> m ()
 updatePricingId (Id reqId) pricingId = do

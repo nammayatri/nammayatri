@@ -33,9 +33,7 @@ instance ToHttpApiData JourneyLegStatus where
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''JourneyLegStatus)
 
 data JourneySearchData = JourneySearchData
-  { journeyId :: Text,
-    journeyLegOrder :: Int,
-    agency :: Maybe Text,
+  { agency :: Maybe Text,
     skipBooking :: Bool,
     convenienceCost :: Int,
     pricingId :: Maybe Text,

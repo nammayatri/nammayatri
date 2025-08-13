@@ -289,8 +289,6 @@ select2 personId estimateId req@DSelectReq {..} = do
   QSearchRequest.updateMultipleByRequestId searchRequestId autoAssignEnabled (fromMaybe False autoAssignEnabledV2) isAdvancedBookingEnabled
   QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimateId, otherSelectedEstimates, validTill = searchRequest.validTill, providerId = Just estimate.providerId, tripCategory = estimate.tripCategory}
   QEstimate.updateStatus DEstimate.DRIVER_QUOTE_REQUESTED estimateId
-  whenJust searchRequest.journeyLegInfo $ \journeyLegInfo -> do
-    QJourney.updateStatus DJ.INPROGRESS (Id journeyLegInfo.journeyId)
   QDOffer.updateStatus DDO.INACTIVE estimateId
   whenJust searchRequest.journeyLegInfo $ \journeyLegInfo -> do
     QSearchRequest.updateJourneyLegInfo searchRequestId (Just $ journeyLegInfo {JLT.skipBooking = False, JLT.pricingId = Just estimateId.getId, JLT.onSearchFailed = Just False})
@@ -311,7 +309,12 @@ select2 personId estimateId req@DSelectReq {..} = do
   let merchantOperatingCityId = searchRequest.merchantOperatingCityId
   city <- CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
   let toUpdateDeviceIdInfo = (fromMaybe 0 person.totalRidesCount) == 0
-  mbJourneyId <- mkJourneyForSearch searchRequest estimate personId
+  mbJourneyLeg <- QJourneyLeg.findByLegSearchId (Just searchRequest.id.getId)
+  mbJourneyId <- case mbJourneyLeg of
+    Just journeyLeg -> do
+      QJourney.updateStatus DJ.INPROGRESS journeyLeg.journeyId
+      pure journeyLeg.journeyId
+    Nothing -> mkJourneyForSearch searchRequest estimate personId
   isMultipleOrNoDeviceIdExist <-
     maybe
       (return Nothing)
@@ -411,146 +414,139 @@ insertVehicleServiceTier n newVehicle currentList
 mkJourneyForSearch :: SelectFlow m r c => DSearchReq.SearchRequest -> DEstimate.Estimate -> Id DPerson.Person -> m (Id DJ.Journey)
 mkJourneyForSearch searchRequest estimate personId = do
   now <- getCurrentTime
-  let journeyId = searchRequest.journeyLegInfo <&> (.journeyId)
-      searchRequestId = searchRequest.id
-  case journeyId of
-    Just jId -> pure (Id jId)
-    Nothing -> do
-      journeyGuid <- generateGUID
-      journeyLegGuid <- generateGUID
-      journeyRouteDetailsId <- generateGUID
-      journeyLegRouteGroupGuid <- generateGUID
+  journeyGuid <- generateGUID
+  journeyLegGuid <- generateGUID
+  journeyRouteDetailsId <- generateGUID
+  journeyLegRouteGroupGuid <- generateGUID
 
-      let estimatedMinFare = Just estimate.estimatedFare.amount
-          estimatedMaxFare = Just estimate.estimatedFare.amount
+  let estimatedMinFare = Just estimate.estimatedFare.amount
+      estimatedMaxFare = Just estimate.estimatedFare.amount
 
-      let journey =
-            DJ.Journey
-              { id = journeyGuid,
-                convenienceCost = 0,
-                estimatedDistance = fromMaybe (Distance 0 Meter) searchRequest.distance,
-                estimatedDuration = searchRequest.estimatedRideDuration,
-                isPaymentSuccess = Just True,
-                totalLegs = 1,
-                modes = [DTrip.Taxi],
-                searchRequestId = searchRequest.id.getId,
-                merchantId = searchRequest.merchantId,
-                status = DJ.INPROGRESS,
-                riderId = personId,
-                startTime = Just searchRequest.startTime,
-                endTime = Nothing,
-                merchantOperatingCityId = searchRequest.merchantOperatingCityId,
-                createdAt = now,
-                updatedAt = now,
-                recentLocationId = searchRequest.recentLocationId,
-                isPublicTransportIncluded = Just False,
-                relevanceScore = Nothing,
-                hasPreferredServiceTier = Nothing,
-                hasPreferredTransitModes = Just False,
-                fromLocation = searchRequest.fromLocation,
-                toLocation = searchRequest.toLocation,
-                paymentOrderShortId = Nothing,
-                journeyExpiryTime = Nothing
-              }
+  let journey =
+        DJ.Journey
+          { id = journeyGuid,
+            convenienceCost = 0,
+            estimatedDistance = fromMaybe (Distance 0 Meter) searchRequest.distance,
+            estimatedDuration = searchRequest.estimatedRideDuration,
+            isPaymentSuccess = Just True,
+            totalLegs = 1,
+            modes = [DTrip.Taxi],
+            searchRequestId = searchRequest.id.getId,
+            merchantId = searchRequest.merchantId,
+            status = DJ.INPROGRESS,
+            riderId = personId,
+            startTime = Just searchRequest.startTime,
+            endTime = Nothing,
+            merchantOperatingCityId = searchRequest.merchantOperatingCityId,
+            createdAt = now,
+            updatedAt = now,
+            recentLocationId = searchRequest.recentLocationId,
+            isPublicTransportIncluded = Just False,
+            relevanceScore = Nothing,
+            hasPreferredServiceTier = Nothing,
+            hasPreferredTransitModes = Just False,
+            fromLocation = searchRequest.fromLocation,
+            toLocation = searchRequest.toLocation,
+            paymentOrderShortId = Nothing,
+            journeyExpiryTime = Nothing
+          }
 
-      let journeyLeg =
-            DJL.JourneyLeg
-              { id = journeyLegGuid,
-                journeyId = journeyGuid,
-                routeGroupId = Just journeyLegRouteGroupGuid,
-                isSkipped = Just False,
-                sequenceNumber = 0,
-                mode = DTrip.Taxi,
-                startLocation = LatLngV2 searchRequest.fromLocation.lat searchRequest.fromLocation.lon,
-                endLocation = case searchRequest.toLocation of
-                  Just toLoc -> LatLngV2 toLoc.lat toLoc.lon
-                  Nothing -> LatLngV2 searchRequest.fromLocation.lat searchRequest.fromLocation.lon,
-                distance = searchRequest.distance,
-                duration = searchRequest.estimatedRideDuration,
-                agency = Just $ MultiModalAgency {name = "NAMMA_YATRI", gtfsId = Nothing},
-                fromArrivalTime = Nothing,
-                fromDepartureTime = Just searchRequest.startTime,
-                toArrivalTime =
-                  searchRequest.estimatedRideDuration >>= \duration ->
-                    Just $ addUTCTime (fromIntegral $ getSeconds duration) searchRequest.startTime,
-                toDepartureTime = Nothing,
-                fromStopDetails = Nothing,
-                toStopDetails = Nothing,
-                routeDetails =
-                  [ DRD.RouteDetails
-                      { agencyGtfsId = Nothing,
-                        agencyName = Nothing,
-                        alternateShortNames = [],
-                        endLocationLat = fromMaybe searchRequest.fromLocation.lat (searchRequest.toLocation <&> (.lat)),
-                        endLocationLon = fromMaybe searchRequest.fromLocation.lon (searchRequest.toLocation <&> (.lon)),
-                        frequency = Nothing,
-                        fromArrivalTime = Nothing,
-                        fromDepartureTime = Just searchRequest.startTime,
-                        fromStopCode = Nothing,
-                        fromStopGtfsId = Nothing,
-                        fromStopName = Nothing,
-                        fromStopPlatformCode = Nothing,
-                        id = journeyRouteDetailsId,
-                        journeyLegId = journeyLegGuid.getId,
-                        routeCode = Nothing,
-                        routeColorCode = Nothing,
-                        routeColorName = Nothing,
-                        routeGroupId = Just journeyLegRouteGroupGuid,
-                        routeGtfsId = Nothing,
-                        routeLongName = Nothing,
-                        routeShortName = Nothing,
-                        startLocationLat = searchRequest.fromLocation.lat,
-                        startLocationLon = searchRequest.fromLocation.lon,
-                        subLegOrder = Just 1,
-                        toArrivalTime =
-                          searchRequest.estimatedRideDuration >>= \duration ->
-                            Just $ addUTCTime (fromIntegral $ getSeconds duration) searchRequest.startTime,
-                        toDepartureTime = Nothing,
-                        toStopCode = Nothing,
-                        toStopGtfsId = Nothing,
-                        toStopName = Nothing,
-                        toStopPlatformCode = Nothing,
-                        trackingStatus = Nothing,
-                        merchantId = Just searchRequest.merchantId,
-                        merchantOperatingCityId = Just searchRequest.merchantOperatingCityId,
-                        createdAt = now,
-                        updatedAt = now
-                      }
-                  ],
-                serviceTypes = Nothing,
-                estimatedMinFare = estimatedMinFare,
-                estimatedMaxFare = estimatedMaxFare,
-                merchantId = searchRequest.merchantId,
-                merchantOperatingCityId = searchRequest.merchantOperatingCityId,
-                createdAt = now,
-                updatedAt = now,
-                legSearchId = Just searchRequestId.getId,
-                isDeleted = Just False,
-                changedBusesInSequence = Nothing,
-                finalBoardedBusNumber = Nothing,
-                osmEntrance = Nothing,
-                osmExit = Nothing,
-                straightLineEntrance = Nothing,
-                straightLineExit = Nothing,
-                riderId = personId
-              }
+  let journeyLeg =
+        DJL.JourneyLeg
+          { id = journeyLegGuid,
+            journeyId = journeyGuid,
+            routeGroupId = Just journeyLegRouteGroupGuid,
+            isSkipped = Just False,
+            sequenceNumber = 0,
+            mode = DTrip.Taxi,
+            startLocation = LatLngV2 searchRequest.fromLocation.lat searchRequest.fromLocation.lon,
+            endLocation = case searchRequest.toLocation of
+              Just toLoc -> LatLngV2 toLoc.lat toLoc.lon
+              Nothing -> LatLngV2 searchRequest.fromLocation.lat searchRequest.fromLocation.lon,
+            distance = searchRequest.distance,
+            duration = searchRequest.estimatedRideDuration,
+            agency = Just $ MultiModalAgency {name = "NAMMA_YATRI", gtfsId = Nothing},
+            fromArrivalTime = Nothing,
+            fromDepartureTime = Just searchRequest.startTime,
+            toArrivalTime =
+              searchRequest.estimatedRideDuration >>= \duration ->
+                Just $ addUTCTime (fromIntegral $ getSeconds duration) searchRequest.startTime,
+            toDepartureTime = Nothing,
+            fromStopDetails = Nothing,
+            toStopDetails = Nothing,
+            routeDetails =
+              [ DRD.RouteDetails
+                  { agencyGtfsId = Nothing,
+                    agencyName = Nothing,
+                    alternateShortNames = [],
+                    endLocationLat = fromMaybe searchRequest.fromLocation.lat (searchRequest.toLocation <&> (.lat)),
+                    endLocationLon = fromMaybe searchRequest.fromLocation.lon (searchRequest.toLocation <&> (.lon)),
+                    frequency = Nothing,
+                    fromArrivalTime = Nothing,
+                    fromDepartureTime = Just searchRequest.startTime,
+                    fromStopCode = Nothing,
+                    fromStopGtfsId = Nothing,
+                    fromStopName = Nothing,
+                    fromStopPlatformCode = Nothing,
+                    id = journeyRouteDetailsId,
+                    journeyLegId = journeyLegGuid.getId,
+                    routeCode = Nothing,
+                    routeColorCode = Nothing,
+                    routeColorName = Nothing,
+                    routeGroupId = Just journeyLegRouteGroupGuid,
+                    routeGtfsId = Nothing,
+                    routeLongName = Nothing,
+                    routeShortName = Nothing,
+                    startLocationLat = searchRequest.fromLocation.lat,
+                    startLocationLon = searchRequest.fromLocation.lon,
+                    subLegOrder = Just 1,
+                    toArrivalTime =
+                      searchRequest.estimatedRideDuration >>= \duration ->
+                        Just $ addUTCTime (fromIntegral $ getSeconds duration) searchRequest.startTime,
+                    toDepartureTime = Nothing,
+                    toStopCode = Nothing,
+                    toStopGtfsId = Nothing,
+                    toStopName = Nothing,
+                    toStopPlatformCode = Nothing,
+                    trackingStatus = Nothing,
+                    merchantId = Just searchRequest.merchantId,
+                    merchantOperatingCityId = Just searchRequest.merchantOperatingCityId,
+                    createdAt = now,
+                    updatedAt = now
+                  }
+              ],
+            serviceTypes = Nothing,
+            estimatedMinFare = estimatedMinFare,
+            estimatedMaxFare = estimatedMaxFare,
+            merchantId = searchRequest.merchantId,
+            merchantOperatingCityId = searchRequest.merchantOperatingCityId,
+            createdAt = now,
+            updatedAt = now,
+            legSearchId = Just searchRequest.id.getId,
+            isDeleted = Just False,
+            changedBusesInSequence = Nothing,
+            finalBoardedBusNumber = Nothing,
+            osmEntrance = Nothing,
+            osmExit = Nothing,
+            straightLineEntrance = Nothing,
+            straightLineExit = Nothing,
+            riderId = personId
+          }
 
-      let journeySearchData =
-            JLT.JourneySearchData
-              { journeyId = journeyGuid.getId,
-                journeyLegOrder = 0,
-                agency = Nothing,
-                skipBooking = False,
-                convenienceCost = 0,
-                pricingId = Just estimate.id.getId,
-                onSearchFailed = Nothing,
-                isDeleted = Nothing
-              }
+  let journeySearchData =
+        JLT.JourneySearchData
+          { agency = Nothing,
+            skipBooking = False,
+            convenienceCost = 0,
+            pricingId = Just estimate.id.getId,
+            onSearchFailed = Nothing,
+            isDeleted = Nothing
+          }
 
-      QJourney.create journey
-      QJourneyLeg.create journeyLeg
-      QSearchRequest.updateJourneyLegInfo searchRequestId (Just journeySearchData)
-      pure journeyGuid
+  QJourney.create journey
+  QJourneyLeg.create journeyLeg
+  QSearchRequest.updateJourneyLegInfo searchRequest.id (Just journeySearchData)
+  pure journeyGuid
 
 data MultimodalSelectRes = MultimodalSelectRes
   { journeyId :: Maybe (Id DJ.Journey),

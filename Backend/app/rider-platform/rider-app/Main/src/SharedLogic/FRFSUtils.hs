@@ -17,6 +17,7 @@ module SharedLogic.FRFSUtils where
 import qualified API.Types.UI.FRFSTicketService as APITypes
 import qualified BecknV2.FRFS.Enums as Spec
 import BecknV2.FRFS.Utils
+import Control.Monad.Extra (mapMaybeM)
 import Data.Aeson as A
 import Data.List (groupBy, nub, sortBy)
 import qualified Data.Text as T
@@ -95,6 +96,7 @@ import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingP
 import Storage.Queries.FRFSTicketDiscount as QFRFSTicketDiscount
 import Storage.Queries.FRFSVehicleServiceTier as QFRFSVehicleServiceTier
 import qualified Storage.Queries.Journey as QJourney
+import qualified Storage.Queries.JourneyLeg as QJL
 import qualified Storage.Queries.Person as QP
 import Storage.Queries.RouteTripMapping as QRouteTripMapping
 import Storage.Queries.StopFare as QRouteStopFare
@@ -704,6 +706,39 @@ partnerOrgBppSubscriberId = "partnerOrg_bpp_subscriber_id"
 partnerOrgBppSubscriberUrl :: Text
 partnerOrgBppSubscriberUrl = "partnerOrg_bpp_subscriber_url"
 
+getJourneyIdFromBooking ::
+  ( EsqDBFlow m r,
+    CacheFlow m r,
+    MonadFlow m,
+    EsqDBReplicaFlow m r,
+    ServiceFlow m r,
+    EncFlow m r
+  ) =>
+  DFRFSTicketBooking.FRFSTicketBooking ->
+  m (Maybe (Id DJourney.Journey))
+getJourneyIdFromBooking booking = do
+  mbJourneyLeg <- QJL.findByLegSearchId (Just booking.searchId.getId)
+  return $ mbJourneyLeg <&> (.journeyId)
+
+getAllJourneyFrfsBookings ::
+  ( EsqDBFlow m r,
+    CacheFlow m r,
+    MonadFlow m,
+    EsqDBReplicaFlow m r,
+    ServiceFlow m r,
+    EncFlow m r
+  ) =>
+  DFRFSTicketBooking.FRFSTicketBooking ->
+  m (Maybe (Id DJourney.Journey), [DFRFSTicketBooking.FRFSTicketBooking])
+getAllJourneyFrfsBookings booking = do
+  mbJourneyLeg <- QJL.findByLegSearchId (Just booking.searchId.getId)
+  case mbJourneyLeg of
+    Just leg -> do
+      legs <- QJL.findAllByJourneyId leg.journeyId
+      bookings <- mapMaybeM (QFRFSTicketBooking.findBySearchId . Id) (mapMaybe (.legSearchId) legs)
+      return (Just leg.journeyId, bookings)
+    Nothing -> pure (Nothing, [booking])
+
 markAllRefundBookings ::
   ( EsqDBFlow m r,
     CacheFlow m r,
@@ -717,11 +752,7 @@ markAllRefundBookings ::
   Id DP.Person ->
   m ()
 markAllRefundBookings booking personId = do
-  let mbJourneyId = booking.journeyId
-  allJourneyFrfsBookings <- case mbJourneyId of
-    Just journeyId -> QFRFSTicketBooking.findAllByJourneyId (Just journeyId)
-    Nothing -> return [booking]
-
+  (mbJourneyId, allJourneyFrfsBookings) <- getAllJourneyFrfsBookings booking
   allPaymentBookings <- mapM (QFRFSTicketBookingPayment.findNewTBPByBookingId . (.id)) allJourneyFrfsBookings
   let paymentBookings = catMaybes allPaymentBookings
 

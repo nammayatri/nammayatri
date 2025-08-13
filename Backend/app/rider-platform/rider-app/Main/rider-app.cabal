@@ -548,13 +548,11 @@ library
       Storage.Queries.Transformers.IntegratedBPPConfig
       Storage.Queries.Transformers.Journey
       Storage.Queries.Transformers.JourneyLeg
-      Storage.Queries.Transformers.JourneyLegsFeedback
       Storage.Queries.Transformers.Merchant
       Storage.Queries.Transformers.MerchantConfig
       Storage.Queries.Transformers.MerchantMessage
       Storage.Queries.Transformers.MerchantPaymentMethod
       Storage.Queries.Transformers.MerchantServiceConfig
-      Storage.Queries.Transformers.MultiModal
       Storage.Queries.Transformers.PartnerOrgConfig
       Storage.Queries.Transformers.Person
       Storage.Queries.Transformers.Quote
@@ -769,10 +767,8 @@ library
       Domain.Types.InterCityDetails
       Domain.Types.Issue
       Domain.Types.Journey
-      Domain.Types.JourneyBooking
       Domain.Types.JourneyFeedback
       Domain.Types.JourneyLeg
-      Domain.Types.JourneyLegsFeedbacks
       Domain.Types.Location
       Domain.Types.LocationMapping
       Domain.Types.Merchant
@@ -796,7 +792,6 @@ library
       Domain.Types.PartnerOrganization
       Domain.Types.PartnerOrgConfig
       Domain.Types.PartnerOrgStation
-      Domain.Types.PassengerDetails
       Domain.Types.PaymentCustomer
       Domain.Types.PayoutConfig
       Domain.Types.Person
@@ -903,10 +898,8 @@ library
       Storage.Beam.InterCityDetails
       Storage.Beam.Issue
       Storage.Beam.Journey
-      Storage.Beam.JourneyBooking
       Storage.Beam.JourneyFeedback
       Storage.Beam.JourneyLeg
-      Storage.Beam.JourneyLegsFeedbacks
       Storage.Beam.Location
       Storage.Beam.LocationMapping
       Storage.Beam.Merchant
@@ -930,7 +923,6 @@ library
       Storage.Beam.PartnerOrganization
       Storage.Beam.PartnerOrgConfig
       Storage.Beam.PartnerOrgStation
-      Storage.Beam.PassengerDetails
       Storage.Beam.PaymentCustomer
       Storage.Beam.PayoutConfig
       Storage.Beam.Person
@@ -1038,10 +1030,8 @@ library
       Storage.Queries.InterCityDetails
       Storage.Queries.Issue
       Storage.Queries.Journey
-      Storage.Queries.JourneyBooking
       Storage.Queries.JourneyFeedback
       Storage.Queries.JourneyLeg
-      Storage.Queries.JourneyLegsFeedbacks
       Storage.Queries.Location
       Storage.Queries.LocationMapping
       Storage.Queries.Merchant
@@ -1120,7 +1110,6 @@ library
       Storage.Queries.PartnerOrganization
       Storage.Queries.PartnerOrgConfig
       Storage.Queries.PartnerOrgStation
-      Storage.Queries.PassengerDetails
       Storage.Queries.PaymentCustomer
       Storage.Queries.PayoutConfig
       Storage.Queries.Person

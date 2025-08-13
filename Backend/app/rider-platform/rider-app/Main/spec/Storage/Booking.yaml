@@ -33,7 +33,6 @@ imports:
   TripParty: Domain.Types.Trip
   ConfigVersionMap: Lib.Yudhishthira.Types
   Value: Data.Aeson
-  Journey: Domain.Types.Journey
   ParcelType: Domain.Types.ParcelType
   JourneyLeg: Domain.Types.JourneyLeg
   RecentLocation: Domain.Types.RecentLocation
@@ -235,10 +234,8 @@ Booking:
     initiatedBy: Maybe TripParty
     isReferredRide: Maybe Bool
     disabilityTag: Maybe Text
-    journeyLegOrder: Maybe Int
     isDeleted: Maybe Bool
     configInExperimentVersions: "[ConfigVersionMap]"
-    journeyId: Maybe (Id Journey)
     preferSafetyPlus: Bool
     recentLocationId: Maybe (Id RecentLocation)
     isInsured: Bool

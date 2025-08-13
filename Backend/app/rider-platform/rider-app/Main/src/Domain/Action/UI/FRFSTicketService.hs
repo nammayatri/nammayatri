@@ -716,8 +716,6 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req crisSdkResponse
                 cashbackStatus = if isJust quote.discountedTickets then Just DFTB.PENDING else Nothing,
                 bppDelayedInterest = quote.bppDelayedInterest,
                 discountsJson = Just appliedDiscountsJson,
-                journeyLegOrder = mbSearch >>= (.journeyLegInfo) <&> (.journeyLegOrder),
-                journeyId = Id <$> (mbSearch >>= (.journeyLegInfo) <&> (.journeyId)),
                 journeyOnInitDone = Nothing,
                 startTime = Just now, -- TODO
                 isFareChanged = Just isFareChanged,
@@ -813,7 +811,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking booking' = do
         void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.REFUND_PENDING booking.id
         riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCity.id Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCity.id.getId)
         when riderConfig.enableAutoJourneyRefund $ refundOrderCall booking person
-        markJourneyPaymentSuccess booking.journeyId paymentOrder
+        markJourneyPaymentSuccess booking paymentOrder
       when (paymentBookingStatus == FRFSTicketService.PENDING) do
         void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.PAYMENT_PENDING bookingId
         void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.PENDING booking.id
@@ -911,7 +909,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking booking' = do
                   txnId <- getSuccessTransactionId transactions
                   void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.SUCCESS booking.id
                   void $ QFRFSTicketBooking.updateStatusValidTillAndPaymentTxnById DFRFSTicketBooking.CONFIRMING updatedTTL (Just txnId.getId) booking.id
-                  markJourneyPaymentSuccess booking.journeyId paymentOrder
+                  markJourneyPaymentSuccess booking paymentOrder
                   let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.CONFIRMING (Just updatedTTL) (Just txnId.getId)
                   let mRiderName = person.firstName <&> (\fName -> person.lastName & maybe fName (\lName -> fName <> " " <> lName))
                   mRiderNumber <- mapM decrypt person.mobileNumber
@@ -959,7 +957,8 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking booking' = do
     DFRFSTicketBooking.TECHNICAL_CANCEL_REJECTED -> do
       buildFRFSTicketBookingStatusAPIRes booking Nothing
   where
-    markJourneyPaymentSuccess mbJourneyId paymentOrder = do
+    markJourneyPaymentSuccess booking paymentOrder = do
+      mbJourneyId <- FRFSUtils.getJourneyIdFromBooking booking
       whenJust mbJourneyId $ \journeyId -> do
         void $ QJourney.updatePaymentOrderShortId (Just paymentOrder.shortId) (Just True) journeyId
         void $ QJourney.updateStatus DJ.INPROGRESS journeyId
