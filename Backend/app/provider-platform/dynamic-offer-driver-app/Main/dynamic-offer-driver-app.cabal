@@ -273,6 +273,7 @@ library
       Domain.Action.UI.Ride.StartRide
       Domain.Action.UI.Ride.StartRide.Internal
       Domain.Action.UI.RideDetails
+      Domain.Action.UI.RiderMobileNumber
       Domain.Action.UI.RideRoute
       Domain.Action.UI.RideSummary
       Domain.Action.UI.Route
@@ -778,6 +779,7 @@ library
       API.Action.UI.PriceBreakup
       API.Action.UI.Reels
       API.Action.UI.ReferralPayout
+      API.Action.UI.RiderMobileNumber
       API.Action.UI.SocialLogin
       API.Action.UI.SpecialLocation
       API.Action.UI.SpecialLocationWarrior
