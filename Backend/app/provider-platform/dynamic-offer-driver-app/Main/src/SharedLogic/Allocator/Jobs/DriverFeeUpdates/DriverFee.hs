@@ -237,7 +237,7 @@ processRestFee ::
   SubscriptionConfig ->
   DriverFee ->
   HighPrecMoney ->
-  m (Id DriverFee)
+  m ()
 processRestFee paymentMode DriverFee {..} subscriptionConfig parentDriverFee totalFee = do
   id_ <- generateGUID
   let driverFee =
@@ -251,7 +251,6 @@ processRestFee paymentMode DriverFee {..} subscriptionConfig parentDriverFee tot
   QVF.createChildVendorFee parentDriverFee driverFee totalFee
   processDriverFee paymentMode driverFee subscriptionConfig
   updateSerialOrderForInvoicesInWindow driverFee.id merchantOperatingCityId startTime endTime driverFee.serviceName
-  return id_
 
 makeOfferReq :: HighPrecMoney -> Person -> Plan -> UTCTime -> UTCTime -> Int -> TransporterConfig -> Payment.OfferListReq
 makeOfferReq totalFee driver plan dutyDate registrationDate numOfRides transporterConfig = do
@@ -364,10 +363,11 @@ driverFeeSplitter paymentMode plan feeWithoutDiscount totalFee driverFee mandate
   case splittedFees of
     [] -> throwError (InternalError "No driver fee entity with non zero total fee")
     (firstFee : restFees) -> do
-      childDriverFeeIds <- mapM (\dfee -> processRestFee paymentMode dfee subscriptionConfigs driverFee totalFee) restFees
+      mapM_ (\dfee -> processRestFee paymentMode dfee subscriptionConfigs driverFee totalFee) restFees
       -- Reset The Original Fee Amount & adjust the vendor fee amount by subtracting sums of child vendor fees
       resetFee firstFee.id firstFee.govtCharges firstFee.platformFee (Just feeWithoutDiscount) firstFee.amountPaidByCoin now
-      when (not (null childDriverFeeIds)) $ QVF.adjustVendorFeeSubtractingChildren firstFee.id childDriverFeeIds
+      let childIds = map (.id) restFees
+      when (not (null childIds)) $ QVF.adjustVendorFeeSubtractingChildren firstFee.id childIds
 
 getRescheduledTime :: (MonadFlow m) => NominalDiffTime -> m UTCTime
 getRescheduledTime gap = addUTCTime gap <$> getCurrentTime
