@@ -159,7 +159,8 @@ type DriverRCRes = APISuccess
 data DriverPanReq = DriverPanReq
   { panNumber :: Text,
     imageId :: Text, --Image,
-    driverId :: Text
+    driverId :: Text,
+    panName :: Maybe Text
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -175,11 +176,12 @@ data DriverGstinReq = DriverGstinReq
 type DriverGstinRes = APISuccess
 
 data DriverAadhaarReq = DriverAadhaarReq
-  { aadhaarNumber :: Text,
+  { aadhaarNumber :: Maybe Text,
     aadhaarFrontImageId :: Text,
     aadhaarBackImageId :: Maybe Text,
     consent :: Bool,
-    driverId :: Text
+    driverId :: Text,
+    aadhaarName :: Maybe Text
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -418,11 +420,26 @@ verifyPan verifyBy mbMerchant (personId, _, merchantOpCityId) req = do
       let validateExtractedPan resp = case resp.extractedPan of
             Just extractedPan -> do
               let extractedPanNo = removeSpaceAndDash <$> extractedPan.id_number
-              unless (extractedPanNo == Just req.panNumber) $
-                throwImageError (Id req.imageId) $
-                  ImageDocumentNumberMismatch
-                    (maybe "null" maskText extractedPanNo)
-                    (maskText req.panNumber)
+              let extractedNameOnCard = extractedPan.name_on_card
+              if verifyBy == DPan.FRONTEND_SDK
+                then case (req.panName, extractedNameOnCard) of
+                  (Just providedName, Just extractedName) -> do
+                    let nameCompareReq =
+                          Verification.NameCompareReq
+                            { extractedName = extractedName,
+                              verifiedName = providedName,
+                              percentage = Just True,
+                              driverId = person.id.getId
+                            }
+                    isValid <- isNameComparePercentageValid person.merchantId merchantOpCityId nameCompareReq
+                    unless isValid $ throwError (InvalidRequest "Name match failed")
+                  _ -> throwError (InvalidRequest "PAN name is required")
+                else
+                  unless (extractedPanNo == Just req.panNumber) $
+                    throwImageError (Id req.imageId) $
+                      ImageDocumentNumberMismatch
+                        (maybe "null" maskText extractedPanNo)
+                        (maskText req.panNumber)
               pure extractedPan
             Nothing -> throwImageError (Id req.imageId) ImageExtractionFailed
 
@@ -643,14 +660,15 @@ verifyAadhaar ::
   Flow DriverAadhaarRes
 verifyAadhaar verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req = do
   externalServiceRateLimitOptions <- asks (.externalServiceRateLimitOptions)
-  checkSlidingWindowLimitWithOptions (makeVerifyAadhaarHitsCountKey req.aadhaarNumber) externalServiceRateLimitOptions
+  whenJust req.aadhaarNumber $ \aadhaarNumber -> do
+    checkSlidingWindowLimitWithOptions (makeVerifyAadhaarHitsCountKey aadhaarNumber) externalServiceRateLimitOptions
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   (blocked, driverDocument) <- getDriverDocumentInfo person
   when blocked $ throwError AccountBlocked
   transporterConfig <- SCTC.findByMerchantOpCityId person.merchantOperatingCityId (Just (DriverId (cast person.id))) >>= fromMaybeM (TransporterConfigNotFound person.merchantOperatingCityId.getId)
-  case transporterConfig.allowDuplicateAadhaar of
-    Just False -> do
-      aadhaarHash <- getDbHash req.aadhaarNumber
+  case (transporterConfig.allowDuplicateAadhaar, req.aadhaarNumber) of
+    (Just False, Just aadhaarNumber) -> do
+      aadhaarHash <- getDbHash aadhaarNumber
       aadhaarInfoList <- QAadhaarCard.findAllByEncryptedAadhaarNumber (Just aadhaarHash)
       when (length aadhaarInfoList > 1) $ throwError AadhaarAlreadyLinked
       aadhaarPersonDetails <- Person.getDriversByIdIn (map (.driverId) aadhaarInfoList)
@@ -677,28 +695,47 @@ verifyAadhaar verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req =
         whenJust aadhaarInfo $ \aadhaarInfoData -> do
           when (aadhaarInfoData.verificationStatus == Documents.VALID) $ throwError AadhaarAlreadyLinked
         resp <- Verification.extractAadhaarImage person.merchantId merchantOpCityId extractReq
-        case resp.extractedAadhaar of
+        mbAadhaarNumber <- case resp.extractedAadhaar of
           Just extractedAadhaarData -> do
             let extractedAadhaarOutputData = extractedAadhaarData.extraction_output
             let extractedAadhaarNumber = removeSpaceAndDash <$> extractedAadhaarOutputData.id_number
-            unless (extractedAadhaarNumber == Just req.aadhaarNumber) $
-              throwImageError (Id req.aadhaarFrontImageId) $
-                ImageDocumentNumberMismatch
-                  (maybe "null" maskText extractedAadhaarNumber)
-                  (maskText req.aadhaarNumber)
+            let extractedNameOnCard = extractedAadhaarOutputData.name_on_card
+            if verifyBy == DPan.FRONTEND_SDK
+              then case (req.aadhaarName, extractedNameOnCard) of
+                (Just providedName, Just extractedName) -> do
+                  let nameCompareReq =
+                        Verification.NameCompareReq
+                          { extractedName,
+                            verifiedName = providedName,
+                            percentage = Just True,
+                            driverId = person.id.getId
+                          }
+                  isValid <- isNameComparePercentageValid merchantId merchantOpCityId nameCompareReq
+                  unless isValid $ throwError (InvalidRequest "Provided name and extracted name on card do not match")
+                _ -> throwError (InvalidRequest "Aadhaar name is required")
+              else case req.aadhaarNumber of
+                Just aadhaarNumber ->
+                  unless (extractedAadhaarNumber == Just aadhaarNumber) $
+                    throwImageError (Id req.aadhaarFrontImageId) $
+                      ImageDocumentNumberMismatch
+                        (maybe "null" maskText extractedAadhaarNumber)
+                        (maskText aadhaarNumber)
+                Nothing -> throwError (InvalidRequest "Aadhaar number is required")
             when (isNameCompareRequired transporterConfig verifyBy) $
               validateDocument person.merchantId merchantOpCityId person.id extractedAadhaarOutputData.name_on_card extractedAadhaarOutputData.date_of_birth Nothing ODC.AadhaarCard driverDocument
             aadhaarCard <- makeAadhaarCardEntity person.id extractedAadhaarOutputData req
             QAadhaarCard.upsertAadhaarRecord aadhaarCard
+            return extractedAadhaarNumber
           Nothing -> throwImageError (Id req.aadhaarFrontImageId) ImageExtractionFailed
-        case person.role of
-          Person.FLEET_OWNER -> do
-            encryptedAadhaarNumber <- encrypt req.aadhaarNumber
-            QFOI.updateAadhaarImage (Just encryptedAadhaarNumber) (Just req.aadhaarFrontImageId) req.aadhaarBackImageId person.id
-          Person.DRIVER -> do
-            encryptedAadhaarNumber <- encrypt req.aadhaarNumber
-            DIQuery.updateAadhaarNumber (Just encryptedAadhaarNumber) person.id
-          _ -> pure ()
+        whenJust mbAadhaarNumber $ \aadhaarNumber -> do
+          case person.role of
+            Person.FLEET_OWNER -> do
+              encryptedAadhaarNumber <- encrypt aadhaarNumber
+              QFOI.updateAadhaarImage (Just encryptedAadhaarNumber) (Just req.aadhaarFrontImageId) req.aadhaarBackImageId person.id
+            Person.DRIVER -> do
+              encryptedAadhaarNumber <- encrypt aadhaarNumber
+              DIQuery.updateAadhaarNumber (Just encryptedAadhaarNumber) person.id
+            _ -> pure ()
   if isNameCompareRequired transporterConfig verifyBy
     then Redis.withWaitOnLockRedisWithExpiry (makeDocumentVerificationLockKey personId.getId) 10 10 runBody
     else runBody
@@ -706,13 +743,18 @@ verifyAadhaar verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req =
   where
     makeAadhaarCardEntity driverId extractedAadhaar aadhaarReq = do
       currTime <- getCurrentTime
-      aadhaarHash <- getDbHash aadhaarReq.aadhaarNumber
+      (aadhaarHash, maskedAadhaarNumber) <- case aadhaarReq.aadhaarNumber of
+        Just aadhaarNumber -> do
+          aadhaarHash <- getDbHash aadhaarNumber
+          let maskedAadhaarNumber = maskText aadhaarNumber
+          return (Just aadhaarHash, Just maskedAadhaarNumber)
+        Nothing -> return (Nothing, Nothing)
       return $
         DAadhaarCard.AadhaarCard
           { driverId = driverId,
             createdAt = currTime,
             updatedAt = currTime,
-            aadhaarNumberHash = Just aadhaarHash,
+            aadhaarNumberHash = aadhaarHash,
             dateOfBirth = extractedAadhaar.date_of_birth,
             driverGender = extractedAadhaar.gender,
             aadhaarBackImageId = Id <$> aadhaarReq.aadhaarBackImageId,
@@ -723,7 +765,7 @@ verifyAadhaar verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req =
             consentTimestamp = currTime,
             driverImage = Nothing,
             driverImagePath = Nothing,
-            maskedAadhaarNumber = Just $ maskText aadhaarReq.aadhaarNumber,
+            maskedAadhaarNumber = maskedAadhaarNumber,
             merchantId = merchantId,
             merchantOperatingCityId = merchantOpCityId,
             nameOnCard = extractedAadhaar.name_on_card
@@ -747,11 +789,13 @@ makeDocumentVerificationLockKey personId = "DocumentVerificationLock:" <> person
 isNameComparePercentageValid :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Verification.NameCompareReq -> Flow Bool
 isNameComparePercentageValid merchantId merchantOpCityId req = do
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  percentage <- fromMaybeM (InvalidRequest "Name comparison percentage threshold not configured") transporterConfig.validNameComparePercentage
   resp <- Verification.nameCompare merchantId merchantOpCityId req
   logDebug $ "Name compare percentage response: " <> show resp
   case resp.nameComparedData of
-    Just percentageData -> return $ percentageData.match_output.name_match >= percentage
+    Just percentageData -> do
+      case transporterConfig.validNameComparePercentage of
+        Just percentage -> return $ percentageData.match_output.name_match >= percentage
+        Nothing -> return True -- If percentage not configured, assume valid
     Nothing -> throwError $ InternalError "Name comparison service returned invalid response"
 
 verifyRCFlow :: Person.Person -> Id DMOC.MerchantOperatingCity -> Text -> Id Image.Image -> Maybe UTCTime -> Maybe Bool -> Maybe DVC.VehicleCategory -> Maybe Bool -> Maybe Bool -> Maybe Bool -> EncryptedHashedField 'AsEncrypted Text -> Domain.ImageExtractionValidation -> Flow ()
