@@ -17,6 +17,8 @@ module Domain.Action.Dashboard.AppManagement.Tickets
     getTicketsTicketdashboardTicketplaceInfo,
     postTicketsTicketdashboardTicketplaceUpdate,
     getTicketsTicketdashboardTicketplaces,
+    getTicketsTicketdashboardTicketplaceSubPlaces,
+    postTicketsTicketdashboardTicketplaceUpdateSubPlaces,
   )
 where
 
@@ -227,3 +229,20 @@ getTicketsTicketdashboardTicketplaces _merchantShortId _opCity _status _requesto
   requestorRole <- _requestorRole & fromMaybeM (InvalidRequest "RequestorRole is required")
   status <- _status & fromMaybeM (InvalidRequest "Status query param is required")
   Domain.Action.UI.TicketDashboard.getTicketPlaceDashboardList status requestorId requestorRole
+
+getTicketsTicketdashboardTicketplaceSubPlaces ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace ->
+  Environment.Flow [Domain.Types.TicketSubPlace.TicketSubPlace]
+getTicketsTicketdashboardTicketplaceSubPlaces _merchantShortId _opCity ticketPlaceId = do
+  Domain.Action.UI.TicketDashboard.getTicketPlaceDashboardSubPlaces ticketPlaceId
+
+postTicketsTicketdashboardTicketplaceUpdateSubPlaces ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace ->
+  [Domain.Types.TicketSubPlace.TicketSubPlace] ->
+  Environment.Flow Kernel.Types.APISuccess.APISuccess
+postTicketsTicketdashboardTicketplaceUpdateSubPlaces _merchantShortId _opCity ticketPlaceId req = do
+  Domain.Action.UI.TicketDashboard.postUpsertTicketPlaceDashboardSubPlaces ticketPlaceId req
