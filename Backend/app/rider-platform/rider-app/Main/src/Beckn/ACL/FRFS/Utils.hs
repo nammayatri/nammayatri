@@ -44,11 +44,12 @@ buildContext ::
   Context.City ->
   Spec.VehicleCategory ->
   m Spec.Context
-buildContext action bapConfig txnId msgId mTTL _ city vehicleCategory = do
+buildContext action bapConfig txnId msgId mTTL bppData city vehicleCategory = do
   now <- UTCTimeRFC3339 <$> getCurrentTime
   let bapUrl = showBaseUrl bapConfig.subscriberUrl
   let bapId = bapConfig.subscriberId
-
+      contextBppId = bppData <&> (.bppId)
+      contextBppUri = bppData <&> (.bppUri)
   cityCode <- getCodeFromCity city
   let contextVersion = if vehicleCategory == Spec.BUS then "2.0.1" else "2.0.0"
   return $
@@ -56,8 +57,8 @@ buildContext action bapConfig txnId msgId mTTL _ city vehicleCategory = do
       { contextAction = encodeToText' action,
         contextBapId = Just bapId,
         contextBapUri = Just bapUrl,
-        contextBppId = Just "pramaan.ondc.org/beta/preprod/mock/seller",
-        contextBppUri = Just "https://pramaan.ondc.org/beta/preprod/mock/seller",
+        contextBppId,
+        contextBppUri,
         contextDomain = encodeToText' Spec.FRFS,
         contextKey = Nothing,
         contextLocation = Just $ tfLocation cityCode,
@@ -379,7 +380,7 @@ mkSettlementTagGroup mAmount mSettlementType mbDelayInterest =
                         descriptorImages = Nothing,
                         descriptorName = Nothing
                       },
-                tagValue = Just "New Delhi"
+                tagValue = Just "Cuttack"
               },
           Just $
             Spec.Tag

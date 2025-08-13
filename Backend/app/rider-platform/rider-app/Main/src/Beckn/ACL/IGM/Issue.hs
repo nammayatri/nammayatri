@@ -81,24 +81,28 @@ tfIssue category option description createdAt now issueId merchant ridebookingIn
       issueType = Utils.mapBecknIssueType mbCustomerAction mbType
       issueStatus = Utils.mapBecknIssueStatus mbCustomerAction
   Spec.Issue
-    { issueCategory = issueCategory,
-      issueComplainantInfo = tfComplainantInfo ridebookingInfo rider,
+    { issueCategory = notfmap mbType issueCategory,
+      issueComplainantInfo = notfmap mbType $ tfComplainantInfo ridebookingInfo rider,
       issueCreatedAt = createdAt,
-      issueDescription = tfDescription description,
-      issueExpectedResolutionTime = Just $ Spec.IssueExpectedResolutionTime (Just $ Utils.computeTtlISO8601 igmConfig.expectedResolutionTime),
-      issueExpectedResponseTime = Just $ Spec.IssueExpectedResolutionTime (Just $ Utils.computeTtlISO8601 igmConfig.expectedResponseTime),
+      issueDescription = notfmap mbType $ tfDescription description,
+      issueExpectedResolutionTime = notfmap mbType $ Just $ Spec.IssueExpectedResolutionTime (Just $ Utils.computeTtlISO8601 igmConfig.expectedResolutionTime),
+      issueExpectedResponseTime = notfmap mbType $ Just $ Spec.IssueExpectedResolutionTime (Just $ Utils.computeTtlISO8601 igmConfig.expectedResponseTime),
       issueId = issueId,
       issueIssueActions = tfIssueActions merchant now igmConfig description mbCustomerAction ridebookingInfo,
       issueIssueType = issueType,
-      issueOrderDetails = tfOrderDetails ridebookingInfo,
+      issueOrderDetails = notfmap mbType $ tfOrderDetails ridebookingInfo,
       issueResolution = Nothing,
       issueResolutionProvider = Nothing,
-      issueSource = tfIssueSource merchant,
+      issueSource = notfmap mbType $ tfIssueSource merchant,
       issueStatus = issueStatus,
-      issueSubCategory = issueSubCategory,
+      issueSubCategory = notfmap mbType $ issueSubCategory,
       issueUpdatedAt = now,
       issueRating = Utils.mapRating mbCustomerAction mbCustomerRating
     }
+
+notfmap :: Maybe a -> Maybe b -> Maybe b -- maybe rename this function?
+notfmap Nothing b = b
+notfmap (Just _) _ = Nothing
 
 tfDescription :: Text -> Maybe Spec.IssueDescription
 tfDescription description = do
@@ -172,12 +176,7 @@ tfOrderDetails ridebookingInfo =
 
 tfFulfillments :: RideBooking -> Maybe [Spec.Fulfillment]
 tfFulfillments ridebookingInfo =
-  Just
-    [ Spec.Fulfillment
-        { fulfillmentId = Just ridebookingInfo.bppItemId,
-          fulfillmentState = Nothing
-        }
-    ]
+  Just $ map (\fId -> Spec.Fulfillment (Just fId) Nothing) ridebookingInfo.bppFulfillmentIds
 
 tfItems :: RideBooking -> Maybe [Spec.Item]
 tfItems ridebookingInfo =
@@ -213,10 +212,10 @@ tfComplainantContact ridebookingInfo =
       }
 
 tfComplainantPerson :: Person -> Maybe Spec.ComplainantPerson
-tfComplainantPerson rider =
+tfComplainantPerson _rider =
   Just $
     Spec.ComplainantPerson
-      { complainantPersonName = rider.firstName <> Just " " <> rider.lastName
+      { complainantPersonName = Just "John Doe" -- rider.firstName <> Just " " <> rider.lastName
       }
 
 tfContact :: IGMConfig -> Maybe Spec.GROContact

@@ -42,5 +42,7 @@ pushLogs requestType requestData merchantId domain = do
   let kafkaLog = TransactionLog requestType requestData
   pushBecknLogToKafka kafkaLog
   let transactionLog = TransactionLogReq requestType (maskSensitiveData requestData)
-  whenJust mLogsTokenConfig $ \logsTokenConfig ->
+  logDebug $ "Pushing transaction logs to ONDC preprod for merchantId: " <> merchantId <> ", domain: " <> domain <> ", TokenConfig" <> show mLogsTokenConfig
+  whenJust mLogsTokenConfig $ \logsTokenConfig -> do
+    logDebug $ "Pushing transaction logs to ONDC preprod:" <> show logsTokenConfig
     pushTxnLogs (ONDCCfg $ ONDCConfig {apiToken = logsTokenConfig.token, url = logsTokenConfig.ondcUrl}) transactionLog

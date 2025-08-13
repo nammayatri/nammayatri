@@ -598,6 +598,7 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req crisSdkResponse
       personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
       rider <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
       quote <- B.runInReplica $ QFRFSQuote.findById quoteId >>= fromMaybeM (InvalidRequest "Invalid quote id")
+      logDebug $ "Request ticketQuantity: " <> show req.ticketQuantity
       let ticketQuantity = fromMaybe quote.quantity req.ticketQuantity
           childTicketQuantity = req.childTicketQuantity <|> quote.childTicketQuantity
       void $ QFRFSQuote.updateTicketAndChildTicketQuantityById quoteId (Just ticketQuantity) childTicketQuantity

@@ -36,7 +36,7 @@ buildIssueStatusReq merchant merchantOperatingCity booking becknIssueId transact
   let validTill = addUTCTime (intToNominalDiffTime 30) now
       ttl = diffUTCTime validTill now
   messageId <- generateGUID
-  context <- Utils.buildContext Spec.ISSUE_STATUS Spec.ON_DEMAND merchant transactionId messageId merchantOperatingCity.city (Just $ Utils.BppData booking.providerId (showBaseUrl booking.providerUrl)) (Just $ Utils.durationToText ttl)
+  context <- Utils.buildContext Spec.ISSUE_STATUS Spec.PUBLIC_TRANSPORT merchant transactionId messageId merchantOperatingCity.city (Just $ Utils.BppData booking.providerId (showBaseUrl booking.providerUrl)) (Just $ Utils.durationToText ttl)
   pure $
     Spec.IssueStatusReq
       { issueStatusReqContext = context,

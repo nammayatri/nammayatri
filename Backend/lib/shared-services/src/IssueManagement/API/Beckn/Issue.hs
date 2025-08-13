@@ -19,11 +19,14 @@ import IssueManagement.Storage.BeamFlow
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant hiding (Unauthorized, throwError)
+import TransactionLogs.PushLogs
+import TransactionLogs.Types
 
 type IssueAPI =
   Common.OnDemandAPI
@@ -75,6 +78,8 @@ issueProcessingLockKey id = "IGM:OnIssue:Processing:MessageId-" <> id
 onIssue ::
   ( HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     CoreMetrics m,
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
@@ -86,10 +91,12 @@ onIssue ::
   ServiceHandle m ->
   Identifier ->
   m Spec.AckResponse
-onIssue _merchantId req _ _identifier = do
+onIssue merchantId req _ _identifier = do
   transaction_id <- req.onIssueReqContext.contextTransactionId & fromMaybeM (InvalidRequest "TransactionId not found")
   logDebug $ "Received OnIssue request" <> encodeToText req
   withTransactionIdLogTag' transaction_id $ do
+    fork "FRFS onIssue received pushing ondc logs" do
+      void $ pushLogs "on_issue" (toJSON req) merchantId.getId "PUBLIC_TRANSPORT"
     message_id <- req.onIssueReqContext.contextMessageId & fromMaybeM (InvalidRequest "MessageId not found")
     onIssueReq <- OIACL.buildOnIssueReq req
     Redis.whenWithLockRedis (onIssueLockKey message_id) 60 $ do
@@ -149,6 +156,8 @@ issueStatusProcessingLockKey id = "IGM:OnIssueStatus:Processing:MessageId-" <> i
 onIssueStatus ::
   ( HasFlowEnv m r '["internalEndPointHashMap" ::: HMS.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     CoreMetrics m,
     HasHttpClientOptions r c,
     HasShortDurationRetryCfg r c,
@@ -160,10 +169,12 @@ onIssueStatus ::
   ServiceHandle m ->
   Identifier ->
   m Spec.AckResponse
-onIssueStatus _merchantId req _ _identifier = do
+onIssueStatus merchantId req _ _identifier = do
   transaction_id <- req.onIssueStatusReqContext.contextTransactionId & fromMaybeM (InvalidRequest "TransactionId not found")
   logDebug $ "Received OnIssueStatus request" <> encodeToText req
   withTransactionIdLogTag' transaction_id $ do
+    fork "FRFS onIssue received pushing ondc logs" do
+      void $ pushLogs "on_issue_status" (toJSON req) merchantId.getId "PUBLIC_TRANSPORT"
     message_id <- req.onIssueStatusReqContext.contextMessageId & fromMaybeM (InvalidRequest "MessageId not found")
     onIssueStatusReq <- OISACL.buildOnIssueStatusReq req
     Redis.whenWithLockRedis (onIssueStatusLockKey message_id) 60 $ do

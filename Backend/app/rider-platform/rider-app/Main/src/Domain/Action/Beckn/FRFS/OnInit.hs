@@ -79,15 +79,14 @@ onInit ::
   Merchant.Merchant ->
   FTBooking.FRFSTicketBooking ->
   m ()
-onInit onInitReq merchant booking_ = do
-  person <- QP.findById booking_.riderId >>= fromMaybeM (PersonNotFound booking_.riderId.getId)
-  whenJust (onInitReq.validTill) (\validity -> void $ QFRFSTicketBooking.updateValidTillById validity booking_.id)
-  void $ QFRFSTicketBooking.updatePriceById onInitReq.totalPrice booking_.id
-  void $ QFRFSTicketBooking.updateBppPaymentId onInitReq.bppPaymentId booking_.id
-  void $ QFRFSTicketBooking.updateBppBankDetailsById (Just onInitReq.bankAccNum) (Just onInitReq.bankCode) booking_.id
-  frfsConfig <- CQFRFSConfig.findByMerchantOperatingCityId booking_.merchantOperatingCityId Nothing >>= fromMaybeM (FRFSConfigNotFound booking_.merchantOperatingCityId.getId)
-  whenJust onInitReq.bppOrderId (\bppOrderId -> void $ QFRFSTicketBooking.updateBPPOrderIdById (Just bppOrderId) booking_.id)
-  let booking = booking_ {FTBooking.price = onInitReq.totalPrice, FTBooking.journeyOnInitDone = Just True}
+onInit onInitReq merchant oldBooking = do
+  person <- QP.findById oldBooking.riderId >>= fromMaybeM (PersonNotFound oldBooking.riderId.getId)
+  whenJust (onInitReq.validTill) (\validity -> void $ QFRFSTicketBooking.updateValidTillById validity oldBooking.id)
+  void $ QFRFSTicketBooking.updateBppPaymentId onInitReq.bppPaymentId oldBooking.id
+  void $ QFRFSTicketBooking.updateBppBankDetailsById (Just onInitReq.bankAccNum) (Just onInitReq.bankCode) oldBooking.id
+  frfsConfig <- CQFRFSConfig.findByMerchantOperatingCityId oldBooking.merchantOperatingCityId Nothing >>= fromMaybeM (FRFSConfigNotFound oldBooking.merchantOperatingCityId.getId)
+  whenJust onInitReq.bppOrderId (\bppOrderId -> void $ QFRFSTicketBooking.updateBPPOrderIdById (Just bppOrderId) oldBooking.id)
+  let booking = oldBooking {FTBooking.price = onInitReq.totalPrice, FTBooking.journeyOnInitDone = Just True}
   isMetroTestTransaction <- asks (.isMetroTestTransaction)
   logInfo $ "onInit journeyId" <> show booking.journeyId
   case booking.journeyId of
@@ -137,7 +136,7 @@ onInit onInitReq merchant booking_ = do
       let updatedOrderShortId = bool (orderShortId.getShortId) ("test-" <> orderShortId.getShortId) isMetroTestTransaction
       return (orderId, updatedOrderShortId)
     markBookingApproved (ticketBookingPayment, booking) = do
-      let price = if booking.id == booking_.id then onInitReq.totalPrice else booking.price
+      let price = if booking.id == oldBooking.id then onInitReq.totalPrice else booking.price
       void $ QFRFSTicketBookingPayment.create ticketBookingPayment
       void $ QFRFSTicketBooking.updateBPPOrderIdAndStatusById booking.bppOrderId FTBooking.APPROVED booking.id
       void $ QFRFSTicketBooking.updateFinalPriceById (Just price) booking.id
