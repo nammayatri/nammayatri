@@ -6,6 +6,7 @@ import qualified "dashboard-helper-api" API.Types.RiderPlatform.Management.Ride 
 import qualified Beckn.ACL.IGM.Issue as ACL
 import qualified Beckn.ACL.IGM.IssueStatus as ACL
 import Beckn.ACL.IGM.Utils
+import BecknV2.Utils (maskNumber)
 import qualified Data.Set as Set
 import qualified Domain.Action.Dashboard.Ride as DRide
 import Domain.Action.UI.IGM
@@ -415,7 +416,7 @@ createIssueReport (personId, merchantId) mbLanguage req = withFlowHandlerAPI $ d
       pure $ Just issueId
 
     processTicketBookingIssue ticketBooking category option merchant person igmConfig reqBody = do
-      frfsTicketBookingDetails <- fromFRFSTicketBooking ticketBooking
+      frfsTicketBookingDetails <- fromFRFSTicketBooking ticketBooking person
       merchantOperatingCity <- CQMOC.findById frfsTicketBookingDetails.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantOperatingCityId- " <> show frfsTicketBookingDetails.merchantOperatingCityId)
       (becknIssueReq, issueId, igmIssue) <- ACL.buildIssueReq frfsTicketBookingDetails category option reqBody.description merchant person igmConfig merchantOperatingCity Nothing Nothing Nothing
       QIGM.create igmIssue
@@ -474,7 +475,7 @@ igmIssueStatus (personId, merchantId) = withFlowHandlerAPI $ do
         then QB.findById (Id issue.bookingId) >>= fromMaybeM (BookingNotFound issue.bookingId) >>= \b -> pure (fromBooking b, b.providerUrl)
         else
           QFTB.findById (Id issue.bookingId) >>= fromMaybeM (TicketBookingNotFound issue.bookingId) >>= \tb ->
-            liftA2 (,) (fromFRFSTicketBooking tb) (parseBaseUrl tb.bppSubscriberUrl)
+            liftA2 (,) (fromFRFSTicketBooking tb person) (parseBaseUrl tb.bppSubscriberUrl)
 
     becknIssueStatusReq <- ACL.buildIssueStatusReq merchant merchantOperatingCity bookingDetails issue.id.getId issue.transactionId
     fork "sending beckn issue_status" . withShortRetry $ void $ CallBPP.issueStatus providerUrl becknIssueStatusReq
@@ -501,7 +502,7 @@ resolveIGMIssue (personId, merchantId) issueReportId response rating = do
           return $ fromBooking booking
         Spec.PUBLIC_TRANSPORT -> do
           frfsBooking <- QFTB.findById (Id igmIssue.bookingId) >>= fromMaybeM (FRFSTicketBookingNotFound igmIssue.bookingId)
-          fromFRFSTicketBooking frfsBooking
+          fromFRFSTicketBooking frfsBooking person
       option <- maybe (return Nothing) (`QIO.findById` CUSTOMER) issueReport.optionId
       category <- case issueReport.categoryId of
         Nothing -> throwError $ InvalidRequest "Issue Category not found"
@@ -525,12 +526,19 @@ fromBooking b = do
       contactPhone = Just $ b.primaryExophone,
       domain = Spec.ON_DEMAND,
       quantity = Nothing,
-      bppOrderId = Nothing
+      bppOrderId = Nothing,
+      bppFulfillmentIds = []
     }
 
-fromFRFSTicketBooking :: (MonadFlow m) => FRFSTicketBooking -> m RideBooking
-fromFRFSTicketBooking b = do
+fromFRFSTicketBooking :: (EncFlow m r, CacheFlow m r) => FRFSTicketBooking -> SP.Person -> m RideBooking
+fromFRFSTicketBooking b person = do
   providerUrl <- parseBaseUrl b.bppSubscriberUrl
+  phoneNumber <- mapM decrypt person.mobileNumber
+  bppFulfillmentIds <-
+    Redis.safeGet (transactionIdToFulfillmentsKey b.searchId.getId) >>= \case
+      Just fulfillmentIds -> pure fulfillmentIds
+      Nothing -> pure []
+  let contactPhone = maskNumber <$> phoneNumber
   pure $
     RideBooking
       { bookingId = b.id.getId,
@@ -541,8 +549,12 @@ fromFRFSTicketBooking b = do
         bppBookingId = Just $ getId b.searchId,
         status = Just $ show b.status,
         bppItemId = b.bppItemId,
-        contactPhone = Nothing,
+        contactPhone,
         domain = Spec.PUBLIC_TRANSPORT,
         quantity = Just b.quantity,
-        bppOrderId = b.bppOrderId
+        bppOrderId = b.bppOrderId,
+        bppFulfillmentIds
       }
+
+transactionIdToFulfillmentsKey :: Text -> Text
+transactionIdToFulfillmentsKey id = "FRFS:OnConfirm:Fulfillments:transactionId-" <> id

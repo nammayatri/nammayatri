@@ -19,6 +19,7 @@ import qualified BecknV2.FRFS.APIs as Spec
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec
 import qualified BecknV2.FRFS.Utils as Utils
+import Domain.Action.Beckn.FRFS.Common as Domain
 import qualified Domain.Action.Beckn.FRFS.OnConfirm as DOnConfirm
 import Environment
 import Kernel.Prelude
@@ -58,6 +59,8 @@ onConfirm _ req = withFlowHandlerAPI $ do
         fork "onConfirm request processing" $
           Redis.whenWithLockRedis (onConfirmProcessingLockKey onConfirmReq.bppOrderId) 60 $
             DOnConfirm.onConfirm merchant booking onConfirmReq
+        fork "onConfirm request fulfillments caching" $
+          Redis.set (onConfirmFulfillmentsKey transaction_id) (getFulfillmentIdsFromOrder onConfirmReq) -- should not use cache, we can store in frfs ticket booking
         fork "FRFS onConfirm received pushing ondc logs" do
           void $ pushLogs "on_confirm" (toJSON req) merchant.id.getId "PUBLIC_TRANSPORT"
       Nothing -> DOnConfirm.onConfirmFailure bapConfig ticketBooking
@@ -68,3 +71,12 @@ onConfirmLockKey id = "FRFS:OnConfirm:bppOrderId-" <> id
 
 onConfirmProcessingLockKey :: Text -> Text
 onConfirmProcessingLockKey id = "FRFS:OnConfirm:Processing:bppOrderId-" <> id
+
+onConfirmFulfillmentsKey :: Text -> Text
+onConfirmFulfillmentsKey id = "FRFS:OnConfirm:Fulfillments:transactionId-" <> id
+
+getFulfillmentIdsFromOrder :: Domain.DOrder -> [Text]
+getFulfillmentIdsFromOrder order = do
+  let tickets = order.tickets
+  fulfillmentIds <- map (\ticket -> ticket.bppFulfillmentId) tickets
+  pure fulfillmentIds

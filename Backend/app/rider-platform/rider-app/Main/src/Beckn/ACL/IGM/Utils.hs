@@ -39,7 +39,7 @@ mkBapUri merchantId = asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack 
 buildContext :: (HasFlowEnv m r '["nwAddress" ::: BaseUrl]) => Spec.Action -> Spec.Domain -> DM.Merchant -> Text -> Text -> Context.City -> Maybe BppData -> Maybe Text -> m Spec.Context
 buildContext action domain _merchant txnId msgId city _ mTTL = do
   now <- UTCTimeRFC3339 <$> getCurrentTime
-  let bapUrl = "https://d81e-27-7-145-240.ngrok-free.app/beckn/frfs/v1/da4e23a5-3ce6-4c37-8b9b-41377c3c1a52"
+  let bapUrl = "https://6e3fc0345259.ngrok-free.app/beckn/frfs/v1/da4e23a5-3ce6-4c37-8b9b-41377c3c1a52"
   let bapId = "api.sandbox.moving.tech/dev/bap/frfs/4b17bd06-ae7e-48e9-85bf-282fb310209c"
   cityCode <- getCodeFromCity city
   pure $
@@ -94,7 +94,7 @@ mapBecknIssueStatus mbResp =
 mapBecknIssueType :: Maybe Common.CustomerResponse -> Maybe IGMIssueCommon.IssueType -> Maybe Text
 mapBecknIssueType Nothing (Just _) = Nothing -- this case should never happen
 mapBecknIssueType Nothing _ = Just $ show Spec.TYPE_ISSUE
-mapBecknIssueType (Just Common.ACCEPT) (Just IGMIssueCommon.ISSUE) = Just $ show Spec.TYPE_ISSUE
+mapBecknIssueType (Just Common.ACCEPT) (Just IGMIssueCommon.ISSUE) = Nothing -- Just $ show Spec.TYPE_ISSUE
 mapBecknIssueType _ Nothing = Nothing -- this case should never happen as code will already throw error if issue doesnot exist
 mapBecknIssueType _ _ = Just $ show Spec.GRIEVANCE
 
@@ -178,5 +178,6 @@ data RideBooking = RideBooking
     contactPhone :: Maybe Text,
     domain :: Spec.Domain,
     quantity :: Maybe Int,
-    bppOrderId :: Maybe Text
+    bppOrderId :: Maybe Text,
+    bppFulfillmentIds :: [Text]
   }
