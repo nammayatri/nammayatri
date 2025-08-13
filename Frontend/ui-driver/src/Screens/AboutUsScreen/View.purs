@@ -253,18 +253,18 @@ contactUsData :: ST.AboutUsScreenState -> Array ComplaintsModel.CardData
 contactUsData state =
   []
     <> (if state.appConfig.showCorporateAddress then
-        [ { title: (getString $ CORPORATE_ADDRESS "CORPORATE_ADDRESS")
-          , subTitle: (getString $ CORPORATE_ADDRESS_DESCRIPTION "CORPORATE_ADDRESS_DESCRIPTION")
-          , addtionalData: Just (getString $ CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL")
-          }
-        ]
-      else
-        [])
+          [ { title: (getString $ CORPORATE_ADDRESS "CORPORATE_ADDRESS")
+            , subTitle: (getString $ CORPORATE_ADDRESS_DESCRIPTION "CORPORATE_ADDRESS_DESCRIPTION")
+            , addtionalData: Just (getString $ CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL")
+            }
+          ] 
+        else
+          [])
     <> (if state.appConfig.showRegisteredAddress then
-        [ { title: (getString $ REGISTERED_ADDRESS "REGISTERED_ADDRESS")
-          , subTitle: (getString $ REGISTERED_ADDRESS_DESCRIPTION "REGISTERED_ADDRESS_DESCRIPTION")
-          , addtionalData: Just (getString $ REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL")
-          }
-        ]
-      else
-        [])
+          [ { title: (getString $ REGISTERED_ADDRESS "REGISTERED_ADDRESS")
+            , subTitle: (getString $ REGISTERED_ADDRESS_DESCRIPTION "REGISTERED_ADDRESS_DESCRIPTION")
+            , addtionalData: Just (getString $ REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL")
+            }
+          ]
+        else
+          [])

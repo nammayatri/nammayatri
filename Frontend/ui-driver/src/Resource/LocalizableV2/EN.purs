@@ -563,7 +563,7 @@ getEn =
     , rides_cancelled: "Rides Cancelled"
     , earnings_missed: "Earnings Missed"
     , summary: "Summary"
-    , namma_bonus: (\_ -> "Namma Bonus")
+    , namma_bonus: (\_ -> "")
     , trips_completed: "Trips Completed"
     , late_night_trips: "Late night trips"
     , about_me: "About me"

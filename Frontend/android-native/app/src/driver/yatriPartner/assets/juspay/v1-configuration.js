@@ -12,7 +12,7 @@ window.getMerchantConfig = function () {
     "USER_APP_LINK": "https://yatricustomer.page.link/pcJb",
     "PRIVACY_POLICY_LINK": "https://docs.google.com/document/d/1j7REROF75Rpgx65if5guFpqtEKXqCY9O/edit?usp=sharing&ouid=115428839751313950285&rtpof=true&sd=true",
     "SPECIAL_ZONE_OTP_VIEW": "false",
-    "StringKeys": ["NEED_IT_TO_ENABLE_LOCATION", "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER", "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT", "YOUR_LOCATION_HELPS_OUR_SYSTEM", "EARNED_ON_APP", "TRAVELLED_ON_APP", "REPORT_ISSUE_CHAT_PLACEHOLDER", "CORPORATE_ADDRESS", "CORPORATE_ADDRESS_DESCRIPTION", "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL", "REGISTERED_ADDRESS", "REGISTERED_ADDRESS_DESCRIPTION", "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL", "REFERRED_DRIVERS_INFO", "REFERRED_CUSTOMERS_INFO", "DOWNLOAD_NAMMA_YATRI", "SHARE_NAMMA_YATRI"],
+    "StringKeys": ["NEED_IT_TO_ENABLE_LOCATION", "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER", "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT", "YOUR_LOCATION_HELPS_OUR_SYSTEM", "EARNED_ON_APP", "TRAVELLED_ON_APP", "REPORT_ISSUE_CHAT_PLACEHOLDER", "CORPORATE_ADDRESS", "CORPORATE_ADDRESS_DESCRIPTION", "CORPORATE_ADDRESS_DESCRIPTION_ADDITIONAL", "REGISTERED_ADDRESS", "REGISTERED_ADDRESS_DESCRIPTION", "REGISTERED_ADDRESS_DESCRIPTION_ADDITIONAL", "REFERRED_DRIVERS_INFO", "REFERRED_CUSTOMERS_INFO", "DOWNLOAD_NAMMA_YATRI", "SHARE_NAMMA_YATRI","NAMMA_BONUS"],
     "fontType": "Assets",
     "currency": "₹",
     "isGradient" : "false",
@@ -63,7 +63,8 @@ window.getMerchantConfig = function () {
       "REFERRED_CUSTOMERS_INFO" : "Referred Customers who have registered on Yatri",
       "SHARE_NAMMA_YATRI" : "Share Yatri",
       "WHAT_IS_NAMMA_YATRI_BONUS" : "What is Yatri Bonus?",
-      "GET_READY_FOR_YS_SUBSCRIPTION" : "Get ready for\n Yatri Plans!"
+      "GET_READY_FOR_YS_SUBSCRIPTION" : "Get ready for\n Yatri Plans!",
+      "NAMMA_BONUS" : "Yatri Bonus"
     },
     "malayalamStrings": {
       "MERCHANT_NAME" : "യാത്രി",
@@ -85,7 +86,8 @@ window.getMerchantConfig = function () {
       "REFERRED_CUSTOMERS_INFO": "യാത്രിയിൽ രജിസ്റ്റർ ചെയ്ത പരാമർശിച്ച കസ്റ്റമേഴ്സ്",
       "SHARE_NAMMA_YATRI" : "യാത്രാ പങ്കിടുക",
       "WHAT_IS_NAMMA_YATRI_BONUS" : "What is Yatri Bonus?",
-      "GET_READY_FOR_YS_SUBSCRIPTION" : "Get ready for\n Yatri Plans!"
+      "GET_READY_FOR_YS_SUBSCRIPTION" : "Get ready for\n Yatri Plans!",
+      "NAMMA_BONUS" : "യാത്രി ബോണസ്"
     },
     "hindiStrings": {
       "NEED_IT_TO_ENABLE_LOCATION": "यात्री पार्टनर ड्राइवर के लोकेशन की निगरानी के लिए अपना स्थान साझा करने के लिए लोकेशन डेटा एकत्र करता है, तब भी जब ऐप बंद हो या उपयोग में न हो।",
@@ -99,7 +101,8 @@ window.getMerchantConfig = function () {
       "GET_READY_FOR_YS_SUBSCRIPTION" : "यात्री योजनाओं के लिए\nतैयार हो जाइए!",
       "DOWNLOAD_NAMMA_YATRI" : "यात्री डाउनलोड करें",
       "REPORT_ISSUE_CHAT_PLACEHOLDER" : "Describe your issue. Yatri will try to resolve it in under 24 hours.",
-      "GET_READY_FOR_YS_SUBSCRIPTION" : "Get ready for\n Yatri Plans!"
+      "GET_READY_FOR_YS_SUBSCRIPTION" : "Get ready for\n Yatri Plans!",
+      "NAMMA_BONUS" : "यात्री बोनस"
     },
     "kannadaStrings": {
       "NEED_IT_TO_ENABLE_LOCATION": "ಅಪ್ಲಿಕೇಶನ್ ಮುಚ್ಚಿದಾಗ ಅಥವಾ ಬಳಕೆಯಲ್ಲಿಲ್ಲದಿದ್ದರೂ ಸಹ ಚಾಲಕ ಪ್ರಸ್ತುತ ಸ್ಥಳವನ್ನು ಮೇಲ್ವಿಚಾರಣೆ ಮಾಡಲು ನಿಮ್ಮ ಸ್ಥಳವನ್ನು ಹಂಚಿಕೊಳ್ಳಲು ಸಕ್ರಿಯಗೊಳಿಸಲು ಯಾತ್ರಿ ಡ್ರೈವರ್ ಸ್ಥಳ ಡೇಟಾವನ್ನು ಸಂಗ್ರಹಿಸುತ್ತದೆ.",
@@ -112,7 +115,9 @@ window.getMerchantConfig = function () {
       "GUARANTEED_FIXED_PRICE" : "ಅಪ್ರೈಲ್ 1, 2025 ವರೆಗೆ ಖಚಿತ ಬೆಲೆಯ ಗ್ಯಾರಂಟಿ",
       "GET_READY_FOR_YS_SUBSCRIPTION" : "ನಮ್ಮ ಯಾತ್ರಿ ಯೋಜನೆಗಳಿಗೆ\nಸಿದ್ಧತೆ ಪಡೆಯಲು ಸಿದ್ಧವಾಗಿರಿ!",
       "REPORT_ISSUE_CHAT_PLACEHOLDER" : "ನಿಮ್ಮ ಸಮಸ್ಯೆಯನ್ನು ವಿವರಿಸಿ. ಯಾತ್ರಿ ಅದನ್ನು 24 ಗಂಟೆಗಳಲ್ಲಿ ಪರಿಹರಿಸಲು ಪ್ರಯತ್ನಿಸುತ್ತಾರೆ.",
-      "GET_READY_FOR_YS_SUBSCRIPTION" : "ಯಾತ್ರಿ ಯೋಜನೆಗಳಿಗೆ\n ಸಿದ್ಧರಾಗಿ!"
+      "GET_READY_FOR_YS_SUBSCRIPTION" : "ಯಾತ್ರಿ ಯೋಜನೆಗಳಿಗೆ\n ಸಿದ್ಧರಾಗಿ!",
+      "NAMMA_BONUS" : "ಯಾತ್ರಿಕ ಬೋನಸ್"
+
     },
     "tamilStrings": {
       "NEED_IT_TO_ENABLE_LOCATION": "பயன்பாடு மூடப்பட்டிருந்தாலும் அல்லது பயன்பாட்டில் இல்லாவிட்டாலும் கூட, இயக்கி தற்போதைய இருப்பிடத்தைக் கண்காணிக்க, உங்கள் இருப்பிடத்தைப் பகிர்வதை இயக்க, யாத்ரி டிரைவர் இருப்பிடத் தரவைச் சேகரிக்கிறார்.",
@@ -124,7 +129,8 @@ window.getMerchantConfig = function () {
       "TRAVELLED_ON_APP" : "யாத்ரியில் பயணம் செய்தேன்",
       "GUARANTEED_FIXED_PRICE" : "ஏப்ரல் 1, 2025 வரை உத்தரவாதமான நிலையான விலை",
       "GET_READY_FOR_YS_SUBSCRIPTION" : "யாத்ரி திட்டங்களுக்கு\n தயாராகுங்கள்!",
-      "REPORT_ISSUE_CHAT_PLACEHOLDER" : "உங்கள் சிக்கலை விவரிக்கவும். யாத்ரி அதை 24 மணி நேரத்திற்குள் தீர்க்க முயற்சிக்கும்."
+      "REPORT_ISSUE_CHAT_PLACEHOLDER" : "உங்கள் சிக்கலை விவரிக்கவும். யாத்ரி அதை 24 மணி நேரத்திற்குள் தீர்க்க முயற்சிக்கும்.",
+      "NAMMA_BONUS" : "யாத்ரி போனஸ்"
     },
     "teluguStrings": {
       "NEED_IT_TO_ENABLE_LOCATION": "యాత్రి డ్రైవర్ యాప్ మూసివేయబడినప్పుడు లేదా ఉపయోగంలో లేనప్పటికీ, డ్రైవర్ ప్రస్తుత స్థానాన్ని పర్యవేక్షించడానికి మీ స్థానాన్ని భాగస్వామ్యం చేయడానికి స్థాన డేటాను సేకరిస్తుంది.",
@@ -136,7 +142,8 @@ window.getMerchantConfig = function () {
       "TRAVELLED_ON_APP" : "యాత్రిలో ప్రయాణించారు",
       "GUARANTEED_FIXED_PRICE" : "ఏప్రిల్ 1, 2025 వరకు స్థిర ధరకు హామీ ఇవ్వబడుతుంది",
       "GET_READY_FOR_YS_SUBSCRIPTION" : "యాత్రి ప్రణాళికలకు\n సిద్ధంగా ఉండండి!",
-      "REPORT_ISSUE_CHAT_PLACEHOLDER" : "మీ సమస్యను వివరించండి. యాత్రి 24 గంటలలోపు దాన్ని పరిష్కరించడానికి ప్రయత్నిస్తుంది."
+      "REPORT_ISSUE_CHAT_PLACEHOLDER" : "మీ సమస్యను వివరించండి. యాత్రి 24 గంటలలోపు దాన్ని పరిష్కరించడానికి ప్రయత్నిస్తుంది.",
+      "NAMMA_BONUS" : "యాత్రి బోనస్"
     },
     "logs": ["JUSPAY","FIREBASE","CLEVERTAP"]
     , "fontName" : "PlusJakartaSans"

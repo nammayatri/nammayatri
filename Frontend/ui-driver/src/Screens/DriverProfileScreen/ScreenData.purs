@@ -217,6 +217,12 @@ languagesChoices =
     , subText : "Bangla"
     , isSelected : false
     }
+  , {
+    value: "OD_IN"
+    , text: "ଓଡିଆ"
+    , subText: "Odia"
+    , isSelected : false
+    }
   ]
 
 dummyDriverInfo :: GetDriverInfoResp
