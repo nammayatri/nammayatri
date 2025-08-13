@@ -695,47 +695,58 @@ verifyAadhaar verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req =
         whenJust aadhaarInfo $ \aadhaarInfoData -> do
           when (aadhaarInfoData.verificationStatus == Documents.VALID) $ throwError AadhaarAlreadyLinked
         resp <- Verification.extractAadhaarImage person.merchantId merchantOpCityId extractReq
-        mbAadhaarNumber <- case resp.extractedAadhaar of
+        extractedAadhaarNumber <- case resp.extractedAadhaar of
           Just extractedAadhaarData -> do
             let extractedAadhaarOutputData = extractedAadhaarData.extraction_output
-            let extractedAadhaarNumber = removeSpaceAndDash <$> extractedAadhaarOutputData.id_number
+            let mbExtractedAadhaarNumber = removeSpaceAndDash <$> extractedAadhaarOutputData.id_number
+
+            -- extracted aadhaar number is mandatory
+            extractedAadhaarNumber <- maybe (throwImageError (Id req.aadhaarFrontImageId) ImageExtractionFailed) pure mbExtractedAadhaarNumber
+
+            -- keep validation every time if aadhaarNumber was provided in request
+            whenJust req.aadhaarNumber $ \reqAadhaarNumber -> do
+              unless (extractedAadhaarNumber == reqAadhaarNumber) $
+                throwImageError (Id req.aadhaarFrontImageId) $
+                  ImageDocumentNumberMismatch
+                    (maskText extractedAadhaarNumber)
+                    (maskText reqAadhaarNumber)
+
             let extractedNameOnCard = extractedAadhaarOutputData.name_on_card
             if verifyBy == DPan.FRONTEND_SDK
-              then case (req.aadhaarName, extractedNameOnCard) of
-                (Just providedName, Just extractedName) -> do
-                  let nameCompareReq =
-                        Verification.NameCompareReq
-                          { extractedName,
-                            verifiedName = providedName,
-                            percentage = Just True,
-                            driverId = person.id.getId
-                          }
-                  isValid <- isNameComparePercentageValid merchantId merchantOpCityId nameCompareReq
-                  unless isValid $ throwError (InvalidRequest "Provided name and extracted name on card do not match")
-                _ -> throwError (InvalidRequest "Aadhaar name is required")
-              else case req.aadhaarNumber of
-                Just aadhaarNumber ->
-                  unless (extractedAadhaarNumber == Just aadhaarNumber) $
-                    throwImageError (Id req.aadhaarFrontImageId) $
-                      ImageDocumentNumberMismatch
-                        (maybe "null" maskText extractedAadhaarNumber)
-                        (maskText aadhaarNumber)
-                Nothing -> throwError (InvalidRequest "Aadhaar number is required")
+              then do
+                -- req aadhar name is mandatory
+                case (req.aadhaarName, extractedNameOnCard) of
+                  (Just providedName, Just extractedName) -> do
+                    let nameCompareReq =
+                          Verification.NameCompareReq
+                            { extractedName,
+                              verifiedName = providedName,
+                              percentage = Just True,
+                              driverId = person.id.getId
+                            }
+                    isValid <- isNameComparePercentageValid merchantId merchantOpCityId nameCompareReq
+                    unless isValid $ throwError (InvalidRequest "Provided name and extracted name on card do not match")
+                  _ -> throwError (InvalidRequest "Aadhaar name is required")
+              else do
+                -- req aadhar number is mandatory
+                when (isNothing req.aadhaarNumber) $
+                  throwError (InvalidRequest "Aadhaar number is required")
             when (isNameCompareRequired transporterConfig verifyBy) $
               validateDocument person.merchantId merchantOpCityId person.id extractedAadhaarOutputData.name_on_card extractedAadhaarOutputData.date_of_birth Nothing ODC.AadhaarCard driverDocument
             aadhaarCard <- makeAadhaarCardEntity person.id extractedAadhaarOutputData req
             QAadhaarCard.upsertAadhaarRecord aadhaarCard
             return extractedAadhaarNumber
           Nothing -> throwImageError (Id req.aadhaarFrontImageId) ImageExtractionFailed
-        whenJust mbAadhaarNumber $ \aadhaarNumber -> do
-          case person.role of
-            Person.FLEET_OWNER -> do
-              encryptedAadhaarNumber <- encrypt aadhaarNumber
-              QFOI.updateAadhaarImage (Just encryptedAadhaarNumber) (Just req.aadhaarFrontImageId) req.aadhaarBackImageId person.id
-            Person.DRIVER -> do
-              encryptedAadhaarNumber <- encrypt aadhaarNumber
-              DIQuery.updateAadhaarNumber (Just encryptedAadhaarNumber) person.id
-            _ -> pure ()
+
+        -- use extractedAadhaarNumber for update info
+        case person.role of
+          Person.FLEET_OWNER -> do
+            encryptedAadhaarNumber <- encrypt extractedAadhaarNumber
+            QFOI.updateAadhaarImage (Just encryptedAadhaarNumber) (Just req.aadhaarFrontImageId) req.aadhaarBackImageId person.id
+          Person.DRIVER -> do
+            encryptedAadhaarNumber <- encrypt extractedAadhaarNumber
+            DIQuery.updateAadhaarNumber (Just encryptedAadhaarNumber) person.id
+          _ -> pure ()
   if isNameCompareRequired transporterConfig verifyBy
     then Redis.withWaitOnLockRedisWithExpiry (makeDocumentVerificationLockKey personId.getId) 10 10 runBody
     else runBody
