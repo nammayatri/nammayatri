@@ -14,14 +14,6 @@ import Servant
 import Storage.CachedQueries.Merchant.MultiModalBus (RouteState)
 import Tools.Auth
 
-data SimpleNearbyBus = SimpleNearbyBus
-  { currentLocation :: Kernel.External.Maps.Types.LatLong,
-    vehicleNumber :: Kernel.Prelude.Maybe Data.Text.Text
-  }
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-  deriving (Show)
-
 data NearbyBus = NearbyBus
   { currentLocation :: Kernel.External.Maps.Types.LatLong,
     distance :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
