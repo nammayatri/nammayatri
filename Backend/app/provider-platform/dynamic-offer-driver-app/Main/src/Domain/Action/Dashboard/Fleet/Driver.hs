@@ -1654,14 +1654,17 @@ postDriverFleetVerifyJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId mbR
 
       let phoneNumber = req.mobileCountryCode <> req.mobileNumber
       withLogTag ("personId_" <> getId person.id) $ do
-        (mbSender, message, templateId) <-
-          MessageBuilder.buildFleetJoinAndDownloadAppMessage merchantOpCityId $
-            MessageBuilder.BuildDownloadAppMessageReq
-              { fleetOwnerName = fleetOwner.firstName
-              }
-        let sender = fromMaybe smsCfg.sender mbSender
-        Sms.sendSMS person.merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId)
-          >>= Sms.checkSmsResult
+        let useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
+        whenNothing_ useFakeOtpM $
+          do
+            (mbSender, message, templateId) <-
+              MessageBuilder.buildFleetJoinAndDownloadAppMessage merchantOpCityId $
+                MessageBuilder.BuildDownloadAppMessageReq
+                  { fleetOwnerName = fleetOwner.firstName
+                  }
+            let sender = fromMaybe smsCfg.sender mbSender
+            Sms.sendSMS person.merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId)
+            >>= Sms.checkSmsResult
     Nothing -> do
       let key = makeFleetDriverOtpKey (req.mobileCountryCode <> req.mobileNumber)
       otp <- Redis.get key >>= fromMaybeM OtpNotFound
