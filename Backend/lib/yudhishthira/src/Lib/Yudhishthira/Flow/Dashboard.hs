@@ -248,7 +248,12 @@ verifyTag (Lib.Yudhishthira.Types.TagNameValue fullTag) = do
       if ("&" `T.isInfixOf` tagValueText) -- don't check for condition if value type is array
         then pure ()
         else do
-          let mbTagValue = textToMaybeValue tagValueText
+          -- Normalize boolean values before processing - force them to be strings
+          let normalizedTagValueText = case T.toLower tagValueText of
+                "true" -> "\"true\""
+                "false" -> "\"false\""
+                _ -> tagValueText
+          let mbTagValue = textToMaybeValue normalizedTagValueText
           case tag.possibleValues of
             Lib.Yudhishthira.Types.Tags values ->
               case mbTagValue of
