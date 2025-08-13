@@ -1210,7 +1210,7 @@ createJourneyLegFromCancelledLeg journeyLeg newMode startLocation newDistance ne
         osmExit = journeyLeg.osmExit,
         straightLineEntrance = journeyLeg.straightLineEntrance,
         straightLineExit = journeyLeg.straightLineExit,
-        status = Just JL.Cancelled
+        status = Just JL.InPlan
       }
 
 extendLeg ::
