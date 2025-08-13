@@ -231,9 +231,9 @@ types:
   TicketFleetVehicleResp:
     fleetOwnerId: Text
     fleetOwnerName: Text
-    vehicleNo: Text
+    vehicleNo: Maybe Text
     rcId: Text
-    vehicleType: Text
+    vehicleType: Maybe Text
     driverId: Maybe Text
     driverName: Maybe Text
     isActive: Bool
