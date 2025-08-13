@@ -39,3 +39,5 @@ FleetBookingInformation:
       kvFunction: findOneWithKV
       where: serviceId
 
+  extraOperations:
+    - EXTRA_QUERY_FILE
