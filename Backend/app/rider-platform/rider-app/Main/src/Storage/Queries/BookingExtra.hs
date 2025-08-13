@@ -349,8 +349,7 @@ findAllByRiderIdAndStatusAndMOCId (Id personId) status (Id mocId) = do
     [ Se.And
         [ Se.Is BeamB.riderId $ Se.Eq personId,
           Se.Is BeamB.status $ Se.Eq status,
-          Se.Is BeamB.merchantOperatingCityId $ Se.Eq (Just mocId),
-          Se.Is BeamB.journeyId $ Se.Not $ Se.Eq Nothing
+          Se.Is BeamB.merchantOperatingCityId $ Se.Eq (Just mocId)
         ]
     ]
     (Se.Desc BeamB.createdAt)

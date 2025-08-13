@@ -1,6 +1,5 @@
 module Lib.JourneyModule.Base where
 
-import qualified API.Types.UI.FRFSTicketService as FRFSTicketService
 import qualified API.Types.UI.MultimodalConfirm as APITypes
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.OnDemand.Enums as BecknSpec
@@ -11,7 +10,6 @@ import Data.List.NonEmpty (nonEmpty)
 import Data.Ord (comparing)
 import qualified Data.Time as Time
 import Domain.Action.UI.EditLocation as DEditLocation
-import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified Domain.Action.UI.Location as DLoc
 import Domain.Action.UI.Ride as DRide
 import qualified Domain.Types.BookingCancellationReason as SBCR
@@ -30,10 +28,8 @@ import qualified Domain.Types.JourneyLeg as DJourneyLeg
 import qualified Domain.Types.Location as DLocation
 import qualified Domain.Types.LocationAddress as LA
 import Domain.Types.Merchant
-import qualified Domain.Types.Merchant as DMerchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.MultimodalPreferences as DMP
-import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.RideStatus as DTaxiRide
 import qualified Domain.Types.RiderConfig
 import qualified Domain.Types.Trip as DTrip
@@ -195,12 +191,6 @@ getJourney id = QJourney.findByPrimaryKey id >>= fromMaybeM (JourneyNotFound id.
 getJourneyLegs :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DJourney.Journey -> m [DJourneyLeg.JourneyLeg]
 getJourneyLegs = QJourneyLeg.getJourneyLegs
 
-getAllLegsInfoWithoutAddingSkipLeg ::
-  (JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
-  Id DJourney.Journey ->
-  m [JL.LegInfo]
-getAllLegsInfoWithoutAddingSkipLeg journeyId = getAllLegsInfo journeyId
-
 -- not needed as we are using getJourneyLegs from JourneyLegExtra and it is already
 -- sorted by sequenceNumber and filtered out deleted legs by default from db
 -- legs <- QJourneyLeg.findAllByJourneyId journeyId
@@ -323,7 +313,7 @@ getAllLegsStatus journey = do
   let allLegsState = map snd legPairs
   -- Update journey expiry time to the next valid ticket expiry when a leg is completed
   whenJust (minimumTicketLegOrder legPairs) $ \nextLegOrder -> do
-    QJourneyExtra.updateJourneyToNextTicketExpiryTime journey.id nextLegOrder
+    QJourneyExtra.updateJourneyToNextTicketExpiryTime journey.id allLegsRawData nextLegOrder
   checkAndMarkTerminalJourneyStatus journey True False allLegsState
   return allLegsState
   where
@@ -1624,27 +1614,12 @@ generateJourneyInfoResponse journey legs = do
         }
 
 generateJourneyStatusResponse ::
-  Id DPerson.Person ->
-  Id DMerchant.Merchant ->
   DJourney.Journey ->
   [JL.JourneyLegState] ->
   Flow APITypes.JourneyStatusResp
-generateJourneyStatusResponse personId merchantId journey legs = do
+generateJourneyStatusResponse journey legs = do
   journeyChangeLogCounter <- getJourneyChangeLogCounter journey.id
-  paymentStatus <-
-    if journey.isPaymentSuccess /= Just True
-      then do
-        allJourneyFrfsBookings <- QTBooking.findAllByJourneyIdCond (Just journey.id)
-        frfsBookingStatusArr <- mapM (FRFSTicketService.frfsBookingStatus (personId, merchantId) True) allJourneyFrfsBookings
-        let anyFirstBooking = listToMaybe frfsBookingStatusArr
-            paymentOrder =
-              anyFirstBooking >>= (.payment)
-                <&> ( \p ->
-                        APITypes.PaymentOrder {sdkPayload = p.paymentOrder, status = p.status}
-                    )
-        return $ paymentOrder <&> (.status)
-      else return (Just FRFSTicketService.SUCCESS)
-  return $ APITypes.JourneyStatusResp {legs = concatMap transformLeg legs, journeyStatus = journey.status, journeyPaymentStatus = paymentStatus, journeyChangeLogCounter}
+  return $ APITypes.JourneyStatusResp {legs = concatMap transformLeg legs, journeyStatus = journey.status, journeyPaymentStatus = Nothing, journeyChangeLogCounter}
   where
     transformLeg :: JL.JourneyLegState -> [APITypes.LegStatus]
     transformLeg legState =

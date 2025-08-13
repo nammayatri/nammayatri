@@ -45,7 +45,6 @@ import Kernel.Types.Common hiding (id)
 import Kernel.Types.Error
 import Kernel.Types.Id (Id)
 import Kernel.Utils.Common
-import qualified Lib.JourneyModule.Base as JM
 import Lib.SessionizerMetrics.Types.Event
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Booking as QB
@@ -189,9 +188,9 @@ onStatus req = do
       pure ()
     ValidatedDriverArrivedDetails request -> DCommon.driverArrivedReqHandler request
     ValidatedRideStartedDetails request -> DCommon.rideStartedReqHandler request
-    ValidatedRideCompletedDetails request -> DCommon.rideCompletedReqHandler request JM.getAllLegsInfoWithoutAddingSkipLeg
+    ValidatedRideCompletedDetails request -> DCommon.rideCompletedReqHandler request
     ValidatedFarePaidDetails request -> DCommon.farePaidReqHandler request
-    ValidatedBookingCancelledDetails request -> DCommon.bookingCancelledReqHandler request JM.getAllLegsInfoWithoutAddingSkipLeg
+    ValidatedBookingCancelledDetails request -> DCommon.bookingCancelledReqHandler request
     ValidatedBookingReallocationDetails BookingReallocationReq {bookingDetails, reallocationSource} -> do
       rideEntity <- buildRideEntity booking updateReallocatedRide bookingDetails
       let rideId = case rideEntity of

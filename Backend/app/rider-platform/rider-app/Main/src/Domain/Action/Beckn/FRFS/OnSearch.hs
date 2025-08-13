@@ -27,6 +27,7 @@ import qualified Domain.Types.FRFSRouteFareProduct as FRFSRouteFareProduct
 import qualified Domain.Types.FRFSSearch as Search
 import qualified Domain.Types.FRFSVehicleServiceTier as FRFSVehicleServiceTier
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
+import qualified Domain.Types.JourneyLeg as DJourneyLeg
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.StationType as Station
@@ -40,7 +41,6 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import qualified Kernel.Types.TimeBound as DTB
 import Kernel.Utils.Common
-import qualified Lib.JourneyLeg.Types as JourneyLegTypes
 import qualified Lib.JourneyModule.Types as JourneyTypes
 import qualified SharedLogic.CreateFareForMultiModal as SLCF
 import qualified SharedLogic.FRFSUtils as SFU
@@ -193,12 +193,11 @@ onSearchHelper onSearchReq validatedReq integratedBPPConfig = do
       let updatedQuotes = map updateQuotes zippedQuotes
       for_ updatedQuotes \quote -> QQuote.updateCachedQuoteByPrimaryKey quote
   let search = validatedReq.search
-  mbRequiredQuote <- filterQuotes quotes search.journeyLegInfo
+  mbRequiredQuote <- filterQuotes quotes mbJourneyLeg
   case mbRequiredQuote of
     Just requiredQuote -> do
       void $ SLCF.createFares search.id.getId search.journeyLegInfo (QSearch.updatePricingId validatedReq.search.id (Just requiredQuote.id.getId))
-      whenJust search.journeyLegInfo $ \journeyLegInfo -> do
-        QJourneyLeg.updateEstimatedFaresByJourneyIdAndSequenceNumber (Just requiredQuote.price.amount) (Just requiredQuote.price.amount) (Id journeyLegInfo.journeyId) journeyLegInfo.journeyLegOrder
+      QJourneyLeg.updateEstimatedFaresBySearchId (Just requiredQuote.price.amount) (Just requiredQuote.price.amount) (Just onSearchReq.transactionId)
     Nothing -> do
       whenJust validatedReq.search.journeyLegInfo $ \_journeyLegInfo -> do
         QSearch.updateOnSearchFailed validatedReq.search.id (Just True)
@@ -269,11 +268,10 @@ onSearchHelper onSearchReq validatedReq integratedBPPConfig = do
               }
       QRSF.create stopFare
 
-filterQuotes :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r) => [Quote.FRFSQuote] -> Maybe JourneyLegTypes.JourneySearchData -> m (Maybe Quote.FRFSQuote)
+filterQuotes :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r) => [Quote.FRFSQuote] -> Maybe DJourneyLeg.JourneyLeg -> m (Maybe Quote.FRFSQuote)
 filterQuotes [] _ = return Nothing
-filterQuotes quotes (Just journeySearchData) = do
-  mbJourneyLeg <- QJourneyLeg.findByJourneyIdAndSequenceNumber (Id journeySearchData.journeyId) journeySearchData.journeyLegOrder
-  filteredQuotes <- case mbJourneyLeg >>= (.serviceTypes) of
+filterQuotes quotes (Just journeyLeg) = do
+  filteredQuotes <- case journeyLeg.serviceTypes of
     Just serviceTypes -> do
       return $ quotes & filter (maybe False (\serviceTier -> serviceTier.serviceTierType `elem` serviceTypes) . JourneyTypes.getServiceTierFromQuote)
     Nothing -> return quotes

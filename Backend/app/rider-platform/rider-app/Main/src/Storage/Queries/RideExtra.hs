@@ -384,8 +384,8 @@ findRiderIdByRideId rideId = do
   booking <- maybe (pure Nothing) (\ride' -> findOneWithKV [Se.Is BeamB.id $ Se.Eq $ getId (Ride.bookingId ride')]) ride
   pure $ Booking.riderId <$> booking
 
-findAllByRiderIdAndRide :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe BookingStatus -> Maybe (Id DC.Client) -> Maybe UTCTime -> Maybe UTCTime -> [BookingStatus] -> Bool -> m ([Booking], [Booking])
-findAllByRiderIdAndRide (Id personId) mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate mbToDate mbBookingStatusList excludeJourneyBookings = do
+findAllByRiderIdAndRide :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Person -> Maybe Integer -> Maybe Integer -> Maybe Bool -> Maybe BookingStatus -> Maybe (Id DC.Client) -> Maybe UTCTime -> Maybe UTCTime -> [BookingStatus] -> m ([Booking], [Booking])
+findAllByRiderIdAndRide (Id personId) mbLimit mbOffset mbOnlyActive mbBookingStatus mbClientId mbFromDate mbToDate mbBookingStatusList = do
   let isOnlyActive = Just True == mbOnlyActive
   let limit' = maybe 10 fromIntegral mbLimit
   let offset' = maybe 0 fromIntegral mbOffset
@@ -399,7 +399,6 @@ findAllByRiderIdAndRide (Id personId) mbLimit mbOffset mbOnlyActive mbBookingSta
               <> ([Se.Is BeamB.createdAt $ Se.GreaterThanOrEq (fromJust mbFromDate) | isJust mbFromDate])
               <> ([Se.Is BeamB.createdAt $ Se.LessThanOrEq (fromJust mbToDate) | isJust mbToDate])
               <> ([Se.Is BeamB.status $ Se.In mbBookingStatusList | not (null mbBookingStatusList)])
-              <> ([Se.Is BeamB.journeyId $ Se.Eq Nothing | excludeJourneyBookings])
           )
       ]
       (if isOnlyActive then Se.Asc BeamB.startTime else Se.Desc BeamB.startTime)

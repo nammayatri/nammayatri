@@ -38,7 +38,6 @@ imports:
   Provider: Lib.JourneyModule.Types
   Value: Data.Aeson
   Gate: Domain.Types.Station
-  JourneyLegFeedbackData: Domain.Types.JourneyLegsFeedbacks
   FRFSTicketBookingStatus: Domain.Types.FRFSTicketBookingStatus
 
 module: MultimodalConfirm
@@ -168,7 +167,6 @@ types:
     isExperienceGood: Maybe Bool
     rating: Maybe Int
     legOrder: Int
-    feedbackData: Maybe JourneyLegFeedbackData
 
   JourneyConfirmReq:
     journeyConfirmReqElements: "[JourneyConfirmReqElement]"

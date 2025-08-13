@@ -576,7 +576,7 @@ mkLegInfoFromBookingAndRide booking mRide journeyLeg = do
         pricingId = booking.quoteId <&> (.getId),
         travelMode = DTrip.Taxi,
         startTime = booking.startTime,
-        order = fromMaybe 0 booking.journeyLegOrder,
+        order = journeyLeg.sequenceNumber,
         estimatedDuration = booking.estimatedDuration,
         estimatedMinFare = Just $ mkPriceAPIEntity booking.estimatedFare,
         estimatedChildFare = Nothing,
@@ -654,7 +654,7 @@ mkLegInfoFromSearchRequest DSR.SearchRequest {..} journeyLeg = do
         pricingId = journeyLegInfo'.pricingId,
         travelMode = DTrip.Taxi,
         startTime = startTime,
-        order = journeyLegInfo'.journeyLegOrder,
+        order = journeyLeg.sequenceNumber,
         estimatedDuration = estimatedRideDuration,
         estimatedChildFare = Nothing,
         estimatedMinFare = mkPriceAPIEntity <$> (mbFareRange <&> (.minFare)),
@@ -786,7 +786,6 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
   let ticketNo = ticketsData <&> (.ticketNumber)
 
   now <- getCurrentTime
-  legOrder <- fromMaybeM (InternalError "Leg Order is Nothing") (booking.journeyLegOrder)
   let startTime = fromMaybe now booking.startTime
   let singleAdultPrice = roundToTwoDecimalPlaces . HighPrecMoney $ safeDiv (getHighPrecMoney booking.price.amount) (fromIntegral booking.quantity) -- TODO :: To be handled as single price cannot be obtained from this if more than 1 fare breakup (Child Quantity / Discounts)
       estimatedPrice =
@@ -810,7 +809,7 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
         pricingId = Just booking.quoteId.getId, -- Just booking.id.getId,
         travelMode = castCategoryToMode booking.vehicleType,
         startTime = startTime,
-        order = legOrder,
+        order = journeyLeg.sequenceNumber,
         estimatedDuration = journeyLeg.duration,
         estimatedMinFare = Just $ mkPriceAPIEntity estimatedPrice,
         estimatedChildFare = Nothing,
@@ -1011,7 +1010,7 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg = do
         pricingId = journeyLegInfo'.pricingId,
         travelMode = castCategoryToMode vehicleType,
         startTime = fromMaybe now startTime,
-        order = journeyLegInfo'.journeyLegOrder,
+        order = journeyLeg.sequenceNumber,
         estimatedDuration = duration,
         estimatedMinFare = mbEstimatedFare,
         estimatedChildFare = mkPriceAPIEntity <$> (mbQuote >>= (.childPrice)),

@@ -8,7 +8,6 @@ imports:
   Currency: Kernel.Types.Common
   Location: Domain.Types.Location
   Person: Domain.Types.Person
-  JourneySearchData: Lib.JourneyLeg.Types
   PolylinePoints: Kernel.External.Maps.Google.MapsClient.Types
   LatLngV2: Kernel.External.Maps.Google.MapsClient.Types
   MultiModalStopDetails: Kernel.External.MultiModal.Interface.Types
@@ -120,57 +119,6 @@ Journey:
 
   default:
     riderId: "''" # default value for backward compatibility
-
-#passenger details
-JourneyBooking:
-  fields:
-    id: Id JourneyBooking
-    journeyId: Id Journey
-    fare: Maybe Price
-    estimatedFare: Maybe Price
-    estimatedDistance: Distance
-    estimatedDuration: Maybe Seconds
-    modes: "[MultimodalTravelMode]"
-    numberOfPassengers: Int
-    convenienceCost: Int
-    isBookingCancellable: Bool
-    customerCancelled: Bool
-
-  beamFields:
-    fare:
-      fare: Maybe HighPrecMoney
-      currency: Maybe Currency
-    estimatedDistance:
-      estimatedDistance: HighPrecDistance
-      distanceUnit: DistanceUnit
-
-  beamType:
-    estimatedFare: Maybe HighPrecMoney
-
-  fromTType:
-    fare: ((Kernel.Types.Common.mkPrice currency) <$> fare)|E
-    estimatedFare: ((Kernel.Types.Common.mkPrice currency) <$> estimatedFare)|E
-    estimatedDistance: (Kernel.Types.Common.Distance estimatedDistance distanceUnit)|E
-
-  toTType:
-    fare: (Kernel.Prelude.fmap (.amount))|I
-    currency: (Kernel.Prelude.fmap (.currency))|I
-    estimatedFare: (Kernel.Prelude.fmap (.amount))|I
-    estimatedDistance: ((.value))|I
-    distanceUnit: ((.unit))|I
-
-  constraints:
-    id: PrimaryKey
-    journeyId: "!SecondaryKey"
-
-# use booking, FRFS booking and bus booking for journey leg booking and attach the journey booking id there
-PassengerDetails:
-  fields:
-    id: Id PassengerDetails
-    bookingId: Text
-    firstName: Text
-    lastName: Maybe Text
-    age: Maybe Int
 
 MultimodalPreferences:
   tableName: multimodal_preferences
@@ -319,11 +267,6 @@ JourneyLeg:
       kvFunction: findOneWithKV
       where:
         and: [journeyId, sequenceNumber]
-    updateEstimatedFaresByJourneyIdAndSequenceNumber:
-      kvFunction: updateWithKV
-      params: [estimatedMinFare, estimatedMaxFare]
-      where:
-        and: [journeyId, sequenceNumber]
     updateEstimatedFaresBySearchId:
       kvFunction: updateWithKV
       params: [estimatedMinFare, estimatedMaxFare]
@@ -463,66 +406,3 @@ JourneyFeedback:
     journeyId: PrimaryKey
     riderId: SecondaryKey
 
-JourneyLegsFeedbacks:
-  fields:
-    journeyId: Id Journey
-    legOrder: Int
-    isExperienceGood: Maybe Bool
-    travelMode: Maybe MultimodalTravelMode
-    rating: Maybe Int
-    feedbackData: Maybe JourneyLegFeedbackData
-
-  types:
-    TaxiFeedbackData:
-      feedbackDetails: Maybe Text
-      wasRideSafe: Maybe Bool
-      shouldFavDriver: Maybe Bool
-      wasOfferedAssistance: Maybe Bool
-      mbAudio: Maybe Text
-      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
-
-    SubwayFeedbackData:
-      feedbackDetails: Maybe Text
-      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
-
-    WalkFeedbackData:
-      feedbackDetails: Maybe Text
-      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
-
-    BusFeedbackData:
-      feedbackDetails: Maybe Text
-      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
-
-    MetroFeedbackData:
-      feedbackDetails: Maybe Text
-      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
-
-    JourneyLegFeedbackData:
-      enum: "Taxi TaxiFeedbackData, Bus BusFeedbackData, Walk WalkFeedbackData, Subway SubwayFeedbackData, Metro MetroFeedbackData"
-      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
-
-  beamType:
-    feedbackData: Maybe Data.Aeson.Value
-
-  fromTType:
-    feedbackData: Storage.Queries.Transformers.JourneyLegsFeedback.getFeedbackData =<< feedbackData|E
-
-  toTType:
-    feedbackData: Storage.Queries.Transformers.JourneyLegsFeedback.getFeedbackDataJson <$> feedbackData|E
-
-  queries:
-    findAllByJourneyId:
-      kvFunction: findAllWithKV
-      where: journeyId
-
-    findByJourneyIdAndLegOrder:
-      kvFunction: findOneWithKV
-      where:
-        and: [journeyId, legOrder]
-
-  constraints:
-    journeyId: PrimaryKey
-    legOrder: PrimaryKey
-
-  sqlType:
-    feedbackData: json

@@ -156,8 +156,6 @@ SearchRequest:
       clientModelName: Maybe Text
       clientManufacturer: Maybe Text
     journeyLegInfo:
-      journeyLegOrder: Maybe Int
-      journeyId: Maybe Text
       agency: Maybe Text
       skipBooking: Maybe Bool
       convenienceCost: Maybe Int
@@ -190,8 +188,6 @@ SearchRequest:
     clientConfigVersion: Kernel.Utils.Version.versionToText <$> clientConfigVersion|E
     backendConfigVersion: Kernel.Utils.Version.versionToText <$> backendConfigVersion|E
     distanceUnit: Kernel.Prelude.Just|I
-    journeyLegOrder: Kernel.Prelude.fmap (.journeyLegOrder)|I
-    journeyId: Kernel.Prelude.fmap (.journeyId)|I
     agency: (journeyLegInfo >>= (.agency))|E
     skipBooking: Kernel.Prelude.fmap (.skipBooking)|I
     convenienceCost: Kernel.Prelude.fmap (.convenienceCost)|I
@@ -268,7 +264,6 @@ SearchRequest:
   constraints:
     id: PrimaryKey
     riderId: SecondaryKey
-    # journeyId: "!SecondaryKey" # forcing to be a secondary key
 
   extraOperations:
     - EXTRA_QUERY_FILE

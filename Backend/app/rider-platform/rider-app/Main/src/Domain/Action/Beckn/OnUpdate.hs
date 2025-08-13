@@ -70,7 +70,6 @@ import Kernel.Prelude
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
-import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Flow
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -423,9 +422,9 @@ onUpdate = \case
   OUValidatedScheduledRideAssignedReq req -> Common.rideAssignedReqHandler req
   OUValidatedRideAssignedReq req -> Common.rideAssignedReqHandler req
   OUValidatedRideStartedReq req -> Common.rideStartedReqHandler req
-  OUValidatedRideCompletedReq req -> Common.rideCompletedReqHandler req JM.getAllLegsInfoWithoutAddingSkipLeg
+  OUValidatedRideCompletedReq req -> Common.rideCompletedReqHandler req
   OUValidatedFarePaidReq req -> Common.farePaidReqHandler req
-  OUValidatedBookingCancelledReq req -> Common.bookingCancelledReqHandler req JM.getAllLegsInfoWithoutAddingSkipLeg
+  OUValidatedBookingCancelledReq req -> Common.bookingCancelledReqHandler req
   OUValidatedBookingReallocationReq ValidatedBookingReallocationReq {..} -> do
     mbRide <- QRide.findActiveByRBId booking.id
     bookingCancellationReason <- mkBookingCancellationReason booking (mbRide <&> (.id)) reallocationSource
@@ -534,11 +533,12 @@ onUpdate = \case
     QFareBreakup.createMany fareBreakups
     estimatedFare <- bookingUpdateRequest.estimatedFare & fromMaybeM (InternalError "Estimated fare not found for bookingUpdateRequestId")
     QRB.updateMultipleById True estimatedFare estimatedFare (convertHighPrecMetersToDistance bookingUpdateRequest.distanceUnit <$> bookingUpdateRequest.estimatedDistance) bookingUpdateRequest.bookingId
-    whenJust booking.journeyId $ \journeyId -> do
-      journeyLegId <- Redis.safeGet (mkExtendLegKey journeyId.getId) >>= fromMaybeM (InvalidRequest "journeyLegId not found in Redis")
+    mbJourneyLeg <- QJourneyLeg.findByLegSearchId (Just booking.transactionId)
+    whenJust mbJourneyLeg $ \journeyLeg -> do
+      let journeyId = journeyLeg.journeyId
       toLocation <- ride.toLocation & fromMaybeM (InvalidRequest $ "toLocation not found for rideId: " <> show ride.id)
       JM.cancelRemainingLegs journeyId True
-      QJourneyLeg.updateAfterEditLocation booking.estimatedDuration booking.estimatedDistance (Maps.LatLngV2 {latitude = toLocation.lat, longitude = toLocation.lon}) journeyLegId
+      QJourneyLeg.updateAfterEditLocation booking.estimatedDuration booking.estimatedDistance (Maps.LatLngV2 {latitude = toLocation.lat, longitude = toLocation.lon}) journeyLeg.id
       JM.updateJourneyChangeLogCounter journeyId
     Notify.notifyOnTripUpdate booking ride Nothing
   OUValidatedTollCrossedEventReq ValidatedTollCrossedEventReq {..} -> do
@@ -719,6 +719,3 @@ mkBookingCancellationReason booking mbRideId cancellationSource = do
         createdAt = now,
         updatedAt = now
       }
-
-mkExtendLegKey :: Text -> Text
-mkExtendLegKey journeyId = "Extend:Leg:For:JourneyId-" <> journeyId

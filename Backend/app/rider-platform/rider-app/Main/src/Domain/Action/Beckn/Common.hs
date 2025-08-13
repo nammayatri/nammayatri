@@ -72,12 +72,12 @@ import qualified Kernel.Types.SlidingWindowCounters as SW
 import Kernel.Utils.Common
 import qualified Kernel.Utils.SlidingWindowCounters as SWC
 import qualified Kernel.Utils.Time as KUT
-import qualified Lib.JourneyModule.Types as JL
 import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DLP
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
+import SharedLogic.Booking
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.Insurance as SI
 import SharedLogic.JobScheduler
@@ -104,6 +104,7 @@ import qualified Storage.Queries.BookingPartiesLink as QBPL
 import qualified Storage.Queries.ClientPersonInfo as QCP
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Journey as QJourney
+import qualified Storage.Queries.JourneyLeg as QJL
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonStats as QPersonStats
 import qualified Storage.Queries.RecentLocation as SQRL
@@ -627,9 +628,8 @@ rideCompletedReqHandler ::
     HasKafkaProducer r
   ) =>
   ValidatedRideCompletedReq ->
-  (Id DJourney.Journey -> m [JL.LegInfo]) ->
   m ()
-rideCompletedReqHandler ValidatedRideCompletedReq {..} getJourneyLegsCallbackFn = do
+rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
   let BookingDetails {..} = bookingDetails
   fork "ride end geohash frequencyUpdater" $ do
     case tripEndLocation of
@@ -701,10 +701,8 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} getJourneyLegsCallbackFn 
   QRide.updateMultiple updRide.id updRide
   QFareBreakup.createMany breakups
   QPFS.clearCache booking.riderId
-
-  when (isNothing booking.journeyId) $ do
-    createRecentLocationForTaxi booking
-  whenJust booking.journeyId $ \journeyId -> checkAndUpdateJourneyTerminalStatusForNormalRide journeyId DJourney.COMPLETED getJourneyLegsCallbackFn
+  createRecentLocationForTaxi booking
+  checkAndUpdateJourneyTerminalStatusForNormalRide booking DJourney.COMPLETED
 
   -- uncomment for update api test; booking.paymentMethodId should be present
   -- whenJust booking.paymentMethodId $ \paymentMethodId -> do
@@ -792,11 +790,10 @@ bookingCancelledReqHandler ::
     m ~ Kernel.Types.Flow.FlowR AppEnv
   ) =>
   ValidatedBookingCancelledReq ->
-  (Id DJourney.Journey -> m [JL.LegInfo]) ->
   m ()
-bookingCancelledReqHandler (ValidatedBookingCancelledReq {..}) getJourneyLegsCallbackFn = do
+bookingCancelledReqHandler (ValidatedBookingCancelledReq {..}) = do
   logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason:-" <> show cancellationSource)
-  cancellationTransaction booking mbRide cancellationSource Nothing getJourneyLegsCallbackFn
+  cancellationTransaction booking mbRide cancellationSource Nothing
 
 cancellationTransaction ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
@@ -819,9 +816,8 @@ cancellationTransaction ::
   Maybe DRide.Ride ->
   DBCR.CancellationSource ->
   Maybe PriceAPIEntity ->
-  (Id DJourney.Journey -> m [JL.LegInfo]) ->
   m ()
-cancellationTransaction booking mbRide cancellationSource cancellationFee getJourneyLegsCallbackFn = do
+cancellationTransaction booking mbRide cancellationSource cancellationFee = do
   bookingCancellationReason <- mkBookingCancellationReason booking (mbRide <&> (.id)) cancellationSource
   merchantConfigs <- CMC.findAllByMerchantOperatingCityIdInRideFlow booking.merchantOperatingCityId booking.configInExperimentVersions
   fork "incrementing fraud counters" $ do
@@ -846,7 +842,7 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee getJou
     void $ do
       QRB.updateStatus booking.id DRB.CANCELLED
       QBPL.makeAllInactiveByBookingId booking.id
-      whenJust booking.journeyId $ \journeyId -> checkAndUpdateJourneyTerminalStatusForNormalRide journeyId DJourney.CANCELLED getJourneyLegsCallbackFn
+      checkAndUpdateJourneyTerminalStatusForNormalRide booking DJourney.CANCELLED
   whenJust mbRide $ \ride -> void $ do
     unless (ride.status == DRide.CANCELLED) $ void $ QRide.updateStatus ride.id DRide.CANCELLED
   riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow booking.merchantOperatingCityId booking.configInExperimentVersions >>= fromMaybeM (InternalError "RiderConfig not found")
@@ -893,12 +889,14 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee getJou
               QP.updateCustomerTags (Just $ personTags <> [rejectUpgradeTagWithExpiry]) person.id
         _ -> pure ()
 
-checkAndUpdateJourneyTerminalStatusForNormalRide :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => Id DJourney.Journey -> DJourney.JourneyStatus -> (Id DJourney.Journey -> m [JL.LegInfo]) -> m ()
-checkAndUpdateJourneyTerminalStatusForNormalRide journeyId journeyStatus getJourneyLegsCallbackFn = do
-  journeyLegs <- getJourneyLegsCallbackFn journeyId
-  case journeyLegs of
-    [_] -> QJourney.updateStatus journeyStatus journeyId -- only one element here means just taxi leg i.e. normal ride flow, so updating journeyStatus
-    _ -> pure ()
+checkAndUpdateJourneyTerminalStatusForNormalRide :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => DRB.Booking -> DJourney.JourneyStatus -> m ()
+checkAndUpdateJourneyTerminalStatusForNormalRide booking journeyStatus = do
+  mbJourneyId <- getJourneyIdFromBooking booking
+  whenJust mbJourneyId $ \journeyId -> do
+    journeyLegs <- QJL.getJourneyLegs journeyId
+    case journeyLegs of
+      [_] -> QJourney.updateStatus journeyStatus journeyId -- only one element here means just taxi leg i.e. normal ride flow, so updating journeyStatus
+      _ -> pure ()
 
 mkBookingCancellationReason ::
   (MonadFlow m) =>

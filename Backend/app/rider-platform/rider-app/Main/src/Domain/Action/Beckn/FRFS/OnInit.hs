@@ -84,31 +84,26 @@ onInit onInitReq merchant oldBooking = do
   void $ QFRFSTicketBooking.updateBppBankDetailsById (Just onInitReq.bankAccNum) (Just onInitReq.bankCode) oldBooking.id
   frfsConfig <- CQFRFSConfig.findByMerchantOperatingCityId oldBooking.merchantOperatingCityId Nothing >>= fromMaybeM (FRFSConfigNotFound oldBooking.merchantOperatingCityId.getId)
   whenJust onInitReq.bppOrderId (\bppOrderId -> void $ QFRFSTicketBooking.updateBPPOrderIdById (Just bppOrderId) oldBooking.id)
-  let booking = oldBooking {FTBooking.price = onInitReq.totalPrice, FTBooking.journeyOnInitDone = Just True}
   isMetroTestTransaction <- asks (.isMetroTestTransaction)
-  logInfo $ "onInit journeyId" <> show booking.journeyId
-  case booking.journeyId of
-    Just journeyId -> do
-      logInfo $ "Booking with journeyId" <> show journeyId
-      QFRFSTicketBooking.updateOnInitDone (Just True) booking.id
-      allJourneyBookings <- QFRFSTicketBooking.findAllByJourneyId (Just journeyId)
-      let allLegsOnInitDone = all (\b -> b.journeyOnInitDone == Just True) allJourneyBookings
-      when allLegsOnInitDone $ do
-        Redis.withLockRedis (key journeyId) 60 $ do
-          let paymentType = Payment.FRFSMultiModalBooking
-          (vendorSplitDetails, amount) <- createVendorSplitFromBookings allJourneyBookings merchant.id oldBooking.merchantOperatingCityId paymentType (isMetroTestTransaction && frfsConfig.isFRFSTestingEnabled)
-          createPayments allJourneyBookings oldBooking.merchantOperatingCityId oldBooking.merchantId amount person paymentType vendorSplitDetails
-    Nothing -> do
-      logInfo $ "Booking with journeyId" <> show booking
-      let paymentType = getPaymentType booking.vehicleType
-      let amount :: HighPrecMoney = if isMetroTestTransaction && frfsConfig.isFRFSTestingEnabled then 1 else booking.price.amount
-      createPayments [booking] oldBooking.merchantOperatingCityId oldBooking.merchantId amount person paymentType []
+  let booking = oldBooking {FTBooking.price = onInitReq.totalPrice, FTBooking.journeyOnInitDone = Just True}
+  QFRFSTicketBooking.updateOnInitDone (Just True) booking.id
+  (mbJourneyId, allJourneyBookings) <- getAllJourneyFrfsBookings booking
+  let allLegsOnInitDone = all (\b -> b.journeyOnInitDone == Just True) allJourneyBookings
+  when allLegsOnInitDone $ do
+    Redis.withLockRedis (key (maybe booking.id.getId (.getId) mbJourneyId)) 60 $ do
+      let paymentType = getPaymentType booking.vehicleType mbJourneyId
+      (vendorSplitDetails, amount) <- createVendorSplitFromBookings allJourneyBookings merchant.id oldBooking.merchantOperatingCityId paymentType (isMetroTestTransaction && frfsConfig.isFRFSTestingEnabled)
+      createPayments allJourneyBookings oldBooking.merchantOperatingCityId oldBooking.merchantId amount person paymentType vendorSplitDetails
   where
-    getPaymentType = \case
-      Spec.METRO -> Payment.FRFSBooking
-      Spec.BUS -> Payment.FRFSBusBooking
-      Spec.SUBWAY -> Payment.FRFSBooking
-    key journeyId = "initJourney-" <> journeyId.getId
+    getPaymentType vehicleType mbJourneyId = do
+      case mbJourneyId of
+        Just _ -> Payment.FRFSMultiModalBooking
+        Nothing -> do
+          case vehicleType of
+            Spec.METRO -> Payment.FRFSBooking
+            Spec.BUS -> Payment.FRFSBusBooking
+            Spec.SUBWAY -> Payment.FRFSBooking
+    key journeyId = "initJourney-" <> journeyId
 
 createPayments ::
   ( EsqDBReplicaFlow m r,

@@ -30,6 +30,7 @@ import Kernel.Utils.Common
 import qualified Lib.JourneyLeg.Types as JL
 import qualified Lib.JourneyModule.Base as JM
 import qualified Lib.JourneyModule.State.Types as JMState
+import SharedLogic.FRFSUtils
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.FRFSRecon as QFRFSRecon
 import qualified Storage.Queries.FRFSTicketBooking as QTBooking
@@ -67,7 +68,8 @@ onCancel merchant booking' dOnCancel = do
     Spec.CANCEL_INITIATED -> do
       void $ QTBooking.updateStatusById FTBooking.CANCEL_INITIATED booking.id
       void $ QFRFSRecon.updateStatusByTicketBookingId (Just DFRFSTicket.CANCEL_INITIATED) booking.id
-      whenJust booking.journeyId $ \journeyId -> do
+      mbJourneyId <- getJourneyIdFromBooking booking
+      whenJust mbJourneyId $ \journeyId -> do
         legs <- JM.getJourneyLegs journeyId
         forM_ legs $ \journeyLeg -> do
           mapM_ (\rd -> JM.markLegStatus (Just JL.Cancelled) (Just JMState.Finished) journeyLeg rd.subLegOrder) journeyLeg.routeDetails
