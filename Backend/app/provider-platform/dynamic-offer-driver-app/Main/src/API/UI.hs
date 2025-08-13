@@ -34,6 +34,7 @@ import qualified API.Action.UI.Operator as Operator
 import qualified API.Action.UI.PriceBreakup as PriceBreakup
 import qualified API.Action.UI.Reels as Reels
 import qualified API.Action.UI.ReferralPayout as ReferralPayout
+import qualified API.Action.UI.RiderMobileNumber as RiderMobileNumber
 import qualified API.Action.UI.SocialLogin as SocialLogin
 import qualified API.Action.UI.SpecialLocation as SpecialLocation
 import qualified API.Action.UI.SpecialLocationWarrior as SpecialLocationWarrior
@@ -127,6 +128,7 @@ type API =
            :<|> OH.API
            :<|> Operator.API
            :<|> Insurance.API
+           :<|> RiderMobileNumber.API
        )
 
 handler :: FlowServer API
@@ -182,3 +184,4 @@ handler =
     :<|> OH.handler
     :<|> Operator.handler
     :<|> Insurance.handler
+    :<|> RiderMobileNumber.handler

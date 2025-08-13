@@ -206,3 +206,65 @@ getInsuranceInfoClient = client (Proxy @GetInsuranceInfoAPI)
 
 getInsuranceInfoAPI :: Proxy GetInsuranceInfoAPI
 getInsuranceInfoAPI = Proxy
+
+type RideSearchExpiredAPI =
+  "internal"
+    :> "rideSearchExpired"
+    :> Header "token" Text
+    :> ReqBody '[JSON] RideSearchExpiredReq
+    :> Post '[JSON] APISuccess
+
+newtype RideSearchExpiredReq = RideSearchExpiredReq
+  {transactionId :: Text}
+  deriving (Generic, ToJSON, FromJSON)
+
+rideSearchExpiredClient :: Maybe Text -> RideSearchExpiredReq -> EulerClient APISuccess
+rideSearchExpiredClient = client (Proxy @RideSearchExpiredAPI)
+
+rideSearchExpiredAPI :: Proxy RideSearchExpiredAPI
+rideSearchExpiredAPI = Proxy
+
+rideSearchExpired ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+  ) =>
+  Text ->
+  BaseUrl ->
+  RideSearchExpiredReq ->
+  m APISuccess
+rideSearchExpired apiKey internalUrl request = do
+  logInfo "BPP handle rideSearchExpired callBAPInternal"
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (rideSearchExpiredClient (Just apiKey) request) "rideSearchExpired" rideSearchExpiredAPI
+
+type GetRiderMobileNumberAPI =
+  "internal"
+    :> "riderMobileNumber"
+    :> Capture "rideId" Text
+    :> Header "token" Text
+    :> Get '[JSON] RiderMobileAPIEntity
+
+data RiderMobileAPIEntity = RiderMobileAPIEntity
+  { riderMobileNumber :: Maybe Text
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+getRiderMobileNumber ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+  ) =>
+  Text ->
+  BaseUrl ->
+  Text ->
+  m RiderMobileAPIEntity
+getRiderMobileNumber apiKey internalUrl rideId = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (getRiderMobileNumberClient rideId (Just apiKey)) "GetRiderMobileNumber" getRiderMobileNumberAPI
+
+getRiderMobileNumberClient :: Text -> Maybe Text -> EulerClient RiderMobileAPIEntity
+getRiderMobileNumberClient = client (Proxy @GetRiderMobileNumberAPI)
+
+getRiderMobileNumberAPI :: Proxy GetRiderMobileNumberAPI
+getRiderMobileNumberAPI = Proxy
