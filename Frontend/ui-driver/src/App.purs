@@ -34,7 +34,6 @@ import Screens.ApplicationStatusScreen.ScreenData as ApplicationStatusScreenData
 import Screens.BankDetailScreen.ScreenData as BankDetailScreenData
 import Screens.BookingOptionsScreen.ScreenData as BookingOptionsScreenData
 import Screens.ChooseCityScreen.ScreenData as ChooseCityScreenData
-import Screens.ChooseLanguageScreen.ScreenData as ChooseLanguageScreenData
 import Screens.DriverDetailsScreen.ScreenData as DriverDetailsScreenData
 import Screens.DriverProfileScreen.ScreenData as DriverProfileScreenData
 import Screens.DriverRideRatingScreen.ScreenData as DriverRideRatingScreenData
