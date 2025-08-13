@@ -507,6 +507,7 @@ library
       Storage.Queries.IssueExtra
       Storage.Queries.JourneyExtra
       Storage.Queries.JourneyLegExtra
+      Storage.Queries.JourneyLegMappingExtra
       Storage.Queries.LocationMappingExtra
       Storage.Queries.MerchantExtra
       Storage.Queries.MerchantPaymentMethodExtra
@@ -526,6 +527,7 @@ library
       Storage.Queries.RecentLocationExtra
       Storage.Queries.RegistrationTokenExtra
       Storage.Queries.RideExtra
+      Storage.Queries.RouteDetailsExtra
       Storage.Queries.RoutePolylinesExtra
       Storage.Queries.SafetySettingsExtra
       Storage.Queries.SavedReqLocationExtra
@@ -544,10 +546,8 @@ library
       Storage.Queries.Transformers.BookingCancellationReason
       Storage.Queries.Transformers.CancellationReason
       Storage.Queries.Transformers.Estimate
-      Storage.Queries.Transformers.FRFSSearch
       Storage.Queries.Transformers.IntegratedBPPConfig
       Storage.Queries.Transformers.Journey
-      Storage.Queries.Transformers.JourneyLeg
       Storage.Queries.Transformers.Merchant
       Storage.Queries.Transformers.MerchantConfig
       Storage.Queries.Transformers.MerchantMessage
@@ -769,6 +769,7 @@ library
       Domain.Types.Journey
       Domain.Types.JourneyFeedback
       Domain.Types.JourneyLeg
+      Domain.Types.JourneyLegMapping
       Domain.Types.Location
       Domain.Types.LocationMapping
       Domain.Types.Merchant
@@ -900,6 +901,7 @@ library
       Storage.Beam.Journey
       Storage.Beam.JourneyFeedback
       Storage.Beam.JourneyLeg
+      Storage.Beam.JourneyLegMapping
       Storage.Beam.Location
       Storage.Beam.LocationMapping
       Storage.Beam.Merchant
@@ -1032,6 +1034,7 @@ library
       Storage.Queries.Journey
       Storage.Queries.JourneyFeedback
       Storage.Queries.JourneyLeg
+      Storage.Queries.JourneyLegMapping
       Storage.Queries.Location
       Storage.Queries.LocationMapping
       Storage.Queries.Merchant
@@ -1073,6 +1076,7 @@ library
       Storage.Queries.OrphanInstances.Issue
       Storage.Queries.OrphanInstances.Journey
       Storage.Queries.OrphanInstances.JourneyLeg
+      Storage.Queries.OrphanInstances.JourneyLegMapping
       Storage.Queries.OrphanInstances.LocationMapping
       Storage.Queries.OrphanInstances.Merchant
       Storage.Queries.OrphanInstances.MerchantPaymentMethod
@@ -1091,6 +1095,7 @@ library
       Storage.Queries.OrphanInstances.RecentLocation
       Storage.Queries.OrphanInstances.RegistrationToken
       Storage.Queries.OrphanInstances.Ride
+      Storage.Queries.OrphanInstances.RouteDetails
       Storage.Queries.OrphanInstances.RoutePolylines
       Storage.Queries.OrphanInstances.SafetySettings
       Storage.Queries.OrphanInstances.SavedReqLocation

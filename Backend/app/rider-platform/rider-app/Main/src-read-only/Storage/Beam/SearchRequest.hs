@@ -66,7 +66,6 @@ data SearchRequestT f = SearchRequestT
     isDeleted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     onSearchFailed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     pricingId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    skipBooking :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     language :: B.C f (Kernel.Prelude.Maybe Kernel.External.Maps.Language),
     maxDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Utils.Common.Centesimal),
     maxDistanceValue :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance),

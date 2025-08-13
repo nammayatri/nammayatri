@@ -42,6 +42,6 @@ getToLocation id = do
   toLocation <- maybe (pure Nothing) (QL.findById . (.locationId)) mbToLocationMapping
   return toLocation
 
-mkJourneyLegInfo :: (Maybe Text -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe Bool -> Maybe Lib.JourneyLeg.Types.JourneySearchData)
-mkJourneyLegInfo agency (Just convenienceCost) isDeleted onSearchFailed pricingId (Just skipBooking) = Just $ Lib.JourneyLeg.Types.JourneySearchData {..}
-mkJourneyLegInfo _ _ _ _ _ _ = Nothing
+mkJourneyLegInfo :: (Maybe Text -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe Lib.JourneyLeg.Types.JourneySearchData)
+mkJourneyLegInfo agency (Just convenienceCost) isDeleted onSearchFailed pricingId = Just $ Lib.JourneyLeg.Types.JourneySearchData {..}
+mkJourneyLegInfo _ _ _ _ _ = Nothing

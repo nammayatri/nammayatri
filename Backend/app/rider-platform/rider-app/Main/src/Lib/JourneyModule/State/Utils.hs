@@ -1,7 +1,9 @@
 module Lib.JourneyModule.State.Utils where
 
 import Domain.Types.Booking as DBooking
+import Domain.Types.BookingStatus as DTaxiBooking
 import Domain.Types.Estimate as DEstimate
+import Domain.Types.EstimateStatus as DTaxiEstimate
 import Domain.Types.FRFSTicketBooking as DFRFSBooking
 import Domain.Types.FRFSTicketBookingStatus as DFRFSBooking
 import Domain.Types.FRFSTicketStatus as DFRFSTicket
@@ -28,7 +30,7 @@ getFRFSAllStatuses journeyLeg mbBooking = do
       )
       journeyLeg.routeDetails
   let oldStatus =
-        if journeyLeg.isSkipped == Just True
+        if maybe False (\status -> status `elem` [FRFSTicket DFRFSTicket.CANCELLED, FRFSBooking DFRFSBooking.CANCELLED]) bookingStatus
           then JLTypes.Skipped
           else maybe JLTypes.InPlan castTrackingStatusToJourneyLegStatus ((listToMaybe trackingStatuses) >>= snd) -- for UI backward compatibility
   return (oldStatus, bookingStatus, trackingStatuses)
@@ -44,7 +46,7 @@ getTaxiAllStatuses journeyLeg mbBooking mbRide mbEstimate = do
   let bookingStatus = getTaxiJourneyBookingStatus mbBooking mbRide mbEstimate
   mbTrackingStatus <- getTaxiJourneyLegTrackingStatus mbBooking mbRide mbEstimate (listToMaybe journeyLeg.routeDetails)
   let oldStatus =
-        if journeyLeg.isSkipped == Just True
+        if maybe False (\status -> status `elem` [TaxiRide DTaxiRide.CANCELLED, TaxiBooking DTaxiBooking.CANCELLED, TaxiEstimate DTaxiEstimate.CANCELLED]) bookingStatus
           then JLTypes.Skipped
           else maybe JLTypes.InPlan castTrackingStatusToJourneyLegStatus mbTrackingStatus -- for UI backward compatibility
   return (oldStatus, bookingStatus, mbTrackingStatus)

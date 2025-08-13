@@ -9,7 +9,7 @@ import Kernel.Utils.Common
 import Lib.JourneyLeg.Types.Walk
 import qualified Lib.JourneyModule.State.Utils as JMStateUtils
 import qualified Lib.JourneyModule.Types as JT
-import qualified Storage.Queries.JourneyLeg as QJourneyLeg
+import qualified Storage.Queries.JourneyLegMapping as QJourneyLegMapping
 
 instance JT.JourneyLeg WalkLegRequest m where
   search _ = throwError (InternalError "Not supported")
@@ -21,7 +21,7 @@ instance JT.JourneyLeg WalkLegRequest m where
   update _ = throwError (InternalError "Not supported")
 
   cancel (WalkLegRequestCancel legData) = do
-    QJourneyLeg.updateIsDeleted (Just True) (Just legData.journeyLegId.getId)
+    QJourneyLegMapping.updateIsDeleted True legData.journeyLegId
   cancel _ = throwError (InternalError "Not supported")
 
   isCancellable ((WalkLegRequestIsCancellable _)) = return $ JT.IsCancellableResponse {canCancel = True}
@@ -44,7 +44,7 @@ instance JT.JourneyLeg WalkLegRequest m where
   getState _ = throwError (InternalError "Not supported")
 
   getInfo (WalkLegRequestGetInfo req) = do
-    Just <$> JT.mkWalkLegInfoFromWalkLegData req.journeyLeg
+    Just <$> JT.mkWalkLegInfoFromWalkLegData req.personId req.journeyLeg
   getInfo _ = throwError (InternalError "Not supported")
 
   getFare (WalkLegRequestGetFare _) = do

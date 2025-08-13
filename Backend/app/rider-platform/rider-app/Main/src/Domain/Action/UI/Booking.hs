@@ -271,7 +271,7 @@ buildApiEntityForRideOrJourney personId mbLimit bookings journeys =
     buildJourneyApiEntity :: (GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) => DJ.Journey -> m (Maybe APITypes.JourneyInfoResp)
     buildJourneyApiEntity journey = do
       legsInfo <-
-        try @_ @SomeException (getAllLegsInfo journey.id)
+        try @_ @SomeException (getAllLegsInfo journey.riderId journey.id)
           >>= \case
             Left err -> do
               logError $ "Error getting legs info for journeyId: " <> show journey.id <> ", skipping from booking list : " <> show err

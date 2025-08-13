@@ -34,6 +34,7 @@ import SharedLogic.FRFSUtils
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.FRFSRecon as QFRFSRecon
 import qualified Storage.Queries.FRFSTicketBooking as QTBooking
+import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 
 data DOnCancel = DOnCancel
   { providerId :: Text,
@@ -70,7 +71,7 @@ onCancel merchant booking' dOnCancel = do
       void $ QFRFSRecon.updateStatusByTicketBookingId (Just DFRFSTicket.CANCEL_INITIATED) booking.id
       mbJourneyId <- getJourneyIdFromBooking booking
       whenJust mbJourneyId $ \journeyId -> do
-        legs <- JM.getJourneyLegs journeyId
+        legs <- QJourneyLeg.getJourneyLegs journeyId
         forM_ legs $ \journeyLeg -> do
           mapM_ (\rd -> JM.markLegStatus (Just JL.Cancelled) (Just JMState.Finished) journeyLeg rd.subLegOrder) journeyLeg.routeDetails
         journey <- JM.getJourney journeyId

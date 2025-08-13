@@ -59,7 +59,8 @@ data TaxiLegRequestCancelData = TaxiLegRequestCancelData
     blockOnCancellationRate :: Maybe Bool,
     cancellationSource :: SBCR.CancellationSource,
     cancelEstimateId :: Maybe (Id DE.Estimate),
-    isSkipped :: Bool
+    isSkipped :: Bool,
+    journeyLegId :: Id DJourneyLeg.JourneyLeg
   }
 
 data TaxiLegRequestIsCancellableData = TaxiLegRequestIsCancellableData

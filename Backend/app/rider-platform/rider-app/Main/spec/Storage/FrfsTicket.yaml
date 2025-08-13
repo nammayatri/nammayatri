@@ -58,7 +58,7 @@ FRFSSearch:
     isOnSearchReceived: Maybe Bool
     integratedBppConfigId: Id IntegratedBPPConfig
     recentLocationId: Maybe (Id RecentLocation)
-    validTill: Maybe UTCTime
+    validTill: Maybe UTCTime    
 
   beamFields:
     fromStationCode:
@@ -68,23 +68,21 @@ FRFSSearch:
     routeCode:
       routeId: Maybe Text
     journeyLegInfo:
-      agency: Maybe Text
-      skipBooking: Maybe Bool
+      agency: Maybe Text      
       convenienceCost: Maybe Int
       pricingId: Maybe Text
       isDeleted: Maybe Bool
       onSearchFailed: Maybe Bool
 
   toTType:
-    agency: (journeyLegInfo >>= (.agency))|E
-    skipBooking: Kernel.Prelude.fmap (.skipBooking)|I
+    agency: (journeyLegInfo >>= (.agency))|E    
     convenienceCost: Kernel.Prelude.fmap (.convenienceCost)|I
     pricingId: (journeyLegInfo >>= (.pricingId))|E
     isDeleted: (journeyLegInfo >>= (.isDeleted))|E
-    onSearchFailed: (journeyLegInfo >>= (.onSearchFailed))|E
+    onSearchFailed: (journeyLegInfo >>= (.onSearchFailed))|E    
 
   fromTType:
-    journeyLegInfo: mkJourneyLegInfo
+    journeyLegInfo: Storage.Queries.Transformers.SearchRequest.mkJourneyLegInfo
 
   excludedDefaultQueries:
     - create

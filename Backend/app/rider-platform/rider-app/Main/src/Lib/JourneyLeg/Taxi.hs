@@ -45,6 +45,7 @@ import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
+import qualified Storage.Queries.JourneyLegMapping as QJourneyLegMapping
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Error
@@ -109,7 +110,6 @@ instance JT.JourneyLeg TaxiLegRequest m where
       mkJourneySearchData =
         JourneySearchData
           { agency = journeyLegData.agency <&> (.name),
-            skipBooking = False,
             convenienceCost = 0,
             pricingId = Nothing,
             isDeleted = Just False,
@@ -174,7 +174,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
           Just pricingId -> do
             void $ cancelSearch' (searchReq.riderId, searchReq.merchantId) (Id pricingId)
           Nothing -> return ()
-    if legData.isSkipped then QJourneyLeg.updateIsSkipped (Just True) (Just legData.searchRequestId.getId) else QJourneyLeg.updateIsDeleted (Just True) (Just legData.searchRequestId.getId)
+    when (not legData.isSkipped) $ QJourneyLegMapping.updateIsDeleted True legData.journeyLegId
   cancel _ = throwError (InternalError "Not Supported")
 
   isCancellable ((TaxiLegRequestIsCancellable legData)) = do

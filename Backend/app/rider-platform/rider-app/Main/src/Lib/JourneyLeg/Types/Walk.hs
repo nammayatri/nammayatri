@@ -3,6 +3,7 @@ module Lib.JourneyLeg.Types.Walk where
 import qualified API.Types.UI.MultimodalConfirm as ApiTypes
 import qualified Domain.Types.Journey as DJourney
 import qualified Domain.Types.JourneyLeg as DJourneyLeg
+import qualified Domain.Types.Person as DPerson
 import Kernel.Prelude
 import Kernel.Types.Id
 import Lib.JourneyModule.Types
@@ -21,7 +22,8 @@ data WalkLegRequestGetStateData = WalkLegRequestGetStateData
   }
 
 data WalkLegRequestGetInfoData = WalkLegRequestGetInfoData
-  { journeyLeg :: DJourneyLeg.JourneyLeg
+  { journeyLeg :: DJourneyLeg.JourneyLeg,
+    personId :: Id DPerson.Person
   }
 
 data WalkLegRequestConfirmData = WalkLegRequestConfirmData

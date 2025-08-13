@@ -30,7 +30,6 @@ data RouteDetails = RouteDetails
     routeCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     routeColorCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     routeColorName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    routeGroupId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     routeGtfsId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     routeLongName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     routeShortName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
