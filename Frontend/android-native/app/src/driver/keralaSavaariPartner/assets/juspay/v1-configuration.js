@@ -75,7 +75,7 @@ function getNammaYatriConfig() {
       "USER_APP_LINK": "https://nammayatri.in/link/rider/mvnw",
       "PRIVACY_POLICY_LINK": "https://docs.google.com/document/d/1N3ZJVwilWO9cIGFJXgl8h8au7lpdRyhXNMZJ8OXq4YY",
       "SPECIAL_ZONE_OTP_VIEW": "false",
-      "StringKeys": ["NEED_IT_TO_ENABLE_LOCATION", "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER", "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT", "YOUR_LOCATION_HELPS_OUR_SYSTEM", "WHAT_IS_NAMMA_YATRI_BONUS", "EARNED_ON_APP", "TRAVELLED_ON_APP", "GUARANTEED_FIXED_PRICE", "GET_READY_FOR_YS_SUBSCRIPTION"],
+      "StringKeys": ["NEED_IT_TO_ENABLE_LOCATION", "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER", "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT", "YOUR_LOCATION_HELPS_OUR_SYSTEM", "WHAT_IS_NAMMA_YATRI_BONUS", "EARNED_ON_APP", "TRAVELLED_ON_APP", "GUARANTEED_FIXED_PRICE", "GET_READY_FOR_YS_SUBSCRIPTION","NAMMA_BONUS"],
       "fontType": "Assets",
       "currency": "₹",
       "isGradient" : "false",
@@ -108,7 +108,8 @@ function getNammaYatriConfig() {
         "EARNED_ON_APP" : "Earned on NY",
         "TRAVELLED_ON_APP" : "Travelled On Namma Yatri",
         "GUARANTEED_FIXED_PRICE" : "Guaranteed fixed price until \nApr 1, 2025",
-        "GET_READY_FOR_YS_SUBSCRIPTION" : "Get ready for\n Yatri Plans!"
+        "GET_READY_FOR_YS_SUBSCRIPTION" : "Get ready for\n Yatri Plans!",
+        "NAMMA_BONUS" : "Savaari Bonus"
       },
       "hindiStrings": {
         "MERCHANT_NAME" : appName.includes("namma") ? "नम्मा यात्री" : "मना यात्री",
@@ -120,7 +121,8 @@ function getNammaYatriConfig() {
         "EARNED_ON_APP" : "NY पर अर्जित मूल्य",
         "TRAVELLED_ON_APP" : "नम्मा यात्री पर तय की गई दूरी",
         "GUARANTEED_FIXED_PRICE" : "अप्रैल 1, 2025 तक निश्चित मूल्य गारंटी",
-        "GET_READY_FOR_YS_SUBSCRIPTION" : "नम्मा यात्री योजनाओं के लिए\nतैयार हो जाइए!"
+        "GET_READY_FOR_YS_SUBSCRIPTION" : "नम्मा यात्री योजनाओं के लिए\nतैयार हो जाइए!",
+        "NAMMA_BONUS" : "सवारी बोनस"
       },
       "kannadaStrings": {
         "MERCHANT_NAME" : appName.includes("namma") ? "ನಮ್ಮ ಯಾತ್ರಿ" : "ಮನ ಯಾತ್ರಿ",
@@ -132,7 +134,8 @@ function getNammaYatriConfig() {
         "EARNED_ON_APP" : "NY ನಲ್ಲಿ ಗಳಿಸಿದ ಬೆಲೆ",
         "TRAVELLED_ON_APP" : "ನಮ್ಮ ಯಾತ್ರಿಯಲ್ಲಿ ಪ್ರಯಾಣಿಸಿದೆ",
         "GUARANTEED_FIXED_PRICE" : "ಅಪ್ರೈಲ್ 1, 2025 ವರೆಗೆ ಖಚಿತ ಬೆಲೆಯ ಗ್ಯಾರಂಟಿ",
-        "GET_READY_FOR_YS_SUBSCRIPTION" : "ನಮ್ಮ ಯಾತ್ರಿ ಯೋಜನೆಗಳಿಗೆ\nಸಿದ್ಧತೆ ಪಡೆಯಲು ಸಿದ್ಧವಾಗಿರಿ!"
+        "GET_READY_FOR_YS_SUBSCRIPTION" : "ನಮ್ಮ ಯಾತ್ರಿ ಯೋಜನೆಗಳಿಗೆ\nಸಿದ್ಧತೆ ಪಡೆಯಲು ಸಿದ್ಧವಾಗಿರಿ!",
+        "NAMMA_BONUS" : "ಸವಾರಿ ಬೋನಸ್"
       },
       "tamilStrings": {
         "MERCHANT_NAME" : appName.includes("namma") ? "நம்ம யாத்ரி" : "மன யாத்ரி",
@@ -144,7 +147,8 @@ function getNammaYatriConfig() {
         "EARNED_ON_APP" : "NY இல் பெறப்பட்ட விலை",
         "TRAVELLED_ON_APP" : "நம்ம யாத்ரியில் நடந்த தூரம்",
         "GUARANTEED_FIXED_PRICE" : "ஏப்ரல் 1, 2025 வரை உத்தரவாதமான நிலையான விலை",
-        "GET_READY_FOR_YS_SUBSCRIPTION" : "நம்ம யாத்ரி திட்டங்களுக்கு தயாராகுங்கள்!"
+        "GET_READY_FOR_YS_SUBSCRIPTION" : "நம்ம யாத்ரி திட்டங்களுக்கு தயாராகுங்கள்!",
+        "NAMMA_BONUS" : "சவாரி போனஸ்"
       },
       "teluguStrings": {
         "MERCHANT_NAME" : appName.includes("namma") ? "నమ్మ యాత్రి" : "Mana yātri",
@@ -156,7 +160,9 @@ function getNammaYatriConfig() {
         "EARNED_ON_APP" : "యొక్క ఆర్జి",
         "TRAVELLED_ON_APP" : "నమ్మ యాత్రిలో పయణించినది",
         "GUARANTEED_FIXED_PRICE" : "ఏప్రిల్ 1, 2025 వరకు స్థిర ధరకు హామీ ఇవ్వబడుతుంది",
-        "GET_READY_FOR_YS_SUBSCRIPTION" : "నమ్మ యాత్రి ప్రణాళికల కోసం సిద్ధంగా ఉండండి!"
+        "GET_READY_FOR_YS_SUBSCRIPTION" : "నమ్మ యాత్రి ప్రణాళికల కోసం సిద్ధంగా ఉండండి!",
+        "NAMMA_BONUS" : "సవారి బోనస్"
+        
       },
       "logs": ["JUSPAY","FIREBASE","CLEVERTAP"]
       , "fontName" : "PlusJakartaSans"
