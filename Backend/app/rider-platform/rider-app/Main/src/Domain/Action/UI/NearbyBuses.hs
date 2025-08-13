@@ -11,6 +11,7 @@ import qualified Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Domain.Types.RecentLocation
+import qualified Domain.Types.RiderConfig as DomainRiderConfig
 import qualified Domain.Types.Route as Route
 import Domain.Types.RouteStopTimeTable
 import qualified Environment
@@ -22,6 +23,7 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Lib.JourneyLeg.Common.FRFS (getNearbyBusesFRFS)
 import Lib.JourneyModule.Utils as JourneyUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.BecknConfig as CQBC
@@ -55,6 +57,12 @@ postNearbyBusBooking (mbPersonId, _) req = do
       then getNearbyBuses person.merchantOperatingCityId radius req
       else return []
 
+  simpleNearbyBuses <-
+    if req.requireNearbyBuses
+      then getSimpleNearbyBuses riderConfig req
+      else return []
+  logDebug $ "Simple nearby buses: " <> show simpleNearbyBuses
+
   recentRides <-
     if req.requireRecentRide
       then getRecentRides person req
@@ -73,12 +81,27 @@ castToOnDemandVehicleCategory Spe.BUS = BecknV2.OnDemand.Enums.BUS
 castToOnDemandVehicleCategory Spe.METRO = BecknV2.OnDemand.Enums.METRO
 castToOnDemandVehicleCategory Spe.SUBWAY = BecknV2.OnDemand.Enums.SUBWAY
 
+getSimpleNearbyBuses :: DomainRiderConfig.RiderConfig -> API.Types.UI.NearbyBuses.NearbyBusesRequest -> Environment.Flow [API.Types.UI.NearbyBuses.SimpleNearbyBus]
+getSimpleNearbyBuses riderConfig req = do
+  buses <- getNearbyBusesFRFS (Maps.LatLong req.userLat req.userLon) riderConfig
+  logDebug $ "Nearby buses: " <> show buses
+  pure $
+    map
+      ( \bus ->
+          API.Types.UI.NearbyBuses.SimpleNearbyBus
+            { currentLocation = Maps.LatLong bus.latitude bus.longitude,
+              vehicleNumber = bus.vehicle_number
+            }
+      )
+      buses
+
 getNearbyBuses :: Id MerchantOperatingCity -> Double -> API.Types.UI.NearbyBuses.NearbyBusesRequest -> Environment.Flow [[API.Types.UI.NearbyBuses.NearbyBus]]
 getNearbyBuses merchantOperatingCityId nearbyDriverSearchRadius req = do
   busesBS :: [ByteString] <- CQMMB.withCrossAppRedisNew $ Hedis.geoSearch nearbyBusKey (Hedis.FromLonLat req.userLon req.userLat) (Hedis.ByRadius nearbyDriverSearchRadius "km")
   let buses = map decodeUtf8 busesBS
   logDebug $ "BusesBS: " <> show busesBS
   logDebug $ "Buses List: " <> show buses
+  logDebug $ "Number of buses: " <> show (length buses)
   logDebug $ "User location: lat=" <> show req.userLat <> ", lon=" <> show req.userLon <> ", radius=" <> show nearbyDriverSearchRadius
 
   let vehicleCategory = castToOnDemandVehicleCategory req.vehicleType
