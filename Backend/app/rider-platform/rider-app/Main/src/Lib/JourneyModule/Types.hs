@@ -1428,6 +1428,6 @@ getNearestOSMGate point gates merchantId merchantOpCityId =
                 sourceDestinationMapping = Nothing,
                 distanceUnit = Meter
               }
-      distances <- lift $ Maps.getDistances merchantId merchantOpCityId Nothing req
+      distances <- lift $ Maps.getMultimodalJourneyDistances merchantId merchantOpCityId Nothing req
       nearest <- hoistMaybe $ minimumByMay (\r1 r2 -> compare r1.distance r2.distance) (toList distances)
       pure (nearest.destination)
