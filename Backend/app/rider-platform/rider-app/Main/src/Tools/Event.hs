@@ -102,6 +102,8 @@ data Payload
         utmMedium :: Maybe Text,
         utmSource :: Maybe Text,
         utmTerm :: Maybe Text,
+        appName :: Maybe Text,
+        userType :: Maybe UserType,
         merchantId :: Id Merchant,
         merchantOperatingCityId :: Id MerchantOperatingCity,
         createdAt :: UTCTime,
@@ -115,7 +117,8 @@ data Payload
         utmMedium :: Maybe Text,
         utmSource :: Maybe Text,
         utmTerm :: Maybe Text,
-        merchantName :: Text,
+        appName :: Maybe Text,
+        userType :: Maybe UserType,
         createdAt :: UTCTime,
         updatedAt :: UTCTime
       }
@@ -197,7 +200,7 @@ data MarketingParamsEventPreLoginData = MarketingParamsEventPreLoginData
     utmMedium :: Maybe Text,
     utmSource :: Maybe Text,
     utmTerm :: Maybe Text,
-    merchantName :: Text,
+    appName :: Maybe Text,
     userType :: Maybe UserType,
     createdAt :: UTCTime,
     updatedAt :: UTCTime
@@ -213,6 +216,7 @@ data MarketingParamsEventData = MarketingParamsEventData
     utmMedium :: Maybe Text,
     utmSource :: Maybe Text,
     utmTerm :: Maybe Text,
+    appName :: Maybe Text,
     merchantId :: Id Merchant,
     merchantOperatingCityId :: Id MerchantOperatingCity,
     userType :: Maybe UserType,
@@ -375,5 +379,5 @@ triggerMarketingParamEventPreLogin ::
   m ()
 triggerMarketingParamEventPreLogin MarketingParamsEventPreLoginData {..} = do
   let marketingParamsPayload = MarketingParamsEventPreLoginData {..}
-  event <- createEvent (Just $ "") merchantName MarketingParamsPreLoginData RIDER_APP System (Just marketingParamsPayload) Nothing Nothing
+  event <- createEvent (Just $ "") (fromMaybe "" appName) MarketingParamsPreLoginData RIDER_APP System (Just marketingParamsPayload) Nothing Nothing
   triggerEvent event
