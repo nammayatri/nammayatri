@@ -66,6 +66,7 @@ import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.FRFSSearch as QFRFSSearch
 import qualified Storage.Queries.FRFSTicketBooking as QTBooking
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
+import qualified Storage.Queries.JourneyLegMapping as QJourneyLegMapping
 import Tools.Error
 
 -- getState and other functions from the original file...
@@ -372,7 +373,6 @@ search vehicleCategory personId merchantId quantity city journeyLeg recentLocati
   let journeySearchData =
         JPT.JourneySearchData
           { agency = journeyLeg.agency <&> (.name),
-            skipBooking = False,
             convenienceCost = 0,
             pricingId = Nothing,
             isDeleted = Just False,
@@ -421,15 +421,15 @@ confirm personId merchantId mbQuoteId ticketQuantity childTicketQuantity skipBoo
       (merchant', quote') <- DOnSelect.validateRequest onSelectReq
       DOnSelect.onSelect onSelectReq merchant' quote'
 
-cancel :: JT.CancelFlow m r c => Id FRFSSearch -> Spec.CancellationType -> Bool -> m ()
-cancel searchId cancellationType isSkipped = do
+cancel :: JT.CancelFlow m r c => Id FRFSSearch -> Spec.CancellationType -> Bool -> Id DJourneyLeg.JourneyLeg -> m ()
+cancel searchId cancellationType isSkipped journeyLegId = do
   mbMetroBooking <- QTBooking.findBySearchId searchId
   whenJust mbMetroBooking $ \metroBooking -> do
     merchant <- CQM.findById metroBooking.merchantId >>= fromMaybeM (MerchantDoesNotExist metroBooking.merchantId.getId)
     merchantOperatingCity <- CQMOC.findById metroBooking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound metroBooking.merchantOperatingCityId.getId)
     bapConfig <- CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory metroBooking.vehicleType) >>= fromMaybeM (InternalError "Beckn Config not found")
     CallExternalBPP.cancel merchant merchantOperatingCity bapConfig cancellationType metroBooking
-  if isSkipped then QJourneyLeg.updateIsSkipped (Just True) (Just searchId.getId) else QJourneyLeg.updateIsDeleted (Just True) (Just searchId.getId)
+  when (not isSkipped) $ QJourneyLegMapping.updateIsDeleted True journeyLegId
 
 isCancellable :: JT.CancelFlow m r c => Id FRFSSearch -> JT.LegInfo -> m JT.IsCancellableResponse
 isCancellable searchId leg = do

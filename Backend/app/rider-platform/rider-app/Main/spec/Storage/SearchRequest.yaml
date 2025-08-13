@@ -82,7 +82,7 @@ SearchRequest:
     availablePaymentMethods: "[Id MerchantPaymentMethod]"
     placeNameSource:  Maybe Text
     initiatedBy: Maybe TripParty
-    journeyLegInfo: Maybe JourneySearchData
+    journeyLegInfo: Maybe JourneySearchData    
     driverIdentifier: Maybe DriverIdentifier
     hasMultimodalSearch: Maybe Bool
     routeCode: Maybe Text
@@ -156,12 +156,11 @@ SearchRequest:
       clientModelName: Maybe Text
       clientManufacturer: Maybe Text
     journeyLegInfo:
-      agency: Maybe Text
-      skipBooking: Maybe Bool
+      agency: Maybe Text     
       convenienceCost: Maybe Int
       pricingId: Maybe Text
       isDeleted: Maybe Bool
-      onSearchFailed: Maybe Bool
+      onSearchFailed: Maybe Bool      
     driverIdentifier:
       driverIdentifierType: Maybe DriverIdentifierType
       driverIdentifierValue: Maybe Text
@@ -188,11 +187,10 @@ SearchRequest:
     clientConfigVersion: Kernel.Utils.Version.versionToText <$> clientConfigVersion|E
     backendConfigVersion: Kernel.Utils.Version.versionToText <$> backendConfigVersion|E
     distanceUnit: Kernel.Prelude.Just|I
-    agency: (journeyLegInfo >>= (.agency))|E
-    skipBooking: Kernel.Prelude.fmap (.skipBooking)|I
+    agency: (journeyLegInfo >>= (.agency))|E    
     convenienceCost: Kernel.Prelude.fmap (.convenienceCost)|I
     pricingId: (journeyLegInfo >>= (.pricingId))|E
-    isDeleted:  (journeyLegInfo >>= (.isDeleted))|E
+    isDeleted:  (journeyLegInfo >>= (.isDeleted))|E    
     onSearchFailed:  (journeyLegInfo >>= (.onSearchFailed))|E
     driverIdentifierType: driverIdentifier <&> (._type)|E
     driverIdentifierValue: driverIdentifier <&> (.value)|E

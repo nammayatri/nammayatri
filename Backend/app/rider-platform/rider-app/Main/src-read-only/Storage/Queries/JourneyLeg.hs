@@ -7,7 +7,6 @@ module Storage.Queries.JourneyLeg (module Storage.Queries.JourneyLeg, module ReE
 import qualified Data.Aeson
 import qualified Domain.Types.Common
 import qualified Domain.Types.FRFSRouteDetails
-import qualified Domain.Types.Journey
 import qualified Domain.Types.JourneyLeg
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -26,13 +25,8 @@ import Storage.Queries.JourneyLegExtra as ReExport
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.JourneyLeg.JourneyLeg] -> m ())
 createMany = traverse_ create
 
-findAllByJourneyId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Journey.Journey -> m [Domain.Types.JourneyLeg.JourneyLeg])
-findAllByJourneyId journeyId = do findAllWithKV [Se.Is Beam.journeyId $ Se.Eq (Kernel.Types.Id.getId journeyId)]
-
-findByJourneyIdAndSequenceNumber ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.Journey.Journey -> Kernel.Prelude.Int -> m (Maybe Domain.Types.JourneyLeg.JourneyLeg))
-findByJourneyIdAndSequenceNumber journeyId sequenceNumber = do findOneWithKV [Se.And [Se.Is Beam.journeyId $ Se.Eq (Kernel.Types.Id.getId journeyId), Se.Is Beam.sequenceNumber $ Se.Eq sequenceNumber]]
+findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg -> m (Maybe Domain.Types.JourneyLeg.JourneyLeg))
+findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByLegSearchId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe Domain.Types.JourneyLeg.JourneyLeg))
 findByLegSearchId legSearchId = do findOneWithKV [Se.Is Beam.legId $ Se.Eq legSearchId]
@@ -72,12 +66,6 @@ updateEstimatedFaresBySearchId estimatedMinFare estimatedMaxFare legSearchId = d
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.estimatedMinFare estimatedMinFare, Se.Set Beam.estimatedMaxFare estimatedMaxFare, Se.Set Beam.updatedAt _now] [Se.Is Beam.legId $ Se.Eq legSearchId]
 
-updateIsDeleted :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m ())
-updateIsDeleted isDeleted legSearchId = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.isDeleted isDeleted, Se.Set Beam.updatedAt _now] [Se.Is Beam.legId $ Se.Eq legSearchId]
-
-updateIsSkipped :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m ())
-updateIsSkipped isSkipped legSearchId = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.isSkipped isSkipped, Se.Set Beam.updatedAt _now] [Se.Is Beam.legId $ Se.Eq legSearchId]
-
 updateLegSearchId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg -> m ())
 updateLegSearchId legSearchId id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.legId legSearchId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
@@ -109,7 +97,6 @@ updateByPrimaryKey (Domain.Types.JourneyLeg.JourneyLeg {..}) = do
       Se.Set Beam.fromStopName (fromStopDetails >>= (.name)),
       Se.Set Beam.fromStopPlatformCode (fromStopDetails >>= (.platformCode)),
       Se.Set Beam.isDeleted isDeleted,
-      Se.Set Beam.isSkipped isSkipped,
       Se.Set Beam.journeyId (Kernel.Types.Id.getId journeyId),
       Se.Set Beam.legId legSearchId,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
@@ -117,8 +104,6 @@ updateByPrimaryKey (Domain.Types.JourneyLeg.JourneyLeg {..}) = do
       Se.Set Beam.mode mode,
       Se.Set Beam.osmEntrance (osmEntrance >>= Just . Data.Aeson.toJSON),
       Se.Set Beam.osmExit (osmExit >>= Just . Data.Aeson.toJSON),
-      Se.Set Beam.riderId (Just (Kernel.Types.Id.getId riderId)),
-      Se.Set Beam.routeGroupId routeGroupId,
       Se.Set Beam.sequenceNumber sequenceNumber,
       Se.Set Beam.serviceTypes serviceTypes,
       Se.Set Beam.startLocationLat (startLocation & (.latitude)),

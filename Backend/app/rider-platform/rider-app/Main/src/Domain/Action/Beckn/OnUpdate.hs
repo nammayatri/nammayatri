@@ -537,7 +537,7 @@ onUpdate = \case
     whenJust mbJourneyLeg $ \journeyLeg -> do
       let journeyId = journeyLeg.journeyId
       toLocation <- ride.toLocation & fromMaybeM (InvalidRequest $ "toLocation not found for rideId: " <> show ride.id)
-      JM.cancelRemainingLegs journeyId True
+      JM.cancelRemainingLegs journeyId True booking.riderId
       QJourneyLeg.updateAfterEditLocation booking.estimatedDuration booking.estimatedDistance (Maps.LatLngV2 {latitude = toLocation.lat, longitude = toLocation.lon}) journeyLeg.id
       JM.updateJourneyChangeLogCounter journeyId
     Notify.notifyOnTripUpdate booking ride Nothing

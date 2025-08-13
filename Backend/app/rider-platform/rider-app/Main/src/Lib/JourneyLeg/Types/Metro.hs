@@ -42,7 +42,8 @@ data MetroLegRequestConfirmData = MetroLegRequestConfirmData
 data MetroLegRequestCancelData = MetroLegRequestCancelData
   { searchId :: Id FRFSSearch.FRFSSearch,
     cancellationType :: Spec.CancellationType,
-    isSkipped :: Bool
+    isSkipped :: Bool,
+    journeyLegId :: Id DJourneyLeg.JourneyLeg
   }
 
 data MetroLegRequestIsCancellableData = MetroLegRequestIsCancellableData

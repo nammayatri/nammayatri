@@ -665,8 +665,8 @@ convertModeToEntityType _ = DTRL.TAXI -- This case will never be hit due to cond
 -- Main function to create recent location table entry
 createRecentLocationForMultimodal :: (MonadFlow m, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => Journey -> m ()
 createRecentLocationForMultimodal journey = do
-  journeyLegs <- QJourneyLeg.findAllByJourneyId journey.id
-  let onlyPublicTransportLegs = filter (\leg -> leg.mode `elem` [DTrip.Bus, DTrip.Metro, DTrip.Subway] && not (fromMaybe False leg.isDeleted)) journeyLegs
+  journeyLegs <- QJourneyLeg.getJourneyLegs journey.id
+  let onlyPublicTransportLegs = filter (\leg -> leg.mode `elem` [DTrip.Bus, DTrip.Metro, DTrip.Subway]) journeyLegs
   let fare = foldl' (\acc leg -> acc + fromMaybe 0 leg.estimatedMinFare) 0 onlyPublicTransportLegs
   now <- getCurrentTime
   let legs = sortBy (comparing (.sequenceNumber)) onlyPublicTransportLegs

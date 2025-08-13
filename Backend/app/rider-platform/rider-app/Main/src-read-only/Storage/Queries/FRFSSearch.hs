@@ -17,7 +17,6 @@ import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurr
 import qualified Sequelize as Se
 import qualified Storage.Beam.FRFSSearch as Beam
 import Storage.Queries.FRFSSearchExtra as ReExport
-import Storage.Queries.Transformers.FRFSSearch
 
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FRFSSearch.FRFSSearch] -> m ())
 createMany = traverse_ create
@@ -25,7 +24,7 @@ createMany = traverse_ create
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch -> m (Maybe Domain.Types.FRFSSearch.FRFSSearch))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-getTicketPlaces :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m [Domain.Types.FRFSSearch.FRFSSearch])
+getTicketPlaces :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m ([Domain.Types.FRFSSearch.FRFSSearch]))
 getTicketPlaces merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)]
 
 updateIsOnSearchReceivedById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch -> m ())
@@ -48,12 +47,11 @@ updateByPrimaryKey (Domain.Types.FRFSSearch.FRFSSearch {..}) = do
     [ Se.Set Beam.fromStationId fromStationCode,
       Se.Set Beam.integratedBppConfigId (Kernel.Types.Id.getId integratedBppConfigId),
       Se.Set Beam.isOnSearchReceived isOnSearchReceived,
-      Se.Set Beam.agency (journeyLegInfo >>= (.agency)),
+      Se.Set Beam.agency ((journeyLegInfo >>= (.agency))),
       Se.Set Beam.convenienceCost (Kernel.Prelude.fmap (.convenienceCost) journeyLegInfo),
-      Se.Set Beam.isDeleted (journeyLegInfo >>= (.isDeleted)),
-      Se.Set Beam.onSearchFailed (journeyLegInfo >>= (.onSearchFailed)),
-      Se.Set Beam.pricingId (journeyLegInfo >>= (.pricingId)),
-      Se.Set Beam.skipBooking (Kernel.Prelude.fmap (.skipBooking) journeyLegInfo),
+      Se.Set Beam.isDeleted ((journeyLegInfo >>= (.isDeleted))),
+      Se.Set Beam.onSearchFailed ((journeyLegInfo >>= (.onSearchFailed))),
+      Se.Set Beam.pricingId ((journeyLegInfo >>= (.pricingId))),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.partnerOrgId (Kernel.Types.Id.getId <$> partnerOrgId),

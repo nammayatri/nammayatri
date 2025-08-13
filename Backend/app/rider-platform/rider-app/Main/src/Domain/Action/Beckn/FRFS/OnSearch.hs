@@ -197,7 +197,7 @@ onSearchHelper onSearchReq validatedReq integratedBPPConfig = do
   case mbRequiredQuote of
     Just requiredQuote -> do
       void $ SLCF.createFares search.id.getId search.journeyLegInfo (QSearch.updatePricingId validatedReq.search.id (Just requiredQuote.id.getId))
-      QJourneyLeg.updateEstimatedFaresBySearchId (Just requiredQuote.price.amount) (Just requiredQuote.price.amount) (Just onSearchReq.transactionId)
+      QJourneyLeg.updateEstimatedFaresBySearchId (Just requiredQuote.price.amount) (Just requiredQuote.price.amount) (Just validatedReq.search.id.getId)
     Nothing -> do
       whenJust validatedReq.search.journeyLegInfo $ \_journeyLegInfo -> do
         QSearch.updateOnSearchFailed validatedReq.search.id (Just True)

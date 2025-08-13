@@ -34,7 +34,6 @@ $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''JourneyLegStatus)
 
 data JourneySearchData = JourneySearchData
   { agency :: Maybe Text,
-    skipBooking :: Bool,
     convenienceCost :: Int,
     pricingId :: Maybe Text,
     onSearchFailed :: Maybe Bool,

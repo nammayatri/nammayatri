@@ -9,7 +9,6 @@ import qualified Domain.Types.Common
 import qualified Domain.Types.Journey
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
-import qualified Domain.Types.Person
 import qualified Domain.Types.RouteDetails
 import qualified Kernel.External.Maps.Google.MapsClient.Types
 import qualified Kernel.External.MultiModal.Interface.Types
@@ -32,7 +31,6 @@ data JourneyLeg = JourneyLeg
     fromStopDetails :: Kernel.Prelude.Maybe Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails,
     id :: Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg,
     isDeleted :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    isSkipped :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     journeyId :: Kernel.Types.Id.Id Domain.Types.Journey.Journey,
     legSearchId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
@@ -40,9 +38,7 @@ data JourneyLeg = JourneyLeg
     mode :: Domain.Types.Common.MultimodalTravelMode,
     osmEntrance :: Kernel.Prelude.Maybe Kernel.External.MultiModal.Interface.Types.MultiModalLegGate,
     osmExit :: Kernel.Prelude.Maybe Kernel.External.MultiModal.Interface.Types.MultiModalLegGate,
-    riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     routeDetails :: [Domain.Types.RouteDetails.RouteDetails],
-    routeGroupId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     sequenceNumber :: Kernel.Prelude.Int,
     serviceTypes :: Kernel.Prelude.Maybe [BecknV2.FRFS.Enums.ServiceTierType],
     startLocation :: Kernel.External.Maps.Google.MapsClient.Types.LatLngV2,

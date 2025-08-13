@@ -50,6 +50,7 @@ import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.EstimateStatus as DEstimate
 import qualified Domain.Types.Journey as DJ
 import qualified Domain.Types.JourneyLeg as DJL
+import qualified Domain.Types.JourneyLegMapping as DJLM
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.ParcelDetails as DParcel
@@ -95,6 +96,7 @@ import qualified Storage.Queries.DriverOffer as QDOffer
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
+import qualified Storage.Queries.JourneyLegMapping as QJourneyLegMapping
 import qualified Storage.Queries.Location as QLoc
 import qualified Storage.Queries.ParcelDetails as QParcel
 import qualified Storage.Queries.Person as QP
@@ -291,7 +293,7 @@ select2 personId estimateId req@DSelectReq {..} = do
   QEstimate.updateStatus DEstimate.DRIVER_QUOTE_REQUESTED estimateId
   QDOffer.updateStatus DDO.INACTIVE estimateId
   whenJust searchRequest.journeyLegInfo $ \journeyLegInfo -> do
-    QSearchRequest.updateJourneyLegInfo searchRequestId (Just $ journeyLegInfo {JLT.skipBooking = False, JLT.pricingId = Just estimateId.getId, JLT.onSearchFailed = Just False})
+    QSearchRequest.updateJourneyLegInfo searchRequestId (Just $ journeyLegInfo {JLT.pricingId = Just estimateId.getId, JLT.onSearchFailed = Just False})
   let mbCustomerExtraFee = (mkPriceFromAPIEntity <$> req.customerExtraFeeWithCurrency) <|> (mkPriceFromMoney Nothing <$> req.customerExtraFee)
   Kernel.Prelude.whenJust req.customerExtraFeeWithCurrency $ \reqWithCurrency -> do
     unless (estimate.estimatedFare.currency == reqWithCurrency.currency) $
@@ -416,8 +418,8 @@ mkJourneyForSearch searchRequest estimate personId = do
   now <- getCurrentTime
   journeyGuid <- generateGUID
   journeyLegGuid <- generateGUID
+  journeyLegMappingGuid <- generateGUID
   journeyRouteDetailsId <- generateGUID
-  journeyLegRouteGroupGuid <- generateGUID
 
   let estimatedMinFare = Just estimate.estimatedFare.amount
       estimatedMaxFare = Just estimate.estimatedFare.amount
@@ -454,10 +456,6 @@ mkJourneyForSearch searchRequest estimate personId = do
   let journeyLeg =
         DJL.JourneyLeg
           { id = journeyLegGuid,
-            journeyId = journeyGuid,
-            routeGroupId = Just journeyLegRouteGroupGuid,
-            isSkipped = Just False,
-            sequenceNumber = 0,
             mode = DTrip.Taxi,
             startLocation = LatLngV2 searchRequest.fromLocation.lat searchRequest.fromLocation.lon,
             endLocation = case searchRequest.toLocation of
@@ -493,7 +491,6 @@ mkJourneyForSearch searchRequest estimate personId = do
                     routeCode = Nothing,
                     routeColorCode = Nothing,
                     routeColorName = Nothing,
-                    routeGroupId = Just journeyLegRouteGroupGuid,
                     routeGtfsId = Nothing,
                     routeLongName = Nothing,
                     routeShortName = Nothing,
@@ -523,20 +520,33 @@ mkJourneyForSearch searchRequest estimate personId = do
             createdAt = now,
             updatedAt = now,
             legSearchId = Just searchRequest.id.getId,
-            isDeleted = Just False,
             changedBusesInSequence = Nothing,
             finalBoardedBusNumber = Nothing,
             osmEntrance = Nothing,
             osmExit = Nothing,
             straightLineEntrance = Nothing,
             straightLineExit = Nothing,
-            riderId = personId
+            journeyId = journeyGuid,
+            isDeleted = Just False,
+            sequenceNumber = 0
+          }
+
+  let journeyLegMapping =
+        DJLM.JourneyLegMapping
+          { id = journeyLegMappingGuid,
+            journeyId = journeyGuid,
+            sequenceNumber = 0,
+            merchantId = searchRequest.merchantId,
+            merchantOperatingCityId = searchRequest.merchantOperatingCityId,
+            isDeleted = False,
+            journeyLegId = journeyLegGuid,
+            createdAt = now,
+            updatedAt = now
           }
 
   let journeySearchData =
         JLT.JourneySearchData
           { agency = Nothing,
-            skipBooking = False,
             convenienceCost = 0,
             pricingId = Just estimate.id.getId,
             onSearchFailed = Nothing,
@@ -545,6 +555,7 @@ mkJourneyForSearch searchRequest estimate personId = do
 
   QJourney.create journey
   QJourneyLeg.create journeyLeg
+  QJourneyLegMapping.create journeyLegMapping
   QSearchRequest.updateJourneyLegInfo searchRequest.id (Just journeySearchData)
   pure journeyGuid
 
