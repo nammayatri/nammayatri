@@ -75,25 +75,27 @@ getSimpleNearbyBuses :: DomainRiderConfig.RiderConfig -> API.Types.UI.NearbyBuse
 getSimpleNearbyBuses riderConfig req = do
   buses <- getNearbyBusesFRFS (Maps.LatLong req.userLat req.userLon) riderConfig
   logDebug $ "Nearby buses: " <> show buses
-  -- latitude :: Double,
-  --     longitude :: Double,
-  --     timestamp :: Int,
-  --     speed :: Double,
-  --     device_id :: Text,
-  --     route_id :: Text,
-  --     route_state :: Maybe RouteState,
-  --     route_number :: Maybe Text,
-  --     vehicle_number :: Maybe Text
+
+  busRouteMapping <- forM buses $ \bus -> do
+    mbResult <- SIBC.fetchFirstIntegratedBPPConfigResult riderConfig.integratedBPPConfigs $ \config ->
+      maybeToList <$> OTPRest.getVehicleServiceType config bus.vehicle_number
+    pure $ Kernel.Prelude.listToMaybe mbResult
+
+  let successfulMappings = catMaybes busRouteMapping
+
+  let serviceTypeMap :: HashMap.HashMap Text Text
+      serviceTypeMap = HashMap.fromList $ map (\m -> (m.vehicle_number, m.service_type)) successfulMappings
 
   pure $
     map
       ( \bus ->
+          let maybeServiceType = HashMap.lookup (bus.vehicle_number) serviceTypeMap
           API.Types.UI.NearbyBuses.NearbyBus
             { currentLocation = Maps.LatLong bus.latitude bus.longitude,
               distance = Nothing,
               routeCode = bus.route_id,
               routeState = bus.route_state,
-              serviceType = Nothing,
+              serviceType = maybeServiceType,
               shortName = bus.route_number,
               vehicleNumber = bus.vehicle_number
             }
