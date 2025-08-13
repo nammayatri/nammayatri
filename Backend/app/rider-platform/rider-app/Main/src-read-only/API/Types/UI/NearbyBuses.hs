@@ -13,6 +13,14 @@ import qualified Kernel.Types.Price
 import Servant
 import Tools.Auth
 
+data SimpleNearbyBus = SimpleNearbyBus
+  { currentLocation :: Kernel.External.Maps.Types.LatLong,
+    vehicleNumber :: Kernel.Prelude.Maybe Data.Text.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+  deriving (Show)
+
 data NearbyBus = NearbyBus
   { capacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     currentLocation :: Kernel.External.Maps.Types.LatLong,
