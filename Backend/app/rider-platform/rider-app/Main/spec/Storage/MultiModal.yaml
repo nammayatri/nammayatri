@@ -168,7 +168,6 @@ JourneyLegMapping:
     id: PrimaryKey
     journeyId: "!SecondaryKey"
     journeyLegId: "!SecondaryKey"
-    sequenceNumber: "!SecondaryKey"
 
   queries:
     updateIsDeleted:

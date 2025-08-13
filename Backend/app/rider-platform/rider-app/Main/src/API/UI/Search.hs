@@ -268,166 +268,92 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
         (Just start, Just end) -> JM.isWithinTimeBound start end now riderConfig.timeDiffFromUtc
         _ -> False
   when (isSingleModeMetroSearch && isOutsideMetroBusinessHours) $ throwError $ InvalidRequest "Metro booking not allowed outside business hours"
+  let currentLocation = fmap latLongToLocationV2 req.currentLocation
   mbIntegratedBPPConfig <- SIBC.findMaybeIntegratedBPPConfig Nothing merchantOperatingCityId vehicleCategory (fromMaybe DIBC.MULTIMODAL req.platformType)
-  mbSingleModeRouteDetails <-
-    case mbIntegratedBPPConfig of
-      Just config ->
-        JMU.measureLatency (JMU.getSingleModeRouteDetails searchRequest.routeCode searchRequest.originStopCode searchRequest.destinationStopCode config searchRequest.merchantId searchRequest.merchantOperatingCityId vehicleCategory) ("getSingleModeRouteDetails" <> show vehicleCategory <> " routeCode: " <> show searchRequest.routeCode <> " originStopCode: " <> show searchRequest.originStopCode <> " destinationStopCode: " <> show searchRequest.destinationStopCode)
-      Nothing -> return Nothing
-  logDebug $ "mbSingleModeRouteDetails: " <> show mbSingleModeRouteDetails
-  (singleModeWarningType, otpResponse) <- case mbSingleModeRouteDetails of
-    Just singleModeRouteDetails -> do
-      let fromStopDetails =
-            MultiModalTypes.MultiModalStopDetails
-              { stopCode = Just singleModeRouteDetails.fromStop.stopCode,
-                platformCode = singleModeRouteDetails.fromStop.platformNumber,
-                name = Just singleModeRouteDetails.fromStop.stopName,
-                gtfsId = Just singleModeRouteDetails.fromStop.stopCode
+  directSingleModeRoutes <-
+    case vehicleCategory of
+      BecknV2.OnDemand.Enums.BUS -> JMU.buildSingleModeBusRoutes (getPreliminaryLeg now currentLocation) searchRequest.routeCode searchRequest.originStopCode searchRequest.destinationStopCode mbIntegratedBPPConfig searchRequest.merchantId searchRequest.merchantOperatingCityId
+      _ -> return []
+  (singleModeWarningType, otpResponse) <- do
+    if not (null directSingleModeRoutes)
+      then do
+        return $
+          ( Nothing,
+            MInterface.MultiModalResponse
+              { routes = directSingleModeRoutes
               }
-      let toStopDetails =
-            MultiModalTypes.MultiModalStopDetails
-              { stopCode = Just singleModeRouteDetails.toStop.stopCode,
-                platformCode = singleModeRouteDetails.toStop.platformNumber,
-                name = Just singleModeRouteDetails.toStop.stopName,
-                gtfsId = Just singleModeRouteDetails.toStop.stopCode
-              }
-      let fromStopLocation = LocationV2 {latLng = LatLngV2 {latitude = singleModeRouteDetails.fromStop.stopLat, longitude = singleModeRouteDetails.fromStop.stopLon}}
-      let toStopLocation = LocationV2 {latLng = LatLngV2 {latitude = singleModeRouteDetails.toStop.stopLat, longitude = singleModeRouteDetails.toStop.stopLon}}
-      let distance = fromMaybe (Distance 0 Meter) searchRequest.distance
-      let duration = nominalDiffTimeToSeconds $ diffUTCTime singleModeRouteDetails.toStop.stopArrivalTime singleModeRouteDetails.fromStop.stopArrivalTime
-      let currentLocation = fmap latLongToLocationV2 req.currentLocation
-      mbPreliminaryLeg <- getPreliminaryLeg now currentLocation fromStopLocation
-      let subLegOrder = if isJust mbPreliminaryLeg then 2 else 1
-      let leg =
-            MultiModalTypes.MultiModalLeg
-              { distance = distance,
-                duration = duration,
-                polyline = Polyline {encodedPolyline = fromMaybe "" singleModeRouteDetails.route.polyline},
-                mode = castVehicleCategoryToGeneralVehicleType vehicleCategory,
-                startLocation = fromStopLocation,
-                endLocation = toStopLocation,
-                fromStopDetails = Just fromStopDetails,
-                toStopDetails = Just toStopDetails,
-                routeDetails =
-                  [ MultiModalTypes.MultiModalRouteDetails
-                      { gtfsId = Just singleModeRouteDetails.route.code,
-                        longName = Just singleModeRouteDetails.route.longName,
-                        shortName = Just singleModeRouteDetails.route.shortName,
-                        alternateShortNames = singleModeRouteDetails.availableRoutes,
-                        color = singleModeRouteDetails.route.color,
-                        fromStopDetails = Just fromStopDetails,
-                        toStopDetails = Just toStopDetails,
-                        startLocation = fromStopLocation,
-                        endLocation = toStopLocation,
-                        subLegOrder,
-                        fromArrivalTime = Just singleModeRouteDetails.fromStop.stopArrivalTime,
-                        fromDepartureTime = Just singleModeRouteDetails.fromStop.stopArrivalTime,
-                        toArrivalTime = Just singleModeRouteDetails.toStop.stopArrivalTime,
-                        toDepartureTime = Just singleModeRouteDetails.toStop.stopArrivalTime
+          )
+      else do
+        let sortingType = fromMaybe DMP.FASTEST userPreferences.journeyOptionsSortingType
+        destination <- extractDest searchRequest.toLocation
+        -- Get stop information if integrated BPP config is available
+        fromStopInfo <- case (mbIntegratedBPPConfig, searchRequest.originStopCode) of
+          (Just integratedBPPConfig, Just originStopCode) ->
+            OTPRest.getStationByGtfsIdAndStopCode originStopCode integratedBPPConfig
+          _ ->
+            return Nothing
+
+        let searchReqLoc :: LatLngV2 =
+              LatLngV2
+                { latitude = searchRequest.fromLocation.lat,
+                  longitude = searchRequest.fromLocation.lon
+                }
+
+        -- Determine the from location based on request type and stop info
+        let fromLocation :: LatLngV2 = case (req', fromStopInfo) of
+              (DSearch.PTSearch _, Just stopInfo) ->
+                case (stopInfo.lat, stopInfo.lon) of
+                  (Just lat, Just lon) ->
+                    LatLngV2
+                      { latitude = lat,
+                        longitude = lon
                       }
-                  ],
-                serviceTypes = [],
-                agency = Nothing,
-                fromArrivalTime = Just singleModeRouteDetails.fromStop.stopArrivalTime,
-                fromDepartureTime = Just singleModeRouteDetails.fromStop.stopArrivalTime,
-                toArrivalTime = Just singleModeRouteDetails.toStop.stopArrivalTime,
-                toDepartureTime = Just singleModeRouteDetails.toStop.stopArrivalTime,
-                entrance = Nothing,
-                exit = Nothing
-              }
-      legs <- case mbPreliminaryLeg of
-        Just preliminaryLeg -> return [preliminaryLeg, leg]
-        Nothing -> return [leg]
-      return $
-        ( Nothing,
-          MInterface.MultiModalResponse
-            { routes =
-                [ MultiModalTypes.MultiModalRoute
-                    { distance = distance,
-                      duration = duration,
-                      startTime = Just singleModeRouteDetails.fromStop.stopArrivalTime,
-                      endTime = Just singleModeRouteDetails.toStop.stopArrivalTime,
-                      legs = legs,
-                      relevanceScore = Nothing
-                    }
-                ]
-            }
-        )
-    _ -> do
-      let permissibleModesToUse =
-            if (not isSingleModeMetroSearch) && isOutsideMetroBusinessHours
-              then filter (/= MultiModalTypes.MetroRail) (fromMaybe [] riderConfig.permissibleModes)
-              else fromMaybe [] riderConfig.permissibleModes
-      let sortingType = fromMaybe DMP.FASTEST userPreferences.journeyOptionsSortingType
-      destination <- extractDest searchRequest.toLocation
-      -- Get stop information if integrated BPP config is available
-      fromStopInfo <- case (mbIntegratedBPPConfig, searchRequest.originStopCode) of
-        (Just integratedBPPConfig, Just originStopCode) ->
-          OTPRest.getStationByGtfsIdAndStopCode originStopCode integratedBPPConfig
-        _ ->
-          return Nothing
+                  _ -> searchReqLoc
+              _ -> searchReqLoc
 
-      let searchReqLoc :: LatLngV2 =
-            LatLngV2
-              { latitude = searchRequest.fromLocation.lat,
-                longitude = searchRequest.fromLocation.lon
-              }
-
-      -- Determine the from location based on request type and stop info
-      let fromLocation :: LatLngV2 = case (req', fromStopInfo) of
-            (DSearch.PTSearch _, Just stopInfo) ->
-              case (stopInfo.lat, stopInfo.lon) of
-                (Just lat, Just lon) ->
-                  LatLngV2
-                    { latitude = lat,
-                      longitude = lon
-                    }
-                _ -> searchReqLoc
-            _ -> searchReqLoc
-
-      let transitRoutesReq =
-            GetTransitRoutesReq
-              { origin = WayPointV2 {location = LocationV2 {latLng = LatLngV2 {latitude = fromLocation.latitude, longitude = fromLocation.longitude}}},
-                destination = WayPointV2 {location = LocationV2 {latLng = LatLngV2 {latitude = destination.lat, longitude = destination.lon}}},
-                arrivalTime = Nothing,
-                departureTime = Nothing,
-                mode = Nothing,
-                transitPreferences = Nothing,
-                transportModes = Nothing,
-                minimumWalkDistance = riderConfig.minimumWalkDistance,
-                permissibleModes = permissibleModesToUse,
-                maxAllowedPublicTransportLegs = riderConfig.maxAllowedPublicTransportLegs,
-                sortingType = JMU.convertSortingType sortingType
-              }
-      transitServiceReq <- TMultiModal.getTransitServiceReq searchRequest.merchantId merchantOperatingCityId
-      otpResponse' <- JMU.measureLatency (MultiModal.getTransitRoutes (Just searchRequest.id.getId) transitServiceReq transitRoutesReq >>= fromMaybeM (InternalError "routes dont exist")) "getTransitRoutes"
-      let otpResponse'' = MInterface.MultiModalResponse (map mkRouteDetailsForWalkLegs otpResponse'.routes)
-      logDebug $ "[Multimodal - OTP Response]" <> show otpResponse'' <> show searchRequest.id.getId
-      -- Add default auto leg if no routes are found
-      if null otpResponse''.routes
-        then do
-          case searchRequest.toLocation of
-            Just toLocation -> do
-              let toLocationV2 = LocationV2 {latLng = LatLngV2 {latitude = toLocation.lat, longitude = toLocation.lon}}
-              let distance = fromMaybe (Distance 0 Meter) searchRequest.distance
-              let duration = fromMaybe (Seconds 0) searchRequest.estimatedRideDuration
-              (autoLeg, startTime, endTime) <- mkAutoOrWalkLeg now Nothing toLocationV2 MultiModalTypes.Unspecified distance duration
-              let autoMultiModalResponse = mkMultimodalResponse autoLeg startTime endTime
-              return (Just NoPublicTransportRoutes, autoMultiModalResponse)
-            Nothing -> return (Nothing, otpResponse'')
-        else do
-          case req' of
-            DSearch.PTSearch _ -> do
-              let onlySingleModeRoutes = filter (\r -> (all (eitherWalkOrSingleMode vehicleCategory) r.legs) && (any (onlySingleMode vehicleCategory) r.legs)) otpResponse''.routes
-              let filterFirstAndLastMileWalks = map filterWalkLegs onlySingleModeRoutes
-              let routesWithCorrectStops = map filterRoutesWithCorrectFromAndToLocations filterFirstAndLastMileWalks
-              let validRoutes = filter (\r -> not (null r.legs)) routesWithCorrectStops
-              let warningType = if null validRoutes then Just NoSingleModeRoutes else Nothing
-              filteredRoutes <- JM.filterTransitRoutes riderConfig (if null validRoutes then otpResponse''.routes else validRoutes)
-              return (warningType, MInterface.MultiModalResponse {routes = filteredRoutes})
-            _ -> do
-              filteredRoutes <- JM.filterTransitRoutes riderConfig otpResponse''.routes
-              return (Nothing, MInterface.MultiModalResponse {routes = filteredRoutes})
+        let transitRoutesReq =
+              GetTransitRoutesReq
+                { origin = WayPointV2 {location = LocationV2 {latLng = LatLngV2 {latitude = fromLocation.latitude, longitude = fromLocation.longitude}}},
+                  destination = WayPointV2 {location = LocationV2 {latLng = LatLngV2 {latitude = destination.lat, longitude = destination.lon}}},
+                  arrivalTime = Nothing,
+                  departureTime = Nothing,
+                  mode = Nothing,
+                  transitPreferences = Nothing,
+                  transportModes = Nothing,
+                  minimumWalkDistance = riderConfig.minimumWalkDistance,
+                  permissibleModes = fromMaybe [] riderConfig.permissibleModes,
+                  maxAllowedPublicTransportLegs = riderConfig.maxAllowedPublicTransportLegs,
+                  sortingType = JMU.convertSortingType sortingType
+                }
+        transitServiceReq <- TMultiModal.getTransitServiceReq searchRequest.merchantId merchantOperatingCityId
+        otpResponse' <- JMU.measureLatency (MultiModal.getTransitRoutes (Just searchRequest.id.getId) transitServiceReq transitRoutesReq >>= fromMaybeM (InternalError "routes dont exist")) "getTransitRoutes"
+        let otpResponse'' = MInterface.MultiModalResponse (map mkRouteDetailsForWalkLegs otpResponse'.routes)
+        logDebug $ "[Multimodal - OTP Response]" <> show otpResponse'' <> show searchRequest.id.getId
+        -- Add default auto leg if no routes are found
+        if null otpResponse''.routes
+          then do
+            case searchRequest.toLocation of
+              Just toLocation -> do
+                let toLocationV2 = LocationV2 {latLng = LatLngV2 {latitude = toLocation.lat, longitude = toLocation.lon}}
+                let distance = fromMaybe (Distance 0 Meter) searchRequest.distance
+                let duration = fromMaybe (Seconds 0) searchRequest.estimatedRideDuration
+                (autoLeg, startTime, endTime) <- mkAutoOrWalkLeg now Nothing toLocationV2 MultiModalTypes.Unspecified distance duration
+                let autoMultiModalResponse = mkMultimodalResponse autoLeg startTime endTime
+                return (Just NoPublicTransportRoutes, autoMultiModalResponse)
+              Nothing -> return (Nothing, otpResponse'')
+          else do
+            case req' of
+              DSearch.PTSearch _ -> do
+                let onlySingleModeRoutes = filter (\r -> (all (eitherWalkOrSingleMode vehicleCategory) r.legs) && (any (onlySingleMode vehicleCategory) r.legs)) otpResponse''.routes
+                let filterFirstAndLastMileWalks = map filterWalkLegs onlySingleModeRoutes
+                let routesWithCorrectStops = map filterRoutesWithCorrectFromAndToLocations filterFirstAndLastMileWalks
+                let validRoutes = filter (\r -> not (null r.legs)) routesWithCorrectStops
+                let warningType = if null validRoutes then Just NoSingleModeRoutes else Nothing
+                filteredRoutes <- JM.filterTransitRoutes riderConfig (if null validRoutes then otpResponse''.routes else validRoutes)
+                return (warningType, MInterface.MultiModalResponse {routes = filteredRoutes})
+              _ -> do
+                filteredRoutes <- JM.filterTransitRoutes riderConfig otpResponse''.routes
+                return (Nothing, MInterface.MultiModalResponse {routes = filteredRoutes})
 
   let userPreferredTransitModes = userPreferencesToGeneralVehicleTypes userPreferences.allowedTransitModes
       hasOnlyUserPreferredTransitModes otpRoute = all (isLegModeIn userPreferredTransitModes) otpRoute.legs

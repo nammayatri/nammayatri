@@ -7,6 +7,7 @@ import Control.Applicative ((<|>))
 import Control.Monad.Extra (mapMaybeM)
 import qualified Data.Geohash as Geohash
 import Data.List (groupBy, nub, sort, sortBy)
+import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Map.Strict as Map
 import Data.Ord (comparing)
 import qualified Data.Text as T
@@ -20,10 +21,12 @@ import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MultimodalPreferences as DMP
 import Domain.Types.Person
 import qualified Domain.Types.RecentLocation as DTRL
-import Domain.Types.Route
 import Domain.Types.RouteStopTimeTable
 import qualified Domain.Types.Trip as DTrip
-import Kernel.External.MultiModal.Interface as MultiModal hiding (decode, encode)
+import Environment
+import Kernel.External.Maps.Google.MapsClient.Types
+import qualified Kernel.External.MultiModal.Interface as MultiModal hiding (decode, encode)
+import qualified Kernel.External.MultiModal.Interface.Types as MultiModalTypes
 import qualified Kernel.External.Payment.Interface.Types as KT
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
@@ -32,6 +35,7 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Error
 import Kernel.Types.Id
+import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
@@ -530,24 +534,6 @@ findUpcomingTrips routeCode stopCode mbServiceType currentTime mid mocid vc = do
           }
   return upcomingTripInfo
 
-data StopDetails = StopDetails
-  { stopCode :: Text,
-    stopName :: Text,
-    stopLat :: Double,
-    stopLon :: Double,
-    stopArrivalTime :: UTCTime,
-    platformNumber :: Maybe Text
-  }
-  deriving (Generic, Show, ToJSON, FromJSON)
-
-data SingleModeRouteDetails = SingleModeRouteDetails
-  { fromStop :: StopDetails,
-    toStop :: StopDetails,
-    route :: Route,
-    availableRoutes :: [Text]
-  }
-  deriving (Generic, Show, ToJSON, FromJSON)
-
 measureLatency :: MonadFlow m => m a -> Text -> m a
 measureLatency action label = do
   startTime <- getCurrentTime
@@ -557,7 +543,46 @@ measureLatency action label = do
   logDebug $ label <> " Latency: " <> show latency <> " seconds"
   return result
 
-getSingleModeRouteDetails ::
+mkMultiModalRoute :: UTCTime -> Maybe MultiModalTypes.MultiModalLeg -> MultiModalTypes.GeneralVehicleType -> NonEmpty MultiModalTypes.MultiModalRouteDetails -> MultiModalTypes.MultiModalRoute
+mkMultiModalRoute currentTimeIST mbPreliminaryLeg mode routeDetails = do
+  let firstRouteDetails = NonEmpty.head routeDetails
+  let lastRouteDetails = NonEmpty.last routeDetails
+  let duration = nominalDiffTimeToSeconds $ diffUTCTime (fromMaybe currentTimeIST lastRouteDetails.toArrivalTime) (fromMaybe currentTimeIST firstRouteDetails.fromArrivalTime)
+  let distance = convertHighPrecMetersToDistance Meter (distanceBetweenInMeters (locationV2ToLatLong firstRouteDetails.startLocation) (locationV2ToLatLong lastRouteDetails.endLocation))
+  let leg =
+        MultiModalTypes.MultiModalLeg
+          { distance = distance,
+            duration = duration,
+            polyline = Polyline {encodedPolyline = ""},
+            mode,
+            startLocation = firstRouteDetails.startLocation,
+            endLocation = lastRouteDetails.endLocation,
+            fromStopDetails = firstRouteDetails.fromStopDetails,
+            toStopDetails = lastRouteDetails.toStopDetails,
+            routeDetails = NonEmpty.toList routeDetails,
+            serviceTypes = [],
+            agency = Nothing,
+            fromArrivalTime = firstRouteDetails.fromArrivalTime,
+            fromDepartureTime = firstRouteDetails.fromDepartureTime,
+            toArrivalTime = lastRouteDetails.toArrivalTime,
+            toDepartureTime = lastRouteDetails.toDepartureTime,
+            entrance = Nothing,
+            exit = Nothing
+          }
+  let legs = maybe [leg] (\pl -> [pl, leg]) mbPreliminaryLeg
+  MultiModalTypes.MultiModalRoute
+    { distance = distance,
+      duration = duration,
+      startTime = leg.fromArrivalTime,
+      endTime = leg.toArrivalTime,
+      legs = legs,
+      relevanceScore = Nothing
+    }
+  where
+    locationV2ToLatLong :: LocationV2 -> LatLong
+    locationV2ToLatLong locationV2 = LatLong {lat = locationV2.latLng.latitude, lon = locationV2.latLng.longitude}
+
+buildMultimodalRouteDetails ::
   ( CacheFlow m r,
     EsqDBFlow m r,
     EsqDBReplicaFlow m r,
@@ -567,69 +592,97 @@ getSingleModeRouteDetails ::
     HasKafkaProducer r,
     HasShortDurationRetryCfg r c
   ) =>
+  Int ->
   Maybe Text ->
   Maybe Text ->
   Maybe Text ->
-  DIntegratedBPPConfig.IntegratedBPPConfig ->
+  Maybe DIntegratedBPPConfig.IntegratedBPPConfig ->
   Id Merchant ->
   Id MerchantOperatingCity ->
   Enums.VehicleCategory ->
-  m (Maybe SingleModeRouteDetails)
-getSingleModeRouteDetails mbRouteCode (Just originStopCode) (Just destinationStopCode) integratedBppConfig mid mocid vc = do
+  m (Maybe MultiModalTypes.MultiModalRouteDetails)
+buildMultimodalRouteDetails subLegOrder mbRouteCode (Just originStopCode) (Just destinationStopCode) (Just integratedBppConfig) mid mocid vc = do
   mbFromStop <- OTPRest.getStationByGtfsIdAndStopCode originStopCode integratedBppConfig
   mbToStop <- OTPRest.getStationByGtfsIdAndStopCode destinationStopCode integratedBppConfig
   currentTime <- getCurrentTime
   let (_, currentTimeIST) = getISTTimeInfo currentTime
 
-  case (mbFromStop, mbToStop) of
-    (Just fromStop, Just toStop) -> do
-      case (fromStop.lat, fromStop.lon, toStop.lat, toStop.lon) of
-        (Just fromStopLat, Just fromStopLon, Just toStopLat, Just toStopLon) -> do
-          (nextAvailableRouteCode, possibleRoutes) <- measureLatency (findPossibleRoutes Nothing originStopCode destinationStopCode currentTime integratedBppConfig mid mocid vc True) "findPossibleRoutes"
+  case (mbFromStop >>= (.lat), mbFromStop >>= (.lon), mbToStop >>= (.lat), mbToStop >>= (.lon)) of
+    (Just fromStopLat, Just fromStopLon, Just toStopLat, Just toStopLon) -> do
+      (nextAvailableRouteCode, possibleRoutes) <- measureLatency (findPossibleRoutes Nothing originStopCode destinationStopCode currentTime integratedBppConfig mid mocid vc True) "findPossibleRoutes"
 
-          let routeCode = mbRouteCode <|> nextAvailableRouteCode
-          mbRoute <-
-            maybe
-              (return Nothing)
-              (\rc -> OTPRest.getRouteByRouteId integratedBppConfig rc)
-              routeCode
-          case mbRoute of
-            Just route -> do
-              routeStopMappings <- OTPRest.getRouteStopMappingByRouteCode route.code integratedBppConfig
-              -- Get timing information for this route at the origin stop
-              originStopTimings <- fetchLiveTimings [route.code] originStopCode currentTime integratedBppConfig mid mocid vc
-              destStopTimings <- fetchLiveTimings [route.code] destinationStopCode currentTime integratedBppConfig mid mocid vc
+      let routeCode = mbRouteCode <|> nextAvailableRouteCode
+      mbRoute <-
+        maybe
+          (return Nothing)
+          (\rc -> OTPRest.getRouteByRouteId integratedBppConfig rc)
+          routeCode
+      case mbRoute of
+        Just route -> do
+          routeStopMappings <- OTPRest.getRouteStopMappingByRouteCode route.code integratedBppConfig
+          -- Get timing information for this route at the origin stop
+          originStopTimings <- fetchLiveTimings [route.code] originStopCode currentTime integratedBppConfig mid mocid vc
+          destStopTimings <- fetchLiveTimings [route.code] destinationStopCode currentTime integratedBppConfig mid mocid vc
 
-              let stopCodeToSequenceNum = Map.fromList $ map (\rst -> (rst.stopCode, rst.sequenceNum)) routeStopMappings
+          let stopCodeToSequenceNum = Map.fromList $ map (\rst -> (rst.stopCode, rst.sequenceNum)) routeStopMappings
 
-              let mbEarliestOriginTiming =
-                    findEarliestTiming currentTimeIST currentTime $
-                      sortBy
-                        ( \a b ->
-                            compare
-                              (getISTArrivalTime a.timeOfDeparture currentTime)
-                              (getISTArrivalTime b.timeOfDeparture currentTime)
-                        )
-                        originStopTimings
+          let mbEarliestOriginTiming =
+                findEarliestTiming currentTimeIST currentTime $
+                  sortBy
+                    ( \a b ->
+                        compare
+                          (getISTArrivalTime a.timeOfDeparture currentTime)
+                          (getISTArrivalTime b.timeOfDeparture currentTime)
+                    )
+                    originStopTimings
 
-              let mbDestinationTiming = do
-                    originTiming <- mbEarliestOriginTiming
-                    findMatchingDestinationTiming (.tripId) (.stopCode) originTiming destStopTimings stopCodeToSequenceNum
+          let mbDestinationTiming = do
+                originTiming <- mbEarliestOriginTiming
+                findMatchingDestinationTiming (.tripId) (.stopCode) originTiming destStopTimings stopCodeToSequenceNum
 
-              let mbFirstOriginTiming = listToMaybe originStopTimings
-              let mbFirstDestinationTiming = do
-                    originTiming <- mbFirstOriginTiming
-                    findMatchingDestinationTiming (.tripId) (.stopCode) originTiming destStopTimings stopCodeToSequenceNum
+          let mbFirstOriginTiming = listToMaybe originStopTimings
+          let mbFirstDestinationTiming = do
+                originTiming <- mbFirstOriginTiming
+                findMatchingDestinationTiming (.tripId) (.stopCode) originTiming destStopTimings stopCodeToSequenceNum
 
-              let mbDepartureTime = getUTCArrivalTime . (.timeOfDeparture) <$> mbEarliestOriginTiming <*> pure currentTime
-                  mbArrivalTime = getUTCArrivalTime . (.timeOfArrival) <$> mbDestinationTiming <*> pure currentTime
-                  mbOriginPlatformCode = ((.platformCode) =<< mbEarliestOriginTiming) <|> ((.platformCode) =<< mbFirstOriginTiming) -- (.platformCode) =<< mbEarliestOriginTiming
-                  mbDestinationPlatformCode = ((.platformCode) =<< mbDestinationTiming) <|> ((.platformCode) =<< mbFirstDestinationTiming)
-                  fromStopDetails = StopDetails fromStop.code fromStop.name fromStopLat fromStopLon (fromMaybe currentTime mbDepartureTime) mbOriginPlatformCode
-                  toStopDetails = StopDetails toStop.code toStop.name toStopLat toStopLon (fromMaybe currentTime mbArrivalTime) mbDestinationPlatformCode
-              logDebug $ "fromStopDetails: " <> show fromStopDetails <> " toStopDetails: " <> show toStopDetails <> " route: " <> show route <> " possibleRoutes: " <> show possibleRoutes <> " mbEarliestOriginTiming: " <> show mbEarliestOriginTiming <> " mbDestinationTiming: " <> show mbDestinationTiming
-              return $ Just $ SingleModeRouteDetails fromStopDetails toStopDetails route (concatMap (.availableRoutes) possibleRoutes)
-            Nothing -> return Nothing
+          let mbDepartureTime = getUTCArrivalTime . (.timeOfDeparture) <$> mbEarliestOriginTiming <*> pure currentTime
+              mbArrivalTime = getUTCArrivalTime . (.timeOfArrival) <$> mbDestinationTiming <*> pure currentTime
+              mbOriginPlatformCode = ((.platformCode) =<< mbEarliestOriginTiming) <|> ((.platformCode) =<< mbFirstOriginTiming) -- (.platformCode) =<< mbEarliestOriginTiming
+              mbDestinationPlatformCode = ((.platformCode) =<< mbDestinationTiming) <|> ((.platformCode) =<< mbFirstDestinationTiming)
+          let fromStopDetails =
+                MultiModalTypes.MultiModalStopDetails
+                  { stopCode = mbFromStop <&> (.code),
+                    platformCode = mbOriginPlatformCode,
+                    name = mbFromStop <&> (.name),
+                    gtfsId = mbFromStop <&> (.code)
+                  }
+          let toStopDetails =
+                MultiModalTypes.MultiModalStopDetails
+                  { stopCode = mbToStop <&> (.code),
+                    platformCode = mbDestinationPlatformCode,
+                    name = mbToStop <&> (.name),
+                    gtfsId = mbToStop <&> (.code)
+                  }
+          let fromStopLocation = LocationV2 {latLng = LatLngV2 {latitude = fromStopLat, longitude = fromStopLon}}
+          let toStopLocation = LocationV2 {latLng = LatLngV2 {latitude = toStopLat, longitude = toStopLon}}
+          return $
+            Just $
+              MultiModalTypes.MultiModalRouteDetails
+                { gtfsId = Just route.code,
+                  longName = Just route.longName,
+                  shortName = Just route.shortName,
+                  alternateShortNames = concatMap (.availableRoutes) possibleRoutes,
+                  color = route.color,
+                  fromStopDetails = Just fromStopDetails,
+                  toStopDetails = Just toStopDetails,
+                  startLocation = fromStopLocation,
+                  endLocation = toStopLocation,
+                  subLegOrder,
+                  fromArrivalTime = mbDepartureTime,
+                  fromDepartureTime = mbDepartureTime,
+                  toArrivalTime = mbArrivalTime,
+                  toDepartureTime = mbArrivalTime
+                }
         _ -> return Nothing
     _ -> return Nothing
   where
@@ -643,7 +696,26 @@ getSingleModeRouteDetails mbRouteCode (Just originStopCode) (Just destinationSto
                     _ -> False
             )
             destStopTimings
-getSingleModeRouteDetails _ _ _ _ _ _ _ = return Nothing
+buildMultimodalRouteDetails _ _ _ _ _ _ _ _ = return Nothing
+
+buildSingleModeBusRoutes ::
+  (LocationV2 -> Flow (Maybe MultiModalTypes.MultiModalLeg)) ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe DIntegratedBPPConfig.IntegratedBPPConfig ->
+  Id Merchant ->
+  Id MerchantOperatingCity ->
+  Flow [MultiModalTypes.MultiModalRoute]
+buildSingleModeBusRoutes getPreliminaryLeg mbRouteCode mbOriginStopCode mbDestinationStopCode mbIntegratedBppConfig mid mocid = do
+  mbRouteDetails <- buildMultimodalRouteDetails 1 mbRouteCode mbOriginStopCode mbDestinationStopCode mbIntegratedBppConfig mid mocid Enums.BUS
+  case mbRouteDetails of
+    Just routeDetails -> do
+      currentTime <- getCurrentTime
+      let (_, currentTimeIST) = getISTTimeInfo currentTime
+      mbPreliminaryLeg <- getPreliminaryLeg routeDetails.startLocation
+      return [mkMultiModalRoute currentTimeIST mbPreliminaryLeg MultiModalTypes.Bus (NonEmpty.fromList [routeDetails])]
+    Nothing -> return []
 
 findEarliestTiming :: UTCTime -> UTCTime -> [RouteStopTimeTable] -> Maybe RouteStopTimeTable
 findEarliestTiming currentTimeIST currentTime routeStopTimings = filter (\rst -> getISTArrivalTime rst.timeOfDeparture currentTime >= currentTimeIST) routeStopTimings & listToMaybe
