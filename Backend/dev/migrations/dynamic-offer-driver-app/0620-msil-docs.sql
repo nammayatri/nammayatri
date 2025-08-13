@@ -3615,17 +3615,17 @@ SELECT '28911beb-38ba-456d-8cca-4d019461d2b1', m.merchant_id, 'MANUAL', 'FLEXIBL
 
 -- Prod --
 UPDATE atlas_driver_offer_bpp.transporter_config
-SET subscription = false, prepaid_subscription_threshold = 100.0
+SET subscription = false, prepaid_subscription_threshold = 100.0, enable_driver_wallet = true, gst_percentage = 5.0
 WHERE merchant_operating_city_id in (select id from atlas_driver_offer_bpp.merchant_operating_city where merchant_short_id = 'MSIL_PARTNER' and city = 'Delhi');
 
 -- Master --
 UPDATE atlas_driver_offer_bpp.transporter_config
-SET subscription = false, prepaid_subscription_threshold = 100.0
+SET subscription = false, prepaid_subscription_threshold = 100.0, enable_driver_wallet = true, gst_percentage = 5.0
 WHERE merchant_operating_city_id in (select id from atlas_driver_offer_bpp.merchant_operating_city where merchant_short_id = 'NAMMA_YATRI_PARTNER' and city = 'Delhi');
 
 -- Local --
 UPDATE atlas_driver_offer_bpp.transporter_config
-SET subscription = false, prepaid_subscription_threshold = 100.0
+SET subscription = false, prepaid_subscription_threshold = 100.0, enable_driver_wallet = true, gst_percentage = 5.0
 WHERE merchant_operating_city_id in (select id from atlas_driver_offer_bpp.merchant_operating_city where merchant_short_id = 'NAMMA_YATRI_PARTNER' and city = 'Kochi');
 
 -- Fare Policy --

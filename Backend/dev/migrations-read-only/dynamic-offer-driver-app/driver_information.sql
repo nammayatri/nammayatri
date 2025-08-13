@@ -236,6 +236,11 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN plan_expiry_dat
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN driver_flow_status text ;
 
 
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN wallet_balance double precision ;
+
+
 
 ------- SQL updates -------
 

@@ -100,6 +100,7 @@ data DriverInformationT f = DriverInformationT
     tollRelatedIssueCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     totalReferred :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     verified :: B.C f Kernel.Prelude.Bool,
+    walletBalance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     weeklyCancellationRateBlockingCooldown :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
