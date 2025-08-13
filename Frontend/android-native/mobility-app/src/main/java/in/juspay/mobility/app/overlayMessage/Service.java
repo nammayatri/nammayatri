@@ -4,7 +4,9 @@ import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.graphics.PixelFormat;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.Gravity;
@@ -60,10 +62,15 @@ public class Service extends android.app.Service {
     }
 
     private void removeOverlayView() {
-        if(overlayView != null){
+        if (overlayView != null && overlayView.getView().getParent() != null) {
             Log.i(TAG, "Removing older overlay view");
-            windowManager.removeView(overlayView.getView());
+            try {
+                windowManager.removeView(overlayView.getView());
+            } catch (Exception e) {
+                Log.e(TAG, "Error removing view: " + e.getMessage(), e);
+            }
             overlayView.destroyView();
+            overlayView = null;
         }
     }
 
@@ -84,7 +91,17 @@ public class Service extends android.app.Service {
             }
         });
 
-        windowManager.addView(view, getWindowLayoutParams());
+        new Handler(Looper.getMainLooper()).post(() -> {
+            try {
+                if (view.getParent() == null) {
+                    windowManager.addView(view, getWindowLayoutParams());
+                }else{
+                    Log.d(TAG, "View already added to WindowManager");
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to add overlay view: " + e.getMessage(), e);
+            }
+        });
     }
 
     private WindowManager.LayoutParams getWindowLayoutParams(){
