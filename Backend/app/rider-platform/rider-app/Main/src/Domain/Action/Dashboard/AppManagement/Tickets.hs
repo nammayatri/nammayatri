@@ -225,10 +225,8 @@ getTicketsTicketdashboardTicketplaces ::
   Kernel.Prelude.Maybe Domain.Types.MerchantOnboarding.RequestorRole ->
   Environment.Flow [Domain.Types.TicketPlace.TicketPlace]
 getTicketsTicketdashboardTicketplaces _merchantShortId _opCity _status _requestorId _requestorRole = do
-  requestorId <- _requestorId & fromMaybeM (InvalidRequest "RequestorId is required")
-  requestorRole <- _requestorRole & fromMaybeM (InvalidRequest "RequestorRole is required")
   status <- _status & fromMaybeM (InvalidRequest "Status query param is required")
-  Domain.Action.UI.TicketDashboard.getTicketPlaceDashboardList status requestorId requestorRole
+  Domain.Action.UI.TicketDashboard.getTicketPlaceDashboardList status _requestorId _requestorRole
 
 getTicketsTicketdashboardTicketplaceSubPlaces ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
