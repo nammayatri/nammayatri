@@ -509,8 +509,6 @@ postUpsertTicketPlaceDashboardDetails (merchantId, merchantOpCityId) placeDetail
   -- Update or create the ticket place
   ticketPlace <- case mbExistingPlace of
     Just existingPlace -> do
-      when (isNothing existingPlace.ticketMerchantId && requestorRole /= Just MO.TICKET_DASHBOARD_ADMIN) $ throwError $ InvalidRequest "Don't have access"
-      when (isJust existingPlace.ticketMerchantId && (existingPlace.ticketMerchantId /= requestorId && requestorRole /= Just MO.TICKET_DASHBOARD_ADMIN)) $ throwError $ InvalidRequest "Don't have access"
       let updatedPlace = updateTicketPlace existingPlace placeDetails
       QTicketPlace.updateByPrimaryKey updatedPlace
       -- Invalidate cache when ticket place is updated
