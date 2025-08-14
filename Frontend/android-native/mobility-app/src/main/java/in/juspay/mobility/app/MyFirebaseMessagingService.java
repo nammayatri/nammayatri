@@ -336,10 +336,10 @@ public  class MyFirebaseMessagingService {
                         if (sharedPref.getString("MAPS_OPENED", "null").equals("true")) {
                             NotificationUtils.startMainActivity(context);
                         } else {
-                            NotificationUtils.startWidgetService(context, context.getString(R.string.ride_cancelled), payload, entity_payload, NotificationUtils.RequestSource.FCM);
+//                            NotificationUtils.startWidgetService(context, context.getString(R.string.ride_cancelled), payload, entity_payload, NotificationUtils.RequestSource.FCM);
                         }
                         if (merchantType.equals("DRIVER")) {
-                            NotificationUtils.updateLocationUpdateDisAndFreq(notificationType, sharedPref);
+//                            NotificationUtils.updateLocationUpdateDisAndFreq(notificationType, sharedPref);
                         }
                         break;
 

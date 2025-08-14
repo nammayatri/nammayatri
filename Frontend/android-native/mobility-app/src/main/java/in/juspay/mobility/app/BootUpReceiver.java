@@ -31,8 +31,8 @@ public class BootUpReceiver extends BroadcastReceiver {
                 locationUpdateService = new Intent(context, LocationUpdateServiceV2.class);
             }
             locationUpdateService.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
-            Intent widgetReloadService = new Intent(context, WidgetService.class);
-            widgetReloadService.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
+//            Intent widgetReloadService = new Intent(context, WidgetService.class);
+//            widgetReloadService.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
             Intent restartIntent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
             restartIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
             SharedPreferences sharedPrefs = context.getApplicationContext().getSharedPreferences(context.getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
@@ -48,7 +48,7 @@ public class BootUpReceiver extends BroadcastReceiver {
                     }
                     if (Settings.canDrawOverlays(context)) {
                         try {
-                            context.startService(widgetReloadService);
+//                            context.startService(widgetReloadService);
                             Handler handler = new Handler();
                             handler.postDelayed(() -> {
                                     context.startActivity(restartIntent);
