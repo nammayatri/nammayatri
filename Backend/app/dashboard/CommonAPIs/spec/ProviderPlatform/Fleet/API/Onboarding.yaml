@@ -72,12 +72,13 @@ apis:
             auth: ApiAuthV2
             params:
               verifyType: VerifyType
-            query:
-              accessType: DashboardAccessType
             request:
               type: VerifyReq
+            query:
+                accessType: DashboardAccessType
+                adminApprovalRequired: Bool
             response:
-              type: APISuccess
+              type: VerifyDocumentRes
 
   - GET:
       endpoint: /get/referralDetails
@@ -102,6 +103,9 @@ types:
     imageId: Text
     optionalImageId: Maybe Text
     identifierNumber: Text
+  VerifyDocumentRes:
+    - enableFleetOwner: Bool
+    - recordType: NewType
   VerifyType:
     enum: "VERIFY_PAN,VERIFY_GST,VERIFY_AADHAAR"
     derive: "HttpInstance"
