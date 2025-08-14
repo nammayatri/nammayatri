@@ -264,7 +264,7 @@ createOrder config integratedBPPConfig booking = do
             classCode = classCode,
             trainType = trainTypeCode,
             tktType = config.ticketType,
-            journeyDate = T.pack $ formatTime defaultTimeLocale "%m-%d-%Y" startTime,
+            journeyDate = T.pack $ formatTime defaultTimeLocale "%m-%d-%Y" (utcToIST startTime),
             adult = booking.quantity,
             child = fromMaybe 0 booking.childTicketQuantity,
             seniorMen = 0,
@@ -405,6 +405,12 @@ getBppOrderId :: (MonadFlow m) => FRFSTicketBooking -> m Text
 getBppOrderId booking = do
   bookingUUID <- fromText booking.id.getId & fromMaybeM (InternalError "Booking Id not being able to parse into UUID")
   return $ uuidTo21CharString bookingUUID --- The length should be 21 characters (alphanumeric)
+
+-- Convert UTC time to IST
+utcToIST :: UTCTime -> LocalTime
+utcToIST utcTime =
+  let istTimeZone = TimeZone (5 * 60 + 30) False "IST" -- IST is UTC+5:30
+   in utcToLocalTime istTimeZone utcTime
 
 -- Parse IST datetime string to UTCTime
 parseTicketValidity :: (MonadFlow m) => Text -> m UTCTime
