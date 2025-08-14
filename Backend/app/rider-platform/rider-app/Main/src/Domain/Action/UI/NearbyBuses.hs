@@ -4,6 +4,7 @@ import qualified API.Types.UI.NearbyBuses
 import qualified BecknV2.FRFS.Enums as Spe
 import qualified BecknV2.OnDemand.Enums
 import qualified Data.HashMap.Strict as HashMap
+import qualified Data.List as Data.List
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
@@ -78,13 +79,18 @@ getSimpleNearbyBuses :: Id MerchantOperatingCity -> DomainRiderConfig.RiderConfi
 getSimpleNearbyBuses merchantOperatingCityId riderConfig req = do
   buses <- getNearbyBusesFRFS (Maps.LatLong req.userLat req.userLon) riderConfig
   logDebug $ "Nearby buses: " <> show buses
+  logDebug $ "Number of nearby buses: " <> show (length buses)
 
   let vehicleCategory = castToOnDemandVehicleCategory req.vehicleType
   integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig merchantOperatingCityId vehicleCategory req.platformType
 
-  busRouteMapping <- forM buses $ \bus -> do
+  let vehicleNumbers = Data.List.nub $ mapMaybe (.vehicle_number) buses
+  logDebug $ "Vehicle numbers: " <> show vehicleNumbers
+  logDebug $ "Number of unique vehicle numbers: " <> show (length vehicleNumbers)
+
+  busRouteMapping <- forM vehicleNumbers $ \vehicleNumber -> do
     mbResult <- SIBC.fetchFirstIntegratedBPPConfigResult integratedBPPConfigs $ \config ->
-      maybeToList <$> OTPRest.getVehicleServiceType config (fromMaybe "" bus.vehicle_number)
+      maybeToList <$> OTPRest.getVehicleServiceType config vehicleNumber
     pure $ Kernel.Prelude.listToMaybe mbResult
 
   let successfulMappings = catMaybes busRouteMapping
@@ -95,7 +101,7 @@ getSimpleNearbyBuses merchantOperatingCityId riderConfig req = do
   pure $
     map
       ( \bus -> do
-          let maybeServiceType = HashMap.lookup (fromMaybe "" bus.vehicle_number) serviceTypeMap
+          let maybeServiceType = bus.vehicle_number >>= (`HashMap.lookup` serviceTypeMap)
           API.Types.UI.NearbyBuses.NearbyBus
             { currentLocation = Maps.LatLong bus.latitude bus.longitude,
               distance = Nothing,
