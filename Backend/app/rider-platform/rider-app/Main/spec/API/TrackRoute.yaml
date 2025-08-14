@@ -7,6 +7,7 @@ imports:
   VehicleCategory: BecknV2.FRFS.Enums
   PlatformType: Domain.Types.IntegratedBPPConfig
   IntegratedBPPConfig: Domain.Types.IntegratedBPPConfig
+  RouteState: Storage.CachedQueries.Merchant.MultiModalBus
 
 module: TrackRoute
 
@@ -34,6 +35,7 @@ types:
     vehicleInfo: VehicleInfoForRoute
     upcomingStops: [SharedLogic.FRFSUtils.UpcomingStop]
     delay: Maybe Seconds
+    route_state: Maybe RouteState
 
 apis:
   - GET:
