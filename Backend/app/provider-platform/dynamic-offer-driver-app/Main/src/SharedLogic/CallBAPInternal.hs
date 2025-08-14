@@ -241,7 +241,7 @@ rideSearchExpired apiKey internalUrl request = do
 
 type GetPickupInstructionsAPI =
   "internal"
-    :> Capture "riderId" Text
+    :> Capture "rideId" Text
     :> "pickupInstructions"
     :> Header "token" Text
     :> Get '[JSON] PickupInstructions.PickupInstructionResp
@@ -261,10 +261,10 @@ getPickupInstructions ::
   BaseUrl ->
   Text ->
   m PickupInstructions.PickupInstructionResp
-getPickupInstructions apiKey internalUrl riderId = do
-  logInfo $ "CallBAPInternal: Calling BAP internal API for pickup instructions, riderId: " <> riderId
+getPickupInstructions apiKey internalUrl rideId = do
+  logInfo $ "CallBAPInternal: Calling BAP internal API for pickup instructions, rideId: " <> rideId
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (getPickupInstructionsClient riderId (Just apiKey)) "GetPickupInstructions" getPickupInstructionsAPI
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (getPickupInstructionsClient rideId (Just apiKey)) "GetPickupInstructions" getPickupInstructionsAPI
 
 type GetRiderMobileNumberAPI =
   "internal"
