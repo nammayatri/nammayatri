@@ -61,11 +61,11 @@ mapWithIndex f = go 0
       ys <- go (idx + 1) xs'
       return (y : ys)
 
-convertMultiModalModeToTripMode :: MultiModal.GeneralVehicleType -> Meters -> Meters -> Meters -> Meters -> DTrip.MultimodalTravelMode
-convertMultiModalModeToTripMode input straightLineDistance distance maximumWalkDistance straightLineThreshold = case input of
+convertMultiModalModeToTripMode :: MultiModal.GeneralVehicleType -> Meters -> Meters -> DTrip.MultimodalTravelMode
+convertMultiModalModeToTripMode input straightLineDistance maximumWalkDistance = case input of
   MultiModal.MetroRail -> DTrip.Metro
   MultiModal.Subway -> DTrip.Subway
-  MultiModal.Walk -> if straightLineDistance < straightLineThreshold && distance < maximumWalkDistance then DTrip.Walk else DTrip.Taxi
+  MultiModal.Walk -> if straightLineDistance < maximumWalkDistance then DTrip.Walk else DTrip.Taxi
   MultiModal.Bus -> DTrip.Bus
   MultiModal.Unspecified -> DTrip.Taxi
 
