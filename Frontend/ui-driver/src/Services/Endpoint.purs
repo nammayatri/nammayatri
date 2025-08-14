@@ -437,3 +437,6 @@ getMeterPrice rideId = (getBaseUrl "dummy") <> "/meterRide/price?rideId=" <> rid
 
 driverConsent :: String -> String
 driverConsent _ = (getBaseUrl "") <> "/driver/consent/respond"
+
+getRiderMobileNumber :: String -> String
+getRiderMobileNumber rideId = (getBaseUrl "") <> "/riderMobileNumber/" <> rideId
