@@ -23,7 +23,8 @@ type RideSummaryScreenData = {
   cancelRidePopUpData :: S.CancelRidePopUpData,
   activeRideData :: S.ActiveRide,
   route :: Maybe Route,
-  config :: AppConfig
+  config :: AppConfig,
+  callingOption :: S.CallingOptionType
 }
 
 type RideSummaryScreenProps = {
@@ -204,6 +205,7 @@ initData = {
     , activeRideData :dummyActiveRideData
     , route: Nothing
     , config : getAppConfig appConfig
+    , callingOption : S.AnonymousCall
   },
   props: {
     pickUpOpen : true,

@@ -18,7 +18,7 @@ module Helpers.Utils
     , module ReExport
     ) where
 
-import Screens.Types (AllocationData, DisabilityType(..), DriverReferralType(..), DriverStatus(..), NotificationBody(..), VehicleCategory(..), UpdateRouteSrcDestConfig)
+import Screens.Types (AllocationData, DisabilityType(..), DriverReferralType(..), DriverStatus(..), NotificationBody(..), VehicleCategory(..), UpdateRouteSrcDestConfig, CallingOptionType(..))
 import Language.Strings (getString)
 import Data.Ord (comparing, Ordering)
 import Data.Lens ((^.))
@@ -109,7 +109,7 @@ import Data.Argonaut.Core as AC
 import Data.Argonaut.Decode.Parser as ADP
 import Common.Types.Config as CTC
 import Common.Resources.Constants (assetDomain)
-import Common.RemoteConfig.Utils (forwardBatchConfigData)
+import Common.RemoteConfig.Utils (forwardBatchConfigData, fetchDriverCallingOptionsConfig) as RU
 import Common.RemoteConfig.Types (ForwardBatchConfigData(..))
 import DecodeUtil (getAnyFromWindow)
 import Data.Foldable (foldl)
@@ -126,7 +126,8 @@ import RemoteConfig
 import Storage as Storage
 import PrestoDOM (Padding(..), Gravity(..), Margin(..), Length(..))
 import Font.Size as FontSize
-import Common.Types.App (YoutubeData, YoutubeVideoStatus(..))
+import Common.Types.App (YoutubeData, YoutubeVideoStatus(..),LazyCheck(..))
+import Data.Either as Either
 
 type AffSuccess s = (s -> Effect Unit)
 
@@ -1416,3 +1417,17 @@ youtubeData =
   , showFullScreen : false
   , hideFullScreenButton : false
   } 
+
+
+getCallingOptionType :: LazyCheck -> String -> CallingOptionType
+getCallingOptionType lazy driverCity =
+  let driverCallingOptions = RU.fetchDriverCallingOptionsConfig driverCity
+      callingOptions = DS.toLower $ fromMaybe "anonymouscall" $ DA.head driverCallingOptions.option
+      encodedCallingOptions = encode callingOptions
+  in 
+    case decodeCallingOption encodedCallingOptions of
+      Just option -> option
+      Nothing -> AnonymousCall
+
+decodeCallingOption :: Foreign -> Maybe CallingOptionType
+decodeCallingOption = Either.hush <<< runExcept <<< decode

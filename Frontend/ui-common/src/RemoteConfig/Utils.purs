@@ -14,7 +14,7 @@
 -}
 module Common.RemoteConfig.Utils where
 
-import Common.RemoteConfig.Types (RemoteConfig, RCCarousel(..), VariantLevelRemoteConfig(..), InvoiceConfig(..), ForwardBatchConfigData(..), TipsConfig, defaultForwardBatchConfigData, SubscriptionConfigVariantLevelEntity, SubscriptionConfigVariantLevel, GullakConfig, StuckRideFilterConfig, FeaturesConfigData(..), LottieSubscriptionInfo(..), LanguageKeyValue(..), defaultFeaturesConfigData, AppLanguage, AppConfigRC, WmbFlowConfig)
+import Common.RemoteConfig.Types (RemoteConfig, RCCarousel(..), VariantLevelRemoteConfig(..), InvoiceConfig(..), ForwardBatchConfigData(..), TipsConfig, defaultForwardBatchConfigData, SubscriptionConfigVariantLevelEntity, SubscriptionConfigVariantLevel, GullakConfig, StuckRideFilterConfig, FeaturesConfigData(..), LottieSubscriptionInfo(..), LanguageKeyValue(..), defaultFeaturesConfigData, AppLanguage, AppConfigRC, WmbFlowConfig, DriverCallingOptionsConfig)
 import DecodeUtil (decodeForeignObject, parseJSON, setAnyInWindow)
 import Data.String (null, toLower)
 import Data.Maybe (Maybe(..))
@@ -624,3 +624,15 @@ pushEventsConfig _ =
     defaultPushEventsConfig = {
       loggingIntervalInS : 30000
     }
+
+
+fetchDriverCallingOptionsConfig :: String -> Types.DriverCallingOptionsConfig
+fetchDriverCallingOptionsConfig city =
+  let config = fetchRemoteConfigString "driver_calling_options_config"
+      value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultDriverCallingOptionsConfig
+  in getCityBasedConfig value $ toLower city
+
+defaultDriverCallingOptionsConfig :: Types.DriverCallingOptionsConfig
+defaultDriverCallingOptionsConfig = {
+  option : ["anonymousCall"]
+}

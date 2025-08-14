@@ -131,7 +131,7 @@ import Screens.SubscriptionScreen.Transformer (alternatePlansTransformer)
 import Screens.Types (AadhaarStage(..), ActiveRide, AllocationData, AutoPayStatus(..), DriverStatus(..), HomeScreenStage(..), HomeScreenState, UpdateRouteSrcDestConfig(..), KeyboardModalType(..), Location, PlanCardConfig, PromoConfig, ReferralType(..), StageStatus(..), SubscribePopupType(..), SubscriptionBannerType(..), SubscriptionPopupType(..), SubscriptionSubview(..), UpdatePopupType(..), ChooseCityScreenStage(..), NotificationBody)
 import Screens.Types as ST
 import Screens.UploadDrivingLicenseScreen.ScreenData (initData) as UploadDrivingLicenseScreenData
-import Services.API (AddDestRes(..), DriverInsuranceResp(..), LocationAddress(..), AlternateNumberResendOTPResp(..), Category(Category), CreateOrderRes(..), CurrentDateAndTimeRes(..), DriverActiveInactiveResp(..),  DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GenerateAadhaarOTPResp(..), GetCategoriesRes(GetCategoriesRes), DriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPaymentHistoryResp(..), GetPaymentHistoryResp(..), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), Option(Option), OrderStatusRes(..), OrganizationInfo(..), PaymentDetailsEntity(..), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes),  RemoveAlternateNumberRequest(..), ResendOTPResp(..), RidesInfo(..), Route(..),  Status(..), SubscribePlanResp(..), TriggerOTPResp(..), UpdateDriverInfoReq(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyAadhaarOTPResp(..), VerifyTokenResp(..), GenerateReferralCodeReq(..), GenerateReferralCodeRes(..), FeeType(..), ClearDuesResp(..), HistoryEntryDetailsEntityV2Resp(..), DriverProfileSummaryRes(..), DummyRideRequestReq(..), BookingTypes(..), UploadOdometerImageResp(UploadOdometerImageResp), GetRidesSummaryListResp(..), PayoutVpaStatus(..), ScheduledBookingListResponse (..), DriverReachedReq(..), ServiceTierType(..), GetMeterPriceResp(..))
+import Services.API (AddDestRes(..), DriverInsuranceResp(..), LocationAddress(..), AlternateNumberResendOTPResp(..), Category(Category), CreateOrderRes(..), CurrentDateAndTimeRes(..), DriverActiveInactiveResp(..),  DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GenerateAadhaarOTPResp(..), GetCategoriesRes(GetCategoriesRes), DriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPaymentHistoryResp(..), GetPaymentHistoryResp(..), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), Option(Option), OrderStatusRes(..), OrganizationInfo(..), PaymentDetailsEntity(..), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes),  RemoveAlternateNumberRequest(..), ResendOTPResp(..), RidesInfo(..), Route(..),  Status(..), SubscribePlanResp(..), TriggerOTPResp(..), UpdateDriverInfoReq(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyAadhaarOTPResp(..), VerifyTokenResp(..), GenerateReferralCodeReq(..), GenerateReferralCodeRes(..), FeeType(..), ClearDuesResp(..), HistoryEntryDetailsEntityV2Resp(..), DriverProfileSummaryRes(..), DummyRideRequestReq(..), BookingTypes(..), UploadOdometerImageResp(UploadOdometerImageResp), GetRidesSummaryListResp(..), PayoutVpaStatus(..), ScheduledBookingListResponse (..), DriverReachedReq(..), ServiceTierType(..), GetMeterPriceResp(..), GetRiderMobileNumberResp(..))
 import Services.API as API
 import Services.Accessor (_lat, _lon, _id, _orderId, _moduleId, _languagesAvailableForQuiz , _languagesAvailableForVideos, _deepLinkJSON, _payload)
 import Services.Backend (driverRegistrationStatusBT, dummyVehicleObject, makeDriverDLReq, makeDriverRCReq, makeGetRouteReq, makeLinkReferralCodeReq, makeOfferRideReq, makeReferDriverReq, makeResendAlternateNumberOtpRequest, makeTriggerOTPReq, makeValidateAlternateNumberRequest, makeValidateImageReq, makeVerifyAlternateNumberOtpRequest, makeVerifyOTPReq, mkUpdateDriverInfoReq, walkCoordinate, walkCoordinates)
@@ -2864,7 +2864,10 @@ homeScreenFlow = do
       modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> driverProfileScreen{props{alternateNumberView = true, isEditAlternateMobile = true, mNumberEdtFocused = true}, data {fromHomeScreen = true}})
       driverProfileFlow
     ON_CALL state exophoneNumber -> do
-      (API.ApiSuccessResult resp) <- Remote.onCallBT (Remote.makeOnCallReq state.data.activeRide.id exophoneNumber)
+      _ <- getCustomerCallingNumber state.data.callingOption state.data.activeRide.id exophoneNumber
+      when (state.data.callingOption == ST.AnonymousCall) $ do
+        (API.ApiSuccessResult resp) <- Remote.onCallBT (Remote.makeOnCallReq state.data.activeRide.id exophoneNumber)
+        pure unit
       homeScreenFlow
     OPEN_PAYMENT_PAGE state -> ysPaymentFlow
     HOMESCREEN_NAV GoToSubscription -> do
@@ -4863,7 +4866,10 @@ rideSummaryScreenFlow = do
     BACK_HOME -> homeScreenFlow
     GO_TO_HOME_SCREEN_FROM_BANNER -> homeScreenFlow
     ON_CALLING state exophoneNumber -> do
-      (API.ApiSuccessResult  resp) <- Remote.onCallBT (Remote.makeOnCallReq state.data.activeRideData.id exophoneNumber)
+      _ <- getCustomerCallingNumber state.data.callingOption state.data.activeRideData.id exophoneNumber
+      when (state.data.callingOption == ST.AnonymousCall) $ do
+        (API.ApiSuccessResult  resp) <- Remote.onCallBT (Remote.makeOnCallReq state.data.activeRideData.id exophoneNumber)
+        pure unit
       rideSummaryScreenFlow
     GO_TO_OPEN_GOOGLE_MAP state -> do
       void $ pure $ openNavigation state.data.activeRideData.src_lat state.data.activeRideData.src_lon "DRIVE"
@@ -5139,3 +5145,14 @@ buildStartOpenMeterConfig mbOpenMeterConfig = {
   addDestination : maybe false (\openMeterConfig -> openMeterConfig.addDestination) mbOpenMeterConfig,
   shareRideTracking : maybe false (\openMeterConfig -> openMeterConfig.shareRideTracking) mbOpenMeterConfig
 }
+
+getCustomerCallingNumber :: ST.CallingOptionType -> String -> String -> FlowBT String Unit
+getCustomerCallingNumber callingOption driverRideId exophoneNumber = do
+  finalCallingNumber <- 
+    if callingOption == ST.DirectCall then do
+      response <- lift $ lift $ Remote.getRiderMobileNumber driverRideId
+      case response of
+        Right (GetRiderMobileNumberResp { riderMobileNumber: Just num }) -> pure num
+        _ -> pure exophoneNumber
+      else pure exophoneNumber
+  void $ pure $ JB.showDialer finalCallingNumber false 
