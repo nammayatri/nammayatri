@@ -24,6 +24,7 @@ import Domain.Types.Route
 import Domain.Types.RouteStopTimeTable
 import qualified Domain.Types.Trip as DTrip
 import Kernel.External.MultiModal.Interface as MultiModal hiding (decode, encode)
+import Kernel.External.MultiModal.Interface.Types as MultiModalTypes
 import qualified Kernel.External.Payment.Interface.Types as KT
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
@@ -556,6 +557,32 @@ measureLatency action label = do
   let latency = diffUTCTime endTime startTime
   logDebug $ label <> " Latency: " <> show latency <> " seconds"
   return result
+
+-- Returns the first route that matches the following conditions in order:
+--   1. The route has the correct origin and destination stop codes, and all non-walk legs match the selected vehicle category.
+--   2. All non-walk legs match the selected vehicle category.
+getBestOneWayRoute :: GeneralVehicleType -> [MultiModalTypes.MultiModalRoute] -> Maybe Text -> Maybe Text -> Maybe MultiModalTypes.MultiModalRoute
+getBestOneWayRoute vehicleCategory routes mbOriginStopCode mbDestinationStopCode = do
+  firstJust
+    [ findConditionalRoute
+        [ correctToFromStops mbOriginStopCode mbDestinationStopCode,
+          onlySelectedModeWithWalkLegs vehicleCategory
+        ],
+      findConditionalRoute
+        [ onlySelectedModeWithWalkLegs vehicleCategory
+        ]
+    ]
+  where
+    removeWalkLegs = filter (\l -> l.mode /= MultiModal.Walk)
+    onlySelectedModeWithWalkLegs vc = all (\l -> l.mode == vc) . removeWalkLegs
+    correctToFromStops (Just originStopCode) (Just destinationStopCode) legs =
+      case ((listToMaybe legs) >>= (.fromStopDetails) >>= (.stopCode), (listToMaybe $ reverse legs) >>= (.toStopDetails) >>= (.stopCode)) of
+        (Just journeyStartStopCode, Just journeyEndStopCode) -> journeyStartStopCode == originStopCode && journeyEndStopCode == destinationStopCode
+        _ -> False
+    correctToFromStops _ _ _ = True
+    findConditionalRoute fns = find (\r -> all (\fn -> fn r.legs) fns) routes
+
+    firstJust xs = foldr (<|>) Nothing xs
 
 getSingleModeRouteDetails ::
   ( CacheFlow m r,
