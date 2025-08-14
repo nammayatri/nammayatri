@@ -457,6 +457,7 @@ mkJourneyForSearch searchRequest estimate personId = do
         DJL.JourneyLeg
           { id = journeyLegGuid,
             mode = DTrip.Taxi,
+            groupCode = Nothing,
             startLocation = LatLngV2 searchRequest.fromLocation.lat searchRequest.fromLocation.lon,
             endLocation = case searchRequest.toLocation of
               Just toLoc -> LatLngV2 toLoc.lat toLoc.lon

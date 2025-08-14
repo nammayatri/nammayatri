@@ -12,6 +12,7 @@ import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSTicketBookingStatus
 import qualified Domain.Types.IntegratedBPPConfig
 import qualified Domain.Types.Journey
+import qualified Domain.Types.JourneyLeg
 import qualified Domain.Types.Location
 import qualified Domain.Types.LocationAddress
 import qualified Domain.Types.MultimodalPreferences
@@ -202,11 +203,19 @@ data RiderLocationReq = RiderLocationReq {currTime :: Kernel.Prelude.UTCTime, la
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data SimilarJourneyLegsResp = SimilarJourneyLegsResp {journeyLegsInfo :: [Lib.JourneyModule.Types.LegInfo]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data SingleQRReq = SingleQRReq {provider :: Lib.JourneyModule.Types.Provider, tickets :: [Kernel.Prelude.Text]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data SwitchFRFSTierReq = SwitchFRFSTierReq {quoteId :: Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data SwitchJourneyLegReq = SwitchJourneyLegReq {journeyLegId :: Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

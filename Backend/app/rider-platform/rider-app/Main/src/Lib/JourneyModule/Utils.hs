@@ -740,6 +740,7 @@ buildTrainAllViaRoutes getPreliminaryLeg (Just originStopCode) (Just destination
     ( \(viaRoutes, _distance) -> do
         -- consider distance for future
         routeDetails <- mapMaybeM (\(osc, dsc) -> buildMultimodalRouteDetails 1 Nothing osc dsc integratedBppConfig mid mocid vc) viaRoutes
+        logDebug $ "buildTrainAllViaRoutes routeDetails: " <> show routeDetails
         let updateRouteDetails = zipWith (\idx routeDetail -> routeDetail {MultiModalTypes.subLegOrder = idx}) [1 ..] routeDetails
         case updateRouteDetails of
           [] -> return Nothing
@@ -779,6 +780,7 @@ buildTrainAllViaRoutes getPreliminaryLeg (Just originStopCode) (Just destination
                          in (viaRoutes, fd.distance)
                     )
                     $ mapMaybe (.fareDetails) fares
+          logDebug $ "getAllSubwayRoutes viaPoints: " <> show viaPoints
           return viaPoints
         _ -> return []
 buildTrainAllViaRoutes _ _ _ _ _ _ _ _ _ = return []

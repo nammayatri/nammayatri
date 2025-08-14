@@ -1177,6 +1177,13 @@ mkJourney riderId startTime endTime estimatedDistance estiamtedDuration journeyI
   where
     straightLineDistance leg = highPrecMetersToMeters $ distanceBetweenInMeters (LatLong leg.startLocation.latLng.latitude leg.startLocation.latLng.longitude) (LatLong leg.endLocation.latLng.latitude leg.endLocation.latLng.longitude)
 
+mkJourneyLegGroupCode :: Id DSR.SearchRequest -> DTrip.MultimodalTravelMode -> Maybe EMInterface.MultiModalStopDetails -> Maybe EMInterface.MultiModalStopDetails -> Maybe Text
+mkJourneyLegGroupCode journeySearchRequestId mode mbFromStopDetails mbToStopDetails =
+  case mode of
+    DTrip.Walk -> Nothing
+    DTrip.Taxi -> Nothing
+    _ -> Just $ journeySearchRequestId.getId <> "-" <> show mode <> "-" <> fromMaybe "" (mbFromStopDetails >>= (.stopCode)) <> "-" <> fromMaybe "" (mbToStopDetails >>= (.stopCode))
+
 mkJourneyLeg ::
   ( CacheFlow m r,
     EncFlow m r,
@@ -1192,10 +1199,11 @@ mkJourneyLeg ::
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Id DJ.Journey ->
+  Id DSR.SearchRequest ->
   Meters ->
   Maybe GetFareResponse ->
   m (DJL.JourneyLeg, DJLM.JourneyLegMapping)
-mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation merchantId merchantOpCityId journeyId maximumWalkDistance fare = do
+mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation merchantId merchantOpCityId journeyId journeySearchRequestId maximumWalkDistance fare = do
   now <- getCurrentTime
   journeyLegId <- generateGUID
   journeyLegMappingId <- generateGUID
@@ -1209,11 +1217,13 @@ mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation m
             let toStopDetails' = mkStopDetails (gates >>= (.straightLineEntrance) >>= (.streetName)) (mbNext >>= (.fromStopDetails)) (journeyEndLocation <&> (.address))
             (fromStopDetails', toStopDetails')
           _ -> (leg.fromStopDetails, leg.toStopDetails)
+  let groupCode = mkJourneyLegGroupCode journeySearchRequestId travelMode fromStopDetails toStopDetails
   return $
     ( DJL.JourneyLeg
         { agency = leg.agency,
           distance = Just leg.distance,
           duration = Just leg.duration,
+          groupCode,
           endLocation = mkLocationWithGate (gates >>= (.straightLineEntrance)) leg.endLocation.latLng,
           fromArrivalTime = leg.fromArrivalTime,
           fromDepartureTime = leg.fromDepartureTime,

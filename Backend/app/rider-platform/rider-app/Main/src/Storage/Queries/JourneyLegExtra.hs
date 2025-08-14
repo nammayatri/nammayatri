@@ -33,6 +33,12 @@ create journeyLeg = do
     RD.create routeDetail
   create' journeyLeg
 
+findByGroupCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m [JL.JourneyLeg])
+findByGroupCode groupCode = do
+  if isNothing groupCode
+    then return []
+    else findAllWithKV [Se.Is Beam.groupCode $ Se.Eq groupCode]
+
 getJourneyLegs :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Journey.Journey -> m [JL.JourneyLeg]
 getJourneyLegs journeyId = do
   journeyLegMappings <- QJourneyLegMapping.findAllLegsMappingByJourneyId journeyId False
