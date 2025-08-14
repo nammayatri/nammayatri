@@ -270,10 +270,17 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
   when (isSingleModeMetroSearch && isOutsideMetroBusinessHours) $ throwError $ InvalidRequest "Metro booking not allowed outside business hours"
   let currentLocation = fmap latLongToLocationV2 req.currentLocation
   mbIntegratedBPPConfig <- SIBC.findMaybeIntegratedBPPConfig Nothing merchantOperatingCityId vehicleCategory (fromMaybe DIBC.MULTIMODAL req.platformType)
-  directSingleModeRoutes <-
-    case vehicleCategory of
-      BecknV2.OnDemand.Enums.BUS -> JMU.buildSingleModeBusRoutes (getPreliminaryLeg now currentLocation) searchRequest.routeCode searchRequest.originStopCode searchRequest.destinationStopCode mbIntegratedBPPConfig searchRequest.merchantId searchRequest.merchantOperatingCityId
-      _ -> return []
+  directSingleModeRoutes <- do
+    let mode = castVehicleCategoryToGeneralVehicleType vehicleCategory
+    if mode `elem` (fromMaybe [] riderConfig.domainRouteCalculationEnabledModes)
+      then do
+        case vehicleCategory of
+          BecknV2.OnDemand.Enums.BUS -> JMU.buildSingleModeDirectRoutes (getPreliminaryLeg now currentLocation) searchRequest.routeCode searchRequest.originStopCode searchRequest.destinationStopCode mbIntegratedBPPConfig searchRequest.merchantId searchRequest.merchantOperatingCityId vehicleCategory mode
+          BecknV2.OnDemand.Enums.METRO -> JMU.buildSingleModeDirectRoutes (getPreliminaryLeg now currentLocation) searchRequest.routeCode searchRequest.originStopCode searchRequest.destinationStopCode mbIntegratedBPPConfig searchRequest.merchantId searchRequest.merchantOperatingCityId vehicleCategory mode
+          BecknV2.OnDemand.Enums.SUBWAY -> JMU.buildTrainAllViaRoutes (getPreliminaryLeg now currentLocation) searchRequest.originStopCode searchRequest.destinationStopCode mbIntegratedBPPConfig searchRequest.merchantId searchRequest.merchantOperatingCityId personId vehicleCategory mode
+          _ -> return []
+      else do
+        return []
   (singleModeWarningType, otpResponse) <- do
     if not (null directSingleModeRoutes)
       then do

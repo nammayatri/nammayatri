@@ -136,6 +136,7 @@ RiderConfig:
     nyRegularMasterJobNextRunOffsetSeconds: NominalDiffTime
     refundStatusUpdateInterval: NominalDiffTime
     refundStatusUpdateRetries: Int
+    domainRouteCalculationEnabledModes: "Maybe [GeneralVehicleType]"
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
@@ -303,6 +304,7 @@ RiderConfig:
     minimumWalkDistance: "100"
     straightLineThreshold: "300"
     permissibleModes: "'{Walk, Bus, MetroRail, Subway}'"
+    domainRouteCalculationEnabledModes: "'{Bus, Subway}'"
     maxAllowedPublicTransportLegs: "2"
     postRideSafetyNotificationDelay : "60"
     useUserSettingsForSafetyIVR: "false"
@@ -337,6 +339,7 @@ RiderConfig:
     sensitiveWords: text []
     sensitiveWordsForExactMatch: text []
     permissibleModes: text []
+    domainRouteCalculationEnabledModes: text []
     excludedVehicleVariants: text []
     rentalsConfig: text []
     intercitySearchLocations : text []
