@@ -21,6 +21,7 @@ import Domain.Types.Booking ()
 import Domain.Types.Merchant ()
 import Domain.Types.PickupInstructions ()
 import Domain.Types.Ride ()
+import qualified Domain.Types.Ride
 import Environment
 import qualified IssueManagement.Storage.Queries.MediaFile as QMF
 import Kernel.Prelude
@@ -39,12 +40,12 @@ data PickupInstructionResp = PickupInstructionResp
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-getPickupInstructions :: Text -> Maybe Text -> Flow PickupInstructionResp
-getPickupInstructions riderId apiKey = do
-  logInfo $ "GetPickupInstructions: Processing request for riderId: " <> riderId
+getPickupInstructions :: Id Domain.Types.Ride.BPPRide -> Maybe Text -> Flow PickupInstructionResp
+getPickupInstructions bppRideId apiKey = do
+  logInfo $ "GetPickupInstructions: Processing request for bppRideId: " <> bppRideId.getId
 
-  -- Find the ride by riderId
-  ride <- QRide.findById (Id riderId) >>= fromMaybeM (RideNotFound riderId)
+  -- Find the ride by BPP ride ID
+  ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideNotFound bppRideId.getId)
   logInfo $ "GetPickupInstructions: Found ride with bookingId: " <> ride.bookingId.getId
 
   -- Find the booking to get personId

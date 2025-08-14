@@ -20,13 +20,15 @@ where
 
 import Domain.Action.Internal.GetPickupInstructions (PickupInstructionResp)
 import qualified Domain.Action.Internal.GetPickupInstructions as Domain
+import qualified Domain.Types.Ride
 import Environment
 import Kernel.Prelude
+import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
 
 type API =
-  Capture "riderId" Text
+  Capture "rideId" (Id Domain.Types.Ride.BPPRide)
     :> "pickupInstructions"
     :> Header "token" Text
     :> Get '[JSON] PickupInstructionResp
@@ -34,6 +36,6 @@ type API =
 handler :: FlowServer API
 handler = getPickupInstructionsHandler
 
-getPickupInstructionsHandler :: Text -> Maybe Text -> FlowHandler PickupInstructionResp
-getPickupInstructionsHandler riderId apiKey =
-  withFlowHandlerAPI $ Domain.getPickupInstructions riderId apiKey
+getPickupInstructionsHandler :: Id Domain.Types.Ride.BPPRide -> Maybe Text -> FlowHandler PickupInstructionResp
+getPickupInstructionsHandler bppRideId apiKey =
+  withFlowHandlerAPI $ Domain.getPickupInstructions bppRideId apiKey
