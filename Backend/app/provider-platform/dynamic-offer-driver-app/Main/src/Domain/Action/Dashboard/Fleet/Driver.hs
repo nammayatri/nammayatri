@@ -2631,13 +2631,15 @@ getDriverFleetBookings ::
   Maybe UTCTime ->
   Maybe UTCTime ->
   Maybe Text ->
+  Maybe Bool ->
   Flow Common.FleetBookingsInformationResponse
-getDriverFleetBookings _ _ memberPersonId mbLimit mbOffset mbFrom mbTo mbStatus = do
+getDriverFleetBookings _ _ memberPersonId mbLimit mbOffset mbFrom mbTo mbStatus mbSearchByFleetOwnerId = do
+  let searchByFleetOwnerId = fromMaybe True mbSearchByFleetOwnerId
   fleetOwnerInfo <- getFleetOwnerIds memberPersonId Nothing
   let fleetOwnerIds = map fst fleetOwnerInfo
       fleetNameMap = Map.fromList fleetOwnerInfo
 
-  ticketBookings <- QFBI.findAllByFleetOwnerIdsAndFilters fleetOwnerIds mbFrom mbTo mbLimit mbOffset
+  ticketBookings <- QFBI.findAllByFleetOwnerIdsAndFilters fleetOwnerIds mbFrom mbTo mbLimit mbOffset searchByFleetOwnerId
 
   let filteredBookings = case mbStatus of
         Just status -> filter (\booking -> fromMaybe "" booking.status == status) ticketBookings
