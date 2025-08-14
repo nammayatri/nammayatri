@@ -596,10 +596,24 @@ convertToTagGroup = go . filter (isJust . snd)
             foldl'
               ( \acc (tag, value) -> do
                   let tagGroup = getTagGroup tag
-                  flip (M.insert tagGroup) acc $ case M.lookup tagGroup acc of
-                    Nothing -> [getFullTag tag value]
-                    Just tags -> getFullTag tag value : tags
+                  let acc2 = flip (M.insert tagGroup) acc $ case M.lookup tagGroup acc of
+                        Nothing -> [getFullTag tag value]
+                        Just tags -> getFullTag tag value : tags
+
+                  let mbTagGroupAdditional = getTagGroupAdditional tag
+                  case mbTagGroupAdditional of
+                    Just tagGroupAdditional ->
+                      flip (M.insert tagGroupAdditional) acc2 $ case M.lookup tagGroupAdditional acc2 of
+                        Nothing -> [getFullTag tag value]
+                        Just tags -> getFullTag tag value : tags
+                    Nothing -> acc2
               )
               mempty
               tagList
       M.elems $ MP.mapWithKey getFullTagGroup tagsWithGroup
+
+-- make additional ONDC compatible tags
+getTagGroupAdditional :: BecknTag -> Maybe BecknTagGroup
+getTagGroupAdditional = \case
+  ETA_TO_NEAREST_DRIVER_MIN -> Just INFO
+  _ -> Nothing
