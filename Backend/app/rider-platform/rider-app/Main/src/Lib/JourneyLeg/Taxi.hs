@@ -211,7 +211,8 @@ instance JT.JourneyLeg TaxiLegRequest m where
             vehiclePositions = maybe [] (\latLong -> [JT.VehiclePosition {position = Just latLong, vehicleId = "taxi", upcomingStops = [], route_state = Nothing}]) vehiclePosition,
             legOrder = req.journeyLeg.sequenceNumber,
             subLegOrder = 1,
-            mode = DTrip.Taxi
+            mode = DTrip.Taxi,
+            fleetNo = Nothing
           }
   getState _ = throwError (InternalError "Not Supported")
 

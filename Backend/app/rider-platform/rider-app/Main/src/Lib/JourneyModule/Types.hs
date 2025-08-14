@@ -245,7 +245,8 @@ data JourneyLegStateData = JourneyLegStateData
     vehiclePositions :: [VehiclePosition], -- Uses the modified VehiclePosition
     subLegOrder :: Int,
     legOrder :: Int,
-    mode :: DTrip.MultimodalTravelMode
+    mode :: DTrip.MultimodalTravelMode,
+    fleetNo :: Maybe Text
     -- boardedVehicles field removed
   }
   deriving stock (Show, Generic)
@@ -418,7 +419,8 @@ data BusLegExtraInfo = BusLegExtraInfo
     adultTicketQuantity :: Maybe Int,
     childTicketQuantity :: Maybe Int,
     refund :: Maybe LegSplitInfo,
-    trackingStatus :: Maybe JMState.TrackingStatus
+    trackingStatus :: Maybe JMState.TrackingStatus,
+    fleetNo :: Maybe Text
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -902,7 +904,8 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
                   adultTicketQuantity = Just booking.quantity,
                   childTicketQuantity = booking.childTicketQuantity,
                   refund = refundBloc,
-                  trackingStatus = journeyLegDetail.trackingStatus
+                  trackingStatus = journeyLegDetail.trackingStatus,
+                  fleetNo = journeyLeg.finalBoardedBusNumber
                 }
         Spec.SUBWAY -> do
           mbQuote <- QFRFSQuote.findById booking.quoteId
@@ -1077,7 +1080,8 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg = do
                   adultTicketQuantity = mbQuote <&> (.quantity),
                   childTicketQuantity = mbQuote >>= (.childTicketQuantity),
                   refund = Nothing,
-                  trackingStatus = journeyLegDetail.trackingStatus
+                  trackingStatus = journeyLegDetail.trackingStatus,
+                  fleetNo = journeyLeg.finalBoardedBusNumber
                 }
         Spec.SUBWAY -> do
           let mbSelectedServiceTier = getServiceTierFromQuote =<< mbQuote
