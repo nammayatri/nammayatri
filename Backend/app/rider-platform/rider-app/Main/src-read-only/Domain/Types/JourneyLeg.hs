@@ -29,6 +29,7 @@ data JourneyLeg = JourneyLeg
     fromArrivalTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     fromDepartureTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     fromStopDetails :: Kernel.Prelude.Maybe Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails,
+    groupCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg,
     isDeleted :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     journeyId :: Kernel.Types.Id.Id Domain.Types.Journey.Journey,

@@ -29,6 +29,8 @@ module Domain.Action.UI.MultimodalConfirm
     postMultimodalOrderSoftCancel,
     getMultimodalOrderCancelStatus,
     postMultimodalOrderCancel,
+    getMultimodalOrderSimilarJourneyLegs,
+    postMultimodalOrderSwitchJourneyLeg,
   )
 where
 
@@ -92,6 +94,7 @@ import Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import Storage.Queries.Journey as QJourney
 import Storage.Queries.JourneyFeedback as SQJFB
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
+import qualified Storage.Queries.JourneyLegMapping as QJourneyLegMapping
 import Storage.Queries.MultimodalPreferences as QMP
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Ride as QRide
@@ -956,3 +959,48 @@ getAbsoluteValue mbRefundAmount = case mbRefundAmount of
   Just rfValue -> do
     let HighPrecMoney value = rfValue
     Just (HighPrecMoney $ abs value)
+
+getMultimodalOrderSimilarJourneyLegs ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
+    Kernel.Prelude.Int ->
+    Environment.Flow API.Types.UI.MultimodalConfirm.SimilarJourneyLegsResp
+  )
+getMultimodalOrderSimilarJourneyLegs (mbPersonId, _) journeyId legOrder = do
+  personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
+  journey <- JM.getJourney journeyId
+  legs <- QJourneyLeg.getJourneyLegs journeyId
+  journeyLeg <- find (\leg -> leg.sequenceNumber == legOrder) legs & fromMaybeM (InvalidRequest "No matching journey leg found for the given legOrder")
+  let groupCode = JMTypes.mkJourneyLegGroupCode (Id journey.searchRequestId) journeyLeg.mode journeyLeg.fromStopDetails journeyLeg.toStopDetails
+  journeyLegs <- QJourneyLeg.findByGroupCode groupCode
+  journeyLegsInfo <- mapMaybeM (JM.getLegInfo personId) journeyLegs
+  return $ API.Types.UI.MultimodalConfirm.SimilarJourneyLegsResp {journeyLegsInfo}
+
+postMultimodalOrderSwitchJourneyLeg ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
+    Kernel.Prelude.Int ->
+    API.Types.UI.MultimodalConfirm.SwitchJourneyLegReq ->
+    Environment.Flow API.Types.UI.MultimodalConfirm.JourneyInfoResp
+  )
+postMultimodalOrderSwitchJourneyLeg userInfo journeyId legOrder req = do
+  journey <- JM.getJourney journeyId
+  legs <- QJourneyLeg.getJourneyLegs journeyId
+  currentJourneyLeg <- find (\leg -> leg.sequenceNumber == legOrder) legs & fromMaybeM (InvalidRequest "No matching journey leg found for the given legOrder")
+  switchJourneyLeg <- QJourneyLeg.findById req.journeyLegId >>= fromMaybeM (InvalidRequest "No matching journey leg found for the given journeyLegId")
+  switchJourneyLegs currentJourneyLeg switchJourneyLeg
+  when (isNothing switchJourneyLeg.legSearchId) $ do
+    fork "initiating switch journey leg" $ do
+      void $ postMultimodalInitiate userInfo journeyId
+  updatedLegs <- JM.getAllLegsInfo journey.riderId journeyId
+  generateJourneyInfoResponse journey updatedLegs
+  where
+    switchJourneyLegs currentJourneyLeg switchJourneyLeg = do
+      currentJourneyLegMapping <- QJourneyLegMapping.findByJourneyLegId currentJourneyLeg.id >>= fromMaybeM (InvalidRequest "Journey Leg Mapping Not Found.")
+      switchJourneyLegMapping <- QJourneyLegMapping.findByJourneyLegId switchJourneyLeg.id >>= fromMaybeM (InvalidRequest "Journey Leg Mapping Not Found.")
+      QJourneyLegMapping.updateJourneyLegId switchJourneyLeg.id currentJourneyLegMapping.id
+      QJourneyLegMapping.updateJourneyLegId currentJourneyLeg.id switchJourneyLegMapping.id

@@ -255,3 +255,18 @@ ALTER TABLE atlas_app.journey_leg ADD COLUMN rider_id character varying(36) ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.journey_leg ADD COLUMN group_code text ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

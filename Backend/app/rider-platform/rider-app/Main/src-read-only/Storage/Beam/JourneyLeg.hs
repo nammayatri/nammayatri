@@ -32,6 +32,7 @@ data JourneyLegT f = JourneyLegT
     fromStopGtfsId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     fromStopName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     fromStopPlatformCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    groupCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,
     isDeleted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     journeyId :: B.C f Kernel.Prelude.Text,
@@ -64,6 +65,6 @@ instance B.Table JourneyLegT where
 
 type JourneyLeg = JourneyLegT Identity
 
-$(enableKVPG ''JourneyLegT ['id] [['journeyId], ['legId]])
+$(enableKVPG ''JourneyLegT ['id] [['groupCode], ['journeyId], ['legId]])
 
 $(mkTableInstances ''JourneyLegT "journey_leg")

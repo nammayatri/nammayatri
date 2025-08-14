@@ -174,6 +174,10 @@ JourneyLegMapping:
       kvFunction: updateOneWithKV
       params: [isDeleted]
       where: journeyLegId
+    updateJourneyLegId:
+      kvFunction: updateOneWithKV
+      params: [journeyLegId]
+      where: id
     findAllLegsMappingByJourneyId:
       kvFunction: findAllWithKV
       where:
@@ -195,6 +199,7 @@ JourneyLegMapping:
 JourneyLeg:
   fields:
     id: Id JourneyLeg
+    groupCode: Maybe Text # <parentSearchRequestId>-<mode>-<fromStopDetails.stopCode>-<toStopDetails.stopCode>
     duration: Maybe Seconds
     distance: Maybe Distance
     # polylinePoints: PolylinePoints     #to see    #Polyline.encodedPolyline
@@ -337,6 +342,7 @@ JourneyLeg:
     id: PrimaryKey
     journeyId: "!SecondaryKey"
     legId: "!SecondaryKey"
+    groupCode: "!SecondaryKey"
 
   extraOperations:
     - EXTRA_QUERY_FILE

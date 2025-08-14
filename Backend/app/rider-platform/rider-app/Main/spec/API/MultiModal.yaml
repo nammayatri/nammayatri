@@ -236,6 +236,12 @@ types:
   UpdatePaymentOrderResp:
     sdkPayload: Maybe SDKPayloadDetails
 
+  SwitchJourneyLegReq:
+    journeyLegId: Id JourneyLeg
+
+  SimilarJourneyLegsResp:
+    journeyLegsInfo: "[LegInfo]"
+
 apis:
   - POST:
       endpoint: /multimodal/{journeyId}/initiate
@@ -358,6 +364,24 @@ apis:
         legOrder: Int
       request:
         type: SwitchFRFSTierReq
+      response:
+        type: JourneyInfoResp
+
+  - GET:
+      endpoint: multimodal/{journeyId}/order/{legOrder}/similarJourneyLegs
+      params:
+        journeyId: Id Journey
+        legOrder: Int
+      response:
+        type: SimilarJourneyLegsResp
+
+  - POST:
+      endpoint: multimodal/{journeyId}/order/{legOrder}/switchJourneyLeg
+      params:
+        journeyId: Id Journey
+        legOrder: Int
+      request:
+        type: SwitchJourneyLegReq
       response:
         type: JourneyInfoResp
 
