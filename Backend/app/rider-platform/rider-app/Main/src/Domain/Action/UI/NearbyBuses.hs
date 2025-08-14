@@ -4,7 +4,7 @@ import qualified API.Types.UI.NearbyBuses
 import qualified BecknV2.FRFS.Enums as Spe
 import qualified BecknV2.OnDemand.Enums
 import qualified Data.HashMap.Strict as HashMap
-import qualified Data.List as Data.List
+import qualified Data.Set as Set
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
@@ -84,7 +84,7 @@ getSimpleNearbyBuses merchantOperatingCityId riderConfig req = do
   let vehicleCategory = castToOnDemandVehicleCategory req.vehicleType
   integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig merchantOperatingCityId vehicleCategory req.platformType
 
-  let vehicleNumbers = Data.List.nub $ mapMaybe (.vehicle_number) buses
+  let vehicleNumbers = Set.toList $ Set.fromList $ mapMaybe (.vehicle_number) buses
   logDebug $ "Vehicle numbers: " <> show vehicleNumbers
   logDebug $ "Number of unique vehicle numbers: " <> show (length vehicleNumbers)
 
@@ -100,17 +100,17 @@ getSimpleNearbyBuses merchantOperatingCityId riderConfig req = do
 
   pure $
     map
-      ( \bus -> do
+      ( \bus ->
           let maybeServiceType = bus.vehicle_number >>= (`HashMap.lookup` serviceTypeMap)
-          API.Types.UI.NearbyBuses.NearbyBus
-            { currentLocation = Maps.LatLong bus.latitude bus.longitude,
-              distance = Nothing,
-              routeCode = bus.route_id,
-              routeState = bus.route_state,
-              serviceType = maybeServiceType,
-              shortName = bus.route_number,
-              vehicleNumber = bus.vehicle_number
-            }
+           in API.Types.UI.NearbyBuses.NearbyBus
+                { currentLocation = Maps.LatLong bus.latitude bus.longitude,
+                  distance = Nothing,
+                  routeCode = bus.route_id,
+                  routeState = bus.route_state,
+                  serviceType = maybeServiceType,
+                  shortName = bus.route_number,
+                  vehicleNumber = bus.vehicle_number
+                }
       )
       buses
 
