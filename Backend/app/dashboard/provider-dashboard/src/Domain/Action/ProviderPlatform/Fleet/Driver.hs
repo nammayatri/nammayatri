@@ -489,8 +489,8 @@ postDriverFleetV2AccessMultiOwnerIdSelect merchantShortId opCity apiTokenInfo _ 
   let fleetMemberId = apiTokenInfo.personId.getId
   Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetV2AccessMultiOwnerIdSelect) (Just fleetMemberId) onlyCurrent enable req
 
-getDriverFleetBookings :: (Kernel.Types.Id.ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Environment.Flow Common.FleetBookingsInformationResponse)
-getDriverFleetBookings merchantShortId opCity apiTokenInfo limit offset from to status = do
+getDriverFleetBookings :: (Kernel.Types.Id.ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Environment.Flow Common.FleetBookingsInformationResponse)
+getDriverFleetBookings merchantShortId opCity apiTokenInfo limit offset from to status searchByFleetOwnerId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   let memberPersonId = apiTokenInfo.personId.getId
-  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetBookings) memberPersonId limit offset from to status
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetBookings) memberPersonId limit offset from to status searchByFleetOwnerId

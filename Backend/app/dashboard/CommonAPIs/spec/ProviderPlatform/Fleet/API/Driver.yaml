@@ -453,6 +453,7 @@ apis:
         - from: UTCTime
         - to: UTCTime
         - status: Text
+        - searchByFleetOwnerId: Bool
       response:
         type: FleetBookingsInformationResponse
       migrate:
@@ -469,6 +470,7 @@ apis:
               - from: UTCTime
               - to: UTCTime
               - status: Text
+              - searchByFleetOwnerId: Bool
             response:
               type: FleetBookingsInformationResponse
 
