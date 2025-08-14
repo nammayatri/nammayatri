@@ -15,12 +15,11 @@ import qualified Storage.Beam.FleetBookingInformation as Beam
 import Storage.Queries.OrphanInstances.FleetBookingInformation
 
 -- Extra code goes here --
-findAllByFleetOwnerIdsAndFilters :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Text] -> Maybe Kernel.Prelude.UTCTime -> Maybe Kernel.Prelude.UTCTime -> Maybe Int -> Maybe Int -> m [Domain.Types.FleetBookingInformation.FleetBookingInformation]
-findAllByFleetOwnerIdsAndFilters fleetOwnersIds from' to' limit offset =
+findAllByFleetOwnerIdsAndFilters :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Text] -> Maybe Kernel.Prelude.UTCTime -> Maybe Kernel.Prelude.UTCTime -> Maybe Int -> Maybe Int -> Bool -> m [Domain.Types.FleetBookingInformation.FleetBookingInformation]
+findAllByFleetOwnerIdsAndFilters fleetOwnersIds from' to' limit offset searchByFleetOwnerId =
   findAllWithOptionsKV
     [ Se.And $
-        [ Se.Is Beam.fleetOwnerId $ Se.In $ map pure fleetOwnersIds
-        ]
+        (if searchByFleetOwnerId then [Se.Is Beam.fleetOwnerId $ Se.In $ map pure fleetOwnersIds] else [])
           <> ( case (from', to') of
                  (Just from, Just to) ->
                    [ Se.Is Beam.createdAt $ Se.GreaterThanOrEq from,
