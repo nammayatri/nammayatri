@@ -32,12 +32,13 @@ import Engineering.Helpers.BackTrack (liftFlowBT)
 import ConfigProvider (getAppConfig, appConfig)
 import JBridge as JB
 import Screens.Types as ST
+import Helpers.PrestoUtils
 
 
 handleAppUpdatePopUp :: FlowBT String APP_UPDATE_POPUP
 handleAppUpdatePopUp = do
   (GlobalState state) ← getState
-  _ <- lift $ lift $ doAff $ liftEffect $ initUIWithNameSpace "AppUpdatePopUpScreen" Nothing
+  _ <- lift $ lift $ doAff $ liftEffect $ initUIWithNameSpace "AppUpdatePopUpScreen" (getFragmentView "")
   act <- lift $ lift $ showScreenWithNameSpace ( AppUpdatePopUpScreen.screen state.appUpdatePopUpScreen)
   _ <- lift $ lift $ doAff $ liftEffect $ terminateUI $ Just "AppUpdatePopUpScreen"
   case act of

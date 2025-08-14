@@ -44,6 +44,7 @@ import Data.Lens ((^.))
 import Engineering.Helpers.Accessor
 import Debug (spy)
 import Mobility.Prelude as MP
+import Helpers.Utils (emitTerminateApp, isParentView)
 
 instance showAction :: Show Action where
   show _ = ""
