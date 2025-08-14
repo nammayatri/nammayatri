@@ -187,6 +187,22 @@ apis:
         - requestorRole: RequestorRole
       response:
         type: "[TicketPlace]"
+  - GET:
+      endpoint: /ticketdashboard/ticketplace/{ticketPlaceId}/subPlaces
+      auth: ApiAuthV2
+      params:
+        ticketPlaceId: Id TicketPlace
+      response:
+        type: "[TicketSubPlace]"
+  - POST:
+      endpoint: /ticketdashboard/ticketplace/{ticketPlaceId}/updateSubPlaces
+      auth: ApiAuthV2
+      params:
+        ticketPlaceId: Id TicketPlace
+      request:
+        type: "[TicketSubPlace]"
+      response:
+        type: APISuccess
 
   - GET: # GetTicketFleetVehiclesAPI
       endpoint: /ticket/places/{placeId}/fleet/VehicleAssociation/list

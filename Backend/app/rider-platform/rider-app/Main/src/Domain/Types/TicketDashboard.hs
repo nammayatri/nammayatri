@@ -56,7 +56,8 @@ data TicketPlaceDashboardDetails = TicketPlaceDashboardDetails
     assignTicketToBpp :: Maybe Bool,
     customTabs :: Maybe [DTicketPlace.CustomTab],
     recommend :: Maybe Bool,
-    enforcedAsSubPlace :: Maybe Bool
+    enforcedAsSubPlace :: Maybe Bool,
+    merchantOperatingCityId :: Maybe Text
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
