@@ -14,7 +14,7 @@ window.getMerchantConfig = function () {
     "USER_APP_LINK": "https://nammayatri.in/link/rider/mvnw",
     "PRIVACY_POLICY_LINK": "https://docs.google.com/document/d/1tF96MwtaEiq70y_P40E29Sy3X61moTc9",
     "SPECIAL_ZONE_OTP_VIEW": "false",
-    "StringKeys": ["NEED_IT_TO_ENABLE_LOCATION", "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER", "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT", "YOUR_LOCATION_HELPS_OUR_SYSTEM", "WHAT_IS_NAMMA_YATRI_BONUS", "EARNED_ON_APP", "TRAVELLED_ON_APP", "GUARANTEED_FIXED_PRICE", "GET_READY_FOR_YS_SUBSCRIPTION"],
+    "StringKeys": ["NEED_IT_TO_ENABLE_LOCATION", "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER", "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT", "YOUR_LOCATION_HELPS_OUR_SYSTEM", "WHAT_IS_NAMMA_YATRI_BONUS", "EARNED_ON_APP", "TRAVELLED_ON_APP","REPORT_ISSUE_CHAT_PLACEHOLDER", "GUARANTEED_FIXED_PRICE", "GET_READY_FOR_YS_SUBSCRIPTION"],
     "fontType": "Assets",
     "currency": "₹",
     "isGradient" : "false",
@@ -24,8 +24,8 @@ window.getMerchantConfig = function () {
     "apiLoaderLottie": "primary_button_loader.json",
     "primaryTextColor": "#FCC32C",
     "primaryBackground": "#2C2F3A",
-    "showCorporateAddress" : true,
-    "showRegisteredAddress" : true,
+    "showCorporateAddress" : false,
+    "showRegisteredAddress" : false,
     "imageUploadOptional" : false,
     "BONUS_EARNED" : "true",
     "clientName" : "Namma Yatri",
@@ -39,13 +39,14 @@ window.getMerchantConfig = function () {
     "engilshInNative" : "ಆಂಗ್ಲ",
     "englishStrings": {
       "MERCHANT_NAME" : appName.includes("namma") ? "Namma Yatri" : "Mana Yatri",
-      "NEED_IT_TO_ENABLE_LOCATION": "Namma Yatri Partner collect location data to enable share your location to monitor driver current location, even when the app is closed or not in use.",
+      "NEED_IT_TO_ENABLE_LOCATION": "Odisha Yatri Partner collect location data to enable share your location to monitor driver current location, even when the app is closed or not in use.",
       "CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER": "Currently, We aren't operating with this vehicle registration number",
-      "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT": "You are about to place a call to the Namma Yatri Support Team. Do you want to proceed?",
+      "YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT": "You are about to place a call to the Odisha Yatri Support Team. Do you want to proceed?",
+      "REPORT_ISSUE_CHAT_PLACEHOLDER" : "Describe your issue. Odisha Yatri will try to resolve it in under 24 hours.",
       "YOUR_LOCATION_HELPS_OUR_SYSTEM": "Your location helps our system to map down all the near by autos and get you the quickest ride possible.",
-      "WHAT_IS_NAMMA_YATRI_BONUS" : "What is Namma Yatri Bonus?",
-      "EARNED_ON_APP" : "Earned on NY",
-      "TRAVELLED_ON_APP" : "Travelled On Namma Yatri",
+      "WHAT_IS_NAMMA_YATRI_BONUS" : "What is Odisha Yatri Bonus?",
+      "EARNED_ON_APP" : "Earned on OY",
+      "TRAVELLED_ON_APP" : "Travelled On Odisha Yatri",
       "GUARANTEED_FIXED_PRICE" : "Guaranteed fixed price until \nApr 1, 2025",
       "GET_READY_FOR_YS_SUBSCRIPTION" : "Get ready for\n Yatri Plans!"
     },
@@ -170,7 +171,7 @@ window.getMerchantConfig = function () {
     , "otpRegex" :  "is your OTP for login to [A-Za-z]+ [A-Za-z]+ [A-Za-z]+"
     , "termsLink" : "https://docs.google.com/document/d/1K68xvtReD9FVpx-IshtKNMt4baQNgKXt"
     , "termsVersion" : 2.0
-    , "privacyLink" : "https://docs.google.com/document/d/1tF96MwtaEiq70y_P40E29Sy3X61moTc9"
+    , "privacyLink" : "https://docs.google.com/document/d/1eVnQgomRt6JiAtPPNuR1oMMby6MYTef4/edit?tab=t.0"
     , "feature" : {
       "enableBonus" : true
       , "enableImageUpload" : false
@@ -180,7 +181,7 @@ window.getMerchantConfig = function () {
     }
     , "appData" : {
       "link" : "https://play.google.com/store/apps/details?id=in.juspay.nammayatripartner"
-      , "name" : "Namma Yatri"
+      , "name" : "Odisha Yatri"
     }
     , "enableMockLocation" : true
     , "cityConfig" : [
@@ -315,6 +316,10 @@ window.getMerchantConfig = function () {
           "bike" : {
             "freeSeconds" : 300,
             "perMinCharges" : 1.0
+          },
+          "ambulance" : {
+            "freeSeconds" : 480,
+            "perMinCharges" : 2.0
           }
         },
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
@@ -406,6 +411,10 @@ window.getMerchantConfig = function () {
         "bike" : {
           "freeSeconds" : 180
         , "perMinCharges" : 2.0
+        },
+        "ambulance" : {
+          "freeSeconds" : 480,
+          "perMinCharges" : 2.0
         }
       },
       "rateCardConfig" : { "showLearnMore" : true, "learnMoreVideoLink" : "https://www.youtube.com/shorts/NUTNKPzslpw" },
@@ -493,6 +502,10 @@ window.getMerchantConfig = function () {
         "bike" : {
           "freeSeconds" : 300,
           "perMinCharges" : 1.0
+        },
+        "ambulance" : {
+          "freeSeconds" : 480,
+          "perMinCharges" : 2.0
         }
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
@@ -581,6 +594,10 @@ window.getMerchantConfig = function () {
         "bike" : {
           "freeSeconds" : 300,
           "perMinCharges" : 1.0
+        },
+        "ambulance" : {
+          "freeSeconds" : 480,
+          "perMinCharges" : 2.0
         }
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
@@ -1269,6 +1286,10 @@ window.getMerchantConfig = function () {
         "bike" : {
           "freeSeconds" : 300,
           "perMinCharges" : 1.0
+        },
+        "ambulance" : {
+          "freeSeconds" : 480,
+          "perMinCharges" : 2.0
         }
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
@@ -1357,6 +1378,10 @@ window.getMerchantConfig = function () {
         "bike" : {
           "freeSeconds" : 300,
           "perMinCharges" : 1.0
+        },
+        "ambulance" : {
+          "freeSeconds" : 480,
+          "perMinCharges" : 2.0
         }
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
@@ -1445,6 +1470,10 @@ window.getMerchantConfig = function () {
         "bike" : {
           "freeSeconds" : 300,
           "perMinCharges" : 1.0
+        },
+        "ambulance" : {
+          "freeSeconds" : 480,
+          "perMinCharges" : 2.0
         }
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
@@ -1533,6 +1562,10 @@ window.getMerchantConfig = function () {
         "bike" : {
           "freeSeconds" : 300,
           "perMinCharges" : 1.0
+        },
+        "ambulance" : {
+          "freeSeconds" : 480,
+          "perMinCharges" : 2.0
         }
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
@@ -1621,6 +1654,10 @@ window.getMerchantConfig = function () {
         "bike" : {
           "freeSeconds" : 300,
           "perMinCharges" : 1.0
+        },
+        "ambulance" : {
+          "freeSeconds" : 480,
+          "perMinCharges" : 2.0
         }
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
@@ -1709,6 +1746,10 @@ window.getMerchantConfig = function () {
         "bike" : {
           "freeSeconds" : 300,
           "perMinCharges" : 1.0
+        },
+        "ambulance" : {
+          "freeSeconds" : 480,
+          "perMinCharges" : 2.0
         }
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
@@ -1797,6 +1838,10 @@ window.getMerchantConfig = function () {
         "bike" : {
           "freeSeconds" : 300,
           "perMinCharges" : 1.0
+        },
+        "ambulance" : {
+          "freeSeconds" : 480,
+          "perMinCharges" : 2.0
         }
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
@@ -2175,7 +2220,7 @@ window.getMerchantConfig = function () {
         "waitingCharges" : 1.50,
         "waitingChargesConfig" : defWaitingChargesConfig,
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
-        "rateCardConfig" : { "showLearnMore" : true, "learnMoreVideoLink" : "https://www.youtube.com/shorts/NUTNKPzslpw" },
+        "rateCardConfig" : { "showLearnMore" : true, "learnMoreVideoLink" : "https://www.youtube.com/@YourOdishaYatri" },
         "gstPercentage": "18",
         "enableHvSdk" : true,
         "purpleRideConfig" : {
@@ -2214,7 +2259,7 @@ window.getMerchantConfig = function () {
       {
         "cityName" : "Bhubaneshwar",
         "mapImage" : "ny_ic_location_map",
-        "cityCode": "std:00112", //// check this from backend
+        "cityCode": "std:0674", //// check this from backend
         "showSubscriptions" : false,
         "enableAdvancedBooking" : false,
         "advancedRidePopUpYoutubeLink" : "" ,
@@ -2250,7 +2295,7 @@ window.getMerchantConfig = function () {
         "waitingCharges" : 1.50,
         "waitingChargesConfig" : defWaitingChargesConfig,
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
-        "rateCardConfig" : { "showLearnMore" : true, "learnMoreVideoLink" : "https://www.youtube.com/shorts/NUTNKPzslpw" },
+        "rateCardConfig" : { "showLearnMore" : true, "learnMoreVideoLink" : "https://www.youtube.com/@YourOdishaYatri" },
         "gstPercentage": "18",
         "enableHvSdk" : true,
         "purpleRideConfig" : {
@@ -2516,7 +2561,7 @@ window.getMerchantConfig = function () {
   , "appUpdatePopupUrl" : "https://play.google.com/store/apps/details?id=in.juspay.nammayatripartner&pcampaignid=web_share"
   , "dashboard" : {
         "enable" : true,
-        "url" : "https://nammayatri.in/open?source=in-app"
+        "url" : "https://odishayatri.in/open?cc=ODI"
     }
   , "profile" : {
     "showBookingOption" : true
@@ -2555,6 +2600,10 @@ let defWaitingChargesConfig = {
     "bike" : {
       "freeSeconds" : 300,
       "perMinCharges" : 1.0
+    },
+    "ambulance" : {
+      "freeSeconds" : 480,
+      "perMinCharges" : 2.0
     }
   }
 
@@ -2570,6 +2619,10 @@ let defRentalWaitingChargesConfig = {
   },
   "bike" : {
     "freeSeconds" : 180,
+    "perMinCharges" : 2.0
+  },
+  "ambulance" : {
+    "freeSeconds" : 480,
     "perMinCharges" : 2.0
   }
 }
