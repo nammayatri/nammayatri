@@ -54,6 +54,7 @@ library
       API.Internal.DriverArrivalNotf
       API.Internal.FrequentLocUser
       API.Internal.FRFS
+      API.Internal.GetPickupInstructions
       API.Internal.Rating
       API.Internal.RideSearchExpired
       API.Internal.StopEvents
@@ -191,7 +192,9 @@ library
       Domain.Action.Internal.DriverArrivalNotf
       Domain.Action.Internal.FrequentLocUser
       Domain.Action.Internal.FRFS
+      Domain.Action.Internal.GetPickupInstructions
       Domain.Action.Internal.Payout
+      Domain.Action.Internal.PickupInstructionHandler
       Domain.Action.Internal.Rating
       Domain.Action.Internal.RideSearchExpired
       Domain.Action.Internal.StopEvents
@@ -252,6 +255,7 @@ library
       Domain.Action.UI.RentalsIntercityCache
       Domain.Action.UI.Ride
       Domain.Action.UI.RidePayment
+      Domain.Action.UI.RiderMobileNumberInternal
       Domain.Action.UI.Route
       Domain.Action.UI.SavedReqLocation
       Domain.Action.UI.Search
@@ -644,6 +648,7 @@ library
       API.Action.UI.Places
       API.Action.UI.PriceBreakup
       API.Action.UI.RidePayment
+      API.Action.UI.RiderMobileNumberInternal
       API.Action.UI.SocialLogin
       API.Action.UI.Sos
       API.Action.UI.TicketKapture
@@ -706,6 +711,7 @@ library
       API.Types.UI.Places
       API.Types.UI.PriceBreakup
       API.Types.UI.RidePayment
+      API.Types.UI.RiderMobileNumberInternal
       API.Types.UI.SocialLogin
       API.Types.UI.Sos
       API.Types.UI.TicketKapture

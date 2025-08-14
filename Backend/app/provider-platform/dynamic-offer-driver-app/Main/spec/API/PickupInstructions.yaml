@@ -1,0 +1,20 @@
+imports:
+  APISuccess: Kernel.Types.APISuccess
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+
+module: PickupInstructions
+
+types:
+  PickupInstructionResp:
+    instruction: Maybe Text
+    audioBase64: Maybe Text
+
+apis:
+  - GET:
+      endpoint: /driver/pickupInstructions
+      auth: TokenAuth PROVIDER_TYPE
+      mandatoryQuery:
+        riderId: Text
+      response:
+        type: API.Types.UI.PickupInstructions.PickupInstructionResp

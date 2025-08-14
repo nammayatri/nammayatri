@@ -95,3 +95,8 @@ ALTER TABLE atlas_app.ticket_place ADD COLUMN end_date date ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.ticket_place ADD COLUMN assign_ticket_to_bpp boolean  default false;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ticket_place ADD COLUMN enforced_as_sub_place boolean  default false;

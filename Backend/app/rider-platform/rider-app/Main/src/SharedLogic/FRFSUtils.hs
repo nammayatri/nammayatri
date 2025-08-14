@@ -740,7 +740,7 @@ markAllRefundBookings booking personId = do
   allPaymentBookings <- mapM (QFRFSTicketBookingPayment.findNewTBPByBookingId . (.id)) allJourneyFrfsBookings
   let paymentBookings = catMaybes allPaymentBookings
 
-  let failedBookings = filter ((== DFRFSTicketBooking.FAILED) . (.status)) allJourneyFrfsBookings
+  let terminalBookings = filter (\frfsBooking -> frfsBooking.status `elem` [DFRFSTicketBooking.FAILED, DFRFSTicketBooking.CANCELLED]) allJourneyFrfsBookings
       nonRefundInitiatedBookings =
         filter
           ( \bkg ->
@@ -752,8 +752,8 @@ markAllRefundBookings booking personId = do
                   paymentBookings
               )
           )
-          failedBookings
-      allFailed = not (null failedBookings) && length failedBookings == length allJourneyFrfsBookings
+          terminalBookings
+      allFailed = not (null terminalBookings) && all (\frfsBooking -> frfsBooking.status == DFRFSTicketBooking.FAILED) allJourneyFrfsBookings
   whenJust (listToMaybe nonRefundInitiatedBookings) $ \_ -> do
     logInfo $ "payment status api markAllRefundBookings: " <> show nonRefundInitiatedBookings
     logInfo $ "allFailed flag in markAllRefundBookings: " <> show allFailed
@@ -772,7 +772,7 @@ markAllRefundBookings booking personId = do
     let splitDetails = Payment.mkUnaggregatedSplitSettlementDetails isSplitEnabled amountUpdated vendorSplitDetails
     let refundSplitDetails = mkRefundSplitDetails nonRefundInitiatedBookings
     refundId <- generateGUID
-    let lockKey = "markAllRefundBookings:" <> refundId
+    let lockKey = "markAllRefundBookings:" <> orderShortId
     Redis.withLockRedis lockKey 5 $ do
       when allFailed $ whenJust mbJourneyId $ \journeyId -> QJourney.updateStatus DJourney.FAILED journeyId
       let refundReq =

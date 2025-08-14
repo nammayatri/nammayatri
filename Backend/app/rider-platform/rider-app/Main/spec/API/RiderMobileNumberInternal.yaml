@@ -1,0 +1,19 @@
+imports:
+  {}
+
+module: RiderMobileNumberInternal
+
+types:
+  RiderMobileAPIEntity:
+    riderMobileNumber: Maybe Text
+
+apis:
+  - GET:
+      endpoint: /riderMobileNumber/{bppRideId}
+      headers:
+        token: Text
+      params:
+        bppRideId: Text
+      auth: NoAuth
+      response:
+        type: "RiderMobileAPIEntity"

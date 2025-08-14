@@ -63,6 +63,7 @@ library
       API.Internal.FleetVehiclesAssociation
       API.Internal.KnowYourDriver
       API.Internal.Multimodal
+      API.Internal.PickupInstruction
       API.Internal.PopulateTipAmount
       API.Internal.ProdLoopStatus
       API.Internal.ReportACIssue
@@ -201,6 +202,7 @@ library
       Domain.Action.Internal.FleetBookingInformation
       Domain.Action.Internal.FleetVehiclesAssociation
       Domain.Action.Internal.KnowYourDriver
+      Domain.Action.Internal.PickupInstruction
       Domain.Action.Internal.PopulateTipAmount
       Domain.Action.Internal.ProcessingChangeOnline
       Domain.Action.Internal.ProdLoopStatus
@@ -257,6 +259,7 @@ library
       Domain.Action.UI.Payout
       Domain.Action.UI.Performance
       Domain.Action.UI.Person
+      Domain.Action.UI.PickupInstructions
       Domain.Action.UI.PlaceNameCache
       Domain.Action.UI.Plan
       Domain.Action.UI.PriceBreakup
@@ -273,6 +276,7 @@ library
       Domain.Action.UI.Ride.StartRide
       Domain.Action.UI.Ride.StartRide.Internal
       Domain.Action.UI.RideDetails
+      Domain.Action.UI.RiderMobileNumber
       Domain.Action.UI.RideRoute
       Domain.Action.UI.RideSummary
       Domain.Action.UI.Route
@@ -775,9 +779,11 @@ library
       API.Action.UI.MeterRide
       API.Action.UI.OperationHub
       API.Action.UI.Operator
+      API.Action.UI.PickupInstructions
       API.Action.UI.PriceBreakup
       API.Action.UI.Reels
       API.Action.UI.ReferralPayout
+      API.Action.UI.RiderMobileNumber
       API.Action.UI.SocialLogin
       API.Action.UI.SpecialLocation
       API.Action.UI.SpecialLocationWarrior
@@ -821,6 +827,7 @@ library
       API.Types.UI.Merchant
       API.Types.UI.MeterRide
       API.Types.UI.OperationHub
+      API.Types.UI.PickupInstructions
       API.Types.UI.PriceBreakup
       API.Types.UI.Reels
       API.Types.UI.ReferralPayout

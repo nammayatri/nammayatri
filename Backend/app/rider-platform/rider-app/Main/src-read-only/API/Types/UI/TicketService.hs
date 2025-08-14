@@ -54,6 +54,7 @@ data CategoriesResp = CategoriesResp
 data PeopleCategoriesResp = PeopleCategoriesResp
   { cancellationCharges :: Kernel.Prelude.Maybe [Domain.Types.ServicePeopleCategory.CancellationCharge],
     description :: Data.Text.Text,
+    iconUrl :: Kernel.Prelude.Maybe Data.Text.Text,
     id :: Kernel.Types.Id.Id Domain.Types.ServicePeopleCategory.ServicePeopleCategory,
     name :: Data.Text.Text,
     pricePerUnit :: Kernel.Types.Common.HighPrecMoney,
@@ -231,8 +232,8 @@ data TicketFleetVehicleResp = TicketFleetVehicleResp
     fleetOwnerName :: Data.Text.Text,
     isActive :: Kernel.Prelude.Bool,
     rcId :: Data.Text.Text,
-    vehicleNo :: Data.Text.Text,
-    vehicleType :: Data.Text.Text
+    vehicleNo :: Kernel.Prelude.Maybe Data.Text.Text,
+    vehicleType :: Kernel.Prelude.Maybe Data.Text.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

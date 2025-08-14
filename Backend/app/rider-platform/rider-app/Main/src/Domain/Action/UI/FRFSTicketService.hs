@@ -666,7 +666,7 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req crisSdkResponse
                   let childPriceAmount = maybe updatedQuote.price.amount (.amount) updatedQuote.childPrice
                   let discountedPrice = modifyPrice updatedQuote.price $ \p -> max (HighPrecMoney 0.0) $ HighPrecMoney ((p.getHighPrecMoney * (toRational updatedQuote.quantity)) + (childPriceAmount.getHighPrecMoney * (toRational (fromMaybe 0 updatedQuote.childTicketQuantity)))) - totalDiscount
                   void $ QFRFSTicketBooking.updatePriceAndQuantityById discountedPrice updatedQuote.quantity updatedQuote.childTicketQuantity booking.id
-                  return $ booking {DFRFSTicketBooking.quoteId = quoteId, DFRFSTicketBooking.bppItemId = updatedQuote.bppItemId, DFRFSTicketBooking.bookingAuthCode = mBookAuthCode, DFRFSTicketBooking.quantity = ticketQuantity, DFRFSTicketBooking.childTicketQuantity = childTicketQuantity}
+                  return $ booking {DFRFSTicketBooking.quoteId = quoteId, DFRFSTicketBooking.bppItemId = updatedQuote.bppItemId, DFRFSTicketBooking.bookingAuthCode = mBookAuthCode, DFRFSTicketBooking.price = discountedPrice, DFRFSTicketBooking.quantity = ticketQuantity, DFRFSTicketBooking.childTicketQuantity = childTicketQuantity}
                 else return booking
             pure (rider, updatedBooking)
         )

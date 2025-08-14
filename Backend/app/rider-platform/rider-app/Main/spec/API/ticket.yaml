@@ -72,6 +72,7 @@ types:
     pricePerUnitWithCurrency: PriceAPIEntity
     description: Text
     cancellationCharges: "Maybe [CancellationCharge]"
+    iconUrl: Maybe Text
 
   TicketBookingReq:
     visitDate: Day
@@ -231,9 +232,9 @@ types:
   TicketFleetVehicleResp:
     fleetOwnerId: Text
     fleetOwnerName: Text
-    vehicleNo: Text
+    vehicleNo: Maybe Text
     rcId: Text
-    vehicleType: Text
+    vehicleType: Maybe Text
     driverId: Maybe Text
     driverName: Maybe Text
     isActive: Bool
@@ -371,6 +372,14 @@ apis:
       auth: TokenAuth
       response:
         type: "[TicketPlaceResp]"
+  - GET:
+      endpoint: /ticket/place/{placeId}
+      name: getTicketPlace
+      auth: TokenAuth
+      params:
+        placeId: Id TicketPlace
+      response:
+        type: "TicketPlaceResp"
 
   # GET /ticket/bookings/{ticketServiceShortId}/fleet-vehicles
   - GET:

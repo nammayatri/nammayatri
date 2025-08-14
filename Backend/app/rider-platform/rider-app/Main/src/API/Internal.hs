@@ -6,10 +6,12 @@ where
 
 import qualified API.Action.UI.InsuranceInternal as InsuranceInternal
 import qualified API.Action.UI.MeterRideInternal as MeterRideInternal
+import qualified API.Action.UI.RiderMobileNumberInternal as RiderMobileNumberInternal
 import qualified API.Internal.Cac as Cac
 import qualified API.Internal.DriverArrivalNotf as DriverArrivalNotf
 import qualified API.Internal.FRFS as FRFS
 import qualified API.Internal.FrequentLocUser as FrequentLocUser
+import qualified API.Internal.GetPickupInstructions as GetPickupInstructions
 import qualified API.Internal.Rating as Rating
 import qualified API.Internal.RideSearchExpired as RideSearchExpired
 import qualified API.Internal.StopEvents as StopEvents
@@ -30,6 +32,8 @@ type API =
            :<|> InsuranceInternal.API
            :<|> ViolationDetection.API
            :<|> RideSearchExpired.API
+           :<|> RiderMobileNumberInternal.API
+           :<|> GetPickupInstructions.API
        )
 
 handler :: FlowServer API
@@ -44,3 +48,5 @@ handler =
     :<|> InsuranceInternal.handler
     :<|> ViolationDetection.handler
     :<|> RideSearchExpired.handler
+    :<|> RiderMobileNumberInternal.handler
+    :<|> GetPickupInstructions.handler

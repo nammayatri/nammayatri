@@ -57,6 +57,7 @@ module Domain.Action.ProviderPlatform.Fleet.Driver
     postDriverFleetV2AccessMultiOwnerIdSelect,
     getDriverFleetStatus,
     getMbFleetOwnerAndRequestorIdMerchantBased,
+    getDriverFleetBookings,
   )
 where
 
@@ -108,16 +109,7 @@ buildTransaction apiTokenInfo driverId =
 
 --------------------------------------- Single Fleet Owners Access --------------------------------------
 getFleetOwnerId :: Text -> Maybe Text -> Flow Text
-getFleetOwnerId memberPersonId mbFleetOwnerId = do
-  mbCachedFleetOwnerId :: Maybe Text <- Redis.get redisKey
-  case mbCachedFleetOwnerId of
-    Just fleetOwnerId -> return fleetOwnerId
-    Nothing -> do
-      fleetOwnerId <- Client.callFleetAPI (skipMerchantCityAccessCheck (ShortId "no_required")) City.AnyCity (.driverDSL.getDriverDashboardInternalHelperGetFleetOwnerId) mbFleetOwnerId memberPersonId
-      Redis.setExp redisKey fleetOwnerId 180
-      return fleetOwnerId
-  where
-    redisKey = "CachedFleetOwnerId:memberPersonId-" <> memberPersonId <> "-fleetOwnerId-" <> fromMaybe "None" mbFleetOwnerId
+getFleetOwnerId memberPersonId mbFleetOwnerId = Client.callFleetAPI (skipMerchantCityAccessCheck (ShortId "no_required")) City.AnyCity (.driverDSL.getDriverDashboardInternalHelperGetFleetOwnerId) mbFleetOwnerId memberPersonId
 
 ------------------------------------- Helper Functions --------------------------------------
 -- in case if fleet owner is mandatory
@@ -504,3 +496,9 @@ postDriverFleetV2AccessMultiOwnerIdSelect merchantShortId opCity apiTokenInfo _ 
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   let fleetMemberId = apiTokenInfo.personId.getId
   Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetV2AccessMultiOwnerIdSelect) (Just fleetMemberId) onlyCurrent enable req
+
+getDriverFleetBookings :: (Kernel.Types.Id.ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Environment.Flow Common.FleetBookingsInformationResponse)
+getDriverFleetBookings merchantShortId opCity apiTokenInfo limit offset from to status = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  let memberPersonId = apiTokenInfo.personId.getId
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetBookings) memberPersonId limit offset from to status

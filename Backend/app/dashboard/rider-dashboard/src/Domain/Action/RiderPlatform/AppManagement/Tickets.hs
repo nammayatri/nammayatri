@@ -17,6 +17,8 @@ module Domain.Action.RiderPlatform.AppManagement.Tickets
     getTicketsTicketdashboardTicketplaceInfo,
     postTicketsTicketdashboardTicketplaceUpdate,
     getTicketsTicketdashboardTicketplaces,
+    getTicketsTicketdashboardTicketplaceSubPlaces,
+    postTicketsTicketdashboardTicketplaceUpdateSubPlaces,
   )
 where
 
@@ -237,26 +239,36 @@ postTicketsTicketdashboardSendverifyotp merchantShortId opCity req = do
 getTicketsTicketdashboardTicketplaceInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Domain.Types.MerchantOnboarding.RequestorRole) -> Environment.Flow Domain.Types.TicketDashboard.TicketPlaceDashboardDetails)
 getTicketsTicketdashboardTicketplaceInfo merchantShortId opCity apiTokenInfo ticketPlaceId _requestorId' _requestorRole' = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  let requestorId = apiTokenInfo.personId.getId
-  requestorRole <- getDashboardAccessType requestorId
-  unless (requestorRole `elem` [DMO.TICKET_DASHBOARD_MERCHANT, DMO.TICKET_DASHBOARD_ADMIN]) $
-    throwError $ InternalError "Operation not permitted"
-  API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.ticketsDSL.getTicketsTicketdashboardTicketplaceInfo) ticketPlaceId (pure requestorId) (pure requestorRole)
+  --let requestorId = apiTokenInfo.personId.getId
+  -- requestorRole <- getDashboardAccessType requestorId
+  -- unless (requestorRole `elem` [DMO.TICKET_DASHBOARD_MERCHANT, DMO.TICKET_DASHBOARD_ADMIN]) $
+  --   throwError $ InternalError "Operation not permitted"
+  API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.ticketsDSL.getTicketsTicketdashboardTicketplaceInfo) ticketPlaceId Nothing Nothing
 
 postTicketsTicketdashboardTicketplaceUpdate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Domain.Types.MerchantOnboarding.RequestorRole) -> Domain.Types.TicketDashboard.TicketPlaceDashboardDetails -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postTicketsTicketdashboardTicketplaceUpdate merchantShortId opCity apiTokenInfo _requestorId' _requestorRole' req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  let requestorId = apiTokenInfo.personId.getId
-  requestorRole <- getDashboardAccessType requestorId
-  unless (requestorRole `elem` [DMO.TICKET_DASHBOARD_MERCHANT, DMO.TICKET_DASHBOARD_ADMIN]) $
-    throwError $ InternalError "Operation not permitted"
-  API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.ticketsDSL.postTicketsTicketdashboardTicketplaceUpdate) (pure requestorId) (pure requestorRole) req
+  --let requestorId = apiTokenInfo.personId.getId
+  -- requestorRole <- getDashboardAccessType requestorId
+  -- unless (requestorRole `elem` [DMO.TICKET_DASHBOARD_MERCHANT, DMO.TICKET_DASHBOARD_ADMIN]) $
+  --   throwError $ InternalError "Operation not permitted"
+  API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.ticketsDSL.postTicketsTicketdashboardTicketplaceUpdate) Nothing Nothing req
 
 getTicketsTicketdashboardTicketplaces :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Kernel.Prelude.Maybe (Domain.Types.MerchantOnboarding.RequestorRole) -> Environment.Flow [Domain.Types.TicketPlace.TicketPlace])
 getTicketsTicketdashboardTicketplaces merchantShortId opCity apiTokenInfo status _requestorId _requestorRole = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  let requestorId = apiTokenInfo.personId.getId
-  requestorRole <- getDashboardAccessType requestorId
-  unless (requestorRole `elem` [DMO.TICKET_DASHBOARD_MERCHANT, DMO.TICKET_DASHBOARD_ADMIN]) $
-    throwError $ InternalError "Operation not permitted"
-  API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.ticketsDSL.getTicketsTicketdashboardTicketplaces) status (pure requestorId) (pure requestorRole)
+  --let requestorId = apiTokenInfo.personId.getId
+  -- requestorRole <- getDashboardAccessType requestorId
+  -- unless (requestorRole `elem` [DMO.TICKET_DASHBOARD_MERCHANT, DMO.TICKET_DASHBOARD_ADMIN]) $
+  --   throwError $ InternalError "Operation not permitted"
+  API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.ticketsDSL.getTicketsTicketdashboardTicketplaces) status Nothing Nothing
+
+getTicketsTicketdashboardTicketplaceSubPlaces :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Environment.Flow [Domain.Types.TicketSubPlace.TicketSubPlace])
+getTicketsTicketdashboardTicketplaceSubPlaces merchantShortId opCity apiTokenInfo ticketPlaceId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.ticketsDSL.getTicketsTicketdashboardTicketplaceSubPlaces) ticketPlaceId
+
+postTicketsTicketdashboardTicketplaceUpdateSubPlaces :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> [Domain.Types.TicketSubPlace.TicketSubPlace] -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
+postTicketsTicketdashboardTicketplaceUpdateSubPlaces merchantShortId opCity apiTokenInfo ticketPlaceId req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.ticketsDSL.postTicketsTicketdashboardTicketplaceUpdateSubPlaces) ticketPlaceId req

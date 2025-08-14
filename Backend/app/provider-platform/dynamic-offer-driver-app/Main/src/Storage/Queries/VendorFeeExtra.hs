@@ -62,7 +62,7 @@ adjustVendorFee driverFeeId adjustment = do
 -- Adjust original vendor fee by subtracting the sum of vendor fees created for child driver fees
 adjustVendorFeeSubtractingChildren :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DriverFee -> [Id DriverFee] -> m ()
 adjustVendorFeeSubtractingChildren parentDriverFeeId childDriverFeeIds = do
-  when (null childDriverFeeIds) $ pure ()
+  when (null childDriverFeeIds) $ return ()
   oldVendorFees <- findAllByDriverFeeId parentDriverFeeId
   childVendorFees <- concat <$> mapM findAllByDriverFeeId childDriverFeeIds
   let childSums :: M.Map Text Rational

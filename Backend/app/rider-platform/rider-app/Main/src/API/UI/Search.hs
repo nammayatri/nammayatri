@@ -194,8 +194,9 @@ search' (personId, merchantId) req mbBundleVersion mbClientVersion mbClientConfi
     void $ CallBPP.searchV2 dSearchRes.gatewayUrl becknTaxiReqV2 merchantId
   fork "Multimodal Search" $ do
     riderConfig <- QRC.findByMerchantOperatingCityIdInRideFlow dSearchRes.searchRequest.merchantOperatingCityId dSearchRes.searchRequest.configInExperimentVersions >>= fromMaybeM (RiderConfigNotFound dSearchRes.searchRequest.merchantOperatingCityId.getId)
-    when riderConfig.makeMultiModalSearch $ do
-      void (multiModalSearch dSearchRes.searchRequest riderConfig riderConfig.initiateFirstMultimodalJourney True req personId)
+    if riderConfig.makeMultiModalSearch
+      then void (multiModalSearch dSearchRes.searchRequest riderConfig riderConfig.initiateFirstMultimodalJourney True req personId)
+      else QSearchRequest.updateAllJourneysLoaded (Just True) dSearchRes.searchRequest.id
   return $ DSearch.SearchResp dSearchRes.searchRequest.id dSearchRes.searchRequestExpiry dSearchRes.shortestRouteInfo
   where
     -- TODO : remove this code after multiple search req issue get fixed from frontend
@@ -402,7 +403,7 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
       transitServiceReq <- TMultiModal.getTransitServiceReq searchRequest.merchantId merchantOperatingCityId
       otpResponse' <- JMU.measureLatency (MultiModal.getTransitRoutes (Just searchRequest.id.getId) transitServiceReq transitRoutesReq >>= fromMaybeM (InternalError "routes dont exist")) "getTransitRoutes"
       let otpResponse'' = MInterface.MultiModalResponse (map mkRouteDetailsForWalkLegs otpResponse'.routes)
-      logDebug $ "[Multimodal - OTP Response]" <> show otpResponse''
+      logDebug $ "[Multimodal - OTP Response]" <> show otpResponse'' <> show searchRequest.id.getId
       -- Add default auto leg if no routes are found
       if null otpResponse''.routes
         then do

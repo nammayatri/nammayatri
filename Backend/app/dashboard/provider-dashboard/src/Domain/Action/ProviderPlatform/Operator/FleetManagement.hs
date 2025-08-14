@@ -120,9 +120,6 @@ postFleetManagementFleetLinkVerifyOtp merchantShortId opCity apiTokenInfo req = 
 postFleetManagementFleetMemberAssociationCreate :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Operator.FleetManagement.FleetMemberAssociationCreateReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess)
 postFleetManagementFleetMemberAssociationCreate merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  -- Verify admin access
-  unless (apiTokenInfo.person.dashboardAccessType == Just DASHBOARD_ADMIN) $
-    throwError AccessDenied
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
   SharedLogic.Transaction.withTransactionStoring transaction $
     Client.callOperatorAPI checkedMerchantId opCity (.fleetManagementDSL.postFleetManagementFleetMemberAssociationCreate) req

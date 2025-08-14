@@ -626,7 +626,7 @@ instance Eq TagNameValue where
 
 -- We don't need Eq here because we want to compare only tagName and tagValue, not expiredAt. Use compareTagNameValue function instead
 newtype TagNameValueExpiry = TagNameValueExpiry {getTagNameValueExpiry :: Text} -- tagName#tagValue#expiredAt format (only tagName is mandatory)
-  deriving newtype (Show, Read, ToJSON, FromJSON, ToSchema)
+  deriving newtype (Show, Eq, Read, ToJSON, FromJSON, ToSchema)
 
 data TagObject = TagObject
   { tagName :: TagName,

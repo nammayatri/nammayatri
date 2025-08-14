@@ -250,7 +250,7 @@ bbpsStatusHandler bbpsInfo = do
       | bbpsInfo.status `elem` [DBBPS.AWAITING_BBPS_CONFIRMATION] -> return oldResp -- Extra state might be needed later to handle some cases -- we can call bbps status api here..
       | bbpsInfo.status `elem` [DBBPS.REFUND_PENDING, DBBPS.CONFIRMATION_FAILED] -> do
         fork "Trigger Refund data updation" $ do
-          refunds <- QRefunds.findAllByOrderId (Kernel.Types.Id.cast bbpsInfo.refId)
+          refunds <- QRefunds.findAllByOrderId (Kernel.Types.Id.ShortId bbpsInfo.refId.getId)
           let isAnyRefundPending = any (\refund -> refund.status `elem` [Payment.REFUND_PENDING, Payment.MANUAL_REVIEW]) refunds
               isRefundSuccess = any (\refund -> refund.status == Payment.REFUND_SUCCESS) refunds
               allRefundFailed = all (\refund -> refund.status == Payment.REFUND_FAILURE) refunds

@@ -66,6 +66,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.BusinessHour as QBH
+import qualified Storage.Queries.MerchantOperatingCity as QMO
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonExtra as PersonExtra
 import qualified Storage.Queries.SeatManagement as QTSM
@@ -138,13 +139,18 @@ getTicketPlaces (_, merchantId) = do
   context <- TicketRule.getCurrentContext 330 Nothing Nothing
   ticketPlaces' <- QTicketPlace.getTicketPlaces merchantOpCity.id
   let ticketPlaces = TicketRule.processEntity context <$> ticketPlaces'
-  pure $ sortBy (comparing (Down . (.priority))) $ filterEndedOrUnPublishedPlaces ticketPlaces
+  pure $ sortBy (comparing (Down . (.priority))) $ filterEnforcedAsSubPlace $ filterEndedOrUnPublishedPlaces ticketPlaces
   where
     filterEndedOrUnPublishedPlaces = filter (\place -> place.status `notElem` [Domain.Types.TicketPlace.Ended, Domain.Types.TicketPlace.Unpublished])
+    filterEnforcedAsSubPlace = filter (\place -> not place.enforcedAsSubPlace)
 
 getTicketPlacesServices :: (Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Prelude.Maybe (Data.Time.Calendar.Day) -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.TicketSubPlace.TicketSubPlace) -> Environment.Flow [API.Types.UI.TicketService.TicketServiceResp]
 getTicketPlacesServices _ placeId mbDate mbSubPlaceId = do
-  ticketServices <- QTicketService.getTicketServicesByPlaceIdAndSubPlaceId placeId.getId mbSubPlaceId
+  ticketServices <-
+    if isJust mbSubPlaceId
+      then QTicketService.getTicketServicesByPlaceIdAndSubPlaceId placeId.getId mbSubPlaceId
+      else QTicketService.getTicketServicesByPlaceId placeId.getId
+
   now <- getCurrentTime
   let bookingDate = fromMaybe (utctDay now) mbDate
   context <- TicketRule.getCurrentContext 330 mbDate Nothing
@@ -268,7 +274,8 @@ getTicketPlacesServices _ placeId mbDate mbSubPlaceId = do
             pricePerUnit = peopleCategory.pricePerUnit.amount,
             pricePerUnitWithCurrency = mkPriceAPIEntity peopleCategory.pricePerUnit,
             description = peopleCategory.description,
-            cancellationCharges = peopleCategory.cancellationCharges
+            cancellationCharges = peopleCategory.cancellationCharges,
+            iconUrl = peopleCategory.iconUrl
           }
 
     findSpecialOccasion service = QSO.findAllSpecialOccasionByEntityId service.id.getId Nothing
@@ -590,7 +597,7 @@ getTicketBookingsDetails (_mbPersonId, merchantId') shortId_ = do
   mkTicketBookingDetails ticketBooking services
   where
     mkTicketBookingDetails DTTB.TicketBooking {..} services = do
-      refunds <- QRefunds.findAllByOrderId $ Kernel.Types.Id.Id shortId.getShortId
+      refunds <- QRefunds.findAllByOrderId (Kernel.Types.Id.ShortId shortId.getShortId)
       person <- QP.findById personId >>= fromMaybeM (InvalidRequest "Person not found")
       let isAnyRefundPending = any (\refund -> refund.status == Kernel.External.Payment.Interface.Types.REFUND_PENDING) refunds
       refundDetails <-
@@ -672,9 +679,9 @@ getTicketBookingsDetails (_mbPersonId, merchantId') shortId_ = do
         Refunds
           { id = Kernel.Types.Id.Id requestId,
             merchantId = merchantId.getId,
-            shortId = requestId,
+            shortId = Kernel.Types.Id.ShortId requestId,
             status = status,
-            orderId = Kernel.Types.Id.Id orderId.getShortId,
+            orderId = Kernel.Types.Id.ShortId orderId.getShortId,
             refundAmount = amount,
             idAssignedByServiceProvider = Nothing,
             initiatedBy = Nothing,
@@ -734,15 +741,16 @@ postTicketBookingsVerify _ = processBookingService
         case mbTicketPlace of
           Just ticketPlace ->
             when ticketPlace.assignTicketToBpp $ do
-              case (mbFleetOwnerId, mbVehicleNo, ticketPlace.ticketMerchantId) of
-                (Just fleetOwnerId, Just vehicleNo, Just merchantId) -> do
-                  merchant <- CQM.findById (Kernel.Types.Id.Id merchantId) >>= fromMaybeM (MerchantNotFound merchantId)
+              merchanOperatingCity <- QMO.findById ticketPlace.merchantOperatingCityId >>= fromMaybeM (InvalidRequest "Merchant Operating City not found")
+              case (mbFleetOwnerId, mbVehicleNo) of
+                (Just fleetOwnerId, Just vehicleNo) -> do
+                  merchant <- CQM.findById (merchanOperatingCity.merchantId) >>= fromMaybeM (MerchantNotFound merchanOperatingCity.merchantId.getId)
                   let updateReq =
                         CallBPPInternal.UpdateFleetBookingInformationReq
                           { id = bookingService.assignmentId,
                             bookingId = booking.id.getId,
                             serviceId = bookingService.id.getId,
-                            fleetOwnerId = Just fleetOwnerId,
+                            fleetOwnerId = fleetOwnerId,
                             vehicleNo = vehicleNo,
                             personId = Just booking.personId.getId,
                             visitDate = Just booking.visitDate,
@@ -1780,6 +1788,25 @@ invalidateCacheForTicketPlace placeId = do
   logInfo $ "Invalidating cache for ticket place: " <> placeId.getId
   invalidateTicketPlaceAvailabilityCache placeId
 
+getTicketPlace ::
+  (Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) ->
+  Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace ->
+  Environment.Flow API.Types.UI.TicketService.TicketPlaceResp
+getTicketPlace _ placeId = do
+  context <- TicketRule.getCurrentContext 330 Nothing Nothing
+  ticketPlace' <- QTicketPlace.findById placeId >>= fromMaybeM (InvalidRequest $ "Ticket place not found: " <> placeId.getId)
+  let ticketPlace = TicketRule.processEntity context ticketPlace'
+  buildTicketPlaceResp ticketPlace
+  where
+    buildTicketPlaceResp place = do
+      subPlaces <- QTicketSubPlace.findAllByTicketPlaceId place.id
+      let activeSubPlaces = filter (.isActive) subPlaces
+      pure $
+        API.Types.UI.TicketService.TicketPlaceResp
+          { ticketPlace = place,
+            subPlaces = activeSubPlaces
+          }
+
 getTicketPlacesV2 ::
   (Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) ->
   Environment.Flow [API.Types.UI.TicketService.TicketPlaceResp]
@@ -1788,11 +1815,12 @@ getTicketPlacesV2 (_, merchantId) = do
   context <- TicketRule.getCurrentContext 330 Nothing Nothing
   ticketPlaces' <- QTicketPlace.getTicketPlaces merchantOpCity.id
   let ticketPlaces = TicketRule.processEntity context <$> ticketPlaces'
-  let filteredPlaces = sortBy (comparing (Down . (.priority))) $ filterEndedOrUnPublishedPlaces ticketPlaces
+  let filteredPlaces = sortBy (comparing (Down . (.priority))) $ filterEnforcedAsSubPlace $ filterEndedOrUnPublishedPlaces ticketPlaces
   -- Transform to TicketPlaceResp with subPlaces
   mapM buildTicketPlaceResp filteredPlaces
   where
     filterEndedOrUnPublishedPlaces = filter (\place -> place.status `notElem` [Domain.Types.TicketPlace.Ended, Domain.Types.TicketPlace.Unpublished])
+    filterEnforcedAsSubPlace = filter (\place -> not place.enforcedAsSubPlace)
 
     buildTicketPlaceResp place = do
       subPlaces <- QTicketSubPlace.findAllByTicketPlaceId place.id
