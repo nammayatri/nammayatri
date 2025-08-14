@@ -72,6 +72,7 @@ types:
     pricePerUnitWithCurrency: PriceAPIEntity
     description: Text
     cancellationCharges: "Maybe [CancellationCharge]"
+    iconUrl: Maybe Text
 
   TicketBookingReq:
     visitDate: Day
