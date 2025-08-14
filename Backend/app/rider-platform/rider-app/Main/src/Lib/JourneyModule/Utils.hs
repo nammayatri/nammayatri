@@ -6,6 +6,9 @@ import qualified BecknV2.OnDemand.Enums as Enums
 import Control.Applicative ((<|>))
 import Control.Monad.Extra (mapMaybeM)
 import qualified Data.Geohash as Geohash
+-- import BecknV2.FRFS.Enums (ServiceTierType)
+
+import qualified Data.HashMap.Strict as HM
 import Data.List (groupBy, nub, sort, sortBy)
 import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Map.Strict as Map
@@ -141,6 +144,12 @@ data LegServiceTier = LegServiceTier
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data AvailableRoutesInfo = AvailableRoutesInfo
+  { routeCode :: Text,
+    isLiveTrackingAvailable :: Bool
+  }
+  deriving (Generic, Show, Eq, ToJSON, FromJSON, ToSchema)
+
 -- | Data structure to represent available routes grouped by service tier
 data AvailableRoutesByTier = AvailableRoutesByTier
   { serviceTier :: Spec.ServiceTierType,
@@ -149,7 +158,8 @@ data AvailableRoutesByTier = AvailableRoutesByTier
     via :: Maybe Text,
     trainTypeCode :: Maybe Text,
     quoteId :: Maybe (Id DFRFSQuote.FRFSQuote),
-    availableRoutes :: [Text],
+    availableRoutes :: [Text], -- todo: deprecate this
+    availableRoutesInfo :: [AvailableRoutesInfo],
     nextAvailableBuses :: [Seconds],
     nextAvailableTimings :: [(TimeOfDay, TimeOfDay)],
     fare :: PriceAPIEntity,
@@ -329,6 +339,10 @@ fetchLiveTimings routeCodes stopCode currentTime integratedBppConfig mid mocid v
   Enums.BUS -> fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid mocid
   _ -> measureLatency (GRSM.findByRouteCodeAndStopCode integratedBppConfig mid mocid routeCodes stopCode) "fetch route stop timing through graphql"
 
+type RouteCodeText = Text
+
+type ServiceTypeText = Text
+
 -- | Find all possible routes from originStop to destinationStop with trips in the next hour
 -- grouped by service tier type
 findPossibleRoutes ::
@@ -370,6 +384,18 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
               fromRouteCode == toRouteCode && fromSeq < toSeq -- Ensure correct sequence
           ]
 
+  liveBusesInfo <- mapM (\routeInfo -> (routeInfo,) <$> MultiModalBus.getRoutesBuses routeInfo) validRoutes
+
+  busRouteMapping :: HM.HashMap RouteCodeText (HM.HashMap ServiceTypeText Text) <-
+    HM.fromList <$> forM liveBusesInfo \(routeInfo, routeWithBuses) -> do
+      busMappings <-
+        mapMaybeM
+          ( \bus -> do
+              mbServiceType <- OTPRest.getVehicleServiceType integratedBppConfig bus.vehicleNumber
+              return $ (\serviceTypeResp -> (serviceTypeResp.service_type, bus.vehicleNumber)) <$> mbServiceType
+          )
+          routeWithBuses.buses
+      return (routeInfo, HM.fromList busMappings)
   -- Get the timing information for these routes at the origin stop
 
   routeStopTimings <- measureLatency (fetchLiveTimings validRoutes fromStopCode currentTime integratedBppConfig mid mocid vc) ("fetchLiveTimings" <> show validRoutes <> " fromStopCode: " <> show fromStopCode <> " toStopCode: " <> show toStopCode)
@@ -433,10 +459,18 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
 
     logDebug $ "mbFare: " <> show mbFare <> "serviceTierType: " <> show serviceTierType <> "routeShortNames: " <> show routeShortNames <> "quoteId: " <> show quoteId <> "via: " <> show via <> "trainTypeCode: " <> show trainTypeCode
     let fare = fromMaybe (PriceAPIEntity 0.0 INR) mbFare -- fix it later
+    let availableRoutesInfo =
+          map
+            ( \routeDetail -> do
+                let busForCurrentServiceType = HM.lookup (show serviceTierType) =<< HM.lookup routeDetail.code busRouteMapping
+                AvailableRoutesInfo {routeCode = routeDetail.code, isLiveTrackingAvailable = isJust busForCurrentServiceType}
+            )
+            validRouteDetails
     return $
       AvailableRoutesByTier
         { serviceTier = serviceTierType,
-          availableRoutes = routeShortNames,
+          availableRoutes = routeShortNames, -- TODO: deprecate this
+          availableRoutesInfo = availableRoutesInfo,
           nextAvailableBuses = sort arrivalTimes,
           serviceTierName = serviceTierName,
           serviceTierDescription = serviceTierDescription,
