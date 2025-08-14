@@ -297,7 +297,6 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
       let duration = nominalDiffTimeToSeconds $ diffUTCTime singleModeRouteDetails.toStop.stopArrivalTime singleModeRouteDetails.fromStop.stopArrivalTime
       let currentLocation = fmap latLongToLocationV2 req.currentLocation
       mbPreliminaryLeg <- getPreliminaryLeg now currentLocation fromStopLocation
-      let subLegOrder = if isJust mbPreliminaryLeg then 2 else 1
       let leg =
             MultiModalTypes.MultiModalLeg
               { distance = distance,
@@ -319,7 +318,7 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
                         toStopDetails = Just toStopDetails,
                         startLocation = fromStopLocation,
                         endLocation = toStopLocation,
-                        subLegOrder,
+                        subLegOrder = 1,
                         fromArrivalTime = Just singleModeRouteDetails.fromStop.stopArrivalTime,
                         fromDepartureTime = Just singleModeRouteDetails.fromStop.stopArrivalTime,
                         toArrivalTime = Just singleModeRouteDetails.toStop.stopArrivalTime,
