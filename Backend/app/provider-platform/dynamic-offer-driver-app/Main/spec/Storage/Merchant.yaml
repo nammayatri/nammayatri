@@ -92,6 +92,7 @@ Merchant:
     fleetOwnerEnabledCheck: Maybe Bool
     overwriteAssociation: Maybe Bool
     mediaFileDocumentLinkExpires: Seconds
+    fileExtensionCheck: Maybe Bool
   sqlType:
     destinationRestriction: text[]
     originRestriction: text[]
@@ -119,6 +120,7 @@ Merchant:
     fleetOwnerEnabledCheck: "false"
     overwriteAssociation: "false"
     mediaFileDocumentLinkExpires: 3600
+    fileExtensionCheck: "false"
 
   excludedFields:
     - merchantId

@@ -4,6 +4,7 @@
 module API.Types.ProviderPlatform.Management.Endpoints.DriverRegistration where
 
 import qualified API.Types.ProviderPlatform.Management.Endpoints.Account
+import qualified AWS.S3
 import qualified Dashboard.Common
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
@@ -313,7 +314,14 @@ data UpdateDocumentRequest
 instance Kernel.Types.HideSecrets.HideSecrets UpdateDocumentRequest where
   hideSecrets = Kernel.Prelude.identity
 
-data UploadDocumentReq = UploadDocumentReq {imageBase64 :: Kernel.Prelude.Text, imageType :: DocumentType, rcNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text, requestorId :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
+data UploadDocumentReq = UploadDocumentReq
+  { imageBase64 :: Kernel.Prelude.Text,
+    fileType :: Kernel.Prelude.Maybe AWS.S3.FileType,
+    reqContentType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    imageType :: DocumentType,
+    rcNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    requestorId :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

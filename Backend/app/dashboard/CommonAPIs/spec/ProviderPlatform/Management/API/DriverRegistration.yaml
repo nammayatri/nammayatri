@@ -8,6 +8,7 @@ imports:
   Document: Dashboard.Common
   VehicleCategory: Dashboard.Common
   DriverVehicleDetails: Dashboard.Common
+  FileType: AWS.S3
 
 module: DriverRegistration
 apiPrefix: driver
@@ -204,6 +205,8 @@ types:
     - enum: "DriverLicense, VehicleRegistrationCertificate, PanCard, VehiclePermitImage, VehiclePUCImage, VehicleInsuranceImage, VehicleFitnessCertificateImage, VehicleInspectionImage, ProfilePhotoImage, VehicleNOC, Permissions, SubscriptionPlan, AadhaarCard, ProfileDetails, SocialSecurityNumber, GSTCertificate, BackgroundVerification, UploadProfileImage, BusinessLicense, VehicleFront,VehicleBack,VehicleRight, VehicleLeft, VehicleFrontInterior, VehicleBackInterior, Odometer, InspectionHub"
   UploadDocumentReq:
     - imageBase64: Text
+    - fileType: Maybe FileType
+    - reqContentType: Maybe Text
     - imageType: DocumentType
     - rcNumber: Maybe Text
     - requestorId: Maybe Text
