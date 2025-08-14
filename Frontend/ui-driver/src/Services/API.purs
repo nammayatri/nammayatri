@@ -572,7 +572,8 @@ newtype DriverTags = DriverTags {
   "PetDriver" :: Maybe String,
   "NYClubTag" :: Maybe String, -- ny_member, ny_member_probation, ny_member_revoked, ny_ineligible
   "NyMemberProbationTill" :: Maybe Int,
-  "DriverChargingBehaviour" :: Maybe OverchargingTag
+  "DriverChargingBehaviour" :: Maybe OverchargingTag,
+  "DriverTier" :: Maybe String
 }
 
 newtype  OrganizationInfo = OrganizationInfo
