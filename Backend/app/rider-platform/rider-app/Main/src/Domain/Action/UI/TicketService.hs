@@ -273,7 +273,8 @@ getTicketPlacesServices _ placeId mbDate mbSubPlaceId = do
             pricePerUnit = peopleCategory.pricePerUnit.amount,
             pricePerUnitWithCurrency = mkPriceAPIEntity peopleCategory.pricePerUnit,
             description = peopleCategory.description,
-            cancellationCharges = peopleCategory.cancellationCharges
+            cancellationCharges = peopleCategory.cancellationCharges,
+            iconUrl = peopleCategory.iconUrl
           }
 
     findSpecialOccasion service = QSO.findAllSpecialOccasionByEntityId service.id.getId Nothing
