@@ -250,6 +250,8 @@ postDriverRegistrationDocumentUpload merchantShortId opCity driverId_ req = do
       ImageValidateRequest
         { image = req.imageBase64,
           imageType = mapDocumentType req.imageType,
+          fileType = req.fileType,
+          reqContentType = req.reqContentType,
           rcNumber = req.rcNumber,
           validationStatus = Nothing,
           workflowTransactionId = Nothing,

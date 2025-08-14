@@ -56,6 +56,8 @@ testPostDriverRegistrationDocumentUploadWithRealExecution =
             req =
               Common.UploadDocumentReq
                 { Common.imageBase64 = "base64string==",
+                  Common.fileType = Nothing,
+                  Common.reqContentType = Nothing,
                   Common.imageType = Common.DriverLicense,
                   Common.rcNumber = Just "RC1234",
                   Common.requestorId = Just "requestor-123"
@@ -67,7 +69,7 @@ testPostDriverRegistrationDocumentUploadWithRealExecution =
           (evaluate $ DDriverReg.postDriverRegistrationDocumentUpload merchantShortId opCity driverId req)
 
         -- Validate the request structure that was passed to the function
-        let Common.UploadDocumentReq {Common.imageBase64 = imageBase64, Common.imageType = imageType, Common.rcNumber = rcNumber, Common.requestorId = requestorId} = req
+        let Common.UploadDocumentReq {Common.imageBase64 = imageBase64, Common.fileType = Nothing, Common.reqContentType = Nothing, Common.imageType = imageType, Common.rcNumber = rcNumber, Common.requestorId = requestorId} = req
 
         -- Test that the request data is correctly structured
         imageBase64 @?= "base64string=="
@@ -91,9 +93,9 @@ testPostDriverRegistrationDocumentUploadWithRealExecution =
                 Environment.Flow Common.UploadDocumentResp
         True @? "Function should return UploadDocumentResp",
       testCase "Executes with different document types and validates request handling" $ do
-        let req1 = Common.UploadDocumentReq "base64string1==" Common.DriverLicense (Just "RC1234") (Just "requestor-1")
-            req2 = Common.UploadDocumentReq "base64string2==" Common.PanCard (Just "PAN1234") (Just "requestor-2")
-            req3 = Common.UploadDocumentReq "base64string3==" Common.AadhaarCard (Just "AADHAAR1234") (Just "requestor-3")
+        let req1 = Common.UploadDocumentReq "base64string1==" Nothing Nothing Common.DriverLicense (Just "RC1234") (Just "requestor-1")
+            req2 = Common.UploadDocumentReq "base64string2==" Nothing Nothing Common.PanCard (Just "PAN1234") (Just "requestor-2")
+            req3 = Common.UploadDocumentReq "base64string3==" Nothing Nothing Common.AadhaarCard (Just "AADHAAR1234") (Just "requestor-3")
             merchantShortId = Kernel.Types.Id.ShortId "test-merchant"
             opCity = Context.Delhi
             driverId = Kernel.Types.Id.Id "driver-123" :: Kernel.Types.Id.Id DDriver.Driver
@@ -110,9 +112,9 @@ testPostDriverRegistrationDocumentUploadWithRealExecution =
           (evaluate $ DDriverReg.postDriverRegistrationDocumentUpload merchantShortId opCity driverId req3)
 
         -- Validate that different document types are handled correctly
-        let Common.UploadDocumentReq {Common.imageType = imageType1, Common.rcNumber = rcNumber1} = req1
-            Common.UploadDocumentReq {Common.imageType = imageType2, Common.rcNumber = rcNumber2} = req2
-            Common.UploadDocumentReq {Common.imageType = imageType3, Common.rcNumber = rcNumber3} = req3
+        let Common.UploadDocumentReq {Common.imageType = imageType1, Common.fileType = Nothing, Common.reqContentType = Nothing, Common.rcNumber = rcNumber1} = req1
+            Common.UploadDocumentReq {Common.imageType = imageType2, Common.fileType = Nothing, Common.reqContentType = Nothing, Common.rcNumber = rcNumber2} = req2
+            Common.UploadDocumentReq {Common.imageType = imageType3, Common.fileType = Nothing, Common.reqContentType = Nothing, Common.rcNumber = rcNumber3} = req3
 
         imageType1 @?= Common.DriverLicense
         imageType2 @?= Common.PanCard

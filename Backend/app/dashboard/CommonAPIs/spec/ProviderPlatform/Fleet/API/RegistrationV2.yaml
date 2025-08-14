@@ -1,6 +1,7 @@
 imports:
   Person: Dashboard.Common
   City: Kernel.Types.Beckn.Context
+  FileType: AWS.S3
 
 module: RegistrationV2
 apiPrefix: fleet
@@ -84,6 +85,8 @@ types:
     - fleetType: Maybe FleetType
     - businessLicenseNumber: Maybe Text
     - businessLicenseImage: Maybe Text
+    - fileType: Maybe FileType
+    - reqContentType: Maybe Text
     - operatorReferralCode: Maybe Text
     - adminApprovalRequired: Maybe Bool
   FleetOwnerRegisterTReqV2: # hide secrets
