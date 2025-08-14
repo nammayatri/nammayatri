@@ -42,6 +42,7 @@ import Domain.Types.Person
 import Domain.Types.Plan (BasedOnEntity (..), PaymentMode (AUTOPAY, MANUAL), Plan (..), PlanBaseAmount (..), ServiceNames (..))
 import Domain.Types.SubscriptionConfig
 import Domain.Types.TransporterConfig (TransporterConfig)
+import qualified Domain.Types.VendorFee as DVF
 import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface as PaymentInterface
 import qualified Kernel.External.Payment.Interface.Types as Payment
@@ -72,7 +73,7 @@ import qualified Storage.Queries.DriverStats as QDS
 import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.Mandate as QMD
 import qualified Storage.Queries.Person as QP
-import Storage.Queries.VendorFeeExtra as QVF
+import Storage.Queries.VendorFee as QVF
 
 calculateDriverFeeForDrivers ::
   ( CacheFlow m r,
@@ -234,21 +235,20 @@ processRestFee ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasKafkaProducer r) =>
   PaymentMode ->
   DriverFee ->
+  [DVF.VendorFee] ->
   SubscriptionConfig ->
   DriverFee ->
   HighPrecMoney ->
   m ()
-processRestFee paymentMode DriverFee {..} subscriptionConfig parentDriverFee totalFee = do
-  id_ <- generateGUID
+processRestFee paymentMode DriverFee {..} vendorFees subscriptionConfig _ _ = do
   let driverFee =
         DriverFee
-          { id = id_,
-            status = if paymentMode == MANUAL && not (subscriptionConfig.allowManualPaymentLinks) then PAYMENT_OVERDUE else PAYMENT_PENDING,
+          { status = if paymentMode == MANUAL && not (subscriptionConfig.allowManualPaymentLinks) then PAYMENT_OVERDUE else PAYMENT_PENDING,
             feeType = if paymentMode == MANUAL then RECURRING_INVOICE else RECURRING_EXECUTION_INVOICE,
             ..
           }
   QDF.create driverFee
-  QVF.createChildVendorFee parentDriverFee driverFee totalFee
+  when (fromMaybe False subscriptionConfig.isVendorSplitEnabled) $ mapM_ (QVF.create) vendorFees
   processDriverFee paymentMode driverFee subscriptionConfig
   updateSerialOrderForInvoicesInWindow driverFee.id merchantOperatingCityId startTime endTime driverFee.serviceName
 
@@ -313,27 +313,45 @@ getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan 
           return (0, 0, offerId, offerTitle)
         else return (feeWithOutDiscountPlusSpecialZone, finalOrderAmount + driverFee.specialZoneAmount, offerId, offerTitle)
 
-splitPlatformFee :: HighPrecMoney -> HighPrecMoney -> Plan -> DriverFee -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> [DriverFee]
-splitPlatformFee feeWithoutDiscount_ totalFee plan DriverFee {..} maxAmountPerDriverfeeThreshold coinClearedAmount = do
+splitPlatformFee :: (MonadFlow m) => HighPrecMoney -> HighPrecMoney -> Plan -> DriverFee -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> [DVF.VendorFee] -> UTCTime -> m [(DriverFee, [DVF.VendorFee])]
+splitPlatformFee feeWithoutDiscount_ totalFee plan DriverFee {..} maxAmountPerDriverfeeThreshold coinClearedAmount vendorFees now = do
   let maxAmount = fromMaybe totalFee maxAmountPerDriverfeeThreshold
   let numEntities = totalFee / maxAmount
+      numEntitiesInt = floor numEntities :: Integer
       remainingFee = totalFee `mod'` maxAmount
       coinDiscount = if remainingFee <= 0 then coinClearedAmount else Nothing
-      entityList = replicate (floor numEntities) (maxAmount, coinDiscount, Nothing) ++ [(remainingFee, coinClearedAmount, Just id) | remainingFee > 0]
-   in map
-        ( \(fee, coinPaidAmount, isSplitOf') -> do
+      vendorFeeAmountEqualPartsAndRemaining =
+        map
+          ( \vf -> do
+              let amountVf = vf.amount / numEntities
+              let remainingVf = vf.amount - (amountVf * (HighPrecMoney $ toRational numEntitiesInt))
+              let vendorId = vf.vendorId
+              (amountVf, vendorId, remainingVf)
+          )
+          $ vendorFees
+  newIds <- replicateM (fromInteger $ if remainingFee == 0.0 then numEntitiesInt - 1 else numEntitiesInt) (generateGUID)
+  let idsToApply = newIds <> [id]
+  let vendorFeeAmountEqualParts :: [(HighPrecMoney, Text)] = map (\(amount, vendorId, _) -> (amount, vendorId)) vendorFeeAmountEqualPartsAndRemaining
+  let vendorFeeAmountRemaining :: [(HighPrecMoney, Text)] = map (\(_, vendorId, amount) -> (amount, vendorId)) vendorFeeAmountEqualPartsAndRemaining
+  let entityList = replicate (fromInteger numEntitiesInt) (maxAmount, coinDiscount, vendorFeeAmountEqualParts) ++ [(remainingFee, coinClearedAmount, vendorFeeAmountRemaining) | remainingFee > 0]
+  let entityListZpWithId = zip idsToApply entityList
+   in mapM
+        ( \(driverFeeId, (fee, coinPaidAmount, vendorFeeData)) -> do
             let (platformFee_, cgst, sgst) = calculatePlatformFeeAttr fee plan
-            DriverFee
-              { platformFee = PlatformFee {fee = platformFee_, ..},
-                feeType = feeType,
-                feeWithoutDiscount = Just feeWithoutDiscount_, -- same for all splitted ones, not remaining fee
-                amountPaidByCoin = coinPaidAmount,
-                splitOfDriverFeeId = isSplitOf',
-                ..
-              }
+                dfee =
+                  DriverFee
+                    { platformFee = PlatformFee {fee = platformFee_, ..},
+                      feeType = feeType,
+                      feeWithoutDiscount = Just feeWithoutDiscount_, -- same for all splitted ones, not remaining fee
+                      amountPaidByCoin = coinPaidAmount,
+                      splitOfDriverFeeId = if driverFeeId /= id then Just id else Nothing,
+                      id = driverFeeId,
+                      ..
+                    }
+            let vfs = map (\(amount, vendorId) -> DVF.VendorFee {driverFeeId = driverFeeId, vendorId = vendorId, amount = amount, createdAt = now, updatedAt = now}) $ vendorFeeData
+            return $ (dfee, vfs)
         )
-        -- govt_charges, num_rides, total_earnings are same for all these
-        entityList
+        $ entityListZpWithId
 
 getFreqAndBaseAmountcase :: PlanBaseAmount -> (Text, HighPrecMoney)
 getFreqAndBaseAmountcase planBaseAmount = case planBaseAmount of
@@ -359,20 +377,18 @@ driverFeeSplitter paymentMode plan feeWithoutDiscount totalFee driverFee mandate
   let amountForSpiltting = if isNothing mbCoinAmountUsed then Just $ roundToHalf driverFee.currency totalFee else roundToHalf driverFee.currency <$> (mandate <&> (.maxAmount))
       coinAmountUsed = fromMaybe 0 mbCoinAmountUsed
       totalFeeWithCoinDeduction = roundToHalf driverFee.currency $ totalFee - coinAmountUsed
-      splittedFees = splitPlatformFee feeWithoutDiscount totalFeeWithCoinDeduction plan driverFee amountForSpiltting mbCoinAmountUsed
-  case splittedFees of
+  vendorFees <- QVF.findAllByDriverFeeId driverFee.id
+  splittedFeesWithRespectiveVendorFee <- splitPlatformFee feeWithoutDiscount totalFeeWithCoinDeduction plan driverFee amountForSpiltting mbCoinAmountUsed vendorFees now
+  case splittedFeesWithRespectiveVendorFee of
     [] -> throwError (InternalError "No driver fee entity with non zero total fee")
-    (firstFee : restFees) -> do
-      let adjustment =
-            if totalFee.getHighPrecMoney == 0
-              then 1.0
-              else (firstFee.platformFee.fee.getHighPrecMoney + firstFee.platformFee.cgst.getHighPrecMoney + firstFee.platformFee.sgst.getHighPrecMoney) / totalFee.getHighPrecMoney
-      mapM_ (\dfee -> processRestFee paymentMode dfee subscriptionConfigs driverFee totalFee) restFees
-      -- Reset The Original Fee Amount & adjust the vendor fee amount in proportion
-      resetFee firstFee.id firstFee.govtCharges firstFee.platformFee (Just feeWithoutDiscount) firstFee.amountPaidByCoin now
-      if restFees /= []
-        then QVF.adjustVendorFee firstFee.id adjustment
-        else return ()
+    _ -> do
+      forM_ splittedFeesWithRespectiveVendorFee $ \(dfee, vfee) -> do
+        if dfee.id /= driverFee.id
+          then processRestFee paymentMode dfee vfee subscriptionConfigs driverFee totalFee
+          else do
+            -- Reset The Original Fee Amount & adjust the vendor fee amount by subtracting sums of child vendor fees
+            resetFee dfee.id dfee.govtCharges dfee.platformFee (Just feeWithoutDiscount) dfee.amountPaidByCoin now
+            QVF.resetVendorFee dfee.merchantOperatingCityId vfee
 
 getRescheduledTime :: (MonadFlow m) => NominalDiffTime -> m UTCTime
 getRescheduledTime gap = addUTCTime gap <$> getCurrentTime
