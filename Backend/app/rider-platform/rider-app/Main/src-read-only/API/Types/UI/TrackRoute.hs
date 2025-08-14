@@ -10,6 +10,7 @@ import qualified Kernel.Types.Common
 import Servant
 import qualified SharedLogic.External.LocationTrackingService.Types
 import qualified SharedLogic.FRFSUtils
+import qualified Storage.CachedQueries.Merchant.MultiModalBus
 import Tools.Auth
 
 data TrackingResp = TrackingResp {vehicleTrackingInfo :: [VehicleInfo]}
@@ -21,6 +22,7 @@ data VehicleInfo = VehicleInfo
     nextStop :: Kernel.Prelude.Maybe Domain.Types.RouteStopMapping.RouteStopMapping,
     nextStopTravelDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     nextStopTravelTime :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    routeState :: Kernel.Prelude.Maybe Storage.CachedQueries.Merchant.MultiModalBus.RouteState,
     upcomingStops :: [SharedLogic.FRFSUtils.UpcomingStop],
     vehicleId :: Kernel.Prelude.Text,
     vehicleInfo :: VehicleInfoForRoute
