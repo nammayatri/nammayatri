@@ -737,7 +737,7 @@ buildTrainAllViaRoutes ::
 buildTrainAllViaRoutes getPreliminaryLeg (Just originStopCode) (Just destinationStopCode) (Just integratedBppConfig) mid mocid personId vc mode = do
   allSubwayRoutes <- getAllSubwayRoutes
   mapMaybeM
-    ( \(viaRoutes, _distance) -> do
+    ( \viaRoutes -> do
         -- consider distance for future
         routeDetails <- mapMaybeM (\(osc, dsc) -> buildMultimodalRouteDetails 1 Nothing osc dsc integratedBppConfig mid mocid vc) viaRoutes
         logDebug $ "buildTrainAllViaRoutes routeDetails: " <> show routeDetails
@@ -752,7 +752,7 @@ buildTrainAllViaRoutes getPreliminaryLeg (Just originStopCode) (Just destination
     )
     allSubwayRoutes
   where
-    getAllSubwayRoutes :: Flow [([(Text, Text)], Meters)]
+    getAllSubwayRoutes :: Flow [[(Text, Text)]]
     getAllSubwayRoutes = do
       person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
       mbMobileNumber <- mapM decrypt person.mobileNumber
@@ -776,8 +776,8 @@ buildTrainAllViaRoutes getPreliminaryLeg (Just originStopCode) (Just destination
                   map
                     ( \fd ->
                         let viaStops = T.splitOn "-" fd.via
-                            viaRoutes = zipWith (,) viaStops (drop 1 viaStops)
-                         in (viaRoutes, fd.distance)
+                            stops = [originStopCode] <> viaStops <> [destinationStopCode]
+                         in zipWith (,) stops (drop 1 stops)
                     )
                     $ mapMaybe (.fareDetails) fares
           logDebug $ "getAllSubwayRoutes viaPoints: " <> show viaPoints
