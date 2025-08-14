@@ -1913,4 +1913,5 @@ getKn =
     , you_are_in_probation_period_till : (\date -> "ನಿಮ್ಮ " <> date <> " ವರ್ಷದಲ್ಲಿ ಪ್ರಯೋಗದ ಅವಧಿಯಲ್ಲಿದ್ದೀರಿ")
     , pass_all_eligibility_criteria_to_continue_being_a_member : "ನಮ್ಮ ಕುಟುಂಬದ ಸದಸ್ಯರಾಗಿ ಜಾರಿಗೆ ಸಮಸ್ತ ಯೋಗ್ಯತೆ ಮಾನದಂಡಗಳನ್ನು ಪಾಲಿಸಿ"
     , metro : "ಮೆಟ್ರೋ"
+    , gold_tier : "ಗೋಲ್ಡ್ ಟೈರ್"
     }

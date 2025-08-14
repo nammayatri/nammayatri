@@ -508,17 +508,50 @@ nyClubView state push =
                     Just (GetDriverInfoResp res) -> Tuple (fromMaybe false res.nyClubConsent) (res.driverTags >>= \(API.DriverTags tags) -> tags."NYClubTag")
                     Nothing -> Tuple false Nothing
       nammaClubEnabled = state.props.nammaClubEnabled
+      goldTier = case state.data.driverInfoResponse of
+        Just (GetDriverInfoResp res) -> res.driverTags >>= \(API.DriverTags tags) -> tags."DriverTier"
+        Nothing -> Nothing
   in
-  linearLayout
+  linearLayout[
+    height WRAP_CONTENT
+  , width MATCH_PARENT
+  , orientation HORIZONTAL
+  , margin $ MarginTop 16
+  , margin $ MarginLeft 16
+  , gravity CENTER
+  , layoutGravity "center"
+  ][
+    linearLayout
+  [ height WRAP_CONTENT
+  , width WRAP_CONTENT
+  , orientation HORIZONTAL
+  , background "#FFF5CB"
+  , cornerRadius 30.0
+  , padding $ Padding 12 9 12 9
+  , margin $ Margin 16 0 11 0
+  , gravity CENTER_VERTICAL
+  , onClick push $ const ClubDetailsClick
+  , stroke "1,#FADA56"
+  , visibility $ boolToVisibility $ goldTier == Just "Gold"
+  ][  imageView
+      [ width $ V 24
+      , height $ V 24
+      , imageWithFallback $ HU.fetchImage HU.FF_ASSET "ny_ic_gold_tier"
+      ]
+    , textView $ 
+      [ text $ getStringV2 gold_tier
+      , color "#554311"
+      , margin $ MarginLeft 6
+      ] <> (FontStyle.body6 TypoGraphy)
+  ]
+  ,linearLayout
   [ height WRAP_CONTENT
   , width WRAP_CONTENT
   , orientation HORIZONTAL
   , background Color.white900
   , cornerRadius 40.0
   , padding $ Padding 12 12 12 12
-  , margin $ MarginTop 16
   , layoutGravity "center"
-  , gravity CENTER
   , onClick push $ const ClubDetailsClick
   , stroke "1,#339DFF"
   , visibility $ boolToVisibility $ (nyClubTag == Just "ny_member" || nyClubTag == Just "ny_member_probation") && nyClubConsent && nammaClubEnabled
@@ -538,6 +571,7 @@ nyClubView state push =
       , margin $ MarginTop 2
       , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_chevron_right_grey"
       ]
+  ]
   ]
 
 nameAndMoreDetailsView :: forall w. ST.DriverProfileScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
