@@ -607,7 +607,7 @@ postUpsertTicketPlaceDashboardDetails (merchantId, merchantOpCityId) placeDetail
         newSO <- createSpecialOccasion (merchantId, merchantOpCityId) soDetails ticketPlace.id
         QSpecialOccasion.create newSO
 
-getTicketPlaceDashboardList :: Text -> Text -> MO.RequestorRole -> Environment.Flow [DTicketPlace.TicketPlace]
+getTicketPlaceDashboardList :: Text -> Maybe Text -> Maybe MO.RequestorRole -> Environment.Flow [DTicketPlace.TicketPlace]
 getTicketPlaceDashboardList status _requestorId _requestorRole = do
   placeStatus <- fromMaybeM (InvalidRequest "Invalid status query param") $ readMaybe (T.unpack status)
   QTicketPlace.getAllTicketPlaces placeStatus
