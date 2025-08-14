@@ -266,7 +266,6 @@ data JourneyInitData = JourneyInitData
     startTime :: Maybe UTCTime,
     endTime :: Maybe UTCTime,
     maximumWalkDistance :: Meters,
-    straightLineThreshold :: Meters,
     relevanceScore :: Maybe Double
   }
   deriving stock (Show, Generic)
@@ -1138,10 +1137,10 @@ mkSearchReqLocation address latLng = do
       address = address
     }
 
-mkJourney :: MonadFlow m => Id DP.Person -> Maybe UTCTime -> Maybe UTCTime -> Distance -> Seconds -> Id DJ.Journey -> Id DSR.SearchRequest -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> [EMInterface.MultiModalLeg] -> Meters -> Meters -> Maybe (Id DRL.RecentLocation) -> Maybe Double -> Bool -> Bool -> Location -> Maybe Location -> m DJ.Journey
-mkJourney riderId startTime endTime estimatedDistance estiamtedDuration journeyId parentSearchId merchantId merchantOperatingCityId legs maximumWalkDistance straightLineThreshold mbRecentLocationId relevanceScore hasUserPreferredServiceTier hasUserPreferredTransitModes fromLocation toLocation = do
+mkJourney :: MonadFlow m => Id DP.Person -> Maybe UTCTime -> Maybe UTCTime -> Distance -> Seconds -> Id DJ.Journey -> Id DSR.SearchRequest -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> [EMInterface.MultiModalLeg] -> Meters -> Maybe (Id DRL.RecentLocation) -> Maybe Double -> Bool -> Bool -> Location -> Maybe Location -> m DJ.Journey
+mkJourney riderId startTime endTime estimatedDistance estiamtedDuration journeyId parentSearchId merchantId merchantOperatingCityId legs maximumWalkDistance mbRecentLocationId relevanceScore hasUserPreferredServiceTier hasUserPreferredTransitModes fromLocation toLocation = do
   let journeyLegsCount = length legs
-      modes = map (\x -> convertMultiModalModeToTripMode x.mode (straightLineDistance x) (distanceToMeters x.distance) maximumWalkDistance straightLineThreshold) legs
+      modes = map (\x -> convertMultiModalModeToTripMode x.mode (straightLineDistance x) maximumWalkDistance) legs
   let isPublicTransportIncluded = any (`elem` [DTrip.Bus, DTrip.Metro, DTrip.Subway]) modes
   now <- getCurrentTime
   return $
@@ -1190,15 +1189,14 @@ mkJourneyLeg ::
   Id DMOC.MerchantOperatingCity ->
   Id DJ.Journey ->
   Meters ->
-  Meters ->
   Maybe GetFareResponse ->
   m (DJL.JourneyLeg, DJLM.JourneyLegMapping)
-mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation merchantId merchantOpCityId journeyId maximumWalkDistance straightLineThreshold fare = do
+mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation merchantId merchantOpCityId journeyId maximumWalkDistance fare = do
   now <- getCurrentTime
   journeyLegId <- generateGUID
   journeyLegMappingId <- generateGUID
   routeDetails <- mapM (mkRouteDetail journeyLegId) leg.routeDetails
-  let travelMode = convertMultiModalModeToTripMode leg.mode straightLineDistance (distanceToMeters leg.distance) maximumWalkDistance straightLineThreshold
+  let travelMode = convertMultiModalModeToTripMode leg.mode straightLineDistance maximumWalkDistance
   gates <- getGates (mbPrev, leg, mbNext) merchantId merchantOpCityId
   let (fromStopDetails, toStopDetails) =
         case travelMode of

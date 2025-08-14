@@ -145,9 +145,9 @@ init journeyReq userPreferences = do
   legsAndFares <-
     mapWithIndex
       ( \idx (mbPrev, leg, mbNext) -> do
-          let travelMode = convertMultiModalModeToTripMode leg.mode (straightLineDistance leg) (distanceToMeters leg.distance) journeyReq.maximumWalkDistance journeyReq.straightLineThreshold
+          let travelMode = convertMultiModalModeToTripMode leg.mode (straightLineDistance leg) journeyReq.maximumWalkDistance
           legFare@(_, mbTotalLegFare) <- measureLatency (JLI.getFare leg.fromArrivalTime journeyReq.personId journeyReq.merchantId journeyReq.merchantOperatingCityId leg travelMode) "multimodal getFare"
-          journeyLegAndMapping <- JL.mkJourneyLeg idx (mbPrev, leg, mbNext) fromLocation toLocation journeyReq.merchantId journeyReq.merchantOperatingCityId journeyId journeyReq.maximumWalkDistance journeyReq.straightLineThreshold mbTotalLegFare
+          journeyLegAndMapping <- JL.mkJourneyLeg idx (mbPrev, leg, mbNext) fromLocation toLocation journeyReq.merchantId journeyReq.merchantOperatingCityId journeyId journeyReq.maximumWalkDistance mbTotalLegFare
           return (legFare, journeyLegAndMapping)
       )
       legsWithContext
@@ -162,7 +162,7 @@ init journeyReq userPreferences = do
         QJourneyLegMapping.create mapping
       hasUserPreferredTransitTypesFlag <- hasUserPreferredTransitTypes journeyLegAndMapping userPreferences
       hasUserPreferredTransitModesFlag <- hasUserPreferredTransitModes journeyLegAndMapping userPreferences
-      journey <- JL.mkJourney searchReq.riderId journeyReq.startTime journeyReq.endTime journeyReq.estimatedDistance journeyReq.estimatedDuration journeyId journeyReq.parentSearchId journeyReq.merchantId journeyReq.merchantOperatingCityId journeyReq.legs journeyReq.maximumWalkDistance journeyReq.straightLineThreshold (searchReq.recentLocationId) journeyReq.relevanceScore hasUserPreferredTransitTypesFlag hasUserPreferredTransitModesFlag fromLocation toLocation
+      journey <- JL.mkJourney searchReq.riderId journeyReq.startTime journeyReq.endTime journeyReq.estimatedDistance journeyReq.estimatedDuration journeyId journeyReq.parentSearchId journeyReq.merchantId journeyReq.merchantOperatingCityId journeyReq.legs journeyReq.maximumWalkDistance (searchReq.recentLocationId) journeyReq.relevanceScore hasUserPreferredTransitTypesFlag hasUserPreferredTransitModesFlag fromLocation toLocation
       QJourney.create journey
       logDebug $ "journey for multi-modal: " <> show journey
       return $ Just journey
@@ -1154,7 +1154,7 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
       (newOriginLat, newOriginLon) <- getNewOriginLatLon currentLeg.legExtraInfo
       leg <- mkMultiModalTaxiLeg newDistance newDuration MultiModalTypes.Unspecified newOriginLat newOriginLon endLocation.lat endLocation.lon currentLeg.startTime
       riderConfig <- QRC.findByMerchantOperatingCityId currentLeg.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist currentLeg.merchantOperatingCityId.getId)
-      (journeyLeg, journeyLegMapping) <- JL.mkJourneyLeg startLegOrder (Nothing, leg, Nothing) journey.fromLocation journey.toLocation currentLeg.merchantId currentLeg.merchantOperatingCityId journeyId riderConfig.maximumWalkDistance riderConfig.straightLineThreshold (Just fare)
+      (journeyLeg, journeyLegMapping) <- JL.mkJourneyLeg startLegOrder (Nothing, leg, Nothing) journey.fromLocation journey.toLocation currentLeg.merchantId currentLeg.merchantOperatingCityId journeyId riderConfig.maximumWalkDistance (Just fare)
       startLocationAddress <-
         case currentLeg.legExtraInfo of
           JL.Walk walkLegExtraInfo -> return walkLegExtraInfo.origin.address
@@ -1194,7 +1194,7 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
       now <- getCurrentTime
       leg <- mkMultiModalTaxiLeg newDistance newDuration MultiModalTypes.Unspecified startlocation.location.lat startlocation.location.lon endLocation.lat endLocation.lon now
       riderConfig <- QRC.findByMerchantOperatingCityId currentLeg.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist currentLeg.merchantOperatingCityId.getId)
-      (journeyLeg, journeyLegMapping) <- JL.mkJourneyLeg currentLeg.order (Nothing, leg, Nothing) journey.fromLocation journey.toLocation currentLeg.merchantId currentLeg.merchantOperatingCityId journeyId riderConfig.maximumWalkDistance riderConfig.straightLineThreshold (Just fare)
+      (journeyLeg, journeyLegMapping) <- JL.mkJourneyLeg currentLeg.order (Nothing, leg, Nothing) journey.fromLocation journey.toLocation currentLeg.merchantId currentLeg.merchantOperatingCityId journeyId riderConfig.maximumWalkDistance (Just fare)
       withJourneyUpdateInProgress journeyId $ do
         cancelRequiredLegs journey.riderId
         QJourneyLeg.create journeyLeg

@@ -450,7 +450,6 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
                 startTime = updatedRoute.startTime,
                 endTime = updatedRoute.endTime,
                 maximumWalkDistance = riderConfig.maximumWalkDistance,
-                straightLineThreshold = riderConfig.straightLineThreshold,
                 relevanceScore = updatedRoute.relevanceScore
               }
       JM.init initReq userPreferences
