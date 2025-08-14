@@ -22,6 +22,7 @@ import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as ContextV2
 import BecknV2.Utils
 import qualified BecknV2.Utils as Utils
+import Control.Applicative ((<|>))
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.OnSelect as DOnSelect
 import Kernel.Prelude
@@ -171,9 +172,11 @@ getQuoteValidTill contextTime time = do
   Just $ addDurationToUTCTime contextTime valid
 
 getPickupDurationV2 :: Maybe [Spec.TagGroup] -> Maybe Int
-getPickupDurationV2 tagGroups = do
-  tagValue <- Utils.getTagV2 Tag.GENERAL_INFO Tag.ETA_TO_NEAREST_DRIVER_MIN tagGroups
-  readMaybe $ T.unpack tagValue
+getPickupDurationV2 tagGroups = getPickupDurationV2' Tag.INFO <|> getPickupDurationV2' Tag.GENERAL_INFO
+  where
+    getPickupDurationV2' tagGroup = do
+      tagValue <- Utils.getTagV2 tagGroup Tag.ETA_TO_NEAREST_DRIVER_MIN tagGroups
+      readMaybe $ T.unpack tagValue
 
 getIsUpgradedToCab :: Maybe [Spec.TagGroup] -> Maybe Bool
 getIsUpgradedToCab tagGroups = do
