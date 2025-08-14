@@ -18,10 +18,12 @@ import qualified Domain.Types.SpecialOccasion as DSpecialOccasion
 import Domain.Types.TicketDashboard
 import qualified Domain.Types.TicketPlace as DTicketPlace
 import qualified Domain.Types.TicketService as DTicketService
+import qualified Domain.Types.TicketSubPlace as DTicketSubPlace
 import Environment
 import qualified IssueManagement.Storage.Queries.MediaFile as MFQuery
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Types.APISuccess
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -34,6 +36,7 @@ import qualified Storage.Queries.SpecialOccasion as QSpecialOccasion
 import qualified Storage.Queries.TicketMerchantDetails as QTMD
 import qualified Storage.Queries.TicketPlace as QTicketPlace
 import qualified Storage.Queries.TicketService as QTicketService
+import qualified Storage.Queries.TicketSubPlace as QTicketSubPlace
 import Tools.Error
 
 getTicketDashboardUserInfo :: Text -> MO.RequestorRole -> Environment.Flow Tickets.TicketDashboardUserInfo
@@ -91,11 +94,8 @@ getTicketDashboardFile fileId = do
       }
 
 getTicketPlaceDashboardDetails :: Id DTicketPlace.TicketPlace -> Maybe Text -> Maybe MO.RequestorRole -> Environment.Flow TicketPlaceDashboardDetails
-getTicketPlaceDashboardDetails placeId requestorId requestorRole = do
+getTicketPlaceDashboardDetails placeId _requestorId _requestorRole = do
   ticketPlace <- QTicketPlace.findById placeId >>= fromMaybeM (InvalidRequest $ "Ticket place not found: " <> getId placeId)
-
-  when (isNothing ticketPlace.ticketMerchantId && requestorRole /= Just MO.TICKET_DASHBOARD_ADMIN) $ throwError $ InvalidRequest "Don't have access"
-  when (isJust ticketPlace.ticketMerchantId && (ticketPlace.ticketMerchantId /= requestorId && requestorRole /= Just MO.TICKET_DASHBOARD_ADMIN)) $ throwError $ InvalidRequest "Don't have access"
 
   services <- QTicketService.getTicketServicesByPlaceId placeId.getId
 
@@ -173,7 +173,8 @@ getTicketPlaceDashboardDetails placeId requestorId requestorRole = do
         assignTicketToBpp = Just ticketPlace.assignTicketToBpp,
         customTabs = ticketPlace.customTabs,
         recommend = Just ticketPlace.recommend,
-        enforcedAsSubPlace = Just ticketPlace.enforcedAsSubPlace
+        enforcedAsSubPlace = Just ticketPlace.enforcedAsSubPlace,
+        merchantOperatingCityId = Just ticketPlace.merchantOperatingCityId.getId
       }
   where
     toTicketServiceDetails :: DTicketService.TicketService -> TicketServiceDetails
@@ -518,7 +519,7 @@ postUpsertTicketPlaceDashboardDetails (merchantId, merchantOpCityId) placeDetail
     Nothing -> do
       -- Create new place
       let creatorId = if requestorRole == Just MO.TICKET_DASHBOARD_ADMIN then Nothing else requestorId
-      newPlace <- createTicketPlace placeDetails creatorId merchantId merchantOpCityId
+      newPlace <- createTicketPlace placeDetails creatorId merchantId (maybe merchantOpCityId Id placeDetails.merchantOperatingCityId)
       QTicketPlace.create newPlace
       return newPlace
 
@@ -607,9 +608,19 @@ postUpsertTicketPlaceDashboardDetails (merchantId, merchantOpCityId) placeDetail
         QSpecialOccasion.create newSO
 
 getTicketPlaceDashboardList :: Text -> Text -> MO.RequestorRole -> Environment.Flow [DTicketPlace.TicketPlace]
-getTicketPlaceDashboardList status requestorId requestorRole = do
+getTicketPlaceDashboardList status _requestorId _requestorRole = do
   placeStatus <- fromMaybeM (InvalidRequest "Invalid status query param") $ readMaybe (T.unpack status)
-  case requestorRole of
-    MO.TICKET_DASHBOARD_ADMIN -> QTicketPlace.getAllTicketPlaces placeStatus
-    MO.TICKET_DASHBOARD_MERCHANT -> QTicketPlace.findAllByTicketMerchantIdAndStatus (Just requestorId) placeStatus
-    _ -> throwError $ InvalidRequest "Operation not permitted"
+  QTicketPlace.getAllTicketPlaces placeStatus
+
+getTicketPlaceDashboardSubPlaces :: Id DTicketPlace.TicketPlace -> Environment.Flow [DTicketSubPlace.TicketSubPlace]
+getTicketPlaceDashboardSubPlaces placeId = do
+  QTicketSubPlace.findAllByTicketPlaceId placeId
+
+postUpsertTicketPlaceDashboardSubPlaces :: Id DTicketPlace.TicketPlace -> [DTicketSubPlace.TicketSubPlace] -> Environment.Flow Kernel.Types.APISuccess.APISuccess
+postUpsertTicketPlaceDashboardSubPlaces _ subPlaces = do
+  forM_ subPlaces $ \subPlace -> do
+    mbExistingSubPlace <- QTicketSubPlace.findById subPlace.id
+    case mbExistingSubPlace of
+      Just _ -> QTicketSubPlace.updateByPrimaryKey subPlace
+      Nothing -> QTicketSubPlace.create subPlace
+  return Kernel.Types.APISuccess.Success
