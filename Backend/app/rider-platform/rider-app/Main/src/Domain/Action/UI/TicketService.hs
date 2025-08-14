@@ -66,6 +66,7 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.BusinessHour as QBH
+import qualified Storage.Queries.MerchantOperatingCity as QMO
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonExtra as PersonExtra
 import qualified Storage.Queries.SeatManagement as QTSM
@@ -740,9 +741,10 @@ postTicketBookingsVerify _ = processBookingService
         case mbTicketPlace of
           Just ticketPlace ->
             when ticketPlace.assignTicketToBpp $ do
-              case (mbFleetOwnerId, mbVehicleNo, ticketPlace.ticketMerchantId) of
-                (Just fleetOwnerId, Just vehicleNo, Just merchantId) -> do
-                  merchant <- CQM.findById (Kernel.Types.Id.Id merchantId) >>= fromMaybeM (MerchantNotFound merchantId)
+              merchanOperatingCity <- QMO.findById ticketPlace.merchantOperatingCityId >>= fromMaybeM (InvalidRequest "Merchant Operating City not found")
+              case (mbFleetOwnerId, mbVehicleNo) of
+                (Just fleetOwnerId, Just vehicleNo) -> do
+                  merchant <- CQM.findById (merchanOperatingCity.merchantId) >>= fromMaybeM (MerchantNotFound merchanOperatingCity.merchantId.getId)
                   let updateReq =
                         CallBPPInternal.UpdateFleetBookingInformationReq
                           { id = bookingService.assignmentId,
