@@ -3,8 +3,10 @@ module Domain.Action.UI.NearbyBuses (postNearbyBusBooking, getNextVehicleDetails
 import qualified API.Types.UI.NearbyBuses
 import qualified BecknV2.FRFS.Enums as Spe
 import qualified BecknV2.OnDemand.Enums
+import qualified Data.HashMap.Strict as HashMap
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant
+import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Domain.Types.RecentLocation
 import qualified Domain.Types.RiderConfig as DomainRiderConfig
@@ -24,6 +26,7 @@ import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.BecknConfig as CQBC
 import Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
+import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.RouteStopTimeTable as GRSM
 import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.MerchantOperatingCity as QMerchantOperatingCity
@@ -50,7 +53,7 @@ postNearbyBusBooking (mbPersonId, _) req = do
 
   simpleNearbyBuses <-
     if req.requireNearbyBuses
-      then getSimpleNearbyBuses riderConfig req
+      then getSimpleNearbyBuses person.merchantOperatingCityId riderConfig req
       else return []
 
   recentRides <-
@@ -71,25 +74,28 @@ castToOnDemandVehicleCategory Spe.BUS = BecknV2.OnDemand.Enums.BUS
 castToOnDemandVehicleCategory Spe.METRO = BecknV2.OnDemand.Enums.METRO
 castToOnDemandVehicleCategory Spe.SUBWAY = BecknV2.OnDemand.Enums.SUBWAY
 
-getSimpleNearbyBuses :: DomainRiderConfig.RiderConfig -> API.Types.UI.NearbyBuses.NearbyBusesRequest -> Environment.Flow [API.Types.UI.NearbyBuses.NearbyBus]
-getSimpleNearbyBuses riderConfig req = do
+getSimpleNearbyBuses :: Id MerchantOperatingCity -> DomainRiderConfig.RiderConfig -> API.Types.UI.NearbyBuses.NearbyBusesRequest -> Environment.Flow [API.Types.UI.NearbyBuses.NearbyBus]
+getSimpleNearbyBuses merchantOperatingCityId riderConfig req = do
   buses <- getNearbyBusesFRFS (Maps.LatLong req.userLat req.userLon) riderConfig
   logDebug $ "Nearby buses: " <> show buses
 
+  let vehicleCategory = castToOnDemandVehicleCategory req.vehicleType
+  integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig merchantOperatingCityId vehicleCategory req.platformType
+
   busRouteMapping <- forM buses $ \bus -> do
-    mbResult <- SIBC.fetchFirstIntegratedBPPConfigResult riderConfig.integratedBPPConfigs $ \config ->
-      maybeToList <$> OTPRest.getVehicleServiceType config bus.vehicle_number
+    mbResult <- SIBC.fetchFirstIntegratedBPPConfigResult integratedBPPConfigs $ \config ->
+      maybeToList <$> OTPRest.getVehicleServiceType config (fromMaybe "" bus.vehicle_number)
     pure $ Kernel.Prelude.listToMaybe mbResult
 
   let successfulMappings = catMaybes busRouteMapping
 
   let serviceTypeMap :: HashMap.HashMap Text Text
-      serviceTypeMap = HashMap.fromList $ map (\m -> (m.vehicle_number, m.service_type)) successfulMappings
+      serviceTypeMap = HashMap.fromList $ map (\m -> (m.vehicle_no, m.service_type)) successfulMappings
 
   pure $
     map
-      ( \bus ->
-          let maybeServiceType = HashMap.lookup (bus.vehicle_number) serviceTypeMap
+      ( \bus -> do
+          let maybeServiceType = HashMap.lookup (fromMaybe "" bus.vehicle_number) serviceTypeMap
           API.Types.UI.NearbyBuses.NearbyBus
             { currentLocation = Maps.LatLong bus.latitude bus.longitude,
               distance = Nothing,
