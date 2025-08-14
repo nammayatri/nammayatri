@@ -106,7 +106,8 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
                     JT.vehiclePositions = [], -- Will be populated based on status
                     legOrder = journeyLeg.sequenceNumber,
                     subLegOrder = 1,
-                    mode
+                    mode,
+                    fleetNo = mbCurrentLegDetails >>= (.finalBoardedBusNumber)
                   }
 
           vehiclePositionsToReturn <-
@@ -123,26 +124,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
               movementDetected
 
           let detailedStateData = baseStateData {JT.vehiclePositions = vehiclePositionsToReturn}
-
-          finalStateData <-
-            if detailedStateData.status `elem` [JPT.Finishing, JPT.Completed]
-              then do
-                case mbCurrentLegDetails of
-                  Just legToUpdate -> do
-                    when (isNothing legToUpdate.finalBoardedBusNumber) $ do
-                      bestCandidateResult <- Hedis.zrevrangeWithscores (topVehicleCandidatesKeyFRFS (legToUpdate.id.getId)) 0 0
-                      case bestCandidateResult of
-                        [] -> pure ()
-                        ((bestVehicleNumber, _) : _) -> do
-                          QJourneyLeg.updateByPrimaryKey legToUpdate {DJourneyLeg.finalBoardedBusNumber = Just bestVehicleNumber}
-                    pure detailedStateData
-                  Nothing -> do
-                    logError $ "CFRFS getState: Could not find leg to update finalBoardedBusNumber for searchId: " <> searchId.getId
-                    pure detailedStateData
-              else do
-                logDebug $ "CFRFS getState: Not finalizing state for booking with searchId: " <> show detailedStateData
-                pure detailedStateData
-
+          finalStateData <- updateFleetNoIfFinalized detailedStateData mbCurrentLegDetails searchId (isJust mbBooking)
           return $ JT.Single finalStateData
         _ -> do
           vehiclePositions :: [JT.VehiclePosition] <-
@@ -162,7 +144,8 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
                       JT.vehiclePositions = vehiclePositions,
                       legOrder = journeyLeg.sequenceNumber,
                       subLegOrder,
-                      mode
+                      mode,
+                      fleetNo = Nothing
                     }
                   | (subLegOrder, trackingStatus) <- trackingStatuses
                 ]
@@ -195,7 +178,8 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
                     JT.vehiclePositions = [], -- Will be populated based on status
                     legOrder = journeyLeg.sequenceNumber,
                     subLegOrder = 1,
-                    mode
+                    mode,
+                    fleetNo = mbCurrentLegDetails >>= (.finalBoardedBusNumber)
                   }
 
           vehiclePositionsToReturn <-
@@ -213,24 +197,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
 
           let detailedStateData = baseStateData {JT.vehiclePositions = vehiclePositionsToReturn}
           logDebug $ "CFRFS getState: Detailed state data for without booking: " <> show vehiclePositionsToReturn
-
-          finalStateData <-
-            if detailedStateData.status `elem` [JPT.Finishing, JPT.Completed]
-              then do
-                case mbCurrentLegDetails of
-                  Just legToUpdate -> do
-                    when (isNothing legToUpdate.finalBoardedBusNumber) $ do
-                      bestCandidateResult <- Hedis.zrevrangeWithscores (topVehicleCandidatesKeyFRFS (legToUpdate.id.getId)) 0 0
-                      case bestCandidateResult of
-                        [] -> pure ()
-                        ((bestVehicleNumber, _) : _) -> do
-                          QJourneyLeg.updateByPrimaryKey legToUpdate {DJourneyLeg.finalBoardedBusNumber = Just bestVehicleNumber}
-                    pure detailedStateData
-                  Nothing -> do
-                    logError $ "CFRFS.getState: Could not find leg to update finalBoardedBusNumber for searchId: " <> searchId.getId
-                    pure detailedStateData
-              else pure detailedStateData
-
+          finalStateData <- updateFleetNoIfFinalized detailedStateData mbCurrentLegDetails searchId (isJust mbBooking)
           return $ JT.Single finalStateData
         _ -> do
           -- Other modes (Metro, Subway, etc.)
@@ -245,7 +212,8 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
                       JT.vehiclePositions = vehiclePositions,
                       legOrder = journeyLeg.sequenceNumber,
                       subLegOrder = subLegOrder,
-                      mode
+                      mode,
+                      fleetNo = Nothing
                     }
                   | (subLegOrder, trackingStatus) <- trackingStatuses
                 ]
@@ -295,6 +263,35 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
               allTripsInfo
         _ -> do
           return []
+
+    updateFleetNoIfFinalized ::
+      (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig], HasField "ltsHedisEnv" r Redis.HedisEnv, HasShortDurationRetryCfg r c, HasKafkaProducer r) =>
+      JT.JourneyLegStateData ->
+      Maybe DJourneyLeg.JourneyLeg ->
+      Id FRFSSearch ->
+      Bool ->
+      m JT.JourneyLegStateData
+    updateFleetNoIfFinalized detailedStateData mbCurrentLegDetails searchId' isBooking =
+      if detailedStateData.status `elem` [JPT.Finishing, JPT.Completed]
+        then do
+          case mbCurrentLegDetails of
+            Just legToUpdate -> do
+              case legToUpdate.finalBoardedBusNumber of
+                Nothing -> do
+                  bestCandidateResult <- Hedis.zrevrangeWithscores (topVehicleCandidatesKeyFRFS (legToUpdate.id.getId)) 0 0
+                  case bestCandidateResult of
+                    [] -> pure detailedStateData
+                    ((bestVehicleNumber, _) : _) -> do
+                      QJourneyLeg.updateByPrimaryKey legToUpdate {DJourneyLeg.finalBoardedBusNumber = Just bestVehicleNumber}
+                      -- Update in-memory detailedStateData as well
+                      pure (detailedStateData :: JT.JourneyLegStateData) {JT.fleetNo = Just bestVehicleNumber}
+                Just _ -> pure detailedStateData
+            Nothing -> do
+              logError $ "CFRFS getState: Could not find leg to update finalBoardedBusNumber for searchId: " <> searchId'.getId
+              pure detailedStateData
+        else do
+          when isBooking $ logDebug $ "CFRFS getState: Not finalizing state for booking with searchId: " <> searchId'.getId <> "for state: " <> show detailedStateData
+          pure detailedStateData
 
 getFare :: (CoreMetrics m, CacheFlow m r, EncFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv, HasKafkaProducer r, HasShortDurationRetryCfg r c) => Id DPerson.Person -> DMerchant.Merchant -> MerchantOperatingCity -> Spec.VehicleCategory -> [FRFSRouteDetails] -> Maybe UTCTime -> Maybe Text -> m (Bool, Maybe JT.GetFareResponse)
 getFare riderId merchant merchantOperatingCity vehicleCategory routeDetails mbFromArrivalTime agencyGtfsId = do
