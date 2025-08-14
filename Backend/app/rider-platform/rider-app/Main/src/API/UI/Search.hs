@@ -257,7 +257,7 @@ multimodalSearchHandler (personId, _merchantId) req mbInitiateJourney mbBundleVe
     multiModalSearch dSearchRes.searchRequest riderConfig initiateJourney False req personId
 
 multiModalSearch :: SearchRequest.SearchRequest -> DRC.RiderConfig -> Bool -> Bool -> DSearch.SearchReq -> Id Person.Person -> Flow MultimodalSearchResp
-multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJourney req' personId = do
+multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJourney req' personId = withLogTag ("multimodalSearch" <> searchRequest.id.getId) $ do
   now <- getCurrentTime
   userPreferences <- DMC.getMultimodalUserPreferences (Just searchRequest.riderId, searchRequest.merchantId)
   let req = DSearch.extractSearchDetails now req'
@@ -349,18 +349,16 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
                 return (Just NoPublicTransportRoutes, autoMultiModalResponse)
               Nothing -> return (Nothing, otpResponse'')
           else do
-            case req' of
+            (finalRoutes, warningType) <- case req' of
               DSearch.PTSearch _ -> do
-                let onlySingleModeRoutes = filter (\r -> (all (eitherWalkOrSingleMode vehicleCategory) r.legs) && (any (onlySingleMode vehicleCategory) r.legs)) otpResponse''.routes
-                let filterFirstAndLastMileWalks = map filterWalkLegs onlySingleModeRoutes
-                let routesWithCorrectStops = map filterRoutesWithCorrectFromAndToLocations filterFirstAndLastMileWalks
-                let validRoutes = filter (\r -> not (null r.legs)) routesWithCorrectStops
-                let warningType = if null validRoutes then Just NoSingleModeRoutes else Nothing
-                filteredRoutes <- JM.filterTransitRoutes riderConfig (if null validRoutes then otpResponse''.routes else validRoutes)
-                return (warningType, MInterface.MultiModalResponse {routes = filteredRoutes})
-              _ -> do
-                filteredRoutes <- JM.filterTransitRoutes riderConfig otpResponse''.routes
-                return (Nothing, MInterface.MultiModalResponse {routes = filteredRoutes})
+                let mbBestOneWayRoute = JMU.getBestOneWayRoute (castVehicleCategoryToGeneralVehicleType vehicleCategory) otpResponse''.routes searchRequest.originStopCode searchRequest.destinationStopCode
+                return $ case mbBestOneWayRoute of
+                  Just bestOneWayRoute -> ([bestOneWayRoute], Nothing)
+                  Nothing -> (otpResponse''.routes, Just NoSingleModeRoutes)
+              _ -> return (otpResponse''.routes, Nothing)
+            logDebug $ "finalRoutes: " <> show finalRoutes
+            filteredRoutes <- JM.filterTransitRoutes riderConfig finalRoutes
+            return (warningType, MInterface.MultiModalResponse {routes = filteredRoutes})
 
   let userPreferredTransitModes = userPreferencesToGeneralVehicleTypes userPreferences.allowedTransitModes
       hasOnlyUserPreferredTransitModes otpRoute = all (isLegModeIn userPreferredTransitModes) otpRoute.legs
@@ -406,7 +404,7 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
             QSearchRequest.updateAllJourneysLoaded (Just True) searchRequest.id
             return Nothing
       else do
-        QSearchRequest.updateAllJourneysLoaded (Just True) searchRequest.id
+        fork "Process all routes " $ processRestOfRoutes (map snd indexedRoutesToProcess) userPreferences
         return Nothing
 
   return $
@@ -541,44 +539,6 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
                   routeDetails = updatedRouteDetails
                 }
 
-    eitherWalkOrSingleMode :: BecknV2.OnDemand.Enums.VehicleCategory -> MultiModalTypes.MultiModalLeg -> Bool
-    eitherWalkOrSingleMode selectedMode leg = isLegModeIn [MultiModalTypes.Walk, MultiModalTypes.Unspecified, castVehicleCategoryToGeneralVehicleType selectedMode] leg
-
-    onlySingleMode :: BecknV2.OnDemand.Enums.VehicleCategory -> MultiModalTypes.MultiModalLeg -> Bool
-    onlySingleMode selectedMode leg = leg.mode == castVehicleCategoryToGeneralVehicleType selectedMode
-
-    filterWalkLegs :: MultiModalTypes.MultiModalRoute -> MultiModalTypes.MultiModalRoute
-    filterWalkLegs MultiModalTypes.MultiModalRoute {..} = do
-      let legsWithIndex = zip [0 ..] legs
-      let filteredLegs =
-            [ leg
-              | (index, leg) <- legsWithIndex,
-                not ((index == 0 || index == length legs - 1) && isLegModeIn [MultiModalTypes.Walk, MultiModalTypes.Unspecified] leg)
-            ]
-      MultiModalTypes.MultiModalRoute {legs = if null filteredLegs then legs else filteredLegs, ..}
-
-    filterRoutesWithCorrectFromAndToLocations :: MultiModalTypes.MultiModalRoute -> MultiModalTypes.MultiModalRoute
-    filterRoutesWithCorrectFromAndToLocations multiModalRoute = do
-      let routeLegs = multiModalRoute.legs
-      case (listToMaybe routeLegs, listToMaybe $ reverse routeLegs) of
-        (Just firstLeg, Just lastLeg) -> do
-          let originStopCode = searchRequest.originStopCode
-              destinationStopCode = searchRequest.destinationStopCode
-              firstLegFromStopCode = firstLeg.fromStopDetails >>= (.stopCode)
-              lastLegToStopCode = lastLeg.toStopDetails >>= (.stopCode)
-
-          -- Check if the route starts from the correct origin stop and ends at the correct destination stop
-          let isValidRoute = case (originStopCode, destinationStopCode) of
-                (Just originCode, Just destCode) ->
-                  firstLegFromStopCode == Just originCode && lastLegToStopCode == Just destCode
-                (Just originCode, Nothing) ->
-                  firstLegFromStopCode == Just originCode -- Only check origin if destination not specified
-                (Nothing, Just destCode) ->
-                  lastLegToStopCode == Just destCode -- Only check destination if origin not specified
-                (Nothing, Nothing) ->
-                  True -- If neither stop codes are provided, consider route valid
-          if isValidRoute then multiModalRoute else multiModalRoute {MultiModalTypes.legs = []} -- Return empty legs if route doesn't match
-        _ -> multiModalRoute -- If no legs, return as is
     processRestOfRoutes :: [MultiModalTypes.MultiModalRoute] -> ApiTypes.MultimodalUserPreferences -> Flow ()
     processRestOfRoutes routes userPreferences = do
       forM_ routes $ \route' -> processRoute route' userPreferences
