@@ -24,12 +24,15 @@ import qualified Domain.Types.RecentLocation as DTRL
 import Domain.Types.RouteStopTimeTable
 import qualified Domain.Types.Trip as DTrip
 import Environment
+import ExternalBPP.ExternalAPI.Subway.CRIS.RouteFare as CRISRouteFare
+import Kernel.External.Encryption
 import Kernel.External.Maps.Google.MapsClient.Types
 import qualified Kernel.External.MultiModal.Interface as MultiModal hiding (decode, encode)
 import qualified Kernel.External.MultiModal.Interface.Types as MultiModalTypes
 import qualified Kernel.External.Payment.Interface.Types as KT
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
+import Kernel.Randomizer
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
@@ -50,6 +53,7 @@ import qualified Storage.CachedQueries.RouteStopTimeTable as GRSM
 import Storage.GraphqlQueries.Client (mapToServiceTierType)
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
+import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RecentLocation as SQRL
 import qualified Storage.Queries.VehicleRouteMapping as QVehicleRouteMapping
 import qualified System.Environment as Se
@@ -594,14 +598,14 @@ buildMultimodalRouteDetails ::
   ) =>
   Int ->
   Maybe Text ->
-  Maybe Text ->
-  Maybe Text ->
-  Maybe DIntegratedBPPConfig.IntegratedBPPConfig ->
+  Text ->
+  Text ->
+  DIntegratedBPPConfig.IntegratedBPPConfig ->
   Id Merchant ->
   Id MerchantOperatingCity ->
   Enums.VehicleCategory ->
   m (Maybe MultiModalTypes.MultiModalRouteDetails)
-buildMultimodalRouteDetails subLegOrder mbRouteCode (Just originStopCode) (Just destinationStopCode) (Just integratedBppConfig) mid mocid vc = do
+buildMultimodalRouteDetails subLegOrder mbRouteCode originStopCode destinationStopCode integratedBppConfig mid mocid vc = do
   mbFromStop <- OTPRest.getStationByGtfsIdAndStopCode originStopCode integratedBppConfig
   mbToStop <- OTPRest.getStationByGtfsIdAndStopCode destinationStopCode integratedBppConfig
   currentTime <- getCurrentTime
@@ -696,9 +700,8 @@ buildMultimodalRouteDetails subLegOrder mbRouteCode (Just originStopCode) (Just 
                     _ -> False
             )
             destStopTimings
-buildMultimodalRouteDetails _ _ _ _ _ _ _ _ = return Nothing
 
-buildSingleModeBusRoutes ::
+buildSingleModeDirectRoutes ::
   (LocationV2 -> Flow (Maybe MultiModalTypes.MultiModalLeg)) ->
   Maybe Text ->
   Maybe Text ->
@@ -706,16 +709,79 @@ buildSingleModeBusRoutes ::
   Maybe DIntegratedBPPConfig.IntegratedBPPConfig ->
   Id Merchant ->
   Id MerchantOperatingCity ->
+  Enums.VehicleCategory ->
+  MultiModalTypes.GeneralVehicleType ->
   Flow [MultiModalTypes.MultiModalRoute]
-buildSingleModeBusRoutes getPreliminaryLeg mbRouteCode mbOriginStopCode mbDestinationStopCode mbIntegratedBppConfig mid mocid = do
-  mbRouteDetails <- buildMultimodalRouteDetails 1 mbRouteCode mbOriginStopCode mbDestinationStopCode mbIntegratedBppConfig mid mocid Enums.BUS
+buildSingleModeDirectRoutes getPreliminaryLeg mbRouteCode (Just originStopCode) (Just destinationStopCode) (Just integratedBppConfig) mid mocid vc mode = do
+  mbRouteDetails <- buildMultimodalRouteDetails 1 mbRouteCode originStopCode destinationStopCode integratedBppConfig mid mocid vc
   case mbRouteDetails of
     Just routeDetails -> do
       currentTime <- getCurrentTime
       let (_, currentTimeIST) = getISTTimeInfo currentTime
       mbPreliminaryLeg <- getPreliminaryLeg routeDetails.startLocation
-      return [mkMultiModalRoute currentTimeIST mbPreliminaryLeg MultiModalTypes.Bus (NonEmpty.fromList [routeDetails])]
+      return [mkMultiModalRoute currentTimeIST mbPreliminaryLeg mode (NonEmpty.fromList [routeDetails])]
     Nothing -> return []
+buildSingleModeDirectRoutes _ _ _ _ _ _ _ _ _ = return []
+
+buildTrainAllViaRoutes ::
+  (LocationV2 -> Flow (Maybe MultiModalTypes.MultiModalLeg)) ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe DIntegratedBPPConfig.IntegratedBPPConfig ->
+  Id Merchant ->
+  Id MerchantOperatingCity ->
+  Id Person ->
+  Enums.VehicleCategory ->
+  MultiModalTypes.GeneralVehicleType ->
+  Flow [MultiModalTypes.MultiModalRoute]
+buildTrainAllViaRoutes getPreliminaryLeg (Just originStopCode) (Just destinationStopCode) (Just integratedBppConfig) mid mocid personId vc mode = do
+  allSubwayRoutes <- getAllSubwayRoutes
+  mapMaybeM
+    ( \(viaRoutes, _distance) -> do
+        -- consider distance for future
+        routeDetails <- mapMaybeM (\(osc, dsc) -> buildMultimodalRouteDetails 1 Nothing osc dsc integratedBppConfig mid mocid vc) viaRoutes
+        let updateRouteDetails = zipWith (\idx routeDetail -> routeDetail {MultiModalTypes.subLegOrder = idx}) [1 ..] routeDetails
+        case updateRouteDetails of
+          [] -> return Nothing
+          (rD : _) -> do
+            currentTime <- getCurrentTime
+            let (_, currentTimeIST) = getISTTimeInfo currentTime
+            mbPreliminaryLeg <- getPreliminaryLeg rD.startLocation
+            return $ Just $ mkMultiModalRoute currentTimeIST mbPreliminaryLeg mode (NonEmpty.fromList updateRouteDetails)
+    )
+    allSubwayRoutes
+  where
+    getAllSubwayRoutes :: Flow [([(Text, Text)], Meters)]
+    getAllSubwayRoutes = do
+      person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+      mbMobileNumber <- mapM decrypt person.mobileNumber
+      mbImeiNumber <- mapM decrypt person.imeiNumber
+      sessionId <- getRandomInRange (1, 1000000 :: Int)
+      case integratedBppConfig.providerConfig of
+        DIntegratedBPPConfig.CRIS crisConfig -> do
+          let routeFareReq =
+                CRISRouteFare.CRISFareRequest
+                  { mobileNo = mbMobileNumber,
+                    imeiNo = fromMaybe "ed409d8d764c04f7" mbImeiNumber,
+                    appSession = sessionId,
+                    sourceCode = originStopCode,
+                    changeOver = " ",
+                    destCode = destinationStopCode,
+                    via = " "
+                  }
+          fares <- CRISRouteFare.getRouteFare crisConfig mocid routeFareReq
+          let viaPoints =
+                nub $
+                  map
+                    ( \fd ->
+                        let viaStops = T.splitOn "-" fd.via
+                            viaRoutes = zipWith (,) viaStops (drop 1 viaStops)
+                         in (viaRoutes, fd.distance)
+                    )
+                    $ mapMaybe (.fareDetails) fares
+          return viaPoints
+        _ -> return []
+buildTrainAllViaRoutes _ _ _ _ _ _ _ _ _ = return []
 
 findEarliestTiming :: UTCTime -> UTCTime -> [RouteStopTimeTable] -> Maybe RouteStopTimeTable
 findEarliestTiming currentTimeIST currentTime routeStopTimings = filter (\rst -> getISTArrivalTime rst.timeOfDeparture currentTime >= currentTimeIST) routeStopTimings & listToMaybe

@@ -88,12 +88,12 @@ getFares riderId merchant merchanOperatingCity integrationBPPConfig fareRouteDet
       fares <- FRFSUtils.getFares riderId vehicleCategory integrationBPPConfig merchant.id merchanOperatingCity.id routeCode startStopCode endStopCode
       return (isFareMandatory, fares)
     CRIS config' -> do
-      redisResp <- Redis.safeGet (mkRouteFareKey startStopCode endStopCode)
+      (viaPoints, changeOver) <- getChangeOverAndViaPoints (NE.toList fareRouteDetails) integrationBPPConfig
+      redisResp <- Redis.safeGet (mkRouteFareKey startStopCode endStopCode changeOver)
       case redisResp of
         Just frfsFare -> return (isFareMandatory, frfsFare)
         Nothing -> do
           sessionId <- getRandomInRange (1, 1000000 :: Int)
-          (viaPoints, changeOver) <- getChangeOverAndViaPoints (NE.toList fareRouteDetails) integrationBPPConfig
           let request =
                 CRISRouteFare.CRISFareRequest
                   { mobileNo = Just "1111111111", -- dummy number and imei for all other requests to avoid sdkToken confusion
@@ -110,10 +110,10 @@ getFares riderId merchant merchanOperatingCity integrationBPPConfig fareRouteDet
               logError $ "Error while calling CRIS API: " <> show err
               return (isFareMandatory, [])
             Right fares -> do
-              Redis.setExp (mkRouteFareKey startStopCode endStopCode) fares 3600 -- 1 hour
+              Redis.setExp (mkRouteFareKey startStopCode endStopCode changeOver) fares 3600 -- 1 hour
               return (isFareMandatory, fares)
   where
-    mkRouteFareKey startStopCode endStopCode = "CRIS:" <> startStopCode <> "-" <> endStopCode
+    mkRouteFareKey startStopCode endStopCode changeOver = "CRIS:" <> startStopCode <> "-" <> endStopCode <> "-" <> changeOver
 
     getRouteCodeAndStartAndStop :: (Text, Text, Text)
     getRouteCodeAndStartAndStop = do
