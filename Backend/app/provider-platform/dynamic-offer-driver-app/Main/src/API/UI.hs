@@ -32,6 +32,7 @@ import qualified API.Action.UI.Merchant as Merchant
 import qualified API.Action.UI.MeterRide as MeterRide
 import qualified API.Action.UI.OperationHub as OH
 import qualified API.Action.UI.Operator as Operator
+import qualified API.Action.UI.PickupInstructions as PickupInstructions
 import qualified API.Action.UI.PriceBreakup as PriceBreakup
 import qualified API.Action.UI.Reels as Reels
 import qualified API.Action.UI.ReferralPayout as ReferralPayout
@@ -127,6 +128,7 @@ type API =
            :<|> WMB.API
            :<|> OH.API
            :<|> Operator.API
+           :<|> PickupInstructions.API
            :<|> CallFeedback.API
            :<|> Invoice.API
            :<|> Insurance.API
@@ -184,6 +186,7 @@ handler =
     :<|> WMB.handler
     :<|> OH.handler
     :<|> Operator.handler
+    :<|> PickupInstructions.handler
     :<|> CallFeedback.handler
     :<|> Invoice.handler
     :<|> Insurance.handler
