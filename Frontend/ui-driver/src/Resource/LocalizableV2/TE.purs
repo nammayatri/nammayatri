@@ -1913,4 +1913,5 @@ getTe =
     , you_are_in_probation_period_till : (\date -> "మీరు " <> date <> " వర్షదల్లి ప్రయోగద అవధియల్లిద్దీరి")
     , pass_all_eligibility_criteria_to_continue_being_a_member : "నమ్మ కుతుమా సదస్యత్తున్నారు పాలిసి సమస్త యోగ్యతా మానదండ్ పాలిసి"
     , metro : "మెట్రో"
+    , gold_tier : "గోల్డ్ టీర్"
     }

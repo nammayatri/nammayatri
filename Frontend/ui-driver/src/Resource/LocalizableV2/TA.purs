@@ -1913,4 +1913,5 @@ getTa =
     , you_are_in_probation_period_till : (\date -> "நிமிட " <> date <> " வர்ஷத்திற்கு பார் ஦லில் மா஡஬ஹு஦ு")
     , pass_all_eligibility_criteria_to_continue_being_a_member : "நம்ம குதுமா ஸதஸ்யத்தை ஜாரி஗ெ ஸமஸ்த யோக்குவாய்ப்பாக மாநிதிகளை பாலிஸி"
     , metro : "மெட்ரோ"
+    , gold_tier : "கோல்ட் டீர்"
     }
