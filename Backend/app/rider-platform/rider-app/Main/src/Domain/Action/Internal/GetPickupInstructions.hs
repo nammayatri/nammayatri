@@ -28,7 +28,6 @@ import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.Beam.IssueManagement ()
-import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.PickupInstructions as QPickupInstructions
 import qualified Storage.Queries.Ride as QRide
@@ -53,11 +52,11 @@ getPickupInstructions bppRideId apiKey = do
   logInfo $ "GetPickupInstructions: Found booking for personId: " <> booking.riderId.getId
 
   -- Validate API key
-  merchant <- QMerchant.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
-  unless (Just merchant.driverOfferApiKey == apiKey) $
+  internalAPIKey <- asks (.internalAPIKey)
+  unless (Just internalAPIKey == apiKey) $
     throwError (AuthBlocked "Invalid BAP internal api key")
 
-  logInfo $ "GetPickupInstructions: API key validated for merchant: " <> merchant.name
+  logInfo $ "GetPickupInstructions: API key validated"
 
   -- Get pickup location from ride
   let fromLocation = ride.fromLocation
