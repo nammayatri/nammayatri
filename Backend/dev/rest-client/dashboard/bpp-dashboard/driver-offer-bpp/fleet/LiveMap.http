@@ -69,6 +69,30 @@ content-type: application/json
 
 ###
 
+# @name update_fleet_group_driver2
+
+POST {{location-tracking-service-host}}/ui/driver/location
+token: favorit-suv-000000000000000000000000
+mid: {{merchantId}}
+gid: favorit-fleet-owner-0000000000000000
+gid2: favorit-operator-0-0000-000000000000
+vt: AUTO_RICKSHAW
+dm: ONLINE
+content-type: application/json
+
+[
+    {
+        "pt": {
+            "lat": 14.445636,
+            "lon": 75.920288
+        },
+        "ts": "{{$localDatetime iso8601}}",
+        "aux": "1st Main Rd"
+    }
+]
+
+###
+
 # @name nearby_fleet_group
 
 GET {{location-tracking-service-host}}/internal/drivers/nearby
@@ -85,15 +109,31 @@ Content-Type: application/json
 
 ###
 
+# @name getDriverLocations
+
+# set DEV environment variable for DEV testing
+# export DEV=1
+
+@driverId=favorit-auto2-0000000000000000000000
+
+GET {{location-tracking-service-host}}/internal/drivers/location
+# token: {{operator}}
+content-type: application/json
+
+{ "driverIds":["favorit-auto2-0000000000000000000000", "favorit-suv-000000000000000000000000"]
+}
+
+###
+
 # @name getLiveMapDrivers
 
-@radius = 5000
+@radius = 115
 
 # for local MSIL testing:
 # UPDATE atlas_bpp_dashboard.merchant SET has_fleet_member_hierarchy='false' WHERE short_id='NAMMA_YATRI_PARTNER';
 
 GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/liveMap/drivers/{{radius}}
 # ?fleetOwnerId={{fleet}}
-# ?driverIdForRadius={{driver_Id}}
-?point=14.445332,75.919028
+?driverIdForRadius={{driver_Id}}
+# &point=14.445332,75.919028
 token: {{operator}}
