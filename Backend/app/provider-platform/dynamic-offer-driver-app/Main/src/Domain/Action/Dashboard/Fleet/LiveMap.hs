@@ -19,15 +19,15 @@ import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Common (Meters (..))
 import Kernel.Types.Error
   ( GenericError (InternalError),
+    LocationError (LocationNotFound),
     PersonError (PersonDoesNotExist, PersonNotFound),
     RideError (RideNotFound),
   )
 import qualified Kernel.Types.Id as ID
 import Kernel.Utils.Error.Throwing (fromMaybeM, throwError)
-import Kernel.Utils.Logging (logError)
+import Kernel.Utils.Logging (logError, logWarning)
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import SharedLogic.Merchant (findMerchantByShortId)
-import SharedLogic.WMB (getDriverCurrentLocation)
 import qualified Storage.Clickhouse.Booking as CHB
 import Storage.Queries.DriverInformationExtra (findAllByDriverIds)
 import qualified Storage.Queries.Person as QP
@@ -90,6 +90,20 @@ getLiveMapDrivers merchantShortId _opCity radius requestorId mbReqFleetOwnerId m
         DV.BLACK_XL,
         DV.SUV_PLUS
       ]
+
+getDriverCurrentLocation :: ID.Id DP.Person -> Environment.Flow LatLong
+getDriverCurrentLocation driverId = do
+  mbCurrentDriverLocation <-
+    try @_ @SomeException (LF.driversLocation [driverId])
+      >>= \case
+        Left _ -> do
+          logError $ "Drivers location api was falied for current driver: " <> driverId.getId
+          return Nothing
+        Right locations -> do
+          when (null locations) $ logWarning $ "Location was not found for current driver: " <> driverId.getId
+          return $ Kernel.Prelude.listToMaybe locations
+  currentDriverLocation <- mbCurrentDriverLocation & fromMaybeM LocationNotFound
+  pure $ LatLong currentDriverLocation.lat currentDriverLocation.lon
 
 buildRideRelatedInfo ::
   Bool ->
