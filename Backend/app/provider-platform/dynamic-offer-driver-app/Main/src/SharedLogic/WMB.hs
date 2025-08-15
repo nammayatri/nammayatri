@@ -473,18 +473,18 @@ unlinkVehicleToDriver driverId merchantId merchantOperatingCityId vehicleNumber 
       Just rc -> DAQuery.endAssociationForRC driverId rc.id
       Nothing -> pure ()
 
-getDriverCurrentLocation :: Id Person -> Flow LatLong
-getDriverCurrentLocation driverId = do
-  mbCurrentDriverLocation <-
-    try @_ @SomeException (LF.driversLocation [driverId])
-      >>= \case
-        Left _ -> do
-          return Nothing
-        Right locations -> do
-          let location = listToMaybe locations
-          -- when (isNothing location) $ logError "Driver is not active since 24 hours, please ask driver to go online and then end the trip."
-          return location
-  return $ (maybe (LatLong 0.0 0.0) (\currentDriverLocation -> LatLong currentDriverLocation.lat currentDriverLocation.lon) mbCurrentDriverLocation)
+-- getDriverCurrentLocation :: Id Person -> Flow LatLong
+-- getDriverCurrentLocation driverId = do
+--   mbCurrentDriverLocation <-
+--     try @_ @SomeException (LF.driversLocation [driverId])
+--       >>= \case
+--         Left _ -> do
+--           return Nothing
+--         Right locations -> do
+--           let location = listToMaybe locations
+--           -- when (isNothing location) $ logError "Driver is not active since 24 hours, please ask driver to go online and then end the trip."
+--           return location
+--   return $ (maybe (LatLong 0.0 0.0) (\currentDriverLocation -> LatLong currentDriverLocation.lat currentDriverLocation.lon) mbCurrentDriverLocation)
 
 getRouteDetails :: Text -> Flow Common.RouteDetails
 getRouteDetails routeCode = do
