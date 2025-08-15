@@ -450,7 +450,8 @@ data VehicleTracking = VehicleTracking
     upcomingStops :: [UpcomingStop],
     vehicleId :: Text,
     vehicleInfo :: Maybe VehicleInfo,
-    delay :: Maybe Seconds
+    delay :: Maybe Seconds,
+    routeState :: Maybe CQMMB.RouteState
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -509,7 +510,8 @@ trackVehicles _personId _merchantId merchantOpCityId vehicleType routeCode platf
                       upcomingStops = [],
                       vehicleId = vehicleId,
                       vehicleInfo = Just vehicleInfo,
-                      delay = Nothing
+                      delay = Nothing,
+                      routeState = Nothing
                     }
             )
             vehicleTrackingInfo
@@ -564,7 +566,8 @@ trackVehicles _personId _merchantId merchantOpCityId vehicleType routeCode platf
                           tripId = Nothing,
                           upcomingStops = Nothing
                         },
-                  delay = Nothing
+                  delay = Nothing,
+                  routeState = busData.route_state
                 }
     _ -> do
       route <- OTPRest.getRouteByRouteId integratedBPPConfig routeCode >>= fromMaybeM (RouteNotFound routeCode)
@@ -605,7 +608,8 @@ trackVehicles _personId _merchantId merchantOpCityId vehicleType routeCode platf
                       upcomingStops = [],
                       vehicleId = show vehicleType,
                       vehicleInfo = Nothing,
-                      delay = Nothing
+                      delay = Nothing,
+                      routeState = Nothing
                     }
             pure vehicleTracking
         Nothing -> do
