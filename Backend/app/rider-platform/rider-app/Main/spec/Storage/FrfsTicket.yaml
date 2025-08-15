@@ -574,9 +574,6 @@ FRFSTicketBookingPayment:
     findById:
       kvFunction: findOneWithKV
       where: id
-    findByPaymentOrderId:
-      kvFunction: findOneWithKV
-      where: paymentOrderId
     findAllByOrderId:
       kvFunction: findAllWithKV
       where: paymentOrderId
