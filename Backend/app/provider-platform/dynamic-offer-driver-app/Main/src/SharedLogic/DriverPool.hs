@@ -73,6 +73,7 @@ import qualified Data.Vector as V
 import Domain.Action.UI.Route as DRoute
 import Domain.Types as DVST
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
+import qualified Domain.Types.DriverInformation as DTDI
 import Domain.Types.DriverIntelligentPoolConfig (IntelligentScores (IntelligentScores))
 import qualified Domain.Types.DriverIntelligentPoolConfig as DIPC
 import Domain.Types.DriverPoolConfig
@@ -544,8 +545,9 @@ calculateGoHomeDriverPool ::
   CalculateGoHomeDriverPoolReq a ->
   Id DMOC.MerchantOperatingCity ->
   Maybe HighPrecMoney ->
+  [DTDI.DriverInformation] ->
   m [DriverPoolWithActualDistResult]
-calculateGoHomeDriverPool req@CalculateGoHomeDriverPoolReq {..} merchantOpCityId prepaidSubscriptionThreshold = do
+calculateGoHomeDriverPool req@CalculateGoHomeDriverPoolReq {..} merchantOpCityId prepaidSubscriptionThreshold driverInfos = do
   now <- getCurrentTime
   cityServiceTiers <- CQVST.findAllByMerchantOpCityIdInRideFlow merchantOpCityId configsInExperimentVersions
   approxDriverPool <-
@@ -578,7 +580,7 @@ calculateGoHomeDriverPool req@CalculateGoHomeDriverPoolReq {..} merchantOpCityId
     Estimate -> pure approxDriverPool --estimate stage we dont need to consider actual parallel request counts
   randomDriverPool <- liftIO $ take goHomeCfg.numDriversForDirCheck <$> Rnd.randomizeList driversWithLessThanNParallelRequests
   logDebug $ "random driver pool" <> show randomDriverPool
-  fst <$> filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool req merchantOpCityId
+  fst <$> filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool req merchantOpCityId driverInfos
   where
     getParallelSearchRequestCount now dObj = getValidSearchRequestCount merchantId (dObj.driverId) now
 
@@ -603,8 +605,9 @@ filterOutGoHomeDriversAccordingToHomeLocation ::
   [QP.NearestGoHomeDriversResult] ->
   CalculateGoHomeDriverPoolReq a ->
   Id DMOC.MerchantOperatingCity ->
+  [DTDI.DriverInformation] ->
   m ([DriverPoolWithActualDistResult], [Id DP.Driver])
-filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDriverPoolReq {..} merchantOpCityId = do
+filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDriverPoolReq {..} merchantOpCityId driverInfos = do
   logDebug $ "MetroWarriorDebugging randomDriverPool -----" <> show randomDriverPool
   now <- getCurrentTime
   goHomeRequests <-
@@ -678,7 +681,25 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
         Just thresholdToIgnoreActualDistanceThreshold -> (distanceToPickup <= thresholdToIgnoreActualDistanceThreshold) || (getMeters estDist.actualDistanceToPickup <= fromIntegral threshold)
         Nothing -> getMeters estDist.actualDistanceToPickup <= fromIntegral threshold
 
-    makeDriverPoolRes QP.NearestGoHomeDriversResult {..} = DriverPoolResult {distanceToPickup = distanceToDriver, customerTags = Nothing, ..}
+    makeDriverPoolRes QP.NearestGoHomeDriversResult {..} =
+      let matchingDriverInfo = find (\di -> di.driverId == driverId) driverInfos
+       in DriverPoolResult
+            { distanceToPickup = distanceToDriver,
+              customerTags = Nothing,
+              rideDistance = case matchingDriverInfo of
+                Just driverInfo -> case driverInfo.isAboveActive of
+                  Just True -> driverInfo.tripDistanceMinThreshold
+                  Just False -> driverInfo.tripDistanceMaxThreshold
+                  Nothing -> Nothing
+                Nothing -> Nothing,
+              isPriorityRidesEnabled = matchingDriverInfo >>= (.isPriorityRidesEnabled),
+              isPetModeEnabled = maybe False (.isPetModeEnabled) matchingDriverInfo,
+              isIntercity = maybe False (.canSwitchToInterCity) matchingDriverInfo,
+              isRental = maybe False (.canSwitchToRental) matchingDriverInfo,
+              isAcRidesEnabled = matchingDriverInfo >>= (.isAcRidesEnabled),
+              isSilentModeEnabled = matchingDriverInfo >>= (.isSilentModeEnabled),
+              ..
+            }
 
     getRoutesForAllDrivers =
       mapM
@@ -724,12 +745,25 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
         }
 
     makeDriverPoolResult QP.NearestGoHomeDriversResult {serviceTier = serviceTier', ..} =
-      DriverPoolResult
-        { distanceToPickup = distanceToDriver,
-          serviceTier = serviceTier',
-          customerTags = Nothing,
-          ..
-        }
+      let matchingDriverInfo = find (\di -> di.driverId == driverId) driverInfos
+       in DriverPoolResult
+            { distanceToPickup = distanceToDriver,
+              serviceTier = serviceTier',
+              customerTags = Nothing,
+              rideDistance = case matchingDriverInfo of
+                Just driverInfo -> case driverInfo.isAboveActive of
+                  Just True -> driverInfo.tripDistanceMinThreshold
+                  Just False -> driverInfo.tripDistanceMaxThreshold
+                  Nothing -> Nothing
+                Nothing -> Nothing,
+              isPriorityRidesEnabled = matchingDriverInfo >>= (.isPriorityRidesEnabled),
+              isPetModeEnabled = maybe False (.isPetModeEnabled) matchingDriverInfo,
+              isIntercity = maybe False (.canSwitchToInterCity) matchingDriverInfo,
+              isRental = maybe False (.canSwitchToRental) matchingDriverInfo,
+              isAcRidesEnabled = matchingDriverInfo >>= (.isAcRidesEnabled),
+              isSilentModeEnabled = matchingDriverInfo >>= (.isSilentModeEnabled),
+              ..
+            }
 
 data CalculateDriverPoolReq a = CalculateDriverPoolReq
   { cityServiceTiers :: [DVST.VehicleServiceTier],
@@ -762,11 +796,11 @@ calculateDriverPool ::
     HasKafkaProducer r
   ) =>
   CalculateDriverPoolReq a ->
-  m ([DriverPoolResult], [QP.NearestDriversResult])
+  m ([DriverPoolResult], [QP.NearestDriversResult], [DTDI.DriverInformation])
 calculateDriverPool CalculateDriverPoolReq {..} = do
   let radius = getRadius mRadiusStep
   let coord = getCoordinates pickup
-  approxDriverPool <-
+  (approxDriverPool, driverInfos) <-
     measuringDurationToLog INFO "calculateDriverPool" $
       QPG.getNearestDrivers $
         QPG.NearestDriversReq
@@ -786,10 +820,10 @@ calculateDriverPool CalculateDriverPoolReq {..} = do
         )
         approxDriverPool
     Estimate -> pure approxDriverPool --estimate stage we dont need to consider actual parallel request counts
-  let driverPoolResult = makeDriverPoolResult <$> driversWithLessThanNParallelRequests
+  let driverPoolResult = map (`makeDriverPoolResult` driverInfos) driversWithLessThanNParallelRequests
   logDebug $ "driverPoolResult: " <> show driverPoolResult
   logDebug $ "driverPoolResult: MetroWarriorDebugging-------" <> show driverPoolResult
-  pure (driverPoolResult, approxDriverPool)
+  pure (driverPoolResult, approxDriverPool, driverInfos)
   where
     getParallelSearchRequestCount :: Redis.HedisFlow m r => QP.NearestDriversResult -> m Int
     getParallelSearchRequestCount dObj = getValidSearchRequestCount merchantId (cast dObj.driverId) now
@@ -803,13 +837,26 @@ calculateDriverPool CalculateDriverPoolReq {..} = do
           min (minRadius + radiusStepSize * radiusStep) maxRadius
         Nothing -> maxRadius
 
-    makeDriverPoolResult :: QP.NearestDriversResult -> DriverPoolResult
-    makeDriverPoolResult QP.NearestDriversResult {..} = do
-      DriverPoolResult
-        { distanceToPickup = distanceToDriver,
-          customerTags = Nothing,
-          ..
-        }
+    makeDriverPoolResult :: QP.NearestDriversResult -> [DTDI.DriverInformation] -> DriverPoolResult
+    makeDriverPoolResult QP.NearestDriversResult {..} driverInfos =
+      let matchingDriverInfo = find (\di -> di.driverId == driverId) driverInfos
+       in DriverPoolResult
+            { distanceToPickup = distanceToDriver,
+              customerTags = Nothing,
+              rideDistance = case matchingDriverInfo of
+                Just driverInfo -> case driverInfo.isAboveActive of
+                  Just True -> driverInfo.tripDistanceMinThreshold
+                  Just False -> driverInfo.tripDistanceMaxThreshold
+                  Nothing -> Nothing
+                Nothing -> Nothing,
+              isPriorityRidesEnabled = matchingDriverInfo >>= (.isPriorityRidesEnabled),
+              isPetModeEnabled = maybe False (.isPetModeEnabled) matchingDriverInfo,
+              isIntercity = maybe False (.canSwitchToInterCity) matchingDriverInfo,
+              isRental = maybe False (.canSwitchToRental) matchingDriverInfo,
+              isAcRidesEnabled = matchingDriverInfo >>= (.isAcRidesEnabled),
+              isSilentModeEnabled = matchingDriverInfo >>= (.isSilentModeEnabled),
+              ..
+            }
 
 data FilterStage = NearBy | MaxParallelRequests | ActualDistance | TaggedPool
   deriving (Generic, Show, FromJSON, ToJSON)
@@ -847,11 +894,11 @@ calculateDriverPoolWithActualDist ::
   PoolType ->
   DST.CurrentSearchInfo ->
   Int ->
-  m [DriverPoolWithActualDistResult]
+  m ([DriverPoolWithActualDistResult], [DTDI.DriverInformation])
 calculateDriverPoolWithActualDist calculateReq@CalculateDriverPoolReq {..} poolType currentSearchInfo batchNum = do
-  (driverPool, approxDriverPool) <- calculateDriverPool calculateReq
+  (driverPool, approxDriverPool, driverInfos) <- calculateDriverPool calculateReq
   case driverPool of
-    [] -> return []
+    [] -> return ([], driverInfos)
     (a : pprox) -> do
       filtDriverPoolWithActualDist' <- withTimeAPI "driverPooling" "computeActualDistance" $ do
         case poolType of
@@ -895,7 +942,7 @@ calculateDriverPoolWithActualDist calculateReq@CalculateDriverPoolReq {..} poolT
           )
           "search-try-batch"
           currentSearchInfo.searchTry.id.getId
-      return filtDriverPoolWithActualDist
+      return (filtDriverPoolWithActualDist, driverInfos)
   where
     mkSpecialZoneQueueActualDistanceResult dpr = do
       DriverPoolWithActualDistResult
@@ -1088,8 +1135,9 @@ calculateDriverCurrentlyOnRideWithActualDist ::
   PoolType ->
   Integer ->
   DST.CurrentSearchInfo ->
+  [DTDI.DriverInformation] ->
   m [DriverPoolWithActualDistResult]
-calculateDriverCurrentlyOnRideWithActualDist calculateReq@CalculateDriverPoolReq {..} poolType batchNum currentSearchInfo = do
+calculateDriverCurrentlyOnRideWithActualDist calculateReq@CalculateDriverPoolReq {..} poolType batchNum currentSearchInfo driverInfos = do
   (thresholdRadius, driverPoolStraightLineFiltered) <- calculateDriverPoolCurrentlyOnRide calculateReq (Just batchNum)
   let countDriversToProccess = fromMaybe 10 driverPoolCfg.batchSizeOnRideWithStraightLineDistance
   let driverPool = take countDriversToProccess $ sortOn (.distanceToPickup) driverPoolStraightLineFiltered
@@ -1099,13 +1147,13 @@ calculateDriverCurrentlyOnRideWithActualDist calculateReq@CalculateDriverPoolReq
       logDebug "driverPool is empty"
       return []
     (a : pprox) -> do
-      let driverPoolResultsWithDriverLocationAsDestinationLocation = driverResultFromDestinationLocation <$> (a :| pprox)
+      let driverPoolResultsWithDriverLocationAsDestinationLocation = NE.fromList $ map driverResultFromDestinationLocation (a : pprox)
           driverToDestinationDistanceThreshold = driverPoolCfg.driverToDestinationDistanceThreshold
       driverPoolWithActualDistFromDestinationLocation <- computeActualDistance driverPoolCfg.distanceUnit merchantId merchantOperatingCityId Nothing pickup driverPoolResultsWithDriverLocationAsDestinationLocation
       driverPoolWithActualDistFromCurrentLocation <- do
         case driverPoolCfg.useOneToOneOsrmMapping of
-          Just True -> calculateActualDistanceCurrentlyOneToOneSrcAndDestMapping (a :| pprox)
-          _ -> traverse (calculateActualDistanceCurrently driverToDestinationDistanceThreshold) (a :| pprox)
+          Just True -> calculateActualDistanceCurrentlyOneToOneSrcAndDestMapping (a :| pprox) driverInfos
+          _ -> traverse (\driver -> calculateActualDistanceCurrently driverToDestinationDistanceThreshold driver driverInfos) (a :| pprox)
       let driverPoolWithActualDist = catMaybes $ zipWith (curry $ combine driverToDestinationDistanceThreshold) (NE.toList driverPoolWithActualDistFromDestinationLocation) (NE.toList driverPoolWithActualDistFromCurrentLocation)
           filtDriverPoolWithActualDist' = case (driverPoolCfg.actualDistanceThresholdOnRide, poolType) of
             (_, SpecialZoneQueuePool) -> driverPoolWithActualDist
@@ -1120,14 +1168,45 @@ calculateDriverCurrentlyOnRideWithActualDist calculateReq@CalculateDriverPoolReq
     filterFunc threshold estDist = getMeters estDist.actualDistanceToPickup <= fromIntegral threshold
 
     driverResultFromDestinationLocation DriverPoolResultCurrentlyOnRide {..} =
-      DriverPoolResult
-        { lat = previousRideDropLat,
-          lon = previousRideDropLon,
-          customerTags = Nothing,
-          ..
-        }
-    calculateActualDistanceCurrently _driverToDestinationDistanceThreshold DriverPoolResultCurrentlyOnRide {..} = do
-      let temp = DriverPoolResult {customerTags = Nothing, ..}
+      let matchingDriverInfo = find (\di -> di.driverId == driverId) driverInfos
+       in DriverPoolResult
+            { lat = previousRideDropLat,
+              lon = previousRideDropLon,
+              customerTags = Nothing,
+              rideDistance = case matchingDriverInfo of
+                Just driverInfo -> case driverInfo.isAboveActive of
+                  Just True -> driverInfo.tripDistanceMinThreshold
+                  Just False -> driverInfo.tripDistanceMaxThreshold
+                  Nothing -> Nothing
+                Nothing -> Nothing,
+              isPriorityRidesEnabled = matchingDriverInfo >>= (.isPriorityRidesEnabled),
+              isPetModeEnabled = maybe False (.isPetModeEnabled) matchingDriverInfo,
+              isIntercity = maybe False (.canSwitchToInterCity) matchingDriverInfo,
+              isRental = maybe False (.canSwitchToRental) matchingDriverInfo,
+              isAcRidesEnabled = matchingDriverInfo >>= (.isAcRidesEnabled),
+              isSilentModeEnabled = matchingDriverInfo >>= (.isSilentModeEnabled),
+              ..
+            }
+
+    calculateActualDistanceCurrently _driverToDestinationDistanceThreshold DriverPoolResultCurrentlyOnRide {..} driverInfos' = do
+      let matchingDriverInfo = find (\di -> di.driverId == driverId) driverInfos'
+      let temp =
+            DriverPoolResult
+              { customerTags = Nothing,
+                rideDistance = case matchingDriverInfo of
+                  Just driverInfo -> case driverInfo.isAboveActive of
+                    Just True -> driverInfo.tripDistanceMinThreshold
+                    Just False -> driverInfo.tripDistanceMaxThreshold
+                    Nothing -> Nothing
+                  Nothing -> Nothing,
+                isPriorityRidesEnabled = matchingDriverInfo >>= (.isPriorityRidesEnabled),
+                isPetModeEnabled = maybe False (.isPetModeEnabled) matchingDriverInfo,
+                isIntercity = maybe False (.canSwitchToInterCity) matchingDriverInfo,
+                isRental = maybe False (.canSwitchToRental) matchingDriverInfo,
+                isAcRidesEnabled = matchingDriverInfo >>= (.isAcRidesEnabled),
+                isSilentModeEnabled = matchingDriverInfo >>= (.isSilentModeEnabled),
+                ..
+              }
       computeActualDistanceOneToOne driverPoolCfg.distanceUnit merchantId merchantOperatingCityId (Just $ LatLong previousRideDropLat previousRideDropLon) (LatLong previousRideDropLat previousRideDropLon) temp
     combine driverToDestinationDistanceThreshold (DriverPoolWithActualDistResult {actualDistanceToPickup = x, actualDurationToPickup = y, previousDropGeoHash = pDGeoHash}, DriverPoolWithActualDistResult {..}) =
       if actualDistanceToPickup < driverToDestinationDistanceThreshold
@@ -1141,8 +1220,36 @@ calculateDriverCurrentlyOnRideWithActualDist calculateReq@CalculateDriverPoolReq
                 ..
               }
         else Nothing
-    calculateActualDistanceCurrentlyOneToOneSrcAndDestMapping driverPoolCurrentlyOnRide = do
-      let driverPoolResultsWithDriverLocationAsCurrentLocation = map (\DriverPoolResultCurrentlyOnRide {..} -> DriverPoolResult {customerTags = Nothing, ..}) driverPoolCurrentlyOnRide
+    calculateActualDistanceCurrentlyOneToOneSrcAndDestMapping driverPoolCurrentlyOnRide driverInfos' = do
+      let driverPoolResultsWithDriverLocationAsCurrentLocation =
+            map
+              ( \DriverPoolResultCurrentlyOnRide {..} ->
+                  let matchingDriverInfo = find (\di -> di.driverId == driverId) driverInfos'
+                      rideDistance = case matchingDriverInfo of
+                        Just driverInfo -> case driverInfo.isAboveActive of
+                          Just True -> driverInfo.tripDistanceMinThreshold
+                          Just False -> driverInfo.tripDistanceMaxThreshold
+                          Nothing -> Nothing
+                        Nothing -> Nothing
+                      isPriorityRidesEnabled = matchingDriverInfo >>= (.isPriorityRidesEnabled)
+                      isPetModeEnabled = maybe False (.isPetModeEnabled) matchingDriverInfo
+                      isIntercity = maybe False (.canSwitchToInterCity) matchingDriverInfo
+                      isRental' = maybe False (.canSwitchToRental) matchingDriverInfo
+                      isAcRidesEnabled = matchingDriverInfo >>= (.isAcRidesEnabled)
+                      isSilentModeEnabled = matchingDriverInfo >>= (.isSilentModeEnabled)
+                   in DriverPoolResult
+                        { customerTags = Nothing,
+                          rideDistance = rideDistance,
+                          isPriorityRidesEnabled = isPriorityRidesEnabled,
+                          isPetModeEnabled = isPetModeEnabled,
+                          isIntercity = isIntercity,
+                          isRental = isRental',
+                          isAcRidesEnabled = isAcRidesEnabled,
+                          isSilentModeEnabled = isSilentModeEnabled,
+                          ..
+                        }
+              )
+              driverPoolCurrentlyOnRide
       let mbPreviousRideDropLatLn = NE.toList $ map (\DriverPoolResultCurrentlyOnRide {..} -> Just $ LatLong previousRideDropLat previousRideDropLon) driverPoolCurrentlyOnRide
       let previousRideDropLatLn = NE.fromList $ catMaybes mbPreviousRideDropLatLn
       computeActualDistanceOneToOneSrcAndDestMapping driverPoolCfg.distanceUnit merchantId merchantOperatingCityId previousRideDropLatLn mbPreviousRideDropLatLn driverPoolResultsWithDriverLocationAsCurrentLocation

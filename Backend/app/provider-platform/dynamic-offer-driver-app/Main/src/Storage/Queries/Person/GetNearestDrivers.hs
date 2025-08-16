@@ -7,6 +7,7 @@ import qualified Data.Text as T
 import Domain.Types
 import qualified Domain.Types.Common as DriverInfo
 import qualified Domain.Types.Driver.DriverInformation as DIAPI
+import qualified Domain.Types.DriverInformation as DTDI
 import Domain.Types.Merchant
 import Domain.Types.Person as Person
 import Domain.Types.VehicleServiceTier as DVST
@@ -77,7 +78,7 @@ data NearestDriversReq = NearestDriversReq
 getNearestDrivers ::
   (MonadFlow m, MonadTime m, LT.HasLocationService m r, CoreMetrics m, EsqDBFlow m r, CacheFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) =>
   NearestDriversReq ->
-  m [NearestDriversResult]
+  m ([NearestDriversResult], [DTDI.DriverInformation])
 getNearestDrivers NearestDriversReq {..} = do
   let allowedCityServiceTiers = filter (\cvst -> cvst.serviceTierType `elem` serviceTiers) cityServiceTiers
       allowedVehicleVariant = DL.nub (concatMap (.allowedVehicleVariant) allowedCityServiceTiers)
@@ -96,7 +97,7 @@ getNearestDrivers NearestDriversReq {..} = do
   let res = linkArrayList driverLocs driverInfos vehicle drivers driverBankAccounts
   logDebug $ "GetNearestDrivers Result:- " <> show (length res)
   logDebug $ "MetroWarriorDebugging Result:- getNearestDrivers --------person tags res----" <> show res
-  return res
+  return (res, driverInfos)
   where
     linkArrayList driverLocations driverInformations vehicles persons driverBankAccounts =
       let personHashMap = HashMap.fromList $ (\p -> (p.id, p)) <$> persons

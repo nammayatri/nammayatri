@@ -240,3 +240,20 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN driver_flow_sta
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN online_duration_refreshed_at timestamp with time zone  default CURRENT_TIMESTAMP;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN trip_distance_min_threshold integer ;
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN trip_distance_max_threshold integer ;
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN ride_request_volume integer ;
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN max_pickup_radius integer ;
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN is_priority_rides_enabled boolean ;
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN is_ac_rides_enabled boolean ;
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN is_above_active boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN is_silent_mode_enabled boolean ;
