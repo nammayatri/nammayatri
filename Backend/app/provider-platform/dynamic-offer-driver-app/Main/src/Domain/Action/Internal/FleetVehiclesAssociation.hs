@@ -74,7 +74,7 @@ getFleetVehicleAssociation apiKey placeId mbLimit mbOffset mbSearchString = do
       let limit = fromIntegral $ fromMaybe 1000 mbLimit
           offset = fromIntegral $ fromMaybe 0 mbOffset
 
-      rcs <- VRCExtra.findAllValidRcByFleetOwnerIdsAndSearchString limit offset merchantId fleetOwnerIds mbSearchString mbRegNumberStringHash
+      rcs <- VRCExtra.findAllValidRcByFleetOwnerIdsAndSearchStringWithoutVerificationStatusMF limit offset merchantId fleetOwnerIds mbSearchString mbRegNumberStringHash
       items <- mapM (buildItem fleetOwnerNameMap) rcs
       pure $ BoatFleetVehicleListRes items
 

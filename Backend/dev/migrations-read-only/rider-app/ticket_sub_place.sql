@@ -12,3 +12,9 @@ ALTER TABLE atlas_app.ticket_sub_place ADD COLUMN updated_at timestamp with time
 ALTER TABLE atlas_app.ticket_sub_place ADD COLUMN merchant_id character varying(36) ;
 ALTER TABLE atlas_app.ticket_sub_place ADD COLUMN merchant_operating_city_id character varying(36) ;
 ALTER TABLE atlas_app.ticket_sub_place ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ticket_sub_place ADD COLUMN enforced_ticket_place_id character varying(36) ;

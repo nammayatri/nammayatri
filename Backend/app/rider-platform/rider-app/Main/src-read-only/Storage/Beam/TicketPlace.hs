@@ -20,6 +20,7 @@ data TicketPlaceT f = TicketPlaceT
     customTabs :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     description :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     endDate :: B.C f (Kernel.Prelude.Maybe Data.Time.Day),
+    enforcedAsSubPlace :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     faqs :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     gallery :: B.C f [Kernel.Prelude.Text],
     iconUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
