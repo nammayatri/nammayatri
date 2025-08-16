@@ -19,6 +19,7 @@ data TicketPlace = TicketPlace
     customTabs :: Kernel.Prelude.Maybe [Domain.Types.TicketPlace.CustomTab],
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     endDate :: Kernel.Prelude.Maybe Data.Time.Day,
+    enforcedAsSubPlace :: Kernel.Prelude.Bool,
     faqs :: Kernel.Prelude.Maybe [Domain.Types.TicketPlace.Faq],
     gallery :: [Kernel.Prelude.Text],
     iconUrl :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

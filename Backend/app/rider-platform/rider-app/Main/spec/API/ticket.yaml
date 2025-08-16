@@ -72,6 +72,7 @@ types:
     pricePerUnitWithCurrency: PriceAPIEntity
     description: Text
     cancellationCharges: "Maybe [CancellationCharge]"
+    iconUrl: Maybe Text
 
   TicketBookingReq:
     visitDate: Day
@@ -200,6 +201,9 @@ types:
     id: Id TicketBookingPeopleCategory
     quantity: Int
 
+  TicketServiceVerificationReq:
+    assignments: "Maybe [SharedLogic.CallBPPInternal.BookingAssignment]"
+
   TicketServiceVerificationResp:
     ticketServiceName: Maybe Text
     visitDate: Maybe Day
@@ -231,9 +235,9 @@ types:
   TicketFleetVehicleResp:
     fleetOwnerId: Text
     fleetOwnerName: Text
-    vehicleNo: Text
+    vehicleNo: Maybe Text
     rcId: Text
-    vehicleType: Text
+    vehicleType: Maybe Text
     driverId: Maybe Text
     driverName: Maybe Text
     isActive: Bool
@@ -304,6 +308,17 @@ apis:
       response:
         type: API.Types.UI.TicketService.TicketBookingDetails
 
+  - POST:
+      endpoint: /ticket/bookings/{personServiceId}/{ticketServiceShortId}/verify/v2
+      auth: TokenAuth
+      params:
+        personServiceId: Id TicketService
+        ticketServiceShortId: ShortId TicketBookingService
+      request:
+        type: API.Types.UI.TicketService.TicketServiceVerificationReq
+      response:
+        type: API.Types.UI.TicketService.TicketServiceVerificationResp
+
   # # POST /ticket/bookings/{personServiceId}/{ticketServiceShortId}/verify
   - POST:
       endpoint: /ticket/bookings/{personServiceId}/{ticketServiceShortId}/verify
@@ -371,6 +386,14 @@ apis:
       auth: TokenAuth
       response:
         type: "[TicketPlaceResp]"
+  - GET:
+      endpoint: /ticket/place/{placeId}
+      name: getTicketPlace
+      auth: TokenAuth
+      params:
+        placeId: Id TicketPlace
+      response:
+        type: "TicketPlaceResp"
 
   # GET /ticket/bookings/{ticketServiceShortId}/fleet-vehicles
   - GET:

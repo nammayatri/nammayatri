@@ -278,7 +278,8 @@ getLiveTicketDef placeId = do
                 isClosed = ticketPlace.isClosed,
                 startDate = ticketPlace.startDate,
                 venue = ticketPlace.venue,
-                assignTicketToBpp = ticketPlace.assignTicketToBpp
+                assignTicketToBpp = ticketPlace.assignTicketToBpp,
+                enforcedAsSubPlace = ticketPlace.enforcedAsSubPlace
               }
           serviceDefs = map (toTicketServiceDef linkedBusinessHours) services
           serviceCategoryDefs = map (toServiceCategoryDef linkedBusinessHours) linkedServiceCategories
@@ -338,7 +339,8 @@ getLiveTicketDef placeId = do
           pricingType = spc.pricingType,
           priceAmount = spc.pricePerUnit.amount,
           priceCurrency = spc.pricePerUnit.currency,
-          rules = spc.rules
+          rules = spc.rules,
+          iconUrl = spc.iconUrl
         }
 
 getTicketDef :: Id DTicketPlace.TicketPlace -> Environment.Flow DEM.TicketPlaceDef
@@ -605,7 +607,8 @@ applyDraftChanges draftChange = do
             isClosed = ticketDef.basicInformation.isClosed,
             startDate = ticketDef.basicInformation.startDate,
             venue = ticketDef.basicInformation.venue,
-            assignTicketToBpp = ticketDef.basicInformation.assignTicketToBpp
+            assignTicketToBpp = ticketDef.basicInformation.assignTicketToBpp,
+            enforcedAsSubPlace = ticketDef.basicInformation.enforcedAsSubPlace
           }
   case existingTicketPlace of
     Just extTP -> do
@@ -654,7 +657,8 @@ applyDraftChanges draftChange = do
                 placeId = fromMaybe (pure draftChange.id.getId) (existingSPC <&> (.placeId)),
                 updatedAt = now,
                 rules = spcDef.rules,
-                isClosed = fromMaybe False (existingSPC <&> (.isClosed))
+                isClosed = fromMaybe False (existingSPC <&> (.isClosed)),
+                iconUrl = spcDef.iconUrl
               }
       case existingSPC of
         Just _ -> QServicePeopleCategory.updateByPrimaryKey servicePC

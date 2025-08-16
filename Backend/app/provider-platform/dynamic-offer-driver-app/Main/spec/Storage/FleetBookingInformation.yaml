@@ -17,8 +17,8 @@ FleetBookingInformation:
     serviceId: Maybe Text
     placeName: Maybe Text
     serviceName: Maybe Text
-    fleetOwnerId: Maybe (Id Person)
-    vehicleNo: Maybe Text
+    fleetOwnerId: Maybe (Id Person) # This will be deprecated like my sleep
+    vehicleNo: Maybe Text  # This will be deprecated like my sleep
     personId: Maybe (Id Person)
     amount: Maybe HighPrecMoney
     visitDate: Maybe Day
@@ -39,3 +39,36 @@ FleetBookingInformation:
       kvFunction: findOneWithKV
       where: serviceId
 
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+FleetBookingAssignments:
+  tableName: fleet_booking_assignments
+  fields:
+    id: Id FleetBookingAssignments
+    mainAssignmentId: Id FleetBookingInformation
+    bookingId: Text
+    serviceId: Maybe Text
+    placeName: Maybe Text
+    serviceName: Maybe Text
+    visitDate: Maybe Day
+    fleetOwnerId: Text
+    vehicleNo: Text
+    amount: Maybe HighPrecMoney
+    merchantId: Maybe (Id Merchant)
+    merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  constraints:
+    id: PrimaryKey
+    mainAssignmentId: SecondaryKey
+
+  queries:
+    findAllByMainAssignmentId:
+      kvFunction: findAllWithKV
+      where: mainAssignmentId
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+    - GENERATE_INDEXES

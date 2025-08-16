@@ -640,8 +640,8 @@ data FleetVehicleInfo = FleetVehicleInfo
   { fleetOwnerId :: Text,
     fleetOwnerName :: Text,
     rcId :: Text,
-    vehicleNo :: Text,
-    vehicleType :: Text,
+    vehicleNo :: Maybe Text,
+    vehicleType :: Maybe Text,
     driverId :: Maybe Text,
     driverName :: Maybe Text,
     isActive :: Bool
@@ -740,13 +740,20 @@ data UpdateFleetBookingInformationReq = UpdateFleetBookingInformationReq
   { id :: Maybe Text,
     bookingId :: Text,
     serviceId :: Text,
-    fleetOwnerId :: Maybe Text,
+    fleetOwnerId :: Text,
     vehicleNo :: Text,
     personId :: Maybe Text,
     status :: Maybe Text,
     visitDate :: Maybe Day,
     bookedSeats :: Maybe Int,
-    amount :: Maybe HighPrecMoney
+    amount :: Maybe HighPrecMoney,
+    assignments :: Maybe [BookingAssignment]
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
+data BookingAssignment = BookingAssignment
+  { fleetOwnerId :: Text,
+    vehicleNo :: Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 

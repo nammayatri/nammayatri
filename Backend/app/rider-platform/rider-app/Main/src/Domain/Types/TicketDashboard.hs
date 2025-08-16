@@ -53,7 +53,11 @@ data TicketPlaceDashboardDetails = TicketPlaceDashboardDetails
     endDate :: Maybe Time.Day,
     venue :: Maybe Text,
     rules :: Maybe [Rule],
-    assignTicketToBpp :: Bool
+    assignTicketToBpp :: Maybe Bool,
+    customTabs :: Maybe [DTicketPlace.CustomTab],
+    recommend :: Maybe Bool,
+    enforcedAsSubPlace :: Maybe Bool,
+    merchantOperatingCityId :: Maybe Text
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -104,7 +108,8 @@ data ServicePeopleCategoryDetails = ServicePeopleCategoryDetails
     priceCurrency :: Currency,
     timeBounds :: TimeBound,
     vendorSplitDetails :: Maybe [Payment.VendorSplitDetails],
-    rules :: Maybe [Rule]
+    rules :: Maybe [Rule],
+    iconUrl :: Maybe Text
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
