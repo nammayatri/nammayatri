@@ -16,12 +16,14 @@ module Domain.Action.Internal.FleetBookingInformation where
 
 import Control.Applicative ((<|>))
 import Data.Time hiding (getCurrentTime)
+import qualified Domain.Types.FleetBookingAssignments as DFBA
 import qualified Domain.Types.FleetBookingInformation as DFBI
 import qualified Domain.Types.Person as DP
 import Environment
 import Kernel.Prelude
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common hiding (id)
+import qualified Storage.Queries.FleetBookingAssignments as QFBA
 import qualified Storage.Queries.FleetBookingInformation as QFBI
 
 data CreateFleetBookingInformationReq = CreateFleetBookingInformationReq
@@ -53,7 +55,14 @@ data UpdateFleetBookingInformationReq = UpdateFleetBookingInformationReq
     status :: Maybe Text,
     visitDate :: Maybe Day,
     bookedSeats :: Maybe Int,
-    amount :: Maybe HighPrecMoney
+    amount :: Maybe HighPrecMoney,
+    assignments :: Maybe [BookingAssignment]
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
+data BookingAssignment = BookingAssignment
+  { fleetOwnerId :: Text,
+    vehicleNo :: Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -62,7 +71,7 @@ data UpdateFleetBookingInformationResp = UpdateFleetBookingInformationResp
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
-createBookingInformation :: CreateFleetBookingInformationReq -> Flow CreateFleetBookingInformationResp
+createBookingInformation :: CreateFleetBookingInformationReq -> Flow (DFBI.FleetBookingInformation, CreateFleetBookingInformationResp)
 createBookingInformation req = do
   infoId <- generateGUID
   now <- getCurrentTime
@@ -86,14 +95,13 @@ createBookingInformation req = do
             updatedAt = now
           }
   QFBI.create record
-  pure $ CreateFleetBookingInformationResp infoId
+  pure $ (record, CreateFleetBookingInformationResp infoId)
 
 updateBookingInformation :: UpdateFleetBookingInformationReq -> Flow UpdateFleetBookingInformationResp
 updateBookingInformation req = do
   mExisting <- case req.id of
     Just id -> QFBI.findById id
     Nothing -> QFBI.findByServiceId (Just req.serviceId)
-  -- _ -> pure Nothing
   now <- getCurrentTime
   case mExisting of
     Just existing -> do
@@ -107,6 +115,7 @@ updateBookingInformation req = do
                 DFBI.updatedAt = now
               }
       QFBI.updateByPrimaryKey updated
+      createAssignments updated req.assignments
       pure $ UpdateFleetBookingInformationResp existing.id
     Nothing -> do
       let createReq =
@@ -122,5 +131,32 @@ updateBookingInformation req = do
                 bookedSeats = req.bookedSeats,
                 status = req.status
               }
-      CreateFleetBookingInformationResp newId <- createBookingInformation createReq
+      (newAssignment, CreateFleetBookingInformationResp newId) <- createBookingInformation createReq
+      createAssignments newAssignment req.assignments
       pure $ UpdateFleetBookingInformationResp newId
+  where
+    createAssignments :: DFBI.FleetBookingInformation -> Maybe [BookingAssignment] -> Flow ()
+    createAssignments mainAssignment mbAssignments = do
+      let assignments = fromMaybe [] mbAssignments
+      now <- getCurrentTime
+      let individualAmount = maybe Nothing (\amt -> Just (amt / (fromIntegral (max 1 (fromMaybe 1 mainAssignment.bookedSeats))))) mainAssignment.amount
+      forM_ assignments $ \assignment -> do
+        assignmentId <- generateGUID
+        let record =
+              DFBA.FleetBookingAssignments
+                { id = assignmentId,
+                  mainAssignmentId = mainAssignment.id,
+                  bookingId = mainAssignment.bookingId,
+                  serviceId = mainAssignment.serviceId,
+                  placeName = mainAssignment.placeName,
+                  serviceName = mainAssignment.serviceName,
+                  DFBA.visitDate = mainAssignment.visitDate,
+                  fleetOwnerId = assignment.fleetOwnerId,
+                  vehicleNo = assignment.vehicleNo,
+                  amount = individualAmount,
+                  merchantId = mainAssignment.merchantId,
+                  merchantOperatingCityId = mainAssignment.merchantOperatingCityId,
+                  createdAt = now,
+                  updatedAt = now
+                }
+        QFBA.create record

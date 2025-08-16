@@ -62,7 +62,8 @@ data BasicInformation = BasicInformation
     isClosed :: Bool,
     startDate :: Maybe Time.Day,
     venue :: Maybe Text,
-    assignTicketToBpp :: Bool
+    assignTicketToBpp :: Bool,
+    enforcedAsSubPlace :: Bool
   }
   deriving (Generic, Show, Ord, Eq, ToJSON, FromJSON, ToSchema)
 
@@ -108,7 +109,8 @@ data ServicePeopleCategoryDef = ServicePeopleCategoryDef
     pricingType :: DServicePeopleCategory.PricingType,
     priceAmount :: HighPrecMoney,
     priceCurrency :: Currency,
-    rules :: Maybe [Rule]
+    rules :: Maybe [Rule],
+    iconUrl :: Maybe Text
   }
   deriving (Generic, Show, Eq, Ord, ToJSON, FromJSON, ToSchema)
 

@@ -66,6 +66,7 @@ TicketPlace:
     venue: Maybe Text
     isClosed: Bool
     assignTicketToBpp: Bool
+    enforcedAsSubPlace: Bool
 
   types:
     PlaceType:
@@ -98,6 +99,7 @@ TicketPlace:
     isRecurring: Maybe Bool
     isClosed: Maybe Bool
     assignTicketToBpp: Maybe Bool
+    enforcedAsSubPlace: Maybe Bool
 
   sqlType:
     customTabs: json
@@ -115,7 +117,7 @@ TicketPlace:
     isRecurring: Kernel.Prelude.fromMaybe True|I
     isClosed: Kernel.Prelude.fromMaybe False|I
     assignTicketToBpp: Kernel.Prelude.fromMaybe False|I
-
+    enforcedAsSubPlace: Kernel.Prelude.fromMaybe False|I
   toTType:
     priority: Kernel.Prelude.Just|I
     customTabs: Data.Aeson.toJSON <$> customTabs|E
@@ -126,7 +128,7 @@ TicketPlace:
     isRecurring: Kernel.Prelude.Just|I
     isClosed: Kernel.Prelude.Just isClosed|E
     assignTicketToBpp: Kernel.Prelude.Just assignTicketToBpp|E
-
+    enforcedAsSubPlace: Kernel.Prelude.Just enforcedAsSubPlace|E
   default:
     termsAndConditions: "'{}'"
     placeType: "'Other'"
@@ -137,6 +139,7 @@ TicketPlace:
     isRecurring: "true"
     isClosed: 'false'
     assignTicketToBpp: "false"
+    enforcedAsSubPlace: "false"
 
   queries:
     getTicketPlaces:
@@ -255,6 +258,7 @@ TicketSubPlace:
   fields:
     id: Id TicketSubPlace
     ticketPlaceId: Id TicketPlace
+    enforcedTicketPlaceId: "Maybe (Id TicketPlace)"
     name: Text
     description: Maybe Text
     subPlaceType: SubPlaceType
@@ -441,6 +445,7 @@ ServicePeopleCategory:
     placeId: Maybe Text
     rules: "Maybe [Rule]"
     isClosed: Bool
+    iconUrl: Maybe Text
   beamType:
     cancellationCharges: Maybe Value
     vendorSplitDetails: Maybe Value

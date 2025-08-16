@@ -23,7 +23,7 @@ handler :: FlowServer API
 handler = createBookingInformation :<|> updateBookingInformation
 
 createBookingInformation :: Domain.CreateFleetBookingInformationReq -> FlowHandler Domain.CreateFleetBookingInformationResp
-createBookingInformation = withFlowHandlerAPI . Domain.createBookingInformation
+createBookingInformation req = withFlowHandlerAPI $ snd <$> Domain.createBookingInformation req
 
 updateBookingInformation :: Domain.UpdateFleetBookingInformationReq -> FlowHandler Domain.UpdateFleetBookingInformationResp
 updateBookingInformation = withFlowHandlerAPI . Domain.updateBookingInformation

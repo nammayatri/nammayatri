@@ -22,6 +22,7 @@ import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Lib.Payment.Domain.Types.Refunds
 import Servant
+import qualified SharedLogic.CallBPPInternal
 import Tools.Auth
 
 data BusinessHourResp = BusinessHourResp
@@ -54,6 +55,7 @@ data CategoriesResp = CategoriesResp
 data PeopleCategoriesResp = PeopleCategoriesResp
   { cancellationCharges :: Kernel.Prelude.Maybe [Domain.Types.ServicePeopleCategory.CancellationCharge],
     description :: Data.Text.Text,
+    iconUrl :: Kernel.Prelude.Maybe Data.Text.Text,
     id :: Kernel.Types.Id.Id Domain.Types.ServicePeopleCategory.ServicePeopleCategory,
     name :: Data.Text.Text,
     pricePerUnit :: Kernel.Types.Common.HighPrecMoney,
@@ -231,8 +233,8 @@ data TicketFleetVehicleResp = TicketFleetVehicleResp
     fleetOwnerName :: Data.Text.Text,
     isActive :: Kernel.Prelude.Bool,
     rcId :: Data.Text.Text,
-    vehicleNo :: Data.Text.Text,
-    vehicleType :: Data.Text.Text
+    vehicleNo :: Kernel.Prelude.Maybe Data.Text.Text,
+    vehicleType :: Kernel.Prelude.Maybe Data.Text.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -268,6 +270,10 @@ data TicketServiceResp = TicketServiceResp
     shortDesc :: Kernel.Prelude.Maybe Data.Text.Text,
     subPlaceId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.TicketSubPlace.TicketSubPlace)
   }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data TicketServiceVerificationReq = TicketServiceVerificationReq {assignments :: Kernel.Prelude.Maybe [SharedLogic.CallBPPInternal.BookingAssignment]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

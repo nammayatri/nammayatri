@@ -15,6 +15,7 @@ import qualified Tools.Beam.UtilsTH
 data TicketSubPlace = TicketSubPlace
   { createdAt :: Kernel.Prelude.UTCTime,
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    enforcedTicketPlaceId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace),
     id :: Kernel.Types.Id.Id Domain.Types.TicketSubPlace.TicketSubPlace,
     isActive :: Kernel.Prelude.Bool,
     name :: Kernel.Prelude.Text,
@@ -29,4 +30,4 @@ data TicketSubPlace = TicketSubPlace
 
 data SubPlaceType = Venue | Terminal | Dock | Screen | Hall | Platform deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''SubPlaceType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''SubPlaceType)

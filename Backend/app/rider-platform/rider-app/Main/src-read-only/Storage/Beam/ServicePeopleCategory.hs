@@ -17,6 +17,7 @@ import Tools.Beam.UtilsTH
 data ServicePeopleCategoryT f = ServicePeopleCategoryT
   { cancellationCharges :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     description :: B.C f Kernel.Prelude.Text,
+    iconUrl :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,
     isClosed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     name :: B.C f Kernel.Prelude.Text,
