@@ -153,6 +153,7 @@ import Engineering.Helpers.RippleCircles as EHR
 import Components.TripStageTopBar.Controller as TripStageTopBar
 import Data.Array as DA
 import Resource.Constants as Const
+import Common.RemoteConfig.Utils as RU
 
 
 instance showAction :: Show Action where
@@ -1343,7 +1344,7 @@ eval (RideActionModalAction (RideActionModal.CallCustomer)) state = do
       void $ pure $ showDialer exophoneNumber false -- TODO: FIX_DIALER
       _ <- logEventWithTwoParams state.data.logField "call_customer" "trip_id" (state.data.activeRide.id) "user_id" (getValueToLocalStore DRIVER_ID)
       pure NoAction
-    ] $ CallCustomer state exophoneNumber
+    ] $ CallCustomer state {data {callingOption = fromMaybe "" getCustomerCallingOptionForDriver}} exophoneNumber
 
 eval (RideActionModalAction (RideActionModal.SecondaryTextClick popUpType)) state = do
   let updatedState = if popUpType == RideActionModal.RentalInfo then state{props{rentalInfoPopUp = true, safetyAudioAutoPlay = false}}
@@ -1442,11 +1443,11 @@ eval (ChatViewActionController (ChatView.TextChanged value)) state = continue st
 
 eval (ChatViewActionController (ChatView.Call)) state = do
   let exophoneNumber = getExoPhoneNumber state
-  continueWithCmd state [ do
+  updateWithCmdAndExit state [ do
     _ <- pure $ showDialer exophoneNumber false -- TODO: FIX_DIALER
     _ <- logEventWithTwoParams state.data.logField "call_customer" "trip_id" state.data.activeRide.id "user_id" (getValueToLocalStore DRIVER_ID)
     pure NoAction
-  ]
+  ] $ CallCustomer state {data {callingOption = fromMaybe "" getCustomerCallingOptionForDriver}} exophoneNumber
 
 eval (ChatViewActionController (ChatView.SendMessage)) state = do
   if state.data.messageToBeSent /= ""
@@ -2637,3 +2638,11 @@ updateRoute state = do
         liftFlow $ runEffectFn1 EHR.upsertMarkerLabel  { id: markerId <> "label" , title: sourceArea, actionImage: "", actionCallBack: "", position: pt, markerImage : ""}
         pure unit
     pure unit
+
+
+getCustomerCallingOptionForDriver :: Maybe String
+getCustomerCallingOptionForDriver =
+  let driverCity = toLower $ getValueToLocalStore DRIVER_LOCATION
+      driverCallingOptions = RU.fetchDriverCallingOptionsConfig driverCity
+      callingOptions = DA.head driverCallingOptions.option
+  in callingOptions

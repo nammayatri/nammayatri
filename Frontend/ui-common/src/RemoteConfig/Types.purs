@@ -386,3 +386,7 @@ type PollingConfig = {
 type PushEventsConfig = {
   loggingIntervalInS :: Int
 }
+
+type DriverCallingOptionsConfig = {
+  option :: Array String
+}

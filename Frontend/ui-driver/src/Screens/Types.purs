@@ -1143,6 +1143,7 @@ type HomeScreenData =  {
 , blockedExpiryTime :: String
 , nyClubTag :: Maybe String
 , consentPopupPeakHeight :: Int
+, callingOption :: String
 }
 
 type InsuranceData = {

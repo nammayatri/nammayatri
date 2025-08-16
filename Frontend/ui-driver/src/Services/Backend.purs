@@ -1982,3 +1982,10 @@ getMeterPrice rideId = do
         withAPIResult (EP.getMeterPrice rideId) unwrapResponse $ callAPI headers (GetMeterPriceReq rideId)
     where
       unwrapResponse (x) = x
+
+getRiderMobileNumber :: String -> Flow GlobalState (Either ErrorResponse GetRiderMobileNumberResp)
+getRiderMobileNumber rideId = do
+        headers <- getHeaders "" false
+        withAPIResult (EP.getRiderMobileNumber rideId) unwrapResponse $ callAPI headers (GetRiderMobileNumberReq rideId)
+    where
+      unwrapResponse (x) = x

@@ -5840,3 +5840,28 @@ instance standardEncodeGetMeterPriceReq :: StandardEncode GetMeterPriceReq where
 instance showGetMeterPriceReq :: Show GetMeterPriceReq where show = genericShow
 instance decodeGetMeterPriceReq :: Decode GetMeterPriceReq where decode = defaultDecode
 instance encodeGetMeterPriceReq :: Encode GetMeterPriceReq where encode = defaultEncode
+
+
+data GetRiderMobileNumberReq = GetRiderMobileNumberReq String
+
+newtype GetRiderMobileNumberResp = GetRiderMobileNumberResp {
+  riderMobileNumber :: Maybe String
+}
+
+instance makeGetRiderMobileNumberReq :: RestEndpoint GetRiderMobileNumberReq  where
+ makeRequest reqBody@(GetRiderMobileNumberReq rideId) headers = defaultMakeRequestWithoutLogs GET (EP.getRiderMobileNumber rideId) headers reqBody Nothing
+ encodeRequest req = encode req
+
+derive instance genericGetRiderMobileNumberResp :: Generic GetRiderMobileNumberResp _
+derive instance newtypeGetRiderMobileNumberResp :: Newtype GetRiderMobileNumberResp _
+instance standardEncodeGetRiderMobileNumberResp :: StandardEncode GetRiderMobileNumberResp where standardEncode (GetRiderMobileNumberResp body) = standardEncode body
+instance showGetRiderMobileNumberResp :: Show GetRiderMobileNumberResp where show = genericShow
+instance decodeGetRiderMobileNumberResp :: Decode GetRiderMobileNumberResp where decode = defaultDecode
+instance encodeGetRiderMobileNumberResp :: Encode GetRiderMobileNumberResp where encode = defaultEncode
+
+
+derive instance genericGetRiderMobileNumberReq :: Generic GetRiderMobileNumberReq _
+instance standardEncodeGetRiderMobileNumberReq :: StandardEncode GetRiderMobileNumberReq where standardEncode (GetRiderMobileNumberReq body) = standardEncode body
+instance showGetRiderMobileNumberReq :: Show GetRiderMobileNumberReq where show = genericShow
+instance decodeGetRiderMobileNumberReq :: Decode GetRiderMobileNumberReq where decode = defaultDecode
+instance encodeGetRiderMobileNumberReq :: Encode GetRiderMobileNumberReq where encode = defaultEncode
