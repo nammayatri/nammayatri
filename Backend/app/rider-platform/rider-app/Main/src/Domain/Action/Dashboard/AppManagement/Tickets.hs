@@ -19,6 +19,7 @@ module Domain.Action.Dashboard.AppManagement.Tickets
     getTicketsTicketdashboardTicketplaces,
     getTicketsTicketdashboardTicketplaceSubPlaces,
     postTicketsTicketdashboardTicketplaceUpdateSubPlaces,
+    postTicketBookingsVerifyV2,
   )
 where
 
@@ -244,3 +245,14 @@ postTicketsTicketdashboardTicketplaceUpdateSubPlaces ::
   Environment.Flow Kernel.Types.APISuccess.APISuccess
 postTicketsTicketdashboardTicketplaceUpdateSubPlaces _merchantShortId _opCity ticketPlaceId req = do
   Domain.Action.UI.TicketDashboard.postUpsertTicketPlaceDashboardSubPlaces ticketPlaceId req
+
+postTicketBookingsVerifyV2 ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Kernel.Types.Id.Id Domain.Types.TicketService.TicketService ->
+  Kernel.Types.Id.ShortId Domain.Types.TicketBookingService.TicketBookingService ->
+  API.Types.UI.TicketService.TicketServiceVerificationReq ->
+  Environment.Flow API.Types.UI.TicketService.TicketServiceVerificationResp
+postTicketBookingsVerifyV2 merchantShortId _opCity personServiceId ticketBookingServiceShortId req = do
+  m <- findMerchantByShortId merchantShortId
+  Domain.Action.UI.TicketService.postTicketBookingsVerifyV2 (Nothing, m.id) personServiceId ticketBookingServiceShortId req

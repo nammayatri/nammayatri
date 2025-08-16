@@ -19,6 +19,7 @@ module Domain.Action.RiderPlatform.AppManagement.Tickets
     getTicketsTicketdashboardTicketplaces,
     getTicketsTicketdashboardTicketplaceSubPlaces,
     postTicketsTicketdashboardTicketplaceUpdateSubPlaces,
+    postTicketBookingsVerifyV2,
   )
 where
 
@@ -272,3 +273,8 @@ postTicketsTicketdashboardTicketplaceUpdateSubPlaces :: (Kernel.Types.Id.ShortId
 postTicketsTicketdashboardTicketplaceUpdateSubPlaces merchantShortId opCity apiTokenInfo ticketPlaceId req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.ticketsDSL.postTicketsTicketdashboardTicketplaceUpdateSubPlaces) ticketPlaceId req
+
+postTicketBookingsVerifyV2 :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.TicketService.TicketService -> Kernel.Types.Id.ShortId Domain.Types.TicketBookingService.TicketBookingService -> API.Types.UI.TicketService.TicketServiceVerificationReq -> Environment.Flow API.Types.UI.TicketService.TicketServiceVerificationResp)
+postTicketBookingsVerifyV2 merchantShortId opCity apiTokenInfo personServiceId ticketServiceShortId req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.ticketsDSL.postTicketBookingsVerifyV2) personServiceId ticketServiceShortId req
