@@ -786,6 +786,7 @@ TransporterConfig:
       deliveryLightGoodsVehicle: Kilometers
       busAc: Kilometers
       busNonAc: Kilometers
+      boat: Kilometers
       derive': Generic, Show, ToJSON, FromJSON, Read,Eq
     DashboardMediaSendingLimit:
       sms: Int
@@ -812,6 +813,7 @@ TransporterConfig:
       deliveryLightGoodsVehicle: Maybe Seconds
       busNonAc: Maybe Seconds
       busAc: Maybe Seconds
+      boat: Maybe Seconds
       derive': Generic, Show, ToJSON, FromJSON, Read,Eq
     DistanceRecomputeConfigs:
       estimatedDistanceUpper: Meters

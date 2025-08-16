@@ -444,6 +444,36 @@ findAllValidRcByFleetOwnerIdsAndSearchString limit offset (Id merchantId') fleet
       catMaybes <$> mapM fromTType' res'
     Left _ -> pure []
 
+findAllValidRcByFleetOwnerIdsAndSearchStringWithoutVerificationStatusMF :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Integer -> Integer -> Id Merchant.Merchant -> [Text] -> Maybe Text -> Maybe DbHash -> m [VehicleRegistrationCertificate]
+findAllValidRcByFleetOwnerIdsAndSearchStringWithoutVerificationStatusMF limit offset (Id merchantId') fleetOwnerIds mbSearchString mbSearchStringHash = do
+  dbConf <- getReplicaBeamConfig
+  res <-
+    L.runDB dbConf $
+      L.findRows $
+        B.select $
+          B.limit_ limit $
+            B.offset_ offset $
+              B.orderBy_ (\rc' -> B.desc_ rc'.updatedAt) $
+                B.filter_'
+                  ( \rc ->
+                      rc.merchantId B.==?. B.val_ (Just merchantId')
+                        B.&&?. (B.sqlBool_ $ rc.fleetOwnerId `B.in_` ((B.val_ . Just) <$> fleetOwnerIds))
+                        B.&&?. ( maybe
+                                   (B.sqlBool_ $ B.val_ True)
+                                   (\cNum -> B.sqlBool_ (B.like_ (B.lower_ (B.coalesce_ [rc.unencryptedCertificateNumber] (B.val_ ""))) (B.val_ ("%" <> toLower cNum <> "%"))))
+                                   mbSearchString
+                                   B.||?. maybe
+                                     (B.sqlBool_ $ B.val_ True)
+                                     (\searchStrDBHash -> rc.certificateNumberHash B.==?. B.val_ searchStrDBHash)
+                                     mbSearchStringHash
+                               )
+                  )
+                  $ B.all_ (BeamCommon.vehicleRegistrationCertificate BeamCommon.atlasDB)
+  case res of
+    Right res' -> do
+      catMaybes <$> mapM fromTType' res'
+    Left _ -> pure []
+
 findAllRCByStatusForFleetMF :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => [Text] -> Maybe Documents.VerificationStatus -> Integer -> Integer -> Id Merchant.Merchant -> Maybe Text -> m [VehicleRegistrationCertificate]
 findAllRCByStatusForFleetMF fleetOwnerIds status limitVal offsetVal (Id merchantId') statusAwareVehicleNo = do
   dbConf <- getReplicaBeamConfig

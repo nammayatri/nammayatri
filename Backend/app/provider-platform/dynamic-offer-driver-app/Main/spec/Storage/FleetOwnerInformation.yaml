@@ -20,6 +20,7 @@ FleetOwnerInformation:
     businessLicenseNumber : Maybe Text
     businessLicenseImageId : Maybe Text
     referredByOperatorId: Maybe Text
+    ticketPlaceId: Maybe Text
   sqlType:
     referredByOperatorId: character varying (36)
   excludedFields: [merchantOperatingCityId]

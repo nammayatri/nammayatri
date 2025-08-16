@@ -82,6 +82,7 @@ updateByPrimaryKey (Domain.Types.FleetOwnerInformation.FleetOwnerInformation {..
       Se.Set Beam.panImageId panImageId,
       Se.Set Beam.panNumber panNumber,
       Se.Set Beam.referredByOperatorId referredByOperatorId,
+      Se.Set Beam.ticketPlaceId ticketPlaceId,
       Se.Set Beam.verified verified,
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
@@ -106,6 +107,7 @@ instance FromTType' Beam.FleetOwnerInformation Domain.Types.FleetOwnerInformatio
             panImageId = panImageId,
             panNumber = panNumber,
             referredByOperatorId = referredByOperatorId,
+            ticketPlaceId = ticketPlaceId,
             verified = verified,
             createdAt = createdAt,
             updatedAt = updatedAt
@@ -127,6 +129,7 @@ instance ToTType' Beam.FleetOwnerInformation Domain.Types.FleetOwnerInformation.
         Beam.panImageId = panImageId,
         Beam.panNumber = panNumber,
         Beam.referredByOperatorId = referredByOperatorId,
+        Beam.ticketPlaceId = ticketPlaceId,
         Beam.verified = verified,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
