@@ -201,6 +201,9 @@ types:
     id: Id TicketBookingPeopleCategory
     quantity: Int
 
+  TicketServiceVerificationReq:
+    assignments: "Maybe [SharedLogic.CallBPPInternal.BookingAssignment]"
+
   TicketServiceVerificationResp:
     ticketServiceName: Maybe Text
     visitDate: Maybe Day
@@ -304,6 +307,17 @@ apis:
         ticketBookingShortId: ShortId TicketBooking
       response:
         type: API.Types.UI.TicketService.TicketBookingDetails
+
+  - POST:
+      endpoint: /ticket/bookings/{personServiceId}/{ticketServiceShortId}/verify/v2
+      auth: TokenAuth
+      params:
+        personServiceId: Id TicketService
+        ticketServiceShortId: ShortId TicketBookingService
+      request:
+        type: API.Types.UI.TicketService.TicketServiceVerificationReq
+      response:
+        type: API.Types.UI.TicketService.TicketServiceVerificationResp
 
   # # POST /ticket/bookings/{personServiceId}/{ticketServiceShortId}/verify
   - POST:

@@ -155,3 +155,9 @@ INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_acc
 
 -- {"api":"GetDriverFleetBookings","migration":"userActionType","param":"ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET FLEET_BOOKINGS_INFORMATION","schema":"atlas_bpp_dashboard"}
 INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) ( SELECT atlas_bpp_dashboard.uuid_generate_v4(), T1.role_id, 'DSL', 'USER_FULL_ACCESS', 'PROVIDER_FLEET/DRIVER/GET_DRIVER_FLEET_BOOKINGS' FROM atlas_bpp_dashboard.access_matrix AS T1 WHERE T1.user_access_type = 'USER_FULL_ACCESS' AND T1.api_entity = 'FLEET' AND T1.user_action_type = 'FLEET_BOOKINGS_INFORMATION' ) ON CONFLICT DO NOTHING;
+
+
+------- SQL updates -------
+
+-- {"api":"GetDriverFleetAssignments","migration":"userActionType","param":"ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET FLEET_ASSIGNMENTS_INFORMATION","schema":"atlas_bpp_dashboard"}
+INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_access_type, user_action_type) ( SELECT atlas_bpp_dashboard.uuid_generate_v4(), T1.role_id, 'DSL', 'USER_FULL_ACCESS', 'PROVIDER_FLEET/DRIVER/GET_DRIVER_FLEET_ASSIGNMENTS' FROM atlas_bpp_dashboard.access_matrix AS T1 WHERE T1.user_access_type = 'USER_FULL_ACCESS' AND T1.api_entity = 'FLEET' AND T1.user_action_type = 'FLEET_ASSIGNMENTS_INFORMATION' ) ON CONFLICT DO NOTHING;

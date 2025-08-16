@@ -746,7 +746,14 @@ data UpdateFleetBookingInformationReq = UpdateFleetBookingInformationReq
     status :: Maybe Text,
     visitDate :: Maybe Day,
     bookedSeats :: Maybe Int,
-    amount :: Maybe HighPrecMoney
+    amount :: Maybe HighPrecMoney,
+    assignments :: Maybe [BookingAssignment]
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
+
+data BookingAssignment = BookingAssignment
+  { fleetOwnerId :: Text,
+    vehicleNo :: Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 

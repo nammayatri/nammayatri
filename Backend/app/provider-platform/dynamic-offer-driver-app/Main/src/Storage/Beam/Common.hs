@@ -29,6 +29,7 @@ import Storage.Beam.DriverReferral
 import Storage.Beam.Exophone
 import Storage.Beam.FleetBadge
 import Storage.Beam.FleetBadgeAssociation
+import Storage.Beam.FleetBookingAssignments
 import Storage.Beam.FleetDriverAssociation
 import Storage.Beam.FleetOperatorAssociation
 import Storage.Beam.FleetOwnerInformation
@@ -94,7 +95,8 @@ atlasDB =
         fleetBadge = fleetBadgeTable,
         tripTransaction = tripTransactionTable,
         fleetBadgeAssociation = fleetBadgeAssociationTable,
-        fleetOwnerInformation = fleetOwnerInformationTable
+        fleetOwnerInformation = fleetOwnerInformationTable,
+        fleetBookingAssignments = fleetBookingAssignmentsTable
       }
 
 data AtlasDB f = AtlasDB
@@ -134,6 +136,7 @@ data AtlasDB f = AtlasDB
     fleetBadge :: f (B.TableEntity FleetBadgeT),
     tripTransaction :: f (B.TableEntity TripTransactionT),
     fleetBadgeAssociation :: f (B.TableEntity FleetBadgeAssociationT),
-    fleetOwnerInformation :: f (B.TableEntity FleetOwnerInformationT)
+    fleetOwnerInformation :: f (B.TableEntity FleetOwnerInformationT),
+    fleetBookingAssignments :: f (B.TableEntity FleetBookingAssignmentsT)
   }
   deriving (Generic, B.Database be)
