@@ -69,9 +69,21 @@ data DocumentVerificationConfigList = DocumentVerificationConfigList
   { ambulances :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity],
     autos :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity],
     bikes :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity],
+    boat :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity],
     bus :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity],
     cabs :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity],
     trucks :: Kernel.Prelude.Maybe [DocumentVerificationConfigAPIEntity]
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data DriverGstinReq = DriverGstinReq
+  { gstNumber :: Kernel.Prelude.Text,
+    imageId1 :: Kernel.Types.Id.Id Domain.Types.Image.Image,
+    imageId2 :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Image.Image),
+    transactionId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    validationStatus :: Kernel.Prelude.Maybe ValidationStatus,
+    verifiedBy :: Kernel.Prelude.Maybe Domain.Types.DriverPanCard.VerifiedBy
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -86,17 +98,6 @@ data DriverPanReq = DriverPanReq
     nameOnCard :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     nameOnGovtDB :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     panNumber :: Kernel.Prelude.Text,
-    transactionId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    validationStatus :: Kernel.Prelude.Maybe ValidationStatus,
-    verifiedBy :: Kernel.Prelude.Maybe Domain.Types.DriverPanCard.VerifiedBy
-  }
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data DriverGstinReq = DriverGstinReq
-  { imageId1 :: Kernel.Types.Id.Id Domain.Types.Image.Image,
-    imageId2 :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Image.Image),
-    gstNumber :: Kernel.Prelude.Text,
     transactionId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     validationStatus :: Kernel.Prelude.Maybe ValidationStatus,
     verifiedBy :: Kernel.Prelude.Maybe Domain.Types.DriverPanCard.VerifiedBy

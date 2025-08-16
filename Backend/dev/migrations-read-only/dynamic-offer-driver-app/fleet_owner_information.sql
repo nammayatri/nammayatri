@@ -42,3 +42,4 @@ ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN business_l
 ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN pan_number text ;
 ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN pan_image_id text ;
 ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN is_eligible_for_subscription boolean ;
+ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN ticket_place_id text ;

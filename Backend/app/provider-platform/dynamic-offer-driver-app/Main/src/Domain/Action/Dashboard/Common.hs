@@ -83,6 +83,7 @@ castVehicleVariantDashboard = \case
   Just DV.DELIVERY_TRUCK_ULTRA_LARGE -> Just Common.DELIVERY_TRUCK_ULTRA_LARGE
   Just DV.BUS_NON_AC -> Just Common.BUS_NON_AC
   Just DV.BUS_AC -> Just Common.BUS_AC
+  Just DV.BOAT -> Just Common.BOAT
   _ -> Nothing
 
 runVerifyRCFlow :: Id DP.Person -> DM.Merchant -> Id DMOC.MerchantOperatingCity -> Context.City -> Common.AddVehicleReq -> Bool -> Flow ()

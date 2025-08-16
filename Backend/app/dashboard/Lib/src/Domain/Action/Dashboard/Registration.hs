@@ -110,7 +110,7 @@ data FleetRegisterReq = FleetRegisterReq
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-data FleetType = RENTAL_FLEET | NORMAL_FLEET | BUSINESS_FLEET
+data FleetType = RENTAL_FLEET | NORMAL_FLEET | BUSINESS_FLEET | BOAT_FLEET
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
 login ::
@@ -329,6 +329,7 @@ registerFleetOwner isOperator req mbPersonId = do
       Just RENTAL_FLEET -> RENTAL_FLEET_OWNER
       Just NORMAL_FLEET -> FLEET_OWNER
       Just BUSINESS_FLEET -> FLEET_OWNER
+      Just BOAT_FLEET -> FLEET_OWNER
       Nothing -> FLEET_OWNER
 
 buildFleetOwner :: (EncFlow m r) => FleetRegisterReq -> Maybe Text -> Id DRole.Role -> DRole.DashboardAccessType -> m PT.Person

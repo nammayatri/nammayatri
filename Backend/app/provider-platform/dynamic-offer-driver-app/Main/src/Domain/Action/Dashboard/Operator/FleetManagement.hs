@@ -6,6 +6,7 @@ module Domain.Action.Dashboard.Operator.FleetManagement
     postFleetManagementFleetLinkSendOtp,
     postFleetManagementFleetLinkVerifyOtp,
     createFleetOwnerInfo,
+    postFleetManagementFleetMemberAssociationCreate,
   )
 where
 
@@ -18,6 +19,7 @@ import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificat
 import qualified Domain.Action.UI.DriverReferral as DR
 import qualified Domain.Action.UI.Registration as Registration
 import qualified Domain.Types.DocumentVerificationConfig as DVC
+import qualified Domain.Types.FleetMemberAssociation as DFMA
 import Domain.Types.FleetOperatorAssociation (FleetOperatorAssociation (fleetOwnerId))
 import qualified Domain.Types.FleetOwnerInformation as FOI
 import qualified Domain.Types.Merchant
@@ -57,6 +59,7 @@ import qualified Storage.Queries.DriverGstin as QGST
 import qualified Storage.Queries.DriverPanCard as QPanCard
 import Storage.Queries.DriverReferral as QDR
 import qualified Storage.Queries.DriverStats as QDriverStats
+import qualified Storage.Queries.FleetMemberAssociation as QFMA
 import qualified Storage.Queries.FleetOperatorAssociation as QFOA
 import Storage.Queries.FleetOperatorAssociationExtra (findAllActiveByOperatorIdWithLimitOffset)
 import qualified Storage.Queries.FleetOwnerInformation as QFOI
@@ -140,7 +143,7 @@ fleetOwnerLogin _mbRequestorId enabled req = do
       -- Operator won't reach here as it has separate sign up flow --
       let personAuth = buildFleetOwnerAuthReq merchant.id req
       deploymentVersion <- asks (.version)
-      person <- createFleetOwnerDetails personAuth merchant.id merchantOpCityId True deploymentVersion.getDeploymentVersion enabled
+      person <- createFleetOwnerDetails personAuth merchant.id merchantOpCityId True deploymentVersion.getDeploymentVersion enabled Nothing
       pure person.id
   let useFakeOtpM = useFakeSms smsCfg
   otp <- maybe generateOTPCode (return . show) useFakeOtpM
@@ -195,18 +198,18 @@ updateFleetOwnerInfo fleetOwnerInfo FleetOwnerRegisterReq {..} = do
           }
   void $ QFOI.updateByPrimaryKey updFleetOwnerInfo
 
-createFleetOwnerDetails :: Registration.AuthReq -> Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Text -> Maybe Bool -> Environment.Flow DP.Person
-createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deploymentVersion enabled = do
+createFleetOwnerDetails :: Registration.AuthReq -> Id DMerchant.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Text -> Maybe Bool -> Maybe Text -> Environment.Flow DP.Person
+createFleetOwnerDetails authReq merchantId merchantOpCityId isDashboard deploymentVersion enabled mbTicketPlaceId = do
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   person <- Registration.makePerson authReq transporterConfig Nothing Nothing Nothing Nothing (Just deploymentVersion) merchantId merchantOpCityId isDashboard (Just DP.FLEET_OWNER)
   void $ QP.create person
   merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist merchantOpCityId.getId)
   QDriverStats.createInitialDriverStats merchantOperatingCity.currency merchantOperatingCity.distanceUnit person.id
-  fork "creating fleet owner info" $ createFleetOwnerInfo person.id merchantId enabled
+  fork "creating fleet owner info" $ createFleetOwnerInfo person.id merchantId enabled mbTicketPlaceId
   pure person
 
-createFleetOwnerInfo :: Id DP.Person -> Id DMerchant.Merchant -> Maybe Bool -> Environment.Flow ()
-createFleetOwnerInfo personId merchantId enabled = do
+createFleetOwnerInfo :: Id DP.Person -> Id DMerchant.Merchant -> Maybe Bool -> Maybe Text -> Environment.Flow ()
+createFleetOwnerInfo personId merchantId enabled mbTicketPlaceId = do
   now <- getCurrentTime
   let fleetOwnerInfo =
         FOI.FleetOwnerInformation
@@ -224,6 +227,7 @@ createFleetOwnerInfo personId merchantId enabled = do
             panImageId = Nothing,
             panNumber = Nothing,
             isEligibleForSubscription = True,
+            ticketPlaceId = mbTicketPlaceId,
             createdAt = now,
             updatedAt = now
           }
@@ -425,7 +429,7 @@ postFleetManagementFleetLinkSendOtp merchantShortId opCity requestorId req = do
                 }
         let personAuth = buildFleetOwnerAuthReq merchant.id (mkFleetOwnerLoginReq merchantShortId opCity createReq)
         deploymentVersion <- asks (.version)
-        personData <- createFleetOwnerDetails personAuth merchant.id merchantOpCityId True deploymentVersion.getDeploymentVersion enabled
+        personData <- createFleetOwnerDetails personAuth merchant.id merchantOpCityId True deploymentVersion.getDeploymentVersion enabled Nothing
         pure personData
 
   SA.checkForFleetAssociationOverwrite merchant fleetOwner.id
@@ -491,6 +495,48 @@ postFleetManagementFleetLinkVerifyOtp merchantShortId opCity requestorId req = d
   let sender = fromMaybe smsCfg.sender mbSender
   SMSHelper.sendSMS merchant.id merchantOpCityId (Sms.SendSMSReq message phoneNumber sender) >>= Sms.checkSmsResult
   Redis.del key
+  pure Kernel.Types.APISuccess.Success
+
+---------------------------------------------------------------------
+postFleetManagementFleetMemberAssociationCreate ::
+  ID.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Common.FleetMemberAssociationCreateReq ->
+  Environment.Flow Kernel.Types.APISuccess.APISuccess
+postFleetManagementFleetMemberAssociationCreate merchantShortId _opCity req = do
+  _merchant <- findMerchantByShortId merchantShortId
+  now <- getCurrentTime
+  existingAssociation' <- QFMA.findByPrimaryKey req.fleetMemberId req.fleetOwnerId
+  case existingAssociation' of
+    Just existingAssociation -> do
+      QFMA.updateByPrimaryKey $
+        DFMA.FleetMemberAssociation
+          { fleetMemberId = existingAssociation.fleetMemberId,
+            fleetOwnerId = existingAssociation.fleetOwnerId,
+            enabled = req.enabled,
+            isFleetOwner = req.isFleetOwner,
+            level = req.level,
+            parentGroupCode = req.parentGroupCode,
+            groupCode = req.groupCode,
+            order = req.order,
+            createdAt = now,
+            updatedAt = now
+          }
+    Nothing -> do
+      let fleetMemberAssociation =
+            DFMA.FleetMemberAssociation
+              { fleetMemberId = req.fleetMemberId,
+                fleetOwnerId = req.fleetOwnerId,
+                enabled = req.enabled,
+                isFleetOwner = req.isFleetOwner,
+                level = req.level,
+                parentGroupCode = req.parentGroupCode,
+                groupCode = req.groupCode,
+                order = req.order,
+                createdAt = now,
+                updatedAt = now
+              }
+      QFMA.create fleetMemberAssociation
   pure Kernel.Types.APISuccess.Success
 
 makeFleetLinkOtpKey :: Text -> Text
