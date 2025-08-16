@@ -27,6 +27,7 @@ module Domain.Action.Dashboard.Fleet.Driver
     getDriverFleetVehicleEarning,
     getDriverFleetDriverEarning,
     getDriverFleetBookings,
+    getDriverFleetAssignments,
     getDriverFleetDriverVehicleAssociation,
     getDriverFleetDriverAssociation,
     getDriverFleetVehicleAssociation,
@@ -154,6 +155,7 @@ import qualified Storage.Queries.DriverRCAssociationExtra as DRCAE
 import qualified Storage.Queries.DriverReferral as QDR
 import qualified Storage.Queries.FleetBadge as QFB
 import qualified Storage.Queries.FleetBadgeAssociation as QFBA
+import qualified Storage.Queries.FleetBookingAssignments as QFBA
 import qualified Storage.Queries.FleetBookingInformation as QFBI
 import qualified Storage.Queries.FleetConfig as QFC
 import qualified Storage.Queries.FleetDriverAssociation as FDV
@@ -2672,3 +2674,43 @@ getDriverFleetBookings _ _ memberPersonId mbLimit mbOffset mbFrom mbTo mbStatus 
       { bookings = ticketBookingsList,
         summary = summary
       }
+
+---------------------------------------------------------------------
+getDriverFleetAssignments ::
+  ( ShortId DM.Merchant ->
+    Context.City ->
+    Text ->
+    Maybe Int ->
+    Maybe Int ->
+    Maybe UTCTime ->
+    Maybe UTCTime ->
+    Maybe Text ->
+    Maybe Text ->
+    Environment.Flow Common.FleetBookingAssignmentsResponse
+  )
+getDriverFleetAssignments _ _ memberPersonId mbLimit mbOffset mbFrom mbTo mbVehicleNo mbMainAssignmentId = do
+  fleetOwnerInfo <- getFleetOwnerIds memberPersonId Nothing
+  let fleetOwnerIds = map fst fleetOwnerInfo
+      fleetNameMap = Map.fromList fleetOwnerInfo
+  ticketAssignments <- QFBA.findAllByFleetOwnerIdsAndFilters fleetOwnerIds mbMainAssignmentId mbFrom mbTo mbLimit mbOffset mbVehicleNo
+
+  ticketAssignmentsList <- forM ticketAssignments $ \assignment -> do
+    let fleetOwnerId = assignment.fleetOwnerId
+        fleetOwnerName = fromMaybe "" (Map.lookup fleetOwnerId fleetNameMap)
+
+    pure $
+      Common.FleetBookingAssignmentItem
+        { bookingId = assignment.bookingId,
+          serviceId = fromMaybe "" assignment.serviceId,
+          serviceName = fromMaybe "" assignment.serviceName,
+          placeName = fromMaybe "" assignment.placeName,
+          vehicleNo = assignment.vehicleNo,
+          amount = fromMaybe 0.0 (fmap realToFrac assignment.amount),
+          visitDate = assignment.visitDate,
+          createdAt = assignment.createdAt,
+          fleetOwnerId = fleetOwnerId,
+          fleetOwnerName = fleetOwnerName
+        }
+
+  let summary = Common.Summary {totalCount = 10000, count = length ticketAssignmentsList}
+  pure $ Common.FleetBookingAssignmentsResponse {bookings = ticketAssignmentsList, summary = summary}

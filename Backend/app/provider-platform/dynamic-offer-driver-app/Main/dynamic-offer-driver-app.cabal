@@ -603,6 +603,7 @@ library
       Storage.Queries.FeedbackExtra
       Storage.Queries.FleetBadgeAssociationExtra
       Storage.Queries.FleetBadgeExtra
+      Storage.Queries.FleetBookingAssignmentsExtra
       Storage.Queries.FleetBookingInformationExtra
       Storage.Queries.FleetDriverAssociationExtra
       Storage.Queries.FleetMemberAssociationExtra
@@ -883,6 +884,7 @@ library
       Domain.Types.Feedback
       Domain.Types.FleetBadge
       Domain.Types.FleetBadgeAssociation
+      Domain.Types.FleetBookingAssignments
       Domain.Types.FleetBookingInformation
       Domain.Types.FleetConfig
       Domain.Types.FleetDriverAssociation
@@ -1032,6 +1034,7 @@ library
       Storage.Beam.Feedback
       Storage.Beam.FleetBadge
       Storage.Beam.FleetBadgeAssociation
+      Storage.Beam.FleetBookingAssignments
       Storage.Beam.FleetBookingInformation
       Storage.Beam.FleetConfig
       Storage.Beam.FleetDriverAssociation
@@ -1184,6 +1187,7 @@ library
       Storage.Queries.Feedback
       Storage.Queries.FleetBadge
       Storage.Queries.FleetBadgeAssociation
+      Storage.Queries.FleetBookingAssignments
       Storage.Queries.FleetBookingInformation
       Storage.Queries.FleetConfig
       Storage.Queries.FleetDriverAssociation
@@ -1261,6 +1265,7 @@ library
       Storage.Queries.OrphanInstances.Feedback
       Storage.Queries.OrphanInstances.FleetBadge
       Storage.Queries.OrphanInstances.FleetBadgeAssociation
+      Storage.Queries.OrphanInstances.FleetBookingAssignments
       Storage.Queries.OrphanInstances.FleetBookingInformation
       Storage.Queries.OrphanInstances.FleetDriverAssociation
       Storage.Queries.OrphanInstances.FleetMemberAssociation
