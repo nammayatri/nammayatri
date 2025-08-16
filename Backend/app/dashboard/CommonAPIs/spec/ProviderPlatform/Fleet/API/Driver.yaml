@@ -444,6 +444,66 @@ apis:
             response:
               type: FleetEarningListRes
 
+  - GET: # FleetTicketBookingsAPI
+      endpoint: /fleet/bookings
+      auth: ApiAuthV2
+      query:
+        - limit: Int
+        - offset: Int
+        - from: UTCTime
+        - to: UTCTime
+        - status: Text
+        - searchByFleetOwnerId: Bool
+      response:
+        type: FleetBookingsInformationResponse
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET FLEET_BOOKINGS_INFORMATION
+      helperApi:
+        - GET:
+            endpoint: /{fleetOwnerId}/fleet/bookings
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+            query:
+              - limit: Int
+              - offset: Int
+              - from: UTCTime
+              - to: UTCTime
+              - status: Text
+              - searchByFleetOwnerId: Bool
+            response:
+              type: FleetBookingsInformationResponse
+
+  - GET: # FleetTicketAssignmentsAPI
+      endpoint: /fleet/assignments
+      auth: ApiAuthV2
+      query:
+        - limit: Int
+        - offset: Int
+        - from: UTCTime
+        - to: UTCTime
+        - vehicleNo: Text
+        - mainAssignmentId: Text
+      response:
+        type: FleetBookingAssignmentsResponse
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET FLEET_ASSIGNMENTS_INFORMATION
+      helperApi:
+        - GET:
+            endpoint: /{fleetOwnerId}/fleet/assignments
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+            query:
+              - limit: Int
+              - offset: Int
+              - from: UTCTime
+              - to: UTCTime
+              - vehicleNo: Text
+              - mainAssignmentId: Text
+            response:
+              type: FleetBookingAssignmentsResponse
+
   - GET: # GetFleetDriverVehicleAssociationAPI
       endpoint: /fleet/driverVehicleAssociation
       auth: ApiAuthV2
@@ -1128,6 +1188,37 @@ types:
   FleetEarningListRes:
     - fleetEarningRes: [FleetEarningRes]
     - summary: Summary
+  FleetBookingsInformationResponse:
+    - bookings: [FleetBookingItem]
+    - summary: Summary
+  FleetBookingItem:
+    - bookingId: Text
+    - serviceId: Text
+    - serviceName: Text
+    - placeName: Text
+    - vehicleNo: Text
+    - amount: Double
+    - bookedSeats: Int
+    - status: Text
+    - visitDate: Maybe Day
+    - createdAt: UTCTime
+    - updatedAt: UTCTime
+    - fleetOwnerId: Text
+    - fleetOwnerName: Text
+  FleetBookingAssignmentsResponse:
+    - bookings: [FleetBookingAssignmentItem]
+    - summary: Summary
+  FleetBookingAssignmentItem:
+    - bookingId: Text
+    - serviceId: Text
+    - serviceName: Text
+    - placeName: Text
+    - vehicleNo: Text
+    - amount: Double
+    - visitDate: Maybe Day
+    - createdAt: UTCTime
+    - fleetOwnerId: Text
+    - fleetOwnerName: Text
   SortOn:
     - enum: "COMPLETED_RIDES, CANCELLED_RIDES"
     - derive: "HttpInstance"
