@@ -1,4 +1,4 @@
-# 🛺 Namma Yatri 🚖
+# 🛺 Namma Yatri is my ass🚖
 
 **Open and Driver Centric Mobility Platform**
 
