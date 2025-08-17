@@ -99,7 +99,7 @@ data FleetOwnerRegisterReq = FleetOwnerRegisterReq
     businessLicenseImage :: Maybe Text,
     operatorReferralCode :: Maybe Text,
     adminApprovalRequired :: Maybe Bool,
-    operatingRouteCodes :: [Text],
+    operatingRouteCodes :: Maybe [Text],
     allowAutomaticRoundTripAssignment :: Maybe Bool,
     allowEndingMidRoute :: Maybe Bool,
     allowStartRideFromQR :: Maybe Bool,
@@ -158,19 +158,20 @@ fleetOwnerRegister req mbEnabled = do
       case mbExisting of
         Just _ -> QFC.updateByPrimaryKey fleetConfig
         Nothing -> QFC.create fleetConfig
-      forM_ req.operatingRouteCodes $ \routeCode -> do
-        assocId <- generateGUID
-        let assoc =
-              FleetRouteAssociation.FleetRouteAssociation
-                { createdAt = now,
-                  fleetOwnerId = person.id,
-                  id = Id assocId,
-                  merchantId = merchant.id,
-                  merchantOperatingCityId = merchantOpCityId,
-                  routeCode = routeCode,
-                  updatedAt = now
-                }
-        QFRA.create assoc
+      whenJust (getField @"operatingRouteCodes" req) $ \routeCodes ->
+        forM_ routeCodes $ \routeCode -> do
+          assocId <- generateGUID
+          let assoc =
+                FleetRouteAssociation.FleetRouteAssociation
+                  { createdAt = now,
+                    fleetOwnerId = person.id,
+                    id = Id assocId,
+                    merchantId = merchant.id,
+                    merchantOperatingCityId = merchantOpCityId,
+                    routeCode = routeCode,
+                    updatedAt = now
+                  }
+          QFRA.create assoc
       -- Side effects (forks, image uploads, etc.) can follow after
       fork "Creating Pan Info for Fleet Owner" $ do
         createPanInfo person.id merchant.id merchantOpCityId req.panImageId1 req.panImageId2 req.panNumber

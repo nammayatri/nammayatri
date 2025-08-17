@@ -32,19 +32,16 @@ import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleRouteMapping as DVRM
 import Environment (Flow)
 import EulerHS.Prelude (toList)
-import Kernel.Beam.Functions (findAllWithOptionsKV)
 import Kernel.External.Encryption (encrypt, getDbHash)
 import Kernel.Prelude hiding (toList)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error (GenericError (..), PersonError (PersonNotFound))
 import Kernel.Types.Id (Id (..), ShortId)
 import Kernel.Utils.Common (fromMaybeM, generateGUID, getCurrentTime, logTagInfo)
-import qualified Sequelize as Se
 import Servant
 import Servant.Multipart
 import SharedLogic.Merchant (findMerchantByShortId)
-import SharedLogic.WMB (linkFleetBadge, validateBadgeAssignment)
-import qualified Storage.Beam.FleetDriverAssociation as BeamFDVA
+import SharedLogic.WMB (linkFleetBadge', validateBadgeAssignment)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.FleetDriverAssociation as QFDV
 import qualified Storage.Queries.FleetRouteAssociation as QFRA
@@ -185,42 +182,33 @@ handleBulkRow merchantShortId opCity i row = do
   -- Check if driver exists and get their details
   driverPhoneNumberHash <- getDbHash driverPhoneNo
   mbDriver <- QP.findByMobileNumberAndMerchantAndRole mobileCountryCode driverPhoneNumberHash merchant.id DP.DRIVER
-
-  case mbDriver of
+  driverPersonId <- case mbDriver of
     Just driver -> do
-      -- Check fleet-driver association
-      let driverId = driver.id
-          fleetOwnerId = entityDetails.id.getId
-      logTagInfo "BulkAssociation" $ "Looking for association with: driverId=" <> show driverId <> ", fleetOwnerId=" <> show fleetOwnerId
-      mbAssoc <- QFDV.findByDriverIdAndFleetOwnerId driverId fleetOwnerId True
-      logTagInfo "BulkAssociation" $ "Driver found: " <> show driver.id <> ", Fleet association: " <> show (isJust mbAssoc)
+      let drvId = driver.id
+      let fleetOwnerId = entityDetails.id.getId
+      logTagInfo "BulkAssociation" $ "Looking for association with: driverId=" <> show drvId <> ", fleetOwnerId=" <> show fleetOwnerId
+      mbAssoc <- QFDV.findByDriverIdAndFleetOwnerId drvId fleetOwnerId True
       case mbAssoc of
-        Just assoc -> logTagInfo "BulkAssociation" $ "Association details: isActive=" <> show assoc.isActive <> ", fleetOwnerId=" <> show assoc.fleetOwnerId <> ", associatedTill=" <> show assoc.associatedTill
-        Nothing -> do
-          logTagInfo "BulkAssociation" $ "No active association found"
-          -- Create a new fleet-driver association defaulting to BUS through 2099
-          QFDV.createFleetDriverAssociationIfNotExists driverId entityDetails.id Nothing DVC.BUS True
-          logTagInfo "BulkAssociation" $ "Created fleet-driver association for driver: " <> show driverId <> ", fleetOwnerId: " <> show fleetOwnerId
-          -- Try to find any association (without time condition) to debug
-          now <- getCurrentTime
-          logTagInfo "BulkAssociation" $ "Current time: " <> show now
-          -- Let's check what associations exist without the time condition
-          logTagInfo "BulkAssociation" $ "Checking for any association with driverId=" <> show driverId <> ", fleetOwnerId=" <> show fleetOwnerId
-          -- Try to find association without the time condition by using a different approach
-          let assocQuery = [Se.And [Se.Is BeamFDVA.driverId $ Se.Eq (driverId.getId), Se.Is BeamFDVA.fleetOwnerId $ Se.Eq fleetOwnerId, Se.Is BeamFDVA.isActive $ Se.Eq True]]
-          allAssocs <- findAllWithOptionsKV assocQuery (Se.Desc BeamFDVA.createdAt) Nothing Nothing
-          logTagInfo "BulkAssociation" $ "All associations found (without time condition): " <> show (length allAssocs)
-          forM_ allAssocs $ \assoc -> do
-            logTagInfo "BulkAssociation" $ "Association: id=" <> show assoc.id <> ", isActive=" <> show assoc.isActive <> ", associatedTill=" <> show assoc.associatedTill
+        Nothing -> QFDV.createFleetDriverAssociationIfNotExists drvId entityDetails.id Nothing DVC.BUS True
+        Just _ -> pure ()
+      pure drvId
     Nothing -> do
-      logTagInfo "BulkAssociation" $ "Driver not found with phone: " <> driverPhoneNo
-      -- Create the driver record
       let driverName = "Driver " <> driverPhoneNo
           driverDetails = DriverDetails driverName driverPhoneNo (Just DVC.BUS) Nothing
       (person, _) <- fetchOrCreatePerson merchantOpCityId driverDetails
-      let driverId = person.id
-      -- Create fleet-driver association
-      QFDV.createFleetDriverAssociationIfNotExists driverId entityDetails.id Nothing DVC.BUS True
+      QFDV.createFleetDriverAssociationIfNotExists person.id entityDetails.id Nothing DVC.BUS True
+      pure person.id
+  -- Conductor handling (similar to driver)
+  let conductorPhoneNo = fromMaybe ("C-" <> row.vehicle_number) row.conductor_badge_identifier
+  conductorHash <- getDbHash conductorPhoneNo
+  mbConductor <- QP.findByMobileNumberAndMerchantAndRole mobileCountryCode conductorHash merchant.id DP.DRIVER
+  conductorPersonId <- case mbConductor of
+    Just conductor -> pure (Just conductor.id)
+    Nothing -> do
+      let conductorName = "Conductor " <> conductorPhoneNo
+          conductorDetails = DriverDetails conductorName conductorPhoneNo (Just DVC.BUS) Nothing
+      (person, _) <- fetchOrCreatePerson merchantOpCityId conductorDetails
+      pure (Just person.id)
 
   -- Add vehicle using postDriverFleetAddVehicle (this will create driver if needed)
   logTagInfo "BulkAssociation" $ "Adding vehicle with driver: " <> driverPhoneNo
@@ -271,11 +259,13 @@ handleBulkRow merchantShortId opCity i row = do
       if null routeErrors
         then do
           when (isJust row.driver_badge_name) $ do
-            driverBadge <- validateBadgeAssignment entityDetails.id merchant.id merchantOpCityId.id entityDetails.id.getId (fromJust row.driver_badge_name) DFBT.DRIVER
-            linkFleetBadge entityDetails.id merchant.id merchantOpCityId.id entityDetails.id.getId driverBadge DFBT.DRIVER
-          when (isJust row.conductor_badge_name) $ do
-            conductorBadge <- validateBadgeAssignment entityDetails.id merchant.id merchantOpCityId.id entityDetails.id.getId (fromJust row.conductor_badge_name) DFBT.CONDUCTOR
-            linkFleetBadge entityDetails.id merchant.id merchantOpCityId.id entityDetails.id.getId conductorBadge DFBT.CONDUCTOR
+            driverBadge <- validateBadgeAssignment driverPersonId merchant.id merchantOpCityId.id entityDetails.id.getId (fromJust row.driver_badge_name) DFBT.DRIVER
+            linkFleetBadge' driverPersonId merchant.id merchantOpCityId.id entityDetails.id.getId driverBadge DFBT.DRIVER (Just True)
+
+          when (isJust row.conductor_badge_name && isJust conductorPersonId) $ do
+            conductorBadge <- validateBadgeAssignment (fromJust conductorPersonId) merchant.id merchantOpCityId.id entityDetails.id.getId (fromJust row.conductor_badge_name) DFBT.CONDUCTOR
+            linkFleetBadge' (fromJust conductorPersonId) merchant.id merchantOpCityId.id entityDetails.id.getId conductorBadge DFBT.CONDUCTOR (Just True)
+
           -- To check if driver or merchant has to be associated with the fleet, for fleet badges
           pure $ BulkFleetAssociationResult i (Just $ entityDetails.id.getId) (Just $ T.intercalate "," successfulRoutes) (Just $ show entityDetails.id) Nothing Nothing "success" Nothing
         else pure $ BulkFleetAssociationResult i (Just $ entityDetails.id.getId) Nothing (Just $ show entityDetails.id) Nothing Nothing "failure" (Just $ T.intercalate ", " routeErrors)
