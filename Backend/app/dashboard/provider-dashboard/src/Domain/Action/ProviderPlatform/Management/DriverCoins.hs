@@ -16,6 +16,7 @@ module Domain.Action.ProviderPlatform.Management.DriverCoins
   ( postDriverCoinsBulkUploadCoins,
     postDriverCoinsBulkUploadCoinsV2,
     getDriverCoinsCoinHistory,
+    postDriverCoinsBlacklistedEventsUpdate,
   )
 where
 
@@ -24,6 +25,7 @@ import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Dr
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import "lib-dashboard" Environment
 import Kernel.Prelude
+import Kernel.Types.APISuccess (APISuccess (..))
 import Kernel.Types.Beckn.City as City
 import Kernel.Types.Id
 import "lib-dashboard" Tools.Auth
@@ -43,3 +45,8 @@ getDriverCoinsCoinHistory :: ShortId DM.Merchant -> City.City -> ApiTokenInfo ->
 getDriverCoinsCoinHistory merchantShortId opCity apiTokenInfo driverId mbLimit mbOffset = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callManagementAPI checkedMerchantId opCity (.driverCoinsDSL.getDriverCoinsCoinHistory) driverId mbLimit mbOffset
+
+postDriverCoinsBlacklistedEventsUpdate :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Common.UpdateBlacklistedCoinEventsReq -> Flow APISuccess
+postDriverCoinsBlacklistedEventsUpdate merchantShortId opCity apiTokenInfo driverId req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callManagementAPI checkedMerchantId opCity (.driverCoinsDSL.postDriverCoinsBlacklistedEventsUpdate) driverId req

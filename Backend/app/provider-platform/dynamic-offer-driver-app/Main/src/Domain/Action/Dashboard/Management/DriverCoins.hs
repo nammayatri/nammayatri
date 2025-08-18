@@ -16,12 +16,14 @@ module Domain.Action.Dashboard.Management.DriverCoins
   ( postDriverCoinsBulkUploadCoins,
     postDriverCoinsBulkUploadCoinsV2,
     getDriverCoinsCoinHistory,
+    postDriverCoinsBlacklistedEventsUpdate,
   )
 where
 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverCoins as Common
 import Data.Time (UTCTime (UTCTime, utctDay))
 import qualified Domain.Types.Coins.CoinHistory as DTCC
+import qualified Domain.Types.DriverStats as DDS
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
@@ -31,6 +33,7 @@ import qualified Domain.Types.VehicleVariant as VecVarient
 import Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Beam.Functions as B
+import Kernel.Types.APISuccess (APISuccess (..))
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -42,6 +45,7 @@ import Storage.Beam.SystemConfigs ()
 import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.Queries.Coins.CoinHistory as CHistory
+import qualified Storage.Queries.DriverStats as QDriverStats
 import Storage.Queries.Person as Person
 import Storage.Queries.PurchaseHistory as PHistory
 import qualified Storage.Queries.Vehicle as QVeh
@@ -235,3 +239,19 @@ getDriverCoinsCoinHistory merchantShortId opCity reqDriverId mbLimit mbOffset = 
           createdAt = createdAt,
           updatedAt = updatedAt
         }
+
+postDriverCoinsBlacklistedEventsUpdate :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.UpdateBlacklistedCoinEventsReq -> Flow APISuccess
+postDriverCoinsBlacklistedEventsUpdate merchantShortId opCity reqDriverId Common.UpdateBlacklistedCoinEventsReq {..} = do
+  let driverId = cast @Common.Driver @SP.Driver reqDriverId
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.getMerchantOpCity merchant (Just opCity)
+  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCity.id Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCity.id.getId)
+  unless (transporterConfig.coinFeature) $
+    throwError $ CoinServiceUnavailable merchant.id.getId
+  mbStats <- QDriverStats.findByPrimaryKey driverId
+  stats <- case mbStats of
+    Just ds -> pure ds
+    Nothing -> throwError $ InternalError "driver stats does not exists for driver cannot blacklist"
+  let updatedStats = stats {DDS.blacklistCoinEvents = Just blacklistedEvents}
+  QDriverStats.updateByPrimaryKey updatedStats
+  pure Success
