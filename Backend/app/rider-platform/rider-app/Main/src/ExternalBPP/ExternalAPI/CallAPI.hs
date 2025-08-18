@@ -193,18 +193,23 @@ getPaymentDetails _merchant _merchantOperatingCity _bapConfig (_mRiderName, _mRi
 getChangeOverAndViaPoints :: (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c) => [BasicRouteDetail] -> IntegratedBPPConfig -> m (Text, Text)
 getChangeOverAndViaPoints fareRouteDetails integrationBPPConfig = do
   allStations <- buildStations fareRouteDetails integrationBPPConfig
-  let viaStations = nub $ map (.stationCode) allStations
-      viaPoints = if null viaStations then " " else T.intercalate "-" viaStations
-      changeOverStation = filter (\code -> code `elem` changeOverStations) viaStations
-      changeOver = if null changeOverStation then " " else T.intercalate "-" changeOverStation
-  return (viaPoints, changeOver)
-  where
-    changeOverStations :: [Text]
-    changeOverStations =
-      case integrationBPPConfig.providerConfig of
-        CRIS config ->
-          fromMaybe [] config.changeOverIndirectStations <> fromMaybe [] config.changeOverDirectStations
+  let stationCodes = map (.stationCode) allStations
+      viaStations = case stationCodes of
+        [] -> []
+        [_] -> []
+        xs -> nub $ drop 1 (take (length xs - 1) xs)
+      changeOverStationCodes = nub $ concatMap (\rd -> [rd.startStopCode, rd.endStopCode]) fareRouteDetails
+      changeOverPoints = case changeOverStationCodes of
+        [] -> []
+        [_] -> []
+        xs -> nub $ drop 1 (take (length xs - 1) xs)
+      configuredChangeOverStations = case integrationBPPConfig.providerConfig of
+        CRIS config -> fromMaybe [] (changeOverIndirectStations config) <> fromMaybe [] (changeOverDirectStations config)
         _ -> []
+      changeOverStations = filter (`elem` configuredChangeOverStations) changeOverPoints
+      viaPoints = if null viaStations then " " else T.intercalate "-" viaStations
+      changeOver = if null changeOverStations then " " else T.intercalate "-" changeOverStations
+  return (viaPoints, changeOver)
 
 buildStations :: (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c) => [BasicRouteDetail] -> IntegratedBPPConfig -> m [DStation]
 buildStations basicRouteDetails integratedBPPConfig = do
