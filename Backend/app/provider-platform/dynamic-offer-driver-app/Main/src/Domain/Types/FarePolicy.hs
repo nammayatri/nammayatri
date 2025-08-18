@@ -121,7 +121,7 @@ data CongestionChargeMultiplier
   = BaseFareAndExtraDistanceFare Centesimal
   | ExtraDistanceFare Centesimal
   deriving stock (Show, Eq, Read, Ord, Generic)
-  deriving anyclass (FromJSON, ToJSON)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
 
 data PlatformFeeMethods = Subscription | FixedAmount | None | SlabBased | NoCharge
   deriving (Generic, Show, Eq, FromJSON, Read, Ord, ToJSON, ToSchema)
