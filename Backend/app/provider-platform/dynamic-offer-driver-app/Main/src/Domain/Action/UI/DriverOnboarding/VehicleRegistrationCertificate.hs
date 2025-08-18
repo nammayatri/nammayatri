@@ -1270,7 +1270,7 @@ compareDateOfBirth :: Maybe UTCTime -> Maybe UTCTime -> Flow Bool
 compareDateOfBirth mbExtractedValue mbVerifiedValue = do
   case (mbExtractedValue, mbVerifiedValue) of
     (Just extractedValue, Just verifiedValue) -> do
-      unless (compare extractedValue verifiedValue == EQ) $ throwError (InvalidRequest "Date of birth mismatch")
+      unless (compare extractedValue verifiedValue == EQ) $ throwError (InvalidRequest $ "Date of birth mismatch: " <> show extractedValue <> " " <> show verifiedValue)
       return True
     _ -> do
       logInfo "Date of birth checks not executed."
