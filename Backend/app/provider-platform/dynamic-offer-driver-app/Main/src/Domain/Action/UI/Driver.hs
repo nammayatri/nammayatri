@@ -270,6 +270,7 @@ import qualified Storage.Queries.DriverQuote as QDrQt
 import qualified Storage.Queries.DriverReferral as QDR
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Estimate as QEst
+import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
 import qualified Storage.Queries.Geometry as QGeometry
 import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.MetaData as QMeta
@@ -383,7 +384,8 @@ data DriverInformationRes = DriverInformationRes
     driverTags :: Maybe DA.Value,
     nyClubConsent :: Maybe Bool,
     cancellationRateSlabConfig :: Maybe Domain.Types.TransporterConfig.CancellationRateSlabConfig,
-    reactVersion :: Maybe Text
+    reactVersion :: Maybe Text,
+    fleetOwnerId :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -764,6 +766,7 @@ getInformation (personId, merchantId, merchantOpCityId) mbClientId toss tnant' c
   logDebug $ "alternateNumber-" <> show driverEntity.alternateNumber
   systemConfigs <- L.getOption KBT.Tables
   let useCACConfig = maybe False (.useCACForFrontend) systemConfigs
+  fda <- QFDA.findByDriverId driverId True
   let context' = fromMaybe DAKM.empty (DA.decode $ BSL.pack $ T.unpack $ fromMaybe "{}" context)
   frntndfgs <- if useCACConfig then getFrontendConfigs merchantOpCityId toss tnant' context' else return Nothing
   let mbMd5Digest = T.pack . show . MD5.md5 . DA.encode <$> frntndfgs
@@ -771,7 +774,7 @@ getInformation (personId, merchantId, merchantOpCityId) mbClientId toss tnant' c
     CQM.findById merchantId
       >>= fromMaybeM (MerchantNotFound merchantId.getId)
   driverGoHomeInfo <- CQDGR.getDriverGoHomeRequestInfo driverId merchantOpCityId Nothing
-  makeDriverInformationRes merchantOpCityId driverEntity merchant driverReferralCode driverStats driverGoHomeInfo (Just currentDues) (Just manualDues) mbMd5Digest operatorReferral
+  makeDriverInformationRes merchantOpCityId driverEntity merchant driverReferralCode driverStats driverGoHomeInfo (Just currentDues) (Just manualDues) mbMd5Digest operatorReferral ((.fleetOwnerId) <$> fda)
 
 setActivity :: (CacheFlow m r, EsqDBFlow m r, HasField "serviceClickhouseCfg" r CH.ClickhouseCfg, HasField "serviceClickhouseEnv" r CH.ClickhouseEnv) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Bool -> Maybe DriverInfo.DriverMode -> m APISuccess.APISuccess
 setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
@@ -1223,6 +1226,7 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
   driverStats <- runInReplica $ QDriverStats.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
   driverEntity <- buildDriverEntityRes (updPerson, updatedDriverInfo, driverStats, merchantOpCityId) Plan.YATRI_SUBSCRIPTION
   driverReferralCode <- QDR.findById personId
+  fda <- QFDA.findByDriverId personId True
   operatorReferral <- case updatedDriverInfo.referredByOperatorId of
     Just opId -> QDR.findById (cast (Id opId))
     Nothing -> pure Nothing
@@ -1231,7 +1235,7 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
     CQM.findById merchantId
       >>= fromMaybeM (MerchantNotFound merchantId.getId)
   driverGoHomeInfo <- CQDGR.getDriverGoHomeRequestInfo personId merchantOpCityId Nothing
-  makeDriverInformationRes merchantOpCityId driverEntity org driverReferralCode driverStats driverGoHomeInfo Nothing Nothing Nothing operatorReferral
+  makeDriverInformationRes merchantOpCityId driverEntity org driverReferralCode driverStats driverGoHomeInfo Nothing Nothing Nothing operatorReferral ((.fleetOwnerId) <$> fda)
   where
     -- logic is deprecated, should be handle from driver service tier options now, kept it for backward compatibility
     checkIfCanDowngrade vehicle = do
@@ -1266,8 +1270,8 @@ updateMetaData (personId, _, _) req = do
   QMeta.updateMetaData req.device req.deviceOS req.deviceDateTime req.appPermissions personId
   return Success
 
-makeDriverInformationRes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DMOC.MerchantOperatingCity -> DriverEntityRes -> DM.Merchant -> Maybe DR.DriverReferral -> DriverStats -> DDGR.CachedGoHomeRequest -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe Text -> Maybe DR.DriverReferral -> m DriverInformationRes
-makeDriverInformationRes merchantOpCityId DriverEntityRes {..} merchant referralCode driverStats dghInfo currentDues manualDues md5DigestHash operatorReferral = do
+makeDriverInformationRes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DMOC.MerchantOperatingCity -> DriverEntityRes -> DM.Merchant -> Maybe DR.DriverReferral -> DriverStats -> DDGR.CachedGoHomeRequest -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe Text -> Maybe DR.DriverReferral -> Maybe Text -> m DriverInformationRes
+makeDriverInformationRes merchantOpCityId DriverEntityRes {..} merchant referralCode driverStats dghInfo currentDues manualDues md5DigestHash operatorReferral fleetOwnerId = do
   merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist merchantOpCityId.getId)
   mbVehicle <- QVehicle.findById id
   let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
