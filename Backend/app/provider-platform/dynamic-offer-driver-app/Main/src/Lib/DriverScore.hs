@@ -275,7 +275,8 @@ createDriverStat currency distanceUnit driverId = do
             numFleetsOnboarded = 0,
             safetyPlusEarnings = 0.0,
             safetyPlusRideCount = 0,
-            onlineDuration = Seconds 0
+            onlineDuration = Seconds 0,
+            blacklistCoinEvents = Nothing
           }
   _ <- DSQ.create driverStat
   pure driverStat
