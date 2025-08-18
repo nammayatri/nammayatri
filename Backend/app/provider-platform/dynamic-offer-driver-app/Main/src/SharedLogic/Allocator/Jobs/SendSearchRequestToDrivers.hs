@@ -22,8 +22,10 @@ import Domain.Types as DTC
 import Domain.Types.Booking (BookingStatus (..))
 import qualified Domain.Types.ConditionalCharges as DAC
 import Domain.Types.DriverPoolConfig
+import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.FarePolicy as DFP
 import Domain.Types.GoHomeConfig (GoHomeConfig)
+import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.SearchTry (SearchTry)
 import qualified Kernel.Beam.Functions as B
 import Kernel.Prelude hiding (handle)
@@ -41,6 +43,7 @@ import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.In
 import qualified SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPoolUnified as UI
 import qualified SharedLogic.Booking as SBooking
 import SharedLogic.CallBAPInternal
+import qualified SharedLogic.CallInternalMLPricing as ML
 import SharedLogic.DriverPool hiding (getDriverPoolConfig)
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.GoogleTranslate (TranslateFlow)
@@ -84,7 +87,8 @@ sendSearchRequestToDrivers ::
     HasShortDurationRetryCfg r c,
     HasField "enableAPILatencyLogging" r Bool,
     HasField "enableAPIPrometheusMetricLogging" r Bool,
-    HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal]
+    HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal],
+    HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal]
   ) =>
   Job 'SendSearchRequestToDriver ->
   m ExecutionResult
@@ -136,6 +140,17 @@ sendSearchRequestToDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId)
   (res, _, _) <- sendSearchRequestToDrivers' driverPoolConfig searchTry driverSearchBatchInput goHomeCfg
   return res
   where
+    buildEstimateTripQuoteDetails ::
+      ( CacheFlow m r,
+        EsqDBFlow m r,
+        EsqDBReplicaFlow m r,
+        HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal],
+        HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+      ) =>
+      SearchTry ->
+      DSR.SearchRequest ->
+      DEst.Estimate ->
+      m TripQuoteDetail
     buildEstimateTripQuoteDetails searchTry searchReq estimate = do
       let mbDriverExtraFeeBounds = ((,) <$> estimate.estimatedDistance <*> (join $ (.driverExtraFeeBounds) <$> estimate.farePolicy)) <&> \(dist, driverExtraFeeBounds) -> DFP.findDriverExtraFeeBoundsByDistance dist driverExtraFeeBounds
           driverPickUpCharge = join $ USRD.extractDriverPickupCharges <$> ((.farePolicyDetails) <$> estimate.farePolicy)
@@ -171,7 +186,8 @@ sendSearchRequestToDrivers' ::
     HasShortDurationRetryCfg r c,
     HasField "enableAPILatencyLogging" r Bool,
     HasField "enableAPIPrometheusMetricLogging" r Bool,
-    HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal]
+    HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal],
+    HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal]
   ) =>
   DriverPoolConfig ->
   SearchTry ->

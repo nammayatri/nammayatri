@@ -220,8 +220,8 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                         Just reachedStops -> map (\stop -> (stop, True)) reachedStops
                         Nothing -> []
                   case bookedsStops of
-                    [] -> return (srcPt :| ((pickedWaypointsForEditDestination (alreadySnappedPoints <> editDestinationPoints) 7) ++ filteredStops ++ [currentPoint, dropLatLong]), Just currentPoint, Just snapToRoadFailed)
-                    _ -> return (srcPt :| ((pickedWaypointsForEditDestination (alreadySnappedPoints <> editDestinationPoints <> reachedStopLocationsWithTrue) (7 - length filteredStops)) ++ filteredStops ++ [currentPoint, dropLatLong]), Just currentPoint, Just snapToRoadFailed)
+                    [] -> return (srcPt :| (pickedWaypointsForEditDestination (alreadySnappedPoints <> editDestinationPoints) 7 ++ filteredStops ++ [currentPoint, dropLatLong]), Just currentPoint, Just snapToRoadFailed)
+                    _ -> return (srcPt :| (pickedWaypointsForEditDestination (alreadySnappedPoints <> editDestinationPoints <> reachedStopLocationsWithTrue) (7 - length filteredStops) ++ filteredStops ++ [currentPoint, dropLatLong]), Just currentPoint, Just snapToRoadFailed)
                 else return (srcPt :| (stopLatLongs ++ [dropLatLong]), Nothing, Nothing)
             logTagInfo "update Ride soft update" $ "pickedWaypoints: " <> show pickedWaypoints
             routeResponse <-
@@ -243,7 +243,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
             Redis.setExp (multipleRouteKeySoftUpdate booking.id.getId) (map RR.createMultipleRouteInfo routeResponse) 600
             -- TODO: Currently isDashboard flagged is passed as False here, but fix it properly once we have edit destination from dashboard too
             fareProducts <- getAllFarePoliciesProduct merchantOperatingCity.merchantId merchantOperatingCity.id False srcPt (Just dropLatLong) (Just (TransactionId (Id booking.transactionId))) booking.fromLocGeohash booking.toLocGeohash (Just estimatedDistance) (Just duration) booking.dynamicPricingLogicVersion booking.tripCategory booking.configInExperimentVersions
-            farePolicy <- getFarePolicy (Just srcPt) booking.fromLocGeohash booking.toLocGeohash (Just estimatedDistance) (Just duration) merchantOperatingCity.id False booking.tripCategory booking.vehicleServiceTier (Just fareProducts.area) (Just booking.startTime) booking.dynamicPricingLogicVersion (Just (TransactionId (Id booking.transactionId))) booking.configInExperimentVersions
+            farePolicy <- getFarePolicy (Just srcPt) (Just dropLatLong) booking.fromLocGeohash booking.toLocGeohash (Just estimatedDistance) (Just duration) merchantOperatingCity.id False booking.tripCategory booking.vehicleServiceTier (Just fareProducts.area) (Just booking.startTime) booking.dynamicPricingLogicVersion (Just (TransactionId (Id booking.transactionId))) booking.configInExperimentVersions
             logTagInfo "Dynamic Pricing debugging update Ride soft update" $ "transactionId" <> booking.transactionId <> "farePolicy: " <> show farePolicy
             mbTollInfo <- getTollInfoOnRoute merchantOperatingCity.id (Just person.id) shortestRoute.points
             let isTollAllowed =

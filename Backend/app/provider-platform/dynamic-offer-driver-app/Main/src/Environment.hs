@@ -57,6 +57,7 @@ import Passetto.Client
 import qualified Registry.Beckn.Nammayatri.Types as NyRegistry
 import SharedLogic.Allocator (AllocatorJobType)
 import SharedLogic.CallBAPInternal
+import SharedLogic.CallInternalMLPricing
 import SharedLogic.External.LocationTrackingService.Types
 import SharedLogic.GoogleTranslate
 import Storage.CachedQueries.Merchant as CM
@@ -103,6 +104,7 @@ data AppCfg = AppCfg
     googleTranslateUrl :: BaseUrl,
     googleTranslateKey :: Text,
     appBackendBapInternal :: AppBackendBapInternal,
+    mlPricingInternal :: MLPricingInternal,
     searchRequestExpirationSeconds :: Int,
     searchRequestExpirationSecondsForMultimodal :: Int,
     driverQuoteExpirationSeconds :: Int,
@@ -201,6 +203,7 @@ data AppEnv = AppEnv
     externalServiceRateLimitOptions :: APIRateLimitOptions,
     googleTranslateUrl :: BaseUrl,
     appBackendBapInternal :: AppBackendBapInternal,
+    mlPricingInternal :: MLPricingInternal,
     googleTranslateKey :: Text,
     bppMetrics :: BPPMetricsContainer,
     ssrMetrics :: SendSearchRequestToDriverMetricsContainer,
@@ -288,7 +291,7 @@ buildAppEnv cfg@AppCfg {searchRequestExpirationSeconds = _searchRequestExpiratio
   hostname <- map T.pack <$> lookupEnv "POD_NAME"
   psqlConn <- PG.connect (toConnectInfo esqDBCfg)
   version <- lookupDeploymentVersion
-  passettoContext <- (uncurry mkDefPassettoContext) encTools.service
+  passettoContext <- uncurry mkDefPassettoContext encTools.service
   isShuttingDown <- newEmptyTMVarIO
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv

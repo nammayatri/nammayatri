@@ -22,6 +22,7 @@ import qualified Domain.Types as DTC
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.ConditionalCharges as DCC
+import qualified Domain.Types.Estimate as DEst
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Merchant as DMerc
 import qualified Domain.Types.Person as DP
@@ -42,6 +43,7 @@ import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestT
 import SharedLogic.Booking
 import qualified SharedLogic.CallBAP as BP
 import SharedLogic.CallBAPInternal
+import qualified SharedLogic.CallInternalMLPricing as ML
 import SharedLogic.DriverPool
 import qualified SharedLogic.DriverPool as DP
 import qualified SharedLogic.DriverPool.Types as SDT
@@ -91,7 +93,8 @@ reAllocateBookingIfPossible ::
     HasKafkaProducer r,
     HasField "enableAPILatencyLogging" r Bool,
     HasField "enableAPIPrometheusMetricLogging" r Bool,
-    HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal]
+    HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal],
+    HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal]
   ) =>
   Bool ->
   Bool ->
@@ -187,6 +190,19 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
             else cancelRideTransactionForNonReallocation Nothing (Just estimateId)
         Left _ -> cancelRideTransactionForNonReallocation Nothing (Just estimateId)
 
+    createTripQuoteDetails ::
+      ( MonadFlow m,
+        CacheFlow m r,
+        EsqDBFlow m r,
+        EsqDBReplicaFlow m r,
+        HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal],
+        HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+      ) =>
+      DSR.SearchRequest ->
+      DST.SearchTry ->
+      Id DEst.Estimate ->
+      [DCC.ConditionalCharges] ->
+      m [SDT.TripQuoteDetail]
     createTripQuoteDetails searchReq searchTry estimateId conditionalCharges = do
       if length searchTry.estimateIds > 1
         then traverse (createQuoteDetails searchReq searchTry conditionalCharges) searchTry.estimateIds
@@ -209,7 +225,9 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
       ( MonadFlow m,
         CacheFlow m r,
         EsqDBFlow m r,
-        EsqDBReplicaFlow m r
+        EsqDBReplicaFlow m r,
+        HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal],
+        HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
       ) =>
       DSR.SearchRequest ->
       DST.SearchTry ->
