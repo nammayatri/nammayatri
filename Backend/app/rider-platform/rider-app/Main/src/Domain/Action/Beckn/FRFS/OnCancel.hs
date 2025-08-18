@@ -72,7 +72,7 @@ onCancel merchant booking' dOnCancel = do
       mbJourneyId <- getJourneyIdFromBooking booking
       whenJust mbJourneyId $ \journeyId -> do
         legs <- QJourneyLeg.getJourneyLegs journeyId
-        forM_ legs $ \journeyLeg -> do
+        forM_ legs $ \(journeyLeg, _) -> do
           mapM_ (\rd -> JM.markLegStatus (Just JL.Cancelled) (Just JMState.Finished) journeyLeg rd.subLegOrder) journeyLeg.routeDetails
         journey <- JM.getJourney journeyId
         updatedLegStatus <- JM.getAllLegsStatus journey
