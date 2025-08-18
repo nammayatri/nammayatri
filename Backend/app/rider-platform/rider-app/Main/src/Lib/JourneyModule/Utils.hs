@@ -549,14 +549,10 @@ measureLatency action label = do
 
 getBestOneWayRoute :: MultiModalTypes.GeneralVehicleType -> [MultiModalTypes.MultiModalRoute] -> Maybe Text -> Maybe Text -> Maybe MultiModalTypes.MultiModalRoute
 getBestOneWayRoute vehicleCategory routes mbOriginStopCode mbDestinationStopCode = do
+  let selectedVehicleCategoryRoutes = filter (\r -> onlySelectedModeWithWalkLegs vehicleCategory r.legs) routes
   firstJust
-    [ findConditionalRoute
-        [ correctToFromStops mbOriginStopCode mbDestinationStopCode,
-          onlySelectedModeWithWalkLegs vehicleCategory
-        ],
-      findConditionalRoute
-        [ onlySelectedModeWithWalkLegs vehicleCategory
-        ]
+    [ findConditionalRoute [correctToFromStops mbOriginStopCode mbDestinationStopCode] selectedVehicleCategoryRoutes,
+      listToMaybe selectedVehicleCategoryRoutes
     ]
   where
     removeWalkLegs = filter (\l -> l.mode /= MultiModal.Walk)
@@ -566,8 +562,8 @@ getBestOneWayRoute vehicleCategory routes mbOriginStopCode mbDestinationStopCode
         (Just journeyStartStopCode, Just journeyEndStopCode) -> journeyStartStopCode == originStopCode && journeyEndStopCode == destinationStopCode
         _ -> False
     correctToFromStops _ _ _ = True
-    findConditionalRoute fns = find (\r -> all (\fn -> fn r.legs) fns) routes
 
+    findConditionalRoute fns xs = find (\r -> all (\fn -> fn r.legs) fns) xs
     firstJust xs = foldr (<|>) Nothing xs
 
 mkMultiModalRoute :: UTCTime -> Maybe MultiModalTypes.MultiModalLeg -> MultiModalTypes.GeneralVehicleType -> NonEmpty MultiModalTypes.MultiModalRouteDetails -> MultiModalTypes.MultiModalRoute

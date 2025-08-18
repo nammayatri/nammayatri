@@ -57,7 +57,7 @@ import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import Storage.CachedQueries.Merchant.MultiModalBus (BusData (..), BusDataWithoutETA (..))
+import Storage.CachedQueries.Merchant.MultiModalBus (BusData (..), BusDataWithRoutesInfo (..))
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
@@ -467,7 +467,7 @@ nearbyBusKeyFRFS :: Text
 nearbyBusKeyFRFS = "bus_locations"
 
 vehicleMetaKey :: Text
-vehicleMetaKey = "bus_metadata"
+vehicleMetaKey = "bus_metadata_v2"
 
 topVehicleCandidatesKeyFRFS :: Text -> Text
 topVehicleCandidatesKeyFRFS journeyLegId = "journeyLegTopVehicleCandidates:" <> journeyLegId
@@ -519,10 +519,8 @@ processBusLegState
             riderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCityId.getId)
             let busTrackingConfig = fromMaybe defaultBusTrackingConfigFRFS riderConfig.busTrackingConfig
             nearbyBusesETA <- getNearbyBusesFRFS userPos.latLong riderConfig
-            let matchingBusesETA = filter (\x -> x.route_id == rc) nearbyBusesETA
-            let nearbyFilteredBusesETA = filter (\bus -> highPrecMetersToMeters (distanceBetweenInMeters userPos.latLong (LatLong bus.latitude bus.longitude)) < 100) matchingBusesETA
-            logDebug $ "matchingBusesETA: " <> show matchingBusesETA <> " filtered from: " <> show nearbyBusesETA <> "for route_id: " <> show rc <> " and buses filtered on distance from user: " <> show nearbyFilteredBusesETA
-            let scoresForBuses = scoreBusesByDistanceFRFS userPos busTrackingConfig nearbyFilteredBusesETA
+            logDebug $ "nearbyBusesETA: " <> show nearbyBusesETA <> "for route_id: " <> show rc
+            let scoresForBuses = scoreBusesByDistanceFRFS userPos busTrackingConfig nearbyBusesETA
             logDebug $ "scoresForBuses: " <> show scoresForBuses
             votingSystemFRFS scoresForBuses legDetails busTrackingConfig
 
@@ -654,7 +652,7 @@ getUpcomingStopsForBus now mbTargetStation busData filterFromCurrentTime =
        in map toNextStopDetails filteredStops
     Nothing -> []
 
-getNearbyBusesFRFS :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig], HasField "ltsHedisEnv" r Redis.HedisEnv, HasShortDurationRetryCfg r c, HasKafkaProducer r) => LatLong -> DomainRiderConfig.RiderConfig -> m [BusDataWithoutETA]
+getNearbyBusesFRFS :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig], HasField "ltsHedisEnv" r Redis.HedisEnv, HasShortDurationRetryCfg r c, HasKafkaProducer r) => LatLong -> DomainRiderConfig.RiderConfig -> m [BusDataWithRoutesInfo]
 getNearbyBusesFRFS userPos' riderConfig = do
   let nearbyDriverSearchRadius :: Double = fromMaybe 0.5 riderConfig.nearbyDriverSearchRadius
   busesBS <- mapM (pure . decodeUtf8) =<< (CQMMB.withCrossAppRedisNew $ Hedis.geoSearch nearbyBusKeyFRFS (Hedis.FromLonLat userPos'.lon userPos'.lat) (Hedis.ByRadius nearbyDriverSearchRadius "km"))
@@ -670,18 +668,18 @@ scoreByDistanceFRFS distance busTrackingConfig
   | distance <= busTrackingConfig.fairScoreDistanceInMeters = busTrackingConfig.fairScore
   | otherwise = 0
 
-scoreBusesByDistanceFRFS :: APITypes.RiderLocationReq -> DomainRiderConfig.BusTrackingConfig -> [BusDataWithoutETA] -> [(BusDataWithoutETA, Double)]
+scoreBusesByDistanceFRFS :: APITypes.RiderLocationReq -> DomainRiderConfig.BusTrackingConfig -> [BusDataWithRoutesInfo] -> [(BusDataWithRoutesInfo, Double)]
 scoreBusesByDistanceFRFS passengerLoc busTrackingConfig = map assignScore . filter isRecent
   where
     now = passengerLoc.currTime
 
-    isRecent :: BusDataWithoutETA -> Bool
+    isRecent :: BusDataWithRoutesInfo -> Bool
     isRecent bus =
       let pingTime = posixSecondsToUTCTime (fromIntegral bus.timestamp)
           timeDiff = abs (Time.diffUTCTime now pingTime)
        in timeDiff < (realToFrac busTrackingConfig.thresholdSeconds)
 
-    assignScore :: BusDataWithoutETA -> (BusDataWithoutETA, Double)
+    assignScore :: BusDataWithRoutesInfo -> (BusDataWithRoutesInfo, Double)
     assignScore bus =
       let busLoc = LatLong bus.latitude bus.longitude
           distanceMeters = distanceBetweenInMeters passengerLoc.latLong busLoc
@@ -692,7 +690,7 @@ scoreBusesByDistanceFRFS passengerLoc busTrackingConfig = map assignScore . filt
 isWorseThanThresholdFRFS :: Double -> Double -> Double -> Bool
 isWorseThanThresholdFRFS candidateScore bestScore worseThreshold = candidateScore < (worseThreshold * bestScore)
 
-addAllScoresFRFS :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig], HasField "ltsHedisEnv" r Redis.HedisEnv, HasShortDurationRetryCfg r c, HasKafkaProducer r) => [(BusDataWithoutETA, Double)] -> DJourneyLeg.JourneyLeg -> m ()
+addAllScoresFRFS :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig], HasField "ltsHedisEnv" r Redis.HedisEnv, HasShortDurationRetryCfg r c, HasKafkaProducer r) => [(BusDataWithRoutesInfo, Double)] -> DJourneyLeg.JourneyLeg -> m ()
 addAllScoresFRFS scoredBuses leg = do
   forM_ scoredBuses $ \(bus, points) -> do
     whenJust bus.vehicle_number $ \vehicle ->
@@ -715,7 +713,7 @@ addBetterMembersFRFS allCandidates leg bestScore busTrackingConfig = do
     unless (isWorseThanThresholdFRFS score bestScore busTrackingConfig.thresholdFactor) $
       Redis.sAddExp (resultKeyFRFS leg.id.getId) [candidate] 3600
 
-votingSystemFRFS :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig], HasField "ltsHedisEnv" r Redis.HedisEnv, HasShortDurationRetryCfg r c, HasKafkaProducer r) => [(BusDataWithoutETA, Double)] -> DJourneyLeg.JourneyLeg -> DomainRiderConfig.BusTrackingConfig -> m ()
+votingSystemFRFS :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig], HasField "ltsHedisEnv" r Redis.HedisEnv, HasShortDurationRetryCfg r c, HasKafkaProducer r) => [(BusDataWithRoutesInfo, Double)] -> DJourneyLeg.JourneyLeg -> DomainRiderConfig.BusTrackingConfig -> m ()
 votingSystemFRFS scoredBuses leg busTrackingConfig = do
   addAllScoresFRFS scoredBuses leg
   Hedis.expire (topVehicleCandidatesKeyFRFS leg.id.getId) 3600
