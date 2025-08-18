@@ -5,6 +5,7 @@ imports:
   Currency: Kernel.Types.Common
   DistanceUnit: Kernel.Types.Common
   Centesimal: Kernel.Types.Common
+  DriverCoinsFunctionType: Lib.DriverCoins.Types
 
 DriverStats:
   tableName: driver_stats
@@ -43,6 +44,7 @@ DriverStats:
     safetyPlusRideCount : Int
     safetyPlusEarnings : HighPrecMoney
     onlineDuration : Seconds
+    blacklistCoinEvents: Maybe [DriverCoinsFunctionType]
 
   beamFields:
     totalEarnings:
@@ -187,6 +189,7 @@ DriverStats:
     earningsMissed: double precision
     totalDistance: double precision
     bonusEarned: double precision
+    blacklistCoinEvents: text[]
 
 
   default:
@@ -204,6 +207,7 @@ DriverStats:
     validDriverCancellationTagCount: "0"
     validCustomerCancellationTagCount: "0"
     onlineDuration: "0"
+    blacklistCoinEvents: "'{}'"
 
   extraOperations:
     - EXTRA_QUERY_FILE
