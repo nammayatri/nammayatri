@@ -47,6 +47,7 @@ import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types as Yudhishthira
 import qualified SharedLogic.CallBAP as BP
 import SharedLogic.CallBAPInternal
+import qualified SharedLogic.CallInternalMLPricing as ML
 import SharedLogic.Cancel
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
@@ -103,7 +104,8 @@ cancelRideImpl ::
     HasShortDurationRetryCfg r c,
     HasField "enableAPILatencyLogging" r Bool,
     HasField "enableAPIPrometheusMetricLogging" r Bool,
-    HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal]
+    HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal],
+    HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal]
   ) =>
   Id DRide.Ride ->
   DRide.RideEndedBy ->

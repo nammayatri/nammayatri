@@ -50,6 +50,7 @@ import Lib.SessionizerMetrics.Prometheus.Internal
 import Lib.SessionizerMetrics.Types.Event hiding (id)
 import Passetto.Client
 import SharedLogic.CallBAPInternal (AppBackendBapInternal)
+import SharedLogic.CallInternalMLPricing (MLPricingInternal)
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import "dynamic-offer-driver-app" SharedLogic.GoogleTranslate
 import System.Environment (lookupEnv)
@@ -118,7 +119,8 @@ data HandlerEnv = HandlerEnv
     kafkaClickhouseCfg :: ClickhouseCfg,
     broadcastMessageTopic :: KafkaTopic,
     selfBaseUrl :: BaseUrl,
-    appBackendBapInternal :: AppBackendBapInternal
+    appBackendBapInternal :: AppBackendBapInternal,
+    mlPricingInternal :: MLPricingInternal
   }
   deriving (Generic)
 

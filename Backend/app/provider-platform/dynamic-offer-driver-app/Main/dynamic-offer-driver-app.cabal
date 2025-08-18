@@ -387,6 +387,7 @@ library
       SharedLogic.CallBAP
       SharedLogic.CallBAPInternal
       SharedLogic.CallIGMBAP
+      SharedLogic.CallInternalMLPricing
       SharedLogic.Cancel
       SharedLogic.CancellationCoins
       SharedLogic.DeleteDriver
