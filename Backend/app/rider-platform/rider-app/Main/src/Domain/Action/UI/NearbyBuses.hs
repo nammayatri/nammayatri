@@ -3,6 +3,10 @@ module Domain.Action.UI.NearbyBuses (postNearbyBusBooking, getNextVehicleDetails
 import qualified API.Types.UI.NearbyBuses
 import qualified BecknV2.FRFS.Enums as Spe
 import qualified BecknV2.OnDemand.Enums
+import qualified Data.HashMap.Strict as HM
+import qualified Data.HashMap.Strict as HashMap
+import qualified Data.Map as M
+import qualified Data.Set as Set
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
@@ -23,6 +27,7 @@ import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.BecknConfig as CQBC
 import Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
+import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.RouteStopTimeTable as GRSM
 import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.MerchantOperatingCity as QMerchantOperatingCity
@@ -74,30 +79,57 @@ getSimpleNearbyBuses :: DomainRiderConfig.RiderConfig -> API.Types.UI.NearbyBuse
 getSimpleNearbyBuses riderConfig req = do
   buses <- getNearbyBusesFRFS (Maps.LatLong req.userLat req.userLon) riderConfig
   logDebug $ "Nearby buses: " <> show buses
-  -- latitude :: Double,
-  --     longitude :: Double,
-  --     timestamp :: Int,
-  --     speed :: Double,
-  --     device_id :: Text,
-  --     route_id :: Text,
-  --     route_state :: Maybe RouteState,
-  --     route_number :: Maybe Text,
-  --     vehicle_number :: Maybe Text
+  let busesWithMostMatchingRouteStates = mapMaybe (\bus -> (bus,) <$> keepHighestPrecisionRouteState bus.routes_info) buses
+  logDebug $ "Buses with most matching route states: " <> show busesWithMostMatchingRouteStates
+  logDebug $ "Number of nearby buses: " <> show (length buses)
+
+  let vehicleCategory = castToOnDemandVehicleCategory req.vehicleType
+  integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig riderConfig.merchantOperatingCityId vehicleCategory req.platformType
+
+  let vehicleNumbers = Set.toList $ Set.fromList $ mapMaybe (.vehicle_number) buses
+  logDebug $ "Vehicle numbers: " <> show vehicleNumbers
+  logDebug $ "Number of unique vehicle numbers: " <> show (length vehicleNumbers)
+
+  busRouteMapping <- forM vehicleNumbers $ \vehicleNumber -> do
+    mbResult <- SIBC.fetchFirstIntegratedBPPConfigResult integratedBPPConfigs $ \config ->
+      maybeToList <$> OTPRest.getVehicleServiceType config vehicleNumber
+    pure $ Kernel.Prelude.listToMaybe mbResult
+
+  let successfulMappings = catMaybes busRouteMapping
+
+  let serviceTypeMap :: HashMap.HashMap Text Text
+      serviceTypeMap = HashMap.fromList $ map (\m -> (m.vehicle_no, m.service_type)) successfulMappings
 
   pure $
     map
-      ( \bus ->
-          API.Types.UI.NearbyBuses.NearbyBus
-            { currentLocation = Maps.LatLong bus.latitude bus.longitude,
-              distance = Nothing,
-              routeCode = bus.route_id,
-              routeState = bus.route_state,
-              serviceType = Nothing,
-              shortName = bus.route_number,
-              vehicleNumber = bus.vehicle_number
-            }
+      ( \(bus, (route_id, routeInfo)) ->
+          let maybeServiceType = bus.vehicle_number >>= (`HashMap.lookup` serviceTypeMap)
+           in API.Types.UI.NearbyBuses.NearbyBus
+                { currentLocation = Maps.LatLong bus.latitude bus.longitude,
+                  distance = Nothing,
+                  routeCode = route_id,
+                  routeState = Just routeInfo.route_state,
+                  serviceType = maybeServiceType,
+                  shortName = Just routeInfo.route_number,
+                  vehicleNumber = bus.vehicle_number
+                }
       )
-      buses
+      busesWithMostMatchingRouteStates
+  where
+    keepHighestPrecisionRouteState :: Maybe (M.Map CQMMB.BusRouteId CQMMB.BusRouteInfo) -> Maybe (CQMMB.BusRouteId, CQMMB.BusRouteInfo)
+    keepHighestPrecisionRouteState mbRouteInfo = do
+      let routeInfoList = M.toList (fromMaybe (M.empty) mbRouteInfo)
+      Kernel.Prelude.listToMaybe $ sortOn (\(_, a) -> fromMaybe 0 (HM.lookup a.route_state routeStateHierarchy)) routeInfoList
+
+    routeStateHierarchy :: HM.HashMap CQMMB.RouteState Int
+    routeStateHierarchy =
+      HM.fromList
+        [ (CQMMB.ConfirmedHigh, 1),
+          (CQMMB.ConfirmedMed, 2),
+          (CQMMB.Alternate, 3),
+          (CQMMB.All, 4),
+          (CQMMB.Schedule, 5)
+        ]
 
 -- getNearbyBuses :: Id MerchantOperatingCity -> Double -> API.Types.UI.NearbyBuses.NearbyBusesRequest -> Environment.Flow [[API.Types.UI.NearbyBuses.NearbyBus]]
 -- getNearbyBuses merchantOperatingCityId nearbyDriverSearchRadius req = do

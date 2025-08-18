@@ -4,6 +4,10 @@ module Storage.CachedQueries.Merchant.MultiModalBus
     BusDataWithoutETA (..),
     RouteWithBuses (..),
     FullBusData (..),
+    RouteState (..),
+    BusRouteInfo (..),
+    BusRouteId,
+    BusDataWithRoutesInfo (..),
     getRoutesBuses,
     getBusesForRoutes,
     mkRouteKey,
@@ -14,11 +18,19 @@ where
 
 import Data.Aeson
 import Data.Aeson.Types
+import qualified Data.Map as M
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime, utcTimeToPOSIXSeconds)
 import EulerHS.Prelude hiding (encodeUtf8, fromStrict, id, map)
 import Kernel.Prelude hiding (encodeUtf8)
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Utils.Common
+
+-- Route state enum for bus routes
+data RouteState = ConfirmedHigh | Alternate | All | Schedule | ConfirmedMed
+  deriving stock (Show, Generic, Eq, Ord)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Hashable RouteState
 
 utcToIST :: UTCTime -> UTCTime
 utcToIST = addUTCTime 19800
@@ -73,6 +85,25 @@ data BusData = BusData
     route_state :: Maybe RouteState,
     route_number :: Maybe Text,
     vehicle_number :: Maybe Text
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+data BusRouteInfo = BusRouteInfo
+  { route_number :: Text,
+    route_state :: RouteState
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+type BusRouteId = Text
+
+data BusDataWithRoutesInfo = BusDataWithRoutesInfo
+  { latitude :: Double,
+    longitude :: Double,
+    timestamp :: Int,
+    speed :: Double,
+    device_id :: Text,
+    vehicle_number :: Maybe Text,
+    routes_info :: Maybe (M.Map BusRouteId BusRouteInfo)
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
