@@ -4,6 +4,7 @@
 
 module Storage.Queries.VendorSplitDetails where
 
+import qualified Data.Text
 import qualified Domain.Types.IntegratedBPPConfig
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.VendorSplitDetails
@@ -50,7 +51,7 @@ updateByPrimaryKey (Domain.Types.VendorSplitDetails.VendorSplitDetails {..}) = d
   updateWithKV
     [ Se.Set Beam.includeInSplit includeInSplit,
       Se.Set Beam.integratedBPPConfigId (Kernel.Types.Id.getId integratedBPPConfigId),
-      Se.Set Beam.splitShare splitShare,
+      Se.Set Beam.splitShare (Just $ show splitShare),
       Se.Set Beam.splitType splitType,
       Se.Set Beam.vendorId vendorId,
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
@@ -67,7 +68,7 @@ instance FromTType' Beam.VendorSplitDetails Domain.Types.VendorSplitDetails.Vend
           { id = Kernel.Types.Id.Id id,
             includeInSplit = includeInSplit,
             integratedBPPConfigId = Kernel.Types.Id.Id integratedBPPConfigId,
-            splitShare = splitShare,
+            splitShare = (readMaybe . Data.Text.unpack) =<< splitShare,
             splitType = splitType,
             vendorId = vendorId,
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
@@ -81,7 +82,7 @@ instance ToTType' Beam.VendorSplitDetails Domain.Types.VendorSplitDetails.Vendor
       { Beam.id = Kernel.Types.Id.getId id,
         Beam.includeInSplit = includeInSplit,
         Beam.integratedBPPConfigId = Kernel.Types.Id.getId integratedBPPConfigId,
-        Beam.splitShare = splitShare,
+        Beam.splitShare = Just $ show splitShare,
         Beam.splitType = splitType,
         Beam.vendorId = vendorId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,

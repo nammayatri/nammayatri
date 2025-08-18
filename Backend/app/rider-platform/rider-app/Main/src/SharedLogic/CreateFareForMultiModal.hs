@@ -15,6 +15,7 @@
 module SharedLogic.CreateFareForMultiModal where
 
 import BecknV2.FRFS.Utils
+import qualified Domain.Types.Extra.VendorSplitDetails as VendorSplitDetails
 import qualified Domain.Types.FRFSTicketBooking as FTBooking
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant as Merchant
