@@ -295,6 +295,7 @@ library
       Domain.Types.Extra.Ride
       Domain.Types.Extra.RiderConfig
       Domain.Types.Extra.TicketBooking
+      Domain.Types.Extra.VendorSplitDetails
       Domain.Types.FarePolicy.FareProductType
       Domain.Types.Geometry
       Domain.Types.HotSpot
