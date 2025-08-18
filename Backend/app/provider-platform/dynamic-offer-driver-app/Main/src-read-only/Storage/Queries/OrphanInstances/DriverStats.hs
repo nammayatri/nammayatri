@@ -24,7 +24,8 @@ instance FromTType' Beam.DriverStats Domain.Types.DriverStats.DriverStats where
     pure $
       Just
         Domain.Types.DriverStats.DriverStats
-          { bonusEarned = Kernel.Types.Common.mkAmountWithDefault bonusEarnedAmount bonusEarned,
+          { blacklistCoinEvents = blacklistCoinEvents,
+            bonusEarned = Kernel.Types.Common.mkAmountWithDefault bonusEarnedAmount bonusEarned,
             coinCovertedToCashLeft = Kernel.Prelude.fromMaybe 0 coinCovertedToCashLeft,
             currency = Kernel.Prelude.fromMaybe Kernel.Types.Common.INR currency,
             distanceUnit = Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit,
@@ -60,7 +61,8 @@ instance FromTType' Beam.DriverStats Domain.Types.DriverStats.DriverStats where
 instance ToTType' Beam.DriverStats Domain.Types.DriverStats.DriverStats where
   toTType' (Domain.Types.DriverStats.DriverStats {..}) = do
     Beam.DriverStatsT
-      { Beam.bonusEarned = Kernel.Prelude.roundToIntegral bonusEarned,
+      { Beam.blacklistCoinEvents = blacklistCoinEvents,
+        Beam.bonusEarned = Kernel.Prelude.roundToIntegral bonusEarned,
         Beam.bonusEarnedAmount = Kernel.Prelude.Just bonusEarned,
         Beam.coinCovertedToCashLeft = Kernel.Prelude.Just coinCovertedToCashLeft,
         Beam.currency = Kernel.Prelude.Just currency,
