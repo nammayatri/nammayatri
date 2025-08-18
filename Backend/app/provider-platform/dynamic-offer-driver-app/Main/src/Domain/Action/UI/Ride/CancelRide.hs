@@ -53,6 +53,8 @@ import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
 import Lib.Scheduler (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event
+import SharedLogic.CallBAPInternal
+import qualified SharedLogic.CallInternalMLPricing as ML
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.GoogleTranslate (TranslateFlow)
@@ -104,7 +106,9 @@ cancelRideHandle ::
     MonadFlow m,
     Metrics.HasCoreMetrics r,
     HasField "enableAPILatencyLogging" r Bool,
-    HasField "enableAPIPrometheusMetricLogging" r Bool
+    HasField "enableAPIPrometheusMetricLogging" r Bool,
+    HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal],
+    HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal]
   ) =>
   ServiceHandle m
 cancelRideHandle =

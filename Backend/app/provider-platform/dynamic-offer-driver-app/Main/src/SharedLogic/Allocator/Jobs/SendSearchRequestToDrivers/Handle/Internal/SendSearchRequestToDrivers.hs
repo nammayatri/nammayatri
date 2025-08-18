@@ -19,6 +19,7 @@ where
 
 import qualified BecknV2.OnDemand.Utils.Common as BecknUtils
 import Control.Monad.Extra (anyM)
+import qualified Data.HashMap.Strict as HM
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.List as List
 import qualified Data.Map as M
@@ -55,6 +56,7 @@ import Lib.DriverCoins.Types as DCT
 import Lib.Scheduler.Environment
 import Lib.Yudhishthira.Types
 import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers.Handle.Internal.DriverPool (getPoolBatchNum)
+import qualified SharedLogic.CallInternalMLPricing as ML
 import qualified SharedLogic.DriverPool as SDP
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.FareCalculator as Fare
@@ -85,6 +87,8 @@ sendSearchRequestToDrivers ::
     CacheFlow m r,
     EncFlow m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int, "version" ::: DeploymentVersion],
+    HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal],
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     LT.HasLocationService m r,
     JobCreator r m,
     HasShortDurationRetryCfg r c,
@@ -220,7 +224,9 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
         HasFlowEnv m r '["version" ::: DeploymentVersion],
         EsqDBFlow m r,
         Esq.EsqDBReplicaFlow m r,
-        CacheFlow m r
+        CacheFlow m r,
+        HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal],
+        HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
       ) =>
       DSR.SearchRequest ->
       HashMap.HashMap DVST.ServiceTierType SDP.TripQuoteDetail ->
@@ -251,7 +257,7 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
 
       baseFare <- case tripQuoteDetail.tripCategory of
         DTC.Ambulance _ -> do
-          farePolicy <- getFarePolicyByEstOrQuoteId (Just $ EMaps.getCoordinates searchReq.fromLocation) searchReq.fromLocGeohash searchReq.toLocGeohash searchReq.estimatedDistance searchReq.estimatedDuration searchReq.merchantOperatingCityId tripQuoteDetail.tripCategory dpRes.serviceTier searchReq.area searchTry.estimateId Nothing Nothing searchReq.dynamicPricingLogicVersion (Just (TransactionId (Id searchReq.transactionId)))
+          farePolicy <- getFarePolicyByEstOrQuoteId (Just $ EMaps.getCoordinates searchReq.fromLocation) (Just . EMaps.getCoordinates =<< searchReq.toLocation) searchReq.fromLocGeohash searchReq.toLocGeohash searchReq.estimatedDistance searchReq.estimatedDuration searchReq.merchantOperatingCityId tripQuoteDetail.tripCategory dpRes.serviceTier searchReq.area searchTry.estimateId Nothing Nothing searchReq.dynamicPricingLogicVersion (Just (TransactionId (Id searchReq.transactionId)))
           getBaseFare searchReq farePolicy dpRes.vehicleAge tripQuoteDetail transporterConfig
         _ -> pure $ tripQuoteDetail.baseFare + additionalCharges
       deploymentVersion <- asks (.version)
