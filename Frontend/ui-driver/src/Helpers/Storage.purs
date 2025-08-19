@@ -124,6 +124,8 @@ data KeyStore = USER_NAME
                 | VISITED_DRIVER_COINS_PAGE
                 | REFERRAL_CODE_ADDED
                 | APPLIED_REFERRAL_CODE
+                | DRIVER_OPERATOR_ID
+                | DRIVER_FLEET_OWNER_ID
                 | DRIVER_NAME
                 | DRIVER_OPERATION_CREATE_REQUEST_SUCCESS
                 | VEHICLE_PHOTOS_UPLOAD_STATUS

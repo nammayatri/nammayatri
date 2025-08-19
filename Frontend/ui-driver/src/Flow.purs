@@ -489,6 +489,8 @@ getDriverInfoFlow event activeRideResp driverInfoResp updateShowSubscription isA
             void $ lift $ lift $ fork $ Remote.getDriverInfoApi ""
           if getDriverInfoResp.enabled 
             then do
+              if isJust getDriverInfoResp.operatorId then void $ pure $ setValueToLocalStore DRIVER_OPERATOR_ID (fromMaybe "" getDriverInfoResp.operatorId) else pure unit
+              if isJust getDriverInfoResp.fleetOwnerId then void $ pure $ setValueToLocalStore DRIVER_FLEET_OWNER_ID (fromMaybe "" getDriverInfoResp.fleetOwnerId) else pure unit
               deleteValueFromLocalStore ENTERED_RC
               if getValueToLocalStore IS_DRIVER_ENABLED == "false" 
                 then do
@@ -4498,6 +4500,8 @@ logoutFlow = do
   deleteValueFromLocalStore FREE_TRIAL_DAYS
   deleteValueFromLocalStore REFERRAL_CODE_ADDED
   deleteValueFromLocalStore APPLIED_REFERRAL_CODE
+  deleteValueFromLocalStore DRIVER_OPERATOR_ID
+  deleteValueFromLocalStore DRIVER_FLEET_OWNER_ID
   deleteValueFromLocalStore DRIVER_NAME
   deleteValueFromLocalStore DRIVER_OPERATION_CREATE_REQUEST_SUCCESS
   deleteValueFromLocalStore TRAININGS_COMPLETED_STATUS
