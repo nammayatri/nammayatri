@@ -370,6 +370,7 @@ postDriverRegistrationRegisterRc merchantShortId opCity driverId_ Common.Registe
         }
     )
     False
+    Nothing
 
 postDriverRegistrationRegisterAadhaar :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.AadhaarCardReq -> Flow APISuccess
 postDriverRegistrationRegisterAadhaar merchantShortId opCity driverId req = do

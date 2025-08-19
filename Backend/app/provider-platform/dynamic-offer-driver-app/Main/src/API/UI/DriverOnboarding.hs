@@ -141,7 +141,7 @@ verifyDL :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> Drive
 verifyDL (personId, merchantId, merchantOpCityId) = withFlowHandlerAPI . DriverOnboarding.verifyDL DPan.FRONTEND_SDK Nothing (personId, merchantId, merchantOpCityId)
 
 verifyRC :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> DriverOnboarding.DriverRCReq -> FlowHandler DriverOnboarding.DriverRCRes
-verifyRC (personId, merchantId, merchantOpCityId) req = withFlowHandlerAPI $ DriverOnboarding.verifyRC False Nothing (personId, merchantId, merchantOpCityId) req False
+verifyRC (personId, merchantId, merchantOpCityId) req = withFlowHandlerAPI $ DriverOnboarding.verifyRC False Nothing (personId, merchantId, merchantOpCityId) req False Nothing
 
 statusHandler :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> Maybe Bool -> Maybe Bool -> Maybe DVC.VehicleCategory -> Maybe Bool -> Maybe Bool -> FlowHandler DriverOnboarding.StatusRes
 statusHandler (personId, merchantId, merchantOpCityId) makeSelfieAadhaarPanMandatory prefillData onboardingVehicleCategory useHVSdkForDL onlyMandatoryDocs = withFlowHandlerAPI $ DriverOnboarding.statusHandler (personId, merchantId, merchantOpCityId) makeSelfieAadhaarPanMandatory Nothing prefillData onboardingVehicleCategory useHVSdkForDL onlyMandatoryDocs

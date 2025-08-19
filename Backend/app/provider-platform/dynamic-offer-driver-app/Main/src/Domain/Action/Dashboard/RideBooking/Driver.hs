@@ -595,7 +595,7 @@ postDriverAddVehicle merchantShortId opCity reqDriverId req = do
       when (isNothing mbAssoc) $ do
         createDriverRCAssociationIfPossible transporterConfig personId newRC
 
-      fork "Parallely verifying RC for add Vehicle: " $ DCommon.runVerifyRCFlow personId merchant merchantOpCityId opCity req False False -- run RC verification details
+      fork "Parallely verifying RC for add Vehicle: " $ DCommon.runVerifyRCFlow personId merchant merchantOpCityId opCity req False False Nothing -- run RC verification details
       cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId (Just [])
       -- as we create new rc, need to pass onboard inspection before activate rc and create vehicle
       unless (transporterConfig.requiresOnboardingInspection == Just True) $ do
