@@ -2,10 +2,13 @@ module Storage.Queries.DriverReferralExtra where
 
 import qualified Data.Text
 import qualified Database.Beam as B
+import qualified Domain.Types.Person
 import qualified EulerHS.Language as L
 import Kernel.Beam.Functions
 import Kernel.Prelude
+import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Sequelize as Se
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.DriverReferral as Beam
 import qualified Storage.Beam.DriverReferral as BeamDR
@@ -41,3 +44,7 @@ getLastRefferalCode = do
       case Data.Text.uncons text of
         Just ('0', rest) -> trimLeadingZeros rest
         _ -> text
+
+deleteByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id Domain.Types.Person.Person -> m ()
+deleteByDriverId driverId = do
+  deleteWithKV [Se.Is Beam.driverId $ Se.Eq (getId driverId)]

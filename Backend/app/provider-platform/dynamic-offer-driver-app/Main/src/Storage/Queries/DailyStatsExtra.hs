@@ -78,3 +78,10 @@ updateOnlineDurationByDriverId driverId merchantLocalDate onlineDuration = do
       Se.Set Beam.onlineDuration $ Just onlineDuration
     ]
     [Se.And [Se.Is Beam.driverId $ Se.Eq (getId driverId), Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate]]
+
+deleteAllByDriverId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id SP.Person ->
+  m ()
+deleteAllByDriverId driverId = do
+  deleteWithKV [Se.Is Beam.driverId $ Se.Eq (getId driverId)]

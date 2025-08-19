@@ -76,3 +76,7 @@ findAllRequestsInRange from to limit offset mbMobileNumberHash mbReqStatus mbReq
     Left err -> do
       logError $ "Error in findAllRequestsInRange " <> show err
       pure []
+
+deleteByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id Person -> m ()
+deleteByDriverId driverId = do
+  deleteWithKV [Se.Is BeamOHR.creatorId $ Se.Eq (getId driverId)]
