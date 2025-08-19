@@ -136,6 +136,7 @@ RiderConfig:
     refundStatusUpdateInterval: NominalDiffTime
     refundStatusUpdateRetries: Int
     domainRouteCalculationEnabledModes: "Maybe [GeneralVehicleType]"
+    busSearchWindow: Maybe Double
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
@@ -312,6 +313,7 @@ RiderConfig:
     initiateFirstMultimodalJourney: "false"
     enableAutoJourneyRefund: "false"
     filterWalkAndUnspecifiedTransitModes: "false"
+    busSearchWindow: "86400"
 
   queries:
     findByMerchantOperatingCityId:

@@ -367,3 +367,9 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN boost_search_pre_selection_service
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN bus_booking_allowed boolean ;
 ALTER TABLE atlas_app.rider_config ADD COLUMN domain_route_calculation_enabled_modes text []  default '{Bus, Subway}';
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN bus_search_window double precision  default 86400;
