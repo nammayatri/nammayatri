@@ -30,9 +30,9 @@ getFRFSAllStatuses journeyLeg mbBooking = do
       )
       journeyLeg.routeDetails
   let oldStatus =
-        if all (\(_, mbTrackingStatus) -> mbTrackingStatus == Just Finished) trackingStatuses
+        if not (null trackingStatuses) && all (\(_, mbTrackingStatus) -> mbTrackingStatus == Just Finished) trackingStatuses
           then JLTypes.Completed
-          else do
+          else
             if maybe False (\status -> status `elem` [FRFSTicket DFRFSTicket.CANCELLED, FRFSBooking DFRFSBooking.CANCELLED]) bookingStatus
               then JLTypes.Skipped
               else case bookingStatus of

@@ -454,10 +454,10 @@ startJourney riderId confirmElements forcedBookedLegOrder journeyId = do
         let mElement = find (\element -> element.journeyLegOrder == leg.order) confirmElements
             ticketQuantity = mElement >>= (.ticketQuantity)
             childTicketQuantity = mElement >>= (.childTicketQuantity)
+            bookLater = fromMaybe False (mElement <&> (.skipBooking))
         let forcedBooking = Just leg.order == forcedBookedLegOrder
         let crisSdkResponse = find (\element -> element.journeyLegOrder == leg.order) confirmElements >>= (.crisSdkResponse)
-        when (leg.status == JL.InPlan) $ do
-          JLI.confirm forcedBooking ticketQuantity childTicketQuantity leg crisSdkResponse
+        JLI.confirm forcedBooking ticketQuantity childTicketQuantity bookLater leg crisSdkResponse
     )
     allLegs
 
@@ -904,10 +904,7 @@ cancelLeg journeyId journeyLeg cancellationReasonCode shouldDeleteLeg skippedDur
     updatedLegStatus <- getAllLegsStatus journey
     logError $ "Checking and marking terminal journey status for journey: " <> show journey.id.getId <> " with updatedLegStatus: " <> show (length updatedLegStatus)
     when (length updatedLegStatus == 1) $ do
-      checkAndMarkTerminalJourneyStatus journey (not shouldDeleteLeg) (isJust cancelEstimateId) updatedLegStatus
-  -- whenJust journeyLeg.journeyLegId $ \journeyLegId -> do
-  --   when isSkipped $ do
-  --     JMStateUtils.setJourneyLegTrackingStatus journeyLegId Nothing JMState.Finished
+      checkAndMarkTerminalJourneyStatus journey shouldDeleteLeg (isJust cancelEstimateId) updatedLegStatus
   return ()
 
 cancelRemainingLegs ::
@@ -918,18 +915,11 @@ cancelRemainingLegs ::
   m ()
 cancelRemainingLegs journeyId isExtend riderId = do
   remainingLegs <- if isExtend then (getRemainingLegsForExtend journeyId riderId) else (getRemainingLegs journeyId riderId)
-  -- forM_ remainingLegs $ \leg -> do
-  --   isCancellable <- checkIfCancellable leg
-  --   unless isCancellable $
-  --     throwError $ InvalidRequest $ "Cannot cancel leg for leg: " <> show leg.travelMode
   results <-
     forM remainingLegs $ \leg -> do
-      try @_ @SomeException $
-        if leg.skipBooking
-          then return ()
-          else do
-            isCancellable <- checkIfCancellable leg
-            when isCancellable $ cancelLeg journeyId leg (SCR.CancellationReasonCode "") True False False Nothing
+      try @_ @SomeException $ do
+        isCancellable <- checkIfCancellable leg
+        when isCancellable $ cancelLeg journeyId leg (SCR.CancellationReasonCode "") True False False Nothing
   let failures = [e | Left e <- results]
   unless (null failures) $
     throwError $ InvalidRequest $ "Failed to cancel some legs: " <> show failures
@@ -947,14 +937,11 @@ skipLeg ::
 skipLeg journeyId legOrder skippedDuringConfirmation personId = do
   allLegs <- getAllLegsInfo personId journeyId
   skippingLeg <- fromMaybeM (InvalidRequest $ "Leg not found: " <> show legOrder) $ find (\leg -> leg.order == legOrder) allLegs
-  if skippingLeg.skipBooking
-    then return ()
-    else do
-      when (skippingLeg.travelMode == DTrip.Walk) $
-        throwError $ JourneyLegCannotBeSkippedForMode (show skippingLeg.travelMode)
-      unless (cancellableStatus skippingLeg) $
-        throwError $ JourneyLegCannotBeSkippedForStatus (show skippingLeg.status)
-      cancelLeg journeyId skippingLeg (SCR.CancellationReasonCode "") False skippedDuringConfirmation True Nothing
+  when (skippingLeg.travelMode == DTrip.Walk) $
+    throwError $ JourneyLegCannotBeSkippedForMode (show skippingLeg.travelMode)
+  unless (cancellableStatus skippingLeg) $
+    throwError $ JourneyLegCannotBeSkippedForStatus (show skippingLeg.status)
+  cancelLeg journeyId skippingLeg (SCR.CancellationReasonCode "") False skippedDuringConfirmation True Nothing
   journey <- getJourney journeyId
   updatedLegStatus <- getAllLegsStatus journey
   if legOrder == length updatedLegStatus - 1

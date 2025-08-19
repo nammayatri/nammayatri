@@ -275,7 +275,7 @@ postMultimodalOrderSwitchTaxi (_, _) journeyId legOrder req = do
     mkTaxiLegConfirmReq searchReq estimateId = do
       TaxiLegRequestConfirm $
         TaxiLegRequestConfirmData
-          { skipBooking = False,
+          { bookLater = False,
             forcedBooked = True,
             searchId = searchReq.id.getId,
             estimateId = Just estimateId,
