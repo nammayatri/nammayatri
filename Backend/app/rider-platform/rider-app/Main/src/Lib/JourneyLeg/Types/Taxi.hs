@@ -26,7 +26,7 @@ data TaxiLegRequestSearchData = TaxiLegRequestSearchData
   }
 
 data TaxiLegRequestConfirmData = TaxiLegRequestConfirmData
-  { skipBooking :: Bool,
+  { bookLater :: Bool,
     forcedBooked :: Bool,
     startTime :: UTCTime,
     personId :: Id DP.Person,

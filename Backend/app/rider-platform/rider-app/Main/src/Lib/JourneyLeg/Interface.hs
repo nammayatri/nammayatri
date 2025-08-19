@@ -143,8 +143,8 @@ getFare fromArrivalTime riderId merchantId merchantOperatingCityId leg = \case
               Just $ FRFSRouteDetails {routeCode = Just routeCode, ..}
             _ -> Nothing
 
-confirm :: JL.ConfirmFlow m r c => Bool -> Maybe Int -> Maybe Int -> JL.LegInfo -> Maybe CrisSdkResponse -> m ()
-confirm forcedBooked ticketQuantity childTicketQuantity JL.LegInfo {..} crisSdkResponse =
+confirm :: JL.ConfirmFlow m r c => Bool -> Maybe Int -> Maybe Int -> Bool -> JL.LegInfo -> Maybe CrisSdkResponse -> m ()
+confirm forcedBooked ticketQuantity childTicketQuantity bookLater JL.LegInfo {..} crisSdkResponse =
   case travelMode of
     DTrip.Taxi -> do
       confirmReq :: TaxiLegRequest <- mkTaxiLegConfirmReq
@@ -167,7 +167,7 @@ confirm forcedBooked ticketQuantity childTicketQuantity JL.LegInfo {..} crisSdkR
       return $
         TaxiLegRequestConfirm $
           TaxiLegRequestConfirmData
-            { skipBooking = skipBooking,
+            { bookLater = bookLater,
               forcedBooked,
               searchId,
               estimateId = Id <$> pricingId,
@@ -180,7 +180,7 @@ confirm forcedBooked ticketQuantity childTicketQuantity JL.LegInfo {..} crisSdkR
       return $
         MetroLegRequestConfirm $
           MetroLegRequestConfirmData
-            { skipBooking,
+            { bookLater,
               bookingAllowed,
               searchId = Id searchId,
               quoteId = Id <$> pricingId,
@@ -195,7 +195,7 @@ confirm forcedBooked ticketQuantity childTicketQuantity JL.LegInfo {..} crisSdkR
       return $
         SubwayLegRequestConfirm $
           SubwayLegRequestConfirmData
-            { skipBooking,
+            { bookLater,
               searchId = Id searchId,
               bookingAllowed,
               quoteId = Id <$> pricingId,
@@ -211,7 +211,7 @@ confirm forcedBooked ticketQuantity childTicketQuantity JL.LegInfo {..} crisSdkR
       return $
         BusLegRequestConfirm $
           BusLegRequestConfirmData
-            { skipBooking,
+            { bookLater,
               bookingAllowed,
               searchId = Id searchId,
               quoteId = Id <$> pricingId,

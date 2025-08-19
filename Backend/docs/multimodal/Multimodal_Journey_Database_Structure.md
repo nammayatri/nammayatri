@@ -83,7 +83,6 @@ The multimodal journey system uses a relational database structure designed to h
 | `entrance` | JSON? | Entry gate information |
 | `exit` | JSON? | Exit gate information |
 | `isDeleted` | Bool? | Soft delete flag |
-| `isSkipped` | Bool? | Whether leg was skipped |
 | `distanceUnit` | DistanceUnit? | Distance measurement unit |
 | `merchantId` | Text? | Merchant identifier |
 | `merchantOperatingCityId` | Text? | Operating city |
