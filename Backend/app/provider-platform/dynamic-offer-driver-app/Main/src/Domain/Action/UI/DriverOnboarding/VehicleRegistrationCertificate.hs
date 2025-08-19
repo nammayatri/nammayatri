@@ -789,14 +789,14 @@ makeDocumentVerificationLockKey personId = "DocumentVerificationLock:" <> person
 isNameComparePercentageValid :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Verification.NameCompareReq -> Flow Bool
 isNameComparePercentageValid merchantId merchantOpCityId req = do
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  resp <- Verification.nameCompare merchantId merchantOpCityId req
-  logDebug $ "Name compare percentage response: " <> show resp
-  case resp.nameComparedData of
-    Just percentageData -> do
-      case transporterConfig.validNameComparePercentage of
-        Just percentage -> return $ percentageData.match_output.name_match >= percentage
-        Nothing -> return True -- If percentage not configured, assume valid
-    Nothing -> throwError $ InternalError "Name comparison service returned invalid response"
+  case transporterConfig.validNameComparePercentage of
+    Just percentage -> do
+      resp <- Verification.nameCompare merchantId merchantOpCityId req
+      logDebug $ "Name compare percentage response: " <> show resp
+      case resp.nameComparedData of
+        Just percentageData -> return $ percentageData.match_output.name_match >= percentage
+        Nothing -> throwError $ InternalError "Name comparison service returned invalid response"
+    Nothing -> return True -- If percentage not configured, assume valid
 
 verifyRCFlow :: Person.Person -> Id DMOC.MerchantOperatingCity -> Text -> Id Image.Image -> Maybe UTCTime -> Maybe Bool -> Maybe DVC.VehicleCategory -> Maybe Bool -> Maybe Bool -> Maybe Bool -> EncryptedHashedField 'AsEncrypted Text -> Domain.ImageExtractionValidation -> Flow ()
 verifyRCFlow person merchantOpCityId rcNumber imageId dateOfRegistration multipleRC mbVehicleCategory mbAirConditioned mbOxygen mbVentilator encryptedRC imageExtractionValidation = do
