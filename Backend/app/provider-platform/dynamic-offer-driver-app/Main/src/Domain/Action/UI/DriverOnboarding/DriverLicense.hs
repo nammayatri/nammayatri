@@ -140,10 +140,7 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
                 unless (extractDLNumber == dlNumber) $
                   throwImageError imageId1 $ ImageDocumentNumberMismatch (maybe "null" maskText extractDLNumber) (maybe "null" maskText dlNumber)
                 let extractedDob = VC.parseDateTime =<< extractedDL.dateOfBirth
-                validDob <- VC.compareDateOfBirth extractedDob (Just driverDateOfBirth)
-                unless validDob $ do
-                  logError $ "DOB Mismatch in DL: " <> (show driverDateOfBirth) <> " extracted: " <> (show extractedDob)
-                  throwImageError imageId1 $ ImageDocumentNumberMismatch (show driverDateOfBirth) (show extractedDob)
+                void $ VC.compareDateOfBirth extractedDob (Just driverDateOfBirth)
                 return (nameOnCard, extractedDL.dateOfBirth)
               Nothing -> throwImageError imageId1 ImageExtractionFailed
           else return (Nothing, Nothing)
