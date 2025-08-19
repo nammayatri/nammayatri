@@ -18,7 +18,7 @@ module Screens.NotificationsScreen.Controller where
 import Prelude
 
 import Common.Styles.Colors as Color
-import Common.Types.App (YoutubeData)
+import Common.Types.App 
 import Common.Types.App (YoutubeData)
 import Components.BottomNavBar.Controller (Action(..)) as BottomNavBar
 import Components.ErrorModal as ErrorModalController
@@ -40,7 +40,7 @@ import Effect.Aff (launchAff)
 import Effect.Uncurried (runEffectFn1)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.Commons (getNewIDWithTag, strToBool, flowRunner, getImageUrl)
-import Helpers.Utils (getTimeStampString, setEnabled, setRefreshing, parseNumber, incrementValueOfLocalStoreKey)
+import Helpers.Utils (getTimeStampString, setEnabled, setRefreshing, parseNumber, incrementValueOfLocalStoreKey,emitTerminateApp, isParentView)
 import JBridge (hideKeyboardOnNavigation, requestKeyboardShow, cleverTapCustomEvent, metaLogEvent, firebaseLogEvent, setYoutubePlayer, removeMediaPlayer, shareTextMessage)
 import Language.Strings (getString)
 import Language.Types (STR(..))
@@ -106,7 +106,6 @@ data Action
 
 eval :: Action -> NotificationsScreenState -> Eval Action ScreenOutput NotificationsScreenState
 eval Refresh state = exit $ RefreshScreen state
-
 eval BackPressed state = do
   if state.notifsDetailModelVisibility == VISIBLE && state.notificationDetailModelState.addCommentModelVisibility == GONE then
     continueWithCmd state { notifsDetailModelVisibility = GONE }
@@ -119,9 +118,14 @@ eval BackPressed state = do
       ]
   else if state.notificationDetailModelState.addCommentModelVisibility == VISIBLE then
     continue state { notificationDetailModelState { addCommentModelVisibility = GONE, comment = Nothing} }
-  else
-    exit $ if state.deepLinkActivated then GoToCurrentRideFlow state else GoToHomeScreen state
+  else do
+    if isParentView FunctionCall then do
+      void $ pure $ emitTerminateApp Nothing true
+      continue state
+    else
+      exit $ if state.deepLinkActivated then GoToCurrentRideFlow state else GoToHomeScreen state
 
+  
 
 eval (NotificationCardClick (NotificationCardAC.Action1Click index)) state = do
   case state.notificationList Array.!! index of

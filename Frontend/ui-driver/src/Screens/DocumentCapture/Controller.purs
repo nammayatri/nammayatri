@@ -41,6 +41,8 @@ import Effect.Unsafe (unsafePerformEffect)
 import Storage (KeyStore(..), getValueToLocalStore)
 import Common.Types.App
 import Engineering.Helpers.Events as EHE
+import Helpers.Utils (isParentView, emitLogoutApp)
+import Common.Types.App (LazyCheck(..))
 
 instance showAction :: Show Action where
   show (PrimaryButtonAC var1) = "PrimaryButtonAC_" <> show var1
@@ -113,9 +115,16 @@ eval (ValidateDocumentModalAction (ValidateDocumentModal.PrimaryButtonActionCont
     void $ liftEffect $ JB.uploadFile uploadFileConfig true
     pure NoAction]
 
-eval (PopUpModalLogoutAction (PopUpModal.OnButton2Click)) state = continue $ (state {props {logoutModalView= false}})
+eval (PopUpModalLogoutAction (PopUpModal.OnButton2Click)) state =  
+  continue $ (state {props {logoutModalView= false}})
 
-eval (PopUpModalLogoutAction (PopUpModal.OnButton1Click)) state = exit $ LogoutAccount
+eval (PopUpModalLogoutAction (PopUpModal.OnButton1Click)) state = do  
+  if isParentView FunctionCall
+    then do
+      void $ pure $ emitLogoutApp Nothing
+      continue state
+    else do
+      exit LogoutAccount 
 
 eval (ValidateDocumentModalAction (ValidateDocumentModal.AfterRender)) state = continueWithCmd state [pure (CallBackImageUpload state.data.imageBase64 "" "")]
 

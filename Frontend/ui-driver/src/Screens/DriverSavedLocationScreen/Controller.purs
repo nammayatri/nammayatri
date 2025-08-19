@@ -42,7 +42,8 @@ import Screens.DriverSavedLocationScreen.Transformer (getLocationArray, tagAlrea
 import Screens.Types (DriverSavedLocationScreenState, GoToScrEntryType(..), Location(..), PredictionItem(..), SavedLocationScreenType(..),LocationSelectType(..))
 import Services.API (GetHomeLocationsRes(..))
 import Common.Resources.Constants (zoomLevel)
-import Helpers.Utils(getCurrentLocation, LatLon(..))
+import Helpers.Utils(getCurrentLocation, LatLon(..) ,emitTerminateApp, isParentView)
+import Common.Types.App (LazyCheck (..))
 
 instance showAction :: Show Action where
   show (BackPressed) = "BackPressed"
@@ -105,19 +106,23 @@ data ScreenOutput
   | EditLocation DriverSavedLocationScreenState
 
 eval :: Action -> DriverSavedLocationScreenState -> Eval Action ScreenOutput DriverSavedLocationScreenState
-eval BackPressed state = do
-  void $ pure $ JB.hideKeyboardOnNavigation true
-  if state.props.confirmDelete then
-    continue state { props { confirmDelete = false } }
-  else if state.props.viewType == SearchLocation then do
-    if state.props.gotBackToHomeScreen then exit $ GoBack state else continue state { props { viewType = GoToList } }
-  else if state.props.viewType == LOCATE_ON_MAP then
-    continue state { props { viewType = SearchLocation } }
-  else if state.props.viewType == ConfirmLocation then
-    continue state { props { viewType = if state.props.fromEditButton == (Just FromEdit) then GoToList else LOCATE_ON_MAP } }
+eval BackPressed state = 
+  if isParentView FunctionCall then do
+    void $ pure $ emitTerminateApp Nothing true
+    continue state
   else do
-    _ <- pure $ exitLocateOnMap ""
-    exit $ GoBack state
+    void $ pure $ JB.hideKeyboardOnNavigation true
+    if state.props.confirmDelete then
+      continue state { props { confirmDelete = false } }
+    else if state.props.viewType == SearchLocation then do
+      if state.props.gotBackToHomeScreen then exit $ GoBack state else continue state { props { viewType = GoToList } }
+    else if state.props.viewType == LOCATE_ON_MAP then
+      continue state { props { viewType = SearchLocation } }
+    else if state.props.viewType == ConfirmLocation then
+      continue state { props { viewType = if state.props.fromEditButton == (Just FromEdit) then GoToList else LOCATE_ON_MAP } }
+    else do
+      _ <- pure $ exitLocateOnMap ""
+      exit $ GoBack state
 
 eval OnAnimationEnd state = do
   void case state.props.viewType of
@@ -158,20 +163,26 @@ eval (OnTextChanged textVal) state = do
   continue state
 
 
-eval (PrimaryButtonAC PrimaryButton.OnClick) state = case state.props.viewType of
+eval (PrimaryButtonAC PrimaryButton.OnClick) state = do
+ case state.props.viewType of
   GoToList -> do
-    pure $ setText (getNewIDWithTag "SavedLocationEditText") ""
-    continue state { props { viewType = SearchLocation }, data { predictions = [] } }
+      pure $ setText (getNewIDWithTag "SavedLocationEditText") ""
+      continue state { props { viewType = SearchLocation }, data { predictions = [] } }
   LOCATE_ON_MAP -> do
-    pure $ setText (getNewIDWithTag "ConfirmLocEDT") ""
-    continue state { props { viewType = ConfirmLocation, errorText = Nothing }, data { saveLocationObject { tag = if (tagAlreadySaved state.data.savedLocationsArray state.props.defTag) then "" else state.props.defTag } } }
-  _ -> continue state
+      pure $ setText (getNewIDWithTag "ConfirmLocEDT") ""
+      continue state { props { viewType = ConfirmLocation, errorText = Nothing }, data { saveLocationObject { tag = if (tagAlreadySaved state.data.savedLocationsArray state.props.defTag) then "" else state.props.defTag } } }
+  _ -> 
+      continue state
 
 eval (ConfirmChangesAC PrimaryButton.OnClick) state =
   if state.props.fromEditButton == (Just FromEdit) then
     exit $ EditLocation state
   else
-    exit $ SaveLocation state
+    if isParentView FunctionCall then do
+      void $ pure $ emitTerminateApp Nothing true
+      exit $ SaveLocation state
+    else do
+      exit $ SaveLocation state
 
 eval ClearSearch state = do
   pure $ setText (getNewIDWithTag "SavedLocationEditText") ""
