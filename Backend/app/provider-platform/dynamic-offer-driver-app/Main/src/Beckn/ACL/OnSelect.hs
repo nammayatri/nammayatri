@@ -75,7 +75,7 @@ mkOnSelectMessageV2 isValueAddNP bppConfig merchant mbFarePolicy req@DOnSelectRe
           orderItems = Just $ map (\fulf -> mkItemV2 fulf vehicleServiceTierItem driverQuote mbFarePolicy taggings) fulfillments,
           orderQuote = Just $ mkQuoteV2 driverQuote req.now,
           orderPayments = Just [paymentV2],
-          orderProvider = mkProvider bppConfig,
+          orderProvider = Utils.tfProvider bppConfig,
           orderBilling = Nothing,
           orderCancellation = Nothing,
           orderCancellationTerms = Nothing,
@@ -130,7 +130,8 @@ mkAgentPersonV2 quote isValueAddNP =
     { personId = Nothing,
       personImage = Nothing,
       personName = Just quote.driverName,
-      personTags = if isValueAddNP then mkAgentTagsV2 quote else Nothing
+      personTags = if isValueAddNP then mkAgentTagsV2 quote else Nothing,
+      personLanguages = Nothing
     }
 
 mkAgentTagsV2 :: DQuote.DriverQuote -> Maybe [Spec.TagGroup]
@@ -178,7 +179,8 @@ mkItemV2 fulfillment vehicleServiceTierItem quote mbFarePolicy taggings = do
       itemTags = mkItemTagsV2 quote.estimatedFare quote.fareParams.congestionChargeViaDp mbFarePolicy taggings,
       itemDescriptor = mkItemDescriptor vehicleServiceTierItem,
       itemLocationIds = Nothing,
-      itemPaymentIds = Nothing
+      itemPaymentIds = Nothing,
+      itemCategoryIds = Nothing -- FIXME
     }
 
 mkItemDescriptor :: DVST.VehicleServiceTier -> Maybe Spec.Descriptor
@@ -261,16 +263,4 @@ mkQuotationPrice quote =
         priceMinimumValue = Nothing,
         priceOfferedValue = Just $ encodeToText quote.estimatedFare,
         priceValue = Just $ encodeToText quote.estimatedFare
-      }
-
-mkProvider :: DBC.BecknConfig -> Maybe Spec.Provider
-mkProvider becknConfig = do
-  return $
-    Spec.Provider
-      { providerDescriptor = Nothing,
-        providerFulfillments = Nothing,
-        providerId = Just $ becknConfig.subscriberId,
-        providerItems = Nothing,
-        providerLocations = Nothing,
-        providerPayments = Nothing
       }

@@ -16,8 +16,12 @@ module BecknV2.OnDemand.Enums where
 
 import Data.Aeson
 import Data.Aeson.Types (typeMismatch)
-import Kernel.Prelude
+import Data.List.Extra (takeEnd)
+import Data.OpenApi
+import qualified Data.Text as T
+import Kernel.Prelude hiding (show)
 import Kernel.Utils.JSON
+import qualified Kernel.Utils.Schema as S
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Prelude (show)
 
@@ -249,3 +253,48 @@ instance Read SafetyReasonCode where
     "DEVIATION" -> [(DEVIATION, "")]
     "RIDE_STOPPAGE" -> [(RIDE_STOPPAGE, "")]
     _ -> []
+
+-- ONDC compliant --
+
+data CategoryCode
+  = -- ..category.descriptor.code
+    CATEGORY_ON_DEMAND_TRIP
+  | CATEGORY_ON_DEMAND_RENTAL
+  | CATEGORY_SCHEDULED_TRIP
+  | CATEGORY_SCHEDULED_RENTAL
+  deriving (Eq, Generic)
+
+instance ToJSON CategoryCode where
+  toJSON = genericToJSON $ objectWithSingleFieldParsing stripCategory
+
+instance FromJSON CategoryCode where
+  parseJSON = genericParseJSON $ objectWithSingleFieldParsing stripCategory
+
+instance ToSchema CategoryCode where
+  declareNamedSchema = genericDeclareNamedSchema $ S.objectWithSingleFieldParsing stripCategory
+
+stripCategory :: String -> String
+stripCategory str = case take 9 str of
+  "CATEGORY_" -> takeEnd 9 str
+  _ -> str
+
+instance Show CategoryCode where
+  show CATEGORY_ON_DEMAND_TRIP = "ON_DEMAND_TRIP"
+  show CATEGORY_ON_DEMAND_RENTAL = "ON_DEMAND_RENTAL"
+  show CATEGORY_SCHEDULED_TRIP = "SCHEDULED_TRIP"
+  show CATEGORY_SCHEDULED_RENTAL = "SCHEDULED_RENTAL"
+
+instance Read CategoryCode where
+  readsPrec _ = \case
+    "ON_DEMAND_TRIP" -> [(CATEGORY_ON_DEMAND_TRIP, "")]
+    "ON_DEMAND_RENTAL" -> [(CATEGORY_ON_DEMAND_RENTAL, "")]
+    "SCHEDULED_TRIP" -> [(CATEGORY_SCHEDULED_TRIP, "")]
+    "SCHEDULED_RENTAL" -> [(CATEGORY_SCHEDULED_RENTAL, "")]
+    _ -> []
+
+-- category id is the same as code for now
+categoryCodeToId :: CategoryCode -> Text
+categoryCodeToId = T.pack . show
+
+categoryIdToCode :: Text -> Maybe CategoryCode
+categoryIdToCode = readMaybe . T.unpack

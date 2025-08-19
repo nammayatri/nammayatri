@@ -114,6 +114,7 @@ tfCustomer res =
               { personId = Nothing,
                 personImage = Nothing,
                 personName = Just riderName,
-                personTags = Nothing
+                personTags = Nothing,
+                personLanguages = Nothing
               }
       }

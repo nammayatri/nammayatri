@@ -21,6 +21,8 @@ where
 import qualified BecknV2.OnDemand.Enums as Spec
 import qualified BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types as Spec
+import BecknV2.OnDemand.Utils.Tags (BuyerFinderFee, City, SettlementType, SettlementWindow)
+import qualified BecknV2.OnDemand.Utils.Tags as UTag
 import Data.Aeson as A
 import Domain.Types
 import Kernel.Prelude
@@ -29,14 +31,6 @@ import Kernel.Types.Common (Price)
 type TxnId = Text
 
 type CollectedBy = Text
-
-type BuyerFinderFee = Text
-
-type City = Text
-
-type SettlementType = Text
-
-type SettlementWindow = Text
 
 mkPayment ::
   City ->
@@ -106,168 +100,10 @@ mkPaymentParams mPaymentParams _mTxnId mAmount mCurrency = do
 mkPaymentTags :: City -> Maybe SettlementType -> Maybe Text -> Maybe SettlementWindow -> Maybe BaseUrl -> Maybe BuyerFinderFee -> [Spec.TagGroup]
 mkPaymentTags txnCity mSettlementType mAmount mSettlementWindow mSettlementTermsUrl mbff =
   catMaybes
-    [ Just $ mkBuyerFinderFeeTagGroup mbff,
-      Just $ mkSettlementTagGroup txnCity mAmount mSettlementWindow mSettlementTermsUrl,
-      mkSettlementDetailsTagGroup mSettlementType
+    [ Just $ UTag.mkBuyerFinderFeeTagGroup mbff,
+      Just $ UTag.mkSettlementTagGroup txnCity mAmount mSettlementWindow mSettlementTermsUrl,
+      UTag.mkSettlementDetailsTagGroup mSettlementType
     ]
-
-mkBuyerFinderFeeTagGroup :: Maybe BuyerFinderFee -> Spec.TagGroup
-mkBuyerFinderFeeTagGroup mbff =
-  Spec.TagGroup
-    { tagGroupDescriptor =
-        Just $
-          Spec.Descriptor
-            { descriptorCode = Just $ show Tag.BUYER_FINDER_FEES,
-              descriptorName = Nothing,
-              descriptorShortDesc = Nothing
-            },
-      tagGroupDisplay = Just False,
-      tagGroupList = Just [feePercentage]
-    }
-  where
-    feePercentage =
-      Spec.Tag
-        { tagDescriptor =
-            Just $
-              Spec.Descriptor
-                { descriptorCode = Just $ show Tag.BUYER_FINDER_FEES_PERCENTAGE,
-                  descriptorName = Nothing,
-                  descriptorShortDesc = Nothing
-                },
-          tagValue = Just $ fromMaybe "0" mbff,
-          tagDisplay = Just False
-        }
-
-mkSettlementTagGroup :: City -> Maybe Text -> Maybe SettlementWindow -> Maybe BaseUrl -> Spec.TagGroup
-mkSettlementTagGroup txnCity mSettlementAmount mSettlementWindow mSettlementTermsUrl =
-  Spec.TagGroup
-    { tagGroupDescriptor =
-        Just $
-          Spec.Descriptor
-            { descriptorCode = Just $ show Tag.SETTLEMENT_TERMS,
-              descriptorName = Nothing,
-              descriptorShortDesc = Nothing
-            },
-      tagGroupDisplay = Just False,
-      tagGroupList = Just settlementTags
-    }
-  where
-    settlementTags =
-      catMaybes
-        [ mSettlementAmount <&> \samount ->
-            Spec.Tag
-              { tagDescriptor =
-                  Just $
-                    Spec.Descriptor
-                      { descriptorCode = Just $ show Tag.SETTLEMENT_AMOUNT,
-                        descriptorName = Nothing,
-                        descriptorShortDesc = Nothing
-                      },
-                tagValue = Just samount,
-                tagDisplay = Just False
-              },
-          Just $
-            Spec.Tag
-              { tagDescriptor =
-                  Just $
-                    Spec.Descriptor
-                      { descriptorCode = Just $ show Tag.SETTLEMENT_WINDOW,
-                        descriptorName = Nothing,
-                        descriptorShortDesc = Nothing
-                      },
-                tagValue = Just $ fromMaybe "PT1D" mSettlementWindow,
-                tagDisplay = Just False
-              },
-          Just $
-            Spec.Tag
-              { tagDescriptor =
-                  Just $
-                    Spec.Descriptor
-                      { descriptorCode = Just $ show Tag.DELAY_INTEREST,
-                        descriptorName = Nothing,
-                        descriptorShortDesc = Nothing
-                      },
-                tagValue = Just "0",
-                tagDisplay = Just False
-              },
-          Just $
-            Spec.Tag
-              { tagDescriptor =
-                  Just $
-                    Spec.Descriptor
-                      { descriptorCode = Just $ show Tag.SETTLEMENT_BASIS,
-                        descriptorName = Nothing,
-                        descriptorShortDesc = Nothing
-                      },
-                tagValue = Just "INVOICE_RECIEPT",
-                tagDisplay = Just False
-              },
-          Just $
-            Spec.Tag
-              { tagDescriptor =
-                  Just $
-                    Spec.Descriptor
-                      { descriptorCode = Just $ show Tag.MANDATORY_ARBITRATION,
-                        descriptorName = Nothing,
-                        descriptorShortDesc = Nothing
-                      },
-                tagValue = Just "TRUE",
-                tagDisplay = Just False
-              },
-          Just $
-            Spec.Tag
-              { tagDescriptor =
-                  Just $
-                    Spec.Descriptor
-                      { descriptorCode = Just $ show Tag.COURT_JURISDICTION,
-                        descriptorName = Nothing,
-                        descriptorShortDesc = Nothing
-                      },
-                tagValue = Just txnCity,
-                tagDisplay = Just False
-              },
-          Just $
-            Spec.Tag
-              { tagDescriptor =
-                  Just $
-                    Spec.Descriptor
-                      { descriptorCode = Just $ show Tag.STATIC_TERMS,
-                        descriptorName = Nothing,
-                        descriptorShortDesc = Nothing
-                      },
-                tagValue = Just $ maybe "https://api.example-bap.com/booking/terms" showBaseUrl mSettlementTermsUrl,
-                tagDisplay = Just False
-              }
-        ]
-
-mkSettlementDetailsTagGroup :: Maybe SettlementType -> Maybe Spec.TagGroup
-mkSettlementDetailsTagGroup mSettlementType = do
-  st <- mSettlementType
-  return $
-    Spec.TagGroup
-      { tagGroupDescriptor =
-          Just $
-            Spec.Descriptor
-              { descriptorCode = Just $ show Tag.SETTLEMENT_DETAILS,
-                descriptorName = Nothing,
-                descriptorShortDesc = Nothing
-              },
-        tagGroupDisplay = Just False,
-        tagGroupList = Just [stTag st]
-      }
-  where
-    stTag st =
-      Spec.Tag
-        { tagDescriptor =
-            Just $
-              Spec.Descriptor
-                { descriptorCode = Just $ show Tag.SETTLEMENT_TYPE,
-                  descriptorName = Nothing,
-                  descriptorShortDesc = Nothing
-                },
-          tagValue = Just st,
-          tagDisplay = Just False
-        }
 
 encodeToText' :: (ToJSON a) => a -> Maybe Text
 encodeToText' = A.decode . A.encode

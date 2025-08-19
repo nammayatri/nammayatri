@@ -89,7 +89,7 @@ tfQuotesInfo provider fulfillments validTill item = do
       isCustomerPrefferedSearchRoute_ = Beckn.OnDemand.Utils.OnSearch.getIsCustomerPrefferedSearchRoute item
       isBlockedRoute_ = Beckn.OnDemand.Utils.OnSearch.getIsBlockedRoute item
       tollChargesInfo_ = Beckn.OnDemand.Utils.OnSearch.buildTollChargesInfo item currency
-      estimatedPickupDuration = Beckn.OnDemand.Utils.OnSearch.getestimatedPickupDuration item
+      estimatedPickupDuration = Beckn.OnDemand.Utils.OnSearch.getEstimatedPickupDuration item
       vehicleIconUrl = Beckn.OnDemand.Utils.OnSearch.getVehicleIconUrl item
   quoteOrEstId_ <- Beckn.OnDemand.Utils.OnSearch.getQuoteFulfillmentId item
   fulfillment <- find (\f -> f.fulfillmentId == Just quoteOrEstId_) fulfillments & Kernel.Utils.Error.fromMaybeM (Tools.Error.InvalidRequest "Missing fulfillment for item")
