@@ -15,7 +15,6 @@
 module Domain.Action.Internal.PickupInstruction where
 
 import Environment
-import Kernel.External.Notification.FCM.Types as FCM
 import Kernel.Prelude
 import Kernel.Types.APISuccess
 import Kernel.Types.Id
@@ -56,31 +55,16 @@ sendPickupInstruction driverId apiKey req = do
     Just _ -> logInfo "PickupInstruction: Audio instruction provided"
     Nothing -> logInfo "PickupInstruction: No audio instruction provided"
 
-  -- Send overlay notification with pickup instruction
-  let overlayReq =
-        FCM.FCMOverlayReq
-          { title = Just "Pickup Instructions",
-            description = req.instruction,
-            imageUrl = Nothing,
-            secondaryActions = Nothing,
-            actions = [],
-            link = Nothing,
-            method = Nothing,
-            reqBody = toJSON req.audioBase64, -- Include audio data in reqBody
-            endPoint = Nothing,
-            delay = Nothing,
-            contactSupportNumber = Nothing,
-            toastMessage = Nothing,
-            okButtonText = Nothing,
-            cancelButtonText = Nothing,
-            actions2 = [],
-            secondaryActions2 = Nothing,
-            socialMediaLinks = Nothing,
-            showPushNotification = Nothing
+  -- Create entity data for the FCM notification
+  let entityData =
+        Notifications.PickupInstructionEntityData
+          { instruction = req.instruction,
+            audioBase64 = req.audioBase64
           }
 
-  logInfo $ "PickupInstruction: Sending overlay notification to driver: " <> driverId
-  Notifications.sendOverlay driver.merchantOperatingCityId driver overlayReq
+  -- Send FCM notification with pickup instruction
+  logInfo $ "PickupInstruction: Sending FCM notification to driver: " <> driverId
+  Notifications.sendPickupInstructionNotification driver.merchantOperatingCityId driver entityData
 
-  logInfo $ "PickupInstruction: Successfully sent pickup instruction overlay to driver: " <> driverId
+  logInfo $ "PickupInstruction: Successfully sent pickup instruction notification to driver: " <> driverId
   pure Success

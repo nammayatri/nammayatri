@@ -1504,3 +1504,38 @@ notifyEditDestination merchantOpCityId personId mbDeviceToken = do
         }
     title = FCM.FCMNotificationTitle "Edit Destination"
     body = FCMNotificationBody "Driver accepted edited destination."
+
+data PickupInstructionEntityData = PickupInstructionEntityData
+  { instruction :: Maybe Text,
+    audioBase64 :: Maybe Text
+  }
+  deriving (Generic, ToJSON, FromJSON, Show)
+
+sendPickupInstructionNotification ::
+  ( CacheFlow m r,
+    EsqDBFlow m r
+  ) =>
+  Id DMOC.MerchantOperatingCity ->
+  Person ->
+  PickupInstructionEntityData ->
+  m ()
+sendPickupInstructionNotification merchantOpCityId driver entityData = do
+  let newCityId = cityFallback driver.clientBundleVersion merchantOpCityId -- TODO: Remove this fallback once YATRI_PARTNER_APP is updated To Newer Version
+  transporterConfig <- findByMerchantOpCityId newCityId (Just (DriverId (cast driver.id))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  -- Build notification data
+  let notificationData =
+        FCM.FCMData
+          { fcmNotificationType = FCM.PICKUP_INSTRUCTIONS,
+            fcmShowNotification = FCM.SHOW,
+            fcmEntityType = FCM.Person,
+            fcmEntityIds = getId driver.id,
+            fcmEntityData = entityData,
+            fcmNotificationJSON = FCM.createAndroidNotification title body FCM.PICKUP_INSTRUCTIONS Nothing,
+            fcmOverlayNotificationJSON = Nothing,
+            fcmNotificationId = Nothing
+          }
+      title = FCM.FCMNotificationTitle "Pickup Instructions"
+      body = FCMNotificationBody $ fromMaybe "You have received pickup instructions" entityData.instruction
+  logInfo $ "PickupInstructionNotification: Notification data: " <> show notificationData
+  -- Send notification
+  FCM.notifyPersonWithPriority transporterConfig.fcmConfig (Just FCM.HIGH) (clearDeviceToken driver.id) notificationData (FCMNotificationRecipient driver.id.getId driver.deviceToken) EulerHS.Prelude.id
