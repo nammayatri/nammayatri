@@ -21,6 +21,7 @@ data MerchantT f = MerchantT
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     description :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     enabled :: B.C f Kernel.Prelude.Bool,
+    fileExtensionCheck :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     fleetOwnerEnabledCheck :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     fromTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     gatewayAndRegistryPriorityList :: B.C f (Kernel.Prelude.Maybe [Domain.Types.GatewayAndRegistryService]),
