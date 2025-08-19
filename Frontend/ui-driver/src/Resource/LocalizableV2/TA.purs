@@ -1340,7 +1340,7 @@ getTa =
     , please_try_again_in_some_time: "தயவுசெய்து சிறிது நேரத்திற்கு பிறகு மீண்டும் முயற்சிக்கவும்."
     , policy_generate_once_ride_start: "உங்கள் காப்பீட்டு திட்டம் உருவாகும் \n பயணம் தொடங்கும் போது."
     , this_ride_is_insured_for_free: "நீங்கள் பாதுகாக்கப்பட்டுள்ளீர்கள்! இந்த பயணம்\nஇலவசமாக காப்பீடு செய்யப்பட்டுள்ளதாம்."
-    , this_ride_come_with_complimentary_insurance: "இந்த பயணத்துடன்\nஇலவச காப்பீடு வழங்கப்படுகிறது."
+    , this_ride_come_with_free_insurance: "இந்த சவாரி இலவச\nகாப்பீட்டுடன் வருகிறது."
     , download_insurance_policy: "காப்பீட்டு திட்டத்தை பதிவிறக்கவும்"
     , special_pickup_zone: "சிறப்பு பிக்கப் ஜோன்"
     , special_pickup_zone_popup_info: "சிறப்பு ஜோனில், அருகிலுள்ள வாடிக்கையாளர்களின் சவாரிகளுக்கு முன்னுரிமை பெறுவீர்கள்!"
