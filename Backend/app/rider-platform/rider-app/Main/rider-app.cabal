@@ -508,7 +508,6 @@ library
       Storage.Queries.IssueExtra
       Storage.Queries.JourneyExtra
       Storage.Queries.JourneyLegExtra
-      Storage.Queries.JourneyLegMappingExtra
       Storage.Queries.LocationMappingExtra
       Storage.Queries.MerchantExtra
       Storage.Queries.MerchantPaymentMethodExtra
@@ -549,6 +548,7 @@ library
       Storage.Queries.Transformers.Estimate
       Storage.Queries.Transformers.IntegratedBPPConfig
       Storage.Queries.Transformers.Journey
+      Storage.Queries.Transformers.JourneyLeg
       Storage.Queries.Transformers.Merchant
       Storage.Queries.Transformers.MerchantConfig
       Storage.Queries.Transformers.MerchantMessage
@@ -1077,7 +1077,6 @@ library
       Storage.Queries.OrphanInstances.Issue
       Storage.Queries.OrphanInstances.Journey
       Storage.Queries.OrphanInstances.JourneyLeg
-      Storage.Queries.OrphanInstances.JourneyLegMapping
       Storage.Queries.OrphanInstances.LocationMapping
       Storage.Queries.OrphanInstances.Merchant
       Storage.Queries.OrphanInstances.MerchantPaymentMethod

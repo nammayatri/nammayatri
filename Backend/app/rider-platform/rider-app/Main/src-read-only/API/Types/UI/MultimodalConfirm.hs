@@ -203,7 +203,7 @@ data RiderLocationReq = RiderLocationReq {currTime :: Kernel.Prelude.UTCTime, la
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data SimilarJourneyLegsResp = SimilarJourneyLegsResp {journeyLegsInfo :: [Lib.JourneyModule.Types.LegInfo]}
+data SimilarJourneyLegsResp = SimilarJourneyLegsResp {journeyLegsInfo :: [Lib.JourneyModule.Utils.JourneyLegOption]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

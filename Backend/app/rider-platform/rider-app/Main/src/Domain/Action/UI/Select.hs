@@ -50,7 +50,6 @@ import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.EstimateStatus as DEstimate
 import qualified Domain.Types.Journey as DJ
 import qualified Domain.Types.JourneyLeg as DJL
-import qualified Domain.Types.JourneyLegMapping as DJLM
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.ParcelDetails as DParcel
@@ -96,7 +95,6 @@ import qualified Storage.Queries.DriverOffer as QDOffer
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
-import qualified Storage.Queries.JourneyLegMapping as QJourneyLegMapping
 import qualified Storage.Queries.Location as QLoc
 import qualified Storage.Queries.ParcelDetails as QParcel
 import qualified Storage.Queries.Person as QP
@@ -418,7 +416,6 @@ mkJourneyForSearch searchRequest estimate personId = do
   now <- getCurrentTime
   journeyGuid <- generateGUID
   journeyLegGuid <- generateGUID
-  journeyLegMappingGuid <- generateGUID
   journeyRouteDetailsId <- generateGUID
 
   let estimatedMinFare = Just estimate.estimatedFare.amount
@@ -532,19 +529,6 @@ mkJourneyForSearch searchRequest estimate personId = do
             sequenceNumber = 0
           }
 
-  let journeyLegMapping =
-        DJLM.JourneyLegMapping
-          { id = journeyLegMappingGuid,
-            journeyId = journeyGuid,
-            sequenceNumber = 0,
-            merchantId = searchRequest.merchantId,
-            merchantOperatingCityId = searchRequest.merchantOperatingCityId,
-            isDeleted = False,
-            journeyLegId = journeyLegGuid,
-            createdAt = now,
-            updatedAt = now
-          }
-
   let journeySearchData =
         JLT.JourneySearchData
           { agency = Nothing,
@@ -556,7 +540,6 @@ mkJourneyForSearch searchRequest estimate personId = do
 
   QJourney.create journey
   QJourneyLeg.create journeyLeg
-  QJourneyLegMapping.create journeyLegMapping
   QSearchRequest.updateJourneyLegInfo searchRequest.id (Just journeySearchData)
   pure journeyGuid
 

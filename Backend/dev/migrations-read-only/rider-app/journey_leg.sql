@@ -270,3 +270,18 @@ ALTER TABLE atlas_app.journey_leg ADD COLUMN group_code text ;
 
 ------- SQL updates -------
 
+
+
+------- SQL updates -------
+ALTER TABLE atlas_app.journey_leg ALTER COLUMN sequence_number DROP NOT NULL;
+ALTER TABLE atlas_app.journey_leg ALTER COLUMN journey_id DROP NOT NULL;
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

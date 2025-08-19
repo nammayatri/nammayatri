@@ -17,11 +17,17 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Kernel.Utils.JSON
 import qualified Storage.Beam.JourneyLeg as Beam
+import qualified Storage.Queries.JourneyLegMapping
 import qualified Storage.Queries.RouteDetails
+import qualified Storage.Queries.Transformers.JourneyLeg
 
 instance FromTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
   fromTType' (Beam.JourneyLegT {..}) = do
+    mbJourneyLegMapping <- Storage.Queries.JourneyLegMapping.findByJourneyLegId (Kernel.Types.Id.Id id)
+    isDeleted' <- Storage.Queries.Transformers.JourneyLeg.getIsDeleted mbJourneyLegMapping isDeleted
+    journeyId' <- Storage.Queries.Transformers.JourneyLeg.getJourneyId mbJourneyLegMapping journeyId
     routeDetails' <- Storage.Queries.RouteDetails.findAllByJourneyLegId id
+    sequenceNumber' <- Storage.Queries.Transformers.JourneyLeg.getSequenceNumber mbJourneyLegMapping sequenceNumber
     pure $
       Just
         Domain.Types.JourneyLeg.JourneyLeg
@@ -38,8 +44,8 @@ instance FromTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
             fromStopDetails = Just $ Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails fromStopCode fromStopPlatformCode fromStopName fromStopGtfsId,
             groupCode = groupCode,
             id = Kernel.Types.Id.Id id,
-            isDeleted = isDeleted,
-            journeyId = Kernel.Types.Id.Id journeyId,
+            isDeleted = isDeleted',
+            journeyId = journeyId',
             legSearchId = legId,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
@@ -47,7 +53,7 @@ instance FromTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
             osmEntrance = osmEntrance >>= Kernel.Utils.JSON.valueToMaybe,
             osmExit = osmExit >>= Kernel.Utils.JSON.valueToMaybe,
             routeDetails = routeDetails',
-            sequenceNumber = sequenceNumber,
+            sequenceNumber = sequenceNumber',
             serviceTypes = serviceTypes,
             startLocation = Kernel.External.Maps.Google.MapsClient.LatLngV2 startLocationLat startLocationLon,
             straightLineEntrance = straightLineEntrance >>= Kernel.Utils.JSON.valueToMaybe,
@@ -82,14 +88,14 @@ instance ToTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
         Beam.groupCode = groupCode,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isDeleted = isDeleted,
-        Beam.journeyId = Kernel.Types.Id.getId journeyId,
+        Beam.journeyId = Just $ Kernel.Types.Id.getId journeyId,
         Beam.legId = legSearchId,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.mode = mode,
         Beam.osmEntrance = osmEntrance >>= Just . Data.Aeson.toJSON,
         Beam.osmExit = osmExit >>= Just . Data.Aeson.toJSON,
-        Beam.sequenceNumber = sequenceNumber,
+        Beam.sequenceNumber = Just sequenceNumber,
         Beam.serviceTypes = serviceTypes,
         Beam.startLocationLat = startLocation & (.latitude),
         Beam.startLocationLon = startLocation & (.longitude),

@@ -27,6 +27,7 @@ imports:
   JourneyOptionsSortingType: Domain.Types.MultimodalPreferences
   FRFSQuote: Domain.Types.FRFSQuote
   AvailableRoutesByTier: Lib.JourneyModule.Utils
+  JourneyLegOption: Lib.JourneyModule.Utils
   VehiclePosition: Lib.JourneyModule.Types
   SDKPayloadDetails: Kernel.External.Payment.Juspay.Types
   ServiceTierType: BecknV2.FRFS.Enums
@@ -240,7 +241,7 @@ types:
     journeyLegId: Id JourneyLeg
 
   SimilarJourneyLegsResp:
-    journeyLegsInfo: "[LegInfo]"
+    journeyLegsInfo: "[JourneyLegOption]"
 
 apis:
   - POST:

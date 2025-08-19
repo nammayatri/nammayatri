@@ -26,7 +26,6 @@ import qualified Domain.Types.IntegratedBPPConfig as DTBC
 import qualified Domain.Types.Journey as DJ
 import qualified Domain.Types.JourneyLeg as DJL
 import qualified Domain.Types.JourneyLeg as DJourneyLeg
-import qualified Domain.Types.JourneyLegMapping as DJLM
 import Domain.Types.Location
 import Domain.Types.LocationAddress
 import qualified Domain.Types.Merchant as DM
@@ -88,7 +87,6 @@ import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.FRFSVehicleServiceTier as QFRFSVehicleServiceTier
-import qualified Storage.Queries.JourneyLegMapping as QJourneyLegMapping
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import qualified Storage.Queries.Transformers.Booking as QTB
@@ -568,7 +566,6 @@ mkLegInfoFromBookingAndRide booking mRide journeyLeg = do
   batchConfig <- SharedRedisKeys.getBatchConfig booking.transactionId
   (oldStatus, bookingStatus, trackingStatus) <- JMStateUtils.getTaxiAllStatuses journeyLeg (Just booking) mRide Nothing
   let skipBooking = maybe False (\status -> status `elem` [JMState.TaxiRide DRide.CANCELLED, JMState.TaxiBooking DBooking.CANCELLED, JMState.TaxiEstimate DEstimate.CANCELLED]) bookingStatus
-  journeyLegMapping <- QJourneyLegMapping.findByJourneyLegId journeyLeg.id
   return $
     LegInfo
       { journeyLegId = journeyLeg.id,
@@ -578,7 +575,7 @@ mkLegInfoFromBookingAndRide booking mRide journeyLeg = do
         pricingId = booking.quoteId <&> (.getId),
         travelMode = DTrip.Taxi,
         startTime = booking.startTime,
-        order = fromMaybe 0 (journeyLegMapping <&> (.sequenceNumber)),
+        order = journeyLeg.sequenceNumber,
         estimatedDuration = booking.estimatedDuration,
         estimatedMinFare = Just $ mkPriceAPIEntity booking.estimatedFare,
         estimatedChildFare = Nothing,
@@ -646,7 +643,6 @@ mkLegInfoFromSearchRequest DSR.SearchRequest {..} journeyLeg = do
   batchConfig <- SharedRedisKeys.getBatchConfig id.getId
   (oldStatus, bookingStatus, trackingStatus) <- JMStateUtils.getTaxiAllStatuses journeyLeg Nothing Nothing mbEstimate
   let skipBooking = maybe False (\status -> status `elem` [JMState.TaxiRide DRide.CANCELLED, JMState.TaxiBooking DBooking.CANCELLED, JMState.TaxiEstimate DEstimate.CANCELLED]) bookingStatus
-  journeyLegMapping <- QJourneyLegMapping.findByJourneyLegId journeyLeg.id
   return $
     LegInfo
       { journeyLegId = journeyLeg.id,
@@ -656,7 +652,7 @@ mkLegInfoFromSearchRequest DSR.SearchRequest {..} journeyLeg = do
         pricingId = journeyLegInfo'.pricingId,
         travelMode = DTrip.Taxi,
         startTime = startTime,
-        order = fromMaybe 0 (journeyLegMapping <&> (.sequenceNumber)),
+        order = journeyLeg.sequenceNumber,
         estimatedDuration = estimatedRideDuration,
         estimatedChildFare = Nothing,
         estimatedMinFare = mkPriceAPIEntity <$> (mbFareRange <&> (.minFare)),
@@ -705,7 +701,6 @@ mkWalkLegInfoFromWalkLegData :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, Mona
 mkWalkLegInfoFromWalkLegData personId legData@DJL.JourneyLeg {..} = do
   let (oldStatus, trackingStatus) = JMStateUtils.getWalkAllStatuses legData
   now <- getCurrentTime
-  journeyLegMapping <- QJourneyLegMapping.findByJourneyLegId id
   return $
     LegInfo
       { journeyLegId = id,
@@ -715,7 +710,7 @@ mkWalkLegInfoFromWalkLegData personId legData@DJL.JourneyLeg {..} = do
         pricingId = Just id.getId,
         travelMode = DTrip.Walk,
         startTime = fromMaybe now fromDepartureTime,
-        order = fromMaybe 0 (journeyLegMapping <&> (.sequenceNumber)),
+        order = sequenceNumber,
         estimatedDuration = duration,
         estimatedMinFare = Nothing,
         estimatedMaxFare = Nothing,
@@ -802,7 +797,6 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
   journeyLegInfo' <- getLegRouteInfo (zip journeyLeg.routeDetails (map snd trackingStatuses)) integratedBPPConfig
   legExtraInfo <- mkLegExtraInfo qrDataList qrValidity ticketsCreatedAt journeyLeg.routeDetails journeyLegInfo' ticketNo
   let skipBooking = maybe False (\status -> status `elem` [JMState.FRFSTicket DFRFSTicket.CANCELLED, JMState.FRFSBooking DFRFSBooking.CANCELLED]) bookingStatus
-  journeyLegMapping <- QJourneyLegMapping.findByJourneyLegId journeyLeg.id
   return $
     LegInfo
       { journeyLegId = journeyLeg.id,
@@ -812,7 +806,7 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
         pricingId = Just booking.quoteId.getId, -- Just booking.id.getId,
         travelMode = castCategoryToMode booking.vehicleType,
         startTime = startTime,
-        order = fromMaybe 0 (journeyLegMapping <&> (.sequenceNumber)),
+        order = journeyLeg.sequenceNumber,
         estimatedDuration = journeyLeg.duration,
         estimatedMinFare = Just $ mkPriceAPIEntity estimatedPrice,
         estimatedChildFare = Nothing,
@@ -1005,8 +999,6 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg = do
   journeyLegRouteInfo' <- getLegRouteInfo (zip journeyLeg.routeDetails (map snd trackingStatuses)) integratedBPPConfig
   legExtraInfo <- mkLegExtraInfo mbQuote journeyLegRouteInfo'
 
-  journeyLegMapping <- QJourneyLegMapping.findByJourneyLegId journeyLeg.id
-
   return $
     LegInfo
       { journeyLegId = journeyLeg.id,
@@ -1016,7 +1008,7 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg = do
         pricingId = journeyLegInfo'.pricingId,
         travelMode = castCategoryToMode vehicleType,
         startTime = fromMaybe now startTime,
-        order = fromMaybe 0 (journeyLegMapping <&> (.sequenceNumber)),
+        order = journeyLeg.sequenceNumber,
         estimatedDuration = duration,
         estimatedMinFare = mbEstimatedFare,
         estimatedChildFare = mkPriceAPIEntity <$> (mbQuote >>= (.childPrice)),
@@ -1202,11 +1194,10 @@ mkJourneyLeg ::
   Id DSR.SearchRequest ->
   Meters ->
   Maybe GetFareResponse ->
-  m (DJL.JourneyLeg, DJLM.JourneyLegMapping)
+  m DJL.JourneyLeg
 mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation merchantId merchantOpCityId journeyId journeySearchRequestId maximumWalkDistance fare = do
   now <- getCurrentTime
   journeyLegId <- generateGUID
-  journeyLegMappingId <- generateGUID
   routeDetails <- mapM (mkRouteDetail journeyLegId) leg.routeDetails
   let travelMode = convertMultiModalModeToTripMode leg.mode straightLineDistance maximumWalkDistance
   gates <- getGates (mbPrev, leg, mbNext) merchantId merchantOpCityId
@@ -1219,52 +1210,40 @@ mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation m
           _ -> (leg.fromStopDetails, leg.toStopDetails)
   let groupCode = mkJourneyLegGroupCode journeySearchRequestId travelMode fromStopDetails toStopDetails
   return $
-    ( DJL.JourneyLeg
-        { agency = leg.agency,
-          distance = Just leg.distance,
-          duration = Just leg.duration,
-          groupCode,
-          endLocation = mkLocationWithGate (gates >>= (.straightLineEntrance)) leg.endLocation.latLng,
-          fromArrivalTime = leg.fromArrivalTime,
-          fromDepartureTime = leg.fromDepartureTime,
-          fromStopDetails = fromStopDetails,
-          id = journeyLegId,
-          mode = travelMode,
-          routeDetails,
-          startLocation = mkLocationWithGate (gates >>= (.straightLineExit)) leg.startLocation.latLng,
-          toArrivalTime = leg.toArrivalTime,
-          toDepartureTime = leg.toDepartureTime,
-          toStopDetails = toStopDetails,
-          serviceTypes = fare >>= (.serviceTypes),
-          estimatedMinFare = fare <&> (.estimatedMinFare),
-          estimatedMaxFare = fare <&> (.estimatedMaxFare),
-          merchantId = merchantId,
-          merchantOperatingCityId = merchantOpCityId,
-          createdAt = now,
-          updatedAt = now,
-          legSearchId = Nothing,
-          changedBusesInSequence = Nothing,
-          finalBoardedBusNumber = Nothing,
-          osmEntrance = gates >>= (.osmEntrance),
-          osmExit = gates >>= (.osmExit),
-          straightLineEntrance = gates >>= (.straightLineEntrance),
-          straightLineExit = gates >>= (.straightLineExit),
-          journeyId = journeyId,
-          isDeleted = Just False,
-          sequenceNumber = idx
-        },
-      DJLM.JourneyLegMapping
-        { id = journeyLegMappingId,
-          journeyLegId = journeyLegId,
-          journeyId = journeyId,
-          sequenceNumber = idx,
-          isDeleted = False,
-          merchantId = merchantId,
-          merchantOperatingCityId = merchantOpCityId,
-          createdAt = now,
-          updatedAt = now
-        }
-    )
+    DJL.JourneyLeg
+      { agency = leg.agency,
+        distance = Just leg.distance,
+        duration = Just leg.duration,
+        groupCode,
+        endLocation = mkLocationWithGate (gates >>= (.straightLineEntrance)) leg.endLocation.latLng,
+        fromArrivalTime = leg.fromArrivalTime,
+        fromDepartureTime = leg.fromDepartureTime,
+        fromStopDetails = fromStopDetails,
+        id = journeyLegId,
+        mode = travelMode,
+        routeDetails,
+        startLocation = mkLocationWithGate (gates >>= (.straightLineExit)) leg.startLocation.latLng,
+        toArrivalTime = leg.toArrivalTime,
+        toDepartureTime = leg.toDepartureTime,
+        toStopDetails = toStopDetails,
+        serviceTypes = fare >>= (.serviceTypes),
+        estimatedMinFare = fare <&> (.estimatedMinFare),
+        estimatedMaxFare = fare <&> (.estimatedMaxFare),
+        merchantId = merchantId,
+        merchantOperatingCityId = merchantOpCityId,
+        createdAt = now,
+        updatedAt = now,
+        legSearchId = Nothing,
+        changedBusesInSequence = Nothing,
+        finalBoardedBusNumber = Nothing,
+        osmEntrance = gates >>= (.osmEntrance),
+        osmExit = gates >>= (.osmExit),
+        straightLineEntrance = gates >>= (.straightLineEntrance),
+        straightLineExit = gates >>= (.straightLineExit),
+        journeyId = journeyId,
+        isDeleted = Just False,
+        sequenceNumber = idx
+      }
   where
     straightLineDistance = highPrecMetersToMeters $ distanceBetweenInMeters (LatLong leg.startLocation.latLng.latitude leg.startLocation.latLng.longitude) (LatLong leg.endLocation.latLng.latitude leg.endLocation.latLng.longitude)
 

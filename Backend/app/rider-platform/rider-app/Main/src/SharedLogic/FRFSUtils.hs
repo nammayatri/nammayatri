@@ -734,8 +734,7 @@ getAllJourneyFrfsBookings booking = do
   mbJourneyLeg <- QJL.findByLegSearchId (Just booking.searchId.getId)
   case mbJourneyLeg of
     Just leg -> do
-      legsWithMapping <- QJL.getJourneyLegs leg.journeyId
-      let legs = map fst legsWithMapping
+      legs <- QJL.getJourneyLegs leg.journeyId
       bookings <- mapMaybeM (QFRFSTicketBooking.findBySearchId . Id) (mapMaybe (.legSearchId) legs)
       return (Just leg.journeyId, bookings)
     Nothing -> pure (Nothing, [booking])

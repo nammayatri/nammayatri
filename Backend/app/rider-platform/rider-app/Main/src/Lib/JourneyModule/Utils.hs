@@ -16,6 +16,7 @@ import qualified Domain.Types.FRFSQuote as DFRFSQuote
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.IntegratedBPPConfig as DIntegratedBPPConfig
 import Domain.Types.Journey
+import qualified Domain.Types.JourneyLeg as DJourneyLeg
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MultimodalPreferences as DMP
@@ -140,6 +141,17 @@ data LegServiceTier = LegServiceTier
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data JourneyLegOption = JourneyLegOption
+  { viaPoints :: [Text],
+    arrivalTimes :: [Seconds],
+    availableRoutes :: [Text],
+    fare :: HighPrecMoney,
+    duration :: Maybe Seconds,
+    distance :: Maybe Distance,
+    journeyLegId :: Id DJourneyLeg.JourneyLeg
+  }
+  deriving (Generic, Show, Eq, ToJSON, FromJSON, ToSchema)
 
 -- | Data structure to represent available routes grouped by service tier
 data AvailableRoutesByTier = AvailableRoutesByTier
@@ -824,8 +836,7 @@ convertModeToEntityType _ = DTRL.TAXI -- This case will never be hit due to cond
 -- Main function to create recent location table entry
 createRecentLocationForMultimodal :: (MonadFlow m, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => Journey -> m ()
 createRecentLocationForMultimodal journey = do
-  journeyLegsWithMapping <- QJourneyLeg.getJourneyLegs journey.id
-  let journeyLegs = map fst journeyLegsWithMapping
+  journeyLegs <- QJourneyLeg.getJourneyLegs journey.id
   let onlyPublicTransportLegs = filter (\leg -> leg.mode `elem` [DTrip.Bus, DTrip.Metro, DTrip.Subway]) journeyLegs
   let fare = foldl' (\acc leg -> acc + fromMaybe 0 leg.estimatedMinFare) 0 onlyPublicTransportLegs
   now <- getCurrentTime

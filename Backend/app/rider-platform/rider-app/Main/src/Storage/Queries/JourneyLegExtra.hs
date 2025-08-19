@@ -32,6 +32,23 @@ create journeyLeg = do
   forM_ (JL.routeDetails journeyLeg) $ \routeDetail -> do
     RD.create routeDetail
   create' journeyLeg
+  journeyLegMapping <- mkJourneyLegMapping
+  QJourneyLegMapping.create journeyLegMapping
+  where
+    mkJourneyLegMapping = do
+      journeyLegMappingId <- Common.generateGUID
+      return $
+        DJLM.JourneyLegMapping
+          { id = journeyLegMappingId,
+            journeyLegId = journeyLeg.id,
+            journeyId = journeyLeg.journeyId,
+            sequenceNumber = journeyLeg.sequenceNumber,
+            isDeleted = fromMaybe False journeyLeg.isDeleted,
+            merchantId = journeyLeg.merchantId,
+            merchantOperatingCityId = journeyLeg.merchantOperatingCityId,
+            createdAt = journeyLeg.createdAt,
+            updatedAt = journeyLeg.updatedAt
+          }
 
 findByGroupCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m [JL.JourneyLeg])
 findByGroupCode groupCode = do
@@ -40,7 +57,7 @@ findByGroupCode groupCode = do
     else findAllWithKV [Se.Is Beam.groupCode $ Se.Eq groupCode]
 
 -- TODO :: Remove Nothing, Post Release and Adoption
-getJourneyLegs :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Journey.Journey -> m [(JL.JourneyLeg, Maybe DJLM.JourneyLegMapping)]
+getJourneyLegs :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Journey.Journey -> m [JL.JourneyLeg]
 getJourneyLegs journeyId = do
   journeyLegMappings <- QJourneyLegMapping.findAllLegsMappingByJourneyId journeyId False
   if not (null journeyLegMappings)
@@ -49,23 +66,21 @@ getJourneyLegs journeyId = do
         ( \journeyLegMapping -> do
             findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId journeyLegMapping.journeyLegId)]
               >>= \case
-                Just leg -> return $ Just (leg, Just journeyLegMapping)
+                Just leg -> return $ Just leg
                 Nothing -> return Nothing
         )
         journeyLegMappings
     else do
-      legs <-
-        findAllWithOptionsKV
-          [ Se.And
-              [ Se.Is Beam.journeyId $ Se.Eq (Kernel.Types.Id.getId journeyId),
-                Se.Or
-                  [Se.Is Beam.isDeleted $ Se.Eq (Just False), Se.Is Beam.isDeleted $ Se.Eq Nothing]
-              ]
-          ]
-          (Se.Asc Beam.sequenceNumber)
-          Nothing
-          Nothing
-      return $ map (\leg -> (leg, Nothing)) legs
+      findAllWithOptionsKV
+        [ Se.And
+            [ Se.Is Beam.journeyId $ Se.Eq (Just $ Kernel.Types.Id.getId journeyId),
+              Se.Or
+                [Se.Is Beam.isDeleted $ Se.Eq (Just False), Se.Is Beam.isDeleted $ Se.Eq Nothing]
+            ]
+        ]
+        (Se.Asc Beam.sequenceNumber)
+        Nothing
+        Nothing
 
 findByJourneyIdAndSequenceNumber ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
@@ -74,4 +89,4 @@ findByJourneyIdAndSequenceNumber journeyId sequenceNumber = do
   mbJourneyLegMapping <- QJourneyLegMapping.findByJourneyIdAndSequenceNumber journeyId sequenceNumber
   case mbJourneyLegMapping of
     Just journeyLegMapping -> findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId journeyLegMapping.journeyLegId)]
-    Nothing -> findOneWithKV [Se.And [Se.Is Beam.journeyId $ Se.Eq (Kernel.Types.Id.getId journeyId), Se.Is Beam.sequenceNumber $ Se.Eq sequenceNumber]]
+    Nothing -> findOneWithKV [Se.And [Se.Is Beam.journeyId $ Se.Eq (Just $ Kernel.Types.Id.getId journeyId), Se.Is Beam.sequenceNumber $ Se.Eq (Just sequenceNumber)]]
