@@ -192,10 +192,24 @@ postDriverFleetAddVehicle ::
   Maybe Text ->
   Maybe Text ->
   Maybe Common.Role ->
-  Maybe Bool ->
   Common.AddVehicleReq ->
   Flow APISuccess
-postDriverFleetAddVehicle merchantShortId opCity reqDriverPhoneNo requestorId mbFleetOwnerId mbMobileCountryCode mbRole mbBulkUpload req = do
+postDriverFleetAddVehicle = postDriverFleetAddVehicleHelper False
+
+type IsBulkUpload = Bool
+
+postDriverFleetAddVehicleHelper ::
+  IsBulkUpload ->
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Common.Role ->
+  Common.AddVehicleReq ->
+  Flow APISuccess
+postDriverFleetAddVehicleHelper isBulkUpload merchantShortId opCity reqDriverPhoneNo requestorId mbFleetOwnerId mbMobileCountryCode mbRole req = do
   runRequestValidation Common.validateAddVehicleReq req
   let mobileCountryCode = fromMaybe DCommon.mobileIndianCode mbMobileCountryCode
   validateMobileNumber reqDriverPhoneNo mobileCountryCode
@@ -215,14 +229,14 @@ postDriverFleetAddVehicle merchantShortId opCity reqDriverPhoneNo requestorId mb
     (DP.DRIVER, Nothing) -> do
       -- DCO case
       void $ checkRCAssociationForDriver getEntityData.id rc True
-      void $ DCommon.runVerifyRCFlow getEntityData.id merchant merchantOpCityId opCity req True (fromMaybe False mbBulkUpload) -- Pass fleet.id if addvehicle under fleet or pass driver.id if addvehcile under driver
+      void $ DCommon.runVerifyRCFlow getEntityData.id merchant merchantOpCityId opCity req True isBulkUpload -- Pass fleet.id if addvehicle under fleet or pass driver.id if addvehcile under driver
       logTagInfo "dashboard -> addVehicleUnderDCO : " (show getEntityData.id)
       pure Success
     (_, Just fleetOwnerId) -> do
       -- fleet and fleetDriver case
       whenJust rc $ \rcert -> checkRCAssociationForFleet fleetOwnerId rcert
       Redis.set (DomainRC.makeFleetOwnerKey req.registrationNo) fleetOwnerId -- setting this value here , so while creation of creation of vehicle we can add fleet owner id
-      void $ DCommon.runVerifyRCFlow getEntityData.id merchant merchantOpCityId opCity req True (fromMaybe False mbBulkUpload) -- Pass fleet.id if addvehicle under fleet or pass driver.id if addvehcile under driver
+      void $ DCommon.runVerifyRCFlow getEntityData.id merchant merchantOpCityId opCity req True isBulkUpload -- Pass fleet.id if addvehicle under fleet or pass driver.id if addvehcile under driver
       let logTag = case getEntityData.role of
             DP.FLEET_OWNER -> "dashboard -> addVehicleUnderFleet"
             DP.DRIVER -> "dashboard -> addVehicleUnderFleetDriver"
@@ -764,7 +778,7 @@ postDriverFleetAddVehicles merchantShortId opCity req = do
             QPerson.findByMobileNumberAndMerchantAndRole mobileCountryCode phoneHash merchant.id DP.FLEET_OWNER >>= fromMaybeM (FleetOwnerNotFound fleetNo) <&> (Just . (.id.getId))
           Nothing -> pure Nothing
 
-        postDriverFleetAddVehicle merchant.shortId opCity phoneNo requestorId mbFleetOwnerId mbCountryCode mbRole (Just True) addVehicleReq
+        postDriverFleetAddVehicleHelper True merchant.shortId opCity phoneNo requestorId mbFleetOwnerId mbCountryCode mbRole addVehicleReq
 
       case result of
         Left e -> return $ Left $ "Error: " <> T.pack (displayException e)

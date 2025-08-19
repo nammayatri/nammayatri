@@ -223,7 +223,7 @@ postDriverFleetAddVehicle merchantShortId opCity apiTokenInfo phoneNo mbMobileCo
   runRequestValidation Common.validateAddVehicleReq req
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   (mbFleetOwnerId', requestorId) <- getMbFleetOwnerAndRequestorIdMerchantBased apiTokenInfo mbFleetOwnerId
-  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetAddVehicle) phoneNo requestorId mbFleetOwnerId' mbMobileCountryCode mbRole (Just False) req -- apiTokenInfo may contain opertaor or fleet
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetAddVehicle) phoneNo requestorId mbFleetOwnerId' mbMobileCountryCode mbRole req -- apiTokenInfo may contain opertaor or fleet
 
 postDriverFleetAddRCWithoutDriver :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Maybe Text -> Registration.RegisterRCReq -> Flow APISuccess
 postDriverFleetAddRCWithoutDriver merchantShortId opCity apiTokenInfo mbFleetOwnerId req = do
