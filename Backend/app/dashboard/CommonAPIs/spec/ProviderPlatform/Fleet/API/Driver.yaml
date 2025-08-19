@@ -122,7 +122,6 @@ apis:
               - mobileCountryCode: Text
               - fleetOwnerId : Text
               - mbRole: Role
-              - bulkUpload: Bool
             request:
               type: AddVehicleReq
             response:
