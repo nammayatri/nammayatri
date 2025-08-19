@@ -14,7 +14,7 @@
 
 module Domain.Action.Internal.PickupInstructionHandler where
 
-import qualified AWS.S3 as S3
+import qualified AWS.S3.Flow as S3Flow
 import Data.Aeson (Result (Success), fromJSON)
 import qualified Data.Aeson as Aeson
 import qualified Data.Geohash as Geohash
@@ -59,22 +59,27 @@ handlePickupInstruction ride booking driverIdValue = do
     Just pickupInstruction -> do
       logInfo $ "PickupInstructionHandler: Pickup instruction found - id: " <> pickupInstruction.id.getId
 
-      -- Get audio base64 if mediaFileId exists
-      mbAudioBase64 <- case pickupInstruction.mediaFileId of
+      -- Generate signed URL for audio if mediaFileId exists
+      mbAudioUrl <- case pickupInstruction.mediaFileId of
         Just mediaFileId -> do
           logInfo $ "PickupInstructionHandler: Processing audio file - mediaFileId: " <> mediaFileId.getId
           mbMediaFile <- MFQuery.findById mediaFileId
           case mbMediaFile of
             Just mediaFile -> case mediaFile.s3FilePath of
               Just s3Path -> do
-                logInfo $ "PickupInstructionHandler: Fetching audio from S3: " <> s3Path
-                result <- try @_ @SomeException $ S3.get (T.unpack s3Path)
+                logInfo $ "PickupInstructionHandler: Generating signed URL for audio in S3: " <> s3Path
+                -- Extract bucket name and object path from s3FilePath (format: "bucket-name/object-path")
+                let (bucketName, objectPath) = case T.splitOn "/" s3Path of
+                      (bucket : rest) -> (bucket, T.intercalate "/" rest)
+                      _ -> ("", "")
+                -- Generate a signed URL with 1 hour expiration (3600 seconds)
+                result <- try @_ @SomeException $ S3Flow.generateDownloadUrl' bucketName (T.unpack objectPath) 3600
                 case result of
-                  Right audioContent -> do
-                    logInfo "PickupInstructionHandler: Successfully retrieved audio content from S3"
-                    return (Just audioContent)
+                  Right signedUrl -> do
+                    logInfo "PickupInstructionHandler: Successfully generated signed URL for audio"
+                    return (Just signedUrl)
                   Left err -> do
-                    logError $ "PickupInstructionHandler: Failed to retrieve audio from S3: " <> show err
+                    logError $ "PickupInstructionHandler: Failed to generate signed URL: " <> show err
                     return Nothing
               Nothing -> do
                 logInfo "PickupInstructionHandler: No S3 path found for media file"
@@ -97,7 +102,7 @@ handlePickupInstruction ride booking driverIdValue = do
             merchant.driverOfferBaseUrl
             driverId
             (Just pickupInstruction.instruction)
-            mbAudioBase64
+            mbAudioUrl
 
       case result of
         Right _ -> logInfo "PickupInstructionHandler: Successfully sent pickup instruction to driver app"
