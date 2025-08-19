@@ -48,13 +48,13 @@ import qualified SharedLogic.CreateFareForMultiModal as SMMFRFS
 import SharedLogic.FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
+import qualified Storage.CachedQueries.FRFSVehicleServiceTier as CQFRFSVehicleServiceTier
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as MultiModalBus
 import qualified Storage.CachedQueries.Merchant.MultiModalSuburban as MultiModalSuburban
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.RouteStopTimeTable as GRSM
 import Storage.GraphqlQueries.Client (mapToServiceTierType)
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
-import qualified Storage.Queries.FRFSVehicleServiceTier as QFRFSVehicleServiceTier
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RecentLocation as SQRL
@@ -248,7 +248,7 @@ fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid moci
           <$> mapM
             ( \serviceTierTypeString -> do
                 let serviceTierType = mapToServiceTierType serviceTierTypeString
-                frfsServiceTier <- QFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityId serviceTierType mocid
+                frfsServiceTier <- CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityId serviceTierType mocid
                 return (serviceTierTypeString, frfsServiceTier <&> (.shortName))
             )
             (map (\(_, mapping) -> mapping) validBuses)

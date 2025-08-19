@@ -27,11 +27,11 @@ import Lib.JourneyLeg.Common.FRFS (getNearbyBusesFRFS)
 import Lib.JourneyModule.Utils as JourneyUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.BecknConfig as CQBC
+import qualified Storage.CachedQueries.FRFSVehicleServiceTier as CQFRFSVehicleServiceTier
 import Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.RouteStopTimeTable as GRSM
-import qualified Storage.Queries.FRFSVehicleServiceTier as QFRFSVehicleServiceTier
 import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.MerchantOperatingCity as QMerchantOperatingCity
 import qualified Storage.Queries.Person as QP
@@ -104,7 +104,7 @@ getSimpleNearbyBuses merchantOperatingCityId riderConfig req = do
     HashMap.fromList
       <$> mapM
         ( \m -> do
-            frfsServiceTier <- QFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityId m.service_type riderConfig.merchantOperatingCityId
+            frfsServiceTier <- CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityId m.service_type riderConfig.merchantOperatingCityId
             return (m.vehicle_no, (m.service_type, frfsServiceTier <&> (.shortName)))
         )
         successfulMappings
