@@ -54,7 +54,7 @@ import Data.Aeson hiding (Success)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.List as DL
 import Data.Text as T hiding (elem, find, length, map, null, zip)
-import Data.Time (Day)
+import Data.Time (Day, utctDay)
 import Data.Time.Format
 import qualified Domain.Action.UI.DriverOnboarding.Image as Image
 import qualified Domain.Types.DocumentVerificationConfig as ODC
@@ -800,7 +800,9 @@ compareDateOfBirth :: Maybe UTCTime -> Maybe UTCTime -> Flow Bool
 compareDateOfBirth mbExtractedValue mbVerifiedValue = do
   case (mbExtractedValue, mbVerifiedValue) of
     (Just extractedValue, Just verifiedValue) -> do
-      unless (compare extractedValue verifiedValue == EQ) $ throwError (InvalidRequest $ "Date of birth mismatch: " <> show extractedValue <> " " <> show verifiedValue)
+      let extractedDay = utctDay extractedValue
+          verifiedDay = utctDay verifiedValue
+      unless (compare extractedDay verifiedDay == EQ) $ throwError (InvalidRequest $ "Date of birth mismatch: " <> show extractedDay <> " " <> show verifiedDay)
       return True
     _ -> do
       logInfo "Date of birth checks not executed."
