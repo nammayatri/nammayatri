@@ -18,6 +18,7 @@ import Data.Aeson
 import qualified Data.List.NonEmpty as NE
 import EulerHS.Prelude
 import Kernel.Prelude
+import Kernel.Types.Base64 (Base64)
 import qualified Kernel.Types.Beckn.Context as Beckn
 import Kernel.Types.Common
 import qualified Kernel.Types.Registry as Beckn
@@ -70,3 +71,32 @@ buildAddCityNyReq newCities uniqueKeyId subscriberId subscriberType domain = do
         registryUrl = url,
         ..
       }
+
+createNewSubscriberReq ::
+  Text ->
+  Text ->
+  BaseUrl ->
+  Beckn.SubscriberType ->
+  Beckn.Domain ->
+  Beckn.City ->
+  Beckn.Country ->
+  Base64 ->
+  UTCTime ->
+  NyT.Subscriber
+createNewSubscriberReq uniqueKeyId subscriberId subscriberUrl subscriberType domain newCities country signingPublicKey createdAt =
+  NyT.Subscriber
+    { unique_key_id = uniqueKeyId,
+      subscriber_id = subscriberId,
+      subscriber_url = subscriberUrl,
+      _type = subscriberType,
+      domain = domain,
+      city = [show newCities],
+      country = Just country,
+      signing_public_key = signingPublicKey,
+      encr_public_key = Nothing,
+      valid_from = Nothing,
+      valid_until = Nothing,
+      status = Nothing,
+      created = createdAt,
+      updated = createdAt
+    }

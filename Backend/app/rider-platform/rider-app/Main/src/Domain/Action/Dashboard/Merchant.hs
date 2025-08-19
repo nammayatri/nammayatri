@@ -41,6 +41,7 @@ import Data.Csv
 import qualified Data.List as DL
 import Data.List.Extra (notNull)
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
 import Data.Time hiding (getCurrentTime)
 import qualified Data.Vector as V
 import qualified Domain.Types
@@ -73,6 +74,7 @@ import Kernel.Storage.Esqueleto (runTransaction)
 import qualified Kernel.Storage.Esqueleto.Transactionable as Esq
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess (APISuccess (..))
+import Kernel.Types.Base64 (Base64 (..))
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Geofencing
 import Kernel.Types.Id
@@ -533,27 +535,49 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
       _ -> return Nothing
 
   -- beckn config
+  becknConfigList <- SQBC.findAllByMerchantOperatingCityId (Just baseOperatingCityId)
+  let becknConfigOld = listToMaybe becknConfigList
   mbBecknConfig <-
     SQBC.findAllByMerchantOperatingCityId (Just newMerchantOperatingCityId) >>= \case
       [] -> do
-        becknConfig <- SQBC.findAllByMerchantOperatingCityId (Just baseOperatingCityId)
-        newBecknConfig <- mapM (buildBecknConfig newMerchantId newMerchantOperatingCityId now) becknConfig
+        newBecknConfig <- mapM (buildBecknConfig newMerchantId newMerchantOperatingCityId now) becknConfigList
         return $ Just newBecknConfig
       _ -> return Nothing
 
-  nyRegistryUrl <- asks (.nyRegistryUrl)
+  nyRegistryBaseUrl <- asks (.nyRegistryUrl)
+  case becknConfigOld of
+    Just becknCfg -> do
+      whenJust mbNewMerchant $ \newMerchant -> do
+        let subscriberUrl_ = (showBaseUrl becknCfg.subscriberUrl)
+            newSubscriberUrlText = T.replace baseMerchant.id.getId newMerchant.id.getId subscriberUrl_
+            uniqueKeyId = newMerchant.bapUniqueKeyId
+            subscriberId = newMerchant.bapId
+            subscriberType = BecknSub.BAP
+            domain = Context.MOBILITY
+            newCities = req.city
+            country = req.country
+            -- TODO : check the correct usage --
+            signingPublicKey = Base64 (TE.encodeUtf8 newMerchant.bapUniqueKeyId)
+            createdAt = now
+        newSubscriberUrl <- parseBaseUrl newSubscriberUrlText
+        void $ RegistryIF.createSubscriber nyRegistryBaseUrl (RegistryT.createNewSubscriberReq uniqueKeyId subscriberId newSubscriberUrl subscriberType domain newCities country signingPublicKey createdAt)
+    Nothing ->
+      logInfo $ "Beckn Config not found for the base merchant, skipping subscriber creation"
   let uniqueKeyId = baseMerchant.bapUniqueKeyId
       subscriberId = baseMerchant.bapId
       subType = BecknSub.BAP
       domain = Context.MOBILITY
       lookupReq = SimpleLookupRequest {unique_key_id = uniqueKeyId, subscriber_id = subscriberId, merchant_id = baseMerchant.id.getId, subscriber_type = subType, ..}
   mbAddCityReq <-
-    Registry.registryLookup nyRegistryUrl lookupReq subscriberId >>= \case
+    case mbNewMerchant of
+      Just _ -> return Nothing
       Nothing -> do
-        logError $ "No entry found for subscriberId: " <> subscriberId <> ", uniqueKeyId: " <> uniqueKeyId <> " in NY registry"
-        return Nothing
-      Just sub | req.city `elem` sub.city -> return Nothing
-      Just _ -> Just <$> RegistryT.buildAddCityNyReq (req.city :| []) uniqueKeyId subscriberId subType domain
+        Registry.registryLookup nyRegistryBaseUrl lookupReq subscriberId >>= \case
+          Nothing -> do
+            logError $ "No entry found for subscriberId: " <> subscriberId <> ", uniqueKeyId: " <> uniqueKeyId <> " in NY registry"
+            return Nothing
+          Just sub | req.city `elem` sub.city -> return Nothing
+          Just _ -> Just <$> RegistryT.buildAddCityNyReq (req.city :| []) uniqueKeyId subscriberId subType domain
 
   finally
     ( do
