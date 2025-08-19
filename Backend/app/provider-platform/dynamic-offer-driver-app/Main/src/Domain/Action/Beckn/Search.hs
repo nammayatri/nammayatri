@@ -207,30 +207,29 @@ data NearestDriverInfo = NearestDriverInfo
   }
   deriving (Generic, Show)
 
-getRouteServiceability :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DistanceUnit -> LatLong -> LatLong -> Maybe [LatLong] -> Maybe Meters -> Maybe Seconds -> Maybe [Maps.RouteInfo] -> Flow RouteServiceability
-getRouteServiceability _ merchantOpCityId _ _ _ (Just routePoints) (Just distance) (Just duration) (Just multipleRoutes) = do
+getRouteServiceability :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DistanceUnit -> LatLong -> LatLong -> Maybe [LatLong] -> Maybe Meters -> Maybe Seconds -> Maybe [Maps.RouteInfo] -> Text -> Flow RouteServiceability
+getRouteServiceability _ merchantOpCityId _ _ _ (Just routePoints) (Just distance) (Just duration) (Just multipleRoutes) _ = do
   checkRouteServiceability merchantOpCityId (0, routePoints, distance, duration) multipleRoutes
-getRouteServiceability _ merchantOpCityId _ _ _ (Just routePoints) (Just distance) (Just duration) Nothing = do
+getRouteServiceability _ merchantOpCityId _ _ _ (Just routePoints) (Just distance) (Just duration) Nothing _ = do
   checkRouteServiceability merchantOpCityId (0, routePoints, distance, duration) []
-getRouteServiceability merchantId merchantOpCityId distanceUnit fromLocation toLocation _ _ _ _ = do
-  response <- ----------------Change the distance api call to directions and pass stops as waypoints ---------Already done by @khuzema in another PR.
-    Maps.getDistance merchantId merchantOpCityId Nothing $
-      Maps.GetDistanceReq
-        { origin = fromLocation,
-          destination = toLocation,
-          travelMode = Just Maps.CAR,
-          sourceDestinationMapping = Nothing,
-          distanceUnit
-        }
-  return $
-    RouteServiceability
-      { routePoints = [],
-        routeDistance = response.distance,
-        routeDuration = response.duration,
-        multipleRoutes = [],
-        isCustomerPrefferedSearchRoute = True,
-        isBlockedRoute = False
-      }
+getRouteServiceability merchantId merchantOpCityId _distanceUnit fromLocation toLocation _ _ _ _ transactionId = do
+  -- as of now this case only happens for off-us BAPs
+  responses <- Maps.getRoutes merchantId merchantOpCityId (Just transactionId) Maps.GetRoutesReq {waypoints = NE.fromList [fromLocation, toLocation], mode = Just Maps.CAR, calcPoints = True}
+  if null responses
+    then do
+      logWarning $ "No route found for transactionId: " <> transactionId
+      checkRouteServiceability merchantOpCityId (0, [], 0, 0) []
+    else do
+      let distanceWeightage = 20 -- this value is present in riderConfig.distanceWeightage, maybe we should use that?
+          durationWeightage = 100 - distanceWeightage
+          (mbShortestRoute, index) = Maps.getEfficientRouteInfo responses distanceWeightage durationWeightage
+          routeDistance = fromMaybe 0 (mbShortestRoute >>= (.distance))
+          routeDuration = fromMaybe 0 (mbShortestRoute >>= (.duration))
+          routePoints = maybe [] (.points) mbShortestRoute
+      when (isNothing mbShortestRoute) $ do
+        -- this case should never happen as we filter out null responses
+        logWarning $ "Efficient route selection returned Nothing for transactionId: " <> transactionId
+      checkRouteServiceability merchantOpCityId (index, routePoints, routeDistance, routeDuration) responses
 
 handler :: ValidatedDSearchReq -> DSearchReq -> Flow DSearchRes
 handler ValidatedDSearchReq {..} sReq = do
@@ -246,7 +245,7 @@ handler ValidatedDSearchReq {..} sReq = do
   (mbSetRouteInfo, mbToLocation, mbDistance, mbDuration, mbIsCustomerPrefferedSearchRoute, mbIsBlockedRoute, mbTollCharges, mbTollNames, mbIsAutoRickshawAllowed, mbIsTwoWheelerAllowed) <-
     case sReq.dropLocation of
       Just dropLoc -> do
-        serviceableRoute <- getRouteServiceability merchant.id merchantOpCityId cityDistanceUnit sReq.pickupLocation dropLoc sReq.routePoints sReq.routeDistance sReq.routeDuration sReq.multipleRoutes
+        serviceableRoute <- getRouteServiceability merchant.id merchantOpCityId cityDistanceUnit sReq.pickupLocation dropLoc sReq.routePoints sReq.routeDistance sReq.routeDuration sReq.multipleRoutes sReq.transactionId
         let estimatedDistance = serviceableRoute.routeDistance
             estimatedDuration = serviceableRoute.routeDuration
         logDebug $ "distance: " <> show estimatedDistance
