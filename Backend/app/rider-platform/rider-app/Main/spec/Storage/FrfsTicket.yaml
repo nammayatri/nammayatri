@@ -939,6 +939,16 @@ FRFSVehicleServiceTier:
     merchantOperatingCityId: Id MerchantOperatingCity
   constraints:
     id: PrimaryKey
+  cachedQueries:
+    findByServiceTierAndMerchantOperatingCityId:
+      keyParams:
+        - _type
+        - merchantOperatingCityId
+      returnType: One
+      dbQuery: findByServiceTierAndMerchantOperatingCityId
+      dbQueryParams:
+        - _type
+        - merchantOperatingCityId
   queries:
     findById:
       kvFunction: findOneWithKV

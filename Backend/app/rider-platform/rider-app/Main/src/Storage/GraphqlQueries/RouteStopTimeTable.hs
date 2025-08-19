@@ -28,6 +28,7 @@ import EulerHS.Prelude (concatMapM)
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Storage.CachedQueries.FRFSVehicleServiceTier as CQFRFSVehicleServiceTier
 import qualified Storage.GraphqlQueries.Client as Client
 
 findByRouteCodeAndStopCode ::
@@ -60,81 +61,90 @@ findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCode
             logError $ "GraphQL query failed: " <> show err
             pure []
           Right response -> do
-            pure $ concatMap (parseToRouteStopTimeTable integratedBPPConfig.id merchantId merchantOpId vehicleCategory) response.routeStopTimeTables
+            concatMapM (parseToRouteStopTimeTable integratedBPPConfig.id merchantId merchantOpId vehicleCategory) response.routeStopTimeTables
     )
     stopCodes
 
 -- Helper function to convert GraphQL response to domain type
 parseToRouteStopTimeTable ::
+  ( MonadFlow m,
+    CacheFlow m r,
+    EncFlow m r,
+    EsqDBFlow m r,
+    HasShortDurationRetryCfg r c
+  ) =>
   Id IntegratedBPPConfig ->
   Id Merchant ->
   Id MerchantOperatingCity ->
   VehicleCategory ->
   Client.TimetableEntry ->
-  [RouteStopTimeTable]
+  m [RouteStopTimeTable]
 parseToRouteStopTimeTable integratedBPPConfigId mid mocid vehicleCategory entry =
   case vehicleCategory of
     SUBWAY ->
-      [ RouteStopTimeTable
-          { integratedBppConfigId = integratedBPPConfigId,
-            routeCode = entry.routeCode,
-            serviceTierType = SECOND_CLASS,
-            serviceTierName = Just "SECOND_CLASS",
-            stopCode = entry.stopCode,
-            timeOfArrival = entry.timeOfArrival,
-            timeOfDeparture = entry.timeOfDeparture,
-            tripId = Id entry.tripId,
-            merchantId = Just mid,
-            merchantOperatingCityId = Just mocid,
-            createdAt = entry.createdAt,
-            updatedAt = entry.updatedAt,
-            delay = Nothing,
-            source = GTFS,
-            stage = entry.stage,
-            providerStopCode = entry.providerStopCode,
-            platformCode = entry.platformCode,
-            isStageStop = entry.isStageStop
-          },
-        RouteStopTimeTable
-          { integratedBppConfigId = integratedBPPConfigId,
-            routeCode = entry.routeCode,
-            serviceTierType = FIRST_CLASS,
-            serviceTierName = Just "FIRST_CLASS",
-            stopCode = entry.stopCode,
-            timeOfArrival = entry.timeOfArrival,
-            timeOfDeparture = entry.timeOfDeparture,
-            tripId = Id entry.tripId,
-            merchantId = Just mid,
-            merchantOperatingCityId = Just mocid,
-            createdAt = entry.createdAt,
-            updatedAt = entry.updatedAt,
-            delay = Nothing,
-            source = GTFS,
-            stage = entry.stage,
-            providerStopCode = entry.providerStopCode,
-            platformCode = entry.platformCode,
-            isStageStop = entry.isStageStop
-          }
-      ]
-    _ ->
-      [ RouteStopTimeTable
-          { integratedBppConfigId = integratedBPPConfigId,
-            routeCode = entry.routeCode,
-            serviceTierType = entry.serviceTierType,
-            serviceTierName = Nothing,
-            stopCode = entry.stopCode,
-            timeOfArrival = entry.timeOfArrival,
-            timeOfDeparture = entry.timeOfDeparture,
-            tripId = Id entry.tripId,
-            merchantId = Just mid,
-            merchantOperatingCityId = Just mocid,
-            createdAt = entry.createdAt,
-            updatedAt = entry.updatedAt,
-            delay = Nothing,
-            source = GTFS,
-            stage = entry.stage,
-            providerStopCode = entry.providerStopCode,
-            platformCode = entry.platformCode,
-            isStageStop = entry.isStageStop
-          }
-      ]
+      pure $
+        [ RouteStopTimeTable
+            { integratedBppConfigId = integratedBPPConfigId,
+              routeCode = entry.routeCode,
+              serviceTierType = SECOND_CLASS,
+              serviceTierName = Just "SECOND_CLASS",
+              stopCode = entry.stopCode,
+              timeOfArrival = entry.timeOfArrival,
+              timeOfDeparture = entry.timeOfDeparture,
+              tripId = Id entry.tripId,
+              merchantId = Just mid,
+              merchantOperatingCityId = Just mocid,
+              createdAt = entry.createdAt,
+              updatedAt = entry.updatedAt,
+              delay = Nothing,
+              source = GTFS,
+              stage = entry.stage,
+              providerStopCode = entry.providerStopCode,
+              platformCode = entry.platformCode,
+              isStageStop = entry.isStageStop
+            },
+          RouteStopTimeTable
+            { integratedBppConfigId = integratedBPPConfigId,
+              routeCode = entry.routeCode,
+              serviceTierType = FIRST_CLASS,
+              serviceTierName = Just "FIRST_CLASS",
+              stopCode = entry.stopCode,
+              timeOfArrival = entry.timeOfArrival,
+              timeOfDeparture = entry.timeOfDeparture,
+              tripId = Id entry.tripId,
+              merchantId = Just mid,
+              merchantOperatingCityId = Just mocid,
+              createdAt = entry.createdAt,
+              updatedAt = entry.updatedAt,
+              delay = Nothing,
+              source = GTFS,
+              stage = entry.stage,
+              providerStopCode = entry.providerStopCode,
+              platformCode = entry.platformCode,
+              isStageStop = entry.isStageStop
+            }
+        ]
+    _ -> do
+      frfsServiceTier <- CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityId entry.serviceTierType mocid
+      pure $
+        [ RouteStopTimeTable
+            { integratedBppConfigId = integratedBPPConfigId,
+              routeCode = entry.routeCode,
+              serviceTierType = entry.serviceTierType,
+              serviceTierName = frfsServiceTier <&> (.shortName),
+              stopCode = entry.stopCode,
+              timeOfArrival = entry.timeOfArrival,
+              timeOfDeparture = entry.timeOfDeparture,
+              tripId = Id entry.tripId,
+              merchantId = Just mid,
+              merchantOperatingCityId = Just mocid,
+              createdAt = entry.createdAt,
+              updatedAt = entry.updatedAt,
+              delay = Nothing,
+              source = GTFS,
+              stage = entry.stage,
+              providerStopCode = entry.providerStopCode,
+              platformCode = entry.platformCode,
+              isStageStop = entry.isStageStop
+            }
+        ]

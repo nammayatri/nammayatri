@@ -983,6 +983,7 @@ library
       Storage.Beam.WalkLegMultimodal
       Storage.Beam.WhiteListOrg
       Storage.CachedQueries.FeedbackForm
+      Storage.CachedQueries.FRFSVehicleServiceTier
       Storage.CachedQueries.InsuranceConfig
       Storage.CachedQueries.SavedReqLocation
       Storage.Queries.AadhaarOtpReq

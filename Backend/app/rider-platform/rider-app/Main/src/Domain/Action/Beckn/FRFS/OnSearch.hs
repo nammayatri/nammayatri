@@ -46,6 +46,7 @@ import qualified SharedLogic.CreateFareForMultiModal as SLCF
 import qualified SharedLogic.FRFSUtils as SFU
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
+import qualified Storage.CachedQueries.FRFSVehicleServiceTier as CQVSR
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.FRFSFarePolicy as QFFP
@@ -497,7 +498,7 @@ createEntriesInFareTables merchantId merchantOperatingCityId quote integratedBpp
             updatedAt = now
           }
   (vehicleServiceTierId, vehicleServiceTier) <- do
-    QVSR.findByServiceTierAndMerchantOperatingCityId Spec.ORDINARY merchantOperatingCityId >>= \case
+    CQVSR.findByServiceTierAndMerchantOperatingCityId Spec.ORDINARY merchantOperatingCityId >>= \case
       Just vsc -> return (vsc.id, Nothing)
       Nothing -> do
         id <- generateGUID

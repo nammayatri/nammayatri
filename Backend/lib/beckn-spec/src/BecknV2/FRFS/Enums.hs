@@ -81,7 +81,7 @@ instance FromJSON ServiceTierType where
   parseJSON r = case r of
     (String "Deluxe EV") -> pure EXECUTIVE
     (String "Small Bus Express") -> pure EXPRESS
-    (String "Small Bus Ordinary") -> pure THIRD_CLASS
+    (String "Small Bus Ordinary") -> pure NON_AC
     (String "A/C") -> pure AC
     (String "Ordinary") -> pure ORDINARY
     (String "A/C EV") -> pure AC
