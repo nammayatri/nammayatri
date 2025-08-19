@@ -180,3 +180,10 @@ findByDriverIdAndOperatorId driverId operatorId isActive = do
       (Se.Desc BeamDOA.createdAt)
       (Just 1)
       Nothing
+
+deleteByDriverId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id DP.Person ->
+  m ()
+deleteByDriverId driverId = do
+  deleteWithKV [Se.And [Se.Is BeamDOA.driverId $ Se.Eq (driverId.getId)]]

@@ -27,15 +27,20 @@ import Storage.Beam.IssueManagement ()
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.AadhaarOtpReq as AadhaarReq
 import qualified Storage.Queries.AadhaarOtpVerify as AadhaarOtp
+import qualified Storage.Queries.DailyStats as QDailyStats
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverLicense as QDriverLicense
+import qualified Storage.Queries.DriverOperatorAssociation as QDriverOperatorAssociation
+import qualified Storage.Queries.DriverPanCard as QPanCard
 import qualified Storage.Queries.DriverQuote as QDriverQuote
 import qualified Storage.Queries.DriverRCAssociation as QRCAssociation
+import qualified Storage.Queries.DriverReferral as QDriverReferral
 import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.FleetDriverAssociation as QFleetDriverAssociation
 import qualified Storage.Queries.IdfyVerification as QIV
 import qualified Storage.Queries.Image as QImage
 import qualified Storage.Queries.MessageReport as QMessage
+import qualified Storage.Queries.OperationHubRequests as QOperationHubRequests
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RegistrationToken as QR
 import qualified Storage.Queries.Ride as QRide
@@ -64,7 +69,11 @@ deleteDriver merchantShortId reqDriverId = do
   QDriverQuote.deleteByDriverId reqDriverId
   QSearchReqForDriver.deleteByDriverId reqDriverId
   QFleetDriverAssociation.deleteByDriverId reqDriverId
+  QDriverOperatorAssociation.deleteByDriverId reqDriverId
+  QDriverReferral.deleteByDriverId reqDriverId
+  QOperationHubRequests.deleteByDriverId reqDriverId
   QDriverStats.deleteById (cast reqDriverId)
+  QDailyStats.deleteAllByDriverId reqDriverId
   QR.deleteByPersonId reqDriverId.getId
   QVehicle.deleteById reqDriverId
   QDriverInfo.deleteById (cast reqDriverId)
@@ -73,6 +82,7 @@ deleteDriver merchantShortId reqDriverId = do
   AadhaarReq.deleteByPersonId reqDriverId
   AadhaarOtp.deleteByPersonId reqDriverId
   QAadhaarCard.deleteByPersonId reqDriverId
+  QPanCard.deleteByDriverId reqDriverId
   QPerson.deleteById reqDriverId
   logTagInfo "deleteDriver : " (show reqDriverId)
   return Success
