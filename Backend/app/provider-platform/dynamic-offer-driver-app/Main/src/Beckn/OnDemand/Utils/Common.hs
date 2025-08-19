@@ -547,7 +547,8 @@ mkFulfillmentV2 mbDriver mbDriverStats ride booking mbVehicle mbImage mbTags mbP
                                 imageWidth = Nothing
                               },
                         personName = mbDInfo >>= Just . (.name),
-                        personTags = mbDInfo >>= (.tags) & (mbPersonTags <>)
+                        personTags = mbDInfo >>= (.tags) & (mbPersonTags <>),
+                        personLanguages = Nothing
                       }
               },
         fulfillmentVehicle =
@@ -608,7 +609,8 @@ tfCustomer riderPhone riderName =
               { personId = Nothing,
                 personImage = Nothing,
                 personName = riderName,
-                personTags = Nothing
+                personTags = Nothing,
+                personLanguages = Nothing
               }
       }
 
@@ -1291,7 +1293,8 @@ tfItems booking shortId estimatedDistance mbFarePolicy mbPaymentId =
           itemLocationIds = Nothing,
           itemPaymentIds = tfPaymentId mbPaymentId,
           itemPrice = tfItemPrice $ booking.estimatedFare,
-          itemTags = mkRateCardTag estimatedDistance Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp mbFarePolicy Nothing Nothing
+          itemTags = mkRateCardTag estimatedDistance Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp mbFarePolicy Nothing Nothing,
+          itemCategoryIds = Nothing -- FIXME send in on_init
         }
     ]
 
@@ -1306,7 +1309,8 @@ tfItemsSoftUpdate booking shortId estimatedDistance mbFarePolicy mbPaymentId upd
           itemLocationIds = Nothing,
           itemPaymentIds = tfPaymentId mbPaymentId,
           itemPrice = tfItemPrice updatedBooking.estimatedFare,
-          itemTags = mkRateCardTag estimatedDistance' Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp mbFarePolicy Nothing Nothing
+          itemTags = mkRateCardTag estimatedDistance' Nothing booking.estimatedFare booking.fareParams.congestionChargeViaDp mbFarePolicy Nothing Nothing,
+          itemCategoryIds = Nothing
         }
     ]
 
@@ -1420,6 +1424,7 @@ mkGeneralInfoTagGroup transporterConfig pricing isValueAddNP =
             <> tollNamesSingleton pricing.tollNames
             <> tipOptionSingleton pricing.tipOptions
             <> durationToNearestDriverTagSingleton
+            <> etaToNearestDriverTagSingleton
             <> smartTipSuggestionTagSingleton
             <> smartTipReasonTagSingleton
       }
@@ -1559,7 +1564,14 @@ mkGeneralInfoTagGroup transporterConfig pricing isValueAddNP =
                     },
               tagValue = show <$> tipOptions
             }
-    durationToNearestDriverTagSingleton
+
+    -- for backward compatibility
+    durationToNearestDriverTagSingleton = mkDurationToNearestDriverTagSingleton Tags.DURATION_TO_NEAREST_DRIVER_MINUTES
+
+    -- ONDC compliant
+    etaToNearestDriverTagSingleton = mkDurationToNearestDriverTagSingleton Tags.ETA_TO_NEAREST_DRIVER_MIN
+
+    mkDurationToNearestDriverTagSingleton tagName
       | isNothing pricing.distanceToNearestDriver || not isValueAddNP = Nothing
       | otherwise =
         Just . List.singleton $
@@ -1568,7 +1580,7 @@ mkGeneralInfoTagGroup transporterConfig pricing isValueAddNP =
               tagDescriptor =
                 Just
                   Spec.Descriptor
-                    { descriptorCode = Just $ show Tags.DURATION_TO_NEAREST_DRIVER_MINUTES,
+                    { descriptorCode = Just $ show tagName,
                       descriptorName = Just $ show pricing.vehicleVariant,
                       descriptorShortDesc = Nothing
                     },
@@ -1608,7 +1620,6 @@ mkGeneralInfoTagGroup transporterConfig pricing isValueAddNP =
                 Variant.BUS_AC -> avgSpeed.busAc.getKilometers
                 Variant.BOAT -> avgSpeed.boat.getKilometers
                 Variant.AUTO_PLUS -> avgSpeed.autorickshaw.getKilometers
-
           getDuration pricing.distanceToNearestDriver variantSpeed
 
         getDuration :: Maybe Meters -> Int -> Maybe Text
@@ -1728,7 +1739,8 @@ tfProvider becknConfig =
         providerId = Just $ becknConfig.subscriberId,
         providerItems = Nothing,
         providerLocations = Nothing,
-        providerPayments = Nothing
+        providerPayments = Nothing,
+        providerCategories = Nothing
       }
 
 mkFulfillmentV2SoftUpdate ::
@@ -1780,7 +1792,8 @@ mkFulfillmentV2SoftUpdate mbDriver mbDriverStats ride booking mbVehicle mbImage 
                                 imageWidth = Nothing
                               },
                         personName = mbDInfo >>= Just . (.name),
-                        personTags = mbDInfo >>= (.tags) & (mbPersonTags <>)
+                        personTags = mbDInfo >>= (.tags) & (mbPersonTags <>),
+                        personLanguages = Nothing
                       }
               },
         fulfillmentVehicle =
