@@ -29,7 +29,6 @@ module Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
     LinkedRC (..),
     DeleteRCReq (..),
     convertTextToUTC,
-    makeFleetOwnerKey,
     mkIdfyVerificationEntity,
     mkHyperVergeVerificationEntity,
     validateRCResponse,
@@ -210,8 +209,9 @@ verifyRC ::
   (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   DriverRCReq ->
   Bool ->
+  Maybe (Id Person.Person) ->
   Flow DriverRCRes
-verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req bulkUpload = do
+verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req bulkUpload mbFleetOwnerId = do
   externalServiceRateLimitOptions <- asks (.externalServiceRateLimitOptions)
   checkSlidingWindowLimitWithOptions (makeVerifyRCHitsCountKey req.vehicleRegistrationCertNumber) externalServiceRateLimitOptions
 
@@ -248,7 +248,8 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req bulkUpload =
           unless (extractRCNumber == rcNumber) $
             throwImageError req.imageId $ ImageDocumentNumberMismatch (maybe "null" maskText extractRCNumber) (maybe "null" maskText rcNumber)
         Nothing -> throwImageError req.imageId ImageExtractionFailed
-
+  whenJust mbFleetOwnerId $ \fleetOwnerId -> do
+    Redis.set (makeFleetOwnerKey req.vehicleRegistrationCertNumber) fleetOwnerId.getId
   mVehicleRC <- RCQuery.findLastVehicleRCWrapper req.vehicleRegistrationCertNumber
   encryptedRC <- encrypt req.vehicleRegistrationCertNumber
   let imageExtractionValidation = bool Domain.Skipped Domain.Success (isNothing req.dateOfRegistration && documentVerificationConfig.checkExtraction)
@@ -771,7 +772,7 @@ rcVerificationLockKey :: Text -> Text
 rcVerificationLockKey rcNumber = "VehicleRC::RCNumber-" <> rcNumber
 
 makeFleetOwnerKey :: Text -> Text
-makeFleetOwnerKey vehicleNo = "FleetOwnerId:PersonId-" <> vehicleNo
+makeFleetOwnerKey vehicleNo = "FleetOwnerId:PersonId-" <> removeSpaceAndDash vehicleNo
 
 parseDateTime :: Text -> Maybe UTCTime
 parseDateTime = parseTimeM True defaultTimeLocale "%Y-%m-%d" . unpack

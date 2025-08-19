@@ -229,14 +229,13 @@ postDriverFleetAddVehicleHelper isBulkUpload merchantShortId opCity reqDriverPho
     (DP.DRIVER, Nothing) -> do
       -- DCO case
       void $ checkRCAssociationForDriver getEntityData.id rc True
-      void $ DCommon.runVerifyRCFlow getEntityData.id merchant merchantOpCityId opCity req True isBulkUpload -- Pass fleet.id if addvehicle under fleet or pass driver.id if addvehcile under driver
+      void $ DCommon.runVerifyRCFlow getEntityData.id merchant merchantOpCityId opCity req True isBulkUpload Nothing -- Pass fleet.id if addvehicle under fleet or pass driver.id if addvehcile under driver
       logTagInfo "dashboard -> addVehicleUnderDCO : " (show getEntityData.id)
       pure Success
     (_, Just fleetOwnerId) -> do
       -- fleet and fleetDriver case
       whenJust rc $ \rcert -> checkRCAssociationForFleet fleetOwnerId rcert
-      Redis.set (DomainRC.makeFleetOwnerKey req.registrationNo) fleetOwnerId -- setting this value here , so while creation of creation of vehicle we can add fleet owner id
-      void $ DCommon.runVerifyRCFlow getEntityData.id merchant merchantOpCityId opCity req True isBulkUpload -- Pass fleet.id if addvehicle under fleet or pass driver.id if addvehcile under driver
+      void $ DCommon.runVerifyRCFlow getEntityData.id merchant merchantOpCityId opCity req True isBulkUpload (Just $ Id @DP.Person fleetOwnerId) -- Pass fleet.id if addvehicle under fleet or pass driver.id if addvehcile under driver
       let logTag = case getEntityData.role of
             DP.FLEET_OWNER -> "dashboard -> addVehicleUnderFleet"
             DP.DRIVER -> "dashboard -> addVehicleUnderFleetDriver"
@@ -447,7 +446,6 @@ postDriverFleetAddRCWithoutDriver merchantShortId opCity fleetOwnerId req = do
   unless (merchant.id == merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist driver.id.getId)
   rc <- RCQuery.findLastVehicleRCWrapper req.vehicleRegistrationCertNumber
   whenJust rc $ \rcert -> checkRCAssociationForFleet fleetOwnerId rcert
-  Redis.set (DomainRC.makeFleetOwnerKey req.vehicleRegistrationCertNumber) fleetOwnerId
   let rcReq =
         DomainRC.DriverRCReq
           { vehicleRegistrationCertNumber = req.vehicleRegistrationCertNumber,
@@ -461,7 +459,7 @@ postDriverFleetAddRCWithoutDriver merchantShortId opCity fleetOwnerId req = do
             vehicleCategory = req.vehicleCategory,
             vehicleDetails = Nothing
           }
-  void $ DomainRC.verifyRC False (Just merchant) (personId, merchant.id, merchantOpCityId) rcReq False
+  void $ DomainRC.verifyRC False (Just merchant) (personId, merchant.id, merchantOpCityId) rcReq False (Just personId)
   logTagInfo "dashboard -> Register RC For Fleet : " (show driver.id)
   pure Success
 
@@ -1433,7 +1431,6 @@ postDriverFleetVehicleDriverRcStatus merchantShortId opCity reqDriverId requesto
     DP.FLEET_OWNER -> do
       DCommon.checkFleetOwnerVerification entityId merchant.fleetOwnerEnabledCheck
       validateFleetOwnerWithDriverAndVehicle personId entityId merchant.id merchantOpCityId req.rcNo
-      Redis.set (DomainRC.makeFleetOwnerKey req.rcNo) entityId
     DP.OPERATOR -> validateOperatorWithDriver personId entityId
     _ -> throwError (InvalidRequest "Invalid Data")
   _ <- DomainRC.linkRCStatus (personId, merchant.id, merchantOpCityId) (DomainRC.RCStatusReq {isActivate = req.isActivate, rcNo = req.rcNo})
