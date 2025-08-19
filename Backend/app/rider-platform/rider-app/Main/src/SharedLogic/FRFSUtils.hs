@@ -24,6 +24,7 @@ import qualified Data.Text as T
 import qualified Data.Time as Time
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Domain.Types.AadhaarVerification as DAadhaarVerification
+import Domain.Types.BecknConfig
 import qualified Domain.Types.FRFSConfig as Config
 import qualified Domain.Types.FRFSFarePolicy as DFRFSFarePolicy
 import qualified Domain.Types.FRFSQuote as Quote
@@ -48,6 +49,7 @@ import qualified Domain.Types.Route as Route
 import qualified Domain.Types.RouteStopMapping as RouteStopMapping
 import qualified Domain.Types.RouteTripMapping as DRTM
 import qualified Domain.Types.Station as Station
+import Environment
 import EulerHS.Prelude (comparing, concatMapM, (+||), (||+))
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (decrypt)
@@ -88,6 +90,7 @@ import qualified Storage.CachedQueries.PartnerOrgStation as CQPOS
 import Storage.CachedQueries.RouteStopTimeTable as QRouteStopTimeTable
 import Storage.Queries.AadhaarVerification as QAV
 import Storage.Queries.FRFSFarePolicy as QFRFSFarePolicy
+import qualified Storage.Queries.FRFSRecon as QFRFSRecon
 import Storage.Queries.FRFSRouteFareProduct as QFRFSRouteFareProduct
 import Storage.Queries.FRFSRouteStopStageFare as QFRFSRouteStopStageFare
 import Storage.Queries.FRFSStageFare as QFRFSStageFare
@@ -912,3 +915,24 @@ createPaymentOrder bookings merchantOperatingCityId merchantId amount person pay
                 paymentOrderId = orderId
               }
       return ticketBookingPayment
+
+makecancelledTtlKey :: Id DFRFSTicketBooking.FRFSTicketBooking -> Text
+makecancelledTtlKey bookingId = "FRFS:OnConfirm:CancelledTTL:bookingId-" <> bookingId.getId
+
+totalOrderValue :: DTBP.FRFSTicketBookingPaymentStatus -> DFRFSTicketBooking.FRFSTicketBooking -> Flow Price
+totalOrderValue paymentBookingStatus booking =
+  if paymentBookingStatus == DTBP.REFUND_PENDING || paymentBookingStatus == DTBP.REFUNDED
+    then booking.price `addPrice` refundAmountToPrice -- Here the `refundAmountToPrice` value is in Negative
+    else pure $ booking.price
+  where
+    refundAmountToPrice = mkPrice (Just INR) (fromMaybe (HighPrecMoney $ toRational (0 :: Int)) booking.refundAmount)
+
+updateTotalOrderValueAndSettlementAmount :: DFRFSTicketBooking.FRFSTicketBooking -> BecknConfig -> Flow ()
+updateTotalOrderValueAndSettlementAmount booking bapConfig = do
+  paymentBooking <- runInReplica $ QFRFSTicketBookingPayment.findNewTBPByBookingId booking.id >>= fromMaybeM (InvalidRequest "Payment booking not found for approved TicketBookingId")
+  let finderFee :: Price = mkPrice Nothing $ fromMaybe 0 $ (readMaybe . T.unpack) =<< bapConfig.buyerFinderFee
+      finderFeeForEachTicket = modifyPrice finderFee $ \p -> HighPrecMoney $ (p.getHighPrecMoney) / (toRational booking.quantity)
+  tOrderPrice <- totalOrderValue paymentBooking.status booking
+  let tOrderValue = modifyPrice tOrderPrice $ \p -> HighPrecMoney $ (p.getHighPrecMoney) / (toRational booking.quantity)
+  settlementAmount <- tOrderValue `subtractPrice` finderFeeForEachTicket
+  void $ QFRFSRecon.updateTOrderValueAndSettlementAmountById settlementAmount tOrderValue booking.id

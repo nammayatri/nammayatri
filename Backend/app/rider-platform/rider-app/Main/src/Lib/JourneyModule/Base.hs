@@ -846,7 +846,7 @@ cancelLeg ::
   Bool ->
   Maybe (Id DEstimate.Estimate) ->
   m ()
-cancelLeg journeyId journeyLeg cancellationReasonCode isSkipped skippedDuringConfirmation shouldUpdateJourneyStatus cancelEstimateId = do
+cancelLeg journeyId journeyLeg cancellationReasonCode shouldDeleteLeg skippedDuringConfirmation shouldUpdateJourneyStatus cancelEstimateId = do
   unless skippedDuringConfirmation $ do
     isCancellable <- checkIfCancellable journeyLeg
     unless isCancellable $
@@ -863,7 +863,7 @@ cancelLeg journeyId journeyLeg cancellationReasonCode isSkipped skippedDuringCon
               blockOnCancellationRate = Nothing,
               cancellationSource = SBCR.ByUser,
               cancelEstimateId,
-              isSkipped,
+              shouldDeleteLeg,
               journeyLegId = journeyLeg.journeyLegId
             }
     DTrip.Walk ->
@@ -878,7 +878,7 @@ cancelLeg journeyId journeyLeg cancellationReasonCode isSkipped skippedDuringCon
           MetroLegRequestCancelData
             { searchId = Id journeyLeg.searchId,
               cancellationType = Spec.CONFIRM_CANCEL,
-              isSkipped,
+              shouldDeleteLeg,
               journeyLegId = journeyLeg.journeyLegId
             }
     DTrip.Subway ->
@@ -887,7 +887,7 @@ cancelLeg journeyId journeyLeg cancellationReasonCode isSkipped skippedDuringCon
           SubwayLegRequestCancelData
             { searchId = Id journeyLeg.searchId,
               cancellationType = Spec.CONFIRM_CANCEL,
-              isSkipped,
+              shouldDeleteLeg,
               journeyLegId = journeyLeg.journeyLegId
             }
     DTrip.Bus ->
@@ -896,7 +896,7 @@ cancelLeg journeyId journeyLeg cancellationReasonCode isSkipped skippedDuringCon
           BusLegRequestCancelData
             { searchId = Id journeyLeg.searchId,
               cancellationType = Spec.CONFIRM_CANCEL,
-              isSkipped,
+              shouldDeleteLeg,
               journeyLegId = journeyLeg.journeyLegId
             }
   when shouldUpdateJourneyStatus $ do
@@ -904,7 +904,7 @@ cancelLeg journeyId journeyLeg cancellationReasonCode isSkipped skippedDuringCon
     updatedLegStatus <- getAllLegsStatus journey
     logError $ "Checking and marking terminal journey status for journey: " <> show journey.id.getId <> " with updatedLegStatus: " <> show (length updatedLegStatus)
     when (length updatedLegStatus == 1) $ do
-      checkAndMarkTerminalJourneyStatus journey (not isSkipped) (isJust cancelEstimateId) updatedLegStatus
+      checkAndMarkTerminalJourneyStatus journey (not shouldDeleteLeg) (isJust cancelEstimateId) updatedLegStatus
   -- whenJust journeyLeg.journeyLegId $ \journeyLegId -> do
   --   when isSkipped $ do
   --     JMStateUtils.setJourneyLegTrackingStatus journeyLegId Nothing JMState.Finished
@@ -929,9 +929,7 @@ cancelRemainingLegs journeyId isExtend riderId = do
           then return ()
           else do
             isCancellable <- checkIfCancellable leg
-            if isCancellable
-              then cancelLeg journeyId leg (SCR.CancellationReasonCode "") False False False Nothing
-              else QJourneyLegMapping.updateIsDeleted True leg.journeyLegId
+            when isCancellable $ cancelLeg journeyId leg (SCR.CancellationReasonCode "") True False False Nothing
   let failures = [e | Left e <- results]
   unless (null failures) $
     throwError $ InvalidRequest $ "Failed to cancel some legs: " <> show failures
@@ -956,7 +954,7 @@ skipLeg journeyId legOrder skippedDuringConfirmation personId = do
         throwError $ JourneyLegCannotBeSkippedForMode (show skippingLeg.travelMode)
       unless (cancellableStatus skippingLeg) $
         throwError $ JourneyLegCannotBeSkippedForStatus (show skippingLeg.status)
-      cancelLeg journeyId skippingLeg (SCR.CancellationReasonCode "") True skippedDuringConfirmation True Nothing
+      cancelLeg journeyId skippingLeg (SCR.CancellationReasonCode "") False skippedDuringConfirmation True Nothing
   journey <- getJourney journeyId
   updatedLegStatus <- getAllLegsStatus journey
   if legOrder == length updatedLegStatus - 1
@@ -1183,9 +1181,7 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
       withJourneyUpdateInProgress journeyId $ do
         forM_ legsToCancel $ \currLeg -> do
           isCancellable <- checkIfCancellable currLeg
-          if isCancellable
-            then cancelLeg journeyId currLeg (SCR.CancellationReasonCode "") False False False Nothing
-            else QJourneyLegMapping.updateIsDeleted True currLeg.journeyLegId
+          when isCancellable $ cancelLeg journeyId currLeg (SCR.CancellationReasonCode "") True False False Nothing
         QJourneyLeg.create journeyLeg
         updateJourneyChangeLogCounter journeyId
         searchResp <- addTaxiLeg journey journeyLeg startLocationAddress (mkLocationAddress endLocation)
@@ -1227,9 +1223,7 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
           mapM_
             ( \leg -> do
                 isCancellable <- checkIfCancellable leg
-                if isCancellable
-                  then cancelLeg journeyId leg (SCR.CancellationReasonCode "") False False False Nothing
-                  else QJourneyLegMapping.updateIsDeleted True leg.journeyLegId
+                when isCancellable $ cancelLeg journeyId leg (SCR.CancellationReasonCode "") True False False Nothing
             )
             legsToCancel
 
@@ -1558,7 +1552,7 @@ switchLeg journeyId personId req = do
   unless canSwitch $ do throwError (JourneyLegCannotBeSwitched journeyLeg.id.getId)
   let lockKey = multimodalLegSearchIdAccessLockKey journeyId.getId
   Redis.whenWithLockRedis lockKey 5 $ do
-    cancelLeg journeyId legData (SCR.CancellationReasonCode "") False False False Nothing
+    cancelLeg journeyId legData (SCR.CancellationReasonCode "") True False False Nothing
     newJourneyLeg <- createJourneyLegFromCancelledLeg journeyLeg req.newMode startLocation newDistance newDuration
     addAllLegs journeyId (Just journeyLegs) [newJourneyLeg]
     when (legData.status /= JL.InPlan) $

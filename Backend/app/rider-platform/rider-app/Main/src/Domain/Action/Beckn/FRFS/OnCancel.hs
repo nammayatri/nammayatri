@@ -15,7 +15,6 @@
 module Domain.Action.Beckn.FRFS.OnCancel where
 
 import qualified BecknV2.FRFS.Enums as Spec
-import qualified Domain.Action.Beckn.FRFS.Common as Common
 import qualified Domain.Types.FRFSTicketBooking as Booking
 import qualified Domain.Types.FRFSTicketBooking as FTBooking
 import qualified Domain.Types.FRFSTicketBookingStatus as FTBooking
@@ -27,14 +26,10 @@ import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Lib.JourneyLeg.Types as JL
-import qualified Lib.JourneyModule.Base as JM
-import qualified Lib.JourneyModule.State.Types as JMState
-import SharedLogic.FRFSUtils
+import qualified SharedLogic.FRFSCancel as FRFSCancel
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.FRFSRecon as QFRFSRecon
 import qualified Storage.Queries.FRFSTicketBooking as QTBooking
-import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 
 data DOnCancel = DOnCancel
   { providerId :: Text,
@@ -65,16 +60,9 @@ onCancel merchant booking' dOnCancel = do
   case dOnCancel.orderStatus of
     Spec.SOFT_CANCELLED -> do
       void $ QTBooking.updateRefundCancellationChargesAndIsCancellableByBookingId (Just refundAmount) (Just cancellationCharges) (Just True) booking.id
-    Spec.CANCELLED -> Common.handleCancelledStatus merchant booking refundAmount cancellationCharges dOnCancel.messageId True
+    Spec.CANCELLED -> FRFSCancel.handleCancelledStatus merchant booking refundAmount cancellationCharges dOnCancel.messageId True
     Spec.CANCEL_INITIATED -> do
       void $ QTBooking.updateStatusById FTBooking.CANCEL_INITIATED booking.id
       void $ QFRFSRecon.updateStatusByTicketBookingId (Just DFRFSTicket.CANCEL_INITIATED) booking.id
-      mbJourneyId <- getJourneyIdFromBooking booking
-      whenJust mbJourneyId $ \journeyId -> do
-        legs <- QJourneyLeg.getJourneyLegs journeyId
-        forM_ legs $ \journeyLeg -> do
-          mapM_ (\rd -> JM.markLegStatus (Just JL.Cancelled) (Just JMState.Finished) journeyLeg rd.subLegOrder) journeyLeg.routeDetails
-        journey <- JM.getJourney journeyId
-        updatedLegStatus <- JM.getAllLegsStatus journey
-        JM.checkAndMarkTerminalJourneyStatus journey False False updatedLegStatus
+      FRFSCancel.cancelJourney booking
     _ -> throwError $ InvalidRequest "Unexpected orderStatus received"
