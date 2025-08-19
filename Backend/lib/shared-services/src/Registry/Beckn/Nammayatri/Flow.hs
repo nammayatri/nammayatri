@@ -24,3 +24,8 @@ updateCities :: (MonadFlow m, CoreMetrics m) => Text -> BaseUrl -> UpdateCitiesR
 updateCities apiKey url req = do
   callAPI url (updateCitiesClient (Just apiKey) req) "updateCitiesNammayatriRegistry" updateCitiesAPI
     >>= fromEitherM (ExternalAPICallError (Just "UPDATE_CITIES_NAMMAYATRI_REGISTRY_FAILED") url)
+
+createSubscriber :: (MonadFlow m, CoreMetrics m) => BaseUrl -> Subscriber -> m AckResponse
+createSubscriber url req = do
+  callAPI url (createSubscriberClient req) "createSubscriberNammayatriRegistry" createAPI
+    >>= fromEitherM (ExternalAPICallError (Just "CREATE_SUBSCRIBER_NAMMAYATRI_REGISTRY_FAILED") url)
