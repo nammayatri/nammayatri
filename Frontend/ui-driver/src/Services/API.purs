@@ -5170,7 +5170,7 @@ instance encodeVerifiedBy :: Encode VerifiedBy where encode = defaultEnumEncode
 instance standardEncodeVerifiedBy :: StandardEncode VerifiedBy where standardEncode _ = standardEncode {}
 
 instance makePanCardReq :: RestEndpoint PanCardReq where
-    makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.registerPAN "") headers reqBody Nothing
+    makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.registerPanCard "") headers reqBody Nothing
     encodeRequest req = defaultEncode req
 
 derive instance genericPanCardReq :: Generic PanCardReq _
@@ -5187,7 +5187,7 @@ instance decodeDriverPANResp:: Decode DriverPANResp where decode = defaultDecode
 instance encodeDriverPANResp  :: Encode DriverPANResp where encode = defaultEncode
 
 instance makeAadhaarCardReq :: RestEndpoint AadhaarCardReq where
-    makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.registerAadhaar "") headers reqBody Nothing
+    makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.registerAadhaarCard "") headers reqBody Nothing
     encodeRequest req = defaultEncode req
 
 derive instance genericAadhaarCardReq :: Generic AadhaarCardReq _
@@ -5202,6 +5202,43 @@ instance standardEncodeDriverAadhaarResp :: StandardEncode DriverAadhaarResp whe
 instance showDriverAadhaarResp :: Show DriverAadhaarResp where show = genericShow
 instance decodeDriverAadhaarResp:: Decode DriverAadhaarResp where decode = defaultDecode
 instance encodeDriverAadhaarResp  :: Encode DriverAadhaarResp where encode = defaultEncode
+
+data DriverPanReq = DriverPanReq
+  { panNumber :: String,
+    imageId :: String,
+    driverId :: String,
+    panName :: Maybe String
+  }
+
+instance makeDriverPanReq :: RestEndpoint DriverPanReq where
+    makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.registerPan "") headers reqBody Nothing
+    encodeRequest req = defaultEncode req
+
+derive instance genericDriverPanReq :: Generic DriverPanReq _
+instance showDriverPanReq :: Show DriverPanReq where show = genericShow
+instance standardDriverPanReq :: StandardEncode DriverPanReq where standardEncode (DriverPanReq req) = standardEncode req
+instance decodeDriverPanReq :: Decode DriverPanReq where decode = defaultDecode
+instance encodeDriverPanReq :: Encode DriverPanReq where encode = defaultEncode
+
+data DriverAadhaarReq = DriverAadhaarReq
+  { aadhaarNumber :: String,
+    aadhaarFrontImageId :: String,
+    aadhaarBackImageId :: Maybe String,
+    consent :: Boolean,
+    driverId :: String,
+    aadhaarName :: Maybe String
+  }
+
+instance makeDriverAadhaarReq :: RestEndpoint DriverAadhaarReq where
+    makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.registerAadhaar "") headers reqBody Nothing
+    encodeRequest req = defaultEncode req
+
+
+derive instance genericDriverAadhaarReq :: Generic DriverAadhaarReq _
+instance showDriverAadhaarReq :: Show DriverAadhaarReq where show = genericShow
+instance standardDriverAadhaarReq :: StandardEncode DriverAadhaarReq where standardEncode (DriverAadhaarReq req) = standardEncode req
+instance decodeDriverAadhaarReq :: Decode DriverAadhaarReq where decode = defaultDecode
+instance encodeDriverAadhaarReq :: Encode DriverAadhaarReq where encode = defaultEncode
 
 -----------------------------------------------------------Fetching Driver Profile--------------------------------------------------
 data DriverProfileDataReq = DriverProfileDataReq Boolean 

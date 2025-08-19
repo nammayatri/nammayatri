@@ -888,7 +888,7 @@ onBoardingFlowV1 _ = do
                 resp <- lift $ lift $ Remote.validateImage (Remote.makeValidateImageReq image "PanCard" Nothing (Just convertedStatus) result.transactionId state.data.vehicleCategory)
                 case resp of
                   Right (ValidateImageRes response)-> do
-                    resp <- lift $ lift $ Remote.registerDriverPAN (Remote.makePANCardReq true currentTime detail.dob detail.name (Just response.imageId) Nothing panNum (convertedStatus) result.transactionId detail.panDB_name)
+                    resp <- lift $ lift $ Remote.registerDriverPanCard (Remote.makePANCardReq true currentTime detail.dob detail.name (Just response.imageId) Nothing panNum (convertedStatus) result.transactionId detail.panDB_name)
                     case resp of
                       Left errPayload -> if result.status /= (Just "auto_declined") then void $ pure $ toast $ Remote.getCorrespondingErrorMessage errPayload else pure unit
                       Right response -> pure unit
@@ -912,7 +912,7 @@ onBoardingFlowV1 _ = do
                 respBackImage <- lift $ lift $ Remote.validateImage (Remote.makeValidateImageReq imageBack "AadhaarCard" Nothing (Just convertedStatus) result.transactionId state.data.vehicleCategory)
                 case respFrontImage, respBackImage of
                   Right (ValidateImageRes frontResp), Right (ValidateImageRes backResp) | isJust result.transactionId -> do
-                    resp <- lift $ lift $ Remote.registerDriverAadhaar (Remote.makeAadhaarCardReq (Just backResp.imageId) (Just frontResp.imageId) detail.address true currentTime detail.dob (Just aadhaarNum) detail.fullName (convertedStatus) (fromMaybe "" result.transactionId))
+                    resp <- lift $ lift $ Remote.registerDriverAadhaarCard (Remote.makeAadhaarCardReq (Just backResp.imageId) (Just frontResp.imageId) detail.address true currentTime detail.dob (Just aadhaarNum) detail.fullName (convertedStatus) (fromMaybe "" result.transactionId))
                     case resp of
                       Left errPayload -> if result.status /= (Just "auto_declined") then void $ pure $ toast $ Remote.getCorrespondingErrorMessage errPayload else pure unit
                       Right response -> pure unit
@@ -1171,7 +1171,7 @@ onBoardingFlowV2 _ = do
                 resp <- lift $ lift $ Remote.validateImage (Remote.makeValidateImageReq image "PanCard" Nothing (Just convertedStatus) result.transactionId state.data.vehicleCategory)
                 case resp of
                   Right (ValidateImageRes response)-> do
-                    resp <- lift $ lift $ Remote.registerDriverPAN (Remote.makePANCardReq true currentTime detail.dob detail.name (Just response.imageId) Nothing panNum (convertedStatus) result.transactionId detail.panDB_name)
+                    resp <- lift $ lift $ Remote.registerDriverPan (Remote.makeDriverPanReq panNum response.imageId (getValueToLocalStore DRIVER_ID) detail.name)
                     case resp of
                       Left errPayload -> if result.status /= (Just "auto_declined") then void $ pure $ toast $ Remote.getCorrespondingErrorMessage errPayload else pure unit
                       Right response -> pure unit
@@ -1195,7 +1195,7 @@ onBoardingFlowV2 _ = do
                 respBackImage <- lift $ lift $ Remote.validateImage (Remote.makeValidateImageReq imageBack "AadhaarCard" Nothing (Just convertedStatus) result.transactionId state.data.vehicleCategory)
                 case respFrontImage, respBackImage of
                   Right (ValidateImageRes frontResp), Right (ValidateImageRes backResp) | isJust result.transactionId -> do
-                    resp <- lift $ lift $ Remote.registerDriverAadhaar (Remote.makeAadhaarCardReq (Just backResp.imageId) (Just frontResp.imageId) detail.address true currentTime detail.dob (Just aadhaarNum) detail.fullName (convertedStatus) (fromMaybe "" result.transactionId))
+                    resp <- lift $ lift $ Remote.registerDriverAadhaar (Remote.makeDriverAadhaarReq aadhaarNum frontResp.imageId backResp.imageId true (getValueToLocalStore DRIVER_ID) detail.fullName)
                     case resp of
                       Left errPayload -> if result.status /= (Just "auto_declined") then void $ pure $ toast $ Remote.getCorrespondingErrorMessage errPayload else pure unit
                       Right response -> pure unit
