@@ -393,11 +393,17 @@ getSdkToken expiry serviceName = (getBaseUrl "") <> "/driver/sdkToken?expiry=" <
 getLiveSelfie :: String -> String
 getLiveSelfie status = (getBaseUrl "") <> "/driver/register/getLiveSelfie?status=" <> status
 
-registerPAN :: String -> String
-registerPAN _ = (getBaseUrl "") <> "/driver/register/pancard"
+registerPanCard :: String -> String
+registerPanCard _ = (getBaseUrl "") <> "/driver/register/pancard"
+
+registerAadhaarCard ::  String -> String 
+registerAadhaarCard _ = (getBaseUrl "") <> "/driver/register/aadhaarCard"
+
+registerPan :: String -> String
+registerPan _ = (getBaseUrl "") <> "/driver/register/pan"
 
 registerAadhaar ::  String -> String 
-registerAadhaar _ = (getBaseUrl "") <> "/driver/register/aadhaarCard"
+registerAadhaar _ = (getBaseUrl "") <> "/driver/register/aadhaar"
 
 getDriverProfile :: Boolean -> String 
 getDriverProfile isImages = (getBaseUrl "") <> "/DriverProfileQues?isImages=" <> (show isImages)

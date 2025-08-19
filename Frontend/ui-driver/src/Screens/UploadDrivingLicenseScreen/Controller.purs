@@ -293,7 +293,7 @@ eval (CallBackImageUpload image imageName imagePath) state =
     continue state                    
 
 eval (DatePicker (label) resp year month date) state = do
-  let fullDate = (dateFormat year) <> "-" <> (dateFormat (month+1)) <> "-" <> (dateFormat date) <> " 00:00:00.233691+00" 
+  let fullDate = (dateFormat year) <> "-" <> (dateFormat (month+1)) <> "-" <> (dateFormat date) <> " 00:00:00.000+00"
   let dateView = (show date) <> "/" <> (show (month+1)) <> "/" <> (show year)
   case resp of 
     "SELECTED" -> case label of

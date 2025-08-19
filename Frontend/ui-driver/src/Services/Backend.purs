@@ -1811,10 +1811,10 @@ getLiveSelfie status = do
     where
         unwrapResponse x = x
 
-registerDriverPAN :: PanCardReq -> Flow GlobalState (Either ErrorResponse DriverPANResp)
-registerDriverPAN req = do
+registerDriverPanCard :: PanCardReq -> Flow GlobalState (Either ErrorResponse DriverPANResp)
+registerDriverPanCard req = do
     headers <- getHeaders "" false
-    withAPIResult (EP.registerPAN "")  unwrapResponse $ callAPI headers req
+    withAPIResult (EP.registerPanCard "")  unwrapResponse $ callAPI headers req
     where
         unwrapResponse x = x
 
@@ -1841,10 +1841,10 @@ makePANCardReq consent consentTimestamp dateOfBirth nameOnCard imageId1 imageId2
             Nothing -> Nothing
 
 
-registerDriverAadhaar :: AadhaarCardReq -> Flow GlobalState (Either ErrorResponse DriverAadhaarResp)
-registerDriverAadhaar req = do
+registerDriverAadhaarCard :: AadhaarCardReq -> Flow GlobalState (Either ErrorResponse DriverAadhaarResp)
+registerDriverAadhaarCard req = do
     headers <- getHeaders "" false
-    withAPIResult (EP.registerAadhaar "")  unwrapResponse $ callAPI headers req
+    withAPIResult (EP.registerAadhaarCard "")  unwrapResponse $ callAPI headers req
     where
         unwrapResponse x = x
 
@@ -1863,6 +1863,39 @@ makeAadhaarCardReq aadhaarBackImageId aadhaarFrontImageId address consent consen
        "validationStatus" : validationStatus,
        "transactionId" : transactionId
     }
+
+registerDriverPan :: DriverPanReq -> Flow GlobalState (Either ErrorResponse DriverPANResp)
+registerDriverPan req = do
+    headers <- getHeaders "" false
+    withAPIResult (EP.registerPan "")  unwrapResponse $ callAPI headers req
+    where
+        unwrapResponse x = x
+
+makeDriverPanReq :: String -> String -> String -> Maybe String -> DriverPanReq
+makeDriverPanReq panNumber imageId driverId mbPanName = DriverPanReq
+    {
+        "panNumber" : panNumber,
+        "imageId" : imageId,
+        "driverId" : driverId,
+        "panName" : mbPanName
+    }
+
+registerDriverAadhaar :: DriverAadhaarReq -> Flow GlobalState (Either ErrorResponse DriverAadhaarResp)
+registerDriverAadhaar req = do
+    headers <- getHeaders "" false
+    withAPIResult (EP.registerAadhaar "")  unwrapResponse $ callAPI headers req
+    where
+        unwrapResponse x = x
+
+makeDriverAadhaarReq :: String -> String -> String -> Boolean -> String -> Maybe String -> DriverAadhaarReq
+makeDriverAadhaarReq aadhaarNumber aadhaarFrontImageId aadhaarBackImageId consent driverId mbAadhaarName = DriverAadhaarReq {
+    "aadhaarNumber" : aadhaarNumber,
+    "aadhaarFrontImageId" : aadhaarFrontImageId,
+    "aadhaarBackImageId" : Just aadhaarBackImageId,
+    "consent" : consent,
+    "driverId" : driverId,
+    "aadhaarName" : mbAadhaarName
+}
 
 ---------------------------------------------------------Fetching Driver Profile------------------------------------------------------------
 

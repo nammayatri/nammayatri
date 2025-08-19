@@ -841,10 +841,10 @@ getStatus step state =
   where filterCondition item = (state.data.vehicleCategory == item.verifiedVehicleCategory) ||  (isNothing item.verifiedVehicleCategory && item.vehicleType == state.data.vehicleCategory)
 
 dependentDocAvailable :: ST.StepProgress -> ST.RegistrationScreenState -> Boolean
-dependentDocAvailable item state = 
+dependentDocAvailable item state =
   case item.stage of
-    ST.AADHAAR_CARD -> (getStatus ST.PROFILE_PHOTO state) == ST.COMPLETED
-    ST.PAN_CARD -> (getStatus ST.PROFILE_PHOTO state) == ST.COMPLETED
+    ST.AADHAAR_CARD -> ((getStatus ST.PROFILE_PHOTO state) == ST.COMPLETED) && (state.data.drivingLicenseStatus == ST.COMPLETED) 
+    ST.PAN_CARD -> (getStatus ST.PROFILE_PHOTO state) == ST.COMPLETED && (state.data.drivingLicenseStatus == ST.COMPLETED)
     _ -> all (\docType -> statusCompOrManual (getStatus docType state)) item.dependencyDocumentType
 
 compVisibility :: ST.RegistrationScreenState -> ST.StepProgress -> Boolean
