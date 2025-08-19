@@ -897,7 +897,7 @@ data BppEstimate = BppEstimate
 data PickupInstructionReq = PickupInstructionReq
   { driverId :: Text,
     instruction :: Maybe Text,
-    audioBase64 :: Maybe Text
+    audioUrl :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -926,6 +926,6 @@ sendPickupInstruction ::
   Maybe Text ->
   Maybe Text ->
   m APISuccess
-sendPickupInstruction apiKey internalUrl driverId instruction audioBase64 = do
+sendPickupInstruction apiKey internalUrl driverId instruction audioUrl = do
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
-  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (sendPickupInstructionClient driverId (Just apiKey) (PickupInstructionReq driverId instruction audioBase64)) "SendPickupInstruction" sendPickupInstructionApi
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (sendPickupInstructionClient driverId (Just apiKey) (PickupInstructionReq driverId instruction audioUrl)) "SendPickupInstruction" sendPickupInstructionApi
