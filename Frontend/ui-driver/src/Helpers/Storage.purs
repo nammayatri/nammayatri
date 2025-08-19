@@ -123,6 +123,8 @@ data KeyStore = USER_NAME
                 | TOTAL_WAITED
                 | VISITED_DRIVER_COINS_PAGE
                 | REFERRAL_CODE_ADDED
+                | DRIVER_OPERATOR_ID
+                | DRIVER_FLEET_OWNER_ID
                 | SAVED_GOTO_COUNT
                 | OLD_COIN_BALANCE
                 | TIMES_OPENED_NEW_BENEFITS

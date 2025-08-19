@@ -302,6 +302,8 @@ dummyDriverInfo = GetDriverInfoResp {
     , driverTags : Nothing
     , nyClubConsent : Nothing
     , cancellationRateSlabConfig : Nothing
+    , fleetOwnerId : Nothing
+    , operatorId : Nothing
 }
 
 organizationInfo :: OrganizationInfo
