@@ -942,20 +942,24 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) service
           else driverStats.rating <&> (\(Centesimal x) -> Centesimal (fromInteger (round x)))
   fareProductConfig <- CQFP.findAllFareProductByMerchantOpCityId person.merchantOperatingCityId
   let supportedServiceTiers = nub $ map (.vehicleServiceTier) fareProductConfig
-  (checkIfACWorking, mbDefaultServiceTier) <-
+  (checkIfACWorking, mbDefaultServiceTier, isVehicleSupported) <-
     case vehicleMB of
-      Nothing -> return (False, Nothing)
+      Nothing -> return (False, Nothing, False)
       Just vehicle -> do
         cityServiceTiers <- CQVST.findAllByMerchantOpCityId person.merchantOperatingCityId
-        let mbDefaultServiceTierItem = find (\vst -> vehicle.variant `elem` vst.defaultForVehicleVariant) cityServiceTiers
+        let allVehicleSupportedDefaultServiceTiers = sortOn (fmap Down . (.airConditionedThreshold)) $ (filter (\vst -> vehicle.variant `elem` vst.defaultForVehicleVariant && vst.serviceTierType `elem` supportedServiceTiers) cityServiceTiers)
+        let isVehicleSupported = not $ null allVehicleSupportedDefaultServiceTiers
+        let mbDefaultServiceTierItem =
+              if (null allVehicleSupportedDefaultServiceTiers)
+                then find (\vst -> vehicle.variant `elem` vst.defaultForVehicleVariant) cityServiceTiers
+                else listToMaybe allVehicleSupportedDefaultServiceTiers
         let checIfACWorking' =
               case mbDefaultServiceTierItem >>= (.airConditionedThreshold) of
                 Nothing -> False
                 Just acThreshold -> do
                   (fromMaybe 0 driverInfo.airConditionScore) <= acThreshold
                     && maybe True (\lastCheckedAt -> fromInteger (diffDays (utctDay now) (utctDay lastCheckedAt)) >= transporterConfig.acStatusCheckGap) driverInfo.lastACStatusCheckedAt
-        return (checIfACWorking', (.serviceTierType) <$> mbDefaultServiceTierItem)
-  let isVehicleSupported = maybe False (`elem` supportedServiceTiers) mbDefaultServiceTier
+        return (checIfACWorking', (.serviceTierType) <$> mbDefaultServiceTierItem, isVehicleSupported)
   onRideFlag <-
     if driverInfo.onRide && driverInfo.onboardingVehicleCategory /= Just DVC.BUS
       then
