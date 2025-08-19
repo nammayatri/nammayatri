@@ -89,7 +89,7 @@ data BusData = BusData
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
 data BusRouteInfo = BusRouteInfo
-  { route_number :: Text,
+  { route_number :: Maybe Text,
     route_state :: RouteState
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)

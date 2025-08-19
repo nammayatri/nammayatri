@@ -56,7 +56,7 @@ data RouteStopMappingInMemoryServer = RouteStopMappingInMemoryServer
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
 data VehicleServiceTypeResponse = VehicleServiceTypeResponse
-  { service_type :: Text,
+  { service_type :: BecknV2.FRFS.Enums.ServiceTierType,
     vehicle_no :: Text,
     last_updated :: Maybe UTCTime,
     schedule_no :: Text,

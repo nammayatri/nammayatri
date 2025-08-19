@@ -10,20 +10,20 @@ imports:
   ServiceTierType: BecknV2.FRFS.Enums
   VehicleCategory: BecknV2.FRFS.Enums
   UpcomingTripInfo: Lib.JourneyModule.Utils
-
+  RouteState: Storage.CachedQueries.Merchant.MultiModalBus
 module: NearbyBuses
 
 types:
+  RouteCodes:
+      routeCodes: [Text]
   NearbyBus:
       vehicleNumber: Maybe Text
       routeCode: Text
       currentLocation: LatLong
-      nextStop: Maybe Text
       distance: Maybe Double
-      serviceType: Maybe Text
-      eta: Maybe UTCTime
-      capacity: Maybe Int
-      occupancy: Maybe Int
+      serviceType: Maybe ServiceTierType
+      serviceTierName: Maybe Text
+      routeState: Maybe RouteState
       shortName: Maybe Text
 
   RecentRide:

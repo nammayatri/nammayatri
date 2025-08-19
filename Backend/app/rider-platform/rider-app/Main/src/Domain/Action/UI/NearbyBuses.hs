@@ -31,6 +31,7 @@ import Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.RouteStopTimeTable as GRSM
+import qualified Storage.Queries.FRFSVehicleServiceTier as QFRFSVehicleServiceTier
 import qualified Storage.Queries.Merchant as QMerchant
 import qualified Storage.Queries.MerchantOperatingCity as QMerchantOperatingCity
 import qualified Storage.Queries.Person as QP
@@ -99,8 +100,14 @@ getSimpleNearbyBuses merchantOperatingCityId riderConfig req = do
 
   let successfulMappings = catMaybes busRouteMapping
 
-  let serviceTypeMap :: HashMap.HashMap Text Text
-      serviceTypeMap = HashMap.fromList $ map (\m -> (m.vehicle_no, m.service_type)) successfulMappings
+  serviceTypeMap :: HashMap.HashMap Text (Spe.ServiceTierType, Maybe Text) <-
+    HashMap.fromList
+      <$> mapM
+        ( \m -> do
+            frfsServiceTier <- QFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityId m.service_type riderConfig.merchantOperatingCityId
+            return (m.vehicle_no, (m.service_type, frfsServiceTier <&> (.shortName)))
+        )
+        successfulMappings
 
   pure $
     map
@@ -111,8 +118,9 @@ getSimpleNearbyBuses merchantOperatingCityId riderConfig req = do
                   distance = Nothing,
                   routeCode = route_id,
                   routeState = Just routeInfo.route_state,
-                  serviceType = maybeServiceType,
-                  shortName = Just routeInfo.route_number,
+                  serviceType = fst <$> maybeServiceType,
+                  serviceTierName = snd =<< maybeServiceType,
+                  shortName = routeInfo.route_number,
                   vehicleNumber = bus.vehicle_number
                 }
       )
