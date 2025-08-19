@@ -185,7 +185,7 @@ cancel merchant merchantOperatingCity bapConfig cancellationType booking = do
         providerUrl <- booking.bppSubscriberUrl & parseBaseUrl & fromMaybeM (InvalidRequest "Invalid provider url")
         ttl <- bapConfig.cancelTTLSec & fromMaybeM (InternalError "Invalid ttl")
         messageId <- generateGUID
-        when (cancellationType == Spec.CONFIRM_CANCEL) $ Redis.setExp (makecancelledTtlKey booking.id) messageId ttl
+        when (cancellationType == Spec.CONFIRM_CANCEL) $ Redis.setExp (FRFSUtils.makecancelledTtlKey booking.id) messageId ttl
         bknCancelReq <- ACL.buildCancelReq messageId booking bapConfig Utils.BppData {bppId = booking.bppSubscriberId, bppUri = booking.bppSubscriberUrl} frfsConfig.cancellationReasonId cancellationType merchantOperatingCity.city
         logDebug $ "FRFS CancelReq " <> encodeToText bknCancelReq
         void $ CallFRFSBPP.cancel providerUrl bknCancelReq merchant.id

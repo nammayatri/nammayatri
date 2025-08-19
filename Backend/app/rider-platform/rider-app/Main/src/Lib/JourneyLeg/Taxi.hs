@@ -174,7 +174,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
           Just pricingId -> do
             void $ cancelSearch' (searchReq.riderId, searchReq.merchantId) (Id pricingId)
           Nothing -> return ()
-    when (not legData.isSkipped) $ QJourneyLegMapping.updateIsDeleted True legData.journeyLegId
+    when legData.shouldDeleteLeg $ QJourneyLegMapping.updateIsDeleted True legData.journeyLegId
   cancel _ = throwError (InternalError "Not Supported")
 
   isCancellable ((TaxiLegRequestIsCancellable legData)) = do

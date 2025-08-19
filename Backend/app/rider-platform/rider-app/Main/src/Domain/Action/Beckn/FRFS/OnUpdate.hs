@@ -15,7 +15,6 @@
 module Domain.Action.Beckn.FRFS.OnUpdate where
 
 import qualified BecknV2.FRFS.Enums as Spec
-import qualified Domain.Action.Beckn.FRFS.Common as Common
 import qualified Domain.Types.FRFSTicketBooking as Booking
 import qualified Domain.Types.FRFSTicketBooking as FTBooking
 import Domain.Types.Merchant as Merchant
@@ -25,6 +24,7 @@ import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.FRFSCancel as FRFSCancel
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.FRFSTicketBooking as QTBooking
 
@@ -55,5 +55,5 @@ onUpdate merchant booking' dOnUpdate = do
   let refundAmount = fromMaybe dOnUpdate.baseFare dOnUpdate.refundAmount
   let cancellationCharges = fromMaybe 0 dOnUpdate.cancellationCharges
   case dOnUpdate.orderStatus of
-    Spec.CANCELLED -> Common.handleCancelledStatus merchant booking refundAmount cancellationCharges dOnUpdate.messageId False
+    Spec.CANCELLED -> FRFSCancel.handleCancelledStatus merchant booking refundAmount cancellationCharges dOnUpdate.messageId False
     _ -> throwError $ InvalidRequest "Unexpected orderStatus received"

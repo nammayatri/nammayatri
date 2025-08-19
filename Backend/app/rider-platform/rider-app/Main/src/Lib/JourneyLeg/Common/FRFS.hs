@@ -419,14 +419,14 @@ confirm personId merchantId mbQuoteId ticketQuantity childTicketQuantity skipBoo
       DOnSelect.onSelect onSelectReq merchant' quote'
 
 cancel :: JT.CancelFlow m r c => Id FRFSSearch -> Spec.CancellationType -> Bool -> Id DJourneyLeg.JourneyLeg -> m ()
-cancel searchId cancellationType isSkipped journeyLegId = do
+cancel searchId cancellationType shouldDeleteLeg journeyLegId = do
   mbMetroBooking <- QTBooking.findBySearchId searchId
   whenJust mbMetroBooking $ \metroBooking -> do
     merchant <- CQM.findById metroBooking.merchantId >>= fromMaybeM (MerchantDoesNotExist metroBooking.merchantId.getId)
     merchantOperatingCity <- CQMOC.findById metroBooking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound metroBooking.merchantOperatingCityId.getId)
     bapConfig <- CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory metroBooking.vehicleType) >>= fromMaybeM (InternalError "Beckn Config not found")
     CallExternalBPP.cancel merchant merchantOperatingCity bapConfig cancellationType metroBooking
-  when (not isSkipped) $ QJourneyLegMapping.updateIsDeleted True journeyLegId
+  when shouldDeleteLeg $ QJourneyLegMapping.updateIsDeleted True journeyLegId
 
 isCancellable :: JT.CancelFlow m r c => Id FRFSSearch -> JT.LegInfo -> m JT.IsCancellableResponse
 isCancellable searchId leg = do

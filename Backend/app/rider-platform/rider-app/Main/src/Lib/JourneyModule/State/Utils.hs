@@ -30,11 +30,14 @@ getFRFSAllStatuses journeyLeg mbBooking = do
       )
       journeyLeg.routeDetails
   let oldStatus =
-        if maybe False (\status -> status `elem` [FRFSTicket DFRFSTicket.CANCELLED, FRFSBooking DFRFSBooking.CANCELLED]) bookingStatus
-          then JLTypes.Skipped
-          else case bookingStatus of
-            Just (FRFSBooking status) -> getFRFSLegStatusFromBooking status
-            _ -> maybe JLTypes.InPlan castTrackingStatusToJourneyLegStatus ((listToMaybe trackingStatuses) >>= snd) -- for UI backward compatibility
+        if all (\(_, mbTrackingStatus) -> mbTrackingStatus == Just Finished) trackingStatuses
+          then JLTypes.Completed
+          else do
+            if maybe False (\status -> status `elem` [FRFSTicket DFRFSTicket.CANCELLED, FRFSBooking DFRFSBooking.CANCELLED]) bookingStatus
+              then JLTypes.Skipped
+              else case bookingStatus of
+                Just (FRFSBooking status) -> getFRFSLegStatusFromBooking status
+                _ -> maybe JLTypes.InPlan castTrackingStatusToJourneyLegStatus ((listToMaybe trackingStatuses) >>= snd) -- for UI backward compatibility
   return (oldStatus, bookingStatus, trackingStatuses)
   where
     getFRFSLegStatusFromBooking :: DFRFSBooking.FRFSTicketBookingStatus -> JLTypes.JourneyLegStatus
@@ -61,14 +64,17 @@ getTaxiAllStatuses journeyLeg mbBooking mbRide mbEstimate = do
   let bookingStatus = getTaxiJourneyBookingStatus mbBooking mbRide mbEstimate
   mbTrackingStatus <- getTaxiJourneyLegTrackingStatus mbBooking mbRide mbEstimate (listToMaybe journeyLeg.routeDetails)
   let oldStatus =
-        if maybe False (\status -> status `elem` [TaxiRide DTaxiRide.CANCELLED, TaxiBooking DTaxiBooking.CANCELLED, TaxiEstimate DTaxiEstimate.CANCELLED]) bookingStatus
-          then JLTypes.Skipped
+        if mbTrackingStatus == Just Finished
+          then JLTypes.Completed
           else do
-            case bookingStatus of
-              Just (TaxiEstimate status) -> mapTaxiEstimateStatusToJourneyLegStatus status
-              Just (TaxiRide status) -> mapTaxiRideStatusToJourneyLegStatus status
-              Just (TaxiBooking status) -> mapTaxiBookingStatusToJourneyLegStatus status
-              _ -> maybe JLTypes.InPlan castTrackingStatusToJourneyLegStatus mbTrackingStatus -- for UI backward compatibility
+            if maybe False (\status -> status `elem` [TaxiRide DTaxiRide.CANCELLED, TaxiBooking DTaxiBooking.CANCELLED, TaxiEstimate DTaxiEstimate.CANCELLED]) bookingStatus
+              then JLTypes.Skipped
+              else do
+                case bookingStatus of
+                  Just (TaxiEstimate status) -> mapTaxiEstimateStatusToJourneyLegStatus status
+                  Just (TaxiRide status) -> mapTaxiRideStatusToJourneyLegStatus status
+                  Just (TaxiBooking status) -> mapTaxiBookingStatusToJourneyLegStatus status
+                  _ -> maybe JLTypes.InPlan castTrackingStatusToJourneyLegStatus mbTrackingStatus -- for UI backward compatibility
   return (oldStatus, bookingStatus, mbTrackingStatus)
   where
     mapTaxiEstimateStatusToJourneyLegStatus :: DTaxiEstimate.EstimateStatus -> JLTypes.JourneyLegStatus

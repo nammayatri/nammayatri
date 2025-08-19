@@ -377,6 +377,7 @@ library
       SharedLogic.External.Nandi.API.Nandi
       SharedLogic.External.Nandi.Flow
       SharedLogic.External.Nandi.Types
+      SharedLogic.FRFSCancel
       SharedLogic.FRFSUtils
       SharedLogic.GoogleTranslate
       SharedLogic.Insurance

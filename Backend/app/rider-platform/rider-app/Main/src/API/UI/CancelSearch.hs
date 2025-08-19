@@ -66,7 +66,7 @@ cancelSearchImpl (personId, _merchantId) estimateId = do
     Just journeyLeg -> do
       legInfo <- JLT.getLegInfo personId journeyLeg >>= fromMaybeM (InvalidRequest $ "LegInfo not found for searchId: " <> searchId.getId)
       let cancellationReasonCode = SCR.CancellationReasonCode "SEARCH_CANCELLED_BY_RIDER"
-      JLT.cancelLeg (journeyLeg.journeyId) legInfo cancellationReasonCode True True True (Just estimateId)
+      JLT.cancelLeg (journeyLeg.journeyId) legInfo cancellationReasonCode False True True (Just estimateId)
     Nothing -> do
       void $ JLT.cancelSearch' (personId, _merchantId) estimateId
   return Success

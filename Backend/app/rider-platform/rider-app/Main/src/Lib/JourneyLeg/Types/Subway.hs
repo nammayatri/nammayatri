@@ -42,7 +42,7 @@ data SubwayLegRequestConfirmData = SubwayLegRequestConfirmData
 data SubwayLegRequestCancelData = SubwayLegRequestCancelData
   { searchId :: Id FRFSSearch.FRFSSearch,
     cancellationType :: Spec.CancellationType,
-    isSkipped :: Bool,
+    shouldDeleteLeg :: Bool,
     journeyLegId :: Id DJourneyLeg.JourneyLeg
   }
 
