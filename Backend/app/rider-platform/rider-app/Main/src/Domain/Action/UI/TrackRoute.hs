@@ -40,6 +40,7 @@ getTrackVehicles (mbPersonId, merchantId) routeCode mbIntegratedBPPConfigId mbPl
           nextStopTravelDistance = nextStopTravelDistance,
           upcomingStops = upcomingStops,
           delay = delay,
+          routeState = routeState,
           vehicleInfo = maybe (TrackRoute.VehicleInfoForRoute Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing) mkVehicleInfo vehicleInfo
         }
     mkVehicleInfo VehicleInfo {..} = TrackRoute.VehicleInfoForRoute {..}
