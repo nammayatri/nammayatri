@@ -6,6 +6,7 @@ import qualified BecknV2.OnDemand.Enums as Enums
 import Control.Applicative ((<|>))
 import Control.Monad.Extra (mapMaybeM)
 import qualified Data.Geohash as Geohash
+import qualified Data.HashMap.Strict as HM
 import Data.List (groupBy, nub, sort, sortBy)
 import qualified Data.Map.Strict as Map
 import Data.Ord (comparing)
@@ -46,6 +47,7 @@ import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.RouteStopTimeTable as GRSM
 import Storage.GraphqlQueries.Client (mapToServiceTierType)
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
+import qualified Storage.Queries.FRFSVehicleServiceTier as QFRFSVehicleServiceTier
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.RecentLocation as SQRL
 import qualified Storage.Queries.VehicleRouteMapping as QVehicleRouteMapping
@@ -107,6 +109,7 @@ whenJourneyUpdateInProgress journeyId actions = do
 data UpcomingVehicleInfo = UpcomingVehicleInfo
   { routeCode :: Text,
     serviceType :: Spec.ServiceTierType,
+    serviceName :: Maybe Text,
     arrivalTimeInSeconds :: Seconds,
     nextAvailableTimings :: (TimeOfDay, TimeOfDay),
     source :: SourceType
@@ -221,13 +224,23 @@ fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid moci
 
       let validBuses = catMaybes vehicleRouteMappings
       logDebug $ "validBuses: " <> show validBuses
-      let baseStopTimes = map createStopTime validBuses
+      serviceTierToShortNameMapping :: HM.HashMap Text (Maybe Text) <- -- HashMap SeriveTier ServiceTierNameForUI
+        HM.fromList
+          <$> mapM
+            ( \serviceTierTypeString -> do
+                let serviceTierType = mapToServiceTierType serviceTierTypeString
+                frfsServiceTier <- QFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityId serviceTierType mocid
+                return (serviceTierTypeString, frfsServiceTier <&> (.shortName))
+            )
+            (map (\(_, mapping) -> mapping) validBuses)
+      let baseStopTimes = map (createStopTime serviceTierToShortNameMapping) validBuses
       return baseStopTimes
       where
-        createStopTime ((vehicleNumber, eta), mapping) = createRouteStopTimeTable routeWithBuses vehicleNumber eta mapping
+        createStopTime serviceTierToShortNameMapping ((vehicleNumber, eta), mapping) = createRouteStopTimeTable serviceTierToShortNameMapping routeWithBuses vehicleNumber eta mapping
 
-    createRouteStopTimeTable routeWithBuses vehicleNumber eta mapping =
+    createRouteStopTimeTable serviceTierToShortNameMapping routeWithBuses vehicleNumber eta mapping =
       let timeOfDay = timeToTimeOfDay $ utctDayTime eta.arrivalTime
+          serviceTierName = fromMaybe Nothing $ HM.lookup mapping serviceTierToShortNameMapping
           serviceTierType = mapToServiceTierType mapping
        in RouteStopTimeTable
             { integratedBppConfigId = integratedBppConfig.id,
@@ -241,6 +254,7 @@ fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid moci
               createdAt = currentTime,
               updatedAt = currentTime,
               serviceTierType = serviceTierType,
+              serviceTierName = serviceTierName,
               delay = Nothing,
               source = LIVE,
               stage = Nothing,
@@ -291,6 +305,7 @@ fetchLiveSubwayTimings routeCodes stopCode currentTime integratedBppConfig mid m
           createdAt = currentTime,
           updatedAt = currentTime,
           serviceTierType = Spec.SECOND_CLASS,
+          serviceTierName = Just "SECOND_CLASS",
           delay = Just $ Seconds train.delayArrival,
           source = LIVE,
           stage = Nothing,
@@ -490,6 +505,7 @@ findUpcomingTrips routeCode stopCode mbServiceType currentTime mid mocid vc = do
         [ UpcomingVehicleInfo
             { routeCode = rst.routeCode,
               serviceType = rst.serviceTierType,
+              serviceName = rst.serviceTierName,
               arrivalTimeInSeconds = estimatedArrivalTimeInSeconds,
               nextAvailableTimings = (rst.timeOfArrival, rst.timeOfDeparture),
               source = rst.source

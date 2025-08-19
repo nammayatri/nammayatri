@@ -11,15 +11,16 @@ import qualified Kernel.External.Maps.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Price
 import Servant
-import Storage.CachedQueries.Merchant.MultiModalBus (RouteState)
+import qualified Storage.CachedQueries.Merchant.MultiModalBus
 import Tools.Auth
 
 data NearbyBus = NearbyBus
   { currentLocation :: Kernel.External.Maps.Types.LatLong,
     distance :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     routeCode :: Data.Text.Text,
-    routeState :: Kernel.Prelude.Maybe RouteState,
-    serviceType :: Kernel.Prelude.Maybe Data.Text.Text,
+    routeState :: Kernel.Prelude.Maybe Storage.CachedQueries.Merchant.MultiModalBus.RouteState,
+    serviceTierName :: Kernel.Prelude.Maybe Data.Text.Text,
+    serviceType :: Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType,
     shortName :: Kernel.Prelude.Maybe Data.Text.Text,
     vehicleNumber :: Kernel.Prelude.Maybe Data.Text.Text
   }
