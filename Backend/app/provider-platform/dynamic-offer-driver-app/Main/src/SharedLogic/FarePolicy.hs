@@ -297,8 +297,13 @@ getFullFarePolicy mbFromLocation mbToLocation mbFromLocGeohash mbToLocGeohash mb
                     fare = Just fare,
                     ..
                   }
-          congestionChargeRes <- ML.getCongestionCharge mlPricingInternal.apiKey mlPricingInternal.url req
-          return congestionChargeRes.congestionChargeMultiplier
+          -- If ML call fails for any reason, fall back to no congestion multiplier to keep flow running
+          resOrErr <- try @_ @SomeException (ML.getCongestionCharge mlPricingInternal.apiKey mlPricingInternal.url req)
+          case resOrErr of
+            Right congestionChargeRes -> return congestionChargeRes.congestionChargeMultiplier
+            Left e -> do
+              logError $ "getCongestionCharge via MLfailed, defaulting to Nothing: " <> show e
+              return Nothing
         -- return fullFarePolicy.congestionChargeMultiplier
         _ -> return Nothing
     calculateCongestionChargeViaML _ _ _ _ _ = return Nothing
