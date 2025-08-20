@@ -491,7 +491,7 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
                 Left err -> do
                   logError $ "OSRM/Maps.getMultimodalWalkDistance failed: " <> show err <> ", falling back to proportional duration and distance" <> "latlong: " <> show (leg.startLocation.latLng.latitude, leg.startLocation.latLng.longitude) <> " " <> show (leg.endLocation.latLng.latitude, leg.endLocation.latLng.longitude)
                   return $ updateDuration totalEstimatedDuration totalEstimatedDistance leg
-            else return leg
+            else return leg{duration = JM.calculateWalkDuration leg.distance}
         MultiModalTypes.Unspecified -> return $ updateDuration totalEstimatedDuration totalEstimatedDistance leg
         _ -> return leg -- Skip other modes
       where
