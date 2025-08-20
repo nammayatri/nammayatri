@@ -220,7 +220,8 @@ getRouteServiceability merchantId merchantOpCityId _distanceUnit fromLocation to
       logWarning $ "No route found for transactionId: " <> transactionId
       checkRouteServiceability merchantOpCityId (0, [], 0, 0) []
     else do
-      let distanceWeightage = 20 -- this value is present in riderConfig.distanceWeightage, maybe we should use that?
+      transporterConfig <- CCT.findByMerchantOpCityId merchantOpCityId (Just (TransactionId (Id transactionId))) >>= fromMaybeM (TransporterConfigDoesNotExist merchantOpCityId.getId)
+      let distanceWeightage = fromMaybe 20 transporterConfig.distanceWeightage
           durationWeightage = 100 - distanceWeightage
           (mbShortestRoute, index) = Maps.getEfficientRouteInfo responses distanceWeightage durationWeightage
           routeDistance = fromMaybe 0 (mbShortestRoute >>= (.distance))

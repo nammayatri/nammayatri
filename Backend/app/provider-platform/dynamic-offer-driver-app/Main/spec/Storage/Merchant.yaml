@@ -1064,6 +1064,7 @@ TransporterConfig:
     allowCacheDriverFlowStatus : Maybe Bool
     cancellationRateSlabConfig: Maybe CancellationRateSlabConfig
     maxOnlineDurationDays : Maybe Int
+    distanceWeightage: Maybe Int
 
   beamType:
     currency: Maybe Currency
@@ -1483,6 +1484,7 @@ TransporterConfig:
     disableDriverWhenUnlinkingVehicle : "true"
     allowCacheDriverFlowStatus : "false"
     maxOnlineDurationDays : "10"
+    distanceWeightage: "20"
   excludedDefaultQueries:
     - findByPrimaryKey
     - updateByPrimaryKey
