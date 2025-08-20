@@ -59,7 +59,7 @@ validateRequest DOnCancel {..} = do
 onCancel :: Merchant -> Booking.FRFSTicketBooking -> DOnCancel -> Flow ()
 onCancel merchant booking' dOnCancel = do
   let booking = booking' {Booking.bppOrderId = Just dOnCancel.bppOrderId}
-  let refundAmount = fromMaybe (negate $ dOnCancel.baseFare * fromIntegral booking'.quantity) dOnCancel.refundAmount
+  let refundAmount = fromMaybe (negate dOnCancel.baseFare) dOnCancel.refundAmount
   let cancellationCharges = fromMaybe 0 dOnCancel.cancellationCharges
   case dOnCancel.orderStatus of
     Spec.SOFT_CANCELLED -> do
