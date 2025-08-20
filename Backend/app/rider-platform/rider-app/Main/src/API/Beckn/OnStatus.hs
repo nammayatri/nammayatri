@@ -22,6 +22,7 @@ import qualified Domain.Action.Beckn.OnStatus as DOnStatus
 import Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Tools.Logging
 import Kernel.Types.Beckn.Ack
 import Kernel.Types.Error
 import Kernel.Utils.Common
@@ -39,22 +40,27 @@ onStatus ::
   SignatureAuthResult ->
   OnStatus.OnStatusReqV2 ->
   FlowHandler AckResponse
-onStatus _ reqV2 = withFlowHandlerBecknAPI do
-  transactionId <- Utils.getTransactionId reqV2.onStatusReqContext
-  Utils.withTransactionIdLogTag transactionId $ do
-    logTagInfo "onStatusAPIV2" $ "Received onStatus API call:-" <> show reqV2
-    messageId <- Utils.getMessageIdText reqV2.onStatusReqContext
-    mbDOnStatusReq <- ACL.buildOnStatusReqV2 reqV2 transactionId
-    whenJust mbDOnStatusReq $ \onStatusReq ->
-      Redis.whenWithLockRedis (onStatusLockKey messageId) 60 $ do
-        validatedOnStatusReq <- DOnStatus.validateRequest onStatusReq
-        fork "on status processing" $ do
-          Redis.whenWithLockRedis (onStatusProcessngLockKey messageId) 60 $
-            DOnStatus.onStatus validatedOnStatusReq
-          fork "on status received pushing ondc logs" do
-            booking <- QRB.findByBPPBookingId onStatusReq.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> onStatusReq.bppBookingId.getId)
-            void $ pushLogs "on_status" (toJSON reqV2) booking.merchantId.getId "MOBILITY"
-  pure Ack
+onStatus _ reqV2 = withFlowHandlerBecknAPI $
+  withDynamicLogLevel "rider-onstatus-api" $ do
+    transactionId <- Utils.getTransactionId reqV2.onStatusReqContext
+    Utils.withTransactionIdLogTag transactionId $ do
+      logDebug $ "RIDER_ONSTATUS_API_DEBUG: Received on_status request for transactionId: " <> transactionId
+      logTagError "onStatusAPIV2" $ "Received onStatus API call:-" <> show reqV2
+      messageId <- Utils.getMessageIdText reqV2.onStatusReqContext
+      mbDOnStatusReq <- ACL.buildOnStatusReqV2 reqV2 transactionId
+      whenJust mbDOnStatusReq $ \onStatusReq -> do
+        logDebug $ "RIDER_ONSTATUS_API_DEBUG: Processing on_status for transactionId: " <> transactionId <> " with bppBookingId: " <> onStatusReq.bppBookingId.getId
+        Redis.whenWithLockRedis (onStatusLockKey messageId) 60 $ do
+          validatedOnStatusReq <- DOnStatus.validateRequest onStatusReq
+          fork "on status processing" $ do
+            Redis.whenWithLockRedis (onStatusProcessngLockKey messageId) 60 $
+              DOnStatus.onStatus validatedOnStatusReq
+            fork "on status received pushing ondc logs" do
+              logDebug $ "RIDER_ONSTATUS_API_DEBUG: Looking for booking with bppBookingId: " <> onStatusReq.bppBookingId.getId
+              booking <- QRB.findByBPPBookingId onStatusReq.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId:-" <> onStatusReq.bppBookingId.getId)
+              logDebug $ "RIDER_ONSTATUS_API_DEBUG: Found booking: " <> booking.id.getId <> " with status: " <> show booking.status
+              void $ pushLogs "on_status" (toJSON reqV2) booking.merchantId.getId "MOBILITY"
+    pure Ack
 
 onStatusLockKey :: Text -> Text
 onStatusLockKey id = "Customer:OnStatus:MessageId-" <> id

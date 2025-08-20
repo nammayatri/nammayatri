@@ -60,6 +60,7 @@ import qualified Kernel.External.Ticket.Interface.Types as Ticket
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto hiding (count, isNothing, on)
 import qualified Kernel.Storage.Hedis as Hedis
+import Kernel.Tools.Logging
 import Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error
@@ -210,7 +211,7 @@ getRideList ::
   Maybe UTCTime ->
   Maybe UTCTime ->
   Flow Common.RideListRes
-getRideList merchantShortId _ mbLimit mbOffset mbBookingStatus mbReqShortRideId mbCustomerPhone mbDriverPhone mbFrom mbTo = do
+getRideList merchantShortId _ mbLimit mbOffset mbBookingStatus mbReqShortRideId mbCustomerPhone mbDriverPhone mbFrom mbTo = withDynamicLogLevel "ride-list" $ do
   merchant <- findMerchantByShortId merchantShortId
   let limit_ = min maxLimit . fromMaybe defaultLimit $ mbLimit -- TODO move to common code
       offset_ = fromMaybe 0 mbOffset
@@ -261,7 +262,7 @@ getRideKaptureList ::
   Maybe Text ->
   Maybe Text ->
   Flow Common.TicketRideListRes
-getRideKaptureList merchantShortId _ mbRideShortId countryCode mbPhoneNumber _ = do
+getRideKaptureList merchantShortId _ mbRideShortId countryCode mbPhoneNumber _ = withDynamicLogLevel "ride-kapture-list" $ do
   merchant <- findMerchantByShortId merchantShortId
   let totalRides = 5
   let mbShortId = coerce @(ShortId Common.Ride) @(ShortId DRide.Ride) <$> mbRideShortId
@@ -521,22 +522,29 @@ rideSync ::
   DM.Merchant ->
   Id Common.Ride ->
   Flow APISuccess
-rideSync merchant reqRideId = do
-  let rideId = cast @Common.Ride @DRide.Ride reqRideId
-  ride <- B.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
-  booking <- B.runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+rideSync merchant reqRideId = withDynamicLogLevel "ride-sync-single" $ do
+  withLogTag ("merchantId-" <> merchant.id.getId) $ do
+    let rideId = cast @Common.Ride @DRide.Ride reqRideId
+    logDebug $ "Starting ride sync for rideId: " <> rideId.getId
+    withLogTag ("rideId-" <> rideId.getId) $ do
+      ride <- B.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+      booking <- B.runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+      logDebug $ "Found booking: " <> booking.id.getId <> " with status: " <> show booking.status <> " and bppBookingId: " <> show booking.bppBookingId <> " and transactionId: " <> show booking.transactionId
 
-  unless (merchant.id == booking.merchantId) $
-    throwError (RideDoesNotExist rideId.getId)
-  city <- case ride.merchantOperatingCityId of
-    Nothing -> pure merchant.defaultCity
-    Just merchantOperatingCityId -> CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
-  let dStatusReq = DStatusReq {booking, merchant, city}
-  becknStatusReq <- buildStatusReqV2 dStatusReq
-  messageId <- Utils.getMessageId becknStatusReq.statusReqContext
-  Hedis.setExp (Common.makeContextMessageIdStatusSyncKey messageId) True 3600
-  void $ withShortRetry $ CallBPP.callStatusV2 booking.providerUrl becknStatusReq booking.merchantId
-  pure Success
+      unless (merchant.id == booking.merchantId) $
+        throwError (RideDoesNotExist rideId.getId)
+      city <- case ride.merchantOperatingCityId of
+        Nothing -> pure merchant.defaultCity
+        Just merchantOperatingCityId -> CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
+      let dStatusReq = DStatusReq {booking, merchant, city}
+      becknStatusReq <- buildStatusReqV2 dStatusReq
+      messageId <- Utils.getMessageId becknStatusReq.statusReqContext
+      logDebug $ "Sending status request to BPP with transactionId: " <> show booking.transactionId <> " and providerUrl: " <> show booking.providerUrl
+      withLogTag ("messageId-" <> messageId) $ do
+        Hedis.setExp (Common.makeContextMessageIdStatusSyncKey messageId) True 3600
+        void $ withShortRetry $ CallBPP.callStatusV2 booking.providerUrl becknStatusReq booking.merchantId
+        logDebug $ "Completed ride sync for rideId: " <> rideId.getId
+        pure Success
 
 getRideTripRoute ::
   ShortId DM.Merchant ->
@@ -563,16 +571,24 @@ postRideSyncMultiple ::
   Context.City ->
   Common.MultipleRideSyncReq ->
   Flow Common.MultipleRideSyncResp
-postRideSyncMultiple merchantShortId _ req = do
-  runRequestValidation validateMultipleRideSyncReq req
-  merchant <- findMerchantByShortId merchantShortId
-  logTagInfo "dashboard -> multipleRideSync : " $ show (req.rides <&> (.rideId))
-  respItems <- forM req.rides $ \reqItem -> do
-    info <- handle Common.listItemErrHandler $ do
-      void $ rideSync merchant reqItem.rideId
-      pure Common.SuccessItem
-    pure $ Common.MultipleRideSyncRespItem {rideId = reqItem.rideId, info}
-  pure $ Common.MultipleRideSyncResp {list = respItems}
+postRideSyncMultiple merchantShortId _ req = withDynamicLogLevel "ride-sync-multiple" $ do
+  withLogTag ("merchantShortId-" <> merchantShortId.getShortId) $ do
+    logDebug $ "Starting multiple ride sync for " <> show (length req.rides) <> " rides"
+    runRequestValidation validateMultipleRideSyncReq req
+    merchant <- findMerchantByShortId merchantShortId
+    withLogTag ("merchantId-" <> merchant.id.getId) $ do
+      logTagInfo "dashboard -> multipleRideSync : " $ show (req.rides <&> (.rideId))
+      respItems <- forM req.rides $ \reqItem -> do
+        withLogTag ("rideId-" <> reqItem.rideId.getId) $ do
+          logDebug $ "Processing ride: " <> reqItem.rideId.getId
+          info <- handle Common.listItemErrHandler $ do
+            void $ rideSync merchant reqItem.rideId
+            logDebug $ "Successfully synced ride: " <> reqItem.rideId.getId
+            pure Common.SuccessItem
+          logDebug $ "Completed processing ride: " <> reqItem.rideId.getId <> " with result: " <> show info
+          pure $ Common.MultipleRideSyncRespItem {rideId = reqItem.rideId, info}
+      logDebug $ "Completed multiple ride sync for " <> show (length req.rides) <> " rides"
+      pure $ Common.MultipleRideSyncResp {list = respItems}
 
 validateMultipleRideSyncReq :: Validate Common.MultipleRideSyncReq
 validateMultipleRideSyncReq Common.MultipleRideSyncReq {..} = do

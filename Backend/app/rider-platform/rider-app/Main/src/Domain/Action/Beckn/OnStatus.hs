@@ -41,6 +41,7 @@ import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import Kernel.Tools.Logging
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Error
 import Kernel.Types.Id (Id)
@@ -168,10 +169,13 @@ isStatusChanged bookingOldStatus bookingNewStatus rideEntity = do
 onStatus ::
   ValidatedOnStatusReq ->
   Flow ()
-onStatus req = do
+onStatus req = withDynamicLogLevel "rider-onstatus-domain" $ do
+  logDebug $ "RIDER_ONSTATUS_DOMAIN_DEBUG: Processing on_status domain logic for bppBookingId: " <> req.bppBookingId.getId
   booking <- QB.findByBPPBookingId req.bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> req.bppBookingId.getId)
+  logDebug $ "RIDER_ONSTATUS_DOMAIN_DEBUG: Found booking: " <> booking.id.getId <> " with status: " <> show booking.status
   case req.validatedRideDetails of
     ValidatedNewBookingDetails -> do
+      logDebug $ "RIDER_ONSTATUS_DOMAIN_DEBUG: Processing ValidatedNewBookingDetails for booking: " <> booking.id.getId
       mbExistingRide <- B.runInReplica $ QRide.findActiveByRBId booking.id
       unless (booking.status == bookingNewStatus) $ do
         QB.updateStatus booking.id bookingNewStatus
@@ -182,16 +186,30 @@ onStatus req = do
       where
         bookingNewStatus = DB.NEW
         rideNewStatus = DRide.CANCELLED
-    ValidatedRideAssignedDetails request -> DCommon.rideAssignedReqHandler request
+    ValidatedRideAssignedDetails request -> do
+      logDebug $ "RIDER_ONSTATUS_DOMAIN_DEBUG: Processing ValidatedRideAssignedDetails for booking: " <> booking.id.getId
+      DCommon.rideAssignedReqHandler request
     ValidatedRideEnroutePickupDetails -> do
+      logDebug $ "RIDER_ONSTATUS_DOMAIN_DEBUG: Processing ValidatedRideEnroutePickupDetails for booking: " <> booking.id.getId
       logTagInfo "OnStatus" "RIDE_ENROUTE_PICKUP event received"
       pure ()
-    ValidatedDriverArrivedDetails request -> DCommon.driverArrivedReqHandler request
-    ValidatedRideStartedDetails request -> DCommon.rideStartedReqHandler request
-    ValidatedRideCompletedDetails request -> DCommon.rideCompletedReqHandler request
-    ValidatedFarePaidDetails request -> DCommon.farePaidReqHandler request
-    ValidatedBookingCancelledDetails request -> DCommon.bookingCancelledReqHandler request
+    ValidatedDriverArrivedDetails request -> do
+      logDebug $ "RIDER_ONSTATUS_DOMAIN_DEBUG: Processing ValidatedDriverArrivedDetails for booking: " <> booking.id.getId
+      DCommon.driverArrivedReqHandler request
+    ValidatedRideStartedDetails request -> do
+      logDebug $ "RIDER_ONSTATUS_DOMAIN_DEBUG: Processing ValidatedRideStartedDetails for booking: " <> booking.id.getId
+      DCommon.rideStartedReqHandler request
+    ValidatedRideCompletedDetails request -> do
+      logDebug $ "RIDER_ONSTATUS_DOMAIN_DEBUG: Processing ValidatedRideCompletedDetails for booking: " <> booking.id.getId
+      DCommon.rideCompletedReqHandler request
+    ValidatedFarePaidDetails request -> do
+      logDebug $ "RIDER_ONSTATUS_DOMAIN_DEBUG: Processing ValidatedFarePaidDetails for booking: " <> booking.id.getId
+      DCommon.farePaidReqHandler request
+    ValidatedBookingCancelledDetails request -> do
+      logDebug $ "RIDER_ONSTATUS_DOMAIN_DEBUG: Processing ValidatedBookingCancelledDetails for booking: " <> booking.id.getId
+      DCommon.bookingCancelledReqHandler request
     ValidatedBookingReallocationDetails BookingReallocationReq {bookingDetails, reallocationSource} -> do
+      logDebug $ "RIDER_ONSTATUS_DOMAIN_DEBUG: Processing ValidatedBookingReallocationDetails for booking: " <> booking.id.getId
       rideEntity <- buildRideEntity booking updateReallocatedRide bookingDetails
       let rideId = case rideEntity of
             UpdatedRide (DUpdatedRide {ride}) -> ride.id
