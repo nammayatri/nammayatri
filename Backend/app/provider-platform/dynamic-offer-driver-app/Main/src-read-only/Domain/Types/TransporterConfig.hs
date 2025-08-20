@@ -91,6 +91,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     disableDriverWhenUnlinkingVehicle :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     disableListScheduledBookingAPI :: Kernel.Prelude.Bool,
     distanceUnit :: Kernel.Types.Common.DistanceUnit,
+    distanceWeightage :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     dlNumberVerification :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     dpBlackListedGeohash :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     dpGeoHashPercision :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
