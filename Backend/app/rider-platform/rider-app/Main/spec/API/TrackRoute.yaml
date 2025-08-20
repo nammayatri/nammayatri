@@ -7,6 +7,7 @@ imports:
   VehicleCategory: BecknV2.FRFS.Enums
   PlatformType: Domain.Types.IntegratedBPPConfig
   IntegratedBPPConfig: Domain.Types.IntegratedBPPConfig
+  RouteState: Storage.CachedQueries.Merchant.MultiModalBus
 
 module: TrackRoute
 
@@ -18,6 +19,7 @@ types:
     startTime: Maybe UTCTime
     startDate: Maybe Text
     scheduleRelationship: Maybe Text
+    routeState: Maybe RouteState
     tripId: Maybe Text
     latitude: Maybe Double
     longitude: Maybe Double
