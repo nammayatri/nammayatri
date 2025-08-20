@@ -26,6 +26,7 @@ import qualified Control.Monad.Extra as CME
 import Data.Aeson hiding (Success)
 import Data.Text as T hiding (elem, find, length, map, null, zip)
 import Data.Time (defaultTimeLocale, formatTime)
+import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.Dashboard.Fleet.RegistrationV2 as DFR
 import qualified Domain.Action.UI.DriverOnboarding.Image as Image
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DVRC
@@ -118,7 +119,7 @@ verifyPan verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprovalR
             panCardDetails <- buildPanCard person Nothing Nothing Nothing
             DPQuery.create $ panCardDetails
         case person.role of
-          role | isFleetOwnerRole role -> do
+          role | DCommon.checkFleetOwnerRole role -> do
             encryptedPanNumber <- encrypt req.panNumber
             QFOI.updatePanImage (Just encryptedPanNumber) (Just req.imageId) person.id
           Person.DRIVER -> do
@@ -141,13 +142,11 @@ verifyPan verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprovalR
         void $ SStatus.statusHandler' driverImagesInfo Nothing Nothing Nothing Nothing Nothing (Just True) shouldActivateRc onlyMandatoryDocs
       pure False
     role
-      | isFleetOwnerRole role ->
+      | DCommon.checkFleetOwnerRole role ->
         DFR.enableFleetIfPossible person.id adminApprovalRequired (DFR.castRoleToFleetType person.role)
     _ -> pure False
   pure res
   where
-    isFleetOwnerRole :: Person.Role -> Bool
-    isFleetOwnerRole role = role `elem` [Person.FLEET_OWNER, Person.FLEET_BUSINESS]
     callIdfy :: Person.Person -> Maybe DPan.DriverPanCard -> DVRC.DriverDocument -> DTC.TransporterConfig -> Flow APISuccess
     callIdfy person mdriverPanInformation driverDocument transporterConfig = do
       image1 <- DVRC.getDocumentImage person.id req.imageId ODC.PanCard
