@@ -36,14 +36,14 @@ data AlertRequest = AlertRequest
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data RequesteeType = FleetOwner | Driver deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema))
+data RequesteeType = FleetOwner | Driver deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-data RequestorType = SystemGenerated | DriverGenerated deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema))
+data RequestorType = SystemGenerated | DriverGenerated deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum (''RequestorType))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum ''RequestorType)
 
-$(Kernel.Utils.TH.mkFromHttpInstanceForEnum (''RequestorType))
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''RequestorType)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum (''RequesteeType))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnum ''RequesteeType)
 
-$(Kernel.Utils.TH.mkFromHttpInstanceForEnum (''RequesteeType))
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''RequesteeType)

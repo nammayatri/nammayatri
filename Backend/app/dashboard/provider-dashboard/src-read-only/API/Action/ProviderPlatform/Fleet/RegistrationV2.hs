@@ -32,9 +32,9 @@ type PostRegistrationV2VerifyOtp = API.Types.ProviderPlatform.Fleet.Registration
 
 type PostRegistrationV2Register =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_FLEET) / ('API.Types.ProviderPlatform.Fleet.REGISTRATION_V2) / ('API.Types.ProviderPlatform.Fleet.RegistrationV2.POST_REGISTRATION_V2_REGISTER))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_FLEET / 'API.Types.ProviderPlatform.Fleet.REGISTRATION_V2 / 'API.Types.ProviderPlatform.Fleet.RegistrationV2.POST_REGISTRATION_V2_REGISTER)
       :> API.Types.ProviderPlatform.Fleet.RegistrationV2.PostRegistrationV2Register
   )
 

@@ -17,10 +17,10 @@ import Servant
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
-type API = ("riderMobileNumber" :> Capture "bppRideId" Kernel.Prelude.Text :> Header "token" Kernel.Prelude.Text :> Get ('[JSON]) API.Types.UI.RiderMobileNumberInternal.RiderMobileAPIEntity)
+type API = ("riderMobileNumber" :> Capture "bppRideId" Kernel.Prelude.Text :> Header "token" Kernel.Prelude.Text :> Get '[JSON] API.Types.UI.RiderMobileNumberInternal.RiderMobileAPIEntity)
 
 handler :: Environment.FlowServer API
 handler = getRiderMobileNumber
 
-getRiderMobileNumber :: (Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Prelude.Text) -> Environment.FlowHandler API.Types.UI.RiderMobileNumberInternal.RiderMobileAPIEntity)
+getRiderMobileNumber :: (Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.FlowHandler API.Types.UI.RiderMobileNumberInternal.RiderMobileAPIEntity)
 getRiderMobileNumber a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.RiderMobileNumberInternal.getRiderMobileNumber a2 a1

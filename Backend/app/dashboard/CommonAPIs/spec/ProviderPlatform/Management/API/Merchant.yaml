@@ -760,6 +760,8 @@ types:
     - govtCharges: Maybe Double
     - perMinuteRideExtraTimeCharge: Maybe HighPrecMoney
     - tollCharges: Maybe HighPrecMoney
+    - priorityCharges: Maybe HighPrecMoney
+    - pickupBufferInSecsForNightShiftCal: Maybe Seconds
     - perMinuteRideExtraTimeChargeWithCurrency: Maybe PriceAPIEntity
     - congestionChargeMultiplier: Maybe CongestionChargeMultiplierAPIEntity
     - description: Maybe Text

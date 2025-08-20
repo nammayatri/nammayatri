@@ -26,4 +26,4 @@ data PickupInstructionsReq = PickupInstructionsReq {file :: Kernel.Prelude.Maybe
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(mkHttpInstancesForEnum (''DeleteTarget))
+$(mkHttpInstancesForEnum ''DeleteTarget)

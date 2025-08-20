@@ -23,7 +23,7 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Journey.Journey] -> m ())
 createMany = traverse_ create
 
-findBySearchId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m ([Domain.Types.Journey.Journey]))
+findBySearchId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m [Domain.Types.Journey.Journey])
 findBySearchId searchRequestId = do findAllWithKV [Se.Is Beam.searchRequestId $ Se.Eq searchRequestId]
 
 updatePaymentOrderShortId ::
@@ -39,7 +39,7 @@ updatePaymentOrderShortId paymentOrderShortId isPaymentSuccess id = do
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Journey.JourneyStatus -> Kernel.Types.Id.Id Domain.Types.Journey.Journey -> m ())
-updateStatus status id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.status ((Just status)), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+updateStatus status id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.status (Just status), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Journey.Journey -> m (Maybe Domain.Types.Journey.Journey))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
@@ -50,11 +50,11 @@ updateByPrimaryKey (Domain.Types.Journey.Journey {..}) = do
   updateWithKV
     [ Se.Set Beam.convenienceCost convenienceCost,
       Se.Set Beam.endTime endTime,
-      Se.Set Beam.distanceUnit (((.unit)) estimatedDistance),
-      Se.Set Beam.estimatedDistance (((.value)) estimatedDistance),
+      Se.Set Beam.distanceUnit ((.unit) estimatedDistance),
+      Se.Set Beam.estimatedDistance ((.value) estimatedDistance),
       Se.Set Beam.estimatedDuration estimatedDuration,
-      Se.Set Beam.fromLocationAddress (Nothing),
-      Se.Set Beam.fromLocationId ((Just $ Kernel.Types.Id.getId ((.id) fromLocation))),
+      Se.Set Beam.fromLocationAddress Nothing,
+      Se.Set Beam.fromLocationId (Just $ Kernel.Types.Id.getId ((.id) fromLocation)),
       Se.Set Beam.hasPreferredServiceTier hasPreferredServiceTier,
       Se.Set Beam.hasPreferredTransitModes hasPreferredTransitModes,
       Se.Set Beam.isPaymentSuccess isPaymentSuccess,
@@ -69,9 +69,9 @@ updateByPrimaryKey (Domain.Types.Journey.Journey {..}) = do
       Se.Set Beam.riderId (Kernel.Types.Id.getId riderId),
       Se.Set Beam.searchRequestId searchRequestId,
       Se.Set Beam.startTime startTime,
-      Se.Set Beam.status ((Just status)),
-      Se.Set Beam.toLocationAddress (Nothing),
-      Se.Set Beam.toLocationId ((Kernel.Types.Id.getId <$> (toLocation <&> (.id)))),
+      Se.Set Beam.status (Just status),
+      Se.Set Beam.toLocationAddress Nothing,
+      Se.Set Beam.toLocationId (Kernel.Types.Id.getId <$> (toLocation <&> (.id))),
       Se.Set Beam.totalLegs totalLegs,
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now

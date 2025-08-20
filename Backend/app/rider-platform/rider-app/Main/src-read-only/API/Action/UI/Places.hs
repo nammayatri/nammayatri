@@ -21,7 +21,7 @@ import Servant
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
-type API = (TokenAuth :> "places" :> ReqBody ('[JSON]) API.Types.UI.Places.PlacesRequest :> Post ('[JSON]) API.Types.UI.Places.PlacesResponse)
+type API = (TokenAuth :> "places" :> ReqBody '[JSON] API.Types.UI.Places.PlacesRequest :> Post '[JSON] API.Types.UI.Places.PlacesResponse)
 
 handler :: Environment.FlowServer API
 handler = postPlaces

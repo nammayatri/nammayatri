@@ -10,7 +10,6 @@ import qualified "this" Domain.Types.Estimate
 import qualified "this" Domain.Types.Person
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
-import qualified Kernel.Types.APISuccess
 import Kernel.Types.Common
 import qualified Kernel.Types.Id
 import Servant
@@ -25,7 +24,9 @@ type PostSelectEstimate =
            (Kernel.Types.Id.Id Domain.Types.Estimate.Estimate)
       :> "select"
       :> ReqBody '[JSON] Domain.Action.UI.Select.DSelectReq
-      :> Post '[JSON] Domain.Action.UI.Select.MultimodalSelectRes
+      :> Post
+           '[JSON]
+           Domain.Action.UI.Select.MultimodalSelectRes
   )
 
 type GetSelectQuotes =

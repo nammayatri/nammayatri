@@ -20,26 +20,26 @@ import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =
-  ( "getCustomerInfo" :> Header "token" Data.Text.Text :> ReqBody ('[JSON]) API.Types.UI.MeterRideInternal.CustomerInfo
+  ( "getCustomerInfo" :> Header "token" Data.Text.Text :> ReqBody '[JSON] API.Types.UI.MeterRideInternal.CustomerInfo
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.MeterRideInternal.CustomerInfoResponse
       :<|> Capture "bppRideId" Data.Text.Text
       :> "addDestination"
       :> Header "token" Data.Text.Text
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.MeterRideInternal.MeterRideAddDestinationReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 
 handler :: Environment.FlowServer API
 handler = getGetCustomerInfo :<|> postAddDestination
 
-getGetCustomerInfo :: (Kernel.Prelude.Maybe (Data.Text.Text) -> API.Types.UI.MeterRideInternal.CustomerInfo -> Environment.FlowHandler API.Types.UI.MeterRideInternal.CustomerInfoResponse)
+getGetCustomerInfo :: (Kernel.Prelude.Maybe Data.Text.Text -> API.Types.UI.MeterRideInternal.CustomerInfo -> Environment.FlowHandler API.Types.UI.MeterRideInternal.CustomerInfoResponse)
 getGetCustomerInfo a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MeterRideInternal.getGetCustomerInfo a2 a1
 
-postAddDestination :: (Data.Text.Text -> Kernel.Prelude.Maybe (Data.Text.Text) -> API.Types.UI.MeterRideInternal.MeterRideAddDestinationReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
+postAddDestination :: (Data.Text.Text -> Kernel.Prelude.Maybe Data.Text.Text -> API.Types.UI.MeterRideInternal.MeterRideAddDestinationReq -> Environment.FlowHandler Kernel.Types.APISuccess.APISuccess)
 postAddDestination a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MeterRideInternal.postAddDestination a3 a2 a1

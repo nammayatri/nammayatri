@@ -22,7 +22,7 @@ import qualified SharedLogic.CallBAPInternal
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
-type API = (TokenAuth :> "riderMobileNumber" :> Capture "rideId" Kernel.Prelude.Text :> Get ('[JSON]) SharedLogic.CallBAPInternal.RiderMobileAPIEntity)
+type API = (TokenAuth :> "riderMobileNumber" :> Capture "rideId" Kernel.Prelude.Text :> Get '[JSON] SharedLogic.CallBAPInternal.RiderMobileAPIEntity)
 
 handler :: Environment.FlowServer API
 handler = getRiderMobileNumber

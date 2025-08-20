@@ -22,7 +22,7 @@ findByCategory category = do findOneWithKV [Se.Is Beam.category $ Se.Eq category
 
 findByCategoryAndMerchantOperatingCityId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> m ([Domain.Types.CallFeedbackOptions.CallFeedbackOptions]))
+  (Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> m [Domain.Types.CallFeedbackOptions.CallFeedbackOptions])
 findByCategoryAndMerchantOperatingCityId category merchantOperatingCityId = do
   findAllWithKV
     [ Se.And

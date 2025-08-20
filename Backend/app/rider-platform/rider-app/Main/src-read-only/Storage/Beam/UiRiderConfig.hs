@@ -15,13 +15,13 @@ import qualified Lib.Yudhishthira.Types
 import Tools.Beam.UtilsTH
 
 data UiRiderConfigT f = UiRiderConfigT
-  { config :: (B.C f Data.Aeson.Value),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    id :: (B.C f Data.Text.Text),
-    merchantOperatingCityId :: (B.C f Data.Text.Text),
-    os :: (B.C f Kernel.Types.Version.DeviceType),
-    platform :: (B.C f Lib.Yudhishthira.Types.PlatformType),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { config :: B.C f Data.Aeson.Value,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    id :: B.C f Data.Text.Text,
+    merchantOperatingCityId :: B.C f Data.Text.Text,
+    os :: B.C f Kernel.Types.Version.DeviceType,
+    platform :: B.C f Lib.Yudhishthira.Types.PlatformType,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -31,6 +31,6 @@ instance B.Table UiRiderConfigT where
 
 type UiRiderConfig = UiRiderConfigT Identity
 
-$(enableKVPG (''UiRiderConfigT) [('id)] [])
+$(enableKVPG ''UiRiderConfigT ['id] [])
 
-$(mkTableInstances (''UiRiderConfigT) "ui_rider_config")
+$(mkTableInstances ''UiRiderConfigT "ui_rider_config")

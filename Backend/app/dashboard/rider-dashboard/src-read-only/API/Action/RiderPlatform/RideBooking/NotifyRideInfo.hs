@@ -29,9 +29,9 @@ handler merchantId city = postNotifyRideInfoNotifyRideInfo merchantId city
 
 type PostNotifyRideInfoNotifyRideInfo =
   ( ApiAuth
-      ('APP_BACKEND)
-      ('DSL)
-      (('RIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.NOTIFY_RIDE_INFO) / ('API.Types.Dashboard.RideBooking.NotifyRideInfo.POST_NOTIFY_RIDE_INFO_NOTIFY_RIDE_INFO))
+      'APP_BACKEND
+      'DSL
+      ('RIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.NOTIFY_RIDE_INFO / 'API.Types.Dashboard.RideBooking.NotifyRideInfo.POST_NOTIFY_RIDE_INFO_NOTIFY_RIDE_INFO)
       :> API.Types.Dashboard.RideBooking.NotifyRideInfo.PostNotifyRideInfoNotifyRideInfo
   )
 

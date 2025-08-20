@@ -35,121 +35,121 @@ handler merchantId city = getSubscriptionListPlan merchantId city :<|> putSubscr
 
 type GetSubscriptionListPlan =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.SUBSCRIPTION) / ('API.Types.Dashboard.AppManagement.Subscription.GET_SUBSCRIPTION_LIST_PLAN))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.SUBSCRIPTION / 'API.Types.Dashboard.AppManagement.Subscription.GET_SUBSCRIPTION_LIST_PLAN)
       :> API.Types.Dashboard.AppManagement.Subscription.GetSubscriptionListPlan
   )
 
 type PutSubscriptionSelectPlan =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.SUBSCRIPTION) / ('API.Types.Dashboard.AppManagement.Subscription.PUT_SUBSCRIPTION_SELECT_PLAN))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.SUBSCRIPTION / 'API.Types.Dashboard.AppManagement.Subscription.PUT_SUBSCRIPTION_SELECT_PLAN)
       :> API.Types.Dashboard.AppManagement.Subscription.PutSubscriptionSelectPlan
   )
 
 type PutSubscriptionSuspendPlan =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.SUBSCRIPTION) / ('API.Types.Dashboard.AppManagement.Subscription.PUT_SUBSCRIPTION_SUSPEND_PLAN))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.SUBSCRIPTION / 'API.Types.Dashboard.AppManagement.Subscription.PUT_SUBSCRIPTION_SUSPEND_PLAN)
       :> API.Types.Dashboard.AppManagement.Subscription.PutSubscriptionSuspendPlan
   )
 
 type PostSubscriptionSubscribePlan =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.SUBSCRIPTION) / ('API.Types.Dashboard.AppManagement.Subscription.POST_SUBSCRIPTION_SUBSCRIBE_PLAN))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.SUBSCRIPTION / 'API.Types.Dashboard.AppManagement.Subscription.POST_SUBSCRIPTION_SUBSCRIBE_PLAN)
       :> API.Types.Dashboard.AppManagement.Subscription.PostSubscriptionSubscribePlan
   )
 
 type GetSubscriptionCurrentPlan =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.SUBSCRIPTION) / ('API.Types.Dashboard.AppManagement.Subscription.GET_SUBSCRIPTION_CURRENT_PLAN))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.SUBSCRIPTION / 'API.Types.Dashboard.AppManagement.Subscription.GET_SUBSCRIPTION_CURRENT_PLAN)
       :> API.Types.Dashboard.AppManagement.Subscription.GetSubscriptionCurrentPlan
   )
 
 type GetSubscriptionListPlanV2 =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.SUBSCRIPTION) / ('API.Types.Dashboard.AppManagement.Subscription.GET_SUBSCRIPTION_LIST_PLAN_V2))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.SUBSCRIPTION / 'API.Types.Dashboard.AppManagement.Subscription.GET_SUBSCRIPTION_LIST_PLAN_V2)
       :> API.Types.Dashboard.AppManagement.Subscription.GetSubscriptionListPlanV2
   )
 
 type PutSubscriptionSelectPlanV2 =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.SUBSCRIPTION) / ('API.Types.Dashboard.AppManagement.Subscription.PUT_SUBSCRIPTION_SELECT_PLAN_V2))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.SUBSCRIPTION / 'API.Types.Dashboard.AppManagement.Subscription.PUT_SUBSCRIPTION_SELECT_PLAN_V2)
       :> API.Types.Dashboard.AppManagement.Subscription.PutSubscriptionSelectPlanV2
   )
 
 type PutSubscriptionSuspendPlanV2 =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.SUBSCRIPTION) / ('API.Types.Dashboard.AppManagement.Subscription.PUT_SUBSCRIPTION_SUSPEND_PLAN_V2))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.SUBSCRIPTION / 'API.Types.Dashboard.AppManagement.Subscription.PUT_SUBSCRIPTION_SUSPEND_PLAN_V2)
       :> API.Types.Dashboard.AppManagement.Subscription.PutSubscriptionSuspendPlanV2
   )
 
 type PostSubscriptionSubscribePlanV2 =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.SUBSCRIPTION) / ('API.Types.Dashboard.AppManagement.Subscription.POST_SUBSCRIPTION_SUBSCRIBE_PLAN_V2))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.SUBSCRIPTION / 'API.Types.Dashboard.AppManagement.Subscription.POST_SUBSCRIPTION_SUBSCRIBE_PLAN_V2)
       :> API.Types.Dashboard.AppManagement.Subscription.PostSubscriptionSubscribePlanV2
   )
 
 type GetSubscriptionCurrentPlanV2 =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.SUBSCRIPTION) / ('API.Types.Dashboard.AppManagement.Subscription.GET_SUBSCRIPTION_CURRENT_PLAN_V2))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.SUBSCRIPTION / 'API.Types.Dashboard.AppManagement.Subscription.GET_SUBSCRIPTION_CURRENT_PLAN_V2)
       :> API.Types.Dashboard.AppManagement.Subscription.GetSubscriptionCurrentPlanV2
   )
 
 type GetSubscriptionOrderStatus =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.SUBSCRIPTION) / ('API.Types.Dashboard.AppManagement.Subscription.GET_SUBSCRIPTION_ORDER_STATUS))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.SUBSCRIPTION / 'API.Types.Dashboard.AppManagement.Subscription.GET_SUBSCRIPTION_ORDER_STATUS)
       :> API.Types.Dashboard.AppManagement.Subscription.GetSubscriptionOrderStatus
   )
 
 type GetSubscriptionDriverPaymentHistoryAPIV2 =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.SUBSCRIPTION) / ('API.Types.Dashboard.AppManagement.Subscription.GET_SUBSCRIPTION_DRIVER_PAYMENT_HISTORY_API_V2))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.SUBSCRIPTION / 'API.Types.Dashboard.AppManagement.Subscription.GET_SUBSCRIPTION_DRIVER_PAYMENT_HISTORY_API_V2)
       :> API.Types.Dashboard.AppManagement.Subscription.GetSubscriptionDriverPaymentHistoryAPIV2
   )
 
 type GetSubscriptionDriverPaymentHistoryEntityDetailsV2 =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.SUBSCRIPTION) / ('API.Types.Dashboard.AppManagement.Subscription.GET_SUBSCRIPTION_DRIVER_PAYMENT_HISTORY_ENTITY_DETAILS_V2))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.SUBSCRIPTION / 'API.Types.Dashboard.AppManagement.Subscription.GET_SUBSCRIPTION_DRIVER_PAYMENT_HISTORY_ENTITY_DETAILS_V2)
       :> API.Types.Dashboard.AppManagement.Subscription.GetSubscriptionDriverPaymentHistoryEntityDetailsV2
   )
 
 type PostSubscriptionCollectManualPayments =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.SUBSCRIPTION) / ('API.Types.Dashboard.AppManagement.Subscription.POST_SUBSCRIPTION_COLLECT_MANUAL_PAYMENTS))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.SUBSCRIPTION / 'API.Types.Dashboard.AppManagement.Subscription.POST_SUBSCRIPTION_COLLECT_MANUAL_PAYMENTS)
       :> API.Types.Dashboard.AppManagement.Subscription.PostSubscriptionCollectManualPayments
   )
 
 type PostSubscriptionFeeWaiveOff =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_APP_MANAGEMENT) / ('API.Types.Dashboard.AppManagement.SUBSCRIPTION) / ('API.Types.Dashboard.AppManagement.Subscription.POST_SUBSCRIPTION_FEE_WAIVE_OFF))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_APP_MANAGEMENT / 'API.Types.Dashboard.AppManagement.SUBSCRIPTION / 'API.Types.Dashboard.AppManagement.Subscription.POST_SUBSCRIPTION_FEE_WAIVE_OFF)
       :> API.Types.Dashboard.AppManagement.Subscription.PostSubscriptionFeeWaiveOff
   )
 
@@ -186,7 +186,7 @@ getSubscriptionCurrentPlanV2 merchantShortId opCity apiTokenInfo driverId servic
 getSubscriptionOrderStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver -> Kernel.Types.Id.Id Domain.Types.Invoice.Invoice -> Environment.FlowHandler Domain.Action.UI.Payment.PaymentStatusResp)
 getSubscriptionOrderStatus merchantShortId opCity apiTokenInfo driverId orderId = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.AppManagement.Subscription.getSubscriptionOrderStatus merchantShortId opCity apiTokenInfo driverId orderId
 
-getSubscriptionDriverPaymentHistoryAPIV2 :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver -> Domain.Types.Plan.ServiceNames -> Kernel.Prelude.Maybe (Domain.Types.Invoice.InvoicePaymentMode) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Environment.FlowHandler Domain.Action.UI.Driver.HistoryEntityV2)
+getSubscriptionDriverPaymentHistoryAPIV2 :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver -> Domain.Types.Plan.ServiceNames -> Kernel.Prelude.Maybe Domain.Types.Invoice.InvoicePaymentMode -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Environment.FlowHandler Domain.Action.UI.Driver.HistoryEntityV2)
 getSubscriptionDriverPaymentHistoryAPIV2 merchantShortId opCity apiTokenInfo driverId serviceName paymentMode limit offset = withFlowHandlerAPI' $ Domain.Action.ProviderPlatform.AppManagement.Subscription.getSubscriptionDriverPaymentHistoryAPIV2 merchantShortId opCity apiTokenInfo driverId serviceName paymentMode limit offset
 
 getSubscriptionDriverPaymentHistoryEntityDetailsV2 :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id API.Types.ProviderPlatform.Fleet.Driver.Driver -> Domain.Types.Plan.ServiceNames -> Kernel.Types.Id.Id Domain.Types.Invoice.Invoice -> Environment.FlowHandler Domain.Action.UI.Driver.HistoryEntryDetailsEntityV2)

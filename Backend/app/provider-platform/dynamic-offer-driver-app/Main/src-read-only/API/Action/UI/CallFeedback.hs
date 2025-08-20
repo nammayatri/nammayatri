@@ -23,7 +23,7 @@ import Servant
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
-type API = (TokenAuth :> "driver" :> "call" :> "feedback" :> ReqBody ('[JSON]) API.Types.UI.CallFeedback.CallFeedbackReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
+type API = (TokenAuth :> "driver" :> "call" :> "feedback" :> ReqBody '[JSON] API.Types.UI.CallFeedback.CallFeedbackReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
 handler :: Environment.FlowServer API
 handler = postDriverCallFeedback

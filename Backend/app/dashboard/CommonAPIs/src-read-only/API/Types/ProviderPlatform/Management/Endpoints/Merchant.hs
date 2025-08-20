@@ -482,7 +482,6 @@ data UpdateFarePolicyReq = UpdateFarePolicyReq
     govtCharges :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     perMinuteRideExtraTimeCharge :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     tollCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
-    petCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     priorityCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     pickupBufferInSecsForNightShiftCal :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     perMinuteRideExtraTimeChargeWithCurrency :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
@@ -497,7 +496,8 @@ data UpdateFarePolicyReq = UpdateFarePolicyReq
     waitingCharge :: Kernel.Prelude.Maybe WaitingChargeAPIEntity,
     waitingChargeInfo :: Kernel.Prelude.Maybe WaitingChargeInfoAPIEntity,
     freeWaitingTime :: Kernel.Prelude.Maybe Kernel.Types.Common.Minutes,
-    nightShiftCharge :: Kernel.Prelude.Maybe NightShiftChargeAPIEntity
+    nightShiftCharge :: Kernel.Prelude.Maybe NightShiftChargeAPIEntity,
+    petCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

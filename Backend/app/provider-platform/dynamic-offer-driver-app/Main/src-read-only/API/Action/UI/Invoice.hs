@@ -25,7 +25,7 @@ import Tools.Auth
 type API =
   ( TokenAuth :> "invoice" :> QueryParam "fromDate" Kernel.Prelude.UTCTime :> QueryParam "toDate" Kernel.Prelude.UTCTime :> QueryParam "rcNo" Kernel.Prelude.Text
       :> Get
-           ('[JSON])
+           '[JSON]
            [API.Types.UI.Invoice.InvoiceRes]
   )
 
@@ -37,9 +37,9 @@ getInvoice ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.UTCTime) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Text) ->
+    Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
+    Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Text ->
     Environment.FlowHandler [API.Types.UI.Invoice.InvoiceRes]
   )
 getInvoice a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.Invoice.getInvoice (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1

@@ -23,7 +23,7 @@ import Servant
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
-type API = (TokenAuth :> "pickupInstructions" :> MandatoryQueryParam "rideId" (Kernel.Types.Id.Id Domain.Types.Ride.Ride) :> Get ('[JSON]) API.Types.UI.PickupInstructions.PickupInstructionResp)
+type API = (TokenAuth :> "pickupInstructions" :> MandatoryQueryParam "rideId" (Kernel.Types.Id.Id Domain.Types.Ride.Ride) :> Get '[JSON] API.Types.UI.PickupInstructions.PickupInstructionResp)
 
 handler :: Environment.FlowServer API
 handler = getPickupInstructions

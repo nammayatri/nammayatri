@@ -29,8 +29,8 @@ updateByPrimaryKey (Domain.Types.VehicleRouteMapping.VehicleRouteMapping {..}) =
       Se.Set Beam.fleetOwnerId (Kernel.Types.Id.getId fleetOwnerId),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
-      Se.Set Beam.vehicleNumberEncrypted (((vehicleNumber & unEncrypted . encrypted))),
-      Se.Set Beam.vehicleNumberHash ((vehicleNumber & hash)),
+      Se.Set Beam.vehicleNumberEncrypted (vehicleNumber & unEncrypted . encrypted),
+      Se.Set Beam.vehicleNumberHash (vehicleNumber & hash),
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]

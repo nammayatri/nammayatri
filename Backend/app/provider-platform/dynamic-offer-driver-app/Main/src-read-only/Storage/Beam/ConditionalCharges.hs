@@ -14,13 +14,13 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data ConditionalChargesT f = ConditionalChargesT
-  { cgstPercentage :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
-    charge :: (B.C f Kernel.Types.Common.HighPrecMoney),
-    chargeCategory :: (B.C f Domain.Types.Extra.ConditionalCharges.ConditionalChargesCategories),
-    farePolicyId :: (B.C f Data.Text.Text),
-    sgstPercentage :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney)),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { cgstPercentage :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    charge :: B.C f Kernel.Types.Common.HighPrecMoney,
+    chargeCategory :: B.C f Domain.Types.Extra.ConditionalCharges.ConditionalChargesCategories,
+    farePolicyId :: B.C f Data.Text.Text,
+    sgstPercentage :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -30,6 +30,6 @@ instance B.Table ConditionalChargesT where
 
 type ConditionalCharges = ConditionalChargesT Identity
 
-$(enableKVPG (''ConditionalChargesT) [('chargeCategory), ('farePolicyId)] [])
+$(enableKVPG ''ConditionalChargesT ['chargeCategory, 'farePolicyId] [])
 
-$(mkTableInstances (''ConditionalChargesT) "conditional_charges")
+$(mkTableInstances ''ConditionalChargesT "conditional_charges")

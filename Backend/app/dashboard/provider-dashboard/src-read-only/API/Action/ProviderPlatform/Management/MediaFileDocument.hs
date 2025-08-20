@@ -30,33 +30,33 @@ handler merchantId city = postMediaFileDocumentUploadLink merchantId city :<|> p
 
 type PostMediaFileDocumentUploadLink =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.MEDIA_FILE_DOCUMENT) / ('API.Types.ProviderPlatform.Management.MediaFileDocument.POST_MEDIA_FILE_DOCUMENT_UPLOAD_LINK))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MEDIA_FILE_DOCUMENT / 'API.Types.ProviderPlatform.Management.MediaFileDocument.POST_MEDIA_FILE_DOCUMENT_UPLOAD_LINK)
       :> API.Types.ProviderPlatform.Management.MediaFileDocument.PostMediaFileDocumentUploadLink
   )
 
 type PostMediaFileDocumentConfirm =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.MEDIA_FILE_DOCUMENT) / ('API.Types.ProviderPlatform.Management.MediaFileDocument.POST_MEDIA_FILE_DOCUMENT_CONFIRM))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MEDIA_FILE_DOCUMENT / 'API.Types.ProviderPlatform.Management.MediaFileDocument.POST_MEDIA_FILE_DOCUMENT_CONFIRM)
       :> API.Types.ProviderPlatform.Management.MediaFileDocument.PostMediaFileDocumentConfirm
   )
 
 type PostMediaFileDocumentDelete =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.MEDIA_FILE_DOCUMENT) / ('API.Types.ProviderPlatform.Management.MediaFileDocument.POST_MEDIA_FILE_DOCUMENT_DELETE))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MEDIA_FILE_DOCUMENT / 'API.Types.ProviderPlatform.Management.MediaFileDocument.POST_MEDIA_FILE_DOCUMENT_DELETE)
       :> API.Types.ProviderPlatform.Management.MediaFileDocument.PostMediaFileDocumentDelete
   )
 
 type GetMediaFileDocumentDownloadLink =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.MEDIA_FILE_DOCUMENT) / ('API.Types.ProviderPlatform.Management.MediaFileDocument.GET_MEDIA_FILE_DOCUMENT_DOWNLOAD_LINK))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.MEDIA_FILE_DOCUMENT / 'API.Types.ProviderPlatform.Management.MediaFileDocument.GET_MEDIA_FILE_DOCUMENT_DOWNLOAD_LINK)
       :> API.Types.ProviderPlatform.Management.MediaFileDocument.GetMediaFileDocumentDownloadLink
   )
 

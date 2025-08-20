@@ -13,17 +13,17 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data PopularLocationT f = PopularLocationT
-  { address :: (B.C f Data.Text.Text),
-    createdAt :: (B.C f Data.Time.Clock.UTCTime),
-    id :: (B.C f Data.Text.Text),
-    lat :: (B.C f Kernel.Prelude.Double),
-    lon :: (B.C f Kernel.Prelude.Double),
-    merchantOperatingCityId :: (B.C f Data.Text.Text),
-    name :: (B.C f Data.Text.Text),
-    rating :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double)),
-    type_ :: (B.C f Data.Text.Text),
-    updatedAt :: (B.C f Data.Time.Clock.UTCTime),
-    merchantId :: (B.C f (Kernel.Prelude.Maybe (Data.Text.Text)))
+  { address :: B.C f Data.Text.Text,
+    createdAt :: B.C f Data.Time.Clock.UTCTime,
+    id :: B.C f Data.Text.Text,
+    lat :: B.C f Kernel.Prelude.Double,
+    lon :: B.C f Kernel.Prelude.Double,
+    merchantOperatingCityId :: B.C f Data.Text.Text,
+    name :: B.C f Data.Text.Text,
+    rating :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
+    type_ :: B.C f Data.Text.Text,
+    updatedAt :: B.C f Data.Time.Clock.UTCTime,
+    merchantId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text)
   }
   deriving (Generic, B.Beamable)
 
@@ -33,6 +33,6 @@ instance B.Table PopularLocationT where
 
 type PopularLocation = PopularLocationT Identity
 
-$(enableKVPG (''PopularLocationT) [('id)] [])
+$(enableKVPG ''PopularLocationT ['id] [])
 
-$(mkTableInstances (''PopularLocationT) "popular_location")
+$(mkTableInstances ''PopularLocationT "popular_location")

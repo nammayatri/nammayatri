@@ -27,4 +27,4 @@ data FRFSFarePolicy = FRFSFarePolicy
 
 data FRFSFarePolicyType = MatrixBased | StageBased deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''FRFSFarePolicyType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''FRFSFarePolicyType)

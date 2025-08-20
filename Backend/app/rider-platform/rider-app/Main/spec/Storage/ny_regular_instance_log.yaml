@@ -54,6 +54,6 @@ NyRegularInstanceLog:
       where: instanceTransactionId
     # Potentially a query to get all pending or failed instances for retry logic, if needed later.
     # findByStatus:
-    #   kvFunction: findAllWithKV
+    #   kvFunction: findAllWithOptionsKV
     #   where: automationStatus
     #   orderBy: createdAt ASC
