@@ -11,7 +11,7 @@ import qualified API.Types.RiderPlatform.Management.FRFSTicket
 import qualified BecknV2.FRFS.Enums
 import qualified Dashboard.Common
 import qualified Data.Text
-import qualified Domain.Action.Dashboard.FRFSTicket as Domain.Action.Dashboard.FRFSTicket
+import qualified Domain.Action.Dashboard.FRFSTicket
 import qualified Domain.Types.Merchant
 import qualified Environment
 import EulerHS.Prelude

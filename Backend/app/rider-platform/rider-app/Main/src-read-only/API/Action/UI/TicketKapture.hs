@@ -10,7 +10,7 @@ where
 import qualified API.Types.UI.TicketKapture
 import qualified Control.Lens
 import qualified Data.Text
-import qualified Domain.Action.UI.TicketKapture as Domain.Action.UI.TicketKapture
+import qualified Domain.Action.UI.TicketKapture
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import qualified Environment

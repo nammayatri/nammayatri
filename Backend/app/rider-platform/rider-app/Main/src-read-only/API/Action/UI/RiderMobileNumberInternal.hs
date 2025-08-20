@@ -8,7 +8,7 @@ module API.Action.UI.RiderMobileNumberInternal
 where
 
 import qualified API.Types.UI.RiderMobileNumberInternal
-import qualified Domain.Action.UI.RiderMobileNumberInternal as Domain.Action.UI.RiderMobileNumberInternal
+import qualified Domain.Action.UI.RiderMobileNumberInternal
 import qualified Environment
 import EulerHS.Prelude
 import qualified Kernel.Prelude

@@ -9,7 +9,7 @@ where
 
 import qualified API.Types.Dashboard.AppManagement.DriverSubscription
 import qualified Dashboard.Common
-import qualified Domain.Action.Dashboard.AppManagement.DriverSubscription as Domain.Action.Dashboard.AppManagement.DriverSubscription
+import qualified Domain.Action.Dashboard.AppManagement.DriverSubscription
 import qualified Domain.Types.Merchant
 import qualified Environment
 import EulerHS.Prelude

@@ -10,7 +10,7 @@ where
 import qualified API.Types.UI.Sos
 import qualified Control.Lens
 import qualified Data.Text
-import qualified Domain.Action.UI.Sos as Domain.Action.UI.Sos
+import qualified Domain.Action.UI.Sos
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import qualified Domain.Types.Ride

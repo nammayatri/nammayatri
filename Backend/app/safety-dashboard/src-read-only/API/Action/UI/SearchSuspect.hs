@@ -9,7 +9,7 @@ where
 
 import qualified API.Types.UI.SearchSuspect
 import qualified Data.Text
-import qualified Domain.Action.UI.SearchSuspect as Domain.Action.UI.SearchSuspect
+import qualified Domain.Action.UI.SearchSuspect
 import qualified Domain.Types.Suspect
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude

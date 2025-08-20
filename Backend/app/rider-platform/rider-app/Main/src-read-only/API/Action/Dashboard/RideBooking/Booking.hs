@@ -8,7 +8,7 @@ module API.Action.Dashboard.RideBooking.Booking
 where
 
 import qualified API.Types.Dashboard.RideBooking.Booking
-import qualified Domain.Action.Dashboard.RideBooking.Booking as Domain.Action.Dashboard.RideBooking.Booking
+import qualified Domain.Action.Dashboard.RideBooking.Booking
 import qualified "this" Domain.Action.UI.Booking
 import qualified "this" Domain.Types.Booking
 import qualified "this" Domain.Types.Booking.API

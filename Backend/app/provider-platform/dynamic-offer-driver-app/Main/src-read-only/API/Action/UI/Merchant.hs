@@ -9,7 +9,7 @@ where
 
 import qualified API.Types.UI.Merchant
 import qualified Control.Lens
-import qualified Domain.Action.UI.Merchant as Domain.Action.UI.Merchant
+import qualified Domain.Action.UI.Merchant
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person

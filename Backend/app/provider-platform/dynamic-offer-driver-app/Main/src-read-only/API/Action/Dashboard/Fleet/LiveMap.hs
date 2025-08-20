@@ -9,7 +9,7 @@ where
 
 import qualified API.Types.ProviderPlatform.Fleet.LiveMap
 import qualified Dashboard.Common
-import qualified Domain.Action.Dashboard.Fleet.LiveMap as Domain.Action.Dashboard.Fleet.LiveMap
+import qualified Domain.Action.Dashboard.Fleet.LiveMap
 import qualified Domain.Types.Merchant
 import qualified Environment
 import EulerHS.Prelude

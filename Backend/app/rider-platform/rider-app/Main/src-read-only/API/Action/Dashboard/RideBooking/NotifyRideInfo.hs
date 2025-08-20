@@ -8,7 +8,7 @@ module API.Action.Dashboard.RideBooking.NotifyRideInfo
 where
 
 import qualified API.Types.Dashboard.RideBooking.NotifyRideInfo
-import qualified Domain.Action.Dashboard.RideBooking.NotifyRideInfo as Domain.Action.Dashboard.RideBooking.NotifyRideInfo
+import qualified Domain.Action.Dashboard.RideBooking.NotifyRideInfo
 import qualified Domain.Types.Merchant
 import qualified "this" Domain.Types.Person
 import qualified Environment

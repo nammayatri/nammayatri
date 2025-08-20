@@ -9,7 +9,7 @@ where
 
 import qualified API.Types.Dashboard.AppManagement.Subscription
 import qualified API.Types.ProviderPlatform.Fleet.Driver
-import qualified Domain.Action.Dashboard.AppManagement.Subscription as Domain.Action.Dashboard.AppManagement.Subscription
+import qualified Domain.Action.Dashboard.AppManagement.Subscription
 import qualified Domain.Action.UI.Driver
 import qualified "this" Domain.Action.UI.Payment
 import qualified "this" Domain.Action.UI.Plan

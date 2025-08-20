@@ -9,7 +9,7 @@ where
 
 import qualified API.Types.UI.EstimateBP
 import qualified Control.Lens
-import qualified Domain.Action.UI.EstimateBP as Domain.Action.UI.EstimateBP
+import qualified Domain.Action.UI.EstimateBP
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import qualified Domain.Types.Ride

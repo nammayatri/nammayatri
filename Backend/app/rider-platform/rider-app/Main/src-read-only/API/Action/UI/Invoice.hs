@@ -9,7 +9,7 @@ where
 
 import qualified API.Types.UI.Invoice
 import qualified Control.Lens
-import qualified Domain.Action.UI.Invoice as Domain.Action.UI.Invoice
+import qualified Domain.Action.UI.Invoice
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import qualified Environment

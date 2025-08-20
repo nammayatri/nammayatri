@@ -8,7 +8,7 @@ module API.Action.UI.Operator
 where
 
 import qualified Control.Lens
-import qualified Domain.Action.UI.Operator as Domain.Action.UI.Operator
+import qualified Domain.Action.UI.Operator
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person

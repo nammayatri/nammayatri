@@ -9,7 +9,7 @@ where
 
 import qualified API.Types.RiderPlatform.Management.Customer
 import qualified Dashboard.Common
-import qualified Domain.Action.Dashboard.Customer as Domain.Action.Dashboard.Customer
+import qualified Domain.Action.Dashboard.Customer
 import qualified Domain.Types.Merchant
 import qualified Environment
 import EulerHS.Prelude

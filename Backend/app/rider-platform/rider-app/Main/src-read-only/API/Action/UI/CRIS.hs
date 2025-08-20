@@ -9,7 +9,7 @@ where
 
 import qualified API.Types.UI.CRIS
 import qualified Control.Lens
-import qualified Domain.Action.UI.CRIS as Domain.Action.UI.CRIS
+import qualified Domain.Action.UI.CRIS
 import qualified Domain.Types.IntegratedBPPConfig
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person

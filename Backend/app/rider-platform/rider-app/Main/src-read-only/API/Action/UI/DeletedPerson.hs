@@ -9,7 +9,7 @@ where
 
 import qualified API.Types.UI.DeletedPerson
 import qualified Control.Lens
-import qualified Domain.Action.UI.DeletedPerson as Domain.Action.UI.DeletedPerson
+import qualified Domain.Action.UI.DeletedPerson
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import qualified Environment

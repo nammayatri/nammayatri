@@ -8,7 +8,7 @@ module API.Action.UI.RiderMobileNumber
 where
 
 import qualified Control.Lens
-import qualified Domain.Action.UI.RiderMobileNumber as Domain.Action.UI.RiderMobileNumber
+import qualified Domain.Action.UI.RiderMobileNumber
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person

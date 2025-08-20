@@ -9,7 +9,7 @@ where
 
 import qualified API.Types.UI.CustomerReferral
 import qualified Control.Lens
-import qualified Domain.Action.UI.CustomerReferral as Domain.Action.UI.CustomerReferral
+import qualified Domain.Action.UI.CustomerReferral
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import qualified Environment

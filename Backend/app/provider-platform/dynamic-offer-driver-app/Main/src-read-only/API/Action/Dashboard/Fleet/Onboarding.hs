@@ -10,7 +10,7 @@ where
 import qualified API.Types.ProviderPlatform.Fleet.Onboarding
 import qualified API.Types.ProviderPlatform.Management.Endpoints.Account
 import qualified Dashboard.Common
-import qualified Domain.Action.Dashboard.Fleet.Onboarding as Domain.Action.Dashboard.Fleet.Onboarding
+import qualified Domain.Action.Dashboard.Fleet.Onboarding
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.VehicleCategory
 import qualified Environment

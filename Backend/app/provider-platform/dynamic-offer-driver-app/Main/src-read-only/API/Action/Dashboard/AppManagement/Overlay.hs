@@ -8,7 +8,7 @@ module API.Action.Dashboard.AppManagement.Overlay
 where
 
 import qualified API.Types.Dashboard.AppManagement.Overlay
-import qualified Domain.Action.Dashboard.AppManagement.Overlay as Domain.Action.Dashboard.AppManagement.Overlay
+import qualified Domain.Action.Dashboard.AppManagement.Overlay
 import qualified Domain.Types.Merchant
 import qualified Environment
 import EulerHS.Prelude

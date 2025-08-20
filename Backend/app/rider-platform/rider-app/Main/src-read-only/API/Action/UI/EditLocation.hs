@@ -9,7 +9,7 @@ where
 
 import qualified API.Types.UI.EditLocation
 import qualified Control.Lens
-import qualified Domain.Action.UI.EditLocation as Domain.Action.UI.EditLocation
+import qualified Domain.Action.UI.EditLocation
 import qualified Domain.Types.BookingUpdateRequest
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person

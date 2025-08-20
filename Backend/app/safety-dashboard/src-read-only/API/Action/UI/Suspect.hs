@@ -8,7 +8,7 @@ module API.Action.UI.Suspect
 where
 
 import qualified API.Types.UI.Suspect
-import qualified Domain.Action.UI.Suspect as Domain.Action.UI.Suspect
+import qualified Domain.Action.UI.Suspect
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude
 import qualified Kernel.Types.APISuccess

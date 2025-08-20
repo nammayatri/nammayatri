@@ -11,7 +11,7 @@ import qualified API.Types.ProviderPlatform.Fleet.Endpoints.Driver
 import qualified API.Types.UI.WMB
 import qualified Control.Lens
 import qualified Data.Text
-import qualified Domain.Action.UI.WMB as Domain.Action.UI.WMB
+import qualified Domain.Action.UI.WMB
 import qualified Domain.Types.AlertRequest
 import qualified Domain.Types.FleetBadgeType
 import qualified Domain.Types.FleetConfig

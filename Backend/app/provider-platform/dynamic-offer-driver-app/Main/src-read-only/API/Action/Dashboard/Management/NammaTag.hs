@@ -8,7 +8,7 @@ module API.Action.Dashboard.Management.NammaTag
 where
 
 import qualified API.Types.ProviderPlatform.Management.NammaTag
-import qualified Domain.Action.Dashboard.Management.NammaTag as Domain.Action.Dashboard.Management.NammaTag
+import qualified Domain.Action.Dashboard.Management.NammaTag
 import qualified Domain.Types.Merchant
 import qualified Environment
 import EulerHS.Prelude

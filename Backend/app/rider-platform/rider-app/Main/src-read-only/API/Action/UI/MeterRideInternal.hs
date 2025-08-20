@@ -9,7 +9,7 @@ where
 
 import qualified API.Types.UI.MeterRideInternal
 import qualified Data.Text
-import qualified Domain.Action.UI.MeterRideInternal as Domain.Action.UI.MeterRideInternal
+import qualified Domain.Action.UI.MeterRideInternal
 import qualified Environment
 import EulerHS.Prelude
 import qualified Kernel.Prelude

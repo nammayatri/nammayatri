@@ -8,7 +8,7 @@ module API.Action.Dashboard.Operator.Registration
 where
 
 import qualified API.Types.ProviderPlatform.Operator.Registration
-import qualified Domain.Action.Dashboard.Operator.Registration as Domain.Action.Dashboard.Operator.Registration
+import qualified Domain.Action.Dashboard.Operator.Registration
 import qualified Domain.Types.Merchant
 import qualified Environment
 import EulerHS.Prelude

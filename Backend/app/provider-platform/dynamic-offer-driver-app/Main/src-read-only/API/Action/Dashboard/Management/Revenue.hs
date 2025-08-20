@@ -8,7 +8,7 @@ module API.Action.Dashboard.Management.Revenue
 where
 
 import qualified API.Types.ProviderPlatform.Management.Revenue
-import qualified Domain.Action.Dashboard.Management.Revenue as Domain.Action.Dashboard.Management.Revenue
+import qualified Domain.Action.Dashboard.Management.Revenue
 import qualified Domain.Types.Merchant
 import qualified Environment
 import EulerHS.Prelude

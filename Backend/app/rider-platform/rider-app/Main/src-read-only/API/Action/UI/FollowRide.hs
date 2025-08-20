@@ -9,7 +9,7 @@ where
 
 import qualified API.Types.UI.FollowRide
 import qualified Control.Lens
-import qualified Domain.Action.UI.FollowRide as Domain.Action.UI.FollowRide
+import qualified Domain.Action.UI.FollowRide
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import qualified Domain.Types.Ride

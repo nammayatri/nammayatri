@@ -9,7 +9,7 @@ where
 
 import qualified API.Types.ProviderPlatform.Management.DriverCoins
 import qualified Dashboard.Common
-import qualified Domain.Action.Dashboard.Management.DriverCoins as Domain.Action.Dashboard.Management.DriverCoins
+import qualified Domain.Action.Dashboard.Management.DriverCoins
 import qualified Domain.Types.Merchant
 import qualified Environment
 import EulerHS.Prelude

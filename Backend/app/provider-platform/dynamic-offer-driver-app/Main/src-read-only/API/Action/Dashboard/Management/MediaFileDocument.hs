@@ -9,7 +9,7 @@ where
 
 import qualified API.Types.ProviderPlatform.Management.MediaFileDocument
 import qualified Dashboard.Common.MediaFileDocument
-import qualified Domain.Action.Dashboard.Management.MediaFileDocument as Domain.Action.Dashboard.Management.MediaFileDocument
+import qualified Domain.Action.Dashboard.Management.MediaFileDocument
 import qualified Domain.Types.Merchant
 import qualified Environment
 import EulerHS.Prelude

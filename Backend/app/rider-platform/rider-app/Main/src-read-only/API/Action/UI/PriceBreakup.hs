@@ -9,7 +9,7 @@ where
 
 import qualified API.Types.UI.PriceBreakup
 import qualified Control.Lens
-import qualified Domain.Action.UI.PriceBreakup as Domain.Action.UI.PriceBreakup
+import qualified Domain.Action.UI.PriceBreakup
 import qualified Domain.Types.Booking
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person

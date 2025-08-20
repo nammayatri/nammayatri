@@ -9,7 +9,7 @@ where
 
 import qualified API.Types.ProviderPlatform.IssueManagement.Issue
 import qualified Data.Aeson
-import qualified Domain.Action.Dashboard.IssueManagement.Issue as Domain.Action.Dashboard.IssueManagement.Issue
+import qualified Domain.Action.Dashboard.IssueManagement.Issue
 import qualified Domain.Types.Merchant
 import qualified Environment
 import EulerHS.Prelude

@@ -9,7 +9,7 @@ where
 
 import qualified API.Types.RiderPlatform.Management.NammaTag
 import qualified Dashboard.Common
-import qualified Domain.Action.Dashboard.NammaTag as Domain.Action.Dashboard.NammaTag
+import qualified Domain.Action.Dashboard.NammaTag
 import qualified Domain.Types.Merchant
 import qualified Environment
 import EulerHS.Prelude

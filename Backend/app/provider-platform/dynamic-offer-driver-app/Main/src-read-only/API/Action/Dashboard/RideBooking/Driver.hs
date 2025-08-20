@@ -11,7 +11,7 @@ import qualified API.Types.Dashboard.RideBooking.Driver
 import qualified API.Types.ProviderPlatform.Fleet.Driver
 import qualified Dashboard.Common
 import qualified Dashboard.Common.Driver
-import qualified Domain.Action.Dashboard.RideBooking.Driver as Domain.Action.Dashboard.RideBooking.Driver
+import qualified Domain.Action.Dashboard.RideBooking.Driver
 import qualified Domain.Types.Merchant
 import qualified Environment
 import EulerHS.Prelude

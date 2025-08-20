@@ -8,7 +8,7 @@ module API.Action.Dashboard.Management.CoinsConfig
 where
 
 import qualified API.Types.ProviderPlatform.Management.CoinsConfig
-import qualified Domain.Action.Dashboard.Management.CoinsConfig as Domain.Action.Dashboard.Management.CoinsConfig
+import qualified Domain.Action.Dashboard.Management.CoinsConfig
 import qualified Domain.Types.Merchant
 import qualified Environment
 import EulerHS.Prelude

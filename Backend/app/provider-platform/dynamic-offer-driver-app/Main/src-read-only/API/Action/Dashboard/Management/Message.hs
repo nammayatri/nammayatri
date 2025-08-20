@@ -9,7 +9,7 @@ where
 
 import qualified API.Types.ProviderPlatform.Management.Message
 import qualified Dashboard.Common
-import qualified Domain.Action.Dashboard.Management.Message as Domain.Action.Dashboard.Management.Message
+import qualified Domain.Action.Dashboard.Management.Message
 import qualified Domain.Types.Merchant
 import qualified Environment
 import EulerHS.Prelude

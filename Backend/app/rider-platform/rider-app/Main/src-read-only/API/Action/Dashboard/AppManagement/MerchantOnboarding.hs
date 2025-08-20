@@ -9,7 +9,7 @@ where
 
 import qualified API.Types.Dashboard.AppManagement.MerchantOnboarding
 import qualified Data.Aeson
-import qualified Domain.Action.Dashboard.AppManagement.MerchantOnboarding as Domain.Action.Dashboard.AppManagement.MerchantOnboarding
+import qualified Domain.Action.Dashboard.AppManagement.MerchantOnboarding
 import qualified Domain.Types.Merchant
 import qualified "this" Domain.Types.MerchantOnboarding
 import qualified "this" Domain.Types.MerchantOnboardingStep

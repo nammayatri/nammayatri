@@ -8,7 +8,7 @@ module API.Action.Dashboard.AppManagement.EventManagement
 where
 
 import qualified API.Types.Dashboard.AppManagement.EventManagement
-import qualified Domain.Action.Dashboard.AppManagement.EventManagement as Domain.Action.Dashboard.AppManagement.EventManagement
+import qualified Domain.Action.Dashboard.AppManagement.EventManagement
 import qualified Domain.Types.DraftTicketChange
 import qualified "this" Domain.Types.EventManagement
 import qualified Domain.Types.Merchant

@@ -8,7 +8,7 @@ module API.Action.Dashboard.Management.DriverReferral
 where
 
 import qualified API.Types.ProviderPlatform.Management.DriverReferral
-import qualified Domain.Action.Dashboard.Management.DriverReferral as Domain.Action.Dashboard.Management.DriverReferral
+import qualified Domain.Action.Dashboard.Management.DriverReferral
 import qualified Domain.Types.Merchant
 import qualified Environment
 import EulerHS.Prelude

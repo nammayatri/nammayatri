@@ -10,7 +10,7 @@ where
 import qualified API.Types.UI.FavouriteDriver
 import qualified Control.Lens
 import qualified Data.Text
-import qualified Domain.Action.UI.FavouriteDriver as Domain.Action.UI.FavouriteDriver
+import qualified Domain.Action.UI.FavouriteDriver
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import qualified Environment

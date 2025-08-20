@@ -10,7 +10,7 @@ where
 import qualified API.Types.Dashboard.AppManagement.Tickets
 import qualified "this" API.Types.UI.TicketService
 import qualified Data.Time.Calendar
-import qualified Domain.Action.Dashboard.AppManagement.Tickets as Domain.Action.Dashboard.AppManagement.Tickets
+import qualified Domain.Action.Dashboard.AppManagement.Tickets
 import qualified Domain.Types.Merchant
 import qualified "this" Domain.Types.MerchantOnboarding
 import qualified "this" Domain.Types.TicketBooking

@@ -8,7 +8,7 @@ module API.Action.Dashboard.Fleet.RegistrationV2
 where
 
 import qualified API.Types.ProviderPlatform.Fleet.RegistrationV2
-import qualified Domain.Action.Dashboard.Fleet.RegistrationV2 as Domain.Action.Dashboard.Fleet.RegistrationV2
+import qualified Domain.Action.Dashboard.Fleet.RegistrationV2
 import qualified Domain.Types.Merchant
 import qualified Environment
 import EulerHS.Prelude

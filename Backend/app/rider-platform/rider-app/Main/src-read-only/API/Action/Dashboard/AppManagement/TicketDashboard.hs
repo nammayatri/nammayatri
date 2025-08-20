@@ -8,7 +8,7 @@ module API.Action.Dashboard.AppManagement.TicketDashboard
 where
 
 import qualified API.Types.Dashboard.AppManagement.TicketDashboard
-import qualified Domain.Action.Dashboard.AppManagement.TicketDashboard as Domain.Action.Dashboard.AppManagement.TicketDashboard
+import qualified Domain.Action.Dashboard.AppManagement.TicketDashboard
 import qualified Domain.Types.Merchant
 import qualified "this" Domain.Types.MerchantOnboarding
 import qualified "this" Domain.Types.TicketPlace

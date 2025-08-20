@@ -9,7 +9,7 @@ where
 
 import qualified API.Types.Dashboard.AppManagement.Driver
 import qualified Data.Time.Calendar
-import qualified Domain.Action.Dashboard.AppManagement.Driver as Domain.Action.Dashboard.AppManagement.Driver
+import qualified Domain.Action.Dashboard.AppManagement.Driver
 import qualified "this" Domain.Action.UI.Ride
 import qualified Domain.Types.Merchant
 import qualified "this" Domain.Types.Person

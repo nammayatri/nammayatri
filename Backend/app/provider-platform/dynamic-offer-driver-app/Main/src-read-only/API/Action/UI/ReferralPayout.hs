@@ -12,7 +12,7 @@ import qualified Control.Lens
 import qualified Data.Text
 import qualified Data.Time.Calendar
 import qualified Domain.Action.UI.Driver
-import qualified Domain.Action.UI.ReferralPayout as Domain.Action.UI.ReferralPayout
+import qualified Domain.Action.UI.ReferralPayout
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person

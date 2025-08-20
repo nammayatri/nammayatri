@@ -9,7 +9,7 @@ where
 
 import qualified API.Types.RiderPlatform.Management.Booking
 import qualified Dashboard.Common.Booking
-import qualified Domain.Action.Dashboard.Booking as Domain.Action.Dashboard.Booking
+import qualified Domain.Action.Dashboard.Booking
 import qualified Domain.Types.Merchant
 import qualified Environment
 import EulerHS.Prelude
