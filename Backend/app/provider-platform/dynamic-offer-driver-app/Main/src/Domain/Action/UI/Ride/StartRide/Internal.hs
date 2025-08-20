@@ -37,8 +37,8 @@ startRideTransaction driverId ride bookingId firstPoint merchantId odometer = do
   triggerRideStartEvent RideEventData {ride = ride{status = SRide.INPROGRESS}, personId = driverId, merchantId = merchantId}
   minDistanceBetweenTwoPoints <- bool (pure Nothing) (Just <$> asks (.minDistanceBetweenTwoPoints)) (ride.tripCategory == DTC.OneWay DTC.MeterRide)
   void $ LF.rideStart ride.id firstPoint.lat firstPoint.lon merchantId driverId (Just $ (LT.Car $ LT.CarRideInfo {pickupLocation = firstPoint, minDistanceBetweenTwoPoints = minDistanceBetweenTwoPoints}))
-  QRide.updateStatus ride.id SRide.INPROGRESS
-  SQD.updateHasRideStarted driverId True
   QRide.updateStartTimeAndLoc ride.id firstPoint
   whenJust odometer $ \odometerReading -> QRide.updateStartOdometerReading ride.id odometerReading
+  QRide.updateStatus ride.id SRide.INPROGRESS
+  SQD.updateHasRideStarted driverId True
   QBE.logRideCommencedEvent (cast driverId) bookingId ride.id ride.distanceUnit
