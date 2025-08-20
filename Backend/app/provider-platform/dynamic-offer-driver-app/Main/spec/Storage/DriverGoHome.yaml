@@ -45,9 +45,9 @@ DriverGoHomeRequest:
     reachedHome: mbReachedHome|E
 
 
-  constriants:
+  constraints:
     id: PrimaryKey
-    driverId: SecondaryKey
+    driverId: "!SecondaryKey"
 
   queries:
     findById:
@@ -206,3 +206,6 @@ GoHomeConfig:
 
 
   excludedFields: [merchantOperatingCityId, merchantId, createdAt, updatedAt]
+
+
+

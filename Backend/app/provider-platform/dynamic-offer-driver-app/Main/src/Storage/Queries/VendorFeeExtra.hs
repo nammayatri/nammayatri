@@ -84,3 +84,18 @@ createChildVendorFee parentFee childFee totalFee = do
 
 updateManyVendorFee :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DMC.MerchantOperatingCity -> [VendorFee] -> m ()
 updateManyVendorFee merchantOpCityId = traverse_ $ updateVendorFee merchantOpCityId
+
+resetVendorFee :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DMC.MerchantOperatingCity -> [VendorFee] -> m ()
+resetVendorFee merchantOpCityId vendorFees = do
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
+  forM_ vendorFees $ \vendorFee -> do
+    updateWithKV
+      [ Se.Set Beam.amount (roundToTwoDecimalPlaces (HighPrecMoney $ vendorFee.amount.getHighPrecMoney)),
+        Se.Set Beam.updatedAt now
+      ]
+      [ Se.And
+          [ Se.Is Beam.driverFeeId $ Se.Eq vendorFee.driverFeeId.getId,
+            Se.Is Beam.vendorId $ Se.Eq vendorFee.vendorId
+          ]
+      ]

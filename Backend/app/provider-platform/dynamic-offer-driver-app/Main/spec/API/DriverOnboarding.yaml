@@ -32,6 +32,7 @@ types:
     ambulances: Maybe [DocumentVerificationConfigAPIEntity]
     trucks: Maybe [DocumentVerificationConfigAPIEntity]
     bus: Maybe [DocumentVerificationConfigAPIEntity]
+    boat: Maybe [DocumentVerificationConfigAPIEntity]
   DocumentVerificationConfigAPIEntity:
     documentType: DocumentType
     documentCategory: Maybe DocumentCategory
@@ -140,6 +141,13 @@ types:
     frontInterior: [Text]
     backInterior: [Text]
     odometer: [Text]
+  DriverGstinReq:
+    imageId1 : Id Image
+    imageId2 : Maybe (Id Image)
+    gstNumber : Text
+    transactionId : Maybe Text
+    validationStatus : Maybe ValidationStatus
+    verifiedBy : Maybe VerifiedBy
 
 apis:
   - GET:
