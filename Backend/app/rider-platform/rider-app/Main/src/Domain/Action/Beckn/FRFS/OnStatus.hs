@@ -63,13 +63,19 @@ validateRequest (TicketVerification DTicketPayload {..}) = do
 onStatus :: Merchant -> Booking.FRFSTicketBooking -> DOnStatus -> Flow DOnStatusResp
 onStatus _merchant booking (Booking dOrder) = do
   statuses <- traverse (Utils.getTicketStatus booking) dOrder.tickets
-  let googleWalletStates = map (\(ticketNumber, status, _vehicleNumber) -> (ticketNumber, GWSA.mapToGoogleTicketStatus status)) statuses
-  whenJust dOrder.orderStatus $ \status ->
-    case status of
-      Spec.COMPLETE | booking.status == Booking.CANCEL_INITIATED -> QTBooking.updateStatusById Booking.TECHNICAL_CANCEL_REJECTED booking.id
-      Spec.CANCELLED | not booking.customerCancelled -> QTBooking.updateStatusById Booking.COUNTER_CANCELLED booking.id
-      _ -> pure ()
-  traverse_ updateTicket statuses
+  statuses' <-
+    case dOrder.orderStatus of
+      Just Spec.COMPLETE
+        | booking.status == Booking.CANCEL_INITIATED -> do
+          QTBooking.updateStatusById Booking.TECHNICAL_CANCEL_REJECTED booking.id
+          pure statuses
+        | otherwise -> pure $ updateTicketStatuses statuses
+      Just Spec.CANCELLED | not booking.customerCancelled -> do
+        QTBooking.updateStatusById Booking.COUNTER_CANCELLED booking.id
+        pure statuses
+      _ -> pure statuses
+  let googleWalletStates = map (\ticketStatus -> (ticketStatus.ticketNumber, GWSA.mapToGoogleTicketStatus ticketStatus.status)) statuses'
+  traverse_ updateTicket statuses'
   whenJust booking.partnerOrgId $ \pOrgId -> do
     walletPOCfg <- do
       pOrgCfg <- CQPOC.findByIdAndCfgType pOrgId DPOC.WALLET_CLASS_NAME >>= fromMaybeM (PartnerOrgConfigNotFound pOrgId.getId $ show DPOC.WALLET_CLASS_NAME)
@@ -79,8 +85,10 @@ onStatus _merchant booking (Booking dOrder) = do
   traverse_ refreshTicket dOrder.tickets
   return Async
   where
-    updateTicket (ticketNumber, status, vehicleNumber) =
-      void $ QTicket.updateStatusByTBookingIdAndTicketNumber status vehicleNumber booking.id ticketNumber
+    updateTicketStatuses :: [Utils.TicketStatus] -> [Utils.TicketStatus]
+    updateTicketStatuses = fmap (\ts@Utils.TicketStatus {} -> ts {Utils.status = Ticket.USED})
+    updateTicket ticketStatus =
+      void $ QTicket.updateStatusByTBookingIdAndTicketNumber ticketStatus.status ticketStatus.vehicleNumber booking.id ticketStatus.ticketNumber
     updateStatesForGoogleWallet (ticketNumber, state') = do
       let serviceName = DEMSC.WalletService GW.GoogleWallet
       let mId = booking.merchantId

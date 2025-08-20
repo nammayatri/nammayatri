@@ -367,14 +367,20 @@ encodeToText' = A.decode . A.encode
 
 type TicketNumber = Text
 
-getTicketStatus :: (MonadFlow m) => Booking.FRFSTicketBooking -> DTicket -> m (TicketNumber, Ticket.FRFSTicketStatus, Maybe Text)
+data TicketStatus = TicketStatus
+  { ticketNumber :: TicketNumber,
+    status :: Ticket.FRFSTicketStatus,
+    vehicleNumber :: Maybe Text
+  }
+
+getTicketStatus :: (MonadFlow m) => Booking.FRFSTicketBooking -> DTicket -> m TicketStatus
 getTicketStatus booking dTicket = do
   let validTill = dTicket.validTill
   now <- getCurrentTime
   ticketStatus <- castTicketStatus dTicket.status booking
   if now > validTill && (ticketStatus /= Ticket.CANCELLED || ticketStatus /= Ticket.COUNTER_CANCELLED)
-    then return (dTicket.ticketNumber, Ticket.EXPIRED, dTicket.vehicleNumber)
-    else return (dTicket.ticketNumber, ticketStatus, dTicket.vehicleNumber)
+    then return TicketStatus {ticketNumber = dTicket.ticketNumber, status = Ticket.EXPIRED, vehicleNumber = dTicket.vehicleNumber}
+    else return TicketStatus {ticketNumber = dTicket.ticketNumber, status = ticketStatus, vehicleNumber = dTicket.vehicleNumber}
 
 castTicketStatus :: MonadFlow m => Text -> Booking.FRFSTicketBooking -> m Ticket.FRFSTicketStatus
 castTicketStatus "UNCLAIMED" _ = return Ticket.ACTIVE
