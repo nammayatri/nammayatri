@@ -9,7 +9,7 @@ where
 
 import qualified API.Types.UI.DriverOnboardingV2
 import qualified Control.Lens
-import qualified Domain.Action.UI.DriverOnboardingV2 as Domain.Action.UI.DriverOnboardingV2
+import qualified Domain.Action.UI.DriverOnboardingV2
 import qualified Domain.Types.Common
 import qualified Domain.Types.Image
 import qualified Domain.Types.Merchant

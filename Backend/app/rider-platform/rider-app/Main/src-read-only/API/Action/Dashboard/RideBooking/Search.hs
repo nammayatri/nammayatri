@@ -9,7 +9,7 @@ where
 
 import qualified API.Types.Dashboard.RideBooking.Search
 import qualified "this" API.UI.Search
-import qualified Domain.Action.Dashboard.RideBooking.Search as Domain.Action.Dashboard.RideBooking.Search
+import qualified Domain.Action.Dashboard.RideBooking.Search
 import qualified Domain.Types.Merchant
 import qualified "this" Domain.Types.Person
 import qualified Environment

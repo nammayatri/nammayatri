@@ -9,7 +9,7 @@ where
 
 import qualified API.Types.UI.AttractionRecommend
 import qualified Control.Lens
-import qualified Domain.Action.UI.AttractionRecommend as Domain.Action.UI.AttractionRecommend
+import qualified Domain.Action.UI.AttractionRecommend
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import qualified Environment

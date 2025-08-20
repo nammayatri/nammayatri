@@ -9,7 +9,7 @@ where
 
 import qualified API.Types.UI.FareCalculator
 import qualified Control.Lens
-import qualified Domain.Action.UI.FareCalculator as Domain.Action.UI.FareCalculator
+import qualified Domain.Action.UI.FareCalculator
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person

@@ -9,7 +9,7 @@ where
 
 import qualified API.Types.RiderPlatform.IssueManagement.IssueList
 import qualified Data.Aeson
-import qualified Domain.Action.Dashboard.IssueManagement.IssueList as Domain.Action.Dashboard.IssueManagement.IssueList
+import qualified Domain.Action.Dashboard.IssueManagement.IssueList
 import qualified Domain.Types.Merchant
 import qualified Environment
 import EulerHS.Prelude

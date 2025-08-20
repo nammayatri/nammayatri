@@ -9,7 +9,7 @@ where
 
 import qualified Control.Lens
 import qualified Data.Aeson
-import qualified Domain.Action.UI.Cac as Domain.Action.UI.Cac
+import qualified Domain.Action.UI.Cac
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import qualified Environment

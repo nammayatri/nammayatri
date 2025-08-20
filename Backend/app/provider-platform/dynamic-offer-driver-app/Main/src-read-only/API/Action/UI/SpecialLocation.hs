@@ -8,7 +8,7 @@ module API.Action.UI.SpecialLocation
 where
 
 import qualified Control.Lens
-import qualified Domain.Action.UI.SpecialLocation as Domain.Action.UI.SpecialLocation
+import qualified Domain.Action.UI.SpecialLocation
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person

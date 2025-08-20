@@ -8,7 +8,7 @@ module API.Action.Dashboard.Management.VehicleInfo
 where
 
 import qualified API.Types.ProviderPlatform.Management.VehicleInfo
-import qualified Domain.Action.Dashboard.Management.VehicleInfo as Domain.Action.Dashboard.Management.VehicleInfo
+import qualified Domain.Action.Dashboard.Management.VehicleInfo
 import qualified Domain.Types.Merchant
 import qualified Environment
 import EulerHS.Prelude

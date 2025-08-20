@@ -11,7 +11,7 @@ import qualified API.Types.UI.TicketService
 import qualified Control.Lens
 import qualified Data.Text
 import qualified Data.Time.Calendar
-import qualified Domain.Action.UI.TicketService as Domain.Action.UI.TicketService
+import qualified Domain.Action.UI.TicketService
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import qualified Domain.Types.TicketBooking

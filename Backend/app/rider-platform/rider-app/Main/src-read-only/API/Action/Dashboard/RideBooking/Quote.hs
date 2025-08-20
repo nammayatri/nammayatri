@@ -8,7 +8,7 @@ module API.Action.Dashboard.RideBooking.Quote
 where
 
 import qualified API.Types.Dashboard.RideBooking.Quote
-import qualified Domain.Action.Dashboard.RideBooking.Quote as Domain.Action.Dashboard.RideBooking.Quote
+import qualified Domain.Action.Dashboard.RideBooking.Quote
 import qualified "this" Domain.Action.UI.Quote
 import qualified Domain.Types.Merchant
 import qualified "this" Domain.Types.Person

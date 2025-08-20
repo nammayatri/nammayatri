@@ -9,7 +9,7 @@ where
 
 import qualified API.Types.UI.MeterRide
 import qualified Control.Lens
-import qualified Domain.Action.UI.MeterRide as Domain.Action.UI.MeterRide
+import qualified Domain.Action.UI.MeterRide
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person

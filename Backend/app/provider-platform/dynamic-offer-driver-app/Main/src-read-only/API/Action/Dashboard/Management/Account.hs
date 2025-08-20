@@ -9,7 +9,7 @@ where
 
 import qualified API.Types.ProviderPlatform.Management.Account
 import qualified Dashboard.Common
-import qualified Domain.Action.Dashboard.Management.Account as Domain.Action.Dashboard.Management.Account
+import qualified Domain.Action.Dashboard.Management.Account
 import qualified Domain.Types.Merchant
 import qualified Environment
 import EulerHS.Prelude

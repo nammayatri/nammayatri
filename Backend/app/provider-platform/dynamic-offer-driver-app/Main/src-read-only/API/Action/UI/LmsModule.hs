@@ -9,7 +9,7 @@ where
 
 import qualified API.Types.UI.LmsModule
 import qualified Control.Lens
-import qualified Domain.Action.UI.LmsModule as Domain.Action.UI.LmsModule
+import qualified Domain.Action.UI.LmsModule
 import qualified Domain.Types.LmsModule
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity

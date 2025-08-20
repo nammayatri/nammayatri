@@ -8,7 +8,7 @@ module API.Action.UI.Merchant
 where
 
 import qualified API.Types.UI.Merchant
-import qualified Domain.Action.UI.Merchant as Domain.Action.UI.Merchant
+import qualified Domain.Action.UI.Merchant
 import qualified Domain.Types.MerchantConfigs
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude

@@ -9,7 +9,7 @@ where
 
 import qualified API.Types.UI.MultimodalConfirm
 import qualified Control.Lens
-import qualified Domain.Action.UI.MultimodalConfirm as Domain.Action.UI.MultimodalConfirm
+import qualified Domain.Action.UI.MultimodalConfirm
 import qualified Domain.Types.Journey
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person

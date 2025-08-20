@@ -11,7 +11,7 @@ import qualified API.Types.UI.NearbyBuses
 import qualified BecknV2.FRFS.Enums
 import qualified Control.Lens
 import qualified Data.Text
-import qualified Domain.Action.UI.NearbyBuses as Domain.Action.UI.NearbyBuses
+import qualified Domain.Action.UI.NearbyBuses
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import qualified Environment

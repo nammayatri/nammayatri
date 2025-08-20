@@ -8,7 +8,7 @@ module API.Action.Dashboard.Management.Media
 where
 
 import qualified API.Types.ProviderPlatform.Management.Media
-import qualified Domain.Action.Dashboard.Management.Media as Domain.Action.Dashboard.Management.Media
+import qualified Domain.Action.Dashboard.Management.Media
 import qualified Domain.Types.Merchant
 import qualified Environment
 import EulerHS.Prelude

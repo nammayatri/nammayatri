@@ -9,7 +9,7 @@ where
 
 import qualified API.Types.UI.DriverProfileQuestions
 import qualified Control.Lens
-import qualified Domain.Action.UI.DriverProfileQuestions as Domain.Action.UI.DriverProfileQuestions
+import qualified Domain.Action.UI.DriverProfileQuestions
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person

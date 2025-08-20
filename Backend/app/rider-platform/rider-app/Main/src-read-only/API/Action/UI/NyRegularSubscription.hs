@@ -10,7 +10,7 @@ where
 import qualified API.Types.UI.NyRegularSubscription
 import qualified Control.Lens
 import qualified Data.Text
-import qualified Domain.Action.UI.NyRegularSubscription as Domain.Action.UI.NyRegularSubscription
+import qualified Domain.Action.UI.NyRegularSubscription
 import qualified Domain.Action.UI.Quote
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.NyRegularSubscription

@@ -8,7 +8,7 @@ module API.Action.Dashboard.RideBooking.Select
 where
 
 import qualified API.Types.Dashboard.RideBooking.Select
-import qualified Domain.Action.Dashboard.RideBooking.Select as Domain.Action.Dashboard.RideBooking.Select
+import qualified Domain.Action.Dashboard.RideBooking.Select
 import qualified "this" Domain.Action.UI.Select
 import qualified "this" Domain.Types.Estimate
 import qualified Domain.Types.Merchant

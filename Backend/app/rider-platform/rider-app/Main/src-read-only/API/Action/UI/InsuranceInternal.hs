@@ -8,7 +8,7 @@ module API.Action.UI.InsuranceInternal
 where
 
 import qualified API.Types.UI.Insurance
-import qualified Domain.Action.UI.InsuranceInternal as Domain.Action.UI.InsuranceInternal
+import qualified Domain.Action.UI.InsuranceInternal
 import qualified Environment
 import EulerHS.Prelude
 import qualified Kernel.Prelude

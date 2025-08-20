@@ -9,7 +9,7 @@ where
 
 import qualified API.Types.UI.Places
 import qualified Control.Lens
-import qualified Domain.Action.UI.Places as Domain.Action.UI.Places
+import qualified Domain.Action.UI.Places
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import qualified Environment

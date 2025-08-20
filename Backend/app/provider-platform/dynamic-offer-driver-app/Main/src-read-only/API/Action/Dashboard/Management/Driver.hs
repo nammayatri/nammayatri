@@ -11,7 +11,7 @@ import qualified API.Types.ProviderPlatform.Management.Driver
 import qualified Dashboard.Common
 import qualified Dashboard.Common.Driver
 import qualified Data.Time.Calendar
-import qualified Domain.Action.Dashboard.Management.Driver as Domain.Action.Dashboard.Management.Driver
+import qualified Domain.Action.Dashboard.Management.Driver
 import qualified Domain.Types.Merchant
 import qualified Environment
 import EulerHS.Prelude

@@ -8,7 +8,7 @@ module API.Action.UI.FlaggedCategory
 where
 
 import qualified API.Types.UI.FlaggedCategory
-import qualified Domain.Action.UI.FlaggedCategory as Domain.Action.UI.FlaggedCategory
+import qualified Domain.Action.UI.FlaggedCategory
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude
 import qualified Kernel.Prelude

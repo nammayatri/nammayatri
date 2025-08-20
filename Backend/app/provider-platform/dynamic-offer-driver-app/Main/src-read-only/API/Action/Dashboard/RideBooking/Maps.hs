@@ -8,7 +8,7 @@ module API.Action.Dashboard.RideBooking.Maps
 where
 
 import qualified API.Types.Dashboard.RideBooking.Maps
-import qualified Domain.Action.Dashboard.RideBooking.Maps as Domain.Action.Dashboard.RideBooking.Maps
+import qualified Domain.Action.Dashboard.RideBooking.Maps
 import qualified "this" Domain.Action.UI.Maps
 import qualified Domain.Types.Merchant
 import qualified "this" Domain.Types.Person

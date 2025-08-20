@@ -9,7 +9,7 @@ where
 
 import qualified API.Types.Dashboard.RideBooking.DriverRegistration
 import qualified Dashboard.ProviderPlatform.Management.DriverRegistration
-import qualified Domain.Action.Dashboard.RideBooking.DriverRegistration as Domain.Action.Dashboard.RideBooking.DriverRegistration
+import qualified Domain.Action.Dashboard.RideBooking.DriverRegistration
 import qualified Domain.Types.Merchant
 import qualified Environment
 import EulerHS.Prelude

@@ -10,7 +10,7 @@ where
 import qualified API.Types.Dashboard.AppManagement.Customer
 import qualified "this" API.Types.UI.DeletedPerson
 import qualified "this" API.Types.UI.Sos
-import qualified Domain.Action.Dashboard.AppManagement.Customer as Domain.Action.Dashboard.AppManagement.Customer
+import qualified Domain.Action.Dashboard.AppManagement.Customer
 import qualified Domain.Types.Merchant
 import qualified "this" Domain.Types.Person
 import qualified Environment

@@ -9,7 +9,7 @@ where
 
 import qualified API.Types.UI.SocialLogin
 import qualified Control.Lens
-import qualified Domain.Action.UI.SocialLogin as Domain.Action.UI.SocialLogin
+import qualified Domain.Action.UI.SocialLogin
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person

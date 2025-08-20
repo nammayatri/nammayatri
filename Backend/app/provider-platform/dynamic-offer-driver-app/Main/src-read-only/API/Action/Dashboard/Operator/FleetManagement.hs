@@ -9,7 +9,7 @@ where
 
 import qualified API.Types.ProviderPlatform.Fleet.Endpoints.RegistrationV2
 import qualified API.Types.ProviderPlatform.Operator.FleetManagement
-import qualified Domain.Action.Dashboard.Operator.FleetManagement as Domain.Action.Dashboard.Operator.FleetManagement
+import qualified Domain.Action.Dashboard.Operator.FleetManagement
 import qualified Domain.Types.Merchant
 import qualified Environment
 import EulerHS.Prelude

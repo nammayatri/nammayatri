@@ -9,7 +9,7 @@ where
 
 import qualified API.Types.Dashboard.RideBooking.Confirm
 import qualified "this" API.UI.Confirm
-import qualified Domain.Action.Dashboard.RideBooking.Confirm as Domain.Action.Dashboard.RideBooking.Confirm
+import qualified Domain.Action.Dashboard.RideBooking.Confirm
 import qualified Domain.Types.Merchant
 import qualified "this" Domain.Types.Person
 import qualified "this" Domain.Types.Quote

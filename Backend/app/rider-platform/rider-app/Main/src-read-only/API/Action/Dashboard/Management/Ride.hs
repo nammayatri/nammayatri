@@ -10,7 +10,7 @@ where
 import qualified API.Types.RiderPlatform.Management.Ride
 import qualified Dashboard.Common
 import qualified Dashboard.Common.Ride
-import qualified Domain.Action.Dashboard.Ride as Domain.Action.Dashboard.Ride
+import qualified Domain.Action.Dashboard.Ride
 import qualified Domain.Types.Merchant
 import qualified Environment
 import EulerHS.Prelude

@@ -9,7 +9,7 @@ where
 
 import qualified API.Types.UI.DemandHotspots
 import qualified Control.Lens
-import qualified Domain.Action.UI.DemandHotspots as Domain.Action.UI.DemandHotspots
+import qualified Domain.Action.UI.DemandHotspots
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person

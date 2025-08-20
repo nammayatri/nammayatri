@@ -8,7 +8,7 @@ module API.Action.Dashboard.RideBooking.Cancel
 where
 
 import qualified API.Types.Dashboard.RideBooking.Cancel
-import qualified Domain.Action.Dashboard.RideBooking.Cancel as Domain.Action.Dashboard.RideBooking.Cancel
+import qualified Domain.Action.Dashboard.RideBooking.Cancel
 import qualified "this" Domain.Action.UI.Cancel
 import qualified "this" Domain.Types.Booking
 import qualified Domain.Types.Merchant

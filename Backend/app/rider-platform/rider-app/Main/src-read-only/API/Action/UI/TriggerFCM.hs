@@ -9,7 +9,7 @@ where
 
 import qualified API.Types.UI.TriggerFCM
 import qualified Control.Lens
-import qualified Domain.Action.UI.TriggerFCM as Domain.Action.UI.TriggerFCM
+import qualified Domain.Action.UI.TriggerFCM
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import qualified Environment

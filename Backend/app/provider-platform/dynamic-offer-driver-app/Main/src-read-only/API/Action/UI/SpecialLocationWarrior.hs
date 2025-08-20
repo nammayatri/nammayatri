@@ -10,7 +10,7 @@ where
 import qualified API.Types.UI.SpecialLocationWarrior
 import qualified Control.Lens
 import qualified Data.Text
-import qualified Domain.Action.UI.SpecialLocationWarrior as Domain.Action.UI.SpecialLocationWarrior
+import qualified Domain.Action.UI.SpecialLocationWarrior
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person

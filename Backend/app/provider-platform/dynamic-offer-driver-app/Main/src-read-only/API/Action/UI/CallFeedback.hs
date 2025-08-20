@@ -9,7 +9,7 @@ where
 
 import qualified API.Types.UI.CallFeedback
 import qualified Control.Lens
-import qualified Domain.Action.UI.CallFeedback as Domain.Action.UI.CallFeedback
+import qualified Domain.Action.UI.CallFeedback
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person

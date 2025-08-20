@@ -10,7 +10,7 @@ where
 import qualified API.Types.ProviderPlatform.Management.Merchant
 import qualified Dashboard.Common
 import qualified Dashboard.Common.Merchant
-import qualified Domain.Action.Dashboard.Management.Merchant as Domain.Action.Dashboard.Management.Merchant
+import qualified Domain.Action.Dashboard.Management.Merchant
 import qualified Domain.Types.Merchant
 import qualified Environment
 import EulerHS.Prelude

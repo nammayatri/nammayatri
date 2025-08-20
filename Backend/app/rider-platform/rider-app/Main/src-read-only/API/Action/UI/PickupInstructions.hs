@@ -9,7 +9,7 @@ where
 
 import qualified API.Types.UI.PickupInstructions
 import qualified Control.Lens
-import qualified Domain.Action.UI.PickupInstructions as Domain.Action.UI.PickupInstructions
+import qualified Domain.Action.UI.PickupInstructions
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import qualified Environment

@@ -8,7 +8,7 @@ module API.Action.UI.Notification
 where
 
 import qualified API.Types.UI.Notification
-import qualified Domain.Action.UI.Notification as Domain.Action.UI.Notification
+import qualified Domain.Action.UI.Notification
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude
 import qualified Kernel.Prelude

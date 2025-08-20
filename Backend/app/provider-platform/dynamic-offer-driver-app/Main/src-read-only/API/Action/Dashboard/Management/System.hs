@@ -8,7 +8,7 @@ module API.Action.Dashboard.Management.System
 where
 
 import qualified API.Types.ProviderPlatform.Management.System
-import qualified Domain.Action.Dashboard.Management.System as Domain.Action.Dashboard.Management.System
+import qualified Domain.Action.Dashboard.Management.System
 import qualified Domain.Types.Merchant
 import qualified Environment
 import EulerHS.Prelude

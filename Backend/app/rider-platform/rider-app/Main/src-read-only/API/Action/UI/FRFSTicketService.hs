@@ -11,7 +11,7 @@ import qualified API.Types.UI.FRFSTicketService
 import qualified BecknV2.FRFS.Enums
 import qualified Control.Lens
 import qualified Data.Text
-import qualified Domain.Action.UI.FRFSTicketService as Domain.Action.UI.FRFSTicketService
+import qualified Domain.Action.UI.FRFSTicketService
 import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSSearch
 import qualified Domain.Types.FRFSTicketBooking

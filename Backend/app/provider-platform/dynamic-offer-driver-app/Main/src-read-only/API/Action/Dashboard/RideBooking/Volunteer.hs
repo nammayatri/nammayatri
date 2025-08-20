@@ -8,7 +8,7 @@ module API.Action.Dashboard.RideBooking.Volunteer
 where
 
 import qualified API.Types.Dashboard.RideBooking.Volunteer
-import qualified Domain.Action.Dashboard.RideBooking.Volunteer as Domain.Action.Dashboard.RideBooking.Volunteer
+import qualified Domain.Action.Dashboard.RideBooking.Volunteer
 import qualified Domain.Types.Merchant
 import qualified Environment
 import EulerHS.Prelude

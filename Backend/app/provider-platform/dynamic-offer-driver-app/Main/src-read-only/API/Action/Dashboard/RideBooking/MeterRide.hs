@@ -9,7 +9,7 @@ where
 
 import qualified API.Types.Dashboard.RideBooking.MeterRide
 import qualified "this" API.Types.UI.PriceBreakup
-import qualified Domain.Action.Dashboard.RideBooking.MeterRide as Domain.Action.Dashboard.RideBooking.MeterRide
+import qualified Domain.Action.Dashboard.RideBooking.MeterRide
 import qualified Domain.Types.Merchant
 import qualified "this" Domain.Types.Ride
 import qualified Environment
