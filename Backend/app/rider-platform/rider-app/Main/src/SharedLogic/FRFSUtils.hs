@@ -473,6 +473,7 @@ data VehicleInfo = VehicleInfo
   { latitude :: Maybe Double,
     longitude :: Maybe Double,
     scheduleRelationship :: Maybe Text,
+    routeState :: Maybe CQMMB.RouteState,
     speed :: Maybe Double,
     startDate :: Maybe Text,
     startTime :: Maybe UTCTime,
@@ -563,6 +564,7 @@ trackVehicles _personId _merchantId merchantOpCityId vehicleType routeCode platf
                           speed = Just busData.speed,
                           startDate = Nothing,
                           startTime = Nothing,
+                          routeState = busData.route_state,
                           timestamp = Just . show $ epochToUTCTime busData.timestamp,
                           tripId = Nothing,
                           upcomingStops = Nothing
@@ -670,7 +672,8 @@ trackVehicles _personId _merchantId merchantOpCityId vehicleType routeCode platf
                       startTime = vehicleInfo.vehicleInfo.startTime,
                       timestamp = vehicleInfo.vehicleInfo.timestamp,
                       tripId = vehicleInfo.vehicleInfo.tripId,
-                      upcomingStops = vehicleInfo.vehicleInfo.upcomingStops
+                      upcomingStops = vehicleInfo.vehicleInfo.upcomingStops,
+                      routeState = Nothing
                     }
                 )
             )
