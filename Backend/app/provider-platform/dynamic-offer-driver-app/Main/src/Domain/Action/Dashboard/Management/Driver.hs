@@ -1114,8 +1114,8 @@ getDriverPanAadharSelfieDetailsList merchantShortId _opCity docType' driverID = 
   let personId = cast @Common.Driver @DP.Person driverID
   merchant <- findMerchantByShortId merchantShortId
   documentType <- convertToDomainType docType'
-  hvSdkLogs <- QSdkLogs.findAllByDriverIdAndDocType personId $ Just documentType
-  imageDetails <- filter (isJust . (.workflowTransactionId)) <$> QImage.findImagesByPersonAndType merchant.id personId documentType
+  hvSdkLogs <- QSdkLogs.findAllByDriverIdAndDocType Nothing Nothing personId $ Just documentType
+  imageDetails <- filter (isJust . (.workflowTransactionId)) <$> QImage.findImagesByPersonAndType Nothing Nothing merchant.id personId documentType
   let txnIdsInLogs = HS.fromList $ map (Just . (.txnId)) hvSdkLogs
       (imagesAvaialbleInLogs, imagesNotAvailableInLogs) = partition ((`HS.member` txnIdsInLogs) . (.workflowTransactionId)) imageDetails
   partialResp <- mapM (buildRespFromHVSdkLogs imagesAvaialbleInLogs) hvSdkLogs

@@ -27,8 +27,8 @@ findByInstanceTransactionId instanceTransactionId = do findOneWithKV [Se.Is Beam
 
 findBySubscriptionId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.NyRegularSubscription.NyRegularSubscription -> m ([Domain.Types.NyRegularInstanceLog.NyRegularInstanceLog]))
-findBySubscriptionId nyRegularSubscriptionId = do findAllWithKV [Se.Is Beam.nyRegularSubscriptionId $ Se.Eq (Kernel.Types.Id.getId nyRegularSubscriptionId)]
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.NyRegularSubscription.NyRegularSubscription -> m [Domain.Types.NyRegularInstanceLog.NyRegularInstanceLog])
+findBySubscriptionId limit offset nyRegularSubscriptionId = do findAllWithOptionsKV [Se.Is Beam.nyRegularSubscriptionId $ Se.Eq (Kernel.Types.Id.getId nyRegularSubscriptionId)] (Se.Desc Beam.scheduledPickupTime) limit offset
 
 findBySubscriptionIdAndScheduledTime ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

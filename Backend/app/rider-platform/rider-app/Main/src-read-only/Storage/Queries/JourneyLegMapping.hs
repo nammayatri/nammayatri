@@ -25,8 +25,17 @@ createMany = traverse_ create
 
 findAllLegsMappingByJourneyId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.Journey.Journey -> Kernel.Prelude.Bool -> m [Domain.Types.JourneyLegMapping.JourneyLegMapping])
-findAllLegsMappingByJourneyId journeyId isDeleted = do findAllWithKV [Se.And [Se.Is Beam.journeyId $ Se.Eq (Kernel.Types.Id.getId journeyId), Se.Is Beam.isDeleted $ Se.Eq isDeleted]]
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Journey.Journey -> Kernel.Prelude.Bool -> m [Domain.Types.JourneyLegMapping.JourneyLegMapping])
+findAllLegsMappingByJourneyId limit offset journeyId isDeleted = do
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is Beam.journeyId $ Se.Eq (Kernel.Types.Id.getId journeyId),
+          Se.Is Beam.isDeleted $ Se.Eq isDeleted
+        ]
+    ]
+    (Se.Asc Beam.sequenceNumber)
+    limit
+    offset
 
 findByJourneyIdAndSequenceNumber ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

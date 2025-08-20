@@ -28,8 +28,17 @@ findAllByDriverId driverId = do findAllWithKV [Se.Is Beam.driverId $ Se.Eq (Kern
 
 findAllByDriverIdAndDocType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe Domain.Types.DocumentVerificationConfig.DocumentType -> m [Domain.Types.HyperVergeSdkLogs.HyperVergeSdkLogs])
-findAllByDriverIdAndDocType driverId docType = do findAllWithKV [Se.And [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId), Se.Is Beam.docType $ Se.Eq docType]]
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Maybe Domain.Types.DocumentVerificationConfig.DocumentType -> m [Domain.Types.HyperVergeSdkLogs.HyperVergeSdkLogs])
+findAllByDriverIdAndDocType limit offset driverId docType = do
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId),
+          Se.Is Beam.docType $ Se.Eq docType
+        ]
+    ]
+    (Se.Asc Beam.createdAt)
+    limit
+    offset
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m (Maybe Domain.Types.HyperVergeSdkLogs.HyperVergeSdkLogs))
 findByPrimaryKey txnId = do findOneWithKV [Se.And [Se.Is Beam.txnId $ Se.Eq txnId]]

@@ -26,7 +26,7 @@ instance FromTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
     mbJourneyLegMapping <- Storage.Queries.JourneyLegMapping.findByJourneyLegId (Kernel.Types.Id.Id id)
     isDeleted' <- Storage.Queries.Transformers.JourneyLeg.getIsDeleted mbJourneyLegMapping isDeleted
     journeyId' <- Storage.Queries.Transformers.JourneyLeg.getJourneyId mbJourneyLegMapping journeyId
-    routeDetails' <- Storage.Queries.RouteDetails.findAllByJourneyLegId id
+    routeDetails' <- Storage.Queries.RouteDetails.findAllByJourneyLegId Nothing Nothing id
     sequenceNumber' <- Storage.Queries.Transformers.JourneyLeg.getSequenceNumber mbJourneyLegMapping sequenceNumber
     pure $
       Just

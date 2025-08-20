@@ -179,7 +179,7 @@ JourneyLegMapping:
       params: [journeyLegId]
       where: id
     findAllLegsMappingByJourneyId:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithOptionsKV
       where:
         and: [journeyId, isDeleted]
       orderBy:
@@ -306,7 +306,7 @@ JourneyLeg:
     distance: (Kernel.Types.Common.Distance <$> distance <*> distanceUnit)|E
     fromStopDetails: (Just $ Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails fromStopCode fromStopPlatformCode fromStopName fromStopGtfsId)|E
     toStopDetails: (Just $ Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails toStopCode toStopPlatformCode toStopName toStopGtfsId)|E
-    routeDetails: Storage.Queries.RouteDetails.findAllByJourneyLegId id|EM
+    routeDetails: Storage.Queries.RouteDetails.findAllByJourneyLegId Nothing Nothing id|EM
     agency: (Kernel.External.MultiModal.Interface.Types.MultiModalAgency agencyGtfsId <$> agencyName)|E
     startLocation: Kernel.External.Maps.Google.MapsClient.LatLngV2 startLocationLat startLocationLon|E
     endLocation: Kernel.External.Maps.Google.MapsClient.LatLngV2 endLocationLat endLocationLon|E
@@ -400,7 +400,7 @@ RouteDetails:
       kvFunction: findOneWithKV
       where: id
     findAllByJourneyLegId:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithOptionsKV
       where: journeyLegId
       orderBy:
         field: subLegOrder

@@ -36,9 +36,11 @@ NyRegularInstanceLog:
       kvFunction: findOneWithKV
       where: instanceTransactionId
     findBySubscriptionId:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithOptionsKV
       where: nyRegularSubscriptionId
-      orderBy: scheduledPickupTime DESC # Order by scheduled time, latest first
+      orderBy:
+       field: scheduledPickupTime
+       order: desc # Order by scheduled time, latest first
     # To find a specific instance for a subscription at a given time (useful for scheduler to avoid duplicates)
     findBySubscriptionIdAndScheduledTime:
       kvFunction: findOneWithKV

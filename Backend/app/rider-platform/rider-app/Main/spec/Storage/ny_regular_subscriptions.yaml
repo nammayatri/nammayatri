@@ -102,9 +102,11 @@ NyRegularSubscription:
       kvFunction: findOneWithKV
       where: id
     findByUserId:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithOptionsKV
       where: userId
-      orderBy: createdAt DESC
+      orderBy:
+        field: createdAt
+        order: desc
     updateStatusById:
       kvFunction: updateWithKV
       params: [ status ]

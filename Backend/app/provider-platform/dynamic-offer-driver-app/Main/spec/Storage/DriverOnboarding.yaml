@@ -321,7 +321,7 @@ Image:
       kvFunction: findOneWithKV
       where: id
     findImagesByPersonAndType:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithOptionsKV
       where:
         and: [merchantId, personId, imageType]
       orderBy:
@@ -1006,7 +1006,7 @@ HyperVergeSdkLogs:
       kvFunction: findAllWithKV
       where: driverId
     findAllByDriverIdAndDocType:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithOptionsKV
       where:
         and: [driverId, docType]
       orderBy:

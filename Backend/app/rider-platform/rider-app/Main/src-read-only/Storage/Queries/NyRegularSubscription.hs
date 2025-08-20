@@ -52,8 +52,10 @@ findById ::
   (Kernel.Types.Id.Id Domain.Types.NyRegularSubscription.NyRegularSubscription -> m (Maybe Domain.Types.NyRegularSubscription.NyRegularSubscription))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-findByUserId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m [Domain.Types.NyRegularSubscription.NyRegularSubscription])
-findByUserId userId = do findAllWithKV [Se.Is Beam.userId $ Se.Eq (Kernel.Types.Id.getId userId)]
+findByUserId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m [Domain.Types.NyRegularSubscription.NyRegularSubscription])
+findByUserId limit offset userId = do findAllWithOptionsKV [Se.Is Beam.userId $ Se.Eq (Kernel.Types.Id.getId userId)] (Se.Desc Beam.createdAt) limit offset
 
 updateLastProcessedAtById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

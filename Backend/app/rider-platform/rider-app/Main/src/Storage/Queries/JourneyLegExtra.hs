@@ -59,7 +59,7 @@ findByGroupCode groupCode = do
 -- TODO :: Remove Nothing, Post Release and Adoption
 getJourneyLegs :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Kernel.Types.Id.Id Journey.Journey -> m [JL.JourneyLeg]
 getJourneyLegs journeyId = do
-  journeyLegMappings <- QJourneyLegMapping.findAllLegsMappingByJourneyId journeyId False
+  journeyLegMappings <- QJourneyLegMapping.findAllLegsMappingByJourneyId Nothing Nothing journeyId False
   if not (null journeyLegMappings)
     then do
       mapMaybeM

@@ -29,7 +29,7 @@ deleteById id = do deleteWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id
 deleteByPersonIdAndLocation :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Text -> m ())
 deleteByPersonIdAndLocation personId geohash = do deleteWithKV [Se.And [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId), Se.Is Beam.geohash $ Se.Eq geohash]]
 
-findByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ([Domain.Types.PickupInstructions.PickupInstructions]))
+findByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m [Domain.Types.PickupInstructions.PickupInstructions])
 findByPersonId personId = do findAllWithKV [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)]
 
 findByPersonIdAndGeohash ::
@@ -37,8 +37,10 @@ findByPersonIdAndGeohash ::
   (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.Text -> m (Maybe Domain.Types.PickupInstructions.PickupInstructions))
 findByPersonIdAndGeohash personId geohash = do findOneWithKV [Se.And [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId), Se.Is Beam.geohash $ Se.Eq geohash]]
 
-findOldestByPersonId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Person.Person -> m ([Domain.Types.PickupInstructions.PickupInstructions]))
-findOldestByPersonId personId = do findAllWithKV [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)]
+findOldestByPersonId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m [Domain.Types.PickupInstructions.PickupInstructions])
+findOldestByPersonId limit offset personId = do findAllWithOptionsKV [Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId)] (Se.Asc Beam.updatedAt) limit offset
 
 updateInstructionById ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

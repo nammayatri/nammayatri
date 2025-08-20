@@ -104,7 +104,7 @@ getDriverRegistrationDocumentsList merchantShortId city driverId mbRcId = do
   vehicleBackInteriorImgs <- getVehicleImages merchant.id Domain.VehicleBackInterior
   pucImages <- getDriverImages merchant.id Domain.VehiclePUC
   permitImages <- getDriverImages merchant.id Domain.VehiclePermit
-  dlImgs <- groupByTxnIdInHM <$> runInReplica (findImagesByPersonAndType merchant.id (cast driverId) Domain.DriverLicense)
+  dlImgs <- groupByTxnIdInHM <$> runInReplica (findImagesByPersonAndType Nothing Nothing merchant.id (cast driverId) Domain.DriverLicense)
   vInspectionImgs <- getDriverImages merchant.id Domain.VehicleInspectionForm
   vehRegImgs <- getDriverImages merchant.id Domain.VehicleRegistrationCertificate
   uploadProfImgs <- getDriverImages merchant.id Domain.UploadProfile
@@ -158,7 +158,7 @@ getDriverRegistrationDocumentsList merchantShortId city driverId mbRcId = do
       Just rcId -> map (.id.getId) <$> runInReplica (findImagesByRCAndType merchantId (Just rcId) imageType Nothing)
       Nothing -> pure []
 
-    getDriverImages merchantId imageType = map (.id.getId) <$> runInReplica (findImagesByPersonAndType merchantId (cast driverId) imageType)
+    getDriverImages merchantId imageType = map (.id.getId) <$> runInReplica (findImagesByPersonAndType Nothing Nothing merchantId (cast driverId) imageType)
 
     groupByTxnIdInHM = handleNullTxnIds . foldl' (\acc img -> HM.insertWith (++) (fromMaybe "Nothing" img.workflowTransactionId) [img.id.getId] acc) (HM.empty :: HM.HashMap Text [Text])
     handleNullTxnIds hm = (maybe [] (map (: [])) $ HM.lookup "Nothing" hm) ++ (HM.elems $ HM.delete "Nothing" hm)

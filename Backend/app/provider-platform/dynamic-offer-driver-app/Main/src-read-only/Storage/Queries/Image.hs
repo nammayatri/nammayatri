@@ -50,15 +50,18 @@ findByWrokflowTransactionId workflowTransactionId = do findAllWithKV [Se.Is Beam
 
 findImagesByPersonAndType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.DocumentVerificationConfig.DocumentType -> m [Domain.Types.Image.Image])
-findImagesByPersonAndType merchantId personId imageType = do
-  findAllWithKV
+  (Maybe Int -> Maybe Int -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.DocumentVerificationConfig.DocumentType -> m [Domain.Types.Image.Image])
+findImagesByPersonAndType limit offset merchantId personId imageType = do
+  findAllWithOptionsKV
     [ Se.And
         [ Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId merchantId),
           Se.Is Beam.personId $ Se.Eq (Kernel.Types.Id.getId personId),
           Se.Is Beam.imageType $ Se.Eq imageType
         ]
     ]
+    (Se.Desc Beam.createdAt)
+    limit
+    offset
 
 updateDocumentExpiry :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.Image.Image -> m ())
 updateDocumentExpiry documentExpiry id = do

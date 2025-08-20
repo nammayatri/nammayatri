@@ -60,7 +60,7 @@ PickupInstructions:
         and: [personId, geohash]
 
     findOldestByPersonId:
-      kvFunction: findAllWithKV
+      kvFunction: findAllWithOptionsKV
       where: personId
       orderBy:
         field: updatedAt
