@@ -56,6 +56,7 @@ module Domain.Action.Dashboard.Fleet.Driver
     postDriverFleetV2AccessMultiOwnerIdSelect,
     validateOperatorToFleetAssoc,
     getDriverFleetOperatorInfo,
+    checkRCAssociationForFleet,
   )
 where
 

@@ -40,6 +40,7 @@ import qualified Domain.Types.Merchant as DTM
 import qualified Domain.Types.MerchantMessage as DMM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person
+import qualified Domain.Types.TransporterConfig as DTC
 import Domain.Types.Vehicle
 import qualified Domain.Types.VehicleCategory as DVC
 import Domain.Types.VehicleRegistrationCertificate
@@ -66,6 +67,8 @@ import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantMessage as QMM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.DriverInformation as DIQuery
+import qualified Storage.Queries.DriverRCAssociation as DAQuery
+import qualified Storage.Queries.FleetRCAssociation as FRCAssoc
 import qualified Storage.Queries.Image as Query
 import qualified Storage.Queries.Message as MessageQuery
 import qualified Storage.Queries.Person as QP
@@ -199,6 +202,21 @@ incrementDriverAcUsageRestrictionCount cityVehicleServiceTiers personId = do
     safeMaximum [] = Nothing
     safeMaximum xs = Just (maximum xs)
 
+createDriverRCAssociationIfPossible ::
+  forall m r.
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  DTC.TransporterConfig ->
+  Id Person ->
+  VehicleRegistrationCertificate ->
+  m ()
+createDriverRCAssociationIfPossible transporterConfig driverId rc = do
+  if transporterConfig.requiresOnboardingInspection /= Just True || rc.verificationStatus == Documents.VALID
+    then do
+      driverRCAssoc <- makeRCAssociation transporterConfig.merchantId transporterConfig.merchantOperatingCityId driverId rc.id (convertTextToUTC (Just "2099-12-12"))
+      DAQuery.create driverRCAssoc
+    else do
+      logWarning $ "Unable to create driver rc association: " <> "; driverId: " <> driverId.getId <> "; rcId: " <> rc.id.getId <> "; verification status: " <> show rc.verificationStatus
+
 makeRCAssociation :: (MonadFlow m) => Id DTM.Merchant -> Id DMOC.MerchantOperatingCity -> Id Person -> Id VehicleRegistrationCertificate -> Maybe UTCTime -> m DriverRCAssociation
 makeRCAssociation merchantId merchantOperatingCityId driverId rcId end = do
   id <- generateGUID
@@ -235,6 +253,21 @@ makeFleetRCAssociation merchantId merchantOperatingCityId fleetOwnerId rcId end 
         createdAt = now,
         updatedAt = now
       }
+
+createFleetRCAssociationIfPossible ::
+  forall m r.
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>
+  DTC.TransporterConfig ->
+  Id Person ->
+  VehicleRegistrationCertificate ->
+  m ()
+createFleetRCAssociationIfPossible transporterConfig fleetOwnerId rc = do
+  if transporterConfig.requiresOnboardingInspection /= Just True || rc.verificationStatus == Documents.VALID
+    then do
+      fleetRCAssoc <- makeFleetRCAssociation transporterConfig.merchantId transporterConfig.merchantOperatingCityId fleetOwnerId rc.id (convertTextToUTC (Just "2099-12-12"))
+      FRCAssoc.create fleetRCAssoc
+    else do
+      logWarning $ "Unable to create fleet rc association: " <> "; fleetOwnerId: " <> fleetOwnerId.getId <> "; rcId: " <> rc.id.getId <> "; verification status: " <> show rc.verificationStatus
 
 data VehicleRegistrationCertificateAPIEntity = VehicleRegistrationCertificateAPIEntity
   { certificateNumber :: Text,
