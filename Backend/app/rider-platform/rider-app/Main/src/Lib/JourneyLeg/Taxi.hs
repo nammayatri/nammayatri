@@ -45,7 +45,6 @@ import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
-import qualified Storage.Queries.JourneyLegMapping as QJourneyLegMapping
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Error
@@ -174,19 +173,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
           Just pricingId -> do
             void $ cancelSearch' (searchReq.riderId, searchReq.merchantId) (Id pricingId)
           Nothing -> return ()
-    when legData.shouldDeleteLeg $ QJourneyLegMapping.updateIsDeleted True legData.journeyLegId
   cancel _ = throwError (InternalError "Not Supported")
-
-  isCancellable ((TaxiLegRequestIsCancellable legData)) = do
-    mbBooking <- QBooking.findByTransactionId legData.searchId.getId
-    case mbBooking of
-      Just booking -> do
-        mbRide <- QRide.findByRBId booking.id
-        canCancel <- DCancel.isBookingCancellable booking mbRide
-        return $ JT.IsCancellableResponse {canCancel}
-      Nothing -> do
-        return $ JT.IsCancellableResponse {canCancel = True}
-  isCancellable _ = throwError (InternalError "Not Supported")
 
   getState (TaxiLegRequestGetState req) = do
     mbBooking <- QBooking.findByTransactionIdAndStatus req.searchId.getId (activeBookingStatus <> [COMPLETED, CANCELLED])

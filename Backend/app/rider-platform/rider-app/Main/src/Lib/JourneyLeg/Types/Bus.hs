@@ -14,7 +14,6 @@ import Kernel.External.Maps.Google.MapsClient.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
-import Lib.JourneyModule.Types
 
 data BusLegRequestSearchData = BusLegRequestSearchData
   { quantity :: Int,
@@ -41,14 +40,7 @@ data BusLegRequestUpdateData = BusLegRequestUpdateData
 
 data BusLegRequestCancelData = BusLegRequestCancelData
   { searchId :: Id FRFSSearch.FRFSSearch,
-    cancellationType :: Spec.CancellationType,
-    shouldDeleteLeg :: Bool,
-    journeyLegId :: Id DJourneyLeg.JourneyLeg
-  }
-
-data BusLegRequestIsCancellableData = BusLegRequestIsCancellableData
-  { searchId :: Id FRFSSearch.FRFSSearch,
-    legInfo :: LegInfo
+    cancellationType :: Spec.CancellationType
   }
 
 data BusLegRequestGetInfoData = BusLegRequestGetInfoData
@@ -80,7 +72,6 @@ data BusLegRequest
   | BusLegRequestConfirm BusLegRequestConfirmData
   | BusLegRequestUpdate BusLegRequestUpdateData
   | BusLegRequestCancel BusLegRequestCancelData
-  | BusLegRequestIsCancellable BusLegRequestIsCancellableData
   | BusLegRequestGetFare BusLegRequestGetFareData
   | BusLegRequestGetState BusLegRequestGetStateData
   | BusLegRequestGetInfo BusLegRequestGetInfoData

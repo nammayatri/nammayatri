@@ -176,12 +176,15 @@ init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking
 cancel :: Merchant -> MerchantOperatingCity -> BecknConfig -> Spec.CancellationType -> DBooking.FRFSTicketBooking -> Flow ()
 cancel merchant merchantOperatingCity bapConfig cancellationType booking = do
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
+  frfsConfig <-
+    CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow merchantOperatingCity.id []
+      >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> merchantOperatingCity.id.getId)
+  unless (frfsConfig.isCancellationAllowed) $ throwError CancellationNotSupported
+  when (cancellationType == Spec.SOFT_CANCEL) $
+    unless (booking.status == DBooking.CONFIRMED) $ throwError (InvalidRequest $ "Cancellation during incorrect status: " <> show booking.status)
   case integratedBPPConfig.providerConfig of
     ONDC _ -> do
       fork "FRFS ONDC Cancel Req" $ do
-        frfsConfig <-
-          CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow merchantOperatingCity.id []
-            >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> merchantOperatingCity.id.getId)
         providerUrl <- booking.bppSubscriberUrl & parseBaseUrl & fromMaybeM (InvalidRequest "Invalid provider url")
         ttl <- bapConfig.cancelTTLSec & fromMaybeM (InternalError "Invalid ttl")
         messageId <- generateGUID

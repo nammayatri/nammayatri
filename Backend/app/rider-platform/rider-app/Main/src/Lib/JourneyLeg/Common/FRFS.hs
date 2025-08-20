@@ -54,7 +54,6 @@ import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.BecknConfig as CQBC
-import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Storage.CachedQueries.Merchant.MultiModalBus (BusData (..), BusDataWithRoutesInfo (..))
@@ -66,7 +65,6 @@ import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.FRFSSearch as QFRFSSearch
 import qualified Storage.Queries.FRFSTicketBooking as QTBooking
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
-import qualified Storage.Queries.JourneyLegMapping as QJourneyLegMapping
 import Tools.Error
 
 -- getState and other functions from the original file...
@@ -418,33 +416,14 @@ confirm personId merchantId mbQuoteId ticketQuantity childTicketQuantity bookLat
       (merchant', quote') <- DOnSelect.validateRequest onSelectReq
       DOnSelect.onSelect onSelectReq merchant' quote'
 
-cancel :: JT.CancelFlow m r c => Id FRFSSearch -> Spec.CancellationType -> Bool -> Id DJourneyLeg.JourneyLeg -> m ()
-cancel searchId cancellationType shouldDeleteLeg journeyLegId = do
+cancel :: JT.CancelFlow m r c => Id FRFSSearch -> Spec.CancellationType -> m ()
+cancel searchId cancellationType = do
   mbMetroBooking <- QTBooking.findBySearchId searchId
   whenJust mbMetroBooking $ \metroBooking -> do
     merchant <- CQM.findById metroBooking.merchantId >>= fromMaybeM (MerchantDoesNotExist metroBooking.merchantId.getId)
     merchantOperatingCity <- CQMOC.findById metroBooking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound metroBooking.merchantOperatingCityId.getId)
     bapConfig <- CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory metroBooking.vehicleType) >>= fromMaybeM (InternalError "Beckn Config not found")
     CallExternalBPP.cancel merchant merchantOperatingCity bapConfig cancellationType metroBooking
-  when shouldDeleteLeg $ QJourneyLegMapping.updateIsDeleted True journeyLegId
-
-isCancellable :: JT.CancelFlow m r c => Id FRFSSearch -> JT.LegInfo -> m JT.IsCancellableResponse
-isCancellable searchId leg = do
-  mbMetroBooking <- QTBooking.findBySearchId searchId
-  case mbMetroBooking of
-    Just metroBooking -> do
-      frfsConfig <- CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow metroBooking.merchantOperatingCityId [] >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> show metroBooking.merchantOperatingCityId)
-      let isBookingCancellable =
-            case leg.legExtraInfo of
-              JT.Bus extraInfo -> maybe False (`elem` JT.cannotCancelStatus) extraInfo.trackingStatus
-              JT.Metro extraInfo -> any (\routeInfo -> maybe False (`elem` JT.cannotCancelStatus) routeInfo.trackingStatus) extraInfo.routeInfo
-              JT.Subway extraInfo -> any (\routeInfo -> maybe False (`elem` JT.cannotCancelStatus) routeInfo.trackingStatus) extraInfo.routeInfo
-              _ -> False
-      case isBookingCancellable of
-        True -> return $ JT.IsCancellableResponse {canCancel = False}
-        False -> return $ JT.IsCancellableResponse {canCancel = frfsConfig.isCancellationAllowed}
-    Nothing -> do
-      return $ JT.IsCancellableResponse {canCancel = True}
 
 -- Helper functions for bus tracking, adapted from Lib.JourneyModule.Base
 -- These functions are suffixed with CFRFS to avoid potential name clashes if Lib.JourneyModule.Base is also imported.

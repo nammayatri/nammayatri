@@ -41,12 +41,8 @@ data SubwayLegRequestConfirmData = SubwayLegRequestConfirmData
 
 data SubwayLegRequestCancelData = SubwayLegRequestCancelData
   { searchId :: Id FRFSSearch.FRFSSearch,
-    cancellationType :: Spec.CancellationType,
-    shouldDeleteLeg :: Bool,
-    journeyLegId :: Id DJourneyLeg.JourneyLeg
+    cancellationType :: Spec.CancellationType
   }
-
-data SubwayLegRequestIsCancellableData = SubwayLegRequestIsCancellableData
 
 data SubwayLegRequestGetStateData = SubwayLegRequestGetStateData
   { searchId :: Id FRFSSearch.FRFSSearch,
@@ -64,7 +60,6 @@ data SubwayLegRequest
   | SubwayLegRequestConfirm SubwayLegRequestConfirmData
   | SubwayLegRequestUpdate SubwayLegRequestUpdateData
   | SubwayLegRequestCancel SubwayLegRequestCancelData
-  | SubwayLegRequestIsCancellable SubwayLegRequestIsCancellableData
   | SubwayLegRequestGetFare SubwayLegRequestGetFareData
   | SubwayLegRequestGetState SubwayLegRequestGetStateData
   | SubwayLegRequestGetInfo SubwayLegRequestGetInfoData

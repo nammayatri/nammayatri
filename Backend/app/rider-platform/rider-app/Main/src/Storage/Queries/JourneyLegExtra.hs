@@ -82,6 +82,14 @@ getJourneyLegs journeyId = do
         Nothing
         Nothing
 
+getJourneyLeg ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Kernel.Types.Id.Id Journey.Journey ->
+  Kernel.Prelude.Int ->
+  m JL.JourneyLeg
+getJourneyLeg journeyId sequenceNumber = do
+  findByJourneyIdAndSequenceNumber journeyId sequenceNumber >>= fromMaybeM (InvalidRequest $ "Journey Leg not found with journeyId: " <> show journeyId <> " and sequenceNumber: " <> show sequenceNumber)
+
 findByJourneyIdAndSequenceNumber ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Journey.Journey -> Kernel.Prelude.Int -> m (Maybe JL.JourneyLeg))

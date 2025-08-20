@@ -10,7 +10,6 @@ import qualified Data.HashMap.Strict as HM
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as Text
 import qualified Domain.Types.Booking as DBooking
-import qualified Domain.Types.BookingStatus as DBooking
 import qualified Domain.Types.Common as DTrip
 import qualified Domain.Types.EstimateStatus as DEstimate
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
@@ -18,8 +17,6 @@ import Domain.Types.FRFSRouteDetails
 import Domain.Types.FRFSSearch
 import qualified Domain.Types.FRFSSearch as FRFSSR
 import qualified Domain.Types.FRFSTicketBooking as DFRFSBooking
-import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSBooking
-import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
 import qualified Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.IntegratedBPPConfig as DTBC
@@ -33,7 +30,6 @@ import Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.RecentLocation as DRL
 import qualified Domain.Types.Ride as DRide
-import qualified Domain.Types.RideStatus as DRide
 import Domain.Types.RouteDetails
 import qualified Domain.Types.SearchRequest as DSR
 import Domain.Types.Station as DTS
@@ -190,8 +186,6 @@ type ConfirmJourneyLeg leg m = leg -> m ()
 
 type CancelJourneyLeg leg m = leg -> m ()
 
-type IsCancellableJourneyLeg leg m = leg -> m IsCancellableResponse
-
 type UpdateJourneyLeg leg m = leg -> m ()
 
 type GetJourneyLegState leg m = leg -> m JourneyLegState
@@ -203,7 +197,6 @@ class JourneyLeg leg m where
   confirm :: ConfirmFlow m r c => ConfirmJourneyLeg leg m
   update :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => UpdateJourneyLeg leg m
   cancel :: CancelFlow m r c => CancelJourneyLeg leg m
-  isCancellable :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, m ~ Kernel.Types.Flow.FlowR AppEnv) => IsCancellableJourneyLeg leg m
   getState :: GetStateFlow m r c => GetJourneyLegState leg m
   getInfo :: GetStateFlow m r c => GetJourneyLeg leg m
   getFare :: GetFareFlow m r => GetFareJourneyLeg leg m
@@ -524,10 +517,6 @@ instance ToJSON UnifiedTicketQRV2 where
         "MTC" .= mtc
       ]
 
-data IsCancellableResponse = IsCancellableResponse
-  { canCancel :: Bool
-  }
-
 getTaxiVehiclePosition :: GetStateFlow m r c => Maybe DRide.Ride -> m (Maybe LatLong)
 getTaxiVehiclePosition mRide = do
   case mRide of
@@ -565,11 +554,10 @@ mkLegInfoFromBookingAndRide booking mRide journeyLeg = do
   tollDifference <- getTollDifference fareBreakups estimatedFareBreakups
   batchConfig <- SharedRedisKeys.getBatchConfig booking.transactionId
   (oldStatus, bookingStatus, trackingStatus) <- JMStateUtils.getTaxiAllStatuses journeyLeg (Just booking) mRide Nothing
-  let skipBooking = maybe False (\status -> status `elem` [JMState.TaxiRide DRide.CANCELLED, JMState.TaxiBooking DBooking.CANCELLED, JMState.TaxiEstimate DEstimate.CANCELLED]) bookingStatus
   return $
     LegInfo
       { journeyLegId = journeyLeg.id,
-        skipBooking,
+        skipBooking = False,
         bookingAllowed = True,
         searchId = booking.transactionId,
         pricingId = booking.quoteId <&> (.getId),
@@ -642,11 +630,10 @@ mkLegInfoFromSearchRequest DSR.SearchRequest {..} journeyLeg = do
   toLocation' <- toLocation & fromMaybeM (InvalidRequest "To location not found") -- make it proper
   batchConfig <- SharedRedisKeys.getBatchConfig id.getId
   (oldStatus, bookingStatus, trackingStatus) <- JMStateUtils.getTaxiAllStatuses journeyLeg Nothing Nothing mbEstimate
-  let skipBooking = maybe False (\status -> status `elem` [JMState.TaxiRide DRide.CANCELLED, JMState.TaxiBooking DBooking.CANCELLED, JMState.TaxiEstimate DEstimate.CANCELLED]) bookingStatus
   return $
     LegInfo
       { journeyLegId = journeyLeg.id,
-        skipBooking = skipBooking,
+        skipBooking = False, -- TODO :: To be deprecated from UI @Khuzema
         bookingAllowed = True,
         searchId = id.getId,
         pricingId = journeyLegInfo'.pricingId,
@@ -796,11 +783,10 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
   (oldStatus, bookingStatus, trackingStatuses) <- JMStateUtils.getFRFSAllStatuses journeyLeg (Just booking)
   journeyLegInfo' <- getLegRouteInfo (zip journeyLeg.routeDetails (map snd trackingStatuses)) integratedBPPConfig
   legExtraInfo <- mkLegExtraInfo qrDataList qrValidity ticketsCreatedAt journeyLeg.routeDetails journeyLegInfo' ticketNo
-  let skipBooking = maybe False (\status -> status `elem` [JMState.FRFSTicket DFRFSTicket.CANCELLED, JMState.FRFSBooking DFRFSBooking.CANCELLED]) bookingStatus
   return $
     LegInfo
       { journeyLegId = journeyLeg.id,
-        skipBooking,
+        skipBooking = False, -- TODO :: To be deprecated from UI @Khuzema
         bookingAllowed = True,
         searchId = booking.searchId.getId,
         pricingId = Just booking.quoteId.getId, -- Just booking.id.getId,
@@ -985,14 +971,13 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg = do
           Spec.BUS -> not isSearchFailed && (fromMaybe False (mRiderConfig >>= (.busBookingAllowed)) || isPTBookingAllowedForUser)
   now <- getCurrentTime
   (oldStatus, bookingStatus, trackingStatuses) <- JMStateUtils.getFRFSAllStatuses journeyLeg Nothing
-  let skipBooking = maybe False (\status -> status `elem` [JMState.TaxiRide DRide.CANCELLED, JMState.TaxiBooking DBooking.CANCELLED, JMState.TaxiEstimate DEstimate.CANCELLED]) bookingStatus
   (mbEstimatedFare, mbQuote) <-
     case journeyLegInfo'.pricingId of
       Just quoteId -> do
         mbQuote <- QFRFSQuote.findById (Id quoteId)
         return $ (mkPriceAPIEntity <$> (mbQuote <&> (.price)), mbQuote)
       Nothing -> do
-        if bookingAllowed && not skipBooking
+        if bookingAllowed
           then do return (Nothing, Nothing)
           else return $ (mkPriceAPIEntity <$> (mkPrice Nothing <$> fallbackFare), Nothing)
 
@@ -1002,7 +987,7 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg = do
   return $
     LegInfo
       { journeyLegId = journeyLeg.id,
-        skipBooking,
+        skipBooking = False, -- TODO :: To be deprecated from UI @Khuzema
         bookingAllowed,
         searchId = id.getId,
         pricingId = journeyLegInfo'.pricingId,
@@ -1337,20 +1322,8 @@ getServiceTypeFromProviderCode merchantOperatingCityId providerCode = do
 sumHighPrecMoney :: [HighPrecMoney] -> HighPrecMoney
 sumHighPrecMoney = HighPrecMoney . sum . map getHighPrecMoney
 
-completedStatus :: [JourneyLegStatus]
-completedStatus = [Completed, Cancelled]
-
 allCompletedStatus :: [JourneyLegStatus]
 allCompletedStatus = [Completed, Cancelled, Skipped]
-
-cannotCancelStatus :: [JMState.TrackingStatus]
-cannotCancelStatus = [JMState.Ongoing, JMState.Finishing, JMState.Finished] -- TODO :: Booking Status Cancelled To be included
-
-cannotCancelWalkStatus :: [JMState.TrackingStatus]
-cannotCancelWalkStatus = [JMState.Finished] -- TODO :: Booking Status Cancelled To be included
-
-cannotCancelExtendStatus :: [JMState.TrackingStatus]
-cannotCancelExtendStatus = [JMState.Ongoing, JMState.Finishing, JMState.Finished, JMState.Arriving, JMState.AlmostArrived, JMState.Arrived] -- TODO :: Booking Status Cancelled To be included
 
 data ExtendLegStartPoint
   = StartLocation StartLocationType

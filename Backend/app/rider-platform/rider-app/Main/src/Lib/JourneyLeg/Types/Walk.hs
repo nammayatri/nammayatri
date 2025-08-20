@@ -6,7 +6,6 @@ import qualified Domain.Types.JourneyLeg as DJourneyLeg
 import qualified Domain.Types.Person as DPerson
 import Kernel.Prelude
 import Kernel.Types.Id
-import Lib.JourneyModule.Types
 import SharedLogic.Search
 
 data WalkLegRequestSearchData = WalkLegRequestSearchData
@@ -34,10 +33,6 @@ data WalkLegRequestCancelData = WalkLegRequestCancelData
   { journeyLegId :: Id DJourneyLeg.JourneyLeg
   }
 
-data WalkLegRequestIsCancellableData = WalkLegRequestIsCancellableData
-  { legInfo :: LegInfo
-  }
-
 data WalkLegRequestUpdateData = WalkLegRequestUpdateData
 
 data WalkLegRequest
@@ -45,7 +40,6 @@ data WalkLegRequest
   | WalkLegRequestConfirm WalkLegRequestConfirmData
   | WalkLegRequestUpdate WalkLegRequestUpdateData
   | WalkLegRequestCancel WalkLegRequestCancelData
-  | WalkLegRequestIsCancellable WalkLegRequestIsCancellableData
   | WalkLegRequestGetInfo WalkLegRequestGetInfoData
   | WalkLegRequestGetState WalkLegRequestGetStateData
   | WalkLegRequestGetFare WalkLegRequestGetFareData

@@ -21,11 +21,8 @@ instance JT.JourneyLeg MetroLegRequest m where
   update (MetroLegRequestUpdate _) = return ()
   update _ = throwError (InternalError "Not supported")
 
-  cancel (MetroLegRequestCancel legData) = CFRFS.cancel legData.searchId legData.cancellationType legData.shouldDeleteLeg legData.journeyLegId
+  cancel (MetroLegRequestCancel legData) = CFRFS.cancel legData.searchId legData.cancellationType
   cancel _ = throwError (InternalError "Not supported")
-
-  isCancellable (MetroLegRequestIsCancellable legData) = CFRFS.isCancellable legData.searchId legData.legInfo
-  isCancellable _ = throwError (InternalError "Not Supported")
 
   getState (MetroLegRequestGetState req) = CFRFS.getState DTrip.Metro req.searchId req.riderLastPoints False Nothing req.journeyLeg
   getState _ = throwError (InternalError "Not supported")

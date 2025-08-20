@@ -13,7 +13,6 @@ module Domain.Action.UI.MultimodalConfirm
     getMultimodalJourneyStatus,
     postMultimodalExtendLegGetfare,
     postMultimodalJourneyFeedback,
-    getActiveJourneyIds,
     getMultimodalFeedback,
     getMultimodalUserPreferences,
     postMultimodalUserPreferences,
@@ -49,11 +48,11 @@ import qualified Data.HashMap.Strict as HashMap
 import Data.List (nub, nubBy)
 import qualified Data.Text as T
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
+import qualified Domain.Types.CancellationReason as SCR
 import qualified Domain.Types.Common as DTrip
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.EstimateStatus as DEst
 import qualified Domain.Types.FRFSTicketBooking as DFRFSB
-import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSB
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Journey
 import qualified Domain.Types.JourneyFeedback as JFB
@@ -83,8 +82,6 @@ import qualified Lib.JourneyModule.Types as JMTypes
 import qualified Lib.JourneyModule.Utils as JLU
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.BecknConfig as CQBC
-import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
-import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
@@ -93,7 +90,6 @@ import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import Storage.Queries.FRFSSearch as QFRFSSearch
 import Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
-import Storage.Queries.Journey as QJourney
 import Storage.Queries.JourneyFeedback as SQJFB
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.JourneyLegMapping as QJourneyLegMapping
@@ -148,13 +144,10 @@ postMultimodalConfirm ::
     API.Types.UI.MultimodalConfirm.JourneyConfirmReq ->
     Environment.Flow Kernel.Types.APISuccess.APISuccess
   )
-postMultimodalConfirm (mbPersonId, _) journeyId forcedBookLegOrder journeyConfirmReq = do
-  personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
+postMultimodalConfirm (_, _) journeyId forcedBookLegOrder journeyConfirmReq = do
   validateMetroBusinessHours journeyId
   journey <- JM.getJourney journeyId
   let confirmElements = journeyConfirmReq.journeyConfirmReqElements
-  forM_ confirmElements $ \element -> do
-    when element.skipBooking $ JM.skipLeg journeyId element.journeyLegOrder True personId
   void $ JM.startJourney journey.riderId confirmElements forcedBookLegOrder journey.id
   JM.updateJourneyStatus journey Domain.Types.Journey.CONFIRMED
   fork "Caching recent location" $ JLU.createRecentLocationForMultimodal journey
@@ -340,18 +333,6 @@ postMultimodalOrderSwitchFRFSTier (mbPersonId, merchantId) journeyId legOrder re
       let mbSelectedOption = find (\option -> option.quoteId == Just req.quoteId) options.options
       return $ mbSelectedOption <&> (.availableRoutes)
 
-getActiveJourneyIds ::
-  ( CacheFlow m r,
-    EsqDBFlow m r,
-    EncFlow m r,
-    Monad m
-  ) =>
-  Kernel.Types.Id.Id Domain.Types.Person.Person ->
-  m [Domain.Types.Journey.Journey]
-getActiveJourneyIds riderId = do
-  activeJourneys <- QJourney.findAllActiveByRiderId riderId
-  return activeJourneys
-
 postMultimodalSwitch ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
@@ -382,11 +363,7 @@ postMultimodalJourneyCancel ::
   ) ->
   Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
   Environment.Flow Kernel.Types.APISuccess.APISuccess
-postMultimodalJourneyCancel (_, _) journeyId = do
-  journey <- JM.getJourney journeyId
-  void $ JM.cancelRemainingLegs journeyId False journey.riderId
-  JM.updateJourneyStatus journey Domain.Types.Journey.CANCELLED
-  pure Kernel.Types.APISuccess.Success
+postMultimodalJourneyCancel (_, _) _ = throwError $ InvalidRequest "Not implemented"
 
 postMultimodalExtendLeg ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -409,6 +386,7 @@ postMultimodalExtendLegGetfare ::
 postMultimodalExtendLegGetfare (_, _) journeyId req = do
   JM.extendLegEstimatedFare journeyId req.startLocation req.endLocation Nothing
 
+-- TODO :: To be deprecated from UI @Khuzema: Call cancel instead of this API
 postMultimodalJourneyLegSkip ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
@@ -417,11 +395,12 @@ postMultimodalJourneyLegSkip ::
     Int ->
     Environment.Flow Kernel.Types.APISuccess.APISuccess
   )
-postMultimodalJourneyLegSkip (mbPersonId, _) journeyId legOrder = do
-  personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
-  JM.skipLeg journeyId legOrder False personId
+postMultimodalJourneyLegSkip (_, _) journeyId legOrder = do
+  journeyLeg <- QJourneyLeg.getJourneyLeg journeyId legOrder
+  JM.cancelLeg journeyLeg (SCR.CancellationReasonCode "") True Nothing
   pure Kernel.Types.APISuccess.Success
 
+-- TODO :: To be deprecated from UI @Khuzema: Call confirm instead of this API
 postMultimodalJourneyLegAddSkippedLeg ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
@@ -431,7 +410,8 @@ postMultimodalJourneyLegAddSkippedLeg ::
     Environment.Flow Kernel.Types.APISuccess.APISuccess
   )
 postMultimodalJourneyLegAddSkippedLeg (_, _) journeyId legOrder = do
-  JM.addSkippedLeg journeyId legOrder
+  journey <- JM.getJourney journeyId
+  void $ JM.startJourney journey.riderId [] (Just legOrder) journey.id
   pure Kernel.Types.APISuccess.Success
 
 getMultimodalJourneyStatus ::
@@ -608,6 +588,7 @@ postMultimodalUserPreferences (mbPersonId, merchantId) multimodalUserPreferences
       QMP.create newPreferences
   pure Kernel.Types.APISuccess.Success
 
+-- TODO :: To be deprecated from UI @Khuzema
 postMultimodalTransitOptionsLite ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
@@ -882,23 +863,11 @@ postMultimodalOrderSoftCancel ::
     Kernel.Prelude.Int ->
     Environment.Flow Kernel.Types.APISuccess.APISuccess
   )
-postMultimodalOrderSoftCancel (_, merchantId) journeyId _ = do
-  merchant <- CQM.findById merchantId >>= fromMaybeM (InvalidRequest "Invalid merchant id")
+postMultimodalOrderSoftCancel (_, _) journeyId legOrder = do
   legs <- QJourneyLeg.getJourneyLegs journeyId
-  JMTypes.checkIfAnyTaxiLegOngoing legs
-
-  ticketBookings <- mapMaybeM (QFRFSTicketBooking.findBySearchId . Id) (mapMaybe (.legSearchId) legs)
-  when (null ticketBookings) $ throwError (InvalidRequest "No FRFS bookings found for this journey")
-  unless (length ticketBookings == 1) $ throwError (InvalidRequest "Multiple FRFS bookings found for this journey")
-  let ticketBooking = head ticketBookings
-  merchantOperatingCity <- CQMOC.findById ticketBooking.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantOperatingCityId- " <> show ticketBooking.merchantOperatingCityId)
-  bapConfig <- CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (Utils.frfsVehicleCategoryToBecknVehicleCategory ticketBooking.vehicleType) >>= fromMaybeM (InternalError "Beckn Config not found")
-  frfsConfig <-
-    CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow ticketBooking.merchantOperatingCityId []
-      >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> show ticketBooking.merchantOperatingCityId)
-  unless (ticketBooking.status == DFRFSB.CONFIRMED) $ throwError (InvalidRequest "Cancellation during incorrect status")
-  unless (frfsConfig.isCancellationAllowed) $ throwError CancellationNotSupported
-  void $ CallExternalBPP.cancel merchant merchantOperatingCity bapConfig Spec.SOFT_CANCEL ticketBooking
+  JMTypes.checkIfAnyTaxiLegOngoing legs -- check for any ongoing taxi legs, remove this once handled properly from UI
+  journeyLeg <- find (\leg -> leg.sequenceNumber == legOrder) legs & fromMaybeM (InvalidRequest "No matching journey leg found for the given legOrder")
+  JM.softCancelLeg journeyLeg (SCR.CancellationReasonCode "") False Nothing
   return Kernel.Types.APISuccess.Success
 
 getMultimodalOrderCancelStatus ::
@@ -910,10 +879,8 @@ getMultimodalOrderCancelStatus ::
     Environment.Flow API.Types.UI.MultimodalConfirm.MultimodalCancelStatusResp
   )
 getMultimodalOrderCancelStatus (_, __) journeyId legOrder = do
-  legs <- QJourneyLeg.getJourneyLegs journeyId
-  JMTypes.checkIfAnyTaxiLegOngoing legs
-
-  journeyLeg <- find (\leg -> leg.sequenceNumber == legOrder) legs & fromMaybeM (InvalidRequest "No matching journey leg found for the given legOrder")
+  journeyLeg <- QJourneyLeg.getJourneyLeg journeyId legOrder
+  -- TODO: Move to the JourneyLeg class
   ticketBooking <- maybe (pure Nothing) (QFRFSTicketBooking.findBySearchId . Id) journeyLeg.legSearchId >>= fromMaybeM (InvalidRequest "No FRFS booking found for the leg")
   return $
     ApiTypes.MultimodalCancelStatusResp
@@ -931,18 +898,9 @@ postMultimodalOrderCancel ::
     Kernel.Prelude.Int ->
     Environment.Flow Kernel.Types.APISuccess.APISuccess
   )
-postMultimodalOrderCancel (_, merchantId) journeyId legOrder = do
-  merchant <- CQM.findById merchantId >>= fromMaybeM (InvalidRequest "Invalid merchant id")
-  legs <- QJourneyLeg.getJourneyLegs journeyId
-  journeyLeg <- find (\leg -> leg.sequenceNumber == legOrder) legs & fromMaybeM (InvalidRequest "No matching journey leg found for the given legOrder")
-  ticketBooking <- maybe (pure Nothing) (QFRFSTicketBooking.findBySearchId . Id) journeyLeg.legSearchId >>= fromMaybeM (InvalidRequest "No FRFS booking found for the leg")
-  merchantOperatingCity <- CQMOC.findById ticketBooking.merchantOperatingCityId >>= fromMaybeM (InvalidRequest $ "Invalid merchant operating city id" <> ticketBooking.merchantOperatingCityId.getId)
-  bapConfig <- CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (Utils.frfsVehicleCategoryToBecknVehicleCategory ticketBooking.vehicleType) >>= fromMaybeM (InternalError "Beckn Config not found")
-  frfsConfig <-
-    CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow ticketBooking.merchantOperatingCityId []
-      >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> show ticketBooking.merchantOperatingCityId)
-  unless (frfsConfig.isCancellationAllowed) $ throwError CancellationNotSupported
-  void $ CallExternalBPP.cancel merchant merchantOperatingCity bapConfig Spec.CONFIRM_CANCEL ticketBooking
+postMultimodalOrderCancel (_, _) journeyId legOrder = do
+  journeyLeg <- QJourneyLeg.getJourneyLeg journeyId legOrder
+  JM.cancelLeg journeyLeg (SCR.CancellationReasonCode "") False Nothing
   return Kernel.Types.APISuccess.Success
 
 getAbsoluteValue :: Maybe HighPrecMoney -> Maybe HighPrecMoney
