@@ -33,6 +33,7 @@ import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Dr
 import qualified API.Types.UI.DriverOnboardingV2
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Tuple.Extra as TE
+import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.Dashboard.Management.Driver as DDriver
 import qualified Domain.Action.UI.DriverOnboarding.AadhaarVerification as AV
 import Domain.Action.UI.DriverOnboarding.DriverLicense
@@ -312,7 +313,7 @@ postDriverRegistrationUnlinkDocument merchantShortId opCity personId documentTyp
     checkAndUpdateEnabledStatus :: Id DMOC.MerchantOperatingCity -> Common.DocumentType -> DP.Person -> Flow Bool
     checkAndUpdateEnabledStatus merchantOpCityId docType person = do
       case person.role of
-        role | isFleetOwnerRole role -> do
+        role | DCommon.checkFleetOwnerRole role -> do
           mbFleetVerificationConfig <- QFODVC.findByPrimaryKey (mapDocumentType docType) merchantOpCityId person.role
           let isMandatory = maybe False (.isMandatory) mbFleetVerificationConfig
           if isMandatory
@@ -327,8 +328,6 @@ postDriverRegistrationUnlinkDocument merchantShortId opCity personId documentTyp
             QDriverInfo.updateEnabledVerifiedState person.id False Nothing
           pure False
         _ -> pure False
-    isFleetOwnerRole :: DP.Role -> Bool
-    isFleetOwnerRole role = role `elem` [DP.FLEET_OWNER, DP.FLEET_BUSINESS]
 
 postDriverRegistrationRegisterDl :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.RegisterDLReq -> Flow APISuccess
 postDriverRegistrationRegisterDl merchantShortId opCity driverId_ Common.RegisterDLReq {..} = do
