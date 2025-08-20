@@ -1197,7 +1197,9 @@ switchLeg journeyId _ req = do
                 sourceDestinationMapping = Nothing,
                 distanceUnit = Meter
               }
-        return (Just newDistanceAndDuration.distanceWithUnit, Just newDistanceAndDuration.duration)
+        -- Use OSRM distance but calculate duration using our correct formula
+        let calculatedDuration = calculateWalkDuration newDistanceAndDuration.distanceWithUnit
+        return (Just newDistanceAndDuration.distanceWithUnit, Just calculatedDuration)
       _ -> return (journeyLeg.distance, journeyLeg.duration)
   let lockKey = multimodalLegSearchIdAccessLockKey journeyId.getId
   Redis.whenWithLockRedis lockKey 5 $ do
@@ -1352,3 +1354,19 @@ markLegStatus mbStatus trackingStatus journeyLeg mbSubLegOrder = do
       Just JL.Completed -> Just JMState.Finished
       Just JL.Failed -> Just JMState.Finished
       Nothing -> Nothing
+
+-- Constants for walk duration calculation
+averageSpeedMPSForWalk :: Double
+averageSpeedMPSForWalk = 1.39 -- WALK speed in m/s
+
+-- for 2km it takes around 29 minutes
+fudgeFactorForWalk :: Double
+fudgeFactorForWalk = 1.2
+
+calculateWalkDuration :: Distance -> Seconds
+calculateWalkDuration distance =
+  let distanceInMeters = distanceToMeters distance
+      -- Formula: (distance * fudgeFactor) / averageSpeedMPS
+      -- This gives us the correct walk duration in seconds
+      walkDurationInSeconds = round $ (fromIntegral distanceInMeters * fudgeFactorForWalk) / averageSpeedMPSForWalk
+   in Seconds walkDurationInSeconds
