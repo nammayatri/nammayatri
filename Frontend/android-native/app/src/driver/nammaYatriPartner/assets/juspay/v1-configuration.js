@@ -3044,7 +3044,7 @@ function getNammaYatriConfig() {
           "cityName" : "Bhubaneshwar",
           "mapImage" : "ny_ic_location_map",
           "cityCode" : "std:0674",  // check this from backend
-          "showSubscriptions" : false,
+          "showSubscriptions" : true,
           "enableAdvancedBooking" : false,
           "advancedRidePopUpYoutubeLink" : "" ,
           "callDriverInfoPost": false, // Dummy link need to change
@@ -3119,7 +3119,7 @@ function getNammaYatriConfig() {
           "cityName" : "Cuttack",
           "mapImage" : "ny_ic_location_map",
           "cityCode" : "std:0671",  // check this from backend
-          "showSubscriptions" : false,
+          "showSubscriptions" : true,
           "enableAdvancedBooking" : false,
           "advancedRidePopUpYoutubeLink" : "" ,
           "callDriverInfoPost": false, // Dummy link need to change

@@ -315,6 +315,10 @@ window.getMerchantConfig = function () {
           "bike" : {
             "freeSeconds" : 300,
             "perMinCharges" : 1.0
+          },
+          "ambulance" : {
+            "freeSeconds" : 480,
+            "perMinCharges" : 2.0
           }
         },
         "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
@@ -406,6 +410,10 @@ window.getMerchantConfig = function () {
         "bike" : {
           "freeSeconds" : 180
         , "perMinCharges" : 2.0
+        },
+        "ambulance" : {
+          "freeSeconds" : 480,
+          "perMinCharges" : 2.0
         }
       },
       "rateCardConfig" : { "showLearnMore" : true, "learnMoreVideoLink" : "https://www.youtube.com/shorts/NUTNKPzslpw" },
@@ -493,6 +501,10 @@ window.getMerchantConfig = function () {
         "bike" : {
           "freeSeconds" : 300,
           "perMinCharges" : 1.0
+        },
+        "ambulance" : {
+          "freeSeconds" : 480,
+          "perMinCharges" : 2.0
         }
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
@@ -581,6 +593,10 @@ window.getMerchantConfig = function () {
         "bike" : {
           "freeSeconds" : 300,
           "perMinCharges" : 1.0
+        },
+        "ambulance" : {
+          "freeSeconds" : 480,
+          "perMinCharges" : 2.0
         }
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
@@ -1269,6 +1285,10 @@ window.getMerchantConfig = function () {
         "bike" : {
           "freeSeconds" : 300,
           "perMinCharges" : 1.0
+        },
+        "ambulance" : {
+          "freeSeconds" : 480,
+          "perMinCharges" : 2.0
         }
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
@@ -1357,6 +1377,10 @@ window.getMerchantConfig = function () {
         "bike" : {
           "freeSeconds" : 300,
           "perMinCharges" : 1.0
+        },
+        "ambulance" : {
+          "freeSeconds" : 480,
+          "perMinCharges" : 2.0
         }
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
@@ -1445,6 +1469,10 @@ window.getMerchantConfig = function () {
         "bike" : {
           "freeSeconds" : 300,
           "perMinCharges" : 1.0
+        },
+        "ambulance" : {
+          "freeSeconds" : 480,
+          "perMinCharges" : 2.0
         }
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
@@ -1533,6 +1561,10 @@ window.getMerchantConfig = function () {
         "bike" : {
           "freeSeconds" : 300,
           "perMinCharges" : 1.0
+        },
+        "ambulance" : {
+          "freeSeconds" : 480,
+          "perMinCharges" : 2.0
         }
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
@@ -1621,6 +1653,10 @@ window.getMerchantConfig = function () {
         "bike" : {
           "freeSeconds" : 300,
           "perMinCharges" : 1.0
+        },
+        "ambulance" : {
+          "freeSeconds" : 480,
+          "perMinCharges" : 2.0
         }
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
@@ -1709,6 +1745,10 @@ window.getMerchantConfig = function () {
         "bike" : {
           "freeSeconds" : 300,
           "perMinCharges" : 1.0
+        },
+        "ambulance" : {
+          "freeSeconds" : 480,
+          "perMinCharges" : 2.0
         }
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
@@ -1797,6 +1837,10 @@ window.getMerchantConfig = function () {
         "bike" : {
           "freeSeconds" : 300,
           "perMinCharges" : 1.0
+        },
+        "ambulance" : {
+          "freeSeconds" : 480,
+          "perMinCharges" : 2.0
         }
       },
       "rentalWaitingChargesConfig" : defRentalWaitingChargesConfig,
@@ -2215,7 +2259,7 @@ window.getMerchantConfig = function () {
         "cityName" : "Bhubaneshwar",
         "mapImage" : "ny_ic_location_map",
         "cityCode": "std:00112", //// check this from backend
-        "showSubscriptions" : false,
+        "showSubscriptions" : true,
         "enableAdvancedBooking" : false,
         "advancedRidePopUpYoutubeLink" : "" ,
         "callDriverInfoPost": false, // Dummy link need to change
@@ -2555,6 +2599,10 @@ let defWaitingChargesConfig = {
     "bike" : {
       "freeSeconds" : 300,
       "perMinCharges" : 1.0
+    },
+    "ambulance" : {
+      "freeSeconds" : 480,
+      "perMinCharges" : 2.0
     }
   }
 
@@ -2570,6 +2618,10 @@ let defRentalWaitingChargesConfig = {
   },
   "bike" : {
     "freeSeconds" : 180,
+    "perMinCharges" : 2.0
+  },
+  "ambulance" : {
+    "freeSeconds" : 480,
     "perMinCharges" : 2.0
   }
 }
