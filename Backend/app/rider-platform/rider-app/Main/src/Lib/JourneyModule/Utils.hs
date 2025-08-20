@@ -416,7 +416,7 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
         mapMaybeM
           ( \bus -> do
               mbServiceType <- OTPRest.getVehicleServiceType integratedBppConfig bus.vehicleNumber
-              return $ (\serviceTypeResp -> (serviceTypeResp.service_type, bus.vehicleNumber)) <$> mbServiceType
+              return $ (\serviceTypeResp -> (show serviceTypeResp.service_type, bus.vehicleNumber)) <$> mbServiceType
           )
           routeWithBuses.buses
       return (routeInfo, HM.fromList busMappings)
