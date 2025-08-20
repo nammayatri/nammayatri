@@ -22,7 +22,7 @@ import Servant
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
-type API = (TokenAuth :> "operator" :> "consent" :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
+type API = (TokenAuth :> "operator" :> "consent" :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
 handler :: Environment.FlowServer API
 handler = postOperatorConsent

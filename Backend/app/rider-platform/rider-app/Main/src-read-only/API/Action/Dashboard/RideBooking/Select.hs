@@ -15,7 +15,6 @@ import qualified Domain.Types.Merchant
 import qualified "this" Domain.Types.Person
 import qualified Environment
 import EulerHS.Prelude
-import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common

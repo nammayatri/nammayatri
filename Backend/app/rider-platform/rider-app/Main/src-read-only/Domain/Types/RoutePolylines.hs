@@ -21,4 +21,4 @@ data RoutePolylines = RoutePolylines
     updatedAt :: Kernel.Prelude.UTCTime,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory
   }
-  deriving (Show, (Generic), (ToJSON), (FromJSON), (Eq))
+  deriving (Show, Generic, ToJSON, FromJSON, Eq)

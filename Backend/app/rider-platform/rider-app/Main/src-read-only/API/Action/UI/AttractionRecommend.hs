@@ -22,9 +22,9 @@ import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =
-  ( TokenAuth :> "attractions" :> "recommend" :> ReqBody ('[JSON]) API.Types.UI.AttractionRecommend.AttractionRecommendReq
+  ( TokenAuth :> "attractions" :> "recommend" :> ReqBody '[JSON] API.Types.UI.AttractionRecommend.AttractionRecommendReq
       :> Post
-           ('[JSON])
+           '[JSON]
            API.Types.UI.AttractionRecommend.AttractionRecommendResp
   )
 

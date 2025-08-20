@@ -5,6 +5,7 @@ module Storage.Queries.TripAlertRequestExtra where
 
 import Domain.Types.Alert
 import Domain.Types.Alert.AlertRequestStatus
+import qualified Domain.Types.AlertRequest
 import qualified Domain.Types.FleetBadge as DFB
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.TripAlertRequest
@@ -67,3 +68,10 @@ findTripAlertRequestsByFleetOwnerIds merchantOpCityId fleetOwnerIds mbFrom mbTo 
     fleetBadgeIds = maybe [] (map (pure . (.getId))) mbFleetBadgeIds
     limitVal = min (fromMaybe 10 mbLimit) 10
     offsetVal = fromMaybe 0 mbOffset
+
+updateStatusWithReason ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Domain.Types.Alert.AlertRequestStatus.AlertRequestStatus -> Kernel.Types.Id.Id Domain.Types.AlertRequest.AlertRequest -> m ())
+updateStatusWithReason alertStatus id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.alertStatus (Just alertStatus), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]

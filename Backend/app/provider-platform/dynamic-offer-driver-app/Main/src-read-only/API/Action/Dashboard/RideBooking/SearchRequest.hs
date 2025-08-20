@@ -10,7 +10,7 @@ where
 import qualified API.Types.Dashboard.RideBooking.SearchRequest
 import qualified Domain.Action.Dashboard.RideBooking.SearchRequest as Domain.Action.Dashboard.RideBooking.SearchRequest
 import qualified Domain.Types.Merchant
-import qualified Domain.Types.Person
+import qualified "this" Domain.Types.Person
 import qualified Environment
 import EulerHS.Prelude
 import qualified Kernel.Prelude

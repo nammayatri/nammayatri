@@ -16,21 +16,21 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data AlertRequestT f = AlertRequestT
-  { body :: (B.C f Data.Text.Text),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    id :: (B.C f Data.Text.Text),
-    merchantId :: (B.C f Data.Text.Text),
-    merchantOperatingCityId :: (B.C f Data.Text.Text),
-    reason :: (B.C f (Kernel.Prelude.Maybe Data.Text.Text)),
-    requestData :: (B.C f Domain.Types.Alert.AlertRequestData.AlertRequestData),
-    requestType :: (B.C f (Kernel.Prelude.Maybe Domain.Types.Alert.AlertRequestType.AlertRequestType)),
-    requesteeId :: (B.C f Data.Text.Text),
-    requesteeType :: (B.C f (Kernel.Prelude.Maybe Domain.Types.AlertRequest.RequesteeType)),
-    requestorId :: (B.C f Data.Text.Text),
-    requestorType :: (B.C f (Kernel.Prelude.Maybe Domain.Types.AlertRequest.RequestorType)),
-    status :: (B.C f Domain.Types.Alert.AlertRequestStatus.AlertRequestStatus),
-    title :: (B.C f Data.Text.Text),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { body :: B.C f Data.Text.Text,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    id :: B.C f Data.Text.Text,
+    merchantId :: B.C f Data.Text.Text,
+    merchantOperatingCityId :: B.C f Data.Text.Text,
+    reason :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
+    requestData :: B.C f Domain.Types.Alert.AlertRequestData.AlertRequestData,
+    requestType :: B.C f (Kernel.Prelude.Maybe Domain.Types.Alert.AlertRequestType.AlertRequestType),
+    requesteeId :: B.C f Data.Text.Text,
+    requesteeType :: B.C f (Kernel.Prelude.Maybe Domain.Types.AlertRequest.RequesteeType),
+    requestorId :: B.C f Data.Text.Text,
+    requestorType :: B.C f (Kernel.Prelude.Maybe Domain.Types.AlertRequest.RequestorType),
+    status :: B.C f Domain.Types.Alert.AlertRequestStatus.AlertRequestStatus,
+    title :: B.C f Data.Text.Text,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -40,6 +40,6 @@ instance B.Table AlertRequestT where
 
 type AlertRequest = AlertRequestT Identity
 
-$(enableKVPG (''AlertRequestT) [('id)] [[('requesteeId)], [('requestorId)]])
+$(enableKVPG ''AlertRequestT ['id] [['requesteeId], ['requestorId]])
 
-$(mkTableInstances (''AlertRequestT) "approval_request")
+$(mkTableInstances ''AlertRequestT "approval_request")

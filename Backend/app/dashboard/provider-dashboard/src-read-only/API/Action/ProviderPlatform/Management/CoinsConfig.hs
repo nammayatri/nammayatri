@@ -28,17 +28,17 @@ handler merchantId city = putCoinsConfigUpdate merchantId city :<|> postCoinsCon
 
 type PutCoinsConfigUpdate =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.COINS_CONFIG) / ('API.Types.ProviderPlatform.Management.CoinsConfig.PUT_COINS_CONFIG_UPDATE))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.COINS_CONFIG / 'API.Types.ProviderPlatform.Management.CoinsConfig.PUT_COINS_CONFIG_UPDATE)
       :> API.Types.ProviderPlatform.Management.CoinsConfig.PutCoinsConfigUpdate
   )
 
 type PostCoinsConfigCreate =
   ( ApiAuth
-      ('DRIVER_OFFER_BPP_MANAGEMENT)
-      ('DSL)
-      (('PROVIDER_MANAGEMENT) / ('API.Types.ProviderPlatform.Management.COINS_CONFIG) / ('API.Types.ProviderPlatform.Management.CoinsConfig.POST_COINS_CONFIG_CREATE))
+      'DRIVER_OFFER_BPP_MANAGEMENT
+      'DSL
+      ('PROVIDER_MANAGEMENT / 'API.Types.ProviderPlatform.Management.COINS_CONFIG / 'API.Types.ProviderPlatform.Management.CoinsConfig.POST_COINS_CONFIG_CREATE)
       :> API.Types.ProviderPlatform.Management.CoinsConfig.PostCoinsConfigCreate
   )
 

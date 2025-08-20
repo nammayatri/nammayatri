@@ -12,14 +12,14 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data RoutePolylinesT f = RoutePolylinesT
-  { createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    id :: (B.C f Kernel.Prelude.Text),
-    merchantId :: (B.C f Kernel.Prelude.Text),
-    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
-    polyline :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
-    routeId :: (B.C f Kernel.Prelude.Text),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime),
-    vehicleType :: (B.C f BecknV2.FRFS.Enums.VehicleCategory)
+  { createdAt :: B.C f Kernel.Prelude.UTCTime,
+    id :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f Kernel.Prelude.Text,
+    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    polyline :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    routeId :: B.C f Kernel.Prelude.Text,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    vehicleType :: B.C f BecknV2.FRFS.Enums.VehicleCategory
   }
   deriving (Generic, B.Beamable)
 
@@ -29,6 +29,6 @@ instance B.Table RoutePolylinesT where
 
 type RoutePolylines = RoutePolylinesT Identity
 
-$(enableKVPG (''RoutePolylinesT) [('id)] [])
+$(enableKVPG ''RoutePolylinesT ['id] [])
 
-$(mkTableInstances (''RoutePolylinesT) "route_polylines")
+$(mkTableInstances ''RoutePolylinesT "route_polylines")

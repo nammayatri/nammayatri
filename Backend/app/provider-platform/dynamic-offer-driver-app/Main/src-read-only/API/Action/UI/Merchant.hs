@@ -9,7 +9,7 @@ where
 
 import qualified API.Types.UI.Merchant
 import qualified Control.Lens
-import qualified Domain.Action.UI.Merchant
+import qualified Domain.Action.UI.Merchant as Domain.Action.UI.Merchant
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
@@ -22,7 +22,7 @@ import Servant
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
-type API = (TokenAuth :> "cityConfigs" :> Get ('[JSON]) API.Types.UI.Merchant.CityConfigs)
+type API = (TokenAuth :> "cityConfigs" :> Get '[JSON] API.Types.UI.Merchant.CityConfigs)
 
 handler :: Environment.FlowServer API
 handler = getCityConfigs

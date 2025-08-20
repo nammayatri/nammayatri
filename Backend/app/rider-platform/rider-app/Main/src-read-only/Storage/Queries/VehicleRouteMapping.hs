@@ -21,16 +21,16 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.VehicleRouteMapping.VehicleRouteMapping] -> m ())
 createMany = traverse_ create
 
-findByRouteId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m ([Domain.Types.VehicleRouteMapping.VehicleRouteMapping]))
+findByRouteId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m [Domain.Types.VehicleRouteMapping.VehicleRouteMapping])
 findByRouteId routeId = do findAllWithDb [Se.Is Beam.routeId $ Se.Eq routeId]
 
-findByService :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m ([Domain.Types.VehicleRouteMapping.VehicleRouteMapping]))
+findByService :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m [Domain.Types.VehicleRouteMapping.VehicleRouteMapping])
 findByService service = do findAllWithDb [Se.Is Beam.service $ Se.Eq service]
 
-findByShift :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m ([Domain.Types.VehicleRouteMapping.VehicleRouteMapping]))
+findByShift :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m [Domain.Types.VehicleRouteMapping.VehicleRouteMapping])
 findByShift shift = do findAllWithDb [Se.Is Beam.shift $ Se.Eq shift]
 
-findByVehicleNo :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m ([Domain.Types.VehicleRouteMapping.VehicleRouteMapping]))
+findByVehicleNo :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m [Domain.Types.VehicleRouteMapping.VehicleRouteMapping])
 findByVehicleNo vehicleNo = do findAllWithDb [Se.Is Beam.vehicleNo $ Se.Eq vehicleNo]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m (Maybe Domain.Types.VehicleRouteMapping.VehicleRouteMapping))

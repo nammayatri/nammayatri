@@ -12,14 +12,14 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data NyRegularInstanceLogT f = NyRegularInstanceLogT
-  { automationStatus :: (B.C f Domain.Types.NyRegularInstanceLog.NyRegularInstanceAutomationStatus),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    instanceTransactionId :: (B.C f Kernel.Prelude.Text),
-    nyRegularSubscriptionId :: (B.C f Kernel.Prelude.Text),
-    scheduledPickupTime :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime),
-    merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text)))
+  { automationStatus :: B.C f Domain.Types.NyRegularInstanceLog.NyRegularInstanceAutomationStatus,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    instanceTransactionId :: B.C f Kernel.Prelude.Text,
+    nyRegularSubscriptionId :: B.C f Kernel.Prelude.Text,
+    scheduledPickupTime :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)
   }
   deriving (Generic, B.Beamable)
 
@@ -29,6 +29,6 @@ instance B.Table NyRegularInstanceLogT where
 
 type NyRegularInstanceLog = NyRegularInstanceLogT Identity
 
-$(enableKVPG (''NyRegularInstanceLogT) [('instanceTransactionId)] [[('nyRegularSubscriptionId)]])
+$(enableKVPG ''NyRegularInstanceLogT ['instanceTransactionId] [['nyRegularSubscriptionId]])
 
-$(mkTableInstances (''NyRegularInstanceLogT) "ny_regular_instance_log")
+$(mkTableInstances ''NyRegularInstanceLogT "ny_regular_instance_log")

@@ -60,30 +60,30 @@ data UploadMediaFileDocumentTReq = UploadMediaFileDocumentTReq {mediaFileDocumen
 
 type API = ("mediaFileDocument" :> (PostMediaFileDocumentUploadLinkHelper :<|> PostMediaFileDocumentConfirmHelper :<|> PostMediaFileDocumentDeleteHelper :<|> GetMediaFileDocumentDownloadLinkHelper))
 
-type PostMediaFileDocumentUploadLink = ("uploadLink" :> ReqBody ('[JSON]) UploadMediaFileDocumentReq :> Post ('[JSON]) MediaFileDocumentResp)
+type PostMediaFileDocumentUploadLink = ("uploadLink" :> ReqBody '[JSON] UploadMediaFileDocumentReq :> Post '[JSON] MediaFileDocumentResp)
 
 type PostMediaFileDocumentUploadLinkHelper =
-  ( "uploadLink" :> MandatoryQueryParam "requestorId" Kernel.Prelude.Text :> ReqBody ('[JSON]) UploadMediaFileDocumentReq
+  ( "uploadLink" :> MandatoryQueryParam "requestorId" Kernel.Prelude.Text :> ReqBody '[JSON] UploadMediaFileDocumentReq
       :> Post
-           ('[JSON])
+           '[JSON]
            MediaFileDocumentResp
   )
 
-type PostMediaFileDocumentConfirm = ("confirm" :> ReqBody ('[JSON]) MediaFileDocumentReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
+type PostMediaFileDocumentConfirm = ("confirm" :> ReqBody '[JSON] MediaFileDocumentReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
 type PostMediaFileDocumentConfirmHelper =
-  ( "confirm" :> MandatoryQueryParam "requestorId" Kernel.Prelude.Text :> ReqBody ('[JSON]) MediaFileDocumentReq
+  ( "confirm" :> MandatoryQueryParam "requestorId" Kernel.Prelude.Text :> ReqBody '[JSON] MediaFileDocumentReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 
-type PostMediaFileDocumentDelete = ("delete" :> ReqBody ('[JSON]) MediaFileDocumentReq :> Post ('[JSON]) Kernel.Types.APISuccess.APISuccess)
+type PostMediaFileDocumentDelete = ("delete" :> ReqBody '[JSON] MediaFileDocumentReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
 type PostMediaFileDocumentDeleteHelper =
-  ( "delete" :> MandatoryQueryParam "requestorId" Kernel.Prelude.Text :> ReqBody ('[JSON]) MediaFileDocumentReq
+  ( "delete" :> MandatoryQueryParam "requestorId" Kernel.Prelude.Text :> ReqBody '[JSON] MediaFileDocumentReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 
@@ -92,7 +92,7 @@ type GetMediaFileDocumentDownloadLink =
       :> MandatoryQueryParam
            "rcNumber"
            Kernel.Prelude.Text
-      :> Get ('[JSON]) MediaFileDocumentResp
+      :> Get '[JSON] MediaFileDocumentResp
   )
 
 type GetMediaFileDocumentDownloadLinkHelper =
@@ -102,15 +102,15 @@ type GetMediaFileDocumentDownloadLinkHelper =
            Kernel.Prelude.Text
       :> MandatoryQueryParam "requestorId" Kernel.Prelude.Text
       :> Get
-           ('[JSON])
+           '[JSON]
            MediaFileDocumentResp
   )
 
 data MediaFileDocumentAPIs = MediaFileDocumentAPIs
-  { postMediaFileDocumentUploadLink :: (Kernel.Prelude.Text -> UploadMediaFileDocumentReq -> EulerHS.Types.EulerClient MediaFileDocumentResp),
-    postMediaFileDocumentConfirm :: (Kernel.Prelude.Text -> MediaFileDocumentReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    postMediaFileDocumentDelete :: (Kernel.Prelude.Text -> MediaFileDocumentReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess),
-    getMediaFileDocumentDownloadLink :: (Dashboard.Common.MediaFileDocument.MediaFileDocumentType -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient MediaFileDocumentResp)
+  { postMediaFileDocumentUploadLink :: Kernel.Prelude.Text -> UploadMediaFileDocumentReq -> EulerHS.Types.EulerClient MediaFileDocumentResp,
+    postMediaFileDocumentConfirm :: Kernel.Prelude.Text -> MediaFileDocumentReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postMediaFileDocumentDelete :: Kernel.Prelude.Text -> MediaFileDocumentReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    getMediaFileDocumentDownloadLink :: Dashboard.Common.MediaFileDocument.MediaFileDocumentType -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> EulerHS.Types.EulerClient MediaFileDocumentResp
   }
 
 mkMediaFileDocumentAPIs :: (Client EulerHS.Types.EulerClient API -> MediaFileDocumentAPIs)
@@ -126,4 +126,4 @@ data MediaFileDocumentUserActionType
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(Data.Singletons.TH.genSingletons [(''MediaFileDocumentUserActionType)])
+$(Data.Singletons.TH.genSingletons [''MediaFileDocumentUserActionType])

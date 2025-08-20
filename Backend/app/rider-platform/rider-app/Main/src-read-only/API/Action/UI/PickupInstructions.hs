@@ -15,7 +15,7 @@ import qualified Domain.Types.Person
 import qualified Environment
 import EulerHS.Prelude
 import qualified Kernel.Prelude
-import Kernel.ServantMultipart
+import qualified Kernel.ServantMultipart
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
@@ -26,7 +26,7 @@ import Tools.Auth
 type API =
   ( TokenAuth :> "pickupinstructions" :> Kernel.ServantMultipart.MultipartForm Kernel.ServantMultipart.Tmp API.Types.UI.PickupInstructions.PickupInstructionsReq
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "pickupinstructions"
@@ -38,7 +38,7 @@ type API =
            "lon"
            Kernel.Prelude.Double
       :> Get
-           ('[JSON])
+           '[JSON]
            API.Types.UI.PickupInstructions.ClosestPickupInstructionResp
       :<|> TokenAuth
       :> "pickupinstructions"
@@ -52,7 +52,7 @@ type API =
            "target"
            API.Types.UI.PickupInstructions.DeleteTarget
       :> Delete
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 
@@ -72,8 +72,8 @@ getPickupinstructionsClosest ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Double) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Double) ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Double ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Double ->
     Environment.FlowHandler API.Types.UI.PickupInstructions.ClosestPickupInstructionResp
   )
 getPickupinstructionsClosest a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.PickupInstructions.getPickupinstructionsClosest (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
@@ -82,9 +82,9 @@ deletePickupinstructions ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Double) ->
-    Kernel.Prelude.Maybe (Kernel.Prelude.Double) ->
-    Kernel.Prelude.Maybe (API.Types.UI.PickupInstructions.DeleteTarget) ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Double ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Double ->
+    Kernel.Prelude.Maybe API.Types.UI.PickupInstructions.DeleteTarget ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
 deletePickupinstructions a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.PickupInstructions.deletePickupinstructions (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1

@@ -35,8 +35,8 @@ instance ToTType' Beam.VehicleRouteMapping Domain.Types.VehicleRouteMapping.Vehi
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.routeCode = routeCode,
-        Beam.vehicleNumberEncrypted = ((vehicleNumber & unEncrypted . encrypted)),
-        Beam.vehicleNumberHash = (vehicleNumber & hash),
+        Beam.vehicleNumberEncrypted = vehicleNumber & unEncrypted . encrypted,
+        Beam.vehicleNumberHash = vehicleNumber & hash,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

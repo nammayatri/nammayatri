@@ -26,10 +26,10 @@ import Tools.Auth
 type API =
   ( TokenAuth :> "cris" :> "getSDKData" :> QueryParam "integratedBppConfigId" (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig)
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.CRIS.GetSDKDataRequest
       :> Post
-           ('[JSON])
+           '[JSON]
            API.Types.UI.CRIS.GetSDKDataResponse
       :<|> TokenAuth
       :> "cris"
@@ -39,7 +39,7 @@ type API =
            "integratedBppConfigId"
            (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig)
       :> Get
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
       :<|> TokenAuth
       :> "cris"
@@ -49,10 +49,10 @@ type API =
            "integratedBppConfigId"
            (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig)
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.CRIS.CrisChangeDeviceRequest
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 

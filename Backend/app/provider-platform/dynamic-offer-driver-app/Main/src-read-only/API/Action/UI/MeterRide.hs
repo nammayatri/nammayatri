@@ -27,9 +27,9 @@ import Tools.Auth
 type API =
   ( TokenAuth :> "meterRide" :> Capture "rideId" (Kernel.Types.Id.Id Domain.Types.Ride.Ride) :> "addDestination"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.MeterRide.MeterRideAddDestinationReq
-      :> Post ('[JSON]) API.Types.UI.MeterRide.MeterRideAddDestinationResp
+      :> Post '[JSON] API.Types.UI.MeterRide.MeterRideAddDestinationResp
       :<|> TokenAuth
       :> "meterRide"
       :> Capture
@@ -37,10 +37,10 @@ type API =
            (Kernel.Types.Id.Id Domain.Types.Ride.Ride)
       :> "shareReceipt"
       :> ReqBody
-           ('[JSON])
+           '[JSON]
            API.Types.UI.MeterRide.SendRecietRequest
       :> Post
-           ('[JSON])
+           '[JSON]
            Kernel.Types.APISuccess.APISuccess
   )
 

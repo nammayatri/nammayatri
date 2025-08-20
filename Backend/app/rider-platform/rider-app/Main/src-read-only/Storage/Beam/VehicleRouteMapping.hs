@@ -12,13 +12,13 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data VehicleRouteMappingT f = VehicleRouteMappingT
-  { createdAt :: (B.C f Data.Time.UTCTime),
-    routeId :: (B.C f Kernel.Prelude.Text),
-    service :: (B.C f Kernel.Prelude.Text),
-    shift :: (B.C f Kernel.Prelude.Text),
-    typeOfService :: (B.C f Kernel.Prelude.Text),
-    updatedAt :: (B.C f Data.Time.UTCTime),
-    vehicleNo :: (B.C f Kernel.Prelude.Text)
+  { createdAt :: B.C f Data.Time.UTCTime,
+    routeId :: B.C f Kernel.Prelude.Text,
+    service :: B.C f Kernel.Prelude.Text,
+    shift :: B.C f Kernel.Prelude.Text,
+    typeOfService :: B.C f Kernel.Prelude.Text,
+    updatedAt :: B.C f Data.Time.UTCTime,
+    vehicleNo :: B.C f Kernel.Prelude.Text
   }
   deriving (Generic, B.Beamable)
 
@@ -28,6 +28,6 @@ instance B.Table VehicleRouteMappingT where
 
 type VehicleRouteMapping = VehicleRouteMappingT Identity
 
-$(enableKVPG (''VehicleRouteMappingT) [('vehicleNo)] [])
+$(enableKVPG ''VehicleRouteMappingT ['vehicleNo] [])
 
-$(mkTableInstances (''VehicleRouteMappingT) "vehicle_route_mapping")
+$(mkTableInstances ''VehicleRouteMappingT "vehicle_route_mapping")

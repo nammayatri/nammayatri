@@ -11,13 +11,13 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data RouteStopCalenderT f = RouteStopCalenderT
-  { integratedBppConfigId :: (B.C f Kernel.Prelude.Text),
-    serviceability :: (B.C f [Kernel.Prelude.Int]),
-    tripId :: (B.C f Kernel.Prelude.Text),
-    merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { integratedBppConfigId :: B.C f Kernel.Prelude.Text,
+    serviceability :: B.C f [Kernel.Prelude.Int],
+    tripId :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -27,6 +27,6 @@ instance B.Table RouteStopCalenderT where
 
 type RouteStopCalender = RouteStopCalenderT Identity
 
-$(enableKVPG (''RouteStopCalenderT) [('integratedBppConfigId), ('tripId)] [])
+$(enableKVPG ''RouteStopCalenderT ['integratedBppConfigId, 'tripId] [])
 
-$(mkTableInstances (''RouteStopCalenderT) "route_stop_calender")
+$(mkTableInstances ''RouteStopCalenderT "route_stop_calender")

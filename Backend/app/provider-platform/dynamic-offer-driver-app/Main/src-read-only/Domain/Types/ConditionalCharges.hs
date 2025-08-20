@@ -22,4 +22,4 @@ data ConditionalCharges = ConditionalCharges
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq, Kernel.Utils.GenericPretty.PrettyShow)
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Ord, Eq, Read, Kernel.Utils.GenericPretty.PrettyShow)

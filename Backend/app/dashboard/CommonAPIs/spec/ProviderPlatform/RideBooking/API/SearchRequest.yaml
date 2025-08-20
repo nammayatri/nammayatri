@@ -8,6 +8,9 @@ imports:
   SearchRequest: Domain.Types.SearchRequest
   Location: Domain.Types.Location
 
+importPackageOverrides:
+  Domain.Types.Person: "dynamic-offer-driver-app"
+
 module: SearchRequest
 
 types:

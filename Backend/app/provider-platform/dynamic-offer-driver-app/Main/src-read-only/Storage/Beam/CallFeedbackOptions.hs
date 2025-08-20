@@ -11,13 +11,13 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data CallFeedbackOptionsT f = CallFeedbackOptionsT
-  { category :: (B.C f Kernel.Prelude.Text),
-    id :: (B.C f Kernel.Prelude.Text),
-    messageKey :: (B.C f Kernel.Prelude.Text),
-    merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { category :: B.C f Kernel.Prelude.Text,
+    id :: B.C f Kernel.Prelude.Text,
+    messageKey :: B.C f Kernel.Prelude.Text,
+    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -27,6 +27,6 @@ instance B.Table CallFeedbackOptionsT where
 
 type CallFeedbackOptions = CallFeedbackOptionsT Identity
 
-$(enableKVPG (''CallFeedbackOptionsT) [('id)] [])
+$(enableKVPG ''CallFeedbackOptionsT ['id] [])
 
-$(mkTableInstances (''CallFeedbackOptionsT) "call_feedback_options")
+$(mkTableInstances ''CallFeedbackOptionsT "call_feedback_options")

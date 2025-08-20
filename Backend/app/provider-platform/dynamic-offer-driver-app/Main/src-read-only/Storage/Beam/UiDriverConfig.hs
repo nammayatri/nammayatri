@@ -15,13 +15,13 @@ import qualified Lib.Yudhishthira.Types
 import Tools.Beam.UtilsTH
 
 data UiDriverConfigT f = UiDriverConfigT
-  { config :: (B.C f Data.Aeson.Value),
-    createdAt :: (B.C f Kernel.Prelude.UTCTime),
-    id :: (B.C f Data.Text.Text),
-    merchantOperatingCityId :: (B.C f Data.Text.Text),
-    os :: (B.C f Kernel.Types.Version.DeviceType),
-    platform :: (B.C f Lib.Yudhishthira.Types.PlatformType),
-    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
+  { config :: B.C f Data.Aeson.Value,
+    createdAt :: B.C f Kernel.Prelude.UTCTime,
+    id :: B.C f Data.Text.Text,
+    merchantOperatingCityId :: B.C f Data.Text.Text,
+    os :: B.C f Kernel.Types.Version.DeviceType,
+    platform :: B.C f Lib.Yudhishthira.Types.PlatformType,
+    updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
 
@@ -31,6 +31,6 @@ instance B.Table UiDriverConfigT where
 
 type UiDriverConfig = UiDriverConfigT Identity
 
-$(enableKVPG (''UiDriverConfigT) [('id)] [])
+$(enableKVPG ''UiDriverConfigT ['id] [])
 
-$(mkTableInstances (''UiDriverConfigT) "ui_driver_config")
+$(mkTableInstances ''UiDriverConfigT "ui_driver_config")

@@ -6,7 +6,7 @@ module API.Types.Dashboard.RideBooking.Endpoints.SearchRequest where
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
 import qualified Domain.Types.Location
-import qualified Domain.Types.Person
+import qualified "this" Domain.Types.Person
 import qualified Domain.Types.SearchRequest
 import qualified Domain.Types.SearchRequestForDriver
 import EulerHS.Prelude hiding (id, state)
@@ -51,7 +51,7 @@ data SearchRequestsRes = SearchRequestsRes {searchrequests :: [SearchRequestOfDr
 
 type API = ("searchRequest" :> (PostSearchRequestSearchrequests :<|> GetSearchRequestList))
 
-type PostSearchRequestSearchrequests = ("searchrequests" :> ReqBody ('[JSON]) SearchRequestsReq :> Post ('[JSON]) SearchRequestsRes)
+type PostSearchRequestSearchrequests = ("searchrequests" :> ReqBody '[JSON] SearchRequestsReq :> Post '[JSON] SearchRequestsRes)
 
 type GetSearchRequestList =
   ( "list" :> MandatoryQueryParam "driverId" (Kernel.Types.Id.Id Domain.Types.Person.Person)
@@ -64,13 +64,13 @@ type GetSearchRequestList =
            "offset"
            Kernel.Prelude.Int
       :> Get
-           ('[JSON])
+           '[JSON]
            SearchRequestsRes
   )
 
 data SearchRequestAPIs = SearchRequestAPIs
-  { postSearchRequestSearchrequests :: (SearchRequestsReq -> EulerHS.Types.EulerClient SearchRequestsRes),
-    getSearchRequestList :: (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.UTCTime -> Kernel.Prelude.UTCTime -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> EulerHS.Types.EulerClient SearchRequestsRes)
+  { postSearchRequestSearchrequests :: SearchRequestsReq -> EulerHS.Types.EulerClient SearchRequestsRes,
+    getSearchRequestList :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Prelude.UTCTime -> Kernel.Prelude.UTCTime -> Kernel.Prelude.Int -> Kernel.Prelude.Int -> EulerHS.Types.EulerClient SearchRequestsRes
   }
 
 mkSearchRequestAPIs :: (Client EulerHS.Types.EulerClient API -> SearchRequestAPIs)
@@ -84,4 +84,4 @@ data SearchRequestUserActionType
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(Data.Singletons.TH.genSingletons [(''SearchRequestUserActionType)])
+$(Data.Singletons.TH.genSingletons [''SearchRequestUserActionType])

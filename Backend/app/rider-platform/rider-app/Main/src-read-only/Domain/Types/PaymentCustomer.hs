@@ -15,4 +15,4 @@ data PaymentCustomer = PaymentCustomer
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
-  deriving (Generic, (ToJSON), (FromJSON), (Show))
+  deriving (Generic, ToJSON, FromJSON, Show)

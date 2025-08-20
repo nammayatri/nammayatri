@@ -21,7 +21,7 @@ import Servant
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
-type API = (TokenAuth :> "nearbyDrivers" :> ReqBody ('[JSON]) API.Types.UI.NearbyDrivers.NearbyDriverReq :> Post ('[JSON]) API.Types.UI.NearbyDrivers.NearbyDriverRes)
+type API = (TokenAuth :> "nearbyDrivers" :> ReqBody '[JSON] API.Types.UI.NearbyDrivers.NearbyDriverReq :> Post '[JSON] API.Types.UI.NearbyDrivers.NearbyDriverRes)
 
 handler :: Environment.FlowServer API
 handler = postNearbyDrivers
