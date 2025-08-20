@@ -59,6 +59,7 @@ module Domain.Action.Dashboard.Fleet.Driver
     validateOperatorToFleetAssoc,
     validateRequestorRoleAndGetEntityId,
     getDriverFleetOperatorInfo,
+    checkRCAssociationForFleet,
   )
 where
 
