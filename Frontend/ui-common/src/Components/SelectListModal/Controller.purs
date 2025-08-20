@@ -23,6 +23,7 @@ import Font.Size as FontSize
 import Styles.Colors as Color
 import MerchantConfig.DefaultConfig as DC
 import MerchantConfig.Types (AppConfig)
+import ConfigProvider
 
 
 data Action = Button1 PrimaryButtonController.Action
@@ -40,6 +41,8 @@ type Config = {
     , subHeadingTextConfig :: HeadingTextConfig
     , primaryButtonVisibility :: Boolean
     , secondaryButtonVisibility :: Boolean
+    , primaryButtonBgColor :: String
+    , secondaryButtonBgColor :: String
     , activeIndex :: Maybe Int
     , cornerRadius :: Number
     , activeReasonCode :: Maybe String
@@ -70,6 +73,8 @@ type ButtonTextConfig =
       firstText :: String
     , secondText :: String
     , width :: Length
+    , firstTextColor :: String
+    , secondTextColor :: String
   }
 
 type HeadingTextConfig = 
@@ -86,6 +91,8 @@ type HeadingTextConfig =
 
 config :: Config
 config = 
+  let appCfg = getAppConfig appConfig
+  in
   {
     selectionOptions : []
     , showAllOptionsText : "Show All Options"
@@ -94,6 +101,8 @@ config =
             firstText : "Go Back"
           , secondText : "Cancel Ride"
           , width : MATCH_PARENT
+          , firstTextColor : Color.black900
+          , secondTextColor : "#696A6F"
         }
     , activeIndex : Nothing  
     , activeReasonCode : Nothing
@@ -128,8 +137,10 @@ config =
     }
     , primaryButtonVisibility : true
     , secondaryButtonVisibility : true
+    , primaryButtonBgColor : Color.white900
+    , secondaryButtonBgColor : "#F1F1F4"
     , topLeftIcon : false
-    , config : DC.config
+    , config : appCfg
     , hideOthers : true
     , showBgColor : false
     , editTextBgColor : Color.grey800

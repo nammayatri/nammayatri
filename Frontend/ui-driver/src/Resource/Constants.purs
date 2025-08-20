@@ -341,3 +341,6 @@ twoHrsInSec = 7200
 
 fiveMinInSec :: Int
 fiveMinInSec = 300
+
+mailToLink :: String
+mailToLink = "mailto:"

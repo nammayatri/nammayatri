@@ -83,11 +83,10 @@ selectYourGenderConfig state = let
       , isSelectButtonActive = case state.data.genderSelectionModal.activeIndex of 
                               Just index -> true
                               Nothing    -> false
-      , primaryButtonTextConfig =
-        {
-            firstText : ""
-          , secondText : (getString CONFIRM)
-          , width : MATCH_PARENT
+      , primaryButtonTextConfig {
+            firstText = ""
+          , secondText = (getString CONFIRM)
+          , width = MATCH_PARENT
         }
       , primaryButtonVisibility = false
       , secondaryButtonVisibility = true

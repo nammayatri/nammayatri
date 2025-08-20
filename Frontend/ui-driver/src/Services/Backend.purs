@@ -1083,6 +1083,18 @@ driverOperationCreateRequestBT payload = do
             pure $ toast (getString SOMETHING_WENT_WRONG)
             setValueToLocalStore DRIVER_OPERATION_CREATE_REQUEST_SUCCESS "NOT_STARTED"
             BackT $ pure GoBack
+
+-------------------------------------- getCitySafetyNumbers ---------------------------------------------
+
+getCitySafetyNumbersBT :: String -> FlowBT String GetCitySafetyNumbersResp
+getCitySafetyNumbersBT _ = do
+  headers <- getHeaders' "" false 
+  withAPIResultBT (EP.getCitySafetyNumbers "") identity errorHandler (lift $ lift $ callAPI headers (GetCitySafetyNumbersReq {}))
+  where
+    errorHandler (ErrorPayload errorPayload) =  do
+      pure $ toast (getString SOMETHING_WENT_WRONG)
+      BackT $ pure GoBack
+
 ----------------------------------- validateAlternateNumber --------------------------
 
 validateAlternateNumber :: DriverAlternateNumberReq -> Flow GlobalState (Either ErrorResponse DriverAlternateNumberResp)
@@ -1960,4 +1972,13 @@ makeupdateHVSdkCallLogReq txnId status hvFlowId failureReason docType callbackRe
       "status" : status,
       "txnId" : txnId
     }
-    
+
+----------------------------------------------- Earning Period Stats API -------------------------------------------------------------
+
+getEarningPeriodStatsBT :: String -> String -> String -> FlowBT String EarningPeriodStatsRes
+getEarningPeriodStatsBT fromDate toDate earningType = do
+    headers <- getHeaders' "" false
+    withAPIResultBT (EP.getEarningPeriodStats fromDate toDate earningType) identity errorHandler (lift $ lift $ callAPI headers (EarningPeriodStatsReq fromDate toDate earningType))
+    where
+    errorHandler (ErrorPayload errorPayload) = do
+        BackT $ pure GoBack

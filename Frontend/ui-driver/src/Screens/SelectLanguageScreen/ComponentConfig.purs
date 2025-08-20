@@ -26,6 +26,7 @@ import Styles.Colors as Color
 import Components.SelectMenuButton as MenuButton
 import MerchantConfig.Types as MT
 import Prelude ((==))
+import Engineering.Helpers.Utils as EHU
 
 primaryButtonConfig :: ST.SelectLanguageScreenState -> PrimaryButton.Config
 primaryButtonConfig state = PrimaryButton.config { textConfig
@@ -48,8 +49,8 @@ menuButtonConfig state language index = MenuButton.config
     , isSelected = (state.props.selectedLanguage == language.value)
     , index = index
     , lineVisibility = false
-    , activeStrokeColor = state.data.config.themeColors.radioActiveStroke 
-    , activeBgColor =  state.data.config.themeColors.radioActiveBackground 
+    , activeStrokeColor = EHU.getColorWithOpacity 12 state.data.config.themeColors.radioActiveStroke
+    , activeBgColor =  EHU.getColorWithOpacity 12 state.data.config.themeColors.radioActiveBackground
     , inactiveStrokeColor =  Color.grey100 
     , inactiveBgColor = state.data.config.themeColors.radioInactiveBackground
     , radioSelectedImage = state.data.config.themeColors.radioSelectedImage

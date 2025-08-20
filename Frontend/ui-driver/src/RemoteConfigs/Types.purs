@@ -160,3 +160,11 @@ type RideEndAudioConfig = {
   enableRideEndAudio :: Boolean
 , rideEndAudioUrl :: Maybe String
 }
+
+type HelpAndSupportConfig = { 
+  supportNumber :: String, 
+  supportWAN :: String, 
+  supportMail :: String,
+  policeNumber :: String,
+  ambulanceNumber :: String
+}
