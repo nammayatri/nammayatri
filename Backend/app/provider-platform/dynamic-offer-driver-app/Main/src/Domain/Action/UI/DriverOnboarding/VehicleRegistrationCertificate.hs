@@ -850,22 +850,38 @@ validateDocument merchantId merchantOpCityId personId mbNameValue mbDateOfBirthV
   let mbUtcDateOfBirthValue = parseDateTime =<< mbDateOfBirthValue
   case verifyingDocumentType of
     ODC.AadhaarCard -> do
-      when (isJust panNumber) $ do
-        void $ checkPan merchantId merchantOpCityId personId mbNameValue mbUtcDateOfBirthValue ODC.AadhaarCard
-      when (isJust dlNumber) $ do
-        void $ checkDL merchantId merchantOpCityId personId mbNameValue mbUtcDateOfBirthValue ODC.AadhaarCard
+      panChecked <-
+        maybe
+          (pure False)
+          (\_ -> checkPan merchantId merchantOpCityId personId mbNameValue mbUtcDateOfBirthValue ODC.AadhaarCard)
+          panNumber
+      unless panChecked $
+        whenJust dlNumber $ \_ ->
+          void $ checkDL merchantId merchantOpCityId personId mbNameValue mbUtcDateOfBirthValue ODC.AadhaarCard
     ODC.PanCard -> do
-      when (isJust aadhaarNumber) $ do
-        void $ checkAadhaar merchantId merchantOpCityId personId mbNameValue mbUtcDateOfBirthValue ODC.PanCard
-      when (isJust dlNumber) $ do
-        void $ checkDL merchantId merchantOpCityId personId mbNameValue mbUtcDateOfBirthValue ODC.PanCard
-      when (isJust gstNumber) $ do
-        checkGST personId mbPanNumber
+      aadhaarChecked <-
+        maybe
+          (pure False)
+          (\_ -> checkAadhaar merchantId merchantOpCityId personId mbNameValue mbUtcDateOfBirthValue ODC.PanCard)
+          aadhaarNumber
+      unless aadhaarChecked $ do
+        dlChecked <-
+          maybe
+            (pure False)
+            (\_ -> checkDL merchantId merchantOpCityId personId mbNameValue mbUtcDateOfBirthValue ODC.PanCard)
+            dlNumber
+        unless dlChecked $
+          when (isJust gstNumber) $
+            checkGST personId mbPanNumber
     ODC.DriverLicense -> do
-      when (isJust aadhaarNumber) $ do
-        void $ checkAadhaar merchantId merchantOpCityId personId mbNameValue mbUtcDateOfBirthValue ODC.DriverLicense
-      when (isJust panNumber) $ do
-        void $ checkPan merchantId merchantOpCityId personId mbNameValue mbUtcDateOfBirthValue ODC.DriverLicense
+      aadhaarChecked <-
+        maybe
+          (pure False)
+          (\_ -> checkAadhaar merchantId merchantOpCityId personId mbNameValue mbUtcDateOfBirthValue ODC.DriverLicense)
+          aadhaarNumber
+      unless aadhaarChecked $
+        whenJust panNumber $ \_ ->
+          void $ checkPan merchantId merchantOpCityId personId mbNameValue mbUtcDateOfBirthValue ODC.DriverLicense
     ODC.GSTCertificate -> checkTwoPanNumber mbPanNumber panNumber
     _ -> return ()
 
