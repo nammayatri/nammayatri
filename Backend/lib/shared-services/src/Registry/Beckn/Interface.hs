@@ -19,6 +19,7 @@ import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Utils.Common
 import qualified Registry.Beckn.Interface.Nammayatri as Ny
 import Registry.Beckn.Interface.Types
+import qualified Registry.Beckn.Nammayatri.Flow as Flow
 import Registry.Beckn.Nammayatri.Types as NyRegistry
 
 updateSubscriber :: (MonadFlow m, CoreMetrics m) => UpdateSubscriberReq -> m UpdateSubscriberResp
@@ -26,4 +27,4 @@ updateSubscriber updSubReq = case updSubReq._data of
   UpdSubNY _data -> UpdSubResNY <$> Ny.updateCities updSubReq _data
 
 createSubscriber :: (MonadFlow m, CoreMetrics m) => BaseUrl -> NyRegistry.Subscriber -> m AckResponse
-createSubscriber registryUrl subscriber = Ny.createSubscriber registryUrl subscriber
+createSubscriber registryUrl subscriber = Flow.createSubscriber registryUrl subscriber

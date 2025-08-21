@@ -32,6 +32,3 @@ updateCities Types.RegistryReq {..} updData =
           replaceCities = updData.replaceCities <&> mapMaybe (A.decode . A.encode),
           ..
         }
-
-createSubscriber :: (MonadFlow m, CoreMetrics m) => BaseUrl -> Subscriber -> m AckResponse
-createSubscriber registryUrl subscriber = Flow.createSubscriber registryUrl subscriber
