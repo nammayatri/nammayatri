@@ -18,7 +18,6 @@ module Storage.CachedQueries.DocumentVerificationConfig
     findByMerchantOpCityIdAndDocumentType,
     findByMerchantOpCityIdAndDocumentTypeAndCategory,
     findByMerchantOpCityIdAndCategory,
-    findByMerchantOpCityIdAndDocumentTypeAndDefaultEnabledOnManualVerification,
     updateSupportedVehicleClassesJSON,
     clearCache,
     create,
@@ -64,15 +63,6 @@ findByMerchantOpCityIdAndDocumentType merchantOpCityId documentType mbConfigVers
 findByMerchantOpCityIdAndCategory :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> VehicleCategory -> Maybe [LYT.ConfigVersionMap] -> m [DTO.DocumentVerificationConfig]
 findByMerchantOpCityIdAndCategory merchantOpCityId category mbConfigVersionMap =
   filter (\config -> config.vehicleCategory == category) <$> findAllByMerchantOpCityId merchantOpCityId mbConfigVersionMap
-
-findByMerchantOpCityIdAndDocumentTypeAndDefaultEnabledOnManualVerification :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> DocumentType -> Bool -> Maybe [LYT.ConfigVersionMap] -> m [DTO.DocumentVerificationConfig]
-findByMerchantOpCityIdAndDocumentTypeAndDefaultEnabledOnManualVerification merchantOpCityId documentType isDefaultEnabledOnManualVerification mbConfigVersionMap =
-  filter
-    ( \config ->
-        config.documentType == documentType
-          && config.isDefaultEnabledOnManualVerification == isDefaultEnabledOnManualVerification
-    )
-    <$> findAllByMerchantOpCityId merchantOpCityId mbConfigVersionMap
 
 -- Call it after any update
 clearCache :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m ()

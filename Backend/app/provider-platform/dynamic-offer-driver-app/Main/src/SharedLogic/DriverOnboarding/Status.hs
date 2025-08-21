@@ -331,7 +331,7 @@ fetchDriverDocuments driverImagesInfo allDocumentVerificationConfigs possibleVeh
         message <- documentStatusMessage status Nothing docType mbProcessedUrl language
         return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = mbProcessedReason <|> Just message, verificationUrl = mbProcessedUrl}
       Nothing -> do
-        (status, mbReason, mbUrl) <- getInProgressDriverDocuments driverImagesInfo docType
+        (status, mbReason, mbUrl) <- getInProgressDriverDocuments driverImagesInfo allDocumentVerificationConfigs docType
         message <- documentStatusMessage status mbReason docType mbUrl language
         return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message, verificationUrl = mbUrl}
 
@@ -459,7 +459,7 @@ fetchProcessedVehicleDocumentsWithRC driverImagesInfo allDocumentVerificationCon
             message <- documentStatusMessage status Nothing docType mbProcessedUrl language
             return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = mbProcessedReason <|> Just message, verificationUrl = mbProcessedUrl}
           Nothing -> do
-            (status, mbReason, mbUrl) <- getInProgressVehicleDocuments driverImagesInfo (Just rcImagesInfo) docType
+            (status, mbReason, mbUrl) <- getInProgressVehicleDocuments driverImagesInfo (Just rcImagesInfo) allDocumentVerificationConfigs docType
             message <- documentStatusMessage status mbReason docType mbUrl language
             return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message, verificationUrl = mbUrl}
     return
@@ -562,7 +562,7 @@ fetchInprogressVehicleDocuments driverImagesInfo allDocumentVerificationConfigs 
                   vehicleDocumentTypes <- getVehicleDocTypes merchantOpCityId allDocumentVerificationConfigs verifiedVehicleCategory userSelectedVehicleCategory onlyMandatoryDocs
                   documents <-
                     vehicleDocumentTypes `forM` \docType -> do
-                      (status, mbReason, mbUrl) <- getInProgressVehicleDocuments driverImagesInfo mbRcImagesInfo docType
+                      (status, mbReason, mbUrl) <- getInProgressVehicleDocuments driverImagesInfo mbRcImagesInfo allDocumentVerificationConfigs docType
                       message <- documentStatusMessage status mbReason docType mbUrl language
                       return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message, verificationUrl = mbUrl}
                   return
@@ -757,23 +757,24 @@ checkBackgroundVerificationStatus driverId merchantId merchantOpCityId = do
 
 getInProgressDriverDocuments ::
   IQuery.DriverImagesInfo ->
+  [DVC.DocumentVerificationConfig] ->
   DDVC.DocumentType ->
   Flow (ResponseStatus, Maybe Text, Maybe BaseUrl)
-getInProgressDriverDocuments driverImagesInfo docType = do
+getInProgressDriverDocuments driverImagesInfo allDocumentVerificationConfigs docType = do
   let driverId = driverImagesInfo.driverId
       merchantOpCityId = driverImagesInfo.merchantOperatingCity.id
       merchantId = driverImagesInfo.merchantOperatingCity.merchantId
   case docType of
     DDVC.DriverLicense -> checkIfUnderProgress driverImagesInfo DDVC.DriverLicense
     DDVC.BackgroundVerification -> checkBackgroundVerificationStatus driverId merchantId merchantOpCityId
-    DDVC.AadhaarCard -> checkIfImageUploadedOrInvalidated driverImagesInfo DDVC.AadhaarCard
-    DDVC.PanCard -> checkIfImageUploadedOrInvalidated driverImagesInfo DDVC.PanCard
-    DDVC.GSTCertificate -> checkIfImageUploadedOrInvalidated driverImagesInfo DDVC.GSTCertificate
+    DDVC.AadhaarCard -> return $ checkIfImageUploadedOrInvalidated driverImagesInfo allDocumentVerificationConfigs DDVC.AadhaarCard
+    DDVC.PanCard -> return $ checkIfImageUploadedOrInvalidated driverImagesInfo allDocumentVerificationConfigs DDVC.PanCard
+    DDVC.GSTCertificate -> return $ checkIfImageUploadedOrInvalidated driverImagesInfo allDocumentVerificationConfigs DDVC.GSTCertificate
     DDVC.Permissions -> return (VALID, Nothing, Nothing)
     DDVC.ProfilePhoto -> do
       let mbImages = IQuery.filterRecentLatestByPersonIdAndImageType driverImagesInfo DDVC.ProfilePhoto
       return (fromMaybe NO_DOC_AVAILABLE (mapStatus <$> (mbImages >>= (.verificationStatus))), Nothing, Nothing)
-    DDVC.UploadProfile -> checkIfImageUploadedOrInvalidated driverImagesInfo DDVC.UploadProfile
+    DDVC.UploadProfile -> return $ checkIfImageUploadedOrInvalidated driverImagesInfo allDocumentVerificationConfigs DDVC.UploadProfile
     _ -> return (NO_DOC_AVAILABLE, Nothing, Nothing)
 
 vehicleDocsByRcIdList :: [DVC.DocumentType]
@@ -787,16 +788,21 @@ vehicleDocsByRcIdList =
     DVC.Odometer
   ]
 
-getInProgressVehicleDocuments :: IQuery.DriverImagesInfo -> Maybe IQuery.RcImagesInfo -> DVC.DocumentType -> Flow (ResponseStatus, Maybe Text, Maybe BaseUrl)
-getInProgressVehicleDocuments driverImagesInfo mbRcImagesInfo docType =
+getInProgressVehicleDocuments ::
+  IQuery.DriverImagesInfo ->
+  Maybe IQuery.RcImagesInfo ->
+  [DVC.DocumentVerificationConfig] ->
+  DVC.DocumentType ->
+  Flow (ResponseStatus, Maybe Text, Maybe BaseUrl)
+getInProgressVehicleDocuments driverImagesInfo mbRcImagesInfo allDocumentVerificationConfigs docType =
   case docType of
     DVC.VehicleRegistrationCertificate -> checkIfUnderProgress driverImagesInfo DVC.VehicleRegistrationCertificate
     DVC.SubscriptionPlan -> return (NO_DOC_AVAILABLE, Nothing, Nothing)
-    DVC.VehiclePermit -> checkIfImageUploadedOrInvalidated driverImagesInfo DVC.VehiclePermit
-    DVC.VehicleFitnessCertificate -> checkIfImageUploadedOrInvalidated driverImagesInfo DVC.VehicleFitnessCertificate
-    DVC.VehicleInsurance -> checkIfImageUploadedOrInvalidated driverImagesInfo DVC.VehicleInsurance
-    DVC.VehiclePUC -> checkIfImageUploadedOrInvalidated driverImagesInfo DVC.VehiclePUC
-    DVC.VehicleInspectionForm -> checkIfImageUploadedOrInvalidated driverImagesInfo DVC.VehicleInspectionForm
+    DVC.VehiclePermit -> return $ checkIfImageUploadedOrInvalidated driverImagesInfo allDocumentVerificationConfigs DVC.VehiclePermit
+    DVC.VehicleFitnessCertificate -> return $ checkIfImageUploadedOrInvalidated driverImagesInfo allDocumentVerificationConfigs DVC.VehicleFitnessCertificate
+    DVC.VehicleInsurance -> return $ checkIfImageUploadedOrInvalidated driverImagesInfo allDocumentVerificationConfigs DVC.VehicleInsurance
+    DVC.VehiclePUC -> return $ checkIfImageUploadedOrInvalidated driverImagesInfo allDocumentVerificationConfigs DVC.VehiclePUC
+    DVC.VehicleInspectionForm -> return $ checkIfImageUploadedOrInvalidated driverImagesInfo allDocumentVerificationConfigs DVC.VehicleInspectionForm
     _ | docType `elem` vehicleDocsByRcIdList -> return $ checkIfImageUploadedOrInvalidatedByRC mbRcImagesInfo docType
     _ -> return (NO_DOC_AVAILABLE, Nothing, Nothing)
 
@@ -812,19 +818,19 @@ checkIfImageUploadedOrInvalidatedByRC mbRcImagesInfo docType = do
         then (INVALID, extractImageFailReason latestImage.failureReason, Nothing)
         else (MANUAL_VERIFICATION_REQUIRED, Nothing, Nothing)
 
-checkIfImageUploadedOrInvalidated :: IQuery.DriverImagesInfo -> DDVC.DocumentType -> Flow (ResponseStatus, Maybe Text, Maybe BaseUrl)
-checkIfImageUploadedOrInvalidated driverImagesInfo docType = do
+checkIfImageUploadedOrInvalidated :: IQuery.DriverImagesInfo -> [DVC.DocumentVerificationConfig] -> DDVC.DocumentType -> (ResponseStatus, Maybe Text, Maybe BaseUrl)
+checkIfImageUploadedOrInvalidated driverImagesInfo allDocumentVerificationConfigs docType = do
   let images = IQuery.filterRecentByPersonIdAndImageType driverImagesInfo docType
-  documentVerificationConfig <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndDefaultEnabledOnManualVerification driverImagesInfo.merchantOperatingCity.id docType False Nothing
+      notEnabledOnManualVerification = any (\config -> config.documentType == docType && not config.isDefaultEnabledOnManualVerification) allDocumentVerificationConfigs
   case images of
-    [] -> return (NO_DOC_AVAILABLE, Nothing, Nothing)
+    [] -> (NO_DOC_AVAILABLE, Nothing, Nothing)
     latestImage : _ -> do
       if latestImage.verificationStatus == Just Documents.INVALID
-        then return (INVALID, extractImageFailReason latestImage.failureReason, Nothing)
+        then (INVALID, extractImageFailReason latestImage.failureReason, Nothing)
         else
-          if length documentVerificationConfig > 0
-            then return (FAILED, Nothing, Nothing)
-            else return (MANUAL_VERIFICATION_REQUIRED, Nothing, Nothing)
+          if notEnabledOnManualVerification
+            then (FAILED, Nothing, Nothing)
+            else (MANUAL_VERIFICATION_REQUIRED, Nothing, Nothing)
 
 checkIfUnderProgress :: IQuery.DriverImagesInfo -> DVC.DocumentType -> Flow (ResponseStatus, Maybe Text, Maybe BaseUrl)
 checkIfUnderProgress driverImagesInfo docType = do
