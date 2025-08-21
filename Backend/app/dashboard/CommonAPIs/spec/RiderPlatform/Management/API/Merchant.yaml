@@ -29,6 +29,8 @@ imports:
   UpsertTicketConfigReq: Dashboard.Common.Merchant
   UpsertTicketConfigResp: Dashboard.Common.Merchant
   FilePath: EulerHS.Prelude
+  WhiteListOperatingCityReq: Dashboard.Common.Merchant
+  WhiteListOperatingCityRes: Dashboard.Common.Merchant
 
 module: Merchant
 
@@ -221,6 +223,14 @@ apis:
         endpoint: MerchantAPI UpsertTicketConfigEndpoint
         endpointV2:
         userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT UPSERT_FARE_TICKET_CONFIG
+  - POST: # whiteListOperatingCityAPI
+      endpoint: /config/operatingCity/whiteList
+      auth: ApiAuthV2
+      request:
+        type: WhiteListOperatingCityReq
+      response:
+        type: WhiteListOperatingCityRes
+      userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT WHITELIST_MERCHANT_OPERATING_CITY
 
 types:
   MerchantUpdateReq:

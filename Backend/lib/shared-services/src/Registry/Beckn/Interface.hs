@@ -27,4 +27,4 @@ updateSubscriber updSubReq = case updSubReq._data of
   UpdSubNY _data -> UpdSubResNY <$> Ny.updateCities updSubReq _data
 
 createSubscriber :: (MonadFlow m, CoreMetrics m) => BaseUrl -> NyRegistry.Subscriber -> m AckResponse
-createSubscriber registryUrl subscriber = Flow.createSubscriber registryUrl subscriber
+createSubscriber = Flow.createSubscriber

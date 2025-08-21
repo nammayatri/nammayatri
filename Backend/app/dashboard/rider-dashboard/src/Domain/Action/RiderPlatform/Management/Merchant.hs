@@ -27,6 +27,7 @@ module Domain.Action.RiderPlatform.Management.Merchant
     postMerchantConfigFailover,
     postMerchantTicketConfigUpsert,
     postMerchantConfigSpecialLocationUpsert,
+    postMerchantConfigOperatingCityWhiteList,
   )
 where
 
@@ -218,3 +219,9 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity apiTokenInfo req 
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just req)
   T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (Common.addMultipartBoundary "XXX00XXX" . (.merchantDSL.postMerchantConfigSpecialLocationUpsert)) req
+
+postMerchantConfigOperatingCityWhiteList :: (Kernel.Types.Id.ShortId DM.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Dashboard.Common.Merchant.WhiteListOperatingCityReq -> Environment.Flow Dashboard.Common.Merchant.WhiteListOperatingCityRes)
+postMerchantConfigOperatingCityWhiteList merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantConfigOperatingCityWhiteList) req
