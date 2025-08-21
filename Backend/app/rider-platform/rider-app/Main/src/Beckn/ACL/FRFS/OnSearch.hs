@@ -106,8 +106,14 @@ parseFulfillments item fulfillments fulfillmentId = do
       then fulfillmentStops & sequenceStops & mapWithIndex (\idx stop -> mkDStation stop (Just $ idx + 1))
       else traverse (\s -> mkDStation s Nothing) fulfillmentStops
   price <- item.itemPrice >>= Utils.parsePrice & fromMaybeM (InvalidRequest "Price not found")
+  let offerPrice = item.itemPrice >>= Utils.parseOfferPrice
   vehicleCategory <- fulfillment.fulfillmentVehicle >>= (.vehicleCategory) & fromMaybeM (InvalidRequest "VehicleType not found")
   vehicleType <- vehicleCategory & castVehicleVariant & fromMaybeM (InvalidRequest "VehicleType not found")
+
+  let adultDiscount = createAdultDiscount offerPrice
+      discounts = case adultDiscount of
+        Just discount -> [discount]
+        Nothing -> []
 
   return $
     Domain.DQuote
@@ -119,7 +125,7 @@ parseFulfillments item fulfillments fulfillmentId = do
         routeStations = [],
         stations,
         fareDetails = Nothing,
-        discounts = [],
+        discounts = discounts,
         _type = quoteType
       }
 
@@ -198,3 +204,18 @@ castQuoteType "SFSJT" = return DQuote.SpecialFareSingleJourney
 castQuoteType "RJT" = return DQuote.ReturnJourney
 castQuoteType "PASS" = return DQuote.Pass
 castQuoteType _ = throwError $ InvalidRequest "Invalid quote type"
+
+createAdultDiscount :: Maybe Price -> Maybe Domain.DDiscount
+createAdultDiscount offerPrice = do
+  case offerPrice of
+    Just op -> do
+      Just $
+        Domain.DDiscount
+          { code = "ADULT",
+            title = "Adult Discount",
+            description = "Special discount for adult passengers",
+            tnc = "<b>Terms and conditions apply for adult discount</b>",
+            price = op,
+            eligibility = True
+          }
+    Nothing -> Nothing
