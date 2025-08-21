@@ -28,6 +28,7 @@ import qualified Domain.Types.Ride as DRide
 import Environment
 import EulerHS.Prelude
 import Kernel.Beam.Functions as B
+import Kernel.Tools.Logging
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -44,12 +45,17 @@ handler ::
   Id DM.Merchant ->
   DStatusReq ->
   Flow DStatusRes
-handler transporterId req = do
+handler transporterId req = withDynamicLogLevel "bpp-status-domain" $ do
+  logDebug $ "BPP_STATUS_DEBUG: Searching for transactionId: " <> req.transactionId
   transporter <-
     CQM.findById transporterId
       >>= fromMaybeM (MerchantNotFound transporterId.getId)
   booking <- B.runInReplica $ QRB.findByTransactionId req.transactionId >>= fromMaybeM (BookingNotFound req.transactionId)
+  logDebug $ "BPP_STATUS_DEBUG: Found booking: " <> booking.id.getId <> " with status: " <> show booking.status
   mbRide <- B.runInReplica $ QRide.findOneByBookingId booking.id
+  case mbRide of
+    Just ride -> logDebug $ "BPP_STATUS_DEBUG: Found ride: " <> ride.id.getId <> " with status: " <> show ride.status
+    Nothing -> logDebug $ "BPP_STATUS_DEBUG: No ride found for booking: " <> booking.id.getId
   let transporterId' = booking.providerId
       estimateId = booking.estimateId <&> getId
   unless (transporterId' == transporterId) $ throwError AccessDenied
@@ -63,6 +69,7 @@ handler transporterId req = do
           let tripStartLocation = bookingDetails.ride.tripStartPos
           pure $ RideStartedReq DRideStartedReq {..}
         DRide.COMPLETED -> do
+          logDebug $ "BPP_STATUS_DEBUG: Processing COMPLETED ride for booking: " <> booking.id.getId
           bookingDetails <- SyncRide.fetchBookingDetails ride booking
           SyncRide.RideCompletedInfo {..} <- SyncRide.fetchRideCompletedInfo ride booking
           let tripEndLocation = bookingDetails.ride.tripEndPos
@@ -82,14 +89,18 @@ handler transporterId req = do
         DBooking.NEW -> do
           pure $ NewBookingBuildReq (DNewBookingBuildReq booking.id)
         DBooking.TRIP_ASSIGNED -> do
+          logDebug $ "BPP_STATUS_DEBUG: ERROR: TRIP_ASSIGNED booking without ride record: " <> booking.id.getId
           throwError (RideNotFound $ "BookingId: " <> booking.id.getId)
         DBooking.COMPLETED -> do
+          logDebug $ "BPP_STATUS_DEBUG: ERROR: COMPLETED booking without ride record: " <> booking.id.getId
           throwError (RideNotFound $ "BookingId: " <> booking.id.getId)
         DBooking.CANCELLED -> do
           bookingCancelledInfo <- SyncRide.fetchBookingCancelledInfo Nothing
           pure $ BookingCancelledReq DBookingCancelledReq {bookingDetails = Nothing, cancellationFee = Nothing, cancellationSource = bookingCancelledInfo.cancellationSource, ..}
         DBooking.REALLOCATED -> do
+          logDebug $ "BPP_STATUS_DEBUG: ERROR: REALLOCATED booking without ride record: " <> booking.id.getId
           throwError (RideNotFound $ "BookingId: " <> booking.id.getId)
+  logDebug $ "BPP_STATUS_DEBUG: Sending response for booking: " <> booking.id.getId
   pure DStatusRes {transporter, booking, info}
   where
     syncAssignedReq ride booking estimateId = do
