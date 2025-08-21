@@ -111,7 +111,7 @@ convertVendorDetails ::
   m [Payment.VendorSplitDetails]
 convertVendorDetails splitDetailsZippedByBooking vendorDetailsToIncludeByDefault isFRFSTestingEnabled = do
   let validVendorSplitDetails = concat $ map (\ele -> createVendorSplitForBooking ele) splitDetailsZippedByBooking
-      finalSplits = ensureAllRequiredVendorsExist validVendorSplitDetails
+  finalSplits <- ensureAllRequiredVendorsExist validVendorSplitDetails
   logInfo $ "validVendorSplitDetails" <> show validVendorSplitDetails
   logInfo $ "finalSplits" <> show finalSplits
   return finalSplits
@@ -140,21 +140,37 @@ convertVendorDetails splitDetailsZippedByBooking vendorDetailsToIncludeByDefault
         Nothing ->
           totalAmount
 
-    ensureAllRequiredVendorsExist :: [Payment.VendorSplitDetails] -> [Payment.VendorSplitDetails]
-    ensureAllRequiredVendorsExist existingVendorSplits =
+    ensureAllRequiredVendorsExist ::
+      ( EsqDBReplicaFlow m r,
+        BeamFlow m r,
+        EncFlow m r,
+        ServiceFlow m r
+      ) =>
+      [Payment.VendorSplitDetails] ->
+      m [Payment.VendorSplitDetails]
+    ensureAllRequiredVendorsExist existingVendorSplits = do
       let existingVendorIds = map (.vendorId) existingVendorSplits
           missingVendors = filter (\vd -> vd.vendorId `notElem` existingVendorIds) vendorDetailsToIncludeByDefault
-          missingVendorSplits = map createDefaultVendorSplit missingVendors
-       in existingVendorSplits ++ missingVendorSplits
+      missingVendorSplits <- mapM createDefaultVendorSplit missingVendors
+      return $ existingVendorSplits ++ missingVendorSplits
 
-    createDefaultVendorSplit :: VendorSplitDetails.VendorSplitDetails -> Payment.VendorSplitDetails
-    createDefaultVendorSplit vd =
-      Payment.VendorSplitDetails
-        { splitAmount = 0,
-          splitType = vendorSplitDetailSplitTypeToPaymentSplitType vd.splitType,
-          vendorId = vd.vendorId,
-          ticketId = Nothing
-        }
+    createDefaultVendorSplit ::
+      ( EsqDBReplicaFlow m r,
+        BeamFlow m r,
+        EncFlow m r,
+        ServiceFlow m r
+      ) =>
+      VendorSplitDetails.VendorSplitDetails ->
+      m Payment.VendorSplitDetails
+    createDefaultVendorSplit vd = do
+      ticketId <- generateGUID
+      return $
+        Payment.VendorSplitDetails
+          { splitAmount = 0,
+            splitType = vendorSplitDetailSplitTypeToPaymentSplitType vd.splitType,
+            vendorId = vd.vendorId,
+            ticketId = Just ticketId
+          }
 
 vendorSplitDetailSplitTypeToPaymentSplitType :: VendorSplitDetails.SplitType -> Payment.SplitType
 vendorSplitDetailSplitTypeToPaymentSplitType = \case
