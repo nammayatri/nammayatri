@@ -28,6 +28,7 @@ module Domain.Action.RiderPlatform.Management.Merchant
     postMerchantTicketConfigUpsert,
     postMerchantConfigSpecialLocationUpsert,
     postMerchantSchedulerTrigger,
+    postMerchantConfigOperatingCityWhiteList,
   )
 where
 
@@ -225,3 +226,9 @@ postMerchantSchedulerTrigger merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just req)
   T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantSchedulerTrigger) req
+
+postMerchantConfigOperatingCityWhiteList :: (Kernel.Types.Id.ShortId DM.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Dashboard.Common.Merchant.WhiteListOperatingCityReq -> Environment.Flow Dashboard.Common.Merchant.WhiteListOperatingCityRes)
+postMerchantConfigOperatingCityWhiteList merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantConfigOperatingCityWhiteList) req

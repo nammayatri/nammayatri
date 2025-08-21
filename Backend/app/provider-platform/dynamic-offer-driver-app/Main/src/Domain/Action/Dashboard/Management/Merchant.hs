@@ -47,6 +47,7 @@ module Domain.Action.Dashboard.Management.Merchant
     postMerchantConfigFailover,
     postMerchantPayoutConfigUpdate,
     postMerchantConfigUpsertPlanAndConfigSubscription,
+    postMerchantConfigOperatingCityWhiteList,
   )
 where
 
@@ -96,11 +97,14 @@ import qualified Domain.Types.Overlay as DMO
 import qualified Domain.Types.PayoutConfig as DPC
 import qualified Domain.Types.Plan as Plan
 import qualified Domain.Types.PlanTranslation as PlanTrans
+import qualified Domain.Types.RegistryMapFallback as RMF
 import qualified Domain.Types.SubscriptionConfig as DSC
 import qualified Domain.Types.TransporterConfig as DTC
+import qualified Domain.Types.ValueAddNP as VNP
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleServiceTier as DVST
 import qualified Domain.Types.VehicleVariant as DVeh
+import qualified Domain.Types.WhiteListOrg as WLO
 import Environment
 import qualified EulerHS.Language as L
 import qualified "shared-services" IssueManagement.Common as ICommon
@@ -180,7 +184,10 @@ import qualified Storage.Queries.PayoutConfig as QPC
 import qualified Storage.Queries.Plan as QPlan
 import qualified Storage.Queries.PlanExtra as QPlanE
 import qualified Storage.Queries.PlanTranslation as SQPT
+import qualified Storage.Queries.RegistryMapFallback as QRMF
 import qualified Storage.Queries.SubscriptionConfig as QSC
+import qualified Storage.Queries.ValueAddNP as SQVNP
+import qualified Storage.Queries.WhiteListOrg as QWLO
 import Tools.Error
 
 ---------------------------------------------------------------------
@@ -2748,3 +2755,27 @@ postMerchantPayoutConfigUpdate merchantShortId city req = do
   QPC.updateConfigValues req payoutConfig merchantOpCity.id
   CPC.clearConfigCache merchantOpCity.id req.vehicleCategory
   pure Success
+
+-- provider side changes here
+postMerchantConfigOperatingCityWhiteList :: ShortId DM.Merchant -> Context.City -> Common.WhiteListOperatingCityReq -> Flow Common.WhiteListOperatingCityRes
+postMerchantConfigOperatingCityWhiteList _ _ req = do
+  let merchantId = req.bppMerchantId
+      merchantOperatingCityId = req.bppMerchantOperatingCityId
+      bapSubId = req.bapSubscriberId
+      bapUniqueKeyId = req.bapUniqueKeyId
+      bppDomain = req.bppSubscriberDomain
+  now <- getCurrentTime
+  nyRegistryBaseUrl <- asks (.nyRegistryUrl)
+  whiteListOrgId <- generateGUID
+  let whiteListOrgReq = WLO.WhiteListOrg {domain = bppDomain, id = whiteListOrgId, merchantId = Id merchantId, merchantOperatingCityId = Id merchantOperatingCityId, subscriberId = bapSubId, createdAt = now, updatedAt = now}
+      valueAddNpReq = VNP.ValueAddNP {enabled = True, subscriberId = bapSubId.getShortId, createdAt = now, updatedAt = now}
+      registryMapFallbackReq = RMF.RegistryMapFallback {registryUrl = nyRegistryBaseUrl, subscriberId = bapSubId.getShortId, uniqueId = bapUniqueKeyId}
+  QWLO.create whiteListOrgReq
+  SQVNP.create valueAddNpReq
+  QRMF.create registryMapFallbackReq
+  pure $
+    Common.WhiteListOperatingCityRes
+      { whiteListSuccess = True,
+        whiteListMessage = "Success",
+        whiteListError = Nothing
+      }
