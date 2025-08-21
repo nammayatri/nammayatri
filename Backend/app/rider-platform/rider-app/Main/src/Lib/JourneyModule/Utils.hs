@@ -146,7 +146,8 @@ data LegServiceTier = LegServiceTier
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data AvailableRoutesInfo = AvailableRoutesInfo
-  { routeCode :: Text,
+  { shortName :: Text,
+    routeCode :: Text,
     isLiveTrackingAvailable :: Bool
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON, ToSchema)
@@ -487,7 +488,7 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
           map
             ( \routeDetail -> do
                 let busForCurrentServiceType = HM.lookup (show serviceTierType) =<< HM.lookup routeDetail.code busRouteMapping
-                AvailableRoutesInfo {routeCode = routeDetail.code, isLiveTrackingAvailable = isJust busForCurrentServiceType}
+                AvailableRoutesInfo {shortName = routeDetail.shortName, routeCode = routeDetail.code, isLiveTrackingAvailable = isJust busForCurrentServiceType}
             )
             validRouteDetails
     return $
