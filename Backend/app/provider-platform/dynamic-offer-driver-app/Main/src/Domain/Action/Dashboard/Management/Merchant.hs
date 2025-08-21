@@ -62,7 +62,6 @@ import qualified Data.List as DL
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
-import qualified Data.Text.Encoding as TE
 import Data.Time (DayOfWeek (..))
 import qualified Data.Vector as V
 import qualified Domain.Action.UI.MerchantServiceConfig as DMSC
@@ -115,7 +114,6 @@ import Kernel.Storage.Esqueleto (runTransaction)
 import qualified Kernel.Storage.Esqueleto.Transactionable as Esq
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.APISuccess (APISuccess (..))
-import Kernel.Types.Base64
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Geofencing
 import Kernel.Types.Id
@@ -2099,14 +2097,13 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
       _ -> return Nothing
 
   -- beckn config
-  becknConfigList <- SQBC.findAllByMerchantId (Just baseMerchantId)
-  let becknConfigOld = listToMaybe becknConfigList
   mbBecknConfig <-
     case req.merchantData of
       Just _ -> do
         SQBC.findAllByMerchantId (Just newMerchantId) >>= \case
           [] -> do
-            newBecknConfig <- mapM (buildBecknConfig newMerchantId now) becknConfigList
+            becknConfig <- SQBC.findAllByMerchantId (Just baseMerchantId)
+            newBecknConfig <- mapM (buildBecknConfig newMerchantId now) becknConfig
             return $ Just newBecknConfig
           _ -> return Nothing
       Nothing -> return Nothing
@@ -2123,23 +2120,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
       return $ map (buildSubscriptionConfig newMerchantId newMerchantOperatingCityId now <$>) subscriptionCfgs
 
   nyRegistryBaseUrl <- asks (.nyRegistryUrl)
-  -- create a new Subscriber for New Merchant
-  case becknConfigOld of
-    Just becknCfg -> do
-      whenJust mbNewMerchant $ \newMerchant -> do
-        let newSubscriberUrlText = T.replace baseMerchant.id.getId newMerchant.id.getId (showBaseUrl becknCfg.subscriberUrl)
-            uniqueKeyId = newMerchant.uniqueKeyId
-            subscriberId = newMerchant.subscriberId.getShortId
-            subscriberType = BecknSub.BPP
-            domain = Context.MOBILITY
-            newCities = req.city
-            country = req.country
-            signingPublicKey = Base64 (TE.encodeUtf8 newMerchant.uniqueKeyId)
-            createdAt = now
-        newSubscriberUrl <- parseBaseUrl newSubscriberUrlText
-        void $ RegistryIF.createSubscriber nyRegistryBaseUrl (RegistryT.createNewSubscriberReq uniqueKeyId subscriberId newSubscriberUrl subscriberType domain newCities country signingPublicKey createdAt)
-    Nothing ->
-      logInfo $ "Beckn Config not found for the base merchant, skipping subscriber creation"
+
   let uniqueKeyId = baseMerchant.uniqueKeyId
       subscriberId = baseMerchant.subscriberId.getShortId
       subType = BecknSub.BPP
@@ -2147,12 +2128,31 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
       lookupReq = SimpleLookupRequest {unique_key_id = uniqueKeyId, subscriber_id = subscriberId, merchant_id = baseMerchant.id.getId, subscriber_type = subType, ..}
       newUniqueId = maybe uniqueKeyId (.uniqueKeyId) mbNewMerchant
       newSubscriberId = maybe subscriberId (.subscriberId.getShortId) mbNewMerchant
+
+  -- create a new Subscriber for New Merchant
+  oldSubscriber <- Registry.registryLookup nyRegistryBaseUrl lookupReq subscriberId
+  case oldSubscriber of
+    Just sub -> do
+      whenJust mbNewMerchant $ \newMerchant -> do
+        let newSubscriberUrlText = T.replace baseMerchant.id.getId newMerchant.id.getId (showBaseUrl sub.subscriber_url)
+            ukId = newMerchant.uniqueKeyId
+            subId = T.replace baseMerchant.id.getId newMerchant.id.getId sub.subscriber_id
+            subscriberType = BecknSub.BPP
+            subDomain = Context.MOBILITY
+            newCities = req.city
+            country = req.country
+            signingPublicKey = sub.signing_public_key
+            createdAt = now
+        newSubscriberUrl <- parseBaseUrl newSubscriberUrlText
+        void $ RegistryIF.createSubscriber nyRegistryBaseUrl (RegistryT.createNewSubscriberReq ukId subId newSubscriberUrl subscriberType subDomain newCities country signingPublicKey createdAt)
+    Nothing -> do
+      logInfo $ "No existing subscriber found for " <> subscriberId <> " skipping subscriber creation"
   -- only add cities if old merchant is used
   mbAddCityReq <-
     case mbNewMerchant of
       Just _ -> return Nothing
       Nothing -> do
-        Registry.registryLookup nyRegistryBaseUrl lookupReq subscriberId >>= \case
+        case oldSubscriber of
           Nothing -> do
             logError $ "No entry found for subscriberId: " <> subscriberId <> ", uniqueKeyId: " <> uniqueKeyId <> " in NY registry"
             return Nothing
