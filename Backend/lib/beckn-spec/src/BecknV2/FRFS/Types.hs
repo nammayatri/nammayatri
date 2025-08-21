@@ -1414,7 +1414,9 @@ data Price = Price
   { -- |
     priceCurrency :: Maybe Text,
     -- | Describes a numerical value in decimal form
-    priceValue :: Maybe Text
+    priceValue :: Maybe Text,
+    -- | This field is not according to ONDC spec. It is used only in case of CHALO (Odisha Yatri)
+    priceOfferedValue :: Maybe Text
   }
   deriving (Show, Eq, Generic, Data)
 
@@ -1433,7 +1435,8 @@ optionsPrice =
   where
     table =
       [ ("priceCurrency", "currency"),
-        ("priceValue", "value")
+        ("priceValue", "value"),
+        ("priceOfferedValue", "offered_value")
       ]
 
 -- | Describes the catalog of a business.

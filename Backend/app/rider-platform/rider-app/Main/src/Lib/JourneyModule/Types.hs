@@ -444,7 +444,8 @@ data BusLegExtraInfo = BusLegExtraInfo
     ticketNo :: Maybe [Text],
     adultTicketQuantity :: Maybe Int,
     childTicketQuantity :: Maybe Int,
-    refund :: Maybe LegSplitInfo
+    refund :: Maybe LegSplitInfo,
+    discounts :: Maybe [FRFSTicketServiceAPI.FRFSDiscountRes]
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -1014,7 +1015,8 @@ mkLegInfoFromFrfsBooking booking distance duration = do
                   ticketNo = Just ticketNo,
                   adultTicketQuantity = Just booking.quantity,
                   childTicketQuantity = booking.childTicketQuantity,
-                  refund = refundBloc
+                  refund = refundBloc,
+                  discounts = mbQuote >>= (.discountsJson) >>= decodeFromText
                 }
         Spec.SUBWAY -> do
           mbQuote <- QFRFSQuote.findById booking.quoteId
@@ -1193,7 +1195,8 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} fallbackFare di
                   ticketNo = Nothing,
                   adultTicketQuantity = mbQuote <&> (.quantity),
                   childTicketQuantity = mbQuote >>= (.childTicketQuantity),
-                  refund = Nothing
+                  refund = Nothing,
+                  discounts = mbQuote >>= (.discountsJson) >>= decodeFromText
                 }
         Spec.SUBWAY -> do
           let mbSelectedServiceTier = getServiceTierFromQuote =<< mbQuote
