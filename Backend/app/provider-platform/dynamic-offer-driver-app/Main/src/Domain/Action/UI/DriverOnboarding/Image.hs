@@ -161,35 +161,41 @@ validateImage isDashboard (personId, _, merchantOpCityId) req@ImageValidateReque
       throwError (ImageValidationExceedLimit personId.getId)
 
   -- WorkflowTransactionId is used only in case of hyperverge request
-  when (imageType /= DVC.DriverLicense && isJust workflowTransactionId && any ((== Just Documents.VALID) . (.verificationStatus)) images) $ throwError $ DocumentAlreadyValidated (show imageType)
-  when (imageType /= DVC.DriverLicense && isJust workflowTransactionId && any ((== Just Documents.MANUAL_VERIFICATION_REQUIRED) . (.verificationStatus)) images) $ throwError $ DocumentUnderManualReview (show imageType)
-
-  imagePath <- createPath personId.getId merchantId.getId imageType
-  fork "S3 Put Image" do
-    Redis.withLockRedis (imageS3Lock imagePath) 5 $
-      S3.put (T.unpack imagePath) image
-  imageEntity <- mkImage personId merchantId (Just merchantOpCityId) imagePath imageType mbRcId (convertValidationStatusToVerificationStatus <$> validationStatus) workflowTransactionId sdkFailureReason
-  Query.create imageEntity
-
-  -- skipping validation for rc as validation not available in idfy
-  isImageValidationRequired <- case person.role of
-    Person.FLEET_OWNER -> do
-      --------------- Image validation for fleet
-      docConfigs <- CFQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId imageType Nothing
-      return $ maybe True (.isImageValidationRequired) docConfigs
+  let mValidatedImage = find ((== Just Documents.VALID) . (.verificationStatus)) images
+  case mValidatedImage of
+    Just validatedImage
+      | imageType /= DVC.DriverLicense,
+        isJust workflowTransactionId ->
+        return $ ImageValidateResponse validatedImage.id
     _ -> do
-      docConfigs <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId imageType (fromMaybe CAR vehicleCategory) Nothing
-      return $ maybe True (.isImageValidationRequired) docConfigs
-  if isImageValidationRequired && isNothing validationStatus
-    then do
-      validationOutput <-
-        Verification.validateImage merchantId merchantOpCityId $
-          Verification.ValidateImageReq {image, imageType = castImageType imageType, driverId = person.id.getId}
-      when validationOutput.validationAvailable $ do
-        checkErrors imageEntity.id imageType validationOutput.detectedImage
-      Query.updateVerificationStatusOnlyById Documents.VALID imageEntity.id
-    else when (isNothing validationStatus) $ Query.updateVerificationStatusOnlyById Documents.MANUAL_VERIFICATION_REQUIRED imageEntity.id
-  return $ ImageValidateResponse {imageId = imageEntity.id}
+      when (imageType /= DVC.DriverLicense && isJust workflowTransactionId && any ((== Just Documents.MANUAL_VERIFICATION_REQUIRED) . (.verificationStatus)) images) $ throwError $ DocumentUnderManualReview (show imageType)
+
+      imagePath <- createPath personId.getId merchantId.getId imageType
+      fork "S3 Put Image" do
+        Redis.withLockRedis (imageS3Lock imagePath) 5 $
+          S3.put (T.unpack imagePath) image
+      imageEntity <- mkImage personId merchantId (Just merchantOpCityId) imagePath imageType mbRcId (convertValidationStatusToVerificationStatus <$> validationStatus) workflowTransactionId sdkFailureReason
+      Query.create imageEntity
+
+      -- skipping validation for rc as validation not available in idfy
+      isImageValidationRequired <- case person.role of
+        Person.FLEET_OWNER -> do
+          --------------- Image validation for fleet
+          docConfigs <- CFQDVC.findByMerchantOpCityIdAndDocumentType merchantOpCityId imageType Nothing
+          return $ maybe True (.isImageValidationRequired) docConfigs
+        _ -> do
+          docConfigs <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId imageType (fromMaybe CAR vehicleCategory) Nothing
+          return $ maybe True (.isImageValidationRequired) docConfigs
+      if isImageValidationRequired && isNothing validationStatus
+        then do
+          validationOutput <-
+            Verification.validateImage merchantId merchantOpCityId $
+              Verification.ValidateImageReq {image, imageType = castImageType imageType, driverId = person.id.getId}
+          when validationOutput.validationAvailable $ do
+            checkErrors imageEntity.id imageType validationOutput.detectedImage
+          Query.updateVerificationStatusOnlyById Documents.VALID imageEntity.id
+        else when (isNothing validationStatus) $ Query.updateVerificationStatusOnlyById Documents.MANUAL_VERIFICATION_REQUIRED imageEntity.id
+      return $ ImageValidateResponse {imageId = imageEntity.id}
   where
     checkErrors id_ _ Nothing = throwImageError id_ ImageValidationFailed
     checkErrors id_ imgType (Just detectedImage) = do
