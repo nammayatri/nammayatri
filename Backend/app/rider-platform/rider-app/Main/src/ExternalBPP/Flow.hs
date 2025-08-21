@@ -205,12 +205,12 @@ confirm _merchant _merchantOperatingCity frfsConfig integratedBPPConfig bapConfi
         map
           ( \ticket ->
               DTicket
-                { qrData = ticket.qrData,
+                { qrData = Just ticket.qrData,
                   vehicleNumber = ticket.vehicleNumber,
                   bppFulfillmentId = CallAPI.getProviderName integratedBPPConfig,
                   ticketNumber = ticket.ticketNumber,
-                  validTill = ticket.qrValidity,
-                  status = ticket.qrStatus,
+                  validTill = Just ticket.qrValidity,
+                  status = Just ticket.qrStatus,
                   description = ticket.description,
                   qrRefreshAt = ticket.qrRefreshAt
                 }
@@ -226,7 +226,8 @@ confirm _merchant _merchantOperatingCity frfsConfig integratedBPPConfig bapConfi
         transactionId = booking.searchId.getId,
         orderStatus = Nothing,
         messageId = booking.id.getId,
-        tickets = tickets
+        tickets = tickets,
+        hasStops = True
       }
 
 status :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r) => Id Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> DFRFSTicketBooking.FRFSTicketBooking -> m DOrder
@@ -237,12 +238,12 @@ status _merchantId _merchantOperatingCity integratedBPPConfig bapConfig booking 
         map
           ( \ticket ->
               DTicket
-                { qrData = ticket.qrData,
+                { qrData = Just ticket.qrData,
                   vehicleNumber = ticket.vehicleNumber,
                   bppFulfillmentId = CallAPI.getProviderName integratedBPPConfig,
                   ticketNumber = ticket.ticketNumber,
-                  validTill = ticket.qrValidity,
-                  status = ticket.qrStatus,
+                  validTill = Just ticket.qrValidity,
+                  status = Just ticket.qrStatus,
                   qrRefreshAt = ticket.qrRefreshAt,
                   description = ticket.description
                 }
@@ -258,7 +259,8 @@ status _merchantId _merchantOperatingCity integratedBPPConfig bapConfig booking 
         transactionId = booking.searchId.getId,
         orderStatus = Nothing,
         messageId = booking.id.getId,
-        tickets = tickets
+        tickets = tickets,
+        hasStops = True
       }
 
 verifyTicket :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r) => Id Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> Text -> m DTicketPayload

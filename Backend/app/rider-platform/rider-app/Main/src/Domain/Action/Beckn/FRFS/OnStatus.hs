@@ -82,7 +82,7 @@ onStatus _merchant booking (Booking dOrder) = do
       DPOC.getWalletClassNameConfig pOrgCfg.config
     let mbClassName = HashMap.lookup booking.merchantOperatingCityId.getId walletPOCfg.className
     whenJust mbClassName $ \_ -> fork ("updating status of tickets in google wallet for bookingId " <> booking.id.getId) $ traverse_ updateStatesForGoogleWallet googleWalletStates
-  traverse_ refreshTicket dOrder.tickets
+  bool (pure ()) (traverse_ refreshTicket dOrder.tickets) dOrder.hasStops
   return Async
   where
     updateTicketStatuses :: [Utils.TicketStatus] -> [Utils.TicketStatus]
@@ -105,8 +105,9 @@ onStatus _merchant booking (Booking dOrder) = do
           return ()
       return ()
     refreshTicket ticket =
-      whenJust ticket.qrRefreshAt $ \qrRefreshAt ->
-        void $ QTicket.updateRefreshTicketQRByTBookingIdAndTicketNumber ticket.qrData (Just qrRefreshAt) booking.id ticket.ticketNumber
+      whenJust ticket.qrRefreshAt $ \qrRefreshAt -> do
+        ticketQrData <- ticket.qrData & fromMaybeM (InternalError "QR Data not found")
+        void $ QTicket.updateRefreshTicketQRByTBookingIdAndTicketNumber ticketQrData (Just qrRefreshAt) booking.id ticket.ticketNumber
 onStatus _merchant booking (TicketVerification ticketPayload) = do
   ticket <- runInReplica $ QTicket.findByTicketBookingIdTicketNumber booking.id ticketPayload.ticketNumber >>= fromMaybeM (InternalError "Ticket Does Not Exist")
   let terminalTicketStates = [Ticket.USED, Ticket.EXPIRED, Ticket.CANCELLED]

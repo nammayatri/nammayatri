@@ -116,15 +116,15 @@ mkFareBreakup fareBreakup = do
         quantity
       }
 
-parseTickets :: (MonadFlow m) => Spec.Item -> [Spec.Fulfillment] -> m [Domain.DTicket]
-parseTickets item fulfillments = do
+parseTickets :: (MonadFlow m) => Spec.Item -> [Spec.Fulfillment] -> Bool -> m [Domain.DTicket]
+parseTickets item fulfillments hasStops = do
   fulfillmentIds <- item.itemFulfillmentIds & fromMaybeM (InvalidRequest "FulfillmentIds not found")
   when (null fulfillmentIds) $ throwError $ InvalidRequest "Empty fulfillmentIds"
 
   let ticketFulfillments = filterByIds fulfillmentIds "TICKET"
       finalTicketFulfillments = if not (null ticketFulfillments) then ticketFulfillments else filterByIds fulfillmentIds "TRIP"
   when (null finalTicketFulfillments) $ throwError $ InvalidRequest "No ticket fulfillment found"
-  traverse parseTicket finalTicketFulfillments
+  if hasStops then traverse parseTicket finalTicketFulfillments else traverse parseTicketWithoutStops finalTicketFulfillments
   where
     filterByIds fIds fullfillmentType = filter (\f -> f.fulfillmentId `elem` (Just <$> fIds) && f.fulfillmentType == Just fullfillmentType) fulfillments
 
@@ -142,21 +142,38 @@ parseTicket fulfillment = do
   ticketNumber <- (pure (mbTags >>= Utils.getTag "TICKET_INFO" "NUMBER") |<|>| getTicketNumber) >>= fromMaybeM (InvalidRequest "TicketNumber not found")
   pure $
     Domain.DTicket
-      { qrData,
+      { qrData = Just qrData,
         vehicleNumber = Nothing,
-        validTill,
+        validTill = Just validTill,
         bppFulfillmentId = fId,
         ticketNumber,
-        status,
+        status = Just status,
         description = Nothing,
         qrRefreshAt = Nothing
       }
-  where
-    getTicketNumber :: (MonadFlow m) => m (Maybe Text)
-    getTicketNumber = do
-      id <- generateGUID
-      pure $
-        UU.fromText id <&> \uuid -> show (fromIntegral ((\(a, b, c, d) -> a + b + c + d) (UU.toWords uuid)) :: Integer)
+
+getTicketNumber :: (MonadFlow m) => m (Maybe Text)
+getTicketNumber = do
+  id <- generateGUID
+  pure $
+    UU.fromText id <&> \uuid -> show (fromIntegral ((\(a, b, c, d) -> a + b + c + d) (UU.toWords uuid)) :: Integer)
+
+parseTicketWithoutStops :: (MonadFlow m) => Spec.Fulfillment -> m Domain.DTicket
+parseTicketWithoutStops fulfillment = do
+  fId <- fulfillment.fulfillmentId & fromMaybeM (InvalidRequest "FulfillmentId not found")
+  let mbTags = fulfillment.fulfillmentTags
+  ticketNumber <- (pure (mbTags >>= Utils.getTag "TICKET_INFO" "NUMBER") |<|>| getTicketNumber) >>= fromMaybeM (InvalidRequest "TicketNumber not found")
+  pure $
+    Domain.DTicket
+      { qrData = Nothing,
+        vehicleNumber = Nothing,
+        description = Nothing,
+        bppFulfillmentId = fId,
+        ticketNumber = ticketNumber,
+        validTill = Nothing,
+        status = Nothing,
+        qrRefreshAt = Nothing
+      }
 
 type TxnId = Text
 
@@ -375,18 +392,18 @@ data TicketStatus = TicketStatus
 
 getTicketStatus :: (MonadFlow m) => Booking.FRFSTicketBooking -> DTicket -> m TicketStatus
 getTicketStatus booking dTicket = do
-  let validTill = dTicket.validTill
+  validTill <- dTicket.validTill & fromMaybeM (InvalidRequest "ValidTill not found")
   now <- getCurrentTime
   ticketStatus <- castTicketStatus dTicket.status booking
   if now > validTill && (ticketStatus /= Ticket.CANCELLED || ticketStatus /= Ticket.COUNTER_CANCELLED)
     then return TicketStatus {ticketNumber = dTicket.ticketNumber, status = Ticket.EXPIRED, vehicleNumber = dTicket.vehicleNumber}
     else return TicketStatus {ticketNumber = dTicket.ticketNumber, status = ticketStatus, vehicleNumber = dTicket.vehicleNumber}
 
-castTicketStatus :: MonadFlow m => Text -> Booking.FRFSTicketBooking -> m Ticket.FRFSTicketStatus
-castTicketStatus "UNCLAIMED" _ = return Ticket.ACTIVE
-castTicketStatus "CLAIMED" _ = return Ticket.USED
-castTicketStatus "CANCELLED" booking | booking.customerCancelled = return Ticket.CANCELLED
-castTicketStatus "CANCELLED" booking | not booking.customerCancelled = return Ticket.COUNTER_CANCELLED
+castTicketStatus :: MonadFlow m => Maybe Text -> Booking.FRFSTicketBooking -> m Ticket.FRFSTicketStatus
+castTicketStatus (Just "UNCLAIMED") _ = return Ticket.ACTIVE
+castTicketStatus (Just "CLAIMED") _ = return Ticket.USED
+castTicketStatus (Just "CANCELLED") booking | booking.customerCancelled = return Ticket.CANCELLED
+castTicketStatus (Just "CANCELLED") booking | not booking.customerCancelled = return Ticket.COUNTER_CANCELLED
 castTicketStatus _ _ = throwError $ InternalError "Invalid ticket status"
 
 data BppData = BppData

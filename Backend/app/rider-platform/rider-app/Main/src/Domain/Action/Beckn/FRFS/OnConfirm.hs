@@ -235,8 +235,10 @@ mkTicket :: Booking.FRFSTicketBooking -> DTicket -> Bool -> Flow Ticket.FRFSTick
 mkTicket booking dTicket isTicketFree = do
   now <- getCurrentTime
   ticketId <- generateGUID
+  ticketQrData <- dTicket.qrData & fromMaybeM (InvalidRequest "QR Data is missing")
+  validTill <- dTicket.validTill & fromMaybeM (InvalidRequest "Valid Till is missing")
   ticketStatus <- Utils.getTicketStatus booking dTicket
-  processedQrData <- processQRData dTicket.qrData
+  processedQrData <- processQRData ticketQrData
   return
     Ticket.FRFSTicket
       { Ticket.frfsTicketBookingId = booking.id,
@@ -248,7 +250,7 @@ mkTicket booking dTicket isTicketFree = do
         Ticket.status = ticketStatus.status,
         Ticket.scannedByVehicleNumber = ticketStatus.vehicleNumber,
         Ticket.ticketNumber = dTicket.ticketNumber,
-        Ticket.validTill = dTicket.validTill,
+        Ticket.validTill = validTill,
         Ticket.merchantId = booking.merchantId,
         Ticket.merchantOperatingCityId = booking.merchantOperatingCityId,
         Ticket.partnerOrgId = booking.partnerOrgId,

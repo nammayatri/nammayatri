@@ -33,7 +33,8 @@ buildOnConfirmReq onConfirmReq = do
   handleError onConfirmReq $ \message -> do
     case parseData message of
       Right (providerId, totalPrice, bppItemId, transactionId, bppOrderId, messageId, item, fulfillments, quoteBreakup, orderStatus) -> do
-        tickets <- Utils.parseTickets item fulfillments
+        let hasStops = True -- True because in on_confirm ticket should always have stops
+        tickets <- Utils.parseTickets item fulfillments hasStops
         fareBreakUp <- traverse Utils.mkFareBreakup quoteBreakup
         let dOrder =
               Domain.DOrder
@@ -45,7 +46,8 @@ buildOnConfirmReq onConfirmReq = do
                   orderStatus,
                   bppOrderId,
                   messageId,
-                  tickets
+                  tickets,
+                  hasStops
                 }
         return $ Just dOrder
       Left err -> throwError $ InvalidBecknSchema $ "on_confirm error:-" <> show err

@@ -44,17 +44,18 @@ data DOrder = DOrder
     transactionId :: Text,
     orderStatus :: Maybe Spec.OrderStatus,
     messageId :: Text,
-    tickets :: [DTicket]
+    tickets :: [DTicket],
+    hasStops :: Bool
   }
 
 data DTicket = DTicket
-  { qrData :: Text,
+  { qrData :: Maybe Text,
     vehicleNumber :: Maybe Text,
     description :: Maybe Text,
     bppFulfillmentId :: Text,
     ticketNumber :: Text,
-    validTill :: UTCTime,
-    status :: Text,
+    validTill :: Maybe UTCTime,
+    status :: Maybe Text,
     qrRefreshAt :: Maybe UTCTime
   }
 
