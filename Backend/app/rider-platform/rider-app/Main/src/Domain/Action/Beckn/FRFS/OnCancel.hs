@@ -64,5 +64,4 @@ onCancel merchant booking' dOnCancel = do
     Spec.CANCEL_INITIATED -> do
       void $ QTBooking.updateStatusById FTBooking.CANCEL_INITIATED booking.id
       void $ QFRFSRecon.updateStatusByTicketBookingId (Just DFRFSTicket.CANCEL_INITIATED) booking.id
-      FRFSCancel.cancelJourney booking
     _ -> throwError $ InvalidRequest "Unexpected orderStatus received"
