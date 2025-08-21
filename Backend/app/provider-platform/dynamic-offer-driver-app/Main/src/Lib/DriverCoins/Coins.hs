@@ -36,7 +36,6 @@ import qualified Data.Text as T
 import Data.Time (UTCTime (UTCTime, utctDay), addDays)
 import qualified Domain.Types.Coins.CoinHistory as DTCC
 import qualified Domain.Types.Common as Common
-import qualified Domain.Types.DriverStats as DDS
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -63,7 +62,6 @@ import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.Coins.CoinHistory as CHistory
 import qualified Storage.Queries.DriverQuote as QDQ
-import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.Translations as MTQuery
@@ -111,17 +109,8 @@ driverCoinsEvent driverId merchantId merchantOpCityId eventType entityId mbVehVa
   logDebug $ "Driver Coins Event Triggered for merchantOpCityId - " <> merchantOpCityId.getId <> " and driverId - " <> driverId.getId <> "and vehicle category - " <> show vehCategory
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   coinConfiguration <- CDCQ.fetchFunctionsOnEventbasis eventType merchantId merchantOpCityId vehCategory mbConfigVersionMap
-  mbDriverStats <- B.runInReplica $ QDriverStats.findByPrimaryKey driverId
-  let blacklistedEvents = maybe [] (fromMaybe []) (DDS.blacklistCoinEvents <$> mbDriverStats)
-      filteredConfig = filter (\cc -> cc.eventFunction `notElem` blacklistedEvents) coinConfiguration
-
-  logInfo $ "Coin events for driver " <> driverId.getId <> " - Blacklist: " <> show blacklistedEvents <> ", Total: " <> show (map (.eventFunction) coinConfiguration) <> ", Filtered: " <> show (map (.eventFunction) filteredConfig)
-
-  if null filteredConfig
-    then pure () -- Skip if all blacklisted
-    else do
-      finalCoinsValue <- sum <$> forM filteredConfig (\cc -> calculateCoins eventType driverId merchantId merchantOpCityId cc.eventFunction cc.expirationAt cc.coins transporterConfig entityId vehCategory)
-      updateDriverCoins driverId finalCoinsValue transporterConfig.timeDiffFromUtc
+  finalCoinsValue <- sum <$> forM coinConfiguration (\cc -> calculateCoins eventType driverId merchantId merchantOpCityId cc.eventFunction cc.expirationAt cc.coins transporterConfig entityId vehCategory)
+  updateDriverCoins driverId finalCoinsValue transporterConfig.timeDiffFromUtc
 
 calculateCoins :: EventFlow m r => DCT.DriverCoinsEventType -> Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> TransporterConfig -> Maybe Text -> DTV.VehicleCategory -> m Int
 calculateCoins eventType driverId merchantId merchantOpCityId eventFunction mbexpirationTime numCoins transporterConfig entityId vehCategory = do
