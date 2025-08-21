@@ -297,10 +297,6 @@ JourneyLeg:
       kvFunction: updateWithKV
       params: [estimatedMinFare, estimatedMaxFare]
       where: legSearchId
-    updateIsDeleted:
-      kvFunction: updateOneWithKV
-      params: [isDeleted]
-      where: id
 
   intermediateTransformers:
     fromTType:

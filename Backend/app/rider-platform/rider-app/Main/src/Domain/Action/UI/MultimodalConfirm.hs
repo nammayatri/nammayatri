@@ -101,6 +101,7 @@ import Storage.Queries.FRFSSearch as QFRFSSearch
 import Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import Storage.Queries.JourneyFeedback as SQJFB
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
+import qualified Storage.Queries.JourneyLegExtra as QJourneyLegExtra
 import qualified Storage.Queries.JourneyLegMapping as QJourneyLegMapping
 import Storage.Queries.MultimodalPreferences as QMP
 import qualified Storage.Queries.Person as QP
@@ -109,7 +110,7 @@ import qualified Storage.Queries.RiderConfig as QRiderConfig
 import qualified Storage.Queries.RouteDetails as QRouteDetails
 import Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Error
-import qualified Tools.Maps as Maps
+import qualified Tools.Error as StationError
 import Tools.MultiModal as MM
 import qualified Tools.MultiModal as TMultiModal
 import qualified Tools.Payment as Payment
@@ -1058,206 +1059,228 @@ postMultimodalOrderChangeStops ::
   )
 postMultimodalOrderChangeStops _ journeyId legOrder req = do
   when (isNothing req.newSourceStation && isNothing req.newDestinationStation) $
-    throwError $ InvalidRequest "At least one of newSourceStation or newDestinationStation must be provided"
+    throwError $ InvalidStationChange "" "At least one of newSourceStation or newDestinationStation must be provided"
   journey <- JM.getJourney journeyId
   allLegs <- QJourneyLeg.getJourneyLegs journeyId
-  let sortedLegs = sortBy (\a b -> compare a.sequenceNumber b.sequenceNumber) allLegs
-  reqJourneyLeg <- find (\leg -> leg.sequenceNumber == legOrder) allLegs & fromMaybeM (InvalidRequest $ "Leg not found for legOrder: " <> show legOrder)
+  reqJourneyLeg <- find (\leg -> leg.sequenceNumber == legOrder) allLegs & fromMaybeM (InvalidLegOrder legOrder)
+  validateChangeNeededForStop reqJourneyLeg req.newSourceStation req.newDestinationStation
   integratedBPPConfig <- SIBC.findIntegratedBPPConfig Nothing reqJourneyLeg.merchantOperatingCityId (Utils.frfsVehicleCategoryToBecknVehicleCategory Spec.METRO) DIBC.MULTIMODAL
   riderConfig <-
     QRC.findByMerchantOperatingCityId reqJourneyLeg.merchantOperatingCityId Nothing
       >>= fromMaybeM (RiderConfigDoesNotExist reqJourneyLeg.merchantOperatingCityId.getId)
 
-  (metroLeg, mbSourceStation, mbDestStation) <- case (req.newSourceStation, req.newDestinationStation) of
-    (Just sourceStation, Just destStation) -> do
-      sourceStationData <-
-        OTPRest.getStationByGtfsIdAndStopCode sourceStation.stopCode integratedBPPConfig
-          >>= fromMaybeM (InvalidRequest $ "Source station not found: " <> sourceStation.stopCode)
-      destStationData <-
-        OTPRest.getStationByGtfsIdAndStopCode destStation.stopCode integratedBPPConfig
-          >>= fromMaybeM (InvalidRequest $ "Destination station not found: " <> destStation.stopCode)
+  (newLeg, mbSourceStation, mbDestStation) <- processChangeStops journey reqJourneyLeg integratedBPPConfig riderConfig
 
-      metroLeg <- validateAndGetMetroLeg sourceStation.latLong destStation.latLong sourceStation.stopCode destStation.stopCode journey journeyId reqJourneyLeg riderConfig
-
-      return (metroLeg, Just sourceStationData, Just destStationData)
-    (Just sourceStation, Nothing) -> do
-      destStopCode <- reqJourneyLeg.toStopDetails >>= (.stopCode) & fromMaybeM (InvalidRequest "Current destination station not found")
-      sourceStationData <-
-        OTPRest.getStationByGtfsIdAndStopCode sourceStation.stopCode integratedBPPConfig
-          >>= fromMaybeM (InvalidRequest $ "Source station not found: " <> sourceStation.stopCode)
-      let destLatLong = LatLong reqJourneyLeg.endLocation.latitude reqJourneyLeg.endLocation.longitude
-      metroLeg <- validateAndGetMetroLeg sourceStation.latLong destLatLong sourceStation.stopCode destStopCode journey journeyId reqJourneyLeg riderConfig
-
-      return (metroLeg, Just sourceStationData, Nothing)
-    (Nothing, Just destStation) -> do
-      sourceStopCode <- reqJourneyLeg.fromStopDetails >>= (.stopCode) & fromMaybeM (InvalidRequest "Current source station not found")
-      destStationData <-
-        OTPRest.getStationByGtfsIdAndStopCode destStation.stopCode integratedBPPConfig
-          >>= fromMaybeM (InvalidRequest $ "Destination station not found: " <> destStation.stopCode)
-      let sourceLatLong = LatLong reqJourneyLeg.startLocation.latitude reqJourneyLeg.startLocation.longitude
-      metroLeg <- validateAndGetMetroLeg sourceLatLong destStation.latLong sourceStopCode destStation.stopCode journey journeyId reqJourneyLeg riderConfig
-
-      return (metroLeg, Nothing, Just destStationData)
-    (Nothing, Nothing) ->
-      throwError $ InvalidRequest "No stations provided for change"
-
-  let (prevLeg, nextLeg) = findAdjacentLegs reqJourneyLeg.sequenceNumber sortedLegs
-  mbGates <- updateLegsWithGates riderConfig prevLeg nextLeg reqJourneyLeg metroLeg journey.merchantId reqJourneyLeg.merchantOperatingCityId mbSourceStation mbDestStation
+  let (prevLeg, nextLeg) = JMU.findAdjacentLegs reqJourneyLeg.sequenceNumber allLegs
+  mbGates <- updateLegsWithGates riderConfig prevLeg nextLeg reqJourneyLeg newLeg journey.merchantId reqJourneyLeg.merchantOperatingCityId mbSourceStation mbDestStation
 
   newJourneyLeg <-
     JMTypes.mkJourneyLeg
       legOrder
-      (Nothing, metroLeg, Nothing)
+      (Nothing, newLeg, Nothing)
       journey.fromLocation journey.toLocation
       journey.merchantId reqJourneyLeg.merchantOperatingCityId
       journeyId
       (Id journey.searchRequestId)
       riderConfig.maximumWalkDistance Nothing mbGates
-  QJourneyLeg.updateIsDeleted (Just True) reqJourneyLeg.id
-  QJourneyLeg.create newJourneyLeg
+  QJourneyLegMapping.updateIsDeleted True reqJourneyLeg.id
+  QJourneyLegExtra.create newJourneyLeg
 
   return $ API.Types.UI.MultimodalConfirm.ChangeStopsResp {stationsChanged = True}
+  where
+    validateChangeNeededForStop reqJourneyLeg mbSourceStation mbDestStation = do
+      let currentSrc = reqJourneyLeg.fromStopDetails >>= (.stopCode)
+          currentDest = reqJourneyLeg.toStopDetails >>= (.stopCode)
+          newSrc = (.stopCode) <$> mbSourceStation
+          newDest = (.stopCode) <$> mbDestStation
+      when (currentSrc == newSrc && currentDest == newDest) $
+        throwError $ InvalidStationChange "" "No change needed for the stop"
 
-findAdjacentLegs :: Int -> [DJourneyLeg.JourneyLeg] -> (Maybe DJourneyLeg.JourneyLeg, Maybe DJourneyLeg.JourneyLeg)
-findAdjacentLegs sequenceNumber legs =
-  let prevLeg = find (\leg -> leg.sequenceNumber == sequenceNumber - 1) legs
-      nextLeg = find (\leg -> leg.sequenceNumber == sequenceNumber + 1) legs
-   in (prevLeg, nextLeg)
+    processChangeStops ::
+      (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasShortDurationRetryCfg r c) =>
+      Domain.Types.Journey.Journey ->
+      DJourneyLeg.JourneyLeg ->
+      DIBC.IntegratedBPPConfig ->
+      DRC.RiderConfig ->
+      m (MultiModalTypes.MultiModalLeg, Maybe DStation.Station, Maybe DStation.Station)
+    processChangeStops journey reqJourneyLeg integratedBPPConfig riderConfig = do
+      case (req.newSourceStation, req.newDestinationStation) of
+        (Just sourceStation, Just destStation) -> do
+          sourceStationData <-
+            OTPRest.getStationByGtfsIdAndStopCode sourceStation.stopCode integratedBPPConfig
+              >>= fromMaybeM (StationError.StationNotFound sourceStation.stopCode)
+          destStationData <-
+            OTPRest.getStationByGtfsIdAndStopCode destStation.stopCode integratedBPPConfig
+              >>= fromMaybeM (StationError.StationNotFound destStation.stopCode)
 
-validateAndGetMetroLeg ::
-  (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasShortDurationRetryCfg r c) =>
-  LatLong -> -- Source location
-  LatLong -> -- Destination location
-  Text -> -- Source stop code
-  Text -> -- Destination stop code
-  Domain.Types.Journey.Journey ->
-  Id Domain.Types.Journey.Journey ->
-  DJourneyLeg.JourneyLeg ->
-  DRC.RiderConfig ->
-  m MultiModalTypes.MultiModalLeg
-validateAndGetMetroLeg sourceLatLong destLatLong sourceStopCode destStopCode journey journeyId reqJourneyLeg riderConfig = do
-  let transitRoutesReq =
-        GetTransitRoutesReq
-          { origin = WayPointV2 {location = LocationV2 {latLng = LatLngV2 {latitude = sourceLatLong.lat, longitude = sourceLatLong.lon}}},
-            destination = WayPointV2 {location = LocationV2 {latLng = LatLngV2 {latitude = destLatLong.lat, longitude = destLatLong.lon}}},
-            arrivalTime = Nothing,
-            departureTime = Nothing,
-            mode = Nothing,
-            transitPreferences = Nothing,
-            transportModes = Nothing,
-            minimumWalkDistance = riderConfig.minimumWalkDistance,
-            permissibleModes = fromMaybe [] riderConfig.permissibleModes,
-            maxAllowedPublicTransportLegs = riderConfig.maxAllowedPublicTransportLegs,
-            sortingType = MultiModal.Fastest
-          }
+          sourceLat <- sourceStationData.lat & fromMaybeM (StationError.InvalidStationData "Source station latitude not found")
+          sourceLon <- sourceStationData.lon & fromMaybeM (StationError.InvalidStationData "Source station longitude not found")
+          destLat <- destStationData.lat & fromMaybeM (StationError.InvalidStationData "Destination station latitude not found")
+          destLon <- destStationData.lon & fromMaybeM (StationError.InvalidStationData "Destination station longitude not found")
+          let sourceLatLong = LatLong sourceLat sourceLon
+              destLatLong = LatLong destLat destLon
 
-  transitServiceReq <- TMultiModal.getTransitServiceReq journey.merchantId reqJourneyLeg.merchantOperatingCityId
-  otpResponse <- JMU.measureLatency (MultiModal.getTransitRoutes (Just journeyId.getId) transitServiceReq transitRoutesReq >>= fromMaybeM (InternalError "No routes found from OTP")) "getTransitRoutes"
+          multiModalLeg <- getUpdatedMultiModalLeg sourceLatLong destLatLong sourceStation.stopCode destStation.stopCode journey reqJourneyLeg riderConfig
 
-  validatedRoute <- JMU.getBestOneWayRoute MultiModalTypes.MetroRail otpResponse.routes (Just sourceStopCode) (Just destStopCode) & fromMaybeM (InvalidRequest "No valid metro route found between the specified stops")
+          return (multiModalLeg, Just sourceStationData, Just destStationData)
+        (Just sourceStation, Nothing) -> do
+          destStopCode <- reqJourneyLeg.toStopDetails >>= (.stopCode) & fromMaybeM (StationError.InvalidStationData "Current destination station not found")
+          sourceStationData <-
+            OTPRest.getStationByGtfsIdAndStopCode sourceStation.stopCode integratedBPPConfig
+              >>= fromMaybeM (StationError.StationNotFound sourceStation.stopCode)
+          sourceLat <- sourceStationData.lat & fromMaybeM (StationError.InvalidStationData "Source station latitude not found")
+          sourceLon <- sourceStationData.lon & fromMaybeM (StationError.InvalidStationData "Source station longitude not found")
+          let sourceLatLong = LatLong sourceLat sourceLon
+              destLatLong = LatLong reqJourneyLeg.endLocation.latitude reqJourneyLeg.endLocation.longitude
+          multiModalLeg <- getUpdatedMultiModalLeg sourceLatLong destLatLong sourceStation.stopCode destStopCode journey reqJourneyLeg riderConfig
 
-  metroLeg <- case filter (\leg -> leg.mode == MultiModalTypes.MetroRail) validatedRoute.legs of
-    [singleMetroLeg] -> return singleMetroLeg
-    [] -> throwError $ InvalidRequest "No metro leg found in route"
-    _ -> throwError $ InvalidRequest "Multiple metro legs found in route"
+          return (multiModalLeg, Just sourceStationData, Nothing)
+        (Nothing, Just destStation) -> do
+          sourceStopCode <- reqJourneyLeg.fromStopDetails >>= (.stopCode) & fromMaybeM (StationError.InvalidStationData "Current source station not found")
+          destStationData <-
+            OTPRest.getStationByGtfsIdAndStopCode destStation.stopCode integratedBPPConfig
+              >>= fromMaybeM (StationError.StationNotFound destStation.stopCode)
+          let sourceLatLong = LatLong reqJourneyLeg.startLocation.latitude reqJourneyLeg.startLocation.longitude
+          destLat <- destStationData.lat & fromMaybeM (StationError.InvalidStationData "Destination station latitude not found")
+          destLon <- destStationData.lon & fromMaybeM (StationError.InvalidStationData "Destination station longitude not found")
+          let destLatLong = LatLong destLat destLon
+          multiModalLeg <- getUpdatedMultiModalLeg sourceLatLong destLatLong sourceStopCode destStation.stopCode journey reqJourneyLeg riderConfig
 
-  return metroLeg
+          return (multiModalLeg, Nothing, Just destStationData)
+        (Nothing, Nothing) ->
+          throwError $ InvalidStationChange "" "No stations provided for change"
 
-updateLegsWithGates ::
-  (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasShortDurationRetryCfg r c) =>
-  DRC.RiderConfig ->
-  Maybe DJourneyLeg.JourneyLeg ->
-  Maybe DJourneyLeg.JourneyLeg ->
-  DJourneyLeg.JourneyLeg ->
-  MultiModalTypes.MultiModalLeg ->
-  Id Domain.Types.Merchant.Merchant ->
-  Id DMOC.MerchantOperatingCity ->
-  Maybe DStation.Station ->
-  Maybe DStation.Station ->
-  m (Maybe JMTypes.Gates)
-updateLegsWithGates riderConfig mbPrevLeg mbNextLeg oldMetroLeg metroLeg merchantId merchantOpCityId mbSourceStation mbDestStation = do
-  mbEntranceGates <- case (mbPrevLeg, mbSourceStation) of
-    (Just prevLeg, Just sourceStation) -> do
-      let prevLegStartPoint = LatLong prevLeg.startLocation.latitude prevLeg.startLocation.longitude
-      (mbOsmEntrance, mbStraightLineEntrance) <- JMTypes.getNearestGateFromLeg prevLegStartPoint merchantId merchantOpCityId (fromMaybe [] sourceStation.gates)
-      let bestEntrance = mbOsmEntrance <|> mbStraightLineEntrance
-          prevLegEndLocation = maybe prevLeg.endLocation (\e -> LatLngV2 (fromMaybe prevLeg.endLocation.latitude e.lat) (fromMaybe prevLeg.endLocation.longitude e.lon)) bestEntrance
-      (mbNewDistance, mbNewDuration) <- getDistanceAndDuration merchantId merchantOpCityId prevLegStartPoint (LatLong prevLegEndLocation.latitude prevLegEndLocation.longitude)
-      let mode = maybe prevLeg.mode (\newDistance' -> if newDistance' < riderConfig.maximumWalkDistance then DTrip.Walk else DTrip.Taxi) mbNewDistance
-          newDistance = maybe prevLeg.distance (\newDistance' -> Just (convertMetersToDistance Meter newDistance')) mbNewDistance
-          newDuration = maybe prevLeg.duration (\newDistance' -> if newDistance' < riderConfig.maximumWalkDistance then Just (calculateWalkDuration (convertMetersToDistance Meter newDistance')) else mbNewDuration) mbNewDistance
-          updatedPrevLeg =
-            prevLeg
-              { DJourneyLeg.endLocation = prevLegEndLocation,
-                DJourneyLeg.toStopDetails = metroLeg.fromStopDetails,
-                DJourneyLeg.osmEntrance = mbOsmEntrance,
-                DJourneyLeg.straightLineEntrance = mbStraightLineEntrance,
-                DJourneyLeg.legSearchId = Nothing,
-                DJourneyLeg.distance = newDistance,
-                DJourneyLeg.duration = newDuration,
-                DJourneyLeg.mode = mode
+    getUpdatedMultiModalLeg ::
+      (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasShortDurationRetryCfg r c) =>
+      LatLong -> -- Source location
+      LatLong -> -- Destination location
+      Text -> -- Source stop code
+      Text -> -- Destination stop code
+      Domain.Types.Journey.Journey ->
+      DJourneyLeg.JourneyLeg ->
+      DRC.RiderConfig ->
+      m MultiModalTypes.MultiModalLeg
+    getUpdatedMultiModalLeg sourceLatLong destLatLong sourceStopCode destStopCode journey reqJourneyLeg riderConfig = do
+      case reqJourneyLeg.mode of
+        DTrip.Metro -> validateAndGetMetroLeg sourceLatLong destLatLong sourceStopCode destStopCode journey reqJourneyLeg riderConfig
+        _ -> throwError $ InvalidRequest "Mode not implemented for station changes"
+
+    validateAndGetMetroLeg ::
+      (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasShortDurationRetryCfg r c) =>
+      LatLong -> -- Source location
+      LatLong -> -- Destination location
+      Text -> -- Source stop code
+      Text -> -- Destination stop code
+      Domain.Types.Journey.Journey ->
+      DJourneyLeg.JourneyLeg ->
+      DRC.RiderConfig ->
+      m MultiModalTypes.MultiModalLeg
+    validateAndGetMetroLeg sourceLatLong destLatLong sourceStopCode destStopCode journey reqJourneyLeg riderConfig = do
+      let transitRoutesReq =
+            GetTransitRoutesReq
+              { origin = WayPointV2 {location = LocationV2 {latLng = LatLngV2 {latitude = sourceLatLong.lat, longitude = sourceLatLong.lon}}},
+                destination = WayPointV2 {location = LocationV2 {latLng = LatLngV2 {latitude = destLatLong.lat, longitude = destLatLong.lon}}},
+                arrivalTime = Nothing,
+                departureTime = Nothing,
+                mode = Nothing,
+                transitPreferences = Nothing,
+                transportModes = Nothing,
+                minimumWalkDistance = riderConfig.minimumWalkDistance,
+                permissibleModes = fromMaybe [] riderConfig.permissibleModes,
+                maxAllowedPublicTransportLegs = riderConfig.maxAllowedPublicTransportLegs,
+                sortingType = MultiModal.Fastest
               }
-      QJourneyLeg.updateByPrimaryKey updatedPrevLeg
-      return $ Just (mbOsmEntrance, mbStraightLineEntrance)
-    _ -> return Nothing
 
-  mbExitGates <- case (mbNextLeg, mbDestStation) of
-    (Just nextLeg, Just destStation) -> do
-      let nextLegEndPoint = LatLong nextLeg.endLocation.latitude nextLeg.endLocation.longitude
-      (mbOsmExit, mbStraightLineExit) <- JMTypes.getNearestGateFromLeg nextLegEndPoint merchantId merchantOpCityId (fromMaybe [] destStation.gates)
-      let bestExit = mbOsmExit <|> mbStraightLineExit
-      let nextLegStartLocation = maybe nextLeg.startLocation (\e -> LatLngV2 (fromMaybe nextLeg.startLocation.latitude e.lat) (fromMaybe nextLeg.startLocation.longitude e.lon)) bestExit
-      (mbNewDistance, mbNewDuration) <- getDistanceAndDuration merchantId merchantOpCityId (LatLong nextLegStartLocation.latitude nextLegStartLocation.longitude) nextLegEndPoint
-      let mode = maybe nextLeg.mode (\newDistance' -> if newDistance' < riderConfig.maximumWalkDistance then DTrip.Walk else DTrip.Taxi) mbNewDistance
-          newDistance = maybe nextLeg.distance (\newDistance' -> Just (convertMetersToDistance Meter newDistance')) mbNewDistance
-          newDuration = maybe nextLeg.duration (\newDistance' -> if newDistance' < riderConfig.maximumWalkDistance then Just (calculateWalkDuration (convertMetersToDistance Meter newDistance')) else mbNewDuration) mbNewDistance
-      let updatedNextLeg =
-            nextLeg
-              { DJourneyLeg.startLocation = nextLegStartLocation,
-                DJourneyLeg.fromStopDetails = metroLeg.toStopDetails,
-                DJourneyLeg.osmExit = mbOsmExit,
-                DJourneyLeg.straightLineExit = mbStraightLineExit,
-                DJourneyLeg.legSearchId = Nothing,
-                DJourneyLeg.distance = newDistance,
-                DJourneyLeg.duration = newDuration,
-                DJourneyLeg.mode = mode
-              }
-      QJourneyLeg.updateByPrimaryKey updatedNextLeg
-      return $ Just (mbOsmExit, mbStraightLineExit)
-    _ -> return Nothing
+      transitServiceReq <- TMultiModal.getTransitServiceReq journey.merchantId reqJourneyLeg.merchantOperatingCityId
+      otpResponse <- JMU.measureLatency (MultiModal.getTransitRoutes (Just journeyId.getId) transitServiceReq transitRoutesReq >>= fromMaybeM (OTPServiceUnavailable "No routes found from OTP")) "getTransitRoutes"
 
-  case (mbEntranceGates, mbExitGates) of
-    (Nothing, Nothing) -> return Nothing
-    _ ->
-      let straightLineEntrance = (mbEntranceGates >>= snd) <|> (oldMetroLeg.straightLineEntrance)
-          straightLineExit = (mbExitGates >>= snd) <|> (oldMetroLeg.straightLineExit)
-          osmEntrance = (mbEntranceGates >>= fst) <|> (oldMetroLeg.osmEntrance)
-          osmExit = (mbExitGates >>= fst) <|> (oldMetroLeg.osmExit)
-       in return $ Just JMTypes.Gates {..}
+      validatedRoute <- JMU.getBestOneWayRoute MultiModalTypes.MetroRail otpResponse.routes (Just sourceStopCode) (Just destStopCode) & fromMaybeM (NoValidMetroRoute sourceStopCode destStopCode)
 
-getDistanceAndDuration ::
-  (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]) =>
-  Id Domain.Types.Merchant.Merchant ->
-  Id DMOC.MerchantOperatingCity ->
-  LatLong ->
-  LatLong ->
-  m (Maybe Meters, Maybe Seconds)
-getDistanceAndDuration merchantId merchantOpCityId startLocation endLocation = do
-  let origin = startLocation
-      destination = endLocation
-  distResp <-
-    try @_ @SomeException $
-      Maps.getMultimodalWalkDistance merchantId merchantOpCityId Nothing $
-        Maps.GetDistanceReq
-          { origin = origin,
-            destination = destination,
-            travelMode = Just Maps.FOOT,
-            sourceDestinationMapping = Nothing,
-            distanceUnit = Meter
-          }
-  case distResp of
-    Right response -> do
-      return (Just response.distance, Just response.duration)
-    Left err -> do
-      logError $ "Failed to get walk distance from OSRM for leg " <> show merchantId.getId <> ": " <> show err
-      return (Nothing, Nothing)
+      metroLeg <- case filter (\leg -> leg.mode == MultiModalTypes.MetroRail) validatedRoute.legs of
+        [singleMetroLeg] -> return singleMetroLeg
+        _ -> throwError $ MetroLegNotFound "Multiple metro legs found in route"
+      return metroLeg
+
+    updateLegsWithGates ::
+      (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasShortDurationRetryCfg r c) =>
+      DRC.RiderConfig ->
+      Maybe DJourneyLeg.JourneyLeg ->
+      Maybe DJourneyLeg.JourneyLeg ->
+      DJourneyLeg.JourneyLeg ->
+      MultiModalTypes.MultiModalLeg ->
+      Id Domain.Types.Merchant.Merchant ->
+      Id DMOC.MerchantOperatingCity ->
+      Maybe DStation.Station ->
+      Maybe DStation.Station ->
+      m (Maybe JMTypes.Gates)
+    updateLegsWithGates riderConfig mbPrevLeg mbNextLeg oldJourneyLeg multiModalLeg merchantId merchantOpCityId mbSourceStation mbDestStation = do
+      mbEntranceGates <- case (mbPrevLeg, mbSourceStation) of
+        (Just prevLeg, Just sourceStation) -> do
+          let prevLegStartPoint = LatLong prevLeg.startLocation.latitude prevLeg.startLocation.longitude
+          (mbOsmEntrance, mbStraightLineEntrance) <- JMTypes.getNearestGateFromLeg prevLegStartPoint merchantId merchantOpCityId (fromMaybe [] sourceStation.gates)
+          let bestEntrance = mbOsmEntrance <|> mbStraightLineEntrance
+              prevLegEndLocation = maybe prevLeg.endLocation (\e -> LatLngV2 (fromMaybe prevLeg.endLocation.latitude e.lat) (fromMaybe prevLeg.endLocation.longitude e.lon)) bestEntrance
+          (mbNewDistance, _) <- JMU.getDistanceAndDuration merchantId merchantOpCityId prevLegStartPoint (LatLong prevLegEndLocation.latitude prevLegEndLocation.longitude)
+          let (mode, newDistance, newDuration) =
+                case mbNewDistance of
+                  Just newD
+                    | newD < riderConfig.maximumWalkDistance ->
+                      ( DTrip.Walk,
+                        Just (convertMetersToDistance Meter newD),
+                        Just (calculateWalkDuration (convertMetersToDistance Meter newD))
+                      )
+                  _ -> (prevLeg.mode, prevLeg.distance, prevLeg.duration)
+              updatedPrevLeg =
+                prevLeg
+                  { DJourneyLeg.endLocation = prevLegEndLocation,
+                    DJourneyLeg.toStopDetails = multiModalLeg.fromStopDetails,
+                    DJourneyLeg.osmEntrance = mbOsmEntrance,
+                    DJourneyLeg.straightLineEntrance = mbStraightLineEntrance,
+                    DJourneyLeg.legSearchId = Nothing,
+                    DJourneyLeg.distance = newDistance,
+                    DJourneyLeg.duration = newDuration,
+                    DJourneyLeg.mode = mode
+                  }
+          QJourneyLeg.updateByPrimaryKey updatedPrevLeg
+          return $ Just (mbOsmEntrance, mbStraightLineEntrance)
+        _ -> return Nothing
+
+      mbExitGates <- case (mbNextLeg, mbDestStation) of
+        (Just nextLeg, Just destStation) -> do
+          let nextLegEndPoint = LatLong nextLeg.endLocation.latitude nextLeg.endLocation.longitude
+          (mbOsmExit, mbStraightLineExit) <- JMTypes.getNearestGateFromLeg nextLegEndPoint merchantId merchantOpCityId (fromMaybe [] destStation.gates)
+          let bestExit = mbOsmExit <|> mbStraightLineExit
+          let nextLegStartLocation = maybe nextLeg.startLocation (\e -> LatLngV2 (fromMaybe nextLeg.startLocation.latitude e.lat) (fromMaybe nextLeg.startLocation.longitude e.lon)) bestExit
+          (mbNewDistance, _) <- JMU.getDistanceAndDuration merchantId merchantOpCityId (LatLong nextLegStartLocation.latitude nextLegStartLocation.longitude) nextLegEndPoint
+          let (mode, newDistance, newDuration) =
+                case mbNewDistance of
+                  Just newD
+                    | newD < riderConfig.maximumWalkDistance ->
+                      ( DTrip.Walk,
+                        Just (convertMetersToDistance Meter newD),
+                        Just (calculateWalkDuration (convertMetersToDistance Meter newD))
+                      )
+                  _ -> (nextLeg.mode, nextLeg.distance, nextLeg.duration)
+          let updatedNextLeg =
+                nextLeg
+                  { DJourneyLeg.startLocation = nextLegStartLocation,
+                    DJourneyLeg.fromStopDetails = multiModalLeg.toStopDetails,
+                    DJourneyLeg.osmExit = mbOsmExit,
+                    DJourneyLeg.straightLineExit = mbStraightLineExit,
+                    DJourneyLeg.legSearchId = Nothing,
+                    DJourneyLeg.distance = newDistance,
+                    DJourneyLeg.duration = newDuration,
+                    DJourneyLeg.mode = mode
+                  }
+          QJourneyLeg.updateByPrimaryKey updatedNextLeg
+          return $ Just (mbOsmExit, mbStraightLineExit)
+        _ -> return Nothing
+
+      case (mbEntranceGates, mbExitGates) of
+        (Nothing, Nothing) -> return Nothing
+        _ ->
+          let straightLineEntrance = (mbEntranceGates >>= snd) <|> (oldJourneyLeg.straightLineEntrance)
+              straightLineExit = (mbExitGates >>= snd) <|> (oldJourneyLeg.straightLineExit)
+              osmEntrance = (mbEntranceGates >>= fst) <|> (oldJourneyLeg.osmEntrance)
+              osmExit = (mbExitGates >>= fst) <|> (oldJourneyLeg.osmExit)
+           in return $ Just JMTypes.Gates {..}

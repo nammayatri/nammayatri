@@ -428,6 +428,7 @@ data StationError
   = StationNotFound Text
   | StationDoesNotExist Text
   | StationsNotFound Text Text
+  | InvalidStationData Text -- station data issue
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''StationError
@@ -437,17 +438,20 @@ instance IsBaseError StationError where
     StationNotFound msg -> Just $ "Station Not Found:-" <> msg
     StationDoesNotExist msg -> Just $ "Station Does Not Exist:-" <> msg
     StationsNotFound start end -> Just $ "Station Not Found:-" <> start <> ", " <> end
+    InvalidStationData reason -> Just $ "Invalid station data: " <> reason
 
 instance IsHTTPError StationError where
   toErrorCode = \case
     StationNotFound _ -> "STATION_NOT_FOUND"
     StationDoesNotExist _ -> "STATION_DOES_NOT_EXIST"
     StationsNotFound _ _ -> "STATIONS_NOT_FOUND"
+    InvalidStationData _ -> "INVALID_STATION_DATA"
 
   toHttpCode = \case
     StationNotFound _ -> E500
     StationDoesNotExist _ -> E400
     StationsNotFound _ _ -> E500
+    InvalidStationData _ -> E400
 
 instance IsAPIError StationError
 
@@ -956,3 +960,41 @@ instance IsHTTPError SearchCancelErrors where
     FailedToCancelSearch _ -> E400
 
 instance IsAPIError SearchCancelErrors
+
+data MultimodalError
+  = InvalidStationChange Text Text
+  | NoValidMetroRoute Text Text -- source, destination
+  | MetroLegNotFound Text -- reason
+  | InvalidLegOrder Int -- legOrder
+  | OSRMFailure Text -- reason
+  | OTPServiceUnavailable Text -- reason
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''MultimodalError
+
+instance IsBaseError MultimodalError where
+  toMessage = \case
+    InvalidStationChange stopCode reason -> Just $ "Invalid station change for stop code " <> stopCode <> ": " <> reason
+    NoValidMetroRoute source dest -> Just $ "No valid metro route found between " <> source <> " and " <> dest
+    MetroLegNotFound reason -> Just $ "Metro leg not found: " <> reason
+    InvalidLegOrder legOrder -> Just $ "Invalid leg order: " <> show legOrder
+    OSRMFailure reason -> Just $ "OSRM service failure: " <> reason
+    OTPServiceUnavailable reason -> Just $ "OTP service unavailable: " <> reason
+
+instance IsHTTPError MultimodalError where
+  toErrorCode = \case
+    InvalidStationChange _ _ -> "INVALID_STATION_CHANGE"
+    NoValidMetroRoute _ _ -> "NO_VALID_METRO_ROUTE"
+    MetroLegNotFound _ -> "METRO_LEG_NOT_FOUND"
+    InvalidLegOrder _ -> "INVALID_LEG_ORDER"
+    OSRMFailure _ -> "OSRM_FAILURE"
+    OTPServiceUnavailable _ -> "OTP_SERVICE_UNAVAILABLE"
+  toHttpCode = \case
+    InvalidStationChange _ _ -> E400
+    NoValidMetroRoute _ _ -> E400
+    MetroLegNotFound _ -> E400
+    InvalidLegOrder _ -> E400
+    OSRMFailure _ -> E500
+    OTPServiceUnavailable _ -> E503
+
+instance IsAPIError MultimodalError
