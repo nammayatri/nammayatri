@@ -83,4 +83,10 @@
     <string name="stops">%1$d സ്റ്റോപ്പുകൾ</string>
     <string name="round_trip">റൗണ്ട് ട്രിപ്പ്</string>
     <string name="points">പോയിന്റുകൾ</string>
+    <string name="pickup_instruction_fallback">പിക്കപ്പ് നിർദ്ദേശങ്ങൾ ലഭ്യമാണ്. ദയവായി നിങ്ങളുടെ സന്ദേശങ്ങൾ പരിശോധിക്കുക.</string>
+    <string name="pickup_instruction_error">പിക്കപ്പ് നിർദ്ദേശങ്ങൾ പ്രദർശിപ്പിക്കുന്നതിനിടെ പിഴവ്</string>
+    <string name="pickup_instruction_none">പിക്കപ്പ് നിർദ്ദേശങ്ങൾ ലഭ്യമല്ല</string>
+    <string name="pickup_instruction_play_voice">വോയ്സ് നിർദേശങ്ങൾ പ്ലേ ചെയ്യുക</string>
+    <string name="pickup_instruction_audio_unavailable_suffix">(ഓഡിയോ ലഭ്യമല്ല)</string>
+    <string name="pickup_instruction_default_text">ദയവായി ഗേറ്റ് 4-ൽ നിന്നെ പിക്കപ്പ് ചെയ്യുക. നീല ബോർഡ് നോക്കുക, അവിടെ കാത്തിരിക്കുക.</string>
 </resources>

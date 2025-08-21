@@ -87,4 +87,10 @@
     <string name="stops">%1$d ನಿಲ್ದಾಣಗಳು</string>
     <string name="round_trip">ರೌಂಡ್ ಟ್ರಿಪ್</string>
     <string name="points">ಪಾಯಿಂಟ್‌ಗಳು</string>
+    <string name="pickup_instruction_fallback">ಪಿಕಪ್ ಸೂಚನೆಗಳು ಲಭ್ಯವಿವೆ. ದಯವಿಟ್ಟು ನಿಮ್ಮ ಸಂದೇಶಗಳನ್ನು ಪರಿಶೀಲಿಸಿ.</string>
+    <string name="pickup_instruction_error">ಪಿಕಪ್ ಸೂಚನೆಗಳನ್ನು ಪ್ರದರ್ಶಿಸುವಲ್ಲಿ ದೋಷ</string>
+    <string name="pickup_instruction_none">ಪಿಕಪ್ ಸೂಚನೆಗಳು ಲಭ್ಯವಿಲ್ಲ</string>
+    <string name="pickup_instruction_play_voice">ಧ್ವನಿ ಸೂಚನೆಗಳನ್ನು ಪ್ಲೇ ಮಾಡಿ</string>
+    <string name="pickup_instruction_audio_unavailable_suffix">(ಆಡಿಯೋ ಲಭ್ಯವಿಲ್ಲ)</string>
+    <string name="pickup_instruction_default_text">ದಯವಿಟ್ಟು ಗೇಟ್ 4 ನಲ್ಲಿ ನನ್ನನ್ನು ಪಿಕಪ್ ಮಾಡಿ. ನೀಲಿ ಫಲಕವನ್ನು ನೋಡಿ ಅಲ್ಲಿ ನಿರೀಕ್ಷಿಸಿ.</string>
 </resources>

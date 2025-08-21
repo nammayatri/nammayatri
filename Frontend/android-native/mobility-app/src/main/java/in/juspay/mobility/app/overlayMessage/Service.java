@@ -72,6 +72,9 @@ public class Service extends android.app.Service {
             case NotificationTypes.EKD_LIVE_CALL_FEEDBACK:
                 overlayView = new CallFeedbackView();
                 break;
+            case NotificationTypes.PICKUP_INSTRUCTIONS:
+                overlayView = new PickupInstructionOverlayView();
+                break;
             default:
                 overlayView = new MessagingView();
         }
