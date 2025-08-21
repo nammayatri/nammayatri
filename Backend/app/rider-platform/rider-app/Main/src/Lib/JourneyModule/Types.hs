@@ -85,6 +85,7 @@ import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
+import qualified Storage.Queries.FRFSSearch as QFRFSSearch
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.FRFSVehicleServiceTier as QFRFSVehicleServiceTier
@@ -885,6 +886,11 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
 
           mbQuote <- QFRFSQuote.findById booking.quoteId
           let mbSelectedServiceTier = getServiceTierFromQuote =<< mbQuote
+
+          discounts <- case journeyLeg.legSearchId of
+            Just searchId -> extractDiscountsFromQuotes searchId
+            Nothing -> return []
+
           return $
             Bus $
               BusLegExtraInfo
@@ -905,7 +911,8 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
                   childTicketQuantity = booking.childTicketQuantity,
                   refund = refundBloc,
                   trackingStatus = journeyLegDetail.trackingStatus,
-                  fleetNo = journeyLeg.finalBoardedBusNumber
+                  fleetNo = journeyLeg.finalBoardedBusNumber,
+                  discounts = Just discounts
                 }
         Spec.SUBWAY -> do
           mbQuote <- QFRFSQuote.findById booking.quoteId
@@ -1061,6 +1068,10 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg = do
           let routeCode' = journeyLegDetail.routeCode
 
           let mbSelectedServiceTier = getServiceTierFromQuote =<< mbQuote
+          discounts <- case journeyLeg.legSearchId of
+            Just searchId -> extractDiscountsFromQuotes searchId
+            Nothing -> return []
+
           return $
             Bus $
               BusLegExtraInfo
@@ -1081,7 +1092,8 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg = do
                   childTicketQuantity = mbQuote >>= (.childTicketQuantity),
                   refund = Nothing,
                   trackingStatus = journeyLegDetail.trackingStatus,
-                  fleetNo = journeyLeg.finalBoardedBusNumber
+                  fleetNo = journeyLeg.finalBoardedBusNumber,
+                  discounts = Just discounts
                 }
         Spec.SUBWAY -> do
           let mbSelectedServiceTier = getServiceTierFromQuote =<< mbQuote
@@ -1531,3 +1543,20 @@ isTaxiLegOngoing journeyLeg = do
               return $ estimate.status `elem` [DEstimate.COMPLETED, DEstimate.DRIVER_QUOTE_REQUESTED, DEstimate.GOT_DRIVER_QUOTE, DEstimate.DRIVER_QUOTE_CANCELLED]
             Nothing -> return False
     _ -> return False
+
+extractDiscountsFromQuotes :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => Text -> m [FRFSTicketServiceAPI.FRFSDiscountRes]
+extractDiscountsFromQuotes searchId = do
+  quotes <- QFRFSQuote.findAllBySearchId (Id searchId)
+
+  let allDiscounts = concatMap extractDiscountsFromQuote quotes
+
+  return allDiscounts
+  where
+    extractDiscountsFromQuote :: DFRFSQuote.FRFSQuote -> [FRFSTicketServiceAPI.FRFSDiscountRes]
+    extractDiscountsFromQuote quote =
+      case quote.discountsJson of
+        Just discountJson ->
+          case decodeFromText discountJson of
+            Just discounts -> discounts
+            Nothing -> []
+        Nothing -> []

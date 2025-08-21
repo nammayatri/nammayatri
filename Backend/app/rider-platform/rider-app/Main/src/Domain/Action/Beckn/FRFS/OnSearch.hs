@@ -87,18 +87,18 @@ data DQuote = DQuote
     vehicleType :: Spec.VehicleCategory,
     routeStations :: [DRouteStation],
     stations :: [DStation],
-    discounts :: [DDiscount],
+    categories :: [DCategory],
     fareDetails :: Maybe Quote.FRFSFareDetails,
     _type :: Quote.FRFSQuoteType
   }
 
-data DDiscount = DDiscount
+data DCategory = DCategory
   { code :: Text,
-    title :: Text,
-    description :: Text,
-    tnc :: Text,
+    bppItemId :: Text,
+    category :: FRFSQuoteCategoryType,
     price :: Price,
-    eligibility :: Bool
+    offeredPrice :: Maybe OfferedValue,
+    maxTicketAllowed :: Maybe Int
   }
 
 data DRouteStation = DRouteStation
@@ -386,7 +386,8 @@ castDiscountToAPI DDiscount {..} =
       API.title = title,
       API.description = description,
       API.tnc = tnc,
-      API.eligibility = eligibility
+      API.eligibility = eligibility,
+      API.discountPercentage = discountPercentage
     }
 
 isQuoteChanged :: (Quote.FRFSQuote, Quote.FRFSQuote) -> Bool

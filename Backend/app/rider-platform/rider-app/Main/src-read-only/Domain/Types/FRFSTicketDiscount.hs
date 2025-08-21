@@ -21,13 +21,13 @@ data FRFSTicketDiscount = FRFSTicketDiscount
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     title :: Kernel.Prelude.Text,
     tnc :: Kernel.Prelude.Text,
-    value :: Domain.Types.FRFSTicketDiscount.DiscountValue,
+    value :: Domain.Types.FRFSTicketDiscount.OfferedValue,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
-data DiscountValue = FixedAmount Kernel.Types.Common.HighPrecMoney | Percentage Kernel.Prelude.Double deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data OfferedValue = FixedAmount Kernel.Types.Common.HighPrecMoney | Percentage Kernel.Prelude.Double deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''DiscountValue))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''OfferedValue))

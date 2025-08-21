@@ -461,10 +461,11 @@ startJourney riderId confirmElements forcedBookedLegOrder journeyId = do
         let mElement = find (\element -> element.journeyLegOrder == leg.order) confirmElements
             ticketQuantity = mElement >>= (.ticketQuantity)
             childTicketQuantity = mElement >>= (.childTicketQuantity)
+            frfsDiscountReq = mElement >>= (.frfsDiscountReq)
         let forcedBooking = Just leg.order == forcedBookedLegOrder
         let crisSdkResponse = find (\element -> element.journeyLegOrder == leg.order) confirmElements >>= (.crisSdkResponse)
         when (leg.status == JL.InPlan) $ do
-          JLI.confirm forcedBooking ticketQuantity childTicketQuantity leg crisSdkResponse
+          JLI.confirm forcedBooking ticketQuantity childTicketQuantity leg crisSdkResponse frfsDiscountReq
     )
     allLegs
 

@@ -136,8 +136,9 @@ select ::
   DQuote.FRFSQuote ->
   Maybe Int ->
   Maybe Int ->
+  [FRFSDiscountReq] ->
   m ()
-select processOnSelectHandler merchant merchantOperatingCity bapConfig quote ticketQuantity childTicketQuantity = do
+select processOnSelectHandler merchant merchantOperatingCity bapConfig quote ticketQuantity childTicketQuantity frfsDiscountReq = do
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity quote
   case integratedBPPConfig.providerConfig of
     ONDC _ -> do
@@ -146,7 +147,7 @@ select processOnSelectHandler merchant merchantOperatingCity bapConfig quote tic
         let updatedQuantity = fromMaybe quote.quantity ticketQuantity
         let updatedQuote = quote {DQuote.quantity = updatedQuantity, DQuote.childTicketQuantity = childTicketQuantity}
         providerUrl <- quote.bppSubscriberUrl & parseBaseUrl
-        bknSelectReq <- ACL.buildSelectReq updatedQuote bapConfig Utils.BppData {bppId = quote.bppSubscriberId, bppUri = quote.bppSubscriberUrl} merchantOperatingCity.city
+        bknSelectReq <- ACL.buildSelectReq updatedQuote bapConfig Utils.BppData {bppId = quote.bppSubscriberId, bppUri = quote.bppSubscriberUrl} merchantOperatingCity.city frfsDiscountReq
         logDebug $ "FRFS SelectReq " <> encodeToText bknSelectReq
         Metrics.startMetrics Metrics.SELECT_FRFS merchant.name quote.searchId.getId merchantOperatingCity.id.getId
         void $ CallFRFSBPP.select providerUrl bknSelectReq merchant.id

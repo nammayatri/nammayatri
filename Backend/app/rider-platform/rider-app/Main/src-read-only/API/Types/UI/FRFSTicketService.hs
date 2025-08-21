@@ -104,7 +104,8 @@ data FRFSDiscountRes = FRFSDiscountRes
     eligibility :: Kernel.Prelude.Bool,
     price :: Kernel.Types.Common.PriceAPIEntity,
     title :: Data.Text.Text,
-    tnc :: Data.Text.Text
+    tnc :: Data.Text.Text,
+    discountPercentage :: Data.Maybe.Maybe Kernel.Prelude.Double
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

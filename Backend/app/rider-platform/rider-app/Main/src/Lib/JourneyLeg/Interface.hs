@@ -143,8 +143,8 @@ getFare fromArrivalTime riderId merchantId merchantOperatingCityId leg = \case
               Just $ FRFSRouteDetails {routeCode = Just routeCode, ..}
             _ -> Nothing
 
-confirm :: JL.ConfirmFlow m r c => Bool -> Maybe Int -> Maybe Int -> JL.LegInfo -> Maybe CrisSdkResponse -> m ()
-confirm forcedBooked ticketQuantity childTicketQuantity JL.LegInfo {..} crisSdkResponse =
+confirm :: JL.ConfirmFlow m r c => Bool -> Maybe Int -> Maybe Int -> JL.LegInfo -> Maybe CrisSdkResponse -> [FRFSDiscountReq] -> m ()
+confirm forcedBooked ticketQuantity childTicketQuantity JL.LegInfo {..} crisSdkResponse frfsDiscountReq =
   case travelMode of
     DTrip.Taxi -> do
       confirmReq :: TaxiLegRequest <- mkTaxiLegConfirmReq
@@ -219,5 +219,6 @@ confirm forcedBooked ticketQuantity childTicketQuantity JL.LegInfo {..} crisSdkR
               merchantId,
               merchantOperatingCityId,
               quantity = ticketQuantity,
-              childTicketQuantity
+              childTicketQuantity,
+              frfsDiscountReq
             }

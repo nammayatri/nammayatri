@@ -15,12 +15,13 @@ import Kernel.Utils.Common
 
 buildSelectReq ::
   (MonadFlow m) =>
-  DQuote.FRFSQuote ->
+  [DQuote.FRFSQuote] ->
   BecknConfig ->
   Utils.BppData ->
   Context.City ->
+  [FRFSDiscountReq] ->
   m Spec.SelectReq
-buildSelectReq quote bapConfig bppData city = do
+buildSelectReq quote bapConfig bppData city frfsDiscountReq = do
   now <- getCurrentTime
   let transactionId = quote.searchId.getId
   let messageId = quote.id.getId
@@ -42,8 +43,8 @@ tfSelectMessage quote mSettlementType =
     { confirmReqMessageOrder = tfOrder quote mSettlementType
     }
 
-tfOrder :: DQuote.FRFSQuote -> Maybe Text -> Spec.Order
-tfOrder quote mSettlementType =
+tfOrder :: DQuote.FRFSQuote -> Maybe Text -> [FRFSDiscountReq] -> Spec.Order
+tfOrder quote mSettlementType frfsDiscountReq =
   Spec.Order
     { orderBilling = Nothing,
       orderCancellation = Nothing,
@@ -51,7 +52,7 @@ tfOrder quote mSettlementType =
       orderCreatedAt = Nothing,
       orderFulfillments = Nothing,
       orderId = Nothing,
-      orderItems = tfItems quote,
+      orderItems = tfItems quote frfsDiscountReq,
       orderPayments = tfPayments quote mSettlementType,
       orderProvider = tfProvider quote,
       orderQuote = Nothing,
@@ -60,8 +61,8 @@ tfOrder quote mSettlementType =
       orderUpdatedAt = Nothing
     }
 
-tfItems :: DQuote.FRFSQuote -> Maybe [Spec.Item]
-tfItems quote =
+tfItems :: DQuote.FRFSQuote -> [FRFSDiscountReq] -> Maybe [Spec.Item]
+tfItems quote frfsDiscountReq =
   Just $
     [ Spec.Item
         { itemCategoryIds = Nothing,
@@ -69,13 +70,13 @@ tfItems quote =
           itemFulfillmentIds = Nothing,
           itemId = Just quote.bppItemId,
           itemPrice = Nothing,
-          itemQuantity = tfQuantity quote,
+          itemQuantity = tfQuantity quote.quantity,
           itemTime = Nothing
         }
     ]
 
-tfQuantity :: DQuote.FRFSQuote -> Maybe Spec.ItemQuantity
-tfQuantity quote =
+tfQuantity :: Int -> Maybe Spec.ItemQuantity
+tfQuantity quantity =
   Just $
     Spec.ItemQuantity
       { itemQuantityMaximum = Nothing,
@@ -83,7 +84,7 @@ tfQuantity quote =
         itemQuantitySelected =
           Just $
             Spec.ItemQuantitySelected
-              { itemQuantitySelectedCount = Just quote.quantity
+              { itemQuantitySelectedCount = Just quantity
               }
       }
 

@@ -39,6 +39,10 @@ imports:
   CrisSearchData: Lib.JourneyLeg.Types
   RouteStopTimeTable: Domain.Types.RouteStopTimeTable
 
+types:
+  FRFSQuoteCategoryType:
+    enum: "ADULT, CHILD, SENIOR_CITIZEN, STUDENT, FEMALE, MALE"
+
 FRFSSearch:
   tableName: frfs_search
 
@@ -121,7 +125,6 @@ FRFSQuote:
     quantity: Int
     stationsJson: Text
     routeStationsJson: Maybe Text
-    discountsJson: Maybe Text
     vehicleType: VehicleCategory
     bppSubscriberId: Text
     bppSubscriberUrl: Text
@@ -218,6 +221,67 @@ FRFSQuote:
 
   extraOperations:
     - EXTRA_QUERY_FILE
+
+# Default FRFSQuoteCategory is for ADULT category
+FRFSQuoteCategory:
+  tableName: frfs_quote_category
+  fields:
+    id: Id FRFSQuoteCategory
+    quoteId: Id FRFSQuote
+    bppItemId: Text
+    ticketCategoryMetadataConfig: FRFSTicketCategoryMetadataConfig|NoRelation
+    price: Price
+    offeredPrice: OfferedValue
+    maxTicketAllowed: Maybe Int
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+  constraints:
+    id: PrimaryKey
+    quoteId: SecondaryKey
+  beamFields:
+    ticketCategoryMetadataConfigId: Id FRFSTicketCategoryMetadataConfig
+
+  fromTType:
+    ticketCategoryMetadataConfig: Storage.Queries|E
+
+  toTType:
+    ticketCategoryMetadataConfigId: (.id)|I
+
+  queries:
+
+FRFSQuoteBreakup:
+  tableName: frfs_quote_breakup
+  fields:
+    id: Id FRFSQuoteBreakup
+    quoteId: Id FRFSQuote
+    quoteCategoryId: Id FRFSQuoteCategory
+    tag:
+    |  "ADULT_PRICE" | "CHILD_PRICE" | "SENIOR_CITIZEN_PRICE" | "STUDENT_PRICE" | "FEMALE_PRICE" | "MALE_PRICE" # OnSearch
+      "ADULT_QUANTITY" | "CHILD_QUANTITY" | "SENIOR_CITIZEN_QUANTITY" | "STUDENT_QUANTITY" | "FEMALE_QUANTITY" | "MALE_QUANTITY" | # Select
+    value: Text
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+  constraints:
+    id: PrimaryKey
+    quoteId: SecondaryKey
+    quoteCategoryId: SecondaryKey
+
+FRFSTicketBookingBreakup:
+  tableName: frfs_ticket_booking_breakup
+  fields:
+    id: Id FRFSTicketBookingBreakup
+    ticketBookingId: Id FRFSTicketBooking
+    quoteCategoryId: Id FRFSQuoteCategory
+    tag:
+    |  "ADULT_PRICE" | "CHILD_PRICE" | "SENIOR_CITIZEN_PRICE" | "STUDENT_PRICE" | "FEMALE_PRICE" | "MALE_PRICE" # Init
+      "ADULT_QUANTITY" | "CHILD_QUANTITY" | "SENIOR_CITIZEN_QUANTITY" | "STUDENT_QUANTITY" | "FEMALE_QUANTITY" | "MALE_QUANTITY" | # Init
+    value: Text
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+  constraints:
+    id: PrimaryKey
+    quoteId: SecondaryKey
+    quoteCategoryId: SecondaryKey
 
 FRFSTicketBooking:
   tableName: frfs_ticket_booking
@@ -816,22 +880,35 @@ FRFSRouteStopStageFare:
       where:
         and: [farePolicyId, routeCode, stopCode]
 
+FRFSTicketCategoryMetadataConfig:
+  tableName: frfs_ticket_category_metadata_config
+  fields:
+    id: Id FRFSTicketCategoryMetadataConfig
+    code: Maybe Text
+    title: Text
+    description: Text
+    tnc: Maybe Text
+    category: ADULT | CHILD | SENIOR_CITIZEN | STUDENT | FEMALE | MALE
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    vehicleCategory: VehicleCategory
+  constraints:
+    id: PrimaryKey
+
 FRFSTicketDiscount:
   tableName: frfs_ticket_discount
   derives: "Generic,Show,Eq,FromJSON,ToJSON,ToSchema"
   fields:
     id: Id FRFSTicketDiscount
+    ticketCategoryMetadataConfigId: Id FRFSTicketCategoryMetadataConfig
     code: Text
-    title: Text
-    description: Text
-    tnc: Text
-    value: DiscountValue
+    value: OfferedValue
     currency: Currency
     vehicleType: VehicleCategory
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
   types:
-    DiscountValue:
+    OfferedValue:
       enum: "FixedAmount HighPrecMoney, Percentage Double"
   constraints:
     id: PrimaryKey

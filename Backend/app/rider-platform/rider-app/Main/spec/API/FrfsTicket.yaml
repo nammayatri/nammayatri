@@ -70,14 +70,14 @@ types:
     eligibility: Bool
     derive: "Show"
 
-  FRFSDiscountReq:
-    code: Text
+  FRFSCategorySelectionReq:
+    quoteCategoryId: Id FRFSQuoteCategory
     quantity: Int
 
   FRFSQuoteConfirmReq:
-    discounts: "[FRFSDiscountReq]"
-    ticketQuantity: Maybe Int
-    childTicketQuantity: Maybe Int
+    offered: "[FRFSCategorySelectionReq]"
+    ticketQuantity: Maybe Int # TODO: To Be Deprecated
+    childTicketQuantity: Maybe Int # TODO: To Be Deprecated
 
   FRFSTicketBookingStatusAPIRes:
     bookingId: Id FRFSTicketBooking

@@ -84,7 +84,8 @@ data JourneyConfirmReqElement = JourneyConfirmReqElement
     crisSdkResponse :: Kernel.Prelude.Maybe CrisSdkResponse,
     journeyLegOrder :: Kernel.Prelude.Int,
     skipBooking :: Kernel.Prelude.Bool,
-    ticketQuantity :: Kernel.Prelude.Maybe Kernel.Prelude.Int
+    ticketQuantity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    frfsDiscountReq :: [API.Types.UI.FRFSTicketService.FRFSDiscountReq]
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

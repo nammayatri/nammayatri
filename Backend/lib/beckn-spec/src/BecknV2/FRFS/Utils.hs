@@ -29,6 +29,16 @@ parsePrice specPrice = do
   money <- parseMoney specPrice
   Just $ mkPrice (Just currency) money
 
+parseOfferPrice :: Spec.Price -> Maybe Price
+parseOfferPrice specPrice = do
+  currency <- parseCurrency specPrice
+  money <- parseOfferMoney specPrice
+  Just $ mkPrice (Just currency) money
+
+parseOfferMoney :: Spec.Price -> Maybe HighPrecMoney
+parseOfferMoney price =
+  price.priceOfferedValue >>= (readMaybe . T.unpack)
+
 parseMoney :: Spec.Price -> Maybe HighPrecMoney
 parseMoney price =
   price.priceValue >>= (readMaybe . T.unpack)

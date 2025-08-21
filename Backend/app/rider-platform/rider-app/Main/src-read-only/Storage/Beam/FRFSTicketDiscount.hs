@@ -22,7 +22,7 @@ data FRFSTicketDiscountT f = FRFSTicketDiscountT
     merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
     title :: (B.C f Kernel.Prelude.Text),
     tnc :: (B.C f Kernel.Prelude.Text),
-    value :: (B.C f Domain.Types.FRFSTicketDiscount.DiscountValue),
+    value :: (B.C f Domain.Types.FRFSTicketDiscount.OfferedValue),
     vehicleType :: (B.C f BecknV2.FRFS.Enums.VehicleCategory),
     createdAt :: (B.C f Kernel.Prelude.UTCTime),
     updatedAt :: (B.C f Kernel.Prelude.UTCTime)

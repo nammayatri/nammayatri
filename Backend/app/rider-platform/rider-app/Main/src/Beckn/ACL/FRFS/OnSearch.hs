@@ -64,7 +64,7 @@ buildOnSearchReq onSearchReq = do
 
   when (null interestTags) $
     throwError $ InvalidRequest "Payment tags are missing for all payments"
-
+,
   let bppDelayedInterest = listToMaybe interestTags
 
   quotes <- mkQuotes items fulfillments
@@ -96,6 +96,7 @@ parseFulfillments :: (MonadFlow m) => Spec.Item -> [Spec.Fulfillment] -> Text ->
 parseFulfillments item fulfillments fulfillmentId = do
   itemId <- item.itemId & fromMaybeM (InvalidRequest "ItemId not found")
   itemCode <- item.itemDescriptor >>= (.descriptorCode) & fromMaybeM (InvalidRequest "ItemCode not found")
+  let itemDescriptorName = item.itemDescriptor >>= (.descriptorName)
   quoteType <- castQuoteType itemCode
 
   fulfillment <- fulfillments & find (\fulfillment -> fulfillment.fulfillmentId == Just fulfillmentId) & fromMaybeM (InvalidRequest "Fulfillment not found")
@@ -106,8 +107,15 @@ parseFulfillments item fulfillments fulfillmentId = do
       then fulfillmentStops & sequenceStops & mapWithIndex (\idx stop -> mkDStation stop (Just $ idx + 1))
       else traverse (\s -> mkDStation s Nothing) fulfillmentStops
   price <- item.itemPrice >>= Utils.parsePrice & fromMaybeM (InvalidRequest "Price not found")
+  let offerPrice = item.itemPrice >>= Utils.parseOfferPrice
   vehicleCategory <- fulfillment.fulfillmentVehicle >>= (.vehicleCategory) & fromMaybeM (InvalidRequest "VehicleType not found")
   vehicleType <- vehicleCategory & castVehicleVariant & fromMaybeM (InvalidRequest "VehicleType not found")
+
+  -- Create discount based on offerPrice if it exists
+  let discount = createDiscountFromOfferPrice itemId itemDescriptorName price offerPrice
+      discounts = case discount of
+        Just d -> [d]
+        Nothing -> []
 
   return $
     Domain.DQuote
@@ -119,7 +127,7 @@ parseFulfillments item fulfillments fulfillmentId = do
         routeStations = [],
         stations,
         fareDetails = Nothing,
-        discounts = [],
+        discounts = discounts,
         _type = quoteType
       }
 
@@ -193,8 +201,38 @@ castStationType = \case
   _ -> Nothing
 
 castQuoteType :: MonadFlow m => Text -> m DQuote.FRFSQuoteType
-castQuoteType "SJT" = return DQuote.SingleJourney
-castQuoteType "SFSJT" = return DQuote.SpecialFareSingleJourney
+castQuoteType "SJT" = return DQuote.SingleJourney -- MALE
+castQuoteType "SFSJT" = return DQuote.SpecialFareSingleJourney -- FEMALE
 castQuoteType "RJT" = return DQuote.ReturnJourney
 castQuoteType "PASS" = return DQuote.Pass
 castQuoteType _ = throwError $ InvalidRequest "Invalid quote type"
+
+-- Create discount based on offerPrice difference
+createDiscountFromOfferPrice :: Text -> Maybe Text -> Price -> Maybe Price -> Maybe Domain.DDiscount
+createDiscountFromOfferPrice item price offerPrice = do
+  -- Only create discount if offerPrice exists and is different from original price
+  offeredPrice <- offerPrice
+  guard (offeredPrice.amount < price.amount)
+
+  -- Get item ID for the discount code
+  itemId <- item.itemId
+
+  let originalAmount = price.amount
+      offeredAmount = offeredPrice.amount
+      discountAmount = originalAmount - offeredAmount
+      discountPercentage = (discountAmount / originalAmount) * 100
+      discountPrice = Price
+        { amount = discountAmount
+        , amountInt = Money (round discountAmount)
+        , currency = price.currency
+        }
+
+  Just $ Domain.DDiscount
+    { code = itemId
+    , title = fromMaybe "Special Offer Discount" itemDescriptorName
+    , description = "Special discount offer for this item"
+    , tnc = "<b>Terms and conditions apply for this special offer</b>"
+    , price = discountPrice
+    , eligibility = True
+    , discountPercentage = Just (fromRational $ toRational discountPercentage)
+    }

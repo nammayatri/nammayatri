@@ -148,7 +148,7 @@ search merchant merchantOperatingCity integratedBPPConfig bapConfig mbNetworkHos
 
     mkDVehicleServiceTier FRFSVehicleServiceTier {..} = DVehicleServiceTier {..}
 
-    mkDDiscount FRFSDiscount {..} = DDiscount {..}
+    mkDDiscount FRFSDiscount {..} = DDiscount {discountPercentage = Nothing, ..}
 
 select :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> DFRFSQuote.FRFSQuote -> Maybe Int -> Maybe Int -> m DOnSelect
 select _merchant _merchantOperatingCity _integratedBPPConfig _bapConfig quote ticketQuantity childTicketQuantity = do
