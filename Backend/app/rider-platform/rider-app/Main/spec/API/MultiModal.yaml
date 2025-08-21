@@ -242,6 +242,7 @@ types:
 
   SimilarJourneyLegsResp:
     journeyLegsInfo: "[JourneyLegOption]"
+    allLegsLoaded: Bool
 
 apis:
   - POST:

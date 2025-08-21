@@ -651,7 +651,7 @@ buildMultimodalRouteDetails ::
   Id Merchant ->
   Id MerchantOperatingCity ->
   Enums.VehicleCategory ->
-  m (Maybe MultiModalTypes.MultiModalRouteDetails)
+  m (Maybe MultiModalTypes.MultiModalRouteDetails, Maybe HighPrecMeters)
 buildMultimodalRouteDetails subLegOrder mbRouteCode originStopCode destinationStopCode integratedBppConfig mid mocid vc = do
   mbFromStop <- OTPRest.getStationByGtfsIdAndStopCode originStopCode integratedBppConfig
   mbToStop <- OTPRest.getStationByGtfsIdAndStopCode destinationStopCode integratedBppConfig
@@ -661,7 +661,7 @@ buildMultimodalRouteDetails subLegOrder mbRouteCode originStopCode destinationSt
   case (mbFromStop >>= (.lat), mbFromStop >>= (.lon), mbToStop >>= (.lat), mbToStop >>= (.lon)) of
     (Just fromStopLat, Just fromStopLon, Just toStopLat, Just toStopLon) -> do
       (nextAvailableRouteCode, possibleRoutes) <- measureLatency (findPossibleRoutes Nothing originStopCode destinationStopCode currentTime integratedBppConfig mid mocid vc True) "findPossibleRoutes"
-
+      let distance = distanceBetweenInMeters (LatLong fromStopLat fromStopLon) (LatLong toStopLat toStopLon)
       let routeCode = mbRouteCode <|> nextAvailableRouteCode
       mbRoute <-
         maybe
@@ -717,25 +717,27 @@ buildMultimodalRouteDetails subLegOrder mbRouteCode originStopCode destinationSt
           let fromStopLocation = LocationV2 {latLng = LatLngV2 {latitude = fromStopLat, longitude = fromStopLon}}
           let toStopLocation = LocationV2 {latLng = LatLngV2 {latitude = toStopLat, longitude = toStopLon}}
           return $
-            Just $
-              MultiModalTypes.MultiModalRouteDetails
-                { gtfsId = Just route.code,
-                  longName = Just route.longName,
-                  shortName = Just route.shortName,
-                  alternateShortNames = concatMap (.availableRoutes) possibleRoutes,
-                  color = route.color,
-                  fromStopDetails = Just fromStopDetails,
-                  toStopDetails = Just toStopDetails,
-                  startLocation = fromStopLocation,
-                  endLocation = toStopLocation,
-                  subLegOrder,
-                  fromArrivalTime = mbDepartureTime,
-                  fromDepartureTime = mbDepartureTime,
-                  toArrivalTime = mbArrivalTime,
-                  toDepartureTime = mbArrivalTime
-                }
-        _ -> return Nothing
-    _ -> return Nothing
+            ( Just
+                MultiModalTypes.MultiModalRouteDetails
+                  { gtfsId = Just route.code,
+                    longName = Just route.longName,
+                    shortName = Just route.shortName,
+                    alternateShortNames = concatMap (.availableRoutes) possibleRoutes,
+                    color = route.color,
+                    fromStopDetails = Just fromStopDetails,
+                    toStopDetails = Just toStopDetails,
+                    startLocation = fromStopLocation,
+                    endLocation = toStopLocation,
+                    subLegOrder,
+                    fromArrivalTime = mbDepartureTime,
+                    fromDepartureTime = mbDepartureTime,
+                    toArrivalTime = mbArrivalTime,
+                    toDepartureTime = mbArrivalTime
+                  },
+              Just distance
+            )
+        _ -> return (Nothing, Just distance)
+    _ -> return (Nothing, Nothing)
   where
     findMatchingDestinationTiming getTripId getStopCode originTiming destStopTimings stopCodeToSequenceNum =
       let originSeq = Map.lookup (getStopCode originTiming) stopCodeToSequenceNum
@@ -760,7 +762,7 @@ buildSingleModeDirectRoutes ::
   MultiModalTypes.GeneralVehicleType ->
   Flow [MultiModalTypes.MultiModalRoute]
 buildSingleModeDirectRoutes getPreliminaryLeg mbRouteCode (Just originStopCode) (Just destinationStopCode) (Just integratedBppConfig) mid mocid vc mode = do
-  mbRouteDetails <- buildMultimodalRouteDetails 1 mbRouteCode originStopCode destinationStopCode integratedBppConfig mid mocid vc
+  (mbRouteDetails, _) <- buildMultimodalRouteDetails 1 mbRouteCode originStopCode destinationStopCode integratedBppConfig mid mocid vc
   case mbRouteDetails of
     Just routeDetails -> do
       currentTime <- getCurrentTime
@@ -786,16 +788,23 @@ buildTrainAllViaRoutes getPreliminaryLeg (Just originStopCode) (Just destination
   mapMaybeM
     ( \viaRoutes -> do
         -- consider distance for future
-        routeDetails <- mapMaybeM (\(osc, dsc) -> buildMultimodalRouteDetails 1 Nothing osc dsc integratedBppConfig mid mocid vc) viaRoutes
-        logDebug $ "buildTrainAllViaRoutes routeDetails: " <> show routeDetails
-        let updateRouteDetails = zipWith (\idx routeDetail -> routeDetail {MultiModalTypes.subLegOrder = idx}) [1 ..] routeDetails
-        case updateRouteDetails of
-          [] -> return Nothing
-          (rD : _) -> do
-            currentTime <- getCurrentTime
-            let (_, currentTimeIST) = getISTTimeInfo currentTime
-            mbPreliminaryLeg <- getPreliminaryLeg rD.startLocation
-            return $ Just $ mkMultiModalRoute currentTimeIST mbPreliminaryLeg mode (NonEmpty.fromList updateRouteDetails)
+        routeDetailsWithDistance <- mapM (\(osc, dsc) -> buildMultimodalRouteDetails 1 Nothing osc dsc integratedBppConfig mid mocid vc) viaRoutes
+        logDebug $ "buildTrainAllViaRoutes routeDetailsWithDistance: " <> show routeDetailsWithDistance
+        -- ensure that atleast one train route is possible or two stops are less than 1km apart so that user can walk to other station e.g. Chennai Park to Central station
+        let isRoutePossible = all (\(mbRouteDetails, mbDistance) -> isJust mbRouteDetails || (isJust mbDistance && mbDistance < Just (HighPrecMeters 1000))) routeDetailsWithDistance
+        if isRoutePossible
+          then do
+            let routeDetails = mapMaybe (\(mbRouteDetails, _) -> mbRouteDetails) routeDetailsWithDistance
+            logDebug $ "buildTrainAllViaRoutes routeDetails: " <> show routeDetails
+            let updateRouteDetails = zipWith (\idx routeDetail -> routeDetail {MultiModalTypes.subLegOrder = idx}) [1 ..] routeDetails
+            case updateRouteDetails of
+              [] -> return Nothing
+              (rD : _) -> do
+                currentTime <- getCurrentTime
+                let (_, currentTimeIST) = getISTTimeInfo currentTime
+                mbPreliminaryLeg <- getPreliminaryLeg rD.startLocation
+                return $ Just $ mkMultiModalRoute currentTimeIST mbPreliminaryLeg mode (NonEmpty.fromList updateRouteDetails)
+          else return Nothing
     )
     allSubwayRoutes
   where

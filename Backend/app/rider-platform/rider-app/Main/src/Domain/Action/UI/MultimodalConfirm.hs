@@ -923,14 +923,16 @@ getMultimodalOrderSimilarJourneyLegs (mbPersonId, merchantId) journeyId legOrder
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   journey <- JM.getJourney journeyId
   legs <- QJourneyLeg.getJourneyLegs journeyId
+  mbSearchRequest <- QSearchRequest.findById (Id journey.searchRequestId)
   journeyLeg <- find (\leg -> leg.sequenceNumber == legOrder) legs & fromMaybeM (InvalidRequest "No matching journey leg found for the given legOrder")
   let groupCode = JMTypes.mkJourneyLegGroupCode (Id journey.searchRequestId) journeyLeg.mode journeyLeg.fromStopDetails journeyLeg.toStopDetails
   journeyLegs <- QJourneyLeg.findByGroupCode groupCode
+  let allLegsLoaded = fromMaybe True (mbSearchRequest >>= (.allJourneysLoaded))
   let journeyLegsWithTransits = map (\leg -> (mkStationCodesFromRouteDetails leg.routeDetails, leg)) journeyLegs
       sortedJourneyLegsWithTransits = sortBy (\a b -> compare (fst a) (fst b)) journeyLegsWithTransits
       uniqueJourneyLegsWithTransits = nubBy (\a b -> fst a == fst b) sortedJourneyLegsWithTransits
   journeyLegsInfo <- mapMaybeM (createLegOption person . snd) uniqueJourneyLegsWithTransits
-  return $ API.Types.UI.MultimodalConfirm.SimilarJourneyLegsResp {journeyLegsInfo}
+  return $ API.Types.UI.MultimodalConfirm.SimilarJourneyLegsResp {journeyLegsInfo, allLegsLoaded}
   where
     mkStationCodesFromRouteDetails :: [RD.RouteDetails] -> Text
     mkStationCodesFromRouteDetails routeDetails =
