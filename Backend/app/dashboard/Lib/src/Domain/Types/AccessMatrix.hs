@@ -384,6 +384,7 @@ data UserActionType
   | COLLECT_MANUAL_PAYMENTS
   | EXEMPT_DRIVER_FEE
   | PAN_AADHAAR_SELFIE_DETAILS_LIST
+  | WHITELIST_MERCHANT_OPERATING_CITY
   | PROVIDER_FLEET ProviderFleet.FleetUserActionType
   | PROVIDER_OPERATOR ProviderOperator.OperatorUserActionType
   | PROVIDER_MANAGEMENT ProviderManagement.ManagementUserActionType

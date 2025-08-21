@@ -30,6 +30,7 @@ module Domain.Action.Dashboard.Merchant
     postMerchantTicketConfigUpsert,
     postMerchantConfigSpecialLocationUpsert,
     postMerchantSchedulerTrigger,
+    postMerchantConfigOperatingCityWhiteList,
   )
 where
 
@@ -61,6 +62,7 @@ import Domain.Types.ServiceCategory
 import Domain.Types.ServicePeopleCategory
 import Domain.Types.TicketPlace hiding (Fee (..))
 import Domain.Types.TicketService
+import qualified Domain.Types.WhiteListOrg as WLO
 import Environment
 import qualified EulerHS.Language as L
 import qualified "shared-services" IssueManagement.Common as ICommon
@@ -121,6 +123,7 @@ import qualified Storage.Queries.ServicePeopleCategory as SQSPC
 import qualified Storage.Queries.ServicePeopleCategoryExtra as SQSPCE
 import qualified Storage.Queries.TicketPlace as SQTP
 import qualified Storage.Queries.TicketService as SQTS
+import qualified Storage.Queries.WhiteListOrg as QWLO
 import Tools.Error
 import qualified Tools.Payment as Payment
 
@@ -1505,3 +1508,31 @@ postMerchantSchedulerTrigger merchantShortId opCity req = do
               pure Success
             Nothing -> throwError $ InternalError "invalid job data"
         Nothing -> throwError $ InternalError "invalid job name"
+
+-- create the EP here
+
+postMerchantConfigOperatingCityWhiteList :: ShortId DM.Merchant -> Context.City -> Common.WhiteListOperatingCityReq -> Flow Common.WhiteListOperatingCityRes
+postMerchantConfigOperatingCityWhiteList _ _ req = do
+  let merchantId = req.bapMerchantId
+      merchantOperatingCityId = req.bapMerchantOperatingCityId
+      bapSubDomain = req.bapSubscriberDomain
+  now <- getCurrentTime
+  whiteListOrgId <- generateGUID
+  let whiteListOrgReq =
+        WLO.WhiteListOrg
+          { domain = bapSubDomain,
+            id = whiteListOrgId,
+            merchantId = Id merchantId,
+            merchantOperatingCityId = Id merchantOperatingCityId,
+            subscriberId = req.bapSubscriberId,
+            createdAt = now,
+            updatedAt = now
+          }
+  QWLO.create whiteListOrgReq
+
+  pure $
+    Common.WhiteListOperatingCityRes
+      { penetrationSuccesful = True,
+        penetrationMessage = "Success",
+        penerationError = Nothing
+      }
