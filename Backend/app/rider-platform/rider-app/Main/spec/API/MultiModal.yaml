@@ -246,7 +246,6 @@ types:
 
   StationAPIEntity:
     stopCode: Text
-    latLong: LatLong
 
   ChangeStopsReq:
     journeyId: Id Journey

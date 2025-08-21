@@ -224,7 +224,7 @@ data SingleQRReq = SingleQRReq {provider :: Lib.JourneyModule.Types.Provider, ti
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data StationAPIEntity = StationAPIEntity {latLong :: Kernel.External.Maps.Types.LatLong, stopCode :: Kernel.Prelude.Text}
+data StationAPIEntity = StationAPIEntity {stopCode :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

@@ -61,6 +61,7 @@ import qualified Storage.Queries.RecentLocation as SQRL
 import qualified Storage.Queries.VehicleRouteMapping as QVehicleRouteMapping
 import qualified System.Environment as Se
 import Tools.Maps (LatLong (..))
+import qualified Tools.Maps as Maps
 import qualified Tools.Payment as TPayment
 
 mapWithIndex :: (MonadFlow m) => (Int -> a -> m b) -> [a] -> m [b]
@@ -1006,3 +1007,40 @@ getRouteCodesFromTo fromCode toCode integratedBPPConfig = do
       routeCodes <- fetchPossibleRoutes fromCode toCode integratedBPPConfig
       Hedis.setExp key routeCodes 86400 -- 24 hours
       return routeCodes
+
+-- | Find adjacent legs based on sequence number
+findAdjacentLegs :: Int -> [DJourneyLeg.JourneyLeg] -> (Maybe DJourneyLeg.JourneyLeg, Maybe DJourneyLeg.JourneyLeg)
+findAdjacentLegs sequenceNumber legs =
+  let sortedLegs = sortBy (comparing (.sequenceNumber)) legs
+      prevLeg = find (\leg -> leg.sequenceNumber == sequenceNumber - 1) sortedLegs
+      nextLeg = find (\leg -> leg.sequenceNumber == sequenceNumber + 1) sortedLegs
+   in (prevLeg, nextLeg)
+
+-- | Get distance and duration between two locations using OSRM
+getDistanceAndDuration ::
+  (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasKafkaProducer r) =>
+  Id Merchant ->
+  Id MerchantOperatingCity ->
+  LatLong ->
+  LatLong ->
+  m (Maybe Meters, Maybe Seconds)
+getDistanceAndDuration merchantId merchantOpCityId startLocation endLocation = do
+  let origin = startLocation
+      destination = endLocation
+  distResp <-
+    try @_ @SomeException $
+      Maps.getMultimodalWalkDistance merchantId merchantOpCityId Nothing $
+        Maps.GetDistanceReq
+          { origin = origin,
+            destination = destination,
+            travelMode = Just Maps.FOOT,
+            sourceDestinationMapping = Nothing,
+            distanceUnit = Meter
+          }
+  case distResp of
+    Right response -> do
+      return (Just response.distance, Just response.duration)
+    Left err -> do
+      logError $ "Failed to get walk distance from OSRM for leg " <> show merchantId.getId <> ": " <> show err
+      -- Return Nothing instead of throwing error to allow graceful fallback
+      return (Nothing, Nothing)
