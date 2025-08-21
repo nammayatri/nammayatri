@@ -30,6 +30,7 @@ module Domain.Action.Dashboard.Merchant
     postMerchantTicketConfigUpsert,
     postMerchantConfigSpecialLocationUpsert,
     postMerchantSchedulerTrigger,
+    postMerchantConfigOperatingCityWhiteList,
   )
 where
 
@@ -61,6 +62,7 @@ import Domain.Types.ServiceCategory
 import Domain.Types.ServicePeopleCategory
 import Domain.Types.TicketPlace hiding (Fee (..))
 import Domain.Types.TicketService
+import qualified Domain.Types.WhiteListOrg as WLO
 import Environment
 import qualified EulerHS.Language as L
 import qualified "shared-services" IssueManagement.Common as ICommon
@@ -121,6 +123,7 @@ import qualified Storage.Queries.ServicePeopleCategory as SQSPC
 import qualified Storage.Queries.ServicePeopleCategoryExtra as SQSPCE
 import qualified Storage.Queries.TicketPlace as SQTP
 import qualified Storage.Queries.TicketService as SQTS
+import qualified Storage.Queries.WhiteListOrg as QWLO
 import Tools.Error
 import qualified Tools.Payment as Payment
 
@@ -539,7 +542,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
 
   -- beckn config
   becknConfigList <- SQBC.findAllByMerchantOperatingCityId (Just baseOperatingCityId)
-  let becknConfigFRFS = listToMaybe $ filter (\bcknCfg -> bcknCfg.domain == (show FRFS.FRFS)) becknConfigList
+  let becknConfigFRFS = find (\bcknCfg -> bcknCfg.domain == show FRFS.FRFS) becknConfigList
   mbBecknConfig <-
     SQBC.findAllByMerchantOperatingCityId (Just newMerchantOperatingCityId) >>= \case
       [] -> do
@@ -557,7 +560,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
   case oldSubscriber of
     Just sub -> do
       whenJust mbNewMerchant $ \newMerchant -> do
-        let subscriberUrl_ = (showBaseUrl sub.subscriber_url)
+        let subscriberUrl_ = showBaseUrl sub.subscriber_url
             newSubscriberUrlText = T.replace baseMerchant.id.getId newMerchant.id.getId subscriberUrl_
             ukId = newMerchant.bapUniqueKeyId
             subId = newMerchant.bapId
@@ -575,7 +578,6 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
   -- support for adding FRFS subscriber
   let buildFRFSSubscriber_ = fromMaybe False req.buildFRFSSubscriber
   frfsUkId <- generateGUID
-  frfsSubId <- generateGUID
   case (becknConfigFRFS, buildFRFSSubscriber_) of
     (Just bcknCfg, True) -> do
       case oldSubscriber of
@@ -585,7 +587,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
               let frfsSubUrl = showBaseUrl bcknCfg.subscriberUrl
                   newFrfsSubUrl = T.replace baseMerchant.id.getId newMerchant.id.getId frfsSubUrl
                   frfsUkId_ = frfsUkId
-                  frfsSubId_ = frfsSubId
+                  frfsSubId_ = T.replace baseMerchant.id.getId newMerchant.id.getId sub.subscriber_id
                   subscriberType = BecknSub.BAP
                   frfsDomain = Context.PUBLIC_TRANSPORT
                   newCities = req.city
@@ -605,7 +607,7 @@ postMerchantConfigOperatingCityCreate merchantShortId city req = do
                     country
                     signingPublicKey
                     createdAt
-            Nothing -> logInfo $ "Subscriber creation aborted for old Merchant"
+            Nothing -> logInfo "Subscriber creation aborted for old Merchant"
         Nothing ->
           logInfo $ "No Subscriber found for baseMerchant: " <> baseMerchant.id.getId <> "building new FRFS subscriber" <> show True
     (_, _) ->
@@ -1505,3 +1507,31 @@ postMerchantSchedulerTrigger merchantShortId opCity req = do
               pure Success
             Nothing -> throwError $ InternalError "invalid job data"
         Nothing -> throwError $ InternalError "invalid job name"
+
+-- create the EP here
+
+postMerchantConfigOperatingCityWhiteList :: ShortId DM.Merchant -> Context.City -> Common.WhiteListOperatingCityReq -> Flow Common.WhiteListOperatingCityRes
+postMerchantConfigOperatingCityWhiteList _ _ req = do
+  let merchantId = req.bapMerchantId
+      merchantOperatingCityId = req.bapMerchantOperatingCityId
+      bapSubDomain = req.bapSubscriberDomain
+  now <- getCurrentTime
+  whiteListOrgId <- generateGUID
+  let whiteListOrgReq =
+        WLO.WhiteListOrg
+          { domain = bapSubDomain,
+            id = whiteListOrgId,
+            merchantId = Id merchantId,
+            merchantOperatingCityId = Id merchantOperatingCityId,
+            subscriberId = req.bapSubscriberId,
+            createdAt = now,
+            updatedAt = now
+          }
+  QWLO.create whiteListOrgReq
+
+  pure $
+    Common.WhiteListOperatingCityRes
+      { whiteListSuccess = True,
+        whiteListMessage = "Success",
+        whiteListError = Nothing
+      }
