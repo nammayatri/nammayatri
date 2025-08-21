@@ -90,7 +90,9 @@ createNewSubscriberReq uniqueKeyId subscriberId subscriberUrl subscriberType dom
       subscriber_url = subscriberUrl,
       _type = subscriberType,
       domain = domain,
-      city = [show newCities],
+      city = case toJSON newCities of
+        String city -> [city]
+        _ -> ["*"],
       country = Just country,
       signing_public_key = signingPublicKey,
       encr_public_key = Nothing,
