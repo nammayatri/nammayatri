@@ -10,7 +10,6 @@ import qualified Data.Singletons.TH
 import EulerHS.Prelude hiding (id, state)
 import qualified EulerHS.Types
 import qualified Kernel.Prelude
-import qualified Kernel.Types.APISuccess
 import Kernel.Types.Common
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -99,50 +98,36 @@ data Translations = Translations
   deriving stock (Generic, Show, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data UpdateBlacklistedCoinEventsReq = UpdateBlacklistedCoinEventsReq {blacklistedEvents :: [Dashboard.Common.DriverCoins.DriverCoinsFunctionType]}
-  deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
+type API = ("coins" :> (PostDriverCoinsBulkUploadCoins :<|> PostDriverCoinsBulkUploadCoinsV2 :<|> GetDriverCoinsCoinHistory))
 
-type API = ("coins" :> (PostDriverCoinsBulkUploadCoins :<|> PostDriverCoinsBulkUploadCoinsV2 :<|> GetDriverCoinsCoinHistory :<|> PostDriverCoinsBlacklistedEventsUpdate))
+type PostDriverCoinsBulkUploadCoins = ("bulkUploadCoins" :> ReqBody ('[JSON]) BulkUploadCoinsReq :> Post ('[JSON]) BulkUploadCoinRes)
 
-type PostDriverCoinsBulkUploadCoins = ("bulkUploadCoins" :> ReqBody '[JSON] BulkUploadCoinsReq :> Post '[JSON] BulkUploadCoinRes)
-
-type PostDriverCoinsBulkUploadCoinsV2 = ("bulkUploadCoinsV2" :> ReqBody '[JSON] BulkUploadCoinsReqV2 :> Post '[JSON] BulkUploadCoinRes)
+type PostDriverCoinsBulkUploadCoinsV2 = ("bulkUploadCoinsV2" :> ReqBody ('[JSON]) BulkUploadCoinsReqV2 :> Post ('[JSON]) BulkUploadCoinRes)
 
 type GetDriverCoinsCoinHistory =
   ( "coinHistory" :> Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> QueryParam "limit" Kernel.Prelude.Integer
       :> QueryParam
            "offset"
            Kernel.Prelude.Integer
-      :> Get '[JSON] CoinHistoryRes
-  )
-
-type PostDriverCoinsBlacklistedEventsUpdate =
-  ( "blacklistedEvents" :> Capture "driverId" (Kernel.Types.Id.Id Dashboard.Common.Driver) :> "update"
-      :> ReqBody
-           '[JSON]
-           UpdateBlacklistedCoinEventsReq
-      :> Post '[JSON] Kernel.Types.APISuccess.APISuccess
+      :> Get ('[JSON]) CoinHistoryRes
   )
 
 data DriverCoinsAPIs = DriverCoinsAPIs
-  { postDriverCoinsBulkUploadCoins :: BulkUploadCoinsReq -> EulerHS.Types.EulerClient BulkUploadCoinRes,
-    postDriverCoinsBulkUploadCoinsV2 :: BulkUploadCoinsReqV2 -> EulerHS.Types.EulerClient BulkUploadCoinRes,
-    getDriverCoinsCoinHistory :: Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Maybe Kernel.Prelude.Integer -> Kernel.Prelude.Maybe Kernel.Prelude.Integer -> EulerHS.Types.EulerClient CoinHistoryRes,
-    postDriverCoinsBlacklistedEventsUpdate :: Kernel.Types.Id.Id Dashboard.Common.Driver -> UpdateBlacklistedCoinEventsReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
+  { postDriverCoinsBulkUploadCoins :: (BulkUploadCoinsReq -> EulerHS.Types.EulerClient BulkUploadCoinRes),
+    postDriverCoinsBulkUploadCoinsV2 :: (BulkUploadCoinsReqV2 -> EulerHS.Types.EulerClient BulkUploadCoinRes),
+    getDriverCoinsCoinHistory :: (Kernel.Types.Id.Id Dashboard.Common.Driver -> Kernel.Prelude.Maybe (Kernel.Prelude.Integer) -> Kernel.Prelude.Maybe (Kernel.Prelude.Integer) -> EulerHS.Types.EulerClient CoinHistoryRes)
   }
 
 mkDriverCoinsAPIs :: (Client EulerHS.Types.EulerClient API -> DriverCoinsAPIs)
 mkDriverCoinsAPIs driverCoinsClient = (DriverCoinsAPIs {..})
   where
-    postDriverCoinsBulkUploadCoins :<|> postDriverCoinsBulkUploadCoinsV2 :<|> getDriverCoinsCoinHistory :<|> postDriverCoinsBlacklistedEventsUpdate = driverCoinsClient
+    postDriverCoinsBulkUploadCoins :<|> postDriverCoinsBulkUploadCoinsV2 :<|> getDriverCoinsCoinHistory = driverCoinsClient
 
 data DriverCoinsUserActionType
   = POST_DRIVER_COINS_BULK_UPLOAD_COINS
   | POST_DRIVER_COINS_BULK_UPLOAD_COINS_V2
   | GET_DRIVER_COINS_COIN_HISTORY
-  | POST_DRIVER_COINS_BLACKLISTED_EVENTS_UPDATE
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-$(Data.Singletons.TH.genSingletons [''DriverCoinsUserActionType])
+$(Data.Singletons.TH.genSingletons [(''DriverCoinsUserActionType)])

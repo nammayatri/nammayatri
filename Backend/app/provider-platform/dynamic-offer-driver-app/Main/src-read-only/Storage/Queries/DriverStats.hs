@@ -95,8 +95,7 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.DriverStats.DriverStats {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.blacklistCoinEvents blacklistCoinEvents,
-      Se.Set Beam.bonusEarned (Kernel.Prelude.roundToIntegral bonusEarned),
+    [ Se.Set Beam.bonusEarned (Kernel.Prelude.roundToIntegral bonusEarned),
       Se.Set Beam.bonusEarnedAmount (Kernel.Prelude.Just bonusEarned),
       Se.Set Beam.coinCovertedToCashLeft (Kernel.Prelude.Just coinCovertedToCashLeft),
       Se.Set Beam.currency (Kernel.Prelude.Just currency),
