@@ -19,7 +19,7 @@
 module Dashboard.Common
   ( module Dashboard.Common,
     module Domain.Types.VehicleVariant,
-    module Domain.Types.VehicleCategory,
+    VehicleCategory (CAR, MOTORCYCLE, TRAIN, BUS, FLIGHT, AUTO_CATEGORY, AMBULANCE, TRUCK),
     module Reexport,
   )
 where

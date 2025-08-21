@@ -23,3 +23,15 @@ findByPersonIdAndEnabledAndVerified mbEnabled mbVerified fleetOwnerPersonId = do
           <> [Se.Is Beam.enabled $ Se.Eq (fromJust mbEnabled) | isJust mbEnabled]
           <> [Se.Is Beam.verified $ Se.Eq (fromJust mbVerified) | isJust mbVerified]
     ]
+
+getFleetOwnerByTicketPlaceId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Maybe Text ->
+  m [Domain.Types.FleetOwnerInformation.FleetOwnerInformation]
+getFleetOwnerByTicketPlaceId mbTicketPlaceId = do
+  findAllWithKV
+    [ Se.And $
+        [Se.Is Beam.enabled $ Se.Eq True]
+          <> [Se.Is Beam.verified $ Se.Eq True]
+          <> [Se.Is Beam.ticketPlaceId $ Se.Eq mbTicketPlaceId]
+    ]
