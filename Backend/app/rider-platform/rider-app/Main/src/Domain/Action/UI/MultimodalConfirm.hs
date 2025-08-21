@@ -109,6 +109,7 @@ import qualified Storage.Queries.RiderConfig as QRiderConfig
 import qualified Storage.Queries.RouteDetails as QRouteDetails
 import Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Error
+import qualified Tools.Maps as Maps
 import Tools.MultiModal as MM
 import qualified Tools.MultiModal as TMultiModal
 import qualified Tools.Payment as Payment
@@ -1101,7 +1102,7 @@ postMultimodalOrderChangeStops _ journeyId legOrder req = do
       throwError $ InvalidRequest "No stations provided for change"
 
   let (prevLeg, nextLeg) = findAdjacentLegs reqJourneyLeg.sequenceNumber sortedLegs
-  mbGates <- updateLegsWithGates prevLeg nextLeg reqJourneyLeg metroLeg journey.merchantId reqJourneyLeg.merchantOperatingCityId mbSourceStation mbDestStation
+  mbGates <- updateLegsWithGates riderConfig prevLeg nextLeg reqJourneyLeg metroLeg journey.merchantId reqJourneyLeg.merchantOperatingCityId mbSourceStation mbDestStation
 
   newJourneyLeg <-
     JMTypes.mkJourneyLeg
@@ -1164,6 +1165,7 @@ validateAndGetMetroLeg sourceLatLong destLatLong sourceStopCode destStopCode jou
 
 updateLegsWithGates ::
   (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasShortDurationRetryCfg r c) =>
+  DRC.RiderConfig ->
   Maybe DJourneyLeg.JourneyLeg ->
   Maybe DJourneyLeg.JourneyLeg ->
   DJourneyLeg.JourneyLeg ->
@@ -1173,20 +1175,27 @@ updateLegsWithGates ::
   Maybe DStation.Station ->
   Maybe DStation.Station ->
   m (Maybe JMTypes.Gates)
-updateLegsWithGates mbPrevLeg mbNextLeg oldMetroLeg metroLeg merchantId merchantOpCityId mbSourceStation mbDestStation = do
+updateLegsWithGates riderConfig mbPrevLeg mbNextLeg oldMetroLeg metroLeg merchantId merchantOpCityId mbSourceStation mbDestStation = do
   mbEntranceGates <- case (mbPrevLeg, mbSourceStation) of
     (Just prevLeg, Just sourceStation) -> do
       let prevLegStartPoint = LatLong prevLeg.startLocation.latitude prevLeg.startLocation.longitude
       (mbOsmEntrance, mbStraightLineEntrance) <- JMTypes.getNearestGateFromLeg prevLegStartPoint merchantId merchantOpCityId (fromMaybe [] sourceStation.gates)
       let bestEntrance = mbOsmEntrance <|> mbStraightLineEntrance
-      let prevLegEndLocation = maybe prevLeg.endLocation (\e -> LatLngV2 (fromMaybe prevLeg.endLocation.latitude e.lat) (fromMaybe prevLeg.endLocation.longitude e.lon)) bestEntrance
-      let updatedPrevLeg =
+          prevLegEndLocation = maybe prevLeg.endLocation (\e -> LatLngV2 (fromMaybe prevLeg.endLocation.latitude e.lat) (fromMaybe prevLeg.endLocation.longitude e.lon)) bestEntrance
+      (mbNewDistance, mbNewDuration) <- getDistanceAndDuration merchantId merchantOpCityId prevLegStartPoint (LatLong prevLegEndLocation.latitude prevLegEndLocation.longitude)
+      let mode = maybe prevLeg.mode (\newDistance' -> if newDistance' < riderConfig.maximumWalkDistance then DTrip.Walk else DTrip.Taxi) mbNewDistance
+          newDistance = maybe prevLeg.distance (\newDistance' -> Just (convertMetersToDistance Meter newDistance')) mbNewDistance
+          newDuration = maybe prevLeg.duration (\newDistance' -> if newDistance' < riderConfig.maximumWalkDistance then Just (calculateWalkDuration (convertMetersToDistance Meter newDistance')) else mbNewDuration) mbNewDistance
+          updatedPrevLeg =
             prevLeg
               { DJourneyLeg.endLocation = prevLegEndLocation,
                 DJourneyLeg.toStopDetails = metroLeg.fromStopDetails,
                 DJourneyLeg.osmEntrance = mbOsmEntrance,
                 DJourneyLeg.straightLineEntrance = mbStraightLineEntrance,
-                DJourneyLeg.legSearchId = Nothing
+                DJourneyLeg.legSearchId = Nothing,
+                DJourneyLeg.distance = newDistance,
+                DJourneyLeg.duration = newDuration,
+                DJourneyLeg.mode = mode
               }
       QJourneyLeg.updateByPrimaryKey updatedPrevLeg
       return $ Just (mbOsmEntrance, mbStraightLineEntrance)
@@ -1198,13 +1207,20 @@ updateLegsWithGates mbPrevLeg mbNextLeg oldMetroLeg metroLeg merchantId merchant
       (mbOsmExit, mbStraightLineExit) <- JMTypes.getNearestGateFromLeg nextLegEndPoint merchantId merchantOpCityId (fromMaybe [] destStation.gates)
       let bestExit = mbOsmExit <|> mbStraightLineExit
       let nextLegStartLocation = maybe nextLeg.startLocation (\e -> LatLngV2 (fromMaybe nextLeg.startLocation.latitude e.lat) (fromMaybe nextLeg.startLocation.longitude e.lon)) bestExit
+      (mbNewDistance, mbNewDuration) <- getDistanceAndDuration merchantId merchantOpCityId (LatLong nextLegStartLocation.latitude nextLegStartLocation.longitude) nextLegEndPoint
+      let mode = maybe nextLeg.mode (\newDistance' -> if newDistance' < riderConfig.maximumWalkDistance then DTrip.Walk else DTrip.Taxi) mbNewDistance
+          newDistance = maybe nextLeg.distance (\newDistance' -> Just (convertMetersToDistance Meter newDistance')) mbNewDistance
+          newDuration = maybe nextLeg.duration (\newDistance' -> if newDistance' < riderConfig.maximumWalkDistance then Just (calculateWalkDuration (convertMetersToDistance Meter newDistance')) else mbNewDuration) mbNewDistance
       let updatedNextLeg =
             nextLeg
               { DJourneyLeg.startLocation = nextLegStartLocation,
                 DJourneyLeg.fromStopDetails = metroLeg.toStopDetails,
                 DJourneyLeg.osmExit = mbOsmExit,
                 DJourneyLeg.straightLineExit = mbStraightLineExit,
-                DJourneyLeg.legSearchId = Nothing
+                DJourneyLeg.legSearchId = Nothing,
+                DJourneyLeg.distance = newDistance,
+                DJourneyLeg.duration = newDuration,
+                DJourneyLeg.mode = mode
               }
       QJourneyLeg.updateByPrimaryKey updatedNextLeg
       return $ Just (mbOsmExit, mbStraightLineExit)
@@ -1218,3 +1234,30 @@ updateLegsWithGates mbPrevLeg mbNextLeg oldMetroLeg metroLeg merchantId merchant
           osmEntrance = (mbEntranceGates >>= fst) <|> (oldMetroLeg.osmEntrance)
           osmExit = (mbExitGates >>= fst) <|> (oldMetroLeg.osmExit)
        in return $ Just JMTypes.Gates {..}
+
+getDistanceAndDuration ::
+  (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools]) =>
+  Id Domain.Types.Merchant.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  LatLong ->
+  LatLong ->
+  m (Maybe Meters, Maybe Seconds)
+getDistanceAndDuration merchantId merchantOpCityId startLocation endLocation = do
+  let origin = startLocation
+      destination = endLocation
+  distResp <-
+    try @_ @SomeException $
+      Maps.getMultimodalWalkDistance merchantId merchantOpCityId Nothing $
+        Maps.GetDistanceReq
+          { origin = origin,
+            destination = destination,
+            travelMode = Just Maps.FOOT,
+            sourceDestinationMapping = Nothing,
+            distanceUnit = Meter
+          }
+  case distResp of
+    Right response -> do
+      return (Just response.distance, Just response.duration)
+    Left err -> do
+      logError $ "Failed to get walk distance from OSRM for leg " <> show merchantId.getId <> ": " <> show err
+      return (Nothing, Nothing)
