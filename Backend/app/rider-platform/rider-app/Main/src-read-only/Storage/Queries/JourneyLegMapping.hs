@@ -39,8 +39,15 @@ findAllLegsMappingByJourneyId limit offset journeyId isDeleted = do
 
 findByJourneyIdAndSequenceNumber ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.Journey.Journey -> Kernel.Prelude.Int -> m (Maybe Domain.Types.JourneyLegMapping.JourneyLegMapping))
-findByJourneyIdAndSequenceNumber journeyId sequenceNumber = do findOneWithKV [Se.And [Se.Is Beam.journeyId $ Se.Eq (Kernel.Types.Id.getId journeyId), Se.Is Beam.sequenceNumber $ Se.Eq sequenceNumber]]
+  (Kernel.Types.Id.Id Domain.Types.Journey.Journey -> Kernel.Prelude.Int -> Kernel.Prelude.Bool -> m (Maybe Domain.Types.JourneyLegMapping.JourneyLegMapping))
+findByJourneyIdAndSequenceNumber journeyId sequenceNumber isDeleted = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.journeyId $ Se.Eq (Kernel.Types.Id.getId journeyId),
+          Se.Is Beam.sequenceNumber $ Se.Eq sequenceNumber,
+          Se.Is Beam.isDeleted $ Se.Eq isDeleted
+        ]
+    ]
 
 findByJourneyLegId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg -> m (Maybe Domain.Types.JourneyLegMapping.JourneyLegMapping))
 findByJourneyLegId journeyLegId = do findOneWithKV [Se.Is Beam.journeyLegId $ Se.Eq (Kernel.Types.Id.getId journeyLegId)]

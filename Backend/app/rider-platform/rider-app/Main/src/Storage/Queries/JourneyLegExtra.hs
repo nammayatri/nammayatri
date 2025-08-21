@@ -94,7 +94,15 @@ findByJourneyIdAndSequenceNumber ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Journey.Journey -> Kernel.Prelude.Int -> m (Maybe JL.JourneyLeg))
 findByJourneyIdAndSequenceNumber journeyId sequenceNumber = do
-  mbJourneyLegMapping <- QJourneyLegMapping.findByJourneyIdAndSequenceNumber journeyId sequenceNumber
+  mbJourneyLegMapping <- QJourneyLegMapping.findByJourneyIdAndSequenceNumber journeyId sequenceNumber False
   case mbJourneyLegMapping of
     Just journeyLegMapping -> findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId journeyLegMapping.journeyLegId)]
-    Nothing -> findOneWithKV [Se.And [Se.Is Beam.journeyId $ Se.Eq (Just $ Kernel.Types.Id.getId journeyId), Se.Is Beam.sequenceNumber $ Se.Eq (Just sequenceNumber)]]
+    Nothing ->
+      findOneWithKV
+        [ Se.And
+            [ Se.Is Beam.journeyId $ Se.Eq (Just $ Kernel.Types.Id.getId journeyId),
+              Se.Is Beam.sequenceNumber $ Se.Eq (Just sequenceNumber),
+              Se.Or
+                [Se.Is Beam.isDeleted $ Se.Eq (Just False), Se.Is Beam.isDeleted $ Se.Eq Nothing]
+            ]
+        ]

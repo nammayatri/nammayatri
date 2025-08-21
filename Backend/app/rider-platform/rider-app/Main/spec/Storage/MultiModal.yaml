@@ -188,7 +188,7 @@ JourneyLegMapping:
     findByJourneyIdAndSequenceNumber:
       kvFunction: findOneWithKV
       where:
-        and: [journeyId, sequenceNumber]
+        and: [journeyId, sequenceNumber, isDeleted]
     findByJourneyLegId:
       kvFunction: findOneWithKV
       where: journeyLegId
