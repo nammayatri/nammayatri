@@ -37,6 +37,10 @@ getFRFSAllStatuses journeyLeg mbBooking = do
               then JLTypes.Skipped
               else case bookingStatus of
                 Just (FRFSBooking status) -> getFRFSLegStatusFromBooking status
+                Just (FRFSTicket DFRFSTicket.CANCELLED) -> JLTypes.Cancelled
+                Just (FRFSTicket DFRFSTicket.USED) -> JLTypes.Completed
+                Just (FRFSTicket DFRFSTicket.EXPIRED) -> JLTypes.Completed
+                Just (Feedback _) -> JLTypes.Completed
                 _ -> maybe JLTypes.InPlan castTrackingStatusToJourneyLegStatus ((listToMaybe trackingStatuses) >>= snd) -- for UI backward compatibility
   return (oldStatus, bookingStatus, trackingStatuses)
   where
@@ -73,8 +77,9 @@ getTaxiAllStatuses journeyLeg mbBooking mbRide mbEstimate = do
               else do
                 case bookingStatus of
                   Just (TaxiEstimate status) -> mapTaxiEstimateStatusToJourneyLegStatus status
-                  Just (TaxiRide status) -> mapTaxiRideStatusToJourneyLegStatus status
                   Just (TaxiBooking status) -> mapTaxiBookingStatusToJourneyLegStatus status
+                  Just (TaxiRide status) -> mapTaxiRideStatusToJourneyLegStatus status
+                  Just (Feedback _) -> JLTypes.Completed
                   _ -> maybe JLTypes.InPlan castTrackingStatusToJourneyLegStatus mbTrackingStatus -- for UI backward compatibility
   return (oldStatus, bookingStatus, mbTrackingStatus)
   where
