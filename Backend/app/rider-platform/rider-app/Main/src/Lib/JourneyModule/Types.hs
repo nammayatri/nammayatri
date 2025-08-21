@@ -1182,13 +1182,14 @@ mkJourneyLeg ::
   Id DSR.SearchRequest ->
   Meters ->
   Maybe GetFareResponse ->
+  Maybe Gates ->
   m DJL.JourneyLeg
-mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation merchantId merchantOpCityId journeyId journeySearchRequestId maximumWalkDistance fare = do
+mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation merchantId merchantOpCityId journeyId journeySearchRequestId maximumWalkDistance fare mbGates = do
   now <- getCurrentTime
   journeyLegId <- generateGUID
   routeDetails <- mapM (mkRouteDetail journeyLegId) leg.routeDetails
   let travelMode = convertMultiModalModeToTripMode leg.mode straightLineDistance maximumWalkDistance
-  gates <- getGates (mbPrev, leg, mbNext) merchantId merchantOpCityId
+  gates <- maybe (getGates (mbPrev, leg, mbNext) merchantId merchantOpCityId) (pure . Just) mbGates
   let (fromStopDetails, toStopDetails) =
         case travelMode of
           DTrip.Walk -> do

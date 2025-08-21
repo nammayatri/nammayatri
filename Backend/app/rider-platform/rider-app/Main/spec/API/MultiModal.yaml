@@ -244,6 +244,19 @@ types:
     journeyLegsInfo: "[JourneyLegOption]"
     allLegsLoaded: Bool
 
+  StationAPIEntity:
+    stopCode: Text
+    latLong: LatLong
+
+  ChangeStopsReq:
+    journeyId: Id Journey
+    legOrder: Int
+    newSourceStation: Maybe StationAPIEntity
+    newDestinationStation: Maybe StationAPIEntity
+
+  ChangeStopsResp:
+    stationsChanged: Bool
+
 apis:
   - POST:
       endpoint: /multimodal/{journeyId}/initiate
@@ -498,3 +511,13 @@ apis:
         legOrder: Int
       response:
         type: Kernel.Types.APISuccess.APISuccess
+
+  - POST:
+      endpoint: /multimodal/{journeyId}/order/{legOrder}/changeStops
+      params:
+        journeyId: Id Journey
+        legOrder: Int
+      request:
+        type: ChangeStopsReq
+      response:
+        type: ChangeStopsResp
