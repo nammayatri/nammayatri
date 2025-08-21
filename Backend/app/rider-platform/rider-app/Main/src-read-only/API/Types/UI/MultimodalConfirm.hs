@@ -34,6 +34,19 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder
 import Servant
 import Tools.Auth
 
+data ChangeStopsReq = ChangeStopsReq
+  { journeyId :: Kernel.Types.Id.Id Domain.Types.Journey.Journey,
+    legOrder :: Kernel.Prelude.Int,
+    newDestinationStation :: Kernel.Prelude.Maybe StationAPIEntity,
+    newSourceStation :: Kernel.Prelude.Maybe StationAPIEntity
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data ChangeStopsResp = ChangeStopsResp {stationsChanged :: Kernel.Prelude.Bool}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data CrisSdkResponse = CrisSdkResponse {bookAuthCode :: Kernel.Prelude.Text, osBuildVersion :: Kernel.Prelude.Text, osType :: Kernel.Prelude.Text}
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -208,6 +221,10 @@ data SimilarJourneyLegsResp = SimilarJourneyLegsResp {allLegsLoaded :: Kernel.Pr
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data SingleQRReq = SingleQRReq {provider :: Lib.JourneyModule.Types.Provider, tickets :: [Kernel.Prelude.Text]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data StationAPIEntity = StationAPIEntity {latLong :: Kernel.External.Maps.Types.LatLong, stopCode :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
