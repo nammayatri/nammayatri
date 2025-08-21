@@ -42,6 +42,7 @@ onCancel ::
 onCancel _ req = withFlowHandlerBecknAPI do
   transactionId <- Utils.getTransactionId req.onCancelReqContext
   Utils.withTransactionIdLogTag transactionId $ do
+    -- SHTODO: tag should conatain all transactionIds for shared Ride case
     logTagInfo "onCancel API Flow" $ "Received onCancel request:-" <> show req
     cancelMsg <- req.onCancelReqMessage & fromMaybeM (InvalidBecknSchema "Missing message in on_cancel")
     cancelStatus' <- cancelMsg.confirmReqMessageOrder.orderStatus & fromMaybeM (InvalidBecknSchema "Missing order.status in on_cancel message")

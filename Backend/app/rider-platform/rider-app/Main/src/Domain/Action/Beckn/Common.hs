@@ -47,6 +47,7 @@ import qualified Domain.Types.RecentLocation as DTRL
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideRelatedNotificationConfig as DRN
 import qualified Domain.Types.RiderConfig as DRC
+import qualified Domain.Types.SharedEntity as DSharedEntity
 import qualified Domain.Types.Trip as Trip
 import qualified Domain.Types.VehicleVariant as DV
 import Environment
@@ -108,6 +109,7 @@ import qualified Storage.Queries.PersonStats as QPersonStats
 import qualified Storage.Queries.RecentLocation as SQRL
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideExtra as QERIDE
+import qualified Storage.Queries.SharedEntity as QSharedEntity
 import Tools.Constants
 import Tools.Error
 import Tools.Event
@@ -432,7 +434,7 @@ rideAssignedReqHandler req = do
     assignRideUpdate req'@ValidatedRideAssignedReq {..} mbMerchant rideStatus now = do
       let BookingDetails {..} = req'.bookingDetails
       ride <- buildRide req' mbMerchant now rideStatus
-      let applicationFeeAmount = applicationFeeAmountForRide $ fromMaybe [] fareBreakups
+      let applicationFeeAmount = applicationFeeAmountForRide $ fromMaybe [] fareBreakups -- SHTODO: need to ensure this is handled while writing estimate changes.
       whenJust req'.onlinePaymentParameters $ \OnlinePaymentParameters {..} -> do
         let createPaymentIntentReq =
               Payment.CreatePaymentIntentReq
@@ -822,6 +824,7 @@ cancellationTransaction ::
   (Id DJourney.Journey -> m [JL.LegInfo]) ->
   m ()
 cancellationTransaction booking mbRide cancellationSource cancellationFee getJourneyLegsCallbackFn = do
+  -- here
   bookingCancellationReason <- mkBookingCancellationReason booking (mbRide <&> (.id)) cancellationSource
   merchantConfigs <- CMC.findAllByMerchantOperatingCityIdInRideFlow booking.merchantOperatingCityId booking.configInExperimentVersions
   fork "incrementing fraud counters" $ do
@@ -876,9 +879,13 @@ cancellationTransaction booking mbRide cancellationSource cancellationFee getJou
           when (totalRides > minRides && rate > threshold) $ do
             SMC.blockCustomer booking.riderId Nothing
         _ -> logDebug "Configs or person stats doesnt not exist for checking blocking condition"
+  -- Handle shared ride cancellation
+  whenJust booking.sharedEntityId $ \sharedEntityId ->
+    whenJust mbRide $ \ride ->
+      handleSharedRideCancel sharedEntityId ride booking
   -- notify customer
   bppDetails <- CQBPP.findBySubscriberIdAndDomain booking.providerId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:-" <> booking.providerId <> "and domain:-" <> show Context.MOBILITY)
-  Notify.notifyOnBookingCancelled booking cancellationSource bppDetails mbRide otherParties
+  Notify.notifyOnBookingCancelled booking cancellationSource bppDetails mbRide otherParties booking.sharedEntityId
   when (booking.isDashboardRequest == Just True && riderConfig.autoSendBookingDetailsViaWhatsapp == Just True) $ do
     fork "Sending Dashboard Cancelled Ride Message" $ do
       sendBookingCancelledMessageViaWhatsapp booking.riderId riderConfig
@@ -1369,3 +1376,45 @@ createRecentLocationForTaxi booking = do
                   DTRL.fromGeohash = fromGeohash
                 }
         SQRL.create recentLocation
+
+-- Handle shared ride cancellation
+handleSharedRideCancel ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    MonadFlow m
+  ) =>
+  Text ->
+  DRide.Ride ->
+  DRB.Booking ->
+  m ()
+handleSharedRideCancel sharedEntityId ride booking = do
+  -- Fetch shared entity
+  sharedEntity <- QSharedEntity.findById sharedEntityId >>= fromMaybeM (InternalError $ "SharedEntity not found for id: " <> sharedEntityId)
+
+  -- Update booking's isActive to false in bookingList
+  let updatedBookingList = updateTrackedEntityStatus sharedEntity.bookingIds booking.id.getId False
+
+  -- Update ride's isActive to false in rideList
+  let updatedRideList = updateTrackedEntityStatus sharedEntity.rideIds ride.id.getId False
+
+  -- Check if all rides are inactive
+  let allRidesInactive = all (not . (.isActive)) updatedRideList
+
+  if allRidesInactive
+    then do
+      -- Mark shared entity status as CANCELLED
+      void $ QSharedEntity.updateStatusAndLists DSharedEntity.CANCELLED sharedEntityId updatedBookingList updatedRideList
+    else do
+      -- Just update the lists without changing status
+      void $ QSharedEntity.updateBookingAndRideLists sharedEntityId updatedBookingList updatedRideList
+
+-- Helper function to update isActive status for a specific entity in the list
+updateTrackedEntityStatus :: [DSharedEntity.TrackedEntity] -> Text -> Bool -> [DSharedEntity.TrackedEntity]
+updateTrackedEntityStatus entities entityId newStatus =
+  map
+    ( \entity ->
+        if entity.entityId == entityId
+          then entity {DSharedEntity.isActive = newStatus}
+          else entity
+    )
+    entities

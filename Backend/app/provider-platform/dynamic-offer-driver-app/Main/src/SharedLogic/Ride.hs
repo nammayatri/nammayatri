@@ -109,8 +109,7 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
     Redis.unlockRedis (offerQuoteLockKeyWithCoolDown ride.driverId)
     when (isDriverOnRide == Just True) $ QDI.updateHasAdvancedRide (cast ride.driverId) True
     Redis.unlockRedis (editDestinationLockKey ride.driverId)
-  unless booking.isScheduled $ void $ LF.rideDetails ride.id DRide.NEW merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon (Just ride.isAdvanceBooking) (Just (LT.Car $ LT.CarRideInfo {pickupLocation = LatLong (booking.fromLocation.lat) (booking.fromLocation.lon), minDistanceBetweenTwoPoints = Nothing, rideStops = Just $ map (\stop -> LatLong stop.lat stop.lon) booking.stops}))
-
+  unless booking.isScheduled $ void $ LF.rideDetails ride.id DRide.NEW merchantId ride.driverId booking.fromLocation.lat booking.fromLocation.lon (Just ride.isAdvanceBooking) (Just (LT.Car $ LT.CarRideInfo {pickupLocation = LatLong (booking.fromLocation.lat) (booking.fromLocation.lon), minDistanceBetweenTwoPoints = Nothing, rideStops = Just $ map (\stop -> LatLong stop.lat stop.lon) booking.stops})) -- SHTODO: ask khuzema how LTS should work in shared Ride
   triggerRideCreatedEvent RideEventData {ride = ride, personId = cast driver.id, merchantId = merchantId}
   QBE.logDriverAssignedEvent (cast driver.id) booking.id ride.id booking.distanceUnit
 
@@ -121,9 +120,8 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
   fork "DriverScoreEventHandler OnNewRideAssigned" $
     DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnNewRideAssigned {merchantId = merchantId, driverId = ride.driverId, currency = ride.currency, distanceUnit = booking.distanceUnit}
 
-  notifyRideRelatedNotificationOnEvent ride now DRN.RIDE_ASSIGNED
-  notifyRideRelatedNotificationOnEvent ride now DRN.PICKUP_TIME
-
+  notifyRideRelatedNotificationOnEvent ride now DRN.RIDE_ASSIGNED -- SHTODO: ask about this
+  notifyRideRelatedNotificationOnEvent ride now DRN.PICKUP_TIME -- SHTODO: ask about this
   return (ride, rideDetails, vehicle)
   where
     notificationType = Notification.DRIVER_ASSIGNMENT
