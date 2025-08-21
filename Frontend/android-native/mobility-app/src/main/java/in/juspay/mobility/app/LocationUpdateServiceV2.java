@@ -1061,7 +1061,10 @@ public class LocationUpdateServiceV2 extends Service {
         String merchantId = getValueFromStorage("MERCHANT_ID");
         String vehicleVariant = getValueFromStorage("VEHICLE_VARIANT");
         String driverMode = getValueFromStorage("DRIVER_STATUS_N");
-
+        String fleetOwnerId = getValueFromStorage("DRIVER_FLEET_OWNER_ID");
+        String operatorId = getValueFromStorage("DRIVER_OPERATOR_ID");
+        if (fleetOwnerId != null) headers.put("gid", fleetOwnerId);
+        if (operatorId != null) headers.put("gid2", operatorId);
         if (merchantId != null && vehicleVariant != null && driverMode != null) {
             headers.put("mId", merchantId);
             headers.put("vt", vehicleVariant);
@@ -1104,7 +1107,16 @@ public class LocationUpdateServiceV2 extends Service {
                 headers.put("dm", drMode);
                 updateStorage("DRIVER_STATUS_N", merchantID);
             }
-
+            String fleetOwnerId = resp.optString("fleetOwnerId");
+            String operatorId = resp.optString("operatorId");
+            if (!fleetOwnerId.isEmpty()) {
+                updateStorage("DRIVER_FLEET_OWNER_ID", fleetOwnerId);
+                headers.put("gid", fleetOwnerId);
+            }
+            if (!operatorId.isEmpty()) {
+                updateStorage("DRIVER_OPERATOR_ID", operatorId);
+                headers.put("gid2", operatorId);
+            }
             JSONObject org = resp.optJSONObject("organization");
             if (org != null && org.has("id")) {
                 merchantID = org.getString("id");

@@ -824,6 +824,10 @@ public class LocationUpdateService extends Service {
                         String merchantId = getValueFromStorage("MERCHANT_ID");
                         String vehicleVariant = getValueFromStorage("VEHICLE_VARIANT");
                         String driverMode = getValueFromStorage("DRIVER_STATUS_N");
+                        String fleetOwnerId = getValueFromStorage("DRIVER_FLEET_OWNER_ID");
+                        String operatorId = getValueFromStorage("DRIVER_OPERATOR_ID");
+                        if (fleetOwnerId != null) baseHeaders.put("gid", fleetOwnerId);
+                        if (operatorId != null) baseHeaders.put("gid2", operatorId);
                         if (merchantId != null && vehicleVariant != null && driverMode != null) {
                             baseHeaders.put("mId", merchantId);
                             baseHeaders.put("vt", vehicleVariant);
@@ -851,6 +855,16 @@ public class LocationUpdateService extends Service {
                                     vVariant = vehicle.getString("variant");
                                     baseHeaders.put("vt", vVariant);
                                     updateStorage("VEHICLE_VARIANT", vVariant);
+                                }
+                                fleetOwnerId = resp.optString("fleetOwnerId");
+                                operatorId = resp.optString("operatorId");
+                                if (!fleetOwnerId.isEmpty()) {
+                                    updateStorage("DRIVER_FLEET_OWNER_ID", fleetOwnerId);
+                                    baseHeaders.put("gid", fleetOwnerId);
+                                }
+                                if (!operatorId.isEmpty()) {
+                                    updateStorage("DRIVER_OPERATOR_ID", operatorId);
+                                    baseHeaders.put("gid2", operatorId);
                                 }
                             } catch (JSONException e) {
                                 e.printStackTrace();
