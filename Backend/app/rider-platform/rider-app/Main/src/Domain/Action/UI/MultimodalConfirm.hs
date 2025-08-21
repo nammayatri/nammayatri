@@ -1060,6 +1060,7 @@ postMultimodalOrderChangeStops _ journeyId legOrder req = do
     throwError $ InvalidRequest "At least one of newSourceStation or newDestinationStation must be provided"
   journey <- JM.getJourney journeyId
   allLegs <- QJourneyLeg.getJourneyLegs journeyId
+  let sortedLegs = sortBy (\a b -> compare a.sequenceNumber b.sequenceNumber) allLegs
   reqJourneyLeg <- find (\leg -> leg.sequenceNumber == legOrder) allLegs & fromMaybeM (InvalidRequest $ "Leg not found for legOrder: " <> show legOrder)
   integratedBPPConfig <- SIBC.findIntegratedBPPConfig Nothing reqJourneyLeg.merchantOperatingCityId (Utils.frfsVehicleCategoryToBecknVehicleCategory Spec.METRO) DIBC.MULTIMODAL
   riderConfig <-
@@ -1099,18 +1100,8 @@ postMultimodalOrderChangeStops _ journeyId legOrder req = do
     (Nothing, Nothing) ->
       throwError $ InvalidRequest "No stations provided for change"
 
-  let sortedLegs = sortBy (\a b -> compare a.sequenceNumber b.sequenceNumber) allLegs
-      prevLeg = find (\leg -> leg.sequenceNumber == (reqJourneyLeg.sequenceNumber - 1)) sortedLegs
-      nextLeg = find (\leg -> leg.sequenceNumber == (reqJourneyLeg.sequenceNumber + 1)) sortedLegs
-
-  mbGates <- case (prevLeg, nextLeg) of
-    (Just prevLeg', Just nextLeg') -> do
-      updateAutoLegsWithGates (Just prevLeg') (Just nextLeg') metroLeg journey.merchantId reqJourneyLeg.merchantOperatingCityId mbSourceStation mbDestStation
-    (Just prevLeg', Nothing) -> do
-      updateAutoLegsWithGates (Just prevLeg') Nothing metroLeg journey.merchantId reqJourneyLeg.merchantOperatingCityId mbSourceStation mbDestStation
-    (Nothing, Just nextLeg') -> do
-      updateAutoLegsWithGates Nothing (Just nextLeg') metroLeg journey.merchantId reqJourneyLeg.merchantOperatingCityId mbSourceStation mbDestStation
-    (Nothing, Nothing) -> return Nothing
+  let (prevLeg, nextLeg) = findAdjacentLegs reqJourneyLeg.sequenceNumber sortedLegs
+  mbGates <- updateLegsWithGates prevLeg nextLeg reqJourneyLeg metroLeg journey.merchantId reqJourneyLeg.merchantOperatingCityId mbSourceStation mbDestStation
 
   newJourneyLeg <-
     JMTypes.mkJourneyLeg
@@ -1125,6 +1116,12 @@ postMultimodalOrderChangeStops _ journeyId legOrder req = do
   QJourneyLeg.create newJourneyLeg
 
   return $ API.Types.UI.MultimodalConfirm.ChangeStopsResp {stationsChanged = True}
+
+findAdjacentLegs :: Int -> [DJourneyLeg.JourneyLeg] -> (Maybe DJourneyLeg.JourneyLeg, Maybe DJourneyLeg.JourneyLeg)
+findAdjacentLegs sequenceNumber legs =
+  let prevLeg = find (\leg -> leg.sequenceNumber == sequenceNumber - 1) legs
+      nextLeg = find (\leg -> leg.sequenceNumber == sequenceNumber + 1) legs
+   in (prevLeg, nextLeg)
 
 validateAndGetMetroLeg ::
   (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasShortDurationRetryCfg r c) =>
@@ -1156,9 +1153,7 @@ validateAndGetMetroLeg sourceLatLong destLatLong sourceStopCode destStopCode jou
   transitServiceReq <- TMultiModal.getTransitServiceReq journey.merchantId reqJourneyLeg.merchantOperatingCityId
   otpResponse <- JMU.measureLatency (MultiModal.getTransitRoutes (Just journeyId.getId) transitServiceReq transitRoutesReq >>= fromMaybeM (InternalError "No routes found from OTP")) "getTransitRoutes"
 
-  validatedRoute <- case JMU.getBestOneWayRoute MultiModalTypes.MetroRail otpResponse.routes (Just sourceStopCode) (Just destStopCode) of
-    Nothing -> throwError $ InvalidRequest "No valid metro route found between the specified stops"
-    Just route -> return route
+  validatedRoute <- JMU.getBestOneWayRoute MultiModalTypes.MetroRail otpResponse.routes (Just sourceStopCode) (Just destStopCode) & fromMaybeM (InvalidRequest "No valid metro route found between the specified stops")
 
   metroLeg <- case filter (\leg -> leg.mode == MultiModalTypes.MetroRail) validatedRoute.legs of
     [singleMetroLeg] -> return singleMetroLeg
@@ -1167,88 +1162,59 @@ validateAndGetMetroLeg sourceLatLong destLatLong sourceStopCode destStopCode jou
 
   return metroLeg
 
-updateAutoLegsWithGates ::
+updateLegsWithGates ::
   (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasShortDurationRetryCfg r c) =>
   Maybe DJourneyLeg.JourneyLeg ->
   Maybe DJourneyLeg.JourneyLeg ->
+  DJourneyLeg.JourneyLeg ->
   MultiModalTypes.MultiModalLeg ->
   Id Domain.Types.Merchant.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Maybe DStation.Station ->
   Maybe DStation.Station ->
   m (Maybe JMTypes.Gates)
-updateAutoLegsWithGates mbPrevLeg mbNextLeg metroLeg merchantId merchantOpCityId mbSourceStation mbDestStation = do
-  now <- getCurrentTime
+updateLegsWithGates mbPrevLeg mbNextLeg oldMetroLeg metroLeg merchantId merchantOpCityId mbSourceStation mbDestStation = do
   mbEntranceGates <- case (mbPrevLeg, mbSourceStation) of
     (Just prevLeg, Just sourceStation) -> do
-      let prevLegEndPoint = LatLong prevLeg.endLocation.latitude prevLeg.endLocation.longitude
-      (mbOsmEntrance, mbStraightLineEntrance) <- JMTypes.getNearestGateFromLeg prevLegEndPoint merchantId merchantOpCityId (fromMaybe [] sourceStation.gates)
+      let prevLegStartPoint = LatLong prevLeg.startLocation.latitude prevLeg.startLocation.longitude
+      (mbOsmEntrance, mbStraightLineEntrance) <- JMTypes.getNearestGateFromLeg prevLegStartPoint merchantId merchantOpCityId (fromMaybe [] sourceStation.gates)
       let bestEntrance = mbOsmEntrance <|> mbStraightLineEntrance
-
-      case bestEntrance of
-        Just entrance -> do
-          let prevLegEndLocation = LatLngV2 (fromMaybe prevLeg.endLocation.latitude entrance.lat) (fromMaybe prevLeg.endLocation.longitude entrance.lon)
-          let updatedPrevLeg =
-                prevLeg
-                  { DJourneyLeg.endLocation = prevLegEndLocation,
-                    DJourneyLeg.toStopDetails = metroLeg.fromStopDetails,
-                    DJourneyLeg.osmEntrance = mbOsmEntrance <|> prevLeg.osmEntrance,
-                    DJourneyLeg.straightLineEntrance = mbStraightLineEntrance <|> prevLeg.straightLineEntrance,
-                    DJourneyLeg.updatedAt = now
-                  }
-          QJourneyLeg.updateByPrimaryKey updatedPrevLeg
-          return $ Just (mbStraightLineEntrance, mbOsmEntrance)
-        _ -> return Nothing
+      let prevLegEndLocation = maybe prevLeg.endLocation (\e -> LatLngV2 (fromMaybe prevLeg.endLocation.latitude e.lat) (fromMaybe prevLeg.endLocation.longitude e.lon)) bestEntrance
+      let updatedPrevLeg =
+            prevLeg
+              { DJourneyLeg.endLocation = prevLegEndLocation,
+                DJourneyLeg.toStopDetails = metroLeg.fromStopDetails,
+                DJourneyLeg.osmEntrance = mbOsmEntrance,
+                DJourneyLeg.straightLineEntrance = mbStraightLineEntrance,
+                DJourneyLeg.legSearchId = Nothing
+              }
+      QJourneyLeg.updateByPrimaryKey updatedPrevLeg
+      return $ Just (mbOsmEntrance, mbStraightLineEntrance)
     _ -> return Nothing
 
   mbExitGates <- case (mbNextLeg, mbDestStation) of
     (Just nextLeg, Just destStation) -> do
-      let nextLegStartPoint = LatLong nextLeg.startLocation.latitude nextLeg.startLocation.longitude
-      (mbOsmExit, mbStraightLineExit) <- JMTypes.getNearestGateFromLeg nextLegStartPoint merchantId merchantOpCityId (fromMaybe [] destStation.gates)
+      let nextLegEndPoint = LatLong nextLeg.endLocation.latitude nextLeg.endLocation.longitude
+      (mbOsmExit, mbStraightLineExit) <- JMTypes.getNearestGateFromLeg nextLegEndPoint merchantId merchantOpCityId (fromMaybe [] destStation.gates)
       let bestExit = mbOsmExit <|> mbStraightLineExit
-
-      case bestExit of
-        Just exit -> do
-          let nextLegStartLocation = LatLngV2 (fromMaybe nextLeg.startLocation.latitude exit.lat) (fromMaybe nextLeg.startLocation.longitude exit.lon)
-          let updatedNextLeg =
-                nextLeg
-                  { DJourneyLeg.startLocation = nextLegStartLocation,
-                    DJourneyLeg.fromStopDetails = metroLeg.toStopDetails,
-                    DJourneyLeg.osmExit = mbOsmExit <|> nextLeg.osmExit,
-                    DJourneyLeg.straightLineExit = mbStraightLineExit <|> nextLeg.straightLineExit,
-                    DJourneyLeg.updatedAt = now
-                  }
-          QJourneyLeg.updateByPrimaryKey updatedNextLeg
-          return $ Just (mbStraightLineExit, mbOsmExit)
-        _ -> return Nothing
+      let nextLegStartLocation = maybe nextLeg.startLocation (\e -> LatLngV2 (fromMaybe nextLeg.startLocation.latitude e.lat) (fromMaybe nextLeg.startLocation.longitude e.lon)) bestExit
+      let updatedNextLeg =
+            nextLeg
+              { DJourneyLeg.startLocation = nextLegStartLocation,
+                DJourneyLeg.fromStopDetails = metroLeg.toStopDetails,
+                DJourneyLeg.osmExit = mbOsmExit,
+                DJourneyLeg.straightLineExit = mbStraightLineExit,
+                DJourneyLeg.legSearchId = Nothing
+              }
+      QJourneyLeg.updateByPrimaryKey updatedNextLeg
+      return $ Just (mbOsmExit, mbStraightLineExit)
     _ -> return Nothing
 
   case (mbEntranceGates, mbExitGates) of
-    (Just (straightLineEntrance, osmEntrance), Just (straightLineExit, osmExit)) ->
-      return $
-        Just $
-          JMTypes.Gates
-            { straightLineEntrance = straightLineEntrance,
-              straightLineExit = straightLineExit,
-              osmEntrance = osmEntrance,
-              osmExit = osmExit
-            }
-    (Just (straightLineEntrance, osmEntrance), Nothing) ->
-      return $
-        Just $
-          JMTypes.Gates
-            { straightLineEntrance = straightLineEntrance,
-              straightLineExit = Nothing,
-              osmEntrance = osmEntrance,
-              osmExit = Nothing
-            }
-    (Nothing, Just (straightLineExit, osmExit)) ->
-      return $
-        Just $
-          JMTypes.Gates
-            { straightLineEntrance = Nothing,
-              straightLineExit = straightLineExit,
-              osmEntrance = Nothing,
-              osmExit = osmExit
-            }
     (Nothing, Nothing) -> return Nothing
+    _ ->
+      let straightLineEntrance = (mbEntranceGates >>= snd) <|> (oldMetroLeg.straightLineEntrance)
+          straightLineExit = (mbExitGates >>= snd) <|> (oldMetroLeg.straightLineExit)
+          osmEntrance = (mbEntranceGates >>= fst) <|> (oldMetroLeg.osmEntrance)
+          osmExit = (mbExitGates >>= fst) <|> (oldMetroLeg.osmExit)
+       in return $ Just JMTypes.Gates {..}
