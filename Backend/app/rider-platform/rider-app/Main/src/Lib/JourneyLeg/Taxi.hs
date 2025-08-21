@@ -176,7 +176,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
   cancel _ = throwError (InternalError "Not Supported")
 
   getState (TaxiLegRequestGetState req) = do
-    mbBooking <- QBooking.findByTransactionIdAndStatus req.searchId.getId (activeBookingStatus <> [COMPLETED, CANCELLED])
+    mbBooking <- QBooking.findByTransactionIdAndStatus req.searchId.getId (activeBookingStatus <> [COMPLETED])
     mbRide <- maybe (pure Nothing) (QRide.findByRBId . (.id)) mbBooking
     mbEstimate <-
       case mbBooking of
@@ -204,7 +204,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
   getState _ = throwError (InternalError "Not Supported")
 
   getInfo (TaxiLegRequestGetInfo req) = do
-    mbBooking <- QBooking.findByTransactionIdAndStatus req.searchId.getId (activeBookingStatus <> [COMPLETED, CANCELLED])
+    mbBooking <- QBooking.findByTransactionIdAndStatus req.searchId.getId (activeBookingStatus <> [COMPLETED])
     case mbBooking of
       Just booking -> do
         mRide <- QRide.findByRBId booking.id

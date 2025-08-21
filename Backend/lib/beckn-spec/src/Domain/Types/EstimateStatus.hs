@@ -13,6 +13,7 @@ data EstimateStatus
   | CANCELLED
   | GOT_DRIVER_QUOTE
   | DRIVER_QUOTE_CANCELLED
+  | RIDE_SEARCH_EXPIRED
   | COMPLETED
   deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 

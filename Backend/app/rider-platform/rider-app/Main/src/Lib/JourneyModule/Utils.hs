@@ -863,7 +863,7 @@ buildTrainAllViaRoutes getPreliminaryLeg (Just originStopCode) (Just destination
                 nub $
                   map
                     ( \fd ->
-                        let viaStops = T.splitOn "-" fd.via
+                        let viaStops = T.splitOn "-" (T.strip fd.via)
                             stops = [originStopCode] <> viaStops <> [destinationStopCode]
                          in zipWith (,) stops (drop 1 stops)
                     )

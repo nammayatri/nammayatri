@@ -12,7 +12,7 @@ import qualified Data.Text.Encoding as TE
 import Domain.Types.Extra.IntegratedBPPConfig (CRISConfig)
 import qualified Domain.Types.FRFSQuote as Quote
 import Domain.Types.MerchantOperatingCity
-import EulerHS.Prelude hiding (concatMap, find, readMaybe, whenJust)
+import EulerHS.Prelude hiding (concatMap, find, null, readMaybe, whenJust)
 import qualified EulerHS.Types as ET
 import ExternalBPP.ExternalAPI.Subway.CRIS.Auth (callCRISAPI)
 import ExternalBPP.ExternalAPI.Subway.CRIS.Encryption (decryptResponseData, encryptPayload)
@@ -160,8 +160,10 @@ getRouteFare config merchantOperatingCityId request = do
   logInfo $ "FRFS Subway Fare: " <> show routeFareDetails
   frfsDetails <-
     routeFareDetails `forM` \routeFareDetail -> do
-      let fares = routeFareDetail.fareDtlsList
+      let allFares = routeFareDetail.fareDtlsList
       let routeId = routeFareDetail.routeId
+      let onlySelectedViaFares = filter (\fare -> fare.via == request.via) allFares
+      let fares = if null onlySelectedViaFares || request.via == " " then allFares else onlySelectedViaFares
       fares `forM` \fare -> do
         let mbFareAmount = readMaybe @HighPrecMoney . T.unpack $ fare.adultFare
             mbChildFareAmount = readMaybe @HighPrecMoney . T.unpack $ fare.childFare

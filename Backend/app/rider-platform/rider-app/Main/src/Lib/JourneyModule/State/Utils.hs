@@ -62,12 +62,13 @@ getWalkAllStatuses journeyLeg = do
 getTaxiAllStatuses :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => DJourneyLeg.JourneyLeg -> Maybe DBooking.Booking -> Maybe DRide.Ride -> Maybe DEstimate.Estimate -> m (JLTypes.JourneyLegStatus, Maybe JourneyBookingStatus, Maybe TrackingStatus)
 getTaxiAllStatuses journeyLeg mbBooking mbRide mbEstimate = do
   let bookingStatus = getTaxiJourneyBookingStatus mbBooking mbRide mbEstimate
-  mbTrackingStatus <- getTaxiJourneyLegTrackingStatus mbBooking mbRide mbEstimate (listToMaybe journeyLeg.routeDetails)
+  mbTrackingStatus <- getTaxiJourneyLegTrackingStatus bookingStatus `mapM` (listToMaybe journeyLeg.routeDetails)
   let oldStatus =
         if mbTrackingStatus == Just Finished
           then JLTypes.Completed
           else do
-            if maybe False (\status -> status `elem` [TaxiRide DTaxiRide.CANCELLED, TaxiBooking DTaxiBooking.CANCELLED, TaxiEstimate DTaxiEstimate.CANCELLED]) bookingStatus
+            -- If status is completed, a booking should exist. If it appears here without a booking, it means the booking was cancelled.
+            if maybe False (\status -> status `elem` [TaxiRide DTaxiRide.CANCELLED, TaxiBooking DTaxiBooking.CANCELLED, TaxiEstimate DTaxiEstimate.CANCELLED, TaxiEstimate DTaxiEstimate.COMPLETED]) bookingStatus
               then JLTypes.Skipped
               else do
                 case bookingStatus of
@@ -81,7 +82,7 @@ getTaxiAllStatuses journeyLeg mbBooking mbRide mbEstimate = do
     mapTaxiEstimateStatusToJourneyLegStatus estimateStatus =
       case estimateStatus of
         DTaxiEstimate.NEW -> JLTypes.InPlan
-        DTaxiEstimate.COMPLETED -> JLTypes.Booked
+        DTaxiEstimate.COMPLETED -> JLTypes.Cancelled -- If status is completed, a booking should exist. If it appears here without a booking, it means the booking was cancelled.
         DTaxiEstimate.CANCELLED -> JLTypes.Cancelled
         _ -> JLTypes.Assigning
 
@@ -172,26 +173,25 @@ setJourneyLegTrackingStatus journeyLeg subLegOrder trackingStatus = do
     )
     routeDetails
 
-getTaxiJourneyLegTrackingStatus :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => Maybe DBooking.Booking -> Maybe DRide.Ride -> Maybe DEstimate.Estimate -> Maybe DRouteDetails.RouteDetails -> m (Maybe TrackingStatus)
-getTaxiJourneyLegTrackingStatus _ _ _ Nothing = return Nothing
-getTaxiJourneyLegTrackingStatus mbBooking mbRide mbEstimate (Just journeyRouteDetails) = do
-  let taxiJourneyLegStatus = getTaxiJourneyBookingStatus mbBooking mbRide mbEstimate
+getTaxiJourneyLegTrackingStatus :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => Maybe JourneyBookingStatus -> DRouteDetails.RouteDetails -> m TrackingStatus
+getTaxiJourneyLegTrackingStatus taxiJourneyLegStatus journeyRouteDetails = do
   case taxiJourneyLegStatus of
     Just (TaxiRide DTaxiRide.INPROGRESS) -> do
       when (journeyRouteDetails.trackingStatus /= Just Ongoing) $ do
         void $ QRouteDetails.updateTrackingStatus (Just Ongoing) journeyRouteDetails.id
-      return $ Just Ongoing
+      return Ongoing
     Just (TaxiRide DTaxiRide.COMPLETED) -> do
       when (journeyRouteDetails.trackingStatus /= Just Finished) $ do
         void $ QRouteDetails.updateTrackingStatus (Just Finished) journeyRouteDetails.id
-      return $ Just Finished
+      return Finished
     bookingStatus ->
-      if journeyRouteDetails.trackingStatus `elem` [Just Arriving, Just AlmostArrived, Just Arrived] && bookingStatus `elem` [Just (TaxiEstimate DTaxiEstimate.CANCELLED), Just (TaxiBooking DTaxiBooking.CANCELLED), Just (TaxiRide DTaxiRide.CANCELLED)]
+      -- If status is completed, a booking should exist. If it appears here without a booking, it means the booking was cancelled.
+      if journeyRouteDetails.trackingStatus `elem` [Just Arriving, Just AlmostArrived, Just Arrived] && bookingStatus `elem` [Just (TaxiEstimate DTaxiEstimate.CANCELLED), Just (TaxiEstimate DTaxiEstimate.COMPLETED), Just (TaxiBooking DTaxiBooking.CANCELLED), Just (TaxiRide DTaxiRide.CANCELLED)]
         then do
           when (journeyRouteDetails.trackingStatus /= Just InPlan) $ do
             void $ QRouteDetails.updateTrackingStatus (Just InPlan) journeyRouteDetails.id
-          return $ Just InPlan
-        else return journeyRouteDetails.trackingStatus
+          return InPlan
+        else return (fromMaybe InPlan journeyRouteDetails.trackingStatus)
 
 getFRFSJourneyLegTrackingStatus :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => Maybe DFRFSBooking.FRFSTicketBooking -> DRouteDetails.RouteDetails -> m (Maybe TrackingStatus)
 getFRFSJourneyLegTrackingStatus mbBooking journeyRouteDetails = do

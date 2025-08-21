@@ -313,6 +313,7 @@ select2 personId estimateId req@DSelectReq {..} = do
   mbJourneyId <- case mbJourneyLeg of
     Just journeyLeg -> do
       QJourney.updateStatus DJ.INPROGRESS journeyLeg.journeyId
+      QSearchRequest.updatePricingId searchRequest.id (Just estimate.id.getId)
       pure journeyLeg.journeyId
     Nothing -> mkJourneyForSearch searchRequest estimate personId
   isMultipleOrNoDeviceIdExist <-
