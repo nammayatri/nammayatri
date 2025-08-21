@@ -33,6 +33,16 @@ parseMoney :: Spec.Price -> Maybe HighPrecMoney
 parseMoney price =
   price.priceValue >>= (readMaybe . T.unpack)
 
+parseOfferPrice :: Spec.Price -> Maybe Price
+parseOfferPrice specPrice = do
+  currency <- parseCurrency specPrice
+  offerMoney <- parseOfferMoney specPrice
+  Just $ mkPrice (Just currency) offerMoney
+
+parseOfferMoney :: Spec.Price -> Maybe HighPrecMoney
+parseOfferMoney price =
+  price.priceOfferedValue >>= (readMaybe . T.unpack)
+
 -- TODO check what we receive from bpp
 parseCurrency :: Spec.Price -> Maybe Currency
 parseCurrency price =
