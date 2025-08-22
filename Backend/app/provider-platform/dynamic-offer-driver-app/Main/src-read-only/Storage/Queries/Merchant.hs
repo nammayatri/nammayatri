@@ -50,6 +50,7 @@ updateByPrimaryKey (Domain.Types.Merchant.Merchant {..}) = do
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.description description,
       Se.Set Beam.enabled enabled,
+      Se.Set Beam.enforceSufficientDriverBalance enforceSufficientDriverBalance,
       Se.Set Beam.fleetOwnerEnabledCheck fleetOwnerEnabledCheck,
       Se.Set Beam.fromTime fromTime,
       Se.Set Beam.gatewayAndRegistryPriorityList (Kernel.Prelude.Just gatewayAndRegistryPriorityList),
