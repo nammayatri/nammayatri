@@ -62,7 +62,13 @@ validateRequest (TicketVerification DTicketPayload {..}) = do
 
 onStatus :: Merchant -> Booking.FRFSTicketBooking -> DOnStatus -> Flow DOnStatusResp
 onStatus _merchant booking (Booking dOrder) = do
-  statuses <- traverse (Utils.getTicketStatus booking) dOrder.tickets
+  tickets <-
+    if null dOrder.tickets
+      then do
+        tickets <- QTicket.findAllByTicketBookingId booking.id
+        pure $ map mapTicketToDTicket tickets
+      else return dOrder.tickets
+  statuses <- traverse (Utils.getTicketStatus booking) tickets
   statuses' <-
     case dOrder.orderStatus of
       Just Spec.COMPLETE
@@ -82,9 +88,32 @@ onStatus _merchant booking (Booking dOrder) = do
       DPOC.getWalletClassNameConfig pOrgCfg.config
     let mbClassName = HashMap.lookup booking.merchantOperatingCityId.getId walletPOCfg.className
     whenJust mbClassName $ \_ -> fork ("updating status of tickets in google wallet for bookingId " <> booking.id.getId) $ traverse_ updateStatesForGoogleWallet googleWalletStates
-  traverse_ refreshTicket dOrder.tickets
+  traverse_ refreshTicket tickets
   return Async
   where
+    mapTicketToDTicket :: Ticket.FRFSTicket -> DTicket
+    mapTicketToDTicket ticket =
+      DTicket
+        { qrData = ticket.qrData,
+          vehicleNumber = ticket.scannedByVehicleNumber,
+          description = ticket.description,
+          bppFulfillmentId = Nothing,
+          ticketNumber = ticket.ticketNumber,
+          validTill = ticket.validTill,
+          status = (mapFRFSStatusToDTicketStatus ticket.status),
+          qrRefreshAt = ticket.qrRefreshAt
+        }
+
+    mapFRFSStatusToDTicketStatus :: Ticket.FRFSTicketStatus -> Text
+    mapFRFSStatusToDTicketStatus = \case
+      Ticket.ACTIVE -> "UNCLAIMED"
+      Ticket.EXPIRED -> "EXPIRED"
+      Ticket.USED -> "CLAIMED"
+      Ticket.CANCELLED -> "CANCELLED"
+      Ticket.COUNTER_CANCELLED -> "CANCELLED"
+      Ticket.CANCEL_INITIATED -> "CANCELLED"
+      Ticket.TECHNICAL_CANCEL_REJECTED -> "UNCLAIMED"
+
     updateTicketStatuses :: [Utils.TicketStatus] -> [Utils.TicketStatus]
     updateTicketStatuses = fmap (\ts@Utils.TicketStatus {} -> ts {Utils.status = Ticket.USED})
     updateTicket ticketStatus =

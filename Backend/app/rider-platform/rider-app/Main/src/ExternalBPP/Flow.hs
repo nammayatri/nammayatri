@@ -207,7 +207,7 @@ confirm _merchant _merchantOperatingCity frfsConfig integratedBPPConfig bapConfi
               DTicket
                 { qrData = ticket.qrData,
                   vehicleNumber = ticket.vehicleNumber,
-                  bppFulfillmentId = CallAPI.getProviderName integratedBPPConfig,
+                  bppFulfillmentId = Just $ CallAPI.getProviderName integratedBPPConfig,
                   ticketNumber = ticket.ticketNumber,
                   validTill = ticket.qrValidity,
                   status = ticket.qrStatus,
@@ -239,7 +239,7 @@ status _merchantId _merchantOperatingCity integratedBPPConfig bapConfig booking 
               DTicket
                 { qrData = ticket.qrData,
                   vehicleNumber = ticket.vehicleNumber,
-                  bppFulfillmentId = CallAPI.getProviderName integratedBPPConfig,
+                  bppFulfillmentId = Just $ CallAPI.getProviderName integratedBPPConfig,
                   ticketNumber = ticket.ticketNumber,
                   validTill = ticket.qrValidity,
                   status = ticket.qrStatus,
