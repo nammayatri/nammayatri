@@ -87,7 +87,7 @@ data DTicket = DTicket
   { qrData :: Text,
     vehicleNumber :: Maybe Text,
     description :: Maybe Text,
-    bppFulfillmentId :: Text,
+    bppFulfillmentId :: Maybe Text,
     ticketNumber :: Text,
     validTill :: UTCTime,
     status :: Text,
