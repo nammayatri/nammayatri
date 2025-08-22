@@ -216,6 +216,7 @@ initData =
       }
       , nyClubTag : Nothing
       , consentPopupPeakHeight : 0
+      , callingOption : ST.AnonymousCall
     }
   , props:
       { isFreeRide: false

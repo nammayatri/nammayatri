@@ -18,7 +18,7 @@ import Data.Number as DN
 import Components.PopUpModal as PopUpModal
 import Timers as T
 import Screens.RideSummaryScreen.ScreenData
-import Data.String(take)
+import Data.String(take, toLower)
 import Engineering.Helpers.LogEvent (logEvent, logEventWithTwoParams, logEventWithMultipleParams)
 import Storage (getValueToLocalStore, KeyStore(..))
 import Effect.Aff (launchAff)
@@ -29,7 +29,7 @@ import Control.Transformers.Back.Trans (runBackT)
 import Engineering.Helpers.BackTrack (getState, liftFlowBT)
 import PrestoDOM.Core (getPushFn)
 import Services.Backend as Remote
-import Data.Array (union, (!!), filter, length, (:), foldl, drop,  replicate, updateAt, elemIndex, (..), last, find, catMaybes, sortBy, reverse)
+import Data.Array (union, (!!), filter, length, (:), foldl, drop,  replicate, updateAt, elemIndex, (..), last, find, catMaybes, sortBy, reverse, head)
 import JBridge as JB
 import Services.Backend (driverRegistrationStatusBT, dummyVehicleObject, makeDriverDLReq, makeDriverRCReq, makeGetRouteReq, makeLinkReferralCodeReq, makeOfferRideReq, makeReferDriverReq, makeResendAlternateNumberOtpRequest, makeTriggerOTPReq, makeValidateAlternateNumberRequest, makeValidateImageReq, makeVerifyAlternateNumberOtpRequest, makeVerifyOTPReq, mkUpdateDriverInfoReq, walkCoordinate, walkCoordinates)
 import Screens.HomeScreen.ComponentConfig (mapRouteConfig)
@@ -39,7 +39,7 @@ import Engineering.Helpers.RippleCircles
 import Helpers.Utils
 import Data.Number (fromString) as Number
 import Components.DropDownCard.Controller
-
+import Common.RemoteConfig.Utils as RU
 
 instance showAction :: Show Action where
   show (BackPressed) = "BackPressed"
@@ -219,10 +219,9 @@ eval (PopUpModalErrorAction (PopUpModal.OnButton2Click)) state  = updateAndExit 
 
 eval (Call) state = do
   let exophoneNumber = if (take 1 state.data.activeRideData.exoPhone) == "0" then state.data.activeRideData.exoPhone else "0" <> state.data.activeRideData.exoPhone
-  updateWithCmdAndExit state [ do
-    void $ pure $ JB.showDialer exophoneNumber false
-    pure NoAction
-    ] $ CallingCustomer state exophoneNumber
+      driverCity = toLower $ getValueToLocalStore DRIVER_LOCATION
+      option = getCallingOptionType CTA.FunctionCall driverCity
+  updateAndExit state { data {callingOption = option}} $ CallingCustomer state exophoneNumber
 
 eval (GoToMap dstLt dstLn) state =  updateAndExit state  $ GoToOpenGoogleMap state
 

@@ -1339,11 +1339,12 @@ eval (RideActionModalAction (RideActionModal.CallCustomer)) state = do
     continue state{props{showDeliveryCallPopup = true}}
   else do
     let exophoneNumber = getExoPhoneNumber state
+        driverCity = toLower $ getValueToLocalStore DRIVER_LOCATION
+        option = getCallingOptionType Common.FunctionCall driverCity
     updateWithCmdAndExit state [ do
-      void $ pure $ showDialer exophoneNumber false -- TODO: FIX_DIALER
       _ <- logEventWithTwoParams state.data.logField "call_customer" "trip_id" (state.data.activeRide.id) "user_id" (getValueToLocalStore DRIVER_ID)
       pure NoAction
-    ] $ CallCustomer state exophoneNumber
+    ] $ CallCustomer state {data {callingOption = option}} exophoneNumber
 
 eval (RideActionModalAction (RideActionModal.SecondaryTextClick popUpType)) state = do
   let updatedState = if popUpType == RideActionModal.RentalInfo then state{props{rentalInfoPopUp = true, safetyAudioAutoPlay = false}}
@@ -1373,7 +1374,6 @@ eval (DeliveryCall item) state =  do
   let exoPhoneNumber = if (take 1 exoPhoneNo) == "0" then exoPhoneNo else "0" <> exoPhoneNo
   let newState = state { props { showDeliveryCallPopup = false } }
   updateWithCmdAndExit newState [ do
-    void $ pure $ showDialer exoPhoneNumber false
     _ <- logEventWithTwoParams state.data.logField "call_customer" "trip_id" (state.data.activeRide.id) "user_id" (getValueToLocalStore DRIVER_ID)
     pure NoAction
     ] $ CallCustomer newState exoPhoneNumber
@@ -1442,11 +1442,12 @@ eval (ChatViewActionController (ChatView.TextChanged value)) state = continue st
 
 eval (ChatViewActionController (ChatView.Call)) state = do
   let exophoneNumber = getExoPhoneNumber state
-  continueWithCmd state [ do
-    _ <- pure $ showDialer exophoneNumber false -- TODO: FIX_DIALER
+      driverCity = toLower $ getValueToLocalStore DRIVER_LOCATION
+      option = getCallingOptionType Common.FunctionCall driverCity
+  updateWithCmdAndExit state [ do
     _ <- logEventWithTwoParams state.data.logField "call_customer" "trip_id" state.data.activeRide.id "user_id" (getValueToLocalStore DRIVER_ID)
     pure NoAction
-  ]
+  ] $ CallCustomer state {data {callingOption = option}} exophoneNumber
 
 eval (ChatViewActionController (ChatView.SendMessage)) state = do
   if state.data.messageToBeSent /= ""

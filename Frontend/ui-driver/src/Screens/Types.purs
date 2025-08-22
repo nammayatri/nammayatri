@@ -32,19 +32,19 @@ import Data.Argonaut.Decode (class DecodeJson)
 import Data.Argonaut.Encode (class EncodeJson)
 import Data.Either as Either
 import Data.Generic.Rep (class Generic)
-import Data.Maybe (Maybe)
+import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Newtype (class Newtype)
 import Data.Show.Generic (genericShow)
 import Domain.Payments as PP
 import Foreign (Foreign)
 import Foreign.Generic (class Encode)
-import Foreign.Class (class Decode, class Encode)
+import Foreign.Class (class Decode, class Encode, encode)
 import Foreign.Object (Object)
 import Control.Alt ((<|>))
 import Foreign (ForeignError(..), fail)
 import Halogen.VDom.DOM.Prop (PropValue)
 import MerchantConfig.Types (AppConfig, BottomNavConfig, GradientConfig, SubscriptionConfig, Language(..))
-import Prelude (class Eq, class Show, ($), (<$>))
+import Prelude (class Eq, class Show, ($), (<$>),(<<<), bind,pure)
 import Foreign.Index (readProp)
 import Foreign.Generic (class Decode, decode)
 import Presto.Core.Types.API (class StandardEncode, standardEncode)
@@ -74,6 +74,11 @@ import Common.RemoteConfig.Types as CommonRC
 import Common.RemoteConfig.Types (OfferBanner(..)) as ReExport
 import Data.Tuple(Tuple(..))
 import JBridge as JB
+import Common.RemoteConfig.Utils as RU
+import Data.String (toLower)
+import Common.Types.App (LazyCheck(..))
+import Data.Array as DA
+import Debug (spy)
 
 
 type EditTextInLabelState =
@@ -1143,6 +1148,7 @@ type HomeScreenData =  {
 , blockedExpiryTime :: String
 , nyClubTag :: Maybe String
 , consentPopupPeakHeight :: Int
+, callingOption :: CallingOptionType
 }
 
 type InsuranceData = {
@@ -3639,3 +3645,21 @@ type MeterRideScreenProps = {
 }
 
 data FareProductType = RENTAL | INTER_CITY | ONE_WAY | ONE_WAY_SPECIAL_ZONE | DRIVER_OFFER | AMBULANCE | DELIVERY
+
+
+-------------------------------------------------- Driver Calling Options ------------------------------------
+
+data CallingOptionType = AnonymousCall | DirectCall
+
+derive instance genericCallingOptionType :: Generic CallingOptionType _
+instance eqCallingOptionType :: Eq CallingOptionType where eq = genericEq
+instance showCallingOptionType :: Show CallingOptionType where show = toLower <<< genericShow
+
+instance encodeCallingOptionType :: Encode CallingOptionType where encode = defaultEnumEncode
+instance decodeCallingOptionType :: Decode CallingOptionType where
+  decode fgn = do
+    str <- decode fgn
+    case toLower str of
+      "directcall"    -> pure DirectCall
+      "anonymouscall" -> pure AnonymousCall
+      _               -> pure AnonymousCall
