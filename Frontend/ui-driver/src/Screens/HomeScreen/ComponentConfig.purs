@@ -16,6 +16,7 @@
 module Screens.HomeScreen.ComponentConfig where
 
 import Language.Strings
+import Language.Types (STR(..))
 import Common.Types.Config
 import Common.Types.App (LazyCheck(..), PolylineAnimationConfig)
 import Common.Types.App as CommonTypes
@@ -62,10 +63,10 @@ import Prelude (Unit,div,mod,unit, ($), (-), (/), (<), (<=), (<>), (==), (>=), (
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Padding(..), Visibility(..), Accessiblity(..), Orientation(..), cornerRadius, padding, gravity)
 import PrestoDOM.Types.DomAttributes as PTD
 import Resource.Constants as Const
-import Screens.Types (AutoPayStatus(..), SubscriptionBannerType(..), SubscriptionPopupType(..), GoToPopUpType(..))
+import Screens.Types (AutoPayStatus(..), SubscriptionBannerType(..), SubscriptionPopupType(..), GoToPopUpType(..), BlockType(..))
 import Screens.Types as ST
 import Services.API as API
-import Services.API (PaymentBreakUp(..), PromotionPopupConfig(..), Status(..), BookingTypes(..))
+import Services.API (PaymentBreakUp(..), PromotionPopupConfig(..), Status(..), BookingTypes(..), GetDriverInfoResp(..), CancellationRateSlabConfig(..), CancellationRateSlab(..), SlabType(..))
 import Storage (KeyStore(..), getValueToLocalNativeStore, getValueToLocalStore)
 import Mobility.Prelude (boolToVisibility)
 import Styles.Colors as Color
@@ -96,6 +97,9 @@ import Control.Apply as CA
 import Resource.Localizable.TypesV2 as LT2
 import Resource.Localizable.StringsV2 as StringsV2
 import Components.PrimaryEditText.Controller as PrimaryEditTextController
+import Data.String (Pattern(..), Replacement(..))
+import Data.String as String
+import Data.Function (flip)
 import Services.Accessor as Acc
 import Components.SelectableItems as SelectableItems
 import Components.SelectableItem as SelectableItem
@@ -851,20 +855,54 @@ cancelConfirmationConfig state = let
     margin = MarginHorizontal 24 24 ,
     buttonLayoutMargin = Margin 16 24 16 20 ,
     primaryText {
-      text =
-        let
-          isAmbulance = RC.getCategoryFromVariant state.data.vehicleType == Just ST.AmbulanceCategory
-          ambulanceText =  StringsV2.getStringV2 LT2.canceling_this_booking_may_affect_the_emergency_medical
-          nonAmbulanceText = case state.data.activeRide.specialLocationTag of
-            Nothing -> getString FREQUENT_CANCELLATIONS_WILL_LEAD_TO_BLOCKING
-            Just specialLocationTag -> getString $ getCancelAlertText $ (HU.getRideLabelData (Just specialLocationTag) false).cancelText
-        in
-          if isAmbulance then ambulanceText else nonAmbulanceText
-    , margin = Margin 16 24 16 0 },
+      text = if state.props.willCancellationBlock && (state.data.activeRide.specialLocationTag == Nothing || (HU.getRequiredTag state.data.activeRide.specialLocationTag false) == Nothing)
+             then StringsV2.getStringV2 LT2.your_cancellation_rate_is_high
+             else let
+                    isAmbulance = RC.getCategoryFromVariant state.data.vehicleType == Just ST.AmbulanceCategory
+                    ambulanceText =  StringsV2.getStringV2 LT2.canceling_this_booking_may_affect_the_emergency_medical
+                    blockingText = if state.props.willCancellationBlock 
+                                  then StringsV2.getStringV2 LT2.cancelling_this_ride_will_block_you
+                                  else StringsV2.getStringV2 LT2.your_cancellation_rate_is_high 
+                    nonAmbulanceText = case state.data.activeRide.specialLocationTag of
+                      Nothing -> blockingText
+                      Just specialLocationTag -> 
+                          if state.props.willCancellationBlock
+                          then StringsV2.getStringV2 LT2.cancelling_this_ride_will_block_you
+                          else getString $ getCancelAlertText $ (HU.getRideLabelData (Just specialLocationTag) false).cancelText
+                    in
+                      if isAmbulance then ambulanceText else nonAmbulanceText
+    , margin = if (state.data.activeRide.specialLocationTag == Nothing || (HU.getRequiredTag state.data.activeRide.specialLocationTag false) == Nothing) && not state.props.willCancellationBlock
+               then Margin 16 8 16 4
+               else Margin 16 16 16 4
+    , color = if state.props.willCancellationBlock then Color.red900 else Color.black900
+    },
     secondaryText {
-      visibility = if state.data.activeRide.specialLocationTag == (Just "GOTO") || RC.getCategoryFromVariant state.data.vehicleType == Just ST.AmbulanceCategory then VISIBLE else GONE,
-      text = if state.data.activeRide.specialLocationTag == (Just "GOTO") then getString GO_TO_CANCELLATION_DESC else  StringsV2.getStringV2 LT2.drivers_are_permitted_to_cancel_ambulance_bookings,
-      margin = MarginTop 6
+      visibility = if state.data.activeRide.specialLocationTag == (Just "GOTO") || RC.getCategoryFromVariant state.data.vehicleType == Just ST.AmbulanceCategory || state.props.willCancellationBlock || (state.data.activeRide.specialLocationTag == Nothing || (HU.getRequiredTag state.data.activeRide.specialLocationTag false) == Nothing) then VISIBLE else GONE,
+      text = if state.props.willCancellationBlock 
+             then let 
+                    nextCancellationRate = if state.props.cancellationValues.totalRides > 0 
+                                          then ((state.props.cancellationValues.cancelledRides + 1) * 100) / state.props.cancellationValues.totalRides
+                                          else 0
+                    baseText = case state.props.cancellationValues.blockType of
+                                  Just DailyBlock -> StringsV2.getStringV2 LT2.your_daily_cancellation_rate_will_increase_to_x_percent_and_will_block_you_for_x_hours
+                                  Just WeeklyBlock -> StringsV2.getStringV2 LT2.your_weekly_cancellation_rate_will_increase_to_x_percent_and_will_block_you_for_x_hours
+                                  _ -> StringsV2.getStringV2 LT2.your_daily_cancellation_rate_will_increase_to_x_percent_and_will_block_you_for_x_hours
+                    replacedText = String.replace (Pattern "X%") (Replacement $ show nextCancellationRate <> "%")
+                      $ String.replace (Pattern "X hours") (Replacement $ show state.props.cancellationValues.suspensionHours <> " hours") baseText
+                  in replacedText
+              else if state.data.activeRide.specialLocationTag == (Just "GOTO") 
+                    then StringsV2.getStringV2 LT2.go_to_cancellation_desc
+                    else if RC.getCategoryFromVariant state.data.vehicleType == Just ST.AmbulanceCategory
+                         then StringsV2.getStringV2 LT2.drivers_are_permitted_to_cancel_ambulance_bookings
+                         else if (state.data.activeRide.specialLocationTag == Nothing || (HU.getRequiredTag state.data.activeRide.specialLocationTag false) == Nothing)
+                              then StringsV2.getStringV2 LT2.cancelling_this_ride_will_lower_your_score_and_may_lead_to_blocking
+                              else "",
+      margin = if (state.data.activeRide.specialLocationTag == Nothing || (HU.getRequiredTag state.data.activeRide.specialLocationTag false) == Nothing) && not state.props.willCancellationBlock
+               then Margin 16 8 16 16
+               else Margin 16 4 16 16,
+      color = Color.black700,
+      gravity = CENTER,
+      useTextFromHtml = true
       },
     option1 {
       text = (getString CONTINUE)
@@ -889,11 +927,16 @@ cancelConfirmationConfig state = let
     backgroundClickable = false,
     cornerRadius = (PTD.Corners 15.0 true true true true),
     coverImageConfig {
-      imageUrl = fetchImage FF_ASSET  if (state.data.activeRide.specialLocationTag == Nothing || (HU.getRequiredTag state.data.activeRide.specialLocationTag false) == Nothing)
-                    then if (RC.decodeVehicleType $ getValueToLocalStore VEHICLE_CATEGORY) == Just ST.AmbulanceCategory then "ny_ic_cancel_prevention_ambulance" else "ny_ic_frequent_cancellation_blocking"
+      imageUrl = fetchImage FF_ASSET $ 
+        if state.props.willCancellationBlock 
+        then "ny_ic_this_cancellation_will_block_you"
+        else if (RC.decodeVehicleType $ getValueToLocalStore VEHICLE_CATEGORY) == Just ST.AmbulanceCategory
+             then "ny_ic_cancel_prevention_ambulance"
+             else if (state.data.activeRide.specialLocationTag == Nothing || (HU.getRequiredTag state.data.activeRide.specialLocationTag false) == Nothing)
+                  then "ny_ic_your_cancellation_rate_is_high_meter"
                   else (HU.getRideLabelData state.data.activeRide.specialLocationTag false).cancelConfirmImage
     , visibility = VISIBLE
-    , margin = Margin 16 10 16 0
+    , margin = Margin 16 16 16 0
     , height = V 250
     , width = MATCH_PARENT
     },
@@ -1154,7 +1197,7 @@ getCancelAlertText key = case key of
   "ZONE_CANCEL_TEXT_PICKUP" -> ZONE_CANCEL_TEXT_PICKUP
   "ZONE_CANCEL_TEXT_DROP" -> ZONE_CANCEL_TEXT_DROP
   "GO_TO_CANCELLATION_TITLE" -> GO_TO_CANCELLATION_TITLE
-  _ -> FREQUENT_CANCELLATIONS_WILL_LEAD_TO_BLOCKING
+  _ -> YOUR_CANCELLATION_RATE_IS_HIGH
 
 mapRouteConfig :: String -> String -> Boolean -> PolylineAnimationConfig -> JB.MapRouteConfig
 mapRouteConfig srcIcon destIcon isAnim animConfig  = JB.mapRouteConfig {

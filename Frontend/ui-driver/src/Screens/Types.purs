@@ -51,7 +51,7 @@ import PrestoDOM.List (ListItem)
 import Prim.TypeError as String
 import RemoteConfig.Types as RC
 import Screens (ScreenName)
-import Services.API (LmsTranslatedModuleInfoRes(..), QuizQuestion(..), QuizOptions(..), LmsQuizHistory(..), LmsQuestionRes(..), LmsModuleRes(..), LmsVideoRes(..), LmsEntityCompletionStatus(..), LmsBonus(..), LmsReward(..), LmsCategory(..), ModuleCompletionStatus(..), AutopayPaymentStage, BankError(..), FeeType, GetDriverInfoResp(..), MediaType, PaymentBreakUp, Route, Status, DriverProfileStatsResp(..), LastPaymentType(..), RidesSummary, RidesInfo(..), GetAllRcDataResp(..), GetAllRcDataRecords(..), TripCategory(..), QuestionConfirmRes(..), ServiceTierType(..))
+import Services.API (LmsTranslatedModuleInfoRes(..), QuizQuestion(..), QuizOptions(..), LmsQuizHistory(..), LmsQuestionRes(..), LmsModuleRes(..), LmsVideoRes(..), LmsEntityCompletionStatus(..), LmsBonus(..), LmsReward(..), LmsCategory(..), ModuleCompletionStatus(..), AutopayPaymentStage, BankError(..), FeeType, GetDriverInfoResp(..), MediaType, PaymentBreakUp, Route, Status, DriverProfileStatsResp(..), LastPaymentType(..), RidesSummary, RidesInfo(..), GetAllRcDataResp(..), GetAllRcDataRecords(..), TripCategory(..), QuestionConfirmRes(..), ServiceTierType(..), CancellationRateSlabConfig(..))
 import Services.API (QuestionConfirmRes(..), GetDriverInfoResp(..), Route, Status, MediaType, PaymentBreakUp, BookingTypes(..))
 import Services.API as API
 import Styles.Types (FontSize)
@@ -479,6 +479,11 @@ type DriverProfileScreenData = {
   assignedRides :: Int,
   cancelledRides :: Int,
   cancellationWindow :: Maybe Int,
+  assignedRidesCountDaily :: Maybe Int,
+  cancelledRidesCountDaily :: Maybe Int,
+  assignedRidesCountWeekly :: Maybe Int, 
+  cancelledRidesCountWeekly :: Maybe Int,
+  cancellationRateSlabConfig :: Maybe CancellationRateSlabConfig,
   missedEarnings :: Int,
   driverInfoResponse :: Maybe GetDriverInfoResp,
   profileCompletedModules :: Int,
@@ -1468,8 +1473,12 @@ type HomeScreenProps =  {
   bus_input_data :: String,
   whereIsMyBusConfig :: WhereIsMyBusConfig,
   showBlockerPopup :: Boolean,
-  showInsuranceBanner :: Boolean
- }
+  showInsuranceBanner :: Boolean,
+  coinWaitingThreshold :: Int,
+  nyClubConsent :: Maybe Boolean,
+  willCancellationBlock :: Boolean,
+  cancellationValues :: { cancelledRides :: Int, totalRides :: Int, suspensionHours :: Int, blockType :: Maybe BlockType }
+}
 
 type WhereIsMyBusConfig = {
   linkTripPopup :: Boolean,
@@ -1557,6 +1566,14 @@ instance eqSubscriptionPopupType :: Eq SubscriptionPopupType where eq = genericE
 instance showSubscriptionPopupType :: Show SubscriptionPopupType where show = genericShow
 instance encodeSubscriptionPopupType :: Encode SubscriptionPopupType where encode = defaultEnumEncode
 instance decodeSubscriptionPopupType :: Decode SubscriptionPopupType where decode = defaultEnumDecode
+
+data BlockType = DailyBlock | WeeklyBlock
+
+derive instance genericBlockType :: Generic BlockType _
+instance eqBlockType :: Eq BlockType where eq = genericEq
+instance showBlockType :: Show BlockType where show = genericShow
+instance encodeBlockType :: Encode BlockType where encode = defaultEnumEncode
+instance decodeBlockType :: Decode BlockType where decode = defaultEnumDecode
 
 data TripType = OneWay | RoundTrip | Rental | Intercity | RideShare | Delivery
 

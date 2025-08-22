@@ -25,7 +25,7 @@ import Language.Types (STR(..)) as STR
 import ConfigProvider
 import Prelude (class Eq, unit, (<>), (==), (||), (/=))
 import Screens.Types (DriverProfileScreenState, BottomNavBarState, DriverProfileScreenType(..),AutoPayStatus(..), Component(..))
-import Services.API (GetDriverInfoResp(..), OrganizationInfo(..), DriverGoHomeInfo(..))
+import Services.API (GetDriverInfoResp(..), OrganizationInfo(..), DriverGoHomeInfo(..), CancellationRateSlabConfig(..))
 import Screens.Types as ST
 import Engineering.Helpers.Commons as EHC
 
@@ -98,6 +98,11 @@ initData =
     assignedRides : 0,
     cancelledRides : 0,
     cancellationWindow : Nothing,
+    assignedRidesCountDaily : Nothing,
+    cancelledRidesCountDaily : Nothing,
+    assignedRidesCountWeekly : Nothing,
+    cancelledRidesCountWeekly : Nothing,
+    cancellationRateSlabConfig : Nothing,
     missedEarnings : 0,
     driverInfoResponse : Nothing,
     profileCompletedModules : 0,
@@ -278,6 +283,11 @@ dummyDriverInfo = GetDriverInfoResp {
     , overchargingTag : Nothing
     , ridesWithFareIssues : Nothing
     , totalRidesConsideredForFareIssues : Nothing
+    , assignedRidesCountDaily : Nothing
+    , cancelledRidesCountDaily : Nothing
+    , assignedRidesCountWeekly : Nothing
+    , cancelledRidesCountWeekly : Nothing
+    , cancellationRateSlabConfig : Nothing
 }
 
 organizationInfo :: OrganizationInfo
