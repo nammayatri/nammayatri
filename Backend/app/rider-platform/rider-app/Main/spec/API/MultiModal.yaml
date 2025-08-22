@@ -449,7 +449,7 @@ apis:
         type: JourneyStatusResp
 
   - POST:
-      endpoint: /multimodal/{journeyId}/order/{legOrder}/subleg/{subLegOrder}/setStatusV2/{trackingStatus}
+      endpoint: /multimodal/{journeyId}/order/{legOrder}/subleg/{subLegOrder}/setTrackingStatus/{trackingStatus}
       params:
         journeyId: Id Journey
         legOrder: Int

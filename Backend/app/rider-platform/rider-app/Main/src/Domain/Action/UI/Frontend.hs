@@ -82,11 +82,11 @@ getPersonFlowStatus personId merchantId _ pollActiveBooking = do
           whenJust mbBooking $ \booking -> do
             case booking.status of
               DB.COMPLETED -> do
-                void $ DMultimodal.postMultimodalOrderSublegSetStatusV2 (Just personId, merchantId) normalRideJourney.id 0 1 JMState.Finished
+                void $ DMultimodal.postMultimodalOrderSublegSetTrackingStatus (Just personId, merchantId) normalRideJourney.id 0 1 JMState.Finished
                 -- TODO :: For Backward compatibility, remove this post release
                 void $ DMultimodal.postMultimodalOrderSublegSetStatus (Just personId, merchantId) normalRideJourney.id 0 1 JL.Completed
               DB.CANCELLED -> do
-                void $ DMultimodal.postMultimodalOrderSublegSetStatusV2 (Just personId, merchantId) normalRideJourney.id 0 1 JMState.Finished
+                void $ DMultimodal.postMultimodalOrderSublegSetTrackingStatus (Just personId, merchantId) normalRideJourney.id 0 1 JMState.Finished
                 -- TODO :: For Backward compatibility, remove this post release
                 void $ DMultimodal.postMultimodalOrderSublegSetStatus (Just personId, merchantId) normalRideJourney.id 0 1 JL.Cancelled
               DB.REALLOCATED -> do

@@ -22,7 +22,7 @@ module Domain.Action.UI.MultimodalConfirm
     getMultimodalOrderGetLegTierOptions,
     postMultimodalPaymentUpdateOrder,
     postMultimodalOrderSublegSetStatus,
-    postMultimodalOrderSublegSetStatusV2,
+    postMultimodalOrderSublegSetTrackingStatus,
     postMultimodalTicketVerify,
     postMultimodalComplete,
     postMultimodalOrderSoftCancel,
@@ -743,7 +743,7 @@ castTravelModeToVehicleCategory DTrip.Walk = Enums.AUTO_RICKSHAW
 castTravelModeToVehicleCategory DTrip.Metro = Enums.METRO
 castTravelModeToVehicleCategory DTrip.Subway = Enums.SUBWAY
 
--- TODO :: For Backward compatibility, remove this post `postMultimodalOrderSublegSetStatusV2` release
+-- TODO :: For Backward compatibility, remove this post `postMultimodalOrderSublegSetTrackingStatus` release
 postMultimodalOrderSublegSetStatus ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
@@ -768,7 +768,7 @@ postMultimodalOrderSublegSetStatus (_, _) journeyId legOrder subLegOrder newStat
   updatedJourney <- JM.getJourney journeyId
   generateJourneyStatusResponse updatedJourney updatedLegStatus
 
-postMultimodalOrderSublegSetStatusV2 ::
+postMultimodalOrderSublegSetTrackingStatus ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
   ) ->
@@ -777,7 +777,7 @@ postMultimodalOrderSublegSetStatusV2 ::
   Kernel.Prelude.Int ->
   JMState.TrackingStatus ->
   Environment.Flow ApiTypes.JourneyStatusResp
-postMultimodalOrderSublegSetStatusV2 (_, _) journeyId legOrder subLegOrder trackingStatus = do
+postMultimodalOrderSublegSetTrackingStatus (_, _) journeyId legOrder subLegOrder trackingStatus = do
   journey <- JM.getJourney journeyId
 
   legs <- QJourneyLeg.getJourneyLegs journeyId
