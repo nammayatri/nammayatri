@@ -45,6 +45,8 @@ DriverStats:
     safetyPlusEarnings : HighPrecMoney
     onlineDuration : Seconds
     blacklistCoinEvents: Maybe [DriverCoinsFunctionType]
+    acceptationRequestCount : Maybe Int
+    totalRequestCount : Maybe Int
 
   beamFields:
     totalEarnings:
@@ -178,6 +180,11 @@ DriverStats:
     updateOnlineDuration:
       kvFunction: updateOneWithKV
       params: [onlineDuration]
+      where: driverId
+
+    updateTotalRequestCount:
+      kvFunction: updateOneWithKV
+      params: [totalRequestCount]
       where: driverId
 
     # setMissedEarnings: -- beam Field checkUp DSL Fix needed

@@ -67,6 +67,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Common (fromMaybeM, generateGUID, getCurrentTime, throwError)
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator
+import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import SharedLogic.WMB
@@ -84,6 +85,7 @@ import qualified Storage.Queries.FleetBadge as QFB
 import qualified Storage.Queries.FleetBadgeAssociation as QFBA
 import qualified Storage.Queries.FleetConfig as QFC
 import qualified Storage.Queries.FleetDriverAssociation as FDV
+import qualified Storage.Queries.FleetOperatorAssociation as QFOA
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Route as QR
 import qualified Storage.Queries.RouteTripStopMapping as QRTSM
@@ -453,6 +455,10 @@ postFleetConsent (mbDriverId, merchantId, merchantOperatingCityId) = do
   SA.endDriverAssociationsIfAllowed merchant merchantOperatingCityId transporterConfig driver
 
   FDV.updateByPrimaryKey (fleetDriverAssociation {isActive = True})
+  when (transporterConfig.allowAnalytics == Just True) $ do
+    mbOperator <- QFOA.findByFleetOwnerId fleetDriverAssociation.fleetOwnerId True
+    when (isNothing mbOperator) $ logTagError "AnalyticsAddDriver" "Operator not found for fleet owner"
+    whenJust mbOperator $ \operator -> Analytics.incrementOperatorAnalyticsApplicationCount transporterConfig operator.operatorId
   when (transporterConfig.allowCacheDriverFlowStatus == Just True) $ do
     driverInfo <- QDI.findById fleetDriverAssociation.driverId >>= fromMaybeM (DriverNotFound fleetDriverAssociation.driverId.getId)
     DDriverMode.incrementFleetOperatorStatusKeyForDriver FLEET_OWNER fleetDriverAssociation.fleetOwnerId driverInfo.driverFlowStatus
@@ -461,8 +467,7 @@ postFleetConsent (mbDriverId, merchantId, merchantOperatingCityId) = do
   whenJust fleetDriverAssociation.onboardedOperatorId $ \referredOperatorId -> do
     DOR.makeDriverReferredByOperator merchantOperatingCityId driverId referredOperatorId
 
-  unless (transporterConfig.requiresOnboardingInspection == Just True) $
-    QDI.updateEnabledVerifiedState driverId True (Just True)
+  unless (transporterConfig.requiresOnboardingInspection == Just True) $ Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId True (Just True)
   mbMerchantPN <- CPN.findMatchingMerchantPN merchantOperatingCityId "FLEET_CONSENT" Nothing Nothing driver.language Nothing
   whenJust mbMerchantPN $ \merchantPN -> do
     let title = T.replace "{#fleetOwnerName#}" fleetOwner.firstName merchantPN.title

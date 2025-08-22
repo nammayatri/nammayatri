@@ -14,6 +14,7 @@ import Tools.Beam.UtilsTH
 
 data DriverStatsT f = DriverStatsT
   { blacklistCoinEvents :: B.C f (Kernel.Prelude.Maybe [Lib.DriverCoins.Types.DriverCoinsFunctionType]),
+    acceptationRequestCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     bonusEarned :: B.C f Kernel.Types.Common.Money,
     bonusEarnedAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     coinCovertedToCashLeft :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
@@ -41,6 +42,7 @@ data DriverStatsT f = DriverStatsT
     totalRatingScore :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     totalRatings :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     totalReferralCounts :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    totalRequestCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     totalRides :: B.C f Kernel.Prelude.Int,
     totalRidesAssigned :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     totalValidActivatedRides :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
