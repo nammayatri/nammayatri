@@ -42,7 +42,8 @@ data PersonT f = PersonT
     rejectionReason :: B.C f (Maybe Text),
     rejectedAt :: B.C f (Maybe Time.UTCTime),
     passwordUpdatedAt :: B.C f (Maybe Time.UTCTime),
-    approvedBy :: B.C f (Maybe Text)
+    approvedBy :: B.C f (Maybe Text),
+    rejectedBy :: B.C f (Maybe Text)
   }
   deriving (Generic, B.Beamable)
 

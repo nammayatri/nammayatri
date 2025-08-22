@@ -368,7 +368,8 @@ buildFleetOwner req pid roleId dashboardAccessType = do
         rejectedAt = Nothing,
         dashboardType = DEFAULT_DASHBOARD,
         passwordUpdatedAt = Just now,
-        approvedBy = Nothing
+        approvedBy = Nothing,
+        rejectedBy = Nothing
       }
 
 validateFleetOwner :: Validate FleetRegisterReq

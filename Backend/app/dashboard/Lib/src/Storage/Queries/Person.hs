@@ -387,6 +387,7 @@ instance FromTType' BeamP.Person Person.Person where
             mobileNumber = EncryptedHashed (Encrypted mobileNumberEncrypted) mobileNumberHash,
             dashboardType = dashboardType,
             approvedBy = approvedBy <&> Id,
+            rejectedBy = rejectedBy <&> Id,
             ..
           }
 
@@ -401,6 +402,7 @@ instance ToTType' BeamP.Person Person.Person where
         mobileNumberHash = mobileNumber.hash,
         dashboardType = dashboardType,
         approvedBy = approvedBy <&> getId,
+        rejectedBy = rejectedBy <&> getId,
         ..
       }
 
@@ -446,6 +448,26 @@ softDeletePerson personId mbReason = do
       Se.Set BeamP.updatedAt now,
       Se.Set BeamP.rejectionReason mbReason,
       Se.Set BeamP.rejectedAt $ Just now
+    ]
+    [ Se.Is BeamP.id $ Se.Eq $ getId personId
+    ]
+
+updatePersonApprovedBy :: BeamFlow m r => Id Person -> Id Person -> m ()
+updatePersonApprovedBy personId approverId = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamP.approvedBy $ Just (getId approverId),
+      Se.Set BeamP.updatedAt now
+    ]
+    [ Se.Is BeamP.id $ Se.Eq $ getId personId
+    ]
+
+updatePersonRejectedBy :: BeamFlow m r => Id Person -> Id Person -> m ()
+updatePersonRejectedBy personId rejecterId = do
+  now <- getCurrentTime
+  updateWithKV
+    [ Se.Set BeamP.rejectedBy $ Just (getId rejecterId),
+      Se.Set BeamP.updatedAt now
     ]
     [ Se.Is BeamP.id $ Se.Eq $ getId personId
     ]

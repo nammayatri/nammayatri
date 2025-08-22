@@ -31,6 +31,8 @@ import "lib-dashboard" Storage.Queries.Person
   ( findAllByFromDateAndToDateAndMobileNumberAndStatusWithLimitOffset,
     findById,
     softDeletePerson,
+    updatePersonApprovedBy,
+    updatePersonRejectedBy,
     updatePersonVerifiedStatus,
   )
 import qualified "lib-dashboard" Storage.Queries.Person as QP
@@ -112,9 +114,11 @@ postAccountVerifyAccount merchantShortId opCity apiTokenInfo req = do
       Auth.cleanCachedTokens personId
       QR.deleteAllByPersonId personId
       softDeletePerson personId req.reason
+      updatePersonRejectedBy personId apiTokenInfo.personId
     Common.Approved -> do
       person <- findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
       unless (person.verified == Just True) $ updatePersonVerifiedStatus personId True
+      updatePersonApprovedBy personId apiTokenInfo.personId
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- SharedLogic.Transaction.buildTransaction (Domain.Types.Transaction.castEndpoint apiTokenInfo.userActionType) (Kernel.Prelude.Just DRIVER_OFFER_BPP_MANAGEMENT) (Kernel.Prelude.Just apiTokenInfo) Kernel.Prelude.Nothing Kernel.Prelude.Nothing (Kernel.Prelude.Just req)
   SharedLogic.Transaction.withTransactionStoring transaction $
