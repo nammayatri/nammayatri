@@ -346,7 +346,7 @@ type API =
       :> Capture
            "subLegOrder"
            Kernel.Prelude.Int
-      :> "setStatusV2"
+      :> "setTrackingStatus"
       :> Capture
            "trackingStatus"
            Lib.JourneyModule.State.Types.TrackingStatus
@@ -418,7 +418,7 @@ type API =
   )
 
 handler :: Environment.FlowServer API
-handler = postMultimodalInitiate :<|> postMultimodalConfirm :<|> getMultimodalBookingInfo :<|> getMultimodalBookingPaymentStatus :<|> postMultimodalPaymentUpdateOrder :<|> postMultimodalSwitch :<|> postMultimodalJourneyLegSkip :<|> postMultimodalJourneyLegAddSkippedLeg :<|> postMultimodalExtendLeg :<|> postMultimodalExtendLegGetfare :<|> getMultimodalJourneyStatus :<|> postMultimodalJourneyCancel :<|> postMultimodalRiderLocation :<|> postMultimodalOrderSwitchTaxi :<|> postMultimodalOrderSwitchFRFSTier :<|> getMultimodalOrderSimilarJourneyLegs :<|> postMultimodalOrderSwitchJourneyLeg :<|> postMultimodalJourneyFeedback :<|> getMultimodalFeedback :<|> getMultimodalUserPreferences :<|> postMultimodalUserPreferences :<|> postMultimodalTransitOptionsLite :<|> getPublicTransportData :<|> getMultimodalOrderGetLegTierOptions :<|> postMultimodalOrderSublegSetStatus :<|> postMultimodalOrderSublegSetStatusV2 :<|> postMultimodalComplete :<|> postMultimodalTicketVerify :<|> postMultimodalOrderSoftCancel :<|> getMultimodalOrderCancelStatus :<|> postMultimodalOrderCancel
+handler = postMultimodalInitiate :<|> postMultimodalConfirm :<|> getMultimodalBookingInfo :<|> getMultimodalBookingPaymentStatus :<|> postMultimodalPaymentUpdateOrder :<|> postMultimodalSwitch :<|> postMultimodalJourneyLegSkip :<|> postMultimodalJourneyLegAddSkippedLeg :<|> postMultimodalExtendLeg :<|> postMultimodalExtendLegGetfare :<|> getMultimodalJourneyStatus :<|> postMultimodalJourneyCancel :<|> postMultimodalRiderLocation :<|> postMultimodalOrderSwitchTaxi :<|> postMultimodalOrderSwitchFRFSTier :<|> getMultimodalOrderSimilarJourneyLegs :<|> postMultimodalOrderSwitchJourneyLeg :<|> postMultimodalJourneyFeedback :<|> getMultimodalFeedback :<|> getMultimodalUserPreferences :<|> postMultimodalUserPreferences :<|> postMultimodalTransitOptionsLite :<|> getPublicTransportData :<|> getMultimodalOrderGetLegTierOptions :<|> postMultimodalOrderSublegSetStatus :<|> postMultimodalOrderSublegSetTrackingStatus :<|> postMultimodalComplete :<|> postMultimodalTicketVerify :<|> postMultimodalOrderSoftCancel :<|> getMultimodalOrderCancelStatus :<|> postMultimodalOrderCancel
 
 postMultimodalInitiate ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -666,7 +666,7 @@ postMultimodalOrderSublegSetStatus ::
   )
 postMultimodalOrderSublegSetStatus a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalOrderSublegSetStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
 
-postMultimodalOrderSublegSetStatusV2 ::
+postMultimodalOrderSublegSetTrackingStatus ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
@@ -676,7 +676,7 @@ postMultimodalOrderSublegSetStatusV2 ::
     Lib.JourneyModule.State.Types.TrackingStatus ->
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.JourneyStatusResp
   )
-postMultimodalOrderSublegSetStatusV2 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalOrderSublegSetStatusV2 (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
+postMultimodalOrderSublegSetTrackingStatus a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalOrderSublegSetTrackingStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
 
 postMultimodalComplete ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
