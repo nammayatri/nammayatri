@@ -109,3 +109,55 @@ aggregatePeriodStatsWithBoundaries driverId fromDateU toDateU period = do
           )
           (CH.all_ @CH.APP_SERVICE_CLICKHOUSE dailyStatsTTable)
   pure $ mkEarningsBar <$> res
+
+-- Count drivers whose total rides in [fromDate, toDate] exceeds a threshold
+countDriversWithNumRidesGreaterThanBetween ::
+  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
+  [Id DP.Person] ->
+  Day ->
+  Day ->
+  Int ->
+  m Int
+countDriversWithNumRidesGreaterThanBetween driverIds fromDateU toDateU threshold = do
+  res <-
+    CH.findAll $
+      CH.select_
+        ( \ds ->
+            CH.groupBy ds.driverId $ \driver -> (driver, CH.sum_ ds.numRides)
+        )
+        $ CH.filter_
+          ( \ds _ ->
+              ds.driverId `CH.in_` driverIds
+                CH.&&. ds.merchantLocalDate >=. fromDateU
+                CH.&&. ds.merchantLocalDate <=. toDateU
+          )
+          (CH.all_ @CH.APP_SERVICE_CLICKHOUSE dailyStatsTTable)
+  let totals = [ridesSum | (_driver, ridesSum) <- res, ridesSum > threshold]
+  pure $ length totals
+
+countDriversWithNumRidesGreaterThan1Between ::
+  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
+  [Id DP.Person] ->
+  Day ->
+  Day ->
+  m Int
+countDriversWithNumRidesGreaterThan1Between driverIds fromDateU toDateU =
+  countDriversWithNumRidesGreaterThanBetween driverIds fromDateU toDateU 1
+
+countDriversWithNumRidesGreaterThan10Between ::
+  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
+  [Id DP.Person] ->
+  Day ->
+  Day ->
+  m Int
+countDriversWithNumRidesGreaterThan10Between driverIds fromDateU toDateU =
+  countDriversWithNumRidesGreaterThanBetween driverIds fromDateU toDateU 10
+
+countDriversWithNumRidesGreaterThan50Between ::
+  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
+  [Id DP.Person] ->
+  Day ->
+  Day ->
+  m Int
+countDriversWithNumRidesGreaterThan50Between driverIds fromDateU toDateU =
+  countDriversWithNumRidesGreaterThanBetween driverIds fromDateU toDateU 50
