@@ -101,6 +101,7 @@ import Lib.Scheduler.Types (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event
 import Lib.Types.SpecialLocation hiding (Merchant, MerchantOperatingCity)
 import SharedLogic.Allocator
+import qualified SharedLogic.Analytics as Analytics
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FareCalculator
@@ -188,7 +189,8 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   DDriverMode.updateDriverModeAndFlowStatus driverId thresholdConfig oldDriverInfo.active oldDriverInfo.mode newFlowStatus oldDriverInfo
   let driverInfo = oldDriverInfo {DI.driverFlowStatus = Just newFlowStatus}
   let safetyPlusCharges = maybe Nothing (\a -> find (\ac -> ac.chargeCategory == DAC.SAFETY_PLUS_CHARGES) a) $ (mbFareParams <&> (.conditionalCharges)) <|> (Just newFareParams.conditionalCharges)
-  QDriverStats.incrementTotalRidesAndTotalDistAndIdleTime (cast ride.driverId) (fromMaybe 0 ride.chargeableDistance)
+  void $ QDriverStats.incrementTotalRidesAndTotalDistAndIdleTime (cast ride.driverId) (fromMaybe 0 ride.chargeableDistance)
+  when (thresholdConfig.allowAnalytics == Just True) $ Analytics.updateOperatorAnalyticsTotalRideCount thresholdConfig driverId ride
   when (isJust safetyPlusCharges) $ QDriverStats.incSafetyPlusRiderCountAndEarnings (cast ride.driverId) (fromMaybe 0.0 $ safetyPlusCharges <&> (.charge))
   Hedis.del $ multipleRouteKey booking.transactionId
   Hedis.del $ searchRequestKey booking.transactionId

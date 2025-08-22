@@ -67,6 +67,7 @@ import Kernel.Types.Documents
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import SharedLogic.Analytics as Analytics
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.Cac.TransporterConfig as CCT
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
@@ -340,7 +341,8 @@ postDriverRegistrationUnlinkDocument merchantShortId opCity personId documentTyp
           mbVerificationConfig <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId (mapDocumentType docType) DVC.CAR Nothing
           let isMandatory = maybe False (\config -> fromMaybe config.isMandatory config.isMandatoryForEnabling) mbVerificationConfig
           when isMandatory $ do
-            QDriverInfo.updateEnabledVerifiedState person.id False Nothing
+            transporterConfig <- CCT.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+            Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig person.id False Nothing
           pure False
         _ -> pure False
 

@@ -24,7 +24,8 @@ instance FromTType' Beam.DriverStats Domain.Types.DriverStats.DriverStats where
     pure $
       Just
         Domain.Types.DriverStats.DriverStats
-          { blacklistCoinEvents = blacklistCoinEvents,
+          { acceptationRequestCount = acceptationRequestCount,
+            blacklistCoinEvents = blacklistCoinEvents,
             bonusEarned = Kernel.Types.Common.mkAmountWithDefault bonusEarnedAmount bonusEarned,
             coinCovertedToCashLeft = Kernel.Prelude.fromMaybe 0 coinCovertedToCashLeft,
             currency = Kernel.Prelude.fromMaybe Kernel.Types.Common.INR currency,
@@ -50,6 +51,7 @@ instance FromTType' Beam.DriverStats Domain.Types.DriverStats.DriverStats where
             totalRatingScore = totalRatingScore,
             totalRatings = totalRatings,
             totalReferralCounts = Kernel.Prelude.fromMaybe 0 totalReferralCounts,
+            totalRequestCount = totalRequestCount,
             totalRides = totalRides,
             totalRidesAssigned = totalRidesAssigned,
             totalValidActivatedRides = Kernel.Prelude.fromMaybe 0 totalValidActivatedRides,
@@ -62,7 +64,8 @@ instance FromTType' Beam.DriverStats Domain.Types.DriverStats.DriverStats where
 instance ToTType' Beam.DriverStats Domain.Types.DriverStats.DriverStats where
   toTType' (Domain.Types.DriverStats.DriverStats {..}) = do
     Beam.DriverStatsT
-      { Beam.blacklistCoinEvents = blacklistCoinEvents,
+      { Beam.acceptationRequestCount = acceptationRequestCount,
+        Beam.blacklistCoinEvents = blacklistCoinEvents,
         Beam.bonusEarned = Kernel.Prelude.roundToIntegral bonusEarned,
         Beam.bonusEarnedAmount = Kernel.Prelude.Just bonusEarned,
         Beam.coinCovertedToCashLeft = Kernel.Prelude.Just coinCovertedToCashLeft,
@@ -90,6 +93,7 @@ instance ToTType' Beam.DriverStats Domain.Types.DriverStats.DriverStats where
         Beam.totalRatingScore = totalRatingScore,
         Beam.totalRatings = totalRatings,
         Beam.totalReferralCounts = Kernel.Prelude.Just totalReferralCounts,
+        Beam.totalRequestCount = totalRequestCount,
         Beam.totalRides = totalRides,
         Beam.totalRidesAssigned = totalRidesAssigned,
         Beam.totalValidActivatedRides = Kernel.Prelude.Just totalValidActivatedRides,
