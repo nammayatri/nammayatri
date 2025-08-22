@@ -154,12 +154,20 @@ data AvailableRoutesInfo = AvailableRoutesInfo
 
 data JourneyLegOption = JourneyLegOption
   { viaPoints :: [Text],
+    routeDetails :: [JourneyLegRouteDetails],
     arrivalTimes :: [Seconds],
     availableRoutes :: [Text],
     fare :: HighPrecMoney,
     duration :: Maybe Seconds,
     distance :: Maybe Distance,
     journeyLegId :: Id DJourneyLeg.JourneyLeg
+  }
+  deriving (Generic, Show, Eq, ToJSON, FromJSON, ToSchema)
+
+data JourneyLegRouteDetails = JourneyLegRouteDetails
+  { fromStopCode :: Text,
+    toStopCode :: Text,
+    subLegOrder :: Int
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON, ToSchema)
 

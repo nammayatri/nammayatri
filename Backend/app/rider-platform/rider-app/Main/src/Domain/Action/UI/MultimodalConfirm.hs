@@ -397,7 +397,7 @@ postMultimodalJourneyLegSkip ::
   )
 postMultimodalJourneyLegSkip (_, _) journeyId legOrder = do
   journeyLeg <- QJourneyLeg.getJourneyLeg journeyId legOrder
-  JM.cancelLeg journeyLeg (SCR.CancellationReasonCode "") True Nothing
+  JM.cancelLeg journeyLeg (SCR.CancellationReasonCode "") False Nothing
   pure Kernel.Types.APISuccess.Success
 
 -- TODO :: To be deprecated from UI @Khuzema: Call confirm instead of this API
@@ -964,6 +964,7 @@ getMultimodalOrderSimilarJourneyLegs (mbPersonId, merchantId) journeyId legOrder
         leg.estimatedMinFare <&> \fare ->
           JLU.JourneyLegOption
             { viaPoints = changeOverPoints,
+              routeDetails = mapMaybe mkJourneyLegRouteDetails leg.routeDetails,
               arrivalTimes = maybe [] (.nextAvailableBuses) mbAvailableTier,
               availableRoutes = maybe [] (.availableRoutes) mbAvailableTier,
               fare,
@@ -971,6 +972,13 @@ getMultimodalOrderSimilarJourneyLegs (mbPersonId, merchantId) journeyId legOrder
               distance = leg.distance,
               journeyLegId = leg.id
             }
+
+    mkJourneyLegRouteDetails :: RD.RouteDetails -> Maybe JLU.JourneyLegRouteDetails
+    mkJourneyLegRouteDetails detail = do
+      fromStopCode <- detail.fromStopCode
+      toStopCode <- detail.toStopCode
+      subLegOrder <- detail.subLegOrder
+      return $ JLU.JourneyLegRouteDetails {fromStopCode, toStopCode, subLegOrder}
 
 postMultimodalOrderSwitchJourneyLeg ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

@@ -1,9 +1,6 @@
-{-# OPTIONS_GHC -Wwarn=unused-imports #-}
-
 module Domain.Action.UI.Miscellaneous (postMiscTestScanQR) where
 
 import qualified API.Types.UI.Miscellaneous
-import Data.OpenApi (ToSchema)
 import qualified Domain.Action.Beckn.FRFS.OnConfirm as OC
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
@@ -11,8 +8,6 @@ import qualified Environment
 import EulerHS.Prelude hiding (error, id)
 import qualified Kernel.Prelude hiding (error)
 import qualified Kernel.Types.Id
-import Servant
-import Tools.Auth
 
 postMiscTestScanQR ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
