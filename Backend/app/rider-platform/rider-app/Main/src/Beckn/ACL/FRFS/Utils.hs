@@ -19,6 +19,7 @@ import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec
 import qualified BecknV2.FRFS.Utils as Utils
 import qualified BecknV2.OnDemand.Enums as Enums
+import Control.Applicative ((<|>))
 import Data.Aeson as A
 import qualified Data.UUID as UU
 import Domain.Action.Beckn.FRFS.Common
@@ -124,39 +125,40 @@ parseTickets item fulfillments = do
   let ticketFulfillments = filterByIds fulfillmentIds "TICKET"
       finalTicketFulfillments = if not (null ticketFulfillments) then ticketFulfillments else filterByIds fulfillmentIds "TRIP"
   when (null finalTicketFulfillments) $ throwError $ InvalidRequest "No ticket fulfillment found"
-  traverse parseTicket finalTicketFulfillments
+  fallbackTicketNumber <- getTicketNumber
+  return $ mapMaybe (parseTicket fallbackTicketNumber) finalTicketFulfillments
   where
     filterByIds fIds fullfillmentType = filter (\f -> f.fulfillmentId `elem` (Just <$> fIds) && f.fulfillmentType == Just fullfillmentType) fulfillments
 
-parseTicket :: (MonadFlow m) => Spec.Fulfillment -> m Domain.DTicket
-parseTicket fulfillment = do
-  fId <- fulfillment.fulfillmentId & fromMaybeM (InvalidRequest "FulfillmentId not found")
-  stops <- fulfillment.fulfillmentStops & fromMaybeM (InvalidRequest "FulfillmentStops not found")
-  startStopAuth <- getStartStop stops >>= (.stopAuthorization) & fromMaybeM (InvalidRequest "StartStop Auth not found")
+getTicketNumber :: (MonadFlow m) => m (Maybe Text)
+getTicketNumber = do
+  id <- generateGUID
+  pure $
+    UU.fromText id <&> \uuid -> show (fromIntegral ((\(a, b, c, d) -> a + b + c + d) (UU.toWords uuid)) :: Integer)
 
-  qrData <- startStopAuth.authorizationToken & fromMaybeM (InvalidRequest "TicketQrData not found")
-  validTill <- startStopAuth.authorizationValidTo & fromMaybeM (InvalidRequest "TicketValidTill not found")
-  status <- startStopAuth.authorizationStatus & fromMaybeM (InvalidRequest "TicketStatus not found")
+parseTicket :: Maybe Text -> Spec.Fulfillment -> Maybe Domain.DTicket
+parseTicket fallbackTicketNumber fulfillment = do
+  fId <- fulfillment.fulfillmentId
+  stops <- fulfillment.fulfillmentStops
+  startStopAuth <- getStartStop stops >>= (.stopAuthorization)
+
+  qrData <- startStopAuth.authorizationToken
+  validTill <- startStopAuth.authorizationValidTo
+  status <- startStopAuth.authorizationStatus
 
   let mbTags = fulfillment.fulfillmentTags
-  ticketNumber <- (pure (mbTags >>= Utils.getTag "TICKET_INFO" "NUMBER") |<|>| getTicketNumber) >>= fromMaybeM (InvalidRequest "TicketNumber not found")
+  ticketNumber <- (mbTags >>= Utils.getTag "TICKET_INFO" "NUMBER") <|> fallbackTicketNumber
   pure $
     Domain.DTicket
       { qrData,
         vehicleNumber = Nothing,
         validTill,
-        bppFulfillmentId = fId,
+        bppFulfillmentId = Just fId,
         ticketNumber,
         status,
         description = Nothing,
         qrRefreshAt = Nothing
       }
-  where
-    getTicketNumber :: (MonadFlow m) => m (Maybe Text)
-    getTicketNumber = do
-      id <- generateGUID
-      pure $
-        UU.fromText id <&> \uuid -> show (fromIntegral ((\(a, b, c, d) -> a + b + c + d) (UU.toWords uuid)) :: Integer)
 
 type TxnId = Text
 
