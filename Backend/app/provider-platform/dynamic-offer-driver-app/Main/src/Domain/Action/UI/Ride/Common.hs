@@ -156,7 +156,8 @@ data DriverRideRes = DriverRideRes
     parcelQuantity :: Maybe Int,
     isInsured :: Maybe Bool,
     insuredAmount :: Maybe Text,
-    isPetRide :: Bool
+    isPetRide :: Bool,
+    riderMobileNumber :: Maybe Text
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -175,8 +176,9 @@ mkDriverRideRes ::
   Maybe DI.DriverInformation ->
   Bool ->
   [DSI.StopInformation] ->
+  Maybe Text ->
   m DriverRideRes
-mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId driverInfo isValueAddNP stopsInfo = do
+mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId driverInfo isValueAddNP stopsInfo mbRiderMobileNumber = do
   let fareParams = booking.fareParams
       estimatedBaseFare = fareSum (fareParams{driverSelectedFare = Nothing}) Nothing -- it should not be part of estimatedBaseFare
   let initial = "" :: Text
@@ -271,7 +273,8 @@ mkDriverRideRes rideDetails driverNumber rideRating mbExophone (ride, booking) b
         parcelQuantity = booking.parcelQuantity,
         isInsured = Just $ ride.isInsured,
         insuredAmount = ride.insuredAmount,
-        isPetRide = booking.isPetRide
+        isPetRide = booking.isPetRide,
+        riderMobileNumber = mbRiderMobileNumber
       }
 
 -- calculateLocations moved from UI.Ride

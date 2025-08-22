@@ -7,6 +7,7 @@ import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.Extra.TransporterConfig
+import qualified Domain.Types.TransporterConfig
 import qualified Domain.Types.UtilsTH
 import qualified Domain.Types.VehicleVariant
 import qualified Email.Types
@@ -93,6 +94,7 @@ data TransporterConfigT f = TransporterConfigT
     driverAutoPayExecutionTime :: B.C f Kernel.Types.Common.Seconds,
     driverAutoPayExecutionTimeFallBack :: B.C f Kernel.Types.Common.Seconds,
     driverAutoPayNotificationTime :: B.C f Kernel.Types.Common.Seconds,
+    driverCallingOption :: B.C f (Kernel.Prelude.Maybe Domain.Types.TransporterConfig.CallingOption),
     driverDistanceToPickupThresholdOnCancel :: B.C f Kernel.Types.Common.Meters,
     driverDistanceTravelledOnPickupThresholdOnCancel :: B.C f Kernel.Types.Common.Meters,
     driverDrivenSearchReqExpiry :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),

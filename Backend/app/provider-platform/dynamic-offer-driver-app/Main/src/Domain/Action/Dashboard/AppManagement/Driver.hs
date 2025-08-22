@@ -1,5 +1,6 @@
 module Domain.Action.Dashboard.AppManagement.Driver (getDriverFleetListRides) where
 
+import Data.Maybe
 import qualified Data.Time.Calendar
 import qualified "this" Domain.Action.UI.Ride
 import qualified Domain.Types.Merchant
@@ -23,4 +24,4 @@ getDriverFleetListRides ::
   Kernel.Prelude.Maybe Kernel.Prelude.Int ->
   Environment.Flow Domain.Action.UI.Ride.DriverRideListRes
 getDriverFleetListRides _merchantShortId _opCity driverId mbLimit mbOffset mbOnlyActive mbStatus mbDay mbFleetOwnerId mbNumOfDays =
-  Domain.Action.UI.Ride.listDriverRides driverId mbLimit mbOffset mbOnlyActive mbStatus mbDay mbFleetOwnerId mbNumOfDays
+  Domain.Action.UI.Ride.listDriverRides driverId Nothing mbLimit mbOffset mbOnlyActive mbStatus mbDay mbFleetOwnerId mbNumOfDays
