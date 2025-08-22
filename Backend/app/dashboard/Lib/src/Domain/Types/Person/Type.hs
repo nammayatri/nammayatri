@@ -41,7 +41,8 @@ data PersonE e = Person
     rejectionReason :: Maybe Text,
     rejectedAt :: Maybe UTCTime,
     passwordUpdatedAt :: Maybe UTCTime,
-    approvedBy :: Maybe (Id Person)
+    approvedBy :: Maybe (Id Person),
+    rejectedBy :: Maybe (Id Person)
   }
   deriving (Generic)
 
