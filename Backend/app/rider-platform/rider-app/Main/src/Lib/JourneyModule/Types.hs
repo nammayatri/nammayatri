@@ -1469,7 +1469,7 @@ checkIfAnyTaxiLegOngoing :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlo
 checkIfAnyTaxiLegOngoing legs = do
   ongoings <- mapM isTaxiLegOngoing legs
   when (or ongoings) $
-    throwError (InvalidRequest "Ongoing Taxi Leg. Can't perfom the Action")
+    throwError (InvalidRequest "You have an Ongoing Taxi Search/Ride. Please complete or cancel it before proceeding.")
 
 isTaxiLegOngoing :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => DJourneyLeg.JourneyLeg -> m Bool
 isTaxiLegOngoing journeyLeg = do
@@ -1483,6 +1483,6 @@ isTaxiLegOngoing journeyLeg = do
           mbEstimate <- maybe (pure Nothing) (QEstimate.findById . Id) (mbSearchReq >>= (.journeyLegInfo) >>= (.pricingId))
           case mbEstimate of
             Just estimate -> do
-              return $ estimate.status `elem` [DEstimate.COMPLETED, DEstimate.DRIVER_QUOTE_REQUESTED, DEstimate.GOT_DRIVER_QUOTE, DEstimate.DRIVER_QUOTE_CANCELLED]
+              return $ estimate.status `elem` [DEstimate.DRIVER_QUOTE_REQUESTED, DEstimate.GOT_DRIVER_QUOTE]
             Nothing -> return False
     _ -> return False
