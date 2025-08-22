@@ -34,6 +34,7 @@ buildOnConfirmReq onConfirmReq = do
     case parseData message of
       Right (providerId, totalPrice, bppItemId, transactionId, bppOrderId, messageId, item, fulfillments, quoteBreakup, orderStatus) -> do
         tickets <- Utils.parseTickets item fulfillments
+        when (null tickets) $ throwError (InvalidBecknSchema $ "No ticket fulfillment found in onconfirm req: " <> show fulfillments)
         fareBreakUp <- traverse Utils.mkFareBreakup quoteBreakup
         let dOrder =
               Domain.DOrder
