@@ -33,11 +33,14 @@ import IssueManagement.Domain.Types.MediaFile as D
 import qualified IssueManagement.Storage.Queries.MediaFile as QMF
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption (encrypt)
+import qualified Kernel.Storage.Clickhouse.Config as CH
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Common hiding (id)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
+import qualified SharedLogic.Analytics as Analytics
 import Storage.Beam.IssueManagement ()
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -149,7 +152,7 @@ handler merchantId req ride = do
   calculateAverageRating driverId merchant.minimumDriverRatesCount ratingValue ratingCount ratingsSum
 
 calculateAverageRating ::
-  (CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
+  (CacheFlow m r, EsqDBFlow m r, EncFlow m r, Redis.HedisFlow m r, HasField "serviceClickhouseCfg" r CH.ClickhouseCfg, HasField "serviceClickhouseEnv" r CH.ClickhouseEnv) =>
   Id DP.Person ->
   Int ->
   Int ->
@@ -166,6 +169,7 @@ calculateAverageRating personId minimumDriverRatesCount ratingValue mbtotalRatin
     logTagInfo "PersonAPI" "No rating found to calculate"
   let isValidRating = newRatingsCount >= minimumDriverRatesCount
   logTagInfo "PersonAPI" $ "New average rating for person " +|| personId ||+ ""
+  Analytics.updateOperatorAnalyticsRatingScoreKey personId ratingValue -- Need to add merchant based check
   void $ QDriverStats.updateAverageRating personId (Just newRatingsCount) (Just newTotalRatingScore) (Just isValidRating)
 
 buildRating ::

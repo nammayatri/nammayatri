@@ -6,6 +6,8 @@ module Domain.Action.ProviderPlatform.Operator.Driver
     getDriverOperatorList,
     postDriverOperatorSendJoiningOtp,
     postDriverOperatorVerifyJoiningOtp,
+    getDriverOperatorDashboardAnalyticsAllTime,
+    getDriverOperatorDashboardAnalytics,
   )
 where
 
@@ -88,3 +90,13 @@ postDriverOperatorVerifyJoiningOtp :: (Kernel.Types.Id.ShortId Domain.Types.Merc
 postDriverOperatorVerifyJoiningOtp merchantShortId opCity apiTokenInfo authId req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   Client.callOperatorAPI checkedMerchantId opCity (.driverDSL.postDriverOperatorVerifyJoiningOtp) authId apiTokenInfo.personId.getId req
+
+getDriverOperatorDashboardAnalyticsAllTime :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Environment.Flow API.Types.ProviderPlatform.Operator.Driver.AllTimeOperatorAnalyticsRes)
+getDriverOperatorDashboardAnalyticsAllTime merchantShortId opCity apiTokenInfo = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callOperatorAPI checkedMerchantId opCity (.driverDSL.getDriverOperatorDashboardAnalyticsAllTime) apiTokenInfo.personId.getId
+
+getDriverOperatorDashboardAnalytics :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.UTCTime -> Kernel.Prelude.UTCTime -> Environment.Flow API.Types.ProviderPlatform.Operator.Driver.FilteredOperatorAnalyticsRes)
+getDriverOperatorDashboardAnalytics merchantShortId opCity apiTokenInfo from to = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callOperatorAPI checkedMerchantId opCity (.driverDSL.getDriverOperatorDashboardAnalytics) apiTokenInfo.personId.getId from to

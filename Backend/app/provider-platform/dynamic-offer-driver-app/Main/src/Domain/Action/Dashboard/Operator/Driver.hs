@@ -7,6 +7,9 @@ module Domain.Action.Dashboard.Operator.Driver
     getDriverOperatorList,
     postDriverOperatorSendJoiningOtp,
     postDriverOperatorVerifyJoiningOtp,
+    getDriverOperatorDashboardAnalyticsAllTime,
+    getDriverOperatorDashboardAnalytics,
+    inferPeriod,
   )
 where
 
@@ -44,13 +47,17 @@ import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
+import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
+import qualified SharedLogic.DriverFlowStatus as SDFStatus
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import Storage.Beam.SystemConfigs ()
 import Storage.Cac.TransporterConfig (findByMerchantOpCityId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.Clickhouse.DailyStats as CDaily
+import qualified Storage.Clickhouse.DriverInformation as CDI
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverOperatorAssociation as QDOA
 import qualified Storage.Queries.DriverRCAssociationExtra as QDRC
@@ -424,3 +431,152 @@ makeOperatorDriverOtpKey phoneNo = "Operator:Driver:PhoneNo" <> phoneNo
 
 makeOperatorDriverHitsCountKey :: Text -> Text
 makeOperatorDriverHitsCountKey phoneNo = "Operator:Driver:PhoneNoHits" <> phoneNo <> ":hitsCount"
+
+---------------------------------------------------------------------
+getDriverOperatorDashboardAnalyticsAllTime ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Flow API.Types.ProviderPlatform.Operator.Driver.AllTimeOperatorAnalyticsRes
+getDriverOperatorDashboardAnalyticsAllTime _merchantShortId _opCity requestorId = do
+  operator <- B.runInReplica $ QP.findById (Id requestorId :: Id DP.Person) >>= fromMaybeM (PersonNotFound requestorId)
+  unless (operator.role == DP.OPERATOR) $
+    throwError AccessDenied
+
+  -- Redis keys for fleet aggregates
+  let totalRideKey = Analytics.makeOperatorAnalyticsKey operator.id.getId "totalRideCount"
+      ratingSumKey = Analytics.makeOperatorAnalyticsKey operator.id.getId "ratingSum"
+      cancelCountKey = Analytics.makeOperatorAnalyticsKey operator.id.getId "cancelCount"
+
+  -- try redis first
+  mbTotalRides <- Redis.get @Int totalRideKey
+  mbRatingSum <- Redis.get @Int ratingSumKey
+  mbCancelCount <- Redis.get @Int cancelCountKey
+
+  -- fallback to ClickHouse and populate cache when missing
+  (totalRides, ratingSum, cancelCount) <- do
+    case (mbTotalRides, mbRatingSum, mbCancelCount) of
+      (Just tr, Just rs, Just cc) -> pure (tr, rs, cc)
+      _ -> Analytics.fallbackToClickHouseAndUpdateRedisForAllTime operator.id.getId totalRideKey ratingSumKey cancelCountKey
+
+  let acceptationCount = 0 :: Int -- TODO: Implement this
+  logTagInfo "Total rides" (show totalRides)
+  logTagInfo "Rating sum" (show ratingSum)
+  logTagInfo "Cancel count" (show cancelCount)
+  logTagInfo "Acceptation count" (show acceptationCount)
+  let (rating, cancellationRate, acceptanceRate) = if totalRides > 0 then (fromIntegral ratingSum / fromIntegral totalRides, (fromIntegral cancelCount / fromIntegral totalRides) * 100, (fromIntegral acceptationCount / fromIntegral totalRides) * 100) else (0, 0, 0)
+  pure $ API.Types.ProviderPlatform.Operator.Driver.AllTimeOperatorAnalyticsRes {rating, cancellationRate, acceptanceRate}
+
+---------------------------------------------------------------------
+getDriverOperatorDashboardAnalytics ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  UTCTime ->
+  UTCTime ->
+  Flow API.Types.ProviderPlatform.Operator.Driver.FilteredOperatorAnalyticsRes
+getDriverOperatorDashboardAnalytics _merchantShortId _opCity requestorId from to = do
+  operator <- B.runInReplica $ QP.findById (Id requestorId :: Id DP.Person) >>= fromMaybeM (PersonNotFound requestorId)
+  unless (operator.role == DP.OPERATOR) $ throwError AccessDenied
+
+  now <- getCurrentTime
+  let period = inferPeriod now from to
+      kTotalApplicationCount = Analytics.makeOperatorPeriodicKey operator.id.getId "totalApplicationCount" (show period)
+      kDriverEnabled = Analytics.makeOperatorPeriodicKey operator.id.getId "driverEnabled" (show period)
+      kGtOne = Analytics.makeOperatorPeriodicKey operator.id.getId "greaterThanOneRide" (show period)
+      kGtTen = Analytics.makeOperatorPeriodicKey operator.id.getId "greaterThanTenRide" (show period)
+      kGtFifty = Analytics.makeOperatorPeriodicKey operator.id.getId "greaterThanFiftyRide" (show period)
+  logTagInfo "kTotalApplicationCount:-" kTotalApplicationCount
+  logTagInfo "kDriverEnabled:-" kDriverEnabled
+  logTagInfo "kGtOne:-" kGtOne
+  logTagInfo "kGtTen:-" kGtTen
+  logTagInfo "kGtFifty:-" kGtFifty
+
+  case period of
+    Nothing -> do
+      (appCount, enabledCount, gt1, gt10, gt50) <- fallbackCompute operator.id.getId
+      pure $
+        API.Types.ProviderPlatform.Operator.Driver.FilteredOperatorAnalyticsRes
+          { totalApplicationCount = appCount,
+            driverEnabled = enabledCount,
+            greaterThanOneRide = gt1,
+            greaterThanTenRide = gt10,
+            greaterThanFiftyRide = gt50
+          }
+    Just _ -> do
+      -- attempt to read cached values
+      mbApp <- Redis.get @Int kTotalApplicationCount
+      mbEnabled <- Redis.get @Int kDriverEnabled
+      mbGt1 <- Redis.get @Int kGtOne
+      mbGt10 <- Redis.get @Int kGtTen
+      mbGt50 <- Redis.get @Int kGtFifty
+
+      (totalApplicationCount, driverEnabled, greaterThanOneRide, greaterThanTenRide, greaterThanFiftyRide) <- do
+        case (mbApp, mbEnabled, mbGt1, mbGt10, mbGt50) of
+          (Just a, Just e, Just g1, Just g10, Just g50) -> pure (a, e, g1, g10, g50)
+          _ -> do
+            (appCount, enabledCount, gt1, gt10, gt50) <- fallbackCompute operator.id.getId
+            -- write back to Redis
+            void $ Redis.set kTotalApplicationCount appCount
+            void $ Redis.set kDriverEnabled enabledCount
+            void $ Redis.set kGtOne gt1
+            void $ Redis.set kGtTen gt10
+            void $ Redis.set kGtFifty gt50
+            pure (appCount, enabledCount, gt1, gt10, gt50)
+
+      pure $ API.Types.ProviderPlatform.Operator.Driver.FilteredOperatorAnalyticsRes {totalApplicationCount, driverEnabled, greaterThanOneRide, greaterThanTenRide, greaterThanFiftyRide}
+  where
+    fallbackCompute :: Text -> Flow (Int, Int, Int, Int, Int)
+    fallbackCompute operatorId = do
+      driverIds <- SDFStatus.getFleetDriverIdsAndDriverIdsByOperatorId operatorId
+      -- totalApplicationCount = active driver-operator associations and active driver-fleet-operator associations
+      appCount <- SDFStatus.getTotalFleetDriverAndDriverCountByOperatorIdInDateRange operatorId from to
+      -- driverEnabled = count of driver_info.enabled == true among these drivers
+      enabledCount <- CDI.getEnabledDriverCountByDriverIds driverIds from to
+      -- thresholds via daily_stats (sum numRides in [from,to] on merchantLocalDate)
+      let fromDay = utctDay from
+          toDay = utctDay to
+      gt1 <- CDaily.countDriversWithNumRidesGreaterThan1Between driverIds fromDay toDay
+      gt10 <- CDaily.countDriversWithNumRidesGreaterThan10Between driverIds fromDay toDay
+      gt50 <- CDaily.countDriversWithNumRidesGreaterThan50Between driverIds fromDay toDay
+      pure (appCount, enabledCount, gt1, gt10, gt50)
+
+inferPeriod :: UTCTime -> UTCTime -> UTCTime -> Maybe Period
+inferPeriod now from to =
+  let (y, m, d) = toGregorian (utctDay now)
+      todayStart = UTCTime (fromGregorian y m d) 0
+      -- week starts on Monday
+      dow :: Int = case dayOfWeek (utctDay now) of
+        Monday -> 0
+        Tuesday -> 1
+        Wednesday -> 2
+        Thursday -> 3
+        Friday -> 4
+        Saturday -> 5
+        Sunday -> 6
+      thisWeekStart = addUTCTime (negate (fromIntegral dow * 86400)) todayStart
+      firstOfMonth = UTCTime (fromGregorian y m 1) 0
+      yesterdayStart = addUTCTime (-86400) todayStart
+      lastWeekStart = addUTCTime (-7 * 86400) thisWeekStart
+      lastMonthStart = UTCTime (addGregorianMonthsClip (-1) (fromGregorian y m 1)) 0
+   in if from == todayStart && to <= now && to >= todayStart
+        then Just Today
+        else
+          if from == thisWeekStart && to <= now && to >= todayStart
+            then Just ThisWeek
+            else
+              if from == firstOfMonth && to <= now && to >= todayStart
+                then Just ThisMonth
+                else
+                  if from == yesterdayStart && to == addUTCTime (-1) todayStart
+                    then Just Yesterday
+                    else
+                      if from == lastWeekStart && to == addUTCTime (-1) thisWeekStart
+                        then Just LastWeek
+                        else
+                          if from == lastMonthStart && to == addUTCTime (-1) firstOfMonth
+                            then Just LastMonth
+                            else Nothing
+
+data Period = Today | ThisWeek | ThisMonth | Yesterday | LastWeek | LastMonth
+  deriving (Show, Eq)

@@ -88,6 +88,24 @@ getFleetDriverIdsAndDriverIdsByOperatorId operatorId = do
   driverIds <- CDOA.getDriverIdsByOperatorId operatorId
   pure (driverIds <> fleetDriverIds)
 
+getTotalFleetDriverAndDriverCountByOperatorIdInDateRange ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    Redis.HedisFlow m r,
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
+  ) =>
+  Text ->
+  UTCTime ->
+  UTCTime ->
+  m Int
+getTotalFleetDriverAndDriverCountByOperatorIdInDateRange operatorId from to = do
+  fleetOwnerIds <- CFOA.getFleetOwnerIdsByOperatorId operatorId
+  fleetDriverCount <- CFDA.getTotalDriverCountByFleetOwnerIdsInDateRange fleetOwnerIds from to
+  driverCount <- CDOA.getTotalDriverCountByOperatorIdInDateRange operatorId from to
+  pure (fleetDriverCount + driverCount)
+
 toDriverStatusRes :: [(Maybe DDF.DriverFlowStatus, Int)] -> Common.DriverStatusRes
 toDriverStatusRes xs =
   let m = Map.fromList xs

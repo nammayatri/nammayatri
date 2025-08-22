@@ -27,6 +27,7 @@ import Kernel.External.Maps.Types (LatLong (..))
 import qualified Kernel.External.Maps.Types as Maps
 import Kernel.External.Types
 import Kernel.Prelude
+import qualified Kernel.Storage.Clickhouse.Config as CH
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
@@ -81,7 +82,9 @@ sendScheduledRideAssignedOnUpdate ::
     Metrics.HasCoreMetrics r,
     HasField "enableAPILatencyLogging" r Bool,
     HasField "enableAPIPrometheusMetricLogging" r Bool,
-    HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal]
+    HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal],
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
   ) =>
   Job 'ScheduledRideAssignedOnUpdate ->
   m ExecutionResult
@@ -287,7 +290,9 @@ cancelOrReallocate ::
     Metrics.HasCoreMetrics r,
     HasField "enableAPILatencyLogging" r Bool,
     HasField "enableAPIPrometheusMetricLogging" r Bool,
-    HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal]
+    HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal],
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
   ) =>
   DRide.Ride ->
   Text ->
