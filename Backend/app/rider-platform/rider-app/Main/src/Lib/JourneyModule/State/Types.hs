@@ -42,5 +42,10 @@ data TrackingStatus
   | Finished -- (Taxi - Ride COMPLETED)
   deriving (Generic, ToSchema, Eq, Ord, Show, Read, FromJSON, ToJSON, ToParamSchema)
 
-$(mkHttpInstancesForEnum ''TrackingStatus)
+instance FromHttpApiData TrackingStatus where
+  parseQueryParam = readEither
+
+instance ToHttpApiData TrackingStatus where
+  toUrlPiece = show
+
 $(mkBeamInstancesForEnum ''TrackingStatus)
