@@ -42,6 +42,25 @@ findAllByFleetOwnerId fleetOwnerId isActive = do
     Nothing
     Nothing
 
+-- including inactive
+findAllByFleetIdAndOperatorId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id DP.Person ->
+  Id DP.Person ->
+  m [FleetOperatorAssociation]
+findAllByFleetIdAndOperatorId fleetOwnerId operatorId = do
+  now <- getCurrentTime
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is BeamFOA.fleetOwnerId $ Se.Eq fleetOwnerId.getId,
+          Se.Is BeamFOA.operatorId $ Se.Eq operatorId.getId,
+          Se.Is BeamFOA.associatedTill (Se.GreaterThan $ Just now)
+        ]
+    ]
+    (Se.Desc BeamFOA.createdAt)
+    Nothing
+    Nothing
+
 endFleetOperatorAssociation :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> Id DP.Person -> m ()
 endFleetOperatorAssociation fleetOwnerId operatorId = do
   now <- getCurrentTime
@@ -74,3 +93,17 @@ findByFleetOwnerIdAndOperatorId fleetOwnerId operatorId isActive = do
       (Se.Desc BeamFOA.createdAt)
       (Just 1)
       Nothing
+
+findAllActiveByOperatorId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Text ->
+  m [FleetOperatorAssociation]
+findAllActiveByOperatorId operatorId = do
+  now <- getCurrentTime
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamFOA.operatorId $ Se.Eq operatorId,
+          Se.Is BeamFOA.isActive $ Se.Eq True,
+          Se.Is BeamFOA.associatedTill (Se.GreaterThan $ Just now)
+        ]
+    ]

@@ -147,6 +147,7 @@ library
       Domain.Action.Dashboard.Driver.Notification
       Domain.Action.Dashboard.Exotel
       Domain.Action.Dashboard.Fleet.Driver
+      Domain.Action.Dashboard.Fleet.LiveMap
       Domain.Action.Dashboard.Fleet.Onboarding
       Domain.Action.Dashboard.Fleet.Referral
       Domain.Action.Dashboard.Fleet.Registration
@@ -234,6 +235,7 @@ library
       Domain.Action.UI.FareCalculator
       Domain.Action.UI.FleetDriverAssociation
       Domain.Action.UI.Insurance
+      Domain.Action.UI.Invoice
       Domain.Action.UI.KioskLocation
       Domain.Action.UI.LeaderBoard
       Domain.Action.UI.LmsModule
@@ -291,6 +293,7 @@ library
       Domain.Types.Common
       Domain.Types.DeliveryDetails
       Domain.Types.DeliveryPersonDetails
+      Domain.Types.DriverFlowStatus
       Domain.Types.DriverLocation
       Domain.Types.External.LiveEKD
       Domain.Types.Extra.ConditionalCharges
@@ -380,6 +383,7 @@ library
       SharedLogic.DeleteDriver
       SharedLogic.DriverFee
       SharedLogic.DriverFleetOperatorAssociation
+      SharedLogic.DriverFlowStatus
       SharedLogic.DriverOnboarding
       SharedLogic.DriverOnboarding.Status
       SharedLogic.DriverPool
@@ -522,10 +526,16 @@ library
       Storage.CachedQueries.VehicleDetails
       Storage.CachedQueries.VehicleServiceTier
       Storage.CachedQueries.WhiteListOrg
+      Storage.Clickhouse.Booking
       Storage.Clickhouse.BppTransactionJoin
       Storage.Clickhouse.DriverEdaKafka
       Storage.Clickhouse.DriverFee
+      Storage.Clickhouse.DriverInformation
+      Storage.Clickhouse.DriverOperatorAssociation
       Storage.Clickhouse.Estimate
+      Storage.Clickhouse.FleetDriverAssociation
+      Storage.Clickhouse.FleetOperatorAssociation
+      Storage.Clickhouse.Location
       Storage.Clickhouse.Ride
       Storage.Clickhouse.RideDetails
       Storage.Clickhouse.SearchRequestForDriver
@@ -706,6 +716,7 @@ library
       API.Action.Dashboard.AppManagement.Subscription
       API.Action.Dashboard.Fleet
       API.Action.Dashboard.Fleet.Driver
+      API.Action.Dashboard.Fleet.LiveMap
       API.Action.Dashboard.Fleet.Onboarding
       API.Action.Dashboard.Fleet.RegistrationV2
       API.Action.Dashboard.IssueManagement
@@ -748,6 +759,7 @@ library
       API.Action.UI.EditBooking
       API.Action.UI.FareCalculator
       API.Action.UI.Insurance
+      API.Action.UI.Invoice
       API.Action.UI.LmsModule
       API.Action.UI.Merchant
       API.Action.UI.MeterRide
@@ -794,6 +806,7 @@ library
       API.Types.UI.EditBooking
       API.Types.UI.FareCalculator
       API.Types.UI.Insurance
+      API.Types.UI.Invoice
       API.Types.UI.LmsModule
       API.Types.UI.Merchant
       API.Types.UI.MeterRide

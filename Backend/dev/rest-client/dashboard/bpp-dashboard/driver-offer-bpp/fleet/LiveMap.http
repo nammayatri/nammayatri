@@ -1,0 +1,139 @@
+# access tokens with different roles
+@operator = favorit-operator-token0-000000000000
+@fleet = 88ef2a2a-b014-4a86-b1c0-e453e8b0b688
+@fleetOwnerId = favorit-fleet-owner-0000000000000000
+@rentalFleet = favorit-rental_fleet-token-000000000
+@juspay_admin = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/juspay_admin}}
+@location-tracking-service-host = http://localhost:8081
+@merchantId = favorit0-0000-0000-0000-00000favorit
+
+@driver_Id = favorit-auto2-0000000000000000000000
+
+
+# @name healthcheck
+GET {{bpp-dashboard-host}}
+
+###
+
+# @name update_fleet_group
+
+# set DEV environment variable for DEV testing
+# export DEV=1
+
+@driverId=favorit-auto2-0000000000000000000000
+
+POST {{location-tracking-service-host}}/ui/driver/location
+token: {{driverId}}
+mid: {{merchantId}}
+gid: favorit-fleet-owner-0000000000000000
+gid2: favorit-operator-0-0000-000000000000
+vt: AUTO_RICKSHAW
+dm: ONLINE
+content-type: application/json
+
+[
+    {
+        "pt": {
+            "lat": 14.445332,
+            "lon": 75.919028
+
+        },
+        "ts": "{{$localDatetime iso8601}}"
+    },
+    {
+        "pt": {
+            "lat": 14.445488,
+            "lon": 75.919687
+
+        },
+        "ts": "{{$localDatetime iso8601}}",
+        "aux": "Tharalabalu Badavane"
+    },
+    {
+        "pt": {
+            "lat": 14.445093,
+            "lon": 75.919955
+
+        },
+        "ts": "{{$localDatetime iso8601}}"
+    },
+    {
+        "pt": {
+            "lat": 14.444636,
+            "lon": 75.920288
+        },
+        "ts": "{{$localDatetime iso8601}}",
+        "aux": "1st Main Rd"
+    }
+]
+
+###
+
+# @name update_fleet_group_driver2
+
+POST {{location-tracking-service-host}}/ui/driver/location
+token: favorit-suv-000000000000000000000000
+mid: {{merchantId}}
+gid: favorit-fleet-owner-0000000000000000
+gid2: favorit-operator-0-0000-000000000000
+vt: AUTO_RICKSHAW
+dm: ONLINE
+content-type: application/json
+
+[
+    {
+        "pt": {
+            "lat": 14.445636,
+            "lon": 75.920288
+        },
+        "ts": "{{$localDatetime iso8601}}",
+        "aux": "1st Main Rd"
+    }
+]
+
+###
+
+# @name nearby_fleet_group
+
+GET {{location-tracking-service-host}}/internal/drivers/nearby
+Content-Type: application/json
+
+{
+  "lat": 14.444491,
+  "lon": 75.920846,
+  "vehicle_type": ["AUTO_RICKSHAW", "SEDAN", "SUV"],
+  "radius": 10000,
+  "merchantId": "favorit0-0000-0000-0000-00000favorit",
+  "groupId": "favorit-fleet-owner-0000000000000000"
+}
+
+###
+
+# @name getDriverLocations
+
+# set DEV environment variable for DEV testing
+# export DEV=1
+
+@driverId=favorit-auto2-0000000000000000000000
+
+GET {{location-tracking-service-host}}/internal/drivers/location
+# token: {{operator}}
+content-type: application/json
+
+{ "driverIds":["favorit-auto2-0000000000000000000000", "favorit-suv-000000000000000000000000"]
+}
+
+###
+
+# @name getLiveMapDrivers
+
+@radius = 115
+
+# for local MSIL testing:
+# UPDATE atlas_bpp_dashboard.merchant SET has_fleet_member_hierarchy='false' WHERE short_id='NAMMA_YATRI_PARTNER';
+
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/liveMap/drivers/{{radius}}
+# ?fleetOwnerId={{fleet}}
+?driverIdForRadius={{driver_Id}}
+# &point=14.445332,75.919028
+token: {{operator}}
