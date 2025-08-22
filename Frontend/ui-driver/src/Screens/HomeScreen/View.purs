@@ -20,6 +20,8 @@ import Debug
 import Mobility.Prelude
 import PrestoDOM.List
 import Screens.HomeScreen.ComponentConfig
+import Screens.HomeScreen.Controller (willNextCancellationBlock)
+import Services.API (GetDriverInfoResp(..), CancellationRateSlabConfig(..), CancellationRateSlab(..), SlabType(..))
 import Timers
 import Prelude (div,mod,unit, ($), (-), (/), (<), (<=), (<>), (==), (>=), (||), (>), (/=), show, map, (&&), not, bottom, (<>), (*), negate, otherwise, (+),(<$>))
 import Animation as Anim
@@ -92,7 +94,7 @@ import PrestoDOM.Types.DomAttributes as PTD
 import Screens as ScreenNames
 import Screens.HomeScreen.Controller (Action(..), RideRequestPollingData, ScreenOutput, ScreenOutput(GoToHelpAndSupportScreen), checkPermissionAndUpdateDriverMarker, eval, getPeekHeight, getBannerConfigs)
 import Screens.HomeScreen.PopUpConfig as PopUpConfig
-import Screens.Types (HomeScreenStage(..), HomeScreenState, KeyboardModalType(..), DriverStatus(..), DriverStatusResult(..), PillButtonState(..), TimerStatus(..), DisabilityType(..), SavedLocationScreenType(..), LocalStoreSubscriptionInfo, SubscriptionBannerType(..), NotificationBody(..))
+import Screens.Types (HomeScreenStage(..), HomeScreenState, KeyboardModalType(..), DriverStatus(..), DriverStatusResult(..), PillButtonState(..), TimerStatus(..), DisabilityType(..), SavedLocationScreenType(..), LocalStoreSubscriptionInfo, SubscriptionBannerType(..), NotificationBody(..), BlockType(..))
 import Screens.Types as ST
 import Services.API (GetRidesHistoryResp(..), OrderStatusRes(..), Status(..), DriverProfileStatsReq(..), DriverInfoReq(..), BookingTypes(..), RidesInfo(..), StopLocation(..), LocationInfo(..), ScheduledBookingListResponse(..), BusTripStatus(..), TripTransactionDetails(..)) 
 import Services.Accessor (_lat, _lon, _stopName, _stopCode, _stopLat, _stopLong, _routeInfo, _allowStartRideFromQR, _routeInfo, _source, _destination, _routeCode, _stopName )
@@ -138,7 +140,56 @@ import Components.SelectableItem as SelectableItem
 
 screen :: HomeScreenState -> GlobalState -> Screen Action HomeScreenState ScreenOutput
 screen initialState (GlobalState globalState) =
-  { initialState
+  let driverInfo = globalState.globalProps.driverInformation
+      blockingInfo = willNextCancellationBlock driverInfo
+      willBlock = blockingInfo.willBlock
+      blockType = blockingInfo.blockType
+      cancellationValues = case driverInfo of
+        Nothing -> { cancelledRides: 0, totalRides: 0, suspensionHours: 0, blockType: Nothing }
+        Just (GetDriverInfoResp info) -> 
+          case blockType of
+            Just WeeklyBlock -> 
+              let cancelledRides = fromMaybe 0 info.cancelledRidesCountWeekly
+                  totalRides = fromMaybe 0 info.assignedRidesCountWeekly
+                  suspensionHours = case info.cancellationRateSlabConfig of
+                    Nothing -> 0
+                    Just (CancellationRateSlabConfig config) -> 
+                      case DA.find (\slab ->
+                        let (SlabType slabData) = slab
+                            minRange = slabData.minBookingsRange
+                            minValue = fromMaybe 0 (minRange DA.!! 0)
+                            maxValue = fromMaybe 999 (minRange DA.!! 1)
+                        in totalRides >= minValue && totalRides <= maxValue
+                      ) config.weeklySlabs of
+                        Nothing -> 0
+                        Just slab -> 
+                          let (SlabType slabData) = slab
+                              (CancellationRateSlab penalty) = slabData.penalityForCancellation
+                          in penalty.suspensionTimeInHours
+              in { cancelledRides, totalRides, suspensionHours, blockType }
+            Just DailyBlock -> 
+              let cancelledRides = fromMaybe 0 info.cancelledRidesCountDaily
+                  totalRides = fromMaybe 0 info.assignedRidesCountDaily
+                  suspensionHours = case info.cancellationRateSlabConfig of
+                    Nothing -> 0
+                    Just (CancellationRateSlabConfig config) -> 
+                      case DA.find (\slab ->
+                        let (SlabType slabData) = slab
+                            minRange = slabData.minBookingsRange
+                            minValue = fromMaybe 0 (minRange DA.!! 0)
+                            maxValue = fromMaybe 999 (minRange DA.!! 1)
+                        in totalRides >= minValue && totalRides <= maxValue
+                      ) config.dailySlabs of
+                        Nothing -> 0
+                        Just slab -> 
+                          let (SlabType slabData) = slab
+                              (CancellationRateSlab penalty) = slabData.penalityForCancellation
+                          in penalty.suspensionTimeInHours
+              in { cancelledRides, totalRides, suspensionHours, blockType }
+            _ -> { cancelledRides: 0, totalRides: 0, suspensionHours: 0, blockType: Nothing }
+      updatedState = initialState{props{willCancellationBlock = willBlock, cancellationValues = cancellationValues}}
+  in
+  { initialState: updatedState
   , view
   , name : "HomeScreen"
   , globalEvents : [

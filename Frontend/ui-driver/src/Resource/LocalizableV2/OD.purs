@@ -1734,6 +1734,11 @@ getOd =
     , n_more_free_rides_left: (\n -> n <> " ଅଧିକ ମୁକ୍ତ ରାଇଡ୍ ବାକି ଅଛି!")
     , this_feature_will_be_applicable: "ଏହି ବିଶେଷତା ନିର୍ଦିଷ୍ଟ ଭାବରେ ଦୂରତା 3 କି.ମି ଅପେକ୍ଷା ଅଧିକ ହେଲେ ମାତ୍ର ପ୍ରୟୋଗ ହେବ।\n\nଏହା ସକ୍ରିୟ କରିବା ପରେ ଥିବା ସ୍ଥାନ ପସନ୍ଦଗୁଡ଼ିକ 30 ମିନିଟ ପର୍ଯ୍ୟନ୍ତ ମାତ୍ର ବ valid ହେବ।"
     , frequent_cancellations_will_lead_to_blocking: "ବାରମ୍ବାର କ୍ୟାନସେଲେସନ୍ କଲେ ବ୍ଲକିଙ୍ଗ ହେବ ଏବଂ ରେଟିଂ କମି ଯିବ।"
+    , cancelling_this_ride_will_block_you: "ଏହି ଯାତ୍ରା ବାତିଲ କରିବା ଆପଣଙ୍କୁ ଅବରୋଧ କରିବ"
+    , your_cancellation_rate_is_high: "ଆପଣଙ୍କର ବାତିଲ ହେବାର ହାର ଅଧିକ ଅଛି"
+    , cancelling_this_ride_will_lower_your_score_and_may_lead_to_blocking: "ଏହି ଯାତ୍ରା ବାତିଲ କରିବା ଆପଣଙ୍କର ସ୍କୋର କମିଯିବ<br/>ଏବଂ ଅବରୋଧ ହୋଇପାରେ"
+    , your_daily_cancellation_rate_will_increase_to_x_percent_and_will_block_you_for_x_hours: "ଆପଣଙ୍କ ଦୈନିକ ବାତିଲ ହାର <b>%s%%</b> ବୃଦ୍ଧି କରିବ ଏବଂ ଆପଣଙ୍କୁ <b>%s ଘଣ୍ଟା</b> ପାଇଁ ଅବରୋଧ କରିବ"
+    , your_weekly_cancellation_rate_will_increase_to_x_percent_and_will_block_you_for_x_hours: "ଆପଣଙ୍କ ସାପ୍ତାହିକ ବାତିଲ ହାର <b>%s%%</b> ବୃଦ୍ଧି କରିବ ଏବଂ ଆପଣଙ୍କୁ <b>%s ଘଣ୍ଟା</b> ପାଇଁ ଅବରୋଧ କରିବ"
     , hotspots: "ହଟସ୍ପଟ୍ସ"
     , customer: "ଗ୍ରାହକ"
     , very_high: "ଅତ୍ୟଧିକ ଉଚ୍ଚ"

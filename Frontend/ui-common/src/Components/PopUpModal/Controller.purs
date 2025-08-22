@@ -431,7 +431,7 @@ config = {
       lineheight : Mb.Nothing,
       visibility : VISIBLE,
       isClickable : false ,
-      textStyle : ParagraphText,
+      textStyle : SubHeading1,
       accessibilityHint : "", 
       suffixImage : {
         visibility : GONE
