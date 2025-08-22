@@ -21,12 +21,14 @@ import Kernel.Types.APISuccess (APISuccess (Success))
 import Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverOnboarding as DomainRC
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.Cac.TransporterConfig as SCT
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.FleetDriverAssociation as QFDV
+import qualified Storage.Queries.FleetOperatorAssociation as QFOA
 import Tools.Error
 
 postDriverRegistrationAuth, auth :: ShortId DM.Merchant -> Context.City -> Common.AuthReq -> Flow Common.AuthRes
@@ -79,7 +81,15 @@ verify authId mbFleet fleetOwnerId mbOperatorId transporterConfig req = do
     assoc <- FDV.makeFleetDriverAssociation res.person.id fleetOwnerId mbOperatorId (DomainRC.convertTextToUTC (Just "2099-12-12"))
     QFDV.create assoc
     let allowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
-    when allowCacheDriverFlowStatus $ do
+    let needsDriverInfo = transporterConfig.allowAnalytics == Just True || allowCacheDriverFlowStatus
+    when needsDriverInfo $ do
       driverInfo <- QDI.findById res.person.id >>= fromMaybeM (DriverNotFound res.person.id.getId)
-      DDriverMode.incrementFleetOperatorStatusKeyForDriver SP.FLEET_OWNER fleetOwnerId driverInfo.driverFlowStatus
+      when (transporterConfig.allowAnalytics == Just True) $ do
+        mbOperator <- QFOA.findByFleetOwnerId fleetOwnerId True
+        when (isNothing mbOperator) $ logTagError "AnalyticsAddDriver" "Operator not found for fleet owner"
+        whenJust mbOperator $ \operator -> do
+          when driverInfo.enabled $ Analytics.incrementOperatorAnalyticsDriverEnabled transporterConfig operator.operatorId
+          Analytics.incrementOperatorAnalyticsApplicationCount transporterConfig operator.operatorId
+      when allowCacheDriverFlowStatus $ do
+        DDriverMode.incrementFleetOperatorStatusKeyForDriver SP.FLEET_OWNER fleetOwnerId driverInfo.driverFlowStatus
   pure Success

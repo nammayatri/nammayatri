@@ -7,6 +7,8 @@ module Domain.Action.Dashboard.Operator.Driver
     getDriverOperatorList,
     postDriverOperatorSendJoiningOtp,
     postDriverOperatorVerifyJoiningOtp,
+    getDriverOperatorDashboardAnalyticsAllTime,
+    getDriverOperatorDashboardAnalytics,
   )
 where
 
@@ -44,6 +46,7 @@ import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
+import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import SharedLogic.Merchant (findMerchantByShortId)
@@ -381,7 +384,8 @@ postDriverOperatorVerifyJoiningOtp merchantShortId opCity mbAuthId requestorId r
               deviceToken = deviceToken,
               whatsappNotificationEnroll = Nothing
             }
-      verifyAndAssociateDriverWithOperator merchant merchantOpCityId operator res.person allowCacheDriverFlowStatus
+
+      verifyAndAssociateDriverWithOperator merchant merchantOpCityId operator res.person transporterConfig
 
       DOR.makeDriverReferredByOperator merchantOpCityId person.id operator.id
 
@@ -402,11 +406,11 @@ postDriverOperatorVerifyJoiningOtp merchantShortId opCity mbAuthId requestorId r
 
       SA.endDriverAssociationsIfAllowed merchant merchantOpCityId transporterConfig person
 
-      verifyAndAssociateDriverWithOperator merchant merchantOpCityId operator person allowCacheDriverFlowStatus
+      verifyAndAssociateDriverWithOperator merchant merchantOpCityId operator person transporterConfig
 
   pure Success
   where
-    verifyAndAssociateDriverWithOperator merchant merchantOpCityId operator person allowCache = do
+    verifyAndAssociateDriverWithOperator merchant merchantOpCityId operator person transporterConfig = do
       checkAssocOperator <-
         B.runInReplica $
           QDOA.findByDriverIdAndOperatorId person.id operator.id True
@@ -415,12 +419,113 @@ postDriverOperatorVerifyJoiningOtp merchantShortId opCity mbAuthId requestorId r
 
       assoc <- SA.makeDriverOperatorAssociation merchant.id merchantOpCityId person.id operator.id.getId (DomainRC.convertTextToUTC (Just "2099-12-12"))
       QDOA.create assoc
-      when allowCache $ do
+      let needsDriverInfo = transporterConfig.allowAnalytics == Just True || transporterConfig.allowCacheDriverFlowStatus == Just True
+      when needsDriverInfo $ do
         driverInfo <- QDI.findById person.id >>= fromMaybeM (DriverNotFound person.id.getId)
-        DDriverMode.incrementFleetOperatorStatusKeyForDriver DP.OPERATOR operator.id.getId driverInfo.driverFlowStatus
+        when (transporterConfig.allowAnalytics == Just True) $ do
+          when driverInfo.enabled $ Analytics.incrementOperatorAnalyticsDriverEnabled transporterConfig operator.id.getId
+          Analytics.incrementOperatorAnalyticsApplicationCount transporterConfig operator.id.getId
+        when (transporterConfig.allowCacheDriverFlowStatus == Just True) $ do
+          DDriverMode.incrementFleetOperatorStatusKeyForDriver DP.OPERATOR operator.id.getId driverInfo.driverFlowStatus
 
 makeOperatorDriverOtpKey :: Text -> Text
 makeOperatorDriverOtpKey phoneNo = "Operator:Driver:PhoneNo" <> phoneNo
 
 makeOperatorDriverHitsCountKey :: Text -> Text
 makeOperatorDriverHitsCountKey phoneNo = "Operator:Driver:PhoneNoHits" <> phoneNo <> ":hitsCount"
+
+---------------------------------------------------------------------
+getDriverOperatorDashboardAnalyticsAllTime ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Flow API.Types.ProviderPlatform.Operator.Driver.AllTimeOperatorAnalyticsRes
+getDriverOperatorDashboardAnalyticsAllTime merchantShortId opCity requestorId = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  transporterConfig <- findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  when (transporterConfig.allowAnalytics /= Just True) $ throwError (InvalidRequest "Analytics is not allowed for this merchant")
+  operator <- B.runInReplica $ QP.findById (Id requestorId :: Id DP.Person) >>= fromMaybeM (PersonNotFound requestorId)
+  unless (operator.role == DP.OPERATOR) $
+    throwError AccessDenied
+
+  -- Redis keys for fleet aggregates
+  let allTimeKeysData = Analytics.allTimeKeys operator.id.getId
+  logTagInfo "allTimeKeysData" (show allTimeKeysData)
+
+  -- try redis first
+  mbAllTimeKeysRes <- mapM (Redis.get @Int) allTimeKeysData
+  logTagInfo "mbAllTimeKeysRes" (show mbAllTimeKeysRes)
+
+  -- fallback to ClickHouse and populate cache when missing
+  (totalRides, ratingSum, cancelCount, acceptationCount, totalRequestCount) <- do
+    if all isJust mbAllTimeKeysRes
+      then do
+        let res = Analytics.convertToAllTimeFallbackRes (zip Analytics.allTimeMetrics (map (fromMaybe 0) mbAllTimeKeysRes))
+        logTagInfo "AllTimeFallbackRes" (show res)
+        pure (res.totalRideCount, res.ratingSum, res.cancelCount, res.acceptationCount, res.totalRequestCount)
+      else do
+        res <- Analytics.handleCacheMissForOperatorAnalyticsAllTime operator.id.getId allTimeKeysData
+        logTagInfo "AllTimeFallbackRes" (show res)
+        pure (res.totalRideCount, res.ratingSum, res.cancelCount, res.acceptationCount, res.totalRequestCount)
+
+  logTagInfo "Total rides" (show totalRides)
+  logTagInfo "Rating sum" (show ratingSum)
+  logTagInfo "Cancel count" (show cancelCount)
+  logTagInfo "Acceptation count" (show acceptationCount)
+  logTagInfo "Total request count" (show totalRequestCount)
+  let (rating, cancellationRate) = if totalRides > 0 then (fromIntegral ratingSum / fromIntegral totalRides, (fromIntegral cancelCount / fromIntegral totalRides) * 100) else (0, 0)
+  let acceptanceRate = if totalRequestCount > 0 then (fromIntegral acceptationCount / fromIntegral totalRequestCount) * 100 else 0
+  pure $ API.Types.ProviderPlatform.Operator.Driver.AllTimeOperatorAnalyticsRes {rating, cancellationRate, acceptanceRate}
+
+---------------------------------------------------------------------
+getDriverOperatorDashboardAnalytics ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Day ->
+  Day ->
+  Flow API.Types.ProviderPlatform.Operator.Driver.FilteredOperatorAnalyticsRes
+getDriverOperatorDashboardAnalytics merchantShortId opCity requestorId fromDay toDay = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  transporterConfig <- findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  when (transporterConfig.allowAnalytics /= Just True) $ throwError (InvalidRequest "Analytics is not allowed for this merchant")
+  operator <- B.runInReplica $ QP.findById (Id requestorId :: Id DP.Person) >>= fromMaybeM (PersonNotFound requestorId)
+  unless (operator.role == DP.OPERATOR) $ throwError AccessDenied
+
+  now <- getCurrentTime
+  let mbPeriod = Analytics.inferPeriod (utctDay now) fromDay toDay
+  logTagInfo "mbPeriod:-" (show mbPeriod)
+
+  case mbPeriod of
+    Nothing -> do
+      res <- Analytics.fallbackComputePeriodOperatorAnalytics operator.id.getId fromDay toDay
+      logTagInfo "PeriodFallbackRes" (show res)
+      pure $
+        API.Types.ProviderPlatform.Operator.Driver.FilteredOperatorAnalyticsRes
+          { totalApplicationCount = res.totalApplicationCount,
+            driverEnabled = res.driverEnabled,
+            greaterThanOneRide = res.greaterThanOneRide,
+            greaterThanTenRide = res.greaterThanTenRide,
+            greaterThanFiftyRide = res.greaterThanFiftyRide
+          }
+    Just period -> do
+      let periodKeysData = Analytics.periodKeys operator.id.getId period
+      logTagInfo "periodKeysData" (show periodKeysData)
+      -- attempt to read cached values
+      mbPeriodKeysRes <- mapM (Redis.get @Int) periodKeysData
+      logTagInfo "mbPeriodKeysRes" (show mbPeriodKeysRes)
+
+      (totalApplicationCount, driverEnabled, greaterThanOneRide, greaterThanTenRide, greaterThanFiftyRide) <- do
+        if all isJust mbPeriodKeysRes
+          then do
+            let res = Analytics.convertToPeriodFallbackRes (zip Analytics.periodMetrics (map (fromMaybe 0) mbPeriodKeysRes))
+            logTagInfo "PeriodKeysRes" (show res)
+            pure (res.totalApplicationCount, res.driverEnabled, res.greaterThanOneRide, res.greaterThanTenRide, res.greaterThanFiftyRide)
+          else do
+            res <- Analytics.handleCacheMissForOperatorAnalyticsPeriod transporterConfig operator.id.getId periodKeysData period fromDay toDay
+            logTagInfo "PeriodFallbackRes" (show res)
+            pure (res.totalApplicationCount, res.driverEnabled, res.greaterThanOneRide, res.greaterThanTenRide, res.greaterThanFiftyRide)
+
+      pure $ API.Types.ProviderPlatform.Operator.Driver.FilteredOperatorAnalyticsRes {totalApplicationCount, driverEnabled, greaterThanOneRide, greaterThanTenRide, greaterThanFiftyRide}

@@ -45,12 +45,14 @@ import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.CancellationReason as DTCR
 import Domain.Types.DriverLocation
 import qualified Domain.Types.Merchant as DMerc
+import qualified Domain.Types.TransporterConfig as DTTC
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderDetails as RiderDetails
 import qualified Domain.Types.Yudhishthira as TY
 import EulerHS.Prelude
 import Kernel.External.Maps
 import Kernel.Prelude hiding (any, elem, map)
+import qualified Kernel.Storage.Clickhouse.Config as CH
 import qualified Kernel.Storage.Esqueleto as Esq hiding (whenJust_)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
@@ -67,6 +69,7 @@ import qualified Lib.Yudhishthira.Event as Yudhishthira
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types as Yudhishthira
+import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.CallBAP as BP
 import SharedLogic.CallBAPInternal
 import qualified SharedLogic.CallInternalMLPricing as ML
@@ -131,7 +134,9 @@ cancelRideImpl ::
     HasField "enableAPILatencyLogging" r Bool,
     HasField "enableAPIPrometheusMetricLogging" r Bool,
     HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal],
-    HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal]
+    HasFlowEnv m r '["mlPricingInternal" ::: ML.MLPricingInternal],
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
   ) =>
   Id DRide.Ride ->
   DRide.RideEndedBy ->
@@ -183,7 +188,7 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
                 DC.driverCoinsEvent ride.driverId driver.merchantId booking.merchantOperatingCityId (DCT.Cancellation ride.createdAt booking.distanceToPickup disToPickup DCT.CancellationByDriver (fromMaybe (DTCR.CancellationReasonCode "OTHER") bookingCReason.reasonCode)) (Just ride.id.getId) ride.vehicleVariant (Just booking.configInExperimentVersions)
 
             fork "cancelRide - Notify driver" $ do
-              rideTags <- updateNammaTagsForCancelledRide booking ride bookingCReason
+              rideTags <- updateNammaTagsForCancelledRide booking ride bookingCReason transporterConfig
               triggerRideCancelledEvent RideEventData {ride = ride{status = DRide.CANCELLED}, personId = driver.id, merchantId = merchantId}
               triggerBookingCancelledEvent BookingEventData {booking = booking{status = SRB.CANCELLED}, personId = driver.id, merchantId = merchantId}
               when (bookingCReason.source == SBCR.ByDriver) $
@@ -250,13 +255,17 @@ cancelRideTransaction booking ride bookingCReason merchantId rideEndedBy cancell
 updateNammaTagsForCancelledRide ::
   ( EsqDBFlow m r,
     CacheFlow m r,
-    Esq.EsqDBReplicaFlow m r
+    Esq.EsqDBReplicaFlow m r,
+    Redis.HedisFlow m r,
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
   ) =>
   SRB.Booking ->
   DRide.Ride ->
   SBCR.BookingCancellationReason ->
+  DTTC.TransporterConfig ->
   m [LYT.TagNameValue]
-updateNammaTagsForCancelledRide booking ride bookingCReason = do
+updateNammaTagsForCancelledRide booking ride bookingCReason transporterConfig = do
   now <- getCurrentTime
   mbCallStatus <- QCallStatus.findOneByEntityId (Just ride.id.getId)
   let callAtemptByDriver = isJust mbCallStatus
@@ -277,6 +286,7 @@ updateNammaTagsForCancelledRide booking ride bookingCReason = do
   driverStats <- QDriverStats.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   let tags = fromMaybe [] allTags
   when (validDriverCancellation `elem` tags) $ do
+    when (transporterConfig.allowAnalytics == Just True) $ Analytics.updateOperatorAnalyticsCancelCount transporterConfig ride.driverId
     QDriverStats.updateValidDriverCancellationTagCount (driverStats.validDriverCancellationTagCount + 1) ride.driverId
   when (validCustomerCancellation `elem` tags) $ do
     QDriverStats.updateValidCustomerCancellationTagCount (driverStats.validCustomerCancellationTagCount + 1) ride.driverId

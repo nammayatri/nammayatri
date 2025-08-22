@@ -1099,6 +1099,7 @@ TransporterConfig:
     subscriptionConfig: SubscriptionConfig
     analyticsConfig: AnalyticsConfig
     driverWalletConfig: DriverWalletConfig
+    allowAnalytics : Maybe Bool
 
   beamType:
     currency: Maybe Currency
@@ -1526,6 +1527,7 @@ TransporterConfig:
     disableDriverWhenUnlinkingVehicle : "true"
     distanceWeightage: "20"
     driverCallingOption: "'AnonymousCall'"
+    allowAnalytics : "false"
     driverWalletConfig:  '''{"enableDriverWallet": false, "driverWalletPayoutThreshold": 0, "gstPercentage": 0.0, "enableWalletPayout": false, "enableWalletTopup": false, "maxWalletPayoutsPerDay": null, "minWalletAmountForCashRides": null, "minimumWalletPayoutAmount": 0, "payoutCutOffDays": 7}'' :: json'
     analyticsConfig: '''{"weekStartMode": 3, "earningsWindowSize": 7, "allowCacheDriverFlowStatus": false, "maxOnlineDurationDays": 10, "onlineDurationCalculateFrom": null}'' :: json'
     subscriptionConfig:  '''{"prepaidSubscriptionThreshold": null}'' :: json'
