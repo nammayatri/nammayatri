@@ -12,12 +12,14 @@ import qualified Domain.Types.Estimate
 import qualified Domain.Types.IntegratedBPPConfig
 import qualified Domain.Types.Location
 import qualified Domain.Types.NyRegularSubscription
+import qualified Domain.Types.Person
 import qualified Domain.Types.RecentLocation
 import qualified Domain.Types.RefereeLink
 import qualified Domain.Types.ServiceTierType
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Id
+import qualified Kernel.Types.Price
 import Servant
 import Tools.Auth
 
@@ -41,6 +43,34 @@ data CreateSubscriptionReq = CreateSubscriptionReq
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data CreateSubscriptionRes = CreateSubscriptionRes {searchRequestId :: Data.Text.Text, subscriptionId :: Kernel.Types.Id.Id Domain.Types.NyRegularSubscription.NyRegularSubscription}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data NyRegularSubscriptionApiEntity = NyRegularSubscriptionApiEntity
+  { bppId :: Data.Text.Text,
+    createdAt :: Data.Time.UTCTime,
+    dropoffLocation :: Domain.Types.Location.Location,
+    fixedPrice :: Kernel.Prelude.Maybe Kernel.Types.Price.Price,
+    fixedPriceBreakupDetails :: Kernel.Prelude.Maybe Data.Aeson.Value,
+    fixedPriceExpiryDate :: Kernel.Prelude.Maybe Data.Time.UTCTime,
+    id :: Kernel.Types.Id.Id Domain.Types.NyRegularSubscription.NyRegularSubscription,
+    initialBppQuoteId :: Kernel.Prelude.Maybe Data.Text.Text,
+    lastProcessedAt :: Kernel.Prelude.Maybe Data.Time.UTCTime,
+    metadata :: Kernel.Prelude.Maybe Data.Text.Text,
+    nextRideOccurence :: Kernel.Prelude.Maybe Data.Time.UTCTime,
+    pauseEndDate :: Kernel.Prelude.Maybe Data.Time.UTCTime,
+    pauseStartDate :: Kernel.Prelude.Maybe Data.Time.UTCTime,
+    pickupLocation :: Domain.Types.Location.Location,
+    recurrenceEndDate :: Kernel.Prelude.Maybe Data.Time.Calendar.Day,
+    recurrenceRuleDays :: [Data.Time.Calendar.DayOfWeek],
+    scheduledTimeOfDay :: Data.Time.LocalTime.TimeOfDay,
+    schedulingHash :: Kernel.Prelude.Maybe Data.Text.Text,
+    startDatetime :: Data.Time.UTCTime,
+    status :: Domain.Types.NyRegularSubscription.NyRegularSubscriptionStatus,
+    updatedAt :: Data.Time.UTCTime,
+    userId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
+    vehicleServiceTier :: Kernel.Prelude.Maybe Domain.Types.ServiceTierType.ServiceTierType
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

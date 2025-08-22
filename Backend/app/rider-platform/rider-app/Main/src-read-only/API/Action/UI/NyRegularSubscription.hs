@@ -65,7 +65,7 @@ type API =
            API.Types.UI.NyRegularSubscription.ConfirmSubscriptionReq
       :> Post
            '[JSON]
-           Domain.Types.NyRegularSubscription.NyRegularSubscription
+           API.Types.UI.NyRegularSubscription.NyRegularSubscriptionApiEntity
       :<|> TokenAuth
       :> "nyRegular"
       :> "subscriptions"
@@ -75,7 +75,7 @@ type API =
            API.Types.UI.NyRegularSubscription.UpdateSubscriptionReq
       :> Post
            '[JSON]
-           Domain.Types.NyRegularSubscription.NyRegularSubscription
+           API.Types.UI.NyRegularSubscription.NyRegularSubscriptionApiEntity
       :<|> TokenAuth
       :> "nyRegular"
       :> "subscriptions"
@@ -90,7 +90,7 @@ type API =
            Kernel.Prelude.Int
       :> Get
            '[JSON]
-           [Domain.Types.NyRegularSubscription.NyRegularSubscription]
+           [API.Types.UI.NyRegularSubscription.NyRegularSubscriptionApiEntity]
       :<|> TokenAuth
       :> "nyRegular"
       :> "subscriptionDetails"
@@ -99,7 +99,7 @@ type API =
            (Kernel.Types.Id.Id Domain.Types.NyRegularSubscription.NyRegularSubscription)
       :> Get
            '[JSON]
-           Domain.Types.NyRegularSubscription.NyRegularSubscription
+           API.Types.UI.NyRegularSubscription.NyRegularSubscriptionApiEntity
       :<|> TokenAuth
       :> "nyRegular"
       :> "subscriptions"
@@ -109,7 +109,7 @@ type API =
       :> "cancel"
       :> Post
            '[JSON]
-           Domain.Types.NyRegularSubscription.NyRegularSubscription
+           API.Types.UI.NyRegularSubscription.NyRegularSubscriptionApiEntity
   )
 
 handler :: Environment.FlowServer API
@@ -145,7 +145,7 @@ postNyRegularSubscriptionsConfirm ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     API.Types.UI.NyRegularSubscription.ConfirmSubscriptionReq ->
-    Environment.FlowHandler Domain.Types.NyRegularSubscription.NyRegularSubscription
+    Environment.FlowHandler API.Types.UI.NyRegularSubscription.NyRegularSubscriptionApiEntity
   )
 postNyRegularSubscriptionsConfirm a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.NyRegularSubscription.postNyRegularSubscriptionsConfirm (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
@@ -154,7 +154,7 @@ postNyRegularSubscriptionsUpdate ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     API.Types.UI.NyRegularSubscription.UpdateSubscriptionReq ->
-    Environment.FlowHandler Domain.Types.NyRegularSubscription.NyRegularSubscription
+    Environment.FlowHandler API.Types.UI.NyRegularSubscription.NyRegularSubscriptionApiEntity
   )
 postNyRegularSubscriptionsUpdate a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.NyRegularSubscription.postNyRegularSubscriptionsUpdate (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
@@ -165,7 +165,7 @@ getNyRegularSubscriptions ::
     Kernel.Prelude.Maybe Domain.Types.NyRegularSubscription.NyRegularSubscriptionStatus ->
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
-    Environment.FlowHandler [Domain.Types.NyRegularSubscription.NyRegularSubscription]
+    Environment.FlowHandler [API.Types.UI.NyRegularSubscription.NyRegularSubscriptionApiEntity]
   )
 getNyRegularSubscriptions a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.NyRegularSubscription.getNyRegularSubscriptions (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a4) a3 a2 a1
 
@@ -174,7 +174,7 @@ getNyRegularSubscriptionDetails ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Types.Id.Id Domain.Types.NyRegularSubscription.NyRegularSubscription ->
-    Environment.FlowHandler Domain.Types.NyRegularSubscription.NyRegularSubscription
+    Environment.FlowHandler API.Types.UI.NyRegularSubscription.NyRegularSubscriptionApiEntity
   )
 getNyRegularSubscriptionDetails a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.NyRegularSubscription.getNyRegularSubscriptionDetails (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
@@ -183,6 +183,6 @@ postNyRegularSubscriptionsCancel ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Types.Id.Id Domain.Types.NyRegularSubscription.NyRegularSubscription ->
-    Environment.FlowHandler Domain.Types.NyRegularSubscription.NyRegularSubscription
+    Environment.FlowHandler API.Types.UI.NyRegularSubscription.NyRegularSubscriptionApiEntity
   )
 postNyRegularSubscriptionsCancel a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.NyRegularSubscription.postNyRegularSubscriptionsCancel (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
