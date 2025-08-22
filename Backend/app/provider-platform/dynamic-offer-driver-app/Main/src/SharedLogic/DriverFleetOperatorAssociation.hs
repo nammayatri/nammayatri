@@ -23,6 +23,7 @@ import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import SharedLogic.Analytics as Analytics
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverOperatorAssociation as QDOA
@@ -61,6 +62,8 @@ endDriverAssociationsIfAllowed merchant merchantOpCityId transporterConfig drive
       then forM_ existingFDAssociations $ \existingAssociation -> do
         logInfo $ "End existing fleet driver association: fleetOwnerId: " <> existingAssociation.fleetOwnerId <> "driverId: " <> existingAssociation.driverId.getId
         QFDA.endFleetDriverAssociation existingAssociation.fleetOwnerId existingAssociation.driverId
+        operator <- QFOA.findByFleetOwnerId existingAssociation.fleetOwnerId True >>= fromMaybeM (InvalidRequest "No operator found for fleet owner") -- Need to add merchant base check here
+        Analytics.decrementOperatorAnalyticsApplicationCount operator.operatorId -- Need to add merchant base check here
         when (transporterConfig.allowCacheDriverFlowStatus == Just True) $ do
           driverInfo <- QDI.findById existingAssociation.driverId >>= fromMaybeM (DriverNotFound existingAssociation.driverId.getId)
           DDriverMode.decrementFleetOperatorStatusKeyForDriver DP.FLEET_OWNER existingAssociation.fleetOwnerId driverInfo.driverFlowStatus
@@ -81,6 +84,7 @@ endDriverAssociationsIfAllowed merchant merchantOpCityId transporterConfig drive
       then forM_ existingDOAssociations $ \existingAssociation -> do
         logInfo $ "End existing operator driver association: operatorId: " <> existingAssociation.operatorId <> "driverId: " <> existingAssociation.driverId.getId
         QDOA.endOperatorDriverAssociation existingAssociation.operatorId existingAssociation.driverId
+        Analytics.decrementOperatorAnalyticsApplicationCount existingAssociation.operatorId -- Need to add merchant base check here
         when (transporterConfig.allowCacheDriverFlowStatus == Just True) $ do
           driverInfo <- QDI.findById existingAssociation.driverId >>= fromMaybeM (DriverNotFound existingAssociation.driverId.getId)
           DDriverMode.decrementFleetOperatorStatusKeyForDriver DP.OPERATOR existingAssociation.operatorId driverInfo.driverFlowStatus

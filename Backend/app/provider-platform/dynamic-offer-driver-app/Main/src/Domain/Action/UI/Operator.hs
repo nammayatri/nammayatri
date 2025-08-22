@@ -13,6 +13,7 @@ import Kernel.Types.APISuccess
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Cac.TransporterConfig as SCT
@@ -47,12 +48,14 @@ postOperatorConsent (mbDriverId, merchantId, merchantOperatingCityId) = do
   DOR.makeDriverReferredByOperator merchantOperatingCityId driverId operator.id
 
   QDriverOperatorAssociation.updateByPrimaryKey driverOperatorAssociation{isActive = True}
+  Analytics.incrementOperatorAnalyticsApplicationCount operator.id.getId -- Need to add merchant base check here
   when (transporterConfig.allowCacheDriverFlowStatus == Just True) $ do
     driverInfo <- QDI.findById driverOperatorAssociation.driverId >>= fromMaybeM (DriverNotFound driverOperatorAssociation.driverId.getId)
     DDriverMode.incrementFleetOperatorStatusKeyForDriver OPERATOR driverOperatorAssociation.operatorId driverInfo.driverFlowStatus
   QDriverInfoInternal.updateOnboardingVehicleCategory mbOnboardingVehicleCategory driver.id
 
-  unless (transporterConfig.requiresOnboardingInspection == Just True) $
+  unless (transporterConfig.requiresOnboardingInspection == Just True) $ do
+    Analytics.incrementOperatorAnalyticsDriverEnabled driverId -- Need to add merchant base check here
     QDI.updateEnabledVerifiedState driverId True (Just True)
   mbMerchantPN <- CPN.findMatchingMerchantPN merchantOperatingCityId "OPERATOR_CONSENT" Nothing Nothing driver.language Nothing
   whenJust mbMerchantPN $ \merchantPN -> do

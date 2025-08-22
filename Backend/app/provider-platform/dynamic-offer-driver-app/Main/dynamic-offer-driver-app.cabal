@@ -369,6 +369,7 @@ library
       SharedLogic.Allocator.Jobs.SupplyDemand.SupplyDemandRatio
       SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver
       SharedLogic.Allocator.Jobs.Webhook.Webhook
+      SharedLogic.Analytics
       SharedLogic.Beckn.Common
       SharedLogic.BehaviourManagement.CancellationRate
       SharedLogic.BehaviourManagement.IssueBreach
@@ -535,6 +536,7 @@ library
       Storage.Clickhouse.DriverFee
       Storage.Clickhouse.DriverInformation
       Storage.Clickhouse.DriverOperatorAssociation
+      Storage.Clickhouse.DriverStats
       Storage.Clickhouse.Estimate
       Storage.Clickhouse.FleetDriverAssociation
       Storage.Clickhouse.FleetOperatorAssociation

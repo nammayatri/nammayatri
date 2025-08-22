@@ -121,6 +121,7 @@ import qualified Lib.Yudhishthira.Flow.Dashboard as Yudhishthira
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.Allocator
+import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DeleteDriver as DeleteDriver
 import SharedLogic.DriverOnboarding
 import SharedLogic.DriverOnboarding.Status (ResponseStatus (..))
@@ -337,6 +338,7 @@ postDriverDisable merchantShortId opCity reqDriverId = do
   -- merchant access checking
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
 
+  Analytics.decrementOperatorAnalyticsDriverEnabled personId -- Need to add merchant base check here
   QDriverInfo.updateEnabledVerifiedState driverId False Nothing
   logTagInfo "dashboard -> disableDriver : " (show personId)
   pure Success
@@ -508,6 +510,7 @@ postDriverUnlinkDL merchantShortId opCity driverId = do
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
 
   QDriverLicense.deleteByDriverId personId
+  Analytics.decrementOperatorAnalyticsDriverEnabled personId -- Need to add merchant base check here
   QDriverInfo.updateEnabledVerifiedState driverId_ False (Just False)
   logTagInfo "dashboard -> unlinkDL : " (show personId)
   pure Success
@@ -525,7 +528,9 @@ postDriverUnlinkAadhaar merchantShortId opCity driverId = do
 
   QAadhaarCard.deleteByPersonId personId
   QDriverInfo.updateAadhaarVerifiedState False driverId_
-  unless (transporterConfig.aadhaarVerificationRequired) $ QDriverInfo.updateEnabledVerifiedState driverId_ False (Just False)
+  unless (transporterConfig.aadhaarVerificationRequired) $ do
+    Analytics.decrementOperatorAnalyticsDriverEnabled personId -- Need to add merchant base check here
+    QDriverInfo.updateEnabledVerifiedState driverId_ False (Just False)
   logTagInfo "dashboard -> unlinkAadhaar : " (show personId)
   pure Success
 

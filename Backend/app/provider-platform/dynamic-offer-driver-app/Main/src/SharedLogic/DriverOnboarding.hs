@@ -59,6 +59,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.Allocator.Jobs.Overlay.SendOverlay as ACOverlay
+import SharedLogic.Analytics as Analytics
 import SharedLogic.MessageBuilder (addBroadcastMessageToKafka)
 import SharedLogic.VehicleServiceTier
 import qualified Storage.Cac.TransporterConfig as SCTC
@@ -155,6 +156,7 @@ triggerOnboardingAlertsAndMessages driver merchant merchantOperatingCity = do
 enableAndTriggerOnboardingAlertsAndMessages :: Id DMOC.MerchantOperatingCity -> Id Person -> Bool -> Flow ()
 enableAndTriggerOnboardingAlertsAndMessages merchantOpCityId personId verified = do
   driverInfo <- DIQuery.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
+  Analytics.incrementOperatorAnalyticsDriverEnabled personId -- Need to add merchant base check here
   DIQuery.updateEnabledVerifiedState personId True (Just verified)
   when (not driverInfo.enabled && isNothing driverInfo.enabledAt) $ do
     merchantOpCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)

@@ -32,6 +32,7 @@ import qualified Domain.Types.Yudhishthira as TY
 import EulerHS.Prelude
 import Kernel.External.Maps.Types
 import Kernel.Prelude hiding (any, elem, map)
+import qualified Kernel.Storage.Clickhouse.Config as CH
 import qualified Kernel.Storage.Esqueleto as Esq hiding (whenJust_)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
@@ -45,6 +46,7 @@ import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Event as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
 import qualified Lib.Yudhishthira.Types as Yudhishthira
+import qualified SharedLogic.Analytics as Analytics
 import qualified SharedLogic.CallBAP as BP
 import SharedLogic.CallBAPInternal
 import SharedLogic.Cancel
@@ -103,7 +105,9 @@ cancelRideImpl ::
     HasShortDurationRetryCfg r c,
     HasField "enableAPILatencyLogging" r Bool,
     HasField "enableAPIPrometheusMetricLogging" r Bool,
-    HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal]
+    HasFlowEnv m r '["appBackendBapInternal" ::: AppBackendBapInternal],
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
   ) =>
   Id DRide.Ride ->
   DRide.RideEndedBy ->
@@ -183,7 +187,10 @@ cancelRideTransaction booking ride bookingCReason merchantId rideEndedBy cancell
 updateNammaTagsForCancelledRide ::
   ( EsqDBFlow m r,
     CacheFlow m r,
-    Esq.EsqDBReplicaFlow m r
+    Esq.EsqDBReplicaFlow m r,
+    Redis.HedisFlow m r,
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
   ) =>
   SRB.Booking ->
   DRide.Ride ->
@@ -210,6 +217,7 @@ updateNammaTagsForCancelledRide booking ride bookingCReason = do
   driverStats <- QDriverStats.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   let tags = fromMaybe [] allTags
   when (validDriverCancellation `elem` tags) $ do
+    Analytics.updateOperatorAnalyticsCancelCount ride.driverId -- Need to add merchant base checks here
     QDriverStats.updateValidDriverCancellationTagCount (driverStats.validDriverCancellationTagCount + 1) ride.driverId
   when (validCustomerCancellation `elem` tags) $ do
     QDriverStats.updateValidCustomerCancellationTagCount (driverStats.validCustomerCancellationTagCount + 1) ride.driverId

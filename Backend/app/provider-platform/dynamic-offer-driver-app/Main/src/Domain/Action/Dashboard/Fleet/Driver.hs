@@ -124,6 +124,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
 import Kernel.Utils.Validation
+import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverFlowStatus as SDF
 import SharedLogic.DriverOnboarding
@@ -607,7 +608,9 @@ unlinkVehicleFromDriver merchant personId vehicleNo opCity role = do
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   when (transporterConfig.deactivateRCOnUnlink == Just True) $ DomainRC.deactivateCurrentRC personId
   QVehicle.deleteById personId
-  when (driverInfo.onboardingVehicleCategory /= Just DVC.BUS && transporterConfig.disableDriverWhenUnlinkingVehicle == Just True) $ QDriverInfo.updateEnabledVerifiedState personId False (Just False) -- TODO :: Is it required for Normal Fleet ?
+  when (driverInfo.onboardingVehicleCategory /= Just DVC.BUS && transporterConfig.disableDriverWhenUnlinkingVehicle == Just True) $ do
+    Analytics.decrementOperatorAnalyticsDriverEnabled personId -- Need to add merchant base check here
+    QDriverInfo.updateEnabledVerifiedState personId False (Just False) -- TODO :: Is it required for Normal Fleet ?
   _ <- QRCAssociation.endAssociationForRC personId rc.id
   logTagInfo (show role <> " -> unlinkVehicle : ") (show personId)
 
@@ -865,11 +868,14 @@ postDriverFleetRemoveDriver merchantShortId opCity requestorId driverId mbFleetO
         rc <- RCQuery.findByRCIdAndFleetOwnerId assoc.rcId $ Just entityId
         when (isJust rc) $ throwError (InvalidRequest "Driver is linked to fleet Vehicle, first unlink then try")
       FDV.endFleetDriverAssociation entityId personId
+      operator <- FOV.findByFleetOwnerId entityId True >>= fromMaybeM (InvalidRequest "No operator found for fleet owner") -- Need to add merchant base check here
+      Analytics.decrementOperatorAnalyticsApplicationCount operator.operatorId -- Need to add merchant base check here
       when (transporterConfig.allowCacheDriverFlowStatus == Just True) $ do
         driverInfo <- QDriverInfo.findById personId >>= fromMaybeM (DriverNotFound personId.getId)
         DDriverMode.decrementFleetOperatorStatusKeyForDriver DP.FLEET_OWNER entityId driverInfo.driverFlowStatus
     DP.OPERATOR -> do
       DOV.endOperatorDriverAssociation entityId personId
+      Analytics.decrementOperatorAnalyticsApplicationCount entityId -- Need to add merchant base check here
       when (transporterConfig.allowCacheDriverFlowStatus == Just True) $ do
         driverInfo <- QDriverInfo.findById personId >>= fromMaybeM (DriverNotFound personId.getId)
         DDriverMode.decrementFleetOperatorStatusKeyForDriver DP.OPERATOR entityId driverInfo.driverFlowStatus
@@ -1669,6 +1675,8 @@ postDriverFleetVerifyJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId mbR
       -- onboarded operator required only for new drivers
       assoc <- FDA.makeFleetDriverAssociation person.id fleetOwnerId Nothing (DomainRC.convertTextToUTC (Just "2099-12-12"))
       QFDV.create assoc
+      operator <- FOV.findByFleetOwnerId fleetOwnerId True >>= fromMaybeM (InvalidRequest "No operator found for fleet owner") -- Need to add merchant base check here
+      Analytics.incrementOperatorAnalyticsApplicationCount operator.operatorId -- Need to add merchant base check here
       when (transporterConfig.allowCacheDriverFlowStatus == Just True) $ do
         driverInfo <- QDriverInfo.findById person.id >>= fromMaybeM (DriverNotFound person.id.getId)
         DDriverMode.incrementFleetOperatorStatusKeyForDriver DP.FLEET_OWNER fleetOwnerId driverInfo.driverFlowStatus

@@ -56,6 +56,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Validation (runRequestValidation)
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
+import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.BehaviourManagement.CancellationRate as SCR
 import qualified SharedLogic.DriverFee as SLDriverFee
 import SharedLogic.DriverOnboarding
@@ -502,6 +503,7 @@ postDriverUnlinkVehicle merchantShortId opCity reqDriverId = do
 
   DomainRC.deactivateCurrentRC personId
   QVehicle.deleteById personId
+  Analytics.decrementOperatorAnalyticsDriverEnabled personId -- Need to add merchant base check here
   QDriverInfo.updateEnabledVerifiedState driverId False (Just False)
   logTagInfo "dashboard -> unlinkVehicle : " (show personId)
   pure Success
@@ -533,6 +535,7 @@ postDriverEndRCAssociation merchantShortId opCity reqDriverId = do
       void $ DomainRC.deleteRC (personId, merchant.id, merchantOpCityId) (DomainRC.DeleteRCReq {rcNo}) True
     Nothing -> throwError (InvalidRequest "No linked RC  to driver")
 
+  Analytics.decrementOperatorAnalyticsDriverEnabled personId -- Need to add merchant base check here
   QDriverInfo.updateEnabledVerifiedState driverId False (Just False)
   logTagInfo "dashboard -> endRCAssociation : " (show personId)
   pure Success
