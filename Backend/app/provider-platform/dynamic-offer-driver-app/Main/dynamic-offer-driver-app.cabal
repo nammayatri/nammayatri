@@ -383,6 +383,7 @@ library
       SharedLogic.Allocator.Jobs.SupplyDemand.SupplyDemandRatio
       SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver
       SharedLogic.Allocator.Jobs.Webhook.Webhook
+      SharedLogic.Analytics
       SharedLogic.Beckn.Common
       SharedLogic.BehaviourManagement.CancellationRate
       SharedLogic.BehaviourManagement.IssueBreach
@@ -420,6 +421,7 @@ library
       SharedLogic.FarePolicy
       SharedLogic.FareProduct
       SharedLogic.Fleet
+      SharedLogic.FleetOperatorStats
       SharedLogic.GoogleMaps
       SharedLogic.GoogleTranslate
       SharedLogic.KaalChakra.Actions
@@ -555,6 +557,7 @@ library
       Storage.Clickhouse.Estimate
       Storage.Clickhouse.FleetDriverAssociation
       Storage.Clickhouse.FleetOperatorAssociation
+      Storage.Clickhouse.FleetOperatorStats
       Storage.Clickhouse.Location
       Storage.Clickhouse.Ride
       Storage.Clickhouse.RideDetails
@@ -677,6 +680,8 @@ library
       Storage.Queries.Transformers.DriverQuote
       Storage.Queries.Transformers.DriverStats
       Storage.Queries.Transformers.Estimate
+      Storage.Queries.Transformers.FleetOperatorDailyStats
+      Storage.Queries.Transformers.FleetOperatorStats
       Storage.Queries.Transformers.FleetOwnerInformation
       Storage.Queries.Transformers.Invoice
       Storage.Queries.Transformers.Location
@@ -920,6 +925,8 @@ library
       Domain.Types.FleetDriverAssociation
       Domain.Types.FleetMemberAssociation
       Domain.Types.FleetOperatorAssociation
+      Domain.Types.FleetOperatorDailyStats
+      Domain.Types.FleetOperatorStats
       Domain.Types.FleetOwnerDocumentVerificationConfig
       Domain.Types.FleetOwnerInformation
       Domain.Types.FleetRCAssociation
@@ -1073,6 +1080,8 @@ library
       Storage.Beam.FleetDriverAssociation
       Storage.Beam.FleetMemberAssociation
       Storage.Beam.FleetOperatorAssociation
+      Storage.Beam.FleetOperatorDailyStats
+      Storage.Beam.FleetOperatorStats
       Storage.Beam.FleetOwnerDocumentVerificationConfig
       Storage.Beam.FleetOwnerInformation
       Storage.Beam.FleetRCAssociation
@@ -1230,6 +1239,8 @@ library
       Storage.Queries.FleetDriverAssociation
       Storage.Queries.FleetMemberAssociation
       Storage.Queries.FleetOperatorAssociation
+      Storage.Queries.FleetOperatorDailyStats
+      Storage.Queries.FleetOperatorStats
       Storage.Queries.FleetOwnerDocumentVerificationConfig
       Storage.Queries.FleetOwnerInformation
       Storage.Queries.FleetRCAssociation
