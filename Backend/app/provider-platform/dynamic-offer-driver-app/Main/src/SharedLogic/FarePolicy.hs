@@ -202,7 +202,7 @@ getFullFarePolicy mbFromLocation mbFromLocGeohash mbToLocGeohash mbDistance mbDu
   let localTimeZoneSeconds = transporterConfig.timeDiffFromUtc
   congestionChargeMultiplierFromModel <-
     case fareProduct.tripCategory of
-      DTC.OneWay v | v /= MeterRide -> do
+      DTC.OneWay v | (v /= MeterRide && v /= OneWayRideOtp) -> do
         maybe (return Nothing) (checkGeoHashAndCalculate mbVehicleServiceTierItem localTimeZoneSeconds whiteListedGeohashes blackListedGeohashes transporterConfig mbFromLocGeohash) mbFromLocation
       _ -> return Nothing -- For now, we are not supporting congestion charge through model for other trips
   farePolicy' <- QFP.findById txnId fareProduct.farePolicyId >>= fromMaybeM NoFarePolicy
