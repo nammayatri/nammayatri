@@ -163,6 +163,7 @@ endRideTransaction ::
   TransporterConfig ->
   m ()
 endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFareParams thresholdConfig = do
+  merchant <- CQM.findById booking.providerId >>= fromMaybeM (MerchantNotFound booking.providerId.getId)
   updateOnRideStatusWithAdvancedRideCheck ride.driverId (Just ride)
   QDI.updateHasRideStarted driverId False
   QRB.updateStatus booking.id SRB.COMPLETED
@@ -179,7 +180,7 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   Hedis.del $ searchRequestKey booking.transactionId
   clearCachedFarePolicyByEstOrQuoteId booking.quoteId
   clearTollStartGateBatchCache ride.driverId
-  when (isJust thresholdConfig.prepaidSubscriptionThreshold) $ do
+  when (fromMaybe False merchant.enforceSufficientDriverBalance && isJust thresholdConfig.prepaidSubscriptionThreshold) $ do
     case ride.fare of
       Just fare -> fork "update driver's prepaid balance" $ updateBalance fare driverInfo
       Nothing -> logWarning $ "Fare is not present for ride: " <> show ride.id.getId

@@ -543,9 +543,8 @@ calculateGoHomeDriverPool ::
   ) =>
   CalculateGoHomeDriverPoolReq a ->
   Id DMOC.MerchantOperatingCity ->
-  Maybe HighPrecMoney ->
   m [DriverPoolWithActualDistResult]
-calculateGoHomeDriverPool req@CalculateGoHomeDriverPoolReq {..} merchantOpCityId prepaidSubscriptionThreshold = do
+calculateGoHomeDriverPool req@CalculateGoHomeDriverPoolReq {..} merchantOpCityId = do
   now <- getCurrentTime
   cityServiceTiers <- CQVST.findAllByMerchantOpCityIdInRideFlow merchantOpCityId configsInExperimentVersions
   approxDriverPool <-
@@ -559,7 +558,7 @@ calculateGoHomeDriverPool req@CalculateGoHomeDriverPoolReq {..} merchantOpCityId
             homeRadius = goHomeCfg.goHomeWayPointRadius,
             merchantId,
             driverPositionInfoExpiry = driverPoolCfg.driverPositionInfoExpiry,
-            prepaidSubscriptionThreshold,
+            prepaidSubscriptionThreshold = bool Nothing transporterConfig.prepaidSubscriptionThreshold enforceSufficientDriverBalance,
             rideFare,
             isRental,
             isInterCity,
@@ -746,7 +745,8 @@ data CalculateDriverPoolReq a = CalculateDriverPoolReq
     isInterCity :: Bool,
     isValueAddNP :: Bool,
     onlinePayment :: Bool,
-    now :: UTCTime
+    now :: UTCTime,
+    enforceSufficientDriverBalance :: Bool
   }
 
 calculateDriverPool ::
@@ -773,7 +773,7 @@ calculateDriverPool CalculateDriverPoolReq {..} = do
           { fromLocLatLong = coord,
             nearestRadius = radius,
             driverPositionInfoExpiry = driverPoolCfg.driverPositionInfoExpiry,
-            prepaidSubscriptionThreshold = transporterConfig.prepaidSubscriptionThreshold,
+            prepaidSubscriptionThreshold = bool Nothing transporterConfig.prepaidSubscriptionThreshold enforceSufficientDriverBalance,
             rideFare,
             ..
           }
@@ -1032,7 +1032,7 @@ calculateDriverPoolCurrentlyOnRide CalculateDriverPoolReq {..} mbBatchNum = do
               nearestRadius = radius,
               driverPositionInfoExpiry = driverPoolCfg.driverPositionInfoExpiry,
               currentRideTripCategoryValidForForwardBatching = driverPoolCfg.currentRideTripCategoryValidForForwardBatching,
-              prepaidSubscriptionThreshold = transporterConfig.prepaidSubscriptionThreshold,
+              prepaidSubscriptionThreshold = bool Nothing transporterConfig.prepaidSubscriptionThreshold enforceSufficientDriverBalance,
               rideFare,
               ..
             }
