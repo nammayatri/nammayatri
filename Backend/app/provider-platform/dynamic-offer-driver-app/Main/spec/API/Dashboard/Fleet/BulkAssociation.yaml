@@ -1,0 +1,45 @@
+apis:
+  - POST:
+      endpoint: /fleet/bulk/bulk-associate
+      auth: DashboardTokenAuth
+      multipart:
+        type: BulkFleetAssociationRow
+      response:
+        type: [BulkFleetAssociationResult]
+      description: |
+        Bulk associate fleet owners with vehicles and drivers via CSV upload.
+        The CSV file should contain the following columns:
+        - fleet_owner_mobile_number: Mobile number of the fleet owner
+        - device_identifier: Device identifier for the driver
+        - device_identifier_type: Type of device identifier (DEVICEID, MOBILENUMBER, AADHAAR, EMAIL)
+        - vehicle_number: Vehicle registration number
+        - route_codes: Route codes (comma-separated or JSON array)
+        - driver_badge_name: Optional badge name for driver
+        - conductor_badge_name: Optional badge name for conductor
+        - driver_badge_identifier: Optional badge identifier for driver
+        - driver_identifier_type: Optional identifier type for driver
+        - conductor_badge_identifier: Optional badge identifier for conductor
+        - conductor_identifier_type: Optional identifier type for conductor
+types:
+  BulkFleetAssociationRow:
+    - fleet_owner_mobile_number: Text
+    - device_identifier: Text
+    - device_identifier_type: Text
+    - vehicle_number: Text
+    - route_codes: Text
+    - driver_badge_name: Maybe Text
+    - conductor_badge_name: Maybe Text
+    - driver_badge_identifier: Maybe Text
+    - driver_identifier_type: Maybe Text
+    - conductor_badge_identifier: Maybe Text
+    - conductor_identifier_type: Maybe Text
+
+  BulkFleetAssociationResult:
+    - rowNumber: Int
+    - fleetOwnerId: Maybe Text
+    - vehicleId: Maybe Text
+    - driverId: Maybe Text
+    - routeAssociationId: Maybe Text
+    - badgeAssociationId: Maybe Text
+    - status: Text
+    - errorMsg: Maybe Text

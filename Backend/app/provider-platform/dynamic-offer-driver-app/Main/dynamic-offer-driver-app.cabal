@@ -41,6 +41,7 @@ library
       API.Dashboard
       API.Dashboard.Exotel
       API.Dashboard.Fleet
+      API.Dashboard.Fleet.BulkAssociation
       API.Dashboard.Fleet.Registration
       API.External.LiveEKD
       API.IGM
@@ -148,6 +149,7 @@ library
       Domain.Action.Dashboard.Common
       Domain.Action.Dashboard.Driver.Notification
       Domain.Action.Dashboard.Exotel
+      Domain.Action.Dashboard.Fleet.BulkAssociation
       Domain.Action.Dashboard.Fleet.Driver
       Domain.Action.Dashboard.Fleet.LiveMap
       Domain.Action.Dashboard.Fleet.Onboarding
