@@ -833,6 +833,8 @@ TransporterConfig:
       minThresholdPercentage: Int
       minThresholdDistance: Meters
       derive': Generic, Show, ToJSON, FromJSON, Read,Eq
+    CallingOption:
+      enum: "AnonymousCall, DirectCall, DualCall"
   beamInstance:
     - MakeTableInstancesWithTModifier [("automaticRCActivationCutOff", "automatic_r_c_activation_cut_off")]
     - Custom Domain.Types.UtilsTH.mkCacParseInstance
@@ -1045,6 +1047,9 @@ TransporterConfig:
     localAmbulanceNumbers: Maybe [Text]
     safetyTeamNumbers: Maybe [Text]
     cancellationRateSlabConfig: Maybe CancellationRateSlabConfig
+    maxOnlineDurationDays : Maybe Int
+    distanceWeightage: Maybe Int
+    driverCallingOption: "Maybe CallingOption"
 
   beamType:
     currency: Maybe Currency
@@ -1308,6 +1313,7 @@ TransporterConfig:
     minThresholdForPassThroughDestination: int
     allowedReferralEntities: "text[]"
     cancellationRateSlabConfig: json
+    driverCallingOption: "Text"
   default:
     mediaFileUrlPattern: |-
       'http://localhost:8016/ui/<DOMAIN>/media?filePath=<FILE_PATH>'

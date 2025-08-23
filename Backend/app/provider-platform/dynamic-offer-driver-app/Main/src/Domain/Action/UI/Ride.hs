@@ -46,6 +46,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.StopInformation as DSI
+import qualified Domain.Types.TransporterConfig as DTC
 import Environment
 import qualified EulerHS.Language as L
 import EulerHS.Prelude (withFile)
@@ -91,6 +92,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Rating as QR
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RideDetails as QRD
+import Storage.Queries.RiderDetails as QRID
 import qualified Storage.Queries.StopInformation as QSI
 import Storage.Queries.Vehicle as QVeh
 import qualified Text.Read as TR (read)
@@ -175,6 +177,7 @@ newtype DriverRideListRes = DriverRideListRes
 listDriverRides ::
   (EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>
   Id DP.Person ->
+  Maybe (Id DMOC.MerchantOperatingCity) ->
   Maybe Integer ->
   Maybe Integer ->
   Maybe Bool ->
@@ -183,8 +186,11 @@ listDriverRides ::
   Maybe Text ->
   Maybe Int ->
   m DriverRideListRes
-listDriverRides driverId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay mbFleetOwnerId mbNumOfDays = do
+listDriverRides driverId mocId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay mbFleetOwnerId mbNumOfDays = do
   driverInfo <- runInReplica $ QDI.findById driverId >>= fromMaybeM (DriverNotFound driverId.getId)
+  transporterConfig <- case mocId of
+    Just id -> SCTC.findByMerchantOpCityId id Nothing
+    Nothing -> pure Nothing
   rides <- case (driverInfo.onRide, mbOnlyActive) of
     (True, Just True) -> QRide.getActiveBookingAndRideByDriverId driverId
     (False, Just True) -> return []
@@ -196,10 +202,13 @@ listDriverRides driverId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay mbFlee
     driverNumber <- RD.getDriverNumber rideDetail
     mbExophone <- CQExophone.findByPrimaryPhone booking.primaryExophone
     bapMetadata <- CQSM.findBySubscriberIdAndDomain (Id booking.bapId) Domain.MOBILITY
+    riderCallingNumber <- case transporterConfig >>= DTC.driverCallingOption of
+      Just option | ride.status `notElem` [DRide.COMPLETED, DRide.CANCELLED] -> getRiderMobileNumber booking option
+      _ -> pure Nothing
     isValueAddNP <- CQVAN.isValueAddNP booking.bapId
     stopsInfo <- if (fromMaybe False ride.hasStops) then QSI.findAllByRideId ride.id else return []
     let goHomeReqId = ride.driverGoHomeRequestId
-    RideCommon.mkDriverRideRes rideDetail driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId (Just driverInfo) isValueAddNP stopsInfo
+    RideCommon.mkDriverRideRes rideDetail driverNumber rideRating mbExophone (ride, booking) bapMetadata goHomeReqId (Just driverInfo) isValueAddNP stopsInfo riderCallingNumber
   filteredRides <- case mbFleetOwnerId of
     Just fleetOwnerId -> do
       isFleetDriver <- FDV.findByDriverIdAndFleetOwnerId driverId fleetOwnerId True
@@ -260,8 +269,11 @@ otpRideCreate driver otpCode booking clientId = do
   stopsInfo <- if (fromMaybe False ride.hasStops) then QSI.findAllByRideId ride.id else return []
   mbExophone <- CQExophone.findByPrimaryPhone booking.primaryExophone
   bapMetadata <- CQSM.findBySubscriberIdAndDomain (Id booking.bapId) Domain.MOBILITY
+  riderCallingNumber <- case DTC.driverCallingOption transporterConfig of
+    Just option | ride.status `notElem` [DRide.COMPLETED, DRide.CANCELLED] -> getRiderMobileNumber booking option
+    _ -> pure Nothing
   isValueAddNP <- CQVAN.isValueAddNP booking.bapId
-  RideCommon.mkDriverRideRes rideDetails driverNumber Nothing mbExophone (ride, booking) bapMetadata ride.driverGoHomeRequestId Nothing isValueAddNP stopsInfo
+  RideCommon.mkDriverRideRes rideDetails driverNumber Nothing mbExophone (ride, booking) bapMetadata ride.driverGoHomeRequestId Nothing isValueAddNP stopsInfo riderCallingNumber
   where
     errHandler uBooking transporter exc
       | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = SBooking.cancelBooking uBooking (Just driver) transporter >> throwM exc
@@ -460,3 +472,21 @@ arrivedAtDestination rideId pt = do
   pure Success
   where
     isValidRideStatus status = status == DRide.INPROGRESS
+
+getRiderMobileNumber ::
+  (EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>
+  DRB.Booking ->
+  DTC.CallingOption ->
+  m (Maybe Text)
+getRiderMobileNumber booking option = do
+  mbRiderNumber <-
+    if option == DTC.DirectCall || option == DTC.DualCall
+      then case booking.riderId of
+        Nothing -> pure Nothing
+        Just riderId -> do
+          mbRider <- QRID.findById riderId
+          case mbRider of
+            Nothing -> pure Nothing
+            Just rider -> Just <$> decrypt rider.mobileNumber
+      else pure Nothing
+  pure mbRiderNumber
