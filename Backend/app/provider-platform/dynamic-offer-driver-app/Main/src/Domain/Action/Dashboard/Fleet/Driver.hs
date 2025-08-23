@@ -247,7 +247,8 @@ postDriverFleetAddVehicleHelper isBulkUpload merchantShortId opCity reqDriverPho
           opCity
           req
           True
-          (fromMaybe False mbBulkUpload)
+          isBulkUpload
+          (Just (Id fleetOwnerId))
       -- Manual vehicle creation for buses when verification is skippable
       when (getField @"verificationSkippable" fleetConfig && req.vehicleCategory == Just DVC.BUS) $ do
         now <- getCurrentTime

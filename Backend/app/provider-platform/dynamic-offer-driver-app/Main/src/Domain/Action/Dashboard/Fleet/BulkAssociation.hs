@@ -222,7 +222,6 @@ handleBulkRow merchantShortId opCity i row = do
         mbFleetOwnerId
         mbCountryCode
         mbRole
-        (Just True)
         (buildAddVehicleReqFromRow row)
 
   case vehicleResult of
