@@ -519,3 +519,8 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN max_online_dura
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN distance_weightage integer  default 20;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN driver_calling_option Text ;
