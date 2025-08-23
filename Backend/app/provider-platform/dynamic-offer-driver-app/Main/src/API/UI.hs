@@ -36,7 +36,6 @@ import qualified API.Action.UI.PickupInstructions as PickupInstructions
 import qualified API.Action.UI.PriceBreakup as PriceBreakup
 import qualified API.Action.UI.Reels as Reels
 import qualified API.Action.UI.ReferralPayout as ReferralPayout
-import qualified API.Action.UI.RiderMobileNumber as RiderMobileNumber
 import qualified API.Action.UI.SocialLogin as SocialLogin
 import qualified API.Action.UI.SpecialLocation as SpecialLocation
 import qualified API.Action.UI.SpecialLocationWarrior as SpecialLocationWarrior
@@ -132,7 +131,6 @@ type API =
            :<|> CallFeedback.API
            :<|> Invoice.API
            :<|> Insurance.API
-           :<|> RiderMobileNumber.API
        )
 
 handler :: FlowServer API
@@ -190,4 +188,3 @@ handler =
     :<|> CallFeedback.handler
     :<|> Invoice.handler
     :<|> Insurance.handler
-    :<|> RiderMobileNumber.handler

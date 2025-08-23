@@ -6,7 +6,6 @@ where
 
 import qualified API.Action.UI.InsuranceInternal as InsuranceInternal
 import qualified API.Action.UI.MeterRideInternal as MeterRideInternal
-import qualified API.Action.UI.RiderMobileNumberInternal as RiderMobileNumberInternal
 import qualified API.Internal.Cac as Cac
 import qualified API.Internal.DriverArrivalNotf as DriverArrivalNotf
 import qualified API.Internal.FRFS as FRFS
@@ -32,7 +31,6 @@ type API =
            :<|> InsuranceInternal.API
            :<|> ViolationDetection.API
            :<|> RideSearchExpired.API
-           :<|> RiderMobileNumberInternal.API
            :<|> GetPickupInstructions.API
        )
 
@@ -48,5 +46,4 @@ handler =
     :<|> InsuranceInternal.handler
     :<|> ViolationDetection.handler
     :<|> RideSearchExpired.handler
-    :<|> RiderMobileNumberInternal.handler
     :<|> GetPickupInstructions.handler
