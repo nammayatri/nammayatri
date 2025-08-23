@@ -11,6 +11,7 @@ import Data.List (groupBy, nub, sort, sortBy)
 import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Map.Strict as Map
 import Data.Ord (comparing)
+import qualified Data.Set as Set
 import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime, nominalDiffTimeToSeconds, secondsToNominalDiffTime)
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
@@ -373,6 +374,26 @@ fetchLiveTimings routeCodes stopCode currentTime integratedBppConfig mid mocid v
   Enums.BUS -> fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid mocid
   _ -> measureLatency (GRSM.findByRouteCodeAndStopCode integratedBppConfig mid mocid routeCodes stopCode) "fetch route stop timing through graphql"
 
+-- Function for explicitly fetching static timings for buses to give more possibleRoutes for buses
+fetchStaticTimings ::
+  ( HasField "ltsHedisEnv" r Hedis.HedisEnv,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    EncFlow m r,
+    Monad m,
+    HasKafkaProducer r,
+    HasShortDurationRetryCfg r c
+  ) =>
+  [Text] ->
+  Text ->
+  DIntegratedBPPConfig.IntegratedBPPConfig ->
+  Id Merchant ->
+  Id MerchantOperatingCity ->
+  m [RouteStopTimeTable]
+fetchStaticTimings routeCodes stopCode integratedBppConfig mid mocid =
+  measureLatency (GRSM.findByRouteCodeAndStopCode integratedBppConfig mid mocid routeCodes stopCode) ("fetchStaticTimings" <> show routeCodes <> " fromStopCode: " <> show stopCode <> " fromStopCode: " <> show stopCode)
+
 type RouteCodeText = Text
 
 type ServiceTypeText = Text
@@ -432,11 +453,22 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
       return (routeInfo, HM.fromList busMappings)
   -- Get the timing information for these routes at the origin stop
 
-  routeStopTimings <- measureLatency (fetchLiveTimings validRoutes fromStopCode currentTime integratedBppConfig mid mocid vc) ("fetchLiveTimings" <> show validRoutes <> " fromStopCode: " <> show fromStopCode <> " toStopCode: " <> show toStopCode)
+  -- We get static timings in this call if live timings are not found
+  routeStopTimingsLive <- measureLatency (fetchLiveTimings validRoutes fromStopCode currentTime integratedBppConfig mid mocid vc) ("fetchLiveTimings" <> show validRoutes <> " fromStopCode: " <> show fromStopCode <> " toStopCode: " <> show toStopCode)
   -- Get IST time info
   let (_, currentTimeIST) = getISTTimeInfo currentTime
 
-  let source = fromMaybe GTFS $ listToMaybe $ map (.source) routeStopTimings
+  let fetchLiveTimingsSource = fromMaybe GTFS $ listToMaybe $ map (.source) routeStopTimingsLive
+  -- Fetch static timings for buses if not already fetched by `fetchLiveTimings`
+  routeStopTimingsStatic <- case fetchLiveTimingsSource of
+    GTFS -> pure [] -- Already timings are from static source
+    _ -> case vc of
+      Enums.BUS -> fetchStaticTimings validRoutes fromStopCode integratedBppConfig mid mocid
+      _ -> pure []
+  let liveRouteCodes = Set.fromList [rst.routeCode | rst <- routeStopTimingsLive]
+  let routeStopTimings =
+        routeStopTimingsLive
+          <> [s | s <- routeStopTimingsStatic, s.routeCode `Set.notMember` liveRouteCodes]
 
   let sortedTimings =
         sortBy
@@ -454,6 +486,7 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
   results <- forM groupedByTier $ \timingsForTier -> do
     let serviceTierType = if null timingsForTier then Spec.ORDINARY else (head timingsForTier).serviceTierType
         routeCodesForTier = nub $ map (.routeCode) timingsForTier
+    let tierSource = fromMaybe GTFS $ listToMaybe $ map (.source) timingsForTier
 
     -- Get route details to include the short name
     routeDetails <-
@@ -513,7 +546,7 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
           trainTypeCode = trainTypeCode,
           fare = fare,
           nextAvailableTimings = sortBy (\a b -> compare (fst a) (fst b)) nextAvailableTimings,
-          source = source
+          source = tierSource
         }
 
   -- Only return service tiers that have available routes
