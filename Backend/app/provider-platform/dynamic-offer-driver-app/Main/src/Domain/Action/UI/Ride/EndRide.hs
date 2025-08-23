@@ -529,7 +529,7 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
         isValueAddNP <- CQVAN.isValueAddNP booking.bapId
         stopsInfo <- if fromMaybe False finalUpdatedRide.hasStops then QSI.findAllByRideId finalUpdatedRide.id else return []
         let goHomeReqId = finalUpdatedRide.driverGoHomeRequestId
-        Just <$> DUIRideCommon.mkDriverRideRes rideDetail driverNumber rideRating mbExophone (finalUpdatedRide, booking) bapMetadata goHomeReqId Nothing isValueAddNP stopsInfo
+        Just <$> DUIRideCommon.mkDriverRideRes rideDetail driverNumber rideRating mbExophone (finalUpdatedRide, booking) bapMetadata goHomeReqId Nothing isValueAddNP stopsInfo Nothing
 
   return $
     EndRideResp

@@ -91,6 +91,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     driverAutoPayExecutionTime :: Kernel.Prelude.NominalDiffTime,
     driverAutoPayExecutionTimeFallBack :: Kernel.Prelude.NominalDiffTime,
     driverAutoPayNotificationTime :: Kernel.Prelude.NominalDiffTime,
+    driverCallingOption :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.CallingOption,
     driverDistanceToPickupThresholdOnCancel :: Kernel.Types.Common.Meters,
     driverDistanceTravelledOnPickupThresholdOnCancel :: Kernel.Types.Common.Meters,
     driverDrivenSearchReqExpiry :: Kernel.Prelude.Maybe Kernel.Prelude.NominalDiffTime,
@@ -283,6 +284,8 @@ data AvgSpeedOfVechilePerKm = AvgSpeedOfVechilePerKm
   }
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
+data CallingOption = AnonymousCall | DirectCall | DualCall deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
 data CancellationRateBasedNudgingAndBlockingConfig = CancellationRateBasedNudgingAndBlockingConfig
   { cancellationRateSlabConfig :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.CancellationRateSlabConfig,
     cancellationRateThresholdDaily :: Kernel.Prelude.Int,
@@ -331,3 +334,5 @@ instance ToJSON (TransporterConfigD 'Unsafe)
 instance FromJSON (TransporterConfigD 'Safe)
 
 instance ToJSON (TransporterConfigD 'Safe)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''CallingOption)

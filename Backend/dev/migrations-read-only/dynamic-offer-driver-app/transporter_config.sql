@@ -433,3 +433,35 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN is_ml_based_dyn
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN cancellation_rate_slab_config json;
+
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN prepaid_subscription_threshold double precision ;
+
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN is_ml_based_dynamic_pricing_enabled boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN max_online_duration_days integer  default 10;
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN distance_weightage integer  default 20;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN driver_calling_option Text ;
