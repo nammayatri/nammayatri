@@ -382,6 +382,11 @@ newtype Keymap = Keymap {
   , fare_updated :: String
   , frequent_cancellations_will_lead_to_less_rides :: String
   , frequent_cancellations_will_lead_to_blocking :: String
+  , cancelling_this_ride_will_block_you :: String
+  , your_cancellation_rate_is_high :: String
+  , cancelling_this_ride_will_lower_your_score_and_may_lead_to_blocking :: String
+  , your_daily_cancellation_rate_will_increase_to_x_percent_and_will_block_you_for_x_hours :: String
+  , your_weekly_cancellation_rate_will_increase_to_x_percent_and_will_block_you_for_x_hours :: String
   , continue :: String
   , confirm_password :: String
   , demo_mode :: String
@@ -3038,6 +3043,21 @@ frequent_cancellations_will_lead_to_less_rides = a
 
 frequent_cancellations_will_lead_to_blocking :: Proxy "frequent_cancellations_will_lead_to_blocking"
 frequent_cancellations_will_lead_to_blocking = a
+
+cancelling_this_ride_will_block_you :: Proxy "cancelling_this_ride_will_block_you"
+cancelling_this_ride_will_block_you = a
+
+your_cancellation_rate_is_high :: Proxy "your_cancellation_rate_is_high"
+your_cancellation_rate_is_high = a
+
+cancelling_this_ride_will_lower_your_score_and_may_lead_to_blocking :: Proxy "cancelling_this_ride_will_lower_your_score_and_may_lead_to_blocking"
+cancelling_this_ride_will_lower_your_score_and_may_lead_to_blocking = a
+
+your_daily_cancellation_rate_will_increase_to_x_percent_and_will_block_you_for_x_hours :: Proxy "your_daily_cancellation_rate_will_increase_to_x_percent_and_will_block_you_for_x_hours"
+your_daily_cancellation_rate_will_increase_to_x_percent_and_will_block_you_for_x_hours = a
+
+your_weekly_cancellation_rate_will_increase_to_x_percent_and_will_block_you_for_x_hours :: Proxy "your_weekly_cancellation_rate_will_increase_to_x_percent_and_will_block_you_for_x_hours"
+your_weekly_cancellation_rate_will_increase_to_x_percent_and_will_block_you_for_x_hours = a
 
 continue :: Proxy "continue"
 continue = a

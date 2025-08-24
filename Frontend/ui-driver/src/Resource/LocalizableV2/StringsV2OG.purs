@@ -1904,4 +1904,6 @@ getProxy str = case str of
   CANCELLATION_PENALISATON -> \a -> a @~ cancellation_penalisaton
   YOU_ARE_IN_PROBATION_PERIOD_TILL arg1 -> \a -> (a @~ you_are_in_probation_period_till) arg1
   METRO -> \a -> a @~ metro
+  CANCELLING_THIS_RIDE_WILL_BLOCK_YOU -> \a -> a @~ cancelling_this_ride_will_block_you
+  YOUR_CANCELLATION_RATE_IS_HIGH -> \a -> a @~ your_cancellation_rate_is_high
 
