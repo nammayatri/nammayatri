@@ -36,6 +36,8 @@ FleetOperatorAssociation:
       kvFunction: findOneWithKV
       where:
         and: [fleetOwnerId, isActive]
-
+    deleteByFleetOwnerId:
+      kvFunction: deleteWithKV
+      where: fleetOwnerId
   extraOperations:
     - EXTRA_QUERY_FILE
