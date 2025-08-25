@@ -23,15 +23,16 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.OperationHubRequests.OperationHubRequests] -> m ())
 createMany = traverse_ create
 
-findByCreatorStatusAndType ::
+findByCreatorRCStatusAndType ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.OperationHubRequests.RequestStatus -> Domain.Types.OperationHubRequests.RequestType -> m (Maybe Domain.Types.OperationHubRequests.OperationHubRequests))
-findByCreatorStatusAndType creatorId requestStatus requestType = do
-  findOneWithKV
+  (Kernel.Types.Id.Id Domain.Types.Person.Person -> Domain.Types.OperationHubRequests.RequestStatus -> Domain.Types.OperationHubRequests.RequestType -> Kernel.Prelude.Text -> m [Domain.Types.OperationHubRequests.OperationHubRequests])
+findByCreatorRCStatusAndType creatorId requestStatus requestType registrationNo = do
+  findAllWithKV
     [ Se.And
         [ Se.Is Beam.creatorId $ Se.Eq (Kernel.Types.Id.getId creatorId),
           Se.Is Beam.requestStatus $ Se.Eq requestStatus,
-          Se.Is Beam.requestType $ Se.Eq requestType
+          Se.Is Beam.requestType $ Se.Eq requestType,
+          Se.Is Beam.registrationNo $ Se.Eq registrationNo
         ]
     ]
 

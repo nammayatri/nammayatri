@@ -29,15 +29,12 @@ getOperationGetAllHubs (_, _, opCityId) = QOH.findAllByCityId opCityId
 postOperationCreateRequest :: (Maybe (Id Person), Id Merchant, Id MerchantOperatingCity) -> DriverOperationHubRequest -> Flow APISuccess
 postOperationCreateRequest (mbPersonId, merchantId, merchantOperatingCityId) req = do
   runRequestValidation validateDriverOperationHubRequest req
-  Redis.whenWithLockRedis (opsHubDriverLockKey req.creatorId) 60 $ do
+  let creatorId = fromMaybe (Id req.creatorId) mbPersonId
+  Redis.whenWithLockRedis (opsHubDriverLockKey creatorId.getId) 60 $ do
     id <- generateGUID
     now <- getCurrentTime
-    creatorId <- case mbPersonId of
-      Just driverId -> do
-        opsHubReq <- QOHR.findByCreatorStatusAndType driverId PENDING req.requestType
-        unless (isNothing opsHubReq) $ Kernel.Utils.Common.throwError (InvalidRequest "Duplicate Request")
-        pure driverId
-      _ -> pure (Id req.creatorId)
+    opsHubReq <- QOHR.findByCreatorRCStatusAndType creatorId PENDING req.requestType req.registrationNo
+    unless (null opsHubReq) $ Kernel.Utils.Common.throwError (InvalidRequest "Duplicate Request")
     void $ QOH.findByPrimaryKey req.operationHubId >>= fromMaybeM (OperationHubDoesNotExist req.operationHubId.getId)
     let operationHubReq =
           OperationHubRequests
