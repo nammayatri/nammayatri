@@ -102,6 +102,7 @@ data Payload
         utmMedium :: Maybe Text,
         utmSource :: Maybe Text,
         utmTerm :: Maybe Text,
+        userType :: Maybe UserType,
         merchantId :: Id Merchant,
         merchantOperatingCityId :: Id MerchantOperatingCity,
         createdAt :: UTCTime,
@@ -116,6 +117,7 @@ data Payload
         utmSource :: Maybe Text,
         utmTerm :: Maybe Text,
         merchantName :: Text,
+        userType :: Maybe UserType,
         createdAt :: UTCTime,
         updatedAt :: UTCTime
       }
