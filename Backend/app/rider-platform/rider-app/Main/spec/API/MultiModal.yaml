@@ -40,6 +40,7 @@ imports:
   JourneyLegFeedbackData: Domain.Types.JourneyLegsFeedbacks
   FRFSTicketBookingStatus: Domain.Types.FRFSTicketBookingStatus
   LegStatusElement: Lib.JourneyModule.Types
+  JourneyLegState : Lib.JourneyModule.Types
 
 module: MultimodalConfirm
 
@@ -141,6 +142,7 @@ types:
     paymentOrder: Maybe PaymentOrder
     paymentFareUpdate: Maybe [PaymentFareUpdate]
     gatewayReferenceId: Maybe Text
+    legsStatus : Maybe [JourneyLegState]
 
   PaymentFareUpdate:
     journeyLegOrder: Int

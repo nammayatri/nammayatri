@@ -315,7 +315,8 @@ getMultimodalBookingPaymentStatus (mbPersonId, merchantId) journeyId = do
           { journeyId,
             paymentOrder,
             paymentFareUpdate = Just paymentFareUpdate,
-            gatewayReferenceId = paymentGateWayId
+            gatewayReferenceId = paymentGateWayId,
+            legsStatus = Nothing
           }
     else do
       return $
@@ -323,7 +324,8 @@ getMultimodalBookingPaymentStatus (mbPersonId, merchantId) journeyId = do
           { journeyId,
             paymentOrder = Nothing,
             paymentFareUpdate = Nothing,
-            gatewayReferenceId = paymentGateWayId
+            gatewayReferenceId = paymentGateWayId,
+            legsStatus = Nothing
           }
 
 -- TODO :: To be deprecated @Kavyashree

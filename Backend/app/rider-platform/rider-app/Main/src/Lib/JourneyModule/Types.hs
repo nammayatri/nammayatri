@@ -212,6 +212,8 @@ newtype SearchResponse = SearchResponse
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data JourneyLegState = Transit [JourneyLegStateData] | Single JourneyLegStateData
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data NextStopDetails = NextStopDetails
   { stopCode :: Text,
