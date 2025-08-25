@@ -32,6 +32,8 @@ imports:
   ConfigNames: Dashboard.Common.Merchant
   DocumentCategory: API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding
   Value: Data.Aeson
+  WhiteListOperatingCityReq: Dashboard.Common.Merchant
+  WhiteListOperatingCityRes: Dashboard.Common.Merchant
 
 module: Merchant
 
@@ -473,6 +475,14 @@ apis:
         type: APISuccess
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPDATE_PAYOUT_CONFIG
+  - POST: # whiteListOperatingCityAPI
+      endpoint: /config/operatingCity/whiteList
+      auth: ApiAuthV2
+      request:
+        type: WhiteListOperatingCityReq
+      response:
+        type: WhiteListOperatingCityRes
+      userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT WHITELIST_MERCHANT_OPERATING_CITY
 
 types:
   MerchantUpdateReq:

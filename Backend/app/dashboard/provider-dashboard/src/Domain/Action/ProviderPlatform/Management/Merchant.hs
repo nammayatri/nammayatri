@@ -47,6 +47,7 @@ module Domain.Action.ProviderPlatform.Management.Merchant
     postMerchantPayoutConfigUpdate,
     postMerchantConfigSpecialLocationUpsert,
     postMerchantConfigUpsertPlanAndConfigSubscription,
+    postMerchantConfigOperatingCityWhiteList,
   )
 where
 
@@ -443,3 +444,9 @@ postMerchantConfigUpsertPlanAndConfigSubscription merchantShortId opCity apiToke
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just req)
   T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantConfigUpsertPlanAndConfigSubscription) req
+
+postMerchantConfigOperatingCityWhiteList :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.WhiteListOperatingCityReq -> Environment.Flow Common.WhiteListOperatingCityRes
+postMerchantConfigOperatingCityWhiteList merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo (Just req)
+  T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantConfigOperatingCityWhiteList) req

@@ -115,6 +115,7 @@ autoComplete (personId, merchantId) entityId AutoCompleteReq {..} = do
       Context.France -> Maps.France
       Context.USA -> Maps.USA
       Context.Netherlands -> Maps.Netherlands
+      Context.Finland -> Maps.Finland
       Context.AnyCountry -> Maps.India
 
 getPlaceDetails :: ServiceFlow m r => (Id DP.Person, Id DMerchant.Merchant) -> Maybe Text -> Maps.GetPlaceDetailsReq -> m Maps.GetPlaceDetailsResp
