@@ -9,8 +9,9 @@ import qualified Data.Geohash as Geohash
 import qualified Data.HashMap.Strict as HM
 import Data.List (groupBy, nub, sort, sortBy)
 import qualified Data.List.NonEmpty as NonEmpty
+import qualified Data.Map.Strict as M
 import qualified Data.Map.Strict as Map
-import Data.Ord (comparing)
+import Data.Ord (Down (..), comparing)
 import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime, nominalDiffTimeToSeconds, secondsToNominalDiffTime)
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
@@ -49,6 +50,7 @@ import SharedLogic.FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import qualified Storage.CachedQueries.FRFSVehicleServiceTier as CQFRFSVehicleServiceTier
+import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as MultiModalBus
 import qualified Storage.CachedQueries.Merchant.MultiModalSuburban as MultiModalSuburban
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
@@ -437,13 +439,16 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
   let (_, currentTimeIST) = getISTTimeInfo currentTime
 
   let source = fromMaybe GTFS $ listToMaybe $ map (.source) routeStopTimings
+  freqMap <- loadRouteFrequencies routeStopTimings
 
   let sortedTimings =
         sortBy
           ( \a b ->
-              let aTime = nominalDiffTimeToSeconds $ diffUTCTime (getISTArrivalTime a.timeOfArrival currentTime) currentTimeIST
-                  bTime = nominalDiffTimeToSeconds $ diffUTCTime (getISTArrivalTime b.timeOfArrival currentTime) currentTimeIST
-               in compare aTime bTime
+              case compare (sourcePriority a.source) (sourcePriority b.source) of
+                EQ -> case compare (Down (getFreq a freqMap)) (Down (getFreq b freqMap)) of
+                  EQ -> compare (arrivalDiff a currentTimeIST) (arrivalDiff b currentTimeIST)
+                  ord -> ord
+                ord -> ord
           )
           routeStopTimings
 
@@ -518,6 +523,29 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
 
   -- Only return service tiers that have available routes
   return $ ((listToMaybe sortedTimings) <&> (.routeCode), filter (\r -> not (null $ r.availableRoutes) && (r.fare /= PriceAPIEntity 0.0 INR || sendWithoutFare)) results)
+  where
+    routeTripCountKey :: Text -> Text
+    routeTripCountKey routeId = "gtfs_route_trip_count:" <> routeId
+
+    sourcePriority LIVE = 0 :: Int
+    sourcePriority _ = 1
+
+    arrivalDiff r currentTimeIST' =
+      nominalDiffTimeToSeconds $
+        diffUTCTime (getISTArrivalTime r.timeOfArrival currentTime) currentTimeIST'
+
+    getRouteFrequency :: (Hedis.HedisFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv) => Text -> m (Maybe Int)
+    getRouteFrequency routeId = CQMMB.withCrossAppRedisNew $ Hedis.get (routeTripCountKey routeId)
+
+    loadRouteFrequencies :: (Hedis.HedisFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv) => [RouteStopTimeTable] -> m (M.Map Text Int)
+    loadRouteFrequencies timings = do
+      let routeIds = map (\x -> x.routeCode) timings
+      freqs <- forM routeIds $ \rid -> do
+        mCount <- getRouteFrequency rid
+        pure (rid, fromMaybe 0 mCount)
+      pure (M.fromList freqs)
+
+    getFreq r freqMap = M.findWithDefault 0 r.routeCode freqMap
 
 -- | Find the top upcoming trips for a given route code and stop code
 -- Returns arrival times in seconds for the upcoming trips along with route ID and service type
