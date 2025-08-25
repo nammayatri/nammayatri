@@ -67,3 +67,11 @@ ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN num_drivers_onboarded
 
 ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN safety_plus_ride_count integer ;
 ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN safety_plus_earnings double precision ;
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN online_duration integer  default 0;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN blacklist_coin_events text[]  default '{}';
