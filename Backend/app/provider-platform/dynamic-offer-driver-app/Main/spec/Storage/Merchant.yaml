@@ -745,6 +745,18 @@ DriverIntelligentPoolConfig:
 TransporterConfig:
   derives: Generic,Show,'UsageSafety,Eq
   types:
+    CancellationRateSlab:
+      cancellationPercentageThreshold: Int
+      suspensionTimeInHours: Int
+      derive': Generic, Show, ToJSON, FromJSON, ToSchema,Eq
+    SlabType:
+      minBookingsRange : "[Int]"
+      penalityForCancellation : CancellationRateSlab
+      derive': Generic, Show, ToJSON, FromJSON, ToSchema,Eq
+    CancellationRateSlabConfig:
+      dailySlabs: "[SlabType]"
+      weeklySlabs: "[SlabType]"
+      derive': Generic, Show, ToJSON, FromJSON, ToSchema,Eq
     CancellationRateBasedNudgingAndBlockingConfig:
       cancellationRateThresholdDaily: Int
       cancellationRateThresholdWeekly: Int
@@ -756,6 +768,7 @@ TransporterConfig:
       weeklyOffenceSuspensionTimeHours: Int
       dailyConditionCooldownTimeHours: Int
       weeklyConditionCooldownTimeHours: Int
+      cancellationRateSlabConfig : Maybe CancellationRateSlabConfig
       derive': Generic, Show, ToJSON, FromJSON, ToSchema,Eq
     DemandHotspotsConfig:
       enableDemandHotspots: Bool
@@ -1031,6 +1044,7 @@ TransporterConfig:
     localPoliceNumbers: Maybe [Text]
     localAmbulanceNumbers: Maybe [Text]
     safetyTeamNumbers: Maybe [Text]
+    cancellationRateSlabConfig: Maybe CancellationRateSlabConfig
 
   beamType:
     currency: Maybe Currency
@@ -1091,6 +1105,7 @@ TransporterConfig:
     enableExistingVehicleInBulkUpload: Maybe Bool
     isMLBasedDynamicPricingEnabled: Maybe Bool
 
+    cancellationRateSlabConfig: Maybe Value
   beamFields:
     fcmConfig:
       fcmUrl: Text
@@ -1159,6 +1174,7 @@ TransporterConfig:
     enableExistingVehicleInBulkUpload: Just enableExistingVehicleInBulkUpload|E
     isMLBasedDynamicPricingEnabled: Just isMLBasedDynamicPricingEnabled|E
 
+    cancellationRateSlabConfig: Data.Aeson.toJSON <$> cancellationRateSlabConfig|E
   intermediateTransformers:
     fromTType:
       - fcmUrl': Kernel.Prelude.parseBaseUrl fcmUrl|EM
@@ -1233,6 +1249,7 @@ TransporterConfig:
     enableExistingVehicleInBulkUpload: fromMaybe False enableExistingVehicleInBulkUpload|E
     isMLBasedDynamicPricingEnabled: fromMaybe False isMLBasedDynamicPricingEnabled|E
 
+    cancellationRateSlabConfig: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< cancellationRateSlabConfig|E
   constraints:
     merchantOperatingCityId: PrimaryKey
 
@@ -1290,7 +1307,7 @@ TransporterConfig:
     recomputeDistanceThresholds: json
     minThresholdForPassThroughDestination: int
     allowedReferralEntities: "text[]"
-
+    cancellationRateSlabConfig: json
   default:
     mediaFileUrlPattern: |-
       'http://localhost:8016/ui/<DOMAIN>/media?filePath=<FILE_PATH>'
@@ -1429,6 +1446,7 @@ TransporterConfig:
     requireRouteMappingInVehicle: "true"
     enableExistingVehicleInBulkUpload: "false"
     onboardingDocsCountLimit: "50"
+    cancellationRateSlabConfig: '{}'
 
   excludedDefaultQueries:
     - findByPrimaryKey

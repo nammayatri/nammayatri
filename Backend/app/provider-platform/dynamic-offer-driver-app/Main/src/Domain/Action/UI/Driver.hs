@@ -352,6 +352,10 @@ data DriverInformationRes = DriverInformationRes
     cancelledRidesCountInWindow :: Maybe Int,
     assignedRidesCountInWindow :: Maybe Int,
     windowSize :: Maybe Int,
+    assignedRidesCountDaily :: Maybe Int,
+    cancelledRidesCountDaily :: Maybe Int,
+    assignedRidesCountWeekly :: Maybe Int,
+    cancelledRidesCountWeekly :: Maybe Int,
     isSubscriptionVehicleCategoryChanged :: Bool,
     isOnFreeTrial :: Bool,
     planMandatoryForCategory :: Bool,
@@ -375,7 +379,8 @@ data DriverInformationRes = DriverInformationRes
     onboardingVehicleCategory :: Maybe VehicleCategory,
     subscriptionDown :: Maybe Bool,
     driverTags :: Maybe DA.Value,
-    nyClubConsent :: Maybe Bool
+    nyClubConsent :: Maybe Bool,
+    cancellationRateSlabConfig :: Maybe Domain.Types.TransporterConfig.CancellationRateSlabConfig
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -1220,6 +1225,7 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} merchant referral
   let vehicleCategory = fromMaybe DVC.AUTO_CATEGORY ((.category) =<< mbVehicle)
   mbPayoutConfig <- CPC.findByPrimaryKey merchantOpCityId vehicleCategory Nothing
   cancellationRateData <- SCR.getCancellationRateData merchantOpCityId id
+  merchantConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   bankDetails <-
     if merchant.onlinePayment
       then do
@@ -1259,6 +1265,11 @@ makeDriverInformationRes merchantOpCityId DriverEntityRes {..} merchant referral
           cancelledRidesCountInWindow = (.cancelledCount) <$> cancellationRateData,
           assignedRidesCountInWindow = (.assignedCount) <$> cancellationRateData,
           windowSize = (.windowSize) <$> cancellationRateData,
+          assignedRidesCountDaily = (.assignedCountDaily) <$> cancellationRateData,
+          cancelledRidesCountDaily = (.cancelledCountDaily) <$> cancellationRateData,
+          assignedRidesCountWeekly = (.assignedCountWeekly) <$> cancellationRateData,
+          cancelledRidesCountWeekly = (.cancelledCountWeekly) <$> cancellationRateData,
+          cancellationRateSlabConfig = merchantConfig.cancellationRateSlabConfig,
           favCount = Just driverStats.favRiderCount,
           operatorReferralCode = (.referralCode.getId) <$> operatorReferral,
           ..
