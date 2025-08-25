@@ -803,7 +803,8 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking booking' = do
   unless (personId == booking'.riderId) $ throwError AccessDenied
   person <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   now <- getCurrentTime
-  when (booking'.status /= DFRFSTicketBooking.CONFIRMED && booking'.status /= DFRFSTicketBooking.FAILED && booking'.status /= DFRFSTicketBooking.CANCELLED && booking'.validTill < now) $
+  let validTillWithBuffer = addUTCTime 5 booking'.validTill
+  when (booking'.status /= DFRFSTicketBooking.CONFIRMED && booking'.status /= DFRFSTicketBooking.FAILED && booking'.status /= DFRFSTicketBooking.CANCELLED && validTillWithBuffer < now) $
     void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.FAILED bookingId
   booking <- QFRFSTicketBooking.findById bookingId >>= fromMaybeM (InvalidRequest "Invalid booking id")
   merchantOperatingCity <- getMerchantOperatingCityFromBooking booking
@@ -922,14 +923,15 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking booking' = do
                   let updatedTTL = addUTCTime (maybe 60 intToNominalDiffTime bapConfig.confirmTTLSec) now
                   transactions <- QPaymentTransaction.findAllByOrderId paymentOrder.id
                   txnId <- getSuccessTransactionId transactions
-                  void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.SUCCESS booking.id
-                  void $ QFRFSTicketBooking.updateStatusValidTillAndPaymentTxnById DFRFSTicketBooking.CONFIRMING updatedTTL (Just txnId.getId) booking.id
-                  markJourneyPaymentSuccess booking.journeyId paymentOrder
                   let updatedBooking = makeUpdatedBooking booking DFRFSTicketBooking.CONFIRMING (Just updatedTTL) (Just txnId.getId)
-                  let mRiderName = person.firstName <&> (\fName -> person.lastName & maybe fName (\lName -> fName <> " " <> lName))
-                  mRiderNumber <- mapM decrypt person.mobileNumber
-                  whenWithLockRedis (mkPaymentSuccessLockKey bookingId) 60 $ do
-                    -- setNxExpire
+                  -- setNxExpire
+                  isLockAcquired <- Hedis.tryLockRedis (mkPaymentSuccessLockKey bookingId) 60
+                  when isLockAcquired $ do
+                    void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.SUCCESS booking.id
+                    void $ QFRFSTicketBooking.updateStatusValidTillAndPaymentTxnById DFRFSTicketBooking.CONFIRMING updatedTTL (Just txnId.getId) booking.id
+                    markJourneyPaymentSuccess booking.journeyId paymentOrder
+                    let mRiderName = person.firstName <&> (\fName -> person.lastName & maybe fName (\lName -> fName <> " " <> lName))
+                    mRiderNumber <- mapM decrypt person.mobileNumber
                     void $ QFRFSTicketBooking.insertPayerVpaIfNotPresent paymentStatusResp.payerVpa bookingId
                     void $ CallExternalBPP.confirm processOnConfirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) updatedBooking
                     when isMultiModalBooking do
