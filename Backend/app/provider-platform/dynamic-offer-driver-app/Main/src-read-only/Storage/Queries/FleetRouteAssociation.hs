@@ -38,6 +38,18 @@ findByPrimaryKey ::
   (Kernel.Types.Id.Id Domain.Types.FleetRouteAssociation.FleetRouteAssociation -> m (Maybe Domain.Types.FleetRouteAssociation.FleetRouteAssociation))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
+findByFleetOwnerRouteAndCity ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Prelude.Text -> m (Maybe Domain.Types.FleetRouteAssociation.FleetRouteAssociation))
+findByFleetOwnerRouteAndCity fleetOwnerId merchantOperatingCityId routeCode = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.fleetOwnerId $ Se.Eq (Kernel.Types.Id.getId fleetOwnerId),
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
+          Se.Is Beam.routeCode $ Se.Eq routeCode
+        ]
+    ]
+
 updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FleetRouteAssociation.FleetRouteAssociation -> m ())
 updateByPrimaryKey (Domain.Types.FleetRouteAssociation.FleetRouteAssociation {..}) = do
   _now <- getCurrentTime
