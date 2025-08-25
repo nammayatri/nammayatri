@@ -767,7 +767,8 @@ newtype RidesInfo = RidesInfo
       parcelType :: Maybe ParcelType,
       isInsured :: Maybe Boolean,
       insuredAmount :: Maybe String,
-      parcelQuantity :: Maybe Int
+      parcelQuantity :: Maybe Int,
+      riderMobileNumber :: Maybe String
 }
 
 type ParcelType = {

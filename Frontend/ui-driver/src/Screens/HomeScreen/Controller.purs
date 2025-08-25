@@ -1203,7 +1203,6 @@ eval (RideActionModalAction (RideActionModal.CallCustomer)) state = do
     let exoPhoneNo = if state.data.activeRide.tripType == ST.Delivery then maybe "0000" (\(API.PersonDetails det) -> det.primaryExophone) state.data.activeRide.senderPersonDetails else state.data.activeRide.exoPhone
     let exophoneNumber = if (take 1 exoPhoneNo) == "0" then exoPhoneNo else "0" <> exoPhoneNo
     updateWithCmdAndExit state [ do
-      void $ pure $ showDialer exophoneNumber false
       _ <- logEventWithTwoParams state.data.logField "call_customer" "trip_id" (state.data.activeRide.id) "user_id" (getValueToLocalStore DRIVER_ID)
       pure NoAction
       ] $ CallCustomer state exophoneNumber
@@ -1235,7 +1234,6 @@ eval (DeliveryCall item) state =  do
   let exoPhoneNumber = if (take 1 exoPhoneNo) == "0" then exoPhoneNo else "0" <> exoPhoneNo
   let newState = state { props { showDeliveryCallPopup = false } }
   updateWithCmdAndExit newState [ do
-    void $ pure $ showDialer exoPhoneNumber false
     _ <- logEventWithTwoParams state.data.logField "call_customer" "trip_id" (state.data.activeRide.id) "user_id" (getValueToLocalStore DRIVER_ID)
     pure NoAction
     ] $ CallCustomer newState exoPhoneNumber
@@ -1302,11 +1300,12 @@ eval ScrollToBottom state = do
 
 eval (ChatViewActionController (ChatView.TextChanged value)) state = continue state{data{messageToBeSent = (trim value)},props{sendMessageActive = (length (trim value)) >= 1}}
 
-eval(ChatViewActionController (ChatView.Call)) state = continueWithCmd state [ do
-  _ <- pure $ showDialer (if (take 1 state.data.activeRide.exoPhone) == "0" then state.data.activeRide.exoPhone else "0" <> state.data.activeRide.exoPhone) false -- TODO: FIX_DIALER
-  _ <- logEventWithTwoParams state.data.logField "call_customer" "trip_id" state.data.activeRide.id "user_id" (getValueToLocalStore DRIVER_ID)
-  pure NoAction
-  ]
+eval(ChatViewActionController (ChatView.Call)) state = do
+  let exoPhoneNumber = if (take 1 state.data.activeRide.exoPhone) == "0" then state.data.activeRide.exoPhone else "0" <> state.data.activeRide.exoPhone
+  updateWithCmdAndExit state [ do
+    _ <- logEventWithTwoParams state.data.logField "call_customer" "trip_id" state.data.activeRide.id "user_id" (getValueToLocalStore DRIVER_ID)
+    pure NoAction
+    ] $ CallCustomer state exoPhoneNumber
 
 eval (ChatViewActionController (ChatView.SendMessage)) state = do
   if state.data.messageToBeSent /= ""
@@ -2317,7 +2316,8 @@ activeRideDetail state (RidesInfo ride) =
   destinationWaitingTime : Nothing,
   destinationWaitTimerId : "",
   isInsured : ride.isInsured,
-  insuredAmount : ride.insuredAmount 
+  insuredAmount : ride.insuredAmount,
+  riderMobileNumber : ride.riderMobileNumber 
 }
   where
     getAddressFromStopLocation :: Maybe API.StopLocation -> Maybe String
