@@ -27,7 +27,8 @@ import qualified Tools.Notifications as Notifications
 data PickupInstructionReq = PickupInstructionReq
   { driverId :: Text,
     instruction :: Maybe Text,
-    audioUrl :: Maybe Text
+    audioUrl :: Maybe Text,
+    customerName :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -59,7 +60,8 @@ sendPickupInstruction driverId apiKey req = do
   let entityData =
         Notifications.PickupInstructionEntityData
           { instruction = req.instruction,
-            audioUrl = req.audioUrl
+            audioUrl = req.audioUrl,
+            customerName = req.customerName
           }
 
   -- Send FCM notification with pickup instruction

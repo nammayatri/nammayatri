@@ -29,6 +29,7 @@ import Kernel.Utils.Common
 import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.Merchant as QM
+import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PickupInstructions as QPI
 import Tools.Error
 
@@ -98,7 +99,9 @@ handlePickupInstruction ride booking driverIdValue = do
 
       -- Call driver app internal API
       merchant <- QM.findById booking.merchantId >>= fromMaybeM (MerchantNotFound booking.merchantId.getId)
-      logInfo $ "PickupInstructionHandler: Calling driver app API - driverId: " <> driverId
+      -- Get customer name from rider
+      customer <- QP.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
+      let customerName = customer.firstName
 
       result <-
         try @_ @SomeException $
@@ -108,6 +111,7 @@ handlePickupInstruction ride booking driverIdValue = do
             driverId
             (Just pickupInstruction.instruction)
             mbAudioUrl
+            customerName
 
       case result of
         Right _ -> logInfo "PickupInstructionHandler: Successfully sent pickup instruction to driver app"

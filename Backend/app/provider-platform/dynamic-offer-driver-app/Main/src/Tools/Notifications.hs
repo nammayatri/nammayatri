@@ -1507,7 +1507,8 @@ notifyEditDestination merchantOpCityId personId mbDeviceToken = do
 
 data PickupInstructionEntityData = PickupInstructionEntityData
   { instruction :: Maybe Text,
-    audioUrl :: Maybe Text
+    audioUrl :: Maybe Text,
+    customerName :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, Show)
 
