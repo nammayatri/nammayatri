@@ -308,6 +308,7 @@ buildFleetOwnerAuthReq merchantId' FleetOwnerRegisterReq {..} =
   Registration.AuthReq
     { name = Just (firstName <> " " <> lastName),
       mobileNumber = Just mobileNumber,
+      deviceId = Nothing,
       mobileCountryCode = Just mobileCountryCode,
       merchantId = merchantId'.getId,
       merchantOperatingCity = Just city,

@@ -313,6 +313,7 @@ buildFleetOwnerAuthReq ::
 buildFleetOwnerAuthReq merchantId' opCity Common.FleetOwnerLoginReqV2 {..} =
   Registration.AuthReq
     { name = Just "Fleet Owner", -- to be updated in register
+      deviceId = Nothing,
       mobileNumber = Just mobileNumber,
       mobileCountryCode = Just mobileCountryCode,
       merchantId = merchantId'.getId,

@@ -13,9 +13,12 @@ module Domain.Action.Dashboard.Fleet.BulkAssociation
 where
 
 import qualified API.Types.ProviderPlatform.Fleet.Endpoints.Driver as API
+import Control.Applicative (optional)
 import qualified Dashboard.Common ()
 import Data.Aeson ()
 import qualified Data.ByteString.Lazy as LBS
+import Data.Char (isAlphaNum, isDigit)
+import Data.Csv ((.:))
 import qualified Data.Csv as Csv
 import Data.Either (partitionEithers)
 import Data.OpenApi ()
@@ -58,6 +61,90 @@ data DriverDetails = DriverDetails
     fleetPhoneNo :: Maybe Text
   }
 
+-- Parse route codes from various CSV formats
+parseRouteCodes :: Text -> [Text]
+parseRouteCodes rawText =
+  let cleaned = T.strip rawText
+   in if T.null cleaned
+        then []
+        else
+          let -- Remove outer quotes if present: "..." -> ...
+              unquoted =
+                if T.length cleaned >= 2 && T.head cleaned == '"' && T.last cleaned == '"'
+                  then T.drop 1 $ T.dropEnd 1 cleaned
+                  else cleaned
+
+              -- Handle different array formats
+              codes = case () of
+                _ | T.null unquoted -> []
+                -- Format: ["ACV1L-U","ACV1L-D"] or [ACV1L-U,ACV1L-D]
+                _
+                  | T.length unquoted >= 2 && T.head unquoted == '[' && T.last unquoted == ']' ->
+                    let inner = T.drop 1 $ T.dropEnd 1 unquoted
+                     in if T.any (== '"') inner
+                          then -- Has quotes: "ACV1L-U","ACV1L-D"
+                            map (T.strip . T.filter (/= '"')) $ splitOn "," inner
+                          else -- No quotes: ACV1L-U,ACV1L-D
+                            map T.strip $ splitOn "," inner
+                -- Format: ACV1L-U,ACV1L-D (simple comma-separated)
+                _ -> map T.strip $ splitOn "," unquoted
+           in filter (not . T.null) codes
+
+-- Device identifier validation based on type
+validateDeviceIdentifier :: Text -> Text -> Either Text Text
+validateDeviceIdentifier identifierType deviceId =
+  let cleaned = T.strip deviceId
+      len = T.length cleaned
+   in case () of
+        _ | T.null cleaned -> Left "Device identifier cannot be empty"
+        _ -> case identifierType of
+          "MOBILENUMBER" -> validateMobileNumber cleaned len
+          "DEVICEID" -> validateDeviceId cleaned len
+          "EMAIL" -> validateEmail cleaned len
+          "AADHAAR" -> validateAadhaar cleaned len
+          _ -> Left $ "Unsupported identifier type: " <> identifierType
+  where
+    validateMobileNumber mobile len =
+      case () of
+        _ | T.null mobile -> Left "Mobile number cannot be empty"
+        _ | len /= 10 -> Left "Mobile number must be exactly 10 digits"
+        _ | not (T.all isDigit mobile) -> Left "Mobile number can only contain digits"
+        _ | T.head mobile `notElem` ['6', '7', '8', '9'] -> Left "Mobile number must start with 6, 7, 8, or 9"
+        _ -> Right mobile
+
+    validateDeviceId dId len =
+      case () of
+        _ | T.null dId -> Left "Device ID cannot be empty"
+        _ | len < 10 -> Left "Device ID must be at least 10 characters"
+        _ | len > 20 -> Left "Device ID cannot exceed 20 characters"
+        _ | not (T.all isDigit dId) -> Left "Device ID can only contain letters and numbers"
+        _ -> Right dId
+
+    validateEmail email len =
+      case () of
+        _ | T.null email -> Left "Email cannot be empty"
+        _ | not (T.elem '@' email) -> Left "Email must contain @ symbol"
+        _ | len < 5 -> Left "Email must be at least 5 characters"
+        _ | len > 100 -> Left "Email cannot exceed 100 characters"
+        _ -> Right email
+
+    validateAadhaar aadhaar len =
+      case () of
+        _ | T.null aadhaar -> Left "Aadhaar number cannot be empty"
+        _ | len /= 12 -> Left "Aadhaar number must be exactly 12 digits"
+        _ | not (T.all isDigit aadhaar) -> Left "Aadhaar number can only contain digits"
+        _ -> Right aadhaar
+
+validateVehicleNumber :: Text -> Either Text Text
+validateVehicleNumber vehicleNum =
+  let cleaned = T.strip vehicleNum
+      len = T.length cleaned
+   in case () of
+        _ | T.null cleaned -> Left "Vehicle number cannot be empty"
+        _ | len < 1 || len > 11 -> Left "Vehicle number must be between 1 and 11 characters"
+        _ | not (T.all isAlphaNum cleaned) -> Left "Vehicle number can only contain letters and numbers"
+        _ -> Right cleaned
+
 -- Get or create a driver record
 fetchOrCreatePerson :: DMOC.MerchantOperatingCity -> DriverDetails -> Text -> Flow (DP.Person, Bool)
 fetchOrCreatePerson moc req_ identifierType = do
@@ -68,6 +155,9 @@ fetchOrCreatePerson moc req_ identifierType = do
             merchantId = moc.merchantId.getId,
             merchantOperatingCity = Just moc.city,
             email = Nothing,
+            deviceId = case identifierType of
+              "DEVICEID" -> Just $ driverPhoneNumber req_
+              _ -> Nothing,
             name = Just $ driverName req_,
             identifierType = case identifierType of
               "DEVICEID" -> Just DP.DEVICEID
@@ -83,9 +173,8 @@ fetchOrCreatePerson moc req_ identifierType = do
       mobileHash <- getDbHash (driverPhoneNumber req_)
       QP.findByMobileNumberAndMerchantAndRole "+91" mobileHash moc.merchantId DP.DRIVER
     "DEVICEID" -> do
-      -- For DEVICEID, treat the identifier as a phone number for person lookup
-      mobileHash <- getDbHash (driverPhoneNumber req_)
-      QP.findByMobileNumberAndMerchantAndRole "+91" mobileHash moc.merchantId DP.DRIVER
+      -- For DEVICEID, look up by deviceId stored in clientId field
+      QP.findByDeviceIdAndMerchantAndRole (driverPhoneNumber req_) moc.merchantId DP.DRIVER
     _ -> do
       logTagWarning "BulkAssociation" $ "Unknown identifier type: " <> identifierType <> ", treating as phone number"
       mobileHash <- getDbHash (driverPhoneNumber req_)
@@ -115,7 +204,20 @@ data BulkFleetAssociationRow = BulkFleetAssociationRow
   }
   deriving (Show, Generic, ToJSON, FromJSON, ToSchema)
 
-instance Csv.FromNamedRecord BulkFleetAssociationRow
+instance Csv.FromNamedRecord BulkFleetAssociationRow where
+  parseNamedRecord r =
+    BulkFleetAssociationRow
+      <$> r .: "fleet_owner_mobile_number"
+      <*> r .: "device_identifier"
+      <*> r .: "device_identifier_type"
+      <*> r .: "vehicle_number"
+      <*> r .: "route_codes"
+      <*> optional (r .: "driver_badge_name")
+      <*> optional (r .: "conductor_badge_name")
+      <*> optional (r .: "driver_badge_identifier")
+      <*> optional (r .: "driver_identifier_type")
+      <*> optional (r .: "conductor_badge_identifier")
+      <*> optional (r .: "conductor_identifier_type")
 
 instance Csv.DefaultOrdered BulkFleetAssociationRow
 
@@ -145,6 +247,13 @@ validateRow row = do
   when (T.null row.vehicle_number) $ Left "Vehicle number is required"
   when (T.null row.route_codes) $ Left "Route codes are required"
   when (T.null row.device_identifier_type) $ Left "Device identifier type is required"
+  -- Validate device identifier type is valid
+  case row.device_identifier_type of
+    "MOBILENUMBER" -> pure ()
+    "AADHAAR" -> pure ()
+    "EMAIL" -> pure ()
+    "DEVICEID" -> pure ()
+    invalid -> Left $ "Invalid device identifier type: '" <> invalid <> "'. Valid values are: MOBILENUMBER, AADHAAR, EMAIL, DEVICEID"
   pure ()
 
 bulkFleetAssociationHandler :: ShortId DM.Merchant -> Context.City -> MultipartData Mem -> Flow [BulkFleetAssociationResult]
@@ -162,7 +271,7 @@ bulkFleetAssociationHandler merchantShortId opCity multipartData = do
       case Csv.decodeByName csvData of
         Left err -> do
           logTagError "BulkAssociation" $ "CSV parse error: " <> show err
-          pure [BulkFleetAssociationResult 0 Nothing Nothing Nothing Nothing Nothing "failure" (Just $ "CSV parse error: " <> toText err)]
+          pure [BulkFleetAssociationResult 0 Nothing Nothing Nothing Nothing Nothing "failure" (Just ("CSV parse error: " <> toText err))]
         Right (_, rows) -> do
           logTagInfo "BulkAssociation" $ "Successfully parsed " <> show (length rows) <> " rows from CSV"
 
@@ -175,11 +284,13 @@ bulkFleetAssociationHandler merchantShortId opCity multipartData = do
 
           let (invalidRows, validRows) = partitionEithers validationResults
 
-          when (not (null invalidRows)) $ do
+          unless (null invalidRows) $ do
             logTagWarning "BulkAssociation" $ "Found " <> show (length invalidRows) <> " invalid rows: " <> show invalidRows
 
-          -- Process valid rows
-          validResults <- forM validRows $ \(i, row) -> handleBulkRow merchantShortId opCity i row
+          -- Process valid rows with exception handling
+          validResults <- forM validRows $ \(i, row) -> do
+            handleBulkRow merchantShortId opCity i row `catch` \(e :: SomeException) ->
+              pure $ BulkFleetAssociationResult i Nothing Nothing Nothing Nothing Nothing "failure" (Just $ "Unexpected error processing row: " <> show e)
 
           -- Create error results for invalid rows
           let invalidResults =
@@ -278,21 +389,18 @@ handleBulkRow merchantShortId opCity i row = do
       let deviceName = "Device: " <> deviceIdentifier
           deviceDetails = DriverDetails deviceName deviceIdentifier (Just DVC.BUS) Nothing
       logTagInfo "BulkAssociation" $ "Creating new device: " <> deviceName <> " with " <> deviceIdentifierType <> ": " <> deviceIdentifier
-      (person, _) <- fetchOrCreatePerson merchantOpCityId deviceDetails "DEVICEID"
+      (person, _) <- fetchOrCreatePerson merchantOpCityId deviceDetails deviceIdentifierType
       QFDV.createFleetDriverAssociationIfNotExists person.id entityDetails.id Nothing DVC.BUS True
       pure person.id
 
   -- Create/find driver person (only if CSV has driver data)
   driverPersonId <- case (row.driver_badge_identifier, row.driver_badge_name, row.driver_identifier_type) of
     (Just driverIdentifier, Just driverName, Just driverIdentifierType) -> do
-      logTagInfo "BulkAssociation" $ "Processing driver with " <> driverIdentifierType <> ": " <> driverIdentifier <> " and name: " <> driverName
-
       mbDriver <- case driverIdentifierType of
         "MOBILENUMBER" -> do
           driverHash <- getDbHash driverIdentifier
           QP.findByMobileNumberAndMerchantAndRole mobileCountryCode driverHash merchant.id DP.DRIVER
         _ -> do
-          logTagWarning "BulkAssociation" $ "Unknown driver identifier type: " <> driverIdentifierType <> ", treating as phone number"
           driverHash <- getDbHash driverIdentifier
           QP.findByMobileNumberAndMerchantAndRole mobileCountryCode driverHash merchant.id DP.DRIVER
 
@@ -300,145 +408,161 @@ handleBulkRow merchantShortId opCity i row = do
         Just driver -> do
           let drvId = driver.id
           let fleetOwnerId = entityDetails.id.getId
-          logTagInfo "BulkAssociation" $ "Found existing driver: " <> show drvId <> " for fleet owner: " <> show fleetOwnerId
           mbAssoc <- QFDV.findByDriverIdAndFleetOwnerId drvId fleetOwnerId True
           case mbAssoc of
-            Nothing -> do
-              logTagInfo "BulkAssociation" $ "Creating fleet driver association for driver: " <> show drvId
-              QFDV.createFleetDriverAssociationIfNotExists drvId entityDetails.id Nothing DVC.BUS True
-            Just _ -> logTagInfo "BulkAssociation" $ "Fleet driver association already exists for driver: " <> show drvId
+            Nothing -> QFDV.createFleetDriverAssociationIfNotExists drvId entityDetails.id Nothing DVC.BUS True
+            Just _ -> pure ()
           pure (Just drvId)
         Nothing -> do
           let driverDetails = DriverDetails ("Driver: " <> driverName) driverIdentifier (Just DVC.BUS) Nothing
-          logTagInfo "BulkAssociation" $ "Creating new driver: " <> ("Driver: " <> driverName) <> " with " <> driverIdentifierType <> ": " <> driverIdentifier
           (person, _) <- fetchOrCreatePerson merchantOpCityId driverDetails "MOBILENUMBER"
           QFDV.createFleetDriverAssociationIfNotExists person.id entityDetails.id Nothing DVC.BUS True
           pure (Just person.id)
-    _ -> do
-      logTagInfo "BulkAssociation" $ "No driver data provided for vehicle " <> row.vehicle_number <> ", skipping driver creation"
-      pure Nothing
+    _ -> pure Nothing
 
   -- Conductor handling (only if CSV has conductor data)
   conductorPersonId <- case (row.conductor_badge_identifier, row.conductor_badge_name, row.conductor_identifier_type) of
     (Just conductorIdentifier, Just conductorName, Just conductorIdentifierType) -> do
-      logTagInfo "BulkAssociation" $ "Processing conductor with " <> conductorIdentifierType <> ": " <> conductorIdentifier <> " and name: " <> conductorName
-
       mbConductor <- case conductorIdentifierType of
         "MOBILENUMBER" -> do
           conductorHash <- getDbHash conductorIdentifier
           QP.findByMobileNumberAndMerchantAndRole mobileCountryCode conductorHash merchant.id DP.DRIVER
         _ -> do
-          logTagWarning "BulkAssociation" $ "Unknown conductor identifier type: " <> conductorIdentifierType <> ", treating as phone number"
           conductorHash <- getDbHash conductorIdentifier
           QP.findByMobileNumberAndMerchantAndRole mobileCountryCode conductorHash merchant.id DP.DRIVER
 
       case mbConductor of
-        Just conductor -> do
-          logTagInfo "BulkAssociation" $ "Found existing conductor: " <> show conductor.id
-          pure (Just conductor.id)
+        Just conductor -> pure (Just conductor.id)
         Nothing -> do
           let conductorDetails = DriverDetails ("Conductor: " <> conductorName) conductorIdentifier (Just DVC.BUS) Nothing
-          logTagInfo "BulkAssociation" $ "Creating new conductor: " <> ("Conductor: " <> conductorName) <> " with " <> conductorIdentifierType <> ": " <> conductorIdentifier
           (person, _) <- fetchOrCreatePerson merchantOpCityId conductorDetails "MOBILENUMBER"
           pure (Just person.id)
-    _ -> do
-      logTagInfo "BulkAssociation" $ "No conductor data provided for vehicle " <> row.vehicle_number <> ", skipping conductor creation"
-      pure Nothing
+    _ -> pure Nothing
 
-  -- Add vehicle using postDriverFleetAddVehicle (this will create driver if needed)
-  logTagInfo "BulkAssociation" $ "Adding vehicle " <> row.vehicle_number <> " with device: " <> deviceIdentifier
-  vehicleResult <-
-    try @_ @SomeException $
-      FleetDriver.postDriverFleetAddVehicle
-        merchantShortId
-        opCity
-        deviceIdentifier
-        (fromMaybe "" requestorId)
-        mbFleetOwnerId
-        mbCountryCode
-        mbRole
-        (buildAddVehicleReqFromRow row)
-
-  case vehicleResult of
-    Left err -> do
-      logTagError "BulkAssociation" $ "Failed to add vehicle " <> row.vehicle_number <> " for row " <> show i <> ": " <> show err
-      pure $ BulkFleetAssociationResult i (Just $ entityDetails.id.getId) Nothing (Just $ show devicePersonId) Nothing Nothing "failure" (Just $ "Vehicle addition failed: " <> show err)
+  -- Validate device identifier BEFORE any database operations
+  case validateDeviceIdentifier row.device_identifier_type row.device_identifier of
+    Left deviceError -> pure $ BulkFleetAssociationResult i (Just $ entityDetails.id.getId) Nothing (Just $ show entityDetails.id) Nothing Nothing "failure" (Just $ "Device validation failed: " <> deviceError)
     Right _ -> do
-      logTagInfo "BulkAssociation" $ "Successfully added vehicle " <> row.vehicle_number <> " for row " <> show i
+      -- Validate vehicle number BEFORE any database operations
+      case validateVehicleNumber row.vehicle_number of
+        Left vehicleError -> pure $ BulkFleetAssociationResult i (Just $ entityDetails.id.getId) Nothing (Just $ show entityDetails.id) Nothing Nothing "failure" (Just $ "Vehicle number validation failed: " <> vehicleError)
+        Right _ -> do
+          -- Validate all routes BEFORE any database operations
+          let routeCodes = parseRouteCodes row.route_codes
+          routeValidationResults <- fmap partitionEithers $
+            forM routeCodes $ \routeCode -> do
+              routeM <- QRoute.findByRouteCode routeCode
+              case routeM of
+                Nothing -> pure $ Left $ "Route '" <> routeCode <> "' does not exist in system"
+                Just routeInfo -> pure $ Right (routeCode, routeInfo)
 
-      let routeCodes = splitOn "," row.route_codes
-      logTagInfo "BulkAssociation" $ "Processing " <> show (length routeCodes) <> " routes for vehicle " <> row.vehicle_number
+          let (routeErrors, validatedRoutes) = routeValidationResults
+          if not (null routeErrors)
+            then pure $ BulkFleetAssociationResult i (Just $ entityDetails.id.getId) Nothing (Just $ show entityDetails.id) Nothing Nothing "failure" (Just $ "Route validation failed: " <> T.intercalate ", " routeErrors)
+            else do
+              -- All validations passed, proceed with vehicle creation
+              -- Vehicle creation (wrapped in exception handling)
+              ( do
+                  _vehicleResult <-
+                    FleetDriver.postDriverFleetAddVehicle
+                      merchantShortId
+                      opCity
+                      deviceIdentifier
+                      (fromMaybe "" requestorId)
+                      mbFleetOwnerId
+                      mbCountryCode
+                      mbRole
+                      (buildAddVehicleReqFromRow row)
 
-      routeResults <- fmap partitionEithers $
-        forM routeCodes $ \routeCode -> do
-          routeM <- QRoute.findByRouteCode routeCode
-          case routeM of
-            Nothing -> do
-              logTagWarning "BulkAssociation" $ "Route with code " <> routeCode <> " not found for vehicle " <> row.vehicle_number
-              pure $ Left $ "Route with code " <> routeCode <> " not found"
-            Just routeInfo -> do
-              logTagInfo "BulkAssociation" $ "Found route " <> routeCode <> " for vehicle " <> row.vehicle_number
-              now <- getCurrentTime
-              assocId <- generateGUID
-              let assoc =
-                    FleetRouteAssociation.FleetRouteAssociation
-                      { id = assocId,
-                        fleetOwnerId = entityDetails.id,
-                        routeCode = routeCode,
-                        merchantId = merchant.id,
-                        merchantOperatingCityId = merchantOpCityId.id,
-                        createdAt = now,
-                        updatedAt = now
-                      }
-              res' <- try @_ @SomeException $ QFRA.create assoc
-              case res' of
-                Left err -> do
-                  logTagError "BulkAssociation" $ "Failed to create fleet route association for route " <> routeCode <> " and vehicle " <> row.vehicle_number <> ": " <> show err
-                  pure $ Left $ "Failed to create fleet route association for route " <> routeCode
-                Right _ -> do
-                  logTagInfo "BulkAssociation" $ "Created fleet route association for route " <> routeCode <> " and vehicle " <> row.vehicle_number
-                  buildVehicleRouteMapping entityDetails.id merchant.id merchantOpCityId.id routeCode routeInfo row.vehicle_number
-                  pure $ Right routeCode
-      let (routeErrors, successfulRoutes) = routeResults
+                  -- Vehicle creation succeeded, proceed with route and badge associations
+                  -- Create route associations using pre-validated routes with idempotency check
+                  routeResults <-
+                    forM validatedRoutes $ \(routeCode, routeInfo) -> do
+                      -- Check if fleet route association already exists (idempotent)
+                      existingAssoc <- QFRA.findByFleetOwnerRouteAndCity entityDetails.id merchantOpCityId.id routeCode
+                      case existingAssoc of
+                        Just _ -> do
+                          -- Association already exists, skip creation but still create vehicle route mapping
+                          buildVehicleRouteMapping entityDetails.id merchant.id merchantOpCityId.id routeCode routeInfo row.vehicle_number
+                          pure $ Right routeCode
+                        Nothing ->
+                          -- Create new association with exception handling
+                          ( do
+                              now <- getCurrentTime
+                              assocId <- generateGUID
+                              let assoc =
+                                    FleetRouteAssociation.FleetRouteAssociation
+                                      { id = assocId,
+                                        fleetOwnerId = entityDetails.id,
+                                        routeCode = routeCode,
+                                        merchantId = merchant.id,
+                                        merchantOperatingCityId = merchantOpCityId.id,
+                                        createdAt = now,
+                                        updatedAt = now
+                                      }
+                              QFRA.create assoc
+                              buildVehicleRouteMapping entityDetails.id merchant.id merchantOpCityId.id routeCode routeInfo row.vehicle_number
+                              pure (Right routeCode)
+                          )
+                            `catch` \(e :: SomeException) ->
+                              pure $ Left $ "Failed to create fleet-route association for route '" <> routeCode <> "': " <> show e
+                  let (routeAssocErrors, successfulRoutes) = partitionEithers routeResults
 
-      if null routeErrors
-        then do
-          logTagInfo "BulkAssociation" $ "All routes processed successfully for vehicle " <> row.vehicle_number <> ". Routes: " <> T.intercalate ", " successfulRoutes
+                  -- Handle badge assignments with proper error reporting
+                  badgeErrors <-
+                    catMaybes
+                      <$> sequence
+                        [ -- Driver badge
+                          if isJust row.driver_badge_name && isJust driverPersonId
+                            then
+                              ( do
+                                  driverBadge <- validateBadgeAssignment (fromJust driverPersonId) merchant.id merchantOpCityId.id entityDetails.id.getId (fromJust row.driver_badge_name) DFBT.DRIVER
+                                  linkFleetBadge' (fromJust driverPersonId) merchant.id merchantOpCityId.id entityDetails.id.getId driverBadge DFBT.DRIVER (Just True)
+                                  pure Nothing
+                              )
+                                `catch` \(e :: SomeException) ->
+                                  pure $ Just $ "Driver badge assignment failed for '" <> fromJust row.driver_badge_name <> "': " <> show e
+                            else pure Nothing,
+                          -- Conductor badge
+                          if isJust row.conductor_badge_name && isJust conductorPersonId
+                            then
+                              ( do
+                                  conductorBadge <- validateBadgeAssignment (fromJust conductorPersonId) merchant.id merchantOpCityId.id entityDetails.id.getId (fromJust row.conductor_badge_name) DFBT.CONDUCTOR
+                                  linkFleetBadge' (fromJust conductorPersonId) merchant.id merchantOpCityId.id entityDetails.id.getId conductorBadge DFBT.CONDUCTOR (Just True)
+                                  pure Nothing
+                              )
+                                `catch` \(e :: SomeException) ->
+                                  pure $ Just $ "Conductor badge assignment failed for '" <> fromJust row.conductor_badge_name <> "': " <> show e
+                            else pure Nothing
+                        ]
 
-          -- Handle driver badge
-          when (isJust row.driver_badge_name) $ do
-            logTagInfo "BulkAssociation" $ "Processing driver badge: " <> fromJust row.driver_badge_name <> " for vehicle " <> row.vehicle_number
-            driverBadge <- validateBadgeAssignment (fromJust driverPersonId) merchant.id merchantOpCityId.id entityDetails.id.getId (fromJust row.driver_badge_name) DFBT.DRIVER
-            linkFleetBadge' (fromJust driverPersonId) merchant.id merchantOpCityId.id entityDetails.id.getId driverBadge DFBT.DRIVER (Just True)
-
-          -- Handle conductor badge
-          when (isJust row.conductor_badge_name && isJust conductorPersonId) $ do
-            logTagInfo "BulkAssociation" $ "Processing conductor badge: " <> fromJust row.conductor_badge_name <> " for vehicle " <> row.vehicle_number
-            conductorBadge <- validateBadgeAssignment (fromJust conductorPersonId) merchant.id merchantOpCityId.id entityDetails.id.getId (fromJust row.conductor_badge_name) DFBT.CONDUCTOR
-            linkFleetBadge' (fromJust conductorPersonId) merchant.id merchantOpCityId.id entityDetails.id.getId conductorBadge DFBT.CONDUCTOR (Just True)
-
-          pure $
-            BulkFleetAssociationResult
-              i
-              (Just $ entityDetails.id.getId)
-              (Just $ row.vehicle_number)
-              (Just $ show devicePersonId)
-              (Just $ T.intercalate ", " successfulRoutes)
-              Nothing
-              "success"
-              Nothing
-        else do
-          logTagWarning "BulkAssociation" $ "Some routes failed for vehicle " <> row.vehicle_number <> ". Errors: " <> T.intercalate ", " routeErrors
-          pure $
-            BulkFleetAssociationResult
-              i
-              (Just $ entityDetails.id.getId)
-              (Just $ row.vehicle_number) -- Use actual vehicle number
-              (Just $ show devicePersonId)
-              (Just $ T.intercalate ", " successfulRoutes) -- Show successful routes
-              Nothing
-              "partial_success" -- Better status for partial success
-              (Just $ "Route errors: " <> T.intercalate ", " routeErrors)
+                  let allErrors = routeAssocErrors ++ badgeErrors
+                  if null allErrors
+                    then
+                      pure $
+                        BulkFleetAssociationResult
+                          i
+                          (Just $ entityDetails.id.getId)
+                          (Just $ row.vehicle_number)
+                          (Just $ show devicePersonId)
+                          (Just $ T.intercalate ", " successfulRoutes)
+                          Nothing
+                          "success"
+                          Nothing
+                    else
+                      pure $
+                        BulkFleetAssociationResult
+                          i
+                          (Just $ entityDetails.id.getId)
+                          (if null routeAssocErrors then Just $ row.vehicle_number else Nothing)
+                          (Just $ show devicePersonId)
+                          (if null routeAssocErrors then Just $ T.intercalate ", " successfulRoutes else Nothing)
+                          Nothing
+                          (if null routeAssocErrors then "partial_success" else "failure")
+                          (Just $ T.intercalate "; " allErrors)
+                )
+                `catch` \(e :: SomeException) ->
+                  pure $ BulkFleetAssociationResult i (Just $ entityDetails.id.getId) Nothing (Just $ show devicePersonId) Nothing Nothing "failure" (Just $ "Vehicle creation failed: " <> show e)
 
 buildVehicleRouteMapping :: Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> DRoute.Route -> Text -> Flow ()
 buildVehicleRouteMapping fleetOwnerId merchantId merchantOpCityId routeCode _ vehicleNumber = do
@@ -456,7 +580,8 @@ buildVehicleRouteMapping fleetOwnerId merchantId merchantOpCityId routeCode _ ve
             updatedAt = now,
             vehicleNumber = encryptedVehicleNumber
           }
-  res' <- try @_ @SomeException $ QVRM.upsert mapping vehicleNumberHash
-  case res' of
-    Left err -> logTagError "BulkAssociation" $ "Failed to create vehicle route mapping for route " <> routeCode <> " and vehicle " <> vehicleNumber <> ": " <> show err
-    Right _ -> logTagInfo "BulkAssociation" $ "Successfully created vehicle route mapping for route " <> routeCode <> " and vehicle " <> vehicleNumber
+  ( QVRM.upsert mapping vehicleNumberHash
+      >> logTagInfo "BulkAssociation" ("Successfully created vehicle route mapping for route " <> routeCode <> " and vehicle " <> vehicleNumber)
+    )
+    `catch` \(e :: SomeException) ->
+      logTagError "BulkAssociation" $ "Failed to create vehicle route mapping for route " <> routeCode <> " and vehicle " <> vehicleNumber <> ": " <> show e

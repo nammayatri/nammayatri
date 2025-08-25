@@ -21,6 +21,18 @@ create = createWithKV
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.FleetMemberAssociation.FleetMemberAssociation] -> m ())
 createMany = traverse_ create
 
+findActiveByfleetMemberIdAndfleetOwnerId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Prelude.Bool -> m (Maybe Domain.Types.FleetMemberAssociation.FleetMemberAssociation))
+findActiveByfleetMemberIdAndfleetOwnerId fleetMemberId fleetOwnerId enabled = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.fleetMemberId $ Se.Eq fleetMemberId,
+          Se.Is Beam.fleetOwnerId $ Se.Eq fleetOwnerId,
+          Se.Is Beam.enabled $ Se.Eq enabled
+        ]
+    ]
+
 findAllActiveByfleetMemberId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> Kernel.Prelude.Bool -> m [Domain.Types.FleetMemberAssociation.FleetMemberAssociation])
 findAllActiveByfleetMemberId fleetMemberId enabled = do findAllWithKV [Se.And [Se.Is Beam.fleetMemberId $ Se.Eq fleetMemberId, Se.Is Beam.enabled $ Se.Eq enabled]]
 

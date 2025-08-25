@@ -84,6 +84,7 @@ postSocialLogin req = do
         { mobileNumber = Nothing,
           mobileCountryCode = Nothing,
           name = name,
+          deviceId = Nothing,
           merchantId = req.merchantId.getId,
           merchantOperatingCity = Just city,
           email = Just email,

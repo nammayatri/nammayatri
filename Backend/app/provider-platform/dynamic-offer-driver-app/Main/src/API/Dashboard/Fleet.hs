@@ -17,15 +17,11 @@ module API.Dashboard.Fleet where
 
 import qualified API.Dashboard.Fleet.BulkAssociation as BulkAssociation
 import qualified API.Dashboard.Fleet.Registration as Registration
-import Control.Exception (Exception)
-import Data.Aeson (FromJSON, ToJSON)
-import Data.OpenApi (ToSchema)
 import qualified Domain.Types.FleetMemberAssociation as DFMA
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import Environment
-import GHC.Generics (Generic)
-import Kernel.Prelude (Bool, Int, Maybe (..), Show (..), Text, pure, void, whenJust, ($), (<>), (>>=))
+import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Error.BaseError.HTTPError (HttpCode (..), IsAPIError, IsBaseError (..), IsBecknAPIError, IsHTTPError (..))
 import Kernel.Types.Id (Id (..), ShortId)
@@ -101,7 +97,7 @@ createFleetMemberAssociation _ req = Utils.withFlowHandlerAPI $ do
   ownerRes <- QP.findById ownerId
   void $ pure ownerRes >>= Utils.fromMaybeM (FleetOwnerNotFound req.fleetOwnerId)
 
-  mExistingAssoc <- QFMA.findByPrimaryKey req.fleetMemberId req.fleetOwnerId
+  mExistingAssoc <- QFMA.findActiveByfleetMemberIdAndfleetOwnerId req.fleetMemberId req.fleetOwnerId True
   whenJust mExistingAssoc $ \_ -> do
     Utils.throwError AssociationAlreadyExists
 

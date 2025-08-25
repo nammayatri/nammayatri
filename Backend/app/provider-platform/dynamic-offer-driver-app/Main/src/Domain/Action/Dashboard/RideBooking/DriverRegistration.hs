@@ -38,6 +38,7 @@ auth merchantShortId opCity req = do
       True
       DReg.AuthReq
         { mobileNumber = Just req.mobileNumber,
+          deviceId = Nothing,
           mobileCountryCode = Just req.mobileCountryCode,
           merchantId = merchant.id.getId,
           merchantOperatingCity = Just opCity,

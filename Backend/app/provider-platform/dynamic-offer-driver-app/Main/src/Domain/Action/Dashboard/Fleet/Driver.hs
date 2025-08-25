@@ -2421,6 +2421,7 @@ fetchOrCreatePerson moc req_ = do
             merchantId = moc.merchantId.getId,
             merchantOperatingCity = Just moc.city,
             email = Nothing,
+            deviceId = Nothing,
             name = Just req_.driverName,
             identifierType = Just DP.MOBILENUMBER,
             registrationLat = Nothing,
