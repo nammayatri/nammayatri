@@ -859,7 +859,7 @@ postMultimodalComplete ::
 postMultimodalComplete (_, _) journeyId = do
   journey <- JM.getJourney journeyId
   legs <- QJourneyLeg.getJourneyLegs journeyId
-  JMTypes.checkIfAnyTaxiLegOngoing legs
+  cancelOngoingTaxiLegs legs
 
   mapM_ (\leg -> markAllSubLegsCompleted leg) legs
   updatedLegStatus <- JM.getAllLegsStatus journey
@@ -877,7 +877,7 @@ postMultimodalOrderSoftCancel ::
   )
 postMultimodalOrderSoftCancel (_, _) journeyId legOrder = do
   legs <- QJourneyLeg.getJourneyLegs journeyId
-  JMTypes.checkIfAnyTaxiLegOngoing legs -- check for any ongoing taxi legs, remove this once handled properly from UI
+  checkIfAnyTaxiLegOngoing legs -- check for any ongoing taxi legs, remove this once handled properly from UI
   journeyLeg <- find (\leg -> leg.sequenceNumber == legOrder) legs & fromMaybeM (InvalidRequest "No matching journey leg found for the given legOrder")
   JM.softCancelLeg journeyLeg (SCR.CancellationReasonCode "") False Nothing
   return Kernel.Types.APISuccess.Success
@@ -912,6 +912,8 @@ postMultimodalOrderCancel ::
   )
 postMultimodalOrderCancel (_, _) journeyId legOrder = do
   journeyLeg <- QJourneyLeg.getJourneyLeg journeyId legOrder
+  legs <- QJourneyLeg.getJourneyLegs journeyId
+  cancelOngoingTaxiLegs legs -- shouldn't be there once we have leg wise cancellation
   JM.cancelLeg journeyLeg (SCR.CancellationReasonCode "") False Nothing
   return Kernel.Types.APISuccess.Success
 

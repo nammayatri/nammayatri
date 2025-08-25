@@ -11,7 +11,6 @@ import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as Text
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Common as DTrip
-import qualified Domain.Types.EstimateStatus as DEstimate
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
 import Domain.Types.FRFSRouteDetails
 import Domain.Types.FRFSSearch
@@ -77,14 +76,12 @@ import qualified SharedLogic.Search as SLSearch
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
-import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.FRFSVehicleServiceTier as QFRFSVehicleServiceTier
 import qualified Storage.Queries.Person as QPerson
-import qualified Storage.Queries.SearchRequest as QSearchRequest
 import qualified Storage.Queries.Transformers.Booking as QTB
 import Tools.Error
 import Tools.Maps as Maps
@@ -1465,25 +1462,3 @@ safeTail :: [a] -> Maybe a
 safeTail [] = Nothing
 safeTail [_] = Nothing
 safeTail xs = Just (last xs)
-
-checkIfAnyTaxiLegOngoing :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => [DJourneyLeg.JourneyLeg] -> m ()
-checkIfAnyTaxiLegOngoing legs = do
-  ongoings <- mapM isTaxiLegOngoing legs
-  when (or ongoings) $
-    throwError (InvalidRequest "You have an Ongoing Taxi Search/Ride. Please complete or cancel it before proceeding.")
-
-isTaxiLegOngoing :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => DJourneyLeg.JourneyLeg -> m Bool
-isTaxiLegOngoing journeyLeg = do
-  case (journeyLeg.legSearchId, journeyLeg.mode) of
-    (Just legSearchId, DTrip.Taxi) -> do
-      mbBooking <- QBooking.findByTransactionIdAndStatus legSearchId DBooking.activeBookingStatus
-      case mbBooking of
-        Just _ -> return True
-        Nothing -> do
-          mbSearchReq <- QSearchRequest.findById (Id legSearchId)
-          mbEstimate <- maybe (pure Nothing) (QEstimate.findById . Id) (mbSearchReq >>= (.journeyLegInfo) >>= (.pricingId))
-          case mbEstimate of
-            Just estimate -> do
-              return $ estimate.status `elem` [DEstimate.DRIVER_QUOTE_REQUESTED, DEstimate.GOT_DRIVER_QUOTE]
-            Nothing -> return False
-    _ -> return False

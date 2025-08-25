@@ -12,6 +12,7 @@ import qualified Data.Time as Time
 import Domain.Action.UI.EditLocation as DEditLocation
 import qualified Domain.Action.UI.Location as DLoc
 import Domain.Action.UI.Ride as DRide
+import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.BookingStatus as DTaxiBooking
 import qualified Domain.Types.BookingUpdateRequest as DBUR
@@ -1369,3 +1370,35 @@ calculateWalkDuration distance =
       -- This gives us the correct walk duration in seconds
       walkDurationInSeconds = round $ (fromIntegral distanceInMeters * fudgeFactorForWalk) / averageSpeedMPSForWalk
    in Seconds walkDurationInSeconds
+
+cancelOngoingTaxiLegs ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    EncFlow m r,
+    Monad m,
+    m ~ Kernel.Types.Flow.FlowR AppEnv
+  ) =>
+  [DJourneyLeg.JourneyLeg] ->
+  m ()
+cancelOngoingTaxiLegs =
+  mapM_
+    ( \leg -> do
+        case leg.mode of
+          DTrip.Taxi -> cancelLeg leg (SCR.CancellationReasonCode "") False Nothing
+          _ -> return ()
+    )
+
+checkIfAnyTaxiLegOngoing :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => [DJourneyLeg.JourneyLeg] -> m ()
+checkIfAnyTaxiLegOngoing legs = do
+  ongoings <- mapM isTaxiLegOngoing legs
+  when (or ongoings) $
+    throwError (InvalidRequest "You have an Ongoing Taxi Ride. Please complete it before proceeding.")
+
+isTaxiLegOngoing :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => DJourneyLeg.JourneyLeg -> m Bool
+isTaxiLegOngoing journeyLeg = do
+  case (journeyLeg.legSearchId, journeyLeg.mode) of
+    (Just legSearchId, DTrip.Taxi) -> do
+      mbBooking <- QBooking.findByTransactionIdAndStatus legSearchId DBooking.activeBookingStatus
+      return $ isJust mbBooking
+    _ -> return False

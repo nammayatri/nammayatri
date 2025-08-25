@@ -147,7 +147,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
   update _ = throwError (InternalError "Not Supported")
 
   cancel (TaxiLegRequestCancel legData) = do
-    mbBooking <- QBooking.findByTransactionId legData.searchRequestId.getId
+    mbBooking <- QBooking.findByTransactionIdAndStatus legData.searchRequestId.getId activeBookingStatus
     case mbBooking of
       Just booking -> do
         maybe
