@@ -23,7 +23,7 @@ import Dashboard.Common as ReExport
 import Data.Aeson
 import qualified Data.List as List
 import qualified Data.Vector as V
-import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
+import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnumAndList)
 import Kernel.Prelude
 import qualified Text.Show (show)
 
@@ -254,4 +254,4 @@ isMetroRideType FromMetro = True
 isMetroRideType FromOrToMetro = True
 isMetroRideType _ = False
 
-$(mkBeamInstancesForEnum ''DriverCoinsFunctionType)
+$(mkBeamInstancesForEnumAndList ''DriverCoinsFunctionType)
