@@ -109,6 +109,9 @@ FleetOwnerInformation:
       kvFunction: updateOneWithKV
       params: [referredByOperatorId]
       where: fleetOwnerPersonId
+    deleteByFleetOwnerPersonId:
+      kvFunction: deleteWithKV
+      where: fleetOwnerPersonId
 
   excludedDefaultQueries:
     - updateByPrimaryKey
