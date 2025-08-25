@@ -28,6 +28,9 @@ FleetDriverAssociation:
     deleteByDriverId:
       kvFunction: deleteWithKV
       where: driverId
+    deleteByFleetOwnerId:
+      kvFunction: deleteWithKV
+      where: fleetOwnerId
 
   sqlType:
     id: text

@@ -187,3 +187,21 @@ deleteByDriverId ::
   m ()
 deleteByDriverId driverId = do
   deleteWithKV [Se.And [Se.Is BeamDOA.driverId $ Se.Eq (driverId.getId)]]
+
+findActiveAssociationByOperatorId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Id DP.Person ->
+  m (Maybe DriverOperatorAssociation)
+findActiveAssociationByOperatorId operatorId = do
+  now <- getCurrentTime
+  findOneWithKV
+    [ Se.And
+        [ Se.Is BeamDOA.operatorId $ Se.Eq operatorId.getId,
+          Se.Is BeamDOA.isActive $ Se.Eq True,
+          Se.Is BeamDOA.associatedTill (Se.GreaterThan $ Just now)
+        ]
+    ]
+
+deleteByOperatorId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DP.Person -> m ()
+deleteByOperatorId operatorId = do
+  deleteWithKV [Se.Is BeamDOA.operatorId $ Se.Eq (getId operatorId)]

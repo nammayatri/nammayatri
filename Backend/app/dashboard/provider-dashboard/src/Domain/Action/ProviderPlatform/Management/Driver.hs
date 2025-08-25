@@ -73,7 +73,9 @@ import Kernel.Utils.Common
 import Kernel.Utils.Validation (runRequestValidation)
 import qualified SharedLogic.Transaction as T
 import Storage.Beam.CommonInstances ()
+import "lib-dashboard" Storage.Queries.MerchantAccess as QMerchantAccess
 import "lib-dashboard" Storage.Queries.Person as QP
+import "lib-dashboard" Storage.Queries.RegistrationToken as QRegistrationToken
 import Tools.Auth.Api
 import Tools.Auth.Merchant
 
@@ -166,8 +168,19 @@ deleteDriverPermanentlyDelete :: ShortId DM.Merchant -> City.City -> ApiTokenInf
 deleteDriverPermanentlyDelete merchantShortId opCity apiTokenInfo driverId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just driverId) T.emptyRequest
-  T.withTransactionStoring transaction $
-    Client.callManagementAPI checkedMerchantId opCity (.driverDSL.deleteDriverPermanentlyDelete) driverId
+  T.withTransactionStoring transaction $ do
+    apiResult <- try @_ @SomeException (Client.callManagementAPI checkedMerchantId opCity (.driverDSL.deleteDriverPermanentlyDelete) driverId)
+    case apiResult of
+      Right result -> do
+        let personId = Kernel.Types.Id.cast driverId
+        mbPerson <- QP.findById personId
+        whenJust mbPerson $ \_ -> do
+          QMerchantAccess.deleteAllByPersonId personId
+          QRegistrationToken.deleteAllByPersonId personId
+          QP.deletePerson personId
+          logTagInfo "deletePermanentlyDelete - successfully removed person and associated data for personId: " (show personId)
+        pure result
+      Left _ -> throwError (InternalError "Failed to delete person in Driver DB")
 
 postDriverUnlinkDL :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Flow APISuccess
 postDriverUnlinkDL merchantShortId opCity apiTokenInfo driverId = do
