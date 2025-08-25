@@ -54,6 +54,7 @@ data TransporterConfigT f = TransporterConfigT
     cancellationFee :: B.C f Kernel.Types.Common.HighPrecMoney,
     cancellationFeeDisputeLimit :: B.C f Kernel.Prelude.Int,
     cancellationRateCalculationThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    cancellationRateSlabConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     cancellationRateThresholdDaily :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     cancellationRateThresholdWeekly :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     cancellationRateWindow :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

@@ -60,6 +60,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     cancellationFee :: Kernel.Types.Common.HighPrecMoney,
     cancellationFeeDisputeLimit :: Kernel.Prelude.Int,
     cancellationRateCalculationThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    cancellationRateSlabConfig :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.CancellationRateSlabConfig,
     cancellationRateThresholdDaily :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     cancellationRateThresholdWeekly :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     cancellationRateWindow :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -283,7 +284,8 @@ data AvgSpeedOfVechilePerKm = AvgSpeedOfVechilePerKm
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
 data CancellationRateBasedNudgingAndBlockingConfig = CancellationRateBasedNudgingAndBlockingConfig
-  { cancellationRateThresholdDaily :: Kernel.Prelude.Int,
+  { cancellationRateSlabConfig :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.CancellationRateSlabConfig,
+    cancellationRateThresholdDaily :: Kernel.Prelude.Int,
     cancellationRateThresholdWeekly :: Kernel.Prelude.Int,
     dailyConditionCooldownTimeHours :: Kernel.Prelude.Int,
     dailyMinRidesforBlocking :: Kernel.Prelude.Int,
@@ -294,6 +296,12 @@ data CancellationRateBasedNudgingAndBlockingConfig = CancellationRateBasedNudgin
     weeklyMinRidesforNudging :: Kernel.Prelude.Int,
     weeklyOffenceSuspensionTimeHours :: Kernel.Prelude.Int
   }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
+
+data CancellationRateSlab = CancellationRateSlab {cancellationPercentageThreshold :: Kernel.Prelude.Int, suspensionTimeInHours :: Kernel.Prelude.Int}
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
+
+data CancellationRateSlabConfig = CancellationRateSlabConfig {dailySlabs :: [Domain.Types.TransporterConfig.SlabType], weeklySlabs :: [Domain.Types.TransporterConfig.SlabType]}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
 data DashboardMediaSendingLimit = DashboardMediaSendingLimit {alert :: Kernel.Prelude.Int, overlay :: Kernel.Prelude.Int, sms :: Kernel.Prelude.Int, whatsapp :: Kernel.Prelude.Int}
@@ -310,6 +318,9 @@ data DemandHotspotsConfig = DemandHotspotsConfig
 
 data DistanceRecomputeConfigs = DistanceRecomputeConfigs {estimatedDistanceUpper :: Kernel.Types.Common.Meters, minThresholdDistance :: Kernel.Types.Common.Meters, minThresholdPercentage :: Kernel.Prelude.Int}
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
+
+data SlabType = SlabType {minBookingsRange :: [Kernel.Prelude.Int], penalityForCancellation :: Domain.Types.TransporterConfig.CancellationRateSlab}
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
 type TransporterConfig = TransporterConfigD 'Safe
 
