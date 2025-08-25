@@ -14,21 +14,21 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data TripAlertRequestT f = TripAlertRequestT
-  { alertRequestId :: B.C f Data.Text.Text,
-    alertRequestType :: B.C f Domain.Types.Alert.AlertRequestType.AlertRequestType,
-    alertStatus :: B.C f (Kernel.Prelude.Maybe Domain.Types.Alert.AlertRequestStatus.AlertRequestStatus),
-    conductorFleetBadgeId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    fleetBadgeId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
-    driverId :: B.C f Data.Text.Text,
-    fleetOwnerId :: B.C f Data.Text.Text,
-    id :: B.C f Data.Text.Text,
-    isViolated :: B.C f Kernel.Prelude.Bool,
-    merchantId :: B.C f Data.Text.Text,
-    merchantOperatingCityId :: B.C f Data.Text.Text,
-    routeCode :: B.C f Data.Text.Text,
-    tripTransactionId :: B.C f Data.Text.Text,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+  { alertRequestId :: (B.C f Data.Text.Text),
+    alertRequestType :: (B.C f Domain.Types.Alert.AlertRequestType.AlertRequestType),
+    alertStatus :: (B.C f (Kernel.Prelude.Maybe Domain.Types.Alert.AlertRequestStatus.AlertRequestStatus)),
+    conductorFleetBadgeId :: (B.C f (Kernel.Prelude.Maybe (Data.Text.Text))),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    fleetBadgeId :: (B.C f (Kernel.Prelude.Maybe (Data.Text.Text))),
+    driverId :: (B.C f Data.Text.Text),
+    fleetOwnerId :: (B.C f Data.Text.Text),
+    id :: (B.C f Data.Text.Text),
+    isViolated :: (B.C f Kernel.Prelude.Bool),
+    merchantId :: (B.C f Data.Text.Text),
+    merchantOperatingCityId :: (B.C f Data.Text.Text),
+    routeCode :: (B.C f Data.Text.Text),
+    tripTransactionId :: (B.C f Data.Text.Text),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 
@@ -38,6 +38,6 @@ instance B.Table TripAlertRequestT where
 
 type TripAlertRequest = TripAlertRequestT Identity
 
-$(enableKVPG ''TripAlertRequestT ['id] [['driverId]])
+$(enableKVPG (''TripAlertRequestT) [('id)] [[('driverId)]])
 
-$(mkTableInstances ''TripAlertRequestT "trip_alert_request")
+$(mkTableInstances (''TripAlertRequestT) "trip_alert_request")
