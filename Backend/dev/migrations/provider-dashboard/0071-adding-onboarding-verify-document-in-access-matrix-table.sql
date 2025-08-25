@@ -1,0 +1,1 @@
+INSERT INTO atlas_bpp_dashboard.access_matrix ( id, role_id, api_entity, user_access_type, user_action_type ) SELECT atlas_bpp_dashboard.uuid_generate_v4(), r.id, 'DSL', 'USER_NO_ACCESS', 'PROVIDER_FLEET/ONBOARDING/POST_ONBOARDING_VERIFY' FROM atlas_bpp_dashboard.role r ON CONFLICT DO NOTHING;
