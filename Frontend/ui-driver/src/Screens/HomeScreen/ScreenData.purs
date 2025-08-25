@@ -491,6 +491,7 @@ dummyRideData = {
       , destinationWaitTimerId : ""
       , isInsured : Nothing
       , insuredAmount : Nothing
+      , riderMobileNumber : Nothing
       }
 
 initialParkingData :: ParkingData

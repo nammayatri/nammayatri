@@ -3176,7 +3176,10 @@ homeScreenFlow = do
       modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> driverProfileScreen{props{alternateNumberView = true, isEditAlternateMobile = true, mNumberEdtFocused = true}, data {fromHomeScreen = true}})
       driverProfileFlow
     ON_CALL state exophoneNumber -> do
-      (API.ApiSuccessResult resp) <- Remote.onCallBT (Remote.makeOnCallReq state.data.activeRide.id exophoneNumber)
+      callingOption <- getCustomerCallingNumber exophoneNumber state.data.activeRide.riderMobileNumber
+      when (callingOption == ST.AnonymousCall) $ do
+        (API.ApiSuccessResult resp) <- Remote.onCallBT (Remote.makeOnCallReq state.data.activeRide.id exophoneNumber)
+        pure unit
       homeScreenFlow
     OPEN_PAYMENT_PAGE state -> ysPaymentFlow
     HOMESCREEN_NAV GoToSubscription -> do
@@ -4923,7 +4926,10 @@ rideSummaryScreenFlow = do
     BACK_HOME -> homeScreenFlow
     GO_TO_HOME_SCREEN_FROM_BANNER -> homeScreenFlow
     ON_CALLING state exophoneNumber -> do
-      (API.ApiSuccessResult  resp) <- Remote.onCallBT (Remote.makeOnCallReq state.data.activeRideData.id exophoneNumber)
+      callingOption <- getCustomerCallingNumber exophoneNumber state.data.activeRideData.riderMobileNumber
+      when (callingOption == ST.AnonymousCall) $ do
+        (API.ApiSuccessResult resp) <- Remote.onCallBT (Remote.makeOnCallReq state.data.activeRideData.id exophoneNumber)
+        pure unit
       rideSummaryScreenFlow
     GO_TO_OPEN_GOOGLE_MAP state -> do
       void $ pure $ openNavigation state.data.activeRideData.src_lat state.data.activeRideData.src_lon "DRIVE"
@@ -5138,3 +5144,17 @@ extraChargeInfoScreenFlow :: FlowBT String Unit
 extraChargeInfoScreenFlow = do
   output <- UI.extraChargeInfoScreen
   pure unit
+
+getCustomerCallingNumber :: String -> Maybe String -> FlowBT String ST.CallingOptionType
+getCustomerCallingNumber exophoneNumber mbMobileNumber = do
+  let driverCity = toLower $ getValueToLocalStore DRIVER_LOCATION
+      callingOption = HU.getCallingOptionType CTA.FunctionCall driverCity
+      mbMobileNumber' = mbMobileNumber <#> \num -> if take 1 num == "0" then num else "0" <> num
+  finalCallingNumber <-
+    case callingOption of
+      ST.DirectCall -> pure $ fromMaybe exophoneNumber mbMobileNumber'
+      ST.AnonymousCall -> pure exophoneNumber
+  void $ pure $ spy "Calling Number: " mbMobileNumber
+  void $ pure $ JB.showDialer finalCallingNumber false
+  pure callingOption
+

@@ -204,3 +204,7 @@ type WMBEducationDescription = {
   description :: String,
   imageUrl :: String
 }
+
+type DriverCallingOptionsConfig = {
+  option :: Array String
+}

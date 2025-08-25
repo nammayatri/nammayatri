@@ -432,3 +432,14 @@ wmbEducationConfigs language =
       isWMBEducationEnabled : false,
       descriptionList : [{ description : "", imageUrl: ""}]
     }
+
+fetchDriverCallingOptionsConfig :: String -> Types.DriverCallingOptionsConfig
+fetchDriverCallingOptionsConfig city =
+  let config = fetchRemoteConfigString "driver_calling_options_config"
+      value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultDriverCallingOptionsConfig
+  in getCityBasedConfig value $ toLower city
+
+defaultDriverCallingOptionsConfig :: Types.DriverCallingOptionsConfig
+defaultDriverCallingOptionsConfig = {
+  option : ["anonymousCall"]
+}
