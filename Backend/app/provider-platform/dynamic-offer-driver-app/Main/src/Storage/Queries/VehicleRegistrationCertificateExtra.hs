@@ -740,3 +740,6 @@ partialFindLastVehicleRCFleetMF certNumber fleetOwnerIds limit offset = do
     Right res' -> do
       catMaybes <$> mapM fromTType' res'
     Left _ -> pure []
+
+deleteByFleetOwnerId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m ()
+deleteByFleetOwnerId fleetOwnerId = deleteWithKV [Se.Is BeamVRC.fleetOwnerId (Se.Eq $ Just fleetOwnerId)]
