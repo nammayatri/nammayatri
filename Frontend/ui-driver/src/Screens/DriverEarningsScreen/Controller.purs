@@ -777,5 +777,6 @@ dummyRideHistoryItem = RidesInfo {
       parcelQuantity : Nothing,
       isInsured : Nothing,
       insuredAmount : Nothing,
-      coinsEarned : Nothing 
+      coinsEarned : Nothing,
+      riderMobileNumber : Nothing
 }

@@ -18,7 +18,7 @@ module Helpers.Utils
     , module ReExport
     ) where
 
-import Screens.Types (AllocationData, DisabilityType(..), DriverReferralType(..), DriverStatus(..), NotificationBody(..), VehicleCategory(..), UpdateRouteSrcDestConfig)
+import Screens.Types (AllocationData, DisabilityType(..), DriverReferralType(..), DriverStatus(..), NotificationBody(..), VehicleCategory(..), UpdateRouteSrcDestConfig, CallingOptionType(..))
 import Language.Strings (getString)
 import Language.Types(STR(..))
 import Data.Array ((!!), any, elemIndex, length, slice, last, find, singleton, null, elemIndex) as DA
@@ -66,7 +66,7 @@ import Prelude (map, (*), (-), (/), (==), div, mod, not)
 import Presto.Core.Utils.Encoding (defaultEnumDecode, defaultEnumEncode, defaultDecode, defaultEncode)
 import Data.Function.Uncurried (Fn4(..), Fn3(..), runFn4, runFn3, Fn2, runFn1, runFn2)
 import Effect.Uncurried (EffectFn1(..),EffectFn5(..), mkEffectFn1, mkEffectFn4, runEffectFn5, EffectFn2(..))
-import Common.Types.App (OptionButtonList)
+import Common.Types.App (OptionButtonList,LazyCheck(..))
 import Engineering.Helpers.Commons (parseFloat, setText, convertUTCtoISC, getCurrentUTC) as ReExport
 import Engineering.Helpers.Commons (flowRunner)
 import PaymentPage(PaymentPagePayload, UpiApps(..))
@@ -122,6 +122,8 @@ import Resource.Localizable.StringsV2 (getStringV2)
 import Resource.Localizable.TypesV2
 import PrestoDOM (Padding(..), Gravity(..), Margin(..), Length(..))
 import Font.Size as FontSize
+import Data.Either as Either
+import RemoteConfig.Utils (fetchDriverCallingOptionsConfig) as RU
 
 
 type AffSuccess s = (s -> Effect Unit)
@@ -1474,3 +1476,17 @@ checkIfPrivateFleet state =
         in isPrivateFleet
       Nothing -> let storeIsPrivateBusFleetValue = getValueToLocalStore IS_PRIVATE_BUS_FLEET 
         in if DA.any (_ == storeIsPrivateBusFleetValue) ["__failed", "(null)", "", ""] then false else storeIsPrivateBusFleetValue == "true"
+
+
+getCallingOptionType :: LazyCheck -> String -> CallingOptionType
+getCallingOptionType lazy driverCity =
+  let driverCallingOptions = RU.fetchDriverCallingOptionsConfig driverCity
+      callingOptions = DS.toLower $ fromMaybe "anonymouscall" $ DA.head driverCallingOptions.option
+      encodedCallingOptions = encode callingOptions
+  in 
+    case decodeCallingOption encodedCallingOptions of
+      Just option -> option
+      Nothing -> AnonymousCall
+
+decodeCallingOption :: Foreign -> Maybe CallingOptionType
+decodeCallingOption = Either.hush <<< runExcept <<< decode

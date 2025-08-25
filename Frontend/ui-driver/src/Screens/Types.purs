@@ -41,7 +41,7 @@ import Control.Alt ((<|>))
 import Foreign (ForeignError(..), fail)
 import Halogen.VDom.DOM.Prop (PropValue)
 import MerchantConfig.Types (AppConfig, BottomNavConfig, GradientConfig, SubscriptionConfig, Language(..))
-import Prelude (class Eq, class Show, ($), (<$>))
+import Prelude (class Eq, class Show, ($), (<$>),(<<<), bind,pure)
 import Foreign.Index (readProp)
 import Foreign.Generic (class Decode, decode)
 import Presto.Core.Types.API (class StandardEncode, standardEncode)
@@ -70,6 +70,7 @@ import Common.Types.App (CalendarDate)
 import Common.RemoteConfig.Types as CommonRC
 import Common.RemoteConfig.Types (OfferBanner(..)) as ReExport
 import Data.Tuple(Tuple(..))
+import Data.String (toLower)
 
 
 type EditTextInLabelState =
@@ -1372,7 +1373,8 @@ type ActiveRide = {
   destinationWaitingTime :: Maybe Int,
   destinationWaitTimerId :: String,
   isInsured :: Maybe Boolean,
-  insuredAmount :: Maybe String
+  insuredAmount :: Maybe String,
+  riderMobileNumber :: Maybe String
 }
 
 type HomeScreenProps =  {
@@ -3483,3 +3485,20 @@ type QrCodeScannerState = {
 type BusQrCodeData = {
   vehicleNumber :: String
 }
+
+-------------------------------------------------- Driver Calling Options ------------------------------------
+
+data CallingOptionType = AnonymousCall | DirectCall
+
+derive instance genericCallingOptionType :: Generic CallingOptionType _
+instance eqCallingOptionType :: Eq CallingOptionType where eq = genericEq
+instance showCallingOptionType :: Show CallingOptionType where show = toLower <<< genericShow
+
+instance encodeCallingOptionType :: Encode CallingOptionType where encode = defaultEnumEncode
+instance decodeCallingOptionType :: Decode CallingOptionType where
+  decode fgn = do
+    str <- decode fgn
+    case toLower str of
+      "directcall"    -> pure DirectCall
+      "anonymouscall" -> pure AnonymousCall
+      _               -> pure AnonymousCall
