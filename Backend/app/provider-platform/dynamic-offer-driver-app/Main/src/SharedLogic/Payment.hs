@@ -138,6 +138,7 @@ createOrder (driverId, merchantId, opCity) serviceName (driverFees, driverFeesTo
 
 mkSplitSettlementDetails :: (MonadFlow m) => [VF.VendorFee] -> HighPrecMoney -> m (Maybe SplitSettlementDetails)
 mkSplitSettlementDetails vendorFees totalAmount = do
+  uuid <- generateGUID
   let sortedVendorFees = sortBy (compare `on` VF.vendorId) vendorFees
       groupedVendorFees = groupBy ((==) `on` VF.vendorId) sortedVendorFees
       mbVendorSplits = map computeSplit groupedVendorFees
@@ -165,7 +166,7 @@ mkSplitSettlementDetails vendorFees totalAmount = do
               { amount = roundToTwoDecimalPlaces $ sum $ map (\fee -> VF.amount fee) feesForVendor,
                 merchantCommission = 0,
                 subMid = firstFee.vendorId,
-                uniqueSplitId = Nothing
+                uniqueSplitId = uuid
               }
 
 roundToTwoDecimalPlaces :: HighPrecMoney -> HighPrecMoney
