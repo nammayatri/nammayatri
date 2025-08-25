@@ -2,7 +2,6 @@ module SharedLogic.CancellationCoins where
 
 import Data.Aeson
 import Data.Default.Class
-import qualified Domain.Types.Common as Common
 import EulerHS.Prelude hiding (id)
 import Kernel.Utils.Common
 import qualified Lib.DriverCoins.Types as DCT
@@ -20,8 +19,7 @@ data CancellationCoinData = CancellationCoinData
     driverWaitingTime :: Maybe Int,
     callAttemptByDriver :: Bool,
     actualCoveredDistance :: Maybe Meters,
-    expectedCoveredDistance :: Maybe Meters,
-    vehicleVariant :: Maybe Common.ServiceTierType
+    expectedCoveredDistance :: Maybe Meters
   }
   deriving (Show, Generic, ToJSON, FromJSON)
 
@@ -39,6 +37,5 @@ instance Default CancellationCoinData where
         driverWaitingTime = Nothing,
         callAttemptByDriver = False,
         actualCoveredDistance = Nothing,
-        expectedCoveredDistance = Nothing,
-        vehicleVariant = Nothing
+        expectedCoveredDistance = Nothing
       }
