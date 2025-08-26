@@ -1047,8 +1047,6 @@ TransporterConfig:
     localAmbulanceNumbers: Maybe [Text]
     safetyTeamNumbers: Maybe [Text]
     cancellationRateSlabConfig: Maybe CancellationRateSlabConfig
-    maxOnlineDurationDays : Maybe Int
-    distanceWeightage: Maybe Int
     driverCallingOption: "Maybe CallingOption"
 
   beamType:
@@ -1313,7 +1311,7 @@ TransporterConfig:
     minThresholdForPassThroughDestination: int
     allowedReferralEntities: "text[]"
     cancellationRateSlabConfig: json
-    driverCallingOption: "Text"
+    driverCallingOption: text
   default:
     mediaFileUrlPattern: |-
       'http://localhost:8016/ui/<DOMAIN>/media?filePath=<FILE_PATH>'
@@ -1453,6 +1451,7 @@ TransporterConfig:
     enableExistingVehicleInBulkUpload: "false"
     onboardingDocsCountLimit: "50"
     cancellationRateSlabConfig: '{}'
+    driverCallingOption: "'AnonymousCall'"
 
   excludedDefaultQueries:
     - findByPrimaryKey
