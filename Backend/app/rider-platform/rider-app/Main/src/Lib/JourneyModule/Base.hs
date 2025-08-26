@@ -35,6 +35,7 @@ import Domain.Types.MultimodalPreferences as DMP
 import qualified Domain.Types.Person as DPerson
 import qualified Domain.Types.RideStatus as DTaxiRide
 import qualified Domain.Types.RiderConfig
+import qualified Domain.Types.RouteDetails as DRouteDetails
 import qualified Domain.Types.Trip as DTrip
 import Environment
 import EulerHS.Prelude (safeHead)
@@ -457,6 +458,25 @@ startJourney riderId confirmElements forcedBookedLegOrder journeyId = do
         JLI.confirm forcedBooking ticketQuantity childTicketQuantity bookLater leg crisSdkResponse
     )
     allLegs
+
+startJourneyLeg ::
+  (JL.ConfirmFlow m r c, JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) => JL.LegInfo -> m ()
+startJourneyLeg legInfo = do
+  (adultTicketQuantity, childTicketQuantity, crisSdkResponse) <-
+    case legInfo.legExtraInfo of
+      JL.Metro legExtraInfo -> return (legExtraInfo.adultTicketQuantity, legExtraInfo.childTicketQuantity, Nothing)
+      JL.Subway legExtraInfo -> do
+        mbBooking <- QTBooking.findBySearchId (Id legInfo.searchId)
+        let crisSdkResponse =
+              case ((mbBooking >>= (.bookingAuthCode)), (mbBooking >>= (.osType)), (mbBooking >>= (.osBuildVersion))) of
+                (Just bookingAuthCode, Just osType, Just osBuildVersion) -> Just APITypes.CrisSdkResponse {bookAuthCode = bookingAuthCode, osType = osType, osBuildVersion = osBuildVersion}
+                _ -> Nothing
+        return (legExtraInfo.adultTicketQuantity, legExtraInfo.childTicketQuantity, crisSdkResponse)
+      JL.Bus legExtraInfo -> return (legExtraInfo.adultTicketQuantity, legExtraInfo.childTicketQuantity, Nothing)
+      _ -> return (Nothing, Nothing, Nothing)
+  when (legInfo.travelMode `elem` [DTrip.Metro, DTrip.Subway, DTrip.Bus]) $ do
+    QTBooking.updateOnInitDoneBySearchId (Just False) (Id legInfo.searchId)
+  JLI.confirm True adultTicketQuantity childTicketQuantity False legInfo crisSdkResponse
 
 addAllLegs ::
   ( JL.SearchRequestFlow m r c,
@@ -1229,6 +1249,7 @@ switchLeg journeyId _ req = do
             DJourneyLeg.duration = newDuration,
             DJourneyLeg.fromStopDetails = Nothing,
             DJourneyLeg.id = journeyLegId,
+            DJourneyLeg.routeDetails = (\routeDetail -> routeDetail {DRouteDetails.journeyLegId = journeyLegId.getId, DRouteDetails.trackingStatus = Nothing}) <$> journeyLeg.routeDetails,
             DJourneyLeg.mode = newMode,
             DJourneyLeg.serviceTypes = Nothing,
             DJourneyLeg.startLocation = startLocation,

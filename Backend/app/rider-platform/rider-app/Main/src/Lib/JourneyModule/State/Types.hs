@@ -8,7 +8,7 @@ import qualified Domain.Types.FRFSTicketStatus as DFRFSTicket
 import qualified Domain.Types.RideStatus as DTaxiRide
 import Kernel.Beam.Lib.UtilsTH (mkBeamInstancesForEnum)
 import Kernel.Prelude
-import Kernel.Utils.TH (mkHttpInstancesForEnum)
+import Servant (FromHttpApiData (..), ToHttpApiData (..))
 
 data JourneyBookingStatus
   = TaxiEstimate DTaxiEstimate.EstimateStatus
