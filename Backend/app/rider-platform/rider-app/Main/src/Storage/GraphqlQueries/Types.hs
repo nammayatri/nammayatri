@@ -180,7 +180,7 @@ instance RequestType RouteStopTimeTableQuery where
       ++ "  stop(id: $stopId) {\n"
       ++ "    gtfsId\n"
       ++ "    name\n"
-      ++ "    stoptimesWithoutPatterns(numberOfDepartures: 500) {\n"
+      ++ "    stoptimesWithoutPatterns(numberOfDepartures: 10000) {\n"
       ++ "      scheduledArrival\n"
       ++ "      realtimeArrival\n"
       ++ "      arrivalDelay\n"
