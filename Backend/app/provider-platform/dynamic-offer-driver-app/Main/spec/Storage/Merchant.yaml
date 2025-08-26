@@ -1344,7 +1344,7 @@ TransporterConfig:
     weekStartMode : int
     earningsWindowSize : int
     cancellationRateSlabConfig: json
-    driverCallingOption: "Text"
+    driverCallingOption: text
   default:
     mediaFileUrlPattern: |-
       'http://localhost:8016/ui/<DOMAIN>/media?filePath=<FILE_PATH>'
@@ -1492,6 +1492,7 @@ TransporterConfig:
     allowCacheDriverFlowStatus : "false"
     maxOnlineDurationDays : "10"
     distanceWeightage: "20"
+    driverCallingOption: "'AnonymousCall'"
   excludedDefaultQueries:
     - findByPrimaryKey
     - updateByPrimaryKey
