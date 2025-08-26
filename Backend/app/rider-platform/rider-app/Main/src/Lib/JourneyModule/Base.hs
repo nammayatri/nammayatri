@@ -1352,6 +1352,11 @@ markLegStatus mbStatus trackingStatus journeyLeg mbSubLegOrder = do
   let finalStatus = trackingStatus <|> castJourneyLegStatusToTrackingStatus mbStatus
   whenJust finalStatus $ \status -> do
     JMStateUtils.setJourneyLegTrackingStatus journeyLeg mbSubLegOrder status
+
+    -- TODO :: UI is sending subLegOrder as 0 for Taxi and Walk leg but on Backend subLegOrder starts from 1 always in All modes for consistency, but to handle current UI even if subLegOrder is coming as 0 we are updating with 1
+    whenJust mbSubLegOrder $ \subLegOrder -> do
+      when (subLegOrder == 0) $ do
+        JMStateUtils.setJourneyLegTrackingStatus journeyLeg (Just 1) status
   where
     castJourneyLegStatusToTrackingStatus :: Maybe JL.JourneyLegStatus -> Maybe JMState.TrackingStatus
     castJourneyLegStatusToTrackingStatus = \case

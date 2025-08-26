@@ -127,7 +127,9 @@ type ConfirmFlow m r c =
     HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig],
     Redis.HedisFlow m r,
     ServiceFlow m r,
-    HasField "isMetroTestTransaction" r Bool
+    HasField "isMetroTestTransaction" r Bool,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    m ~ Kernel.Types.Flow.FlowR AppEnv
   )
 
 type CancelFlow m r c =

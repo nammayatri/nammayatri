@@ -19,7 +19,6 @@ import Domain.Types.BookingStatus
 import qualified Domain.Types.CancellationReason as SCR
 import qualified Domain.Types.Common as DTrip
 import qualified Domain.Types.Estimate as DEstimate
-import qualified Domain.Types.EstimateStatus as DEstimate
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as DPerson
 import Domain.Types.ServiceTierType ()
@@ -124,22 +123,27 @@ instance JT.JourneyLeg TaxiLegRequest m where
       mbEstimate <- maybe (pure Nothing) QEstimate.findById req.estimateId
       case mbEstimate of
         Just estimate -> do
-          when (estimate.status == DEstimate.NEW) $ do
-            let selectReq =
-                  DSelect.DSelectReq
-                    { customerExtraFee = Nothing,
-                      isPetRide = Nothing,
-                      customerExtraFeeWithCurrency = Nothing,
-                      autoAssignEnabled = True,
-                      autoAssignEnabledV2 = Just True,
-                      paymentMethodId = Nothing,
-                      otherSelectedEstimates = Nothing,
-                      isAdvancedBookingEnabled = Nothing,
-                      deliveryDetails = Nothing,
-                      disabilityDisable = Nothing,
-                      preferSafetyPlus = Nothing
-                    }
-            void $ DSelect.select2' (req.personId, req.merchantId) estimate.id selectReq
+          try @_ @SomeException (cancelSearchUtil (req.personId, req.merchantId) estimate.id)
+            >>= \case
+              Left err -> do
+                logTagInfo "Failed to cancel" $ show err
+                pure ()
+              Right _ -> pure ()
+          let selectReq =
+                DSelect.DSelectReq
+                  { customerExtraFee = Nothing,
+                    isPetRide = Nothing,
+                    customerExtraFeeWithCurrency = Nothing,
+                    autoAssignEnabled = True,
+                    autoAssignEnabledV2 = Just True,
+                    paymentMethodId = Nothing,
+                    otherSelectedEstimates = Nothing,
+                    isAdvancedBookingEnabled = Nothing,
+                    deliveryDetails = Nothing,
+                    disabilityDisable = Nothing,
+                    preferSafetyPlus = Nothing
+                  }
+          void $ DSelect.select2' (req.personId, req.merchantId) estimate.id selectReq
         Nothing -> CFFM.setConfirmOnceGetFare req.searchId
   confirm _ = throwError (InternalError "Not Supported")
 
