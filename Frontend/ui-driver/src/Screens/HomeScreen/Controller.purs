@@ -489,6 +489,7 @@ data ScreenOutput =   Refresh ST.HomeScreenState
                     | OpenPaymentPage ST.HomeScreenState
                     | AadhaarVerificationFlow ST.HomeScreenState
                     | SubscriptionScreen ST.HomeScreenState
+                    | GoToRideRequestScreen ST.HomeScreenState
                     | GoToVehicleDetailScreen ST.HomeScreenState
                     | GoToRideDetailsScreen ST.HomeScreenState
                     | PostRideFeedback ST.HomeScreenState
@@ -561,6 +562,8 @@ data Action = NoAction
             | RemoveChat
             | UpdateInChat
             | HelpAndSupportScreen
+            | SafetyPillClicked
+            | SafetyPillBottomSheetAC PopUpModal.Action
             | SwitchDriverStatus ST.DriverStatus HSD.DriverStatusChangeEntry
             | PopUpModalSilentAction PopUpModal.Action
             | LinkAadhaarPopupAC PopUpModal.Action
@@ -573,6 +576,7 @@ data Action = NoAction
             | RequestInfoCardAction RequestInfoCard.Action
             | ScrollToBottom
             | GoToButtonClickAC PrimaryButtonController.Action
+            | GoToPillButtonClick 
             | GoToLocationModalAC GoToLocationModal.Action
             | CancelBackAC PrimaryButtonController.Action
             | ClickInfo
@@ -732,12 +736,10 @@ eval (FavPopUpAction PopUpModal.OnButton2Click) state = continueWithCmd state[pu
 
 eval (FavPopUpAction PopUpModal.DismissPopup) state = continue state{data{favPopUp{visibility = false, title = "", message = ""}}}
 
-eval (GoToButtonClickAC PrimaryButtonController.OnClick) state = do
-  pure $ toggleBtnLoader "GotoClick" false
-  if state.data.driverGotoState.isGotoEnabled then continue state { data { driverGotoState { confirmGotoCancel = true } }}
+eval GoToPillButtonClick state = do
+  if state.data.driverGotoState.isGotoEnabled then continue state { data { driverGotoState { confirmGotoCancel = true } }} 
   else if state.data.driverGotoState.gotoCount <=0 then continue state
   else do
-    pure $ toggleBtnLoader "GotoClick" true
     updateAndExit state{ data { driverGotoState { savedLocationsArray = []}}} $ LoadGotoLocations state{ data { driverGotoState { savedLocationsArray = []}}}
 
 eval (ProfileDataAPIResponseAction res) state = do
@@ -1097,6 +1099,7 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state = do
       _ <- pure $ metaLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
       let _ = unsafePerformEffect $ firebaseLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
       exit $ SubscriptionScreen state
+    "Trips" -> exit $ GoToRideRequestScreen state
     _ -> continue state
 
 eval (OfferPopupAC PopUpModal.OnButton1Click) state = do
@@ -1178,9 +1181,9 @@ eval (InAppKeyboardModalAction (InAppKeyboardModal.OnSelection key index)) state
     focusIndex = length rideOtp
     newState = state { props = state.props { rideOtp = rideOtp, enterOtpFocusIndex = focusIndex ,otpIncorrect = false} }
     exitAction = if state.props.endRideOtpModal then EndRide newState else if state.props.zoneRideBooking then StartZoneRide newState else StartRide newState
-  if ((length rideOtp) >= 4  && (not state.props.otpAttemptsExceeded)) then
-      if state.data.activeRide.tripType == ST.Rental then
-        continue $ rentalNewState state
+  if ((length rideOtp) >= 4  && (not state.props.otpAttemptsExceeded)) then 
+      if state.data.activeRide.tripType == ST.Rental then 
+        updateAndExit (rentalNewState state) exitAction
       else updateAndExit newState exitAction
   else continue newState
   where
@@ -1776,6 +1779,31 @@ eval ZoneOtpAction state = do
   continue state { props = state.props { enterOtpModal = true, rideOtp = "", enterOtpFocusIndex = 0, otpIncorrect = false,zoneRideBooking = true } }
 
 eval HelpAndSupportScreen state = exit $ GoToHelpAndSupportScreen state
+
+eval SafetyPillClicked state = continueWithCmd state { props { showSafetyPillBottomSheet = true } } [ do
+    void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
+      (API.GetCitySafetyNumbersResp resp) <- Remote.getCitySafetyNumbersBT ""
+      let _ = spy "printing resp -> " resp
+      pure unit
+    pure NoAction -- continue state { props { showSafetyPillBottomSheet = true } }
+  ]
+
+-- eval SafetyPillClicked state = continue state { props { showSafetyPillBottomSheet = true } }
+
+eval (SafetyPillBottomSheetAC PopUpModal.OnImageClick) state = continue state { props { showSafetyPillBottomSheet = false } }
+
+eval (SafetyPillBottomSheetAC PopUpModal.DismissPopup) state = continue state { props { showSafetyPillBottomSheet = false } }
+
+eval (SafetyPillBottomSheetAC (PopUpModal.ListViewItemAction index )) state = do
+  let helpAndSupportConfig = RC.getHelpAndSupportConfig (getValueToLocalStore DRIVER_LOCATION)
+      numberToDial = 
+        case index of
+          0 -> helpAndSupportConfig.policeNumber
+          1 -> helpAndSupportConfig.ambulanceNumber
+          2 -> helpAndSupportConfig.supportNumber
+          _ -> ""
+  void $ pure $ showDialer numberToDial false
+  continue state { props { showSafetyPillBottomSheet = false } }
 
 eval (BannerCarousal (BannerCarousel.OnClick index)) state =
   continueWithCmd state [do

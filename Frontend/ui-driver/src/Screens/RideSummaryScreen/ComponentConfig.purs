@@ -297,9 +297,9 @@ cancelConfirmationConfig state = let
       text = (getString LT.GO_BACK)
     , margin = MarginLeft 12
     , width = V $ (((EHC.screenWidth unit)-92)/2)
-    , color = Color.yellow900
-    , strokeColor = Color.black900
-    , background = Color.black900
+    , color = state.data.config.primaryTextColor
+    , strokeColor = state.data.config.primaryButtonBackground
+    , background = state.data.config.primaryButtonBackground
     , enableRipple = true
     },
     backgroundClickable = false,
@@ -345,9 +345,9 @@ errorPopUpConfig state = let
       text = (getString LT.GOT_IT)
     , margin = MarginLeft 12
     , width = V $ (((EHC.screenWidth unit)-92)/2)
-    , color = Color.yellow900
-    , strokeColor = Color.black900
-    , background = Color.black900
+    , color = state.data.config.primaryTextColor
+    , strokeColor = state.data.config.primaryButtonBackground
+    , background = state.data.config.primaryButtonBackground
     , enableRipple = true
     },
     backgroundClickable = false,

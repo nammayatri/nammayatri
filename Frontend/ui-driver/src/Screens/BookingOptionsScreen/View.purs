@@ -122,7 +122,7 @@ acCheckForDriversView push state =
 
     (API.AirConditionedTier airConditionedData) = MB.fromMaybe defaultAirConditionedData state.data.airConditioned
 
-    backgroundColor = if airConditionedData.isWorking then Color.blue800 else Color.black600
+    backgroundColor = if airConditionedData.isWorking then Color.blue900 else EHU.getColorWithOpacity 12 Color.blue900
 
     align = if airConditionedData.isWorking then RIGHT else LEFT
 
@@ -180,7 +180,7 @@ acCheckForDriversView push state =
               , height $ V 22
               , cornerRadius 100.0
               , background backgroundColor
-              , stroke $ "1," <> backgroundColor
+              , stroke $ "1," <> Color.blue900
               -- , clickable canUpgradeOrDowngradeVariant -- TODO : enable when backend sends correct usageRestrictionType
               , onClick push $ const $ UpdateACAvailability airConditionedData.isWorking
               , gravity CENTER_VERTICAL
@@ -193,7 +193,7 @@ acCheckForDriversView push state =
                   [ linearLayout
                       [ width $ V 16
                       , height $ V 16
-                      , background Color.white900
+                      , background $ if airConditionedData.isWorking then Color.white900 else Color.blue900
                       , cornerRadius 100.0
                       , gravity CENTER_VERTICAL
                       , margin (MarginHorizontal 2 2)
@@ -565,7 +565,7 @@ petRidesPreferenceView push state totalPreferencesCount petRidesFeatureConfig =
 toggleView :: forall w. (Action -> Effect Unit) -> Boolean -> Boolean -> ST.RidePreference -> Action -> PrestoDOM (Effect Unit) w
 toggleView push enabled default service action =
   let
-    backgroundColor = if enabled && not service.isUsageRestricted then Color.blue800 else Color.black600
+    backgroundColor = if enabled && not service.isUsageRestricted then Color.blue900 else EHU.getColorWithOpacity 12 Color.blue900
 
     align = if enabled && not service.isUsageRestricted then RIGHT else LEFT
   in
@@ -575,7 +575,7 @@ toggleView push enabled default service action =
       , cornerRadius 100.0
       , alpha if default then 0.5 else 1.0
       , background backgroundColor
-      , stroke $ "1," <> backgroundColor
+      , stroke $ "1," <> Color.blue900
       , gravity CENTER_VERTICAL
       , onClick push $ const $ action
       , clickable $ not default
@@ -588,7 +588,7 @@ toggleView push enabled default service action =
           [ linearLayout
               [ width $ V 16
               , height $ V 16
-              , background Color.white900
+              , background $ if enabled && not service.isUsageRestricted then Color.white900 else Color.blue900
               , cornerRadius 100.0
               , gravity CENTER_VERTICAL
               , margin (MarginHorizontal 2 2)
@@ -764,7 +764,7 @@ rateCardBannerView push state =
   , gravity CENTER
   , cornerRadius 8.0
   , rippleColor Color.rippleShade
-  , gradient (Linear 90.0 [Colors.darkGradientBlue, Color.lightGradientBlue])
+  , gradient (Linear 90.0 [EHU.getColorWithOpacity 20 Colors.blue900, Color.blue600])
   , onClick push $ const $ RateCardBannerClick
   , visibility $ MP.boolToVisibility $ state.props.rateCardLoaded && showRateCard
   ][  relativeLayout

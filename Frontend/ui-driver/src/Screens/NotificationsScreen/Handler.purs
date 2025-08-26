@@ -63,3 +63,6 @@ notifications = do
       modifyScreenState $ NotificationsScreenStateType (\notificationScreen → NotificationsScreenData.initData)
       App.BackT $ App.NoBack <$> (pure $ CHECK_RIDE_FLOW_STATUS)
     SubscriptionScreen updatedState -> App.BackT $ App.NoBack <$> (pure $ NOTIFICATION_SCREEN_NAV GoToSubscription)
+    GoToRideRequestScreen updatedState -> do
+      modifyScreenState $ NotificationsScreenStateType (\notificationScreen → updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ NOTIFICATION_SCREEN_NAV GoToRideRequest)

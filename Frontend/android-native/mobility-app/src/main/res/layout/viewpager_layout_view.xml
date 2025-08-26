@@ -10,6 +10,7 @@
         android:layout_height="match_parent"
         android:layout_marginTop="24dp"
         android:elevation="1dp"
+        android:gravity="center"
         android:orientation="vertical">
 
         <FrameLayout
@@ -362,6 +363,7 @@
                             app:shimmer_auto_start="false"
                             app:shimmer_base_alpha="1.0"
                             app:shimmer_base_color="#FFFFFF"
+                            android:visibility="gone"
                             app:shimmer_highlight_alpha="0.6"
                             app:shimmer_highlight_color="#FFFFFF">
 
@@ -395,8 +397,83 @@
                                     android:visibility="invisible" />
                             </LinearLayout>
                         </com.facebook.shimmer.ShimmerFrameLayout>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:orientation="vertical"
+                            android:paddingHorizontal="10dp"
+                            android:paddingBottom="10dp">
+
+                            <TextView
+                                android:id="@+id/variant1"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/plus_jakartasans_regular"
+                                android:layout_marginTop="8dp"
+                                android:lineHeight="18dp"
+                                android:text="Ac"
+                                android:textColor="@color/Black800"
+                                android:textSize="14dp" />
+
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:layout_gravity="center">
+
+                                <TextView
+                                    android:id="@+id/indicatorText1"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:fontFamily="@font/plus_jakartasans_semibold"
+                                    android:lineHeight="28dp"
+                                    android:layout_marginVertical="10dp"
+                                    android:text="₹120"
+                                    android:textColor="@color/Black800"
+                                    android:textSize="20dp" />
+                                <ImageView
+                                    android:layout_width="16dp"
+                                    android:layout_height="16dp"
+                                    android:src="@drawable/ic_tip_tag"
+                                    android:layout_gravity="center"
+                                    android:visibility="gone"
+                                    android:layout_marginLeft="4dp"
+                                    android:id="@+id/indicator1Image"
+                                    />
+
+                            </LinearLayout>
+
+                            <com.google.android.material.progressindicator.LinearProgressIndicator
+                                android:id="@+id/progress_indicator_1"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginHorizontal="5dp"
+                                android:layout_marginBottom="5dp"
+                                android:indeterminate="false"
+                                android:progress="100"
+                                android:theme="@style/MaterialTheme"
+                                app:indicatorColor="@color/defaultRRThemeColor"
+                                app:trackColor="@color/rrProgressTrackerColor"
+                                app:trackCornerRadius="20dp"
+                                app:trackThickness="7dp" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="1dp"
+                                android:ellipsize="end"
+                                android:gravity="center"
+                                android:maxLines="1"
+                                android:paddingHorizontal="6dp"
+                                android:paddingVertical="2dp"
+                                android:text="₹12000"
+                                android:textColor="@color/white"
+                                android:textSize="10sp"
+                                android:visibility="invisible" />
+
+                        </LinearLayout>
                     </LinearLayout>
-                </LinearLayout>
 
                 <LinearLayout
                     android:layout_width="wrap_content"
@@ -419,6 +496,7 @@
                             app:shimmer_base_alpha="1.0"
                             app:shimmer_base_color="#FFFFFF"
                             app:shimmer_highlight_alpha="0.6"
+                            android:visibility="gone"
                             app:shimmer_highlight_color="#FFFFFF">
 
                             <LinearLayout
@@ -435,9 +513,7 @@
                                     android:layout_marginRight="4dp"
                                     android:src="@drawable/ic_line"
                                     android:visibility="gone" />
-
                                 <TextView
-                                    android:id="@+id/tip_banner_view_1"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:ellipsize="end"
@@ -451,8 +527,83 @@
                                     android:visibility="invisible" />
                             </LinearLayout>
                         </com.facebook.shimmer.ShimmerFrameLayout>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:orientation="vertical"
+                            android:paddingHorizontal="10dp"
+                            android:paddingBottom="10dp">
+
+                            <TextView
+                                android:id="@+id/variant2"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/plus_jakartasans_regular"
+                                android:lineHeight="28dp"
+                                android:text="Ac"
+                                android:layout_marginTop="8dp"
+                                android:textColor="@color/Black800"
+                                android:textSize="14dp" />
+
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:layout_gravity="center">
+
+                                <TextView
+                                    android:id="@+id/indicatorText2"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:fontFamily="@font/plus_jakartasans_semibold"
+                                    android:lineHeight="28dp"
+                                    android:layout_marginVertical="10dp"
+                                    android:text="₹40"
+                                    android:textColor="@color/Black800"
+                                    android:textSize="20dp" />
+
+                                <ImageView
+                                    android:id="@+id/indicator2Image"
+                                    android:layout_width="16dp"
+                                    android:layout_height="16dp"
+                                    android:layout_gravity="center"
+                                    android:layout_marginLeft="4dp"
+                                    android:src="@drawable/ic_tip_tag"
+                                    android:visibility="gone" />
+                            </LinearLayout>
+
+                            <com.google.android.material.progressindicator.LinearProgressIndicator
+                                android:id="@+id/progress_indicator_2"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginHorizontal="5dp"
+                                android:layout_marginBottom="5dp"
+                                android:indeterminate="false"
+                                android:progress="100"
+                                android:theme="@style/MaterialTheme"
+                                app:indicatorColor="@color/defaultRRThemeColor"
+                                app:trackColor="@color/rrProgressTrackerColor"
+                                app:trackCornerRadius="20dp"
+                                app:trackThickness="7dp" />
+
+                            <TextView
+                                android:id="@+id/tip_banner_view_1"
+                                android:layout_width="wrap_content"
+                                android:layout_height="1dp"
+                                android:ellipsize="end"
+                                android:gravity="center"
+                                android:maxLines="1"
+                                android:paddingHorizontal="6dp"
+                                android:paddingVertical="2dp"
+                                android:text="₹12000"
+                                android:textColor="@color/white"
+                                android:textSize="10sp"
+                                android:visibility="invisible" />
+
+                        </LinearLayout>
                     </LinearLayout>
-                </LinearLayout>
 
                 <LinearLayout
                     android:layout_width="wrap_content"
@@ -475,6 +626,7 @@
                             app:shimmer_base_alpha="1.0"
                             app:shimmer_base_color="#FFFFFF"
                             app:shimmer_highlight_alpha="0.6"
+                            android:visibility="gone"
                             app:shimmer_highlight_color="#FFFFFF">
 
                             <LinearLayout
@@ -572,109 +724,79 @@
                     android:layout_weight="1.0"
                     android:gravity="center">
 
-                    <LinearLayout
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:background="@drawable/round_corner_transparent"
-                        android:clipToOutline="true"
-                        app:cardCornerRadius="15dp">
-
-                        <com.facebook.shimmer.ShimmerFrameLayout
-                            android:id="@+id/shimmer_view_container_4"
+                        <LinearLayout
                             android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            app:shimmer_auto_start="false"
-                            app:shimmer_base_alpha="1.0"
-                            app:shimmer_base_color="#FFFFFF"
-                            app:shimmer_highlight_alpha="0.6"
-                            app:shimmer_highlight_color="#FFFFFF">
+                            android:layout_height="match_parent"
+                            android:gravity="center"
+                            android:orientation="vertical"
+                            android:paddingHorizontal="10dp"
+                            android:paddingBottom="10dp">
+
+                            <TextView
+                                android:id="@+id/variant3"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="@font/plus_jakartasans_regular"
+                                android:lineHeight="28dp"
+                                android:text="Ac"
+                                android:layout_marginTop="8dp"
+                                android:textColor="@color/Black800"
+                                android:textSize="14dp" />
+
 
                             <LinearLayout
-                                android:id="@+id/tip_indicator_4"
-                                android:layout_width="match_parent"
-                                android:layout_height="match_parent"
-                                android:gravity="center"
-                                android:orientation="horizontal">
-
-                                <ImageView
-                                    android:id="@+id/tip_banner_image_4"
-                                    android:layout_width="16dp"
-                                    android:layout_height="16dp"
-                                    android:layout_marginRight="4dp"
-                                    android:src="@drawable/ic_line"
-                                    android:visibility="gone" />
-
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:layout_gravity="center">
                                 <TextView
-                                    android:id="@+id/tip_banner_view_4"
+                                    android:id="@+id/indicatorText3"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:ellipsize="end"
-                                    android:gravity="center"
-                                    android:maxLines="1"
-                                    android:paddingHorizontal="6dp"
-                                    android:paddingVertical="2dp"
-                                    android:text="Tip"
-                                    android:textColor="@color/white"
-                                    android:textSize="10sp"
-                                    android:visibility="invisible" />
-                            </LinearLayout>
-                        </com.facebook.shimmer.ShimmerFrameLayout>
-                    </LinearLayout>
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1.0"
-                    android:gravity="center">
-
-                    <LinearLayout
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:background="@drawable/round_corner_transparent"
-                        android:clipToOutline="true"
-                        app:cardCornerRadius="15dp">
-
-                        <com.facebook.shimmer.ShimmerFrameLayout
-                            android:id="@+id/shimmer_view_container_5"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            app:shimmer_auto_start="false"
-                            app:shimmer_base_alpha="1.0"
-                            app:shimmer_base_color="#FFFFFF"
-                            app:shimmer_highlight_alpha="0.6"
-                            app:shimmer_highlight_color="#FFFFFF">
-
-                            <LinearLayout
-                                android:id="@+id/tip_indicator_5"
-                                android:layout_width="match_parent"
-                                android:layout_height="match_parent"
-                                android:gravity="center"
-                                android:orientation="horizontal">
+                                    android:fontFamily="@font/plus_jakartasans_semibold"
+                                    android:lineHeight="28dp"
+                                    android:layout_marginVertical="10dp"
+                                    android:text="₹160"
+                                    android:textColor="@color/Black800"
+                                    android:textSize="20dp" />
 
                                 <ImageView
-                                    android:id="@+id/tip_banner_image_5"
                                     android:layout_width="16dp"
                                     android:layout_height="16dp"
-                                    android:layout_marginRight="4dp"
-                                    android:src="@drawable/ic_line"
-                                    android:visibility="gone" />
-
-                                <TextView
-                                    android:id="@+id/tip_banner_view_5"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:ellipsize="end"
-                                    android:gravity="center"
-                                    android:maxLines="1"
-                                    android:paddingHorizontal="6dp"
-                                    android:paddingVertical="2dp"
-                                    android:text="Tip"
-                                    android:textColor="@color/white"
-                                    android:textSize="10sp"
-                                    android:visibility="invisible" />
+                                    android:src="@drawable/ic_tip_tag"
+                                    android:layout_gravity="center"
+                                    android:layout_marginLeft="4dp"
+                                    android:visibility="gone"
+                                    android:id="@+id/indicator3Image"
+                                    />
                             </LinearLayout>
-                        </com.facebook.shimmer.ShimmerFrameLayout>
+
+                            <com.google.android.material.progressindicator.LinearProgressIndicator
+                                android:id="@+id/progress_indicator_3"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginHorizontal="5dp"
+                                android:layout_marginBottom="5dp"
+                                android:indeterminate="false"
+                                android:progress="100"
+                                android:theme="@style/MaterialTheme"
+                                app:indicatorColor="@color/defaultRRThemeColor"
+                                app:trackColor="@color/rrProgressTrackerColor"
+                                app:trackCornerRadius="20dp"
+                                app:trackThickness="7dp" />
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="1dp"
+                                android:ellipsize="end"
+                                android:gravity="center"
+                                android:maxLines="1"
+                                android:paddingHorizontal="6dp"
+                                android:paddingVertical="2dp"
+                                android:text="₹12000"
+                                android:textColor="@color/white"
+                                android:textSize="10sp"
+                                android:visibility="invisible" />
+                        </LinearLayout>
                     </LinearLayout>
                 </LinearLayout>
             </LinearLayout>

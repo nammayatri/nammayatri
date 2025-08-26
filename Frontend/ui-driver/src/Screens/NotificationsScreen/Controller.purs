@@ -88,6 +88,7 @@ data ScreenOutput
   | GoToCurrentRideFlow NotificationsScreenState
   | SubscriptionScreen NotificationsScreenState
   | EarningsScreen NotificationsScreenState
+  | GoToRideRequestScreen NotificationsScreenState
 
 data Action
   = OnFadeComplete String
@@ -297,6 +298,9 @@ eval (BottomNavBarAction (BottomNavBar.OnNavigate item)) state =
       void $ pure $ metaLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
       let _ = unsafePerformEffect $ firebaseLogEvent if driverSubscribed then "ny_driver_myplan_option_clicked" else "ny_driver_plan_option_clicked"
       exit $ SubscriptionScreen state
+    "Trips" -> do
+      void $ pure $ setValueToLocalNativeStore ALERT_RECEIVED "false"
+      exit $ GoToRideRequestScreen state
     _ -> continue state
 
 eval _ state = update state

@@ -57,7 +57,7 @@ import Data.String.CodeUnits (fromCharArray, toCharArray, splitAt)
 import Data.Time.Duration (Milliseconds(..))
 import Data.Traversable (traverse, for_)
 import Data.Tuple (Tuple(..), fst, snd)
-import DecodeUtil (stringifyJSON, removeFromWindow, setInWindow)
+import DecodeUtil
 import Domain.Payments (APIPaymentStatus(..)) as PS
 import Domain.Payments (PaymentStatus(..))
 import Effect (Effect)
@@ -131,17 +131,19 @@ import Screens.SubscriptionScreen.Transformer (alternatePlansTransformer)
 import Screens.Types (AadhaarStage(..), ActiveRide, AllocationData, AutoPayStatus(..), DriverStatus(..), HomeScreenStage(..), HomeScreenState, UpdateRouteSrcDestConfig(..), KeyboardModalType(..), Location, PlanCardConfig, PromoConfig, ReferralType(..), StageStatus(..), SubscribePopupType(..), SubscriptionBannerType(..), SubscriptionPopupType(..), SubscriptionSubview(..), UpdatePopupType(..), ChooseCityScreenStage(..), NotificationBody)
 import Screens.Types as ST
 import Screens.UploadDrivingLicenseScreen.ScreenData (initData) as UploadDrivingLicenseScreenData
-import Services.API (AddDestRes(..), DriverInsuranceResp(..), LocationAddress(..), AlternateNumberResendOTPResp(..), Category(Category), CreateOrderRes(..), CurrentDateAndTimeRes(..), DriverActiveInactiveResp(..),  DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GenerateAadhaarOTPResp(..), GetCategoriesRes(GetCategoriesRes), DriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPaymentHistoryResp(..), GetPaymentHistoryResp(..), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), Option(Option), OrderStatusRes(..), OrganizationInfo(..), PaymentDetailsEntity(..), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes),  RemoveAlternateNumberRequest(..), ResendOTPResp(..), RidesInfo(..), Route(..),  Status(..), SubscribePlanResp(..), TriggerOTPResp(..), UpdateDriverInfoReq(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyAadhaarOTPResp(..), VerifyTokenResp(..), GenerateReferralCodeReq(..), GenerateReferralCodeRes(..), FeeType(..), ClearDuesResp(..), HistoryEntryDetailsEntityV2Resp(..), DriverProfileSummaryRes(..), DummyRideRequestReq(..), BookingTypes(..), UploadOdometerImageResp(UploadOdometerImageResp), GetRidesSummaryListResp(..), PayoutVpaStatus(..), ScheduledBookingListResponse (..), DriverReachedReq(..), ServiceTierType(..), GetMeterPriceResp(..))
+import Services.API (AddDestRes(..), DriverInsuranceResp(..), LocationAddress(..), AlternateNumberResendOTPResp(..), Category(Category), CreateOrderRes(..), CurrentDateAndTimeRes(..), DriverActiveInactiveResp(..),  DriverAlternateNumberResp(..), DriverArrivedReq(..), DriverProfileStatsReq(..), DriverProfileStatsResp(..), DriverRegistrationStatusReq(..), DriverRegistrationStatusResp(..), GenerateAadhaarOTPResp(..), GetCategoriesRes(GetCategoriesRes), DriverInfoReq(..), GetDriverInfoResp(..), GetOptionsRes(GetOptionsRes), GetPaymentHistoryResp(..), GetPaymentHistoryResp(..), GetPerformanceReq(..), GetPerformanceRes(..), GetRidesHistoryResp(..), GetRouteResp(..), IssueInfoRes(IssueInfoRes), LogOutReq(..), Option(Option), OrderStatusRes(..), OrganizationInfo(..), PaymentDetailsEntity(..), PostIssueReq(PostIssueReq), PostIssueRes(PostIssueRes),  RemoveAlternateNumberRequest(..), ResendOTPResp(..), RidesInfo(..), Route(..),  Status(..), SubscribePlanResp(..), TriggerOTPResp(..), UpdateDriverInfoReq(..), UpdateDriverInfoResp(..), ValidateImageReq(..), ValidateImageRes(..), Vehicle(..), VerifyAadhaarOTPResp(..), VerifyTokenResp(..), GenerateReferralCodeReq(..), GenerateReferralCodeRes(..), FeeType(..), ClearDuesResp(..), HistoryEntryDetailsEntityV2Resp(..), DriverProfileSummaryRes(..), DummyRideRequestReq(..), BookingTypes(..), UploadOdometerImageResp(UploadOdometerImageResp), GetRidesSummaryListResp(..), PayoutVpaStatus(..), ScheduledBookingListResponse (..), DriverReachedReq(..), ServiceTierType(..), GetAllHubsResp(..), GetMeterPriceResp(..))
 import Services.API as API
 import Services.Accessor (_lat, _lon, _id, _orderId, _moduleId, _languagesAvailableForQuiz , _languagesAvailableForVideos, _deepLinkJSON, _payload, _show_splash)
 import Services.Backend (driverRegistrationStatusBT, dummyVehicleObject, makeDriverDLReq, makeDriverRCReq, makeGetRouteReq, makeLinkReferralCodeReq, makeOfferRideReq, makeReferDriverReq, makeResendAlternateNumberOtpRequest, makeTriggerOTPReq, makeValidateAlternateNumberRequest, makeValidateImageReq, makeVerifyAlternateNumberOtpRequest, makeVerifyOTPReq, mkUpdateDriverInfoReq, walkCoordinate, walkCoordinates)
 import Services.Backend as Remote
+import Screens.OperationHubScreen.ScreenData
 import Engineering.Helpers.Events as Events
 import Services.Config (getBaseUrl)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, isLocalStageOn, isOnFreeTrial, setValueToLocalNativeStore, setValueToLocalStore)
 import Timers (clearTimerWithId)
-import Types.App (RIDE_SUMMARY_SCREEN_OUTPUT(..), LMS_QUIZ_SCREEN_OUTPUT(..), LMS_VIDEO_SCREEN_OUTPUT(..), REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..), RIDES_SELECTION_SCREEN_OUTPUT(..), ABOUT_US_SCREEN_OUTPUT(..), BANK_DETAILS_SCREENOUTPUT(..), ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), APPLICATION_STATUS_SCREENOUTPUT(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), CHOOSE_CITY_SCREEN_OUTPUT(..), DRIVER_RIDE_RATING_SCREEN_OUTPUT(..), ENTER_MOBILE_NUMBER_SCREEN_OUTPUT(..), ENTER_OTP_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREENOUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NO_INTERNET_SCREEN_OUTPUT(..), PERMISSIONS_SCREEN_OUTPUT(..), POPUP_SCREEN_OUTPUT(..), REGISTRATION_SCREEN_OUTPUT(..), RIDE_DETAIL_SCREENOUTPUT(..), PAYMENT_HISTORY_SCREEN_OUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenStage(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), UPLOAD_ADHAAR_CARD_SCREENOUTPUT(..), UPLOAD_DRIVER_LICENSE_SCREENOUTPUT(..), VEHICLE_DETAILS_SCREEN_OUTPUT(..), WRITE_TO_US_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUTPUT(..), BOOKING_OPTIONS_SCREEN_OUTPUT(..), ACKNOWLEDGEMENT_SCREEN_OUTPUT(..), defaultGlobalState, SUBSCRIPTION_SCREEN_OUTPUT(..), NAVIGATION_ACTIONS(..), AADHAAR_VERIFICATION_SCREEN_OUTPUT(..), ONBOARDING_SUBSCRIPTION_SCREENOUTPUT(..), APP_UPDATE_POPUP(..), DRIVE_SAVED_LOCATION_OUTPUT(..), WELCOME_SCREEN_OUTPUT(..), DRIVER_EARNINGS_SCREEN_OUTPUT(..), BENEFITS_SCREEN_OUTPUT(..), CUSTOMER_REFERRAL_TRACKER_SCREEN_OUTPUT(..), HOTSPOT_SCREEN_OUTPUT(..), SCHEDULED_RIDE_ACCEPTED_SCREEN_OUTPUT(..), UPLOAD_PARCEL_IMAGE_SCREEN_OUTPUT(..), METER_SCREEN_OUTPUT(..), DRIVER_CLAIM_REWARD_SCREEN_OUTPUT(..))
+import Types.App (RIDE_SUMMARY_SCREEN_OUTPUT(..), LMS_QUIZ_SCREEN_OUTPUT(..), LMS_VIDEO_SCREEN_OUTPUT(..), REPORT_ISSUE_CHAT_SCREEN_OUTPUT(..), RIDES_SELECTION_SCREEN_OUTPUT(..), ABOUT_US_SCREEN_OUTPUT(..), BANK_DETAILS_SCREENOUTPUT(..), ADD_VEHICLE_DETAILS_SCREENOUTPUT(..), APPLICATION_STATUS_SCREENOUTPUT(..), DRIVER_DETAILS_SCREEN_OUTPUT(..), DRIVER_PROFILE_SCREEN_OUTPUT(..), CHOOSE_CITY_SCREEN_OUTPUT(..), DRIVER_RIDE_RATING_SCREEN_OUTPUT(..), ENTER_MOBILE_NUMBER_SCREEN_OUTPUT(..), ENTER_OTP_SCREEN_OUTPUT(..), FlowBT, GlobalState(..), HELP_AND_SUPPORT_SCREEN_OUTPUT(..), HOME_SCREENOUTPUT(..), MY_RIDES_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), NO_INTERNET_SCREEN_OUTPUT(..), PERMISSIONS_SCREEN_OUTPUT(..), POPUP_SCREEN_OUTPUT(..), REGISTRATION_SCREEN_OUTPUT(..), RIDE_DETAIL_SCREENOUTPUT(..), PAYMENT_HISTORY_SCREEN_OUTPUT(..), SELECT_LANGUAGE_SCREEN_OUTPUT(..), ScreenStage(..), ScreenType(..), TRIP_DETAILS_SCREEN_OUTPUT(..), UPLOAD_ADHAAR_CARD_SCREENOUTPUT(..), UPLOAD_DRIVER_LICENSE_SCREENOUTPUT(..), VEHICLE_DETAILS_SCREEN_OUTPUT(..), WRITE_TO_US_SCREEN_OUTPUT(..), NOTIFICATIONS_SCREEN_OUTPUT(..), REFERRAL_SCREEN_OUTPUT(..), BOOKING_OPTIONS_SCREEN_OUTPUT(..), ACKNOWLEDGEMENT_SCREEN_OUTPUT(..), defaultGlobalState, SUBSCRIPTION_SCREEN_OUTPUT(..), NAVIGATION_ACTIONS(..), AADHAAR_VERIFICATION_SCREEN_OUTPUT(..), ONBOARDING_SUBSCRIPTION_SCREENOUTPUT(..), APP_UPDATE_POPUP(..), DRIVE_SAVED_LOCATION_OUTPUT(..), WELCOME_SCREEN_OUTPUT(..), DRIVER_EARNINGS_SCREEN_OUTPUT(..),DRIVER_EARNINGS_SCREEN_V2_OUTPUT(..), BENEFITS_SCREEN_OUTPUT(..), CUSTOMER_REFERRAL_TRACKER_SCREEN_OUTPUT(..), HOTSPOT_SCREEN_OUTPUT(..), SCHEDULED_RIDE_ACCEPTED_SCREEN_OUTPUT(..), UPLOAD_PARCEL_IMAGE_SCREEN_OUTPUT(..), METER_SCREEN_OUTPUT(..), DRIVER_CLAIM_REWARD_SCREEN_OUTPUT(..), REGISTRATION_SCREEN_V2_OUTPUT(..), OPERATION_HUB_SCREEN_OUTPUT(..), ONBOARDING_FAQS_SCREEN_OUTPUT(..), HELP_AND_SUPPORT_SCREEN_V2_OUTPUT(..)) 
 import Types.App as TA
+import Screens.RegistrationScreenV2.View (filterCategories)
 import Types.App (METER_RIDE_SCREEN_OUTPUT(..)) as MRSO
 import Types.ModifyScreenState (modifyScreenState, updateStage)
 import ConfigProvider
@@ -444,6 +446,7 @@ loginFlow mbEvent = do
       liftFlowBT $ logEvent logField_ "ny_driver_otp_trigger"
       latLong <- getCurrentLocation 0.0 0.0 0.0 0.0 400 false true
       TriggerOTPResp triggerOtpResp <- Remote.triggerOTPBT (makeTriggerOTPReq updateState.data.mobileNumber latLong)
+      modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber -> enterMobileNumber { props {btnLoader = false} })
       modifyScreenState $ EnterOTPScreenType (\enterOTPScreen → enterOTPScreen { data { tokenId = triggerOtpResp.authId}})
       enterOTPFlow mbEvent
 
@@ -526,6 +529,8 @@ getDriverInfoFlow event activeRideResp driverInfoResp updateShowSubscription isA
                       }
                 pure unit
               else do
+                if isJust getDriverInfoResp.operatorId then void $ pure $ setValueToLocalStore DRIVER_OPERATOR_ID (fromMaybe "" getDriverInfoResp.operatorId) else pure unit
+                if isJust getDriverInfoResp.fleetOwnerId then void $ pure $ setValueToLocalStore DRIVER_FLEET_OWNER_ID (fromMaybe "" getDriverInfoResp.fleetOwnerId) else pure unit
                 deleteValueFromLocalStore ENTERED_RC
                 if getValueToLocalStore IS_DRIVER_ENABLED == "false"
                   then do
@@ -555,7 +560,7 @@ getDriverInfoFlow event activeRideResp driverInfoResp updateShowSubscription isA
                     handleDeepLinksFlow event activeRideResp (Just getDriverInfoResp.onRide)
                   else do
                     modifyScreenState $ PermissionsScreenStateType (\permissionScreen -> permissionScreen{props{isDriverEnabled = true}})
-                    permissionsScreenFlow event activeRideResp (Just getDriverInfoResp.onRide)
+                    permissionsScreenFlow event activeRideResp (Just getDriverInfoResp.onRide) 
             else do
               if (HU.isParentView FunctionCall) then do
                 void $ pure $ runFn3 JB.emitJOSEvent "java" "onEvent" $ encode
@@ -581,6 +586,7 @@ getDriverInfoFlow event activeRideResp driverInfoResp updateShowSubscription isA
                 else do
                   setValueToLocalStore IS_DRIVER_VERIFIED "false"
                   modifyScreenState $ RegisterScreenStateType (\registerationScreen -> registerationScreen{data{phoneNumber = fromMaybe "" getDriverInfoResp.mobileNumber}} )
+          if isJust getDriverInfoResp.operatorReferralCode then void $ pure $ setValueToLocalStore APPLIED_REFERRAL_CODE (fromMaybe "" getDriverInfoResp.operatorReferralCode) else pure unit
           onBoardingFlow
         Left errorPayload -> do
           if ((decodeErrorCode errorPayload.response.errorMessage) == "VEHICLE_NOT_FOUND" || (decodeErrorCode errorPayload.response.errorMessage) == "DRIVER_INFORMATON_NOT_FOUND")
@@ -911,13 +917,20 @@ getSdkTokenFromCache = do
 
 onBoardingFlow :: FlowBT String Unit
 onBoardingFlow = do
+  config <- getAppConfigFlowBT Constants.appConfig
+  case config.feature.enableV2Registration of
+    true -> onBoardingFlowV2 ""
+    _ -> onBoardingFlowV1 ""
+
+onBoardingFlowV1 :: String -> FlowBT String Unit
+onBoardingFlowV1 _ = do
   token <- getSdkTokenFromCache
   logField_ <- lift $ lift $ getLogFields
   void $ pure $ hideKeyboardOnNavigation true
   config <- getAppConfigFlowBT Constants.appConfig
   setValueToLocalStore LOGS_TRACKING "true"
   GlobalState allState <- getState
-  DriverRegistrationStatusResp driverRegistrationResp <- driverRegistrationStatusBT $ DriverRegistrationStatusReq true
+  DriverRegistrationStatusResp driverRegistrationResp <- driverRegistrationStatusBT $ DriverRegistrationStatusReq true false
   let cityConfig = getCityConfig config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
       registrationState = allState.registrationScreen
       driverEnabled = fromMaybe false driverRegistrationResp.enabled
@@ -931,7 +944,7 @@ onBoardingFlow = do
       if getValueToLocalStore REFERRAL_CODE_ADDED /= "true" && isJust referralCode
         then do
           case referralCode of
-            Just code -> activateReferralCode registrationState code
+            Just code -> activateReferralCode registrationState code Nothing
             Nothing   -> pure unit
         else pure unit
     else pure unit
@@ -939,7 +952,7 @@ onBoardingFlow = do
                         else if driverRegistrationResp.dlVerificationStatus == "LIMIT_EXCEED" then Just "DL"
                         else Nothing
       referralCodeAdded = getValueToLocalStore REFERRAL_CODE_ADDED == "true"
-      uiCurrentCategory = if manageVehicle then registrationState.props.manageVehicleCategory else  RC.decodeVehicleType $ getValueToLocalStore VEHICLE_CATEGORY
+      manageVehicle = registrationState.props.manageVehicle
       registerationStepsCabs = maybe [] (\(API.OnboardingDocsRes mbDoc) -> mkRegSteps $ fromMaybe [] mbDoc.cabs) updatedGs.globalProps.onBoardingDocs
       registerationStepsAutos = maybe [] (\(API.OnboardingDocsRes mbDoc) -> mkRegSteps $ fromMaybe [] mbDoc.autos) updatedGs.globalProps.onBoardingDocs
       registerationStepsBike = maybe [] (\(API.OnboardingDocsRes mbDoc) -> mkRegSteps $ fromMaybe [] mbDoc.bikes) updatedGs.globalProps.onBoardingDocs
@@ -948,6 +961,16 @@ onBoardingFlow = do
       registerationStepsBus = maybe [] (\(API.OnboardingDocsRes mbDoc) -> mkRegSteps $ fromMaybe [] mbDoc.bus) updatedGs.globalProps.onBoardingDocs
       checkAvailability field = maybe false (\(API.OnboardingDocsRes mbDoc) -> isJust (field mbDoc)) updatedGs.globalProps.onBoardingDocs
       variantList = (if checkAvailability _.bikes then [ST.BikeCategory] else []) <> (if checkAvailability _.autos then [ST.AutoCategory] else []) <> (if checkAvailability _.cabs then [ST.CarCategory] else []) <> (if checkAvailability _.ambulances then [ST.AmbulanceCategory] else []) <> (if checkAvailability _.trucks then [ST.TruckCategory] else []) <> (if checkAvailability _.bus then [ST.BusCategory] else [])
+      uiCurrentCategory = if DA.length variantList == 1 then do 
+                            case variantList DA.!! 0 of
+                              Just vehicleType | manageVehicle -> Just vehicleType
+                              Just vehicleType -> do
+                                void $ pure $ setValueToLocalStore VEHICLE_CATEGORY $ show vehicleType
+                                void $ pure $ setValueToLocalStore SHOW_SUBSCRIPTIONS $ if DA.elem (show vehicleType) registrationState.data.cityConfig.variantSubscriptionConfig.variantList then "true" else "false"
+                                Just vehicleType
+                              _ -> Nothing
+                          else if manageVehicle then registrationState.props.manageVehicleCategory 
+                          else RC.decodeVehicleType $ getValueToLocalStore VEHICLE_CATEGORY
       mismatchLogic vehicleDocument = (uiCurrentCategory == (RC.transformVehicleType $ Just vehicleDocument.userSelectedVehicleCategory)) && isJust vehicleDocument.verifiedVehicleCategory && (Just vehicleDocument.userSelectedVehicleCategory /= vehicleDocument.verifiedVehicleCategory)
       vehicleTypeMismatch = not registrationState.props.manageVehicle && any (\(API.VehicleDocumentItem item) -> mismatchLogic item) driverRegistrationResp.vehicleDocuments
       documentStatusList = mkStatusList (DriverRegistrationStatusResp driverRegistrationResp)
@@ -959,10 +982,9 @@ onBoardingFlow = do
       enteredRC = if localStoreRC == "__failed" then Nothing else Just localStoreRC
       rcNo = if manageVehicle then enteredRC else onboardingRC
       filteredVehicleDocs = if manageVehicle then filter (\docStatus -> docStatus.regNo == rcNo) documentStatusList else documentStatusList
-      manageVehicle = registrationState.props.manageVehicle
 
-  modifyScreenState $ RegisterScreenStateType (\registerationScreen ->
-                  registerationScreen { data {
+  modifyScreenState $ RegisterScreenStateType (\registerationScreen -> 
+                  registerationScreen { data { 
                       vehicleDetailsStatus = getStatusValue driverRegistrationResp.rcVerificationStatus,
                       drivingLicenseStatus = getStatusValue driverRegistrationResp.dlVerificationStatus,
                       lastUpdateTime = convertUTCtoISC (getCurrentUTC "") "hh:mm A",
@@ -982,7 +1004,7 @@ onBoardingFlow = do
                       cityConfig = cityConfig,
                       vehicleCategory = uiCurrentCategory,
                       accessToken = token
-                  }, props {limitReachedFor = limitReachedFor, referralCodeSubmitted = referralCodeAdded, driverEnabled = driverEnabled}})
+                  }, props {limitReachedFor = limitReachedFor, referralCodeSubmitted = referralCodeAdded, driverEnabled = driverEnabled, manageVehicleCategory = if manageVehicle then uiCurrentCategory else Nothing}})
   hideSplashAndCallFlow (pure unit)
   flow <- UI.registration
   case flow of
@@ -1040,7 +1062,7 @@ onBoardingFlow = do
                 resp <- lift $ lift $ Remote.validateImage (Remote.makeValidateImageReq image "PanCard" Nothing (Just convertedStatus) result.transactionId state.data.vehicleCategory)
                 case resp of
                   Right (ValidateImageRes response)-> do
-                    resp <- lift $ lift $ Remote.registerDriverPAN (Remote.makePANCardReq true currentTime detail.dob detail.name (Just response.imageId) Nothing panNum (convertedStatus) result.transactionId detail.panDB_name)
+                    resp <- lift $ lift $ Remote.registerDriverPanCard (Remote.makePANCardReq true currentTime detail.dob detail.name (Just response.imageId) Nothing panNum (convertedStatus) result.transactionId detail.panDB_name)
                     case resp of
                       Left errPayload -> if result.status /= (Just "auto_declined") then void $ pure $ toast $ Remote.getCorrespondingErrorMessage errPayload else pure unit
                       Right response -> pure unit
@@ -1064,7 +1086,7 @@ onBoardingFlow = do
                 respBackImage <- lift $ lift $ Remote.validateImage (Remote.makeValidateImageReq imageBack "AadhaarCard" Nothing (Just convertedStatus) result.transactionId state.data.vehicleCategory)
                 case respFrontImage, respBackImage of
                   Right (ValidateImageRes frontResp), Right (ValidateImageRes backResp) | isJust result.transactionId -> do
-                    resp <- lift $ lift $ Remote.registerDriverAadhaar (Remote.makeAadhaarCardReq (Just backResp.imageId) (Just frontResp.imageId) detail.address true currentTime detail.dob (Just aadhaarNum) detail.fullName (convertedStatus) (fromMaybe "" result.transactionId))
+                    resp <- lift $ lift $ Remote.registerDriverAadhaarCard (Remote.makeAadhaarCardReq (Just backResp.imageId) (Just frontResp.imageId) detail.address true currentTime detail.dob (Just aadhaarNum) detail.fullName (convertedStatus) (fromMaybe "" result.transactionId))
                     case resp of
                       Left errPayload -> if result.status /= (Just "auto_declined") then void $ pure $ toast $ Remote.getCorrespondingErrorMessage errPayload else pure unit
                       Right response -> pure unit
@@ -1101,7 +1123,7 @@ onBoardingFlow = do
       modifyScreenState $ OnBoardingSubscriptionScreenStateType (\onBoardingSubscriptionScreen -> onBoardingSubscriptionScreen{data{vehicleCategory = state.data.vehicleCategory}})
       onBoardingSubscriptionScreenFlow onBoardingSubscriptionViewCount
     REFERRAL_CODE_SUBMIT state -> do
-      activateReferralCode state state.data.referralCode
+      activateReferralCode state state.data.referralCode Nothing
       onBoardingFlow
     DOCUMENT_CAPTURE_FLOW state doctype -> do
       let defState = DocumentCaptureData.initData
@@ -1131,7 +1153,8 @@ onBoardingFlow = do
                 disableWarning : fromMaybe "" step.disableWarning,
                 isHidden : step.isHidden,
                 dependencyDocumentType : map (\item -> RC.transformToRegisterationStep item) step.dependencyDocumentType,
-                rcNumberPrefixList : step.rcNumberPrefixList
+                rcNumberPrefixList : step.rcNumberPrefixList,
+                documentCategory : step.documentCategory
               }) onBoardingDocsArr
 
     transfromDocumentStatusItem :: Array API.DocumentStatusItem ->  String -> Maybe String -> Maybe String -> Array ST.DocumentStatus
@@ -1150,7 +1173,350 @@ onBoardingFlow = do
     updateOnboardingDocs manageVehicle = do
       (resp :: (Either ErrorResponse API.OnboardingDocsRes)) <- lift $ lift $ HelpersAPI.callApi $ API.OnboardingDocsReq true manageVehicle
       case resp of
-        Right docs -> modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{onBoardingDocs = Just docs }
+        Right docs -> modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{onBoardingDocs = Just docs}
+        Left err -> pure unit -- handle error
+
+onBoardingFlowV2 :: String -> FlowBT String Unit
+onBoardingFlowV2 _ = do
+  token <- getSdkTokenFromCache
+  logField_ <- lift $ lift $ getLogFields
+  void $ pure $ hideKeyboardOnNavigation true
+  config <- getAppConfigFlowBT Constants.appConfig
+  setValueToLocalStore LOGS_TRACKING "true"
+  GlobalState allState <- getState
+  DriverRegistrationStatusResp driverRegistrationResp <- driverRegistrationStatusBT $ DriverRegistrationStatusReq true true
+  let cityConfig = getCityConfig config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+      registrationState = allState.registrationScreen
+      driverEnabled = fromMaybe false driverRegistrationResp.enabled
+      driverName = maybe Nothing (\(API.DLDetails item) -> item.driverName) (maybe Nothing (\item -> DA.head item) driverRegistrationResp.driverLicenseDetails)
+      merchantName = getMerchantName $ getMerchant FunctionCall
+      trainingsCompletionStatus = if (getValueToLocalNativeStore TRAININGS_COMPLETED_STATUS) == "true" then ST.COMPLETED else ST.NOT_STARTED
+  permissions <- checkAllPermissions false config.permissions.locationPermission
+  if isNothing allState.globalProps.onBoardingDocs then updateOnboardingDocs registrationState.props.manageVehicle else pure unit
+  if isJust driverName then setValueToLocalStore DRIVER_NAME (fromMaybe "" driverName) else deleteValueFromLocalStore DRIVER_NAME
+  GlobalState updatedGs <- getState
+  if driverEnabled && config.feature.enableAutoReferral && (cityConfig.showDriverReferral || config.enableDriverReferral) 
+    then do
+      let referralCode = getReferralCode (getValueToLocalStore REFERRER_URL)
+      if getValueToLocalStore REFERRAL_CODE_ADDED /= "true" && isJust referralCode 
+        then do
+          case referralCode of
+            Just code -> activateReferralCode registrationState code (Just "DRIVER")
+            Nothing   -> pure unit
+        else pure unit
+    else pure unit
+  let limitReachedFor = if driverRegistrationResp.rcVerificationStatus == "LIMIT_EXCEED" then Just "RC"
+                        else if driverRegistrationResp.dlVerificationStatus == "LIMIT_EXCEED" then Just "DL" 
+                        else Nothing
+      referralCodeAdded = getValueToLocalStore REFERRAL_CODE_ADDED == "true"
+      manageVehicle = registrationState.props.manageVehicle
+      registerationStepsCabs = maybe [] (\(API.OnboardingDocsRes mbDoc) -> mkRegSteps $ fromMaybe [] mbDoc.cabs) updatedGs.globalProps.onBoardingDocs
+      registerationStepsAutos = maybe [] (\(API.OnboardingDocsRes mbDoc) -> mkRegSteps $ fromMaybe [] mbDoc.autos) updatedGs.globalProps.onBoardingDocs
+      registerationStepsBike = maybe [] (\(API.OnboardingDocsRes mbDoc) -> mkRegSteps $ fromMaybe [] mbDoc.bikes) updatedGs.globalProps.onBoardingDocs
+      registerationStepsAmbulance = maybe [] (\(API.OnboardingDocsRes mbDoc) -> mkRegSteps $ fromMaybe [] mbDoc.ambulances) updatedGs.globalProps.onBoardingDocs
+      registerationStepsTruck = maybe [] (\(API.OnboardingDocsRes mbDoc) -> mkRegSteps $ fromMaybe [] mbDoc.trucks) updatedGs.globalProps.onBoardingDocs
+      registerationStepsBus = maybe [] (\(API.OnboardingDocsRes mbDoc) -> mkRegSteps $ fromMaybe [] mbDoc.bus) updatedGs.globalProps.onBoardingDocs
+      checkAvailability field = maybe false (\(API.OnboardingDocsRes mbDoc) -> isJust (field mbDoc)) updatedGs.globalProps.onBoardingDocs
+      variantList = (if checkAvailability _.bikes then [ST.BikeCategory] else []) <> (if checkAvailability _.autos then [ST.AutoCategory] else []) <> (if checkAvailability _.cabs then [ST.CarCategory] else []) <> (if checkAvailability _.ambulances then [ST.AmbulanceCategory] else []) <> (if checkAvailability _.trucks then [ST.TruckCategory] else []) <> (if checkAvailability _.bus then [ST.BusCategory] else [])
+      uiCurrentCategory = if DA.length variantList == 1 then do 
+                            case variantList DA.!! 0 of
+                              Just vehicleType | manageVehicle -> Just vehicleType
+                              Just vehicleType -> do
+                                void $ pure $ setValueToLocalStore VEHICLE_CATEGORY $ show vehicleType
+                                void $ pure $ setValueToLocalStore SHOW_SUBSCRIPTIONS $ if DA.elem (show vehicleType) registrationState.data.cityConfig.variantSubscriptionConfig.variantList then "true" else "false"
+                                Just vehicleType
+                              _ -> Nothing
+                          else if manageVehicle then registrationState.props.manageVehicleCategory 
+                          else RC.decodeVehicleType $ getValueToLocalStore VEHICLE_CATEGORY
+      mismatchLogic vehicleDocument = (uiCurrentCategory == (RC.transformVehicleType $ Just vehicleDocument.userSelectedVehicleCategory)) && isJust vehicleDocument.verifiedVehicleCategory && (Just vehicleDocument.userSelectedVehicleCategory /= vehicleDocument.verifiedVehicleCategory)
+      vehicleTypeMismatch = not registrationState.props.manageVehicle && any (\(API.VehicleDocumentItem item) -> mismatchLogic item) driverRegistrationResp.vehicleDocuments
+      documentStatusList = mkStatusList1 (DriverRegistrationStatusResp driverRegistrationResp)
+      vehiclePhotosStatus = getVehiclePhotoStatus (DriverRegistrationStatusResp driverRegistrationResp)
+      verifiedRC = find (\docStatus -> docStatus.status == ST.COMPLETED && docStatus.docType == ST.VEHICLE_DETAILS_OPTION && docStatus.verifiedVehicleCategory == uiCurrentCategory) documentStatusList
+      onboardingRC = case verifiedRC of
+                  Just rcItem -> rcItem.regNo
+                  Nothing -> Nothing
+      localStoreRC = getValueToLocalStore ENTERED_RC
+      enteredRC = if localStoreRC == "__failed" then Nothing else Just localStoreRC
+      rcNo = if manageVehicle then enteredRC else onboardingRC
+      filteredVehicleDocs = if manageVehicle then filter (\docStatus -> docStatus.regNo == rcNo) documentStatusList else mkStatusList2 (DriverRegistrationStatusResp driverRegistrationResp) rcNo
+  if isJust rcNo then do
+    (API.OperationHubRequestsResp resp) <- Remote.getOperationHubRequestBT (fromMaybe "" rcNo) "2025-01-01T14:30Z"
+    let requestsArr = resp.requests
+        isAnyRequestPendingOrCompleted = filter(\(API.OperationHubRequests item) -> item.requestStatus == "APPROVED" || item.requestStatus == "PENDING") requestsArr
+        isAnyRequestFailed = filter(\(API.OperationHubRequests item) -> item.requestStatus == "REJECTED") requestsArr
+    void $ setValueToLocalNativeStore DRIVER_OPERATION_CREATE_REQUEST_SUCCESS (if DA.length isAnyRequestPendingOrCompleted > 0 then "COMPLETED" else if DA.length isAnyRequestFailed > 0 then "FAILED" else "NOT_STARTED")
+    else pure unit
+  modifyScreenState $ RegisterScreenStateType (\registerationScreen -> 
+                  registerationScreen { data { 
+                      vehicleDetailsStatus = getStatusValue driverRegistrationResp.rcVerificationStatus,
+                      drivingLicenseStatus = getStatusValue driverRegistrationResp.dlVerificationStatus, 
+                      lastUpdateTime = convertUTCtoISC (getCurrentUTC "") "hh:mm A",
+                      enteredDL = getValueToLocalStore ENTERED_DL,
+                      enteredRC = localStoreRC,
+                      registerationStepsCabs = registerationStepsCabs,
+                      registerationStepsAuto = registerationStepsAutos,
+                      registerationStepsAmbulance = registerationStepsAmbulance,
+                      registerationStepsTruck = registerationStepsTruck,
+                      registerationStepsBus = registerationStepsBus,
+                      documentStatusList = filteredVehicleDocs,
+                      registerationStepsBike = registerationStepsBike,
+                      variantList = variantList,
+                      linkedRc = rcNo,
+                      vehicleTypeMismatch = vehicleTypeMismatch,
+                      permissionsStatus = if permissions then ST.COMPLETED else ST.NOT_STARTED,
+                      trainingsCompletionStatus = trainingsCompletionStatus,
+                      cityConfig = cityConfig,
+                      vehicleCategory = uiCurrentCategory,
+                      accessToken = token
+                  }, props {
+                      limitReachedFor = limitReachedFor, 
+                      referralCodeSubmitted = referralCodeAdded, 
+                      driverEnabled = driverEnabled, 
+                      manageVehicleCategory = if manageVehicle then uiCurrentCategory else Nothing,
+                      categoryToStepProgressMap = filterCategories registerationStepsCabs registerationScreen.props.categoryToStepProgressMap filteredVehicleDocs vehiclePhotosStatus,
+                      vehicleImagesUploaded = vehiclePhotosStatus,
+                      selectedDocumentCategory = if manageVehicle then Just API.VEHICLE else registerationScreen.props.selectedDocumentCategory
+                      }})
+  hideSplashAndCallFlow (pure unit)
+  flow <- UI.registrationV2
+  case flow of
+    UPLOAD_DRIVER_LICENSE_V2 state -> do
+      modifyScreenState $ UploadDrivingLicenseScreenStateType $ \_ -> UploadDrivingLicenseScreenData.initData { data {
+        mobileNumber = state.data.phoneNumber,
+        cityConfig = state.data.cityConfig,
+        vehicleCategory = state.data.vehicleCategory
+        }}
+      uploadDrivingLicenseFlow
+    UPLOAD_VEHICLE_DETAILS_V2 state rcNumberPrefixList -> do
+      modifyScreenState $ AddVehicleDetailsScreenStateType $ \_ -> AddVehicleDetailsScreenData.initData { data {
+        driverMobileNumber = state.data.phoneNumber, 
+        cityConfig = state.data.cityConfig,
+        vehicleCategory = state.data.vehicleCategory,
+        rcNumberPrefixList = rcNumberPrefixList
+        }}
+      addVehicleDetailsflow false
+    PERMISSION_SCREEN_V2 state -> do
+      modifyScreenState $ PermissionsScreenStateType $ \permissionsScreen -> permissionsScreen { data {driverMobileNumber = state.data.phoneNumber}}
+      permissionsScreenFlow Nothing Nothing Nothing
+    AADHAAR_PAN_SELFIE_UPLOAD_V2 state (ST.HyperVergeKycResult result) -> do 
+      let currentTime = getCurrentUTC ""
+      let status = fromMaybe "needs_review" result.status
+      let convertedStatus = convertToRequestStatus status
+      void $ lift $ lift $ loaderText (getString VALIDATING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
+      void $ lift $ lift $ toggleLoader true
+      case result.details of 
+        Just (ST.LIVE_SELFIE (ST.LiveSelfie detail)) | (isJust detail.selfieURL) -> do
+          if result.status == (Just "auto_declined")
+            then if isJust detail.errorCode then void $ pure $ JB.toast $ getHvErrorMsg detail.errorCode else pure unit
+          else pure unit
+          image' <- lift $ lift $ doAff $ JB.encodeToBase64Type (fromMaybe "" detail.selfieURL) 10000
+          case image' of 
+            Nothing -> void $ pure $ toast (getString TIMEOUT)
+            Just image -> do
+              resp <- lift $ lift $ Remote.validateImage (Remote.makeValidateImageReq image "ProfilePhoto" Nothing (Just convertedStatus) result.transactionId state.data.vehicleCategory)
+              case resp of
+                Left errPayload -> if result.status /= (Just "auto_declined") then void $ pure $ toast $ Remote.getCorrespondingErrorMessage errPayload else pure unit
+                Right response -> pure unit
+        Just (ST.PAN_DETAILS (ST.PanDetails detail)) | (isJust detail.panURL) -> do
+          if result.status == (Just "auto_declined")
+            then if isJust detail.errorCode then void $ pure $ JB.toast $ getHvErrorMsg detail.errorCode else pure unit
+          else pure unit
+          let panNum = fromMaybe "" detail.pan
+          if DS.null panNum
+            then do
+              if result.status /= (Just "auto_declined") then void $ pure $ toast (getString CANNOT_DETECT_PAN_CARD) else pure unit
+              void $ lift $ lift $ delay $ Milliseconds 100.0 -- This delay is added for toggleloader to work.
+          else do
+            image' <- lift $ lift $ doAff $ JB.encodeToBase64Type (fromMaybe "" detail.panURL) 10000
+            case image' of
+              Nothing -> void $ pure $ toast (getString TIMEOUT)
+              Just image -> do
+                resp <- lift $ lift $ Remote.validateImage (Remote.makeValidateImageReq image "PanCard" Nothing (Just convertedStatus) result.transactionId state.data.vehicleCategory)
+                case resp of
+                  Right (ValidateImageRes response)-> do
+                    resp <- lift $ lift $ Remote.registerDriverPan (Remote.makeDriverPanReq panNum response.imageId (getValueToLocalStore DRIVER_ID) detail.name)
+                    case resp of
+                      Left errPayload -> if result.status /= (Just "auto_declined") then void $ pure $ toast $ Remote.getCorrespondingErrorMessage errPayload else pure unit
+                      Right response -> pure unit
+                  Left errPayload -> if result.status /= (Just "auto_declined") then void $ pure $ toast $ Remote.getCorrespondingErrorMessage errPayload else pure unit
+        Just (ST.AADHAAR_DETAILS (ST.AadhaarCardDetails detail)) | (isJust detail.aadhaarFrontURL && isJust detail.aadhaarBackURL)-> do
+          if result.status == (Just "auto_declined")
+            then if isJust detail.errorCode then void $ pure $ JB.toast $ getHvErrorMsg detail.errorCode else pure unit
+          else pure unit
+          let aadhaarNum = fromMaybe "" detail.idNumber
+          if DS.null aadhaarNum || detail.errorCode == Just "113" -- or condition added to make sure both sides are detected
+            then do
+              if result.status /= (Just "auto_declined") then void $ pure $ toast (getString CANNOT_DETECT_AADHAAR) else pure unit
+              void $ lift $ lift $ delay $ Milliseconds 100.0 -- This delay is added for toggleloader to work.
+          else do
+            imageFrontControl <- lift $ lift $ fork $ doAff $ JB.encodeToBase64Type (fromMaybe "" detail.aadhaarFrontURL) 10000
+            imageBack <- lift $ lift $ doAff $ JB.encodeToBase64Type (fromMaybe "" detail.aadhaarBackURL) 10000
+            imageFront <- lift $ lift  $ await imageFrontControl
+            case imageFront, imageBack of
+              Just imageFront, Just imageBack -> do
+                respFrontImage <- lift $ lift $ Remote.validateImage (Remote.makeValidateImageReq imageFront "AadhaarCard" Nothing (Just convertedStatus) result.transactionId state.data.vehicleCategory)
+                respBackImage <- lift $ lift $ Remote.validateImage (Remote.makeValidateImageReq imageBack "AadhaarCard" Nothing (Just convertedStatus) result.transactionId state.data.vehicleCategory)
+                case respFrontImage, respBackImage of
+                  Right (ValidateImageRes frontResp), Right (ValidateImageRes backResp) | isJust result.transactionId -> do
+                    resp <- lift $ lift $ Remote.registerDriverAadhaar (Remote.makeDriverAadhaarReq aadhaarNum frontResp.imageId backResp.imageId true (getValueToLocalStore DRIVER_ID) detail.fullName)
+                    case resp of
+                      Left errPayload -> if result.status /= (Just "auto_declined") then void $ pure $ toast $ Remote.getCorrespondingErrorMessage errPayload else pure unit
+                      Right response -> pure unit
+                  Left errPayload , _ -> if result.status /= (Just "auto_declined") then void $ pure $ toast $ Remote.getCorrespondingErrorMessage errPayload else pure unit
+                  _, Left errPayload -> if result.status /= (Just "auto_declined") then void $ pure $ toast $ Remote.getCorrespondingErrorMessage errPayload else pure unit 
+                  _, _ -> if result.status /= (Just "auto_declined") then void $ pure $ toast $ getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER else pure unit 
+              _, _ -> void $ pure $ toast (getString TIMEOUT)
+            pure unit
+        _ -> do
+          void $ lift $ lift $ delay $ Milliseconds 100.0 -- This delay is added for toggleloader to work.
+          void $ pure $ toast $ getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
+      void $ lift $ lift $ toggleLoader false
+      onBoardingFlow
+    GO_TO_APP_UPDATE_POPUP_SCREEN_V2 _ -> appUpdatedFlow {title : (getString APP_UPDATE), description : (getString APP_UPDATE_MESSAGE), image : ""} ST.REG_PROF_PAN_AADHAAR
+    AADHAAR_PAN_SELFIE_UPLOAD_V2 state _ -> onBoardingFlow
+    LOGOUT_FROM_REGISTERATION_SCREEN_V2 -> logoutFlow
+    GO_TO_HOME_SCREEN_FROM_REGISTERATION_SCREEN_V2 state -> 
+      if state.props.manageVehicle
+      then do
+        modifyScreenState $  DriverProfileScreenStateType (\driverProfileScreen -> driverProfileScreen{props{screenType = ST.VEHICLE_DETAILS}})
+        driverProfileFlow
+      else do
+        modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{onBoardingDocs = Nothing, firstTimeOnboardingStatus = true } 
+        modifyScreenState $ AcknowledgementScreenType $ \_ -> AckScreenInitData.initData { data {
+          title = Just $ getString REGISTRATION_COMPLETED , -- Todo: Shikhar change back to this after R2 changes go live  getString CONGRATULATIONS,
+          description = Just $ getString WE_WILL_NOFITY_YOU_WHEN_WE_GO_LIVE, -- getString (YOU_ARE_ALL_SET_TO_TAKE_RIDES merchantName),
+          primaryButtonText = Just $ getString CONTINUE,
+          primaryButtonVisibility = false,
+          illustrationAsset = "ny_ic_go_live_soon"},
+          props{illustrationType = ST.Image}}
+        ackScreenFlow $ getDriverInfoFlow Nothing Nothing Nothing false (Just state.data.cityConfig.enableAdvancedBooking) true
+    REFRESH_REGISTERATION_SCREEN_V2 -> do
+      modifyScreenState $ RegisterScreenStateType (\registerScreen -> registerScreen { props { refreshAnimation = false}})
+      onBoardingFlow
+    GO_TO_ONBOARD_SUBSCRIPTION_V2 state -> do
+      let onBoardingSubscriptionViewCount =  fromMaybe 0 (fromString (getValueToLocalNativeStore ONBOARDING_SUBSCRIPTION_SCREEN_COUNT))
+      modifyScreenState $ OnBoardingSubscriptionScreenStateType (\onBoardingSubscriptionScreen -> onBoardingSubscriptionScreen{data{vehicleCategory = state.data.vehicleCategory}})
+      onBoardingSubscriptionScreenFlow onBoardingSubscriptionViewCount
+    REFERRAL_CODE_SUBMIT_V2 state -> do
+      activateReferralCode state state.data.referralCode (Just "OPERATOR")
+      onBoardingFlow
+    GET_DRIVER_REFERRAL_DETAILS state -> do
+      (resp :: (Either ErrorResponse API.DriverReferralDetailsRes)) <- lift $ lift $ HelpersAPI.callApi $ API.GetReferralDetailsReq state.data.referralCode "OPERATOR"
+      case resp of
+        Right (API.DriverReferralDetailsRes response) -> modifyScreenState $ RegisterScreenStateType (\registerationScreen -> registerationScreen {data { refereeName = response.name}})
+        Left err -> modifyScreenState $ RegistrationScreenStateType (\driverReferralScreen -> state{ props{isValidReferralCode = false}})
+      onBoardingFlow
+    DOCUMENT_CAPTURE_FLOW_V2 state doctype -> do
+      let defState = DocumentCaptureData.initData
+      modifyScreenState $ DocumentCaptureScreenStateType (\_ -> defState { data { cityConfig = state.data.cityConfig, docType = doctype, vehicleCategory = state.data.vehicleCategory, linkedRc = state.data.linkedRc}})
+      documentcaptureScreenFlow
+    SELECT_LANG_FROM_REGISTRATION_V2 -> do
+      modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{onBoardingDocs = Nothing}
+      modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ props{ onlyGetTheSelectedLanguage = false, selectedLanguage = "", selectLanguageForScreen = "", fromOnboarding = true}})
+      selectLanguageFlow
+    GO_TO_OPERATION_HUB_SCREEN state -> do
+      modifyScreenState $ OperationHubScreenStateType (\operationHubScreen -> operationHubScreen { data { rcNumber = state.data.linkedRc}})
+      operationHubScreenFlow
+    GO_TO_TRAININGS_SCREEN state -> do
+      modifyScreenState $ BenefitsScreenStateType (\benefitsScreen -> benefitsScreen {props {fromRegistrationScreen = true}})
+      benefitsScreenFlow
+    GO_TO_FAQS_SCREEN state -> onboardingFaqScreenFlow
+  where 
+    mkStatusList1 :: DriverRegistrationStatusResp -> Array ST.DocumentStatus
+    mkStatusList1 (DriverRegistrationStatusResp driverRegistrationStatusResp) = 
+      let driversDocument = driverRegistrationStatusResp.driverDocuments
+          vehicleDoc = driverRegistrationStatusResp.vehicleDocuments
+          vehiclePhotoTypes = Const.vehiclePhotoTypes
+          vehicleDocsWithoutPhotoStatus = map (\(API.VehicleDocumentItem vDoc) -> 
+                                            let docs = vDoc.documents
+                                                photoDocs = DA.filter (\(API.DocumentStatusItem doc) -> not $ elem doc.documentType vehiclePhotoTypes) docs
+                                            in
+                                            API.VehicleDocumentItem {
+                                              registrationNo : vDoc.registrationNo,
+                                              userSelectedVehicleCategory : vDoc.userSelectedVehicleCategory,
+                                              verifiedVehicleCategory : vDoc.verifiedVehicleCategory,
+                                              isVerified : vDoc.isVerified,
+                                              vehicleModel : vDoc.vehicleModel,
+                                              isActive : vDoc.isActive,
+                                              documents : photoDocs
+                                            }
+                                          ) vehicleDoc
+          vehicleDoc' = DA.foldl (\acc (API.VehicleDocumentItem vDoc) -> acc <> transfromDocumentStatusItem vDoc.documents vDoc.userSelectedVehicleCategory vDoc.verifiedVehicleCategory (Just vDoc.registrationNo)) [] vehicleDocsWithoutPhotoStatus
+          driversDocument' = transfromDocumentStatusItem driversDocument "" Nothing Nothing
+      in driversDocument' <> vehicleDoc'
+
+    mkStatusList2 :: DriverRegistrationStatusResp -> Maybe String -> Array ST.DocumentStatus
+    mkStatusList2 (DriverRegistrationStatusResp driverRegistrationStatusResp) rcNo = 
+      let driversDocument = driverRegistrationStatusResp.driverDocuments
+          vehicleDoc = driverRegistrationStatusResp.vehicleDocuments
+          vehiclePhotoTypes = Const.vehiclePhotoTypes
+          filteredVehicleDoc = case rcNo of
+            Just rc -> DA.filter (\(API.VehicleDocumentItem vDoc) -> vDoc.registrationNo == rc) vehicleDoc
+            Nothing -> vehicleDoc
+          vehicleDocsWithoutPhotoStatus = map (\(API.VehicleDocumentItem vDoc) -> 
+                                            let docs = vDoc.documents
+                                                photoDocs = DA.filter (\(API.DocumentStatusItem doc) -> not $ elem doc.documentType vehiclePhotoTypes) docs
+                                            in
+                                            API.VehicleDocumentItem {
+                                              registrationNo : vDoc.registrationNo,
+                                              userSelectedVehicleCategory : vDoc.userSelectedVehicleCategory,
+                                              verifiedVehicleCategory : vDoc.verifiedVehicleCategory,
+                                              isVerified : vDoc.isVerified,
+                                              vehicleModel : vDoc.vehicleModel,
+                                              isActive : vDoc.isActive,
+                                              documents : photoDocs
+                                            }
+                                          ) filteredVehicleDoc
+          vehicleDoc' = DA.foldl (\acc (API.VehicleDocumentItem vDoc) -> acc <> transfromDocumentStatusItem vDoc.documents vDoc.userSelectedVehicleCategory vDoc.verifiedVehicleCategory (Just vDoc.registrationNo)) [] vehicleDocsWithoutPhotoStatus
+          driversDocument' = transfromDocumentStatusItem driversDocument "" Nothing Nothing
+      in driversDocument' <> vehicleDoc'
+
+    getVehiclePhotoStatus :: DriverRegistrationStatusResp -> Boolean
+    getVehiclePhotoStatus (DriverRegistrationStatusResp resp) = 
+      let vehicleDoc = resp.vehicleDocuments
+          vehiclePhotoTypes = Const.vehiclePhotoTypes
+          allPhotosUploadedStatus = map (\(API.VehicleDocumentItem vDoc) -> 
+                                            let docs = vDoc.documents
+                                                photoDocs = DA.filter (\(API.DocumentStatusItem doc) -> elem doc.documentType vehiclePhotoTypes && (doc.verificationStatus == "COMPLETED" || doc.verificationStatus == "MANUAL_VERIFICATION_REQUIRED")) docs
+                                            in
+                                            photoDocs
+                                          ) vehicleDoc
+      in (DA.length $ fromMaybe [] (DA.head allPhotosUploadedStatus)) == 7
+      
+    mkRegSteps :: Array API.OnboardingDoc -> Array ST.StepProgress
+    mkRegSteps onBoardingDocsArr = 
+      map (\(API.OnboardingDoc step) ->
+              { stageName : RC.transformStageNameFromTitle step.title step.documentType,
+                stage : RC.transformToRegisterationStep step.documentType,
+                subtext : fromMaybe "" step.description,
+                isMandatory : step.isMandatory,
+                isDisabled : step.isDisabled,
+                disableWarning : fromMaybe "" step.disableWarning,
+                isHidden : step.isHidden,
+                dependencyDocumentType : map (\item -> RC.transformToRegisterationStep item) step.dependencyDocumentType,
+                rcNumberPrefixList : step.rcNumberPrefixList,
+                documentCategory : step.documentCategory
+              }) onBoardingDocsArr 
+    
+    transfromDocumentStatusItem :: Array API.DocumentStatusItem ->  String -> Maybe String -> Maybe String -> Array ST.DocumentStatus
+    transfromDocumentStatusItem statusItem userSelectedVehicle verifiedVehicleCategory regNo =
+      map (\(API.DocumentStatusItem documentStatusItem) -> {
+              vehicleType : RC.transformVehicleType $ Just userSelectedVehicle,
+              status : getStatusValue documentStatusItem.verificationStatus,
+              docType : RC.transformToRegisterationStep documentStatusItem.documentType,
+              verificationMessage : documentStatusItem.verificationMessage,
+              verifiedVehicleCategory : RC.transformVehicleType verifiedVehicleCategory,
+              regNo : regNo
+            }
+          ) statusItem
+
+    updateOnboardingDocs :: Boolean ->  FlowBT String Unit
+    updateOnboardingDocs manageVehicle = do
+      (resp :: (Either ErrorResponse API.OnboardingDocsRes)) <- lift $ lift $ HelpersAPI.callApi $ API.OnboardingDocsReq true manageVehicle
+      case resp of
+        Right docs -> do
+          modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{onBoardingDocs = Just docs}
         Left err -> pure unit -- handle error
 
 updateDriverVersion :: Maybe Version -> Maybe Version -> FlowBT String Unit
@@ -1170,6 +1536,34 @@ updateDriverVersion dbClientVersion dbBundleVersion = do
       pure unit
     else pure unit
   else pure unit
+
+onboardingFaqScreenFlow :: FlowBT String Unit
+onboardingFaqScreenFlow = do
+  out <- UI.onboardingFaqsScreen
+  case out of 
+    _ -> onBoardingFlow
+
+operationHubScreenFlow :: FlowBT String Unit
+operationHubScreenFlow = do
+  (GetAllHubsResp getAllHubsResp) <- Remote.getAllHubsBT ""
+  modifyScreenState $ OperationHubScreenStateType (\operationHubScreen -> operationHubScreen { data { operationHubList = if DA.length getAllHubsResp > 0 then Just getAllHubsResp else Nothing}})
+  out <- UI.operationHubScreen
+  case out of
+    CHANGE_LANG_FROM_OPERATION_HUB updatedState -> do
+      modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{onBoardingDocs = Nothing}
+      modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ props{ onlyGetTheSelectedLanguage = false, selectedLanguage = "", selectLanguageForScreen = "", fromOnboarding = true}})
+      selectLanguageFlow
+    LOGOUT_FROM_OPERATION_HUB -> logoutFlow
+    CALL_DRIVER_OPERATION_CREATE_REQUEST_API updatedState -> do
+      if isJust updatedState.data.selectedHub then do
+        let (API.OperationHub hub) = fromMaybe dummyOperationHub updatedState.data.selectedHub
+        (API.ApiSuccessResult resp) <- Remote.driverOperationCreateRequestBT (API.DriverOperationCreateRequestReq {operationHubId : hub.id, registrationNo : fromMaybe "" updatedState.data.rcNumber, requestType : show API.ONBOARDING_INSPECTION, creatorId : getValueToLocalStore DRIVER_ID})
+        setValueToLocalStore DRIVER_OPERATION_CREATE_REQUEST_SUCCESS "COMPLETED"
+        onBoardingFlow
+      else pure unit
+    GO_TO_FAQS_SCREEN_FROM_OPERATION_HUB -> onboardingFaqScreenFlow
+    _ -> do
+      pure unit
 
 aadhaarVerificationFlow :: FlowBT String Unit
 aadhaarVerificationFlow = do
@@ -1339,6 +1733,7 @@ uploadDrivingLicenseFlow = do
       modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{onBoardingDocs = Nothing}
       modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ props{ onlyGetTheSelectedLanguage = false, selectedLanguage = "", selectLanguageForScreen = "", fromOnboarding = true}})
       selectLanguageFlow
+    GO_TO_FAQS_SCREEN_FROM_UPLOAD_DRIVER_LICENSE_SCREEN -> onboardingFaqScreenFlow
 
 
 addVehicleDetailsflow :: Boolean -> FlowBT String Unit
@@ -1375,7 +1770,7 @@ addVehicleDetailsflow addRcFromProf = do
                 modifyScreenState $ RegisterScreenStateType (\registerationScreen -> registerationScreen { data { vehicleDetailsStatus = ST.COMPLETED}})
                 addVehicleDetailsflow state.props.addRcFromProfile
               else do
-                (DriverRegistrationStatusResp resp ) <- driverRegistrationStatusBT $ DriverRegistrationStatusReq true
+                (DriverRegistrationStatusResp resp ) <- driverRegistrationStatusBT $ DriverRegistrationStatusReq true false
                 let multiRcStatus  = getStatusValue resp.rcVerificationStatus
                 modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { props {validating = false, multipleRCstatus = multiRcStatus, validateProfilePicturePopUp = false}}
                 addVehicleDetailsflow state.props.addRcFromProfile
@@ -1442,7 +1837,7 @@ addVehicleDetailsflow addRcFromProf = do
     REFER_API_CALL state -> do
       void $ lift $ lift $ loaderText (getString VALIDATING) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
       void $ lift $ lift $ toggleLoader true
-      referDriverResponse <- lift $ lift $ Remote.referDriver (makeReferDriverReq state.data.referral_mobile_number)
+      referDriverResponse <- lift $ lift $ Remote.referDriver (makeReferDriverReq state.data.referral_mobile_number Nothing)
       case referDriverResponse of
         Right (API.ApiSuccessResult resp) -> do
           void $ lift $ lift $ toggleLoader false
@@ -1492,6 +1887,11 @@ addVehicleDetailsflow addRcFromProf = do
       modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{onBoardingDocs = Nothing}
       modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ props{ onlyGetTheSelectedLanguage = false, selectedLanguage = "", selectLanguageForScreen = "", fromOnboarding = true}})
       selectLanguageFlow
+    GO_TO_FAQS_SCREEN_FROM_ADD_VEHICLE_DETAILS_SCREEN -> onboardingFaqScreenFlow
+    GO_TO_CHANGE_LOCATION_SCREEN -> do
+      modifyScreenState $ ChooseCityScreenStateType (\chooseCityScreen -> chooseCityScreen { props { currentStage = SELECT_CITY, goBackToAddVehiclesScreen = true}})--, data {locationSelected = getValueToLocalNativeStore DRIVER_LOCATION}})
+      chooseCityFlow Nothing
+      
 
 applicationSubmittedFlow :: String -> FlowBT String Unit
 applicationSubmittedFlow screenType = do
@@ -1595,15 +1995,16 @@ driverProfileFlow = do
 
     HELP_AND_SUPPORT_SCREEN -> do
       liftFlowBT $ logEvent logField_ "ny_driver_help"
-      let language = ( case getLanguageLocale languageKey of
-                         "HI_IN" -> "hi"
-                         "KN_IN" -> "kn"
-                         "TA_IN" -> "ta"
-                         "TE_IN" -> "te"
-                         _       -> "en"
-                     )
-      categories' <- HU.sortIssueCategories language <$> Remote.getCategoriesBT language
-      modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data { categories = categories', goBackTo = ScreenNames.DRIVER_PROFILE_SCREEN } } )
+      -- let language = ( case getLanguageLocale languageKey of
+      --                    "HI_IN" -> "hi"
+      --                    "KN_IN" -> "kn"
+      --                    "TA_IN" -> "ta"
+      --                    "TE_IN" -> "te"
+      --                    _       -> "en"
+      --                )
+      -- categories' <- HU.sortIssueCategories language <$> Remote.getCategoriesBT language
+      -- modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data { categories = categories', goBackTo = ScreenNames.DRIVER_PROFILE_SCREEN } } )
+      modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data { goBackTo = ScreenNames.DRIVER_PROFILE_SCREEN } } )
       helpAndSupportFlow
     GO_TO_DRIVER_HISTORY_SCREEN -> do
       modifyScreenState $ RideHistoryScreenStateType (\rideHistoryScreen -> rideHistoryScreen{offsetValue = 0, currentTab = "COMPLETED"})
@@ -1675,7 +2076,7 @@ driverProfileFlow = do
       pure $ setText (getNewIDWithTag "ReenterVehicleRegistrationNumber") ""
       deleteValueFromLocalStore ENTERED_RC
       modifyScreenState $ AddVehicleDetailsScreenStateType (\_ -> defaultEpassState.addVehicleDetailsScreen)
-      modifyScreenState $ RegistrationScreenStateType (\regScreenState -> regScreenState{ props{manageVehicle = true, manageVehicleCategory = Nothing}, data { linkedRc = Nothing}})
+      modifyScreenState $ RegistrationScreenStateType (\regScreenState -> regScreenState{ props{manageVehicle = true, manageVehicleCategory = Just ST.CarCategory}, data { linkedRc = Nothing, vehicleCategory = Just ST.CarCategory}})
       onBoardingFlow
     SUBCRIPTION -> updateAvailableAppsAndGoToSubs
     GO_TO_CALL_DRIVER state -> do
@@ -2167,6 +2568,13 @@ rateCardScreenFlow = do
 
 helpAndSupportFlow :: FlowBT String Unit
 helpAndSupportFlow = do
+  let config = getAppConfig appConfig
+  case config.feature.enableV2HelpAndSupport of
+    true -> helpAndSupportFlowV2 ""
+    _ -> helpAndSupportFlowV1 ""
+
+helpAndSupportFlowV1 :: String ->FlowBT String Unit
+helpAndSupportFlowV1 _ = do
   config <- getAppConfigFlowBT Constants.appConfig
   let cityConfig = getCityConfig config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
   modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen{data {cityConfig = cityConfig}})
@@ -2230,6 +2638,36 @@ writeToUsFlow = do
   action <- UI.writeToUsScreen
   case action of
     GO_TO_HOME_SCREEN_FLOW -> homeScreenFlow
+
+
+helpAndSupportFlowV2 :: String ->FlowBT String Unit
+helpAndSupportFlowV2 _ = do
+  config <- getAppConfigFlowBT Constants.appConfig
+  let cityConfig = getCityConfig config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+  modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen{data {cityConfig = cityConfig}})
+  action <- UI.helpAndSupportScreenV2
+  case action of
+    DUMMY_RIDE_REQUEST_V2 updatedState -> do
+      (resp :: API.ApiSuccessResult) <- HelpersAPI.callApiBT $ DummyRideRequestReq ""
+      modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> updatedState)
+      helpAndSupportFlow
+    GO_BACK_TO_PROFILE_SCREEN_V2 updatedState -> do
+      modifyScreenState $ HelpAndSupportScreenStateType (\_ -> updatedState)
+      driverProfileFlow
+    GO_BACK_TO_HELP_AND_SUPPORT_V2 updatedState -> do
+      modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> updatedState)
+      helpAndSupportFlow
+    GO_BACK_TO_HOME_SCREEN_FROM_HELP_V2 updatedState -> do
+      modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> updatedState)
+      homeScreenFlow
+    GO_BACK_TO_TRIP_DETAILS_V2 updatedState -> do
+      modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> updatedState)
+      tripDetailsScreenFlow
+    SHOW_OPERATION_HUBS updatedState -> do
+      (GetAllHubsResp getAllHubsResp) <- Remote.getAllHubsBT ""
+      modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen{data {operationHubs = getAllHubsResp}})
+      helpAndSupportFlow 
+    GO_TO_ONBOARDING_FAQ_SCREEN updatedState -> onboardingFaqScreenFlow
 
 permissionsScreenFlow :: Maybe Event -> Maybe GetRidesHistoryResp -> Maybe Boolean -> FlowBT String Unit
 permissionsScreenFlow event activeRideResp isActiveRide = do
@@ -2352,15 +2790,16 @@ issueReportChatScreenFlow = do
   flow <- UI.reportIssueChatScreen
   case flow of
     GO_TO_HELP_AND_SUPPORT -> do
-      let language = ( case getLanguageLocale languageKey of
-                         "HI_IN" -> "hi"
-                         "KN_IN" -> "kn"
-                         "TA_IN" -> "ta"
-                         "TE_IN" -> "te"
-                         _       -> "en"
-                     )
-      categories' <- HU.sortIssueCategories language <$> Remote.getCategoriesBT language
-      modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data { categories = categories' } } )
+      -- let language = ( case getLanguageLocale languageKey of
+      --                    "HI_IN" -> "hi"
+      --                    "KN_IN" -> "kn"
+      --                    "TA_IN" -> "ta"
+      --                    "TE_IN" -> "te"
+      --                    _       -> "en"
+      --                )
+      -- categories' <- HU.sortIssueCategories language <$> Remote.getCategoriesBT language
+      -- modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data { categories = categories' } } )
+      modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data { goBackTo = ScreenNames.DRIVER_PROFILE_SCREEN } } )
       helpAndSupportFlow
     SUBMIT_ISSUE state -> do
       let mediaFiles' = case state.data.uploadedAudioId of
@@ -2460,15 +2899,16 @@ tripDetailsScreenFlow mbRideId = do
     GO_TO_EARINING -> driverEarningsFlow
     GO_TO_HOME_SCREEN -> homeScreenFlow
     OPEN_HELP_AND_SUPPORT -> do
-      let language = ( case getLanguageLocale languageKey of
-                         "HI_IN" -> "hi"
-                         "KN_IN" -> "kn"
-                         "TA_IN" -> "ta"
-                         "TE_IN" -> "te"
-                         _       -> "en"
-                     )
-      categories' <- HU.sortIssueCategories language <$> Remote.getCategoriesBT language
-      modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data { categories = categories', goBackTo = ScreenNames.TRIP_DETAILS_SCREEN} } )
+      -- let language = ( case getLanguageLocale languageKey of
+      --                    "HI_IN" -> "hi"
+      --                    "KN_IN" -> "kn"
+      --                    "TA_IN" -> "ta"
+      --                    "TE_IN" -> "te"
+      --                    _       -> "en"
+      --                )
+      -- categories' <- HU.sortIssueCategories language <$> Remote.getCategoriesBT language
+      -- modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data { categories = categories', goBackTo = ScreenNames.TRIP_DETAILS_SCREEN} } )
+      modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data { goBackTo = ScreenNames.TRIP_DETAILS_SCREEN} } )
       helpAndSupportFlow
 
 currentRideFlow :: Maybe GetRidesHistoryResp -> Maybe Boolean -> FlowBT String Unit
@@ -2504,7 +2944,7 @@ currentRideFlow activeRideResp isActiveRide = do
   void $ pure $ setCleverTapUserProp [{key : "Driver On-ride", value : unsafeToForeign $ if getValueToLocalNativeStore IS_RIDE_ACTIVE == "false" then "No" else "Yes"}]
   -- Deprecated case for aadhaar popup shown after HV Integration
   when (allState.homeScreen.data.config.profileVerification.aadharVerificationRequired) $ do -- TODO :: Should be moved to global events as an async event
-    (DriverRegistrationStatusResp resp) <- driverRegistrationStatusBT $ DriverRegistrationStatusReq true
+    (DriverRegistrationStatusResp resp) <- driverRegistrationStatusBT $ DriverRegistrationStatusReq true false
     modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {showlinkAadhaarPopup = (resp.aadhaarVerificationStatus == "INVALID" || resp.aadhaarVerificationStatus == "NO_DOC_AVAILABLE")}})
   modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {tobeLogged = true}})
   liftFlowBT $ markPerformance "CURRENT_RIDE_FLOW_END"
@@ -2730,15 +3170,16 @@ homeScreenFlow = do
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props {showOffer = status == Online && state.props.driverStatusSet == Offline && getDriverInfoRes.autoPayStatus == Nothing }})
       homeScreenFlow
     GO_TO_HELP_AND_SUPPORT_SCREEN -> do
-      let language = ( case getLanguageLocale languageKey of
-                         "HI_IN" -> "hi"
-                         "KN_IN" -> "kn"
-                         "TA_IN" -> "ta"
-                         "TE_IN" -> "te"
-                         _       -> "en"
-                     )
-      categories' <- HU.sortIssueCategories language <$> Remote.getCategoriesBT language
-      modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data { categories = categories', goBackTo = ScreenNames.HOME_SCREEN } } )
+      -- let language = ( case getLanguageLocale languageKey of
+      --                    "HI_IN" -> "hi"
+      --                    "KN_IN" -> "kn"
+      --                    "TA_IN" -> "ta"
+      --                    "TE_IN" -> "te"
+      --                    _       -> "en"
+      --                )
+      -- categories' <- HU.sortIssueCategories language <$> Remote.getCategoriesBT language
+      -- modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data { categories = categories', goBackTo = ScreenNames.HOME_SCREEN } } )
+      modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen { data { goBackTo = ScreenNames.HOME_SCREEN } } )
       helpAndSupportFlow
     GO_TO_EDIT_GENDER_SCREEN -> driverProfileFlow
 
@@ -3027,6 +3468,7 @@ homeScreenFlow = do
     HOMESCREEN_NAV (GoToEarningsScreen showCoinsView) -> do
       modifyScreenState $ DriverEarningsScreenStateType (\driverEarningsScreen -> driverEarningsScreen { props { subView = if showCoinsView then ST.YATRI_COINS_VIEW else ST.EARNINGS_VIEW }})
       driverEarningsFlow
+    HOMESCREEN_NAV GoToRideRequest -> rideRequestScreenFlow
     HOMESCREEN_NAV _ -> homeScreenFlow
     GO_TO_AADHAAR_VERIFICATION -> do
       modifyScreenState $ AadhaarVerificationScreenType (\aadhaarScreen -> aadhaarScreen { props { fromHomeScreen = true, currentStage = EnterAadhaar}})
@@ -3795,6 +4237,7 @@ subScriptionFlow = do
     NAV GoToAlerts -> notificationFlow Nothing
     GOTO_HOMESCREEN -> homeScreenFlow
     NAV (GoToEarningsScreen _) -> driverEarningsFlow
+    NAV GoToRideRequest -> rideRequestScreenFlow
     MAKE_PAYMENT state -> do
       case state.props.joinPlanProps.selectedPlanItem of
         Just selectedPlan -> do
@@ -4056,6 +4499,7 @@ notificationFlow mbPayload= do
     GO_PROFILE_SCREEN -> driverProfileFlow
     CHECK_RIDE_FLOW_STATUS -> currentRideFlow Nothing Nothing
     NOTIFICATION_SCREEN_NAV GoToSubscription -> updateAvailableAppsAndGoToSubs
+    NOTIFICATION_SCREEN_NAV GoToRideRequest -> rideRequestScreenFlow
     NOTIFICATION_SCREEN_NAV _ -> notificationFlow Nothing
 
 removeChatService :: String -> FlowBT String Unit
@@ -4431,6 +4875,12 @@ logoutFlow = do
   deleteValueFromLocalStore ONBOARDING_SUBSCRIPTION_SCREEN_COUNT
   deleteValueFromLocalStore FREE_TRIAL_DAYS
   deleteValueFromLocalStore REFERRAL_CODE_ADDED
+  deleteValueFromLocalStore APPLIED_REFERRAL_CODE
+  deleteValueFromLocalStore DRIVER_OPERATOR_ID
+  deleteValueFromLocalStore DRIVER_FLEET_OWNER_ID
+  deleteValueFromLocalStore DRIVER_NAME
+  deleteValueFromLocalStore DRIVER_OPERATION_CREATE_REQUEST_SUCCESS
+  deleteValueFromLocalStore TRAININGS_COMPLETED_STATUS
   deleteValueFromLocalStore VEHICLE_CATEGORY
   deleteValueFromLocalStore ENTERED_RC
   deleteValueFromLocalStore GULLAK_TOKEN
@@ -4455,6 +4905,7 @@ chooseCityFlow mbEvent = do
     DETECT_CITY lat lon state -> do
       if state.data.config.chooseCity.straightLineDistLogic then straightLineDist lat lon state else detectCityAPI lat lon state
       chooseCityFlow mbEvent
+    BACK_TO_ADD_VEHICLES_SCREEN _ -> addVehicleDetailsflow false
   where
     closestCity :: (Tuple String Number) -> CityConfig -> Number -> Number -> (Tuple String Number)
     closestCity (Tuple cityName distance) city driverLat driverLon = do
@@ -4527,13 +4978,20 @@ benefitsScreenFlow = do
       let cachedSelectedLanguage = (getValueToLocalStore LMS_SELECTED_LANGUAGE_CACHE)
           cityConfig = (getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION))
           selectedLanguage = if (cachedSelectedLanguage == "__failed" || cachedSelectedLanguage == "null" || cachedSelectedLanguage == "")
-                              then if (DS.null cityConfig.languageKey) then (getLanguageLocale languageKey) else cityConfig.languageKey
+                              then getLanguageLocale languageKey 
                               else cachedSelectedLanguage
       modifyScreenState $ LmsVideoScreenStateType (\lmsVideoScreen -> lmsVideoScreen { props {selectedLanguage = selectedLanguage, selectedModule = state.props.selectedModule}})
       lmsVideoScreenFlow
     CUSTOMER_REFERRAL_TRACKER_NAV openPP -> do
       modifyScreenState $ CustomerReferralTrackerScreenStateType (\customerReferralTrackerScreenState -> customerReferralTrackerScreenState{props {openPP = openPP}})
       customerReferralTrackerFlow
+    GO_TO_REGISTRATION_SCREEN state -> onBoardingFlow
+    SELECT_LANG_FROM_BENEFITS_SCREEN state -> do
+      modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{onBoardingDocs = Nothing}
+      modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ props{ onlyGetTheSelectedLanguage = false, selectedLanguage = "", selectLanguageForScreen = "", fromOnboarding = true}})
+      selectLanguageFlow
+    LOGOUT_FROM_BENEFITS_SCREEN -> logoutFlow
+    GO_TO_FAQS_SCREEN_FROM_BENEFITS_SCREEN -> onboardingFaqScreenFlow
     GO_TO_DRIVER_CLAIM_REWARD_SCREEN state -> do
       driverClaimRewardFlow
 
@@ -4790,6 +5248,13 @@ confirmQuestionFlow state = let moduleId = maybe "" (\selModule -> selModule ^. 
 
 driverEarningsFlow :: FlowBT String Unit
 driverEarningsFlow = do
+  let config = getAppConfig appConfig
+  case config.feature.enableV2Earnings of
+    true -> driverEarningsFlowV2 ""
+    _ -> driverEarningsFlowV1 ""
+  
+driverEarningsFlowV1 :: String -> FlowBT String Unit
+driverEarningsFlowV1 _ = do
   (GlobalState globalState) <- getState
   appConfig <- getAppConfigFlowBT Constants.appConfig
   logField_ <- lift $ lift $ getLogFields
@@ -4893,9 +5358,59 @@ driverEarningsFlow = do
     , key : "TABLE_TITILE"
     }
 
-activateReferralCode :: ST.RegistrationScreenState -> String -> FlowBT String Unit
-activateReferralCode state code = do
-  referDriverResponse <- lift $ lift $ Remote.referDriver $ makeReferDriverReq code
+driverEarningsFlowV2 :: String -> FlowBT String Unit
+driverEarningsFlowV2 _ = do
+  (GlobalState globalState) <- getState
+  appConfig <- getAppConfigFlowBT Constants.appConfig
+  logField_ <- lift $ lift $ getLogFields
+  let earningScreenState = globalState.driverEarningsScreen
+  modifyScreenState $ DriverEarningsScreenStateType (\driverEarningsScreen -> driverEarningsScreen{data{hasActivePlan = globalState.homeScreen.data.paymentState.autoPayStatus /= NO_AUTOPAY, config = appConfig}, props{showShimmer = true}})
+  uiAction <- UI.driverEarningsScreenV2
+  case uiAction of
+    EARNINGS_NAV_V2 HomeScreenNav state -> do
+       updateDriverStats state homeScreenFlow  
+    EARNINGS_NAV_V2 GoToSubscription state -> do
+       updateDriverStats state updateAvailableAppsAndGoToSubs  
+    EARNINGS_NAV_V2 GoToContest state -> do
+       updateDriverStats state referralFlow  
+    EARNINGS_NAV_V2 GoToAlerts state -> do
+       updateDriverStats state $ notificationFlow Nothing
+    EARNINGS_NAV_V2 GoToRideRequest state -> do
+       updateDriverStats state rideRequestScreenFlow
+    EARNINGS_NAV_V2 _ state -> do
+       updateDriverStats state driverEarningsFlow
+    CHANGE_SUB_VIEW_V2 subView state -> do
+      modifyScreenState $ DriverEarningsScreenStateType (\state -> state{props{subView = subView, date = getCurrentUTC ""}})
+      driverEarningsFlow
+    REFRESH_EARNINGS_SCREEN_V2 state -> driverEarningsFlow
+    EARNINGS_HISTORY_V2 _ -> driverEarningsFlow
+  where 
+    updateDriverStats state flow = do
+      when (state.props.subView == ST.YATRI_COINS_VIEW) $ do
+        modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{driverRideStats = (<$>) (\(DriverProfileStatsResp stats) -> DriverProfileStatsResp stats{ coinBalance = state.data.coinBalance }) globalProps.driverRideStats}
+        modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen{data{coinBalance = state.data.coinBalance}})
+      flow
+    
+    checkCoinsInfoConditions :: API.CoinInfoType -> Boolean
+    checkCoinsInfoConditions coinInfo = 
+      let 
+        cond1 = not $ startsWith "BulkUploadEvent" coinInfo.key
+        cond2 = not $ DS.null coinInfo.title
+        cond3 = coinInfo.coins /= 0
+      in 
+        cond1 && cond2 && cond3
+
+    tableTitle :: API.CoinInfo
+    tableTitle = API.CoinInfo {
+      coins : 0
+    , title : getString TASK_COMPLETED
+    , description : ""
+    , key : "TABLE_TITILE"
+    }
+      
+activateReferralCode :: ST.RegistrationScreenState -> String -> Maybe String -> FlowBT String Unit
+activateReferralCode state code role = do
+  referDriverResponse <- lift $ lift $ Remote.referDriver (makeReferDriverReq code role)
   case referDriverResponse of
     Right (API.ApiSuccessResult res) -> do
       case res.result of
@@ -4917,6 +5432,7 @@ activateReferralCode state code = do
       modifyScreenState $ RegistrationScreenStateType (\driverReferralScreen -> state{ props{isValidReferralCode = true, referralCodeSubmitted = true, enterReferralCodeModal = false}})
       setValueToLocalStore REFERRER_URL ""
       setValueToLocalStore REFERRAL_CODE_ADDED "true"
+      setValueToLocalStore APPLIED_REFERRAL_CODE state.data.referralCode
 
 documentcaptureScreenFlow :: FlowBT String Unit
 documentcaptureScreenFlow = do
@@ -4939,6 +5455,24 @@ documentcaptureScreenFlow = do
         Left error -> do
           modifyScreenState $ DocumentCaptureScreenStateType $ \docCapScreenState -> docCapScreenState { props {validating = false}, data {errorMessage = Just $ Remote.getCorrespondingErrorMessage error}}
           documentcaptureScreenFlow
+    TA.UPLOAD_VEHICLE_API state imageType -> do
+      validateImageResp <- lift $ lift $ Remote.validateImage $ makeValidateImageReq state.data.imageBase64 imageType state.data.linkedRc Nothing Nothing state.data.vehicleCategory
+      case validateImageResp of
+        Right (ValidateImageRes resp) -> do
+          void $ lift $ lift $ loaderText (getString PLEASE_WAIT) (getString PLEASE_WAIT_WHILE_IN_PROGRESS)
+          void $ lift $ lift $ toggleLoader true
+          void $ lift $ lift $ delay $ Milliseconds 3000.0
+          void $ lift $ lift $ toggleLoader false
+          void $ pure $ toast $ "Image Uploaded Successfully"
+          documentcaptureScreenFlow
+        Left error -> do
+          modifyScreenState $ DocumentCaptureScreenStateType $ \docCapScreenState -> docCapScreenState { props {validating = false}, data {errorMessage = Just $ Remote.getCorrespondingErrorMessage error}}
+          documentcaptureScreenFlow
+    TA.GOTO_ONBOARDING_SCREEN state -> do
+      modifyScreenState $ RegisterScreenStateType (\registerationScreen -> registerationScreen { props {vehicleImagesUploaded = state.props.allImagesUploaded }})
+      onBoardingFlow
+    TA.GET_VEHICLE_PHOTOS_STATUS state -> documentcaptureScreenFlow
+    TA.GO_TO_FAQS_SCREEN_FROM_DOCUMENT_CAPTURE -> onboardingFaqScreenFlow
 
 uploadParcelImageFlow :: FlowBT String Unit
 uploadParcelImageFlow = do

@@ -30,6 +30,7 @@ import Engineering.Helpers.Commons as EHC
 import Components.TipsView as TipsView
 import JBridge
 import Effect (Effect)
+import ConfigProvider
 import Language.Strings (getString)
 
 instance showAction :: Show Action where
@@ -68,6 +69,7 @@ data Action = OnButton1Click
             | PersonAddress PrimaryEditTextController.Action
             | PersonInstruction PrimaryEditTextController.Action
             | CheckBoxClick
+            | ListViewItemAction Int
 
 type Config = {
     primaryText :: TextConfig,
@@ -110,6 +112,7 @@ type Config = {
     optionWithHtml :: OptionWithHtmlConfig,
     topTitle :: TopTitle,
     listViewArray :: Array String,
+    listViewArrayWithImage :: Array ListViewItem,
     coverMediaConfig :: CoverMediaConfig,
     timerId :: String,
     onlyTopTitle :: Visibility,
@@ -148,6 +151,16 @@ type DeliveryDetailsConfig = {
   locationTitle :: String,
   locationDetails :: String,
   checkBoxDetails :: {text :: String, isSelected :: Boolean, visibility :: Boolean }
+}
+
+type ListViewItem = {
+  text :: String,
+  prefixImageConfig :: ImageConfig,
+  background :: String,
+  textColor :: String,
+  suffixImageConfig :: ImageConfig,
+  componentStroke :: String,
+  cornerRadius :: Number
 }
 
 type UPIDetailConfig = {
@@ -323,7 +336,9 @@ type CoinWarningConfig = {
 }  
 
 config :: Config
-config = {
+config = 
+  let appConfig = getAppConfig ""
+  in {
   optionButtonOrientation: "HORIZONTAL"
   , showRetry : true
   , activeIndex : 1
@@ -501,10 +516,10 @@ config = {
     , useWeight : true
     }
   , option2 : {
-      background : Color.black900
+      background : appConfig.primaryButtonBackground
     , text : "Button2"
     , strokeColor : Color.black900
-    , color : Color.yellow900
+    , color : appConfig.primaryTextColor
     , visibility : true
     , margin : (Margin 12 0 0 16)
     , gravity : CENTER
@@ -655,6 +670,7 @@ config = {
     , fareEstimateText : ""
     , tipSelectedText : ""
     , listViewArray : []
+    , listViewArrayWithImage : []
     , coverMediaConfig : {
         visibility : GONE ,
         height : V 400 ,

@@ -177,6 +177,7 @@ data ScreenOutput = GoBack UploadDrivingLicenseState
                     | GoToRegisteration
                     | ChangeVehicle UploadDrivingLicenseState
                     | SelectLang UploadDrivingLicenseState
+                    | GoToFaqsScreen UploadDrivingLicenseState
       
 data Action = BackPressed Boolean
             | NoAction
@@ -299,7 +300,7 @@ eval (TutorialModalAction (TutorialModalController.CallSupport)) state = continu
     _ -> pure $ showDialer (getSupportNumber "") false
   pure NoAction
   ]
-eval (TutorialModalAction (TutorialModalController.Logout)) state = exit LogoutAccount
+eval (TutorialModalAction (TutorialModalController.Logout)) state = continue state{props{logoutPopupModal = true}}
 eval (RemoveUploadedFile removeType) state = if(removeType == "front") then continue state{data{imageFront = ""}} else continue state{data{imageBack = ""}}
 eval (UploadFileAction clickedType) state = continueWithCmd (state {props {clickedButtonType = clickedType}}) [ pure UploadImage]
 eval (UploadImage) state = continueWithCmd (state {props {validateProfilePicturePopUp = false, imageCaptureLayoutView = true}}) [do
@@ -323,7 +324,7 @@ eval (CallBackImageUpload image imageName imagePath) state =
     continue state                    
 
 eval (DatePicker (label) resp year month date) state = do
-  let fullDate = (dateFormat year) <> "-" <> (dateFormat (month+1)) <> "-" <> (dateFormat date) <> " 00:00:00.233691+00" 
+  let fullDate = (dateFormat year) <> "-" <> (dateFormat (month+1)) <> "-" <> (dateFormat date) <> " 00:00:00.000+00"
   let dateView = (show date) <> "/" <> (show (month+1)) <> "/" <> (show year)
   case resp of 
     "SELECTED" -> case label of
@@ -396,6 +397,7 @@ eval (OptionsMenuAction (OptionsMenu.ItemClick item)) state = do
     "contact_support" -> continue newState { props { contactSupportModal = ST.SHOW}}
     "change_vehicle" -> continue newState {props {confirmChangeVehicle = true}}
     "change_language" -> exit $ SelectLang newState
+    "faqs" -> exit $ GoToFaqsScreen newState
     _ -> continue newState
 
 eval (ChangeVehicleAC (PopUpModal.OnButton2Click)) state = continue state {props {confirmChangeVehicle= false}}

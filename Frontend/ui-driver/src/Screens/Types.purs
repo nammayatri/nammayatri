@@ -16,7 +16,8 @@
 module Screens.Types
   ( module Screens.Types
   , module ReExport
-  ) where
+  )
+  where
 
 import Common.Types.Config
 import Common.Types.App as Common
@@ -296,7 +297,6 @@ type RegistrationScreenState = {
   props :: RegistrationScreenProps
 }
 type RegistrationScreenData = {
-  activeIndex :: Int,
   registerationStepsAuto :: Array StepProgress,
   registerationStepsCabs :: Array StepProgress,
   registerationStepsBike :: Array StepProgress,
@@ -307,6 +307,7 @@ type RegistrationScreenData = {
   drivingLicenseStatus :: StageStatus,
   vehicleDetailsStatus :: StageStatus,
   permissionsStatus :: StageStatus,
+  trainingsCompletionStatus :: StageStatus,
   documentStatusList :: Array DocumentStatus,
   variantList :: Array VehicleCategory,
   lastUpdateTime :: String,
@@ -322,7 +323,8 @@ type RegistrationScreenData = {
   linkedRc :: Maybe String,
   accessToken :: String,
   hvTxnId :: Maybe String,
-  hvFlowId :: Maybe String
+  hvFlowId :: Maybe String,
+  refereeName :: Maybe String
 }
 
 type DocumentStatus = {
@@ -349,7 +351,8 @@ type StepProgress = {
   disableWarning :: String,
   isHidden :: Boolean,
   dependencyDocumentType :: Array RegisterationStep,
-  rcNumberPrefixList :: Array String
+  rcNumberPrefixList :: Array String,
+  documentCategory :: Maybe API.DocumentCategory
 }
 
 type RegistrationScreenProps = {
@@ -369,7 +372,17 @@ type RegistrationScreenProps = {
   menuOptions :: Boolean,
   manageVehicle :: Boolean,
   manageVehicleCategory :: Maybe VehicleCategory,
-  dontAllowHvRelaunch :: Boolean
+  dontAllowHvRelaunch :: Boolean,
+  categoryToStepProgressMap :: Array CategoryToStepMap,
+  selectedDocumentCategory :: Maybe API.DocumentCategory,
+  vehicleImagesUploaded :: Boolean
+}
+
+type CategoryToStepMap = {
+  category :: API.DocumentCategory,
+  registrationSteps :: Array StepProgress,
+  completionStatus :: StageStatus,
+  showContinueButton :: Boolean
 }
 
 data AnimType = HIDE | SHOW | ANIMATING
@@ -390,6 +403,8 @@ data RegisterationStep =
   | VEHICLE_INSURANCE
   | VEHICLE_PUC
   | NO_OPTION
+  | VEHICLE_PHOTOS
+  | INSPECTION_HUB
 
 derive instance genericRegisterationStep :: Generic RegisterationStep _
 instance eqRegisterationStep :: Eq RegisterationStep where eq = genericEq
@@ -436,7 +451,9 @@ type PrimaryEditTextState = {
   text :: String,
   fontSize :: FontSize,
   letterSpacing :: LetterSpacing,
-  id :: String
+  id :: String,
+  background :: String,
+  stroke :: String 
 }
 
 ----------------------------------------------------- DriverProfileScreen ------------------------------------------------
@@ -683,7 +700,8 @@ type EnterMobileNumberScreenStateData = {
 type EnterMobileNumberScreenStateProps = {
   btnActive :: Boolean,
   isValid :: Boolean,
-  mobileNumberEditFocused :: Boolean
+  mobileNumberEditFocused :: Boolean,
+  btnLoader :: Boolean
 }
 
 --------------------------------------------------------------- BankDetailScreenState -----------------------------------------------------------------------------
@@ -950,7 +968,7 @@ type DriverDetailsScreenState = {
   props :: DriverDetailsScreenStateProps
 }
 
-data KeyboardModalType = MOBILE__NUMBER | OTP | ODOMETER | NONE
+data KeyboardModalType = MOBILE__NUMBER | OTP | ODOMETER | NONE | REFERRAL__CODE
 
 derive instance genericKeyboardModalType :: Generic KeyboardModalType _
 instance eqKeyboardModalType :: Eq KeyboardModalType where eq = genericEq
@@ -1485,6 +1503,7 @@ type HomeScreenProps =  {
   showMetroWarriorWarningPopup :: Boolean,
   setBusOnline :: Boolean,
   bus_input_data :: String,
+  showSafetyPillBottomSheet :: Boolean,
   showEndRideWithStopPopup :: Boolean,
   triggerGMapsIntent :: Boolean,
   showBlockerPopup :: Boolean,
@@ -1675,6 +1694,7 @@ type HelpAndSupportScreenData = {
   timerId :: String,
   goBackTo :: ScreenName,
   cityConfig :: CityConfig,
+  operationHubs :: Array API.OperationHub,
   config :: AppConfig
 }
 
@@ -1682,7 +1702,8 @@ type HelpAndSupportScreenProps = {
   isNoRides :: Boolean,
   enableDummyPopup :: Boolean,
   startTimerforDummyRides :: Boolean,
-  popupType :: UpdateDummyTestPopUpType
+  popupType :: UpdateDummyTestPopUpType,
+  showOperationsHub :: Boolean
 }
 
 type ReportIssueChatScreenState = {
@@ -2171,7 +2192,7 @@ type DocumentDetailsScreenData = {
 }
 
 type DocumentDetailsScreenProps = {
-
+  menuOptions :: Boolean
 }
 
 type DriverClaimRewardScreenState = {
@@ -2344,6 +2365,7 @@ type AcknowledgementScreenData = {
   primaryButtonText :: Maybe String,
   orderId  :: Maybe String,
   amount :: String,
+  primaryButtonVisibility :: Boolean,
   config :: AppConfig
 }
 
@@ -2712,7 +2734,8 @@ type DriverSavedLocationScreenData = {
   predictions :: Array PredictionItem,
   saveLocationObject :: SaveLocationObject,
   maxGotoLocations :: Int,
-  locationSelectType :: LocationSelectType
+  locationSelectType :: LocationSelectType,
+  config :: AppConfig
 }
 
 data LocationSelectType = SET_LOC | CURRENT_LOC
@@ -2830,7 +2853,8 @@ type ChooseCityScreenProps = {
   locationDetectionFailed :: Boolean,
   isMockLocation :: Boolean,
   lat :: Number,
-  lon :: Number
+  lon :: Number,
+  goBackToAddVehiclesScreen :: Boolean
 }
 
 data ChooseCityScreenStage = SELECT_LANG | SELECT_CITY | ENABLE_PERMISSION | DETECT_LOCATION
@@ -2907,7 +2931,10 @@ type DriverEarningsScreenProps = {
   individualQuestion :: FaqQuestions,
   callRideSummaryApi :: Boolean,
   loadMoreButtonVisibility :: Boolean,
-  offsetValue :: Int
+  offsetValue :: Int,
+  fromDate :: String,
+  toDate :: String,
+  graphIndex :: Int
 }
 
 type CalendarState = {
@@ -2946,7 +2973,9 @@ type WeeklyEarning = {
   rideDistance :: Int,
   rideDate :: String,
   noOfRides :: Int,
-  percentLength :: Number
+  percentLength :: Number,
+  cancellationCharges :: Int,
+  tipAmount :: Int
 }
 
 type TotalEarningsData = {
@@ -2954,7 +2983,9 @@ type TotalEarningsData = {
   toDate :: String,
   totalEarnings :: Int,
   totalRides :: Int,
-  totalDistanceTravelled :: Int
+  totalDistanceTravelled :: Int,
+  cancellationCharges :: Int,
+  tipAmount :: Int
 }
 
 newtype CachedEarningsForDriver = CachedEarningsForDriver {
@@ -2968,7 +2999,7 @@ instance showCachedEarningsForDriver :: Show CachedEarningsForDriver where show 
 instance decodeCachedEarningsForDriver :: Decode CachedEarningsForDriver where decode = defaultDecode
 instance encodeCachedEarningsForDriver :: Encode CachedEarningsForDriver where encode = defaultEncode
 
-data DriverEarningsSubView = EARNINGS_VIEW | YATRI_COINS_VIEW | USE_COINS_VIEW | FAQ_VIEW | FAQ_QUESTON_VIEW
+data DriverEarningsSubView = EARNINGS_VIEW | YATRI_COINS_VIEW | USE_COINS_VIEW | FAQ_VIEW | FAQ_QUESTON_VIEW | WEEKLY_EARNINGS_VIEW | MONTHLY_EARNINGS_VIEW | ALL_TIME_EARNINGS_VIEW
 
 derive instance genericDriverEarningsSubView :: Generic DriverEarningsSubView _
 instance showDriverEarningsSubView :: Show DriverEarningsSubView where show = genericShow
@@ -3041,6 +3072,10 @@ type BenefitsScreenProps = {
 , isPayoutEnabled :: Maybe Boolean
 , bannerLength :: Int
 , glBannerClickable :: Boolean
+, fromRegistrationScreen :: Boolean
+, menuOptions :: Boolean
+, logoutModalView :: Boolean
+, contactSupportModal :: AnimType
 , nammaClubEnabled :: Boolean
 , nyClubConsent :: Maybe Boolean
 , showGoBack :: Boolean
@@ -3180,7 +3215,8 @@ type DocumentCaptureScreenData = {
   docId :: String,
   linkedRc :: Maybe String,
   cityConfig :: CityConfig,
-  config :: AppConfig
+  config :: AppConfig, 
+  vehiclePhotos :: API.GetVehiclePhotosResp,
 }
 
 type DocumentCaptureScreenProps = {
@@ -3189,7 +3225,10 @@ type DocumentCaptureScreenProps = {
   validating :: Boolean,
   menuOptions :: Boolean,
   confirmChangeVehicle :: Boolean,
-  contactSupportModal :: AnimType
+  contactSupportModal :: AnimType,
+  uploadVehiclePhotos :: Boolean,
+  vehicleTypeImageToUpload :: Maybe API.VehicleImageType,
+  allImagesUploaded :: Boolean
 }
 
 
@@ -3497,6 +3536,51 @@ type MetroWarriorData = {
   primaryStation :: Maybe API.SpecialLocationWarrior,
   secondaryStationsData :: Array String,
   isSpecialLocWarrior :: Boolean
+}
+
+type OperationHubScreenState = {
+  data :: OperationHubScreenData,
+  props :: OperationHubScreenProps
+}
+
+type OperationHubScreenData = {
+  config :: AppConfig,
+  selectedHub :: Maybe API.OperationHub,
+  operationHubList :: Maybe (Array API.OperationHub),
+  rcNumber :: Maybe String
+}
+
+type OperationHubScreenProps = {
+  menuOptions :: Boolean,
+  contactSupportModal :: AnimType,
+  logoutModalView :: Boolean,
+  showOptions :: Boolean
+}
+
+type OnboardingFaqsScreenState = {
+  data :: OnboardingFaqsScreenData,
+  props :: OnboardingFaqsScreenProps
+}
+
+type OnboardingFaqsScreenData = {
+  categoryToQuestionAnsMap :: Array CategoryToQuestionAnsMap,
+  selectedSectionQnAList :: Array QuestionAnsMap
+  }
+type OnboardingFaqsScreenProps = {
+  selectedCategory :: Maybe String,
+  selectedCategoryIndex :: Maybe Int,
+  showAns :: Boolean,
+  selectedQnA :: QuestionAnsMap
+  }
+
+type CategoryToQuestionAnsMap = {
+  category :: String,
+  questionAnsMap :: Array QuestionAnsMap
+}
+
+type QuestionAnsMap = {
+  question :: String,
+  answer :: String
 }
 
 type MeterScreenState = {

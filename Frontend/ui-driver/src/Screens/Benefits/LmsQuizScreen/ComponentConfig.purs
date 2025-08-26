@@ -32,6 +32,7 @@ import Components.PopUpModal as PopUpModal
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import PrestoDOM.Types.DomAttributes (Corners(..))
+import Debug
 
 quizDoneButtonConfig :: String -> ST.LmsQuizScreenState -> Boolean -> PrimaryButton.Config
 quizDoneButtonConfig label state isRetryButtonVisible =
@@ -48,14 +49,14 @@ quizDoneButtonConfig label state isRetryButtonVisible =
              "RETRY_QUESTION" -> (StringsV2.getString state.props.selectedLanguage RETRY_STR) <> " "
              _ -> ""
     , color = case label of
-               "RETRY_QUESTION" -> Color.black700
-               "CLOSE_QUIZ" -> Color.black700
-               _ -> Color.yellow900
+               "RETRY_QUESTION" -> state.data.config.themeColors.quizButtonStrokeAndText
+               "CLOSE_QUIZ" -> state.data.config.themeColors.quizButtonStrokeAndText
+               _ -> state.data.config.primaryTextColor
     }
   , background = case label of
                   "RETRY_QUESTION" -> Color.white900
                   "CLOSE_QUIZ" -> Color.white900
-                  _ -> Color.black900
+                  _ -> state.data.config.primaryButtonBackground
   , enableRipple = false
   , rippleColor = Color.white40Alpha
   , margin = case label of
@@ -63,46 +64,44 @@ quizDoneButtonConfig label state isRetryButtonVisible =
               "NEXT_QUESTION" -> if isRetryButtonVisible then Margin 8 0 0 0 else Margin 0 0 0 0
               _ -> Margin 0 0 0 0
   , stroke = case label of
-              "RETRY_QUESTION" -> "1," <> Color.black700
-              _ -> "0," <> Color.black
+              "RETRY_QUESTION" -> "1," <> state.data.config.themeColors.quizButtonStrokeAndText
+              _ -> "0," <> state.data.config.primaryButtonBackground
   , id = "QuizPrimaryButton_" <> label
   , enableLoader = (JB.getBtnLoader $ "QuizPrimaryButton_" <> label)
   , width = if isRetryButtonVisible then (V (sWidth/2))  else MATCH_PARENT
   }
 
 exitPopupConfig :: ST.LmsQuizScreenState -> PopUpModal.Config
-exitPopupConfig state = 
-  PopUpModal.config
-  {   gravity = CENTER,
-      margin = (MarginHorizontal 16 16),
-      padding = PaddingHorizontal 16 16,
-      cornerRadius = (Corners 20.0 true true true true),
-      optionButtonOrientation = "VERTICAL",
-
-      primaryText {
-        text = (StringsV2.getString state.props.selectedLanguage EXIT_THE_QUIZ)
-      , margin = (Margin 0 20 0 20)
-      , accessibilityHint = "Do you wish to exit quiz?"
-        },
-      secondaryText {
-        visibility = GONE
-        },
-      option1 {
-        text = (StringsV2.getString state.props.selectedLanguage CANCEL)
-      , enableRipple = true
-      , color = Color.yellow900
-      , background = Color.black900
-      , strokeColor = Color.black900
-      , width = MATCH_PARENT
+exitPopupConfig state =
+  PopUpModal.config {   
+    gravity = CENTER,
+    margin = (MarginHorizontal 16 16),
+    padding = PaddingHorizontal 16 16,
+    cornerRadius = (Corners 20.0 true true true true),
+    optionButtonOrientation = "VERTICAL",
+    primaryText {
+      text = (StringsV2.getString state.props.selectedLanguage EXIT_THE_QUIZ)
+    , margin = (Margin 0 20 0 20)
       },
-      option2 {
-        text = (StringsV2.getString state.props.selectedLanguage EXIT_AND_START_AGAIN_LATER)
-      , enableRipple = true
-      , color = Color.black900
-      , background = Color.white900
-      , strokeColor = Color.white900
-      , height = WRAP_CONTENT
-      , width = MATCH_PARENT
-      , margin = MarginTop 16
-      }
-  }
+    secondaryText {
+      visibility = GONE
+      },
+    option1 {
+      text = (StringsV2.getString state.props.selectedLanguage CANCEL)
+    , enableRipple = true
+    , color = state.data.config.primaryTextColor
+    , background = state.data.config.primaryButtonBackground
+    , strokeColor = state.data.config.primaryButtonBackground
+    , width = MATCH_PARENT
+    },
+    option2 {
+      text = (StringsV2.getString state.props.selectedLanguage EXIT_AND_START_AGAIN_LATER)
+    , enableRipple = true
+    , color = Color.black900
+    , background = Color.white900
+    , strokeColor = Color.white900
+    , height = WRAP_CONTENT
+    , width = MATCH_PARENT
+    , margin = MarginTop 16
+    }
+}

@@ -54,8 +54,8 @@ view push state =
           , onClick push $ const $ OnSelection state
           , gravity CENTER_VERTICAL
           , cornerRadius 6.0
-          , background if state.isSelected then state.activeBgColor else Color.white900
-          , stroke if state.isSelected then "1,"<>state.activeStrokeColor else "1,"<>state.inactiveStrokeColor
+          , background if state.isSelected then state.activeBgColor else state.inactiveBgColor
+          , stroke if state.isSelected then "1," <> state.activeStrokeColor else "1," <> state.inactiveStrokeColor
           ][ linearLayout
               [ height WRAP_CONTENT
               , width WRAP_CONTENT
@@ -85,7 +85,7 @@ view push state =
                   ][ imageView
                       [ height (V 24)
                       , width (V 24)
-                      , imageWithFallback $ fetchImage FF_COMMON_ASSET $ "ny_ic_radio_selected"
+                      , imageWithFallback $ fetchImage FF_COMMON_ASSET state.radioSelectedImage
                       , visibility if state.isSelected then VISIBLE else GONE
                       ]
                     , imageView

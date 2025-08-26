@@ -114,7 +114,7 @@ view push config =
                        , width MATCH_PARENT
                        , padding $ PaddingVertical 12 16
                        , onClick push $ const $ if DA.any (_ == config.currentRateCardType) [DefaultRateCard, RentalRateCard] then Close else GoToDefaultStart
-                       , color Color.blue800
+                       , color Color.blue900
                        , gravity CENTER
                        ] <> FontStyle.subHeading1 TypoGraphy
           Nothing -> linearLayout[][]

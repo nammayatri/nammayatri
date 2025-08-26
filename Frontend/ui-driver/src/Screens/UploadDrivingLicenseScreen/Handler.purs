@@ -51,3 +51,6 @@ uploadDrivingLicense = do
     SelectLang updatedState -> do
       modifyScreenState $ UploadDrivingLicenseScreenStateType (\_ → updatedState)
       App.BackT $ App.NoBack <$> (pure $ CHANGE_LANG_FROM_DL_SCREEN)
+    GoToFaqsScreen updatedState -> do
+      modifyScreenState $ UploadDrivingLicenseScreenStateType (\_ → updatedState)
+      App.BackT $ App.NoBack <$> (pure $ GO_TO_FAQS_SCREEN_FROM_UPLOAD_DRIVER_LICENSE_SCREEN)

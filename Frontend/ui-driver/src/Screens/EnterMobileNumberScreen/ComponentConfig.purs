@@ -28,7 +28,7 @@ import Font.Size as FontSize
 import Font.Style as FontStyle
 import JBridge as JB
 import Language.Types (STR(..))
-import Prelude (not)
+import Prelude (not,(<>))
 import Resource.Constants as Constant
 import Screens.Types as ST
 import Styles.Colors as Color
@@ -38,7 +38,7 @@ primaryButtonViewConfig state = let
     config = PrimaryButton.config
     primaryButtonConfig' = config 
       { textConfig{ text = (getString CONTINUE) }
-      , id = "PrimaryButtonMobileNumber"
+      , id = "PrimaryButtonMobileNumber1"
       , isClickable = state.props.btnActive
       , alpha = if state.props.btnActive then 1.0 else 0.6
       , height = (V 60)
@@ -58,7 +58,7 @@ mobileNumberButtonConfig state = let
       , isClickable = state.props.btnActive
       , alpha = if state.props.btnActive then 1.0 else 0.4
       , margin = (Margin 0 0 0 0 )
-      , enableLoader = (JB.getBtnLoader "PrimaryButtonMobileNumber")
+      , enableLoader = state.props.btnLoader
       , enableRipple = true
       , rippleColor = Color.rippleShade
       }
@@ -107,8 +107,9 @@ mobileNumberConfig state = let
       , pattern = Just "[0-9]*,10"
       , margin = MarginHorizontal 10 0
       , text = ""
-      , placeholder = getString TEN_DIGIT_MOBILE_NUMBER
+      , placeholder = getString ENTER_MOBILE_NUMBER
       , padding = Padding 0 16 16 16
+      , focused = state.props.mobileNumberEditFocused
       }
     , showCountryCodeField = false
     , topLabel
@@ -124,5 +125,8 @@ mobileNumberConfig state = let
         , margin = MarginBottom 1
         }
     , showErrorLabel = state.props.isValid
+    , background = state.data.config.themeColors.radioInactiveBackground
+    , focusedStroke = ("1," <> state.data.config.themeColors.editTextFocusedStroke)
+    , stroke = ("1," <> state.data.config.themeColors.radioInactiveBackground)
     }
   in mobileNumberEditor'

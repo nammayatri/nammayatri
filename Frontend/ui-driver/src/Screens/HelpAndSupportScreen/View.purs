@@ -278,6 +278,7 @@ testRideRequestView state push =
     [ width MATCH_PARENT
     , height WRAP_CONTENT
     , orientation VERTICAL
+    , visibility GONE
     ][ reportAnIssueHeader state push (getString CHECK_APP)
      , linearLayout
         [ width MATCH_PARENT

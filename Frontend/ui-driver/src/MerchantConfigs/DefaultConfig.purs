@@ -78,6 +78,10 @@ config =
     }
   ,  primaryTextColor: "#FCC32C"
   , primaryBackground: "#2C2F3A"
+  , primaryButtonBackground : "#2C2F3A"
+  , buttonInactiveBackground : "#2C2F3A"
+  , buttonInactiveTextColor : "#FCC32C"
+  , alphaInPrimaryButtonAllowed : true
   , languageList:
       [ { name: "English", value: "EN_US", subtitle: "" }
       , { name: "ಕನ್ನಡ", value: "KN_IN", subtitle: "Kannada" }
@@ -200,10 +204,14 @@ config =
           showNew : false
         },
       referral :
-        { isVisible : true,
-          showNew : true
+        { isVisible : false,
+          showNew : false
         },
       notifications :
+        { isVisible : true,
+          showNew : false
+        },
+      trips : 
         { isVisible : true,
           showNew : false
         }
@@ -1262,6 +1270,7 @@ config =
             -- }
         ]
   , enableMockLocation : false
+  , enableChangeVehicleType : true
   , permissions : {
       locationPermission : false,
       notification : true
@@ -1277,6 +1286,30 @@ config =
     showGenderBanner : true
   }
   , colors : defaultColors
+  , themeColors : {
+    navBarBackground : "#FFFFFF",
+    primaryStrokeColor : "#E5E7EB",
+    openMapsStrokeColor : "#00FFFFFF",
+    secondaryStrokeColor : "#B9BABE",
+    onlineStatusColor : "#53BB6F",
+    onboardingHeaderTextColor : "#FFFFFF",
+    onboardingHeaderStroke : "#FFFFFF",
+    radioInactiveBackground : "#FFFFFF",
+    radioActiveBackground : "#f4F7FF",
+    editTextFocusedStroke : "#e4e4e4",
+    editTextNormalStroke : "#e4e4e4",
+    mobileNumberScreenHeaderText : "LETS_GET_YOU_TRIP_READY",
+    defaultBackButton : "ny_ic_chevron_left_white",
+    highlightedTextColor : "#2194FF",
+    radioSelectedImage : "ny_ic_radio_selected",
+    radioActiveStroke : "#0066FF",
+    onboardingStepImgBg : "#f4F7FF",
+    welcomeScreenBackground : "#FFFAED",
+    quizButtonStrokeAndText : "#6D7280",
+    quizOptionStrokeColor : "#0066FF",
+    quizOptionSelectedBgColor : "#1A0066FF",
+    quizOptionTextColor : "#454545"
+  }
   , primaryButtonConfig : defaultPrimaryButtonConfig
   , fontConfig : defaultFontConfig
   , loaderConfig : defaultLoaderConfig
@@ -1299,6 +1332,11 @@ config =
   , enableAutoReferral : true
   , enableSpecialPickup : EHC.jBridgeMethodExists "locateOnMapV2"
   , enableInterOperability : true
+  , showFaqsWhileOnboarding : false
+  , enableV2Registration : false
+  , enableV2Earnings : false
+  , enableV2HelpAndSupport : false
+  , enableDriverProfile : true
   }
   , showCorporateAddress : false
   , showRegisteredAddress : false

@@ -217,6 +217,7 @@ triggerOTPBT payload = do
         if (errorPayload.code == 429 && codeMessage == "HITS_LIMIT_EXCEED") then
             pure $ toast $ getString OTP_ENTERING_LIMIT_EXHAUSTED_PLEASE_TRY_RESENDING_OTP
             else pure $ toast $ getString SOMETHING_WENT_WRONG_PLEASE_TRY_AGAIN
+        modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber -> enterMobileNumber { props {btnLoader = false} })
         modifyScreenState $ ChooseLanguageScreenStateType (\chooseLanguageScreen -> chooseLanguageScreen { props {btnActive = false} })
         BackT $ pure GoBack
 
@@ -939,9 +940,9 @@ makeValidateImageReq image imageType rcNumber status transactionId category = Va
     }
 
 driverRegistrationStatusBT :: DriverRegistrationStatusReq -> FlowBT String DriverRegistrationStatusResp
-driverRegistrationStatusBT payload@(DriverRegistrationStatusReq queryParam) = do
+driverRegistrationStatusBT payload@(DriverRegistrationStatusReq queryParam providePrefillDetails) = do
      headers <- getHeaders' "" false
-     withAPIResultBT ((EP.driverRegistrationStatus queryParam)) identity errorHandler (lift $ lift $ callAPI headers payload)
+     withAPIResultBT ((EP.driverRegistrationStatus queryParam providePrefillDetails)) identity errorHandler (lift $ lift $ callAPI headers payload)
     where
         errorHandler (ErrorPayload errorPayload) =  do
             BackT $ pure GoBack
@@ -953,10 +954,11 @@ referDriver payload = do
     where
         unwrapResponse (x) = x
 
-makeReferDriverReq :: String -> ReferDriverReq
-makeReferDriverReq referralNumber = ReferDriverReq
+makeReferDriverReq :: String -> Maybe String -> ReferDriverReq
+makeReferDriverReq referralNumber role = ReferDriverReq
     {
-      "value" : referralNumber
+      "value" : referralNumber,
+      "role" : role
     }
 
 getDriverProfileStatsBT :: DriverProfileStatsReq -> FlowBT String DriverProfileStatsResp
@@ -1068,6 +1070,72 @@ generateReferralCode payload = do
     withAPIResult (EP.generateReferralCode "") unwrapResponse (callAPI headers payload)
     where
         unwrapResponse x = x
+
+
+---------------------------------------- getAllHubsBT ---------------------------------------------
+getAllHubsBT :: String -> FlowBT String GetAllHubsResp
+getAllHubsBT _ = do
+    headers <- getHeaders' "" false
+    withAPIResultBT (EP.getAllHubs "") identity errorHandler (lift $ lift $ callAPI headers (GetAllHubsReq {}))
+    where
+        errorHandler (ErrorPayload errorPayload) =  do
+            pure $ toast (getString SOMETHING_WENT_WRONG)
+            BackT $ pure GoBack
+
+------------------------------------------- getOperationHubRequest ----------------------------------------------------------
+
+getOperationHubRequestBT :: String -> String -> FlowBT String OperationHubRequestsResp
+getOperationHubRequestBT rcNo mbFrom = do
+    headers <- getHeaders' "" false
+    withAPIResultBT (EP.getOperationHubRequest rcNo mbFrom) identity errorHandler (lift $ lift $ callAPI headers (GetOperationHubReq rcNo mbFrom))
+    where
+        errorHandler (ErrorPayload errorPayload) =  do
+            pure $ toast (getString SOMETHING_WENT_WRONG)
+            BackT $ pure GoBack
+
+----------------------------------------------------- getVehiclePhotosBT ----------------------------------------------------------
+
+getVehiclePhotosBT :: String -> FlowBT String GetVehiclePhotosResp
+getVehiclePhotosBT rcNo = do
+    headers <- getHeaders' "" false
+    withAPIResultBT (EP.getVehiclePhotos rcNo) identity errorHandler (lift $ lift $ callAPI headers (GetVehiclePhotosReq rcNo))
+    where
+        errorHandler (ErrorPayload errorPayload) =  do
+            pure $ toast (getString SOMETHING_WENT_WRONG)
+            BackT $ pure GoBack
+
+----------------------------------------------------- getVehiclePhotosBaseBT ----------------------------------------------------------
+
+getVehiclePhotosBase64BT :: String -> Boolean -> Boolean -> Boolean -> Boolean -> Boolean -> Boolean -> Boolean -> FlowBT String GetVehiclePhotosResp
+getVehiclePhotosBase64BT rcNo front back right left frontInterior backInterior odometer = do
+    headers <- getHeaders' "" false
+    withAPIResultBT (EP.getVehiclePhotosBase64 rcNo front back right left frontInterior backInterior odometer) identity errorHandler (lift $ lift $ callAPI headers (GetVehiclePhotosBase64Req rcNo front back right left frontInterior backInterior odometer))
+    where
+        errorHandler (ErrorPayload errorPayload) =  do
+            pure $ toast (getString SOMETHING_WENT_WRONG)   
+            BackT $ pure GoBack
+
+----------------------------------- driverOperationCreateRequestBT -----------------------------------
+driverOperationCreateRequestBT :: DriverOperationCreateRequestReq -> FlowBT String ApiSuccessResult
+driverOperationCreateRequestBT payload = do
+    headers <- getHeaders' "" false
+    withAPIResultBT (EP.driverOperationCreateRequest "") identity errorHandler (lift $ lift $ callAPI headers payload)
+    where
+        errorHandler (ErrorPayload errorPayload) =  do
+            pure $ toast (getString SOMETHING_WENT_WRONG)
+            setValueToLocalStore DRIVER_OPERATION_CREATE_REQUEST_SUCCESS "NOT_STARTED"
+            BackT $ pure GoBack
+
+-------------------------------------- getCitySafetyNumbers ---------------------------------------------
+
+getCitySafetyNumbersBT :: String -> FlowBT String GetCitySafetyNumbersResp
+getCitySafetyNumbersBT _ = do
+  headers <- getHeaders' "" false 
+  withAPIResultBT (EP.getCitySafetyNumbers "") identity errorHandler (lift $ lift $ callAPI headers (GetCitySafetyNumbersReq {}))
+  where
+    errorHandler (ErrorPayload errorPayload) =  do
+      pure $ toast (getString SOMETHING_WENT_WRONG)
+      BackT $ pure GoBack
 
 ----------------------------------- validateAlternateNumber --------------------------
 
@@ -1797,10 +1865,10 @@ getLiveSelfie status = do
     where
         unwrapResponse x = x
 
-registerDriverPAN :: PanCardReq -> Flow GlobalState (Either ErrorResponse DriverPANResp)
-registerDriverPAN req = do
+registerDriverPanCard :: PanCardReq -> Flow GlobalState (Either ErrorResponse DriverPANResp)
+registerDriverPanCard req = do
     headers <- getHeaders "" false
-    withAPIResult (EP.registerPAN "")  unwrapResponse $ callAPI headers req
+    withAPIResult (EP.registerPanCard "")  unwrapResponse $ callAPI headers req
     where
         unwrapResponse x = x
 
@@ -1827,10 +1895,10 @@ makePANCardReq consent consentTimestamp dateOfBirth nameOnCard imageId1 imageId2
             Nothing -> Nothing
 
 
-registerDriverAadhaar :: AadhaarCardReq -> Flow GlobalState (Either ErrorResponse DriverAadhaarResp)
-registerDriverAadhaar req = do
+registerDriverAadhaarCard :: AadhaarCardReq -> Flow GlobalState (Either ErrorResponse DriverAadhaarResp)
+registerDriverAadhaarCard req = do
     headers <- getHeaders "" false
-    withAPIResult (EP.registerAadhaar "")  unwrapResponse $ callAPI headers req
+    withAPIResult (EP.registerAadhaarCard "")  unwrapResponse $ callAPI headers req
     where
         unwrapResponse x = x
 
@@ -1849,6 +1917,39 @@ makeAadhaarCardReq aadhaarBackImageId aadhaarFrontImageId address consent consen
        "validationStatus" : validationStatus,
        "transactionId" : transactionId
     }
+
+registerDriverPan :: DriverPanReq -> Flow GlobalState (Either ErrorResponse DriverPANResp)
+registerDriverPan req = do
+    headers <- getHeaders "" false
+    withAPIResult (EP.registerPan "")  unwrapResponse $ callAPI headers req
+    where
+        unwrapResponse x = x
+
+makeDriverPanReq :: String -> String -> String -> Maybe String -> DriverPanReq
+makeDriverPanReq panNumber imageId driverId mbPanName = DriverPanReq
+    {
+        "panNumber" : panNumber,
+        "imageId" : imageId,
+        "driverId" : driverId,
+        "panName" : mbPanName
+    }
+
+registerDriverAadhaar :: DriverAadhaarReq -> Flow GlobalState (Either ErrorResponse DriverAadhaarResp)
+registerDriverAadhaar req = do
+    headers <- getHeaders "" false
+    withAPIResult (EP.registerAadhaar "")  unwrapResponse $ callAPI headers req
+    where
+        unwrapResponse x = x
+
+makeDriverAadhaarReq :: String -> String -> String -> Boolean -> String -> Maybe String -> DriverAadhaarReq
+makeDriverAadhaarReq aadhaarNumber aadhaarFrontImageId aadhaarBackImageId consent driverId mbAadhaarName = DriverAadhaarReq {
+    "aadhaarNumber" : aadhaarNumber,
+    "aadhaarFrontImageId" : aadhaarFrontImageId,
+    "aadhaarBackImageId" : Just aadhaarBackImageId,
+    "consent" : consent,
+    "driverId" : driverId,
+    "aadhaarName" : mbAadhaarName
+}
 
 ---------------------------------------------------------Fetching Driver Profile------------------------------------------------------------
 
@@ -1982,3 +2083,13 @@ getMeterPrice rideId = do
         withAPIResult (EP.getMeterPrice rideId) unwrapResponse $ callAPI headers (GetMeterPriceReq rideId)
     where
       unwrapResponse (x) = x
+
+----------------------------------------------- Earning Period Stats API -------------------------------------------------------------
+
+getEarningPeriodStatsBT :: String -> String -> String -> FlowBT String EarningPeriodStatsRes
+getEarningPeriodStatsBT fromDate toDate earningType = do
+    headers <- getHeaders' "" false
+    withAPIResultBT (EP.getEarningPeriodStats fromDate toDate earningType) identity errorHandler (lift $ lift $ callAPI headers (EarningPeriodStatsReq fromDate toDate earningType))
+    where
+    errorHandler (ErrorPayload errorPayload) = do
+        BackT $ pure GoBack

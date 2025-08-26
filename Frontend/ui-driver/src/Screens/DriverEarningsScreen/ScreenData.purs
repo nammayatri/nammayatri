@@ -112,6 +112,8 @@ initData =
           , totalEarnings: 0
           , totalRides: 0
           , totalDistanceTravelled: 0
+          , cancellationCharges: 0
+          , tipAmount: 0
           }
       , currWeekData: []
       , startDate: ""
@@ -131,6 +133,9 @@ initData =
           , showTable: false
           , tag : ST.NothingCoinsQuestionTag
           }
+      , fromDate: ""
+      , toDate: ""
+      , graphIndex: 0
       }
   }
 

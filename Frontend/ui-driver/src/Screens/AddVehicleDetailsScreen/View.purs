@@ -206,7 +206,6 @@ menuOptionModal push state =
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , padding $ PaddingTop 55
-    , background Color.blackLessTrans
     ][ OptionsMenu.view (push <<< OptionsMenuAction) (optionsMenuConfig state) ]
 
 headerView :: forall w. AddVehicleDetailsScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -292,6 +291,8 @@ referralAppliedView state push =
 
 vehicleRegistrationNumber :: AddVehicleDetailsScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
 vehicleRegistrationNumber state push = 
+  let appName = JB.getAppName unit
+  in 
   linearLayout
   [ width MATCH_PARENT
   , height WRAP_CONTENT
@@ -332,7 +333,8 @@ vehicleRegistrationNumber state push =
           [ width MATCH_PARENT
           , height WRAP_CONTENT
           , orientation HORIZONTAL
-          , stroke ("1," <> if ((DS.length state.data.vehicle_registration_number >= 2) && not validateRegistrationNumber (DS.take 2 state.data.vehicle_registration_number)) then Color.warningRed else Color.borderColorLight) 
+          , stroke ("1," <> if ((DS.length state.data.vehicle_registration_number >= 2) && not validateRegistrationNumber (DS.take 2 state.data.vehicle_registration_number)) then Color.warningRed else state.data.config.themeColors.editTextNormalStroke) 
+          , background state.data.config.themeColors.radioInactiveBackground
           , cornerRadius 4.0
           ][  textView
               [ width $ V 20
@@ -344,25 +346,15 @@ vehicleRegistrationNumber state push =
               , padding (Padding 0 17 0 17)
               , color Color.greyTextColor
               , text state.props.input_data
-              , hint (getString ENTER_VEHICLE_NO)
+              , hint (getString ENTER_RC_NUMBER)
               , weight 1.0
               , cornerRadius 4.0
               , pattern "[0-9a-zA-Z]*,10"
-              , stroke ("1," <> Color.white900)
               , id (EHC.getNewIDWithTag "VehicleRegistrationNumber")
               , onChange push (const VehicleRegistrationNumber state.props.input_data)
               , inputTypeI 4097
               ] <> FontStyle.subHeading1 TypoGraphy)
             ]
-          , textView $
-            [ width MATCH_PARENT
-            , height WRAP_CONTENT
-            , text (getString CHANGE_LOCATION)
-            , color Color.blue800
-            , onClick push $ const ChangeLocation
-            , visibility GONE
-            , margin $ MarginTop 8
-            ] <> FontStyle.body3 TypoGraphy
           , textView $ -- (Error Indication)
             [ width WRAP_CONTENT
             , height WRAP_CONTENT
@@ -372,6 +364,15 @@ vehicleRegistrationNumber state push =
             , margin (MarginTop 10)
             , visibility if ((DS.length state.data.vehicle_registration_number >= 2) && not validateRegistrationNumber (DS.take 2 state.data.vehicle_registration_number)) then VISIBLE else GONE
             ] <> FontStyle.paragraphText TypoGraphy
+          , textView $
+            [ width MATCH_PARENT
+            , height WRAP_CONTENT
+            , text (getString CHANGE_LOCATION)
+            , color state.data.config.themeColors.highlightedTextColor
+            , onClick push $ const ChangeLocation
+            , visibility GONE
+            , margin $ MarginTop 8
+            ] <> FontStyle.tags TypoGraphy
           , linearLayout
           [ width MATCH_PARENT
           , height WRAP_CONTENT
@@ -405,7 +406,8 @@ vehicleRegistrationNumber state push =
                 [ width MATCH_PARENT
                 , height WRAP_CONTENT
                 , orientation HORIZONTAL
-                , stroke ("1," <> Color.borderColorLight) 
+                , stroke ("1," <> state.data.config.themeColors.editTextNormalStroke) 
+                , background state.data.config.themeColors.radioInactiveBackground
                 , cornerRadius 4.0
                 ][  textView
                     [ width $ V 20
@@ -417,11 +419,10 @@ vehicleRegistrationNumber state push =
                     , padding (Padding 0 17 0 17)
                     , color Color.greyTextColor
                     , text state.props.input_data
-                    , hint  (getString ENTER_VEHICLE_NO)
+                    , hint  (getString ENTER_RC_NUMBER)
                     , weight 1.0
                     , cornerRadius 4.0
                     , pattern "[0-9a-zA-Z]*,10"
-                    , stroke ("1," <> Color.white900)
                     , id (EHC.getNewIDWithTag "ReenterVehicleRegistrationNumber")
                     , onChange push (const ReEnterVehicleRegistrationNumber state.props.input_data)
                     , inputTypeI 4097
@@ -502,7 +503,7 @@ vehicleRegistrationNumber state push =
                     ]
                   , facilityListView state push
           ]
-        , checkACView state push
+        , if appName == "FleetX" then rcEligibilityCriteriaView state push else checkACView state push
         ]
       ]
   ]
@@ -625,6 +626,34 @@ checkACView state push =
             [ getString YES, getString NO ]
     ]
 
+rcEligibilityCriteriaView :: AddVehicleDetailsScreenState -> (Action -> Effect Unit) -> forall w. PrestoDOM (Effect Unit) w
+rcEligibilityCriteriaView state push = 
+  linearLayout
+    [ height WRAP_CONTENT
+    , width MATCH_PARENT
+    , orientation VERTICAL
+    , gravity LEFT
+    , margin $ MarginTop 16
+    ]
+    [ textView
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , text $ getStringV2 eligibility_criteria_for_rc
+      , color Color.grey600
+      ]
+    , textView
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , text $ "-   " <> getStringV2 car_must_be_less_than_3_years_old
+      , margin $ Margin 16 8 0 0
+      ]
+    , textView
+      [ height WRAP_CONTENT
+      , width MATCH_PARENT
+      , text $ "-   " <> getStringV2 car_must_be_sedan_vehicle
+      , margin $ Margin 16 8 0 0
+      ]
+    ]
 
 
 ----------------------------------------------------------------- uploadRC ------------------------------------------------------
@@ -949,7 +978,7 @@ rightWrongView isRight =
   ][ imageView
     [ width $ V 120
     , height $ V if isRight then 80 else 100
-    , imageWithFallback $ fetchImage FF_ASSET if isRight then "ny_ic_upload_right" else "ny_ic_image_wrong"
+    , imageWithFallback $ fetchImage FF_ASSET if isRight then "ny_ic_upload_rc_right" else "ny_ic_upload_rc_wrong"
     ]
   , linearLayout
     [ width MATCH_PARENT

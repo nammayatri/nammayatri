@@ -26,7 +26,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Prelude ((==), (&&), (<>), ($), (/=), (>), map, (-))
 import Screens.Types as ST
-import Services.API (LocationInfo(..), StopLocation(..), StopLocationAddress(..), TripCategory(..), AddressComponents(..))
+import Services.API (LocationInfo(..), StopLocation(..), StopLocationAddress(..), TripCategory(..), VehicleImageType(..), AddressComponents(..))
 import JBridge as JB
 import Data.String as DS
 import Data.Function.Uncurried (runFn2, Fn2)
@@ -122,7 +122,7 @@ transformDocText stage =
   case stage of
     ST.DRIVING_LICENSE_OPTION -> (getString DRIVING_LICENSE)
     ST.VEHICLE_DETAILS_OPTION -> getString VEHICLE_REGISTERATON_CERTIFICATE
-    ST.GRANT_PERMISSION -> getString GRANT_PERMISSIONS
+    ST.GRANT_PERMISSION -> "App Permissions"-- getString GRANT_PERMISSIONS
     ST.SUBSCRIPTION_PLAN -> getString $ SUBSCRIPTION_PLAN_STR "SUBSCRIPTION_PLAN_STR"
     ST.PROFILE_PHOTO -> getString PROFILE_PHOTO_STR
     ST.AADHAAR_CARD -> getString AADHAAR_CARD_STR
@@ -131,7 +131,26 @@ transformDocText stage =
     ST.FITNESS_CERTIFICATE -> getString FITNESS_CERTIFICATE_STR
     ST.VEHICLE_INSURANCE -> getString VEHICLE_INSURANCE_STR
     ST.VEHICLE_PUC -> getString VEHICLE_PUC_STR
+    ST.VEHICLE_PHOTOS -> getString VEHICLE_PHOTOS_STR
+    ST.INSPECTION_HUB -> getString OPERATION_HUB_STR
     ST.NO_OPTION -> ""
+
+transformStageNameFromTitle :: String -> String -> String
+transformStageNameFromTitle title doctype = 
+  case title, doctype of
+        _ , "VehicleInspectionForm" -> getString VEHICLE_PHOTOS_STR
+        _ , "InspectionHub" -> getString OPERATION_HUB_STR
+        "Vehicle Registration Certificate" , _ -> getString VEHICLE_REGISTERATON_CERTIFICATE
+        "Driving License" , _ -> getString DRIVING_LICENSE
+        "Profile Photo" , _ -> getString PROFILE_PHOTO_STR
+        "Aadhaar Card" , _ -> getString AADHAAR_CARD_STR
+        "PAN Card" , _ -> getString PAN_CARD_STR
+        "Vehicle Permit" , _ -> getString VEHICLE_PERMIT_STR
+        "Fitness Certificate (FC)" , _ -> getString FITNESS_CERTIFICATE_STR
+        "Vehicle Insurance" , _ -> getString VEHICLE_INSURANCE_STR
+        "Vehicle PUC Certificate" , _ -> getString VEHICLE_PUC_STR
+        _ , _ -> title
+
 
 transformToRegisterationStep :: String -> ST.RegisterationStep
 transformToRegisterationStep doctype =
@@ -147,6 +166,8 @@ transformToRegisterationStep doctype =
         "VehicleFitnessCertificate" -> ST.FITNESS_CERTIFICATE
         "VehicleInsurance" -> ST.VEHICLE_INSURANCE
         "VehiclePUC" -> ST.VEHICLE_PUC
+        "VehicleInspectionForm" -> ST.VEHICLE_PHOTOS
+        "InspectionHub" -> ST.INSPECTION_HUB
         _ -> ST.NO_OPTION
 
 transformToDoctype :: ST.RegisterationStep -> String
@@ -163,8 +184,25 @@ transformToDoctype step =
     ST.AADHAAR_CARD -> "AadhaarCard"
     ST.PAN_CARD -> "PanCard"
     ST.GRANT_PERMISSION -> "Permissions"
-    ST.NO_OPTION -> ""
+    ST.VEHICLE_PHOTOS -> "VehiclePhotos"
+    ST.INSPECTION_HUB -> "InspectionHub"
+    _ -> ""
 
+vehiclePhotoTypes :: Array String
+vehiclePhotoTypes = ["VehicleFront", "VehicleBack", "VehicleLeft", "VehicleRight", "VehicleFrontInterior", "VehicleBackInterior", "Odometer"]
+
+transformVehicleImageToDoctype :: Maybe VehicleImageType -> String
+transformVehicleImageToDoctype imageType = 
+        case imageType of 
+          Just VehicleFront -> "VehicleFront"
+          Just VehicleBack -> "VehicleBack"
+          Just VehicleLeft -> "VehicleLeft"
+          Just VehicleRight -> "VehicleRight"
+          Just VehicleFrontInterior -> "VehicleFrontInterior"
+          Just VehicleBackInterior -> "VehicleBackInterior" 
+          Just Odometer_ -> "Odometer"
+          Nothing -> ""
+          
 transformVehicleType :: Maybe String -> Maybe ST.VehicleCategory
 transformVehicleType vehicletype =
   case vehicletype of
@@ -314,6 +352,9 @@ twoHrsInSec = 7200
 
 fiveMinInSec :: Int
 fiveMinInSec = 300
+
+mailToLink :: String
+mailToLink = "mailto:"
 
 getDelayForAutoComplete :: Int
 getDelayForAutoComplete = 800

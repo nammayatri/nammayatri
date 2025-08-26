@@ -120,7 +120,7 @@ config = {
   , imageConfig : dummyImageConfig{visibility = VISIBLE}
   , buttonConfig : {
       text : "",
-      color : Color.blue800,
+      color : Color.blue900,
       visibility : VISIBLE,
       margin : Margin 0 0 0 0,
       padding : PaddingVertical 28 20,

@@ -38,6 +38,7 @@ import Resource.Constants as Constant
 import Screens.Types as ST
 import Styles.Colors as Color
 import Helpers.Utils as HU
+import Data.Array as DA
 import Storage ( getValueToLocalStore , KeyStore(..))
 import ConfigProvider
 import Mobility.Prelude
@@ -62,7 +63,6 @@ primaryButtonConfig state = let
                            else getString UPLOAD_DRIVING_LICENSE
       }
       , width = MATCH_PARENT
-      , background = Color.black900
       , margin = if imageUploadCondition then Margin 15 0 15 10 else Margin 15 0 15 30
       , cornerRadius = 6.0
       , height = V 50
@@ -88,8 +88,9 @@ primaryEditTextConfig state = let
         , color = Color.greyTextColor
         }
       , margin = MarginBottom 15
-      , background = Color.white900
+      , background = state.data.config.themeColors.radioInactiveBackground
       , id = EHC.getNewIDWithTag "EnterDrivingLicenseEditText"
+      , stroke = ("1," <> state.data.config.themeColors.editTextNormalStroke)
       }
     in primaryEditTextConfig'
 
@@ -105,13 +106,14 @@ primaryEditTextConfigReEnterDl state = let
           , capsLock = true
           , color = Color.black800
         }
-      , stroke = if (DS.toLower(state.data.driver_license_number) /= DS.toLower(state.data.reEnterDriverLicenseNumber) && state.data.reEnterDriverLicenseNumber /= "") then ("1," <> Color.red) else ("1," <> Color.borderColorLight)
+      , stroke = if (DS.toLower(state.data.driver_license_number) /= DS.toLower(state.data.reEnterDriverLicenseNumber) && state.data.reEnterDriverLicenseNumber /= "") then ("1," <> Color.red) else ("1," <> state.data.config.themeColors.editTextNormalStroke
+)
       , topLabel
         { text = getString RE_ENTER_DRIVING_LICENSE_NUMBER
         , color = Color.greyTextColor
         }
       , margin = MarginBottom 15
-      , background = Color.white900
+      , background = state.data.config.themeColors.radioInactiveBackground
       , id = EHC.getNewIDWithTag "ReEnterDrivingLicenseEditText"
       }
     in primaryEditTextConfig'
@@ -167,13 +169,15 @@ appOnboardingNavBarConfig state =
   { genericHeaderConfig = genericHeaderConfig state,
     appConfig = state.data.config,
     headerTextConfig = AppOnboardingNavBar.config.headerTextConfig
-              { text = if state.props.openHowToUploadManual 
-                        then getString UPLOAD_DRIVING_LICENSE 
-                        else getString DRIVING_LICENSE_DETAILS
+              { color = state.data.config.themeColors.onboardingHeaderTextColor,
+                text = getString DRIVING_LICENSE
               },
     rightButton = AppOnboardingNavBar.config.rightButton{
-      text = getString HELP_FAQ
-      }
+      text = getString HELP_FAQ,
+      color = state.data.config.themeColors.onboardingHeaderTextColor
+      },
+    navBarOpen = state.props.menuOptions,
+    prefixImageConfig = AppOnboardingNavBar.config.prefixImageConfig{ image = state.data.config.themeColors.defaultBackButton }
   }
 
 genericHeaderConfig :: ST.UploadDrivingLicenseState -> GenericHeader.Config
@@ -182,7 +186,7 @@ genericHeaderConfig state = let
   genericHeaderConfig' = config
     {
       height = WRAP_CONTENT
-    , background = state.data.config.primaryBackground
+    , background = Color.transparent
     , prefixImageConfig {
        visibility = VISIBLE
       , imageUrl = HU.fetchImage HU.FF_ASSET "ic_new_avatar"
@@ -192,8 +196,8 @@ genericHeaderConfig state = let
       }
     , padding = (PaddingVertical 5 5)
     , textConfig {
-        text = (getValueToLocalStore MOBILE_NUMBER_KEY)
-      , color = Color.white900
+        text = if DA.any (_ == getValueToLocalStore DRIVER_NAME) ["", "__failed"] then getValueToLocalStore MOBILE_NUMBER_KEY else getValueToLocalStore DRIVER_NAME
+      , color = state.data.config.themeColors.onboardingHeaderTextColor
       , margin = MarginHorizontal 5 5 
       , textStyle = FontStyle.Body1
       }
@@ -206,9 +210,10 @@ genericHeaderConfig state = let
 optionsMenuConfig :: ST.UploadDrivingLicenseState -> OptionsMenuConfig.Config
 optionsMenuConfig state = OptionsMenuConfig.config {
   menuItems = [
+    {image : HU.fetchImage HU.FF_ASSET "ny_ic_getting_started_and_faq", textdata : getString FAQS_STR, action : "faqs", isVisible : true, color : Color.black800},
     {image : HU.fetchImage HU.FF_ASSET "ny_ic_phone_unfilled", textdata : getString CONTACT_SUPPORT, action : "contact_support", isVisible : true, color : Color.black800},
     {image : HU.fetchImage HU.FF_ASSET "ny_ic_language", textdata : getString CHANGE_LANGUAGE_STR, action : "change_language", isVisible : true, color : Color.black800},
-    {image : HU.fetchImage HU.FF_ASSET "ny_ic_parallel_arrows_horizontal", textdata : getString CHANGE_VEHICLE, action : "change_vehicle", isVisible : true, color : Color.black800},
+    {image : HU.fetchImage HU.FF_ASSET "ny_ic_parallel_arrows_horizontal", textdata : getString CHANGE_VEHICLE, action : "change_vehicle", isVisible : state.data.config.enableChangeVehicleType, color : Color.black800},
     {image : HU.fetchImage HU.FF_ASSET "ny_ic_logout_grey", textdata : getString LOGOUT, action : "logout", isVisible :  true, color : Color.black800}
   ],
   backgroundColor = Color.blackLessTrans,
@@ -228,7 +233,45 @@ bottomDrawerListConfig state = BottomDrawerList.config {
   animState = state.props.contactSupportModal,
   titleText = getString CONTACT_SUPPORT_VIA,
   itemList = [
-    {prefixImg : "ny_ic_whatsapp_black", title : "Whatsapp", desc : getString YOU_CAN_SHARE_SCREENSHOT , postFixImg : "ny_ic_chevron_right", visibility : state.data.cityConfig.registration.whatsappSupport, identifier : "whatsapp"},
+    {prefixImg : "ny_ic_whatsapp_black", title : getString WHATSAPP, desc : getString YOU_CAN_SHARE_SCREENSHOT , postFixImg : "ny_ic_chevron_right", visibility : state.data.cityConfig.registration.whatsappSupport, identifier : "whatsapp"},
     {prefixImg : "ny_ic_direct_call", title : getString CALL, desc : getString PLACE_A_CALL, postFixImg : "ny_ic_chevron_right", visibility : state.data.cityConfig.registration.callSupport, identifier : "call"}
   ]
 }
+
+logoutPopUp :: ST.UploadDrivingLicenseState -> PopUpModal.Config
+logoutPopUp  state = let 
+  config' = PopUpModal.config
+  popUpConfig' = config' {
+    primaryText {text = (getString LOGOUT)},
+    secondaryText {text = (getString ARE_YOU_SURE_YOU_WANT_TO_LOGOUT)},
+    buttonLayoutMargin = (MarginBottom 40),
+    padding = (Padding 16 16 16 0),
+    backgroundClickable = true,
+    dismissPopup = true,
+    option1 {
+      text = (getString LOGOUT),
+      color = Color.white900,
+      textStyle = FontStyle.SubHeading1,
+      strokeColor = state.data.config.primaryButtonBackground,
+      width = MATCH_PARENT,
+      height = WRAP_CONTENT,
+      background = state.data.config.primaryButtonBackground,
+      margin = (MarginBottom 12),
+      padding = (PaddingVertical 16 16),
+      enableRipple = true
+      },
+    option2 {
+      text = (getString CANCEL),
+      color = Color.blue900,
+      textStyle = FontStyle.SubHeading1,
+      height = WRAP_CONTENT,
+      strokeColor = Color.white900,
+      width = MATCH_PARENT,
+      padding = PaddingVertical 16 16,
+      margin = (MarginBottom 0),
+      background = Color.white900,
+      enableRipple = true
+      },
+    optionButtonOrientation = "VERTICAL"
+  }
+  in popUpConfig'

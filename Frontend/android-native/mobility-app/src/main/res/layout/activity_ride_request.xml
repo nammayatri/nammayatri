@@ -17,5 +17,261 @@
 
         <include layout="@layout/loading_screen_overlay" />
     </LinearLayout>
-    <include android:id="@+id/view_pager_parent" layout="@layout/viewpager_layout_view"/>
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:id="@+id/view_pager_parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:id="@+id/indicatorLayout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="15dp"
+                android:layout_marginTop="20dp">
+
+                <androidx.cardview.widget.CardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="10dp"
+                    android:background="@color/white"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="0dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content">
+
+                        <LinearLayout
+                            android:id="@+id/indicator1"
+                            android:layout_width="wrap_content"
+                            android:layout_height="match_parent"
+                            android:layout_weight="1"
+                            android:gravity="center"
+                            android:orientation="vertical"
+                            android:paddingHorizontal="5dp"
+                            android:paddingVertical="15dp">
+
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:layout_gravity="center">
+
+                                <TextView
+                                    android:id="@+id/indicatorText1"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:fontFamily="@font/plus_jakartasans_semibold"
+                                    android:lineHeight="28dp"
+                                    android:text="₹120"
+                                    android:layout_marginVertical="10dp"
+                                    android:textColor="@color/Black800"
+                                    android:textSize="20dp" />
+
+                                <ImageView
+                                    android:layout_width="16dp"
+                                    android:layout_height="16dp"
+                                    android:src="@drawable/ic_tip_tag"
+                                    android:layout_gravity="center"
+                                    android:layout_marginLeft="4dp"
+                                    android:visibility="gone"
+                                    android:id="@+id/indicator1Image"
+                                    />
+
+                            </LinearLayout>
+
+                            <com.google.android.material.progressindicator.LinearProgressIndicator
+                                android:id="@+id/progress_indicator_1"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginHorizontal="10dp"
+                                android:layout_marginBottom="5dp"
+                                android:indeterminate="false"
+                                android:progress="100"
+                                android:theme="@style/MaterialTheme"
+                                app:indicatorColor="@color/defaultRRThemeColor"
+                                app:trackColor="@color/grey900"
+                                app:trackCornerRadius="20dp"
+                                app:trackThickness="7dp" />
+
+                            <TextView
+                                android:id="@+id/tip_banner_view_0"
+                                android:layout_width="wrap_content"
+                                android:layout_height="1dp"
+                                android:ellipsize="end"
+                                android:gravity="center"
+                                android:maxLines="1"
+                                android:paddingHorizontal="6dp"
+                                android:paddingVertical="2dp"
+                                android:text="₹12000"
+                                android:textColor="@color/white"
+                                android:textSize="10sp"
+                                android:visibility="invisible" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="1dp"
+                            android:layout_height="match_parent"
+                            android:background="#E5E7EB" />
+
+                        <LinearLayout
+                            android:id="@+id/indicator2"
+                            android:layout_width="wrap_content"
+                            android:layout_height="match_parent"
+                            android:layout_weight="1"
+                            android:gravity="center"
+                            android:orientation="vertical"
+                            android:paddingHorizontal="5dp"
+                            android:paddingVertical="15dp">
+
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:layout_gravity="center">
+
+                                <TextView
+                                    android:id="@+id/indicatorText2"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:fontFamily="@font/plus_jakartasans_semibold"
+                                    android:lineHeight="28dp"
+                                    android:text="₹40"
+                                    android:layout_marginVertical="10dp"
+                                    android:textColor="@color/Black800"
+                                    android:textSize="20dp" />
+                                <ImageView
+                                    android:layout_width="16dp"
+                                    android:layout_height="16dp"
+                                    android:src="@drawable/ic_tip_tag"
+                                    android:layout_gravity="center"
+                                    android:layout_marginLeft="4dp"
+                                    android:visibility="gone"
+                                    android:id="@+id/indicator2Image"
+                                    />
+                            </LinearLayout>
+
+                            <com.google.android.material.progressindicator.LinearProgressIndicator
+                                android:id="@+id/progress_indicator_2"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginHorizontal="10dp"
+                                android:layout_marginBottom="5dp"
+                                android:indeterminate="false"
+                                android:progress="100"
+                                android:theme="@style/MaterialTheme"
+                                app:indicatorColor="@color/defaultRRThemeColor"
+                                app:trackColor="@color/grey900"
+                                app:trackCornerRadius="20dp"
+                                app:trackThickness="7dp" />
+
+                            <TextView
+                                android:id="@+id/tip_banner_view_1"
+                                android:layout_width="wrap_content"
+                                android:layout_height="1dp"
+                                android:ellipsize="end"
+                                android:gravity="center"
+                                android:maxLines="1"
+                                android:paddingHorizontal="6dp"
+                                android:paddingVertical="2dp"
+                                android:text="₹12000"
+                                android:textColor="@color/white"
+                                android:textSize="10sp"
+                                android:visibility="invisible" />
+
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="1dp"
+                            android:layout_height="match_parent"
+                            android:background="#E5E7EB" />
+
+                        <LinearLayout
+                            android:id="@+id/indicator3"
+                            android:layout_width="wrap_content"
+                            android:layout_height="match_parent"
+                            android:layout_weight="1"
+                            android:gravity="center"
+                            android:orientation="vertical"
+                            android:paddingHorizontal="5dp"
+                            android:paddingVertical="15dp">
+
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="center"
+                                android:orientation="horizontal">
+
+                                <TextView
+                                    android:id="@+id/indicatorText3"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginVertical="10dp"
+                                    android:fontFamily="@font/plus_jakartasans_semibold"
+                                    android:lineHeight="28dp"
+                                    android:text="₹160"
+                                    android:textColor="@color/Black800"
+                                    android:textSize="20dp" />
+
+                                <ImageView
+                                    android:id="@+id/indicator3Image"
+                                    android:layout_width="16dp"
+                                    android:layout_height="16dp"
+                                    android:layout_gravity="center"
+                                    android:layout_marginLeft="4dp"
+                                    android:src="@drawable/ic_tip_tag"
+                                    android:visibility="gone" />
+                            </LinearLayout>
+
+                            <com.google.android.material.progressindicator.LinearProgressIndicator
+                                android:id="@+id/progress_indicator_3"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginHorizontal="10dp"
+                                android:layout_marginBottom="5dp"
+                                android:indeterminate="false"
+                                android:progress="100"
+                                android:theme="@style/MaterialTheme"
+                                app:indicatorColor="@color/defaultRRThemeColor"
+                                app:trackColor="#171C8F1F"
+                                app:trackCornerRadius="20dp"
+                                app:trackThickness="7dp" />
+
+                            <TextView
+                                android:id="@+id/tip_banner_view_2"
+                                android:layout_width="wrap_content"
+                                android:layout_height="1dp"
+                                android:ellipsize="end"
+                                android:gravity="center"
+                                android:maxLines="1"
+                                android:paddingHorizontal="6dp"
+                                android:paddingVertical="2dp"
+                                android:text="₹12000"
+                                android:textColor="@color/white"
+                                android:textSize="10sp"
+                                android:visibility="invisible" />
+
+                        </LinearLayout>
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
+            </LinearLayout>
+
+            <androidx.viewpager2.widget.ViewPager2
+                android:id="@+id/viewPager"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_marginTop="30dp"
+                android:clipChildren="false"
+                android:clipToPadding="false" />
+        </LinearLayout>
+
+    </FrameLayout>
+
 </FrameLayout>

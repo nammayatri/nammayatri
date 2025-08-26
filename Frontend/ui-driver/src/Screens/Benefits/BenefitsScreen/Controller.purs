@@ -17,7 +17,7 @@ import Language.Strings (getString)
 import Language.Types (STR(..))
 import Components.BottomNavBar as BottomNavBar
 import Storage (KeyStore(..), getValueToLocalNativeStore, setValueToLocalNativeStore, getValueToLocalStore)
-import Helpers.Utils (incrementValueOfLocalStoreKey, generateReferralLink, generateQR)
+import Helpers.Utils (incrementValueOfLocalStoreKey, generateReferralLink, generateQR, contactSupportNumber, getCityConfig)
 import Components.PrimaryButton as PrimaryButton
 import Common.Types.App (ShareImageConfig, LazyCheck(..))
 import Engineering.Helpers.Commons (getNewIDWithTag)
@@ -43,6 +43,11 @@ import PrestoDOM.Core (processEvent)
 import Data.Function.Uncurried (runFn2)
 import Engineering.Helpers.Commons as EHC
 import Engineering.Helpers.Utils as EHU
+import Components.AppOnboardingNavBar as AppOnboardingNavBar
+import Components.OptionsMenu as OptionsMenu
+import Components.PopUpModal as PopUpModal
+import Components.BottomDrawerList as BottomDrawerList
+import Screens.Types as ST
 import Helpers.Utils (emitTerminateApp, isParentView)
 
 instance showAction :: Show Action where
@@ -137,6 +142,12 @@ data Action = BackPressed
             | GullakSDKResponse String
             | GullakBannerClick
             | UpdateReferralCode GenerateReferralCodeRes
+            | AppOnboardingNavBarAC AppOnboardingNavBar.Action
+            | OptionsMenuAction OptionsMenu.Action
+            | PopUpModalLogoutAction PopUpModal.Action
+            | BottomDrawerListAC BottomDrawerList.Action
+            | WhatsAppClick
+            | ContinueButtonAction PrimaryButton.Action
             | GoToClaimReward
             | YoutubeVideoStatus String
 data ScreenOutput = GoToHomeScreen BenefitsScreenState
@@ -147,6 +158,10 @@ data ScreenOutput = GoToHomeScreen BenefitsScreenState
                   | GoBack
                   | GoToLmsVideoScreen BenefitsScreenState
                   | GoToCustomerReferralTrackerScreen Boolean BenefitsScreenState
+                  | GoToRegistrationScreen BenefitsScreenState
+                  | SelectLang BenefitsScreenState
+                  | LogoutAccount
+                  | GoToFaqsScreen BenefitsScreenState
                   | GoToDriverClaimRewardScreen BenefitsScreenState
 
 eval :: Action -> BenefitsScreenState -> Eval Action ScreenOutput BenefitsScreenState
@@ -156,6 +171,9 @@ eval BackPressed state =
     continue state{props{showDriverReferralQRCode = false}}
   else if state.props.referralInfoPopType /= NO_REFERRAL_POPUP then 
     continue state{props{referralInfoPopType = NO_REFERRAL_POPUP}}
+  else if state.props.contactSupportModal == ST.SHOW then continue state { props { contactSupportModal = ST.HIDE}}
+  else if state.props.menuOptions then continue state { props { menuOptions = false}}
+  else if state.props.fromRegistrationScreen then exit $ GoToRegistrationScreen state
   else if isParentView FunctionCall then do
     void $ pure $ emitTerminateApp Nothing true
     continue state
@@ -301,7 +319,54 @@ eval (BannerCarousal (BannerCarousel.OnClick index)) state =
 eval GullakBannerClick state = continue state { props { glBannerClickable = false}}
 
 eval GoToClaimReward state = exit $ GoToDriverClaimRewardScreen state
+
+eval (AppOnboardingNavBarAC (AppOnboardingNavBar.Logout)) state = continue state {props{menuOptions = not state.props.menuOptions}}
+
+eval (AppOnboardingNavBarAC (AppOnboardingNavBar.PrefixImgOnClick)) state = continueWithCmd state [pure BackPressed]
+
+eval (OptionsMenuAction OptionsMenu.BackgroundClick) state = continue state{props{menuOptions = false}}
+
+eval (OptionsMenuAction (OptionsMenu.ItemClick item)) state = do
+  let newState = state{props{menuOptions = false}}
+  case item of
+    "logout" -> continue newState { props { logoutModalView = true }}
+    "contact_support" -> continue newState { props { contactSupportModal = ST.SHOW}}
+    "change_language" -> exit $ SelectLang newState
+    "faqs" -> exit $ GoToFaqsScreen newState
+    _ -> continue newState
   
+eval (PopUpModalLogoutAction (PopUpModal.OnButton2Click)) state = continue $ (state {props {logoutModalView = false}})
+
+eval (PopUpModalLogoutAction (PopUpModal.OnButton1Click)) state = exit $ LogoutAccount
+
+eval (BottomDrawerListAC BottomDrawerList.Dismiss) state = continue state { props { contactSupportModal = ST.HIDE}}
+
+eval (BottomDrawerListAC BottomDrawerList.OnAnimationEnd) state = continue state { props { contactSupportModal = if state.props.contactSupportModal == ST.ANIMATING then ST.HIDE else state.props.contactSupportModal}}
+
+eval (BottomDrawerListAC (BottomDrawerList.OnItemClick item)) state = do
+  case item.identifier of
+    "whatsapp" -> continueWithCmd state [pure WhatsAppClick]
+    "call" -> do
+                void $ pure $ unsafePerformEffect $ contactSupportNumber ""
+                continue state
+    _ -> continue state
+
+eval WhatsAppClick state = continueWithCmd state [do
+  let cityConfig = getCityConfig state.data.config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
+      supportPhone = cityConfig.registration.supportWAN
+      phone = "%0APhone%20Number%3A%20"<> getValueToLocalStore MOBILE_NUMBER_KEY
+      dlNumber = getValueToLocalStore ENTERED_DL
+      rcNumber = getValueToLocalStore ENTERED_RC
+      dl = if (dlNumber /= "__failed") then ("%0ADL%20Number%3A%20"<> dlNumber) else ""
+      rc = if (rcNumber /= "__failed") then ("%0ARC%20Number%3A%20"<> rcNumber) else ""
+  void $ JB.openUrlInApp $ "https://wa.me/" <> supportPhone <> "?text=Hi%20Team%2C%0AI%20would%20require%20help%20in%20onboarding%20%0A%E0%A4%AE%E0%A5%81%E0%A4%9D%E0%A5%87%20%E0%A4%AA%E0%A4%82%E0%A4%9C%E0%A5%80%E0%A4%95%E0%A4%B0%E0%A4%A3%20%E0%A4%AE%E0%A5%87%E0%A4%82%20%E0%A4%B8%E0%A4%B9%E0%A4%BE%E0%A4%AF%E0%A4%A4%E0%A4%BE%20%E0%A4%95%E0%A5%80%20%E0%A4%86%E0%A4%B5%E0%A4%B6%E0%A5%8D%E0%A4%AF%E0%A4%95%E0%A4%A4%E0%A4%BE%20%E0%A4%B9%E0%A5%8B%E0%A4%97%E0%A5%80" <> phone <> dl <> rc
+  pure NoAction
+  ]
+
+eval (ContinueButtonAction (PrimaryButton.OnClick)) state = do
+  void $ pure $ setValueToLocalNativeStore TRAININGS_COMPLETED_STATUS "true"
+  exit $ GoToRegistrationScreen state
+
 eval _ state = update state
 
 shareImageMessageConfig :: BenefitsScreenState -> ShareImageConfig

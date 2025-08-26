@@ -77,6 +77,14 @@ navData screenName bottomNavConfig = do
           screenName : ScreenNames.REFERRAL_SCREEN
         },
         {
+          activeIcon: fetchImage FF_ASSET "ny_ic_trips_active",
+          defaultIcon: fetchImage FF_ASSET "ny_ic_trips_inactive",
+          isVisible : bottomNavConfig.trips.isVisible,
+          showNewBanner : bottomNavConfig.trips.showNew,
+          text: "Trips",
+          screenName : ScreenNames.REFERRAL_SCREEN
+        },
+        {
           activeIcon: fetchImage FF_ASSET "ny_ic_alerts_active",
           defaultIcon: fetchImage FF_ASSET "ny_ic_alerts_inactive",
           text: "Alert",

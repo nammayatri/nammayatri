@@ -46,7 +46,6 @@ primaryButtonConfig state = let
     primaryButtonConfig' = config 
       { textConfig { text = getString if state.props.manageVehicle then ADD_VEHICLE else COMPLETE_REGISTRATION }
       , width = MATCH_PARENT
-      , background = Color.black900
       , height = V 48
       , id = "RegistrationScreenButton"
       }
@@ -59,6 +58,7 @@ appOnboardingNavBarConfig state =
     genericHeaderConfig = genericHeaderConfig state,
     appConfig = state.data.config,
     headerTextConfig = AppOnboardingNavBar.config.headerTextConfig{
+      color = state.data.config.themeColors.onboardingHeaderTextColor,
       text = case state.data.vehicleCategory of
               _ | state.props.manageVehicle -> getString ADD_VEHICLE
               Just ST.CarCategory -> getString REGISTER_YOUR_CAR
@@ -71,8 +71,10 @@ appOnboardingNavBarConfig state =
               Nothing -> getString REGISTRATION
       },
     rightButton = AppOnboardingNavBar.config.rightButton{
-      text = getString HELP_FAQ
-      }
+      text = getString HELP_FAQ,
+      color = state.data.config.themeColors.onboardingHeaderTextColor
+      },
+    navBarOpen = state.props.menuOptions
   }
 
 changeVehicleConfig :: Common.LazyCheck -> PopUpModal.Config
@@ -199,7 +201,7 @@ genericHeaderConfig state = let
   genericHeaderConfig' = config
     {
       height = WRAP_CONTENT
-    , background = state.data.config.primaryBackground
+    , background = Color.transparent
     , prefixImageConfig {
        visibility = VISIBLE
       , imageUrl = HU.fetchImage HU.FF_ASSET "ic_new_avatar"
@@ -210,7 +212,7 @@ genericHeaderConfig state = let
     , padding = (PaddingVertical 5 5)
     , textConfig {
         text = (getValueToLocalStore MOBILE_NUMBER_KEY)
-      , color = Color.white900
+      , color = state.data.config.themeColors.onboardingHeaderTextColor
       , margin = MarginHorizontal 5 5 
       , textStyle = FontStyle.Body1
       }
@@ -263,9 +265,10 @@ continueButtonConfig state =
 optionsMenuConfig :: ST.RegistrationScreenState -> OptionsMenuConfig.Config
 optionsMenuConfig state = OptionsMenuConfig.config {
   menuItems = [
+    {image : HU.fetchImage HU.FF_ASSET "ny_ic_getting_started_and_faq", textdata : getString FAQS_STR, action : "faqs", isVisible : true, color : Color.black800},
     {image : HU.fetchImage HU.FF_ASSET "ny_ic_phone_unfilled", textdata : getString CONTACT_SUPPORT, action : "contact_support", isVisible : true, color : Color.black800},
     {image : HU.fetchImage HU.FF_ASSET "ny_ic_language", textdata : getString CHANGE_LANGUAGE_STR, action : "change_language", isVisible : not state.props.manageVehicle, color : Color.black800},
-    {image : HU.fetchImage HU.FF_ASSET "ny_ic_parallel_arrows_horizontal", textdata : getString CHANGE_VEHICLE, action : "change_vehicle", isVisible : (isJust state.data.vehicleCategory) && not state.props.manageVehicle, color : Color.black800},
+    {image : HU.fetchImage HU.FF_ASSET "ny_ic_parallel_arrows_horizontal", textdata : getString CHANGE_VEHICLE, action : "change_vehicle", isVisible : (isJust state.data.vehicleCategory) && not state.props.manageVehicle && state.data.config.enableChangeVehicleType, color : Color.black800},
     {image : HU.fetchImage HU.FF_ASSET "ny_ic_logout_grey", textdata : getString LOGOUT, action : "logout", isVisible :  not state.props.manageVehicle, color : Color.black800}
   ],
   backgroundColor = Color.blackLessTrans,
@@ -285,7 +288,7 @@ bottomDrawerListConfig state = BottomDrawerList.config {
   animState = state.props.contactSupportModal,
   titleText = getString CONTACT_SUPPORT_VIA,
   itemList = [
-    {prefixImg : "ny_ic_whatsapp_black", title : "Whatsapp", desc : getString YOU_CAN_SHARE_SCREENSHOT , postFixImg : "ny_ic_chevron_right", visibility : state.data.cityConfig.registration.whatsappSupport, identifier : "whatsapp"},
+    {prefixImg : "ny_ic_whatsapp_black", title : getString WHATSAPP, desc : getString YOU_CAN_SHARE_SCREENSHOT , postFixImg : "ny_ic_chevron_right", visibility : state.data.cityConfig.registration.whatsappSupport, identifier : "whatsapp"},
     {prefixImg : "ny_ic_direct_call", title : getString CALL, desc : getString PLACE_A_CALL, postFixImg : "ny_ic_chevron_right", visibility : state.data.cityConfig.registration.callSupport, identifier : "call"}
   ]
 }

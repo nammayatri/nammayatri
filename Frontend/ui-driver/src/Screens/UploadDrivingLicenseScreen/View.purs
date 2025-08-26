@@ -53,17 +53,16 @@ import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties as PP
 import PrestoDOM.Types.DomAttributes as PTD
-import Screens.AddVehicleDetailsScreen.Views (redirectScreen, rightWrongView)
+import Screens.AddVehicleDetailsScreen.Views (redirectScreen, rightWrongItemView)
 import Screens.Types as ST
 import Screens.UploadDrivingLicenseScreen.Controller (Action(..), eval, ScreenOutput)
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
-import Screens.RegistrationScreen.ComponentConfig (logoutPopUp) as LP
 import Data.String.Common as DSC
 import ConfigProvider
 import Components.OptionsMenu as OptionsMenu
 import Data.Array as DA
-import Screens.RegistrationScreen.ComponentConfig (changeVehicleConfig)
+import Screens.RegistrationScreenV2.ComponentConfig (changeVehicleConfig)
 import Components.BottomDrawerList as BottomDrawerList
 import Engineering.Helpers.Events as EHE
 import Helpers.Utils as HU
@@ -199,7 +198,6 @@ menuOptionModal push state =
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , padding $ PaddingTop 55
-    , background Color.blackLessTrans
     ][ OptionsMenu.view (push <<< OptionsMenuAction) (optionsMenuConfig state) ]
 
 headerView :: forall w. ST.UploadDrivingLicenseState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
@@ -449,7 +447,8 @@ dateOfBirth push state =
     , margin (MarginVertical 10 10)
     , padding (Padding 20 16 16 16)
     , cornerRadius 4.0
-    , stroke ("1," <> Color.borderGreyColor)
+    , stroke ("1," <> state.data.config.themeColors.editTextNormalStroke)
+    , background state.data.config.themeColors.radioInactiveBackground
     ][ linearLayout
       [ width MATCH_PARENT
         , height MATCH_PARENT
@@ -587,7 +586,7 @@ popupModal push state =
     where 
       action = if state.props.logoutPopupModal then PopUpModalLogoutAction 
                 else ChangeVehicleAC
-      popupConfig = if state.props.logoutPopupModal then (LP.logoutPopUp Language)
+      popupConfig = if state.props.logoutPopupModal then (logoutPopUp state)
                     else changeVehicleConfig FunctionCall
 
 validateProfilePictureModal :: forall w . (Action -> Effect Unit) -> ST.UploadDrivingLicenseState -> PrestoDOM (Effect Unit) w
@@ -661,3 +660,26 @@ dummyLinearLayout =
     [ width WRAP_CONTENT
     , height $ V 0
     ][]
+
+rightWrongView :: Boolean -> forall w . PrestoDOM (Effect Unit) w
+rightWrongView isRight = 
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , gravity CENTER_VERTICAL
+  , margin $ MarginBottom 16
+  ][ imageView
+    [ width $ V 120
+    , height $ V if isRight then 80 else 100
+    , imageWithFallback $ fetchImage FF_ASSET if isRight then "ny_ic_upload_right" else "ny_ic_image_wrong"
+    ]
+  , linearLayout
+    [ width MATCH_PARENT
+    , height MATCH_PARENT
+    , orientation VERTICAL
+    , padding $ Padding 16 16 0 0
+    , gravity CENTER
+    ][ rightWrongItemView isRight $ if isRight then (getString CLEAR_IMAGE) else (getString BLURRY_IMAGE)
+     , rightWrongItemView isRight $ if isRight then (getString CROPPED_CORRECTLY) else (getString WRONG_CROPPING)
+    ]
+  ]

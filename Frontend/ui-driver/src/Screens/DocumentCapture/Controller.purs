@@ -17,7 +17,7 @@ module Screens.DocumentCaptureScreen.Controller where
 
 import Components.GenericHeader.Controller (Action(..)) as GenericHeaderController
 import Components.PrimaryButton.Controller as PrimaryButtonController
-import Prelude (class Show, pure, unit, bind, discard, ($), (/=), (==), void, (<>), show)
+import Prelude (class Show, pure, unit, bind, discard, ($), (/=), (==), void, (<>), (&&), not, show, (>), show)
 import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
@@ -27,7 +27,7 @@ import Components.AppOnboardingNavBar as AppOnboardingNavBar
 import Components.ValidateDocumentModal.Controller as ValidateDocumentModal
 import JBridge as JB
 import Log (printLog)
-import Effect.Uncurried (runEffectFn4)
+import Effect.Uncurried (runEffectFn4, runEffectFn1)
 import Engineering.Helpers.Commons as EHC
 import Components.PopUpModal.Controller as PopUpModal
 import Data.String as DS
@@ -41,6 +41,13 @@ import Effect.Unsafe (unsafePerformEffect)
 import Storage (KeyStore(..), getValueToLocalStore)
 import Common.Types.App
 import Engineering.Helpers.Events as EHE
+import Services.API as API
+import Resource.Constants as Const
+import Storage
+import DecodeUtil 
+import Debug
+import Data.Maybe
+import Data.Array as DA
 import Helpers.Utils (isParentView, emitLogoutApp)
 import Common.Types.App (LazyCheck(..))
 
@@ -74,12 +81,22 @@ data Action = PrimaryButtonAC PrimaryButtonController.Action
             | ChangeVehicleAC PopUpModal.Action
             | BottomDrawerListAC BottomDrawerList.Action
             | WhatsAppClick
+            | VehicleUploadPrimaryButtonAC PrimaryButtonController.Action 
+            | AfterRender
+            | UploadImageWihType (Maybe API.VehicleImageType)
+            | CallUploadVehicleImageAPI
+            | UpdateVehiclePhotos API.GetVehiclePhotosResp
+            | UpdateVehiclePhotosWithType API.GetVehiclePhotosResp API.VehicleImageType
 
 data ScreenOutput = GoBack 
                   | UploadAPI DocumentCaptureScreenState
                   | LogoutAccount
                   | SelectLang DocumentCaptureScreenState
                   | ChangeVehicle DocumentCaptureScreenState
+                  | UploadVehicleImageAPI DocumentCaptureScreenState
+                  | GoToOnboardingScreen DocumentCaptureScreenState
+                  | GetVehicleImagesStatus DocumentCaptureScreenState
+                  | GoToFaqsScreen DocumentCaptureScreenState
 
 uploadFileConfig :: UploadFileConfig
 uploadFileConfig = UploadFileConfig {
@@ -90,20 +107,122 @@ uploadFileConfig = UploadFileConfig {
 
 eval :: Action -> DocumentCaptureScreenState -> Eval Action ScreenOutput DocumentCaptureScreenState
 
-eval (PrimaryButtonAC PrimaryButtonController.OnClick) state = continueWithCmd state [do
-  let _ = EHE.addEvent (EHE.defaultEventObject $ HU.getDocUploadEventName state.data.docType) { module = HU.getRegisterationStepModule state.data.docType, source = HU.getRegisterationStepScreenSource state.data.docType}
-  _ <- liftEffect $ JB.uploadFile uploadFileConfig true
-  pure NoAction]
+eval (PrimaryButtonAC PrimaryButtonController.OnClick) state = 
+  if state.data.docType == ST.VEHICLE_PHOTOS && not state.props.uploadVehiclePhotos then do
+    let newState = state {props {uploadVehiclePhotos = true}}
+    exit $ GetVehicleImagesStatus newState 
+  else continueWithCmd state [do
+    let _ = EHE.addEvent (EHE.defaultEventObject $ HU.getDocUploadEventName state.data.docType) { module = HU.getRegisterationStepModule state.data.docType, source = HU.getRegisterationStepScreenSource state.data.docType}
+    void $ liftEffect $ JB.uploadFile uploadFileConfig true
+    pure NoAction]
+
+eval (UpdateVehiclePhotos vehiclePhotosResp) state = continue state { data {vehiclePhotos = vehiclePhotosResp}}
+
+eval (UpdateVehiclePhotosWithType (API.GetVehiclePhotosResp vehiclePhotosResp) vehicleImageType) state = do
+  let (API.GetVehiclePhotosResp photos) = state.data.vehiclePhotos
+      vehiclePhotos = 
+        case vehicleImageType of
+          API.VehicleFront -> 
+            let vehicleFrontImages = vehiclePhotosResp.front
+            in API.GetVehiclePhotosResp {
+                  front : vehicleFrontImages,
+                  back : photos.back,
+                  left : photos.left,
+                  right : photos.right,
+                  frontInterior : photos.frontInterior,
+                  backInterior : photos.backInterior,
+                  odometer : photos.odometer
+                }
+          API.VehicleBack -> 
+            let vehicleBackImages = vehiclePhotosResp.back
+            in API.GetVehiclePhotosResp {
+                  front : photos.front,
+                  back : vehicleBackImages,
+                  left : photos.left,
+                  right : photos.right,
+                  frontInterior : photos.frontInterior,
+                  backInterior : photos.backInterior,
+                  odometer : photos.odometer
+                }
+          API.VehicleRight ->
+            let vehicleRightImages = vehiclePhotosResp.right
+            in API.GetVehiclePhotosResp {
+                  front : photos.front,
+                  back : photos.back,
+                  left : photos.left,
+                  right : vehicleRightImages,
+                  frontInterior : photos.frontInterior,
+                  backInterior : photos.backInterior,
+                  odometer : photos.odometer
+                }
+          API.VehicleLeft ->
+            let vehicleLeftImages = vehiclePhotosResp.left
+            in API.GetVehiclePhotosResp {
+                  front : photos.front,
+                  back : photos.back,
+                  left : vehicleLeftImages,
+                  right : photos.right,
+                  frontInterior : photos.frontInterior,
+                  backInterior : photos.backInterior,
+                  odometer : photos.odometer
+                }
+          API.VehicleFrontInterior -> 
+            let vehicleFrontInteriorImages = vehiclePhotosResp.frontInterior
+            in API.GetVehiclePhotosResp {
+                  front : photos.front,
+                  back : photos.back,
+                  left : photos.left,
+                  right : photos.right,
+                  frontInterior : vehicleFrontInteriorImages,
+                  backInterior : photos.backInterior,
+                  odometer : photos.odometer
+                }
+          API.VehicleBackInterior -> 
+            let vehicleBackInteriorImages = vehiclePhotosResp.backInterior
+            in API.GetVehiclePhotosResp {
+                  front : photos.front,
+                  back : photos.back,
+                  left : photos.left,
+                  right : photos.right,
+                  frontInterior : photos.frontInterior,
+                  backInterior : vehicleBackInteriorImages,
+                  odometer : photos.odometer
+                }
+          API.Odometer_ -> 
+            let odometerImages = vehiclePhotosResp.odometer
+            in API.GetVehiclePhotosResp {
+                  front : photos.front,
+                  back : photos.back,
+                  left : photos.left,
+                  right : photos.right,
+                  frontInterior : photos.frontInterior,
+                  backInterior : photos.backInterior,
+                  odometer : odometerImages
+                }
+  let newState = state { data { vehiclePhotos = vehiclePhotos}, props {allImagesUploaded = checkIfAllImagesUploaded vehiclePhotos}}
+  continueWithCmd newState [ do
+    void $ runEffectFn1 JB.displayBase64Image JB.displayBase64ImageConfig {source =  getImage vehicleImageType vehiclePhotos , id = EHC.getNewIDWithTag $ getImageLayoutId vehicleImageType, scaleType =  "CENTER_CROP", inSampleSize = 2} 
+    pure NoAction
+  ]
+
+eval (VehicleUploadPrimaryButtonAC PrimaryButtonController.OnClick) state = exit $ GoToOnboardingScreen state
 
 eval (AppOnboardingNavBarAC (AppOnboardingNavBar.Logout)) state = continue state {props { menuOptions = true }}
 
 eval (AppOnboardingNavBarAC AppOnboardingNavBar.PrefixImgOnClick) state = continueWithCmd state [pure BackPressed]
 
 eval (CallBackImageUpload imageBase64 imageName imagePath) state = do
-  if imageBase64 /= "" then continueWithCmd state { data { imageBase64 = imageBase64 }, props { validateDocModal = true}} [ do
-      void $ runEffectFn4 JB.renderBase64ImageFile imageBase64 (EHC.getNewIDWithTag "ValidateProfileImage") false "CENTER_CROP"
-      pure $ NoAction]
-  else continue state
+  if imageBase64 /= "" then 
+    case state.data.docType of
+      ST.VEHICLE_PHOTOS -> continueWithCmd state {data { imageBase64 = imageBase64}, props{validating = true}} [do
+                              -- void $ runEffectFn4 JB.renderBase64ImageFile imageBase64 (EHC.getNewIDWithTag $ "vehicle_image00") false "CENTER_CROP"
+                              pure $ CallUploadVehicleImageAPI ]
+      _ -> continueWithCmd state { data { imageBase64 = imageBase64 }, props { validateDocModal = true}} [ do
+              void $ runEffectFn4 JB.renderBase64ImageFile imageBase64 (EHC.getNewIDWithTag "ValidateProfileImage") false "CENTER_CROP"
+              pure $ NoAction]
+    else continue state
+
+eval CallUploadVehicleImageAPI state = updateAndExit state $ UploadVehicleImageAPI state{props{validating = true}}
 
 eval (ValidateDocumentModalAction (ValidateDocumentModal.BackPressed)) state = continueWithCmd state [pure BackPressed]  
 
@@ -134,6 +253,7 @@ eval BackPressed state =
   else if state.props.confirmChangeVehicle then continue state{props{confirmChangeVehicle = false}}
   else if state.props.menuOptions then continue state{props{menuOptions = false}} 
   else if state.props.contactSupportModal == ST.SHOW then continue state { props { contactSupportModal = ST.ANIMATING}}
+  else if state.props.uploadVehiclePhotos then continue state { props { uploadVehiclePhotos = false}}
   else exit $ GoBack
 
 eval (OptionsMenuAction OptionsMenu.BackgroundClick) state = continue state{props{menuOptions = false}}
@@ -145,6 +265,7 @@ eval (OptionsMenuAction (OptionsMenu.ItemClick item)) state = do
     "contact_support" -> continue newState { props { contactSupportModal = ST.SHOW}}
     "change_vehicle" -> continue newState {props {confirmChangeVehicle = true}}
     "change_language" -> exit $ SelectLang newState
+    "faqs" -> exit $ GoToFaqsScreen newState
     _ -> continue newState
 
 eval (ChangeVehicleAC (PopUpModal.OnButton2Click)) state = continue state {props {confirmChangeVehicle= false}}
@@ -176,4 +297,37 @@ eval WhatsAppClick state = continueWithCmd state [do
   pure NoAction
   ]
 
+eval (UploadImageWihType imageType) state = continueWithCmd state {props{vehicleTypeImageToUpload = imageType}} [do
+    -- let _ = EHE.addEvent (EHE.defaultEventObject $ HU.getDocUploadEventName state.data.docType) { module = HU.getRegisterationStepModule state.data.docType, source = HU.getRegisterationStepScreenSource state.data.docType}
+    void $ liftEffect $ JB.uploadFile (UploadFileConfig {showAccordingToAspectRatio : true ,imageAspectHeight : 9, imageAspectWidth : 12}) true
+    pure NoAction]
+
+eval AfterRender state = continue state 
+
 eval _ state = update state
+
+getImage :: API.VehicleImageType -> API.GetVehiclePhotosResp -> String
+getImage imageType (API.GetVehiclePhotosResp photos) = 
+  case imageType of
+    API.VehicleFront -> if DA.length photos.front > 0 then (fromMaybe "" $ DA.last photos.front) else ""
+    API.VehicleBack -> if DA.length photos.back > 0 then (fromMaybe "" $ DA.last photos.back) else ""
+    API.VehicleLeft -> if DA.length photos.left > 0 then (fromMaybe "" $ DA.last photos.left) else ""
+    API.VehicleRight -> if DA.length photos.right > 0 then (fromMaybe "" $ DA.last photos.right) else ""
+    API.VehicleFrontInterior -> if DA.length photos.frontInterior > 0 then (fromMaybe "" $ DA.last photos.frontInterior) else ""
+    API.VehicleBackInterior -> if DA.length photos.backInterior > 0 then (fromMaybe "" $ DA.last photos.backInterior) else ""
+    API.Odometer_ -> if DA.length photos.odometer > 0 then (fromMaybe "" $ DA.last photos.odometer) else ""
+    _ -> ""
+
+getImageLayoutId imageType = 
+          case imageType of
+            API.VehicleFront -> "vehicle_image00"
+            API.VehicleBack -> "vehicle_image10"
+            API.VehicleRight -> "vehicle_image01"
+            API.VehicleLeft -> "vehicle_image11"
+            API.VehicleFrontInterior -> "vehicle_image02"
+            API.VehicleBackInterior -> "vehicle_image12"
+            API.Odometer_ -> "vehicle_image03" 
+            _ -> ""
+
+checkIfAllImagesUploaded :: API.GetVehiclePhotosResp -> Boolean 
+checkIfAllImagesUploaded (API.GetVehiclePhotosResp vehiclePhotos) = DA.length vehiclePhotos.back > 0 && DA.length vehiclePhotos.backInterior > 0 && DA.length vehiclePhotos.frontInterior > 0 && DA.length vehiclePhotos.left > 0 && DA.length vehiclePhotos.right > 0 && DA.length vehiclePhotos.odometer > 0 && DA.length vehiclePhotos.front > 0

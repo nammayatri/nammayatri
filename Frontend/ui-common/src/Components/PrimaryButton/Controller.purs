@@ -40,9 +40,11 @@ type Config =
     , margin :: Margin
     , stroke :: String
     , alpha :: Number
+    , allowAlpha :: Boolean
     , isClickable :: Boolean
     , visibility :: Visibility
     , background :: String
+    , buttonInactiveBackground :: String
     , gravity :: Gravity
     , isSuffixImage :: Boolean
     , suffixImageConfig :: ImageConfig
@@ -66,6 +68,7 @@ type TextConfig =
   { text :: String
   , textStyle :: Style
   , color :: String
+  , buttonInactiveTextColor :: String
   , gravity :: Gravity
   , visibility :: Visibility
   , height :: Length
@@ -114,6 +117,7 @@ config =
     , gravity : CENTER
     , visibility : VISIBLE
     , color : appConfigVal.primaryTextColor
+    , buttonInactiveTextColor : appConfigVal.buttonInactiveTextColor
     , height : WRAP_CONTENT
     , width : WRAP_CONTENT
     , accessibilityHint : ""
@@ -129,9 +133,11 @@ config =
   , margin: (Margin 10 0 10 0)
   , stroke: ("0," <> Color.black)
   , alpha: 1.0
+  , allowAlpha : appConfigVal.alphaInPrimaryButtonAllowed
   , isClickable: true
   , visibility: VISIBLE
-  , background : appConfigVal.primaryBackground
+  , background : appConfigVal.primaryButtonBackground
+  , buttonInactiveBackground : appConfigVal.buttonInactiveBackground
   , gravity : CENTER
   , isSuffixImage : false
   , weight : Nothing

@@ -76,6 +76,7 @@ screen initialState =
 
 view :: forall w. (Action -> Effect Unit) -> LmsVideoScreenState -> PrestoDOM (Effect Unit) w
 view push state =
+  Anim.screenAnimation $
   relativeLayout
   [ height MATCH_PARENT
   , width MATCH_PARENT
@@ -98,7 +99,6 @@ view push state =
 customHeaderView :: forall w. (Action -> Effect Unit) -> LmsVideoScreenState -> PrestoDOM (Effect Unit) w
 customHeaderView push state =
   let moduleName = maybe "" (\moduleInfo -> moduleInfo ^. _name) state.data.videosScreenData.selectedTranslatedModule
-      sw = (screenWidth unit) - 305
   in
   linearLayout
   [ width $ MATCH_PARENT
@@ -119,17 +119,16 @@ customHeaderView push state =
         ]
       , textView $
         [ text $ moduleName
+        , weight 1.0
         , ellipsize true
         , width $ V 240
         , maxLines 1
         , color Color.black900
         ] <> (FontStyle.h3 LanguageStyle)
-      , linearLayout [ weight 1.0][]
       , linearLayout
-        [ width $ V sw
+        [ width WRAP_CONTENT
         , height $ WRAP_CONTENT
         , orientation HORIZONTAL
-        , gravity CENTER
         , onClick push $ const SelectLanguage
         ][ imageView
            [ imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_language_logo"
@@ -142,7 +141,7 @@ customHeaderView push state =
            , color Color.blue800
            , ellipsize true
            , maxLines 1
-           , width $ V (sw - 19)
+           , width WRAP_CONTENT
            ] <> FontStyle.body1 LanguageStyle
         ]
      ]

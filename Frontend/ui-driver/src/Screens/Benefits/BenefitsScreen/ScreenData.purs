@@ -17,12 +17,11 @@
 module Screens.Benefits.BenefitsScreen.ScreenData where
 
 import Data.Maybe
-import Screens.Types (BenefitsScreenState, DriverReferralType(..), ReferralInfoPopType(..))
+import Screens.Types (BenefitsScreenState, DriverReferralType(..), ReferralInfoPopType(..), AnimType(..))
 import Services.API (ModuleCompletionCriteria(..), LmsModuleRes(..), LmsCategory(..), ModuleCompletionStatus(..))
 import Foreign.Object (empty)
 import ConfigProvider
 import Prelude
-import Screens.RegistrationScreen.ScreenData as RSD
 import MerchantConfig.DefaultConfig (defaultCityConfig)
 
 initData :: BenefitsScreenState
@@ -64,6 +63,10 @@ initData = {
       glBannerClickable : true,
       nammaClubEnabled : false,
       nyClubConsent : Nothing,
-      showGoBack: false
+      showGoBack: false,
+      fromRegistrationScreen : false,
+      menuOptions : false,
+      logoutModalView : false,
+      contactSupportModal : HIDE
     }
 }

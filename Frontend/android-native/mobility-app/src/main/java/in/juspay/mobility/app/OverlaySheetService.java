@@ -122,12 +122,14 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
     private Boolean isRideAcceptedOrRejected = false;
     private TextView indicatorText1, indicatorText2, indicatorText3, indicatorText4, indicatorText5, indicatorText6, vehicleText1, vehicleText2, vehicleText3, vehicleText4, vehicleText5, vehicleText6;
     private TextView tipBanner1, tipBanner2, tipBanner3, tipBanner4, tipBanner5, tipBanner6;
+    private ImageView indicator1Image, indicator2Image, indicator3Image;
     private ShimmerFrameLayout shimmerTip1, shimmerTip2, shimmerTip3, shimmerTip4, shimmerTip5, shimmerTip6;
     private LinearProgressIndicator progressIndicator1, progressIndicator2, progressIndicator3, progressIndicator4, progressIndicator5, progressIndicator6;
     private ArrayList<TextView> indicatorTextList;
     private ArrayList<LinearProgressIndicator> progressIndicatorsList;
     private ArrayList<LinearLayout> indicatorList;
     private ArrayList<TextView> indicatorTipBannerList;
+    private ArrayList<ImageView> idicatorSuffixImagesList;
     private ArrayList<LinearLayout> indicatorTipList;
     private ArrayList<ShimmerFrameLayout> shimmerTipList;
     private String key = "";
@@ -186,10 +188,8 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 holder.isFavouriteTag.setVisibility(model.isFavourite() ? View.VISIBLE : View.GONE);
                 holder.testRequestTag.setVisibility(searchRequestId.equals(DUMMY_FROM_LOCATION) ? View.VISIBLE : View.GONE);
                 holder.gotoTag.setVisibility(model.isGotoTag() ? View.VISIBLE : View.GONE);
-                holder.reqButton.setTextColor(model.isGotoTag() ? getColor(R.color.yellow900) : getColor(R.color.white));
-                holder.reqButton.setBackgroundTintList(model.isGotoTag() ?
-                        ColorStateList.valueOf(getColor(R.color.Black900)) :
-                        ColorStateList.valueOf(getColor(R.color.green900)));
+                holder.reqButton.setTextColor(getColor(R.color.white));
+                holder.reqButton.setBackgroundTintList(ColorStateList.valueOf( getColor(R.color.defaultRRThemeColor)));
                 // Not required.
                 holder.rideTypeTag.setVisibility(View.GONE);
                 holder.stopsTag.setVisibility(model.getStops() > 0 ? View.VISIBLE : View.GONE);
@@ -271,7 +271,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             updateIncreaseDecreaseButtons(holder, model);
             updateTagsView(holder, model);
             RideRequestUtils.updateRateView(holder, model);
-            RideRequestUtils.updateTierAndAC(holder, model, OverlaySheetService.this);
+            if (holder.vcTierAndACView != null && holder.vehicleServiceTier != null ) RideRequestUtils.updateTierAndAC(holder, model, OverlaySheetService.this);
             RideRequestUtils.updateRentalView(holder, model, OverlaySheetService.this);
             RideRequestUtils.updateIntercityView(holder, model, OverlaySheetService.this);
             RideRequestUtils.updateExtraChargesString(holder, model, OverlaySheetService.this);
@@ -843,6 +843,12 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             merchantLogo.setText("Yatri Driver");
         } else if (key != null && key.equals("passcultureprovider")) {
             merchantLogo.setText("Alliance Taxis");
+        } else if (key != null && key.contains("marutisuzukiprovider")) {
+            merchantLogo.setText("FleetX");
+            ImageView merchantLogoIcon = (ImageView) floatyView.findViewById(R.id.merchantLogoIcon);
+            merchantLogoIcon.setVisibility(View.GONE);
+            LinearLayout merchantBackground = (LinearLayout) floatyView.findViewById(R.id.merchant_bottom_tag);
+            if (merchantBackground != null) merchantBackground.setBackgroundColor(getColor(R.color.defaultRRThemeColor)) ;
         } else if (appName.contains("Mana")) {
             merchantLogo.setText("Mana Yatri");
         } else if (appName.contains("Kerala")) {
@@ -1248,6 +1254,10 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
             tipBanner5 = floatyView.findViewById(R.id.tip_banner_view_4);
             tipBanner6 = floatyView.findViewById(R.id.tip_banner_view_5);
             indicatorTipBannerList = new ArrayList<>(Arrays.asList(tipBanner1, tipBanner2, tipBanner3, tipBanner4, tipBanner5, tipBanner6));
+            indicator1Image = floatyView.findViewById(R.id.indicator1Image);
+            indicator2Image = floatyView.findViewById(R.id.indicator2Image);
+            indicator3Image = floatyView.findViewById(R.id.indicator3Image);
+            idicatorSuffixImagesList = new ArrayList<>(Arrays.asList(indicator1Image, indicator2Image, indicator3Image));
             shimmerTip1 = floatyView.findViewById(R.id.shimmer_view_container_0);
             shimmerTip2 = floatyView.findViewById(R.id.shimmer_view_container_1);
             shimmerTip3 = floatyView.findViewById(R.id.shimmer_view_container_2);
@@ -1261,7 +1271,16 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     updateTopBarBackground(i);
                     indicatorTextList.get(i).setText(sharedPref.getString("CURRENCY", "₹") + (sheetArrayList.get(i).getBaseFare() + sheetArrayList.get(i).getUpdatedAmount()));
                     progressIndicatorsList.get(i).setVisibility(View.VISIBLE);
-                    boolean isSpecialZone = sheetArrayList.get(i).getSpecialZonePickup();
+                    if (sheetArrayList.get(i).getRideProductType().equals(RENTAL)) {
+                        idicatorSuffixImagesList.get(i).setVisibility(View.VISIBLE);
+                        idicatorSuffixImagesList.get(i).setImageDrawable(getDrawable(R.drawable.ny_ic_rental_indicator));
+                    } else if (sheetArrayList.get(i).getRideProductType().equals(INTERCITY)) {
+                        idicatorSuffixImagesList.get(i).setVisibility(View.VISIBLE);
+                        idicatorSuffixImagesList.get(i).setImageDrawable(getDrawable(R.drawable.ny_ic_intercity_indicator));
+                    } else if (sheetArrayList.get(i).getCustomerTip() > 0) {
+                        idicatorSuffixImagesList.get(i).setVisibility(View.VISIBLE);
+                        idicatorSuffixImagesList.get(i).setImageDrawable(getDrawable(R.drawable.ny_ic_tip_indicator));
+                    }
                     updateTopBar(i);
                 } else {
                     indicatorTextList.get(i).setText("--");
@@ -1270,6 +1289,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     shimmerTipList.get(i).setVisibility(View.INVISIBLE);
                     progressIndicatorsList.get(i).setVisibility(View.GONE);
                     indicatorTipBannerList.get(i).setVisibility(View.INVISIBLE);
+                    idicatorSuffixImagesList.get(i).setVisibility(View.GONE);
                 }
             }
         });
@@ -1290,14 +1310,15 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                     indicatorList.get(i).setBackgroundColor(getColor(R.color.white));
                     break;
                 default: {
-                    indicatorList.get(i).setBackgroundColor(getColor(isSpecialZone ? R.color.green100 : sheetArrayList.get(i).getCustomerTip() > 0 ? R.color.yellow200 : sheetArrayList.get(i).getCongestionCharges() > 0 ? R.color.orange100 : R.color.grey900));
+                    // indicatorList.get(i).setBackgroundColor(getColor(isSpecialZone ? R.color.green100 : sheetArrayList.get(i).getCustomerTip() > 0 ? R.color.yellow200 : sheetArrayList.get(i).getCongestionCharges() > 0 ? R.color.orange100 : R.color.grey900));
+                    indicatorList.get(i).setBackgroundColor(getColor(isSpecialZone ? R.color.green100 : R.color.rrIndicatorBackground));
                     break;
                 }
             }
             progressIndicatorsList.get(i).setTrackColor(getColor(R.color.white));
         } else {
             indicatorList.get(i).setBackgroundColor(getColor(R.color.white));
-            progressIndicatorsList.get(i).setTrackColor(getColor(R.color.grey900));
+            progressIndicatorsList.get(i).setTrackColor(getColor(R.color.rrIndicatorBackground));
         }
     }
 
@@ -1406,7 +1427,7 @@ public class OverlaySheetService extends Service implements View.OnTouchListener
                 if (progressCompat <= 8) {
                     progressIndicatorsList.get(i).setIndicatorColor(getColor(R.color.red900));
                 } else {
-                    progressIndicatorsList.get(i).setIndicatorColor(getColor(R.color.green900));
+                    progressIndicatorsList.get(i).setIndicatorColor(getColor(R.color.defaultRRThemeColor));
                 }
             }
         } catch (Exception e) {

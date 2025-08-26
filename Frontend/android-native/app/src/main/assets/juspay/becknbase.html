@@ -35,7 +35,7 @@
     let headID = document.getElementsByTagName("head")[0];
     window.prevTimeStamp = Date.now();
     window.assetDownloadDuration = Date.now();
-    let jsFile = JBridge.loadFileInDUI(assets_downloader ? 'v1-assets_downloader.jsa' : 'v1-index_bundle.jsa'); // update index_bundle.js to share apk
+    let jsFile = JBridge.loadFileInDUI('index_bundle.js'); // update index_bundle.js to share apk
     let newScript = document.createElement('script');
     newScript.type = 'text/javascript';
     newScript.id = 'mystique';

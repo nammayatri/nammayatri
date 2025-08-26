@@ -49,7 +49,7 @@ view push config =
           linearLayout
             ([ height config.height
             , cornerRadius config.cornerRadius
-            , background config.background
+            , background if config.isClickable then config.background else config.buttonInactiveBackground
             , padding config.padding
             , gravity config.gravity
             , clickable if config.enableLoader then false else config.isClickable
@@ -67,9 +67,9 @@ view push config =
                                     let _ = (toggleBtnLoader config.id false)
                                     push action)
                 (const NoAction)
-            , alpha if config.enableLoader then 0.5 else config.alpha
+            , alpha if config.enableLoader then 0.5 else if config.allowAlpha then config.alpha else 1.0 
             , stroke config.stroke
-            ]  <> (if config.isGradient then [gradient config.gradient] else [background config.background])
+            ]  <> (if config.isGradient then [gradient config.gradient] else [])
               <> (case config.weight of
                 Nothing -> [width config.width]
                 Just value ->  [weight value])
@@ -93,7 +93,7 @@ view push config =
                       $ [ height config.textConfig.height
                         , accessibilityHint config.textConfig.accessibilityHint
                         , accessibility ENABLE
-                        , color config.textConfig.color
+                        , color if config.isClickable then config.textConfig.color else config.textConfig.buttonInactiveTextColor
                         , gravity config.textConfig.gravity
                         , lineHeight "20"
                         , id $ getNewIDWithTag $ config.id <> "_textView"

@@ -408,9 +408,58 @@ getProxy str = case str of
   SOMETHING_WENT_WRONG -> \a -> a @~ something_went_wrong
   PICKUP -> \a -> a @~ pickup
   TRIP -> \a -> a @~ trip
+  OPTIONAL_STR -> \a -> a @~ optional_str
+  MY_VEHICLE -> \a -> a @~ my_vehicle
+  APP_PERMISSIONS -> \a -> a @~ app_permissions
+  TRAININGS -> \a -> a @~ trainings
+  VERIFY -> \a -> a @~ verify
+  INVALID_CODE_PLEASE_RE_ENTER -> \a -> a @~ invalid_code_please_re_enter
+  VERIFIED_LINKED_WITH_NAME arg1 -> \a -> (a @~ verified_linked_with_name) arg1
+  VISIT_YOUR_NEAREST_HUB_TO_COMPLETE_A_SHORT_VEHICLE_INSPECTION_TO_START_EARNING_WITH_US -> \a -> a @~ visit_your_nearest_hub_to_complete_a_short_vehicle_inspection_to_start_earning_with_us
+  YOU_WILL_BE_CONTACTED_BY_YOUR_SELECTED_HUB_WITHIN_24_HOURS -> \a -> a @~ you_will_be_contacted_by_your_selected_hub_within_24_hours
+  OPERATOR_REFERRAL_CODE_APPLIED -> \a -> a @~ operator_referral_code_applied
+  GOT_AN_OPERATOR_REFERRAL_CODE -> \a -> a @~ got_an_operator_referral_code
+  LOCATE_ON_MAP_STR -> \a -> a @~ locate_on_map
+  CONTACT_NUMBER -> \a -> a @~ contact_number
+  ADDRESS -> \a -> a @~ address
+  VEHICLE_PHOTOS_STR -> \a -> a @~ vehicle_photos
+  OPERATION_HUB_STR -> \a -> a @~ operation_hub
+  TAKE_A_CLEAR_PICTURE_OF_THE_VEHICLE_FROM_THE_SUGGESTED_ANGLES -> \a -> a @~ take_a_clear_picture_of_the_vehicle_from_the_suggested_angles
+  TAKE_A_CLEAR_SELFIE_WITH_YOUR_FACE_INSIDE_THE_MARKED_AREA -> \a -> a @~ take_a_clear_selfie_with_your_face_inside_the_marked_area
+  ENSURE_ONLY_YOUR_VEHICLE_IS_IN_THE_FRAME_WHEN_UPLOADING -> \a -> a @~ ensure_only_your_vehicle_is_in_the_frame_when_uploading
+  ONLY_YOUR_FACE_SHOULD_BE_IN_THE_FRAME_WHEN_UPLOADING_THE_IMAGE -> \a -> a @~ only_your_face_should_be_in_the_frame_when_uploading_the_image
+  FULL_VIEW -> \a -> a @~ full_view
+  AVOID_PEOPLE -> \a -> a @~ avoid_people
+  CROPPED_AREA -> \a -> a @~ cropped_area
+  INSIDE_MARKED_AREA -> \a -> a @~ inside_marked_area
+  NO_CLOSED_EYES -> \a -> a @~ no_closed_eyes
+  MORE_THAN_ONE_FACE -> \a -> a @~ more_than_one_face
+  OUTSIDE_MARKED_AREA -> \a -> a @~ outside_marked_area
+  FRONT_STR -> \a -> a @~ front_str
+  BACK_STR -> \a -> a @~ back_str
+  LEFT_STR -> \a -> a @~ left_str
+  RIGHT_STR -> \a -> a @~ right_str
+  ODOMETER_STR -> \a -> a @~ odometer_str
+  FRONT_INTERIOR -> \a -> a @~ front_interior
+  REAR_INTERIOR -> \a -> a @~ rear_interior
+  ENTER_THE_CODE_SHARED_WITH_YOU_BY_THE_OPERATIONS_AGENT_DURING_ONBOARDING -> \a -> a @~ enter_the_code_shared_with_you_by_the_operations_agent_during_onboarding
+  REGISTER_YOUR_PROFILE -> \a -> a @~ register_your_profile
+  REGISTRATION_COMPLETED -> \a -> a @~ registration_completed
+  WE_WILL_NOFITY_YOU_WHEN_WE_GO_LIVE -> \a -> a @~ we_will_notify_you_when_we_go_live
+  UPLOAD_AGAIN -> \a -> a @~ upload_again
+  SELECT_OPERATION_HUB -> \a -> a @~ select_operation_hub
+  HELP_CENTRE -> \a -> a @~ help_centre
+  ALL_TIME -> \a -> a @~ all_time
+  SUBSCRIPTION_AMOUNT_SPENT -> \a -> a @~ subscription_amount_spent
+  RIDE_BOOST_RECEIVED -> \a -> a @~ ride_boost_received
+  CANCELLATION_CHARGES_RECEIVED -> \a -> a @~ cancellation_charges_received
+  TODAYS -> \a -> a @~ todays
   CURRENTLY_WE_ALLOW_ONLY_KARNATAKA_REGISTERED_NUMBER arg1 -> \a -> (a @~ currently_we_allow_only_karnataka_registered_number) arg1
   RE_ENTER_VEHICLE_REGISTRATION_NUMBER -> \a -> a @~ re_enter_vehicle_registration_number
   RE_ENTER_DRIVING_LICENSE_NUMBER -> \a -> a @~ re_enter_driving_license_number
+  ELIGIBILITY_CRITERIA_FOR_RC -> \a -> a @~ eligibility_criteria_for_rc
+  CAR_MUST_BE_LESS_THAN_3_YEARS_OLD -> \a -> a @~ car_must_be_less_than_3_years_old
+  CAR_MUST_BE_SEDAN_VEHICLE -> \a -> a @~ car_must_be_sedan_vehicle
   UPDATED_AT -> \a -> a @~ updated_at
   TRIP_COUNT -> \a -> a @~ trip_count
   TODAYS_EARNINGS -> \a -> a @~ todays_earnings
@@ -507,6 +556,7 @@ getProxy str = case str of
   ACTIVATED_CUSTOMERS -> \a -> a @~ activated_customers
   REFERRAL_CODE_LINKING -> \a -> a @~ referral_code_linking
   CONTACT_SUPPORT -> \a -> a @~ contact_support
+  FAQS_STR -> \a -> a @~ faqs_str
   AC_CHECK_TITILE -> \a -> a @~ ac_check_titile
   CALL_SUPPORT -> \a -> a @~ call_support
   YOU_ARE_ABOUT_TO_CALL_NAMMA_YATRI_SUPPORT arg1 -> \a -> (a @~ you_are_about_to_call_namma_yatri_support) arg1
@@ -745,6 +795,7 @@ getProxy str = case str of
   AADHAAR_LINKING_REQUIRED_DESCRIPTION arg1 -> \a -> (a @~ aadhaar_linking_required_description) arg1
   BY_CLICKING_THIS_YOU_WILL_BE_AGREEING_TO_OUR_TC -> \a -> a @~ by_clicking_this_you_will_be_agreeing_to_our_tc
   TERMS_AND_CONDITIONS_SHORT -> \a -> a @~ terms_and_conditions_short
+  BY_CLICKING_THIS_YOU_WILL_BE_AGREEING_TO_OUR -> \a -> a @~ by_clicking_this_you_will_be_agreeing_to_our
   OTP_SENT_TO_AADHAAR_NUMBER -> \a -> a @~ otp_sent_to_aadhaar_number
   ENTER_SIX_DIGIT_OTP -> \a -> a @~ enter_six_digit_otp
   TC_TAIL -> \a -> a @~ tc_tail
@@ -1188,11 +1239,13 @@ getProxy str = case str of
   COMPLETE_AUTOPAY_LATER -> \a -> a @~ complete_autopay_later
   START_EARNING_IN_FOUR_STEPS -> \a -> a @~ start_earning_in_four_steps
   COMPLETE -> \a -> a @~ complete
+  COMPLETE_THE_STEPS_TO_START_EARNING -> \a -> a @~ complete_the_steps_to_start_earning
   HOW_TO_UPLOAD -> \a -> a @~ how_to_upload
   TAKE_CLEAR_PICTURE_DL -> \a -> a @~ take_clear_picture_dl
   ENSURE_ADEQUATE_LIGHT -> \a -> a @~ ensure_adequate_light
   FIT_DL_CORRECTLY -> \a -> a @~ fit_dl_correctly
   TAKE_PHOTO -> \a -> a @~ take_photo
+  TAKE_SLASH_UPLOAD_PHOTO -> \a -> a @~ take_slash_upload_photo
   FIT_RC_CORRECTLY -> \a -> a @~ fit_rc_correctly
   TAKE_CLEAR_PICTURE_RC -> \a -> a @~ take_clear_picture_rc
   DL_UPLOADED -> \a -> a @~ dl_uploaded
@@ -1205,6 +1258,7 @@ getProxy str = case str of
   RETAKE_PHOTO -> \a -> a @~ retake_photo
   CHANGE_CITY -> \a -> a @~ change_city
   LETS_GET_YOU_TRIP_READY -> \a -> a @~ lets_get_you_trip_ready
+  WELCOME_LETS_GET_STARTED -> \a -> a @~ welcome_lets_get_started
   GOT_AN_OTP -> \a -> a @~ got_an_otp
   DRIVING_LICENSE_DETAILS -> \a -> a @~ driving_license_details
   VEHICLE_REGISTRATION_DETAILS -> \a -> a @~ vehicle_registration_details
@@ -1890,6 +1944,83 @@ getProxy str = case str of
   SEARCH -> \a -> a @~ search
   BUS__ -> \a -> a @~ bus__
   DRIVER_UNSUBSCRIBED -> \a -> a @~ driver_unsubscribed
+  ONBOARDING_FAQ_SETTING_UP_ACCOUNT -> \a -> a @~ onboarding_faq_setting_up_account
+  ONBOARDING_FAQ_MANAGING_ACCOUNT -> \a -> a @~ onboarding_faq_managing_account
+  ONBOARDING_FAQ_ADDING_MANAGING_DRIVERS -> \a -> a @~ onboarding_faq_adding_managing_drivers
+  ONBOARDING_FAQ_ADDING_MANAGING_VEHICLES -> \a -> a @~ onboarding_faq_adding_managing_vehicles
+  ONBOARDING_FAQ_MAPPING_DRIVERS_VEHICLES -> \a -> a @~ onboarding_faq_mapping_drivers_vehicles
+  ONBOARDING_FAQ_REGISTER_FLEET_OPERATOR_Q -> \a -> a @~ onboarding_faq_register_fleet_operator_q
+  ONBOARDING_FAQ_REGISTER_FLEET_OPERATOR_A -> \a -> a @~ onboarding_faq_register_fleet_operator_a
+  ONBOARDING_FAQ_CHOOSE_LANGUAGE_Q -> \a -> a @~ onboarding_faq_choose_language_q
+  ONBOARDING_FAQ_CHOOSE_LANGUAGE_A -> \a -> a @~ onboarding_faq_choose_language_a
+  ONBOARDING_FAQ_SIGNUP_EMAIL_Q -> \a -> a @~ onboarding_faq_signup_email_q
+  ONBOARDING_FAQ_SIGNUP_EMAIL_A -> \a -> a @~ onboarding_faq_signup_email_a
+  ONBOARDING_FAQ_OTP_ISSUE_Q -> \a -> a @~ onboarding_faq_otp_issue_q
+  ONBOARDING_FAQ_OTP_ISSUE_A -> \a -> a @~ onboarding_faq_otp_issue_a
+  ONBOARDING_FAQ_INDIVIDUAL_BUSINESS_FLEET_Q -> \a -> a @~ onboarding_faq_individual_business_fleet_q
+  ONBOARDING_FAQ_INDIVIDUAL_BUSINESS_FLEET_A -> \a -> a @~ onboarding_faq_individual_business_fleet_a
+  ONBOARDING_FAQ_REGISTRATION_DETAILS_Q -> \a -> a @~ onboarding_faq_registration_details_q
+  ONBOARDING_FAQ_REGISTRATION_DETAILS_A -> \a -> a @~ onboarding_faq_registration_details_a
+  ONBOARDING_FAQ_OPERATING_CITIES_Q -> \a -> a @~ onboarding_faq_operating_cities_q
+  ONBOARDING_FAQ_OPERATING_CITIES_A -> \a -> a @~ onboarding_faq_operating_cities_a
+  ONBOARDING_FAQ_OPERATOR_REFERRAL_CODE_Q -> \a -> a @~ onboarding_faq_operator_referral_code_q
+  ONBOARDING_FAQ_OPERATOR_REFERRAL_CODE_A -> \a -> a @~ onboarding_faq_operator_referral_code_a
+  ONBOARDING_FAQ_REQUIRED_DOCUMENTS_Q -> \a -> a @~ onboarding_faq_required_documents_q
+  ONBOARDING_FAQ_REQUIRED_DOCUMENTS_A -> \a -> a @~ onboarding_faq_required_documents_a
+  ONBOARDING_FAQ_REGISTRATION_ASSISTANCE_Q -> \a -> a @~ onboarding_faq_registration_assistance_q
+  ONBOARDING_FAQ_REGISTRATION_ASSISTANCE_A -> \a -> a @~ onboarding_faq_registration_assistance_a
+  ONBOARDING_FAQ_UPDATE_DOCUMENTS_Q -> \a -> a @~ onboarding_faq_update_documents_q
+  ONBOARDING_FAQ_UPDATE_DOCUMENTS_A -> \a -> a @~ onboarding_faq_update_documents_a
+  ONBOARDING_FAQ_VIEW_PROFILE_Q -> \a -> a @~ onboarding_faq_view_profile_q
+  ONBOARDING_FAQ_VIEW_PROFILE_A -> \a -> a @~ onboarding_faq_view_profile_a
+  ONBOARDING_FAQ_LOGOUT_Q -> \a -> a @~ onboarding_faq_logout_q
+  ONBOARDING_FAQ_LOGOUT_A -> \a -> a @~ onboarding_faq_logout_a
+  ONBOARDING_FAQ_PROFILE_PICTURE_Q -> \a -> a @~ onboarding_faq_profile_picture_q
+  ONBOARDING_FAQ_PROFILE_PICTURE_A -> \a -> a @~ onboarding_faq_profile_picture_a
+  ONBOARDING_FAQ_MSIL_PROVIDE_DRIVERS_Q -> \a -> a @~ onboarding_faq_msil_provide_drivers_q
+  ONBOARDING_FAQ_MSIL_PROVIDE_DRIVERS_A -> \a -> a @~ onboarding_faq_msil_provide_drivers_a
+  ONBOARDING_FAQ_ADD_MULTIPLE_DRIVERS_Q -> \a -> a @~ onboarding_faq_add_multiple_drivers_q
+  ONBOARDING_FAQ_ADD_MULTIPLE_DRIVERS_A -> \a -> a @~ onboarding_faq_add_multiple_drivers_a
+  ONBOARDING_FAQ_ONBOARD_DRIVER_Q -> \a -> a @~ onboarding_faq_onboard_driver_q
+  ONBOARDING_FAQ_ONBOARD_DRIVER_A -> \a -> a @~ onboarding_faq_onboard_driver_a
+  ONBOARDING_FAQ_ADD_DRIVER_MANUALLY_Q -> \a -> a @~ onboarding_faq_add_driver_manually_q
+  ONBOARDING_FAQ_ADD_DRIVER_MANUALLY_A -> \a -> a @~ onboarding_faq_add_driver_manually_a
+  ONBOARDING_FAQ_DRIVER_BULK_UPLOAD_Q -> \a -> a @~ onboarding_faq_driver_bulk_upload_q
+  ONBOARDING_FAQ_DRIVER_BULK_UPLOAD_A -> \a -> a @~ onboarding_faq_driver_bulk_upload_a
+  ONBOARDING_FAQ_DRIVER_DOCUMENTS_Q -> \a -> a @~ onboarding_faq_driver_documents_q
+  ONBOARDING_FAQ_DRIVER_DOCUMENTS_A -> \a -> a @~ onboarding_faq_driver_documents_a
+  ONBOARDING_FAQ_DRIVER_TAB_Q -> \a -> a @~ onboarding_faq_driver_tab_q
+  ONBOARDING_FAQ_DRIVER_TAB_A -> \a -> a @~ onboarding_faq_driver_tab_a
+  ONBOARDING_FAQ_TRACK_DRIVER_DOCS_Q -> \a -> a @~ onboarding_faq_track_driver_docs_q
+  ONBOARDING_FAQ_TRACK_DRIVER_DOCS_A -> \a -> a @~ onboarding_faq_track_driver_docs_a
+  ONBOARDING_FAQ_ADD_REMOVE_DRIVERS_Q -> \a -> a @~ onboarding_faq_add_remove_drivers_q
+  ONBOARDING_FAQ_ADD_REMOVE_DRIVERS_A -> \a -> a @~ onboarding_faq_add_remove_drivers_a
+  ONBOARDING_FAQ_MANAGE_DRIVER_DOCS_Q -> \a -> a @~ onboarding_faq_manage_driver_docs_q
+  ONBOARDING_FAQ_MANAGE_DRIVER_DOCS_A -> \a -> a @~ onboarding_faq_manage_driver_docs_a
+  ONBOARDING_FAQ_ONBOARD_VEHICLE_Q -> \a -> a @~ onboarding_faq_onboard_vehicle_q
+  ONBOARDING_FAQ_ONBOARD_VEHICLE_A -> \a -> a @~ onboarding_faq_onboard_vehicle_a
+  ONBOARDING_FAQ_ADD_MULTIPLE_VEHICLES_Q -> \a -> a @~ onboarding_faq_add_multiple_vehicles_q
+  ONBOARDING_FAQ_ADD_MULTIPLE_VEHICLES_A -> \a -> a @~ onboarding_faq_add_multiple_vehicles_a
+  ONBOARDING_FAQ_VEHICLE_DOCUMENTS_Q -> \a -> a @~ onboarding_faq_vehicle_documents_q
+  ONBOARDING_FAQ_VEHICLE_DOCUMENTS_A -> \a -> a @~ onboarding_faq_vehicle_documents_a
+  ONBOARDING_FAQ_READD_VEHICLE_Q -> \a -> a @~ onboarding_faq_readd_vehicle_q
+  ONBOARDING_FAQ_READD_VEHICLE_A -> \a -> a @~ onboarding_faq_readd_vehicle_a
+  ONBOARDING_FAQ_VEHICLE_INSPECTION_Q -> \a -> a @~ onboarding_faq_vehicle_inspection_q
+  ONBOARDING_FAQ_VEHICLE_INSPECTION_A -> \a -> a @~ onboarding_faq_vehicle_inspection_a
+  ONBOARDING_FAQ_INSPECTION_COST_Q -> \a -> a @~ onboarding_faq_inspection_cost_q
+  ONBOARDING_FAQ_INSPECTION_COST_A -> \a -> a @~ onboarding_faq_inspection_cost_a
+  ONBOARDING_FAQ_MANAGE_VEHICLE_DOCS_Q -> \a -> a @~ onboarding_faq_manage_vehicle_docs_q
+  ONBOARDING_FAQ_MANAGE_VEHICLE_DOCS_A -> \a -> a @~ onboarding_faq_manage_vehicle_docs_a
+  ONBOARDING_FAQ_TRACK_VEHICLE_DOCS_Q -> \a -> a @~ onboarding_faq_track_vehicle_docs_q
+  ONBOARDING_FAQ_TRACK_VEHICLE_DOCS_A -> \a -> a @~ onboarding_faq_track_vehicle_docs_a
+  ONBOARDING_FAQ_ASSIGN_DRIVER_VEHICLE_Q -> \a -> a @~ onboarding_faq_assign_driver_vehicle_q
+  ONBOARDING_FAQ_ASSIGN_DRIVER_VEHICLE_A -> \a -> a @~ onboarding_faq_assign_driver_vehicle_a
+  ONBOARDING_FAQ_REMOVE_VEHICLE_Q -> \a -> a @~ onboarding_faq_remove_vehicle_q
+  ONBOARDING_FAQ_REMOVE_VEHICLE_A -> \a -> a @~ onboarding_faq_remove_vehicle_a
+  ONBOARDING_FAQ_EDIT_VEHICLE_Q -> \a -> a @~ onboarding_faq_edit_vehicle_q
+  ONBOARDING_FAQ_EDIT_VEHICLE_A -> \a -> a @~ onboarding_faq_edit_vehicle_a
+  ONBOARDING_FAQ_UPDATE_DRIVER_STATUS_Q -> \a -> a @~ onboarding_faq_update_driver_status_q
+  ONBOARDING_FAQ_UPDATE_DRIVER_STATUS_A -> \a -> a @~ onboarding_faq_update_driver_status_a
   OUT_OF_RIDES arg1 arg2 -> \a -> (a @~ out_of_rides)  arg1 arg2
   SUSPENDED_TILL arg1 arg2 -> \a -> (a @~ suspended_till)  arg1 arg2
   THIS_RIDE_INCLUDES_A_PET -> \a -> a @~ this_ride_includes_a_pet
