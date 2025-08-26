@@ -8,6 +8,9 @@ import Kernel.Prelude
 import Kernel.Types.Base64
 import Kernel.Types.Time
 
+data CRISRouteSortingCriteria = FARE | DISTANCE
+  deriving (Generic, Show, Read, FromJSON, ToJSON, Eq)
+
 data EBIXConfig = EBIXConfig
   { agentId :: Text,
     username :: Text,
@@ -56,7 +59,8 @@ data CRISConfig = CRISConfig
     changeOverIndirectStations :: Maybe [Text],
     changeOverDirectStations :: Maybe [Text],
     agentDataDecryptionKey :: EncryptedField 'AsEncrypted Text,
-    utsDataKey :: EncryptedField 'AsEncrypted Text
+    utsDataKey :: EncryptedField 'AsEncrypted Text,
+    routeSortingCriteria :: Maybe CRISRouteSortingCriteria
   }
   deriving stock (Eq, Generic)
   deriving anyclass (FromJSON, ToJSON)

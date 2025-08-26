@@ -901,6 +901,18 @@ buildTrainAllViaRoutes getPreliminaryLeg (Just originStopCode) (Just destination
                     via = " "
                   }
           fares <- CRISRouteFare.getRouteFare crisConfig mocid routeFareReq
+          let sortedFares = case crisConfig.routeSortingCriteria of
+                Just DIntegratedBPPConfig.FARE -> sortBy (comparing (\fare -> fare.price.amount)) fares
+                Just DIntegratedBPPConfig.DISTANCE ->
+                  sortBy
+                    ( comparing
+                        ( \fare -> case fare.fareDetails of
+                            Just details -> details.distance
+                            Nothing -> Meters 0
+                        )
+                    )
+                    fares
+                Nothing -> fares
           let viaPoints =
                 nub $
                   map
@@ -909,7 +921,7 @@ buildTrainAllViaRoutes getPreliminaryLeg (Just originStopCode) (Just destination
                             stops = [originStopCode] <> viaStops <> [destinationStopCode]
                          in zipWith (,) stops (drop 1 stops)
                     )
-                    $ mapMaybe (.fareDetails) fares
+                    $ mapMaybe (.fareDetails) sortedFares
           logDebug $ "getAllSubwayRoutes viaPoints: " <> show viaPoints
           return viaPoints
         _ -> return []
