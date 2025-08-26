@@ -58,6 +58,7 @@ module Domain.Action.ProviderPlatform.Fleet.Driver
     getMbFleetOwnerAndRequestorIdMerchantBased,
     getDriverFleetBookings,
     getDriverFleetAssignments,
+    getDriverFleetOperatorInfo,
   )
 where
 
@@ -67,6 +68,7 @@ import qualified "dashboard-helper-api" Dashboard.Common as DCommon
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.DriverRegistration as Registration
 import qualified Data.ByteString.Lazy as LBS
 import Data.Text hiding (elem, filter, find, length, map, null)
+import qualified Domain.Action.Dashboard.Common as DCommon
 import "lib-dashboard" Domain.Action.Dashboard.Person as DPerson
 import Domain.Action.ProviderPlatform.CheckVerification (checkFleetOwnerVerification)
 import Domain.Types.Alert
@@ -501,3 +503,15 @@ getDriverFleetAssignments merchantShortId opCity apiTokenInfo limit offset from 
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   let memberPersonId = apiTokenInfo.personId.getId
   Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetAssignments) memberPersonId limit offset from to vehicleNo mainAssignmentId
+
+getDriverFleetOperatorInfo :: (Kernel.Types.Id.ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.Flow Common.FleetOwnerInfoRes)
+getDriverFleetOperatorInfo merchantShortId opCity apiTokenInfo mbMobileCountryCode mbMobileNumber mbPersonId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  person <- case (mbPersonId, mbMobileNumber) of
+    (Just pid, _) -> QP.findById (Id pid) >>= fromMaybeM (PersonNotFound pid)
+    (_, Just mobileNumber) -> do
+      let mobileCountryCode = fromMaybe DCommon.mobileIndianCode mbMobileCountryCode
+      QP.findByMobileNumber mobileNumber mobileCountryCode >>= fromMaybeM (PersonNotFound mobileNumber)
+    (Nothing, Nothing) ->
+      throwError $ InvalidRequest "Either personId or mobile number must be provided."
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetOperatorInfo) mbMobileCountryCode mbMobileNumber (Just person.id.getId)
