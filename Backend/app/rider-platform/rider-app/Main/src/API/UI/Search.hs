@@ -404,7 +404,11 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
             QSearchRequest.updateAllJourneysLoaded (Just True) searchRequest.id
             return Nothing
       else do
-        fork "Process all routes " $ processRestOfRoutes (map snd indexedRoutesToProcess) userPreferences
+        case mbJourneyWithIndex of
+          Just (idx, _) -> do
+            fork "Process all routes " $ processRestOfRoutes [x | (j, x) <- indexedRoutesToProcess, j /= idx] userPreferences
+          Nothing -> do
+            fork "Process all routes " $ processRestOfRoutes (map snd indexedRoutesToProcess) userPreferences
         return Nothing
 
   return $
