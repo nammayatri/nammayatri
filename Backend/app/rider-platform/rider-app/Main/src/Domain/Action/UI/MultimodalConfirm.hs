@@ -31,6 +31,7 @@ module Domain.Action.UI.MultimodalConfirm
     getMultimodalOrderSimilarJourneyLegs,
     postMultimodalOrderSwitchJourneyLeg,
     postMultimodalOrderChangeStops,
+    postMultimodalRouteAvailability,
   )
 where
 
@@ -64,6 +65,7 @@ import Domain.Types.MultimodalPreferences as DMP
 import qualified Domain.Types.Person
 import qualified Domain.Types.RiderConfig as DRC
 import qualified Domain.Types.RouteDetails as RD
+import Domain.Types.RouteStopTimeTable (SourceType (..))
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.Station as DStation
 import Environment
@@ -1288,3 +1290,63 @@ postMultimodalOrderChangeStops _ journeyId legOrder req = do
               osmEntrance = (mbEntranceGates >>= fst) <|> (oldJourneyLeg.osmEntrance)
               osmExit = (mbExitGates >>= fst) <|> (oldJourneyLeg.osmExit)
            in return $ Just JMTypes.Gates {..}
+
+postMultimodalRouteAvailability ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    API.Types.UI.MultimodalConfirm.RouteAvailabilityReq ->
+    Environment.Flow API.Types.UI.MultimodalConfirm.RouteAvailabilityResp
+  )
+postMultimodalRouteAvailability (mbPersonId, merchantId) req = do
+  personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
+  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+
+  -- Get current time for route search
+  currentTime <- getCurrentTime
+
+  -- Determine vehicle category based on the route search (defaulting to Bus for general routes)
+  let vehicleCategory = Enums.BUS
+
+  -- Find integrated BPP configs for the merchant operating city
+  integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId vehicleCategory DIBC.MULTIMODAL
+
+  case integratedBPPConfigs of
+    [] -> return $ ApiTypes.RouteAvailabilityResp {availableRoutes = []}
+    (integratedBPPConfig : _) -> do
+      -- Use findPossibleRoutes to get available routes
+      (_, availableRoutesByTier) <-
+        JMU.findPossibleRoutes
+          Nothing
+          req.startStopCode
+          req.endStopCode
+          currentTime
+          integratedBPPConfig
+          merchantId
+          person.merchantOperatingCityId
+          vehicleCategory
+          True -- sendWithoutFare
+
+      -- Filter routes based on onlyLive flag if needed
+      let filteredRoutes =
+            if req.onlyLive
+              then filter (\route -> route.source == LIVE) availableRoutesByTier
+              else availableRoutesByTier
+
+      -- Convert to API response format
+      let availableRoutes = concatMap convertToAvailableRoute filteredRoutes
+
+      return $ ApiTypes.RouteAvailabilityResp {availableRoutes = availableRoutes}
+  where
+    convertToAvailableRoute :: JMU.AvailableRoutesByTier -> [ApiTypes.AvailableRoute]
+    convertToAvailableRoute routesByTier =
+      map
+        ( \routeInfo ->
+            ApiTypes.AvailableRoute
+              { source = routesByTier.source,
+                routeCode = routeInfo.routeCode,
+                routeShortName = routeInfo.shortName,
+                routeTimings = routesByTier.nextAvailableBuses
+              }
+        )
+        routesByTier.availableRoutesInfo

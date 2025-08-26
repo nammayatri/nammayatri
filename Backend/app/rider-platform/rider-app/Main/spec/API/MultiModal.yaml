@@ -40,6 +40,7 @@ imports:
   Value: Data.Aeson
   Gate: Domain.Types.Station
   FRFSTicketBookingStatus: Domain.Types.FRFSTicketBookingStatus
+  SourceType: Domain.Types.RouteStopTimeTable
 
 module: MultimodalConfirm
 
@@ -255,6 +256,20 @@ types:
 
   ChangeStopsResp:
     stationsChanged: Bool
+
+  RouteAvailabilityReq:
+    startStopCode: Text
+    endStopCode: Text
+    onlyLive: Bool
+
+  RouteAvailabilityResp:
+    availableRoutes: "[AvailableRoute]"
+
+  AvailableRoute:
+    source: SourceType
+    routeCode: Text
+    routeShortName: Text
+    routeTimings: "[Seconds]"
 
 apis:
   - POST:
@@ -520,3 +535,10 @@ apis:
         type: ChangeStopsReq
       response:
         type: ChangeStopsResp
+
+  - POST:
+      endpoint: /multimodal/routeAvailability
+      request:
+        type: RouteAvailabilityReq
+      response:
+        type: RouteAvailabilityResp

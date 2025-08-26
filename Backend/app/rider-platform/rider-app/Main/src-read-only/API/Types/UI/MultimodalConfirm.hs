@@ -16,6 +16,7 @@ import qualified Domain.Types.JourneyLeg
 import qualified Domain.Types.Location
 import qualified Domain.Types.LocationAddress
 import qualified Domain.Types.MultimodalPreferences
+import qualified Domain.Types.RouteStopTimeTable
 import qualified Domain.Types.Station
 import qualified Domain.Types.StationType
 import qualified Domain.Types.Trip
@@ -33,6 +34,10 @@ import qualified Lib.JourneyModule.Utils
 import qualified Lib.Payment.Domain.Types.PaymentOrder
 import Servant
 import Tools.Auth
+
+data AvailableRoute = AvailableRoute {routeCode :: Kernel.Prelude.Text, routeShortName :: Kernel.Prelude.Text, routeTimings :: [Kernel.Types.Common.Seconds], source :: Domain.Types.RouteStopTimeTable.SourceType}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data ChangeStopsReq = ChangeStopsReq
   { journeyId :: Kernel.Types.Id.Id Domain.Types.Journey.Journey,
@@ -213,6 +218,14 @@ data RateMultiModelTravelModes = RateMultiModelTravelModes
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data RiderLocationReq = RiderLocationReq {currTime :: Kernel.Prelude.UTCTime, latLong :: Kernel.External.Maps.Types.LatLong}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data RouteAvailabilityReq = RouteAvailabilityReq {endStopCode :: Kernel.Prelude.Text, onlyLive :: Kernel.Prelude.Bool, startStopCode :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data RouteAvailabilityResp = RouteAvailabilityResp {availableRoutes :: [AvailableRoute]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

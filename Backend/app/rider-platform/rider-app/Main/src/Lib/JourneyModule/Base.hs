@@ -917,10 +917,6 @@ canBeSwitched ::
 canBeSwitched journeyLeg newMode = do
   let currentMode = journeyLeg.mode
   case (currentMode, newMode) of
-    (_, DTrip.Metro) -> return False
-    (_, DTrip.Bus) -> return False
-    (DTrip.Bus, DTrip.Taxi) -> return False
-    (DTrip.Metro, DTrip.Taxi) -> return False
     (DTrip.Walk, DTrip.Taxi) -> return True
     (DTrip.Taxi, DTrip.Walk) -> return True
     _ -> return False
@@ -1247,18 +1243,18 @@ switchLeg journeyId _ req = do
         journeyLeg
           { DJourneyLeg.distance = newDistance,
             DJourneyLeg.duration = newDuration,
-            DJourneyLeg.fromStopDetails = Nothing,
+            DJourneyLeg.fromStopDetails = if isJust req.startLocation then Nothing else journeyLeg.fromStopDetails,
             DJourneyLeg.id = journeyLegId,
             DJourneyLeg.routeDetails = (\routeDetail -> routeDetail {DRouteDetails.journeyLegId = journeyLegId.getId, DRouteDetails.trackingStatus = Nothing}) <$> journeyLeg.routeDetails,
             DJourneyLeg.mode = newMode,
             DJourneyLeg.serviceTypes = Nothing,
             DJourneyLeg.startLocation = startLocation,
             DJourneyLeg.toArrivalTime = Nothing,
-            DJourneyLeg.estimatedMinFare = Nothing,
-            DJourneyLeg.estimatedMaxFare = Nothing,
+            DJourneyLeg.estimatedMinFare = Nothing, -- needs to be updated by on_search
+            DJourneyLeg.estimatedMaxFare = Nothing, -- needs to be updated by on_search
             DJourneyLeg.createdAt = now,
             DJourneyLeg.updatedAt = now,
-            DJourneyLeg.legSearchId = Nothing,
+            DJourneyLeg.legSearchId = Nothing, -- will be updated by add Leg
             DJourneyLeg.isDeleted = Just False
           }
 
