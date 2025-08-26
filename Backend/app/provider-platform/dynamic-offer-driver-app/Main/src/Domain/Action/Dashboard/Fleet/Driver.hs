@@ -54,6 +54,8 @@ module Domain.Action.Dashboard.Fleet.Driver
     getDriverDashboardInternalHelperGetFleetOwnerId,
     getDriverDashboardInternalHelperGetFleetOwnerIds,
     postDriverFleetV2AccessMultiOwnerIdSelect,
+    validateOperatorToFleetAssoc,
+    getDriverFleetOperatorInfo,
   )
 where
 
@@ -131,19 +133,18 @@ import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.WMB as WMB
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Cac.TransporterConfig as SCTC
+import Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Clickhouse.Ride as CQRide
 import Storage.Clickhouse.RideDetails (findIdsByFleetOwner)
-import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.AlertRequest as QAR
-import qualified Storage.Queries.DriverGstin as QGST
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverLicense as QDriverLicense
 import qualified Storage.Queries.DriverOperatorAssociation as DOV
 import qualified Storage.Queries.DriverOperatorAssociation as QDOA
-import qualified Storage.Queries.DriverPanCard as DPC
 import qualified Storage.Queries.DriverRCAssociation as QRCAssociation
 import qualified Storage.Queries.DriverRCAssociationExtra as DRCAE
+import qualified Storage.Queries.DriverReferral as QDR
 import qualified Storage.Queries.FleetBadge as QFB
 import qualified Storage.Queries.FleetBadgeAssociation as QFBA
 import qualified Storage.Queries.FleetBookingAssignments as QFBA
@@ -1314,6 +1315,42 @@ postDriverUpdateFleetOwnerInfo merchantShortId opCity driverId req = do
   pure Success
 
 ---------------------------------------------------------------------
+getDriverFleetOperatorInfo ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Flow Common.FleetOwnerInfoRes
+getDriverFleetOperatorInfo merchantShortId opCity mbMobileCountryCode mbMobileNumber mbPersonId = do
+  merchant <-
+    QMerchant.findByShortId merchantShortId
+      >>= fromMaybeM (MerchantNotFound merchantShortId.getShortId)
+  personId <- case mbPersonId of
+    Just pid -> pure (Id pid)
+    Nothing -> resolveByMobile merchant
+  getDriverFleetOwnerInfo merchantShortId opCity personId
+  where
+    resolveByMobile :: DM.Merchant -> Flow (Id Common.Driver)
+    resolveByMobile merchant =
+      maybe
+        (throwError $ InvalidRequest "Either personId or mobile number must be provided.")
+        (\mobile -> lookupByMobile merchant mobile)
+        mbMobileNumber
+
+    lookupByMobile :: DM.Merchant -> Text -> Flow (Id Common.Driver)
+    lookupByMobile merchant mobileNumber = do
+      let mobileCountryCode = fromMaybe DCommon.mobileIndianCode mbMobileCountryCode
+      mobileNumberDbHash <- getDbHash mobileNumber
+      person <-
+        QPerson.findByMobileNumberAndMerchantAndRoles
+          mobileCountryCode
+          mobileNumberDbHash
+          merchant.id
+          [DP.FLEET_OWNER, DP.OPERATOR]
+          >>= fromMaybeM (PersonNotFound mobileNumber)
+      pure (cast @DP.Person @Common.Driver person.id)
+
 getDriverFleetOwnerInfo ::
   ShortId DM.Merchant ->
   Context.City ->
@@ -1321,31 +1358,53 @@ getDriverFleetOwnerInfo ::
   Flow Common.FleetOwnerInfoRes
 getDriverFleetOwnerInfo _ _ driverId = do
   let personId = cast @Common.Driver @DP.Person driverId
-  fleetOwnerInfo <- B.runInReplica $ FOI.findByPrimaryKey personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
-  fleetConfig <- QFC.findByPrimaryKey personId
-  panDetails <- B.runInReplica $ DPC.findByDriverId personId
-  gstDetails <- QGST.findByDriverId personId
-  aadhaarDetails <- QAadhaarCard.findByPrimaryKey personId
-  panNumber <- case panDetails of
-    Just pan -> Just <$> decrypt pan.panCardNumber
-    Nothing -> pure Nothing
-  gstNumber <- case gstDetails of
-    Just gst -> Just <$> decrypt gst.gstin
-    Nothing -> pure Nothing
-  let aadhaarNumber = case aadhaarDetails of
-        Just aadhaar -> aadhaar.maskedAadhaarNumber
-        Nothing -> Nothing
-  mbFleetOperatorAssoc <- FOV.findByFleetOwnerId personId.getId True
-  (operatorName, operatorContact) <- case mbFleetOperatorAssoc of
-    Nothing -> pure (Nothing, Nothing)
-    Just fleetOperatorAssoc -> do
-      person <- QPerson.findById (Id fleetOperatorAssoc.operatorId) >>= fromMaybeM (PersonDoesNotExist fleetOperatorAssoc.operatorId)
+  person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  mbFleetOwnerInfo <- B.runInReplica $ FOI.findByPrimaryKey personId
+  case mbFleetOwnerInfo of
+    Nothing -> do
+      unless (person.role == DP.OPERATOR) $ throwError (InvalidRequest "Person is not a fleet owner or operator")
+      referral <- QDR.findById personId
       contact <- mapM decrypt person.mobileNumber
-      pure $ (Just (person.firstName <> fromMaybe "" person.middleName <> fromMaybe "" person.lastName), contact)
-  makeFleetOwnerInfoRes panNumber gstNumber aadhaarNumber fleetConfig fleetOwnerInfo operatorName operatorContact
+      let name = person.firstName <> maybe "" (" " <>) person.middleName <> maybe "" (" " <>) person.lastName
+      pure
+        Common.FleetOwnerInfoRes
+          { id = person.id.getId,
+            mobileNo = contact,
+            name = Just name,
+            fleetType = "",
+            referralCode = (.referralCode.getId) <$> referral,
+            blocked = False,
+            enabled = True,
+            verified = True,
+            gstNumber = Nothing,
+            gstImageId = Nothing,
+            panNumber = Nothing,
+            maskedAadhaarNumber = Nothing,
+            fleetConfig = Nothing,
+            operatorName = Nothing,
+            operatorContact = Nothing,
+            registeredAt = Nothing,
+            businessLicenseNumber = Nothing,
+            approvedBy = Nothing,
+            roleName = Just (show person.role),
+            referredByOperatorId = Nothing,
+            isEligibleForSubscription = Nothing,
+            updatedAt = person.updatedAt
+          }
+    Just fleetOwnerInfo -> do
+      fleetConfig <- QFC.findByPrimaryKey personId
+      mbFleetOperatorAssoc <- FOV.findByFleetOwnerId personId.getId True
+      (operatorName, operatorContact) <- case mbFleetOperatorAssoc of
+        Nothing -> pure (Nothing, Nothing)
+        Just fleetOperatorAssoc -> do
+          operator <- QPerson.findById (Id fleetOperatorAssoc.operatorId) >>= fromMaybeM (PersonDoesNotExist fleetOperatorAssoc.operatorId)
+          contact <- mapM decrypt operator.mobileNumber
+          pure $ (Just (operator.firstName <> fromMaybe "" operator.middleName <> fromMaybe "" operator.lastName), contact)
+      makeFleetOwnerInfoRes fleetConfig fleetOwnerInfo person operatorName operatorContact
   where
-    makeFleetOwnerInfoRes :: Maybe Text -> Maybe Text -> Maybe Text -> Maybe DFC.FleetConfig -> DFOI.FleetOwnerInformation -> Maybe Text -> Maybe Text -> Flow Common.FleetOwnerInfoRes
-    makeFleetOwnerInfoRes panNumber_ gstNumber_ maskedAadhaarNumber mbFleetConfig DFOI.FleetOwnerInformation {..} operatorName operatorContact = do
+    makeFleetOwnerInfoRes :: Maybe DFC.FleetConfig -> DFOI.FleetOwnerInformation -> DP.Person -> Maybe Text -> Maybe Text -> Flow Common.FleetOwnerInfoRes
+    makeFleetOwnerInfoRes mbFleetConfig DFOI.FleetOwnerInformation {..} fleetOwner operatorName operatorContact = do
+      referral <- QDR.findById fleetOwnerPersonId
       let fleetConfig =
             mbFleetConfig <&> \fleetConfig' ->
               Common.FleetConfig
@@ -1355,7 +1414,25 @@ getDriverFleetOwnerInfo _ _ driverId = do
                   endRideDistanceThreshold = fleetConfig'.endRideDistanceThreshold,
                   rideEndApproval = fleetConfig'.rideEndApproval
                 }
-      return $ Common.FleetOwnerInfoRes {panNumber = panNumber_, gstNumber = gstNumber_, fleetType = show fleetType, ..}
+      let name = fleetOwner.firstName <> maybe "" (" " <>) fleetOwner.middleName <> maybe "" (" " <>) fleetOwner.lastName
+      mobileNo' <- mapM decrypt fleetOwner.mobileNumber
+      return $
+        Common.FleetOwnerInfoRes
+          { fleetType = show fleetType,
+            referralCode = (.referralCode.getId) <$> referral,
+            gstNumber = Nothing,
+            panNumber = Nothing,
+            maskedAadhaarNumber = Nothing,
+            businessLicenseNumber = Nothing,
+            approvedBy = Nothing,
+            registeredAt = Nothing,
+            id = fleetOwnerPersonId.getId,
+            name = Just name,
+            mobileNo = mobileNo',
+            roleName = Just (show fleetOwner.role),
+            isEligibleForSubscription = Just isEligibleForSubscription,
+            ..
+          }
 
 ---------------------------------------------------------------------
 data FleetOwnerInfo = FleetOwnerInfo
