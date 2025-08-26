@@ -25,7 +25,7 @@ getFRFSAllStatuses journeyLeg mbBooking = do
   trackingStatuses <-
     mapM
       ( \routeDetail -> do
-          trackingStatus <- getFRFSJourneyLegTrackingStatus mbBooking routeDetail
+          let trackingStatus = getFRFSJourneyLegTrackingStatus mbBooking routeDetail
           return (fromMaybe 1 routeDetail.subLegOrder, trackingStatus)
       )
       journeyLeg.routeDetails
@@ -189,6 +189,10 @@ getTaxiJourneyLegTrackingStatus taxiJourneyLegStatus journeyRouteDetails = do
       when (journeyRouteDetails.trackingStatus /= Just Finished) $ do
         void $ QRouteDetails.updateTrackingStatus (Just Finished) journeyRouteDetails.id
       return Finished
+    Just (Feedback FEEDBACK_PENDING) -> do
+      when (journeyRouteDetails.trackingStatus /= Just Finished) $ do
+        void $ QRouteDetails.updateTrackingStatus (Just Finished) journeyRouteDetails.id
+      return Finished
     bookingStatus ->
       -- If status is completed, a booking should exist. If it appears here without a booking, it means the booking was cancelled.
       if journeyRouteDetails.trackingStatus `elem` [Just Arriving, Just AlmostArrived, Just Arrived] && bookingStatus `elem` [Just (TaxiEstimate DTaxiEstimate.CANCELLED), Just (TaxiEstimate DTaxiEstimate.COMPLETED), Just (TaxiBooking DTaxiBooking.CANCELLED), Just (TaxiRide DTaxiRide.CANCELLED)]
@@ -198,15 +202,10 @@ getTaxiJourneyLegTrackingStatus taxiJourneyLegStatus journeyRouteDetails = do
           return InPlan
         else return (fromMaybe InPlan journeyRouteDetails.trackingStatus)
 
-getFRFSJourneyLegTrackingStatus :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => Maybe DFRFSBooking.FRFSTicketBooking -> DRouteDetails.RouteDetails -> m (Maybe TrackingStatus)
+getFRFSJourneyLegTrackingStatus :: Maybe DFRFSBooking.FRFSTicketBooking -> DRouteDetails.RouteDetails -> Maybe TrackingStatus
 getFRFSJourneyLegTrackingStatus mbBooking journeyRouteDetails = do
-  frfsJourneyLegStatus <- getFRFSJourneyBookingStatus mbBooking
-  case frfsJourneyLegStatus of
-    Just (FRFSTicket DFRFSTicket.USED) -> do
-      when (journeyRouteDetails.trackingStatus /= Just Finished) $ do
-        void $ QRouteDetails.updateTrackingStatus (Just Finished) journeyRouteDetails.id
-      return $ Just Finished
-    _ -> return journeyRouteDetails.trackingStatus
+  case mbBooking of
+    _ -> journeyRouteDetails.trackingStatus
 
 castTrackingStatusToJourneyLegStatus :: TrackingStatus -> JLTypes.JourneyLegStatus
 castTrackingStatusToJourneyLegStatus = \case

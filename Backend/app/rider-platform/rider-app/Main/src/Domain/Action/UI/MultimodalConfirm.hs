@@ -423,7 +423,9 @@ postMultimodalJourneyLegAddSkippedLeg ::
   )
 postMultimodalJourneyLegAddSkippedLeg (_, _) journeyId legOrder = do
   journey <- JM.getJourney journeyId
-  void $ JM.startJourney journey.riderId [] (Just legOrder) journey.id
+  legs <- JM.getAllLegsInfo journey.riderId journeyId
+  leg <- find (\leg -> leg.order == legOrder) legs & fromMaybeM (InvalidRequest "No matching journey leg found for the given legOrder")
+  void $ JM.startJourneyLeg leg
   pure Kernel.Types.APISuccess.Success
 
 getMultimodalJourneyStatus ::
