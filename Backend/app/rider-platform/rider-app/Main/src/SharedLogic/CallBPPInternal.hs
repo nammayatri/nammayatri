@@ -732,7 +732,8 @@ data CreateFleetBookingInformationReq = CreateFleetBookingInformationReq
     amount :: Maybe HighPrecMoney,
     visitDate :: Maybe Day,
     bookedSeats :: Maybe Int,
-    status :: Maybe Text
+    status :: Maybe Text,
+    ticketPlaceId :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -747,6 +748,7 @@ data UpdateFleetBookingInformationReq = UpdateFleetBookingInformationReq
     visitDate :: Maybe Day,
     bookedSeats :: Maybe Int,
     amount :: Maybe HighPrecMoney,
+    ticketPlaceId :: Maybe Text,
     assignments :: Maybe [BookingAssignment]
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)

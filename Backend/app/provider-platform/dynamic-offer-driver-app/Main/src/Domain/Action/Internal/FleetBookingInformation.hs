@@ -36,7 +36,8 @@ data CreateFleetBookingInformationReq = CreateFleetBookingInformationReq
     amount :: Maybe HighPrecMoney,
     visitDate :: Maybe Day,
     bookedSeats :: Maybe Int,
-    status :: Maybe Text
+    status :: Maybe Text,
+    ticketPlaceId :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -56,6 +57,7 @@ data UpdateFleetBookingInformationReq = UpdateFleetBookingInformationReq
     visitDate :: Maybe Day,
     bookedSeats :: Maybe Int,
     amount :: Maybe HighPrecMoney,
+    ticketPlaceId :: Maybe Text,
     assignments :: Maybe [BookingAssignment]
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
@@ -91,6 +93,7 @@ createBookingInformation req = do
             visitDate = req.visitDate,
             bookedSeats = req.bookedSeats,
             status = req.status,
+            ticketPlaceId = req.ticketPlaceId,
             createdAt = now,
             updatedAt = now
           }
@@ -112,6 +115,7 @@ updateBookingInformation req = do
                 DFBI.personId = req.personId <|> existing.personId,
                 DFBI.status = req.status <|> existing.status,
                 DFBI.amount = req.amount <|> existing.amount,
+                DFBI.ticketPlaceId = req.ticketPlaceId <|> existing.ticketPlaceId,
                 DFBI.updatedAt = now
               }
       QFBI.updateByPrimaryKey updated
@@ -129,7 +133,8 @@ updateBookingInformation req = do
                 vehicleNo = Just req.vehicleNo,
                 visitDate = req.visitDate,
                 bookedSeats = req.bookedSeats,
-                status = req.status
+                status = req.status,
+                ticketPlaceId = req.ticketPlaceId
               }
       (newAssignment, CreateFleetBookingInformationResp newId) <- createBookingInformation createReq
       createAssignments newAssignment req.assignments
