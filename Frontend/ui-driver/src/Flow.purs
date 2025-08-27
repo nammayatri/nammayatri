@@ -5154,7 +5154,6 @@ getCustomerCallingNumber exophoneNumber mbMobileNumber = do
     case callingOption of
       ST.DirectCall -> pure $ fromMaybe exophoneNumber mbMobileNumber'
       ST.AnonymousCall -> pure exophoneNumber
-  void $ pure $ spy "Calling Number: " mbMobileNumber
   void $ pure $ JB.showDialer finalCallingNumber false
   pure callingOption
 
