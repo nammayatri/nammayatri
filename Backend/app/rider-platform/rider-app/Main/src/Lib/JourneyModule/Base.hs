@@ -263,7 +263,7 @@ checkAndMarkTerminalJourneyStatus journey feedbackRequired isCancelSearchApi = g
     isCancelled :: JL.JourneyLegStateData -> Bool
     isCancelled legState =
       legState.status == JL.Cancelled -- TODO: Remove this once below is used always
-        || (if legState.mode == DTrip.Walk then legState.trackingStatus == Just JMState.Finished else maybe False (\status -> status `elem` [JMState.TaxiEstimate DTaxiEstimate.CANCELLED, JMState.TaxiEstimate DTaxiEstimate.COMPLETED, JMState.TaxiBooking DTaxiBooking.CANCELLED, JMState.TaxiRide DTaxiRide.CANCELLED, JMState.FRFSBooking DFRFSBooking.CANCELLED, JMState.FRFSTicket DFRFSTicket.CANCELLED]) legState.bookingStatus) -- If status is completed, a booking should exist. If it appears here without a booking, it means the booking was cancelled.
+        || (if legState.mode `elem` [DTrip.Walk, DTrip.Taxi] then legState.trackingStatus == Just JMState.Finished else maybe False (\status -> status `elem` [JMState.TaxiEstimate DTaxiEstimate.CANCELLED, JMState.TaxiEstimate DTaxiEstimate.COMPLETED, JMState.TaxiBooking DTaxiBooking.CANCELLED, JMState.TaxiRide DTaxiRide.CANCELLED, JMState.FRFSBooking DFRFSBooking.CANCEL_INITIATED, JMState.FRFSBooking DFRFSBooking.CANCELLED, JMState.FRFSTicket DFRFSTicket.CANCELLED]) legState.bookingStatus) -- If status is completed, a booking should exist. If it appears here without a booking, it means the booking was cancelled.
     isCompleted :: JL.JourneyLegStateData -> Bool
     isCompleted legState =
       legState.status `elem` journeyLegTerminalStatuses -- TODO: Remove this once below is used always
