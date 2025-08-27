@@ -246,11 +246,9 @@ defaultBusTrackingConfig =
 checkAndMarkTerminalJourneyStatus ::
   (JL.GetStateFlow m r c, JL.SearchRequestFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
   DJourney.Journey ->
-  Bool ->
-  Bool ->
   [JL.JourneyLegState] ->
   m ()
-checkAndMarkTerminalJourneyStatus journey feedbackRequired isCancelSearchApi = go . concatLegStates
+checkAndMarkTerminalJourneyStatus journey = go . concatLegStates
   where
     concatLegStates =
       foldl'
@@ -262,30 +260,17 @@ checkAndMarkTerminalJourneyStatus journey feedbackRequired isCancelSearchApi = g
 
     isCancelled :: JL.JourneyLegStateData -> Bool
     isCancelled legState =
-      legState.status == JL.Cancelled -- TODO: Remove this once below is used always
-        || (if legState.mode == DTrip.Walk then legState.trackingStatus == Just JMState.Finished else maybe False (\status -> status `elem` [JMState.TaxiEstimate DTaxiEstimate.CANCELLED, JMState.TaxiEstimate DTaxiEstimate.COMPLETED, JMState.TaxiBooking DTaxiBooking.CANCELLED, JMState.TaxiRide DTaxiRide.CANCELLED, JMState.FRFSBooking DFRFSBooking.CANCELLED, JMState.FRFSTicket DFRFSTicket.CANCELLED]) legState.bookingStatus) -- If status is completed, a booking should exist. If it appears here without a booking, it means the booking was cancelled.
+      if legState.mode == DTrip.Walk then legState.trackingStatus == JMState.Finished else legState.bookingStatus `elem` [JMState.TaxiEstimate DTaxiEstimate.CANCELLED, JMState.TaxiEstimate DTaxiEstimate.COMPLETED, JMState.TaxiBooking DTaxiBooking.CANCELLED, JMState.TaxiRide DTaxiRide.CANCELLED, JMState.FRFSBooking DFRFSBooking.CANCELLED, JMState.FRFSBooking DFRFSBooking.CANCEL_INITIATED, JMState.FRFSTicket DFRFSTicket.CANCELLED] -- If status is completed, a booking should exist. If it appears here without a booking, it means the booking was cancelled.
     isCompleted :: JL.JourneyLegStateData -> Bool
     isCompleted legState =
-      legState.status `elem` journeyLegTerminalStatuses -- TODO: Remove this once below is used always
-        || (if legState.mode == DTrip.Walk then legState.trackingStatus == Just JMState.Finished else maybe False (\status -> status `elem` [JMState.TaxiBooking DTaxiBooking.COMPLETED, JMState.TaxiRide DTaxiRide.COMPLETED, JMState.FRFSTicket DFRFSTicket.USED] || (not feedbackRequired && legState.bookingStatus == Just (JMState.Feedback JMState.FEEDBACK_PENDING))) legState.bookingStatus)
-
-    isFeedbackPending :: JL.JourneyLegStateData -> Bool
-    isFeedbackPending legState =
-      legState.status `elem` journeyLegTerminalStatuses -- TODO: Remove this once below is used always
-        || ( feedbackRequired
-               && (if legState.mode == DTrip.Walk then legState.trackingStatus == Just JMState.Finished else legState.bookingStatus == Just (JMState.Feedback JMState.FEEDBACK_PENDING))
-           )
+      legState.trackingStatus == JMState.Finished || legState.bookingStatus `elem` [JMState.TaxiBooking DTaxiBooking.COMPLETED, JMState.TaxiRide DTaxiRide.COMPLETED] || (legState.mode == DTrip.Taxi && legState.bookingStatus == JMState.Feedback JMState.FEEDBACK_PENDING)
 
     go allLegsState
       | all isCancelled allLegsState =
         updateJourneyStatus journey DJourney.CANCELLED
-      | all isCompleted allLegsState && (journey.status == DJourney.FEEDBACK_PENDING || not feedbackRequired) =
-        updateJourneyStatus journey DJourney.COMPLETED
-      | all isFeedbackPending allLegsState =
+      | all isCompleted allLegsState =
         updateJourneyStatus journey DJourney.FEEDBACK_PENDING
       | otherwise = pure ()
-
-    journeyLegTerminalStatuses = if isCancelSearchApi then [JL.Completed, JL.Cancelled, JL.Skipped] else [JL.Completed, JL.Cancelled]
 
 getAllLegsStatus ::
   (JL.GetStateFlow m r c, JL.SearchRequestFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
@@ -304,7 +289,7 @@ getAllLegsStatus journey = do
   -- Update journey expiry time to the next valid ticket expiry when a leg is completed
   whenJust (minimumTicketLegOrder legPairs) $ \nextLegOrder -> do
     QJourneyExtra.updateJourneyToNextTicketExpiryTime journey.id allLegsRawData nextLegOrder
-  checkAndMarkTerminalJourneyStatus journey True False allLegsState
+  checkAndMarkTerminalJourneyStatus journey allLegsState
   return allLegsState
   where
     minimumTicketLegOrder = foldl' go Nothing
@@ -898,7 +883,7 @@ cancelLegUtil journeyLeg cancellationReasonCode shouldUpdateJourneyStatus cancel
     updatedLegStatus <- getAllLegsStatus journey
     logError $ "Checking and marking terminal journey status for journey: " <> show journey.id.getId <> " with updatedLegStatus: " <> show (length updatedLegStatus)
     when (length updatedLegStatus == 1) $ do
-      checkAndMarkTerminalJourneyStatus journey False (isJust cancelEstimateId) updatedLegStatus
+      checkAndMarkTerminalJourneyStatus journey updatedLegStatus
   return ()
 
 multimodalLegSearchIdAccessLockKey :: Text -> Text

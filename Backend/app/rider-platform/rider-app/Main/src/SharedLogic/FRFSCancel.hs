@@ -50,7 +50,7 @@ cancelJourney booking = do
       mapM_ (\rd -> JM.markLegStatus (Just JL.Cancelled) (Just JMState.Finished) journeyLeg rd.subLegOrder) journeyLeg.routeDetails
     journey <- JM.getJourney journeyId
     updatedLegStatus <- JM.getAllLegsStatus journey
-    JM.checkAndMarkTerminalJourneyStatus journey False False updatedLegStatus
+    JM.checkAndMarkTerminalJourneyStatus journey updatedLegStatus
 
 handleCancelledStatus :: Merchant.Merchant -> DFRFSTicketBooking.FRFSTicketBooking -> HighPrecMoney -> HighPrecMoney -> Text -> Bool -> Flow ()
 handleCancelledStatus merchant booking refundAmount cancellationCharges messageId counterCancellationPossible = do

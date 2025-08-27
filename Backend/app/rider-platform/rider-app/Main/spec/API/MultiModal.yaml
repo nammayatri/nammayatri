@@ -66,8 +66,8 @@ types:
     legOrder: Int
     subLegOrder: Int
     status: JourneyLegStatus
-    bookingStatus: Maybe JourneyBookingStatus
-    trackingStatus: Maybe TrackingStatus
+    bookingStatus: JourneyBookingStatus
+    trackingStatus: TrackingStatus
     vehiclePositions: "[VehiclePosition]"
     userPosition: Maybe LatLong
     mode: MultimodalTravelMode

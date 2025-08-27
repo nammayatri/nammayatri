@@ -229,8 +229,8 @@ data VehiclePosition = VehiclePosition
 
 data JourneyLegStateData = JourneyLegStateData
   { status :: JourneyLegStatus, -- TODO :: This field would be deprecated
-    bookingStatus :: Maybe JMState.JourneyBookingStatus,
-    trackingStatus :: Maybe JMState.TrackingStatus,
+    bookingStatus :: JMState.JourneyBookingStatus,
+    trackingStatus :: JMState.TrackingStatus,
     userPosition :: Maybe LatLong,
     vehiclePositions :: [VehiclePosition], -- Uses the modified VehiclePosition
     subLegOrder :: Int,
@@ -272,7 +272,7 @@ data LegInfo = LegInfo
     startTime :: UTCTime,
     order :: Int,
     status :: JourneyLegStatus, -- TODO :: To be Deprecated, remove this once UI starts consuming `legStatus` instead.
-    bookingStatus :: Maybe JMState.JourneyBookingStatus,
+    bookingStatus :: JMState.JourneyBookingStatus,
     estimatedDuration :: Maybe Seconds,
     estimatedMinFare :: Maybe PriceAPIEntity,
     estimatedMaxFare :: Maybe PriceAPIEntity,
@@ -306,7 +306,7 @@ data LegSplitInfo = LegSplitInfo
 data WalkLegExtraInfo = WalkLegExtraInfo
   { origin :: Location,
     destination :: Location,
-    trackingStatus :: Maybe JMState.TrackingStatus,
+    trackingStatus :: JMState.TrackingStatus,
     id :: Id DJourneyLeg.JourneyLeg
   }
   deriving stock (Show, Generic)
@@ -334,7 +334,7 @@ data TaxiLegExtraInfo = TaxiLegExtraInfo
     bppRideId :: Maybe (Id DRide.BPPRide),
     driverMobileNumber :: Maybe Text,
     exoPhoneNumber :: Maybe Text,
-    trackingStatus :: Maybe JMState.TrackingStatus
+    trackingStatus :: JMState.TrackingStatus
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -385,7 +385,7 @@ data LegRouteInfo = LegRouteInfo
     lineColorCode :: Maybe Text,
     trainNumber :: Maybe Text,
     journeyStatus :: Maybe JourneyLegStatus,
-    trackingStatus :: Maybe JMState.TrackingStatus,
+    trackingStatus :: JMState.TrackingStatus,
     frequency :: Maybe Seconds,
     allAvailableRoutes :: [Text]
   }
@@ -409,7 +409,7 @@ data BusLegExtraInfo = BusLegExtraInfo
     adultTicketQuantity :: Maybe Int,
     childTicketQuantity :: Maybe Int,
     refund :: Maybe LegSplitInfo,
-    trackingStatus :: Maybe JMState.TrackingStatus,
+    trackingStatus :: JMState.TrackingStatus,
     fleetNo :: Maybe Text,
     discounts :: Maybe [FRFSTicketServiceAPI.FRFSDiscountRes]
   }
@@ -708,7 +708,7 @@ mkWalkLegInfoFromWalkLegData personId legData@DJL.JourneyLeg {..} = do
         merchantOperatingCityId = merchantOperatingCityId,
         personId = personId,
         status = oldStatus, -- TODO :: This field would be deprecated
-        bookingStatus = Nothing,
+        bookingStatus = JMState.Initial JMState.BOOKING_PENDING,
         legExtraInfo =
           Walk $
             WalkLegExtraInfo
@@ -918,11 +918,11 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
     safeDiv x 0 = x
     safeDiv x y = x / y
 
-getLegRouteInfo :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => [(RouteDetails, Maybe JMState.TrackingStatus)] -> DIBC.IntegratedBPPConfig -> m [LegRouteInfo]
+getLegRouteInfo :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => [(RouteDetails, JMState.TrackingStatus)] -> DIBC.IntegratedBPPConfig -> m [LegRouteInfo]
 getLegRouteInfo journeyRouteDetailsWithTrackingStatuses integratedBPPConfig = do
   mapM transformJourneyRouteDetails journeyRouteDetailsWithTrackingStatuses
   where
-    transformJourneyRouteDetails :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => (RouteDetails, Maybe JMState.TrackingStatus) -> m LegRouteInfo
+    transformJourneyRouteDetails :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => (RouteDetails, JMState.TrackingStatus) -> m LegRouteInfo
     transformJourneyRouteDetails (journeyRouteDetail, trackingStatus) = do
       fromStationCode' <- fromMaybeM (InternalError "FromStationCode is missing") journeyRouteDetail.fromStopCode
       toStationCode' <- fromMaybeM (InternalError "ToStationCode is missing") journeyRouteDetail.toStopCode
@@ -938,7 +938,7 @@ getLegRouteInfo journeyRouteDetailsWithTrackingStatuses integratedBPPConfig = do
             routeCode = route.code,
             subOrder = journeyRouteDetail.subLegOrder,
             platformNumber = journeyRouteDetail.fromStopPlatformCode,
-            journeyStatus = JMStateUtils.castTrackingStatusToJourneyLegStatus <$> trackingStatus,
+            journeyStatus = Just $ JMStateUtils.castTrackingStatusToJourneyLegStatus trackingStatus,
             trackingStatus,
             lineColor = journeyRouteDetail.routeColorName,
             lineColorCode = journeyRouteDetail.routeColorCode,
