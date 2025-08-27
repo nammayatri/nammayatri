@@ -84,7 +84,7 @@ fleetOwnerVerfiy req = withFlowHandlerAPI' $ do
   let checkedMerchantId = skipMerchantCityAccessCheck merchantShortId
   void $ Client.callDynamicOfferDriverAppFleetApi checkedMerchantId req.city (.registration.fleetOwnerVerify) req
   token <- DR.generateToken person.id merchant.id req.city
-  when (person.verified /= Just True && (merchant.verifyFleetWhileLogin == Just True) && not (fromMaybe False merchant.requireAdminApprovalForFleetOnboarding)) $ QP.updatePersonVerifiedStatus person.id True
+  when (person.verified /= Just True && not (fromMaybe False merchant.requireAdminApprovalForFleetOnboarding)) $ QP.updatePersonVerifiedStatus person.id True
   pure $ DP.FleetOwnerVerifyRes {authToken = token}
 
 fleetOwnerRegister :: DP.FleetOwnerRegisterReq -> FlowHandler FleetOwnerRegisterResp
