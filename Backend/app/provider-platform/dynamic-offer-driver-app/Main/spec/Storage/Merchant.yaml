@@ -1067,6 +1067,7 @@ TransporterConfig:
     allowCacheDriverFlowStatus : Maybe Bool
     cancellationRateSlabConfig: Maybe CancellationRateSlabConfig
     enableDriverWallet: Maybe Bool
+    driverWalletPayoutThreshold: Maybe HighPrecMoney
     gstPercentage: Maybe Double
     maxOnlineDurationDays : Maybe Int
     distanceWeightage: Maybe Int

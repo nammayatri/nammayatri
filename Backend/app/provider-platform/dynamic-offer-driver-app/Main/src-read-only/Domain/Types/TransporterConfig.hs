@@ -117,6 +117,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     driverPaymentReminderInterval :: Kernel.Prelude.NominalDiffTime,
     driverSmsReceivingLimit :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.DashboardMediaSendingLimit,
     driverTimeSpentOnPickupThresholdOnCancel :: Kernel.Types.Common.Seconds,
+    driverWalletPayoutThreshold :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     dropLocThreshold :: Kernel.Types.Common.Meters,
     dummyFromLocation :: Domain.Types.Location.DummyLocationInfo,
     dummyShowDriverAdditions :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,

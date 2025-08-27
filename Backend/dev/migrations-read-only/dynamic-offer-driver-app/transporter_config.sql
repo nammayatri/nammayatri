@@ -532,3 +532,8 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN distance_weight
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN driver_calling_option text  default 'AnonymousCall';
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN driver_wallet_payout_threshold double precision ;
