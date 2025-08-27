@@ -134,6 +134,7 @@ import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Clickhouse.Ride as CQRide
 import Storage.Clickhouse.RideDetails (findIdsByFleetOwner)
+import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.AlertRequest as QAR
 import qualified Storage.Queries.DriverGstin as QGST
 import qualified Storage.Queries.DriverInformation as QDriverInfo
@@ -1345,7 +1346,6 @@ getDriverFleetOwnerInfo _ _ driverId = do
   where
     makeFleetOwnerInfoRes :: Maybe Text -> Maybe Text -> Maybe Text -> Maybe DFC.FleetConfig -> DFOI.FleetOwnerInformation -> Maybe Text -> Maybe Text -> Flow Common.FleetOwnerInfoRes
     makeFleetOwnerInfoRes panNumber_ gstNumber_ maskedAadhaarNumber mbFleetConfig DFOI.FleetOwnerInformation {..} operatorName operatorContact = do
-      referral <- QDR.findById fleetOwnerPersonId
       let fleetConfig =
             mbFleetConfig <&> \fleetConfig' ->
               Common.FleetConfig
@@ -1355,7 +1355,7 @@ getDriverFleetOwnerInfo _ _ driverId = do
                   endRideDistanceThreshold = fleetConfig'.endRideDistanceThreshold,
                   rideEndApproval = fleetConfig'.rideEndApproval
                 }
-      return $ Common.FleetOwnerInfoRes {panNumber = panNumber_, gstNumber = gstNumber_, fleetType = show fleetType, referralCode = (.referralCode.getId) <$> referral, ..}
+      return $ Common.FleetOwnerInfoRes {panNumber = panNumber_, gstNumber = gstNumber_, fleetType = show fleetType, ..}
 
 ---------------------------------------------------------------------
 data FleetOwnerInfo = FleetOwnerInfo
