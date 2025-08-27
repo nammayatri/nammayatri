@@ -126,7 +126,7 @@ getTaxiJourneyBookingStatus mbBooking mbRide mbEstimate = do
         Nothing -> do
           case mbEstimate of
             Just estimate -> TaxiEstimate estimate.status
-            Nothing -> Feedback FEEDBACK_PENDING
+            Nothing -> Initial BOOKING_PENDING
 
 getFRFSJourneyBookingStatus :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => Maybe DFRFSBooking.FRFSTicketBooking -> m JourneyBookingStatus
 getFRFSJourneyBookingStatus mbBooking = do
