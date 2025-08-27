@@ -201,8 +201,8 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
                 person <- QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
                 let (notificationTitle, notificationMessage, notificationType) =
                       if isSuccessStatus payoutStatus
-                        then ("Payout Complete", "Your payout of ₹" <> show amount <> " has been successfully settled to your bank account.", FCM.PAYOUT_COMPLETED)
-                        else ("Payout Failed", "Your payout of ₹" <> show amount <> " has failed. Please retry or contact support.", FCM.PAYOUT_FAILED)
+                        then ("Payout Complete", "Your payout of Rs." <> show amount <> " has been successfully settled to your bank account.", FCM.PAYOUT_COMPLETED)
+                        else ("Payout Failed", "Your payout of Rs." <> show amount <> " has failed. Please retry or contact support.", FCM.PAYOUT_FAILED)
                 Notify.sendNotificationToDriver person.merchantOperatingCityId FCM.SHOW Nothing notificationType notificationTitle notificationMessage person person.deviceToken
           _ -> pure ()
       pure ()
