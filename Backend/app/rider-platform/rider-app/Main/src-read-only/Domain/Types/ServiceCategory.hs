@@ -19,6 +19,7 @@ data ServiceCategory = ServiceCategory
     id :: Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory,
     inclusionPoints :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     isClosed :: Kernel.Prelude.Bool,
+    maxSelection :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     name :: Kernel.Prelude.Text,
     peopleCategory :: [Kernel.Types.Id.Id Domain.Types.ServicePeopleCategory.ServicePeopleCategory],
     placeId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

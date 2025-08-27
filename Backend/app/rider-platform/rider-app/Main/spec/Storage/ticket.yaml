@@ -190,9 +190,10 @@ TicketService:
     businessHours: "[Id BusinessHour]"
     rules: "Maybe [Rule]"
     isClosed: Bool
+    maxSelection: Maybe Int
   types:
     ExpiryType:
-      enum: "InstantExpiry Kernel.Prelude.Int,VisitDate Kernel.Prelude.TimeOfDay"
+      enum: "InstantExpiry Kernel.Prelude.Int,VisitDate Kernel.Prelude.TimeOfDay,ValidityDays Kernel.Prelude.Int"
     OperationalDate:
       startDate: Day
       eneDate: Day
@@ -401,6 +402,7 @@ ServiceCategory:
     rules: "Maybe [Rule]"
     remainingActions: "Maybe [ActionType]"
     isClosed: Bool
+    maxSelection: Maybe Int
   beamFields:
     remainingActions: {}
   sqlType:
@@ -520,6 +522,7 @@ ServicePeopleCategory:
         - pricingType
         - vendorSplitDetails
         - placeId
+        - iconUrl
       where:
         and: [id, timeBounds]
     deleteByIdAndTimebounds:

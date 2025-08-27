@@ -18,6 +18,7 @@ data ServiceCategoryT f = ServiceCategoryT
     id :: B.C f Kernel.Prelude.Text,
     inclusionPoints :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     isClosed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    maxSelection :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     name :: B.C f Kernel.Prelude.Text,
     peopleCategory :: B.C f [Kernel.Prelude.Text],
     placeId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

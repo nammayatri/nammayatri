@@ -21,6 +21,7 @@ data TicketService = TicketService
     expiry :: Domain.Types.TicketService.ExpiryType,
     id :: Kernel.Types.Id.Id Domain.Types.TicketService.TicketService,
     isClosed :: Kernel.Prelude.Bool,
+    maxSelection :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     maxVerification :: Kernel.Prelude.Int,
     operationalDate :: Kernel.Prelude.Maybe Domain.Types.TicketService.OperationalDate,
     operationalDays :: [Kernel.Prelude.Text],
@@ -37,7 +38,7 @@ data TicketService = TicketService
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
-data ExpiryType = InstantExpiry Kernel.Prelude.Int | VisitDate Kernel.Prelude.TimeOfDay deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data ExpiryType = InstantExpiry Kernel.Prelude.Int | VisitDate Kernel.Prelude.TimeOfDay | ValidityDays Kernel.Prelude.Int deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data OperationalDate = OperationalDate {eneDate :: Data.Time.Day, startDate :: Data.Time.Day} deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq, Ord)
 
