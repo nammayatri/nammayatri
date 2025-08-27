@@ -99,7 +99,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
                 JT.JourneyLegStateData
                   { status = oldStatus,
                     bookingStatus,
-                    trackingStatus = snd =<< (listToMaybe trackingStatuses),
+                    trackingStatus = fromMaybe JMStateTypes.InPlan (snd <$> listToMaybe trackingStatuses),
                     userPosition,
                     JT.vehiclePositions = [], -- Will be populated based on status
                     legOrder = journeyLeg.sequenceNumber,
@@ -118,7 +118,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
               mbUserBoardingStation
               mbLegEndStation
               allBusDataForRoute
-              (fromMaybe JMStateTypes.InPlan ((listToMaybe trackingStatuses) >>= snd))
+              (fromMaybe JMStateTypes.InPlan (snd <$> listToMaybe trackingStatuses))
               movementDetected
 
           let detailedStateData = baseStateData {JT.vehiclePositions = vehiclePositionsToReturn}
@@ -135,7 +135,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
               journeyLeg.routeDetails
           let journeyLegStates =
                 [ JT.JourneyLegStateData
-                    { status = maybe JPT.InPlan JMStateUtils.castTrackingStatusToJourneyLegStatus trackingStatus,
+                    { status = JMStateUtils.castTrackingStatusToJourneyLegStatus trackingStatus,
                       bookingStatus,
                       trackingStatus,
                       userPosition,
@@ -171,7 +171,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
                 JT.JourneyLegStateData
                   { status = oldStatus,
                     bookingStatus,
-                    trackingStatus = snd =<< (listToMaybe trackingStatuses),
+                    trackingStatus = fromMaybe JMStateTypes.InPlan (snd <$> listToMaybe trackingStatuses),
                     userPosition,
                     JT.vehiclePositions = [], -- Will be populated based on status
                     legOrder = journeyLeg.sequenceNumber,
@@ -190,7 +190,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
               mbUserBoardingStation
               mbLegEndStation
               allBusDataForRoute
-              (fromMaybe JMStateTypes.InPlan ((listToMaybe trackingStatuses) >>= snd))
+              (fromMaybe JMStateTypes.InPlan (snd <$> listToMaybe trackingStatuses))
               movementDetected
 
           let detailedStateData = baseStateData {JT.vehiclePositions = vehiclePositionsToReturn}
@@ -203,7 +203,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
 
           let journeyLegStates =
                 [ JT.JourneyLegStateData
-                    { status = maybe JPT.InPlan JMStateUtils.castTrackingStatusToJourneyLegStatus trackingStatus,
+                    { status = JMStateUtils.castTrackingStatusToJourneyLegStatus trackingStatus,
                       bookingStatus,
                       trackingStatus,
                       userPosition,

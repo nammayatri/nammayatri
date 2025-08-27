@@ -7,6 +7,7 @@ import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Utils.Common
 import Lib.JourneyLeg.Types.Walk
+import qualified Lib.JourneyModule.State.Types as JMStateTypes
 import qualified Lib.JourneyModule.State.Utils as JMStateUtils
 import qualified Lib.JourneyModule.Types as JT
 
@@ -28,7 +29,7 @@ instance JT.JourneyLeg WalkLegRequest m where
       JT.Single $
         JT.JourneyLegStateData
           { status = oldStatus,
-            bookingStatus = Nothing,
+            bookingStatus = JMStateTypes.Initial JMStateTypes.BOOKING_PENDING,
             trackingStatus = trackingStatus,
             userPosition = (.latLong) <$> listToMaybe req.riderLastPoints,
             vehiclePositions = [],

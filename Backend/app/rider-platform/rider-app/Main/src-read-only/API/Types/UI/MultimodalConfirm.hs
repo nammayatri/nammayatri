@@ -144,12 +144,12 @@ data LegServiceTierOptionsResp = LegServiceTierOptionsResp {options :: [Lib.Jour
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data LegStatus = LegStatus
-  { bookingStatus :: Kernel.Prelude.Maybe Lib.JourneyModule.State.Types.JourneyBookingStatus,
+  { bookingStatus :: Lib.JourneyModule.State.Types.JourneyBookingStatus,
     legOrder :: Kernel.Prelude.Int,
     mode :: Domain.Types.Trip.MultimodalTravelMode,
     status :: Lib.JourneyLeg.Types.JourneyLegStatus,
     subLegOrder :: Kernel.Prelude.Int,
-    trackingStatus :: Kernel.Prelude.Maybe Lib.JourneyModule.State.Types.TrackingStatus,
+    trackingStatus :: Lib.JourneyModule.State.Types.TrackingStatus,
     userPosition :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
     vehiclePositions :: [Lib.JourneyModule.Types.VehiclePosition]
   }
