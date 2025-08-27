@@ -42,12 +42,12 @@ import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Plan as DP
 import qualified Domain.Types.SubscriptionConfig as DSC
 import qualified Domain.Types.SubscriptionTransaction as SubscriptionTransaction
-import qualified Domain.Types.TransporterConfig
 import qualified Domain.Types.WebhookExtra as WT
 import Environment
 import Kernel.Beam.Functions (runInMasterDb)
 import Kernel.Beam.Functions as B (runInReplica)
 import Kernel.External.Encryption
+import qualified Kernel.External.Notification.FCM.Types as FCM
 import qualified Kernel.External.Payment.Interface as DPayments
 import qualified Kernel.External.Payment.Interface.Juspay as Juspay
 import qualified Kernel.External.Payment.Interface.Types as Payment
@@ -318,10 +318,11 @@ processPayment merchantId driver orderId sendNotification (serviceName, subsConf
       driverFees <- QDF.findAllByDriverFeeIds driverFeeIds
       let nonClearedDriverFees = filter (\df -> df.status /= CLEARED) driverFees
       QDF.updateStatusByIds CLEARED driverFeeIds now
-      mapM_ (processNonClearedDriverFees merchantId driver transporterConfig now) nonClearedDriverFees
+      let utcTime = addUTCTime (secondsToNominalDiffTime $ -1 * transporterConfig.timeDiffFromUtc) now
+      mapM_ (processNonClearedDriverFees merchantId driver utcTime) nonClearedDriverFees
     QIN.updateInvoiceStatusByInvoiceId INV.SUCCESS (cast orderId)
     updatePaymentStatus driver.id driver.merchantOperatingCityId serviceName
-    when (sendNotification && subsConfig.sendInAppFcmNotifications) $ notifyPaymentSuccessIfNotNotified driver orderId
+    when (sendNotification && subsConfig.sendInAppFcmNotifications && serviceName /= DP.PREPAID_SUBSCRIPTION) $ notifyPaymentSuccessIfNotNotified driver orderId
 
 processNonClearedDriverFees ::
   ( MonadFlow m,
@@ -331,11 +332,10 @@ processNonClearedDriverFees ::
   ) =>
   Id DM.Merchant ->
   DP.Person ->
-  Domain.Types.TransporterConfig.TransporterConfig ->
   UTCTime ->
   DriverFee ->
   m ()
-processNonClearedDriverFees merchantId driver transporterConfig now driverFee = do
+processNonClearedDriverFees merchantId driver now driverFee = do
   when (driverFee.feeType == PREPAID_RECHARGE) $ do
     Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey driver.id.getId) 10 10 $ do
       driverInfo <- QDI.findById (cast driverFee.driverId) >>= fromMaybeM (PersonNotFound driverFee.driverId.getId)
@@ -344,8 +344,11 @@ processNonClearedDriverFees merchantId driver transporterConfig now driverFee = 
           finalExpiry = max currentExpiry newExpiry
           newBalance = fromMaybe 0.0 driverInfo.prepaidSubscriptionBalance + driverFee.totalEarnings
       QDIExtra.updatePrepaidSubscriptionBalanceAndExpiry driverFee.driverId newBalance (Just finalExpiry)
+      logInfo $ "Prepaid recharge completed " <> show driver.id.getId
+      let prepaidRechargeMessage = "Your recharge worth ₹" <> show (SPayment.roundToTwoDecimalPlaces driverFee.totalEarnings) <> " is successful"
+          prepaidRechargeTitle = "Recharge Successful!"
+      sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.PREPAID_RECHARGE_SUCCESS prepaidRechargeTitle prepaidRechargeMessage driver driver.deviceToken
       id <- generateGUID
-      let utcTime = addUTCTime (secondsToNominalDiffTime $ -1 * transporterConfig.timeDiffFromUtc) now
       let transaction =
             SubscriptionTransaction.SubscriptionTransaction
               { id = id,
@@ -359,8 +362,8 @@ processNonClearedDriverFees merchantId driver transporterConfig now driverFee = 
                 runningBalance = newBalance,
                 fromLocationId = Nothing,
                 toLocationId = Nothing,
-                createdAt = utcTime,
-                updatedAt = utcTime
+                createdAt = now,
+                updatedAt = now
               }
       QSubscriptionTransaction.create transaction
 

@@ -200,7 +200,7 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
     let serviceName = YATRI_SUBSCRIPTION
     createDriverFee booking.providerId booking.merchantOperatingCityId driverId ride.fare ride.currency newFareParams driverInfo booking serviceName
 
-  when (fromMaybe False thresholdConfig.enableDriverWallet) $ do
+  when (fromMaybe False merchant.enforceSufficientDriverBalance && fromMaybe False thresholdConfig.enableDriverWallet) $ do
     fork "createDriverWalletTransaction" $ createDriverWalletTransaction ride booking thresholdConfig
 
   triggerRideEndEvent RideEventData {ride = ride{status = Ride.COMPLETED}, personId = cast driverId, merchantId = booking.providerId}
@@ -243,13 +243,16 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
         -- Fetching again to avoid race conditions
         freshDriverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
         let newBalance = fromMaybe 0 freshDriverInfo.prepaidSubscriptionBalance - fare
+        driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+        let balanceUpdateMessage = "Thank you for taking the ride. Your updated subscription balance is ₹" <> show newBalance
+            balanceUpdatedTitle = "Subscription balance updated!"
+        sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.PREAID_BALANCE_UPDATE balanceUpdatedTitle balanceUpdateMessage driver driver.deviceToken
         QDIE.updatePrepaidSubscriptionBalance (cast ride.driverId) newBalance
         createSubscriptionTransaction ride newBalance booking
         when (newBalance < fromMaybe 0 thresholdConfig.prepaidSubscriptionThreshold) $ do
           logInfo $ "Prepaid subscription balance is less than threshold for driver: " <> show driverId.getId
-          let unsubscribedMessage = "Recharge Alert!"
-              unsubscribedTitle = "Your subscription balance is low. Please recharge to get rides"
-          driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+          let unsubscribedMessage = "Your subscription balance is low. Please recharge to get rides"
+              unsubscribedTitle = "Low Balance Alert!"
           sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.DRIVER_UNSUBSCRIBED unsubscribedTitle unsubscribedMessage driver driver.deviceToken
 
 createSubscriptionTransaction ::

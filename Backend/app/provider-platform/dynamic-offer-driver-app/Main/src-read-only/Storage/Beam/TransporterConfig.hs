@@ -112,6 +112,7 @@ data TransporterConfigT f = TransporterConfigT
     driverPaymentReminderInterval :: B.C f Kernel.Types.Common.Seconds,
     driverSmsReceivingLimit :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     driverTimeSpentOnPickupThresholdOnCancel :: B.C f Kernel.Types.Common.Seconds,
+    driverWalletPayoutThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     dropLocThreshold :: B.C f Kernel.Types.Common.Meters,
     dummyFromLocation :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     dummyShowDriverAdditions :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

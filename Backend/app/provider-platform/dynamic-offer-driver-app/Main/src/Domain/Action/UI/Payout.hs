@@ -35,6 +35,7 @@ import qualified Domain.Types.VehicleCategory as DVC
 import Environment
 import Kernel.Beam.Functions as B (runInReplica)
 import Kernel.External.Encryption (decrypt)
+import qualified Kernel.External.Notification.FCM.Types as FCM
 import qualified Kernel.External.Payout.Interface as Juspay
 import qualified Kernel.External.Payout.Interface.Juspay as Juspay
 import qualified Kernel.External.Payout.Interface.Types as IPayout
@@ -67,6 +68,7 @@ import qualified Storage.Queries.DriverWallet as QDW
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.Vehicle as QV
 import Tools.Error
+import qualified Tools.Notifications as Notify
 import qualified Tools.Payout as Payout
 import Utils.Common.Cac.KeyNameConstants
 
@@ -196,6 +198,12 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
                         }
                 QDW.create transaction
                 unless (isSuccessStatus payoutStatus) $ QDI.updateWalletBalance (Just newRunningBalance) driverId
+                person <- QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+                let (notificationTitle, notificationMessage, notificationType) =
+                      if isSuccessStatus payoutStatus
+                        then ("Payout Complete", "Your payout of ₹" <> show amount <> " has been successfully settled to your bank account.", FCM.PAYOUT_COMPLETED)
+                        else ("Payout Failed", "Your payout of ₹" <> show amount <> " has failed. Please retry or contact support.", FCM.PAYOUT_FAILED)
+                Notify.sendNotificationToDriver person.merchantOperatingCityId FCM.SHOW Nothing notificationType notificationTitle notificationMessage person person.deviceToken
           _ -> pure ()
       pure ()
     IPayout.BadStatusResp -> pure ()

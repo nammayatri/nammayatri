@@ -27,6 +27,7 @@ import qualified Domain.Types.Person
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption (decrypt)
+import qualified Kernel.External.Notification.FCM.Types as FCM
 import qualified Kernel.External.Payout.Interface as Juspay
 import qualified Kernel.External.Payout.Types as TPayout
 import qualified Kernel.Prelude
@@ -37,12 +38,14 @@ import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
 import SharedLogic.Payment
+import Storage.Cac.TransporterConfig (findByMerchantOpCityId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverWallet as QDW
 import qualified Storage.Queries.Person as QPerson
 import Tools.Error
+import qualified Tools.Notifications as Notify
 import qualified Tools.Payout as Payout
 import qualified Tools.Utils as Utils
 
@@ -101,16 +104,16 @@ postWalletPayout ::
   )
 postWalletPayout (mbPersonId, _, mocId) = do
   driverId <- fromMaybeM (PersonDoesNotExist "Nothing") mbPersonId
+  transporterConfig <- findByMerchantOpCityId mocId Nothing >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
+  person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  subscriptionConfig <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName person.merchantOperatingCityId Nothing PREPAID_SUBSCRIPTION >>= fromMaybeM (NoSubscriptionConfigForService person.merchantOperatingCityId.getId "PREPAID_SUBSCRIPTION") -- Driver wallet is not required for postpaid
   Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey driverId.getId) 10 10 $ do
     driverInfo <- QDI.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
     let walletBalance = fromMaybe 0 driverInfo.walletBalance
-    when (walletBalance <= 0) $ throwError $ InvalidRequest "No payout required as wallet balance is less than or equal to zero"
-    person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-    subscriptionConfig <-
-      CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName person.merchantOperatingCityId Nothing PREPAID_SUBSCRIPTION -- Driver wallet is not required for postpaid
-        >>= fromMaybeM (NoSubscriptionConfigForService person.merchantOperatingCityId.getId "PREPAID_SUBSCRIPTION")
+        payoutThreshold = fromMaybe 0 transporterConfig.driverWalletPayoutThreshold
+    when (walletBalance < payoutThreshold) $ throwError $ InvalidRequest ("Payout not possible as wallet balance is less than payout threshold of ₹" <> show payoutThreshold)
     let mbVpa = driverInfo.payoutVpa
-    vpa <- fromMaybeM (InternalError $ "payout vpa not present for " <> driverId.getId) mbVpa
+    vpa <- fromMaybeM (InternalError $ "Payout vpa not present for " <> driverId.getId) mbVpa
     payoutId <- generateGUID
     phoneNo <- mapM decrypt person.mobileNumber
     payoutServiceName <- Payout.decidePayoutService (fromMaybe (DEMSC.PayoutService TPayout.Juspay) subscriptionConfig.payoutServiceName) person.clientSdkVersion person.merchantOperatingCityId
@@ -144,6 +147,9 @@ postWalletPayout (mbPersonId, _, mocId) = do
                 }
         QDW.create transaction
         QDI.updateWalletBalance (Just 0) driverId
+        let notificationTitle = "Payout Initiated"
+            notificationMessage = "Your payout of " <> show walletBalance <> " has been initiated."
+        Notify.sendNotificationToDriver person.merchantOperatingCityId FCM.SHOW Nothing FCM.PAYOUT_INITIATED notificationTitle notificationMessage person person.deviceToken
   pure APISuccess.Success
 
 mkPayoutReq :: Domain.Types.Person.Person -> Text -> T.Text -> Maybe Text -> HighPrecMoney -> Juspay.CreatePayoutOrderReq
