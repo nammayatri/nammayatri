@@ -32,7 +32,6 @@ import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Id
 import Kernel.Types.SlidingWindowLimiter
 import Kernel.Utils.Common
-import Lib.JourneyLeg.Types
 import Lib.JourneyLeg.Types.Taxi
 import qualified Lib.JourneyModule.State.Utils as JMStateUtils
 import qualified Lib.JourneyModule.Types as JT
@@ -51,7 +50,6 @@ import TransactionLogs.Types
 
 instance JT.JourneyLeg TaxiLegRequest m where
   search (TaxiLegRequestSearch TaxiLegRequestSearchData {..}) = do
-    let journeySearchData = mkJourneySearchData
     legSearchReq <- mkOneWaySearchReq
     dSearchRes <-
       DSearch.search
@@ -64,7 +62,6 @@ instance JT.JourneyLeg TaxiLegRequest m where
         Nothing
         Nothing
         False
-        (Just journeySearchData)
         True
     QJourneyLeg.updateDistanceAndDuration (convertMetersToDistance Meter <$> dSearchRes.distance) dSearchRes.duration journeyLegData.id
     fork "search cabs" . withShortRetry $ do
@@ -104,15 +101,6 @@ instance JT.JourneyLeg TaxiLegRequest m where
                 verifyBeforeCancellingOldBooking = Just True,
                 ..
               }
-
-      mkJourneySearchData =
-        JourneySearchData
-          { agency = journeyLegData.agency <&> (.name),
-            convenienceCost = 0,
-            pricingId = Nothing,
-            isDeleted = Just False,
-            onSearchFailed = Nothing
-          }
   search _ = throwError (InternalError "Not Supported")
 
   confirm (TaxiLegRequestConfirm req) = do
@@ -172,8 +160,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
           legData.cancelEstimateId
       Nothing -> do
         searchReq <- QSearchRequest.findById legData.searchRequestId >>= fromMaybeM (SearchRequestNotFound $ "searchRequestId-" <> legData.searchRequestId.getId)
-        journeySearchData <- searchReq.journeyLegInfo & fromMaybeM (InvalidRequest $ "JourneySearchData not found for search id: " <> searchReq.id.getId)
-        case journeySearchData.pricingId of
+        case legData.journeyLeg.legPricingId of
           Just pricingId -> do
             void $ cancelSearch' (searchReq.riderId, searchReq.merchantId) (Id pricingId)
           Nothing -> return ()
@@ -186,9 +173,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
       case mbBooking of
         Just _ -> return Nothing
         Nothing -> do
-          searchReq <- QSearchRequest.findById req.searchId >>= fromMaybeM (SearchRequestNotFound req.searchId.getId)
-          journeySearchData <- searchReq.journeyLegInfo & fromMaybeM (InvalidRequest $ "JourneySearchData not found for search id: " <> searchReq.id.getId)
-          maybe (pure Nothing) (QEstimate.findById . Id) journeySearchData.pricingId
+          maybe (pure Nothing) (QEstimate.findById . Id) req.journeyLeg.legPricingId
 
     vehiclePosition <- JT.getTaxiVehiclePosition mbRide
     (oldStatus, bookingStatus, trackingStatus) <- JMStateUtils.getTaxiAllStatuses req.journeyLeg mbBooking mbRide mbEstimate

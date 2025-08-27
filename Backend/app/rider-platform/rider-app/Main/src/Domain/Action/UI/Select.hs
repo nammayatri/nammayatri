@@ -80,7 +80,6 @@ import Kernel.Types.Predicate
 import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
-import qualified Lib.JourneyLeg.Types as JLT
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.Quote
 import qualified Storage.CachedQueries.BppDetails as CQBPP
@@ -290,8 +289,6 @@ select2 personId estimateId req@DSelectReq {..} = do
   QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimateId, otherSelectedEstimates, validTill = searchRequest.validTill, providerId = Just estimate.providerId, tripCategory = estimate.tripCategory}
   QEstimate.updateStatus DEstimate.DRIVER_QUOTE_REQUESTED estimateId
   QDOffer.updateStatus DDO.INACTIVE estimateId
-  whenJust searchRequest.journeyLegInfo $ \journeyLegInfo -> do
-    QSearchRequest.updateJourneyLegInfo searchRequestId (Just $ journeyLegInfo {JLT.pricingId = Just estimateId.getId, JLT.onSearchFailed = Just False})
   let mbCustomerExtraFee = (mkPriceFromAPIEntity <$> req.customerExtraFeeWithCurrency) <|> (mkPriceFromMoney Nothing <$> req.customerExtraFee)
   Kernel.Prelude.whenJust req.customerExtraFeeWithCurrency $ \reqWithCurrency -> do
     unless (estimate.estimatedFare.currency == reqWithCurrency.currency) $
@@ -313,7 +310,7 @@ select2 personId estimateId req@DSelectReq {..} = do
   mbJourneyId <- case mbJourneyLeg of
     Just journeyLeg -> do
       QJourney.updateStatus DJ.INPROGRESS journeyLeg.journeyId
-      QSearchRequest.updatePricingId searchRequest.id (Just estimate.id.getId)
+      QJourneyLeg.updateLegPricingIdByLegSearchId (Just estimate.id.getId) (Just searchRequest.id.getId)
       pure journeyLeg.journeyId
     Nothing -> mkJourneyForSearch searchRequest estimate personId
   isMultipleOrNoDeviceIdExist <-
@@ -519,6 +516,7 @@ mkJourneyForSearch searchRequest estimate personId = do
             createdAt = now,
             updatedAt = now,
             legSearchId = Just searchRequest.id.getId,
+            legPricingId = Just estimate.id.getId,
             changedBusesInSequence = Nothing,
             finalBoardedBusNumber = Nothing,
             osmEntrance = Nothing,
@@ -529,19 +527,8 @@ mkJourneyForSearch searchRequest estimate personId = do
             isDeleted = Just False,
             sequenceNumber = 0
           }
-
-  let journeySearchData =
-        JLT.JourneySearchData
-          { agency = Nothing,
-            convenienceCost = 0,
-            pricingId = Just estimate.id.getId,
-            onSearchFailed = Nothing,
-            isDeleted = Nothing
-          }
-
   QJourney.create journey
   QJourneyLeg.create journeyLeg
-  QSearchRequest.updateJourneyLegInfo searchRequest.id (Just journeySearchData)
   pure journeyGuid
 
 data MultimodalSelectRes = MultimodalSelectRes

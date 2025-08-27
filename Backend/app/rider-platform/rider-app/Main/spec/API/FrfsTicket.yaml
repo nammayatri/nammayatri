@@ -22,7 +22,6 @@ imports:
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   Meters: Kernel.Types.Common
   LatLong: Kernel.External.Maps.Types
-  JourneySearchData: Lib.JourneyLeg.Types
   RouteStopInfo: SharedLogic.FRFSUtils
   PlatformType: Domain.Types.IntegratedBPPConfig
   IntegratedBPPConfig: Domain.Types.IntegratedBPPConfig
@@ -39,7 +38,6 @@ types:
     toStationCode: Text
     routeCode: Maybe Text
     quantity: Int
-    journeySearchData: Maybe JourneySearchData
     recentLocationId: Maybe (Id RecentLocation)
 
   FRFSSearchAPIRes:

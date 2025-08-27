@@ -69,6 +69,7 @@ import qualified Storage.CachedQueries.Sos as CQSos
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.BookingPartiesLink as QBPL
 import qualified Storage.Queries.Estimate as QEstimate
+import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.NotificationSoundsConfig as SQNSC
 import qualified Storage.Queries.Person as Person
 import Storage.Queries.PersonDefaultEmergencyNumber as QPDEN
@@ -225,7 +226,8 @@ notifyOnRideSearchExpired searchReq = do
   logDebug "Sending ride search expired notification"
   let searchRequestId = searchReq.id
   person <- Person.findById searchReq.riderId
-  whenJust (searchReq.journeyLegInfo >>= (.pricingId)) $ QEstimate.updateStatus DEstimate.RIDE_SEARCH_EXPIRED . Id
+  mbJourneyLeg <- QJourneyLeg.findByLegSearchId (Just searchReq.id.getId)
+  whenJust (mbJourneyLeg >>= (.legPricingId)) $ QEstimate.updateStatus DEstimate.RIDE_SEARCH_EXPIRED . Id
   case person of
     Just personObj -> do
       let entity = Notification.Entity Notification.SearchRequest searchRequestId.getId ()

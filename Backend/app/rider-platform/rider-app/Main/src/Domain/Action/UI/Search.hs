@@ -63,7 +63,6 @@ import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.Common
 import Kernel.Utils.Version
-import qualified Lib.JourneyLeg.Types as JPT
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
 import Lib.SessionizerMetrics.Types.Event
 import Lib.Yudhishthira.Tools.Utils as Yudhishthira
@@ -264,10 +263,9 @@ search ::
   Maybe (Id DC.Client) ->
   Maybe Text ->
   Bool ->
-  Maybe JPT.JourneySearchData ->
   Bool ->
   m SearchRes
-search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion clientId device isDashboardRequest_ journeySearchData justMultimodalSearch = do
+search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion clientId device isDashboardRequest_ justMultimodalSearch = do
   now <- getCurrentTime
   let SearchDetails {..} = extractSearchDetails now req
   let isReservedRideSearch = case req of
@@ -336,7 +334,6 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
       placeNameSource
       hasStops
       (safeInit stopLocations)
-      journeySearchData
       driverIdentifier'
       configVersionMap
       isMeterRide
@@ -346,6 +343,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
       originStopCode
       vehicleCategory
       isReservedRideSearch
+      justMultimodalSearch
 
   Metrics.incrementSearchRequestCount merchant.name merchantOperatingCity.id.getId
 
@@ -407,9 +405,6 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
     getTags tag searchRequest reservePricingTag person distance duration returnTime roundTrip mbPoints mbMultipleRoutes txnCity mbIsReallocationEnabled isDashboardRequest mbfareParametersInRateCard isMeterRideSearch = do
       let isReallocationEnabled = fromMaybe False mbIsReallocationEnabled
       let fareParametersInRateCard = fromMaybe False mbfareParametersInRateCard
-      let isMultimodalSearch = case journeySearchData of
-            Just _ -> True
-            Nothing -> False
       let reserveTag = case searchRequest.searchMode of
             Just SearchRequest.RESERVE -> [(Beckn.RESERVED_RIDE_TAG, Just "true")]
             _ -> []
@@ -427,7 +422,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
                      (Beckn.IS_REALLOCATION_ENABLED, Just $ show isReallocationEnabled),
                      (Beckn.FARE_PARAMETERS_IN_RATECARD, Just $ show fareParametersInRateCard),
                      (Beckn.DRIVER_IDENTITY, searchRequest.driverIdentifier <&> LT.toStrict . AT.encodeToLazyText),
-                     (Beckn.IS_MULTIMODAL_SEARCH, Just $ show isMultimodalSearch)
+                     (Beckn.IS_MULTIMODAL_SEARCH, Just $ show justMultimodalSearch)
                    ],
             Beckn.paymentTags =
               [ (Beckn.SETTLEMENT_AMOUNT, Nothing),
@@ -561,7 +556,6 @@ buildSearchRequest ::
   Maybe Text ->
   Maybe Bool ->
   [Location.Location] ->
-  Maybe JPT.JourneySearchData ->
   Maybe DRL.DriverIdentifier ->
   [LYT.ConfigVersionMap] ->
   Maybe Bool ->
@@ -571,8 +565,9 @@ buildSearchRequest ::
   Maybe Text ->
   Maybe Enums.VehicleCategory ->
   Bool ->
+  Bool ->
   m SearchRequest.SearchRequest
-buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion clientRnVersion device disabilityTag duration staticDuration riderPreferredOption distanceUnit totalRidesCount isDashboardRequest mbPlaceNameSource hasStops stops journeySearchData mbDriverReferredInfo configVersionMap isMeterRide recentLocationId routeCode destinationStopCode originStopCode vehicleCategory isReservedRideSearch = do
+buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion clientRnVersion device disabilityTag duration staticDuration riderPreferredOption distanceUnit totalRidesCount isDashboardRequest mbPlaceNameSource hasStops stops mbDriverReferredInfo configVersionMap isMeterRide recentLocationId routeCode destinationStopCode originStopCode vehicleCategory isReservedRideSearch justMultimodalSearch = do
   let searchMode =
         if isReservedRideSearch
           then Just SearchRequest.RESERVE
@@ -622,7 +617,6 @@ buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCit
         isDashboardRequest = Just isDashboardRequest,
         placeNameSource = mbPlaceNameSource,
         initiatedBy = Nothing,
-        journeyLegInfo = journeySearchData,
         driverIdentifier = mbDriverReferredInfo,
         hasMultimodalSearch = Just False,
         configInExperimentVersions = configVersionMap,
@@ -631,7 +625,8 @@ buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCit
         originStopCode = originStopCode,
         allJourneysLoaded = Just False,
         searchMode = searchMode,
-        isMultimodalSearch = Just $ isJust journeySearchData,
+        isMultimodalSearch = Just justMultimodalSearch,
+        onSearchFailed = Nothing,
         ..
       }
   where

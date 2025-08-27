@@ -348,7 +348,6 @@ buildBooking searchRequest bppQuoteId quote fromLoc mbToLoc exophone now otpCode
           initiatedBy = searchRequest.initiatedBy,
           hasStops = searchRequest.hasStops,
           isReferredRide = searchRequest.driverIdentifier $> True,
-          isDeleted = Just False,
           preferSafetyPlus = quote.isSafetyPlus,
           recentLocationId = searchRequest.recentLocationId,
           isMultimodalSearch = searchRequest.isMultimodalSearch,

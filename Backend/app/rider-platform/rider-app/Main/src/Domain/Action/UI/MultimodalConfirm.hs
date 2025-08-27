@@ -99,7 +99,6 @@ import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
-import Storage.Queries.FRFSSearch as QFRFSSearch
 import Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import Storage.Queries.JourneyFeedback as SQJFB
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
@@ -266,11 +265,11 @@ postMultimodalOrderSwitchTaxi (_, _) journeyId legOrder req = do
 
   whenJust journeyLeg.legSearchId $ \legSearchId -> do
     searchReq <- QSearchRequest.findById (Id legSearchId) >>= fromMaybeM (SearchRequestNotFound $ "searchRequestId-" <> legSearchId)
-    mbEstimate <- maybe (pure Nothing) (QEstimate.findById . Id) (searchReq.journeyLegInfo >>= (.pricingId))
+    mbEstimate <- maybe (pure Nothing) (QEstimate.findById . Id) journeyLeg.legPricingId
     whenJust mbEstimate $ \estimate -> do
       when (estimate.status `elem` [DEst.COMPLETED, DEst.CANCELLED, DEst.GOT_DRIVER_QUOTE, DEst.DRIVER_QUOTE_CANCELLED]) $
         throwError $ InvalidRequest "Can't switch vehicle if driver has already being assigned"
-      QSearchRequest.updatePricingId (Id legSearchId) (Just req.estimateId.getId)
+      QJourneyLeg.updateLegPricingIdByLegSearchId (Just req.estimateId.getId) journeyLeg.legSearchId
       when (estimate.status == DEst.DRIVER_QUOTE_REQUESTED) $ do
         cancelPrevSearch searchReq legSearchId estimate.id
         JMTypes.confirm (mkTaxiLegConfirmReq searchReq req.estimateId)
@@ -314,7 +313,7 @@ postMultimodalOrderSwitchFRFSTier (mbPersonId, merchantId) journeyId legOrder re
   whenJust journeyLeg.legSearchId $ \legSearchId -> do
     mbAlternateShortNames <- getAlternateShortNames
     let searchId = Id legSearchId
-    QFRFSSearch.updatePricingId searchId (Just req.quoteId.getId)
+    QJourneyLeg.updateLegPricingIdByLegSearchId (Just req.quoteId.getId) journeyLeg.legSearchId
     mbBooking <- QFRFSTicketBooking.findBySearchId searchId
     whenJust mbBooking $ \booking -> do
       quote <- QFRFSQuote.findById req.quoteId >>= fromMaybeM (InvalidRequest "Quote not found")

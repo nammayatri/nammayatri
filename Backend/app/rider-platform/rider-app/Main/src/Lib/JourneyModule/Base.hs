@@ -849,7 +849,7 @@ cancelLegUtil journeyLeg cancellationReasonCode shouldUpdateJourneyStatus cancel
                 blockOnCancellationRate = Nothing,
                 cancellationSource = SBCR.ByUser,
                 cancelEstimateId,
-                journeyLegId = journeyLeg.id
+                journeyLeg
               }
       DTrip.Walk ->
         JL.cancel $
@@ -1235,8 +1235,9 @@ switchLeg journeyId _ req = do
             DJourneyLeg.serviceTypes = Nothing,
             DJourneyLeg.startLocation = startLocation,
             DJourneyLeg.toArrivalTime = Nothing,
-            DJourneyLeg.estimatedMinFare = Nothing, -- needs to be updated by on_search
-            DJourneyLeg.estimatedMaxFare = Nothing, -- needs to be updated by on_search
+            DJourneyLeg.estimatedMinFare = Nothing, -- will be updated by on_search
+            DJourneyLeg.estimatedMaxFare = Nothing, -- will be updated by on_search
+            DJourneyLeg.legPricingId = Nothing, -- will be updated by on_search
             DJourneyLeg.createdAt = now,
             DJourneyLeg.updatedAt = now,
             DJourneyLeg.legSearchId = Nothing, -- will be updated by add Leg

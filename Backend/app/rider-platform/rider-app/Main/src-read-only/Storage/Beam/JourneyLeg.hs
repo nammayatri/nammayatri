@@ -36,6 +36,7 @@ data JourneyLegT f = JourneyLegT
     id :: B.C f Kernel.Prelude.Text,
     isDeleted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     journeyId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    legPricingId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     legId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,

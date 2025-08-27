@@ -620,9 +620,8 @@ mkLegInfoFromBookingAndRide booking mRide journeyLeg = do
 
 mkLegInfoFromSearchRequest :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => DSR.SearchRequest -> DJourneyLeg.JourneyLeg -> m LegInfo
 mkLegInfoFromSearchRequest DSR.SearchRequest {..} journeyLeg = do
-  journeyLegInfo' <- journeyLegInfo & fromMaybeM (InvalidRequest "Not a valid mulimodal search as no journeyLegInfo found")
   (mbFareRange, mbEstimate) <-
-    case journeyLegInfo'.pricingId of
+    case journeyLeg.legPricingId of
       Just estId -> do
         mbEst <- QEstimate.findById (Id estId)
         return $ (mbEst <&> (.totalFareRange), mbEst)
@@ -636,7 +635,7 @@ mkLegInfoFromSearchRequest DSR.SearchRequest {..} journeyLeg = do
         skipBooking = False, -- TODO :: To be deprecated from UI @Khuzema
         bookingAllowed = True,
         searchId = id.getId,
-        pricingId = journeyLegInfo'.pricingId,
+        pricingId = journeyLeg.legPricingId,
         travelMode = DTrip.Taxi,
         startTime = startTime,
         order = journeyLeg.sequenceNumber,
@@ -960,11 +959,10 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg = do
   let startTime = journeyLeg.fromDepartureTime
 
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity frfsSearch
-  journeyLegInfo' <- journeyLegInfo & fromMaybeM (InvalidRequest "Not a valid mulimodal search as no journeyLegInfo found")
   mRiderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId Nothing
   person <- QPerson.findById riderId >>= fromMaybeM (PersonNotFound riderId.getId)
   let isPTBookingAllowedForUser = ("PTBookingAllowed#Yes" `elem` (maybe [] (map YTypes.getTagNameValueExpiry) person.customerNammaTags))
-  let isSearchFailed = fromMaybe False (journeyLegInfo >>= (.onSearchFailed))
+  let isSearchFailed = fromMaybe False onSearchFailed
   let bookingAllowed =
         case vehicleType of
           Spec.METRO -> not isSearchFailed && (fromMaybe False (mRiderConfig >>= (.metroBookingAllowed)) || isPTBookingAllowedForUser)
@@ -973,7 +971,7 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg = do
   now <- getCurrentTime
   (oldStatus, bookingStatus, trackingStatuses) <- JMStateUtils.getFRFSAllStatuses journeyLeg Nothing
   (mbEstimatedFare, mbQuote) <-
-    case journeyLegInfo'.pricingId of
+    case journeyLeg.legPricingId of
       Just quoteId -> do
         mbQuote <- QFRFSQuote.findById (Id quoteId)
         return $ (mkPriceAPIEntity <$> (mbQuote <&> (.price)), mbQuote)
@@ -991,7 +989,7 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg = do
         skipBooking = False, -- TODO :: To be deprecated from UI @Khuzema
         bookingAllowed,
         searchId = id.getId,
-        pricingId = journeyLegInfo'.pricingId,
+        pricingId = journeyLeg.legPricingId,
         travelMode = castCategoryToMode vehicleType,
         startTime = fromMaybe now startTime,
         order = journeyLeg.sequenceNumber,
@@ -1222,6 +1220,7 @@ mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation m
         createdAt = now,
         updatedAt = now,
         legSearchId = Nothing,
+        legPricingId = Nothing,
         changedBusesInSequence = Nothing,
         finalBoardedBusNumber = Nothing,
         osmEntrance = gates >>= (.osmEntrance),
