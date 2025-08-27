@@ -259,17 +259,12 @@ checkAndMarkTerminalJourneyStatus journey = go . concatLegStates
         []
 
     isCancelled :: JL.JourneyLegStateData -> Bool
-    isCancelled legState =
-      if legState.mode == DTrip.Walk then legState.trackingStatus == JMState.Finished else legState.bookingStatus `elem` [JMState.TaxiEstimate DTaxiEstimate.CANCELLED, JMState.TaxiEstimate DTaxiEstimate.COMPLETED, JMState.TaxiBooking DTaxiBooking.CANCELLED, JMState.TaxiRide DTaxiRide.CANCELLED, JMState.FRFSBooking DFRFSBooking.CANCELLED, JMState.FRFSBooking DFRFSBooking.CANCEL_INITIATED, JMState.FRFSTicket DFRFSTicket.CANCELLED] -- If status is completed, a booking should exist. If it appears here without a booking, it means the booking was cancelled.
-    isCompleted :: JL.JourneyLegStateData -> Bool
-    isCompleted legState =
-      legState.trackingStatus == JMState.Finished || legState.bookingStatus `elem` [JMState.TaxiBooking DTaxiBooking.COMPLETED, JMState.TaxiRide DTaxiRide.COMPLETED] || (legState.mode == DTrip.Taxi && legState.bookingStatus == JMState.Feedback JMState.FEEDBACK_PENDING)
-
+    isCancelled legState = legState.bookingStatus `elem` [JMState.TaxiEstimate DTaxiEstimate.CANCELLED, JMState.TaxiBooking DTaxiBooking.CANCELLED, JMState.TaxiRide DTaxiRide.CANCELLED, JMState.FRFSBooking DFRFSBooking.CANCELLED, JMState.FRFSBooking DFRFSBooking.CANCEL_INITIATED, JMState.FRFSTicket DFRFSTicket.CANCELLED] -- If status is completed, a booking should exist. If it appears here without a booking, it means the booking was cancelled.
     go allLegsState
-      | all isCancelled allLegsState =
-        updateJourneyStatus journey DJourney.CANCELLED
-      | all isCompleted allLegsState =
-        updateJourneyStatus journey DJourney.FEEDBACK_PENDING
+      | all (\legState -> legState.trackingStatus == JMState.Finished) allLegsState =
+        if any isCancelled allLegsState
+          then updateJourneyStatus journey DJourney.CANCELLED
+          else updateJourneyStatus journey DJourney.FEEDBACK_PENDING
       | otherwise = pure ()
 
 getAllLegsStatus ::
