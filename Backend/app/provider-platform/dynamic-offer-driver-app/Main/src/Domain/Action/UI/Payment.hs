@@ -345,7 +345,7 @@ processNonClearedDriverFees merchantId driver now driverFee = do
           newBalance = fromMaybe 0.0 driverInfo.prepaidSubscriptionBalance + driverFee.totalEarnings
       QDIExtra.updatePrepaidSubscriptionBalanceAndExpiry driverFee.driverId newBalance (Just finalExpiry)
       logInfo $ "Prepaid recharge completed " <> show driver.id.getId
-      let prepaidRechargeMessage = "Your recharge worth ₹" <> show (SPayment.roundToTwoDecimalPlaces driverFee.totalEarnings) <> " is successful"
+      let prepaidRechargeMessage = "Your recharge worth Rs." <> show (SPayment.roundToTwoDecimalPlaces driverFee.totalEarnings) <> " is successful"
           prepaidRechargeTitle = "Recharge Successful!"
       sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.PREPAID_RECHARGE_SUCCESS prepaidRechargeTitle prepaidRechargeMessage driver driver.deviceToken
       id <- generateGUID

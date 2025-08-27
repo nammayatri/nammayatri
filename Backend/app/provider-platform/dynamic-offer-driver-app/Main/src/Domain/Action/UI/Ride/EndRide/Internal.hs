@@ -244,9 +244,9 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
         freshDriverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
         let newBalance = fromMaybe 0 freshDriverInfo.prepaidSubscriptionBalance - fare
         driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-        let balanceUpdateMessage = "Thank you for taking the ride. Your updated subscription balance is ₹" <> show newBalance
+        let balanceUpdateMessage = "Thank you for taking the ride. Your updated subscription balance is Rs." <> show newBalance
             balanceUpdatedTitle = "Subscription balance updated!"
-        sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.PREAID_BALANCE_UPDATE balanceUpdatedTitle balanceUpdateMessage driver driver.deviceToken
+        sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.PREPAID_BALANCE_UPDATE balanceUpdatedTitle balanceUpdateMessage driver driver.deviceToken
         QDIE.updatePrepaidSubscriptionBalance (cast ride.driverId) newBalance
         createSubscriptionTransaction ride newBalance booking
         when (newBalance < fromMaybe 0 thresholdConfig.prepaidSubscriptionThreshold) $ do

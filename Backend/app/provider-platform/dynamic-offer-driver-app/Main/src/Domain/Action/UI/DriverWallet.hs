@@ -111,7 +111,7 @@ postWalletPayout (mbPersonId, _, mocId) = do
     driverInfo <- QDI.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
     let walletBalance = fromMaybe 0 driverInfo.walletBalance
         payoutThreshold = fromMaybe 0 transporterConfig.driverWalletPayoutThreshold
-    when (walletBalance < payoutThreshold) $ throwError $ InvalidRequest ("Payout not possible as wallet balance is less than payout threshold of ₹" <> show payoutThreshold)
+    when (walletBalance < payoutThreshold) $ throwError $ InvalidRequest ("Payout not possible as wallet balance is less than payout threshold of Rs. " <> show payoutThreshold)
     let mbVpa = driverInfo.payoutVpa
     vpa <- fromMaybeM (InternalError $ "Payout vpa not present for " <> driverId.getId) mbVpa
     payoutId <- generateGUID
