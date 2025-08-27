@@ -58,6 +58,7 @@ updateByIdAndTimebounds (Domain.Types.ServicePeopleCategory.ServicePeopleCategor
       Se.Set Beam.pricingType (Kernel.Prelude.Just pricingType),
       Se.Set Beam.vendorSplitDetails (Data.Aeson.toJSON <$> vendorSplitDetails),
       Se.Set Beam.placeId placeId,
+      Se.Set Beam.iconUrl iconUrl,
       Se.Set Beam.updatedAt _now
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id), Se.Is Beam.timeBounds $ Se.Eq (Kernel.Prelude.Just timeBounds)]]

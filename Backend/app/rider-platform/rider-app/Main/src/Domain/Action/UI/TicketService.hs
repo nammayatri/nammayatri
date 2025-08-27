@@ -533,6 +533,7 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
     calcExpiry expiry visitDate currentTime = case expiry of
       Domain.Types.TicketService.InstantExpiry minutes -> addUTCTime (fromIntegral (minutes * 60)) currentTime
       Domain.Types.TicketService.VisitDate timeOfDay -> UTCTime visitDate (timeOfDayToTime timeOfDay)
+      Domain.Types.TicketService.ValidityDays days -> addUTCTime (fromIntegral (days * 24 * 60 * 60)) (UTCTime visitDate (timeOfDayToTime (TimeOfDay 0 0 0)))
 
 getTicketBookings :: (Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Domain.Types.TicketBooking.BookingStatus -> Environment.Flow [API.Types.UI.TicketService.TicketBookingAPIEntity]
 getTicketBookings (mbPersonId, merchantId_) mbLimit mbOffset status_ = do

@@ -1159,6 +1159,7 @@ postMerchantTicketConfigUpsert merchantShortId opCity request = do
                 rules = Nothing,
                 isClosed = False,
                 serviceDetails = Nothing,
+                maxSelection = Nothing,
                 ..
               }
 
@@ -1193,6 +1194,7 @@ postMerchantTicketConfigUpsert merchantShortId opCity request = do
                 isClosed = False,
                 remainingActions = Nothing,
                 inclusionPoints = Nothing,
+                maxSelection = Nothing,
                 ..
               }
 
