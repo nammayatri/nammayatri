@@ -2734,8 +2734,7 @@ type DriverSavedLocationScreenData = {
   predictions :: Array PredictionItem,
   saveLocationObject :: SaveLocationObject,
   maxGotoLocations :: Int,
-  locationSelectType :: LocationSelectType,
-  config :: AppConfig
+  locationSelectType :: LocationSelectType
 }
 
 data LocationSelectType = SET_LOC | CURRENT_LOC
@@ -3216,7 +3215,7 @@ type DocumentCaptureScreenData = {
   linkedRc :: Maybe String,
   cityConfig :: CityConfig,
   config :: AppConfig, 
-  vehiclePhotos :: API.GetVehiclePhotosResp,
+  vehiclePhotos :: API.GetVehiclePhotosResp
 }
 
 type DocumentCaptureScreenProps = {

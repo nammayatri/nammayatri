@@ -73,12 +73,10 @@ instance loggableAction :: Loggable Action where
         UpdateOverlayPermissionState -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "update_overlay_permission_state"
         UpdateBatteryPermissionState -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "update_battery_permission_state"
         UpdateLocationPermissionState -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "location_permission_callback"
-        UpdateCameraPermissionState -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "camera_permission_callback"
         NotificationPermissionCallBack str -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "location_permission_callback"
         OverlayPermissionSwitchCallBack str -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "overlay_permission_switch_callback"
         BatteryUsagePermissionCallBack str -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "battery_usage_permission_callback"
         LocationPermissionCallBack str -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "location_permission_callback"
-        CameraPermissionCallBack str -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "camera_permission_callback"
         UpdateAllChecks updatedState -> trackAppScreenEvent appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "update_all_checks"
         NoAction -> trackAppScreenEvent appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "no_action"
         FcmNotificationAction _ _ -> trackAppScreenEvent appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "fcm_notification"
@@ -110,9 +108,7 @@ data Action = BackPressed
             | OverlayPermissionSwitchCallBack Boolean
             | BatteryUsagePermissionCallBack Boolean
             | LocationPermissionCallBack Boolean
-            | CameraPermissionCallBack Boolean
             | UpdateLocationPermissionState
-            | UpdateCameraPermissionState
             | UpdateBatteryPermissionState
             | AfterRender
             | FcmNotificationAction String NotificationBody

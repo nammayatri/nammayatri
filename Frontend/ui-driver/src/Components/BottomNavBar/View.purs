@@ -49,7 +49,7 @@ view push state =
     , alignParentBottom "true,-1"
     , gravity CENTER
     ]-- [] -- check after rebase
-     linearLayout
+     [linearLayout
        [ width MATCH_PARENT
        , height MATCH_PARENT
        , stroke ("1,"<> Color.grey900)
@@ -110,6 +110,7 @@ view push state =
            ]
          ) state.navButton
          )
+         ]
 
 lottieLoaderView :: forall w. BottomNavBarState -> (Action -> Effect Unit) -> Int -> String -> PrestoDOM (Effect Unit) w
 lottieLoaderView state push activeIndex text =

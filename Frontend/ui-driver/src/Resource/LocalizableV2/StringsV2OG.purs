@@ -283,6 +283,7 @@ getProxy str = case str of
   TIME_TAKEN -> \a -> a @~ time_taken
   MAPS -> \a -> a @~ maps
   CALL -> \a -> a @~ call
+  WHATSAPP -> \a -> a @~ whatsapp
   START_RIDE -> \a -> a @~ start_ride
   CANCEL_RIDE -> \a -> a @~ cancel_ride
   PLEASE_TELL_US_WHY_YOU_WANT_TO_CANCEL -> \a -> a @~ please_tell_us_why_you_want_to_cancel

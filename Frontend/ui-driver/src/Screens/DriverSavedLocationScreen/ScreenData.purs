@@ -51,7 +51,6 @@ initData =
           , tag: ""
           }
       , locationSelectType : SET_LOC
-      , config : getAppConfig appConfig
       }
   , props:
       { viewType: GoToList

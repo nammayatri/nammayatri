@@ -1605,7 +1605,7 @@ tripStageTopBar push state =
         cornerRadius 32.0,
         background $ if isNothing state.data.advancedRideData then Color.grey700 else Color.blue600,
         padding $ Padding 4 4 4 4 ,
-        visibility $ boolToVisibility $ DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] && state.data.cityConfig.enableAdvancedBooking && (isJust state.data.advancedRideData || not (isLocalStageOn RideAccepted && isJust state.data.activeRide.disabilityTag)) && not (HU.isAmbulance state.data.linkedVehicleVariant)
+        visibility $ boolToVisibility $ DA.any (_ == state.props.currentStage) [RideAccepted, RideStarted, ChatWithCustomer] && state.data.cityConfig.enableAdvancedBooking && (isJust state.data.advancedRideData || not (isLocalStageOn RideAccepted && isJust state.data.activeRide.disabilityTag)) && not (EHU.isAmbulance state.data.linkedVehicleVariant)
       ]$[ swichBtn (getString CURRENT_BUTTON_TEXT) CURRENT false $ state.props.bookingStage /= CURRENT
         , swichBtn (getString ADVANCE) ADVANCED (isNothing state.data.advancedRideData) (state.props.bookingStage /= ADVANCED)
         ]
@@ -2635,8 +2635,10 @@ offlineNavigationLinks push state =
           linearLayout
             [ height WRAP_CONTENT
             , width WRAP_CONTENT
+            , background Color.white900
             , orientation HORIZONTAL
             , cornerRadius 32.0
+            , stroke $ "1," <> Color.black600
             , padding $ Padding 12 12 12 12
             , margin $ MarginLeft if index == 0 then 0 else 5
             , gravity CENTER_VERTICAL
@@ -2645,19 +2647,21 @@ offlineNavigationLinks push state =
             , rippleColor Color.rippleShade
             , alpha $ itemAlpha item.action
             , clickable $ itemClickable item.action
-            , background item.background
-            , stroke item.stroke
-            ]$ (if item.icon == "" then [] else [iconImageView item.icon])
-            <> [
-              textView $
+            ][  imageView
+                [ width $ V 16
+                , height $ V 16
+                , imageWithFallback $ HU.fetchImage HU.FF_ASSET item.icon
+                , margin $ MarginRight 5
+                ]
+              , textView $
                 [ width WRAP_CONTENT
                 , height WRAP_CONTENT
                 , gravity CENTER
                 , text item.title
-                , color item.color
+                , color Color.black900
                 , padding $ PaddingBottom 1
                 ] <> FontStyle.tags TypoGraphy
-              ]
+            ] 
           ) navLinksArray)
     ]
     where

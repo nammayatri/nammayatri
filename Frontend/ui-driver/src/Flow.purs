@@ -2662,7 +2662,7 @@ helpAndSupportFlowV2 _ = do
       homeScreenFlow
     GO_BACK_TO_TRIP_DETAILS_V2 updatedState -> do
       modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> updatedState)
-      tripDetailsScreenFlow
+      tripDetailsScreenFlow Nothing
     SHOW_OPERATION_HUBS updatedState -> do
       (GetAllHubsResp getAllHubsResp) <- Remote.getAllHubsBT ""
       modifyScreenState $ HelpAndSupportScreenStateType (\helpAndSupportScreen -> helpAndSupportScreen{data {operationHubs = getAllHubsResp}})

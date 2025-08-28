@@ -40,6 +40,7 @@ instance showAction :: Show Action where
   show (NoAction) = "NoAction"
   show (OnTextViewClick _) = "OnTextViewClick"
   show (RetakeParcelImage) = "RetakeParcelImage"
+  show (PrimaryButtonAction _) = "PrimaryButtonAction"
 
 data Action = OnSelection String Int
             | OnClickDone String

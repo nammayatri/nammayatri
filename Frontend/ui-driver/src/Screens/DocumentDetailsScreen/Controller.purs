@@ -23,6 +23,7 @@ import Components.AppOnboardingNavBar as AppOnboardingNavBar
 
 instance showAction :: Show Action where
   show BackPressed = "BackPressed"
+  show (AppOnboardingNavBarAC var1) = "AppOnboardingNavBarAC_" <> show var1
 
   
 instance loggableAction :: Loggable Action where

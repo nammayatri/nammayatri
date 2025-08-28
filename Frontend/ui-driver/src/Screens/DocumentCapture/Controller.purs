@@ -64,6 +64,12 @@ instance showAction :: Show Action where
   show (ChangeVehicleAC var1) = "ChangeVehicleAC_" <> show var1
   show (BottomDrawerListAC var1) = "BottomDrawerListAC_" <> show var1
   show (WhatsAppClick) = "WhatsAppClick"
+  show (VehicleUploadPrimaryButtonAC var1) = "VehicleUploadPrimaryButtonAC_" <> show var1
+  show (AfterRender) = "AfterRender"
+  show (UploadImageWihType _) = "UploadImageWihType"
+  show (CallUploadVehicleImageAPI) = "CallUploadVehicleImageAPI"
+  show (UpdateVehiclePhotos _) = "UpdateVehiclePhotos"
+  show (UpdateVehiclePhotosWithType _ _) = "UpdateVehiclePhotosWithType"
 
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of

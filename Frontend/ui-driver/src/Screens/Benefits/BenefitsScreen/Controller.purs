@@ -81,6 +81,14 @@ instance showAction :: Show Action where
   show (UpdateReferralCode _) = "UpdateReferralCode"
   show (GoToClaimReward) = "GoToClaimReward"
   show (YoutubeVideoStatus _) = "YoutubeVideoStatus"
+  show (AppOnboardingNavBarAC var1) = "AppOnboardingNavBarAC_" <> show var1
+  show (OptionsMenuAction var1) = "OptionsMenuAction_" <> show var1
+  show (PopUpModalLogoutAction var1) = "PopUpModalLogoutAction_" <> show var1
+  show (BottomDrawerListAC var1) = "BottomDrawerListAC_" <> show var1
+  show (WhatsAppClick) = "WhatsAppClick"
+  show (ContinueButtonAction var1) = "ContinueButtonAction_" <> show var1
+  show (GoToClaimReward) = "GoToClaimReward"
+
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of
     AfterRender -> trackAppScreenRender appId "screen" "BenefitsScreen"

@@ -51,6 +51,7 @@ instance showAction :: Show Action where
   show (PersonAddress var1) = "PersonAddress_" <> show var1
   show (PersonInstruction var1) = "PersonInstruction_" <> show var1
   show (CheckBoxClick) = "CheckBoxClick"
+  show (ListViewItemAction var1) = "ListViewItemAction_" <> show var1
 
 data Action = OnButton1Click
             | OnButton2Click

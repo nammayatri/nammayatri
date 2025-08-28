@@ -288,7 +288,7 @@ instance showAction :: Show Action where
   show (TollChargesPopUpAC var1) = "TollChargesPopUpAC_" <> show var1
   show (TollChargesAmbigousPopUpAC var1) = "TollChargesAmbigousPopUpAC_" <> show var1
   show (RideRequestsList) = "RideRequestsList"
-  show (TripStageTopBarAC var) = "TripStageTopBarAC_" <> show var
+  show (SwitchBookingStage var1) = "SwitchBookingStage_" <> show var1
   show (GotoMeterRideScreen) = "GotoMeterRideScreen"
   show (AccessibilityHeaderAction) = "AccessibilityHeaderAction"
   show (PopUpModalInterOperableAction var1) = "PopUpModalInterOperableAction_" <> show var1
@@ -334,6 +334,10 @@ instance showAction :: Show Action where
   show (ConsentPopupCallSupport) = "ConsentPopupCallSupport"
   show (DismissConsentPopup) = "DismissConsentPopup"
   show (ConsentPopupAfterRender) = "ConsentPopupAfterRender"
+  show (SafetyPillClicked) = "SafetyPillClicked"
+  show (SafetyPillBottomSheetAC var1) = "SafetyPillBottomSheetAC_" <> show var1
+  show (GoToPillButtonClick) = "GoToPillButtonClick"
+
 
 instance loggableAction :: Loggable Action where
   performLog action appId = pure unit
@@ -662,7 +666,7 @@ data Action = NoAction
             | TollChargesPopUpAC PopUpModal.Action
             | TollChargesAmbigousPopUpAC PopUpModal.Action
             | RideRequestsList
-            | TripStageTopBarAC TripStageTopBar.Action
+            | SwitchBookingStage BookingTypes
             | AccessibilityHeaderAction
             | PopUpModalInterOperableAction PopUpModal.Action
             | UpdateSpecialZoneList
@@ -2057,7 +2061,7 @@ eval (TollChargesPopUpAC PopUpModal.OnButton2Click) state = continue state {data
 
 eval (TollChargesAmbigousPopUpAC PopUpModal.OnButton2Click) state = continue state {data {toll {showTollChargeAmbigousPopup = false}}}
 
-eval (TripStageTopBarAC (TripStageTopBar.SwitchBookingStage stage)) state = do
+eval (SwitchBookingStage stage) state = do
   if state.props.bookingStage == stage then continue state
   else do
     let currentRideData = if stage == CURRENT then fromMaybe state.data.activeRide state.data.currentRideData else state.data.activeRide
@@ -2068,8 +2072,6 @@ eval (TripStageTopBarAC (TripStageTopBar.SwitchBookingStage stage)) state = do
       data {activeRide = activeRideData, currentRideData = Just currentRideData},
       props {bookingStage = stage, currentStage = fetchStageFromRideStatus activeRideData}
     }
-
-eval (TripStageTopBarAC (TripStageTopBar.HelpAndSupportScreen)) state = exit $ GoToHelpAndSupportScreen state
 
 eval (PlanListResponse (API.UiPlansResp plansListResp)) state = do
   let isTamilSelected = (getLanguageLocale languageKey) == "TA_IN"

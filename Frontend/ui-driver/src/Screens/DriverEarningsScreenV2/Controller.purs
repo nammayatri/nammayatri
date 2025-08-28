@@ -208,7 +208,7 @@ getEarningForDate earningLst date =
 getTagImages :: RidesInfo -> Array String
 getTagImages (RidesInfo ride) =
   let
-    tag = getRequiredTag ride.specialLocationTag
+    tag = getRequiredTag ride.specialLocationTag false
     conditionsAndTags = 
       [ {condition: isJust ride.customerExtraFee, tag: fetchImage FF_ASSET "ny_ic_tip_ride_tag"}
       , {condition: isJust ride.disabilityTag, tag: fetchImage FF_ASSET "ny_ic_disability_tag"}
