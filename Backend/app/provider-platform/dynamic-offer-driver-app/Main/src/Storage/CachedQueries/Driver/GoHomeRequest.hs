@@ -13,7 +13,6 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBFlow)
 import Kernel.Storage.Hedis (withCrossAppRedis)
 import qualified Kernel.Storage.Hedis as Hedis
-import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.App (MonadFlow)
 import Kernel.Types.CacheFlow
 import Kernel.Types.Common (MonadTime (getCurrentTime), generateGUID)
@@ -97,10 +96,9 @@ activateDriverGoHomeRequest merchantId merchantOpCityId driverId driverHomeLoc g
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
   currTime <- getLocalCurrentTime =<< ((SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (InternalError "Transporter config for timezone not found")) <&> (.timeDiffFromUtc))
   guId <- generateGUID
-  Redis.whenWithLockRedis (buildActivateGoHomeKey driverId) 3 $ do
-    _ <- QDGR.create =<< buildDriverGoHomeRequest guId driverHomeLoc
-    let vTill = addUTCTime (fromIntegral activeTime) currTime
-    withCrossAppRedis $ Hedis.setExp ghKey (templateGoHomeData (Just DDGR.ACTIVE) ghInfo.cnt (Just vTill) (Just guId) False (Just ghInfo.goHomeReferenceTime) currTime) expTime
+  _ <- QDGR.create =<< buildDriverGoHomeRequest guId driverHomeLoc
+  let vTill = addUTCTime (fromIntegral activeTime) currTime
+  withCrossAppRedis $ Hedis.setExp ghKey (templateGoHomeData (Just DDGR.ACTIVE) ghInfo.cnt (Just vTill) (Just guId) False (Just ghInfo.goHomeReferenceTime) currTime) expTime
   where
     buildDriverGoHomeRequest guId driverHomeLocation = do
       let id = guId
@@ -118,7 +116,6 @@ activateDriverGoHomeRequest merchantId merchantOpCityId driverId driverHomeLoc g
             merchantOperatingCityId = Just merchantOpCityId,
             ..
           }
-    buildActivateGoHomeKey driverId' = "Driver:GoHome:Activate:" <> show driverId'
 
 deactivateDriverGoHomeRequest :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id DMOC.MerchantOperatingCity -> Id DP.Driver -> DDGR.DriverGoHomeRequestStatus -> CachedGoHomeRequest -> Maybe Bool -> m ()
 deactivateDriverGoHomeRequest merchantOpCityId driverId stat ghInfo mbReachedHome = do
