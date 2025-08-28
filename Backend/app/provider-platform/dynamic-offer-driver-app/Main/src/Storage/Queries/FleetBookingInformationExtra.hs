@@ -15,11 +15,13 @@ import qualified Storage.Beam.FleetBookingInformation as Beam
 import Storage.Queries.OrphanInstances.FleetBookingInformation
 
 -- Extra code goes here --
-findAllByFleetOwnerIdsAndFilters :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Text] -> Maybe Kernel.Prelude.UTCTime -> Maybe Kernel.Prelude.UTCTime -> Maybe Int -> Maybe Int -> Bool -> m [Domain.Types.FleetBookingInformation.FleetBookingInformation]
-findAllByFleetOwnerIdsAndFilters fleetOwnersIds from' to' limit offset searchByFleetOwnerId =
+findAllByFleetOwnerIdsAndFilters :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Text] -> Maybe Kernel.Prelude.UTCTime -> Maybe Kernel.Prelude.UTCTime -> Maybe Int -> Maybe Int -> Bool -> Maybe Text -> Maybe Text -> m [Domain.Types.FleetBookingInformation.FleetBookingInformation]
+findAllByFleetOwnerIdsAndFilters fleetOwnersIds from' to' limit offset searchByFleetOwnerId ticketPlaceId mbStatus =
   findAllWithOptionsKV
     [ Se.And $
-        (if searchByFleetOwnerId then [Se.Is Beam.fleetOwnerId $ Se.In $ map pure fleetOwnersIds] else [])
+        (if searchByFleetOwnerId && mbStatus /= Just "NEW" then [Se.Is Beam.fleetOwnerId $ Se.In $ map pure fleetOwnersIds] else [])
+          <> (if isJust ticketPlaceId then [Se.Is Beam.ticketPlaceId $ Se.Eq ticketPlaceId] else [])
+          <> (if isJust mbStatus then [Se.Is Beam.status $ Se.Eq mbStatus] else [])
           <> ( case (from', to') of
                  (Just from, Just to) ->
                    [ Se.Is Beam.createdAt $ Se.GreaterThanOrEq from,

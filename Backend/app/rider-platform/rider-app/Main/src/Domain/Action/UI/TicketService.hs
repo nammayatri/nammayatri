@@ -758,7 +758,8 @@ postTicketBookingsVerify _ = processBookingService
                             bookedSeats = Just bookingService.bookedSeats,
                             status = Just "ASSIGNED",
                             amount = Just bookingService.amount.amount,
-                            assignments = Nothing
+                            assignments = Nothing,
+                            ticketPlaceId = Just ticketPlace.id.getId
                           }
                   response <- CallBPPInternal.updateFleetBookingInformation merchant updateReq
                   QTicketBookingService.updateAssignmentById (Just response.assignmentId) bookingService.id
@@ -921,7 +922,8 @@ postTicketBookingsVerifyV2 _ = processBookingService
                         bookedSeats = Just bookingService.bookedSeats,
                         status = Just "ASSIGNED",
                         amount = Just bookingService.amount.amount,
-                        assignments = req.assignments
+                        assignments = req.assignments,
+                        ticketPlaceId = Just ticketPlace.id.getId
                       }
               response <- CallBPPInternal.updateFleetBookingInformation merchant updateReq
               QTicketBookingService.updateAssignmentById (Just response.assignmentId) bookingService.id
@@ -1042,7 +1044,8 @@ getTicketBookingsStatus (mbPersonId, merchantId) _shortId@(Kernel.Types.Id.Short
                                 amount = Just ticketBookingService.amount.amount,
                                 visitDate = Just ticketBooking'.visitDate,
                                 bookedSeats = Just ticketBookingService.bookedSeats,
-                                status = Just "NEW"
+                                status = Just "NEW",
+                                ticketPlaceId = Just ticketPlace.id.getId
                               }
                       response <- CallBPPInternal.createFleetBookingInformation merchant createReq
                       QTicketBookingService.updateAssignmentById (Just response.assignmentId) ticketBookingService.id
