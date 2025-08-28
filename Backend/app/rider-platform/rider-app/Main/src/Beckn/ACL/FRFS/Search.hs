@@ -109,5 +109,6 @@ tfVehicle :: Spec.VehicleCategory -> Maybe Spec.Vehicle
 tfVehicle vehicleType =
   Just $
     Spec.Vehicle
-      { vehicleCategory = Utils.encodeToText' vehicleType
+      { vehicleCategory = Utils.encodeToText' vehicleType,
+        vehicleVariant = Nothing
       }
