@@ -127,7 +127,9 @@ type ConfirmFlow m r c =
     HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig],
     Redis.HedisFlow m r,
     ServiceFlow m r,
-    HasField "isMetroTestTransaction" r Bool
+    HasField "isMetroTestTransaction" r Bool,
+    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
+    m ~ Kernel.Types.Flow.FlowR AppEnv
   )
 
 type CancelFlow m r c =
@@ -227,8 +229,8 @@ data VehiclePosition = VehiclePosition
 
 data JourneyLegStateData = JourneyLegStateData
   { status :: JourneyLegStatus, -- TODO :: This field would be deprecated
-    bookingStatus :: Maybe JMState.JourneyBookingStatus,
-    trackingStatus :: Maybe JMState.TrackingStatus,
+    bookingStatus :: JMState.JourneyBookingStatus,
+    trackingStatus :: JMState.TrackingStatus,
     userPosition :: Maybe LatLong,
     vehiclePositions :: [VehiclePosition], -- Uses the modified VehiclePosition
     subLegOrder :: Int,
@@ -270,7 +272,7 @@ data LegInfo = LegInfo
     startTime :: UTCTime,
     order :: Int,
     status :: JourneyLegStatus, -- TODO :: To be Deprecated, remove this once UI starts consuming `legStatus` instead.
-    bookingStatus :: Maybe JMState.JourneyBookingStatus,
+    bookingStatus :: JMState.JourneyBookingStatus,
     estimatedDuration :: Maybe Seconds,
     estimatedMinFare :: Maybe PriceAPIEntity,
     estimatedMaxFare :: Maybe PriceAPIEntity,
@@ -304,7 +306,7 @@ data LegSplitInfo = LegSplitInfo
 data WalkLegExtraInfo = WalkLegExtraInfo
   { origin :: Location,
     destination :: Location,
-    trackingStatus :: Maybe JMState.TrackingStatus,
+    trackingStatus :: JMState.TrackingStatus,
     id :: Id DJourneyLeg.JourneyLeg
   }
   deriving stock (Show, Generic)
@@ -332,7 +334,7 @@ data TaxiLegExtraInfo = TaxiLegExtraInfo
     bppRideId :: Maybe (Id DRide.BPPRide),
     driverMobileNumber :: Maybe Text,
     exoPhoneNumber :: Maybe Text,
-    trackingStatus :: Maybe JMState.TrackingStatus
+    trackingStatus :: JMState.TrackingStatus
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -383,7 +385,7 @@ data LegRouteInfo = LegRouteInfo
     lineColorCode :: Maybe Text,
     trainNumber :: Maybe Text,
     journeyStatus :: Maybe JourneyLegStatus,
-    trackingStatus :: Maybe JMState.TrackingStatus,
+    trackingStatus :: JMState.TrackingStatus,
     frequency :: Maybe Seconds,
     allAvailableRoutes :: [Text]
   }
@@ -407,7 +409,7 @@ data BusLegExtraInfo = BusLegExtraInfo
     adultTicketQuantity :: Maybe Int,
     childTicketQuantity :: Maybe Int,
     refund :: Maybe LegSplitInfo,
-    trackingStatus :: Maybe JMState.TrackingStatus,
+    trackingStatus :: JMState.TrackingStatus,
     fleetNo :: Maybe Text,
     discounts :: Maybe [FRFSTicketServiceAPI.FRFSDiscountRes]
   }
@@ -618,9 +620,8 @@ mkLegInfoFromBookingAndRide booking mRide journeyLeg = do
 
 mkLegInfoFromSearchRequest :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => DSR.SearchRequest -> DJourneyLeg.JourneyLeg -> m LegInfo
 mkLegInfoFromSearchRequest DSR.SearchRequest {..} journeyLeg = do
-  journeyLegInfo' <- journeyLegInfo & fromMaybeM (InvalidRequest "Not a valid mulimodal search as no journeyLegInfo found")
   (mbFareRange, mbEstimate) <-
-    case journeyLegInfo'.pricingId of
+    case journeyLeg.legPricingId of
       Just estId -> do
         mbEst <- QEstimate.findById (Id estId)
         return $ (mbEst <&> (.totalFareRange), mbEst)
@@ -634,7 +635,7 @@ mkLegInfoFromSearchRequest DSR.SearchRequest {..} journeyLeg = do
         skipBooking = False, -- TODO :: To be deprecated from UI @Khuzema
         bookingAllowed = True,
         searchId = id.getId,
-        pricingId = journeyLegInfo'.pricingId,
+        pricingId = journeyLeg.legPricingId,
         travelMode = DTrip.Taxi,
         startTime = startTime,
         order = journeyLeg.sequenceNumber,
@@ -706,7 +707,7 @@ mkWalkLegInfoFromWalkLegData personId legData@DJL.JourneyLeg {..} = do
         merchantOperatingCityId = merchantOperatingCityId,
         personId = personId,
         status = oldStatus, -- TODO :: This field would be deprecated
-        bookingStatus = Nothing,
+        bookingStatus = JMState.Initial JMState.BOOKING_PENDING,
         legExtraInfo =
           Walk $
             WalkLegExtraInfo
@@ -916,11 +917,11 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
     safeDiv x 0 = x
     safeDiv x y = x / y
 
-getLegRouteInfo :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => [(RouteDetails, Maybe JMState.TrackingStatus)] -> DIBC.IntegratedBPPConfig -> m [LegRouteInfo]
+getLegRouteInfo :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => [(RouteDetails, JMState.TrackingStatus)] -> DIBC.IntegratedBPPConfig -> m [LegRouteInfo]
 getLegRouteInfo journeyRouteDetailsWithTrackingStatuses integratedBPPConfig = do
   mapM transformJourneyRouteDetails journeyRouteDetailsWithTrackingStatuses
   where
-    transformJourneyRouteDetails :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => (RouteDetails, Maybe JMState.TrackingStatus) -> m LegRouteInfo
+    transformJourneyRouteDetails :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => (RouteDetails, JMState.TrackingStatus) -> m LegRouteInfo
     transformJourneyRouteDetails (journeyRouteDetail, trackingStatus) = do
       fromStationCode' <- fromMaybeM (InternalError "FromStationCode is missing") journeyRouteDetail.fromStopCode
       toStationCode' <- fromMaybeM (InternalError "ToStationCode is missing") journeyRouteDetail.toStopCode
@@ -936,7 +937,7 @@ getLegRouteInfo journeyRouteDetailsWithTrackingStatuses integratedBPPConfig = do
             routeCode = route.code,
             subOrder = journeyRouteDetail.subLegOrder,
             platformNumber = journeyRouteDetail.fromStopPlatformCode,
-            journeyStatus = JMStateUtils.castTrackingStatusToJourneyLegStatus <$> trackingStatus,
+            journeyStatus = Just $ JMStateUtils.castTrackingStatusToJourneyLegStatus trackingStatus,
             trackingStatus,
             lineColor = journeyRouteDetail.routeColorName,
             lineColorCode = journeyRouteDetail.routeColorCode,
@@ -958,11 +959,10 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg = do
   let startTime = journeyLeg.fromDepartureTime
 
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity frfsSearch
-  journeyLegInfo' <- journeyLegInfo & fromMaybeM (InvalidRequest "Not a valid mulimodal search as no journeyLegInfo found")
   mRiderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCityId Nothing
   person <- QPerson.findById riderId >>= fromMaybeM (PersonNotFound riderId.getId)
   let isPTBookingAllowedForUser = ("PTBookingAllowed#Yes" `elem` (maybe [] (map YTypes.getTagNameValueExpiry) person.customerNammaTags))
-  let isSearchFailed = fromMaybe False (journeyLegInfo >>= (.onSearchFailed))
+  let isSearchFailed = fromMaybe False onSearchFailed
   let bookingAllowed =
         case vehicleType of
           Spec.METRO -> not isSearchFailed && (fromMaybe False (mRiderConfig >>= (.metroBookingAllowed)) || isPTBookingAllowedForUser)
@@ -971,7 +971,7 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg = do
   now <- getCurrentTime
   (oldStatus, bookingStatus, trackingStatuses) <- JMStateUtils.getFRFSAllStatuses journeyLeg Nothing
   (mbEstimatedFare, mbQuote) <-
-    case journeyLegInfo'.pricingId of
+    case journeyLeg.legPricingId of
       Just quoteId -> do
         mbQuote <- QFRFSQuote.findById (Id quoteId)
         return $ (mkPriceAPIEntity <$> (mbQuote <&> (.price)), mbQuote)
@@ -989,7 +989,7 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg = do
         skipBooking = False, -- TODO :: To be deprecated from UI @Khuzema
         bookingAllowed,
         searchId = id.getId,
-        pricingId = journeyLegInfo'.pricingId,
+        pricingId = journeyLeg.legPricingId,
         travelMode = castCategoryToMode vehicleType,
         startTime = fromMaybe now startTime,
         order = journeyLeg.sequenceNumber,
@@ -1220,6 +1220,7 @@ mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation m
         createdAt = now,
         updatedAt = now,
         legSearchId = Nothing,
+        legPricingId = Nothing,
         changedBusesInSequence = Nothing,
         finalBoardedBusNumber = Nothing,
         osmEntrance = gates >>= (.osmEntrance),

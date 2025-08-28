@@ -246,11 +246,9 @@ defaultBusTrackingConfig =
 checkAndMarkTerminalJourneyStatus ::
   (JL.GetStateFlow m r c, JL.SearchRequestFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
   DJourney.Journey ->
-  Bool ->
-  Bool ->
   [JL.JourneyLegState] ->
   m ()
-checkAndMarkTerminalJourneyStatus journey feedbackRequired isCancelSearchApi = go . concatLegStates
+checkAndMarkTerminalJourneyStatus journey = go . concatLegStates
   where
     concatLegStates =
       foldl'
@@ -261,31 +259,13 @@ checkAndMarkTerminalJourneyStatus journey feedbackRequired isCancelSearchApi = g
         []
 
     isCancelled :: JL.JourneyLegStateData -> Bool
-    isCancelled legState =
-      legState.status == JL.Cancelled -- TODO: Remove this once below is used always
-        || (if legState.mode == DTrip.Walk then legState.trackingStatus == Just JMState.Finished else maybe False (\status -> status `elem` [JMState.TaxiEstimate DTaxiEstimate.CANCELLED, JMState.TaxiEstimate DTaxiEstimate.COMPLETED, JMState.TaxiBooking DTaxiBooking.CANCELLED, JMState.TaxiRide DTaxiRide.CANCELLED, JMState.FRFSBooking DFRFSBooking.CANCELLED, JMState.FRFSTicket DFRFSTicket.CANCELLED]) legState.bookingStatus) -- If status is completed, a booking should exist. If it appears here without a booking, it means the booking was cancelled.
-    isCompleted :: JL.JourneyLegStateData -> Bool
-    isCompleted legState =
-      legState.status `elem` journeyLegTerminalStatuses -- TODO: Remove this once below is used always
-        || (if legState.mode == DTrip.Walk then legState.trackingStatus == Just JMState.Finished else maybe False (\status -> status `elem` [JMState.TaxiBooking DTaxiBooking.COMPLETED, JMState.TaxiRide DTaxiRide.COMPLETED, JMState.FRFSTicket DFRFSTicket.USED] || (not feedbackRequired && legState.bookingStatus == Just (JMState.Feedback JMState.FEEDBACK_PENDING))) legState.bookingStatus)
-
-    isFeedbackPending :: JL.JourneyLegStateData -> Bool
-    isFeedbackPending legState =
-      legState.status `elem` journeyLegTerminalStatuses -- TODO: Remove this once below is used always
-        || ( feedbackRequired
-               && (if legState.mode == DTrip.Walk then legState.trackingStatus == Just JMState.Finished else legState.bookingStatus == Just (JMState.Feedback JMState.FEEDBACK_PENDING))
-           )
-
+    isCancelled legState = legState.bookingStatus `elem` [JMState.TaxiEstimate DTaxiEstimate.CANCELLED, JMState.TaxiBooking DTaxiBooking.CANCELLED, JMState.TaxiRide DTaxiRide.CANCELLED, JMState.FRFSBooking DFRFSBooking.CANCELLED, JMState.FRFSBooking DFRFSBooking.CANCEL_INITIATED, JMState.FRFSTicket DFRFSTicket.CANCELLED] -- If status is completed, a booking should exist. If it appears here without a booking, it means the booking was cancelled.
     go allLegsState
-      | all isCancelled allLegsState =
-        updateJourneyStatus journey DJourney.CANCELLED
-      | all isCompleted allLegsState && (journey.status == DJourney.FEEDBACK_PENDING || not feedbackRequired) =
-        updateJourneyStatus journey DJourney.COMPLETED
-      | all isFeedbackPending allLegsState =
-        updateJourneyStatus journey DJourney.FEEDBACK_PENDING
+      | all (\legState -> legState.trackingStatus == JMState.Finished) allLegsState =
+        if any isCancelled allLegsState
+          then updateJourneyStatus journey DJourney.CANCELLED
+          else updateJourneyStatus journey DJourney.FEEDBACK_PENDING
       | otherwise = pure ()
-
-    journeyLegTerminalStatuses = if isCancelSearchApi then [JL.Completed, JL.Cancelled, JL.Skipped] else [JL.Completed, JL.Cancelled]
 
 getAllLegsStatus ::
   (JL.GetStateFlow m r c, JL.SearchRequestFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
@@ -304,7 +284,7 @@ getAllLegsStatus journey = do
   -- Update journey expiry time to the next valid ticket expiry when a leg is completed
   whenJust (minimumTicketLegOrder legPairs) $ \nextLegOrder -> do
     QJourneyExtra.updateJourneyToNextTicketExpiryTime journey.id allLegsRawData nextLegOrder
-  checkAndMarkTerminalJourneyStatus journey True False allLegsState
+  checkAndMarkTerminalJourneyStatus journey allLegsState
   return allLegsState
   where
     minimumTicketLegOrder = foldl' go Nothing
@@ -864,7 +844,7 @@ cancelLegUtil journeyLeg cancellationReasonCode shouldUpdateJourneyStatus cancel
                 blockOnCancellationRate = Nothing,
                 cancellationSource = SBCR.ByUser,
                 cancelEstimateId,
-                journeyLegId = journeyLeg.id
+                journeyLeg
               }
       DTrip.Walk ->
         JL.cancel $
@@ -898,7 +878,7 @@ cancelLegUtil journeyLeg cancellationReasonCode shouldUpdateJourneyStatus cancel
     updatedLegStatus <- getAllLegsStatus journey
     logError $ "Checking and marking terminal journey status for journey: " <> show journey.id.getId <> " with updatedLegStatus: " <> show (length updatedLegStatus)
     when (length updatedLegStatus == 1) $ do
-      checkAndMarkTerminalJourneyStatus journey False (isJust cancelEstimateId) updatedLegStatus
+      checkAndMarkTerminalJourneyStatus journey updatedLegStatus
   return ()
 
 multimodalLegSearchIdAccessLockKey :: Text -> Text
@@ -917,10 +897,6 @@ canBeSwitched ::
 canBeSwitched journeyLeg newMode = do
   let currentMode = journeyLeg.mode
   case (currentMode, newMode) of
-    (_, DTrip.Metro) -> return False
-    (_, DTrip.Bus) -> return False
-    (DTrip.Bus, DTrip.Taxi) -> return False
-    (DTrip.Metro, DTrip.Taxi) -> return False
     (DTrip.Walk, DTrip.Taxi) -> return True
     (DTrip.Taxi, DTrip.Walk) -> return True
     _ -> return False
@@ -1247,18 +1223,19 @@ switchLeg journeyId _ req = do
         journeyLeg
           { DJourneyLeg.distance = newDistance,
             DJourneyLeg.duration = newDuration,
-            DJourneyLeg.fromStopDetails = Nothing,
+            DJourneyLeg.fromStopDetails = if isJust req.startLocation then Nothing else journeyLeg.fromStopDetails,
             DJourneyLeg.id = journeyLegId,
             DJourneyLeg.routeDetails = (\routeDetail -> routeDetail {DRouteDetails.journeyLegId = journeyLegId.getId, DRouteDetails.trackingStatus = Nothing}) <$> journeyLeg.routeDetails,
             DJourneyLeg.mode = newMode,
             DJourneyLeg.serviceTypes = Nothing,
             DJourneyLeg.startLocation = startLocation,
             DJourneyLeg.toArrivalTime = Nothing,
-            DJourneyLeg.estimatedMinFare = Nothing,
-            DJourneyLeg.estimatedMaxFare = Nothing,
+            DJourneyLeg.estimatedMinFare = Nothing, -- will be updated by on_search
+            DJourneyLeg.estimatedMaxFare = Nothing, -- will be updated by on_search
+            DJourneyLeg.legPricingId = Nothing, -- will be updated by on_search
             DJourneyLeg.createdAt = now,
             DJourneyLeg.updatedAt = now,
-            DJourneyLeg.legSearchId = Nothing,
+            DJourneyLeg.legSearchId = Nothing, -- will be updated by add Leg
             DJourneyLeg.isDeleted = Just False
           }
 
@@ -1356,6 +1333,11 @@ markLegStatus mbStatus trackingStatus journeyLeg mbSubLegOrder = do
   let finalStatus = trackingStatus <|> castJourneyLegStatusToTrackingStatus mbStatus
   whenJust finalStatus $ \status -> do
     JMStateUtils.setJourneyLegTrackingStatus journeyLeg mbSubLegOrder status
+
+    -- TODO :: UI is sending subLegOrder as 0 for Taxi and Walk leg but on Backend subLegOrder starts from 1 always in All modes for consistency, but to handle current UI even if subLegOrder is coming as 0 we are updating with 1
+    whenJust mbSubLegOrder $ \subLegOrder -> do
+      when (subLegOrder == 0) $ do
+        JMStateUtils.setJourneyLegTrackingStatus journeyLeg (Just 1) status
   where
     castJourneyLegStatusToTrackingStatus :: Maybe JL.JourneyLegStatus -> Maybe JMState.TrackingStatus
     castJourneyLegStatusToTrackingStatus = \case
@@ -1370,7 +1352,7 @@ markLegStatus mbStatus trackingStatus journeyLeg mbSubLegOrder = do
       Just JL.Arrived -> Just JMState.Arrived
       Just JL.Ongoing -> Just JMState.Ongoing
       Just JL.Finishing -> Just JMState.Finishing
-      Just JL.Skipped -> Just JMState.Finished
+      Just JL.Skipped -> Just JMState.InPlan
       Just JL.Cancelled -> Just JMState.Finished
       Just JL.Completed -> Just JMState.Finished
       Just JL.Failed -> Just JMState.Finished

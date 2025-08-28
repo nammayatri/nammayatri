@@ -285,3 +285,13 @@ ALTER TABLE atlas_app.journey_leg ALTER COLUMN journey_id DROP NOT NULL;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.journey_leg ADD COLUMN leg_pricing_id text ;
+
+
+------- SQL updates -------
+

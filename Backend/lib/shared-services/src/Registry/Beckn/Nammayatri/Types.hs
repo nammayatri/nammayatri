@@ -18,9 +18,12 @@ module Registry.Beckn.Nammayatri.Types
   )
 where
 
+import "mock-registry" App.Routes as Reexport
+import "mock-registry" Domain.Subscriber as Reexport
 import "mock-registry" Domain.Types.UpdateCities as Reexport
 import EulerHS.Types (EulerClient, client)
 import Kernel.Prelude
+import Kernel.Types.Beckn.Ack (AckResponse (..))
 import qualified Kernel.Types.Beckn.City as Beckn
 import Kernel.Utils.Dhall
 
@@ -33,6 +36,12 @@ data UpdData = UpdData
 
 updateCitiesClient :: Maybe Text -> UpdateCitiesReq -> EulerClient UpdateCitiesRes
 updateCitiesClient = client updateCitiesAPI
+
+createAPI :: Proxy CreateAPI
+createAPI = Proxy
+
+createSubscriberClient :: Subscriber -> EulerClient AckResponse
+createSubscriberClient = client createAPI
 
 data RegistryConfig = RegistryConfig
   { url :: BaseUrl,

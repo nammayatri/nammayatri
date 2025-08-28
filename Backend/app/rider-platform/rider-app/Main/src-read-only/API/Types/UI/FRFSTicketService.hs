@@ -22,7 +22,6 @@ import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.TimeBound
-import qualified Lib.JourneyLeg.Types
 import Servant
 import Tools.Auth
 
@@ -168,7 +167,6 @@ data FRFSRouteStationsAPI = FRFSRouteStationsAPI
 
 data FRFSSearchAPIReq = FRFSSearchAPIReq
   { fromStationCode :: Data.Text.Text,
-    journeySearchData :: Data.Maybe.Maybe Lib.JourneyLeg.Types.JourneySearchData,
     quantity :: Kernel.Prelude.Int,
     recentLocationId :: Data.Maybe.Maybe (Kernel.Types.Id.Id Domain.Types.RecentLocation.RecentLocation),
     routeCode :: Data.Maybe.Maybe Data.Text.Text,

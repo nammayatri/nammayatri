@@ -42,7 +42,9 @@ import Kernel.Prelude
 import Kernel.ServantMultipart
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
+import qualified Kernel.Types.Id as Id
 import Kernel.Types.Predicate
+import qualified Kernel.Types.Registry.Subscriber as BecknSub
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
 import Servant (FromHttpApiData (..), ToHttpApiData (..))
@@ -601,7 +603,8 @@ data CreateMerchantOperatingCityReq = CreateMerchantOperatingCityReq
     currency :: Maybe Currency,
     distanceUnit :: Maybe DistanceUnit,
     merchantData :: Maybe MerchantData,
-    driverOfferMerchantOperatingCityId :: Maybe Text
+    driverOfferMerchantOperatingCityId :: Maybe Text,
+    buildFRFSSubscriber :: Maybe Bool
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -625,6 +628,7 @@ instance FromMultipart Tmp CreateMerchantOperatingCityReq where
       <*> parseMaybeInput "distanceUnit" form
       <*> parseMaybeJsonInput "merchantData" form
       <*> parseMaybeJsonInput "driverOfferMerchantOperatingCityId" form
+      <*> parseMaybeInput "buildFRFSSubscriber" form
 
 parseInput :: Read b => Text -> MultipartData tag -> Either String b
 parseInput fieldName form = case lookupInput fieldName form of
@@ -665,7 +669,8 @@ data CreateMerchantOperatingCityReqT = CreateMerchantOperatingCityReqT
     currency :: Maybe Currency,
     distanceUnit :: Maybe DistanceUnit,
     merchantData :: Maybe MerchantData,
-    driverOfferMerchantOperatingCityId :: Maybe Text
+    driverOfferMerchantOperatingCityId :: Maybe Text,
+    buildFRFSSubscriber :: Maybe Bool
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -885,3 +890,29 @@ instance ToMultipart Tmp UpsertSpecialLocationCsvReq where
 newtype APISuccessWithUnprocessedEntities = APISuccessWithUnprocessedEntities {unprocessedEntities :: [Kernel.Prelude.Text]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+------------------------ WhiteList Operating City ------------------------
+
+data WhiteListOperatingCityReq = WhiteListOperatingCityReq
+  { bppMerchantOperatingCityId :: Text,
+    bppMerchantId :: Text,
+    bppSubscriberDomain :: Context.Domain,
+    bapMerchantId :: Text,
+    bapMerchantOperatingCityId :: Text,
+    bapUniqueKeyId :: Text,
+    bapSubscriberId :: Id.ShortId BecknSub.Subscriber,
+    bapSubscriberDomain :: Context.Domain
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data WhiteListOperatingCityRes = WhiteListOperatingCityRes
+  { whiteListSuccess :: Bool,
+    whiteListMessage :: Text,
+    whiteListError :: Maybe Text
+  }
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance HideSecrets WhiteListOperatingCityReq where
+  hideSecrets = identity

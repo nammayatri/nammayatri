@@ -480,8 +480,12 @@ testRuleJSON :: IO ()
 testRuleJSON = do
   let rule =
         Rule
-          (Weekday [Monday, Tuesday, Wednesday, Thursday, Friday])
-          (Action (PricingIncreaseBy 10))
+          ( And
+              [ DaysBeforeBooking Equal 0,
+                TimeOfDayRange [(TimeOfDay 17 0 0, TimeOfDay 23 59 59)]
+              ]
+          )
+          (Action (Closed))
           330 -- IST timezone (+5:30)
   putTextLn "JSON representation of rule:"
   let jsonValue = encode rule

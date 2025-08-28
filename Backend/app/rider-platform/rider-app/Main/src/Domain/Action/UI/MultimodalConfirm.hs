@@ -31,6 +31,7 @@ module Domain.Action.UI.MultimodalConfirm
     getMultimodalOrderSimilarJourneyLegs,
     postMultimodalOrderSwitchJourneyLeg,
     postMultimodalOrderChangeStops,
+    postMultimodalRouteAvailability,
   )
 where
 
@@ -64,6 +65,7 @@ import Domain.Types.MultimodalPreferences as DMP
 import qualified Domain.Types.Person
 import qualified Domain.Types.RiderConfig as DRC
 import qualified Domain.Types.RouteDetails as RD
+import Domain.Types.RouteStopTimeTable (SourceType (..))
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.Station as DStation
 import Environment
@@ -97,7 +99,6 @@ import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
-import Storage.Queries.FRFSSearch as QFRFSSearch
 import Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import Storage.Queries.JourneyFeedback as SQJFB
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
@@ -264,11 +265,11 @@ postMultimodalOrderSwitchTaxi (_, _) journeyId legOrder req = do
 
   whenJust journeyLeg.legSearchId $ \legSearchId -> do
     searchReq <- QSearchRequest.findById (Id legSearchId) >>= fromMaybeM (SearchRequestNotFound $ "searchRequestId-" <> legSearchId)
-    mbEstimate <- maybe (pure Nothing) (QEstimate.findById . Id) (searchReq.journeyLegInfo >>= (.pricingId))
+    mbEstimate <- maybe (pure Nothing) (QEstimate.findById . Id) journeyLeg.legPricingId
     whenJust mbEstimate $ \estimate -> do
       when (estimate.status `elem` [DEst.COMPLETED, DEst.CANCELLED, DEst.GOT_DRIVER_QUOTE, DEst.DRIVER_QUOTE_CANCELLED]) $
         throwError $ InvalidRequest "Can't switch vehicle if driver has already being assigned"
-      QSearchRequest.updatePricingId (Id legSearchId) (Just req.estimateId.getId)
+      QJourneyLeg.updateLegPricingIdByLegSearchId (Just req.estimateId.getId) journeyLeg.legSearchId
       when (estimate.status == DEst.DRIVER_QUOTE_REQUESTED) $ do
         cancelPrevSearch searchReq legSearchId estimate.id
         JMTypes.confirm (mkTaxiLegConfirmReq searchReq req.estimateId)
@@ -312,7 +313,7 @@ postMultimodalOrderSwitchFRFSTier (mbPersonId, merchantId) journeyId legOrder re
   whenJust journeyLeg.legSearchId $ \legSearchId -> do
     mbAlternateShortNames <- getAlternateShortNames
     let searchId = Id legSearchId
-    QFRFSSearch.updatePricingId searchId (Just req.quoteId.getId)
+    QJourneyLeg.updateLegPricingIdByLegSearchId (Just req.quoteId.getId) journeyLeg.legSearchId
     mbBooking <- QFRFSTicketBooking.findBySearchId searchId
     whenJust mbBooking $ \booking -> do
       quote <- QFRFSQuote.findById req.quoteId >>= fromMaybeM (InvalidRequest "Quote not found")
@@ -778,7 +779,7 @@ postMultimodalOrderSublegSetStatus (_, _) journeyId legOrder subLegOrder newStat
 
   -- refetch updated legs and journey
   updatedLegStatus <- JM.getAllLegsStatus journey
-  checkAndMarkTerminalJourneyStatus journey False False updatedLegStatus
+  checkAndMarkTerminalJourneyStatus journey updatedLegStatus
   updatedJourney <- JM.getJourney journeyId
   generateJourneyStatusResponse updatedJourney updatedLegStatus
 
@@ -802,7 +803,7 @@ postMultimodalOrderSublegSetTrackingStatus (_, _) journeyId legOrder subLegOrder
 
   -- refetch updated legs and journey
   updatedLegStatus <- JM.getAllLegsStatus journey
-  checkAndMarkTerminalJourneyStatus journey False False updatedLegStatus
+  checkAndMarkTerminalJourneyStatus journey updatedLegStatus
   updatedJourney <- JM.getJourney journeyId
   generateJourneyStatusResponse updatedJourney updatedLegStatus
 
@@ -865,7 +866,7 @@ postMultimodalComplete (_, _) journeyId = do
 
   mapM_ (\leg -> markAllSubLegsCompleted leg) legs
   updatedLegStatus <- JM.getAllLegsStatus journey
-  checkAndMarkTerminalJourneyStatus journey True False updatedLegStatus
+  checkAndMarkTerminalJourneyStatus journey updatedLegStatus
   updatedJourney <- JM.getJourney journeyId
   generateJourneyStatusResponse updatedJourney updatedLegStatus
 
@@ -1288,3 +1289,63 @@ postMultimodalOrderChangeStops _ journeyId legOrder req = do
               osmEntrance = (mbEntranceGates >>= fst) <|> (oldJourneyLeg.osmEntrance)
               osmExit = (mbExitGates >>= fst) <|> (oldJourneyLeg.osmExit)
            in return $ Just JMTypes.Gates {..}
+
+postMultimodalRouteAvailability ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    API.Types.UI.MultimodalConfirm.RouteAvailabilityReq ->
+    Environment.Flow API.Types.UI.MultimodalConfirm.RouteAvailabilityResp
+  )
+postMultimodalRouteAvailability (mbPersonId, merchantId) req = do
+  personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
+  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+
+  -- Get current time for route search
+  currentTime <- getCurrentTime
+
+  -- Determine vehicle category based on the route search (defaulting to Bus for general routes)
+  let vehicleCategory = Enums.BUS
+
+  -- Find integrated BPP configs for the merchant operating city
+  integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId vehicleCategory DIBC.MULTIMODAL
+
+  case integratedBPPConfigs of
+    [] -> return $ ApiTypes.RouteAvailabilityResp {availableRoutes = []}
+    (integratedBPPConfig : _) -> do
+      -- Use findPossibleRoutes to get available routes
+      (_, availableRoutesByTier) <-
+        JMU.findPossibleRoutes
+          Nothing
+          req.startStopCode
+          req.endStopCode
+          currentTime
+          integratedBPPConfig
+          merchantId
+          person.merchantOperatingCityId
+          vehicleCategory
+          True -- sendWithoutFare
+
+      -- Filter routes based on onlyLive flag if needed
+      let filteredRoutes =
+            if req.onlyLive
+              then filter (\route -> route.source == LIVE) availableRoutesByTier
+              else availableRoutesByTier
+
+      -- Convert to API response format
+      let availableRoutes = concatMap convertToAvailableRoute filteredRoutes
+
+      return $ ApiTypes.RouteAvailabilityResp {availableRoutes = availableRoutes}
+  where
+    convertToAvailableRoute :: JMU.AvailableRoutesByTier -> [ApiTypes.AvailableRoute]
+    convertToAvailableRoute routesByTier =
+      map
+        ( \routeInfo ->
+            ApiTypes.AvailableRoute
+              { source = routesByTier.source,
+                routeCode = routeInfo.routeCode,
+                routeShortName = routeInfo.shortName,
+                routeTimings = routesByTier.nextAvailableBuses
+              }
+        )
+        routesByTier.availableRoutesInfo

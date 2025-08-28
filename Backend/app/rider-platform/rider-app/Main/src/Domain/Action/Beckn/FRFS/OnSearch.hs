@@ -197,11 +197,10 @@ onSearchHelper onSearchReq validatedReq integratedBPPConfig = do
   mbRequiredQuote <- filterQuotes quotes mbJourneyLeg
   case mbRequiredQuote of
     Just requiredQuote -> do
-      void $ SLCF.createFares search.id.getId search.journeyLegInfo (QSearch.updatePricingId validatedReq.search.id (Just requiredQuote.id.getId))
+      void $ SLCF.createFares search.id.getId requiredQuote.id.getId
       QJourneyLeg.updateEstimatedFaresBySearchId (Just requiredQuote.price.amount) (Just requiredQuote.price.amount) (Just validatedReq.search.id.getId)
     Nothing -> do
-      whenJust validatedReq.search.journeyLegInfo $ \_journeyLegInfo -> do
-        QSearch.updateOnSearchFailed validatedReq.search.id (Just True)
+      QSearch.updateOnSearchFailed validatedReq.search.id (Just True)
   QSearch.updateIsOnSearchReceivedById (Just True) validatedReq.search.id
   fork "Updating Route Stop Fare" $ do
     forM_ onSearchReq.quotes $ \quote -> do

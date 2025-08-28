@@ -66,7 +66,6 @@ data BookingT f = BookingT
     isAirConditioned :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isBookingUpdated :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isDashboardRequest :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
-    isDeleted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isInsured :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isMultimodalSearch :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isPetRide :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

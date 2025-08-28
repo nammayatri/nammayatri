@@ -20,6 +20,7 @@ data TicketServiceT f = TicketServiceT
     expiry :: B.C f Domain.Types.TicketService.ExpiryType,
     id :: B.C f Kernel.Prelude.Text,
     isClosed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    maxSelection :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     maxVerification :: B.C f Kernel.Prelude.Int,
     operationalEndDate :: B.C f (Kernel.Prelude.Maybe Data.Time.Day),
     operationalStartDate :: B.C f (Kernel.Prelude.Maybe Data.Time.Day),

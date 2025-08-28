@@ -99,7 +99,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
                 JT.JourneyLegStateData
                   { status = oldStatus,
                     bookingStatus,
-                    trackingStatus = snd =<< (listToMaybe trackingStatuses),
+                    trackingStatus = fromMaybe JMStateTypes.InPlan (snd <$> listToMaybe trackingStatuses),
                     userPosition,
                     JT.vehiclePositions = [], -- Will be populated based on status
                     legOrder = journeyLeg.sequenceNumber,
@@ -118,7 +118,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
               mbUserBoardingStation
               mbLegEndStation
               allBusDataForRoute
-              (fromMaybe JMStateTypes.InPlan ((listToMaybe trackingStatuses) >>= snd))
+              (fromMaybe JMStateTypes.InPlan (snd <$> listToMaybe trackingStatuses))
               movementDetected
 
           let detailedStateData = baseStateData {JT.vehiclePositions = vehiclePositionsToReturn}
@@ -135,7 +135,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
               journeyLeg.routeDetails
           let journeyLegStates =
                 [ JT.JourneyLegStateData
-                    { status = maybe JPT.InPlan JMStateUtils.castTrackingStatusToJourneyLegStatus trackingStatus,
+                    { status = JMStateUtils.castTrackingStatusToJourneyLegStatus trackingStatus,
                       bookingStatus,
                       trackingStatus,
                       userPosition,
@@ -171,7 +171,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
                 JT.JourneyLegStateData
                   { status = oldStatus,
                     bookingStatus,
-                    trackingStatus = snd =<< (listToMaybe trackingStatuses),
+                    trackingStatus = fromMaybe JMStateTypes.InPlan (snd <$> listToMaybe trackingStatuses),
                     userPosition,
                     JT.vehiclePositions = [], -- Will be populated based on status
                     legOrder = journeyLeg.sequenceNumber,
@@ -190,7 +190,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
               mbUserBoardingStation
               mbLegEndStation
               allBusDataForRoute
-              (fromMaybe JMStateTypes.InPlan ((listToMaybe trackingStatuses) >>= snd))
+              (fromMaybe JMStateTypes.InPlan (snd <$> listToMaybe trackingStatuses))
               movementDetected
 
           let detailedStateData = baseStateData {JT.vehiclePositions = vehiclePositionsToReturn}
@@ -203,7 +203,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
 
           let journeyLegStates =
                 [ JT.JourneyLegStateData
-                    { status = maybe JPT.InPlan JMStateUtils.castTrackingStatusToJourneyLegStatus trackingStatus,
+                    { status = JMStateUtils.castTrackingStatusToJourneyLegStatus trackingStatus,
                       bookingStatus,
                       trackingStatus,
                       userPosition,
@@ -365,23 +365,15 @@ getInfo searchId journeyLeg = do
 
 search :: JT.SearchRequestFlow m r c => Spec.VehicleCategory -> Id DPerson.Person -> Id DMerchant.Merchant -> Int -> Context.City -> DJourneyLeg.JourneyLeg -> Maybe (Id DRL.RecentLocation) -> m JT.SearchResponse
 search vehicleCategory personId merchantId quantity city journeyLeg recentLocationId = do
-  let journeySearchData =
-        JPT.JourneySearchData
-          { agency = journeyLeg.agency <&> (.name),
-            convenienceCost = 0,
-            pricingId = Nothing,
-            isDeleted = Just False,
-            onSearchFailed = Nothing
-          }
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchantId city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchantId.getId <> "-city-" <> show city)
-  integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromAgency journeySearchData.agency merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleCategory) DIBC.MULTIMODAL
-  frfsSearchReq <- buildFRFSSearchReq (Just journeySearchData)
+  integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromAgency (journeyLeg.agency <&> (.name)) merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleCategory) DIBC.MULTIMODAL
+  frfsSearchReq <- buildFRFSSearchReq
   frfsRouteDetails <- getFrfsRouteDetails journeyLeg.routeDetails
   let mbFare = journeyLeg.estimatedMinFare <|> journeyLeg.estimatedMaxFare
   res <- FRFSTicketService.postFrfsSearchHandler (personId, merchantId) merchantOpCity integratedBPPConfig vehicleCategory frfsSearchReq frfsRouteDetails Nothing Nothing mbFare
   return $ JT.SearchResponse {id = res.searchId.getId}
   where
-    buildFRFSSearchReq journeySearchData = do
+    buildFRFSSearchReq = do
       fromStationCode <- ((journeyLeg.fromStopDetails >>= (.stopCode)) <|> ((journeyLeg.fromStopDetails >>= (.gtfsId)) <&> gtfsIdtoDomainCode)) & fromMaybeM (InvalidRequest "From station gtfsId not found")
       toStationCode <- ((journeyLeg.toStopDetails >>= (.stopCode)) <|> ((journeyLeg.toStopDetails >>= (.gtfsId)) <&> gtfsIdtoDomainCode)) & fromMaybeM (InvalidRequest "To station gtfsId not found")
       let routeCode = Nothing

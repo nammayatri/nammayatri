@@ -11,13 +11,23 @@ import Kernel.Prelude
 import Servant (FromHttpApiData (..), ToHttpApiData (..))
 
 data JourneyBookingStatus
-  = TaxiEstimate DTaxiEstimate.EstimateStatus
+  = Initial InitialStatus
+  | TaxiEstimate DTaxiEstimate.EstimateStatus
   | TaxiBooking DTaxiBooking.BookingStatus
   | TaxiRide DTaxiRide.RideStatus
   | FRFSBooking DFRFSBooking.FRFSTicketBookingStatus
   | FRFSTicket DFRFSTicket.FRFSTicketStatus
   | Feedback FeedbackStatus
   deriving (Generic, ToSchema, ToJSON, FromJSON, Show, Eq, Ord)
+
+data InitialStatus = BOOKING_PENDING
+  deriving (Generic, ToSchema, Show, Eq, Ord)
+
+instance FromJSON InitialStatus where
+  parseJSON _ = return BOOKING_PENDING
+
+instance ToJSON InitialStatus where
+  toJSON BOOKING_PENDING = "BOOKING_PENDING"
 
 data FeedbackStatus = FEEDBACK_PENDING
   deriving (Generic, ToSchema, Show, Eq, Ord)

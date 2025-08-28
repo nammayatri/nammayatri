@@ -41,6 +41,7 @@ updateByPrimaryKey (Domain.Types.ServiceCategory.ServiceCategory {..}) = do
       Se.Set Beam.description description,
       Se.Set Beam.inclusionPoints (Data.Aeson.toJSON <$> inclusionPoints),
       Se.Set Beam.isClosed (Kernel.Prelude.Just isClosed),
+      Se.Set Beam.maxSelection maxSelection,
       Se.Set Beam.name name,
       Se.Set Beam.peopleCategory (Kernel.Types.Id.getId <$> peopleCategory),
       Se.Set Beam.placeId placeId,

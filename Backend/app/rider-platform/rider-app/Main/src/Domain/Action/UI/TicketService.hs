@@ -533,6 +533,7 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
     calcExpiry expiry visitDate currentTime = case expiry of
       Domain.Types.TicketService.InstantExpiry minutes -> addUTCTime (fromIntegral (minutes * 60)) currentTime
       Domain.Types.TicketService.VisitDate timeOfDay -> UTCTime visitDate (timeOfDayToTime timeOfDay)
+      Domain.Types.TicketService.ValidityDays days -> addUTCTime (fromIntegral (days * 24 * 60 * 60)) (UTCTime visitDate (timeOfDayToTime (TimeOfDay 0 0 0)))
 
 getTicketBookings :: (Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Domain.Types.TicketBooking.BookingStatus -> Environment.Flow [API.Types.UI.TicketService.TicketBookingAPIEntity]
 getTicketBookings (mbPersonId, merchantId_) mbLimit mbOffset status_ = do
@@ -757,7 +758,8 @@ postTicketBookingsVerify _ = processBookingService
                             bookedSeats = Just bookingService.bookedSeats,
                             status = Just "ASSIGNED",
                             amount = Just bookingService.amount.amount,
-                            assignments = Nothing
+                            assignments = Nothing,
+                            ticketPlaceId = Just ticketPlace.id.getId
                           }
                   response <- CallBPPInternal.updateFleetBookingInformation merchant updateReq
                   QTicketBookingService.updateAssignmentById (Just response.assignmentId) bookingService.id
@@ -920,7 +922,8 @@ postTicketBookingsVerifyV2 _ = processBookingService
                         bookedSeats = Just bookingService.bookedSeats,
                         status = Just "ASSIGNED",
                         amount = Just bookingService.amount.amount,
-                        assignments = req.assignments
+                        assignments = req.assignments,
+                        ticketPlaceId = Just ticketPlace.id.getId
                       }
               response <- CallBPPInternal.updateFleetBookingInformation merchant updateReq
               QTicketBookingService.updateAssignmentById (Just response.assignmentId) bookingService.id
@@ -1041,7 +1044,8 @@ getTicketBookingsStatus (mbPersonId, merchantId) _shortId@(Kernel.Types.Id.Short
                                 amount = Just ticketBookingService.amount.amount,
                                 visitDate = Just ticketBooking'.visitDate,
                                 bookedSeats = Just ticketBookingService.bookedSeats,
-                                status = Just "NEW"
+                                status = Just "NEW",
+                                ticketPlaceId = Just ticketPlace.id.getId
                               }
                       response <- CallBPPInternal.createFleetBookingInformation merchant createReq
                       QTicketBookingService.updateAssignmentById (Just response.assignmentId) ticketBookingService.id

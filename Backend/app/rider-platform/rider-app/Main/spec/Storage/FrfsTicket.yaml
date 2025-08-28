@@ -27,7 +27,6 @@ imports:
   PartnerOrgTransaction: Domain.Types.PartnerOrganization
   TimeBound: Kernel.Types.TimeBound
   LatLong: Kernel.External.Maps.Types
-  JourneySearchData: Lib.JourneyLeg.Types
   Journey: Domain.Types.Journey
   JourneyLeg: Domain.Types.JourneyLeg
   JourneyLegStatus: Lib.JourneyLeg.Types
@@ -54,7 +53,7 @@ FRFSSearch:
     merchantOperatingCityId: Id MerchantOperatingCity
     partnerOrgTransactionId: Maybe (Id PartnerOrgTransaction)
     partnerOrgId: Maybe (Id PartnerOrganization)
-    journeyLegInfo: Maybe JourneySearchData
+    onSearchFailed: Maybe Bool
     isOnSearchReceived: Maybe Bool
     integratedBppConfigId: Id IntegratedBPPConfig
     recentLocationId: Maybe (Id RecentLocation)
@@ -67,22 +66,6 @@ FRFSSearch:
       toStationId: Text
     routeCode:
       routeId: Maybe Text
-    journeyLegInfo:
-      agency: Maybe Text
-      convenienceCost: Maybe Int
-      pricingId: Maybe Text
-      isDeleted: Maybe Bool
-      onSearchFailed: Maybe Bool
-
-  toTType:
-    agency: (journeyLegInfo >>= (.agency))|E
-    convenienceCost: Kernel.Prelude.fmap (.convenienceCost)|I
-    pricingId: (journeyLegInfo >>= (.pricingId))|E
-    isDeleted: (journeyLegInfo >>= (.isDeleted))|E
-    onSearchFailed: (journeyLegInfo >>= (.onSearchFailed))|E
-
-  fromTType:
-    journeyLegInfo: Storage.Queries.Transformers.SearchRequest.mkJourneyLegInfo
 
   excludedDefaultQueries:
     - create
@@ -268,7 +251,6 @@ FRFSTicketBooking:
     googleWalletJWTUrl: Maybe Text
     journeyOnInitDone: Maybe Bool
     startTime: Maybe UTCTime
-    isDeleted: Maybe Bool
     isFareChanged: Maybe Bool
     integratedBppConfigId: Id IntegratedBPPConfig
     recentLocationId: Maybe (Id RecentLocation)
