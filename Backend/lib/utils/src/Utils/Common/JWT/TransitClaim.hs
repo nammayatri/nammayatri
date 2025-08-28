@@ -36,10 +36,11 @@ data TransitObject = TransitObject
     passengerNames :: Text,
     validTimeInterval :: TimeInterval,
     ticketLeg :: TicketLeg,
-    barcode :: Barcode,
+    barcode :: Maybe Barcode,
     textModulesData :: [TextModule],
     groupingInfo :: GroupingInfo,
-    linksModuleData :: Maybe LinksModuleData
+    linksModuleData :: Maybe LinksModuleData,
+    rotatingBarcode :: Maybe RotatingBarcode
   }
   deriving (Show, Generic, FromJSON, ToJSON)
 
@@ -139,6 +140,27 @@ newtype DateTime = DateTime
   { date :: Text
   }
   deriving (Show, Generic, ToJSON, FromJSON)
+
+data RotatingBarcode = RotatingBarcode
+  { _type :: Text,
+    renderEncoding :: Text,
+    valuePattern :: Text,
+    totpDetails :: TOTPDetails,
+    alternateText :: Text
+  }
+  deriving (Show, Generic)
+
+instance FromJSON RotatingBarcode where
+  parseJSON = genericParseJSON stripPrefixUnderscoreIfAny
+
+instance ToJSON RotatingBarcode where
+  toJSON = genericToJSON stripPrefixUnderscoreIfAny
+
+data TOTPDetails = TOTPDetails
+  { algorithm :: Text,
+    periodMillis :: Text
+  }
+  deriving (Show, Generic, FromJSON, ToJSON)
 
 createAdditionalClaims :: [(T.Text, Value)] -> ClaimsMap
 createAdditionalClaims additionalClaims = ClaimsMap $ Map.fromList additionalClaims
