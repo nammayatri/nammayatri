@@ -214,7 +214,7 @@ getFrfsRoute (_personId, _mId) routeCode mbIntegratedBPPConfigId _platformType _
                             -- Calculate time from current stop to next stop
                             case (stopSchedule, nextStopSchedule) of
                               (Just currentSchedule, Just nextSchedule) ->
-                                let currentDepartureTime = secondsToTimeOfDay' currentSchedule.departureTime
+                                let currentDepartureTime = secondsToTimeOfDay' currentSchedule.arrivalTime
                                     nextArrivalTime = secondsToTimeOfDay' nextSchedule.arrivalTime
                                  in (stopSchedule, Just $ diffTimeOfDay currentDepartureTime nextArrivalTime)
                               _ -> (stopSchedule, Nothing)
