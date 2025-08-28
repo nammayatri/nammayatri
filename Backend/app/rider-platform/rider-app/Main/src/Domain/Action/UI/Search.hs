@@ -406,7 +406,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
       let isReallocationEnabled = fromMaybe False mbIsReallocationEnabled
       let fareParametersInRateCard = fromMaybe False mbfareParametersInRateCard
       let reserveTag = case searchRequest.searchMode of
-            Just SearchRequest.RESERVE -> [(Beckn.RESERVED_RIDE_TAG, Just "true")]
+            Just SearchRequest.RESERVE -> [(Beckn.RESERVED_RIDE_TAG, Just "True")]
             _ -> []
       Just $
         def{Beckn.fulfillmentTags =
