@@ -189,7 +189,6 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.googleWalletJWTUrl googleWalletJWTUrl,
       Se.Set Beam.integratedBppConfigId (Kernel.Types.Id.getId integratedBppConfigId),
       Se.Set Beam.isBookingCancellable isBookingCancellable,
-      Se.Set Beam.isDeleted isDeleted,
       Se.Set Beam.isFareChanged isFareChanged,
       Se.Set Beam.journeyOnInitDone journeyOnInitDone,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),

@@ -27,19 +27,19 @@ import Kernel.Storage.Esqueleto.Config
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Lib.JourneyLeg.Types as JPT
 import Lib.Payment.Storage.Beam.BeamFlow
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import Storage.Beam.Payment ()
+import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.VendorSplitDetails as QVendorSplitDetails
 import qualified Tools.Payment as Payment
 
 fareProcessingLockKey :: Text -> Text
 fareProcessingLockKey journeyId = "Fare:Processing:JourneyId" <> journeyId
 
-createFares :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r) => Text -> Maybe JPT.JourneySearchData -> m () -> m Bool
-createFares searchId journeyLegInfo updateInSearchReqFunc = do
-  whenJust journeyLegInfo $ \_ -> updateInSearchReqFunc
+createFares :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r) => Text -> Text -> m Bool
+createFares searchId pricingId = do
+  QJourneyLeg.updateLegPricingIdByLegSearchId (Just pricingId) (Just searchId)
   mbShouldConfirmFare <- getConfirmOnceGetFare searchId
   when (mbShouldConfirmFare == Just True) $ resetConfirmOnceGetFare searchId
   return (mbShouldConfirmFare == Just True)

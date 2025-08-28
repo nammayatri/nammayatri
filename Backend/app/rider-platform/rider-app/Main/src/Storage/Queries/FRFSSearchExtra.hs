@@ -16,12 +16,6 @@ create' = createWithKV
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSSearch.FRFSSearch -> m ())
 create frfsSearchReq = create' frfsSearchReq
 
-updatePricingId :: (MonadFlow m, EsqDBFlow m r) => Id FRFSSearch -> Maybe Text -> m ()
-updatePricingId (Id reqId) pricingId = do
-  updateOneWithKV
-    [Se.Set Beam.pricingId pricingId]
-    [Se.Is Beam.id (Se.Eq reqId)]
-
 updateOnSearchFailed :: (MonadFlow m, EsqDBFlow m r) => Id FRFSSearch -> Maybe Bool -> m ()
 updateOnSearchFailed (Id reqId) onSearchFailed = do
   updateOneWithKV

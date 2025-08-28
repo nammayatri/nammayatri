@@ -6,7 +6,6 @@ import Kernel.Prelude
 import Kernel.Types.Common
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Lib.JourneyLeg.Types
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
@@ -41,7 +40,3 @@ getToLocation id = do
   mbToLocationMapping <- QLM.getLatestEndByEntityId id
   toLocation <- maybe (pure Nothing) (QL.findById . (.locationId)) mbToLocationMapping
   return toLocation
-
-mkJourneyLegInfo :: (Maybe Text -> Maybe Int -> Maybe Bool -> Maybe Bool -> Maybe Text -> Maybe Lib.JourneyLeg.Types.JourneySearchData)
-mkJourneyLegInfo agency (Just convenienceCost) isDeleted onSearchFailed pricingId = Just $ Lib.JourneyLeg.Types.JourneySearchData {..}
-mkJourneyLegInfo _ _ _ _ _ = Nothing

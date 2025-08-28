@@ -32,15 +32,6 @@ instance ToHttpApiData JourneyLegStatus where
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''JourneyLegStatus)
 
-data JourneySearchData = JourneySearchData
-  { agency :: Maybe Text,
-    convenienceCost :: Int,
-    pricingId :: Maybe Text,
-    onSearchFailed :: Maybe Bool,
-    isDeleted :: Maybe Bool
-  }
-  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
-
 data MultiModalJourneyRouteDetails = MultiModalJourneyRouteDetails
   { frequency :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     alternateShortNames :: [Kernel.Prelude.Text],

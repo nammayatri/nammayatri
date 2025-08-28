@@ -33,6 +33,7 @@ data JourneyLeg = JourneyLeg
     id :: Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg,
     isDeleted :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     journeyId :: Kernel.Types.Id.Id Domain.Types.Journey.Journey,
+    legPricingId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     legSearchId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,

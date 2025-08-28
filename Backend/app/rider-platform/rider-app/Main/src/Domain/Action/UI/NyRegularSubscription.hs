@@ -137,7 +137,6 @@ postNyRegularSubscriptionsCreate (mPersonId, merchantId) mbClientId mbIsDashboar
       (Kernel.Types.Id.Id <$> mbClientId)
       mbDevice
       (fromMaybe False mbIsDashboardRequest)
-      Nothing
       False
 
   logInfo $ "New subscription created with id: " <> subscriptionId.getId

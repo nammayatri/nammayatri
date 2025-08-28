@@ -37,7 +37,6 @@ import Kernel.Types.Id
 import qualified Kernel.Types.Logging as Log
 import Kernel.Utils.Common hiding (withLogTag)
 import Kernel.Utils.SlidingWindowLimiter (checkSlidingWindowLimitWithOptions)
-import qualified Lib.JourneyLeg.Types as JPT
 import Servant hiding (route, throwError)
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import Storage.Beam.SystemConfigs ()
@@ -120,7 +119,7 @@ upsertPersonAndGetFare partnerOrg mbIntegratedBPPConfigId req = withFlowHandlerA
   (personId, token) <- DPOFRFS.upsertPersonAndGetToken partnerOrg.orgId regPOCfg req.cityId merchantId mbRegCoordinates req
 
   Log.withLogTag ("FRFS:GetFare:PersonId:" <> personId.getId) $ do
-    let frfsSearchReq = buildFRFSSearchReq fromStation.code toStation.code (route <&> (.code)) req.numberOfPassengers Nothing
+    let frfsSearchReq = buildFRFSSearchReq fromStation.code toStation.code (route <&> (.code)) req.numberOfPassengers
         frfsVehicleType = fromStation.vehicleType
         frfsRouteDetails =
           [ FRFSRouteDetails
@@ -137,8 +136,8 @@ upsertPersonAndGetFare partnerOrg mbIntegratedBPPConfigId req = withFlowHandlerA
     getFareHitsCountKey :: Text
     getFareHitsCountKey = "BAP:FRFS:PartnerOrgId:" <> getId partnerOrg.orgId <> ":GetFare:hitsCount"
 
-    buildFRFSSearchReq :: Text -> Text -> Maybe Text -> Int -> Maybe JPT.JourneySearchData -> DFRFSTypes.FRFSSearchAPIReq
-    buildFRFSSearchReq fromStationCode toStationCode routeCode quantity journeySearchData = DFRFSTypes.FRFSSearchAPIReq {recentLocationId = Nothing, ..}
+    buildFRFSSearchReq :: Text -> Text -> Maybe Text -> Int -> DFRFSTypes.FRFSSearchAPIReq
+    buildFRFSSearchReq fromStationCode toStationCode routeCode quantity = DFRFSTypes.FRFSSearchAPIReq {recentLocationId = Nothing, ..}
 
 getConfigByStationIds :: PartnerOrganization -> Text -> Text -> Maybe (Id DIBC.IntegratedBPPConfig) -> FlowHandler DPOFRFS.GetConfigResp
 getConfigByStationIds partnerOrg fromGMMStationId toGMMStationId mbIntegratedBPPConfigId =

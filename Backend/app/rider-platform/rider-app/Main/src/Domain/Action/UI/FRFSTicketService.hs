@@ -541,9 +541,9 @@ postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPP
             riderId = personId,
             partnerOrgTransactionId = mbPOrgTxnId,
             partnerOrgId = mbPOrgId,
-            journeyLegInfo = journeySearchData,
             integratedBppConfigId = integratedBPPConfig.id,
             isOnSearchReceived = Nothing,
+            onSearchFailed = Nothing,
             validTill = Just validTill,
             ..
           }
@@ -720,7 +720,6 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req crisSdkResponse
                 isFareChanged = Just isFareChanged,
                 integratedBppConfigId = quote.integratedBppConfigId,
                 googleWalletJWTUrl = Nothing,
-                isDeleted = Just False,
                 quantity = ticketQuantity',
                 childTicketQuantity,
                 bookingAuthCode = crisSdkResponse <&> (.bookAuthCode),

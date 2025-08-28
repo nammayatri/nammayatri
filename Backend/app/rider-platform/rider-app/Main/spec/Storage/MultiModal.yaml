@@ -199,10 +199,9 @@ JourneyLeg:
     groupCode: Maybe Text # <parentSearchRequestId>-<mode>-<fromStopDetails.stopCode>-<toStopDetails.stopCode>
     duration: Maybe Seconds
     distance: Maybe Distance
-    # polylinePoints: PolylinePoints     #to see    #Polyline.encodedPolyline
     mode: MultimodalTravelMode
-    startLocation: LatLngV2 #LocationV2     #Location.latLng
-    endLocation: LatLngV2 #LocationV2
+    startLocation: LatLngV2
+    endLocation: LatLngV2
     fromStopDetails: Maybe MultiModalStopDetails
     toStopDetails: Maybe MultiModalStopDetails
     routeDetails: "[RouteDetails]"
@@ -215,6 +214,7 @@ JourneyLeg:
     toDepartureTime: Maybe UTCTime
     serviceTypes: Maybe [ServiceTierType]
     legSearchId: Maybe Text
+    legPricingId: Maybe Text
     changedBusesInSequence: "Maybe [Text]"
     finalBoardedBusNumber: Maybe Text
     straightLineEntrance: Maybe MultiModalLegGate
@@ -281,6 +281,10 @@ JourneyLeg:
       kvFunction: updateOneWithKV
       params: [legSearchId]
       where: id
+    updateLegPricingIdByLegSearchId:
+      kvFunction: updateOneWithKV
+      params: [legPricingId]
+      where: legSearchId
     updateMode:
       kvFunction: updateOneWithKV
       params: [mode]

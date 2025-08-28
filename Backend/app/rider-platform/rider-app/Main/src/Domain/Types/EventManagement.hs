@@ -80,7 +80,8 @@ data TicketServiceDef = TicketServiceDef
     expiry :: DTicketService.ExpiryType,
     subPlaceId :: Maybe (Id DTicketSubPlace.TicketSubPlace),
     serviceCategoryId :: [Id DServiceCategory.ServiceCategory],
-    rules :: Maybe [Rule]
+    rules :: Maybe [Rule],
+    maxSelection :: Maybe Int
   }
   deriving (Generic, Show, Eq, Ord, ToJSON, FromJSON, ToSchema)
 
@@ -98,7 +99,8 @@ data ServiceCategoryDef = ServiceCategoryDef
     allowedSeats :: Maybe Int,
     businessHours :: [BusinessHourDef],
     peopleCategory :: [Id DServicePeopleCategory.ServicePeopleCategory],
-    rules :: Maybe [Rule]
+    rules :: Maybe [Rule],
+    maxSelection :: Maybe Int
   }
   deriving (Generic, Show, Eq, Ord, ToJSON, FromJSON, ToSchema)
 

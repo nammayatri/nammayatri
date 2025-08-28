@@ -11,7 +11,6 @@ import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Lib.JourneyLeg.Types as JLT
 import qualified Sequelize as Se
 import qualified SharedLogic.LocationMapping as SLM
 import qualified Storage.Beam.SearchRequest as BeamSR
@@ -87,12 +86,6 @@ updateMultipleByRequestId (Id searchRequestId) autoAssignedEnabled autoAssignedE
     ]
     [Se.Is BeamSR.id (Se.Eq searchRequestId)]
 
-updatePricingId :: (MonadFlow m, EsqDBFlow m r) => Id SearchRequest -> Maybe Text -> m ()
-updatePricingId (Id searchRequestId) pricingId = do
-  updateOneWithKV
-    [Se.Set BeamSR.pricingId pricingId]
-    [Se.Is BeamSR.id (Se.Eq searchRequestId)]
-
 updateDisability :: (MonadFlow m, EsqDBFlow m r) => Id SearchRequest -> Maybe Text -> m ()
 updateDisability (Id searchRequestId) disability = do
   updateOneWithKV
@@ -106,15 +99,4 @@ updateStartTime :: (MonadFlow m, EsqDBFlow m r) => Id SearchRequest -> UTCTime -
 updateStartTime (Id searchRequestId) startTime = do
   updateOneWithKV
     [Se.Set BeamSR.startTime startTime]
-    [Se.Is BeamSR.id (Se.Eq searchRequestId)]
-
-updateJourneyLegInfo :: (MonadFlow m, EsqDBFlow m r) => Id SearchRequest -> Maybe JLT.JourneySearchData -> m ()
-updateJourneyLegInfo (Id searchRequestId) journeyLegInfo = do
-  updateOneWithKV
-    [ Se.Set BeamSR.agency (journeyLegInfo >>= (.agency)),
-      Se.Set BeamSR.convenienceCost (journeyLegInfo <&> (.convenienceCost)),
-      Se.Set BeamSR.pricingId (journeyLegInfo >>= (.pricingId)),
-      Se.Set BeamSR.onSearchFailed (journeyLegInfo >>= (.onSearchFailed)),
-      Se.Set BeamSR.isDeleted (journeyLegInfo >>= (.isDeleted))
-    ]
     [Se.Is BeamSR.id (Se.Eq searchRequestId)]

@@ -66,6 +66,11 @@ updateEstimatedFaresBySearchId estimatedMinFare estimatedMaxFare legSearchId = d
   _now <- getCurrentTime
   updateWithKV [Se.Set Beam.estimatedMinFare estimatedMinFare, Se.Set Beam.estimatedMaxFare estimatedMaxFare, Se.Set Beam.updatedAt _now] [Se.Is Beam.legId $ Se.Eq legSearchId]
 
+updateLegPricingIdByLegSearchId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> m ())
+updateLegPricingIdByLegSearchId legPricingId legSearchId = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.legPricingId legPricingId, Se.Set Beam.updatedAt _now] [Se.Is Beam.legId $ Se.Eq legSearchId]
+
 updateLegSearchId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.JourneyLeg.JourneyLeg -> m ())
 updateLegSearchId legSearchId id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.legId legSearchId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
@@ -99,6 +104,7 @@ updateByPrimaryKey (Domain.Types.JourneyLeg.JourneyLeg {..}) = do
       Se.Set Beam.groupCode groupCode,
       Se.Set Beam.isDeleted isDeleted,
       Se.Set Beam.journeyId (Just $ Kernel.Types.Id.getId journeyId),
+      Se.Set Beam.legPricingId legPricingId,
       Se.Set Beam.legId legSearchId,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),

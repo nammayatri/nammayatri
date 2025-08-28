@@ -50,6 +50,7 @@ updateByPrimaryKey (Domain.Types.TicketService.TicketService {..}) = do
       Se.Set Beam.businessHours (Kernel.Types.Id.getId <$> businessHours),
       Se.Set Beam.expiry expiry,
       Se.Set Beam.isClosed (Kernel.Prelude.Just isClosed),
+      Se.Set Beam.maxSelection maxSelection,
       Se.Set Beam.maxVerification maxVerification,
       Se.Set Beam.operationalEndDate (operationalDate <&> (.eneDate)),
       Se.Set Beam.operationalStartDate (operationalDate <&> (.startDate)),

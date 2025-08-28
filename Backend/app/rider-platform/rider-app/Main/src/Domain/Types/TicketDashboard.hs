@@ -74,7 +74,8 @@ data TicketServiceDetails = TicketServiceDetails
     subPlaceId :: Maybe (Id DTicketSubPlace.TicketSubPlace),
     expiry :: DTicketService.ExpiryType,
     businessHours :: [Id DBusinessHour.BusinessHour],
-    rules :: Maybe [Rule]
+    rules :: Maybe [Rule],
+    maxSelection :: Maybe Int
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -95,7 +96,8 @@ data ServiceCategoryDetails = ServiceCategoryDetails
     availableSeats :: Maybe Int,
     inclusionPoints :: Maybe [Text],
     peopleCategory :: [Id DServicePeopleCategory.ServicePeopleCategory],
-    rules :: Maybe [Rule]
+    rules :: Maybe [Rule],
+    maxSelection :: Maybe Int
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 

@@ -21,7 +21,6 @@ import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.Version
 import Kernel.Utils.TH
-import qualified Lib.JourneyLeg.Types
 import qualified Lib.Yudhishthira.Types
 import qualified Tools.Beam.UtilsTH
 
@@ -59,11 +58,11 @@ data SearchRequest = SearchRequest
     isMeterRideSearch :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isMultimodalSearch :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isPetRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    journeyLegInfo :: Kernel.Prelude.Maybe Lib.JourneyLeg.Types.JourneySearchData,
     language :: Kernel.Prelude.Maybe Kernel.External.Maps.Language,
     maxDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
+    onSearchFailed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     originStopCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     placeNameSource :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     recentLocationId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.RecentLocation.RecentLocation),

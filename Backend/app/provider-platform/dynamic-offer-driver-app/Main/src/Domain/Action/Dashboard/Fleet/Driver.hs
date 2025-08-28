@@ -2648,20 +2648,21 @@ getDriverFleetBookings ::
   Maybe UTCTime ->
   Maybe Text ->
   Maybe Bool ->
+  Maybe Bool ->
   Flow Common.FleetBookingsInformationResponse
-getDriverFleetBookings _ _ memberPersonId mbLimit mbOffset mbFrom mbTo mbStatus mbSearchByFleetOwnerId = do
+getDriverFleetBookings _ _ memberPersonId mbLimit mbOffset mbFrom mbTo mbStatus mbSearchByFleetOwnerId mbSearchByTicketPlaceId = do
   let searchByFleetOwnerId = fromMaybe True mbSearchByFleetOwnerId
   fleetOwnerInfo <- getFleetOwnerIds memberPersonId Nothing
   let fleetOwnerIds = map fst fleetOwnerInfo
       fleetNameMap = Map.fromList fleetOwnerInfo
+  mbFleetOwnerInfo <-
+    if fromMaybe False mbSearchByTicketPlaceId
+      then join <$> traverse (FOI.findByPrimaryKey . Id) (headMay fleetOwnerIds)
+      else pure Nothing
 
-  ticketBookings <- QFBI.findAllByFleetOwnerIdsAndFilters fleetOwnerIds mbFrom mbTo mbLimit mbOffset searchByFleetOwnerId
+  ticketBookings <- QFBI.findAllByFleetOwnerIdsAndFilters fleetOwnerIds mbFrom mbTo mbLimit mbOffset searchByFleetOwnerId (mbFleetOwnerInfo >>= FOI.ticketPlaceId) mbStatus
 
-  let filteredBookings = case mbStatus of
-        Just status -> filter (\booking -> fromMaybe "" booking.status == status) ticketBookings
-        Nothing -> ticketBookings
-
-  ticketBookingsList <- forM filteredBookings $ \booking -> do
+  ticketBookingsList <- forM ticketBookings $ \booking -> do
     let fleetOwnerId = fromMaybe "" (fmap (.getId) booking.fleetOwnerId)
         fleetOwnerName = fromMaybe "" (Map.lookup fleetOwnerId fleetNameMap)
 

@@ -7,12 +7,10 @@ import qualified Domain.Types.FRFSSearch
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
-import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Storage.Beam.FRFSSearch as Beam
-import qualified Storage.Queries.Transformers.SearchRequest
 
 instance FromTType' Beam.FRFSSearch Domain.Types.FRFSSearch.FRFSSearch where
   fromTType' (Beam.FRFSSearchT {..}) = do
@@ -23,9 +21,9 @@ instance FromTType' Beam.FRFSSearch Domain.Types.FRFSSearch.FRFSSearch where
             id = Kernel.Types.Id.Id id,
             integratedBppConfigId = Kernel.Types.Id.Id integratedBppConfigId,
             isOnSearchReceived = isOnSearchReceived,
-            journeyLegInfo = Storage.Queries.Transformers.SearchRequest.mkJourneyLegInfo agency convenienceCost isDeleted onSearchFailed pricingId,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
+            onSearchFailed = onSearchFailed,
             partnerOrgId = Kernel.Types.Id.Id <$> partnerOrgId,
             partnerOrgTransactionId = Kernel.Types.Id.Id <$> partnerOrgTransactionId,
             quantity = quantity,
@@ -46,13 +44,9 @@ instance ToTType' Beam.FRFSSearch Domain.Types.FRFSSearch.FRFSSearch where
         Beam.id = Kernel.Types.Id.getId id,
         Beam.integratedBppConfigId = Kernel.Types.Id.getId integratedBppConfigId,
         Beam.isOnSearchReceived = isOnSearchReceived,
-        Beam.agency = journeyLegInfo >>= (.agency),
-        Beam.convenienceCost = Kernel.Prelude.fmap (.convenienceCost) journeyLegInfo,
-        Beam.isDeleted = journeyLegInfo >>= (.isDeleted),
-        Beam.onSearchFailed = journeyLegInfo >>= (.onSearchFailed),
-        Beam.pricingId = journeyLegInfo >>= (.pricingId),
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,
+        Beam.onSearchFailed = onSearchFailed,
         Beam.partnerOrgId = Kernel.Types.Id.getId <$> partnerOrgId,
         Beam.partnerOrgTransactionId = Kernel.Types.Id.getId <$> partnerOrgTransactionId,
         Beam.quantity = quantity,

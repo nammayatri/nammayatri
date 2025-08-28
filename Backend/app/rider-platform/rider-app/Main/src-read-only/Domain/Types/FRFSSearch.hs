@@ -13,7 +13,6 @@ import qualified Domain.Types.Person
 import qualified Domain.Types.RecentLocation
 import Kernel.Prelude
 import qualified Kernel.Types.Id
-import qualified Lib.JourneyLeg.Types
 import qualified Tools.Beam.UtilsTH
 
 data FRFSSearch = FRFSSearch
@@ -21,9 +20,9 @@ data FRFSSearch = FRFSSearch
     id :: Kernel.Types.Id.Id Domain.Types.FRFSSearch.FRFSSearch,
     integratedBppConfigId :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
     isOnSearchReceived :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    journeyLegInfo :: Kernel.Prelude.Maybe Lib.JourneyLeg.Types.JourneySearchData,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
+    onSearchFailed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     partnerOrgId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PartnerOrganization.PartnerOrganization),
     partnerOrgTransactionId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PartnerOrganization.PartnerOrgTransaction),
     quantity :: Kernel.Prelude.Int,
