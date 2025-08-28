@@ -307,6 +307,11 @@ mkTransitObjects pOrgId booking ticket person serviceAccount className sortIndex
           { TC._type = show GWSA.QR_CODE,
             TC.value = ticket.qrData
           }
+  walletQRTypeCfg <- do
+    qrCfg <- CQPOC.findByIdAndCfgType pOrgId DPOC.WALLET_QR_TYPE >>= fromMaybeM (PartnerOrgConfigNotFound pOrgId.getId $ show DPOC.WALLET_QR_TYPE)
+    DPOC.getWalletQRTypeConfig qrCfg.config
+  let mbPeriodMillis = lookup booking.merchantOperatingCityId.getId walletQRTypeCfg.qrType
+  let mbRotatingBarcode = mkRotatingBarcode ticket.qrData mbPeriodMillis
   frfsConfig <- CQFRFSConfig.findByMerchantOperatingCityId fromStation.merchantOperatingCityId Nothing >>= fromMaybeM (FRFSConfigNotFound fromStation.merchantOperatingCityId.getId)
   let passengerName' = fromMaybe "-" person.firstName
   let istTimeText = GWSA.showTimeIst ticket.validTill
@@ -352,12 +357,22 @@ mkTransitObjects pOrgId booking ticket person serviceAccount className sortIndex
               TC.originStationGmmLocationId = fromStationGMMLocationId,
               TC.destinationStationGmmLocationId = toStationGMMLocationId
             },
-        TC.barcode = barcode',
+        TC.barcode = if isJust mbPeriodMillis then Nothing else Just barcode',
         TC.textModulesData = textModules,
         TC.groupingInfo = groupingInfo,
         TC.validTimeInterval = timeInterval,
-        TC.linksModuleData = linkModuleData
+        TC.linksModuleData = linkModuleData,
+        TC.rotatingBarcode = mbRotatingBarcode
       }
+  where
+    mkRotatingBarcode :: Text -> Maybe Text -> Maybe TC.RotatingBarcode
+    mkRotatingBarcode qrData mbPeriodMillis = do
+      let dynamicData = "#{{totp_timestamp_seconds_hex}||0.0|0.0|}"
+      let dynamicQrData = qrData <> dynamicData
+      periodMillis <- mbPeriodMillis
+      let totpDetails = TC.TOTPDetails {TC.algorithm = "TOTP_SHA1", TC.periodMillis = periodMillis}
+      let rotatingBarcode = TC.RotatingBarcode {TC._type = show GWSA.QR_CODE, TC.renderEncoding = "UTF_8", TC.valuePattern = dynamicQrData, TC.totpDetails = totpDetails, TC.alternateText = "This is a dynamic QR, please don't take screenshots"}
+      return rotatingBarcode
 
 createTickets :: Booking.FRFSTicketBooking -> [DTicket] -> Int -> Flow [Ticket.FRFSTicket]
 createTickets booking dTickets discountedTickets = go dTickets discountedTickets []
