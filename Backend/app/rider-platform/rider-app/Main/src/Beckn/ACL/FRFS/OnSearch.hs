@@ -21,6 +21,7 @@ import qualified BecknV2.FRFS.Utils as Utils
 import qualified Domain.Action.Beckn.FRFS.OnSearch as Domain
 import qualified Domain.Types.FRFSQuote as DQuote
 import Domain.Types.StationType
+import Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.TimeRFC339
@@ -110,6 +111,13 @@ parseFulfillments item fulfillments fulfillmentId = do
   vehicleCategory <- fulfillment.fulfillmentVehicle >>= (.vehicleCategory) & fromMaybeM (InvalidRequest "VehicleType not found")
   vehicleType <- vehicleCategory & castVehicleVariant & fromMaybeM (InvalidRequest "VehicleType not found")
 
+  -- Check if vehicle variant is present to build routeStations
+  let vehicleVariant = fulfillment.fulfillmentVehicle >>= (.vehicleVariant)
+  routeStations <-
+    case vehicleVariant of
+      Just _ -> pure $ fromMaybe [] (mkDRouteStations fulfillment stations price fulfillmentId)
+      Nothing -> return []
+
   let adultDiscount = createAdultDiscount offerPrice
       discounts = case adultDiscount of
         Just discount -> [discount]
@@ -122,7 +130,7 @@ parseFulfillments item fulfillments fulfillmentId = do
         price,
         childPrice = Nothing,
         vehicleType,
-        routeStations = [],
+        routeStations,
         stations,
         fareDetails = Nothing,
         discounts = discounts,
@@ -219,3 +227,83 @@ createAdultDiscount offerPrice = do
             eligibility = True
           }
     Nothing -> Nothing
+
+mkDRouteStations :: Spec.Fulfillment -> [Domain.DStation] -> Price -> Text -> Maybe [Domain.DRouteStation]
+mkDRouteStations fulfillment stops price fulfillmentId = do
+  -- Extract route information from fulfillment tags
+  routeInfo <-
+    fulfillment.fulfillmentTags
+      >>= find
+        ( \tagGroup ->
+            maybe False (\desc -> desc.descriptorCode == Just "ROUTE_INFO") tagGroup.tagGroupDescriptor
+        )
+
+  routeId <-
+    routeInfo.tagGroupList
+      >>= find
+        ( \tag ->
+            maybe False (\desc -> desc.descriptorCode == Just "ROUTE_ID") tag.tagDescriptor
+        )
+      >>= (.tagValue)
+
+  startStop <- find (\stop -> stop.stationType == START) stops
+  endStop <- find (\stop -> stop.stationType == END) stops
+  startLat <- startStop.stationLat
+  startLon <- startStop.stationLon
+  endLat <- endStop.stationLat
+  endLon <- endStop.stationLon
+  let routeStartPoint = LatLong startLat startLon
+      routeEndPoint = LatLong endLat endLon
+      routeLongName = startStop.stationName <> " - " <> endStop.stationName
+      -- Create vehicle service tier from vehicle variant
+      routeServiceTier = createVehicleServiceTier fulfillment
+
+  return
+    [ Domain.DRouteStation
+        { routeCode = fulfillmentId,
+          routeLongName,
+          routeShortName = routeId,
+          routeStartPoint,
+          routeEndPoint,
+          routeStations = stops,
+          routeTravelTime = Nothing,
+          routeSequenceNum = Nothing,
+          routeServiceTier,
+          routePrice = price,
+          routeColor = Just routeId,
+          routeFarePolicyId = Nothing
+        }
+    ]
+
+createVehicleServiceTier :: Spec.Fulfillment -> Maybe Domain.DVehicleServiceTier
+createVehicleServiceTier fulfillment = do
+  vehicle <- fulfillment.fulfillmentVehicle
+  variant <- vehicle.vehicleVariant
+  category <- vehicle.vehicleCategory
+
+  let serviceTierType = castVehicleVariantToServiceTierType variant
+      serviceTierProviderCode = variant
+      serviceTierShortName = variant
+      serviceTierDescription = category <> " " <> variant
+      serviceTierLongName = category <> " " <> variant
+
+  Just $
+    Domain.DVehicleServiceTier
+      { serviceTierType,
+        serviceTierProviderCode,
+        serviceTierShortName,
+        serviceTierDescription,
+        serviceTierLongName
+      }
+
+castVehicleVariantToServiceTierType :: Text -> Spec.ServiceTierType
+castVehicleVariantToServiceTierType = \case
+  "AC" -> Spec.AC
+  "NON_AC" -> Spec.NON_AC
+  "EXPRESS" -> Spec.EXPRESS
+  "SPECIAL" -> Spec.SPECIAL
+  "EXECUTIVE" -> Spec.EXECUTIVE
+  "FIRST_CLASS" -> Spec.FIRST_CLASS
+  "SECOND_CLASS" -> Spec.SECOND_CLASS
+  "THIRD_CLASS" -> Spec.THIRD_CLASS
+  _ -> Spec.ORDINARY -- Default fallback

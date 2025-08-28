@@ -1799,9 +1799,11 @@ optionsTimeRange =
       ]
 
 -- | Describes a vehicle is a device that is designed or used to transport people or cargo over land, water, air, or through space.&lt;br&gt;This has properties like category, capacity, make, model, size,variant,color,energy_type,registration
-newtype Vehicle = Vehicle
+data Vehicle = Vehicle
   { -- |
-    vehicleCategory :: Maybe Text
+    vehicleCategory :: Maybe Text,
+    -- This field is not according to the spec, but is used to store the variant of the vehicle for Odisha Yatri
+    vehicleVariant :: Maybe Text
   }
   deriving (Show, Eq, Generic, Data)
 
@@ -1819,5 +1821,6 @@ optionsVehicle =
     }
   where
     table =
-      [ ("vehicleCategory", "category")
+      [ ("vehicleCategory", "category"),
+        ("vehicleVariant", "variant")
       ]
