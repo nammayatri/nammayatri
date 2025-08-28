@@ -77,8 +77,9 @@ verifyPan ::
   (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   DriverPanReq ->
   Maybe Bool ->
+  Bool ->
   Flow Bool
-verifyPan verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprovalRequired = do
+verifyPan verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprovalRequired isDashboard = do
   externalServiceRateLimitOptions <- asks (.externalServiceRateLimitOptions)
   checkSlidingWindowLimitWithOptions (makeVerifyPanHitsCountKey req.panNumber) externalServiceRateLimitOptions
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -99,7 +100,8 @@ verifyPan verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprovalR
   merchantServiceUsageConfig <-
     CQMSUC.findByMerchantOpCityId merchantOpCityId Nothing
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
-  let mbPanVerificationService = merchantServiceUsageConfig.panVerificationService
+  let mbPanVerificationService =
+        (if isDashboard then merchantServiceUsageConfig.dashboardPanVerificationService else merchantServiceUsageConfig.panVerificationService)
   whenJust mbMerchant $ \merchant -> do
     unless (merchant.id == person.merchantId) $ throwError (PersonNotFound personId.getId)
   let runBody = do

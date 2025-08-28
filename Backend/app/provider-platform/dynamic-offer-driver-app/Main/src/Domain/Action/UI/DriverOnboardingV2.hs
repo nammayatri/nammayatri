@@ -597,13 +597,25 @@ postDriverRegisterPancard ::
     API.Types.UI.DriverOnboardingV2.DriverPanReq ->
     Environment.Flow Kernel.Types.APISuccess.APISuccess
   )
-postDriverRegisterPancard (mbPersonId, merchantId, merchantOpCityId) req = do
+postDriverRegisterPancard (mbPersonId, merchantId, merchantOpCityId) req = postDriverRegisterPancardHelper (mbPersonId, merchantId, merchantOpCityId) False req
+
+postDriverRegisterPancardHelper ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    Bool ->
+    API.Types.UI.DriverOnboardingV2.DriverPanReq ->
+    Flow APISuccess
+  )
+postDriverRegisterPancardHelper (mbPersonId, merchantId, merchantOpCityId) isDashboard req = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- runInReplica $ PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   merchantServiceUsageConfig <-
     CQMSUC.findByMerchantOpCityId merchantOpCityId Nothing
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
-  let mbPanVerificationService = merchantServiceUsageConfig.panVerificationService
+  let mbPanVerificationService =
+        (if isDashboard then merchantServiceUsageConfig.dashboardPanVerificationService else merchantServiceUsageConfig.panVerificationService)
 
   mbPanInfo <- QDPC.findUnInvalidByPanNumber req.panNumber
   whenJust mbPanInfo $ \panInfo -> do

@@ -148,12 +148,12 @@ statusHandler (personId, merchantId, merchantOpCityId) makeSelfieAadhaarPanManda
 
 verifyPan :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> DriverOnboarding.DriverPanReq -> FlowHandler DriverOnboarding.DriverPanRes
 verifyPan (personId, merchantId, merchantOpCityId) req = withFlowHandlerAPI $ do
-  _ <- DriverOnboarding.verifyPan DPan.FRONTEND_SDK Nothing (personId, merchantId, merchantOpCityId) req Nothing
+  _ <- DriverOnboarding.verifyPan DPan.FRONTEND_SDK Nothing (personId, merchantId, merchantOpCityId) req Nothing False
   pure Success
 
 verifyGstin :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> DriverOnboarding.DriverGstinReq -> FlowHandler DriverOnboarding.DriverGstinRes
 verifyGstin (personId, merchantId, merchantOpCityId) req = withFlowHandlerAPI $ do
-  _ <- DriverOnboarding.verifyGstin DPan.FRONTEND_SDK Nothing (personId, merchantId, merchantOpCityId) req Nothing
+  _ <- DriverOnboarding.verifyGstin DPan.FRONTEND_SDK Nothing (personId, merchantId, merchantOpCityId) req Nothing False
   pure Success
 
 verifyAadhaar :: (Id DP.Person, Id DM.Merchant, Id DM.MerchantOperatingCity) -> DriverOnboarding.DriverAadhaarReq -> FlowHandler DriverOnboarding.DriverAadhaarRes
