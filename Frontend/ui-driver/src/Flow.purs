@@ -3177,7 +3177,7 @@ homeScreenFlow = do
       driverProfileFlow
     ON_CALL state exophoneNumber -> do
       callingOption <- getCustomerCallingNumber exophoneNumber state.data.activeRide.riderMobileNumber
-      when (callingOption == ST.AnonymousCall) $ do
+      when (callingOption == ST.AnonymousCall || (isNothing state.data.activeRide.riderMobileNumber)) $ do
         (API.ApiSuccessResult resp) <- Remote.onCallBT (Remote.makeOnCallReq state.data.activeRide.id exophoneNumber)
         pure unit
       homeScreenFlow
@@ -4927,7 +4927,7 @@ rideSummaryScreenFlow = do
     GO_TO_HOME_SCREEN_FROM_BANNER -> homeScreenFlow
     ON_CALLING state exophoneNumber -> do
       callingOption <- getCustomerCallingNumber exophoneNumber state.data.activeRideData.riderMobileNumber
-      when (callingOption == ST.AnonymousCall) $ do
+      when (callingOption == ST.AnonymousCall || (isNothing state.data.activeRideData.riderMobileNumber)) $ do
         (API.ApiSuccessResult resp) <- Remote.onCallBT (Remote.makeOnCallReq state.data.activeRideData.id exophoneNumber)
         pure unit
       rideSummaryScreenFlow
