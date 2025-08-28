@@ -1352,7 +1352,7 @@ markLegStatus mbStatus trackingStatus journeyLeg mbSubLegOrder = do
       Just JL.Arrived -> Just JMState.Arrived
       Just JL.Ongoing -> Just JMState.Ongoing
       Just JL.Finishing -> Just JMState.Finishing
-      Just JL.Skipped -> Just JMState.Finished
+      Just JL.Skipped -> Just JMState.InPlan
       Just JL.Cancelled -> Just JMState.Finished
       Just JL.Completed -> Just JMState.Finished
       Just JL.Failed -> Just JMState.Finished
