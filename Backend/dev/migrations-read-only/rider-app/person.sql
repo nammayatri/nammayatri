@@ -191,7 +191,6 @@ ALTER TABLE atlas_app.person ADD COLUMN latest_lat double precision ;
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_app.person ALTER COLUMN blocked_until SET DEFAULT ''; --------------didn't add this, got added by DSL
 
 ALTER TABLE atlas_app.person ADD COLUMN last_used_vehicle_service_tiers text[] ;
 

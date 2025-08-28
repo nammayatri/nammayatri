@@ -68,6 +68,15 @@ findByTransactionIdAndStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => T
 findByTransactionIdAndStatus txnId status =
   findOneWithKV [Se.And [Se.Is BeamB.transactionId $ Se.Eq txnId, Se.Is BeamB.status $ Se.Eq status]]
 
+findByTransactionIdAndStatuses :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> [BookingStatus] -> m (Maybe Booking)
+findByTransactionIdAndStatuses transactionId statusList =
+  findAllWithKVAndConditionalDB
+    [ Se.Is BeamB.transactionId $ Se.Eq transactionId,
+      Se.Is BeamB.status $ Se.In statusList
+    ]
+    (Just (Se.Desc BeamB.createdAt))
+    <&> listToMaybe
+
 findByStatusTripCatSchedulingAndMerchant :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Integer -> Maybe Integer -> Maybe DT.Day -> Maybe DT.Day -> BookingStatus -> Maybe DTC.TripCategory -> [DVST.ServiceTierType] -> Bool -> Id DMOC.MerchantOperatingCity -> Seconds -> m [Booking]
 findByStatusTripCatSchedulingAndMerchant mbLimit mbOffset mbFromDay mbToDay status mbTripCategory serviceTiers isScheduled (Id cityId) timeDiffFromUtc = do
   let limitVal = maybe 5 fromInteger mbLimit
