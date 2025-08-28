@@ -1362,6 +1362,7 @@ markLegStatus mbStatus trackingStatus journeyLeg mbSubLegOrder = do
     castJourneyLegStatusToTrackingStatus = \case
       Just JL.InPlan -> Just JMState.InPlan
       Just JL.Assigning -> Just JMState.InPlan
+      Just JL.Skipped -> Just JMState.InPlan
       Just JL.Booked -> Just JMState.InPlan
       Just JL.AtRiskOfMissing -> Just JMState.InPlan
       Just JL.Missed -> Just JMState.InPlan
@@ -1371,7 +1372,6 @@ markLegStatus mbStatus trackingStatus journeyLeg mbSubLegOrder = do
       Just JL.Arrived -> Just JMState.Arrived
       Just JL.Ongoing -> Just JMState.Ongoing
       Just JL.Finishing -> Just JMState.Finishing
-      Just JL.Skipped -> Just JMState.Finished
       Just JL.Cancelled -> Just JMState.Finished
       Just JL.Completed -> Just JMState.Finished
       Just JL.Failed -> Just JMState.Finished

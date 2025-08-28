@@ -195,7 +195,7 @@ getTaxiJourneyLegTrackingStatus taxiJourneyLegStatus journeyRouteDetails = do
       return Finished
     bookingStatus ->
       -- If status is completed, a booking should exist. If it appears here without a booking, it means the booking was cancelled.
-      if journeyRouteDetails.trackingStatus `elem` [Just Arriving, Just AlmostArrived, Just Arrived] && bookingStatus `elem` [Just (TaxiEstimate DTaxiEstimate.CANCELLED), Just (TaxiEstimate DTaxiEstimate.COMPLETED), Just (TaxiBooking DTaxiBooking.CANCELLED), Just (TaxiRide DTaxiRide.CANCELLED)]
+      if journeyRouteDetails.trackingStatus `elem` [Just Arriving, Just AlmostArrived, Just Arrived, Just Ongoing] && bookingStatus `elem` [Just (TaxiEstimate DTaxiEstimate.CANCELLED), Just (TaxiEstimate DTaxiEstimate.COMPLETED), Just (TaxiBooking DTaxiBooking.CANCELLED), Just (TaxiRide DTaxiRide.CANCELLED)]
         then do
           when (journeyRouteDetails.trackingStatus /= Just InPlan) $ do
             void $ QRouteDetails.updateTrackingStatus (Just InPlan) journeyRouteDetails.id
