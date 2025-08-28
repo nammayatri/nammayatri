@@ -539,6 +539,8 @@ MerchantServiceUsageConfig:
     faceVerificationService: VerificationService
     panVerificationService: Maybe VerificationService
     gstVerificationService: Maybe VerificationService
+    dashboardPanVerificationService: Maybe VerificationService
+    dashboardGstVerificationService: Maybe VerificationService
     issueTicketService: IssueTicketService
     rectifyDistantPointsFailure: MapsService
     getExophone: CallService
@@ -592,6 +594,8 @@ MerchantServiceUsageConfig:
     faceVerificationService: character varying(30)
     panVerificationService: character varying(30)
     gstVerificationService: character varying(30)
+    dashboardPanVerificationService: character varying(30)
+    dashboardGstVerificationService: character varying(30)
     issueTicketService: character varying(30)
     getExophone: character varying(255)
     snapToRoadProvidersList: "text[]"

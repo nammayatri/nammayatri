@@ -28,6 +28,8 @@ data MerchantServiceUsageConfigT f = MerchantServiceUsageConfigT
     backgroundVerification :: B.C f Kernel.External.BackgroundVerification.Types.BackgroundVerificationService,
     createBankAccount :: B.C f Kernel.External.Payment.Types.PaymentService,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
+    dashboardGstVerificationService :: B.C f (Kernel.Prelude.Maybe Kernel.External.Verification.Types.VerificationService),
+    dashboardPanVerificationService :: B.C f (Kernel.Prelude.Maybe Kernel.External.Verification.Types.VerificationService),
     driverBackgroundVerificationService :: B.C f Kernel.External.Verification.Types.DriverBackgroundVerificationService,
     faceVerificationService :: B.C f Kernel.External.Verification.Types.VerificationService,
     getBankAccount :: B.C f Kernel.External.Payment.Types.PaymentService,

@@ -70,8 +70,9 @@ verifyGstin ::
   (Id Person.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
   DriverGstinReq ->
   Maybe Bool ->
+  Bool ->
   Flow Bool
-verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprovalRequired = do
+verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprovalRequired isDashboard = do
   externalServiceRateLimitOptions <- asks (.externalServiceRateLimitOptions)
   checkSlidingWindowLimitWithOptions (makeVerifyGstinHitsCountKey req.gstin) externalServiceRateLimitOptions
 
@@ -93,7 +94,8 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
   merchantServiceUsageConfig <-
     CQMSUC.findByMerchantOpCityId merchantOpCityId Nothing
       >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
-  let mbGstVerificationService = merchantServiceUsageConfig.gstVerificationService
+  let mbGstVerificationService =
+        (if isDashboard then merchantServiceUsageConfig.dashboardGstVerificationService else merchantServiceUsageConfig.gstVerificationService)
   let runBody = do
         mdriverGstInformation <- DGQuery.findByDriverId person.id
         case mbGstVerificationService of
