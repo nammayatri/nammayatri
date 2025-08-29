@@ -137,7 +137,6 @@ eval UpdateOverlayPermissionState state = continue state {props {isOverlayPermis
 eval UpdateBatteryPermissionState state = continue state {props {isBatteryOptimizationChecked = true}}
 eval UpdateLocationPermissionState state = continue state {props {isLocationPermissionChecked = true}}
 
-
 eval (NotificationPermissionCallBack isNotificationPermissionEnabled) state = do
   if isNotificationPermissionEnabled then do
     let _ = unsafePerformEffect $ logEvent state.data.logField  "permission_granted_notification"

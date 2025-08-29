@@ -1,7 +1,7 @@
 #!/bin/bash
 echo " ---------- Customer prod:android :- --------------"
 cd ../ui-customer
-npm run prod:android
+# npm run prod:android
 cd ./../android-native
 
 echo " ---------- Copy index_bundle.js Customer :- --------------"

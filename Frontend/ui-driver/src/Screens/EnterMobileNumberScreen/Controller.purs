@@ -13,14 +13,9 @@
   the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Screens.EnterMobileNumberScreen.Controller
-  ( Action(..)
-  , ScreenOutput(..)
-  , eval
-  )
-  where
-import Prelude (class Show, not, pure, unit, (&&), (<=), (==), (||), discard, bind, ($), (>), show, (<>))
-import PrestoDOM (Eval, update, continue, continueWithCmd, exit)
+module Screens.EnterMobileNumberScreen.Controller where
+import Prelude (class Show, not, pure, unit, (&&), (<=), (==), (||), discard, bind, ($), (>), (<), void, show, (<>))
+import PrestoDOM (Eval, update, continue, continueWithCmd, exit, updateAndExit)
 import Screens.Types (EnterMobileNumberScreenState)
 import Components.PrimaryEditText.Controllers as PrimaryEditText
 import Components.MobileNumberEditor as MobileNumberEditor
@@ -37,6 +32,7 @@ import Screens (ScreenName(..), getScreen)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.LogEvent (logEvent)
 import ConfigProvider
+import JBridge (toggleBtnLoader)
 
 instance showAction :: Show Action where
   show (BackPressed ) = "BackPressed"
@@ -86,7 +82,7 @@ eval AfterRender state = continue state
 eval BackPressed state = do
         pure $ hideKeyboardOnNavigation true
         exit GoBack
-eval (PrimaryButtonActionController (PrimaryButton.OnClick)) state = exit (GoToNextScreen state)
+eval (PrimaryButtonActionController (PrimaryButton.OnClick)) state = updateAndExit state {props{btnLoader = true}} $ GoToNextScreen state{props{btnLoader = true}}
 eval (PrimaryEditTextAction (MobileNumberEditor.TextChanged valId newVal)) state = do
   _ <- if length newVal == 10 then do
             pure $ hideKeyboardOnNavigation true 
@@ -104,6 +100,9 @@ eval (PrimaryEditTextAction (MobileNumberEditor.TextChanged valId newVal)) state
     pure unit
     else pure unit
   continue  state { props = state.props { btnActive = if (length newVal == 10 && isValidMobileNumber) then true else false
-                                        , isValid = not isValidMobileNumber }
+                                        , isValid = not isValidMobileNumber
+                                        , mobileNumberEditFocused = length newVal < 10 }
                                         , data = state.data { mobileNumber = if length newVal <= 10 then newVal else state.data.mobileNumber}}
+
+eval (PrimaryEditTextAction (MobileNumberEditor.FocusChanged focusChanged)) state = continue state { props {mobileNumberEditFocused = focusChanged}} 
 eval _ state = update state

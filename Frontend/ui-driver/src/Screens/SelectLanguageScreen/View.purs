@@ -73,6 +73,11 @@ view push state =
       , afterRender push (const AfterRender)
       ][  headerLayout push state
         , menuButtonsView state push
+        , linearLayout
+          [ height $ V 1
+          , width MATCH_PARENT
+          , background Color.grey800
+          ][]
         , PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state)
       ]
 
@@ -144,7 +149,7 @@ menuButtonsView state push =
               [   height WRAP_CONTENT
                 , width MATCH_PARENT
                 , orientation VERTICAL
-                , margin $ Margin 1 16 1 0
+                , margin $ Margin 16 16 16 5
                 , background Color.white900
               ](DA.mapWithIndex
                   (\ index language ->

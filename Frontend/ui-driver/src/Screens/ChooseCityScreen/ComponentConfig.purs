@@ -21,6 +21,7 @@ import Data.String.Common as DSC
 import MerchantConfig.Types (AppConfig)
 import Components.SelectMenuButton as MenuButton
 import MerchantConfig.Types as MT
+import Engineering.Helpers.Utils as EHU
 
 ---------------- genericHeaderConfig ----------------
 genericHeaderConfig :: ChooseCityScreenState -> GenericHeader.Config
@@ -31,7 +32,7 @@ genericHeaderConfig state =
       { height = (V 30)
       , width = (V 30)
       , margin = (MarginRight 16)
-      , imageUrl = fetchImage FF_ASSET "ny_ic_chevron_left"
+      , imageUrl = fetchImage FF_ASSET state.data.config.themeColors.defaultBackButton
       , padding = (Padding 5 5 5 5)
       , enableRipple = true
       }
@@ -56,7 +57,7 @@ primaryButtonConfig state = let
     primaryButtonConfig' = config 
       { textConfig { text = getString case state.props.currentStage of
                                         SELECT_LANG ->  CONFIRM_LANGUAGE
-                                        SELECT_CITY ->  CONFIRM_LOCATION_STR
+                                        SELECT_CITY ->  CONFIRM
                                         ENABLE_PERMISSION -> ENABLE_LOCATION
                                         _ -> CONFIRM
 
@@ -131,8 +132,8 @@ mockLocationConfig state =
         , buttonConfig
           { visibility = GONE }
         }
-menuButtonConfig :: Int -> MT.Language -> String -> MenuButton.State
-menuButtonConfig index language selectedVal = MenuButton.config { 
+menuButtonConfig :: Int -> MT.Language -> String -> ChooseCityScreenState -> MenuButton.State
+menuButtonConfig index language selectedVal state = MenuButton.config { 
   text =
     { name: language.name
     , value: language.value
@@ -141,7 +142,9 @@ menuButtonConfig index language selectedVal = MenuButton.config {
   isSelected = selectedVal == language.value,
   index = index, 
   lineVisibility = false, 
-  activeStrokeColor = Color.blue900, 
-  activeBgColor = Color.blue600, 
-  inactiveStrokeColor = Color.grey700
+  activeStrokeColor = EHU.getColorWithOpacity 12 state.data.config.themeColors.radioActiveStroke,
+  activeBgColor = EHU.getColorWithOpacity 12 state.data.config.themeColors.radioActiveBackground,
+  inactiveStrokeColor = Color.grey100,
+  inactiveBgColor = state.data.config.themeColors.radioInactiveBackground,
+  radioSelectedImage = state.data.config.themeColors.radioSelectedImage
   }

@@ -139,6 +139,11 @@ newtype Keymap = Keymap {
   , terms_and_conditions :: String
   , update_vehicle_details :: String
   , help_and_support :: String
+  , faqs :: String
+  , whatsapp_chat :: String
+  , mail_us :: String
+  , call_us :: String
+  , operations_hub :: String
   , note :: String
   , visit_my_rides_screen_for_specific_complaints :: String
   , thank_you_for_wrtitting_us :: String
@@ -203,6 +208,7 @@ newtype Keymap = Keymap {
   , time_taken :: String
   , maps :: String
   , call :: String
+  , whatsapp :: String
   , start_ride :: String
   , cancel_ride :: String
   , please_tell_us_why_you_want_to_cancel :: String
@@ -328,9 +334,58 @@ newtype Keymap = Keymap {
   , something_went_wrong :: String
   , pickup :: String
   , trip :: String
+  , optional_str :: String
+  , my_vehicle :: String
+  , app_permissions :: String
+  , trainings :: String
+  , verify :: String
+  , invalid_code_please_re_enter :: String
+  , verified_linked_with_name :: String -> String
+  , visit_your_nearest_hub_to_complete_a_short_vehicle_inspection_to_start_earning_with_us :: String
+  , you_will_be_contacted_by_your_selected_hub_within_24_hours :: String
+  , operator_referral_code_applied :: String
+  , got_an_operator_referral_code :: String
+  , locate_on_map :: String
+  , contact_number :: String
+  , address :: String
+  , vehicle_photos :: String
+  , operation_hub :: String
+  , take_a_clear_picture_of_the_vehicle_from_the_suggested_angles :: String
+  , take_a_clear_selfie_with_your_face_inside_the_marked_area :: String
+  , ensure_only_your_vehicle_is_in_the_frame_when_uploading :: String
+  , only_your_face_should_be_in_the_frame_when_uploading_the_image :: String
+  , full_view :: String
+  , avoid_people :: String
+  , cropped_area :: String
+  , inside_marked_area :: String
+  , no_closed_eyes :: String
+  , more_than_one_face :: String
+  , outside_marked_area :: String
+  , front_str :: String
+  , back_str :: String
+  , left_str :: String
+  , right_str :: String
+  , odometer_str :: String
+  , front_interior :: String
+  , rear_interior :: String
+  , enter_the_code_shared_with_you_by_the_operations_agent_during_onboarding :: String
+  , register_your_profile :: String
+  , registration_completed :: String
+  , we_will_notify_you_when_we_go_live :: String
+  , upload_again :: String
+  , select_operation_hub :: String
+  , help_centre :: String
+  , all_time :: String
+  , subscription_amount_spent :: String
+  , ride_boost_received :: String
+  , cancellation_charges_received :: String
+  , todays :: String
   , currently_we_allow_only_karnataka_registered_number :: String -> String
   , re_enter_vehicle_registration_number :: String
   , re_enter_driving_license_number :: String
+  , eligibility_criteria_for_rc :: String
+  , car_must_be_less_than_3_years_old :: String
+  , car_must_be_sedan_vehicle :: String
   , updated_at :: String
   , trip_count :: String
   , todays_earnings :: String
@@ -663,6 +718,7 @@ newtype Keymap = Keymap {
   , customer_added_a_stop :: String
   , aadhaar_linking_required_description :: String -> String
   , by_clicking_this_you_will_be_agreeing_to_our_tc :: String
+  , by_clicking_this_you_will_be_agreeing_to_our :: String
   , terms_and_conditions_short :: String
   , otp_sent_to_aadhaar_number :: String
   , enter_six_digit_otp :: String
@@ -1106,12 +1162,14 @@ newtype Keymap = Keymap {
   , subscription_plan_str :: String -> String
   , complete_autopay_later :: String
   , start_earning_in_four_steps :: String
+  , complete_the_steps_to_start_earning :: String
   , complete :: String
   , how_to_upload :: String
   , take_clear_picture_dl :: String
   , ensure_adequate_light :: String
   , fit_dl_correctly :: String
   , take_photo :: String
+  , take_slash_upload_photo :: String
   , fit_rc_correctly :: String
   , take_clear_picture_rc :: String
   , dl_uploaded :: String
@@ -1124,6 +1182,7 @@ newtype Keymap = Keymap {
   , retake_photo :: String
   , change_city :: String
   , lets_get_you_trip_ready :: String
+  , welcome_lets_get_started :: String
   , got_an_otp :: String
   , driving_license_details :: String
   , vehicle_registration_details :: String
@@ -1584,6 +1643,7 @@ newtype Keymap = Keymap {
   , yatri_points_faqs_ques1_ans4 :: String -> String
   , yatri_points_tnc :: String
   , yatri_points_faqs_ques2_ans3 :: String
+  , faqs_str :: String
   , hotspots :: String
   , very_high :: String
   , high :: String
@@ -1625,7 +1685,7 @@ newtype Keymap = Keymap {
   , remove_eyewere :: String
   , image_validation_exceed_limit :: String
   , parking_charges_included :: String -> String
-  , invoice_generated_from_driver_to_rider :: String
+  , collect_from_the_customer_via_upi_qr_or_cash :: String
   , included :: String
   , db_check_and_name_match_failed :: String
   , complete_your_profile :: String
@@ -1820,6 +1880,85 @@ newtype Keymap = Keymap {
   , drivers_are_permitted_to_cancel_ambulance_bookings :: String
   , payment_under_maintenance :: String
   , payments_temporarily_unavailable :: String
+  -- Onboarding FAQ Keys
+  , onboarding_faq_setting_up_account :: String
+  , onboarding_faq_managing_account :: String
+  , onboarding_faq_adding_managing_drivers :: String
+  , onboarding_faq_adding_managing_vehicles :: String
+  , onboarding_faq_mapping_drivers_vehicles :: String
+  , onboarding_faq_register_fleet_operator_q :: String
+  , onboarding_faq_register_fleet_operator_a :: String
+  , onboarding_faq_choose_language_q :: String
+  , onboarding_faq_choose_language_a :: String
+  , onboarding_faq_signup_email_q :: String
+  , onboarding_faq_signup_email_a :: String
+  , onboarding_faq_otp_issue_q :: String
+  , onboarding_faq_otp_issue_a :: String
+  , onboarding_faq_individual_business_fleet_q :: String
+  , onboarding_faq_individual_business_fleet_a :: String
+  , onboarding_faq_registration_details_q :: String
+  , onboarding_faq_registration_details_a :: String
+  , onboarding_faq_operating_cities_q :: String
+  , onboarding_faq_operating_cities_a :: String
+  , onboarding_faq_operator_referral_code_q :: String
+  , onboarding_faq_operator_referral_code_a :: String
+  , onboarding_faq_required_documents_q :: String
+  , onboarding_faq_required_documents_a :: String
+  , onboarding_faq_registration_assistance_q :: String
+  , onboarding_faq_registration_assistance_a :: String
+  , onboarding_faq_update_documents_q :: String
+  , onboarding_faq_update_documents_a :: String
+  , onboarding_faq_view_profile_q :: String
+  , onboarding_faq_view_profile_a :: String
+  , onboarding_faq_logout_q :: String
+  , onboarding_faq_logout_a :: String
+  , onboarding_faq_profile_picture_q :: String
+  , onboarding_faq_profile_picture_a :: String
+  , onboarding_faq_msil_provide_drivers_q :: String
+  , onboarding_faq_msil_provide_drivers_a :: String
+  , onboarding_faq_add_multiple_drivers_q :: String
+  , onboarding_faq_add_multiple_drivers_a :: String
+  , onboarding_faq_onboard_driver_q :: String
+  , onboarding_faq_onboard_driver_a :: String
+  , onboarding_faq_add_driver_manually_q :: String
+  , onboarding_faq_add_driver_manually_a :: String
+  , onboarding_faq_driver_bulk_upload_q :: String
+  , onboarding_faq_driver_bulk_upload_a :: String
+  , onboarding_faq_driver_documents_q :: String
+  , onboarding_faq_driver_documents_a :: String
+  , onboarding_faq_driver_tab_q :: String
+  , onboarding_faq_driver_tab_a :: String
+  , onboarding_faq_track_driver_docs_q :: String
+  , onboarding_faq_track_driver_docs_a :: String
+  , onboarding_faq_add_remove_drivers_q :: String
+  , onboarding_faq_add_remove_drivers_a :: String
+  , onboarding_faq_manage_driver_docs_q :: String
+  , onboarding_faq_manage_driver_docs_a :: String
+  , onboarding_faq_onboard_vehicle_q :: String
+  , onboarding_faq_onboard_vehicle_a :: String
+  , onboarding_faq_add_multiple_vehicles_q :: String
+  , onboarding_faq_add_multiple_vehicles_a :: String
+  , onboarding_faq_vehicle_documents_q :: String
+  , onboarding_faq_vehicle_documents_a :: String
+  , onboarding_faq_readd_vehicle_q :: String
+  , onboarding_faq_readd_vehicle_a :: String
+  , onboarding_faq_vehicle_inspection_q :: String
+  , onboarding_faq_vehicle_inspection_a :: String
+  , onboarding_faq_inspection_cost_q :: String
+  , onboarding_faq_inspection_cost_a :: String
+  , onboarding_faq_manage_vehicle_docs_q :: String
+  , onboarding_faq_manage_vehicle_docs_a :: String
+  , onboarding_faq_track_vehicle_docs_q :: String
+  , onboarding_faq_track_vehicle_docs_a :: String
+  , onboarding_faq_assign_driver_vehicle_q :: String
+  , onboarding_faq_assign_driver_vehicle_a :: String
+  , onboarding_faq_remove_vehicle_q :: String
+  , onboarding_faq_remove_vehicle_a :: String
+  , onboarding_faq_edit_vehicle_q :: String
+  , onboarding_faq_edit_vehicle_a :: String
+  , onboarding_faq_update_driver_status_q :: String
+  , onboarding_faq_update_driver_status_a :: String
+  , contact_hub :: String
   , extra_charge_penalty :: String
   , out_of_rides :: String -> String -> String
   , extra_charged :: String
@@ -1850,83 +1989,83 @@ newtype Keymap = Keymap {
   , end_ride_with_stops :: String
   , stop :: String -> String
   , rate_changes_as_the_distance_changes :: String
-    , nammanmeter :: String
-    , press_to_cancel :: String
-    , dist :: String
-    , km :: String
-    , updated_at_ :: String
-    , time :: String
-    , enter_destination :: String
-    , stop_meter :: String
-    , upton2km :: String
-    , meter_running :: String
-    , confirm_meter_stop :: String
-    , package :: String
-    , cancellation_score :: String
-    , safety_score :: String
-    , overcharging_score :: String
-    , you_have_been_unsafe :: String
-    , you_have_been_watchlisted :: String
-    , you_are_safe :: String
-    , safe :: String
-    , watchlisted :: String
-    , unsafe :: String
-    , good_cancellation_score :: String
-    , poor_cancellation_score :: String
-    , good :: String
-    , poor :: String
-    , open_meter :: String
-    , this_ride_includes_a_pet :: String
-    , pet_rides :: String
-    , thanks_for_accepting_pet_ride :: String
-    , clean_the_vehicle_after_ride_if_needed :: String
-    , the_customer_is_responsible_for_pet :: String
-    , please_resume_ride_to_continue :: String
-    , you_are_too_far_from_the_stop :: String
-    , you_may_lose_some_coins_if_you_cancel_this_ride :: String
-    , cancellation_compensation :: String
-    , cancellation_penalisaton :: String
-    , i_agree_to :: String
-    , namma_kutumba :: String
-    , become_a_member_of_the_namma_driver_welfare_trust :: String
-    , never_raise_fraudulent_claim :: String
-    , ask_only_the_fair_price_shown_in_the_app :: String
-    , follow_safety_standards :: String
-    , provide_sakkath_service_to_the_customers :: String
-    , i_have_read_and_accept_the :: String
-    , nominate_your_representative :: String
-    , your_namma_kutumba_membership_has_been_revoked :: String
-    , high_cancellation_rate_take_more_rides :: String
-    , accidental_medical_support :: String
-    , accidental_death_support :: String
-    , medical_health_insurance :: String
-    , personal_loans :: String
-    , namma_support :: String
-    , accidental_medical_support_description :: String
-    , accidental_death_support_description :: String
-    , medical_health_insurance_description :: String
-    , personal_loans_description :: String
-    , namma_support_description :: String
-    , eligibility_criteria :: String
-    , completed_50_rides_in_the_last_3_months :: String
-    , safety_score_of_80_or_above :: String
-    , rating_of_4_6_or_above :: String
-    , cancellation_rate_below_30 :: String
-    , claim_via :: String
-    , what_is_kutumba :: String
-    , how_can_i_be_eligible :: String
-    , can_i_refer_a_friend_to_kutumba_once_i_am_eligible :: String
-    , how_do_i_claim_a_benefit :: String
-    , are_there_limits_on_claims_per_month :: String
-    , what_is_kutumba_answer :: String
-    , how_can_i_be_eligible_answer :: String
-    , can_i_refer_a_friend_to_kutumba_once_i_am_eligible_answer :: String
-    , how_do_i_claim_a_benefit_answer :: String
-    , are_there_limits_on_claims_per_month_answer :: String
-    , view_less :: String
-    , you_are_in_probation_period_till :: String -> String
-    , pass_all_eligibility_criteria_to_continue_being_a_member :: String
-    , metro :: String
+  , nammanmeter :: String
+  , press_to_cancel :: String
+  , dist :: String
+  , km :: String
+  , updated_at_ :: String
+  , time :: String
+  , enter_destination :: String
+  , stop_meter :: String
+  , upton2km :: String
+  , meter_running :: String
+  , confirm_meter_stop :: String
+  , package :: String
+  , cancellation_score :: String
+  , safety_score :: String
+  , overcharging_score :: String
+  , you_have_been_unsafe :: String
+  , you_have_been_watchlisted :: String
+  , you_are_safe :: String
+  , safe :: String
+  , watchlisted :: String
+  , unsafe :: String
+  , good_cancellation_score :: String
+  , poor_cancellation_score :: String
+  , good :: String
+  , poor :: String
+  , open_meter :: String
+  , this_ride_includes_a_pet :: String
+  , pet_rides :: String
+  , thanks_for_accepting_pet_ride :: String
+  , clean_the_vehicle_after_ride_if_needed :: String
+  , the_customer_is_responsible_for_pet :: String
+  , please_resume_ride_to_continue :: String
+  , you_are_too_far_from_the_stop :: String
+  , you_may_lose_some_coins_if_you_cancel_this_ride :: String
+  , cancellation_compensation :: String
+  , cancellation_penalisaton :: String
+  , i_agree_to :: String
+  , namma_kutumba :: String
+  , become_a_member_of_the_namma_driver_welfare_trust :: String
+  , never_raise_fraudulent_claim :: String
+  , ask_only_the_fair_price_shown_in_the_app :: String
+  , follow_safety_standards :: String
+  , provide_sakkath_service_to_the_customers :: String
+  , i_have_read_and_accept_the :: String
+  , nominate_your_representative :: String
+  , your_namma_kutumba_membership_has_been_revoked :: String
+  , high_cancellation_rate_take_more_rides :: String
+  , accidental_medical_support :: String
+  , accidental_death_support :: String
+  , medical_health_insurance :: String
+  , personal_loans :: String
+  , namma_support :: String
+  , accidental_medical_support_description :: String
+  , accidental_death_support_description :: String
+  , medical_health_insurance_description :: String
+  , personal_loans_description :: String
+  , namma_support_description :: String
+  , eligibility_criteria :: String
+  , completed_50_rides_in_the_last_3_months :: String
+  , safety_score_of_80_or_above :: String
+  , rating_of_4_6_or_above :: String
+  , cancellation_rate_below_30 :: String
+  , claim_via :: String
+  , what_is_kutumba :: String
+  , how_can_i_be_eligible :: String
+  , can_i_refer_a_friend_to_kutumba_once_i_am_eligible :: String
+  , how_do_i_claim_a_benefit :: String
+  , are_there_limits_on_claims_per_month :: String
+  , what_is_kutumba_answer :: String
+  , how_can_i_be_eligible_answer :: String
+  , can_i_refer_a_friend_to_kutumba_once_i_am_eligible_answer :: String
+  , how_do_i_claim_a_benefit_answer :: String
+  , are_there_limits_on_claims_per_month_answer :: String
+  , view_less :: String
+  , you_are_in_probation_period_till :: String -> String
+  , pass_all_eligibility_criteria_to_continue_being_a_member :: String
+  , metro :: String
 
 }
 
@@ -2309,6 +2448,21 @@ update_vehicle_details = a
 help_and_support :: Proxy "help_and_support"
 help_and_support = a
 
+faqs :: Proxy "faqs"
+faqs = a
+
+whatsapp_chat :: Proxy "whatsapp_chat"
+whatsapp_chat = a
+
+mail_us :: Proxy "mail_us"
+mail_us = a
+
+call_us :: Proxy "call_us"
+call_us = a
+
+operations_hub :: Proxy "operations_hub"
+operations_hub = a
+
 note :: Proxy "note"
 note = a
 
@@ -2500,6 +2654,9 @@ maps = a
 
 call :: Proxy "call"
 call = a
+
+whatsapp :: Proxy "whatsapp"
+whatsapp = a
 
 start_ride :: Proxy "start_ride"
 start_ride = a
@@ -2876,6 +3033,144 @@ pickup = a
 trip :: Proxy "trip"
 trip = a
 
+optional_str :: Proxy "optional_str"
+optional_str = a
+
+my_vehicle :: Proxy "my_vehicle"
+my_vehicle = a
+
+app_permissions :: Proxy "app_permissions"
+app_permissions = a
+
+trainings :: Proxy "trainings"
+trainings = a
+
+verify :: Proxy "verify"
+verify = a
+
+invalid_code_please_re_enter :: Proxy "invalid_code_please_re_enter"
+invalid_code_please_re_enter = a
+
+visit_your_nearest_hub_to_complete_a_short_vehicle_inspection_to_start_earning_with_us :: Proxy "visit_your_nearest_hub_to_complete_a_short_vehicle_inspection_to_start_earning_with_us"
+visit_your_nearest_hub_to_complete_a_short_vehicle_inspection_to_start_earning_with_us = a
+
+you_will_be_contacted_by_your_selected_hub_within_24_hours :: Proxy "you_will_be_contacted_by_your_selected_hub_within_24_hours"
+you_will_be_contacted_by_your_selected_hub_within_24_hours = a
+
+verified_linked_with_name :: Proxy "verified_linked_with_name"
+verified_linked_with_name = a
+
+operator_referral_code_applied :: Proxy "operator_referral_code_applied"
+operator_referral_code_applied = a
+
+got_an_operator_referral_code :: Proxy "got_an_operator_referral_code"
+got_an_operator_referral_code = a
+
+locate_on_map :: Proxy "locate_on_map"
+locate_on_map = a
+
+contact_number :: Proxy "contact_number"
+contact_number = a
+
+address :: Proxy "address"
+address = a
+
+vehicle_photos :: Proxy "vehicle_photos"
+vehicle_photos = a
+
+operation_hub :: Proxy "operation_hub"
+operation_hub = a
+
+take_a_clear_picture_of_the_vehicle_from_the_suggested_angles :: Proxy "take_a_clear_picture_of_the_vehicle_from_the_suggested_angles"
+take_a_clear_picture_of_the_vehicle_from_the_suggested_angles = a
+
+take_a_clear_selfie_with_your_face_inside_the_marked_area :: Proxy "take_a_clear_selfie_with_your_face_inside_the_marked_area"
+take_a_clear_selfie_with_your_face_inside_the_marked_area = a
+
+ensure_only_your_vehicle_is_in_the_frame_when_uploading :: Proxy "ensure_only_your_vehicle_is_in_the_frame_when_uploading"
+ensure_only_your_vehicle_is_in_the_frame_when_uploading = a
+
+only_your_face_should_be_in_the_frame_when_uploading_the_image :: Proxy "only_your_face_should_be_in_the_frame_when_uploading_the_image"
+only_your_face_should_be_in_the_frame_when_uploading_the_image = a
+
+full_view :: Proxy "full_view"
+full_view = a
+
+avoid_people :: Proxy "avoid_people"
+avoid_people = a
+
+cropped_area :: Proxy "cropped_area"
+cropped_area = a
+
+inside_marked_area ::  Proxy "inside_marked_area"
+inside_marked_area = a
+
+no_closed_eyes :: Proxy "no_closed_eyes"
+no_closed_eyes = a
+
+more_than_one_face :: Proxy "more_than_one_face"
+more_than_one_face = a
+
+outside_marked_area :: Proxy "outside_marked_area"
+outside_marked_area = a
+
+front_str :: Proxy "front_str"
+front_str = a
+
+back_str :: Proxy "back_str"
+back_str = a
+
+left_str :: Proxy "left_str"
+left_str = a
+
+right_str :: Proxy "right_str"
+right_str = a
+
+odometer_str :: Proxy "odometer_str"
+odometer_str = a
+
+front_interior :: Proxy "front_interior"
+front_interior = a
+
+rear_interior :: Proxy "rear_interior"
+rear_interior = a
+
+enter_the_code_shared_with_you_by_the_operations_agent_during_onboarding :: Proxy "enter_the_code_shared_with_you_by_the_operations_agent_during_onboarding"
+enter_the_code_shared_with_you_by_the_operations_agent_during_onboarding = a
+
+register_your_profile :: Proxy "register_your_profile"
+register_your_profile = a
+
+registration_completed :: Proxy "registration_completed"
+registration_completed = a
+
+we_will_notify_you_when_we_go_live :: Proxy "we_will_notify_you_when_we_go_live"
+we_will_notify_you_when_we_go_live = a
+
+upload_again :: Proxy "upload_again"
+upload_again = a
+
+select_operation_hub :: Proxy "select_operation_hub"
+select_operation_hub = a
+
+help_centre :: Proxy "help_centre"
+help_centre = a
+
+all_time :: Proxy "all_time"
+all_time = a
+
+subscription_amount_spent :: Proxy "subscription_amount_spent"
+subscription_amount_spent = a
+
+ride_boost_received :: Proxy "ride_boost_received"
+ride_boost_received = a
+
+cancellation_charges_received :: Proxy "cancellation_charges_received"
+cancellation_charges_received = a
+
+todays :: Proxy "todays"
+todays = a
+
 currently_we_allow_only_karnataka_registered_number :: Proxy "currently_we_allow_only_karnataka_registered_number"
 currently_we_allow_only_karnataka_registered_number = a
 
@@ -2884,6 +3179,15 @@ re_enter_vehicle_registration_number = a
 
 re_enter_driving_license_number :: Proxy "re_enter_driving_license_number"
 re_enter_driving_license_number = a
+
+eligibility_criteria_for_rc :: Proxy "eligibility_criteria_for_rc"
+eligibility_criteria_for_rc = a
+
+car_must_be_less_than_3_years_old :: Proxy "car_must_be_less_than_3_years_old"
+car_must_be_less_than_3_years_old = a
+
+car_must_be_sedan_vehicle :: Proxy "car_must_be_sedan_vehicle"
+car_must_be_sedan_vehicle = a
 
 updated_at :: Proxy "updated_at"
 updated_at = a
@@ -3880,6 +4184,9 @@ aadhaar_linking_required_description = a
 
 by_clicking_this_you_will_be_agreeing_to_our_tc :: Proxy "by_clicking_this_you_will_be_agreeing_to_our_tc"
 by_clicking_this_you_will_be_agreeing_to_our_tc = a
+
+by_clicking_this_you_will_be_agreeing_to_our :: Proxy "by_clicking_this_you_will_be_agreeing_to_our"
+by_clicking_this_you_will_be_agreeing_to_our = a
 
 terms_and_conditions_short :: Proxy "terms_and_conditions_short"
 terms_and_conditions_short = a
@@ -5210,6 +5517,9 @@ complete_autopay_later = a
 start_earning_in_four_steps :: Proxy "start_earning_in_four_steps"
 start_earning_in_four_steps = a
 
+complete_the_steps_to_start_earning :: Proxy "complete_the_steps_to_start_earning"
+complete_the_steps_to_start_earning = a
+
 complete :: Proxy "complete"
 complete = a
 
@@ -5227,6 +5537,9 @@ fit_dl_correctly = a
 
 take_photo :: Proxy "take_photo"
 take_photo = a
+
+take_slash_upload_photo :: Proxy "take_slash_upload_photo"
+take_slash_upload_photo = a 
 
 fit_rc_correctly :: Proxy "fit_rc_correctly"
 fit_rc_correctly = a
@@ -5263,6 +5576,9 @@ change_city = a
 
 lets_get_you_trip_ready :: Proxy "lets_get_you_trip_ready"
 lets_get_you_trip_ready = a
+
+welcome_lets_get_started :: Proxy "welcome_lets_get_started"
+welcome_lets_get_started = a
 
 got_an_otp :: Proxy "got_an_otp"
 got_an_otp = a
@@ -6638,6 +6954,9 @@ yatri_points_tnc = a
 yatri_points_faqs_ques2_ans3 :: Proxy "yatri_points_faqs_ques2_ans3"
 yatri_points_faqs_ques2_ans3 = a
 
+faqs_str :: Proxy "faqs_str"
+faqs_str = a
+
 hotspots :: Proxy "hotspots"
 hotspots = a
 
@@ -6761,8 +7080,8 @@ image_validation_exceed_limit = a
 parking_charges_included :: Proxy "parking_charges_included"
 parking_charges_included = a
 
-invoice_generated_from_driver_to_rider :: Proxy "invoice_generated_from_driver_to_rider"
-invoice_generated_from_driver_to_rider = a
+collect_from_the_customer_via_upi_qr_or_cash :: Proxy "collect_from_the_customer_via_upi_qr_or_cash"
+collect_from_the_customer_via_upi_qr_or_cash = a
 
 included :: Proxy "included"
 included = a
@@ -7427,29 +7746,40 @@ suspended_till = Proxy
 
 fair_price_driver :: Proxy "fair_price_driver"
 fair_price_driver = Proxy
+
 stop :: Proxy "stop"
 stop = a
 
 rate_changes_as_the_distance_changes :: Proxy "rate_changes_as_the_distance_changes"
 rate_changes_as_the_distance_changes = a
+
 nammanmeter :: Proxy "nammanmeter"
 nammanmeter = a
+
 press_to_cancel :: Proxy "press_to_cancel"
 press_to_cancel = a
+
 dist :: Proxy "dist"
 dist = a
+
 km :: Proxy "km"
 km = a
+
 updated_at_ :: Proxy "updated_at_"
 updated_at_ = a
+
 time :: Proxy "time"
 time = a
+
 enter_destination :: Proxy "enter_destination"
 enter_destination = a
+
 stop_meter :: Proxy "stop_meter"
 stop_meter = a
+
 upton2km :: Proxy "upton2km"
 upton2km = a
+
 meter_running :: Proxy "meter_running"
 meter_running = a
 
@@ -7458,10 +7788,13 @@ confirm_meter_stop = a
 
 confirm_destination :: Proxy "confirm_destination"
 confirm_destination = a
+
 search_results :: Proxy "search_results"
 search_results = a
+
 start_typing_to_search_places :: Proxy "start_typing_to_search_places"
 start_typing_to_search_places = a
+
 bus_number :: Proxy "bus_number"
 bus_number = a
 
@@ -7473,7 +7806,6 @@ namma_meter = a
 
 package :: Proxy "package"
 package = a
-
 
 end_ride_with_stops ::Proxy "package"
 end_ride_with_stops = a
@@ -7651,3 +7983,237 @@ pass_all_eligibility_criteria_to_continue_being_a_member = a
 
 metro :: Proxy "metro"
 metro = a
+
+onboarding_faq_setting_up_account :: Proxy "onboarding_faq_setting_up_account"
+onboarding_faq_setting_up_account = a
+
+onboarding_faq_managing_account :: Proxy "onboarding_faq_managing_account"
+onboarding_faq_managing_account = a
+
+onboarding_faq_adding_managing_drivers :: Proxy "onboarding_faq_adding_managing_drivers"
+onboarding_faq_adding_managing_drivers = a
+
+onboarding_faq_adding_managing_vehicles :: Proxy "onboarding_faq_adding_managing_vehicles"
+onboarding_faq_adding_managing_vehicles = a
+
+onboarding_faq_mapping_drivers_vehicles :: Proxy "onboarding_faq_mapping_drivers_vehicles"
+onboarding_faq_mapping_drivers_vehicles = a
+
+onboarding_faq_register_fleet_operator_q :: Proxy "onboarding_faq_register_fleet_operator_q"
+onboarding_faq_register_fleet_operator_q = a
+
+onboarding_faq_register_fleet_operator_a :: Proxy "onboarding_faq_register_fleet_operator_a"
+onboarding_faq_register_fleet_operator_a = a
+
+onboarding_faq_choose_language_q :: Proxy "onboarding_faq_choose_language_q"
+onboarding_faq_choose_language_q = a
+
+onboarding_faq_choose_language_a :: Proxy "onboarding_faq_choose_language_a"
+onboarding_faq_choose_language_a = a
+
+onboarding_faq_signup_email_q :: Proxy "onboarding_faq_signup_email_q"
+onboarding_faq_signup_email_q = a
+
+onboarding_faq_signup_email_a :: Proxy "onboarding_faq_signup_email_a"
+onboarding_faq_signup_email_a = a
+
+onboarding_faq_otp_issue_q :: Proxy "onboarding_faq_otp_issue_q"
+onboarding_faq_otp_issue_q = a
+
+onboarding_faq_otp_issue_a :: Proxy "onboarding_faq_otp_issue_a"
+onboarding_faq_otp_issue_a = a
+
+onboarding_faq_individual_business_fleet_q :: Proxy "onboarding_faq_individual_business_fleet_q"
+onboarding_faq_individual_business_fleet_q = a
+
+onboarding_faq_individual_business_fleet_a :: Proxy "onboarding_faq_individual_business_fleet_a"
+onboarding_faq_individual_business_fleet_a = a
+
+onboarding_faq_registration_details_q :: Proxy "onboarding_faq_registration_details_q"
+onboarding_faq_registration_details_q = a
+
+onboarding_faq_registration_details_a :: Proxy "onboarding_faq_registration_details_a"
+onboarding_faq_registration_details_a = a
+
+onboarding_faq_operating_cities_q :: Proxy "onboarding_faq_operating_cities_q"
+onboarding_faq_operating_cities_q = a
+
+onboarding_faq_operating_cities_a :: Proxy "onboarding_faq_operating_cities_a"
+onboarding_faq_operating_cities_a = a
+
+onboarding_faq_operator_referral_code_q :: Proxy "onboarding_faq_operator_referral_code_q"
+onboarding_faq_operator_referral_code_q = a
+
+onboarding_faq_operator_referral_code_a :: Proxy "onboarding_faq_operator_referral_code_a"
+onboarding_faq_operator_referral_code_a = a
+
+onboarding_faq_required_documents_q :: Proxy "onboarding_faq_required_documents_q"
+onboarding_faq_required_documents_q = a
+
+onboarding_faq_required_documents_a :: Proxy "onboarding_faq_required_documents_a"
+onboarding_faq_required_documents_a = a
+
+onboarding_faq_registration_assistance_q :: Proxy "onboarding_faq_registration_assistance_q"
+onboarding_faq_registration_assistance_q = a
+
+onboarding_faq_registration_assistance_a :: Proxy "onboarding_faq_registration_assistance_a"
+onboarding_faq_registration_assistance_a = a
+
+onboarding_faq_update_documents_q :: Proxy "onboarding_faq_update_documents_q"
+onboarding_faq_update_documents_q = a
+
+onboarding_faq_update_documents_a :: Proxy "onboarding_faq_update_documents_a"
+onboarding_faq_update_documents_a = a
+
+onboarding_faq_view_profile_q :: Proxy "onboarding_faq_view_profile_q"
+onboarding_faq_view_profile_q = a
+
+onboarding_faq_view_profile_a :: Proxy "onboarding_faq_view_profile_a"
+onboarding_faq_view_profile_a = a
+
+onboarding_faq_logout_q :: Proxy "onboarding_faq_logout_q"
+onboarding_faq_logout_q = a
+
+onboarding_faq_logout_a :: Proxy "onboarding_faq_logout_a"
+onboarding_faq_logout_a = a
+
+onboarding_faq_profile_picture_q :: Proxy "onboarding_faq_profile_picture_q"
+onboarding_faq_profile_picture_q = a
+
+onboarding_faq_profile_picture_a :: Proxy "onboarding_faq_profile_picture_a"
+onboarding_faq_profile_picture_a = a
+
+onboarding_faq_msil_provide_drivers_q :: Proxy "onboarding_faq_msil_provide_drivers_q"
+onboarding_faq_msil_provide_drivers_q = a
+
+onboarding_faq_msil_provide_drivers_a :: Proxy "onboarding_faq_msil_provide_drivers_a"
+onboarding_faq_msil_provide_drivers_a = a
+
+onboarding_faq_add_multiple_drivers_q :: Proxy "onboarding_faq_add_multiple_drivers_q"
+onboarding_faq_add_multiple_drivers_q = a
+
+onboarding_faq_add_multiple_drivers_a :: Proxy "onboarding_faq_add_multiple_drivers_a"
+onboarding_faq_add_multiple_drivers_a = a
+
+onboarding_faq_onboard_driver_q :: Proxy "onboarding_faq_onboard_driver_q"
+onboarding_faq_onboard_driver_q = a
+
+onboarding_faq_onboard_driver_a :: Proxy "onboarding_faq_onboard_driver_a"
+onboarding_faq_onboard_driver_a = a
+
+onboarding_faq_add_driver_manually_q :: Proxy "onboarding_faq_add_driver_manually_q"
+onboarding_faq_add_driver_manually_q = a
+
+onboarding_faq_add_driver_manually_a :: Proxy "onboarding_faq_add_driver_manually_a"
+onboarding_faq_add_driver_manually_a = a
+
+onboarding_faq_driver_bulk_upload_q :: Proxy "onboarding_faq_driver_bulk_upload_q"
+onboarding_faq_driver_bulk_upload_q = a
+
+onboarding_faq_driver_bulk_upload_a :: Proxy "onboarding_faq_driver_bulk_upload_a"
+onboarding_faq_driver_bulk_upload_a = a
+
+onboarding_faq_driver_documents_q :: Proxy "onboarding_faq_driver_documents_q"
+onboarding_faq_driver_documents_q = a
+
+onboarding_faq_driver_documents_a :: Proxy "onboarding_faq_driver_documents_a"
+onboarding_faq_driver_documents_a = a
+
+onboarding_faq_driver_tab_q :: Proxy "onboarding_faq_driver_tab_q"
+onboarding_faq_driver_tab_q = a
+
+onboarding_faq_driver_tab_a :: Proxy "onboarding_faq_driver_tab_a"
+onboarding_faq_driver_tab_a = a
+
+onboarding_faq_track_driver_docs_q :: Proxy "onboarding_faq_track_driver_docs_q"
+onboarding_faq_track_driver_docs_q = a
+
+onboarding_faq_track_driver_docs_a :: Proxy "onboarding_faq_track_driver_docs_a"
+onboarding_faq_track_driver_docs_a = a
+
+onboarding_faq_add_remove_drivers_q :: Proxy "onboarding_faq_add_remove_drivers_q"
+onboarding_faq_add_remove_drivers_q = a
+
+onboarding_faq_add_remove_drivers_a :: Proxy "onboarding_faq_add_remove_drivers_a"
+onboarding_faq_add_remove_drivers_a = a
+
+onboarding_faq_manage_driver_docs_q :: Proxy "onboarding_faq_manage_driver_docs_q"
+onboarding_faq_manage_driver_docs_q = a
+
+onboarding_faq_manage_driver_docs_a :: Proxy "onboarding_faq_manage_driver_docs_a"
+onboarding_faq_manage_driver_docs_a = a
+
+onboarding_faq_onboard_vehicle_q :: Proxy "onboarding_faq_onboard_vehicle_q"
+onboarding_faq_onboard_vehicle_q = a
+
+onboarding_faq_onboard_vehicle_a :: Proxy "onboarding_faq_onboard_vehicle_a"
+onboarding_faq_onboard_vehicle_a = a
+
+onboarding_faq_add_multiple_vehicles_q :: Proxy "onboarding_faq_add_multiple_vehicles_q"
+onboarding_faq_add_multiple_vehicles_q = a
+
+onboarding_faq_add_multiple_vehicles_a :: Proxy "onboarding_faq_add_multiple_vehicles_a"
+onboarding_faq_add_multiple_vehicles_a = a
+
+onboarding_faq_vehicle_documents_q :: Proxy "onboarding_faq_vehicle_documents_q"
+onboarding_faq_vehicle_documents_q = a
+
+onboarding_faq_vehicle_documents_a :: Proxy "onboarding_faq_vehicle_documents_a"
+onboarding_faq_vehicle_documents_a = a
+
+onboarding_faq_readd_vehicle_q :: Proxy "onboarding_faq_readd_vehicle_q"
+onboarding_faq_readd_vehicle_q = a
+
+onboarding_faq_readd_vehicle_a :: Proxy "onboarding_faq_readd_vehicle_a"
+onboarding_faq_readd_vehicle_a = a
+
+onboarding_faq_vehicle_inspection_q :: Proxy "onboarding_faq_vehicle_inspection_q"
+onboarding_faq_vehicle_inspection_q = a
+
+onboarding_faq_vehicle_inspection_a :: Proxy "onboarding_faq_vehicle_inspection_a"
+onboarding_faq_vehicle_inspection_a = a
+
+onboarding_faq_inspection_cost_q :: Proxy "onboarding_faq_inspection_cost_q"
+onboarding_faq_inspection_cost_q = a
+
+onboarding_faq_inspection_cost_a :: Proxy "onboarding_faq_inspection_cost_a"
+onboarding_faq_inspection_cost_a = a
+
+onboarding_faq_manage_vehicle_docs_q :: Proxy "onboarding_faq_manage_vehicle_docs_q"
+onboarding_faq_manage_vehicle_docs_q = a
+
+onboarding_faq_manage_vehicle_docs_a :: Proxy "onboarding_faq_manage_vehicle_docs_a"
+onboarding_faq_manage_vehicle_docs_a = a
+
+onboarding_faq_track_vehicle_docs_q :: Proxy "onboarding_faq_track_vehicle_docs_q"
+onboarding_faq_track_vehicle_docs_q = a
+
+onboarding_faq_track_vehicle_docs_a :: Proxy "onboarding_faq_track_vehicle_docs_a"
+onboarding_faq_track_vehicle_docs_a = a
+
+onboarding_faq_assign_driver_vehicle_q :: Proxy "onboarding_faq_assign_driver_vehicle_q"
+onboarding_faq_assign_driver_vehicle_q = a
+
+onboarding_faq_assign_driver_vehicle_a :: Proxy "onboarding_faq_assign_driver_vehicle_a"
+onboarding_faq_assign_driver_vehicle_a = a
+
+onboarding_faq_remove_vehicle_q :: Proxy "onboarding_faq_remove_vehicle_q"
+onboarding_faq_remove_vehicle_q = a
+
+onboarding_faq_remove_vehicle_a :: Proxy "onboarding_faq_remove_vehicle_a"
+onboarding_faq_remove_vehicle_a = a
+
+onboarding_faq_edit_vehicle_q :: Proxy "onboarding_faq_edit_vehicle_q"
+onboarding_faq_edit_vehicle_q = a
+
+onboarding_faq_edit_vehicle_a :: Proxy "onboarding_faq_edit_vehicle_a"
+onboarding_faq_edit_vehicle_a = a
+
+onboarding_faq_update_driver_status_q :: Proxy "onboarding_faq_update_driver_status_q"
+onboarding_faq_update_driver_status_q = a
+
+onboarding_faq_update_driver_status_a :: Proxy "onboarding_faq_update_driver_status_a"
+onboarding_faq_update_driver_status_a = a
+
+contact_hub :: Proxy "contact_hub"
+contact_hub = a

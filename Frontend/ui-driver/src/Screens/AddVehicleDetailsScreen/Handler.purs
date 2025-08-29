@@ -55,3 +55,9 @@ addVehicleDetails = do
     ChangeVehicle updatedState -> do
       modifyScreenState $ AddVehicleDetailsScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ CHANGE_VEHICLE_FROM_RC_SCREEN)
+    GoToFaqsScreen updatedState -> do
+      modifyScreenState $ AddVehicleDetailsScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ GO_TO_FAQS_SCREEN_FROM_ADD_VEHICLE_DETAILS_SCREEN)
+    GoToChangeLocation updatedState -> do
+      modifyScreenState $ AddVehicleDetailsScreenStateType (\_ -> updatedState)
+      App.BackT $ App.NoBack <$> (pure $ GO_TO_CHANGE_LOCATION_SCREEN)

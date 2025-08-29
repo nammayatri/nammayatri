@@ -3,6 +3,7 @@
     <string name="ride_rejected"> റൈഡ് നിരസിച്ചു</string>
     <string name="request">അഭ്യർത്ഥിക്കുക</string>
     <string name="decline">നിരസിക്കുക</string>
+    <string name="pass">പാസ്</string>
     <string name="pickup">പുരോഗമിക്കുക</string>
     <string name="test_request">ടെസ്റ്റ് അഭ്യർത്ഥന</string>
     <string name="test_request_successful">ടെസ്റ്റ് റൈഡ് അഭ്യർത്ഥന വിജയിച്ചു!</string>

@@ -226,6 +226,8 @@ data ScreenOutput = ValidateDetails AddVehicleDetailsScreenState
                     | ActivateRC AddVehicleDetailsScreenState
                     | ChangeVehicle AddVehicleDetailsScreenState
                     | SelectLang AddVehicleDetailsScreenState
+                    | GoToFaqsScreen AddVehicleDetailsScreenState
+                    | GoToChangeLocation AddVehicleDetailsScreenState
                     
                     
 
@@ -415,7 +417,7 @@ eval (TutorialModalAction (TutorialModalController.CallSupport)) state = continu
     _ -> pure $ showDialer (getSupportNumber "") false
   pure NoAction
   ]
-eval (TutorialModalAction (TutorialModalController.Logout)) state = exit LogoutAccount
+eval (TutorialModalAction (TutorialModalController.Logout)) state = continue state{props{logoutModalView = true}}
 eval ReferralMobileNumber state = do
   continue state{props{openReferralMobileNumber = true, btnActive = false, isEdit = true}}
 eval (ReferralMobileNumberAction (ReferralMobileNumberController.OnBackClick)) state = continue state{props{openReferralMobileNumber = false}}
@@ -511,7 +513,7 @@ eval (PopUpModalActions (PopUpModal.OnButton1Click)) state = do
 
 eval RedirectScreen state = exit GoToRegisteration
 
-eval ChangeLocation state = exit $ LogoutAccount
+eval ChangeLocation state = exit $ GoToChangeLocation state
 
 eval (ActivateRCbtn (PrimaryButtonController.OnClick)) state = case state.props.multipleRCstatus of
                                                                 COMPLETED -> exit $ ActivateRC state
@@ -538,6 +540,7 @@ eval (OptionsMenuAction (OptionsMenu.ItemClick item)) state = do
     "contact_support" -> continue newState { props { contactSupportModal = ST.SHOW}}
     "change_vehicle" -> continue newState {props {confirmChangeVehicle = true}}
     "change_language" -> exit $ SelectLang newState
+    "faqs" -> exit $ GoToFaqsScreen newState
     _ -> continue newState
 
 eval (ChangeVehicleAC (PopUpModal.OnButton2Click)) state = continue state {props {confirmChangeVehicle= false}}

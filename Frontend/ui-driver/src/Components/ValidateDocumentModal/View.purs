@@ -212,11 +212,9 @@ primaryButtonConfig state = let
     primaryButtonConfig' = config
       { textConfig
       { text = getString if state.verificationStatus == None then CONFIRM_AND_UPLOAD else RETAKE_PHOTO
-      , color = Color.yellow900
       }
       , margin = Margin 18 0 25 10
       , cornerRadius = 8.0
-      , background = Color.black900
       , height = V 60
       }
   in primaryButtonConfig'

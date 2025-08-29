@@ -15,6 +15,7 @@ initData = {
         primaryButtonText : Maybe.Nothing,
         orderId: Maybe.Nothing,
         amount : "",
+        primaryButtonVisibility : true,
         config : getAppConfig appConfig
     },
     props: {

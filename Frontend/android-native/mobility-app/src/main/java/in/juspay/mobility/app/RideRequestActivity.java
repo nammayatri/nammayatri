@@ -385,7 +385,7 @@ boolean updateTags = model.getCustomerTip() > 0 || model.getDisabilityTag() || s
             RideRequestUtils.updateStepFeeAndButtonAlpha(holder, model, mainLooper);
             updateIncreaseDecreaseButtons(holder, model);
             updateTagsView(holder, model);
-            RideRequestUtils.updateTierAndAC(holder, model, RideRequestActivity.this);
+            if (holder.vcTierAndACView != null && holder.vehicleServiceTier != null ) RideRequestUtils.updateTierAndAC(holder, model, RideRequestActivity.this);
             RideRequestUtils.updateRateView(holder, model);
             RideRequestUtils.updateRentalView(holder, model, RideRequestActivity.this);
             RideRequestUtils.updateIntercityView(holder, model, RideRequestActivity.this);
@@ -820,7 +820,7 @@ boolean updateTags = model.getCustomerTip() > 0 || model.getDisabilityTag() || s
             if (progressCompat <= 8) {
                 progressIndicatorsList.get(i).setIndicatorColor(getColor(R.color.red900));
             } else {
-                progressIndicatorsList.get(i).setIndicatorColor(getColor(R.color.green900));
+                progressIndicatorsList.get(i).setIndicatorColor(getColor(R.color.defaultRRThemeColor));
             }
         }
     }

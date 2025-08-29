@@ -10,6 +10,8 @@ import JBridge as JB
 import Data.Function.Uncurried (runFn2)
 import Engineering.Helpers.Commons (screenWidth, convertUTCtoISC, getNewIDWithTag , getCurrentUTC)
 import MerchantConfig.Types (AppConfig)
+import ConfigProvider
+import MerchantConfig.Types (AppConfig)
 
 type RideSummaryScreenState = {
   data :: RideSummaryScreenData,
@@ -203,7 +205,7 @@ initData = {
         }
     , activeRideData :dummyActiveRideData
     , route: Nothing
-    , config : getAppConfig appConfig
+    , config: getAppConfig appConfig
   },
   props: {
     pickUpOpen : true,

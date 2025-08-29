@@ -25,14 +25,16 @@ type Config = {
   genericHeaderConfig :: GenericHeader.Config,
   headerTextConfig :: TextConfig,
   appConfig :: AppConfig,
-  rightButton :: TextConfig
+  rightButton :: TextConfig,
+  navBarOpen :: Boolean
 }
 
 type ImageConfig = {
   height :: Length,
   width :: Length,
   visibility :: Visibility,
-  image :: String
+  image :: String,
+  clickable :: Boolean
 }
 
 type TextConfig = {
@@ -48,7 +50,8 @@ config = {
     height : V 25,
     width : V 25,
     visibility : VISIBLE,
-    image : "ny_ic_chevron_left_white"
+    image : "ny_ic_chevron_left_white",
+    clickable : true
   },
   genericHeaderConfig : GenericHeader.config,
   rightButton : {
@@ -63,5 +66,6 @@ config = {
     color : Color.white900,
     fontStyle : Style.Heading1
   },
-  appConfig : getAppConfig appConfig
+  appConfig : getAppConfig appConfig,
+  navBarOpen : false
 }

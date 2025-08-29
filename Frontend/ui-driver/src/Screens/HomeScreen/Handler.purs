@@ -144,6 +144,9 @@ homeScreen = do
     SubscriptionScreen updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ → updatedState)
       App.BackT $ App.NoBack <$> (pure $ HOMESCREEN_NAV GoToSubscription)
+    GoToRideRequestScreen updatedState -> do
+      modifyScreenState $ HomeScreenStateType (\_ → updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ HOMESCREEN_NAV GoToRideRequest)
     GoToRideDetailsScreen updatedState -> do
       modifyScreenState $ HomeScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ GO_TO_RIDE_DETAILS_SCREEN updatedState.data.activeRide.id)

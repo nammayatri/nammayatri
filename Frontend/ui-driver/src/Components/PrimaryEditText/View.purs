@@ -64,7 +64,8 @@ view push state =
           [ width MATCH_PARENT
           , height WRAP_CONTENT
           , orientation HORIZONTAL
-          , stroke if state.isinValid then ("1," <> Color.lightMaroon) else  ("1," <> Color.borderColorLight)
+          , stroke if state.isinValid then ("1," <> Color.lightMaroon) else  ("1," <> state.stroke)
+          , background state.background
           , cornerRadius 4.0
           ][  textView (
               [ width $ V 60
@@ -94,7 +95,6 @@ view push state =
               , pattern (fromMaybe "[a-z, 0-9, A-Z]" state.pattern )
               , letterSpacing state.letterSpacing
               , onChange push (TextChanged state.valueId)
-              , stroke if state.isinValid then ("1," <> Color.white900) else ("1," <> Color.white900)
               , onFocus push (const TextClicked)
               , id state.id
               ] <> FontStyle.subHeading1 TypoGraphy

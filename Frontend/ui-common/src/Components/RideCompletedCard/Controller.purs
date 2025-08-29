@@ -109,6 +109,7 @@ type Config = {
   variant :: String,
   driverCity :: String,
   driverInvoiceText :: String,
+  driverInvoiceTextBgColor :: String,
   coinsRewardedOnGoldTierRide :: Maybe Int
 }
 
@@ -276,6 +277,7 @@ config = {
   variant : "",
   driverCity : "",
   driverInvoiceText : "",
+  driverInvoiceTextBgColor : Color.transparent,
   coinsRewardedOnGoldTierRide : Nothing
 }
 
@@ -340,7 +342,7 @@ type DriverBottomCard = {
   savedMoney :: Array SavedMoney
 }
 
-type SavedMoney = {
+type SavedMoney = { -- TODO: Shikhar change this type for fare breakup at ride completed card
   amount :: Int
 , reason :: String 
 }

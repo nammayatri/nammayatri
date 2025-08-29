@@ -459,6 +459,21 @@ getRideEndAudioConfig city = do
         cityValue = getCityBasedConfig value $ toLower city
     getCityBasedConfig value $ toLower city
 
+defaultHelpAndSupportConfig :: HelpAndSupportConfig
+defaultHelpAndSupportConfig = { 
+  supportNumber: "", 
+  supportWAN: "", 
+  supportMail: "",
+  policeNumber: "100",
+  ambulanceNumber: "108"
+}
+
+getHelpAndSupportConfig :: String -> HelpAndSupportConfig
+getHelpAndSupportConfig city =
+  let config = fetchRemoteConfigString "help_and_support_config"
+      decodedConfig = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultHelpAndSupportConfig
+  in getCityBasedConfig decodedConfig $ toLower city
+
 
 type ExtraChargeVideoConfig = {
     low :: String
