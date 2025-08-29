@@ -273,8 +273,8 @@ public  class MyFirebaseMessagingService {
                     case NotificationTypes.CANCELLATION_RATE_NUDGE_WEEKLY :
                         cancellationNudgeOverlay(context, remoteMessage, NotificationTypes.CANCELLATION_RATE_NUDGE_WEEKLY);
                         break;
-                    case NotificationTypes.DRIVER_STOP_DETECTED :
-                        stopDetectedOverlay(context);
+//                    case NotificationTypes.DRIVER_STOP_DETECTED : // not needed for FleetX
+//                        stopDetectedOverlay(context);
                     case NotificationTypes.TRIGGER_SERVICE:
                         if (merchantType.equals("DRIVER")) {
                             if (title != null && title.equals("You were inactive"))
