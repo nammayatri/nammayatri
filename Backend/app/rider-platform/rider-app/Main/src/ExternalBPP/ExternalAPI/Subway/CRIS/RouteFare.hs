@@ -162,8 +162,8 @@ getRouteFare config merchantOperatingCityId request = do
     routeFareDetails `forM` \routeFareDetail -> do
       let allFares = routeFareDetail.fareDtlsList
       let routeId = routeFareDetail.routeId
-      let onlySelectedViaFares = filter (\fare -> fare.via == request.via) allFares
-      let fares = if null onlySelectedViaFares || request.via == " " then allFares else onlySelectedViaFares
+      let onlySelectedViaFares = filter (\fare -> fare.via == request.changeOver) allFares
+      let fares = if null onlySelectedViaFares || request.changeOver == " " then allFares else onlySelectedViaFares
       fares `forM` \fare -> do
         let mbFareAmount = readMaybe @HighPrecMoney . T.unpack $ fare.adultFare
             mbChildFareAmount = readMaybe @HighPrecMoney . T.unpack $ fare.childFare
