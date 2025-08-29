@@ -113,6 +113,7 @@ data RiderConfig = RiderConfig
     ticketingPermissionConfig :: Kernel.Prelude.Maybe Data.Aeson.Value,
     timeDiffFromUtc :: Kernel.Types.Common.Seconds,
     trackingShortUrlPattern :: Kernel.Prelude.Text,
+    upcomingBusThresholdSec :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     useUserSettingsForSafetyIVR :: Kernel.Prelude.Bool,
     userServiceTierOrderConfig :: [Domain.Types.Extra.RiderConfig.VehicleServiceTierOrderConfig],
     variantListForNearByReq :: Kernel.Prelude.Maybe [Domain.Types.VehicleVariant.VehicleVariant],

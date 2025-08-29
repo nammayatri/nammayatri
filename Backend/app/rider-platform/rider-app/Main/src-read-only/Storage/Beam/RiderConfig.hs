@@ -112,6 +112,7 @@ data RiderConfigT f = RiderConfigT
     ticketingPermissionConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     timeDiffFromUtc :: B.C f Kernel.Types.Common.Seconds,
     trackingShortUrlPattern :: B.C f Kernel.Prelude.Text,
+    upcomingBusThresholdSec :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     useUserSettingsForSafetyIVR :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     userServiceTierOrderConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     variantListForNearByReq :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
