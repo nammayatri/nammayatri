@@ -1083,7 +1083,11 @@ castDriverStatus = \case
 
 ---------------------------------------------------------------------
 getDriverFleetStatus :: ShortId DM.Merchant -> Context.City -> Text -> Maybe Text -> Flow Common.DriverStatusRes
-getDriverFleetStatus _merchantShortId _opCity requestorId mbFleetOwnerId = do
+getDriverFleetStatus merchantShortId opCity requestorId mbFleetOwnerId = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  when (transporterConfig.allowCacheDriverFlowStatus /= Just True) $ throwError (InvalidRequest "Cache driver flow status is not allowed in this merchant")
   requestedPerson <- QPerson.findById (Id requestorId) >>= fromMaybeM (PersonDoesNotExist requestorId)
   (entityRole, entityId) <- validateRequestorRoleAndGetEntityId requestedPerson mbFleetOwnerId
   let allKeys = DDF.allKeys entityId
