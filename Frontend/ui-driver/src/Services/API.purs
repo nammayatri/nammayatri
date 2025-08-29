@@ -5859,3 +5859,37 @@ instance standardEncodeSpecialLocationListRes :: StandardEncode SpecialLocationL
 instance showSpecialLocationListRes :: Show SpecialLocationListRes where show = genericShow
 instance decodeSpecialLocationListRes :: Decode SpecialLocationListRes where decode = defaultDecode
 instance encodeSpecialLocationListRes :: Encode SpecialLocationListRes where encode = defaultEncode
+
+----------------------------------------------- All Time Stats API -------------------------------------------------------------
+
+data DriverStatsReq = DriverStatsReq
+
+newtype DriverStatsRes = DriverStatsRes
+  { numDriversOnboarded :: Int,
+    numFleetsOnboarded :: Int,
+    totalRides :: Int,
+    totalEarnings :: Int,
+    totalDistance :: Int,
+    bonusEarnings :: Int,
+    totalEarningsWithCurrency :: CTA.Price,
+    totalEarningsPerKm :: Int,
+    totalEarningsPerKmWithCurrency :: CTA.Price,
+    bonusEarningsWithCurrency :: CTA.Price
+  }
+
+instance makeDriverStatsReq :: RestEndpoint DriverStatsReq where
+    makeRequest reqBody headers = defaultMakeRequestWithoutLogs GET (EP.getAllTimeStats "") headers reqBody Nothing
+    encodeRequest req = defaultEncode req
+
+derive instance genericDriverStatsReq :: Generic DriverStatsReq _
+instance standardEncodeDriverStatsReq :: StandardEncode DriverStatsReq where standardEncode _ = standardEncode {}
+instance showDriverStatsReq :: Show DriverStatsReq where show = genericShow
+instance decodeDriverStatsReq :: Decode DriverStatsReq where decode = defaultDecode
+instance encodeDriverStatsReq :: Encode DriverStatsReq where encode = defaultEncode
+
+derive instance genericDriverStatsRes :: Generic DriverStatsRes _
+derive instance newtypeDriverStatsRes :: Newtype DriverStatsRes _
+instance standardEncodeDriverStatsRes :: StandardEncode DriverStatsRes where standardEncode (DriverStatsRes req) = standardEncode req
+instance showDriverStatsRes :: Show DriverStatsRes where show = genericShow
+instance decodeDriverStatsRes :: Decode DriverStatsRes where decode = defaultDecode
+instance encodeDriverStatsRes :: Encode DriverStatsRes where encode = defaultEncode

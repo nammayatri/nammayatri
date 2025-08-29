@@ -289,7 +289,7 @@ getEn =
     , we_will_notify_you_when_we_go_live : "We'll notify you when we go live"
     , upload_again : "Upload Again"
     , select_operation_hub : "Select Operation Hub"
-    , help_centre : "Help Cenre"
+    , help_centre : "Help Centre"
     , all_time: "All-Time"
     , subscription_amount_spent: "Subscription Amount Spent"
     , ride_boost_received: "Ride Boost Received"
