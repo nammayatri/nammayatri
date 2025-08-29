@@ -190,6 +190,12 @@ data AvailableRoutesByTier = AvailableRoutesByTier
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON, ToSchema)
 
+data ViaRoute = ViaRoute
+  { viaPoints :: [(Text, Text)],
+    distance :: Meters
+  }
+  deriving (Generic, Show, Eq, ToJSON, FromJSON, ToSchema)
+
 getISTArrivalTime :: TimeOfDay -> UTCTime -> UTCTime
 getISTArrivalTime timeOfDay currentTime = do
   let currentTimeIST = addUTCTime (secondsToNominalDiffTime $ round istOffset) currentTime
@@ -668,12 +674,12 @@ getBestOneWayRoute vehicleCategory routes mbOriginStopCode mbDestinationStopCode
     findConditionalRoute fns xs = find (\r -> all (\fn -> fn r.legs) fns) xs
     firstJust xs = foldr (<|>) Nothing xs
 
-mkMultiModalRoute :: UTCTime -> Maybe MultiModalTypes.MultiModalLeg -> MultiModalTypes.GeneralVehicleType -> NonEmpty MultiModalTypes.MultiModalRouteDetails -> MultiModalTypes.MultiModalRoute
-mkMultiModalRoute currentTimeIST mbPreliminaryLeg mode routeDetails = do
+mkMultiModalRoute :: UTCTime -> Maybe MultiModalTypes.MultiModalLeg -> MultiModalTypes.GeneralVehicleType -> NonEmpty MultiModalTypes.MultiModalRouteDetails -> Maybe HighPrecMeters -> MultiModalTypes.MultiModalRoute
+mkMultiModalRoute currentTimeIST mbPreliminaryLeg mode routeDetails mbDistance = do
   let firstRouteDetails = NonEmpty.head routeDetails
   let lastRouteDetails = NonEmpty.last routeDetails
   let duration = nominalDiffTimeToSeconds $ diffUTCTime (fromMaybe currentTimeIST lastRouteDetails.toArrivalTime) (fromMaybe currentTimeIST firstRouteDetails.fromArrivalTime)
-  let distance = convertHighPrecMetersToDistance Meter (distanceBetweenInMeters (locationV2ToLatLong firstRouteDetails.startLocation) (locationV2ToLatLong lastRouteDetails.endLocation))
+  let distance = convertHighPrecMetersToDistance Meter $ fromMaybe (distanceBetweenInMeters (locationV2ToLatLong firstRouteDetails.startLocation) (locationV2ToLatLong lastRouteDetails.endLocation)) mbDistance
   let leg =
         MultiModalTypes.MultiModalLeg
           { distance = distance,
@@ -842,7 +848,7 @@ buildSingleModeDirectRoutes getPreliminaryLeg mbRouteCode (Just originStopCode) 
       currentTime <- getCurrentTime
       let (_, currentTimeIST) = getISTTimeInfo currentTime
       mbPreliminaryLeg <- getPreliminaryLeg routeDetails.startLocation
-      return [mkMultiModalRoute currentTimeIST mbPreliminaryLeg mode (NonEmpty.fromList [routeDetails])]
+      return [mkMultiModalRoute currentTimeIST mbPreliminaryLeg mode (NonEmpty.fromList [routeDetails]) Nothing]
     Nothing -> return []
 buildSingleModeDirectRoutes _ _ _ _ _ _ _ _ _ = return []
 
@@ -861,8 +867,9 @@ buildTrainAllViaRoutes getPreliminaryLeg (Just originStopCode) (Just destination
   allSubwayRoutes <- getAllSubwayRoutes
   mapMaybeM
     ( \viaRoutes -> do
-        -- consider distance for future
-        routeDetailsWithDistance <- mapM (\(osc, dsc) -> buildMultimodalRouteDetails 1 Nothing osc dsc integratedBppConfig mid mocid vc) viaRoutes
+        let viaPoints = viaRoutes.viaPoints
+            routeDistance = metersToHighPrecMeters viaRoutes.distance
+        routeDetailsWithDistance <- mapM (\(osc, dsc) -> buildMultimodalRouteDetails 1 Nothing osc dsc integratedBppConfig mid mocid vc) viaPoints
         logDebug $ "buildTrainAllViaRoutes routeDetailsWithDistance: " <> show routeDetailsWithDistance
         -- ensure that atleast one train route is possible or two stops are less than 1km apart so that user can walk to other station e.g. Chennai Park to Central station
         let isRoutePossible = all (\(mbRouteDetails, mbDistance) -> isJust mbRouteDetails || (isJust mbDistance && mbDistance < Just (HighPrecMeters 1000))) routeDetailsWithDistance
@@ -877,12 +884,12 @@ buildTrainAllViaRoutes getPreliminaryLeg (Just originStopCode) (Just destination
                 currentTime <- getCurrentTime
                 let (_, currentTimeIST) = getISTTimeInfo currentTime
                 mbPreliminaryLeg <- getPreliminaryLeg rD.startLocation
-                return $ Just $ mkMultiModalRoute currentTimeIST mbPreliminaryLeg mode (NonEmpty.fromList updateRouteDetails)
+                return $ Just $ mkMultiModalRoute currentTimeIST mbPreliminaryLeg mode (NonEmpty.fromList updateRouteDetails) (Just routeDistance)
           else return Nothing
     )
     allSubwayRoutes
   where
-    getAllSubwayRoutes :: Flow [[(Text, Text)]]
+    getAllSubwayRoutes :: Flow [ViaRoute]
     getAllSubwayRoutes = do
       person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
       mbMobileNumber <- mapM decrypt person.mobileNumber
@@ -913,17 +920,18 @@ buildTrainAllViaRoutes getPreliminaryLeg (Just originStopCode) (Just destination
                     )
                     fares
                 Nothing -> fares
-          let viaPoints =
+          let viaRoutes =
                 nub $
                   map
                     ( \fd ->
                         let viaStops = if T.strip fd.via == "" then [] else T.splitOn "-" (T.strip fd.via)
                             stops = [originStopCode] <> viaStops <> [destinationStopCode]
-                         in zipWith (,) stops (drop 1 stops)
+                            viaPoints = zipWith (,) stops (drop 1 stops)
+                         in ViaRoute {viaPoints = viaPoints, distance = fd.distance}
                     )
                     $ mapMaybe (.fareDetails) sortedFares
-          logDebug $ "getAllSubwayRoutes viaPoints: " <> show viaPoints
-          return viaPoints
+          logDebug $ "getAllSubwayRoutes viaRoutes: " <> show viaRoutes
+          return viaRoutes
         _ -> return []
 buildTrainAllViaRoutes _ _ _ _ _ _ _ _ _ = return []
 
