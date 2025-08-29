@@ -1444,7 +1444,8 @@ type HomeScreenProps =  {
   showParcelIntroductionPopup :: Boolean,
   showMetroWarriorWarningPopup :: Boolean,
   setBusOnline :: Boolean,
-  bus_input_data :: String
+  bus_input_data :: String,
+  showSafetyPillBottomSheet :: Boolean
  }
 
 type RideRequestPill = {
@@ -1625,14 +1626,16 @@ type HelpAndSupportScreenData = {
   issueListType :: IssueModalType,
   timerId :: String,
   goBackTo :: ScreenName,
-  cityConfig :: CityConfig
+  cityConfig :: CityConfig,
+  operationHubs :: Array API.OperationHub
 }
 
 type HelpAndSupportScreenProps = {
   isNoRides :: Boolean,
   enableDummyPopup :: Boolean,
   startTimerforDummyRides :: Boolean,
-  popupType :: UpdateDummyTestPopUpType
+  popupType :: UpdateDummyTestPopUpType,
+  showOperationsHub :: Boolean
 }
 
 type ReportIssueChatScreenState = {
@@ -2102,11 +2105,11 @@ type DocumentDetailsScreenState = {
 }
 
 type DocumentDetailsScreenData = {
-
+  config :: AppConfig
 }
 
 type DocumentDetailsScreenProps = {
-
+  menuOptions :: Boolean
 }
 
 type DriverCompleteProfileScreenState = {
@@ -2608,7 +2611,8 @@ type DriverSavedLocationScreenData = {
   predictions :: Array PredictionItem,
   saveLocationObject :: SaveLocationObject,
   maxGotoLocations :: Int,
-  locationSelectType :: LocationSelectType
+  locationSelectType :: LocationSelectType,
+  config :: AppConfig
 }
 
 data LocationSelectType = SET_LOC | CURRENT_LOC
@@ -2799,7 +2803,10 @@ type DriverEarningsScreenProps = {
   individualQuestion :: FaqQuestions,
   callRideSummaryApi :: Boolean,
   loadMoreButtonVisibility :: Boolean,
-  offsetValue :: Int
+  offsetValue :: Int,
+  fromDate :: String,
+  toDate :: String,
+  graphIndex :: Int
 }
 
 type CalendarState = { 
@@ -2836,7 +2843,9 @@ type WeeklyEarning = {
   rideDistance :: Int,
   rideDate :: String,
   noOfRides :: Int,
-  percentLength :: Number
+  percentLength :: Number,
+  cancellationCharges :: Int,
+  tipAmount :: Int
 }
 
 type TotalEarningsData = {
@@ -2844,7 +2853,9 @@ type TotalEarningsData = {
   toDate :: String,
   totalEarnings :: Int,
   totalRides :: Int,
-  totalDistanceTravelled :: Int
+  totalDistanceTravelled :: Int,
+  cancellationCharges :: Int,
+  tipAmount :: Int
 }
 
 newtype CachedEarningsForDriver = CachedEarningsForDriver {
@@ -2858,7 +2869,7 @@ instance showCachedEarningsForDriver :: Show CachedEarningsForDriver where show 
 instance decodeCachedEarningsForDriver :: Decode CachedEarningsForDriver where decode = defaultDecode
 instance encodeCachedEarningsForDriver :: Encode CachedEarningsForDriver where encode = defaultEncode
 
-data DriverEarningsSubView = EARNINGS_VIEW | YATRI_COINS_VIEW | USE_COINS_VIEW | FAQ_VIEW | FAQ_QUESTON_VIEW
+data DriverEarningsSubView = EARNINGS_VIEW | YATRI_COINS_VIEW | USE_COINS_VIEW | FAQ_VIEW | FAQ_QUESTON_VIEW | WEEKLY_EARNINGS_VIEW | MONTHLY_EARNINGS_VIEW | ALL_TIME_EARNINGS_VIEW
 
 derive instance genericDriverEarningsSubView :: Generic DriverEarningsSubView _
 instance showDriverEarningsSubView :: Show DriverEarningsSubView where show = genericShow

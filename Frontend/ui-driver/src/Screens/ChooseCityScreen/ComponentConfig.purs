@@ -21,6 +21,7 @@ import Data.String.Common as DSC
 import MerchantConfig.Types (AppConfig)
 import Components.SelectMenuButton as MenuButton
 import MerchantConfig.Types as MT
+import Engineering.Helpers.Utils as EHU
 
 ---------------- genericHeaderConfig ----------------
 genericHeaderConfig :: ChooseCityScreenState -> GenericHeader.Config
@@ -141,8 +142,8 @@ menuButtonConfig index language selectedVal state = MenuButton.config {
   isSelected = selectedVal == language.value,
   index = index, 
   lineVisibility = false, 
-  activeStrokeColor = state.data.config.themeColors.radioActiveStroke,
-  activeBgColor = state.data.config.themeColors.radioActiveBackground,
+  activeStrokeColor = EHU.getColorWithOpacity 12 state.data.config.themeColors.radioActiveStroke,
+  activeBgColor = EHU.getColorWithOpacity 12 state.data.config.themeColors.radioActiveBackground,
   inactiveStrokeColor = Color.grey100,
   inactiveBgColor = state.data.config.themeColors.radioInactiveBackground,
   radioSelectedImage = state.data.config.themeColors.radioSelectedImage

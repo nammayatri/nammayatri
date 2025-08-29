@@ -4,6 +4,7 @@
     <string name="ride_rejected"> सवारी अस्वीकृत </string>
     <string name="request"> अनुरोध करें </string>
     <string name="decline">अस्वीकार करें</string>
+    <string name="pass">पास</string>
     <string name="pickup">पिकअप जगह</string>
     <string name="test_request">परीक्षण अनुरोध</string>
     <string name="test_request_successful">टेस्ट राइड अनुरोध सफल!</string>

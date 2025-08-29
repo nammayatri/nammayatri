@@ -47,14 +47,26 @@ import Debug
 
 primaryButtonConfig :: ST.RegistrationScreenState -> PrimaryButton.Config
 primaryButtonConfig state = let 
+    documentList = case state.data.vehicleCategory of
+                      Just ST.CarCategory -> state.data.registerationStepsCabs
+                      Just ST.TruckCategory -> state.data.registerationStepsTruck
+                      Just ST.BikeCategory -> state.data.registerationStepsBike
+                      Just ST.AmbulanceCategory -> state.data.registerationStepsAmbulance
+                      Just ST.AutoCategory -> state.data.registerationStepsAuto
+                      Just ST.BusCategory -> state.data.registerationStepsBus
+                      _ -> state.data.registerationStepsAuto
     config = PrimaryButton.config
     primaryButtonConfig' = config 
       { textConfig { text = getString if state.props.manageVehicle then ADD_VEHICLE else COMPLETE_REGISTRATION }
       , width = MATCH_PARENT
       , height = V 48
       , id = "RegistrationScreenButton"
+      , isClickable = if state.props.manageVehicle then DA.all (\docType -> statusCompOrManual (getStatus docType.stage state)) $ DA.filter(\elem -> elem.isMandatory) documentList else true
       }
   in primaryButtonConfig'
+
+statusCompOrManual :: ST.StageStatus -> Boolean
+statusCompOrManual status = DA.any (_ == status) [ST.COMPLETED, ST.MANUAL_VERIFICATION_REQUIRED]
 
 
 continueCategorySpecificButtonConfig :: ST.RegistrationScreenState -> PrimaryButton.Config
@@ -80,14 +92,15 @@ appOnboardingNavBarConfig state =
   AppOnboardingNavBar.config
   { prefixImageConfig = AppOnboardingNavBar.config.prefixImageConfig{ 
         image = state.data.config.themeColors.defaultBackButton,
-        visibility = if isNothing state.props.selectedDocumentCategory then GONE else VISIBLE,
+        visibility = if isJust state.props.selectedDocumentCategory || state.props.manageVehicle then VISIBLE else GONE,
         clickable = not $ state.props.menuOptions
     },
     genericHeaderConfig = genericHeaderConfig state,
     appConfig = state.data.config,
     headerTextConfig = AppOnboardingNavBar.config.headerTextConfig{
       color = state.data.config.themeColors.onboardingHeaderTextColor,
-      text = case state.props.selectedDocumentCategory of 
+      text = if state.props.manageVehicle then "My Vehicle" else 
+              case state.props.selectedDocumentCategory of 
                 Just API.VEHICLE -> getStringV2 LT2.my_vehicle
                 Just API.DRIVER -> getStringV2 LT2.my_profile
                 Just API.PERMISSION -> getStringV2 LT2.app_permissions
@@ -228,7 +241,7 @@ genericHeaderConfig state = let
       height = WRAP_CONTENT
     , background = Color.transparent
     , prefixImageConfig {
-       visibility = VISIBLE
+       visibility = if state.props.manageVehicle then GONE else VISIBLE
       , imageUrl = HU.fetchImage HU.FF_ASSET "ic_new_avatar"
       , height = (V 25)
       , width = (V 25)
@@ -236,7 +249,7 @@ genericHeaderConfig state = let
       }
     , padding = (PaddingVertical 5 5)
     , textConfig {
-        text = if DA.any (_ == getValueToLocalStore DRIVER_NAME) ["", "__failed"] then getValueToLocalStore MOBILE_NUMBER_KEY else getValueToLocalStore DRIVER_NAME
+        text = if state.props.manageVehicle then "" else if DA.any (_ == getValueToLocalStore DRIVER_NAME) ["", "__failed"] then getValueToLocalStore MOBILE_NUMBER_KEY else getValueToLocalStore DRIVER_NAME
       , color = state.data.config.themeColors.onboardingHeaderTextColor
       , margin = MarginHorizontal 5 5 
       , textStyle = FontStyle.Body1

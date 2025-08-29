@@ -67,6 +67,7 @@ import Data.Maybe
 import Data.Int
 import Services.API as SA
 import Components.RateCard.Controller 
+import Engineering.Helpers.Utils as EHU
 
 view :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 view push config = do
@@ -88,7 +89,7 @@ view push config = do
               , orientation HORIZONTAL
               , gravity CENTER
               ][ 
-                  messageButton push config,
+                  -- messageButton push config, -- // TODO: Shikhar -> handle chat flow
                   callButton push config,
                   openGoogleMap push config
               ]
@@ -375,7 +376,7 @@ openGoogleMap push config =
           , margin (MarginLeft 8)
           , text (getString MAPS)
           , gravity CENTER
-          , color appConfig'.themeColors.openMapsTextColor
+          , color Color.white900
           ] <> FontStyle.body1 TypoGraphy
           )
       ]
@@ -783,9 +784,9 @@ waitTimeView push config =
          ]
          [textView $
         [ height WRAP_CONTENT
-         , width $ V 65
+         , width $ WRAP_CONTENT
          , text (getString WAIT_TIME) 
-         ,margin $ Margin 20 0 0 0 
+         , margin $ Margin 10 0 0 0 
          , color Color.black650
          , textSize FontSize.a_14
          , ellipsize true
@@ -798,10 +799,10 @@ waitTimeView push config =
             , visibility if config.notifiedCustomer then VISIBLE else GONE
             , onClick push (const WaitingInfo)
             , gravity CENTER
-            , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_info_blue"
+            , imageWithFallback $ fetchImage FF_ASSET "ny_ic_info_blue"
             , rippleColor Color.rippleShade
             , cornerRadius 20.0
-            , margin $ Margin 0 2 0 0 
+            , margin $ Margin 2 2 0 0 
           ]
          ]
        , linearLayout
@@ -816,9 +817,9 @@ waitTimeView push config =
             , ellipsize true
             , textSize FontSize.a_20
             -- ,padding $ Padding 4 0 0 0 
-            ,margin $ Margin 28 0 0 0  
-            ,singleLine true
-            ,fontStyle $ FontStyle.semiBold TypoGraphy
+            , margin $ Margin 18 0 0 0  
+            , singleLine true
+            , fontStyle $ FontStyle.semiBold TypoGraphy
             ]
             , if config.waitTimeSeconds > chargesOb.freeSeconds then 
                 yellowPill push ("+ " <> HU.formatSecIntoMinSecs (config.waitTimeSeconds - chargesOb.freeSeconds)) false 
@@ -853,18 +854,19 @@ yellowPill push text' showInfo =
         , margin $ Margin 1 1 0 0
         , visibility if showInfo then VISIBLE else GONE
         , onClick push $ const WaitingInfo
-        , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_info_blue"
+        , imageWithFallback $ fetchImage FF_ASSET "ny_ic_info_blue"
         ]
     ]
 
 rideInfoView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
 rideInfoView push config =
-  linearLayout
+  linearLayout 
     [ height WRAP_CONTENT
     , width MATCH_PARENT
-    , stroke $ "1," <> Color.grey900
+    , stroke $ "1," <> Color.blue600
     , cornerRadius 8.0
     , padding $ Padding 14 14 5 14
+    , background Color.blue600
     , afterRender push $ const NoAction
     ] [  horizontalScrollView
           [ width MATCH_PARENT
@@ -913,7 +915,7 @@ rideTierAndCapacity push config =
   linearLayout
   [ width WRAP_CONTENT
   , height WRAP_CONTENT
-  , background Color.blue600 
+  , background $ EHU.getColorWithOpacity 8 Color.blue900
   , gravity CENTER
   , padding $ Padding paddingLeft 4 4 4
   , margin $ MarginBottom 12
@@ -1005,14 +1007,7 @@ normalRideInfoView push config =
           [ height WRAP_CONTENT
           , width MATCH_PARENT
           ]
-          [ estimatedFareView push config
-          
-          , if isWaitingTimeStarted config then  
-                linearLayout
-                [ height WRAP_CONTENT
-                , width WRAP_CONTENT
-                ,margin $ MarginHorizontal 5 5
-                ][separator true , waitTimeView push config] else pickUpDistance push config 
+          [ estimatedFareView push config 
           , linearLayout
               [ weight 1.0
               , height MATCH_PARENT
@@ -1020,6 +1015,12 @@ normalRideInfoView push config =
               []
           , separator true
           , totalDistanceView push config
+          , if isWaitingTimeStarted config then  
+                linearLayout
+                [ height WRAP_CONTENT
+                , width WRAP_CONTENT
+                , margin $ MarginHorizontal 0 5
+                ][separator true , waitTimeView push config] else pickUpDistance push config
           ]
       , if config.estimatedTollCharges > 0.0 then extraChargesView  (fetchImage FF_COMMON_ASSET "ny_ic_blue_toll") (getString $ RIDE_TOLL_FARE_INCLUDES $ (getCurrency appConfig) <> (show $ round config.estimatedTollCharges)) else noView 
       , if config.parkingCharge > 0.0 then extraChargesView  (fetchImage FF_COMMON_ASSET "ny_ic_parking_logo_blue") (getString $ PARKING_CHARGES_INCLUDED $ (getCurrency appConfig) <> (show $ round config.parkingCharge) ) else noView
@@ -1276,7 +1277,7 @@ arrivedStopView push state =
     , padding (Padding 0 0 0 4)
     , onClick push (const $ ArrivedAtStop)
     , cornerRadius 8.0
-    , background Color.blueGreen
+    , background Color.blue900
     , gravity CENTER
     , margin $ MarginRight 8
     ] <> FontStyle.subHeading1 TypoGraphy
