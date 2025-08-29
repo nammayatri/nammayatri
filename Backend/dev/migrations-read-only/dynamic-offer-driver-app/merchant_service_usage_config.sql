@@ -74,7 +74,8 @@ ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN pan_
 ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN gst_verification_service character varying(30) ;
 
 
+
 ------- SQL updates -------
 
-ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ALTER COLUMN dashboard_pan_verification_service TYPE character varying(30);
-ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ALTER COLUMN dashboard_gst_verification_service TYPE character varying(30);
+ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN dashboard_pan_verification_service character varying(30) ;
+ALTER TABLE atlas_driver_offer_bpp.merchant_service_usage_config ADD COLUMN dashboard_gst_verification_service character varying(30) ;
