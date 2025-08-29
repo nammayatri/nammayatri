@@ -1949,3 +1949,13 @@ getEarningPeriodStatsBT fromDate toDate earningType = do
     where
     errorHandler (ErrorPayload errorPayload) = do
         BackT $ pure GoBack
+
+----------------------------------------------- All Time Stats API -------------------------------------------------------------
+
+getAllTimeStatsBT :: DriverStatsReq -> FlowBT String DriverStatsRes
+getAllTimeStatsBT payload = do
+    headers <- getHeaders' "" false
+    withAPIResultBT (EP.getAllTimeStats "") identity errorHandler (lift $ lift $ callAPI headers payload)
+    where
+    errorHandler (ErrorPayload errorPayload) = do
+        BackT $ pure GoBack

@@ -506,7 +506,6 @@ listItem push item state =
     , clickable $ compClickable state item
     , alpha $ compAlpha state item
     , onClick push $ const $ (if not state.props.dontAllowHvRelaunch then RegistrationAction item else NoAction) 
-    -- , onClick push $ const $ RegistrationAction'
     , margin (MarginBottom 20)
     , gravity CENTER_VERTICAL
     ][  linearLayout
