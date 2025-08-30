@@ -206,3 +206,34 @@ getInsuranceInfoClient = client (Proxy @GetInsuranceInfoAPI)
 
 getInsuranceInfoAPI :: Proxy GetInsuranceInfoAPI
 getInsuranceInfoAPI = Proxy
+
+type GetRiderMobileNumberAPI =
+  "internal"
+    :> "riderMobileNumber"
+    :> Capture "rideId" Text
+    :> Header "token" Text
+    :> Get '[JSON] RiderMobileAPIEntity
+
+data RiderMobileAPIEntity = RiderMobileAPIEntity
+  { riderMobileNumber :: Maybe Text
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+getRiderMobileNumber ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+  ) =>
+  Text ->
+  BaseUrl ->
+  Text ->
+  m RiderMobileAPIEntity
+getRiderMobileNumber apiKey internalUrl rideId = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BAP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (getRiderMobileNumberClient rideId (Just apiKey)) "GetRiderMobileNumber" getRiderMobileNumberAPI
+
+getRiderMobileNumberClient :: Text -> Maybe Text -> EulerClient RiderMobileAPIEntity
+getRiderMobileNumberClient = client (Proxy @GetRiderMobileNumberAPI)
+
+getRiderMobileNumberAPI :: Proxy GetRiderMobileNumberAPI
+getRiderMobileNumberAPI = Proxy
