@@ -141,6 +141,7 @@ import qualified SharedLogic.WMB as WMB
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Clickhouse.Ride as CQRide
 import Storage.Clickhouse.RideDetails (findIdsByFleetOwner)
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
@@ -183,6 +184,7 @@ import Tools.Error
 import qualified Tools.Maps as Maps
 import qualified Tools.Notifications as Notification
 import Tools.SMS as Sms hiding (Success)
+import Utils.Common.Cac.KeyNameConstants
 
 postDriverFleetAddVehicle ::
   ShortId DM.Merchant ->
@@ -235,7 +237,64 @@ postDriverFleetAddVehicleHelper isBulkUpload merchantShortId opCity reqDriverPho
     (_, Just fleetOwnerId) -> do
       -- fleet and fleetDriver case
       whenJust rc $ \rcert -> checkRCAssociationForFleet fleetOwnerId rcert
-      void $ DCommon.runVerifyRCFlow getEntityData.id merchant merchantOpCityId opCity req True isBulkUpload (Just $ Id @DP.Person fleetOwnerId) -- Pass fleet.id if addvehicle under fleet or pass driver.id if addvehcile under driver
+      Redis.set (DomainRC.makeFleetOwnerKey req.registrationNo) fleetOwnerId -- setting this value here , so while creation of creation of vehicle we can add fleet owner id
+      fleetConfig <- QFC.findByPrimaryKey (Id fleetOwnerId) >>= fromMaybeM (FleetConfigNotFound fleetOwnerId)
+      void $
+        DCommon.runVerifyRCFlow
+          (getField @"id" getEntityData)
+          merchant
+          merchantOpCityId
+          opCity
+          req
+          True
+          isBulkUpload
+          (Just (Id fleetOwnerId))
+      -- Manual vehicle creation for buses when verification is skippable
+      when (getField @"verificationSkippable" fleetConfig && req.vehicleCategory == Just DVC.BUS) $ do
+        now <- getCurrentTime
+        transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast getEntityData.id))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+
+        -- Create RC input from the request
+        let createRCInput = createRCInputFromVehicleWithFleet req getMbFleetOwnerId
+
+        -- Build RC record
+        mbNewRC <- buildRC merchant.id merchantOpCityId createRCInput []
+        case mbNewRC of
+          Just newRC -> do
+            -- Upsert the RC record
+            RCQuery.upsert newRC
+
+            -- Create RC associations
+            case getEntityData.role of
+              DP.FLEET_OWNER -> do
+                mbFleetAssoc <- FRAE.findLinkedByRCIdAndFleetOwnerId getEntityData.id newRC.id now
+                when (isNothing mbFleetAssoc) $ do
+                  createFleetRCAssociationIfPossible transporterConfig getEntityData.id newRC
+              DP.DRIVER -> do
+                -- For fleet drivers, create both fleet and driver associations
+                whenJust (Id <$> getMbFleetOwnerId) $ \fleetOwnerIdTyped -> do
+                  mbFleetAssoc <- FRAE.findLinkedByRCIdAndFleetOwnerId fleetOwnerIdTyped newRC.id now
+                  when (isNothing mbFleetAssoc) $ do
+                    createFleetRCAssociationIfPossible transporterConfig fleetOwnerIdTyped newRC
+
+                mbDriverAssoc <- QRCAssociation.findLinkedByRCIdAndDriverId getEntityData.id newRC.id now
+                when (isNothing mbDriverAssoc) $ do
+                  createDriverRCAssociationIfPossible transporterConfig getEntityData.id newRC
+              _ -> pure ()
+
+            -- Create vehicle
+            cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId Nothing
+            case getEntityData.role of
+              DP.DRIVER -> do
+                driverInfo <- QDriverInfo.findById getEntityData.id >>= fromMaybeM DriverInfoNotFound
+                let vehicle = makeFullVehicleFromRC cityVehicleServiceTiers driverInfo getEntityData merchant.id req.registrationNo newRC merchantOpCityId now req.vehicleTags
+                QVehicle.create vehicle
+                logTagInfo "dashboard -> manual bus vehicle created for driver: " (show getEntityData.id)
+              DP.FLEET_OWNER -> do
+                -- For fleet owners, we don't create the vehicle directly as it needs to be assigned to a driver
+                logTagInfo "dashboard -> RC created for fleet owner, vehicle will be created when assigned to driver: " (show getEntityData.id)
+              _ -> pure ()
+          Nothing -> logError "Failed to create RC for manual bus vehicle creation"
       let logTag = case getEntityData.role of
             DP.FLEET_OWNER -> "dashboard -> addVehicleUnderFleet"
             DP.DRIVER -> "dashboard -> addVehicleUnderFleetDriver"
@@ -2426,7 +2485,7 @@ fetchOrCreatePerson moc req_ = do
             merchantOperatingCity = Just moc.city,
             email = Nothing,
             name = Just req_.driverName,
-            identifierType = Just DP.MOBILENUMBER,
+            identifierType = Just DP.DEVICEID,
             registrationLat = Nothing,
             registrationLon = Nothing
           }
@@ -2594,6 +2653,36 @@ convertToAddVehicleReq rcReq =
       vehicleModelYear = Nothing,
       vehicleTags = Nothing,
       fuelType = Nothing
+    }
+
+-- Helper function to create RC input from AddVehicleReq with fleet owner ID
+createRCInputFromVehicleWithFleet :: Common.AddVehicleReq -> Maybe Text -> CreateRCInput
+createRCInputFromVehicleWithFleet Common.AddVehicleReq {..} mbFleetOwnerId =
+  CreateRCInput
+    { registrationNumber = Just registrationNo,
+      fitnessUpto = Nothing,
+      fleetOwnerId = mbFleetOwnerId,
+      vehicleCategory = vehicleCategory,
+      airConditioned,
+      oxygen,
+      ventilator,
+      documentImageId = fromMaybe (Id "") (cast <$> imageId), -- Use empty ID if no image provided
+      vehicleClass = Just vehicleClass,
+      vehicleClassCategory = Nothing,
+      insuranceValidity = Nothing,
+      seatingCapacity = capacity,
+      permitValidityUpto = Nothing,
+      pucValidityUpto = Nothing,
+      manufacturer = Just make,
+      manufacturerModel = Just model,
+      bodyType = Nothing,
+      fuelType = energyType,
+      mYManufacturing = mYManufacturing,
+      color = Just colour,
+      dateOfRegistration = dateOfRegistration,
+      vehicleModelYear = vehicleModelYear,
+      grossVehicleWeight = Nothing,
+      unladdenWeight = Nothing
     }
 
 getDriverDashboardInternalHelperGetFleetOwnerId :: (ShortId DM.Merchant -> Context.City -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> Environment.Flow Text)

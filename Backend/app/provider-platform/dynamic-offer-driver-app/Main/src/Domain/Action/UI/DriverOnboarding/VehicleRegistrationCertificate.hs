@@ -29,6 +29,7 @@ module Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
     LinkedRC (..),
     DeleteRCReq (..),
     convertTextToUTC,
+    makeFleetOwnerKey,
     mkIdfyVerificationEntity,
     mkHyperVergeVerificationEntity,
     validateRCResponse,

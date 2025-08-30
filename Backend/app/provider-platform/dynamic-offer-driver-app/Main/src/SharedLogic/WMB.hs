@@ -426,6 +426,36 @@ linkFleetBadge driverId _ _ fleetOwnerId badge badgeType = do
           updatedAt = now
         }
 
+linkFleetBadge' :: Id Person -> Id Merchant -> Id MerchantOperatingCity -> Text -> FleetBadge -> DFBT.FleetBadgeType -> Maybe Bool -> Flow ()
+linkFleetBadge' driverId _ _ fleetOwnerId badge badgeType skipNameUpdate = do
+  createBadgeAssociation -- Upsert the badge association
+  let (driverBadgeName, conductorBadgeName) = case badgeType of
+        DFBT.DRIVER -> (Just badge.badgeName, Nothing)
+        DFBT.CONDUCTOR -> (Nothing, Just badge.badgeName)
+  case skipNameUpdate of
+    Just True -> pure ()
+    _ -> QP.updatePersonName driverId driverBadgeName conductorBadgeName
+  where
+    createBadgeAssociation = do
+      now <- getCurrentTime
+      fleetBadgeId <- generateGUID
+      let fleetBadgeAssoc = buildBadgeAssociation fleetBadgeId now
+      QFBA.createBadgeAssociationIfNotExists fleetBadgeAssoc
+
+    buildBadgeAssociation fleetBadgeId now =
+      FleetBadgeAssociation
+        { associatedOn = Just now,
+          associatedTill = convertTextToUTC (Just "2099-12-12"),
+          badgeId = badge.id,
+          badgeType = badgeType,
+          createdAt = now,
+          driverId = driverId,
+          fleetOwnerId = fleetOwnerId,
+          id = Id fleetBadgeId,
+          isActive = True,
+          updatedAt = now
+        }
+
 linkVehicleToDriver :: Id Person -> Id Merchant -> Id MerchantOperatingCity -> FleetConfig -> Text -> Text -> VehicleRegistrationCertificate -> Flow ()
 linkVehicleToDriver driverId merchantId merchantOperatingCityId _ _ vehicleNumber vehicleRC = do
   tryLinkinRC
