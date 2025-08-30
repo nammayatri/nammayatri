@@ -288,16 +288,15 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
         )
   let merchantOperatingCityId = merchantOperatingCity.id
   let isMeterRide = getIsMeterRideSearch req
-
   when (isMeterRide == Just True && person.role /= Person.METER_RIDE_DUMMY) $
     throwError (InvalidRequest $ "Only meter dummy guy is allowed to do this")
   configVersionMap <- getConfigVersionMapForStickiness (cast merchantOperatingCityId)
   riderCfg <- QRC.findByMerchantOperatingCityIdInRideFlow merchantOperatingCityId configVersionMap >>= fromMaybeM (RiderConfigNotFound merchantOperatingCityId.getId)
   searchRequestId <- generateGUID
+  let driverIdentifier' = driverIdentifier_ <|> (person.referralCode >>= \refCode -> bool Nothing (mkDriverIdentifier refCode) $ shouldPriortiseDriver person riderCfg refCode)
   RouteDetails {..} <- getRouteDetails person merchant merchantOperatingCity searchRequestId stopsLatLong now sourceLatLong roundTrip originCity riderCfg isMeterRide req
   fromLocation <- buildSearchReqLoc merchant.id merchantOperatingCityId origin
   stopLocations <- buildSearchReqLoc merchant.id merchantOperatingCityId `mapM` stops
-  let driverIdentifier' = driverIdentifier_ <|> (person.referralCode >>= \refCode -> bool Nothing (mkDriverIdentifier refCode) $ shouldPriortiseDriver person riderCfg refCode)
   searchRequest <-
     buildSearchRequest
       searchRequestId
@@ -337,11 +336,15 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
       vehicleCategory
 
   Metrics.incrementSearchRequestCount merchant.name merchantOperatingCity.id.getId
-
   Metrics.startSearchMetrics merchant.name searchRequest.id.getId
   -- triggerSearchEvent SearchEventData {searchRequest = searchRequest}
-  QSearchRequest.createDSReq searchRequest
-  QPFS.clearCache person.id
+  let action = do
+        QSearchRequest.createDSReq searchRequest
+        QPFS.clearCache person.id
+
+  case driverIdentifier' of
+    Just driverId -> Redis.whenWithLockRedis (driverIdentifierLockKey driverId) 30 action
+    Nothing -> action
 
   fork "updating search counters" $ fraudCheck person merchantOperatingCity searchRequest
   let updatedPerson = backfillCustomerNammaTags person
@@ -693,3 +696,6 @@ autoCompleteEvent riderConfig searchRequestId sessionToken isSourceManuallyMoved
           let updatedRecord = AutoCompleteEventData record.autocompleteInputs record.customerId record.id isDestinationManuallyMoved (Just searchRequestId) record.searchType record.sessionToken record.merchantId record.merchantOperatingCityId record.originLat record.originLon record.createdAt now
           -- let updatedRecord = record {DTA.searchRequestId = Just searchRequestId, DTA.isLocationSelectedOnMap = isDestinationManuallyMoved, DTA.updatedAt = now}
           triggerAutoCompleteEvent updatedRecord
+
+driverIdentifierLockKey :: DRL.DriverIdentifier -> Text
+driverIdentifierLockKey driverId = "Rider:Search:DriverIdentifier:" <> show driverId._type <> ":" <> driverId.value
