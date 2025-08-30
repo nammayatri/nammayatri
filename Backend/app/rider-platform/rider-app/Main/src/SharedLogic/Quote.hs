@@ -45,7 +45,8 @@ data QuoteAPIEntity = QuoteAPIEntity
     createdAt :: UTCTime,
     isValueAddNP :: Bool,
     validTill :: UTCTime,
-    vehicleIconUrl :: Maybe Text
+    vehicleIconUrl :: Maybe Text,
+    serviceTierType :: DVST.ServiceTierType
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -73,6 +74,7 @@ makeQuoteAPIEntity (Quote {..}) bppDetails isValueAddNP =
           vehicleVariant = vehicleServiceTierType,
           quoteFareBreakup = mkQuoteBreakupAPIEntity <$> quoteBreakupList,
           vehicleIconUrl = showBaseUrl <$> vehicleIconUrl,
+          serviceTierType = vehicleServiceTierType,
           ..
         }
 
