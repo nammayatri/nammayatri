@@ -221,11 +221,15 @@ getTollNames item = do
   parsedTagValue <- readMaybe tagValueStr :: Maybe [Text]
   return parsedTagValue
 
-getestimatedPickupDuration :: Spec.Item -> Maybe Seconds
-getestimatedPickupDuration item = do
-  tagValueStr <- Utils.getTagV2 Tag.INFO Tag.DURATION_TO_NEAREST_DRIVER_MINUTES item.itemTags
-  parsedTagValue <- readMaybe tagValueStr :: Maybe Seconds
-  return parsedTagValue
+getEstimatedPickupDuration :: Spec.Item -> Maybe Seconds
+getEstimatedPickupDuration item =
+  parseDurationTag Tag.ETA_TO_NEAREST_DRIVER_MIN -- ONDC compliant
+    <|> parseDurationTag Tag.DURATION_TO_NEAREST_DRIVER_MINUTES -- for backward compatibility
+  where
+    parseDurationTag tagName = do
+      tagValueStr <- Utils.getTagV2 Tag.INFO tagName item.itemTags
+      parsedTagValue <- readMaybe tagValueStr :: Maybe Seconds
+      return parsedTagValue
 
 getSmartTipSuggestion :: Spec.Item -> Maybe HighPrecMoney
 getSmartTipSuggestion item = do

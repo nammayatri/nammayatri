@@ -2,13 +2,16 @@ module Beckn.OnDemand.Transformer.OnSearch where
 
 import qualified Beckn.OnDemand.Utils.Common
 import Beckn.OnDemand.Utils.OnSearch
+import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Types
 import qualified BecknV2.OnDemand.Utils.Common
 import qualified BecknV2.OnDemand.Utils.Context
+import qualified BecknV2.OnDemand.Utils.Tags as UTag
 import qualified Data.List
 import qualified Data.Text
 import qualified Domain.Action.Beckn.Search
 import Domain.Types.BecknConfig as DBC
+import qualified Domain.Types.Merchant as DM
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.App
@@ -35,7 +38,8 @@ tfCatalog :: Domain.Action.Beckn.Search.DSearchRes -> DBC.BecknConfig -> Bool ->
 tfCatalog res bppConfig isValueAddNP = do
   let catalogDescriptor_ = tfCatalogDescriptor res
       catalogProviders_ = tfCatalogProviders res bppConfig isValueAddNP & Just . Data.List.singleton
-  BecknV2.OnDemand.Types.Catalog {catalogDescriptor = catalogDescriptor_, catalogProviders = catalogProviders_}
+      catalogTags_ = tfCatalogTags res.provider bppConfig
+  BecknV2.OnDemand.Types.Catalog {catalogDescriptor = catalogDescriptor_, catalogProviders = catalogProviders_, catalogTags = Just catalogTags_}
 
 tfCatalogDescriptor :: Domain.Action.Beckn.Search.DSearchRes -> Maybe BecknV2.OnDemand.Types.Descriptor
 tfCatalogDescriptor res = do
@@ -57,7 +61,8 @@ tfCatalogProviders res bppConfig isValueAddNP = do
       pricings = (map (Beckn.OnDemand.Utils.Common.convertEstimateToPricing res.specialLocationName) res.estimates) <> (map (Beckn.OnDemand.Utils.Common.convertQuoteToPricing res.specialLocationName) res.quotes)
       providerFulfillments_ = map (tfProviderFulfillments res) pricings & Just
       providerItems_ = Just $ map (tfProviderItems res isValueAddNP) pricings
-  BecknV2.OnDemand.Types.Provider {providerDescriptor = providerDescriptor_, providerFulfillments = providerFulfillments_, providerId = providerId_, providerItems = providerItems_, providerLocations = providerLocations_, providerPayments = providerPayments_}
+      providerCategories_ = map tfProviderCategories res.categoryCode
+  BecknV2.OnDemand.Types.Provider {providerDescriptor = providerDescriptor_, providerFulfillments = providerFulfillments_, providerId = providerId_, providerItems = providerItems_, providerLocations = providerLocations_, providerPayments = providerPayments_, providerCategories = providerCategories_}
 
 tfItemPrice :: Beckn.OnDemand.Utils.Common.Pricing -> Maybe BecknV2.OnDemand.Types.Price
 tfItemPrice pricing = do
@@ -94,7 +99,8 @@ tfProviderItems res isValueAddNP pricing = do
       itemPaymentIds_ = Nothing
       itemTags_ = Beckn.OnDemand.Utils.OnSearch.mkItemTags res.transporterConfig pricing isValueAddNP res.fareParametersInRateCard
       itemPrice_ = tfItemPrice pricing
-  BecknV2.OnDemand.Types.Item {itemDescriptor = itemDescriptor_, itemFulfillmentIds = itemFulfillmentIds_, itemId = itemId_, itemLocationIds = itemLocationIds_, itemPaymentIds = itemPaymentIds_, itemPrice = itemPrice_, itemTags = itemTags_}
+      itemCategoryIds_ = map tfItemCategoryIds res.categoryCode
+  BecknV2.OnDemand.Types.Item {itemDescriptor = itemDescriptor_, itemFulfillmentIds = itemFulfillmentIds_, itemId = itemId_, itemLocationIds = itemLocationIds_, itemPaymentIds = itemPaymentIds_, itemPrice = itemPrice_, itemTags = itemTags_, itemCategoryIds = itemCategoryIds_}
 
 tfVehicle :: Beckn.OnDemand.Utils.Common.Pricing -> Maybe BecknV2.OnDemand.Types.Vehicle
 tfVehicle pricing = do
@@ -120,3 +126,21 @@ tfItemDescriptor pricing =
         descriptorShortDesc = pricing.serviceTierDescription,
         descriptorName = Just pricing.serviceTierName
       }
+
+tfProviderCategories :: Enums.CategoryCode -> [BecknV2.OnDemand.Types.Category]
+tfProviderCategories categoryCode = do
+  let descriptorCode_ = Just $ Kernel.Prelude.show categoryCode
+  let categoryId_ = Just $ Enums.categoryCodeToId categoryCode
+  let categoryDescriptor_ = Just $ BecknV2.OnDemand.Types.Descriptor {descriptorCode = descriptorCode_, descriptorName = Nothing, descriptorShortDesc = Nothing}
+  [ BecknV2.OnDemand.Types.Category
+      { categoryDescriptor = categoryDescriptor_,
+        categoryId = categoryId_
+      }
+    ]
+
+tfItemCategoryIds :: Enums.CategoryCode -> [Text]
+tfItemCategoryIds categoryCode = [Enums.categoryCodeToId categoryCode]
+
+tfCatalogTags :: DM.Merchant -> DBC.BecknConfig -> [BecknV2.OnDemand.Types.TagGroup]
+tfCatalogTags merchant bppConfig =
+  [UTag.mkBppTermsTagGroup (show merchant.city) bppConfig.settlementType Nothing bppConfig.settlementWindow bppConfig.staticTermsUrl bppConfig.buyerFinderFee]
