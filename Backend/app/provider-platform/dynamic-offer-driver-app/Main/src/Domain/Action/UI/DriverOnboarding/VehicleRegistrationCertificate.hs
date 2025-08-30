@@ -29,6 +29,7 @@ module Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
     LinkedRC (..),
     DeleteRCReq (..),
     convertTextToUTC,
+    makeFleetOwnerKey,
     mkIdfyVerificationEntity,
     mkHyperVergeVerificationEntity,
     validateRCResponse,
@@ -101,6 +102,7 @@ import qualified Storage.Queries.DriverLicense as DLQuery
 import qualified Storage.Queries.DriverPanCard as DPQuery
 import Storage.Queries.DriverRCAssociation (buildRcHM)
 import qualified Storage.Queries.DriverRCAssociation as DAQuery
+import qualified Storage.Queries.FleetConfig as QFC
 import qualified Storage.Queries.FleetOwnerInformation as FOI
 import qualified Storage.Queries.FleetRCAssociation as FRCAssoc
 import qualified Storage.Queries.HyperVergeVerification as HVQuery
@@ -331,20 +333,37 @@ getDocumentImage personId imageId_ expectedDocType = do
 verifyRCFlow :: Person.Person -> Id DMOC.MerchantOperatingCity -> Text -> Id Image.Image -> Maybe UTCTime -> Maybe Bool -> Maybe DVC.VehicleCategory -> Maybe Bool -> Maybe Bool -> Maybe Bool -> EncryptedHashedField 'AsEncrypted Text -> Domain.ImageExtractionValidation -> Flow ()
 verifyRCFlow person merchantOpCityId rcNumber imageId dateOfRegistration multipleRC mbVehicleCategory mbAirConditioned mbOxygen mbVentilator encryptedRC imageExtractionValidation = do
   now <- getCurrentTime
-  verifyRes <-
-    Verification.verifyRC person.merchantId
-      merchantOpCityId
-      Nothing
-      Verification.VerifyRCReq {rcNumber = rcNumber, driverId = person.id.getId}
-  case verifyRes.verifyRCResp of
-    Verification.AsyncResp res -> do
-      case res.requestor of
-        VT.Idfy -> IVQuery.create =<< mkIdfyVerificationEntity person res.requestId now imageExtractionValidation multipleRC encryptedRC dateOfRegistration mbVehicleCategory mbAirConditioned mbOxygen mbVentilator imageId Nothing Nothing
-        VT.HyperVergeRCDL -> HVQuery.create =<< mkHyperVergeVerificationEntity person res.requestId now imageExtractionValidation multipleRC encryptedRC dateOfRegistration mbVehicleCategory mbAirConditioned mbOxygen mbVentilator imageId Nothing Nothing res.transactionId
-        _ -> throwError $ InternalError ("Service provider not configured to return async responses. Provider Name : " <> (show res.requestor))
-      CQO.setVerificationPriorityList person.id verifyRes.remPriorityList
-    Verification.SyncResp res -> do
-      void $ onVerifyRC person Nothing res (Just verifyRes.remPriorityList) (Just imageExtractionValidation) (Just encryptedRC) multipleRC imageId Nothing Nothing Nothing
+
+  -- Check if verification should be skipped based on fleet config
+  mbFleetOwnerId <- Redis.safeGet $ makeFleetOwnerKey rcNumber
+  shouldSkipVerification <- case mbFleetOwnerId of
+    Just fleetOwnerId -> do
+      mbFleetConfig <- QFC.findByPrimaryKey (Id fleetOwnerId)
+      pure $ maybe False (.verificationSkippable) mbFleetConfig
+    Nothing -> pure False
+
+  if shouldSkipVerification
+    then do
+      -- Bypass external verification and create mock successful response
+      logInfo $ "Bypassing RC verification for RC: " <> rcNumber <> " due to verificationSkippable flag"
+      let mockSuccessfulResponse = createMockRCVerificationResponse rcNumber dateOfRegistration mbVehicleCategory
+      void $ onVerifyRCHandler person mockSuccessfulResponse mbVehicleCategory mbAirConditioned imageId Nothing Nothing Nothing dateOfRegistration Nothing mbOxygen mbVentilator Nothing (Just imageExtractionValidation) (Just encryptedRC) multipleRC imageId Nothing Nothing
+    else do
+      -- Normal verification flow
+      verifyRes <-
+        Verification.verifyRC person.merchantId
+          merchantOpCityId
+          Nothing
+          Verification.VerifyRCReq {rcNumber = rcNumber, driverId = person.id.getId}
+      case verifyRes.verifyRCResp of
+        Verification.AsyncResp res -> do
+          case res.requestor of
+            VT.Idfy -> IVQuery.create =<< mkIdfyVerificationEntity person res.requestId now imageExtractionValidation multipleRC encryptedRC dateOfRegistration mbVehicleCategory mbAirConditioned mbOxygen mbVentilator imageId Nothing Nothing
+            VT.HyperVergeRCDL -> HVQuery.create =<< mkHyperVergeVerificationEntity person res.requestId now imageExtractionValidation multipleRC encryptedRC dateOfRegistration mbVehicleCategory mbAirConditioned mbOxygen mbVentilator imageId Nothing Nothing res.transactionId
+            _ -> throwError $ InternalError ("Service provider not configured to return async responses. Provider Name : " <> (show res.requestor))
+          CQO.setVerificationPriorityList person.id verifyRes.remPriorityList
+        Verification.SyncResp res -> do
+          void $ onVerifyRC person Nothing res (Just verifyRes.remPriorityList) (Just imageExtractionValidation) (Just encryptedRC) multipleRC imageId Nothing Nothing Nothing
 
 mkIdfyVerificationEntity :: MonadFlow m => Person.Person -> Text -> UTCTime -> Domain.ImageExtractionValidation -> Maybe Bool -> EncryptedHashedField 'AsEncrypted Text -> Maybe UTCTime -> Maybe DVC.VehicleCategory -> Maybe Bool -> Maybe Bool -> Maybe Bool -> Id Image.Image -> Maybe Int -> Maybe Text -> m Domain.IdfyVerification
 mkIdfyVerificationEntity person requestId now imageExtractionValidation multipleRC encryptedRC dateOfRegistration mbVehicleCategory mbAirConditioned mbOxygen mbVentilator imageId mbRetryCnt mbStatus = do
@@ -773,6 +792,38 @@ rcVerificationLockKey rcNumber = "VehicleRC::RCNumber-" <> rcNumber
 
 makeFleetOwnerKey :: Text -> Text
 makeFleetOwnerKey vehicleNo = "FleetOwnerId:PersonId-" <> removeSpaceAndDash vehicleNo
+
+-- Helper function to create a mock successful RC verification response for bypass
+createMockRCVerificationResponse :: Text -> Maybe UTCTime -> Maybe DVC.VehicleCategory -> VT.RCVerificationResponse
+createMockRCVerificationResponse rcNumber dateOfRegistration mbVehicleCategory =
+  VT.RCVerificationResponse
+    { registrationDate = show <$> dateOfRegistration,
+      registrationNumber = Just rcNumber,
+      fitnessUpto = Nothing,
+      insuranceValidity = Nothing,
+      vehicleClass = case mbVehicleCategory of
+        Just DVC.CAR -> Just "LMV"
+        Just DVC.BUS -> Just "MGV"
+        Just DVC.TRUCK -> Just "HGV"
+        Just DVC.AMBULANCE -> Just "LMV"
+        _ -> Just "MGV",
+      vehicleCategory = Nothing,
+      seatingCapacity = case mbVehicleCategory of
+        Just DVC.BUS -> Just (String "40")
+        _ -> Just (String "4"),
+      manufacturer = Just "Generic",
+      permitValidityFrom = Nothing,
+      permitValidityUpto = Nothing,
+      pucValidityUpto = Nothing,
+      manufacturerModel = Just "Generic Model",
+      mYManufacturing = Nothing,
+      color = Just "White",
+      fuelType = Just "Diesel",
+      bodyType = Nothing,
+      status = Nothing,
+      grossVehicleWeight = Nothing,
+      unladdenWeight = Nothing
+    }
 
 parseDateTime :: Text -> Maybe UTCTime
 parseDateTime = parseTimeM True defaultTimeLocale "%Y-%m-%d" . unpack
