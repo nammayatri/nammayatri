@@ -75,7 +75,21 @@ data VehicleCategory = METRO | SUBWAY | BUS
 $(mkHttpInstancesForEnum ''VehicleCategory)
 
 data ServiceTierType = ORDINARY | AC | NON_AC | EXPRESS | SPECIAL | EXECUTIVE | FIRST_CLASS | SECOND_CLASS | THIRD_CLASS
-  deriving (Eq, Ord, Show, Read, Generic, ToJSON, ToParamSchema)
+  deriving (Eq, Show, Read, Generic, ToJSON, ToParamSchema)
+
+instance Ord ServiceTierType where
+  compare a b = compare (rank a) (rank b)
+    where
+      rank :: ServiceTierType -> Int
+      rank EXECUTIVE = 0
+      rank ORDINARY = 1
+      rank AC = 2
+      rank NON_AC = 3
+      rank SPECIAL = 4
+      rank EXPRESS = 5
+      rank FIRST_CLASS = 6
+      rank SECOND_CLASS = 7
+      rank THIRD_CLASS = 8
 
 instance FromJSON ServiceTierType where
   parseJSON r = case r of
