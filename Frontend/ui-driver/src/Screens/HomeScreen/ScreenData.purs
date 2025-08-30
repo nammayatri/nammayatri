@@ -223,6 +223,9 @@ initData =
         policyId : Nothing,
         policyNumber : Nothing
       }
+      , nyClubTag : Nothing
+      , consentPopupPeakHeight : 0
+      , hasDriverAttemptedCall : false
     }
   , props:
       { isFreeRide: false

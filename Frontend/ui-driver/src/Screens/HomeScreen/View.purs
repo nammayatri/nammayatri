@@ -4054,3 +4054,119 @@ recentBusRideView push state =
         , fontSize = FontStyle.Body20
       }    
           
+
+
+customerNotPickingUpTheCall :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+customerNotPickingUpTheCall push state = 
+  linearLayout
+   [
+      width MATCH_PARENT
+    , height MATCH_PARENT
+    , alignParentBottom "true,-1"
+    , orientation VERTICAL
+    , gravity BOTTOM
+    , background Color.black9000
+   ]
+   [
+    callNotPickingView push state
+   ]
+
+callNotPickingView :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+callNotPickingView push state = 
+  relativeLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , orientation VERTICAL
+    , gravity BOTTOM
+    , cornerRadius 24.0
+    , background Color.white900
+    ]
+    [ linearLayout
+      [
+        width MATCH_PARENT
+      , height WRAP_CONTENT
+      , orientation VERTICAL
+      , margin $ Margin 20 24 20 24
+      ]
+      [textView
+        ([ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , background Color.white900
+        , gravity CENTER
+        , text $ "Customer not picking up the call?"
+        , color Color.black
+        , margin $ MarginBottom 12
+        ] <> FontStyle.h0 TypoGraphy
+        ),
+       imageView [
+        imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_call_not_picked"
+        , height $ V 230
+        , width MATCH_PARENT
+        , gravity $ CENTER
+        , margin $ MarginBottom 12
+        ],
+        textView
+        ([ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , background Color.lightYellow
+        , padding $ Padding 12 12 12 12
+        , gravity CENTER
+        , text $ "You can cancel the ride without affecting your rating"
+        , cornerRadius 20.0
+        , color Color.lightBrown
+        , margin $ MarginBottom 12
+        ] <> FontStyle.body38 TypoGraphy
+        ),
+        PrimaryButton.view (push <<< UnaffectedCancel) (cancelRideButtonConfig state)
+      , PrimaryButton.view (push <<< Wait) (waitButtonConfig state)
+        
+      ]
+    ]
+
+
+customerNotPickingUpTheCallPopUp :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+customerNotPickingUpTheCallPopUp push state = 
+  linearLayout
+  [ width MATCH_PARENT
+  , height WRAP_CONTENT
+  , orientation VERTICAL
+  , background Color.transparent
+  , cornerRadius 24.0
+  , margin $ Margin 10 300 10 10
+  ]
+  [
+    linearLayout
+    [
+      width MATCH_PARENT
+    , height WRAP_CONTENT
+    , orientation HORIZONTAL
+    , padding $ Padding 10 10 10 10
+    , cornerRadius 24.0
+    , background Color.white900
+    ]
+    [
+      imageView
+      [ width $ V 50
+      , height WRAP_CONTENT
+      , imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_call_not_picked_bg_removed"
+      , cornerRadius 24.0
+      , padding $ PaddingTop 10
+      ]
+    , textView $
+      [ width $ V (2*(EHC.screenWidth unit)/3)
+      , height WRAP_CONTENT
+      , color Color.black800
+      , text $ "Customer not picking up the call?"
+      , margin $ MarginLeft 5
+      , margin $ MarginRight 5
+      , padding $ PaddingHorizontal 10 15
+      ] <> FontStyle.title8 TypoGraphy
+      ,imageView
+      [ width $ V 50
+      , height WRAP_CONTENT
+      , padding $ PaddingVertical 10 10
+      , imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_right_arrow_grey_bg"
+      ]
+    ]
+  ]
+
