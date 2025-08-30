@@ -1115,6 +1115,9 @@ type HomeScreenData =  {
 , overchargingTag :: Maybe API.OverchargingTag
 , driverBlocked :: Boolean
 , blockedExpiryTime :: String
+, nyClubTag :: Maybe String
+, consentPopupPeakHeight :: Int
+, hasDriverAttemptedCall :: Boolean
 }
 -- | Represents the current state of bus-related data
 type WhereIsMyBusData = {
