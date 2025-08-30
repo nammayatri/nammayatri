@@ -22,6 +22,7 @@ where
 import Control.Monad.Extra hiding (fromMaybeM, whenJust)
 import Data.Aeson hiding (Success)
 import Data.Text as T hiding (elem, find, length, map, null, zip)
+import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.Dashboard.Fleet.RegistrationV2 as DFR
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DVRC
 import qualified Domain.Types.DocumentVerificationConfig as ODC
@@ -106,7 +107,7 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
             DGQuery.create gstCardDetails
 
         case person.role of
-          role | isFleetOwnerRole role -> do
+          role | DCommon.checkFleetOwnerRole role -> do
             gstin <- encrypt req.gstin
             QFOI.updateGstImage (Just gstin) (Just req.imageId) person.id
           _ -> pure ()
@@ -127,13 +128,11 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
         void $ SStatus.statusHandler' driverImagesInfo Nothing Nothing Nothing Nothing Nothing (Just True) shouldActivateRc onlyMandatoryDocs
       pure False
     role
-      | isFleetOwnerRole role ->
+      | DCommon.checkFleetOwnerRole role ->
         DFR.enableFleetIfPossible person.id adminApprovalRequired (DFR.castRoleToFleetType person.role)
     _ -> pure False
   pure res
   where
-    isFleetOwnerRole :: Person.Role -> Bool
-    isFleetOwnerRole role = role `elem` [Person.FLEET_OWNER, Person.FLEET_BUSINESS]
     buildGstinCard :: Person.Person -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Bool -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> Flow DGst.DriverGstin
     buildGstinCard person address constitution_of_business date_of_liability is_provisional legal_name trade_name type_of_registration valid_from valid_upto pan_number = do
       gstinEnc <- encrypt req.gstin

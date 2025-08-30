@@ -24,6 +24,7 @@ import qualified Data.ByteString.Lazy as LBS
 import Data.Text (pack, unpack)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
+import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.Dashboard.Fleet.RegistrationV2 as DFR
 import qualified Domain.Action.UI.DriverOnboarding.Status as Status
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DVRC
@@ -467,12 +468,10 @@ verifyAadhaar verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req a
             shouldActivateRc = False
         void $ SStatus.statusHandler' driverImagesInfo Nothing Nothing Nothing Nothing Nothing (Just True) shouldActivateRc onlyMandatoryDocs
       pure False
-    role | isFleetOwnerRole role -> DFR.enableFleetIfPossible person.id adminApprovalRequired (DFR.castRoleToFleetType person.role)
+    role | DCommon.checkFleetOwnerRole role -> DFR.enableFleetIfPossible person.id adminApprovalRequired (DFR.castRoleToFleetType person.role)
     _ -> pure False
   pure res
   where
-    isFleetOwnerRole :: Person.Role -> Bool
-    isFleetOwnerRole role = role `elem` [Person.FLEET_OWNER, Person.FLEET_BUSINESS]
     makeAadhaarCardEntity driverId extractedAadhaar aadhaarReq = do
       currTime <- getCurrentTime
       (aadhaarHash, maskedAadhaarNumber) <- case aadhaarReq.aadhaarNumber of
