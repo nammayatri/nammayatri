@@ -1009,7 +1009,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking booking' = do
                 metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
                 splitSettlementDetails = Payment.mkSplitSettlementDetails isSplitEnabled_ paymentOrder.amount []
               }
-      DPayment.createOrderService commonMerchantId (Just $ cast merchantOperatingCityId) commonPersonId createOrderReq (createOrderCall merchantOperatingCityId booking (Just person.id.getId) person.clientSdkVersion)
+      DPayment.createOrderService commonMerchantId (Just $ cast merchantOperatingCityId) commonPersonId Nothing createOrderReq (createOrderCall merchantOperatingCityId booking (Just person.id.getId) person.clientSdkVersion)
 
     getPaymentType = \case
       Spec.METRO -> if isMultiModalBooking then Payment.FRFSMultiModalBooking else Payment.FRFSBooking

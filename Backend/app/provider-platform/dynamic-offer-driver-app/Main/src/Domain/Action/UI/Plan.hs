@@ -841,11 +841,11 @@ createPrepaidInvoiceAndOrder serviceName driverId merchantId merchantOpCityId pl
   now <- getCurrentTime
   prepaidRegistrationFee <- getLatestPrepaidRegistrationFee driverId serviceName now
   case prepaidRegistrationFee of
-    Just fee -> SPayment.createOrder (driverId, merchantId, merchantOpCityId) paymentServiceName ([fee], []) Nothing INV.PREPAID_INVOICE Nothing [] mbDeepLinkData False
+    Just fee -> SPayment.createOrder (driverId, merchantId, merchantOpCityId) paymentServiceName ([fee], []) Nothing INV.PREPAID_INVOICE Nothing [] mbDeepLinkData False Nothing
     Nothing -> do
       driverFee <- mkDriverFee driverId merchantId merchantOpCityId serviceName plan currency Nothing
       QDF.create driverFee
-      SPayment.createOrder (driverId, merchantId, merchantOpCityId) paymentServiceName ([driverFee], []) Nothing INV.PREPAID_INVOICE Nothing [] mbDeepLinkData False
+      SPayment.createOrder (driverId, merchantId, merchantOpCityId) paymentServiceName ([driverFee], []) Nothing INV.PREPAID_INVOICE Nothing [] mbDeepLinkData False Nothing
 
 createMandateInvoiceAndOrder ::
   ServiceNames ->
@@ -900,9 +900,9 @@ createMandateInvoiceAndOrder serviceName driverId merchantId merchantOpCityId pl
         then do
           vendorFees' <- if splitEnabled then concat <$> mapM (QVF.findAllByDriverFeeId . DF.id) driverManualDuesFees else pure []
           let vendorFees = map roundVendorFee vendorFees'
-          SPayment.createOrder (driverId, merchantId, merchantOpCityId) paymentServiceName (driverFee : driverManualDuesFees, []) mbMandateOrder INV.MANDATE_SETUP_INVOICE mbInvoiceIdTuple vendorFees mbDeepLinkData splitEnabled
+          SPayment.createOrder (driverId, merchantId, merchantOpCityId) paymentServiceName (driverFee : driverManualDuesFees, []) mbMandateOrder INV.MANDATE_SETUP_INVOICE mbInvoiceIdTuple vendorFees mbDeepLinkData splitEnabled Nothing
         else do
-          SPayment.createOrder (driverId, merchantId, merchantOpCityId) paymentServiceName ([driverFee], []) mbMandateOrder INV.MANDATE_SETUP_INVOICE mbInvoiceIdTuple [] mbDeepLinkData splitEnabled
+          SPayment.createOrder (driverId, merchantId, merchantOpCityId) paymentServiceName ([driverFee], []) mbMandateOrder INV.MANDATE_SETUP_INVOICE mbInvoiceIdTuple [] mbDeepLinkData splitEnabled Nothing
     calculateDues driverFees = sum $ map (\dueInvoice -> roundToHalf dueInvoice.currency (dueInvoice.govtCharges + dueInvoice.platformFee.fee + dueInvoice.platformFee.cgst + dueInvoice.platformFee.sgst)) driverFees
     checkIfInvoiceIsReusable invoice newDriverFees = do
       allDriverFeeClubedToInvoice <- QINV.findById invoice.id

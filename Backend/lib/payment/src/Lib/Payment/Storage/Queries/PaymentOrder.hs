@@ -109,6 +109,7 @@ instance FromTType' BeamPO.PaymentOrder DOrder.PaymentOrder where
             shortId = ShortId shortId,
             personId = Id personId,
             merchantId = Id merchantId,
+            entityName = entityName,
             serviceProvider = fromMaybe Payment.Juspay serviceProvider,
             clientAuthToken = case (clientAuthTokenEncrypted, clientAuthTokenHash) of
               (Just encryptedToken, Just hash) -> Just $ EncryptedHashed (Encrypted encryptedToken) hash
@@ -132,6 +133,7 @@ instance ToTType' BeamPO.PaymentOrder DOrder.PaymentOrder where
         shortId = getShortId shortId,
         personId = personId.getId,
         merchantId = merchantId.getId,
+        entityName = entityName,
         webPaymentLink = showBaseUrl <$> paymentLinks.web,
         iframePaymentLink = showBaseUrl <$> paymentLinks.iframe,
         mobilePaymentLink = showBaseUrl <$> paymentLinks.mobile,
