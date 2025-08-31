@@ -536,7 +536,9 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN driver_calling_
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN driver_wallet_payout_threshold double precision ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN minimum_wallet_payout_amount double precision ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN max_wallet_payouts_per_day integer ;
+
 
 
 ------- SQL updates -------

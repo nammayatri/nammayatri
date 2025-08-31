@@ -5,7 +5,6 @@
 module Storage.Queries.DriverWallet (module Storage.Queries.DriverWallet, module ReExport) where
 
 import qualified Domain.Types.DriverWallet
-import qualified Domain.Types.Person
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude

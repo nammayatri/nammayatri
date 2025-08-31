@@ -12,22 +12,27 @@
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
 
-module Domain.Action.UI.DriverWallet (getWalletTransactions, postWalletPayout) where
+module Domain.Action.UI.DriverWallet (getWalletTransactions, postWalletPayout, postWalletTopup) where
 
-import qualified API.Types.UI.DriverWallet
+import qualified API.Types.UI.DriverWallet as DriverWallet
 import qualified Data.Text as T
 import qualified Data.Time
+import Domain.Action.UI.Plan hiding (mkDriverFee)
 import Domain.Action.UI.Ride.EndRide.Internal (makeWalletRunningBalanceLockKey)
+import qualified Domain.Types.DriverFee as DF
 import qualified Domain.Types.DriverWallet as DW
 import Domain.Types.Extra.Plan
+import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MerchantServiceConfig as DEMSC
-import qualified Domain.Types.Person
+import qualified Domain.Types.Person as DP
+import Domain.Types.VehicleCategory
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import Kernel.External.Encryption (decrypt)
 import qualified Kernel.External.Notification.FCM.Types as FCM
+import qualified Kernel.External.Payment.Types as Payment
 import qualified Kernel.External.Payout.Interface as Juspay
 import qualified Kernel.External.Payout.Types as TPayout
 import qualified Kernel.Prelude
@@ -37,10 +42,12 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
-import SharedLogic.Payment
+import qualified SharedLogic.Payment as SPayment
 import Storage.Cac.TransporterConfig (findByMerchantOpCityId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
+import qualified Storage.Queries.DriverFee as QDF
+import qualified Storage.Queries.DriverFeeExtra as QDFE
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverWallet as QDW
 import qualified Storage.Queries.Person as QPerson
@@ -50,7 +57,7 @@ import qualified Tools.Payout as Payout
 import qualified Tools.Utils as Utils
 
 getWalletTransactions ::
-  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id DP.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
@@ -59,7 +66,7 @@ getWalletTransactions ::
     Kernel.Prelude.Maybe DW.TransactionType ->
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
-    Environment.Flow API.Types.UI.DriverWallet.TransactionResponse
+    Environment.Flow DriverWallet.TransactionResponse
   )
 getWalletTransactions (mbPersonId, _, _) mbFromDate mbToDate mbTransactionType mbLimit mbOffset = do
   driverId <- fromMaybeM (PersonDoesNotExist "Nothing") mbPersonId
@@ -78,7 +85,7 @@ getWalletTransactions (mbPersonId, _, _) mbFromDate mbToDate mbTransactionType m
         DW.RIDE_TRANSACTION -> Utils.extractLocationFromMaps dw.rideId rideMap bookingMap
         _ -> return (Nothing, Nothing)
       return $
-        API.Types.UI.DriverWallet.TransactionDetails
+        DriverWallet.TransactionDetails
           { id = dw.id,
             rideId = dw.rideId,
             transactionType = dw.transactionType,
@@ -91,12 +98,12 @@ getWalletTransactions (mbPersonId, _, _) mbFromDate mbToDate mbTransactionType m
             toLocation = toLocation,
             createdAt = dw.createdAt
           }
-  pure $ API.Types.UI.DriverWallet.TransactionResponse {transactions = transactionsAPIEntity, currentBalance = driverInfo.walletBalance}
+  pure $ DriverWallet.TransactionResponse {transactions = transactionsAPIEntity, currentBalance = driverInfo.walletBalance}
   where
     maxLimit = 10
 
 postWalletPayout ::
-  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id DP.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
@@ -110,8 +117,19 @@ postWalletPayout (mbPersonId, _, mocId) = do
   Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey driverId.getId) 10 10 $ do
     driverInfo <- QDI.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
     let walletBalance = fromMaybe 0 driverInfo.walletBalance
-        payoutThreshold = fromMaybe 0 transporterConfig.driverWalletPayoutThreshold
-    when (walletBalance < payoutThreshold) $ throwError $ InvalidRequest ("Payout not possible as wallet balance is less than payout threshold of Rs. " <> show payoutThreshold)
+    let minPayoutAmount = fromMaybe 0 transporterConfig.minimumWalletPayoutAmount
+    when (walletBalance < minPayoutAmount) $ throwError $ InvalidRequest ("Minimum payout amount is " <> show minPayoutAmount)
+    utcTime <- getCurrentTime
+    let timeDiff = secondsToNominalDiffTime transporterConfig.timeDiffFromUtc
+        localTime = addUTCTime timeDiff utcTime
+        localDay = Data.Time.utctDay localTime
+        startOfLocalDay = Data.Time.UTCTime localDay 0
+        endOfLocalDay = Data.Time.UTCTime localDay 86399
+        utcStartOfDay = addUTCTime (negate timeDiff) startOfLocalDay
+        utcEndOfDay = addUTCTime (negate timeDiff) endOfLocalDay
+    whenJust transporterConfig.maxWalletPayoutsPerDay $ \maxPayoutsPerDay -> do
+      payoutsToday <- QDW.findAllByDriverIdRangeAndTransactionType driverId utcStartOfDay utcEndOfDay (Just DW.PAYOUT) (maxPayoutsPerDay + 1) 0
+      when (length payoutsToday >= maxPayoutsPerDay) $ throwError $ InvalidRequest "Maximum payouts per day reached"
     let mbVpa = driverInfo.payoutVpa
     vpa <- fromMaybeM (InternalError $ "Payout vpa not present for " <> driverId.getId) mbVpa
     payoutId <- generateGUID
@@ -125,7 +143,6 @@ postWalletPayout (mbPersonId, _, mocId) = do
     when (createPayoutOrderReq.amount > 0.0) $ do
       (_, mbPayoutOrder) <- DPayment.createPayoutService (Kernel.Types.Id.cast person.merchantId) (Just $ Kernel.Types.Id.cast person.merchantOperatingCityId) (Kernel.Types.Id.cast driverId) Nothing (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
       whenJust mbPayoutOrder $ \payoutOrder -> do
-        now <- getCurrentTime
         newId <- generateGUID
         let transaction =
               DW.DriverWallet
@@ -142,8 +159,8 @@ postWalletPayout (mbPersonId, _, mocId) = do
                   runningBalance = 0,
                   payoutOrderId = Just payoutOrder.id,
                   payoutStatus = Just DW.INITIATED,
-                  createdAt = now,
-                  updatedAt = now
+                  createdAt = utcTime,
+                  updatedAt = utcTime
                 }
         QDW.create transaction
         QDI.updateWalletBalance (Just 0) driverId
@@ -152,11 +169,11 @@ postWalletPayout (mbPersonId, _, mocId) = do
         Notify.sendNotificationToDriver person.merchantOperatingCityId FCM.SHOW Nothing FCM.PAYOUT_INITIATED notificationTitle notificationMessage person person.deviceToken
   pure APISuccess.Success
 
-mkPayoutReq :: Domain.Types.Person.Person -> Text -> T.Text -> Maybe Text -> HighPrecMoney -> Juspay.CreatePayoutOrderReq
+mkPayoutReq :: DP.Person -> Text -> T.Text -> Maybe Text -> HighPrecMoney -> Juspay.CreatePayoutOrderReq
 mkPayoutReq person vpa uid phoneNo amount =
   Juspay.CreatePayoutOrderReq
     { orderId = uid,
-      amount = roundToTwoDecimalPlaces amount,
+      amount = SPayment.roundToTwoDecimalPlaces amount,
       customerPhone = fromMaybe "6666666666" phoneNo, -- dummy no.
       customerEmail = fromMaybe "dummymail@gmail.com" person.email, -- dummy mail
       customerId = person.id.getId,
@@ -166,3 +183,100 @@ mkPayoutReq person vpa uid phoneNo amount =
       customerVpa = vpa,
       isDynamicWebhookRequired = False
     }
+
+postWalletTopup ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id DP.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    DriverWallet.TopUpRequest ->
+    Environment.Flow PlanSubscribeRes
+  )
+postWalletTopup (mbPersonId, merchantId, mocId) req = do
+  driverId <- fromMaybeM (PersonDoesNotExist "Nothing") mbPersonId
+  when (req.amount <= 0) $ throwError $ InvalidRequest "Top-up amount must be greater than zero"
+  eitherResult <- Redis.whenWithLockRedisAndReturnValue (makeWalletTopupLockKey driverId.getId) 10 $ do
+    existingTopUpFee <- QDFE.findLatestByFeeTypeAndStatusWithTotalEarnings DF.WALLET_TOPUP [DF.PAYMENT_PENDING] driverId req.amount
+    case existingTopUpFee of
+      Just fee -> pure fee
+      Nothing -> do
+        driverFee <- mkDriverFee driverId req.amount
+        QDF.create driverFee
+        pure driverFee
+  case eitherResult of
+    Right fee -> createTopupOrder driverId [fee]
+    Left _ -> throwError $ InternalError "Could not acquire lock for wallet topup."
+  where
+    makeWalletTopupLockKey :: Text -> Text
+    makeWalletTopupLockKey driverId = "wallet-topup-lock:" <> driverId
+
+    createTopupOrder driverId driverFees = do
+      (createOrderResp, orderId) <-
+        SPayment.createOrder
+          (driverId, merchantId, mocId)
+          (DEMSC.PaymentService Payment.Juspay)
+          (driverFees, [])
+          Nothing
+          INV.WALLET_TOPUP_INVOICE
+          Nothing
+          []
+          Nothing
+          False
+          (Just DPayment.DRIVER_WALLET_TOPUP)
+      return $
+        PlanSubscribeRes
+          { orderId = orderId,
+            orderResp = createOrderResp
+          }
+
+    mkDriverFee driverId amount = do
+      now <- getCurrentTime
+      feeId <- generateGUID
+      pure $
+        DF.DriverFee
+          { id = feeId,
+            driverId = driverId,
+            merchantId = merchantId,
+            merchantOperatingCityId = mocId,
+            feeType = DF.WALLET_TOPUP,
+            status = DF.PAYMENT_PENDING,
+            currency = INR,
+            platformFee = DF.PlatformFee {fee = 0, cgst = 0, sgst = 0, currency = INR},
+            govtCharges = 0,
+            specialZoneAmount = 0,
+            totalEarnings = amount,
+            numRides = 0,
+            specialZoneRideCount = 0,
+            startTime = now,
+            endTime = now,
+            payBy = now,
+            createdAt = now,
+            updatedAt = now,
+            serviceName = PREPAID_SUBSCRIPTION,
+            vehicleCategory = CAR,
+            notificationRetryCount = 0,
+            schedulerTryCount = 0,
+            overlaySent = False,
+            amountPaidByCoin = Nothing,
+            autopayPaymentStage = Nothing,
+            badDebtDeclarationDate = Nothing,
+            badDebtRecoveryDate = Nothing,
+            billNumber = Nothing,
+            collectedAt = Nothing,
+            collectedBy = Nothing,
+            feeWithoutDiscount = Nothing,
+            hasSibling = Nothing,
+            offerId = Nothing,
+            planId = Nothing,
+            planMode = Nothing,
+            planOfferTitle = Nothing,
+            refundEntityId = Nothing,
+            refundedAmount = Nothing,
+            refundedAt = Nothing,
+            refundedBy = Nothing,
+            siblingFeeId = Nothing,
+            splitOfDriverFeeId = Nothing,
+            stageUpdatedAt = Nothing,
+            validDays = Nothing,
+            vehicleNumber = Nothing
+          }

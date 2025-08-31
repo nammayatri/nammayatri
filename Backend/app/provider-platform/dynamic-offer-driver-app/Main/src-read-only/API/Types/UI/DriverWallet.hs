@@ -14,6 +14,10 @@ import qualified Kernel.Types.Id
 import Servant
 import Tools.Auth
 
+data TopUpRequest = TopUpRequest {amount :: Kernel.Types.Common.HighPrecMoney}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data TransactionDetails = TransactionDetails
   { collectionAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     createdAt :: Data.Time.UTCTime,

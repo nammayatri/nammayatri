@@ -10,7 +10,8 @@ where
 import qualified API.Types.UI.DriverWallet
 import qualified Control.Lens
 import qualified Data.Time
-import qualified Domain.Action.UI.DriverWallet as Domain.Action.UI.DriverWallet
+import qualified Domain.Action.UI.DriverWallet
+import qualified Domain.Action.UI.Plan
 import qualified Domain.Types.DriverWallet
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -41,10 +42,19 @@ type API =
       :> Post
            '[JSON]
            Kernel.Types.APISuccess.APISuccess
+      :<|> TokenAuth
+      :> "wallet"
+      :> "topup"
+      :> ReqBody
+           '[JSON]
+           API.Types.UI.DriverWallet.TopUpRequest
+      :> Post
+           '[JSON]
+           Domain.Action.UI.Plan.PlanSubscribeRes
   )
 
 handler :: Environment.FlowServer API
-handler = getWalletTransactions :<|> postWalletPayout
+handler = getWalletTransactions :<|> postWalletPayout :<|> postWalletTopup
 
 getWalletTransactions ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -68,3 +78,13 @@ postWalletPayout ::
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
 postWalletPayout a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverWallet.postWalletPayout (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
+
+postWalletTopup ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    API.Types.UI.DriverWallet.TopUpRequest ->
+    Environment.FlowHandler Domain.Action.UI.Plan.PlanSubscribeRes
+  )
+postWalletTopup a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverWallet.postWalletTopup (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

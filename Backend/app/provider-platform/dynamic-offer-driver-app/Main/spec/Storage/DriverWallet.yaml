@@ -12,7 +12,7 @@ DriverWallet:
   derives: "Generic,Show"
   types:
     TransactionType:
-      enum: "RIDE_TRANSACTION,PAYOUT"
+      enum: "RIDE_TRANSACTION,PAYOUT,TOPUP"
       derive: "HttpInstance"
     PayoutStatus:
       enum: "INITIATED,FAILED,SETTLED"
