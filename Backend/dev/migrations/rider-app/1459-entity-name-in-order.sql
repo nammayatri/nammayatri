@@ -1,0 +1,1 @@
+ALTER TABLE atlas_app.payment_order ADD COLUMN entity_name character varying(255);
