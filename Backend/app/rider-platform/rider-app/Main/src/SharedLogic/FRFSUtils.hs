@@ -85,6 +85,7 @@ import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import qualified Storage.CachedQueries.FRFSGtfsStageFare as QFRFSGtfsStageFare
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
+import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.PartnerOrgStation as CQPOS
 import Storage.CachedQueries.RouteStopTimeTable as QRouteStopTimeTable
@@ -763,7 +764,7 @@ markAllRefundBookings booking personId = do
   let paymentBookings = catMaybes allPaymentBookings
 
   let terminalBookings = filter (\frfsBooking -> frfsBooking.status `elem` [DFRFSTicketBooking.FAILED, DFRFSTicketBooking.CANCELLED]) allJourneyFrfsBookings
-      nonRefundInitiatedBookings =
+      nonRefundInitiatedBookings' =
         filter
           ( \bkg ->
               ( any
@@ -775,7 +776,16 @@ markAllRefundBookings booking personId = do
               )
           )
           terminalBookings
-      allFailed = not (null terminalBookings) && all (\frfsBooking -> frfsBooking.status == DFRFSTicketBooking.FAILED) allJourneyFrfsBookings
+  nonRefundInitiatedBookings <-
+    filterM
+      ( \currBooking -> do
+          let mkRefundLockKey = "frfsRefundBooking:" <> currBooking.id.getId
+          processedCount <- Redis.incr mkRefundLockKey
+          void $ Redis.expire mkRefundLockKey 60
+          pure (processedCount == 1)
+      )
+      nonRefundInitiatedBookings'
+  let allFailed = not (null terminalBookings) && all (\frfsBooking -> frfsBooking.status == DFRFSTicketBooking.FAILED) allJourneyFrfsBookings
   whenJust (listToMaybe nonRefundInitiatedBookings) $ \_ -> do
     logInfo $ "payment status api markAllRefundBookings: " <> show nonRefundInitiatedBookings
     logInfo $ "allFailed flag in markAllRefundBookings: " <> show allFailed
@@ -794,36 +804,38 @@ markAllRefundBookings booking personId = do
     let splitDetails = Payment.mkUnaggregatedSplitSettlementDetails isSplitEnabled amountUpdated vendorSplitDetails
     let refundSplitDetails = mkRefundSplitDetails nonRefundInitiatedBookings
     refundId <- generateGUID
-    let lockKey = "markAllRefundBookings:" <> orderShortId
-    Redis.withLockRedis lockKey 5 $ do
-      when allFailed $ whenJust mbJourneyId $ \journeyId -> QJourney.updateStatus DJourney.FAILED journeyId
-      let refundReq =
-            Payment.AutoRefundReq
-              { orderId = orderShortId,
-                requestId = refundId,
-                amount = amountUpdated,
-                splitSettlementDetails = splitDetails
-              }
-          createRefundCall refundReq' = Payment.refundOrder person.merchantId person.merchantOperatingCityId Nothing Payment.FRFSMultiModalBooking (Just person.id.getId) person.clientSdkVersion refundReq'
-      result <- try @_ @SomeException $ DPayment.refundService (refundReq, Kernel.Types.Id.Id {Kernel.Types.Id.getId = refundId}) (Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant person.merchantId) (Just refundSplitDetails) createRefundCall
-      case result of
-        Left err -> logError $ "Refund service failed for journey " <> refundId <> ": " <> show err
-        Right _ -> do
-          logInfo $ "Refund service completed successfully for journey " <> refundId
-          forM_ nonRefundInitiatedBookings $ \frfsBooking -> do
-            void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.REFUND_INITIATED frfsBooking.id
+    when allFailed $ whenJust mbJourneyId $ \journeyId -> QJourney.updateStatus DJourney.FAILED journeyId
+    let refundReq =
+          Payment.AutoRefundReq
+            { orderId = orderShortId,
+              requestId = refundId,
+              amount = amountUpdated,
+              splitSettlementDetails = splitDetails
+            }
+        createRefundCall refundReq' = Payment.refundOrder person.merchantId person.merchantOperatingCityId Nothing Payment.FRFSMultiModalBooking (Just person.id.getId) person.clientSdkVersion refundReq'
+    result <- try @_ @SomeException $ DPayment.refundService (refundReq, Kernel.Types.Id.Id {Kernel.Types.Id.getId = refundId}) (Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant person.merchantId) (Just refundSplitDetails) createRefundCall
+    case result of
+      Left err -> do
+        forM_ nonRefundInitiatedBookings $ \frfsBooking -> do
+          void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.REFUND_FAILED frfsBooking.id
+        logError $ "Refund service failed for journey " <> refundId <> ": " <> show err
+      Right _ -> do
+        logInfo $ "Refund service completed successfully for journey " <> refundId
+        forM_ nonRefundInitiatedBookings $ \frfsBooking -> do
+          void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.REFUND_INITIATED frfsBooking.id
 
-          let scheduleAfter = secondsToNominalDiffTime (24 * 60 * 60) -- Schedule for 24 hours later
-              jobData =
-                JobScheduler.CheckRefundStatusJobData
-                  { JobScheduler.refundId = refundId,
-                    JobScheduler.numberOfRetries = 0
-                  }
-          createJobIn @_ @'CheckRefundStatus (Just person.merchantId) (Just person.merchantOperatingCityId) scheduleAfter (jobData :: JobScheduler.CheckRefundStatusJobData)
-          logInfo $ "Scheduled refund status check job for " <> refundId <> " in 24 hours (initial check)"
+        riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+        let scheduleAfter = riderConfig.refundStatusUpdateInterval -- Schedule for 24 hours later
+            jobData =
+              JobScheduler.CheckRefundStatusJobData
+                { JobScheduler.refundId = refundId,
+                  JobScheduler.numberOfRetries = 0
+                }
+        createJobIn @_ @'CheckRefundStatus (Just person.merchantId) (Just person.merchantOperatingCityId) scheduleAfter (jobData :: JobScheduler.CheckRefundStatusJobData)
+        logInfo $ "Scheduled refund status check job for " <> refundId <> " in 24 hours (initial check)"
 
-          logInfo $ "payment status api markAllRefundBookings completed"
-      pure ()
+        logInfo $ "payment status api markAllRefundBookings completed"
+    pure ()
   where
     mkRefundSplitDetails :: [DFRFSTicketBooking.FRFSTicketBooking] -> [Refunds.Split]
     mkRefundSplitDetails bookings =

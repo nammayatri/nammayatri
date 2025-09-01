@@ -185,13 +185,13 @@ juspayWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId authData val
   osr <- case orderWebhookResponse of
     Nothing -> throwError $ InternalError "Order Contents not found."
     Just osr' -> pure osr'
-  (orderShortId, status) <- getOrderData osr
+  (orderShortId, status, refunds) <- getOrderData osr
   logDebug $ "order short Id from Response bap webhook: " <> show orderShortId
   Redis.whenWithLockRedis (mkOrderStatusCheckKey orderShortId status) 60 $ do
     case mbServiceType of
-      Just Payment.FRFSBooking -> void $ FRFSTicketService.webhookHandlerFRFSTicket (ShortId orderShortId) merchantId
-      Just Payment.FRFSBusBooking -> void $ FRFSTicketService.webhookHandlerFRFSTicket (ShortId orderShortId) merchantId
-      Just Payment.FRFSMultiModalBooking -> void $ FRFSTicketService.webhookHandlerFRFSTicket (ShortId orderShortId) merchantId
+      Just Payment.FRFSBooking -> void $ FRFSTicketService.webhookHandlerFRFSTicket (ShortId orderShortId) merchantId refunds
+      Just Payment.FRFSBusBooking -> void $ FRFSTicketService.webhookHandlerFRFSTicket (ShortId orderShortId) merchantId refunds
+      Just Payment.FRFSMultiModalBooking -> void $ FRFSTicketService.webhookHandlerFRFSTicket (ShortId orderShortId) merchantId refunds
       Just Payment.BBPS -> void $ BBPS.webhookHandlerBBPS (ShortId orderShortId) merchantId
       _ -> pure ()
   pure Ack
@@ -204,7 +204,7 @@ juspayWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId authData val
       Just Payment.FRFSMultiModalBooking -> DMSC.MultiModalPaymentService Payment.Juspay
       Nothing -> DMSC.PaymentService Payment.Juspay
     getOrderData osr = case osr of
-      Payment.OrderStatusResp {..} -> pure (orderShortId, transactionStatus)
+      Payment.OrderStatusResp {..} -> pure (orderShortId, transactionStatus, refunds)
       _ -> throwError $ InternalError "Order Id not found in response."
 
 mkOrderStatusCheckKey :: Text -> Payment.TransactionStatus -> Text
