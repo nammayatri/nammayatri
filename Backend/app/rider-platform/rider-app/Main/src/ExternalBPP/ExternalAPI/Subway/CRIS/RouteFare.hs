@@ -193,7 +193,7 @@ getRouteFare config merchantOperatingCityId request = do
                 Just
                   Quote.FRFSFareDetails
                     { providerRouteId = show routeId,
-                      distance = Meters fare.distance,
+                      distance = kilometersToMeters $ Kilometers fare.distance,
                       via = fare.via,
                       ticketTypeCode = fare.ticketTypeCode,
                       trainTypeCode = fare.trainTypeCode,
