@@ -556,6 +556,7 @@ data FRFSTicketBookingError
   | FRFSTicketBookingDoesNotExist Text
   | FRFSTicketsForBookingExpired Text
   | FRFSTicketsForBookingDoesNotExist Text
+  | FRFSQuoteExpired Text
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''FRFSTicketBookingError
@@ -566,6 +567,7 @@ instance IsBaseError FRFSTicketBookingError where
     FRFSTicketBookingDoesNotExist bookingId -> Just $ "FRFS Ticket Booking with bookingId:" +|| bookingId ||+ " does not exist."
     FRFSTicketsForBookingExpired bookingId -> Just $ "FRFS Tickets for booking with bookingId:" +|| bookingId ||+ " has expired."
     FRFSTicketsForBookingDoesNotExist bookingId -> Just $ "FRFS Tickets for booking with bookingId:" +|| bookingId ||+ " does not exist."
+    FRFSQuoteExpired _ -> Just $ "Quote expired"
 
 instance IsHTTPError FRFSTicketBookingError where
   toErrorCode = \case
@@ -573,12 +575,14 @@ instance IsHTTPError FRFSTicketBookingError where
     FRFSTicketBookingDoesNotExist _ -> "FRFS_TICKET_BOOKING_DOES_NOT_EXIST"
     FRFSTicketsForBookingExpired _ -> "FRFS_TICKETS_FOR_BOOKING_EXPIRED"
     FRFSTicketsForBookingDoesNotExist _ -> "FRFS_TICKETS_FOR_BOOKING_DOES_NOT_EXIST"
+    FRFSQuoteExpired _ -> "FRFS_QUOTE_EXPIRED"
 
   toHttpCode = \case
     FRFSTicketBookingNotFound _ -> E500
     FRFSTicketBookingDoesNotExist _ -> E400
     FRFSTicketsForBookingExpired _ -> E400
     FRFSTicketsForBookingDoesNotExist _ -> E400
+    FRFSQuoteExpired _ -> E400
 
 instance IsAPIError FRFSTicketBookingError
 

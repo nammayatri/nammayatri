@@ -156,13 +156,25 @@ instance JT.JourneyLeg TaxiLegRequest m where
               dCancelRes <- DCancel.cancel booking mbRide cancelReq legData.cancellationSource
               void $ withShortRetry $ CallBPP.cancelV2 booking.merchantId dCancelRes.bppUrl =<< ACL.buildCancelReqV2 dCancelRes cancelReq.reallocate
           )
-          (\estimateId -> void $ cancelSearch' (booking.riderId, booking.merchantId) estimateId)
+          ( \estimateId -> do
+              try @_ @SomeException (cancelSearch' (booking.riderId, booking.merchantId) estimateId)
+                >>= \case
+                  Left err -> do
+                    logTagInfo "Failed to cancel booking search: " $ show err
+                    pure ()
+                  Right _ -> pure ()
+          )
           legData.cancelEstimateId
       Nothing -> do
         searchReq <- QSearchRequest.findById legData.searchRequestId >>= fromMaybeM (SearchRequestNotFound $ "searchRequestId-" <> legData.searchRequestId.getId)
         case legData.journeyLeg.legPricingId of
           Just pricingId -> do
-            void $ cancelSearch' (searchReq.riderId, searchReq.merchantId) (Id pricingId)
+            try @_ @SomeException (cancelSearch' (searchReq.riderId, searchReq.merchantId) (Id pricingId))
+              >>= \case
+                Left err -> do
+                  logTagInfo "Failed to cancel estimate search: " $ show err
+                  pure ()
+                Right _ -> pure ()
           Nothing -> return ()
   cancel _ = throwError (InternalError "Not Supported")
 

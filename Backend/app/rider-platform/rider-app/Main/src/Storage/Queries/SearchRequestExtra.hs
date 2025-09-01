@@ -20,7 +20,7 @@ import Storage.Queries.OrphanInstances.SearchRequest ()
 
 createDSReq' :: (MonadFlow m, EsqDBFlow m r) => SearchRequest -> m ()
 createDSReq' searchReq = do
-  if fromMaybe False searchReq.isMultimodalSearch then createWithKVWithOptions Nothing True searchReq else createWithKV searchReq
+  if fromMaybe False searchReq.isMultimodalSearch then createWithKVWithOptions (Just 21600) True searchReq else createWithKV searchReq
 
 create :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => SearchRequest -> m ()
 create dsReq = do

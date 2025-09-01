@@ -639,7 +639,7 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req crisSdkResponse
       selectedDiscounts <- validateDiscounts req.discounts (fromMaybe [] discounts)
 
       now <- getCurrentTime
-      unless (quote.validTill > now) $ throwError $ InvalidRequest "Quote expired"
+      unless (quote.validTill > now) $ throwError $ FRFSQuoteExpired quote.id.getId
       maybeM
         (buildAndCreateBooking rider updatedQuote selectedDiscounts)
         ( \booking -> do
