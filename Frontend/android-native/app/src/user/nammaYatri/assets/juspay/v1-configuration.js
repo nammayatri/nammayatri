@@ -1137,6 +1137,7 @@ const manaYatriConfig = function () {
       , "enableEditPickupLocation": true
       , "enableRepeatTripBackfilling": true
       , "enableEditDestination": true
+      , "enableHelpAndSupport": true
     }
     , "appData": {
       "link": getAppLink(window.__OS)
