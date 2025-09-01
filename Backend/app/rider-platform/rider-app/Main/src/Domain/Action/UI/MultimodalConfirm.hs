@@ -160,11 +160,22 @@ postMultimodalConfirm ::
 postMultimodalConfirm (_, _) journeyId forcedBookLegOrder journeyConfirmReq = do
   validateMetroBusinessHours journeyId
   journey <- JM.getJourney journeyId
+  legs <- QJourneyLeg.getJourneyLegs journey.id
   let confirmElements = journeyConfirmReq.journeyConfirmReqElements
   void $ JM.startJourney journey.riderId confirmElements forcedBookLegOrder journey.id
-  JM.updateJourneyStatus journey Domain.Types.Journey.CONFIRMED
+  -- If all FRFS legs are skipped, update journey status to INPROGRESS. Otherwise, update journey status to CONFIRMED and it would be marked as INPROGRESS on Payment Success in `markJourneyPaymentSuccess`.
+  -- Note: INPROGRESS journey status indicates that the tracking has started.
+  if isAllFRFSLegSkipped legs confirmElements
+    then JM.updateJourneyStatus journey Domain.Types.Journey.INPROGRESS
+    else JM.updateJourneyStatus journey Domain.Types.Journey.CONFIRMED
   fork "Caching recent location" $ JLU.createRecentLocationForMultimodal journey
   pure Kernel.Types.APISuccess.Success
+  where
+    isAllFRFSLegSkipped legs journeyConfirmReqElements =
+      all
+        ( \leg -> maybe True (.skipBooking) (find (\r -> r.journeyLegOrder == leg.sequenceNumber && leg.mode `elem` [DTrip.Bus, DTrip.Subway, DTrip.Metro]) journeyConfirmReqElements)
+        )
+        legs
 
 getMultimodalBookingInfo ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
