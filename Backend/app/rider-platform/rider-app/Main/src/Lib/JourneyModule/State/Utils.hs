@@ -78,7 +78,7 @@ getTaxiAllStatuses journeyLeg mbBooking mbRide mbEstimate = do
                 case bookingStatus of
                   TaxiEstimate status -> mapTaxiEstimateStatusToJourneyLegStatus status
                   TaxiBooking status -> mapTaxiBookingStatusToJourneyLegStatus status
-                  TaxiRide status -> mapTaxiRideStatusToJourneyLegStatus status
+                  TaxiRide status -> fromMaybe (castTrackingStatusToJourneyLegStatus trackingStatus) (mapTaxiRideStatusToJourneyLegStatus status)
                   Feedback _ -> JLTypes.Completed
                   _ -> castTrackingStatusToJourneyLegStatus trackingStatus -- for UI backward compatibility
   return (oldStatus, bookingStatus, trackingStatus)
@@ -91,13 +91,12 @@ getTaxiAllStatuses journeyLeg mbBooking mbRide mbEstimate = do
         DTaxiEstimate.CANCELLED -> JLTypes.Cancelled
         _ -> JLTypes.Assigning
 
-    mapTaxiRideStatusToJourneyLegStatus :: DTaxiRide.RideStatus -> JLTypes.JourneyLegStatus
+    mapTaxiRideStatusToJourneyLegStatus :: DTaxiRide.RideStatus -> Maybe JLTypes.JourneyLegStatus
     mapTaxiRideStatusToJourneyLegStatus status = case status of
-      DTaxiRide.UPCOMING -> JLTypes.InPlan
-      DTaxiRide.NEW -> JLTypes.Booked
-      DTaxiRide.INPROGRESS -> JLTypes.Ongoing
-      DTaxiRide.COMPLETED -> JLTypes.Completed
-      DTaxiRide.CANCELLED -> JLTypes.Cancelled
+      DTaxiRide.UPCOMING -> Just JLTypes.InPlan
+      DTaxiRide.COMPLETED -> Just JLTypes.Completed
+      DTaxiRide.CANCELLED -> Just JLTypes.Cancelled
+      _ -> Nothing
 
     mapTaxiBookingStatusToJourneyLegStatus :: DTaxiBooking.BookingStatus -> JLTypes.JourneyLegStatus
     mapTaxiBookingStatusToJourneyLegStatus status = case status of
