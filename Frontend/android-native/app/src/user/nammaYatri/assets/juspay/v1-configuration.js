@@ -764,7 +764,7 @@ const odishaYatriConfig = function () {
       , "enableEditPickupLocation" : true
       , "enableRepeatTripBackfilling" : true
       , "enableEditDestination" : true
-      , "enableHelpAndSupport" : true
+      , "enableHelpAndSupport" : false
     }
     , "appData" : {
       "link" : getAppLink(window.__OS)
