@@ -236,7 +236,8 @@ instance FromJSON DriverCoinsFunctionType where
           Array arr' -> case V.toList arr' of
             [String rideType, Number rides] -> pure $ MetroRideCompleted (parseRideType rideType) (Just (round rides))
             [String rideType] -> pure $ MetroRideCompleted (parseRideType rideType) Nothing
-            _ -> fail "Expected array of length 1 or 2 for 'MetroRideCompleted'"
+            [String rideType, Null] -> pure $ MetroRideCompleted (parseRideType rideType) Nothing
+            _ -> fail $ "Expected array of length 1 or 2 for 'MetroRideCompleted', got: " <> show contents
           -- Older format: "FromMetro"
           String rideType -> pure $ MetroRideCompleted (parseRideType rideType) Nothing
           _ -> fail "Unsupported format for 'MetroRideCompleted' contents"
