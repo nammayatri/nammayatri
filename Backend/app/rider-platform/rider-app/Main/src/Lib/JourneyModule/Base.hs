@@ -8,7 +8,6 @@ import Control.Monad.Extra (mapMaybeM)
 import Data.List (sortBy)
 import Data.List.NonEmpty (nonEmpty)
 import Data.Ord (comparing)
-import qualified Data.Time as Time
 import Domain.Action.UI.EditLocation as DEditLocation
 import qualified Domain.Action.UI.Location as DLoc
 import Domain.Action.UI.Ride as DRide
@@ -699,20 +698,6 @@ addBusLeg journey journeyLeg = do
             city,
             journeyLeg
           }
-
-isWithinTimeBound :: Time.TimeOfDay -> Time.TimeOfDay -> UTCTime -> Seconds -> Bool
-isWithinTimeBound startTime endTime now timeDiffFromUtc =
-  let tzMinutes = getSeconds timeDiffFromUtc `div` 60
-      tz = Time.minutesToTimeZone tzMinutes
-      nowAsLocal = Time.utcToLocalTime tz now
-      nowTOD = Time.localTimeOfDay nowAsLocal
-
-      --handle midnight wrap
-      inWindow =
-        if startTime <= endTime
-          then nowTOD >= startTime && nowTOD <= endTime
-          else nowTOD >= startTime || nowTOD <= endTime
-   in inWindow
 
 getUnifiedQR :: DJourney.Journey -> [JL.LegInfo] -> Maybe JL.UnifiedTicketQR
 getUnifiedQR journey legs = do

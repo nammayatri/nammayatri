@@ -939,3 +939,23 @@ updateTotalOrderValueAndSettlementAmount booking bapConfig = do
   let tOrderValue = modifyPrice tOrderPrice $ \p -> HighPrecMoney $ (p.getHighPrecMoney) / (toRational booking.quantity)
   settlementAmount <- tOrderValue `subtractPrice` finderFeeForEachTicket
   void $ QFRFSRecon.updateTOrderValueAndSettlementAmountById settlementAmount tOrderValue booking.id
+
+isOutsideBusinessHours :: Maybe Time.TimeOfDay -> Maybe Time.TimeOfDay -> UTCTime -> Seconds -> Bool
+isOutsideBusinessHours startTime endTime now timeDiffFromUtc =
+  case (startTime, endTime) of
+    (Just start, Just end) -> not $ isWithinTimeBound start end now timeDiffFromUtc
+    _ -> False
+
+isWithinTimeBound :: Time.TimeOfDay -> Time.TimeOfDay -> UTCTime -> Seconds -> Bool
+isWithinTimeBound startTime endTime now timeDiffFromUtc =
+  let tzMinutes = getSeconds timeDiffFromUtc `div` 60
+      tz = Time.minutesToTimeZone tzMinutes
+      nowAsLocal = Time.utcToLocalTime tz now
+      nowTOD = Time.localTimeOfDay nowAsLocal
+
+      --handle midnight wrap
+      inWindow =
+        if startTime <= endTime
+          then nowTOD >= startTime && nowTOD <= endTime
+          else nowTOD >= startTime || nowTOD <= endTime
+   in inWindow
