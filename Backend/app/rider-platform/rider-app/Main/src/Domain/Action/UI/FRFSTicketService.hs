@@ -62,6 +62,7 @@ import qualified Lib.Payment.Domain.Types.Common as DPayment
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified Lib.Payment.Storage.Queries.PaymentTransaction as QPaymentTransaction
+import qualified Lib.Payment.Storage.Queries.Refunds as QRefunds
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.FRFSUtils
 import SharedLogic.FRFSUtils as FRFSUtils
@@ -761,14 +762,35 @@ postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId = do
 postFrfsQuotePaymentRetry :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 postFrfsQuotePaymentRetry = error "Logic yet to be decided"
 
-webhookHandlerFRFSTicket :: Kernel.Types.Id.ShortId DPaymentOrder.PaymentOrder -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Environment.Flow ()
-webhookHandlerFRFSTicket paymentOrderId merchantId = do
+webhookHandlerFRFSTicket :: Kernel.Types.Id.ShortId DPaymentOrder.PaymentOrder -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> [Payment.RefundsData] -> Environment.Flow ()
+webhookHandlerFRFSTicket paymentOrderId merchantId refunds = do
   logDebug $ "frfs ticket order bap webhookc call" <> paymentOrderId.getShortId
   order <- QPaymentOrder.findByShortId paymentOrderId >>= fromMaybeM (PaymentOrderNotFound paymentOrderId.getShortId)
   bookingPayments <- QFRFSTicketBookingPayment.findAllByOrderId order.id
   bookings <- mapMaybeM (QFRFSTicketBooking.findById . (.frfsTicketBookingId)) bookingPayments
+  processRefunds
 
   mapM_ (\booking -> frfsBookingStatus (booking.riderId, merchantId) False booking) bookings
+  where
+    processRefunds :: Environment.Flow ()
+    processRefunds = do
+      mapM_
+        ( \refund -> do
+            let refundStatus = refund.status
+            refundEntry <- QRefunds.findById (Id refund.requestId) >>= fromMaybeM (InvalidRequest "Refund entry not found")
+            bookingIds <- case refundEntry.split of
+              Just splits -> pure $ map (.frfsBookingId) splits
+              Nothing -> pure []
+            mapM_
+              ( \bookingId ->
+                  case refundStatus of
+                    Payment.REFUND_SUCCESS -> QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.REFUNDED (Id bookingId)
+                    Payment.REFUND_FAILURE -> QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.REFUND_FAILED (Id bookingId)
+                    _ -> pure ()
+              )
+              bookingIds
+        )
+        refunds
 
 getFrfsBookingStatus :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSTicketBooking.FRFSTicketBooking -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 getFrfsBookingStatus (mbPersonId, merchantId_) bookingId = do

@@ -65,7 +65,7 @@ checkRefundStatusJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
       then do
         logInfo $ "Maximum retries reached for refund " <> refundId.getId <> ". Stopping further checks."
       else do
-        let nextSchedule = riderConfig.refundStatusUpdateInterval
+        let nextSchedule = riderConfig.refundStatusUpdateInterval * (2 ^ currentRetries)
             newJobData =
               CheckRefundStatusJobData
                 { refundId = refundId.getId,
