@@ -105,13 +105,16 @@ findActiveByFleetOwnerId ::
   m (Maybe FleetOperatorAssociation)
 findActiveByFleetOwnerId fleetOwnerId = do
   now <- getCurrentTime
-  findOneWithKV
-    [ Se.And
-        [ Se.Is BeamFOA.fleetOwnerId $ Se.Eq fleetOwnerId.getId,
-          Se.Is BeamFOA.isActive $ Se.Eq True,
-          Se.Is BeamFOA.associatedTill (Se.GreaterThan $ Just now)
-        ]
-    ]
+  listToMaybe
+    <$> findAllWithOptionsKV'
+      [ Se.And
+          [ Se.Is BeamFOA.fleetOwnerId $ Se.Eq fleetOwnerId.getId,
+            Se.Is BeamFOA.isActive $ Se.Eq True,
+            Se.Is BeamFOA.associatedTill (Se.GreaterThan $ Just now)
+          ]
+      ]
+      (Just 1)
+      Nothing
 
 -- including inactive
 findAllByFleetIdAndOperatorId ::
@@ -185,13 +188,16 @@ findActiveAssociationByOperatorId ::
   m (Maybe FleetOperatorAssociation)
 findActiveAssociationByOperatorId (Id operatorId) = do
   now <- getCurrentTime
-  findOneWithKV
-    [ Se.And
-        [ Se.Is BeamFOA.operatorId $ Se.Eq operatorId,
-          Se.Is BeamFOA.isActive $ Se.Eq True,
-          Se.Is BeamFOA.associatedTill (Se.GreaterThan $ Just now)
-        ]
-    ]
+  listToMaybe
+    <$> findAllWithOptionsKV'
+      [ Se.And
+          [ Se.Is BeamFOA.operatorId $ Se.Eq operatorId,
+            Se.Is BeamFOA.isActive $ Se.Eq True,
+            Se.Is BeamFOA.associatedTill (Se.GreaterThan $ Just now)
+          ]
+      ]
+      (Just 1)
+      Nothing
 
 deleteByOperatorId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id DP.Person -> m ()
 deleteByOperatorId (Id operatorId) = deleteWithKV [Se.Is BeamFOA.operatorId (Se.Eq operatorId)]

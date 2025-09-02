@@ -194,13 +194,16 @@ findActiveAssociationByOperatorId ::
   m (Maybe DriverOperatorAssociation)
 findActiveAssociationByOperatorId operatorId = do
   now <- getCurrentTime
-  findOneWithKV
-    [ Se.And
-        [ Se.Is BeamDOA.operatorId $ Se.Eq operatorId.getId,
-          Se.Is BeamDOA.isActive $ Se.Eq True,
-          Se.Is BeamDOA.associatedTill (Se.GreaterThan $ Just now)
-        ]
-    ]
+  listToMaybe
+    <$> findAllWithOptionsKV'
+      [ Se.And
+          [ Se.Is BeamDOA.operatorId $ Se.Eq operatorId.getId,
+            Se.Is BeamDOA.isActive $ Se.Eq True,
+            Se.Is BeamDOA.associatedTill (Se.GreaterThan $ Just now)
+          ]
+      ]
+      (Just 1)
+      Nothing
 
 deleteByOperatorId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id DP.Person -> m ()
 deleteByOperatorId operatorId = do
