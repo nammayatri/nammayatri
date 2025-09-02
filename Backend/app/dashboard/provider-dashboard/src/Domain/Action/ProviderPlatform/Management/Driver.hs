@@ -169,18 +169,15 @@ deleteDriverPermanentlyDelete merchantShortId opCity apiTokenInfo driverId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just driverId) T.emptyRequest
   T.withTransactionStoring transaction $ do
-    apiResult <- try @_ @SomeException (Client.callManagementAPI checkedMerchantId opCity (.driverDSL.deleteDriverPermanentlyDelete) driverId)
-    case apiResult of
-      Right result -> do
-        let personId = Kernel.Types.Id.cast driverId
-        mbPerson <- QP.findById personId
-        whenJust mbPerson $ \_ -> do
-          QMerchantAccess.deleteAllByPersonId personId
-          QRegistrationToken.deleteAllByPersonId personId
-          QP.deletePerson personId
-          logTagInfo "deletePermanentlyDelete - successfully removed person and associated data for personId: " (show personId)
-        pure result
-      Left _ -> throwError (InternalError "Failed to delete person in Driver DB")
+    result <- Client.callManagementAPI checkedMerchantId opCity (.driverDSL.deleteDriverPermanentlyDelete) driverId
+    let personId = Kernel.Types.Id.cast driverId
+    mbPerson <- QP.findById personId
+    whenJust mbPerson $ \_ -> do
+      QMerchantAccess.deleteAllByPersonId personId
+      QRegistrationToken.deleteAllByPersonId personId
+      QP.deletePerson personId
+      logTagInfo "PermanentlyDelete - successfully removed person and associated data for personId: " (show personId)
+    pure result
 
 postDriverUnlinkDL :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> Flow APISuccess
 postDriverUnlinkDL merchantShortId opCity apiTokenInfo driverId = do

@@ -281,13 +281,16 @@ findActiveDriverByFleetOwnerId ::
   m (Maybe FleetDriverAssociation)
 findActiveDriverByFleetOwnerId fleetOwnerId = do
   now <- getCurrentTime
-  findOneWithKV
-    [ Se.And
-        [ Se.Is BeamFDVA.fleetOwnerId $ Se.Eq fleetOwnerId,
-          Se.Is BeamFDVA.isActive $ Se.Eq True,
-          Se.Is BeamFDVA.associatedTill (Se.GreaterThan $ Just now)
-        ]
-    ]
+  listToMaybe
+    <$> findAllWithOptionsKV'
+      [ Se.And
+          [ Se.Is BeamFDVA.fleetOwnerId $ Se.Eq fleetOwnerId,
+            Se.Is BeamFDVA.isActive $ Se.Eq True,
+            Se.Is BeamFDVA.associatedTill (Se.GreaterThan $ Just now)
+          ]
+      ]
+      (Just 1)
+      Nothing
 
 endFleetDriverAssociation :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> Id Person -> m ()
 endFleetDriverAssociation fleetOwnerId (Id driverId) = do
