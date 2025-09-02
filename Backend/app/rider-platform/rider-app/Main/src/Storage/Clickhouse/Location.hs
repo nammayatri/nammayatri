@@ -53,7 +53,7 @@ findLocationById id createdAt = do
     CH.findAll $
       CH.select $
         CH.filter_
-          ( \location _ ->
+          ( \location ->
               location.id CH.==. id
                 CH.&&. location.createdAt >=. addUTCTime (-120) createdAt -- locations are created before booking, so 2 mins buffer is added here
           )

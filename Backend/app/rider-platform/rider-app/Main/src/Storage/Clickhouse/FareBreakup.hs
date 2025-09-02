@@ -57,7 +57,7 @@ findFareBreakupByBookingIdAndDescription bookingId description createdAt = do
     CH.findAll $
       CH.select $
         CH.filter_
-          ( \fareBreakup _ ->
+          ( \fareBreakup ->
               fareBreakup.bookingId CH.==. bookingId
                 CH.&&. fareBreakup.description CH.==. description
                 CH.&&. fareBreakup.date >=. addUTCTime (-120) createdAt

@@ -59,7 +59,7 @@ findAllByQuoteId qId createdAt = do
   CH.findAll $
     CH.select $
       CH.filter_
-        ( \quoteBreakup _ ->
+        ( \quoteBreakup ->
             quoteBreakup.quoteId CH.==. qId
               CH.&&. quoteBreakup.createdAt >=. addUTCTime (-1800) createdAt -- quote expires in 30 mins
               CH.&&. quoteBreakup.createdAt <=. createdAt

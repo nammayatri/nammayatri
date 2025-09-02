@@ -40,7 +40,7 @@ findById bookingId = do
     CH.findAll $
       CH.select $
         CH.filter_
-          ( \booking _ ->
+          ( \booking ->
               booking.id CH.==. bookingId
           )
           (CH.all_ @CH.APP_SERVICE_CLICKHOUSE bookingTTable)

@@ -66,6 +66,6 @@ findTotalRidesCountByPersonId personId = do
     CH.findAll $
       CH.select_ (\person -> CH.notGrouped (person.totalRidesCount)) $
         CH.filter_
-          (\person _ -> person.id CH.==. personId)
+          (\person -> person.id CH.==. personId)
           (CH.all_ @CH.APP_SERVICE_CLICKHOUSE personTTable)
   return $ listToMaybe (catMaybes personRideCount)

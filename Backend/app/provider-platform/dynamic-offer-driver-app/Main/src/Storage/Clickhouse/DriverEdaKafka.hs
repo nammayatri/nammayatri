@@ -83,7 +83,7 @@ findAll firstDate lastDate driverId rideId = do
     CH.select $
       CH.orderBy_ (\driverEdaKafka _ -> CH.asc driverEdaKafka.timestamp) $
         CH.filter_
-          ( \driverEdaKafka _ ->
+          ( \driverEdaKafka ->
               ( driverEdaKafka.partitionDate CH.==. Time.utctDay firstDate
                   CH.||. driverEdaKafka.partitionDate ==. Time.utctDay lastDate
               )
@@ -105,7 +105,7 @@ findAllTuple firstDate lastDate driverId rideId = do
     CH.select_ (\dek -> CH.notGrouped (dek.lat, dek.lon, dek.timestamp, dek.accuracy, dek.rideStatus)) $
       CH.orderBy_ (\dek _ -> CH.asc dek.timestamp) $
         CH.filter_
-          ( \dek _ ->
+          ( \dek ->
               ( dek.partitionDate CH.==. Time.utctDay firstDate
                   CH.||. dek.partitionDate ==. Time.utctDay lastDate
               )

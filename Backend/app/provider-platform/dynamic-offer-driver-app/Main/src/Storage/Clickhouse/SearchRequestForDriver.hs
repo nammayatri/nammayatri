@@ -109,7 +109,7 @@ calulateSupplyDemandByGeohashAndServiceTierAndDistanceBin from to = do
             (fromLocGeohash, supplyCount, demandCount, vehicleCategory, tripDistanceBin')
       )
       $ CH.filter_
-        ( \srfd _ ->
+        ( \srfd ->
             srfd.createdAt >=. CH.DateTime from
               CH.&&. srfd.createdAt <=. CH.DateTime to
               CH.&&. srfd.mode CH.==. Just DI.ONLINE
@@ -148,7 +148,7 @@ calulateAcceptanceCountByGeohashAndServiceTierAndDistanceBin from to = do
             (fromLocGeohash, acceptanceCount, vehicleCategory, tripDistanceBin')
       )
       $ CH.filter_
-        ( \srfd _ ->
+        ( \srfd ->
             srfd.createdAt >=. CH.DateTime from
               CH.&&. srfd.createdAt <=. CH.DateTime to
               CH.&&. CH.isNotNull srfd.fromLocGeohash
@@ -171,7 +171,7 @@ calulateSupplyDemandByGeohashAndServiceTier from to = do
             (fromLocGeohash, supplyCount, demandCount, vehicleCategory)
       )
       $ CH.filter_
-        ( \srfd _ ->
+        ( \srfd ->
             srfd.createdAt >=. CH.DateTime from
               CH.&&. srfd.createdAt <=. CH.DateTime to
               CH.&&. srfd.mode CH.==. Just DI.ONLINE
@@ -193,7 +193,7 @@ calulateAcceptanceCountByGeohashAndServiceTier from to = do
             (fromLocGeohash, acceptanceCount, vehicleCategory)
       )
       $ CH.filter_
-        ( \srfd _ ->
+        ( \srfd ->
             srfd.createdAt >=. CH.DateTime from
               CH.&&. srfd.createdAt <=. CH.DateTime to
               CH.&&. CH.isNotNull srfd.fromLocGeohash
@@ -215,7 +215,7 @@ calulateDemandByCityAndServiceTier from to = do
             (merchantOperatingCityId, demandCount, vehicleCategory)
       )
       $ CH.filter_
-        ( \srfd _ ->
+        ( \srfd ->
             srfd.createdAt >=. CH.DateTime from
               CH.&&. srfd.createdAt <=. CH.DateTime to
         )
@@ -235,7 +235,7 @@ calulateAcceptanceCountByCityAndServiceTier from to = do
             (merchantOperatingCityId, acceptanceCount, vehicleCategory)
       )
       $ CH.filter_
-        ( \srfd _ ->
+        ( \srfd ->
             srfd.createdAt >=. CH.DateTime from
               CH.&&. srfd.createdAt <=. CH.DateTime to
               CH.&&. (srfd.response CH.==. Just DI.Accept)
@@ -257,7 +257,7 @@ findByDriverId driverId from to limit offset = do
         CH.offset_ offset $
           CH.selectModifierOverride CH.NO_SELECT_MODIFIER $
             CH.filter_
-              ( \srfd _ ->
+              ( \srfd ->
                   srfd.driverId CH.==. driverId
                     CH.&&. srfd.createdAt >=. CH.DateTime from
                     CH.&&. srfd.createdAt <=. CH.DateTime to

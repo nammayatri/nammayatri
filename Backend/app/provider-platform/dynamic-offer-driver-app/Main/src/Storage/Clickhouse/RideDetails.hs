@@ -53,7 +53,7 @@ findIdsByFleetOwner fleetOwnerId from to = do
   CH.findAll $
     CH.select_ (\rd -> CH.notGrouped (rd.id)) $
       CH.filter_
-        ( \rideDetails _ ->
+        ( \rideDetails ->
             rideDetails.fleetOwnerId CH.==. fleetOwnerId
               CH.&&. rideDetails.createdAt >=. (Just $ CH.DateTime from)
               CH.&&. rideDetails.createdAt <=. (Just $ CH.DateTime to)
@@ -71,7 +71,7 @@ findIdsByFleetOwnerAndVehicle fleetOwnerId vehicleNumber from to = do
   CH.findAll $
     CH.select_ (\rd -> CH.notGrouped (rd.id)) $
       CH.filter_
-        ( \rideDetails _ ->
+        ( \rideDetails ->
             rideDetails.fleetOwnerId CH.==. fleetOwnerId
               CH.&&. rideDetails.vehicleNumber CH.==. Just vehicleNumber
               CH.&&. rideDetails.createdAt >=. (Just $ CH.DateTime from)
@@ -88,7 +88,7 @@ findByIdAndVehicleNumber rideId mbVehicleNumber = do
   CH.findAll $
     CH.select_ (\rd -> CH.notGrouped (rd.vehicleNumber)) $
       CH.filter_
-        ( \rideDetails _ ->
+        ( \rideDetails ->
             rideDetails.id CH.==. rideId
               CH.&&. CH.whenJust_ mbVehicleNumber (\vehicleNumber -> rideDetails.vehicleNumber CH.==. Just vehicleNumber)
         )

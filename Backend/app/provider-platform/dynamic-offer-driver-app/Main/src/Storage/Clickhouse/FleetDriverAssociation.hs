@@ -38,7 +38,7 @@ getDriverIdsByFleetOwnerId fleetOwnerId =
   CH.findAll $
     CH.select_ (\assoc -> CH.notGrouped (assoc.driverId)) $
       CH.filter_
-        (\assoc _ -> assoc.fleetOwnerId CH.==. fleetOwnerId CH.&&. assoc.isActive CH.==. True)
+        (\assoc -> assoc.fleetOwnerId CH.==. fleetOwnerId CH.&&. assoc.isActive CH.==. True)
         (CH.all_ @CH.APP_SERVICE_CLICKHOUSE fleetDriverAssociationTTable)
 
 getDriverIdsByFleetOwnerIds ::
@@ -49,5 +49,5 @@ getDriverIdsByFleetOwnerIds fleetOwnerIds =
   CH.findAll $
     CH.select_ (\assoc -> CH.notGrouped (assoc.driverId)) $
       CH.filter_
-        (\assoc _ -> (assoc.fleetOwnerId `CH.in_` fleetOwnerIds) CH.&&. (assoc.isActive CH.==. True))
+        (\assoc -> (assoc.fleetOwnerId `CH.in_` fleetOwnerIds) CH.&&. (assoc.isActive CH.==. True))
         (CH.all_ @CH.APP_SERVICE_CLICKHOUSE fleetDriverAssociationTTable)
