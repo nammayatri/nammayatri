@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wwarn=unused-imports #-}
-
 module Domain.Action.UI.CRIS (postCrisGetSDKData, getCrisOtpGeneration, postCrisChangeDevice) where
 
 import qualified API.Types.UI.CRIS

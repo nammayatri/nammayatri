@@ -1,17 +1,9 @@
-{-# OPTIONS_GHC -Wwarn=unused-imports #-}
-
 module Domain.Action.UI.TicketKapture (postKaptureCustomerLogin, postKaptureCloseTicket, getGetAllActiveTickets, getGetClosedTicketDetails, getGetClosedTicketIds) where
 
 import qualified API.Types.UI.TicketKapture
 import qualified API.Types.UI.TicketKapture as TicketKapture
-import Data.Aeson (FromJSON, ToJSON, Value, fromJSON)
-import qualified Data.Aeson as Aeson
-import qualified Data.Aeson.Key as Key
-import qualified Data.Aeson.KeyMap as KM
 import Data.List (nubBy)
-import Data.OpenApi (ToSchema)
 import Data.Text
-import qualified Data.Vector as V
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import Domain.Types.TicketKapture (TaggedChatMessage (..), TaggedChatMessageContent (..))
@@ -25,7 +17,6 @@ import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import qualified Kernel.External.Ticket.Interface.Types as TIT
 import qualified Kernel.External.Ticket.Kapture.Types as Kapture
-import Kernel.Prelude (Generic)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess as API
 import Kernel.Types.Error

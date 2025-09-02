@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wwarn=unused-imports #-}
-
 module Domain.Action.UI.WMB
   ( postWmbTripRequest,
     getWmbRequestsStatus,
@@ -22,18 +20,13 @@ import qualified API.Types.ProviderPlatform.Fleet.Endpoints.Driver as Common
 import API.Types.UI.WMB
 import qualified Data.Aeson as A
 import qualified Data.HashMap.Strict as HM
-import Data.List (minimumBy, sortBy)
 import Data.Maybe
 import qualified Data.Text as T
-import Data.Time.Clock hiding (getCurrentTime, secondsToNominalDiffTime)
 import qualified Domain.Action.Internal.DriverMode as DDriverMode
-import qualified Domain.Action.UI.Call as Call
 import qualified Domain.Action.UI.DriverOnboarding.Referral as DOR
 import Domain.Types.Alert
 import Domain.Types.AlertRequest
-import qualified Domain.Types.CallStatus as SCS
 import Domain.Types.Common
-import Domain.Types.EmptyDynamicParam
 import Domain.Types.Extra.TransporterConfig
 import qualified Domain.Types.FleetBadgeType as DFBT
 import Domain.Types.FleetConfig
@@ -41,43 +34,31 @@ import Domain.Types.FleetDriverAssociation
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.Person
-import qualified Domain.Types.Ride as DRide
 import Domain.Types.Route
-import Domain.Types.RouteTripStopMapping
-import Domain.Types.TripAlertRequest
 import Domain.Types.TripTransaction
-import Domain.Types.Vehicle
 import qualified Domain.Types.VehicleCategory as DVehCategory
 import qualified Domain.Types.VehicleVariant as DVehVariant
 import Environment
-import qualified EulerHS.Prelude as EHS
-import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
-import qualified Kernel.External.Maps.Google.PolyLinePoints as KEPP
 import Kernel.External.Maps.Types hiding (fromList)
-import qualified Kernel.External.Notification as Notification
 import Kernel.Prelude
-import Kernel.Prelude (when)
 import Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
 import Kernel.Types.Error
 import Kernel.Types.Id
 import qualified Kernel.Utils.CalculateDistance as KU
 import Kernel.Utils.Common
-import Kernel.Utils.Common (fromMaybeM, generateGUID, getCurrentTime, throwError)
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.Allocator
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
-import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import SharedLogic.WMB
 import qualified SharedLogic.WMB as WMB
+import Storage.Beam.SchedulerJob ()
 import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.Cac.TransporterConfig as SCT
-import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.Queries.AlertRequest as QAR
-import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverInformation.Internal as QDriverInfoInternal
 import qualified Storage.Queries.FleetBadge as QFB
@@ -86,15 +67,11 @@ import qualified Storage.Queries.FleetConfig as QFC
 import qualified Storage.Queries.FleetDriverAssociation as FDV
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Route as QR
-import qualified Storage.Queries.RouteTripStopMapping as QRTSM
-import qualified Storage.Queries.TransporterConfig as QTC
-import qualified Storage.Queries.TripAlertRequest as QTAR
 import qualified Storage.Queries.TripTransaction as QTT
 import qualified Storage.Queries.TripTransactionExtra as QTTE
 import qualified Storage.Queries.Vehicle as QV
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import qualified Storage.Queries.VehicleRouteMapping as VRM
-import qualified Tools.Call as Call
 import Tools.Error
 import qualified Tools.Notifications as TN
 import Utils.Common.Cac.KeyNameConstants

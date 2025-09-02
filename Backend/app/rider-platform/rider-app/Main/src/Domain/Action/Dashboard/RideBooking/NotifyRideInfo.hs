@@ -1,30 +1,22 @@
-{-# OPTIONS_GHC -Wwarn=unused-imports #-}
-
 module Domain.Action.Dashboard.RideBooking.NotifyRideInfo (postNotifyRideInfoNotifyRideInfo) where
 
 import qualified API.Types.Dashboard.RideBooking.NotifyRideInfo as NRI
-import Data.OpenApi (ToSchema)
 import qualified Domain.Action.Beckn.Common as Common
 import qualified Domain.Types.Merchant as DM
 import qualified "this" Domain.Types.Person
-import qualified Domain.Types.Ride as DR
 import qualified Domain.Types.RideStatus as DR
 import qualified Environment
 import EulerHS.Prelude hiding (id)
-import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess (..))
 import Kernel.Types.Beckn.Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Servant hiding (throwError)
 import SharedLogic.Merchant (findMerchantByShortId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Ride as QRide
-import Tools.Auth
 import Tools.Error
-import qualified Tools.Whatsapp
 
 postNotifyRideInfoNotifyRideInfo :: ShortId DM.Merchant -> City -> Id Domain.Types.Person.Person -> NRI.NotifyRideInfoRequest -> Environment.Flow APISuccess
 postNotifyRideInfoNotifyRideInfo merchantShortId opCity personId req = do

@@ -1,13 +1,8 @@
-{-# OPTIONS_GHC -Wwarn=unused-imports #-}
-
 module Domain.Action.Dashboard.RideBooking.SearchRequest (postSearchRequestSearchrequests, getSearchRequestList) where
 
 import qualified API.Types.Dashboard.RideBooking.SearchRequest
 import qualified API.Types.Dashboard.RideBooking.SearchRequest as SRType
 import qualified Data.Map as Map
-import Data.Maybe (mapMaybe)
-import Data.Time.Calendar (fromGregorian)
-import Data.Time.Clock (UTCTime (..))
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import qualified Environment

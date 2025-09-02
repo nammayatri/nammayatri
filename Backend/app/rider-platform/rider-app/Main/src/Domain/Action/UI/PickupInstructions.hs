@@ -1,5 +1,4 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wwarn=unused-imports #-}
 
 module Domain.Action.UI.PickupInstructions
   ( postPickupinstructions,
@@ -13,8 +12,6 @@ import AWS.S3 as S3
 import qualified Data.ByteString as BS
 import qualified Data.Geohash as Geohash
 import qualified Data.List as List
-import Data.Maybe (fromMaybe, isJust, isNothing)
-import Data.Ord (comparing)
 import qualified Data.Text as T
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
@@ -24,16 +21,12 @@ import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
 import EulerHS.Types (base64Encode)
 import GHC.IO.Handle (hFileSize)
-import GHC.IO.IOMode (IOMode (..))
 import qualified IssueManagement.Domain.Types.MediaFile as DMF
 import qualified IssueManagement.Storage.Queries.MediaFile as MFQuery
-import Kernel.External.Maps.Types (LatLong (..))
 import qualified Kernel.Prelude
 import Kernel.ServantMultipart
 import qualified Kernel.Types.APISuccess
-import Kernel.Types.Distance (highPrecMetersToMeters)
 import qualified Kernel.Types.Id
-import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import Storage.Beam.IssueManagement ()
 import qualified Storage.CachedQueries.Merchant as CQM

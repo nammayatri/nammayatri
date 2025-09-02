@@ -1,13 +1,8 @@
-{-# OPTIONS_GHC -Wwarn=unused-imports #-}
-
 module Domain.Action.UI.AttractionRecommend (postAttractionsRecommend, makeRecommendedTicketPlacesKey) where
 
 import qualified API.Types.UI.AttractionRecommend as API
-import Control.Monad (join)
 import qualified Data.List as L
-import qualified Data.Maybe as Maybe
 import Data.OpenApi (ToSchema)
-import qualified Data.Text as T
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import qualified Domain.Types.TicketPlace as DTicketPlace
@@ -19,10 +14,7 @@ import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Distance (HighPrecMeters (..), highPrecMetersToMeters)
 import qualified Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
-import Kernel.Utils.Common (getCurrentTime)
-import Servant
 import qualified Storage.Queries.TicketPlace as QTicketPlace
-import Tools.Auth
 
 data CachedAttraction = CachedAttraction
   { id :: Kernel.Types.Id.Id DTicketPlace.TicketPlace,

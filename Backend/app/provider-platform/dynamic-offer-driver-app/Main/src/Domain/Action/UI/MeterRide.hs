@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wwarn=unused-imports #-}
-
 module Domain.Action.UI.MeterRide (postMeterRideAddDestination, postMeterRideShareReceipt) where
 
 import qualified API.Types.UI.MeterRide
