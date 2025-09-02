@@ -44,6 +44,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as DTR
 import Environment
+import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id, pack, safeHead)
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
@@ -57,6 +58,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.JourneyModule.Base (generateJourneyInfoResponse, getAllLegsInfo)
 import Lib.JourneyModule.Types (GetStateFlow)
+import qualified Lib.JourneyModule.Utils as JMU
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.Merchant as CQMerchant
@@ -219,7 +221,7 @@ bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyO
         then do
           -- Backward compatibility: use old function when mbOffset is passed
           entitiesWithSource <- buildApiEntityForRideOrJourney personId mbLimit rbList []
-          let nextOffset = Just (fromMaybe 0 mbOffset + fromIntegral (length rbList))
+          let nextOffset = Just (fromMaybe 0 mbOffset + fromIntegral (length entitiesWithSource))
           pure (entitiesWithSource, nextOffset, Nothing)
         else do
           -- New logic: use new function when mbBookingOffset is passed
@@ -233,7 +235,7 @@ bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyO
         then do
           -- Backward compatibility: use old function when mbOffset is passed
           entitiesWithSource <- buildApiEntityForRideOrJourney personId mbLimit [] allJourneys
-          let nextOffset = Just (fromMaybe 0 mbOffset + fromIntegral (length allJourneys))
+          let nextOffset = Just (fromMaybe 0 mbOffset + fromIntegral (length entitiesWithSource))
           pure (entitiesWithSource, Nothing, nextOffset)
         else do
           -- New logic: use new function when mbJourneyOffset is passed
@@ -241,14 +243,27 @@ bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyO
           let nextOffset = Just (fromMaybe 0 mbJourneyOffset + fromIntegral journeyCount)
           pure (entitiesWithSource, Nothing, nextOffset)
     _ -> do
-      (rbList, allbookings) <- getBookingList (personId, merchantId) mbLimit bookingOffsetToUse Nothing Nothing Nothing mbFromDate' mbToDate' mbBookingStatusList
-      allJourneys <- getJourneyList personId mbLimit journeyOffsetToUse mbFromDate' mbToDate' mbJourneyStatusList mbIsPaymentSuccess
+      -- Use awaitableFork for parallel execution of both calls
+      bookingListFork <- awaitableFork "bookingListV2->getBookingList" $ getBookingList (personId, merchantId) mbLimit bookingOffsetToUse Nothing Nothing Nothing mbFromDate' mbToDate' mbBookingStatusList
+      journeyListFork <- awaitableFork "bookingListV2->getJourneyList" $ getJourneyList personId mbLimit journeyOffsetToUse mbFromDate' mbToDate' mbJourneyStatusList mbIsPaymentSuccess
+
+      -- Await both results
+      (rbList, allbookings) <-
+        L.await Nothing bookingListFork >>= \case
+          Left err -> throwError $ InternalError $ "Failed to get booking list: " <> show err
+          Right result -> pure result
+
+      allJourneys <-
+        L.await Nothing journeyListFork >>= \case
+          Left err -> throwError $ InternalError $ "Failed to get journey list: " <> show err
+          Right result -> pure result
+
       clearStuckRides (Just allbookings) rbList
       if useLegacyFunction
         then do
           -- Backward compatibility: use old function when mbOffset is passed
           entitiesWithSource <- buildApiEntityForRideOrJourney personId mbLimit rbList allJourneys
-          let nextOffset = Just (fromMaybe 0 mbOffset + fromIntegral (length rbList + length allJourneys))
+          let nextOffset = Just (fromMaybe 0 mbOffset + fromIntegral (length entitiesWithSource))
           pure (entitiesWithSource, nextOffset, Nothing)
         else do
           -- New logic: use new function when mbBookingOffset and mbJourneyOffset are passed
@@ -281,7 +296,7 @@ buildApiEntityForRideOrJourneyWithCounts :: Id Person.Person -> Maybe Integer ->
 buildApiEntityForRideOrJourneyWithCounts personId mbLimit bookings journeys = do
   let limit = maybe maxBound fromIntegral mbLimit
       (mergedList, bookingCount, journeyCount) = mergeWithCounts bookings journeys limit 0 0 []
-  entities <- buildBookingListV2 personId (reverse mergedList)
+  entities <- JMU.measureLatency (buildBookingListV2 personId (reverse mergedList)) (show personId <> " buildBookingListV2 measureLatency: ")
   return (entities, bookingCount, journeyCount)
   where
     -- Merge bookings and journeys while respecting the limit and counting each type
@@ -328,7 +343,7 @@ buildApiEntityForRideOrJourneyWithCounts personId mbLimit bookings journeys = do
           bookingEntity <- SRB.buildBookingAPIEntity booking riderId'
           go riderId' ls (acc Seq.|> Ride bookingEntity)
         go riderId' (Right journey : ls) acc = do
-          mbJourneyEntity <- buildJourneyApiEntity journey
+          mbJourneyEntity <- JMU.measureLatency (buildJourneyApiEntity journey) (show journey.id <> " buildJourneyApiEntity measureLatency: ")
           case mbJourneyEntity of
             Just journeyEntity -> go riderId' ls (acc Seq.|> MultiModalRide journeyEntity)
             Nothing -> go riderId' ls acc
@@ -336,7 +351,7 @@ buildApiEntityForRideOrJourneyWithCounts personId mbLimit bookings journeys = do
     buildJourneyApiEntity :: (GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) => DJ.Journey -> m (Maybe APITypes.JourneyInfoResp)
     buildJourneyApiEntity journey = do
       legsInfo <-
-        try @_ @SomeException (getAllLegsInfo journey.riderId journey.id)
+        try @_ @SomeException (JMU.measureLatency (getAllLegsInfo journey.riderId journey.id) (show journey.id <> " getAllLegsInfo journey myrides measureLatency: "))
           >>= \case
             Left err -> do
               logError $ "Error getting legs info for journeyId: " <> show journey.id <> ", skipping from booking list : " <> show err
