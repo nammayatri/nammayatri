@@ -26,6 +26,7 @@ import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as DP
 import Domain.Types.Plan as DP
 import qualified Domain.Types.VendorFee as VF
+import qualified EulerHS.Language as L
 import qualified Kernel.Beam.Functions as B
 import Kernel.External.Encryption
 import qualified Kernel.External.Payment.Interface as Payment
@@ -138,9 +139,10 @@ createOrder (driverId, merchantId, opCity) serviceName (driverFees, driverFeesTo
 
 mkSplitSettlementDetails :: (MonadFlow m) => [VF.VendorFee] -> HighPrecMoney -> m (Maybe SplitSettlementDetails)
 mkSplitSettlementDetails vendorFees totalAmount = do
+  uuid <- L.generateGUID
   let sortedVendorFees = sortBy (compare `on` VF.vendorId) vendorFees
       groupedVendorFees = groupBy ((==) `on` VF.vendorId) sortedVendorFees
-      mbVendorSplits = map computeSplit groupedVendorFees
+      mbVendorSplits = map (computeSplit uuid) groupedVendorFees
       vendorSplits = catMaybes mbVendorSplits
   let totalVendorAmount = roundToTwoDecimalPlaces $ sum $ map (\Split {amount} -> amount) vendorSplits
       marketplaceAmount = roundToTwoDecimalPlaces (totalAmount - totalVendorAmount)
@@ -156,7 +158,7 @@ mkSplitSettlementDetails vendorFees totalAmount = do
           vendor = Vendor vendorSplits
         }
   where
-    computeSplit feesForVendor =
+    computeSplit uniqueId feesForVendor =
       case feesForVendor of
         [] -> Nothing
         (firstFee : _) ->
@@ -165,7 +167,7 @@ mkSplitSettlementDetails vendorFees totalAmount = do
               { amount = roundToTwoDecimalPlaces $ sum $ map (\fee -> VF.amount fee) feesForVendor,
                 merchantCommission = 0,
                 subMid = firstFee.vendorId,
-                uniqueSplitId = Nothing
+                uniqueSplitId = uniqueId
               }
 
 roundToTwoDecimalPlaces :: HighPrecMoney -> HighPrecMoney

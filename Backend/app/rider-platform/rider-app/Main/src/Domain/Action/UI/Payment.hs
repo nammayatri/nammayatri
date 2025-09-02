@@ -82,6 +82,7 @@ createOrder (personId, merchantId) rideId = do
   customerEmail <- person.email & fromMaybeM (PersonFieldNotPresent "email") >>= decrypt
   customerPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
   isSplitEnabled <- Payment.getIsSplitEnabled merchantId person.merchantOperatingCityId Nothing Payment.Normal
+  splitSettlementDetails <- Payment.mkSplitSettlementDetails isSplitEnabled totalFare.amount []
   let createOrderReq =
         Payment.CreateOrderReq
           { orderId = rideId.getId,
@@ -100,7 +101,7 @@ createOrder (personId, merchantId) rideId = do
             optionsGetUpiDeepLinks = Nothing,
             metadataExpiryInMins = Nothing,
             metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
-            splitSettlementDetails = Payment.mkSplitSettlementDetails isSplitEnabled totalFare.amount []
+            splitSettlementDetails = splitSettlementDetails
           }
 
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId

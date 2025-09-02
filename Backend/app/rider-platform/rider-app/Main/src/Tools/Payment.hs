@@ -263,24 +263,26 @@ roundToTwoDecimalPlaces x = fromIntegral (round (x * 100) :: Integer) / 100
 roundVendorFee :: VendorSplitDetails -> VendorSplitDetails
 roundVendorFee vf = vf {splitAmount = roundToTwoDecimalPlaces vf.splitAmount}
 
-mkSplitSettlementDetails :: Bool -> HighPrecMoney -> [VendorSplitDetails] -> Maybe SplitSettlementDetails
+mkSplitSettlementDetails :: (MonadFlow m) => Bool -> HighPrecMoney -> [VendorSplitDetails] -> m (Maybe SplitSettlementDetails)
 mkSplitSettlementDetails isSplitEnabled totalAmount vendorFees = case isSplitEnabled of
-  False -> Nothing
+  False -> return Nothing
   True -> do
+    uuid <- L.generateGUID
     let sortedVendorFees = sortBy (compare `on` (\p -> (p.vendorId, p.ticketId))) (roundVendorFee <$> vendorFees)
         groupedVendorFees = groupBy ((==) `on` (\p -> (p.vendorId, p.ticketId))) sortedVendorFees
-        mbVendorSplits = map computeSplit groupedVendorFees
+        mbVendorSplits = map (computeSplit uuid) groupedVendorFees
         vendorSplits = catMaybes mbVendorSplits
         totalVendorAmount = roundToTwoDecimalPlaces $ sum $ map (\Split {amount} -> amount) vendorSplits
         marketplaceAmount = roundToTwoDecimalPlaces (totalAmount - totalVendorAmount)
-    Just $
-      SplitSettlementDetails
-        { marketplace = Marketplace marketplaceAmount,
-          mdrBorneBy = ALL,
-          vendor = Vendor vendorSplits
-        }
+    return $
+      Just $
+        SplitSettlementDetails
+          { marketplace = Marketplace marketplaceAmount,
+            mdrBorneBy = ALL,
+            vendor = Vendor vendorSplits
+          }
   where
-    computeSplit feesForVendor =
+    computeSplit uniqueId feesForVendor =
       case feesForVendor of
         [] -> Nothing
         (firstFee : _) ->
@@ -289,13 +291,14 @@ mkSplitSettlementDetails isSplitEnabled totalAmount vendorFees = case isSplitEna
               { amount = roundToTwoDecimalPlaces $ sum $ map (\fee -> splitAmount fee) feesForVendor,
                 merchantCommission = 0,
                 subMid = firstFee.vendorId,
-                uniqueSplitId = firstFee.ticketId
+                uniqueSplitId = fromMaybe uniqueId firstFee.ticketId
               }
 
-mkUnaggregatedSplitSettlementDetails :: Bool -> HighPrecMoney -> [VendorSplitDetails] -> Maybe SplitSettlementDetails
+mkUnaggregatedSplitSettlementDetails :: (MonadFlow m) => Bool -> HighPrecMoney -> [VendorSplitDetails] -> m (Maybe SplitSettlementDetails)
 mkUnaggregatedSplitSettlementDetails isSplitEnabled totalAmount vendorFees = case isSplitEnabled of
-  False -> Nothing
+  False -> return Nothing
   True -> do
+    uuid <- L.generateGUID
     let vendorSplits =
           map
             ( \fee ->
@@ -304,20 +307,23 @@ mkUnaggregatedSplitSettlementDetails isSplitEnabled totalAmount vendorFees = cas
                       { amount = splitAmount roundedFee,
                         merchantCommission = 0,
                         subMid = vendorId roundedFee,
-                        uniqueSplitId = fee.ticketId
+                        uniqueSplitId = fromMaybe uuid fee.ticketId
                       }
             )
             vendorFees
 
         totalVendorAmount = roundToTwoDecimalPlaces $ sum $ map (\Split {amount} -> amount) vendorSplits
         marketplaceAmount = roundToTwoDecimalPlaces (totalAmount - totalVendorAmount)
-
-    Just $
-      SplitSettlementDetails
-        { marketplace = Marketplace marketplaceAmount,
-          mdrBorneBy = ALL,
-          vendor = Vendor vendorSplits
-        }
+    when (marketplaceAmount < 0) $ do
+      logError $ "Marketplace amount is negative: " <> show marketplaceAmount <> " for vendorFees: " <> show vendorFees <> "totalVendorAmount: " <> show totalVendorAmount <> " totalAmount: " <> show totalAmount
+      throwError (InternalError "Marketplace amount is negative")
+    return $
+      Just $
+        SplitSettlementDetails
+          { marketplace = Marketplace marketplaceAmount,
+            mdrBorneBy = ALL,
+            vendor = Vendor vendorSplits
+          }
 
 groupSumVendorSplits :: [VendorSplitDetails] -> [VendorSplitDetails]
 groupSumVendorSplits vendorFees = map (\groups -> (head groups) {splitAmount = roundToTwoDecimalPlaces $ sum (map splitAmount groups)}) (groupBy ((==) `on` vendorId) (sortOn vendorId vendorFees))
