@@ -106,3 +106,12 @@ updateJourneyToNextTicketExpiryTime journeyId allLegs nextLegSequence = do
   tickets <- fmap concat $ mapM QTicket.findAllByTicketBookingId upcomingBookingIds
   -- Find the earliest ticket expiry
   updateShortestJourneyExpiryTimeWithTickets journeyId tickets
+
+-- Update journey status and end time when journey is completed
+updateStatusAndEndTime :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => DJ.JourneyStatus -> Kernel.Types.Id.Id DJ.Journey -> m ()
+updateStatusAndEndTime status journeyId = do
+  _now <- getCurrentTime
+  let endTimeUpdate = ([Se.Set Beam.endTime $ Just _now | status == DJ.COMPLETED])
+  updateOneWithKV
+    ([Se.Set Beam.status $ Just status, Se.Set Beam.updatedAt _now] <> endTimeUpdate)
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId journeyId)]

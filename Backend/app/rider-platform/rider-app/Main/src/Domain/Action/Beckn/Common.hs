@@ -104,6 +104,7 @@ import qualified Storage.Queries.BookingPartiesLink as QBPL
 import qualified Storage.Queries.ClientPersonInfo as QCP
 import qualified Storage.Queries.FareBreakup as QFareBreakup
 import qualified Storage.Queries.Journey as QJourney
+import qualified Storage.Queries.JourneyExtra as QJourneyExtra
 import qualified Storage.Queries.JourneyLeg as QJL
 import qualified Storage.Queries.Person as QP
 import qualified Storage.Queries.PersonStats as QPersonStats
@@ -895,7 +896,10 @@ checkAndUpdateJourneyTerminalStatusForNormalRide booking journeyStatus = do
   whenJust mbJourneyId $ \journeyId -> do
     journeyLegs <- QJL.getJourneyLegs journeyId
     case journeyLegs of
-      [_] -> QJourney.updateStatus journeyStatus journeyId -- only one element here means just taxi leg i.e. normal ride flow, so updating journeyStatus
+      [_] -> do
+        if journeyStatus == DJourney.COMPLETED
+          then QJourneyExtra.updateStatusAndEndTime journeyStatus journeyId
+          else QJourney.updateStatus journeyStatus journeyId
       _ -> pure ()
 
 mkBookingCancellationReason ::
