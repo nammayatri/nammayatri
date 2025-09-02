@@ -955,7 +955,7 @@ updateTotalOrderValueAndSettlementAmount booking bapConfig = do
 isOutsideBusinessHours :: Maybe Time.TimeOfDay -> Maybe Time.TimeOfDay -> UTCTime -> Seconds -> Bool
 isOutsideBusinessHours startTime endTime now timeDiffFromUtc =
   case (startTime, endTime) of
-    (Just start, Just end) -> not $ isWithinTimeBound start end now timeDiffFromUtc
+    (Just start, Just end) -> isWithinTimeBound start end now timeDiffFromUtc
     _ -> False
 
 isWithinTimeBound :: Time.TimeOfDay -> Time.TimeOfDay -> UTCTime -> Seconds -> Bool
