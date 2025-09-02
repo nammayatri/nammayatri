@@ -417,6 +417,10 @@ RouteDetails:
       kvFunction: updateWithKV
       params: [alternateShortNames]
       where: journeyLegId
+    updateRoute:
+      kvFunction: updateOneWithKV
+      params: [routeGtfsId, routeCode, routeLongName, routeShortName]
+      where: journeyLegId
 
   extraOperations:
     - EXTRA_QUERY_FILE

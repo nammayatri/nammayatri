@@ -35,7 +35,15 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder
 import Servant
 import Tools.Auth
 
-data AvailableRoute = AvailableRoute {routeCode :: Kernel.Prelude.Text, routeShortName :: Kernel.Prelude.Text, routeTimings :: [Kernel.Types.Common.Seconds], source :: Domain.Types.RouteStopTimeTable.SourceType}
+data AvailableRoute = AvailableRoute
+  { quoteId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote),
+    routeCode :: Kernel.Prelude.Text,
+    routeLongName :: Kernel.Prelude.Text,
+    routeShortName :: Kernel.Prelude.Text,
+    routeTimings :: [Kernel.Types.Common.Seconds],
+    serviceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    source :: Domain.Types.RouteStopTimeTable.SourceType
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -254,6 +262,17 @@ data SwitchLegReq = SwitchLegReq
     newMode :: Domain.Types.Trip.MultimodalTravelMode,
     originAddress :: Kernel.Prelude.Maybe Domain.Types.LocationAddress.LocationAddress,
     startLocation :: Kernel.Prelude.Maybe Kernel.External.Maps.Google.MapsClient.Types.LatLngV2
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data SwitchRouteReq = SwitchRouteReq
+  { journeyId :: Kernel.Types.Id.Id Domain.Types.Journey.Journey,
+    legOrder :: Kernel.Prelude.Int,
+    quoteId :: Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote,
+    routeCode :: Kernel.Prelude.Text,
+    routeLongName :: Kernel.Prelude.Text,
+    routeShortName :: Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

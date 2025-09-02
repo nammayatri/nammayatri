@@ -267,9 +267,20 @@ types:
 
   AvailableRoute:
     source: SourceType
+    quoteId: Maybe (Id FRFSQuote)
+    serviceTierName: Maybe Text
     routeCode: Text
     routeShortName: Text
+    routeLongName: Text
     routeTimings: "[Seconds]"
+
+  SwitchRouteReq:
+    journeyId: Id Journey
+    legOrder: Int
+    quoteId: Id FRFSQuote
+    routeCode: Text
+    routeShortName: Text
+    routeLongName: Text
 
 apis:
   - POST:
@@ -542,3 +553,10 @@ apis:
         type: RouteAvailabilityReq
       response:
         type: RouteAvailabilityResp
+
+  - POST:
+      endpoint: /multimodal/switch/route
+      request:
+        type: SwitchRouteReq
+      response:
+        type: JourneyInfoResp

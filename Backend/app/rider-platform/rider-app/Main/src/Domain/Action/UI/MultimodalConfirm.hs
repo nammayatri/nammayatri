@@ -32,6 +32,7 @@ module Domain.Action.UI.MultimodalConfirm
     postMultimodalOrderSwitchJourneyLeg,
     postMultimodalOrderChangeStops,
     postMultimodalRouteAvailability,
+    postMultimodalSwitchRoute,
   )
 where
 
@@ -1353,9 +1354,24 @@ postMultimodalRouteAvailability (mbPersonId, merchantId) req = do
         ( \routeInfo ->
             ApiTypes.AvailableRoute
               { source = routesByTier.source,
+                quoteId = routesByTier.quoteId,
+                serviceTierName = routesByTier.serviceTierName,
                 routeCode = routeInfo.routeCode,
                 routeShortName = routeInfo.shortName,
+                routeLongName = routeInfo.longName,
                 routeTimings = routesByTier.nextAvailableBuses
               }
         )
         routesByTier.availableRoutesInfo
+
+postMultimodalSwitchRoute ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    API.Types.UI.MultimodalConfirm.SwitchRouteReq ->
+    Environment.Flow API.Types.UI.MultimodalConfirm.JourneyInfoResp
+  )
+postMultimodalSwitchRoute (mbPersonId, merchantId) req = do
+  journeyLeg <- QJourneyLeg.getJourneyLeg req.journeyId req.legOrder
+  QRouteDetails.updateRoute (Just req.routeCode) (Just req.routeCode) (Just req.routeLongName) (Just req.routeShortName) journeyLeg.id.getId
+  postMultimodalOrderSwitchFRFSTier (mbPersonId, merchantId) req.journeyId req.legOrder (API.Types.UI.MultimodalConfirm.SwitchFRFSTierReq req.quoteId)
