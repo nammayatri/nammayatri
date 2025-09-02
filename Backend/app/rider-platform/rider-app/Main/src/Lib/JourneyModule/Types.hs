@@ -1223,10 +1223,10 @@ mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation m
         legPricingId = Nothing,
         changedBusesInSequence = Nothing,
         finalBoardedBusNumber = Nothing,
-        osmEntrance = gates >>= (.osmEntrance),
-        osmExit = gates >>= (.osmExit),
-        straightLineEntrance = gates >>= (.straightLineEntrance),
-        straightLineExit = gates >>= (.straightLineExit),
+        osmEntrance = chooseGate (gates >>= (.osmEntrance)) (leg.entrance),
+        osmExit = chooseGate (gates >>= (.osmExit)) (leg.exit),
+        straightLineEntrance = chooseGate (gates >>= (.straightLineEntrance)) (leg.entrance),
+        straightLineExit = chooseGate (gates >>= (.straightLineExit)) (leg.exit),
         journeyId = journeyId,
         isDeleted = Just False,
         sequenceNumber = idx
@@ -1315,6 +1315,9 @@ mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation m
             createdAt = now,
             updatedAt = now
           }
+
+    chooseGate :: Maybe KEMIT.MultiModalLegGate -> Maybe KEMIT.MultiModalLegGate -> Maybe KEMIT.MultiModalLegGate
+    chooseGate fromGates fromLeg = fromGates <|> fromLeg
 
 getServiceTypeFromProviderCode :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => Id DMOC.MerchantOperatingCity -> Text -> m Spec.ServiceTierType
 getServiceTypeFromProviderCode merchantOperatingCityId providerCode = do
