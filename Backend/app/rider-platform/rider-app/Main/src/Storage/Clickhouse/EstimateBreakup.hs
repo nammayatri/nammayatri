@@ -45,7 +45,7 @@ findAllByEstimateIdT estimateId createdAt =
   CH.findAll $
     CH.select $
       CH.filter_
-        ( \estimateBreakup _ ->
+        ( \estimateBreakup ->
             estimateBreakup.estimateId CH.==. estimateId
               CH.&&. estimateBreakup.date >=. Just (addMinutesToUTCTime (-10) createdAt)
         )

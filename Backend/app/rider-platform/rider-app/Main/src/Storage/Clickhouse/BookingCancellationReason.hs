@@ -72,7 +72,7 @@ countCancelledBookingsByRiderIdGroupByByUserAndDriver riderId createdAt = do
         )
         $ CH.selectModifierOverride CH.NO_SELECT_MODIFIER $
           CH.filter_
-            ( \bookingCancellationReason _ ->
+            ( \bookingCancellationReason ->
                 bookingCancellationReason.date >=. Just createdAt
                   CH.&&. bookingCancellationReason.riderId CH.==. Just riderId
             )

@@ -106,7 +106,7 @@ findAllByStatus merchantId statuses mbFrom mbTo = do
               (status, numRides, numDrivers, totalAmount, specialZoneAmount)
         )
         $ CH.filter_
-          ( \driverFee _ ->
+          ( \driverFee ->
               driverFee.merchantId CH.==. merchantId
                 CH.&&. driverFee.status `in_` (Just <$> statuses)
                 CH.&&. CH.whenJust_ mbFrom (\from -> driverFee.collectedAt >=. CH.DateTime from)
@@ -149,7 +149,7 @@ findAllByDate merchantId statuses mbFrom mbTo dayBasis mbCollBy = do
         )
         $ CH.orderBy_ (\_ (_, _, _, _, date, hour) -> CH.asc (date, hour)) $
           CH.filter_
-            ( \driverFee _ ->
+            ( \driverFee ->
                 driverFee.merchantId CH.==. merchantId
                   CH.&&. driverFee.status `in_` (Just <$> statuses)
                   CH.&&. CH.whenJust_ mbFrom (\from -> driverFee.collectedAt >=. CH.DateTime from)
@@ -196,7 +196,7 @@ findAllByStatusSubSelect merchantId statuses mbFrom mbTo = do
                     (statusAgg, numRidesAgg, driverIdAgg, totalAmountAgg, specialZoneAmountAgg)
               )
               $ CH.filter_
-                ( \driverFee _ ->
+                ( \driverFee ->
                     driverFee.merchantId CH.==. merchantId
                       CH.&&. driverFee.status `in_` (Just <$> statuses)
                       CH.&&. CH.whenJust_ mbFrom (\from -> driverFee.collectedAt >=. CH.DateTime from)
@@ -246,7 +246,7 @@ findAllByDateSubSelect merchantId statuses mbFrom mbTo dayBasis mbCollBy = do
                       (totalAmountAgg, specialZoneAmountAgg, numRidesAgg, driverIdAgg, dateAgg, hourAgg)
                 )
                 $ CH.filter_
-                  ( \driverFee _ ->
+                  ( \driverFee ->
                       driverFee.merchantId CH.==. merchantId
                         CH.&&. driverFee.status `in_` (Just <$> statuses)
                         CH.&&. CH.whenJust_ mbFrom (\from -> driverFee.collectedAt >=. CH.DateTime from)

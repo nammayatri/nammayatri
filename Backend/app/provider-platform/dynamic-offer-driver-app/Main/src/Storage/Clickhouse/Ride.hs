@@ -89,7 +89,7 @@ getCompletedRidesByDriver rideIds driverId from to = do
     CH.findAll $
       CH.select_ (\ride -> CH.aggregate $ CH.count_ ride.id) $
         CH.filter_
-          ( \ride _ ->
+          ( \ride ->
               ride.status CH.==. Just DRide.COMPLETED
                 CH.&&. ride.createdAt >=. from
                 CH.&&. ride.createdAt <=. to
@@ -111,7 +111,7 @@ getRidesByIdAndStatus rideIds status from to = do
     CH.findAll $
       CH.select_ (\ride -> CH.aggregate $ CH.count_ ride.id) $
         CH.filter_
-          ( \ride _ ->
+          ( \ride ->
               ride.status CH.==. Just status
                 CH.&&. ride.createdAt >=. from
                 CH.&&. ride.createdAt <=. to
@@ -132,7 +132,7 @@ getEarningsByDriver rideIds driverId from to = do
     CH.findAll $
       CH.select_ (\ride -> CH.aggregate $ CH.sum_ ride.fare) $
         CH.filter_
-          ( \ride _ ->
+          ( \ride ->
               ride.status CH.==. Just DRide.COMPLETED
                 CH.&&. ride.createdAt >=. from
                 CH.&&. ride.createdAt <=. to
@@ -156,7 +156,7 @@ getEarningsByIds rideIds from to = do
     CH.findAll $
       CH.select_ (\ride -> CH.aggregate $ CH.sum_ ride.fare) $
         CH.filter_
-          ( \ride _ ->
+          ( \ride ->
               ride.status CH.==. Just DRide.COMPLETED
                 CH.&&. ride.createdAt >=. from
                 CH.&&. ride.createdAt <=. to
@@ -202,7 +202,7 @@ getCompletedRidesStatsByIdsAndDriverId rideIds mbDriverId from to limit offset s
           CH.limit_ limit $
             CH.offset_ offset $
               CH.filter_
-                ( \ride _ ->
+                ( \ride ->
                     ride.status `in_` [Just DRide.COMPLETED, Just DRide.CANCELLED]
                       CH.&&. ride.createdAt >=. from
                       CH.&&. ride.createdAt <=. to
@@ -290,7 +290,7 @@ getAllCompletedRidesByDriverId driverId from to =
   CH.findAll $
     CH.select_ (\rd -> CH.notGrouped rd) $
       CH.filter_
-        ( \ride _ ->
+        ( \ride ->
             ride.status CH.==. Just DRide.COMPLETED
               CH.&&. ride.createdAt >=. from
               CH.&&. ride.createdAt <=. to

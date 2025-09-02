@@ -70,7 +70,7 @@ findRideByBookingId bookingId createdAt = do
     CH.findAll $
       CH.select $
         CH.filter_
-          ( \ride _ ->
+          ( \ride ->
               ride.bookingId CH.==. bookingId
                 CH.&&. ride.createdAt >=. createdAt
           )

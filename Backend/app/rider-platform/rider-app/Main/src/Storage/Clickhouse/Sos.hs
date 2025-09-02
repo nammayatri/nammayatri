@@ -68,7 +68,7 @@ findAllByPersonId personId = do
   CH.findAll $
     CH.select $
       CH.filter_
-        ( \sos _ ->
+        ( \sos ->
             sos.personId CH.==. personId
         )
         (CH.all_ @CH.APP_SERVICE_CLICKHOUSE sosTTable)

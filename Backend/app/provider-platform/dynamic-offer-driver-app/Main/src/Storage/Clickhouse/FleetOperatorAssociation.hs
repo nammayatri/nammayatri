@@ -37,5 +37,5 @@ getFleetOwnerIdsByOperatorId operatorId =
   CH.findAll $
     CH.select_ (\assoc -> CH.notGrouped (assoc.fleetOwnerId)) $
       CH.filter_
-        (\assoc _ -> assoc.operatorId CH.==. operatorId CH.&&. assoc.isActive CH.==. True)
+        (\assoc -> assoc.operatorId CH.==. operatorId CH.&&. assoc.isActive CH.==. True)
         (CH.all_ @CH.APP_SERVICE_CLICKHOUSE fleetOperatorAssociationTTable)

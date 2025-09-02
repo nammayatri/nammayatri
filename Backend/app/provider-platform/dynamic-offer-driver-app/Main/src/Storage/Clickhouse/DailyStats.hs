@@ -102,7 +102,7 @@ aggregatePeriodStatsWithBoundaries driverId fromDateU toDateU period = do
                   )
         )
         $ CH.filter_
-          ( \ds _ ->
+          ( \ds ->
               ds.driverId ==. driverId
                 CH.&&. ds.merchantLocalDate >=. fromDateU
                 CH.&&. ds.merchantLocalDate <=. toDateU

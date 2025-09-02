@@ -39,5 +39,5 @@ getModeCountsByDriverIds driverIds =
           CH.groupBy driverFlowStatus $ \m -> (m, countDrivers)
       )
       $ CH.filter_
-        (\info _ -> info.driverId `CH.in_` driverIds)
+        (\info -> info.driverId `CH.in_` driverIds)
         (CH.all_ @CH.APP_SERVICE_CLICKHOUSE driverInformationTTable)
