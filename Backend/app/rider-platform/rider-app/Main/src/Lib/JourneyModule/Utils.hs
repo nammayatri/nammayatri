@@ -879,6 +879,55 @@ buildSingleModeDirectRoutes getPreliminaryLeg mbRouteCode (Just originStopCode) 
     Nothing -> return []
 buildSingleModeDirectRoutes _ _ _ _ _ _ _ _ _ = return []
 
+getSubwayValidRoutes ::
+  [ViaRoute] ->
+  (LocationV2 -> Flow (Maybe MultiModalTypes.MultiModalLeg)) ->
+  DIntegratedBPPConfig.IntegratedBPPConfig ->
+  Id Merchant ->
+  Id MerchantOperatingCity ->
+  Enums.VehicleCategory ->
+  MultiModalTypes.GeneralVehicleType ->
+  Bool ->
+  Flow ([MultiModalTypes.MultiModalRoute], [ViaRoute])
+getSubwayValidRoutes allSubwayRoutes getPreliminaryLeg integratedBppConfig mid mocid vc mode processAllViaPoints = do
+  if processAllViaPoints
+    then do
+      allRoutes <-
+        mapMaybeM
+          processRoute
+          allSubwayRoutes
+      return (allRoutes, [])
+    else do
+      go allSubwayRoutes
+  where
+    processRoute viaRoutes = do
+      let viaPoints = viaRoutes.viaPoints
+          routeDistance = metersToHighPrecMeters viaRoutes.distance
+      routeDetailsWithDistance <- mapM (\(osc, dsc) -> buildMultimodalRouteDetails 1 Nothing osc dsc integratedBppConfig mid mocid vc) viaPoints
+      logDebug $ "buildTrainAllViaRoutes routeDetailsWithDistance: " <> show routeDetailsWithDistance
+      -- ensure that atleast one train route is possible or two stops are less than 1km apart so that user can walk to other station e.g. Chennai Park to Central station
+      let isRoutePossible = all (\(mbRouteDetails, mbDistance) -> isJust mbRouteDetails || (isJust mbDistance && mbDistance < Just (HighPrecMeters 1000))) routeDetailsWithDistance
+      if isRoutePossible
+        then do
+          let routeDetails = mapMaybe (\(mbRouteDetails, _) -> mbRouteDetails) routeDetailsWithDistance
+          logDebug $ "buildTrainAllViaRoutes routeDetails: " <> show routeDetails
+          let updateRouteDetails = zipWith (\idx routeDetail -> routeDetail {MultiModalTypes.subLegOrder = idx}) [1 ..] routeDetails
+          case updateRouteDetails of
+            [] -> return Nothing
+            (rD : _) -> do
+              currentTime <- getCurrentTime
+              let (_, currentTimeIST) = getISTTimeInfo currentTime
+              mbPreliminaryLeg <- getPreliminaryLeg rD.startLocation
+              return $ Just $ mkMultiModalRoute currentTimeIST mbPreliminaryLeg mode (NonEmpty.fromList updateRouteDetails) (Just routeDistance)
+        else return Nothing
+    go [] = return ([], [])
+    go (x : xs) = do
+      processRoute x >>= \case
+        Just route -> do
+          return ([route], xs)
+        Nothing -> do
+          go xs
+
 buildTrainAllViaRoutes ::
   (LocationV2 -> Flow (Maybe MultiModalTypes.MultiModalLeg)) ->
   Maybe Text ->
@@ -889,32 +938,11 @@ buildTrainAllViaRoutes ::
   Id Person ->
   Enums.VehicleCategory ->
   MultiModalTypes.GeneralVehicleType ->
-  Flow [MultiModalTypes.MultiModalRoute]
-buildTrainAllViaRoutes getPreliminaryLeg (Just originStopCode) (Just destinationStopCode) (Just integratedBppConfig) mid mocid personId vc mode = do
+  Bool ->
+  Flow ([MultiModalTypes.MultiModalRoute], [ViaRoute])
+buildTrainAllViaRoutes getPreliminaryLeg (Just originStopCode) (Just destinationStopCode) (Just integratedBppConfig) mid mocid personId vc mode processAllViaPoints = do
   allSubwayRoutes <- getAllSubwayRoutes
-  mapMaybeM
-    ( \viaRoutes -> do
-        let viaPoints = viaRoutes.viaPoints
-            routeDistance = metersToHighPrecMeters viaRoutes.distance
-        routeDetailsWithDistance <- mapM (\(osc, dsc) -> buildMultimodalRouteDetails 1 Nothing osc dsc integratedBppConfig mid mocid vc) viaPoints
-        logDebug $ "buildTrainAllViaRoutes routeDetailsWithDistance: " <> show routeDetailsWithDistance
-        -- ensure that atleast one train route is possible or two stops are less than 1km apart so that user can walk to other station e.g. Chennai Park to Central station
-        let isRoutePossible = all (\(mbRouteDetails, mbDistance) -> isJust mbRouteDetails || (isJust mbDistance && mbDistance < Just (HighPrecMeters 1000))) routeDetailsWithDistance
-        if isRoutePossible
-          then do
-            let routeDetails = mapMaybe (\(mbRouteDetails, _) -> mbRouteDetails) routeDetailsWithDistance
-            logDebug $ "buildTrainAllViaRoutes routeDetails: " <> show routeDetails
-            let updateRouteDetails = zipWith (\idx routeDetail -> routeDetail {MultiModalTypes.subLegOrder = idx}) [1 ..] routeDetails
-            case updateRouteDetails of
-              [] -> return Nothing
-              (rD : _) -> do
-                currentTime <- getCurrentTime
-                let (_, currentTimeIST) = getISTTimeInfo currentTime
-                mbPreliminaryLeg <- getPreliminaryLeg rD.startLocation
-                return $ Just $ mkMultiModalRoute currentTimeIST mbPreliminaryLeg mode (NonEmpty.fromList updateRouteDetails) (Just routeDistance)
-          else return Nothing
-    )
-    allSubwayRoutes
+  getSubwayValidRoutes allSubwayRoutes getPreliminaryLeg integratedBppConfig mid mocid vc mode processAllViaPoints
   where
     getAllSubwayRoutes :: Flow [ViaRoute]
     getAllSubwayRoutes = do
@@ -960,7 +988,7 @@ buildTrainAllViaRoutes getPreliminaryLeg (Just originStopCode) (Just destination
           logDebug $ "getAllSubwayRoutes viaRoutes: " <> show viaRoutes
           return viaRoutes
         _ -> return []
-buildTrainAllViaRoutes _ _ _ _ _ _ _ _ _ = return []
+buildTrainAllViaRoutes _ _ _ _ _ _ _ _ _ _ = return ([], [])
 
 findEarliestTiming :: UTCTime -> UTCTime -> [RouteStopTimeTable] -> Maybe RouteStopTimeTable
 findEarliestTiming currentTimeIST currentTime routeStopTimings = filter (\rst -> getISTArrivalTime rst.timeOfDeparture currentTime >= currentTimeIST) routeStopTimings & listToMaybe
