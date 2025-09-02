@@ -39,8 +39,10 @@ import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import qualified Lib.Queries.SpecialLocation as QSpecialLocation
+import qualified SharedLogic.FRFSUtils as FRFSUtils
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.Person as CQP
 import Storage.Queries.Geometry (findGeometriesContaining)
 import Tools.Error
@@ -52,7 +54,8 @@ data ServiceabilityRes = ServiceabilityRes
     specialLocation :: Maybe QSpecialLocation.SpecialLocationFull,
     geoJson :: Maybe Text,
     hotSpotInfo :: [DHotSpot.HotSpotInfo],
-    blockRadius :: Maybe Int
+    blockRadius :: Maybe Int,
+    isMetroServiceable :: Maybe Bool
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON, ToSchema)
 
@@ -71,17 +74,22 @@ checkServiceability ::
 checkServiceability settingAccessor (personId, merchantId) location shouldUpdatePerson isOrigin = do
   DHotSpot.HotSpotResponse {..} <- getHotspot location merchantId
   mbNearestOpAndCurrentCity <- getNearestOperatingAndCurrentCity' settingAccessor (personId, merchantId) shouldUpdatePerson location
+  person <- CQP.findCityInfoById personId >>= fromMaybeM (PersonNotFound personId.getId)
   case mbNearestOpAndCurrentCity of
     Just (NearestOperatingAndCurrentCity {nearestOperatingCity, currentCity}) -> do
       let city = Just nearestOperatingCity.city
       specialLocationBody <- Esq.runInReplica $ QSpecialLocation.findSpecialLocationByLatLongFull location
       let filteredSpecialLocationBody = QSpecialLocation.filterGates specialLocationBody isOrigin
+      riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+      now <- getCurrentTime
+      let isOutsideMetroBusinessHours = FRFSUtils.isOutsideBusinessHours riderConfig.qrTicketRestrictionStartTime riderConfig.qrTicketRestrictionEndTime now riderConfig.timeDiffFromUtc
       return
         ServiceabilityRes
           { serviceable = True,
             currentCity = Just currentCity.city,
             specialLocation = filteredSpecialLocationBody,
             geoJson = (.geoJson) =<< filteredSpecialLocationBody,
+            isMetroServiceable = Just (not isOutsideMetroBusinessHours),
             ..
           }
     Nothing ->
@@ -92,6 +100,7 @@ checkServiceability settingAccessor (personId, merchantId) location shouldUpdate
             serviceable = False,
             specialLocation = Nothing,
             geoJson = Nothing,
+            isMetroServiceable = Nothing,
             ..
           }
 

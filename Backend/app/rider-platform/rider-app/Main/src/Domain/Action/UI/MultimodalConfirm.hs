@@ -91,6 +91,7 @@ import qualified Lib.JourneyModule.State.Types as JMState
 import qualified Lib.JourneyModule.Types as JMTypes
 import qualified Lib.JourneyModule.Utils as JLU
 import qualified Lib.JourneyModule.Utils as JMU
+import qualified SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -123,9 +124,7 @@ validateMetroBusinessHours journeyId = do
   legs <- QJourneyLeg.getJourneyLegs journeyId
   riderConfig <- QRC.findByMerchantOperatingCityId journey.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist journey.merchantOperatingCityId.getId)
   now <- getCurrentTime
-  let isOutsideMetroBusinessHours = case (riderConfig.qrTicketRestrictionStartTime, riderConfig.qrTicketRestrictionEndTime) of
-        (Just start, Just end) -> JM.isWithinTimeBound start end now riderConfig.timeDiffFromUtc
-        _ -> False
+  let isOutsideMetroBusinessHours = FRFSUtils.isOutsideBusinessHours riderConfig.qrTicketRestrictionStartTime riderConfig.qrTicketRestrictionEndTime now riderConfig.timeDiffFromUtc
       hasMetroLeg = any (\leg -> leg.mode == DTrip.Metro) legs
   when (hasMetroLeg && isOutsideMetroBusinessHours) $
     throwError $ InvalidRequest "Metro booking not allowed outside business hours"
