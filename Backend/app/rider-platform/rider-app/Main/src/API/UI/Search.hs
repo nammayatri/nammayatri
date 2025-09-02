@@ -88,7 +88,6 @@ import qualified Lib.JourneyModule.Types as JMTypes
 import qualified Lib.JourneyModule.Utils as JMU
 import Servant hiding (throwError)
 import qualified SharedLogic.CallBPP as CallBPP
-import qualified SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import SharedLogic.Search as DSearch
 import Storage.Beam.SystemConfigs ()
@@ -264,9 +263,6 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
   let req = DSearch.extractSearchDetails now req'
   let merchantOperatingCityId = searchRequest.merchantOperatingCityId
   let vehicleCategory = fromMaybe BecknV2.OnDemand.Enums.BUS searchRequest.vehicleCategory
-  let isSingleModeMetroSearch = vehicleCategory == BecknV2.OnDemand.Enums.METRO
-  let isOutsideMetroBusinessHours = FRFSUtils.isOutsideBusinessHours riderConfig.qrTicketRestrictionStartTime riderConfig.qrTicketRestrictionEndTime now riderConfig.timeDiffFromUtc
-  when (isSingleModeMetroSearch && isOutsideMetroBusinessHours) $ throwError $ InvalidRequest "Metro booking not allowed outside business hours"
   let currentLocation = fmap latLongToLocationV2 req.currentLocation
   mbIntegratedBPPConfig <- SIBC.findMaybeIntegratedBPPConfig Nothing merchantOperatingCityId vehicleCategory (fromMaybe DIBC.MULTIMODAL req.platformType)
   directSingleModeRoutes <- do
