@@ -1011,6 +1011,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking booking' = do
       personEmail <- mapM decrypt person.email
       personPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
       isSplitEnabled_ <- Payment.getIsSplitEnabled merchantId_ merchantOperatingCityId Nothing (getPaymentType booking.vehicleType)
+      splitSettlementDetails <- Payment.mkSplitSettlementDetails isSplitEnabled_ paymentOrder.amount []
       let createOrderReq =
             Payment.CreateOrderReq
               { orderId = paymentOrder.id.getId,
@@ -1029,7 +1030,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking booking' = do
                 optionsGetUpiDeepLinks = Nothing,
                 metadataExpiryInMins = Nothing,
                 metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
-                splitSettlementDetails = Payment.mkSplitSettlementDetails isSplitEnabled_ paymentOrder.amount []
+                splitSettlementDetails = splitSettlementDetails
               }
       DPayment.createOrderService commonMerchantId (Just $ cast merchantOperatingCityId) commonPersonId createOrderReq (createOrderCall merchantOperatingCityId booking (Just person.id.getId) person.clientSdkVersion)
 
