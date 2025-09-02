@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wwarn=unused-imports #-}
-
 module Domain.Action.Dashboard.AppManagement.EventManagement
   ( getEventManagementTicketdashboardTicketplaceDef,
     postEventManagementTicketdashboardTicketplaceCleardraft,
@@ -29,7 +27,6 @@ import Control.Monad.Extra (concatMapM)
 import Data.List (nub, nubBy, (\\))
 import Data.Map (Map)
 import qualified Data.Map as Map
-import Data.OpenApi (ToSchema)
 import Domain.Action.Dashboard.AppManagement.EventManagement.Utils (deleteAsset)
 import qualified Domain.Types.BusinessHour as DBusinessHour
 import qualified Domain.Types.DraftTicketChange

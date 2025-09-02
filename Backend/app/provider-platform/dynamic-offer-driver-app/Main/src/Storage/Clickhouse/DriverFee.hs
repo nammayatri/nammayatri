@@ -81,83 +81,6 @@ data DriverFeeAggregated = DriverFeeAggregated
   deriving (Show)
 
 -- up to 6 columns supported now
-findAllByStatus ::
-  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
-  Id DM.Merchant ->
-  [Common.DriverFeeStatus] ->
-  Maybe UTCTime ->
-  Maybe UTCTime ->
-  m [DriverFeeAggregated]
-findAllByStatus merchantId statuses mbFrom mbTo = do
-  driverFeeTuple <-
-    CH.findAll $
-      CH.select_
-        ( \driverFee -> do
-            let totalAmount =
-                  CH.sum_ $
-                    driverFee.platformFee
-                      CH.+. driverFee.cgst
-                      CH.+. driverFee.sgst
-                      CH.+. CH.unsafeCoerceNum @(Maybe Int) @(Maybe Centesimal) driverFee.govtCharges
-            let numRides = CH.sum_ driverFee.numRides
-            let numDrivers = CH.count_ (CH.distinct driverFee.driverId)
-            let specialZoneAmount = CH.sum_ driverFee.specialZoneAmount
-            CH.groupBy driverFee.status $ \status -> do
-              (status, numRides, numDrivers, totalAmount, specialZoneAmount)
-        )
-        $ CH.filter_
-          ( \driverFee ->
-              driverFee.merchantId CH.==. merchantId
-                CH.&&. driverFee.status `in_` (Just <$> statuses)
-                CH.&&. CH.whenJust_ mbFrom (\from -> driverFee.collectedAt >=. CH.DateTime from)
-                CH.&&. CH.whenJust_ mbTo (\to -> driverFee.collectedAt <=. CH.DateTime to)
-          )
-          (CH.all_ @CH.APP_SERVICE_CLICKHOUSE driverFeeTTable)
-  pure $ mkDriverFeeByStatus <$> driverFeeTuple
-
--- up to 6 columns supported now
--- mbCollBy = Just [] ---> condition = False
--- mbCollBy = Nothing ---> condition = True
-
-findAllByDate ::
-  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
-  Id DM.Merchant ->
-  [Common.DriverFeeStatus] ->
-  Maybe UTCTime ->
-  Maybe UTCTime ->
-  Bool ->
-  Maybe [Id DVolunteer.Volunteer] ->
-  m [DriverFeeAggregated]
-findAllByDate merchantId statuses mbFrom mbTo dayBasis mbCollBy = do
-  driverFeeTuple <-
-    CH.findAll $
-      CH.select_
-        ( \driverFee -> do
-            let totalAmount =
-                  CH.sum_ $
-                    driverFee.platformFee
-                      CH.+. driverFee.cgst
-                      CH.+. driverFee.sgst
-                      CH.+. CH.unsafeCoerceNum @(Maybe Int) @(Maybe Centesimal) driverFee.govtCharges
-            let numRides = CH.sum_ driverFee.numRides
-            let numDrivers = CH.count_ (CH.distinct driverFee.driverId)
-            let specialZoneAmount = CH.sum_ driverFee.specialZoneAmount
-            let date' = CH.toDate driverFee.collectedAt
-            let hour' = if dayBasis then CH.valColumn 0 else CH.toHour driverFee.collectedAt
-            CH.groupBy (date', hour') $ \(date, hour) -> do
-              (totalAmount, specialZoneAmount, numRides, numDrivers, date, hour)
-        )
-        $ CH.orderBy_ (\_ (_, _, _, _, date, hour) -> CH.asc (date, hour)) $
-          CH.filter_
-            ( \driverFee ->
-                driverFee.merchantId CH.==. merchantId
-                  CH.&&. driverFee.status `in_` (Just <$> statuses)
-                  CH.&&. CH.whenJust_ mbFrom (\from -> driverFee.collectedAt >=. CH.DateTime from)
-                  CH.&&. CH.whenJust_ mbTo (\to -> driverFee.collectedAt <=. CH.DateTime to)
-                  CH.&&. CH.whenJust_ mbCollBy (\collBy -> driverFee.collectedBy `in_` (Just <$> collBy))
-            )
-            $ CH.all_ @CH.APP_SERVICE_CLICKHOUSE driverFeeTTable
-  pure $ mkDriverFeeByDate <$> driverFeeTuple
 
 findAllByStatusSubSelect ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
@@ -204,6 +127,10 @@ findAllByStatusSubSelect merchantId statuses mbFrom mbTo = do
                 )
                 (CH.all_ @CH.APP_SERVICE_CLICKHOUSE driverFeeTTable)
   pure $ mkDriverFeeByStatus <$> driverFeeTuple
+
+-- up to 6 columns supported now
+-- mbCollBy = Just [] ---> condition = False
+-- mbCollBy = Nothing ---> condition = True
 
 findAllByDateSubSelect ::
   CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>

@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wwarn=unused-imports #-}
-
 module Domain.Action.UI.NyRegularSubscription
   ( postNyRegularSubscriptionsCreate,
     getNyRegularSubscriptionsEstimate,
@@ -16,37 +14,24 @@ where
 import API.Types.UI.NyRegularSubscription (NyRegularSubscriptionApiEntity)
 import qualified API.Types.UI.NyRegularSubscription
 import qualified Beckn.ACL.Search as TaxiACL
-import Control.Monad (join, when)
-import Data.Aeson (encode, toJSON)
-import qualified Data.List as List
-import Data.Maybe (fromJust, fromMaybe, isJust)
-import Data.OpenApi (ToSchema)
+import Data.Aeson (encode)
+import Data.Maybe (fromJust)
 import qualified Data.Text
 import qualified Data.Text as T
 import qualified Data.Time as Time
 import qualified Domain.Action.UI.Quote as Domain.Action.UI.Quote
 import qualified Domain.Action.UI.Search as Search
-import qualified Domain.Types.Client as Client
-import qualified Domain.Types.Estimate
 import qualified Domain.Types.Location as Location
-import qualified Domain.Types.LocationAddress as LocationAddress
 import qualified Domain.Types.Merchant as Domain.Types.Merchant
-import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.NyRegularInstanceLog as NyRegularInstanceLog
 import qualified Domain.Types.NyRegularSubscription
 import qualified Domain.Types.NyRegularSubscription as NySub
 import qualified Domain.Types.Person as Domain.Types.Person
-import qualified Domain.Types.Person as Person
-import qualified Domain.Types.SearchRequest as Search
 import Environment (Flow)
-import qualified Environment
 import EulerHS.Prelude hiding (id)
-import Kernel.External.Encryption (EncFlow)
 import Kernel.External.Maps (LatLong (..))
 import qualified Kernel.Prelude
-import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Hedis
-import Kernel.Types.Error (GenericError (InternalError, InvalidRequest), PersonError (..))
 import Kernel.Types.Id (Id (..))
 import qualified Kernel.Types.Id as Id
 import qualified Kernel.Types.Version as Kernel.Types.Version
@@ -55,8 +40,6 @@ import Kernel.Utils.Logging (logDebug, logInfo)
 import Kernel.Utils.Servant.Client (withShortRetry)
 import qualified Kernel.Utils.Time as KUT
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
-import qualified Lib.Scheduler.Types as Scheduler
-import Servant
 import qualified SharedLogic.CallBPP as CallBPP
 import SharedLogic.CallBPPInternal
 import SharedLogic.JobScheduler (NyRegularInstanceJobData (..), RiderJobType (NyRegularInstance))
@@ -70,7 +53,6 @@ import qualified Storage.Queries.NyRegularInstanceLog as QNyRegularInstanceLog
 import qualified Storage.Queries.NyRegularSubscription as QNyRegularSubscription
 import qualified Storage.Queries.NyRegularSubscriptionExtra as NyRegularSubscriptionExtra
 import qualified Storage.Queries.PersonExtra as QPerson
-import Tools.Auth
 import Tools.Error
 
 postNyRegularSubscriptionsCreate ::

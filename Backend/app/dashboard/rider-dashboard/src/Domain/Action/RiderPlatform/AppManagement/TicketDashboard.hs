@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wwarn=unused-imports #-}
-
 module Domain.Action.RiderPlatform.AppManagement.TicketDashboard
   ( ticketDashboardUploadAsset,
     ticketDashboardDeleteAsset,
@@ -11,8 +9,6 @@ where
 import qualified API.Client.RiderPlatform.AppManagement
 import qualified API.Types.Dashboard.AppManagement.TicketDashboard
 import AWS.S3 (FileType (..))
-import qualified AWS.S3 as S3
-import qualified Dashboard.Common
 import qualified Data.ByteString.Lazy as LBS
 import Domain.Action.RiderPlatform.AppManagement.MerchantOnboarding (getDashboardAccessType)
 import qualified "lib-dashboard" Domain.Types.Merchant

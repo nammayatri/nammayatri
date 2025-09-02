@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wwarn=unused-imports #-}
-
 module Domain.Action.RiderPlatform.AppManagement.EventManagement
   ( getEventManagementTicketdashboardTicketplaceDef,
     postEventManagementTicketdashboardTicketplaceCleardraft,
@@ -30,15 +28,12 @@ import qualified Domain.Types.ServiceCategory
 import qualified Domain.Types.ServicePeopleCategory
 import qualified "rider-app" Domain.Types.TicketPlace
 import qualified "rider-app" Domain.Types.TicketService
-import qualified Domain.Types.Transaction
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common
-import qualified SharedLogic.Transaction
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
 import Tools.Auth.Merchant

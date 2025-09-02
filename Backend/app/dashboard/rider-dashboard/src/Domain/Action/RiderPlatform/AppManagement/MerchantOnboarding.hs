@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wwarn=unused-imports #-}
-
 module Domain.Action.RiderPlatform.AppManagement.MerchantOnboarding
   ( merchantOnboardingInfo,
     merchantOnboardingStart,
@@ -23,8 +21,6 @@ import qualified "rider-app" API.Types.Dashboard.AppManagement.Endpoints.Merchan
 import qualified API.Types.Dashboard.AppManagement.MerchantOnboarding
 import "rider-app" API.Types.Dashboard.AppManagement.MerchantOnboarding ()
 import AWS.S3 (FileType (..))
-import qualified AWS.S3 as S3
-import qualified Dashboard.Common
 import Data.Aeson
 import qualified Data.ByteString.Lazy as LBS
 import qualified "lib-dashboard" Domain.Types.Merchant
@@ -32,9 +28,7 @@ import qualified "rider-app" Domain.Types.MerchantOnboarding
 import qualified "rider-app" Domain.Types.MerchantOnboarding as MO
 import qualified "rider-app" Domain.Types.MerchantOnboarding.Handler as DH
 import qualified Domain.Types.MerchantOnboardingStep
-import qualified "lib-dashboard" Domain.Types.Person
 import qualified "lib-dashboard" Domain.Types.Role
-import qualified Domain.Types.Transaction
 import qualified "lib-dashboard" Environment
 import EulerHS.Prelude
 import qualified Kernel.Prelude
@@ -42,7 +36,6 @@ import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified SharedLogic.Transaction
 import "lib-dashboard" Storage.Beam.BeamFlow
 import Storage.Beam.CommonInstances ()
 import qualified "lib-dashboard" Storage.Queries.Person as QP

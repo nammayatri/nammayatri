@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wwarn=unused-imports #-}
-
 module Domain.Action.ProviderPlatform.RideBooking.SearchRequest (postSearchRequestSearchrequests, getSearchRequestList) where
 
 import qualified API.Client.ProviderPlatform.RideBooking
@@ -12,7 +10,6 @@ import EulerHS.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common
 import qualified SharedLogic.Transaction
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api

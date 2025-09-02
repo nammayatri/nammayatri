@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wwarn=unused-imports #-}
-
 module Domain.Action.Dashboard.RideBooking.MeterRide (getMeterRidePrice) where
 
 import qualified API.Types.UI.PriceBreakup

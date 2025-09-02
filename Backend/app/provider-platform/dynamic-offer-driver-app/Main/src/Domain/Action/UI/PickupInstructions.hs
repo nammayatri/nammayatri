@@ -1,10 +1,6 @@
-{-# OPTIONS_GHC -Wwarn=unused-imports #-}
-
 module Domain.Action.UI.PickupInstructions (getPickupInstructions) where
 
 import qualified API.Types.UI.PickupInstructions
-import qualified Data.HashMap.Strict as HM
-import Data.OpenApi (ToSchema)
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
@@ -12,16 +8,9 @@ import qualified Domain.Types.Ride
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
-import Kernel.Types.Common (BaseUrl)
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
-import Kernel.Utils.Logging (logInfo)
-import Servant
-import SharedLogic.CallBAPInternal (AppBackendBapInternal)
 import qualified SharedLogic.CallBAPInternal as CallBAPInternal
-import Tools.Auth
-import Tools.Error
-import Tools.Metrics
 
 getPickupInstructions ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

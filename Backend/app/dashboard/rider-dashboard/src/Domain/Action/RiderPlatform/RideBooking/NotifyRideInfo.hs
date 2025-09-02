@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wwarn=unused-imports #-}
-
 module Domain.Action.RiderPlatform.RideBooking.NotifyRideInfo (postNotifyRideInfoNotifyRideInfo) where
 
 import qualified API.Client.RiderPlatform.RideBooking
@@ -13,7 +11,6 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common
 import qualified SharedLogic.Transaction
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api

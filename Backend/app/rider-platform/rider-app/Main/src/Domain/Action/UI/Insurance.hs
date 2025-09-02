@@ -1,27 +1,19 @@
-{-# OPTIONS_GHC -Wwarn=unused-imports #-}
-
 module Domain.Action.UI.Insurance (getInsurance) where
 
 import qualified API.Types.UI.Insurance
-import Data.OpenApi (ToSchema)
 import qualified Domain.Types.Insurance
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
-import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RideStatus as DRide
 import qualified Environment
 import EulerHS.Prelude hiding (elem, id)
 import Kernel.Prelude
-import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
-import Servant hiding (throwError)
 import qualified SharedLogic.Insurance as SI
 import qualified Storage.Queries.Insurance as QInsurance
 import qualified Storage.Queries.Ride as QRide
-import Tools.Auth
-import Tools.Error
 
 getInsurance ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
