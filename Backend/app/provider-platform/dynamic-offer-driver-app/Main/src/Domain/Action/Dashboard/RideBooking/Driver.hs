@@ -31,6 +31,7 @@ where
 import qualified "this" API.Types.Dashboard.RideBooking.Driver as Common
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver as Common
 import qualified Domain.Action.Dashboard.Common as DCommon
+import qualified Domain.Action.Dashboard.Fleet.Driver as Driver
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as DomainRC
 import qualified Domain.Types.DriverBlockTransactions as DTDBT
 import Domain.Types.DriverFee as DDF
@@ -41,6 +42,7 @@ import qualified Domain.Types.Invoice as INV
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Person as DP
 import Domain.Types.Plan
+import qualified Domain.Types.TransporterConfig as DTC
 import Domain.Types.VehicleRegistrationCertificate
 import qualified Domain.Types.VehicleServiceTier as DVST
 import qualified Domain.Types.VehicleVariant as DV
@@ -73,6 +75,7 @@ import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverLicense as QDriverLicense
 import qualified Storage.Queries.DriverRCAssociation as QRCAssociation
 import qualified Storage.Queries.DriverStats as QDriverStats
+import qualified Storage.Queries.FleetRCAssociation as FRCAssoc
 import qualified Storage.Queries.Invoice as QINV
 import qualified Storage.Queries.Person as QPerson
 import Storage.Queries.RCValidationRules
@@ -549,28 +552,29 @@ postDriverAddVehicle merchantShortId opCity reqDriverId req = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let personId = cast @Common.Driver @DP.Person reqDriverId
-  driver <-
+  requestor <-
     QPerson.findById personId
       >>= fromMaybeM (PersonDoesNotExist personId.getId)
   -- driverStats <- runInReplica $ QDriverStats.findById personId >>= fromMaybeM DriverInfoNotFound
 
   -- merchant access checking
-  let merchantId = driver.merchantId
-  unless (merchant.id == merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
+  let merchantId = requestor.merchantId
+  unless (merchant.id == merchantId && merchantOpCityId == requestor.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
   transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
 
-  mbLinkedVehicle <- QVehicle.findById personId
-  whenJust mbLinkedVehicle $ \_ -> throwError VehicleAlreadyLinked
+  when (requestor.role == DP.DRIVER) $ do
+    mbLinkedVehicle <- QVehicle.findById personId
+    whenJust mbLinkedVehicle $ \_ -> throwError VehicleAlreadyLinked
 
-  allLinkedRCs <- QRCAssociation.findAllLinkedByDriverId personId
-  unless (length allLinkedRCs < transporterConfig.rcLimit) $ throwError (RCLimitReached transporterConfig.rcLimit)
+    allLinkedRCs <- QRCAssociation.findAllLinkedByDriverId personId
+    unless (length allLinkedRCs < transporterConfig.rcLimit) $ throwError (RCLimitReached transporterConfig.rcLimit)
 
   whenJust req.driverName $ \driverName -> do
-    let updDriver = driver {DP.firstName = driverName} :: DP.Person
+    let updDriver = requestor {DP.firstName = driverName} :: DP.Person
     QPerson.updatePersonRec personId updDriver
 
   -- Validate request --
-  rcValidationRules <- findByCityId driver.merchantOperatingCityId
+  rcValidationRules <- findByCityId requestor.merchantOperatingCityId
   failures <- case rcValidationRules of
     Nothing -> pure []
     Just rules -> do
@@ -580,10 +584,16 @@ postDriverAddVehicle merchantShortId opCity reqDriverId req = do
   now <- getCurrentTime
   mbRC <- RCQuery.findLastVehicleRCWrapper req.registrationNo
   whenJust mbRC $ \rc -> do
-    mbAssoc <- QRCAssociation.findLinkedByRCIdAndDriverId personId rc.id now
-    when (isNothing mbAssoc) $ do
-      createDriverRCAssociationIfPossible transporterConfig personId rc
-    throwError $ InvalidRequest "RC already exists for this vehicle number, please activate."
+    case requestor.role of
+      DP.DRIVER -> do
+        mbAssoc <- QRCAssociation.findLinkedByRCIdAndDriverId personId rc.id now
+        when (isNothing mbAssoc) $ do
+          createDriverRCAssociationIfPossible transporterConfig personId rc
+        throwError $ InvalidRequest "RC already exists for this vehicle number, please activate."
+      role
+        | DCommon.checkFleetOwnerRole role ->
+          createRCAssociationWithFleet personId rc transporterConfig now
+      _ -> pure ()
 
   let createRCInput = createRCInputFromVehicle req
   mbNewRC <- buildRC merchant.id merchantOpCityId createRCInput failures
@@ -591,22 +601,35 @@ postDriverAddVehicle merchantShortId opCity reqDriverId req = do
     Just newRC -> do
       when (newRC.verificationStatus == Documents.INVALID) $ do throwError (InvalidRequest $ "No valid mapping found for (vehicleClass: " <> req.vehicleClass <> ", manufacturer: " <> req.make <> " and model: " <> req.model <> ")")
       RCQuery.upsert newRC
-      mbAssoc <- QRCAssociation.findLinkedByRCIdAndDriverId personId newRC.id now
-      when (isNothing mbAssoc) $ do
-        createDriverRCAssociationIfPossible transporterConfig personId newRC
+      case requestor.role of
+        DP.DRIVER -> do
+          mbAssoc <- QRCAssociation.findLinkedByRCIdAndDriverId personId newRC.id now
+          when (isNothing mbAssoc) $ do
+            createDriverRCAssociationIfPossible transporterConfig personId newRC
+        role
+          | DCommon.checkFleetOwnerRole role ->
+            createRCAssociationWithFleet personId newRC transporterConfig now
+        _ -> pure ()
 
       fork "Parallely verifying RC for add Vehicle: " $ DCommon.runVerifyRCFlow personId merchant merchantOpCityId opCity req False False Nothing -- run RC verification details
       cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId (Just [])
       -- as we create new rc, need to pass onboard inspection before activate rc and create vehicle
-      unless (transporterConfig.requiresOnboardingInspection == Just True) $ do
+      unless (transporterConfig.requiresOnboardingInspection == Just True || DCommon.checkFleetOwnerRole requestor.role) $ do
         driverInfo' <- QDriverInfo.findById personId >>= fromMaybeM DriverInfoNotFound
-        let vehicle = makeFullVehicleFromRC cityVehicleServiceTiers driverInfo' driver merchant.id req.registrationNo newRC merchantOpCityId now req.vehicleTags
+        let vehicle = makeFullVehicleFromRC cityVehicleServiceTiers driverInfo' requestor merchant.id req.registrationNo newRC merchantOpCityId now req.vehicleTags
         QVehicle.create vehicle
         when (vehicle.variant == DV.SUV) $
           QDriverInfo.updateDriverDowngradeForSuv transporterConfig.canSuvDowngradeToHatchback transporterConfig.canSuvDowngradeToTaxi personId
       logTagInfo "dashboard -> addVehicle : " (show personId)
     Nothing -> throwError $ InvalidRequest "Registration Number is empty"
   pure Success
+  where
+    createRCAssociationWithFleet :: Id DP.Person -> VehicleRegistrationCertificate -> DTC.TransporterConfig -> UTCTime -> Flow ()
+    createRCAssociationWithFleet personId rc transporterConfig now = do
+      Driver.checkRCAssociationForFleet personId.getId rc
+      mbFleetAssoc <- FRCAssoc.findLinkedByRCIdAndFleetOwnerId personId rc.id now
+      when (isNothing mbFleetAssoc) $ do
+        createFleetRCAssociationIfPossible transporterConfig personId rc
 
 createRCInputFromVehicle :: Common.AddVehicleReq -> CreateRCInput
 createRCInputFromVehicle req@Common.AddVehicleReq {..} =

@@ -8,6 +8,7 @@ module Domain.Action.Dashboard.Common
     appendPlusInMobileCountryCode,
     castStatus,
     checkFleetOwnerVerification,
+    checkFleetOwnerRole,
   )
 where
 
@@ -158,3 +159,6 @@ checkFleetOwnerVerification personId mbEnabledCheck = do
   when (mbEnabledCheck == Just True) $ do
     fleetOwnerInfo <- QFI.findByPrimaryKey (Id personId) >>= fromMaybeM (InvalidRequest $ "Fleet owner does not exist " <> personId)
     unless fleetOwnerInfo.enabled $ throwError (InvalidRequest "Fleet owner is not enabled")
+
+checkFleetOwnerRole :: DP.Role -> Bool
+checkFleetOwnerRole role = role `elem` [DP.FLEET_OWNER, DP.FLEET_BUSINESS]
