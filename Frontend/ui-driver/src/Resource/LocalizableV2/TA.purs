@@ -1890,7 +1890,7 @@ getTa =
     , driver_name: "டிரைவர் பெயர்"
     , cancelling_this_ride_will_block_you: "இந்த சவாரியை ரத்து செய்வது உங்களை தடுக்கும்"
     , your_cancellation_rate_is_high: "உங்கள் ரத்து செய்தல் விகிதம் அதிகமாக உள்ளது"
-    , cancelling_this_ride_will_lower_your_score_and_may_lead_to_blocking: "இந்த சவாரியை ரத்து செய்வது உங்கள் மதிப்பெண்ணை குறைக்கும்<br/>மற்றும் தடுப்புக்கு வழிவகுக்கும்"
+    , cancelling_this_ride_will_lower_your_score_and_may_lead_to_blocking: "இந்த சவாரியை ரத்து செய்வது உங்கள் மதிப்பெண்ணை குறைக்கும் மற்றும் தடுப்புக்கு வழிவகுக்கும்"
     , your_daily_cancellation_rate_will_increase_to_x_percent_and_will_block_you_for_x_hours: "உங்கள் தினசரி ரத்து விகிதம் <b>%s%%</b> ஆக உயரும் மற்றும் உங்களை <b>%s மணி நேரம்</b> தடுக்கும்"
     , your_weekly_cancellation_rate_will_increase_to_x_percent_and_will_block_you_for_x_hours: "உங்கள் வாராந்திர ரத்து விகிதம் <b>%s%%</b> ஆக உயரும் மற்றும் உங்களை <b>%s மணி நேரம்</b> தடுக்கும்"
     }

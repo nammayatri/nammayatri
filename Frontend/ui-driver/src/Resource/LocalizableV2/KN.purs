@@ -299,7 +299,7 @@ getKn =
     , frequent_cancellations_will_lead_to_blocking: "ಅನೇಕ ಬಾರಿ ರದ್ದತಿಗಳು ನಿಷೇಧಕ್ಕೆ ಹಾಗೂ ಕಡಿಮೆ ರೇಟಿಂಗ್‌ಗೆ ಕಾರಣವಾಗಬಹುದು."
     , cancelling_this_ride_will_block_you: "ಈ ಸವಾರಿಯನ್ನು ರದ್ದುಗೊಳಿಸುವುದರಿಂದ ನಿಮ್ಮನ್ನು ನಿರ್ಬಂಧಿಸಲಾಗುತ್ತದೆ."
     , your_cancellation_rate_is_high: "ನಿಮ್ಮ ರದ್ದುಗೊಳಿಸುವಿಕೆ ದರವು ಹೆಚ್ಚಾಗಿದೆ"
-    , cancelling_this_ride_will_lower_your_score_and_may_lead_to_blocking: "ಈ ಸವಾರಿಯನ್ನು ರದ್ದುಗೊಳಿಸುವುದರಿಂದ ನಿಮ್ಮ ಸ್ಕೋರ್ ಕಡಿಮೆಯಾಗುತ್ತದೆ<br/>ಮತ್ತು ನಿರ್ಬಂಧಕ್ಕೆ ಕಾರಣವಾಗಬಹುದು"
+    , cancelling_this_ride_will_lower_your_score_and_may_lead_to_blocking: "ಈ ಸವಾರಿಯನ್ನು ರದ್ದುಗೊಳಿಸುವುದರಿಂದ ನಿಮ್ಮ ಸ್ಕೋರ್ ಕಡಿಮೆಯಾಗುತ್ತದೆ ಮತ್ತು ನಿರ್ಬಂಧಕ್ಕೆ ಕಾರಣವಾಗಬಹುದು"
     , your_daily_cancellation_rate_will_increase_to_x_percent_and_will_block_you_for_x_hours: "ನಿಮ್ಮ ದೈನಂದಿನ ರದ್ದುಗೊಳಿಸುವ ದರ <b>%s%%</b> ಹೆಚ್ಚಾಗುತ್ತದೆ ಮತ್ತು ನಿಮ್ಮನ್ನು <b>%s ಗಂಟೆಗಳ</b> ಕಾಲ ನಿರ್ಬಂಧಿಸುತ್ತದೆ"
     , your_weekly_cancellation_rate_will_increase_to_x_percent_and_will_block_you_for_x_hours: "ನಿಮ್ಮ ವಾರದ ರದ್ದುಗೊಳಿಸುವ ದರ <b>%s%%</b> ಹೆಚ್ಚಾಗುತ್ತದೆ ಮತ್ತು ನಿಮ್ಮನ್ನು <b>%s ಗಂಟೆಗಳ</b> ಕಾಲ ನಿರ್ಬಂಧಿಸುತ್ತದೆ"
     , continue: "ಮುಂದುವರಿಸಿ"

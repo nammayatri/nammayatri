@@ -298,7 +298,7 @@ getBn =
     , frequent_cancellations_will_lead_to_less_rides: "ঘন ঘন বাতিলকরণগুলি কম রাইড এবং কম রেটিংয়ের দিকে পরিচালিত করবে"
     , cancelling_this_ride_will_block_you: "এই যাত্রা বাতিল করলে আপনি ব্লক হয়ে যাবেন"
     , your_cancellation_rate_is_high: "আপনার বাতিলকরণের হার বেশি"
-    , cancelling_this_ride_will_lower_your_score_and_may_lead_to_blocking: "এই যাত্রা বাতিল করলে আপনার স্কোর কমবে<br/>এবং ব্লকিং হতে পারে"
+    , cancelling_this_ride_will_lower_your_score_and_may_lead_to_blocking: "এই যাত্রা বাতিল করলে আপনার স্কোর কমবে এবং ব্লকিং হতে পারে"
     , your_daily_cancellation_rate_will_increase_to_x_percent_and_will_block_you_for_x_hours: "আপনার দৈনিক বাতিলের হার <b>%s%%</b> বেড়ে যাবে এবং আপনাকে <b>%s ঘন্টার</b> জন্য ব্লক করবে"
     , your_weekly_cancellation_rate_will_increase_to_x_percent_and_will_block_you_for_x_hours: "আপনার সাপ্তাহিক বাতিলের হার <b>%s%%</b> বেড়ে যাবে এবং আপনাকে <b>%s ঘন্টার</b> জন্য ব্লক করবে"
     , frequent_cancellations_will_lead_to_blocking: "ঘন ঘন বাতিল করা ব্লকিং এবং কম রেটিং এর দিকে পরিচালিত করবে"
