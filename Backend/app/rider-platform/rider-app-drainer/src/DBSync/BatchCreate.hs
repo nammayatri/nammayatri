@@ -11,8 +11,6 @@ import qualified Data.List as List
 import qualified Data.Map.Strict as M
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
-import qualified Data.Text.Lazy as TL
-import qualified Data.Text.Lazy.Encoding as TLE
 import Database.PostgreSQL.Simple.Types
 import qualified EulerHS.Language as EL
 import EulerHS.Prelude
@@ -22,6 +20,32 @@ import Kernel.Beam.Lib.Utils as KBLU
 import Types.DBSync
 import Types.Event as Event
 import Utils.Utils
+
+-- | Lightweight logging helpers to avoid JSON overhead
+logTableInfo :: Text -> DBModel -> Int -> Int -> Flow ()
+logTableInfo prefix tableName sigCount totalEntries =
+  EL.logInfo prefix $ tableName.getDBModel <> "|sigs:" <> show sigCount <> "|entries:" <> show totalEntries
+
+logSignatureInfo :: Text -> DBModel -> [Text] -> Int -> Flow ()
+logSignatureInfo prefix tableName columns entryCount =
+  EL.logInfo prefix $ tableName.getDBModel <> "|cols:" <> show (length columns) <> "|entries:" <> show entryCount
+
+logSplitInfo :: Text -> Int -> Int -> Flow ()
+logSplitInfo prefix forcedCount batchableCount =
+  EL.logInfo prefix $ "forced:" <> show forcedCount <> "|batchable:" <> show batchableCount
+
+logBatchResults :: Text -> Int -> Int -> Int -> Int -> Flow ()
+logBatchResults prefix totalSucc totalFail indivSucc batchSucc =
+  EL.logInfo prefix $ "success:" <> show totalSucc <> "|fail:" <> show totalFail <> "|indiv:" <> show indivSucc <> "|batch:" <> show batchSucc
+
+-- | Single-pass statistics calculation
+calculateTableStats :: Map ColumnSignature [ParsedCreateEntry] -> (Int, Int)
+calculateTableStats =
+  M.foldl'
+    ( \(sigCount, entryCount) entries ->
+        (sigCount + 1, entryCount + length entries)
+    )
+    (0, 0)
 
 -- | Column signature for grouping compatible inserts
 data ColumnSignature = ColumnSignature
@@ -86,15 +110,7 @@ executeBatchedCreate dbStreamKey createEntries = do
   if failedParseCount > 0
     then do
       EL.logError ("BATCH_CREATE_PARSE_FAILURES" :: Text) $
-        TL.toStrict $
-          TLE.decodeUtf8 $
-            A.encode $
-              A.object
-                [ "totalEntries" A..= totalEntries,
-                  "parsedSuccessfully" A..= parsedCount,
-                  "parseFailures" A..= failedParseCount,
-                  "errors" A..= parseErrors
-                ]
+        "total:" <> show totalEntries <> "|parsed:" <> show parsedCount <> "|failed:" <> show failedParseCount
 
       -- Stop the drainer due to parsing failures
       stopDrainer
@@ -106,14 +122,7 @@ executeBatchedCreate dbStreamKey createEntries = do
       -- Step 2: Separate by forceDrainToDB flag
       let (forceIndividual, batchable) = List.partition (\entry -> entry.createObject.forceDrainToDB) parsedEntries
 
-      EL.logInfo ("PROCESSING_SPLIT" :: Text) $
-        TL.toStrict $
-          TLE.decodeUtf8 $
-            A.encode $
-              A.object
-                [ "forceDrainCount" A..= length forceIndividual,
-                  "batchableCount" A..= length batchable
-                ]
+      logSplitInfo "PROCESSING_SPLIT" (length forceIndividual) (length batchable)
 
       -- Step 3: Process both groups
       individualResults <- processIndividualEntries dbStreamKey forceIndividual
@@ -126,16 +135,7 @@ executeBatchedCreate dbStreamKey createEntries = do
       let totalSuccesses = successes1 ++ successes2
           totalFailures = failures1 ++ failures2
 
-      EL.logInfo ("BATCHED_CREATE_COMPLETE" :: Text) $
-        TL.toStrict $
-          TLE.decodeUtf8 $
-            A.encode $
-              A.object
-                [ "totalSuccesses" A..= length totalSuccesses,
-                  "totalFailures" A..= length totalFailures,
-                  "individualSuccesses" A..= length successes1,
-                  "batchSuccesses" A..= length successes2
-                ]
+      logBatchResults "BATCHED_CREATE_COMPLETE" (length totalSuccesses) (length totalFailures) (length successes1) (length successes2)
 
       pure (totalSuccesses, totalFailures)
 
@@ -161,14 +161,7 @@ pushSuccessfulEntriesToKafka streamName entries successfulIds = do
       let (kafkaSuccesses, kafkaFailures) = partitionEithers results
 
       EL.logInfo ("KAFKA_PUSH_RESULTS" :: Text) $
-        TL.toStrict $
-          TLE.decodeUtf8 $
-            A.encode $
-              A.object
-                [ "totalEntries" A..= length successfulEntries,
-                  "kafkaSuccesses" A..= length kafkaSuccesses,
-                  "kafkaFailures" A..= length kafkaFailures
-                ]
+        "total:" <> show (length successfulEntries) <> "|success:" <> show (length kafkaSuccesses) <> "|fail:" <> show (length kafkaFailures)
 
       pure (kafkaSuccesses, kafkaFailures)
 
@@ -219,14 +212,8 @@ executeBatchableEntries dbStreamKey entries = do
 
       -- Step 1: Group by table name
       let groupedByTable = groupByTable entries
-
-      EL.logInfo ("TABLE_GROUPING" :: Text) $
-        TL.toStrict $
-          TLE.decodeUtf8 $
-            A.encode $
-              A.object
-                [ "tables" A..= map (\(table, entries') -> A.object ["table" A..= table.getDBModel, "count" A..= length entries']) (M.toList groupedByTable)
-                ]
+          tableCount = M.size groupedByTable
+      EL.logInfo ("TABLE_GROUPING" :: Text) $ "tables:" <> show tableCount
 
       -- Step 2: Within each table, group by column signature
       let groupedBySignature = M.map groupByColumnSignature groupedByTable
@@ -250,44 +237,19 @@ groupByColumnSignature = M.fromListWith (++) . map (\entry -> (entry.columnSigna
 processTableSignatureGroups :: Text -> (DBModel, Map ColumnSignature [ParsedCreateEntry]) -> Flow [([EL.KVDBStreamEntryID], [EL.KVDBStreamEntryID])]
 processTableSignatureGroups dbStreamKey (tableName, signatureGroups) = do
   Env {_dontEnableDbTables} <- ask
-  let signatureCount = M.size signatureGroups
-      allEntries = concat $ M.elems signatureGroups
-      totalEntries = length allEntries
+  let (signatureCount, totalEntries) = calculateTableStats signatureGroups
 
-  EL.logInfo ("PROCESSING_TABLE_SIGNATURES" :: Text) $
-    TL.toStrict $
-      TLE.decodeUtf8 $
-        A.encode $
-          A.object
-            [ "table" A..= tableName.getDBModel,
-              "signatureCount" A..= signatureCount,
-              "totalEntries" A..= totalEntries,
-              "signatures"
-                A..= map
-                  ( \(sig, entries) ->
-                      A.object
-                        [ "columns" A..= sig.columnNames,
-                          "count" A..= length entries
-                        ]
-                  )
-                  (M.toList signatureGroups)
-            ]
+  logTableInfo ("PROCESSING_TABLE_SIGNATURES" :: Text) tableName signatureCount totalEntries
 
   -- Check if this table should be Kafka-only (single check for entire table)
   if shouldPushToKafkaOnly tableName _dontEnableDbTables
     then do
       -- Handle Kafka-only table (all entries here already have forceDrainToDB=false)
-      EL.logInfo ("KAFKA_ONLY_TABLE" :: Text) $
-        TL.toStrict $
-          TLE.decodeUtf8 $
-            A.encode $
-              A.object
-                [ "table" A..= tableName.getDBModel,
-                  "kafkaOnlyEntries" A..= totalEntries
-                ]
+      EL.logInfo ("KAFKA_ONLY_TABLE" :: Text) $ tableName.getDBModel <> "|entries:" <> show totalEntries
 
       -- All entries skip DB and go to Kafka only
-      let kafkaIds = map (.entryId) allEntries
+      let allEntries = concat $ M.elems signatureGroups
+          kafkaIds = map (.entryId) allEntries
       kafkaResults <- pushSuccessfulEntriesToKafka dbStreamKey allEntries kafkaIds
 
       pure [kafkaResults]
@@ -299,44 +261,22 @@ processSignatureGroup :: Text -> DBModel -> (ColumnSignature, [ParsedCreateEntry
 processSignatureGroup dbStreamKey tableName (signature, entries) = do
   let entryCount = length entries
       columns = signature.columnNames
-  EL.logInfo ("PROCESSING_SIGNATURE_GROUP" :: Text) $
-    TL.toStrict $
-      TLE.decodeUtf8 $
-        A.encode $
-          A.object
-            [ "table" A..= tableName.getDBModel,
-              "columns" A..= columns,
-              "columnCount" A..= signature.columnCount,
-              "entryCount" A..= entryCount
-            ]
-  canBatch <- shouldBatchSignature signature entryCount
+  logSignatureInfo ("PROCESSING_SIGNATURE_GROUP" :: Text) tableName columns entryCount
+  canBatch <- shouldBatchSignature entryCount
   if canBatch
     then executeBatchForSignature dbStreamKey signature entries
     else executeIndividuallyForSignature dbStreamKey entries
 
 -- | Determine if a signature group should be batched
-shouldBatchSignature :: ColumnSignature -> Int -> Flow Bool
-shouldBatchSignature signature entryCount = do
+shouldBatchSignature :: Int -> Flow Bool
+shouldBatchSignature entryCount = do
   -- Minimum entries required for batching
   let minBatchSize = 2
 
   -- Don't batch if too few entries
   if entryCount < minBatchSize
-    then do
-      EL.logDebug ("BATCH_SIZE_TOO_SMALL" :: Text) ("Entries: " <> show entryCount <> ", Min: " <> show minBatchSize)
-      pure False
-    else do
-      globalEnabled <- EL.runIO getBatchCreateEnabled
-      EL.logDebug ("BATCH_DECISION" :: Text) $
-        TL.toStrict $
-          TLE.decodeUtf8 $
-            A.encode $
-              A.object
-                [ "table" A..= signature.tableName.getDBModel,
-                  "globalEnabled" A..= globalEnabled,
-                  "shouldBatch" A..= globalEnabled
-                ]
-      pure globalEnabled
+    then pure False -- Remove debug log from hot path
+    else EL.runIO getBatchCreateEnabled -- Simplified: just return the global setting
 
 -- | Execute individual processing for small signature groups
 executeIndividuallyForSignature :: Text -> [ParsedCreateEntry] -> Flow ([EL.KVDBStreamEntryID], [EL.KVDBStreamEntryID])
@@ -355,15 +295,7 @@ executeBatchForSignature _dbStreamKey signature entries = do
   if batchSize <= maxBatchSize
     then executeSingleBatch signature entries entryIds createObjects
     else do
-      EL.logInfo ("SPLITTING_LARGE_BATCH" :: Text) $
-        TL.toStrict $
-          TLE.decodeUtf8 $
-            A.encode $
-              A.object
-                [ "table" A..= signature.tableName.getDBModel,
-                  "totalEntries" A..= batchSize,
-                  "maxBatchSize" A..= maxBatchSize
-                ]
+      EL.logInfo ("SPLITTING_LARGE_BATCH" :: Text) $ signature.tableName.getDBModel <> "|size:" <> show batchSize <> "|max:" <> show maxBatchSize
 
       let batches = splitIntoBatches maxBatchSize entries
       results <- mapM (\batch -> executeSingleBatch signature batch (map (.entryId) batch) (map (.createObject) batch)) batches
@@ -394,43 +326,19 @@ executeBatchForSignature _dbStreamKey signature entries = do
               case result of
                 Left (QueryError errorMsg) -> do
                   EL.logError ("BATCH_INSERT_FAILED" :: Text) $
-                    TL.toStrict $
-                      TLE.decodeUtf8 $
-                        A.encode $
-                          A.object
-                            [ "table" A..= sig.tableName.getDBModel,
-                              "columns" A..= sig.columnNames,
-                              "error" A..= errorMsg,
-                              "entryCount" A..= length batchEntries,
-                              "query" A..= T.take 200 bulkQuery -- Log first 200 chars of query
-                            ]
+                    sig.tableName.getDBModel <> "|entries:" <> show (length batchEntries) <> "|error:" <> T.take 100 errorMsg
 
                   void $ publishDBSyncMetric $ Event.QueryExecutionFailure "BatchCreate" sig.tableName.getDBModel
                   EL.logInfo ("FALLING_BACK_TO_INDIVIDUAL" :: Text) ("Batch size: " <> show (length batchEntries))
                   executeIndividuallyForSignature _dbStreamKey batchEntries
                 Right _ -> do
                   EL.logInfo ("BATCH_INSERT_SUCCESS" :: Text) $
-                    TL.toStrict $
-                      TLE.decodeUtf8 $
-                        A.encode $
-                          A.object
-                            [ "table" A..= sig.tableName.getDBModel,
-                              "columns" A..= sig.columnNames,
-                              "batchedCount" A..= length batchEntries
-                            ]
+                    sig.tableName.getDBModel <> "|entries:" <> show (length batchEntries) <> "|cols:" <> show (length sig.columnNames)
                   void $ publishDBSyncMetric $ Event.DrainerQueryExecutes "BatchCreate" (fromIntegral $ length batchEntries)
                   void $ publishDBSyncMetric $ Event.BatchExecutionTime sig.tableName.getDBModel executionTime
 
                   EL.logInfo ("BATCH_WITH_KAFKA_COMPLETE" :: Text) $
-                    TL.toStrict $
-                      TLE.decodeUtf8 $
-                        A.encode $
-                          A.object
-                            [ "table" A..= sig.tableName.getDBModel,
-                              "kafkaSuccesses" A..= length kafkaSuccesses,
-                              "dbSuccesses" A..= length ids,
-                              "finalSuccesses" A..= length kafkaSuccesses
-                            ]
+                    sig.tableName.getDBModel <> "|kafka:" <> show (length kafkaSuccesses) <> "|db:" <> show (length ids) <> "|final:" <> show (length kafkaSuccesses)
 
                   pure (kafkaSuccesses, [])
 
