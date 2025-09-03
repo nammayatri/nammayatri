@@ -33,7 +33,6 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Yudhishthira as TY
 import EulerHS.Prelude
 import Kernel.External.Maps
-import Kernel.External.Maps.Types
 import Kernel.Prelude hiding (any, elem)
 import qualified Kernel.Storage.Esqueleto as Esq hiding (whenJust_)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
