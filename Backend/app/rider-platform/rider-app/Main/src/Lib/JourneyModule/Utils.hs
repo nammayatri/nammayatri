@@ -903,7 +903,7 @@ getSubwayValidRoutes allSubwayRoutes getPreliminaryLeg integratedBppConfig mid m
     processRoute viaRoutes = do
       let viaPoints = viaRoutes.viaPoints
           routeDistance = metersToHighPrecMeters viaRoutes.distance
-      routeDetailsWithDistance <- mapM (\(osc, dsc) -> buildMultimodalRouteDetails 1 Nothing osc dsc integratedBppConfig mid mocid vc) viaPoints
+      routeDetailsWithDistance <- mapM (\(osc, dsc) -> measureLatency (buildMultimodalRouteDetails 1 Nothing osc dsc integratedBppConfig mid mocid vc) "buildMultimodalRouteDetails") viaPoints
       logDebug $ "buildTrainAllViaRoutes routeDetailsWithDistance: " <> show routeDetailsWithDistance
       -- ensure that atleast one train route is possible or two stops are less than 1km apart so that user can walk to other station e.g. Chennai Park to Central station
       let isRoutePossible = all (\(mbRouteDetails, mbDistance) -> isJust mbRouteDetails || (isJust mbDistance && mbDistance < Just (HighPrecMeters 1000))) routeDetailsWithDistance
@@ -926,6 +926,7 @@ getSubwayValidRoutes allSubwayRoutes getPreliminaryLeg integratedBppConfig mid m
         Just route -> do
           return ([route], xs)
         Nothing -> do
+          logDebug $ "getSubwayValidRoutes go Nothing: " <> show x <> " so going for other path"
           go xs
 
 buildTrainAllViaRoutes ::
@@ -941,8 +942,8 @@ buildTrainAllViaRoutes ::
   Bool ->
   Flow ([MultiModalTypes.MultiModalRoute], [ViaRoute])
 buildTrainAllViaRoutes getPreliminaryLeg (Just originStopCode) (Just destinationStopCode) (Just integratedBppConfig) mid mocid personId vc mode processAllViaPoints = do
-  allSubwayRoutes <- getAllSubwayRoutes
-  getSubwayValidRoutes allSubwayRoutes getPreliminaryLeg integratedBppConfig mid mocid vc mode processAllViaPoints
+  allSubwayRoutes <- measureLatency getAllSubwayRoutes "getAllSubwayRoutes"
+  measureLatency (getSubwayValidRoutes allSubwayRoutes getPreliminaryLeg integratedBppConfig mid mocid vc mode processAllViaPoints) "getSubwayValidRoutes"
   where
     getAllSubwayRoutes :: Flow [ViaRoute]
     getAllSubwayRoutes = do
