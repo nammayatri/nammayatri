@@ -493,7 +493,7 @@ type DriverProfileScreenData = {
   cancellationWindow :: Maybe Int,
   assignedRidesCountDaily :: Maybe Int,
   cancelledRidesCountDaily :: Maybe Int,
-  assignedRidesCountWeekly :: Maybe Int,
+  assignedRidesCountWeekly :: Maybe Int, 
   cancelledRidesCountWeekly :: Maybe Int,
   cancellationRateSlabConfig :: Maybe CancellationRateSlabConfig,
   missedEarnings :: Int,
@@ -1489,8 +1489,10 @@ type HomeScreenProps =  {
   showBlockerPopup :: Boolean,
   showInsuranceBanner :: Boolean,
   coinWaitingThreshold :: Int,
-  nyClubConsent :: Maybe Boolean
- }
+  nyClubConsent :: Maybe Boolean,
+  willCancellationBlock :: Boolean,
+  cancellationValues :: { cancelledRides :: Int, totalRides :: Int, suspensionHours :: Int, blockType :: Maybe BlockType }
+}
 
 type RideRequestPill = {
   isPillClickable ::  Boolean,
@@ -1528,6 +1530,14 @@ instance eqSubscriptionPopupType :: Eq SubscriptionPopupType where eq = genericE
 instance showSubscriptionPopupType :: Show SubscriptionPopupType where show = genericShow
 instance encodeSubscriptionPopupType :: Encode SubscriptionPopupType where encode = defaultEnumEncode
 instance decodeSubscriptionPopupType :: Decode SubscriptionPopupType where decode = defaultEnumDecode
+
+data BlockType = DailyBlock | WeeklyBlock
+
+derive instance genericBlockType :: Generic BlockType _
+instance eqBlockType :: Eq BlockType where eq = genericEq
+instance showBlockType :: Show BlockType where show = genericShow
+instance encodeBlockType :: Encode BlockType where encode = defaultEnumEncode
+instance decodeBlockType :: Decode BlockType where decode = defaultEnumDecode
 
 data TripType = OneWay | RoundTrip | Rental | Intercity | RideShare | Delivery
 

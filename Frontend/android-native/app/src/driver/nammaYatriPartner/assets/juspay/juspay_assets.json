@@ -459,6 +459,7 @@
       "ny_ic_driver_offer_cab" : true,
       "ny_ic_driver_profile" : true,
       "ny_ic_driver_related_issue" : true,
+      "ny_ic_drivers_with_shield" : true,
       "ny_ic_drop" : true,
       "ny_ic_drop_down" : true,
       "ny_ic_drop_indicator" : true,
@@ -816,6 +817,7 @@
       "ny_ic_rides_tab_inactive" : true,
       "ny_ic_right_arrow_blue" : true,
       "ny_ic_right_arrow_green" : true,
+      "ny_ic_ring_blue" : true,
       "ny_ic_round_cross" : true,
       "ny_ic_round_trip_indicator_white" : true,
       "ny_ic_roundtrip_indicator" : true,
@@ -849,6 +851,7 @@
       "ny_ic_share" : true,
       "ny_ic_share_explain" : true,
       "ny_ic_share_grey" : true,
+      "ny_ic_shield" : true,
       "ny_ic_shimmer_img" : true,
       "ny_ic_shivamogga_map" : true,
       "ny_ic_silhouette" : true,
@@ -894,6 +897,7 @@
       "ny_ic_test_request_icon_white" : true,
       "ny_ic_test_sos_banner" : true,
       "ny_ic_text_pointer_right" : true,
+      "ny_ic_this_cancellation_will_block_you" : true,
       "ny_ic_tick" : true,
       "ny_ic_tick_grey" : true,
       "ny_ic_tick_selected_blue" : true,
@@ -971,6 +975,7 @@
       "ny_ic_women" : true,
       "ny_ic_yatri_coin" : true,
       "ny_ic_yellow_arrow_right" : true,
+      "ny_ic_yellow_bullet" : true,
       "ny_ic_yellow_clock" : true,
       "ny_ic_yellow_pfp_ring" : true,
       "ny_ic_youtube" : true,
@@ -1001,10 +1006,6 @@
       "tip_banner_rectangle" : true,
       "up_hand_arrow" : true,
       "widget_close_gradient" : true,
-      "zone_curve" : true,
-      "ny_ic_shield" : true,
-      "ny_ic_ring_blue" : true,
-      "ny_ic_drivers_with_shield" : true,
-      "ny_ic_yellow_bullet" : true
+      "zone_curve" : true
    }
 }

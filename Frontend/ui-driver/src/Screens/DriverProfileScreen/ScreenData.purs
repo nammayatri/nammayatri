@@ -25,7 +25,7 @@ import Language.Types (STR(..)) as STR
 import ConfigProvider
 import Prelude (class Eq, unit, (<>), (==), (||), (/=))
 import Screens.Types (DriverProfileScreenState, BottomNavBarState, DriverProfileScreenType(..),AutoPayStatus(..), Component(..))
-import Services.API (GetDriverInfoResp(..), OrganizationInfo(..), DriverGoHomeInfo(..))
+import Services.API (GetDriverInfoResp(..), OrganizationInfo(..), DriverGoHomeInfo(..), CancellationRateSlabConfig(..))
 import Screens.Types as ST
 import Engineering.Helpers.Commons as EHC
 import Screens (ScreenName(..)) as Screen

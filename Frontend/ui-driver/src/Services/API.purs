@@ -522,7 +522,6 @@ instance encodeOverchargingTag :: Encode OverchargingTag where encode = defaultE
 instance eqOverchargingTag :: Eq OverchargingTag where eq = genericEq
 instance standardEncodeOverchargingTag :: StandardEncode OverchargingTag where standardEncode _ = standardEncode {}
 
--- Cancellation Rate Slab Config types
 newtype CancellationRateSlab = CancellationRateSlab {
   cancellationPercentageThreshold :: Int,
   suspensionTimeInHours :: Int

@@ -1914,4 +1914,9 @@ getTe =
     , pass_all_eligibility_criteria_to_continue_being_a_member : "నమ్మ కుతుమా సదస్యత్తున్నారు పాలిసి సమస్త యోగ్యతా మానదండ్ పాలిసి"
     , metro : "మెట్రో"
     , gold_tier : "గోల్డ్ టీర్"
+    , cancelling_this_ride_will_block_you: "ఈ రైడ్‌ను రద్దు చేయడం మిమ్మల్ని బ్లాక్ చేస్తుంది"
+    , your_cancellation_rate_is_high: "మీ రద్దు చేయడం రేటు ఎక్కువగా ఉంది"
+    , cancelling_this_ride_will_lower_your_score_and_may_lead_to_blocking: "ఈ రైడ్‌ను రద్దు చేయడం మీ స్కోర్‌ను తగ్గిస్తుంది మరియు బ్లాకింగ్‌కు దారితీయవచ్చు"
+    , your_daily_cancellation_rate_will_increase_to_x_percent_and_will_block_you_for_x_hours: "మీ రోజువారీ రద్దు రేటు <b>%s%%</b> కి పెంచుతుంది మరియు మిమ్మల్ని <b>%s గంటలు</b> బ్లాక్ చేస్తుంది"
+    , your_weekly_cancellation_rate_will_increase_to_x_percent_and_will_block_you_for_x_hours: "మీ వారపు రద్దు రేటు <b>%s%%</b> కి పెంచుతుంది మరియు మిమ్మల్ని <b>%s గంటలు</b> బ్లాక్ చేస్తుంది"
     }

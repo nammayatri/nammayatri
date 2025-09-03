@@ -94,7 +94,8 @@ import RemoteConfig as RC
 import Resource.Constants (decodeAddress, getLocationInfoFromStopLocation, rideTypeConstructor, getHomeStageFromString)
 import Screens (ScreenName(..), getScreen)
 import Screens.Types as ST
-import Services.API (GetRidesHistoryResp, RidesInfo(..), Status(..), GetCurrentPlanResp(..), PlanEntity(..), PaymentBreakUp(..), GetRouteResp(..), Route(..), StopLocation(..),DriverProfileStatsResp(..), BookingTypes(..) , ScheduledBookingListResponse(..) , ScheduleBooking(..) , BookingAPIEntity(..))
+import Screens.Types (BlockType(..))
+import Services.API (GetRidesHistoryResp, RidesInfo(..), Status(..), GetCurrentPlanResp(..), PlanEntity(..), PaymentBreakUp(..), GetRouteResp(..), Route(..), StopLocation(..),DriverProfileStatsResp(..), BookingTypes(..) , ScheduledBookingListResponse(..) , ScheduleBooking(..) , BookingAPIEntity(..), GetDriverInfoResp(..), CancellationRateSlabConfig(..), CancellationRateSlab(..), SlabType(..))
 import Services.Accessor (_lat, _lon, _area, _extras, _instructions)
 import Storage (KeyStore(..), deleteValueFromLocalStore, getValueToLocalNativeStore, getValueToLocalStore, setValueToLocalNativeStore, setValueToLocalStore, getIntegerFromLocalStore)
 import Types.App (FlowBT, GlobalState(..), HOME_SCREENOUTPUT(..), ScreenType(..))
@@ -711,6 +712,56 @@ uploadFileConfig = Common.UploadFileConfig {
   imageAspectHeight : 0,
   imageAspectWidth : 0
 }
+
+willNextCancellationBlock :: Maybe GetDriverInfoResp -> { willBlock :: Boolean, blockType :: Maybe BlockType }
+willNextCancellationBlock maybeDriverInfo = 
+  case maybeDriverInfo of 
+    Nothing -> { willBlock: false, blockType: Nothing }
+    Just (GetDriverInfoResp driverInfo) -> do
+      let dailyBlocking = checkDailyThreshold driverInfo
+          weeklyBlocking = checkWeeklyThreshold driverInfo
+      if weeklyBlocking then { willBlock: true, blockType: Just WeeklyBlock }
+      else if dailyBlocking then { willBlock: true, blockType: Just DailyBlock }
+      else { willBlock: false, blockType: Nothing }
+  where
+    checkDailyThreshold driverInfo = 
+      case driverInfo.cancellationRateSlabConfig of
+        Nothing -> false
+        Just (CancellationRateSlabConfig config) -> 
+          let totalBookings = fromMaybe 0 driverInfo.assignedRidesCountDaily
+              currentCancellations = fromMaybe 0 driverInfo.cancelledRidesCountDaily
+              nextCancellations = currentCancellations + 1
+          in if totalBookings > 2
+             then checkSlabThreshold config.dailySlabs totalBookings nextCancellations
+             else false
+    
+    checkWeeklyThreshold driverInfo = 
+      case driverInfo.cancellationRateSlabConfig of
+        Nothing -> false
+        Just (CancellationRateSlabConfig config) -> 
+          let totalBookings = fromMaybe 0 driverInfo.assignedRidesCountWeekly
+              currentCancellations = fromMaybe 0 driverInfo.cancelledRidesCountWeekly
+              nextCancellations = currentCancellations + 1
+          in if totalBookings > 2
+             then checkSlabThreshold config.weeklySlabs totalBookings nextCancellations
+             else false
+    
+    checkSlabThreshold slabs totalBookings nextCancellations = 
+      case Array.find (\slab -> 
+        let (SlabType slabData) = slab
+            minRange = slabData.minBookingsRange
+            minValue = fromMaybe 0 (minRange Array.!! 0)
+            maxValue = fromMaybe 999 (minRange Array.!! 1)
+        in totalBookings >= minValue && totalBookings <= maxValue
+      ) slabs of
+        Nothing -> false
+        Just slab -> 
+          let (SlabType slabData) = slab
+              (CancellationRateSlab penalty) = slabData.penalityForCancellation
+              nextCancellationRate = toNumber ((nextCancellations * 100) / totalBookings)
+              threshold = toNumber penalty.cancellationPercentageThreshold
+              willBlock = nextCancellationRate >= threshold
+          in willBlock
 
 eval :: Action -> ST.HomeScreenState -> Eval Action ScreenOutput ST.HomeScreenState
 
@@ -1332,8 +1383,8 @@ eval (RideActionModalAction (RideActionModal.OnNavigate)) state = do
           pure NoAction
         ]
 
-eval (RideActionModalAction (RideActionModal.CancelRide)) state = do
-  continue state{ data {cancelRideConfirmationPopUp{delayInSeconds = 5,  continueEnabled=false}}, props{cancelConfirmationPopup = true}}
+eval (RideActionModalAction (RideActionModal.CancelRide)) state = 
+  continue state { data {cancelRideConfirmationPopUp{delayInSeconds = if state.props.willCancellationBlock then 5 else 3,  continueEnabled=false}}, props{cancelConfirmationPopup = true}}
 eval (RideActionModalAction (RideActionModal.CallCustomer)) state = do
   if state.data.activeRide.tripType == ST.Delivery && state.props.currentStage == ST.RideStarted then
     continue state{props{showDeliveryCallPopup = true}}
