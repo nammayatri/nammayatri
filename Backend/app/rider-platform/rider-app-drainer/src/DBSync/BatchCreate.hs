@@ -231,7 +231,7 @@ executeBatchableEntries dbStreamKey entries = do
       -- Step 2: Within each table, group by column signature
       let groupedBySignature = M.map groupByColumnSignature groupedByTable
 
-      -- Step 3: Process each signature group as a batch
+      -- Step 3: Process each signature group as a batch (shouldPushToKafkaOnly check is done per table)
       results <- mapM (processTableSignatureGroups dbStreamKey) (M.toList groupedBySignature)
       let flatResults = concat results
           (successes, failures) = unzip flatResults
@@ -249,7 +249,10 @@ groupByColumnSignature = M.fromListWith (++) . map (\entry -> (entry.columnSigna
 -- | Process all signature groups for a table
 processTableSignatureGroups :: Text -> (DBModel, Map ColumnSignature [ParsedCreateEntry]) -> Flow [([EL.KVDBStreamEntryID], [EL.KVDBStreamEntryID])]
 processTableSignatureGroups dbStreamKey (tableName, signatureGroups) = do
+  Env {_dontEnableDbTables} <- ask
   let signatureCount = M.size signatureGroups
+      allEntries = concat $ M.elems signatureGroups
+      totalEntries = length allEntries
 
   EL.logInfo ("PROCESSING_TABLE_SIGNATURES" :: Text) $
     TL.toStrict $
@@ -258,6 +261,7 @@ processTableSignatureGroups dbStreamKey (tableName, signatureGroups) = do
           A.object
             [ "table" A..= tableName.getDBModel,
               "signatureCount" A..= signatureCount,
+              "totalEntries" A..= totalEntries,
               "signatures"
                 A..= map
                   ( \(sig, entries) ->
@@ -269,7 +273,26 @@ processTableSignatureGroups dbStreamKey (tableName, signatureGroups) = do
                   (M.toList signatureGroups)
             ]
 
-  mapM (processSignatureGroup dbStreamKey tableName) (M.toList signatureGroups)
+  -- Check if this table should be Kafka-only (single check for entire table)
+  if shouldPushToKafkaOnly tableName _dontEnableDbTables
+    then do
+      -- Handle Kafka-only table (all entries here already have forceDrainToDB=false)
+      EL.logInfo ("KAFKA_ONLY_TABLE" :: Text) $
+        TL.toStrict $
+          TLE.decodeUtf8 $
+            A.encode $
+              A.object
+                [ "table" A..= tableName.getDBModel,
+                  "kafkaOnlyEntries" A..= totalEntries
+                ]
+
+      -- All entries skip DB and go to Kafka only
+      let kafkaIds = map (.entryId) allEntries
+      kafkaResults <- pushSuccessfulEntriesToKafka dbStreamKey allEntries kafkaIds
+
+      pure [kafkaResults]
+    else -- Normal DB processing for this table
+      mapM (processSignatureGroup dbStreamKey tableName) (M.toList signatureGroups)
 
 -- | Process a single signature group
 processSignatureGroup :: Text -> DBModel -> (ColumnSignature, [ParsedCreateEntry]) -> Flow ([EL.KVDBStreamEntryID], [EL.KVDBStreamEntryID])
@@ -353,62 +376,63 @@ executeBatchForSignature _dbStreamKey signature entries = do
           EL.logError ("BATCH_QUERY_GENERATION_FAILED" :: Text) (show sig)
           executeIndividuallyForSignature _dbStreamKey batchEntries
         Just bulkQuery -> do
-          Env {_connectionPool} <- ask
-          startTime <- EL.getCurrentDateInMillis
-          result <- EL.runIO $ try $ DBQ.executeQueryUsingConnectionPool _connectionPool (Query $ TE.encodeUtf8 bulkQuery)
-          endTime <- EL.getCurrentDateInMillis
-          let executionTime = int2Double (endTime - startTime)
-          case result of
-            Left (QueryError errorMsg) -> do
-              EL.logError ("BATCH_INSERT_FAILED" :: Text) $
-                TL.toStrict $
-                  TLE.decodeUtf8 $
-                    A.encode $
-                      A.object
-                        [ "table" A..= sig.tableName.getDBModel,
-                          "columns" A..= sig.columnNames,
-                          "error" A..= errorMsg,
-                          "entryCount" A..= length batchEntries,
-                          "query" A..= T.take 200 bulkQuery -- Log first 200 chars of query
-                        ]
+          -- Step 1: Push to Kafka FIRST (matching individual Create order)
+          (kafkaSuccesses, kafkaFailures) <- pushSuccessfulEntriesToKafka _dbStreamKey batchEntries ids
 
-              void $ publishDBSyncMetric $ Event.QueryExecutionFailure "BatchCreate" sig.tableName.getDBModel
-              EL.logInfo ("FALLING_BACK_TO_INDIVIDUAL" :: Text) ("Batch size: " <> show (length batchEntries))
+          -- If any Kafka pushes failed, fall back to individual processing
+          if not (null kafkaFailures)
+            then do
+              EL.logInfo ("KAFKA_FAILURES_FALLBACK" :: Text) ("Kafka failures: " <> show (length kafkaFailures) <> ", falling back to individual")
               executeIndividuallyForSignature _dbStreamKey batchEntries
-            Right _ -> do
-              EL.logInfo ("BATCH_INSERT_SUCCESS" :: Text) $
-                TL.toStrict $
-                  TLE.decodeUtf8 $
-                    A.encode $
-                      A.object
-                        [ "table" A..= sig.tableName.getDBModel,
-                          "columns" A..= sig.columnNames,
-                          "batchedCount" A..= length batchEntries
-                        ]
-              void $ publishDBSyncMetric $ Event.DrainerQueryExecutes "BatchCreate" (fromIntegral $ length batchEntries)
-              void $ publishDBSyncMetric $ Event.BatchExecutionTime sig.tableName.getDBModel executionTime
+            else do
+              -- Step 2: Push to DB after Kafka success (matching individual Create order)
+              Env {_connectionPool} <- ask
+              startTime <- EL.getCurrentDateInMillis
+              result <- EL.runIO $ try $ DBQ.executeQueryUsingConnectionPool _connectionPool (Query $ TE.encodeUtf8 bulkQuery)
+              endTime <- EL.getCurrentDateInMillis
+              let executionTime = int2Double (endTime - startTime)
+              case result of
+                Left (QueryError errorMsg) -> do
+                  EL.logError ("BATCH_INSERT_FAILED" :: Text) $
+                    TL.toStrict $
+                      TLE.decodeUtf8 $
+                        A.encode $
+                          A.object
+                            [ "table" A..= sig.tableName.getDBModel,
+                              "columns" A..= sig.columnNames,
+                              "error" A..= errorMsg,
+                              "entryCount" A..= length batchEntries,
+                              "query" A..= T.take 200 bulkQuery -- Log first 200 chars of query
+                            ]
 
-              -- Push to Kafka after successful DB insertion using exact same logic as runCreate
-              (kafkaSuccesses, kafkaFailures) <- pushSuccessfulEntriesToKafka _dbStreamKey batchEntries ids
+                  void $ publishDBSyncMetric $ Event.QueryExecutionFailure "BatchCreate" sig.tableName.getDBModel
+                  EL.logInfo ("FALLING_BACK_TO_INDIVIDUAL" :: Text) ("Batch size: " <> show (length batchEntries))
+                  executeIndividuallyForSignature _dbStreamKey batchEntries
+                Right _ -> do
+                  EL.logInfo ("BATCH_INSERT_SUCCESS" :: Text) $
+                    TL.toStrict $
+                      TLE.decodeUtf8 $
+                        A.encode $
+                          A.object
+                            [ "table" A..= sig.tableName.getDBModel,
+                              "columns" A..= sig.columnNames,
+                              "batchedCount" A..= length batchEntries
+                            ]
+                  void $ publishDBSyncMetric $ Event.DrainerQueryExecutes "BatchCreate" (fromIntegral $ length batchEntries)
+                  void $ publishDBSyncMetric $ Event.BatchExecutionTime sig.tableName.getDBModel executionTime
 
-              -- If any Kafka pushes failed, those entries should be treated as failures
-              let finalSuccesses = kafkaSuccesses
-                  finalFailures = kafkaFailures
+                  EL.logInfo ("BATCH_WITH_KAFKA_COMPLETE" :: Text) $
+                    TL.toStrict $
+                      TLE.decodeUtf8 $
+                        A.encode $
+                          A.object
+                            [ "table" A..= sig.tableName.getDBModel,
+                              "kafkaSuccesses" A..= length kafkaSuccesses,
+                              "dbSuccesses" A..= length ids,
+                              "finalSuccesses" A..= length kafkaSuccesses
+                            ]
 
-              EL.logInfo ("BATCH_WITH_KAFKA_COMPLETE" :: Text) $
-                TL.toStrict $
-                  TLE.decodeUtf8 $
-                    A.encode $
-                      A.object
-                        [ "table" A..= sig.tableName.getDBModel,
-                          "dbSuccesses" A..= length ids,
-                          "kafkaSuccesses" A..= length kafkaSuccesses,
-                          "kafkaFailures" A..= length kafkaFailures,
-                          "finalSuccesses" A..= length finalSuccesses,
-                          "finalFailures" A..= length finalFailures
-                        ]
-
-              pure (finalSuccesses, finalFailures)
+                  pure (kafkaSuccesses, [])
 
 -- | Get global batch size from environment variables
 getGlobalBatchSize :: Flow Int

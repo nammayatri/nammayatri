@@ -31,9 +31,10 @@ Successfully implemented column-aware batch create functionality for the rider-a
 
 ### 4. Kafka Integration Preservation
 - **Identical Logic**: Exact same Kafka push logic as original `runCreate`
-- **Same Decision Criteria**: Uses `shouldPushToDbOnly` + `isPushToKafka` flags
+- **Same Decision Criteria**: Uses `shouldPushToDbOnly`, `shouldPushToKafkaOnly` + `isPushToKafka` flags
 - **Same Object Preparation**: Uses `KBLU.replaceMappings` with same parameters
-- **Post-DB Push**: Batch entries push to Kafka after successful DB insertion
+- **Kafka-Only Support**: Properly handles entries that should skip DB and go only to Kafka
+- **Kafka-First Order**: Matches individual Create behavior - Kafka first, then DB (maintains consistency)
 - **Error Handling**: Same error handling and metrics publishing
 
 ### 5. Error Handling & Recovery
@@ -155,7 +156,7 @@ export INSERT_BATCH_SIZE=100  # or 200, 500 based on testing
 ✅ **Schema Safety**: Column signature grouping prevents mismatches
 ✅ **Different Column Handling**: Entries with different signatures processed separately
 ✅ **Force Drain Preserved**: Individual execution for `forceDrainToDB=true` entries
-✅ **Kafka Logic Identical**: Exact same Kafka push logic as original implementation
+✅ **Kafka Logic Identical**: Exact same Kafka push logic as original implementation (including shouldPushToKafkaOnly)
 ✅ **Parse Failure Handling**: Drainer stops immediately on any parsing failure
 ✅ **Batch Failure Recovery**: Automatic fallback to individual processing
 ✅ **Backward Compatibility**: Existing logic completely preserved
