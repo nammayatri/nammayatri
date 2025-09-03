@@ -228,6 +228,7 @@ status merchantId merchantOperatingCity bapConfig booking = do
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
   case integratedBPPConfig.providerConfig of
     ONDC _ -> do
+      Redis.setExp (Utils.mkCheckInprogressKey booking.searchId.getId) False 86400 -- 24hours
       void $ CallFRFSBPP.callBPPStatus booking bapConfig merchantOperatingCity.city merchantId
     _ -> do
       onStatusReq <- Flow.status merchantId merchantOperatingCity integratedBPPConfig bapConfig booking
