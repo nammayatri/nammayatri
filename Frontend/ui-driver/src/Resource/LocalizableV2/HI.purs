@@ -302,7 +302,7 @@ getHi =
     , frequent_cancellations_will_lead_to_blocking: "बार-बार रद्द करने से ब्लॉकिंग और रेटिंग कम हो जाएगी"
     , cancelling_this_ride_will_block_you: "इस यात्रा को रद्द करने से आपको ब्लॉक कर दिया जाएगा"
     , your_cancellation_rate_is_high: "आपकी रद्दीकरण दर अधिक है"
-    , cancelling_this_ride_will_lower_your_score_and_may_lead_to_blocking: "इस यात्रा को रद्द करने से आपका स्कोर कम हो जाएगा<br/>और ब्लॉकिंग हो सकती है"
+    , cancelling_this_ride_will_lower_your_score_and_may_lead_to_blocking: "इस यात्रा को रद्द करने से आपका स्कोर कम हो जाएगा और ब्लॉकिंग हो सकती है"
     , your_daily_cancellation_rate_will_increase_to_x_percent_and_will_block_you_for_x_hours: "आपका दैनिक रद्दीकरण दर <b>%s%%</b> बढ़ जाएगा और आपको <b>%s घंटे</b> के लिए ब्लॉक कर देगा"
     , your_weekly_cancellation_rate_will_increase_to_x_percent_and_will_block_you_for_x_hours: "आपका साप्ताहिक रद्दीकरण दर <b>%s%%</b> बढ़ जाएगा और आपको <b>%s घंटे</b> के लिए ब्लॉक कर देगा"
     , continue: "जारी रखें"
