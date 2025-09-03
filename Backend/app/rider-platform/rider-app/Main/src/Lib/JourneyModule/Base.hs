@@ -17,6 +17,7 @@ import qualified Domain.Types.BookingStatus as DTaxiBooking
 import qualified Domain.Types.BookingUpdateRequest as DBUR
 import qualified Domain.Types.CancellationReason as SCR
 import qualified Domain.Types.Estimate as DEstimate
+import qualified Domain.Types.EstimateStatus as DTaxiEstimate
 import Domain.Types.Extra.Ride as DRide
 import Domain.Types.FRFSRouteDetails
 import qualified Domain.Types.FRFSTicketBooking as DFRFSBooking
@@ -246,7 +247,10 @@ checkAndMarkTerminalJourneyStatus ::
   DJourney.Journey ->
   [JL.JourneyLegState] ->
   m ()
-checkAndMarkTerminalJourneyStatus journey = go . concatLegStates
+checkAndMarkTerminalJourneyStatus journey allLegStates = do
+  let flattenedLegStates = concatLegStates allLegStates
+      isSingleTaxiJourneyLeg = length flattenedLegStates == 1 && ((listToMaybe flattenedLegStates) <&> (.mode)) == Just DTrip.Taxi -- This Would Be A Single Leg Journey With Only A Taxi Leg.
+  go flattenedLegStates isSingleTaxiJourneyLeg
   where
     concatLegStates =
       foldl'
@@ -256,11 +260,16 @@ checkAndMarkTerminalJourneyStatus journey = go . concatLegStates
         )
         []
 
-    isCancelled :: JL.JourneyLegStateData -> Bool
-    isCancelled legState = legState.bookingStatus `elem` [JMState.TaxiBooking DTaxiBooking.CANCELLED, JMState.TaxiRide DTaxiRide.CANCELLED, JMState.FRFSBooking DFRFSBooking.CANCELLED, JMState.FRFSBooking DFRFSBooking.CANCEL_INITIATED, JMState.FRFSTicket DFRFSTicket.CANCELLED] -- If status is completed, a booking should exist. If it appears here without a booking, it means the booking was cancelled.
-    go allLegsState
-      | all (\legState -> legState.trackingStatus == JMState.Finished) allLegsState =
-        if any isCancelled allLegsState
+    isCancelled :: Bool -> JL.JourneyLegStateData -> Bool
+    isCancelled isSingleTaxiJourneyLeg legState =
+      let cancelledStatuses =
+            [JMState.FRFSBooking DFRFSBooking.CANCELLED, JMState.FRFSBooking DFRFSBooking.CANCEL_INITIATED, JMState.FRFSTicket DFRFSTicket.CANCELLED] -- If status is completed, a booking should exist. If it appears here without a booking, it means the booking was cancelled.
+              <> if isSingleTaxiJourneyLeg then [JMState.TaxiRide DTaxiRide.CANCELLED, JMState.TaxiBooking DTaxiBooking.CANCELLED, JMState.TaxiEstimate DTaxiEstimate.CANCELLED, JMState.TaxiEstimate DTaxiEstimate.COMPLETED] else [] -- For Single Taxi JourneyLeg, TaxiEstimate/TaxiBooking/TaxiRide Cancelled Should Also be treated as a Cancelled Journey Status.
+       in legState.bookingStatus `elem` cancelledStatuses
+
+    go flattenedLegStates isSingleTaxiJourneyLeg
+      | all (\legState -> legState.trackingStatus == JMState.Finished) flattenedLegStates || isSingleTaxiJourneyLeg =
+        if any (isCancelled isSingleTaxiJourneyLeg) flattenedLegStates
           then updateJourneyStatus journey DJourney.CANCELLED
           else updateJourneyStatus journey DJourney.FEEDBACK_PENDING
       | otherwise = pure ()
