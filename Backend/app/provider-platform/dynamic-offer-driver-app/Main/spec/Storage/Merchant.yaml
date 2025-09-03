@@ -1076,6 +1076,7 @@ TransporterConfig:
     maxOnlineDurationDays : Maybe Int
     distanceWeightage: Maybe Int
     driverCallingOption: "Maybe CallingOption"
+    allowAnalytics : Maybe Bool
 
   beamType:
     currency: Maybe Currency
@@ -1498,6 +1499,7 @@ TransporterConfig:
     maxOnlineDurationDays : "10"
     distanceWeightage: "20"
     driverCallingOption: "'AnonymousCall'"
+    allowAnalytics : "false"
   excludedDefaultQueries:
     - findByPrimaryKey
     - updateByPrimaryKey
