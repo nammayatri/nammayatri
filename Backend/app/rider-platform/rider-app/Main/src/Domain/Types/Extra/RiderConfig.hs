@@ -4,6 +4,7 @@
 
 module Domain.Types.Extra.RiderConfig where
 
+import qualified BecknV2.FRFS.Enums as Enums
 import Data.Aeson
 import Data.Aeson.Types
 import Data.ByteString (ByteString)
@@ -89,3 +90,14 @@ instance HasSqlValueSyntax be String => HasSqlValueSyntax be VehicleServiceTierO
   sqlValueSyntax = autoSqlValueSyntax
 
 $(Tools.Beam.UtilsTH.mkBeamInstancesForList ''VehicleServiceTierOrderConfig)
+
+data BusTierSortingConfig = BusTierSortingConfig
+  { tier :: Enums.ServiceTierType,
+    rank :: Int
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq, Read, Ord)
+
+instance HasSqlValueSyntax be String => HasSqlValueSyntax be BusTierSortingConfig where
+  sqlValueSyntax = autoSqlValueSyntax
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForList ''BusTierSortingConfig)
