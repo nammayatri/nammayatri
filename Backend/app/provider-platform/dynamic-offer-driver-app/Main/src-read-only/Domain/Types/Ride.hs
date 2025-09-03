@@ -78,6 +78,7 @@ data Ride = Ride
     pickupDropOutsideOfThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     previousRideTripEndPos :: Kernel.Prelude.Maybe Kernel.External.Maps.LatLong,
     previousRideTripEndTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    reactBundleVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     rideEndedBy :: Kernel.Prelude.Maybe Domain.Types.Ride.RideEndedBy,
     rideTags :: Kernel.Prelude.Maybe [Lib.Yudhishthira.Types.TagNameValue],
     safetyAlertTriggered :: Kernel.Prelude.Bool,

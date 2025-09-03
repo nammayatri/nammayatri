@@ -43,7 +43,7 @@ postOperatorRegister merchantShortId opCity req = do
 createOperatorDetails :: Registration.AuthReq -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Text -> Flow DP.Person
 createOperatorDetails authReq merchantId merchantOpCityId isDashboard deploymentVersion = do
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  person <- Registration.makePerson authReq transporterConfig Nothing Nothing Nothing Nothing (Just deploymentVersion) merchantId merchantOpCityId isDashboard (Just DP.OPERATOR)
+  person <- Registration.makePerson authReq transporterConfig Nothing Nothing Nothing Nothing Nothing (Just deploymentVersion) merchantId merchantOpCityId isDashboard (Just DP.OPERATOR)
   void $ QP.create person
   merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityDoesNotExist merchantOpCityId.getId)
   QDriverStats.createInitialDriverStats merchantOperatingCity.currency merchantOperatingCity.distanceUnit person.id

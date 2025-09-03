@@ -22,11 +22,12 @@ import Storage.Queries.Transformers.DriverQuote
 
 instance FromTType' Beam.DriverQuote Domain.Types.DriverQuote.DriverQuote where
   fromTType' (Beam.DriverQuoteT {..}) = do
-    backendConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion)
-    clientBundleVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion)
-    clientConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion)
-    clientSdkVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)
+    backendConfigVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion))
+    clientBundleVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion))
+    clientConfigVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion))
+    clientSdkVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion))
     fareParams' <- getFareParams fareParametersId
+    reactBundleVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> reactBundleVersion))
     pure $
       Just
         Domain.Types.DriverQuote.DriverQuote
@@ -34,7 +35,7 @@ instance FromTType' Beam.DriverQuote Domain.Types.DriverQuote.DriverQuote where
             backendConfigVersion = backendConfigVersion',
             clientBundleVersion = clientBundleVersion',
             clientConfigVersion = clientConfigVersion',
-            clientDevice = Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer,
+            clientDevice = (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer),
             clientId = clientId,
             clientSdkVersion = clientSdkVersion',
             coinsRewardedOnGoldTierRide = coinsRewardedOnGoldTierRide,
@@ -54,6 +55,7 @@ instance FromTType' Beam.DriverQuote Domain.Types.DriverQuote.DriverQuote where
             id = Kernel.Types.Id.Id id,
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             providerId = Kernel.Types.Id.Id providerId,
+            reactBundleVersion = reactBundleVersion',
             requestId = Kernel.Types.Id.Id requestId,
             searchRequestForDriverId = Kernel.Types.Id.Id <$> searchRequestForDriverId,
             searchTryId = Kernel.Types.Id.Id searchTryId,
@@ -74,10 +76,10 @@ instance ToTType' Beam.DriverQuote Domain.Types.DriverQuote.DriverQuote where
         Beam.backendConfigVersion = fmap Kernel.Utils.Version.versionToText backendConfigVersion,
         Beam.clientBundleVersion = fmap Kernel.Utils.Version.versionToText clientBundleVersion,
         Beam.clientConfigVersion = fmap Kernel.Utils.Version.versionToText clientConfigVersion,
-        Beam.clientManufacturer = clientDevice >>= (.deviceManufacturer),
-        Beam.clientModelName = clientDevice <&> (.deviceModel),
-        Beam.clientOsType = clientDevice <&> (.deviceType),
-        Beam.clientOsVersion = clientDevice <&> (.deviceVersion),
+        Beam.clientManufacturer = (clientDevice >>= (.deviceManufacturer)),
+        Beam.clientModelName = (clientDevice <&> (.deviceModel)),
+        Beam.clientOsType = (clientDevice <&> (.deviceType)),
+        Beam.clientOsVersion = (clientDevice <&> (.deviceVersion)),
         Beam.clientId = clientId,
         Beam.clientSdkVersion = fmap Kernel.Utils.Version.versionToText clientSdkVersion,
         Beam.coinsRewardedOnGoldTierRide = coinsRewardedOnGoldTierRide,
@@ -98,6 +100,7 @@ instance ToTType' Beam.DriverQuote Domain.Types.DriverQuote.DriverQuote where
         Beam.id = Kernel.Types.Id.getId id,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.providerId = Kernel.Types.Id.getId providerId,
+        Beam.reactBundleVersion = fmap Kernel.Utils.Version.versionToText reactBundleVersion,
         Beam.requestId = Kernel.Types.Id.getId requestId,
         Beam.searchRequestForDriverId = Kernel.Types.Id.getId <$> searchRequestForDriverId,
         Beam.searchTryId = Kernel.Types.Id.getId searchTryId,

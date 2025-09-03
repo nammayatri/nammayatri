@@ -46,6 +46,7 @@ data DriverQuote = DriverQuote
     id :: Kernel.Types.Id.Id Domain.Types.DriverQuote.DriverQuote,
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     providerId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+    reactBundleVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     requestId :: Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest,
     searchRequestForDriverId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.SearchRequestForDriver.SearchRequestForDriver),
     searchTryId :: Kernel.Types.Id.Id Domain.Types.SearchTry.SearchTry,

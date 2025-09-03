@@ -80,6 +80,7 @@ SearchRequestForDriver:
     rideFrequencyScore: Maybe Double
     customerCancellationDues: HighPrecMoney
     clientSdkVersion: Maybe Version
+    reactBundleVersion: Maybe Version
     clientBundleVersion: Maybe Version
     clientConfigVersion: Maybe Version
     clientDevice: Maybe Device
@@ -110,6 +111,7 @@ SearchRequestForDriver:
 
   beamType:
     clientBundleVersion: Maybe Text
+    reactBundleVersion: Maybe Text
     clientSdkVersion: Maybe Text
     clientConfigVersion: Maybe Text
     backendConfigVersion: Maybe Text
@@ -157,6 +159,7 @@ SearchRequestForDriver:
   fromTType:
     merchantOperatingCityId: Storage.Queries.Transformers.SearchRequestForDriver.getMerchantOpCId merchantOperatingCityId merchantId requestId|EM
     clientBundleVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion))|EM
+    reactBundleVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> reactBundleVersion))|EM
     clientSdkVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion))|EM
     clientConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion))|EM
     backendConfigVersion: (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion))|EM
@@ -180,6 +183,7 @@ SearchRequestForDriver:
   toTType:
     merchantOperatingCityId: Just $ Kernel.Types.Id.getId merchantOperatingCityId|E
     clientBundleVersion: fmap Kernel.Utils.Version.versionToText clientBundleVersion|E
+    reactBundleVersion: fmap Kernel.Utils.Version.versionToText reactBundleVersion|E
     clientSdkVersion: fmap Kernel.Utils.Version.versionToText clientSdkVersion|E
     clientConfigVersion: fmap Kernel.Utils.Version.versionToText clientConfigVersion|E
     backendConfigVersion: fmap Kernel.Utils.Version.versionToText backendConfigVersion|E

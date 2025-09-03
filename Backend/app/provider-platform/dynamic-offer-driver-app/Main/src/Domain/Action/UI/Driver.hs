@@ -400,7 +400,8 @@ data DriverInformationRes = DriverInformationRes
     tripDistanceMaxThreshold :: Maybe Meters,
     tripDistanceMinThreshold :: Maybe Meters,
     maxPickupRadius :: Maybe Meters,
-    isSilentModeEnabled :: Maybe Bool
+    isSilentModeEnabled :: Maybe Bool,
+    reactVersion :: Maybe Version
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -475,7 +476,8 @@ data DriverEntityRes = DriverEntityRes
     tripDistanceMaxThreshold :: Maybe Meters,
     tripDistanceMinThreshold :: Maybe Meters,
     maxPickupRadius :: Maybe Meters,
-    isSilentModeEnabled :: Maybe Bool
+    isSilentModeEnabled :: Maybe Bool,
+    reactVersion :: Maybe Version
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -503,7 +505,8 @@ data UpdateDriverReq = UpdateDriverReq
     tripDistanceMinThreshold :: Maybe Meters,
     maxPickupRadius :: Maybe Meters,
     isSilentModeEnabled :: Maybe Bool,
-    rideRequestVolume :: Maybe Int
+    rideRequestVolume :: Maybe Int,
+    reactVersion :: Maybe Version
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -1080,6 +1083,7 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) service
         autoPayStatus = driverPlan >>= (.autoPayStatus),
         clientVersion = person.clientSdkVersion,
         bundleVersion = person.clientBundleVersion,
+        reactVersion = person.reactBundleVersion,
         gender = Just person.gender,
         payoutVpa = driverInfo.payoutVpa,
         payoutVpaStatus = driverInfo.payoutVpaStatus,
@@ -1140,10 +1144,11 @@ updateDriver ::
   Maybe Version ->
   Maybe Version ->
   Maybe Version ->
+  Maybe Version ->
   Maybe Text ->
   UpdateDriverReq ->
   m UpdateDriverRes
-updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbConfigVersion mbDevice req = do
+updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbConfigVersion mbReactBundleVersion mbDevice req = do
   runRequestValidation validateUpdateDriverReq req
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   deploymentVersion <- asks (.version)
@@ -1155,6 +1160,7 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
                language = req.language <|> person.language,
                clientSdkVersion = mbClientVersion <|> person.clientSdkVersion,
                clientBundleVersion = mbBundleVersion <|> person.clientBundleVersion,
+               reactBundleVersion = mbReactBundleVersion <|> person.reactBundleVersion,
                clientConfigVersion = mbConfigVersion <|> person.clientConfigVersion,
                clientDevice = getDeviceFromText mbDevice <|> person.clientDevice,
                backendConfigVersion = person.backendConfigVersion,
@@ -1389,10 +1395,10 @@ offerQuoteLockKey driverId = "Driver:OfferQuote:DriverId-" <> driverId.getId
 offerQuote :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Text -> DriverOfferReq -> Flow APISuccess
 offerQuote (driverId, merchantId, merchantOpCityId) clientId DriverOfferReq {..} = do
   let response = Accept
-  respondQuote (driverId, merchantId, merchantOpCityId) clientId Nothing Nothing Nothing Nothing DriverRespondReq {searchRequestId = Nothing, searchTryId = Just searchRequestId, notificationSource = Nothing, renderedAt = Nothing, respondedAt = Nothing, ..}
+  respondQuote (driverId, merchantId, merchantOpCityId) clientId Nothing Nothing Nothing Nothing Nothing DriverRespondReq {searchRequestId = Nothing, searchTryId = Just searchRequestId, notificationSource = Nothing, renderedAt = Nothing, respondedAt = Nothing, ..}
 
-respondQuote :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Text -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> DriverRespondReq -> Flow APISuccess
-respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion mbClientVersion mbConfigVersion mbDevice req = do
+respondQuote :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Text -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> DriverRespondReq -> Flow APISuccess
+respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion mbClientVersion mbConfigVersion mbReactBundleVersion mbDevice req = do
   searchTryId <- req.searchRequestId <|> req.searchTryId & fromMaybeM (InvalidRequest "searchTryId field is not present.")
   searchTry <- QST.findById searchTryId >>= fromMaybeM (SearchTryNotFound searchTryId.getId)
   mSReqFD <- QSRD.findByDriverAndSearchTryId driverId searchTry.id
@@ -1432,7 +1438,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
               throwError QuoteAlreadyRejected
             whenM thereAreActiveQuotes (throwError FoundActiveQuotes)
             driverFCMPulledList <- case DTC.tripCategoryToPricingPolicy searchTry.tripCategory of
-              DTC.EstimateBased _ -> acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD mbBundleVersion mbClientVersion mbConfigVersion mbDevice reqOfferedValue
+              DTC.EstimateBased _ -> acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD mbBundleVersion mbClientVersion mbConfigVersion mbReactBundleVersion mbDevice reqOfferedValue
               DTC.QuoteBased _ -> acceptStaticOfferDriverRequest (Just searchTry) driver (fromMaybe searchTry.estimateId sReqFD.estimateId) reqOfferedValue merchant clientId
             QSRD.updateDriverResponse (Just Accept) Inactive req.notificationSource req.renderedAt req.respondedAt sReqFD.id
             DS.driverScoreEventHandler merchantOpCityId $ buildDriverRespondEventPayload searchTry.id searchTry.requestId driverFCMPulledList
@@ -1485,9 +1491,10 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
       Maybe Version ->
       Maybe Version ->
       Maybe Version ->
+      Maybe Version ->
       Maybe Text ->
       m DDrQuote.DriverQuote
-    buildDriverQuote driver driverStats searchReq sd estimateId tripCategory fareParams mbBundleVersion' mbClientVersion' mbConfigVersion' mbDevice' = do
+    buildDriverQuote driver driverStats searchReq sd estimateId tripCategory fareParams mbBundleVersion' mbClientVersion' mbConfigVersion' mbReactBundleVersion' mbDevice' = do
       guid <- generateGUID
       now <- getCurrentTime
       deploymentVersion <- asks (.version)
@@ -1539,7 +1546,8 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
             backendAppVersion = Just deploymentVersion.getDeploymentVersion,
             merchantOperatingCityId = Just searchReq.merchantOperatingCityId,
             vehicleServiceTierName = sd.vehicleServiceTierName,
-            coinsRewardedOnGoldTierRide = sd.coinsRewardedOnGoldTierRide
+            coinsRewardedOnGoldTierRide = sd.coinsRewardedOnGoldTierRide,
+            reactBundleVersion = mbReactBundleVersion'
           }
     thereAreActiveQuotes = do
       driverUnlockDelay <- asks (.driverUnlockDelay)
@@ -1550,8 +1558,8 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
       driverPoolCfg <- SCDPC.getDriverPoolConfig merchantOpCityId vehicleServiceTier tripCategory area dist searchRepeatType searchRepeatCounter (Just (TransactionId (Id searchReq.transactionId))) searchReq
       pure driverPoolCfg.driverQuoteLimit
 
-    acceptDynamicOfferDriverRequest :: DM.Merchant -> DST.SearchTry -> DSR.SearchRequest -> SP.Person -> SearchRequestForDriver -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe HighPrecMoney -> Flow [SearchRequestForDriver]
-    acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD mbBundleVersion' mbClientVersion' mbConfigVersion' mbDevice' reqOfferedValue = do
+    acceptDynamicOfferDriverRequest :: DM.Merchant -> DST.SearchTry -> DSR.SearchRequest -> SP.Person -> SearchRequestForDriver -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe HighPrecMoney -> Flow [SearchRequestForDriver]
+    acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD mbBundleVersion' mbClientVersion' mbConfigVersion' mbReactBundleVersion' mbDevice' reqOfferedValue = do
       let estimateId = fromMaybe searchTry.estimateId sReqFD.estimateId -- backward compatibility
       logDebug $ "offered fare: " <> show reqOfferedValue
       quoteLimit <- getQuoteLimit searchReq.estimatedDistance sReqFD.vehicleServiceTier searchTry.tripCategory searchReq (fromMaybe SL.Default searchReq.area) searchTry.searchRepeatType searchTry.searchRepeatCounter
@@ -1599,7 +1607,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
               mbAdditonalChargeCategories = Just sReqFD.conditionalCharges,
               ..
             }
-      driverQuote <- buildDriverQuote driver driverStats searchReq sReqFD estimateId searchTry.tripCategory fareParams mbBundleVersion' mbClientVersion' mbConfigVersion' mbDevice'
+      driverQuote <- buildDriverQuote driver driverStats searchReq sReqFD estimateId searchTry.tripCategory fareParams mbBundleVersion' mbClientVersion' mbConfigVersion' mbReactBundleVersion' mbDevice'
       void $ cacheFarePolicyByQuoteId driverQuote.id.getId farePolicy
       triggerQuoteEvent QuoteEventData {quote = driverQuote}
       void $ QDrQt.create driverQuote

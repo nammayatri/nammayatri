@@ -429,6 +429,7 @@ buildDriverInfoRes QPerson.DriverWithRidesCount {..} mbDriverLicense rcAssociati
         softBlockReasonFlag = info.softBlockReasonFlag,
         lastActivityDate = Just info.updatedAt,
         createdAt = Just info.createdAt,
+        reactVersion = person.reactBundleVersion,
         drunkAndDriveViolationCount
       }
 
