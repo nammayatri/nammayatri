@@ -3,6 +3,7 @@ module DBSync.DBSync where
 import qualified Config.Env as Env
 import qualified Constants as C
 import Control.Monad.Trans.Except
+import DBSync.BatchCreate
 import DBSync.Create
 import DBSync.Delete
 import DBSync.Update
@@ -126,7 +127,8 @@ dropDBCommand dbStreamKey entryId = do
 runCriticalDBSyncOperations :: Text -> [(EL.KVDBStreamEntryID, ByteString)] -> [(EL.KVDBStreamEntryID, ByteString)] -> [(EL.KVDBStreamEntryID, ByteString)] -> ExceptT Int Flow Int
 runCriticalDBSyncOperations dbStreamKey updateEntries deleteEntries createDataEntries = do
   isForcePushEnabled <- pureRightExceptT $ fromMaybe False <$> getValueFromRedis C.forceDrainEnabledKey
-  (cSucc, cFail) <- pureRightExceptT $ executeInSequence runCreate ([], []) dbStreamKey createDataEntries
+  -- (cSucc, cFail) <- pureRightExceptT $ executeInSequence runCreate ([], []) dbStreamKey createDataEntries
+  (cSucc, cFail) <- pureRightExceptT $ if isForcePushEnabled then executeInSequence runCreate ([], []) dbStreamKey createDataEntries else executeBatchedCreate dbStreamKey createDataEntries
   void $ pureRightExceptT $ publishDBSyncMetric $ Event.DrainerQueryExecutes "Create" (fromIntegral $ length cSucc)
   void $ pureRightExceptT $ publishDBSyncMetric $ Event.DrainerQueryExecutes "CreateInBatch" (if null cSucc then 0 else 1)
   void $

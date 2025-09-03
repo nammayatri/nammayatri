@@ -77,3 +77,20 @@ rider_kafka_update_missing :: PromRep 'Counter "rider_kafka_update_missing" '[]
 rider_kafka_update_missing =
   counter #rider_kafka_update_missing
     .& build
+
+batch_fallback_used :: PromRep 'Counter "batch_fallback_used" '[]
+batch_fallback_used =
+  counter #batch_fallback_used
+    .& build
+
+batch_execution_time :: PromRep 'Histogram "batch_execution_time" '[ '("model", Text)]
+batch_execution_time =
+  histogram #batch_execution_time
+    .& lbl @"model" @Text
+    .& build
+
+schema_variation_alert :: PromRep 'Counter "schema_variation_alert" '[ '("model", Text)]
+schema_variation_alert =
+  counter #schema_variation_alert
+    .& lbl @"model" @Text
+    .& build
