@@ -375,24 +375,30 @@ data TicketStatus = TicketStatus
     vehicleNumber :: Maybe Text
   }
 
-getTicketStatus :: (MonadFlow m) => Booking.FRFSTicketBooking -> DTicket -> m TicketStatus
-getTicketStatus booking dTicket = do
+getTicketStatus :: (MonadFlow m) => Booking.FRFSTicketBooking -> Bool -> DTicket -> m TicketStatus
+getTicketStatus booking checkInprogress dTicket = do
   let validTill = dTicket.validTill
   now <- getCurrentTime
-  ticketStatus <- castTicketStatus dTicket.status booking
-  if now > validTill && (ticketStatus /= Ticket.CANCELLED || ticketStatus /= Ticket.COUNTER_CANCELLED)
+  ticketStatus <- castTicketStatus dTicket.status booking checkInprogress
+  if now > validTill && (ticketStatus `notElem` [Ticket.CANCELLED, Ticket.COUNTER_CANCELLED, Ticket.USED])
     then return TicketStatus {ticketNumber = dTicket.ticketNumber, status = Ticket.EXPIRED, vehicleNumber = dTicket.vehicleNumber}
     else return TicketStatus {ticketNumber = dTicket.ticketNumber, status = ticketStatus, vehicleNumber = dTicket.vehicleNumber}
 
-castTicketStatus :: MonadFlow m => Text -> Booking.FRFSTicketBooking -> m Ticket.FRFSTicketStatus
-castTicketStatus "UNCLAIMED" _ = return Ticket.ACTIVE
-castTicketStatus "CLAIMED" _ = return Ticket.USED
-castTicketStatus "CANCELLED" booking | booking.customerCancelled = return Ticket.CANCELLED
-castTicketStatus "CANCELLED" booking | not booking.customerCancelled = return Ticket.COUNTER_CANCELLED
-castTicketStatus _ _ = throwError $ InternalError "Invalid ticket status"
+castTicketStatus :: MonadFlow m => Text -> Booking.FRFSTicketBooking -> Bool -> m Ticket.FRFSTicketStatus
+castTicketStatus "UNCLAIMED" _ False = return Ticket.ACTIVE -- False means solicited on_status or on_confirm call
+castTicketStatus "UNCLAIMED" _ True = return Ticket.INPROGRESS -- True means unsolicited on_status received
+castTicketStatus "CLAIMED" _ _ = return Ticket.USED
+castTicketStatus "CANCELLED" booking _
+  | booking.customerCancelled = return Ticket.CANCELLED
+  | otherwise = return Ticket.COUNTER_CANCELLED
+castTicketStatus "EXPIRED" _ _ = return Ticket.EXPIRED
+castTicketStatus _ _ _ = throwError $ InternalError "Invalid ticket status"
 
 data BppData = BppData
   { bppId :: Text,
     bppUri :: Text
   }
   deriving (Show, Eq, Generic)
+
+mkCheckInprogressKey :: Text -> Text
+mkCheckInprogressKey transactionId = "FRFS:OnStatus:Solicited-" <> transactionId
