@@ -2434,7 +2434,7 @@ fetchOrCreatePerson moc req_ = do
   QPerson.findByMobileNumberAndMerchantAndRole "+91" mobileNumberHash moc.merchantId DP.DRIVER
     >>= \case
       Nothing -> do
-        person <- DReg.createDriverWithDetails authData Nothing Nothing Nothing Nothing Nothing moc.merchantId moc.id True
+        person <- DReg.createDriverWithDetails authData Nothing Nothing Nothing Nothing Nothing Nothing moc.merchantId moc.id True
         let isNew = True in pure (person, isNew)
       Just person -> do
         QPerson.updateName req_.driverName person.id

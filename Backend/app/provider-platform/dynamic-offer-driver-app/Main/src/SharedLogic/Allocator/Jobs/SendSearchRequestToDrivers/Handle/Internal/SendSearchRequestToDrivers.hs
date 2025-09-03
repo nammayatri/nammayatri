@@ -317,6 +317,7 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
                 rideFrequencyScore = dpwRes.intelligentScores.rideFrequency,
                 customerCancellationDues = fromMaybe 0 searchReq.customerCancellationDues,
                 clientSdkVersion = dpwRes.driverPoolResult.clientSdkVersion,
+                reactBundleVersion = dpwRes.driverPoolResult.reactBundleVersion,
                 clientBundleVersion = dpwRes.driverPoolResult.clientBundleVersion,
                 clientConfigVersion = dpwRes.driverPoolResult.clientConfigVersion,
                 clientDevice = dpwRes.driverPoolResult.clientDevice,

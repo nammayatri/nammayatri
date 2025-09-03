@@ -372,6 +372,7 @@ updatePersonRec (Id personId) person = do
       Se.Set BeamP.description $ person.description,
       Se.Set BeamP.updatedAt now,
       Se.Set BeamP.clientSdkVersion (versionToText <$> person.clientSdkVersion),
+      Se.Set BeamP.reactBundleVersion (versionToText <$> person.reactBundleVersion),
       Se.Set BeamP.clientBundleVersion (versionToText <$> person.clientBundleVersion),
       Se.Set BeamP.clientConfigVersion (versionToText <$> person.clientConfigVersion),
       Se.Set BeamP.clientOsVersion (deviceVersion <$> person.clientDevice),
@@ -389,20 +390,22 @@ updatePersonVersionsAndMerchantOperatingCity ::
   Maybe Version ->
   Maybe Version ->
   Maybe Version ->
+  Maybe Version ->
   Maybe Text ->
   Maybe Text ->
   Maybe Text ->
   Id DMOC.MerchantOperatingCity ->
   m ()
-updatePersonVersionsAndMerchantOperatingCity person mbBundleVersion mbClientVersion mbConfigVersion mbClientId mbDevice' mbBackendApp city = do
+updatePersonVersionsAndMerchantOperatingCity person mbBundleVersion mbClientVersion mbConfigVersion mbReactBundleVersion mbClientId mbDevice' mbBackendApp city = do
   let mbDevice = getDeviceFromText mbDevice'
-  let isBundleDataPresent = isJust mbBundleVersion || isJust mbClientVersion || isJust mbDevice' || isJust mbConfigVersion
-  let isAnyMismatchPresent = or [person.clientBundleVersion /= mbBundleVersion, person.clientSdkVersion /= mbClientVersion, person.clientConfigVersion /= mbConfigVersion, person.clientDevice /= mbDevice, person.backendAppVersion /= mbBackendApp, person.merchantOperatingCityId /= city]
+  let isBundleDataPresent = isJust mbBundleVersion || isJust mbClientVersion || isJust mbDevice' || isJust mbConfigVersion || isJust mbReactBundleVersion
+  let isAnyMismatchPresent = or [person.clientBundleVersion /= mbBundleVersion, person.clientSdkVersion /= mbClientVersion, person.clientConfigVersion /= mbConfigVersion, person.reactBundleVersion /= mbReactBundleVersion, person.clientDevice /= mbDevice, person.backendAppVersion /= mbBackendApp, person.merchantOperatingCityId /= city]
   when (isBundleDataPresent && isAnyMismatchPresent) $ do
     now <- getCurrentTime
     let mbBundleVersionText = versionToText <$> (mbBundleVersion <|> person.clientBundleVersion)
         mbClientVersionText = versionToText <$> (mbClientVersion <|> person.clientSdkVersion)
         mbConfigVersionText = versionToText <$> (mbConfigVersion <|> person.clientConfigVersion)
+        mbReactBundleVersionText = versionToText <$> (mbReactBundleVersion <|> person.reactBundleVersion)
         mbOsVersion = deviceVersion <$> (mbDevice <|> person.clientDevice)
         mbOsType = deviceType <$> (mbDevice <|> person.clientDevice)
         mbModelName = deviceModel <$> (mbDevice <|> person.clientDevice)
@@ -412,6 +415,7 @@ updatePersonVersionsAndMerchantOperatingCity person mbBundleVersion mbClientVers
       [ Se.Set BeamP.clientSdkVersion mbClientVersionText,
         Se.Set BeamP.clientBundleVersion mbBundleVersionText,
         Se.Set BeamP.clientConfigVersion mbConfigVersionText,
+        Se.Set BeamP.reactBundleVersion mbReactBundleVersionText,
         Se.Set BeamP.clientOsVersion mbOsVersion,
         Se.Set BeamP.clientOsType mbOsType,
         Se.Set BeamP.clientId mbClientId',

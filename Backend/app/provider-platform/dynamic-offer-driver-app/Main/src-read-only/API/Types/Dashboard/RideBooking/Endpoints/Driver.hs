@@ -64,6 +64,7 @@ data DriverInfoRes = DriverInfoRes
     drunkAndDriveViolationCount :: Kernel.Prelude.Int,
     bundleVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     clientVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
+    reactVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     alternateNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     rating :: Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal,
     availableMerchants :: [Kernel.Prelude.Text],

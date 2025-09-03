@@ -18,12 +18,13 @@ import qualified Storage.Queries.Transformers.Person
 
 instance FromTType' Beam.Person Domain.Types.Person.Person where
   fromTType' (Beam.PersonT {..}) = do
-    backendConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion)
-    clientBundleVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion)
-    clientConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion)
-    clientSdkVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)
+    backendConfigVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion))
+    clientBundleVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion))
+    clientConfigVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion))
+    clientSdkVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion))
     driverTag' <- Lib.Yudhishthira.Tools.Utils.tagsNameValueExpiryFromTType driverTag
     merchantOperatingCityId' <- Storage.Queries.Transformers.Person.getMerchantOpCId merchantId merchantOperatingCityId
+    reactBundleVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> reactBundleVersion))
     pure $
       Just
         Domain.Types.Person.Person
@@ -32,7 +33,7 @@ instance FromTType' Beam.Person Domain.Types.Person.Person where
             backendConfigVersion = backendConfigVersion',
             clientBundleVersion = clientBundleVersion',
             clientConfigVersion = clientConfigVersion',
-            clientDevice = Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer,
+            clientDevice = (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer),
             clientId = clientId,
             clientSdkVersion = clientSdkVersion',
             createdAt = createdAt,
@@ -61,6 +62,7 @@ instance FromTType' Beam.Person Domain.Types.Person.Person where
             onboardedFromDashboard = onboardedFromDashboard,
             passwordHash = passwordHash,
             qrImageId = Kernel.Types.Id.Id <$> qrImageId,
+            reactBundleVersion = reactBundleVersion',
             registrationLat = registrationLat,
             registrationLon = registrationLon,
             role = role,
@@ -74,16 +76,16 @@ instance FromTType' Beam.Person Domain.Types.Person.Person where
 instance ToTType' Beam.Person Domain.Types.Person.Person where
   toTType' (Domain.Types.Person.Person {..}) = do
     Beam.PersonT
-      { Beam.alternateMobileNumberEncrypted = alternateMobileNumber <&> unEncrypted . (.encrypted),
-        Beam.alternateMobileNumberHash = alternateMobileNumber <&> (.hash),
+      { Beam.alternateMobileNumberEncrypted = ((alternateMobileNumber <&> unEncrypted . (.encrypted))),
+        Beam.alternateMobileNumberHash = (alternateMobileNumber <&> (.hash)),
         Beam.backendAppVersion = backendAppVersion,
         Beam.backendConfigVersion = fmap Kernel.Utils.Version.versionToText backendConfigVersion,
         Beam.clientBundleVersion = fmap Kernel.Utils.Version.versionToText clientBundleVersion,
         Beam.clientConfigVersion = fmap Kernel.Utils.Version.versionToText clientConfigVersion,
-        Beam.clientManufacturer = clientDevice >>= (.deviceManufacturer),
-        Beam.clientModelName = clientDevice <&> (.deviceModel),
-        Beam.clientOsType = clientDevice <&> (.deviceType),
-        Beam.clientOsVersion = clientDevice <&> (.deviceVersion),
+        Beam.clientManufacturer = (clientDevice >>= (.deviceManufacturer)),
+        Beam.clientModelName = (clientDevice <&> (.deviceModel)),
+        Beam.clientOsType = (clientDevice <&> (.deviceType)),
+        Beam.clientOsVersion = (clientDevice <&> (.deviceVersion)),
         Beam.clientId = clientId,
         Beam.clientSdkVersion = fmap Kernel.Utils.Version.versionToText clientSdkVersion,
         Beam.createdAt = createdAt,
@@ -107,12 +109,13 @@ instance ToTType' Beam.Person Domain.Types.Person.Person where
         Beam.merchantOperatingCityId = Just $ Kernel.Types.Id.getId merchantOperatingCityId,
         Beam.middleName = middleName,
         Beam.mobileCountryCode = mobileCountryCode,
-        Beam.mobileNumberEncrypted = mobileNumber <&> unEncrypted . (.encrypted),
-        Beam.mobileNumberHash = mobileNumber <&> (.hash),
+        Beam.mobileNumberEncrypted = ((mobileNumber <&> unEncrypted . (.encrypted))),
+        Beam.mobileNumberHash = (mobileNumber <&> (.hash)),
         Beam.nyClubConsent = nyClubConsent,
         Beam.onboardedFromDashboard = onboardedFromDashboard,
         Beam.passwordHash = passwordHash,
         Beam.qrImageId = Kernel.Types.Id.getId <$> qrImageId,
+        Beam.reactBundleVersion = fmap Kernel.Utils.Version.versionToText reactBundleVersion,
         Beam.registrationLat = registrationLat,
         Beam.registrationLon = registrationLon,
         Beam.role = role,

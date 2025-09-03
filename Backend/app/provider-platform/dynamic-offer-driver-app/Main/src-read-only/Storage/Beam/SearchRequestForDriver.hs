@@ -81,6 +81,7 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
     poolingConfigVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     poolingLogicVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     previousDropGeoHash :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    reactBundleVersion :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     renderedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     requestId :: B.C f Kernel.Prelude.Text,
     respondedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
@@ -111,6 +112,6 @@ instance B.Table SearchRequestForDriverT where
 
 type SearchRequestForDriver = SearchRequestForDriverT Identity
 
-$(enableKVPG ''SearchRequestForDriverT ['id] [['requestId], ['searchTryId]])
+$(enableKVPG (''SearchRequestForDriverT) [('id)] [[('requestId)], [('searchTryId)]])
 
-$(mkTableInstancesWithTModifier ''SearchRequestForDriverT "search_request_for_driver" [("requestId", "search_request_id")])
+$(mkTableInstancesWithTModifier (''SearchRequestForDriverT) "search_request_for_driver" [("requestId", "search_request_id")])

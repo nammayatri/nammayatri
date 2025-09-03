@@ -75,6 +75,7 @@ data SearchRequestForDriver = SearchRequestForDriver
     poolingConfigVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     poolingLogicVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     previousDropGeoHash :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    reactBundleVersion :: Kernel.Prelude.Maybe Kernel.Types.Version.Version,
     renderedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     requestId :: Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest,
     respondedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
