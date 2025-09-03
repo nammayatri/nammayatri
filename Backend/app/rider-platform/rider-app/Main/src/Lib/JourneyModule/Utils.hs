@@ -12,7 +12,6 @@ import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Map.Strict as M
 import qualified Data.Map.Strict as Map
 import Data.Ord (Down (..), comparing)
-import qualified Data.Set as Set
 import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime, nominalDiffTimeToSeconds, secondsToNominalDiffTime)
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
@@ -62,7 +61,6 @@ import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RecentLocation as SQRL
 import qualified Storage.Queries.VehicleRouteMapping as QVehicleRouteMapping
-import qualified System.Environment as Se
 import Tools.Maps (LatLong (..))
 import qualified Tools.Maps as Maps
 import qualified Tools.Payment as TPayment
@@ -153,7 +151,9 @@ data AvailableRoutesInfo = AvailableRoutesInfo
   { shortName :: Text,
     longName :: Text,
     routeCode :: Text,
-    isLiveTrackingAvailable :: Bool
+    routeTimings :: [Seconds],
+    isLiveTrackingAvailable :: Bool,
+    source :: SourceType
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON, ToSchema)
 
@@ -238,17 +238,13 @@ fetchLiveBusTimings ::
   Id MerchantOperatingCity ->
   m [RouteStopTimeTable]
 fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid mocid = do
-  disableLiveBuses <- fromMaybe False . (>>= readMaybe) <$> (liftIO $ Se.lookupEnv "DISABLE_LIVE_BUSES")
-  if not disableLiveBuses
-    then do
-      allRouteWithBuses <- MultiModalBus.getBusesForRoutes routeCodes
-      routeStopTimes <- mapM processRoute allRouteWithBuses
-      let flattenedRouteStopTimes = concat routeStopTimes
-      logDebug $ "allRouteWithBuses: " <> show allRouteWithBuses <> " routeStopTimes: " <> show routeStopTimes <> " flattenedRouteStopTimes: " <> show flattenedRouteStopTimes <> " disableLiveBuses: " <> show disableLiveBuses
-      if not (null flattenedRouteStopTimes)
-        then return flattenedRouteStopTimes
-        else measureLatency (GRSM.findByRouteCodeAndStopCode integratedBppConfig mid mocid routeCodes stopCode) "fetch route stop timing through graphql"
-    else measureLatency (GRSM.findByRouteCodeAndStopCode integratedBppConfig mid mocid routeCodes stopCode) "fetch route stop timing through graphql"
+  allRouteWithBuses <- MultiModalBus.getBusesForRoutes routeCodes
+  let routesWithoutBuses = map (.routeId) $ filter (\route -> null route.buses) allRouteWithBuses
+  liveRouteStopTimes <- mapM processRoute allRouteWithBuses
+  let flattenedLiveRouteStopTimes = concat liveRouteStopTimes
+  logDebug $ "allRouteWithBuses: " <> show allRouteWithBuses <> " flattenedLiveRouteStopTimes: " <> show flattenedLiveRouteStopTimes
+  staticRouteStopTimes <- measureLatency (GRSM.findByRouteCodeAndStopCode integratedBppConfig mid mocid routesWithoutBuses stopCode) "fetch route stop timing through graphql"
+  return $ flattenedLiveRouteStopTimes ++ staticRouteStopTimes
   where
     processRoute routeWithBuses = do
       let busEtaData = concatMap (\bus -> map (\eta -> (bus.vehicleNumber, eta)) $ fromMaybe [] (bus.busData.eta_data)) routeWithBuses.buses
@@ -383,26 +379,6 @@ fetchLiveTimings routeCodes stopCode currentTime integratedBppConfig mid mocid v
   Enums.BUS -> fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid mocid
   _ -> measureLatency (GRSM.findByRouteCodeAndStopCode integratedBppConfig mid mocid routeCodes stopCode) "fetch route stop timing through graphql"
 
--- Function for explicitly fetching static timings for buses to give more possibleRoutes for buses
-fetchStaticTimings ::
-  ( HasField "ltsHedisEnv" r Hedis.HedisEnv,
-    CacheFlow m r,
-    EsqDBFlow m r,
-    EsqDBReplicaFlow m r,
-    EncFlow m r,
-    Monad m,
-    HasKafkaProducer r,
-    HasShortDurationRetryCfg r c
-  ) =>
-  [Text] ->
-  Text ->
-  DIntegratedBPPConfig.IntegratedBPPConfig ->
-  Id Merchant ->
-  Id MerchantOperatingCity ->
-  m [RouteStopTimeTable]
-fetchStaticTimings routeCodes stopCode integratedBppConfig mid mocid =
-  measureLatency (GRSM.findByRouteCodeAndStopCode integratedBppConfig mid mocid routeCodes stopCode) ("fetchStaticTimings" <> show routeCodes <> " fromStopCode: " <> show stopCode <> " fromStopCode: " <> show stopCode)
-
 type RouteCodeText = Text
 
 type ServiceTypeText = Text
@@ -432,7 +408,6 @@ findPossibleRoutes ::
 findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime integratedBppConfig mid mocid vc sendWithoutFare = do
   -- Get route mappings that contain the origin stop
   fromRouteStopMappings <- measureLatency (OTPRest.getRouteStopMappingByStopCode fromStopCode integratedBppConfig) ("getRouteStopMappingByStopCode" <> show fromStopCode)
-
   -- Get route mappings that contain the destination stop
   toRouteStopMappings <- measureLatency (OTPRest.getRouteStopMappingByStopCode toStopCode integratedBppConfig) ("getRouteStopMappingByStopCode" <> show toStopCode)
 
@@ -448,36 +423,9 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
               fromRouteCode == toRouteCode && fromSeq < toSeq -- Ensure correct sequence
           ]
 
-  liveBusesInfo <- mapM (\routeInfo -> (routeInfo,) <$> MultiModalBus.getRoutesBuses routeInfo) validRoutes
+  routeStopTimings <- measureLatency (fetchLiveTimings validRoutes fromStopCode currentTime integratedBppConfig mid mocid vc) ("fetchLiveTimings" <> show validRoutes <> " fromStopCode: " <> show fromStopCode <> " toStopCode: " <> show toStopCode)
 
-  busRouteMapping :: HM.HashMap RouteCodeText (HM.HashMap ServiceTypeText Text) <-
-    HM.fromList <$> forM liveBusesInfo \(routeInfo, routeWithBuses) -> do
-      busMappings <-
-        mapMaybeM
-          ( \bus -> do
-              mbServiceType <- OTPRest.getVehicleServiceType integratedBppConfig bus.vehicleNumber
-              return $ (\serviceTypeResp -> (show serviceTypeResp.service_type, bus.vehicleNumber)) <$> mbServiceType
-          )
-          routeWithBuses.buses
-      return (routeInfo, HM.fromList busMappings)
-  -- Get the timing information for these routes at the origin stop
-
-  -- We get static timings in this call if live timings are not found
-  routeStopTimingsLive <- measureLatency (fetchLiveTimings validRoutes fromStopCode currentTime integratedBppConfig mid mocid vc) ("fetchLiveTimings" <> show validRoutes <> " fromStopCode: " <> show fromStopCode <> " toStopCode: " <> show toStopCode)
-  -- Get IST time info
   let (_, currentTimeIST) = getISTTimeInfo currentTime
-
-  let fetchLiveTimingsSource = fromMaybe GTFS $ listToMaybe $ map (.source) routeStopTimingsLive
-  -- Fetch static timings for buses if not already fetched by `fetchLiveTimings`
-  routeStopTimingsStatic <- case fetchLiveTimingsSource of
-    GTFS -> pure [] -- Already timings are from static source
-    _ -> case vc of
-      Enums.BUS -> fetchStaticTimings validRoutes fromStopCode integratedBppConfig mid mocid
-      _ -> pure []
-  let liveRouteCodes = Set.fromList [rst.routeCode | rst <- routeStopTimingsLive]
-  let routeStopTimings =
-        routeStopTimingsLive
-          <> [s | s <- routeStopTimingsStatic, s.routeCode `Set.notMember` liveRouteCodes]
   freqMap <- loadRouteFrequencies routeStopTimings
 
   let sortedTimings =
@@ -509,8 +457,10 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
 
     -- Calculate arrival times in seconds
     let arrivalTimes =
-          [ estimatedArrivalTimeInSeconds
+          [ (routeCode, source, estimatedArrivalTimeInSeconds)
             | timing <- timingsForTier,
+              let routeCode = timing.routeCode,
+              let source = timing.source,
               let arrivalTimeInSeconds' = nominalDiffTimeToSeconds $ diffUTCTime (getISTArrivalTime timing.timeOfArrival currentTime) currentTimeIST,
               let secondsValue = fromIntegral (getSeconds arrivalTimeInSeconds') :: Double,
               let estimatedArrivalTimeInSeconds
@@ -539,8 +489,16 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
     let availableRoutesInfo =
           map
             ( \routeDetail -> do
-                let busForCurrentServiceType = HM.lookup (show serviceTierType) =<< HM.lookup routeDetail.code busRouteMapping
-                AvailableRoutesInfo {shortName = routeDetail.shortName, longName = routeDetail.longName, routeCode = routeDetail.code, isLiveTrackingAvailable = isJust busForCurrentServiceType}
+                let routeArrivalTimes = filter (\(rtCode, _, _) -> rtCode == routeDetail.code) arrivalTimes
+                    routeSource = fromMaybe GTFS $ listToMaybe $ map (\(_, sr, _) -> sr) routeArrivalTimes
+                AvailableRoutesInfo
+                  { shortName = routeDetail.shortName,
+                    longName = routeDetail.longName,
+                    routeCode = routeDetail.code,
+                    routeTimings = sort $ map (\(_, _, arrivalTime) -> arrivalTime) routeArrivalTimes,
+                    isLiveTrackingAvailable = routeSource == LIVE,
+                    source = routeSource
+                  }
             )
             validRouteDetails
     return $
@@ -548,7 +506,7 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
         { serviceTier = serviceTierType,
           availableRoutes = routeShortNames, -- TODO: deprecate this
           availableRoutesInfo = availableRoutesInfo,
-          nextAvailableBuses = sort arrivalTimes,
+          nextAvailableBuses = sort $ map (\(_, _, arrivalTime) -> arrivalTime) arrivalTimes,
           serviceTierName = serviceTierName,
           serviceTierDescription = serviceTierDescription,
           quoteId = quoteId,

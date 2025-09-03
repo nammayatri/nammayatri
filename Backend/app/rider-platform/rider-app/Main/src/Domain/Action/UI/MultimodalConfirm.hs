@@ -95,6 +95,7 @@ import qualified Lib.JourneyModule.Utils as JMU
 import qualified SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.BecknConfig as CQBC
+import qualified Storage.CachedQueries.FRFSVehicleServiceTier as CQFRFSVehicleServiceTier
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
@@ -1321,13 +1322,21 @@ postMultimodalRouteAvailability (mbPersonId, merchantId) req = do
   -- Find integrated BPP configs for the merchant operating city
   integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId vehicleCategory DIBC.MULTIMODAL
 
+  availableServiceTiers <-
+    case (req.journeyId, req.legOrder) of
+      (Just journeyId, Just legOrder) -> do
+        journeyLeg <- QJourneyLeg.getJourneyLeg journeyId legOrder
+        quotes <- maybe (pure []) (QFRFSQuote.findAllBySearchId . Id) journeyLeg.legSearchId
+        return $ Just $ mapMaybe JMTypes.getServiceTierFromQuote quotes
+      _ -> pure Nothing
+
   case integratedBPPConfigs of
     [] -> return $ ApiTypes.RouteAvailabilityResp {availableRoutes = []}
     (integratedBPPConfig : _) -> do
       -- Use findPossibleRoutes to get available routes
       (_, availableRoutesByTier) <-
         JMU.findPossibleRoutes
-          Nothing
+          availableServiceTiers
           req.startStopCode
           req.endStopCode
           currentTime
@@ -1344,23 +1353,31 @@ postMultimodalRouteAvailability (mbPersonId, merchantId) req = do
               else availableRoutesByTier
 
       -- Convert to API response format
-      let availableRoutes = concatMap convertToAvailableRoute filteredRoutes
+      availableRoutes <- concatMapM (convertToAvailableRoute person) filteredRoutes
 
       return $ ApiTypes.RouteAvailabilityResp {availableRoutes = availableRoutes}
   where
-    convertToAvailableRoute :: JMU.AvailableRoutesByTier -> [ApiTypes.AvailableRoute]
-    convertToAvailableRoute routesByTier =
-      map
-        ( \routeInfo ->
-            ApiTypes.AvailableRoute
-              { source = routesByTier.source,
-                quoteId = routesByTier.quoteId,
-                serviceTierName = routesByTier.serviceTierName,
-                routeCode = routeInfo.routeCode,
-                routeShortName = routeInfo.shortName,
-                routeLongName = routeInfo.longName,
-                routeTimings = routesByTier.nextAvailableBuses
-              }
+    convertToAvailableRoute :: Domain.Types.Person.Person -> JMU.AvailableRoutesByTier -> Environment.Flow [ApiTypes.AvailableRoute]
+    convertToAvailableRoute person routesByTier =
+      mapM
+        ( \routeInfo -> do
+            serviceTierName <-
+              case routesByTier.serviceTierName of
+                Just _ -> return routesByTier.serviceTierName
+                Nothing -> do
+                  frfsServiceTier <- CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityId routesByTier.serviceTier person.merchantOperatingCityId
+                  return $ frfsServiceTier <&> (.shortName)
+            return $
+              ApiTypes.AvailableRoute
+                { source = routeInfo.source,
+                  quoteId = routesByTier.quoteId,
+                  serviceTierName,
+                  serviceTierType = routesByTier.serviceTier,
+                  routeCode = routeInfo.routeCode,
+                  routeShortName = routeInfo.shortName,
+                  routeLongName = routeInfo.longName,
+                  routeTimings = routeInfo.routeTimings
+                }
         )
         routesByTier.availableRoutesInfo
 

@@ -42,6 +42,7 @@ data AvailableRoute = AvailableRoute
     routeShortName :: Kernel.Prelude.Text,
     routeTimings :: [Kernel.Types.Common.Seconds],
     serviceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    serviceTierType :: BecknV2.FRFS.Enums.ServiceTierType,
     source :: Domain.Types.RouteStopTimeTable.SourceType
   }
   deriving stock (Generic)
@@ -229,7 +230,13 @@ data RiderLocationReq = RiderLocationReq {currTime :: Kernel.Prelude.UTCTime, la
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data RouteAvailabilityReq = RouteAvailabilityReq {endStopCode :: Kernel.Prelude.Text, onlyLive :: Kernel.Prelude.Bool, startStopCode :: Kernel.Prelude.Text}
+data RouteAvailabilityReq = RouteAvailabilityReq
+  { endStopCode :: Kernel.Prelude.Text,
+    journeyId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Journey.Journey),
+    legOrder :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    onlyLive :: Kernel.Prelude.Bool,
+    startStopCode :: Kernel.Prelude.Text
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
