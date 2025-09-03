@@ -98,7 +98,8 @@ data AuthReq = AuthReq
     name :: Maybe Text,
     identifierType :: Maybe SP.IdentifierType,
     registrationLat :: Maybe Double,
-    registrationLon :: Maybe Double
+    registrationLon :: Maybe Double,
+    deviceId :: Maybe Text
   }
   deriving (Generic, FromJSON, ToSchema)
 
@@ -182,6 +183,10 @@ authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersi
       >>= fromMaybeM (MerchantNotFound merchantId.getId)
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant req.merchantOperatingCity
 
+  -- Validate DEVICEID auth restrictions
+  when (identifierType == SP.DEVICEID && not isDashboard) $
+    throwError $ InvalidRequest "DEVICEID authentication is only allowed from dashboard/internal APIs"
+
   (person, otpChannel) <-
     case identifierType of
       SP.MOBILENUMBER -> do
@@ -199,6 +204,12 @@ authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersi
             >>= maybe (createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice (Just deploymentVersion.getDeploymentVersion) merchant.id merchantOpCityId isDashboard) return
         return (person, SP.EMAIL)
       SP.AADHAAR -> throwError $ InvalidRequest "Not implemented yet"
+      SP.DEVICEID -> do
+        deviceId <- req.deviceId & fromMaybeM (InvalidRequest "DeviceId is required for DEVICEID auth")
+        person <-
+          QP.findByDeviceIdAndMerchantAndRole deviceId merchant.id SP.DRIVER
+            >>= maybe (createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbDevice (Just deploymentVersion.getDeploymentVersion) merchant.id merchantOpCityId isDashboard) return
+        return (person, SP.DEVICEID)
 
   checkSlidingWindowLimit (authHitsCountKey person)
   let entityId = getId $ person.id
@@ -232,6 +243,21 @@ authWithOtp isDashboard req' mbBundleVersion mbClientVersion mbClientConfigVersi
         emailOTPConfig <- transporterConfig.emailOtpConfig & fromMaybeM (TransporterConfigNotFound $ "merchantOperatingCityId:- " <> merchantOpCityId.getId)
         L.runIO $ Email.sendEmail emailOTPConfig [receiverEmail] otpCode
       SP.AADHAAR -> throwError $ InvalidRequest "Not implemented yet"
+      SP.DEVICEID -> do
+        case (req.mobileCountryCode, req.mobileNumber) of
+          (Just countryCode, Just mobileNumber) -> do
+            let phoneNumber = countryCode <> mobileNumber
+            withLogTag ("personId_" <> getId person.id) $ do
+              (mbSender, message, templateId) <-
+                MessageBuilder.buildSendOTPMessage merchantOpCityId $
+                  MessageBuilder.BuildSendOTPMessageReq
+                    { otp = otpCode,
+                      hash = otpHash
+                    }
+              let sender = fromMaybe smsCfg.sender mbSender
+              Sms.sendSMS person.merchantId merchantOpCityId (Sms.SendSMSReq message phoneNumber sender templateId)
+                >>= Sms.checkSmsResult
+          (_, _) -> pure ()
 
   let attempts = SR.attempts token
       authId = SR.id token
@@ -372,6 +398,16 @@ makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigV
             pure (Just email, Nothing, useFakeOtp)
           Nothing -> throwError $ InvalidRequest "Email is required"
       SP.AADHAAR -> throwError $ InvalidRequest "Not implemented yet"
+      SP.DEVICEID -> do
+        -- For DEVICEID auth, mobile number is optional
+        case (req.mobileNumber, req.mobileCountryCode) of
+          (Just mobileNumber, Just _) -> do
+            let useFakeOtp = if mobileNumber `elem` transporterConfig.fakeOtpMobileNumbers then Just "7891" else Nothing
+            encMobNum <- encrypt mobileNumber
+            return (Nothing, Just encMobNum, useFakeOtp)
+          (_, _) -> do
+            let useFakeOtp = Just "7891" -- Use fake OTP for deviceId-based auth
+            return (Nothing, Nothing, useFakeOtp)
   safetyCohortNewTag <- Yudhishthira.fetchNammaTagExpiry $ LYT.TagNameValue "SafetyCohort#New"
   return $
     SP.Person
@@ -413,7 +449,7 @@ makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigV
         registrationLat = req.registrationLat,
         registrationLon = req.registrationLon,
         useFakeOtp,
-        clientId = Nothing,
+        clientId = if identifierType == SP.DEVICEID then req.deviceId else Nothing,
         driverTag = Just [safetyCohortNewTag],
         maskedMobileDigits = fmap (takeEnd 4) req.mobileNumber,
         nyClubConsent = Just False

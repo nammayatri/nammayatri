@@ -21,6 +21,7 @@ data FleetConfig = FleetConfig
     fleetOwnerId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     rideEndApproval :: Kernel.Prelude.Bool,
     unlinkDriverAndVehicleOnTripTermination :: Kernel.Prelude.Bool,
+    verificationSkippable :: Kernel.Prelude.Bool,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     createdAt :: Kernel.Prelude.UTCTime,

@@ -552,3 +552,18 @@ updatePersonRole personId role = do
     ]
     [ Se.Is BeamP.id $ Se.Eq $ getId personId
     ]
+
+findByDeviceIdAndMerchantAndRole ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Text ->
+  Id Merchant ->
+  Role ->
+  m (Maybe Person)
+findByDeviceIdAndMerchantAndRole deviceId merchantId role = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is BeamP.clientId $ Se.Eq (Just deviceId),
+          Se.Is BeamP.merchantId $ Se.Eq (getId merchantId),
+          Se.Is BeamP.role $ Se.Eq role
+        ]
+    ]

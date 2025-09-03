@@ -48,7 +48,9 @@ mkDynamicOfferDriverAppFleetAPIs merchantId city token = do
 
   FleetAPIs {..}
   where
-    fleetRegisterationClient = clientWithMerchantAndCity (Proxy :: Proxy BPP.API) merchantId city token
+    fleetRegisterationClient
+      :<|> _bulkAssociationClient
+      :<|> _memberAssociationClient = clientWithMerchantAndCity (Proxy :: Proxy BPP.API) merchantId city token
 
     fleetOwnerLogin
       :<|> fleetOwnerVerify

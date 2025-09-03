@@ -23,6 +23,11 @@ FleetMemberAssociation:
       where:
         and: [fleetMemberId]
 
+    findActiveByfleetMemberIdAndfleetOwnerId:
+      kvFunction: findOneWithKV
+      where:
+        and: [fleetMemberId, fleetOwnerId, enabled]
+
     findAllActiveByfleetMemberId:
       kvFunction: findAllWithKV
       where:
