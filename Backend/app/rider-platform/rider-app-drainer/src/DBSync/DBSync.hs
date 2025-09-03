@@ -126,9 +126,10 @@ dropDBCommand dbStreamKey entryId = do
 
 runCriticalDBSyncOperations :: Text -> [(EL.KVDBStreamEntryID, ByteString)] -> [(EL.KVDBStreamEntryID, ByteString)] -> [(EL.KVDBStreamEntryID, ByteString)] -> ExceptT Int Flow Int
 runCriticalDBSyncOperations dbStreamKey updateEntries deleteEntries createDataEntries = do
+  getBatchCreateEnabled <- EL.runIO Env.getBatchCreateEnabled
   isForcePushEnabled <- pureRightExceptT $ fromMaybe False <$> getValueFromRedis C.forceDrainEnabledKey
   -- (cSucc, cFail) <- pureRightExceptT $ executeInSequence runCreate ([], []) dbStreamKey createDataEntries
-  (cSucc, cFail) <- pureRightExceptT $ if isForcePushEnabled then executeInSequence runCreate ([], []) dbStreamKey createDataEntries else executeBatchedCreate dbStreamKey createDataEntries
+  (cSucc, cFail) <- pureRightExceptT $ if isForcePushEnabled || not getBatchCreateEnabled then executeInSequence runCreate ([], []) dbStreamKey createDataEntries else executeBatchedCreate dbStreamKey createDataEntries
   void $ pureRightExceptT $ publishDBSyncMetric $ Event.DrainerQueryExecutes "Create" (fromIntegral $ length cSucc)
   void $ pureRightExceptT $ publishDBSyncMetric $ Event.DrainerQueryExecutes "CreateInBatch" (if null cSucc then 0 else 1)
   void $
