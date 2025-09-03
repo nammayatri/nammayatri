@@ -57,3 +57,10 @@ getDbConnectionRetryMaxAttempts = fromMaybe defaultDbConnectionRetryMaxAttempts 
 
 getDbConnectionRetryDelay :: IO Int
 getDbConnectionRetryDelay = fromMaybe defaultDbConnectionRetryDelay . (>>= readMaybe) <$> SE.lookupEnv dbConnectionRetryDelayEnvKey
+
+-- Batch Create Configuration
+getBatchCreateEnabled :: IO Bool
+getBatchCreateEnabled = fromMaybe False . (>>= readMaybe) <$> SE.lookupEnv "BATCHED_CREATE_ENABLED"
+
+getInsertBatchSize :: IO Int
+getInsertBatchSize = fromMaybe 100 . (>>= readMaybe) <$> SE.lookupEnv "INSERT_BATCH_SIZE"
