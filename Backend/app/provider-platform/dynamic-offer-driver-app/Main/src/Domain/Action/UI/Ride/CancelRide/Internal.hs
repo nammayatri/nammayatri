@@ -15,6 +15,7 @@
 module Domain.Action.UI.Ride.CancelRide.Internal
   ( cancelRideImpl,
     updateNammaTagsForCancelledRide,
+    driverDistanceToPickup,
   )
 where
 
@@ -26,18 +27,22 @@ import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.CancellationFarePolicy as DTC
+import Domain.Types.CancellationReason (CancellationReasonCode (..))
 import qualified Domain.Types.Merchant as DMerc
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.Yudhishthira as TY
 import EulerHS.Prelude
+import Kernel.External.Maps
 import Kernel.External.Maps.Types
 import Kernel.Prelude hiding (any, elem)
 import qualified Kernel.Storage.Esqueleto as Esq hiding (whenJust_)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
-import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer, KafkaProducerTools)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.DriverCoins.Coins as DC
+import qualified Lib.DriverCoins.Types as DCT
 import qualified Lib.DriverScore as DS
 import qualified Lib.DriverScore.Types as DST
 import Lib.Scheduler (SchedulerType)
@@ -71,6 +76,7 @@ import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Constants
 import Tools.Error
 import Tools.Event
+import qualified Tools.Maps as Maps
 import qualified Tools.Metrics as Metrics
 import qualified Tools.Notifications as Notify
 import TransactionLogs.Types
@@ -114,29 +120,48 @@ cancelRideImpl ::
   Maybe Bool ->
   m ()
 cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellationRateBasedBlocking = do
-  ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
-  booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
-  isValueAddNP <- CQVAN.isValueAddNP booking.bapId
-  let merchantId = booking.providerId
-  merchant <-
-    CQM.findById merchantId
-      >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  transporterConfig <- CTC.findByMerchantOpCityId booking.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
-  noShowCharges <- if transporterConfig.canAddCancellationFee then calculateNoShowCharges booking ride else return Nothing
-  cancelRideTransaction booking ride bookingCReason merchantId rideEndedBy noShowCharges
-  logTagInfo ("rideId-" <> getId rideId) ("Cancellation reason " <> show bookingCReason.source)
-  driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-  vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
-  fork "cancelRide - Notify driver" $ do
-    rideTags <- updateNammaTagsForCancelledRide booking ride bookingCReason
-    triggerRideCancelledEvent RideEventData {ride = ride{status = DRide.CANCELLED}, personId = driver.id, merchantId = merchantId}
-    triggerBookingCancelledEvent BookingEventData {booking = booking{status = SRB.CANCELLED}, personId = driver.id, merchantId = merchantId}
-    when (bookingCReason.source == SBCR.ByDriver) $
-      DS.driverScoreEventHandler ride.merchantOperatingCityId DST.OnDriverCancellation {rideTags, merchantId = merchantId, driver = driver, rideFare = Just booking.estimatedFare, currency = booking.currency, distanceUnit = booking.distanceUnit, doCancellationRateBasedBlocking}
-    Notify.notifyOnCancel ride.merchantOperatingCityId booking driver bookingCReason.source
-  fork "cancelRide/ReAllocate - Notify BAP" $ do
-    isReallocated <- reAllocateBookingIfPossible isValueAddNP False merchant booking ride driver vehicle bookingCReason isForceReallocation
-    unless isReallocated $ BP.sendBookingCancelledUpdateToBAP booking merchant bookingCReason.source noShowCharges
+  isLocked <- Redis.tryLockRedis (buildCancelRideTransactionKey rideId) 15
+  if isLocked
+    then do
+      ride <- QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+      booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+      isValueAddNP <- CQVAN.isValueAddNP booking.bapId
+      let merchantId = booking.providerId
+      merchant <-
+        CQM.findById merchantId
+          >>= fromMaybeM (MerchantNotFound merchantId.getId)
+      transporterConfig <- CTC.findByMerchantOpCityId booking.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+      noShowCharges <- if transporterConfig.canAddCancellationFee then calculateNoShowCharges booking ride else return Nothing
+      logTagInfo ("rideId-" <> getId rideId) ("Cancellation reason " <> show bookingCReason.source)
+      driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+      vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
+      when (isInvalidRide ride) do throwError $ RideInvalidStatus ("This ride is already canceled")
+      cancelRideTransaction booking ride bookingCReason merchantId rideEndedBy noShowCharges
+
+      fork "cancelRide - Notify driver" $ do
+        rideTags <- updateNammaTagsForCancelledRide booking ride bookingCReason
+        triggerRideCancelledEvent RideEventData {ride = ride{status = DRide.CANCELLED}, personId = driver.id, merchantId = merchantId}
+        triggerBookingCancelledEvent BookingEventData {booking = booking{status = SRB.CANCELLED}, personId = driver.id, merchantId = merchantId}
+        Notify.notifyOnCancel ride.merchantOperatingCityId booking driver bookingCReason.source
+        when (bookingCReason.source == SBCR.ByDriver) do
+          DS.driverScoreEventHandler ride.merchantOperatingCityId DST.OnDriverCancellation {rideTags, merchantId = merchantId, driver = driver, rideFare = Just booking.estimatedFare, currency = booking.currency, distanceUnit = booking.distanceUnit, doCancellationRateBasedBlocking}
+          logDebug "RideCancelled Coin Event by driver"
+          fork "DriverRideCancelledCoin Event : " $ do
+            mbLocation <- do
+              driverLocations <- LF.driversLocation [ride.driverId]
+              return $ listToMaybe driverLocations
+            disToPickup <- forM mbLocation $ \location -> do
+              driverDistanceToPickup booking (getCoordinates location) (getCoordinates booking.fromLocation)
+            DC.driverCoinsEvent ride.driverId driver.merchantId booking.merchantOperatingCityId (DCT.Cancellation ride.createdAt booking.distanceToPickup disToPickup DCT.CancellationByDriver (fromMaybe (CancellationReasonCode "OTHER") bookingCReason.reasonCode)) (Just ride.id.getId) ride.vehicleVariant
+
+      fork "cancelRide/ReAllocate - Notify BAP" $ do
+        isReallocated <- reAllocateBookingIfPossible isValueAddNP False merchant booking ride driver vehicle bookingCReason isForceReallocation
+        unless isReallocated $ BP.sendBookingCancelledUpdateToBAP booking merchant bookingCReason.source noShowCharges
+      Redis.unlockRedis (buildCancelRideTransactionKey rideId)
+    else throwError $ (RideInvalidStatus "Cancel Ride Inprogress")
+  where
+    buildCancelRideTransactionKey rideId' = "CancelRideTransaction:RideId:-" <> show rideId'
+    isInvalidRide ride = ride.status `elem` [DRide.CANCELLED]
 
 calculateNoShowCharges :: (MonadFlow m, CacheFlow m r) => SRB.Booking -> DRide.Ride -> m (Maybe PriceAPIEntity)
 calculateNoShowCharges booking ride = do
@@ -216,3 +241,29 @@ updateNammaTagsForCancelledRide booking ride bookingCReason = do
   when (validCustomerCancellation `elem` tags) $ do
     QDriverStats.updateValidCustomerCancellationTagCount (driverStats.validCustomerCancellationTagCount + 1) ride.driverId
   return $ fromMaybe [] allTags
+
+driverDistanceToPickup ::
+  ( EncFlow m r,
+    CacheFlow m r,
+    EsqDBFlow m r,
+    Maps.HasCoordinates tripStartPos,
+    Maps.HasCoordinates tripEndPos,
+    ToJSON tripStartPos,
+    ToJSON tripEndPos,
+    HasKafkaProducer r
+  ) =>
+  SRB.Booking ->
+  tripStartPos ->
+  tripEndPos ->
+  m Meters
+driverDistanceToPickup booking tripStartPos tripEndPos = do
+  distRes <-
+    Maps.getDistanceForCancelRide booking.providerId booking.merchantOperatingCityId (Just booking.id.getId) $
+      Maps.GetDistanceReq
+        { origin = tripStartPos,
+          destination = tripEndPos,
+          travelMode = Just Maps.CAR,
+          distanceUnit = booking.distanceUnit,
+          sourceDestinationMapping = Nothing
+        }
+  return $ distRes.distance
