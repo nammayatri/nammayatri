@@ -168,11 +168,12 @@ updateOnlineDurationDuringFetchingDailyStats driverId transporterConfig = do
   -- To avoid race condition we need to fetch driveInfo, dailyStats, driverStats inside of lock
   Redis.whenWithLockRedis (updateDriverOnlineDurationLockKey driverId) 60 $ do
     driverInfo <- QDIE.findByIdAndVerified driverId Nothing >>= fromMaybeM DriverInfoNotFound
-    now <- getCurrentTime
-    let localTime = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) now
-        merchantLocalDate = utctDay localTime
-    mbDailyStats <- SQDS.findByDriverIdAndDate driver.id merchantLocalDate
-    updateOnlineDuration (driverId, driver.merchantId, driver.merchantOperatingCityId) transporterConfig.timeDiffFromUtc driverInfo now localTime merchantLocalDate transporterConfig.maxOnlineDurationDays mbDailyStats
+    when (driverInfo.mode == Just DriverInfo.ONLINE) $ do
+      now <- getCurrentTime
+      let localTime = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) now
+          merchantLocalDate = utctDay localTime
+      mbDailyStats <- SQDS.findByDriverIdAndDate driver.id merchantLocalDate
+      updateOnlineDuration (driverId, driver.merchantId, driver.merchantOperatingCityId) transporterConfig.timeDiffFromUtc driverInfo now localTime merchantLocalDate transporterConfig.maxOnlineDurationDays mbDailyStats
 
 -- To avoid rounding error accumulation, each value was rounded to whole seconds
 diffUTCTimeInSeconds :: UTCTime -> UTCTime -> Seconds

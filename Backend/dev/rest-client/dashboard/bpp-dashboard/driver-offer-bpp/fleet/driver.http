@@ -9,6 +9,8 @@
 
 @rental_fleet_owner = favorit-rental_fleet-token-000000000
 
+@driverId = favorit-auto2-0000000000000000000000
+
 # @name healthcheck
 GET {{bpp-dashboard-host}}
 
@@ -126,3 +128,9 @@ ExistingDriver, 2345678901, CAR, 6666666667
 POST {{driver-offer-bpp-host}}/ui/fleet/consent
 token: {{existingDriverToken}}
 content-type: application/json
+
+
+###
+
+GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/driver/stats?entityId={{driverId}}
+token: {{fleet_owner}}
