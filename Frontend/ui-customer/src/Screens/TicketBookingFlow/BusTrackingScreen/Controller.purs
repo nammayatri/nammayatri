@@ -461,7 +461,7 @@ eval UpdateToExpandView state = continue state {props{expandStopsView = true}}
 
 eval (BookTicketOnNoBus PrimaryButton.OnClick) state = 
   if checkBusRouteEnabled state 
-    then continue state {data{isNoBusAvailable = true}}
+    then exit $ GoToSearchLocation state --- continue state {data{isNoBusAvailable = true}}
     else exit $ GoToBusTicketBookingScreen state
 
 eval (PopUpModalAction PopUpModal.OnButton1Click) state = exit $ GoToSearchLocation state

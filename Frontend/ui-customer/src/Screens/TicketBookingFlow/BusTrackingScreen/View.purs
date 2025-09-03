@@ -88,6 +88,7 @@ import Effect.Uncurried (runEffectFn3)
 import Animation (fadeInWithDelay)
 import Data.Foldable (minimum, maximum)
 import Components.PopUpModal as PopUpModal
+import Helpers.CommonView (emptyTextView)
 
 screen :: ST.BusTrackingScreenState -> Screen Action ST.BusTrackingScreenState ScreenOutput
 screen initialState = 
@@ -167,7 +168,7 @@ view push state =
                 , rippleColor Color.rippleShade
                 ]
             ]
-          , popUpOnNoBusFound state push 
+          -- , if state.data.isNoBusAvailable then popUpOnNoBusFound state push else emptyTextView
         ] 
   where
     bottomSheetHeight = Mb.fromMaybe 25 $ maximum [25, (JB.getLayoutBounds $ EHC.getNewIDWithTag "busStopsView").height -100 ]
@@ -306,6 +307,7 @@ bottomSheetView push state =
                       , text "Ticket booking will be back soon. Keep tracking!"
                       , cornerRadii $ Corners 24.0 true true false false
                       , gravity CENTER
+                      , margin $ MarginBottom 34
                       , visibility $ boolToVisibility $ not isTicketBookingEnabled
                       ] <> FontStyle.body1 CTA.TypoGraphy
                     , linearLayout
@@ -315,7 +317,6 @@ bottomSheetView push state =
                         , gravity CENTER
                         , background if state.props.showRouteDetailsTab then Color.white900 else Color.grey700
                         , cornerRadii $ Corners 24.0 true true false false
-                        , margin $ MarginTop 34
                         ]
                         [ bottomSheetContentView push state
                         ]
@@ -847,12 +848,12 @@ bikeTaxiNudgePopup state push mbEtaTime mbTimestamp =
 popUpOnNoBusFound :: forall w. ST.BusTrackingScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 popUpOnNoBusFound state push = 
   linearLayout
-    [ height MATCH_PARENT
-    , width MATCH_PARENT
-    , accessibility DISABLE
-    , visibility $ boolToVisibility $ state.data.isNoBusAvailable
-    ]
-    [ PopUpModal.view (push <<< PopUpModalAction) (noBusPopUpModelConfig) ]
+  [ height MATCH_PARENT
+  , width MATCH_PARENT
+  , accessibility DISABLE
+  , visibility $ boolToVisibility $ state.data.isNoBusAvailable
+  ]
+  [ PopUpModal.view (push <<< PopUpModalAction) (noBusPopUpModelConfig) ]
 
 showPreBookingTracking :: String -> Boolean
 showPreBookingTracking _ = 

@@ -49,6 +49,7 @@ primaryButtonConfig state =
         , background = Color.black900
         , margin = (Margin 16 16 16 16)
         , id = "BusTrackingScreenPrimaryButton"
+        , enableRipple = true
         }
   in
     primaryButtonConfig'
