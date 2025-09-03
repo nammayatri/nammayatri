@@ -8,8 +8,9 @@ import Kernel.Prelude
 
 data FRFSTicketStatus
   = ACTIVE
+  | INPROGRESS -- Customer entered the metro gate
   | EXPIRED
-  | USED
+  | USED -- Customer exited the metro gate
   | CANCELLED
   | COUNTER_CANCELLED
   | CANCEL_INITIATED
