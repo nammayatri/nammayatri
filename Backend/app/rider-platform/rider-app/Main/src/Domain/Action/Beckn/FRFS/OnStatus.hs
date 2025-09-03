@@ -25,14 +25,17 @@ import qualified Domain.Types.FRFSTicket as Ticket
 import qualified Domain.Types.FRFSTicketBooking as Booking
 import qualified Domain.Types.FRFSTicketBookingStatus as Booking
 import qualified Domain.Types.FRFSTicketStatus as Ticket
+import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import Domain.Types.Merchant as Merchant
 import qualified Domain.Types.PartnerOrgConfig as DPOC
 import Environment
 import Kernel.Beam.Functions
 import Kernel.Prelude hiding (second)
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.CachedQueries.PartnerOrgConfig as CQPOC
 import qualified Storage.Queries.FRFSSearch as QSearch
@@ -62,13 +65,15 @@ validateRequest (TicketVerification DTicketPayload {..}) = do
 
 onStatus :: Merchant -> Booking.FRFSTicketBooking -> DOnStatus -> Flow DOnStatusResp
 onStatus _merchant booking (Booking dOrder) = do
+  integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
+  checkInprogress <- fetchCheckInprogress integratedBPPConfig.providerConfig
   tickets <-
     if null dOrder.tickets
       then do
         tickets <- QTicket.findAllByTicketBookingId booking.id
         pure $ map mapTicketToDTicket tickets
       else return dOrder.tickets
-  statuses <- traverse (Utils.getTicketStatus booking) tickets
+  statuses <- traverse (Utils.getTicketStatus booking checkInprogress) tickets
   statuses' <-
     case dOrder.orderStatus of
       Just Spec.COMPLETE
@@ -107,6 +112,7 @@ onStatus _merchant booking (Booking dOrder) = do
     mapFRFSStatusToDTicketStatus :: Ticket.FRFSTicketStatus -> Text
     mapFRFSStatusToDTicketStatus = \case
       Ticket.ACTIVE -> "UNCLAIMED"
+      Ticket.INPROGRESS -> "UNCLAIMED"
       Ticket.EXPIRED -> "EXPIRED"
       Ticket.USED -> "CLAIMED"
       Ticket.CANCELLED -> "CANCELLED"
@@ -136,6 +142,12 @@ onStatus _merchant booking (Booking dOrder) = do
     refreshTicket ticket =
       whenJust ticket.qrRefreshAt $ \qrRefreshAt ->
         void $ QTicket.updateRefreshTicketQRByTBookingIdAndTicketNumber ticket.qrData (Just qrRefreshAt) booking.id ticket.ticketNumber
+    fetchCheckInprogress :: DIBC.ProviderConfig -> Flow Bool
+    fetchCheckInprogress = \case
+      DIBC.ONDC _ -> do
+        let key = Utils.mkCheckInprogressKey booking.searchId.getId
+        fromMaybe True <$> Redis.get key >>= \val -> when val (Redis.del key) >> pure val
+      _ -> pure True
 onStatus _merchant booking (TicketVerification ticketPayload) = do
   ticket <- runInReplica $ QTicket.findByTicketBookingIdTicketNumber booking.id ticketPayload.ticketNumber >>= fromMaybeM (InternalError "Ticket Does Not Exist")
   let terminalTicketStates = [Ticket.USED, Ticket.EXPIRED, Ticket.CANCELLED]
