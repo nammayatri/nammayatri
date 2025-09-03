@@ -30,6 +30,7 @@ import qualified Domain.Types.PartnerOrgConfig as DPOC
 import Environment
 import Kernel.Beam.Functions
 import Kernel.Prelude hiding (second)
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -62,13 +63,15 @@ validateRequest (TicketVerification DTicketPayload {..}) = do
 
 onStatus :: Merchant -> Booking.FRFSTicketBooking -> DOnStatus -> Flow DOnStatusResp
 onStatus _merchant booking (Booking dOrder) = do
+  isSolicited <- fromMaybe False <$> Redis.get (Utils.mkSolicitedOnStatusKey booking.searchId.getId)
+  when isSolicited $ Redis.del (Utils.mkSolicitedOnStatusKey booking.searchId.getId)
   tickets <-
     if null dOrder.tickets
       then do
         tickets <- QTicket.findAllByTicketBookingId booking.id
         pure $ map mapTicketToDTicket tickets
       else return dOrder.tickets
-  statuses <- traverse (Utils.getTicketStatus booking) tickets
+  statuses <- traverse (Utils.getTicketStatus booking isSolicited) tickets
   statuses' <-
     case dOrder.orderStatus of
       Just Spec.COMPLETE
@@ -107,6 +110,7 @@ onStatus _merchant booking (Booking dOrder) = do
     mapFRFSStatusToDTicketStatus :: Ticket.FRFSTicketStatus -> Text
     mapFRFSStatusToDTicketStatus = \case
       Ticket.ACTIVE -> "UNCLAIMED"
+      Ticket.INPROGRESS -> "UNCLAIMED"
       Ticket.EXPIRED -> "EXPIRED"
       Ticket.USED -> "CLAIMED"
       Ticket.CANCELLED -> "CANCELLED"

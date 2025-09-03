@@ -375,24 +375,29 @@ data TicketStatus = TicketStatus
     vehicleNumber :: Maybe Text
   }
 
-getTicketStatus :: (MonadFlow m) => Booking.FRFSTicketBooking -> DTicket -> m TicketStatus
-getTicketStatus booking dTicket = do
+getTicketStatus :: (MonadFlow m) => Booking.FRFSTicketBooking -> Bool -> DTicket -> m TicketStatus
+getTicketStatus booking isSolicited dTicket = do
   let validTill = dTicket.validTill
   now <- getCurrentTime
-  ticketStatus <- castTicketStatus dTicket.status booking
+  ticketStatus <- castTicketStatus dTicket.status booking isSolicited
   if now > validTill && (ticketStatus /= Ticket.CANCELLED || ticketStatus /= Ticket.COUNTER_CANCELLED)
     then return TicketStatus {ticketNumber = dTicket.ticketNumber, status = Ticket.EXPIRED, vehicleNumber = dTicket.vehicleNumber}
     else return TicketStatus {ticketNumber = dTicket.ticketNumber, status = ticketStatus, vehicleNumber = dTicket.vehicleNumber}
 
-castTicketStatus :: MonadFlow m => Text -> Booking.FRFSTicketBooking -> m Ticket.FRFSTicketStatus
-castTicketStatus "UNCLAIMED" _ = return Ticket.ACTIVE
-castTicketStatus "CLAIMED" _ = return Ticket.USED
-castTicketStatus "CANCELLED" booking | booking.customerCancelled = return Ticket.CANCELLED
-castTicketStatus "CANCELLED" booking | not booking.customerCancelled = return Ticket.COUNTER_CANCELLED
-castTicketStatus _ _ = throwError $ InternalError "Invalid ticket status"
+castTicketStatus :: MonadFlow m => Text -> Booking.FRFSTicketBooking -> Bool -> m Ticket.FRFSTicketStatus
+castTicketStatus "UNCLAIMED" _ True = return Ticket.ACTIVE -- True means solicited on_status call
+castTicketStatus "UNCLAIMED" _ False = return Ticket.INPROGRESS -- False means unsolicited on_status received
+castTicketStatus "CLAIMED" _ _ = return Ticket.USED
+castTicketStatus "CANCELLED" booking _
+  | booking.customerCancelled = return Ticket.CANCELLED
+  | otherwise = return Ticket.COUNTER_CANCELLED
+castTicketStatus _ _ _ = throwError $ InternalError "Invalid ticket status"
 
 data BppData = BppData
   { bppId :: Text,
     bppUri :: Text
   }
   deriving (Show, Eq, Generic)
+
+mkSolicitedOnStatusKey :: Text -> Text
+mkSolicitedOnStatusKey transactionId = "FRFS:OnStatus:Solicited-" <> transactionId

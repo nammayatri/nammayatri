@@ -42,7 +42,7 @@ onStatus _ req = withFlowHandlerAPI $ do
   logDebug $ "Received OnStatus request" <> encodeToText req
   withTransactionIdLogTag' transaction_id $ do
     dOnStatusReq <- ACL.buildOnStatusReq req
-    Redis.whenWithLockRedis (onConfirmLockKey dOnStatusReq.bppOrderId) 60 $ do
+    Redis.whenWithLockRedis (onStatusLockKey dOnStatusReq.bppOrderId) 60 $ do
       (merchant, booking) <- DOnStatus.validateRequest (DOnStatus.Booking dOnStatusReq)
       fork "onStatus request processing" $
         Redis.whenWithLockRedis (onConfirmProcessingLockKey dOnStatusReq.bppOrderId) 60 $
@@ -51,8 +51,8 @@ onStatus _ req = withFlowHandlerAPI $ do
         void $ pushLogs "on_status" (toJSON req) merchant.id.getId "PUBLIC_TRANSPORT"
   pure Utils.ack
 
-onConfirmLockKey :: Text -> Text
-onConfirmLockKey id = "FRFS:OnStatus:bppOrderId-" <> id
+onStatusLockKey :: Text -> Text
+onStatusLockKey id = "FRFS:OnStatus:bppOrderId-" <> id
 
 onConfirmProcessingLockKey :: Text -> Text
 onConfirmProcessingLockKey id = "FRFS:OnStatus:Processing:bppOrderId-" <> id

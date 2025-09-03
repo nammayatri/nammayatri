@@ -235,7 +235,7 @@ mkTicket :: Booking.FRFSTicketBooking -> DTicket -> Bool -> Flow Ticket.FRFSTick
 mkTicket booking dTicket isTicketFree = do
   now <- getCurrentTime
   ticketId <- generateGUID
-  ticketStatus <- Utils.getTicketStatus booking dTicket
+  ticketStatus <- Utils.getTicketStatus booking False dTicket -- on_confirm is always solicited
   processedQrData <- processQRData dTicket.qrData
   return
     Ticket.FRFSTicket
