@@ -135,6 +135,20 @@ getPreferredOrderInBookAny city = do
         value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig false
     getCityBasedConfig value city
 
+getContactSupportConfig :: String -> ContactSupportConfig
+getContactSupportConfig city = do
+    let config = fetchRemoteConfigString "contact_support_config"
+        defaultConfig = { enableContactSupport: false, supportNumber: "9999999999" }
+        value = decodeForeignObject (parseJSON config) $ defaultCityRemoteConfig defaultConfig
+        lowerCity = DS.toLower city
+    getCityBasedConfig value lowerCity
+
+getEnableContactSupport :: String -> Boolean
+getEnableContactSupport city = (getContactSupportConfig city).enableContactSupport
+
+getContactSupportNumber :: String -> String
+getContactSupportNumber city = (getContactSupportConfig city).supportNumber
+
 getBusFlowConfigs :: String -> BusFlowConfig
 getBusFlowConfigs city = do
     let config = fetchRemoteConfigString "bus_flow_config"

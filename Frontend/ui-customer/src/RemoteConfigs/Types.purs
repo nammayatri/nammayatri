@@ -224,3 +224,8 @@ type EnquiryBannerButtonConfig = {
 , background :: String
 , color :: String
 }
+
+type ContactSupportConfig = {
+  enableContactSupport :: Boolean,
+  supportNumber :: String
+}
