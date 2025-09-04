@@ -371,7 +371,7 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
             return (warningType, MInterface.MultiModalResponse {routes = filteredRoutes})
   when (not (null restOfViaPoints) && isJust mbIntegratedBPPConfig) $ do
     fork "Process rest of single mode routes" $ processSingleModeRoutes restOfViaPoints userPreferences mbIntegratedBPPConfig merchantOperatingCityId (getPreliminaryLeg now currentLocation)
-
+  when (null restOfViaPoints) $ cacheAllRoutesLoadedKey searchRequest.id.getId True
   multimodalIntiateHelper singleModeWarningType otpResponse userPreferences merchantOperatingCityId
   where
     processSingleModeRoutes restOfViaPoints userPreferences mbIntegratedBPPConfig merchantOperatingCityId preliminaryLeg = do
