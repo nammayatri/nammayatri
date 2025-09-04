@@ -75,6 +75,8 @@ updateByPrimaryKey (Domain.Types.RouteDetails.RouteDetails {..}) = do
       Se.Set Beam.fromStopName fromStopName,
       Se.Set Beam.fromStopPlatformCode fromStopPlatformCode,
       Se.Set Beam.journeyLegId journeyLegId,
+      Se.Set Beam.legEndTime legEndTime,
+      Se.Set Beam.legStartTime legStartTime,
       Se.Set Beam.routeCode routeCode,
       Se.Set Beam.routeColorCode routeColorCode,
       Se.Set Beam.routeColorName routeColorName,

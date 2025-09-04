@@ -909,8 +909,10 @@ updateJourneyStatus ::
   DJourney.JourneyStatus ->
   m ()
 updateJourneyStatus journey newStatus = do
-  when (newStatus > journey.status) $
-    QJourney.updateStatus newStatus journey.id
+  when (newStatus > journey.status) $ do
+    if newStatus == DJourney.FEEDBACK_PENDING
+      then QJourneyExtra.updateStatusAndEndTime newStatus journey.id
+      else QJourney.updateStatus newStatus journey.id
 
 extendLeg ::
   (JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>

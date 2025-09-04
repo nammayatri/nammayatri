@@ -392,6 +392,8 @@ RouteDetails:
     toStopGtfsId: Maybe Text
     toStopPlatformCode: Maybe Text
     # Times --
+    legStartTime: Maybe UTCTime
+    legEndTime: Maybe UTCTime
     fromArrivalTime: Maybe UTCTime
     fromDepartureTime: Maybe UTCTime
     toArrivalTime: Maybe UTCTime
@@ -456,4 +458,3 @@ JourneyFeedback:
   constraints:
     journeyId: PrimaryKey
     riderId: SecondaryKey
-
