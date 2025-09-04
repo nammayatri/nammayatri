@@ -27,7 +27,6 @@ instance FromTType' Beam.SearchRequestForDriver Domain.Types.SearchRequestForDri
     clientConfigVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion))
     clientSdkVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion))
     merchantOperatingCityId' <- Storage.Queries.Transformers.SearchRequestForDriver.getMerchantOpCId merchantOperatingCityId merchantId requestId
-    reactBundleVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> reactBundleVersion))
     pure $
       Just
         Domain.Types.SearchRequestForDriver.SearchRequestForDriver
@@ -83,7 +82,7 @@ instance FromTType' Beam.SearchRequestForDriver Domain.Types.SearchRequestForDri
             poolingConfigVersion = poolingConfigVersion,
             poolingLogicVersion = poolingLogicVersion,
             previousDropGeoHash = previousDropGeoHash,
-            reactBundleVersion = reactBundleVersion',
+            reactBundleVersion = reactBundleVersion,
             renderedAt = renderedAt,
             requestId = Kernel.Types.Id.Id requestId,
             respondedAt = respondedAt,
@@ -170,7 +169,7 @@ instance ToTType' Beam.SearchRequestForDriver Domain.Types.SearchRequestForDrive
         Beam.poolingConfigVersion = poolingConfigVersion,
         Beam.poolingLogicVersion = poolingLogicVersion,
         Beam.previousDropGeoHash = previousDropGeoHash,
-        Beam.reactBundleVersion = fmap Kernel.Utils.Version.versionToText reactBundleVersion,
+        Beam.reactBundleVersion = reactBundleVersion,
         Beam.renderedAt = renderedAt,
         Beam.requestId = Kernel.Types.Id.getId requestId,
         Beam.respondedAt = respondedAt,

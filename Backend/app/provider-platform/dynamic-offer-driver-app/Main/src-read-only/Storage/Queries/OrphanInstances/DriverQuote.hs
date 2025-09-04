@@ -27,7 +27,6 @@ instance FromTType' Beam.DriverQuote Domain.Types.DriverQuote.DriverQuote where
     clientConfigVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion))
     clientSdkVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion))
     fareParams' <- getFareParams fareParametersId
-    reactBundleVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> reactBundleVersion))
     pure $
       Just
         Domain.Types.DriverQuote.DriverQuote
@@ -55,7 +54,7 @@ instance FromTType' Beam.DriverQuote Domain.Types.DriverQuote.DriverQuote where
             id = Kernel.Types.Id.Id id,
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId,
             providerId = Kernel.Types.Id.Id providerId,
-            reactBundleVersion = reactBundleVersion',
+            reactBundleVersion = reactBundleVersion,
             requestId = Kernel.Types.Id.Id requestId,
             searchRequestForDriverId = Kernel.Types.Id.Id <$> searchRequestForDriverId,
             searchTryId = Kernel.Types.Id.Id searchTryId,
@@ -100,7 +99,7 @@ instance ToTType' Beam.DriverQuote Domain.Types.DriverQuote.DriverQuote where
         Beam.id = Kernel.Types.Id.getId id,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId,
         Beam.providerId = Kernel.Types.Id.getId providerId,
-        Beam.reactBundleVersion = fmap Kernel.Utils.Version.versionToText reactBundleVersion,
+        Beam.reactBundleVersion = reactBundleVersion,
         Beam.requestId = Kernel.Types.Id.getId requestId,
         Beam.searchRequestForDriverId = Kernel.Types.Id.getId <$> searchRequestForDriverId,
         Beam.searchTryId = Kernel.Types.Id.getId searchTryId,

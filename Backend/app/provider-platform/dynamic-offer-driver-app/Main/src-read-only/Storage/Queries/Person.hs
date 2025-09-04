@@ -155,7 +155,7 @@ updateByPrimaryKey (Domain.Types.Person.Person {..}) = do
       Se.Set Beam.onboardedFromDashboard onboardedFromDashboard,
       Se.Set Beam.passwordHash passwordHash,
       Se.Set Beam.qrImageId (Kernel.Types.Id.getId <$> qrImageId),
-      Se.Set Beam.reactBundleVersion (fmap Kernel.Utils.Version.versionToText reactBundleVersion),
+      Se.Set Beam.reactBundleVersion reactBundleVersion,
       Se.Set Beam.registrationLat registrationLat,
       Se.Set Beam.registrationLon registrationLon,
       Se.Set Beam.role role,
