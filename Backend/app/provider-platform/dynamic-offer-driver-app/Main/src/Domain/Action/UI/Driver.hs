@@ -1428,7 +1428,8 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
             searchReq <- QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
             -- fetch if any booking exist with same transaction id and status in activeBookingStatus
             mbActiveBooking <- QBE.findByTransactionIdAndStatuses searchReq.transactionId [DRB.NEW, DRB.TRIP_ASSIGNED]
-            whenJust mbActiveBooking $ const $ throwError RideRequestAlreadyAccepted
+            whenJust mbActiveBooking $ \bk ->
+              when (DTC.isDynamicOfferTrip bk.tripCategory) $ throwError RideRequestAlreadyAccepted
             merchant <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantDoesNotExist searchReq.providerId.getId)
             driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
             driverInfo <- QDriverInformation.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
