@@ -10,12 +10,14 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
+import qualified Lib.DriverCoins.Types
 import Tools.Beam.UtilsTH
 
 data FleetConfigT f = FleetConfigT
   { allowAutomaticRoundTripAssignment :: B.C f Kernel.Prelude.Bool,
     allowEndingMidRoute :: B.C f Kernel.Prelude.Bool,
     allowStartRideFromQR :: B.C f Kernel.Prelude.Bool,
+    blacklistCoinEvents :: (B.C f (Kernel.Prelude.Maybe [Lib.DriverCoins.Types.DriverCoinsFunctionType])),
     directlyStartFirstTripAssignment :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     endRideDistanceThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMeters),
     fleetOwnerId :: B.C f Data.Text.Text,
