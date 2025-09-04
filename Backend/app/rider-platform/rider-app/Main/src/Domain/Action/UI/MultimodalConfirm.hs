@@ -92,7 +92,6 @@ import qualified Lib.JourneyModule.State.Types as JMState
 import qualified Lib.JourneyModule.Types as JMTypes
 import qualified Lib.JourneyModule.Utils as JLU
 import qualified Lib.JourneyModule.Utils as JMU
-import qualified SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.FRFSVehicleServiceTier as CQFRFSVehicleServiceTier
@@ -120,17 +119,6 @@ import Tools.MultiModal as MM
 import qualified Tools.MultiModal as TMultiModal
 import qualified Tools.Payment as Payment
 
-validateMetroBusinessHours :: Id Domain.Types.Journey.Journey -> Environment.Flow ()
-validateMetroBusinessHours journeyId = do
-  journey <- JM.getJourney journeyId
-  legs <- QJourneyLeg.getJourneyLegs journeyId
-  riderConfig <- QRC.findByMerchantOperatingCityId journey.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist journey.merchantOperatingCityId.getId)
-  now <- getCurrentTime
-  let isOutsideMetroBusinessHours = FRFSUtils.isOutsideBusinessHours riderConfig.qrTicketRestrictionStartTime riderConfig.qrTicketRestrictionEndTime now riderConfig.timeDiffFromUtc
-      hasMetroLeg = any (\leg -> leg.mode == DTrip.Metro) legs
-  when (hasMetroLeg && isOutsideMetroBusinessHours) $
-    throwError $ InvalidRequest "Metro booking not allowed outside business hours"
-
 postMultimodalInitiate ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
@@ -140,7 +128,6 @@ postMultimodalInitiate ::
   )
 postMultimodalInitiate (_personId, _merchantId) journeyId = do
   Redis.withLockRedisAndReturnValue lockKey 60 $ do
-    validateMetroBusinessHours journeyId
     journeyLegs <- QJourneyLeg.getJourneyLegs journeyId
     addAllLegs journeyId (Just journeyLegs) journeyLegs
     journey <- JM.getJourney journeyId
@@ -160,7 +147,6 @@ postMultimodalConfirm ::
     Environment.Flow Kernel.Types.APISuccess.APISuccess
   )
 postMultimodalConfirm (_, _) journeyId forcedBookLegOrder journeyConfirmReq = do
-  validateMetroBusinessHours journeyId
   journey <- JM.getJourney journeyId
   legs <- QJourneyLeg.getJourneyLegs journey.id
   let confirmElements = journeyConfirmReq.journeyConfirmReqElements
