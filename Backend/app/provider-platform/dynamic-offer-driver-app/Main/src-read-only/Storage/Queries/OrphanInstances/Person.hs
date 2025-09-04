@@ -24,7 +24,6 @@ instance FromTType' Beam.Person Domain.Types.Person.Person where
     clientSdkVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion))
     driverTag' <- Lib.Yudhishthira.Tools.Utils.tagsNameValueExpiryFromTType driverTag
     merchantOperatingCityId' <- Storage.Queries.Transformers.Person.getMerchantOpCId merchantId merchantOperatingCityId
-    reactBundleVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> reactBundleVersion))
     pure $
       Just
         Domain.Types.Person.Person
@@ -62,7 +61,7 @@ instance FromTType' Beam.Person Domain.Types.Person.Person where
             onboardedFromDashboard = onboardedFromDashboard,
             passwordHash = passwordHash,
             qrImageId = Kernel.Types.Id.Id <$> qrImageId,
-            reactBundleVersion = reactBundleVersion',
+            reactBundleVersion = reactBundleVersion,
             registrationLat = registrationLat,
             registrationLon = registrationLon,
             role = role,
@@ -115,7 +114,7 @@ instance ToTType' Beam.Person Domain.Types.Person.Person where
         Beam.onboardedFromDashboard = onboardedFromDashboard,
         Beam.passwordHash = passwordHash,
         Beam.qrImageId = Kernel.Types.Id.getId <$> qrImageId,
-        Beam.reactBundleVersion = fmap Kernel.Utils.Version.versionToText reactBundleVersion,
+        Beam.reactBundleVersion = reactBundleVersion,
         Beam.registrationLat = registrationLat,
         Beam.registrationLon = registrationLon,
         Beam.role = role,

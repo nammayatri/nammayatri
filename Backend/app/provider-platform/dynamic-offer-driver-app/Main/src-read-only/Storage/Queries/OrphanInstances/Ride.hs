@@ -27,7 +27,6 @@ instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
     clientSdkVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion))
     fromLocation' <- Storage.Queries.Transformers.Ride.getFromLocation id bookingId merchantId merchantOperatingCityId
     merchantOperatingCityId' <- Storage.Queries.Transformers.Ride.getMerchantOperatingCityId bookingId merchantId merchantOperatingCityId
-    reactBundleVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> reactBundleVersion))
     stops' <- Storage.Queries.Transformers.Ride.getStops id hasStops
     toLocation' <- Storage.Queries.Transformers.Ride.getToLocation id bookingId merchantId merchantOperatingCityId
     trackingUrl' <- Kernel.Prelude.parseBaseUrl trackingUrl
@@ -88,7 +87,7 @@ instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
             pickupDropOutsideOfThreshold = pickupDropOutsideOfThreshold,
             previousRideTripEndPos = Storage.Queries.Transformers.Ride.mkLatLong previousRideTripEndLat previousRideTripEndLon,
             previousRideTripEndTime = previousRideTripEndTime,
-            reactBundleVersion = reactBundleVersion',
+            reactBundleVersion = reactBundleVersion,
             rideEndedBy = rideEndedBy,
             rideTags = Lib.Yudhishthira.Tools.Utils.tagsNameValueFromTType rideTags,
             safetyAlertTriggered = safetyAlertTriggered,
@@ -179,7 +178,7 @@ instance ToTType' Beam.Ride Domain.Types.Ride.Ride where
         Beam.previousRideTripEndLat = Kernel.Prelude.fmap (.lat) previousRideTripEndPos,
         Beam.previousRideTripEndLon = Kernel.Prelude.fmap (.lon) previousRideTripEndPos,
         Beam.previousRideTripEndTime = previousRideTripEndTime,
-        Beam.reactBundleVersion = fmap Kernel.Utils.Version.versionToText reactBundleVersion,
+        Beam.reactBundleVersion = reactBundleVersion,
         Beam.rideEndedBy = rideEndedBy,
         Beam.rideTags = Lib.Yudhishthira.Tools.Utils.tagsNameValueToTType rideTags,
         Beam.safetyAlertTriggered = safetyAlertTriggered,

@@ -51,7 +51,7 @@ data NearestDriversResultCurrentlyOnRide = NearestDriversResultCurrentlyOnRide
     mode :: Maybe DriverInfo.DriverMode,
     clientSdkVersion :: Maybe Version,
     clientBundleVersion :: Maybe Version,
-    reactBundleVersion :: Maybe Version,
+    reactBundleVersion :: Maybe Text,
     clientConfigVersion :: Maybe Version,
     clientDevice :: Maybe Device,
     vehicleAge :: Maybe Months,

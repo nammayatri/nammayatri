@@ -115,7 +115,7 @@ updateByPrimaryKey (Domain.Types.SearchRequestForDriver.SearchRequestForDriver {
       Se.Set Beam.poolingConfigVersion poolingConfigVersion,
       Se.Set Beam.poolingLogicVersion poolingLogicVersion,
       Se.Set Beam.previousDropGeoHash previousDropGeoHash,
-      Se.Set Beam.reactBundleVersion (fmap Kernel.Utils.Version.versionToText reactBundleVersion),
+      Se.Set Beam.reactBundleVersion reactBundleVersion,
       Se.Set Beam.renderedAt renderedAt,
       Se.Set Beam.requestId (Kernel.Types.Id.getId requestId),
       Se.Set Beam.respondedAt respondedAt,

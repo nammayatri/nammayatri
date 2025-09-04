@@ -153,7 +153,7 @@ auth ::
   Maybe Version ->
   Maybe Version ->
   Maybe Version ->
-  Maybe Version ->
+  Maybe Text ->
   Maybe Text ->
   Maybe Text ->
   Flow AuthRes
@@ -167,7 +167,7 @@ authWithOtp ::
   Maybe Version ->
   Maybe Version ->
   Maybe Version ->
-  Maybe Version ->
+  Maybe Text ->
   Maybe Text ->
   Maybe Text ->
   Flow AuthWithOtpRes
@@ -347,7 +347,7 @@ makePerson ::
   Maybe Version ->
   Maybe Version ->
   Maybe Version ->
-  Maybe Version ->
+  Maybe Text ->
   Maybe Text ->
   Maybe Text ->
   Id DO.Merchant ->
@@ -466,7 +466,7 @@ makeSession SmsSessionConfig {..} entityId merchantId entityType fakeOtp merchan
 verifyHitsCountKey :: Id SP.Person -> Text
 verifyHitsCountKey id = "BPP:Registration:verify:" <> getId id <> ":hitsCount"
 
-createDriverWithDetails :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => AuthReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> Id DO.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> m SP.Person
+createDriverWithDetails :: (EncFlow m r, EsqDBFlow m r, CacheFlow m r) => AuthReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> Maybe Text -> Id DO.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> m SP.Person
 createDriverWithDetails req mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbDevice mbBackendApp merchantId merchantOpCityId isDashboard = do
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   person <- makePerson req transporterConfig mbBundleVersion mbClientVersion mbClientConfigVersion mbReactBundleVersion mbDevice mbBackendApp merchantId merchantOpCityId isDashboard Nothing

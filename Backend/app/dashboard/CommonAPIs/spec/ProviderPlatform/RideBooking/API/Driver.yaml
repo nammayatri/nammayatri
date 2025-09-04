@@ -275,7 +275,7 @@ types:
     - drunkAndDriveViolationCount: Int
     - bundleVersion: Maybe Version
     - clientVersion: Maybe Version
-    - reactVersion: Maybe Version
+    - reactVersion: Maybe Text
     - alternateNumber: Maybe Text
     - rating: Maybe Centesimal
     - availableMerchants: [Text]

@@ -113,3 +113,7 @@ ALTER TABLE atlas_driver_offer_bpp.person ADD COLUMN ny_club_consent boolean ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.person ADD COLUMN react_bundle_version text ;
+
+
+------- SQL updates -------
+
