@@ -219,7 +219,6 @@ pushEntriesToKafka streamName entries = do
   if null entries
     then pure ([], [])
     else do
-      EL.logInfo ("PUSHING_TO_KAFKA_AFTER_BATCH" :: Text) ("Count: " <> show (length entries))
       results <- mapM (pushSingleEntryToKafka streamName isPushToKafka' _kafkaConnection _dontEnableForKafka) entries
       let (kafkaFailures, kafkaSuccesses) = partitionEithers results
       pure (kafkaSuccesses, kafkaFailures)
@@ -248,7 +247,6 @@ pushSingleEntryToKafka streamName isPushToKafka' kafkaConnection dontEnableForKa
           void $ publishDBSyncMetric $ Event.KafkaPushFailure "BatchCreate" tableName.getDBModel
           return $ Left entryId
         Right _ -> do
-          EL.logInfo ("KAFKA CREATE SUCCESSFUL" :: Text) (" Create successful for object :: " <> show createDBModel.contents)
           return $ Right entryId
 
 -- =============================================================================
@@ -294,9 +292,6 @@ executeBatchableEntries dbStreamKey entries = do
     else do
       -- Step 1: Group by table name
       let groupedByTable = groupByTable entries
-          tableCount = M.size groupedByTable
-      EL.logInfo ("TABLE_GROUPING" :: Text) $ "tables:" <> show tableCount
-
       -- Step 2: Within each table, group by column signature
       let groupedBySignature = M.map groupByColumnSignature groupedByTable
 
@@ -370,7 +365,7 @@ processSignatureGroup dbStreamKey _tableName (signature, entries) = do
   canBatch <- shouldBatchSignature entryCount
   if canBatch
     then executeBatchForSignature dbStreamKey signature entries
-    else executeIndividuallyForSignature dbStreamKey entries
+    else processIndividualEntries dbStreamKey entries
 
 -- | Determine if a signature group should be batched
 shouldBatchSignature :: Int -> Flow Bool
@@ -392,25 +387,24 @@ executeIndividuallyForSignature dbStreamKey entries = do
 executeBatchForSignature :: Text -> ColumnSignature -> [ParsedCreateEntry] -> Flow ([EL.KVDBStreamEntryID], [EL.KVDBStreamEntryID])
 executeBatchForSignature _dbStreamKey signature entries = do
   let batchSize = length entries
-      entryIds = map (.entryId) entries
       createObjects = map (.createObject) entries
-
+  EL.logInfo ("EXECUTING_BATCH_FOR_SIGNATURE" :: Text) $ signature.tableName.getDBModel <> "|size:" <> show batchSize
   maxBatchSize <- getGlobalBatchSize
   if batchSize <= maxBatchSize
-    then executeSingleBatch signature entries entryIds createObjects
+    then executeSingleBatch signature entries createObjects
     else do
       EL.logInfo ("SPLITTING_LARGE_BATCH" :: Text) $ signature.tableName.getDBModel <> "|size:" <> show batchSize <> "|max:" <> show maxBatchSize
 
       let batches = splitIntoBatches maxBatchSize entries
-      results <- mapM (\batch -> executeSingleBatch signature batch (map (.entryId) batch) (map (.createObject) batch)) batches
+      results <- mapM (\batch -> executeSingleBatch signature batch (map (.createObject) batch)) batches
       let (successes, failures) = unzip results
       pure (concat successes, concat failures)
   where
-    executeSingleBatch sig batchEntries ids objects = do
+    executeSingleBatch sig batchEntries objects = do
       case generateBulkInsertForSignature sig objects of
         Nothing -> do
           EL.logError ("BATCH_QUERY_GENERATION_FAILED" :: Text) (show sig)
-          executeIndividuallyForSignature _dbStreamKey batchEntries
+          processIndividualEntries _dbStreamKey batchEntries
         Just bulkQuery -> do
           Env {_connectionPool} <- ask
           startTime <- EL.getCurrentDateInMillis
@@ -423,14 +417,23 @@ executeBatchForSignature _dbStreamKey signature entries = do
                 sig.tableName.getDBModel <> "|entries:" <> show (length batchEntries) <> "|error:" <> errorMsg <> "|query:" <> bulkQuery
               void $ publishDBSyncMetric $ Event.QueryExecutionFailure "BatchCreate" sig.tableName.getDBModel
               EL.logInfo ("FALLING_BACK_TO_INDIVIDUAL" :: Text) ("Batch size: " <> show (length batchEntries))
-              executeIndividuallyForSignature _dbStreamKey batchEntries
+              processIndividualEntries _dbStreamKey batchEntries
             Right _ -> do
               EL.logInfo ("BATCH_INSERT_SUCCESS" :: Text) $
                 sig.tableName.getDBModel <> "|entries:" <> show (length batchEntries) <> "|time:" <> show executionTime
               void $ publishDBSyncMetric $ Event.DrainerQueryExecutes "BatchCreate" (fromIntegral $ length batchEntries)
               void $ publishDBSyncMetric $ Event.BatchExecutionTime sig.tableName.getDBModel executionTime
 
-              pure (ids, [])
+              -- Push successful batch entries to Kafka
+              kafkaResults <- pushEntriesToKafka _dbStreamKey batchEntries
+              let (kafkaSuccesses, kafkaFailures) = kafkaResults
+
+              -- Log Kafka results
+              when (not $ null kafkaFailures) $
+                EL.logError ("BATCH_KAFKA_FAILURES" :: Text) $
+                  sig.tableName.getDBModel <> "|kafka_failed:" <> show (length kafkaFailures)
+
+              pure (kafkaSuccesses, kafkaFailures)
 
 -- | Get global batch size from environment variables
 getGlobalBatchSize :: Flow Int
