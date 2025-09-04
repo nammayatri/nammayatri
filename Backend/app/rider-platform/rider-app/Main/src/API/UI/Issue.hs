@@ -384,8 +384,8 @@ buildMerchantConfig merchantId merchantOpCityId _mbPersonId = do
     MerchantConfig
       { mediaFileSizeUpperLimit = merchant.mediaFileSizeUpperLimit,
         mediaFileUrlPattern = merchant.mediaFileUrlPattern,
-        kaptureDisposition = merchant.kaptureDisposition,
-        kaptureQueue = riderConfig.kaptureQueue,
+        kaptureDisposition = riderConfig.kaptureConfig.disposition,
+        kaptureQueue = riderConfig.kaptureConfig.queue,
         counterPartyUrl = merchant.driverOfferBaseUrl,
         counterPartyApiKey = merchant.driverOfferApiKey,
         sensitiveWords = riderConfig.sensitiveWords,
