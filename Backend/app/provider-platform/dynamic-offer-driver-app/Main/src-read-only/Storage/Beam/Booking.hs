@@ -38,6 +38,7 @@ data BookingT f = BookingT
     estimatedDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
     estimatedDuration :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     estimatedFare :: B.C f Kernel.Types.Common.HighPrecMoney,
+    exotelDeclinedCallStatusReceivingTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     fareParametersId :: B.C f Kernel.Prelude.Text,
     fromLocGeohash :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     fromLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
