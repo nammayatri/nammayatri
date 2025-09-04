@@ -49,25 +49,10 @@ import Utils.Utils
 --    to reduce overhead in hot paths. These functions create structured log messages
 --    without the performance cost of JSON serialization.
 
--- | Log table processing information with signature count and total entries
-logTableInfo :: Text -> DBModel -> Int -> Int -> Flow ()
-logTableInfo prefix tableName sigCount totalEntries =
-  EL.logInfo prefix $ tableName.getDBModel <> "|sigs:" <> show sigCount <> "|entries:" <> show totalEntries
-
--- | Log signature group processing with column count and entry count
-logSignatureInfo :: Text -> DBModel -> [Text] -> Int -> Flow ()
-logSignatureInfo prefix tableName columns entryCount =
-  EL.logInfo prefix $ tableName.getDBModel <> "|cols:" <> show (length columns) <> "|entries:" <> show entryCount
-
 -- | Log entry split information between forced individual and batchable entries
 logSplitInfo :: Text -> Int -> Int -> Flow ()
 logSplitInfo prefix forcedCount batchableCount =
   EL.logInfo prefix $ "forced:" <> show forcedCount <> "|batchable:" <> show batchableCount
-
--- | Log final batch processing results with success/failure breakdown
-logBatchResults :: Text -> Int -> Int -> Int -> Int -> Flow ()
-logBatchResults prefix totalSucc totalFail indivSucc batchSucc =
-  EL.logInfo prefix $ "success:" <> show totalSucc <> "|fail:" <> show totalFail <> "|indiv:" <> show indivSucc <> "|batch:" <> show batchSucc
 
 -- =============================================================================
 -- STATISTICS AND GROUPING
@@ -210,13 +195,10 @@ executeBatchedCreate dbStreamKey createEntries = do
 
       let totalSuccesses = successes1 ++ successes2
           totalFailures = failures1 ++ failures2
-          -- Pre-calculate lengths to avoid multiple O(n) traversals
-          successCount1 = length successes1
-          successCount2 = length successes2
-          totalSuccessCount = successCount1 + successCount2 -- Avoid length on concatenated list
-          totalFailureCount = length failures1 + length failures2
 
-      logBatchResults "BATCHED_CREATE_COMPLETE" totalSuccessCount totalFailureCount successCount1 successCount2
+      -- Simplified logging - avoid expensive length calculations
+      EL.logInfo ("BATCHED_CREATE_COMPLETE" :: Text) $
+        "indiv_batches:" <> show (null successes1) <> "|bulk_batches:" <> show (null successes2)
 
       pure (totalSuccesses, totalFailures)
 
@@ -382,19 +364,14 @@ groupByColumnSignature = M.fromListWith (++) . map (\entry -> (entry.columnSigna
 processTableSignatureGroups :: Text -> (DBModel, Map ColumnSignature [ParsedCreateEntry]) -> Flow [([EL.KVDBStreamEntryID], [EL.KVDBStreamEntryID])]
 processTableSignatureGroups dbStreamKey (tableName, signatureGroups) = do
   Env {_dontEnableDbTables} <- ask
-  let (signatureCount, totalEntries) = calculateTableStats signatureGroups
-
-  logTableInfo ("PROCESSING_TABLE_SIGNATURES" :: Text) tableName signatureCount totalEntries
+  let (_signatureCount, _totalEntries) = calculateTableStats signatureGroups
 
   -- Check if this table should be Kafka-only (single check for entire table)
   if shouldPushToKafkaOnly tableName _dontEnableDbTables
     then do
-      -- Handle Kafka-only table (all entries here already have forceDrainToDB=false)
-      EL.logInfo ("KAFKA_ONLY_TABLE" :: Text) $ tableName.getDBModel <> "|entries:" <> show totalEntries
-
-      -- All entries skip DB and go to Kafka only
+      -- All entries skip DB and go to Kafka only (memory-efficient)
       let allEntries = concat $ M.elems signatureGroups
-          kafkaIds = map (.entryId) allEntries
+          !kafkaIds = map (.entryId) allEntries -- Strict evaluation to avoid thunk buildup
       kafkaResults <- pushSuccessfulEntriesToKafka dbStreamKey allEntries kafkaIds
 
       pure [kafkaResults]
@@ -411,10 +388,8 @@ processTableSignatureGroups dbStreamKey (tableName, signatureGroups) = do
 --    The batching threshold prevents overhead of bulk operations
 --    for small groups where individual processing is more efficient.
 processSignatureGroup :: Text -> DBModel -> (ColumnSignature, [ParsedCreateEntry]) -> Flow ([EL.KVDBStreamEntryID], [EL.KVDBStreamEntryID])
-processSignatureGroup dbStreamKey tableName (signature, entries) = do
+processSignatureGroup dbStreamKey _tableName (signature, entries) = do
   let entryCount = length entries
-      columns = signature.columnNames
-  logSignatureInfo ("PROCESSING_SIGNATURE_GROUP" :: Text) tableName columns entryCount
   canBatch <- shouldBatchSignature entryCount
   if canBatch
     then executeBatchForSignature dbStreamKey signature entries
@@ -468,19 +443,15 @@ executeBatchForSignature _dbStreamKey signature entries = do
           case result of
             Left (QueryError errorMsg) -> do
               EL.logError ("BATCH_INSERT_FAILED" :: Text) $
-                sig.tableName.getDBModel <> "|entries:" <> show (length batchEntries) <> "|error:" <> T.take 100 errorMsg
-
+                sig.tableName.getDBModel <> "|entries:" <> show (length batchEntries) <> "|error:" <> errorMsg <> "|query:" <> bulkQuery
               void $ publishDBSyncMetric $ Event.QueryExecutionFailure "BatchCreate" sig.tableName.getDBModel
               EL.logInfo ("FALLING_BACK_TO_INDIVIDUAL" :: Text) ("Batch size: " <> show (length batchEntries))
               executeIndividuallyForSignature _dbStreamKey batchEntries
             Right _ -> do
               EL.logInfo ("BATCH_INSERT_SUCCESS" :: Text) $
-                sig.tableName.getDBModel <> "|entries:" <> show (length batchEntries) <> "|cols:" <> show (length sig.columnNames)
+                sig.tableName.getDBModel <> "|entries:" <> show (length batchEntries) <> "|time:" <> show executionTime
               void $ publishDBSyncMetric $ Event.DrainerQueryExecutes "BatchCreate" (fromIntegral $ length batchEntries)
               void $ publishDBSyncMetric $ Event.BatchExecutionTime sig.tableName.getDBModel executionTime
-
-              EL.logInfo ("BULK_INSERT_COMPLETE" :: Text) $
-                sig.tableName.getDBModel <> "|entries:" <> show (length batchEntries) <> "|execution_time:" <> show executionTime
 
               pure (ids, [])
 
@@ -488,18 +459,18 @@ executeBatchForSignature _dbStreamKey signature entries = do
 getGlobalBatchSize :: Flow Int
 getGlobalBatchSize = EL.runIO getInsertBatchSize
 
--- | Split entries into batches of specified size
+-- | Split entries into batches of specified size (safe against infinite loops)
 splitIntoBatches :: Int -> [a] -> [[a]]
 splitIntoBatches _ [] = []
-splitIntoBatches size items =
-  let (batch, rest) = splitAt size items
-   in batch : splitIntoBatches size rest
+splitIntoBatches size items
+  | size <= 0 = [items] -- Prevent infinite loop: treat as single batch
+  | otherwise =
+    let (batch, rest) = splitAt size items
+     in batch : splitIntoBatches size rest
 
 generateBulkInsertForSignature :: ColumnSignature -> [DBCreateObject] -> Maybe Text
 generateBulkInsertForSignature signature createObjects = do
   guard (not $ null createObjects)
-  let allObjectsMatch = all (\obj -> generateColumnSignature obj == signature) createObjects
-  guard allObjectsMatch
 
   let schema = SchemaName $ T.pack DBQ.currentSchemaName
       tableName = DBQ.quote' (DBQ.textToSnakeCaseText signature.tableName.getDBModel)
