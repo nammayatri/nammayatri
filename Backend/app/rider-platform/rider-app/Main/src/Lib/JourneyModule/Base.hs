@@ -642,6 +642,7 @@ addTaxiLeg journey journeyLeg originAddress destinationAddress = do
       TaxiLegRequestSearch $
         TaxiLegRequestSearchData
           { journeyLegData = journeyLeg,
+            multimodalSearchRequestId = Just journey.searchRequestId,
             ..
           }
 
@@ -662,6 +663,7 @@ addMetroLeg journey journeyLeg = do
             personId = journey.riderId,
             merchantId = journey.merchantId,
             recentLocationId = journey.recentLocationId,
+            multimodalSearchRequestId = Just journey.searchRequestId,
             city,
             journeyLeg
           }
@@ -683,6 +685,7 @@ addSubwayLeg journey journeyLeg = do
             personId = journey.riderId,
             merchantId = journey.merchantId,
             recentLocationId = journey.recentLocationId,
+            multimodalSearchRequestId = Just journey.searchRequestId,
             city,
             journeyLeg
           }
@@ -704,6 +707,7 @@ addBusLeg journey journeyLeg = do
             personId = journey.riderId,
             merchantId = journey.merchantId,
             recentLocationId = journey.recentLocationId,
+            multimodalSearchRequestId = Just journey.searchRequestId,
             city,
             journeyLeg
           }

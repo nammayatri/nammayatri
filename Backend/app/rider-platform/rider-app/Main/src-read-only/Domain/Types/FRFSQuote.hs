@@ -32,6 +32,7 @@ data FRFSQuote = FRFSQuote
     fromStationCode :: Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote,
     integratedBppConfigId :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
+    multimodalSearchRequestId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
     oldCacheDump :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

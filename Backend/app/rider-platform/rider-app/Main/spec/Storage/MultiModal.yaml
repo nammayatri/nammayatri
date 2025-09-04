@@ -48,6 +48,7 @@ Journey:
     relevanceScore: Maybe Double
     hasPreferredServiceTier: Maybe Bool
     hasPreferredTransitModes: Maybe Bool
+    hasStartedTrackingWithoutBooking: Maybe Bool
     fromLocation: Location
     toLocation: Maybe Location
     isPublicTransportIncluded: Maybe Bool
@@ -104,6 +105,10 @@ Journey:
     updatePaymentOrderShortId:
         kvFunction: updateOneWithKV
         params: [paymentOrderShortId, isPaymentSuccess]
+        where: id
+    updateHasStartedTrackingWithoutBooking:
+        kvFunction: updateOneWithKV
+        params: [hasStartedTrackingWithoutBooking]
         where: id
 
   domainInstance:
@@ -227,6 +232,7 @@ JourneyLeg:
     journeyId: Id Journey
     isDeleted: Maybe Bool
     sequenceNumber: Int
+    multimodalSearchRequestId: Maybe Text
 
   sqlType:
     serviceTypes: text[]

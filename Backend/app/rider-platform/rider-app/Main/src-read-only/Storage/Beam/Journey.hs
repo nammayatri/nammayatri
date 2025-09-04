@@ -23,6 +23,7 @@ data JourneyT f = JourneyT
     fromLocationId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     hasPreferredServiceTier :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     hasPreferredTransitModes :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    hasStartedTrackingWithoutBooking :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     id :: B.C f Kernel.Prelude.Text,
     isPaymentSuccess :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isPublicTransportIncluded :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

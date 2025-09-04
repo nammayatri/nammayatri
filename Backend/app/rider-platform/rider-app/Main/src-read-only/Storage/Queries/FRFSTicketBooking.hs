@@ -191,6 +191,7 @@ updateByPrimaryKey (Domain.Types.FRFSTicketBooking.FRFSTicketBooking {..}) = do
       Se.Set Beam.isBookingCancellable isBookingCancellable,
       Se.Set Beam.isFareChanged isFareChanged,
       Se.Set Beam.journeyOnInitDone journeyOnInitDone,
+      Se.Set Beam.multimodalSearchRequestId multimodalSearchRequestId,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.osBuildVersion osBuildVersion,
