@@ -215,7 +215,7 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req isForceReallocation = d
               then do
                 dghReqId <- fromMaybeM (InternalError "Status active but goHomeRequestId not found") dghInfo.driverGoHomeRequestId
                 driverGoHomeReq <- QDGR.findById dghReqId >>= fromMaybeM (InternalError "DriverGoHomeRequestId present but DriverGoHome Request Entry not found")
-                let cancelCnt = driverGoHomeReq.numCancellation + 1
+                let cancelCnt = if (isNothing booking.exotelDeclinedCallStatusReceivingTime) then driverGoHomeReq.numCancellation + 1 else driverGoHomeReq.numCancellation
                 return (Just cancelCnt, Just $ cancelCnt == goHomeConfig.cancellationCnt, Just driverGoHomeReq.id)
               else do
                 return (Nothing, Nothing, Nothing)

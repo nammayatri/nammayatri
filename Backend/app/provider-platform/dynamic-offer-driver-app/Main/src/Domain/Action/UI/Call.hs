@@ -36,6 +36,7 @@ import Data.Aeson (object, (.=))
 import Data.Char (toUpper)
 import qualified Data.HashMap.Strict as HMS
 import Data.Map as DM
+import qualified Data.Maybe as DM
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as DTL
 import Data.Text.Lazy.Builder (fromString, toLazyText)
@@ -46,6 +47,7 @@ import qualified Domain.Types.Booking as DB
 import Domain.Types.CallStatus as CallStatus
 import Domain.Types.CallStatus as DCallStatus
 import qualified Domain.Types.CallStatus as SCS
+import Domain.Types.EmptyDynamicParam
 import qualified Domain.Types.Exophone as DExophone
 import Domain.Types.External.LiveEKD as TLiveEKD
 import qualified Domain.Types.Merchant as DM
@@ -54,13 +56,14 @@ import qualified Domain.Types.MerchantServiceConfig as DMSC
 import Domain.Types.Person as Person
 import qualified Domain.Types.Ride as SRide
 import Environment (Flow)
-import EulerHS.Prelude (Alternative ((<|>)))
+import qualified EulerHS.Prelude as EulerHS.Prelude
 import Kernel.Beam.Functions
 import qualified Kernel.External.Call as Call
 import Kernel.External.Call.Exotel.Types
 import Kernel.External.Call.Interface.Exotel (exotelStatusToInterfaceStatus)
 import qualified Kernel.External.Call.Interface.Types as CallTypes
 import Kernel.External.Encryption as KE
+import qualified Kernel.External.Notification as Notification
 import Kernel.External.Types (SchedulerFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto hiding (runInReplica)
@@ -90,6 +93,7 @@ import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
 import Text.XML as XML
 import Tools.Call
 import Tools.Error
+import Tools.Notifications
 import TransactionLogs.Types
 import Web.JWT (Algorithm (HS256), ClaimsMap (..), JOSEHeader (..), JWTClaimsSet (..), encodeSigned, hmacSecret, numericDate, stringOrURI)
 
@@ -264,13 +268,14 @@ callStatusCallback req = do
   handleCallFeedback interfaceStatus callStatus (Just req.recordingUrl) req.callSid
   return Ack
 
-directCallStatusCallback :: (EsqDBFlow m r, EncFlow m r, CacheFlow m r, EsqDBReplicaFlow m r, HasFlowEnv m r '["vocalyticsCnfg" ::: TLiveEKD.VocalyticsCnfg], EventStreamFlow m r, CallBAPConstraints m r c) => Text -> ExotelCallStatus -> Maybe Text -> Maybe Int -> Maybe Int -> m CallCallbackRes
+directCallStatusCallback :: (EsqDBFlow m r, EncFlow m r, CacheFlow m r, EsqDBReplicaFlow m r, HasFlowEnv m r '["vocalyticsCnfg" ::: TLiveEKD.VocalyticsCnfg], EventStreamFlow m r, CallBAPConstraints m r c, HasFlowEnv m r '["maxNotificationShards" ::: Int]) => Text -> ExotelCallStatus -> Maybe Text -> Maybe Int -> Maybe Int -> m CallCallbackRes
 directCallStatusCallback callSid dialCallStatus recordingUrl_ callDuratioExotel callDurationFallback = do
-  let callDuration = callDuratioExotel <|> callDurationFallback
+  let callDuration = callDuratioExotel EulerHS.Prelude.<|> callDurationFallback
   callStatus <- QCallStatus.findByCallSid callSid >>= fromMaybeM CallStatusDoesNotExist
   let newCallStatus = exotelStatusToInterfaceStatus dialCallStatus
   let dCallStatus = Just $ handleCallStatus newCallStatus
   isSendFCMSuccess <- sendFCMToBAPOnFailedCallStatus newCallStatus (Right callStatus.entityId)
+  _ <- sendFCMToBPPOnFailedCallStatus newCallStatus (Right callStatus.entityId)
   let callAttemptStatus = if isSendFCMSuccess then Just DCallStatus.Resolved else dCallStatus
   _ <- case recordingUrl_ of
     Just recordUrl -> do
@@ -601,3 +606,53 @@ handleCallFeedback callStatus callStatusObj mbRecordingUrl callSid = do
           void $ LiveEKD.liveEKDProdLoop recordingUrl callSid "driver"
           QCallStatus.updateAiCallAnalyzed (Just True) callStatusObj.callId
     (_, _, _) -> return ()
+
+sendFCMToBPPOnFailedCallStatus ::
+  ( CallBAPConstraints m r c,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int]
+  ) =>
+  CallTypes.CallStatus ->
+  Either (Id Person.Person) (Maybe Text) ->
+  m ()
+sendFCMToBPPOnFailedCallStatus callStatus idInfo = do
+  if isOneOfFailingStatus callStatus || isOneOfIgnoredCallStatus callStatus
+    then do
+      (ride, booking) <- case idInfo of
+        Left driverId -> do
+          ride <- runInReplica $ QRide.getActiveByDriverId driverId >>= fromMaybeM (RideForDriverNotFound $ getId driverId)
+          booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+          return (ride, booking)
+        Right maybeEntityId -> do
+          rideId <- fromMaybeM (CallStatusFieldNotPresent "rideId") maybeEntityId
+          ride <- runInReplica $ QRide.findById (Id rideId) >>= fromMaybeM (RideNotFound rideId)
+          booking <- runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
+          return (ride, booking)
+      when (DM.isNothing booking.exotelDeclinedCallStatusReceivingTime) $ do
+        driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+        notification <- setNotificationData booking.merchantOperatingCityId ride.driverId driver.deviceToken
+        runWithServiceConfigForProviders booking.merchantOperatingCityId notification EulerHS.Prelude.id (clearDeviceToken ride.driverId)
+        QRB.updateExotelCallDeclinedTime booking.id
+    else return ()
+  where
+    isOneOfFailingStatus :: CallTypes.CallStatus -> Bool
+    isOneOfFailingStatus status = status `elem` [CallTypes.NOT_CONNECTED, CallTypes.FAILED]
+
+    isOneOfIgnoredCallStatus :: CallTypes.CallStatus -> Bool
+    isOneOfIgnoredCallStatus status = status `elem` [CallTypes.BUSY, CallTypes.NO_ANSWER, CallTypes.MISSED, CallTypes.CANCELED, CallTypes.QUEUED]
+
+    setNotificationData merchantOpCityId driverId deviceToken = do
+      let notificationData =
+            Notification.NotificationReq
+              { category = Notification.EXOTEL_CALL_UNREACHABLE,
+                subCategory = Nothing,
+                showNotification = Notification.DO_NOT_SHOW,
+                messagePriority = Just Notification.HIGH,
+                entity = Notification.Entity Notification.Product merchantOpCityId.getId (),
+                dynamicParams = EmptyDynamicParam,
+                body = "",
+                title = "",
+                auth = Notification.Auth driverId.getId ((.getFCMRecipientToken) <$> deviceToken) Nothing,
+                ttl = Nothing,
+                sound = Nothing
+              }
+      return notificationData
