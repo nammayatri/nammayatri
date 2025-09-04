@@ -180,8 +180,6 @@ executeBatchedCreate dbStreamKey createEntries = do
       -- forceDrainToDB=false -> can batch for performance (bulk operations)
       let (forceIndividual, batchable) = List.partition (\entry -> entry.createObject.forceDrainToDB) parsedEntries
 
-      logSplitInfo "PROCESSING_SPLIT" (length forceIndividual) (length batchable)
-
       -- Step 3: Process both streams in parallel for optimal performance
       individualResults <- processIndividualEntries dbStreamKey forceIndividual
       batchResults <- executeBatchableEntries dbStreamKey batchable
@@ -214,25 +212,16 @@ executeBatchedCreate dbStreamKey createEntries = do
 -- | Push successfully processed entries to Kafka with filtering.
 --    Filters to only entries that succeeded in database operations before
 --    attempting Kafka push to maintain consistency.
-pushSuccessfulEntriesToKafka :: Text -> [ParsedCreateEntry] -> [EL.KVDBStreamEntryID] -> Flow ([EL.KVDBStreamEntryID], [EL.KVDBStreamEntryID])
-pushSuccessfulEntriesToKafka streamName entries successfulIds = do
+pushEntriesToKafka :: Text -> [ParsedCreateEntry] -> Flow ([EL.KVDBStreamEntryID], [EL.KVDBStreamEntryID])
+pushEntriesToKafka streamName entries = do
   Env {..} <- ask
   isPushToKafka' <- EL.runIO isPushToKafka
-
-  -- Filter entries to only those that were successfully inserted
-  let successfulEntries = filter (\entry -> entry.entryId `elem` successfulIds) entries
-
-  if null successfulEntries
-    then pure (successfulIds, [])
+  if null entries
+    then pure ([], [])
     else do
-      EL.logInfo ("PUSHING_TO_KAFKA_AFTER_BATCH" :: Text) ("Count: " <> show (length successfulEntries))
-
-      results <- mapM (pushSingleEntryToKafka streamName isPushToKafka' _kafkaConnection _dontEnableForKafka) successfulEntries
+      EL.logInfo ("PUSHING_TO_KAFKA_AFTER_BATCH" :: Text) ("Count: " <> show (length entries))
+      results <- mapM (pushSingleEntryToKafka streamName isPushToKafka' _kafkaConnection _dontEnableForKafka) entries
       let (kafkaFailures, kafkaSuccesses) = partitionEithers results
-
-      EL.logInfo ("KAFKA_PUSH_RESULTS" :: Text) $
-        "total:" <> show (length successfulEntries) <> "|success:" <> show (length kafkaSuccesses) <> "|fail:" <> show (length kafkaFailures)
-
       pure (kafkaSuccesses, kafkaFailures)
 
 -- | Push individual entry to Kafka with same decision logic as Create.hs.
@@ -280,11 +269,8 @@ processIndividualEntries dbStreamKey entries = do
     then pure ([], [])
     else do
       let createEntries = map (\entry -> (entry.entryId, entry.originalBytes)) entries
-
       -- Use existing runCreate with executeInSequence
       (successes, failures) <- executeInSequence runCreate ([], []) dbStreamKey createEntries
-
-      void $ publishDBSyncMetric $ Event.DrainerQueryExecutes "IndividualCreate" (fromIntegral $ length successes)
       pure (successes, failures)
 
 -- | Execute batch-eligible entries with intelligent grouping and bulk operations.
@@ -306,8 +292,6 @@ executeBatchableEntries dbStreamKey entries = do
   if null entries
     then pure ([], [])
     else do
-      EL.logInfo ("PROCESSING_BATCHABLE_ENTRIES" :: Text) ("Count: " <> show (length entries))
-
       -- Step 1: Group by table name
       let groupedByTable = groupByTable entries
           tableCount = M.size groupedByTable
@@ -361,16 +345,12 @@ groupByColumnSignature = M.fromListWith (++) . map (\entry -> (entry.columnSigna
 processTableSignatureGroups :: Text -> (DBModel, Map ColumnSignature [ParsedCreateEntry]) -> Flow [([EL.KVDBStreamEntryID], [EL.KVDBStreamEntryID])]
 processTableSignatureGroups dbStreamKey (tableName, signatureGroups) = do
   Env {_dontEnableDbTables} <- ask
-  let (_signatureCount, _totalEntries) = calculateTableStats signatureGroups
-
   -- Check if this table should be Kafka-only (single check for entire table)
   if shouldPushToKafkaOnly tableName _dontEnableDbTables
     then do
       -- All entries skip DB and go to Kafka only (memory-efficient)
       let allEntries = concat $ M.elems signatureGroups
-          !kafkaIds = map (.entryId) allEntries -- Strict evaluation to avoid thunk buildup
-      kafkaResults <- pushSuccessfulEntriesToKafka dbStreamKey allEntries kafkaIds
-
+      kafkaResults <- pushEntriesToKafka dbStreamKey allEntries
       pure [kafkaResults]
     else -- Normal DB processing for this table
       mapM (processSignatureGroup dbStreamKey tableName) (M.toList signatureGroups)
