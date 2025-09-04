@@ -165,18 +165,15 @@ executeBatchedCreate dbStreamKey createEntries = do
       parsedCount = length parsedEntries
       failedParseCount = length parseErrors
 
-  -- Fail fast if any JSON parsing errors occur (indicates data corruption)
+  -- If any JSON parsing errors occur, fallback to sequential processing
   if failedParseCount > 0
     then do
-      EL.logError ("BATCH_CREATE_PARSE_FAILURES" :: Text) $
-        "total:" <> show totalEntries <> "|parsed:" <> show parsedCount <> "|failed:" <> show failedParseCount
+      EL.logError ("BATCH_CREATE_PARSE_FAILURES_FALLBACK" :: Text) $
+        "total:" <> show totalEntries <> "|parsed:" <> show parsedCount <> "|failed:" <> show failedParseCount <> "|falling_back_to_sequential"
 
-      -- Critical failure: stop drainer to prevent data loss
-      stopDrainer
-
-      -- Return all entries as failures to maintain consistency
-      let allEntryIds = map fst createEntries
-      pure ([], allEntryIds)
+      -- Fallback to sequential processing for all entries to handle parsing errors gracefully
+      EL.logInfo ("FALLING_BACK_TO_SEQUENTIAL" :: Text) "Using executeInSequence for all entries due to parse failures"
+      executeInSequence runCreate ([], []) dbStreamKey createEntries
     else do
       -- Step 2: Split by processing strategy based on forceDrainToDB flag
       -- forceDrainToDB=true -> must process individually (time-sensitive operations)
