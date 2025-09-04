@@ -25,6 +25,7 @@ data Journey = Journey
     fromLocation :: Domain.Types.Location.Location,
     hasPreferredServiceTier :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     hasPreferredTransitModes :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    hasStartedTrackingWithoutBooking :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     id :: Kernel.Types.Id.Id Domain.Types.Journey.Journey,
     isPaymentSuccess :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isPublicTransportIncluded :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,

@@ -323,6 +323,7 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
         Quote.updatedAt = now,
         Quote.integratedBppConfigId = search.integratedBppConfigId,
         Quote.childTicketQuantity = Nothing,
+        Quote.multimodalSearchRequestId = search.multimodalSearchRequestId,
         bppDelayedInterest = readMaybe . T.unpack =<< dOnSearch.bppDelayedInterest,
         oldCacheDump = Nothing,
         ..
@@ -433,7 +434,8 @@ updateQuotes (quotesFromCache, quotesFromOnSearch) = do
       Quote.eventDiscountAmount = quotesFromOnSearch.eventDiscountAmount,
       Quote.integratedBppConfigId = quotesFromOnSearch.integratedBppConfigId,
       Quote.discountedTickets = quotesFromOnSearch.discountedTickets,
-      Quote.childTicketQuantity = quotesFromOnSearch.childTicketQuantity
+      Quote.childTicketQuantity = quotesFromOnSearch.childTicketQuantity,
+      Quote.multimodalSearchRequestId = quotesFromOnSearch.multimodalSearchRequestId
     }
   where
     toJsonText :: FRFSCachedQuote -> Text

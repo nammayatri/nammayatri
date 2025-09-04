@@ -1149,17 +1149,18 @@ mkJourney riderId startTime endTime estimatedDistance estiamtedDuration journeyI
         hasPreferredTransitModes = Just hasUserPreferredTransitModes,
         paymentOrderShortId = Nothing,
         journeyExpiryTime = Nothing,
+        hasStartedTrackingWithoutBooking = Nothing,
         ..
       }
   where
     straightLineDistance leg = highPrecMetersToMeters $ distanceBetweenInMeters (LatLong leg.startLocation.latLng.latitude leg.startLocation.latLng.longitude) (LatLong leg.endLocation.latLng.latitude leg.endLocation.latLng.longitude)
 
 mkJourneyLegGroupCode :: Id DSR.SearchRequest -> DTrip.MultimodalTravelMode -> Maybe EMInterface.MultiModalStopDetails -> Maybe EMInterface.MultiModalStopDetails -> Maybe Text
-mkJourneyLegGroupCode journeySearchRequestId mode mbFromStopDetails mbToStopDetails =
+mkJourneyLegGroupCode multimodalSearchRequestId mode mbFromStopDetails mbToStopDetails =
   case mode of
     DTrip.Walk -> Nothing
     DTrip.Taxi -> Nothing
-    _ -> Just $ journeySearchRequestId.getId <> "-" <> show mode <> "-" <> fromMaybe "" (mbFromStopDetails >>= (.stopCode)) <> "-" <> fromMaybe "" (mbToStopDetails >>= (.stopCode))
+    _ -> Just $ multimodalSearchRequestId.getId <> "-" <> show mode <> "-" <> fromMaybe "" (mbFromStopDetails >>= (.stopCode)) <> "-" <> fromMaybe "" (mbToStopDetails >>= (.stopCode))
 
 mkJourneyLeg ::
   ( CacheFlow m r,
@@ -1181,7 +1182,7 @@ mkJourneyLeg ::
   Maybe GetFareResponse ->
   Maybe Gates ->
   m DJL.JourneyLeg
-mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation merchantId merchantOpCityId journeyId journeySearchRequestId maximumWalkDistance fare mbGates = do
+mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation merchantId merchantOpCityId journeyId multimodalSearchRequestId maximumWalkDistance fare mbGates = do
   now <- getCurrentTime
   journeyLegId <- generateGUID
   routeDetails <- mapM (mkRouteDetail journeyLegId) leg.routeDetails
@@ -1194,7 +1195,7 @@ mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation m
             let toStopDetails' = mkStopDetails (gates >>= (.straightLineEntrance) >>= (.streetName)) (mbNext >>= (.fromStopDetails)) (journeyEndLocation <&> (.address))
             (fromStopDetails', toStopDetails')
           _ -> (leg.fromStopDetails, leg.toStopDetails)
-  let groupCode = mkJourneyLegGroupCode journeySearchRequestId travelMode fromStopDetails toStopDetails
+  let groupCode = mkJourneyLegGroupCode multimodalSearchRequestId travelMode fromStopDetails toStopDetails
   return $
     DJL.JourneyLeg
       { agency = leg.agency,
@@ -1229,7 +1230,8 @@ mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation m
         straightLineExit = chooseGate (gates >>= (.straightLineExit)) (leg.exit),
         journeyId = journeyId,
         isDeleted = Just False,
-        sequenceNumber = idx
+        sequenceNumber = idx,
+        multimodalSearchRequestId = Just multimodalSearchRequestId.getId
       }
   where
     straightLineDistance = highPrecMetersToMeters $ distanceBetweenInMeters (LatLong leg.startLocation.latLng.latitude leg.startLocation.latLng.longitude) (LatLong leg.endLocation.latLng.latitude leg.endLocation.latLng.longitude)

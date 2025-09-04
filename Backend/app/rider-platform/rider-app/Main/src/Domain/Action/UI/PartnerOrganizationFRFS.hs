@@ -507,6 +507,7 @@ getFareV2 merchantOperatingCity partnerOrg fromStation toStation partnerOrgTrans
             integratedBppConfigId = integratedBPPConfig.id,
             recentLocationId = Nothing,
             validTill = Just validTill,
+            multimodalSearchRequestId = Nothing,
             ..
           }
 
@@ -620,7 +621,8 @@ mkQuoteFromCache fromStation toStation frfsConfig partnerOrg partnerOrgTransacti
                 DFRFSQuote.integratedBppConfigId = fromStation'.integratedBppConfigId,
                 DFRFSQuote.fareDetails = Nothing,
                 DFRFSQuote.childTicketQuantity = Nothing,
-                DFRFSQuote.oldCacheDump = Nothing
+                DFRFSQuote.oldCacheDump = Nothing,
+                DFRFSQuote.multimodalSearchRequestId = Nothing
               }
       return $ Just quote
 

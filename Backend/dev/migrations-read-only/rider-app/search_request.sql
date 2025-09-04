@@ -445,3 +445,13 @@ ALTER TABLE atlas_app.search_request ALTER COLUMN journey_leg_id TYPE text;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.search_request ADD COLUMN multimodal_search_request_id text ;
+
+
+------- SQL updates -------
+

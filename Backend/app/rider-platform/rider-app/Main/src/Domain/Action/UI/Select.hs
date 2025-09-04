@@ -445,7 +445,8 @@ mkJourneyForSearch searchRequest estimate personId = do
             fromLocation = searchRequest.fromLocation,
             toLocation = searchRequest.toLocation,
             paymentOrderShortId = Nothing,
-            journeyExpiryTime = Nothing
+            journeyExpiryTime = Nothing,
+            hasStartedTrackingWithoutBooking = Nothing
           }
 
   let journeyLeg =
@@ -525,7 +526,8 @@ mkJourneyForSearch searchRequest estimate personId = do
             straightLineExit = Nothing,
             journeyId = journeyGuid,
             isDeleted = Just False,
-            sequenceNumber = 0
+            sequenceNumber = 0,
+            multimodalSearchRequestId = Nothing
           }
   QJourney.create journey
   QJourneyLeg.create journeyLeg

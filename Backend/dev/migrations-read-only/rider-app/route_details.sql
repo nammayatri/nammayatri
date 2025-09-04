@@ -229,3 +229,18 @@ ALTER TABLE atlas_app.route_details ADD COLUMN route_group_id text ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

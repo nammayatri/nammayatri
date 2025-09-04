@@ -41,6 +41,7 @@ data JourneyLegT f = JourneyLegT
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
     mode :: B.C f Domain.Types.Common.MultimodalTravelMode,
+    multimodalSearchRequestId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     osmEntrance :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     osmExit :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     sequenceNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

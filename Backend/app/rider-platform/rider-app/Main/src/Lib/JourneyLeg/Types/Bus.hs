@@ -21,6 +21,7 @@ data BusLegRequestSearchData = BusLegRequestSearchData
     merchantId :: Id DMerchant.Merchant,
     city :: Context.City,
     journeyLeg :: DJourneyLeg.JourneyLeg,
+    multimodalSearchRequestId :: Maybe Text,
     recentLocationId :: Maybe (Id DRecentLocation.RecentLocation)
   }
 

@@ -58,6 +58,7 @@ FRFSSearch:
     integratedBppConfigId: Id IntegratedBPPConfig
     recentLocationId: Maybe (Id RecentLocation)
     validTill: Maybe UTCTime
+    multimodalSearchRequestId: Maybe Text
 
   beamFields:
     fromStationCode:
@@ -127,6 +128,7 @@ FRFSQuote:
     bppDelayedInterest: Maybe Int
     oldCacheDump: Maybe Text
     childTicketQuantity: Maybe Int
+    multimodalSearchRequestId: Maybe Text
   beamFields:
     fromStationCode:
       fromStationId: Text
@@ -257,6 +259,7 @@ FRFSTicketBooking:
     bookingAuthCode: Maybe Text
     osType: Maybe Text
     osBuildVersion: Maybe Text
+    multimodalSearchRequestId: Maybe Text
 
   default:
     customerCancelled: "false"

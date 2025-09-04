@@ -241,6 +241,7 @@ Booking:
     insuredAmount: Maybe Text
     driverInsuredAmount: Maybe Text
     isMultimodalSearch: Maybe Bool
+    multimodalSearchRequestId: Maybe Text
 
   beamFields:
     estimatedDistance:

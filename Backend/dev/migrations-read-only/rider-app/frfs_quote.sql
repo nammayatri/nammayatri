@@ -49,3 +49,8 @@ ALTER TABLE atlas_app.frfs_quote ADD PRIMARY KEY ( id);
 
 ALTER TABLE atlas_app.frfs_quote ALTER COLUMN to_station_id TYPE text;
 ALTER TABLE atlas_app.frfs_quote ALTER COLUMN from_station_id TYPE text;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_quote ADD COLUMN journey_search_request_id text ;
