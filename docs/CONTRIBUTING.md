@@ -1,5 +1,5 @@
 # Contributing to Namma Yatri
-
+##
 ## Code of Conduct
 
 The nammayatri project adheres to the [Code of Conduct][coc].
