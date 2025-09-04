@@ -1,3 +1,5 @@
+{-# LANGUAGE BangPatterns #-}
+
 -- |
 -- Module      : DBSync.BatchCreate
 -- Description : Optimized batch processing for database operations in the drainer
@@ -208,8 +210,13 @@ executeBatchedCreate dbStreamKey createEntries = do
 
       let totalSuccesses = successes1 ++ successes2
           totalFailures = failures1 ++ failures2
+          -- Pre-calculate lengths to avoid multiple O(n) traversals
+          successCount1 = length successes1
+          successCount2 = length successes2
+          totalSuccessCount = successCount1 + successCount2 -- Avoid length on concatenated list
+          totalFailureCount = length failures1 + length failures2
 
-      logBatchResults "BATCHED_CREATE_COMPLETE" (length totalSuccesses) (length totalFailures) (length successes1) (length successes2)
+      logBatchResults "BATCHED_CREATE_COMPLETE" totalSuccessCount totalFailureCount successCount1 successCount2
 
       pure (totalSuccesses, totalFailures)
 
@@ -242,7 +249,7 @@ pushSuccessfulEntriesToKafka streamName entries successfulIds = do
       EL.logInfo ("PUSHING_TO_KAFKA_AFTER_BATCH" :: Text) ("Count: " <> show (length successfulEntries))
 
       results <- mapM (pushSingleEntryToKafka streamName isPushToKafka' _kafkaConnection _dontEnableForKafka) successfulEntries
-      let (kafkaSuccesses, kafkaFailures) = partitionEithers results
+      let (kafkaFailures, kafkaSuccesses) = partitionEithers results
 
       EL.logInfo ("KAFKA_PUSH_RESULTS" :: Text) $
         "total:" <> show (length successfulEntries) <> "|success:" <> show (length kafkaSuccesses) <> "|fail:" <> show (length kafkaFailures)
@@ -333,9 +340,11 @@ executeBatchableEntries dbStreamKey entries = do
       -- Step 3: Process each signature group as a batch (shouldPushToKafkaOnly check is done per table)
       results <- mapM (processTableSignatureGroups dbStreamKey) (M.toList groupedBySignature)
       let flatResults = concat results
-          (successes, failures) = unzip flatResults
+          (successLists, failureLists) = unzip flatResults
+          allSuccesses = concat successLists
+          allFailures = concat failureLists
 
-      pure (concat successes, concat failures)
+      pure (allSuccesses, allFailures)
 
 -- | Group entries by database table for table-level optimizations.
 --
@@ -430,9 +439,9 @@ executeIndividuallyForSignature dbStreamKey entries = do
 -- | Execute batch for a specific signature
 executeBatchForSignature :: Text -> ColumnSignature -> [ParsedCreateEntry] -> Flow ([EL.KVDBStreamEntryID], [EL.KVDBStreamEntryID])
 executeBatchForSignature _dbStreamKey signature entries = do
-  let createObjects = map (.createObject) entries
+  let batchSize = length entries
       entryIds = map (.entryId) entries
-      batchSize = length entries
+      createObjects = map (.createObject) entries
 
   maxBatchSize <- getGlobalBatchSize
   if batchSize <= maxBatchSize
