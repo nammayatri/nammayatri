@@ -39,6 +39,7 @@ runCreate createDataEntry streamName = do
             Left err -> do
               EL.logError ("KAFKA CREATE FAILED" :: Text) ("Kafka create failed for drainer : " <> err <> " for table :: " <> show tableName)
               void $ publishDBSyncMetric $ Event.KafkaPushFailure "Create" tableName.getDBModel
+              _ <- runCreateQuery createDataEntry createDBModel --- it should push that entry to db what if isForcePushEnabled is true then it will get missed
               return $ Left entryId
             Right _ -> do
               EL.logInfo ("KAFKA CREATE SUCCESSFUL" :: Text) (" Create successful for object :: " <> show createDBModel.contents)

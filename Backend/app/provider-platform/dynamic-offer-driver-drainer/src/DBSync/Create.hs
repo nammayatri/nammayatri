@@ -71,6 +71,7 @@ runCreateQuery createDataEntry dbCreateObject = do
               return $ Left entryId
             Right _ -> do
               EL.logDebug ("QUERY INSERT SUCCESSFUL" :: Text) (" Insert successful for query :: " <> query <> " with streamData :: " <> TE.decodeUtf8 byteString)
+              _ <- runCreateQuery createDataEntry dbCreateObject --- it should push that entry to db what if isForcePushEnabled is true then it will get missed
               return $ Right entryId
         Nothing -> do
           EL.logError ("No query generated for streamData: " :: Text) (TE.decodeUtf8 byteString)

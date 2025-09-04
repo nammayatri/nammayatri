@@ -39,6 +39,7 @@ runUpdate updateDataEntries streamName = do
             Left err -> do
               EL.logError ("KAFKA UPDATE FAILED" :: Text) ("Kafka update failed for drainer : " <> err <> " for table :: " <> show tableName)
               void $ publishDBSyncMetric $ Event.KafkaPushFailure "Update" tableName.getDBModel
+              _ <- runUpdateQuery updateDataEntries updateDBModel --- it should push that entry to db what if isForcePushEnabled is true then it will get missed
               return $ Left entryId
             Right _ -> do
               EL.logInfo ("KAFKA UPDATE SUCCESSFUL" :: Text) (" Update successful for object :: " <> show updateDBModel.contents)
