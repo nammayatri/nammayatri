@@ -36,6 +36,7 @@ import qualified Data.Text as T
 import Data.Time (UTCTime (UTCTime, utctDay), addDays)
 import qualified Domain.Types.Coins.CoinHistory as DTCC
 import qualified Domain.Types.DriverStats as DDS
+import qualified Domain.Types.FleetConfig as DFC
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
@@ -63,6 +64,8 @@ import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.Coins.CoinHistory as CHistory
 import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.DriverStats as QDriverStats
+import qualified Storage.Queries.FleetConfig as QFC
+import qualified Storage.Queries.FleetDriverAssociationExtra as QFDAE
 import qualified Storage.Queries.Person as Person
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.Translations as MTQuery
@@ -111,15 +114,33 @@ driverCoinsEvent driverId merchantId merchantOpCityId eventType entityId mbVehVa
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   coinConfiguration <- CDCQ.fetchFunctionsOnEventbasis eventType merchantId merchantOpCityId vehCategory
   mbDriverStats <- B.runInReplica $ QDriverStats.findByPrimaryKey driverId
-  let blacklistedEvents = maybe [] (fromMaybe []) (DDS.blacklistCoinEvents <$> mbDriverStats)
-      filteredConfig = filter (\cc -> cc.eventFunction `notElem` blacklistedEvents) coinConfiguration
+  logDebug $ "Driver stats present: " <> show (isJust mbDriverStats)
+  -- fetch driver fleet here
+  mbFleetDriverAssociation <- QFDAE.findByDriverId driverId True
+  logDebug $ "Fleet association present: " <> show (isJust mbFleetDriverAssociation)
+  -- derive fleetOwnerId and fetch fleet config if present
+  let mbFleetOwnerId = (\fda -> Id fda.fleetOwnerId) <$> mbFleetDriverAssociation
+  logDebug $ "Fleet owner id: " <> show (getId <$> mbFleetOwnerId)
+  mbFleetConfig <- traverse QFC.findByPrimaryKey mbFleetOwnerId
+  logDebug $ "Fleet config present: " <> show (maybe False isJust mbFleetConfig)
+  -- extract blacklists
+  let blacklistedEventsByFleet = case mbFleetConfig of
+        Just (Just fc) -> fromMaybe [] (DFC.blacklistCoinEvents fc)
+        _ -> []
+      blacklistedEventsByDriver = fromMaybe [] (DDS.blacklistCoinEvents =<< mbDriverStats)
+      combinedBlacklist = blacklistedEventsByDriver <> blacklistedEventsByFleet
+      filteredConfigAll = filter (\cc -> cc.eventFunction `notElem` combinedBlacklist) coinConfiguration
+  logDebug $ "Coin config count: total=" <> show (length coinConfiguration) <> ", filtered=" <> show (length filteredConfigAll)
 
-  logInfo $ "Coin events for driver " <> driverId.getId <> " - Blacklist: " <> show blacklistedEvents <> ", Total: " <> show (map (.eventFunction) coinConfiguration) <> ", Filtered: " <> show (map (.eventFunction) filteredConfig)
+  logInfo $ "Coin events for driver " <> driverId.getId <> " - DriverBlacklist: " <> show blacklistedEventsByDriver <> ", FleetBlacklist: " <> show blacklistedEventsByFleet <> ", Total: " <> show (map (.eventFunction) coinConfiguration) <> ", Filtered: " <> show (map (.eventFunction) filteredConfigAll)
 
-  if null filteredConfig
-    then pure () -- Skip if all blacklisted
+  if null filteredConfigAll
+    then do
+      logInfo "All coin events blacklisted; skipping award"
+      pure ()
     else do
-      finalCoinsValue <- sum <$> forM filteredConfig (\cc -> calculateCoins eventType driverId merchantId merchantOpCityId cc.eventFunction cc.expirationAt cc.coins transporterConfig entityId vehCategory)
+      finalCoinsValue <- sum <$> forM filteredConfigAll (\cc -> calculateCoins eventType driverId merchantId merchantOpCityId cc.eventFunction cc.expirationAt cc.coins transporterConfig entityId vehCategory)
+      logInfo $ "Awarding coins: " <> show finalCoinsValue
       updateDriverCoins driverId finalCoinsValue transporterConfig.timeDiffFromUtc
 
 calculateCoins :: EventFlow m r => DCT.DriverCoinsEventType -> Id DP.Person -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> DCT.DriverCoinsFunctionType -> Maybe Int -> Int -> TransporterConfig -> Maybe Text -> DTV.VehicleCategory -> m Int
