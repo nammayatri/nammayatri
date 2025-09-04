@@ -1237,16 +1237,8 @@ postMultimodalOrderChangeStops _ journeyId legOrder req = do
           (mbOsmEntrance, mbStraightLineEntrance) <- JMTypes.getNearestGateFromLeg prevLegStartPoint merchantId merchantOpCityId (fromMaybe [] sourceStation.gates)
           let bestEntrance = mbOsmEntrance <|> mbStraightLineEntrance
               prevLegEndLocation = maybe prevLeg.endLocation (\e -> LatLngV2 (fromMaybe prevLeg.endLocation.latitude e.lat) (fromMaybe prevLeg.endLocation.longitude e.lon)) bestEntrance
-          (mbNewDistance, _) <- JMU.getDistanceAndDuration merchantId merchantOpCityId prevLegStartPoint (LatLong prevLegEndLocation.latitude prevLegEndLocation.longitude)
-          let (mode, newDistance, newDuration) =
-                case mbNewDistance of
-                  Just newD
-                    | newD < riderConfig.maximumWalkDistance ->
-                      ( DTrip.Walk,
-                        Just (convertMetersToDistance Meter newD),
-                        Just (calculateWalkDuration (convertMetersToDistance Meter newD))
-                      )
-                  _ -> (prevLeg.mode, prevLeg.distance, prevLeg.duration)
+          (mbNewDistance, mbNewDuration) <- JMU.getDistanceAndDuration merchantId merchantOpCityId prevLegStartPoint (LatLong prevLegEndLocation.latitude prevLegEndLocation.longitude)
+          let (mode, newDistance, newDuration) = updateLegDistanceAndMode prevLeg mbNewDistance mbNewDuration
               updatedPrevLeg =
                 prevLeg
                   { DJourneyLeg.endLocation = prevLegEndLocation,
@@ -1268,16 +1260,8 @@ postMultimodalOrderChangeStops _ journeyId legOrder req = do
           (mbOsmExit, mbStraightLineExit) <- JMTypes.getNearestGateFromLeg nextLegEndPoint merchantId merchantOpCityId (fromMaybe [] destStation.gates)
           let bestExit = mbOsmExit <|> mbStraightLineExit
           let nextLegStartLocation = maybe nextLeg.startLocation (\e -> LatLngV2 (fromMaybe nextLeg.startLocation.latitude e.lat) (fromMaybe nextLeg.startLocation.longitude e.lon)) bestExit
-          (mbNewDistance, _) <- JMU.getDistanceAndDuration merchantId merchantOpCityId (LatLong nextLegStartLocation.latitude nextLegStartLocation.longitude) nextLegEndPoint
-          let (mode, newDistance, newDuration) =
-                case mbNewDistance of
-                  Just newD
-                    | newD < riderConfig.maximumWalkDistance ->
-                      ( DTrip.Walk,
-                        Just (convertMetersToDistance Meter newD),
-                        Just (calculateWalkDuration (convertMetersToDistance Meter newD))
-                      )
-                  _ -> (nextLeg.mode, nextLeg.distance, nextLeg.duration)
+          (mbNewDistance, mbNewDuration) <- JMU.getDistanceAndDuration merchantId merchantOpCityId (LatLong nextLegStartLocation.latitude nextLegStartLocation.longitude) nextLegEndPoint
+          let (mode, newDistance, newDuration) = updateLegDistanceAndMode nextLeg mbNewDistance mbNewDuration
           let updatedNextLeg =
                 nextLeg
                   { DJourneyLeg.startLocation = nextLegStartLocation,
@@ -1301,6 +1285,31 @@ postMultimodalOrderChangeStops _ journeyId legOrder req = do
               osmEntrance = (mbEntranceGates >>= fst) <|> (oldJourneyLeg.osmEntrance)
               osmExit = (mbExitGates >>= fst) <|> (oldJourneyLeg.osmExit)
            in return $ Just JMTypes.Gates {..}
+      where
+        updateLegDistanceAndMode ::
+          DJourneyLeg.JourneyLeg ->
+          Maybe Meters ->
+          Maybe Seconds ->
+          (DTrip.MultimodalTravelMode, Maybe Distance, Maybe Seconds)
+        updateLegDistanceAndMode leg mbNewDistance mbNewDuration =
+          case mbNewDistance of
+            Just newD
+              | newD < riderConfig.maximumWalkDistance ->
+                ( DTrip.Walk,
+                  Just (convertMetersToDistance Meter newD),
+                  Just (calculateWalkDuration (convertMetersToDistance Meter newD))
+                )
+              | leg.mode == DTrip.Walk && newD >= riderConfig.maximumWalkDistance ->
+                ( DTrip.Taxi,
+                  Just (convertMetersToDistance Meter newD),
+                  mbNewDuration
+                )
+              | otherwise ->
+                ( leg.mode,
+                  Just (convertMetersToDistance Meter newD),
+                  mbNewDuration
+                )
+            _ -> (leg.mode, leg.distance, leg.duration)
 
 postMultimodalRouteAvailability ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
