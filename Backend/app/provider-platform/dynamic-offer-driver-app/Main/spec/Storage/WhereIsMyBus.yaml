@@ -9,6 +9,7 @@ imports:
   EmptyDynamicParam: Domain.Types.EmptyDynamicParam
   AlertRequest: Domain.Types.AlertRequest
   FleetBadge: Domain.Types.FleetBadge
+  DriverCoinsFunctionType: Lib.DriverCoins.Types
 
 VehicleRouteMapping:
   tableName: vehicle_route_mapping
@@ -179,6 +180,7 @@ FleetConfig:
     allowAutomaticRoundTripAssignment: Bool
     directlyStartFirstTripAssignment: Bool
     unlinkDriverAndVehicleOnTripTermination: Bool
+    blacklistCoinEvents: Maybe [DriverCoinsFunctionType]
   beamType:
     endRideDistanceThreshold: Maybe HighPrecMeters
     directlyStartFirstTripAssignment: Maybe Bool
@@ -193,9 +195,11 @@ FleetConfig:
     unlinkDriverAndVehicleOnTripTermination: fromMaybe True unlinkDriverAndVehicleOnTripTermination|E
   sqlType:
     endRideDistanceThreshold: double precision
+    blacklistCoinEvents: text[]
   default:
     endRideDistanceThreshold: "100"
     directlyStartFirstTripAssignment: "true"
     unlinkDriverAndVehicleOnTripTermination: "true"
+    blacklistCoinEvents: "'{}'"
   constraints:
     fleetOwnerId: PrimaryKey
