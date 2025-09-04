@@ -26,7 +26,6 @@ module Domain.Action.Beckn.Cancel
 where
 
 import Data.Maybe (listToMaybe)
-import Domain.Action.UI.Ride.CancelRide (driverDistanceToPickup)
 import qualified Domain.Action.UI.Ride.CancelRide.Internal as CInternal
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
@@ -198,7 +197,7 @@ getDistanceToPickup booking mbRide = do
           Right locations -> return $ listToMaybe locations
       case mbLocation of
         Just location -> do
-          distance <- driverDistanceToPickup booking (getCoordinates location) (getCoordinates booking.fromLocation)
+          distance <- CInternal.driverDistanceToPickup booking (getCoordinates location) (getCoordinates booking.fromLocation)
           return (Just distance, Just location)
         Nothing -> return (Nothing, Nothing)
     _ -> return (Nothing, Nothing)
@@ -238,7 +237,7 @@ customerCancellationChargesCalculation booking mbRide currDistanceToPickup = do
       if ride.isAdvanceBooking
         then do
           forM ride.previousRideTripEndPos $ \location -> do
-            driverDistanceToPickup booking (getCoordinates location) (getCoordinates booking.fromLocation)
+            CInternal.driverDistanceToPickup booking (getCoordinates location) (getCoordinates booking.fromLocation)
         else return booking.distanceToPickup
     getTimeSpentByDriver ride = do
       now <- getCurrentTime
