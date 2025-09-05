@@ -20,6 +20,7 @@ import Kernel.External.Encryption (DbHash)
 import qualified Kernel.External.Payment.Interface as Payment
 import Kernel.Prelude
 import Kernel.Types.Common hiding (Price (..), PriceAPIEntity (..), id)
+import Lib.Payment.Domain.Types.Common (EntityName)
 import qualified Lib.Payment.Domain.Types.PaymentOrder ()
 
 data PaymentOrderT f = PaymentOrderT
@@ -28,6 +29,7 @@ data PaymentOrderT f = PaymentOrderT
     paymentServiceOrderId :: B.C f Text,
     personId :: B.C f Text,
     merchantId :: B.C f Text,
+    entityName :: B.C f (Maybe EntityName),
     paymentMerchantId :: B.C f (Maybe Text),
     requestId :: B.C f (Maybe Text),
     service :: B.C f (Maybe Text),

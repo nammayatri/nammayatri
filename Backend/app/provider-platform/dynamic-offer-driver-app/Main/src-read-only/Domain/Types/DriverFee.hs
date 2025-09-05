@@ -101,6 +101,7 @@ data FeeType
   | PAYOUT_REGISTRATION
   | ONE_TIME_SECURITY_DEPOSIT
   | PREPAID_RECHARGE
+  | WALLET_TOPUP
   deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord, Enum)
 
 data PlatformFee = PlatformFee {cgst :: Kernel.Types.Common.HighPrecMoney, currency :: Kernel.Types.Common.Currency, fee :: Kernel.Types.Common.HighPrecMoney, sgst :: Kernel.Types.Common.HighPrecMoney}

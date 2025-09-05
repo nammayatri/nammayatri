@@ -83,8 +83,9 @@ createOrder ::
   [VF.VendorFee] ->
   Maybe DeepLinkData ->
   Bool ->
+  Maybe DPayment.EntityName ->
   m (CreateOrderResp, Id DOrder.PaymentOrder)
-createOrder (driverId, merchantId, opCity) serviceName (driverFees, driverFeesToAddOnExpiry) mbMandateOrder invoicePaymentMode existingInvoice vendorFees mbDeepLinkData splitEnabled = do
+createOrder (driverId, merchantId, opCity) serviceName (driverFees, driverFeesToAddOnExpiry) mbMandateOrder invoicePaymentMode existingInvoice vendorFees mbDeepLinkData splitEnabled mbEntityName = do
   mapM_ (\driverFee -> when (driverFee.status `elem` [CLEARED, EXEMPTED, COLLECTED_CASH]) $ throwError (DriverFeeAlreadySettled driverFee.id.getId)) driverFees
   mapM_ (\driverFee -> when (driverFee.status `elem` [INACTIVE, ONGOING]) $ throwError (DriverFeeNotInUse driverFee.id.getId)) driverFees
   driver <- B.runInReplica $ QP.findById driverId >>= fromMaybeM (PersonNotFound $ getId driverId)
@@ -130,12 +131,12 @@ createOrder (driverId, merchantId, opCity) serviceName (driverFees, driverFeesTo
       commonPersonId = cast @DP.Person @DPayment.Person driver.id
   paymentServiceName <- TPayment.decidePaymentService serviceName driver.clientSdkVersion driver.merchantOperatingCityId
   (createOrderCall, pseudoClientId) <- TPayment.createOrder merchantId opCity paymentServiceName (Just driver.id.getId) -- api call
-  mCreateOrderRes <- DPayment.createOrderService commonMerchantId (Just $ cast opCity) commonPersonId createOrderReq createOrderCall
+  mCreateOrderRes <- DPayment.createOrderService commonMerchantId (Just $ cast opCity) commonPersonId mbEntityName createOrderReq createOrderCall
   case mCreateOrderRes of
     Just createOrderRes -> return (createOrderRes{sdk_payload = createOrderRes.sdk_payload{payload = createOrderRes.sdk_payload.payload{clientId = pseudoClientId <|> createOrderRes.sdk_payload.payload.clientId}}}, cast invoiceId)
     Nothing -> do
       QIN.updateInvoiceStatusByInvoiceId INV.EXPIRED invoiceId
-      createOrder (driverId, merchantId, opCity) serviceName (driverFees <> driverFeesToAddOnExpiry, []) mbMandateOrder invoicePaymentMode Nothing vendorFees mbDeepLinkData splitEnabled -- call same function with no existing order
+      createOrder (driverId, merchantId, opCity) serviceName (driverFees <> driverFeesToAddOnExpiry, []) mbMandateOrder invoicePaymentMode Nothing vendorFees mbDeepLinkData splitEnabled mbEntityName -- call same function with no existing order
 
 mkSplitSettlementDetails :: (MonadFlow m) => [VF.VendorFee] -> HighPrecMoney -> m (Maybe SplitSettlementDetails)
 mkSplitSettlementDetails vendorFees totalAmount = do

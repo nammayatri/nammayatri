@@ -526,6 +526,27 @@ findLatestByFeeTypeAndStatusWithServiceName feeType status driverId serviceName 
     Nothing
     <&> listToMaybe
 
+findLatestByFeeTypeAndStatusWithTotalEarnings ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Domain.FeeType ->
+  [Domain.DriverFeeStatus] ->
+  Id Person ->
+  HighPrecMoney ->
+  m (Maybe DriverFee)
+findLatestByFeeTypeAndStatusWithTotalEarnings feeType status driverId totalEarnings = do
+  findAllWithOptionsKV
+    [ Se.And
+        [ Se.Is BeamDF.feeType $ Se.Eq feeType,
+          Se.Is BeamDF.status $ Se.In status,
+          Se.Is BeamDF.totalEarningsAmount $ Se.Eq (Just totalEarnings),
+          Se.Is BeamDF.driverId $ Se.Eq driverId.getId
+        ]
+    ]
+    (Se.Desc BeamDF.updatedAt)
+    (Just 1)
+    Nothing
+    <&> listToMaybe
+
 -- TODO : Merge relevant queries
 findAllByTimeMerchantAndStatusWithServiceName ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>

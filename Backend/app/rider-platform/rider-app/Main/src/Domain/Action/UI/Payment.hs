@@ -107,7 +107,7 @@ createOrder (personId, merchantId) rideId = do
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
       commonPersonId = cast @DP.Person @DPayment.Person personId
       createOrderCall = Payment.createOrder merchantId person.merchantOperatingCityId Nothing Payment.Normal (Just person.id.getId) person.clientSdkVersion -- api call
-  DPayment.createOrderService commonMerchantId (Just $ cast person.merchantOperatingCityId) commonPersonId createOrderReq createOrderCall >>= fromMaybeM (InternalError "Order expired please try again")
+  DPayment.createOrderService commonMerchantId (Just $ cast person.merchantOperatingCityId) commonPersonId Nothing createOrderReq createOrderCall >>= fromMaybeM (InternalError "Order expired please try again")
 
 -- order status -----------------------------------------------------
 
