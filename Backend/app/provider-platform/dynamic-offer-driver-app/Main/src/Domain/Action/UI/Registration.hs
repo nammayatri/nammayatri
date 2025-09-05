@@ -604,5 +604,5 @@ logout (personId, _, merchantOpCityId) = do
   QR.deleteByPersonId personId.getId
   when (uperson.role == SP.DRIVER) $ do
     let newFlowStatus = DDriverMode.getDriverFlowStatus (Just DriverInfo.OFFLINE) False
-    DDriverMode.updateDriverModeAndFlowStatus (cast uperson.id) transporterConfig.allowCacheDriverFlowStatus False (Just DriverInfo.OFFLINE) newFlowStatus Nothing
+    DDriverMode.updateDriverModeAndFlowStatus uperson.id transporterConfig False (Just DriverInfo.OFFLINE) newFlowStatus Nothing
   pure Success
