@@ -182,7 +182,7 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   QRide.updateAll ride.id ride
   oldDriverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   let newFlowStatus = DDriverMode.getDriverFlowStatus oldDriverInfo.mode oldDriverInfo.active
-  DDriverMode.updateDriverModeAndFlowStatus driverId thresholdConfig.allowCacheDriverFlowStatus oldDriverInfo.active oldDriverInfo.mode newFlowStatus (Just oldDriverInfo)
+  DDriverMode.updateDriverModeAndFlowStatus driverId thresholdConfig oldDriverInfo.active oldDriverInfo.mode newFlowStatus (Just oldDriverInfo)
   let driverInfo = oldDriverInfo {DI.driverFlowStatus = Just newFlowStatus}
   let safetyPlusCharges = maybe Nothing (\a -> find (\ac -> ac.chargeCategory == DAC.SAFETY_PLUS_CHARGES) a) $ (mbFareParams <&> (.conditionalCharges)) <|> (Just newFareParams.conditionalCharges)
   QDriverStats.incrementTotalRidesAndTotalDistAndIdleTime (cast ride.driverId) (fromMaybe 0 ride.chargeableDistance)

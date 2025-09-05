@@ -35,7 +35,8 @@ INSERT INTO atlas_bpp_dashboard.access_matrix (id, role_id, api_entity, user_acc
         (ARRAY
           [ 'PROVIDER_FLEET/DRIVER/POST_DRIVER_FLEET_ADD_DRIVERS',
             'PROVIDER_FLEET/REGISTRATION_V2/POST_REGISTRATION_V2_REGISTER',
-            'PROVIDER_FLEET/LIVE_MAP/GET_LIVE_MAP_DRIVERS'
+            'PROVIDER_FLEET/LIVE_MAP/GET_LIVE_MAP_DRIVERS',
+            'PROVIDER_MANAGEMENT/DRIVER/GET_DRIVER_STATS'
           ]
         )
     )

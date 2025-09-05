@@ -51,13 +51,16 @@ import Kernel.Prelude
 import Kernel.Types.APISuccess (APISuccess)
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common (Currency (INR), Money, PriceAPIEntity (..), toHighPrecMoney)
+import Kernel.Types.Error
 import Kernel.Types.Id
+import Kernel.Utils.Common (fromMaybeM)
 import qualified Mobility.ARDU.APICalls as API
 import Mobility.ARDU.Fixtures as Fixtures
 import Mobility.ARDU.Queries as Queries
 import Mobility.AppBackend.APICalls as BapAPI
 import Mobility.AppBackend.Fixtures
 import Servant.Client hiding (parseBaseUrl)
+import qualified "dynamic-offer-driver-app" Storage.Cac.TransporterConfig as SCTC
 import qualified "dynamic-offer-driver-app" Storage.CachedQueries.Merchant.MerchantServiceConfig as TCQMSC
 import qualified "dynamic-offer-driver-app" Storage.Queries.Booking as TQRB
 import qualified "rider-app" Storage.Queries.Booking as BQRB
@@ -139,8 +142,10 @@ resetDriver driver = runARDUFlow "" $ do
   forM_ activeQuotes $ \activeQuote ->
     TDQ.setInactiveBySTId activeQuote.searchTryId
   let newFlowStatus = DDriverMode.getDriverFlowStatus (Just TDrInfo.OFFLINE) False
-  let allowCacheDriverFlowStatus = Nothing -- TODO: Need to discuss this
-  DDriverMode.updateDriverModeAndFlowStatus (cast driver.driverId) allowCacheDriverFlowStatus False (Just TDrInfo.OFFLINE) newFlowStatus Nothing
+  transporterConfig <-
+    SCTC.findByMerchantOpCityId Fixtures.nammaYatriPartnerMerchantOperatingCityId Nothing
+      >>= fromMaybeM (TransporterConfigNotFound Fixtures.nammaYatriPartnerMerchantOperatingCityId.getId)
+  DDriverMode.updateDriverModeAndFlowStatus (cast driver.driverId) transporterConfig False (Just TDrInfo.OFFLINE) newFlowStatus Nothing
   QTDrInfo.updateOnRide False (cast driver.driverId)
 
 -- flow primitives

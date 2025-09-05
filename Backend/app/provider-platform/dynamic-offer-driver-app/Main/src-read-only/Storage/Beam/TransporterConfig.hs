@@ -189,6 +189,7 @@ data TransporterConfigT f = TransporterConfigT
     onboardingDocsCountLimit :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     onboardingRetryTimeInHours :: B.C f Kernel.Prelude.Int,
     onboardingTryLimit :: B.C f Kernel.Prelude.Int,
+    onlineDurationCalculateFrom :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     openMarketUnBlocked :: B.C f Kernel.Prelude.Bool,
     orderAndNotificationStatusCheckFallBackTime :: B.C f Kernel.Types.Common.Seconds,
     orderAndNotificationStatusCheckTime :: B.C f Kernel.Types.Common.Seconds,

@@ -537,3 +537,8 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN driver_calling_
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN driver_wallet_payout_threshold double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN online_duration_calculate_from timestamp with time zone ;

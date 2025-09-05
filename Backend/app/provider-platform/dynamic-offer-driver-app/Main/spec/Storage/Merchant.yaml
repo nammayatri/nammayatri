@@ -1076,6 +1076,7 @@ TransporterConfig:
     maxOnlineDurationDays : Maybe Int
     distanceWeightage: Maybe Int
     driverCallingOption: "Maybe CallingOption"
+    onlineDurationCalculateFrom: Maybe UTCTime # set null to switch off calculation, current UTC timestamp to switch on
 
   beamType:
     currency: Maybe Currency
