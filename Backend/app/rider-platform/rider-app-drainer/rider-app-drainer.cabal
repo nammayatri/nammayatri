@@ -30,6 +30,7 @@ library
       Constants
       DBQuery.Functions
       DBQuery.Types
+      DBSync.BatchCreate
       DBSync.Create
       DBSync.DBSync
       DBSync.Delete

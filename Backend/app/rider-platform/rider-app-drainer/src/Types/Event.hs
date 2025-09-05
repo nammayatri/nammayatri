@@ -37,3 +37,6 @@ data DBSyncMetric
   | KafkaUpdateMissing
   | KafkaPushFailure Action ModelName
   | ProcessLatency Text Latency
+  | BatchFallbackUsed Int
+  | BatchExecutionTime ModelName Double
+  | SchemaVariationAlert ModelName Int
