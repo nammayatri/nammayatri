@@ -155,6 +155,7 @@ mapToGoogleTicketStatus status = newStatus
   where
     newStatus = case status of
       FRFS.ACTIVE -> ACTIVE
+      FRFS.INPROGRESS -> ACTIVE
       FRFS.EXPIRED -> EXPIRED
       FRFS.USED -> COMPLETED
       FRFS.CANCELLED -> INACTIVE
