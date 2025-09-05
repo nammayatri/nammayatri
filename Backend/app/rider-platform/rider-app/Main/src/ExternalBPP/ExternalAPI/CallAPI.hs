@@ -34,12 +34,12 @@ import ExternalBPP.ExternalAPI.Types
 import Kernel.External.Encryption
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
-import Kernel.Randomizer
 import Kernel.Storage.Esqueleto.Config
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.JourneyModule.Utils as JMU
 import qualified SharedLogic.FRFSUtils as FRFSUtils
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Tools.Error
@@ -93,18 +93,8 @@ getFares riderId merchant merchanOperatingCity integrationBPPConfig fareRouteDet
       case redisResp of
         Just frfsFare -> return (isFareMandatory, frfsFare)
         Nothing -> do
-          sessionId <- getRandomInRange (1, 1000000 :: Int)
-          let request =
-                CRISRouteFare.CRISFareRequest
-                  { mobileNo = Just "1111111111", -- dummy number and imei for all other requests to avoid sdkToken confusion
-                    imeiNo = "abcdefgh",
-                    appSession = sessionId,
-                    sourceCode = startStopCode,
-                    changeOver = changeOver,
-                    destCode = endStopCode,
-                    via = viaPoints
-                  }
-          resp <- try @_ @SomeException $ CRISRouteFare.getRouteFare config' merchanOperatingCity.id request
+          routeFareReq <- JMU.getDummyRouteFareRequest startStopCode endStopCode changeOver viaPoints
+          resp <- try @_ @SomeException $ CRISRouteFare.getRouteFare config' merchanOperatingCity.id routeFareReq
           case resp of
             Left err -> do
               logError $ "Error while calling CRIS API: " <> show err
