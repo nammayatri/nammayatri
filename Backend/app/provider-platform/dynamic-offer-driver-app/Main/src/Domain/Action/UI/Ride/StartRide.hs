@@ -200,7 +200,7 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
       void $ Redis.del (StopDetection.mkStopCountRedisKey rideId.getId)
       whenWithLocationUpdatesLock driverId $ do
         logTagInfo "startRide" ("Updating driver_flow_status to ON_RIDE for DriverId " <> getId driverId)
-        DDriverMode.updateDriverModeAndFlowStatus driverId transporterConfig.allowCacheDriverFlowStatus driverInfo.active driverInfo.mode DDFS.ON_RIDE (Just driverInfo)
+        DDriverMode.updateDriverModeAndFlowStatus driverId transporterConfig driverInfo.active driverInfo.mode DDFS.ON_RIDE (Just driverInfo)
         withTimeAPI "startRide" "initializeDistanceCalculation" $ initializeDistanceCalculation updatedRide.id driverId point
         withTimeAPI "startRide" "startRideAndUpdateLocation" $ startRideAndUpdateLocation driverId updatedRide booking.id point booking.providerId odometer
 

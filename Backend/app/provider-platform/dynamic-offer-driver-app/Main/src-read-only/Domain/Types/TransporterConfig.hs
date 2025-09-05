@@ -192,6 +192,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     onboardingDocsCountLimit :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     onboardingRetryTimeInHours :: Kernel.Prelude.Int,
     onboardingTryLimit :: Kernel.Prelude.Int,
+    onlineDurationCalculateFrom :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     openMarketUnBlocked :: Kernel.Prelude.Bool,
     orderAndNotificationStatusCheckFallBackTime :: Kernel.Prelude.NominalDiffTime,
     orderAndNotificationStatusCheckTime :: Kernel.Prelude.NominalDiffTime,

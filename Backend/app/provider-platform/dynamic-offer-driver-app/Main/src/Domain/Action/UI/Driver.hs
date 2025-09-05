@@ -845,7 +845,7 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
         Nothing -> throwError $ DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag)
   when (driverInfo.active /= isActive || driverInfo.mode /= mode) $ do
     let newFlowStatus = DDriverMode.getDriverFlowStatus (mode <|> Just DriverInfo.OFFLINE) isActive
-    DDriverMode.updateDriverModeAndFlowStatus driverId transporterConfig.allowCacheDriverFlowStatus isActive (mode <|> Just DriverInfo.OFFLINE) newFlowStatus (Just driverInfo)
+    DDriverMode.updateDriverModeAndFlowStatus driverId transporterConfig isActive (mode <|> Just DriverInfo.OFFLINE) newFlowStatus (Just driverInfo)
   pure APISuccess.Success
 
 activateGoHomeFeature :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id DDHL.DriverHomeLocation -> LatLong -> Flow APISuccess.APISuccess
