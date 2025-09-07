@@ -11,9 +11,11 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Domain.Action.Dashboard.Management.Ride
   ( getRideList,
+    getRideListV2,
     postRideEndMultiple,
     postRideCancelMultiple,
     getRideInfo,
@@ -25,6 +27,7 @@ module Domain.Action.Dashboard.Management.Ride
   )
 where
 
+import API.Types.ProviderPlatform.Management.Endpoints.Ride (RideStatus)
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Ride as Common
 import Data.Coerce (coerce)
 import qualified Domain.Action.Dashboard.Ride as DRide
@@ -39,6 +42,7 @@ import Kernel.Types.APISuccess (APISuccess (..))
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Kernel.Utils.Validation (runRequestValidation)
 import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.Beam.SystemConfigs ()
@@ -119,3 +123,18 @@ getRideKaptureList = DRide.ticketRideList
 
 getRideFareBreakUp :: ShortId DM.Merchant -> Context.City -> Id Common.Ride -> Environment.Flow Common.FareBreakUpRes
 getRideFareBreakUp = DRide.fareBreakUp
+
+getRideListV2 :: ShortId DM.Merchant -> Context.City -> Maybe Currency -> Maybe Text -> Maybe Text -> Maybe UTCTime -> Maybe Int -> Maybe Int -> Maybe (ShortId Common.Ride) -> Maybe Common.RideStatus -> Maybe UTCTime -> Flow Common.RideListResV2
+getRideListV2 merchantShortId opCity mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbReqShortRideId mbRideStatus mbto =
+  DRide.getRideListV2 merchantShortId opCity mbCurrency mbCustomerPhone mbDriverPhone mbfrom mbLimit mbOffset mbReqShortRideId (castRideStatus <$> mbRideStatus) mbto
+
+castRideStatus :: Common.RideStatus -> DRide.RideStatus
+castRideStatus s = case s of
+  Common.RIDE_UPCOMING -> DRide.UPCOMING
+  Common.RIDE_NEW -> DRide.NEW
+  Common.RIDE_INPROGRESS -> DRide.INPROGRESS
+  Common.RIDE_COMPLETED -> DRide.COMPLETED
+  Common.RIDE_CANCELLED -> DRide.CANCELLED
+
+-- Ensure OpenAPI query param instances exist for RideStatus used in endpoints
+$(mkHttpInstancesForEnum ''RideStatus)
