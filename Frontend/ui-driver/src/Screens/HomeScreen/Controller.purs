@@ -537,6 +537,13 @@ data Action = NoAction
             | SelectBusDriver PopUpModal.Action
             | SelectBusConductor PopUpModal.Action
             | RideInsuranceCardAction PopUpModal.Action
+            | ConsentPopupTnC
+            | ConsentPopupAccept PrimaryButtonController.Action
+            | ConsentPopupCallSupport
+            | DismissConsentPopup
+            | ConsentPopupAfterRender
+            | Wait PrimaryButtonController.Action
+            | UnaffectedCancel PrimaryButtonController.Action
 
 uploadFileConfig :: Common.UploadFileConfig
 uploadFileConfig = Common.UploadFileConfig {
@@ -2170,6 +2177,10 @@ eval (ShowLinkPopup (API.AvailableRoutesList availableRoutesList) fleetBadgeDriv
       }
 
 eval _ state = update state 
+eval (Wait PrimaryButtonController.OnClick) state = continue state
+eval (UnaffectedCancel PrimaryButtonController.OnClick) state = continue state
+
+eval _ state = update state
 
 checkPermissionAndUpdateDriverMarker :: Boolean -> Effect Unit
 checkPermissionAndUpdateDriverMarker toAnimateCamera = do

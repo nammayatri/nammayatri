@@ -3841,3 +3841,35 @@ rideInsuranceBannerConfig state = let
       }
   }
   in popUpConfig'
+
+
+
+cancelRideButtonConfig :: ST.HomeScreenState  -> PrimaryButton.Config
+cancelRideButtonConfig state =
+  let config = getAppConfig appConfig
+  in PrimaryButton.config
+      { textConfig { 
+          text = "Cancel Ride"
+        , color = config.primaryTextColor
+        , textStyle = Body10
+        }
+      , background = config.primaryBackground
+      , isClickable = true
+      , cornerRadius = 20.0
+      , margin = (MarginTop 10)
+      }
+
+waitButtonConfig :: ST.HomeScreenState  -> PrimaryButton.Config
+waitButtonConfig state =
+  let config = getAppConfig appConfig
+  in PrimaryButton.config
+      { textConfig { 
+          text = "I will wait"
+        , color = Color.black700
+        , textStyle = Body10
+        }
+      , background = Color.white900
+      , isClickable = true
+      , alpha = 1.0
+      , margin = (MarginTop 10)
+      }

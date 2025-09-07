@@ -82,6 +82,10 @@ white200 = "#99FFFFFF"
 yellow900 :: Color
 yellow900 = "#FCC32C"
 
+lightYellow :: Color
+lightYellow = "#FFF6E0"
+
+
 yellow600 :: Color
 yellow600 = "#FCF6E7"
 
@@ -433,3 +437,12 @@ brightRed = "#E64848"
 
 argent :: Color
 argent = "#888888"
+
+lightOrange400 :: Color
+lightOrange400 = "#FAEBDE"
+
+brown :: Color
+brown = "#844E00"
+
+lightBrown :: Color
+lightBrown = "#7B5B02"
