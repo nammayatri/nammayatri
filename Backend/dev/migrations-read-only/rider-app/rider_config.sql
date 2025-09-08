@@ -383,3 +383,9 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN bus_scan_route_calculation_enabled
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN validate_set_onboarding_vehicle_request boolean  default false;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN upcoming_bus_threshold_sec integer  default 3600;
+ALTER TABLE atlas_app.rider_config ADD COLUMN bus_tier_sorting_config json ;
