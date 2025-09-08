@@ -521,6 +521,23 @@ public  class MyFirebaseMessagingService {
                     case NotificationTypes.EKD_LIVE_CALL_FEEDBACK:
                         showOverlayMessage(context, payload, NotificationTypes.EKD_LIVE_CALL_FEEDBACK);
                         break;
+                    case NotificationTypes.PICKUP_INSTRUCTIONS:
+                        if (remoteMessage.getData().containsKey("entity_data")) {
+                            String entityPayload = remoteMessage.getData().get("entity_data");
+                            if (entityPayload != null) {
+                                JSONObject instructionData = new JSONObject(entityPayload);
+                                
+                                // Only show overlay if app is minimized/in background
+                                String appState = sharedPref.getString("ACTIVITY_STATUS", "null");
+                                if (appState.equals("onPause") || appState.equals("onDestroy")) {
+                                    showOverlayMessage(context, instructionData, NotificationTypes.PICKUP_INSTRUCTIONS);
+                                } else {
+                                    // App is in foreground, don't show overlay
+                                    Log.d(LOG_TAG, "App is in foreground, not showing pickup instruction overlay");
+                                }
+                            }
+                        }
+                        break;
                     default:
                         if (payload.get("show_notification").equals("true")) {
                             NotificationUtils.showNotification(context, title, body, payload, imageUrl, messageId);
@@ -897,5 +914,6 @@ public  class MyFirebaseMessagingService {
         public static final String CANCELLATION_RATE_NUDGE_WEEKLY = "CANCELLATION_RATE_NUDGE_WEEKLY";
         public static final String DRIVER_STOP_DETECTED = "DRIVER_STOP_DETECTED";
         public static final String EKD_LIVE_CALL_FEEDBACK = "EKD_LIVE_CALL_FEEDBACK";
+        public static final String PICKUP_INSTRUCTIONS = "PICKUP_INSTRUCTIONS";
     }
 }

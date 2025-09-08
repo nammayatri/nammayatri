@@ -1,0 +1,253 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!-- Full-screen transparent background for dismiss -->
+    <View
+        android:id="@+id/dismiss_message"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@android:color/transparent"
+        android:clickable="true"
+        android:focusable="true"/>
+
+    <!-- The CardView overlay -->
+    <androidx.cardview.widget.CardView
+        android:id="@+id/pickup_instruction_overlay_root"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginBottom="12dp"
+        app:cardCornerRadius="12dp"
+        app:cardBackgroundColor="@color/white"
+        app:cardElevation="4dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <!-- Header Section -->
+            <RelativeLayout
+                android:id="@+id/pickup_instruction_header_section"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <!-- Replaced ShapeableImageView with regular ImageView to avoid theme compatibility issues -->
+                <ImageView
+                    android:id="@+id/overlay_app_icon"
+                    android:layout_width="42dp"
+                    android:layout_height="42dp"
+                    android:layout_alignParentStart="true"
+                    android:layout_centerVertical="true"
+                    android:src="@drawable/ny_logo_dark" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_toEndOf="@id/overlay_app_icon"
+                    android:layout_centerVertical="true"
+                    android:layout_marginStart="12dp"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/overlay_title_text"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Pickup Instruction from"
+                        android:fontFamily="@font/area_normal_black"
+                        android:textSize="12sp"
+                        android:textColor="#95A9BE" />
+
+                    <TextView
+                        android:id="@+id/overlay_sender_name"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Customer"
+                        android:fontFamily="@font/area_normal_black"
+                        android:textSize="18sp"
+                        android:textColor="#1B1D1F" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/arrow_container"
+                    android:layout_width="50dp"
+                    android:layout_height="40dp"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:background="@drawable/bg_grey_rounded"
+                    android:padding="8dp">
+
+                    <ImageButton
+                        android:id="@+id/overlay_open_chat_button"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:background="@android:color/transparent"
+                        android:src="@drawable/ic_arrow_forward_black_24dp"
+                        android:contentDescription="@string/open_chat"
+                        android:scaleType="center"
+                        android:padding="0dp"/>
+                </LinearLayout>
+            </RelativeLayout>
+
+            <!-- Full-width divider line below header -->
+            <View
+                android:id="@+id/overlay_header_divider"
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="12dp"
+                android:layout_marginBottom="12dp"
+                android:background="#E0E0E0" />
+
+            <!-- Text note section with light blue background -->
+            <LinearLayout
+                android:id="@+id/text_note_section"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="#F4F9FF"
+                android:padding="12dp"
+                android:layout_marginBottom="12dp">
+
+                <!-- Text note label -->
+                <TextView
+                    android:id="@+id/text_note_label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Text note"
+                    android:fontFamily="@font/area_normal_black"
+                    android:textSize="14sp"
+                    android:textColor="#95A9BE"
+                    android:layout_marginBottom="4dp" />
+
+                <!-- Pickup instruction content -->
+                <TextView
+                    android:id="@+id/pickup_instruction_content"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Pick me up at Gate 3 near the pharmacy."
+                    android:textColor="#1B1D1F"
+                    android:fontFamily="@font/area_normal_black"
+                    android:textSize="16sp" />
+            </LinearLayout>
+
+            <!-- Audio note section (initially hidden) -->
+            <LinearLayout
+                android:id="@+id/audio_section"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="#F6F8FC"
+                android:padding="12dp"
+                android:layout_marginBottom="12dp"
+                android:layout_gravity="center_horizontal"
+                android:gravity="center_horizontal"
+                android:minHeight="100dp"
+                android:visibility="gone">
+
+                <!-- Audio note label -->
+                <TextView
+                    android:id="@+id/audio_note_label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Audio note"
+                    android:fontFamily="@font/area_normal_black"
+                    android:textSize="14sp"
+                    android:textColor="#95A9BE"
+                    android:layout_marginBottom="8dp" />
+
+                <!-- Audio controls simplified - removed RelativeLayout container -->
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center_horizontal">
+
+                    <!-- Audio title - positioned above the visualizer -->
+                    <TextView
+                        android:id="@+id/audio_title"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="8dp"
+                        android:text="Fairfield by Marriot"
+                        android:fontFamily="@font/area_normal_black"
+                        android:textSize="16sp"
+                        android:textColor="#1B1D1F" />
+
+                    <!-- Play/Pause and Replay buttons in the same row -->
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center">
+
+                        <!-- Play/Pause button -->
+                        <ImageButton
+                            android:id="@+id/audio_control_button"
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:background="@android:color/transparent"
+                            android:src="@drawable/play_circle"
+                            android:contentDescription="Play/Pause audio"
+                            android:scaleType="fitCenter" />
+
+                        <!-- Replay button (initially hidden) -->
+                        <TextView
+                            android:id="@+id/replay_button"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="12dp"
+                            android:text="Replay"
+                            android:textColor="#1976D2"
+                            android:fontFamily="@font/area_normal_black"
+                            android:textSize="14sp"
+                            android:paddingHorizontal="8dp"
+                            android:paddingVertical="4dp"
+                            android:visibility="gone" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- Audio visualizer wrapper to ensure proper constraints -->
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:layout_gravity="center_horizontal"
+                    android:gravity="center"
+                    android:clipChildren="true"
+                    android:clipToPadding="true">
+
+                    <!-- Audio visualizer (shown during playback) -->
+                    <com.airbnb.lottie.LottieAnimationView
+                        android:id="@+id/audio_visualizer"
+                        android:layout_width="200dp"
+                        android:layout_height="32dp"
+                        android:layout_gravity="center_horizontal"
+                        android:background="#E5E9F0"
+                        app:lottie_rawRes="@raw/mt_ic_record_audio"
+                        app:lottie_autoPlay="true"
+                        app:lottie_loop="true"
+                        android:visibility="gone" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- "Got it" Button -->
+            <Button
+                android:id="@+id/got_it_button"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Got it"
+                android:textColor="@color/white"
+                android:fontFamily="@font/area_normal_black"
+                android:textSize="16sp"
+                android:textAllCaps="false"
+                android:background="@drawable/bg_dark_button"
+                android:minHeight="48dp"
+                android:layout_marginTop="8dp" />
+        </LinearLayout>
+    </androidx.cardview.widget.CardView>
+</FrameLayout>

@@ -105,4 +105,10 @@
     <string name="extra_fare_demanded_desc">Select the reason(s) for asking extra</string>
     <string name="submit">Submit</string>
     <string name="did_not_demand_extra">I did not demand extra</string>
+    <string name="pickup_instruction_fallback">Pickup instructions are available. Please check your messages.</string>
+    <string name="pickup_instruction_error">Error displaying pickup instructions</string>
+    <string name="pickup_instruction_none">No pickup instructions available</string>
+    <string name="pickup_instruction_play_voice">Play voice instructions</string>
+    <string name="pickup_instruction_audio_unavailable_suffix">(Audio unavailable)</string>
+    <string name="pickup_instruction_default_text">Please pick me up from Gate 4. Look for the blue sign and wait there.</string>
 </resources>
