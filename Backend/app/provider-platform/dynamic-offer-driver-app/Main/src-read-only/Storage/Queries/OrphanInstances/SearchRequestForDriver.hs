@@ -22,10 +22,10 @@ import qualified Storage.Queries.Transformers.SearchRequestForDriver
 
 instance FromTType' Beam.SearchRequestForDriver Domain.Types.SearchRequestForDriver.SearchRequestForDriver where
   fromTType' (Beam.SearchRequestForDriverT {..}) = do
-    backendConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion)
-    clientBundleVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion)
-    clientConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion)
-    clientSdkVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)
+    backendConfigVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion))
+    clientBundleVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion))
+    clientConfigVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion))
+    clientSdkVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion))
     merchantOperatingCityId' <- Storage.Queries.Transformers.SearchRequestForDriver.getMerchantOpCId merchantOperatingCityId merchantId requestId
     pure $
       Just
@@ -40,10 +40,10 @@ instance FromTType' Beam.SearchRequestForDriver Domain.Types.SearchRequestForDri
             cancellationRatio = cancellationRatio,
             clientBundleVersion = clientBundleVersion',
             clientConfigVersion = clientConfigVersion',
-            clientDevice = Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer,
+            clientDevice = (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer),
             clientSdkVersion = clientSdkVersion',
             coinsRewardedOnGoldTierRide = coinsRewardedOnGoldTierRide,
-            conditionalCharges = Kernel.Prelude.fromMaybe [] $ Kernel.Prelude.readMaybe . Data.Text.unpack =<< conditionalCharges,
+            conditionalCharges = (Kernel.Prelude.fromMaybe [] $ Kernel.Prelude.readMaybe . Data.Text.unpack =<< conditionalCharges),
             createdAt = Data.Time.localTimeToUTC Data.Time.utc createdAt,
             currency = Kernel.Prelude.fromMaybe Kernel.Types.Common.INR currency,
             customerCancellationDues = getCustomerCancellationDues customerCancellationDues,
@@ -82,6 +82,7 @@ instance FromTType' Beam.SearchRequestForDriver Domain.Types.SearchRequestForDri
             poolingConfigVersion = poolingConfigVersion,
             poolingLogicVersion = poolingLogicVersion,
             previousDropGeoHash = previousDropGeoHash,
+            reactBundleVersion = reactBundleVersion,
             renderedAt = renderedAt,
             requestId = Kernel.Types.Id.Id requestId,
             respondedAt = respondedAt,
@@ -119,10 +120,10 @@ instance ToTType' Beam.SearchRequestForDriver Domain.Types.SearchRequestForDrive
         Beam.cancellationRatio = cancellationRatio,
         Beam.clientBundleVersion = fmap Kernel.Utils.Version.versionToText clientBundleVersion,
         Beam.clientConfigVersion = fmap Kernel.Utils.Version.versionToText clientConfigVersion,
-        Beam.clientManufacturer = clientDevice >>= (.deviceManufacturer),
-        Beam.clientModelName = clientDevice <&> (.deviceModel),
-        Beam.clientOsType = clientDevice <&> (.deviceType),
-        Beam.clientOsVersion = clientDevice <&> (.deviceVersion),
+        Beam.clientManufacturer = (clientDevice >>= (.deviceManufacturer)),
+        Beam.clientModelName = (clientDevice <&> (.deviceModel)),
+        Beam.clientOsType = (clientDevice <&> (.deviceType)),
+        Beam.clientOsVersion = (clientDevice <&> (.deviceVersion)),
         Beam.clientSdkVersion = fmap Kernel.Utils.Version.versionToText clientSdkVersion,
         Beam.coinsRewardedOnGoldTierRide = coinsRewardedOnGoldTierRide,
         Beam.conditionalCharges = Kernel.Prelude.Just $ Kernel.Prelude.show conditionalCharges,
@@ -168,6 +169,7 @@ instance ToTType' Beam.SearchRequestForDriver Domain.Types.SearchRequestForDrive
         Beam.poolingConfigVersion = poolingConfigVersion,
         Beam.poolingLogicVersion = poolingLogicVersion,
         Beam.previousDropGeoHash = previousDropGeoHash,
+        Beam.reactBundleVersion = reactBundleVersion,
         Beam.renderedAt = renderedAt,
         Beam.requestId = Kernel.Types.Id.getId requestId,
         Beam.respondedAt = respondedAt,

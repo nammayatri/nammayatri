@@ -51,7 +51,7 @@ data DriverAPIs = DriverAPIs
   { getDriverInfo :: Text -> Maybe Text -> Maybe Int -> Maybe Text -> Maybe Text -> Maybe DPlan.ServiceNames -> ClientM DriverAPI.DriverInformationRes,
     getNearbySearchRequests :: RegToken -> Maybe (Id DTST.SearchTry) -> ClientM DriverAPI.GetNearbySearchRequestsRes,
     offerQuote :: RegToken -> Maybe Text -> DriverAPI.DriverOfferReq -> ClientM APISuccess,
-    respondQuote :: RegToken -> Maybe Text -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> DriverAPI.DriverRespondReq -> ClientM APISuccess,
+    respondQuote :: RegToken -> Maybe Text -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> DriverAPI.DriverRespondReq -> ClientM APISuccess,
     setDriverOnline :: Text -> Bool -> Maybe TDI.DriverMode -> ClientM APISuccess,
     updateMetaData :: RegToken -> DriverAPI.MetaDataReq -> ClientM APISuccess,
     validate :: Text -> DriverAPI.DriverAlternateNumberReq -> ClientM DriverAPI.DriverAlternateNumberRes,

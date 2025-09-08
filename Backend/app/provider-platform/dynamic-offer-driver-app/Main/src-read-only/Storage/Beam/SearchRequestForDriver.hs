@@ -81,27 +81,28 @@ data SearchRequestForDriverT f = SearchRequestForDriverT
     poolingConfigVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     poolingLogicVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     previousDropGeoHash :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    renderedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
-    requestId :: B.C f Kernel.Prelude.Text,
-    respondedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
-    response :: B.C f (Kernel.Prelude.Maybe Domain.Types.Common.SearchRequestForDriverResponse),
-    rideFrequencyScore :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
-    rideRequestPopupDelayDuration :: B.C f Kernel.Types.Common.Seconds,
-    searchRequestValidTill :: B.C f Data.Time.LocalTime,
-    searchTryId :: B.C f Kernel.Prelude.Text,
-    startTime :: B.C f Kernel.Prelude.UTCTime,
-    status :: B.C f Domain.Types.SearchRequestForDriver.DriverSearchRequestStatus,
-    straightLineDistanceToPickup :: B.C f Kernel.Types.Common.Meters,
-    totalRides :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    tripEstimatedDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
-    tripEstimatedDuration :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
-    updatedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
-    upgradeCabRequest :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
-    vehicleAge :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Time.Months),
-    vehicleCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory),
-    vehicleServiceTier :: B.C f (Kernel.Prelude.Maybe Domain.Types.Common.ServiceTierType),
-    vehicleServiceTierName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    vehicleVariant :: B.C f Domain.Types.VehicleVariant.VehicleVariant
+    reactBundleVersion :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    renderedAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
+    requestId :: (B.C f Kernel.Prelude.Text),
+    respondedAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
+    response :: (B.C f (Kernel.Prelude.Maybe Domain.Types.Common.SearchRequestForDriverResponse)),
+    rideFrequencyScore :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double)),
+    rideRequestPopupDelayDuration :: (B.C f Kernel.Types.Common.Seconds),
+    searchRequestValidTill :: (B.C f Data.Time.LocalTime),
+    searchTryId :: (B.C f Kernel.Prelude.Text),
+    startTime :: (B.C f Kernel.Prelude.UTCTime),
+    status :: (B.C f Domain.Types.SearchRequestForDriver.DriverSearchRequestStatus),
+    straightLineDistanceToPickup :: (B.C f Kernel.Types.Common.Meters),
+    totalRides :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
+    tripEstimatedDistance :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters)),
+    tripEstimatedDuration :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds)),
+    updatedAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
+    upgradeCabRequest :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
+    vehicleAge :: (B.C f (Kernel.Prelude.Maybe Kernel.Types.Time.Months)),
+    vehicleCategory :: (B.C f (Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory)),
+    vehicleServiceTier :: (B.C f (Kernel.Prelude.Maybe Domain.Types.Common.ServiceTierType)),
+    vehicleServiceTierName :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    vehicleVariant :: (B.C f Domain.Types.VehicleVariant.VehicleVariant)
   }
   deriving (Generic, B.Beamable)
 
@@ -111,6 +112,6 @@ instance B.Table SearchRequestForDriverT where
 
 type SearchRequestForDriver = SearchRequestForDriverT Identity
 
-$(enableKVPG ''SearchRequestForDriverT ['id] [['requestId], ['searchTryId]])
+$(enableKVPG (''SearchRequestForDriverT) [('id)] [[('requestId)], [('searchTryId)]])
 
-$(mkTableInstancesWithTModifier ''SearchRequestForDriverT "search_request_for_driver" [("requestId", "search_request_id")])
+$(mkTableInstancesWithTModifier (''SearchRequestForDriverT) "search_request_for_driver" [("requestId", "search_request_id")])

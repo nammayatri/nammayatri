@@ -55,6 +55,7 @@ data PersonT f = PersonT
     nyClubConsent :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     onboardedFromDashboard :: B.C f Kernel.Prelude.Bool,
     passwordHash :: B.C f (Kernel.Prelude.Maybe Kernel.External.Encryption.DbHash),
+    reactBundleVersion :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
     registrationLat :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     registrationLon :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     role :: B.C f Domain.Types.Person.Role,
@@ -72,6 +73,6 @@ instance B.Table PersonT where
 
 type Person = PersonT Identity
 
-$(enableKVPG ''PersonT ['id] [['alternateMobileNumberHash], ['mobileNumberHash]])
+$(enableKVPG (''PersonT) [('id)] [[('alternateMobileNumberHash)], [('mobileNumberHash)]])
 
-$(mkTableInstances ''PersonT "person")
+$(mkTableInstances (''PersonT) "person")

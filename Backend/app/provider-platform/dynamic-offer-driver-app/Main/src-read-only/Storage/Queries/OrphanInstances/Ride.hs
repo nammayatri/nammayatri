@@ -21,10 +21,10 @@ import qualified Storage.Queries.Transformers.Ride
 
 instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
   fromTType' (Beam.RideT {..}) = do
-    backendConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion)
-    clientBundleVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion)
-    clientConfigVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion)
-    clientSdkVersion' <- mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion)
+    backendConfigVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> backendConfigVersion))
+    clientBundleVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientBundleVersion))
+    clientConfigVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientConfigVersion))
+    clientSdkVersion' <- (mapM Kernel.Utils.Version.readVersion (Data.Text.strip <$> clientSdkVersion))
     fromLocation' <- Storage.Queries.Transformers.Ride.getFromLocation id bookingId merchantId merchantOperatingCityId
     merchantOperatingCityId' <- Storage.Queries.Transformers.Ride.getMerchantOperatingCityId bookingId merchantId merchantOperatingCityId
     stops' <- Storage.Queries.Transformers.Ride.getStops id hasStops
@@ -41,7 +41,7 @@ instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
             chargeableDistance = chargeableDistance,
             clientBundleVersion = clientBundleVersion',
             clientConfigVersion = clientConfigVersion',
-            clientDevice = Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer,
+            clientDevice = (Kernel.Utils.Version.mkClientDevice clientOsType clientOsVersion clientModelName clientManufacturer),
             clientId = clientId,
             clientSdkVersion = clientSdkVersion',
             createdAt = createdAt,
@@ -87,6 +87,7 @@ instance FromTType' Beam.Ride Domain.Types.Ride.Ride where
             pickupDropOutsideOfThreshold = pickupDropOutsideOfThreshold,
             previousRideTripEndPos = Storage.Queries.Transformers.Ride.mkLatLong previousRideTripEndLat previousRideTripEndLon,
             previousRideTripEndTime = previousRideTripEndTime,
+            reactBundleVersion = reactBundleVersion,
             rideEndedBy = rideEndedBy,
             rideTags = Lib.Yudhishthira.Tools.Utils.tagsNameValueFromTType rideTags,
             safetyAlertTriggered = safetyAlertTriggered,
@@ -125,10 +126,10 @@ instance ToTType' Beam.Ride Domain.Types.Ride.Ride where
         Beam.chargeableDistance = chargeableDistance,
         Beam.clientBundleVersion = fmap Kernel.Utils.Version.versionToText clientBundleVersion,
         Beam.clientConfigVersion = fmap Kernel.Utils.Version.versionToText clientConfigVersion,
-        Beam.clientManufacturer = clientDevice >>= (.deviceManufacturer),
-        Beam.clientModelName = clientDevice <&> (.deviceModel),
-        Beam.clientOsType = clientDevice <&> (.deviceType),
-        Beam.clientOsVersion = clientDevice <&> (.deviceVersion),
+        Beam.clientManufacturer = (clientDevice >>= (.deviceManufacturer)),
+        Beam.clientModelName = (clientDevice <&> (.deviceModel)),
+        Beam.clientOsType = (clientDevice <&> (.deviceType)),
+        Beam.clientOsVersion = (clientDevice <&> (.deviceVersion)),
         Beam.clientId = clientId,
         Beam.clientSdkVersion = fmap Kernel.Utils.Version.versionToText clientSdkVersion,
         Beam.createdAt = createdAt,
@@ -177,6 +178,7 @@ instance ToTType' Beam.Ride Domain.Types.Ride.Ride where
         Beam.previousRideTripEndLat = Kernel.Prelude.fmap (.lat) previousRideTripEndPos,
         Beam.previousRideTripEndLon = Kernel.Prelude.fmap (.lon) previousRideTripEndPos,
         Beam.previousRideTripEndTime = previousRideTripEndTime,
+        Beam.reactBundleVersion = reactBundleVersion,
         Beam.rideEndedBy = rideEndedBy,
         Beam.rideTags = Lib.Yudhishthira.Tools.Utils.tagsNameValueToTType rideTags,
         Beam.safetyAlertTriggered = safetyAlertTriggered,

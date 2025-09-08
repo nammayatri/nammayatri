@@ -101,6 +101,7 @@ Ride:
     isAirConditioned: Maybe Bool
     rideEndedBy: Maybe RideEndedBy
     clientSdkVersion: Maybe Version
+    reactBundleVersion: Maybe Text
     clientBundleVersion: Maybe Version
     clientConfigVersion: Maybe Version
     backendConfigVersion: Maybe Version

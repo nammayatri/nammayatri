@@ -56,6 +56,7 @@ DriverQuote:
     specialLocationTag : Maybe Text
     goHomeRequestId : Maybe (Id DriverGoHomeRequest)
     clientSdkVersion : Maybe Version
+    reactBundleVersion : Maybe Text
     clientBundleVersion : Maybe Version
     clientConfigVersion : Maybe Version
     clientDevice : Maybe Device
