@@ -25,6 +25,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import Kernel.Types.Version
 import Kernel.Utils.Common (maskText)
+import qualified Lib.Yudhishthira.Tools.Utils as YUtils
 
 data PersonAPIEntity = PersonAPIEntity
   { id :: Id Person,
@@ -47,7 +48,8 @@ data PersonAPIEntity = PersonAPIEntity
     bundleVersion :: Maybe Version,
     clientVersion :: Maybe Version,
     followsRide :: Bool,
-    isSafetyCenterDisabled :: Bool
+    isSafetyCenterDisabled :: Bool,
+    customerTags :: Maybe DA.Value
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -61,6 +63,7 @@ makePersonAPIEntity Person {..} disability isSafetyCenterDisabled safetySettings
       clientVersion = clientSdkVersion,
       hasCompletedMockSafetyDrill = safetySettings.hasCompletedMockSafetyDrill,
       hasCompletedSafetySetup = safetySettings.hasCompletedSafetySetup,
+      customerTags = YUtils.convertTags $ fromMaybe [] person.customerNammaTags,
       ..
     }
 
