@@ -377,7 +377,7 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
   -- This function should be called only once. calling this multiple times will result in suburban booking failure.
   mbCrisSdkToken <- getCrisSdkToken merchantOperatingCityId indexedRoutesToProcess
 
-  multimodalIntiateHelper singleModeWarningType otpResponse userPreferences indexedRoutesToProcess showMultimodalWarningForFirstJourney mbCrisSdkToken
+  multimodalIntiateHelper singleModeWarningType otpResponse userPreferences indexedRoutesToProcess showMultimodalWarningForFirstJourney mbCrisSdkToken True
   where
     processSingleModeRoutes restOfViaPoints userPreferences mbIntegratedBPPConfig preliminaryLeg = do
       (restOfRoutes, _) <- JMU.getSubwayValidRoutes restOfViaPoints preliminaryLeg (fromJust mbIntegratedBPPConfig) searchRequest.merchantId searchRequest.merchantOperatingCityId (fromMaybe BecknV2.OnDemand.Enums.BUS searchRequest.vehicleCategory) (castVehicleCategoryToGeneralVehicleType (fromMaybe BecknV2.OnDemand.Enums.BUS searchRequest.vehicleCategory)) True
@@ -385,17 +385,17 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
         do
           let multimodalResponse = MInterface.MultiModalResponse {routes = restOfRoutes}
           (indexedRoutesToProcess, showMultimodalWarningForFirstJourney) <- getIndexedRoutesAndWarning userPreferences multimodalResponse
-          void $ multimodalIntiateHelper Nothing multimodalResponse userPreferences indexedRoutesToProcess showMultimodalWarningForFirstJourney Nothing
-          cacheAllRoutesLoadedKey searchRequest.id.getId True
+          void $ multimodalIntiateHelper Nothing multimodalResponse userPreferences indexedRoutesToProcess showMultimodalWarningForFirstJourney Nothing False
+      cacheAllRoutesLoadedKey searchRequest.id.getId True
 
-    multimodalIntiateHelper singleModeWarningType otpResponse userPreferences indexedRoutesToProcess showMultimodalWarningForFirstJourney mbCrisSdkToken = do
+    multimodalIntiateHelper singleModeWarningType otpResponse userPreferences indexedRoutesToProcess showMultimodalWarningForFirstJourney mbCrisSdkToken isFirstJourneyReq = do
       mbJourneyWithIndex <- JMU.measureLatency (go indexedRoutesToProcess userPreferences) "Multimodal Init Time" -- process until first journey is found
       QSearchRequest.updateHasMultimodalSearch (Just True) searchRequest.id
 
-      journeys <- DQuote.getJourneys searchRequest (Just True)
+      journeys <- if (isFirstJourneyReq) then DQuote.getJourneys searchRequest (Just True) else return []
       let mbFirstJourney = listToMaybe (fromMaybe [] journeys)
       firstJourneyInfo <-
-        if initiateJourney
+        if initiateJourney && isFirstJourneyReq
           then do
             case mbJourneyWithIndex of
               Just (idx, firstJourney) -> do
