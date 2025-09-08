@@ -1225,7 +1225,14 @@ postMultimodalOrderChangeStops _ journeyId legOrder req = do
           let prevLegStartPoint = LatLong prevLeg.startLocation.latitude prevLeg.startLocation.longitude
           (mbOsmEntrance, mbStraightLineEntrance) <- JMTypes.getNearestGateFromLeg prevLegStartPoint merchantId merchantOpCityId (fromMaybe [] sourceStation.gates)
           let bestEntrance = mbOsmEntrance <|> mbStraightLineEntrance
-              prevLegEndLocation = maybe prevLeg.endLocation (\e -> LatLngV2 (fromMaybe prevLeg.endLocation.latitude e.lat) (fromMaybe prevLeg.endLocation.longitude e.lon)) bestEntrance
+          -- Use new station coordinates when no gates found
+          sourceLat <- sourceStation.lat & fromMaybeM (StationError.InvalidStationData "Source station latitude not found")
+          sourceLon <- sourceStation.lon & fromMaybeM (StationError.InvalidStationData "Source station longitude not found")
+          let newStationLocation = LatLngV2 sourceLat sourceLon
+          let prevLegEndLocation = maybe newStationLocation (\e -> LatLngV2 (fromMaybe sourceLat e.lat) (fromMaybe sourceLon e.lon)) bestEntrance
+          -- Log when falling back to station coordinates
+          when (isNothing bestEntrance) $ do
+            logError $ "No gates found for source station " <> sourceStation.code <> ", using station coordinates: " <> show (sourceLat, sourceLon)
           (mbNewDistance, mbNewDuration) <- JMU.getDistanceAndDuration merchantId merchantOpCityId prevLegStartPoint (LatLong prevLegEndLocation.latitude prevLegEndLocation.longitude)
           let (mode, newDistance, newDuration) = updateLegDistanceAndMode prevLeg mbNewDistance mbNewDuration
               updatedPrevLeg =
@@ -1248,7 +1255,14 @@ postMultimodalOrderChangeStops _ journeyId legOrder req = do
           let nextLegEndPoint = LatLong nextLeg.endLocation.latitude nextLeg.endLocation.longitude
           (mbOsmExit, mbStraightLineExit) <- JMTypes.getNearestGateFromLeg nextLegEndPoint merchantId merchantOpCityId (fromMaybe [] destStation.gates)
           let bestExit = mbOsmExit <|> mbStraightLineExit
-          let nextLegStartLocation = maybe nextLeg.startLocation (\e -> LatLngV2 (fromMaybe nextLeg.startLocation.latitude e.lat) (fromMaybe nextLeg.startLocation.longitude e.lon)) bestExit
+          -- Use new station coordinates when no gates found
+          destLat <- destStation.lat & fromMaybeM (StationError.InvalidStationData "Destination station latitude not found")
+          destLon <- destStation.lon & fromMaybeM (StationError.InvalidStationData "Destination station longitude not found")
+          let newStationLocation = LatLngV2 destLat destLon
+          let nextLegStartLocation = maybe newStationLocation (\e -> LatLngV2 (fromMaybe destLat e.lat) (fromMaybe destLon e.lon)) bestExit
+          -- Log when falling back to station coordinates
+          when (isNothing bestExit) $ do
+            logError $ "No gates found for destination station " <> destStation.code <> ", using station coordinates: " <> show (destLat, destLon)
           (mbNewDistance, mbNewDuration) <- JMU.getDistanceAndDuration merchantId merchantOpCityId (LatLong nextLegStartLocation.latitude nextLegStartLocation.longitude) nextLegEndPoint
           let (mode, newDistance, newDuration) = updateLegDistanceAndMode nextLeg mbNewDistance mbNewDuration
           let updatedNextLeg =
