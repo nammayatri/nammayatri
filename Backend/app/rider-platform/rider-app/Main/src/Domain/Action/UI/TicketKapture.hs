@@ -106,7 +106,8 @@ getGetClosedTicketIds (mbPersonId, _) = do
   issueChats <- QIssueChat.findAllByPersonId issuePersonId
   closedTicketsResult <- mapM extractClosedTicket issueChats
   let closedTickets = catMaybes closedTicketsResult
-  let uniqueClosedTickets = nubBy (\a b -> a.ticketId == b.ticketId) closedTickets
+      sortedTickets = sortOn (Down . (.updatedAt)) closedTickets
+      uniqueClosedTickets = nubBy (\a b -> a.ticketId == b.ticketId) sortedTickets
   pure $ TicketKapture.GetClosedTicketIdsRes {TicketKapture.closedTicketIds = uniqueClosedTickets}
   where
     extractClosedTicket :: ICT.IssueChat -> Environment.Flow (Maybe API.Types.UI.TicketKapture.CloseTicketResp)
@@ -124,7 +125,8 @@ getGetClosedTicketIds (mbPersonId, _) = do
                     Just $
                       TicketKapture.CloseTicketResp
                         { TicketKapture.rideId = Kernel.Types.Id.cast <$> issueChat.rideId,
-                          TicketKapture.ticketId = issueChat.ticketId
+                          TicketKapture.ticketId = issueChat.ticketId,
+                          TicketKapture.updatedAt = issueReport.updatedAt
                         }
                 else pure Nothing
 

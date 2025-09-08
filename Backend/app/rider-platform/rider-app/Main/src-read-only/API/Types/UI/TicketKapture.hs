@@ -16,7 +16,7 @@ data ActiveTicketsRes = ActiveTicketsRes {rideId :: Kernel.Prelude.Maybe (Kernel
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data CloseTicketResp = CloseTicketResp {rideId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Ride.Ride), ticketId :: Data.Text.Text}
+data CloseTicketResp = CloseTicketResp {rideId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Ride.Ride), ticketId :: Data.Text.Text, updatedAt :: Kernel.Prelude.UTCTime}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

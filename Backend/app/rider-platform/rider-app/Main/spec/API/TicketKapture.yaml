@@ -6,6 +6,7 @@ imports:
   TaggedChatMessage: Domain.Types.TicketKapture
   APISuccess: Kernel.Types.APISuccess
   Ride: Domain.Types.Ride
+  UTCTime: Kernel.Prelude
 
 module: TicketKapture
 
@@ -21,6 +22,7 @@ types:
   CloseTicketResp:
     ticketId: Text
     rideId: Maybe (Id Ride)
+    updatedAt: UTCTime
 
   GetAllActiveTicketsRes:
     activeTickets: [ActiveTicketsRes]
