@@ -198,3 +198,13 @@ ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN coins_re
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.search_request_for_driver ADD COLUMN react_bundle_version text ;
+
+
+------- SQL updates -------
+

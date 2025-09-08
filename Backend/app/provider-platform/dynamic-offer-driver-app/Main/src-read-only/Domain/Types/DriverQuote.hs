@@ -46,6 +46,7 @@ data DriverQuote = DriverQuote
     id :: Kernel.Types.Id.Id Domain.Types.DriverQuote.DriverQuote,
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     providerId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+    reactBundleVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     requestId :: Kernel.Types.Id.Id Domain.Types.SearchRequest.SearchRequest,
     searchRequestForDriverId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.SearchRequestForDriver.SearchRequestForDriver),
     searchTryId :: Kernel.Types.Id.Id Domain.Types.SearchTry.SearchTry,
@@ -58,8 +59,8 @@ data DriverQuote = DriverQuote
     vehicleServiceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vehicleVariant :: Domain.Types.VehicleVariant.VehicleVariant
   }
-  deriving (Generic, Show)
+  deriving (Generic, (Show))
 
 data DriverQuoteStatus = Active | Inactive deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DriverQuoteStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''DriverQuoteStatus))
