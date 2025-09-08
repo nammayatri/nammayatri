@@ -649,6 +649,7 @@ view push state =
           driverMapsHeaderView push state
         , rideActionModelView push state
         , rideTrackingModalView push state
+        , customerNotPickingUpTheCallPopUp push state
         -- , if state.data.activeRide.bookingFromOtherPlatform then RideActionModal.bottomPlatformInfoBar VISIBLE else dummyTextView
         ]
       -- , if (getValueToLocalNativeStore PROFILE_DEMO) /= "false" then profileDemoView state push else linearLayout[][]       Disabled ProfileDemoView
@@ -711,6 +712,7 @@ view push state =
         else if (state.props.whereIsMyBusConfig.selectBusDriverDropdown) then selectBusDriverPopup push state
         else if (state.props.whereIsMyBusConfig.selectBusConductorDropdown) then selectBusConductorPopup push state 
         else dummyTextView
+      , if (state.props.callNotPickingUpPopUp) then PopUpModal.view (push <<< CallNotPickingUpAction) (callNotPickingUpConfig state) else dummyTextView
   ]
   where
     currentDate = HU.getCurrentUTC ""
@@ -4052,5 +4054,55 @@ recentBusRideView push state =
         , margin = Margin 10 0 10 24
         , padding = Padding 16 16 16 16
         , fontSize = FontStyle.Body20
-      }    
-          
+      } 
+
+customerNotPickingUpTheCallPopUp :: forall w . (Action -> Effect Unit) -> HomeScreenState -> PrestoDOM (Effect Unit) w
+customerNotPickingUpTheCallPopUp push state =
+  let exoCallUnreachable = (getValueToLocalNativeStore EXOTEL_CALL_UNREACHABLE) == "true"
+  in
+    linearLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , background Color.transparent
+    , clipChildren false
+    , visibility $ boolToVisibility exoCallUnreachable
+    ]
+    [
+      linearLayout
+      [
+        width MATCH_PARENT
+      , height WRAP_CONTENT
+      , orientation HORIZONTAL
+      , padding $ Padding 10 10 10 10
+      , margin $ Margin 10 200 10 10
+      , cornerRadius 24.0
+      , background Color.white900
+      , stroke $ "1," <> Color.grey900
+      , shadow $ Shadow 0.1 2.0 10.0 15.0 Color.greyBackDarkColor 0.5
+      ]
+      [
+        imageView
+        [ width $ V 50
+        , height WRAP_CONTENT
+        , imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_call_not_picked_bg_removed"
+        , cornerRadius 24.0
+        , padding $ PaddingTop 10
+        ]
+      , textView $
+        [ width $ V (2*(EHC.screenWidth unit)/3)
+        , height WRAP_CONTENT
+        , color Color.black800
+        , text $ "Customer not picking up the call?"
+        , margin $ MarginLeft 5
+        , margin $ MarginRight 5
+        , padding $ PaddingHorizontal 10 15
+        ] <> FontStyle.title8 TypoGraphy
+        ,imageView
+        [ width $ V 50
+        , height WRAP_CONTENT
+        , padding $ PaddingVertical 10 10
+        , imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_right_arrow_grey_bg"
+        , onClick push $ const $ OpenCallNotPickUp 
+        ]
+      ]
+    ]        

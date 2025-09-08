@@ -3841,3 +3841,54 @@ rideInsuranceBannerConfig state = let
       }
   }
   in popUpConfig'
+
+callNotPickingUpConfig :: ST.HomeScreenState -> PopUpModal.Config
+callNotPickingUpConfig state = PopUpModal.config {
+    backgroundClickable = false,
+    optionButtonOrientation = "VERTICAL",
+    buttonLayoutMargin = MarginBottom 10,
+    dismissPopup = false,
+    showCallNotPickingUpConfig = true,
+    primaryText 
+    {
+      visibility = GONE
+    },
+    secondaryText 
+    {
+      visibility = GONE
+    },
+    headerInfo
+    {
+      visibility = GONE
+    },
+    option1
+    {
+      text = getString CANCEL_RIDE,
+      color = Color.yellow900,
+      background = Color.black900,
+      textStyle = FontStyle.SubHeading1,
+      strokeColor = Color.transparent,
+      gravity = CENTER,
+      width = MATCH_PARENT,
+      enableRipple = true,
+      margin = Margin 16 16 16 0
+    },
+    option2 {
+      text = "I will wait",
+      color = Color.black700,
+      background = Color.white900,
+      strokeColor = Color.transparent,
+      gravity = CENTER,
+      width = MATCH_PARENT,
+      enableRipple = true,
+      margin = Margin 16 0 16 16
+    },
+    optionsConfig {
+      height = MATCH_PARENT
+      , width = MATCH_PARENT
+      , orientation = VERTICAL
+      , alignParentBottom = "true,-1"
+      , gravity = BOTTOM
+    }
+  }
+ 

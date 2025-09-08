@@ -1479,7 +1479,9 @@ type HomeScreenProps =  {
   coinWaitingThreshold :: Int,
   nyClubConsent :: Maybe Boolean,
   willCancellationBlock :: Boolean,
-  cancellationValues :: { cancelledRides :: Int, totalRides :: Int, suspensionHours :: Int, blockType :: Maybe BlockType }
+  cancellationValues :: { cancelledRides :: Int, totalRides :: Int, suspensionHours :: Int, blockType :: Maybe BlockType },
+  callNotPickingUpPopUp :: Boolean,
+  driverRatingOnCancellationUnaffected :: Boolean
 }
 
 type WhereIsMyBusConfig = {
@@ -2094,6 +2096,7 @@ data NotificationType =  DRIVER_REACHED
                       | WMB_TRIP_STARTED
                       | WMB_TRIP_FINISHED
                       | DRIVER_REQUEST_REJECTED
+                      | EXOTEL_CALL_UNREACHABLE
 
 derive instance genericNotificationType :: Generic NotificationType _
 instance showNotificationType :: Show NotificationType where show = genericShow
