@@ -1427,8 +1427,10 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
             when (expiryTimeWithBuffer < now) $ throwError (InvalidRequest "Quote can't be responded. SearchReqForDriver is expired")
             searchReq <- QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
             -- fetch if any booking exist with same transaction id and status in activeBookingStatus
-            mbActiveBooking <- QBE.findByTransactionIdAndStatuses searchReq.transactionId [DRB.NEW, DRB.TRIP_ASSIGNED]
-            whenJust mbActiveBooking $ const $ throwError RideRequestAlreadyAccepted
+            when (DTC.isDynamicOfferTrip searchTry.tripCategory) $ do
+              mbActiveBooking <- QBE.findByTransactionIdAndStatuses searchReq.transactionId [DRB.NEW, DRB.TRIP_ASSIGNED]
+              whenJust mbActiveBooking $ \_ ->
+                throwError RideRequestAlreadyAccepted
             merchant <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantDoesNotExist searchReq.providerId.getId)
             driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
             driverInfo <- QDriverInformation.findById (cast driverId) >>= fromMaybeM DriverInfoNotFound
