@@ -392,7 +392,7 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
       mbJourneyWithIndex <- JMU.measureLatency (go indexedRoutesToProcess userPreferences) "Multimodal Init Time" -- process until first journey is found
       QSearchRequest.updateHasMultimodalSearch (Just True) searchRequest.id
 
-      journeys <- if (isFirstJourneyReq) then DQuote.getJourneys searchRequest (Just True) else return []
+      journeys <- if isFirstJourneyReq then DQuote.getJourneys searchRequest (Just True) else return Nothing
       let mbFirstJourney = listToMaybe (fromMaybe [] journeys)
       firstJourneyInfo <-
         if initiateJourney && isFirstJourneyReq
