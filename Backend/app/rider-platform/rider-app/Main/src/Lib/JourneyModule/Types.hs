@@ -7,6 +7,7 @@ import qualified BecknV2.OnDemand.Enums as BecknSpec
 import Control.Applicative (liftA2, (<|>))
 import Data.Aeson (object, withObject, (.:), (.=))
 import qualified Data.HashMap.Strict as HM
+import Data.List (nub)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as Text
 import qualified Domain.Types.Booking as DBooking
@@ -242,7 +243,7 @@ data JourneyLegStateData = JourneyLegStateData
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data GetFareResponse = GetFareResponse {estimatedMinFare :: HighPrecMoney, estimatedMaxFare :: HighPrecMoney, serviceTypes :: Maybe [Spec.ServiceTierType]}
+data GetFareResponse = GetFareResponse {estimatedMinFare :: HighPrecMoney, estimatedMaxFare :: HighPrecMoney, serviceTypes :: Maybe [Spec.ServiceTierType], possibleRoutes :: Maybe [AvailableRoutesByTier]}
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -1185,7 +1186,7 @@ mkJourneyLeg ::
 mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation merchantId merchantOpCityId journeyId multimodalSearchRequestId maximumWalkDistance fare mbGates = do
   now <- getCurrentTime
   journeyLegId <- generateGUID
-  routeDetails <- mapM (mkRouteDetail journeyLegId) leg.routeDetails
+  routeDetails <- mapM (mkRouteDetail journeyLegId fare) leg.routeDetails
   let travelMode = convertMultiModalModeToTripMode leg.mode straightLineDistance maximumWalkDistance
   gates <- maybe (getGates (mbPrev, leg, mbNext) merchantId merchantOpCityId) (pure . Just) mbGates
   let (fromStopDetails, toStopDetails) =
@@ -1269,12 +1270,14 @@ mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation m
           }
     mkStopDetails _ _ _ = Nothing
 
-    mkRouteDetail :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => Id DJL.JourneyLeg -> EMInterface.MultiModalRouteDetails -> m RouteDetails
-    mkRouteDetail journeyLegId routeDetail = do
+    mkRouteDetail :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => Id DJL.JourneyLeg -> Maybe GetFareResponse -> EMInterface.MultiModalRouteDetails -> m RouteDetails
+    mkRouteDetail journeyLegId fare' routeDetail = do
       now <- getCurrentTime
       newId <- generateGUID
       let fromStopDetails' = fromMaybe (EMInterface.MultiModalStopDetails Nothing Nothing Nothing Nothing) (routeDetail.fromStopDetails)
           toStopDetails' = fromMaybe (EMInterface.MultiModalStopDetails Nothing Nothing Nothing Nothing) (routeDetail.toStopDetails)
+      let tierRoutes = maybe [] (concatMap (.availableRoutes)) (fare' >>= (.possibleRoutes))
+      let alternateShortNames = if null tierRoutes then routeDetail.alternateShortNames else nub tierRoutes
       return $
         RouteDetails
           { routeGtfsId = routeDetail.gtfsId <&> gtfsIdtoDomainCode,
@@ -1285,7 +1288,7 @@ mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation m
             routeColorName = routeDetail.shortName,
             routeColorCode = routeDetail.color,
             frequency = Nothing,
-            alternateShortNames = routeDetail.alternateShortNames,
+            alternateShortNames = alternateShortNames,
             journeyLegId = journeyLegId.getId,
             agencyGtfsId = routeDetail.gtfsId <&> gtfsIdtoDomainCode,
             agencyName = routeDetail.longName,

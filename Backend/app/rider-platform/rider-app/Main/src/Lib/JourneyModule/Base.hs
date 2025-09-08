@@ -1114,7 +1114,7 @@ extendLegEstimatedFare journeyId startPoint mbEndLocation _ = do
           estimatedDistance <- bookingUpdateReq.estimatedDistance & fromMaybeM (InvalidRequest $ "EditLocation distance not Found for bookingUpdateReqId: " <> show bookingUpdateReq.id)
           return $
             APITypes.ExtendLegGetFareResp
-              { totalFare = Just JL.GetFareResponse {estimatedMinFare = estimatedFare, estimatedMaxFare = estimatedFare, serviceTypes = Nothing},
+              { totalFare = Just JL.GetFareResponse {estimatedMinFare = estimatedFare, estimatedMaxFare = estimatedFare, serviceTypes = Nothing, possibleRoutes = Nothing},
                 distance = convertHighPrecMetersToDistance bookingUpdateReq.distanceUnit estimatedDistance,
                 duration = Nothing,
                 bookingUpdateRequestId = Just bookingUpdateReq.id
