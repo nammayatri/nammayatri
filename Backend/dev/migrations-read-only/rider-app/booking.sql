@@ -392,3 +392,8 @@ ALTER TABLE atlas_app.booking ADD COLUMN multimodal_search_request_id text ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+

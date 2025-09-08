@@ -455,3 +455,8 @@ ALTER TABLE atlas_app.search_request ADD COLUMN multimodal_search_request_id tex
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
