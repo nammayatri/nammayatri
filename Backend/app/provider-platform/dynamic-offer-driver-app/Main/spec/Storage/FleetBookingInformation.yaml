@@ -21,6 +21,8 @@ FleetBookingInformation:
     vehicleNo: Maybe Text  # This will be deprecated like my sleep
     personId: Maybe (Id Person)
     ticketPlaceId: Maybe Text
+    ticketBookingShortId: Maybe Text
+    ticketBookingServiceShortId: Maybe Text
     amount: Maybe HighPrecMoney
     visitDate: Maybe Day
     bookedSeats: Maybe Int

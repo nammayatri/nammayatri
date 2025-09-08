@@ -463,6 +463,7 @@ apis:
         - from: UTCTime
         - to: UTCTime
         - status: Text
+        - vehicleNo: Text
         - searchByFleetOwnerId: Bool
         - searchByTicketPlaceId: Bool
       response:
@@ -481,6 +482,7 @@ apis:
               - from: UTCTime
               - to: UTCTime
               - status: Text
+              - vehicleNo: Text
               - searchByFleetOwnerId: Bool
               - searchByTicketPlaceId: Bool
             response:
@@ -1226,6 +1228,8 @@ types:
   FleetBookingItem:
     - bookingId: Text
     - serviceId: Text
+    - ticketBookingShortId: Maybe Text
+    - ticketBookingServiceShortId: Maybe Text
     - serviceName: Text
     - placeName: Text
     - vehicleNo: Text
