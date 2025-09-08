@@ -279,7 +279,7 @@ findAllRideItemsV2 merchant opCity limitVal offsetVal mbRideStatus mbRideShortId
         CH.limit_ limitVal $
           CH.offset_ offsetVal $
             CH.filter_
-              ( \bppTransaction _ ->
+              ( \bppTransaction ->
                   do
                     bppTransaction.rideCreatedAt >=. from
                     CH.&&. bppTransaction.rideCreatedAt <=. to
