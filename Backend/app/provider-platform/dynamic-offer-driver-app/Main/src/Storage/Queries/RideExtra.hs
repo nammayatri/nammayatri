@@ -47,6 +47,7 @@ import qualified SharedLogic.LocationMapping as SLM
 import qualified Storage.Beam.Booking as BeamB
 import qualified Storage.Beam.Common as BeamCommon
 import qualified Storage.Beam.DriverInformation as BeamDI
+import qualified Storage.Beam.Person as BeamP
 import qualified Storage.Beam.Ride as BeamR
 import qualified Storage.Beam.RideDetails as BeamRD
 import qualified Storage.Beam.RiderDetails as BeamRDR
@@ -54,6 +55,7 @@ import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.LocationMapping as QLM
 import Storage.Queries.OrphanInstances.DriverInformation ()
+import Storage.Queries.OrphanInstances.Person ()
 import Storage.Queries.OrphanInstances.Ride ()
 import Storage.Queries.RideDetails ()
 import Storage.Queries.RiderDetails ()
@@ -662,11 +664,29 @@ findAllRideItemsV2 ::
   Maybe (ShortId Ride) ->
   Maybe DbHash ->
   Maybe DbHash ->
+  Maybe Text ->
   UTCTime ->
   Maybe UTCTime ->
   Maybe UTCTime ->
   m [RideItemV2]
-findAllRideItemsV2 merchant opCity limitVal offsetVal mbRideStatus mbRideShortId mbCustomerPhoneDBHash mbDriverPhoneDBHash now mbFrom mbTo = do
+findAllRideItemsV2 merchant opCity limitVal offsetVal mbRideStatus mbRideShortId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbDriverPhoneNo now mbFrom mbTo = do
+  mbDriver <- case mbDriverPhoneDBHash of
+    Just _driverPhoneDBHash ->
+      findOneWithKV
+        [ Se.And
+            [ Se.Is BeamP.merchantId $ Se.Eq merchant.id.getId,
+              Se.Is BeamP.mobileNumberHash $ Se.Eq mbDriverPhoneDBHash,
+              Se.Is BeamP.role $ Se.Eq DRIVER
+            ]
+        ]
+    Nothing ->
+      pure Nothing
+
+  let mbDriverId = getId . (.id) <$> mbDriver
+
+  logDebug $ "mbDriverId: " <> show mbDriverId
+  logDebug $ "mbDriverPhoneNo: " <> show mbDriverPhoneNo
+
   case mbRideShortId of
     Just rideShortId -> do
       ride <- findOneWithKV [Se.Is BeamR.shortId $ Se.Eq $ getShortId rideShortId] >>= fromMaybeM (RideNotFound $ "for ride shortId: " <> rideShortId.getShortId)
@@ -676,25 +696,19 @@ findAllRideItemsV2 merchant opCity limitVal offsetVal mbRideStatus mbRideShortId
       zippedRides <- case mbTo of
         Just toDate | roundToMidnightUTCToDate toDate >= now -> do
           case (mbDriverPhoneDBHash, mbCustomerPhoneDBHash) of
-            (Just driverPhoneDBHash, _) -> do
-              rideDetails <-
-                findAllFromKvRedis
-                  [ Se.And
-                      ( [Se.Is BeamRD.driverNumberHash $ Se.Eq $ Just driverPhoneDBHash, Se.Is BeamRD.merchantId $ Se.Eq $ Just $ getId merchant.id]
-                          <> [Se.Is BeamRD.createdAt $ Se.GreaterThanOrEq $ roundToMidnightUTC <$> mbFrom]
-                          <> [Se.Is BeamRD.createdAt $ Se.LessThanOrEq $ roundToMidnightUTCToDate <$> mbTo]
-                      )
-                  ]
-                  Nothing
+            (Just _driverPhoneDBHash, _) -> do
               rides <-
                 findAllFromKvRedis
                   [ Se.And
-                      ( [Se.Is BeamR.id $ Se.In $ getId . RideDetails.id <$> rideDetails]
-                          <> [Se.Is BeamR.status $ Se.Eq (fromJust mbRideStatus) | isJust mbRideStatus]
+                      ( [Se.Is BeamR.status $ Se.Eq (fromJust mbRideStatus) | isJust mbRideStatus]
+                          <> [Se.Is BeamR.createdAt $ Se.GreaterThanOrEq $ (roundToMidnightUTC $ fromJust mbFrom) | isJust mbFrom]
+                          <> [Se.Is BeamR.createdAt $ Se.LessThanOrEq $ (roundToMidnightUTCToDate $ fromJust mbTo) | isJust mbTo]
+                          <> [Se.Is BeamR.driverId $ Se.Eq $ (fromJust mbDriverId) | isJust mbDriverId]
+                          -- <> [Se.is BeamR.status $ Se.Eq (fromJust mbRideStatus) | isJust mbRideStatus]
                       )
                   ]
-                  Nothing
-              pure $ mkRideItemUsingMapsV2 rides rideDetails
+                  (Just $ Se.Desc BeamR.createdAt)
+              pure $ mkRideItemUsingMapsV2 rides mbDriver
             (_, Just customerPhoneDBHash) -> do
               riderDetails <- findAllWithKV [Se.Is BeamRDR.mobileNumberHash $ Se.Eq customerPhoneDBHash, Se.Is BeamRDR.merchantId $ Se.Eq $ getId merchant.id]
               bookings <-
@@ -719,7 +733,7 @@ findAllRideItemsV2 merchant opCity limitVal offsetVal mbRideStatus mbRideShortId
             _ -> pure []
         _ -> pure []
       results <- case (mbDriverPhoneDBHash, mbCustomerPhoneDBHash) of
-        (Just driverPhoneDBHash, _) -> do
+        (Just _driverPhoneDBHash, _) -> do
           dbConf <- getReplicaBeamConfig
           res <- L.runDB dbConf $
             L.findRows $
@@ -727,25 +741,22 @@ findAllRideItemsV2 merchant opCity limitVal offsetVal mbRideStatus mbRideShortId
                 B.limit_ (fromIntegral limitVal) $
                   B.offset_ (fromIntegral offsetVal) $
                     B.filter_'
-                      ( \(ride, rideDetails) ->
+                      ( \ride ->
                           (ride.merchantOperatingCityId B.==?. B.val_ (Just $ getId opCity.id) B.||?. (B.sqlBool_ (B.isNothing_ ride.merchantOperatingCityId) B.&&?. B.sqlBool_ (B.val_ (merchant.city == opCity.city))))
-                            B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\rideShortId -> ride.shortId B.==?. B.val_ (getShortId rideShortId)) mbRideShortId
-                            B.&&?. rideDetails.driverNumberHash B.==?. B.val_ (Just driverPhoneDBHash)
                             B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultFrom -> B.sqlBool_ $ ride.createdAt B.>=. B.val_ (roundToMidnightUTC defaultFrom)) mbFrom
                             B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultTo -> B.sqlBool_ $ ride.createdAt B.<=. B.val_ (roundToMidnightUTCToDate defaultTo)) mbTo
                             B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\rideStatus -> ride.status B.==?. B.val_ rideStatus) mbRideStatus
+                            B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\driverId -> ride.driverId B.==?. B.val_ driverId) mbDriverId
                       )
                       do
                         ride' <- B.all_ (BeamCommon.ride BeamCommon.atlasDB)
-                        rideDetails' <- B.join_' (BeamCommon.rideDetails BeamCommon.atlasDB) (\rideDetails'' -> ride'.id B.==?. BeamRD.id rideDetails'')
-                        pure (ride', rideDetails')
+                        pure ride'
+
           case res of
             Right x -> do
-              let rides = fst <$> x
-                  rideDetails = snd <$> x
+              let rides = x
               r <- catMaybes <$> mapM fromTType' rides
-              rd <- catMaybes <$> mapM fromTType' rideDetails
-              pure $ mkRideItemUsingMapsV2 r rd
+              pure $ mkRideItemUsingMapsV2 r mbDriver
             Left err -> do
               logError $ "FAILED_TO_FETCH_RIDE_LIST" <> show err
               pure []
@@ -778,9 +789,13 @@ findAllRideItemsV2 merchant opCity limitVal offsetVal mbRideStatus mbRideShortId
             Right x -> do
               let rides = fst' <$> x
                   rideDetails = snd' <$> x
+                  bookings = thd' <$> x
+                  riderDetails = fth' <$> x
               r <- catMaybes <$> mapM fromTType' rides
               rd <- catMaybes <$> mapM fromTType' rideDetails
-              pure $ mkRideItemUsingMapsV2 r rd
+              bk <- catMaybes <$> mapM fromTType' bookings
+              rdr <- catMaybes <$> mapM fromTType' riderDetails
+              pure $ mkRideItemUsingMaps r rd bk rdr
             Left err -> do
               logError $ "FAILED_TO_FETCH_RIDE_LIST" <> show err
               pure []
@@ -794,13 +809,17 @@ findAllRideItemsV2 merchant opCity limitVal offsetVal mbRideStatus mbRideShortId
     mkRideItemV2 (rideShortId, rideId, rideCreatedAt, driverName, driverPhoneNo, rideStatus) = do
       RideItemV2 {rideShortId, rideId, rideCreatedAt, driverName, driverPhoneNo, rideStatus}
 
-    mkRideItemUsingMapsV2 :: [DDR.Ride] -> [RideDetails.RideDetails] -> [RideItemV2]
-    mkRideItemUsingMapsV2 rides rideDetails =
-      let rideDetailsMap = HMS.fromList [(rideDetail.id, rideDetail) | rideDetail <- rideDetails]
+    mkRideItemUsingMapsV2 :: [DDR.Ride] -> Maybe Person -> [RideItemV2]
+    mkRideItemUsingMapsV2 rides mbDriver =
+      let driverName = case mbDriver of
+            Just driver -> driver.firstName
+            Nothing -> ""
+          driverPhoneNo = case mbDriver of
+            Just driver -> driver.mobileNumber
+            Nothing -> Nothing
        in mapMaybe
             ( \ride -> do
-                rideDetail <- ride.id `HMS.lookup` rideDetailsMap
-                Just (mkRideItemV2 (ride.shortId, ride.id, ride.createdAt, rideDetail.driverName, rideDetail.driverNumber, ride.status))
+                Just (mkRideItemV2 (ride.shortId, ride.id, ride.createdAt, driverName, driverPhoneNo, ride.status))
             )
             rides
 
@@ -820,6 +839,8 @@ findAllRideItemsV2 merchant opCity limitVal offsetVal mbRideStatus mbRideShortId
 
     fst' (x, _, _, _) = x
     snd' (_, y, _, _) = y
+    thd' (_, _, z, _) = z
+    fth' (_, _, _, w) = w
 
 data StuckRideItem = StuckRideItem
   { rideId :: Id Ride,

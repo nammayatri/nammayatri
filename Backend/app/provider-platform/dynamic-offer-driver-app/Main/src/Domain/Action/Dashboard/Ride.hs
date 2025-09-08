@@ -159,7 +159,7 @@ getRideListV2 merchantShortId opCity mbCurrency mbCustomerPhone mbDriverPhone mb
   rideItems <-
     if addUTCTime (- (6 * 60 * 60) :: NominalDiffTime) now >= fromMaybe now mbto && enableClickhouse == Just "True"
       then BppT.findAllRideItemsV2 merchant merchantOpCity limit offset mbRideStatus mbShortRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash from to
-      else QRide.findAllRideItemsV2 merchant merchantOpCity limit offset mbRideStatus mbShortRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash now mbfrom mbto
+      else QRide.findAllRideItemsV2 merchant merchantOpCity limit offset mbRideStatus mbShortRideId mbCustomerPhoneDBHash mbDriverPhoneDBHash mbDriverPhone now mbfrom mbto
   logDebug (T.pack "rideItems: " <> T.pack (show $ length rideItems))
   rideListItems <- traverse buildRideListItemV2 rideItems
   let count = length rideListItems
