@@ -311,3 +311,7 @@ ALTER TABLE atlas_app.journey_leg ADD COLUMN leg_pricing_id text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.journey_leg ADD COLUMN multimodal_search_request_id text ;
+
+
+------- SQL updates -------
+
