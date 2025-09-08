@@ -4,6 +4,7 @@
 
 module Domain.Types.RiderConfig (module Domain.Types.RiderConfig, module ReExport) where
 
+import qualified BecknV2.FRFS.Enums
 import Data.Aeson
 import qualified Data.Time
 import Domain.Types.Extra.RiderConfig as ReExport
@@ -30,6 +31,7 @@ data RiderConfig = RiderConfig
     bookingSyncStatusCallSecondsDiffThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     boostSearchPreSelectionServiceTierConfig :: [Domain.Types.Extra.RiderConfig.VehicleServiceTierOrderConfig],
     busBookingAllowed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    busTierSortingConfig :: Kernel.Prelude.Maybe [Domain.Types.RiderConfig.BusTierSortingConfig],
     busTrackingConfig :: Kernel.Prelude.Maybe Domain.Types.RiderConfig.BusTrackingConfig,
     cancellationPaymentDelay :: Kernel.Prelude.NominalDiffTime,
     collectAutoCompleteData :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -113,6 +115,7 @@ data RiderConfig = RiderConfig
     ticketingPermissionConfig :: Kernel.Prelude.Maybe Data.Aeson.Value,
     timeDiffFromUtc :: Kernel.Types.Common.Seconds,
     trackingShortUrlPattern :: Kernel.Prelude.Text,
+    upcomingBusThresholdSec :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     useUserSettingsForSafetyIVR :: Kernel.Prelude.Bool,
     userServiceTierOrderConfig :: [Domain.Types.Extra.RiderConfig.VehicleServiceTierOrderConfig],
     variantListForNearByReq :: Kernel.Prelude.Maybe [Domain.Types.VehicleVariant.VehicleVariant],
@@ -122,6 +125,8 @@ data RiderConfig = RiderConfig
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Show, Generic, ToJSON, FromJSON, Eq)
+
+data BusTierSortingConfig = BusTierSortingConfig {rank :: Kernel.Prelude.Int, tier :: BecknV2.FRFS.Enums.ServiceTierType} deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
 data BusTrackingConfig = BusTrackingConfig
   { fairScore :: Kernel.Prelude.Double,

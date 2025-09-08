@@ -24,6 +24,7 @@ import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MultimodalPreferences as DMP
 import Domain.Types.Person
 import qualified Domain.Types.RecentLocation as DTRL
+import qualified Domain.Types.RiderConfig as RCTypes
 import Domain.Types.RouteStopTimeTable
 import qualified Domain.Types.Trip as DTrip
 import Environment
@@ -54,6 +55,7 @@ import qualified Storage.CachedQueries.FRFSVehicleServiceTier as CQFRFSVehicleSe
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as MultiModalBus
 import qualified Storage.CachedQueries.Merchant.MultiModalSuburban as MultiModalSuburban
+import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.RouteStopTimeTable as GRSM
 import Storage.GraphqlQueries.Client (mapToServiceTierType)
@@ -439,10 +441,44 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
           routeStopTimings
 
   -- Group by service tier
-  let groupedByTier = groupBy (\a b -> a.serviceTierType == b.serviceTierType) $ sortBy (comparing (.serviceTierType)) routeStopTimings
+  mbRiderConfig <- QRiderConfig.findByMerchantOperatingCityId mocid Nothing
+  let cfgMap = maybe (toCfgMap defaultBusTierSortingConfig) toCfgMap (mbRiderConfig >>= (.busTierSortingConfig))
+  let groupedByTier = groupBy (\a b -> a.serviceTierType == b.serviceTierType) $ sortBy (comparing (tierRank cfgMap . (.serviceTierType))) routeStopTimings
   logDebug $ "groupedByTier: " <> show groupedByTier <> " sortedTimings: " <> show sortedTimings <> " routeStopTimings: " <> show routeStopTimings
+  let upcomingBusThresholdSec = fromMaybe (Seconds 3600) (mbRiderConfig >>= (.upcomingBusThresholdSec))
+  let normalizeEtaSeconds tod =
+        let eta = nominalDiffTimeToSeconds $ diffUTCTime (getISTArrivalTime tod currentTime) currentTimeIST
+            secondsValue = fromIntegral (getSeconds eta) :: Double
+         in if eta > 0
+              then eta
+              else
+                if abs secondsValue > 86400
+                  then Seconds $ round $ (7 * 86400) + secondsValue
+                  else Seconds $ round $ 86400 + secondsValue
+
+  let earliestArrival timings =
+        listToMaybe . sort $
+          [ s
+            | timing <- timings,
+              let Seconds s = normalizeEtaSeconds timing.timeOfArrival
+          ]
+
+  let tierWithEarliest =
+        [ (earliestArrival timings, timings)
+          | timings <- groupedByTier,
+            not (null timings)
+        ]
+  let sortedTierGroups =
+        sortBy
+          ( \(ea1, _) (ea2, _) ->
+              compare
+                (withinThreshold ea1 upcomingBusThresholdSec)
+                (withinThreshold ea2 upcomingBusThresholdSec)
+          )
+          tierWithEarliest
+  let groupedByTierReordered = map snd sortedTierGroups
   -- For each service tier, collect route information
-  results <- forM groupedByTier $ \timingsForTier -> do
+  results <- forM groupedByTierReordered $ \timingsForTier -> do
     let serviceTierType = if null timingsForTier then Spec.ORDINARY else (head timingsForTier).serviceTierType
         routeCodesForTier = nub $ map (.routeCode) timingsForTier
     let tierSource = fromMaybe GTFS $ listToMaybe $ map (.source) timingsForTier
@@ -543,6 +579,28 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
       pure (M.fromList freqs)
 
     getFreq r freqMap = M.findWithDefault 0 r.routeCode freqMap
+
+    withinThreshold :: Maybe Int -> Seconds -> Int
+    withinThreshold s upcomingBusThresholdSec = maybe 1 (\s' -> if s' <= upcomingBusThresholdSec.getSeconds then 0 else 1) s
+
+    defaultBusTierSortingConfig :: [RCTypes.BusTierSortingConfig]
+    defaultBusTierSortingConfig =
+      [ RCTypes.BusTierSortingConfig 1 Spec.EXECUTIVE,
+        RCTypes.BusTierSortingConfig 2 Spec.AC,
+        RCTypes.BusTierSortingConfig 3 Spec.EXPRESS,
+        RCTypes.BusTierSortingConfig 4 Spec.FIRST_CLASS,
+        RCTypes.BusTierSortingConfig 5 Spec.NON_AC,
+        RCTypes.BusTierSortingConfig 6 Spec.ORDINARY,
+        RCTypes.BusTierSortingConfig 7 Spec.SECOND_CLASS,
+        RCTypes.BusTierSortingConfig 8 Spec.SPECIAL,
+        RCTypes.BusTierSortingConfig 9 Spec.THIRD_CLASS
+      ]
+
+    tierRank :: M.Map Spec.ServiceTierType Int -> Spec.ServiceTierType -> Int
+    tierRank cfg tier = fromMaybe maxBound (M.lookup tier cfg)
+
+    toCfgMap :: [RCTypes.BusTierSortingConfig] -> M.Map Spec.ServiceTierType Int
+    toCfgMap xs = M.fromList [(RCTypes.tier x, RCTypes.rank x) | x <- xs]
 
 -- | Find the top upcoming trips for a given route code and stop code
 -- Returns arrival times in seconds for the upcoming trips along with route ID and service type
