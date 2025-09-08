@@ -35,6 +35,10 @@ RiderConfig:
       thresholdFactor: Double
       thresholdSeconds: Double
       movementThresholdInMeters: Double
+    BusTierSortingConfig:
+      derive: "Eq"
+      tier: BecknV2.FRFS.Enums.ServiceTierType
+      rank: Int
 
   tableName: rider_config
 
@@ -122,6 +126,7 @@ RiderConfig:
     boostSearchPreSelectionServiceTierConfig: "[VehicleServiceTierOrderConfig]"
     noOfRideRequestsConfig: Int
     busTrackingConfig: "Maybe BusTrackingConfig"
+    busTierSortingConfig: "Maybe [BusTierSortingConfig]"
     pickupInstructionsThreshold: Int
     pickupInstructionsProximityMeters: Int
     enableMultiModalForAllUsers: Maybe Bool
@@ -136,6 +141,7 @@ RiderConfig:
     refundStatusUpdateInterval: NominalDiffTime
     refundStatusUpdateRetries: Int
     domainRouteCalculationEnabledModes: "Maybe [GeneralVehicleType]"
+    upcomingBusThresholdSec: Maybe Seconds
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
@@ -171,6 +177,7 @@ RiderConfig:
     boostSearchPreSelectionServiceTierConfig: Maybe Value
     noOfRideRequestsConfig: Maybe Int
     busTrackingConfig: Maybe Value
+    busTierSortingConfig: Maybe Value
     pickupInstructionsThreshold: Maybe Int
     pickupInstructionsProximityMeters: Maybe Int
     initiateFirstMultimodalJourney: Maybe Bool
@@ -220,6 +227,7 @@ RiderConfig:
     fareCacheInterCitySearchLocations : fareCacheInterCitySearchLocations >>= Kernel.Utils.JSON.valueToMaybe|E
     userServiceTierOrderConfig: fromMaybe [] (userServiceTierOrderConfig >>= Kernel.Utils.JSON.valueToMaybe)|E
     boostSearchPreSelectionServiceTierConfig: fromMaybe [] (boostSearchPreSelectionServiceTierConfig >>= Kernel.Utils.JSON.valueToMaybe)|E
+    busTierSortingConfig: (busTierSortingConfig >>= Kernel.Utils.JSON.valueToMaybe)|E
     noOfRideRequestsConfig: fromMaybe 5 noOfRideRequestsConfig|E
     busTrackingConfig: busTrackingConfig >>= Kernel.Utils.JSON.valueToMaybe|E
     pickupInstructionsThreshold: fromMaybe 4 pickupInstructionsThreshold|E
@@ -264,6 +272,7 @@ RiderConfig:
     fareCacheInterCitySearchLocations : fareCacheInterCitySearchLocations >>= Just . Data.Aeson.toJSON|E
     userServiceTierOrderConfig: (Just . Data.Aeson.toJSON)|I
     boostSearchPreSelectionServiceTierConfig: (Just . Data.Aeson.toJSON)|I
+    busTierSortingConfig: (busTierSortingConfig >>= Just . Data.Aeson.toJSON)|E
     noOfRideRequestsConfig: Just noOfRideRequestsConfig|E
     busTrackingConfig: busTrackingConfig >>= Just . Data.Aeson.toJSON|E
     pickupInstructionsThreshold: Just pickupInstructionsThreshold|E
@@ -275,6 +284,7 @@ RiderConfig:
     nyRegularMasterJobNextRunOffsetSeconds: (Just  . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
     refundStatusUpdateInterval: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
     refundStatusUpdateRetries: Just refundStatusUpdateRetries|E
+
 
   default:
     enableLocalPoliceSupport: "false"
@@ -312,6 +322,7 @@ RiderConfig:
     initiateFirstMultimodalJourney: "false"
     enableAutoJourneyRefund: "false"
     filterWalkAndUnspecifiedTransitModes: "false"
+    upcomingBusThresholdSec: "3600"
 
   queries:
     findByMerchantOperatingCityId:
@@ -347,6 +358,7 @@ RiderConfig:
     blockedUntilInMins: int
     ticketingPermissionConfig: "json"
     busTrackingConfig: "json"
+    busTierSortingConfig: "json"
 
   extraOperations:
     - EXTRA_DOMAIN_TYPE_FILE
