@@ -276,8 +276,8 @@ getFare riderId merchant merchantOperatingCity vehicleCategory serviecType route
                   now <- getCurrentTime
                   let arrivalTime = fromMaybe now mbFromArrivalTime
                   -- L.setOptionLocal QRSTT.CalledForFare True
-                  (possibleServiceTiers, availableFares) <- case serviecType of
-                    Just serviceTier -> pure (Just [serviceTier], fares) -- bypassing as in case of serviceType/serviceTier is passed, we only calculate fare for that type
+                  ((possibleServiceTiers, availableFares), mbPossibleRoutes) <- case serviecType of
+                    Just serviceTier -> pure ((Just [serviceTier], fares), Nothing) -- bypassing as in case of serviceType/serviceTier is passed, we only calculate fare for that type
                     Nothing -> JMU.measureLatency (filterAvailableBuses arrivalTime fareRouteDetails integratedBPPConfig fares) ("filterAvailableBuses" <> show vehicleCategory <> " routeDetails: " <> show fareRouteDetails)
                   -- L.setOptionLocal QRSTT.CalledForFare False
 
@@ -291,7 +291,7 @@ getFare riderId merchant merchantOperatingCity vehicleCategory serviecType route
                   logDebug $ "all fares: " <> show fares <> "min fare: " <> show mbMinFarePerRoute <> "max fare: " <> show mbMaxFarePerRoute <> "possible service tiers: " <> show possibleServiceTiers <> "available fares: " <> show availableFares
                   case (mbMinFarePerRoute, mbMaxFarePerRoute) of
                     (Just minFare, Just maxFare) -> do
-                      return (isFareMandatory, Just $ JT.GetFareResponse {serviceTypes = possibleServiceTiers, estimatedMinFare = minFare.price.amount, estimatedMaxFare = maxFare.price.amount})
+                      return (isFareMandatory, Just $ JT.GetFareResponse {serviceTypes = possibleServiceTiers, estimatedMinFare = minFare.price.amount, estimatedMaxFare = maxFare.price.amount, possibleRoutes = mbPossibleRoutes})
                     _ -> do
                       logError $ "No Fare Found for Vehicle Category : " <> show vehicleCategory <> "for riderId: " <> show riderId
                       return (isFareMandatory, Nothing)
@@ -302,7 +302,7 @@ getFare riderId merchant merchantOperatingCity vehicleCategory serviecType route
             logError $ "Did not get Beckn Config for Vehicle Category : " <> show vehicleCategory <> "for riderId: " <> show riderId
             return (False, Nothing)
   where
-    filterAvailableBuses :: (EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, MonadFlow m, CacheFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv, HasKafkaProducer r, HasShortDurationRetryCfg r c) => UTCTime -> NE.NonEmpty CallAPI.BasicRouteDetail -> DIBC.IntegratedBPPConfig -> [FRFSFare] -> m (Maybe [Spec.ServiceTierType], [FRFSFare])
+    filterAvailableBuses :: (EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, MonadFlow m, CacheFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv, HasKafkaProducer r, HasShortDurationRetryCfg r c) => UTCTime -> NE.NonEmpty CallAPI.BasicRouteDetail -> DIBC.IntegratedBPPConfig -> [FRFSFare] -> m ((Maybe [Spec.ServiceTierType], [FRFSFare]), Maybe [RD.AvailableRoutesByTier])
     filterAvailableBuses arrivalTime fareRouteDetails integratedBPPConfig fares = do
       case vehicleCategory of
         Spec.BUS -> do
@@ -312,8 +312,8 @@ getFare riderId merchant merchantOperatingCity vehicleCategory serviecType route
           let endStationCode = (NE.last fareRouteDetails).endStopCode
           (_, possibleRoutes, _) <- JMU.findPossibleRoutes Nothing startStationCode endStationCode arrivalTime integratedBPPConfig merchant.id merchantOperatingCity.id Enums.BUS True False
           let possibleServiceTiers = map (.serviceTier) possibleRoutes
-          return $ (Just possibleServiceTiers, filter (\fare -> fare.vehicleServiceTier.serviceTierType `elem` possibleServiceTiers) fares)
-        _ -> return (Nothing, fares)
+          return ((Just possibleServiceTiers, filter (\fare -> fare.vehicleServiceTier.serviceTierType `elem` possibleServiceTiers) fares), Just possibleRoutes)
+        _ -> return ((Nothing, fares), Nothing)
     selectMinFare :: [FRFSFare] -> Maybe FRFSFare
     selectMinFare [] = Nothing
     selectMinFare fares = Just $ minimumBy (\fare1 fare2 -> compare fare1.price.amount.getHighPrecMoney fare2.price.amount.getHighPrecMoney) fares

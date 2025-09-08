@@ -19,6 +19,7 @@ import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import SharedLogic.FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
+import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import Storage.CachedQueries.Merchant.RiderConfig as CQRC
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Storage.Queries.Person as QP
@@ -62,11 +63,12 @@ getTrackVehicles (mbPersonId, merchantId) routeCode mbCurrentLat mbCurrentLon mb
         Nothing -> getTrackWithoutCurrentLocation personId personCityInfo vehicleType maxBuses riderConfig
         Just stop -> do
           vehicleTracking <- trackVehicles personId merchantId personCityInfo.merchantOperatingCityId vehicleType routeCode (fromMaybe DIBC.APPLICATION mbPlatformType) (Just currentLocation) (Just integratedBPPConfig.id)
-          let sortedTracking = sortOn (distanceToStop stop) vehicleTracking
+          let (confirmedHighBuses, ghostBuses) = List.partition (\a -> (a.vehicleInfo >>= (.routeState)) == Just CQMMB.ConfirmedHigh) vehicleTracking
+          let sortedTracking = sortOn (distanceToStop stop) ghostBuses
           pure $
             TrackRoute.TrackingResp
               { vehicleTrackingInfo =
-                  map mkVehicleTrackingResponse (take maxBuses sortedTracking)
+                  map mkVehicleTrackingResponse (confirmedHighBuses <> take maxBuses sortedTracking)
               }
     _ -> getTrackWithoutCurrentLocation personId personCityInfo vehicleType maxBuses riderConfig
   where
