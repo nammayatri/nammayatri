@@ -249,3 +249,5 @@ ALTER TABLE atlas_app.route_details ADD COLUMN route_group_id text ;
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_app.route_details ADD COLUMN leg_start_time timestamp with time zone ;
+ALTER TABLE atlas_app.route_details ADD COLUMN leg_end_time timestamp with time zone ;

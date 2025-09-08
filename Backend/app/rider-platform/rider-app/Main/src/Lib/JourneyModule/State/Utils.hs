@@ -18,6 +18,7 @@ import Lib.JourneyModule.State.Types
 import Storage.Queries.FRFSTicket as QFRFSTicket
 import Storage.Queries.FRFSTicketBookingFeedback as QFRFSTicketBookingFeedback
 import Storage.Queries.RouteDetails as QRouteDetails
+import Storage.Queries.RouteDetailsExtra as QRouteDetailsExtra
 
 getFRFSAllStatuses :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => DJourneyLeg.JourneyLeg -> Maybe DFRFSBooking.FRFSTicketBooking -> m (JLTypes.JourneyLegStatus, JourneyBookingStatus, [(Int, TrackingStatus)])
 getFRFSAllStatuses journeyLeg mbBooking = do
@@ -174,7 +175,7 @@ setJourneyLegTrackingStatus journeyLeg subLegOrder trackingStatus = do
     ( \rd -> do
         -- Removed this validation as in case of Manual Fix Location, Tracking Status can go back in Past.
         -- when (maybe True (trackingStatus >) rd.trackingStatus) $ do
-        void $ QRouteDetails.updateTrackingStatus (Just trackingStatus) rd.id
+        void $ QRouteDetailsExtra.updateTrackingStatusWithTime (Just trackingStatus) rd.id
     )
     routeDetails
 

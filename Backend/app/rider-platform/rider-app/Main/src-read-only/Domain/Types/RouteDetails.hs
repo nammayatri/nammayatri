@@ -27,6 +27,8 @@ data RouteDetails = RouteDetails
     fromStopPlatformCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     id :: Kernel.Types.Id.Id Domain.Types.RouteDetails.RouteDetails,
     journeyLegId :: Kernel.Prelude.Text,
+    legEndTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    legStartTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     routeCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     routeColorCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     routeColorName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
