@@ -381,12 +381,12 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
   where
     processSingleModeRoutes restOfViaPoints userPreferences mbIntegratedBPPConfig preliminaryLeg = do
       (restOfRoutes, _) <- JMU.getSubwayValidRoutes restOfViaPoints preliminaryLeg (fromJust mbIntegratedBPPConfig) searchRequest.merchantId searchRequest.merchantOperatingCityId (fromMaybe BecknV2.OnDemand.Enums.BUS searchRequest.vehicleCategory) (castVehicleCategoryToGeneralVehicleType (fromMaybe BecknV2.OnDemand.Enums.BUS searchRequest.vehicleCategory)) True
+      cacheAllRoutesLoadedKey searchRequest.id.getId True
       when (not (null restOfRoutes)) $
         do
           let multimodalResponse = MInterface.MultiModalResponse {routes = restOfRoutes}
           (indexedRoutesToProcess, showMultimodalWarningForFirstJourney) <- getIndexedRoutesAndWarning userPreferences multimodalResponse
           void $ multimodalIntiateHelper Nothing multimodalResponse userPreferences indexedRoutesToProcess showMultimodalWarningForFirstJourney Nothing False
-      cacheAllRoutesLoadedKey searchRequest.id.getId True
 
     multimodalIntiateHelper singleModeWarningType otpResponse userPreferences indexedRoutesToProcess showMultimodalWarningForFirstJourney mbCrisSdkToken isFirstJourneyReq = do
       mbJourneyWithIndex <- JMU.measureLatency (go indexedRoutesToProcess userPreferences) "Multimodal Init Time" -- process until first journey is found
