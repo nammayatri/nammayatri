@@ -176,6 +176,7 @@ data KeyStore = USER_NAME
                 | RECENT_BUS_TRIPS
                 | DESTINATION_WAITING_TIME_VAL
                 | IS_PRIVATE_BUS_FLEET
+                | EXOTEL_CALL_UNREACHABLE
 
 derive instance genericKeyStore :: Generic KeyStore _
 instance showKeyStore :: Show KeyStore where

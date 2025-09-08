@@ -538,6 +538,10 @@ public  class MyFirebaseMessagingService {
                     case NotificationTypes.SAFETY_ALERT:
                         showSafetyAlert(context, title, body, payload, imageUrl);
                         break;
+                    case NotificationTypes.EXOTEL_CALL_UNREACHABLE:
+                        Log.d ("Fcm Received","EXOTEL_CALL_UNREACHABLE");
+                        sharedPref.edit().putString(context.getString(R.string.EXOTEL_CALL_UNREACHABLE), "true").apply();
+                        break;
                     default:
                         if (payload.get("show_notification").equals("true")) {
                             NotificationUtils.showNotification(context, title, body, payload, imageUrl);
@@ -930,5 +934,6 @@ public  class MyFirebaseMessagingService {
         public static final String CANCELLATION_RATE_NUDGE_WEEKLY = "CANCELLATION_RATE_NUDGE_WEEKLY";
         public static final String DRIVER_STOP_DETECTED = "DRIVER_STOP_DETECTED";
         public static final String WMB_TRIP_ASSIGNED = "WMB_TRIP_ASSIGNED";
+        public static final String EXOTEL_CALL_UNREACHABLE = "EXOTEL_CALL_UNREACHABLE";
     }
 }

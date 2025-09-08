@@ -354,6 +354,8 @@ initData =
       , nyClubConsent : Nothing
       , willCancellationBlock : false
       , cancellationValues : { cancelledRides: 0, totalRides: 0, suspensionHours: 0, blockType: Nothing }
+      , callNotPickingUpPopUp : false
+      , driverRatingOnCancellationUnaffected : false
       }
   }
 

@@ -1907,6 +1907,9 @@ newtype Keymap = Keymap {
   , select_bus_route :: String
   , driver_name :: String
   , link_trip :: String
+  , you_can_cancel_the_ride_without_affecting_your_rating :: String
+  , customer_not_picking_up_the_call :: String
+  , your_rating_wont_be_affected :: String
   }
 
 derive instance ntL :: Newtype Languages _
@@ -7566,3 +7569,12 @@ driver_name = Proxy
 
 link_trip :: Proxy "link_trip"
 link_trip = Proxy
+
+you_can_cancel_the_ride_without_affecting_your_rating :: Proxy "you_can_cancel_the_ride_without_affecting_your_rating"
+you_can_cancel_the_ride_without_affecting_your_rating = Proxy
+
+customer_not_picking_up_the_call :: Proxy "customer_not_picking_up_the_call"
+customer_not_picking_up_the_call = Proxy
+
+your_rating_wont_be_affected :: Proxy "your_rating_wont_be_affected"
+your_rating_wont_be_affected = Proxy

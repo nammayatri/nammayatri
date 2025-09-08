@@ -1869,6 +1869,9 @@ getProxy str = case str of
   THIS_RIDE_IS_ENSURED_FOR_FREE -> \a -> a @~ this_ride_is_insured_for_free
   THIS_RIDE_COME_WITH_FREE_INSURANCE -> \a -> a @~ this_ride_come_with_free_insurance
   DOWNLOAD_INSURANCE_POLICY -> \a -> a @~ download_insurance_policy
+  YOU_CAN_CANCEL_THE_RIDE_WITHOUT_AFFECTING_YOUR_RATING -> \a -> a @~ you_can_cancel_the_ride_without_affecting_your_rating
+  CUSTOMER_NOT_PICKING_UP_THE_CALL -> \a -> a @~ customer_not_picking_up_the_call
+  YOUR_RATING_WONT_BE_AFFECTED -> \a -> a @~ your_rating_wont_be_affected
   -- _ _ -> \a -> (a @~ stop) 0
   _ -> \a -> a @~ resume_ride
 

@@ -109,3 +109,18 @@ stepNumberSize = fromMaybe 52 $ fromNumber $ 52.0 * multiplier
 
 a_72 :: FontSize
 a_72 = fromMaybe 72 $ fromNumber $ 72.0 * multiplier 
+
+a_27 :: FontSize
+a_27 = fromMaybe 27 $ fromNumber $ 27.0 * multiplier
+
+
+a_52 :: FontSize
+a_52 = fromMaybe 52 $ fromNumber $ 52.0 * multiplier 
+
+
+a_38 :: FontSize
+a_38 = fromMaybe 38 $ fromNumber $ 38.0 * multiplier 
+
+
+a_80 :: FontSize
+a_80 = fromMaybe 80 $ fromNumber $ 80.0 * multiplier 

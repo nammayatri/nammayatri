@@ -1893,4 +1893,7 @@ getBn =
     , select_bus_route: "বাস রুট নির্বাচন করুন"
     , driver_name: "চালকের নাম"
     , link_trip: "ট্রিপ লিঙ্ক করুন"
+    , you_can_cancel_the_ride_without_affecting_your_rating: "আপনার রেটিংকে প্রভাবিত না করে আপনি যাত্রা বাতিল করতে পারেন"
+    , customer_not_picking_up_the_call: "গ্রাহক কলটি তুলছেন না"
+    , your_rating_wont_be_affected: "(আপনার রেটিং প্রভাবিত হবে না)"
     }

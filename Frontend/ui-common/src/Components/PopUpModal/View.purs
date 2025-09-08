@@ -419,6 +419,7 @@ view push state =
         , dropdownTextFieldView push state
         , searchableListView push state
         , upiView push state
+        , if state.showCallNotPickingUpConfig then customerNotPickingUpTheCall push state else textView [ visibility GONE ]
         , linearLayout[][]
         , if (null state.listViewArray) then textView[height $ V 0] else listView push state
         , contactView push state
@@ -1113,4 +1114,65 @@ searchableListView push state =
         width MATCH_PARENT
     ][
         SearchableListView.view (push <<< SearchableListAction) state.searchableListConfig 
+    ]
+
+
+customerNotPickingUpTheCall :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+customerNotPickingUpTheCall push state = 
+  linearLayout
+   [
+      width MATCH_PARENT
+    , height MATCH_PARENT
+    , orientation VERTICAL
+    , gravity BOTTOM
+   ]
+   [
+    callNotPickingView push state
+   ]
+
+callNotPickingView :: forall w . (Action -> Effect Unit) -> Config -> PrestoDOM (Effect Unit) w
+callNotPickingView push state = 
+  relativeLayout
+    [ width MATCH_PARENT
+    , height WRAP_CONTENT
+    , orientation VERTICAL
+    , gravity BOTTOM
+    , cornerRadii $ Corners 24.0 true true false false
+    , background Color.white900
+    ]
+    [ linearLayout
+      [
+        width MATCH_PARENT
+      , height WRAP_CONTENT
+      , orientation VERTICAL
+      , margin $ Margin 20 24 20 20
+      ]
+      [textView
+        ([ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , gravity CENTER
+        , text $ getString CUSTOMER_NOT_PICKING_UP_THE_CALL
+        , color Color.black
+        , margin $ MarginBottom 12
+        ] <> FontStyle.h0 TypoGraphy
+        ),
+       imageView [
+        imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_call_not_picked"
+        , height $ V 250
+        , width MATCH_PARENT
+        , gravity $ CENTER
+        , margin $ MarginBottom 12
+        ],
+        textView
+        ([ width MATCH_PARENT
+        , height WRAP_CONTENT
+        , background Color.lightYellow
+        , padding $ Padding 12 12 12 12
+        , gravity CENTER
+        , text $ getString YOU_CAN_CANCEL_THE_RIDE_WITHOUT_AFFECTING_YOUR_RATING
+        , cornerRadius 20.0
+        , color Color.lightBrown
+        ] <> FontStyle.body38 TypoGraphy
+        )
+      ]
     ]

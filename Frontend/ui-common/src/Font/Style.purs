@@ -436,6 +436,14 @@ body33 typography = [
 , lineHeight "18"
 ]  <> if (getFontType "") == Assets then [fontStyle $ medium LanguageStyle] else [fontWeight $ FontWeight 500]
 
+
+body38 ::  LazyCheck -> forall properties. (Array (Prop properties))
+body38 typography = [
+  textSize FontSize.a_20
+, lineHeight "24"
+]  <> if getFontType "" == Assets then [fontStyle $ medium LanguageStyle] else [fontWeight $ FontWeight 900]
+
+
 h0 :: LazyCheck -> forall properties. (Array (Prop properties))
 h0 typography = [
   textSize FontSize.a_24
@@ -461,6 +469,13 @@ title2 :: LazyCheck -> forall properties. (Array (Prop properties))
 title2 typography = [
   textSize FontSize.a_32
 , lineHeight "40"
+] <> if (getFontType "") == Assets then [fontStyle $ bold LanguageStyle] else [fontWeight $ FontWeight 800]
+
+
+title8 :: LazyCheck -> forall properties. (Array (Prop properties))
+title8 typography = [
+  textSize FontSize.a_20
+, lineHeight "22"
 ] <> if (getFontType "") == Assets then [fontStyle $ bold LanguageStyle] else [fontWeight $ FontWeight 800]
 
 data Style = Body1

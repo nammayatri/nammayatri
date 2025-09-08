@@ -1893,4 +1893,7 @@ getMl =
     , select_bus_route: "ബസ് റൂട്ട് തിരഞ്ഞെടുക്കുക"
     , link_trip: "യാത്ര ലിങ്ക് ചെയ്യുക"
     , driver_name: "ഡ്രൈവറിന്റെ പേര്"
+    , you_can_cancel_the_ride_without_affecting_your_rating: "നിങ്ങളുടെ റേറ്റിംഗ് ബാധിക്കാതെ യാത്ര റദ്ദുചെയ്യാം"
+    , customer_not_picking_up_the_call: "ഉപഭോക്താവ് ഫോൺ എടുക്കുന്നില്ല"
+    , your_rating_wont_be_affected: "(നിങ്ങളുടെ റേറ്റിംഗ് ബാധിക്കില്ല)"
     }

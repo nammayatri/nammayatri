@@ -1893,4 +1893,7 @@ getEn =
     , cancelling_this_ride_will_lower_your_score_and_may_lead_to_blocking: "Cancelling this ride will lower your score and may lead to blocking"
     , your_daily_cancellation_rate_will_increase_to_x_percent_and_will_block_you_for_x_hours: "Your daily cancellation rate will increase to <b>X%</b> and will block you for <b>X hours</b>"
     , your_weekly_cancellation_rate_will_increase_to_x_percent_and_will_block_you_for_x_hours: "Your weekly cancellation rate will increase to <b>X%</b> and will block you for <b>X hours</b>"
+    , you_can_cancel_the_ride_without_affecting_your_rating: "You can cancel the ride without affecting your rating"
+    , customer_not_picking_up_the_call: "Customer not picking up the call?"
+    , your_rating_wont_be_affected: "(Your rating won't be affected)"
     }

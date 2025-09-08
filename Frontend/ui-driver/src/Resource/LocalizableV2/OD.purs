@@ -1893,4 +1893,7 @@ getOd =
     , select_bus_route: "ବସ୍ ମାର୍ଗ ଚୟନ କରନ୍ତୁ"
     , link_trip: "ଭ୍ରମଣ ଲିଙ୍କ୍ କରନ୍ତୁ"
     , driver_name: "ଡ୍ରାଇଭର୍ ନାମ"
+    , you_can_cancel_the_ride_without_affecting_your_rating: "ଆପଣଙ୍କର ରେଟିଂକୁ ପ୍ରଭାବିତ କରିବା ବିନା ଆପଣ ଯାତ୍ରା ବାତିଲ୍ କରିପାରିବେ"
+    , customer_not_picking_up_the_call: "ଗ୍ରାହକ କଲ୍ ଉଠାଉନାହିଁ"
+    , your_rating_wont_be_affected: "(ଆପଣଙ୍କର ରେଟିଂ ପ୍ରଭାବିତ ହେବେନାହିଁ)"
   }
