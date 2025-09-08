@@ -48,6 +48,7 @@ import Components.RecordAudioModel.View (view) as RecordAudioModel
 import Data.String (length, trim) as STR
 import Components.ViewImageModel.View (view) as ViewImageModel
 import Effect.Uncurried (runEffectFn2)
+import Debug (spy)
 
 screen :: ReportIssueChatScreenState -> LoggableScreen Action ReportIssueChatScreenState ScreenOutput
 screen initialState =
@@ -55,11 +56,15 @@ screen initialState =
     , view
     , name : "ReportIssueChatScreen"
     , globalEvents : [(\push -> do
+        let _ = spy "ReportIssueChatScreenState  Global event" initialState
         void $ JB.storeCallBackImageUpload push ImageUploadCallback
         void $ runEffectFn2 JB.storeCallBackUploadMultiPartData push UploadMultiPartDataCallback
         pure $ pure unit)
     ]
-    , eval
+    , eval : (\action state -> do
+        let _ = spy "ReportIssueChatScreenState state -----" state
+        let _ = spy "ReportIssueChatScreenState--------action" action
+        eval action state)
   , parent : Nothing
   , logWhitelist: initialState.data.config.logWhitelistConfig.reportIssueChatScreenLogWhitelist
   }
