@@ -47,12 +47,13 @@ import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppBackPress, trackAppEndScreen, trackAppScreenEvent, trackAppScreenRender)
 import Presto.Core.Types.Language.Flow (doAff)
 import PrestoDOM.Types.Core (class Loggable, Eval)
-import PrestoDOM.Utils (continue, continueWithCmd, exit, updateAndExit)
+import PrestoDOM.Utils (continue, continueWithCmd, exit, updateAndExit, update)
 import Screens (ScreenName(REPORT_ISSUE_CHAT_SCREEN), getScreen)
 import Screens.Types (ReportIssueChatScreenState)
 import Services.EndPoints (uploadFile) as EndPoint
 import Timers (waitingCountdownTimerV2, clearTimerWithId)
 import Common.Types.App
+import Data.Array as DA
 
 instance loggableAction :: Loggable Action where
   performLog action appId = case action of
@@ -315,16 +316,18 @@ eval (RecordAudioModelAction (RecordAudioModel.TimerCallback timerID timeInMinut
 
 ---------------------------------------------------- Add Image Callback ----------------------------------------------------
 eval (ImageUploadCallback image imageName imagePath) state = do
-  let images' = if length state.data.addImagesState.imageMediaIds == 3
-                then do
-                  pure $ toast (getString MAX_IMAGES)
-                  state.data.addImagesState.images
-                else
-                  snoc state.data.addImagesState.images { image, imageName }
-  continueWithCmd state { data { addImagesState { images = images',  isLoading = true } } } [do
-    void $  runEffectFn5 uploadMultiPartData imagePath (EndPoint.uploadFile "") "Image" "fileId" "file"
-    pure NoAction
-  ]
+  if DA.find (\x -> x.image == image) state.data.addImagesState.images /= Nothing then do
+    update state
+  else do
+    let images' = if length state.data.addImagesState.imageMediaIds == 3 then do
+                    pure $ toast (getString MAX_IMAGES)
+                    state.data.addImagesState.images
+                  else
+                    snoc state.data.addImagesState.images { image, imageName }
+    continueWithCmd state { data { addImagesState { images = images',  isLoading = true } } } [do
+      void $  runEffectFn5 uploadMultiPartData imagePath (EndPoint.uploadFile "") "Image" "fileId" "file"
+      pure NoAction
+    ]
 
 eval (UploadMultiPartDataCallback fileType fileId) state = do
   if (fileType == "Image") 
