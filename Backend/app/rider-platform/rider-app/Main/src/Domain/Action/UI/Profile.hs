@@ -144,7 +144,7 @@ data ProfileRes = ProfileRes
     isPayoutEnabled :: Maybe Bool,
     publicTransportVersion :: Maybe Text,
     isMultimodalRider :: Bool,
-    customerTags :: Maybe DA.Value
+    customerTags :: DA.Value
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -348,7 +348,7 @@ getPersonDetails (personId, _) toss tenant' context mbBundleVersion mbRnVersion 
             isPayoutEnabled = mbPayoutConfig <&> (.isPayoutEnabled),
             cancellationRate = cancellationPerc,
             publicTransportVersion = if null gtfsVersion then Nothing else Just (T.intercalate (T.pack "#") gtfsVersion),
-            customerTags = YUtils.convertTags $ fromMaybe [] person.customerNammaTags,
+            customerTags = YUtils.convertTags $ fromMaybe [] customerNammaTags,
             ..
           }
 

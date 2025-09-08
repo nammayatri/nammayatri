@@ -15,6 +15,7 @@
 module Domain.Action.UI.Person where
 
 import Data.Aeson
+import qualified Data.Aeson as DA
 import Domain.Types.MerchantOperatingCity as DMOC
 import Domain.Types.Person
 import qualified Domain.Types.SafetySettings as DSafety
@@ -49,7 +50,7 @@ data PersonAPIEntity = PersonAPIEntity
     clientVersion :: Maybe Version,
     followsRide :: Bool,
     isSafetyCenterDisabled :: Bool,
-    customerTags :: Maybe DA.Value
+    customerTags :: DA.Value
   }
   deriving (Generic, Show, FromJSON, ToJSON, ToSchema)
 
@@ -63,7 +64,7 @@ makePersonAPIEntity Person {..} disability isSafetyCenterDisabled safetySettings
       clientVersion = clientSdkVersion,
       hasCompletedMockSafetyDrill = safetySettings.hasCompletedMockSafetyDrill,
       hasCompletedSafetySetup = safetySettings.hasCompletedSafetySetup,
-      customerTags = YUtils.convertTags $ fromMaybe [] person.customerNammaTags,
+      customerTags = YUtils.convertTags $ fromMaybe [] customerNammaTags,
       ..
     }
 
