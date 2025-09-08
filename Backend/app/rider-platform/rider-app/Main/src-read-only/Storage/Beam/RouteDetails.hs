@@ -27,6 +27,8 @@ data RouteDetailsT f = RouteDetailsT
     fromStopPlatformCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     id :: B.C f Kernel.Prelude.Text,
     journeyLegId :: B.C f Kernel.Prelude.Text,
+    legEndTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    legStartTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     routeCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     routeColorCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     routeColorName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

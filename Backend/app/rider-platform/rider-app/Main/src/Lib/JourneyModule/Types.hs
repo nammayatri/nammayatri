@@ -308,6 +308,8 @@ data WalkLegExtraInfo = WalkLegExtraInfo
   { origin :: Location,
     destination :: Location,
     trackingStatus :: JMState.TrackingStatus,
+    legStartTime :: Maybe UTCTime,
+    legEndTime :: Maybe UTCTime,
     id :: Id DJourneyLeg.JourneyLeg
   }
   deriving stock (Show, Generic)
@@ -335,6 +337,8 @@ data TaxiLegExtraInfo = TaxiLegExtraInfo
     bppRideId :: Maybe (Id DRide.BPPRide),
     driverMobileNumber :: Maybe Text,
     exoPhoneNumber :: Maybe Text,
+    legStartTime :: Maybe UTCTime,
+    legEndTime :: Maybe UTCTime,
     trackingStatus :: JMState.TrackingStatus
   }
   deriving stock (Show, Generic)
@@ -388,6 +392,8 @@ data LegRouteInfo = LegRouteInfo
     journeyStatus :: Maybe JourneyLegStatus,
     trackingStatus :: JMState.TrackingStatus,
     frequency :: Maybe Seconds,
+    legStartTime :: Maybe UTCTime,
+    legEndTime :: Maybe UTCTime,
     allAvailableRoutes :: [Text]
   }
   deriving stock (Show, Generic)
@@ -412,6 +418,8 @@ data BusLegExtraInfo = BusLegExtraInfo
     refund :: Maybe LegSplitInfo,
     trackingStatus :: JMState.TrackingStatus,
     fleetNo :: Maybe Text,
+    legStartTime :: Maybe UTCTime,
+    legEndTime :: Maybe UTCTime,
     discounts :: Maybe [FRFSTicketServiceAPI.FRFSDiscountRes]
   }
   deriving stock (Show, Generic)
@@ -600,6 +608,8 @@ mkLegInfoFromBookingAndRide booking mRide journeyLeg = do
                 bppRideId = mRide <&> (.bppRideId),
                 driverMobileNumber = (\item -> Just $ item.driverMobileNumber) =<< mRide,
                 exoPhoneNumber = Just booking.primaryExophone,
+                legStartTime = listToMaybe journeyLeg.routeDetails >>= (.legStartTime),
+                legEndTime = listToMaybe journeyLeg.routeDetails >>= (.legEndTime),
                 trackingStatus = trackingStatus
               },
         actualDistance = mRide >>= (.traveledDistance),
@@ -675,6 +685,8 @@ mkLegInfoFromSearchRequest DSR.SearchRequest {..} journeyLeg = do
                 bppRideId = Nothing,
                 driverMobileNumber = Nothing,
                 exoPhoneNumber = Nothing,
+                legStartTime = Nothing,
+                legEndTime = Nothing,
                 trackingStatus = trackingStatus
               },
         actualDistance = Nothing,
@@ -715,6 +727,8 @@ mkWalkLegInfoFromWalkLegData personId legData@DJL.JourneyLeg {..} = do
               { origin = mkLocation now startLocation (fromStopDetails >>= (.name)),
                 destination = mkLocation now endLocation (toStopDetails >>= (.name)),
                 id = id,
+                legStartTime = listToMaybe legData.routeDetails >>= (.legStartTime),
+                legEndTime = listToMaybe legData.routeDetails >>= (.legEndTime),
                 trackingStatus
               },
         actualDistance = distance,
@@ -886,6 +900,8 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
                   refund = refundBloc,
                   trackingStatus = journeyLegDetail.trackingStatus,
                   fleetNo = journeyLeg.finalBoardedBusNumber,
+                  legStartTime = journeyRouteDetail.legStartTime,
+                  legEndTime = journeyRouteDetail.legEndTime,
                   discounts = mbQuote >>= (.discountsJson) >>= decodeFromText
                 }
         Spec.SUBWAY -> do
@@ -944,6 +960,8 @@ getLegRouteInfo journeyRouteDetailsWithTrackingStatuses integratedBPPConfig = do
             lineColorCode = journeyRouteDetail.routeColorCode,
             trainNumber = Just route.shortName,
             frequency = journeyRouteDetail.frequency,
+            legStartTime = journeyRouteDetail.legStartTime,
+            legEndTime = journeyRouteDetail.legEndTime,
             allAvailableRoutes = validRoutes
           }
 
@@ -1059,6 +1077,8 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg = do
                   refund = Nothing,
                   trackingStatus = journeyLegDetail.trackingStatus,
                   fleetNo = journeyLeg.finalBoardedBusNumber,
+                  legStartTime = journeyRouteDetail.legStartTime,
+                  legEndTime = journeyRouteDetail.legEndTime,
                   discounts = mbQuote >>= (.discountsJson) >>= decodeFromText
                 }
         Spec.SUBWAY -> do
@@ -1304,6 +1324,8 @@ mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation m
             toStopGtfsId = toStopDetails'.gtfsId <&> gtfsIdtoDomainCode,
             toStopPlatformCode = toStopDetails'.platformCode,
             --Times --
+            legStartTime = Nothing,
+            legEndTime = Nothing,
             fromArrivalTime = routeDetail.fromArrivalTime,
             fromDepartureTime = routeDetail.fromDepartureTime,
             toArrivalTime = routeDetail.toArrivalTime,
