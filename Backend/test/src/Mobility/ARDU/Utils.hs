@@ -64,12 +64,14 @@ import qualified "dynamic-offer-driver-app" Storage.Cac.TransporterConfig as SCT
 import qualified "dynamic-offer-driver-app" Storage.CachedQueries.Merchant.MerchantServiceConfig as TCQMSC
 import qualified "dynamic-offer-driver-app" Storage.Queries.Booking as TQRB
 import qualified "rider-app" Storage.Queries.Booking as BQRB
+import qualified "dynamic-offer-driver-app" Storage.Queries.DriverInformation as QDI
 import qualified "dynamic-offer-driver-app" Storage.Queries.DriverInformation as QTDrInfo
 import qualified Storage.Queries.DriverQuote as TDQ
 import qualified "dynamic-offer-driver-app" Storage.Queries.Ride as TQRide
 import qualified "rider-app" Storage.Queries.Ride as BQRide
 import qualified "dynamic-offer-driver-app" Storage.Queries.SearchTry as QST
 import Test.HUnit (assertBool)
+import "dynamic-offer-driver-app" Tools.Error (DriverInformationError (..))
 import Utils
 
 -- database calls
@@ -145,7 +147,8 @@ resetDriver driver = runARDUFlow "" $ do
   transporterConfig <-
     SCTC.findByMerchantOpCityId Fixtures.nammaYatriPartnerMerchantOperatingCityId Nothing
       >>= fromMaybeM (TransporterConfigNotFound Fixtures.nammaYatriPartnerMerchantOperatingCityId.getId)
-  DDriverMode.updateDriverModeAndFlowStatus (cast driver.driverId) transporterConfig False (Just TDrInfo.OFFLINE) newFlowStatus Nothing
+  driverInfo <- QDI.findById (cast driver.driverId) >>= fromMaybeM DriverInfoNotFound
+  DDriverMode.updateDriverModeAndFlowStatus (cast driver.driverId) transporterConfig False (Just TDrInfo.OFFLINE) newFlowStatus driverInfo
   QTDrInfo.updateOnRide False (cast driver.driverId)
 
 -- flow primitives
