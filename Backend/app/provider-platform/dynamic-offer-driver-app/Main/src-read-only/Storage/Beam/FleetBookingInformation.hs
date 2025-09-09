@@ -26,6 +26,8 @@ data FleetBookingInformationT f = FleetBookingInformationT
     serviceId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     serviceName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     status :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    ticketBookingServiceShortId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    ticketBookingShortId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     ticketPlaceId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
     vehicleNo :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

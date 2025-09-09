@@ -61,6 +61,7 @@ types:
     availableSeats: Maybe Int
     allowedSeats: Maybe Int
     bookedSeats: Int
+    maxSelection: Maybe Int
     isClosed: Bool
     inclusionPoints: "Maybe [Text]"
     peopleCategories: [PeopleCategoriesResp]

@@ -46,6 +46,7 @@ data CategoriesResp = CategoriesResp
     id :: Kernel.Types.Id.Id Domain.Types.ServiceCategory.ServiceCategory,
     inclusionPoints :: Kernel.Prelude.Maybe [Data.Text.Text],
     isClosed :: Kernel.Prelude.Bool,
+    maxSelection :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     name :: Data.Text.Text,
     peopleCategories :: [PeopleCategoriesResp]
   }
