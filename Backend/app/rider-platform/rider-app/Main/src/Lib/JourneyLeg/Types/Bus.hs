@@ -1,5 +1,6 @@
 module Lib.JourneyLeg.Types.Bus where
 
+import API.Types.UI.FRFSTicketService
 import qualified API.Types.UI.MultimodalConfirm as ApiTypes
 import qualified BecknV2.FRFS.Enums as Spec
 import Domain.Types.FRFSQuote
@@ -36,7 +37,8 @@ data BusLegRequestConfirmData = BusLegRequestConfirmData
     merchantId :: Id DMerchant.Merchant,
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     quantity :: Maybe Int,
-    childTicketQuantity :: Maybe Int
+    childTicketQuantity :: Maybe Int,
+    categorySelectionReq :: Maybe [FRFSCategorySelectionReq]
   }
 
 data BusLegRequestUpdateData = BusLegRequestUpdateData

@@ -41,6 +41,7 @@ imports:
   Gate: Domain.Types.Station
   FRFSTicketBookingStatus: Domain.Types.FRFSTicketBookingStatus
   SourceType: Domain.Types.RouteStopTimeTable
+  FRFSCategorySelectionReq: API.Types.UI.FRFSTicketService
 
 module: MultimodalConfirm
 
@@ -180,6 +181,7 @@ types:
     ticketQuantity: Maybe Int
     childTicketQuantity: Maybe Int
     crisSdkResponse: Maybe CrisSdkResponse
+    categorySelectionReq: Maybe [FRFSCategorySelectionReq]
 
   CrisSdkResponse:
     osType: Text

@@ -187,7 +187,7 @@ getRouteFare config merchantOperatingCityId request = do
                       amount = childFareAmount,
                       currency = INR
                     },
-              discounts = [],
+              categories = [],
               farePolicyId = Nothing,
               fareDetails =
                 Just

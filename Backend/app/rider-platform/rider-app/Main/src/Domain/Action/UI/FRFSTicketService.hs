@@ -12,6 +12,7 @@ import Data.List (groupBy, nub, nubBy)
 import qualified Data.List.NonEmpty as NonEmpty hiding (groupBy, map, nub, nubBy)
 import Data.List.Split (chunksOf)
 import qualified Data.Time as Time
+import qualified Domain.Action.Beckn.FRFS.Common as FRFSCommon
 import qualified Domain.Action.Beckn.FRFS.OnConfirm as DACFOC
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import Domain.Types.FRFSConfig
@@ -80,6 +81,7 @@ import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.Person as CQP
 import qualified Storage.CachedQueries.RouteStopTimeTable as QRouteStopTimeTable
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
+import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSRecon as QFRFSRecon
 import qualified Storage.Queries.FRFSSearch as QFRFSSearch
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
@@ -619,7 +621,8 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req crisSdkResponse
     let dConfirmRes' = dConfirmRes {DFRFSTicketBooking.validTill = validTill}
     when (dConfirmRes.status /= DFRFSTicketBooking.NEW) $ do
       void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.NEW dConfirmRes.id
-    CallExternalBPP.init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) dConfirmRes'
+    dCategories <- buildCategorySelectFromReq req.offered
+    CallExternalBPP.init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) dConfirmRes' dCategories
   return $ makeBookingStatusAPI dConfirmRes discounts routeStations stations merchantOperatingCity.city
   where
     -- errHandler booking exc
@@ -640,12 +643,12 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req crisSdkResponse
           else return quote
       unless (personId == quote.riderId) $ throwError AccessDenied
       let discounts :: Maybe [FRFSDiscountRes] = decodeFromText =<< quote.discountsJson
-      selectedDiscounts <- validateDiscounts req.discounts (fromMaybe [] discounts)
+      selectedCategories <- validateCategories req.offered (fromMaybe [] discounts)
 
       now <- getCurrentTime
       unless (quote.validTill > now) $ throwError $ FRFSQuoteExpired quote.id.getId
       maybeM
-        (buildAndCreateBooking rider updatedQuote selectedDiscounts)
+        (buildAndCreateBooking rider updatedQuote selectedCategories)
         ( \booking -> do
             updatedBooking <-
               if isMultiInitAllowed
@@ -653,47 +656,46 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req crisSdkResponse
                   let mBookAuthCode = crisSdkResponse <&> (.bookAuthCode)
                   void $ QFRFSTicketBooking.updateBookingAuthCodeById mBookAuthCode booking.id
                   void $ QFRFSTicketBooking.updateQuoteAndBppItemId updatedQuote.id updatedQuote.bppItemId booking.id
-                  let totalDiscount =
+                  let totalOfferedPrice =
                         foldr
-                          (\selectedDiscount discountAmount -> discountAmount + selectedDiscount.price.amount)
+                          (\selectedCategory offeredAmount -> offeredAmount + selectedCategory.price.amount)
                           (HighPrecMoney 0.0)
-                          selectedDiscounts
+                          selectedCategories
                   let childPriceAmount = maybe updatedQuote.price.amount (.amount) updatedQuote.childPrice
-                  let discountedPrice = modifyPrice updatedQuote.price $ \p -> max (HighPrecMoney 0.0) $ HighPrecMoney ((p.getHighPrecMoney * (toRational updatedQuote.quantity)) + (childPriceAmount.getHighPrecMoney * (toRational (fromMaybe 0 updatedQuote.childTicketQuantity)))) - totalDiscount
-                  void $ QFRFSTicketBooking.updatePriceAndQuantityById discountedPrice updatedQuote.quantity updatedQuote.childTicketQuantity booking.id
-                  return $ booking {DFRFSTicketBooking.quoteId = quoteId, DFRFSTicketBooking.bppItemId = updatedQuote.bppItemId, DFRFSTicketBooking.bookingAuthCode = mBookAuthCode, DFRFSTicketBooking.price = discountedPrice, DFRFSTicketBooking.quantity = ticketQuantity, DFRFSTicketBooking.childTicketQuantity = childTicketQuantity}
+                  let offeredPrice = modifyPrice updatedQuote.price $ \p -> max (HighPrecMoney 0.0) $ HighPrecMoney ((p.getHighPrecMoney * (toRational updatedQuote.quantity)) + (childPriceAmount.getHighPrecMoney * (toRational (fromMaybe 0 updatedQuote.childTicketQuantity)))) - totalOfferedPrice
+                  void $ QFRFSTicketBooking.updatePriceAndQuantityById offeredPrice updatedQuote.quantity updatedQuote.childTicketQuantity booking.id
+                  return $ booking {DFRFSTicketBooking.quoteId = quoteId, DFRFSTicketBooking.bppItemId = updatedQuote.bppItemId, DFRFSTicketBooking.bookingAuthCode = mBookAuthCode, DFRFSTicketBooking.price = offeredPrice, DFRFSTicketBooking.quantity = ticketQuantity, DFRFSTicketBooking.childTicketQuantity = childTicketQuantity}
                 else return booking
             pure (rider, updatedBooking)
         )
         (pure mbBooking)
 
-    validateDiscounts :: (MonadFlow m) => [FRFSDiscountReq] -> [FRFSDiscountRes] -> m [FRFSDiscountRes]
-    validateDiscounts selectedDiscounts allDiscounts = do
-      let selecetedDiscountCodes = map (.code) selectedDiscounts
-          eligibleDiscountCodes = map (.code) $ filter (.eligibility) allDiscounts
-      unless (all (flip elem eligibleDiscountCodes) selecetedDiscountCodes) $ throwError DiscountsIneligible
-      return $ intersectBy (\discount selectedDiscount -> discount.code == selectedDiscount.code) allDiscounts selectedDiscounts
-      where
-        intersectBy :: (a -> b -> Bool) -> [a] -> [b] -> [a]
-        intersectBy _ [] _ = []
-        intersectBy _ _ [] = []
-        intersectBy f as bs = filter (\a -> any (f a) bs) as
+    validateCategories :: (MonadFlow m) => [FRFSCategorySelectionReq] -> [FRFSDiscountRes] -> m [FRFSDiscountRes]
+    validateCategories selectedCategories allDiscounts = do
+      let selectedQuoteCategoryIds = map (.quoteCategoryId) selectedCategories
+      let eligibleCategories = filter (.eligibility) allDiscounts
+
+      if null eligibleCategories
+        then do
+          logError $ "No eligible Category found for selected categories: " <> show selectedQuoteCategoryIds
+          throwError CategoriesIneligible
+        else return eligibleCategories
 
     buildAndCreateBooking :: CallExternalBPP.FRFSConfirmFlow m r => Domain.Types.Person.Person -> DFRFSQuote.FRFSQuote -> [FRFSDiscountRes] -> m (Domain.Types.Person.Person, DFRFSTicketBooking.FRFSTicketBooking)
-    buildAndCreateBooking rider quote@DFRFSQuote.FRFSQuote {..} selectedDiscounts = do
+    buildAndCreateBooking rider quote@DFRFSQuote.FRFSQuote {..} selectedCategories = do
       uuid <- generateGUID
       now <- getCurrentTime
       mbSearch <- QFRFSSearch.findById searchId
-      let appliedDiscountsJson = encodeToText selectedDiscounts
-          totalDiscount =
+      let categoriesJson = encodeToText selectedCategories
+          totalOfferedPrice =
             foldr
-              (\selectedDiscount discountAmount -> discountAmount + selectedDiscount.price.amount)
+              (\selectedCategory categoryAmount -> categoryAmount + selectedCategory.price.amount)
               (HighPrecMoney 0.0)
-              selectedDiscounts
+              selectedCategories
       let ticketQuantity' = quote.quantity
       let childTicketQuantity' = fromMaybe 0 childTicketQuantity
       let childPriceAmount = maybe quote.price.amount (.amount) quote.childPrice
-      let discountedPrice = modifyPrice quote.price $ \p -> max (HighPrecMoney 0.0) $ HighPrecMoney ((p.getHighPrecMoney * (toRational ticketQuantity')) + (childPriceAmount.getHighPrecMoney * (toRational childTicketQuantity'))) - totalDiscount
+      let offeredPrice = modifyPrice quote.price $ \p -> max (HighPrecMoney 0.0) $ HighPrecMoney ((p.getHighPrecMoney * (toRational ticketQuantity')) + (childPriceAmount.getHighPrecMoney * (toRational childTicketQuantity'))) - totalOfferedPrice
       let isFareChanged = if isJust partnerOrgId then isJust oldCacheDump else maybe False (\estimatedPrice' -> quote.price /= estimatedPrice') quote.estimatedPrice
       let booking =
             DFRFSTicketBooking.FRFSTicketBooking
@@ -704,8 +706,8 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req crisSdkResponse
                 createdAt = now,
                 updatedAt = now,
                 merchantId = quote.merchantId,
-                price = discountedPrice,
-                estimatedPrice = discountedPrice,
+                price = offeredPrice,
+                estimatedPrice = offeredPrice,
                 finalPrice = Nothing, -- TODO :: Analytics Kind of Pricing, not sent to UI
                 paymentTxnId = Nothing,
                 bppBankAccountNumber = Nothing,
@@ -718,7 +720,7 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req crisSdkResponse
                 cashbackPayoutOrderId = Nothing,
                 cashbackStatus = if isJust quote.discountedTickets then Just DFTB.PENDING else Nothing,
                 bppDelayedInterest = quote.bppDelayedInterest,
-                discountsJson = Just appliedDiscountsJson,
+                discountsJson = Just categoriesJson,
                 journeyOnInitDone = Nothing,
                 startTime = Just now, -- TODO
                 isFareChanged = Just isFareChanged,
@@ -733,6 +735,9 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req crisSdkResponse
                 ..
               }
       QFRFSTicketBooking.create booking
+      -- Create booking breakup entries based on category selections
+      dcategories <- buildCategorySelectFromReq req.offered
+      FRFSUtils.createBookingBreakupEntries booking dcategories merchantId_ quote.merchantOperatingCityId
       return (rider, booking)
 
     makeBookingStatusAPI booking discounts routeStations stations city =
@@ -757,10 +762,29 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req crisSdkResponse
           integratedBppConfigId = booking.integratedBppConfigId,
           ..
         }
+    buildCategorySelectFromReq :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [FRFSCategorySelectionReq] -> m [FRFSCommon.DCategorySelect]
+    buildCategorySelectFromReq categorySelectionReqs = do
+      let quoteCategoryIds = map (.quoteCategoryId) categorySelectionReqs
+      quoteCategories <- mapM QFRFSQuoteCategory.findById quoteCategoryIds
+      let validQuoteCategories = catMaybes quoteCategories
+      return $
+        mapMaybe
+          ( \req' ->
+              let mbQuoteCategory = find (\cat -> cat.id == req'.quoteCategoryId) validQuoteCategories
+               in case mbQuoteCategory of
+                    Just quoteCategory ->
+                      Just $
+                        FRFSCommon.DCategorySelect
+                          { bppItemId = quoteCategory.bppItemId,
+                            quantity = req'.quantity
+                          }
+                    Nothing -> Nothing
+          )
+          categorySelectionReqs
 
 postFrfsQuoteConfirm :: CallExternalBPP.FRFSConfirmFlow m r => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId = do
-  postFrfsQuoteV2Confirm (mbPersonId, merchantId_) quoteId (API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq {discounts = [], ticketQuantity = Nothing, childTicketQuantity = Nothing})
+  postFrfsQuoteV2Confirm (mbPersonId, merchantId_) quoteId (API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq {offered = [], ticketQuantity = Nothing, childTicketQuantity = Nothing})
 
 postFrfsQuotePaymentRetry :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> Environment.Flow API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 postFrfsQuotePaymentRetry = error "Logic yet to be decided"
