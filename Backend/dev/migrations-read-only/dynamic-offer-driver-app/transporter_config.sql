@@ -544,3 +544,13 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN max_wallet_payo
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN online_duration_calculate_from timestamp with time zone ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_wallet_payout boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_wallet_topup boolean ;
