@@ -261,6 +261,8 @@ types:
     startStopCode: Text
     endStopCode: Text
     onlyLive: Bool
+    journeyId: Maybe (Id Journey)
+    legOrder: Maybe Int
 
   RouteAvailabilityResp:
     availableRoutes: "[AvailableRoute]"
@@ -269,6 +271,7 @@ types:
     source: SourceType
     quoteId: Maybe (Id FRFSQuote)
     serviceTierName: Maybe Text
+    serviceTierType: ServiceTierType
     routeCode: Text
     routeShortName: Text
     routeLongName: Text

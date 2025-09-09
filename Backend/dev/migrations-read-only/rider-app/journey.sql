@@ -486,3 +486,23 @@ ALTER TABLE atlas_app.journey ALTER COLUMN search_request_id TYPE text;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.journey ADD COLUMN has_started_tracking_without_booking boolean ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

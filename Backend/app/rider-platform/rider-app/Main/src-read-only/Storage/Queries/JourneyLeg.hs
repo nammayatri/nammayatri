@@ -109,6 +109,7 @@ updateByPrimaryKey (Domain.Types.JourneyLeg.JourneyLeg {..}) = do
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
       Se.Set Beam.mode mode,
+      Se.Set Beam.multimodalSearchRequestId multimodalSearchRequestId,
       Se.Set Beam.osmEntrance (osmEntrance >>= Just . Data.Aeson.toJSON),
       Se.Set Beam.osmExit (osmExit >>= Just . Data.Aeson.toJSON),
       Se.Set Beam.sequenceNumber (Just sequenceNumber),

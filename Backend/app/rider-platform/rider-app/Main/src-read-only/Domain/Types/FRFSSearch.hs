@@ -22,6 +22,7 @@ data FRFSSearch = FRFSSearch
     isOnSearchReceived :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
+    multimodalSearchRequestId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     onSearchFailed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     partnerOrgId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PartnerOrganization.PartnerOrganization),
     partnerOrgTransactionId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PartnerOrganization.PartnerOrgTransaction),

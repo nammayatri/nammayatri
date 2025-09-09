@@ -48,6 +48,7 @@ data FRFSTicketBooking = FRFSTicketBooking
     journeyOnInitDone :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
+    multimodalSearchRequestId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     osBuildVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     osType :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     partnerOrgId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.PartnerOrganization.PartnerOrganization),

@@ -58,6 +58,7 @@ updateByPrimaryKey (Domain.Types.FRFSQuote.FRFSQuote {..}) = do
       Se.Set Beam.integratedBppConfigId (Kernel.Types.Id.getId integratedBppConfigId),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
+      Se.Set Beam.multimodalSearchRequestId multimodalSearchRequestId,
       Se.Set Beam.oldCacheDump oldCacheDump,
       Se.Set Beam.partnerOrgId (Kernel.Types.Id.getId <$> partnerOrgId),
       Se.Set Beam.partnerOrgTransactionId (Kernel.Types.Id.getId <$> partnerOrgTransactionId),

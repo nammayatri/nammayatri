@@ -47,7 +47,7 @@ data NearestDriversResult = NearestDriversResult
     clientSdkVersion :: Maybe Version,
     clientBundleVersion :: Maybe Version,
     clientConfigVersion :: Maybe Version,
-    reactBundleVersion :: Maybe Version,
+    reactBundleVersion :: Maybe Text,
     clientDevice :: Maybe Device,
     vehicleAge :: Maybe Months,
     backendConfigVersion :: Maybe Version,

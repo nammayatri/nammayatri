@@ -1,11 +1,9 @@
 module Domain.Action.Internal.ProcessingChangeOnline (processingChangeOnline, updateOnlineDurationDuringFetchingDailyStats) where
 
-import Data.Time (Day (..), DiffTime, UTCTime (..), addUTCTime, diffUTCTime)
+import Data.Time (DiffTime, UTCTime (..), addUTCTime, diffUTCTime)
 import qualified Domain.Types.Common as DriverInfo
 import qualified Domain.Types.DailyStats as DDS
 import qualified Domain.Types.DriverInformation as DriverInfo
-import qualified Domain.Types.Merchant as DM
-import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.TransporterConfig as DTC
 import EulerHS.Prelude hiding (id, state)
@@ -13,92 +11,111 @@ import Kernel.Storage.Esqueleto.Config (EsqDBFlow)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.CacheFlow (CacheFlow)
 import Kernel.Types.Id
-import Kernel.Utils.Common (Seconds (..), generateGUIDText, getCurrentTime, getLocalCurrentTime, secondsToNominalDiffTime)
+import Kernel.Utils.Common (Seconds (..), generateGUIDText, getCurrentTime, secondsToNominalDiffTime)
 import Kernel.Utils.Error.Throwing (fromMaybeM)
 import Kernel.Utils.Logging (logDebug, logError, logInfo)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
-import qualified Storage.Queries.DailyStats as SQDS
-import qualified Storage.Queries.DailyStatsExtra as SQDSE
+import qualified Storage.Queries.DailyStats as QDS
 import qualified Storage.Queries.DriverInformation as QDI
-import qualified Storage.Queries.DriverInformationExtra as QDIE
 import qualified Storage.Queries.DriverStats as QDriverStats
-import qualified Storage.Queries.Person as QP
 import Tools.Error
 
 processingChangeOnline ::
   (CacheFlow m r, EsqDBFlow m r) =>
-  (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
-  Seconds ->
-  Maybe Int ->
+  Id DP.Person ->
+  DTC.TransporterConfig ->
   Maybe DriverInfo.DriverMode ->
   m ()
-processingChangeOnline (driverId, merchantId, merchantOpCityId) timeDiffFromUtc mbMaxOnlineDurationDays mode =
-  -- To avoid race condition we need to fetch driveInfo, dailyStats, driverStats inside of lock
-  Redis.whenWithLockRedis (updateDriverOnlineDurationLockKey driverId) 60 $ do
-    driverInfo <- QDI.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-    localTime <- getLocalCurrentTime timeDiffFromUtc
+processingChangeOnline driverId transporterConfig mode = do
+  withOnlineDurationLock driverId transporterConfig $ \driverInfo now onlineDurationCalculateFrom -> do
     let previousMode = driverInfo.mode
-        merchantLocalDate = utctDay localTime
-    now <- getCurrentTime
-    mbDailyStats <- SQDS.findByDriverIdAndDate driverId merchantLocalDate
     when (previousMode == Just DriverInfo.ONLINE && mode /= Just DriverInfo.ONLINE) $ do
-      updateOnlineDuration (driverId, merchantId, merchantOpCityId) timeDiffFromUtc driverInfo now localTime merchantLocalDate mbMaxOnlineDurationDays mbDailyStats
+      updateOnlineDuration driverId transporterConfig driverInfo now onlineDurationCalculateFrom
     when (mode == Just DriverInfo.ONLINE && previousMode /= Just DriverInfo.ONLINE) $
-      QDIE.updateOnlineDurationRefreshedAt driverId now
+      QDI.updateOnlineDurationRefreshedAt driverId now
+
+updateOnlineDurationDuringFetchingDailyStats ::
+  (CacheFlow m r, EsqDBFlow m r) =>
+  Id DP.Person ->
+  DTC.TransporterConfig ->
+  m ()
+updateOnlineDurationDuringFetchingDailyStats driverId transporterConfig = do
+  withOnlineDurationLock driverId transporterConfig $ \driverInfo now onlineDurationCalculateFrom -> do
+    when (driverInfo.mode == Just DriverInfo.ONLINE) $ do
+      updateOnlineDuration driverId transporterConfig driverInfo now onlineDurationCalculateFrom
+
+withOnlineDurationLock ::
+  (CacheFlow m r, EsqDBFlow m r) =>
+  Id DP.Person ->
+  DTC.TransporterConfig ->
+  (DriverInfo.DriverInformation -> UTCTime -> UTCTime -> m ()) ->
+  m ()
+withOnlineDurationLock driverId transporterConfig action = do
+  whenJust transporterConfig.onlineDurationCalculateFrom $ \onlineDurationCalculateFrom -> do
+    now <- getCurrentTime
+    when (onlineDurationCalculateFrom <= now) $ do
+      -- To avoid race condition we need to fetch driveInfo, dailyStats, driverStats inside of lock
+      Redis.whenWithLockRedis (updateDriverOnlineDurationLockKey driverId) 60 $ do
+        driverInfo <- QDI.findById driverId >>= fromMaybeM DriverInfoNotFound
+        action driverInfo now onlineDurationCalculateFrom
 
 updateOnlineDuration ::
   (CacheFlow m r, EsqDBFlow m r) =>
-  (Id DP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) ->
-  Seconds ->
+  Id DP.Person ->
+  DTC.TransporterConfig ->
   DriverInfo.DriverInformation ->
   UTCTime ->
   UTCTime ->
-  Day ->
-  Maybe Int ->
-  Maybe DDS.DailyStats ->
   m ()
-updateOnlineDuration (driverId, merchantId, merchantOpCityId) timeDiffFromUtc driverInfo now localTime merchantLocalDate mbMaxOnlineDurationDays mbDailyStats = do
-  let mbLastOnlineFrom = addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) <$> driverInfo.onlineDurationRefreshedAt
+updateOnlineDuration driverId transporterConfig driverInfo now onlineDurationCalculateFrom = do
+  let timeDiffFromUtc = transporterConfig.timeDiffFromUtc
+      localTime = addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) now
+      merchantLocalDate = utctDay localTime
+      mbMaxOnlineDurationDays = transporterConfig.maxOnlineDurationDays
+      mbLastOnlineFrom = max onlineDurationCalculateFrom <$> driverInfo.onlineDurationRefreshedAt
+      mbLastOnlineFromLocal = addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) <$> mbLastOnlineFrom
       numDaysAgo = fromMaybe 10 mbMaxOnlineDurationDays
-      limitLastOnlineFrom = addUTCTime (secondsToNominalDiffTime . Seconds $ - numDaysAgo * 86400) localTime
-      lastOnlineFrom = maybe localTime (max limitLastOnlineFrom) mbLastOnlineFrom
-      newOnlineDuration = calcOnlineDuration localTime mbDailyStats lastOnlineFrom
-      startDayTime = UTCTime (utctDay localTime) 0
+      limitNumDaysAgoLocal = addUTCTime (secondsToNominalDiffTime . Seconds $ (- numDaysAgo) * 86400) localTime
+      lastOnlineFromLocalLimited = maybe localTime (max limitNumDaysAgoLocal) mbLastOnlineFromLocal
+      startDayTimeLocal = UTCTime (utctDay localTime) 0
       twoDaysInSeconds = Seconds 172800
-  when (newOnlineDuration > twoDaysInSeconds) . logInfo $
-    "Online duration more than 2 days. DriverId: " <> driverId.getId
-  when (lastOnlineFrom == limitLastOnlineFrom) . logError $
-    "The limit of " <> show numDaysAgo <> " days has been reached during the calculation of onlineDuration. DriverId: " <> driverId.getId
-  whenNothing_ mbLastOnlineFrom . logDebug $ "OnlineDurationRefreshedAt is Nothing. DriverId: " <> driverId.getId
-  addDataToDailyStats mbDailyStats merchantLocalDate newOnlineDuration
-  QDIE.updateOnlineDurationRefreshedAt driverId now
-  when (lastOnlineFrom < startDayTime) $ setOnlineDurationInDailyStatsForPrevDays merchantLocalDate lastOnlineFrom
-  addDataToDriverStats $ fromMaybe localTime mbLastOnlineFrom
+  mbDailyStats <- QDS.findByDriverIdAndDate driverId merchantLocalDate
+  let newOnlineDurationDaily = calcOnlineDuration localTime mbDailyStats lastOnlineFromLocalLimited
+      newOnlineDuration = diffUTCTimeInSeconds localTime $ fromMaybe localTime mbLastOnlineFromLocal
+  when (newOnlineDuration > twoDaysInSeconds) $
+    logInfo $ "Online duration more than 2 days. DriverId: " <> driverId.getId <> "; duration: " <> show newOnlineDuration
+  when (lastOnlineFromLocalLimited == limitNumDaysAgoLocal) . logError $
+    "The limit of " <> show numDaysAgo <> " days has been reached during the calculation of onlineDuration. DriverId: " <> driverId.getId <> "; duration: " <> show newOnlineDuration
+  whenNothing_ driverInfo.onlineDurationRefreshedAt . logDebug $ "OnlineDurationRefreshedAt is Nothing. DriverId: " <> driverId.getId
+  addDataToDailyStats mbDailyStats merchantLocalDate newOnlineDurationDaily
+  QDI.updateOnlineDurationRefreshedAt driverId now
+  when (lastOnlineFromLocalLimited < startDayTimeLocal) $ setOnlineDurationInDailyStatsForPrevDays merchantLocalDate lastOnlineFromLocalLimited
+  addDataToDriverStats newOnlineDuration
   where
     setOnlineDurationInDailyStatsForPrevDays todayMerchantLocalDate lastOnlineFrom = do
       let lastOnlineFromMerchantLocalDate = utctDay lastOnlineFrom
-      mbPrevDayDailyStats <- SQDS.findByDriverIdAndDate driverId lastOnlineFromMerchantLocalDate
-      let dayWithoutOneSecond = 86399 --  == 24*60*60 - 1
-          endDayTime = UTCTime lastOnlineFromMerchantLocalDate dayWithoutOneSecond
-          newPrevDayOnlineDuration = calcPreviousDayOnlineDuration endDayTime lastOnlineFrom mbPrevDayDailyStats
-          succLastOnlineFromMerchantLocalDate = succ lastOnlineFromMerchantLocalDate
+      mbPrevDayDailyStats <- QDS.findByDriverIdAndDate driverId lastOnlineFromMerchantLocalDate
+      let succLastOnlineFromMerchantLocalDate = succ lastOnlineFromMerchantLocalDate
+          succStartDayTime = UTCTime succLastOnlineFromMerchantLocalDate 0
+          newPrevDayOnlineDuration = calcPreviousDayOnlineDuration succStartDayTime lastOnlineFrom mbPrevDayDailyStats
       addDataToDailyStats mbPrevDayDailyStats lastOnlineFromMerchantLocalDate newPrevDayOnlineDuration
-      when (todayMerchantLocalDate > succLastOnlineFromMerchantLocalDate)
-        . setOnlineDurationInDailyStatsForPrevDays todayMerchantLocalDate
-        $ UTCTime succLastOnlineFromMerchantLocalDate 0
+      when (todayMerchantLocalDate > succLastOnlineFromMerchantLocalDate) $
+        setOnlineDurationInDailyStatsForPrevDays todayMerchantLocalDate succStartDayTime
 
     addDataToDailyStats mbDailyStats' =
       if isJust mbDailyStats'
-        then SQDSE.updateOnlineDurationByDriverId driverId
+        then QDS.updateOnlineDurationByDriverId driverId
         else createNewDailyStats
 
     createNewDailyStats merchantLocDate onlineDuration = do
+      let merchantId = transporterConfig.merchantId
+          merchantOpCityId = transporterConfig.merchantOperatingCityId
       id <- generateGUIDText
       merchantOpCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
-      SQDS.create $
+      QDS.create $
         DDS.DailyStats
-          { id = id,
-            driverId = driverId,
+          { id,
+            driverId,
             totalEarnings = 0.0,
             numRides = 0,
             totalDistance = 0,
@@ -125,8 +142,7 @@ updateOnlineDuration (driverId, merchantId, merchantOpCityId) timeDiffFromUtc dr
             onlineDuration = Just onlineDuration
           }
 
-    addDataToDriverStats lastOnlineFrom = do
-      let newOnlineDuration = diffUTCTimeInSeconds localTime lastOnlineFrom
+    addDataToDriverStats newOnlineDuration = do
       QDriverStats.findById driverId >>= \case
         Just driverStats -> do
           let totalOnlineDuration = driverStats.onlineDuration + newOnlineDuration
@@ -154,26 +170,9 @@ calcPreviousDayOnlineDuration ::
   UTCTime ->
   Maybe DDS.DailyStats ->
   Seconds
-calcPreviousDayOnlineDuration endDayTime lastOnlineFrom mbPrevDayDailyStats =
+calcPreviousDayOnlineDuration succStartDayTime lastOnlineFrom mbPrevDayDailyStats =
   let prevDayOnlineDuration = fromMaybe (Seconds 0) $ mbPrevDayDailyStats >>= (.onlineDuration)
-   in prevDayOnlineDuration + diffUTCTimeInSeconds endDayTime lastOnlineFrom
-
-updateOnlineDurationDuringFetchingDailyStats ::
-  (CacheFlow m r, EsqDBFlow m r) =>
-  Id DP.Person ->
-  DTC.TransporterConfig ->
-  m ()
-updateOnlineDurationDuringFetchingDailyStats driverId transporterConfig = do
-  driver <- QP.findById driverId >>= fromMaybeM (PersonDoesNotExist driverId.getId)
-  -- To avoid race condition we need to fetch driveInfo, dailyStats, driverStats inside of lock
-  Redis.whenWithLockRedis (updateDriverOnlineDurationLockKey driverId) 60 $ do
-    driverInfo <- QDIE.findByIdAndVerified driverId Nothing >>= fromMaybeM DriverInfoNotFound
-    when (driverInfo.mode == Just DriverInfo.ONLINE) $ do
-      now <- getCurrentTime
-      let localTime = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) now
-          merchantLocalDate = utctDay localTime
-      mbDailyStats <- SQDS.findByDriverIdAndDate driver.id merchantLocalDate
-      updateOnlineDuration (driverId, driver.merchantId, driver.merchantOperatingCityId) transporterConfig.timeDiffFromUtc driverInfo now localTime merchantLocalDate transporterConfig.maxOnlineDurationDays mbDailyStats
+   in prevDayOnlineDuration + diffUTCTimeInSeconds succStartDayTime lastOnlineFrom
 
 -- To avoid rounding error accumulation, each value was rounded to whole seconds
 diffUTCTimeInSeconds :: UTCTime -> UTCTime -> Seconds

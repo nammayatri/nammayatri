@@ -92,9 +92,9 @@ import qualified Lib.JourneyModule.State.Types as JMState
 import qualified Lib.JourneyModule.Types as JMTypes
 import qualified Lib.JourneyModule.Utils as JLU
 import qualified Lib.JourneyModule.Utils as JMU
-import qualified SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.BecknConfig as CQBC
+import qualified Storage.CachedQueries.FRFSVehicleServiceTier as CQFRFSVehicleServiceTier
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
@@ -102,6 +102,7 @@ import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
+import qualified Storage.Queries.Journey as QJourney
 import Storage.Queries.JourneyFeedback as SQJFB
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.JourneyLegExtra as QJourneyLegExtra
@@ -118,17 +119,6 @@ import Tools.MultiModal as MM
 import qualified Tools.MultiModal as TMultiModal
 import qualified Tools.Payment as Payment
 
-validateMetroBusinessHours :: Id Domain.Types.Journey.Journey -> Environment.Flow ()
-validateMetroBusinessHours journeyId = do
-  journey <- JM.getJourney journeyId
-  legs <- QJourneyLeg.getJourneyLegs journeyId
-  riderConfig <- QRC.findByMerchantOperatingCityId journey.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist journey.merchantOperatingCityId.getId)
-  now <- getCurrentTime
-  let isOutsideMetroBusinessHours = FRFSUtils.isOutsideBusinessHours riderConfig.qrTicketRestrictionStartTime riderConfig.qrTicketRestrictionEndTime now riderConfig.timeDiffFromUtc
-      hasMetroLeg = any (\leg -> leg.mode == DTrip.Metro) legs
-  when (hasMetroLeg && isOutsideMetroBusinessHours) $
-    throwError $ InvalidRequest "Metro booking not allowed outside business hours"
-
 postMultimodalInitiate ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
@@ -138,7 +128,6 @@ postMultimodalInitiate ::
   )
 postMultimodalInitiate (_personId, _merchantId) journeyId = do
   Redis.withLockRedisAndReturnValue lockKey 60 $ do
-    validateMetroBusinessHours journeyId
     journeyLegs <- QJourneyLeg.getJourneyLegs journeyId
     addAllLegs journeyId (Just journeyLegs) journeyLegs
     journey <- JM.getJourney journeyId
@@ -158,7 +147,6 @@ postMultimodalConfirm ::
     Environment.Flow Kernel.Types.APISuccess.APISuccess
   )
 postMultimodalConfirm (_, _) journeyId forcedBookLegOrder journeyConfirmReq = do
-  validateMetroBusinessHours journeyId
   journey <- JM.getJourney journeyId
   legs <- QJourneyLeg.getJourneyLegs journey.id
   let confirmElements = journeyConfirmReq.journeyConfirmReqElements
@@ -166,7 +154,9 @@ postMultimodalConfirm (_, _) journeyId forcedBookLegOrder journeyConfirmReq = do
   -- If all FRFS legs are skipped, update journey status to INPROGRESS. Otherwise, update journey status to CONFIRMED and it would be marked as INPROGRESS on Payment Success in `markJourneyPaymentSuccess`.
   -- Note: INPROGRESS journey status indicates that the tracking has started.
   if isAllFRFSLegSkipped legs confirmElements
-    then JM.updateJourneyStatus journey Domain.Types.Journey.INPROGRESS
+    then do
+      JM.updateJourneyStatus journey Domain.Types.Journey.INPROGRESS
+      fork "Analytics - Journey Skip Without Booking Update" $ QJourney.updateHasStartedTrackingWithoutBooking (Just True) journeyId
     else JM.updateJourneyStatus journey Domain.Types.Journey.CONFIRMED
   fork "Caching recent location" $ JLU.createRecentLocationForMultimodal journey
   pure Kernel.Types.APISuccess.Success
@@ -1235,17 +1225,16 @@ postMultimodalOrderChangeStops _ journeyId legOrder req = do
           let prevLegStartPoint = LatLong prevLeg.startLocation.latitude prevLeg.startLocation.longitude
           (mbOsmEntrance, mbStraightLineEntrance) <- JMTypes.getNearestGateFromLeg prevLegStartPoint merchantId merchantOpCityId (fromMaybe [] sourceStation.gates)
           let bestEntrance = mbOsmEntrance <|> mbStraightLineEntrance
-              prevLegEndLocation = maybe prevLeg.endLocation (\e -> LatLngV2 (fromMaybe prevLeg.endLocation.latitude e.lat) (fromMaybe prevLeg.endLocation.longitude e.lon)) bestEntrance
-          (mbNewDistance, _) <- JMU.getDistanceAndDuration merchantId merchantOpCityId prevLegStartPoint (LatLong prevLegEndLocation.latitude prevLegEndLocation.longitude)
-          let (mode, newDistance, newDuration) =
-                case mbNewDistance of
-                  Just newD
-                    | newD < riderConfig.maximumWalkDistance ->
-                      ( DTrip.Walk,
-                        Just (convertMetersToDistance Meter newD),
-                        Just (calculateWalkDuration (convertMetersToDistance Meter newD))
-                      )
-                  _ -> (prevLeg.mode, prevLeg.distance, prevLeg.duration)
+          -- Use new station coordinates when no gates found
+          sourceLat <- sourceStation.lat & fromMaybeM (StationError.InvalidStationData "Source station latitude not found")
+          sourceLon <- sourceStation.lon & fromMaybeM (StationError.InvalidStationData "Source station longitude not found")
+          let newStationLocation = LatLngV2 sourceLat sourceLon
+          let prevLegEndLocation = maybe newStationLocation (\e -> LatLngV2 (fromMaybe sourceLat e.lat) (fromMaybe sourceLon e.lon)) bestEntrance
+          -- Log when falling back to station coordinates
+          when (isNothing bestEntrance) $ do
+            logError $ "No gates found for source station " <> sourceStation.code <> ", using station coordinates: " <> show (sourceLat, sourceLon)
+          (mbNewDistance, mbNewDuration) <- JMU.getDistanceAndDuration merchantId merchantOpCityId prevLegStartPoint (LatLong prevLegEndLocation.latitude prevLegEndLocation.longitude)
+          let (mode, newDistance, newDuration) = updateLegDistanceAndMode prevLeg mbNewDistance mbNewDuration
               updatedPrevLeg =
                 prevLeg
                   { DJourneyLeg.endLocation = prevLegEndLocation,
@@ -1266,17 +1255,16 @@ postMultimodalOrderChangeStops _ journeyId legOrder req = do
           let nextLegEndPoint = LatLong nextLeg.endLocation.latitude nextLeg.endLocation.longitude
           (mbOsmExit, mbStraightLineExit) <- JMTypes.getNearestGateFromLeg nextLegEndPoint merchantId merchantOpCityId (fromMaybe [] destStation.gates)
           let bestExit = mbOsmExit <|> mbStraightLineExit
-          let nextLegStartLocation = maybe nextLeg.startLocation (\e -> LatLngV2 (fromMaybe nextLeg.startLocation.latitude e.lat) (fromMaybe nextLeg.startLocation.longitude e.lon)) bestExit
-          (mbNewDistance, _) <- JMU.getDistanceAndDuration merchantId merchantOpCityId (LatLong nextLegStartLocation.latitude nextLegStartLocation.longitude) nextLegEndPoint
-          let (mode, newDistance, newDuration) =
-                case mbNewDistance of
-                  Just newD
-                    | newD < riderConfig.maximumWalkDistance ->
-                      ( DTrip.Walk,
-                        Just (convertMetersToDistance Meter newD),
-                        Just (calculateWalkDuration (convertMetersToDistance Meter newD))
-                      )
-                  _ -> (nextLeg.mode, nextLeg.distance, nextLeg.duration)
+          -- Use new station coordinates when no gates found
+          destLat <- destStation.lat & fromMaybeM (StationError.InvalidStationData "Destination station latitude not found")
+          destLon <- destStation.lon & fromMaybeM (StationError.InvalidStationData "Destination station longitude not found")
+          let newStationLocation = LatLngV2 destLat destLon
+          let nextLegStartLocation = maybe newStationLocation (\e -> LatLngV2 (fromMaybe destLat e.lat) (fromMaybe destLon e.lon)) bestExit
+          -- Log when falling back to station coordinates
+          when (isNothing bestExit) $ do
+            logError $ "No gates found for destination station " <> destStation.code <> ", using station coordinates: " <> show (destLat, destLon)
+          (mbNewDistance, mbNewDuration) <- JMU.getDistanceAndDuration merchantId merchantOpCityId (LatLong nextLegStartLocation.latitude nextLegStartLocation.longitude) nextLegEndPoint
+          let (mode, newDistance, newDuration) = updateLegDistanceAndMode nextLeg mbNewDistance mbNewDuration
           let updatedNextLeg =
                 nextLeg
                   { DJourneyLeg.startLocation = nextLegStartLocation,
@@ -1300,6 +1288,31 @@ postMultimodalOrderChangeStops _ journeyId legOrder req = do
               osmEntrance = (mbEntranceGates >>= fst) <|> (oldJourneyLeg.osmEntrance)
               osmExit = (mbExitGates >>= fst) <|> (oldJourneyLeg.osmExit)
            in return $ Just JMTypes.Gates {..}
+      where
+        updateLegDistanceAndMode ::
+          DJourneyLeg.JourneyLeg ->
+          Maybe Meters ->
+          Maybe Seconds ->
+          (DTrip.MultimodalTravelMode, Maybe Distance, Maybe Seconds)
+        updateLegDistanceAndMode leg mbNewDistance mbNewDuration =
+          case mbNewDistance of
+            Just newD
+              | newD < riderConfig.maximumWalkDistance ->
+                ( DTrip.Walk,
+                  Just (convertMetersToDistance Meter newD),
+                  Just (calculateWalkDuration (convertMetersToDistance Meter newD))
+                )
+              | leg.mode == DTrip.Walk && newD >= riderConfig.maximumWalkDistance ->
+                ( DTrip.Taxi,
+                  Just (convertMetersToDistance Meter newD),
+                  mbNewDuration
+                )
+              | otherwise ->
+                ( leg.mode,
+                  Just (convertMetersToDistance Meter newD),
+                  mbNewDuration
+                )
+            _ -> (leg.mode, leg.distance, leg.duration)
 
 postMultimodalRouteAvailability ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -1321,13 +1334,21 @@ postMultimodalRouteAvailability (mbPersonId, merchantId) req = do
   -- Find integrated BPP configs for the merchant operating city
   integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId vehicleCategory DIBC.MULTIMODAL
 
+  availableServiceTiers <-
+    case (req.journeyId, req.legOrder) of
+      (Just journeyId, Just legOrder) -> do
+        journeyLeg <- QJourneyLeg.getJourneyLeg journeyId legOrder
+        quotes <- maybe (pure []) (QFRFSQuote.findAllBySearchId . Id) journeyLeg.legSearchId
+        return $ Just $ mapMaybe JMTypes.getServiceTierFromQuote quotes
+      _ -> pure Nothing
+
   case integratedBPPConfigs of
     [] -> return $ ApiTypes.RouteAvailabilityResp {availableRoutes = []}
     (integratedBPPConfig : _) -> do
       -- Use findPossibleRoutes to get available routes
       (_, availableRoutesByTier) <-
         JMU.findPossibleRoutes
-          Nothing
+          availableServiceTiers
           req.startStopCode
           req.endStopCode
           currentTime
@@ -1344,23 +1365,31 @@ postMultimodalRouteAvailability (mbPersonId, merchantId) req = do
               else availableRoutesByTier
 
       -- Convert to API response format
-      let availableRoutes = concatMap convertToAvailableRoute filteredRoutes
+      availableRoutes <- concatMapM (convertToAvailableRoute person) filteredRoutes
 
       return $ ApiTypes.RouteAvailabilityResp {availableRoutes = availableRoutes}
   where
-    convertToAvailableRoute :: JMU.AvailableRoutesByTier -> [ApiTypes.AvailableRoute]
-    convertToAvailableRoute routesByTier =
-      map
-        ( \routeInfo ->
-            ApiTypes.AvailableRoute
-              { source = routesByTier.source,
-                quoteId = routesByTier.quoteId,
-                serviceTierName = routesByTier.serviceTierName,
-                routeCode = routeInfo.routeCode,
-                routeShortName = routeInfo.shortName,
-                routeLongName = routeInfo.longName,
-                routeTimings = routesByTier.nextAvailableBuses
-              }
+    convertToAvailableRoute :: Domain.Types.Person.Person -> JMU.AvailableRoutesByTier -> Environment.Flow [ApiTypes.AvailableRoute]
+    convertToAvailableRoute person routesByTier =
+      mapM
+        ( \routeInfo -> do
+            serviceTierName <-
+              case routesByTier.serviceTierName of
+                Just _ -> return routesByTier.serviceTierName
+                Nothing -> do
+                  frfsServiceTier <- CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityId routesByTier.serviceTier person.merchantOperatingCityId
+                  return $ frfsServiceTier <&> (.shortName)
+            return $
+              ApiTypes.AvailableRoute
+                { source = routeInfo.source,
+                  quoteId = routesByTier.quoteId,
+                  serviceTierName,
+                  serviceTierType = routesByTier.serviceTier,
+                  routeCode = routeInfo.routeCode,
+                  routeShortName = routeInfo.shortName,
+                  routeLongName = routeInfo.longName,
+                  routeTimings = routeInfo.routeTimings
+                }
         )
         routesByTier.availableRoutesInfo
 

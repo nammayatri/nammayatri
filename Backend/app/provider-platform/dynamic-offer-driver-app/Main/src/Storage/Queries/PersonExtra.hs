@@ -372,7 +372,7 @@ updatePersonRec (Id personId) person = do
       Se.Set BeamP.description $ person.description,
       Se.Set BeamP.updatedAt now,
       Se.Set BeamP.clientSdkVersion (versionToText <$> person.clientSdkVersion),
-      Se.Set BeamP.reactBundleVersion (versionToText <$> person.reactBundleVersion),
+      Se.Set BeamP.reactBundleVersion $ person.reactBundleVersion,
       Se.Set BeamP.clientBundleVersion (versionToText <$> person.clientBundleVersion),
       Se.Set BeamP.clientConfigVersion (versionToText <$> person.clientConfigVersion),
       Se.Set BeamP.clientOsVersion (deviceVersion <$> person.clientDevice),
@@ -390,7 +390,7 @@ updatePersonVersionsAndMerchantOperatingCity ::
   Maybe Version ->
   Maybe Version ->
   Maybe Version ->
-  Maybe Version ->
+  Maybe Text ->
   Maybe Text ->
   Maybe Text ->
   Maybe Text ->
@@ -405,7 +405,7 @@ updatePersonVersionsAndMerchantOperatingCity person mbBundleVersion mbClientVers
     let mbBundleVersionText = versionToText <$> (mbBundleVersion <|> person.clientBundleVersion)
         mbClientVersionText = versionToText <$> (mbClientVersion <|> person.clientSdkVersion)
         mbConfigVersionText = versionToText <$> (mbConfigVersion <|> person.clientConfigVersion)
-        mbReactBundleVersionText = versionToText <$> (mbReactBundleVersion <|> person.reactBundleVersion)
+        mbReactBundleVersionText = mbReactBundleVersion <|> person.reactBundleVersion
         mbOsVersion = deviceVersion <$> (mbDevice <|> person.clientDevice)
         mbOsType = deviceType <$> (mbDevice <|> person.clientDevice)
         mbModelName = deviceModel <$> (mbDevice <|> person.clientDevice)

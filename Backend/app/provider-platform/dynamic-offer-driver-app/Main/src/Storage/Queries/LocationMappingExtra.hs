@@ -40,13 +40,16 @@ findByEntityId entityId =
 
 getLatestStartByEntityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m (Maybe LocationMapping)
 getLatestStartByEntityId entityId =
-  findOneWithKV
+  -- Switched from findOneWithKV to findAllWithKVAndConditionalDB to fix the issue of not getting the latest mapping.
+  findAllWithKVAndConditionalDB
     [ Se.And
         [ Se.Is BeamLM.entityId $ Se.Eq entityId,
           Se.Is BeamLM.order $ Se.Eq 0,
           Se.Is BeamLM.version $ Se.Eq latestTag
         ]
     ]
+    Nothing
+    <&> listToMaybe
 
 getLatestStopsByEntityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m [LocationMapping]
 getLatestStopsByEntityId entityId = do

@@ -22,7 +22,8 @@ data TaxiLegRequestSearchData = TaxiLegRequestSearchData
   { journey :: DJourney.Journey,
     journeyLegData :: DJourneyLeg.JourneyLeg,
     origin :: SearchReqLocation,
-    stops :: [SearchReqLocation]
+    stops :: [SearchReqLocation],
+    multimodalSearchRequestId :: Maybe Text
   }
 
 data TaxiLegRequestConfirmData = TaxiLegRequestConfirmData

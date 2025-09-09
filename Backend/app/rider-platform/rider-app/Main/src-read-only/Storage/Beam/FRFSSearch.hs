@@ -18,6 +18,7 @@ data FRFSSearchT f = FRFSSearchT
     isOnSearchReceived :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    multimodalSearchRequestId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     onSearchFailed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     partnerOrgId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     partnerOrgTransactionId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

@@ -12,7 +12,6 @@ import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Map.Strict as M
 import qualified Data.Map.Strict as Map
 import Data.Ord (Down (..), comparing)
-import qualified Data.Set as Set
 import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime, nominalDiffTimeToSeconds, secondsToNominalDiffTime)
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
@@ -25,6 +24,7 @@ import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.MultimodalPreferences as DMP
 import Domain.Types.Person
 import qualified Domain.Types.RecentLocation as DTRL
+import qualified Domain.Types.RiderConfig as RCTypes
 import Domain.Types.RouteStopTimeTable
 import qualified Domain.Types.Trip as DTrip
 import Environment
@@ -40,6 +40,7 @@ import Kernel.Randomizer
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
+import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
@@ -54,6 +55,7 @@ import qualified Storage.CachedQueries.FRFSVehicleServiceTier as CQFRFSVehicleSe
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as MultiModalBus
 import qualified Storage.CachedQueries.Merchant.MultiModalSuburban as MultiModalSuburban
+import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.RouteStopTimeTable as GRSM
 import Storage.GraphqlQueries.Client (mapToServiceTierType)
@@ -62,7 +64,6 @@ import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RecentLocation as SQRL
 import qualified Storage.Queries.VehicleRouteMapping as QVehicleRouteMapping
-import qualified System.Environment as Se
 import Tools.Maps (LatLong (..))
 import qualified Tools.Maps as Maps
 import qualified Tools.Payment as TPayment
@@ -153,7 +154,9 @@ data AvailableRoutesInfo = AvailableRoutesInfo
   { shortName :: Text,
     longName :: Text,
     routeCode :: Text,
-    isLiveTrackingAvailable :: Bool
+    routeTimings :: [Seconds],
+    isLiveTrackingAvailable :: Bool,
+    source :: SourceType
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON, ToSchema)
 
@@ -238,17 +241,13 @@ fetchLiveBusTimings ::
   Id MerchantOperatingCity ->
   m [RouteStopTimeTable]
 fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid mocid = do
-  disableLiveBuses <- fromMaybe False . (>>= readMaybe) <$> (liftIO $ Se.lookupEnv "DISABLE_LIVE_BUSES")
-  if not disableLiveBuses
-    then do
-      allRouteWithBuses <- MultiModalBus.getBusesForRoutes routeCodes
-      routeStopTimes <- mapM processRoute allRouteWithBuses
-      let flattenedRouteStopTimes = concat routeStopTimes
-      logDebug $ "allRouteWithBuses: " <> show allRouteWithBuses <> " routeStopTimes: " <> show routeStopTimes <> " flattenedRouteStopTimes: " <> show flattenedRouteStopTimes <> " disableLiveBuses: " <> show disableLiveBuses
-      if not (null flattenedRouteStopTimes)
-        then return flattenedRouteStopTimes
-        else measureLatency (GRSM.findByRouteCodeAndStopCode integratedBppConfig mid mocid routeCodes stopCode) "fetch route stop timing through graphql"
-    else measureLatency (GRSM.findByRouteCodeAndStopCode integratedBppConfig mid mocid routeCodes stopCode) "fetch route stop timing through graphql"
+  allRouteWithBuses <- MultiModalBus.getBusesForRoutes routeCodes
+  let routesWithoutBuses = map (.routeId) $ filter (\route -> null route.buses) allRouteWithBuses
+  liveRouteStopTimes <- mapM processRoute allRouteWithBuses
+  let flattenedLiveRouteStopTimes = concat liveRouteStopTimes
+  logDebug $ "allRouteWithBuses: " <> show allRouteWithBuses <> " flattenedLiveRouteStopTimes: " <> show flattenedLiveRouteStopTimes
+  staticRouteStopTimes <- measureLatency (GRSM.findByRouteCodeAndStopCode integratedBppConfig mid mocid routesWithoutBuses stopCode) "fetch route stop timing through graphql"
+  return $ flattenedLiveRouteStopTimes ++ staticRouteStopTimes
   where
     processRoute routeWithBuses = do
       let busEtaData = concatMap (\bus -> map (\eta -> (bus.vehicleNumber, eta)) $ fromMaybe [] (bus.busData.eta_data)) routeWithBuses.buses
@@ -383,26 +382,6 @@ fetchLiveTimings routeCodes stopCode currentTime integratedBppConfig mid mocid v
   Enums.BUS -> fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid mocid
   _ -> measureLatency (GRSM.findByRouteCodeAndStopCode integratedBppConfig mid mocid routeCodes stopCode) "fetch route stop timing through graphql"
 
--- Function for explicitly fetching static timings for buses to give more possibleRoutes for buses
-fetchStaticTimings ::
-  ( HasField "ltsHedisEnv" r Hedis.HedisEnv,
-    CacheFlow m r,
-    EsqDBFlow m r,
-    EsqDBReplicaFlow m r,
-    EncFlow m r,
-    Monad m,
-    HasKafkaProducer r,
-    HasShortDurationRetryCfg r c
-  ) =>
-  [Text] ->
-  Text ->
-  DIntegratedBPPConfig.IntegratedBPPConfig ->
-  Id Merchant ->
-  Id MerchantOperatingCity ->
-  m [RouteStopTimeTable]
-fetchStaticTimings routeCodes stopCode integratedBppConfig mid mocid =
-  measureLatency (GRSM.findByRouteCodeAndStopCode integratedBppConfig mid mocid routeCodes stopCode) ("fetchStaticTimings" <> show routeCodes <> " fromStopCode: " <> show stopCode <> " fromStopCode: " <> show stopCode)
-
 type RouteCodeText = Text
 
 type ServiceTypeText = Text
@@ -432,7 +411,6 @@ findPossibleRoutes ::
 findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime integratedBppConfig mid mocid vc sendWithoutFare = do
   -- Get route mappings that contain the origin stop
   fromRouteStopMappings <- measureLatency (OTPRest.getRouteStopMappingByStopCode fromStopCode integratedBppConfig) ("getRouteStopMappingByStopCode" <> show fromStopCode)
-
   -- Get route mappings that contain the destination stop
   toRouteStopMappings <- measureLatency (OTPRest.getRouteStopMappingByStopCode toStopCode integratedBppConfig) ("getRouteStopMappingByStopCode" <> show toStopCode)
 
@@ -448,36 +426,9 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
               fromRouteCode == toRouteCode && fromSeq < toSeq -- Ensure correct sequence
           ]
 
-  liveBusesInfo <- mapM (\routeInfo -> (routeInfo,) <$> MultiModalBus.getRoutesBuses routeInfo) validRoutes
+  routeStopTimings <- measureLatency (fetchLiveTimings validRoutes fromStopCode currentTime integratedBppConfig mid mocid vc) ("fetchLiveTimings" <> show validRoutes <> " fromStopCode: " <> show fromStopCode <> " toStopCode: " <> show toStopCode)
 
-  busRouteMapping :: HM.HashMap RouteCodeText (HM.HashMap ServiceTypeText Text) <-
-    HM.fromList <$> forM liveBusesInfo \(routeInfo, routeWithBuses) -> do
-      busMappings <-
-        mapMaybeM
-          ( \bus -> do
-              mbServiceType <- OTPRest.getVehicleServiceType integratedBppConfig bus.vehicleNumber
-              return $ (\serviceTypeResp -> (show serviceTypeResp.service_type, bus.vehicleNumber)) <$> mbServiceType
-          )
-          routeWithBuses.buses
-      return (routeInfo, HM.fromList busMappings)
-  -- Get the timing information for these routes at the origin stop
-
-  -- We get static timings in this call if live timings are not found
-  routeStopTimingsLive <- measureLatency (fetchLiveTimings validRoutes fromStopCode currentTime integratedBppConfig mid mocid vc) ("fetchLiveTimings" <> show validRoutes <> " fromStopCode: " <> show fromStopCode <> " toStopCode: " <> show toStopCode)
-  -- Get IST time info
   let (_, currentTimeIST) = getISTTimeInfo currentTime
-
-  let fetchLiveTimingsSource = fromMaybe GTFS $ listToMaybe $ map (.source) routeStopTimingsLive
-  -- Fetch static timings for buses if not already fetched by `fetchLiveTimings`
-  routeStopTimingsStatic <- case fetchLiveTimingsSource of
-    GTFS -> pure [] -- Already timings are from static source
-    _ -> case vc of
-      Enums.BUS -> fetchStaticTimings validRoutes fromStopCode integratedBppConfig mid mocid
-      _ -> pure []
-  let liveRouteCodes = Set.fromList [rst.routeCode | rst <- routeStopTimingsLive]
-  let routeStopTimings =
-        routeStopTimingsLive
-          <> [s | s <- routeStopTimingsStatic, s.routeCode `Set.notMember` liveRouteCodes]
   freqMap <- loadRouteFrequencies routeStopTimings
 
   let sortedTimings =
@@ -490,10 +441,44 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
           routeStopTimings
 
   -- Group by service tier
-  let groupedByTier = groupBy (\a b -> a.serviceTierType == b.serviceTierType) $ sortBy (comparing (.serviceTierType)) routeStopTimings
+  mbRiderConfig <- QRiderConfig.findByMerchantOperatingCityId mocid Nothing
+  let cfgMap = maybe (toCfgMap defaultBusTierSortingConfig) toCfgMap (mbRiderConfig >>= (.busTierSortingConfig))
+  let groupedByTier = groupBy (\a b -> a.serviceTierType == b.serviceTierType) $ sortBy (comparing (tierRank cfgMap . (.serviceTierType))) routeStopTimings
   logDebug $ "groupedByTier: " <> show groupedByTier <> " sortedTimings: " <> show sortedTimings <> " routeStopTimings: " <> show routeStopTimings
+  let upcomingBusThresholdSec = fromMaybe (Seconds 3600) (mbRiderConfig >>= (.upcomingBusThresholdSec))
+  let normalizeEtaSeconds tod =
+        let eta = nominalDiffTimeToSeconds $ diffUTCTime (getISTArrivalTime tod currentTime) currentTimeIST
+            secondsValue = fromIntegral (getSeconds eta) :: Double
+         in if eta > 0
+              then eta
+              else
+                if abs secondsValue > 86400
+                  then Seconds $ round $ (7 * 86400) + secondsValue
+                  else Seconds $ round $ 86400 + secondsValue
+
+  let earliestArrival timings =
+        listToMaybe . sort $
+          [ s
+            | timing <- timings,
+              let Seconds s = normalizeEtaSeconds timing.timeOfArrival
+          ]
+
+  let tierWithEarliest =
+        [ (earliestArrival timings, timings)
+          | timings <- groupedByTier,
+            not (null timings)
+        ]
+  let sortedTierGroups =
+        sortBy
+          ( \(ea1, _) (ea2, _) ->
+              compare
+                (withinThreshold ea1 upcomingBusThresholdSec)
+                (withinThreshold ea2 upcomingBusThresholdSec)
+          )
+          tierWithEarliest
+  let groupedByTierReordered = map snd sortedTierGroups
   -- For each service tier, collect route information
-  results <- forM groupedByTier $ \timingsForTier -> do
+  results <- forM groupedByTierReordered $ \timingsForTier -> do
     let serviceTierType = if null timingsForTier then Spec.ORDINARY else (head timingsForTier).serviceTierType
         routeCodesForTier = nub $ map (.routeCode) timingsForTier
     let tierSource = fromMaybe GTFS $ listToMaybe $ map (.source) timingsForTier
@@ -509,8 +494,10 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
 
     -- Calculate arrival times in seconds
     let arrivalTimes =
-          [ estimatedArrivalTimeInSeconds
+          [ (routeCode, source, estimatedArrivalTimeInSeconds)
             | timing <- timingsForTier,
+              let routeCode = timing.routeCode,
+              let source = timing.source,
               let arrivalTimeInSeconds' = nominalDiffTimeToSeconds $ diffUTCTime (getISTArrivalTime timing.timeOfArrival currentTime) currentTimeIST,
               let secondsValue = fromIntegral (getSeconds arrivalTimeInSeconds') :: Double,
               let estimatedArrivalTimeInSeconds
@@ -539,8 +526,16 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
     let availableRoutesInfo =
           map
             ( \routeDetail -> do
-                let busForCurrentServiceType = HM.lookup (show serviceTierType) =<< HM.lookup routeDetail.code busRouteMapping
-                AvailableRoutesInfo {shortName = routeDetail.shortName, longName = routeDetail.longName, routeCode = routeDetail.code, isLiveTrackingAvailable = isJust busForCurrentServiceType}
+                let routeArrivalTimes = filter (\(rtCode, _, _) -> rtCode == routeDetail.code) arrivalTimes
+                    routeSource = fromMaybe GTFS $ listToMaybe $ map (\(_, sr, _) -> sr) routeArrivalTimes
+                AvailableRoutesInfo
+                  { shortName = routeDetail.shortName,
+                    longName = routeDetail.longName,
+                    routeCode = routeDetail.code,
+                    routeTimings = sort $ map (\(_, _, arrivalTime) -> arrivalTime) routeArrivalTimes,
+                    isLiveTrackingAvailable = routeSource == LIVE,
+                    source = routeSource
+                  }
             )
             validRouteDetails
     return $
@@ -548,7 +543,7 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
         { serviceTier = serviceTierType,
           availableRoutes = routeShortNames, -- TODO: deprecate this
           availableRoutesInfo = availableRoutesInfo,
-          nextAvailableBuses = sort arrivalTimes,
+          nextAvailableBuses = sort $ map (\(_, _, arrivalTime) -> arrivalTime) arrivalTimes,
           serviceTierName = serviceTierName,
           serviceTierDescription = serviceTierDescription,
           quoteId = quoteId,
@@ -584,6 +579,28 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
       pure (M.fromList freqs)
 
     getFreq r freqMap = M.findWithDefault 0 r.routeCode freqMap
+
+    withinThreshold :: Maybe Int -> Seconds -> Int
+    withinThreshold s upcomingBusThresholdSec = maybe 1 (\s' -> if s' <= upcomingBusThresholdSec.getSeconds then 0 else 1) s
+
+    defaultBusTierSortingConfig :: [RCTypes.BusTierSortingConfig]
+    defaultBusTierSortingConfig =
+      [ RCTypes.BusTierSortingConfig 1 Spec.EXECUTIVE,
+        RCTypes.BusTierSortingConfig 2 Spec.AC,
+        RCTypes.BusTierSortingConfig 3 Spec.EXPRESS,
+        RCTypes.BusTierSortingConfig 4 Spec.FIRST_CLASS,
+        RCTypes.BusTierSortingConfig 5 Spec.NON_AC,
+        RCTypes.BusTierSortingConfig 6 Spec.ORDINARY,
+        RCTypes.BusTierSortingConfig 7 Spec.SECOND_CLASS,
+        RCTypes.BusTierSortingConfig 8 Spec.SPECIAL,
+        RCTypes.BusTierSortingConfig 9 Spec.THIRD_CLASS
+      ]
+
+    tierRank :: M.Map Spec.ServiceTierType Int -> Spec.ServiceTierType -> Int
+    tierRank cfg tier = fromMaybe maxBound (M.lookup tier cfg)
+
+    toCfgMap :: [RCTypes.BusTierSortingConfig] -> M.Map Spec.ServiceTierType Int
+    toCfgMap xs = M.fromList [(RCTypes.tier x, RCTypes.rank x) | x <- xs]
 
 -- | Find the top upcoming trips for a given route code and stop code
 -- Returns arrival times in seconds for the upcoming trips along with route ID and service type
@@ -903,7 +920,7 @@ getSubwayValidRoutes allSubwayRoutes getPreliminaryLeg integratedBppConfig mid m
     processRoute viaRoutes = do
       let viaPoints = viaRoutes.viaPoints
           routeDistance = metersToHighPrecMeters viaRoutes.distance
-      routeDetailsWithDistance <- mapM (\(osc, dsc) -> buildMultimodalRouteDetails 1 Nothing osc dsc integratedBppConfig mid mocid vc) viaPoints
+      routeDetailsWithDistance <- mapM (\(osc, dsc) -> measureLatency (buildMultimodalRouteDetails 1 Nothing osc dsc integratedBppConfig mid mocid vc) "buildMultimodalRouteDetails") viaPoints
       logDebug $ "buildTrainAllViaRoutes routeDetailsWithDistance: " <> show routeDetailsWithDistance
       -- ensure that atleast one train route is possible or two stops are less than 1km apart so that user can walk to other station e.g. Chennai Park to Central station
       let isRoutePossible = all (\(mbRouteDetails, mbDistance) -> isJust mbRouteDetails || (isJust mbDistance && mbDistance < Just (HighPrecMeters 1000))) routeDetailsWithDistance
@@ -926,6 +943,7 @@ getSubwayValidRoutes allSubwayRoutes getPreliminaryLeg integratedBppConfig mid m
         Just route -> do
           return ([route], xs)
         Nothing -> do
+          logDebug $ "getSubwayValidRoutes go Nothing: " <> show x <> " so going for other path"
           go xs
 
 buildTrainAllViaRoutes ::
@@ -935,33 +953,19 @@ buildTrainAllViaRoutes ::
   Maybe DIntegratedBPPConfig.IntegratedBPPConfig ->
   Id Merchant ->
   Id MerchantOperatingCity ->
-  Id Person ->
   Enums.VehicleCategory ->
   MultiModalTypes.GeneralVehicleType ->
   Bool ->
   Flow ([MultiModalTypes.MultiModalRoute], [ViaRoute])
-buildTrainAllViaRoutes getPreliminaryLeg (Just originStopCode) (Just destinationStopCode) (Just integratedBppConfig) mid mocid personId vc mode processAllViaPoints = do
-  allSubwayRoutes <- getAllSubwayRoutes
-  getSubwayValidRoutes allSubwayRoutes getPreliminaryLeg integratedBppConfig mid mocid vc mode processAllViaPoints
+buildTrainAllViaRoutes getPreliminaryLeg (Just originStopCode) (Just destinationStopCode) (Just integratedBppConfig) mid mocid vc mode processAllViaPoints = do
+  allSubwayRoutes <- measureLatency getAllSubwayRoutes "getAllSubwayRoutes"
+  measureLatency (getSubwayValidRoutes allSubwayRoutes getPreliminaryLeg integratedBppConfig mid mocid vc mode processAllViaPoints) "getSubwayValidRoutes"
   where
     getAllSubwayRoutes :: Flow [ViaRoute]
     getAllSubwayRoutes = do
-      person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-      mbMobileNumber <- mapM decrypt person.mobileNumber
-      mbImeiNumber <- mapM decrypt person.imeiNumber
-      sessionId <- getRandomInRange (1, 1000000 :: Int)
       case integratedBppConfig.providerConfig of
         DIntegratedBPPConfig.CRIS crisConfig -> do
-          let routeFareReq =
-                CRISRouteFare.CRISFareRequest
-                  { mobileNo = mbMobileNumber,
-                    imeiNo = fromMaybe "ed409d8d764c04f7" mbImeiNumber,
-                    appSession = sessionId,
-                    sourceCode = originStopCode,
-                    changeOver = " ",
-                    destCode = destinationStopCode,
-                    via = " "
-                  }
+          routeFareReq <- getDummyRouteFareRequest originStopCode destinationStopCode " " " "
           fares <- CRISRouteFare.getRouteFare crisConfig mocid routeFareReq
           let sortedFares = case crisConfig.routeSortingCriteria of
                 Just DIntegratedBPPConfig.FARE -> sortBy (comparing (\fare -> fare.price.amount)) fares
@@ -988,7 +992,7 @@ buildTrainAllViaRoutes getPreliminaryLeg (Just originStopCode) (Just destination
           logDebug $ "getAllSubwayRoutes viaRoutes: " <> show viaRoutes
           return viaRoutes
         _ -> return []
-buildTrainAllViaRoutes _ _ _ _ _ _ _ _ _ _ = return ([], [])
+buildTrainAllViaRoutes _ _ _ _ _ _ _ _ _ = return ([], [])
 
 findEarliestTiming :: UTCTime -> UTCTime -> [RouteStopTimeTable] -> Maybe RouteStopTimeTable
 findEarliestTiming currentTimeIST currentTime routeStopTimings = filter (\rst -> getISTArrivalTime rst.timeOfDeparture currentTime >= currentTimeIST) routeStopTimings & listToMaybe
@@ -1152,3 +1156,34 @@ getDistanceAndDuration merchantId merchantOpCityId startLocation endLocation = d
       logError $ "Failed to get walk distance from OSRM for leg " <> show merchantId.getId <> ": " <> show err
       -- Return Nothing instead of throwing error to allow graceful fallback
       return (Nothing, Nothing)
+
+getDummyRouteFareRequest :: MonadFlow m => Text -> Text -> Text -> Text -> m CRISRouteFare.CRISFareRequest
+getDummyRouteFareRequest sourceCode destCode changeOver viaPoints = do
+  sessionId <- getRandomInRange (1, 1000000 :: Int)
+  return $
+    CRISRouteFare.CRISFareRequest
+      { mobileNo = Just "1111111111",
+        imeiNo = "abcdefgh",
+        appSession = sessionId,
+        sourceCode = sourceCode,
+        destCode = destCode,
+        changeOver = changeOver,
+        via = viaPoints
+      }
+
+getRouteFareRequest :: (CoreMetrics m, MonadFlow m, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => Text -> Text -> Text -> Text -> Id Person -> m CRISRouteFare.CRISFareRequest
+getRouteFareRequest sourceCode destCode changeOver viaPoints personId = do
+  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  mbMobileNumber <- mapM decrypt person.mobileNumber
+  mbImeiNumber <- mapM decrypt person.imeiNumber
+  sessionId <- getRandomInRange (1, 1000000 :: Int)
+  return $
+    CRISRouteFare.CRISFareRequest
+      { mobileNo = mbMobileNumber,
+        imeiNo = fromMaybe "ed409d8d764c04f7" mbImeiNumber,
+        appSession = sessionId,
+        sourceCode = sourceCode,
+        destCode = destCode,
+        changeOver = changeOver,
+        via = viaPoints
+      }

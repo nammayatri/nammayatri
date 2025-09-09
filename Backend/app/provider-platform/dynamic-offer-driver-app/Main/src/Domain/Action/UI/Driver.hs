@@ -401,7 +401,7 @@ data DriverInformationRes = DriverInformationRes
     tripDistanceMinThreshold :: Maybe Meters,
     maxPickupRadius :: Maybe Meters,
     isSilentModeEnabled :: Maybe Bool,
-    reactVersion :: Maybe Version
+    reactVersion :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -477,7 +477,7 @@ data DriverEntityRes = DriverEntityRes
     tripDistanceMinThreshold :: Maybe Meters,
     maxPickupRadius :: Maybe Meters,
     isSilentModeEnabled :: Maybe Bool,
-    reactVersion :: Maybe Version
+    reactVersion :: Maybe Text
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -506,7 +506,7 @@ data UpdateDriverReq = UpdateDriverReq
     maxPickupRadius :: Maybe Meters,
     isSilentModeEnabled :: Maybe Bool,
     rideRequestVolume :: Maybe Int,
-    reactVersion :: Maybe Version
+    reactVersion :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -845,7 +845,7 @@ setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
         Nothing -> throwError $ DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag)
   when (driverInfo.active /= isActive || driverInfo.mode /= mode) $ do
     let newFlowStatus = DDriverMode.getDriverFlowStatus (mode <|> Just DriverInfo.OFFLINE) isActive
-    DDriverMode.updateDriverModeAndFlowStatus driverId transporterConfig.allowCacheDriverFlowStatus isActive (mode <|> Just DriverInfo.OFFLINE) newFlowStatus (Just driverInfo)
+    DDriverMode.updateDriverModeAndFlowStatus driverId transporterConfig isActive (mode <|> Just DriverInfo.OFFLINE) newFlowStatus (Just driverInfo)
   pure APISuccess.Success
 
 activateGoHomeFeature :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id DDHL.DriverHomeLocation -> LatLong -> Flow APISuccess.APISuccess
@@ -1144,7 +1144,7 @@ updateDriver ::
   Maybe Version ->
   Maybe Version ->
   Maybe Version ->
-  Maybe Version ->
+  Maybe Text ->
   Maybe Text ->
   UpdateDriverReq ->
   m UpdateDriverRes
@@ -1397,7 +1397,7 @@ offerQuote (driverId, merchantId, merchantOpCityId) clientId DriverOfferReq {..}
   let response = Accept
   respondQuote (driverId, merchantId, merchantOpCityId) clientId Nothing Nothing Nothing Nothing Nothing DriverRespondReq {searchRequestId = Nothing, searchTryId = Just searchRequestId, notificationSource = Nothing, renderedAt = Nothing, respondedAt = Nothing, ..}
 
-respondQuote :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Text -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> DriverRespondReq -> Flow APISuccess
+respondQuote :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Text -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> DriverRespondReq -> Flow APISuccess
 respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion mbClientVersion mbConfigVersion mbReactBundleVersion mbDevice req = do
   searchTryId <- req.searchRequestId <|> req.searchTryId & fromMaybeM (InvalidRequest "searchTryId field is not present.")
   searchTry <- QST.findById searchTryId >>= fromMaybeM (SearchTryNotFound searchTryId.getId)
@@ -1491,7 +1491,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
       Maybe Version ->
       Maybe Version ->
       Maybe Version ->
-      Maybe Version ->
+      Maybe Text ->
       Maybe Text ->
       m DDrQuote.DriverQuote
     buildDriverQuote driver driverStats searchReq sd estimateId tripCategory fareParams mbBundleVersion' mbClientVersion' mbConfigVersion' mbReactBundleVersion' mbDevice' = do
@@ -1558,7 +1558,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
       driverPoolCfg <- SCDPC.getDriverPoolConfig merchantOpCityId vehicleServiceTier tripCategory area dist searchRepeatType searchRepeatCounter (Just (TransactionId (Id searchReq.transactionId))) searchReq
       pure driverPoolCfg.driverQuoteLimit
 
-    acceptDynamicOfferDriverRequest :: DM.Merchant -> DST.SearchTry -> DSR.SearchRequest -> SP.Person -> SearchRequestForDriver -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe HighPrecMoney -> Flow [SearchRequestForDriver]
+    acceptDynamicOfferDriverRequest :: DM.Merchant -> DST.SearchTry -> DSR.SearchRequest -> SP.Person -> SearchRequestForDriver -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> Maybe HighPrecMoney -> Flow [SearchRequestForDriver]
     acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD mbBundleVersion' mbClientVersion' mbConfigVersion' mbReactBundleVersion' mbDevice' reqOfferedValue = do
       let estimateId = fromMaybe searchTry.estimateId sReqFD.estimateId -- backward compatibility
       logDebug $ "offered fare: " <> show reqOfferedValue

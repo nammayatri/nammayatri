@@ -264,8 +264,9 @@ search ::
   Maybe Text ->
   Bool ->
   Bool ->
+  Maybe Text ->
   m SearchRes
-search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion clientId device isDashboardRequest_ justMultimodalSearch = do
+search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion clientId device isDashboardRequest_ justMultimodalSearch multimodalSearchRequestId = do
   now <- getCurrentTime
   let SearchDetails {..} = extractSearchDetails now req
   let isReservedRideSearch = case req of
@@ -344,6 +345,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
       vehicleCategory
       isReservedRideSearch
       justMultimodalSearch
+      multimodalSearchRequestId
 
   Metrics.incrementSearchRequestCount merchant.name merchantOperatingCity.id.getId
 
@@ -566,8 +568,9 @@ buildSearchRequest ::
   Maybe Enums.VehicleCategory ->
   Bool ->
   Bool ->
+  Maybe Text ->
   m SearchRequest.SearchRequest
-buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion clientRnVersion device disabilityTag duration staticDuration riderPreferredOption distanceUnit totalRidesCount isDashboardRequest mbPlaceNameSource hasStops stops mbDriverReferredInfo configVersionMap isMeterRide recentLocationId routeCode destinationStopCode originStopCode vehicleCategory isReservedRideSearch justMultimodalSearch = do
+buildSearchRequest searchRequestId mbClientId person pickup merchantOperatingCity mbDrop mbMaxDistance mbDistance startTime returnTime roundTrip bundleVersion clientVersion clientConfigVersion clientRnVersion device disabilityTag duration staticDuration riderPreferredOption distanceUnit totalRidesCount isDashboardRequest mbPlaceNameSource hasStops stops mbDriverReferredInfo configVersionMap isMeterRide recentLocationId routeCode destinationStopCode originStopCode vehicleCategory isReservedRideSearch justMultimodalSearch multimodalSearchRequestId = do
   let searchMode =
         if isReservedRideSearch
           then Just SearchRequest.RESERVE

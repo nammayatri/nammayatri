@@ -92,6 +92,7 @@ SearchRequest:
     allJourneysLoaded: Maybe Bool
     searchMode: Maybe SearchMode
     isMultimodalSearch: Maybe Bool
+    multimodalSearchRequestId: Maybe Text
 
   default:
     hasMultimodalSearch: "false"

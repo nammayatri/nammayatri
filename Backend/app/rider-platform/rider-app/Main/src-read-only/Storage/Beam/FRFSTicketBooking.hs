@@ -44,6 +44,7 @@ data FRFSTicketBookingT f = FRFSTicketBookingT
     journeyOnInitDone :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    multimodalSearchRequestId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     osBuildVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     osType :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     partnerOrgId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

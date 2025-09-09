@@ -37,6 +37,7 @@ data FRFSQuoteT f = FRFSQuoteT
     integratedBppConfigId :: B.C f Kernel.Prelude.Text,
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    multimodalSearchRequestId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     oldCacheDump :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     partnerOrgId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     partnerOrgTransactionId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
