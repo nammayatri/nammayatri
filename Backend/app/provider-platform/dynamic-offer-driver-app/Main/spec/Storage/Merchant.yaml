@@ -1071,6 +1071,8 @@ TransporterConfig:
     allowCacheDriverFlowStatus : Maybe Bool
     cancellationRateSlabConfig: Maybe CancellationRateSlabConfig
     enableDriverWallet: Maybe Bool
+    enableWalletPayout: Maybe Bool
+    enableWalletTopup: Maybe Bool
     maxWalletPayoutsPerDay: Maybe Int
     minimumWalletPayoutAmount: Maybe HighPrecMoney
     gstPercentage: Maybe Double
