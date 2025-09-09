@@ -36,6 +36,7 @@ types:
     vehicleInfo: VehicleInfoForRoute
     upcomingStops: [SharedLogic.FRFSUtils.UpcomingStop]
     delay: Maybe Seconds
+    routeCode: Text
 
 apis:
   - GET:
