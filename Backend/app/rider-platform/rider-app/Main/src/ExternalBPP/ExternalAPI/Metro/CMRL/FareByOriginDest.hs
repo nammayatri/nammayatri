@@ -73,7 +73,7 @@ getFareByOriginDest config fareReq = do
                           currency = INR
                         },
                     childPrice = Nothing,
-                    discounts = [],
+                    categories = [],
                     fareDetails = Nothing,
                     farePolicyId = Nothing,
                     vehicleServiceTier =

@@ -444,52 +444,6 @@ VALUES
 
 -- ONLY FOR LOCAL
 INSERT INTO
-  atlas_app.frfs_ticket_discount (
-    id,
-    code,
-    title,
-    currency,
-    description,
-    tnc,
-    merchant_id,
-    merchant_operating_city_id,
-    value,
-    vehicle_type,
-    created_at,
-    updated_at
-  )
-VALUES
-  (
-    '333e23a5-3ce6-4c37-8b9b-41377c3c1333',
-    'WOMEN',
-    'Women 50% Off',
-    'INR',
-    'Women Discount',
-    '<b>Only eligible for women above 18 years old</b>',
-    'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
-    'namma-yatri-0-0000-0000-00000000city',
-    'Percentage 50.0',
-    'BUS',
-    now(),
-    now()
-  ),
-  (
-    '333e23a5-3ce6-4c37-8b9b-41377c3c1444',
-    'SENIORCITIZEN',
-    'Senior Citizen 40% Off',
-    'INR',
-    'Women Discount',
-    '<b>Only eligible for adults with age above 70 years</b>',
-    'da4e23a5-3ce6-4c37-8b9b-41377c3c1a52',
-    'namma-yatri-0-0000-0000-00000000city',
-    'Percentage 40.0',
-    'BUS',
-    now(),
-    now()
-  );
-
--- ONLY FOR LOCAL
-INSERT INTO
   atlas_app.frfs_fare_policy (
     id,
     type,

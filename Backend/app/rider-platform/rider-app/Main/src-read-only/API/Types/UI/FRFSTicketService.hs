@@ -7,6 +7,7 @@ import qualified Data.Maybe
 import Data.OpenApi (ToSchema)
 import qualified Data.Text
 import qualified Domain.Types.FRFSQuote
+import qualified Domain.Types.FRFSQuoteCategory
 import qualified Domain.Types.FRFSSearch
 import qualified Domain.Types.FRFSTicketBooking
 import qualified Domain.Types.FRFSTicketBookingStatus
@@ -75,6 +76,10 @@ data FRFSCancelStatus = FRFSCancelStatus {cancellationCharges :: Data.Maybe.Mayb
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data FRFSCategorySelectionReq = FRFSCategorySelectionReq {quantity :: Kernel.Prelude.Int, quoteCategoryId :: Kernel.Types.Id.Id Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data FRFSConfigAPIRes = FRFSConfigAPIRes
   { bookingEndTime :: Kernel.Prelude.UTCTime,
     bookingStartTime :: Kernel.Prelude.UTCTime,
@@ -91,10 +96,6 @@ data FRFSConfigAPIRes = FRFSConfigAPIRes
     ticketsBookedInEvent :: Kernel.Prelude.Int
   }
   deriving stock (Generic, Show)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
-
-data FRFSDiscountReq = FRFSDiscountReq {code :: Data.Text.Text, quantity :: Kernel.Prelude.Int}
-  deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FRFSDiscountRes = FRFSDiscountRes
@@ -130,7 +131,7 @@ data FRFSQuoteAPIRes = FRFSQuoteAPIRes
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data FRFSQuoteConfirmReq = FRFSQuoteConfirmReq {childTicketQuantity :: Data.Maybe.Maybe Kernel.Prelude.Int, discounts :: [FRFSDiscountReq], ticketQuantity :: Data.Maybe.Maybe Kernel.Prelude.Int}
+data FRFSQuoteConfirmReq = FRFSQuoteConfirmReq {childTicketQuantity :: Data.Maybe.Maybe Kernel.Prelude.Int, offered :: [FRFSCategorySelectionReq], ticketQuantity :: Data.Maybe.Maybe Kernel.Prelude.Int}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -231,6 +232,20 @@ data FRFSTicketBookingStatusAPIRes = FRFSTicketBookingStatusAPIRes
     updatedAt :: Kernel.Prelude.UTCTime,
     validTill :: Kernel.Prelude.UTCTime,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory
+  }
+  deriving stock (Generic, Show)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSTicketCategoryRes = FRFSTicketCategoryRes
+  { category :: Data.Text.Text,
+    code :: Data.Maybe.Maybe Data.Text.Text,
+    description :: Data.Maybe.Maybe Data.Text.Text,
+    eligibility :: Kernel.Prelude.Bool,
+    offeredPrice :: Kernel.Types.Common.PriceAPIEntity,
+    price :: Kernel.Types.Common.PriceAPIEntity,
+    quoteCategoryId :: Kernel.Types.Id.Id Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory,
+    title :: Data.Text.Text,
+    tnc :: Data.Maybe.Maybe Data.Text.Text
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

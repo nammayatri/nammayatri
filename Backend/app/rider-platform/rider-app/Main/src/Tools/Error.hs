@@ -783,24 +783,24 @@ instance IsHTTPError CancellationError where
 
 instance IsAPIError CancellationError
 
-data DiscountError
-  = DiscountsIneligible
+data CategoryError
+  = CategoriesIneligible
   deriving (Eq, Show, IsBecknAPIError)
 
-instanceExceptionWithParent 'HTTPException ''DiscountError
+instanceExceptionWithParent 'HTTPException ''CategoryError
 
-instance IsBaseError DiscountError where
+instance IsBaseError CategoryError where
   toMessage = \case
-    DiscountsIneligible -> Just $ "Discount not eligible"
+    CategoriesIneligible -> Just $ "Category not eligible"
 
-instance IsHTTPError DiscountError where
+instance IsHTTPError CategoryError where
   toErrorCode = \case
-    DiscountsIneligible -> "DISCOUNTS_INELIGIBLE"
+    CategoriesIneligible -> "CATEGORIES_INELIGIBLE"
 
   toHttpCode = \case
-    DiscountsIneligible -> E400
+    CategoriesIneligible -> E400
 
-instance IsAPIError DiscountError
+instance IsAPIError CategoryError
 
 data JourneyLegError
   = JourneyLegCannotBeSwitched Text

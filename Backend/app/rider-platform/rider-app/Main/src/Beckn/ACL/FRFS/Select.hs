@@ -7,6 +7,7 @@ import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec
 import qualified BecknV2.FRFS.Utils as Utils
 import Data.List (singleton)
+import Domain.Action.Beckn.FRFS.Common
 import Domain.Types.BecknConfig
 import qualified Domain.Types.FRFSQuote as DQuote
 import Kernel.Prelude
@@ -19,8 +20,9 @@ buildSelectReq ::
   BecknConfig ->
   Utils.BppData ->
   Context.City ->
+  [DCategorySelect] ->
   m Spec.SelectReq
-buildSelectReq quote bapConfig bppData city = do
+buildSelectReq quote bapConfig bppData city categories = do
   now <- getCurrentTime
   let transactionId = quote.searchId.getId
   let messageId = quote.id.getId
@@ -33,17 +35,17 @@ buildSelectReq quote bapConfig bppData city = do
   pure $
     Spec.SelectReq
       { selectReqContext = context,
-        selectReqMessage = tfSelectMessage quote mSettlementType
+        selectReqMessage = tfSelectMessage quote mSettlementType categories
       }
 
-tfSelectMessage :: DQuote.FRFSQuote -> Maybe Text -> Spec.ConfirmReqMessage
-tfSelectMessage quote mSettlementType =
+tfSelectMessage :: DQuote.FRFSQuote -> Maybe Text -> [DCategorySelect] -> Spec.ConfirmReqMessage
+tfSelectMessage quote mSettlementType categories =
   Spec.ConfirmReqMessage
-    { confirmReqMessageOrder = tfOrder quote mSettlementType
+    { confirmReqMessageOrder = tfOrder quote mSettlementType categories
     }
 
-tfOrder :: DQuote.FRFSQuote -> Maybe Text -> Spec.Order
-tfOrder quote mSettlementType =
+tfOrder :: DQuote.FRFSQuote -> Maybe Text -> [DCategorySelect] -> Spec.Order
+tfOrder quote mSettlementType categories =
   Spec.Order
     { orderBilling = Nothing,
       orderCancellation = Nothing,
@@ -51,7 +53,7 @@ tfOrder quote mSettlementType =
       orderCreatedAt = Nothing,
       orderFulfillments = Nothing,
       orderId = Nothing,
-      orderItems = tfItems quote,
+      orderItems = tfItems quote categories,
       orderPayments = tfPayments quote mSettlementType,
       orderProvider = tfProvider quote,
       orderQuote = Nothing,
@@ -60,22 +62,39 @@ tfOrder quote mSettlementType =
       orderUpdatedAt = Nothing
     }
 
-tfItems :: DQuote.FRFSQuote -> Maybe [Spec.Item]
-tfItems quote =
-  Just $
-    [ Spec.Item
-        { itemCategoryIds = Nothing,
-          itemDescriptor = Nothing,
-          itemFulfillmentIds = Nothing,
-          itemId = Just quote.bppItemId,
-          itemPrice = Nothing,
-          itemQuantity = tfQuantity quote,
-          itemTime = Nothing
-        }
-    ]
+tfItems :: DQuote.FRFSQuote -> [DCategorySelect] -> Maybe [Spec.Item]
+tfItems quote categories =
+  case categories of
+    [] ->
+      Just
+        [ Spec.Item
+            { itemCategoryIds = Nothing,
+              itemDescriptor = Nothing,
+              itemFulfillmentIds = Nothing,
+              itemId = Just quote.bppItemId,
+              itemPrice = Nothing,
+              itemQuantity = tfQuantity quote.quantity,
+              itemTime = Nothing
+            }
+        ]
+    _ ->
+      Just $
+        map
+          ( \ondcReq ->
+              Spec.Item
+                { itemCategoryIds = Nothing,
+                  itemDescriptor = Nothing,
+                  itemFulfillmentIds = Nothing,
+                  itemId = Just ondcReq.bppItemId,
+                  itemPrice = Nothing,
+                  itemQuantity = tfQuantity ondcReq.quantity,
+                  itemTime = Nothing
+                }
+          )
+          categories
 
-tfQuantity :: DQuote.FRFSQuote -> Maybe Spec.ItemQuantity
-tfQuantity quote =
+tfQuantity :: Int -> Maybe Spec.ItemQuantity
+tfQuantity quantity =
   Just $
     Spec.ItemQuantity
       { itemQuantityMaximum = Nothing,
@@ -83,7 +102,7 @@ tfQuantity quote =
         itemQuantitySelected =
           Just $
             Spec.ItemQuantitySelected
-              { itemQuantitySelectedCount = Just quote.quantity
+              { itemQuantitySelectedCount = Just quantity
               }
       }
 
