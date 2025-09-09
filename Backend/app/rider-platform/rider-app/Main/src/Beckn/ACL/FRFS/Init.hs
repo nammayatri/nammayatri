@@ -20,6 +20,7 @@ import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec
 import qualified BecknV2.FRFS.Utils as Utils
 import Data.List (singleton)
+import Domain.Action.Beckn.FRFS.Common
 import Domain.Types.BecknConfig
 import qualified Domain.Types.FRFSTicketBooking as DTBooking
 import Kernel.Prelude
@@ -37,8 +38,9 @@ buildInitReq ::
   BecknConfig ->
   Utils.BppData ->
   Context.City ->
+  [DCategorySelect] ->
   m (Spec.InitReq)
-buildInitReq rider tBooking bapConfig bppData city = do
+buildInitReq rider tBooking bapConfig bppData city categories = do
   now <- getCurrentTime
   let transactionId = tBooking.searchId.getId
   let messageId = tBooking.id.getId
@@ -51,17 +53,17 @@ buildInitReq rider tBooking bapConfig bppData city = do
   pure $
     Spec.InitReq
       { initReqContext = context,
-        initReqMessage = tfInitMessage rider tBooking mSettlementType
+        initReqMessage = tfInitMessage rider tBooking mSettlementType categories
       }
 
-tfInitMessage :: (Maybe RiderName, Maybe RiderNumber) -> DTBooking.FRFSTicketBooking -> Maybe Text -> Spec.ConfirmReqMessage
-tfInitMessage rider tBooking mSettlementType =
+tfInitMessage :: (Maybe RiderName, Maybe RiderNumber) -> DTBooking.FRFSTicketBooking -> Maybe Text -> [DCategorySelect] -> Spec.ConfirmReqMessage
+tfInitMessage rider tBooking mSettlementType categories =
   Spec.ConfirmReqMessage
-    { confirmReqMessageOrder = tfOrder rider tBooking mSettlementType
+    { confirmReqMessageOrder = tfOrder rider tBooking mSettlementType categories
     }
 
-tfOrder :: (Maybe RiderName, Maybe RiderNumber) -> DTBooking.FRFSTicketBooking -> Maybe Text -> Spec.Order
-tfOrder rider tBooking mSettlementType =
+tfOrder :: (Maybe RiderName, Maybe RiderNumber) -> DTBooking.FRFSTicketBooking -> Maybe Text -> [DCategorySelect] -> Spec.Order
+tfOrder rider tBooking mSettlementType categories =
   Spec.Order
     { orderBilling = tfBilling rider,
       orderCancellation = Nothing,
@@ -69,7 +71,7 @@ tfOrder rider tBooking mSettlementType =
       orderCreatedAt = Nothing,
       orderFulfillments = Nothing,
       orderId = Nothing,
-      orderItems = tfItems tBooking,
+      orderItems = tfItems tBooking categories,
       orderPayments = tfPayments tBooking mSettlementType,
       orderProvider = tfProvider tBooking,
       orderQuote = Nothing,
@@ -87,22 +89,39 @@ tfBilling (mRiderName, mRiderNumber) =
         billingPhone = mRiderNumber
       }
 
-tfItems :: DTBooking.FRFSTicketBooking -> Maybe [Spec.Item]
-tfItems tBooking =
-  Just $
-    [ Spec.Item
-        { itemCategoryIds = Nothing,
-          itemDescriptor = Nothing,
-          itemFulfillmentIds = Nothing,
-          itemId = Just tBooking.bppItemId,
-          itemPrice = Nothing,
-          itemQuantity = tfQuantity tBooking,
-          itemTime = Nothing
-        }
-    ]
+tfItems :: DTBooking.FRFSTicketBooking -> [DCategorySelect] -> Maybe [Spec.Item]
+tfItems tBooking categories =
+  case categories of
+    [] ->
+      Just
+        [ Spec.Item
+            { itemCategoryIds = Nothing,
+              itemDescriptor = Nothing,
+              itemFulfillmentIds = Nothing,
+              itemId = Just tBooking.bppItemId,
+              itemPrice = Nothing,
+              itemQuantity = tfQuantity tBooking.quantity,
+              itemTime = Nothing
+            }
+        ]
+    _ ->
+      Just $
+        map
+          ( \category ->
+              Spec.Item
+                { itemCategoryIds = Nothing,
+                  itemDescriptor = Nothing,
+                  itemFulfillmentIds = Nothing,
+                  itemId = Just category.bppItemId,
+                  itemPrice = Nothing,
+                  itemQuantity = tfQuantity category.quantity,
+                  itemTime = Nothing
+                }
+          )
+          categories
 
-tfQuantity :: DTBooking.FRFSTicketBooking -> Maybe Spec.ItemQuantity
-tfQuantity tBooking =
+tfQuantity :: Int -> Maybe Spec.ItemQuantity
+tfQuantity quantity =
   Just $
     Spec.ItemQuantity
       { itemQuantityMaximum = Nothing,
@@ -110,7 +129,7 @@ tfQuantity tBooking =
         itemQuantitySelected =
           Just $
             Spec.ItemQuantitySelected
-              { itemQuantitySelectedCount = Just tBooking.quantity
+              { itemQuantitySelectedCount = Just quantity
               }
       }
 

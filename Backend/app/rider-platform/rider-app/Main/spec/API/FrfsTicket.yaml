@@ -4,8 +4,7 @@ imports:
   Station: Domain.Types.Station
   StationType: Domain.Types.StationType
   FRFSQuoteType: Domain.Types.FRFSQuote
-  DiscountValue: Domain.Types.FRFSTicketDiscount
-  FRFSTicketDiscount: Domain.Types.FRFSTicketDiscount
+  FRFSTicketCategoryMetadataConfig: Domain.Types.FRFSTicketCategoryMetadataConfig
   FRFSQuote: Domain.Types.FRFSQuote
   FRFSTicketBookingStatus: Domain.Types.FRFSTicketBookingStatus
   FRFSTicketBooking: Domain.Types.FRFSTicketBooking
@@ -27,6 +26,7 @@ imports:
   IntegratedBPPConfig: Domain.Types.IntegratedBPPConfig
   RecentLocation: Domain.Types.RecentLocation
   TimeOfDay: Date.Time
+  FRFSQuoteCategory: Domain.Types.FRFSQuoteCategory
 
 module: FRFSTicketService
 types:
@@ -68,14 +68,26 @@ types:
     eligibility: Bool
     derive: "Show"
 
-  FRFSDiscountReq:
-    code: Text
+  FRFSTicketCategoryRes:
+    quoteCategoryId: Id FRFSQuoteCategory
+    category: Text
+    price: PriceAPIEntity
+    offeredPrice: PriceAPIEntity
+    title: Text
+    description: Maybe Text
+    tnc: Maybe Text
+    code: Maybe Text
+    eligibility: Bool
+    derive: "Show"
+
+  FRFSCategorySelectionReq:
+    quoteCategoryId: Id FRFSQuoteCategory
     quantity: Int
 
   FRFSQuoteConfirmReq:
-    discounts: "[FRFSDiscountReq]"
-    ticketQuantity: Maybe Int
-    childTicketQuantity: Maybe Int
+    offered: "[FRFSCategorySelectionReq]"
+    ticketQuantity: Maybe Int # TODO: To Be Deprecated
+    childTicketQuantity: Maybe Int # TODO: To Be Deprecated
 
   FRFSTicketBookingStatusAPIRes:
     bookingId: Id FRFSTicketBooking

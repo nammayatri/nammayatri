@@ -9,9 +9,11 @@ import Domain.Types
 import Domain.Types.BecknConfig
 import Domain.Types.FRFSConfig
 import Domain.Types.FRFSQuote as DFRFSQuote
+import qualified Domain.Types.FRFSQuoteCategory as DFRFSQuoteCategory
 import Domain.Types.FRFSRouteDetails
 import qualified Domain.Types.FRFSSearch as DFRFSSearch
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
+import qualified Domain.Types.FRFSTicketCategoryMetadataConfig as DFRFSTicketCategoryMetadataConfig
 import Domain.Types.IntegratedBPPConfig
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
@@ -27,6 +29,7 @@ import Kernel.Utils.Common
 import SharedLogic.FRFSUtils
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
+import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import Tools.Error
 
 getFares :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Id Person -> Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> NonEmpty CallAPI.BasicRouteDetail -> Spec.VehicleCategory -> m (Bool, [FRFSFare])
@@ -140,7 +143,7 @@ search merchant merchantOperatingCity integratedBPPConfig bapConfig mbNetworkHos
                       _type = DFRFSQuote.SingleJourney,
                       routeStations = routeStations,
                       fareDetails = fareDetails,
-                      discounts = map mkDDiscount discounts,
+                      categories = map (mkDCategory price) categories,
                       ..
                     }
           )
@@ -148,11 +151,13 @@ search merchant merchantOperatingCity integratedBPPConfig bapConfig mbNetworkHos
 
     mkDVehicleServiceTier FRFSVehicleServiceTier {..} = DVehicleServiceTier {..}
 
-    mkDDiscount FRFSDiscount {..} = DDiscount {..}
+    mkDCategory basePrice FRFSTicketCategory {..} = DCategory {bppItemId = CallAPI.getProviderName integratedBPPConfig, offeredPrice = price, price = basePrice, ..}
 
 select :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> DFRFSQuote.FRFSQuote -> Maybe Int -> Maybe Int -> m DOnSelect
 select _merchant _merchantOperatingCity _integratedBPPConfig _bapConfig quote ticketQuantity childTicketQuantity = do
   void $ QFRFSQuote.updateTicketAndChildTicketQuantityById quote.id ticketQuantity childTicketQuantity
+  quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quote.id
+  categorySelect <- buildCategorySelect quoteCategories ticketQuantity childTicketQuantity
   return $
     DOnSelect
       { providerId = quote.providerId,
@@ -161,7 +166,8 @@ select _merchant _merchantOperatingCity _integratedBPPConfig _bapConfig quote ti
         bppItemId = quote.bppItemId,
         validTill = Just quote.validTill,
         transactionId = quote.searchId.getId,
-        messageId = quote.id.getId
+        messageId = quote.id.getId,
+        category = categorySelect
       }
 
 init :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> (Maybe Text, Maybe Text) -> DFRFSTicketBooking.FRFSTicketBooking -> m DOnInit
@@ -265,3 +271,17 @@ verifyTicket :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlo
 verifyTicket _merchantId _merchantOperatingCity integratedBPPConfig _bapConfig encryptedQrData = do
   TicketPayload {..} <- CallAPI.verifyTicket integratedBPPConfig encryptedQrData
   return DTicketPayload {..}
+
+-- Helper function to build DCategorySelect from quote categories
+buildCategorySelect :: (MonadFlow m) => [DFRFSQuoteCategory.FRFSQuoteCategory] -> Maybe Int -> Maybe Int -> m [DCategorySelect]
+buildCategorySelect quoteCategories ticketQuantity childTicketQuantity = do
+  let generalCategories = filter (\category -> category.ticketCategoryMetadataConfig.category == DFRFSTicketCategoryMetadataConfig.ADULT) quoteCategories
+      childCategories = filter (\category -> category.ticketCategoryMetadataConfig.category == DFRFSTicketCategoryMetadataConfig.CHILD) quoteCategories
+
+  let generalQuantity = fromMaybe 0 ticketQuantity
+      childQuantity = fromMaybe 0 childTicketQuantity
+
+  let generalSelect = map (\category -> DCategorySelect {bppItemId = category.bppItemId, quantity = generalQuantity}) generalCategories
+      childSelect = map (\category -> DCategorySelect {bppItemId = category.bppItemId, quantity = childQuantity}) childCategories
+
+  return $ generalSelect ++ childSelect

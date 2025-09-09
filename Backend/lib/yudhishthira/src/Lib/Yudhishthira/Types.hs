@@ -193,7 +193,7 @@ data LogicDomain
   | CANCELLATION_COIN_POLICY
   | FARE_POLICY
   | DYNAMIC_PRICING_UNIFIED
-  | FRFS_DISCOUNTS
+  | FRFS_TICKET_CATEGORIES
   | CONFIG ConfigType
   | RIDER_CONFIG ConfigType
   | DRIVER_CONFIG ConfigType
@@ -207,7 +207,7 @@ instance Enumerable LogicDomain where
     [ POOLING,
       FARE_POLICY,
       DYNAMIC_PRICING_UNIFIED,
-      FRFS_DISCOUNTS,
+      FRFS_TICKET_CATEGORIES,
       CANCELLATION_COIN_POLICY
     ]
       ++ map CONFIG [minBound .. maxBound]
@@ -225,7 +225,7 @@ generateLogicDomainShowInstances =
   [show POOLING]
     ++ [show FARE_POLICY]
     ++ [show DYNAMIC_PRICING_UNIFIED]
-    ++ [show FRFS_DISCOUNTS]
+    ++ [show FRFS_TICKET_CATEGORIES]
     ++ [show (CONFIG configType) | configType <- configTypes]
     ++ [show (RIDER_CONFIG configType) | configType <- configTypes]
     ++ [show (DRIVER_CONFIG configType) | configType <- configTypes]
@@ -250,7 +250,7 @@ instance Show LogicDomain where
   show POOLING = "POOLING"
   show FARE_POLICY = "FARE-POLICY"
   show DYNAMIC_PRICING_UNIFIED = "DYNAMIC-PRICING-UNIFIED"
-  show FRFS_DISCOUNTS = "FRFS-DISCOUNTS"
+  show FRFS_TICKET_CATEGORIES = "FRFS-TICKET-CATEGORIES"
   show (CONFIG configType) = "CONFIG_" ++ show configType
   show (RIDER_CONFIG configType) = "RIDER-CONFIG_" ++ show configType
   show (DRIVER_CONFIG configType) = "DRIVER-CONFIG_" ++ show configType
@@ -270,8 +270,8 @@ instance Read LogicDomain where
             [(FARE_POLICY, drop 1 rest)]
           "DYNAMIC-PRICING-UNIFIED" ->
             [(DYNAMIC_PRICING_UNIFIED, drop 1 rest)]
-          "FRFS-DISCOUNTS" ->
-            [(FRFS_DISCOUNTS, drop 1 rest)]
+          "FRFS-TICKET-CATEGORIES" ->
+            [(FRFS_TICKET_CATEGORIES, drop 1 rest)]
           "CANCELLATION-COIN-POLICY" ->
             [(CANCELLATION_COIN_POLICY, drop 1 rest)]
           "CONFIG" ->

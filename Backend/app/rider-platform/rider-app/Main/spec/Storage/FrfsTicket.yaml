@@ -37,6 +37,8 @@ imports:
   DayOfWeek: Data.Time
   CrisSearchData: Lib.JourneyLeg.Types
   RouteStopTimeTable: Domain.Types.RouteStopTimeTable
+  FRFSCategoryTag: Domain.Types.FRFSQuoteCategorySpec
+  OfferedValue: Domain.Types.FRFSQuoteCategorySpec
 
 FRFSSearch:
   tableName: frfs_search
@@ -203,6 +205,91 @@ FRFSQuote:
 
   extraOperations:
     - EXTRA_QUERY_FILE
+
+# Default FRFSQuoteCategory is for ADULT category
+FRFSQuoteCategory:
+  tableName: frfs_quote_category
+  fields:
+    id: Id FRFSQuoteCategory
+    quoteId: Id FRFSQuote
+    bppItemId: Text
+    ticketCategoryMetadataConfig: FRFSTicketCategoryMetadataConfig
+    price: Price
+    offeredPrice: Price
+    maxTicketAllowed: Maybe Int
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+  constraints:
+    id: PrimaryKey
+    quoteId: SecondaryKey
+    bppItemId: SecondaryKey
+  beamFields:
+    ticketCategoryMetadataConfig:
+      ticketCategoryMetadataConfigId: Text
+    price:
+      currency: Maybe Currency
+      price: HighPrecMoney
+    offeredPrice:
+      offeredPrice: HighPrecMoney
+
+  fromTType:
+    ticketCategoryMetadataConfig: 'Storage.Queries.FRFSTicketCategoryMetadataConfig.findById (Kernel.Types.Id.Id ticketCategoryMetadataConfigId) >>= fromMaybeM (Kernel.Types.Error.InternalError ("Ticket category metadata config not found for quote category: " <> show id)) |EM'
+    price: Kernel.Types.Common.mkPrice currency price|E
+    offeredPrice: Kernel.Types.Common.mkPrice currency offeredPrice|E
+
+  toTType:
+    ticketCategoryMetadataConfigId: (Kernel.Types.Id.getId $ (.id) ticketCategoryMetadataConfig)|E
+    price: (.amount)|I
+    currency: (Kernel.Prelude.Just . (.currency))|I
+    offeredPrice: (.amount)|I
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findAllByQuoteId:
+      kvFunction: findAllWithKV
+      where: quoteId
+    findByBppItemId:
+      kvFunction: findOneWithKV
+      where: bppItemId
+
+FRFSQuoteBreakup:
+  tableName: frfs_quote_breakup
+  fields:
+    id: Id FRFSQuoteBreakup
+    quoteId: Id FRFSQuote
+    quoteCategoryId: Id FRFSQuoteCategory
+    tag: FRFSCategoryTag
+    value: Text
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+  constraints:
+    id: PrimaryKey
+    quoteId: "!SecondaryKey"
+    quoteCategoryId: "!SecondaryKey"
+
+
+
+FRFSTicketBookingBreakup:
+  tableName: frfs_ticket_booking_breakup
+  fields:
+    id: Id FRFSTicketBookingBreakup
+    ticketBookingId: Id FRFSTicketBooking
+    quoteCategoryId: Id FRFSQuoteCategory
+    tag: FRFSCategoryTag
+    value: Text
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+  constraints:
+    id: PrimaryKey
+    quoteId: SecondaryKey
+    quoteCategoryId: SecondaryKey
+  queries:
+    findByTicketBookingIdAndQuoteCategoryId:
+      kvFunction: findOneWithKV
+      where:
+        and: [ticketBookingId, quoteCategoryId]
 
 FRFSTicketBooking:
   tableName: frfs_ticket_booking
@@ -671,7 +758,7 @@ FRFSFarePolicy:
   tableName: frfs_fare_policy
   fields:
     id: Id FRFSFarePolicy
-    applicableDiscountIds: "[Id FRFSTicketDiscount]"
+    applicableDiscountIds: "[Id FRFSTicketCategoryMetadataConfig]"
     _type: FRFSFarePolicyType
     description: Text
     cessCharge: Maybe HighPrecMoney
@@ -768,7 +855,7 @@ FRFSGtfsStageFare:
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
     cessCharge: Maybe HighPrecMoney
-    discountIds: "[Id FRFSTicketDiscount]"
+    discountIds: "[Id FRFSTicketCategoryMetadataConfig]"
   constraints:
     id: PrimaryKey
   default:
@@ -801,34 +888,34 @@ FRFSRouteStopStageFare:
       where:
         and: [farePolicyId, routeCode, stopCode]
 
-FRFSTicketDiscount:
-  tableName: frfs_ticket_discount
-  derives: "Generic,Show,Eq,FromJSON,ToJSON,ToSchema"
+FRFSTicketCategoryMetadataConfig:
+  tableName: frfs_ticket_category_metadata_config
   fields:
-    id: Id FRFSTicketDiscount
+    id: Id FRFSTicketCategoryMetadataConfig
     code: Text
     title: Text
     description: Text
     tnc: Text
-    value: DiscountValue
-    currency: Currency
-    vehicleType: VehicleCategory
+    category: FRFSQuoteCategoryType
     merchantId: Id Merchant
+    domainCategoryValue: OfferedValue
     merchantOperatingCityId: Id MerchantOperatingCity
-  types:
-    DiscountValue:
-      enum: "FixedAmount HighPrecMoney, Percentage Double"
+    vehicleCategory: VehicleCategory
   constraints:
     id: PrimaryKey
+
+  types:
+    FRFSQuoteCategoryType:
+      enum: "ADULT, CHILD, SENIOR_CITIZEN, STUDENT, FEMALE, MALE"
+
   queries:
-    findByCodeAndVehicleAndCity:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByCategoryVehicleAndCity:
       kvFunction: findOneWithKV
       where:
-        and: [code, vehicleType, merchantId, merchantOperatingCityId]
-    findByIdAndVehicleAndCity:
-      kvFunction: findOneWithKV
-      where:
-        and: [id, vehicleType, merchantId, merchantOperatingCityId]
+        and: [category, vehicleCategory ,merchantOperatingCityId]
 
 FRFSVehicleServiceTier:
   tableName: frfs_vehicle_service_tier

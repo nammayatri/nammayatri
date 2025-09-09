@@ -18,17 +18,23 @@ import qualified BecknV2.FRFS.Enums as Enums
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec
 import qualified BecknV2.FRFS.Utils as Utils
+import Data.List (groupBy, sortBy)
 import qualified Domain.Action.Beckn.FRFS.OnSearch as Domain
+import qualified Domain.Types.Extra.IntegratedBPPConfig as DIBCExtra
 import qualified Domain.Types.FRFSQuote as DQuote
+import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import Domain.Types.StationType
 import Kernel.External.Maps.Types
 import Kernel.Prelude
 import Kernel.Types.Error
+import Kernel.Types.Id
 import Kernel.Types.TimeRFC339
 import Kernel.Utils.Common
+import qualified Storage.Queries.FRFSSearch as QSearch
+import qualified Storage.Queries.IntegratedBPPConfig as QIBC
 
 buildOnSearchReq ::
-  (MonadFlow m) =>
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
   Spec.OnSearchReq ->
   m Domain.DOnSearch
 buildOnSearchReq onSearchReq = do
@@ -38,7 +44,7 @@ buildOnSearchReq onSearchReq = do
   messageId <- context.contextMessageId & fromMaybeM (InvalidRequest "MessageId not found")
   bppSubscriberId <- context.contextBppId & fromMaybeM (InvalidRequest "BppSubscriberId not found")
   bppSubscriberUrl <- context.contextBppUri & fromMaybeM (InvalidRequest "BppSubscriberUrl not found")
-
+  frfsSearch <- QSearch.findById (Id transactionId) >>= fromMaybeM (InvalidRequest $ "FrfsSearch not found for transactionId" <> show transactionId)
   timeStamp <- context.contextTimestamp & fromMaybeM (InvalidRequest "Timestamp not found")
 
   let ttl = context.contextTtl >>= Utils.getQuoteValidTill (convertRFC3339ToUTC timeStamp)
@@ -68,8 +74,11 @@ buildOnSearchReq onSearchReq = do
 
   let bppDelayedInterest = listToMaybe interestTags
 
-  quotes <- mkQuotes items fulfillments
+  -- Get IntegratedBPPConfig to check mergeQuoteCriteria
+  integratedBPPConfig <- QIBC.findById frfsSearch.integratedBppConfigId >>= fromMaybeM (InvalidRequest "IntegratedBPPConfig not found")
 
+  quotes <- mkQuotes items fulfillments integratedBPPConfig
+  logDebug $ "Quotes from OnSearch: " <> show quotes
   return
     Domain.DOnSearch
       { providerDescription,
@@ -84,9 +93,34 @@ buildOnSearchReq onSearchReq = do
         bppDelayedInterest
       }
 
-mkQuotes :: (MonadFlow m) => [Spec.Item] -> [Spec.Fulfillment] -> m [Domain.DQuote]
-mkQuotes items fulfillments =
-  traverse (parseItems fulfillments) items <&> concat
+mkQuotes :: (MonadFlow m) => [Spec.Item] -> [Spec.Fulfillment] -> DIBC.IntegratedBPPConfig -> m [Domain.DQuote]
+mkQuotes items fulfillments integratedBPPConfig = do
+  allQuotes <- traverse (parseItems fulfillments) items <&> concat
+  logDebug $ "All Quotes from OnSearch: " <> show allQuotes
+  return $ mergeQuotes integratedBPPConfig allQuotes
+
+mergeQuotes :: DIBC.IntegratedBPPConfig -> [Domain.DQuote] -> [Domain.DQuote]
+mergeQuotes config quotes = case config.providerConfig of
+  DIBC.ONDC ondcConfig ->
+    case ondcConfig.mergeQuoteCriteria of
+      Just DIBCExtra.FULFILLMENT -> mergeQuotesByFulfillment quotes
+      Just _ -> quotes
+      Nothing -> quotes
+  _ -> quotes
+
+mergeQuotesByFulfillment :: [Domain.DQuote] -> [Domain.DQuote]
+mergeQuotesByFulfillment quotes =
+  mapMaybe
+    mergeQuotesForFulfillment
+    ( quotes & sortBy (\q1 q2 -> compare q1.routeCode q2.routeCode)
+        & groupBy (\q1 q2 -> q1.routeCode == q2.routeCode)
+    )
+
+mergeQuotesForFulfillment :: [Domain.DQuote] -> Maybe Domain.DQuote
+mergeQuotesForFulfillment quotes = do
+  quote <- find (\q -> q._type == DQuote.SingleJourney) quotes
+  let allCategories = concatMap (.categories) quotes
+  return $ quote {Domain.categories = allCategories}
 
 parseItems :: (MonadFlow m) => [Spec.Fulfillment] -> Spec.Item -> m [Domain.DQuote]
 parseItems fulfillments item = do
@@ -97,6 +131,7 @@ parseFulfillments :: (MonadFlow m) => Spec.Item -> [Spec.Fulfillment] -> Text ->
 parseFulfillments item fulfillments fulfillmentId = do
   itemId <- item.itemId & fromMaybeM (InvalidRequest "ItemId not found")
   itemCode <- item.itemDescriptor >>= (.descriptorCode) & fromMaybeM (InvalidRequest "ItemCode not found")
+  logDebug $ "ItemCode from OnSearch: " <> itemCode
   quoteType <- castQuoteType itemCode
 
   fulfillment <- fulfillments & find (\fulfillment -> fulfillment.fulfillmentId == Just fulfillmentId) & fromMaybeM (InvalidRequest "Fulfillment not found")
@@ -118,11 +153,9 @@ parseFulfillments item fulfillments fulfillmentId = do
       Just _ -> pure $ fromMaybe [] (mkDRouteStations fulfillment stations price fulfillmentId)
       Nothing -> return []
 
-  let adultDiscount = createAdultDiscount offerPrice
-      discounts = case adultDiscount of
-        Just discount -> [discount]
-        Nothing -> []
-
+  let category = createDiscount price offerPrice itemCode itemId
+      categories = [category]
+  logDebug $ "Categories from OnSearch: " <> show categories
   return $
     Domain.DQuote
       { bppItemId = itemId,
@@ -133,7 +166,7 @@ parseFulfillments item fulfillments fulfillmentId = do
         routeStations,
         stations,
         fareDetails = Nothing,
-        discounts = discounts,
+        categories = categories,
         _type = quoteType
       }
 
@@ -213,20 +246,23 @@ castQuoteType "RJT" = return DQuote.ReturnJourney
 castQuoteType "PASS" = return DQuote.Pass
 castQuoteType _ = throwError $ InvalidRequest "Invalid quote type"
 
-createAdultDiscount :: Maybe Price -> Maybe Domain.DDiscount
-createAdultDiscount offerPrice = do
-  case offerPrice of
-    Just op -> do
-      Just $
-        Domain.DDiscount
-          { code = "ADULT",
-            title = "Adult Discount",
-            description = "Special discount for adult passengers",
-            tnc = "<b>Terms and conditions apply for adult discount</b>",
-            price = op,
-            eligibility = True
-          }
-    Nothing -> Nothing
+createDiscount :: Price -> Maybe Price -> Text -> Text -> Domain.DCategory
+createDiscount price offerPrice itemCode itemId = do
+  let op = fromMaybe price offerPrice
+  let (code, title, description, tnc) = case itemCode of
+        "SJT" -> ("ADULT", "Adult Discount", "Special discount for adult passengers", "Terms and conditions apply for adult discount")
+        "SFSJT" -> ("FEMALE", "Female Discount", "Special discount for female passengers", "Terms and conditions apply for female discount")
+        _ -> ("ADULT", "Adult Discount", "Special discount for adult passengers", "Terms and conditions apply for adult discount")
+   in Domain.DCategory
+        { code = code,
+          title = title,
+          description = description,
+          tnc = tnc,
+          price = price,
+          offeredPrice = op,
+          bppItemId = itemId,
+          eligibility = True
+        }
 
 mkDRouteStations :: Spec.Fulfillment -> [Domain.DStation] -> Price -> Text -> Maybe [Domain.DRouteStation]
 mkDRouteStations fulfillment stops price fulfillmentId = do
