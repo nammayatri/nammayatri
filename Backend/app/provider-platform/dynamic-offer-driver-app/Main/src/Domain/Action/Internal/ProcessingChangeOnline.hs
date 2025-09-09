@@ -25,13 +25,13 @@ processingChangeOnline ::
   Id DP.Person ->
   DTC.TransporterConfig ->
   Maybe DriverInfo.DriverMode ->
+  Maybe DriverInfo.DriverMode ->
   m ()
-processingChangeOnline driverId transporterConfig mode = do
+processingChangeOnline driverId transporterConfig mbNewMode mbOldMode = do
   withOnlineDurationLock driverId transporterConfig $ \driverInfo now onlineDurationCalculateFrom -> do
-    let previousMode = driverInfo.mode
-    when (previousMode == Just DriverInfo.ONLINE && mode /= Just DriverInfo.ONLINE) $ do
+    when (mbOldMode == Just DriverInfo.ONLINE && mbNewMode /= Just DriverInfo.ONLINE) $ do
       updateOnlineDuration driverId transporterConfig driverInfo now onlineDurationCalculateFrom
-    when (mode == Just DriverInfo.ONLINE && previousMode /= Just DriverInfo.ONLINE) $
+    when (mbOldMode /= Just DriverInfo.ONLINE && mbNewMode == Just DriverInfo.ONLINE) $ do
       QDI.updateOnlineDurationRefreshedAt driverId now
 
 updateOnlineDurationDuringFetchingDailyStats ::
@@ -52,10 +52,10 @@ withOnlineDurationLock ::
   m ()
 withOnlineDurationLock driverId transporterConfig action = do
   whenJust transporterConfig.onlineDurationCalculateFrom $ \onlineDurationCalculateFrom -> do
-    now <- getCurrentTime
-    when (onlineDurationCalculateFrom <= now) $ do
-      -- To avoid race condition we need to fetch driveInfo, dailyStats, driverStats inside of lock
-      Redis.whenWithLockRedis (updateDriverOnlineDurationLockKey driverId) 60 $ do
+    -- To avoid race condition we need to fetch driveInfo, dailyStats, driverStats inside of lock
+    Redis.whenWithLockRedis (updateDriverOnlineDurationLockKey driverId) 60 $ do
+      now <- getCurrentTime
+      when (onlineDurationCalculateFrom <= now) $ do
         driverInfo <- QDI.findById driverId >>= fromMaybeM DriverInfoNotFound
         action driverInfo now onlineDurationCalculateFrom
 

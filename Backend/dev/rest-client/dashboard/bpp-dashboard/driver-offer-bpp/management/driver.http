@@ -180,3 +180,15 @@ content-type: application/json
 GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/driver/stats?entityId={{driverId2}}
 token: {{juspay_admin}}
 content-type: application/json
+
+
+###
+
+# @name setActive
+
+@driver-offer-bpp-host = http://localhost:8016
+@token2 = {{driver-offer-bpp-auto-token2}}
+
+POST {{driver-offer-bpp-host}}/ui/driver/setActivity?active=true&mode="ONLINE"
+content-type: application/json
+token: {{token2}}
