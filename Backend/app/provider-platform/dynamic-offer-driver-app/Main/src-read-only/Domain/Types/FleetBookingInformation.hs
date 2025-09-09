@@ -27,6 +27,8 @@ data FleetBookingInformation = FleetBookingInformation
     serviceId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     serviceName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     status :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    ticketBookingServiceShortId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    ticketBookingShortId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     ticketPlaceId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     updatedAt :: Kernel.Prelude.UTCTime,
     vehicleNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
