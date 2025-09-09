@@ -389,7 +389,8 @@ castTicketStatus "UNCLAIMED" _ = return Ticket.ACTIVE
 castTicketStatus "CLAIMED" _ = return Ticket.USED
 castTicketStatus "CANCELLED" booking | booking.customerCancelled = return Ticket.CANCELLED
 castTicketStatus "CANCELLED" booking | not booking.customerCancelled = return Ticket.COUNTER_CANCELLED
-castTicketStatus _ _ = throwError $ InternalError "Invalid ticket status"
+castTicketStatus "EXPIRED" _ = return Ticket.EXPIRED
+castTicketStatus status _ = throwError $ InternalError ("Invalid ticket status: " <> status)
 
 data BppData = BppData
   { bppId :: Text,
