@@ -258,3 +258,47 @@ findAllRideItems merchant opCity limitVal offsetVal mbBookingStatus mbRideShortI
           tripCategory = bppTxn.bookingTripCategory,
           ..
         }
+
+findAllRideItemsV2 ::
+  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
+  Merchant ->
+  MerchantOperatingCity ->
+  Int ->
+  Int ->
+  Maybe Ride.RideStatus ->
+  Maybe (ShortId Ride) ->
+  Maybe DbHash ->
+  Maybe DbHash ->
+  UTCTime ->
+  UTCTime ->
+  m [QRE.RideItemV2]
+findAllRideItemsV2 merchant opCity limitVal offsetVal mbRideStatus mbRideShortId mbCustomerPhoneDBHash mbDriverPhoneDBHash from to = do
+  bppTransaction <-
+    CH.findAll $
+      CH.select $
+        CH.limit_ limitVal $
+          CH.offset_ offsetVal $
+            CH.filter_
+              ( \bppTransaction _ ->
+                  do
+                    bppTransaction.rideCreatedAt >=. from
+                    CH.&&. bppTransaction.rideCreatedAt <=. to
+                    CH.&&. bppTransaction.bookingProviderId CH.==. merchant.id
+                    CH.&&. (bppTransaction.bookingMerchantOperatingCityId CH.==. opCity.id)
+                    CH.&&. CH.whenJust_ mbRideShortId (\rsid -> bppTransaction.rideShortId CH.==. rsid)
+                    CH.&&. CH.whenJust_ mbCustomerPhoneDBHash (\cpdh -> bppTransaction.riderDetailsMobileNumberHash CH.==. (Text.pack . show . unDbHash) cpdh)
+                    CH.&&. CH.whenJust_ mbDriverPhoneDBHash (\dpdh -> bppTransaction.rideDetailsDriverNumberHash CH.==. Just ((Text.pack . show . unDbHash) dpdh))
+                    CH.&&. CH.whenJust_ mbRideStatus (\status -> bppTransaction.rideStatus CH.==. status)
+              )
+              (CH.all_ @CH.APP_SERVICE_CLICKHOUSE bppTransactionJoinTTable)
+  return $ fmap mkRideItemV2 bppTransaction
+  where
+    mkRideItemV2 bppTxn =
+      QRE.RideItemV2
+        { rideShortId = bppTxn.rideShortId,
+          rideCreatedAt = bppTxn.rideCreatedAt,
+          rideId = bppTxn.rideDetailsId,
+          driverName = bppTxn.rideDetailsDriverName,
+          driverPhoneNo = EncryptedHashed <$> (Encrypted <$> bppTxn.rideDetailsDriverNumberEncrypted) <*> (DbHash <$> (encodeUtf8 <$> bppTxn.rideDetailsDriverNumberHash)),
+          rideStatus = bppTxn.rideStatus
+        }

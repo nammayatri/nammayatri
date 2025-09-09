@@ -1,5 +1,6 @@
 imports:
   Ride: Dashboard.Common
+  RideStatus: Domain.Types
   Summary: Dashboard.Common
   CancellationReasonCode: Dashboard.Common.Booking
   MultipleRideSyncResp: Dashboard.Common.Ride
@@ -29,6 +30,23 @@ apis:
         type: RideListRes
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT RIDES RIDE_LIST
+  - GET: # RideListV2API
+      endpoint: /listV2
+      query:
+        limit: Int
+        offset: Int
+        rideStatus: RideStatus
+        rideShortId: ShortId Ride
+        customerPhoneNo: Text
+        driverPhoneNo: Text
+        currency: Currency
+        from: UTCTime
+        to: UTCTime
+      auth: ApiAuthV2
+      response:
+        type: RideListResV2
+      migrate:
+        userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT RIDES RIDE_LIST_V2
   - POST: # MultipleRideEndAPI
       endpoint: /end
       name: PostRideEndMultiple
@@ -125,6 +143,10 @@ types:
     - totalItems: Int # for backward compatibility
     - summary: Summary
     - rides: [RideListItem]
+  RideListResV2:
+    - totalItems: Int
+    - summary: Summary
+    - rides: [RideListItemV2]
   RideListItem:
     - rideId: Id Ride
     - rideShortId: ShortId Ride
@@ -139,6 +161,14 @@ types:
     - fareDiffWithCurrency: Maybe PriceAPIEntity
     - bookingStatus: BookingStatus
     - rideCreatedAt: UTCTime
+  RideListItemV2:
+    - rideId: Id Ride
+    - rideShortId: ShortId Ride
+    - driverName: Text
+    - driverPhoneNo: Maybe Text
+    - rideStatus: RideStatus
+    - rideCreatedAt: UTCTime
+
   DeprecatedTripCategory: # TODO :: Deprecated, please do not maintain this in future. `DeprecatedTripCategory` is replaced with `TripCategory`
     - enum: "OneWay, Rental, RideShare, InterCity, CrossCity, Ambulance"
   BookingStatus:
@@ -245,6 +275,7 @@ types:
     - derive: "Show, 'HideSecrets"
   RideStatus:
     - enum: "RIDE_UPCOMING, RIDE_NEW, RIDE_INPROGRESS, RIDE_COMPLETED, RIDE_CANCELLED"
+    - derive: "Kernel.Prelude.ToParamSchema"
   MultipleRideSyncReq:
     - recordType: NewType
     - rideIds: [Id Ride]
