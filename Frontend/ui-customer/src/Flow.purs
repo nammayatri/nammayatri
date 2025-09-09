@@ -539,6 +539,13 @@ handleDeepLinks mBGlobalPayload skipDefaultCase = do
               , data {fareProductType = FPT.DELIVERY, source="", locationList = updatedState.data.recentSearchs.predictionArray}
               })
               homeScreenFlow
+        "ambulance" -> do
+          void $ pure $ updateLocalStage SearchLocationModel
+          modifyScreenState $ HomeScreenStateType (\updatedState-> updatedState {
+            props { homeScreenPrimaryButtonLottie = false, isSource = Just false, currentStage = SearchLocationModel, isSearchLocation = SearchLocation, searchLocationModelProps{crossBtnSrcVisibility = false},  rideSearchProps{ sessionId = generateSessionId unit } , firstTimeAmbulanceSearch = true , searchType = Just "hospital"}
+          , data { source= if updatedState.data.source == "" then getString STR.CURRENT_LOCATION else updatedState.data.source, fareProductType = FPT.AMBULANCE}
+          })
+          homeScreenFlow
         "bt" -> do
           logField_ <- lift $ lift $ getLogFields
           let _ = unsafePerformEffect $ Events.addEventAggregate "bus_ticketing_clicked"
