@@ -134,11 +134,12 @@ getFRFSJourneyBookingStatus mbBooking = do
       case booking.status of
         DFRFSBooking.CONFIRMED -> do
           mbTickets <- QFRFSTicket.findAllByTicketBookingId booking.id
-          let allTicketsVerified = all (\t -> t.status == DFRFSTicket.USED) mbTickets
+          let allTicketsCheckedOut = all (\t -> t.status == DFRFSTicket.USED) mbTickets
+              allTicketsCheckedIn = all (\t -> t.status == DFRFSTicket.INPROGRESS) mbTickets
               anyTicketActive = any (\t -> t.status == DFRFSTicket.ACTIVE) mbTickets
               allTicketExpired = any (\t -> t.status == DFRFSTicket.EXPIRED) mbTickets
               allTicketCancelled = all (\t -> t.status == DFRFSTicket.CANCELLED) mbTickets
-          if allTicketsVerified
+          if allTicketsCheckedOut
             then do
               isFeedbackGiven <-
                 QFRFSTicketBookingFeedback.findByBookingId booking.id
@@ -152,12 +153,15 @@ getFRFSJourneyBookingStatus mbBooking = do
               if anyTicketActive
                 then return (FRFSTicket DFRFSTicket.ACTIVE)
                 else
-                  if allTicketExpired
-                    then return (FRFSTicket DFRFSTicket.EXPIRED)
+                  if allTicketsCheckedIn
+                    then return (FRFSTicket DFRFSTicket.INPROGRESS)
                     else
-                      if allTicketCancelled
-                        then return (FRFSTicket DFRFSTicket.CANCELLED)
-                        else return (FRFSBooking DFRFSBooking.CONFIRMED)
+                      if allTicketExpired
+                        then return (FRFSTicket DFRFSTicket.EXPIRED)
+                        else
+                          if allTicketCancelled
+                            then return (FRFSTicket DFRFSTicket.CANCELLED)
+                            else return (FRFSBooking DFRFSBooking.CONFIRMED)
         bookingStatus -> return (FRFSBooking bookingStatus)
     Nothing -> return (Initial BOOKING_PENDING)
 
