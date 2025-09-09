@@ -28,6 +28,15 @@ buildOnSelectReq onSelectReq = do
   providerId <- order.orderProvider >>= (.providerId) & fromMaybeM (InvalidRequest "Provider not found")
 
   item <- order.orderItems >>= listToMaybe & fromMaybeM (InvalidRequest "Item not found")
+  let orderItems = fromMaybe [] order.orderItems
+  category <-
+    mapM
+      ( \orderItem -> do
+          bppItemId' <- orderItem.itemId & fromMaybeM (InvalidRequest "BppItemId not found")
+          quantity' <- orderItem.itemQuantity >>= (.itemQuantitySelected) >>= (.itemQuantitySelectedCount) & fromMaybeM (InvalidRequest "Item Quantity not found")
+          return $ DCategorySelect {bppItemId = bppItemId', quantity = quantity'}
+      )
+      orderItems
   bppItemId <- item.itemId & fromMaybeM (InvalidRequest "BppItemId not found")
 
   quotation <- order.orderQuote & fromMaybeM (InvalidRequest "Quotation not found")
@@ -44,5 +53,6 @@ buildOnSelectReq onSelectReq = do
         bppItemId,
         transactionId,
         messageId,
-        validTill = ttl
+        validTill = ttl,
+        category
       }

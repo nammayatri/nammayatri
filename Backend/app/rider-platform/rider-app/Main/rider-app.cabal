@@ -748,6 +748,8 @@ library
       Domain.Types.FRFSFarePolicy
       Domain.Types.FRFSGtfsStageFare
       Domain.Types.FRFSQuote
+      Domain.Types.FRFSQuoteBreakup
+      Domain.Types.FRFSQuoteCategory
       Domain.Types.FRFSRecon
       Domain.Types.FRFSRouteFareProduct
       Domain.Types.FRFSRouteStopStageFare
@@ -755,8 +757,10 @@ library
       Domain.Types.FRFSStageFare
       Domain.Types.FRFSTicket
       Domain.Types.FRFSTicketBooking
+      Domain.Types.FRFSTicketBookingBreakup
       Domain.Types.FRFSTicketBookingFeedback
       Domain.Types.FRFSTicketBookingPayment
+      Domain.Types.FRFSTicketCategoryMetadataConfig
       Domain.Types.FRFSTicketDiscount
       Domain.Types.FRFSVehicleServiceTier
       Domain.Types.HotSpotConfig
@@ -880,6 +884,8 @@ library
       Storage.Beam.FRFSFarePolicy
       Storage.Beam.FRFSGtfsStageFare
       Storage.Beam.FRFSQuote
+      Storage.Beam.FRFSQuoteBreakup
+      Storage.Beam.FRFSQuoteCategory
       Storage.Beam.FRFSRecon
       Storage.Beam.FRFSRouteFareProduct
       Storage.Beam.FRFSRouteStopStageFare
@@ -887,8 +893,10 @@ library
       Storage.Beam.FRFSStageFare
       Storage.Beam.FRFSTicket
       Storage.Beam.FRFSTicketBooking
+      Storage.Beam.FRFSTicketBookingBreakup
       Storage.Beam.FRFSTicketBookingFeedback
       Storage.Beam.FRFSTicketBookingPayment
+      Storage.Beam.FRFSTicketCategoryMetadataConfig
       Storage.Beam.FRFSTicketDiscount
       Storage.Beam.FRFSVehicleServiceTier
       Storage.Beam.HotSpotConfig
@@ -1014,6 +1022,8 @@ library
       Storage.Queries.FRFSFarePolicy
       Storage.Queries.FRFSGtfsStageFare
       Storage.Queries.FRFSQuote
+      Storage.Queries.FRFSQuoteBreakup
+      Storage.Queries.FRFSQuoteCategory
       Storage.Queries.FRFSRecon
       Storage.Queries.FRFSRouteFareProduct
       Storage.Queries.FRFSRouteStopStageFare
@@ -1021,8 +1031,10 @@ library
       Storage.Queries.FRFSStageFare
       Storage.Queries.FRFSTicket
       Storage.Queries.FRFSTicketBooking
+      Storage.Queries.FRFSTicketBookingBreakup
       Storage.Queries.FRFSTicketBookingFeedback
       Storage.Queries.FRFSTicketBookingPayment
+      Storage.Queries.FRFSTicketCategoryMetadataConfig
       Storage.Queries.FRFSTicketDiscount
       Storage.Queries.FRFSVehicleServiceTier
       Storage.Queries.HotSpotConfig

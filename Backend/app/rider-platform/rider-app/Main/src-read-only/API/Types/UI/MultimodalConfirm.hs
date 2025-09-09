@@ -107,7 +107,8 @@ data JourneyConfirmReq = JourneyConfirmReq {journeyConfirmReqElements :: [Journe
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data JourneyConfirmReqElement = JourneyConfirmReqElement
-  { childTicketQuantity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+  { categorySelectionReq :: Kernel.Prelude.Maybe [API.Types.UI.FRFSTicketService.FRFSCategorySelectionReq],
+    childTicketQuantity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     crisSdkResponse :: Kernel.Prelude.Maybe CrisSdkResponse,
     journeyLegOrder :: Kernel.Prelude.Int,
     skipBooking :: Kernel.Prelude.Bool,

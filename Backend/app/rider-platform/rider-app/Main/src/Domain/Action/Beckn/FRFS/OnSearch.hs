@@ -24,8 +24,12 @@ import qualified Data.Text as T
 import Domain.Types.Extra.FRFSCachedQuote as CachedQuote
 import qualified Domain.Types.FRFSFarePolicy as FRFSFarePolicy
 import qualified Domain.Types.FRFSQuote as Quote
+import qualified Domain.Types.FRFSQuoteBreakup as DFRFSQuoteBreakup
+import qualified Domain.Types.FRFSQuoteCategory as DFRFSQuoteCategory
+import qualified Domain.Types.FRFSQuoteCategorySpec as DFRFSQuoteCategory
 import qualified Domain.Types.FRFSRouteFareProduct as FRFSRouteFareProduct
 import qualified Domain.Types.FRFSSearch as Search
+import qualified Domain.Types.FRFSTicketCategoryMetadataConfig as DFRFSTicketCategoryMetadataConfig
 import qualified Domain.Types.FRFSVehicleServiceTier as FRFSVehicleServiceTier
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.JourneyLeg as DJourneyLeg
@@ -55,8 +59,11 @@ import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.FRFSFarePolicy as QFFP
 import qualified Storage.Queries.FRFSQuote as QQuote
+import qualified Storage.Queries.FRFSQuoteBreakup as QFRFSQuoteBreakup
+import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSRouteFareProduct as QFRFP
 import qualified Storage.Queries.FRFSSearch as QSearch
+import qualified Storage.Queries.FRFSTicketCategoryMetadataConfig as QFRFSTicketCategoryMetadataConfig
 import qualified Storage.Queries.FRFSVehicleServiceTier as QVSR
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.PersonStats as QPStats
@@ -75,6 +82,7 @@ data DOnSearch = DOnSearch
     messageId :: Text,
     bppDelayedInterest :: Maybe Text
   }
+  deriving (Show)
 
 data DVehicleServiceTier = DVehicleServiceTier
   { serviceTierType :: Spec.ServiceTierType,
@@ -84,6 +92,7 @@ data DVehicleServiceTier = DVehicleServiceTier
     serviceTierLongName :: Text,
     isAirConditioned :: Bool
   }
+  deriving (Show)
 
 data DQuote = DQuote
   { bppItemId :: Text,
@@ -93,19 +102,23 @@ data DQuote = DQuote
     vehicleType :: Spec.VehicleCategory,
     routeStations :: [DRouteStation],
     stations :: [DStation],
-    discounts :: [DDiscount],
+    categories :: [DCategory],
     fareDetails :: Maybe Quote.FRFSFareDetails,
     _type :: Quote.FRFSQuoteType
   }
+  deriving (Show)
 
-data DDiscount = DDiscount
+data DCategory = DCategory
   { code :: Text,
     title :: Text,
     description :: Text,
     tnc :: Text,
     price :: Price,
-    eligibility :: Bool
+    offeredPrice :: Price,
+    eligibility :: Bool,
+    bppItemId :: Text
   }
+  deriving (Show)
 
 data DRouteStation = DRouteStation
   { routeCode :: Text,
@@ -121,6 +134,7 @@ data DRouteStation = DRouteStation
     routeColor :: Maybe Text,
     routeFarePolicyId :: Maybe (Id FRFSFarePolicy.FRFSFarePolicy)
   }
+  deriving (Show)
 
 data DStation = DStation
   { stationCode :: Text,
@@ -131,6 +145,7 @@ data DStation = DStation
     stopSequence :: Maybe Int,
     towards :: Maybe Text
   }
+  deriving (Show)
 
 data ValidatedDOnSearch = ValidatedDOnSearch
   { merchant :: Merchant,
@@ -140,6 +155,7 @@ data ValidatedDOnSearch = ValidatedDOnSearch
     mbFreeTicketInterval :: Maybe Int,
     mbMaxFreeTicketCashback :: Maybe Int
   }
+  deriving (Show)
 
 validateRequest :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r) => DOnSearch -> m ValidatedDOnSearch
 validateRequest DOnSearch {..} = do
@@ -324,47 +340,85 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
   endStation <- OTPRest.getStationByGtfsIdAndStopCode dEndStation.stationCode integratedBPPConfig >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> dEndStation.stationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
   let stationsJSON = stations & map (castStationToAPI integratedBPPConfig.id) & encodeToText
   let routeStationsJSON = routeStations & map (castRouteStationToAPI integratedBPPConfig.id) & encodeToText
-  let discountsJSON = discounts & map castDiscountToAPI & encodeToText
+  let categoriesJSON = categories & map castCategoryToAPI & encodeToText
   uid <- generateGUID
   now <- getCurrentTime
   let (discountedTickets, eventDiscountAmount) = SFU.getDiscountInfo isEventOngoing mbFreeTicketInterval mbMaxFreeTicketCashback price search.quantity ticketsBookedInEvent
   let validTill = fromMaybe (addUTCTime (intToNominalDiffTime 900) now) dOnSearch.validTill -- If validTill is not present, set it to 15 minutes from now
-  return
-    Quote.FRFSQuote
-      { Quote._type = _type,
-        Quote.bppItemId,
-        Quote.bppSubscriberId = dOnSearch.bppSubscriberId,
-        Quote.bppSubscriberUrl = dOnSearch.bppSubscriberUrl,
-        Quote.fromStationCode = startStation.code,
-        Quote.toStationCode = endStation.code,
-        Quote.id = uid,
-        Quote.price,
-        Quote.childPrice,
-        Quote.estimatedPrice = Just price,
-        Quote.providerDescription = dOnSearch.providerDescription,
-        Quote.providerId = dOnSearch.providerId,
-        Quote.providerName = dOnSearch.providerName,
-        Quote.quantity = search.quantity,
-        Quote.riderId = search.riderId,
-        Quote.searchId = search.id,
-        Quote.stationsJson = stationsJSON,
-        Quote.routeStationsJson = Just routeStationsJSON,
-        Quote.discountsJson = Just discountsJSON,
-        Quote.validTill,
-        Quote.vehicleType,
-        Quote.merchantId = search.merchantId,
-        Quote.merchantOperatingCityId = search.merchantOperatingCityId,
-        Quote.partnerOrgId = search.partnerOrgId,
-        Quote.partnerOrgTransactionId = search.partnerOrgTransactionId,
-        Quote.createdAt = now,
-        Quote.updatedAt = now,
-        Quote.integratedBppConfigId = search.integratedBppConfigId,
-        Quote.childTicketQuantity = Nothing,
-        Quote.multimodalSearchRequestId = search.multimodalSearchRequestId,
-        bppDelayedInterest = readMaybe . T.unpack =<< dOnSearch.bppDelayedInterest,
-        oldCacheDump = Nothing,
-        ..
-      }
+  let frfsQuote =
+        Quote.FRFSQuote
+          { Quote._type = _type,
+            Quote.bppItemId,
+            Quote.bppSubscriberId = dOnSearch.bppSubscriberId,
+            Quote.bppSubscriberUrl = dOnSearch.bppSubscriberUrl,
+            Quote.fromStationCode = startStation.code,
+            Quote.toStationCode = endStation.code,
+            Quote.id = uid,
+            Quote.price,
+            Quote.childPrice,
+            Quote.estimatedPrice = Just price,
+            Quote.providerDescription = dOnSearch.providerDescription,
+            Quote.providerId = dOnSearch.providerId,
+            Quote.providerName = dOnSearch.providerName,
+            Quote.quantity = search.quantity,
+            Quote.riderId = search.riderId,
+            Quote.searchId = search.id,
+            Quote.stationsJson = stationsJSON,
+            Quote.routeStationsJson = Just routeStationsJSON,
+            Quote.discountsJson = Just categoriesJSON,
+            Quote.validTill,
+            Quote.vehicleType,
+            Quote.merchantId = search.merchantId,
+            Quote.merchantOperatingCityId = search.merchantOperatingCityId,
+            Quote.partnerOrgId = search.partnerOrgId,
+            Quote.partnerOrgTransactionId = search.partnerOrgTransactionId,
+            Quote.createdAt = now,
+            Quote.updatedAt = now,
+            Quote.integratedBppConfigId = search.integratedBppConfigId,
+            Quote.childTicketQuantity = Nothing,
+            Quote.multimodalSearchRequestId = search.multimodalSearchRequestId,
+            bppDelayedInterest = readMaybe . T.unpack =<< dOnSearch.bppDelayedInterest,
+            oldCacheDump = Nothing,
+            ..
+          }
+
+  forM_ categories $ \category -> do
+    quoteCategoryIdForDiscount <- generateGUID
+    ticketCategoryMetadataConfig' <- QFRFSTicketCategoryMetadataConfig.findByCategoryVehicleAndCity (getQuoteCategoryType category.code) vehicleType search.merchantOperatingCityId >>= fromMaybeM (InternalError $ "Ticket category metadata config not found for city and category: " <> category.code <> " " <> show vehicleType <> " " <> search.merchantOperatingCityId.getId)
+
+    let quoteCategoryForDiscount =
+          DFRFSQuoteCategory.FRFSQuoteCategory
+            { id = quoteCategoryIdForDiscount,
+              quoteId = uid,
+              bppItemId = category.bppItemId,
+              price,
+              offeredPrice = category.price,
+              maxTicketAllowed = Nothing,
+              merchantId = search.merchantId,
+              merchantOperatingCityId = search.merchantOperatingCityId,
+              ticketCategoryMetadataConfig = ticketCategoryMetadataConfig',
+              createdAt = now,
+              updatedAt = now
+            }
+
+    quoteBreakupDiscountsId <- generateGUID
+    let quoteBreakupDiscounts =
+          DFRFSQuoteBreakup.FRFSQuoteBreakup
+            { id = quoteBreakupDiscountsId,
+              quoteId = uid,
+              quoteCategoryId = quoteCategoryIdForDiscount,
+              tag = getCategoryPriceTags category.code,
+              value = show category.price.amount,
+              merchantId = search.merchantId,
+              merchantOperatingCityId = search.merchantOperatingCityId,
+              createdAt = now,
+              updatedAt = now
+            }
+
+    QFRFSQuoteCategory.create quoteCategoryForDiscount
+    QFRFSQuoteBreakup.create quoteBreakupDiscounts
+
+  return frfsQuote
 
 getStartStation :: [DStation] -> Maybe DStation
 getStartStation = find (\station -> station.stationType == Station.START)
@@ -417,8 +471,8 @@ castVehicleServiceTierAPI DVehicleServiceTier {..} =
       isAirConditioned = isAirConditioned
     }
 
-castDiscountToAPI :: DDiscount -> API.FRFSDiscountRes
-castDiscountToAPI DDiscount {..} =
+castCategoryToAPI :: DCategory -> API.FRFSDiscountRes
+castCategoryToAPI DCategory {..} =
   API.FRFSDiscountRes
     { API.code = code,
       API.price = mkPriceAPIEntity price,
@@ -578,3 +632,21 @@ createEntriesInFareTables merchantId merchantOperatingCityId quote integratedBpp
   QFRFP.create frfsRouteFareProduct
   QFFP.create farePolicy
   QRSF.create routeStopFare
+
+-- Helper function to get category tag based on discount code
+getCategoryPriceTags :: Text -> DFRFSQuoteCategory.FRFSCategoryTag
+getCategoryPriceTags code =
+  case code of
+    "ADULT" -> DFRFSQuoteCategory.ADULT_PRICE
+    "FEMALE" -> DFRFSQuoteCategory.FEMALE_PRICE
+    "MALE" -> DFRFSQuoteCategory.MALE_PRICE
+    "CHILD" -> DFRFSQuoteCategory.CHILD_PRICE
+    "SENIOR_CITIZEN" -> DFRFSQuoteCategory.SENIOR_CITIZEN_PRICE
+    "STUDENT" -> DFRFSQuoteCategory.STUDENT_PRICE
+    _ -> DFRFSQuoteCategory.ADULT_PRICE
+
+getQuoteCategoryType :: Text -> DFRFSTicketCategoryMetadataConfig.FRFSQuoteCategoryType
+getQuoteCategoryType code =
+  case fromJSON (String code) of
+    Success categoryType -> categoryType
+    Data.Aeson.Error _ -> DFRFSTicketCategoryMetadataConfig.ADULT

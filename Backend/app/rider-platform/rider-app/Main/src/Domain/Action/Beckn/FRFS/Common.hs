@@ -18,6 +18,11 @@ import qualified BecknV2.FRFS.Enums as Spec
 import Kernel.Prelude
 import Kernel.Utils.Common
 
+data DCategorySelect = DCategorySelect
+  { bppItemId :: Text,
+    quantity :: Int
+  }
+
 data DOnSelect = DOnSelect
   { providerId :: Text,
     totalPrice :: Price,
@@ -25,7 +30,8 @@ data DOnSelect = DOnSelect
     bppItemId :: Text,
     validTill :: Maybe UTCTime,
     transactionId :: Text,
-    messageId :: Text
+    messageId :: Text,
+    category :: [DCategorySelect]
   }
 
 data DFareBreakUp = DFareBreakUp

@@ -198,6 +198,16 @@ ALTER TABLE atlas_app.frfs_search ALTER COLUMN journey_leg_id TYPE text;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
 ALTER TABLE atlas_app.frfs_search ADD COLUMN multimodal_search_request_id text ;
 
 

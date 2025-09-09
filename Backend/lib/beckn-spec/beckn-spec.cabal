@@ -222,6 +222,7 @@ library
       Domain.Types.EstimateStatus
       Domain.Types.FareProductType
       Domain.Types.FleetBadgeType
+      Domain.Types.FRFSQuoteCategorySpec
       Domain.Types.FRFSRouteDetails
       Domain.Types.FRFSTicketBookingStatus
       Domain.Types.FRFSTicketStatus

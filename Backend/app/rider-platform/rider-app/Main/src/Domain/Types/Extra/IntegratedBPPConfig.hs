@@ -12,6 +12,9 @@ import qualified Text.Show (show)
 data CRISRouteSortingCriteria = FARE | DISTANCE
   deriving (Generic, Show, Read, FromJSON, ToJSON, Eq)
 
+data MergeQuoteCriteria = FULFILLMENT | QUOTE_TYPE
+  deriving (Generic, Show, Read, FromJSON, ToJSON, Eq)
+
 data EBIXConfig = EBIXConfig
   { agentId :: Text,
     username :: Text,
@@ -50,7 +53,8 @@ data ONDCBecknConfig = ONDCBecknConfig
     networkId :: Maybe Text,
     multiInitAllowed :: Maybe Bool,
     fareCachingAllowed :: Maybe Bool,
-    singleTicketForMultiplePassengers :: Maybe Bool
+    singleTicketForMultiplePassengers :: Maybe Bool,
+    mergeQuoteCriteria :: Maybe MergeQuoteCriteria
   }
   deriving stock (Eq, Generic)
   deriving anyclass (FromJSON, ToJSON)

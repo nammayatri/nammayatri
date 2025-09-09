@@ -15,6 +15,7 @@ import qualified Domain.Action.Beckn.FRFS.OnSearch as DOnSearch
 import qualified Domain.Action.Beckn.FRFS.OnStatus as DOnStatus
 import Domain.Types.BecknConfig
 import qualified Domain.Types.FRFSQuote as DQuote
+import qualified Domain.Types.FRFSQuoteBreakup as DFRFSQuoteBreakup
 import Domain.Types.FRFSRouteDetails
 import Domain.Types.FRFSSearch as DSearch
 import qualified Domain.Types.FRFSTicket as DFRFSTicket
@@ -42,6 +43,8 @@ import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
+import qualified Storage.Queries.FRFSQuoteBreakup as QFRFSQuoteBreakup
+import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
 import Tools.Error
@@ -136,8 +139,9 @@ select ::
   DQuote.FRFSQuote ->
   Maybe Int ->
   Maybe Int ->
+  Maybe [API.Types.UI.FRFSTicketService.FRFSCategorySelectionReq] ->
   m ()
-select processOnSelectHandler merchant merchantOperatingCity bapConfig quote ticketQuantity childTicketQuantity = do
+select processOnSelectHandler merchant merchantOperatingCity bapConfig quote ticketQuantity childTicketQuantity categorySelectionReq = do
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity quote
   case integratedBPPConfig.providerConfig of
     ONDC _ -> do
@@ -145,8 +149,38 @@ select processOnSelectHandler merchant merchantOperatingCity bapConfig quote tic
         void $ QFRFSQuote.updateTicketAndChildTicketQuantityById quote.id ticketQuantity childTicketQuantity
         let updatedQuantity = fromMaybe quote.quantity ticketQuantity
         let updatedQuote = quote {DQuote.quantity = updatedQuantity, DQuote.childTicketQuantity = childTicketQuantity}
+        -- Create FRFSQuoteBreakup entries for category selection requests if provided
+        category <- forM categorySelectionReq $ \categorySelections -> do
+          forM categorySelections $ \categorySelection -> do
+            quoteCategory <- QFRFSQuoteCategory.findById categorySelection.quoteCategoryId >>= fromMaybeM (InternalError $ "Quote category not found for id: " <> categorySelection.quoteCategoryId.getId)
+            quoteBreakupId <- generateGUID
+            now <- getCurrentTime
+            let quoteBreakup =
+                  DFRFSQuoteBreakup.FRFSQuoteBreakup
+                    { id = quoteBreakupId,
+                      quoteId = quote.id,
+                      quoteCategoryId = categorySelection.quoteCategoryId,
+                      tag = FRFSUtils.getQuantityTagFromCategory quoteCategory.ticketCategoryMetadataConfig.category,
+                      value = show categorySelection.quantity,
+                      merchantId = quote.merchantId,
+                      merchantOperatingCityId = quote.merchantOperatingCityId,
+                      createdAt = now,
+                      updatedAt = now
+                    }
+            QFRFSQuoteBreakup.create quoteBreakup
+
+            -- Return DCategorySelect for this category selection
+            return $
+              DCategorySelect
+                { bppItemId = quoteCategory.bppItemId,
+                  quantity = categorySelection.quantity
+                }
+
+        -- Flatten the nested list to get all DCategorySelect objects
+        let categories = concat category
+
         providerUrl <- quote.bppSubscriberUrl & parseBaseUrl
-        bknSelectReq <- ACL.buildSelectReq updatedQuote bapConfig Utils.BppData {bppId = quote.bppSubscriberId, bppUri = quote.bppSubscriberUrl} merchantOperatingCity.city
+        bknSelectReq <- ACL.buildSelectReq updatedQuote bapConfig Utils.BppData {bppId = quote.bppSubscriberId, bppUri = quote.bppSubscriberUrl} merchantOperatingCity.city categories
         logDebug $ "FRFS SelectReq " <> encodeToText bknSelectReq
         Metrics.startMetrics Metrics.SELECT_FRFS merchant.name quote.searchId.getId merchantOperatingCity.id.getId
         void $ CallFRFSBPP.select providerUrl bknSelectReq merchant.id
@@ -154,13 +188,13 @@ select processOnSelectHandler merchant merchantOperatingCity bapConfig quote tic
       onSelectReq <- Flow.select merchant merchantOperatingCity integratedBPPConfig bapConfig quote ticketQuantity childTicketQuantity
       processOnSelectHandler onSelectReq
 
-init :: FRFSConfirmFlow m r => Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> DBooking.FRFSTicketBooking -> m ()
-init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking = do
+init :: FRFSConfirmFlow m r => Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> DBooking.FRFSTicketBooking -> [DCategorySelect] -> m ()
+init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking categories = do
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
   case integratedBPPConfig.providerConfig of
     ONDC _ -> do
       providerUrl <- booking.bppSubscriberUrl & parseBaseUrl & fromMaybeM (InvalidRequest "Invalid provider url")
-      bknInitReq <- ACL.buildInitReq (mRiderName, mRiderNumber) booking bapConfig Utils.BppData {bppId = booking.bppSubscriberId, bppUri = booking.bppSubscriberUrl} merchantOperatingCity.city
+      bknInitReq <- ACL.buildInitReq (mRiderName, mRiderNumber) booking bapConfig Utils.BppData {bppId = booking.bppSubscriberId, bppUri = booking.bppSubscriberUrl} merchantOperatingCity.city categories
       logDebug $ "FRFS InitReq " <> encodeToText bknInitReq
       Metrics.startMetrics Metrics.INIT_FRFS merchant.name booking.searchId.getId merchantOperatingCity.id.getId
       void $ CallFRFSBPP.init providerUrl bknInitReq merchant.id
