@@ -51,6 +51,8 @@ updateByPrimaryKey (Domain.Types.FleetBookingInformation.FleetBookingInformation
       Se.Set Beam.serviceId serviceId,
       Se.Set Beam.serviceName serviceName,
       Se.Set Beam.status status,
+      Se.Set Beam.ticketBookingServiceShortId ticketBookingServiceShortId,
+      Se.Set Beam.ticketBookingShortId ticketBookingShortId,
       Se.Set Beam.ticketPlaceId ticketPlaceId,
       Se.Set Beam.updatedAt _now,
       Se.Set Beam.vehicleNo vehicleNo,

@@ -256,6 +256,7 @@ getTicketPlacesServices _ placeId mbDate mbSubPlaceId = do
               availableSeats = serviceCategory.availableSeats,
               bookedSeats = maybe 0 (.booked) mBeatManagement,
               allowedSeats = calcAllowedSeats serviceCategory mBeatManagement,
+              maxSelection = serviceCategory.maxSelection,
               peopleCategories,
               inclusionPoints = serviceCategory.inclusionPoints,
               isClosed = isClosed || serviceCategory.isClosed || null peopleCategories
@@ -752,6 +753,8 @@ postTicketBookingsVerify _ = processBookingService
                           { id = bookingService.assignmentId,
                             bookingId = booking.id.getId,
                             serviceId = bookingService.id.getId,
+                            ticketBookingShortId = booking.shortId.getShortId,
+                            ticketBookingServiceShortId = bookingService.shortId.getShortId,
                             fleetOwnerId = fleetOwnerId,
                             vehicleNo = vehicleNo,
                             personId = Just booking.personId.getId,
@@ -916,6 +919,8 @@ postTicketBookingsVerifyV2 _ = processBookingService
                       { id = bookingService.assignmentId,
                         bookingId = booking.id.getId,
                         serviceId = bookingService.id.getId,
+                        ticketBookingShortId = booking.shortId.getShortId,
+                        ticketBookingServiceShortId = bookingService.shortId.getShortId,
                         fleetOwnerId = fleetOwnerId',
                         vehicleNo = vehicleNo',
                         personId = Just booking.personId.getId,
@@ -1045,6 +1050,8 @@ getTicketBookingsStatus (mbPersonId, merchantId) _shortId@(Kernel.Types.Id.Short
                                 amount = Just ticketBookingService.amount.amount,
                                 visitDate = Just ticketBooking'.visitDate,
                                 bookedSeats = Just ticketBookingService.bookedSeats,
+                                ticketBookingShortId = ticketBooking'.shortId.getShortId,
+                                ticketBookingServiceShortId = ticketBookingService.shortId.getShortId,
                                 status = Just "NEW",
                                 ticketPlaceId = Just ticketPlace.id.getId
                               }
