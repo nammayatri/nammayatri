@@ -286,7 +286,8 @@ notifyOnRideSearchExpired searchReq = do
 data RideAssignedParam = RideAssignedParam
   { driverName :: Text,
     rideTime :: UTCTime,
-    bookingId :: Id SRB.Booking
+    bookingId :: Id SRB.Booking,
+    isScheduledBooking :: Bool
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON)
 
@@ -300,8 +301,8 @@ notifyOnRideAssigned booking ride = do
       rideId = ride.id
       driverName = ride.driverName
   person <- Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  let entity = Notification.Entity Notification.Product rideId.getId (RideAssignedParam driverName booking.startTime booking.id)
-      dynamicParams = RideAssignedParam driverName booking.startTime booking.id
+  let entity = Notification.Entity Notification.Product rideId.getId (RideAssignedParam driverName booking.startTime booking.id booking.isScheduled)
+      dynamicParams = RideAssignedParam driverName booking.startTime booking.id booking.isScheduled
   allOtherBookingPartyPersons <- getAllOtherRelatedPartyPersons booking
   forM_ (person : allOtherBookingPartyPersons) $ \person' -> do
     tag <- getDisabilityTag person.hasDisability person'.id
@@ -372,10 +373,10 @@ notifyOnScheduledRideAccepted booking ride = do
             subCategory = Nothing,
             showNotification = Notification.SHOW,
             messagePriority = Nothing,
-            entity = Notification.Entity Notification.Product rideId.getId (RideAssignedParam driverName booking.startTime booking.id),
+            entity = Notification.Entity Notification.Product rideId.getId (RideAssignedParam driverName booking.startTime booking.id booking.isScheduled),
             body = body,
             title = title,
-            dynamicParams = RideAssignedParam driverName booking.startTime booking.id,
+            dynamicParams = RideAssignedParam driverName booking.startTime booking.id booking.isScheduled,
             auth = Notification.Auth person.id.getId person.deviceToken person.notificationToken,
             ttl = Nothing,
             sound = notificationSound
