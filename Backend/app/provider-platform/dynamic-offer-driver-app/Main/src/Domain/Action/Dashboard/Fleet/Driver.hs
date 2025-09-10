@@ -1502,7 +1502,7 @@ getDriverFleetOperatorInfo ::
 getDriverFleetOperatorInfo merchantShortId opCity personId = do
   getDriverFleetOwnerInfo merchantShortId opCity (Id personId)
 
-getDriverFleetOwnerInfo ::
+getDriverFleetOwnerInfo :: -- Deprecated, use getDriverFleetOperatorInfo
   ShortId DM.Merchant ->
   Context.City ->
   Id Common.Driver ->
