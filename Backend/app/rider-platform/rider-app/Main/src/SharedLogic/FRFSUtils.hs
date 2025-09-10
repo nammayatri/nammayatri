@@ -878,7 +878,7 @@ createPaymentOrder bookings merchantOperatingCityId merchantId amount person pay
             orderShortId = orderShortId,
             amount = amount,
             customerId = person.id.getId,
-            customerEmail = fromMaybe "test@gmail.com" personEmail,
+            customerEmail = fromMaybe "growth@nammayatri.in" personEmail,
             customerPhone = personPhone,
             customerFirstName = person.firstName,
             customerLastName = person.lastName,

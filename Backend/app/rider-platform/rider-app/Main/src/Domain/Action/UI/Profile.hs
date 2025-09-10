@@ -99,8 +99,17 @@ import qualified Storage.Queries.PersonDefaultEmergencyNumber as QPersonDEN
 import qualified Storage.Queries.PersonDisability as PDisability
 import qualified Storage.Queries.PersonStats as QPersonStats
 import qualified Storage.Queries.SafetySettings as QSafety
+import Text.Regex.Posix ((=~))
 import Tools.Error
 import Tools.Event
+
+-- Email validation function
+isValidEmail :: Maybe Text -> Bool
+isValidEmail Nothing = False
+isValidEmail (Just email) =
+  let trimmedEmail = T.strip email
+      emailRegex = "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$" :: String
+   in T.unpack trimmedEmail =~ emailRegex
 
 data ProfileRes = ProfileRes
   { id :: Id Person.Person,
@@ -265,6 +274,7 @@ getPersonDetails ::
   m ProfileRes
 getPersonDetails (personId, _) toss tenant' context mbBundleVersion mbRnVersion mbClientVersion mbClientConfigVersion mbDevice = do
   person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  decPerson <- decrypt person
   personStats <- QPersonStats.findByPersonId personId >>= fromMaybeM (PersonStatsNotFound personId.getId)
   riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
   let device = getDeviceFromText mbDevice
@@ -275,10 +285,14 @@ getPersonDetails (personId, _) toss tenant' context mbBundleVersion mbRnVersion 
   tag <- case person.hasDisability of
     Just True -> B.runInReplica $ fmap (.tag) <$> PDisability.findByPersonId personId
     _ -> return Nothing
-  decPerson <- decrypt person
+
   when ((decPerson.clientBundleVersion /= mbBundleVersion || decPerson.clientSdkVersion /= mbClientVersion || decPerson.clientConfigVersion /= mbClientConfigVersion || decPerson.clientReactNativeVersion /= mbRnVersion || decPerson.clientDevice /= device) && isJust device) do
     deploymentVersion <- asks (.version)
     void $ QPerson.updatePersonVersions person mbBundleVersion mbClientVersion mbClientConfigVersion device deploymentVersion.getDeploymentVersion mbRnVersion
+  when (isJust decPerson.email && not (isValidEmail decPerson.email)) do
+    logDebug $ "Invalid email, updating person email to nothing , Previous emailId: " <> show decPerson.email <> " for person id " <> show personId
+    let updatedPerson = person {Person.email = Nothing}
+    void $ QPerson.updateByPrimaryKey updatedPerson
   systemConfigs <- L.getOption KBT.Tables
   let useCACConfig = maybe False (.useCACForFrontend) systemConfigs
   let context' = fromMaybe DAKM.empty (DA.decode $ BSL.pack $ T.unpack $ fromMaybe "{}" context)
