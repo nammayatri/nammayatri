@@ -63,4 +63,4 @@ getBatchCreateEnabled :: IO Bool
 getBatchCreateEnabled = fromMaybe False . (>>= readMaybe) <$> SE.lookupEnv "BATCHED_CREATE_ENABLED"
 
 getInsertBatchSize :: IO Int
-getInsertBatchSize = fromMaybe 100 . (>>= readMaybe) <$> SE.lookupEnv "INSERT_BATCH_SIZE"
+getInsertBatchSize = fromMaybe 50 . (>>= readMaybe) <$> SE.lookupEnv "INSERT_BATCH_SIZE"

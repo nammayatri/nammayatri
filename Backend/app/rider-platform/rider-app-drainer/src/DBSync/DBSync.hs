@@ -131,6 +131,7 @@ runCriticalDBSyncOperations dbStreamKey updateEntries deleteEntries createDataEn
   -- (cSucc, cFail) <- pureRightExceptT $ executeInSequence runCreate ([], []) dbStreamKey createDataEntries
   (cSucc, cFail) <- pureRightExceptT $ if isForcePushEnabled || not getBatchCreateEnabled then executeInSequence runCreate ([], []) dbStreamKey createDataEntries else executeBatchedCreate dbStreamKey createDataEntries
   void $ pureRightExceptT $ publishDBSyncMetric $ Event.DrainerQueryExecutes "Create" (fromIntegral $ length cSucc)
+  when getBatchCreateEnabled $ void $ pureRightExceptT $ publishDBSyncMetric $ Event.DrainerQueryExecutes "CreateInBatch" (if null cSucc then 0 else 1)
   void $
     if null cSucc
       then pureRightExceptT $ publishDBSyncMetric $ Event.QueryDrainLatency "Create" 0

@@ -50,9 +50,9 @@ rider_process_latency =
     .& lbl @"process_name" @Text
     .& build
 
-eider_kv_config_decode_failure :: PromRep 'Counter "eider_kv_config_decode_failure" '[]
-eider_kv_config_decode_failure =
-  counter #eider_kv_config_decode_failure
+rider_kv_config_decode_failure :: PromRep 'Counter "rider_kv_config_decode_failure" '[]
+rider_kv_config_decode_failure =
+  counter #rider_kv_config_decode_failure
     .& build
 
 drainer_query_executes :: PromRep 'Counter "drainer_query_executes" '[ '("action", Text)]
@@ -86,6 +86,12 @@ batch_fallback_used =
 batch_execution_time :: PromRep 'Histogram "batch_execution_time" '[ '("model", Text)]
 batch_execution_time =
   histogram #batch_execution_time
+    .& lbl @"model" @Text
+    .& build
+
+batch_entries_processed :: PromRep 'Counter "batch_entries_processed" '[ '("model", Text)]
+batch_entries_processed =
+  counter #batch_entries_processed
     .& lbl @"model" @Text
     .& build
 

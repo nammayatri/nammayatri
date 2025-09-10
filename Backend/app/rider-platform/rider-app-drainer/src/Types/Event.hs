@@ -39,4 +39,5 @@ data DBSyncMetric
   | ProcessLatency Text Latency
   | BatchFallbackUsed Int
   | BatchExecutionTime ModelName Double
+  | BatchEntriesProcessed ModelName Int
   | SchemaVariationAlert ModelName Int

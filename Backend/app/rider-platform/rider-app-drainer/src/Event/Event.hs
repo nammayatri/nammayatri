@@ -23,9 +23,10 @@ mkDBSyncMetric = do
       KafkaUpdateMissing -> inc (metrics </> #rider_kafka_update_missing)
       KafkaPushFailure action model -> inc (metrics </> #rider_kafka_push_failure) action model
       ProcessLatency processName latency -> observe (metrics </> #rider_process_latency) latency processName
-      KvConfigDecodeFailure -> inc (metrics </> #eider_kv_config_decode_failure)
+      KvConfigDecodeFailure -> inc (metrics </> #rider_kv_config_decode_failure)
       BatchFallbackUsed _ -> inc (metrics </> #batch_fallback_used)
       BatchExecutionTime model time -> observe (metrics </> #batch_execution_time) time model
+      BatchEntriesProcessed model count -> add (metrics </> #batch_entries_processed) (fromIntegral count) model
       SchemaVariationAlert model _ -> inc (metrics </> #schema_variation_alert) model
   where
     collectionDBSyncMetric =
@@ -40,8 +41,9 @@ mkDBSyncMetric = do
         .> rider_kafka_update_missing
         .> rider_kafka_push_failure
         .> rider_process_latency
-        .> eider_kv_config_decode_failure
+        .> rider_kv_config_decode_failure
         .> batch_fallback_used
         .> batch_execution_time
+        .> batch_entries_processed
         .> schema_variation_alert
         .> MNil

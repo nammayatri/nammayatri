@@ -92,6 +92,7 @@ data ParsedCreateEntry = ParsedCreateEntry
     originalBytes :: ByteString, -- Original JSON bytes for fallback
     columnSignature :: ColumnSignature -- Computed signature for grouping
   }
+  deriving (Show)
 
 -- | Generate column signature from a database create object.
 --    The signature includes sorted column names to ensure consistent grouping
@@ -155,6 +156,7 @@ parseCreateEntry (entryId, streamData) = do
 --    - Table-level Kafka processing reduces overhead
 --    - Graceful fallback for edge cases
 executeBatchedCreate :: Text -> [(EL.KVDBStreamEntryID, ByteString)] -> Flow ([EL.KVDBStreamEntryID], [EL.KVDBStreamEntryID])
+executeBatchedCreate _ [] = pure ([], [])
 executeBatchedCreate dbStreamKey createEntries = do
   EL.logInfo ("STARTING_BATCHED_CREATE" :: Text) ("Total entries: " <> show (length createEntries))
 
@@ -340,6 +342,13 @@ groupByColumnSignature = M.fromListWith (++) . map (\entry -> (entry.columnSigna
 processTableSignatureGroups :: Text -> (DBModel, Map ColumnSignature [ParsedCreateEntry]) -> Flow [([EL.KVDBStreamEntryID], [EL.KVDBStreamEntryID])]
 processTableSignatureGroups dbStreamKey (tableName, signatureGroups) = do
   Env {_dontEnableDbTables} <- ask
+
+  -- Alert if table has too many schema variations (schema drift detection)
+  let signatureCount = M.size signatureGroups
+  when (signatureCount > 1) $ do
+    EL.logWarning ("SCHEMA_VARIATION_DETECTED" :: Text) $ tableName.getDBModel <> "|signatures:" <> show signatureCount <> "signatures found" <> show signatureGroups
+    void $ publishDBSyncMetric $ Event.SchemaVariationAlert tableName.getDBModel signatureCount
+
   -- Check if this table should be Kafka-only (single check for entire table)
   if shouldPushToKafkaOnly tableName _dontEnableDbTables
     then do
@@ -421,8 +430,8 @@ executeBatchForSignature _dbStreamKey signature entries = do
             Right _ -> do
               EL.logInfo ("BATCH_INSERT_SUCCESS" :: Text) $
                 sig.tableName.getDBModel <> "|entries:" <> show (length batchEntries) <> "|time:" <> show executionTime
-              void $ publishDBSyncMetric $ Event.DrainerQueryExecutes "BatchCreate" (fromIntegral $ length batchEntries)
               void $ publishDBSyncMetric $ Event.BatchExecutionTime sig.tableName.getDBModel executionTime
+              void $ publishDBSyncMetric $ Event.BatchEntriesProcessed sig.tableName.getDBModel (length batchEntries)
 
               -- Push successful batch entries to Kafka
               kafkaResults <- pushEntriesToKafka _dbStreamKey batchEntries
