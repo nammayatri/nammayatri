@@ -54,6 +54,7 @@ parseDriverWalletConfig merchantOperatingCityId mbVal = do
             enableWalletPayout = False,
             enableWalletTopup = False,
             maxWalletPayoutsPerDay = Nothing,
+            minWalletAmountForCashRides = Nothing,
             minimumWalletPayoutAmount = 0,
             payoutCutOffDays = 7
           }

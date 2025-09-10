@@ -3,7 +3,7 @@ SET subscription_config = '{"prepaidSubscriptionThreshold": 100}' :: json
 WHERE merchant_operating_city_id in (select id from atlas_driver_offer_bpp.merchant_operating_city where merchant_short_id = 'MSIL_PARTNER' and city = 'Delhi');
 
 UPDATE atlas_driver_offer_bpp.transporter_config
-SET driver_wallet_config = '{"enableDriverWallet": true, "driverWalletPayoutThreshold": 0, "gstPercentage": 5.0, "enableWalletPayout": true, "enableWalletTopup": true, "maxWalletPayoutsPerDay": null, "minimumWalletPayoutAmount": 0}' :: json
+SET driver_wallet_config = '{"enableDriverWallet": true, "driverWalletPayoutThreshold": 0, "gstPercentage": 5.0, "enableWalletPayout": true, "enableWalletTopup": true, "maxWalletPayoutsPerDay": null, "minWalletAmountForCashRides": null, "minimumWalletPayoutAmount": 0}' :: json
 WHERE merchant_operating_city_id in (select id from atlas_driver_offer_bpp.merchant_operating_city where merchant_short_id = 'MSIL_PARTNER' and city = 'Delhi');
 
 UPDATE atlas_driver_offer_bpp.transporter_config

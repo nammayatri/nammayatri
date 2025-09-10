@@ -25,6 +25,7 @@ import qualified Domain.Types.ConditionalCharges as DAC
 import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import Domain.Types.DriverIntelligentPoolConfig (IntelligentScores (..))
 import Domain.Types.DriverPoolConfig (DriverPoolConfig)
+import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import Domain.Types.GoHomeConfig (GoHomeConfig)
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.Person (Driver)
@@ -64,6 +65,7 @@ data CalculateGoHomeDriverPoolReq a = CalculateGoHomeDriverPoolReq
     isValueAddNP :: Bool,
     onlinePayment :: Bool,
     rideFare :: Maybe HighPrecMoney,
+    paymentInstrument :: Maybe DMPM.PaymentInstrument,
     currentSearchInfo :: DTS.CurrentSearchInfo,
     transporterConfig :: DTC.TransporterConfig,
     configsInExperimentVersions :: [LYT.ConfigVersionMap],
@@ -272,5 +274,6 @@ data DriverSearchBatchInput m = DriverSearchBatchInput
     customerExtraFee :: Maybe HighPrecMoney,
     messageId :: Text,
     isRepeatSearch :: Bool,
-    isAllocatorBatch :: Bool
+    isAllocatorBatch :: Bool,
+    paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo
   }

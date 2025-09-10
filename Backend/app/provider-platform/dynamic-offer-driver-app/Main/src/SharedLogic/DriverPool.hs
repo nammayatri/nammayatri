@@ -76,6 +76,7 @@ import qualified Domain.Types.DriverGoHomeRequest as DDGR
 import Domain.Types.DriverIntelligentPoolConfig (IntelligentScores (IntelligentScores))
 import qualified Domain.Types.DriverIntelligentPoolConfig as DIPC
 import Domain.Types.DriverPoolConfig
+import qualified Domain.Types.Extra.MerchantPaymentMethod as MP
 import Domain.Types.GoHomeConfig (GoHomeConfig)
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -560,6 +561,8 @@ calculateGoHomeDriverPool req@CalculateGoHomeDriverPoolReq {..} merchantOpCityId
             driverPositionInfoExpiry = driverPoolCfg.driverPositionInfoExpiry,
             prepaidSubscriptionThreshold = bool Nothing transporterConfig.subscriptionConfig.prepaidSubscriptionThreshold enforceSufficientDriverBalance,
             rideFare,
+            minWalletAmountForCashRides = bool Nothing transporterConfig.driverWalletConfig.minWalletAmountForCashRides enforceSufficientDriverBalance,
+            paymentInstrument,
             isRental,
             isInterCity,
             onlinePayment,
@@ -752,6 +755,7 @@ data CalculateDriverPoolReq a = CalculateDriverPoolReq
     transporterConfig :: DTC.TransporterConfig,
     mRadiusStep :: Maybe PoolRadiusStep,
     rideFare :: Maybe HighPrecMoney,
+    paymentInstrument :: Maybe MP.PaymentInstrument,
     isRental :: Bool,
     isInterCity :: Bool,
     isValueAddNP :: Bool,
@@ -785,6 +789,8 @@ calculateDriverPool CalculateDriverPoolReq {..} = do
             nearestRadius = radius,
             driverPositionInfoExpiry = driverPoolCfg.driverPositionInfoExpiry,
             prepaidSubscriptionThreshold = bool Nothing transporterConfig.subscriptionConfig.prepaidSubscriptionThreshold enforceSufficientDriverBalance,
+            minWalletAmountForCashRides = bool Nothing transporterConfig.driverWalletConfig.minWalletAmountForCashRides enforceSufficientDriverBalance,
+            paymentInstrument,
             rideFare,
             ..
           }
@@ -1049,6 +1055,8 @@ calculateDriverPoolCurrentlyOnRide CalculateDriverPoolReq {..} mbBatchNum = do
               currentRideTripCategoryValidForForwardBatching = driverPoolCfg.currentRideTripCategoryValidForForwardBatching,
               prepaidSubscriptionThreshold = bool Nothing transporterConfig.subscriptionConfig.prepaidSubscriptionThreshold enforceSufficientDriverBalance,
               rideFare,
+              minWalletAmountForCashRides = bool Nothing transporterConfig.driverWalletConfig.minWalletAmountForCashRides enforceSufficientDriverBalance,
+              paymentInstrument,
               ..
             }
   driversWithLessThanNParallelRequests <- case poolStage of

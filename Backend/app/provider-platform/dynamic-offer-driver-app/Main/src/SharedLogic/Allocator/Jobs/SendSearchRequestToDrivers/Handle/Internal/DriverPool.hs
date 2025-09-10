@@ -47,6 +47,7 @@ import qualified Domain.Types.Common as DriverInfo
 import Domain.Types.DriverGoHomeRequest as DDGR
 import Domain.Types.DriverIntelligentPoolConfig
 import Domain.Types.DriverPoolConfig
+import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import Domain.Types.GoHomeConfig (GoHomeConfig)
 import qualified Domain.Types.Merchant as DM
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
@@ -122,8 +123,9 @@ prepareDriverPoolBatch ::
   [TripQuoteDetail] ->
   PoolBatchNum ->
   GoHomeConfig ->
+  Maybe DMPM.PaymentMethodInfo ->
   m DriverPoolWithActualDistResultWithFlags
-prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchTry tripQuoteDetails startingbatchNum goHomeConfig = withLogTag ("startingbatchNum- (" <> show startingbatchNum <> ")") $ do
+prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchTry tripQuoteDetails startingbatchNum goHomeConfig paymentMethodInfo = withLogTag ("startingbatchNum- (" <> show startingbatchNum <> ")") $ do
   isValueAddNP <- CQVAN.isValueAddNP searchReq.bapId
   previousBatchesDrivers <- getPreviousBatchesDrivers Nothing
   previousBatchesDriversOnRide <- getPreviousBatchesDrivers (Just True)
@@ -209,6 +211,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                               onlinePayment = merchant.onlinePayment,
                               configsInExperimentVersions = searchReq.configInExperimentVersions,
                               rideFare = Just searchTry.baseFare, -- TODO: add walletBalance check
+                              paymentInstrument = fmap (.paymentInstrument) paymentMethodInfo,
                               enforceSufficientDriverBalance = fromMaybe False merchant.enforceSufficientDriverBalance,
                               ..
                             }
@@ -448,6 +451,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                         onlinePayment = merchant.onlinePayment,
                         configsInExperimentVersions = searchReq.configInExperimentVersions,
                         rideFare = Just searchTry.baseFare,
+                        paymentInstrument = fmap (.paymentInstrument) paymentMethodInfo,
                         enforceSufficientDriverBalance = fromMaybe False merchant.enforceSufficientDriverBalance,
                         ..
                       }
@@ -479,6 +483,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                     isInterCity = isInterCityTrip searchTry.tripCategory,
                     onlinePayment = merchant.onlinePayment,
                     rideFare = Just searchTry.baseFare,
+                    paymentInstrument = fmap (.paymentInstrument) paymentMethodInfo,
                     enforceSufficientDriverBalance = fromMaybe False merchant.enforceSufficientDriverBalance,
                     ..
                   }
@@ -504,6 +509,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                         isInterCity = isInterCityTrip searchTry.tripCategory,
                         onlinePayment = merchant.onlinePayment,
                         rideFare = Just searchTry.baseFare,
+                        paymentInstrument = fmap (.paymentInstrument) paymentMethodInfo,
                         enforceSufficientDriverBalance = fromMaybe False merchant.enforceSufficientDriverBalance,
                         ..
                       }
@@ -804,14 +810,15 @@ getNextDriverPoolBatch ::
   DSR.SearchRequest ->
   DST.SearchTry ->
   [TripQuoteDetail] ->
+  Maybe DMPM.PaymentMethodInfo ->
   GoHomeConfig ->
   m DriverPoolWithActualDistResultWithFlags
-getNextDriverPoolBatch driverPoolConfig searchReq searchTry tripQuoteDetails goHomeConfig = withLogTag "getNextDriverPoolBatch" do
+getNextDriverPoolBatch driverPoolConfig searchReq searchTry tripQuoteDetails paymentMethodInfo goHomeConfig = withLogTag "getNextDriverPoolBatch" do
   batchNum <- getPoolBatchNum searchTry.id
   incrementBatchNum searchTry.id
   cityServiceTiers <- CQVST.findAllByMerchantOpCityIdInRideFlow searchReq.merchantOperatingCityId searchReq.configInExperimentVersions
   merchant <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantNotFound searchReq.providerId.getId)
-  prepareDriverPoolBatch cityServiceTiers merchant driverPoolConfig searchReq searchTry tripQuoteDetails batchNum goHomeConfig
+  prepareDriverPoolBatch cityServiceTiers merchant driverPoolConfig searchReq searchTry tripQuoteDetails batchNum goHomeConfig paymentMethodInfo
 
 getPoolBatchNum :: (Redis.HedisFlow m r) => Id DST.SearchTry -> m PoolBatchNum
 getPoolBatchNum searchTryId = do
