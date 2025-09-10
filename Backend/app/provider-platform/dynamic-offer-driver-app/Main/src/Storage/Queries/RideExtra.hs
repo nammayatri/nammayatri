@@ -698,16 +698,17 @@ findAllRideItemsV2 merchant opCity limitVal offsetVal mbRideStatus mbRideShortId
           case (mbDriverPhoneDBHash, mbCustomerPhoneDBHash) of
             (Just _driverPhoneDBHash, _) -> do
               rides <-
-                findAllFromKvRedis
+                findAllWithOptionsKV
                   [ Se.And
                       ( [Se.Is BeamR.status $ Se.Eq (fromJust mbRideStatus) | isJust mbRideStatus]
                           <> [Se.Is BeamR.createdAt $ Se.GreaterThanOrEq $ (roundToMidnightUTC $ fromJust mbFrom) | isJust mbFrom]
                           <> [Se.Is BeamR.createdAt $ Se.LessThanOrEq $ (roundToMidnightUTCToDate $ fromJust mbTo) | isJust mbTo]
                           <> [Se.Is BeamR.driverId $ Se.Eq $ (fromJust mbDriverId) | isJust mbDriverId]
-                          -- <> [Se.is BeamR.status $ Se.Eq (fromJust mbRideStatus) | isJust mbRideStatus]
                       )
                   ]
-                  (Just $ Se.Desc BeamR.createdAt)
+                  (Se.Desc BeamR.createdAt)
+                  (Just $ limitVal)
+                  (Just $ offsetVal)
               pure $ mkRideItemUsingMapsV2 rides mbDriver
             (_, Just customerPhoneDBHash) -> do
               riderDetails <- findAllWithKV [Se.Is BeamRDR.mobileNumberHash $ Se.Eq customerPhoneDBHash, Se.Is BeamRDR.merchantId $ Se.Eq $ getId merchant.id]
@@ -733,33 +734,7 @@ findAllRideItemsV2 merchant opCity limitVal offsetVal mbRideStatus mbRideShortId
             _ -> pure []
         _ -> pure []
       results <- case (mbDriverPhoneDBHash, mbCustomerPhoneDBHash) of
-        (Just _driverPhoneDBHash, _) -> do
-          dbConf <- getReplicaBeamConfig
-          res <- L.runDB dbConf $
-            L.findRows $
-              B.select $
-                B.limit_ (fromIntegral limitVal) $
-                  B.offset_ (fromIntegral offsetVal) $
-                    B.filter_'
-                      ( \ride ->
-                          (ride.merchantOperatingCityId B.==?. B.val_ (Just $ getId opCity.id) B.||?. (B.sqlBool_ (B.isNothing_ ride.merchantOperatingCityId) B.&&?. B.sqlBool_ (B.val_ (merchant.city == opCity.city))))
-                            B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultFrom -> B.sqlBool_ $ ride.createdAt B.>=. B.val_ (roundToMidnightUTC defaultFrom)) mbFrom
-                            B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\defaultTo -> B.sqlBool_ $ ride.createdAt B.<=. B.val_ (roundToMidnightUTCToDate defaultTo)) mbTo
-                            B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\rideStatus -> ride.status B.==?. B.val_ rideStatus) mbRideStatus
-                            B.&&?. maybe (B.sqlBool_ $ B.val_ True) (\driverId -> ride.driverId B.==?. B.val_ driverId) mbDriverId
-                      )
-                      do
-                        ride' <- B.all_ (BeamCommon.ride BeamCommon.atlasDB)
-                        pure ride'
-
-          case res of
-            Right x -> do
-              let rides = x
-              r <- catMaybes <$> mapM fromTType' rides
-              pure $ mkRideItemUsingMapsV2 r mbDriver
-            Left err -> do
-              logError $ "FAILED_TO_FETCH_RIDE_LIST" <> show err
-              pure []
+        (Just _driverPhoneDBHash, _) -> pure []
         (_, _) -> do
           dbConf <- getReplicaBeamConfig
           res <- L.runDB dbConf $
