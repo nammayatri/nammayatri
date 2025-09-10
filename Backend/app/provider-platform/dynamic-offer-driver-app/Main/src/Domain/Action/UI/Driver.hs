@@ -814,31 +814,37 @@ activateGoHomeFeature (driverId, merchantId, merchantOpCityId) driverHomeLocatio
   isLocked <- withLockDriverId driverId
   if isLocked
     then do
-      merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-      goHomeConfig <- CGHC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId)))
-      unless (goHomeConfig.enableGoHome) $ throwError GoHomeFeaturePermanentlyDisabled
-      driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
-      unless driverInfo.enabled $ throwError DriverAccountDisabled
-      when (driverInfo.blocked) $ throwError $ DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag)
-      let currPos = LatLong {lat = driverLocation.lat, lon = driverLocation.lon}
-      driverHomeLocation <- QDHL.findById driverHomeLocationId >>= fromMaybeM (DriverHomeLocationDoesNotExist driverHomeLocationId.getId)
-      when (driverHomeLocation.driverId /= driverId) $ throwError DriverHomeLocationDoesNotBelongToDriver
-      let homePos = LatLong {lat = driverHomeLocation.lat, lon = driverHomeLocation.lon}
-      unless (distanceBetweenInMeters homePos currPos > fromIntegral goHomeConfig.destRadiusMeters) $ throwError DriverCloseToHomeLocation
-      dghInfo <- CQDGR.getDriverGoHomeRequestInfo driverId merchantOpCityId (Just goHomeConfig)
-      unless (dghInfo.cnt > 0) $ throwError DriverGoHomeRequestDailyUsageLimitReached
-      unlessM (checkIfGoToInDifferentGeometry merchant driverLocation homePos) $ throwError CannotEnableGoHomeForDifferentCity
-      whenM (fmap ((dghInfo.status == Just DDGR.ACTIVE) ||) (isJust <$> QDGR.findActive driverId)) $ throwError DriverGoHomeRequestAlreadyActive
-      activateDriverGoHomeRequest merchantId merchantOpCityId driverId driverHomeLocation goHomeConfig dghInfo
-      Redis.unlockRedis (buildActivateGoHomeKey driverId)
-    else throwError DriverGoHomeRequestAlreadyActive
+      finally
+        ( do
+            merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+            goHomeConfig <- CGHC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId)))
+            unless (goHomeConfig.enableGoHome) $ throwError GoHomeFeaturePermanentlyDisabled
+            driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
+            unless driverInfo.enabled $ throwError DriverAccountDisabled
+            when (driverInfo.blocked) $ throwError $ DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag)
+            let currPos = LatLong {lat = driverLocation.lat, lon = driverLocation.lon}
+            driverHomeLocation <- QDHL.findById driverHomeLocationId >>= fromMaybeM (DriverHomeLocationDoesNotExist driverHomeLocationId.getId)
+            when (driverHomeLocation.driverId /= driverId) $ throwError DriverHomeLocationDoesNotBelongToDriver
+            let homePos = LatLong {lat = driverHomeLocation.lat, lon = driverHomeLocation.lon}
+            unless (distanceBetweenInMeters homePos currPos > fromIntegral goHomeConfig.destRadiusMeters) $ throwError DriverCloseToHomeLocation
+            dghInfo <- CQDGR.getDriverGoHomeRequestInfo driverId merchantOpCityId (Just goHomeConfig)
+            unless (dghInfo.cnt > 0) $ throwError DriverGoHomeRequestDailyUsageLimitReached
+            unlessM (checkIfGoToInDifferentGeometry merchant driverLocation homePos) $ throwError CannotEnableGoHomeForDifferentCity
+            whenM (fmap ((dghInfo.status == Just DDGR.ACTIVE) ||) (isJust <$> QDGR.findActive driverId)) $ throwError DriverGoHomeRequestAlreadyActive
+            activateDriverGoHomeRequest merchantId merchantOpCityId driverId driverHomeLocation goHomeConfig dghInfo
+            pure ()
+        )
+        ( do
+            Redis.unlockRedis (buildActivateGoHomeKey driverId)
+        )
+    else throwError GoHomeRequestInProgress
   pure APISuccess.Success
   where
     checkIfGoToInDifferentGeometry :: DM.Merchant -> LatLong -> LatLong -> Flow Bool
     checkIfGoToInDifferentGeometry merchant driverLoc = uncurry (liftM2 (\dl hl -> dl == hl && dl /= Context.AnyCity && hl /= Context.AnyCity)) . DTE.both ((((.city) . (.nearestOperatingCity)) <$>) . runInReplica . getNearestOperatingAndSourceCity merchant) . (driverLoc,)
 
     withLockDriverId driverId' = do
-      isLockSuccussful <- Redis.tryLockRedis (buildActivateGoHomeKey driverId') 30
+      isLockSuccussful <- Redis.tryLockRedis (buildActivateGoHomeKey driverId') 10
       return isLockSuccussful
 
     buildActivateGoHomeKey :: Id SP.Person -> Text
