@@ -29,6 +29,7 @@ import qualified Data.Text as T
 import qualified Domain.Action.UI.Select as DSelect
 import Domain.Types
 import Domain.Types.BecknConfig
+import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Location as Location
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
@@ -433,7 +434,14 @@ tfPrice res =
 tfPayments :: DSelect.DSelectRes -> BecknConfig -> Maybe [Spec.Payment]
 tfPayments res bapConfig = do
   let mPrice = Just res.estimate.estimatedFare
-  let mkParams :: (Maybe BknPaymentParams) = decodeFromText =<< bapConfig.paymentParamsJson
+  let mkParams :: (Maybe BknPaymentParams) =
+        case res.paymentMethodInfo of
+          Just paymentMethodInfo ->
+            -- add this part only for testing purpose
+            if paymentMethodInfo.paymentInstrument == DMPM.Cash
+              then Nothing
+              else Just $ BknPaymentParams Nothing Nothing (Just $ show paymentMethodInfo.paymentInstrument) -- Bpp side we consider online when vpa is present (Ideally we should put upi_id here)
+          Nothing -> decodeFromText =<< bapConfig.paymentParamsJson
   Just $ L.singleton $ mkPayment (show res.city) (show bapConfig.collectedBy) Enums.NOT_PAID mPrice Nothing mkParams bapConfig.settlementType bapConfig.settlementWindow bapConfig.staticTermsUrl bapConfig.buyerFinderFee
 
 tfProvider :: DSelect.DSelectRes -> Spec.Provider
