@@ -456,7 +456,6 @@ view push state =
             , visibility state.editTextVisibility
             ]
             [ PrimaryEditText.view (push <<< ETextController) (state.eTextConfig) ]
-        , tipsView push state
         , case state.layout of
             Just layout -> layout { visibility : VISIBLE }
             Nothing -> textView [ visibility GONE]
