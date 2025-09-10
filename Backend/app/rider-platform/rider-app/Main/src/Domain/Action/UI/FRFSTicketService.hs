@@ -1060,7 +1060,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking booking' switchFRF
                 orderShortId = paymentOrder.shortId.getShortId,
                 amount = paymentOrder.amount,
                 customerId = person.id.getId,
-                customerEmail = fromMaybe "test@gmail.com" personEmail,
+                customerEmail = fromMaybe "growth@nammayatri.in" personEmail,
                 customerPhone = personPhone,
                 customerFirstName = person.firstName,
                 customerLastName = person.lastName,
