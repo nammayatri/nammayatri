@@ -407,7 +407,7 @@ findPossibleRoutes ::
   Id MerchantOperatingCity ->
   Enums.VehicleCategory ->
   Bool ->
-  m (Maybe Text, [AvailableRoutesByTier])
+  m (Maybe Text, [AvailableRoutesByTier], [RouteStopTimeTable])
 findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime integratedBppConfig mid mocid vc sendWithoutFare = do
   -- Get route mappings that contain the origin stop
   fromRouteStopMappings <- measureLatency (OTPRest.getRouteStopMappingByStopCode fromStopCode integratedBppConfig) ("getRouteStopMappingByStopCode" <> show fromStopCode)
@@ -434,9 +434,15 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
   let sortedTimings =
         sortBy
           ( \a b ->
-              compare (sourcePriority a.source) (sourcePriority b.source)
-                <> compare (Down (getFreq a freqMap)) (Down (getFreq b freqMap))
-                <> compare (arrivalDiff a currentTimeIST) (arrivalDiff b currentTimeIST)
+              if vc == Enums.BUS
+                then
+                  compare (sourcePriority a.source) (sourcePriority b.source)
+                    <> compare (Down (getFreq a freqMap)) (Down (getFreq b freqMap))
+                    <> compare (arrivalDiff a currentTimeIST) (arrivalDiff b currentTimeIST)
+                else
+                  let aTime = nominalDiffTimeToSeconds $ diffUTCTime (getISTArrivalTime a.timeOfArrival currentTime) currentTimeIST
+                      bTime = nominalDiffTimeToSeconds $ diffUTCTime (getISTArrivalTime b.timeOfArrival currentTime) currentTimeIST
+                   in compare aTime bTime
           )
           routeStopTimings
 
@@ -555,7 +561,7 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
         }
 
   -- Only return service tiers that have available routes
-  return $ ((listToMaybe sortedTimings) <&> (.routeCode), filter (\r -> not (null $ r.availableRoutes) && (r.fare /= PriceAPIEntity 0.0 INR || sendWithoutFare)) results)
+  return $ ((listToMaybe sortedTimings) <&> (.routeCode), filter (\r -> not (null $ r.availableRoutes) && (r.fare /= PriceAPIEntity 0.0 INR || sendWithoutFare)) results, routeStopTimings)
   where
     routeTripCountKey :: Text -> Text
     routeTripCountKey routeId = "gtfs_route_trip_count:" <> routeId
@@ -784,7 +790,7 @@ buildMultimodalRouteDetails subLegOrder mbRouteCode originStopCode destinationSt
 
   case (mbFromStop >>= (.lat), mbFromStop >>= (.lon), mbToStop >>= (.lat), mbToStop >>= (.lon)) of
     (Just fromStopLat, Just fromStopLon, Just toStopLat, Just toStopLon) -> do
-      (nextAvailableRouteCode, possibleRoutes) <- measureLatency (findPossibleRoutes Nothing originStopCode destinationStopCode currentTime integratedBppConfig mid mocid vc True) "findPossibleRoutes"
+      (nextAvailableRouteCode, possibleRoutes, originStopTimings) <- measureLatency (findPossibleRoutes Nothing originStopCode destinationStopCode currentTime integratedBppConfig mid mocid vc True) "findPossibleRoutes"
       let distance = distanceBetweenInMeters (LatLong fromStopLat fromStopLon) (LatLong toStopLat toStopLon)
       let routeCode = mbRouteCode <|> nextAvailableRouteCode
       mbRoute <-
@@ -796,7 +802,6 @@ buildMultimodalRouteDetails subLegOrder mbRouteCode originStopCode destinationSt
         Just route -> do
           routeStopMappings <- OTPRest.getRouteStopMappingByRouteCode route.code integratedBppConfig
           -- Get timing information for this route at the origin stop
-          originStopTimings <- fetchLiveTimings [route.code] originStopCode currentTime integratedBppConfig mid mocid vc
           destStopTimings <- fetchLiveTimings [route.code] destinationStopCode currentTime integratedBppConfig mid mocid vc
 
           let stopCodeToSequenceNum = Map.fromList $ map (\rst -> (rst.stopCode, rst.sequenceNum)) routeStopMappings
