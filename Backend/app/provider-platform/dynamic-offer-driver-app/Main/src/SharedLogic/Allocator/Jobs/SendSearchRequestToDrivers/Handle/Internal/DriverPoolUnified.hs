@@ -209,6 +209,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                     isInterCity = isInterCityTrip searchTry.tripCategory,
                     onlinePayment = merchant.onlinePayment,
                     rideFare = Just searchTry.baseFare, -- TODO: add walletBalance check
+                    paymentInstrument = Nothing, -- TODO: add paymentInstrument
                     enforceSufficientDriverBalance = fromMaybe False merchant.enforceSufficientDriverBalance,
                     ..
                   }
@@ -338,6 +339,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                         onlinePayment = merchant.onlinePayment,
                         rideFare = Just searchTry.baseFare,
                         enforceSufficientDriverBalance = fromMaybe False merchant.enforceSufficientDriverBalance,
+                        paymentInstrument = Nothing, -- TODO: add paymentInstrument,
                         ..
                       }
               calculateDriverCurrentlyOnRideWithActualDist driverPoolReq poolType (toInteger batchNum') currentSearchInfo
@@ -486,6 +488,7 @@ assignDriverGoHomeTags pool searchReq searchTry tripQuoteDetails driverPoolCfg m
                   onlinePayment = merchant.onlinePayment,
                   configsInExperimentVersions = searchReq.configInExperimentVersions,
                   rideFare = Just searchTry.baseFare,
+                  paymentInstrument = Nothing, -- TODO: add paymentInstrument
                   enforceSufficientDriverBalance = fromMaybe False merchant.enforceSufficientDriverBalance,
                   ..
                 }
