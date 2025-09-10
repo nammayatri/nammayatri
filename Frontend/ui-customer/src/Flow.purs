@@ -902,6 +902,7 @@ riderRideCompletedScreenFlow = do
                   , ride_status: Nothing
                   , screen: Just "RiderRideCompletedScreenState"
                   , exit_app: false
+                  , delete_account_req: Nothing
                   }
             }
       (GlobalState globalState) <- getState
@@ -8226,10 +8227,9 @@ clearLocalStoreAuthDataFlow = do
   void $ pure $ clearCache ""
   logField_ <- lift $ lift $ getLogFields
   void $ lift $ lift $ liftFlow $ logEvent logField_ "ny_user_logout"
-  void $ pure $ (setText (getNewIDWithTag "EnterMobileNumberEditText") "")
+  if (HU.isParentView FunctionCall) then do pure $ HU.terminateWithPayload (HU.defaultTerminatePayload { delete_account_req = Just true }) else pure unit
   modifyScreenState $ EnterMobileNumberScreenType (\enterMobileNumber -> EnterMobileNumberScreenData.initData)
   modifyScreenState $ HomeScreenStateType (\homeScreen -> HomeScreenData.initData)
-  enterMobileNumberScreenFlow -- Removed choose langauge screen
 
 
 updateMapReady :: Boolean -> FlowBT String Unit
