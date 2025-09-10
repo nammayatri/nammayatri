@@ -14,6 +14,7 @@
 
 module Beckn.ACL.Select (buildSelectReqV2) where
 
+import Beckn.OnDemand.Utils.Init
 import qualified Beckn.Types.Core.Taxi.API.Select as Select
 import qualified BecknV2.OnDemand.Tags as Tag
 import qualified BecknV2.OnDemand.Types as Spec
@@ -74,6 +75,7 @@ buildSelectReqV2 subscriber req = do
     _ -> pure Nothing
   estimateIdText <- getEstimateId fulfillment item & fromMaybeM (InvalidRequest "Missing item_id")
   let customerPhoneNum = getCustomerPhoneNumber fulfillment
+  paymentMethodInfo <- order.orderPayments >>= Kernel.Prelude.listToMaybe & Kernel.Prelude.mapM Beckn.OnDemand.Utils.Init.mkPaymentMethodInfo <&> Kernel.Prelude.join
   pure
     DSelect.DSelectReq
       { messageId = messageId,
@@ -89,6 +91,7 @@ buildSelectReqV2 subscriber req = do
         isMultipleOrNoDeviceIdExist = isMultipleOrNoDeviceIdExist,
         toUpdateDeviceIdInfo = toUpdateDeviceIdInfo,
         preferSafetyPlus = preferSafetyPlus,
+        paymentMethodInfo = paymentMethodInfo,
         ..
       }
 

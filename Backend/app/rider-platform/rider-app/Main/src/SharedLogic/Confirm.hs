@@ -52,11 +52,13 @@ import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.JobScheduler
+import SharedLogic.MerchantPaymentMethod
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Exophone as CQExophone
 import qualified Storage.CachedQueries.InsuranceConfig as CQInsuranceConfig
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as QMPM
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CMSUC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
@@ -178,6 +180,8 @@ confirm DConfirmReq {..} = do
   confirmResDetails <- case quote.tripCategory of
     Just (Trip.Delivery _) -> Just <$> makeDeliveryDetails booking bookingParties
     _ -> return Nothing
+  merchantPaymentMethod <- maybe (return Nothing) (QMPM.findById . Id) paymentMethodId
+  let paymentMethodInfo = mkPaymentMethodInfo <$> merchantPaymentMethod
   return $
     DConfirmRes
       { booking,
@@ -190,7 +194,7 @@ confirm DConfirmReq {..} = do
         bppQuoteId = bppQuoteId,
         searchRequestId = searchRequest.id,
         maxEstimatedDistance = searchRequest.maxDistance,
-        paymentMethodInfo = Nothing, -- can be removed later
+        paymentMethodInfo = paymentMethodInfo,
         confirmResDetails,
         isAdvanceBookingEnabled = searchRequest.isAdvanceBookingEnabled,
         isInsured = Just $ booking.isInsured,

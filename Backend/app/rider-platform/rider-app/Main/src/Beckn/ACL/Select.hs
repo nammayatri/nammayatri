@@ -27,7 +27,6 @@ import Control.Lens ((%~))
 import qualified Data.List as L
 import qualified Data.Text as T
 import qualified Domain.Action.UI.Select as DSelect
-import Domain.Types
 import Domain.Types.BecknConfig
 import qualified Domain.Types.Location as Location
 import Kernel.Prelude
@@ -35,6 +34,7 @@ import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified SharedLogic.MerchantPaymentMethod as SLMPM
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import Tools.Error
@@ -433,7 +433,7 @@ tfPrice res =
 tfPayments :: DSelect.DSelectRes -> BecknConfig -> Maybe [Spec.Payment]
 tfPayments res bapConfig = do
   let mPrice = Just res.estimate.estimatedFare
-  let mkParams :: (Maybe BknPaymentParams) = decodeFromText =<< bapConfig.paymentParamsJson
+  let mkParams = SLMPM.mkBknPaymentParams res.paymentMethodInfo bapConfig
   Just $ L.singleton $ mkPayment (show res.city) (show bapConfig.collectedBy) Enums.NOT_PAID mPrice Nothing mkParams bapConfig.settlementType bapConfig.settlementWindow bapConfig.staticTermsUrl bapConfig.buyerFinderFee
 
 tfProvider :: DSelect.DSelectRes -> Spec.Provider
