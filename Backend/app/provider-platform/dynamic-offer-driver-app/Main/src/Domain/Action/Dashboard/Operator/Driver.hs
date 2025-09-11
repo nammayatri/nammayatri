@@ -317,6 +317,7 @@ postDriverOperatorVerifyJoiningOtp merchantShortId opCity mbAuthId requestorId r
   transporterConfig <- findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   mobileNumberHash <- getDbHash req.mobileNumber
   person <- B.runInReplica $ QP.findByMobileNumberAndMerchantAndRole req.mobileCountryCode mobileNumberHash merchant.id DP.DRIVER >>= fromMaybeM (PersonNotFound req.mobileNumber)
+  let mbAllowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
   case mbAuthId of
     Just authId -> do
       smsCfg <- asks (.smsCfg)
@@ -333,8 +334,7 @@ postDriverOperatorVerifyJoiningOtp merchantShortId opCity mbAuthId requestorId r
               deviceToken = deviceToken,
               whatsappNotificationEnroll = Nothing
             }
-
-      verifyAndAssociateDriverWithOperator merchant merchantOpCityId operator res.person (transporterConfig.allowCacheDriverFlowStatus == Just True)
+      verifyAndAssociateDriverWithOperator merchant merchantOpCityId operator res.person (mbAllowCacheDriverFlowStatus == Just True)
 
       DOR.makeDriverReferredByOperator merchantOpCityId person.id operator.id
 
@@ -355,7 +355,7 @@ postDriverOperatorVerifyJoiningOtp merchantShortId opCity mbAuthId requestorId r
 
       SA.endDriverAssociationsIfAllowed merchant merchantOpCityId transporterConfig person
 
-      verifyAndAssociateDriverWithOperator merchant merchantOpCityId operator person (transporterConfig.allowCacheDriverFlowStatus == Just True)
+      verifyAndAssociateDriverWithOperator merchant merchantOpCityId operator person (mbAllowCacheDriverFlowStatus == Just True)
 
   pure Success
   where

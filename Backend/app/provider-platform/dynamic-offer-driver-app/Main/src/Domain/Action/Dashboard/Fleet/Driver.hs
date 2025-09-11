@@ -813,12 +813,13 @@ postDriverFleetRemoveDriver merchantShortId opCity fleetOwnerId driverId = do
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   DCommon.checkFleetOwnerVerification fleetOwnerId merchant.fleetOwnerEnabledCheck
   let personId = cast @Common.Driver @DP.Person driverId
+  let mbAllowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
   associationList <- QRCAssociation.findAllLinkedByDriverId personId
   forM_ associationList $ \assoc -> do
     rc <- RCQuery.findByRCIdAndFleetOwnerId assoc.rcId $ Just fleetOwnerId
     when (isJust rc) $ throwError (InvalidRequest "Driver is linked to fleet Vehicle, first unlink then try")
   FDV.endFleetDriverAssociation fleetOwnerId personId
-  when (transporterConfig.allowCacheDriverFlowStatus == Just True) $ do
+  when (mbAllowCacheDriverFlowStatus == Just True) $ do
     driverInfo <- QDriverInfo.findById personId >>= fromMaybeM (DriverNotFound personId.getId)
     DDriverMode.decrementFleetOperatorStatusKeyForDriver DP.FLEET_OWNER fleetOwnerId driverInfo.driverFlowStatus
   pure Success
@@ -1015,7 +1016,8 @@ getDriverFleetStatus merchantShortId opCity requestorId mbFleetOwnerId = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  when (transporterConfig.allowCacheDriverFlowStatus /= Just True) $ throwError (InvalidRequest "Cache driver flow status is not allowed in this merchant")
+  let mbAllowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
+  when (mbAllowCacheDriverFlowStatus /= Just True) $ throwError (InvalidRequest "Cache driver flow status is not allowed in this merchant")
   requestedPerson <- QPerson.findById (Id requestorId) >>= fromMaybeM (PersonDoesNotExist requestorId)
   (entityRole, entityId) <- validateRequestorRoleAndGetEntityId requestedPerson mbFleetOwnerId
   let allKeys = DDF.allKeys entityId
@@ -1628,7 +1630,8 @@ postDriverFleetVerifyJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId mbR
       -- onboarded operator required only for new drivers
       assoc <- FDA.makeFleetDriverAssociation person.id fleetOwnerId Nothing (DomainRC.convertTextToUTC (Just "2099-12-12"))
       QFDV.create assoc
-      when (transporterConfig.allowCacheDriverFlowStatus == Just True) $ do
+      let mbAllowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
+      when (mbAllowCacheDriverFlowStatus == Just True) $ do
         driverInfo <- QDriverInfo.findById person.id >>= fromMaybeM (DriverNotFound person.id.getId)
         DDriverMode.incrementFleetOperatorStatusKeyForDriver DP.FLEET_OWNER fleetOwnerId driverInfo.driverFlowStatus
   pure Success
