@@ -454,7 +454,7 @@ onVerifyRCHandler person rcVerificationResponse mbVehicleCategory mbAirCondition
         mapMaybe
           ( \(field, expiry) ->
               if maybe False (< now) expiry
-                then Just ("Document expired: " <> field)
+                then Just (T.replace " " "" field <> "Expired")
                 else Nothing
           )
           checks
@@ -619,10 +619,10 @@ validateRCResponse rc rule = do
       vehicleAgeValid = ((.getMonths) <$> vehicleAge) <= rule.maxVehicleAge
       failures =
         catMaybes
-          [ if not fuelValid then Just ("Invalid fuel type : " <> show rc.fuelType) else Nothing,
-            if not vehicleClassValid then Just ("Invalid vehicle class : " <> show rc.vehicleClass) else Nothing,
-            if not manufacturerValid then Just ("Invalid OEM : " <> show rc.manufacturer) else Nothing,
-            if not vehicleAgeValid then Just ("Invalid manufacturing: " <> show rc.mYManufacturing) else Nothing
+          [ if not fuelValid then Just ("InvalidFuelType:" <> fromMaybe "" rc.fuelType) else Nothing,
+            if not vehicleClassValid then Just ("InvalidVehicleClass:" <> fromMaybe "" rc.vehicleClass) else Nothing,
+            if not manufacturerValid then Just ("InvalidOEM:" <> fromMaybe "" (rc.manufacturer <|> rc.model)) else Nothing,
+            if not vehicleAgeValid then Just ("InvalidManufacturingYear:" <> maybe "" (T.pack . show) rc.mYManufacturing) else Nothing
           ]
   return failures
 
