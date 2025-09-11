@@ -94,6 +94,7 @@ Booking:
     coinsRewardedOnGoldTierRide: Maybe Int
     isInsured: Bool
     insuredAmount: Maybe Text
+    exotelDeclinedCallStatusReceivingTime: Maybe UTCTime
 
   excludedFields:
     - merchantId

@@ -230,3 +230,10 @@ findByIds ::
   m [Booking]
 findByIds bookingIds = do
   findAllWithKV [Se.Is BeamB.id $ Se.In $ getId <$> bookingIds]
+
+updateExotelCallDeclinedTime :: (MonadFlow m, EsqDBFlow m r) => Id Booking -> m ()
+updateExotelCallDeclinedTime bookingId = do
+  now <- getCurrentTime
+  updateOneWithKV
+    [Se.Set BeamB.exotelDeclinedCallStatusReceivingTime $ Just now]
+    [Se.Is BeamB.id (Se.Eq $ getId bookingId)]
