@@ -104,7 +104,8 @@ data DriverPoolResult = DriverPoolResult
     driverTags :: A.Value,
     score :: Maybe A.Value,
     minRideDistance :: Maybe Meters,
-    maxRideDistance :: Maybe Meters
+    maxRideDistance :: Maybe Meters,
+    maxPickupDistance :: Maybe Meters
   }
   deriving (Generic, Show, HasCoordinates, FromJSON, ToJSON)
 
@@ -137,7 +138,8 @@ instance Default DriverPoolResult where
         driverTags = A.emptyObject,
         score = Nothing,
         minRideDistance = Nothing,
-        maxRideDistance = Nothing
+        maxRideDistance = Nothing,
+        maxPickupDistance = Nothing
       }
 
 data DriverPoolResultCurrentlyOnRide = DriverPoolResultCurrentlyOnRide
@@ -168,7 +170,8 @@ data DriverPoolResultCurrentlyOnRide = DriverPoolResultCurrentlyOnRide
     driverTags :: A.Value,
     score :: Maybe A.Value,
     minRideDistance :: Maybe Meters,
-    maxRideDistance :: Maybe Meters
+    maxRideDistance :: Maybe Meters,
+    maxPickupDistance :: Maybe Meters
   }
   deriving (Generic, Show, HasCoordinates, FromJSON, ToJSON)
 

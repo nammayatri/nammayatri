@@ -683,6 +683,7 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
           customerTags = Nothing,
           minRideDistance = Nothing,
           maxRideDistance = Nothing,
+          maxPickupDistance = Nothing,
           ..
         }
 
@@ -736,6 +737,7 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
           customerTags = Nothing,
           minRideDistance = Nothing,
           maxRideDistance = Nothing,
+          maxPickupDistance = Nothing,
           ..
         }
 
