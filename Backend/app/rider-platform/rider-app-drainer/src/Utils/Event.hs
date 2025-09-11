@@ -50,9 +50,9 @@ rider_process_latency =
     .& lbl @"process_name" @Text
     .& build
 
-eider_kv_config_decode_failure :: PromRep 'Counter "eider_kv_config_decode_failure" '[]
-eider_kv_config_decode_failure =
-  counter #eider_kv_config_decode_failure
+rider_kv_config_decode_failure :: PromRep 'Counter "rider_kv_config_decode_failure" '[]
+rider_kv_config_decode_failure =
+  counter #rider_kv_config_decode_failure
     .& build
 
 drainer_query_executes :: PromRep 'Counter "drainer_query_executes" '[ '("action", Text)]
@@ -76,4 +76,27 @@ rider_kafka_push_failure =
 rider_kafka_update_missing :: PromRep 'Counter "rider_kafka_update_missing" '[]
 rider_kafka_update_missing =
   counter #rider_kafka_update_missing
+    .& build
+
+batch_fallback_used :: PromRep 'Counter "batch_fallback_used" '[]
+batch_fallback_used =
+  counter #batch_fallback_used
+    .& build
+
+batch_execution_time :: PromRep 'Histogram "batch_execution_time" '[ '("model", Text)]
+batch_execution_time =
+  histogram #batch_execution_time
+    .& lbl @"model" @Text
+    .& build
+
+batch_entries_processed :: PromRep 'Counter "batch_entries_processed" '[ '("model", Text)]
+batch_entries_processed =
+  counter #batch_entries_processed
+    .& lbl @"model" @Text
+    .& build
+
+schema_variation_alert :: PromRep 'Counter "schema_variation_alert" '[ '("model", Text)]
+schema_variation_alert =
+  counter #schema_variation_alert
+    .& lbl @"model" @Text
     .& build

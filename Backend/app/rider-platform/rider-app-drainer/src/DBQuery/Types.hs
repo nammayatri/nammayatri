@@ -44,7 +44,7 @@ newtype SchemaName = SchemaName {getSchemaName :: Text}
   deriving stock (Show)
 
 newtype DBModel = DBModel {getDBModel :: Text}
-  deriving stock (Show, Generic)
+  deriving stock (Show, Generic, Eq, Ord)
   deriving newtype (FromJSON)
 
 type Where = [Clause]
