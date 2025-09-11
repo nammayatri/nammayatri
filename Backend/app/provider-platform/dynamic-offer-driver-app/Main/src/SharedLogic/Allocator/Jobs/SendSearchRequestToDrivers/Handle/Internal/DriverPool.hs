@@ -209,6 +209,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                               onlinePayment = merchant.onlinePayment,
                               configsInExperimentVersions = searchReq.configInExperimentVersions,
                               rideFare = Just searchTry.baseFare, -- TODO: add walletBalance check
+                              paymentInstrument = Nothing, -- TODO: add paymentInstrument
                               enforceSufficientDriverBalance = fromMaybe False merchant.enforceSufficientDriverBalance,
                               ..
                             }
@@ -448,6 +449,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                         onlinePayment = merchant.onlinePayment,
                         configsInExperimentVersions = searchReq.configInExperimentVersions,
                         rideFare = Just searchTry.baseFare,
+                        paymentInstrument = Nothing,
                         enforceSufficientDriverBalance = fromMaybe False merchant.enforceSufficientDriverBalance,
                         ..
                       }
@@ -479,6 +481,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                     isInterCity = isInterCityTrip searchTry.tripCategory,
                     onlinePayment = merchant.onlinePayment,
                     rideFare = Just searchTry.baseFare,
+                    paymentInstrument = Nothing, -- TODO: add paymentInstrument
                     enforceSufficientDriverBalance = fromMaybe False merchant.enforceSufficientDriverBalance,
                     ..
                   }
@@ -504,6 +507,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                         isInterCity = isInterCityTrip searchTry.tripCategory,
                         onlinePayment = merchant.onlinePayment,
                         rideFare = Just searchTry.baseFare,
+                        paymentInstrument = Nothing,
                         enforceSufficientDriverBalance = fromMaybe False merchant.enforceSufficientDriverBalance,
                         ..
                       }
