@@ -884,7 +884,6 @@
       "ny_no_automatic_payments" : true,
       "ny_no_manual_payments" : true,
       "ny_pin_check_white" : true,
-      "ny_rounded_yellow_background" : true,
       "ny_ys_logo_text" : true,
       "popup_background" : true,
       "progress_circle" : true,
