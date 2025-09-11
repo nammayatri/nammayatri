@@ -211,6 +211,8 @@ library
       BecknV2.OnDemand.Utils.Context
       BecknV2.OnDemand.Utils.Payment
       BecknV2.Utils
+      Domain.SharedLogic.Cancel
+      Domain.Tools.Error
       Domain.Types
       Domain.Types.Alert
       Domain.Types.Alert.AlertRequestData

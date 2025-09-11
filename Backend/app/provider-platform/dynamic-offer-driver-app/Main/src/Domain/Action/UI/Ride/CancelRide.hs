@@ -30,6 +30,7 @@ import qualified Data.HashMap.Strict as HMS
 import qualified Data.Map as M
 import qualified Data.Text as Text
 import qualified Domain.Action.UI.Ride.CancelRide.Internal as CInternal
+import qualified Domain.SharedLogic.Cancel as SharedCancel
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import Domain.Types.CancellationReason (CancellationReasonCode (..))
@@ -194,6 +195,7 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req isForceReallocation = d
   let driverId = ride.driverId
   booking <- findBookingByIdInReplica ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   driver <- findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  SharedCancel.tryCancellationLock booking.transactionId
   (rideCancelationReason, cancellationCnt, isGoToDisabled, rideEndedBy) <- case requestorId of
     PersonRequestorId personId -> do
       authPerson <-

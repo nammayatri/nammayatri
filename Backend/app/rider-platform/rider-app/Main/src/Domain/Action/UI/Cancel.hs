@@ -29,6 +29,7 @@ where
 
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified Data.HashMap.Strict as HM
+import qualified Domain.SharedLogic.Cancel as SharedCancel
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.BookingStatus as SRB
@@ -152,6 +153,7 @@ cancel booking mRide req cancellationSource = do
   canCancelBooking <- isBookingCancellable booking mRide
   unless canCancelBooking $
     throwError $ RideInvalidStatus "Cannot cancel this ride"
+  SharedCancel.tryCancellationLock booking.transactionId
   city <-
     CQMOC.findById booking.merchantOperatingCityId
       >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
@@ -219,7 +221,7 @@ cancel booking mRide req cancellationSource = do
 
 isBookingCancellable :: (CacheFlow m r, EsqDBFlow m r) => SRB.Booking -> Maybe Ride.Ride -> m Bool
 isBookingCancellable booking mbRide
-  | booking.status `elem` [SRB.CONFIRMED, SRB.AWAITING_REASSIGNMENT, SRB.NEW, SRB.REALLOCATED] = pure True
+  | booking.status `elem` [SRB.CONFIRMED, SRB.AWAITING_REASSIGNMENT, SRB.NEW] = pure True
   | booking.status == SRB.TRIP_ASSIGNED = do
     case mbRide of
       Just ride -> pure (ride.status `elem` [Ride.NEW, Ride.UPCOMING])
