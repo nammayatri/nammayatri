@@ -4,6 +4,7 @@ module API.Types.UI.MultimodalConfirm where
 
 import qualified API.Types.UI.FRFSTicketService
 import qualified BecknV2.FRFS.Enums
+import qualified BecknV2.OnDemand.Enums
 import qualified Data.Aeson
 import Data.OpenApi (ToSchema)
 import qualified Domain.Types.BookingUpdateRequest
@@ -214,7 +215,11 @@ data PaymentOrder = PaymentOrder {sdkPayload :: Kernel.Prelude.Maybe Kernel.Exte
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data PublicTransportData = PublicTransportData {ptcv :: Kernel.Prelude.Text, rs :: [TransportRoute], rsm :: [TransportRouteStopMapping], ss :: [TransportStation]}
+data PublicTransportConfig = PublicTransportConfig {config :: VehicleConfig, vehicleType :: BecknV2.OnDemand.Enums.VehicleCategory}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data PublicTransportData = PublicTransportData {ptcv :: Kernel.Prelude.Text, rs :: [TransportRoute], rsm :: [TransportRouteStopMapping], ss :: [TransportStation], vc :: Kernel.Prelude.Maybe [PublicTransportConfig]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -329,4 +334,8 @@ data UpdatePaymentOrderReq = UpdatePaymentOrderReq {childTicketQuantity :: Kerne
 
 data UpdatePaymentOrderResp = UpdatePaymentOrderResp {sdkPayload :: Kernel.Prelude.Maybe Kernel.External.Payment.Juspay.Types.SDKPayloadDetails}
   deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data VehicleConfig = VehicleConfig {isCancellationAllowed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool}
+  deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

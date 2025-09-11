@@ -684,7 +684,17 @@ getPublicTransportData (mbPersonId, merchantId) mbCity _mbConfigVersion = do
                   )
                   routes,
               rsm = [],
-              ptcv = gtfsVersion
+              ptcv = gtfsVersion,
+              vc =
+                Just
+                  [ ApiTypes.PublicTransportConfig
+                      { vehicleType = bppConfig.vehicleCategory,
+                        config =
+                          ApiTypes.VehicleConfig
+                            { isCancellationAllowed = bppConfig.isCancellationAllowed
+                            }
+                      }
+                  ]
             }
 
   let fetchData bppConfig = do
@@ -708,6 +718,19 @@ getPublicTransportData (mbPersonId, merchantId) mbCity _mbConfigVersion = do
           let configsByFeedId = HashMap.fromListWith (++) $ map (\(config, (feedKey, _)) -> (feedKey, [config])) configsWithFeedInfo
               uniqueConfigs = map (head . snd) $ HashMap.toList configsByFeedId
           mapM fetchData uniqueConfigs
+  publicTransportConfig <-
+    mapM
+      ( \config ->
+          return $
+            ApiTypes.PublicTransportConfig
+              { vehicleType = config.vehicleCategory,
+                config =
+                  ApiTypes.VehicleConfig
+                    { isCancellationAllowed = config.isCancellationAllowed
+                    }
+              }
+      )
+      integratedBPPConfigs
 
   gtfsVersion <-
     try @_ @SomeException (mapM OTPRest.getGtfsVersion integratedBPPConfigs) >>= \case
@@ -718,7 +741,8 @@ getPublicTransportData (mbPersonId, merchantId) mbCity _mbConfigVersion = do
           { ss = concatMap (.ss) transportDataList,
             rs = concatMap (.rs) transportDataList,
             rsm = concatMap (.rsm) transportDataList,
-            ptcv = T.intercalate (T.pack "#") gtfsVersion
+            ptcv = T.intercalate (T.pack "#") gtfsVersion,
+            vc = Just publicTransportConfig
           }
   return transportData
 

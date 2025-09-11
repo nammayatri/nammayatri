@@ -18,3 +18,8 @@ ALTER TABLE atlas_app.integrated_bpp_config ADD PRIMARY KEY ( id);
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.integrated_bpp_config ADD COLUMN provider_name text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.integrated_bpp_config ADD COLUMN is_cancellation_allowed boolean ;
