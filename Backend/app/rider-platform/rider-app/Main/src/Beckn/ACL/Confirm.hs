@@ -108,7 +108,8 @@ tfItems res =
           itemLocationIds = Nothing,
           itemPaymentIds = Nothing,
           itemPrice = Nothing,
-          itemTags = Nothing
+          itemTags = Nothing,
+          itemCategoryIds = Nothing
         }
     ]
 
@@ -161,6 +162,7 @@ tfCustomer res =
         Spec.Person
           { personId = Nothing,
             personImage = Nothing,
+            personLanguages = Nothing,
             personName = res.mbRiderName,
             personTags = mkPersonTags
           }
@@ -242,7 +244,8 @@ tfProvider res =
         providerLocations = Nothing,
         providerPayments = Nothing,
         providerDescriptor = Nothing,
-        providerFulfillments = Nothing
+        providerFulfillments = Nothing,
+        providerCategories = Nothing
       }
 
 tfOrderBilling :: DOnInit.OnInitRes -> Maybe Spec.Billing
