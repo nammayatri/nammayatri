@@ -313,7 +313,7 @@ search vehicleCategory personId merchantId quantity city journeyLeg recentLocati
   frfsSearchReq <- buildFRFSSearchReq
   frfsRouteDetails <- getFrfsRouteDetails journeyLeg.routeDetails
   let mbFare = journeyLeg.estimatedMinFare <|> journeyLeg.estimatedMaxFare
-  res <- FRFSTicketService.postFrfsSearchHandler (personId, merchantId) merchantOpCity integratedBPPConfig vehicleCategory frfsSearchReq frfsRouteDetails Nothing Nothing mbFare multimodalSearchRequestId
+  res <- FRFSTicketService.postFrfsSearchHandler (personId, merchantId) merchantOpCity integratedBPPConfig vehicleCategory frfsSearchReq frfsRouteDetails Nothing Nothing mbFare multimodalSearchRequestId journeyLeg.serviceTypes
   return $ JT.SearchResponse {id = res.searchId.getId}
   where
     buildFRFSSearchReq = do

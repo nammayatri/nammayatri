@@ -465,7 +465,7 @@ getFareV2 merchantOperatingCity partnerOrg fromStation toStation partnerOrgTrans
   searchReq <- mkSearchReq bapConfig frfsVehicleType partnerOrgTransactionId partnerOrg fromStation toStation route
   fork ("FRFS Search: " <> searchReq.id.getId) $ do
     QSearch.create searchReq
-    CallExternalBPP.search merchant merchantOperatingCity bapConfig searchReq Nothing frfsRouteDetails integratedBPPConfig
+    CallExternalBPP.search merchant merchantOperatingCity bapConfig searchReq Nothing frfsRouteDetails integratedBPPConfig Nothing
   quotes <- mkQuoteFromCache fromStation toStation frfsConfig partnerOrg partnerOrgTransactionId searchReq.id
   whenJust quotes $ \quotes' -> QQuote.createMany quotes'
   case quotes of

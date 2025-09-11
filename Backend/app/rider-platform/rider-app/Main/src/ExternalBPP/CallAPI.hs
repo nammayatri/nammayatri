@@ -89,14 +89,14 @@ discoverySearch merchant bapConfig _integratedBPPConfigId req = do
   logDebug $ "FRFS Discovery SearchReq " <> encodeToText bknSearchReq
   void $ CallFRFSBPP.search bapConfig.gatewayUrl bknSearchReq merchant.id
 
-search :: (FRFSSearchFlow m r, HasShortDurationRetryCfg r c) => Merchant -> MerchantOperatingCity -> BecknConfig -> DSearch.FRFSSearch -> Maybe HighPrecMoney -> [FRFSRouteDetails] -> IntegratedBPPConfig -> m ()
-search merchant merchantOperatingCity bapConfig searchReq mbFare routeDetails integratedBPPConfig = do
+search :: (FRFSSearchFlow m r, HasShortDurationRetryCfg r c) => Merchant -> MerchantOperatingCity -> BecknConfig -> DSearch.FRFSSearch -> Maybe HighPrecMoney -> [FRFSRouteDetails] -> IntegratedBPPConfig -> Maybe [Spec.ServiceTierType] -> m ()
+search merchant merchantOperatingCity bapConfig searchReq mbFare routeDetails integratedBPPConfig mbAvailableServiceTiers = do
   case integratedBPPConfig.providerConfig of
     ONDC ONDCBecknConfig {networkHostUrl, networkId, fareCachingAllowed} -> do
       fork ("FRFS ONDC SearchReq for " <> show bapConfig.vehicleCategory) $ do
         case (fareCachingAllowed, networkHostUrl, networkId, mbFare) of
           (Just True, Just _, Just _, Just _) ->
-            try @_ @SomeException (Flow.search merchant merchantOperatingCity integratedBPPConfig bapConfig networkHostUrl networkId searchReq routeDetails)
+            try @_ @SomeException (Flow.search merchant merchantOperatingCity integratedBPPConfig bapConfig networkHostUrl networkId searchReq routeDetails mbAvailableServiceTiers)
               >>= \case
                 Left err -> do
                   logError $ "Error in calling ONDC Search: " <> show err
@@ -108,7 +108,7 @@ search merchant merchantOperatingCity bapConfig searchReq mbFare routeDetails in
           _ -> callOndcSearch networkHostUrl
     _ -> do
       fork "FRFS Direct SearchReq" $ do
-        onSearchReq <- Flow.search merchant merchantOperatingCity integratedBPPConfig bapConfig Nothing Nothing searchReq routeDetails
+        onSearchReq <- Flow.search merchant merchantOperatingCity integratedBPPConfig bapConfig Nothing Nothing searchReq routeDetails mbAvailableServiceTiers
         processOnSearch onSearchReq
   where
     processOnSearch :: (FRFSSearchFlow m r, HasShortDurationRetryCfg r c) => DOnSearch.DOnSearch -> m ()

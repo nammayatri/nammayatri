@@ -38,8 +38,8 @@ getFares riderId merchant merchantOperatingCity integratedBPPConfig _bapConfig f
     Left _ -> return (True, [])
     Right fares -> return fares
 
-search :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> Maybe BaseUrl -> Maybe Text -> DFRFSSearch.FRFSSearch -> [FRFSRouteDetails] -> m DOnSearch
-search merchant merchantOperatingCity integratedBPPConfig bapConfig mbNetworkHostUrl mbNetworkId searchReq routeDetails = do
+search :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> Maybe BaseUrl -> Maybe Text -> DFRFSSearch.FRFSSearch -> [FRFSRouteDetails] -> Maybe [Spec.ServiceTierType] -> m DOnSearch
+search merchant merchantOperatingCity integratedBPPConfig bapConfig mbNetworkHostUrl mbNetworkId searchReq routeDetails mbAvailableServiceTiers = do
   quotes <- buildQuotes routeDetails
   validTill <- mapM (\ttl -> addUTCTime (intToNominalDiffTime ttl) <$> getCurrentTime) bapConfig.searchTTLSec
   messageId <- generateGUID
@@ -115,6 +115,18 @@ search merchant merchantOperatingCity integratedBPPConfig bapConfig mbNetworkHos
       stations <- CallAPI.buildStations fareRouteDetails integratedBPPConfig
       let nonEmptyFareRouteDetails = NE.fromList fareRouteDetails
       (_, fares) <- CallAPI.getFares searchReq.riderId merchant merchantOperatingCity integratedBPPConfig nonEmptyFareRouteDetails vehicleType
+      let filteredFares =
+            case vehicleType of
+              Spec.BUS ->
+                case mbAvailableServiceTiers of
+                  Nothing -> fares
+                  Just allowedServiceTiers ->
+                    filter
+                      ( \FRFSFare {vehicleServiceTier = FRFSVehicleServiceTier {serviceTierType}} ->
+                          serviceTierType `elem` allowedServiceTiers
+                      )
+                      fares
+              _ -> fares
       return $
         map
           ( \FRFSFare {..} ->
@@ -147,7 +159,7 @@ search merchant merchantOperatingCity integratedBPPConfig bapConfig mbNetworkHos
                       ..
                     }
           )
-          fares
+          filteredFares
 
     mkDVehicleServiceTier FRFSVehicleServiceTier {..} = DVehicleServiceTier {..}
 
