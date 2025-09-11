@@ -846,6 +846,27 @@ TransporterConfig:
       derive': Generic, Show, ToJSON, FromJSON, Read,Eq
     CallingOption:
       enum: "AnonymousCall, DirectCall, DualCall"
+    AnalyticsConfig:
+      weekStartMode: Maybe Int
+      earningsWindowSize: Maybe Int
+      allowCacheDriverFlowStatus: Maybe Bool
+      maxOnlineDurationDays: Maybe Int
+      onlineDurationCalculateFrom: Maybe UTCTime # set null to switch off calculation, current UTC timestamp to switch on
+      derive': Generic, Show, ToJSON, FromJSON, Read, Eq
+    DriverWalletConfig:
+      enableDriverWallet: Maybe Bool
+      driverWalletPayoutThreshold: Maybe HighPrecMoney
+      gstPercentage: Maybe Double
+      enableWalletPayout: Maybe Bool
+      enableWalletTopup: Maybe Bool
+      maxWalletPayoutsPerDay: Maybe Int
+      minimumWalletPayoutAmount: Maybe HighPrecMoney
+      payoutCutOffDays: Maybe Int
+      derive': Generic, Show, ToJSON, FromJSON, Read, Eq
+    SubscriptionConfig:
+      prepaidSubscriptionThreshold: Maybe HighPrecMoney
+      recordType: NewType
+      derive': Generic, Show, ToJSON, FromJSON, Read, Eq
   beamInstance:
     - MakeTableInstancesWithTModifier [("automaticRCActivationCutOff", "automatic_r_c_activation_cut_off")]
     - Custom Domain.Types.UtilsTH.mkCacParseInstance
@@ -897,7 +918,6 @@ TransporterConfig:
     driverFeeMandateNotificationBatchSize: Int
     driverFeeMandateExecutionBatchSize: Int
     mandateNotificationRescheduleInterval: NominalDiffTime
-    prepaidSubscriptionThreshold: Maybe HighPrecMoney
     mandateExecutionRescheduleInterval: NominalDiffTime
     driverFeeCalculationTime: Maybe NominalDiffTime
     driverFeeCalculatorBatchSize: Maybe Int
@@ -1058,8 +1078,6 @@ TransporterConfig:
     localPoliceNumbers: Maybe [Text]
     localAmbulanceNumbers: Maybe [Text]
     safetyTeamNumbers: Maybe [Text]
-    weekStartMode : Int
-    earningsWindowSize : Int
     liveEKD: Maybe Bool
     deactivateRCOnUnlink: Maybe Bool
     aaEnabledClientSdkVersion : Text
@@ -1069,19 +1087,12 @@ TransporterConfig:
     allowDuplicatePan : Maybe Bool
     allowDuplicateGst: Maybe Bool
     allowDuplicateAadhaar : Maybe Bool
-    allowCacheDriverFlowStatus : Maybe Bool
     cancellationRateSlabConfig: Maybe CancellationRateSlabConfig
-    enableDriverWallet: Maybe Bool
-    enableWalletPayout: Maybe Bool
-    enableWalletTopup: Maybe Bool
-    maxWalletPayoutsPerDay: Maybe Int
-    minimumWalletPayoutAmount: Maybe HighPrecMoney
-    payoutCutOffDays: Maybe Int
-    gstPercentage: Maybe Double
-    maxOnlineDurationDays : Maybe Int
     distanceWeightage: Maybe Int
     driverCallingOption: "Maybe CallingOption"
-    onlineDurationCalculateFrom: Maybe UTCTime # set null to switch off calculation, current UTC timestamp to switch on
+    subscriptionConfig: SubscriptionConfig
+    analyticsConfig: AnalyticsConfig
+    driverWalletConfig: DriverWalletConfig
 
   beamType:
     currency: Maybe Currency
@@ -1140,16 +1151,21 @@ TransporterConfig:
     bulkWaiveOffLimit : Maybe Int
     requireRouteMappingInVehicle: Maybe Bool
     enableExistingVehicleInBulkUpload: Maybe Bool
-    weekStartMode : Maybe Int
-    earningsWindowSize : Maybe Int
     aaEnabledClientSdkVersion: Maybe Text
     isMLBasedDynamicPricingEnabled: Maybe Bool
     cancellationRateSlabConfig: Maybe Value
+
   beamFields:
     fcmConfig:
       fcmUrl: Text
       fcmServiceAccount: Text
       fcmTokenKeyPrefix: Text
+    driverWalletConfig:
+      driverWalletConfig: Maybe Value
+    analyticsConfig:
+      analyticsConfig: Maybe Value
+    subscriptionConfig:
+      subscriptionConfig: Maybe Value
 
   toTType:
     currency: Just currency|E
@@ -1211,11 +1227,12 @@ TransporterConfig:
     bulkWaiveOffLimit : Just bulkWaiveOffLimit|E
     requireRouteMappingInVehicle: Just requireRouteMappingInVehicle|E
     enableExistingVehicleInBulkUpload: Just enableExistingVehicleInBulkUpload|E
-    weekStartMode : Just weekStartMode|E
-    earningsWindowSize : Just earningsWindowSize|E
     aaEnabledClientSdkVersion: Just aaEnabledClientSdkVersion| E
     cancellationRateSlabConfig: Data.Aeson.toJSON <$> cancellationRateSlabConfig|E
     isMLBasedDynamicPricingEnabled: Just isMLBasedDynamicPricingEnabled|E
+    analyticsConfig: Just . Data.Aeson.toJSON|I
+    driverWalletConfig: Just . Data.Aeson.toJSON|I
+    subscriptionConfig: Just . Data.Aeson.toJSON|I
 
   intermediateTransformers:
     fromTType:
@@ -1290,10 +1307,11 @@ TransporterConfig:
     bulkWaiveOffLimit : fromMaybe 200 bulkWaiveOffLimit|E
     requireRouteMappingInVehicle: fromMaybe False requireRouteMappingInVehicle|E
     enableExistingVehicleInBulkUpload: fromMaybe False enableExistingVehicleInBulkUpload|E
-    weekStartMode : fromMaybe 3 weekStartMode|E
-    earningsWindowSize : fromMaybe 7 earningsWindowSize|E
     cancellationRateSlabConfig: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< cancellationRateSlabConfig|E
     isMLBasedDynamicPricingEnabled: fromMaybe False isMLBasedDynamicPricingEnabled|E
+    analyticsConfig: Storage.Queries.Transformers.TransporterConfig.parseAnalyticsConfig merchantOperatingCityId|IM
+    driverWalletConfig: Storage.Queries.Transformers.TransporterConfig.parseDriverWalletConfig merchantOperatingCityId|IM
+    subscriptionConfig: Storage.Queries.Transformers.TransporterConfig.parseSubscriptionConfig merchantOperatingCityId|IM
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -1352,10 +1370,12 @@ TransporterConfig:
     recomputeDistanceThresholds: json
     minThresholdForPassThroughDestination: int
     allowedReferralEntities: "text[]"
-    weekStartMode : int
-    earningsWindowSize : int
     cancellationRateSlabConfig: json
     driverCallingOption: text
+    analyticsConfig: json
+    driverWalletConfig: json
+    subscriptionConfig: json
+
   default:
     mediaFileUrlPattern: |-
       'http://localhost:8016/ui/<DOMAIN>/media?filePath=<FILE_PATH>'
@@ -1494,16 +1514,15 @@ TransporterConfig:
     enableExistingVehicleInBulkUpload: "false"
     onboardingDocsCountLimit: "50"
     liveEKD: "false"
-    weekStartMode : "3"
-    earningsWindowSize : "7"
     deactivateRCOnUnlink: "true"
     aaEnabledClientSdkVersion : "'999.999.999'"
     isAAEnabledForRecurring : "false"
     disableDriverWhenUnlinkingVehicle : "true"
-    allowCacheDriverFlowStatus : "false"
-    maxOnlineDurationDays : "10"
     distanceWeightage: "20"
     driverCallingOption: "'AnonymousCall'"
+    driverWalletConfig:  '''{"enableDriverWallet": false, "driverWalletPayoutThreshold": 0, "gstPercentage": 0.0, "enableWalletPayout": false, "enableWalletTopup": false, "maxWalletPayoutsPerDay": null, "minimumWalletPayoutAmount": 0, "payoutCutOffDays": 0}'' :: json'
+    analyticsConfig: '''{"weekStartMode": 3, "earningsWindowSize": 7, "allowCacheDriverFlowStatus": false, "maxOnlineDurationDays": 10, "onlineDurationCalculateFrom": null}'' :: json'
+    subscriptionConfig:  '''{"prepaidSubscriptionThreshold": null}'' :: json'
   excludedDefaultQueries:
     - findByPrimaryKey
     - updateByPrimaryKey

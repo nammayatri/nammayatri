@@ -1741,21 +1741,23 @@ getEarnings (driverId, _, merchantOpCityId) from to earningType = do
   when (from > to) $
     throwError $ InvalidRequest $ "Start date must not be after end date."
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  let earningsWindowSize = fromMaybe 7 transporterConfig.analyticsConfig.earningsWindowSize
   case earningType of
     DCommon.DAILY -> do
-      when (daysBetween > transporterConfig.earningsWindowSize) $
-        throwError $ InvalidRequest $ "For daily earnings, the date range must be less than or equal to " <> T.pack (show transporterConfig.earningsWindowSize) <> " days (inclusive)."
+      when (daysBetween > earningsWindowSize) $
+        throwError $ InvalidRequest $ "For daily earnings, the date range must be less than or equal to " <> T.pack (show earningsWindowSize) <> " days (inclusive)."
       driverStats <- runInReplica $ SQDS.findAllInRangeByDriverId_ driverId from to
       let dailyEarningData = CHDS.mkEarningsBar <$> map (\d -> (driverId, d.merchantLocalDate, d.totalEarnings, d.totalDistance, d.numRides, d.cancellationCharges, d.bonusEarnings)) driverStats
       pure $ mkEarningPeriodStatsRes dailyEarningData
     DCommon.WEEKLY -> do
-      when (weeksBetween > transporterConfig.earningsWindowSize) $
-        throwError $ InvalidRequest $ "For weekly earnings, the date range must be less than or equal to " <> T.pack (show transporterConfig.earningsWindowSize) <> " weeks (inclusive)."
-      weeklyEarningData <- runInReplica $ CHDS.aggregatePeriodStatsWithBoundaries driverId from to (CHDS.WeeklyStats transporterConfig.weekStartMode)
+      when (weeksBetween > earningsWindowSize) $
+        throwError $ InvalidRequest $ "For weekly earnings, the date range must be less than or equal to " <> T.pack (show earningsWindowSize) <> " weeks (inclusive)."
+      let weekStartMode = fromMaybe 3 transporterConfig.analyticsConfig.weekStartMode
+      weeklyEarningData <- runInReplica $ CHDS.aggregatePeriodStatsWithBoundaries driverId from to (CHDS.WeeklyStats weekStartMode)
       pure $ mkEarningPeriodStatsRes weeklyEarningData
     DCommon.MONTHLY -> do
-      when (monthsBetween > transporterConfig.earningsWindowSize) $
-        throwError $ InvalidRequest $ "For monthly earnings, the date range must be less than or equal to " <> T.pack (show transporterConfig.earningsWindowSize) <> " months (inclusive)."
+      when (monthsBetween > earningsWindowSize) $
+        throwError $ InvalidRequest $ "For monthly earnings, the date range must be less than or equal to " <> T.pack (show earningsWindowSize) <> " months (inclusive)."
       monthlyEarningData <- runInReplica $ CHDS.aggregatePeriodStatsWithBoundaries driverId from to CHDS.MonthlyStats
       pure $ mkEarningPeriodStatsRes monthlyEarningData
   where
@@ -3084,6 +3086,7 @@ findOnboardedDriversOrFleets personId merchantOpCityId maybeFrom maybeTo = do
             bonusEarningsWithCurrency = PriceAPIEntity 0.0 currency,
             onlineDuration = Seconds 0
           }
+  let earningsWindowSize = fromMaybe 7 transporterConfig.analyticsConfig.earningsWindowSize
   case (maybeFrom, maybeTo) of
     (Nothing, Nothing) -> do
       stats <- runInReplica $ QDriverStats.findByPrimaryKey personId >>= fromMaybeM (InternalError $ "Driver Stats data not found for entity " <> show personId.getId)
@@ -3122,7 +3125,7 @@ findOnboardedDriversOrFleets personId merchantOpCityId maybeFrom maybeTo = do
                 bonusEarningsWithCurrency = PriceAPIEntity stats.bonusEarnings currency,
                 onlineDuration = fromMaybe (Seconds 0) stats.onlineDuration
               }
-    (Just fromDate, Just toDate) | fromIntegral (diffDays toDate fromDate) <= transporterConfig.earningsWindowSize -> do
+    (Just fromDate, Just toDate) | fromIntegral (diffDays toDate fromDate) <= earningsWindowSize -> do
       statsList <- runInReplica $ SQDS.findAllInRangeByDriverId_ personId fromDate toDate
       if null statsList
         then return defaultStats

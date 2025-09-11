@@ -31,12 +31,12 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     acStatusCheckGap :: Kernel.Prelude.Int,
     actualRideDistanceDiffThreshold :: Kernel.Types.Common.HighPrecMeters,
     actualRideDistanceDiffThresholdIfWithinPickupDrop :: Kernel.Types.Common.HighPrecMeters,
-    allowCacheDriverFlowStatus :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     allowDefaultPlanAllocation :: Kernel.Prelude.Bool,
     allowDuplicateAadhaar :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     allowDuplicateGst :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     allowDuplicatePan :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     allowedReferralEntities :: [Domain.Types.Person.Role],
+    analyticsConfig :: Domain.Types.TransporterConfig.AnalyticsConfig,
     approxRideDistanceDiffThreshold :: Kernel.Types.Common.HighPrecMeters,
     arrivalTimeBufferOfVehicle :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.ArrivalTimeBufferOfVehicle,
     arrivedPickupThreshold :: Kernel.Types.Common.HighPrecMeters,
@@ -117,25 +117,22 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     driverPaymentReminderInterval :: Kernel.Prelude.NominalDiffTime,
     driverSmsReceivingLimit :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.DashboardMediaSendingLimit,
     driverTimeSpentOnPickupThresholdOnCancel :: Kernel.Types.Common.Seconds,
+    driverWalletConfig :: Domain.Types.TransporterConfig.DriverWalletConfig,
     dropLocThreshold :: Kernel.Types.Common.Meters,
     dummyFromLocation :: Domain.Types.Location.DummyLocationInfo,
     dummyShowDriverAdditions :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     dummyToLocation :: Domain.Types.Location.DummyLocationInfo,
     dynamicReferralCodeEnabled :: Kernel.Prelude.Bool,
     dynamicReferralCodeValidForMinutes :: Kernel.Prelude.Integer,
-    earningsWindowSize :: Kernel.Prelude.Int,
     editLocDriverPermissionNeeded :: Kernel.Prelude.Bool,
     editLocTimeThreshold :: Kernel.Types.Common.Seconds,
     emailOtpConfig :: Kernel.Prelude.Maybe Email.Types.EmailOTPConfig,
     enableDashboardSms :: Kernel.Prelude.Bool,
-    enableDriverWallet :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableExistingVehicleInBulkUpload :: Kernel.Prelude.Bool,
     enableFaceVerification :: Kernel.Prelude.Bool,
     enableOverchargingBlocker :: Kernel.Prelude.Bool,
     enableTollCrossedNotifications :: Kernel.Prelude.Bool,
     enableUdfForOffers :: Kernel.Prelude.Bool,
-    enableWalletPayout :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    enableWalletTopup :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     exotelAppIdMapping :: Kernel.Prelude.Maybe Domain.Types.Extra.TransporterConfig.ExotelMapping,
     exotelStatusCheckSchedulerDelay :: Kernel.Prelude.Int,
     fakeOtpEmails :: [Kernel.Prelude.Text],
@@ -148,7 +145,6 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     generateReferralCodeForFleet :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     generateReferralCodeForOperator :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     graceTimeForScheduledRidePickup :: Kernel.Prelude.NominalDiffTime,
-    gstPercentage :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     includeDriverCurrentlyOnRide :: Kernel.Prelude.Bool,
     isAAEnabledForRecurring :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isAvoidToll :: Kernel.Prelude.Bool,
@@ -169,9 +165,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     mandateValidity :: Kernel.Prelude.Int,
     maxAllowedDocSizeInMB :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     maxAllowedVideoDocSizeInMB :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    maxOnlineDurationDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     maxPayoutReferralForADay :: Kernel.Prelude.Int,
-    maxWalletPayoutsPerDay :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     mediaFileSizeUpperLimit :: Kernel.Prelude.Int,
     mediaFileUrlPattern :: Kernel.Prelude.Text,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
@@ -182,7 +176,6 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     minRidesForCancellationScore :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     minRidesToUnlist :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     minThresholdForPassThroughDestination :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
-    minimumWalletPayoutAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     minmRentalAndScheduledBookingLeadTimeHours :: Kernel.Types.Common.Hours,
     nightSafetyEndTime :: Kernel.Types.Common.Seconds,
     nightSafetyRouteDeviationThreshold :: Kernel.Types.Common.Meters,
@@ -195,7 +188,6 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     onboardingDocsCountLimit :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     onboardingRetryTimeInHours :: Kernel.Prelude.Int,
     onboardingTryLimit :: Kernel.Prelude.Int,
-    onlineDurationCalculateFrom :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     openMarketUnBlocked :: Kernel.Prelude.Bool,
     orderAndNotificationStatusCheckFallBackTime :: Kernel.Prelude.NominalDiffTime,
     orderAndNotificationStatusCheckTime :: Kernel.Prelude.NominalDiffTime,
@@ -204,11 +196,9 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     overlayBatchSize :: Kernel.Prelude.Int,
     pastDaysRideCounter :: Kernel.Prelude.Int,
     payoutBatchLimit :: Kernel.Prelude.Int,
-    payoutCutOffDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     pickupLocThreshold :: Kernel.Types.Common.Meters,
     placeNameCacheExpiryDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     popupDelayToAddAsPenalty :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
-    prepaidSubscriptionThreshold :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     qarCalRadiusInKm :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     ratingAsDecimal :: Kernel.Prelude.Bool,
     rcExpiryChecks :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -235,6 +225,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     specialZoneBookingOtpExpiry :: Kernel.Prelude.Int,
     stepFunctionToConvertCoins :: Kernel.Prelude.Int,
     subscription :: Kernel.Prelude.Bool,
+    subscriptionConfig :: Domain.Types.TransporterConfig.SubscriptionConfig,
     subscriptionStartTime :: Kernel.Prelude.UTCTime,
     thresholdCancellationPercentageToUnlist :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     thresholdCancellationScore :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -252,7 +243,6 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     validNameComparePercentage :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     variantsToEnableForSubscription :: [Domain.Types.VehicleVariant.VehicleVariant],
     volunteerSmsSendingLimit :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.DashboardMediaSendingLimit,
-    weekStartMode :: Kernel.Prelude.Int,
     weeklyConditionCooldownTimeHours :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     weeklyMinRidesForBlocking :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     weeklyMinRidesForNudging :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -261,6 +251,15 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
   deriving (Generic, Show, Eq)
 
 data AadhaarImageResizeConfig = AadhaarImageResizeConfig {height :: Kernel.Prelude.Int, width :: Kernel.Prelude.Int} deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
+
+data AnalyticsConfig = AnalyticsConfig
+  { allowCacheDriverFlowStatus :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    earningsWindowSize :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    maxOnlineDurationDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    onlineDurationCalculateFrom :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    weekStartMode :: Kernel.Prelude.Maybe Kernel.Prelude.Int
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
 data ArrivalTimeBufferOfVehicle = ArrivalTimeBufferOfVehicle
   { ambulance :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
@@ -345,8 +344,23 @@ data DemandHotspotsConfig = DemandHotspotsConfig
 data DistanceRecomputeConfigs = DistanceRecomputeConfigs {estimatedDistanceUpper :: Kernel.Types.Common.Meters, minThresholdDistance :: Kernel.Types.Common.Meters, minThresholdPercentage :: Kernel.Prelude.Int}
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
+data DriverWalletConfig = DriverWalletConfig
+  { driverWalletPayoutThreshold :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    enableDriverWallet :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    enableWalletPayout :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    enableWalletTopup :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    gstPercentage :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    maxWalletPayoutsPerDay :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    minimumWalletPayoutAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    payoutCutOffDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
+
 data SlabType = SlabType {minBookingsRange :: [Kernel.Prelude.Int], penalityForCancellation :: Domain.Types.TransporterConfig.CancellationRateSlab}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
+
+newtype SubscriptionConfig = SubscriptionConfig {prepaidSubscriptionThreshold :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney}
+  deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
 type TransporterConfig = TransporterConfigD 'Safe
 
