@@ -11,6 +11,10 @@ type AppConfigDriver a =
     logWhitelistConfig :: LogWhitelistConfig,
     primaryTextColor :: String,
     primaryBackground :: String,
+    primaryButtonBackground :: String,
+    buttonInactiveBackground :: String,
+    buttonInactiveTextColor :: String,
+    alphaInPrimaryButtonAllowed :: Boolean,
     languageList :: Array Language,
     popupBackground :: String,
     rideCompletedCardConfig :: RideCompletedCardConfig,
@@ -28,9 +32,11 @@ type AppConfigDriver a =
     cityConfig :: Array CityConfig,
     unserviceableThreshold :: Number,
     enableMockLocation :: Boolean,
+    enableChangeVehicleType :: Boolean,
     flowConfig :: FlowConfig,
     permissions :: PermissionsConfig,
     homeScreen :: HomeScreenConfig,
+    themeColors :: ThemeColors,
     feature :: Features,
     vehicle :: VVConfig,
     allowAllMobileNumber ::Boolean,
@@ -172,6 +178,31 @@ type SubscriptionConfig =  {
   lowestFeesFromDate :: String
  }
 
+type ThemeColors = {
+  navBarBackground :: String,
+  primaryStrokeColor :: String,
+  openMapsStrokeColor :: String,
+  secondaryStrokeColor :: String,
+  onlineStatusColor :: String,
+  onboardingHeaderTextColor :: String,
+  onboardingHeaderStroke :: String,
+  radioInactiveBackground :: String,
+  radioActiveBackground :: String,
+  editTextFocusedStroke :: String,
+  editTextNormalStroke :: String,
+  mobileNumberScreenHeaderText :: String,
+  defaultBackButton :: String,
+  highlightedTextColor :: String,
+  radioSelectedImage :: String,
+  radioActiveStroke :: String,
+  onboardingStepImgBg :: String,
+  welcomeScreenBackground :: String,
+  quizButtonStrokeAndText :: String,
+  quizOptionStrokeColor :: String,
+  quizOptionSelectedBgColor :: String,
+  quizOptionTextColor :: String
+}
+
 type SubscriptionOfferBannerConfig = {
   showDUOfferBanner :: Boolean,
   offerBannerValidTill :: String,
@@ -221,7 +252,8 @@ type BottomNavConfig = {
   subscription :: BottomNavItemConfig,
   referral :: BottomNavItemConfig,
   notifications :: BottomNavItemConfig,
-  driverEarnings :: BottomNavItemConfig
+  driverEarnings :: BottomNavItemConfig,
+  trips :: BottomNavItemConfig
 }
 
 type BottomNavItemConfig = {
@@ -271,6 +303,11 @@ type Features = {
 , enableAutoReferral :: Boolean
 , enableSpecialPickup :: Boolean
 , enableInterOperability :: Boolean
+, showFaqsWhileOnboarding :: Boolean
+, enableV2Registration :: Boolean
+, enableV2Earnings :: Boolean
+, enableV2HelpAndSupport :: Boolean
+, enableDriverProfile :: Boolean
 }
 
  -- VV - VechileVerfication

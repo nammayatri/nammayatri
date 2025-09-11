@@ -12,7 +12,8 @@ import ConfigProvider
 initData :: WelcomeScreenState
 initData = {
   data : { 
-    logField : empty , 
-    config : getAppConfig appConfig  
+    
+    logField : empty,
+    config : getAppConfig appConfig
   }
 }

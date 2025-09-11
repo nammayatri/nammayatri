@@ -75,7 +75,7 @@ import RemoteConfig (RCCarousel(..))
 import Mobility.Prelude (boolToVisibility)
 import Constants
 import LocalStorage.Cache (getValueFromCache)
-import Engineering.Helpers.Utils (getFixedTwoDecimals, isAmbulance)
+import Engineering.Helpers.Utils (getFixedTwoDecimals, getColorWithOpacity, isAmbulance)
 import Common.Resources.Constants
 import Data.Function.Uncurried (runFn3)
 import DecodeUtil (getAnyFromWindow)
@@ -403,8 +403,8 @@ newStopPopupConfig state = let
     option1 {
       text = (getString NAVIGATE_TO_LOCATION)
     , margin = Margin 16 0 16 8
-    , background = Color.black900
-    , color = Color.yellow900
+    , background = state.data.config.primaryButtonBackground
+    , color = state.data.config.primaryTextColor
     ,gravity = CENTER
       , width = MATCH_PARENT
     },
@@ -412,7 +412,7 @@ newStopPopupConfig state = let
       text = (getString CLOSE)
     , margin = Margin 16 0 16 8
     , background = Color.white900
-    , color = Color.black900
+    , color = Color.blue900
     , strokeColor = Color.white900
     , gravity = CENTER
     , width = MATCH_PARENT
@@ -631,7 +631,7 @@ paymentPendingPopupConfig state =
     , color = Color.black700
     , visibility = VISIBLE },
     secondaryText {
-      text = "<span style='color:#2194FF'><u>"<> getString WATCH_VIDEO_FOR_HELP <>"</u></span>"
+      text = "<span style='color:#171C8F'><u>"<> getString WATCH_VIDEO_FOR_HELP <>"</u></span>"
     , textStyle = SubHeading2
     , margin = MarginBottom 24
     , isClickable = true
@@ -646,9 +646,10 @@ paymentPendingPopupConfig state =
     },
     option1 {
       text = getString CLEAR_DUES <> dues
-    , background = Color.black900
-    , color = Color.yellow900
+    , background = state.data.config.primaryButtonBackground
+    , color = state.data.config.primaryTextColor
     , showShimmer = state.data.paymentState.showShimmer
+    , strokeColor = state.data.config.primaryButtonBackground
     , enableRipple = true
     },
     option2 {
@@ -739,9 +740,9 @@ cancelConfirmationConfig state = let
       text = (getString GO_BACK)
     , margin = MarginLeft 12
     , width = V $ (((EHC.screenWidth unit)-92)/2)
-    , color = Color.yellow900
-    , strokeColor = Color.black900
-    , background = Color.black900
+    , color = state.data.config.primaryTextColor
+    , strokeColor = state.data.config.primaryButtonBackground
+    , background = state.data.config.primaryButtonBackground
     , enableRipple = true
     },
     backgroundClickable = false,
@@ -785,9 +786,9 @@ driverRCPopUpConfig state = let
       margin = (Margin 0 0 0 0)
     } ,
     option1 {
-      background = Color.black900,
+      background = state.data.config.primaryButtonBackground,
       text = getString GO_TO_VEHICLE_DETAILS,
-      color = Color.yellow900,
+      color = state.data.config.primaryTextColor,
       margin = MarginTop 24,
       width = MATCH_PARENT,
       padding = Padding 16 6 16 6,
@@ -905,6 +906,9 @@ enterOtpStateConfig state =
         text = state.props.rideOtp,
         focusIndex = state.props.enterOtpFocusIndex
         , textStyle = FontStyle.Heading1
+        , suffixImageVisibility = false
+        , strokeColor = "1," <> appConfig.themeColors.primaryStrokeColor
+        , background = Color.grey100
       },
       headingConfig {
         text = if state.props.endRideOtpModal then (getString ENTER_END_RIDE_OTP) else getString (ENTER_OTP)
@@ -917,14 +921,16 @@ enterOtpStateConfig state =
         text = getString (PLEASE_ASK_THE_CUSTOMER_FOR_THE_OTP),
         visibility = if (state.props.otpAttemptsExceeded) then GONE else VISIBLE
       , textStyle = FontStyle.Body1
+      , margin = MarginTop 12
       },
       imageConfig {
         alpha = if(DS.length state.props.rideOtp < 4) then 0.3 else 1.0
       },
       modalType = ST.OTP,
       showRetakeParcelImage = state.data.activeRide.tripType == ST.Delivery && state.props.currentStage == ST.RideAccepted,
-      enableDeviceKeyboard = appConfig.inAppKeyboardModalConfig.enableDeviceKeyboard,
-      confirmBtnColor = if state.props.endRideOtpModal then Color.red else Color.darkMint
+      enableDeviceKeyboard = false,-- appConfig.inAppKeyboardModalConfig.enableDeviceKeyboard,
+      confirmBtnColor = if state.props.endRideOtpModal then Color.red else Color.darkMint,
+      isValidAlternateNumber = not $ state.props.otpIncorrect
       }
       in inAppModalConfig'
 
@@ -971,8 +977,8 @@ enterOdometerReadingConfig state = let
       }
       in inAppModalConfig'
 
-driverStatusIndicators :: Array ST.PillButtonState
-driverStatusIndicators = [
+driverStatusIndicators :: ST.HomeScreenState -> Array ST.PillButtonState
+driverStatusIndicators state = [
     {
       status : ST.Offline,
       background : Color.red,
@@ -981,12 +987,12 @@ driverStatusIndicators = [
     },
     {
         status : ST.Silent,
-        background : Color.blue800,
+        background : Color.blue900,
         imageUrl : fetchImage FF_ASSET "ic_driver_status_silent",
         textColor : Color.white900
     },
     {
-      status : ST.Online,
+        status : ST.Online,
         background : Color.darkMint,
         imageUrl : fetchImage FF_ASSET "ic_driver_status_online",
         textColor : Color.white900
@@ -1299,7 +1305,7 @@ rentalInfoPopUpConfig state =
     rideInfo = (show tripDuration) <> "h / " <> (show tripDistance) <> "km"
     tripType = state.data.activeRide.tripType
     destinationCity = fromMaybe "" $state.data.activeRide.destinationCity
-    text  = if tripType == ST.Rental then ((getString $ THERE_MIGHT_BE_MULTIPLE_STOPS_IN_THIS_RENTAL_RIDE rideInfo) <>"<br></br><span style='color:#2194FF'><u>"<> getString WATCH_VIDEO_FOR_HELP <>"</u></span>") else (getString PLEASE_ENSURE_THAT_YOUR_VEHICLE_IS_READY_FOR_INTERCITY_TRIP <> destinationCity)
+    text  = if tripType == ST.Rental then ((getString $ THERE_MIGHT_BE_MULTIPLE_STOPS_IN_THIS_RENTAL_RIDE rideInfo) <>"<br></br><span style='color:#171C8F'><u>"<> getString WATCH_VIDEO_FOR_HELP <>"</u></span>") else (getString PLEASE_ENSURE_THAT_YOUR_VEHICLE_IS_READY_FOR_INTERCITY_TRIP <> destinationCity)
     config' = config
       {
         gravity = CENTER,
@@ -1325,8 +1331,8 @@ rentalInfoPopUpConfig state =
         },
         option1 {
           text = getString GOT_IT
-        , background = Color.black900
-        , color = Color.yellow900
+        , background = state.data.config.primaryButtonBackground
+        , color = state.data.config.primaryTextColor
         },
         option2 {
           visibility = false
@@ -1687,11 +1693,11 @@ getRideCompletedConfig state = let
       rippleColor = Color.rippleShade
     },
     topCard {
-      title = getString COLLECT_VIA_UPI_QR_OR_CASH,
+      -- title = getString COLLECT_VIA_UPI_QR_OR_CASH
       finalAmount = state.data.endRideData.finalAmount,
       initialAmount = state.data.endRideData.finalAmount,
       fareUpdatedVisiblity = state.props.isFreeRide,
-      gradient =  ["#F5F8FF","#E2EAFF"],
+      gradient =  [Color.white900,Color.white900],
       infoPill {
         text = getString COLLECT_VIA_CASE_UPI,
         color = Color.white900,
@@ -1705,7 +1711,8 @@ getRideCompletedConfig state = let
         visible = if state.props.isFreeRide then VISIBLE else GONE
       },
       topPill = topPillConfig,
-      bottomText = if state.data.activeRide.tripType == ST.Delivery then getString DELIVERY_DETAILS else getString RIDE_DETAILS
+      bottomText = if state.data.activeRide.tripType == ST.Delivery then getString DELIVERY_DETAILS else getString RIDE_DETAILS,
+      horizontalLineColor = Color.black500
     },
     driverBottomCard {
       visible = showDriverBottomCard,
@@ -1790,7 +1797,8 @@ getRideCompletedConfig state = let
   }
   , variant = getValueToLocalStore VEHICLE_VARIANT
   , driverCity = getValueToLocalStore DRIVER_LOCATION
-  , driverInvoiceText = StringsV2.getStringV2 LT2.invoice_generated_from_driver_to_rider
+  , driverInvoiceText = StringsV2.getStringV2 LT2.collect_from_the_customer_via_upi_qr_or_cash
+  , driverInvoiceTextBgColor = getColorWithOpacity 12 Color.blue900
   }
   in config'
 
@@ -2016,7 +2024,7 @@ gotoKnowMoreConfig state = PopUpModal.config {
     option1 {
       text = getString GO_BACK,
       margin = MarginHorizontal 16 16,
-      color = "#339DFF",
+      color = Color.blue900,
       background = Color.white900,
       strokeColor = Color.white900,
       width = MATCH_PARENT
@@ -2132,7 +2140,7 @@ gotoLocInRangeConfig _ = PopUpModal.config {
   }
 
 disableGotoConfig :: ST.HomeScreenState-> PopUpModal.Config
-disableGotoConfig _ = PopUpModal.config {
+disableGotoConfig state = PopUpModal.config {
   optionButtonOrientation = "VERTICAL",
   buttonLayoutMargin = Margin 16 0 16 20,
   gravity = CENTER,
@@ -2146,8 +2154,8 @@ disableGotoConfig _ = PopUpModal.config {
   option1 {
     text = getString YES_DISABLE,
     margin = MarginHorizontal 16 16,
-    color = Color.yellow900,
-    background = Color.black900,
+    color = state.data.config.primaryTextColor,
+    background = state.data.config.primaryButtonBackground,
     strokeColor = Color.white900,
     width = MATCH_PARENT
   },
@@ -2234,50 +2242,8 @@ cancelButtonConfig _ = PrimaryButton.config
   , margin = MarginLeft 0
   , stroke = "1," <> Color.grey800
   , background = Color.white900
+  , id = "CancelGotoButton"
   }
-
-gotoButtonConfig :: ST.HomeScreenState -> PrimaryButton.Config
-gotoButtonConfig state = PrimaryButton.config
-  { textConfig
-    { text = if (state.data.driverGotoState.isGotoEnabled) then state.data.driverGotoState.timerInMinutes else getString GO_TO
-    , textStyle = Tags
-    , weight = Just 1.0
-    , gravity = CENTER
-    , color = gotoTimer.textColor
-    }
-  , height = WRAP_CONTENT
-  , gravity = CENTER
-  , cornerRadius = 22.0
-  , width = WRAP_CONTENT
-  , padding = if (state.data.driverGotoState.isGotoEnabled) then Padding 16 11 16 11 else Padding 24 11 24 11
-  , margin = MarginLeft 0
-  , isPrefixImage = true
-  , stroke = "0," <> Color.black900
-  , background = gotoTimer.bgColor
-  , prefixImageConfig
-    { imageUrl = gotoTimer.imageString
-    , height = V 15
-    , width = V 15
-    , margin = MarginRight 5
-    }
-  , id = "GotoClick"
-  , alpha = if state.data.driverGotoState.gotoCount == 0 then 0.3 else 1.0
-  , enableLoader = JB.getBtnLoader "GotoClick"
-  , enableRipple = true
-  , rippleColor = Color.rippleShade
-  , lottieConfig
-    { lottieURL = (HU.getAssetsBaseUrl FunctionCall) <> "lottie/primary_button_loader.json"
-    , width = V 100
-    , height = V 35
-    , autoDisableLoader = false
-    }
-  }
-  where gotoTimer = gotoTimerConfig state.data.driverGotoState.isGotoEnabled
-
-gotoTimerConfig :: Boolean -> {bgColor :: String , imageString :: String, textColor :: String }
-gotoTimerConfig enabled
-  | enabled = {bgColor : Color.green900, imageString : fetchImage FF_ASSET "ny_pin_check_white", textColor : Color.white900}
-  | otherwise = {bgColor : Color.white900, imageString : fetchImage FF_ASSET "ny_ic_goto_icon_map_pin_check", textColor : Color.black800}
 
 sourceUnserviceableConfig :: ST.HomeScreenState -> ErrorModal.Config
 sourceUnserviceableConfig state =
@@ -2307,7 +2273,7 @@ sourceUnserviceableConfig state =
         , buttonConfig
           { text = (getString CHANGE_LOCATION)
           , margin = (Margin 16 0 16 (20 + EHC.safeMarginBottom))
-          , background = state.data.config.primaryBackground
+          , background = state.data.config.primaryButtonBackground
           , color = state.data.config.primaryTextColor
           , visibility = GONE
           }
@@ -2468,8 +2434,8 @@ bgLocPopup state =
       , margin = Margin 16 0 16 15 },
       option1 {
         text = getString ENABLE_PERMISSION_STR
-      , color = Color.yellow900
-      , background = Color.black900
+      , color = state.data.config.primaryTextColor
+      , background = state.data.config.primaryButtonBackground
       , strokeColor = Color.transparent
       , textStyle = FontStyle.SubHeading1
       , width = MATCH_PARENT
@@ -3055,8 +3021,8 @@ referNowConfig state =
           { text = getString REFER_NOW
           , width = MATCH_PARENT
           , margin = MarginTop 24
-          , background = Color.black900
-          , color = Color.yellow900
+          , background = state.data.config.primaryButtonBackground
+          , color = state.data.config.primaryTextColor
           }
         , option2
           { text = getString CLOSE
@@ -3456,3 +3422,108 @@ rideInsuranceBannerConfig state = let
       }
   }
   in popUpConfig'
+
+
+safetyPillBottomSheetConfig :: ST.HomeScreenState -> PopUpModal.Config
+safetyPillBottomSheetConfig state =
+  let
+    config' = PopUpModal.config
+    popUpConfig' =
+      config'
+        { 
+         buttonLayoutMargin = Margin 16 24 16 20 ,
+         padding = PaddingTop 24,
+         backgroundClickable = true,
+         dismissPopup = true,
+         secondaryText {
+            visibility = GONE },
+         option1 { 
+          visibility = false
+         },
+         option2 {
+           visibility = false
+         },
+         dismissPopupConfig {
+            visibility = VISIBLE,
+            height = V 20,
+            width = V 20,
+            margin = Margin 0 0 16 16
+          },
+         listViewArrayWithImage = [
+          { text : "Police",
+            prefixImageConfig : {
+              imageUrl : "ny_ic_police_red"
+            , height : V 40
+            , width : V 40
+            , margin : Margin 12 12 12 12
+            , padding : Padding 0 0 0 0
+            , visibility : VISIBLE
+            },
+            background : Color.white900,
+            textColor : Color.black900,
+            componentStroke : "1," <> Color.grey300,
+            suffixImageConfig : {
+              visibility : VISIBLE
+            , imageUrl : "ny_ic_chevron_right"
+            , height : (V 24)
+            , width : (V 24)
+            , margin : MarginRight 8
+            , padding : Padding 0 0 0 0
+            },
+            cornerRadius : 8.0
+          },
+          { text : "Ambulance",
+            prefixImageConfig : {
+              imageUrl : "ny_ic_ambulance_blue"
+            , height : V 40
+            , width : V 40
+            , margin : Margin 12 12 12 12
+            , padding : Padding 0 0 0 0
+            , visibility : VISIBLE
+            },
+            background : Color.white900,
+            textColor : Color.black900,
+            componentStroke : "1," <> Color.grey300,
+            suffixImageConfig : {
+              visibility : VISIBLE
+            , imageUrl : "ny_ic_chevron_right"
+            , height : (V 24)
+            , width : (V 24)
+            , margin : MarginRight 8
+            , padding : Padding 0 0 0 0
+            },
+            cornerRadius : 8.0
+          },
+          { text : "Call Safety Team",
+            prefixImageConfig : {
+              imageUrl : "ny_ic_headphones_blue"
+            , height : V 40
+            , width : V 40
+            , margin : Margin 12 12 12 12
+            , padding : Padding 0 0 0 0
+            , visibility : VISIBLE
+            },
+            background : Color.white900,
+            textColor : Color.black900,
+            componentStroke : "1," <> Color.grey300,
+            suffixImageConfig : {
+              visibility : VISIBLE
+            , imageUrl : "ny_ic_chevron_right"
+            , height : (V 24)
+            , width : (V 24)
+            , margin : MarginRight 8
+            , padding : Padding 0 0 0 0
+            },
+            cornerRadius : 8.0
+          }
+        ]
+        , gravity = BOTTOM
+        , primaryText {
+            text = "Safety Options",
+            textStyle = Heading3,
+            margin = Margin 16 0 16 10,
+            gravity = LEFT
+          }
+        }
+  in
+    popUpConfig'

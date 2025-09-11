@@ -235,6 +235,7 @@ dummyDriverInfo = GetDriverInfoResp {
     , organization          :  organizationInfo
     , enabled               :  false
     , verified              :  false
+    , operatorReferralCode  :  Nothing
     , language              :  Nothing
     , referralCode          :  Nothing
     , alternateNumber       :  Nothing
@@ -290,6 +291,8 @@ dummyDriverInfo = GetDriverInfoResp {
     , isSubscriptionEnabledAtCategoryLevel : Nothing
     , isSpecialLocWarrior : Nothing
     , subscriptionDown : Nothing
+    , fleetOwnerId : Nothing
+    , operatorId : Nothing
     , safetyScore : Nothing
     , ridesWithFareIssues : Nothing
     , totalRidesConsideredForFareIssues : Nothing

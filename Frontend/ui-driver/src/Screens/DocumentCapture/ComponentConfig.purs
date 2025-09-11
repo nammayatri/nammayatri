@@ -21,7 +21,7 @@ import PrestoDOM (Length(..), Margin(..), Padding(..), Visibility(..), Gravity(.
 import Screens.Types as ST 
 import Styles.Colors as Color
 import Helpers.Utils (fetchImage, FetchImageFrom(..))
-import Prelude ((<>), not)
+import Prelude ((<>), not, (==), (>), (&&))
 import Common.Types.App(LazyCheck(..))
 import Font.Style as FontStyle
 import Components.AppOnboardingNavBar as AppOnboardingNavBar
@@ -35,6 +35,8 @@ import Data.Maybe (isJust, fromMaybe)
 import Components.OptionsMenu as OptionsMenuConfig
 import Storage (KeyStore(..), getValueToLocalStore)
 import Components.BottomDrawerList as BottomDrawerList
+import Data.Array as DA
+import Services.API as API
 
 
 primaryButtonConfig :: ST.DocumentCaptureScreenState -> PrimaryButton.Config
@@ -42,9 +44,21 @@ primaryButtonConfig state = let
     config = PrimaryButton.config
     primaryButtonConfig' = config 
       {   textConfig
-        { text = getString UPLOAD_PHOTO } 
+        { text = getString if state.data.docType == ST.VEHICLE_PHOTOS then TAKE_PHOTO else TAKE_SLASH_UPLOAD_PHOTO } 
         , margin = Margin 16 16 16 16
         , id = "DocCaptureButton"
+      }
+  in primaryButtonConfig'
+
+vehicleUploadButtonConfig :: ST.DocumentCaptureScreenState -> PrimaryButton.Config
+vehicleUploadButtonConfig state = let 
+    config = PrimaryButton.config
+    primaryButtonConfig' = config 
+      {   textConfig
+        { text = getString CONTINUE } 
+        , margin = Margin 16 16 16 16
+        , id = "vehicleUploadButton"
+        , isClickable = state.props.allImagesUploaded
       }
   in primaryButtonConfig'
 
@@ -54,7 +68,7 @@ genericHeaderConfig state = let
   genericHeaderConfig' = config
     {
       height = WRAP_CONTENT
-    , background = "#2C2F3A"
+    , background = Color.transparent
     , prefixImageConfig {
        visibility = VISIBLE
       , imageUrl = HU.fetchImage HU.FF_ASSET "ic_new_avatar"
@@ -64,8 +78,8 @@ genericHeaderConfig state = let
       }
     , padding = PaddingVertical 5 5
     , textConfig {
-        text = getValueToLocalStore MOBILE_NUMBER_KEY
-      , color = Color.white900
+        text = if DA.any (_ == getValueToLocalStore DRIVER_NAME) ["", "__failed"] then getValueToLocalStore MOBILE_NUMBER_KEY else getValueToLocalStore DRIVER_NAME
+      , color = state.data.config.themeColors.onboardingHeaderTextColor
       , margin = MarginHorizontal 5 5 
       , textStyle = FontStyle.Body1
       }
@@ -80,11 +94,15 @@ appOnboardingNavBarConfig state =
   AppOnboardingNavBar.config
   { genericHeaderConfig = genericHeaderConfig state,
     headerTextConfig = AppOnboardingNavBar.config.headerTextConfig{ 
-      text = getVarString UPLOAD_DOC [Constant.transformDocText state.data.docType]
+      text = Constant.transformDocText state.data.docType,
+      color = state.data.config.themeColors.onboardingHeaderTextColor
       },
     rightButton = AppOnboardingNavBar.config.rightButton{
-      text = getString HELP_FAQ
-      }
+      text = getString HELP_FAQ,
+      color = state.data.config.themeColors.onboardingHeaderTextColor
+      },
+    navBarOpen = state.props.menuOptions,
+    prefixImageConfig = AppOnboardingNavBar.config.prefixImageConfig{ image = state.data.config.themeColors.defaultBackButton }
   }
 
 validateDocModalState :: ST.DocumentCaptureScreenState -> ValidateDocumentModal.ValidateDocumentModalState
@@ -112,9 +130,10 @@ validateDocModalState state =
 optionsMenuConfig :: ST.DocumentCaptureScreenState -> OptionsMenuConfig.Config
 optionsMenuConfig state = OptionsMenuConfig.config {
   menuItems = [
+    {image : HU.fetchImage HU.FF_ASSET "ny_ic_getting_started_and_faq", textdata : getString FAQS_STR, action : "faqs", isVisible : true, color : Color.black800},
     {image : HU.fetchImage HU.FF_ASSET "ny_ic_phone_unfilled", textdata : getString CONTACT_SUPPORT, action : "contact_support", isVisible : true, color : Color.black800},
     {image : HU.fetchImage HU.FF_ASSET "ny_ic_language", textdata : getString CHANGE_LANGUAGE_STR, action : "change_language", isVisible : true, color : Color.black800},
-    {image : HU.fetchImage HU.FF_ASSET "ny_ic_parallel_arrows_horizontal", textdata : getString CHANGE_VEHICLE, action : "change_vehicle", isVisible : true, color : Color.black800},
+    {image : HU.fetchImage HU.FF_ASSET "ny_ic_parallel_arrows_horizontal", textdata : getString CHANGE_VEHICLE, action : "change_vehicle", isVisible : state.data.config.enableChangeVehicleType, color : Color.black800},
     {image : HU.fetchImage HU.FF_ASSET "ny_ic_logout_grey", textdata : getString LOGOUT, action : "logout", isVisible :  true, color : Color.black800}
   ],
   backgroundColor = Color.blackLessTrans,
@@ -134,7 +153,7 @@ bottomDrawerListConfig state = BottomDrawerList.config {
   animState = state.props.contactSupportModal,
   titleText = getString CONTACT_SUPPORT_VIA,
   itemList = [
-    {prefixImg : "ny_ic_whatsapp_black", title : "Whatsapp", desc : getString YOU_CAN_SHARE_SCREENSHOT , postFixImg : "ny_ic_chevron_right", visibility : true, identifier : "whatsapp"},
+    {prefixImg : "ny_ic_whatsapp_black", title : getString WHATSAPP, desc : getString YOU_CAN_SHARE_SCREENSHOT , postFixImg : "ny_ic_chevron_right", visibility : true, identifier : "whatsapp"},
     {prefixImg : "ny_ic_direct_call", title : getString CALL, desc : getString PLACE_A_CALL, postFixImg : "ny_ic_chevron_right", visibility : true, identifier : "call"}
   ]
 }

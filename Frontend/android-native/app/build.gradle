@@ -78,7 +78,7 @@ android {
         debug {
             resValue "string", "local_ip", host
             resValue "bool", "debuggable", "true"
-            applicationIdSuffix '.debug'
+            // applicationIdSuffix '.debug'
             minifyEnabled false
 //            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
             signingConfig signingConfigs.debug
@@ -200,6 +200,13 @@ android {
             buildConfigField "String", "MERCHANT", "\"KA\""
             dimension "app"
         }
+        msilDriver {
+           applicationId "in.msil.fleetx"
+            // applicationId "in.juspay.nammayatripartner"
+            buildConfigField "String", "MERCHANT_TYPE", "\"DRIVER\""
+            buildConfigField "String", "MERCHANT", "\"KA\""
+            dimension "app"
+        }
         apDriver {
             applicationId "in.mobility.aapleyatripartner"
             buildConfigField "String", "MERCHANT_TYPE", "\"DRIVER\""
@@ -262,6 +269,7 @@ android {
         apDriver.setRoot('src/driver/aapleYatriPartner')
         oyDriver.setRoot('src/driver/odishaYatriPartner')
         ksDriver.setRoot('src/driver/keralaSavaariPartner')
+        msilDriver.setRoot('src/driver/marutiSuzukiDriver')
         bridgeDriver.setRoot('src/driver/bridgeDriver')
         ysUser.setRoot('src/user/jatriSaathi')
         ysDriver.setRoot('src/driver/jatriSaathiDriver')
@@ -283,6 +291,7 @@ android {
         oyUser.res.srcDir('src/user/common/res')
         oyDriver.res.srcDir('src/driver/common/res')
         ksDriver.res.srcDir('src/driver/common/res')
+        msilDriver.res.srcDir('src/driver/common/res')
     }
     sourceSets {
         dev.res.srcDir 'src/dev/res'
@@ -347,6 +356,7 @@ dependencies {
     apDriverImplementation project(path: ':mobility-driver')
     oyDriverImplementation project(path: ':mobility-driver')
     ksDriverImplementation project(path: ':mobility-driver')
+    msilDriverImplementation project(path: ':mobility-driver')
     bridgeDriverImplementation project(path: ':mobility-driver')
     passCulturePartnerImplementation project(path: ':mobility-driver')
     ysDriverImplementation project(path: ':mobility-driver')
@@ -401,8 +411,8 @@ dependencies {
     implementation 'com.android.installreferrer:installreferrer:2.2'
     implementation 'com.google.mlkit:translate:17.0.2'
     implementation 'com.google.android.flexbox:flexbox:3.0.0'
-    debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.11'
-    compileOnly ("co.hyperverge:hyperkyc:0.26.0") {
+    // // debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.11'
+    compileOnly ("co.hyperverge:hyperkyc:0.44.0") {
         transitive = true
         exclude group: 'co.hyperverge', module: 'hyperdocdetect'
         exclude group: 'co.hyperverge', module: 'face-detection-preview-frame'

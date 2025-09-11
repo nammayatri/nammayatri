@@ -644,7 +644,7 @@ public class RideRequestUtils {
 
     @SuppressLint("SetTextI18n")
     public static void updateRateView(SheetAdapter.SheetViewHolder holder, SheetModel model) {
-        double baseFare = model.getBaseFare() + model.getOfferedPrice() - model.getTollCharges();
+        double baseFare = model.getBaseFare() + model.getOfferedPrice() - model.getTollCharges() - model.getParkingCharges();
         float dist = model.getDistanceToBeCovFloat() / 1000;
         String rate;
 
@@ -668,8 +668,8 @@ public class RideRequestUtils {
             holder.tagsBlock.setVisibility(View.VISIBLE);
             holder.reqButton.setTextColor(context.getColor(R.color.white));
 //            holder.reqButton.setBackgroundTintList(ColorStateList.valueOf(context.getColor(R.color.turquoise)));
+            holder.reqButton.setBackgroundTintList(ColorStateList.valueOf(context.getColor(R.color.rentalAcceptButtonBG)));
             holder.rentalRideTypeTag.setVisibility(View.VISIBLE);
-            holder.rideStartDateTimeTag.setVisibility(View.VISIBLE);
             holder.rideStartTime.setText(model.getRideStartTime());
             holder.rideStartDate.setVisibility(View.VISIBLE);
             holder.rideStartDate.setText(model.getRideStartDate());
@@ -694,10 +694,10 @@ public class RideRequestUtils {
             }
             holder.tagsBlock.setVisibility(View.VISIBLE);
             holder.reqButton.setTextColor(context.getColor(R.color.white));
-//            holder.reqButton.setBackgroundTintList(ColorStateList.valueOf(context.getColor(R.color.blue800)));
+            holder.reqButton.setBackgroundTintList(ColorStateList.valueOf(context.getColor(R.color.intercityAcceptButtonBG)));
+            // holder.reqButton.setBackgroundTintList(ColorStateList.valueOf(context.getColor(R.color.blue800)));
             holder.intercityRideTypeTag.setVisibility(View.VISIBLE);
             holder.gotoTag.setVisibility(View.GONE);
-            holder.rideStartDateTimeTag.setVisibility(View.VISIBLE);
             holder.rideStartTime.setText(model.getRideStartTime());
             holder.rideStartDate.setVisibility(View.VISIBLE);
             holder.rideStartDate.setText(model.getRideStartDate());
@@ -874,6 +874,10 @@ public class RideRequestUtils {
                 holder.durationToPickup.setVisibility(View.GONE);
                 holder.durationToPickupImage.setVisibility(View.GONE); // Disabled it
                 holder.durationToPickup.setText(model.getDurationToPickup() + " min");
+            } else if (!model.getDurationToPickup().isEmpty()){
+                holder.durationToPickup.setVisibility(View.VISIBLE);
+                holder.durationToPickup.setText(model.getDurationToPickup() + " min");
+                holder.durationToPickupImage.setVisibility(View.VISIBLE);
             } else {
                 holder.durationToPickup.setVisibility(View.GONE);
                 holder.durationToPickupImage.setVisibility(View.GONE);

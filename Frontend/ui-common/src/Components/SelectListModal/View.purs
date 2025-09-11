@@ -385,7 +385,7 @@ radioButton config push index item =
         , height (V 18)
         , stroke $ "2,"
             <> case config.activeIndex of
-                Just activeIndex' -> if (index == activeIndex') then config.config.primaryBackground else Color.black600
+                Just activeIndex' -> if (index == activeIndex') then config.config.themeColors.radioActiveBackground else Color.black600
                 Nothing -> Color.black600
         , cornerRadius 9.0
         , gravity CENTER
@@ -394,7 +394,7 @@ radioButton config push index item =
             [ width $ V 10
             , height $ V 10
             , cornerRadius 5.0
-            , background config.config.primaryBackground
+            , background config.config.themeColors.radioActiveBackground
             , visibility
                 $ case config.activeIndex of
                     Just activeIndex' -> if (index == activeIndex') then VISIBLE else GONE
@@ -441,11 +441,11 @@ primaryButtonConfig config = let
       {textConfig
       { text = config.primaryButtonTextConfig.firstText
       , accessibilityHint = config.primaryButtonTextConfig.firstText <> " : Button"
-      , color = config.config.primaryBackground}
-      , background = Color.white900
+      , color = config.primaryButtonTextConfig.firstTextColor}
+      , background = config.primaryButtonBgColor
       , isGradient = false
       , cornerRadius = config.cornerRadius
-      , stroke = "1," <> config.config.primaryBackground
+      , stroke = "1," <> config.primaryButtonTextConfig.firstTextColor
       , width = if(config.secondaryButtonVisibility) then (V ((screenWidth unit/2)-30)) else config.primaryButtonTextConfig.width
       , id = "Button1"
       , visibility = if config.primaryButtonVisibility then VISIBLE else GONE
@@ -461,15 +461,15 @@ secondaryButtonConfig config =
         {textConfig
           { text = config.primaryButtonTextConfig.secondText
           , accessibilityHint = config.primaryButtonTextConfig.secondText <> " : Button" <> (if config.isSelectButtonActive then "" else "Disabled : Select A Reason To Enable : Button")
-          , color =  if (not config.isSelectButtonActive) && btnConfig.isGradient then "#696A6F" else config.config.primaryTextColor}
+          , color =  if (not config.isSelectButtonActive) && btnConfig.isGradient then config.primaryButtonTextConfig.secondTextColor else config.config.primaryTextColor}
           , width = if config.primaryButtonVisibility then (V ((screenWidth unit/2)-30)) else config.primaryButtonTextConfig.width
           , isGradient = if (not config.isSelectButtonActive) then false else if btnConfig.isGradient then true else false
           , cornerRadius = config.cornerRadius
           , id = "Button2"
           , alpha = if(config.isSelectButtonActive) || (btnConfig.isGradient) then 1.0  else 0.5
           , isClickable = config.isSelectButtonActive
-          , background = if (not config.isSelectButtonActive) && btnConfig.isGradient then "#F1F1F4" else config.config.primaryBackground
-          , stroke = (if btnConfig.isGradient then "0," else "1,") <> config.config.primaryBackground
+          , background = if (not config.isSelectButtonActive) then config.secondaryButtonBgColor else config.config.primaryButtonBackground
+          , stroke = "1," <> (if (not config.isSelectButtonActive) then config.secondaryButtonBgColor else config.config.primaryButtonBackground)
           , enableRipple = config.isSelectButtonActive
         }
 

@@ -48,6 +48,9 @@ subscriptionScreen = do
     Alerts updatedState -> do 
       modifyScreenState $ SubscriptionScreenStateType (\_ -> updatedState)
       App.BackT $ App.BackPoint <$> (pure $ NAV GoToAlerts)
+    RideRequestScreen updatedState -> do 
+      modifyScreenState $ SubscriptionScreenStateType (\_ -> updatedState)
+      App.BackT $ App.BackPoint <$> (pure $ NAV GoToRideRequest)
     JoinPlanExit updatedState -> do
       modifyScreenState $ SubscriptionScreenStateType (\_ -> updatedState)
       App.BackT $ App.NoBack <$> (pure $ MAKE_PAYMENT updatedState)

@@ -11,6 +11,10 @@ config :: AppConfig
 config =
   { primaryTextColor: "#FCC32C"
   , primaryBackground: "#2C2F3A"
+  , buttonInactiveTextColor : "#FCC32C"
+  , alphaInPrimaryButtonAllowed : true
+  , primaryButtonBackground : "#2C2F3A"
+  , buttonInactiveBackground : "#2C2F3A"
   , submitIssueBtnColor : "#0066FF"
   , estimateConfirmText: "Request a NammaYatri Ride"
   , autoConfirmingLoaderColor: "#80B2FF"

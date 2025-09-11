@@ -320,6 +320,7 @@ initData =
       , showMetroWarriorWarningPopup : false
       , setBusOnline : false
       , bus_input_data : ""
+      , showSafetyPillBottomSheet : false
       , showEndRideWithStopPopup : false
       , triggerGMapsIntent : false
       , showBlockerPopup : false

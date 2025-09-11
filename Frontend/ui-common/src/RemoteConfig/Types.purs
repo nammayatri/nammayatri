@@ -87,6 +87,7 @@ type AppConfigRC a =
   , manaYatriPartner :: Maybe a
   , yatriSathi :: Maybe a
   , yatriSathiPartner :: Maybe a
+  , fleetX :: Maybe a
   , default :: a
   }
 
@@ -221,6 +222,11 @@ type AppLanguage
     value :: String,
     subtitle :: String
   }
+
+type AppCities = {
+  cityNames :: Array String,
+  enableChangeCity :: Boolean  
+}
 
 type SubscriptionConfigVariantLevelEntity = {
    noChargesTillDate :: String,

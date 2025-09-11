@@ -47,6 +47,7 @@ import Screens.Types (DriverSavedLocationScreenState, GoToScrEntryType(..), Pred
 import Services.Backend as Remote
 import Styles.Colors as Color
 import Types.App (defaultGlobalState)
+import Engineering.Helpers.Utils as EHU
 
 screen :: DriverSavedLocationScreenState -> LoggableScreen Action DriverSavedLocationScreenState ScreenOutput
 screen initialState =
@@ -143,9 +144,9 @@ gotoLocationsList state push visibility' =
                   , color Color.black700
                   , padding $ Padding 10 10 10 10
                   , cornerRadius 12.0
-                  , background Color.blue600
+                  , background $ EHU.getColorWithOpacity 12 Color.blue900 
                   ]
-                <> FontStyle.subHeading1 TypoGraphy
+                <> FontStyle.body1 TypoGraphy
             , PrimaryButton.view (push <<< PrimaryButtonAC) (primaryButtonConfig state)
             ]
         ]
@@ -164,7 +165,7 @@ searchLocation state push visibility' =
             [ height WRAP_CONTENT
             , width MATCH_PARENT
             , onAnimationEnd push $ const OnAnimationEnd
-            , background Color.black900
+            , background Color.blue900
             , padding $ PaddingVertical 40 25
             , gravity CENTER_VERTICAL
             ]
@@ -548,7 +549,7 @@ confirmLocationBG state push =
     , width MATCH_PARENT
     , orientation HORIZONTAL
     , padding $ Padding 10 20 10 20
-    , background Color.black900
+    , background Color.blue900
     ]
     [ imageView
         [ height $ V 18
@@ -611,10 +612,11 @@ confirmLocation state push visibility' =
                 [ height MATCH_PARENT
                 , width MATCH_PARENT
                 , orientation HORIZONTAL
-                , stroke $ "1," <> Color.grey900
+                , stroke $ "1," <> state.data.config.themeColors.radioInactiveBackground
                 , padding $ Padding 5 0 15 0
                 , margin $ MarginTop 5
                 , cornerRadius 6.0
+                , background state.data.config.themeColors.radioInactiveBackground
                 ]
                 [ textView
                     $ [ height WRAP_CONTENT
@@ -627,7 +629,7 @@ confirmLocation state push visibility' =
                       , ellipsize true
                       , textSize FontSize.a_16
                       ]
-                    <> FontStyle.body1 TypoGraphy
+                    <> FontStyle.subHeading1 TypoGraphy
                 , textView
                     $ [ text $ getString EDIT
                       , color Color.blue900
@@ -644,7 +646,7 @@ confirmLocation state push visibility' =
                 ]
                 [ textView
                     $ [ textFromHtml $ getString ADD_TAG <> " <small>" <> getString ONLY_ONE_LOC_CAN_ADDED <> "</small>"
-                      , color Color.black900
+                      , color Color.black700
                       , width WRAP_CONTENT
                       ]
                     <> FontStyle.tags TypoGraphy
@@ -653,8 +655,8 @@ confirmLocation state push visibility' =
                 [ height MATCH_PARENT
                 , orientation HORIZONTAL
                 , margin $ Margin 0 10 0 15
-                , background if isActive then Color.blue600 else Color.grey800
-                , stroke $ "1," <> if isActive then Color.blue900 else Color.grey800
+                , background if isActive then Color.blue600 else Color.grey100
+                , stroke $ "1," <> if isActive then Color.blue900 else Color.grey100
                 , padding $ Padding 10 10 10 10
                 , cornerRadius 8.0
                 , gravity CENTER
@@ -675,7 +677,7 @@ confirmLocation state push visibility' =
                 ]
             , textView
                 $ [ text $ getString SAVE_AS
-                  , color Color.black900
+                  , color Color.black700
                   , width MATCH_PARENT
                   ]
                 <> FontStyle.tags TypoGraphy
@@ -683,7 +685,7 @@ confirmLocation state push visibility' =
                 [ height MATCH_PARENT
                 , width MATCH_PARENT
                 , orientation HORIZONTAL
-                , stroke $ "1," <> if isJust state.props.errorText then Color.red900 else Color.grey900
+                , stroke $ "1," <> if isJust state.props.errorText then Color.red900 else state.data.config.themeColors.radioInactiveBackground
                 , margin $ MarginTop 5
                 , padding $ PaddingHorizontal 5 5
                 , cornerRadius 6.0
@@ -694,7 +696,7 @@ confirmLocation state push visibility' =
                       , singleLine true
                       , weight 1.0
                       , cornerRadius 8.0
-                      , background Color.white900
+                      , background state.data.config.themeColors.radioInactiveBackground
                       , text state.data.address
                       , id $ EHC.getNewIDWithTag "ConfirmLocEDT"
                       , ellipsize true

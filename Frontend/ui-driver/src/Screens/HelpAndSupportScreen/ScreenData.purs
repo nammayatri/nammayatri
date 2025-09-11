@@ -36,13 +36,15 @@ initData = {
           timerId : "",
           goBackTo : Screen.DRIVER_PROFILE_SCREEN,
           cityConfig : defaultCityConfig,
+          operationHubs : [],
           config : getAppConfig appConfig
           },
   props: {
           isNoRides : false,
           enableDummyPopup : false,
           startTimerforDummyRides : false,
-          popupType : ST.TEST_RIDE_RECIEVED
+          popupType : ST.TEST_RIDE_RECIEVED,
+          showOperationsHub : false
          }
 }
 

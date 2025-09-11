@@ -61,7 +61,7 @@ screen initialState screenType =
           void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
             if(initialState.props.enterMobileNumberView || initialState.props.enterOtp) then pure unit
               else do
-              (DriverRegistrationStatusResp driverRegistrationStatusResp ) <- driverRegistrationStatusBT $ DriverRegistrationStatusReq true
+              (DriverRegistrationStatusResp driverRegistrationStatusResp ) <- driverRegistrationStatusBT $ DriverRegistrationStatusReq true false
               lift $ lift $ doAff do liftEffect $ push $ DriverRegistrationStatusAction (DriverRegistrationStatusResp driverRegistrationStatusResp)
           else pure unit
         if initialState.props.isAlternateMobileNumberExists then do

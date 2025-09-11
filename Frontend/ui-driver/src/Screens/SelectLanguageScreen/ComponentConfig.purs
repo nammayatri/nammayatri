@@ -26,15 +26,13 @@ import Styles.Colors as Color
 import Components.SelectMenuButton as MenuButton
 import MerchantConfig.Types as MT
 import Prelude ((==))
+import Engineering.Helpers.Utils as EHU
 
 primaryButtonConfig :: ST.SelectLanguageScreenState -> PrimaryButton.Config
 primaryButtonConfig state = PrimaryButton.config { textConfig
-      { text = if state.props.onlyGetTheSelectedLanguage then (getString CONFIRM_LANGUAGE) else (getString UPDATE)
-      , color = Color.primaryButtonColor}
-      , margin = (Margin 0 0 0 0)
-      , cornerRadius = 0.0
-      , background = Color.black900
-      , height = (V 60)
+      { text = if state.props.onlyGetTheSelectedLanguage then (getString CONFIRM_LANGUAGE) else (getString UPDATE)}
+      , margin = (Margin 16 16 16 16)
+      , cornerRadius = 8.0
       , id = "SelectLanguageScreenPrimaryButton"
       , enableRipple = true
       }
@@ -51,7 +49,9 @@ menuButtonConfig state language index = MenuButton.config
     , isSelected = (state.props.selectedLanguage == language.value)
     , index = index
     , lineVisibility = false
-    , activeStrokeColor = if state.props.onlyGetTheSelectedLanguage then Color.blue900 else Color.white900
-    , activeBgColor =  if state.props.onlyGetTheSelectedLanguage then Color.blue9000 else Color.white900
-    , inactiveStrokeColor =  if state.props.onlyGetTheSelectedLanguage then Color.grey900 else Color.white900
+    , activeStrokeColor = EHU.getColorWithOpacity 12 state.data.config.themeColors.radioActiveStroke
+    , activeBgColor =  EHU.getColorWithOpacity 12 state.data.config.themeColors.radioActiveBackground
+    , inactiveStrokeColor =  Color.grey100 
+    , inactiveBgColor = state.data.config.themeColors.radioInactiveBackground
+    , radioSelectedImage = state.data.config.themeColors.radioSelectedImage
     }
