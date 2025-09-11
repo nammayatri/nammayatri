@@ -25,6 +25,7 @@ where
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified Data.Text as T
 import qualified Domain.Action.Beckn.Common as Common
+import qualified Domain.SharedLogic.Cancel as SharedCancel
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.BookingStatus as SRB
@@ -62,6 +63,7 @@ onCancel ValidatedBookingCancelledReq {..} = do
   whenJust cancellationSource $ \source -> logTagInfo ("Cancellation source " <> source) ""
   let castedCancellationSource = castCancellatonSource cancellationSource_
   Common.cancellationTransaction booking mbRide castedCancellationSource cancellationFee
+  SharedCancel.releaseCancellationLock booking.transactionId
   where
     castCancellatonSource = \case
       Just Enums.CONSUMER -> SBCR.ByUser
