@@ -914,7 +914,7 @@ getDLAndStatus driverImagesInfo language useHVSdkForDL = do
     case mDriverLicense of
       Just driverLicense -> do
         let status = mapStatus driverLicense.verificationStatus
-        msg <- verificationStatusCheck status language DVC.DriverLicense
+        msg <- verificationStatusCheck status language DVC.DriverLicense Nothing
         return (status, msg)
       Nothing -> do
         (status, message) <- checkIfInVerification driverImagesInfo DVC.DriverLicense language
@@ -938,7 +938,7 @@ getRCAndStatus driverImagesInfo multipleRC language = do
           case firstRC of
             Just vehicleRC -> do
               let status = mapStatus vehicleRC.verificationStatus
-              message <- verificationStatusCheck status language DVC.VehicleRegistrationCertificate
+              message <- verificationStatusCheck status language DVC.VehicleRegistrationCertificate (Just vehicleRC.failedRules)
               return (status, Just vehicleRC, message)
             Nothing -> do
               msg <- toVerificationMessage NoDcoumentFound language
@@ -954,7 +954,7 @@ getRCAndStatus driverImagesInfo multipleRC language = do
               case mVehicleRC of
                 Just vehicleRC -> do
                   let status = mapStatus vehicleRC.verificationStatus
-                  message <- verificationStatusCheck status language DVC.VehicleRegistrationCertificate
+                  message <- verificationStatusCheck status language DVC.VehicleRegistrationCertificate (Just vehicleRC.failedRules)
                   return (status, Just vehicleRC, message)
                 Nothing -> do
                   msg <- toVerificationMessage NoDcoumentFound language
@@ -968,11 +968,22 @@ mapStatus = \case
   Documents.INVALID -> INVALID
   Documents.UNAUTHORIZED -> UNAUTHORIZED
 
-verificationStatusCheck :: ResponseStatus -> Language -> DVC.DocumentType -> Flow Text
-verificationStatusCheck status language img = do
+verificationStatusCheck :: ResponseStatus -> Language -> DVC.DocumentType -> Maybe [Text] -> Flow Text
+verificationStatusCheck status language img mbReasons = do
   case (status, img) of
     (INVALID, DVC.DriverLicense) -> toVerificationMessage DLInvalid language
-    (INVALID, DVC.VehicleRegistrationCertificate) -> toVerificationMessage RCInvalid language
+    (INVALID, DVC.VehicleRegistrationCertificate) -> do
+      msg <- toVerificationMessage RCInvalid language
+      case mbReasons of
+        Just reasons | not (null reasons) -> do
+          translatedReasons <- forM reasons $ \reason -> do
+            let (key, value) = T.breakOn ":" reason
+            translatedKey <- translateDynamicKey key language
+            if T.null value
+              then pure translatedKey
+              else pure $ translatedKey <> ": " <> T.drop 1 value
+          pure $ msg <> ". " <> T.intercalate ", " translatedReasons
+        _ -> pure msg
     _ -> toVerificationMessage DocumentValid language
 
 checkIfInVerification :: IQuery.DriverImagesInfo -> DVC.DocumentType -> Language -> Flow (ResponseStatus, Text)
@@ -1031,7 +1042,13 @@ data VerificationMessage
   | UnderManualReview
   | Unauthorized
   | Other
+  | Reasons
   deriving (Show, Eq, Ord)
+
+translateDynamicKey :: Text -> Language -> Flow Text
+translateDynamicKey key lang = do
+  mTranslation <- MTQuery.findByErrorAndLanguage key lang
+  return $ fromMaybe key (mTranslation <&> (.message))
 
 toVerificationMessage :: VerificationMessage -> Language -> Flow Text
 toVerificationMessage msg lang = do

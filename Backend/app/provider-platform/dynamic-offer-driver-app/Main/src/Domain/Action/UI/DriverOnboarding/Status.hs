@@ -37,7 +37,7 @@ data StatusRes = StatusRes
   { dlVerificationStatus :: SStatus.ResponseStatus, -- deprecated
     dlVerficationMessage :: Text, -- deprecated
     rcVerificationStatus :: SStatus.ResponseStatus, -- deprecated
-    rcVerficationMessage :: Text, -- deprecated
+    rcVerficationMessage :: Text, -- deprecated (not for MSIL)
     aadhaarVerificationStatus :: SStatus.ResponseStatus, -- deprecated
 
     --- use these fields
