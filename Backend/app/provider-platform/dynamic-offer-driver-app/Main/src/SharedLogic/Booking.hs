@@ -6,6 +6,7 @@ import Data.Text hiding (map)
 import Data.Time (UTCTime (..), defaultTimeLocale, formatTime, utctDay)
 import Data.Time.Calendar (toGregorian)
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
+import qualified Domain.SharedLogic.Cancel as SharedCancel
 import Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.Merchant as DM
@@ -56,6 +57,7 @@ cancelBooking ::
   m ()
 cancelBooking booking mbDriver transporter = do
   logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason " <> show DBCR.ByApplication)
+  SharedCancel.tryCancellationLock booking.transactionId
   let transporterId' = Just booking.providerId
   unless (transporterId' == Just transporter.id) $ throwError AccessDenied
   mbRide <- QRide.findActiveByRBId booking.id

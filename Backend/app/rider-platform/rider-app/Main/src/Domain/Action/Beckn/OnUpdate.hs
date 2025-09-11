@@ -46,6 +46,7 @@ import Data.List (nub)
 import qualified Data.Text as Text
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Action.Beckn.Common as Common
+import qualified Domain.SharedLogic.Cancel as SharedCancel
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.BookingStatus as DRB
@@ -451,6 +452,7 @@ onUpdate = \case
     QBPL.makeAllInactiveByBookingId booking.id
     -- notify customer
     Notify.notifyOnEstOrQuoteReallocated cancellationSource booking estimate.id.getId
+    SharedCancel.releaseCancellationLock booking.transactionId
   OUValidatedQuoteRepetitionReq ValidatedQuoteRepetitionReq {..} -> do
     when (cancellationSource /= DBCR.ByUser) $ do
       -- in case cancellation is by user, we don't need to create a new booking cancellation reason as already created in the previous step
@@ -491,6 +493,7 @@ onUpdate = \case
     void $ SPayment.cancelPaymentIntent booking.merchantId booking.merchantOperatingCityId ride.id
     -- notify customer
     Notify.notifyOnEstOrQuoteReallocated cancellationSource booking quote.id.getId
+    SharedCancel.releaseCancellationLock booking.transactionId
   OUValidatedSafetyAlertReq ValidatedSafetyAlertReq {..} -> do
     logDebug $ "Safety alert triggered for rideId: " <> ride.id.getId
     merchantOperatingCityId <- maybe (QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId) >>= pure . (.merchantOperatingCityId)) pure ride.merchantOperatingCityId
