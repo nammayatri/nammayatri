@@ -35,7 +35,7 @@ imports:
   SuggestedStations: Domain.Types.StationType
   BusData: Storage.CachedQueries.Merchant.MultiModalBus
   PlatformType: Domain.Types.IntegratedBPPConfig
-  VehicleCategory: BecknV2.FRFS.Enums
+  VehicleCategory: BecknV2.OnDemand.Enums
   Provider: Lib.JourneyModule.Types
   Value: Data.Aeson
   Gate: Domain.Types.Station
@@ -227,11 +227,20 @@ types:
     sn: Int
     ibc: Id IntegratedBPPConfig
 
+  VehicleConfig:
+    isCancellationAllowed: Maybe Bool
+    derive: "Show"
+
+  PublicTransportConfig:
+    vehicleType: VehicleCategory
+    config: VehicleConfig
+
   PublicTransportData:
     rs: [TransportRoute]
     ss: [TransportStation]
     rsm: [TransportRouteStopMapping]
     ptcv: Text
+    vc: Maybe [PublicTransportConfig]
 
   UpdatePaymentOrderReq:
     quantity: Int
