@@ -48,6 +48,20 @@ data RouteStopMappingInMemoryServer = RouteStopMappingInMemoryServer
     stopName :: Kernel.Prelude.Text,
     stopPoint :: Kernel.External.Maps.Types.LatLong,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory,
+    hindiName :: Maybe Text,
+    regionalName :: Maybe Text
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+data RouteStopMappingInMemoryServerWithPublicData = RouteStopMappingInMemoryServerWithPublicData
+  { estimatedTravelTimeFromPreviousStop :: Kernel.Prelude.Maybe Kernel.Types.Time.Seconds,
+    providerCode :: Kernel.Prelude.Text,
+    routeCode :: Kernel.Prelude.Text,
+    sequenceNum :: Kernel.Prelude.Int,
+    stopCode :: Kernel.Prelude.Text,
+    stopName :: Kernel.Prelude.Text,
+    stopPoint :: Kernel.External.Maps.Types.LatLong,
+    vehicleType :: BecknV2.FRFS.Enums.VehicleCategory,
     geoJson :: Maybe Value,
     gates :: Maybe [Gate],
     hindiName :: Maybe Text,

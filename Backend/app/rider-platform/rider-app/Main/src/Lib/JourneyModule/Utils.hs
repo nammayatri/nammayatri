@@ -378,7 +378,7 @@ fetchLiveTimings ::
   Enums.VehicleCategory ->
   m [RouteStopTimeTable]
 fetchLiveTimings routeCodes stopCode currentTime integratedBppConfig mid mocid vc = case vc of
-  Enums.SUBWAY -> fetchLiveSubwayTimings routeCodes stopCode currentTime integratedBppConfig mid mocid
+  -- Enums.SUBWAY -> fetchLiveSubwayTimings routeCodes stopCode currentTime integratedBppConfig mid mocid -- Removed this for now.
   Enums.BUS -> fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid mocid
   _ -> measureLatency (GRSM.findByRouteCodeAndStopCode integratedBppConfig mid mocid routeCodes stopCode) "fetch route stop timing through graphql"
 
@@ -490,13 +490,9 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
     let tierSource = fromMaybe GTFS $ listToMaybe $ map (.source) timingsForTier
 
     -- Get route details to include the short name
-    routeDetails <-
-      mapM
-        ( \routeCode -> OTPRest.getRouteByRouteId integratedBppConfig routeCode
-        )
-        routeCodesForTier
-    let validRouteDetails = catMaybes routeDetails
-        routeShortNames = nub $ map (.shortName) validRouteDetails
+    validRouteDetails <- OTPRest.getRoutesByRouteIds integratedBppConfig routeCodesForTier
+    -- let validRouteDetails = catMaybes routeDetails
+    let routeShortNames = nub $ map (.shortName) validRouteDetails
 
     -- Calculate arrival times in seconds
     let arrivalTimes =
