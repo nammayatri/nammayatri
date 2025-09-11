@@ -361,9 +361,15 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
             (finalRoutes, warningType) <- case req' of
               DSearch.PTSearch _ -> do
                 let mbBestOneWayRoute = JMU.getBestOneWayRoute (castVehicleCategoryToGeneralVehicleType vehicleCategory) otpResponse''.routes searchRequest.originStopCode searchRequest.destinationStopCode
-                return $ case mbBestOneWayRoute of
-                  Just bestOneWayRoute -> ([bestOneWayRoute], Nothing)
-                  Nothing -> (otpResponse''.routes, Just NoSingleModeRoutes)
+                case mbBestOneWayRoute of
+                  Just bestOneWayRoute -> do
+                    mbPreliminaryLeg <- join <$> mapM (getPreliminaryLeg now currentLocation) ((listToMaybe bestOneWayRoute.legs) <&> (.startLocation))
+                    let updatedBestOneWayRoute =
+                          case mbPreliminaryLeg of
+                            Just leg -> bestOneWayRoute {MultiModalTypes.legs = [leg] ++ bestOneWayRoute.legs}
+                            Nothing -> bestOneWayRoute
+                    return ([updatedBestOneWayRoute], Nothing)
+                  Nothing -> return (otpResponse''.routes, Just NoSingleModeRoutes)
               _ -> return (otpResponse''.routes, Nothing)
             logDebug $ "finalRoutes: " <> show finalRoutes
             filteredRoutes <- JM.filterTransitRoutes riderConfig finalRoutes
