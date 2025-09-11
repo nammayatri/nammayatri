@@ -12,11 +12,13 @@ type RouteStopMappingByStopCodeAPI = "route-stop-mapping" :> Capture "gtfs_id" T
 
 type RouteByRouteIdAPI = "route" :> Capture "gtfs_id" Text :> Capture "route_id" Text :> Get '[JSON] RouteInfoNandi
 
+type RoutesByRouteIdsAPI = "getRoutesByIds" :> Capture "gtfs_id" Text :> ReqBody '[JSON] [Text] :> Post '[JSON] [RouteInfoNandi]
+
 type RouteFuzzySearchAPI = "routes" :> Capture "gtfs_id" Text :> "fuzzy" :> Capture "query" Text :> Get '[JSON] [RouteInfoNandi]
 
 type RoutesByGtfsIdAPI = "routes" :> Capture "gtfs_id" Text :> Get '[JSON] [RouteInfoNandi]
 
-type StopsByGtfsIdAPI = "stops" :> Capture "gtfs_id" Text :> Get '[JSON] [RouteStopMappingInMemoryServer]
+type StopsByGtfsIdAPI = "stops" :> Capture "gtfs_id" Text :> Get '[JSON] [RouteStopMappingInMemoryServerWithPublicData]
 
 type StopsByGtfsIdAndStopCodeAPI = "stop" :> Capture "gtfs_id" Text :> Capture "stop_code" Text :> Get '[JSON] RouteStopMappingInMemoryServer
 
@@ -42,6 +44,9 @@ nandiGetRouteStopMappingByStopCodeAPI = Proxy
 
 nandiRouteByRouteIdAPI :: Proxy RouteByRouteIdAPI
 nandiRouteByRouteIdAPI = Proxy
+
+nandiRoutesByRouteIdsAPI :: Proxy RoutesByRouteIdsAPI
+nandiRoutesByRouteIdsAPI = Proxy
 
 nandiRouteFuzzySearchAPI :: Proxy RouteFuzzySearchAPI
 nandiRouteFuzzySearchAPI = Proxy
@@ -85,13 +90,16 @@ getNandiGetRouteStopMappingByStopCode = ET.client nandiGetRouteStopMappingByStop
 getNandiRouteByRouteId :: Text -> Text -> ET.EulerClient RouteInfoNandi
 getNandiRouteByRouteId = ET.client nandiRouteByRouteIdAPI
 
+getNandiRoutesByRouteIds :: Text -> [Text] -> ET.EulerClient [RouteInfoNandi]
+getNandiRoutesByRouteIds = ET.client nandiRoutesByRouteIdsAPI
+
 getNandiRouteFuzzySearch :: Text -> Text -> ET.EulerClient [RouteInfoNandi]
 getNandiRouteFuzzySearch = ET.client nandiRouteFuzzySearchAPI
 
 getNandiRoutesByGtfsId :: Text -> ET.EulerClient [RouteInfoNandi]
 getNandiRoutesByGtfsId = ET.client nandiRoutesByGtfsIdAPI
 
-getNandiStopsByGtfsId :: Text -> ET.EulerClient [RouteStopMappingInMemoryServer]
+getNandiStopsByGtfsId :: Text -> ET.EulerClient [RouteStopMappingInMemoryServerWithPublicData]
 getNandiStopsByGtfsId = ET.client nandiStopsByGtfsIdAPI
 
 getNandiStopsByGtfsIdAndStopCode :: Text -> Text -> ET.EulerClient RouteStopMappingInMemoryServer
