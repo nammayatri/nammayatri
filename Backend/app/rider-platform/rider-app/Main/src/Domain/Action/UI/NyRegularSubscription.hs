@@ -21,7 +21,6 @@ import qualified Data.Text as T
 import qualified Data.Time as Time
 import qualified Domain.Action.UI.Quote as Domain.Action.UI.Quote
 import qualified Domain.Action.UI.Search as Search
-import qualified Domain.Types.Location as Location
 import qualified Domain.Types.Merchant as Domain.Types.Merchant
 import qualified Domain.Types.NyRegularInstanceLog as NyRegularInstanceLog
 import qualified Domain.Types.NyRegularSubscription
@@ -44,6 +43,7 @@ import qualified SharedLogic.CallBPP as CallBPP
 import SharedLogic.CallBPPInternal
 import SharedLogic.JobScheduler (NyRegularInstanceJobData (..), RiderJobType (NyRegularInstance))
 import SharedLogic.NyRegularSubscriptionHasher (calculateSubscriptionSchedulingHash)
+import qualified SharedLogic.Search as SLS
 import qualified SharedLogic.Search as Search
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
@@ -75,13 +75,14 @@ postNyRegularSubscriptionsCreate (mPersonId, merchantId) mbClientId mbIsDashboar
   let merchantOperatingCityId = person.merchantOperatingCityId
   now <- getCurrentTime
   subscriptionId <- generateGUID
-
+  pickupLocation' <- SLS.buildSearchReqLoc merchantId merchantOperatingCityId req.pickupLocation
+  dropoffLocation' <- SLS.buildSearchReqLoc merchantId merchantOperatingCityId req.dropoffLocation
   let newSubscription =
         NySub.NyRegularSubscription
           { id = subscriptionId,
             userId = personId,
-            pickupLocation = req.pickupLocation,
-            dropoffLocation = req.dropoffLocation,
+            pickupLocation = pickupLocation',
+            dropoffLocation = dropoffLocation',
             vehicleServiceTier = req.vehicleServiceTier,
             startDatetime = req.startDatetime,
             recurrenceRuleDays = req.recurrenceRuleDays,
@@ -140,8 +141,8 @@ transformToSearchReq req subscriptionId =
   let details = req.oneWaySearchReqDetails
    in Search.OneWaySearch
         Search.OneWaySearchReq
-          { origin = transformLocation req.pickupLocation,
-            destination = Just $ transformLocation req.dropoffLocation,
+          { origin = req.pickupLocation,
+            destination = Just $ req.dropoffLocation,
             startTime = details.startTime,
             stops = Nothing,
             isSourceManuallyMoved = details.isSourceManuallyMoved,
@@ -160,13 +161,6 @@ transformToSearchReq req subscriptionId =
             subscriptionId = Just subscriptionId,
             verifyBeforeCancellingOldBooking = Just True
           }
-  where
-    transformLocation :: Location.Location -> Search.SearchReqLocation
-    transformLocation loc =
-      Search.SearchReqLocation
-        { gps = LatLong {lat = loc.lat, lon = loc.lon},
-          address = loc.address
-        }
 
 getNyRegularSubscriptionsEstimate ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -527,6 +521,8 @@ mapNySubscriptionToApiEntity NySub.NyRegularSubscription {..} = do
     API.Types.UI.NyRegularSubscription.NyRegularSubscriptionApiEntity
       { nextRideOccurence = nextRideOccurence,
         metadata = show <$> metadata,
+        API.Types.UI.NyRegularSubscription.pickupLocation = SLS.SearchReqLocation (LatLong pickupLocation.lat pickupLocation.lon) pickupLocation.address,
+        API.Types.UI.NyRegularSubscription.dropoffLocation = SLS.SearchReqLocation (LatLong dropoffLocation.lat dropoffLocation.lon) dropoffLocation.address,
         ..
       }
 

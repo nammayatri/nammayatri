@@ -10,7 +10,6 @@ import qualified Data.Time.Calendar
 import qualified Data.Time.LocalTime
 import qualified Domain.Types.Estimate
 import qualified Domain.Types.IntegratedBPPConfig
-import qualified Domain.Types.Location
 import qualified Domain.Types.NyRegularSubscription
 import qualified Domain.Types.Person
 import qualified Domain.Types.RecentLocation
@@ -21,6 +20,7 @@ import qualified Kernel.Prelude
 import qualified Kernel.Types.Id
 import qualified Kernel.Types.Price
 import Servant
+import qualified SharedLogic.Search
 import Tools.Auth
 
 data ConfirmSubscriptionReq = ConfirmSubscriptionReq {estimateId :: Kernel.Types.Id.Id Domain.Types.Estimate.Estimate, subscriptionId :: Kernel.Types.Id.Id Domain.Types.NyRegularSubscription.NyRegularSubscription}
@@ -29,10 +29,10 @@ data ConfirmSubscriptionReq = ConfirmSubscriptionReq {estimateId :: Kernel.Types
 
 data CreateSubscriptionReq = CreateSubscriptionReq
   { bppId :: Data.Text.Text,
-    dropoffLocation :: Domain.Types.Location.Location,
+    dropoffLocation :: SharedLogic.Search.SearchReqLocation,
     metadata :: Kernel.Prelude.Maybe Data.Aeson.Value,
     oneWaySearchReqDetails :: OneWaySearchReqDetails,
-    pickupLocation :: Domain.Types.Location.Location,
+    pickupLocation :: SharedLogic.Search.SearchReqLocation,
     recurrenceEndDate :: Kernel.Prelude.Maybe Data.Time.Calendar.Day,
     recurrenceRuleDays :: [Data.Time.Calendar.DayOfWeek],
     scheduledTimeOfDay :: Data.Time.LocalTime.TimeOfDay,
@@ -49,7 +49,7 @@ data CreateSubscriptionRes = CreateSubscriptionRes {searchRequestId :: Data.Text
 data NyRegularSubscriptionApiEntity = NyRegularSubscriptionApiEntity
   { bppId :: Data.Text.Text,
     createdAt :: Data.Time.UTCTime,
-    dropoffLocation :: Domain.Types.Location.Location,
+    dropoffLocation :: SharedLogic.Search.SearchReqLocation,
     fixedPrice :: Kernel.Prelude.Maybe Kernel.Types.Price.Price,
     fixedPriceBreakupDetails :: Kernel.Prelude.Maybe Data.Aeson.Value,
     fixedPriceExpiryDate :: Kernel.Prelude.Maybe Data.Time.UTCTime,
@@ -60,7 +60,7 @@ data NyRegularSubscriptionApiEntity = NyRegularSubscriptionApiEntity
     nextRideOccurence :: Kernel.Prelude.Maybe Data.Time.UTCTime,
     pauseEndDate :: Kernel.Prelude.Maybe Data.Time.UTCTime,
     pauseStartDate :: Kernel.Prelude.Maybe Data.Time.UTCTime,
-    pickupLocation :: Domain.Types.Location.Location,
+    pickupLocation :: SharedLogic.Search.SearchReqLocation,
     recurrenceEndDate :: Kernel.Prelude.Maybe Data.Time.Calendar.Day,
     recurrenceRuleDays :: [Data.Time.Calendar.DayOfWeek],
     scheduledTimeOfDay :: Data.Time.LocalTime.TimeOfDay,

@@ -20,6 +20,7 @@ imports:
   GetQuotesRes: Domain.Action.UI.Quote
   Price: Kernel.Types.Price
   Person: Domain.Types.Person
+  SearchReqLocation : SharedLogic.Search
 
 module: NyRegularSubscription
 types:
@@ -39,8 +40,8 @@ types:
     platformType: Maybe PlatformType
 
   CreateSubscriptionReq:
-    pickupLocation: Location
-    dropoffLocation: Location
+    pickupLocation: SearchReqLocation
+    dropoffLocation: SearchReqLocation
     vehicleServiceTier: Maybe ServiceTierType
     startDatetime: UTCTime
     recurrenceRuleDays: "[DayOfWeek]"
@@ -53,8 +54,8 @@ types:
   NyRegularSubscriptionApiEntity:
     id: Id NyRegularSubscription
     userId: Id Person
-    pickupLocation: Location
-    dropoffLocation: Location
+    pickupLocation: SearchReqLocation
+    dropoffLocation: SearchReqLocation
     vehicleServiceTier: Maybe ServiceTierType
     startDatetime: UTCTime
     recurrenceRuleDays: "[DayOfWeek]"
