@@ -976,7 +976,7 @@ mkCreatePayoutOrderReq :: Text -> HighPrecMoney -> Maybe Text -> Maybe Text -> T
 mkCreatePayoutOrderReq orderId amount mbPhoneNo mbEmail customerId remark mbCustomerName customerVpa orderType isDynamicWebhookRequired =
   PT.CreatePayoutOrderReq
     { customerPhone = fromMaybe "6666666666" mbPhoneNo,
-      customerEmail = fromMaybe "dummymail@gmail.com" mbEmail,
+      customerEmail = fromMaybe "growth@nammayatri.in" mbEmail,
       customerName = fromMaybe "Unknown Customer" mbCustomerName,
       isDynamicWebhookRequired = isDynamicWebhookRequired,
       ..
