@@ -29,7 +29,7 @@ handleCacheMissForDriverFlowStatus ::
   m Common.DriverStatusRes
 handleCacheMissForDriverFlowStatus entityRole entityId allKeys = do
   let inProgressKey = getProgressKey entityId
-  inProgress <- Redis.get @Bool inProgressKey
+  inProgress <- Redis.withMasterRedis $ Redis.get @Bool inProgressKey
   case inProgress of
     Just True -> do
       logTagInfo "DriverStatus" $ "inProgress key present for entityId: " <> entityId <> ". Waiting for it to clear."
@@ -38,7 +38,7 @@ handleCacheMissForDriverFlowStatus entityRole entityId allKeys = do
       redisCounts' <-
         mapM
           ( \key ->
-              Redis.get @Int key >>= \v -> do
+              Redis.withMasterRedis (Redis.get @Int key) >>= \v -> do
                 logTagInfo "DriverStatus" $ "Redis.get (after wait) " <> key <> " => " <> show v
                 pure v
           )
@@ -106,7 +106,7 @@ toDriverStatusRes xs =
 -- Helper to wait until a Redis key is gone (polling every 100ms)
 waitUntilKeyGone :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r) => Text -> m ()
 waitUntilKeyGone key = do
-  exists <- Redis.get @Bool key
+  exists <- Redis.withMasterRedis $ Redis.get @Bool key
   when (exists == Just True) $ do
     liftIO $ threadDelay 100000 -- 100ms
     waitUntilKeyGone key
