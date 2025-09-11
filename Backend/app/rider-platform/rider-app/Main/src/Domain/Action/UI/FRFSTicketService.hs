@@ -643,7 +643,7 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req crisSdkResponse
           else return quote
       unless (personId == quote.riderId) $ throwError AccessDenied
       let discounts :: Maybe [FRFSDiscountRes] = decodeFromText =<< quote.discountsJson
-      selectedCategories <- validateCategories req.offered (fromMaybe [] discounts)
+      let selectedCategories = (fromMaybe [] discounts)
 
       now <- getCurrentTime
       unless (quote.validTill > now) $ throwError $ FRFSQuoteExpired quote.id.getId
@@ -669,17 +669,6 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req crisSdkResponse
             pure (rider, updatedBooking)
         )
         (pure mbBooking)
-
-    validateCategories :: (MonadFlow m) => [FRFSCategorySelectionReq] -> [FRFSDiscountRes] -> m [FRFSDiscountRes]
-    validateCategories selectedCategories allDiscounts = do
-      let selectedQuoteCategoryIds = map (.quoteCategoryId) selectedCategories
-      let eligibleCategories = filter (.eligibility) allDiscounts
-
-      if null eligibleCategories
-        then do
-          logError $ "No eligible Category found for selected categories: " <> show selectedQuoteCategoryIds
-          throwError CategoriesIneligible
-        else return eligibleCategories
 
     buildAndCreateBooking :: CallExternalBPP.FRFSConfirmFlow m r => Domain.Types.Person.Person -> DFRFSQuote.FRFSQuote -> [FRFSDiscountRes] -> m (Domain.Types.Person.Person, DFRFSTicketBooking.FRFSTicketBooking)
     buildAndCreateBooking rider quote@DFRFSQuote.FRFSQuote {..} selectedCategories = do
