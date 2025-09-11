@@ -646,7 +646,7 @@ INSERT INTO
 VALUES
   (
     'FRFS Discounts Eligibility',
-    'FRFS-DISCOUNTS',
+    'FRFS-TICKET-CATEGORIES',
     '{ "filter" :[{"var":"discounts"},{"or":[{"and":[{"==":[{"var":"code"},"WOMEN"] },{ "==" :[{"var":"aadhaarData.personGender"},"women"] } ] },{ "!=" :[{"var":"code"},"WOMEN"] } ] } ] }',
     0,
     1,
@@ -667,7 +667,7 @@ INSERT INTO
   )
 VALUES
   (
-    'FRFS-DISCOUNTS',
+    'FRFS-TICKET-CATEGORIES',
     100,
     1,
     'FRFS Discounts Eligibility For Women',
