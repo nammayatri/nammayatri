@@ -42,6 +42,16 @@ getRouteByRouteId integratedBPPConfig routeId = do
       logError $ "Route not found in OTPRest: " <> show routeId
       pure Nothing
 
+getRoutesByRouteIds ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  IntegratedBPPConfig ->
+  [Text] ->
+  m [Route.Route]
+getRoutesByRouteIds integratedBPPConfig routeIds = do
+  baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
+  routes <- Flow.getRoutesByRouteIds baseUrl integratedBPPConfig.feedKey routeIds
+  parseRoutesFromInMemoryServer routes integratedBPPConfig.id integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
+
 getRouteByFuzzySearch ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
   IntegratedBPPConfig ->
@@ -134,7 +144,7 @@ getStationsByGtfsId ::
 getStationsByGtfsId integratedBPPConfig = do
   baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
   stations <- Flow.getStationsByGtfsId baseUrl integratedBPPConfig.feedKey
-  parseStationsFromInMemoryServer stations integratedBPPConfig
+  parseStationsFromInMemoryServerWithPublicData stations integratedBPPConfig
 
 getStationByGtfsIdAndStopCode ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
@@ -167,13 +177,21 @@ getStationsByVehicleType vehicleType integratedBPPConfig = do
   return $ filter (\station -> station.vehicleType == vehicleType) stations
 
 -- Parse Queries
-
 parseStationsFromInMemoryServer ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, EsqDBFlow m r, HasShortDurationRetryCfg r c, Log m, CacheFlow m r) =>
   [RouteStopMappingInMemoryServer] ->
   IntegratedBPPConfig ->
   m [Station.Station]
 parseStationsFromInMemoryServer stations integratedBPPConfig = do
+  let routeStopMappingInMemoryServerWithPublicData = map (\RouteStopMappingInMemoryServer {..} -> RouteStopMappingInMemoryServerWithPublicData estimatedTravelTimeFromPreviousStop providerCode routeCode sequenceNum stopCode stopName stopPoint vehicleType Nothing Nothing hindiName regionalName) stations
+  parseStationsFromInMemoryServerWithPublicData routeStopMappingInMemoryServerWithPublicData integratedBPPConfig
+
+parseStationsFromInMemoryServerWithPublicData ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, EsqDBFlow m r, HasShortDurationRetryCfg r c, Log m, CacheFlow m r) =>
+  [RouteStopMappingInMemoryServerWithPublicData] ->
+  IntegratedBPPConfig ->
+  m [Station.Station]
+parseStationsFromInMemoryServerWithPublicData stations integratedBPPConfig = do
   now <- getCurrentTime
   stationsExtraInformation <- QStationsExtraInformation.getBystationIdsAndCity (map (.stopCode) stations) integratedBPPConfig.merchantOperatingCityId
   let stationAddressMap = HM.fromList $ map (\info -> (info.stationId, (info.address, info.suggestedDestinations))) stationsExtraInformation
