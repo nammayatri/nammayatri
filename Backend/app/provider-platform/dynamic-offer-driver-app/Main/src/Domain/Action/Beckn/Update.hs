@@ -212,7 +212,7 @@ handler (UEditLocationReq EditLocationReq {..}) = do
                   whenJust (nonEmpty alreadySnappedPointsWithCurrentPoint) $ \alreadySnappedPointsWithCurrentPoint' -> do
                     addEditDestinationSnappedWayPoints ride.driverId alreadySnappedPointsWithCurrentPoint'
                   deleteEditDestinationWaypoints ride.driverId
-                  reachedStopLocations <- Redis.get (VID.mkReachedStopKey ride.id)
+                  reachedStopLocations <- Redis.withMasterRedis $ Redis.get (VID.mkReachedStopKey ride.id)
                   let filteredStops = case reachedStopLocations of
                         Just reachedStops -> filter (\stop -> not (any (\reachedStop -> stop.lat == reachedStop.lat && stop.lon == reachedStop.lon) reachedStops)) stopLatLongs
                         Nothing -> stopLatLongs

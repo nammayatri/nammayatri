@@ -1427,14 +1427,14 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
             now <- getCurrentTime
             when (searchTry.validTill < now) $ throwError SearchRequestExpired
             when (sReqFD.isForwardRequest) $ do
-              mbGeohash <- Redis.get (editDestinationUpdatedLocGeohashKey driverId)
+              mbGeohash <- Redis.withMasterRedis $ Redis.get (editDestinationUpdatedLocGeohashKey driverId)
               when (maybe False (sReqFD.previousDropGeoHash /=) mbGeohash) $ throwError CustomerDestinationUpdated
             let expiryTimeWithBuffer = addUTCTime 10 sReqFD.searchRequestValidTill ------ added 10 secs buffer so that if driver is accepting at last second then because of api latency it sholuldn't fail.
             when (expiryTimeWithBuffer < now) $ throwError (InvalidRequest "Quote can't be responded. SearchReqForDriver is expired")
             searchReq <- QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
             -- fetch if any booking exist with same transaction id and status in activeBookingStatus
             when (DTC.isDynamicOfferTrip searchTry.tripCategory) $ do
-              mbActiveBooking <- QBE.findByTransactionIdAndStatuses searchReq.transactionId [DRB.NEW, DRB.TRIP_ASSIGNED]
+              mbActiveBooking <- runInMasterRedis $ QBE.findByTransactionIdAndStatuses searchReq.transactionId [DRB.NEW, DRB.TRIP_ASSIGNED]
               whenJust mbActiveBooking $ \_ ->
                 throwError RideRequestAlreadyAccepted
             merchant <- CQM.findById searchReq.providerId >>= fromMaybeM (MerchantDoesNotExist searchReq.providerId.getId)
@@ -1621,7 +1621,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
       void $ QDrQt.create driverQuote
       driverFCMPulledList <-
         if (quoteCount + 1) >= quoteLimit || (searchReq.autoAssignEnabled == Just True)
-          then QSRD.findAllActiveBySTId searchTry.id DSRD.Active
+          then runInMasterRedis $ QSRD.findAllActiveBySTId searchTry.id DSRD.Active
           else pure []
       pullExistingRideRequests merchantOpCityId driverFCMPulledList merchantId driver.id $ mkPrice (Just driverQuote.currency) driverQuote.estimatedFare
       sendDriverOffer merchant searchReq sReqFD searchTry driverQuote
@@ -1939,10 +1939,10 @@ verifyAuth (personId, _, _) req = do
     runRequestValidation validateAuthVerifyReq req
     person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
     checkSlidingWindowLimit (verifyHitsCountKey personId)
-    verified <- Redis.get (makeAlternateNumberVerifiedKey personId) >>= fromMaybeM (InvalidRequest "Verified not found")
+    verified <- Redis.withMasterRedis (Redis.get (makeAlternateNumberVerifiedKey personId)) >>= fromMaybeM (InvalidRequest "Verified not found")
     when verified $ throwError $ AuthBlocked "Already verified."
-    altMobNo <- Redis.get (makeAlternatePhoneNumberKey personId) >>= fromMaybeM (InvalidRequest "Alternate Number not found")
-    val <- Redis.get (makeAlternateNumberOtpKey personId)
+    altMobNo <- Redis.withMasterRedis (Redis.get (makeAlternatePhoneNumberKey personId)) >>= fromMaybeM (InvalidRequest "Alternate Number not found")
+    val <- Redis.withMasterRedis $ Redis.get (makeAlternateNumberOtpKey personId)
     authValueHash <- case val of
       Nothing -> throwError $ InternalError "Auth not found"
       Just a -> return a
