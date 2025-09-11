@@ -59,6 +59,7 @@ module Domain.Action.Dashboard.Fleet.Driver
     validateOperatorToFleetAssoc,
     validateRequestorRoleAndGetEntityId,
     getDriverFleetOperatorInfo,
+    checkRCAssociationForFleet,
   )
 where
 
@@ -141,7 +142,6 @@ import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.WMB as WMB
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Cac.TransporterConfig as SCTC
-import Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Clickhouse.Ride as CQRide
 import Storage.Clickhouse.RideDetails (findIdsByFleetOwner)
@@ -1497,41 +1497,12 @@ postDriverUpdateFleetOwnerInfo merchantShortId opCity driverId req = do
 getDriverFleetOperatorInfo ::
   ShortId DM.Merchant ->
   Context.City ->
-  Maybe Text ->
-  Maybe Text ->
-  Maybe Text ->
+  Text ->
   Flow Common.FleetOwnerInfoRes
-getDriverFleetOperatorInfo merchantShortId opCity mbMobileCountryCode mbMobileNumber mbPersonId = do
-  merchant <-
-    QMerchant.findByShortId merchantShortId
-      >>= fromMaybeM (MerchantNotFound merchantShortId.getShortId)
-  personId <- case mbPersonId of
-    Just pid -> pure (Id pid)
-    Nothing -> resolveByMobile merchant
-  getDriverFleetOwnerInfo merchantShortId opCity personId
-  where
-    resolveByMobile :: DM.Merchant -> Flow (Id Common.Driver)
-    resolveByMobile merchant =
-      maybe
-        (throwError $ InvalidRequest "Either personId or mobile number must be provided.")
-        (\mobile -> lookupByMobile merchant mobile)
-        mbMobileNumber
+getDriverFleetOperatorInfo merchantShortId opCity personId = do
+  getDriverFleetOwnerInfo merchantShortId opCity (Id personId)
 
-    lookupByMobile :: DM.Merchant -> Text -> Flow (Id Common.Driver)
-    lookupByMobile merchant mobileNumber = do
-      let mobileCountryCode = fromMaybe DCommon.mobileIndianCode mbMobileCountryCode
-      validateMobileNumber mobileNumber mobileCountryCode
-      mobileNumberDbHash <- getDbHash mobileNumber
-      person <-
-        QPerson.findByMobileNumberAndMerchantAndRoles
-          mobileCountryCode
-          mobileNumberDbHash
-          merchant.id
-          [DP.FLEET_OWNER, DP.OPERATOR]
-          >>= fromMaybeM (PersonNotFound mobileNumber)
-      pure (cast @DP.Person @Common.Driver person.id)
-
-getDriverFleetOwnerInfo ::
+getDriverFleetOwnerInfo :: -- Deprecated, use getDriverFleetOperatorInfo
   ShortId DM.Merchant ->
   Context.City ->
   Id Common.Driver ->

@@ -522,7 +522,6 @@ getDriverFleetOperatorInfo merchantShortId opCity apiTokenInfo mbMobileCountryCo
       QP.findByMobileNumber mobileNumber mobileCountryCode >>= fromMaybeM (PersonNotFound mobileNumber)
     (Nothing, Nothing) ->
       throwError $ InvalidRequest "Either personId or mobile number must be provided."
-
-  res <- Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetOperatorInfo) mbMobileCountryCode mbMobileNumber mbPersonId
+  res <- Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetOperatorInfo) person.id.getId
   pure
     res {Common.approvedBy = person.approvedBy <&> getId}

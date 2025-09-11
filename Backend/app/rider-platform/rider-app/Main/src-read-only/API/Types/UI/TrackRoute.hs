@@ -24,7 +24,8 @@ data VehicleInfo = VehicleInfo
     nextStopTravelTime :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     upcomingStops :: [SharedLogic.FRFSUtils.UpcomingStop],
     vehicleId :: Kernel.Prelude.Text,
-    vehicleInfo :: VehicleInfoForRoute
+    vehicleInfo :: VehicleInfoForRoute,
+    routeCode :: Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

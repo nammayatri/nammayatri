@@ -26,9 +26,11 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Mobility.ARDU.Fixtures as Fixtures
 import qualified "dynamic-offer-driver-app" Storage.Cac.TransporterConfig as SCTC
+import qualified "dynamic-offer-driver-app" Storage.Queries.DriverInformation as QDI
 import qualified "dynamic-offer-driver-app" Storage.Queries.Person as Q
 import qualified "dynamic-offer-driver-app" Storage.Queries.Person.GetNearestDrivers as S
 import Test.Hspec
+import "dynamic-offer-driver-app" Tools.Error (DriverInformationError (..))
 import Utils
 
 spec :: Spec
@@ -131,5 +133,6 @@ setDriversActive isActive mode = do
   forM_
     drivers
     ( \driver -> do
-        DDriverMode.updateDriverModeAndFlowStatus (Id driver) transporterConfig isActive mode newFlowStatus Nothing
+        driverInfo <- QDI.findById (Id driver) >>= fromMaybeM DriverInfoNotFound
+        DDriverMode.updateDriverModeAndFlowStatus (Id driver) transporterConfig isActive mode newFlowStatus driverInfo
     )
