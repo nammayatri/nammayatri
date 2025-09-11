@@ -105,7 +105,8 @@ fleetOwnerRegister _merchantShortId _opCity mbRequestorId req = do
     when (null fleetAssocs) $ do
       fleetOperatorAssocData <- SA.makeFleetOperatorAssociation person.merchantId person.merchantOperatingCityId (personId.getId) referredOperatorId (DomainRC.convertTextToUTC (Just "2099-12-12"))
       QFOA.create fleetOperatorAssocData
-      when (transporterConfig.allowCacheDriverFlowStatus == Just True) $ do
+      let mbAllowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
+      when (mbAllowCacheDriverFlowStatus == Just True) $ do
         DriverMode.incrementOperatorStatusKeyForFleetOwner referredOperatorId fleetOwnerId
       DOR.incrementOnboardedCount DOR.FleetReferral (Id referredOperatorId) transporterConfig
   when (transporterConfig.generateReferralCodeForFleet == Just True) $ do

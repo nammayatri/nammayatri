@@ -31,9 +31,9 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     acStatusCheckGap :: Kernel.Prelude.Int,
     actualRideDistanceDiffThreshold :: Kernel.Types.Common.HighPrecMeters,
     actualRideDistanceDiffThresholdIfWithinPickupDrop :: Kernel.Types.Common.HighPrecMeters,
-    allowCacheDriverFlowStatus :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     allowDefaultPlanAllocation :: Kernel.Prelude.Bool,
     allowedReferralEntities :: [Domain.Types.Person.Role],
+    analyticsConfig :: Domain.Types.TransporterConfig.AnalyticsConfig,
     approxRideDistanceDiffThreshold :: Kernel.Types.Common.HighPrecMeters,
     arrivalTimeBufferOfVehicle :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.ArrivalTimeBufferOfVehicle,
     arrivedPickupThreshold :: Kernel.Types.Common.HighPrecMeters,
@@ -241,6 +241,8 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
   deriving (Generic, Show, Eq)
 
 data AadhaarImageResizeConfig = AadhaarImageResizeConfig {height :: Kernel.Prelude.Int, width :: Kernel.Prelude.Int} deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
+
+newtype AnalyticsConfig = AnalyticsConfig {allowCacheDriverFlowStatus :: Kernel.Prelude.Maybe Kernel.Prelude.Bool} deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
 data ArrivalTimeBufferOfVehicle = ArrivalTimeBufferOfVehicle
   { ambulance :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,

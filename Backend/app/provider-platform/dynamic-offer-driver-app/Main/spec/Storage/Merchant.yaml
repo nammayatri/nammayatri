@@ -836,6 +836,10 @@ TransporterConfig:
       derive': Generic, Show, ToJSON, FromJSON, Read,Eq
     CallingOption:
       enum: "AnonymousCall, DirectCall, DualCall"
+    AnalyticsConfig:
+      allowCacheDriverFlowStatus: Maybe Bool
+      recordType: NewType
+      derive': Generic, Show, ToJSON, FromJSON, Read, Eq
   beamInstance:
     - MakeTableInstancesWithTModifier [("automaticRCActivationCutOff", "automatic_r_c_activation_cut_off")]
     - Custom Domain.Types.UtilsTH.mkCacParseInstance
@@ -1052,7 +1056,7 @@ TransporterConfig:
 
     aaEnabledClientSdkVersion : Text
     isAAEnabledForRecurring : Maybe Bool
-    allowCacheDriverFlowStatus : Maybe Bool
+    analyticsConfig: AnalyticsConfig
 
   beamType:
     currency: Maybe Currency
@@ -1120,6 +1124,8 @@ TransporterConfig:
       fcmUrl: Text
       fcmServiceAccount: Text
       fcmTokenKeyPrefix: Text
+    analyticsConfig:
+      analyticsConfig: Maybe Value
 
   toTType:
     currency: Just currency|E
@@ -1182,6 +1188,7 @@ TransporterConfig:
     requireRouteMappingInVehicle: Just requireRouteMappingInVehicle|E
     enableExistingVehicleInBulkUpload: Just enableExistingVehicleInBulkUpload|E
     isMLBasedDynamicPricingEnabled: Just isMLBasedDynamicPricingEnabled|E
+    analyticsConfig: Just . Data.Aeson.toJSON|I
 
     cancellationRateSlabConfig: Data.Aeson.toJSON <$> cancellationRateSlabConfig|E
     aaEnabledClientSdkVersion: Just aaEnabledClientSdkVersion| E
@@ -1259,7 +1266,7 @@ TransporterConfig:
     requireRouteMappingInVehicle: fromMaybe False requireRouteMappingInVehicle|E
     enableExistingVehicleInBulkUpload: fromMaybe False enableExistingVehicleInBulkUpload|E
     isMLBasedDynamicPricingEnabled: fromMaybe False isMLBasedDynamicPricingEnabled|E
-
+    analyticsConfig: Storage.Queries.Transformers.TransporterConfig.parseAnalyticsConfig merchantOperatingCityId|IM
     cancellationRateSlabConfig: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< cancellationRateSlabConfig|E
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -1320,6 +1327,8 @@ TransporterConfig:
     allowedReferralEntities: "text[]"
     cancellationRateSlabConfig: json
     driverCallingOption: text
+    analyticsConfig: json
+
   default:
     mediaFileUrlPattern: |-
       'http://localhost:8016/ui/<DOMAIN>/media?filePath=<FILE_PATH>'
@@ -1463,7 +1472,7 @@ TransporterConfig:
 
     aaEnabledClientSdkVersion : "'999.999.999'"
     isAAEnabledForRecurring : "false"
-    allowCacheDriverFlowStatus : "false"
+    analyticsConfig: '''{"allowCacheDriverFlowStatus": false}'' :: json'
   excludedDefaultQueries:
     - findByPrimaryKey
     - updateByPrimaryKey

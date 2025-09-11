@@ -23,6 +23,7 @@ import qualified Storage.Queries.Transformers.TransporterConfig
 instance FromTType' Beam.TransporterConfig Domain.Types.TransporterConfig.TransporterConfig where
   fromTType' (Beam.TransporterConfigT {..}) = do
     fcmUrl' <- Kernel.Prelude.parseBaseUrl fcmUrl
+    analyticsConfig' <- Storage.Queries.Transformers.TransporterConfig.parseAnalyticsConfig merchantOperatingCityId analyticsConfig
     pure $
       Just
         Domain.Types.TransporterConfig.TransporterConfig
@@ -32,9 +33,9 @@ instance FromTType' Beam.TransporterConfig Domain.Types.TransporterConfig.Transp
             acStatusCheckGap = acStatusCheckGap,
             actualRideDistanceDiffThreshold = actualRideDistanceDiffThreshold,
             actualRideDistanceDiffThresholdIfWithinPickupDrop = actualRideDistanceDiffThresholdIfWithinPickupDrop,
-            allowCacheDriverFlowStatus = allowCacheDriverFlowStatus,
             allowDefaultPlanAllocation = allowDefaultPlanAllocation,
             allowedReferralEntities = maybe [] (mapMaybe (readMaybe . Data.Text.unpack)) allowedReferralEntities,
+            analyticsConfig = analyticsConfig',
             approxRideDistanceDiffThreshold = approxRideDistanceDiffThreshold,
             arrivalTimeBufferOfVehicle = (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< arrivalTimeBufferOfVehicle,
             arrivedPickupThreshold = fromMaybe 100 arrivedPickupThreshold,
@@ -249,9 +250,9 @@ instance ToTType' Beam.TransporterConfig Domain.Types.TransporterConfig.Transpor
         Beam.acStatusCheckGap = acStatusCheckGap,
         Beam.actualRideDistanceDiffThreshold = actualRideDistanceDiffThreshold,
         Beam.actualRideDistanceDiffThresholdIfWithinPickupDrop = actualRideDistanceDiffThresholdIfWithinPickupDrop,
-        Beam.allowCacheDriverFlowStatus = allowCacheDriverFlowStatus,
         Beam.allowDefaultPlanAllocation = allowDefaultPlanAllocation,
         Beam.allowedReferralEntities = Just (Data.Text.pack . Kernel.Prelude.show <$> allowedReferralEntities),
+        Beam.analyticsConfig = (Just . Data.Aeson.toJSON) analyticsConfig,
         Beam.approxRideDistanceDiffThreshold = approxRideDistanceDiffThreshold,
         Beam.arrivalTimeBufferOfVehicle = Kernel.Prelude.toJSON <$> arrivalTimeBufferOfVehicle,
         Beam.arrivedPickupThreshold = Just arrivedPickupThreshold,

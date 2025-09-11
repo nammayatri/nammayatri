@@ -65,7 +65,7 @@ import Domain.Types.Plan
 import qualified Domain.Types.Ride as Ride
 import qualified Domain.Types.RideRelatedNotificationConfig as DRN
 import qualified Domain.Types.RiderDetails as RD
-import Domain.Types.SubscriptionConfig
+import qualified Domain.Types.SubscriptionConfig as DSC
 import Domain.Types.TransporterConfig
 import qualified Domain.Types.VehicleCategory as DVC
 import qualified Domain.Types.VehicleVariant as Variant
@@ -661,7 +661,7 @@ createDriverFee merchantId merchantOpCityId driverId rideFare currency newFarePa
         then transporterConfig.considerSpecialZoneRideChargesInFreeTrial || notOnFreeTrial
         else notOnFreeTrial
 
-    getPlanAndPushToDefualtIfEligible :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => TransporterConfig -> Maybe SubscriptionConfig -> Int -> Bool -> Bool -> Maybe DVC.VehicleCategory -> m (Maybe DriverPlan, Bool)
+    getPlanAndPushToDefualtIfEligible :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => TransporterConfig -> Maybe DSC.SubscriptionConfig -> Int -> Bool -> Bool -> Maybe DVC.VehicleCategory -> m (Maybe DriverPlan, Bool)
     getPlanAndPushToDefualtIfEligible transporterConfig mbSubsConfig freeTrialDaysLeft' isSpecialZoneCharge planMandatory currentVehicleCategory = do
       mbDriverPlan' <- findByDriverIdWithServiceName (cast driverId) serviceName
       (isOnFreeTrial', _) <- do
@@ -752,7 +752,7 @@ mkDriverFee ::
   Maybe SRB.Booking ->
   Bool ->
   Maybe DVC.VehicleCategory ->
-  Maybe SubscriptionConfig ->
+  Maybe DSC.SubscriptionConfig ->
   m DF.DriverFee
 mkDriverFee serviceName now startTime' endTime' merchantId driverId rideFare govtCharges platformFee cgst sgst currency transporterConfig _mbBooking isSpecialZoneCharge currentVehicleCategory subsConfig = do
   id <- generateGUID
