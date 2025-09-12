@@ -148,13 +148,16 @@ onConfirm (ValidatedBookingConfirmed ValidatedBookingConfirmedReq {..}) = do
 onConfirm (ValidatedRideAssigned req) = DCommon.rideAssignedReqHandler req
 
 -- TODO: Make sure booking status is new here.
-validateRequest :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r, HasHttpClientOptions r c, HasLongDurationRetryCfg r c, HasField "minTripDistanceForReferralCfg" r (Maybe Distance)) => OnConfirmReq -> Text -> m ValidatedOnConfirmReq
-validateRequest (BookingConfirmed BookingConfirmedInfo {..}) _txnId = do
+validateRequest :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r, HasHttpClientOptions r c, HasLongDurationRetryCfg r c, HasField "minTripDistanceForReferralCfg" r (Maybe Distance)) => OnConfirmReq -> Text -> Bool -> m ValidatedOnConfirmReq
+validateRequest (BookingConfirmed BookingConfirmedInfo {..}) _txnId _isValueAddNP = do
   booking <- runInReplica $ QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId-" <> bppBookingId.getId)
   return $ ValidatedBookingConfirmed ValidatedBookingConfirmedReq {..}
-validateRequest (RideAssigned RideAssignedInfo {..}) transactionId = do
+validateRequest (RideAssigned RideAssignedInfo {..}) transactionId isValueAddNP = do
   let bookingDetails = DCommon.BookingDetails {otp = rideOtp, isInitiatedByCronJob = False, ..}
-  booking <- QRB.findByTransactionId transactionId >>= fromMaybeM (BookingDoesNotExist $ "transactionId:-" <> transactionId)
+  booking <-
+    if isValueAddNP
+      then QRB.findByBPPBookingId bppBookingId |<|>| QRB.findByTransactionId transactionId >>= fromMaybeM (BookingDoesNotExist $ "transactionId:-" <> transactionId)
+      else QRB.findByTransactionId transactionId >>= fromMaybeM (BookingDoesNotExist $ "transactionId:-" <> transactionId)
   mbMerchant <- CQM.findById booking.merchantId
   let onlinePayment = maybe False (.onlinePayment) mbMerchant
   onlinePaymentParameters <-

@@ -54,7 +54,7 @@ onConfirm _ reqV2 = withFlowHandlerBecknAPI do
             DOnConfirm.RideAssigned rideAssignedReq -> rideAssignedReq.bppBookingId
             DOnConfirm.BookingConfirmed bookingConfirmedReq -> bookingConfirmedReq.bppBookingId
       Redis.whenWithLockRedis (onConfirmLockKey bppBookingId.getId) 60 $ do
-        validatedReq <- DOnConfirm.validateRequest onConfirmReq transactionId
+        validatedReq <- DOnConfirm.validateRequest onConfirmReq transactionId isValueAddNP
         merchantOperatingCityId <- case validatedReq of
           DOnConfirm.ValidatedRideAssigned rideAssignedReq -> pure $ rideAssignedReq.booking.merchantOperatingCityId.getId
           DOnConfirm.ValidatedBookingConfirmed bookingConfirmedReq -> pure $ bookingConfirmedReq.booking.merchantOperatingCityId.getId

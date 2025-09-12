@@ -42,7 +42,11 @@ buildConfirmReqV2 ::
 buildConfirmReqV2 req isValueAddNP = do
   Utils.validateContext Context.CONFIRM req.confirmReqContext
   transactionId <- Utils.getTransactionId req.confirmReqContext
-  booking <- QB.findByTransactionIdAndStatus transactionId NEW >>= fromMaybeM (InvalidRequest "Booking not found")
+  let bookingId = bool Nothing (Id <$> req.confirmReqMessage.confirmReqMessageOrder.orderId) isValueAddNP
+  booking <-
+    case bookingId of
+      Just id -> QB.findById id <|> QB.findByTransactionIdAndStatus transactionId NEW >>= fromMaybeM (InvalidRequest "Booking not found")
+      Nothing -> QB.findByTransactionIdAndStatus transactionId NEW >>= fromMaybeM (InvalidRequest "Booking not found")
   let bookingId = booking.id
   fulfillment <- req.confirmReqMessage.confirmReqMessageOrder.orderFulfillments >>= listToMaybe & fromMaybeM (InvalidRequest "Fulfillment not found")
   customerPhoneNumber <- fulfillment.fulfillmentCustomer >>= (.customerContact) >>= (.contactPhone) & fromMaybeM (InvalidRequest "Customer Phone not found")
