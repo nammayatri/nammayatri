@@ -17,6 +17,7 @@ import API.Types.UI.FRFSTicketService
 import Domain.Action.Beckn.FRFS.Common (DOnSelect (..))
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified Domain.Types.FRFSQuote as DQuote
+import Domain.Types.FRFSQuoteCategory
 import qualified Domain.Types.Merchant as Merchant
 import Kernel.Beam.Functions
 import Kernel.External.Types (ServiceFlow)
@@ -70,4 +71,6 @@ onSelect onSelectReq merchant quote = do
       mbQuoteCategory <- QFRFSQuoteCategory.findByBppItemId categorySelect.bppItemId
       case mbQuoteCategory of
         Nothing -> return Nothing
-        Just quoteCategory -> return $ Just $ FRFSCategorySelectionReq {quantity = categorySelect.quantity, quoteCategoryId = quoteCategory.id}
+        Just quoteCategory -> do
+          QFRFSQuoteCategory.updateByPrimaryKey quoteCategory {selectedQuantity = Just categorySelect.quantity}
+          return $ Just $ FRFSCategorySelectionReq {quantity = categorySelect.quantity, quoteCategoryId = quoteCategory.id}

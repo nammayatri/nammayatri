@@ -78,7 +78,6 @@ buildOnSearchReq onSearchReq = do
   integratedBPPConfig <- QIBC.findById frfsSearch.integratedBppConfigId >>= fromMaybeM (InvalidRequest "IntegratedBPPConfig not found")
 
   quotes <- mkQuotes items fulfillments integratedBPPConfig
-  logDebug $ "Quotes from OnSearch: " <> show quotes
   return
     Domain.DOnSearch
       { providerDescription,
@@ -96,7 +95,6 @@ buildOnSearchReq onSearchReq = do
 mkQuotes :: (MonadFlow m) => [Spec.Item] -> [Spec.Fulfillment] -> DIBC.IntegratedBPPConfig -> m [Domain.DQuote]
 mkQuotes items fulfillments integratedBPPConfig = do
   allQuotes <- traverse (parseItems fulfillments) items <&> concat
-  logDebug $ "All Quotes from OnSearch: " <> show allQuotes
   return $ mergeQuotes integratedBPPConfig allQuotes
 
 mergeQuotes :: DIBC.IntegratedBPPConfig -> [Domain.DQuote] -> [Domain.DQuote]
@@ -131,7 +129,6 @@ parseFulfillments :: (MonadFlow m) => Spec.Item -> [Spec.Fulfillment] -> Text ->
 parseFulfillments item fulfillments fulfillmentId = do
   itemId <- item.itemId & fromMaybeM (InvalidRequest "ItemId not found")
   itemCode <- item.itemDescriptor >>= (.descriptorCode) & fromMaybeM (InvalidRequest "ItemCode not found")
-  logDebug $ "ItemCode from OnSearch: " <> itemCode
   quoteType <- castQuoteType itemCode
 
   fulfillment <- fulfillments & find (\fulfillment -> fulfillment.fulfillmentId == Just fulfillmentId) & fromMaybeM (InvalidRequest "Fulfillment not found")

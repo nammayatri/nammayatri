@@ -389,3 +389,8 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN validate_set_onboarding_vehicle_re
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN upcoming_bus_threshold_sec integer  default 3600;
 ALTER TABLE atlas_app.rider_config ADD COLUMN bus_tier_sorting_config json ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN source_of_service_tier text default 'NANDI';

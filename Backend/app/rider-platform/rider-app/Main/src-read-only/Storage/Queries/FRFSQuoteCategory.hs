@@ -49,6 +49,7 @@ updateByPrimaryKey (Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory {..}) = do
       Se.Set Beam.currency ((Kernel.Prelude.Just . (.currency)) price),
       Se.Set Beam.price ((.amount) price),
       Se.Set Beam.quoteId (Kernel.Types.Id.getId quoteId),
+      Se.Set Beam.selectedQuantity selectedQuantity,
       Se.Set Beam.ticketCategoryMetadataConfigId (Kernel.Types.Id.getId $ (.id) ticketCategoryMetadataConfig),
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
@@ -69,6 +70,7 @@ instance FromTType' Beam.FRFSQuoteCategory Domain.Types.FRFSQuoteCategory.FRFSQu
             offeredPrice = Kernel.Types.Common.mkPrice currency offeredPrice,
             price = Kernel.Types.Common.mkPrice currency price,
             quoteId = Kernel.Types.Id.Id quoteId,
+            selectedQuantity = selectedQuantity,
             ticketCategoryMetadataConfig = ticketCategoryMetadataConfig',
             createdAt = createdAt,
             updatedAt = updatedAt
@@ -86,6 +88,7 @@ instance ToTType' Beam.FRFSQuoteCategory Domain.Types.FRFSQuoteCategory.FRFSQuot
         Beam.currency = (Kernel.Prelude.Just . (.currency)) price,
         Beam.price = (.amount) price,
         Beam.quoteId = Kernel.Types.Id.getId quoteId,
+        Beam.selectedQuantity = selectedQuantity,
         Beam.ticketCategoryMetadataConfigId = Kernel.Types.Id.getId $ (.id) ticketCategoryMetadataConfig,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt

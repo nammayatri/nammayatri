@@ -725,8 +725,8 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req crisSdkResponse
               }
       QFRFSTicketBooking.create booking
       -- Create booking breakup entries based on category selections
-      dcategories <- buildCategorySelectFromReq req.offered
-      FRFSUtils.createBookingBreakupEntries booking dcategories merchantId_ quote.merchantOperatingCityId
+      -- dcategories <- buildCategorySelectFromReq req.offered
+      -- FRFSUtils.createBookingBreakupEntries booking dcategories merchantId_ quote.merchantOperatingCityId
       return (rider, booking)
 
     makeBookingStatusAPI booking discounts routeStations stations city =
