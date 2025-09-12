@@ -176,7 +176,7 @@ setJourneyLegTrackingStatus journeyLeg subLegOrder trackingStatus trackingStatus
     ( \rd -> do
         -- Removed this validation as in case of Manual Fix Location, Tracking Status can go back in Past.
         -- when (maybe True (trackingStatus >) rd.trackingStatus) $ do
-        void $ QRouteDetailsExtra.updateTrackingStatusWithTime (Just trackingStatus) rd.id trackingStatusUpdateTime
+        void $ QRouteDetails.updateTrackingStatusWithTime (Just trackingStatus) rd.id trackingStatusUpdateTime
     )
     routeDetails
 
