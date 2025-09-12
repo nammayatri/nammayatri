@@ -771,12 +771,13 @@ postMultimodalOrderSublegSetStatus ::
   Environment.Flow ApiTypes.JourneyStatusResp
 postMultimodalOrderSublegSetStatus (_, _) journeyId legOrder subLegOrder newStatus = do
   journey <- JM.getJourney journeyId
+  now <- getCurrentTime
 
   legs <- QJourneyLeg.getJourneyLegs journeyId
 
   journeyLeg <- find (\leg -> leg.sequenceNumber == legOrder) legs & fromMaybeM (InvalidRequest "No matching journey leg found for the given legOrder")
 
-  markLegStatus (Just newStatus) Nothing journeyLeg (Just subLegOrder)
+  markLegStatus (Just newStatus) Nothing journeyLeg (Just subLegOrder) now
 
   -- refetch updated legs and journey
   updatedLegStatus <- JM.getAllLegsStatus journey
@@ -792,15 +793,24 @@ postMultimodalOrderSublegSetTrackingStatus ::
   Kernel.Prelude.Int ->
   Kernel.Prelude.Int ->
   JMState.TrackingStatus ->
+  Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
   Environment.Flow ApiTypes.JourneyStatusResp
-postMultimodalOrderSublegSetTrackingStatus (_, _) journeyId legOrder subLegOrder trackingStatus = do
+postMultimodalOrderSublegSetTrackingStatus (_, _) journeyId legOrder subLegOrder trackingStatus mbTrackingStatusUpdateTime = do
+  now <- getCurrentTime
+  -- In case user device time is of future, consider the updated time to be of now to avoid backend update miss
+  let trackingStatusUpdateTime =
+        case mbTrackingStatusUpdateTime of
+          Just t
+            | t > now -> now
+            | otherwise -> t
+          Nothing -> now
   journey <- JM.getJourney journeyId
 
   legs <- QJourneyLeg.getJourneyLegs journeyId
 
   journeyLeg <- find (\leg -> leg.sequenceNumber == legOrder) legs & fromMaybeM (InvalidRequest "No matching journey leg found for the given legOrder")
 
-  markLegStatus Nothing (Just trackingStatus) journeyLeg (Just subLegOrder)
+  markLegStatus Nothing (Just trackingStatus) journeyLeg (Just subLegOrder) trackingStatusUpdateTime
 
   -- refetch updated legs and journey
   updatedLegStatus <- JM.getAllLegsStatus journey
@@ -847,12 +857,12 @@ postMultimodalTicketVerify (_mbPersonId, merchantId) opCity req = do
         _ -> throwError $ InvalidRequest "Invalid provider"
 
 -- Helper function to mark all sub-legs as completed for FRFS legs
-markAllSubLegsCompleted :: DJourneyLeg.JourneyLeg -> Environment.Flow ()
-markAllSubLegsCompleted journeyLeg = do
+markAllSubLegsCompleted :: DJourneyLeg.JourneyLeg -> UTCTime -> Environment.Flow ()
+markAllSubLegsCompleted journeyLeg trackingStatusUpdateTime = do
   let subLegOrders = map (\r -> fromMaybe 1 r.subLegOrder) journeyLeg.routeDetails
   case subLegOrders of
-    [] -> markLegStatus (Just JL.Completed) (Just JMState.Finished) journeyLeg Nothing
-    orders -> mapM_ (\subOrder -> markLegStatus (Just JL.Completed) (Just JMState.Finished) journeyLeg (Just subOrder)) orders
+    [] -> markLegStatus (Just JL.Completed) (Just JMState.Finished) journeyLeg Nothing trackingStatusUpdateTime
+    orders -> mapM_ (\subOrder -> markLegStatus (Just JL.Completed) (Just JMState.Finished) journeyLeg (Just subOrder) trackingStatusUpdateTime) orders
 
 postMultimodalComplete ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -864,8 +874,8 @@ postMultimodalComplete (_, _) journeyId = do
   journey <- JM.getJourney journeyId
   legs <- QJourneyLeg.getJourneyLegs journeyId
   cancelOngoingTaxiLegs legs
-
-  mapM_ (\leg -> markAllSubLegsCompleted leg) legs
+  now <- getCurrentTime
+  mapM_ (\leg -> markAllSubLegsCompleted leg now) legs
   updatedLegStatus <- JM.getAllLegsStatus journey
   checkAndMarkTerminalJourneyStatus journey updatedLegStatus
   updatedJourney <- JM.getJourney journeyId

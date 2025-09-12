@@ -494,6 +494,8 @@ apis:
 
   - POST:
       endpoint: /multimodal/{journeyId}/order/{legOrder}/subleg/{subLegOrder}/setTrackingStatus/{trackingStatus}
+      query:
+        trackingStatusLastUpdatedAt: UTCTime
       params:
         journeyId: Id Journey
         legOrder: Int

@@ -350,6 +350,9 @@ type API =
       :> Capture
            "trackingStatus"
            Lib.JourneyModule.State.Types.TrackingStatus
+      :> QueryParam
+           "trackingStatusLastUpdatedAt"
+           Kernel.Prelude.UTCTime
       :> Post
            '[JSON]
            API.Types.UI.MultimodalConfirm.JourneyStatusResp
@@ -709,9 +712,10 @@ postMultimodalOrderSublegSetTrackingStatus ::
     Kernel.Prelude.Int ->
     Kernel.Prelude.Int ->
     Lib.JourneyModule.State.Types.TrackingStatus ->
+    Kernel.Prelude.Maybe Kernel.Prelude.UTCTime ->
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.JourneyStatusResp
   )
-postMultimodalOrderSublegSetTrackingStatus a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalOrderSublegSetTrackingStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
+postMultimodalOrderSublegSetTrackingStatus a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.postMultimodalOrderSublegSetTrackingStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a6) a5 a4 a3 a2 a1
 
 postMultimodalComplete ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
