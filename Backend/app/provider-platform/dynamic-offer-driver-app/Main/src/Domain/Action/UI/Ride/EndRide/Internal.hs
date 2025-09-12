@@ -203,7 +203,7 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
     -- Turn this off for only prepaid subscriptions
     let serviceName = YATRI_SUBSCRIPTION
     createDriverFee booking.providerId booking.merchantOperatingCityId driverId ride.fare ride.currency newFareParams driverInfo booking serviceName
-  when (fromMaybe False merchant.enforceSufficientDriverBalance && fromMaybe False thresholdConfig.driverWalletConfig.enableDriverWallet) $ do
+  when (fromMaybe False merchant.enforceSufficientDriverBalance && thresholdConfig.driverWalletConfig.enableDriverWallet) $ do
     fork "createDriverWalletTransaction" $ createDriverWalletTransaction ride booking thresholdConfig
 
   triggerRideEndEvent RideEventData {ride = ride{status = Ride.COMPLETED}, personId = cast driverId, merchantId = booking.providerId}
@@ -302,7 +302,7 @@ createDriverWalletTransaction ride booking transporterConfig = do
   now <- getCurrentTime
   newId <- generateGUID
   let collectionAmount = fromMaybe 0 ride.fare
-      gstPercentage = fromMaybe 0.0 transporterConfig.driverWalletConfig.gstPercentage
+      gstPercentage = transporterConfig.driverWalletConfig.gstPercentage
       gstDeduction = collectionAmount * (realToFrac gstPercentage / 100)
 
   Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey ride.driverId.getId) 10 10 $ do

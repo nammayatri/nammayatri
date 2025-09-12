@@ -253,11 +253,11 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
 data AadhaarImageResizeConfig = AadhaarImageResizeConfig {height :: Kernel.Prelude.Int, width :: Kernel.Prelude.Int} deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
 data AnalyticsConfig = AnalyticsConfig
-  { allowCacheDriverFlowStatus :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    earningsWindowSize :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    maxOnlineDurationDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+  { allowCacheDriverFlowStatus :: Kernel.Prelude.Bool,
+    earningsWindowSize :: Kernel.Prelude.Int,
+    maxOnlineDurationDays :: Kernel.Prelude.Int,
     onlineDurationCalculateFrom :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
-    weekStartMode :: Kernel.Prelude.Maybe Kernel.Prelude.Int
+    weekStartMode :: Kernel.Prelude.Int
   }
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
@@ -345,14 +345,14 @@ data DistanceRecomputeConfigs = DistanceRecomputeConfigs {estimatedDistanceUpper
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
 data DriverWalletConfig = DriverWalletConfig
-  { driverWalletPayoutThreshold :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
-    enableDriverWallet :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    enableWalletPayout :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    enableWalletTopup :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
-    gstPercentage :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+  { driverWalletPayoutThreshold :: Kernel.Types.Common.HighPrecMoney,
+    enableDriverWallet :: Kernel.Prelude.Bool,
+    enableWalletPayout :: Kernel.Prelude.Bool,
+    enableWalletTopup :: Kernel.Prelude.Bool,
+    gstPercentage :: Kernel.Prelude.Double,
     maxWalletPayoutsPerDay :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    minimumWalletPayoutAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
-    payoutCutOffDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int
+    minimumWalletPayoutAmount :: Kernel.Types.Common.HighPrecMoney,
+    payoutCutOffDays :: Kernel.Prelude.Int
   }
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
