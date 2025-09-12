@@ -12,7 +12,6 @@ import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
-import qualified Lib.JourneyModule.State.Types
 import qualified Sequelize as Se
 import qualified Storage.Beam.RouteDetails as Beam
 import Storage.Queries.RouteDetailsExtra as ReExport
@@ -47,13 +46,6 @@ updateRoute routeGtfsId routeCode routeLongName routeShortName journeyLegId = do
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.journeyLegId $ Se.Eq journeyLegId]
-
-updateTrackingStatus ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Lib.JourneyModule.State.Types.TrackingStatus -> Kernel.Types.Id.Id Domain.Types.RouteDetails.RouteDetails -> m ())
-updateTrackingStatus trackingStatus id = do
-  _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.trackingStatus trackingStatus, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.RouteDetails.RouteDetails -> m (Maybe Domain.Types.RouteDetails.RouteDetails))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
@@ -91,6 +83,7 @@ updateByPrimaryKey (Domain.Types.RouteDetails.RouteDetails {..}) = do
       Se.Set Beam.toStopName toStopName,
       Se.Set Beam.toStopPlatformCode toStopPlatformCode,
       Se.Set Beam.trackingStatus trackingStatus,
+      Se.Set Beam.trackingStatusLastUpdatedAt trackingStatusLastUpdatedAt,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.createdAt createdAt,

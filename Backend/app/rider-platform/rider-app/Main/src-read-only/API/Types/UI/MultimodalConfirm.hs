@@ -159,6 +159,7 @@ data LegStatus = LegStatus
     status :: Lib.JourneyLeg.Types.JourneyLegStatus,
     subLegOrder :: Kernel.Prelude.Int,
     trackingStatus :: Lib.JourneyModule.State.Types.TrackingStatus,
+    trackingStatusLastUpdatedAt :: Kernel.Prelude.UTCTime,
     userPosition :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
     vehiclePositions :: [Lib.JourneyModule.Types.VehiclePosition]
   }

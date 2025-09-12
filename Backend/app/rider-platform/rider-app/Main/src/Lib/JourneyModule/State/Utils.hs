@@ -19,18 +19,19 @@ import Storage.Queries.FRFSTicket as QFRFSTicket
 import Storage.Queries.FRFSTicketBookingFeedback as QFRFSTicketBookingFeedback
 import Storage.Queries.RouteDetails as QRouteDetails
 
-getFRFSAllStatuses :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => DJourneyLeg.JourneyLeg -> Maybe DFRFSBooking.FRFSTicketBooking -> m (JLTypes.JourneyLegStatus, JourneyBookingStatus, [(Int, TrackingStatus)])
+getFRFSAllStatuses :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => DJourneyLeg.JourneyLeg -> Maybe DFRFSBooking.FRFSTicketBooking -> m (JLTypes.JourneyLegStatus, JourneyBookingStatus, [(Int, TrackingStatus, UTCTime)])
 getFRFSAllStatuses journeyLeg mbBooking = do
+  now <- getCurrentTime
   bookingStatus <- getFRFSJourneyBookingStatus mbBooking
   trackingStatuses <-
     mapM
       ( \routeDetail -> do
           let trackingStatus = getFRFSJourneyLegTrackingStatus mbBooking routeDetail
-          return (fromMaybe 1 routeDetail.subLegOrder, trackingStatus)
+          return (fromMaybe 1 routeDetail.subLegOrder, trackingStatus, fromMaybe now routeDetail.trackingStatusLastUpdatedAt)
       )
       journeyLeg.routeDetails
   let oldStatus =
-        if not (null trackingStatuses) && all (\(_, trackingStatus) -> trackingStatus == Finished) trackingStatuses
+        if not (null trackingStatuses) && all (\(_, trackingStatus, _) -> trackingStatus == Finished) trackingStatuses
           then JLTypes.Completed
           else
             if bookingStatus `elem` [FRFSTicket DFRFSTicket.CANCELLED, FRFSBooking DFRFSBooking.CANCELLED]
@@ -41,7 +42,7 @@ getFRFSAllStatuses journeyLeg mbBooking = do
                 FRFSTicket DFRFSTicket.USED -> JLTypes.Completed
                 FRFSTicket DFRFSTicket.EXPIRED -> JLTypes.Completed
                 Feedback _ -> JLTypes.Completed
-                _ -> castTrackingStatusToJourneyLegStatus (fromMaybe InPlan (snd <$> listToMaybe trackingStatuses)) -- for UI backward compatibility
+                _ -> castTrackingStatusToJourneyLegStatus (fromMaybe InPlan (listToMaybe trackingStatuses <&> (\(_, a, _) -> a))) -- for UI backward compatibility
   return (oldStatus, bookingStatus, trackingStatuses)
   where
     getFRFSLegStatusFromBooking :: DFRFSBooking.FRFSTicketBookingStatus -> JLTypes.JourneyLegStatus
@@ -57,14 +58,15 @@ getFRFSAllStatuses journeyLeg mbBooking = do
       DFRFSBooking.CANCEL_INITIATED -> JLTypes.Cancelled
       DFRFSBooking.TECHNICAL_CANCEL_REJECTED -> JLTypes.InPlan
 
-getWalkAllStatuses :: DJourneyLeg.JourneyLeg -> (JLTypes.JourneyLegStatus, TrackingStatus)
+getWalkAllStatuses :: DJourneyLeg.JourneyLeg -> (JLTypes.JourneyLegStatus, TrackingStatus, Maybe UTCTime)
 getWalkAllStatuses journeyLeg = do
   case (listToMaybe journeyLeg.routeDetails) of
-    Just routeDetail -> (maybe JLTypes.InPlan castTrackingStatusToJourneyLegStatus routeDetail.trackingStatus, fromMaybe InPlan routeDetail.trackingStatus)
-    Nothing -> (JLTypes.InPlan, InPlan)
+    Just routeDetail -> (maybe JLTypes.InPlan castTrackingStatusToJourneyLegStatus routeDetail.trackingStatus, fromMaybe InPlan routeDetail.trackingStatus, routeDetail.trackingStatusLastUpdatedAt)
+    Nothing -> (JLTypes.InPlan, InPlan, Nothing)
 
-getTaxiAllStatuses :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => DJourneyLeg.JourneyLeg -> Maybe DBooking.Booking -> Maybe DRide.Ride -> Maybe DEstimate.Estimate -> m (JLTypes.JourneyLegStatus, JourneyBookingStatus, TrackingStatus)
+getTaxiAllStatuses :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => DJourneyLeg.JourneyLeg -> Maybe DBooking.Booking -> Maybe DRide.Ride -> Maybe DEstimate.Estimate -> m (JLTypes.JourneyLegStatus, JourneyBookingStatus, TrackingStatus, UTCTime)
 getTaxiAllStatuses journeyLeg mbBooking mbRide mbEstimate = do
+  now <- getCurrentTime
   let bookingStatus = getTaxiJourneyBookingStatus mbBooking mbRide mbEstimate
   trackingStatus <- maybe (return InPlan) (getTaxiJourneyLegTrackingStatus bookingStatus) (listToMaybe journeyLeg.routeDetails)
   let oldStatus =
@@ -81,7 +83,7 @@ getTaxiAllStatuses journeyLeg mbBooking mbRide mbEstimate = do
                   TaxiRide status -> fromMaybe (castTrackingStatusToJourneyLegStatus trackingStatus) (mapTaxiRideStatusToJourneyLegStatus status)
                   Feedback _ -> JLTypes.Completed
                   _ -> castTrackingStatusToJourneyLegStatus trackingStatus -- for UI backward compatibility
-  return (oldStatus, bookingStatus, trackingStatus)
+  return (oldStatus, bookingStatus, trackingStatus, fromMaybe now ((listToMaybe journeyLeg.routeDetails) >>= (.trackingStatusLastUpdatedAt)))
   where
     mapTaxiEstimateStatusToJourneyLegStatus :: DTaxiEstimate.EstimateStatus -> JLTypes.JourneyLegStatus
     mapTaxiEstimateStatusToJourneyLegStatus estimateStatus =
@@ -174,7 +176,7 @@ setJourneyLegTrackingStatus journeyLeg subLegOrder trackingStatus = do
     ( \rd -> do
         -- Removed this validation as in case of Manual Fix Location, Tracking Status can go back in Past.
         -- when (maybe True (trackingStatus >) rd.trackingStatus) $ do
-        void $ QRouteDetails.updateTrackingStatus (Just trackingStatus) rd.id
+        void $ QRouteDetails.updateTrackingStatusWithTime (Just trackingStatus) rd.id
     )
     routeDetails
 

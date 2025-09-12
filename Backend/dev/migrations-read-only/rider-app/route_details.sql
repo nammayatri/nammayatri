@@ -249,3 +249,4 @@ ALTER TABLE atlas_app.route_details ADD COLUMN route_group_id text ;
 
 ------- SQL updates -------
 
+ALTER TABLE atlas_app.route_details ADD COLUMN tracking_status_last_updated_at timestamp with time zone ;

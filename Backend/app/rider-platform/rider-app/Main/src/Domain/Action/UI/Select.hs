@@ -503,6 +503,7 @@ mkJourneyForSearch searchRequest estimate personId = do
                     toStopName = Nothing,
                     toStopPlatformCode = Nothing,
                     trackingStatus = Nothing,
+                    trackingStatusLastUpdatedAt = Just now,
                     merchantId = Just searchRequest.merchantId,
                     merchantOperatingCityId = Just searchRequest.merchantOperatingCityId,
                     createdAt = now,

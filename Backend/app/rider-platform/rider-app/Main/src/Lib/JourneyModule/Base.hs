@@ -1320,6 +1320,7 @@ generateJourneyStatusResponse journey legs = do
               status = legData.status,
               bookingStatus = legData.bookingStatus,
               trackingStatus = legData.trackingStatus,
+              trackingStatusLastUpdatedAt = legData.trackingStatusLastUpdatedAt,
               userPosition = legData.userPosition,
               vehiclePositions = legData.vehiclePositions,
               mode = legData.mode

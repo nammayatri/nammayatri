@@ -404,6 +404,7 @@ RouteDetails:
     endLocationLon: Double
     # Tracking --
     trackingStatus: Maybe TrackingStatus
+    trackingStatusLastUpdatedAt: Maybe UTCTime
 
   queries:
     findById:
@@ -415,10 +416,6 @@ RouteDetails:
       orderBy:
         field: subLegOrder
         order: asc
-    updateTrackingStatus:
-      kvFunction: updateOneWithKV
-      params: [trackingStatus]
-      where: id
     updateAlternateShortNames:
       kvFunction: updateWithKV
       params: [alternateShortNames]

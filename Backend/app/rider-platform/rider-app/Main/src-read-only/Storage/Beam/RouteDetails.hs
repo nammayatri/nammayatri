@@ -43,6 +43,7 @@ data RouteDetailsT f = RouteDetailsT
     toStopName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     toStopPlatformCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     trackingStatus :: B.C f (Kernel.Prelude.Maybe Lib.JourneyModule.State.Types.TrackingStatus),
+    trackingStatusLastUpdatedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
