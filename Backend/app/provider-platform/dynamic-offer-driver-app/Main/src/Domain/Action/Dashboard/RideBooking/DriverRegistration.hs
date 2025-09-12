@@ -78,8 +78,8 @@ verify authId mbFleet fleetOwnerId mbOperatorId transporterConfig req = do
     when (isJust checkAssoc) $ throwError (InvalidRequest "Driver already associated with fleet")
     assoc <- FDV.makeFleetDriverAssociation res.person.id fleetOwnerId mbOperatorId (DomainRC.convertTextToUTC (Just "2099-12-12"))
     QFDV.create assoc
-    let mbAllowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
-    when (mbAllowCacheDriverFlowStatus == Just True) $ do
+    let allowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
+    when allowCacheDriverFlowStatus $ do
       driverInfo <- QDI.findById res.person.id >>= fromMaybeM (DriverNotFound res.person.id.getId)
       DDriverMode.incrementFleetOperatorStatusKeyForDriver SP.FLEET_OWNER fleetOwnerId driverInfo.driverFlowStatus
   pure Success
