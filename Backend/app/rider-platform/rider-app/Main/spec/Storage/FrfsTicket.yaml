@@ -216,6 +216,7 @@ FRFSQuoteCategory:
     ticketCategoryMetadataConfig: FRFSTicketCategoryMetadataConfig
     price: Price
     offeredPrice: Price
+    selectedQuantity: Maybe Int
     maxTicketAllowed: Maybe Int
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity

@@ -9,6 +9,7 @@ import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.Extra.RiderConfig
 import qualified Domain.Types.RentalsIntercityCache
+import qualified Domain.Types.RiderConfig
 import qualified Domain.Types.ServiceTierType
 import qualified Domain.Types.UtilsTH
 import qualified Email.Types
@@ -106,6 +107,7 @@ data RiderConfigT f = RiderConfigT
     sensitiveWords :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     sensitiveWordsForExactMatch :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     settleCancellationFeeBeforeNextRide :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    sourceOfServiceTier :: B.C f (Kernel.Prelude.Maybe Domain.Types.RiderConfig.ServiceTierSource),
     specialZoneRadius :: B.C f Kernel.Prelude.Int,
     suburbanBookingAllowed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     thresholdCancellationPercentageToBlock :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

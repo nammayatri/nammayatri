@@ -233,6 +233,7 @@ fetchLiveBusTimings ::
     HasKafkaProducer r,
     HasShortDurationRetryCfg r c
   ) =>
+  Maybe [LegServiceTier] ->
   [Text] ->
   Text ->
   UTCTime ->
@@ -240,15 +241,33 @@ fetchLiveBusTimings ::
   Id Merchant ->
   Id MerchantOperatingCity ->
   m [RouteStopTimeTable]
-fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid mocid = do
+fetchLiveBusTimings mbAvailableServiceTiers routeCodes stopCode currentTime integratedBppConfig mid mocid = do
   allRouteWithBuses <- MultiModalBus.getBusesForRoutes routeCodes
+  mbSourceOfServiceTier <- fmap (.sourceOfServiceTier) <$> QRiderConfig.findByMerchantOperatingCityId mocid Nothing
   let routesWithoutBuses = map (.routeId) $ filter (\route -> null route.buses) allRouteWithBuses
   liveRouteStopTimes <- mapM processRoute allRouteWithBuses
   let flattenedLiveRouteStopTimes = concat liveRouteStopTimes
   logDebug $ "allRouteWithBuses: " <> show allRouteWithBuses <> " flattenedLiveRouteStopTimes: " <> show flattenedLiveRouteStopTimes
   staticRouteStopTimes <- measureLatency (GRSM.findByRouteCodeAndStopCode integratedBppConfig mid mocid routesWithoutBuses stopCode) "fetch route stop timing through graphql"
-  return $ flattenedLiveRouteStopTimes ++ staticRouteStopTimes
+  return $ forceFillRequestedServiceTier (flattenedLiveRouteStopTimes ++ staticRouteStopTimes) mbSourceOfServiceTier
   where
+    forceFillRequestedServiceTier :: [RouteStopTimeTable] -> Maybe RCTypes.ServiceTierSource -> [RouteStopTimeTable]
+    forceFillRequestedServiceTier routeStopTimings mbSourceOfServiceTier = do
+      case (mbAvailableServiceTiers, mbSourceOfServiceTier) of
+        (Just availableServiceTiers, Just sourceOfServiceTier) ->
+          if sourceOfServiceTier == RCTypes.QUOTES
+            then
+              map
+                ( \(rst, ast) ->
+                    (rst :: RouteStopTimeTable)
+                      { serviceTierType = (.serviceTierType) (ast :: LegServiceTier),
+                        serviceTierName = Just $ (.serviceTierName) (ast :: LegServiceTier)
+                      }
+                )
+                (zip routeStopTimings (concat $ repeat availableServiceTiers))
+            else routeStopTimings
+        _ -> routeStopTimings
+
     processRoute routeWithBuses = do
       let busEtaData = concatMap (\bus -> map (\eta -> (bus.vehicleNumber, eta)) $ fromMaybe [] (bus.busData.eta_data)) routeWithBuses.buses
           filteredBuses = filter (\(_, eta) -> eta.stopCode == stopCode) busEtaData
@@ -369,6 +388,7 @@ fetchLiveTimings ::
     HasKafkaProducer r,
     HasShortDurationRetryCfg r c
   ) =>
+  Maybe [LegServiceTier] ->
   [Text] ->
   Text ->
   UTCTime ->
@@ -377,9 +397,9 @@ fetchLiveTimings ::
   Id MerchantOperatingCity ->
   Enums.VehicleCategory ->
   m [RouteStopTimeTable]
-fetchLiveTimings routeCodes stopCode currentTime integratedBppConfig mid mocid vc = case vc of
+fetchLiveTimings mbAvailableServiceTiers routeCodes stopCode currentTime integratedBppConfig mid mocid vc = case vc of
   -- Enums.SUBWAY -> fetchLiveSubwayTimings routeCodes stopCode currentTime integratedBppConfig mid mocid -- Removed this for now.
-  Enums.BUS -> fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid mocid
+  Enums.BUS -> fetchLiveBusTimings mbAvailableServiceTiers routeCodes stopCode currentTime integratedBppConfig mid mocid
   _ -> measureLatency (GRSM.findByRouteCodeAndStopCode integratedBppConfig mid mocid routeCodes stopCode) "fetch route stop timing through graphql"
 
 type RouteCodeText = Text
@@ -410,6 +430,7 @@ findPossibleRoutes ::
   m (Maybe Text, [AvailableRoutesByTier], [RouteStopTimeTable])
 findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime integratedBppConfig mid mocid vc sendWithoutFare = do
   -- Get route mappings that contain the origin stop
+
   fromRouteStopMappings <- measureLatency (OTPRest.getRouteStopMappingByStopCode fromStopCode integratedBppConfig) ("getRouteStopMappingByStopCode" <> show fromStopCode)
   -- Get route mappings that contain the destination stop
   toRouteStopMappings <- measureLatency (OTPRest.getRouteStopMappingByStopCode toStopCode integratedBppConfig) ("getRouteStopMappingByStopCode" <> show toStopCode)
@@ -426,7 +447,7 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
               fromRouteCode == toRouteCode && fromSeq < toSeq -- Ensure correct sequence
           ]
 
-  routeStopTimings <- measureLatency (fetchLiveTimings validRoutes fromStopCode currentTime integratedBppConfig mid mocid vc) ("fetchLiveTimings" <> show validRoutes <> " fromStopCode: " <> show fromStopCode <> " toStopCode: " <> show toStopCode)
+  routeStopTimings <- measureLatency (fetchLiveTimings mbAvailableServiceTiers validRoutes fromStopCode currentTime integratedBppConfig mid mocid vc) ("fetchLiveTimings" <> show validRoutes <> " fromStopCode: " <> show fromStopCode <> " toStopCode: " <> show toStopCode)
 
   let (_, currentTimeIST) = getISTTimeInfo currentTime
   freqMap <- loadRouteFrequencies routeStopTimings
@@ -634,7 +655,7 @@ findUpcomingTrips routeCode stopCode mbServiceType currentTime mid mocid vc = do
     SIBC.fetchFirstIntegratedBPPConfigResult
       integratedBPPConfigs
       ( \integratedBPPConfig ->
-          fetchLiveTimings [routeCode] stopCode currentTime integratedBPPConfig mid mocid vc
+          fetchLiveTimings Nothing [routeCode] stopCode currentTime integratedBPPConfig mid mocid vc
       )
   logDebug $ "routeStopTimings: " <> show routeStopTimings
 
@@ -798,7 +819,7 @@ buildMultimodalRouteDetails subLegOrder mbRouteCode originStopCode destinationSt
         Just route -> do
           routeStopMappings <- OTPRest.getRouteStopMappingByRouteCode route.code integratedBppConfig
           -- Get timing information for this route at the origin stop
-          destStopTimings <- fetchLiveTimings [route.code] destinationStopCode currentTime integratedBppConfig mid mocid vc
+          destStopTimings <- fetchLiveTimings Nothing [route.code] destinationStopCode currentTime integratedBppConfig mid mocid vc
 
           let stopCodeToSequenceNum = Map.fromList $ map (\rst -> (rst.stopCode, rst.sequenceNum)) routeStopMappings
 

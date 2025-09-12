@@ -378,3 +378,13 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN bus_tier_sorting_config json ;
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN source_of_service_tier text default 'NANDI';
+
+
+------- SQL updates -------
+
