@@ -396,8 +396,8 @@ postFleetManagementFleetUnlink merchantShortId opCity fleetOwnerId requestorId =
   let activeAssociations = filter (\assoc -> assoc.isActive) fleetOperatorAssocList
 
   QFOA.endFleetOperatorAssociation fleetOwner.id operator.id
-  let mbAllowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
-  when (mbAllowCacheDriverFlowStatus == Just True) $ do
+  let allowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
+  when allowCacheDriverFlowStatus $ do
     forM_ activeAssociations $ \assoc ->
       DriverMode.decrementOperatorStatusKeyForFleetOwner assoc.operatorId assoc.fleetOwnerId
 
@@ -496,8 +496,8 @@ postFleetManagementFleetLinkVerifyOtp merchantShortId opCity requestorId req = d
   SA.endFleetAssociationsIfAllowed merchant merchantOpCityId transporterConfig fleetOwner
   fleetOperatorAssociation <- SA.makeFleetOperatorAssociation merchant.id merchantOpCityId (getId fleetOwner.id) operator.id.getId (DomainRC.convertTextToUTC (Just "2099-12-12"))
   QFOA.create fleetOperatorAssociation
-  let mbAllowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
-  when (mbAllowCacheDriverFlowStatus == Just True) $ do
+  let allowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
+  when allowCacheDriverFlowStatus $ do
     DriverMode.incrementOperatorStatusKeyForFleetOwner operator.id.getId fleetOwner.id.getId
 
   let phoneNumber = fromMaybe "+91" fleetOwner.mobileCountryCode <> decryptedMobileNumber

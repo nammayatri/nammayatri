@@ -242,7 +242,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
 
 data AadhaarImageResizeConfig = AadhaarImageResizeConfig {height :: Kernel.Prelude.Int, width :: Kernel.Prelude.Int} deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
-newtype AnalyticsConfig = AnalyticsConfig {allowCacheDriverFlowStatus :: Kernel.Prelude.Maybe Kernel.Prelude.Bool} deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
+newtype AnalyticsConfig = AnalyticsConfig {allowCacheDriverFlowStatus :: Kernel.Prelude.Bool} deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
 data ArrivalTimeBufferOfVehicle = ArrivalTimeBufferOfVehicle
   { ambulance :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,

@@ -62,8 +62,8 @@ endDriverAssociationsIfAllowed merchant merchantOpCityId transporterConfig drive
       then forM_ existingFDAssociations $ \existingAssociation -> do
         logInfo $ "End existing fleet driver association: fleetOwnerId: " <> existingAssociation.fleetOwnerId <> "driverId: " <> existingAssociation.driverId.getId
         QFDA.endFleetDriverAssociation existingAssociation.fleetOwnerId existingAssociation.driverId
-        let mbAllowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
-        when (mbAllowCacheDriverFlowStatus == Just True) $ do
+        let allowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
+        when allowCacheDriverFlowStatus $ do
           driverInfo <- QDI.findById existingAssociation.driverId >>= fromMaybeM (DriverNotFound existingAssociation.driverId.getId)
           DDriverMode.decrementFleetOperatorStatusKeyForDriver DP.FLEET_OWNER existingAssociation.fleetOwnerId driverInfo.driverFlowStatus
 
@@ -83,8 +83,8 @@ endDriverAssociationsIfAllowed merchant merchantOpCityId transporterConfig drive
       then forM_ existingDOAssociations $ \existingAssociation -> do
         logInfo $ "End existing operator driver association: operatorId: " <> existingAssociation.operatorId <> "driverId: " <> existingAssociation.driverId.getId
         QDOA.endOperatorDriverAssociation existingAssociation.operatorId existingAssociation.driverId
-        let mbAllowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
-        when (mbAllowCacheDriverFlowStatus == Just True) $ do
+        let allowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
+        when allowCacheDriverFlowStatus $ do
           driverInfo <- QDI.findById existingAssociation.driverId >>= fromMaybeM (DriverNotFound existingAssociation.driverId.getId)
           DDriverMode.decrementFleetOperatorStatusKeyForDriver DP.OPERATOR existingAssociation.operatorId driverInfo.driverFlowStatus
 
@@ -123,8 +123,8 @@ endFleetAssociationsIfAllowed merchant merchantOpCityId transporterConfig fleetO
       then forM_ existingFOAssociations $ \existingAssociation -> do
         logInfo $ "End existing fleet operator association: fleetOwnerId: " <> existingAssociation.fleetOwnerId <> "operatorId: " <> existingAssociation.operatorId
         QFOA.endFleetOperatorAssociation (Id existingAssociation.fleetOwnerId) (Id existingAssociation.operatorId)
-        let mbAllowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
-        when (mbAllowCacheDriverFlowStatus == Just True) $ do
+        let allowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
+        when allowCacheDriverFlowStatus $ do
           DDriverMode.decrementOperatorStatusKeyForFleetOwner existingAssociation.operatorId existingAssociation.fleetOwnerId
 
         -- send notification to existing operator about fleet unlink

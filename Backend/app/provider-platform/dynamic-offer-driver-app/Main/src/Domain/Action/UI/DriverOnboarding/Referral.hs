@@ -127,8 +127,8 @@ addReferral (personId, merchantId, merchantOpCityId) req = do
           DriverInformation.updateReferredByOperatorId (Just dr.driverId.getId) personId
           driverOperatorAssData <- SA.makeDriverOperatorAssociation merchantId merchantOpCityId personId dr.driverId.getId (DomainRC.convertTextToUTC (Just "2099-12-12"))
           void $ QDOA.create driverOperatorAssData
-          let mbAllowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
-          when (mbAllowCacheDriverFlowStatus == Just True) $ do
+          let allowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
+          when allowCacheDriverFlowStatus $ do
             DDriverMode.incrementFleetOperatorStatusKeyForDriver Person.OPERATOR dr.driverId.getId di.driverFlowStatus
           incrementOnboardedCount DriverReferral dr.driverId transporterConfig
           return Success

@@ -837,7 +837,7 @@ TransporterConfig:
     CallingOption:
       enum: "AnonymousCall, DirectCall, DualCall"
     AnalyticsConfig:
-      allowCacheDriverFlowStatus: Maybe Bool
+      allowCacheDriverFlowStatus: Bool
       recordType: NewType
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
   beamInstance:
