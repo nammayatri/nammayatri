@@ -292,9 +292,25 @@ getFare riderId merchant merchantOperatingCity vehicleCategory routeDetails mbFr
           -- Check for all possible buses available in next hour and just show fares for those buses to avoid confusion
           let startStationCode = (NE.head fareRouteDetails).startStopCode
           let endStationCode = (NE.last fareRouteDetails).endStopCode
+          logDebug $
+            "filterAvailableBuses calling findPossibleRoutes with startStationCode: " <> startStationCode
+              <> " endStationCode: "
+              <> endStationCode
+              <> " arrivalTime: "
+              <> show arrivalTime
+              <> " merchantId: "
+              <> show merchant.id
+              <> " merchantOperatingCityId: "
+              <> show merchantOperatingCity.id
+              <> " mode: "
+              <> show Enums.BUS
+              <> " sendWithoutFares: "
+              <> show True
           (_, possibleRoutes, _) <- JMU.findPossibleRoutes Nothing startStationCode endStationCode arrivalTime integratedBPPConfig merchant.id merchantOperatingCity.id Enums.BUS True
           let possibleServiceTiers = map (.serviceTier) possibleRoutes
-          return ((Just possibleServiceTiers, filter (\fare -> fare.vehicleServiceTier.serviceTierType `elem` possibleServiceTiers) fares), Just possibleRoutes)
+          let filteredFares = filter (\fare -> fare.vehicleServiceTier.serviceTierType `elem` possibleServiceTiers) fares
+          logDebug $ "filterAvailableBuses RESULT: possibleRoutes: " <> show possibleRoutes <> " possibleServiceTiers: " <> show possibleServiceTiers <> " total fares: " <> show fares <> " filtered fares: " <> show filteredFares
+          return ((Just possibleServiceTiers, filteredFares), Just possibleRoutes)
         _ -> return ((Nothing, fares), Nothing)
 
     selectMinFare :: [FRFSFare] -> Maybe FRFSFare
