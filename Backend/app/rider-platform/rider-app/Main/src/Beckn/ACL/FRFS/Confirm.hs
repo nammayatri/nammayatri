@@ -20,6 +20,7 @@ import qualified BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.FRFS.Types as Spec
 import qualified BecknV2.FRFS.Utils as Utils
 import Data.List (singleton)
+import Domain.Action.Beckn.FRFS.Common
 import Domain.Types
 import Domain.Types.BecknConfig
 import qualified Domain.Types.FRFSTicketBooking as DBooking
@@ -39,8 +40,9 @@ buildConfirmReq ::
   Text ->
   Utils.BppData ->
   Context.City ->
+  [DCategorySelect] ->
   m (Spec.ConfirmReq)
-buildConfirmReq rider booking bapConfig txnId bppData city = do
+buildConfirmReq rider booking bapConfig txnId bppData city categories = do
   let transactionId = booking.searchId.getId
       messageId = booking.id.getId
 
@@ -54,17 +56,17 @@ buildConfirmReq rider booking bapConfig txnId bppData city = do
   pure $
     Spec.ConfirmReq
       { confirmReqContext = context,
-        confirmReqMessage = tfConfirmMessage rider booking txnId mPaymentParams mSettlementType
+        confirmReqMessage = tfConfirmMessage rider booking txnId mPaymentParams mSettlementType categories
       }
 
-tfConfirmMessage :: (Maybe RiderName, Maybe RiderNumber) -> DBooking.FRFSTicketBooking -> Text -> Maybe BknPaymentParams -> Maybe Text -> Spec.ConfirmReqMessage
-tfConfirmMessage rider booking txnId mPaymentParams mSettlementType =
+tfConfirmMessage :: (Maybe RiderName, Maybe RiderNumber) -> DBooking.FRFSTicketBooking -> Text -> Maybe BknPaymentParams -> Maybe Text -> [DCategorySelect] -> Spec.ConfirmReqMessage
+tfConfirmMessage rider booking txnId mPaymentParams mSettlementType categories =
   Spec.ConfirmReqMessage
-    { confirmReqMessageOrder = tfOrder rider booking txnId mPaymentParams mSettlementType
+    { confirmReqMessageOrder = tfOrder rider booking txnId mPaymentParams mSettlementType categories
     }
 
-tfOrder :: (Maybe RiderName, Maybe RiderNumber) -> DBooking.FRFSTicketBooking -> Text -> Maybe BknPaymentParams -> Maybe Text -> Spec.Order
-tfOrder rider booking txnId mPaymentParams mSettlementType =
+tfOrder :: (Maybe RiderName, Maybe RiderNumber) -> DBooking.FRFSTicketBooking -> Text -> Maybe BknPaymentParams -> Maybe Text -> [DCategorySelect] -> Spec.Order
+tfOrder rider booking txnId mPaymentParams mSettlementType categories =
   Spec.Order
     { orderBilling = tfBilling rider,
       orderCancellation = Nothing,
@@ -72,7 +74,7 @@ tfOrder rider booking txnId mPaymentParams mSettlementType =
       orderCreatedAt = Nothing,
       orderFulfillments = Nothing,
       orderId = Nothing,
-      orderItems = tfItems booking,
+      orderItems = tfItems booking categories,
       orderPayments = tfPayments booking txnId mPaymentParams mSettlementType,
       orderProvider = tfProvider booking,
       orderQuote = Nothing,
@@ -90,22 +92,39 @@ tfBilling (mRiderName, mRiderNumber) =
         billingPhone = mRiderNumber
       }
 
-tfItems :: DBooking.FRFSTicketBooking -> Maybe [Spec.Item]
-tfItems booking =
-  Just $
-    [ Spec.Item
-        { itemCategoryIds = Nothing,
-          itemDescriptor = Nothing,
-          itemFulfillmentIds = Nothing,
-          itemId = Just booking.bppItemId,
-          itemPrice = Nothing,
-          itemQuantity = tfQuantity booking,
-          itemTime = Nothing
-        }
-    ]
+tfItems :: DBooking.FRFSTicketBooking -> [DCategorySelect] -> Maybe [Spec.Item]
+tfItems booking categories =
+  case categories of
+    [] ->
+      Just
+        [ Spec.Item
+            { itemCategoryIds = Nothing,
+              itemDescriptor = Nothing,
+              itemFulfillmentIds = Nothing,
+              itemId = Just booking.bppItemId,
+              itemPrice = Nothing,
+              itemQuantity = tfQuantity booking.quantity,
+              itemTime = Nothing
+            }
+        ]
+    _ ->
+      Just $
+        map
+          ( \category ->
+              Spec.Item
+                { itemCategoryIds = Nothing,
+                  itemDescriptor = Nothing,
+                  itemFulfillmentIds = Nothing,
+                  itemId = Just category.bppItemId,
+                  itemPrice = Nothing,
+                  itemQuantity = tfQuantity category.quantity,
+                  itemTime = Nothing
+                }
+          )
+          categories
 
-tfQuantity :: DBooking.FRFSTicketBooking -> Maybe Spec.ItemQuantity
-tfQuantity booking =
+tfQuantity :: Int -> Maybe Spec.ItemQuantity
+tfQuantity quantity =
   Just $
     Spec.ItemQuantity
       { itemQuantityMaximum = Nothing,
@@ -113,7 +132,7 @@ tfQuantity booking =
         itemQuantitySelected =
           Just $
             Spec.ItemQuantitySelected
-              { itemQuantitySelectedCount = Just booking.quantity
+              { itemQuantitySelectedCount = Just quantity
               }
       }
 

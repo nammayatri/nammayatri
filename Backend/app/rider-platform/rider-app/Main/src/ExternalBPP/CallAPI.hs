@@ -15,7 +15,6 @@ import qualified Domain.Action.Beckn.FRFS.OnSearch as DOnSearch
 import qualified Domain.Action.Beckn.FRFS.OnStatus as DOnStatus
 import Domain.Types.BecknConfig
 import qualified Domain.Types.FRFSQuote as DQuote
-import qualified Domain.Types.FRFSQuoteBreakup as DFRFSQuoteBreakup
 import Domain.Types.FRFSRouteDetails
 import Domain.Types.FRFSSearch as DSearch
 import qualified Domain.Types.FRFSTicket as DFRFSTicket
@@ -43,7 +42,6 @@ import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
-import qualified Storage.Queries.FRFSQuoteBreakup as QFRFSQuoteBreakup
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
@@ -149,34 +147,14 @@ select processOnSelectHandler merchant merchantOperatingCity bapConfig quote tic
         void $ QFRFSQuote.updateTicketAndChildTicketQuantityById quote.id ticketQuantity childTicketQuantity
         let updatedQuantity = fromMaybe quote.quantity ticketQuantity
         let updatedQuote = quote {DQuote.quantity = updatedQuantity, DQuote.childTicketQuantity = childTicketQuantity}
-        -- Create FRFSQuoteBreakup entries for category selection requests if provided
         category <- forM categorySelectionReq $ \categorySelections -> do
           forM categorySelections $ \categorySelection -> do
             quoteCategory <- QFRFSQuoteCategory.findById categorySelection.quoteCategoryId >>= fromMaybeM (InternalError $ "Quote category not found for id: " <> categorySelection.quoteCategoryId.getId)
-            quoteBreakupId <- generateGUID
-            now <- getCurrentTime
-            let quoteBreakup =
-                  DFRFSQuoteBreakup.FRFSQuoteBreakup
-                    { id = quoteBreakupId,
-                      quoteId = quote.id,
-                      quoteCategoryId = categorySelection.quoteCategoryId,
-                      tag = FRFSUtils.getQuantityTagFromCategory quoteCategory.ticketCategoryMetadataConfig.category,
-                      value = show categorySelection.quantity,
-                      merchantId = quote.merchantId,
-                      merchantOperatingCityId = quote.merchantOperatingCityId,
-                      createdAt = now,
-                      updatedAt = now
-                    }
-            QFRFSQuoteBreakup.create quoteBreakup
-
-            -- Return DCategorySelect for this category selection
             return $
               DCategorySelect
                 { bppItemId = quoteCategory.bppItemId,
                   quantity = categorySelection.quantity
                 }
-
-        -- Flatten the nested list to get all DCategorySelect objects
         let categories = concat category
 
         providerUrl <- quote.bppSubscriberUrl & parseBaseUrl
@@ -235,7 +213,15 @@ confirm onConfirmHandler merchant merchantOperatingCity bapConfig (mRiderName, m
     ONDC _ -> do
       fork "FRFS ONDC Confirm Req" $ do
         providerUrl <- booking.bppSubscriberUrl & parseBaseUrl & fromMaybeM (InvalidRequest "Invalid provider url")
-        bknConfirmReq <- ACL.buildConfirmReq (mRiderName, mRiderNumber) booking bapConfig booking.searchId.getId Utils.BppData {bppId = booking.bppSubscriberId, bppUri = booking.bppSubscriberUrl} merchantOperatingCity.city
+        categories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
+        let filteredDCategories :: [DCategorySelect] =
+              mapMaybe
+                ( \category -> do
+                    selectedQuantity <- category.selectedQuantity
+                    return $ DCategorySelect {bppItemId = category.bppItemId, quantity = selectedQuantity}
+                )
+                categories
+        bknConfirmReq <- ACL.buildConfirmReq (mRiderName, mRiderNumber) booking bapConfig booking.searchId.getId Utils.BppData {bppId = booking.bppSubscriberId, bppUri = booking.bppSubscriberUrl} merchantOperatingCity.city filteredDCategories
         logDebug $ "FRFS ConfirmReq " <> encodeToText bknConfirmReq
         Metrics.startMetrics Metrics.CONFIRM_FRFS merchant.name booking.searchId.getId merchantOperatingCity.id.getId
         void $ CallFRFSBPP.confirm providerUrl bknConfirmReq merchant.id

@@ -39,6 +39,8 @@ RiderConfig:
       derive: "Eq"
       tier: BecknV2.FRFS.Enums.ServiceTierType
       rank: Int
+    ServiceTierSource:
+      enum: "NANDI,QUOTES"
 
   tableName: rider_config
 
@@ -140,6 +142,7 @@ RiderConfig:
     nyRegularMasterJobNextRunOffsetSeconds: NominalDiffTime
     refundStatusUpdateInterval: NominalDiffTime
     refundStatusUpdateRetries: Int
+    sourceOfServiceTier: ServiceTierSource
     domainRouteCalculationEnabledModes: "Maybe [GeneralVehicleType]"
     upcomingBusThresholdSec: Maybe Seconds
 
@@ -187,6 +190,7 @@ RiderConfig:
     nyRegularMasterJobNextRunOffsetSeconds: Maybe Seconds
     refundStatusUpdateInterval: Maybe Seconds
     refundStatusUpdateRetries: Maybe Int
+    sourceOfServiceTier: Maybe ServiceTierSource
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -239,6 +243,7 @@ RiderConfig:
     nyRegularMasterJobNextRunOffsetSeconds: fromMaybe 86400 (Kernel.Utils.Common.secondsToNominalDiffTime <$> nyRegularMasterJobNextRunOffsetSeconds)| E
     refundStatusUpdateInterval: fromMaybe 43200 (Kernel.Utils.Common.secondsToNominalDiffTime <$> refundStatusUpdateInterval)| E
     refundStatusUpdateRetries: fromMaybe 5 refundStatusUpdateRetries|E
+    sourceOfServiceTier: fromMaybe (Domain.Types.RiderConfig.NANDI) sourceOfServiceTier|E
 
   toTType:
     ivrTriggerDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
@@ -284,6 +289,7 @@ RiderConfig:
     nyRegularMasterJobNextRunOffsetSeconds: (Just  . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
     refundStatusUpdateInterval: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
     refundStatusUpdateRetries: Just refundStatusUpdateRetries|E
+    sourceOfServiceTier: Just sourceOfServiceTier|E
 
 
   default:
@@ -323,6 +329,7 @@ RiderConfig:
     enableAutoJourneyRefund: "false"
     filterWalkAndUnspecifiedTransitModes: "false"
     upcomingBusThresholdSec: "3600"
+    sourceOfServiceTier: "'NANDI'"
 
   queries:
     findByMerchantOperatingCityId:
