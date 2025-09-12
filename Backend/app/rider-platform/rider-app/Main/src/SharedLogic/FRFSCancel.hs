@@ -44,10 +44,11 @@ import qualified Utils.Common.JWT.TransitClaim as TC
 cancelJourney :: DFRFSTicketBooking.FRFSTicketBooking -> Flow ()
 cancelJourney booking = do
   mbJourneyId <- getJourneyIdFromBooking booking
+  now <- getCurrentTime
   whenJust mbJourneyId $ \journeyId -> do
     legs <- QJourneyLeg.getJourneyLegs journeyId
     forM_ legs $ \journeyLeg -> do
-      mapM_ (\rd -> JM.markLegStatus (Just JL.Cancelled) (Just JMState.Finished) journeyLeg rd.subLegOrder) journeyLeg.routeDetails
+      mapM_ (\rd -> JM.markLegStatus (Just JL.Cancelled) (Just JMState.Finished) journeyLeg rd.subLegOrder now) journeyLeg.routeDetails
     journey <- JM.getJourney journeyId
     updatedLegStatus <- JM.getAllLegsStatus journey
     JM.checkAndMarkTerminalJourneyStatus journey updatedLegStatus

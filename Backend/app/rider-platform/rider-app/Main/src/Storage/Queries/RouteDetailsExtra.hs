@@ -14,11 +14,11 @@ import Storage.Queries.OrphanInstances.RouteDetails
 -- Update tracking status with leg start and end time
 updateTrackingStatusWithTime ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Lib.JourneyModule.State.Types.TrackingStatus -> Kernel.Types.Id.Id Domain.Types.RouteDetails.RouteDetails -> m ())
-updateTrackingStatusWithTime trackingStatus id = do
+  (Kernel.Prelude.Maybe Lib.JourneyModule.State.Types.TrackingStatus -> Kernel.Types.Id.Id Domain.Types.RouteDetails.RouteDetails -> UTCTime -> m ())
+updateTrackingStatusWithTime trackingStatus id trackingStatusUpdateTime = do
   _now <- getCurrentTime
   updateOneWithKV
-    ([Se.Set Beam.trackingStatus trackingStatus, Se.Set Beam.updatedAt _now, Se.Set Beam.trackingStatusLastUpdatedAt (Just _now)])
+    ([Se.Set Beam.trackingStatus trackingStatus, Se.Set Beam.updatedAt _now, Se.Set Beam.trackingStatusLastUpdatedAt (Just trackingStatusUpdateTime)])
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateTrackingStatus ::

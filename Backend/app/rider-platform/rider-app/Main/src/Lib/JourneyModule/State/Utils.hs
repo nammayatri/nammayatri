@@ -163,8 +163,8 @@ getFRFSJourneyBookingStatus mbBooking = do
         bookingStatus -> return (FRFSBooking bookingStatus)
     Nothing -> return (Initial BOOKING_PENDING)
 
-setJourneyLegTrackingStatus :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => DJourneyLeg.JourneyLeg -> Maybe Int -> TrackingStatus -> m ()
-setJourneyLegTrackingStatus journeyLeg subLegOrder trackingStatus = do
+setJourneyLegTrackingStatus :: (CacheFlow m r, EsqDBFlow m r, MonadFlow m) => DJourneyLeg.JourneyLeg -> Maybe Int -> TrackingStatus -> UTCTime -> m ()
+setJourneyLegTrackingStatus journeyLeg subLegOrder trackingStatus trackingStatusUpdateTime = do
   let routeDetails =
         case subLegOrder of
           Just subLegOrder' ->
@@ -176,7 +176,7 @@ setJourneyLegTrackingStatus journeyLeg subLegOrder trackingStatus = do
     ( \rd -> do
         -- Removed this validation as in case of Manual Fix Location, Tracking Status can go back in Past.
         -- when (maybe True (trackingStatus >) rd.trackingStatus) $ do
-        void $ QRouteDetails.updateTrackingStatusWithTime (Just trackingStatus) rd.id
+        void $ QRouteDetailsExtra.updateTrackingStatusWithTime (Just trackingStatus) rd.id trackingStatusUpdateTime
     )
     routeDetails
 

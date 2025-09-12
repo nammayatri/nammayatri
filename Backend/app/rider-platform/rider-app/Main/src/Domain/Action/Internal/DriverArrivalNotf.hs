@@ -9,6 +9,7 @@ import Kernel.Beam.Functions as B
 import Kernel.Prelude
 import Kernel.Types.APISuccess
 import Kernel.Types.Id
+import Kernel.Utils.Common
 import Kernel.Utils.Error
 import qualified Lib.JourneyModule.State.Types as JMState
 import qualified Lib.JourneyModule.State.Utils as JMState
@@ -35,6 +36,7 @@ data DANTypeValidationReq = DANTypeValidationReq
 
 driverArrivalNotfHandler :: DANTypeValidationReq -> Flow APISuccess
 driverArrivalNotfHandler (DANTypeValidationReq bppRideId driverIdValue status) = do
+  now <- getCurrentTime
   ride <- B.runInReplica $ QRide.findByBPPRideId (Id bppRideId) >>= fromMaybeM (RideDoesNotExist bppRideId)
   when (ride.status == COMPLETED || ride.status == CANCELLED) $
     throwError $ RideInvalidStatus ("Cannot track this ride: " <> pack (show ride.status))
@@ -42,15 +44,15 @@ driverArrivalNotfHandler (DANTypeValidationReq bppRideId driverIdValue status) =
   mbJourneyLeg <- QJourneyLeg.findByLegSearchId (Just booking.transactionId)
   case status of
     DRIVER_ON_THE_WAY -> do
-      whenJust mbJourneyLeg $ \journeyLeg -> JMState.setJourneyLegTrackingStatus journeyLeg Nothing JMState.Arriving
+      whenJust mbJourneyLeg $ \journeyLeg -> JMState.setJourneyLegTrackingStatus journeyLeg Nothing JMState.Arriving now
       Notify.notifyDriverOnTheWay booking.riderId booking.tripCategory ride
     DRIVER_PICKUP_INSTRUCTION -> do
       PIHandler.handlePickupInstruction ride booking driverIdValue
     DRIVER_REACHING -> do
-      whenJust mbJourneyLeg $ \journeyLeg -> JMState.setJourneyLegTrackingStatus journeyLeg Nothing JMState.AlmostArrived
+      whenJust mbJourneyLeg $ \journeyLeg -> JMState.setJourneyLegTrackingStatus journeyLeg Nothing JMState.AlmostArrived now
       Notify.notifyDriverReaching booking.riderId booking.tripCategory ride.otp ride.vehicleNumber ride
     DRIVER_REACHED -> do
-      whenJust mbJourneyLeg $ \journeyLeg -> JMState.setJourneyLegTrackingStatus journeyLeg Nothing JMState.Arrived
+      whenJust mbJourneyLeg $ \journeyLeg -> JMState.setJourneyLegTrackingStatus journeyLeg Nothing JMState.Arrived now
       Notify.notifyDriverHasReached booking.riderId booking.tripCategory ride.otp ride.vehicleNumber ride.vehicleColor ride.vehicleModel ride.vehicleVariant
     _ -> throwError $ InvalidRequest "Unexpected ride notification status"
 
