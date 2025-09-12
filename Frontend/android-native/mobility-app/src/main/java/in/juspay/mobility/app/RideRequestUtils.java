@@ -89,6 +89,7 @@ import static in.juspay.mobility.common.MobilityCommonBridge.isServiceRunning;
 public class RideRequestUtils {
     private final static int rideReqNotificationId = 5032023;
     private final static String RIDE_REQUEST_CHANNEL = "in.juspay.mobility.riderequest";
+    private final static String LOCATION_UPDATE_WORKER_CLASS_NAME = "in.juspay.mobility.services.LocationWorker";
     private final static int rideReqNotificationReqCode = 6032023;
     private static final String LOG_TAG = "RideRequestUtils";
     private static final String KOLKATA = "kolkata";
@@ -289,7 +290,7 @@ public class RideRequestUtils {
     }
     public static void restartLocationService(Context context) {
         try {
-            OneTimeWorkRequest oneTimeWorkRequest = new OneTimeWorkRequest.Builder(LocationUpdateWorker.class).setBackoffCriteria(
+            OneTimeWorkRequest oneTimeWorkRequest = new OneTimeWorkRequest.Builder(Class.forName(LOCATION_UPDATE_WORKER_CLASS_NAME).asSubclass(androidx.work.ListenableWorker.class)).setBackoffCriteria(
                     BackoffPolicy.EXPONENTIAL, // Use exponential backoff strategy
                     1, // Minimum delay before retrying (in minutes)
                     TimeUnit.MINUTES // Time unit for delay
