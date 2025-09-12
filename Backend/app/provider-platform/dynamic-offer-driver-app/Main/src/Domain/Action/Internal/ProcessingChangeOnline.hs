@@ -71,10 +71,9 @@ updateOnlineDuration driverId transporterConfig driverInfo now onlineDurationCal
   let timeDiffFromUtc = transporterConfig.timeDiffFromUtc
       localTime = addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) now
       merchantLocalDate = utctDay localTime
-      mbMaxOnlineDurationDays = transporterConfig.analyticsConfig.maxOnlineDurationDays
+      numDaysAgo = transporterConfig.analyticsConfig.maxOnlineDurationDays
       mbLastOnlineFrom = max onlineDurationCalculateFrom <$> driverInfo.onlineDurationRefreshedAt
       mbLastOnlineFromLocal = addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) <$> mbLastOnlineFrom
-      numDaysAgo = fromMaybe 10 mbMaxOnlineDurationDays
       limitNumDaysAgoLocal = addUTCTime (secondsToNominalDiffTime . Seconds $ (- numDaysAgo) * 86400) localTime
       lastOnlineFromLocalLimited = maybe localTime (max limitNumDaysAgoLocal) mbLastOnlineFromLocal
       startDayTimeLocal = UTCTime (utctDay localTime) 0

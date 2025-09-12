@@ -9,11 +9,11 @@ module Storage.Queries.Transformers.TransporterConfig
 where
 
 import qualified Data.Aeson as A
-import qualified Domain.Types.TransporterConfig as DTC
+import Domain.Types.TransporterConfig
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Version
-import Kernel.Utils.Common
+import Tools.FieldParse as FieldParse
 
 fallbackVersion :: Version
 fallbackVersion =
@@ -28,46 +28,40 @@ fallbackVersion =
 fallBackVersionInText :: Text
 fallBackVersionInText = versionToText fallbackVersion
 
-parseFieldM :: (Monad m, Log m, FromJSON a) => Text -> Text -> Text -> Maybe A.Value -> m (Maybe a)
-parseFieldM table field entityId = \case
-  Just val -> case A.fromJSON val of
-    A.Success x -> pure $ Just x
-    A.Error err -> do
-      logError $ "Entity field parsing failed for table: " <> table <> "; field: " <> field <> "; entityId: " <> entityId <> "; err: " <> show err <> "; default values will be used"
-      pure Nothing
-  Nothing -> pure Nothing
+$(mkFieldParserWithDefault ''AnalyticsConfig)
 
-parseFieldWithDefaultM :: forall m a. (Monad m, Log m, FromJSON a) => Text -> Text -> Text -> a -> Maybe A.Value -> m a
-parseFieldWithDefaultM table field entityId def = (fromMaybe def <$>) . parseFieldM table field entityId
-
-parseAnalyticsConfig :: (Monad m, Log m) => Text -> Maybe A.Value -> m DTC.AnalyticsConfig
+parseAnalyticsConfig :: (Monad m, Log m) => Text -> Maybe A.Value -> m AnalyticsConfig
 parseAnalyticsConfig merchantOperatingCityId mbVal = do
   let def =
-        DTC.AnalyticsConfig
-          { weekStartMode = Just 3,
-            earningsWindowSize = Just 7,
-            allowCacheDriverFlowStatus = Just False,
-            maxOnlineDurationDays = Just 10,
+        AnalyticsConfig
+          { weekStartMode = 3,
+            earningsWindowSize = 7,
+            allowCacheDriverFlowStatus = False,
+            maxOnlineDurationDays = 10,
             onlineDurationCalculateFrom = Nothing
           }
-  parseFieldWithDefaultM "transporterConfig" "analyticsConfig" merchantOperatingCityId def mbVal
+  parseFieldWithDefaultM "transporterConfig" "analyticsConfig" merchantOperatingCityId def parseAnalyticsConfigWithDefault mbVal
 
-parseDriverWalletConfig :: (Monad m, Log m) => Text -> Maybe A.Value -> m DTC.DriverWalletConfig
+$(mkFieldParserWithDefault ''DriverWalletConfig)
+
+parseDriverWalletConfig :: (Monad m, Log m) => Text -> Maybe A.Value -> m DriverWalletConfig
 parseDriverWalletConfig merchantOperatingCityId mbVal = do
   let def =
-        DTC.DriverWalletConfig
-          { enableDriverWallet = Just False,
-            driverWalletPayoutThreshold = Just 0,
-            gstPercentage = Just 0.0,
-            enableWalletPayout = Just False,
-            enableWalletTopup = Just False,
+        DriverWalletConfig
+          { enableDriverWallet = False,
+            driverWalletPayoutThreshold = 0,
+            gstPercentage = 0.0,
+            enableWalletPayout = False,
+            enableWalletTopup = False,
             maxWalletPayoutsPerDay = Nothing,
-            minimumWalletPayoutAmount = Just 0,
-            payoutCutOffDays = Just 0
+            minimumWalletPayoutAmount = 0,
+            payoutCutOffDays = 7
           }
-  parseFieldWithDefaultM "transporterConfig" "driverWalletConfig" merchantOperatingCityId def mbVal
+  parseFieldWithDefaultM "transporterConfig" "driverWalletConfig" merchantOperatingCityId def parseDriverWalletConfigWithDefault mbVal
 
-parseSubscriptionConfig :: (Monad m, Log m) => Text -> Maybe A.Value -> m DTC.SubscriptionConfig
+$(mkFieldParserWithDefault ''SubscriptionConfig)
+
+parseSubscriptionConfig :: (Monad m, Log m) => Text -> Maybe A.Value -> m SubscriptionConfig
 parseSubscriptionConfig merchantOperatingCityId mbVal = do
-  let def = DTC.SubscriptionConfig {prepaidSubscriptionThreshold = Nothing}
-  parseFieldWithDefaultM "transporterConfig" "subscriptionConfig" merchantOperatingCityId def mbVal
+  let def = SubscriptionConfig {prepaidSubscriptionThreshold = Nothing}
+  parseFieldWithDefaultM "transporterConfig" "subscriptionConfig" merchantOperatingCityId def parseSubscriptionConfigWithDefault mbVal
