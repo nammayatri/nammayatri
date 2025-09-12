@@ -838,7 +838,7 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
 
   (oldStatus, bookingStatus, trackingStatuses) <- JMStateUtils.getFRFSAllStatuses journeyLeg (Just booking)
   journeyLegInfo' <- getLegRouteInfo (zip journeyLeg.routeDetails trackingStatuses) integratedBPPConfig
-  legExtraInfo <- mkLegExtraInfo qrDataList qrValidity ticketsCreatedAt journeyLeg.routeDetails journeyLegInfo' ticketNo categoryBookingDetails
+  legExtraInfo <- mkLegExtraInfo qrDataList qrValidity ticketsCreatedAt journeyLeg.routeDetails journeyLegInfo' ticketNo categories categoryBookingDetails
   return $
     LegInfo
       { journeyLegId = journeyLeg.id,
