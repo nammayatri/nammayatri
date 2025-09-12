@@ -810,6 +810,7 @@ emitTerminateApp screen exitApp = runFn3 emitJOSEvent "java" "onEvent" $ encode 
   , trip_id : Nothing
   , screen : screen
   , exit_app : exitApp
+  , delete_account_req : Nothing
   }
 }
 
