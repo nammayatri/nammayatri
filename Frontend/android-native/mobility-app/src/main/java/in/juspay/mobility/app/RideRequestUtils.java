@@ -289,12 +289,6 @@ public class RideRequestUtils {
     }
     public static void restartLocationService(Context context) {
         try {
-            OneTimeWorkRequest oneTimeWorkRequest = new OneTimeWorkRequest.Builder(LocationUpdateWorker.class).setBackoffCriteria(
-                    BackoffPolicy.EXPONENTIAL, // Use exponential backoff strategy
-                    1, // Minimum delay before retrying (in minutes)
-                    TimeUnit.MINUTES // Time unit for delay
-            ).build();
-            WorkManager.getInstance(context).enqueue(oneTimeWorkRequest);
             Intent restartIntent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
             restartIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
             SharedPreferences sharedPrefs = context.getApplicationContext().getSharedPreferences(context.getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);

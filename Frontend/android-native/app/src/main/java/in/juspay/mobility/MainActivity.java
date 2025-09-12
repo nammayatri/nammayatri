@@ -107,7 +107,7 @@ import in.juspay.hypersdk.ui.HyperPaymentsCallbackAdapter;
 import in.juspay.mobility.app.ChatService;
 import in.juspay.mobility.app.InAppNotification;
 import in.juspay.mobility.app.LocationUpdateService;
-import in.juspay.mobility.app.LocationUpdateServiceV2;
+import in.juspay.mobility.services.LocationUpdateServiceV2;
 import in.juspay.mobility.app.MobilityAppBridge;
 import in.juspay.mobility.app.MyFirebaseMessagingService;
 import in.juspay.mobility.app.NotificationUtils;

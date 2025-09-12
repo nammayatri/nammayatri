@@ -24,12 +24,7 @@ public class BootUpReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         if (intent.getAction() != null && intent.getAction().equals(ACTION_BOOT_COMPLETED)) {
-            Intent locationUpdateService;
-            if (context.getSharedPreferences(context.getString(R.string.preference_file_key),Context.MODE_PRIVATE).getString("LOCATION_SERVICE_VERSION", "V2").equals("V1")) {
-                locationUpdateService = new Intent(context, LocationUpdateService.class);
-            } else {
-                locationUpdateService = new Intent(context, LocationUpdateServiceV2.class);
-            }
+            Intent locationUpdateService = new Intent(context, LocationUpdateService.class);
             locationUpdateService.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
 //            Intent widgetReloadService = new Intent(context, WidgetService.class);
 //            widgetReloadService.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
