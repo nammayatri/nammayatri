@@ -17,6 +17,7 @@ import Domain.Types.FRFSRouteDetails
 import Domain.Types.FRFSSearch
 import qualified Domain.Types.FRFSSearch as FRFSSR
 import qualified Domain.Types.FRFSTicketBooking as DFRFSBooking
+import qualified Domain.Types.FRFSTicketCategoryMetadataConfig as DFRFSTicketCategoryMetadataConfig
 import qualified Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.IntegratedBPPConfig as DTBC
@@ -418,16 +419,24 @@ data BusLegExtraInfo = BusLegExtraInfo
     trackingStatus :: JMState.TrackingStatus,
     trackingStatusLastUpdatedAt :: UTCTime,
     fleetNo :: Maybe Text,
-    categories :: Maybe [CategoryInfoResponse]
+    categories :: Maybe [CategoryInfoResponse],
+    categoryBookingDetails :: Maybe [CategoryBookingDetails]
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data CategoryInfoResponse = CategoryInfoResponse
   { categoryId :: Id DFRFSQuoteCategory.FRFSQuoteCategory,
-    categoryName :: Text,
+    categoryName :: DFRFSTicketCategoryMetadataConfig.FRFSQuoteCategoryType,
     categoryPrice :: PriceAPIEntity,
     categoryOfferedPrice :: PriceAPIEntity
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data CategoryBookingDetails = CategoryBookingDetails
+  { categoryName :: DFRFSTicketCategoryMetadataConfig.FRFSQuoteCategoryType,
+    categorySelectedQuantity :: Int
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -777,6 +786,17 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
   tickets <- QFRFSTicket.findAllByTicketBookingId (booking.id)
   frfsQuoteCategories <- QFRFSQuoteCategory.findAllByQuoteId booking.quoteId
   let categories = map mkCategoryInfoResponse frfsQuoteCategories
+  let categoryBookingDetails =
+        mapMaybe
+          ( \category -> do
+              selectedQuantity <- category.selectedQuantity
+              return $
+                CategoryBookingDetails
+                  { categoryName = category.ticketCategoryMetadataConfig.category,
+                    categorySelectedQuantity = selectedQuantity
+                  }
+          )
+          frfsQuoteCategories
   let ticketsData =
         case integratedBPPConfig.providerConfig of
           DIBC.ONDC config -> do
@@ -799,7 +819,7 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
 
   (oldStatus, bookingStatus, trackingStatuses) <- JMStateUtils.getFRFSAllStatuses journeyLeg (Just booking)
   journeyLegInfo' <- getLegRouteInfo (zip journeyLeg.routeDetails trackingStatuses) integratedBPPConfig
-  legExtraInfo <- mkLegExtraInfo qrDataList qrValidity ticketsCreatedAt journeyLeg.routeDetails journeyLegInfo' ticketNo categories
+  legExtraInfo <- mkLegExtraInfo qrDataList qrValidity ticketsCreatedAt journeyLeg.routeDetails journeyLegInfo' ticketNo categoryBookingDetails
   return $
     LegInfo
       { journeyLegId = journeyLeg.id,
@@ -829,7 +849,7 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
         validTill = (if null qrValidity then Nothing else Just $ maximum qrValidity) <|> Just booking.validTill
       }
   where
-    mkLegExtraInfo qrDataList qrValidity ticketsCreatedAt journeyRouteDetails journeyLegInfo' ticketNo categories = do
+    mkLegExtraInfo qrDataList qrValidity ticketsCreatedAt journeyRouteDetails journeyLegInfo' ticketNo categories categoryBookingDetails = do
       mbBookingPayment <- QFRFSTicketBookingPayment.findNewTBPByBookingId booking.id
       refundBloc <- case mbBookingPayment of
         Just bookingPayment -> do
@@ -905,7 +925,8 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
                   trackingStatusLastUpdatedAt = journeyLegDetail.trackingStatusLastUpdatedAt,
                   fleetNo = journeyLeg.finalBoardedBusNumber,
                   discounts = mbQuote >>= (.discountsJson) >>= decodeFromText,
-                  categories = Just categories
+                  categories = Just categories,
+                  categoryBookingDetails = Just categoryBookingDetails
                 }
         Spec.SUBWAY -> do
           mbQuote <- QFRFSQuote.findById booking.quoteId
@@ -1084,7 +1105,8 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg = do
                   trackingStatusLastUpdatedAt = journeyLegDetail.trackingStatusLastUpdatedAt,
                   fleetNo = journeyLeg.finalBoardedBusNumber,
                   discounts = mbQuote >>= (.discountsJson) >>= decodeFromText,
-                  categories = Just categories
+                  categories = Just categories,
+                  categoryBookingDetails = Nothing
                 }
         Spec.SUBWAY -> do
           let mbSelectedServiceTier = getServiceTierFromQuote =<< mbQuote
@@ -1494,4 +1516,4 @@ safeTail xs = Just (last xs)
 
 mkCategoryInfoResponse :: DFRFSQuoteCategory.FRFSQuoteCategory -> CategoryInfoResponse
 mkCategoryInfoResponse category =
-  CategoryInfoResponse {categoryId = category.id, categoryName = category.ticketCategoryMetadataConfig.title, categoryPrice = mkPriceAPIEntity category.price, categoryOfferedPrice = mkPriceAPIEntity category.offeredPrice}
+  CategoryInfoResponse {categoryId = category.id, categoryName = category.ticketCategoryMetadataConfig.category, categoryPrice = mkPriceAPIEntity category.price, categoryOfferedPrice = mkPriceAPIEntity category.offeredPrice}

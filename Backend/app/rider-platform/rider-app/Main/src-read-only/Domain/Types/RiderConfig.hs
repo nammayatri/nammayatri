@@ -110,6 +110,7 @@ data RiderConfig = RiderConfig
     sensitiveWords :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     sensitiveWordsForExactMatch :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     settleCancellationFeeBeforeNextRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    sourceOfServiceTier :: Domain.Types.RiderConfig.ServiceTierSource,
     specialZoneRadius :: Kernel.Prelude.Int,
     suburbanBookingAllowed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     thresholdCancellationPercentageToBlock :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
@@ -147,3 +148,7 @@ data BusTrackingConfig = BusTrackingConfig
 
 data RingBucketCfg = RingBucketCfg {radiusInMeters :: Kernel.Types.Common.Meters, size :: Kernel.Prelude.Int, vehVariant :: Domain.Types.VehicleVariant.VehicleVariant}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
+
+data ServiceTierSource = NANDI | QUOTES deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ServiceTierSource)

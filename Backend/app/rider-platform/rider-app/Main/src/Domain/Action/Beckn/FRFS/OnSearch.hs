@@ -24,7 +24,6 @@ import qualified Data.Text as T
 import Domain.Types.Extra.FRFSCachedQuote as CachedQuote
 import qualified Domain.Types.FRFSFarePolicy as FRFSFarePolicy
 import qualified Domain.Types.FRFSQuote as Quote
-import qualified Domain.Types.FRFSQuoteBreakup as DFRFSQuoteBreakup
 import qualified Domain.Types.FRFSQuoteCategory as DFRFSQuoteCategory
 import qualified Domain.Types.FRFSQuoteCategorySpec as DFRFSQuoteCategory
 import qualified Domain.Types.FRFSRouteFareProduct as FRFSRouteFareProduct
@@ -59,7 +58,7 @@ import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.FRFSFarePolicy as QFFP
 import qualified Storage.Queries.FRFSQuote as QQuote
-import qualified Storage.Queries.FRFSQuoteBreakup as QFRFSQuoteBreakup
+-- import qualified Storage.Queries.FRFSQuoteBreakup as QFRFSQuoteBreakup
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSRouteFareProduct as QFRFP
 import qualified Storage.Queries.FRFSSearch as QSearch
@@ -198,15 +197,7 @@ onSearchHelper :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, HasShortD
 onSearchHelper onSearchReq validatedReq integratedBPPConfig = do
   quotesCreatedByCache <- QQuote.findAllBySearchId (Id onSearchReq.transactionId)
   mbJourneyLeg <- QJourneyLeg.findByLegSearchId (Just onSearchReq.transactionId)
-  filteredQuotes <-
-    if validatedReq.search.vehicleType /= Spec.BUS
-      then pure onSearchReq.quotes
-      else do
-        routeCodes <- mapM (\routeCode -> OTPRest.getRouteByRouteId integratedBPPConfig routeCode >>= fromMaybeM (RouteNotFound routeCode)) (catMaybes ((map (.routeCode) (maybe [] (.routeDetails) mbJourneyLeg)) <> [validatedReq.search.routeCode]))
-        pure $ case routeCodes of
-          [] -> onSearchReq.quotes
-          routesCodes' -> filter (\quote -> quote.routeCode `elem` map (.code) routesCodes') onSearchReq.quotes
-  quotes <- traverse (mkQuotes onSearchReq validatedReq) filteredQuotes
+  quotes <- traverse (mkQuotes onSearchReq validatedReq) onSearchReq.quotes
   traverse_ cacheQuote quotes
   if null quotesCreatedByCache
     then QQuote.createMany quotes
@@ -397,26 +388,27 @@ mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do
               merchantId = search.merchantId,
               merchantOperatingCityId = search.merchantOperatingCityId,
               ticketCategoryMetadataConfig = ticketCategoryMetadataConfig',
+              selectedQuantity = Nothing,
               createdAt = now,
               updatedAt = now
             }
 
-    quoteBreakupDiscountsId <- generateGUID
-    let quoteBreakupDiscounts =
-          DFRFSQuoteBreakup.FRFSQuoteBreakup
-            { id = quoteBreakupDiscountsId,
-              quoteId = uid,
-              quoteCategoryId = quoteCategoryIdForDiscount,
-              tag = getCategoryPriceTags category.code,
-              value = show category.offeredPrice.amount,
-              merchantId = search.merchantId,
-              merchantOperatingCityId = search.merchantOperatingCityId,
-              createdAt = now,
-              updatedAt = now
-            }
+    -- quoteBreakupDiscountsId <- generateGUID
+    -- let quoteBreakupDiscounts =
+    --       DFRFSQuoteBreakup.FRFSQuoteBreakup
+    --         { id = quoteBreakupDiscountsId,
+    --           quoteId = uid,
+    --           quoteCategoryId = quoteCategoryIdForDiscount,
+    --           tag = getCategoryPriceTags category.code,
+    --           value = show category.offeredPrice.amount,
+    --           merchantId = search.merchantId,
+    --           merchantOperatingCityId = search.merchantOperatingCityId,
+    --           createdAt = now,
+    --           updatedAt = now
+    --         }
 
     QFRFSQuoteCategory.create quoteCategoryForDiscount
-    QFRFSQuoteBreakup.create quoteBreakupDiscounts
+  -- QFRFSQuoteBreakup.create quoteBreakupDiscounts
 
   return frfsQuote
 
