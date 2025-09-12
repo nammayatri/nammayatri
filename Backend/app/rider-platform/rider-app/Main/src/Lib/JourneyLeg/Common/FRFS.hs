@@ -93,11 +93,16 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
           mbUserBoardingStation <- OTPRest.getStationByGtfsIdAndStopCode booking.fromStationCode integratedBppConfig
           mbLegEndStation <- OTPRest.getStationByGtfsIdAndStopCode booking.toStationCode integratedBppConfig
           logDebug $ "CFRFS getState: Processing Bus leg for booking with mbUserBoardingStation:" <> show mbUserBoardingStation <> "mbLegEndStation: " <> show mbLegEndStation
+          let (trackingStatus, trackingStatusLastUpdatedAt) =
+                case listToMaybe trackingStatuses of
+                  Just (_, ts, tsupAt) -> (ts, tsupAt)
+                  Nothing -> (JMStateTypes.InPlan, now)
           let baseStateData =
                 JT.JourneyLegStateData
                   { status = oldStatus,
                     bookingStatus,
-                    trackingStatus = fromMaybe JMStateTypes.InPlan (snd <$> listToMaybe trackingStatuses),
+                    trackingStatus,
+                    trackingStatusLastUpdatedAt,
                     userPosition,
                     JT.vehiclePositions = [], -- Will be populated based on status
                     legOrder = journeyLeg.sequenceNumber,
@@ -116,7 +121,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
               mbUserBoardingStation
               mbLegEndStation
               allBusDataForRoute
-              (fromMaybe JMStateTypes.InPlan (snd <$> listToMaybe trackingStatuses))
+              trackingStatus
               movementDetected
 
           let detailedStateData = baseStateData {JT.vehiclePositions = vehiclePositionsToReturn}
@@ -128,6 +133,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
                     { status = JMStateUtils.castTrackingStatusToJourneyLegStatus trackingStatus,
                       bookingStatus,
                       trackingStatus,
+                      trackingStatusLastUpdatedAt,
                       userPosition,
                       JT.vehiclePositions = [],
                       legOrder = journeyLeg.sequenceNumber,
@@ -135,7 +141,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
                       mode,
                       fleetNo = Nothing
                     }
-                  | (subLegOrder, trackingStatus) <- trackingStatuses
+                  | (subLegOrder, trackingStatus, trackingStatusLastUpdatedAt) <- trackingStatuses
                 ]
           return $ JT.Transit journeyLegStates
     Nothing -> do
@@ -156,12 +162,16 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
           -- Fetch user's boarding station and leg's end station details
           mbUserBoardingStation <- OTPRest.getStationByGtfsIdAndStopCode searchReq.fromStationCode integratedBppConfig
           mbLegEndStation <- OTPRest.getStationByGtfsIdAndStopCode searchReq.toStationCode integratedBppConfig
-
+          let (trackingStatus, trackingStatusLastUpdatedAt) =
+                case listToMaybe trackingStatuses of
+                  Just (_, ts, tsupAt) -> (ts, tsupAt)
+                  Nothing -> (JMStateTypes.InPlan, now)
           let baseStateData =
                 JT.JourneyLegStateData
                   { status = oldStatus,
                     bookingStatus,
-                    trackingStatus = fromMaybe JMStateTypes.InPlan (snd <$> listToMaybe trackingStatuses),
+                    trackingStatus,
+                    trackingStatusLastUpdatedAt,
                     userPosition,
                     JT.vehiclePositions = [], -- Will be populated based on status
                     legOrder = journeyLeg.sequenceNumber,
@@ -180,7 +190,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
               mbUserBoardingStation
               mbLegEndStation
               allBusDataForRoute
-              (fromMaybe JMStateTypes.InPlan (snd <$> listToMaybe trackingStatuses))
+              trackingStatus
               movementDetected
 
           let detailedStateData = baseStateData {JT.vehiclePositions = vehiclePositionsToReturn}
@@ -194,6 +204,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
                     { status = JMStateUtils.castTrackingStatusToJourneyLegStatus trackingStatus,
                       bookingStatus,
                       trackingStatus,
+                      trackingStatusLastUpdatedAt,
                       userPosition,
                       JT.vehiclePositions = [],
                       legOrder = journeyLeg.sequenceNumber,
@@ -201,7 +212,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
                       mode,
                       fleetNo = Nothing
                     }
-                  | (subLegOrder, trackingStatus) <- trackingStatuses
+                  | (subLegOrder, trackingStatus, trackingStatusLastUpdatedAt) <- trackingStatuses
                 ]
           return $ JT.Transit journeyLegStates
   where

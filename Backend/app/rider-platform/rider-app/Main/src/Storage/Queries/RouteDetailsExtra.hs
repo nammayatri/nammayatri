@@ -26,5 +26,12 @@ updateTrackingStatusWithTime trackingStatus id = do
         Just Lib.JourneyModule.State.Types.Finished -> [Se.Set Beam.legEndTime (Just _now)]
         _ -> []
   updateOneWithKV
-    (timeUpdates <> [Se.Set Beam.trackingStatus trackingStatus, Se.Set Beam.updatedAt _now])
+    (timeUpdates <> [Se.Set Beam.trackingStatus trackingStatus, Se.Set Beam.updatedAt _now, Se.Set Beam.trackingStatusLastUpdatedAt (Just _now)])
     [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateTrackingStatus ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Lib.JourneyModule.State.Types.TrackingStatus -> Kernel.Types.Id.Id Domain.Types.RouteDetails.RouteDetails -> m ())
+updateTrackingStatus trackingStatus id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.trackingStatus trackingStatus, Se.Set Beam.updatedAt _now, Se.Set Beam.trackingStatusLastUpdatedAt (Just _now)] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]

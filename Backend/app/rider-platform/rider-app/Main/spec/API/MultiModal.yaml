@@ -69,6 +69,7 @@ types:
     status: JourneyLegStatus
     bookingStatus: JourneyBookingStatus
     trackingStatus: TrackingStatus
+    trackingStatusLastUpdatedAt: UTCTime
     vehiclePositions: "[VehiclePosition]"
     userPosition: Maybe LatLong
     mode: MultimodalTravelMode

@@ -45,6 +45,7 @@ data RouteDetails = RouteDetails
     toStopName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     toStopPlatformCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     trackingStatus :: Kernel.Prelude.Maybe Lib.JourneyModule.State.Types.TrackingStatus,
+    trackingStatusLastUpdatedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     createdAt :: Kernel.Prelude.UTCTime,

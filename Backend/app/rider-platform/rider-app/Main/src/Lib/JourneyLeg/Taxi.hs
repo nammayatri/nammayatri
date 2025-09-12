@@ -189,13 +189,14 @@ instance JT.JourneyLeg TaxiLegRequest m where
           maybe (pure Nothing) (QEstimate.findById . Id) req.journeyLeg.legPricingId
 
     vehiclePosition <- JT.getTaxiVehiclePosition mbRide
-    (oldStatus, bookingStatus, trackingStatus) <- JMStateUtils.getTaxiAllStatuses req.journeyLeg mbBooking mbRide mbEstimate
+    (oldStatus, bookingStatus, trackingStatus, trackingStatusLastUpdatedAt) <- JMStateUtils.getTaxiAllStatuses req.journeyLeg mbBooking mbRide mbEstimate
     return $
       JT.Single $
         JT.JourneyLegStateData
           { status = oldStatus,
             bookingStatus = bookingStatus,
             trackingStatus,
+            trackingStatusLastUpdatedAt,
             userPosition = (.latLong) <$> listToMaybe req.riderLastPoints,
             vehiclePositions = maybe [] (\latLong -> [JT.VehiclePosition {position = Just latLong, vehicleId = "taxi", upcomingStops = [], route_state = Nothing}]) vehiclePosition,
             legOrder = req.journeyLeg.sequenceNumber,

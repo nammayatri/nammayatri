@@ -24,13 +24,15 @@ instance JT.JourneyLeg WalkLegRequest m where
   cancel _ = throwError (InternalError "Not supported")
 
   getState (WalkLegRequestGetState req) = do
-    let (oldStatus, trackingStatus) = JMStateUtils.getWalkAllStatuses req.journeyLeg
+    let (oldStatus, trackingStatus, trackingStatusLastUpdatedAt) = JMStateUtils.getWalkAllStatuses req.journeyLeg
+    now <- getCurrentTime
     return $
       JT.Single $
         JT.JourneyLegStateData
           { status = oldStatus,
             bookingStatus = JMStateTypes.Initial JMStateTypes.BOOKING_PENDING,
             trackingStatus = trackingStatus,
+            trackingStatusLastUpdatedAt = fromMaybe now trackingStatusLastUpdatedAt,
             userPosition = (.latLong) <$> listToMaybe req.riderLastPoints,
             vehiclePositions = [],
             legOrder = req.journeyLeg.sequenceNumber,
