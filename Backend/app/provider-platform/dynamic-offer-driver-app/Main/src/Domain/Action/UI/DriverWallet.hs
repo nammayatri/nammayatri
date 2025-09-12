@@ -116,11 +116,11 @@ postWalletPayout (mbPersonId, merchantId, mocId) = do
   person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   subscriptionConfig <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName person.merchantOperatingCityId Nothing PREPAID_SUBSCRIPTION >>= fromMaybeM (NoSubscriptionConfigForService person.merchantOperatingCityId.getId "PREPAID_SUBSCRIPTION") -- Driver wallet is not required for postpaid
-  unless (fromMaybe False merchant.enforceSufficientDriverBalance && fromMaybe False transporterConfig.driverWalletConfig.enableWalletPayout) $ throwError $ InvalidRequest "Payouts are disabled"
+  unless (fromMaybe False merchant.enforceSufficientDriverBalance && transporterConfig.driverWalletConfig.enableWalletPayout) $ throwError $ InvalidRequest "Payouts are disabled"
   Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey driverId.getId) 10 10 $ do
     driverInfo <- QDI.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
     let walletBalance = fromMaybe 0 driverInfo.walletBalance
-    let minPayoutAmount = fromMaybe 0 transporterConfig.driverWalletConfig.minimumWalletPayoutAmount
+    let minPayoutAmount = transporterConfig.driverWalletConfig.minimumWalletPayoutAmount
     utcTimeNow <- getCurrentTime
     let timeDiff = secondsToNominalDiffTime transporterConfig.timeDiffFromUtc
         localTime = addUTCTime timeDiff utcTimeNow
@@ -137,7 +137,7 @@ postWalletPayout (mbPersonId, merchantId, mocId) = do
     payoutId <- generateGUID
     phoneNo <- mapM decrypt person.mobileNumber
     payoutServiceName <- Payout.decidePayoutService (fromMaybe (DEMSC.PayoutService TPayout.Juspay) subscriptionConfig.payoutServiceName) person.clientSdkVersion person.merchantOperatingCityId
-    let cutOffDate = Data.Time.addDays (negate (fromIntegral $ fromMaybe 0 transporterConfig.driverWalletConfig.payoutCutOffDays)) localDay
+    let cutOffDate = Data.Time.addDays (negate (fromIntegral transporterConfig.driverWalletConfig.payoutCutOffDays)) localDay
         utcCutOffTime = addUTCTime (negate timeDiff) (Data.Time.UTCTime cutOffDate 0)
     transactionsAfterCutoff <- QDW.findAllByDriverIdRangeAndTransactionType driverId utcCutOffTime utcTimeNow Nothing Nothing Nothing
     let unsettledReceivables = sum $ mapMaybe (.merchantPayable) transactionsAfterCutoff
@@ -204,7 +204,7 @@ postWalletTopup (mbPersonId, merchantId, mocId) req = do
   driverId <- fromMaybeM (PersonDoesNotExist "Nothing") mbPersonId
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   transporterConfig <- findByMerchantOpCityId mocId Nothing >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
-  unless (fromMaybe False merchant.enforceSufficientDriverBalance && fromMaybe False transporterConfig.driverWalletConfig.enableWalletTopup) $ throwError $ InvalidRequest "Wallet topups are disabled"
+  unless (fromMaybe False merchant.enforceSufficientDriverBalance && transporterConfig.driverWalletConfig.enableWalletTopup) $ throwError $ InvalidRequest "Wallet topups are disabled"
   when (req.amount <= 0) $ throwError $ InvalidRequest "Top-up amount must be greater than zero"
   eitherResult <- Redis.whenWithLockRedisAndReturnValue (makeWalletTopupLockKey driverId.getId) 10 $ do
     existingTopUpFee <- QDFE.findLatestByFeeTypeAndStatusWithTotalEarnings DF.WALLET_TOPUP [DF.PAYMENT_PENDING] driverId req.amount
