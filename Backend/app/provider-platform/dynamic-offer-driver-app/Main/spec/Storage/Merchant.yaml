@@ -847,20 +847,20 @@ TransporterConfig:
     CallingOption:
       enum: "AnonymousCall, DirectCall, DualCall"
     AnalyticsConfig:
-      weekStartMode: Maybe Int
-      earningsWindowSize: Maybe Int
-      allowCacheDriverFlowStatus: Maybe Bool
-      maxOnlineDurationDays: Maybe Int
+      weekStartMode: Int
+      earningsWindowSize: Int
+      allowCacheDriverFlowStatus: Bool
+      maxOnlineDurationDays: Int
       onlineDurationCalculateFrom: Maybe UTCTime # set null to switch off calculation, current UTC timestamp to switch on
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
     DriverWalletConfig:
-      enableDriverWallet: Maybe Bool
-      driverWalletPayoutThreshold: Maybe HighPrecMoney
-      gstPercentage: Maybe Double
-      enableWalletPayout: Maybe Bool
-      enableWalletTopup: Maybe Bool
+      enableDriverWallet: Bool
+      driverWalletPayoutThreshold: HighPrecMoney
+      gstPercentage: Double
+      enableWalletPayout: Bool
+      enableWalletTopup: Bool
       maxWalletPayoutsPerDay: Maybe Int
-      minimumWalletPayoutAmount: Maybe HighPrecMoney
+      minimumWalletPayoutAmount: HighPrecMoney
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
     SubscriptionConfig:
       prepaidSubscriptionThreshold: Maybe HighPrecMoney

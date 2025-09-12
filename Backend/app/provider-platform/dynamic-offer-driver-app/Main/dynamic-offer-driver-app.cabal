@@ -716,6 +716,7 @@ library
       Tools.Encryption
       Tools.Error
       Tools.Event
+      Tools.FieldParse
       Tools.Maps
       Tools.MarketingEvents
       Tools.Metrics
