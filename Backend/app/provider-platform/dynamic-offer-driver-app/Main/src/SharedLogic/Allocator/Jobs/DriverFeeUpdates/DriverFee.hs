@@ -98,110 +98,118 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
       endTime = jobData.endTime
       serviceName = fromMaybe YATRI_SUBSCRIPTION jobData.serviceName
       recalculateManualReview = fromMaybe False jobData.recalculateManualReview
-  now <- getCurrentTime
-  merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  merchantOpCityId <- CQMOC.getMerchantOpCityId mbMerchantOpCityId merchant Nothing
-  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  subscriptionConfigs <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId serviceName >>= fromMaybeM (InternalError $ "No subscription config found" <> show serviceName)
-  driverFees <- getOrGenerateDriverFeeDataBasedOnServiceName serviceName startTime endTime merchantId merchantOpCityId transporterConfig recalculateManualReview subscriptionConfigs
-  let threshold = transporterConfig.driverFeeRetryThresholdConfig
-  driverFeesToProccess <-
-    mapMaybeM
-      ( \driverFee -> do
-          let count = driverFee.schedulerTryCount
-              driverFeeId = driverFee.id
-          if count > threshold
-            then do
-              QDF.updateStatus MANUAL_REVIEW_NEEDED driverFeeId now
-              return Nothing
-            else do
-              QDF.updateRetryCount (count + 1) driverFeeId
-              return (Just driverFee)
-      )
-      driverFees
-  flip C.catchAll (\e -> C.mask_ $ logError $ "Driver fee scheduler for merchant id " <> merchantId.getId <> " failed. Error: " <> show e) $ do
-    for_ driverFeesToProccess $ \driverFee -> do
-      mbDriverPlan <- findByDriverIdWithServiceName (cast driverFee.driverId) serviceName
-      mbPlanFromDPlan <- getPlan mbDriverPlan serviceName merchantOpCityId (Just recalculateManualReview) (mbDriverPlan >>= (.vehicleCategory))
-      let useDriverPlan = ((mbPlanFromDPlan <&> (.merchantOpCityId)) == Just driverFee.merchantOperatingCityId) && ((mbPlanFromDPlan <&> (.vehicleCategory)) == Just driverFee.vehicleCategory)
-      mbPlan <- if useDriverPlan then pure mbPlanFromDPlan else maybe (pure Nothing) (\planId' -> CQP.findByIdAndPaymentModeWithServiceName planId' (fromMaybe MANUAL $ mbDriverPlan <&> (.planType)) serviceName) driverFee.planId
-      let maxCreditLimitLinkedToDPlan = mbPlan <&> (.maxCreditLimit)
-          isPlanToggleAllowedAtPlanLevel = mbPlan <&> (.subscribedFlagToggleAllowed)
-      mbDriverStat <- QDS.findById (cast driverFee.driverId)
-      case mbPlan of
-        Nothing -> pure ()
-        Just plan -> do
-          let (planBaseFrequcency, baseAmount) = getFreqAndBaseAmountcase plan.planBaseAmount
-              (mandateSetupDate, mandateId, waiveOffMode, waiveOffPercentage) = case mbDriverPlan of
-                Nothing -> (now, Nothing, DPlan.NO_WAIVE_OFF, 0.0)
-                Just driverPlan -> (fromMaybe now driverPlan.mandateSetupDate, driverPlan.mandateId, driverPlan.waiveOfMode, driverPlan.waiverOffPercentage)
-              coinCashLeft = if plan.eligibleForCoinDiscount then max 0.0 $ maybe 0.0 (.coinCovertedToCashLeft) mbDriverStat else 0.0
-
-          driver <- QP.findById (cast driverFee.driverId) >>= fromMaybeM (PersonDoesNotExist driverFee.driverId.getId)
-          let numRidesForPlanCharges = calcNumRides driverFee transporterConfig - plan.freeRideCount
-          --------- calculations based of frequency happens here ------------
-          (feeWithoutDiscount, totalFee, offerId, offerTitle) <- do
-            calcFinalOrderAmounts merchantId transporterConfig driver plan mandateSetupDate numRidesForPlanCharges planBaseFrequcency baseAmount driverFee waiveOffPercentage waiveOffMode
-          ---------------------------------------------------------------------
-          ------------- update driver fee with offer and plan details ---------
-          let offerAndPlanTitle = Just plan.name <> Just "-*@*-" <> offerTitle ---- this we will send in payment history ----
-          updateOfferAndPlanDetails offerId offerAndPlanTitle (Just plan.id) (Just plan.paymentMode) driverFee.id
-          let driverFeeUpdateWithPlanAndOffer =
-                driverFee
-                  { offerId = offerId,
-                    planOfferTitle = offerAndPlanTitle,
-                    planId = Just plan.id,
-                    planMode = Just plan.paymentMode
-                  }
-          --------------------------------------------------
-          let paymentMode = maybe MANUAL (.planType) mbDriverPlan
-          let nonEmptyDriverId = NE.fromList [driverFee.driverId]
-          ------------- process driver fee based on payment mode ----------------
-          unless (totalFee == 0) $ do
-            -- driverFeeUpdateWithPlanAndOffer <- QDF.findById driverFee.id >>= fromMaybeM (InternalError $ "driverFee not found with driverFee id : " <> driverFee.id.getId)
-            if coinCashLeft >= totalFee
+  let jobDataT :: Text = show jobData
+  hashedJobData <- getHash jobDataT
+  let lockKey = "CalculateDriverFeesScheduler:Lock:" <> hashedJobData
+  lockResult <- Hedis.whenWithLockRedisAndReturnValue lockKey 2700 $ do
+    now <- getCurrentTime
+    merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+    merchantOpCityId <- CQMOC.getMerchantOpCityId mbMerchantOpCityId merchant Nothing
+    transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+    subscriptionConfigs <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName merchantOpCityId serviceName >>= fromMaybeM (InternalError $ "No subscription config found" <> show serviceName)
+    driverFees <- getOrGenerateDriverFeeDataBasedOnServiceName serviceName startTime endTime merchantId merchantOpCityId transporterConfig recalculateManualReview subscriptionConfigs
+    let threshold = transporterConfig.driverFeeRetryThresholdConfig
+    driverFeesToProccess <-
+      mapMaybeM
+        ( \driverFee -> do
+            let count = driverFee.schedulerTryCount
+                driverFeeId = driverFee.id
+            if count > threshold
               then do
-                void $ QDS.updateCoinToCashByDriverId (cast driverFeeUpdateWithPlanAndOffer.driverId) (-1.0 * totalFee)
-                setCoinToCashUsedAmount driverFeeUpdateWithPlanAndOffer totalFee
-                QDF.updateStatusByIds CLEARED_BY_YATRI_COINS [driverFeeUpdateWithPlanAndOffer.id] now
-                driverFeeSplitter paymentMode plan feeWithoutDiscount totalFee driverFeeUpdateWithPlanAndOffer mandateId Nothing subscriptionConfigs now
-                invoice <- mkInvoiceAgainstDriverFee driverFeeUpdateWithPlanAndOffer (True, paymentMode == AUTOPAY)
-                updateAmountPaidByCoins (Just totalFee) driverFeeUpdateWithPlanAndOffer.id
-                QINV.create invoice
+                QDF.updateStatus MANUAL_REVIEW_NEEDED driverFeeId now
+                return Nothing
               else do
-                when (coinCashLeft > 0) $ do
-                  QDS.updateCoinToCashByDriverId (cast driverFeeUpdateWithPlanAndOffer.driverId) (-1.0 * coinCashLeft)
-                  setCoinToCashUsedAmount driverFeeUpdateWithPlanAndOffer coinCashLeft
-                driverFeeSplitter paymentMode plan feeWithoutDiscount totalFee driverFeeUpdateWithPlanAndOffer mandateId (Just coinCashLeft) subscriptionConfigs now
-                updatePendingPayment True (cast driverFeeUpdateWithPlanAndOffer.driverId)
-                SLOSO.addSendOverlaySchedulerDriverIds merchantOpCityId (Just driverFee.vehicleCategory) (Just "PaymentOverdueGreaterThan") nonEmptyDriverId
-                SLOSO.addSendOverlaySchedulerDriverIds merchantOpCityId (Just driverFee.vehicleCategory) (Just "PaymentOverdueBetween") nonEmptyDriverId
-          -------------------------------------------------------------------------------
-          -- blocking
-          dueDriverFees <- QDF.findAllPendingAndDueDriverFeeByDriverIdForServiceName (cast driverFee.driverId) serviceName -- Problem with lazy evaluation?
-          let driverFeeIds = map (.id) dueDriverFees
-              due = sum $ map (\fee -> if (fee.startTime /= startTime && fee.endTime /= endTime) then roundToHalf driverFee.currency $ fee.govtCharges + fee.platformFee.fee + fee.platformFee.cgst + fee.platformFee.sgst else 0) dueDriverFees
-          if roundToHalf driverFee.currency (due + totalFee - min coinCashLeft totalFee) >= fromMaybe plan.maxCreditLimit maxCreditLimitLinkedToDPlan
-            then do
-              mapM_ updateDriverFeeToManual driverFeeIds
-              updateDriverFeeToManual driverFee.id
-              when (fromMaybe plan.subscribedFlagToggleAllowed isPlanToggleAllowedAtPlanLevel) $ do
-                updateSubscription False (cast driverFee.driverId)
-                SLOSO.addSendOverlaySchedulerDriverIds merchantOpCityId (Just driverFee.vehicleCategory) (Just "BlockedDrivers") nonEmptyDriverId
-            else do
-              unless (totalFee == 0 || coinCashLeft >= totalFee) $ processDriverFee paymentMode driverFee subscriptionConfigs
-          updateSerialOrderForInvoicesInWindow driverFee.id merchantOpCityId startTime endTime serviceName
+                QDF.updateRetryCount (count + 1) driverFeeId
+                return (Just driverFee)
+        )
+        driverFees
+    flip C.catchAll (\e -> C.mask_ $ logError $ "Driver fee scheduler for merchant id " <> merchantId.getId <> " failed. Error: " <> show e) $ do
+      for_ driverFeesToProccess $ \driverFee -> do
+        mbDriverPlan <- findByDriverIdWithServiceName (cast driverFee.driverId) serviceName
+        mbPlanFromDPlan <- getPlan mbDriverPlan serviceName merchantOpCityId (Just recalculateManualReview) (mbDriverPlan >>= (.vehicleCategory))
+        let useDriverPlan = ((mbPlanFromDPlan <&> (.merchantOpCityId)) == Just driverFee.merchantOperatingCityId) && ((mbPlanFromDPlan <&> (.vehicleCategory)) == Just driverFee.vehicleCategory)
+        mbPlan <- if useDriverPlan then pure mbPlanFromDPlan else maybe (pure Nothing) (\planId' -> CQP.findByIdAndPaymentModeWithServiceName planId' (fromMaybe MANUAL $ mbDriverPlan <&> (.planType)) serviceName) driverFee.planId
+        let maxCreditLimitLinkedToDPlan = mbPlan <&> (.maxCreditLimit)
+            isPlanToggleAllowedAtPlanLevel = mbPlan <&> (.subscribedFlagToggleAllowed)
+        mbDriverStat <- QDS.findById (cast driverFee.driverId)
+        case mbPlan of
+          Nothing -> pure ()
+          Just plan -> do
+            let (planBaseFrequcency, baseAmount) = getFreqAndBaseAmountcase plan.planBaseAmount
+                (mandateSetupDate, mandateId, waiveOffMode, waiveOffPercentage) = case mbDriverPlan of
+                  Nothing -> (now, Nothing, DPlan.NO_WAIVE_OFF, 0.0)
+                  Just driverPlan -> (fromMaybe now driverPlan.mandateSetupDate, driverPlan.mandateId, driverPlan.waiveOfMode, driverPlan.waiverOffPercentage)
+                coinCashLeft = if plan.eligibleForCoinDiscount then max 0.0 $ maybe 0.0 (.coinCovertedToCashLeft) mbDriverStat else 0.0
 
-  case listToMaybe driverFees of
-    Nothing -> do
-      Hedis.del (mkDriverFeeBillNumberKey merchantOpCityId serviceName)
-      let jobDataT :: Text = show jobData
-      hashedJobData <- getHash jobDataT
-      duplicationKey <- Hedis.setNxExpire (jobDuplicationPreventionKey hashedJobData "DriverFeeCalc") (3600 * 12) True -- 12 hours
-      when duplicationKey do
-        scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId serviceName subscriptionConfigs jobData
+            driver <- QP.findById (cast driverFee.driverId) >>= fromMaybeM (PersonDoesNotExist driverFee.driverId.getId)
+            let numRidesForPlanCharges = calcNumRides driverFee transporterConfig - plan.freeRideCount
+            --------- calculations based of frequency happens here ------------
+            (feeWithoutDiscount, totalFee, offerId, offerTitle) <- do
+              calcFinalOrderAmounts merchantId transporterConfig driver plan mandateSetupDate numRidesForPlanCharges planBaseFrequcency baseAmount driverFee waiveOffPercentage waiveOffMode
+            ---------------------------------------------------------------------
+            ------------- update driver fee with offer and plan details ---------
+            let offerAndPlanTitle = Just plan.name <> Just "-*@*-" <> offerTitle ---- this we will send in payment history ----
+            updateOfferAndPlanDetails offerId offerAndPlanTitle (Just plan.id) (Just plan.paymentMode) driverFee.id
+            let driverFeeUpdateWithPlanAndOffer =
+                  driverFee
+                    { offerId = offerId,
+                      planOfferTitle = offerAndPlanTitle,
+                      planId = Just plan.id,
+                      planMode = Just plan.paymentMode
+                    }
+            --------------------------------------------------
+            let paymentMode = maybe MANUAL (.planType) mbDriverPlan
+            let nonEmptyDriverId = NE.fromList [driverFee.driverId]
+            ------------- process driver fee based on payment mode ----------------
+            unless (totalFee == 0) $ do
+              -- driverFeeUpdateWithPlanAndOffer <- QDF.findById driverFee.id >>= fromMaybeM (InternalError $ "driverFee not found with driverFee id : " <> driverFee.id.getId)
+              if coinCashLeft >= totalFee
+                then do
+                  void $ QDS.updateCoinToCashByDriverId (cast driverFeeUpdateWithPlanAndOffer.driverId) (-1.0 * totalFee)
+                  setCoinToCashUsedAmount driverFeeUpdateWithPlanAndOffer totalFee
+                  QDF.updateStatusByIds CLEARED_BY_YATRI_COINS [driverFeeUpdateWithPlanAndOffer.id] now
+                  driverFeeSplitter paymentMode plan feeWithoutDiscount totalFee driverFeeUpdateWithPlanAndOffer mandateId Nothing subscriptionConfigs now
+                  invoice <- mkInvoiceAgainstDriverFee driverFeeUpdateWithPlanAndOffer (True, paymentMode == AUTOPAY)
+                  updateAmountPaidByCoins (Just totalFee) driverFeeUpdateWithPlanAndOffer.id
+                  QINV.create invoice
+                else do
+                  when (coinCashLeft > 0) $ do
+                    QDS.updateCoinToCashByDriverId (cast driverFeeUpdateWithPlanAndOffer.driverId) (-1.0 * coinCashLeft)
+                    setCoinToCashUsedAmount driverFeeUpdateWithPlanAndOffer coinCashLeft
+                  driverFeeSplitter paymentMode plan feeWithoutDiscount totalFee driverFeeUpdateWithPlanAndOffer mandateId (Just coinCashLeft) subscriptionConfigs now
+                  updatePendingPayment True (cast driverFeeUpdateWithPlanAndOffer.driverId)
+                  SLOSO.addSendOverlaySchedulerDriverIds merchantOpCityId (Just driverFee.vehicleCategory) (Just "PaymentOverdueGreaterThan") nonEmptyDriverId
+                  SLOSO.addSendOverlaySchedulerDriverIds merchantOpCityId (Just driverFee.vehicleCategory) (Just "PaymentOverdueBetween") nonEmptyDriverId
+            -------------------------------------------------------------------------------
+            -- blocking
+            dueDriverFees <- QDF.findAllPendingAndDueDriverFeeByDriverIdForServiceName (cast driverFee.driverId) serviceName -- Problem with lazy evaluation?
+            let driverFeeIds = map (.id) dueDriverFees
+                due = sum $ map (\fee -> if (fee.startTime /= startTime && fee.endTime /= endTime) then roundToHalf driverFee.currency $ fee.govtCharges + fee.platformFee.fee + fee.platformFee.cgst + fee.platformFee.sgst else 0) dueDriverFees
+            if roundToHalf driverFee.currency (due + totalFee - min coinCashLeft totalFee) >= fromMaybe plan.maxCreditLimit maxCreditLimitLinkedToDPlan
+              then do
+                mapM_ updateDriverFeeToManual driverFeeIds
+                updateDriverFeeToManual driverFee.id
+                when (fromMaybe plan.subscribedFlagToggleAllowed isPlanToggleAllowedAtPlanLevel) $ do
+                  updateSubscription False (cast driverFee.driverId)
+                  SLOSO.addSendOverlaySchedulerDriverIds merchantOpCityId (Just driverFee.vehicleCategory) (Just "BlockedDrivers") nonEmptyDriverId
+              else do
+                unless (totalFee == 0 || coinCashLeft >= totalFee) $ processDriverFee paymentMode driverFee subscriptionConfigs
+            updateSerialOrderForInvoicesInWindow driverFee.id merchantOpCityId startTime endTime serviceName
+
+    case listToMaybe driverFees of
+      Nothing -> do
+        Hedis.del (mkDriverFeeBillNumberKey merchantOpCityId serviceName)
+        duplicationKey <- Hedis.setNxExpire (jobDuplicationPreventionKey hashedJobData "DriverFeeCalc") (3600 * 12) True -- 12 hours
+        when duplicationKey do
+          scheduleJobs transporterConfig startTime endTime merchantId merchantOpCityId serviceName subscriptionConfigs jobData
+        return Complete
+      _ -> ReSchedule <$> getRescheduledTime (fromMaybe 5 transporterConfig.driverFeeCalculatorBatchGap)
+
+  case lockResult of
+    Left () -> do
+      logError $ "Driver fee calculation job for merchant " <> merchantId.getId <> " could not acquire lock. Job completing without processing."
       return Complete
-    _ -> ReSchedule <$> getRescheduledTime (fromMaybe 5 transporterConfig.driverFeeCalculatorBatchGap)
+    Right result -> return result
 
 processDriverFee ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasKafkaProducer r) =>
