@@ -208,7 +208,7 @@ startRide ServiceHandle {..} rideId req = withLogTag ("rideId-" <> rideId.getId)
       fork "startRide - Notify driver" $ Notify.notifyOnRideStarted ride booking
       pure APISuccess.Success
   where
-    isValidRideStatus status = (status == DRide.NEW)
+    isValidRideStatus status = status `elem` [DRide.NEW, DRide.UPCOMING]
     isInProgress status = (status == DRide.INPROGRESS)
 
 makeStartRideIdKey :: Id DP.Person -> Text

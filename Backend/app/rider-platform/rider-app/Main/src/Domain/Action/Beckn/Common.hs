@@ -970,7 +970,7 @@ validateRideStartedReq RideStartedReq {..} = do
   booking <- QRB.findByBPPBookingId bppBookingId >>= fromMaybeM (BookingDoesNotExist $ "BppBookingId: " <> bppBookingId.getId)
   ride <- QRide.findByBPPRideId bppRideId >>= fromMaybeM (RideDoesNotExist $ "BppRideId" <> bppRideId.getId)
   unless (booking.status == DRB.TRIP_ASSIGNED) $ throwError (BookingInvalidStatus $ show booking.status)
-  unless (ride.status == DRide.NEW) $ throwError (RideInvalidStatus $ show ride.status)
+  unless (ride.status == DRide.NEW || ride.status == DRide.UPCOMING) $ throwError (RideInvalidStatus $ show ride.status)
   let estimatedEndTimeRange = mkEstimatedEndTimeRange <$> estimatedEndTimeRangeStart <*> estimatedEndTimeRangeEnd
   return $ ValidatedRideStartedReq {..}
   where
