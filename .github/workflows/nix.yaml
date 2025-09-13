@@ -5,7 +5,7 @@ on:
     branches: 
       - "main"
       - "prodHotPush-Common"
-      - "prodHotPush-MMFRFS"
+      - "backend/fix-driver-drainer"
       - "prodHotPush-BAP"
       - "prodHotPush-BPP"
   pull_request:
@@ -13,7 +13,7 @@ on:
     branches: 
       - "main"
       - "prodHotPush-Common"
-      - "prodHotPush-MMFRFS"
+      - "backend/fix-driver-drainer"
       - "prodHotPush-BAP"
       - "prodHotPush-BPP"
   workflow_dispatch:
@@ -70,7 +70,7 @@ jobs:
           # Moving the docker push conditions here from the build job
           if [[ "${{ github.ref }}" == "refs/heads/main" || 
                 "${{ github.ref }}" == "refs/heads/prodHotPush-Common" || 
-                "${{ github.ref }}" == "refs/heads/prodHotPush-MMFRFS" ||
+                "${{ github.ref }}" == "refs/heads/backend/fix-driver-drainer" ||
                 "${{ github.ref }}" == "refs/heads/prodHotPush-BAP" ||
                 "${{ github.ref }}" == "refs/heads/prodHotPush-BPP" ||
                 "${{ github.event.pull_request.merged }}" == "true" ]]; then
