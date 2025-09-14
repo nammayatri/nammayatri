@@ -2678,10 +2678,11 @@ homeScreenFlow = do
       void $ pure $ setValueToLocalStore RENTAL_RIDE_STATUS_POLLING "False"
       void $ pure $ setValueToLocalStore PET_RIDES_INFO_POPUP_SHOWN "false"
       void $ updateStage $ HomeScreenStage HomeScreen
-
+      (GlobalState globalState) <- getState
+      driverInfoResp <- Remote.getDriverInfoBT ""
+      modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {driverInformation = Just driverInfoResp})
       when state.data.driverGotoState.isGotoEnabled do
-        driverInfoResp <- Remote.getDriverInfoBT ""
-        modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {driverInformation = Just driverInfoResp, gotoPopupType = if (fromMaybe false cancelRideResp.isGoHomeDisabled) then ST.REDUCED 0 else ST.NO_POPUP_VIEW})
+        modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {gotoPopupType = if (fromMaybe false cancelRideResp.isGoHomeDisabled) then ST.REDUCED 0 else ST.NO_POPUP_VIEW})
       updateDriverDataToStates
       modifyScreenState $ GlobalPropsType (\globalProps -> globalProps { gotoPopupType = ST.NO_POPUP_VIEW })
       removeChatService ""
@@ -3155,6 +3156,18 @@ handleFcm notificationType state notificationBody = do
       when (isJust defGlobalState.homeScreen.data.activeRide.disabilityTag) $ do
         modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props {showAccessbilityPopup = true, specialZoneProps{ currentGeoHash = "" }}})
       modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen {props {mapRendered = true,rentalInfoPopUp = homeScreen.data.activeRide.tripType == ST.Rental ,intercityInfoPopUp = homeScreen.data.activeRide.tripType == ST.Intercity , currentStage = RideAccepted , checkUpcomingRide = true, retryRideList = true}})
+      (GlobalState globalState) <- getState
+      case (globalState.globalProps.driverInformation) of
+        Just (GetDriverInfoResp driverInfo) -> do
+          let updatedDriverInfo = GetDriverInfoResp driverInfo {
+                assignedRidesCountDaily = map (_ + 1) driverInfo.assignedRidesCountDaily,
+                assignedRidesCountWeekly = map (_ + 1) driverInfo.assignedRidesCountWeekly
+              }
+          modifyScreenState $ GlobalPropsType (\globalProps -> globalProps {driverInformation = Just updatedDriverInfo})
+          (GlobalState updatedGlobalState) <- getState
+          pure unit
+        Nothing -> do
+          pure unit
       currentRideFlow Nothing Nothing
     "RIDE_REQUESTED"    -> do
       void $ updateStage $ HomeScreenStage RideRequested
