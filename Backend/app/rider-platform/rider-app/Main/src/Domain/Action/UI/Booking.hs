@@ -270,50 +270,50 @@ bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyO
 buildApiEntityForRideOrJourneyWithCounts :: Id Person.Person -> Maybe Integer -> [SRB.Booking] -> [DJ.Journey] -> Maybe Integer -> Maybe Integer -> Flow ([BookingAPIEntityV2], Int, Int)
 buildApiEntityForRideOrJourneyWithCounts personId mbLimit bookings journeys initialBookingOffset initialJourneyOffset = do
   let limit = maybe maxBound fromIntegral mbLimit
-      (mergedList, bookingOffset, journeyOffset) = mergeWithCounts bookings journeys limit 0 0 (maybe 0 fromIntegral initialBookingOffset) (maybe 0 fromIntegral initialJourneyOffset) []
+      (mergedList, bookingOffset, journeyOffset) = mergeWithCounts bookings journeys limit (maybe 0 fromIntegral initialBookingOffset) (maybe 0 fromIntegral initialJourneyOffset) []
   entities <- JMU.measureLatency (buildBookingListV2 personId (reverse mergedList)) "buildBookingListV2 measureLatency: "
   return (entities, bookingOffset, journeyOffset)
   where
     -- Merge bookings and journeys while respecting the limit and counting each type
-    mergeWithCounts :: [SRB.Booking] -> [DJ.Journey] -> Int -> Int -> Int -> Int -> Int -> [Either SRB.Booking DJ.Journey] -> ([Either SRB.Booking DJ.Journey], Int, Int)
+    mergeWithCounts :: [SRB.Booking] -> [DJ.Journey] -> Int -> Int -> Int -> [Either SRB.Booking DJ.Journey] -> ([Either SRB.Booking DJ.Journey], Int, Int)
     -- Base case: no more bookings, take remaining journeys up to limit
-    mergeWithCounts [] js limit bCount jCount bOffset jOffset acc
+    mergeWithCounts [] js limit bOffset jOffset acc
       | reachedLimit = (acc, bOffset, jOffset)
       | otherwise =
-        let takeCount = limit - (bCount + jCount)
+        let takeCount = limit - (bOffset + jOffset)
             (newAcc, newJOffset) = takeValidJourneys js takeCount jOffset acc
          in (newAcc, bOffset, newJOffset)
       where
-        reachedLimit = bCount + jCount >= limit
+        reachedLimit = bOffset + jOffset >= limit
         takeValidJourneys :: [DJ.Journey] -> Int -> Int -> [Either SRB.Booking DJ.Journey] -> ([Either SRB.Booking DJ.Journey], Int)
         takeValidJourneys [] _ currentOffset acc' = (acc', currentOffset)
         takeValidJourneys _ 0 currentOffset acc' = (acc', currentOffset)
         takeValidJourneys (j : js') remainingCount currentOffset acc'
           | isSingleTaxiJourney j =
-            takeValidJourneys js' remainingCount (currentOffset + 1) acc' -- Skip single-leg taxi journey but include for offset
+            takeValidJourneys js' (remainingCount - 1) (currentOffset + 1) acc' -- Skip single-leg taxi journey but include for offset
           | otherwise =
             takeValidJourneys js' (remainingCount - 1) (currentOffset + 1) (Right j : acc')
 
     -- Base case: no more journeys, take remaining bookings up to limit
-    mergeWithCounts bs [] limit bCount jCount bOffset jOffset acc
+    mergeWithCounts bs [] limit bOffset jOffset acc
       | reachedLimit = (acc, bOffset, jOffset)
       | otherwise =
-        let takeCount = limit - (bCount + jCount)
+        let takeCount = limit - (bOffset + jOffset)
             takenBookings = take takeCount bs
          in (foldl' (\acc' x -> Left x : acc') acc takenBookings, bOffset + length takenBookings, jOffset)
       where
-        reachedLimit = bCount + jCount >= limit
+        reachedLimit = bOffset + jOffset >= limit
 
     -- Recursive case: compare current booking and journey, take the more recent one
-    mergeWithCounts (b : bs) (j : js) limit bCount jCount bOffset jOffset acc
+    mergeWithCounts (b : bs) (j : js) limit bOffset jOffset acc
       | reachedLimit = (acc, bOffset, jOffset)
-      | isSingleTaxiJourney j = mergeWithCounts (b : bs) js limit bCount jCount bOffset (jOffset + 1) acc -- Skip single-leg taxi journey but include offset
+      | isSingleTaxiJourney j = mergeWithCounts (b : bs) js limit bOffset (jOffset + 1) acc -- Skip single-leg taxi journey but include offset
       | otherwise =
         case compareBookingJourney b j of
-          GT -> mergeWithCounts bs (j : js) limit (bCount + 1) jCount (bOffset + 1) jOffset (Left b : acc)
-          _ -> mergeWithCounts (b : bs) js limit bCount (jCount + 1) bOffset (jOffset + 1) (Right j : acc)
+          GT -> mergeWithCounts bs (j : js) limit (bOffset + 1) jOffset (Left b : acc)
+          _ -> mergeWithCounts (b : bs) js limit bOffset (jOffset + 1) (Right j : acc)
       where
-        reachedLimit = bCount + jCount >= limit
+        reachedLimit = bOffset + jOffset >= limit
 
     isSingleTaxiJourney :: DJ.Journey -> Bool
     isSingleTaxiJourney j = j.totalLegs == 1 && j.modes == [DTrip.Taxi]
