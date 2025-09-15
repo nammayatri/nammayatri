@@ -29,10 +29,6 @@ VendorSplitDetails:
   excludedFields: [merchantId]
 
   queries:
-    findAllByAreaCityAndVariant:
-      kvFunction: findAllWithKV
-      where:
-        and: [area, merchantOperatingCityId, vehicleVariant]
     findAllByAreasCityAndVariant:
       kvFunction: findAllWithKV
       where:

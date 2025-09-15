@@ -539,6 +539,7 @@ library
       Storage.CachedQueries.ValueAddNP
       Storage.CachedQueries.VehicleDetails
       Storage.CachedQueries.VehicleServiceTier
+      Storage.CachedQueries.VendorSplitDetails
       Storage.CachedQueries.WhiteListOrg
       Storage.Clickhouse.Booking
       Storage.Clickhouse.BppTransactionJoin
