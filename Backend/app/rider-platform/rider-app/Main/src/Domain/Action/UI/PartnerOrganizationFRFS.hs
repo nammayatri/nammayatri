@@ -508,6 +508,7 @@ getFareV2 merchantOperatingCity partnerOrg fromStation toStation partnerOrgTrans
             recentLocationId = Nothing,
             validTill = Just validTill,
             multimodalSearchRequestId = Nothing,
+            searchAsParentStops = Nothing,
             ..
           }
 

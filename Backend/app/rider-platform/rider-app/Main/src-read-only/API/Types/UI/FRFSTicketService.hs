@@ -170,6 +170,7 @@ data FRFSSearchAPIReq = FRFSSearchAPIReq
     quantity :: Kernel.Prelude.Int,
     recentLocationId :: Data.Maybe.Maybe (Kernel.Types.Id.Id Domain.Types.RecentLocation.RecentLocation),
     routeCode :: Data.Maybe.Maybe Data.Text.Text,
+    searchAsParentStops :: Data.Maybe.Maybe Kernel.Prelude.Bool,
     toStationCode :: Data.Text.Text
   }
   deriving stock (Generic)
@@ -188,6 +189,7 @@ data FRFSStationAPI = FRFSStationAPI
     lat :: Data.Maybe.Maybe Kernel.Prelude.Double,
     lon :: Data.Maybe.Maybe Kernel.Prelude.Double,
     name :: Data.Maybe.Maybe Data.Text.Text,
+    parentStopCode :: Data.Maybe.Maybe Data.Text.Text,
     routeCodes :: Data.Maybe.Maybe [Data.Text.Text],
     sequenceNum :: Data.Maybe.Maybe Kernel.Prelude.Int,
     stationType :: Data.Maybe.Maybe Domain.Types.StationType.StationType,

@@ -340,6 +340,7 @@ castStationToAPI integratedBppConfigId DStation {..} =
   API.FRFSStationAPI
     { API.address = Nothing,
       API.code = stationCode,
+      API.parentStopCode = Nothing,
       API.routeCodes = Nothing,
       API.color = Nothing,
       API.lat = stationLat,

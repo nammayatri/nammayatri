@@ -125,7 +125,8 @@ getFrfsRoutes (_personId, _mId) mbEndStationCode mbStartStationCode _city _vehic
                                   distance = Nothing,
                                   color = Nothing,
                                   towards = Nothing,
-                                  integratedBppConfigId = integratedBPPConfig.id
+                                  integratedBppConfigId = integratedBPPConfig.id,
+                                  parentStopCode = Nothing
                                 }
                           )
                       )
@@ -237,7 +238,8 @@ getFrfsRoute (_personId, _mId) routeCode mbIntegratedBPPConfigId _platformType _
                               distance = Nothing,
                               color = Nothing,
                               towards = Nothing,
-                              integratedBppConfigId = integratedBPPConfig.id
+                              integratedBppConfigId = integratedBPPConfig.id,
+                              parentStopCode = Nothing
                             }
                         ) :
                         processedStops
@@ -337,7 +339,8 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin minimalData _p
                         distance = Nothing,
                         color = Nothing,
                         towards = Nothing,
-                        timeTakenToTravelUpcomingStop = Nothing
+                        timeTakenToTravelUpcomingStop = Nothing,
+                        parentStopCode = Nothing
                       }
                 )
                 possibleStartStops
@@ -365,7 +368,8 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin minimalData _p
                         distance = Nothing,
                         color = Nothing,
                         towards = Nothing,
-                        timeTakenToTravelUpcomingStop = Nothing
+                        timeTakenToTravelUpcomingStop = Nothing,
+                        parentStopCode = Nothing
                       }
                 )
                 filteredRouteStops
@@ -392,7 +396,8 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin minimalData _p
                         distance = Nothing,
                         color = Nothing,
                         towards = Nothing,
-                        timeTakenToTravelUpcomingStop = Nothing
+                        timeTakenToTravelUpcomingStop = Nothing,
+                        parentStopCode = Nothing
                       }
                 )
                 stopsSortedBySequenceNumber
@@ -433,7 +438,8 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin minimalData _p
                                   distance = Nothing,
                                   color = Nothing,
                                   towards = Nothing,
-                                  timeTakenToTravelUpcomingStop = Nothing
+                                  timeTakenToTravelUpcomingStop = Nothing,
+                                  parentStopCode = Nothing
                                 }
                             ]
                       _ -> []
@@ -456,6 +462,7 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin minimalData _p
                         name = Just name,
                         routeCodes = Nothing,
                         integratedBppConfigId = integratedBPPConfig.id,
+                        parentStopCode = Nothing,
                         ..
                       }
                 )
@@ -547,6 +554,7 @@ postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPP
             isOnSearchReceived = Nothing,
             onSearchFailed = Nothing,
             validTill = Just validTill,
+            searchAsParentStops = searchAsParentStops,
             ..
           }
   QFRFSSearch.create searchReq
@@ -1357,7 +1365,7 @@ tryStationsAPIWithOSRMDistances merchantId merchantOpCity origin stops integrate
                     travelMode = Just Maps.CAR
                   }
           case res of
-            Left _ -> return $ map (\StationResult {..} -> FRFSStationAPI {lat = Just lat, lon = Just lon, address = Nothing, color = Nothing, distance = Nothing, towards = Nothing, timeTakenToTravelUpcomingStop = Nothing, integratedBppConfigId = integratedBPPConfig.id, ..}) batch
+            Left _ -> return $ map (\StationResult {..} -> FRFSStationAPI {lat = Just lat, lon = Just lon, address = Nothing, color = Nothing, distance = Nothing, towards = Nothing, timeTakenToTravelUpcomingStop = Nothing, integratedBppConfigId = integratedBPPConfig.id, parentStopCode = Nothing, ..}) batch
             Right stopsDistanceResp ->
               return $ map (\stop -> mkStopToAPI stop.origin stop.distance) (NonEmpty.toList stopsDistanceResp)
 
@@ -1373,6 +1381,7 @@ tryStationsAPIWithOSRMDistances merchantId merchantOpCity origin stops integrate
           distance = Just distance,
           stationType = stop.stationType,
           sequenceNum = stop.sequenceNum,
+          parentStopCode = Nothing,
           timeTakenToTravelUpcomingStop = Nothing,
           address = Nothing,
           color = Nothing,

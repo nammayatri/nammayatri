@@ -34,6 +34,8 @@ type StopCodeAPI = "stop-code" :> Capture "gtfs_id" Text :> Capture "provider_st
 
 type TripInfoAPI = "trip" :> Capture "trip_id" Text :> Get '[JSON] TripInfoResponse
 
+type RouteStopMappingByStopCodesAPI = "getAllRouteStopMappingsByStopCodes" :> ReqBody '[JSON] RouteStopMappingByStopCodesReq :> Post '[JSON] [RouteStopMappingInMemoryServer]
+
 nandiGetRouteStopMappingByRouteIdAPI :: Proxy RouteStopMappingByRouteIdAPI
 nandiGetRouteStopMappingByRouteIdAPI = Proxy
 
@@ -76,6 +78,9 @@ nandiStopCodeAPI = Proxy
 nandiTripInfoAPI :: Proxy TripInfoAPI
 nandiTripInfoAPI = Proxy
 
+nandiRouteStopMappingByStopCodesAPI :: Proxy RouteStopMappingByStopCodesAPI
+nandiRouteStopMappingByStopCodesAPI = Proxy
+
 getNandiGetRouteStopMappingByRouteId :: Text -> Text -> ET.EulerClient [RouteStopMappingInMemoryServer]
 getNandiGetRouteStopMappingByRouteId = ET.client nandiGetRouteStopMappingByRouteIdAPI
 
@@ -117,3 +122,6 @@ getNandiStopCode = ET.client nandiStopCodeAPI
 
 getNandiTripInfo :: Text -> ET.EulerClient TripInfoResponse
 getNandiTripInfo = ET.client nandiTripInfoAPI
+
+postNandiRouteStopMappingByStopCodes :: RouteStopMappingByStopCodesReq -> ET.EulerClient [RouteStopMappingInMemoryServer]
+postNandiRouteStopMappingByStopCodes = ET.client nandiRouteStopMappingByStopCodesAPI

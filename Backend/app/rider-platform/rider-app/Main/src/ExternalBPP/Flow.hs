@@ -75,7 +75,7 @@ search merchant merchantOperatingCity integratedBPPConfig bapConfig mbNetworkHos
                   }
           mkQuote searchReq.vehicleType [routeInfo]
         Nothing -> do
-          routesInfo <- getPossibleRoutesBetweenTwoStops startStationCode endStationCode integratedBPPConfig
+          routesInfo <- bool getPossibleRoutesBetweenTwoStops getPossibleRoutesBetweenTwoParentStops (fromMaybe False searchReq.searchAsParentStops) startStationCode endStationCode integratedBPPConfig
           quotes <-
             mapM
               ( \routeInfo -> do
