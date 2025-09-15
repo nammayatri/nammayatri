@@ -419,6 +419,7 @@ data BusLegExtraInfo = BusLegExtraInfo
     trackingStatus :: JMState.TrackingStatus,
     trackingStatusLastUpdatedAt :: UTCTime,
     fleetNo :: Maybe Text,
+    discounts :: Maybe [FRFSTicketServiceAPI.FRFSDiscountRes],
     categories :: Maybe [CategoryInfoResponse],
     categoryBookingDetails :: Maybe [CategoryBookingDetails]
   }

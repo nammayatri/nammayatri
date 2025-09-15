@@ -17,7 +17,6 @@ import API.Types.UI.FRFSTicketService
 import Domain.Action.Beckn.FRFS.Common (DOnSelect (..))
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified Domain.Types.FRFSQuote as DQuote
-import Domain.Types.FRFSQuoteCategory
 import qualified Domain.Types.Merchant as Merchant
 import Kernel.Beam.Functions
 import Kernel.External.Types (ServiceFlow)
@@ -60,17 +59,12 @@ onSelect onSelectReq merchant quote = do
   whenJust (onSelectReq.validTill) (\validity -> void $ Qquote.updateValidTillById quote.id validity)
   Qquote.updatePriceAndEstimatedPriceById quote.id onSelectReq.totalPrice (Just quote.price)
   QJourneyLeg.updateEstimatedFaresBySearchId (Just onSelectReq.totalPrice.amount) (Just onSelectReq.totalPrice.amount) (Just quote.searchId.getId)
-
-  -- Create FRFSCategorySelectionReq using onSelectReq.category
-  categorySelectionReq <- mapM createCategorySelection onSelectReq.category
-  let validCategorySelections = catMaybes categorySelectionReq
-
-  void $ FRFSTicketService.postFrfsQuoteV2ConfirmUtil (Just quote.riderId, merchant.id) quote.id (FRFSQuoteConfirmReq {offered = validCategorySelections, ticketQuantity = Nothing, childTicketQuantity = Nothing}) Nothing
-  where
-    createCategorySelection categorySelect = do
-      mbQuoteCategory <- QFRFSQuoteCategory.findByBppItemId categorySelect.bppItemId
-      case mbQuoteCategory of
-        Nothing -> return Nothing
-        Just quoteCategory -> do
-          QFRFSQuoteCategory.updateByPrimaryKey quoteCategory {selectedQuantity = Just categorySelect.quantity}
-          return $ Just $ FRFSCategorySelectionReq {quantity = categorySelect.quantity, quoteCategoryId = quoteCategory.id}
+  quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quote.id
+  let categorySelectionReq =
+        mapMaybe
+          ( \category -> do
+              selectedQuantity <- category.selectedQuantity
+              return $ FRFSCategorySelectionReq {quantity = selectedQuantity, quoteCategoryId = category.id}
+          )
+          quoteCategories
+  void $ FRFSTicketService.postFrfsQuoteV2ConfirmUtil (Just quote.riderId, merchant.id) quote.id (FRFSQuoteConfirmReq {offered = categorySelectionReq, ticketQuantity = Nothing, childTicketQuantity = Nothing}) Nothing
