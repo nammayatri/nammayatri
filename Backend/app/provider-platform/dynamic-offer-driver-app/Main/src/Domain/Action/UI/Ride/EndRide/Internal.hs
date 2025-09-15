@@ -47,6 +47,7 @@ import Data.Time.Calendar.OrdinalDate (sundayStartWeek)
 import qualified Domain.Action.UI.Plan as Plan
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.CancellationCharges as DCC
+import qualified Domain.Types.Common as DTCommon
 import qualified Domain.Types.ConditionalCharges as DAC
 import Domain.Types.DailyStats as DDS
 import qualified Domain.Types.DriverFee as DF
@@ -181,7 +182,7 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
 
   let validRide = isValidRide ride
   sendReferralFCM validRide ride mbRiderDetails thresholdConfig
-  when (validRide && (ride.traveledDistance > 1000 || (fromMaybe False ride.distanceCalculationFailed && fromMaybe 0 ride.chargeableDistance > 1000))) $ updateLeaderboardZScore booking.providerId booking.merchantOperatingCityId ride
+  when (isValidForLeaderboard validRide) $ updateLeaderboardZScore booking.providerId booking.merchantOperatingCityId ride
   DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnRideCompletion {merchantId = booking.providerId, driverId = cast driverId, ride = ride, fareParameter = Just newFareParams, ..}
   let currency = booking.currency
   let customerCancellationDues = fromMaybe 0.0 newFareParams.customerCancellationDues
@@ -208,6 +209,8 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   now <- getCurrentTime
   rideRelatedNotificationConfigList <- CRN.findAllByMerchantOperatingCityIdAndTimeDiffEventInRideFlow booking.merchantOperatingCityId DRN.END_TIME booking.configInExperimentVersions
   forM_ rideRelatedNotificationConfigList (SN.pushReminderUpdatesInScheduler booking ride now driverId)
+  where
+    isValidForLeaderboard validRide' = validRide' && (ride.tripCategory /= (DTCommon.OneWay DTCommon.MeterRide)) && (ride.traveledDistance > 1000 || (fromMaybe False ride.distanceCalculationFailed && fromMaybe 0 ride.chargeableDistance > 1000))
 
 sendReferralFCM ::
   ( CacheFlow m r,
