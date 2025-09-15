@@ -83,8 +83,8 @@ view push state =
                   [ height WRAP_CONTENT
                   , width WRAP_CONTENT
                   ][ imageView
-                      [ height (V 24)
-                      , width (V 24)
+                      [ height (V 20)
+                      , width (V 20)
                       , imageWithFallback $ fetchImage FF_COMMON_ASSET state.radioSelectedImage
                       , visibility if state.isSelected then VISIBLE else GONE
                       ]

@@ -44,11 +44,11 @@ view push state =
     let config = getAppConfig appConfig
     in
     linearLayout
-    [ width WRAP_CONTENT
+    [ width MATCH_PARENT
     , height WRAP_CONTENT
     , alignParentBottom "true,-1"
     , gravity CENTER
-    ]-- [] -- check after rebase
+    ]
      [linearLayout
        [ width MATCH_PARENT
        , height MATCH_PARENT

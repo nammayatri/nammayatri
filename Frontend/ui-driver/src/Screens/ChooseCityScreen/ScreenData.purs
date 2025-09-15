@@ -25,6 +25,7 @@ import Common.Styles.Colors as Color
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import ConfigProvider
+import Locale.Utils (getLanguageLocale)
 
 initData :: ChooseCityScreenState
 initData = {
@@ -35,7 +36,7 @@ initData = {
     logField : empty
   },
   props : {
-    selectedLanguage: "EN_US",
+    selectedLanguage: getLanguageLocale languageKey,
     currentStage : ENABLE_PERMISSION,
     isLocationPermissionGiven : false,
     radioMenuFocusedLang : "",

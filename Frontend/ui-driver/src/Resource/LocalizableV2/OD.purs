@@ -164,7 +164,7 @@ getOd =
     , enter_rc_number: "RC ନମ୍ବର ଦିଅନ୍ତୁ"
     , eligibility_criteria_for_rc: "ଆର୍ସି ଗାଗିୟ୍ ଅର୍ହତ୍ତାର ମାନଦଂଡଗଳୁଂ"
     , car_must_be_less_than_3_years_old: "ନିଙ୍କର କାର୍ 3 ବର୍ଷଗଳିଲ୍ଲାତ୍ତପ୍ପୋ୾ ହଳକ୍କୁଂ"
-    , car_must_be_sedan_vehicle: "ନିଙ୍କର କାର୍ ସେଡାନ୍ ଵାହନଵାଗିରବେକ୍କୁଂ"
+    , car_must_be_sedan_or_suv: "ନିଙ୍କର କାର୍ ସେଡାନ୍ ବା ଏସ୍ୟୁଭି ହେବା ଆବଶ୍ୟକ"
     , where_is_my_rc_number: "ମୋ RC ନମ୍ବର କେଉଁଠି?"
     , step: "ପଦକ୍ଷେପ"
     , paid: "ଦେବାହୋଇଛି"
@@ -259,7 +259,7 @@ getOd =
     , visit_your_nearest_hub_to_complete_a_short_vehicle_inspection_to_start_earning_with_us: "ଆପଣଙ୍କର କନୀସ ହବ କି ଏକଟି ଛୋଟ ଯାନବାହନ ଜାଚନେର ଜନ୍ଯ ଏଖାରି ଯାନ ଏବଂ ଆମାଦେର ସାଥେ କମାନେର ଶୁରୁ କରନ୍ତୁ"
     , you_will_be_contacted_by_your_selected_hub_within_24_hours: "ଆପଣଙ୍କର ବାଛନ୍ତୁ ହବ 24 ଘଣ୍ଟାରେ ଆପଣଙ୍କର ସହିତ ଯାଞ୍ଚ ହୋଇଛି"
     , operator_referral_code_applied: "ଅପରେଟର୍ ରେଫରାଲ୍ କୋଡ୍ ଲାଗୁ କରାଯାଇଛି"
-    , got_an_operator_referral_code: "ଆପଣଙ୍କ ପାଖରେ ଅପରେଟର ରେଫରାଲ୍ କୋଡ୍ ଅଛି କି?"
+    , got_an_operator_referral_code: "ଆପଣଙ୍କ ପାଖରେ ଅପରେସନ୍ସ ପାର୍ଟନର କୋଡ୍ ଅଛି କି?"
     , locate_on_map: "ମ୍ୟାପ୍ରେ ସ୍ଥାନାନ୍ତରିତ କରନ୍ତୁ"
     , contact_number: "ଯୋଗାଯୋଗ ନମ୍ବର"
     , address: "ଠିକଣା"
@@ -1254,6 +1254,13 @@ getOd =
     , yatri_points_faqs_ques2_ans2: (\_ -> "ଛାଡ଼ ପଏଣ୍ଟଗୁଡିକୁ ସେହି ସମୟସୀମାରେ ବ୍ୟବହାର କରିବା ଆବଶ୍ୟକ।")
     , yatri_points_faqs_ques2_ans3: "ଯଦି ଏହି ସମୟସୀମାରେ ରୂପାନ୍ତର କିମ୍ବା ବ୍ୟବହାର ହେଉନାହିଁ, ପଏଣ୍ଟଗୁଡିକ ହାରାଇଯିବ।"
     , faqs_str: "ପ୍ରାୟତଃ ପଚରା ଯାଉଥିବା ପ୍ରଶ୍ନ"
+    , delhi: "ଦିଲ୍ଲୀ"
+    , gurugram: "ଗୁରୁଗ୍ରାମ"
+    , noida: "ନୋଇଡା"
+    , bangalore: "ବାଙ୍ଗାଲୋର"
+    , car_must_be_maruti_suzuki_vehicle: "ଆପଣଙ୍କର କାର ଏକ ମାରୁତି ସୁଜୁକି ଯାନ ହେବା ଆବଶ୍ୟକ"
+    , car_must_be_commercial_vehicle: "ଆପଣଙ୍କର କାର ଏକ ବ୍ୟବସାୟିକ ଯାନ ହେବା ଆବଶ୍ୟକ"
+    , pan_aadhaar_dl_same_person: "PAN, ଆଧାର ଏବଂ ଡ୍ରାଇଭିଂ ଲାଇସେନ୍ସ (DL) ଏକ ବ୍ୟକ୍ତିର ହେବା ଆବଶ୍ୟକ"
     , yatri_points_faqs_ques3: (\_ -> "ମୁଁ କିପରି ଯାତ୍ରି ପଏଣ୍ଟ ଅର୍ଜନ କରିପାରିବି?")
     , yatri_points_faqs_ques3_ans1: (\_ -> "ଯାତ୍ରି ପଏଣ୍ଟଗୁଡିକ ଆପ୍ରେ ସାଧାରଣ କାର୍ଯ୍ୟଗୁଡିକ ଯେପରିକି ରାଇଡ୍ ନେବା ଏବଂ ଗ୍ରାହକମାନଙ୍କୁ ରେଫର୍ କରିବା ମାଧ୍ୟମରେ ଅର୍ଜନ କରାଯାଏ। କିଛି ଭିନ୍ନ କରିବାକୁ ପଡ଼ିବ ନାହିଁ।")
     , yatri_points_faqs_ques3_ans2: (\_ -> "କମ୍ ବାତିଲ ଏବଂ ଗ୍ରାହକଙ୍କରୁ ଭଲ ରେଟିଂ ଇତ୍ୟାଦି ଭଲ ଆଚରଣ ଦ୍ୱାରା ଅଧିକ ପଏଣ୍ଟ ଅର୍ଜନ କରିପାରିବେ।")
@@ -1855,7 +1862,7 @@ getOd =
     , search : "ଖୋଜନ୍ତୁ"
     , we_are_not_able_to_fetch_your_current_location : "ଆମେ ଆପଣଙ୍କର ବର୍ତ୍ତମାନ ସ୍ଥାନ ଅନ୍ଧାର କରିପାରୁ ନାହିଁ।"
     , bus__ : "ବସ୍"
-    , driver_unsubscribed : "ଡ୍ରାଇଭର ପ୍ଲାଟଫର୍ମ ଥିବା ଅନାବନ୍ଧିତ କରାଯାଇଛି। ପୁନଃ ସବସ୍କ୍ରାଇବ୍ କରିବା ପାଇଁ ବକି ଅଛି ପେଣ୍ଡିଂ ରାଶି।"
+    , driver_unsubscribed : "ଡ୍ରାଇଭର ପ୍ଲାଟଫର୍ମ ଥିବା ଅନାବନ୍ଧିତ କରାଯାଇଛି। ପୁନଃ ସବସ୍କ୍ରାଇବ୍ କରିବା ପାଇଁ ବକି ଅଛି ପେଣ୍ଡିଂ ରାଶି।"  
     , canceling_this_booking_may_affect_the_emergency_medical : "ଏହି ବୁକିଂ ରଦ୍ଦ କରିବାରୁ ରୋଗୀଙ୍କର ଆତିକ୍ରମିକ ଚିକିତ୍ସା ସେବାଗୁଡ଼ିକୁ ପ୍ରଭାବିତ କରିପାରେ"
     , drivers_are_permitted_to_cancel_ambulance_bookings : "ଡ୍ରାଇଭର୍ମାନେ ସେମାନଙ୍କର ଚିକିତ୍ସା କାରଣ କିମ୍ବା ଗାଡ଼ିର ତ୍ରୁଟି ଦ୍ୱାରା ପରିବାହନ ବୁକିଂ ରଦ୍ଦ କରିବାକୁ ଅନୁମତି ଦିଆଯାଇଛି"
     , payment_under_maintenance : "ଅଦାନ-ପ୍ରଦାନ ରକ୍ଷାଣବେକ୍ଷଣ ଅଧୀନରେ ଅଛି"

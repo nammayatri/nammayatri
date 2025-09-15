@@ -216,8 +216,7 @@ type TipsConfig
 type SubscriptionConfigVariantLevel 
   = VariantLevelRemoteConfig (Maybe SubscriptionConfigVariantLevelEntity)
 
-type AppLanguage
-  = {
+type AppLanguage = {
     name :: String,
     value :: String,
     subtitle :: String

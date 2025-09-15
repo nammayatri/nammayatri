@@ -19,6 +19,7 @@ import Common.Types.App
 import Debug
 import Mobility.Prelude
 import Screens.RegistrationScreenV2.ComponentConfig
+import Effect.Class (liftEffect)
 
 import Animation as Anim
 import Common.Animation.Config as AnimConfig
@@ -32,7 +33,7 @@ import Control.Monad.ST (for)
 import Data.Array (all, any, elem, filter, fold, length, mapWithIndex, find)
 import Data.Array as DA
 import Data.Foldable (foldl, and)
-import Data.Maybe (Maybe(..), isJust, isNothing, fromMaybe)
+import Data.Maybe (Maybe(..), isJust, isNothing, fromMaybe, maybe)
 import Data.String as DS
 import Effect (Effect)
 import Effect.Uncurried (runEffectFn1)
@@ -47,7 +48,7 @@ import Resource.Localizable.StringsV2
 import Resource.Localizable.TypesV2 as LT2
 import Language.Types (STR(..))
 import PaymentPage (consumeBP)
-import Prelude (Unit, bind, const, map, not, pure, show, unit, void, ($), (&&), (+), (-), (<<<), (<>), (==), (>=), (||), (/=), (*), (>), (/), discard)
+import Prelude (Unit, bind, const, map, not, pure, show, unit, void, ($), (&&), (+), (-), (<<<), (<>), (==), (>=), (||), (/=), (*), (>), (/), discard, (<))
 import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, Screen, Visibility(..), afterRender, alignParentBottom, background, clickable, color, cornerRadius, editText, fontStyle, gravity, height, hint, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, lottieAnimationView, margin, onAnimationEnd, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, stroke, text, textSize, textView, visibility, weight, width, scrollView, scrollBarY, fillViewport, alpha, textFromHtml, nestedScrollView)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
@@ -74,6 +75,7 @@ import Effect.Aff (Milliseconds(..), launchAff)
 import RemoteConfig as RC
 import Log
 import DecodeUtil
+import Engineering.Helpers.BackTrack
 
 screen :: ST.RegistrationScreenState -> Screen Action ST.RegistrationScreenState ScreenOutput
 screen initialState =
@@ -97,7 +99,18 @@ screen initialState =
       void $ pure $ setValueToLocalStore FUNCTION_EXECUTED_IN_SESSION "true"
       pure unit
     else pure unit
+    void $ launchAff $ flowRunner defaultGlobalState $ autoRefreshStatusForRc initialState push
     pure $ pure unit
+
+autoRefreshStatusForRc :: ST.RegistrationScreenState -> (Action -> Effect Unit) -> Flow GlobalState Unit
+autoRefreshStatusForRc state push = do
+  let rcDoc = find (\docStatus -> docStatus.docType == VEHICLE_DETAILS_OPTION) state.data.documentStatusList
+      rcStatus = maybe ST.NOT_STARTED (\docStatus -> docStatus.status) rcDoc
+  if rcStatus == IN_PROGRESS && state.props.autoRefreshForRCcount < 3 then do
+    void $ delay $ Milliseconds 3000.0
+    EHC.liftFlow $ push Refresh 
+  else pure unit
+
 
 view ::
   forall w.
@@ -181,6 +194,13 @@ view push state =
                               ]
                             <> FontStyle.body2 TypoGraphy
                         ]
+                    , textView
+                        $ [ width MATCH_PARENT
+                          , height WRAP_CONTENT
+                          , text $ getStringV2 LT2.pan_aadhaar_dl_same_person
+                          , visibility $ boolToVisibility $ state.props.selectedDocumentCategory == Just API.DRIVER
+                          , margin $ Margin 8 4 4 16
+                          ] <> FontStyle.body2 TypoGraphy
                     , if isNothing state.props.selectedDocumentCategory then categoryListView push state else categorySpecificList push state -- cardsListView push state
                     ]
                 ]
@@ -329,10 +349,12 @@ categoryListView push state =
                         [ height WRAP_CONTENT
                         , weight 1.0
                         , orientation HORIZONTAL
+                        , gravity CENTER_VERTICAL
                         ][ textView
                             [ height WRAP_CONTENT
                             , color Color.black800
                             , text $ if referralCodeAlreadyApplied then (getStringV2 LT2.operator_referral_code_applied) <> ": " <> (getValueToLocalStore APPLIED_REFERRAL_CODE) else (getStringV2 LT2.got_an_operator_referral_code)
+                            , weight 1.0
                             ]
                         , textView
                             [ text $ getStringV2 LT2.optional_str
@@ -342,7 +364,7 @@ categoryListView push state =
                             , cornerRadius 12.0
                             , padding $ Padding 8 2 8 2
                             , color Color.black900
-                            , margin $ MarginLeft 8
+                            , margin $ MarginHorizontal 8 8
                             , visibility $ boolToVisibility $ not referralCodeAlreadyApplied
                             ]
                         ]
@@ -603,6 +625,7 @@ listItem push item state =
       getVerificationMessage step state = 
         case step of
           GRANT_PERMISSION -> Nothing
+          VEHICLE_DETAILS_OPTION -> state.data.rcVerificationMessage
           VEHICLE_PHOTOS -> Nothing
           _ -> let currentDoc = find (\docStatus -> docStatus.docType == step) state.data.documentStatusList
                 in case currentDoc of

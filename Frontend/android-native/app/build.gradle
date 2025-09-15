@@ -412,7 +412,7 @@ dependencies {
     implementation 'com.google.mlkit:translate:17.0.2'
     implementation 'com.google.android.flexbox:flexbox:3.0.0'
     // // debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.11'
-    compileOnly ("co.hyperverge:hyperkyc:0.44.0") {
+    compileOnly ("co.hyperverge:hyperkyc:2.0.1") {
         transitive = true
         exclude group: 'co.hyperverge', module: 'hyperdocdetect'
         exclude group: 'co.hyperverge', module: 'face-detection-preview-frame'
@@ -423,7 +423,7 @@ dependencies {
     implementation 'com.github.freshworks:freshchat-android:6.3.5'
     api(platform("com.squareup.okhttp3:okhttp-bom:4.12.0"))
     api("com.squareup.okhttp3:okhttp")
-    compileOnly 'com.facebook.react:react-android:0.72.3'
+    implementation 'com.facebook.react:react-android:0.79.2'
 
     implementation fileTree(dir: "libs", include: ["*.jar"])
     compileOnly 'com.facebook.soloader:soloader:0.10.5'

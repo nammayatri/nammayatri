@@ -1787,7 +1787,6 @@ eval HelpAndSupportScreen state = exit $ GoToHelpAndSupportScreen state
 eval SafetyPillClicked state = continueWithCmd state { props { showSafetyPillBottomSheet = true } } [ do
     void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT $ do
       (API.GetCitySafetyNumbersResp resp) <- Remote.getCitySafetyNumbersBT ""
-      let _ = spy "printing resp -> " resp
       pure unit
     pure NoAction -- continue state { props { showSafetyPillBottomSheet = true } }
   ]

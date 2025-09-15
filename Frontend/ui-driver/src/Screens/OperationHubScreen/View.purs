@@ -274,11 +274,25 @@ selectedHubItemView push state =
           , color Color.black800
           , margin $ MarginTop 8
           ]
-      , textView
-          [ text $ (getStringV2 LT2.contact_number) <> " : " <> hub.mobileNumber
-          , height WRAP_CONTENT
-          , color Color.black800
+      , linearLayout
+          [ height WRAP_CONTENT
+          , width MATCH_PARENT
+          , orientation HORIZONTAL
+          , gravity LEFT
           , margin $ MarginTop 8
+          , layoutGravity "center_vertical"
+          , onClick push $ const $ CallHub hub.mobileNumber
+          ]
+          [ textView
+            [ text $ (getStringV2 LT2.contact_number) <> " : "
+            , height WRAP_CONTENT
+            , color Color.black800
+            ]
+          , textView
+            [ text $ hub.mobileNumber
+            , height WRAP_CONTENT
+            , color state.data.config.themeColors.highlightedTextColor
+            ]          
           ]
       , linearLayout
           [ height WRAP_CONTENT

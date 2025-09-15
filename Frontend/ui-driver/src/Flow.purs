@@ -930,7 +930,7 @@ onBoardingFlowV1 _ = do
   config <- getAppConfigFlowBT Constants.appConfig
   setValueToLocalStore LOGS_TRACKING "true"
   GlobalState allState <- getState
-  DriverRegistrationStatusResp driverRegistrationResp <- driverRegistrationStatusBT $ DriverRegistrationStatusReq true false
+  DriverRegistrationStatusResp driverRegistrationResp <- driverRegistrationStatusBT $ DriverRegistrationStatusReq true false false
   let cityConfig = getCityConfig config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
       registrationState = allState.registrationScreen
       driverEnabled = fromMaybe false driverRegistrationResp.enabled
@@ -1131,7 +1131,7 @@ onBoardingFlowV1 _ = do
       documentcaptureScreenFlow
     SELECT_LANG_FROM_REGISTRATION -> do
       modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{onBoardingDocs = Nothing}
-      modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ props{ onlyGetTheSelectedLanguage = false, selectedLanguage = "", selectLanguageForScreen = "", fromOnboarding = true}})
+      modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ props{ onlyGetTheSelectedLanguage = false, selectedLanguage = "", selectLanguageForScreen = "", fromOnboarding = true, goBackTo = "OnboardingFlow"}})
       selectLanguageFlow
   where
     mkStatusList :: DriverRegistrationStatusResp -> Array ST.DocumentStatus
@@ -1184,7 +1184,7 @@ onBoardingFlowV2 _ = do
   config <- getAppConfigFlowBT Constants.appConfig
   setValueToLocalStore LOGS_TRACKING "true"
   GlobalState allState <- getState
-  DriverRegistrationStatusResp driverRegistrationResp <- driverRegistrationStatusBT $ DriverRegistrationStatusReq true true
+  DriverRegistrationStatusResp driverRegistrationResp <- driverRegistrationStatusBT $ DriverRegistrationStatusReq true true true
   let cityConfig = getCityConfig config.cityConfig (getValueToLocalStore DRIVER_LOCATION)
       registrationState = allState.registrationScreen
       driverEnabled = fromMaybe false driverRegistrationResp.enabled
@@ -1251,6 +1251,7 @@ onBoardingFlowV2 _ = do
                   registerationScreen { data { 
                       vehicleDetailsStatus = getStatusValue driverRegistrationResp.rcVerificationStatus,
                       drivingLicenseStatus = getStatusValue driverRegistrationResp.dlVerificationStatus, 
+                      rcVerificationMessage = driverRegistrationResp.rcVerficationMessage,
                       lastUpdateTime = convertUTCtoISC (getCurrentUTC "") "hh:mm A",
                       enteredDL = getValueToLocalStore ENTERED_DL,
                       enteredRC = localStoreRC,
@@ -1413,7 +1414,7 @@ onBoardingFlowV2 _ = do
       documentcaptureScreenFlow
     SELECT_LANG_FROM_REGISTRATION_V2 -> do
       modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{onBoardingDocs = Nothing}
-      modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ props{ onlyGetTheSelectedLanguage = false, selectedLanguage = "", selectLanguageForScreen = "", fromOnboarding = true}})
+      modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ props{ onlyGetTheSelectedLanguage = false, selectedLanguage = "", selectLanguageForScreen = "", fromOnboarding = true, goBackTo = "OnboardingFlow"}})
       selectLanguageFlow
     GO_TO_OPERATION_HUB_SCREEN state -> do
       modifyScreenState $ OperationHubScreenStateType (\operationHubScreen -> operationHubScreen { data { rcNumber = state.data.linkedRc}})
@@ -1551,7 +1552,7 @@ operationHubScreenFlow = do
   case out of
     CHANGE_LANG_FROM_OPERATION_HUB updatedState -> do
       modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{onBoardingDocs = Nothing}
-      modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ props{ onlyGetTheSelectedLanguage = false, selectedLanguage = "", selectLanguageForScreen = "", fromOnboarding = true}})
+      modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ props{ onlyGetTheSelectedLanguage = false, selectedLanguage = "", selectLanguageForScreen = "", fromOnboarding = true, goBackTo = "OnboardingFlow"}})
       selectLanguageFlow
     LOGOUT_FROM_OPERATION_HUB -> logoutFlow
     CALL_DRIVER_OPERATION_CREATE_REQUEST_API updatedState -> do
@@ -1731,7 +1732,7 @@ uploadDrivingLicenseFlow = do
       onBoardingFlow
     CHANGE_LANG_FROM_DL_SCREEN -> do
       modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{onBoardingDocs = Nothing}
-      modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ props{ onlyGetTheSelectedLanguage = false, selectedLanguage = "", selectLanguageForScreen = "", fromOnboarding = true}})
+      modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ props{ onlyGetTheSelectedLanguage = false, selectedLanguage = "", selectLanguageForScreen = "", fromOnboarding = true, goBackTo = "OnboardingFlow"}})
       selectLanguageFlow
     GO_TO_FAQS_SCREEN_FROM_UPLOAD_DRIVER_LICENSE_SCREEN -> onboardingFaqScreenFlow
 
@@ -1770,7 +1771,7 @@ addVehicleDetailsflow addRcFromProf = do
                 modifyScreenState $ RegisterScreenStateType (\registerationScreen -> registerationScreen { data { vehicleDetailsStatus = ST.COMPLETED}})
                 addVehicleDetailsflow state.props.addRcFromProfile
               else do
-                (DriverRegistrationStatusResp resp ) <- driverRegistrationStatusBT $ DriverRegistrationStatusReq true false
+                (DriverRegistrationStatusResp resp ) <- driverRegistrationStatusBT $ DriverRegistrationStatusReq true false true
                 let multiRcStatus  = getStatusValue resp.rcVerificationStatus
                 modifyScreenState $ AddVehicleDetailsScreenStateType $ \addVehicleDetailsScreen -> addVehicleDetailsScreen { props {validating = false, multipleRCstatus = multiRcStatus, validateProfilePicturePopUp = false}}
                 addVehicleDetailsflow state.props.addRcFromProfile
@@ -1848,7 +1849,9 @@ addVehicleDetailsflow addRcFromProf = do
           modifyScreenState $ AddVehicleDetailsScreenStateType (\addVehicleDetailsScreen -> state{ props{ isValid = true, openReferralMobileNumber = true, referralViewstatus = false}})
           addVehicleDetailsflow state.props.addRcFromProfile
     APPLICATION_STATUS_SCREEN -> applicationSubmittedFlow "StatusScreen"
-    ONBOARDING_FLOW -> onBoardingFlow
+    ONBOARDING_FLOW -> do
+      modifyScreenState $ RegisterScreenStateType (\registerScreen -> registerScreen { props { autoRefreshForRCcount = 0}})
+      onBoardingFlow
     DRIVER_PROFILE_SCREEN -> do
       modifyScreenState $ DriverProfileScreenStateType (\driverProfileScreen -> driverProfileScreen {props = driverProfileScreen.props { screenType = ST.VEHICLE_DETAILS, openSettings = false}})
       driverProfileFlow
@@ -1885,7 +1888,7 @@ addVehicleDetailsflow addRcFromProf = do
       onBoardingFlow
     CHANGE_LANG_FROM_RC_SCREEN -> do
       modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{onBoardingDocs = Nothing}
-      modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ props{ onlyGetTheSelectedLanguage = false, selectedLanguage = "", selectLanguageForScreen = "", fromOnboarding = true}})
+      modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ props{ onlyGetTheSelectedLanguage = false, selectedLanguage = "", selectLanguageForScreen = "", fromOnboarding = true, goBackTo = "OnboardingFlow"}})
       selectLanguageFlow
     GO_TO_FAQS_SCREEN_FROM_ADD_VEHICLE_DETAILS_SCREEN -> onboardingFaqScreenFlow
     GO_TO_CHANGE_LOCATION_SCREEN -> do
@@ -1987,7 +1990,7 @@ driverProfileFlow = do
     ABOUT_US_SCREEN -> aboutUsFlow
     SELECT_LANGUAGE_SCREEN -> do
       liftFlowBT $ logEvent logField_ "ny_driver_language_select"
-      modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ props{ onlyGetTheSelectedLanguage = false, selectedLanguage = "", selectLanguageForScreen = "", fromOnboarding = false}})
+      modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ props{ onlyGetTheSelectedLanguage = false, selectedLanguage = "", selectLanguageForScreen = "", fromOnboarding = false, goBackTo = "DriverProfileFlow"}})
       selectLanguageFlow
     ON_BOARDING_FLOW -> onBoardingFlow
     DOCUMENTS_FLOW -> documentDetailsScreen
@@ -2429,7 +2432,11 @@ selectLanguageFlow = do
   case action of
     CHANGE_LANGUAGE state -> do
       (UpdateDriverInfoResp updateDriverResp) <- Remote.updateDriverInfoBT $ UpdateDriverInfoReq $ mkUpdateDriverInfoReq ""
-      if state.props.fromOnboarding then onBoardingFlow else driverProfileFlow
+      case state.props.goBackTo of 
+        "OnboardingFlow" -> onBoardingFlow
+        "DriverProfileFlow" -> driverProfileFlow
+        "PermissionsFlow" -> permissionsScreenFlow Nothing Nothing Nothing
+        _ -> driverProfileFlow
     LANGUAGE_CONFIRMED state -> do
       setValueToLocalStore LMS_SELECTED_LANGUAGE_CACHE state.props.selectedLanguage
       case state.props.selectLanguageForScreen of
@@ -2688,11 +2695,15 @@ permissionsScreenFlow event activeRideResp isActiveRide = do
     GO_TO_REGISTERATION_SCREEN state -> do
       let allChecked = state.props.isNotificationPermissionChecked && state.props.isOverlayPermissionChecked && state.props.isAutoStartPermissionChecked
           partialChecked = state.props.isNotificationPermissionChecked || state.props.isOverlayPermissionChecked || state.props.isAutoStartPermissionChecked
-      modifyScreenState $ RegisterScreenStateType (\registerationScreen -> registerationScreen { data { permissionsStatus = case allChecked, partialChecked of
+      modifyScreenState $ RegisterScreenStateType (\registerationScreen -> registerationScreen {props{selectedDocumentCategory = Nothing}, data { permissionsStatus = case allChecked, partialChecked of
                                                                                                                                 true, _ -> ST.COMPLETED
                                                                                                                                 false, true -> ST.IN_PROGRESS
                                                                                                                                 _, _ -> ST.NOT_STARTED } })
-      onBoardingFlow
+      onBoardingFlow  
+    SELECT_LANG_SCREEN state -> do 
+      modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ props{ onlyGetTheSelectedLanguage = false, selectedLanguage = "", selectLanguageForScreen = "", fromOnboarding = true, goBackTo = "PermissionsFlow"}})
+      selectLanguageFlow
+    GO_TO_FAQS_SCREEN_FROM_PERMISSIONS state -> onboardingFaqScreenFlow
 
 myRidesScreenFlow :: FlowBT String Unit
 myRidesScreenFlow = do
@@ -2944,7 +2955,7 @@ currentRideFlow activeRideResp isActiveRide = do
   void $ pure $ setCleverTapUserProp [{key : "Driver On-ride", value : unsafeToForeign $ if getValueToLocalNativeStore IS_RIDE_ACTIVE == "false" then "No" else "Yes"}]
   -- Deprecated case for aadhaar popup shown after HV Integration
   when (allState.homeScreen.data.config.profileVerification.aadharVerificationRequired) $ do -- TODO :: Should be moved to global events as an async event
-    (DriverRegistrationStatusResp resp) <- driverRegistrationStatusBT $ DriverRegistrationStatusReq true false
+    (DriverRegistrationStatusResp resp) <- driverRegistrationStatusBT $ DriverRegistrationStatusReq true false true
     modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {showlinkAadhaarPopup = (resp.aadhaarVerificationStatus == "INVALID" || resp.aadhaarVerificationStatus == "NO_DOC_AVAILABLE")}})
   modifyScreenState $ HomeScreenStateType (\homeScreen -> homeScreen { props {tobeLogged = true}})
   liftFlowBT $ markPerformance "CURRENT_RIDE_FLOW_END"
@@ -4988,7 +4999,7 @@ benefitsScreenFlow = do
     GO_TO_REGISTRATION_SCREEN state -> onBoardingFlow
     SELECT_LANG_FROM_BENEFITS_SCREEN state -> do
       modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{onBoardingDocs = Nothing}
-      modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ props{ onlyGetTheSelectedLanguage = false, selectedLanguage = "", selectLanguageForScreen = "", fromOnboarding = true}})
+      modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ props{ onlyGetTheSelectedLanguage = false, selectedLanguage = "", selectLanguageForScreen = "", fromOnboarding = true, goBackTo = "OnboardingFlow"}})
       selectLanguageFlow
     LOGOUT_FROM_BENEFITS_SCREEN -> logoutFlow
     GO_TO_FAQS_SCREEN_FROM_BENEFITS_SCREEN -> onboardingFaqScreenFlow
@@ -5444,7 +5455,7 @@ documentcaptureScreenFlow = do
       onBoardingFlow
     TA.CHANGE_LANG_FROM_DOCUMENT_CAPTURE -> do
       modifyScreenState $ GlobalPropsType $ \globalProps -> globalProps{onBoardingDocs = Nothing}
-      modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ props{ onlyGetTheSelectedLanguage = false, selectedLanguage = "", selectLanguageForScreen = "", fromOnboarding = true}})
+      modifyScreenState $ SelectLanguageScreenStateType (\selectLangState -> selectLangState{ props{ onlyGetTheSelectedLanguage = false, selectedLanguage = "", selectLanguageForScreen = "", fromOnboarding = true, goBackTo = "OnboardingFlow"}})
       selectLanguageFlow
     TA.UPLOAD_DOC_API state imageType -> do
       validateImageResp <- lift $ lift $ Remote.validateImage $ makeValidateImageReq state.data.imageBase64 imageType state.data.linkedRc Nothing Nothing state.data.vehicleCategory

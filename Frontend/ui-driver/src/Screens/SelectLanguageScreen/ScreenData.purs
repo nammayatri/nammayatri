@@ -32,6 +32,7 @@ initData = {
       selectedLanguage: "",
       onlyGetTheSelectedLanguage : false,
       selectLanguageForScreen : "",
-      fromOnboarding : false
+      fromOnboarding : false,
+      goBackTo : ""
     }
 }

@@ -20,7 +20,6 @@ import Data.Generic.Rep (class Generic)
 import Data.Maybe (Maybe(..))
 import Language.Strings (getString)
 import MerchantConfig.Types (CityConfig)
-import Prelude (class Eq)
 import Screens.Types (RegisterationStep(..), RegistrationScreenState, StageStatus(..))
 import ConfigProvider
 import Foreign.Object (empty)
@@ -66,7 +65,8 @@ initData = {
         accessToken : "",
         hvTxnId : Nothing,
         hvFlowId : Nothing,
-        refereeName : Nothing
+        refereeName : Nothing,
+        rcVerificationMessage : Nothing
       },
       props: {
         limitReachedFor : Nothing,
@@ -88,6 +88,7 @@ initData = {
         dontAllowHvRelaunch : false,
         categoryToStepProgressMap : [{category: API.PERMISSION, registrationSteps: [], completionStatus: ST.NOT_STARTED, showContinueButton: false}, {category: API.DRIVER, registrationSteps: [], completionStatus: ST.NOT_STARTED, showContinueButton: false}, {category: API.VEHICLE, registrationSteps: [], completionStatus: ST.NOT_STARTED, showContinueButton: false}, {category: API.TRAINING, registrationSteps: [], completionStatus: ST.NOT_STARTED, showContinueButton: false }],
         selectedDocumentCategory : Nothing,
-        vehicleImagesUploaded : false
+        vehicleImagesUploaded : false,
+        autoRefreshForRCcount : 0
       }
   }

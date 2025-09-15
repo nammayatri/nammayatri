@@ -24,19 +24,23 @@ import Components.AppOnboardingNavBar as AppOnboardingNavBar
 import Effect.Class (liftEffect)
 import Effect.Unsafe (unsafePerformEffect)
 import Engineering.Helpers.LogEvent (logEvent)
-import JBridge (checkAndAskNotificationPermission, checkOverlayPermission, firebaseLogEvent, isBatteryPermissionEnabled, isNotificationPermissionEnabled, isOverlayPermissionEnabled, requestAutoStartPermission, requestBatteryPermission, requestLocation, getAndroidVersion, isLocationPermissionEnabled)
+import JBridge (checkAndAskNotificationPermission, checkOverlayPermission, firebaseLogEvent, isBatteryPermissionEnabled, isNotificationPermissionEnabled, isOverlayPermissionEnabled, requestAutoStartPermission, requestBatteryPermission, requestLocation, getAndroidVersion, isLocationPermissionEnabled, openUrlInApp)
 import Language.Strings (getString)
 import Language.Types (STR(..))
 import Log (trackAppActionClick, trackAppBackPress, trackAppEndScreen, trackAppScreenEvent, trackAppScreenRender, trackAppTextInput)
-import Prelude (class Show, bind, discard, not, pure, unit, when, ($), (==), void, show, (<>))
+import Prelude (class Show, bind, discard, not, pure, unit, when, ($), (==), void, show, (<>), (&&), (/=))
 import PrestoDOM (Eval, update, continue, continueWithCmd, exit)
 import PrestoDOM.Types.Core (class Loggable)
 import Screens (ScreenName(..), getScreen)
 import Screens.PermissionsScreen.ScreenData (Permissions(..))
 import Screens.Types (PermissionsScreenState, NotificationBody)
-import Helpers.Utils (isParentView, emitLogoutApp)
+import Helpers.Utils (isParentView, emitLogoutApp, contactSupportNumber)
 import Data.Maybe (Maybe(..))
 import Common.Types.App (LazyCheck(..))
+import Screens.Types as ST
+import Components.OptionsMenu as OptionsMenu
+import Components.BottomDrawerList as BottomDrawerList
+import Storage (getValueToLocalStore, KeyStore(..))
 
 instance showAction :: Show Action where
   show (BackPressed) = "BackPressed"
@@ -56,6 +60,10 @@ instance showAction :: Show Action where
   show (PopUpModalLogoutAction var1) = "PopUpModalLogoutAction_" <> show var1
   show (AppOnboardingNavBarAC var1) = "AppOnboardingNavBarAC_" <> show var1
   show (FcmNotificationAction _ _) = "FcmNotificationAction"
+  show (OptionsMenuAction var1) = "OptionsMenuAction_" <> show var1
+  show (BottomDrawerListAC var1) = "BottomDrawerListAC_" <> show var1
+  show (WhatsAppClick) = "WhatsAppClick"
+  show (CallButtonClick) = "CallButtonClick"
 
 instance loggableAction :: Loggable Action where
     performLog action appId = case action of
@@ -95,8 +103,17 @@ instance loggableAction :: Loggable Action where
                 GenericHeader.SuffixImgOnClick -> trackAppScreenEvent appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "generic_header_on_click"
             AppOnboardingNavBar.Logout -> trackAppScreenEvent appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "onboarding_nav_bar_logout"
             AppOnboardingNavBar.PrefixImgOnClick -> trackAppScreenEvent appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "app_onboarding_nav_bar_prefix_img_on_click"
+        OptionsMenuAction act -> case act of
+            OptionsMenu.BackgroundClick -> trackAppScreenEvent appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "options_menu_background_click"
+            OptionsMenu.ItemClick item -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "options_menu_item_click"
+        BottomDrawerListAC act -> case act of
+            BottomDrawerList.Dismiss -> trackAppScreenEvent appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "bottom_drawer_list_dismiss"
+            BottomDrawerList.OnAnimationEnd -> trackAppScreenEvent appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "bottom_drawer_list_on_animation_end"
+            BottomDrawerList.OnItemClick item -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "bottom_drawer_list_on_item_click"
+        WhatsAppClick -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "whatsapp_click"
+        CallButtonClick -> trackAppActionClick appId (getScreen NEED_ACCESS_SCREEN) "in_screen" "call_button_click"
 
-data ScreenOutput =  GoBack | GoToHome | LogoutAccount | GoToRegisteration PermissionsScreenState | FcmNotification String NotificationBody
+data ScreenOutput =  GoBack | GoToHome | LogoutAccount | GoToRegisteration PermissionsScreenState | FcmNotification String NotificationBody | GoToFaqsScreen PermissionsScreenState | SelectLang PermissionsScreenState
 
 data Action = BackPressed
             | NoAction
@@ -115,6 +132,10 @@ data Action = BackPressed
             | UpdateAllChecks PermissionsScreenState
             | PopUpModalLogoutAction PopUpModal.Action
             | AppOnboardingNavBarAC AppOnboardingNavBar.Action
+            | OptionsMenuAction OptionsMenu.Action
+            | BottomDrawerListAC BottomDrawerList.Action
+            | WhatsAppClick
+            | CallButtonClick
 
 eval :: Action -> PermissionsScreenState -> Eval Action ScreenOutput PermissionsScreenState
 eval AfterRender state = continueWithCmd state [ do 
@@ -130,7 +151,13 @@ eval AfterRender state = continueWithCmd state [ do
 
 eval (UpdateAllChecks updatedState) state = continue updatedState
 eval (FcmNotificationAction notificationType notificationBody) state = exit $ FcmNotification notificationType notificationBody
-eval BackPressed state = exit $ GoToRegisteration state -- DECIDE FOR ENABLED DRIVER
+
+eval BackPressed state = 
+  if state.props.logoutModalView then continue state { props { logoutModalView = false}}
+  else if state.props.menuOptions then continue state{props{menuOptions = false}} 
+  else if state.props.contactSupportModal == ST.SHOW then continue state { props { contactSupportModal = ST.ANIMATING}}
+  else exit $ GoToRegisteration state -- DECIDE FOR ENABLED DRIVER
+
 eval (PrimaryButtonActionController (PrimaryButtonController.OnClick)) state = exit $ if state.props.isDriverEnabled then GoToHome else GoToRegisteration state
 eval UpdateNotificationPermissionState state = continue state {props {isNotificationPermissionChecked = true}}
 eval UpdateOverlayPermissionState state = continue state {props {isOverlayPermissionChecked = true}}
@@ -220,7 +247,43 @@ eval (ItemClick itemType) state =
                 ]
             else continue state
 
-eval (AppOnboardingNavBarAC (AppOnboardingNavBar.Logout)) state = continue $ (state {props{logoutModalView = true}})
+eval (OptionsMenuAction OptionsMenu.BackgroundClick) state = continue state{props{menuOptions = false}}
+
+eval (OptionsMenuAction (OptionsMenu.ItemClick item)) state = do
+  let newState = state{props{menuOptions = false}}
+  case item of
+    "logout" -> continue newState { props { logoutModalView = true }}
+    "contact_support" -> continue newState { props { contactSupportModal = ST.SHOW}}
+    "change_language" -> exit $ SelectLang newState
+    "faqs" -> exit $ GoToFaqsScreen newState
+    _ -> continue newState
+
+eval (BottomDrawerListAC BottomDrawerList.Dismiss) state = continue state { props { contactSupportModal = ST.HIDE}}
+
+eval (BottomDrawerListAC BottomDrawerList.OnAnimationEnd) state = continue state { props { contactSupportModal = if state.props.contactSupportModal == ST.ANIMATING then ST.HIDE else state.props.contactSupportModal}}
+
+eval (BottomDrawerListAC (BottomDrawerList.OnItemClick item)) state = do
+  case item.identifier of
+    "whatsapp" -> continueWithCmd state [pure WhatsAppClick]
+    "call" -> continueWithCmd state [pure CallButtonClick]
+    _ -> continue state
+
+eval WhatsAppClick state = continueWithCmd state [do
+  let supportPhone = state.data.cityConfig.registration.supportWAN
+      phone = "%0APhone%20Number%3A%20"<> getValueToLocalStore MOBILE_NUMBER_KEY
+      dlNumber = getValueToLocalStore ENTERED_DL
+      rcNumber = getValueToLocalStore ENTERED_RC
+      dl = if (dlNumber /= "__failed") then ("%0ADL%20Number%3A%20"<> dlNumber) else ""
+      rc = if (rcNumber /= "__failed") then ("%0ARC%20Number%3A%20"<> rcNumber) else ""
+  void $ openUrlInApp $ "https://wa.me/" <> supportPhone <> "?text=Hi%20Team%2C%0AI%20would%20require%20help%20in%20onboarding%20%0A%E0%A4%AE%E0%A5%81%E0%A4%9D%E0%A5%87%20%E0%A4%AA%E0%A4%82%E0%A4%9C%E0%A5%80%E0%A4%95%E0%A4%B0%E0%A4%A3%20%E0%A4%AE%E0%A5%87%E0%A4%82%20%E0%A4%B8%E0%A4%B9%E0%A4%BE%E0%A4%AF%E0%A4%A4%E0%A4%BE%20%E0%A4%95%E0%A5%80%20%E0%A4%86%E0%A4%B5%E0%A4%B6%E0%A5%8D%E0%A4%AF%E0%A4%95%E0%A4%A4%E0%A4%BE%20%E0%A4%B9%E0%A5%8B%E0%A4%97%E0%A5%80" <> phone <> dl <> rc
+  pure NoAction
+  ]
+
+eval CallButtonClick state = do
+  void $ pure $ unsafePerformEffect $ contactSupportNumber ""
+  continue state
+
+eval (AppOnboardingNavBarAC (AppOnboardingNavBar.Logout)) state = continue state {props{menuOptions = not state.props.menuOptions}}
 
 eval (AppOnboardingNavBarAC AppOnboardingNavBar.PrefixImgOnClick) state = continueWithCmd state [ do pure $ BackPressed]
 

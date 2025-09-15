@@ -174,10 +174,10 @@ primaryButtonConfig state = let
     primaryButtonConfig' = config
       { textConfig
       { text = getString UPDATE
-      , color = Color.primaryButtonColor}
+      , color = state.data.config.primaryTextColor}
       , margin = Margin 10 0 10 10
       , cornerRadius = 10.0
-      , background = Color.black900
+      , background = state.data.config.primaryButtonBackground
       , height = (V 48)
       , id = "DriverProfilePrimaryButton"
       , enableRipple = true
@@ -193,10 +193,11 @@ updateButtonConfig state = let
     primaryButtonConfig' = config
       { textConfig
       { text = getString UPDATE
-      , color = Color.primaryButtonColor}
+      , color = state.data.config.primaryTextColor
+      }
       , margin = MarginHorizontal 10 10
       , cornerRadius = 10.0
-      , background = Color.black900
+      , background = state.data.config.primaryButtonBackground
       , height = (V 48)
       , isClickable = state.props.btnActive
       , alpha = if state.props.btnActive then 1.0 else 0.5
@@ -272,7 +273,9 @@ text = ""
         }
       , showErrorLabel = not state.props.checkAlternateNumber || state.props.numberExistError
       , margin = Margin 10 10 10 0
-      , background = Color.white900
+      , background = state.data.config.themeColors.radioInactiveBackground
+      , focusedStroke = ("1," <> state.data.config.themeColors.editTextFocusedStroke)
+      , stroke = ("1," <> state.data.config.themeColors.radioInactiveBackground)
       , id = EHC.getNewIDWithTag "alternateMobileNumber"
       }
     in primaryEditTextConfig'

@@ -100,8 +100,8 @@ deleteRc dummyString = (getBaseUrl "") <> "/rc/delete"
 callDriverToDriver :: String -> String
 callDriverToDriver rcNo = (getBaseUrl "") <> "/driver/register/call/driver?RC=" <> rcNo 
 
-driverRegistrationStatus :: Boolean -> Boolean -> String
-driverRegistrationStatus queryParam providePrefillDetails = (getBaseUrl "") <> "/driver/register/status?makeSelfieAadhaarPanMandatory=" <> show queryParam <> "&providePrefillDetails=" <> show providePrefillDetails
+driverRegistrationStatus :: Boolean -> Boolean -> Boolean -> String
+driverRegistrationStatus queryParam providePrefillDetails useDriverLanguage = (getBaseUrl "") <> "/driver/register/status?makeSelfieAadhaarPanMandatory=" <> show queryParam <> "&providePrefillDetails=" <> show providePrefillDetails <> "&useDriverLanguage=" <> show useDriverLanguage
 
 validateImage :: String -> String
 validateImage dummyString = (getBaseUrl "") <> "/driver/register/validateImage"

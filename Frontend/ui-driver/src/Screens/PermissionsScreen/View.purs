@@ -32,20 +32,21 @@ import Helpers.Utils (FetchImageFrom(..), fetchImage)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, const, map, pure, unit, ($), (&&), (<<<), (<>), (==), (>), not, void, discard)
-import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, LoggableScreen, Visibility(..), afterRender, background, color, cornerRadius, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, visibility, weight, width)
+import Prelude (Unit, bind, const, map, pure, unit, ($), (&&), (<<<), (<>), (==), (>), not, void, discard, (/=))
+import PrestoDOM (Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, LoggableScreen, Visibility(..), afterRender, background, color, cornerRadius, fontStyle, frameLayout, gravity, height, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, scrollView, stroke, text, textSize, textView, visibility, weight, width, relativeLayout)
 import PrestoDOM.Animation as PrestoAnim
 import PrestoDOM.Properties (cornerRadii)
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import Screens.PermissionsScreen.Controller (Action(..), eval, ScreenOutput, getTitle, getDescription)
 import Screens.PermissionsScreen.ScreenData (Listtype, Permissions(..), permissionsList)
-import Screens.RegistrationScreen.ComponentConfig (logoutPopUp)
 import Screens.Types as ST
 import Styles.Colors as Color
 import Web.HTML.History (back)
 import Engineering.Helpers.Events as EHE
 import Helpers.Utils as HU
 import Data.Maybe (Maybe(..))
+import Components.OptionsMenu as OptionsMenu
+import Components.BottomDrawerList as BottomDrawerList  
 
 screen :: ST.PermissionsScreenState -> LoggableScreen Action ST.PermissionsScreenState ScreenOutput
 screen initialState =
@@ -72,7 +73,7 @@ screen initialState =
 
 view :: forall w. (Action -> Effect Unit) -> ST.PermissionsScreenState -> PrestoDOM (Effect Unit) w
 view push state = 
-    linearLayout
+    relativeLayout
     [ height MATCH_PARENT
     , width MATCH_PARENT
     , orientation VERTICAL
@@ -96,14 +97,25 @@ view push state =
                 , width MATCH_PARENT
                 , orientation VERTICAL
                 ][ permissionsListView state push]
-              ]
-          ]
-      ,  linearLayout
-          [ height WRAP_CONTENT
-          , width MATCH_PARENT
-          , visibility if state.props.logoutModalView then GONE else VISIBLE
-          ][PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state)]
-    ]<> if state.props.logoutModalView then [logoutPopupModal push state] else []
+                ]
+            ,   linearLayout
+                [ height WRAP_CONTENT
+                , width MATCH_PARENT
+                , visibility if state.props.logoutModalView then GONE else VISIBLE
+                ][PrimaryButton.view (push <<< PrimaryButtonActionController) (primaryButtonConfig state)]
+            ]
+    ]   <> if state.props.menuOptions then [menuOptionModal push state] else []
+        <> if state.props.logoutModalView then [ logoutPopupModal push state] else []
+        <> if state.props.contactSupportModal /= ST.HIDE then [BottomDrawerList.view (push <<< BottomDrawerListAC) (bottomDrawerListConfig state)] else []
+
+menuOptionModal :: forall w. (Action -> Effect Unit) -> ST.PermissionsScreenState -> PrestoDOM (Effect Unit) w
+menuOptionModal push state = 
+  linearLayout 
+    [ height MATCH_PARENT
+    , width MATCH_PARENT
+    , padding $ PaddingTop 55
+    ][ OptionsMenu.view (push <<< OptionsMenuAction) (optionsMenuConfig state) ]
+
 
 headerView :: forall w. ST.PermissionsScreenState -> (Action -> Effect Unit) -> PrestoDOM (Effect Unit) w
 headerView state push = AppOnboardingNavBar.view (push <<< AppOnboardingNavBarAC) (appOnboardingNavBarConfig state)
@@ -229,4 +241,4 @@ logoutPopupModal push state =
     [ width MATCH_PARENT
     , height MATCH_PARENT
     , background Color.blackLessTrans
-    ][ PopUpModal.view (push <<< PopUpModalLogoutAction) (logoutPopUp Language) ] 
+    ][ PopUpModal.view (push <<< PopUpModalLogoutAction) (logoutPopUp state) ] 

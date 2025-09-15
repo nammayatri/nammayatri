@@ -1331,11 +1331,12 @@ instance encodeValidateImageRes  :: Encode ValidateImageRes where encode = defau
 
 
 -- DriverRegistrationStatus API request, response types
-data DriverRegistrationStatusReq = DriverRegistrationStatusReq Boolean Boolean
+data DriverRegistrationStatusReq = DriverRegistrationStatusReq Boolean Boolean Boolean
 
 newtype DriverRegistrationStatusResp = DriverRegistrationStatusResp
     { dlVerificationStatus :: String
     , rcVerificationStatus :: String
+    , rcVerficationMessage :: Maybe String
     , aadhaarVerificationStatus :: String
     , driverDocuments :: Array DocumentStatusItem
     , vehicleDocuments :: Array VehicleDocumentItem
@@ -1392,7 +1393,7 @@ newtype DocumentStatusItem = DocumentStatusItem
   }
 
 instance makeDriverRegistrationStatusReq :: RestEndpoint DriverRegistrationStatusReq where
-    makeRequest reqBody@(DriverRegistrationStatusReq queryParam providePrefillDetails) headers = defaultMakeRequestWithoutLogs GET (EP.driverRegistrationStatus queryParam providePrefillDetails) headers reqBody Nothing
+    makeRequest reqBody@(DriverRegistrationStatusReq queryParam providePrefillDetails useDriverLanguage) headers = defaultMakeRequestWithoutLogs GET (EP.driverRegistrationStatus queryParam providePrefillDetails useDriverLanguage) headers reqBody Nothing
     encodeRequest req = defaultEncode req
 
 derive instance genericRCDetails :: Generic RCDetails _
