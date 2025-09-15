@@ -96,25 +96,12 @@
             android:name=".FCMBundleUpdateBroadcastReceiver"
             android:enabled="true"
             android:exported="false" />
-        <receiver
-            android:name="in.juspay.mobility.services.GPSBroadcastReceiver"
-            android:enabled="true"
-            android:exported="false"/>
-        <receiver
-            android:name="in.juspay.mobility.services.GpsListeningService$LocationBroadcastReceiver"
-            android:enabled="true"
-            android:exported="false"/>
 
         <service
             android:name=".OverlaySheetService"
             android:enabled="true"
             android:exported="true"
             android:largeHeap="true" />
-        <service
-            android:name="in.juspay.mobility.services.GpsListeningService"
-            android:exported="false"
-            android:foregroundServiceType="location"
-            android:stopWithTask="false" />
        
 
         <service android:name=".overlayMessage.Service"
