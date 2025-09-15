@@ -117,6 +117,7 @@ import qualified Storage.CachedQueries.Merchant.PayoutConfig as CPC
 import qualified Storage.CachedQueries.PlanExtra as CQP
 import qualified Storage.CachedQueries.RideRelatedNotificationConfig as CRN
 import qualified Storage.CachedQueries.SubscriptionConfig as CQSC
+import qualified Storage.CachedQueries.VendorSplitDetails as CQVSD
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.CancellationCharges as QCC
 import qualified Storage.Queries.DailyStats as QDailyStats
@@ -138,7 +139,6 @@ import qualified Storage.Queries.RiderDetails as QRD
 import qualified Storage.Queries.SubscriptionTransaction as QSubscriptionTransaction
 import qualified Storage.Queries.Vehicle as QV
 import qualified Storage.Queries.VendorFee as QVF
-import qualified Storage.Queries.VendorSplitDetails as QVSD
 import Tools.Error
 import Tools.Event
 import qualified Tools.Maps as Maps
@@ -759,10 +759,7 @@ createDriverFee merchantId merchantOpCityId driverId rideFare currency newFarePa
         fork "Updating vendor fees" $
           when (fromMaybe False (subscriptionConfig >>= (.isVendorSplitEnabled))) $ do
             let vehicleVariant = Variant.castServiceTierToVariant booking.vehicleServiceTier
-            let areasToSearch = case booking.area of
-                  Just area -> if area == Default then [Default] else [area, Default]
-                  Nothing -> [Default]
-            allVendorSplitDetails <- QVSD.findAllByAreasCityAndVariant areasToSearch merchantOpCityId vehicleVariant
+            allVendorSplitDetails <- CQVSD.findAllByAreaIncludingDefaultAndCityAndVariant booking.area merchantOpCityId vehicleVariant
             let vendorSplitDetails = case booking.area of
                   Just area ->
                     let areaDetails = DL.filter (\detail -> detail.area == area) allVendorSplitDetails
