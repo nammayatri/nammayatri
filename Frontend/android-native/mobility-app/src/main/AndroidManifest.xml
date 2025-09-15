@@ -51,7 +51,7 @@
             android:exported="true" />
 
         <receiver
-            android:name=".BootUpReceiver"
+            android:name="in.juspay.mobility.services.BootUpReceiver"
             android:enabled="true"
             android:exported="false"
             android:permission="android.permission.RECEIVE_BOOT_COMPLETED">
@@ -67,13 +67,7 @@
             android:enabled="true">
         </receiver>
         <service
-            android:name=".LocationUpdateService"
-            android:exported="false"
-            android:foregroundServiceType="location"
-            android:largeHeap="true"
-            android:stopWithTask="false" />
-        <service
-            android:name=".LocationUpdateServiceV2"
+            android:name="in.juspay.mobility.services.LocationUpdateService"
             android:exported="false"
             android:foregroundServiceType="location"
             android:largeHeap="true"
@@ -109,11 +103,11 @@
             android:enabled="true"
             android:exported="false" />
         <receiver
-            android:name=".GPSBroadcastReceiver"
+            android:name="in.juspay.mobility.services.GPSBroadcastReceiver"
             android:enabled="true"
             android:exported="false"/>
         <receiver
-            android:name=".GpsListeningService$LocationBroadcastReceiver"
+            android:name="in.juspay.mobility.services.GpsListeningService$LocationBroadcastReceiver"
             android:enabled="true"
             android:exported="false"/>
 
@@ -123,7 +117,7 @@
             android:exported="true"
             android:largeHeap="true" />
         <service
-            android:name=".GpsListeningService"
+            android:name="in.juspay.mobility.services.GpsListeningService"
             android:exported="false"
             android:foregroundServiceType="location"
             android:stopWithTask="false" />

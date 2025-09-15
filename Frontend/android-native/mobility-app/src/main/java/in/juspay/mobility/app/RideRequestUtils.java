@@ -18,7 +18,6 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.res.ColorStateList;
 import android.content.pm.PackageManager;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
@@ -40,6 +39,7 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 import androidx.work.BackoffPolicy;
+import androidx.work.ListenableWorker;
 import androidx.work.OneTimeWorkRequest;
 import androidx.work.WorkManager;
 
@@ -52,13 +52,11 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.SocketTimeoutException;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.text.SimpleDateFormat;
@@ -84,7 +82,6 @@ import in.juspay.hyper.core.ExecutorManager;
 import in.juspay.mobility.app.RemoteConfigs.MobilityRemoteConfigs;
 import in.juspay.mobility.app.dataModel.VariantConfig;
 import in.juspay.mobility.common.services.TLSSocketFactory;
-import static in.juspay.mobility.common.MobilityCommonBridge.isServiceRunning;
 
 public class RideRequestUtils {
     private final static int rideReqNotificationId = 5032023;
@@ -94,6 +91,8 @@ public class RideRequestUtils {
     private static final String KOLKATA = "kolkata";
     private static final String KOCHI = "kochi";
     private static final MobilityRemoteConfigs remoteConfigs = new MobilityRemoteConfigs(false, true);
+
+    private static final String locationUpdateWorkerClass = "in.juspay.mobility.services.LocationUpdateWorker";
 
     public static Boolean driverRespondApi(SheetModel model, boolean isAccept, Context context, int slotNumber) {
         String searchRequestId = model.getSearchRequestId();
@@ -289,14 +288,17 @@ public class RideRequestUtils {
     }
     public static void restartLocationService(Context context) {
         try {
-            OneTimeWorkRequest oneTimeWorkRequest = new OneTimeWorkRequest.Builder(LocationUpdateWorker.class).setBackoffCriteria(
+            Class<? extends androidx.work.ListenableWorker> worker = (Class<? extends ListenableWorker>) Class.forName(locationUpdateWorkerClass);
+            OneTimeWorkRequest oneTimeWorkRequest = new OneTimeWorkRequest.Builder(worker).setBackoffCriteria(
                     BackoffPolicy.EXPONENTIAL, // Use exponential backoff strategy
                     1, // Minimum delay before retrying (in minutes)
                     TimeUnit.MINUTES // Time unit for delay
             ).build();
             WorkManager.getInstance(context).enqueue(oneTimeWorkRequest);
             Intent restartIntent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
-            restartIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
+            if (restartIntent != null) {
+                restartIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
+            }
             SharedPreferences sharedPrefs = context.getApplicationContext().getSharedPreferences(context.getApplicationContext().getString(R.string.preference_file_key), Context.MODE_PRIVATE);
             String activityStatus = sharedPrefs.getString("ACTIVITY_STATUS", "null");
             if (sharedPrefs.getString("LOCATION_SERVICE_VERSION","V2").equals("V1")) {
