@@ -367,3 +367,9 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN boost_search_pre_selection_service
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN bus_booking_allowed boolean ;
 ALTER TABLE atlas_app.rider_config ADD COLUMN domain_route_calculation_enabled_modes text []  default '{Bus, Subway}';
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN track_vehicle_key_expiry integer  default 900;
+ALTER TABLE atlas_app.rider_config ADD COLUMN distance_to_nearest_stop_threshold integer  default 200;
