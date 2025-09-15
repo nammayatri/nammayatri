@@ -1,24 +1,18 @@
-module API.UI.CancelSearch (API, handler, JLT.cancelSearch') where
+module API.UI.CancelSearch (API, handler, cancelSearch') where
 
-import qualified Domain.Action.UI.Select as DSelect
-import qualified Domain.Types.CancellationReason as SCR
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as DPerson
 import Environment
 import Kernel.Prelude
-import Kernel.Types.APISuccess
+import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Lib.JourneyLeg.Taxi ()
-import qualified Lib.JourneyLeg.Taxi as JLT
-import qualified Lib.JourneyModule.Base as JLT
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import Servant hiding (throwError)
+import SharedLogic.Cancel
 import Storage.Beam.SystemConfigs ()
 import Storage.Beam.Yudhishthira ()
-import qualified Storage.Queries.Estimate as QEstimate
-import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Person as QP
 import Tools.Auth
 import Tools.Constants
@@ -29,15 +23,15 @@ type API =
     :> ( TokenAuth
            :> Capture "estimateId" (Id DEstimate.Estimate)
            :> "cancel"
-           :> Post '[JSON] DSelect.CancelAPIResponse
+           :> Post '[JSON] CancelAPIResponse
            :<|> TokenAuth
              :> Capture "estimateId" (Id DEstimate.Estimate)
              :> "cancelSearch"
-             :> Post '[JSON] APISuccess
+             :> Post '[JSON] APISuccess.APISuccess
            :<|> TokenAuth
              :> Capture "estimateId" (Id DEstimate.Estimate)
              :> "rejectUpgrade"
-             :> Post '[JSON] DSelect.CancelAPIResponse
+             :> Post '[JSON] CancelAPIResponse
        )
 
 handler :: FlowServer API
@@ -46,35 +40,27 @@ handler =
     :<|> cancelSearchV2
     :<|> rejectUpgrade
 
-cancelSearch :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> FlowHandler DSelect.CancelAPIResponse
-cancelSearch (personId, merchantId) estimateId = withFlowHandlerAPI $ do
-  expr <- try @_ @SearchCancelErrors $ cancelSearchImpl (personId, merchantId) estimateId
-  case expr of
-    Left (ActiveBookingPresent _e) -> return DSelect.BookingAlreadyCreated
-    Left (FailedToCancelSearch _e) -> return DSelect.FailedToCancel
-    Right _ -> return DSelect.Success
+cancelSearch :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> FlowHandler CancelAPIResponse
+cancelSearch (personId, merchantId) estimateId = withFlowHandlerAPI $ cancelSearch' (personId, merchantId) estimateId
 
-cancelSearchV2 :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> FlowHandler APISuccess
-cancelSearchV2 (personId, merchantId) estimateId = withFlowHandlerAPI $ cancelSearchImpl (personId, merchantId) estimateId
+cancelSearchV2 :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> FlowHandler APISuccess.APISuccess
+cancelSearchV2 (personId, merchantId) estimateId = withFlowHandlerAPI $ do
+  void $ cancelSearchUtil (personId, merchantId) estimateId
+  return APISuccess.Success
 
-cancelSearchImpl :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> Flow APISuccess
-cancelSearchImpl (personId, _merchantId) estimateId = do
-  estimate <- QEstimate.findById estimateId >>= fromMaybeM EstimateNotFound
-  let searchId = estimate.requestId
-  mbJourneyLeg <- QJourneyLeg.findByLegSearchId (Just searchId.getId)
-  case mbJourneyLeg of
-    Just journeyLeg -> do
-      let cancellationReasonCode = SCR.CancellationReasonCode "SEARCH_CANCELLED_BY_RIDER"
-      JLT.cancelLeg journeyLeg cancellationReasonCode True (Just estimateId)
-    Nothing -> do
-      void $ JLT.cancelSearch' (personId, _merchantId) estimateId
-  return Success
-
-rejectUpgrade :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> FlowHandler DSelect.CancelAPIResponse
+rejectUpgrade :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> FlowHandler CancelAPIResponse
 rejectUpgrade (personId, merchantId) estimateId = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let personTags = fromMaybe [] person.customerNammaTags
   unless (rejectUpgradeTag `Yudhishthira.elemTagNameValue` personTags) $ do
     rejectUpgradeTagWithExpiry <- Yudhishthira.fetchNammaTagExpiry rejectUpgradeTag
     QP.updateCustomerTags (Just $ personTags <> [rejectUpgradeTagWithExpiry]) person.id
-  JLT.cancelSearchUtil (personId, merchantId) estimateId
+  cancelSearch' (personId, merchantId) estimateId
+
+cancelSearch' :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> Flow CancelAPIResponse
+cancelSearch' (personId, merchantId) estimateId = do
+  expr <- try @_ @SearchCancelErrors $ cancelSearchUtil (personId, merchantId) estimateId
+  case expr of
+    Left (ActiveBookingPresent _e) -> return BookingAlreadyCreated
+    Left (FailedToCancelSearch _e) -> return FailedToCancel
+    Right _ -> return Success

@@ -159,7 +159,6 @@ SearchRequest:
 
   excludedDefaultQueries:
   - findByPrimaryKey
-  - updateByPrimaryKey
   - create
   - createMany
 
@@ -217,14 +216,6 @@ SearchRequest:
     updatePoolingConfigVersion:
       kvFunction: updateWithKV
       params: [ poolingConfigVersion ]
-      where: id
-    updateParcelDetails:
-      kvFunction: updateWithKV
-      params: [ parcelType, parcelQuantity ]
-      where: id
-    updateSafetyPlus:
-      kvFunction: updateWithKV
-      params: [ preferSafetyPlus ]
       where: id
 
   extraOperations:

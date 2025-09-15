@@ -20,6 +20,7 @@ import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant
+import qualified SharedLogic.Cancel
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
 
@@ -30,33 +31,33 @@ handler merchantId city = postSelectEstimate merchantId city :<|> getSelectQuote
 
 type PostSelectEstimate =
   ( ApiAuth
-      'APP_BACKEND
-      'DSL
-      ('RIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.SELECT / 'API.Types.Dashboard.RideBooking.Select.POST_SELECT_ESTIMATE)
+      ('APP_BACKEND)
+      ('DSL)
+      (('RIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.SELECT) / ('API.Types.Dashboard.RideBooking.Select.POST_SELECT_ESTIMATE))
       :> API.Types.Dashboard.RideBooking.Select.PostSelectEstimate
   )
 
 type GetSelectQuotes =
   ( ApiAuth
-      'APP_BACKEND
-      'DSL
-      ('RIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.SELECT / 'API.Types.Dashboard.RideBooking.Select.GET_SELECT_QUOTES)
+      ('APP_BACKEND)
+      ('DSL)
+      (('RIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.SELECT) / ('API.Types.Dashboard.RideBooking.Select.GET_SELECT_QUOTES))
       :> API.Types.Dashboard.RideBooking.Select.GetSelectQuotes
   )
 
 type GetSelectResult =
   ( ApiAuth
-      'APP_BACKEND
-      'DSL
-      ('RIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.SELECT / 'API.Types.Dashboard.RideBooking.Select.GET_SELECT_RESULT)
+      ('APP_BACKEND)
+      ('DSL)
+      (('RIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.SELECT) / ('API.Types.Dashboard.RideBooking.Select.GET_SELECT_RESULT))
       :> API.Types.Dashboard.RideBooking.Select.GetSelectResult
   )
 
 type PostSelectCancelSearch =
   ( ApiAuth
-      'APP_BACKEND
-      'DSL
-      ('RIDER_RIDE_BOOKING / 'API.Types.Dashboard.RideBooking.SELECT / 'API.Types.Dashboard.RideBooking.Select.POST_SELECT_CANCEL_SEARCH)
+      ('APP_BACKEND)
+      ('DSL)
+      (('RIDER_RIDE_BOOKING) / ('API.Types.Dashboard.RideBooking.SELECT) / ('API.Types.Dashboard.RideBooking.Select.POST_SELECT_CANCEL_SEARCH))
       :> API.Types.Dashboard.RideBooking.Select.PostSelectCancelSearch
   )
 
@@ -69,5 +70,5 @@ getSelectQuotes merchantShortId opCity apiTokenInfo customerId estimateId = with
 getSelectResult :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> Environment.FlowHandler Domain.Action.UI.Select.QuotesResultResponse)
 getSelectResult merchantShortId opCity apiTokenInfo customerId estimateId = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.RideBooking.Select.getSelectResult merchantShortId opCity apiTokenInfo customerId estimateId
 
-postSelectCancelSearch :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> Environment.FlowHandler Domain.Action.UI.Select.CancelAPIResponse)
+postSelectCancelSearch :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Kernel.Types.Id.Id Domain.Types.Estimate.Estimate -> Environment.FlowHandler SharedLogic.Cancel.CancelAPIResponse)
 postSelectCancelSearch merchantShortId opCity apiTokenInfo customerId estimateId = withFlowHandlerAPI' $ Domain.Action.RiderPlatform.RideBooking.Select.postSelectCancelSearch merchantShortId opCity apiTokenInfo customerId estimateId

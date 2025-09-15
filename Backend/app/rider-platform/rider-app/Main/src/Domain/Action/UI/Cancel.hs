@@ -153,7 +153,6 @@ cancel booking mRide req cancellationSource = do
   canCancelBooking <- isBookingCancellable booking mRide
   unless canCancelBooking $
     throwError $ RideInvalidStatus "Cannot cancel this ride"
-  SharedCancel.tryCancellationLock booking.transactionId
   city <-
     CQMOC.findById booking.merchantOperatingCityId
       >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound booking.merchantOperatingCityId.getId)
@@ -181,10 +180,14 @@ cancel booking mRide req cancellationSource = do
             logTagInfo "DriverLocationFetchFailed" $ show err
             buildBookingCancellationReason Nothing Nothing (Just ride.id)
       Nothing -> buildBookingCancellationReason Nothing Nothing Nothing
-  QBCR.upsert cancellationReason
-  when (req.blockOnCancellationRate == Just True) $ do
-    Redis.setExp (makeCustomerBlockingKey booking.id.getId) True 60
   isValueAddNP <- CQVAN.isValueAddNP booking.providerId
+
+  -- Lock Description: This is a Shared Lock held Between Booking Cancel for Customer & Driver, At a time only one of them can do the full Cancel to OnCancel/Reallocation flow.
+  -- Lock Release: Held for 30 seconds and released at the end of the OnCancel/EstimateRepitition-OnUpdate/QuoteRepitition-OnUpdate.
+  SharedCancel.tryCancellationLock booking.transactionId $ do
+    QBCR.upsert cancellationReason
+    when (req.blockOnCancellationRate == Just True) $ do
+      Redis.setExp (makeCustomerBlockingKey booking.id.getId) True 60
   return $
     CancelRes
       { bppBookingId = bppBookingId,
