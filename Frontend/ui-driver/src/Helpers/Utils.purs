@@ -811,6 +811,7 @@ emitTerminateApp screen exitApp = runFn3 emitJOSEvent "java" "onEvent" $ encode 
   , screen : screen
   , exit_app : exitApp
   , delete_account_req : Nothing
+  , call_support_req : Nothing
   }
 }
 
