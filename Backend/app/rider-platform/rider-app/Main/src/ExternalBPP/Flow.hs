@@ -1,5 +1,6 @@
 module ExternalBPP.Flow where
 
+import qualified API.Types.UI.FRFSTicketService as API
 import qualified BecknV2.FRFS.Enums as Spec
 import qualified Data.List.NonEmpty as NE
 import Domain.Action.Beckn.FRFS.Common
@@ -153,11 +154,18 @@ search merchant merchantOperatingCity integratedBPPConfig bapConfig mbNetworkHos
 
     mkDCategory basePrice FRFSTicketCategory {..} = DCategory {bppItemId = CallAPI.getProviderName integratedBPPConfig, offeredPrice = price, price = basePrice, ..}
 
-select :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> DFRFSQuote.FRFSQuote -> Maybe Int -> Maybe Int -> m DOnSelect
-select _merchant _merchantOperatingCity _integratedBPPConfig _bapConfig quote ticketQuantity childTicketQuantity = do
+select :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> DFRFSQuote.FRFSQuote -> Maybe Int -> Maybe Int -> Maybe [API.FRFSCategorySelectionReq] -> m DOnSelect
+select _merchant _merchantOperatingCity _integratedBPPConfig _bapConfig quote ticketQuantity childTicketQuantity categorySelectionReq = do
   void $ QFRFSQuote.updateTicketAndChildTicketQuantityById quote.id ticketQuantity childTicketQuantity
   quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quote.id
-  categorySelect <- buildCategorySelect quoteCategories ticketQuantity childTicketQuantity
+  updatedQuoteCategories <- updateQuoteCategoriesWithSelections (fromMaybe [] categorySelectionReq) quoteCategories
+  let categories =
+        mapMaybe
+          ( \category -> do
+              selectedQuantity <- category.selectedQuantity
+              return $ DCategorySelect {bppItemId = category.bppItemId, quantity = selectedQuantity}
+          )
+          updatedQuoteCategories
   return $
     DOnSelect
       { providerId = quote.providerId,
@@ -167,7 +175,7 @@ select _merchant _merchantOperatingCity _integratedBPPConfig _bapConfig quote ti
         validTill = Just quote.validTill,
         transactionId = quote.searchId.getId,
         messageId = quote.id.getId,
-        category = categorySelect
+        category = categories
       }
 
 init :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r) => Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> (Maybe Text, Maybe Text) -> DFRFSTicketBooking.FRFSTicketBooking -> m DOnInit

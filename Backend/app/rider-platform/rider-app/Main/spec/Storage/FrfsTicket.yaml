@@ -223,7 +223,6 @@ FRFSQuoteCategory:
   constraints:
     id: PrimaryKey
     quoteId: SecondaryKey
-    bppItemId: SecondaryKey
   beamFields:
     ticketCategoryMetadataConfig:
       ticketCategoryMetadataConfigId: Text
@@ -251,9 +250,10 @@ FRFSQuoteCategory:
     findAllByQuoteId:
       kvFunction: findAllWithKV
       where: quoteId
-    findByBppItemId:
-      kvFunction: findOneWithKV
-      where: bppItemId
+    updateQuantityByQuoteCategoryId:
+      kvFunction: updateWithKV
+      params: [selectedQuantity, updatedAt]
+      where: id
 
 FRFSQuoteBreakup:
   tableName: frfs_quote_breakup
