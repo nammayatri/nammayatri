@@ -123,3 +123,28 @@ ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN mb_actual_qar_city_past d
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.estimate ALTER COLUMN congestion_multiplier TYPE text;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN driver_extra_fee_step_fee double precision ;
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN driver_extra_fee_start_distance integer ;
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN driver_extra_fee_min_fee double precision ;
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN driver_extra_fee_max_fee double precision ;
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN driver_extra_fee_distance_unit character varying(255) ;
+ALTER TABLE atlas_driver_offer_bpp.estimate ADD COLUMN driver_extra_fee_default_step_fee double precision ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

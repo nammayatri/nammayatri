@@ -7,6 +7,7 @@ import Data.Aeson
 import qualified Domain.Types.Common
 import qualified Domain.Types.FareParameters
 import qualified Domain.Types.FarePolicy
+import qualified Domain.Types.FarePolicy.DriverExtraFeeBounds
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.SearchRequest
@@ -21,6 +22,7 @@ data Estimate = Estimate
     currency :: Kernel.Types.Common.Currency,
     distanceUnit :: Kernel.Types.Common.DistanceUnit,
     dpVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    driverExtraFeeBounds :: Kernel.Prelude.Maybe Domain.Types.FarePolicy.DriverExtraFeeBounds.DriverExtraFeeBounds,
     eligibleForUpgrade :: Kernel.Prelude.Bool,
     estimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     estimatedDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,

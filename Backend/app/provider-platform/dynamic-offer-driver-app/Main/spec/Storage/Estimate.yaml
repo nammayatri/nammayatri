@@ -9,6 +9,7 @@ imports:
   Merchant: Domain.Types.Merchant
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   Centesimal: Kernel.Types.Common
+  DriverExtraFeeBounds: Domain.Types.FarePolicy.DriverExtraFeeBounds
 
 Estimate:
     tableName: estimate
@@ -38,6 +39,7 @@ Estimate:
       mbActualQARFromLocGeohashDistancePast : Maybe Double
       mbActualQARFromLocGeohashPast : Maybe Double
       mbActualQARCityPast : Maybe Double
+      driverExtraFeeBounds: Maybe DriverExtraFeeBounds
       mbCongestionFromLocGeohashDistance : Maybe Double
       mbCongestionFromLocGeohashDistancePast : Maybe Double
       mbCongestionFromLocGeohash : Maybe Double
@@ -75,9 +77,18 @@ Estimate:
       currency:
         currency: Maybe Currency
 
+      driverExtraFeeBounds:
+        driverExtraFeeStartDistance: Maybe Meters
+        driverExtraFeeDistanceUnit: Maybe DistanceUnit
+        driverExtraFeeStepFee: Maybe HighPrecMoney
+        driverExtraFeeDefaultStepFee: Maybe HighPrecMoney
+        driverExtraFeeMinFee: Maybe HighPrecMoney
+        driverExtraFeeMaxFee: Maybe HighPrecMoney
+
     sqlType:
       farePolicyId: character varying(36)
       tipOptions: integer[]
+
     beamType:
       updatedAt: Maybe UTCTime
       isScheduled: Maybe Bool
@@ -94,6 +105,7 @@ Estimate:
       isScheduled: Kernel.Prelude.fromMaybe Kernel.Prelude.False|I
       tripCategory: Kernel.Prelude.fromMaybe (Domain.Types.Common.OneWay Domain.Types.Common.OneWayOnDemandDynamicOffer)|I
       farePolicy: maybe (pure Nothing) ((Storage.Cac.FarePolicy.findById Nothing) . Kernel.Types.Id.Id)|IM
+      driverExtraFeeBounds: Storage.Queries.Transformers.Estimate.mkDriverExtraFeeBounds driverExtraFeeStartDistance driverExtraFeeDistanceUnit driverExtraFeeStepFee driverExtraFeeDefaultStepFee driverExtraFeeMinFee driverExtraFeeMaxFee|E
       minFare: Kernel.Types.Common.mkAmountWithDefault minFareAmount minFare|E
       maxFare: Kernel.Types.Common.mkAmountWithDefault maxFareAmount maxFare|E
       currency: Kernel.Prelude.fromMaybe Kernel.Types.Common.INR|I
@@ -104,6 +116,12 @@ Estimate:
       updatedAt: Kernel.Prelude.Just|I
       isScheduled: Kernel.Prelude.Just|I
       tripCategory: Kernel.Prelude.Just|I
+      driverExtraFeeStartDistance: (driverExtraFeeBounds <&> (.startDistance))|E
+      driverExtraFeeDistanceUnit: (driverExtraFeeBounds <&> (.distanceUnit))|E
+      driverExtraFeeStepFee: (driverExtraFeeBounds <&> (.stepFee))|E
+      driverExtraFeeDefaultStepFee: (driverExtraFeeBounds <&> (.defaultStepFee))|E
+      driverExtraFeeMinFee: (driverExtraFeeBounds <&> (.minFee))|E
+      driverExtraFeeMaxFee: (driverExtraFeeBounds <&> (.maxFee))|E
       farePolicyId: (Kernel.Types.Id.getId . (.id) <$>)
       minFare:  Kernel.Prelude.roundToIntegral|I
       minFareAmount: Kernel.Prelude.Just|I

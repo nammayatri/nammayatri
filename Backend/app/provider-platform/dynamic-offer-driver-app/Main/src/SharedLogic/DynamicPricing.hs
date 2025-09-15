@@ -17,6 +17,7 @@ module SharedLogic.DynamicPricing where
 import Data.Aeson
 import Data.Default.Class
 import qualified Domain.Types.FarePolicy as FarePolicyD
+import qualified Domain.Types.FarePolicy.DriverExtraFeeBounds as DDriverExtraFeeBounds
 import qualified Domain.Types.ServiceTierType as DServiceTierType
 import qualified Domain.Types.VehicleCategory as DVC
 import EulerHS.Prelude hiding (id)
@@ -66,7 +67,8 @@ data DynamicPricingResult = DynamicPricingResult
     smartTipSuggestion :: Maybe HighPrecMoney,
     smartTipReason :: Maybe Text,
     version :: Maybe Text,
-    congestionChargeMultiplier :: Maybe FarePolicyD.CongestionChargeMultiplier
+    congestionChargeMultiplier :: Maybe FarePolicyD.CongestionChargeMultiplier,
+    driverExtraFeeBounds :: Maybe DDriverExtraFeeBounds.DriverExtraFeeBounds
   }
   deriving (Generic, Show, FromJSON, ToJSON)
 
