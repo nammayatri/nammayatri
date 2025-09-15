@@ -100,6 +100,7 @@ IntegratedBPPConfig:
     vehicleCategory: VehicleCategory|NoRelation
     platformType: PlatformType
     providerName: Maybe Text
+    isCancellationAllowed: Maybe Bool
 
   beamFields:
     providerConfig:
