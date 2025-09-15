@@ -20,7 +20,6 @@ module Domain.Action.UI.Ride.CancelRide
     cancelRideHandle,
     driverCancelRideHandler,
     dashboardCancelRideHandler,
-    driverDistanceToPickup,
     cancelRideImpl,
   )
 where
@@ -45,13 +44,12 @@ import Kernel.External.Maps
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
-import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer, KafkaProducerTools)
+import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Common
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.DriverCoins.Coins as DC
-import qualified Lib.DriverCoins.Types as DCT
 import Lib.Scheduler (SchedulerType)
 import Lib.SessionizerMetrics.Types.Event
 import SharedLogic.CallBAPInternal
@@ -66,7 +64,6 @@ import qualified Storage.Queries.DriverGoHomeRequest as QDGR
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import Tools.Error
-import qualified Tools.Maps as Maps
 import qualified Tools.Metrics as Metrics
 import TransactionLogs.Types
 import Utils.Common.Cac.KeyNameConstants
@@ -118,7 +115,7 @@ cancelRideHandle =
       findById = QPerson.findById,
       cancelRide = CInternal.cancelRideImpl,
       findBookingByIdInReplica = B.runInReplica . QRB.findById,
-      pickUpDistance = driverDistanceToPickup
+      pickUpDistance = CInternal.driverDistanceToPickup
     }
 
 data CancelRideReq = CancelRideReq
@@ -235,9 +232,6 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req isForceReallocation = d
             Nothing -> return Nothing
 
           let currentDriverLocation = getCoordinates <$> mbLocation
-          logDebug "RideCancelled Coin Event by driver"
-          fork "DriverRideCancelledCoin Event : " $ do
-            DC.driverCoinsEvent driverId driver.merchantId booking.merchantOperatingCityId (DCT.Cancellation ride.createdAt booking.distanceToPickup disToPickup DCT.CancellationByDriver req.reasonCode) (Just ride.id.getId) ride.vehicleVariant (Just booking.configInExperimentVersions)
           buildRideCancelationReason currentDriverLocation updatedDisToPickup (Just driverId) DBCR.ByDriver ride (Just driver.merchantId) >>= \res -> return (res, cancellationCount, isGoToDisabled, DRide.Driver)
       return (rideCancellationReason, mbCancellationCnt, isGoToDisabled, rideEndedBy)
     DashboardRequestorId (reqMerchantId, _) -> do
@@ -272,29 +266,3 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req isForceReallocation = d
             merchantOperatingCityId = Just ride.merchantOperatingCityId,
             ..
           }
-
-driverDistanceToPickup ::
-  ( EncFlow m r,
-    CacheFlow m r,
-    EsqDBFlow m r,
-    Maps.HasCoordinates tripStartPos,
-    Maps.HasCoordinates tripEndPos,
-    ToJSON tripStartPos,
-    ToJSON tripEndPos,
-    HasKafkaProducer r
-  ) =>
-  SRB.Booking ->
-  tripStartPos ->
-  tripEndPos ->
-  m Meters
-driverDistanceToPickup booking tripStartPos tripEndPos = do
-  distRes <-
-    Maps.getDistanceForCancelRide booking.providerId booking.merchantOperatingCityId (Just booking.id.getId) $
-      Maps.GetDistanceReq
-        { origin = tripStartPos,
-          destination = tripEndPos,
-          travelMode = Just Maps.CAR,
-          distanceUnit = booking.distanceUnit,
-          sourceDestinationMapping = Nothing
-        }
-  return $ distRes.distance
