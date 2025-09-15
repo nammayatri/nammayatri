@@ -28,11 +28,13 @@ createMany = traverse_ create
 findAllByQuoteId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> m [Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory])
 findAllByQuoteId quoteId = do findAllWithKV [Se.Is Beam.quoteId $ Se.Eq (Kernel.Types.Id.getId quoteId)]
 
-findByBppItemId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m (Maybe Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory))
-findByBppItemId bppItemId = do findOneWithKV [Se.Is Beam.bppItemId $ Se.Eq bppItemId]
-
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory -> m (Maybe Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
+updateQuantityByQuoteCategoryId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory -> m ())
+updateQuantityByQuoteCategoryId selectedQuantity id = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.selectedQuantity selectedQuantity, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory -> m (Maybe Domain.Types.FRFSQuoteCategory.FRFSQuoteCategory))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

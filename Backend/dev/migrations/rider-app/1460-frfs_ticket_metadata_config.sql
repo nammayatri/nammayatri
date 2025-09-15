@@ -85,7 +85,8 @@ SELECT
     NOW()
 FROM atlas_app.merchant_operating_city moc;
 
-CREATE INDEX idx_frfs_quote_category_quote_id_bpp_item_id ON atlas_app.frfs_quote_category USING btree (quote_id,bpp_item_id);
+-- Add Index for quote_id  (Production DB)
+CREATE INDEX idx_frfs_quote_category_quote_id ON atlas_app.frfs_quote_category USING btree (quote_id);
 
 UPDATE atlas_app.app_dynamic_logic_element SET domain = 'FRFS-TICKET-CATEGORIES' WHERE domain = 'FRFS-DISCOUNTS';
 

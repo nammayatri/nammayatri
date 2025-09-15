@@ -29,6 +29,7 @@ import Domain.Types.BecknConfig
 import qualified Domain.Types.FRFSConfig as Config
 import qualified Domain.Types.FRFSFarePolicy as DFRFSFarePolicy
 import qualified Domain.Types.FRFSQuote as Quote
+import qualified Domain.Types.FRFSQuoteCategory as DFRFSQuoteCategory
 import qualified Domain.Types.FRFSQuoteCategorySpec as FRFSCategorySpec
 import Domain.Types.FRFSRouteFareProduct
 import qualified Domain.Types.FRFSTicket as DFRFSTicket
@@ -1073,3 +1074,21 @@ createBookingBreakupEntries booking categories merchantId merchantOperatingCityI
         Nothing -> do
           logError $ "Quote category not found for bppItemId: " <> categorySelect.bppItemId <> ", skipping breakup entries"
           return Nothing
+
+updateQuoteCategoriesWithSelections ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  [APITypes.FRFSCategorySelectionReq] ->
+  [DFRFSQuoteCategory.FRFSQuoteCategory] ->
+  m [DFRFSQuoteCategory.FRFSQuoteCategory]
+updateQuoteCategoriesWithSelections categorySelections quoteCategories = do
+  updatedQuoteCategories <- mapM updateCategory quoteCategories
+  return updatedQuoteCategories
+  where
+    updateCategory category =
+      case find (\sel -> sel.quoteCategoryId == category.id) categorySelections of
+        Just selection -> do
+          QFRFSQuoteCategory.updateQuantityByQuoteCategoryId (Just selection.quantity) category.id
+          return category {DFRFSQuoteCategory.selectedQuantity = Just selection.quantity}
+        Nothing -> do
+          QFRFSQuoteCategory.updateQuantityByQuoteCategoryId Nothing category.id
+          return category {DFRFSQuoteCategory.selectedQuantity = Nothing}

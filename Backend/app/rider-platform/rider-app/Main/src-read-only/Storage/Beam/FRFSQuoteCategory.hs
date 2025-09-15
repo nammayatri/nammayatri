@@ -34,6 +34,6 @@ instance B.Table FRFSQuoteCategoryT where
 
 type FRFSQuoteCategory = FRFSQuoteCategoryT Identity
 
-$(enableKVPG ''FRFSQuoteCategoryT ['id] [['bppItemId], ['quoteId]])
+$(enableKVPG ''FRFSQuoteCategoryT ['id] [['quoteId]])
 
 $(mkTableInstances ''FRFSQuoteCategoryT "frfs_quote_category")

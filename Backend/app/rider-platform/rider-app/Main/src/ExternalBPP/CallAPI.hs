@@ -145,17 +145,17 @@ select processOnSelectHandler merchant merchantOperatingCity bapConfig quote tic
     ONDC _ -> do
       fork ("FRFS ONDC SelectReq for " <> show bapConfig.vehicleCategory) $ do
         void $ QFRFSQuote.updateTicketAndChildTicketQuantityById quote.id ticketQuantity childTicketQuantity
+        quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quote.id
+        updatedQuoteCategories <- FRFSUtils.updateQuoteCategoriesWithSelections (fromMaybe [] categorySelectionReq) quoteCategories
         let updatedQuantity = fromMaybe quote.quantity ticketQuantity
         let updatedQuote = quote {DQuote.quantity = updatedQuantity, DQuote.childTicketQuantity = childTicketQuantity}
-        category <- forM categorySelectionReq $ \categorySelections -> do
-          forM categorySelections $ \categorySelection -> do
-            quoteCategory <- QFRFSQuoteCategory.findById categorySelection.quoteCategoryId >>= fromMaybeM (InternalError $ "Quote category not found for id: " <> categorySelection.quoteCategoryId.getId)
-            return $
-              DCategorySelect
-                { bppItemId = quoteCategory.bppItemId,
-                  quantity = categorySelection.quantity
-                }
-        let categories = concat category
+        let categories =
+              mapMaybe
+                ( \category -> do
+                    selectedQuantity <- category.selectedQuantity
+                    return $ DCategorySelect {bppItemId = category.bppItemId, quantity = selectedQuantity}
+                )
+                updatedQuoteCategories
 
         providerUrl <- quote.bppSubscriberUrl & parseBaseUrl
         bknSelectReq <- ACL.buildSelectReq updatedQuote bapConfig Utils.BppData {bppId = quote.bppSubscriberId, bppUri = quote.bppSubscriberUrl} merchantOperatingCity.city categories
@@ -163,7 +163,7 @@ select processOnSelectHandler merchant merchantOperatingCity bapConfig quote tic
         Metrics.startMetrics Metrics.SELECT_FRFS merchant.name quote.searchId.getId merchantOperatingCity.id.getId
         void $ CallFRFSBPP.select providerUrl bknSelectReq merchant.id
     _ -> do
-      onSelectReq <- Flow.select merchant merchantOperatingCity integratedBPPConfig bapConfig quote ticketQuantity childTicketQuantity
+      onSelectReq <- Flow.select merchant merchantOperatingCity integratedBPPConfig bapConfig quote ticketQuantity childTicketQuantity categorySelectionReq
       processOnSelectHandler onSelectReq
 
 init :: FRFSConfirmFlow m r => Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> DBooking.FRFSTicketBooking -> [DCategorySelect] -> m ()
