@@ -107,7 +107,7 @@ import in.juspay.hypersdk.ui.HyperPaymentsCallbackAdapter;
 import in.juspay.mobility.app.ChatService;
 import in.juspay.mobility.app.InAppNotification;
 import in.juspay.mobility.app.LocationUpdateService;
-import in.juspay.mobility.app.LocationUpdateServiceV2;
+import in.juspay.mobility.services.LocationService;
 import in.juspay.mobility.app.MobilityAppBridge;
 import in.juspay.mobility.app.MyFirebaseMessagingService;
 import in.juspay.mobility.app.NotificationUtils;
@@ -274,7 +274,7 @@ public class MainActivity extends AppCompatActivity {
                         if (sharedPreferences.getString("LOCATION_SERVICE_VERSION", "V2").equals("V1")) {
                             locationUpdateIntent = new Intent(context, LocationUpdateService.class);
                         } else {
-                            locationUpdateIntent = new Intent(context, LocationUpdateServiceV2.class);
+                            locationUpdateIntent = new Intent(context, LocationService.class);
                         }
                         context.stopService(locationUpdateIntent);
                         mWorkManager.cancelAllWorkByTag(context.getString(in.juspay.mobility.app.R.string.location_update));
@@ -284,7 +284,7 @@ public class MainActivity extends AppCompatActivity {
                         if (sharedPreferences.getString("LOCATION_SERVICE_VERSION", "V2").equals("V1")) {
                             locationUpdateIntent = new Intent(context, LocationUpdateService.class);
                         } else {
-                            locationUpdateIntent = new Intent(context, LocationUpdateServiceV2.class);
+                            locationUpdateIntent = new Intent(context, LocationService.class);
                         }
                         context.stopService(locationUpdateIntent);
                         mWorkManager.cancelAllWorkByTag(context.getString(in.juspay.mobility.app.R.string.location_update));
@@ -303,7 +303,7 @@ public class MainActivity extends AppCompatActivity {
             if (key != null && !sharedPreferences.getString("LOCATION_SERVICE_VERSION", "V2").equals("V1") && (key.equals("TRIP_STATUS") || key.equals("DRIVER_STATUS")) && sharedPreferences.getString("DRIVER_STATUS", "null").equals("true")) {
                 System.out.println("TRIGGERED UPDATE POLLING");
                 Context context = getApplicationContext();
-                Intent locationUpdateIntent = new Intent(context, LocationUpdateServiceV2.class);;
+                Intent locationUpdateIntent = new Intent(context, LocationService.class);;
                 if(key.equals("TRIP_STATUS")){
                     locationUpdateIntent.putExtra("TRIP_STATUS", sharedPreferences.getString(key,"null"));
                 }
@@ -555,16 +555,16 @@ public class MainActivity extends AppCompatActivity {
         handleSplashScreen();
         checkAndStartApp = this::startApp;
 
-        if (MobilityServiceHolder.canCacheApp(context) && LocationUpdateServiceV2.isLocationUpdating) {
+        if (MobilityServiceHolder.canCacheApp(context) && LocationService.isLocationUpdating) {
             Handler handler = new Handler(Looper.getMainLooper());
             handler.postDelayed(checkAndStartApp,2000);
             Intent locSvs = new Intent();
-            locSvs.setClass(context,LocationUpdateServiceV2.class);
+            locSvs.setClass(context,LocationService.class);
             connection = new ServiceConnection() {
                 @Override
                 public void onServiceConnected(ComponentName name, IBinder service) {
                     handler.removeCallbacks(checkAndStartApp);
-                    LocationUpdateServiceV2 locService = ((LocationUpdateServiceV2.LocalBinder)service).getService();
+                    LocationService locService = ((LocationService.LocalBinder)service).getService();
                     Object cached = locService.getHyperService();
                     if (cached != null) {
                         MobilityServiceHolder.catchMeBack((MobilityServiceHolder)cached);
@@ -1142,11 +1142,11 @@ public class MainActivity extends AppCompatActivity {
 
         if (MobilityServiceHolder.getInstance(context).bindToService(context, activity)) {
             Intent locSvs = new Intent();
-            locSvs.setClass(context,LocationUpdateServiceV2.class);
+            locSvs.setClass(context,LocationService.class);
             ServiceConnection connection = new ServiceConnection() {
                 @Override
                 public void onServiceConnected(ComponentName name, IBinder service) {
-                    LocationUpdateServiceV2 locService = ((LocationUpdateServiceV2.LocalBinder)service).getService();
+                    LocationService locService = ((LocationService.LocalBinder)service).getService();
                     locService.storeHyperService(MobilityServiceHolder.getInstance(context));
                     MobilityServiceHolder.leaveMeAlone();
                     try{

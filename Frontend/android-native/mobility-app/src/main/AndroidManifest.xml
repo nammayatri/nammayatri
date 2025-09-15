@@ -73,7 +73,7 @@
             android:largeHeap="true"
             android:stopWithTask="false" />
         <service
-            android:name=".LocationUpdateServiceV2"
+            android:name=".LocationService"
             android:exported="false"
             android:foregroundServiceType="location"
             android:largeHeap="true"

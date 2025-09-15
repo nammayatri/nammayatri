@@ -46,14 +46,13 @@ import javax.net.ssl.HttpsURLConnection;
 
 import in.juspay.mobility.common.services.TLSSocketFactory;
 
-
 public class GpsListeningService extends Service {
     private static final String channelId = "GPS_LISTENER";
     final int alertNotificationId = 27081999;
     final int gpsForegroundServiceId = 1112022;
     private final String LOG_TAG = "GpsListeningService";
     private BroadcastReceiver gpsReceiver;
-
+    public static final String LOCATION_SERVICE_CLASS = "in.juspay.mobility.services.LocationService";
     public void startLocationService(Context context) {
         try{
             Log.i(LOG_TAG, "able to access service");
@@ -61,7 +60,7 @@ public class GpsListeningService extends Service {
             if (context.getSharedPreferences(context.getString(R.string.preference_file_key),MODE_PRIVATE).getString("LOCATION_SERVICE_VERSION", "V2").equals("V1")) {
                 locationUpdateService = new Intent(context, LocationUpdateService.class);
             } else {
-                locationUpdateService = new Intent(context, LocationUpdateServiceV2.class);
+                locationUpdateService = new Intent(context, Class.forName(LOCATION_SERVICE_CLASS));
             }
             locationUpdateService.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
             SharedPreferences sharedPrefs = getApplicationContext().getSharedPreferences(this.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
@@ -239,7 +238,11 @@ public class GpsListeningService extends Service {
             if (context.getSharedPreferences(context.getString(R.string.preference_file_key),MODE_PRIVATE).getString("LOCATION_SERVICE_VERSION", "V2").equals("V1")) {
                 locationUpdateService = new Intent(context, LocationUpdateService.class);
             } else {
-                locationUpdateService = new Intent(context, LocationUpdateServiceV2.class);
+                try {
+                    locationUpdateService = new Intent(context, Class.forName(LOCATION_SERVICE_CLASS));
+                } catch (ClassNotFoundException e) {
+                    throw new RuntimeException(e);
+                }
             }
             locationUpdateService.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
