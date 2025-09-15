@@ -69,7 +69,6 @@ data DSelectReq = DSelectReq
 -- user can select array of estimate because of book any option, in most of the cases it will be a single estimate
 handler :: DM.Merchant -> DSelectReq -> DSR.SearchRequest -> [DEst.Estimate] -> Flow ()
 handler merchant sReq searchReq estimates = do
-  when (sReq.disabilityDisable == Just True) $ QSR.updateDisabilityTag searchReq.id Nothing searchReq.isScheduled
   now <- getCurrentTime
   riderId <- case sReq.customerPhoneNum of
     Just number -> do
@@ -83,9 +82,6 @@ handler merchant sReq searchReq estimates = do
     Nothing -> do
       logWarning "Failed to get rider details as BAP Phone Number is NULL"
       return Nothing
-  QSR.updateMultipleByRequestId searchReq.id sReq.autoAssignEnabled sReq.isAdvancedBookingEnabled riderId searchReq.isScheduled
-  QSR.updateSafetyPlus sReq.preferSafetyPlus searchReq.id
-
   when sReq.isPetRide $ do
     let tagData =
           Y.SelectTagData
@@ -93,7 +89,6 @@ handler merchant sReq searchReq estimates = do
             -- ,estimates = estimates uncomment this line if you want to use estimates in select tag data
             }
     addNammaTags tagData searchReq
-
   tripQuoteDetails <-
     estimates `forM` \estimate -> do
       QDQ.setInactiveAllDQByEstId estimate.id now
@@ -104,14 +99,23 @@ handler merchant sReq searchReq estimates = do
           petCharges' = if sReq.isPetRide then (.petCharges) =<< estimate.farePolicy else Nothing
       buildTripQuoteDetail searchReq estimate.tripCategory estimate.vehicleServiceTier estimate.vehicleServiceTierName (estimate.minFare + fromMaybe 0 sReq.customerExtraFee + fromMaybe 0 petCharges') Nothing (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge driverParkingCharge estimate.id.getId driverAdditionalCharges False ((.congestionCharge) =<< estimate.fareParams) petCharges' (estimate.fareParams >>= (.priorityCharges))
   let parcelType = (fst sReq.parcelDetails) >>= \rpt -> readMaybe @DParcel.ParcelType $ unpack rpt
-  when (isJust parcelType) $ QSR.updateParcelDetails parcelType (snd sReq.parcelDetails) searchReq.id
-  upSearchReq <- QSR.findById searchReq.id >>= fromMaybeM (SearchRequestNotFound searchReq.id.getId)
-  -- let searchReq' = searchReq {DSR.isAdvanceBookingEnabled = sReq.isAdvancedBookingEnabled, DSR.riderId = riderId, DSR.preferSafetyPlus = sReq.preferSafetyPlus}
+      updatedSearchRequest =
+        searchReq
+          { DSR.disabilityTag = if sReq.disabilityDisable == Just True then Nothing else searchReq.disabilityTag,
+            DSR.isAdvanceBookingEnabled = sReq.isAdvancedBookingEnabled || searchReq.isAdvanceBookingEnabled,
+            DSR.autoAssignEnabled = if sReq.autoAssignEnabled then Just sReq.autoAssignEnabled else searchReq.autoAssignEnabled,
+            DSR.riderId = riderId,
+            DSR.parcelType = if isJust parcelType then parcelType else searchReq.parcelType,
+            DSR.parcelQuantity = if isJust parcelType then snd sReq.parcelDetails else searchReq.parcelQuantity,
+            DSR.preferSafetyPlus = sReq.preferSafetyPlus
+          }
+  QSR.updateMultipleByRequestId updatedSearchRequest searchReq.isScheduled
+  QSR.updateByPrimaryKey updatedSearchRequest
   let driverSearchBatchInput =
         DriverSearchBatchInput
           { sendSearchRequestToDrivers = sendSearchRequestToDrivers',
             merchant,
-            searchReq = upSearchReq,
+            searchReq = updatedSearchRequest,
             tripQuoteDetails,
             customerExtraFee = sReq.customerExtraFee,
             messageId = sReq.messageId,

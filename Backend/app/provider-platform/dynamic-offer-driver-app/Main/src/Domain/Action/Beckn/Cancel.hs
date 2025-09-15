@@ -31,6 +31,7 @@ import qualified Domain.Action.UI.Ride.CancelRide.Internal as CInternal
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.CancellationReason as DTCR
+import qualified Domain.Types.Common as DTC
 import Domain.Types.DriverLocation
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.Ride as SRide
@@ -38,6 +39,7 @@ import qualified Domain.Types.SearchRequestForDriver as Domain
 import qualified Domain.Types.SearchTry as ST
 import Environment
 import EulerHS.Prelude
+import Kernel.Beam.Functions
 import Kernel.External.Maps
 import Kernel.Prelude (roundToIntegral)
 import qualified Kernel.Storage.Esqueleto as Esq
@@ -249,6 +251,7 @@ customerCancellationChargesCalculation booking mbRide currDistanceToPickup = do
             Nothing -> return $ roundToIntegral $ diffUTCTime now ride.createdAt
         else return $ roundToIntegral $ diffUTCTime now ride.createdAt
 
+-- Cancel Search is only allowed to be called before Init happens on Driver App (i.e, when booking is created)
 cancelSearch ::
   ( CacheFlow m r,
     EsqDBFlow m r,
@@ -258,13 +261,39 @@ cancelSearch ::
   ST.SearchTry ->
   m ()
 cancelSearch _merchantId searchTry = do
-  driverSearchReqs <- QSRD.findAllActiveBySRId searchTry.requestId Domain.Active
-  QST.cancelActiveTriesByRequestId searchTry.requestId
-  QSRD.setInactiveAndPulledByIds $ (.id) <$> driverSearchReqs
-  QDQ.setInactiveBySRId searchTry.requestId
-  for_ driverSearchReqs $ \driverReq -> do
-    driver_ <- QPerson.findById driverReq.driverId >>= fromMaybeM (PersonNotFound driverReq.driverId.getId)
-    Notify.notifyOnCancelSearchRequest searchTry.merchantOperatingCityId driver_ driverReq.searchTryId searchTry.tripCategory
+  searchRequest <- QSR.findById searchTry.requestId >>= fromMaybeM (SearchRequestNotFound searchTry.requestId.getId)
+  callWithErrorHandling searchRequest.transactionId $ do
+    -- Lock Description: This is a Lock held between Init and Cancel Search, if Init is OnGoing the Booking will be created post the lock release and Cancel Search will fail with `RideRequestAlreadyAccepted`.
+    -- Lock Release: Any Exceptions or at end of this function.
+    unlessM (Redis.tryLockRedis (mkCancelSearchInitLockKey searchRequest.transactionId) 30) $
+      throwError RideRequestAlreadyAccepted
+    when (DTC.isDynamicOfferTrip searchTry.tripCategory) $ do
+      mbActiveBooking <- runInMasterDbAndRedis $ QRB.findByTransactionIdAndStatuses searchRequest.transactionId [SRB.NEW, SRB.TRIP_ASSIGNED]
+      whenJust mbActiveBooking $ \_ ->
+        throwError RideRequestAlreadyAccepted
+    driverSearchReqs <- QSRD.findAllActiveBySRId searchTry.requestId Domain.Active
+    QST.cancelActiveTriesByRequestId searchTry.requestId
+    QSRD.setInactiveAndPulledByIds $ (.id) <$> driverSearchReqs
+    QDQ.setInactiveBySRId searchTry.requestId
+    for_ driverSearchReqs $ \driverReq -> do
+      driver_ <- QPerson.findById driverReq.driverId >>= fromMaybeM (PersonNotFound driverReq.driverId.getId)
+      Notify.notifyOnCancelSearchRequest searchTry.merchantOperatingCityId driver_ driverReq.searchTryId searchTry.tripCategory
+  where
+    callWithErrorHandling transactionId action = do
+      exep <- try @_ @SomeException action
+      case exep of
+        Left e -> do
+          Redis.unlockRedis (mkCancelSearchInitLockKey transactionId)
+          someExceptionToAPIErrorThrow e
+        Right a -> do
+          Redis.unlockRedis (mkCancelSearchInitLockKey transactionId)
+          pure a
+
+    someExceptionToAPIErrorThrow exc
+      | Just (HTTPException err) <- fromException exc = throwError err
+      | Just (BaseException err) <- fromException exc =
+        throwError . InternalError . fromMaybe (show err) $ toMessage err
+      | otherwise = throwError . InternalError $ show exc
 
 validateCancelSearchRequest ::
   ( CacheFlow m r,

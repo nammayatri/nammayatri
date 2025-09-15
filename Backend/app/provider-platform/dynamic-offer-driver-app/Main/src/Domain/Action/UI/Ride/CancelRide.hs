@@ -45,7 +45,7 @@ import Kernel.External.Maps
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
-import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer, KafkaProducerTools)
+import Kernel.Streaming.Kafka.Producer.Types
 import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -177,11 +177,14 @@ cancelRideHandler sh requestorId rideId req = withLogTag ("rideId-" <> rideId.ge
 
 cancelRideImpl ::
   ( EsqDBFlow m r,
+    EncFlow m r,
     CacheFlow m r,
     EsqDBReplicaFlow m r,
     LT.HasLocationService m r,
     DC.EventFlow m r,
-    HasShortDurationRetryCfg r c
+    HasShortDurationRetryCfg r c,
+    HasKafkaProducer r,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
   ) =>
   ServiceHandle m ->
   RequestorId ->
@@ -195,33 +198,29 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req isForceReallocation = d
   let driverId = ride.driverId
   booking <- findBookingByIdInReplica ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   driver <- findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-  SharedCancel.tryCancellationLock booking.transactionId
-  (rideCancelationReason, cancellationCnt, isGoToDisabled, rideEndedBy) <- case requestorId of
+  (rideCancelationReason, cancellationCnt, isGoToDisabled, driverGoHomeRequestId, dghInfo, goHomeConfig, disToPickup, rideEndedBy) <- case requestorId of
     PersonRequestorId personId -> do
       authPerson <-
         findById personId
           >>= fromMaybeM (PersonNotFound personId.getId)
-      (rideCancellationReason, mbCancellationCnt, isGoToDisabled, rideEndedBy) <- case authPerson.role of
+      (rideCancellationReason, mbCancellationCnt, isGoToDisabled, driverGoHomeRequestId, dghInfo, goHomeConfig, disToPickup, rideEndedBy) <- case authPerson.role of
         DP.ADMIN -> do
           unless (authPerson.merchantId == driver.merchantId) $ throwError (RideDoesNotExist rideId.getId)
           logTagInfo "admin -> cancelRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
-          buildRideCancelationReason Nothing Nothing Nothing DBCR.ByMerchant ride (Just driver.merchantId) >>= \res -> return (res, Nothing, Nothing, DRide.CallBased)
+          buildRideCancelationReason Nothing Nothing Nothing DBCR.ByMerchant ride (Just driver.merchantId) >>= \res -> return (res, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, DRide.CallBased)
         _ -> do
           unless (authPerson.id == driverId) $ throwError NotAnExecutor
           goHomeConfig <- CGHC.findByMerchantOpCityId booking.merchantOperatingCityId (Just (TransactionId (Id booking.transactionId)))
           dghInfo <- CQDGR.getDriverGoHomeRequestInfo driverId booking.merchantOperatingCityId (Just goHomeConfig)
-          (cancellationCount, isGoToDisabled) <-
+          (cancellationCount, isGoToDisabled, driverGoHomeRequestId) <-
             if dghInfo.status == Just DDGR.ACTIVE
               then do
                 dghReqId <- fromMaybeM (InternalError "Status active but goHomeRequestId not found") dghInfo.driverGoHomeRequestId
                 driverGoHomeReq <- QDGR.findById dghReqId >>= fromMaybeM (InternalError "DriverGoHomeRequestId present but DriverGoHome Request Entry not found")
                 let cancelCnt = driverGoHomeReq.numCancellation + 1
-                QDGR.updateCancellationCount cancelCnt driverGoHomeReq.id
-                when (cancelCnt == goHomeConfig.cancellationCnt) $
-                  CQDGR.deactivateDriverGoHomeRequest booking.merchantOperatingCityId driverId DDGR.SUCCESS dghInfo (Just False)
-                return (Just cancelCnt, Just $ cancelCnt == goHomeConfig.cancellationCnt)
+                return (Just cancelCnt, Just $ cancelCnt == goHomeConfig.cancellationCnt, Just driverGoHomeReq.id)
               else do
-                return (Nothing, Nothing)
+                return (Nothing, Nothing, Nothing)
           logTagInfo "driver -> cancelRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
           mbLocation <- do
             driverLocations <- LF.driversLocation [driverId]
@@ -233,26 +232,35 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req isForceReallocation = d
           updatedDisToPickup :: Maybe Meters <- case disToPickup of
             Just dis -> if abs (toInteger dis) > disToPickupThreshold then logWarning ("Invalid disToPickup received:" <> show disToPickup) >> return Nothing else return (Just dis)
             Nothing -> return Nothing
-
           let currentDriverLocation = getCoordinates <$> mbLocation
-          logDebug "RideCancelled Coin Event by driver"
-          fork "DriverRideCancelledCoin Event : " $ do
-            DC.driverCoinsEvent driverId driver.merchantId booking.merchantOperatingCityId (DCT.Cancellation ride.createdAt booking.distanceToPickup disToPickup DCT.CancellationByDriver req.reasonCode) (Just ride.id.getId) ride.vehicleVariant (Just booking.configInExperimentVersions)
-          buildRideCancelationReason currentDriverLocation updatedDisToPickup (Just driverId) DBCR.ByDriver ride (Just driver.merchantId) >>= \res -> return (res, cancellationCount, isGoToDisabled, DRide.Driver)
-      return (rideCancellationReason, mbCancellationCnt, isGoToDisabled, rideEndedBy)
+          buildRideCancelationReason currentDriverLocation updatedDisToPickup (Just driverId) DBCR.ByDriver ride (Just driver.merchantId) >>= \res -> return (res, cancellationCount, isGoToDisabled, driverGoHomeRequestId, Just dghInfo, Just goHomeConfig, disToPickup, DRide.Driver)
+      return (rideCancellationReason, mbCancellationCnt, isGoToDisabled, driverGoHomeRequestId, dghInfo, goHomeConfig, disToPickup, rideEndedBy)
     DashboardRequestorId (reqMerchantId, _) -> do
       unless (driver.merchantId == reqMerchantId) $ throwError (RideDoesNotExist rideId.getId)
       logTagInfo "dashboard -> cancelRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
-      buildRideCancelationReason Nothing Nothing Nothing DBCR.ByMerchant ride (Just driver.merchantId) >>= \res -> return (res, Nothing, Nothing, DRide.Dashboard) -- is it correct DBCR.ByMerchant?
+      buildRideCancelationReason Nothing Nothing Nothing DBCR.ByMerchant ride (Just driver.merchantId) >>= \res -> return (res, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, DRide.Dashboard) -- is it correct DBCR.ByMerchant?
     ApplicationRequestorId jobId -> do
       logTagInfo "Allocator -> cancelRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id <> "JobId " <> jobId)
-      buildRideCancelationReason Nothing Nothing Nothing DBCR.ByApplication ride (Just driver.merchantId) >>= \res -> return (res, Nothing, Nothing, DRide.Allocator)
+      buildRideCancelationReason Nothing Nothing Nothing DBCR.ByApplication ride (Just driver.merchantId) >>= \res -> return (res, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, DRide.Allocator)
     MerchantRequestorId (reqMerchantId, mocId) -> do
       unless (driver.merchantId == reqMerchantId && mocId == driver.merchantOperatingCityId) $ throwError (RideDoesNotExist rideId.getId)
       logTagInfo "Allocator : ByMerchant -> cancelRide : " ("DriverId " <> getId driverId <> ", RideId " <> getId ride.id)
-      buildRideCancelationReason Nothing Nothing Nothing DBCR.ByMerchant ride (Just driver.merchantId) >>= \res -> return (res, Nothing, Nothing, DRide.Allocator)
+      buildRideCancelationReason Nothing Nothing Nothing DBCR.ByMerchant ride (Just driver.merchantId) >>= \res -> return (res, Nothing, Nothing, Nothing, Nothing, Nothing, Nothing, DRide.Allocator)
 
-  cancelRide rideId rideEndedBy rideCancelationReason isForceReallocation req.doCancellationRateBasedBlocking
+  -- Lock Description: This is a Shared Lock held Between Booking Cancel for Customer & Driver, At a time only one of them can do the full Cancel to OnCancel/Reallocation flow.
+  -- Lock Release: Held for 30 seconds and released at the end of the OnCancel/EstimateRepitition-OnUpdate/QuoteRepitition-OnUpdate.
+  SharedCancel.tryCancellationLock booking.transactionId $ do
+    when (rideCancelationReason.source == DBCR.ByDriver) $ do
+      mapM_
+        ( \(cancelCnt, driverGoHomeReqId, goHomeCfg, driverGoHomeReqInfo) -> do
+            QDGR.updateCancellationCount cancelCnt driverGoHomeReqId
+            when (cancelCnt == goHomeCfg.cancellationCnt) $
+              CQDGR.deactivateDriverGoHomeRequest booking.merchantOperatingCityId driverId DDGR.SUCCESS driverGoHomeReqInfo (Just False)
+        )
+        ((,,,) <$> cancellationCnt <*> driverGoHomeRequestId <*> goHomeConfig <*> dghInfo)
+      fork "DriverRideCancelledCoin Event : " $ do
+        DC.driverCoinsEvent driverId driver.merchantId booking.merchantOperatingCityId (DC.Cancellation ride.createdAt booking.distanceToPickup disToPickup DC.CancellationByDriver req.reasonCode) (Just ride.id.getId) ride.vehicleVariant (Just booking.configInExperimentVersions)
+    cancelRide rideId rideEndedBy rideCancelationReason isForceReallocation req.doCancellationRateBasedBlocking
   pure (cancellationCnt, isGoToDisabled)
   where
     isValidRide ride = ride.status `elem` [DRide.NEW, DRide.UPCOMING]

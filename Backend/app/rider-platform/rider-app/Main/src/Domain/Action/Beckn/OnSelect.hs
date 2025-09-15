@@ -117,6 +117,8 @@ onSelect OnSelectValidatedReq {..} = do
       let lowestFareQuote = selectLowestFareQuote quotes
       case lowestFareQuote of
         Just (autoAssignQuote, False) -> do
+          -- Lock Description: This is a Lock held between OnSelect which calls Confirm Internally to create Booking and UI Confirm for the Quote, if UI Confirm is OnGoing then the OnSelect will not do Confirm and simply ignore.
+          -- Lock Release: Held for 10 seconds once acquired.
           isLockAcquired <- SConfirm.tryInitTriggerLock autoAssignQuote.requestId
           when isLockAcquired $ do
             let dConfirmReq = SConfirm.DConfirmReq {personId = person.id, quote = autoAssignQuote, paymentMethodId = searchRequest.selectedPaymentMethodId}

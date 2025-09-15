@@ -67,28 +67,21 @@ updateRiderId searchRequestId riderId =
 
 updateMultipleByRequestId ::
   (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
-  Id SearchRequest ->
-  Bool ->
-  Bool ->
-  Maybe (Id RD.RiderDetails) ->
+  SearchRequest ->
   Bool ->
   m ()
-updateMultipleByRequestId searchRequestId autoAssignEnabled isAdvancedBookingEnabled riderId isScheduled =
+updateMultipleByRequestId searchRequest isScheduled =
   let updates =
-        ( [ Se.Set BeamSR.riderId $ getId <$> riderId
+        ( [ Se.Set BeamSR.riderId $ getId <$> searchRequest.riderId,
+            Se.Set BeamSR.autoAssignEnabled searchRequest.autoAssignEnabled,
+            Se.Set BeamSR.isAdvanceBookingEnabled $ Just searchRequest.isAdvanceBookingEnabled,
+            Se.Set BeamSR.parcelType searchRequest.parcelType,
+            Se.Set BeamSR.parcelQuantity searchRequest.parcelQuantity,
+            Se.Set BeamSR.disabilityTag searchRequest.disabilityTag,
+            Se.Set BeamSR.preferSafetyPlus $ Just searchRequest.preferSafetyPlus
           ]
-            <> [Se.Set BeamSR.autoAssignEnabled $ Just autoAssignEnabled | autoAssignEnabled]
-            <> [Se.Set BeamSR.isAdvanceBookingEnabled $ Just isAdvancedBookingEnabled | isAdvancedBookingEnabled]
         )
-      condition = [Se.Is BeamSR.id (Se.Eq $ getId searchRequestId)]
-   in if isScheduled
-        then updateOneWithKVWithOptions Nothing True updates condition
-        else updateOneWithKV updates condition
-
-updateDisabilityTag :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id SearchRequest -> Maybe Text -> Bool -> m ()
-updateDisabilityTag searchRequestId disabilityTag isScheduled =
-  let updates = [Se.Set BeamSR.disabilityTag disabilityTag]
-      condition = [Se.Is BeamSR.id (Se.Eq $ getId searchRequestId)]
+      condition = [Se.Is BeamSR.id (Se.Eq searchRequest.id.getId)]
    in if isScheduled
         then updateOneWithKVWithOptions Nothing True updates condition
         else updateOneWithKV updates condition

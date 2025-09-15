@@ -125,6 +125,8 @@ cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI do
       return Ack
     DCancel.CancelSearch cancelSearchReq -> do
       searchTry <- DCancel.validateCancelSearchRequest transporterId subscriber cancelSearchReq
+      -- Lock Description: This is a Lock held between Driver Respond and Cancel Search, if Driver Respond Quote is OnGoing then the Cancel Search will fail with `DriverAlreadyQuoted`.
+      -- Lock Release: Held for 5 seconds once acquired, never released.
       lockAndCall searchTry $ do
         DCancel.cancelSearch transporterId searchTry
       return Ack

@@ -367,6 +367,7 @@ library
       SharedLogic.CallBPPInternal
       SharedLogic.CallFRFSBPP
       SharedLogic.CallIGMBPP
+      SharedLogic.Cancel
       SharedLogic.Confirm
       SharedLogic.CreateFareForMultiModal
       SharedLogic.External.BbpsService.Flow

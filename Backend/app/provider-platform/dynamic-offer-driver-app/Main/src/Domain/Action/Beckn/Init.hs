@@ -31,9 +31,11 @@ import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.Trip as DTrip
 import qualified Domain.Types.VehicleVariant as Veh
+import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Randomizer (getRandomElement)
 import Kernel.Storage.Esqueleto as Esq
+import qualified Kernel.Storage.Hedis.Queries as Redis
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -41,6 +43,7 @@ import Kernel.Utils.Common
 import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.Booking
+import SharedLogic.Cancel
 import qualified SharedLogic.RiderDetails as SRD
 import qualified Storage.Cac.MerchantServiceUsageConfig as CMSUC
 import qualified Storage.Cac.TransporterConfig as CCT
@@ -312,17 +315,35 @@ validateRequest merchantId req = do
   case req.fulfillmentId of
     DriverQuoteId driverQuoteId -> do
       driverQuote <- QDQuote.findById driverQuoteId >>= fromMaybeM (DriverQuoteNotFound driverQuoteId.getId)
-      when (driverQuote.validTill < now || driverQuote.status == DDQ.Inactive) $
-        throwError $ QuoteExpired driverQuote.id.getId
       searchRequest <- QSR.findById driverQuote.requestId >>= fromMaybeM (SearchRequestNotFound driverQuote.requestId.getId)
-      searchTry <- QST.findById driverQuote.searchTryId >>= fromMaybeM (SearchTryNotFound driverQuote.searchTryId.getId)
-      return $ ValidatedInitReq {searchRequest, quote = ValidatedEstimate driverQuote searchTry}
+      callWithErrorHandling searchRequest.transactionId $ do
+        -- Lock Description: This is a Lock held between Init and Cancel Search, if Cancel Search is OnGoing then the Driver Quote would be Marked Inactive post the lock release and Init will fail with `QuoteExpired`.
+        -- Lock Release: If any errors or Post Init Beckn Action Handler is executed.
+        isLockAcquired <- Redis.tryLockRedis (mkCancelSearchInitLockKey searchRequest.transactionId) 30
+        searchTry <- QST.findById driverQuote.searchTryId >>= fromMaybeM (SearchTryNotFound driverQuote.searchTryId.getId)
+        updatedDriverQuote <- runInMasterDbAndRedis $ QDQuote.findById driverQuoteId >>= fromMaybeM (DriverQuoteNotFound driverQuoteId.getId)
+        when (updatedDriverQuote.validTill < now || updatedDriverQuote.status == DDQ.Inactive || not isLockAcquired) $
+          throwError $ QuoteExpired updatedDriverQuote.id.getId
+        return $ ValidatedInitReq {searchRequest, quote = ValidatedEstimate updatedDriverQuote searchTry}
     QuoteId quoteId -> do
       quote <- QQuote.findById quoteId >>= fromMaybeM (QuoteNotFound quoteId.getId)
       when (quote.validTill < now) $
         throwError $ QuoteExpired quote.id.getId
       searchRequest <- QSR.findById quote.searchRequestId >>= fromMaybeM (SearchRequestNotFound quote.searchRequestId.getId)
       return $ ValidatedInitReq {searchRequest, quote = ValidatedQuote quote}
+  where
+    callWithErrorHandling transactionId action = do
+      exep <- try @_ @SomeException action
+      case exep of
+        Left e -> do
+          Redis.unlockRedis (mkCancelSearchInitLockKey transactionId)
+          someExceptionToAPIErrorThrow e
+        Right a -> pure a
+    someExceptionToAPIErrorThrow exc
+      | Just (HTTPException err) <- fromException exc = throwError err
+      | Just (BaseException err) <- fromException exc =
+        throwError . InternalError . fromMaybe (show err) $ toMessage err
+      | otherwise = throwError . InternalError $ show exc
 
 compareMerchantPaymentMethod :: DMPM.PaymentMethodInfo -> DMPM.MerchantPaymentMethod -> Bool
 compareMerchantPaymentMethod providerPaymentMethod DMPM.MerchantPaymentMethod {..} =

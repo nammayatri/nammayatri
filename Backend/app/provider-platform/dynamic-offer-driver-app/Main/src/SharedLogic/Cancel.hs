@@ -290,3 +290,6 @@ reAllocateBookingIfPossible isValueAddNP userReallocationEnabled merchant bookin
             merchantOperatingCityId = Just newBooking.merchantOperatingCityId,
             ..
           }
+
+mkCancelSearchInitLockKey :: Text -> Text
+mkCancelSearchInitLockKey transactionId = "cancelSearchInit:" <> transactionId

@@ -1572,10 +1572,9 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
         whenJust driverExtraFeeBounds $ \driverExtraFeeBounds' ->
           unless (isAllowedExtraFee driverExtraFeeBounds' off) $
             throwError $ NotAllowedExtraFee $ show off
-      when (searchReq.autoAssignEnabled == Just True) do
-        unlessM (CS.lockSearchTry searchTry.id) do
-          logError ("RideRequestAlreadyAcceptedOrCancelled " <> "in respond quote for searchTryId:" <> getId searchTry.id <> " estimateId:" <> estimateId <> " driverId:" <> getId driver.id <> " and srfdId:" <> getId sReqFD.id)
-          throwError (RideRequestAlreadyAcceptedOrCancelled sReqFD.id.getId)
+      unlessM (validateSearchTryActive searchTry.id) $ do
+        logError ("RideRequestAlreadyAcceptedOrCancelled " <> "in respond quote for searchTryId:" <> getId searchTry.id <> " estimateId:" <> estimateId <> " driverId:" <> getId driver.id <> " and srfdId:" <> getId sReqFD.id)
+        throwError (RideRequestAlreadyAcceptedOrCancelled sReqFD.id.getId)
       fareParams <- do
         calculateFareParameters
           CalculateFareParametersParams
@@ -1618,6 +1617,17 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
       pullExistingRideRequests merchantOpCityId driverFCMPulledList merchantId driver.id $ mkPrice (Just driverQuote.currency) driverQuote.estimatedFare
       sendDriverOffer merchant searchReq sReqFD searchTry driverQuote
       return driverFCMPulledList
+      where
+        validateSearchTryActive searchTryId = do
+          -- Lock Description: This is a Lock held between Driver Respond and Cancel Search, if UI Cancel Search is OnGoing then the SearchTry will be marked as CANCELLED and Driver Respond will fail with `RideRequestAlreadyAcceptedOrCancelled`.
+          -- Lock Release: Held for 5 seconds once acquired, never released.
+          isLockAcquired <- CS.lockSearchTry searchTryId
+          if isLockAcquired
+            then do
+              mbUpdatedSearchTry <- runInMasterDbAndRedis $ QST.findById searchTryId
+              return $ maybe True (\updatedSearchTry -> updatedSearchTry.status == DST.ACTIVE) mbUpdatedSearchTry
+            else do
+              return False
 
 acceptStaticOfferDriverRequest :: Maybe DST.SearchTry -> SP.Person -> Text -> Maybe HighPrecMoney -> DM.Merchant -> Maybe Text -> Flow [SearchRequestForDriver]
 acceptStaticOfferDriverRequest mbSearchTry driver quoteId reqOfferedValue merchant clientId = do
