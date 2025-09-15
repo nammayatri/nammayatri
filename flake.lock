@@ -1819,11 +1819,11 @@
         "common": "common_2"
       },
       "locked": {
-        "lastModified": 1742287119,
-        "narHash": "sha256-d0PWx/2SJ3gF61sYBU2A6w0mC/r7aaGr1CWQF31eMGo=",
+        "lastModified": 1755698449,
+        "narHash": "sha256-HtJ/jOrCPXRUjxCZmyd8/xUZael89/GbWn9XDDVkhEs=",
         "owner": "nammayatri",
         "repo": "namma-dsl",
-        "rev": "7136a009df12f3b83e781d4f2a7144836b5675d5",
+        "rev": "e56ad9d9096bdf6bea051dd0184cd97ff5c62655",
         "type": "github"
       },
       "original": {

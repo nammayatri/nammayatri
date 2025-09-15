@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -Wwarn=unused-imports #-}
 
-module Domain.Action.Dashboard.RideBooking.SearchRequest (postSearchRequestSearchrequests, getSearchRequestList) where
+module Domain.Action.Dashboard.RideBooking.SearchRequest (postSearchRequestSearchrequests, getSearchRequestList, getSearchRequestInfo) where
 
 import qualified API.Types.Dashboard.RideBooking.SearchRequest
 import qualified API.Types.Dashboard.RideBooking.SearchRequest as SRType
@@ -8,6 +8,7 @@ import qualified Data.Map as Map
 import Data.Maybe (mapMaybe)
 import Data.Time.Calendar (fromGregorian)
 import Data.Time.Clock (UTCTime (..))
+import qualified Domain.Types.Common as Common
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
 import qualified Environment
@@ -66,3 +67,12 @@ getSearchRequestList _merchantShortId _opCity driverId fromDate toDate mbLimit m
           )
           filteredReqs
   return SRType.SearchRequestsRes {searchrequests = modifiedreq}
+
+getSearchRequestInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.UTCTime -> Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Environment.Flow API.Types.Dashboard.RideBooking.SearchRequest.SearchReqInfoRes)
+getSearchRequestInfo _merchantShortId _opCity fromDate toDate driverId = do
+  sreqs <- SCSRD.findByDriverIdForInfo driverId fromDate toDate
+  let acceptedCount = length $ filter (\(_srfdId, response) -> response == Just Common.Accept) sreqs
+  let rejectedCount = length $ filter (\(_srfdId, response) -> response == Just Common.Reject) sreqs
+  let pulledCount = length $ filter (\(_srfdId, response) -> response == Just Common.Pulled) sreqs
+  let emptyCount = length $ filter (\(_srfdId, response) -> response == Nothing) sreqs
+  return SRType.SearchReqInfoRes {totalCount = length sreqs, acceptedCount = acceptedCount, rejectedCount = rejectedCount, pulledCount = pulledCount, emptyCount = emptyCount}

@@ -266,6 +266,23 @@ findByDriverId driverId from to limit offset = do
               )
               (CH.all_ @CH.APP_SERVICE_CLICKHOUSE searchRequestForDriverTTable)
 
+findByDriverIdForInfo ::
+  CH.HasClickhouseEnv CH.APP_SERVICE_CLICKHOUSE m =>
+  Id DP.Person ->
+  UTCTime ->
+  UTCTime ->
+  m [(Id DSRD.SearchRequestForDriver, Maybe DI.SearchRequestForDriverResponse)]
+findByDriverIdForInfo driverId from to = do
+  CH.findAll $
+    CH.select_ (\srfd -> CH.notGrouped (srfd.id, srfd.response)) $
+      CH.filter_
+        ( \srfd _ ->
+            srfd.driverId CH.==. driverId
+              CH.&&. srfd.createdAt >=. CH.DateTime from
+              CH.&&. srfd.createdAt <=. CH.DateTime to
+        )
+        (CH.all_ @CH.APP_SERVICE_CLICKHOUSE searchRequestForDriverTTable)
+
 concatFun :: [(Maybe Text, Int, Int, Maybe DVC.VehicleCategory)] -> [(Maybe Text, Int, Maybe DVC.VehicleCategory)] -> [(Maybe Text, Int, Int, Int, Maybe DVC.VehicleCategory)]
 concatFun [] _ = []
 concatFun _ [] = []

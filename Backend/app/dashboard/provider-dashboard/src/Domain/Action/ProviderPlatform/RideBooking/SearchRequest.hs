@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -Wwarn=unused-imports #-}
 
-module Domain.Action.ProviderPlatform.RideBooking.SearchRequest (postSearchRequestSearchrequests, getSearchRequestList) where
+module Domain.Action.ProviderPlatform.RideBooking.SearchRequest (postSearchRequestSearchrequests, getSearchRequestList, getSearchRequestInfo) where
 
 import qualified API.Client.ProviderPlatform.RideBooking
 import qualified API.Types.Dashboard.RideBooking.SearchRequest
@@ -28,3 +28,8 @@ getSearchRequestList :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant 
 getSearchRequestList merchantShortId opCity apiTokenInfo driverId fromDate toDate mbLimit mbOffset = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.ProviderPlatform.RideBooking.callRideBookingAPI checkedMerchantId opCity (.searchRequestDSL.getSearchRequestList) driverId fromDate toDate mbLimit mbOffset
+
+getSearchRequestInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.UTCTime -> Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Environment.Flow API.Types.Dashboard.RideBooking.SearchRequest.SearchReqInfoRes)
+getSearchRequestInfo merchantShortId opCity apiTokenInfo fromDate toDate driverId = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  API.Client.ProviderPlatform.RideBooking.callRideBookingAPI checkedMerchantId opCity (.searchRequestDSL.getSearchRequestInfo) fromDate toDate driverId
