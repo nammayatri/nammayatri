@@ -324,7 +324,8 @@ type RegistrationScreenData = {
   accessToken :: String,
   hvTxnId :: Maybe String,
   hvFlowId :: Maybe String,
-  refereeName :: Maybe String
+  refereeName :: Maybe String,
+  rcVerificationMessage :: Maybe String
 }
 
 type DocumentStatus = {
@@ -375,7 +376,8 @@ type RegistrationScreenProps = {
   dontAllowHvRelaunch :: Boolean,
   categoryToStepProgressMap :: Array CategoryToStepMap,
   selectedDocumentCategory :: Maybe API.DocumentCategory,
-  vehicleImagesUploaded :: Boolean
+  vehicleImagesUploaded :: Boolean,
+  autoRefreshForRCcount :: Int
 }
 
 type CategoryToStepMap = {
@@ -1080,7 +1082,8 @@ type SelectLanguageScreenProps = {
   btnActive :: Boolean,
   onlyGetTheSelectedLanguage :: Boolean,
   selectLanguageForScreen :: String,
-  fromOnboarding :: Boolean
+  fromOnboarding :: Boolean,
+  goBackTo :: String
 }
 
 ----------------------------------------------- HomeScreenState ---------------------------------------------
@@ -1818,7 +1821,8 @@ type PermissionsScreenState = {
 type PermissionsScreenData = {
   logField :: Object Foreign,
   driverMobileNumber :: String,
-  config :: AppConfig
+  config :: AppConfig,
+  cityConfig :: CityConfig
 }
 
 type PermissionsScreenProps = {
@@ -1830,6 +1834,8 @@ type PermissionsScreenProps = {
   , isLocationPermissionChecked :: Boolean
   , logoutModalView :: Boolean
   , isDriverEnabled :: Boolean
+  , menuOptions :: Boolean
+  , contactSupportModal :: AnimType
 }
 
 ------------------------------------------- OnBoardingSubscriptionScreenState ---------------------------

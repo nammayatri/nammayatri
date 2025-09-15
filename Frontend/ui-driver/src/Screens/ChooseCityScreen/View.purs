@@ -42,7 +42,7 @@ import Language.Types (STR(..))
 import Prelude (Unit, bind, const, discard, map, not, pure, unit, ($), (<<<), (<>), (==), (&&), when, void)
 import PrestoDOM (Accessiblity(..), Gradient(..), Gravity(..), Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, Prop, LoggableScreen, Visibility(..), accessibility, afterRender, alignParentBottom, alpha, background, color, cornerRadius, fontStyle, gradient, gravity, height, id, imageUrl, imageView, imageWithFallback, layoutGravity, linearLayout, margin, onBackPressed, onClick, orientation, padding, relativeLayout, stroke, text, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
-import Screens.ChooseCityScreen.Controller (Action(..), ScreenOutput, eval)
+import Screens.ChooseCityScreen.Controller
 import Screens.Types (ChooseCityScreenStage(..), ChooseCityScreenState)
 import Storage (getValueToLocalStore, KeyStore(..))
 import Styles.Colors as Color
@@ -149,7 +149,7 @@ currentLocationView state push =
         case locSelectedVal of
           "" -> ""
           "Paris" -> "Odisha"
-          _ -> locSelectedVal
+          _ -> if state.props.selectedLanguage == "__failed" then locSelectedVal else getCityWithSelectedLanguage locSelectedVal
       appName = JB.getAppName unit
       selectCityConfig = RC.selectCityConfig appName
   in linearLayout
@@ -228,7 +228,7 @@ currentLanguageViewV2 state push =
       , padding $ Padding 12 12 12 12
       , margin $ MarginTop 8
       ][textView $ 
-          [ text $ getLangFromVal state.props.selectedLanguage
+          [ text $ getLangFromVal $ if state.props.selectedLanguage == "__failed" then "EN_US" else state.props.selectedLanguage
           , gravity LEFT
           , color Color.black900
           , weight 1.0
@@ -264,7 +264,7 @@ currentLanguageView state push =
           , margin $ MarginTop 2
           ] <> FontStyle.body3 TypoGraphy
         , textView $ 
-          [ text $ getLangFromVal state.props.selectedLanguage
+          [ text $ getLangFromVal $ if state.props.selectedLanguage == "__failed" then "EN_US" else state.props.selectedLanguage
           , gravity CENTER
           , color Color.black900
           ] <> FontStyle.subHeading1 TypoGraphy
@@ -405,4 +405,4 @@ dummyView :: forall w. PrestoDOM (Effect Unit) w
 dummyView = linearLayout [visibility GONE][]
 
 transformCityConfig :: Array String -> Array MenuButton.Text
-transformCityConfig cityConfig = map (\city -> {name: city, value: city, subtitle: ""}) cityConfig
+transformCityConfig cityConfig = map (\city -> {name: getCityWithSelectedLanguage city, value: city, subtitle: ""}) cityConfig

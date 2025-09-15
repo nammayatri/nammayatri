@@ -109,7 +109,7 @@ screen initialState =
               void $ launchAff $ EHC.flowRunner defaultGlobalState $ runExceptT $ runBackT
                 $ do
                     void $ pure $ runFn5 JB.setYoutubePlayer HU.youtubeData (getNewIDWithTag "youtubeView") (show PAUSE) push YoutubeVideoStatus
-                    driverRegistrationStatusResp <- Remote.driverRegistrationStatusBT $ DriverRegistrationStatusReq true false
+                    driverRegistrationStatusResp <- Remote.driverRegistrationStatusBT $ DriverRegistrationStatusReq true false true
                     lift $ lift $ doAff do liftEffect $ push $ RegStatusResponse driverRegistrationStatusResp
               void $ launchAff $ EHC.flowRunner defaultGlobalState $ do
                 driverProfileResp <- Remote.fetchDriverProfile false
@@ -556,7 +556,7 @@ nameAndMoreDetailsView state push =
     ] <> (FontStyle.body6 TypoGraphy)
   , textView $ [
       text $ capitalize $ getStringV2 more_details
-    , color Color.blue800
+    , color Color.blue900
     ] <> (FontStyle.body3 TypoGraphy)
   ]
 
@@ -2243,25 +2243,29 @@ showMenuButtonView state push genderName genderType =
     , height $ V 56
     , gravity CENTER
     , margin $ (Margin 0 10 0 10)
-    , background if checkGenderSelect state.data.genderTypeSelect genderType then Color.blue600 else Color.white900
-    , stroke if checkGenderSelect state.data.genderTypeSelect genderType then ("1," <> Color.blue900) else ("1," <> Color.grey700)
+    , background if checkGenderSelect state.data.genderTypeSelect genderType then EHU.getColorWithOpacity 12 state.data.config.themeColors.radioActiveBackground else state.data.config.themeColors.radioInactiveBackground
+    , stroke if checkGenderSelect state.data.genderTypeSelect genderType then ("1," <> (EHU.getColorWithOpacity 12 state.data.config.themeColors.radioActiveBackground)) else ("1," <> Color.grey100)
     , cornerRadius 6.0
     , onClick push (const $ CheckBoxClick genderType)
     ]
     [ linearLayout
-        [ height $ V 20
-        , width $ V 20
-        , stroke if checkGenderSelect state.data.genderTypeSelect genderType then ("2," <> Color.black800) else ("2," <> Color.black600)
-        , cornerRadius 10.0
-        , gravity CENTER
-        , margin $ MarginLeft 10
+        [ height WRAP_CONTENT
+        , width WRAP_CONTENT
         ]
         [ imageView
-            [ width $ V 10
-            , height $ V 10
-            , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_radio_button"
-            , visibility if checkGenderSelect state.data.genderTypeSelect genderType then VISIBLE else GONE
-            ]
+          [ height (V 20)
+          , width (V 20)
+          , imageWithFallback $ fetchImage FF_COMMON_ASSET state.data.config.themeColors.radioSelectedImage
+          , visibility $ boolToVisibility $ checkGenderSelect state.data.genderTypeSelect genderType
+          , margin (MarginLeft 8)
+          ]
+        , imageView
+          [ width (V 24)
+          , height (V 24)
+          , imageWithFallback $ fetchImage FF_COMMON_ASSET "ny_ic_radio_unselected"
+          , visibility $ boolToVisibility $ not (checkGenderSelect state.data.genderTypeSelect genderType)
+          , margin (MarginLeft 8)
+          ]
         ]
     , textView
         [ text genderName

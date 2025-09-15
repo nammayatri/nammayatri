@@ -26,10 +26,10 @@ donePrimaryButtonConfig state = let
     primaryButtonConfig' = config
       { textConfig { 
           text = getString SUBMIT 
-        , color = Color.primaryButtonColor
+        , color = state.data.config.primaryTextColor
         }
       , cornerRadius = 8.0
-      , background = Color.black900
+      , background = state.data.config.primaryButtonBackground
       , height = V 48
       , alpha = 1.0 
       , isClickable = true

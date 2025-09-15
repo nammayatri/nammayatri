@@ -355,3 +355,41 @@ getConfig  isExpanded =
     , fromY : 0
     , toY : -100
     }
+
+logoutPopUp :: ST.AddVehicleDetailsScreenState -> PopUpModal.Config
+logoutPopUp  state = let 
+  config' = PopUpModal.config
+  popUpConfig' = config' {
+    primaryText {text = (getString LOGOUT)},
+    secondaryText {text = (getString ARE_YOU_SURE_YOU_WANT_TO_LOGOUT)},
+    buttonLayoutMargin = (MarginBottom 40),
+    padding = (Padding 16 16 16 0),
+    backgroundClickable = true,
+    dismissPopup = true,
+    option1 {
+      text = (getString LOGOUT),
+      color = Color.white900,
+      textStyle = FontStyle.SubHeading1,
+      strokeColor = state.data.config.primaryButtonBackground,
+      width = MATCH_PARENT,
+      height = WRAP_CONTENT,
+      background = state.data.config.primaryButtonBackground,
+      margin = (MarginBottom 12),
+      padding = (PaddingVertical 16 16),
+      enableRipple = true
+      },
+    option2 {
+      text = (getString CANCEL),
+      color = Color.blue900,
+      textStyle = FontStyle.SubHeading1,
+      height = WRAP_CONTENT,
+      strokeColor = Color.white900,
+      width = MATCH_PARENT,
+      padding = PaddingVertical 16 16,
+      margin = (MarginBottom 0),
+      background = Color.white900,
+      enableRipple = true
+      },
+    optionButtonOrientation = "VERTICAL"
+  }
+  in popUpConfig'

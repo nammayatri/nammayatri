@@ -39,3 +39,9 @@ permissions = do
         GoToRegisteration updatedState -> do
           modifyScreenState $ PermissionsScreenStateType (\_ -> updatedState)
           App.BackT $ App.BackPoint <$> (pure $ GO_TO_REGISTERATION_SCREEN updatedState)
+        GoToFaqsScreen updatedState -> do
+          modifyScreenState $ PermissionsScreenStateType (\_ -> updatedState)
+          App.BackT $ App.BackPoint <$> (pure $ GO_TO_FAQS_SCREEN_FROM_PERMISSIONS updatedState)
+        SelectLang updatedState -> do
+          modifyScreenState $ PermissionsScreenStateType (\_ -> updatedState)
+          App.BackT $ App.BackPoint <$> (pure $ SELECT_LANG_SCREEN updatedState)

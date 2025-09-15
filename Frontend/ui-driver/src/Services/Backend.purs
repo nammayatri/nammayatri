@@ -940,9 +940,9 @@ makeValidateImageReq image imageType rcNumber status transactionId category = Va
     }
 
 driverRegistrationStatusBT :: DriverRegistrationStatusReq -> FlowBT String DriverRegistrationStatusResp
-driverRegistrationStatusBT payload@(DriverRegistrationStatusReq queryParam providePrefillDetails) = do
+driverRegistrationStatusBT payload@(DriverRegistrationStatusReq queryParam providePrefillDetails useDriverLanguage) = do
      headers <- getHeaders' "" false
-     withAPIResultBT ((EP.driverRegistrationStatus queryParam providePrefillDetails)) identity errorHandler (lift $ lift $ callAPI headers payload)
+     withAPIResultBT ((EP.driverRegistrationStatus queryParam providePrefillDetails useDriverLanguage)) identity errorHandler (lift $ lift $ callAPI headers payload)
     where
         errorHandler (ErrorPayload errorPayload) =  do
             BackT $ pure GoBack

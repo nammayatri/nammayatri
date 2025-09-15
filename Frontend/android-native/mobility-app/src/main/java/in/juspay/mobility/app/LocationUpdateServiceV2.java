@@ -1244,7 +1244,7 @@ public class LocationUpdateServiceV2 extends Service {
         payload.put("lat",lastLatitudeValue);
         payload.put("lon",lastLongitudeValue);
         payload.put("timestamp",timestamp);
-        notifyReact("onLocationUpdateSuccess", Arguments.makeNativeMap(payload));
+//        notifyReact("onLocationUpdateSuccess", Arguments.makeNativeMap(payload));
         Log.d(TAG, "notifyLocationUpdateSuccess() complete");
     }
 
@@ -2406,7 +2406,7 @@ public class LocationUpdateServiceV2 extends Service {
                                 emitReactEvent(locationEmitterPayload);
                                 Log.i(TAG_LOCATION, "Emitted locationPayload " + locationEmitterPayload);
                             }
-                            notifyReact("onLocationFetch", Arguments.makeNativeMap(locationData.toMap()));
+//                            notifyReact("onLocationFetch", Arguments.makeNativeMap(locationData.toMap()));
                             boolean sendDueToTime = shouldSendBatchDueToTime();
 
 

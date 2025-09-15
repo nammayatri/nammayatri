@@ -22,6 +22,8 @@ import Screens.Types (ChooseCityScreenStage(..), ChooseCityScreenState)
 import Storage (KeyStore(..), getValueToLocalStore, setValueToLocalStore)
 import Components.ErrorModal.Controller as ErrorModalController
 import Locale.Utils
+import Resource.Localizable.StringsV2 (getStringV2)
+import Resource.Localizable.TypesV2 as LT2
 
 instance showAction :: Show Action where
   show (BackPressed) = "BackPressed"
@@ -159,3 +161,14 @@ eval (CurrentLocationCallBack lat long _) state = do
   else updateAndExit newState $ DetectCityAPI driverLat driverLon newState
 
 eval _ state = update state
+
+
+
+getCityWithSelectedLanguage :: String -> String
+getCityWithSelectedLanguage city = 
+  case city of 
+    "Delhi" -> getStringV2 LT2.delhi
+    "Gurugram" -> getStringV2 LT2.gurugram
+    "Noida" -> getStringV2 LT2.noida
+    "Bangalore" -> getStringV2 LT2.bangalore
+    _ -> city

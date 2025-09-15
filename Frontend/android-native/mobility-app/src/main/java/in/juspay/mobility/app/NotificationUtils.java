@@ -519,8 +519,7 @@ public class NotificationUtils {
                     .setChannelId(channelId)
                     .setStyle(
                             new NotificationCompat.BigPictureStyle()
-                                    .bigPicture(bitmap)
-                                    .bigLargeIcon(null));
+                                    .bigPicture(bitmap));
         } else {
             mBuilder.setSmallIcon(smallIcon)
                     .setContentTitle(title)

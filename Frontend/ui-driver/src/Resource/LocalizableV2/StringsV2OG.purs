@@ -460,7 +460,7 @@ getProxy str = case str of
   RE_ENTER_DRIVING_LICENSE_NUMBER -> \a -> a @~ re_enter_driving_license_number
   ELIGIBILITY_CRITERIA_FOR_RC -> \a -> a @~ eligibility_criteria_for_rc
   CAR_MUST_BE_LESS_THAN_3_YEARS_OLD -> \a -> a @~ car_must_be_less_than_3_years_old
-  CAR_MUST_BE_SEDAN_VEHICLE -> \a -> a @~ car_must_be_sedan_vehicle
+  CAR_MUST_BE_SEDAN_VEHICLE -> \a -> a @~ car_must_be_sedan_or_suv
   UPDATED_AT -> \a -> a @~ updated_at
   TRIP_COUNT -> \a -> a @~ trip_count
   TODAYS_EARNINGS -> \a -> a @~ todays_earnings

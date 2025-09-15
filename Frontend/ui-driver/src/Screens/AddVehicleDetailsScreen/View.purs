@@ -45,7 +45,7 @@ import PaymentPage (consumeBP)
 import JBridge as JB
 import Language.Strings (getString)
 import Language.Types (STR(..))
-import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (/=), (<<<), (<>), (==), (>=), (||),show)
+import Prelude (Unit, bind, const, discard, not, pure, unit, void, ($), (&&), (/=), (<<<), (<>), (==), (>=), (||),show, map)
 import Presto.Core.Types.Language.Flow (Flow, doAff, delay)
 import PrestoDOM (BottomSheetState(..), Gravity(..), InputType(..), adjustViewWithKeyboard,accessibility, accessibilityHint,onAnimationEnd,Length(..), Margin(..), Orientation(..), Padding(..), PrestoDOM, LoggableScreen, Visibility(..), afterRender, alignParentBottom, alignParentRight, alpha, background, clickable, color, cornerRadius, editText, ellipsize, fontStyle, frameLayout, gravity, height, hint, id, imageUrl, imageView, imageWithFallback, inputType, inputTypeI, layoutGravity, linearLayout, margin, maxLines, onBackPressed, onChange, onClick, orientation, padding, pattern, relativeLayout, scrollView, stroke, text, textFromHtml, textSize, textView, visibility, weight, width)
 import PrestoDOM.Animation as PrestoAnim
@@ -54,7 +54,6 @@ import PrestoDOM.Properties as PP
 import PrestoDOM.Types.DomAttributes (Corners(..))
 import PrestoDOM.Types.DomAttributes as PTD
 import Screens.AddVehicleDetailsScreen.Controller (Action(..), eval, ScreenOutput)
-import Screens.RegistrationScreen.ComponentConfig (logoutPopUp)
 import Screens.Types (AddVehicleDetailsScreenState, StageStatus(..), ValidationStatus(..))
 import Styles.Colors as Color
 import Types.App (GlobalState(..), defaultGlobalState)
@@ -635,26 +634,16 @@ rcEligibilityCriteriaView state push =
     , gravity LEFT
     , margin $ MarginTop 16
     ]
-    [ textView
-      [ height WRAP_CONTENT
-      , width MATCH_PARENT
-      , text $ getStringV2 eligibility_criteria_for_rc
-      , color Color.grey600
-      ]
-    , textView
-      [ height WRAP_CONTENT
-      , width MATCH_PARENT
-      , text $ "-   " <> getStringV2 car_must_be_less_than_3_years_old
-      , margin $ Margin 16 8 0 0
-      ]
-    , textView
-      [ height WRAP_CONTENT
-      , width MATCH_PARENT
-      , text $ "-   " <> getStringV2 car_must_be_sedan_vehicle
-      , margin $ Margin 16 8 0 0
-      ]
-    ]
+    (map(\item -> 
+      textView 
+        [ height WRAP_CONTENT
+        , width MATCH_PARENT
+        , text $ "-   " <> item
+        , color Color.grey600
+        ]) rcEligibilityCriteriaList)
 
+rcEligibilityCriteriaList :: Array String
+rcEligibilityCriteriaList = [getStringV2 car_must_be_less_than_3_years_old, getStringV2 car_must_be_maruti_suzuki_vehicle, getStringV2 car_must_be_sedan_or_suv, getStringV2 car_must_be_commercial_vehicle]
 
 ----------------------------------------------------------------- uploadRC ------------------------------------------------------
 uploadRC :: AddVehicleDetailsScreenState -> (Action -> Effect Unit) -> forall w . PrestoDOM (Effect Unit) w
@@ -1020,7 +1009,7 @@ popupModal push state =
     where 
       action = if state.props.logoutModalView then PopUpModalLogoutAction 
                 else ChangeVehicleAC
-      popupConfig = if state.props.logoutModalView then (logoutPopUp Language)
+      popupConfig = if state.props.logoutModalView then (logoutPopUp state)
                     else changeVehicleConfig FunctionCall
 
 skipButton :: forall w . (Action -> Effect Unit) -> AddVehicleDetailsScreenState -> PrestoDOM (Effect Unit) w

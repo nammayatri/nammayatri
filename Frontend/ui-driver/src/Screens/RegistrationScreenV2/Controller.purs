@@ -299,7 +299,9 @@ eval (PrimaryButtonAction (PrimaryButtonController.OnClick)) state = do
     pure unit
   exit $ GoToHomeScreen state
 
-eval Refresh state = updateAndExit state { props { refreshAnimation = true}} $ RefreshPage state { props { refreshAnimation = true}}
+eval Refresh state = do
+  let updatedState = state { props { refreshAnimation = true, autoRefreshForRCcount = state.props.autoRefreshForRCcount + 1}}
+  updateAndExit updatedState $ RefreshPage updatedState
 
 eval (CategorySpecificContinueButtonAC PrimaryButtonController.OnClick) state = updateAndExit state {props {selectedDocumentCategory = Mb.Nothing}} $ RefreshPage state {props {selectedDocumentCategory = Mb.Nothing}}
 

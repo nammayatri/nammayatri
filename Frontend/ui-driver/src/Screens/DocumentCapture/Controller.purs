@@ -305,7 +305,7 @@ eval WhatsAppClick state = continueWithCmd state [do
 
 eval (UploadImageWihType imageType) state = continueWithCmd state {props{vehicleTypeImageToUpload = imageType}} [do
     -- let _ = EHE.addEvent (EHE.defaultEventObject $ HU.getDocUploadEventName state.data.docType) { module = HU.getRegisterationStepModule state.data.docType, source = HU.getRegisterationStepScreenSource state.data.docType}
-    void $ liftEffect $ JB.uploadFile (UploadFileConfig {showAccordingToAspectRatio : true ,imageAspectHeight : 9, imageAspectWidth : 12}) true
+    void $ liftEffect $ JB.uploadFile (UploadFileConfig {showAccordingToAspectRatio : true ,imageAspectHeight : 9, imageAspectWidth : 12}) false
     pure NoAction]
 
 eval AfterRender state = continue state 

@@ -16,19 +16,21 @@
 module Screens.PermissionsScreen.ScreenData where
 
 import Prelude (class Eq, (<>), (>=))
-import Screens.Types(PermissionsScreenState)
+import Screens.Types
 import Data.Eq.Generic (genericEq)
 import Foreign.Object (empty)
 import Data.Generic.Rep (class Generic)
 import ConfigProvider
 import Debug
+import MerchantConfig.DefaultConfig (defaultCityConfig)
 
 initData :: PermissionsScreenState
 initData = {
     data:{ 
       logField : empty,
       driverMobileNumber : "",
-      config : getAppConfig appConfig
+      config : getAppConfig appConfig,
+      cityConfig : defaultCityConfig
     },
     props:{
       isNotificationPermissionChecked : false
@@ -39,6 +41,8 @@ initData = {
     , androidVersion : 0
     , logoutModalView : false
     , isDriverEnabled : false
+    , menuOptions : false
+    , contactSupportModal : HIDE
     }
 }
 

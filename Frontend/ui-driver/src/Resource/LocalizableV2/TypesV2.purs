@@ -385,7 +385,7 @@ newtype Keymap = Keymap {
   , re_enter_driving_license_number :: String
   , eligibility_criteria_for_rc :: String
   , car_must_be_less_than_3_years_old :: String
-  , car_must_be_sedan_vehicle :: String
+  , car_must_be_sedan_or_suv :: String
   , updated_at :: String
   , trip_count :: String
   , todays_earnings :: String
@@ -1644,6 +1644,13 @@ newtype Keymap = Keymap {
   , yatri_points_tnc :: String
   , yatri_points_faqs_ques2_ans3 :: String
   , faqs_str :: String
+  , delhi :: String
+  , gurugram :: String
+  , noida :: String
+  , bangalore :: String
+  , car_must_be_maruti_suzuki_vehicle :: String
+  , car_must_be_commercial_vehicle :: String
+  , pan_aadhaar_dl_same_person :: String
   , hotspots :: String
   , very_high :: String
   , high :: String
@@ -3186,8 +3193,8 @@ eligibility_criteria_for_rc = a
 car_must_be_less_than_3_years_old :: Proxy "car_must_be_less_than_3_years_old"
 car_must_be_less_than_3_years_old = a
 
-car_must_be_sedan_vehicle :: Proxy "car_must_be_sedan_vehicle"
-car_must_be_sedan_vehicle = a
+car_must_be_sedan_or_suv :: Proxy "car_must_be_sedan_or_suv"
+car_must_be_sedan_or_suv = a
 
 updated_at :: Proxy "updated_at"
 updated_at = a
@@ -6956,6 +6963,27 @@ yatri_points_faqs_ques2_ans3 = a
 
 faqs_str :: Proxy "faqs_str"
 faqs_str = a
+
+delhi :: Proxy "delhi"
+delhi = a
+
+gurugram :: Proxy "gurugram"
+gurugram = a
+
+noida :: Proxy "noida"
+noida = a
+
+bangalore :: Proxy "bangalore"
+bangalore = a
+
+car_must_be_maruti_suzuki_vehicle :: Proxy "car_must_be_maruti_suzuki_vehicle"
+car_must_be_maruti_suzuki_vehicle = a
+
+car_must_be_commercial_vehicle :: Proxy "car_must_be_commercial_vehicle"
+car_must_be_commercial_vehicle = a
+
+pan_aadhaar_dl_same_person :: Proxy "pan_aadhaar_dl_same_person"
+pan_aadhaar_dl_same_person = a
 
 hotspots :: Proxy "hotspots"
 hotspots = a
