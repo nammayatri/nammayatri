@@ -592,6 +592,7 @@ postFrfsQuoteV2ConfirmUtil :: CallExternalBPP.FRFSConfirmFlow m r => (Kernel.Pre
 postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req crisSdkResponse = do
   merchant <- CQM.findById merchantId_ >>= fromMaybeM (InvalidRequest "Invalid merchant id")
   quote <- B.runInReplica $ QFRFSQuote.findById quoteId >>= fromMaybeM (InvalidRequest "Invalid quote id")
+  quoteCategories <- QFRFSQuoteCategory.findAllByQuoteId quoteId
   mbBooking <- QFRFSTicketBooking.findBySearchId quote.searchId
   integratedBppConfig <- SIBC.findIntegratedBPPConfigFromEntity quote
   let isMultiInitAllowed =
@@ -609,7 +610,7 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req crisSdkResponse
   let routeStations :: Maybe [FRFSRouteStationsAPI] = decodeFromText =<< dConfirmRes.routeStationsJson
       discounts :: Maybe [FRFSDiscountRes] = decodeFromText =<< dConfirmRes.discountsJson
   now <- getCurrentTime
-  when (isMultiInitAllowed && dConfirmRes.validTill > now) $ do
+  when isMultiInitAllowed $ do
     bapConfig <- CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory dConfirmRes.vehicleType) >>= fromMaybeM (InternalError "Beckn Config not found")
     let mRiderName = rider.firstName <&> (\fName -> rider.lastName & maybe fName (\lName -> fName <> " " <> lName))
     mRiderNumber <- mapM decrypt rider.mobileNumber
@@ -619,7 +620,14 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req crisSdkResponse
     let dConfirmRes' = dConfirmRes {DFRFSTicketBooking.validTill = validTill}
     when (dConfirmRes.status /= DFRFSTicketBooking.NEW) $ do
       void $ QFRFSTicketBooking.updateStatusById DFRFSTicketBooking.NEW dConfirmRes.id
-    dCategories <- buildCategorySelectFromReq req.offered
+    updatedQuoteCategories <- FRFSUtils.updateQuoteCategoriesWithSelections req.offered quoteCategories
+    let dCategories =
+          mapMaybe
+            ( \category -> do
+                selectedQuantity <- category.selectedQuantity
+                return $ FRFSCommon.DCategorySelect {bppItemId = category.bppItemId, quantity = selectedQuantity}
+            )
+            updatedQuoteCategories
     CallExternalBPP.init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) dConfirmRes' dCategories
   return $ makeBookingStatusAPI dConfirmRes discounts routeStations stations merchantOperatingCity.city
   where
@@ -633,6 +641,8 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req crisSdkResponse
       rider <- B.runInReplica $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
       let ticketQuantity = fromMaybe quote.quantity req.ticketQuantity
           childTicketQuantity = req.childTicketQuantity <|> quote.childTicketQuantity
+      now <- getCurrentTime
+      unless (quote.validTill > now) $ throwError $ FRFSQuoteExpired quote.id.getId
       updatedQuote <-
         if isMultiInitAllowed
           then do
@@ -642,9 +652,6 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req crisSdkResponse
       unless (personId == quote.riderId) $ throwError AccessDenied
       let discounts :: Maybe [FRFSDiscountRes] = decodeFromText =<< quote.discountsJson
       let selectedCategories = (fromMaybe [] discounts)
-
-      now <- getCurrentTime
-      unless (quote.validTill > now) $ throwError $ FRFSQuoteExpired quote.id.getId
       maybeM
         (buildAndCreateBooking rider updatedQuote selectedCategories)
         ( \booking -> do
@@ -749,25 +756,6 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req crisSdkResponse
           integratedBppConfigId = booking.integratedBppConfigId,
           ..
         }
-    buildCategorySelectFromReq :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [FRFSCategorySelectionReq] -> m [FRFSCommon.DCategorySelect]
-    buildCategorySelectFromReq categorySelectionReqs = do
-      let quoteCategoryIds = map (.quoteCategoryId) categorySelectionReqs
-      quoteCategories <- mapM QFRFSQuoteCategory.findById quoteCategoryIds
-      let validQuoteCategories = catMaybes quoteCategories
-      return $
-        mapMaybe
-          ( \req' ->
-              let mbQuoteCategory = find (\cat -> cat.id == req'.quoteCategoryId) validQuoteCategories
-               in case mbQuoteCategory of
-                    Just quoteCategory ->
-                      Just $
-                        FRFSCommon.DCategorySelect
-                          { bppItemId = quoteCategory.bppItemId,
-                            quantity = req'.quantity
-                          }
-                    Nothing -> Nothing
-          )
-          categorySelectionReqs
 
 postFrfsQuoteConfirm :: CallExternalBPP.FRFSConfirmFlow m r => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId = do
