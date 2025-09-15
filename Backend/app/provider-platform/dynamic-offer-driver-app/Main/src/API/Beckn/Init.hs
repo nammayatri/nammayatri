@@ -38,6 +38,7 @@ import Kernel.Utils.Error.BaseError.HTTPError.BecknAPIError
 import Kernel.Utils.Servant.SignatureAuth
 import Servant hiding (throwError)
 import qualified SharedLogic.Booking as SBooking
+import SharedLogic.Cancel
 import qualified SharedLogic.FarePolicy as SFP
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBC
@@ -84,7 +85,9 @@ init transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBec
         validatedRes <- DInit.validateRequest transporterId dInitReq
         fork "init request processing" $ do
           Redis.whenWithLockRedis (initProcessingLockKey initFulfillmentId) 60 $ do
-            dInitRes <- DInit.handler transporterId dInitReq validatedRes
+            dInitRes <-
+              callWithErrorHandling validatedRes.searchRequest.transactionId $ do
+                DInit.handler transporterId dInitReq validatedRes
             internalEndPointHashMap <- asks (.internalEndPointHashMap)
             let vehicleCategory = Utils.mapServiceTierToCategory dInitRes.booking.vehicleServiceTier
             bppConfig <- QBC.findByMerchantIdDomainAndVehicle dInitRes.transporter.id (show Context.MOBILITY) vehicleCategory >>= fromMaybeM (InternalError "Beckn Config not found")
@@ -111,6 +114,22 @@ init transporterId (SignatureAuthResult _ subscriber) reqV2 = withFlowHandlerBec
       | Just BecknAPICallError {} <- fromException @BecknAPICallError exc = SBooking.cancelBooking booking Nothing transporter >> pure Ack
       | Just ExternalAPICallError {} <- fromException @ExternalAPICallError exc = SBooking.cancelBooking booking Nothing transporter >> pure Ack
       | otherwise = throwM exc
+
+    callWithErrorHandling transactionId action = do
+      exep <- try @_ @SomeException action
+      case exep of
+        Left e -> do
+          Redis.unlockRedis (mkCancelSearchInitLockKey transactionId)
+          someExceptionToAPIErrorThrow e
+        Right a -> do
+          Redis.unlockRedis (mkCancelSearchInitLockKey transactionId)
+          pure a
+
+    someExceptionToAPIErrorThrow exc
+      | Just (HTTPException err) <- fromException exc = throwError err
+      | Just (BaseException err) <- fromException exc =
+        throwError . InternalError . fromMaybe (show err) $ toMessage err
+      | otherwise = throwError . InternalError $ show exc
 
 initLockKey :: Text -> Text
 initLockKey id = "Driver:Init:DriverQuoteId-" <> id

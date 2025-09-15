@@ -18,7 +18,6 @@ module API.UI.Select
     DSelect.DSelectResultRes (..),
     DSelect.SelectListRes (..),
     DSelect.QuotesResultResponse (..),
-    DSelect.CancelAPIResponse (..),
     DSelect.MultimodalSelectRes (..),
     API,
     select2',
@@ -29,17 +28,21 @@ module API.UI.Select
 where
 
 import qualified Beckn.ACL.Select as ACL
+import qualified Domain.Action.UI.Search as DSearch
 import qualified Domain.Action.UI.Select as DSelect
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as DPerson
 import Environment
+import Kernel.External.Slack.Types (SlackConfig)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.Id
+import Kernel.Types.SlidingWindowLimiter (APIRateLimitOptions)
 import Kernel.Utils.Common
 import Servant hiding (throwError)
 import qualified SharedLogic.CallBPP as CallBPP
+import SharedLogic.Cancel
 import Storage.Beam.SystemConfigs ()
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.BecknConfig as QBC
@@ -104,8 +107,10 @@ select (personId, merchantId) estimateId req = withFlowHandlerAPI . withPersonId
 select2 :: (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> DSelect.DSelectReq -> FlowHandler DSelect.MultimodalSelectRes
 select2 (personId, merchantId) estimateId = withFlowHandlerAPI . select2' (personId, merchantId) estimateId
 
-select2' :: DSelect.SelectFlow m r c => (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> DSelect.DSelectReq -> m DSelect.MultimodalSelectRes
+select2' :: (DSelect.SelectFlow m r c, DSearch.SearchRequestFlow m r, HasFlowEnv m r '["slackCfg" ::: SlackConfig], HasFlowEnv m r '["searchRateLimitOptions" ::: APIRateLimitOptions], HasFlowEnv m r '["searchLimitExceedNotificationTemplate" ::: Text]) => (Id DPerson.Person, Id Merchant.Merchant) -> Id DEstimate.Estimate -> DSelect.DSelectReq -> m DSelect.MultimodalSelectRes
 select2' (personId, merchantId) estimateId req = withPersonIdLogTag personId $ do
+  -- Note: This `cancelSearch` only handles cancelling the currently selected estimate's previous searches. If any another estimate was selected previously that UI has to ensure to call cancelSearch for that and then call select upon it's success.
+  void $ cancelSearchUtil (personId, merchantId) estimateId
   journeyID <- Redis.whenWithLockRedisAndReturnValue (selectEstimateLockKey personId) 60 $ do
     dSelectReq <- DSelect.select2 personId estimateId req
     becknReq <- ACL.buildSelectReqV2 dSelectReq

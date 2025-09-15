@@ -18,7 +18,6 @@ module Domain.Action.UI.Select
     DSelectResultRes (..),
     SelectListRes (..),
     QuotesResultResponse (..),
-    CancelAPIResponse (..),
     DSelectResDetails (..),
     SelectFlow,
     select,
@@ -30,15 +29,9 @@ module Domain.Action.UI.Select
 where
 
 import Control.Applicative ((<|>))
-import qualified Control.Lens as L
 import Control.Monad.Extra (anyM)
-import Data.Aeson ((.:), (.=))
-import qualified Data.Aeson as A
-import Data.Aeson.Types (parseFail, typeMismatch)
 import qualified Data.HashMap.Strict as HMS
-import qualified Data.HashMap.Strict.InsOrd as HMSIO
 import Data.OpenApi hiding (name)
-import qualified Data.Text as T
 import qualified Domain.Action.UI.Estimate as UEstimate
 import qualified Domain.Action.UI.Registration as Reg
 import Domain.Types.Booking
@@ -206,43 +199,6 @@ newtype SelectListRes = SelectListRes
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data CancelAPIResponse = BookingAlreadyCreated | FailedToCancel | Success
-  deriving stock (Generic, Show, Enum, Bounded)
-
-allCancelAPIResponse :: [CancelAPIResponse]
-allCancelAPIResponse = [minBound .. maxBound]
-
-instance ToJSON CancelAPIResponse where
-  toJSON Success = A.object ["result" .= ("Success" :: Text)]
-  toJSON BookingAlreadyCreated = A.object ["result" .= ("BookingAlreadyCreated" :: Text)]
-  toJSON FailedToCancel = A.object ["result" .= ("FailedToCancel" :: Text)]
-
-instance FromJSON CancelAPIResponse where
-  parseJSON (A.Object obj) = do
-    result :: String <- obj .: "result"
-    case result of
-      "FailedToCancel" -> pure FailedToCancel
-      "BookingAlreadyCreated" -> pure BookingAlreadyCreated
-      "Success" -> pure Success
-      _ -> parseFail "Expected \"Success\" in \"result\" field."
-  parseJSON err = typeMismatch "Object APISuccess" err
-
-instance ToSchema CancelAPIResponse where
-  declareNamedSchema _ = do
-    return $
-      NamedSchema (Just "CancelAPIResponse") $
-        mempty
-          & type_ L.?~ OpenApiObject
-          & properties
-            L..~ HMSIO.singleton "result" enumsSchema
-          & required L..~ ["result"]
-    where
-      enumsSchema =
-        (mempty :: Schema)
-          & type_ L.?~ OpenApiString
-          & enum_ L.?~ map (A.String . T.pack . show) allCancelAPIResponse
-          & Inline
-
 select :: SelectFlow m r c => Id DPerson.Person -> Id DEstimate.Estimate -> DSelectReq -> m DSelectRes
 select personId estimateId req = do
   now <- getCurrentTime
@@ -266,29 +222,8 @@ select2 personId estimateId req@DSelectReq {..} = do
   riderConfig <- QRC.findByMerchantOperatingCityId (cast searchRequest.merchantOperatingCityId) Nothing
   when (disabilityDisable == Just True) $ QSearchRequest.updateDisability searchRequest.id Nothing
   merchant <- QM.findById searchRequest.merchantId >>= fromMaybeM (MerchantNotFound searchRequest.merchantId.getId)
-  when merchant.onlinePayment $ do
-    when (isNothing paymentMethodId) $ throwError PaymentMethodRequired
-    QP.updateDefaultPaymentMethodId paymentMethodId personId -- Make payment method as default payment method for customer
-    -- when ((searchRequest.validTill) < now) $
-    --   throwError SearchRequestExpired
-  when (maybe False Trip.isDeliveryTrip (DEstimate.tripCategory estimate)) $ do
-    validDeliveryDetails <- deliveryDetails & fromMaybeM (InvalidRequest "Delivery details not found for trip category Delivery")
-    updateRequiredDeliveryDetails searchRequestId searchRequest.merchantId searchRequest.merchantOperatingCityId validDeliveryDetails
-    let senderLocationId = searchRequest.fromLocation.id
-    receiverLocationId <- (searchRequest.toLocation <&> (.id)) & fromMaybeM (InvalidRequest "Receiver location not found for trip category Delivery")
-    let senderLocationAddress = validDeliveryDetails.senderDetails.address
-        receiverLocationAddress = validDeliveryDetails.receiverDetails.address
-    QLoc.updateInstructionsAndExtrasById senderLocationAddress.instructions senderLocationAddress.extras senderLocationId
-    QLoc.updateInstructionsAndExtrasById receiverLocationAddress.instructions receiverLocationAddress.extras receiverLocationId
-    QSearchRequest.updateInitiatedBy (Just $ Trip.DeliveryParty validDeliveryDetails.initiatedAs) searchRequestId
-
-  let lastUsedVehicleServiceTiers = insertVehicleServiceTier (maybe 5 (.noOfRideRequestsConfig) riderConfig) estimate.vehicleServiceTierType person.lastUsedVehicleServiceTiers
-  logError $ "lastUsedVehicleServiceTiers personId: " <> personId.getId <> " lastUsedVehicleServiceTiers: " <> show lastUsedVehicleServiceTiers
-  QP.updateLastUsedVehicleServiceTiers lastUsedVehicleServiceTiers personId
-  QSearchRequest.updateMultipleByRequestId searchRequestId autoAssignEnabled (fromMaybe False autoAssignEnabledV2) isAdvancedBookingEnabled
-  QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimateId, otherSelectedEstimates, validTill = searchRequest.validTill, providerId = Just estimate.providerId, tripCategory = estimate.tripCategory}
-  QEstimate.updateStatus DEstimate.DRIVER_QUOTE_REQUESTED estimateId
-  QDOffer.updateStatus DDO.INACTIVE estimateId
+  let merchantOperatingCityId = searchRequest.merchantOperatingCityId
+  city <- CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
   let mbCustomerExtraFee = (mkPriceFromAPIEntity <$> req.customerExtraFeeWithCurrency) <|> (mkPriceFromMoney Nothing <$> req.customerExtraFee)
   Kernel.Prelude.whenJust req.customerExtraFeeWithCurrency $ \reqWithCurrency -> do
     unless (estimate.estimatedFare.currency == reqWithCurrency.currency) $
@@ -299,20 +234,8 @@ select2 personId estimateId req@DSelectReq {..} = do
         parcelDetails <- QParcel.findBySearchRequestId searchRequest.id
         return $ DSelectResDelivery <$> parcelDetails
       _ -> pure Nothing
-  when (isJust mbCustomerExtraFee || isJust req.paymentMethodId) $ do
-    void $ QSearchRequest.updateCustomerExtraFeeAndPaymentMethod searchRequest.id mbCustomerExtraFee req.paymentMethodId
-  when (isJust req.isPetRide) $ do
-    QSearchRequest.updatePetRide req.isPetRide searchRequest.id
-  let merchantOperatingCityId = searchRequest.merchantOperatingCityId
-  city <- CQMOC.findById merchantOperatingCityId >>= fmap (.city) . fromMaybeM (MerchantOperatingCityNotFound merchantOperatingCityId.getId)
+  let lastUsedVehicleServiceTiers = insertVehicleServiceTier (maybe 5 (.noOfRideRequestsConfig) riderConfig) estimate.vehicleServiceTierType person.lastUsedVehicleServiceTiers
   let toUpdateDeviceIdInfo = (fromMaybe 0 person.totalRidesCount) == 0
-  mbJourneyLeg <- QJourneyLeg.findByLegSearchId (Just searchRequest.id.getId)
-  mbJourneyId <- case mbJourneyLeg of
-    Just journeyLeg -> do
-      QJourney.updateStatus DJ.INPROGRESS journeyLeg.journeyId
-      QJourneyLeg.updateLegPricingIdByLegSearchId (Just estimate.id.getId) (Just searchRequest.id.getId)
-      pure journeyLeg.journeyId
-    Nothing -> mkJourneyForSearch searchRequest estimate personId
   isMultipleOrNoDeviceIdExist <-
     maybe
       (return Nothing)
@@ -324,6 +247,47 @@ select2 personId estimateId req@DSelectReq {..} = do
             else return Nothing
       )
       person.deviceId
+  when merchant.onlinePayment $ do
+    when (isNothing paymentMethodId) $ throwError PaymentMethodRequired
+
+  mbJourneyLeg <- QJourneyLeg.findByLegSearchId (Just searchRequest.id.getId)
+  mbJourney <- maybe (pure Nothing) (\leg -> QJourney.findByPrimaryKey leg.journeyId) mbJourneyLeg
+  (journey, journeyLeg, isJourneyNew) <- case (mbJourney, mbJourneyLeg) of
+    (Just journey', Just journeyLeg') -> pure (journey' {DJ.status = DJ.INPROGRESS}, journeyLeg' {DJL.legPricingId = Just estimate.id.getId, DJL.legSearchId = Just searchRequest.id.getId}, False)
+    _ -> do
+      (journey', journeyLeg') <- mkJourneyForSearch searchRequest estimate personId
+      pure (journey', journeyLeg', True)
+
+  -- Select Transaction
+  -- TODO :: This Delivery transaction still throws error inside, can be refactored later upon scale.
+  when merchant.onlinePayment $ do
+    QP.updateDefaultPaymentMethodId paymentMethodId personId -- Make payment method as default payment method for customer
+  when (maybe False Trip.isDeliveryTrip (DEstimate.tripCategory estimate)) $ do
+    validDeliveryDetails <- deliveryDetails & fromMaybeM (InvalidRequest "Delivery details not found for trip category Delivery")
+    updateRequiredDeliveryDetails searchRequestId searchRequest.merchantId searchRequest.merchantOperatingCityId validDeliveryDetails
+    let senderLocationId = searchRequest.fromLocation.id
+    receiverLocationId <- (searchRequest.toLocation <&> (.id)) & fromMaybeM (InvalidRequest "Receiver location not found for trip category Delivery")
+    let senderLocationAddress = validDeliveryDetails.senderDetails.address
+        receiverLocationAddress = validDeliveryDetails.receiverDetails.address
+    QLoc.updateInstructionsAndExtrasById senderLocationAddress.instructions senderLocationAddress.extras senderLocationId
+    QLoc.updateInstructionsAndExtrasById receiverLocationAddress.instructions receiverLocationAddress.extras receiverLocationId
+    QSearchRequest.updateInitiatedBy (Just $ Trip.DeliveryParty validDeliveryDetails.initiatedAs) searchRequestId
+  QP.updateLastUsedVehicleServiceTiers lastUsedVehicleServiceTiers personId
+  QSearchRequest.updateMultipleByRequestId searchRequestId autoAssignEnabled (fromMaybe False autoAssignEnabledV2) isAdvancedBookingEnabled
+  QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimateId, otherSelectedEstimates, validTill = searchRequest.validTill, providerId = Just estimate.providerId, tripCategory = estimate.tripCategory}
+  QEstimate.updateStatus DEstimate.DRIVER_QUOTE_REQUESTED estimateId
+  QDOffer.updateStatus DDO.INACTIVE estimateId
+  when (isJust mbCustomerExtraFee || isJust req.paymentMethodId) $ do
+    void $ QSearchRequest.updateCustomerExtraFeeAndPaymentMethod searchRequest.id mbCustomerExtraFee req.paymentMethodId
+  when (isJust req.isPetRide) $ do
+    QSearchRequest.updatePetRide req.isPetRide searchRequest.id
+  if isJourneyNew
+    then do
+      QJourney.create journey
+      QJourneyLeg.create journeyLeg
+    else do
+      QJourney.updateByPrimaryKey journey
+      QJourneyLeg.updateByPrimaryKey journeyLeg
   pure
     DSelectRes
       { providerId = estimate.providerId,
@@ -333,7 +297,7 @@ select2 personId estimateId req@DSelectReq {..} = do
         tripCategory = estimate.tripCategory,
         selectResDetails = dselectResDetails,
         preferSafetyPlus = fromMaybe False preferSafetyPlus,
-        mbJourneyId = Just mbJourneyId,
+        mbJourneyId = Just journey.id,
         ..
       }
   where
@@ -409,7 +373,7 @@ insertVehicleServiceTier n newVehicle currentList
   | length currentList < n = currentList ++ [newVehicle]
   | otherwise = tail currentList ++ [newVehicle]
 
-mkJourneyForSearch :: SelectFlow m r c => DSearchReq.SearchRequest -> DEstimate.Estimate -> Id DPerson.Person -> m (Id DJ.Journey)
+mkJourneyForSearch :: SelectFlow m r c => DSearchReq.SearchRequest -> DEstimate.Estimate -> Id DPerson.Person -> m (DJ.Journey, DJL.JourneyLeg)
 mkJourneyForSearch searchRequest estimate personId = do
   now <- getCurrentTime
   journeyGuid <- generateGUID
@@ -532,9 +496,7 @@ mkJourneyForSearch searchRequest estimate personId = do
             sequenceNumber = 0,
             multimodalSearchRequestId = Nothing
           }
-  QJourney.create journey
-  QJourneyLeg.create journeyLeg
-  pure journeyGuid
+  pure (journey, journeyLeg)
 
 data MultimodalSelectRes = MultimodalSelectRes
   { journeyId :: Maybe (Id DJ.Journey),

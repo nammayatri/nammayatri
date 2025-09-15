@@ -4,7 +4,7 @@ imports:
   DSelectReq: Domain.Action.UI.Select
   SelectListRes: Domain.Action.UI.Select
   QuotesResultResponse: Domain.Action.UI.Select
-  CancelAPIResponse: Domain.Action.UI.Select
+  CancelAPIResponse: SharedLogic.Cancel
   MultimodalSelectRes: Domain.Action.UI.Select
 
 importPackageOverrides:

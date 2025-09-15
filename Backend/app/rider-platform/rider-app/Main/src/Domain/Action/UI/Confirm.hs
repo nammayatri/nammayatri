@@ -20,6 +20,7 @@ where
 
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Map as M
+import qualified Domain.SharedLogic.Cancel as SharedCancel
 import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.BookingStatus as DRB
@@ -71,22 +72,29 @@ confirm personId quoteId paymentMethodId isAdvanceBookingEnabled = do
   quote <- QQuote.findById quoteId >>= fromMaybeM (QuoteDoesNotExist quoteId.getId)
   whenJust isAdvanceBookingEnabled $ \isAdvanceBookingEnabled' -> do
     QSR.updateAdvancedBookingEnabled (Just isAdvanceBookingEnabled') quote.requestId
+  -- Lock Description: This is a Lock held between OnSelect which calls Confirm Internally to create Booking and UI Confirm for the Quote, if AutoAssign OnSelect's Confirm is OnGoing then the UI Confirm will fail with error `InvalidRequest`.
+  -- Lock Release: Held for 10 seconds once acquired.
   isLockAcquired <- SConfirm.tryInitTriggerLock quote.requestId
   unless isLockAcquired $ do
     throwError . InvalidRequest $ "Lock on searchRequestId:-" <> quote.requestId.getId <> " to create booking already acquired, can't create booking for quoteId:-" <> quoteId.getId
   SConfirm.confirm SConfirm.DConfirmReq {..}
 
 -- cancel booking when QUOTE_EXPIRED on bpp side, or other EXTERNAL_API_CALL_ERROR catched
-cancelBooking :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, HasKafkaProducer r) => DRB.Booking -> m ()
+cancelBooking :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, HasKafkaProducer r, HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]) => DRB.Booking -> m ()
 cancelBooking booking = do
   logTagInfo ("BookingId-" <> getId booking.id) ("Cancellation reason " <> show DBCR.ByApplication)
   bookingCancellationReason <- buildBookingCancellationReason
   otherRelatedParties <- Notify.getAllOtherRelatedPartyPersons booking
-  _ <- QRideB.updateStatus booking.id DRB.CANCELLED
-  _ <- QBPL.makeAllInactiveByBookingId booking.id
-  _ <- QBCR.upsert bookingCancellationReason
   bppDetails <- CQBPP.findBySubscriberIdAndDomain booking.providerId Context.MOBILITY >>= fromMaybeM (InternalError $ "BPP details not found for providerId:- " <> booking.providerId <> "and domain:- " <> show Context.MOBILITY)
-  Notify.notifyOnBookingCancelled booking DBCR.ByApplication bppDetails Nothing otherRelatedParties
+
+  -- Lock Description: This is a Shared Lock held Between Booking Cancel for Customer & Driver, At a time only one of them can do the full Cancel to OnCancel/Reallocation flow.
+  -- Lock Release: Held for 30 seconds and released at the end of the function.
+  SharedCancel.tryCancellationLock booking.transactionId $ do
+    _ <- QRideB.updateStatus booking.id DRB.CANCELLED
+    _ <- QBPL.makeAllInactiveByBookingId booking.id
+    _ <- QBCR.upsert bookingCancellationReason
+    Notify.notifyOnBookingCancelled booking DBCR.ByApplication bppDetails Nothing otherRelatedParties
+  SharedCancel.releaseCancellationLock booking.transactionId
   where
     buildBookingCancellationReason = do
       now <- getCurrentTime

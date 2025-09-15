@@ -1402,7 +1402,7 @@ postMerchantConfigSpecialLocationUpsert merchantShortId opCity req = do
       gateInfoId <- generateGUID
       gateInfoName :: Text <- cleanCSVField idx row.gateInfoName "Gate Info (name)"
       gateInfoLat :: Double <- readCSVField idx row.gateInfoLat "Gate Info (latitude)"
-      gateInfoLon :: Double <- readCSVField idx row.gateInfoLat "Gate Info (longitude)"
+      gateInfoLon :: Double <- readCSVField idx row.gateInfoLon "Gate Info (longitude)"
       let gateInfoDefaultDriverExtra :: Maybe Int = readMaybeCSVField idx row.gateInfoDefaultDriverExtra "Gate Info (default_driver_extra)"
           gateInfoAddress :: Maybe Text = cleanMaybeCSVField idx row.gateInfoAddress "Gate Info (address)"
       gateInfoType :: DGI.GateType <- readCSVField idx row.gateInfoType "Gate Info (type)"

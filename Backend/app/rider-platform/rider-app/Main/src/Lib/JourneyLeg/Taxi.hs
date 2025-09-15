@@ -4,7 +4,6 @@ module Lib.JourneyLeg.Taxi where
 
 import qualified API.UI.Select as DSelect
 import qualified Beckn.ACL.Cancel as ACL
-import qualified Beckn.ACL.Cancel as CACL
 import qualified Beckn.ACL.Search as TaxiACL
 import Data.Aeson
 import qualified Data.HashMap.Strict as HM
@@ -22,7 +21,6 @@ import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.Person as DPerson
 import Domain.Types.ServiceTierType ()
-import qualified Kernel.Beam.Functions as B
 import Kernel.External.Maps.Types
 import Kernel.External.Slack.Types (SlackConfig)
 import Kernel.Prelude
@@ -37,10 +35,10 @@ import qualified Lib.JourneyModule.State.Utils as JMStateUtils
 import qualified Lib.JourneyModule.Types as JT
 import qualified SharedLogic.CallBPP as CallBPP
 import SharedLogic.CallBPPInternal as CallBPPInternal (CalculateFareReq (..), FareData (..), GetFareResponse (..), getFare)
+import SharedLogic.Cancel
 import qualified SharedLogic.CreateFareForMultiModal as CFFM
 import SharedLogic.Search
 import qualified Storage.Queries.Booking as QBooking
-import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Ride as QRide
@@ -251,46 +249,5 @@ cancelSearch' ::
   ) =>
   (Id DPerson.Person, Id Merchant.Merchant) ->
   Id DEstimate.Estimate ->
-  m DSelect.CancelAPIResponse
+  m CancelAPIResponse
 cancelSearch' (personId, merchantId) estimateId = withPersonIdLogTag personId $ cancelSearchUtil (personId, merchantId) estimateId
-
-cancelSearchUtil ::
-  ( DSearch.SearchRequestFlow m r,
-    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
-    Redis.HedisFlow m r,
-    HasFlowEnv m r '["slackCfg" ::: SlackConfig],
-    HasFlowEnv m r '["searchRateLimitOptions" ::: APIRateLimitOptions],
-    HasFlowEnv m r '["searchLimitExceedNotificationTemplate" ::: Text],
-    MonadFlow m,
-    CoreMetrics m,
-    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
-    CacheFlow m r,
-    HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools],
-    HasFlowEnv m r '["ondcTokenHashMap" ::: HM.HashMap KeyConfig TokenConfig],
-    EsqDBFlow m r,
-    HasField "shortDurationRetryCfg" r RetryCfg,
-    HasFlowEnv m r '["nwAddress" ::: BaseUrl]
-  ) =>
-  (Id DPerson.Person, Id Merchant.Merchant) ->
-  Id DEstimate.Estimate ->
-  m DSelect.CancelAPIResponse
-cancelSearchUtil (personId, merchantId) estimateId = do
-  estimate <- QEstimate.findById estimateId >>= fromMaybeM (EstimateDoesNotExist estimateId.getId)
-  activeBooking <- B.runInReplica $ QRB.findByTransactionIdAndStatus estimate.requestId.getId activeBookingStatus
-  if isJust activeBooking
-    then do
-      logTagInfo "Booking already created while cancelling estimate." estimateId.getId
-      throwError (ActiveBookingPresent estimateId.getId)
-    else do
-      dCancelSearch <- DCancel.mkDomainCancelSearch personId estimateId
-      result <-
-        try @_ @SomeException $
-          when dCancelSearch.sendToBpp . void . withShortRetry $ do
-            CallBPP.cancelV2 merchantId dCancelSearch.providerUrl =<< CACL.buildCancelSearchReqV2 dCancelSearch
-      case result of
-        Left err -> do
-          logTagInfo "Failed to cancel" $ show err
-          throwError (FailedToCancelSearch estimateId.getId)
-        Right _ -> do
-          DCancel.cancelSearch personId dCancelSearch
-          pure DSelect.Success
