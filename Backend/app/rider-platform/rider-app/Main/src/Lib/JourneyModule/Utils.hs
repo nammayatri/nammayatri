@@ -512,7 +512,6 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
 
     -- Get route details to include the short name
     validRouteDetails <- OTPRest.getRoutesByRouteIds integratedBppConfig routeCodesForTier
-    logDebug $ "findPossibleRoutes serviceTier: " <> show serviceTierType <> " routeCodesForTier: " <> show routeCodesForTier <> " validRouteDetails: " <> show validRouteDetails
     let routeShortNames = nub $ map (.shortName) validRouteDetails
 
     -- Calculate arrival times in seconds
@@ -579,7 +578,6 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
 
   -- Only return service tiers that have available routes
   let filteredResults = filter (\r -> not (null $ r.availableRoutes) && (r.fare /= PriceAPIEntity 0.0 INR || sendWithoutFare)) results
-  logDebug $ "findPossibleRoutes FINAL_FILTER: results: " <> show results <> " filtered results: " <> show filteredResults <> " sendWithoutFare: " <> show sendWithoutFare
   return $ ((listToMaybe sortedTimings) <&> (.routeCode), filteredResults, routeStopTimings)
   where
     routeTripCountKey :: Text -> Text
@@ -809,9 +807,7 @@ buildMultimodalRouteDetails subLegOrder mbRouteCode originStopCode destinationSt
 
   case (mbFromStop >>= (.lat), mbFromStop >>= (.lon), mbToStop >>= (.lat), mbToStop >>= (.lon)) of
     (Just fromStopLat, Just fromStopLon, Just toStopLat, Just toStopLon) -> do
-      logDebug $ "buildMultimodalRouteDetails: calling findPossibleRoutes with originStopCode: " <> originStopCode <> " destinationStopCode: " <> destinationStopCode <> " vc: " <> show vc <> " sendWithoutFare: True"
       (nextAvailableRouteCode, possibleRoutes, originStopTimings) <- measureLatency (findPossibleRoutes Nothing originStopCode destinationStopCode currentTime integratedBppConfig mid mocid vc True) "findPossibleRoutes"
-      logDebug $ "buildMultimodalRouteDetails: findPossibleRoutes RESULT - nextAvailableRouteCode: " <> show nextAvailableRouteCode <> " possibleRoutes: " <> show possibleRoutes <> " originStopTimings: " <> show originStopTimings
       let distance = distanceBetweenInMeters (LatLong fromStopLat fromStopLon) (LatLong toStopLat toStopLon)
       let routeCode = mbRouteCode <|> nextAvailableRouteCode
       mbRoute <-

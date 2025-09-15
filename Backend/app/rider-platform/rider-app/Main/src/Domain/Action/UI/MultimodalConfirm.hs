@@ -780,9 +780,7 @@ getMultimodalOrderGetLegTierOptions (mbPersonId, merchantId) journeyId legOrder 
 
   case (mbFomStopCode, mbToStopCode, mbIntegratedBPPConfig) of
     (Just fromStopCode, Just toStopCode, Just integratedBPPConfig) -> do
-      logDebug $ "MultimodalConfirm: getMultimodalOrderGetLegTierOptions calling findPossibleRoutes with fromStopCode: " <> fromStopCode <> " toStopCode: " <> toStopCode <> " vehicleCategory: " <> show vehicleCategory <> " sendWithoutFare: " <> show (vehicleCategory /= Enums.SUBWAY) <> " availableServiceTiers: " <> show availableServiceTiers
-      (nextRouteCode, availableRoutesByTiers, routeStopTimings) <- JLU.findPossibleRoutes (Just availableServiceTiers) fromStopCode toStopCode arrivalTime integratedBPPConfig merchantId person.merchantOperatingCityId vehicleCategory (vehicleCategory /= Enums.SUBWAY)
-      logDebug $ "MultimodalConfirm: getMultimodalOrderGetLegTierOptions findPossibleRoutes RESULT - nextRouteCode: " <> show nextRouteCode <> " availableRoutesByTiers: " <> show availableRoutesByTiers <> " routeStopTimings: " <> show routeStopTimings
+      (_, availableRoutesByTiers, _) <- JLU.findPossibleRoutes (Just availableServiceTiers) fromStopCode toStopCode arrivalTime integratedBPPConfig merchantId person.merchantOperatingCityId vehicleCategory (vehicleCategory /= Enums.SUBWAY)
       return $ ApiTypes.LegServiceTierOptionsResp {options = availableRoutesByTiers}
     _ -> return $ ApiTypes.LegServiceTierOptionsResp {options = []}
 
@@ -1019,9 +1017,7 @@ getMultimodalOrderSimilarJourneyLegs (mbPersonId, merchantId) journeyId legOrder
       mbAvailableTier <-
         case (mbFomStopCode, mbToStopCode, mbIntegratedBPPConfig) of
           (Just fromStopCode, Just toStopCode, Just integratedBPPConfig) -> do
-            logDebug $ "MultimodalConfirm: getMultimodalOrderSimilarJourneyLegs calling findPossibleRoutes (similar journey legs) with fromStopCode: " <> fromStopCode <> " toStopCode: " <> toStopCode <> " vehicleCategory: " <> show vehicleCategory <> " sendWithoutFare: True"
-            (nextRouteCode, tiers, routeStopTimings) <- JLU.findPossibleRoutes Nothing fromStopCode toStopCode arrivalTime integratedBPPConfig merchantId person.merchantOperatingCityId vehicleCategory True
-            logDebug $ "MultimodalConfirm: getMultimodalOrderSimilarJourneyLegs findPossibleRoutes (similar journey legs) RESULT - nextRouteCode: " <> show nextRouteCode <> " tiers count: " <> show tiers <> " routeStopTimings count: " <> show routeStopTimings
+            (_, tiers, _) <- JLU.findPossibleRoutes Nothing fromStopCode toStopCode arrivalTime integratedBPPConfig merchantId person.merchantOperatingCityId vehicleCategory True
             return $ listToMaybe tiers
           _ -> return Nothing
       return $
@@ -1396,8 +1392,7 @@ postMultimodalRouteAvailability (mbPersonId, merchantId) req = do
     [] -> return $ ApiTypes.RouteAvailabilityResp {availableRoutes = []}
     (integratedBPPConfig : _) -> do
       -- Use findPossibleRoutes to get available routes
-      logDebug $ "MultimodalConfirm: postMultimodalRouteAvailability calling findPossibleRoutes (route availability) with startStopCode: " <> req.startStopCode <> " endStopCode: " <> req.endStopCode <> " vehicleCategory: " <> show vehicleCategory <> " sendWithoutFare: True" <> " availableServiceTiers count: " <> show availableServiceTiers
-      (nextRouteCode, availableRoutesByTier, routeStopTimings) <-
+      (_, availableRoutesByTier, _) <-
         JMU.findPossibleRoutes
           availableServiceTiers
           req.startStopCode
@@ -1408,7 +1403,6 @@ postMultimodalRouteAvailability (mbPersonId, merchantId) req = do
           person.merchantOperatingCityId
           vehicleCategory
           True -- sendWithoutFare
-      logDebug $ "MultimodalConfirm: postMultimodalRouteAvailability findPossibleRoutes (route availability) RESULT - nextRouteCode: " <> show nextRouteCode <> " availableRoutesByTier count: " <> show availableRoutesByTier <> " routeStopTimings count: " <> show routeStopTimings
 
       -- Filter routes based on onlyLive flag if needed
       let filteredRoutes =

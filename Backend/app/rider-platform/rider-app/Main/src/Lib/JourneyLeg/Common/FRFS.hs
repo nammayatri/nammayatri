@@ -26,7 +26,6 @@ import qualified Domain.Types.RiderConfig as DomainRiderConfig
 import qualified Domain.Types.RouteDetails as RD
 import Domain.Types.Station
 import Domain.Types.Trip as DTrip
-import qualified EulerHS.Language as L
 import ExternalBPP.CallAPI as CallExternalBPP
 import ExternalBPP.ExternalAPI.CallAPI as CallAPI
 import qualified ExternalBPP.Flow as Flow
@@ -58,7 +57,6 @@ import Storage.CachedQueries.Merchant.MultiModalBus (BusData (..), BusDataWithRo
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
-import qualified Storage.CachedQueries.RouteStopTimeTable as QRSTT
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.FRFSSearch as QFRFSSearch
 import qualified Storage.Queries.FRFSTicketBooking as QTBooking
@@ -265,9 +263,9 @@ getFare riderId merchant merchantOperatingCity vehicleCategory routeDetails mbFr
                 Right (isFareMandatory, fares) -> do
                   now <- getCurrentTime
                   let arrivalTime = fromMaybe now mbFromArrivalTime
-                  L.setOptionLocal QRSTT.CalledForFare True
+                  -- L.setOptionLocal QRSTT.CalledForFare True
                   ((possibleServiceTiers, availableFares), mbPossibleRoutes) <- JMU.measureLatency (filterAvailableBuses arrivalTime fareRouteDetails integratedBPPConfig fares) ("filterAvailableBuses" <> show vehicleCategory <> " routeDetails: " <> show fareRouteDetails)
-                  L.setOptionLocal QRSTT.CalledForFare False
+                  -- L.setOptionLocal QRSTT.CalledForFare False
                   let mbMinFarePerRoute = selectMinFare availableFares
                   let mbMaxFarePerRoute = selectMaxFare availableFares
                   logDebug $ "all fares: " <> show fares <> "min fare: " <> show mbMinFarePerRoute <> "max fare: " <> show mbMaxFarePerRoute <> "possible service tiers: " <> show possibleServiceTiers <> "available fares: " <> show availableFares
@@ -292,24 +290,9 @@ getFare riderId merchant merchantOperatingCity vehicleCategory routeDetails mbFr
           -- Check for all possible buses available in next hour and just show fares for those buses to avoid confusion
           let startStationCode = (NE.head fareRouteDetails).startStopCode
           let endStationCode = (NE.last fareRouteDetails).endStopCode
-          logDebug $
-            "filterAvailableBuses calling findPossibleRoutes with startStationCode: " <> startStationCode
-              <> " endStationCode: "
-              <> endStationCode
-              <> " arrivalTime: "
-              <> show arrivalTime
-              <> " merchantId: "
-              <> show merchant.id
-              <> " merchantOperatingCityId: "
-              <> show merchantOperatingCity.id
-              <> " mode: "
-              <> show Enums.BUS
-              <> " sendWithoutFares: "
-              <> show True
           (_, possibleRoutes, _) <- JMU.findPossibleRoutes Nothing startStationCode endStationCode arrivalTime integratedBPPConfig merchant.id merchantOperatingCity.id Enums.BUS True
           let possibleServiceTiers = map (.serviceTier) possibleRoutes
           let filteredFares = filter (\fare -> fare.vehicleServiceTier.serviceTierType `elem` possibleServiceTiers) fares
-          logDebug $ "filterAvailableBuses RESULT: possibleRoutes: " <> show possibleRoutes <> " possibleServiceTiers: " <> show possibleServiceTiers <> " total fares: " <> show fares <> " filtered fares: " <> show filteredFares
           return ((Just possibleServiceTiers, filteredFares), Just possibleRoutes)
         _ -> return ((Nothing, fares), Nothing)
 
