@@ -24,11 +24,19 @@ import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
 type API =
-  ( TokenAuth :> "track" :> Capture "routeCode" Kernel.Prelude.Text :> "vehicles"
+  ( TokenAuth :> "track" :> Capture "routeCode" Kernel.Prelude.Text :> "vehicles" :> QueryParam "currentLat" Kernel.Prelude.Double
+      :> QueryParam
+           "currentLon"
+           Kernel.Prelude.Double
       :> QueryParam
            "integratedBppConfigId"
            (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig)
-      :> QueryParam "platformType" Domain.Types.IntegratedBPPConfig.PlatformType
+      :> QueryParam
+           "maxBuses"
+           Kernel.Prelude.Int
+      :> QueryParam
+           "platformType"
+           Domain.Types.IntegratedBPPConfig.PlatformType
       :> QueryParam
            "vehicleType"
            BecknV2.FRFS.Enums.VehicleCategory
@@ -45,9 +53,12 @@ getTrackVehicles ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Prelude.Text ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Double ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Double ->
     Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig) ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
     Kernel.Prelude.Maybe Domain.Types.IntegratedBPPConfig.PlatformType ->
     Kernel.Prelude.Maybe BecknV2.FRFS.Enums.VehicleCategory ->
     Environment.FlowHandler API.Types.UI.TrackRoute.TrackingResp
   )
-getTrackVehicles a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.TrackRoute.getTrackVehicles (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
+getTrackVehicles a8 a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.TrackRoute.getTrackVehicles (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a8) a7 a6 a5 a4 a3 a2 a1

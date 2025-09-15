@@ -388,3 +388,10 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN source_of_service_tier text defaul
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN track_vehicle_key_expiry integer  default 900;
+ALTER TABLE atlas_app.rider_config ADD COLUMN distance_to_nearest_stop_threshold integer  default 200;

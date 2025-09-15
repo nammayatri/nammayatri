@@ -145,6 +145,8 @@ RiderConfig:
     sourceOfServiceTier: ServiceTierSource
     domainRouteCalculationEnabledModes: "Maybe [GeneralVehicleType]"
     upcomingBusThresholdSec: Maybe Seconds
+    trackVehicleKeyExpiry: Maybe Int
+    distanceToNearestStopThreshold: Maybe Int
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
@@ -330,6 +332,8 @@ RiderConfig:
     filterWalkAndUnspecifiedTransitModes: "false"
     upcomingBusThresholdSec: "3600"
     sourceOfServiceTier: "'NANDI'"
+    trackVehicleKeyExpiry: "900"
+    distanceToNearestStopThreshold: "200"
 
   queries:
     findByMerchantOperatingCityId:
