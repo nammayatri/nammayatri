@@ -19,6 +19,7 @@ import qualified Sequelize as Se
 import qualified Storage.Beam.Estimate as Beam
 import qualified Storage.Cac.FarePolicy
 import qualified Storage.Queries.FareParameters
+import qualified Storage.Queries.Transformers.Estimate
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Estimate.Estimate -> m ())
 create tbl = do Kernel.Prelude.whenJust tbl.fareParams Storage.Queries.FareParameters.create; createWithKV tbl
@@ -67,6 +68,12 @@ updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
       Se.Set Beam.currency (Kernel.Prelude.Just currency),
       Se.Set Beam.distanceUnit (Kernel.Prelude.Just distanceUnit),
       Se.Set Beam.dpVersion dpVersion,
+      Se.Set Beam.driverExtraFeeDefaultStepFee (driverExtraFeeBounds <&> (.defaultStepFee)),
+      Se.Set Beam.driverExtraFeeDistanceUnit (driverExtraFeeBounds <&> (.distanceUnit)),
+      Se.Set Beam.driverExtraFeeMaxFee (driverExtraFeeBounds <&> (.maxFee)),
+      Se.Set Beam.driverExtraFeeMinFee (driverExtraFeeBounds <&> (.minFee)),
+      Se.Set Beam.driverExtraFeeStartDistance (driverExtraFeeBounds <&> (.startDistance)),
+      Se.Set Beam.driverExtraFeeStepFee (driverExtraFeeBounds <&> (.stepFee)),
       Se.Set Beam.eligibleForUpgrade (Kernel.Prelude.Just eligibleForUpgrade),
       Se.Set Beam.estimatedDistance estimatedDistance,
       Se.Set Beam.estimatedDuration estimatedDuration,
@@ -121,6 +128,7 @@ instance FromTType' Beam.Estimate Domain.Types.Estimate.Estimate where
             currency = Kernel.Prelude.fromMaybe Kernel.Types.Common.INR currency,
             distanceUnit = Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter distanceUnit,
             dpVersion = dpVersion,
+            driverExtraFeeBounds = Storage.Queries.Transformers.Estimate.mkDriverExtraFeeBounds driverExtraFeeStartDistance driverExtraFeeDistanceUnit driverExtraFeeStepFee driverExtraFeeDefaultStepFee driverExtraFeeMinFee driverExtraFeeMaxFee,
             eligibleForUpgrade = Kernel.Prelude.fromMaybe False eligibleForUpgrade,
             estimatedDistance = estimatedDistance,
             estimatedDuration = estimatedDuration,
@@ -169,6 +177,12 @@ instance ToTType' Beam.Estimate Domain.Types.Estimate.Estimate where
         Beam.currency = Kernel.Prelude.Just currency,
         Beam.distanceUnit = Kernel.Prelude.Just distanceUnit,
         Beam.dpVersion = dpVersion,
+        Beam.driverExtraFeeDefaultStepFee = driverExtraFeeBounds <&> (.defaultStepFee),
+        Beam.driverExtraFeeDistanceUnit = driverExtraFeeBounds <&> (.distanceUnit),
+        Beam.driverExtraFeeMaxFee = driverExtraFeeBounds <&> (.maxFee),
+        Beam.driverExtraFeeMinFee = driverExtraFeeBounds <&> (.minFee),
+        Beam.driverExtraFeeStartDistance = driverExtraFeeBounds <&> (.startDistance),
+        Beam.driverExtraFeeStepFee = driverExtraFeeBounds <&> (.stepFee),
         Beam.eligibleForUpgrade = Kernel.Prelude.Just eligibleForUpgrade,
         Beam.estimatedDistance = estimatedDistance,
         Beam.estimatedDuration = estimatedDuration,

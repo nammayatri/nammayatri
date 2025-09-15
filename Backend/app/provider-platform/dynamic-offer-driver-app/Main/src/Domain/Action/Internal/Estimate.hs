@@ -73,7 +73,8 @@ data BppEstimate = BppEstimate
     tripCategory :: TripCategory,
     updatedAt :: UTCTime,
     vehicleServiceTier :: ServiceTierType,
-    vehicleServiceTierName :: Maybe Text
+    vehicleServiceTierName :: Maybe Text,
+    driverExtraFeeBounds :: Maybe DriverExtraFeeBounds
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 

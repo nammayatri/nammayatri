@@ -668,6 +668,7 @@ library
       Storage.Queries.Transformers.DriverPlan
       Storage.Queries.Transformers.DriverQuote
       Storage.Queries.Transformers.DriverStats
+      Storage.Queries.Transformers.Estimate
       Storage.Queries.Transformers.FleetOwnerInformation
       Storage.Queries.Transformers.Invoice
       Storage.Queries.Transformers.Location

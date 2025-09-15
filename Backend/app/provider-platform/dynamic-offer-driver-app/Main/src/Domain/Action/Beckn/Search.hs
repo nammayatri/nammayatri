@@ -740,6 +740,7 @@ buildEstimate merchantId merchantOperatingCityId currency distanceUnit mbSearchR
         requestId = maybe (Id "") (.id) mbSearchReq,
         vehicleServiceTier = fullFarePolicy.vehicleServiceTier,
         vehicleServiceTierName = Just vehicleServiceTierItem.name,
+        driverExtraFeeBounds = mbDriverExtraFeeBounds,
         tripCategory = fullFarePolicy.tripCategory,
         estimatedDistance = mbDistance,
         estimatedDuration = maybe Nothing (.estimatedDuration) mbSearchReq,
