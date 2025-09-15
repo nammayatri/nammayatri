@@ -270,9 +270,11 @@ bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyO
 buildApiEntityForRideOrJourneyWithCounts :: Id Person.Person -> Maybe Integer -> [SRB.Booking] -> [DJ.Journey] -> Maybe Integer -> Maybe Integer -> Flow ([BookingAPIEntityV2], Int, Int)
 buildApiEntityForRideOrJourneyWithCounts personId mbLimit bookings journeys initialBookingOffset initialJourneyOffset = do
   let limit = maybe maxBound fromIntegral mbLimit
-      (mergedList, bookingOffset, journeyOffset) = mergeWithCounts bookings journeys limit (maybe 0 fromIntegral initialBookingOffset) (maybe 0 fromIntegral initialJourneyOffset) []
+      (mergedList, bookingOffset, journeyOffset) = mergeWithCounts bookings journeys limit 0 0 []
+      finalBookingOffset = bookingOffset + maybe 0 fromIntegral initialBookingOffset
+      finalJourneyOffset = journeyOffset + maybe 0 fromIntegral initialJourneyOffset
   entities <- JMU.measureLatency (buildBookingListV2 personId (reverse mergedList)) "buildBookingListV2 measureLatency: "
-  return (entities, bookingOffset, journeyOffset)
+  return (entities, finalBookingOffset, finalJourneyOffset)
   where
     -- Merge bookings and journeys while respecting the limit and counting each type
     mergeWithCounts :: [SRB.Booking] -> [DJ.Journey] -> Int -> Int -> Int -> [Either SRB.Booking DJ.Journey] -> ([Either SRB.Booking DJ.Journey], Int, Int)
