@@ -22,6 +22,7 @@ data VehicleInfo = VehicleInfo
     nextStop :: Kernel.Prelude.Maybe Domain.Types.RouteStopMapping.RouteStopMapping,
     nextStopTravelDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     nextStopTravelTime :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    routeCode :: Kernel.Prelude.Text,
     upcomingStops :: [SharedLogic.FRFSUtils.UpcomingStop],
     vehicleId :: Kernel.Prelude.Text,
     vehicleInfo :: VehicleInfoForRoute

@@ -136,6 +136,8 @@ RiderConfig:
     refundStatusUpdateInterval: NominalDiffTime
     refundStatusUpdateRetries: Int
     domainRouteCalculationEnabledModes: "Maybe [GeneralVehicleType]"
+    trackVehicleKeyExpiry: Maybe Int
+    distanceToNearestStopThreshold: Maybe Int
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
@@ -312,6 +314,8 @@ RiderConfig:
     initiateFirstMultimodalJourney: "false"
     enableAutoJourneyRefund: "false"
     filterWalkAndUnspecifiedTransitModes: "false"
+    trackVehicleKeyExpiry: "900"
+    distanceToNearestStopThreshold: "200"
 
   queries:
     findByMerchantOperatingCityId:
