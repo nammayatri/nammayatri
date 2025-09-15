@@ -29,7 +29,7 @@ import Data.Array ((!!), null, filter, reverse, elem)
 import Language.Types (STR(..))
 import Data.Lens ((^.))
 import Data.Maybe (Maybe(..), fromMaybe)
-import Helpers.Utils (validateEmail,strLenWithSpecificCharacters, isParentView, emitTerminateApp, getTime,toStringJSON, fetchImage, FetchImageFrom(..),fetchVehicleVariant)
+import Helpers.Utils (validateEmail,strLenWithSpecificCharacters, isParentView, emitTerminateApp, getTime,toStringJSON, fetchImage, FetchImageFrom(..),fetchVehicleVariant, terminateWithPayload, defaultTerminatePayload)
 import JBridge (showDialer, hideKeyboardOnNavigation, differenceBetweenTwoUTC)
 import Engineering.Helpers.Commons (convertUTCtoISC, getCurrentUTC)
 import Log (trackAppActionClick, trackAppEndScreen, trackAppScreenRender, trackAppBackPress, trackAppTextInput, trackAppScreenEvent)
@@ -61,6 +61,7 @@ import Data.Function.Uncurried (runFn2)
 import Locale.Utils
 import Screens.HelpAndSupportScreen.Transformer
 import Screens.HelpAndSupportScreen.ScreenData (HelpAndSupportScreenState)
+import Debug
 
 
 instance showAction :: Show Action where
@@ -253,6 +254,7 @@ eval ReportIssue state = exit $ GoToTripDetails state
 
 eval CallSupport state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_help_and_support_call_click"
+  let _ = spy "VaibhavD : " "CallSupport Got Called, Not popup should be visible."
   continue state{props{isCallConfirmation = true}}
 
 eval (GenericHeaderActionController (GenericHeader.PrefixImgOnClick )) state = continueWithCmd state [do pure $ BackPressed]
@@ -296,7 +298,10 @@ eval (PopupModelActionController (PopUpModal.OnButton2Click)) state = do
   let _ = unsafePerformEffect $ logEvent state.data.logField "ny_user_help_and_support_call_performed"
       supportNumber = RC.getContactSupportNumber (getValueToLocalStore CUSTOMER_LOCATION)
   void $ pure $ showDialer supportNumber true
-  continue state{props{isCallConfirmation = false}}
+  if (isParentView FunctionCall) then do
+    void $ pure $ terminateWithPayload (defaultTerminatePayload { call_support_req = Just true })
+    continue state{props{isCallConfirmation = false}}
+  else continue state{props{isCallConfirmation = false}}
 
 eval (APIFailureActionController (ErrorModal.PrimaryButtonActionController PrimaryButton.OnClick)) state = exit $ GoBack state
 

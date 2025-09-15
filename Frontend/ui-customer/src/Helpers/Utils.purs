@@ -600,6 +600,7 @@ emitTerminateApp screen exitApp = do
   , screen : screen
   , exit_app : exitApp
   , delete_account_req : Nothing
+  , call_support_req : Nothing
   }
 }
 
@@ -612,6 +613,7 @@ defaultTerminatePayload = {
   , screen : Nothing
   , exit_app : true
   , delete_account_req : Nothing
+  , call_support_req : Nothing
   }
 
 terminateWithPayload :: InnerPayload -> Unit
@@ -633,6 +635,7 @@ nudgeRNApp bookingId screen action = runFn3 emitJOSEvent "java" "onEvent" $ enco
   , screen: screen
   , exit_app : true
   , delete_account_req : Nothing
+  , call_support_req : Nothing
   }
 }
 
@@ -725,6 +728,7 @@ triggerRideStatusEvent status amount bookingId screen = do
     , screen : Just screen
     , exit_app : false
     , delete_account_req : Nothing
+    , call_support_req : Nothing
     }
   pure $ runFn3 emitJOSEvent "java" "onEvent" $ encode $ EventPayload {
     event : "process_result"

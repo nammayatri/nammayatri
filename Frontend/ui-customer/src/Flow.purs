@@ -910,6 +910,7 @@ riderRideCompletedScreenFlow = do
                   , screen: Just "RiderRideCompletedScreenState"
                   , exit_app: false
                   , delete_account_req: Nothing
+                  , call_support_req: Nothing
                   }
             }
       (GlobalState globalState) <- getState
