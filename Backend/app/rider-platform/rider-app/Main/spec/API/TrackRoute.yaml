@@ -45,6 +45,9 @@ apis:
         vehicleType: VehicleCategory
         platformType: PlatformType
         integratedBppConfigId: Id IntegratedBPPConfig
+        currentLat: Double
+        currentLon: Double
+        maxBuses: Int
       params:
         routeCode: Text
       response:
