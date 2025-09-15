@@ -28,7 +28,6 @@ import qualified Domain.Types.RouteDetails as RD
 import Domain.Types.RouteStopMapping (RouteStopMapping)
 import Domain.Types.Station
 import Domain.Types.Trip as DTrip
-import qualified EulerHS.Language as L
 import ExternalBPP.CallAPI as CallExternalBPP
 import ExternalBPP.ExternalAPI.CallAPI as CallAPI
 import qualified ExternalBPP.Flow as Flow
@@ -60,7 +59,6 @@ import Storage.CachedQueries.Merchant.MultiModalBus (BusData (..), BusDataWithRo
 import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
-import qualified Storage.CachedQueries.RouteStopTimeTable as QRSTT
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.FRFSSearch as QFRFSSearch
 import qualified Storage.Queries.FRFSTicketBooking as QTBooking
@@ -275,11 +273,11 @@ getFare riderId merchant merchantOperatingCity vehicleCategory serviecType route
                 Right (isFareMandatory, fares) -> do
                   now <- getCurrentTime
                   let arrivalTime = fromMaybe now mbFromArrivalTime
-                  L.setOptionLocal QRSTT.CalledForFare True
+                  -- L.setOptionLocal QRSTT.CalledForFare True
                   (possibleServiceTiers, availableFares) <- case serviecType of
                     Just serviceTier -> pure (Just [serviceTier], fares) -- bypassing as in case of serviceType/serviceTier is passed, we only calculate fare for that type
                     Nothing -> JMU.measureLatency (filterAvailableBuses arrivalTime fareRouteDetails integratedBPPConfig fares) ("filterAvailableBuses" <> show vehicleCategory <> " routeDetails: " <> show fareRouteDetails)
-                  L.setOptionLocal QRSTT.CalledForFare False
+                  -- L.setOptionLocal QRSTT.CalledForFare False
                   let mbMinFarePerRoute = selectMinFare availableFares
                   let mbMaxFarePerRoute = selectMaxFare availableFares
                   logDebug $ "all fares: " <> show fares <> "min fare: " <> show mbMinFarePerRoute <> "max fare: " <> show mbMaxFarePerRoute <> "possible service tiers: " <> show possibleServiceTiers <> "available fares: " <> show availableFares
@@ -308,7 +306,6 @@ getFare riderId merchant merchantOperatingCity vehicleCategory serviecType route
           let possibleServiceTiers = map (.serviceTier) possibleRoutes
           return $ (Just possibleServiceTiers, filter (\fare -> fare.vehicleServiceTier.serviceTierType `elem` possibleServiceTiers) fares)
         _ -> return (Nothing, fares)
-
     selectMinFare :: [FRFSFare] -> Maybe FRFSFare
     selectMinFare [] = Nothing
     selectMinFare fares = Just $ minimumBy (\fare1 fare2 -> compare fare1.price.amount.getHighPrecMoney fare2.price.amount.getHighPrecMoney) fares
