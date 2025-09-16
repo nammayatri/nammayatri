@@ -25,6 +25,7 @@ where
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity)
 import Domain.Types.RiderConfig
 import Kernel.Prelude
+import Kernel.Storage.InMem as IM
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Yudhishthira.Types as LYT
@@ -48,7 +49,7 @@ findByMerchantOperatingCityId ::
   Id MerchantOperatingCity ->
   Maybe [LYT.ConfigVersionMap] ->
   m (Maybe RiderConfig)
-findByMerchantOperatingCityId id mbConfigInExperimentVersions = do
+findByMerchantOperatingCityId id mbConfigInExperimentVersions = IM.withInMemCache ["RC", id.getId, show mbConfigInExperimentVersions] do
   DynamicLogic.findOneConfig (cast id) (LYT.RIDER_CONFIG LYT.RiderConfig) mbConfigInExperimentVersions Nothing (Queries.findByMerchantOperatingCityId id)
 
 clearCache :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m ()
