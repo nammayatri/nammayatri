@@ -103,7 +103,7 @@ getSimpleNearbyBuses merchantOperatingCityId riderConfig req = do
     HashMap.fromList
       <$> mapM
         ( \m -> do
-            frfsServiceTier <- SIBC.fetchFirstIntegratedBPPConfigResult integratedBPPConfigs $ \config -> do
+            frfsServiceTier <- SIBC.fetchFirstIntegratedBPPConfigMaybeResult integratedBPPConfigs $ \config -> do
               CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId m.service_type riderConfig.merchantOperatingCityId config.id
             return (m.vehicle_no, (m.service_type, frfsServiceTier <&> (.shortName)))
         )

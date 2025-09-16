@@ -594,6 +594,7 @@ createEntriesInFareTables merchantId merchantOperatingCityId quote integratedBpp
                   description = "ORDINARY",
                   shortName = show quote.vehicleType,
                   longName = show quote.vehicleType,
+                  integratedBppConfigId,
                   merchantId,
                   merchantOperatingCityId,
                   createdAt = now,
