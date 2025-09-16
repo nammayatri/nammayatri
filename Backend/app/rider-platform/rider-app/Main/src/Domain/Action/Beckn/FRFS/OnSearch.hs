@@ -580,7 +580,7 @@ createEntriesInFareTables merchantId merchantOperatingCityId quote integratedBpp
             updatedAt = now
           }
   (vehicleServiceTierId, vehicleServiceTier) <- do
-    CQVSR.findByServiceTierAndMerchantOperatingCityId Spec.ORDINARY merchantOperatingCityId >>= \case
+    CQVSR.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId Spec.ORDINARY merchantOperatingCityId integratedBppConfigId >>= \case
       Just vsc -> return (vsc.id, Nothing)
       Nothing -> do
         id <- generateGUID

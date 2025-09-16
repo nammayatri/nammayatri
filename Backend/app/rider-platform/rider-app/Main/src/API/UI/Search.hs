@@ -280,25 +280,25 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
   let currentLocation = fmap latLongToLocationV2 req.currentLocation
   mbIntegratedBPPConfig <- SIBC.findMaybeIntegratedBPPConfig Nothing merchantOperatingCityId vehicleCategory (fromMaybe DIBC.MULTIMODAL req.platformType)
   let mode = castVehicleCategoryToGeneralVehicleType vehicleCategory
-  singleModeVehicleNumber <-
+  routeLiveInfo <-
     case req' of
       DSearch.PTSearch ptSearchDetails -> do
         case (mbIntegratedBPPConfig, ptSearchDetails.vehicleNumber, ptSearchDetails.routeCode) of
           (Just integratedBPPConfig, Just vehicleNumber, Just routeCode) -> do
-            mbRouteCode <- JMU.getRouteCodeFromVehicleNumber [integratedBPPConfig] vehicleNumber
+            mbRouteLiveInfo <- JMU.getVehicleLiveRouteInfo [integratedBPPConfig] vehicleNumber
             return $
               maybe
                 Nothing
-                ( \vehicleRouteCode ->
-                    if vehicleRouteCode == routeCode
-                      then Just routeCode
+                ( \routeLiveInfo ->
+                    if routeLiveInfo.routeCode == routeCode
+                      then Just routeLiveInfo
                       else Nothing
                 )
-                mbRouteCode
+                mbRouteLiveInfo
           _ -> return Nothing
       _ -> return Nothing
   let result
-        | vehicleCategory == BecknV2.OnDemand.Enums.BUS && riderConfig.busScanRouteCalculationEnabledModes == Just True && isJust searchRequest.routeCode && isJust searchRequest.originStopCode && isJust searchRequest.destinationStopCode && isJust singleModeVehicleNumber = do
+        | vehicleCategory == BecknV2.OnDemand.Enums.BUS && riderConfig.busScanRouteCalculationEnabledModes == Just True && isJust searchRequest.routeCode && isJust searchRequest.originStopCode && isJust searchRequest.destinationStopCode && isJust routeLiveInfo = do
           JMU.measureLatency (JMU.buildOneWayBusScanRouteDetails (fromJust searchRequest.routeCode) (fromJust searchRequest.originStopCode) (fromJust searchRequest.destinationStopCode) mbIntegratedBPPConfig >>= (\x -> return (x, []))) "buildOneWayBusScanRouteDetails" -- TODO: make this syntax better in coming future if you get time and 🔥 CAUTION 🔥 never let this fromJust be there without its prechecked condition in any case.
         | mode `elem` (fromMaybe [] riderConfig.domainRouteCalculationEnabledModes) = do
           case vehicleCategory of
@@ -393,7 +393,7 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
             filteredRoutes <- JM.filterTransitRoutes riderConfig finalRoutes
             return (warningType, MInterface.MultiModalResponse {routes = filteredRoutes})
   when (not (null restOfViaPoints) && isJust mbIntegratedBPPConfig) $ do
-    fork "Process rest of single mode routes" $ processSingleModeRoutes restOfViaPoints userPreferences mbIntegratedBPPConfig (getPreliminaryLeg now currentLocation) singleModeVehicleNumber
+    fork "Process rest of single mode routes" $ processSingleModeRoutes restOfViaPoints userPreferences mbIntegratedBPPConfig (getPreliminaryLeg now currentLocation) routeLiveInfo
   when (null restOfViaPoints) $ cacheAllRoutesLoadedKey searchRequest.id.getId True
 
   let (indexedRoutesToProcess, showMultimodalWarningForFirstJourney) = getIndexedRoutesAndWarning userPreferences otpResponse
@@ -401,19 +401,19 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
   -- This function should be called only once. calling this multiple times will result in suburban booking failure.
   mbCrisSdkToken <- getCrisSdkToken merchantOperatingCityId indexedRoutesToProcess
 
-  multimodalIntiateHelper singleModeWarningType otpResponse userPreferences indexedRoutesToProcess showMultimodalWarningForFirstJourney mbCrisSdkToken True singleModeVehicleNumber
+  multimodalIntiateHelper singleModeWarningType otpResponse userPreferences indexedRoutesToProcess showMultimodalWarningForFirstJourney mbCrisSdkToken True routeLiveInfo
   where
-    processSingleModeRoutes restOfViaPoints userPreferences mbIntegratedBPPConfig preliminaryLeg singleModeVehicleNumber = do
+    processSingleModeRoutes restOfViaPoints userPreferences mbIntegratedBPPConfig preliminaryLeg routeLiveInfo = do
       (restOfRoutes, _) <- JMU.getSubwayValidRoutes restOfViaPoints preliminaryLeg (fromJust mbIntegratedBPPConfig) searchRequest.merchantId searchRequest.merchantOperatingCityId (fromMaybe BecknV2.OnDemand.Enums.BUS searchRequest.vehicleCategory) (castVehicleCategoryToGeneralVehicleType (fromMaybe BecknV2.OnDemand.Enums.BUS searchRequest.vehicleCategory)) True
       cacheAllRoutesLoadedKey searchRequest.id.getId True
       when (not (null restOfRoutes)) $
         do
           let multimodalResponse = MInterface.MultiModalResponse {routes = restOfRoutes}
               (indexedRoutesToProcess, showMultimodalWarningForFirstJourney) = getIndexedRoutesAndWarning userPreferences multimodalResponse
-          void $ multimodalIntiateHelper Nothing multimodalResponse userPreferences indexedRoutesToProcess showMultimodalWarningForFirstJourney Nothing False singleModeVehicleNumber
+          void $ multimodalIntiateHelper Nothing multimodalResponse userPreferences indexedRoutesToProcess showMultimodalWarningForFirstJourney Nothing False routeLiveInfo
 
-    multimodalIntiateHelper singleModeWarningType otpResponse userPreferences indexedRoutesToProcess showMultimodalWarningForFirstJourney mbCrisSdkToken isFirstJourneyReq singleModeVehicleNumber = do
-      mbJourneyWithIndex <- JMU.measureLatency (go indexedRoutesToProcess userPreferences singleModeVehicleNumber) "Multimodal Init Time" -- process until first journey is found
+    multimodalIntiateHelper singleModeWarningType otpResponse userPreferences indexedRoutesToProcess showMultimodalWarningForFirstJourney mbCrisSdkToken isFirstJourneyReq routeLiveInfo = do
+      mbJourneyWithIndex <- JMU.measureLatency (go indexedRoutesToProcess userPreferences routeLiveInfo) "Multimodal Init Time" -- process until first journey is found
       QSearchRequest.updateHasMultimodalSearch (Just True) searchRequest.id
 
       journeys <- JMU.measureLatency (if isFirstJourneyReq then DQuote.getJourneys searchRequest (Just True) else return Nothing) "getJourneys Multimodal Init time"
@@ -432,7 +432,7 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
                     else do
                       res <- DMC.postMultimodalInitiate (Just searchRequest.riderId, searchRequest.merchantId) firstJourney.id
                       return $ Just res
-                fork "Rest of the routes Init" $ processRestOfRoutes [x | (j, x) <- zip [0 ..] otpResponse.routes, j /= idx] userPreferences singleModeVehicleNumber
+                fork "Rest of the routes Init" $ processRestOfRoutes [x | (j, x) <- zip [0 ..] otpResponse.routes, j /= idx] userPreferences routeLiveInfo
                 return resp
               Nothing -> do
                 QSearchRequest.updateAllJourneysLoaded (Just True) searchRequest.id
@@ -440,9 +440,9 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
           else do
             case mbJourneyWithIndex of
               Just (idx, _) -> do
-                fork "Process all routes " $ processRestOfRoutes [x | (j, x) <- indexedRoutesToProcess, j /= idx] userPreferences singleModeVehicleNumber
+                fork "Process all routes " $ processRestOfRoutes [x | (j, x) <- indexedRoutesToProcess, j /= idx] userPreferences routeLiveInfo
               Nothing -> do
-                fork "Process all routes " $ processRestOfRoutes (map snd indexedRoutesToProcess) userPreferences singleModeVehicleNumber
+                fork "Process all routes " $ processRestOfRoutes (map snd indexedRoutesToProcess) userPreferences routeLiveInfo
             return Nothing
 
       return $
@@ -462,16 +462,16 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
                     then Just NoUserPreferredFirstJourney
                     else Nothing
           }
-    go :: [(Int, MultiModalTypes.MultiModalRoute)] -> ApiTypes.MultimodalUserPreferences -> Maybe Text -> Flow (Maybe (Int, Journey.Journey))
+    go :: [(Int, MultiModalTypes.MultiModalRoute)] -> ApiTypes.MultimodalUserPreferences -> Maybe JMU.VehicleLiveRouteInfo -> Flow (Maybe (Int, Journey.Journey))
     go [] _ _ = return Nothing
-    go ((idx, r) : routes) userPreferences singleModeVehicleNumber = do
-      mbResult <- processRoute r userPreferences singleModeVehicleNumber
+    go ((idx, r) : routes) userPreferences routeLiveInfo = do
+      mbResult <- processRoute r userPreferences routeLiveInfo
       case mbResult of
-        Nothing -> go routes userPreferences singleModeVehicleNumber
+        Nothing -> go routes userPreferences routeLiveInfo
         Just journey -> return $ Just (idx, journey)
 
-    processRoute :: MultiModalTypes.MultiModalRoute -> ApiTypes.MultimodalUserPreferences -> Maybe Text -> Flow (Maybe Journey.Journey)
-    processRoute r userPreferences singleModeVehicleNumber = do
+    processRoute :: MultiModalTypes.MultiModalRoute -> ApiTypes.MultimodalUserPreferences -> Maybe JMU.VehicleLiveRouteInfo -> Flow (Maybe Journey.Journey)
+    processRoute r userPreferences routeLiveInfo = do
       updatedRoute <- updateRouteWithLegDurations r
       let initReq =
             JMTypes.JourneyInitData
@@ -480,7 +480,7 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
                 merchantOperatingCityId = searchRequest.merchantOperatingCityId,
                 personId = searchRequest.riderId,
                 legs = updatedRoute.legs,
-                singleModeVehicleNumber = singleModeVehicleNumber,
+                routeLiveInfo = routeLiveInfo,
                 estimatedDistance = updatedRoute.distance,
                 estimatedDuration = updatedRoute.duration,
                 startTime = updatedRoute.startTime,
@@ -577,9 +577,9 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
                   routeDetails = updatedRouteDetails
                 }
 
-    processRestOfRoutes :: [MultiModalTypes.MultiModalRoute] -> ApiTypes.MultimodalUserPreferences -> Maybe Text -> Flow ()
-    processRestOfRoutes routes userPreferences singleModeVehicleNumber = do
-      forM_ routes $ \route' -> processRoute route' userPreferences singleModeVehicleNumber
+    processRestOfRoutes :: [MultiModalTypes.MultiModalRoute] -> ApiTypes.MultimodalUserPreferences -> Maybe JMU.VehicleLiveRouteInfo -> Flow ()
+    processRestOfRoutes routes userPreferences routeLiveInfo = do
+      forM_ routes $ \route' -> processRoute route' userPreferences routeLiveInfo
       getAllRoutesLoadedKey searchRequest.id.getId >>= \case
         True -> QSearchRequest.updateAllJourneysLoaded (Just True) searchRequest.id
         False -> do

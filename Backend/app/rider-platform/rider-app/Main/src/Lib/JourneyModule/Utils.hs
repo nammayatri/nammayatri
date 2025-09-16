@@ -300,7 +300,7 @@ fetchLiveBusTimings mbAvailableServiceTiers routeCodes stopCode currentTime inte
           <$> mapM
             ( \serviceTierTypeString -> do
                 let serviceTierType = mapToServiceTierType serviceTierTypeString
-                frfsServiceTier <- CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityId serviceTierType mocid
+                frfsServiceTier <- CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId serviceTierType mocid integratedBppConfig.id
                 return (serviceTierTypeString, frfsServiceTier <&> (.shortName))
             )
             (nub $ map (\(_, mapping) -> mapping) validBuses)

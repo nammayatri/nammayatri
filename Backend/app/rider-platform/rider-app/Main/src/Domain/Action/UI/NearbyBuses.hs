@@ -103,7 +103,8 @@ getSimpleNearbyBuses merchantOperatingCityId riderConfig req = do
     HashMap.fromList
       <$> mapM
         ( \m -> do
-            frfsServiceTier <- CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityId m.service_type riderConfig.merchantOperatingCityId
+            frfsServiceTier <- SIBC.fetchFirstIntegratedBPPConfigResult integratedBPPConfigs $ \config -> do
+              CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId m.service_type riderConfig.merchantOperatingCityId config.id
             return (m.vehicle_no, (m.service_type, frfsServiceTier <&> (.shortName)))
         )
         successfulMappings
@@ -236,7 +237,7 @@ getRecentRides person req = do
                 Kernel.Prelude.listToMaybe
                   <$> ( SIBC.fetchFirstIntegratedBPPConfigResult integratedBPPConfigs $ \integratedBPPConfig -> do
                           let fareRouteDetails = fromList [CallAPI.BasicRouteDetail {routeCode, startStopCode = fromStopCode, endStopCode = toStopCode}]
-                          snd <$> Flow.getFares person.id merchant merchantOperatingCity integratedBPPConfig becknConfig fareRouteDetails req.vehicleType
+                          snd <$> Flow.getFares person.id merchant merchantOperatingCity integratedBPPConfig becknConfig fareRouteDetails req.vehicleType Nothing
                       )
               return $
                 mbFare <&> \fare -> do

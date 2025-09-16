@@ -6,6 +6,7 @@ module Storage.Queries.FRFSVehicleServiceTier where
 
 import qualified BecknV2.FRFS.Enums
 import qualified Domain.Types.FRFSVehicleServiceTier
+import qualified Domain.Types.IntegratedBPPConfig
 import qualified Domain.Types.MerchantOperatingCity
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -39,14 +40,15 @@ findByProviderCode providerCode merchantOperatingCityId = do
         ]
     ]
 
-findByServiceTierAndMerchantOperatingCityId ::
+findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (BecknV2.FRFS.Enums.ServiceTierType -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> m (Maybe Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier))
-findByServiceTierAndMerchantOperatingCityId _type merchantOperatingCityId = do
+  (BecknV2.FRFS.Enums.ServiceTierType -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m (Maybe Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier))
+findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId _type merchantOperatingCityId integratedBppConfigId = do
   findOneWithKV
     [ Se.And
         [ Se.Is Beam._type $ Se.Eq _type,
-          Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
+          Se.Is Beam.integratedBppConfigId $ Se.Eq (Kernel.Types.Id.getId integratedBppConfigId)
         ]
     ]
 
@@ -61,6 +63,7 @@ updateByPrimaryKey (Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier {
   updateWithKV
     [ Se.Set Beam._type _type,
       Se.Set Beam.description description,
+      Se.Set Beam.integratedBppConfigId (Kernel.Types.Id.getId integratedBppConfigId),
       Se.Set Beam.longName longName,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
@@ -79,6 +82,7 @@ instance FromTType' Beam.FRFSVehicleServiceTier Domain.Types.FRFSVehicleServiceT
           { _type = _type,
             description = description,
             id = Kernel.Types.Id.Id id,
+            integratedBppConfigId = Kernel.Types.Id.Id integratedBppConfigId,
             longName = longName,
             merchantId = Kernel.Types.Id.Id merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id merchantOperatingCityId,
@@ -94,6 +98,7 @@ instance ToTType' Beam.FRFSVehicleServiceTier Domain.Types.FRFSVehicleServiceTie
       { Beam._type = _type,
         Beam.description = description,
         Beam.id = Kernel.Types.Id.getId id,
+        Beam.integratedBppConfigId = Kernel.Types.Id.getId integratedBppConfigId,
         Beam.longName = longName,
         Beam.merchantId = Kernel.Types.Id.getId merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId merchantOperatingCityId,

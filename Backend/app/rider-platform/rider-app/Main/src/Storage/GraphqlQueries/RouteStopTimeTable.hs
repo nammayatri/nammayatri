@@ -125,7 +125,7 @@ parseToRouteStopTimeTable integratedBPPConfigId mid mocid vehicleCategory entry 
             }
         ]
     _ -> do
-      frfsServiceTier <- CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityId entry.serviceTierType mocid
+      frfsServiceTier <- CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId entry.serviceTierType mocid integratedBPPConfigId
       pure $
         [ RouteStopTimeTable
             { integratedBppConfigId = integratedBPPConfigId,

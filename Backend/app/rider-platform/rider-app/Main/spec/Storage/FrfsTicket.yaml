@@ -746,6 +746,10 @@ FRFSRouteFareProduct:
       kvFunction: findAllWithKV
       where:
         and: [routeCode, integratedBppConfigId]
+    findByRouteCodeAndVehicleServiceTierId:
+      kvFunction: findOneWithKV
+      where:
+        and: [routeCode, vehicleServiceTierId]
     findAllByIntegratedBPPConfigId:
       kvFunction: findAllWithKV
       where:
@@ -865,6 +869,10 @@ FRFSGtfsStageFare:
     findAllByVehicleServiceTierId:
       kvFunction: findAllWithKV
       where: vehicleServiceTierId
+    findOneByVehicleTypeAndStageAndMerchantOperatingCityIdAndVehicleServiceTierId:
+      kvFunction: findOneWithKV
+      where:
+        and: [vehicleType, stage, merchantOperatingCityId, vehicleServiceTierId]
     findAllByVehicleTypeAndStageAndMerchantOperatingCityId:
       kvFunction: findAllWithKV
       where:
@@ -928,19 +936,22 @@ FRFSVehicleServiceTier:
     longName: Text
     description: Text
     merchantId: Id Merchant
+    integratedBppConfigId: Id IntegratedBPPConfig
     merchantOperatingCityId: Id MerchantOperatingCity
   constraints:
     id: PrimaryKey
   cachedQueries:
-    findByServiceTierAndMerchantOperatingCityId:
+    findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId:
       keyParams:
         - _type
         - merchantOperatingCityId
+        - integratedBppConfigId
       returnType: One
-      dbQuery: findByServiceTierAndMerchantOperatingCityId
+      dbQuery: findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId
       dbQueryParams:
         - _type
         - merchantOperatingCityId
+        - integratedBppConfigId
   queries:
     findById:
       kvFunction: findOneWithKV
@@ -949,10 +960,10 @@ FRFSVehicleServiceTier:
       kvFunction: findAllWithKV
       where:
         and: [providerCode, merchantOperatingCityId]
-    findByServiceTierAndMerchantOperatingCityId:
+    findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId:
       kvFunction: findOneWithKV
       where:
-        and: [_type,merchantOperatingCityId]
+        and: [_type, merchantOperatingCityId, integratedBppConfigId]
 
 RouteTripMapping:
   tableName: route_trip_mapping

@@ -25,6 +25,7 @@ import Lib.JourneyLeg.Types.Taxi
 import Lib.JourneyLeg.Types.Walk
 import Lib.JourneyLeg.Walk ()
 import qualified Lib.JourneyModule.Types as JL
+import qualified Lib.JourneyModule.Utils as JMU
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 
@@ -34,10 +35,11 @@ getFare ::
   Id DP.Person ->
   Id DM.Merchant ->
   Id DMOC.MerchantOperatingCity ->
+  Maybe JMU.VehicleLiveRouteInfo ->
   EMInterface.MultiModalLeg ->
   DTrip.MultimodalTravelMode ->
   m (Bool, Maybe JL.GetFareResponse)
-getFare fromArrivalTime riderId merchantId merchantOperatingCityId leg = \case
+getFare fromArrivalTime riderId merchantId merchantOperatingCityId mbRouteLiveInfo leg = \case
   DTrip.Taxi -> do
     getFareReq :: TaxiLegRequest <- mkTaxiGetFareReq
     JL.getFare getFareReq
@@ -86,6 +88,7 @@ getFare fromArrivalTime riderId merchantId merchantOperatingCityId leg = \case
                   { startLocation = leg.startLocation.latLng,
                     endLocation = leg.endLocation.latLng,
                     agencyGtfsId = leg.agency >>= (.gtfsId),
+                    serviceType = mbRouteLiveInfo <&> (.serviceType),
                     ..
                   }
 
