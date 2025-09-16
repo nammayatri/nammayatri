@@ -948,7 +948,7 @@ getCongestionChargeMultiplierFromModel' timeDiffFromUtc (Just fromLocation) (Jus
                           smartTipReason = Nothing,
                           congestionChargeMultiplier = Nothing,
                           congestionChargeData = FarePolicyD.CongestionChargeData {..},
-                          driverExtraFeeBounds = Nothing,
+                          driverExtraFeeBounds = result.driverExtraFeeBounds,
                           ..
                         }
             A.Error err -> do
