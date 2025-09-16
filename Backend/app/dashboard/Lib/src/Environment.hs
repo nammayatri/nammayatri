@@ -21,6 +21,7 @@ import Kernel.External.Encryption (EncTools)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis (HedisCfg, HedisEnv, connectHedis, connectHedisCluster, disconnectHedis)
+import qualified Kernel.Storage.InMem as IM
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Tools.Slack.Internal
 import Kernel.Types.CacheFlow
@@ -75,7 +76,8 @@ data AppCfg = AppCfg
     kafkaProducerCfg :: KafkaProducerCfg,
     kvConfigUpdateFrequency :: Int,
     passwordExpiryDays :: Maybe Int,
-    enforceStrongPasswordPolicy :: Bool
+    enforceStrongPasswordPolicy :: Bool,
+    inMemConfig :: InMemConfig
   }
   deriving (Generic, FromDhall)
 
@@ -123,7 +125,8 @@ data AppEnv = AppEnv
     kafkaProducerForART :: Maybe KafkaProducerTools,
     passettoContext :: PassettoContext,
     passwordExpiryDays :: Maybe Int,
-    enforceStrongPasswordPolicy :: Bool
+    enforceStrongPasswordPolicy :: Bool,
+    inMemEnv :: InMemEnv
   }
   deriving (Generic)
 
@@ -157,6 +160,7 @@ buildAppEnv authTokenCacheKeyPrefix AppCfg {..} = do
   let internalEndPointHashMap = HM.fromList $ M.toList internalEndPointMap
   cacAclMapRaw <- fromMaybe (error "AUTH_MAP not found in Env !!!!") <$> lookupEnv "AUTH_MAP"
   let cacAclMap = fromMaybe (error "Unable to Parse AUTH_MAP of CAC") (readMaybe cacAclMapRaw :: Maybe [(String, [(String, String)])])
+  inMemEnv <- IM.setupInMemEnv inMemConfig
   return $ AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()

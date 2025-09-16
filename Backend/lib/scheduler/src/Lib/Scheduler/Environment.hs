@@ -11,6 +11,7 @@
 
  the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
 -}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Lib.Scheduler.Environment where
 
@@ -70,7 +71,8 @@ data SchedulerConfig = SchedulerConfig
     enableRedisLatencyLogging :: Bool,
     enablePrometheusMetricLogging :: Bool,
     cacConfig :: CacConfig,
-    kafkaProducerCfg :: KafkaProducerCfg
+    kafkaProducerCfg :: KafkaProducerCfg,
+    inMemConfig :: InMemConfig
   }
   deriving (Generic, FromDhall)
 
@@ -112,7 +114,8 @@ data SchedulerEnv = SchedulerEnv
     requestId :: Maybe Text,
     shouldLogRequestId :: Bool,
     cacConfig :: CacConfig,
-    kafkaProducerForART :: Maybe KafkaProducerTools
+    kafkaProducerForART :: Maybe KafkaProducerTools,
+    inMemEnv :: InMemEnv
   }
   deriving (Generic)
 

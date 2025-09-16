@@ -47,6 +47,7 @@ import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis as Redis hiding (ttl)
 import Kernel.Storage.Hedis.AppPrefixes (riderAppPrefix)
+import qualified Kernel.Storage.InMem as IM
 import Kernel.Types.App
 import qualified Kernel.Types.Beckn.Domain as Domain
 import Kernel.Types.Cache
@@ -167,7 +168,8 @@ data AppCfg = AppCfg
     nammayatriRegistryConfig :: NyRegistry.RegistryConfig,
     nearByDriverAPIRateLimitOptions :: APIRateLimitOptions,
     selfBaseUrl :: BaseUrl,
-    tsServiceConfig :: CPT.TSServiceConfig
+    tsServiceConfig :: CPT.TSServiceConfig,
+    inMemConfig :: CF.InMemConfig
   }
   deriving (Generic, FromDhall)
 
@@ -268,7 +270,8 @@ data AppEnv = AppEnv
     nammayatriRegistryConfig :: NyRegistry.RegistryConfig,
     nearByDriverAPIRateLimitOptions :: APIRateLimitOptions,
     selfBaseUrl :: BaseUrl,
-    tsServiceConfig :: CPT.TSServiceConfig
+    tsServiceConfig :: CPT.TSServiceConfig,
+    inMemEnv :: CF.InMemEnv
   }
   deriving (Generic)
 
@@ -321,6 +324,7 @@ buildAppEnv cfg@AppCfg {..} = do
   let serviceClickhouseCfg = riderClickhouseCfg
   let ondcTokenHashMap = HM.fromList $ M.toList ondcTokenMap
   ltsHedisEnv <- connectHedis ltsRedis identity
+  inMemEnv <- IM.setupInMemEnv inMemConfig
   return AppEnv {minTripDistanceForReferralCfg = convertHighPrecMetersToDistance Meter <$> minTripDistanceForReferralCfg, ..}
 
 releaseAppEnv :: AppEnv -> IO ()

@@ -3,7 +3,6 @@ module Domain.Action.UI.NearbyBuses (postNearbyBusBooking, getNextVehicleDetails
 import qualified API.Types.UI.NearbyBuses
 import qualified BecknV2.FRFS.Enums as Spe
 import qualified BecknV2.OnDemand.Enums
-import qualified Data.HashMap.Strict as HM
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map as M
 import qualified Data.Set as Set
@@ -82,7 +81,7 @@ getSimpleNearbyBuses :: Id MerchantOperatingCity -> DomainRiderConfig.RiderConfi
 getSimpleNearbyBuses merchantOperatingCityId riderConfig req = do
   buses <- getNearbyBusesFRFS (Maps.LatLong req.userLat req.userLon) riderConfig
   logDebug $ "Nearby buses: " <> show buses
-  let busesWithMostMatchingRouteStates = mapMaybe (\bus -> (bus,) <$> keepHighestPrecisionRouteState bus.routes_info) buses
+  let busesWithMostMatchingRouteStates = mapMaybe (\bus -> (bus,) <$> sortOnRouteMatchConfidence bus.routes_info) buses
   logDebug $ "Buses with most matching route states: " <> show busesWithMostMatchingRouteStates
   logDebug $ "Number of nearby buses: " <> show (length buses)
 
@@ -126,20 +125,10 @@ getSimpleNearbyBuses merchantOperatingCityId riderConfig req = do
       )
       busesWithMostMatchingRouteStates
   where
-    keepHighestPrecisionRouteState :: Maybe (M.Map CQMMB.BusRouteId CQMMB.BusRouteInfo) -> Maybe (CQMMB.BusRouteId, CQMMB.BusRouteInfo)
-    keepHighestPrecisionRouteState mbRouteInfo = do
+    sortOnRouteMatchConfidence :: Maybe (M.Map CQMMB.BusRouteId CQMMB.BusRouteInfo) -> Maybe (CQMMB.BusRouteId, CQMMB.BusRouteInfo)
+    sortOnRouteMatchConfidence mbRouteInfo = do
       let routeInfoList = M.toList (fromMaybe (M.empty) mbRouteInfo)
-      Kernel.Prelude.listToMaybe $ sortOn (\(_, a) -> fromMaybe 0 (HM.lookup a.route_state routeStateHierarchy)) routeInfoList
-
-    routeStateHierarchy :: HM.HashMap CQMMB.RouteState Int
-    routeStateHierarchy =
-      HM.fromList
-        [ (CQMMB.ConfirmedHigh, 1),
-          (CQMMB.ConfirmedMed, 2),
-          (CQMMB.Alternate, 3),
-          (CQMMB.All, 4),
-          (CQMMB.Schedule, 5)
-        ]
+      Kernel.Prelude.listToMaybe $ sortOn (\(_, a) -> a.route_state) routeInfoList
 
 -- getNearbyBuses :: Id MerchantOperatingCity -> Double -> API.Types.UI.NearbyBuses.NearbyBusesRequest -> Environment.Flow [[API.Types.UI.NearbyBuses.NearbyBus]]
 -- getNearbyBuses merchantOperatingCityId nearbyDriverSearchRadius req = do

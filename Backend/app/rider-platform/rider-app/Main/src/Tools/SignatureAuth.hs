@@ -101,6 +101,7 @@ instance
     HasField "enablePrometheusMetricLogging" r Bool,
     HasField "enableRedisLatencyLogging" r Bool,
     CF.HasCacConfig r,
+    CF.HasInMemEnv r,
     HasARTFlow r,
     HasCoreMetrics r,
     HasCacheConfig r

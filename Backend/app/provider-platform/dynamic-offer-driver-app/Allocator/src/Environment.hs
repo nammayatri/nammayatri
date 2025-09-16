@@ -34,9 +34,11 @@ import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis (HedisEnv, connectHedis, connectHedisCluster, disconnectHedis)
+import qualified Kernel.Storage.InMem as IM
 import Kernel.Streaming.Kafka.Commons
 import Kernel.Streaming.Kafka.Producer.Types
 import Kernel.Types.Base64 (Base64)
+import qualified Kernel.Types.CacheFlow as CF
 import Kernel.Types.Common
 import Kernel.Types.Flow
 import Kernel.Utils.App (lookupDeploymentVersion)
@@ -120,7 +122,8 @@ data HandlerEnv = HandlerEnv
     broadcastMessageTopic :: KafkaTopic,
     selfBaseUrl :: BaseUrl,
     appBackendBapInternal :: AppBackendBapInternal,
-    mlPricingInternal :: MLPricingInternal
+    mlPricingInternal :: MLPricingInternal,
+    inMemEnv :: CF.InMemEnv
   }
   deriving (Generic)
 
@@ -158,6 +161,7 @@ buildHandlerEnv HandlerCfg {..} = do
   let searchRequestExpirationSeconds' = fromIntegral appCfg.searchRequestExpirationSeconds
       serviceClickhouseCfg = driverClickhouseCfg
       searchRequestExpirationSecondsForMultimodal' = fromIntegral appCfg.searchRequestExpirationSecondsForMultimodal
+  inMemEnv <- IM.setupInMemEnv inMemConfig
   return HandlerEnv {modelNamesHashMap = HMS.fromList $ M.toList modelNamesMap, searchRequestExpirationSeconds = searchRequestExpirationSeconds', searchRequestExpirationSecondsForMultimodal = searchRequestExpirationSecondsForMultimodal', ..}
 
 releaseHandlerEnv :: HandlerEnv -> IO ()

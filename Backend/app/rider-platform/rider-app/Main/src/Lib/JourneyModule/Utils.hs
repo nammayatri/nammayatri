@@ -38,6 +38,7 @@ import Kernel.Prelude
 import Kernel.Randomizer
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Hedis
+import qualified Kernel.Storage.InMem as IM
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Error
@@ -62,6 +63,7 @@ import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RecentLocation as SQRL
 import qualified Storage.Queries.VehicleRouteMapping as QVehicleRouteMapping
+import System.Environment (lookupEnv)
 import Tools.Maps (LatLong (..))
 import qualified Tools.Maps as Maps
 import qualified Tools.Payment as TPayment
@@ -259,7 +261,7 @@ fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid moci
         case vrMapping of
           Just mapping -> return $ Just ((vehicleNumber, etaData), mapping.schedule_no)
           Nothing -> do
-            mbMapping <- listToMaybe <$> QVehicleRouteMapping.findByVehicleNo vehicleNumber
+            mbMapping <- listToMaybe <$> IM.withInMemCache [vehicleNumber] (QVehicleRouteMapping.findByVehicleNo vehicleNumber)
             case mbMapping of
               Just mapping -> return $ Just ((vehicleNumber, etaData), mapping.typeOfService)
               Nothing -> return Nothing
@@ -275,7 +277,7 @@ fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid moci
                 frfsServiceTier <- CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityId serviceTierType mocid
                 return (serviceTierTypeString, frfsServiceTier <&> (.shortName))
             )
-            (map (\(_, mapping) -> mapping) validBuses)
+            (nub $ map (\(_, mapping) -> mapping) validBuses)
       let baseStopTimes = map (createStopTime serviceTierToShortNameMapping) validBuses
       return baseStopTimes
       where
@@ -445,7 +447,8 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
           routeStopTimings
 
   -- Group by service tier
-  let groupedByTier = groupBy (\a b -> a.serviceTierType == b.serviceTierType) $ sortBy (comparing (.serviceTierType)) routeStopTimings
+  maxBusTimingPerTier <- liftIO $ fromMaybe 3 . (>>= readMaybe) <$> lookupEnv "BUS_TIER_MAX_PER_TIER"
+  let groupedByTier = (if vc == Enums.BUS then map (take maxBusTimingPerTier) else (\a -> a)) $ groupBy (\a b -> a.serviceTierType == b.serviceTierType) $ sortBy (comparing (.serviceTierType)) routeStopTimings
   logDebug $ "groupedByTier: " <> show groupedByTier <> " sortedTimings: " <> show sortedTimings <> " routeStopTimings: " <> show routeStopTimings
   -- For each service tier, collect route information
   results <- forM groupedByTier $ \timingsForTier -> do
