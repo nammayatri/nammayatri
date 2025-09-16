@@ -30,6 +30,7 @@ data RiderConfig = RiderConfig
     bookingSyncStatusCallSecondsDiffThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     boostSearchPreSelectionServiceTierConfig :: [Domain.Types.Extra.RiderConfig.VehicleServiceTierOrderConfig],
     busBookingAllowed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    busScanRouteCalculationEnabledModes :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     busTrackingConfig :: Kernel.Prelude.Maybe Domain.Types.RiderConfig.BusTrackingConfig,
     cancellationPaymentDelay :: Kernel.Prelude.NominalDiffTime,
     collectAutoCompleteData :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,

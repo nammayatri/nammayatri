@@ -373,3 +373,8 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN domain_route_calculation_enabled_m
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN track_vehicle_key_expiry integer  default 900;
 ALTER TABLE atlas_app.rider_config ADD COLUMN distance_to_nearest_stop_threshold integer  default 200;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN bus_scan_route_calculation_enabled_modes boolean  default true;
