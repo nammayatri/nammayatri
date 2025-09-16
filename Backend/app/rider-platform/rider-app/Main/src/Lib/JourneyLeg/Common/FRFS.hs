@@ -7,7 +7,9 @@ import BecknV2.FRFS.Utils
 import qualified BecknV2.OnDemand.Enums as Enums
 import Control.Applicative ((<|>))
 import qualified Data.HashMap.Strict as HM
+import qualified Data.List as List
 import qualified Data.List.NonEmpty as NE
+import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import qualified Data.Time as Time
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
@@ -300,11 +302,64 @@ getFare riderId merchant merchantOperatingCity vehicleCategory routeDetails mbFr
           -- Check for all possible buses available in next hour and just show fares for those buses to avoid confusion
           let startStationCode = (NE.head fareRouteDetails).startStopCode
           let endStationCode = (NE.last fareRouteDetails).endStopCode
-          (_, possibleRoutes, _) <- JMU.findPossibleRoutes Nothing startStationCode endStationCode arrivalTime integratedBPPConfig merchant.id merchantOperatingCity.id Enums.BUS True False
-          let possibleServiceTiers = map (.serviceTier) possibleRoutes
-          let filteredFares = filter (\fare -> fare.vehicleServiceTier.serviceTierType `elem` possibleServiceTiers) fares
-          return ((Just possibleServiceTiers, filteredFares), Just possibleRoutes)
+          validRoutes <- JMU.getValidRoutes startStationCode endStationCode integratedBPPConfig
+          (mbPossibleServiceTiers, possibleRoutes) <-
+            getCachedPossibleRoutes validRoutes >>= \cachedRoutes -> case cachedRoutes of
+              Just cachedPossibleRoutes -> do
+                let serviceTiers = extractServiceTiersFromRoutes cachedPossibleRoutes
+                return (Just serviceTiers, cachedPossibleRoutes)
+              Nothing -> do
+                (_, possibleRoutes, _) <- JMU.findPossibleRoutes Nothing startStationCode endStationCode arrivalTime integratedBPPConfig merchant.id merchantOperatingCity.id Enums.BUS True False (Just validRoutes)
+
+                -- Group routes by service tier and find the maximum nextAvailableBuses for each service tier
+                let routesByServiceTier = List.groupBy (\a b -> a.serviceTier == b.serviceTier) possibleRoutes
+                let serviceTierWithMaxBuses =
+                      map
+                        ( \routes ->
+                            let serviceTier = (head routes).serviceTier
+                                maxNextAvailableBuses = maximum $ map (maximum . (.nextAvailableBuses)) routes
+                             in (serviceTier, maxNextAvailableBuses)
+                        )
+                        routesByServiceTier
+
+                -- Calculate the minimum cache time from the maximum nextAvailableBuses for each service tier
+                let cacheTime = case serviceTierWithMaxBuses of
+                      [] -> 60 -- fallback to 1 minute
+                      _ ->
+                        let minMaxBuses = minimum $ map snd serviceTierWithMaxBuses
+                         in getSeconds minMaxBuses
+
+                -- Extract service tiers directly from the grouped data (already unique)
+                let calculatedServiceTiers = map fst serviceTierWithMaxBuses
+                cachePossibleRoutes validRoutes possibleRoutes cacheTime
+                return (Just calculatedServiceTiers, possibleRoutes)
+
+          let filteredFares = case mbPossibleServiceTiers of
+                Just possibleServiceTiers -> filter (\fare -> fare.vehicleServiceTier.serviceTierType `elem` possibleServiceTiers) fares
+                Nothing -> fares
+          return ((mbPossibleServiceTiers, filteredFares), Just possibleRoutes)
         _ -> return ((Nothing, fares), Nothing)
+
+    getCachedPossibleRoutes :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, MonadFlow m) => [Text] -> m (Maybe [JMU.AvailableRoutesByTier])
+    getCachedPossibleRoutes validRouteDetails = do
+      let key = createServiceTierKey validRouteDetails
+      mbCachedRoutes <- Hedis.safeGet key
+      case mbCachedRoutes of
+        Just possibleRoutes -> return (Just possibleRoutes)
+        Nothing -> return Nothing
+
+    cachePossibleRoutes :: (CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, MonadFlow m) => [Text] -> [JMU.AvailableRoutesByTier] -> Int -> m ()
+    cachePossibleRoutes validRouteDetails possibleRoutes timeToLive = do
+      let key = createServiceTierKey validRouteDetails
+      Hedis.setExp key possibleRoutes timeToLive
+
+    extractServiceTiersFromRoutes :: [JMU.AvailableRoutesByTier] -> [Spec.ServiceTierType]
+    extractServiceTiersFromRoutes possibleRoutes =
+      let routesByServiceTier = List.groupBy (\a b -> a.serviceTier == b.serviceTier) possibleRoutes
+       in map (\routes -> (head routes).serviceTier) routesByServiceTier
+
+    createServiceTierKey :: [Text] -> Text
+    createServiceTierKey validRoutes = "CachedQueries:PossibleServiceTiers:" <> T.intercalate ":" validRoutes
 
     selectMinFare :: [FRFSFare] -> Maybe FRFSFare
     selectMinFare [] = Nothing
