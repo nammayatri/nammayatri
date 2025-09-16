@@ -717,6 +717,88 @@ mkMultiModalRoute currentTimeIST mbPreliminaryLeg mode routeDetails mbDistance =
     locationV2ToLatLong :: LocationV2 -> LatLong
     locationV2ToLatLong locationV2 = LatLong {lat = locationV2.latLng.latitude, lon = locationV2.latLng.longitude}
 
+buildOneWayBusScanRouteDetails ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    EncFlow m r,
+    Monad m,
+    HasField "ltsHedisEnv" r Hedis.HedisEnv,
+    HasKafkaProducer r,
+    HasShortDurationRetryCfg r c
+  ) =>
+  Text ->
+  Text ->
+  Text ->
+  Maybe DIntegratedBPPConfig.IntegratedBPPConfig ->
+  m [MultiModalTypes.MultiModalRoute]
+buildOneWayBusScanRouteDetails _ _ _ Nothing = return []
+buildOneWayBusScanRouteDetails routeCode originStopCode destinationStopCode (Just integratedBppConfig) = mkMultiModalRoute' $ do
+  fromStop <- OTPRest.getStationByGtfsIdAndStopCode originStopCode integratedBppConfig >>= fromMaybeM (InternalError $ "From stop not found with stop code: " <> originStopCode)
+  toStop <- OTPRest.getStationByGtfsIdAndStopCode destinationStopCode integratedBppConfig >>= fromMaybeM (InternalError $ "To stop not found with stop code: " <> destinationStopCode)
+  mbRoute <- OTPRest.getRouteByRouteId integratedBppConfig routeCode
+  case mbRoute of
+    Nothing -> throwError (InternalError "route info not found in buildOneWayBusScanRouteDetails")
+    Just route -> do
+      routeStopMappings <- OTPRest.getRouteStopMappingByRouteCode route.code integratedBppConfig
+      let estimatedDistance =
+            fst $
+              foldl'
+                ( \(acc, mbPrev) routeStopMapping ->
+                    case mbPrev of
+                      Just prev -> do
+                        let distance = distanceBetweenInMeters prev.stopPoint routeStopMapping.stopPoint
+                        (acc + distance, Just routeStopMapping)
+                      Nothing -> (acc, Nothing)
+                )
+                (0, listToMaybe routeStopMappings)
+                routeStopMappings
+      let estimatedDurationInSeconds = fromIntegral $ div (max 1 (highPrecMetersToMeters estimatedDistance).getMeters) 7 -- 7m/s (25 km/h)
+      now <- getCurrentTime
+      let fromStopDetails =
+            MultiModalTypes.MultiModalStopDetails
+              { stopCode = Just fromStop.code,
+                platformCode = Nothing,
+                name = Just fromStop.name,
+                gtfsId = Just fromStop.code
+              }
+      let toStopDetails =
+            MultiModalTypes.MultiModalStopDetails
+              { stopCode = Just toStop.code,
+                platformCode = Nothing,
+                name = Just toStop.name,
+                gtfsId = Just toStop.code
+              }
+      case (fromStop.lat, fromStop.lon, toStop.lat, toStop.lon) of
+        (Just fromStopLat, Just fromStopLon, Just toStopLat, Just toStopLon) -> do
+          let fromStopLocation = LocationV2 {latLng = LatLngV2 {latitude = fromStopLat, longitude = fromStopLon}}
+          let toStopLocation = LocationV2 {latLng = LatLngV2 {latitude = toStopLat, longitude = toStopLon}}
+          return $
+            MultiModalTypes.MultiModalRouteDetails
+              { gtfsId = Just route.code,
+                longName = Just route.longName,
+                shortName = Just route.shortName,
+                alternateShortNames = [],
+                color = Nothing,
+                fromStopDetails = Just fromStopDetails,
+                toStopDetails = Just toStopDetails,
+                startLocation = fromStopLocation,
+                endLocation = toStopLocation,
+                subLegOrder = 1, -- Starts from 1
+                fromArrivalTime = Just now,
+                fromDepartureTime = Just now,
+                toArrivalTime = Just (addUTCTime estimatedDurationInSeconds now),
+                toDepartureTime = Just (addUTCTime estimatedDurationInSeconds now)
+              }
+        _ -> throwError (InternalError $ "From stop or to stop not found with stop code: " <> originStopCode <> " or " <> destinationStopCode)
+  where
+    mkMultiModalRoute' routeDetailsM = do
+      currentTime <- getCurrentTime
+      routeDetails <- routeDetailsM
+      let (_, currentTimeIST) = getISTTimeInfo currentTime
+      let mode = MultiModalTypes.Bus
+      return $ [mkMultiModalRoute currentTimeIST Nothing mode (NonEmpty.fromList [routeDetails]) Nothing]
+
 buildMultimodalRouteDetails ::
   ( CacheFlow m r,
     EsqDBFlow m r,
