@@ -541,11 +541,14 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
 
     loadRouteFrequencies :: (Hedis.HedisFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv) => [RouteStopTimeTable] -> m (M.Map Text Int)
     loadRouteFrequencies timings = do
-      let routeIds = map (.routeCode) timings
-      freqs <- forM routeIds $ \rid -> do
-        mCount <- getRouteFrequency rid
-        pure (rid, fromMaybe 0 mCount)
-      pure (M.fromList freqs)
+      case vc of
+        Enums.BUS -> do
+          let routeIds = nub $ map (.routeCode) timings
+          freqs <- forM routeIds $ \rid -> do
+            mCount <- getRouteFrequency rid
+            pure (rid, fromMaybe 0 mCount)
+          pure (M.fromList freqs)
+        _ -> pure M.empty
 
     getFreq r freqMap = M.findWithDefault 0 r.routeCode freqMap
 
