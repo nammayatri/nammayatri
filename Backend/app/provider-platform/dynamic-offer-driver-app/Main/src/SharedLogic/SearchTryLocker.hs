@@ -30,7 +30,7 @@ import Kernel.Prelude
 import qualified Kernel.Storage.Hedis.Queries as Hedis
 import Kernel.Types.Error
 import Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, throwError)
+import Kernel.Utils.Common
 import Tools.Error
 
 isSearchTryCancelled ::
@@ -49,6 +49,12 @@ lockSearchTry searchTryId = do
   Hedis.expire (mkCancelledKey' searchTryId) 5
   return k
 
+unlockSearchTry ::
+  CacheFlow m r =>
+  Id SearchTry ->
+  m ()
+unlockSearchTry searchTryId = void $ Hedis.decr (mkCancelledKey' searchTryId)
+
 whenSearchTryCancellable ::
   CacheFlow m r =>
   Id SearchTry ->
@@ -57,8 +63,22 @@ whenSearchTryCancellable ::
 whenSearchTryCancellable searchTryId actions = do
   gotLock <- lockSearchTry searchTryId
   if gotLock
-    then actions
+    then do
+      exep <- try @_ @SomeException actions
+      case exep of
+        Left e -> do
+          unlockSearchTry searchTryId
+          someExceptionToAPIErrorThrow e
+        Right a -> do
+          unlockSearchTry searchTryId
+          pure a
     else throwError (DriverAlreadyQuoted searchTryId.getId)
+  where
+    someExceptionToAPIErrorThrow exc
+      | Just (HTTPException err) <- fromException exc = throwError err
+      | Just (BaseException err) <- fromException exc =
+        throwError . InternalError . fromMaybe (show err) $ toMessage err
+      | otherwise = throwError . InternalError $ show exc
 
 mkCancelledKey :: Id SearchTry -> Text
 mkCancelledKey searchTryId = "SearchTry:Cancelled:SearchTryId-" <> searchTryId.getId
