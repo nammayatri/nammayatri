@@ -27,6 +27,7 @@ import qualified Domain.Types.RecentLocation as DTRL
 import qualified Domain.Types.RiderConfig as RCTypes
 import Domain.Types.RouteStopTimeTable
 import qualified Domain.Types.Trip as DTrip
+import Domain.Utils (mapConcurrently)
 import Environment
 import ExternalBPP.ExternalAPI.Subway.CRIS.RouteFare as CRISRouteFare
 import Kernel.External.Encryption
@@ -39,6 +40,7 @@ import Kernel.Prelude
 import Kernel.Randomizer
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Hedis
+import qualified Kernel.Storage.InMem as IM
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Error
@@ -64,6 +66,7 @@ import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RecentLocation as SQRL
 import qualified Storage.Queries.VehicleRouteMapping as QVehicleRouteMapping
+import System.Environment (lookupEnv)
 import Tools.Maps (LatLong (..))
 import qualified Tools.Maps as Maps
 import qualified Tools.Payment as TPayment
@@ -245,33 +248,30 @@ fetchLiveBusTimings mbAvailableServiceTiers routeCodes stopCode currentTime inte
   allRouteWithBuses <- MultiModalBus.getBusesForRoutes routeCodes
   mbSourceOfServiceTier <- fmap (.sourceOfServiceTier) <$> QRiderConfig.findByMerchantOperatingCityId mocid Nothing
   let routesWithoutBuses = map (.routeId) $ filter (\route -> null route.buses) allRouteWithBuses
-  liveRouteStopTimes <- mapM processRoute allRouteWithBuses
+  liveRouteStopTimes <- mapConcurrently processRoute allRouteWithBuses
   let flattenedLiveRouteStopTimes = concat liveRouteStopTimes
-  logDebug $ "allRouteWithBuses: " <> show allRouteWithBuses <> " flattenedLiveRouteStopTimes: " <> show flattenedLiveRouteStopTimes
+  logDebug $ "allRouteWithBuses: " <> show (length allRouteWithBuses) <> " flattenedLiveRouteStopTimes: " <> show (length flattenedLiveRouteStopTimes)
   staticRouteStopTimes <- measureLatency (GRSM.findByRouteCodeAndStopCode integratedBppConfig mid mocid routesWithoutBuses stopCode) "fetch route stop timing through graphql"
   return $ forceFillRequestedServiceTier (flattenedLiveRouteStopTimes ++ staticRouteStopTimes) mbSourceOfServiceTier
   where
     forceFillRequestedServiceTier :: [RouteStopTimeTable] -> Maybe RCTypes.ServiceTierSource -> [RouteStopTimeTable]
     forceFillRequestedServiceTier routeStopTimings mbSourceOfServiceTier = do
       case (mbAvailableServiceTiers, mbSourceOfServiceTier) of
-        (Just availableServiceTiers, Just sourceOfServiceTier) ->
-          if sourceOfServiceTier == RCTypes.QUOTES
-            then
-              map
-                ( \(rst, ast) ->
-                    (rst :: RouteStopTimeTable)
-                      { serviceTierType = (.serviceTierType) (ast :: LegServiceTier),
-                        serviceTierName = Just $ (.serviceTierName) (ast :: LegServiceTier)
-                      }
-                )
-                (zip routeStopTimings (concat $ repeat availableServiceTiers))
-            else routeStopTimings
+        (Just availableServiceTiers, Just RCTypes.QUOTES) ->
+          map
+            ( \(rst, ast) ->
+                (rst :: RouteStopTimeTable)
+                  { serviceTierType = (.serviceTierType) (ast :: LegServiceTier),
+                    serviceTierName = Just $ (.serviceTierName) (ast :: LegServiceTier)
+                  }
+            )
+            (zip routeStopTimings (concat $ repeat availableServiceTiers))
         _ -> routeStopTimings
 
     processRoute routeWithBuses = do
       let busEtaData = concatMap (\bus -> map (\eta -> (bus.vehicleNumber, eta)) $ fromMaybe [] (bus.busData.eta_data)) routeWithBuses.buses
           filteredBuses = filter (\(_, eta) -> eta.stopCode == stopCode) busEtaData
-      logDebug $ "filteredBuses: " <> show filteredBuses <> " busEtaData: " <> show busEtaData
+      logDebug $ "filteredBuses: " <> show (length filteredBuses) <> " busEtaData: " <> show (length busEtaData)
       vehicleRouteMappings <- forM filteredBuses $ \(vehicleNumber, etaData) -> do
         vrMapping <-
           try @_ @SomeException (OTPRest.getVehicleServiceType integratedBppConfig vehicleNumber) >>= \case
@@ -280,7 +280,7 @@ fetchLiveBusTimings mbAvailableServiceTiers routeCodes stopCode currentTime inte
         case vrMapping of
           Just mapping -> return $ Just ((vehicleNumber, etaData), mapping.schedule_no)
           Nothing -> do
-            mbMapping <- listToMaybe <$> QVehicleRouteMapping.findByVehicleNo vehicleNumber
+            mbMapping <- listToMaybe <$> IM.withInMemCache [vehicleNumber] (QVehicleRouteMapping.findByVehicleNo vehicleNumber)
             case mbMapping of
               Just mapping -> return $ Just ((vehicleNumber, etaData), mapping.typeOfService)
               Nothing -> return Nothing
@@ -296,7 +296,7 @@ fetchLiveBusTimings mbAvailableServiceTiers routeCodes stopCode currentTime inte
                 frfsServiceTier <- CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityId serviceTierType mocid
                 return (serviceTierTypeString, frfsServiceTier <&> (.shortName))
             )
-            (map (\(_, mapping) -> mapping) validBuses)
+            (nub $ map (\(_, mapping) -> mapping) validBuses)
       let baseStopTimes = map (createStopTime serviceTierToShortNameMapping) validBuses
       return baseStopTimes
       where
@@ -470,7 +470,8 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
   -- Group by service tier
   mbRiderConfig <- QRiderConfig.findByMerchantOperatingCityId mocid Nothing
   let cfgMap = maybe (toCfgMap defaultBusTierSortingConfig) toCfgMap (mbRiderConfig >>= (.busTierSortingConfig))
-  let groupedByTier = groupBy (\a b -> a.serviceTierType == b.serviceTierType) $ sortBy (comparing (tierRank cfgMap . (.serviceTierType))) routeStopTimings
+  maxBusTimingPerTier <- liftIO $ fromMaybe 3 . (>>= readMaybe) <$> lookupEnv "BUS_TIER_MAX_PER_TIER"
+  let groupedByTier = (if vc == Enums.BUS then map (take maxBusTimingPerTier) else (\a -> a)) $ groupBy (\a b -> a.serviceTierType == b.serviceTierType) $ sortBy (comparing (tierRank cfgMap . (.serviceTierType))) routeStopTimings
   logDebug $ "groupedByTier: " <> show groupedByTier <> " sortedTimings: " <> show sortedTimings <> " routeStopTimings: " <> show routeStopTimings
   let upcomingBusThresholdSec = fromMaybe (Seconds 3600) (mbRiderConfig >>= (.upcomingBusThresholdSec))
   let normalizeEtaSeconds tod =
@@ -595,11 +596,14 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
 
     loadRouteFrequencies :: (Hedis.HedisFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv) => [RouteStopTimeTable] -> m (M.Map Text Int)
     loadRouteFrequencies timings = do
-      let routeIds = map (.routeCode) timings
-      freqs <- forM routeIds $ \rid -> do
-        mCount <- getRouteFrequency rid
-        pure (rid, fromMaybe 0 mCount)
-      pure (M.fromList freqs)
+      case vc of
+        Enums.BUS -> do
+          let routeIds = nub $ map (.routeCode) timings
+          freqs <- forM routeIds $ \rid -> do
+            mCount <- getRouteFrequency rid
+            pure (rid, fromMaybe 0 mCount)
+          pure (M.fromList freqs)
+        _ -> pure M.empty
 
     getFreq r freqMap = M.findWithDefault 0 r.routeCode freqMap
 

@@ -14,6 +14,7 @@ import qualified Domain.Types.Station as Station
 import GHC.Num (integerFromInt)
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
+import qualified Kernel.Storage.InMem as IM
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.Id
 import Kernel.Types.TimeBound (TimeBound (..))
@@ -97,7 +98,7 @@ getRouteStopMappingByRouteCode ::
   Text ->
   IntegratedBPPConfig ->
   m [RouteStopMapping]
-getRouteStopMappingByRouteCode routeCode integratedBPPConfig = do
+getRouteStopMappingByRouteCode routeCode integratedBPPConfig = IM.withInMemCache ["RSM", routeCode, integratedBPPConfig.id.getId] $ do
   baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
   routeStopMapping' <- Flow.getRouteStopMappingInMemoryServer baseUrl integratedBPPConfig.feedKey (Just routeCode) Nothing
   logDebug $ "routeStopMapping from rest api: " <> show routeStopMapping'
@@ -162,7 +163,7 @@ getStationByGtfsIdAndStopCode ::
   Text ->
   IntegratedBPPConfig ->
   m (Maybe Station.Station)
-getStationByGtfsIdAndStopCode stopCode integratedBPPConfig = do
+getStationByGtfsIdAndStopCode stopCode integratedBPPConfig = IM.withInMemCache ["SBSC", stopCode, integratedBPPConfig.id.getId] $ do
   baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
   stations <- Flow.getStationsByGtfsIdAndStopCode baseUrl integratedBPPConfig.feedKey stopCode
   listToMaybe <$> parseStationsFromInMemoryServer [stations] integratedBPPConfig
@@ -353,7 +354,7 @@ getVehicleServiceType ::
   IntegratedBPPConfig ->
   Text ->
   m (Maybe VehicleServiceTypeResponse)
-getVehicleServiceType integratedBPPConfig vehicleNumber = do
+getVehicleServiceType integratedBPPConfig vehicleNumber = IM.withInMemCache ["VST", integratedBPPConfig.id.getId, vehicleNumber] $ do
   baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
   Flow.getVehicleServiceType baseUrl vehicleNumber
 

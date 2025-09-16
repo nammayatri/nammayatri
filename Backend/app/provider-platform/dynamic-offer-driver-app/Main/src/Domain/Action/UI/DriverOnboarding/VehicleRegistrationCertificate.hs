@@ -622,7 +622,7 @@ validateRCResponse rc rule = do
           [ if not fuelValid then Just ("InvalidFuelType:" <> fromMaybe "" rc.fuelType) else Nothing,
             if not vehicleClassValid then Just ("InvalidVehicleClass:" <> fromMaybe "" rc.vehicleClass) else Nothing,
             if not manufacturerValid then Just ("InvalidOEM:" <> fromMaybe "" (rc.manufacturer <|> rc.model)) else Nothing,
-            if not vehicleAgeValid then Just ("InvalidManufacturingYear:" <> maybe "" (T.pack . show) rc.mYManufacturing) else Nothing
+            if not vehicleAgeValid then Just ("InvalidManufacturingYear:" <> maybe "" (T.take 7 . T.pack . show) rc.mYManufacturing) else Nothing
           ]
   return failures
 

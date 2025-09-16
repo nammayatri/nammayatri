@@ -31,6 +31,7 @@ import Kernel.Sms.Config
 import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis as Redis hiding (ttl)
+import qualified Kernel.Storage.InMem as IM
 import Kernel.Streaming.Kafka.Producer.Types
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
 import Kernel.Types.App
@@ -159,7 +160,8 @@ data AppCfg = AppCfg
     selfBaseUrl :: BaseUrl,
     meterRideReferralLink :: Text,
     minDistanceBetweenTwoPoints :: Int,
-    tsServiceConfig :: CPT.TSServiceConfig
+    tsServiceConfig :: CPT.TSServiceConfig,
+    inMemConfig :: KTC.InMemConfig
   }
   deriving (Generic, FromDhall)
 
@@ -268,7 +270,8 @@ data AppEnv = AppEnv
     selfBaseUrl :: BaseUrl,
     meterRideReferralLink :: Text,
     minDistanceBetweenTwoPoints :: Int,
-    tsServiceConfig :: CPT.TSServiceConfig
+    tsServiceConfig :: CPT.TSServiceConfig,
+    inMemEnv :: KTC.InMemEnv
   }
   deriving (Generic)
 
@@ -327,6 +330,7 @@ buildAppEnv cfg@AppCfg {searchRequestExpirationSeconds = _searchRequestExpiratio
   let internalEndPointHashMap = HMS.fromList $ M.toList internalEndPointMap
   let ondcTokenHashMap = HMS.fromList $ M.toList ondcTokenMap
       serviceClickhouseCfg = driverClickhouseCfg
+  inMemEnv <- IM.setupInMemEnv inMemConfig
   return AppEnv {modelNamesHashMap = HMS.fromList $ M.toList modelNamesMap, ..}
 
 releaseAppEnv :: AppEnv -> IO ()

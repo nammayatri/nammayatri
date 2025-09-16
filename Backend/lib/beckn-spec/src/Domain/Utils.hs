@@ -2,7 +2,9 @@ module Domain.Utils where
 
 import qualified Data.Text as T
 import Data.Time
+import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (length, map)
+import Kernel.Types.Forkable
 import Kernel.Types.Time
 
 getVehicleAge :: Maybe Day -> UTCTime -> Maybe Months
@@ -34,3 +36,9 @@ safeLast (_ : xs) = safeLast xs
 safeHead :: [a] -> Maybe a
 safeHead [] = Nothing
 safeHead (x : _) = Just x
+
+mapConcurrently :: (L.MonadFlow m, Forkable m) => (a -> m b) -> [a] -> m [b]
+mapConcurrently fn ar = do
+  awaitables <- mapM (awaitableFork "mapConcurrently" . fn) ar
+  results <- rights <$> mapM (L.await Nothing) awaitables
+  return results
