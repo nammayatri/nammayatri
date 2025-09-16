@@ -49,7 +49,8 @@ data RouteStopMappingInMemoryServer = RouteStopMappingInMemoryServer
     stopPoint :: Kernel.External.Maps.Types.LatLong,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory,
     hindiName :: Maybe Text,
-    regionalName :: Maybe Text
+    regionalName :: Maybe Text,
+    parentStopCode :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
@@ -65,7 +66,8 @@ data RouteStopMappingInMemoryServerWithPublicData = RouteStopMappingInMemoryServ
     geoJson :: Maybe Value,
     gates :: Maybe [Gate],
     hindiName :: Maybe Text,
-    regionalName :: Maybe Text
+    regionalName :: Maybe Text,
+    parentStopCode :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
@@ -206,5 +208,11 @@ data GtfsGraphQLRequest = GtfsGraphQLRequest
     operation_name :: Maybe Text,
     city :: Maybe Text, -- todo: remove this
     feedId :: Text
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+data RouteStopMappingByStopCodesReq = RouteStopMappingByStopCodesReq
+  { stopCodes :: [Text],
+    gtfsId :: Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)

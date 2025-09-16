@@ -38,6 +38,7 @@ types:
     toStationCode: Text
     routeCode: Maybe Text
     quantity: Int
+    searchAsParentStops: Maybe Bool
     recentLocationId: Maybe (Id RecentLocation)
 
   FRFSSearchAPIRes:
@@ -168,6 +169,7 @@ types:
     sequenceNum: Maybe Int
     towards: Maybe Text
     integratedBppConfigId: Id IntegratedBPPConfig
+    parentStopCode: Maybe Text
     derive: "Show"
 
   FRFSCanCancelStatus:
