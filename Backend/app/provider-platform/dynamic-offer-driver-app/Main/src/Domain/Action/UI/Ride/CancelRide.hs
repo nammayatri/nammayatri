@@ -259,7 +259,7 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req isForceReallocation = d
         )
         ((,,,) <$> cancellationCnt <*> driverGoHomeRequestId <*> goHomeConfig <*> dghInfo)
       fork "DriverRideCancelledCoin Event : " $ do
-        DC.driverCoinsEvent driverId driver.merchantId booking.merchantOperatingCityId (DC.Cancellation ride.createdAt booking.distanceToPickup disToPickup DC.CancellationByDriver req.reasonCode) (Just ride.id.getId) ride.vehicleVariant (Just booking.configInExperimentVersions)
+        DC.driverCoinsEvent driverId driver.merchantId booking.merchantOperatingCityId (DCT.Cancellation ride.createdAt booking.distanceToPickup disToPickup DCT.CancellationByDriver req.reasonCode) (Just ride.id.getId) ride.vehicleVariant (Just booking.configInExperimentVersions)
     cancelRide rideId rideEndedBy rideCancelationReason isForceReallocation req.doCancellationRateBasedBlocking
   pure (cancellationCnt, isGoToDisabled)
   where
