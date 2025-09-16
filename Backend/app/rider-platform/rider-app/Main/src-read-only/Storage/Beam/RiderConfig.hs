@@ -31,6 +31,7 @@ data RiderConfigT f = RiderConfigT
     boostSearchPreSelectionServiceTierConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     busBookingAllowed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     busTierSortingConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    busScanRouteCalculationEnabledModes :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     busTrackingConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     cancellationPaymentDelay :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     collectAutoCompleteData :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

@@ -145,6 +145,7 @@ RiderConfig:
     sourceOfServiceTier: ServiceTierSource
     domainRouteCalculationEnabledModes: "Maybe [GeneralVehicleType]"
     upcomingBusThresholdSec: Maybe Seconds
+    busScanRouteCalculationEnabledModes: "Maybe Bool"
     trackVehicleKeyExpiry: Maybe Int
     distanceToNearestStopThreshold: Maybe Int
 
@@ -318,6 +319,7 @@ RiderConfig:
     minimumWalkDistance: "100"
     permissibleModes: "'{Walk, Bus, MetroRail, Subway}'"
     domainRouteCalculationEnabledModes: "'{Bus, Subway}'"
+    busScanRouteCalculationEnabledModes: "true"
     maxAllowedPublicTransportLegs: "2"
     postRideSafetyNotificationDelay : "60"
     useUserSettingsForSafetyIVR: "false"

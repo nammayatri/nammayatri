@@ -32,6 +32,7 @@ data RiderConfig = RiderConfig
     boostSearchPreSelectionServiceTierConfig :: [Domain.Types.Extra.RiderConfig.VehicleServiceTierOrderConfig],
     busBookingAllowed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     busTierSortingConfig :: Kernel.Prelude.Maybe [Domain.Types.RiderConfig.BusTierSortingConfig],
+    busScanRouteCalculationEnabledModes :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     busTrackingConfig :: Kernel.Prelude.Maybe Domain.Types.RiderConfig.BusTrackingConfig,
     cancellationPaymentDelay :: Kernel.Prelude.NominalDiffTime,
     collectAutoCompleteData :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
