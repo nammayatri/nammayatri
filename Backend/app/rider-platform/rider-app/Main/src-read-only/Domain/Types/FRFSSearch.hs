@@ -30,6 +30,7 @@ data FRFSSearch = FRFSSearch
     recentLocationId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.RecentLocation.RecentLocation),
     riderId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     routeCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    searchAsParentStops :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     toStationCode :: Kernel.Prelude.Text,
     validTill :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory,

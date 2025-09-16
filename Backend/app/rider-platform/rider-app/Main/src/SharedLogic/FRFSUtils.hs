@@ -279,6 +279,82 @@ getPossibleRoutesBetweenTwoStops startStationCode endStationCode integratedBPPCo
       )
       routes
 
+getPossibleRoutesBetweenTwoParentStops :: (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c) => Text -> Text -> IntegratedBPPConfig -> m [RouteStopInfo]
+getPossibleRoutesBetweenTwoParentStops startParentStopCode endParentStopCode integratedBPPConfig = do
+  -- Get all child station codes for both parent stops
+  startStops <- OTPRest.getChildrenStationsCodes integratedBPPConfig startParentStopCode
+  endStops <- OTPRest.getChildrenStationsCodes integratedBPPConfig endParentStopCode
+
+  -- If no children found, use the parent stop codes themselves as fallback
+  let actualStartStops = if null startStops then [startParentStopCode] else startStops
+      actualEndStops = if null endStops then [endParentStopCode] else endStops
+      allStopCodes = nub (actualStartStops ++ actualEndStops)
+
+  routesWithStops <- OTPRest.getRouteStopMappingByStopCodes integratedBPPConfig allStopCodes
+  let routeCodes = nub $ map (.routeCode) routesWithStops
+
+  -- Get all route stop mappings for these routes in one go
+  allRouteStops <- concatMapM (\routeCode -> OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig) routeCodes
+
+  -- Filter routes based on time bounds
+  currentTime <- getCurrentTime
+  let serviceableStops = DTB.findBoundedDomain allRouteStops currentTime ++ filter (\stop -> stop.timeBounds == DTB.Unbounded) allRouteStops
+      groupedStops = groupBy (\a b -> a.routeCode == b.routeCode) $ sortBy (compare `on` (.routeCode)) serviceableStops
+
+      -- Find routes that connect any start stop to any end stop
+      possibleRoutes = nub $ catMaybes $ map (findValidRouteForParentStops actualStartStops actualEndStops) groupedStops
+
+  -- Build route info for valid routes
+  let mappedRouteCodes = map (\(routeCode, _, _, _, _, _) -> routeCode) possibleRoutes
+  routes <- mapM (\routeCode -> OTPRest.getRouteByRouteId integratedBPPConfig routeCode >>= fromMaybeM (RouteNotFound $ "RouteCode:" +|| routeCode ||+ "and integratedBPPConfigId: " +|| integratedBPPConfig.id.getId ||+ "")) mappedRouteCodes
+
+  return $
+    map
+      ( \route ->
+          let routeData = find (\(routeCode, _, _, _, _, _) -> routeCode == route.code) possibleRoutes
+           in RouteStopInfo
+                { route,
+                  totalStops = (\(_, totalStops, _, _, _, _) -> totalStops) =<< routeData,
+                  stops = (\(_, _, _, stops, _, _) -> stops) =<< routeData,
+                  startStopCode = fromMaybe startParentStopCode ((\(_, _, _, _, startStop, _) -> startStop) <$> routeData),
+                  endStopCode = fromMaybe endParentStopCode ((\(_, _, _, _, _, endStop) -> endStop) <$> routeData),
+                  travelTime = (\(_, _, travelTime, _, _, _) -> travelTime) =<< routeData
+                }
+      )
+      routes
+  where
+    -- Helper function to find valid routes between parent stops
+    findValidRouteForParentStops :: [Text] -> [Text] -> [RouteStopMapping.RouteStopMapping] -> Maybe (Text, Maybe Int, Maybe Seconds, Maybe [RouteStopMapping.RouteStopMapping], Text, Text)
+    findValidRouteForParentStops startStopCodes endStopCodes stops =
+      let stopsSortedBySequenceNumber = sortBy (compare `on` RouteStopMapping.sequenceNum) stops
+          -- Find all possible start stops in this route
+          startStopsInRoute = filter (\stop -> stop.stopCode `elem` startStopCodes) stopsSortedBySequenceNumber
+          -- Find all possible end stops in this route
+          endStopsInRoute = filter (\stop -> stop.stopCode `elem` endStopCodes) stopsSortedBySequenceNumber
+
+          -- Find the best start-end combination
+          bestCombination = do
+            startStop <- listToMaybe startStopsInRoute -- Get earliest start stop
+            endStop <- find (\endStop -> endStop.sequenceNum > startStop.sequenceNum) endStopsInRoute -- Get first valid end stop
+            return (startStop, endStop)
+       in case bestCombination of
+            Just (startStop, endStop) ->
+              let intermediateStops = filter (\stop -> stop.sequenceNum >= startStop.sequenceNum && stop.sequenceNum <= endStop.sequenceNum) stopsSortedBySequenceNumber
+                  totalStops = endStop.sequenceNum - startStop.sequenceNum
+                  totalTravelTime =
+                    foldr
+                      ( \stop acc ->
+                          if stop.sequenceNum > startStop.sequenceNum && stop.sequenceNum <= endStop.sequenceNum
+                            then case (acc, stop.estimatedTravelTimeFromPreviousStop) of
+                              (Just acc', Just travelTime) -> Just (acc' + travelTime)
+                              _ -> Nothing
+                            else acc
+                      )
+                      (Just $ Seconds 0)
+                      stops
+               in Just (startStop.routeCode, (Just totalStops), totalTravelTime, (Just intermediateStops), startStop.stopCode, endStop.stopCode)
+            Nothing -> Nothing
+
 data FRFSTicketCategory = FRFSTicketCategory
   { code :: Text,
     title :: Text,

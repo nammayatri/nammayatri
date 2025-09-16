@@ -61,6 +61,7 @@ FRFSSearch:
     recentLocationId: Maybe (Id RecentLocation)
     validTill: Maybe UTCTime
     multimodalSearchRequestId: Maybe Text
+    searchAsParentStops: Maybe Bool
 
   beamFields:
     fromStationCode:
