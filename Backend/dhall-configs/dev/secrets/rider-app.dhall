@@ -31,7 +31,7 @@ in  { dbUserId = "atlas_app_user"
     , internalAPIKey = "test-bap-api-key"
     , internalClickhouseAPIKey = "test-clickhosue-api-key"
     , clickHouseUsername = "default"
-    , clickHousePassword = ""
+    , clickHousePassword = "ZTvm8Hjh^k4-5EXa"
     , locationTrackingServiceKey = "ae288466-2add-11ee-be56-0242ac120002"
     , ondcTokenMap
     , googleSAPrivateKey
