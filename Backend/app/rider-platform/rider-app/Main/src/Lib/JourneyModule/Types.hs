@@ -90,7 +90,7 @@ import qualified Storage.Queries.Transformers.Booking as QTB
 import Tools.Error
 import Tools.Maps as Maps
 import Tools.Metrics.BAPMetrics.Types
-import Tools.Payment (roundToTwoDecimalPlaces)
+-- import Tools.Payment (roundToTwoDecimalPlaces)
 import qualified Tools.SharedRedisKeys as SharedRedisKeys
 import TransactionLogs.Types
 
@@ -828,13 +828,10 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
   now <- getCurrentTime
 
   let startTime = fromMaybe now booking.startTime
-  let singleAdultPrice = roundToTwoDecimalPlaces . HighPrecMoney $ safeDiv (getHighPrecMoney booking.price.amount) (fromIntegral booking.quantity) -- TODO :: To be handled as single price cannot be obtained from this if more than 1 fare breakup (Child Quantity / Discounts)
-      estimatedPrice =
-        Price
-          { amount = singleAdultPrice,
-            amountInt = Money $ roundToIntegral singleAdultPrice,
-            currency = booking.price.currency
-          }
+
+  -- Fetch the FRFSQuote to get accurate pricing information
+  quote <- QFRFSQuote.findById booking.quoteId >>= fromMaybeM (QuoteNotFound booking.quoteId.getId)
+  let estimatedPrice = quote.price
 
   (oldStatus, bookingStatus, trackingStatuses) <- JMStateUtils.getFRFSAllStatuses journeyLeg (Just booking)
   journeyLegInfo' <- getLegRouteInfo (zip journeyLeg.routeDetails trackingStatuses) integratedBPPConfig
@@ -851,7 +848,7 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
         order = journeyLeg.sequenceNumber,
         estimatedDuration = journeyLeg.duration,
         estimatedMinFare = Just $ mkPriceAPIEntity estimatedPrice,
-        estimatedChildFare = Nothing,
+        estimatedChildFare = mkPriceAPIEntity <$> quote.childPrice,
         estimatedMaxFare = Just $ mkPriceAPIEntity estimatedPrice,
         estimatedTotalFare = Nothing,
         estimatedDistance = journeyLeg.distance,
@@ -975,9 +972,10 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
                   childTicketQuantity = booking.childTicketQuantity,
                   refund = refundBloc
                 }
-    safeDiv :: (Eq a, Fractional a) => a -> a -> a
-    safeDiv x 0 = x
-    safeDiv x y = x / y
+
+-- safeDiv :: (Eq a, Fractional a) => a -> a -> a
+-- safeDiv x 0 = x
+-- safeDiv x y = x / y
 
 getLegRouteInfo :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) => [(RouteDetails, (Int, JMState.TrackingStatus, UTCTime))] -> DIBC.IntegratedBPPConfig -> m [LegRouteInfo]
 getLegRouteInfo journeyRouteDetailsWithTrackingStatuses integratedBPPConfig = do
