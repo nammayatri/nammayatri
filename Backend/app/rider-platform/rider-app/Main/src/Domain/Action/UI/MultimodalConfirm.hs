@@ -1415,7 +1415,7 @@ postMultimodalRouteAvailability (mbPersonId, merchantId) req = do
 
       return $ ApiTypes.RouteAvailabilityResp {availableRoutes = availableRoutes}
   where
-    convertToAvailableRoute :: Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> Domain.Types.Person.Person -> JMU.AvailableRoutesByTier -> Environment.Flow [ApiTypes.AvailableRoute]
+    convertToAvailableRoute :: DIBC.IntegratedBPPConfig -> Domain.Types.Person.Person -> JMU.AvailableRoutesByTier -> Environment.Flow [ApiTypes.AvailableRoute]
     convertToAvailableRoute integratedBPPConfig person routesByTier =
       mapM
         ( \routeInfo -> do

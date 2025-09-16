@@ -88,6 +88,7 @@ BecknConfig:
 
 IntegratedBPPConfig:
   tableName: integrated_bpp_config
+  derives: "Generic,Show,ToJSON,FromJSON"
 
   fields:
     id: Id IntegratedBPPConfig
@@ -111,7 +112,7 @@ IntegratedBPPConfig:
       derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
     ProviderConfig:
       enum: "EBIX EBIXConfig, DIRECT DIRECTConfig, CMRL CMRLConfig, ONDC ONDCBecknConfig, CRIS CRISConfig"
-      derive': "Generic, FromJSON, ToJSON, Eq"
+      derive': "Generic, FromJSON, ToJSON, Eq, Show"
 
   domainInstance:
     - Custom Kernel.Utils.TH.mkFromHttpInstanceForEnum <PlatformType>
@@ -138,8 +139,6 @@ IntegratedBPPConfig:
   extraOperations:
     - EXTRA_DOMAIN_TYPE_FILE
     - EXTRA_QUERY_FILE
-
-  derives: "Generic,FromJSON,ToJSON"
 
   default:
     vehicleCategory: "'BUS'"

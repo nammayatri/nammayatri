@@ -30,7 +30,7 @@ data IntegratedBPPConfig = IntegratedBPPConfig
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
-  deriving (Generic, FromJSON, ToJSON)
+  deriving (Generic, Show, ToJSON, FromJSON)
 
 data PlatformType = MULTIMODAL | PARTNERORG | APPLICATION deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
@@ -40,7 +40,7 @@ data ProviderConfig
   | CMRL Domain.Types.Extra.IntegratedBPPConfig.CMRLConfig
   | ONDC Domain.Types.Extra.IntegratedBPPConfig.ONDCBecknConfig
   | CRIS Domain.Types.Extra.IntegratedBPPConfig.CRISConfig
-  deriving (Generic, FromJSON, ToJSON, Eq)
+  deriving (Generic, FromJSON, ToJSON, Eq, Show)
 
 $(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''PlatformType)
 

@@ -7,6 +7,7 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Base64
 import Kernel.Types.Time
+import qualified Text.Show (show)
 
 data CRISRouteSortingCriteria = FARE | DISTANCE
   deriving (Generic, Show, Read, FromJSON, ToJSON, Eq)
@@ -20,12 +21,18 @@ data EBIXConfig = EBIXConfig
   deriving stock (Eq, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
+instance Show EBIXConfig where
+  show _ = "EBIXConfig"
+
 data DIRECTConfig = DIRECTConfig
   { cipherKey :: Base64,
     qrRefreshTtl :: Maybe Seconds
   }
   deriving stock (Eq, Generic)
   deriving anyclass (FromJSON, ToJSON)
+
+instance Show DIRECTConfig where
+  show _ = "DIRECTConfig"
 
 data CMRLConfig = CMRLConfig
   { networkHostUrl :: BaseUrl,
@@ -34,6 +41,9 @@ data CMRLConfig = CMRLConfig
   }
   deriving stock (Eq, Generic)
   deriving anyclass (FromJSON, ToJSON)
+
+instance Show CMRLConfig where
+  show _ = "CMRLConfig"
 
 data ONDCBecknConfig = ONDCBecknConfig
   { networkHostUrl :: Maybe BaseUrl,
@@ -44,6 +54,9 @@ data ONDCBecknConfig = ONDCBecknConfig
   }
   deriving stock (Eq, Generic)
   deriving anyclass (FromJSON, ToJSON)
+
+instance Show ONDCBecknConfig where
+  show _ = "ONDCBecknConfig"
 
 data CRISConfig = CRISConfig
   { baseUrl :: BaseUrl,
@@ -64,3 +77,6 @@ data CRISConfig = CRISConfig
   }
   deriving stock (Eq, Generic)
   deriving anyclass (FromJSON, ToJSON)
+
+instance Show CRISConfig where
+  show _ = "CRISConfig"

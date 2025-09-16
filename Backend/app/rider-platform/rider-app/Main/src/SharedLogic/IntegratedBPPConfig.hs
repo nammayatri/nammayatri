@@ -123,6 +123,24 @@ fetchFirstIntegratedBPPConfigResult integratedBPPConfigs handler =
     []
     integratedBPPConfigs
 
+fetchFirstIntegratedBPPConfigMaybeResult ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  [IntegratedBPPConfig] ->
+  (IntegratedBPPConfig -> m (Maybe a)) ->
+  m (Maybe a)
+fetchFirstIntegratedBPPConfigMaybeResult integratedBPPConfigs handler =
+  foldrM
+    ( \integratedBPPConfig result ->
+        if isNothing result
+          then do
+            try @_ @SomeException (handler integratedBPPConfig) >>= \case
+              Left _ -> return Nothing
+              Right res' -> return res'
+          else return result
+    )
+    Nothing
+    integratedBPPConfigs
+
 fetchAllIntegratedBPPConfigResult ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   [IntegratedBPPConfig] ->
