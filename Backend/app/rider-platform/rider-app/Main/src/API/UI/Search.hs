@@ -378,7 +378,7 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
     fork "Process rest of single mode routes" $ processSingleModeRoutes restOfViaPoints userPreferences mbIntegratedBPPConfig (getPreliminaryLeg now currentLocation)
   when (null restOfViaPoints) $ cacheAllRoutesLoadedKey searchRequest.id.getId True
 
-  (indexedRoutesToProcess, showMultimodalWarningForFirstJourney) <- getIndexedRoutesAndWarning userPreferences otpResponse
+  let (indexedRoutesToProcess, showMultimodalWarningForFirstJourney) = getIndexedRoutesAndWarning userPreferences otpResponse
 
   -- This function should be called only once. calling this multiple times will result in suburban booking failure.
   mbCrisSdkToken <- getCrisSdkToken merchantOperatingCityId indexedRoutesToProcess
@@ -391,7 +391,7 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
       when (not (null restOfRoutes)) $
         do
           let multimodalResponse = MInterface.MultiModalResponse {routes = restOfRoutes}
-          (indexedRoutesToProcess, showMultimodalWarningForFirstJourney) <- getIndexedRoutesAndWarning userPreferences multimodalResponse
+              (indexedRoutesToProcess, showMultimodalWarningForFirstJourney) = getIndexedRoutesAndWarning userPreferences multimodalResponse
           void $ multimodalIntiateHelper Nothing multimodalResponse userPreferences indexedRoutesToProcess showMultimodalWarningForFirstJourney Nothing False
 
     multimodalIntiateHelper singleModeWarningType otpResponse userPreferences indexedRoutesToProcess showMultimodalWarningForFirstJourney mbCrisSdkToken isFirstJourneyReq = do
@@ -780,7 +780,7 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
     locationV2ToLatLong :: LocationV2 -> Maps.LatLong
     locationV2ToLatLong locationV2 = Maps.LatLong {lat = locationV2.latLng.latitude, lon = locationV2.latLng.longitude}
 
-    getIndexedRoutesAndWarning :: ApiTypes.MultimodalUserPreferences -> MultiModalTypes.MultiModalResponse -> Flow ([(Int, MultiModalTypes.MultiModalRoute)], Bool)
+    getIndexedRoutesAndWarning :: ApiTypes.MultimodalUserPreferences -> MultiModalTypes.MultiModalResponse -> ([(Int, MultiModalTypes.MultiModalRoute)], Bool)
     getIndexedRoutesAndWarning userPreferences otpResponse = do
       let userPreferredTransitModes = userPreferencesToGeneralVehicleTypes userPreferences.allowedTransitModes
           hasOnlyUserPreferredTransitModes otpRoute = all (isLegModeIn userPreferredTransitModes) otpRoute.legs
@@ -794,7 +794,7 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
               then removeOnlyWalkAndUnspecifiedTransitModes baseRoutes
               else baseRoutes
           showMultimodalWarningForFirstJourney = null filteredUserPreferredIndexedRoutes
-      return (indexedRoutesToProcess, showMultimodalWarningForFirstJourney)
+      (indexedRoutesToProcess, showMultimodalWarningForFirstJourney)
 
 checkSearchRateLimit ::
   ( Redis.HedisFlow m r,

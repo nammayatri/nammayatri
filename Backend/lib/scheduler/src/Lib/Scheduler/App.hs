@@ -74,6 +74,14 @@ runSchedulerService s@SchedulerConfig {..} jobInfoMap kvConfigUpdateFrequency ma
   let requestId = Nothing
       shouldLogRequestId = False
   let cacheConfig = CacheConfig {configsExpTime = 0}
+  let inMemCacheInfo = InMemCacheInfo {cache = mempty, cacheSize = 0}
+  inMemHashMap <- newIORef inMemCacheInfo
+  let inMemEnv =
+        InMemEnv
+          { enableInMem = inMemConfig.enableInMem,
+            maxInMemSize = inMemConfig.maxInMemSize,
+            inMemHashMap = inMemHashMap
+          }
   let schedulerEnv = SchedulerEnv {cacheConfig, ..}
   when (tasksPerIteration <= 0) $ do
     hPutStrLn stderr ("tasksPerIteration should be greater than 0" :: Text)
