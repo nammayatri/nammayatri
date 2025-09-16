@@ -460,7 +460,7 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
           DSearch.PTSearch ptSearchDetails -> do
             case (mbIntegratedBPPConfig, ptSearchDetails.vehicleNumber) of
               (Just integratedBPPConfig, Just vehicleNumber) -> do
-                mbRouteCode <- JMU.getRouteCodeFromVehicleNumber [integratedBPPConfig] vehicleNumber
+                mbRouteCode <- JMU.getVehicleLiveRouteInfo [integratedBPPConfig] vehicleNumber >>= \mbResult -> pure $ mbResult <&> (.routeCode)
                 return $
                   maybe
                     Nothing

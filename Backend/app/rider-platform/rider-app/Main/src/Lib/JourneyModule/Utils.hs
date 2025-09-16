@@ -1147,13 +1147,20 @@ getRouteFareRequest sourceCode destCode changeOver viaPoints personId = do
         via = viaPoints
       }
 
-getRouteCodeFromVehicleNumber ::
+data VehicleLiveRouteInfo = VehicleLiveRouteInfo
+  { routeCode :: Text,
+    serviceType :: Spec.ServiceTierType,
+    vehicleNumber :: Text
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+getVehicleLiveRouteInfo ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
   [DIntegratedBPPConfig.IntegratedBPPConfig] ->
   Text ->
-  m (Maybe Text)
-getRouteCodeFromVehicleNumber integratedBPPConfigs vehicleNumber = do
-  mbResult <-
+  m (Maybe VehicleLiveRouteInfo)
+getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber = do
+  mbMbResult <-
     SIBC.fetchFirstIntegratedBPPConfigRightResult integratedBPPConfigs $ \config ->
       OTPRest.getVehicleServiceType config vehicleNumber
-  return ((join mbResult) <&> (.route_id))
+  return $ mbMbResult >>= \mbResult -> mbResult <&> (\result -> VehicleLiveRouteInfo {vehicleNumber = vehicleNumber, routeCode = result.route_id, serviceType = result.service_type})
