@@ -177,6 +177,7 @@ checkAllDriverVehicleDocsVerified person merchantOperatingCity transporterConfig
   pure $ allVehicleDocsVerified && allDriverDocsVerified
 
 statusHandler' ::
+  Maybe DP.Person ->
   IQuery.DriverImagesInfo ->
   Maybe Bool ->
   Maybe Bool ->
@@ -187,13 +188,15 @@ statusHandler' ::
   Bool ->
   Maybe Bool ->
   Flow StatusRes'
-statusHandler' driverImagesInfo makeSelfieAadhaarPanMandatory multipleRC prefillData onboardingVehicleCategory mDL useHVSdkForDL shouldActivateRc onlyMandatoryDocs = do
+statusHandler' mPerson driverImagesInfo makeSelfieAadhaarPanMandatory multipleRC prefillData onboardingVehicleCategory mDL useHVSdkForDL shouldActivateRc onlyMandatoryDocs = do
   let merchantId = driverImagesInfo.merchantOperatingCity.merchantId
       merchantOperatingCity = driverImagesInfo.merchantOperatingCity
       merchantOpCityId = merchantOperatingCity.id
       transporterConfig = driverImagesInfo.transporterConfig
       personId = driverImagesInfo.driverId
-  person <- runInReplica $ Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  person <- case mPerson of
+    Just person -> pure person
+    Nothing -> runInReplica $ Person.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   let language = fromMaybe merchantOperatingCity.language person.language
 
   allDocumentVerificationConfigs <- CQDVC.findAllByMerchantOpCityId merchantOpCityId Nothing
@@ -982,7 +985,7 @@ verificationStatusCheck status language img mbReasons = do
             if T.null value
               then pure translatedKey
               else pure $ translatedKey <> ": " <> T.drop 1 value
-          pure $ msg <> ". " <> T.intercalate ", " translatedReasons
+          pure $ msg <> T.intercalate ", " translatedReasons
         _ -> pure msg
     _ -> toVerificationMessage DocumentValid language
 
