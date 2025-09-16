@@ -634,10 +634,11 @@ makeTaggedDriverPool mOCityId timeDiffFromUtc searchReq onlyNewDrivers batchSize
   return (mbVersion, take batchSize sortedPool)
   where
     updateDriverPoolWithActualDistResult DriverPoolWithActualDistResult {..} =
-      DriverPoolWithActualDistResult {driverPoolResult = updateDriverPoolResult driverPoolResult, searchTags = Just $ maybe A.emptyObject LYTU.convertTags searchReq.searchTags, tripDistance = searchReq.estimatedDistance, ..}
+      DriverPoolWithActualDistResult {driverPoolResult = updateDriverPoolResult driverPoolResult actualDistanceToPickup searchReq.estimatedDistance, searchTags = Just $ maybe A.emptyObject LYTU.convertTags searchReq.searchTags, tripDistance = searchReq.estimatedDistance, ..}
 
-    updateDriverPoolResult DriverPoolResult {..} =
-      DriverPoolResult {customerTags = Just $ maybe A.emptyObject LYTU.convertTags customerNammaTags, ..}
+    updateDriverPoolResult DriverPoolResult {..} actualDistanceToPickup tripDistance =
+      let driverPrefScore = calculateDriverPreferenceScore (DriverPoolResult {..}) actualDistanceToPickup tripDistance
+       in DriverPoolResult {customerTags = Just $ maybe A.emptyObject LYTU.convertTags customerNammaTags, driverPreferenceScore = Just driverPrefScore, ..}
 
     updateVersionInSearchReq mbVersion =
       whenJust mbVersion $ \_ -> do

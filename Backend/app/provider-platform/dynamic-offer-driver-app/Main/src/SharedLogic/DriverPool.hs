@@ -56,10 +56,12 @@ module SharedLogic.DriverPool
     SearchTryBatchData (..),
     SearchTryBatchPoolData (..),
     FilterStage (..),
+    calculateDriverPreferenceScore,
   )
 where
 
 import Control.Monad.Extra (mapMaybeM)
+import qualified Data.Aeson as A
 import Data.Fixed
 import qualified Data.Geohash as DG
 import Data.List (find, length)
@@ -437,6 +439,35 @@ getPopupDelay merchantOpCityId driverId cancellationRatio cancellationScoreRelat
 mkDriverLocationUpdatesKey :: Id DMOC.MerchantOperatingCity -> Id DP.Person -> Text
 mkDriverLocationUpdatesKey mocId dId = "driver-offer:DriverPool:mocId-" <> mocId.getId <> ":dId:" <> dId.getId
 
+calculateDriverPreferenceScore ::
+  DriverPoolResult ->
+  Meters -> -- actualDistanceToPickup
+  Maybe Meters -> -- tripDistance
+  A.Value
+calculateDriverPreferenceScore driverPoolResult actualDistanceToPickup tripDistance =
+  let maxPickupDistance = driverPoolResult.maxPickupDistance
+      minRideDistance = driverPoolResult.minRideDistance
+      maxRideDistance = driverPoolResult.maxRideDistance
+
+      hasPreferences = isJust maxPickupDistance || isJust minRideDistance || isJust maxRideDistance
+
+      pickupDistanceOk = case maxPickupDistance of
+        Nothing -> True
+        Just maxDist -> actualDistanceToPickup <= maxDist
+
+      minRideDistanceOk = case minRideDistance of
+        Nothing -> True
+        Just minDist -> maybe True (>= minDist) tripDistance
+
+      maxRideDistanceOk = case maxRideDistance of
+        Nothing -> True
+        Just maxDist -> maybe True (<= maxDist) tripDistance
+
+      allConditionsMet = pickupDistanceOk && minRideDistanceOk && maxRideDistanceOk
+
+      score = if hasPreferences && allConditionsMet then (0 :: Int) else (1 :: Int)
+   in A.Number $ fromIntegral score
+
 updateDriverSpeedInRedis ::
   ( CacheFlow m r,
     EsqDBFlow m r
@@ -684,6 +715,7 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
           minRideDistance = Nothing,
           maxRideDistance = Nothing,
           maxPickupDistance = Nothing,
+          driverPreferenceScore = Nothing,
           ..
         }
 
@@ -738,6 +770,7 @@ filterOutGoHomeDriversAccordingToHomeLocation randomDriverPool CalculateGoHomeDr
           minRideDistance = Nothing,
           maxRideDistance = Nothing,
           maxPickupDistance = Nothing,
+          driverPreferenceScore = Nothing,
           ..
         }
 
@@ -821,6 +854,7 @@ calculateDriverPool CalculateDriverPoolReq {..} = do
           customerTags = Nothing,
           minRideDistance = tripDistanceMinThreshold,
           maxRideDistance = tripDistanceMaxThreshold,
+          driverPreferenceScore = Just $ A.Number 1,
           ..
         }
 
@@ -1085,6 +1119,7 @@ calculateDriverPoolCurrentlyOnRide CalculateDriverPoolReq {..} mbBatchNum = do
         { distanceToPickup = distanceToDriver,
           minRideDistance = tripDistanceMinThreshold,
           maxRideDistance = tripDistanceMaxThreshold,
+          driverPreferenceScore = Just $ A.Number 1,
           ..
         }
 
