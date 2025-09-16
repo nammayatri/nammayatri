@@ -1222,3 +1222,14 @@ getRouteFareRequest sourceCode destCode changeOver viaPoints personId = do
         changeOver = changeOver,
         via = viaPoints
       }
+
+getRouteCodeFromVehicleNumber ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  [DIntegratedBPPConfig.IntegratedBPPConfig] ->
+  Text ->
+  m (Maybe Text)
+getRouteCodeFromVehicleNumber integratedBPPConfigs vehicleNumber = do
+  mbResult <-
+    SIBC.fetchFirstIntegratedBPPConfigRightResult integratedBPPConfigs $ \config ->
+      OTPRest.getVehicleServiceType config vehicleNumber
+  return ((join mbResult) <&> (.route_id))
