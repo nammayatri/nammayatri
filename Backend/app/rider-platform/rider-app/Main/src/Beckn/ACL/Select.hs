@@ -129,6 +129,7 @@ tfOrderItem res isValueAddNP =
       itemLocationIds = Nothing
       itemPaymentIds = Nothing
       itemId = Just res.estimate.itemId
+      itemCategoryIds = Nothing
       itemTags =
         if isValueAddNP
           then Just $ mkItemTags res
@@ -444,4 +445,5 @@ tfProvider res =
       providerLocations = Nothing
       providerPayments = Nothing
       providerId = Just res.providerId
+      providerCategories = Nothing
    in Spec.Provider {..}
