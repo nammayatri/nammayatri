@@ -16,4 +16,5 @@ VALUES
     (atlas_driver_offer_bpp.uuid_generate_v4(),'FitnessCertificateExpired', 'HINDI', 'फिटनेस प्रमाणपत्र समाप्त हो गया', now(), now()),
     (atlas_driver_offer_bpp.uuid_generate_v4(),'InsuranceExpired', 'HINDI', 'बीमा समाप्त हो गया', now(), now()),
     (atlas_driver_offer_bpp.uuid_generate_v4(),'PermitExpired', 'HINDI', 'परमिट समाप्त हो गया', now(), now()),
-    (atlas_driver_offer_bpp.uuid_generate_v4(),'PUCExpired', 'HINDI', 'पीयूसी समाप्त हो गया', now(), now());
+    (atlas_driver_offer_bpp.uuid_generate_v4(),'PUCExpired', 'HINDI', 'पीयूसी समाप्त हो गया', now(), now()),
+    (atlas_driver_offer_bpp.uuid_generate_v4(),'RCInvalid', 'HINDI', 'आपके वाहन का प्रकार वर्तमान में समर्थित नहीं है. कृपया सहायत टीम से संपर्क करें।', now(), now()); -- message can be changed in MSIL environment
