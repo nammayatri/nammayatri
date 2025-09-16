@@ -240,13 +240,21 @@ fetchLiveBusTimings ::
   DIntegratedBPPConfig.IntegratedBPPConfig ->
   Id Merchant ->
   Id MerchantOperatingCity ->
+  Bool ->
   m [RouteStopTimeTable]
-fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid mocid = do
-  allRouteWithBuses <- MultiModalBus.getBusesForRoutes routeCodes
-  let routesWithoutBuses = map (.routeId) $ filter (\route -> null route.buses) allRouteWithBuses
-  liveRouteStopTimes <- mapConcurrently processRoute allRouteWithBuses
-  let flattenedLiveRouteStopTimes = concat liveRouteStopTimes
-  logDebug $ "allRouteWithBuses: " <> show (length allRouteWithBuses) <> " flattenedLiveRouteStopTimes: " <> show (length flattenedLiveRouteStopTimes)
+fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid mocid useLiveBusData = do
+  mbSourceOfServiceTier <- fmap (.sourceOfServiceTier) <$> QRiderConfig.findByMerchantOperatingCityId mocid Nothing
+  (flattenedLiveRouteStopTimes, routesWithoutBuses) <-
+    if useLiveBusData
+      then do
+        allRouteWithBuses <- MultiModalBus.getBusesForRoutes routeCodes
+        let routesWithoutBuses = map (.routeId) $ filter (\route -> null route.buses) allRouteWithBuses
+        liveRouteStopTimes <- mapConcurrently processRoute allRouteWithBuses
+        let flattenedLiveRouteStopTimes = concat liveRouteStopTimes
+        logDebug $ "allRouteWithBuses: " <> show (length allRouteWithBuses) <> " flattenedLiveRouteStopTimes: " <> show (length flattenedLiveRouteStopTimes)
+        return (flattenedLiveRouteStopTimes, routesWithoutBuses)
+      else do
+        return ([], routeCodes)
   staticRouteStopTimes <- measureLatency (GRSM.findByRouteCodeAndStopCode integratedBppConfig mid mocid routesWithoutBuses stopCode) "fetch route stop timing through graphql"
   return $ flattenedLiveRouteStopTimes ++ staticRouteStopTimes
   where
@@ -377,10 +385,11 @@ fetchLiveTimings ::
   Id Merchant ->
   Id MerchantOperatingCity ->
   Enums.VehicleCategory ->
+  Bool ->
   m [RouteStopTimeTable]
-fetchLiveTimings routeCodes stopCode currentTime integratedBppConfig mid mocid vc = case vc of
+fetchLiveTimings routeCodes stopCode currentTime integratedBppConfig mid mocid vc useLiveBusData = case vc of
   -- Enums.SUBWAY -> fetchLiveSubwayTimings routeCodes stopCode currentTime integratedBppConfig mid mocid -- Removed this for now.
-  Enums.BUS -> fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid mocid
+  Enums.BUS -> fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid mocid useLiveBusData
   _ -> measureLatency (GRSM.findByRouteCodeAndStopCode integratedBppConfig mid mocid routeCodes stopCode) "fetch route stop timing through graphql"
 
 type RouteCodeText = Text
@@ -408,8 +417,9 @@ findPossibleRoutes ::
   Id MerchantOperatingCity ->
   Enums.VehicleCategory ->
   Bool ->
+  Bool ->
   m (Maybe Text, [AvailableRoutesByTier], [RouteStopTimeTable])
-findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime integratedBppConfig mid mocid vc sendWithoutFare = do
+findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime integratedBppConfig mid mocid vc sendWithoutFare useLiveBusData = do
   -- Get route mappings that contain the origin stop
   fromRouteStopMappings <- measureLatency (OTPRest.getRouteStopMappingByStopCode fromStopCode integratedBppConfig) ("getRouteStopMappingByStopCode" <> show fromStopCode)
   -- Get route mappings that contain the destination stop
@@ -427,7 +437,7 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
               fromRouteCode == toRouteCode && fromSeq < toSeq -- Ensure correct sequence
           ]
 
-  routeStopTimings <- measureLatency (fetchLiveTimings validRoutes fromStopCode currentTime integratedBppConfig mid mocid vc) ("fetchLiveTimings" <> show validRoutes <> " fromStopCode: " <> show fromStopCode <> " toStopCode: " <> show toStopCode)
+  routeStopTimings <- measureLatency (fetchLiveTimings validRoutes fromStopCode currentTime integratedBppConfig mid mocid vc useLiveBusData) ("fetchLiveTimings" <> show validRoutes <> " fromStopCode: " <> show fromStopCode <> " toStopCode: " <> show toStopCode)
 
   let (_, currentTimeIST) = getISTTimeInfo currentTime
   freqMap <- loadRouteFrequencies routeStopTimings
@@ -583,7 +593,7 @@ findUpcomingTrips routeCode stopCode mbServiceType currentTime mid mocid vc = do
     SIBC.fetchFirstIntegratedBPPConfigResult
       integratedBPPConfigs
       ( \integratedBPPConfig ->
-          fetchLiveTimings [routeCode] stopCode currentTime integratedBPPConfig mid mocid vc
+          fetchLiveTimings [routeCode] stopCode currentTime integratedBPPConfig mid mocid vc True
       )
   logDebug $ "routeStopTimings: " <> show routeStopTimings
 
@@ -735,7 +745,7 @@ buildMultimodalRouteDetails subLegOrder mbRouteCode originStopCode destinationSt
 
   case (mbFromStop >>= (.lat), mbFromStop >>= (.lon), mbToStop >>= (.lat), mbToStop >>= (.lon)) of
     (Just fromStopLat, Just fromStopLon, Just toStopLat, Just toStopLon) -> do
-      (nextAvailableRouteCode, possibleRoutes, originStopTimings) <- measureLatency (findPossibleRoutes Nothing originStopCode destinationStopCode currentTime integratedBppConfig mid mocid vc True) "findPossibleRoutes"
+      (nextAvailableRouteCode, possibleRoutes, originStopTimings) <- measureLatency (findPossibleRoutes Nothing originStopCode destinationStopCode currentTime integratedBppConfig mid mocid vc True True) "findPossibleRoutes"
       let distance = distanceBetweenInMeters (LatLong fromStopLat fromStopLon) (LatLong toStopLat toStopLon)
       let routeCode = mbRouteCode <|> nextAvailableRouteCode
       mbRoute <-
@@ -747,7 +757,7 @@ buildMultimodalRouteDetails subLegOrder mbRouteCode originStopCode destinationSt
         Just route -> do
           routeStopMappings <- OTPRest.getRouteStopMappingByRouteCode route.code integratedBppConfig
           -- Get timing information for this route at the origin stop
-          destStopTimings <- fetchLiveTimings [route.code] destinationStopCode currentTime integratedBppConfig mid mocid vc
+          destStopTimings <- fetchLiveTimings [route.code] destinationStopCode currentTime integratedBppConfig mid mocid vc True
 
           let stopCodeToSequenceNum = Map.fromList $ map (\rst -> (rst.stopCode, rst.sequenceNum)) routeStopMappings
 
