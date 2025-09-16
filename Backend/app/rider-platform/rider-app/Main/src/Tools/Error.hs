@@ -975,6 +975,8 @@ data MultimodalError
   | UnsupportedVehicleType Text -- reason
   | VehicleUnserviceableOnRoute Text -- reason
   | VehicleServiceTierUnserviceable Text -- reason
+  | InvalidVehicleNumber Text -- reason
+  | PublicTransportDataUnavailable Text -- reason
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''MultimodalError
@@ -990,6 +992,8 @@ instance IsBaseError MultimodalError where
     UnsupportedVehicleType reason -> Just $ "Unsupported vehicle type: " <> reason
     VehicleUnserviceableOnRoute reason -> Just $ "Vehicle unserviceable on route: " <> reason
     VehicleServiceTierUnserviceable reason -> Just $ "Vehicle service tier unserviceable: " <> reason
+    InvalidVehicleNumber reason -> Just $ "Invalid vehicle number: " <> reason
+    PublicTransportDataUnavailable reason -> Just $ "Public transport data unavailable: " <> reason
 
 instance IsHTTPError MultimodalError where
   toErrorCode = \case
@@ -1002,6 +1006,8 @@ instance IsHTTPError MultimodalError where
     UnsupportedVehicleType _ -> "UNSUPPORTED_VEHICLE_TYPE"
     VehicleUnserviceableOnRoute _ -> "VEHICLE_UNSERVICEABLE_ON_ROUTE"
     VehicleServiceTierUnserviceable _ -> "VEHICLE_SERVICE_TIER_UNSERVICEABLE"
+    InvalidVehicleNumber _ -> "INVALID_VEHICLE_NUMBER"
+    PublicTransportDataUnavailable _ -> "PUBLIC_TRANSPORT_DATA_UNAVAILABLE"
   toHttpCode = \case
     InvalidStationChange _ _ -> E400
     NoValidMetroRoute _ _ -> E400
@@ -1012,5 +1018,7 @@ instance IsHTTPError MultimodalError where
     UnsupportedVehicleType _ -> E400
     VehicleUnserviceableOnRoute _ -> E400
     VehicleServiceTierUnserviceable _ -> E400
+    InvalidVehicleNumber _ -> E400
+    PublicTransportDataUnavailable _ -> E500
 
 instance IsAPIError MultimodalError

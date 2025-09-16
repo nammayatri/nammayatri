@@ -649,7 +649,9 @@ getPublicTransportData (mbPersonId, merchantId) mbCity _mbConfigVersion mbVehicl
       vehicleTypes
   mbVehicleLiveInfo <-
     case mbVehicleNumber of
-      Just vehicleNumber -> JLU.getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber
+      Just vehicleNumber -> do
+        routeCode <- (JLU.getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber >>= \mbResult -> pure $ mbResult <&> (.routeCode)) >>= fromMaybeM (InvalidVehicleNumber $ "Vehicle " <> vehicleNumber <> ", not found on any route")
+        return $ Just routeCode
       Nothing -> return Nothing
 
   let mkResponse stations routes routeStops bppConfig = do
@@ -713,11 +715,17 @@ getPublicTransportData (mbPersonId, merchantId) mbCity _mbConfigVersion mbVehicl
   let fetchData bppConfig = do
         case mbVehicleLiveInfo of
           Just vehicleLiveInfo -> do
-            routes <- maybeToList <$> OTPRest.getRouteByRouteId bppConfig vehicleLiveInfo.routeCode
-            routeStopMappingInMem <- OTPRest.getRouteStopMappingByRouteCodeInMem vehicleLiveInfo.routeCode bppConfig
-            routeStops <- OTPRest.parseRouteStopMappingInMemoryServer routeStopMappingInMem bppConfig bppConfig.merchantId bppConfig.merchantOperatingCityId
-            stations <- OTPRest.parseStationsFromInMemoryServer routeStopMappingInMem bppConfig
-            mkResponse stations routes routeStops bppConfig
+            try @_ @SomeException
+              ( do
+                  routes <- maybeToList <$> OTPRest.getRouteByRouteId bppConfig vehicleLiveInfo.routeCode
+                  routeStopMappingInMem <- OTPRest.getRouteStopMappingByRouteCodeInMem vehicleLiveInfo.routeCode bppConfig
+                  routeStops <- OTPRest.parseRouteStopMappingInMemoryServer routeStopMappingInMem bppConfig bppConfig.merchantId bppConfig.merchantOperatingCityId
+                  stations <- OTPRest.parseStationsFromInMemoryServer routeStopMappingInMem bppConfig
+                  mkResponse stations routes routeStops bppConfig
+              )
+              >>= \case
+                Left err -> throwError (PublicTransportDataUnavailable $ "Public transport data unavailable: " <> show err)
+                Right response -> return response
           Nothing -> do
             stations <- OTPRest.getStationsByGtfsId bppConfig
             routes <- OTPRest.getRoutesByGtfsId bppConfig
