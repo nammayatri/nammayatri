@@ -455,6 +455,10 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
     processRoute :: MultiModalTypes.MultiModalRoute -> ApiTypes.MultimodalUserPreferences -> Flow (Maybe Journey.Journey)
     processRoute r userPreferences = do
       updatedRoute <- updateRouteWithLegDurations r
+      let singleModeVehicleNumber =
+            case req' of
+              DSearch.PTSearch ptSearchDetails -> ptSearchDetails.vehicleNumber
+              _ -> Nothing
       let initReq =
             JMTypes.JourneyInitData
               { parentSearchId = searchRequest.id,
@@ -462,6 +466,7 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
                 merchantOperatingCityId = searchRequest.merchantOperatingCityId,
                 personId = searchRequest.riderId,
                 legs = updatedRoute.legs,
+                singleModeVehicleNumber = singleModeVehicleNumber,
                 estimatedDistance = updatedRoute.distance,
                 estimatedDuration = updatedRoute.duration,
                 startTime = updatedRoute.startTime,
