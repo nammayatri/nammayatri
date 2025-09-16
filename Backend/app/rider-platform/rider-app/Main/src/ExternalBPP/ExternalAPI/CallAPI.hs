@@ -61,8 +61,8 @@ data BasicRouteDetail = BasicRouteDetail
   }
   deriving (Show)
 
-getFares :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Id Person -> Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> NonEmpty BasicRouteDetail -> Spec.VehicleCategory -> m (Bool, [FRFSUtils.FRFSFare])
-getFares riderId merchant merchanOperatingCity integrationBPPConfig fareRouteDetails vehicleCategory = do
+getFares :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Id Person -> Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> NonEmpty BasicRouteDetail -> Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> m (Bool, [FRFSUtils.FRFSFare])
+getFares riderId merchant merchanOperatingCity integrationBPPConfig fareRouteDetails vehicleCategory serviceTier = do
   let (routeCode, startStopCode, endStopCode) = getRouteCodeAndStartAndStop
   let isFareMandatory =
         case integrationBPPConfig.providerConfig of
@@ -79,13 +79,13 @@ getFares riderId merchant merchanOperatingCity integrationBPPConfig fareRouteDet
             }
       return (isFareMandatory, fares)
     ONDC _ -> do
-      fares <- FRFSUtils.getFares riderId vehicleCategory integrationBPPConfig merchant.id merchanOperatingCity.id routeCode startStopCode endStopCode
+      fares <- FRFSUtils.getFares riderId vehicleCategory serviceTier integrationBPPConfig merchant.id merchanOperatingCity.id routeCode startStopCode endStopCode
       return (isFareMandatory, fares)
     EBIX _ -> do
-      fares <- FRFSUtils.getFares riderId vehicleCategory integrationBPPConfig merchant.id merchanOperatingCity.id routeCode startStopCode endStopCode
+      fares <- FRFSUtils.getFares riderId vehicleCategory serviceTier integrationBPPConfig merchant.id merchanOperatingCity.id routeCode startStopCode endStopCode
       return (isFareMandatory, fares)
     DIRECT _ -> do
-      fares <- FRFSUtils.getFares riderId vehicleCategory integrationBPPConfig merchant.id merchanOperatingCity.id routeCode startStopCode endStopCode
+      fares <- FRFSUtils.getFares riderId vehicleCategory serviceTier integrationBPPConfig merchant.id merchanOperatingCity.id routeCode startStopCode endStopCode
       return (isFareMandatory, fares)
     CRIS config' -> do
       (viaPoints, changeOver) <- getChangeOverAndViaPoints (NE.toList fareRouteDetails) integrationBPPConfig

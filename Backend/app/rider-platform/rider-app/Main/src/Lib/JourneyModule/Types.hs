@@ -249,7 +249,7 @@ data GetFareResponse = GetFareResponse {estimatedMinFare :: HighPrecMoney, estim
 
 data JourneyInitData = JourneyInitData
   { legs :: [EMInterface.MultiModalLeg],
-    singleModeVehicleNumber :: Maybe Text,
+    routeLiveInfo :: Maybe VehicleLiveRouteInfo,
     parentSearchId :: Id DSR.SearchRequest,
     merchantId :: Id DM.Merchant,
     personId :: Id DP.Person,

@@ -647,9 +647,9 @@ getPublicTransportData (mbPersonId, merchantId) mbCity _mbConfigVersion mbVehicl
           SIBC.findAllIntegratedBPPConfig merchantOperatingCityId vType DIBC.MULTIMODAL
       )
       vehicleTypes
-  mbRouteCode <-
+  mbVehicleLiveInfo <-
     case mbVehicleNumber of
-      Just vehicleNumber -> JLU.getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber >>= \mbResult -> pure $ mbResult <&> (.routeCode)
+      Just vehicleNumber -> JLU.getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber
       Nothing -> return Nothing
 
   let mkResponse stations routes routeStops bppConfig = do
@@ -711,10 +711,10 @@ getPublicTransportData (mbPersonId, merchantId) mbCity _mbConfigVersion mbVehicl
             }
 
   let fetchData bppConfig = do
-        case mbRouteCode of
-          Just routeCode -> do
-            routes <- maybeToList <$> OTPRest.getRouteByRouteId bppConfig routeCode
-            routeStopMappingInMem <- OTPRest.getRouteStopMappingByRouteCodeInMem routeCode bppConfig
+        case mbVehicleLiveInfo of
+          Just vehicleLiveInfo -> do
+            routes <- maybeToList <$> OTPRest.getRouteByRouteId bppConfig vehicleLiveInfo.routeCode
+            routeStopMappingInMem <- OTPRest.getRouteStopMappingByRouteCodeInMem vehicleLiveInfo.routeCode bppConfig
             routeStops <- OTPRest.parseRouteStopMappingInMemoryServer routeStopMappingInMem bppConfig bppConfig.merchantId bppConfig.merchantOperatingCityId
             stations <- OTPRest.parseStationsFromInMemoryServer routeStopMappingInMem bppConfig
             mkResponse stations routes routeStops bppConfig
@@ -1411,19 +1411,19 @@ postMultimodalRouteAvailability (mbPersonId, merchantId) req = do
               else availableRoutesByTier
 
       -- Convert to API response format
-      availableRoutes <- concatMapM (convertToAvailableRoute person) filteredRoutes
+      availableRoutes <- concatMapM (convertToAvailableRoute integratedBPPConfig person) filteredRoutes
 
       return $ ApiTypes.RouteAvailabilityResp {availableRoutes = availableRoutes}
   where
-    convertToAvailableRoute :: Domain.Types.Person.Person -> JMU.AvailableRoutesByTier -> Environment.Flow [ApiTypes.AvailableRoute]
-    convertToAvailableRoute person routesByTier =
+    convertToAvailableRoute :: Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> Domain.Types.Person.Person -> JMU.AvailableRoutesByTier -> Environment.Flow [ApiTypes.AvailableRoute]
+    convertToAvailableRoute integratedBPPConfig person routesByTier =
       mapM
         ( \routeInfo -> do
             serviceTierName <-
               case routesByTier.serviceTierName of
                 Just _ -> return routesByTier.serviceTierName
                 Nothing -> do
-                  frfsServiceTier <- CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityId routesByTier.serviceTier person.merchantOperatingCityId
+                  frfsServiceTier <- CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId routesByTier.serviceTier person.merchantOperatingCityId integratedBPPConfig.id
                   return $ frfsServiceTier <&> (.shortName)
             return $
               ApiTypes.AvailableRoute
