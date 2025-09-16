@@ -81,7 +81,6 @@ import Kernel.External.MultiModal.Interface.Types as MultiModalTypes
 import Kernel.Prelude hiding (foldl')
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types
-import Kernel.Tools.Metrics.CoreMetrics
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Id
@@ -650,7 +649,7 @@ getPublicTransportData (mbPersonId, merchantId) mbCity _mbConfigVersion mbVehicl
       vehicleTypes
   mbRouteCode <-
     case mbVehicleNumber of
-      Just vehicleNumber -> getRouteCodeFromVehicleNumber integratedBPPConfigs vehicleNumber
+      Just vehicleNumber -> JLU.getRouteCodeFromVehicleNumber integratedBPPConfigs vehicleNumber
       Nothing -> return Nothing
 
   let mkResponse stations routes routeStops bppConfig = do
@@ -1474,20 +1473,8 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (_mbPersonId, _merchantId) j
       DTrip.Subway -> return Enums.SUBWAY
       _ -> throwError $ UnsupportedVehicleType (show journeyLeg.mode)
   integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig journey.merchantOperatingCityId vehicleType DIBC.MULTIMODAL
-  routeCode <- getRouteCodeFromVehicleNumber integratedBPPConfigs vehicleNumber >>= fromMaybeM (VehicleUnserviceableOnRoute "Vehicle not found on any route")
+  routeCode <- JLU.getRouteCodeFromVehicleNumber integratedBPPConfigs vehicleNumber >>= fromMaybeM (VehicleUnserviceableOnRoute "Vehicle not found on any route")
   unless (routeCode `elem` journeyLegRouteCodes) $ throwError $ VehicleUnserviceableOnRoute ("Vehicle " <> vehicleNumber <> " not found on any route: " <> show journeyLegRouteCodes)
   QJourneyLeg.updateByPrimaryKey $ journeyLeg {DJourneyLeg.finalBoardedBusNumber = Just vehicleNumber}
   updatedLegs <- JM.getAllLegsInfo journey.riderId journeyId
   generateJourneyInfoResponse journey updatedLegs
-
--- Helper Functions
-getRouteCodeFromVehicleNumber ::
-  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
-  [DIBC.IntegratedBPPConfig] ->
-  Text ->
-  m (Maybe Text)
-getRouteCodeFromVehicleNumber integratedBPPConfigs vehicleNumber = do
-  mbResult <-
-    SIBC.fetchFirstIntegratedBPPConfigRightResult integratedBPPConfigs $ \config ->
-      OTPRest.getVehicleServiceType config vehicleNumber
-  return ((join mbResult) <&> (.route_id))
