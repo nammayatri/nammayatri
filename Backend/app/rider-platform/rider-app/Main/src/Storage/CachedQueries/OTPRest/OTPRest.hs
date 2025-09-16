@@ -105,6 +105,17 @@ getRouteStopMappingByRouteCode routeCode integratedBPPConfig = do
   logDebug $ "routeStopMapping from rest api after parsing: " <> show routeStopMapping
   return routeStopMapping
 
+getRouteStopMappingByRouteCodeInMem ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  Text ->
+  IntegratedBPPConfig ->
+  m [RouteStopMappingInMemoryServer]
+getRouteStopMappingByRouteCodeInMem routeCode integratedBPPConfig = do
+  baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
+  routeStopMapping' <- Flow.getRouteStopMappingInMemoryServer baseUrl integratedBPPConfig.feedKey (Just routeCode) Nothing
+  logDebug $ "routeStopMapping from rest api: " <> show routeStopMapping'
+  return routeStopMapping'
+
 getRouteStopMappingByStopCode ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
   Text ->
