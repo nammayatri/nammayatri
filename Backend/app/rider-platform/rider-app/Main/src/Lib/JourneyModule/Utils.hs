@@ -26,6 +26,7 @@ import Domain.Types.Person
 import qualified Domain.Types.RecentLocation as DTRL
 import Domain.Types.RouteStopTimeTable
 import qualified Domain.Types.Trip as DTrip
+import Domain.Utils (mapConcurrently)
 import Environment
 import ExternalBPP.ExternalAPI.Subway.CRIS.RouteFare as CRISRouteFare
 import Kernel.External.Encryption
@@ -243,16 +244,16 @@ fetchLiveBusTimings ::
 fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid mocid = do
   allRouteWithBuses <- MultiModalBus.getBusesForRoutes routeCodes
   let routesWithoutBuses = map (.routeId) $ filter (\route -> null route.buses) allRouteWithBuses
-  liveRouteStopTimes <- mapM processRoute allRouteWithBuses
+  liveRouteStopTimes <- mapConcurrently processRoute allRouteWithBuses
   let flattenedLiveRouteStopTimes = concat liveRouteStopTimes
-  logDebug $ "allRouteWithBuses: " <> show allRouteWithBuses <> " flattenedLiveRouteStopTimes: " <> show flattenedLiveRouteStopTimes
+  logDebug $ "allRouteWithBuses: " <> show (length allRouteWithBuses) <> " flattenedLiveRouteStopTimes: " <> show (length flattenedLiveRouteStopTimes)
   staticRouteStopTimes <- measureLatency (GRSM.findByRouteCodeAndStopCode integratedBppConfig mid mocid routesWithoutBuses stopCode) "fetch route stop timing through graphql"
   return $ flattenedLiveRouteStopTimes ++ staticRouteStopTimes
   where
     processRoute routeWithBuses = do
       let busEtaData = concatMap (\bus -> map (\eta -> (bus.vehicleNumber, eta)) $ fromMaybe [] (bus.busData.eta_data)) routeWithBuses.buses
           filteredBuses = filter (\(_, eta) -> eta.stopCode == stopCode) busEtaData
-      logDebug $ "filteredBuses: " <> show filteredBuses <> " busEtaData: " <> show busEtaData
+      logDebug $ "filteredBuses: " <> show (length filteredBuses) <> " busEtaData: " <> show (length busEtaData)
       vehicleRouteMappings <- forM filteredBuses $ \(vehicleNumber, etaData) -> do
         vrMapping <-
           try @_ @SomeException (OTPRest.getVehicleServiceType integratedBppConfig vehicleNumber) >>= \case
