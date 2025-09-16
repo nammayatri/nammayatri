@@ -243,7 +243,6 @@ fetchLiveBusTimings ::
   Bool ->
   m [RouteStopTimeTable]
 fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid mocid useLiveBusData = do
-  mbSourceOfServiceTier <- fmap (.sourceOfServiceTier) <$> QRiderConfig.findByMerchantOperatingCityId mocid Nothing
   (flattenedLiveRouteStopTimes, routesWithoutBuses) <-
     if useLiveBusData
       then do
