@@ -28,6 +28,7 @@ data RouteStopMapping = RouteStopMapping
     stopPoint :: Kernel.External.Maps.Types.LatLong,
     timeBounds :: Kernel.Types.TimeBound.TimeBound,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory,
+    parentStopCode :: Maybe Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }

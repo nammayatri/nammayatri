@@ -109,3 +109,7 @@ getNandiTripInfo baseUrl tripId = do
 postRouteStopMappingByStopCodes :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c) => BaseUrl -> Text -> [Text] -> m [RouteStopMappingInMemoryServer]
 postRouteStopMappingByStopCodes baseUrl gtfsId stopCodes = do
   withShortRetry $ callAPI baseUrl (NandiAPI.postNandiRouteStopMappingByStopCodes (RouteStopMappingByStopCodesReq {..})) "postRouteStopMappingByStopCodes" NandiAPI.nandiRouteStopMappingByStopCodesAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_POST_ROUTE_STOP_MAPPING_BY_STOP_CODES_API") baseUrl)
+
+getRouteStopMappingByParentStopCode :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c) => BaseUrl -> Text -> Text -> m [RouteStopMappingInMemoryServer]
+getRouteStopMappingByParentStopCode baseUrl gtfsId parentStopCode = do
+  withShortRetry $ callAPI baseUrl (NandiAPI.getNandiRouteStopMappingByParentStopCode gtfsId parentStopCode) "getRouteStopMappingByParentStopCode" NandiAPI.nandiRouteStopMappingByParentStopCodeAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_GET_ROUTE_STOP_MAPPING_BY_PARENT_STOP_CODE_API") baseUrl)

@@ -156,6 +156,19 @@ getRouteStopMappingByStopCodes integratedBPPConfig stopCodes = do
   logDebug $ "routeStopMapping from rest api after parsing: " <> show routeStopMapping
   return routeStopMapping
 
+getRouteStopMappingByParentStopCode ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  Text ->
+  IntegratedBPPConfig ->
+  m [RouteStopMapping]
+getRouteStopMappingByParentStopCode parentStopCode integratedBPPConfig = do
+  baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
+  routeStopMapping' <- Flow.getRouteStopMappingByParentStopCode baseUrl integratedBPPConfig.feedKey parentStopCode
+  logDebug $ "routeStopMapping from rest api: " <> show routeStopMapping'
+  routeStopMapping <- parseRouteStopMappingInMemoryServer routeStopMapping' integratedBPPConfig integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
+  logDebug $ "routeStopMapping from rest api after parsing: " <> show routeStopMapping
+  return routeStopMapping
+
 fromMaybe' :: Int -> Maybe Int -> Integer
 fromMaybe' a = maybe (integerFromInt a) integerFromInt
 
@@ -320,6 +333,7 @@ parseRouteStopMappingInMemoryServer routeStopMappingInMemoryServer integratedBPP
               routeCode = routeCode,
               sequenceNum = mapping.sequenceNum,
               stopCode = stopCode,
+              parentStopCode = mapping.parentStopCode,
               stopName = mapping.stopName,
               stopPoint = mapping.stopPoint,
               timeBounds = Unbounded,
