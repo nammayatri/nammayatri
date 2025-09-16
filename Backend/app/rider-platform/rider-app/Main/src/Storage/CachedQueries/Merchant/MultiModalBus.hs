@@ -19,6 +19,7 @@ import Data.Aeson
 import Data.Aeson.Types
 import qualified Data.Map as M
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime, utcTimeToPOSIXSeconds)
+import Domain.Utils (mapConcurrently)
 import EulerHS.Prelude hiding (encodeUtf8, fromStrict, id, map)
 import Kernel.Prelude hiding (encodeUtf8)
 import qualified Kernel.Storage.Hedis as Hedis
@@ -37,11 +38,7 @@ utcToIST = addUTCTime 19800
 -- Type for bus stop ETA information
 data BusStopETA = BusStopETA
   { stopCode :: Text,
-    stopSeq :: Int,
-    stopName :: Text,
-    arrivalTime :: UTCTime,
-    stopLat :: Double,
-    stopLon :: Double
+    arrivalTime :: UTCTime
   }
   deriving (Generic, Show, Eq)
 
@@ -53,11 +50,7 @@ withCrossAppRedisNew f = do
 instance FromJSON BusStopETA where
   parseJSON = withObject "BusStopETA" $ \v -> do
     stopCode <- v .: "stop_id"
-    stopSeq <- v .: "stop_seq"
-    stopName <- v .: "stop_name"
     arrivalTimestamp <- v .: "arrival_time" :: Parser Integer
-    stopLat <- v .: "stop_lat"
-    stopLon <- v .: "stop_lon"
     let arrivalTime = utcToIST $ posixSecondsToUTCTime $ realToFrac arrivalTimestamp
     return $ BusStopETA {..}
 
@@ -65,10 +58,6 @@ instance ToJSON BusStopETA where
   toJSON BusStopETA {..} =
     object
       [ "stop_id" .= stopCode,
-        "stop_seq" .= stopSeq,
-        "stop_name" .= stopName,
-        "stop_lat" .= stopLat,
-        "stop_lon" .= stopLon,
         "arrival_time" .= floor @Double @Integer (realToFrac $ utcTimeToPOSIXSeconds arrivalTime)
       ]
 
@@ -77,13 +66,10 @@ data BusData = BusData
   { latitude :: Double,
     longitude :: Double,
     timestamp :: Int,
-    speed :: Double,
-    device_id :: Text,
     eta_data :: Maybe [BusStopETA],
     route_id :: Text,
     route_state :: Maybe RouteState,
-    route_number :: Maybe Text,
-    vehicle_number :: Maybe Text
+    route_number :: Maybe Text
   }
   deriving (Generic, Show, Eq, FromJSON, ToJSON)
 
@@ -99,8 +85,6 @@ data BusDataWithRoutesInfo = BusDataWithRoutesInfo
   { latitude :: Double,
     longitude :: Double,
     timestamp :: Int,
-    speed :: Double,
-    device_id :: Text,
     vehicle_number :: Maybe Text,
     routes_info :: Maybe (M.Map BusRouteId BusRouteInfo)
   }
@@ -127,15 +111,9 @@ mkRouteKey routeId = "route:" <> routeId
 getRoutesBuses :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv) => Text -> m RouteWithBuses
 getRoutesBuses routeId = do
   let key = mkRouteKey routeId
-
   busDataPairs <- withCrossAppRedisNew $ Hedis.hGetAll key
-  logDebug $ "Got bus data for route " <> routeId <> ": " <> show busDataPairs
-
   let buses = map (uncurry FullBusData) busDataPairs
-
-  logDebug $ "Parsed bus data for route " <> routeId <> ": " <> show buses
-
   return $ RouteWithBuses routeId buses
 
 getBusesForRoutes :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv) => [Text] -> m [RouteWithBuses]
-getBusesForRoutes = mapM getRoutesBuses
+getBusesForRoutes = mapConcurrently getRoutesBuses

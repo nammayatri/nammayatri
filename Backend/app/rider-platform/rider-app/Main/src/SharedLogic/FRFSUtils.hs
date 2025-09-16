@@ -19,6 +19,7 @@ import qualified BecknV2.FRFS.Enums as Spec
 import BecknV2.FRFS.Utils
 import Control.Monad.Extra (mapMaybeM)
 import Data.Aeson as A
+import qualified Data.HashMap.Strict as HM
 import Data.List (groupBy, nub, sortBy)
 import qualified Data.Text as T
 import qualified Data.Time as Time
@@ -537,35 +538,32 @@ trackVehicles _personId _merchantId merchantOpCityId vehicleType routeCode platf
             vehicleTrackingInfo
         _ -> do
           nearbyBuses <- CQMMB.getRoutesBuses routeCode -- Add a new logic to get the bus location and ETA, unify it with the existing logic @khuzema
-          logDebug $ "Got bus data for route " <> routeCode <> ": " <> show nearbyBuses
+          routeStopMapping <- HM.fromList . map (\a -> (a.stopCode, a)) <$> OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig
           nearbyBuses.buses `forM` \bus -> do
             let busData = bus.busData
-            let sortedEtaData = sortBy (comparing (.stopSeq)) (fromMaybe [] busData.eta_data)
-            let mbNextStop = listToMaybe sortedEtaData
+            let mbNextStop = busData.eta_data >>= listToMaybe
+            let mbNextStopMapping = mbNextStop >>= (\stop -> HM.lookup stop.stopCode routeStopMapping)
             let (_, upcomingStops) =
                   foldr'
                     ( \stop (lastPoint, acc) -> do
-                        let us =
-                              UpcomingStop
-                                { stopCode = stop.stopCode,
-                                  stopSeq = stop.stopSeq,
-                                  stopName = stop.stopName,
-                                  estimatedTravelTime = Just stop.arrivalTime,
-                                  travelDistance = fmap highPrecMetersToMeters (\lastPoint' -> distanceBetweenInMeters lastPoint' (mkLatLong stop.stopLat stop.stopLon)) <$> lastPoint,
-                                  actualTravelTime = Nothing
-                                }
-                        (Just (mkLatLong stop.stopLat stop.stopLon), us : acc)
+                        let mbStop = HM.lookup stop.stopCode routeStopMapping
+                        case mbStop of
+                          Just stop' -> do
+                            let us =
+                                  UpcomingStop
+                                    { stopCode = stop.stopCode,
+                                      stopSeq = stop'.sequenceNum,
+                                      stopName = stop'.stopName,
+                                      estimatedTravelTime = Just stop.arrivalTime,
+                                      travelDistance = fmap highPrecMetersToMeters (\lastPoint' -> distanceBetweenInMeters lastPoint' (mkLatLong stop'.stopPoint.lat stop'.stopPoint.lon)) <$> lastPoint,
+                                      actualTravelTime = Nothing
+                                    }
+                            (Just (mkLatLong stop'.stopPoint.lat stop'.stopPoint.lon), us : acc)
+                          Nothing -> (lastPoint, acc)
                     )
                     (mbRiderPosition, [])
-                    sortedEtaData
-            logDebug $ "Got bus data for route " <> routeCode <> ": next stop" <> show mbNextStop
-            mbNextStopMapping <-
-              case mbNextStop of
-                Just nextStop -> do
-                  logDebug $ "Got bus data for route " <> routeCode <> ": next stop mapping" <> show nextStop <> " data: " <> show routeCode <> " " <> nextStop.stopCode <> " " <> integratedBPPConfig.id.getId
-                  nextStop' <- OTPRest.getRouteStopMappingByStopCodeAndRouteCode nextStop.stopCode routeCode integratedBPPConfig
-                  return $ listToMaybe nextStop'
-                Nothing -> pure Nothing
+                    (fromMaybe [] busData.eta_data)
+            logDebug $ "Got bus data for route " <> routeCode <> ": next stop" <> show mbNextStopMapping
             return $
               VehicleTracking
                 { nextStop = mbNextStopMapping,
@@ -579,7 +577,7 @@ trackVehicles _personId _merchantId merchantOpCityId vehicleType routeCode platf
                         { latitude = Just busData.latitude,
                           longitude = Just busData.longitude,
                           scheduleRelationship = Nothing,
-                          speed = Just busData.speed,
+                          speed = Nothing,
                           startDate = Nothing,
                           startTime = Nothing,
                           routeState = busData.route_state,
