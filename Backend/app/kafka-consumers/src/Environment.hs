@@ -22,8 +22,10 @@ import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config (EsqDBConfig, EsqDBEnv, prepareEsqDBEnv)
 import Kernel.Storage.Hedis.Config
+import qualified Kernel.Storage.InMem as IM
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerCfg, KafkaProducerTools, buildKafkaProducerTools, castCompression)
 import qualified Kernel.Tools.Metrics.CoreMetrics as Metrics
+import qualified Kernel.Types.CacheFlow as CF
 import Kernel.Types.Common (Microseconds, Seconds)
 import Kernel.Types.Flow (FlowR)
 import Kernel.Types.SlidingWindowCounters
@@ -112,7 +114,8 @@ data AppCfg = AppCfg
     kafkaReadBatchSize :: Int,
     kafkaReadBatchDelay :: Seconds,
     consumerStartTime :: Maybe Integer,
-    consumerEndTime :: Maybe Integer
+    consumerEndTime :: Maybe Integer,
+    inMemConfig :: CF.InMemConfig
   }
   deriving (Generic, FromDhall)
 
@@ -158,7 +161,8 @@ data AppEnv = AppEnv
     kafkaReadBatchSize :: Int,
     kafkaReadBatchDelay :: Seconds,
     consumerStartTime :: Maybe Integer,
-    consumerEndTime :: Maybe Integer
+    consumerEndTime :: Maybe Integer,
+    inMemEnv :: CF.InMemEnv
   }
   deriving (Generic)
 
@@ -205,6 +209,7 @@ buildAppEnv AppCfg {..} consumerType = do
   serviceClickhouseEnv <- createConn serviceClickhouseCfg
   kafkaClickhouseEnv <- createConn kafkaClickhouseCfg
   dashboardClickhouseEnv <- createConn dashboardClickhouseCfg
+  inMemEnv <- IM.setupInMemEnv inMemConfig
   pure $ AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()

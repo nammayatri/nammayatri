@@ -34,8 +34,10 @@ import Kernel.Sms.Config (SmsConfig)
 import Kernel.Storage.Clickhouse.Config
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis (HedisEnv, connectHedis, connectHedisCluster, disconnectHedis)
+import Kernel.Storage.InMem as IM
 import Kernel.Streaming.Kafka.Producer.Types
 import Kernel.Types.Base64 (Base64)
+import Kernel.Types.CacheFlow as KTC
 import Kernel.Types.Common
 import Kernel.Types.Flow
 import Kernel.Types.SlidingWindowLimiter
@@ -121,7 +123,8 @@ data HandlerEnv = HandlerEnv
     kafkaClickhouseEnv :: ClickhouseEnv,
     kafkaClickhouseCfg :: ClickhouseCfg,
     searchLimitExceedNotificationTemplate :: Text,
-    slackCfg :: SlackConfig
+    slackCfg :: SlackConfig,
+    inMemEnv :: KTC.InMemEnv
   }
   deriving (Generic)
 
@@ -158,6 +161,7 @@ buildHandlerEnv HandlerCfg {..} = do
   dashboardClickhouseEnv <- createConn dashboardClickhouseCfg
   kafkaClickhouseEnv <- createConn kafkaClickhouseCfg
   let serviceClickhouseCfg = riderClickhouseCfg
+  inMemEnv <- IM.setupInMemEnv inMemConfig
   return HandlerEnv {..}
 
 releaseHandlerEnv :: HandlerEnv -> IO ()

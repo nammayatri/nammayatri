@@ -19,6 +19,7 @@ import qualified Data.Text as T
 import EulerHS.Prelude hiding (maybe)
 import Kernel.Storage.Esqueleto.Config
 import Kernel.Storage.Hedis
+import Kernel.Storage.InMem as IM
 import Kernel.Streaming.Kafka.Producer.Types
 import Kernel.Tools.Metrics.CoreMetrics
 import Kernel.Types.CacheFlow as CF
@@ -61,7 +62,8 @@ data AppCfg = AppCfg
     schedulerType :: SchedulerType,
     kvConfigUpdateFrequency :: Int,
     runReviver :: Bool,
-    kafkaProducerCfg :: KafkaProducerCfg
+    kafkaProducerCfg :: KafkaProducerCfg,
+    inMemConfig :: CF.InMemConfig
   }
   deriving (Generic, FromDhall)
 
@@ -98,7 +100,8 @@ data AppEnv = AppEnv
     kafkaProducerTools :: KafkaProducerTools,
     requestId :: Maybe Text,
     shouldLogRequestId :: Bool,
-    kafkaProducerForART :: Maybe KafkaProducerTools
+    kafkaProducerForART :: Maybe KafkaProducerTools,
+    inMemEnv :: CF.InMemEnv
   }
   deriving (Generic)
 
@@ -125,6 +128,7 @@ buildAppEnv AppCfg {..} producerType = do
       else connectHedisCluster hedisNonCriticalClusterCfg id
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv
+  inMemEnv <- IM.setupInMemEnv inMemConfig
   pure $ AppEnv {..}
 
 type FlowHandler = FlowHandlerR AppEnv
