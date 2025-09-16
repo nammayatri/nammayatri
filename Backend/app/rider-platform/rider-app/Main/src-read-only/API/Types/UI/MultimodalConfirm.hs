@@ -206,6 +206,10 @@ data MultimodalUserPreferences = MultimodalUserPreferences
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data OnboardedVehicleDetailsReq = OnboardedVehicleDetailsReq {vehicleNumber :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data PaymentFareUpdate = PaymentFareUpdate {journeyLegOrder :: Kernel.Prelude.Int, newFare :: Kernel.Types.Common.PriceAPIEntity, oldFare :: Kernel.Types.Common.PriceAPIEntity}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

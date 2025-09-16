@@ -249,6 +249,7 @@ data GetFareResponse = GetFareResponse {estimatedMinFare :: HighPrecMoney, estim
 
 data JourneyInitData = JourneyInitData
   { legs :: [EMInterface.MultiModalLeg],
+    singleModeVehicleNumber :: Maybe Text,
     parentSearchId :: Id DSR.SearchRequest,
     merchantId :: Id DM.Merchant,
     personId :: Id DP.Person,
@@ -1190,8 +1191,9 @@ mkJourneyLeg ::
   Meters ->
   Maybe GetFareResponse ->
   Maybe Gates ->
+  Maybe Text ->
   m DJL.JourneyLeg
-mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation merchantId merchantOpCityId journeyId multimodalSearchRequestId maximumWalkDistance fare mbGates = do
+mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation merchantId merchantOpCityId journeyId multimodalSearchRequestId maximumWalkDistance fare mbGates mbSingleModeVehicleNumber = do
   now <- getCurrentTime
   journeyLegId <- generateGUID
   routeDetails <- mapM (mkRouteDetail journeyLegId) leg.routeDetails
@@ -1232,7 +1234,7 @@ mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation m
         legSearchId = Nothing,
         legPricingId = Nothing,
         changedBusesInSequence = Nothing,
-        finalBoardedBusNumber = Nothing,
+        finalBoardedBusNumber = mbSingleModeVehicleNumber,
         osmEntrance = chooseGate (gates >>= (.osmEntrance)) (leg.entrance),
         osmExit = chooseGate (gates >>= (.osmExit)) (leg.exit),
         straightLineEntrance = chooseGate (gates >>= (.straightLineEntrance)) (leg.entrance),

@@ -33,6 +33,7 @@ module Domain.Action.UI.MultimodalConfirm
     postMultimodalOrderChangeStops,
     postMultimodalRouteAvailability,
     postMultimodalSwitchRoute,
+    postMultimodalOrderSublegSetOnboardedVehicleDetails,
   )
 where
 
@@ -66,6 +67,7 @@ import Domain.Types.MultimodalPreferences as DMP
 import qualified Domain.Types.Person
 import qualified Domain.Types.RiderConfig as DRC
 import qualified Domain.Types.RouteDetails as RD
+import qualified Domain.Types.RouteStopMapping as DRSM
 import Domain.Types.RouteStopTimeTable (SourceType (..))
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.Station as DStation
@@ -79,6 +81,7 @@ import Kernel.External.MultiModal.Interface.Types as MultiModalTypes
 import Kernel.Prelude hiding (foldl')
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types
+import Kernel.Tools.Metrics.CoreMetrics
 import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Id
@@ -624,22 +627,33 @@ getPublicTransportData ::
     ) ->
     Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.City ->
     Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+    Kernel.Prelude.Maybe VehicleCategory ->
     Environment.Flow API.Types.UI.MultimodalConfirm.PublicTransportData
   )
-getPublicTransportData (mbPersonId, merchantId) mbCity _mbConfigVersion = do
+getPublicTransportData (mbPersonId, merchantId) mbCity _mbConfigVersion mbVehicleNumber mbVehicleType = do
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   mbRequestCity <- maybe (pure Nothing) (CQMOC.findByMerchantIdAndCity merchantId) mbCity
   let merchantOperatingCityId = maybe person.merchantOperatingCityId (.id) mbRequestCity
-  let vehicleTypes = [Enums.BUS, Enums.METRO, Enums.SUBWAY]
+  let vehicleTypes =
+        case mbVehicleType of
+          Just BUS -> [Enums.BUS]
+          Just METRO -> [Enums.METRO]
+          Just SUBWAY -> [Enums.SUBWAY]
+          _ -> [Enums.BUS, Enums.METRO, Enums.SUBWAY]
   integratedBPPConfigs <-
     concatMapM
       ( \vType ->
           SIBC.findAllIntegratedBPPConfig merchantOperatingCityId vType DIBC.MULTIMODAL
       )
       vehicleTypes
+  mbRouteCode <-
+    case mbVehicleNumber of
+      Just vehicleNumber -> getRouteCodeFromVehicleNumber integratedBPPConfigs vehicleNumber
+      Nothing -> return Nothing
 
-  let mkResponse stations routes bppConfig = do
+  let mkResponse stations routes routeStops bppConfig = do
         gtfsVersion <-
           try @_ @SomeException (OTPRest.getGtfsVersion bppConfig) >>= \case
             Left _ -> return bppConfig.feedKey
@@ -683,14 +697,32 @@ getPublicTransportData (mbPersonId, merchantId) mbCity _mbConfigVersion = do
                         }
                   )
                   routes,
-              rsm = [],
+              rsm =
+                map
+                  ( \rsm ->
+                      ApiTypes.TransportRouteStopMapping
+                        { rc = rsm.routeCode,
+                          sc = rsm.stopCode,
+                          sn = rsm.sequenceNum,
+                          ibc = bppConfig.id
+                        }
+                  )
+                  routeStops,
               ptcv = gtfsVersion
             }
 
   let fetchData bppConfig = do
-        stations <- OTPRest.getStationsByGtfsId bppConfig
-        routes <- OTPRest.getRoutesByGtfsId bppConfig
-        mkResponse stations routes bppConfig
+        case mbRouteCode of
+          Just routeCode -> do
+            routes <- maybeToList <$> OTPRest.getRouteByRouteId bppConfig routeCode
+            routeStopMappingInMem <- OTPRest.getRouteStopMappingByRouteCodeInMem routeCode bppConfig
+            routeStops <- OTPRest.parseRouteStopMappingInMemoryServer routeStopMappingInMem bppConfig bppConfig.merchantId bppConfig.merchantOperatingCityId
+            stations <- OTPRest.parseStationsFromInMemoryServer routeStopMappingInMem bppConfig
+            mkResponse stations routes routeStops bppConfig
+          Nothing -> do
+            stations <- OTPRest.getStationsByGtfsId bppConfig
+            routes <- OTPRest.getRoutesByGtfsId bppConfig
+            mkResponse stations routes ([] :: [DRSM.RouteStopMapping]) bppConfig
 
   transportDataList <-
     try @_ @SomeException
@@ -1098,7 +1130,11 @@ postMultimodalOrderChangeStops _ journeyId legOrder req = do
       journey.merchantId reqJourneyLeg.merchantOperatingCityId
       journeyId
       (Id journey.searchRequestId)
-      riderConfig.maximumWalkDistance Nothing mbGates
+      riderConfig.maximumWalkDistance
+      Nothing
+      mbGates
+      reqJourneyLeg.finalBoardedBusNumber
+
   QJourneyLegMapping.updateIsDeleted True reqJourneyLeg.id
   QJourneyLegExtra.create newJourneyLeg
 
@@ -1415,3 +1451,43 @@ postMultimodalSwitchRoute (mbPersonId, merchantId) req = do
   journeyLeg <- QJourneyLeg.getJourneyLeg req.journeyId req.legOrder
   QRouteDetails.updateRoute (Just req.routeCode) (Just req.routeCode) (Just req.routeLongName) (Just req.routeShortName) journeyLeg.id.getId
   postMultimodalOrderSwitchFRFSTier (mbPersonId, merchantId) req.journeyId req.legOrder (API.Types.UI.MultimodalConfirm.SwitchFRFSTierReq req.quoteId)
+
+postMultimodalOrderSublegSetOnboardedVehicleDetails ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
+    Kernel.Prelude.Int ->
+    Kernel.Prelude.Int ->
+    API.Types.UI.MultimodalConfirm.OnboardedVehicleDetailsReq ->
+    Environment.Flow API.Types.UI.MultimodalConfirm.JourneyInfoResp
+  )
+postMultimodalOrderSublegSetOnboardedVehicleDetails (_mbPersonId, _merchantId) journeyId legOrder _subLegOrder req = do
+  let vehicleNumber = req.vehicleNumber
+  journeyLeg <- QJourneyLeg.getJourneyLeg journeyId legOrder
+  journey <- JM.getJourney journeyId
+  let journeyLegRouteCodes = mapMaybe (.routeCode) journeyLeg.routeDetails
+  vehicleType <-
+    case journeyLeg.mode of
+      DTrip.Bus -> return Enums.BUS
+      DTrip.Metro -> return Enums.METRO
+      DTrip.Subway -> return Enums.SUBWAY
+      _ -> throwError $ UnsupportedVehicleType (show journeyLeg.mode)
+  integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig journey.merchantOperatingCityId vehicleType DIBC.MULTIMODAL
+  routeCode <- getRouteCodeFromVehicleNumber integratedBPPConfigs vehicleNumber >>= fromMaybeM (VehicleUnserviceableOnRoute "Vehicle not found on any route")
+  unless (routeCode `elem` journeyLegRouteCodes) $ throwError $ VehicleUnserviceableOnRoute ("Vehicle " <> vehicleNumber <> " not found on any route: " <> show journeyLegRouteCodes)
+  QJourneyLeg.updateByPrimaryKey $ journeyLeg {DJourneyLeg.finalBoardedBusNumber = Just vehicleNumber}
+  updatedLegs <- JM.getAllLegsInfo journey.riderId journeyId
+  generateJourneyInfoResponse journey updatedLegs
+
+-- Helper Functions
+getRouteCodeFromVehicleNumber ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  [DIBC.IntegratedBPPConfig] ->
+  Text ->
+  m (Maybe Text)
+getRouteCodeFromVehicleNumber integratedBPPConfigs vehicleNumber = do
+  mbResult <-
+    SIBC.fetchFirstIntegratedBPPConfigRightResult integratedBPPConfigs $ \config ->
+      OTPRest.getVehicleServiceType config vehicleNumber
+  return ((join mbResult) <&> (.route_id))

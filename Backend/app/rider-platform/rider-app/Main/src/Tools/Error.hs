@@ -972,6 +972,8 @@ data MultimodalError
   | InvalidLegOrder Int -- legOrder
   | OSRMFailure Text -- reason
   | OTPServiceUnavailable Text -- reason
+  | UnsupportedVehicleType Text -- reason
+  | VehicleUnserviceableOnRoute Text -- reason
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''MultimodalError
@@ -984,6 +986,8 @@ instance IsBaseError MultimodalError where
     InvalidLegOrder legOrder -> Just $ "Invalid leg order: " <> show legOrder
     OSRMFailure reason -> Just $ "OSRM service failure: " <> reason
     OTPServiceUnavailable reason -> Just $ "OTP service unavailable: " <> reason
+    UnsupportedVehicleType reason -> Just $ "Unsupported vehicle type: " <> reason
+    VehicleUnserviceableOnRoute reason -> Just $ "Vehicle unserviceable on route: " <> reason
 
 instance IsHTTPError MultimodalError where
   toErrorCode = \case
@@ -993,6 +997,8 @@ instance IsHTTPError MultimodalError where
     InvalidLegOrder _ -> "INVALID_LEG_ORDER"
     OSRMFailure _ -> "OSRM_FAILURE"
     OTPServiceUnavailable _ -> "OTP_SERVICE_UNAVAILABLE"
+    UnsupportedVehicleType _ -> "UNSUPPORTED_VEHICLE_TYPE"
+    VehicleUnserviceableOnRoute _ -> "VEHICLE_UNSERVICEABLE_ON_ROUTE"
   toHttpCode = \case
     InvalidStationChange _ _ -> E400
     NoValidMetroRoute _ _ -> E400
@@ -1000,5 +1006,7 @@ instance IsHTTPError MultimodalError where
     InvalidLegOrder _ -> E400
     OSRMFailure _ -> E500
     OTPServiceUnavailable _ -> E503
+    UnsupportedVehicleType _ -> E400
+    VehicleUnserviceableOnRoute _ -> E400
 
 instance IsAPIError MultimodalError

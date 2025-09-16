@@ -286,6 +286,9 @@ types:
     routeShortName: Text
     routeLongName: Text
 
+  OnboardedVehicleDetailsReq:
+    vehicleNumber: Text
+
 apis:
   - POST:
       endpoint: /multimodal/{journeyId}/initiate
@@ -469,6 +472,8 @@ apis:
       query:
         publicTransportConfigVersion: Text
         city: City
+        vehicleNumber: Text
+        vehicleType: VehicleCategory
       response:
         type: PublicTransportData
 
@@ -479,6 +484,17 @@ apis:
         legOrder: Int
       response:
         type: LegServiceTierOptionsResp
+
+  - POST:
+      endpoint: /multimodal/{journeyId}/order/{legOrder}/subleg/{subLegOrder}/setOnboardedVehicleDetails
+      params:
+        journeyId: Id Journey
+        legOrder: Int
+        subLegOrder: Int
+      request:
+        type: OnboardedVehicleDetailsReq
+      response:
+        type: JourneyInfoResp
 
   - POST:
       endpoint: /multimodal/{journeyId}/order/{legOrder}/subleg/{subLegOrder}/setStatus/{status}
