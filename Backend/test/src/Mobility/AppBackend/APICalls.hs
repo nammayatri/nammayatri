@@ -42,6 +42,7 @@ import Kernel.Types.Version
 import Mobility.AppBackend.Fixtures
 import Servant hiding (Context)
 import Servant.Client
+import qualified "rider-app" SharedLogic.Cancel as AppSelect
 
 selectQuote2 :: RegToken -> Id AbeEstimate.Estimate -> AppSelect.DSelectReq -> ClientM AppSelect.MultimodalSelectRes
 selectList :: RegToken -> Id AbeEstimate.Estimate -> ClientM AppSelect.SelectListRes
