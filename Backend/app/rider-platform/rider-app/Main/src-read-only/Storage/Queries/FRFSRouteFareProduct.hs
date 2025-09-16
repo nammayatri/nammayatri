@@ -6,6 +6,7 @@ module Storage.Queries.FRFSRouteFareProduct where
 
 import qualified Domain.Types.FRFSFarePolicy
 import qualified Domain.Types.FRFSRouteFareProduct
+import qualified Domain.Types.FRFSVehicleServiceTier
 import qualified Domain.Types.IntegratedBPPConfig
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -47,6 +48,17 @@ findByRouteCode routeCode integratedBppConfigId = do
     [ Se.And
         [ Se.Is Beam.routeCode $ Se.Eq routeCode,
           Se.Is Beam.integratedBppConfigId $ Se.Eq (Kernel.Types.Id.getId integratedBppConfigId)
+        ]
+    ]
+
+findByRouteCodeAndVehicleServiceTierId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier -> m (Maybe Domain.Types.FRFSRouteFareProduct.FRFSRouteFareProduct))
+findByRouteCodeAndVehicleServiceTierId routeCode vehicleServiceTierId = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.routeCode $ Se.Eq routeCode,
+          Se.Is Beam.vehicleServiceTierId $ Se.Eq (Kernel.Types.Id.getId vehicleServiceTierId)
         ]
     ]
 

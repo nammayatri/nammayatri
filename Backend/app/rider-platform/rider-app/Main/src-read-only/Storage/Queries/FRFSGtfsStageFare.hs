@@ -41,6 +41,19 @@ findAllByVehicleTypeAndStageAndMerchantOperatingCityId vehicleType stage merchan
         ]
     ]
 
+findOneByVehicleTypeAndStageAndMerchantOperatingCityIdAndVehicleServiceTierId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (BecknV2.FRFS.Enums.VehicleCategory -> Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Kernel.Types.Id.Id Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier -> m (Maybe Domain.Types.FRFSGtfsStageFare.FRFSGtfsStageFare))
+findOneByVehicleTypeAndStageAndMerchantOperatingCityIdAndVehicleServiceTierId vehicleType stage merchantOperatingCityId vehicleServiceTierId = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.vehicleType $ Se.Eq vehicleType,
+          Se.Is Beam.stage $ Se.Eq stage,
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
+          Se.Is Beam.vehicleServiceTierId $ Se.Eq (Kernel.Types.Id.getId vehicleServiceTierId)
+        ]
+    ]
+
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSGtfsStageFare.FRFSGtfsStageFare -> m (Maybe Domain.Types.FRFSGtfsStageFare.FRFSGtfsStageFare))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 

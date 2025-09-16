@@ -15,6 +15,7 @@ data FRFSVehicleServiceTierT f = FRFSVehicleServiceTierT
   { _type :: B.C f BecknV2.FRFS.Enums.ServiceTierType,
     description :: B.C f Kernel.Prelude.Text,
     id :: B.C f Kernel.Prelude.Text,
+    integratedBppConfigId :: B.C f Kernel.Prelude.Text,
     longName :: B.C f Kernel.Prelude.Text,
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,

@@ -142,8 +142,8 @@ init journeyReq userPreferences = do
     mapWithIndex
       ( \idx (mbPrev, leg, mbNext) -> do
           let travelMode = convertMultiModalModeToTripMode leg.mode (straightLineDistance leg) journeyReq.maximumWalkDistance
-          legFare@(_, mbTotalLegFare) <- measureLatency (JLI.getFare leg.fromArrivalTime journeyReq.personId journeyReq.merchantId journeyReq.merchantOperatingCityId leg travelMode) "multimodal getFare"
-          let onboardedSingleModeVehicleNumber = if travelMode `elem` [DTrip.Bus, DTrip.Metro, DTrip.Subway] then journeyReq.singleModeVehicleNumber else Nothing
+          legFare@(_, mbTotalLegFare) <- measureLatency (JLI.getFare leg.fromArrivalTime journeyReq.personId journeyReq.merchantId journeyReq.merchantOperatingCityId journeyReq.routeLiveInfo leg travelMode) "multimodal getFare"
+          let onboardedSingleModeVehicleNumber = if travelMode `elem` [DTrip.Bus, DTrip.Metro, DTrip.Subway] then journeyReq.routeLiveInfo <&> (.vehicleNumber) else Nothing
           journeyLeg <- JL.mkJourneyLeg idx (mbPrev, leg, mbNext) fromLocation toLocation journeyReq.merchantId journeyReq.merchantOperatingCityId journeyId journeyReq.parentSearchId journeyReq.maximumWalkDistance mbTotalLegFare Nothing onboardedSingleModeVehicleNumber
           return (legFare, journeyLeg)
       )
@@ -1094,7 +1094,7 @@ extendLegEstimatedFare journeyId startPoint mbEndLocation _ = do
       let distance = convertMetersToDistance Meter distResp.distance
       now <- getCurrentTime
       let multiModalLeg = mkMultiModalTaxiLeg distance distResp.duration MultiModalTypes.Unspecified startLocation.lat startLocation.lon endLocation.lat endLocation.lon
-      (isFareMandatory, estimatedFare) <- JLI.getFare (Just now) journey.riderId currentLeg.merchantId currentLeg.merchantOperatingCityId multiModalLeg DTrip.Taxi
+      (isFareMandatory, estimatedFare) <- JLI.getFare (Just now) journey.riderId currentLeg.merchantId currentLeg.merchantOperatingCityId Nothing multiModalLeg DTrip.Taxi
       when (isFareMandatory && isNothing estimatedFare) $ throwError (InvalidRequest "Fare is mandatory for this leg, but unavailable")
       return $
         APITypes.ExtendLegGetFareResp
