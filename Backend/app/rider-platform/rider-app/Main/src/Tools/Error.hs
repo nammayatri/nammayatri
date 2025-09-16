@@ -974,6 +974,7 @@ data MultimodalError
   | OTPServiceUnavailable Text -- reason
   | UnsupportedVehicleType Text -- reason
   | VehicleUnserviceableOnRoute Text -- reason
+  | VehicleServiceTierUnserviceable Text -- reason
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''MultimodalError
@@ -988,6 +989,7 @@ instance IsBaseError MultimodalError where
     OTPServiceUnavailable reason -> Just $ "OTP service unavailable: " <> reason
     UnsupportedVehicleType reason -> Just $ "Unsupported vehicle type: " <> reason
     VehicleUnserviceableOnRoute reason -> Just $ "Vehicle unserviceable on route: " <> reason
+    VehicleServiceTierUnserviceable reason -> Just $ "Vehicle service tier unserviceable: " <> reason
 
 instance IsHTTPError MultimodalError where
   toErrorCode = \case
@@ -999,6 +1001,7 @@ instance IsHTTPError MultimodalError where
     OTPServiceUnavailable _ -> "OTP_SERVICE_UNAVAILABLE"
     UnsupportedVehicleType _ -> "UNSUPPORTED_VEHICLE_TYPE"
     VehicleUnserviceableOnRoute _ -> "VEHICLE_UNSERVICEABLE_ON_ROUTE"
+    VehicleServiceTierUnserviceable _ -> "VEHICLE_SERVICE_TIER_UNSERVICEABLE"
   toHttpCode = \case
     InvalidStationChange _ _ -> E400
     NoValidMetroRoute _ _ -> E400
@@ -1008,5 +1011,6 @@ instance IsHTTPError MultimodalError where
     OTPServiceUnavailable _ -> E503
     UnsupportedVehicleType _ -> E400
     VehicleUnserviceableOnRoute _ -> E400
+    VehicleServiceTierUnserviceable _ -> E400
 
 instance IsAPIError MultimodalError

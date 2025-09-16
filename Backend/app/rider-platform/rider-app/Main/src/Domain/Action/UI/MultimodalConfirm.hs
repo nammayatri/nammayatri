@@ -649,7 +649,7 @@ getPublicTransportData (mbPersonId, merchantId) mbCity _mbConfigVersion mbVehicl
       vehicleTypes
   mbRouteCode <-
     case mbVehicleNumber of
-      Just vehicleNumber -> JLU.getRouteCodeFromVehicleNumber integratedBPPConfigs vehicleNumber
+      Just vehicleNumber -> JLU.getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber >>= \mbResult -> pure $ mbResult <&> (.routeCode)
       Nothing -> return Nothing
 
   let mkResponse stations routes routeStops bppConfig = do
@@ -1473,8 +1473,12 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (_mbPersonId, _merchantId) j
       DTrip.Subway -> return Enums.SUBWAY
       _ -> throwError $ UnsupportedVehicleType (show journeyLeg.mode)
   integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig journey.merchantOperatingCityId vehicleType DIBC.MULTIMODAL
-  routeCode <- JLU.getRouteCodeFromVehicleNumber integratedBPPConfigs vehicleNumber >>= fromMaybeM (VehicleUnserviceableOnRoute "Vehicle not found on any route")
-  unless (routeCode `elem` journeyLegRouteCodes) $ throwError $ VehicleUnserviceableOnRoute ("Vehicle " <> vehicleNumber <> " not found on any route: " <> show journeyLegRouteCodes)
+  vehicleLiveRouteInfo <- JLU.getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber >>= fromMaybeM (VehicleUnserviceableOnRoute "Vehicle not found on any route")
+  unless (vehicleLiveRouteInfo.routeCode `elem` journeyLegRouteCodes) $
+    throwError $ VehicleUnserviceableOnRoute ("Vehicle " <> vehicleNumber <> ", the route code " <> vehicleLiveRouteInfo.routeCode <> ", not found on any route: " <> show journeyLegRouteCodes)
+  unless (maybe False (\legServiceTypes -> vehicleLiveRouteInfo.serviceType `elem` legServiceTypes) journeyLeg.serviceTypes) $
+    throwError $ VehicleServiceTierUnserviceable ("Vehicle " <> vehicleNumber <> ", the service tier" <> show vehicleLiveRouteInfo.serviceType <> ", not found on any route: " <> show journeyLeg.serviceTypes)
+
   QJourneyLeg.updateByPrimaryKey $ journeyLeg {DJourneyLeg.finalBoardedBusNumber = Just vehicleNumber}
   updatedLegs <- JM.getAllLegsInfo journey.riderId journeyId
   generateJourneyInfoResponse journey updatedLegs
