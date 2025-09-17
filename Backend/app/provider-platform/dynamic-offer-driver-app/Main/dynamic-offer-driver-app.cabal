@@ -61,6 +61,7 @@ library
       API.Internal.FeedbackForm
       API.Internal.FleetBookingInformation
       API.Internal.FleetVehiclesAssociation
+      API.Internal.GPS
       API.Internal.KnowYourDriver
       API.Internal.Multimodal
       API.Internal.PickupInstruction
@@ -201,6 +202,7 @@ library
       Domain.Action.Internal.FeedbackForm
       Domain.Action.Internal.FleetBookingInformation
       Domain.Action.Internal.FleetVehiclesAssociation
+      Domain.Action.Internal.GPS
       Domain.Action.Internal.KnowYourDriver
       Domain.Action.Internal.PickupInstruction
       Domain.Action.Internal.PopulateTipAmount

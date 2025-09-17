@@ -1675,11 +1675,11 @@
         "treefmt-nix": "treefmt-nix_2"
       },
       "locked": {
-        "lastModified": 1754335658,
-        "narHash": "sha256-wJ0xWrAQtuAlTTvzc5nTx22nkm5teLrDYaWRGeWdHXU=",
+        "lastModified": 1759930238,
+        "narHash": "sha256-9IokvNdZkg+XBYN/oMF6qRySCBzrsBaXGot6Qz2ILhw=",
         "owner": "nammayatri",
         "repo": "location-tracking-service",
-        "rev": "e624197bb548d4cd0c6e6eb256365ecae8ca74b0",
+        "rev": "9403a05f7017232aa055c980584569fb7f958348",
         "type": "github"
       },
       "original": {
@@ -3593,11 +3593,11 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1758030608,
-        "narHash": "sha256-eEreUL+x3Ol5s0qZ9q3P2nQQW344wRxNXZgdMSEM2Sw=",
+        "lastModified": 1758118152,
+        "narHash": "sha256-xClLuubxUMY1ZSr2yBqxrXW9nRWqEyxLARpelW3YoAA=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "fbfa82f9cfca06d0007b32c028ad57393a0e1ee1",
+        "rev": "edcf4d4aef78f0c84b07d801b41b401a00fee8e8",
         "type": "github"
       },
       "original": {

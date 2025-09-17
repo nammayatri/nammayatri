@@ -9,6 +9,7 @@ import qualified Domain.Types.MerchantServiceConfig as Domain
 import qualified Kernel.External.AadhaarVerification.Interface as AadhaarVerification
 import qualified Kernel.External.BackgroundVerification.Types as BackgroundVerification
 import qualified Kernel.External.Call as Call
+import qualified Kernel.External.GPS.Types as GPS
 import Kernel.External.IncidentReport.Interface.Types as IncidentReport
 import qualified Kernel.External.Maps.Interface.Types as Maps
 import qualified Kernel.External.Maps.Types as Maps
@@ -91,6 +92,7 @@ getConfigJSON = \case
     CIT.Gemini cfg -> toJSON cfg
   Domain.DashCamServiceConfig dashcamCfg -> case dashcamCfg of
     DashcamInter.CautioConfig cfg -> toJSON cfg
+  Domain.GpsServiceConfig gpsCfg -> toJSON gpsCfg
 
 getServiceName :: Domain.ServiceConfig -> Domain.ServiceName
 getServiceName = \case
@@ -160,6 +162,7 @@ getServiceName = \case
     CIT.Gemini _ -> Domain.LLMChatCompletionService ChatCompletion.Types.Gemini
   Domain.DashCamServiceConfig dashcamCfg -> case dashcamCfg of
     DashcamInter.CautioConfig _ -> Domain.DashCamService Dashcam.Cautio
+  Domain.GpsServiceConfig _ -> Domain.GpsService GPS.Hunteyed
 
 mkServiceConfig :: (MonadThrow m, Log m) => Data.Aeson.Value -> Domain.ServiceName -> m Domain.ServiceConfig
 mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalError ("Unable to decode MerchantServiceConfigT.configJSON: " <> show configJSON <> " Error:" <> err)) return $ case serviceName of
@@ -211,6 +214,7 @@ mkServiceConfig configJSON serviceName = either (\err -> throwError $ InternalEr
   Domain.LLMChatCompletionService ChatCompletion.Types.AzureOpenAI -> Domain.LLMChatCompletionServiceConfig . CIT.AzureOpenAI <$> eitherValue configJSON
   Domain.LLMChatCompletionService ChatCompletion.Types.Gemini -> Domain.LLMChatCompletionServiceConfig . CIT.Gemini <$> eitherValue configJSON
   Domain.DashCamService Dashcam.Cautio -> Domain.DashCamServiceConfig . DashcamInter.CautioConfig <$> eitherValue configJSON
+  Domain.GpsService GPS.Hunteyed -> Domain.GpsServiceConfig <$> eitherValue configJSON
   where
     eitherValue :: FromJSON a => A.Value -> Either Text a
     eitherValue value = case A.fromJSON value of

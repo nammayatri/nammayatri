@@ -385,9 +385,24 @@ endRideHandler handle@ServiceHandle {..} rideId req = do
         estimatedTollNames = rideOld.estimatedTollNames
         shouldRectifyDistantPointsSnapToRoadFailure = DTC.shouldRectifyDistantPointsSnapToRoadFailure booking.tripCategory
     advanceRide <- runInMasterDbAndRedis $ QRide.getActiveAdvancedRideByDriverId driverId
+    mbRideDetail <- QRD.findById rideId
+    let mbRideInfo = case mbRideDetail of
+          Just rideDetail ->
+            Just $
+              LT.Bus $
+                LT.BusRideInfo
+                  { routeCode = "",
+                    busNumber = rideDetail.vehicleNumber,
+                    source = tripEndPoint,
+                    destination = tripEndPoint,
+                    routeLongName = Nothing,
+                    driverName = Nothing,
+                    groupId = Nothing
+                  }
+          Nothing -> Nothing
     tripEndPoints <- do
       let mbAdvanceRideId = (.id) <$> advanceRide
-      res <- LF.rideEnd rideId tripEndPoint.lat tripEndPoint.lon booking.providerId driverId mbAdvanceRideId Nothing
+      res <- LF.rideEnd rideId tripEndPoint.lat tripEndPoint.lon booking.providerId driverId mbAdvanceRideId mbRideInfo
       pure $ toList res.loc
     (chargeableDistance, finalFare, mbUpdatedFareParams, ride, pickupDropOutsideOfThreshold, distanceCalculationFailed) <-
       case req of
