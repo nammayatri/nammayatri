@@ -67,6 +67,7 @@ import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RecentLocation as SQRL
 import qualified Storage.Queries.VehicleRouteMapping as QVehicleRouteMapping
 import System.Environment (lookupEnv)
+import Tools.Error
 import Tools.Maps (LatLong (..))
 import qualified Tools.Maps as Maps
 import qualified Tools.Payment as TPayment
@@ -810,11 +811,11 @@ buildOneWayBusScanRouteDetails ::
   m [MultiModalTypes.MultiModalRoute]
 buildOneWayBusScanRouteDetails _ _ _ Nothing = return []
 buildOneWayBusScanRouteDetails routeCode originStopCode destinationStopCode (Just integratedBppConfig) = mkMultiModalRoute' $ do
-  fromStop <- OTPRest.getStationByGtfsIdAndStopCode originStopCode integratedBppConfig >>= fromMaybeM (InternalError $ "From stop not found with stop code: " <> originStopCode)
-  toStop <- OTPRest.getStationByGtfsIdAndStopCode destinationStopCode integratedBppConfig >>= fromMaybeM (InternalError $ "To stop not found with stop code: " <> destinationStopCode)
+  fromStop <- OTPRest.getStationByGtfsIdAndStopCode originStopCode integratedBppConfig >>= fromMaybeM (StopNotFound $ "fromStopCode: " <> originStopCode)
+  toStop <- OTPRest.getStationByGtfsIdAndStopCode destinationStopCode integratedBppConfig >>= fromMaybeM (StopNotFound $ "toStopCode: " <> destinationStopCode)
   mbRoute <- OTPRest.getRouteByRouteId integratedBppConfig routeCode
   case mbRoute of
-    Nothing -> throwError (InternalError "route info not found in buildOneWayBusScanRouteDetails")
+    Nothing -> throwError (RouteNotFound routeCode)
     Just route -> do
       routeStopMappings <- OTPRest.getRouteStopMappingByRouteCode route.code integratedBppConfig
       let estimatedDistance =
@@ -866,7 +867,7 @@ buildOneWayBusScanRouteDetails routeCode originStopCode destinationStopCode (Jus
                 toArrivalTime = Just (addUTCTime estimatedDurationInSeconds now),
                 toDepartureTime = Just (addUTCTime estimatedDurationInSeconds now)
               }
-        _ -> throwError (InternalError $ "From stop or to stop not found with stop code: " <> originStopCode <> " or " <> destinationStopCode)
+        _ -> throwError (StopDoesNotHaveLocation $ "from: " <> show fromStop <> " to: " <> show toStop)
   where
     mkMultiModalRoute' routeDetailsM = do
       currentTime <- getCurrentTime

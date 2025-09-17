@@ -274,8 +274,8 @@ getFare riderId merchant merchantOperatingCity vehicleCategory serviecType route
                   now <- getCurrentTime
                   let arrivalTime = fromMaybe now mbFromArrivalTime
                   -- L.setOptionLocal QRSTT.CalledForFare True
-                  (possibleServiceTiers, availableFares) <- case serviecType of
-                    Just serviceTier -> pure (Just [serviceTier], fares) -- bypassing as in case of serviceType/serviceTier is passed, we only calculate fare for that type
+                  ((possibleServiceTiers, availableFares), mbPossibleRoutes) <- case serviecType of
+                    Just serviceTier -> pure ((Just [serviceTier], fares), Nothing) -- bypassing as in case of serviceType/serviceTier is passed, we only calculate fare for that type
                     Nothing -> JMU.measureLatency (filterAvailableBuses arrivalTime fareRouteDetails integratedBPPConfig fares) ("filterAvailableBuses" <> show vehicleCategory <> " routeDetails: " <> show fareRouteDetails)
                   -- L.setOptionLocal QRSTT.CalledForFare False
                   let mbMinFarePerRoute = selectMinFare availableFares

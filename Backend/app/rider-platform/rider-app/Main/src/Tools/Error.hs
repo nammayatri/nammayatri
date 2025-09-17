@@ -977,6 +977,8 @@ data MultimodalError
   | VehicleServiceTierUnserviceable Text -- reason
   | InvalidVehicleNumber Text -- reason
   | PublicTransportDataUnavailable Text -- reason
+  | StopNotFound Text
+  | StopDoesNotHaveLocation Text
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''MultimodalError
@@ -994,6 +996,8 @@ instance IsBaseError MultimodalError where
     VehicleServiceTierUnserviceable reason -> Just $ "Vehicle service tier unserviceable: " <> reason
     InvalidVehicleNumber reason -> Just $ "Invalid vehicle number: " <> reason
     PublicTransportDataUnavailable reason -> Just $ "Public transport data unavailable: " <> reason
+    StopNotFound reason -> Just $ "Stop not found: " <> reason
+    StopDoesNotHaveLocation reason -> Just $ "Stop does not have location: " <> reason
 
 instance IsHTTPError MultimodalError where
   toErrorCode = \case
@@ -1008,6 +1012,8 @@ instance IsHTTPError MultimodalError where
     VehicleServiceTierUnserviceable _ -> "VEHICLE_SERVICE_TIER_UNSERVICEABLE"
     InvalidVehicleNumber _ -> "INVALID_VEHICLE_NUMBER"
     PublicTransportDataUnavailable _ -> "PUBLIC_TRANSPORT_DATA_UNAVAILABLE"
+    StopNotFound _ -> "STOP_NOT_FOUND"
+    StopDoesNotHaveLocation _ -> "STOP_DOES_NOT_HAVE_LOCATION"
   toHttpCode = \case
     InvalidStationChange _ _ -> E400
     NoValidMetroRoute _ _ -> E400
@@ -1020,5 +1026,7 @@ instance IsHTTPError MultimodalError where
     VehicleServiceTierUnserviceable _ -> E400
     InvalidVehicleNumber _ -> E400
     PublicTransportDataUnavailable _ -> E500
+    StopNotFound _ -> E400
+    StopDoesNotHaveLocation _ -> E400
 
 instance IsAPIError MultimodalError
