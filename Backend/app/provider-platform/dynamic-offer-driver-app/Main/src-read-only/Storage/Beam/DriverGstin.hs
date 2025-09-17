@@ -25,6 +25,7 @@ data DriverGstinT f = DriverGstinT
     gstinHash :: B.C f Kernel.External.Encryption.DbHash,
     id :: B.C f Kernel.Prelude.Text,
     isProvisional :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    isStrictlyVerified :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     legalName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     panNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

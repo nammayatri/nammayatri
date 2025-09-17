@@ -718,6 +718,7 @@ DriverPanCard:
     documentImageId2: Maybe (Id Image)
     driverDob: Maybe UTCTime
     driverName: Maybe Text
+    isStrictlyVerified: Maybe Bool
     panCardNumber: EncryptedHashedField e Text
     failedRules: "[Text]"
     verificationStatus: VerificationStatus
@@ -756,6 +757,10 @@ DriverPanCard:
       kvFunction: updateOneWithKV
       params: [verificationStatus]
       where: documentImageId1
+    updateStrictVerificationStatusByDriverId:
+      kvFunction:  updateOneWithKV
+      params: [isStrictlyVerified]
+      where: driverId
   extraOperations:
     - EXTRA_QUERY_FILE
 
@@ -778,6 +783,7 @@ DriverGstin:
     typeOfRegistration: Maybe Text
     validFrom: Maybe UTCTime
     validUpto: Maybe UTCTime
+    isStrictlyVerified: Maybe Bool
     verifiedBy: Maybe Domain.Types.DriverPanCard.VerifiedBy
     merchantOperatingCityId: Maybe (Id MerchantOperatingCity)
   excludedFields: [merchantOperatingCityId]
@@ -809,6 +815,10 @@ DriverGstin:
       kvFunction: updateOneWithKV
       params: [verificationStatus]
       where: documentImageId1
+    updateStrictVerificationStatusByDriverId:
+      kvFunction:  updateOneWithKV
+      params: [isStrictlyVerified]
+      where: driverId
   extraOperations:
     - EXTRA_QUERY_FILE
 
