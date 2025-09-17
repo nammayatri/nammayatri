@@ -228,33 +228,4 @@ ALTER TABLE atlas_app.frfs_search ADD COLUMN multimodal_search_request_id text ;
 
 ------- SQL updates -------
 
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
+ALTER TABLE atlas_app.frfs_search ADD COLUMN search_as_parent_stops boolean ;
