@@ -102,6 +102,8 @@ let cacConfig =
       , enableCac = False
       }
 
+let inMemConfig = { enableInMem = True, maxInMemSize = +100000000 }
+
 in  { hedisCfg
     , hedisClusterCfg
     , hedisNonCriticalCfg = hedisCfg
@@ -137,4 +139,5 @@ in  { hedisCfg
     , kafkaReadBatchSize = +10
     , consumerStartTime = Some +14
     , consumerEndTime = Some +20
+    , inMemConfig
     }

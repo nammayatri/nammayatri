@@ -63,6 +63,8 @@ let kafkaProducerCfg =
       , kafkaCompression = common.kafkaCompression.LZ4
       }
 
+let inMemConfig = { enableInMem = True, maxInMemSize = +100000000 }
+
 in  { hedisCfg
     , hedisClusterCfg
     , hedisNonCriticalCfg = hedisCfg
@@ -93,4 +95,5 @@ in  { hedisCfg
     , kafkaProducerCfg
     , cacConfig
     , producersPerPod = +5
+    , inMemConfig
     }

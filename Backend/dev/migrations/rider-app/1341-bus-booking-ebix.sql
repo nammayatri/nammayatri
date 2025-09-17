@@ -120,7 +120,8 @@ INSERT INTO
     provider_code,
     short_name,
     long_name,
-    description
+    description,
+    integrated_bpp_config_id
   )
 VALUES
   (
@@ -131,7 +132,8 @@ VALUES
     '6',
     'ALA',
     'ASHOK LEYLAND AC',
-    'অশোক লেইল্যান্ড এসি'
+    'অশোক লেইল্যান্ড এসি',
+    'dabe23a5-3ce6-4c37-8b9b-41377c3c1a52'
   ),
   (
     '59e722df-feb0-4a86-bd5b-015cf118f401',
@@ -141,7 +143,8 @@ VALUES
     '9',
     'MDA',
     'MIDI AC',
-    'মিডিয়াম এসি'
+    'মিডিয়াম এসি',
+    'dabe23a5-3ce6-4c37-8b9b-41377c3c1a52'
   ),
   (
     '59e722df-feb0-4a86-bd5b-015cf118f402',
@@ -151,7 +154,8 @@ VALUES
     '3',
     'VOL',
     'VOLVO AC',
-    'ভলভো এসি'
+    'ভলভো এসি',
+    'dabe23a5-3ce6-4c37-8b9b-41377c3c1a52'
   ),
   (
     '59e722df-feb0-4a86-bd5b-015cf118f403',
@@ -161,7 +165,8 @@ VALUES
     '5',
     'SPL',
     'SPECIAL',
-    'স্পেশাল'
+    'স্পেশাল',
+    'dabe23a5-3ce6-4c37-8b9b-41377c3c1a52'
   ),
   (
     '59e722df-feb0-4a86-bd5b-015cf118f404',
@@ -171,7 +176,8 @@ VALUES
     '10',
     'MDN',
     'MIDI NON AC',
-    'মিডি নন এসি'
+    'মিডি নন এসি',
+    'dabe23a5-3ce6-4c37-8b9b-41377c3c1a52'
   ),
   (
     '59e722df-feb0-4a86-bd5b-015cf118f405',
@@ -181,7 +187,8 @@ VALUES
     '7',
     'GSA',
     'GSAGAR',
-    'গঙ্গা সাগর'
+    'গঙ্গা সাগর',
+    'dabe23a5-3ce6-4c37-8b9b-41377c3c1a52'
   ),
   (
     '59e722df-feb0-4a86-bd5b-015cf118f406',
@@ -191,7 +198,8 @@ VALUES
     '4',
     'EXE',
     'EXECUTIVE',
-    'এক্সিকিউটিভ'
+    'এক্সিকিউটিভ',
+    'dabe23a5-3ce6-4c37-8b9b-41377c3c1a52'
   ),
   (
     '59e722df-feb0-4a86-bd5b-015cf118f407',
@@ -201,7 +209,8 @@ VALUES
     '8',
     'ELE',
     'ELECTRIC V',
-    'ইলেক্ট্রিক ভি'
+    'ইলেক্ট্রিক ভি',
+    'dabe23a5-3ce6-4c37-8b9b-41377c3c1a52'
   ),
   (
     '59e722df-feb0-4a86-bd5b-015cf118f408',
@@ -211,7 +220,8 @@ VALUES
     '2',
     'ORD',
     'ORDINARY',
-    'সাধারণ'
+    'সাধারণ',
+    'dabe23a5-3ce6-4c37-8b9b-41377c3c1a52'
   );
 
 -- ONLY FOR LOCAL

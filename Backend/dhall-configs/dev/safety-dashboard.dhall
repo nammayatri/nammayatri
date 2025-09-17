@@ -83,6 +83,8 @@ let kafkaProducerCfg =
       , kafkaCompression = common.kafkaCompression.LZ4
       }
 
+let inMemConfig = { enableInMem = True, maxInMemSize = +100000000 }
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , hedisCfg = rcfg
@@ -127,4 +129,5 @@ in  { esqDBCfg
     , internalAuthAPIKey = "ae288466-2add-11ee-be56-0242ac120002"
     , passwordExpiryDays = None Integer
     , enforceStrongPasswordPolicy = False
+    , inMemConfig
     }

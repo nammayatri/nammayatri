@@ -336,6 +336,8 @@ let modelNamesMap =
 
 let tsServiceConfig = { url = "http://0.0.0.0:3001/" }
 
+let inMemConfig = { enableInMem = True, maxInMemSize = +100000000 }
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , kafkaClickhouseCfg
@@ -438,4 +440,5 @@ in  { esqDBCfg
     , meterRideReferralLink =
         "https://nammayatri.in/refer?referrer=utm_source%3DChennai%26utm_medium%3Dqrcode%26utm_term%3Dreferral%26utm_content%3Dcoins%26utm_campaign%{referralCode}%26anid%3Dadmob&id=in.juspay.nammayatri"
     , minDistanceBetweenTwoPoints = +25
+    , inMemConfig
     }
