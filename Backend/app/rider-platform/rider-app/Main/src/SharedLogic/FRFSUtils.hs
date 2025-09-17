@@ -373,7 +373,8 @@ data FRFSVehicleServiceTier = FRFSVehicleServiceTier
     serviceTierProviderCode :: Text,
     serviceTierShortName :: Text,
     serviceTierDescription :: Text,
-    serviceTierLongName :: Text
+    serviceTierLongName :: Text,
+    isAirConditioned :: Bool
   }
   deriving stock (Generic, Show)
   deriving anyclass (FromJSON, ToJSON)
@@ -442,7 +443,8 @@ buildFRFSFare riderId vehicleType _merchantId merchantOperatingCityId routeCode 
               serviceTierProviderCode = vehicleServiceTier.providerCode,
               serviceTierShortName = vehicleServiceTier.shortName,
               serviceTierDescription = vehicleServiceTier.description,
-              serviceTierLongName = vehicleServiceTier.longName
+              serviceTierLongName = vehicleServiceTier.longName,
+              isAirConditioned = vehicleServiceTier.isAirConditioned
             }
       }
 
@@ -519,7 +521,8 @@ getFareThroughGTFS riderId vehicleType serviceTier integratedBPPConfig merchantI
                         serviceTierProviderCode = vehicleServiceTier.providerCode,
                         serviceTierShortName = vehicleServiceTier.shortName,
                         serviceTierDescription = vehicleServiceTier.description,
-                        serviceTierLongName = vehicleServiceTier.longName
+                        serviceTierLongName = vehicleServiceTier.longName,
+                        isAirConditioned = vehicleServiceTier.isAirConditioned
                       }
                 }
         _ -> return []

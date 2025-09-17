@@ -62,6 +62,7 @@ instance JT.JourneyLeg TaxiLegRequest m where
         False
         True
         multimodalSearchRequestId
+    upsertJourneyLegAction dSearchRes.searchRequest.id.getId
     QJourneyLeg.updateDistanceAndDuration (convertMetersToDistance Meter <$> dSearchRes.distance) dSearchRes.duration journeyLegData.id
     fork "search cabs" . withShortRetry $ do
       becknTaxiReqV2 <- TaxiACL.buildSearchReqV2 dSearchRes

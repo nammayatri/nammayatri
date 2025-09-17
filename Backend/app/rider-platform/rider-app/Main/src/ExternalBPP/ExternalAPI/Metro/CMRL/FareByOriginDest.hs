@@ -82,7 +82,8 @@ getFareByOriginDest config fareReq = do
                           serviceTierProviderCode = "ORDINARY",
                           serviceTierShortName = "ORDINARY",
                           serviceTierDescription = "ORDINARY",
-                          serviceTierLongName = "ORDINARY"
+                          serviceTierLongName = "ORDINARY",
+                          isAirConditioned = False
                         }
                   }
               ]
