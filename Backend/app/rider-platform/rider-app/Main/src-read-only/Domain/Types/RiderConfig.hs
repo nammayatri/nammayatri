@@ -118,6 +118,7 @@ data RiderConfig = RiderConfig
     trackingShortUrlPattern :: Kernel.Prelude.Text,
     useUserSettingsForSafetyIVR :: Kernel.Prelude.Bool,
     userServiceTierOrderConfig :: [Domain.Types.Extra.RiderConfig.VehicleServiceTierOrderConfig],
+    validateSetOnboardingVehicleRequest :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     variantListForNearByReq :: Kernel.Prelude.Maybe [Domain.Types.VehicleVariant.VehicleVariant],
     videoFileSizeUpperLimit :: Kernel.Prelude.Int,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),

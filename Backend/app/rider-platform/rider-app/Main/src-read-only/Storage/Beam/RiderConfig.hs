@@ -117,6 +117,7 @@ data RiderConfigT f = RiderConfigT
     trackingShortUrlPattern :: B.C f Kernel.Prelude.Text,
     useUserSettingsForSafetyIVR :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     userServiceTierOrderConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    validateSetOnboardingVehicleRequest :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     variantListForNearByReq :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     videoFileSizeUpperLimit :: B.C f Kernel.Prelude.Int,
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

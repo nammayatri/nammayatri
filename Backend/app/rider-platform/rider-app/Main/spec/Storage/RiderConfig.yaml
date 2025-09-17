@@ -139,6 +139,7 @@ RiderConfig:
     busScanRouteCalculationEnabledModes: "Maybe Bool"
     trackVehicleKeyExpiry: Maybe Int
     distanceToNearestStopThreshold: Maybe Int
+    validateSetOnboardingVehicleRequest: Maybe Bool
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
@@ -318,6 +319,7 @@ RiderConfig:
     filterWalkAndUnspecifiedTransitModes: "false"
     trackVehicleKeyExpiry: "900"
     distanceToNearestStopThreshold: "200"
+    validateSetOnboardingVehicleRequest: "false"
 
   queries:
     findByMerchantOperatingCityId:

@@ -71,18 +71,22 @@ getTrackVehicles (mbPersonId, merchantId) routeCode mbCurrentLat mbCurrentLon mb
     _ -> getTrackWithoutCurrentLocation personId personCityInfo vehicleType maxBuses riderConfig
   where
     getTrackWithoutCurrentLocation personId personCityInfo vehicleType maxBuses riderConfig = do
+      vehicleTracking <- trackVehicles personId merchantId personCityInfo.merchantOperatingCityId vehicleType routeCode (fromMaybe DIBC.APPLICATION mbPlatformType) Nothing mbIntegratedBPPConfigId
       let trackVehicleKey = mkTrackVehicleKey routeCode vehicleType
-      cachedResp <- Redis.get trackVehicleKey
-      case cachedResp of
-        Just resp -> pure resp
-        Nothing -> do
-          vehicleTracking <- trackVehicles personId merchantId personCityInfo.merchantOperatingCityId vehicleType routeCode (fromMaybe DIBC.APPLICATION mbPlatformType) Nothing mbIntegratedBPPConfigId
-          let resp =
-                TrackRoute.TrackingResp
-                  { vehicleTrackingInfo = map mkVehicleTrackingResponse (take maxBuses vehicleTracking)
-                  }
-          Redis.setExp trackVehicleKey resp (fromMaybe 900 riderConfig.trackVehicleKeyExpiry)
-          pure resp
+      cachedResp :: Maybe [Text] <- Redis.safeGet trackVehicleKey
+      response <-
+        map mkVehicleTrackingResponse
+          <$> case cachedResp of
+            Just resp -> do
+              pure $ filter (\vt -> vt.vehicleId `elem` resp) vehicleTracking
+            Nothing -> do
+              let vehiclesToShow = take maxBuses vehicleTracking
+              Redis.setExp trackVehicleKey (map (.vehicleId) vehiclesToShow) (fromMaybe 900 riderConfig.trackVehicleKeyExpiry)
+              pure vehiclesToShow
+      pure $
+        TrackRoute.TrackingResp
+          { vehicleTrackingInfo = response
+          }
 
     mkVehicleTrackingResponse VehicleTracking {..} =
       TrackRoute.VehicleInfo
@@ -113,4 +117,4 @@ getTrackVehicles (mbPersonId, merchantId) routeCode mbCurrentLat mbCurrentLon mb
     getNearestFromList cmp xs = Just (List.minimumBy cmp xs)
 
 mkTrackVehicleKey :: Text -> Spec.VehicleCategory -> Text
-mkTrackVehicleKey routeCode vehicleType = "trackVehicles:" <> routeCode <> ":" <> show vehicleType
+mkTrackVehicleKey routeCode vehicleType = "trackVehicles:busNumber:" <> routeCode <> ":" <> show vehicleType

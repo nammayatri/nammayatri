@@ -1477,22 +1477,25 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails ::
   )
 postMultimodalOrderSublegSetOnboardedVehicleDetails (_mbPersonId, _merchantId) journeyId legOrder _subLegOrder req = do
   let vehicleNumber = req.vehicleNumber
-  journeyLeg <- QJourneyLeg.getJourneyLeg journeyId legOrder
   journey <- JM.getJourney journeyId
-  let journeyLegRouteCodes = mapMaybe (.routeCode) journeyLeg.routeDetails
-  vehicleType <-
-    case journeyLeg.mode of
-      DTrip.Bus -> return Enums.BUS
-      DTrip.Metro -> return Enums.METRO
-      DTrip.Subway -> return Enums.SUBWAY
-      _ -> throwError $ UnsupportedVehicleType (show journeyLeg.mode)
-  integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig journey.merchantOperatingCityId vehicleType DIBC.MULTIMODAL
-  vehicleLiveRouteInfo <- JLU.getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber >>= fromMaybeM (VehicleUnserviceableOnRoute "Vehicle not found on any route")
-  unless (vehicleLiveRouteInfo.routeCode `elem` journeyLegRouteCodes) $
-    throwError $ VehicleUnserviceableOnRoute ("Vehicle " <> vehicleNumber <> ", the route code " <> vehicleLiveRouteInfo.routeCode <> ", not found on any route: " <> show journeyLegRouteCodes)
-  unless (maybe False (\legServiceTypes -> vehicleLiveRouteInfo.serviceType `elem` legServiceTypes) journeyLeg.serviceTypes) $
-    throwError $ VehicleServiceTierUnserviceable ("Vehicle " <> vehicleNumber <> ", the service tier" <> show vehicleLiveRouteInfo.serviceType <> ", not found on any route: " <> show journeyLeg.serviceTypes)
-
+  journeyLeg <- QJourneyLeg.getJourneyLeg journeyId legOrder
+  riderConfig <- QRiderConfig.findByMerchantOperatingCityId journey.merchantOperatingCityId >>= fromMaybeM (RiderConfigNotFound journey.merchantOperatingCityId.getId)
+  if riderConfig.validateSetOnboardingVehicleRequest == Just True
+    then do
+      let journeyLegRouteCodes = mapMaybe (.routeCode) journeyLeg.routeDetails
+      vehicleType <-
+        case journeyLeg.mode of
+          DTrip.Bus -> return Enums.BUS
+          DTrip.Metro -> return Enums.METRO
+          DTrip.Subway -> return Enums.SUBWAY
+          _ -> throwError $ UnsupportedVehicleType (show journeyLeg.mode)
+      integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig journey.merchantOperatingCityId vehicleType DIBC.MULTIMODAL
+      vehicleLiveRouteInfo <- JLU.getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber >>= fromMaybeM (VehicleUnserviceableOnRoute "Vehicle not found on any route")
+      unless (vehicleLiveRouteInfo.routeCode `elem` journeyLegRouteCodes) $
+        throwError $ VehicleUnserviceableOnRoute ("Vehicle " <> vehicleNumber <> ", the route code " <> vehicleLiveRouteInfo.routeCode <> ", not found on any route: " <> show journeyLegRouteCodes)
+      unless (maybe False (\legServiceTypes -> vehicleLiveRouteInfo.serviceType `elem` legServiceTypes) journeyLeg.serviceTypes) $
+        throwError $ VehicleServiceTierUnserviceable ("Vehicle " <> vehicleNumber <> ", the service tier" <> show vehicleLiveRouteInfo.serviceType <> ", not found on any route: " <> show journeyLeg.serviceTypes)
+    else pure ()
   QJourneyLeg.updateByPrimaryKey $ journeyLeg {DJourneyLeg.finalBoardedBusNumber = Just vehicleNumber}
   updatedLegs <- JM.getAllLegsInfo journey.riderId journeyId
   generateJourneyInfoResponse journey updatedLegs
