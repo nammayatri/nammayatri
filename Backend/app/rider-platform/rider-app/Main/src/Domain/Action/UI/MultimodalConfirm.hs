@@ -129,7 +129,7 @@ postMultimodalInitiate ::
     Environment.Flow ApiTypes.JourneyInfoResp
   )
 postMultimodalInitiate (_personId, _merchantId) journeyId = do
-  Redis.withLockRedisAndReturnValue lockKey 60 $ do
+  runAction $ do
     journeyLegs <- QJourneyLeg.getJourneyLegs journeyId
     addAllLegs journeyId (Just journeyLegs) journeyLegs
     journey <- JM.getJourney journeyId
@@ -137,6 +137,12 @@ postMultimodalInitiate (_personId, _merchantId) journeyId = do
     legs <- JM.getAllLegsInfo journey.riderId journeyId
     generateJourneyInfoResponse journey legs
   where
+    runAction action = do
+      if journeyId.getId == ""
+        then action
+        else do
+          Redis.withWaitAndLockRedis lockKey 10 60 $
+            action
     lockKey = "infoLock-" <> journeyId.getId
 
 postMultimodalConfirm ::
