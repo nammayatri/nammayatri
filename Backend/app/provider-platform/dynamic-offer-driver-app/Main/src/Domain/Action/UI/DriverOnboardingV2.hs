@@ -718,6 +718,7 @@ buildPanCard merchantId person API.Types.UI.DriverOnboardingV2.DriverPanReq {..}
         updatedAt = now,
         verificationStatus = verificationStatus,
         driverNameOnGovtDB = nameOnGovtDB,
+        isStrictlyVerified = Nothing,
         ..
       }
 
@@ -817,6 +818,7 @@ buildGstCard merchantId person API.Types.UI.DriverOnboardingV2.DriverGstinReq {.
         createdAt = now,
         updatedAt = now,
         verificationStatus = verificationStatus,
+        isStrictlyVerified = Nothing,
         ..
       }
 
