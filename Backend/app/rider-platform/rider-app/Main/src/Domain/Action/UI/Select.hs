@@ -28,6 +28,7 @@ module Domain.Action.UI.Select
   )
 where
 
+import qualified BecknV2.OnDemand.Enums as DVCT
 import Control.Applicative ((<|>))
 import Control.Monad.Extra (anyM)
 import qualified Data.HashMap.Strict as HMS
@@ -52,7 +53,6 @@ import qualified Domain.Types.PersonFlowStatus as DPFS
 import qualified Domain.Types.RouteDetails as DRD
 import qualified Domain.Types.SearchRequest as DSearchReq
 import qualified Domain.Types.SearchRequestPartiesLink as DSRPL
-import qualified Domain.Types.ServiceTierType as DVSTT
 import qualified Domain.Types.Trip as DTrip
 import qualified Domain.Types.Trip as Trip
 import qualified Domain.Types.VehicleVariant as DV
@@ -234,7 +234,8 @@ select2 personId estimateId req@DSelectReq {..} = do
         parcelDetails <- QParcel.findBySearchRequestId searchRequest.id
         return $ DSelectResDelivery <$> parcelDetails
       _ -> pure Nothing
-  let lastUsedVehicleServiceTiers = insertVehicleServiceTier (maybe 5 (.noOfRideRequestsConfig) riderConfig) estimate.vehicleServiceTierType person.lastUsedVehicleServiceTiers
+  let lastUsedVehicleServiceTiers = insertVehicleServiceTierAndCategory (maybe 5 (.noOfRideRequestsConfig) riderConfig) estimate.vehicleServiceTierType person.lastUsedVehicleServiceTiers
+  let lastUsedVehicleCategories = insertVehicleServiceTierAndCategory (maybe 5 (.noOfRideRequestsConfig) riderConfig) (fromMaybe DVCT.AUTO_RICKSHAW estimate.vehicleCategory) person.lastUsedVehicleCategories
   let toUpdateDeviceIdInfo = (fromMaybe 0 person.totalRidesCount) == 0
   isMultipleOrNoDeviceIdExist <-
     maybe
@@ -272,7 +273,7 @@ select2 personId estimateId req@DSelectReq {..} = do
     QLoc.updateInstructionsAndExtrasById senderLocationAddress.instructions senderLocationAddress.extras senderLocationId
     QLoc.updateInstructionsAndExtrasById receiverLocationAddress.instructions receiverLocationAddress.extras receiverLocationId
     QSearchRequest.updateInitiatedBy (Just $ Trip.DeliveryParty validDeliveryDetails.initiatedAs) searchRequestId
-  QP.updateLastUsedVehicleServiceTiers lastUsedVehicleServiceTiers personId
+  QP.updateLastUsedVehicleServiceTiersAndCategories lastUsedVehicleServiceTiers lastUsedVehicleCategories personId
   QSearchRequest.updateMultipleByRequestId searchRequestId autoAssignEnabled (fromMaybe False autoAssignEnabledV2) isAdvancedBookingEnabled
   QPFS.updateStatus searchRequest.riderId DPFS.WAITING_FOR_DRIVER_OFFERS {estimateId = estimateId, otherSelectedEstimates, validTill = searchRequest.validTill, providerId = Just estimate.providerId, tripCategory = estimate.tripCategory}
   QEstimate.updateStatus DEstimate.DRIVER_QUOTE_REQUESTED estimateId
@@ -368,8 +369,8 @@ updateRequiredDeliveryDetails searchRequestId merchantId merchantOperatingCityId
   QSRPL.createMany [senderParty, receiverParty]
   QParcel.create $ DParcel.ParcelDetails {createdAt = now, updatedAt = now, ..}
 
-insertVehicleServiceTier :: Int -> DVSTT.ServiceTierType -> [ServiceTierType] -> [ServiceTierType]
-insertVehicleServiceTier n newVehicle currentList
+insertVehicleServiceTierAndCategory :: (Eq a) => Int -> a -> [a] -> [a]
+insertVehicleServiceTierAndCategory n newVehicle currentList
   | length currentList < n = currentList ++ [newVehicle]
   | otherwise = tail currentList ++ [newVehicle]
 

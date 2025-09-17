@@ -19,6 +19,7 @@ imports:
   Version: Kernel.Types.Version
   Minutes: Kernel.Types.Common
   TripCategory: Domain.Types.Common
+  VehicleCategory : BecknV2.OnDemand.Enums
 
 Estimate:
   tableName: estimate
@@ -84,6 +85,7 @@ Estimate:
     vehicleServiceTierType : ServiceTierType
     vehicleServiceTierSeatingCapacity : Maybe Int
     vehicleServiceTierAirConditioned : Maybe Double
+    vehicleCategory: Maybe VehicleCategory
     isAirConditioned: Maybe Bool
     itemId : Text
     tripTerms : Maybe TripTerms

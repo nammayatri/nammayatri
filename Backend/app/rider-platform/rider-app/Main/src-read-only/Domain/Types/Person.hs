@@ -3,6 +3,7 @@
 
 module Domain.Types.Person where
 
+import qualified BecknV2.OnDemand.Enums
 import Data.Aeson
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantConfig
@@ -70,6 +71,7 @@ data PersonE e = Person
     juspayCustomerPaymentID :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.CustomerId,
     language :: Kernel.Prelude.Maybe Kernel.External.Maps.Language,
     lastName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    lastUsedVehicleCategories :: [BecknV2.OnDemand.Enums.VehicleCategory],
     lastUsedVehicleServiceTiers :: [Domain.Types.ServiceTierType.ServiceTierType],
     latestLat :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     latestLon :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
@@ -105,9 +107,9 @@ data PersonE e = Person
   }
   deriving (Generic)
 
-type Person = PersonE ('AsEncrypted)
+type Person = PersonE 'AsEncrypted
 
-type DecryptedPerson = PersonE ('AsUnencrypted)
+type DecryptedPerson = PersonE 'AsUnencrypted
 
 instance EncryptedItem Person where
   type Unencrypted Person = (DecryptedPerson, HashSalt)
@@ -163,6 +165,7 @@ instance EncryptedItem Person where
           juspayCustomerPaymentID = juspayCustomerPaymentID entity,
           language = language entity,
           lastName = lastName entity,
+          lastUsedVehicleCategories = lastUsedVehicleCategories entity,
           lastUsedVehicleServiceTiers = lastUsedVehicleServiceTiers entity,
           latestLat = latestLat entity,
           latestLon = latestLon entity,
@@ -248,6 +251,7 @@ instance EncryptedItem Person where
             juspayCustomerPaymentID = juspayCustomerPaymentID entity,
             language = language entity,
             lastName = lastName entity,
+            lastUsedVehicleCategories = lastUsedVehicleCategories entity,
             lastUsedVehicleServiceTiers = lastUsedVehicleServiceTiers entity,
             latestLat = latestLat entity,
             latestLon = latestLon entity,
@@ -289,26 +293,26 @@ instance EncryptedItem' Person where
   toUnencrypted a salt = (a, salt)
   fromUnencrypted = fst
 
-data Gender = MALE | FEMALE | OTHER | UNKNOWN | PREFER_NOT_TO_SAY deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), ToParamSchema)
+data Gender = MALE | FEMALE | OTHER | UNKNOWN | PREFER_NOT_TO_SAY deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data IdentifierType = MOBILENUMBER | AADHAAR | EMAIL deriving (Show, (Eq), (Read), (Ord), (Generic), (ToJSON), (FromJSON), (ToSchema), (ToParamSchema))
+data IdentifierType = MOBILENUMBER | AADHAAR | EMAIL deriving (Show, Eq, Read, Ord, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data RideShareOptions = ALWAYS_SHARE | SHARE_WITH_TIME_CONSTRAINTS | NEVER_SHARE deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), (ToParamSchema))
+data RideShareOptions = ALWAYS_SHARE | SHARE_WITH_TIME_CONSTRAINTS | NEVER_SHARE deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-data Role = USER | CUSTOMER_SUPPORT | METER_RIDE_DUMMY | TICKET_DASHBOARD_USER deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), ToParamSchema)
+data Role = USER | CUSTOMER_SUPPORT | METER_RIDE_DUMMY | TICKET_DASHBOARD_USER deriving (Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Kernel.Utils.TH.mkFromHttpInstanceForEnum (''Role))
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''Role)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''Role))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''Role)
 
-$(Kernel.Utils.TH.mkFromHttpInstanceForEnum (''IdentifierType))
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''IdentifierType)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''IdentifierType))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''IdentifierType)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''Gender))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''Gender)
 
-$(Kernel.Utils.TH.mkFromHttpInstanceForEnum (''Gender))
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''Gender)
 
-$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList (''RideShareOptions))
+$(Kernel.Beam.Lib.UtilsTH.mkBeamInstancesForEnumAndList ''RideShareOptions)
 
-$(Kernel.Utils.TH.mkFromHttpInstanceForEnum (''RideShareOptions))
+$(Kernel.Utils.TH.mkFromHttpInstanceForEnum ''RideShareOptions)
