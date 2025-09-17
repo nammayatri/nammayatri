@@ -31,7 +31,6 @@ import qualified EulerHS.Language as L
 import EulerHS.Types (OptionEntity)
 import Kernel.Prelude as P
 import qualified Kernel.Storage.Hedis as Hedis
-import qualified Kernel.Storage.InMem as IM
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.CachedQueries.OTPRest.Common as OTPRestCommon
@@ -62,7 +61,7 @@ findByRouteCodeAndStopCode ::
   [Text] ->
   Text ->
   m [RouteStopTimeTable]
-findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCodes' stopCode' = IM.withInMemCache [integratedBPPConfig.id.getId, merchantOpId.getId, intercalate "," routeCodes', stopCode'] $ do
+findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCodes' stopCode' = do
   vehicleType <- castVehicleType integratedBPPConfig.vehicleCategory
   let routeCodes = P.map (modifyCodesToGTFS integratedBPPConfig) routeCodes'
       stopCode = modifyCodesToGTFS integratedBPPConfig stopCode'

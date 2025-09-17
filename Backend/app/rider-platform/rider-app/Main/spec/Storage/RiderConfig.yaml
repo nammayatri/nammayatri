@@ -148,6 +148,7 @@ RiderConfig:
     busScanRouteCalculationEnabledModes: "Maybe Bool"
     trackVehicleKeyExpiry: Maybe Int
     distanceToNearestStopThreshold: Maybe Int
+    validateSetOnboardingVehicleRequest: Maybe Bool
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
@@ -336,6 +337,7 @@ RiderConfig:
     sourceOfServiceTier: "'NANDI'"
     trackVehicleKeyExpiry: "900"
     distanceToNearestStopThreshold: "200"
+    validateSetOnboardingVehicleRequest: "false"
 
   queries:
     findByMerchantOperatingCityId:
