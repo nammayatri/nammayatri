@@ -105,6 +105,7 @@ updateByPrimaryKey (Domain.Types.Estimate.Estimate {..}) = do
       Se.Set Beam.tripTermsId (Kernel.Types.Id.getId <$> (tripTerms <&> (.id))),
       Se.Set Beam.updatedAt _now,
       Se.Set Beam.validTill validTill,
+      Se.Set Beam.vehicleCategory vehicleCategory,
       Se.Set Beam.vehicleIconUrl (Kernel.Prelude.fmap showBaseUrl vehicleIconUrl),
       Se.Set Beam.vehicleServiceTierAirConditioned vehicleServiceTierAirConditioned,
       Se.Set Beam.vehicleServiceTierSeatingCapacity vehicleServiceTierSeatingCapacity,
