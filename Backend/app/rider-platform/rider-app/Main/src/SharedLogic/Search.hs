@@ -3,8 +3,10 @@ module SharedLogic.Search where
 import qualified BecknV2.OnDemand.Enums as Enums
 import qualified BecknV2.OnDemand.Tags as Beckn
 import Data.Aeson
+import Data.List (group, sort)
 import Data.OpenApi hiding (Header, description, email)
 import qualified Data.OpenApi as OpenApi hiding (Header)
+import Data.Ord (comparing)
 import qualified Domain.Types.IntegratedBPPConfig as DIBPC
 import Domain.Types.Location as Location
 import Domain.Types.LocationAddress
@@ -237,3 +239,12 @@ buildSearchReqLoc merchantId merchantOperatingCityId SearchReqLocation {..} = do
         createdAt = now,
         updatedAt = now
       }
+
+-- Get the most frequent element in the list
+
+mostFrequent :: (Ord a) => [a] -> Maybe a
+mostFrequent [] = Nothing
+mostFrequent xs = Just $ fst $ maximumBy (comparing snd) frequencyList
+  where
+    grouped = group . sort $ xs
+    frequencyList = [(head g, length g) | g <- grouped]

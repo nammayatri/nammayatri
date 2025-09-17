@@ -498,6 +498,7 @@ buildEstimate providerInfo now searchRequest deploymentVersion boostSearchPreSel
         insuredAmount = insuranceConfig >>= (.insuredAmount),
         isMultimodalSearch = searchRequest.isMultimodalSearch,
         boostSearchPreSelectionServiceTierConfig = (Just . (.orderArray)) =<< boostSearchPreSelectionServiceTier,
+        vehicleCategory = Just vehicleCategory,
         ..
       }
 
