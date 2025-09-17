@@ -474,6 +474,7 @@ mkJourneyForSearch searchRequest estimate personId = do
                   { agencyGtfsId = Nothing,
                     agencyName = Nothing,
                     alternateShortNames = [],
+                    alternateRouteIds = Nothing,
                     endLocationLat = fromMaybe searchRequest.fromLocation.lat (searchRequest.toLocation <&> (.lat)),
                     endLocationLon = fromMaybe searchRequest.fromLocation.lon (searchRequest.toLocation <&> (.lon)),
                     frequency = Nothing,

@@ -15,6 +15,7 @@ import Tools.Beam.UtilsTH
 data RouteDetailsT f = RouteDetailsT
   { agencyGtfsId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     agencyName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    alternateRouteIds :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     alternateShortNames :: B.C f [Kernel.Prelude.Text],
     endLocationLat :: B.C f Kernel.Prelude.Double,
     endLocationLon :: B.C f Kernel.Prelude.Double,

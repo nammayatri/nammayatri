@@ -140,6 +140,7 @@ data RouteDetail = RouteDetail
     fromStationCode :: Maybe Text,
     toStationCode :: Maybe Text,
     alternateShortNames :: [Text],
+    alternateRouteIds :: Maybe [Text],
     color :: Maybe Text,
     colorCode :: Maybe Text,
     fromStationLatLong :: LatLong,
@@ -352,6 +353,7 @@ getJourneys searchRequest hasMultimodalSearch = do
           color = routeDetail.routeShortName,
           colorCode = routeDetail.routeShortName,
           alternateShortNames = routeDetail.alternateShortNames,
+          alternateRouteIds = routeDetail.alternateRouteIds,
           fromStationLatLong =
             LatLong
               { lat = routeDetail.startLocationLat,
