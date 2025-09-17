@@ -11,6 +11,7 @@ import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import qualified Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import qualified Kernel.Types.Documents
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
@@ -40,6 +41,11 @@ findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)
 findByImageId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Image.Image -> m (Maybe Domain.Types.DriverGstin.DriverGstin))
 findByImageId documentImageId1 = do findOneWithKV [Se.Is Beam.documentImageId1 $ Se.Eq (Kernel.Types.Id.getId documentImageId1)]
 
+updateStrictVerificationStatusByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateStrictVerificationStatusByDriverId isStrictlyVerified driverId = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.isStrictlyVerified isStrictlyVerified, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+
 updateVerificationStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Documents.VerificationStatus -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateVerificationStatus verificationStatus driverId = do
   _now <- getCurrentTime
@@ -67,6 +73,7 @@ updateByPrimaryKey (Domain.Types.DriverGstin.DriverGstin {..}) = do
       Se.Set Beam.gstinEncrypted (gstin & unEncrypted . encrypted),
       Se.Set Beam.gstinHash (gstin & hash),
       Se.Set Beam.isProvisional isProvisional,
+      Se.Set Beam.isStrictlyVerified isStrictlyVerified,
       Se.Set Beam.legalName legalName,
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.panNumber panNumber,

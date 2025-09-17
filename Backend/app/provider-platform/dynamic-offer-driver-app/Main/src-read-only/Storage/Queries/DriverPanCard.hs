@@ -54,6 +54,11 @@ updateMerchantIdAndCityIdByDriverId merchantId merchantOperatingCityId driverId 
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
+    
+updateStrictVerificationStatusByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateStrictVerificationStatusByDriverId isStrictlyVerified driverId = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.isStrictlyVerified isStrictlyVerified, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
 updateVerificationStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Documents.VerificationStatus -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateVerificationStatus verificationStatus driverId = do
@@ -82,6 +87,7 @@ updateByPrimaryKey (Domain.Types.DriverPanCard.DriverPanCard {..}) = do
       Se.Set Beam.driverName driverName,
       Se.Set Beam.driverNameOnGovtDB driverNameOnGovtDB,
       Se.Set Beam.failedRules failedRules,
+      Se.Set Beam.isStrictlyVerified isStrictlyVerified,
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.panCardNumberEncrypted (panCardNumber & unEncrypted . encrypted),
       Se.Set Beam.panCardNumberHash (panCardNumber & hash),

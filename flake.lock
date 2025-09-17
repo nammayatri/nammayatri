@@ -3624,6 +3624,7 @@
       "original": {
         "owner": "nammayatri",
         "repo": "shared-kernel",
+        "rev": "f7ad4164e9873a5b06d40f5b27a5420e783103ed",
         "type": "github"
       }
     },

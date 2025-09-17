@@ -21,9 +21,10 @@ module Domain.Action.UI.DriverOnboarding.IdfyWebhook
   )
 where
 
-import Control.Applicative ((<|>))
 import qualified Data.Text as T
 import qualified Domain.Action.UI.DriverOnboarding.DriverLicense as DL
+import qualified Domain.Action.UI.DriverOnboarding.GstVerification as GstCard
+import qualified Domain.Action.UI.DriverOnboarding.PanVerification as PanCard
 import qualified Domain.Action.UI.DriverOnboarding.Status as Status
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as RC
 import qualified Domain.Types.DocumentVerificationConfig as DVC
@@ -138,7 +139,7 @@ idfyWebhookV2Handler merchantShortId opCity secret val = do
     _ -> throwError $ InternalError "Unknown Service Config"
 
 onVerify :: Idfy.VerificationResponse -> Text -> Flow AckResponse
-onVerify rsp respDump = do
+onVerify (Idfy.VerificationResponse rsp) respDump = do
   verificationReq <- IVQuery.findByRequestId rsp.request_id >>= fromMaybeM (InternalError "Verification request not found")
   person <- runInReplica $ QP.findById verificationReq.driverId >>= fromMaybeM (PersonDoesNotExist verificationReq.driverId.getId)
   IVQuery.updateResponse rsp.status (Just respDump) rsp.request_id
@@ -155,35 +156,66 @@ onVerify rsp respDump = do
       void $ Status.statusHandler (verificationReq.driverId, person.merchantId, person.merchantOperatingCityId) (Just True) Nothing Nothing (Just False) onlyMandatoryDocs Nothing
       return ack_
   where
-    getResultStatus mbResult = mbResult >>= (\rslt -> (rslt.extraction_output >>= (.status)) <|> (rslt.source_output >>= (.status)))
-    verifyDocument person verificationReq rslt mbRemPriorityList
-      | isJust rslt.extraction_output =
-        maybe (pure Ack) (\resExtOp -> RC.onVerifyRC person (Just (SLogicOnboarding.makeIdfyVerificationReqRecord verificationReq)) (Idfy.convertRCOutputToRCVerificationResponse resExtOp) mbRemPriorityList (Just verificationReq.imageExtractionValidation) (Just verificationReq.documentNumber) verificationReq.documentImageId1 verificationReq.retryCount (Just verificationReq.status) (Just VT.Idfy)) rslt.extraction_output
-      | isJust rslt.source_output =
-        maybe (pure Ack) ((\rq -> DL.onVerifyDL (SLogicOnboarding.makeIdfyVerificationReqRecord verificationReq) rq VT.Idfy) . Idfy.convertDLOutputToDLVerificationOutput) rslt.source_output
-      | otherwise = pure Ack
+    getResultStatus :: Maybe Idfy.IdfyResult -> Maybe Text
+    getResultStatus mbResult =
+      case mbResult of
+        Just (Idfy.DLResult (Idfy.SourceOutput o)) -> o.status
+        Just (Idfy.PanResult (Idfy.SourceOutput o)) -> o.status
+        Just (Idfy.GstResult (Idfy.SourceOutput o)) -> o.status
+        Just (Idfy.RCResult (Idfy.ExtractionOutput o)) -> o.status
+        _ -> Nothing
+    verifyDocument person verificationReq rslt mbRemPriorityList =
+      case rslt of
+        Idfy.RCResult resExtOp ->
+          RC.onVerifyRC
+            person
+            (Just (SLogicOnboarding.makeIdfyVerificationReqRecord verificationReq))
+            (Idfy.convertRCOutputToRCVerificationResponse resExtOp.extraction_output)
+            mbRemPriorityList
+            (Just verificationReq.imageExtractionValidation)
+            (Just verificationReq.documentNumber)
+            verificationReq.multipleRC
+            verificationReq.documentImageId1
+            verificationReq.retryCount
+            (Just verificationReq.status)
+            (Just VT.Idfy)
+        Idfy.DLResult resSrcOp ->
+          DL.onVerifyDL
+            (SLogicOnboarding.makeIdfyVerificationReqRecord verificationReq)
+            (Idfy.convertDLOutputToDLVerificationOutput resSrcOp.source_output)
+            VT.Idfy
+        Idfy.PanResult resSrcOp ->
+          PanCard.onVerifyPan
+            (SLogicOnboarding.makeIdfyVerificationReqRecord verificationReq)
+            (Idfy.convertPanOutputToPanVerification resSrcOp.source_output)
+            VT.Idfy
+        Idfy.GstResult resSrcOp ->
+          GstCard.onVerifyGst
+            (SLogicOnboarding.makeIdfyVerificationReqRecord verificationReq)
+            (Idfy.convertGstOutputToGstVerification resSrcOp.source_output)
+            VT.Idfy
 
-    handleIdfySourceDown :: DP.Person -> (IV.IdfyVerification -> Flow ()) -> DIdfyVerification.IdfyVerification -> Flow ()
-    handleIdfySourceDown person retryFunc verificationReq = do
-      unless (verificationReq.docType == DVC.VehicleRegistrationCertificate) $ retryFunc verificationReq
-      mbRemPriorityList <- CQO.getVerificationPriorityList verificationReq.driverId >>= \mbpl -> if mbpl == Just [] then return Nothing else return mbpl
-      rcNum <- decrypt verificationReq.documentNumber
-      flip (maybe (retryFunc verificationReq)) mbRemPriorityList $
-        \priorityList -> do
-          logDebug $ "Idfy Source down trying with alternate service providers remaining !!!!!!" <> verificationReq.requestId
-          rsltresp' <- withTryCatch "verifyRC:handleIdfySourceDown" $ Verification.verifyRC person.merchantId person.merchantOperatingCityId (Just priorityList) (Verification.VerifyRCReq {rcNumber = rcNum, driverId = verificationReq.driverId.getId, token = Nothing, udinNo = Nothing})
-          case rsltresp' of
-            Left _ -> retryFunc verificationReq
-            Right resp' -> do
-              case resp'.verifyRCResp of
-                Verification.AsyncResp res -> do
-                  now <- getCurrentTime
-                  case res.requestor of
-                    VT.Idfy -> IVQuery.create =<< RC.mkIdfyVerificationEntity person res.requestId now verificationReq.imageExtractionValidation verificationReq.documentNumber verificationReq.issueDateOnDoc verificationReq.vehicleCategory verificationReq.airConditioned verificationReq.oxygen verificationReq.ventilator verificationReq.documentImageId1 Nothing Nothing
-                    VT.HyperVergeRCDL -> HVQuery.create =<< RC.mkHyperVergeVerificationEntity person res.requestId now verificationReq.imageExtractionValidation verificationReq.documentNumber verificationReq.issueDateOnDoc verificationReq.vehicleCategory verificationReq.airConditioned verificationReq.oxygen verificationReq.ventilator verificationReq.documentImageId1 Nothing Nothing res.transactionId
-                    _ -> throwError $ InternalError ("Service provider not configured to return async responses. Provider Name : " <> T.pack (show res.requestor))
-                  CQO.setVerificationPriorityList person.id resp'.remPriorityList
-                Verification.SyncResp res -> void $ RC.onVerifyRC person Nothing res (Just resp'.remPriorityList) (Just verificationReq.imageExtractionValidation) (Just verificationReq.documentNumber) verificationReq.documentImageId1 verificationReq.retryCount (Just verificationReq.status) Nothing
+handleIdfySourceDown :: DP.Person -> (IV.IdfyVerification -> Flow ()) -> DIdfyVerification.IdfyVerification -> Flow ()
+handleIdfySourceDown person retryFunc verificationReq = do
+  unless (verificationReq.docType == DVC.VehicleRegistrationCertificate) $ retryFunc verificationReq
+  mbRemPriorityList <- CQO.getVerificationPriorityList verificationReq.driverId >>= \mbpl -> if mbpl == Just [] then return Nothing else return mbpl
+  rcNum <- decrypt verificationReq.documentNumber
+  flip (maybe (retryFunc verificationReq)) mbRemPriorityList $
+    \priorityList -> do
+      logDebug $ "Idfy Source down trying with alternate service providers remaining !!!!!!" <> verificationReq.requestId
+      rsltresp' <- try @_ @SomeException $ Verification.verifyRC person.merchantId person.merchantOperatingCityId (Just priorityList) (Verification.VerifyRCReq {rcNumber = rcNum, driverId = verificationReq.driverId.getId})
+      case rsltresp' of
+        Left _ -> retryFunc verificationReq
+        Right resp' -> do
+          case resp'.verifyRCResp of
+            Verification.AsyncResp res -> do
+              now <- getCurrentTime
+              case res.requestor of
+                VT.Idfy -> IVQuery.create =<< RC.mkIdfyVerificationEntity person res.requestId now verificationReq.imageExtractionValidation verificationReq.multipleRC verificationReq.documentNumber verificationReq.issueDateOnDoc verificationReq.vehicleCategory verificationReq.airConditioned verificationReq.oxygen verificationReq.ventilator verificationReq.documentImageId1 Nothing Nothing
+                VT.HyperVergeRCDL -> HVQuery.create =<< RC.mkHyperVergeVerificationEntity person res.requestId now verificationReq.imageExtractionValidation verificationReq.multipleRC verificationReq.documentNumber verificationReq.issueDateOnDoc verificationReq.vehicleCategory verificationReq.airConditioned verificationReq.oxygen verificationReq.ventilator verificationReq.documentImageId1 Nothing Nothing res.transactionId
+                _ -> throwError $ InternalError ("Service provider not configured to return async responses. Provider Name : " <> T.pack (show res.requestor))
+              CQO.setVerificationPriorityList person.id resp'.remPriorityList
+            Verification.SyncResp res -> void $ RC.onVerifyRC person Nothing res (Just resp'.remPriorityList) (Just verificationReq.imageExtractionValidation) (Just verificationReq.documentNumber) verificationReq.multipleRC verificationReq.documentImageId1 verificationReq.retryCount (Just verificationReq.status) Nothing
 
 scheduleRetryVerificationJob :: IV.IdfyVerification -> Flow ()
 scheduleRetryVerificationJob verificationReq = do
