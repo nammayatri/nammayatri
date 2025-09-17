@@ -1473,18 +1473,18 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (_mbPersonId, _merchantId) j
   let vehicleNumber = req.vehicleNumber
   journey <- JM.getJourney journeyId
   journeyLeg <- QJourneyLeg.getJourneyLeg journeyId legOrder
+  vehicleType <-
+    case journeyLeg.mode of
+      DTrip.Bus -> return Enums.BUS
+      DTrip.Metro -> return Enums.METRO
+      DTrip.Subway -> return Enums.SUBWAY
+      _ -> throwError $ UnsupportedVehicleType (show journeyLeg.mode)
+  integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig journey.merchantOperatingCityId vehicleType DIBC.MULTIMODAL
+  vehicleLiveRouteInfo <- JLU.getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber >>= fromMaybeM (VehicleUnserviceableOnRoute "Vehicle not found on any route")
   riderConfig <- QRiderConfig.findByMerchantOperatingCityId journey.merchantOperatingCityId >>= fromMaybeM (RiderConfigNotFound journey.merchantOperatingCityId.getId)
   if riderConfig.validateSetOnboardingVehicleRequest == Just True
     then do
       let journeyLegRouteCodes = mapMaybe (.routeCode) journeyLeg.routeDetails
-      vehicleType <-
-        case journeyLeg.mode of
-          DTrip.Bus -> return Enums.BUS
-          DTrip.Metro -> return Enums.METRO
-          DTrip.Subway -> return Enums.SUBWAY
-          _ -> throwError $ UnsupportedVehicleType (show journeyLeg.mode)
-      integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig journey.merchantOperatingCityId vehicleType DIBC.MULTIMODAL
-      vehicleLiveRouteInfo <- JLU.getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber >>= fromMaybeM (VehicleUnserviceableOnRoute "Vehicle not found on any route")
       unless (vehicleLiveRouteInfo.routeCode `elem` journeyLegRouteCodes) $
         throwError $ VehicleUnserviceableOnRoute ("Vehicle " <> vehicleNumber <> ", the route code " <> vehicleLiveRouteInfo.routeCode <> ", not found on any route: " <> show journeyLegRouteCodes)
       unless (maybe False (\legServiceTypes -> vehicleLiveRouteInfo.serviceType `elem` legServiceTypes) journeyLeg.serviceTypes) $
