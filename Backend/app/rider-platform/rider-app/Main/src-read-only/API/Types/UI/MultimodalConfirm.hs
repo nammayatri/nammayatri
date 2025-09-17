@@ -162,7 +162,8 @@ data LegStatus = LegStatus
     trackingStatus :: Lib.JourneyModule.State.Types.TrackingStatus,
     trackingStatusLastUpdatedAt :: Kernel.Prelude.UTCTime,
     userPosition :: Kernel.Prelude.Maybe Kernel.External.Maps.Types.LatLong,
-    vehiclePositions :: [Lib.JourneyModule.Types.VehiclePosition]
+    vehiclePositions :: [Lib.JourneyModule.Types.VehiclePosition],
+    fleetNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

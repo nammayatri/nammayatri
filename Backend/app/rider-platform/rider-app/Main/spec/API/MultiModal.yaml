@@ -73,6 +73,7 @@ types:
     vehiclePositions: "[VehiclePosition]"
     userPosition: Maybe LatLong
     mode: MultimodalTravelMode
+    fleetNo: Maybe Text
 
   JourneyStatusResp:
     journeyStatus: Domain.Types.Journey.JourneyStatus
