@@ -650,8 +650,8 @@ getPublicTransportData (mbPersonId, merchantId) mbCity _mbConfigVersion mbVehicl
   mbVehicleLiveInfo <-
     case mbVehicleNumber of
       Just vehicleNumber -> do
-        routeCode <- (JLU.getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber >>= \mbResult -> pure $ mbResult <&> (.routeCode)) >>= fromMaybeM (InvalidVehicleNumber $ "Vehicle " <> vehicleNumber <> ", not found on any route")
-        return $ Just routeCode
+        vehicleLiveInfo <- JLU.getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber >>= fromMaybeM (InvalidVehicleNumber $ "Vehicle " <> vehicleNumber <> ", not found on any route")
+        return $ Just vehicleLiveInfo
       Nothing -> return Nothing
 
   let mkResponse stations routes routeStops bppConfig = do
