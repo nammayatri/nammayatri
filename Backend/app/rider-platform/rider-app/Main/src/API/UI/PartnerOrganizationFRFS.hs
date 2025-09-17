@@ -128,7 +128,7 @@ upsertPersonAndGetFare partnerOrg mbIntegratedBPPConfigId req = withFlowHandlerA
                 endStationCode = toStation.code
               }
           ]
-    res <- DFRFSTicketService.postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPPConfig frfsVehicleType frfsSearchReq frfsRouteDetails req.partnerOrgTransactionId (Just partnerOrg.orgId) Nothing Nothing
+    res <- DFRFSTicketService.postFrfsSearchHandler (personId, merchantId) merchantOperatingCity integratedBPPConfig frfsVehicleType frfsSearchReq frfsRouteDetails req.partnerOrgTransactionId (Just partnerOrg.orgId) Nothing Nothing (\_ -> pure ()) -- the journey leg upsert function is not required here
     return $ DPOFRFS.GetFareResp {searchId = res.searchId, ..}
   where
     withLogTag = Log.withLogTag ("FRFS:UpsertPersonAndGetFare:PartnerOrgId:" <> getId partnerOrg.orgId)

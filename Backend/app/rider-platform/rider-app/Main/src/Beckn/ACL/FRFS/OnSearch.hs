@@ -286,6 +286,7 @@ createVehicleServiceTier fulfillment = do
       serviceTierShortName = variant
       serviceTierDescription = category <> " " <> variant
       serviceTierLongName = category <> " " <> variant
+      isAirConditioned = False
 
   Just $
     Domain.DVehicleServiceTier
@@ -293,7 +294,8 @@ createVehicleServiceTier fulfillment = do
         serviceTierProviderCode,
         serviceTierShortName,
         serviceTierDescription,
-        serviceTierLongName
+        serviceTierLongName,
+        isAirConditioned
       }
 
 castVehicleVariantToServiceTierType :: Text -> Spec.ServiceTierType

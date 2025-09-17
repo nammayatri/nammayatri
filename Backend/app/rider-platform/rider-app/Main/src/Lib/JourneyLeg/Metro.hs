@@ -12,7 +12,7 @@ import Lib.JourneyLeg.Types.Metro
 import qualified Lib.JourneyModule.Types as JT
 
 instance JT.JourneyLeg MetroLegRequest m where
-  search (MetroLegRequestSearch MetroLegRequestSearchData {..}) = CFRFS.search Spec.METRO personId merchantId quantity city journeyLeg recentLocationId multimodalSearchRequestId
+  search (MetroLegRequestSearch MetroLegRequestSearchData {..}) = CFRFS.search Spec.METRO personId merchantId quantity city journeyLeg recentLocationId multimodalSearchRequestId upsertJourneyLegAction
   search _ = throwError (InternalError "Not supported")
 
   confirm (MetroLegRequestConfirm MetroLegRequestConfirmData {..}) = CFRFS.confirm personId merchantId quoteId quantity childTicketQuantity bookLater bookingAllowed Nothing Spec.METRO

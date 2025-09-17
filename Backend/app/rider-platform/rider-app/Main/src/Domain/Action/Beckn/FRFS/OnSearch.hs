@@ -77,7 +77,8 @@ data DVehicleServiceTier = DVehicleServiceTier
     serviceTierProviderCode :: Text,
     serviceTierShortName :: Text,
     serviceTierDescription :: Text,
-    serviceTierLongName :: Text
+    serviceTierLongName :: Text,
+    isAirConditioned :: Bool
   }
 
 data DQuote = DQuote
@@ -376,7 +377,8 @@ castVehicleServiceTierAPI DVehicleServiceTier {..} =
       providerCode = serviceTierProviderCode,
       description = serviceTierDescription,
       longName = serviceTierLongName,
-      shortName = serviceTierShortName
+      shortName = serviceTierShortName,
+      isAirConditioned = isAirConditioned
     }
 
 castDiscountToAPI :: DDiscount -> API.FRFSDiscountRes
@@ -512,6 +514,7 @@ createEntriesInFareTables merchantId merchantOperatingCityId quote integratedBpp
                   description = "ORDINARY",
                   shortName = show quote.vehicleType,
                   longName = show quote.vehicleType,
+                  isAirConditioned = False,
                   integratedBppConfigId,
                   merchantId,
                   merchantOperatingCityId,

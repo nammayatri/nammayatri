@@ -80,7 +80,6 @@ import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
-import qualified Storage.Queries.FRFSVehicleServiceTier as QFRFSVehicleServiceTier
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Transformers.Booking as QTB
 import Tools.Error
@@ -1332,11 +1331,6 @@ mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation m
 
     chooseGate :: Maybe KEMIT.MultiModalLegGate -> Maybe KEMIT.MultiModalLegGate -> Maybe KEMIT.MultiModalLegGate
     chooseGate fromGates fromLeg = fromGates <|> fromLeg
-
-getServiceTypeFromProviderCode :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => Id DMOC.MerchantOperatingCity -> Text -> m Spec.ServiceTierType
-getServiceTypeFromProviderCode merchantOperatingCityId providerCode = do
-  serviceTiers <- QFRFSVehicleServiceTier.findByProviderCode providerCode merchantOperatingCityId
-  return $ fromMaybe Spec.ORDINARY (listToMaybe serviceTiers <&> (._type))
 
 sumHighPrecMoney :: [HighPrecMoney] -> HighPrecMoney
 sumHighPrecMoney = HighPrecMoney . sum . map getHighPrecMoney

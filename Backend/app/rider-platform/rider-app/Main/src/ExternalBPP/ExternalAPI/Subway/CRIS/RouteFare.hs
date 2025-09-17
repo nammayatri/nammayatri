@@ -206,7 +206,8 @@ getRouteFare config merchantOperatingCityId request = do
                     serviceTierProviderCode = serviceTier.providerCode,
                     serviceTierShortName = serviceTier.shortName,
                     serviceTierDescription = serviceTier.description,
-                    serviceTierLongName = serviceTier.longName
+                    serviceTierLongName = serviceTier.longName,
+                    isAirConditioned = serviceTier.isAirConditioned
                   }
             }
   return $ concat frfsDetails

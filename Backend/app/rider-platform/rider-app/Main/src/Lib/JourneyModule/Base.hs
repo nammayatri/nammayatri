@@ -484,22 +484,24 @@ addAllLegs journeyId mbOldJourneyLegs newJourneyLegs = do
   forM_ (traverseWithTriplets allLegs) $ \(mbPrevJourneyLeg, journeyLeg, mbNextJourneyLeg) -> do
     when (isNothing journeyLeg.legSearchId) $ do
       -- In case of retry of this function, if search has already triggered then it will not do it again
-      searchResp <-
-        case journeyLeg.mode of
-          DTrip.Taxi -> do
-            snappedLeg <- snapJourneyLegToNearestGate journeyLeg
-            let originAddress = mkAddress (mbPrevJourneyLeg >>= (.toStopDetails)) journeyLeg.mode journey.fromLocation.address
-            let destinationAddress = mkAddress (mbNextJourneyLeg >>= (.fromStopDetails)) journeyLeg.mode toLocation.address
-            addTaxiLeg journey snappedLeg originAddress destinationAddress
-          DTrip.Metro -> do
-            addMetroLeg journey journeyLeg
-          DTrip.Subway -> do
-            addSubwayLeg journey journeyLeg
-          DTrip.Walk -> return $ JL.SearchResponse {id = journeyLeg.id.getId}
-          DTrip.Bus -> do
-            addBusLeg journey journeyLeg
-      upsertJourneyLeg (journeyLeg {DJourneyLeg.legSearchId = Just searchResp.id})
+      case journeyLeg.mode of
+        DTrip.Taxi -> do
+          snappedLeg <- snapJourneyLegToNearestGate journeyLeg
+          let originAddress = mkAddress (mbPrevJourneyLeg >>= (.toStopDetails)) journeyLeg.mode journey.fromLocation.address
+          let destinationAddress = mkAddress (mbNextJourneyLeg >>= (.fromStopDetails)) journeyLeg.mode toLocation.address
+          void $ addTaxiLeg journey snappedLeg originAddress destinationAddress (upsertJourneyLegAction journeyLeg)
+        DTrip.Metro -> do
+          void $ addMetroLeg journey journeyLeg (upsertJourneyLegAction journeyLeg)
+        DTrip.Subway -> do
+          void $ addSubwayLeg journey journeyLeg (upsertJourneyLegAction journeyLeg)
+        DTrip.Walk ->
+          upsertJourneyLegAction journeyLeg journeyLeg.id.getId
+        DTrip.Bus -> do
+          void $ addBusLeg journey journeyLeg (upsertJourneyLegAction journeyLeg)
   where
+    upsertJourneyLegAction :: JL.SearchRequestFlow m r c => DJourneyLeg.JourneyLeg -> Text -> m ()
+    upsertJourneyLegAction journeyLeg searchId = upsertJourneyLeg (journeyLeg {DJourneyLeg.legSearchId = Just searchId})
+
     traverseWithTriplets :: [a] -> [(Maybe a, a, Maybe a)]
     traverseWithTriplets [] = []
     traverseWithTriplets [x] = [(Nothing, x, Nothing)] -- Single element case
@@ -631,8 +633,9 @@ addTaxiLeg ::
   DJourneyLeg.JourneyLeg ->
   LA.LocationAddress ->
   LA.LocationAddress ->
+  (forall m1 r1 c1. JL.SearchRequestFlow m1 r1 c1 => Text -> m1 ()) ->
   m JL.SearchResponse
-addTaxiLeg journey journeyLeg originAddress destinationAddress = do
+addTaxiLeg journey journeyLeg originAddress destinationAddress upsertJourneyLegAction = do
   let startLocation = mkLocationWithGate journeyLeg.osmExit originAddress journeyLeg.startLocation
   let endLocation = mkLocationWithGate journeyLeg.osmEntrance destinationAddress journeyLeg.endLocation
   let taxiSearchReq = mkTaxiSearchReq startLocation [endLocation]
@@ -651,8 +654,9 @@ addMetroLeg ::
   (JL.SearchRequestFlow m r c, JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
   DJourney.Journey ->
   DJourneyLeg.JourneyLeg ->
+  (forall m1 r1 c1. JL.SearchRequestFlow m1 r1 c1 => Text -> m1 ()) ->
   m JL.SearchResponse
-addMetroLeg journey journeyLeg = do
+addMetroLeg journey journeyLeg upsertJourneyLegAction = do
   merchantOperatingCity <- QMerchOpCity.findById journey.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound journey.merchantOperatingCityId.getId)
   let metroSearchReq = mkMetroLegReq merchantOperatingCity.city
   JL.search metroSearchReq
@@ -666,15 +670,17 @@ addMetroLeg journey journeyLeg = do
             recentLocationId = journey.recentLocationId,
             multimodalSearchRequestId = Just journey.searchRequestId,
             city,
-            journeyLeg
+            journeyLeg,
+            upsertJourneyLegAction
           }
 
 addSubwayLeg ::
   JL.SearchRequestFlow m r c =>
   DJourney.Journey ->
   DJourneyLeg.JourneyLeg ->
+  (forall m1 r1 c1. JL.SearchRequestFlow m1 r1 c1 => Text -> m1 ()) ->
   m JL.SearchResponse
-addSubwayLeg journey journeyLeg = do
+addSubwayLeg journey journeyLeg upsertJourneyLegAction = do
   merchantOperatingCity <- QMerchOpCity.findById journey.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound journey.merchantOperatingCityId.getId)
   let subwaySearchReq = mkSubwayLegReq merchantOperatingCity.city
   JL.search subwaySearchReq
@@ -688,15 +694,17 @@ addSubwayLeg journey journeyLeg = do
             recentLocationId = journey.recentLocationId,
             multimodalSearchRequestId = Just journey.searchRequestId,
             city,
-            journeyLeg
+            journeyLeg,
+            upsertJourneyLegAction
           }
 
 addBusLeg ::
   JL.SearchRequestFlow m r c =>
   DJourney.Journey ->
   DJourneyLeg.JourneyLeg ->
+  (forall m1 r1 c1. JL.SearchRequestFlow m1 r1 c1 => Text -> m1 ()) ->
   m JL.SearchResponse
-addBusLeg journey journeyLeg = do
+addBusLeg journey journeyLeg upsertJourneyLegAction = do
   merchantOperatingCity <- QMerchOpCity.findById journey.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound journey.merchantOperatingCityId.getId)
   let busSearchReq = mkBusLegReq merchantOperatingCity.city
   JL.search busSearchReq
@@ -710,7 +718,8 @@ addBusLeg journey journeyLeg = do
             recentLocationId = journey.recentLocationId,
             multimodalSearchRequestId = Just journey.searchRequestId,
             city,
-            journeyLeg
+            journeyLeg,
+            upsertJourneyLegAction
           }
 
 getUnifiedQR :: DJourney.Journey -> [JL.LegInfo] -> Maybe JL.UnifiedTicketQR
@@ -965,8 +974,7 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
         -- fix it properly later
         -- cancelRequiredLegs journey.riderId
         QJourneyLeg.create journeyLeg
-        searchResp <- addTaxiLeg journey journeyLeg (mkLocationAddress startlocation.location) (mkLocationAddress endLocation)
-        QJourneyLeg.updateLegSearchId (Just searchResp.id) journeyLeg.id
+        void $ addTaxiLeg journey journeyLeg (mkLocationAddress startlocation.location) (mkLocationAddress endLocation) (\searchId -> QJourneyLeg.updateLegSearchId (Just searchId) journeyLeg.id)
         startJourney journey.riderId [] (Just currentLeg.sequenceNumber) journeyId
 
     -- cancelRequiredLegs riderId = do

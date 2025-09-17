@@ -83,7 +83,29 @@ getFares riderId merchant merchanOperatingCity integrationBPPConfig fareRouteDet
       return (isFareMandatory, fares)
     EBIX _ -> do
       fares <- FRFSUtils.getFares riderId vehicleCategory serviceTier integrationBPPConfig merchant.id merchanOperatingCity.id routeCode startStopCode endStopCode
-      return (isFareMandatory, fares)
+      return
+        ( isFareMandatory,
+          map
+            ( \FRFSUtils.FRFSFare {..} ->
+                let FRFSUtils.FRFSVehicleServiceTier {..} = vehicleServiceTier
+                 in FRFSUtils.FRFSFare
+                      { vehicleServiceTier =
+                          FRFSUtils.FRFSVehicleServiceTier
+                            { serviceTierType =
+                                case serviceTierType of
+                                  Spec.ASHOK_LEYLAND_AC -> Spec.AC
+                                  Spec.MIDI_AC -> Spec.AC
+                                  Spec.VOLVO_AC -> Spec.AC
+                                  Spec.ELECTRIC_V -> Spec.AC
+                                  Spec.ELECTRIC_V_PMI -> Spec.AC
+                                  a -> a,
+                              ..
+                            },
+                        ..
+                      }
+            )
+            fares
+        )
     DIRECT _ -> do
       fares <- FRFSUtils.getFares riderId vehicleCategory serviceTier integrationBPPConfig merchant.id merchanOperatingCity.id routeCode startStopCode endStopCode
       return (isFareMandatory, fares)

@@ -847,6 +847,7 @@ FRFSVehicleServiceTier:
     shortName: Text
     longName: Text
     description: Text
+    isAirConditioned: Bool
     merchantId: Id Merchant
     integratedBppConfigId: Id IntegratedBPPConfig
     merchantOperatingCityId: Id MerchantOperatingCity

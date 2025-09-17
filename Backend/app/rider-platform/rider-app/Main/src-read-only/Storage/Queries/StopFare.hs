@@ -26,7 +26,7 @@ createMany = traverse_ create
 
 findAllByStartStopAndIntegratedBPPConfigId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m [Domain.Types.StopFare.StopFare])
+  (Kernel.Prelude.Text -> Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig -> m ([Domain.Types.StopFare.StopFare]))
 findAllByStartStopAndIntegratedBPPConfigId startStopCode endStopCode integratedBppConfigId = do
   findAllWithKV
     [ Se.And
@@ -36,7 +36,7 @@ findAllByStartStopAndIntegratedBPPConfigId startStopCode endStopCode integratedB
         ]
     ]
 
-findByRouteCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSFarePolicy.FRFSFarePolicy -> m [Domain.Types.StopFare.StopFare])
+findByRouteCode :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSFarePolicy.FRFSFarePolicy -> m ([Domain.Types.StopFare.StopFare]))
 findByRouteCode farePolicyId = do findAllWithKV [Se.And [Se.Is Beam.farePolicyId $ Se.Eq (Kernel.Types.Id.getId farePolicyId)]]
 
 findByRouteStartAndStopCode ::

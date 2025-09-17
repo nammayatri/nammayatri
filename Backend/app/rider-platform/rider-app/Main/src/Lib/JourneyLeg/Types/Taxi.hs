@@ -16,6 +16,7 @@ import Kernel.External.Maps.Google.MapsClient.Types
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.JourneyModule.Types as JL
 import SharedLogic.Search
 
 data TaxiLegRequestSearchData = TaxiLegRequestSearchData
@@ -23,7 +24,8 @@ data TaxiLegRequestSearchData = TaxiLegRequestSearchData
     journeyLegData :: DJourneyLeg.JourneyLeg,
     origin :: SearchReqLocation,
     stops :: [SearchReqLocation],
-    multimodalSearchRequestId :: Maybe Text
+    multimodalSearchRequestId :: Maybe Text,
+    upsertJourneyLegAction :: forall m r c. JL.SearchRequestFlow m r c => Text -> m ()
   }
 
 data TaxiLegRequestConfirmData = TaxiLegRequestConfirmData
