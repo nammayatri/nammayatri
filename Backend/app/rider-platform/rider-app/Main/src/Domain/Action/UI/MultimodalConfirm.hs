@@ -320,7 +320,7 @@ postMultimodalOrderSwitchFRFSTier (mbPersonId, merchantId) journeyId legOrder re
   journeyLeg <- find (\leg -> leg.sequenceNumber == legOrder) legs & fromMaybeM (InvalidRequest "No matching journey leg found for the given legOrder")
 
   whenJust journeyLeg.legSearchId $ \legSearchId -> do
-    mbAlternateShortNames <- getAlternateShortNames
+    mbAlternateShortNames <- getAlternateRouteInfo
     let searchId = Id legSearchId
     QJourneyLeg.updateLegPricingIdByLegSearchId (Just req.quoteId.getId) journeyLeg.legSearchId
     mbBooking <- QFRFSTicketBooking.findBySearchId searchId
@@ -344,16 +344,16 @@ postMultimodalOrderSwitchFRFSTier (mbPersonId, merchantId) journeyId legOrder re
                 DFRFSB.estimatedPrice = totalPriceForSwitchLeg
               }
       void $ QFRFSTicketBooking.updateByPrimaryKey updatedBooking
-    whenJust mbAlternateShortNames $ \alternateShortNames -> do
-      QRouteDetails.updateAlternateShortNames alternateShortNames journeyLeg.id.getId
+    whenJust mbAlternateShortNames $ \(alternateShortNames, alternateRouteIds) -> do
+      QRouteDetails.updateAlternateShortNamesAndRouteIds alternateShortNames (Just alternateRouteIds) journeyLeg.id.getId
   updatedLegs <- JM.getAllLegsInfo journey.riderId journeyId
   generateJourneyInfoResponse journey updatedLegs
   where
-    getAlternateShortNames :: Flow (Maybe [Text])
-    getAlternateShortNames = do
+    getAlternateRouteInfo :: Flow (Maybe ([Text], [Text]))
+    getAlternateRouteInfo = do
       options <- getMultimodalOrderGetLegTierOptions (mbPersonId, merchantId) journeyId legOrder
       let mbSelectedOption = find (\option -> option.quoteId == Just req.quoteId) options.options
-      return $ mbSelectedOption <&> (.availableRoutes)
+      return $ mbSelectedOption <&> (unzip . map (\a -> (a.shortName, a.routeCode)) . (.availableRoutesInfo))
 
 postMultimodalSwitch ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -1490,7 +1490,7 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (_mbPersonId, _merchantId) j
   riderConfig <- QRiderConfig.findByMerchantOperatingCityId journey.merchantOperatingCityId >>= fromMaybeM (RiderConfigNotFound journey.merchantOperatingCityId.getId)
   if riderConfig.validateSetOnboardingVehicleRequest == Just True
     then do
-      let journeyLegRouteCodes = mapMaybe (.routeCode) journeyLeg.routeDetails
+      let journeyLegRouteCodes = mapMaybe (.routeCode) journeyLeg.routeDetails <> (concat $ mapMaybe (.alternateRouteIds) journeyLeg.routeDetails)
       unless (vehicleLiveRouteInfo.routeCode `elem` journeyLegRouteCodes) $
         throwError $ VehicleUnserviceableOnRoute ("Vehicle " <> vehicleNumber <> ", the route code " <> vehicleLiveRouteInfo.routeCode <> ", not found on any route: " <> show journeyLegRouteCodes)
       unless (maybe False (\legServiceTypes -> vehicleLiveRouteInfo.serviceType `elem` legServiceTypes) journeyLeg.serviceTypes) $

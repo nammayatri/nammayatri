@@ -19,6 +19,7 @@ instance FromTType' Beam.RouteDetails Domain.Types.RouteDetails.RouteDetails whe
         Domain.Types.RouteDetails.RouteDetails
           { agencyGtfsId = agencyGtfsId,
             agencyName = agencyName,
+            alternateRouteIds = alternateRouteIds,
             alternateShortNames = alternateShortNames,
             endLocationLat = endLocationLat,
             endLocationLon = endLocationLon,
@@ -61,6 +62,7 @@ instance ToTType' Beam.RouteDetails Domain.Types.RouteDetails.RouteDetails where
     Beam.RouteDetailsT
       { Beam.agencyGtfsId = agencyGtfsId,
         Beam.agencyName = agencyName,
+        Beam.alternateRouteIds = alternateRouteIds,
         Beam.alternateShortNames = alternateShortNames,
         Beam.endLocationLat = endLocationLat,
         Beam.endLocationLon = endLocationLon,

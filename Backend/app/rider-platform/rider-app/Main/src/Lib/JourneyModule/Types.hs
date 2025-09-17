@@ -1346,8 +1346,9 @@ mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation m
       newId <- generateGUID
       let fromStopDetails' = fromMaybe (EMInterface.MultiModalStopDetails Nothing Nothing Nothing Nothing) (routeDetail.fromStopDetails)
           toStopDetails' = fromMaybe (EMInterface.MultiModalStopDetails Nothing Nothing Nothing Nothing) (routeDetail.toStopDetails)
-      let tierRoutes = maybe [] (concatMap (.availableRoutes)) (fare' >>= (.possibleRoutes))
-      let alternateShortNames = if null tierRoutes then routeDetail.alternateShortNames else nub tierRoutes
+      let tierRoutes = maybe [] (concatMap (.availableRoutesInfo)) (fare' >>= (.possibleRoutes))
+      let alternateShortNames = if null tierRoutes then routeDetail.alternateShortNames else nub (map (.shortName) tierRoutes)
+      let alternateRouteIds = if null tierRoutes then [] else nub (map (.routeCode) tierRoutes)
       return $
         RouteDetails
           { routeGtfsId = routeDetail.gtfsId <&> gtfsIdtoDomainCode,
@@ -1359,6 +1360,7 @@ mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation m
             routeColorCode = routeDetail.color,
             frequency = Nothing,
             alternateShortNames = alternateShortNames,
+            alternateRouteIds = Just alternateRouteIds,
             journeyLegId = journeyLegId.getId,
             agencyGtfsId = routeDetail.gtfsId <&> gtfsIdtoDomainCode,
             agencyName = routeDetail.longName,

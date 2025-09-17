@@ -328,6 +328,7 @@ JourneyLeg:
     journeyId: Storage.Queries.Transformers.JourneyLeg.getJourneyId mbJourneyLegMapping journeyId|EM
     isDeleted: Storage.Queries.Transformers.JourneyLeg.getIsDeleted mbJourneyLegMapping isDeleted|EM
     sequenceNumber: Storage.Queries.Transformers.JourneyLeg.getSequenceNumber mbJourneyLegMapping sequenceNumber|EM
+    alternateRouteIds: Kernel.Prelude.fromMaybe []|I
 
   toTType:
     distance: (.value) <$> |I
@@ -377,6 +378,7 @@ RouteDetails:
     routeColorName: Maybe Text
     routeColorCode: Maybe Text
     alternateShortNames: "[Text]"
+    alternateRouteIds: "Maybe [Text]"
     frequency: Maybe Seconds
     agencyGtfsId: Maybe Text
     agencyName: Maybe Text
@@ -418,9 +420,9 @@ RouteDetails:
       orderBy:
         field: subLegOrder
         order: asc
-    updateAlternateShortNames:
+    updateAlternateShortNamesAndRouteIds:
       kvFunction: updateWithKV
-      params: [alternateShortNames]
+      params: [alternateShortNames, alternateRouteIds]
       where: journeyLegId
     updateRoute:
       kvFunction: updateOneWithKV
@@ -432,6 +434,7 @@ RouteDetails:
 
   sqlType:
     alternateShortNames: "text[]"
+    alternateRouteIds: "text[]"
 
   constraints:
     id: PrimaryKey
