@@ -120,6 +120,7 @@ types:
     shortName: Text
     longName: Text
     description: Text
+    isAirConditioned: Bool
     derive: "Show"
 
   FRFSRouteStationsAPI:

@@ -14,6 +14,7 @@ import Kernel.External.Maps.Google.MapsClient.Types
 import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
+import qualified Lib.JourneyModule.Types as JL
 
 data SubwayLegRequestSearchData = SubwayLegRequestSearchData
   { quantity :: Int,
@@ -22,7 +23,8 @@ data SubwayLegRequestSearchData = SubwayLegRequestSearchData
     city :: Context.City,
     journeyLeg :: DJourneyLeg.JourneyLeg,
     multimodalSearchRequestId :: Maybe Text,
-    recentLocationId :: Maybe (Id DRecentLocation.RecentLocation)
+    recentLocationId :: Maybe (Id DRecentLocation.RecentLocation),
+    upsertJourneyLegAction :: forall m r c. JL.SearchRequestFlow m r c => Text -> m ()
   }
 
 data SubwayLegRequestUpdateData = SubwayLegRequestUpdateData

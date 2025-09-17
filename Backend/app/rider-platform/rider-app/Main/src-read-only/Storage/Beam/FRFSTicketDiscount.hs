@@ -33,6 +33,6 @@ instance B.Table FRFSTicketDiscountT where
 
 type FRFSTicketDiscount = FRFSTicketDiscountT Identity
 
-$(enableKVPG ''FRFSTicketDiscountT ['id] [])
+$(enableKVPG (''FRFSTicketDiscountT) [('id)] [])
 
-$(mkTableInstances ''FRFSTicketDiscountT "frfs_ticket_discount")
+$(mkTableInstances (''FRFSTicketDiscountT) "frfs_ticket_discount")

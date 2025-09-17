@@ -256,6 +256,13 @@ data FRFSTicketVerifyReq = FRFSTicketVerifyReq {qrData :: Data.Text.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data FRFSVehicleServiceTierAPI = FRFSVehicleServiceTierAPI {_type :: BecknV2.FRFS.Enums.ServiceTierType, description :: Data.Text.Text, longName :: Data.Text.Text, providerCode :: Data.Text.Text, shortName :: Data.Text.Text}
+data FRFSVehicleServiceTierAPI = FRFSVehicleServiceTierAPI
+  { _type :: BecknV2.FRFS.Enums.ServiceTierType,
+    description :: Data.Text.Text,
+    isAirConditioned :: Kernel.Prelude.Bool,
+    longName :: Data.Text.Text,
+    providerCode :: Data.Text.Text,
+    shortName :: Data.Text.Text
+  }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
