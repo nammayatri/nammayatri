@@ -302,9 +302,9 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
           JMU.measureLatency (JMU.buildOneWayBusScanRouteDetails (fromJust searchRequest.routeCode) (fromJust searchRequest.originStopCode) (fromJust searchRequest.destinationStopCode) mbIntegratedBPPConfig >>= (\x -> return (x, []))) "buildOneWayBusScanRouteDetails" -- TODO: make this syntax better in coming future if you get time and 🔥 CAUTION 🔥 never let this fromJust be there without its prechecked condition in any case.
         | mode `elem` (fromMaybe [] riderConfig.domainRouteCalculationEnabledModes) = do
           case vehicleCategory of
-            BecknV2.OnDemand.Enums.BUS -> JMU.measureLatency (JMU.buildSingleModeDirectRoutes (getPreliminaryLeg now currentLocation) searchRequest.routeCode searchRequest.originStopCode searchRequest.destinationStopCode mbIntegratedBPPConfig searchRequest.merchantId searchRequest.merchantOperatingCityId vehicleCategory mode >>= (\x -> return (x, []))) "buildSingleModeDirectRoutes"
-            BecknV2.OnDemand.Enums.METRO -> JMU.measureLatency (JMU.buildSingleModeDirectRoutes (getPreliminaryLeg now currentLocation) searchRequest.routeCode searchRequest.originStopCode searchRequest.destinationStopCode mbIntegratedBPPConfig searchRequest.merchantId searchRequest.merchantOperatingCityId vehicleCategory mode >>= (\x -> return (x, []))) "buildSingleModeDirectRoutes"
-            BecknV2.OnDemand.Enums.SUBWAY -> JMU.measureLatency (JMU.buildTrainAllViaRoutes (getPreliminaryLeg now currentLocation) searchRequest.originStopCode searchRequest.destinationStopCode mbIntegratedBPPConfig searchRequest.merchantId searchRequest.merchantOperatingCityId vehicleCategory mode False) "buildTrainAllViaRoutes"
+            BecknV2.OnDemand.Enums.BUS -> JMU.measureLatency (JMU.buildSingleModeDirectRoutes (getPreliminaryLeg now currentLocation searchRequest.fromLocation.address.area) searchRequest.routeCode searchRequest.originStopCode searchRequest.destinationStopCode mbIntegratedBPPConfig searchRequest.merchantId searchRequest.merchantOperatingCityId vehicleCategory mode >>= (\x -> return (x, []))) "buildSingleModeDirectRoutes"
+            BecknV2.OnDemand.Enums.METRO -> JMU.measureLatency (JMU.buildSingleModeDirectRoutes (getPreliminaryLeg now currentLocation searchRequest.fromLocation.address.area) searchRequest.routeCode searchRequest.originStopCode searchRequest.destinationStopCode mbIntegratedBPPConfig searchRequest.merchantId searchRequest.merchantOperatingCityId vehicleCategory mode >>= (\x -> return (x, []))) "buildSingleModeDirectRoutes"
+            BecknV2.OnDemand.Enums.SUBWAY -> JMU.measureLatency (JMU.buildTrainAllViaRoutes (getPreliminaryLeg now currentLocation searchRequest.fromLocation.address.area) searchRequest.originStopCode searchRequest.destinationStopCode mbIntegratedBPPConfig searchRequest.merchantId searchRequest.merchantOperatingCityId vehicleCategory mode False) "buildTrainAllViaRoutes"
             _ -> return ([], [])
         | otherwise = return ([], [])
   (directSingleModeRoutes, restOfViaPoints) <- result
@@ -371,7 +371,7 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
                 let toLocationV2 = LocationV2 {latLng = LatLngV2 {latitude = toLocation.lat, longitude = toLocation.lon}}
                 let distance = fromMaybe (Distance 0 Meter) searchRequest.distance
                 let duration = fromMaybe (Seconds 0) searchRequest.estimatedRideDuration
-                (autoLeg, startTime, endTime) <- mkAutoOrWalkLeg now Nothing toLocationV2 MultiModalTypes.Unspecified distance duration
+                (autoLeg, startTime, endTime) <- mkAutoOrWalkLeg now Nothing toLocationV2 MultiModalTypes.Unspecified distance duration searchRequest.fromLocation.address.area (searchRequest.toLocation >>= ((.area) . (.address)))
                 let autoMultiModalResponse = mkMultimodalResponse autoLeg startTime endTime
                 return (Just NoPublicTransportRoutes, autoMultiModalResponse)
               Nothing -> return (Nothing, otpResponse'')
@@ -381,7 +381,7 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
                 let mbBestOneWayRoute = JMU.getBestOneWayRoute (castVehicleCategoryToGeneralVehicleType vehicleCategory) otpResponse''.routes searchRequest.originStopCode searchRequest.destinationStopCode
                 case mbBestOneWayRoute of
                   Just bestOneWayRoute -> do
-                    mbPreliminaryLeg <- join <$> mapM (getPreliminaryLeg now currentLocation) ((listToMaybe bestOneWayRoute.legs) <&> (.startLocation))
+                    mbPreliminaryLeg <- join <$> mapM (getPreliminaryLeg now currentLocation searchRequest.fromLocation.address.area ((listToMaybe bestOneWayRoute.legs) >>= (.toStopDetails) >>= (.name))) ((listToMaybe bestOneWayRoute.legs) <&> (.startLocation))
                     let updatedBestOneWayRoute =
                           case mbPreliminaryLeg of
                             Just leg -> bestOneWayRoute {MultiModalTypes.legs = [leg] ++ bestOneWayRoute.legs}
@@ -393,7 +393,7 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
             filteredRoutes <- JM.filterTransitRoutes riderConfig finalRoutes
             return (warningType, MInterface.MultiModalResponse {routes = filteredRoutes})
   when (not (null restOfViaPoints) && isJust mbIntegratedBPPConfig) $ do
-    fork "Process rest of single mode routes" $ processSingleModeRoutes restOfViaPoints userPreferences mbIntegratedBPPConfig (getPreliminaryLeg now currentLocation) routeLiveInfo
+    fork "Process rest of single mode routes" $ processSingleModeRoutes restOfViaPoints userPreferences mbIntegratedBPPConfig (getPreliminaryLeg now currentLocation searchRequest.fromLocation.address.area) routeLiveInfo
   when (null restOfViaPoints) $ cacheAllRoutesLoadedKey searchRequest.id.getId True
 
   let (indexedRoutesToProcess, showMultimodalWarningForFirstJourney) = getIndexedRoutesAndWarning userPreferences otpResponse
@@ -640,8 +640,8 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
               ..
             }
 
-    mkAutoOrWalkLeg :: UTCTime -> Maybe LocationV2 -> LocationV2 -> MultiModalTypes.GeneralVehicleType -> Distance -> Seconds -> Flow (MultiModalTypes.MultiModalLeg, UTCTime, UTCTime)
-    mkAutoOrWalkLeg now fromLocation toLocation mode distance duration = do
+    mkAutoOrWalkLeg :: UTCTime -> Maybe LocationV2 -> LocationV2 -> MultiModalTypes.GeneralVehicleType -> Distance -> Seconds -> Maybe Text -> Maybe Text -> Flow (MultiModalTypes.MultiModalLeg, UTCTime, UTCTime)
+    mkAutoOrWalkLeg now fromLocation toLocation mode distance duration fromStopName toStopName = do
       let fromStopLocation = LocationV2 {latLng = LatLngV2 {latitude = searchRequest.fromLocation.lat, longitude = searchRequest.fromLocation.lon}}
       let toStopLocation = toLocation
       let startLocation = fromMaybe fromStopLocation fromLocation
@@ -655,8 +655,22 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
               mode,
               startLocation,
               endLocation = toStopLocation,
-              fromStopDetails = Nothing,
-              toStopDetails = Nothing,
+              fromStopDetails =
+                Just
+                  MultiModalTypes.MultiModalStopDetails
+                    { stopCode = Nothing,
+                      platformCode = Nothing,
+                      name = fromStopName,
+                      gtfsId = Nothing
+                    },
+              toStopDetails =
+                Just
+                  MultiModalTypes.MultiModalStopDetails
+                    { stopCode = Nothing,
+                      platformCode = Nothing,
+                      name = toStopName,
+                      gtfsId = Nothing
+                    },
               routeDetails =
                 [ MultiModalTypes.MultiModalRouteDetails
                     { gtfsId = Nothing,
@@ -750,8 +764,8 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
             ]
         }
 
-    getPreliminaryLeg :: UTCTime -> Maybe LocationV2 -> LocationV2 -> Flow (Maybe MultiModalTypes.MultiModalLeg)
-    getPreliminaryLeg now mbCurrentLocation fromStopLocation = do
+    getPreliminaryLeg :: UTCTime -> Maybe LocationV2 -> Maybe Text -> Maybe Text -> LocationV2 -> Flow (Maybe MultiModalTypes.MultiModalLeg)
+    getPreliminaryLeg now mbCurrentLocation fromStopName toStopName fromStopLocation = do
       case mbCurrentLocation of
         Nothing -> return Nothing
         Just currentLocation -> do
@@ -766,7 +780,7 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
               if distance < riderConfig.minimumWalkDistance
                 then return Nothing
                 else do
-                  (leg, _, _) <- mkAutoOrWalkLeg now (Just currentLocation) fromStopLocation MultiModalTypes.Walk (convertMetersToDistance Meter distance) duration
+                  (leg, _, _) <- mkAutoOrWalkLeg now (Just currentLocation) fromStopLocation MultiModalTypes.Walk (convertMetersToDistance Meter distance) duration fromStopName toStopName
                   return $ Just leg
             Nothing -> return Nothing
 
