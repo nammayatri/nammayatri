@@ -268,8 +268,16 @@ checkAndMarkTerminalJourneyStatus journey allLegStates = do
               <> if isSingleTaxiJourneyLeg then [JMState.TaxiRide DTaxiRide.CANCELLED, JMState.TaxiBooking DTaxiBooking.CANCELLED, JMState.TaxiEstimate DTaxiEstimate.CANCELLED, JMState.TaxiEstimate DTaxiEstimate.COMPLETED] else [] -- For Single Taxi JourneyLeg, TaxiEstimate/TaxiBooking/TaxiRide Cancelled Should Also be treated as a Cancelled Journey Status.
        in legState.bookingStatus `elem` cancelledStatuses
 
+    isCompleted :: JL.JourneyLegStateData -> Bool
+    isCompleted legState = legState.bookingStatus == JMState.TaxiRide DTaxiRide.COMPLETED
+
+    allTrackingFinished :: [JL.JourneyLegStateData] -> Bool
+    allTrackingFinished = all (\legState -> legState.trackingStatus == JMState.Finished)
+
     go flattenedLegStates isSingleTaxiJourneyLeg
-      | all (\legState -> legState.trackingStatus == JMState.Finished) flattenedLegStates || isSingleTaxiJourneyLeg =
+      | isSingleTaxiJourneyLeg && all isCompleted flattenedLegStates = updateJourneyStatus journey DJourney.FEEDBACK_PENDING
+      | isSingleTaxiJourneyLeg && all (isCancelled isSingleTaxiJourneyLeg) flattenedLegStates = updateJourneyStatus journey DJourney.CANCELLED
+      | not isSingleTaxiJourneyLeg && allTrackingFinished flattenedLegStates =
         if any (isCancelled isSingleTaxiJourneyLeg) flattenedLegStates
           then updateJourneyStatus journey DJourney.CANCELLED
           else updateJourneyStatus journey DJourney.FEEDBACK_PENDING
