@@ -11,6 +11,8 @@ import Kernel.External.AadhaarVerification.Interface.Types
 import Kernel.External.BackgroundVerification.Types as BackgroundVerification
 import qualified Kernel.External.Call as Call
 import Kernel.External.Call.Interface.Types
+import Kernel.External.GPS.Interface.Types
+import qualified Kernel.External.GPS.Types as GPS
 import qualified Kernel.External.IncidentReport.Interface.Types as IncidentReport
 import qualified Kernel.External.Maps as Maps
 import Kernel.External.Maps.Interface.Types
@@ -52,6 +54,7 @@ data ServiceName
   | IncidentReportService IncidentReport.IncidentReportService
   | LLMChatCompletionService ChatCompletion.Types.LLMChatCompletionService
   | DashCamService Dashcam.DashcamService
+  | GpsService GPS.GpsService
   deriving stock (Eq, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON)
 
@@ -77,6 +80,7 @@ instance Show ServiceName where
   show (IncidentReportService s) = "IncidentReport_" <> show s
   show (LLMChatCompletionService s) = "LLMChatCompletion_" <> show s
   show (DashCamService s) = "DashCamService_" <> show s
+  show (GpsService s) = "Gps_" <> show s
 
 instance Read ServiceName where
   readsPrec d' =
@@ -159,6 +163,10 @@ instance Read ServiceName where
                  | r1 <- stripPrefix "DashCamService_" r,
                    (v1, r2) <- readsPrec (app_prec + 1) r1
                ]
+            ++ [ (GpsService v1, r2)
+                 | r1 <- stripPrefix "Gps_" r,
+                   (v1, r2) <- readsPrec (app_prec + 1) r1
+               ]
       )
     where
       app_prec = 10
@@ -184,6 +192,7 @@ data ServiceConfigD (s :: UsageSafety)
   | IncidentReportServiceConfig !IncidentReport.IncidentReportServiceConfig
   | LLMChatCompletionServiceConfig !ChatCompletion.Interface.Types.LLMChatCompletionServiceConfig
   | DashCamServiceConfig !DashcamInter.DashCamServiceConfig
+  | GpsServiceConfig !GpsServiceConfig
   deriving (Generic, Eq, Show)
 
 type ServiceConfig = ServiceConfigD 'Safe

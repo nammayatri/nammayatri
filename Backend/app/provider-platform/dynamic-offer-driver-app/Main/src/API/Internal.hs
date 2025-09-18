@@ -19,6 +19,7 @@ import qualified API.Internal.FavouriteDrivers as FavouriteDrivers
 import qualified API.Internal.FeedbackForm as FeedbackForm
 import qualified API.Internal.FleetBookingInformation as FleetBookingInformation
 import qualified API.Internal.FleetVehiclesAssociation as FleetVehiclesAssociation
+import qualified API.Internal.GPS as GPS
 import qualified API.Internal.KnowYourDriver as KnowYourDriver
 import qualified API.Internal.Multimodal as Multimodal
 import qualified API.Internal.PickupInstruction as PickupInstruction
@@ -60,6 +61,7 @@ type API =
            :<|> Estimate.API
            :<|> FleetBookingInformation.API
            :<|> FleetVehiclesAssociation.API
+           :<|> GPS.API
        )
 
 handler :: FlowServer API
@@ -89,3 +91,4 @@ handler =
     :<|> Estimate.handler
     :<|> FleetBookingInformation.handler
     :<|> FleetVehiclesAssociation.handler
+    :<|> GPS.handler

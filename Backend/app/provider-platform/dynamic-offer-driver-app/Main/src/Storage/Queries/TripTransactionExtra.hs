@@ -98,3 +98,12 @@ findAllTripTransactionByDriverIdWithinCreationRangeMultiFleetOwner fleetOwnerIds
     (Se.Desc BeamT.createdAt)
     limit
     offset
+
+findActiveTripsByVehicleNumbers :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => [Text] -> m [Domain.Types.TripTransaction.TripTransaction]
+findActiveTripsByVehicleNumbers vehicleNumbers = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is BeamT.vehicleNumber (Se.In vehicleNumbers),
+          Se.Is BeamT.status (Se.In [TRIP_ASSIGNED, IN_PROGRESS])
+        ]
+    ]
