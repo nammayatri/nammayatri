@@ -37,6 +37,7 @@ import qualified Data.Text as Text
 import qualified Data.Time.LocalTime as LocalTime
 import Domain.Types.IntegratedBPPConfig
 import Kernel.Prelude
+import Kernel.Types.Time
 import Kernel.Utils.Common
 import SharedLogic.External.Nandi.Flow (postGtfsGraphQL)
 import SharedLogic.External.Nandi.Types (GtfsGraphQLRequest (..))
@@ -79,13 +80,14 @@ transformEntry stopData timestamp entry = do
       stage = entry.extraInfo >>= (.fareStageNumber) >>= readMaybe . Text.unpack,
       providerStopCode = entry.extraInfo >>= (.providerStopCode),
       -- Convert seconds from midnight to HH:MM:SS
-      timeOfArrival = secondsToTime entry.scheduledArrival,
-      timeOfDeparture = secondsToTime entry.scheduledDeparture,
+      timeOfArrival = secondsToTime entry.realtimeArrival,
+      timeOfDeparture = secondsToTime entry.realtimeDeparture,
       tripId = fromMaybe entry.trip.gtfsId $ lastMay $ Text.splitOn ":" entry.trip.gtfsId,
       createdAt = timestamp,
       updatedAt = timestamp,
       platformCode = entry.stop >>= (.platformCode),
-      isStageStop = entry.extraInfo >>= (.isStageStop)
+      isStageStop = entry.extraInfo >>= (.isStageStop),
+      arrivalDelay = Seconds entry.arrivalDelay
     }
 
 -- Convert seconds from midnight to HH:MM:SS format
