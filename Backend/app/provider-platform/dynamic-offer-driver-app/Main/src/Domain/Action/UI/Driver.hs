@@ -717,14 +717,16 @@ getInformationV2 ::
   UpdateProfileInfoPoints ->
   m DriverInformationRes
 getInformationV2 (personId, merchantId, merchantOpCityId) mbClientId toss tenant' context mbServiceName req = do
-  driverInfo <- QDriverInformation.findById personId
+  driverInfo <- QDriverInformation.findById personId >>= fromMaybeM DriverInfoNotFound
   whenJust req.isAdvancedBookingEnabled $ \isAdvancedBookingEnabled ->
-    QDriverInformation.updateForwardBatchingEnabled isAdvancedBookingEnabled personId
+    unless (driverInfo.forwardBatchingEnabled == isAdvancedBookingEnabled) $
+      QDriverInformation.updateForwardBatchingEnabled isAdvancedBookingEnabled personId
   whenJust req.isInteroperable $ \isInteroperable ->
-    QDriverInformation.updateIsInteroperable isInteroperable personId
+    unless (driverInfo.isInteroperable == isInteroperable) $
+      QDriverInformation.updateIsInteroperable isInteroperable personId
   whenJust req.isCategoryLevelSubscriptionEnabled $ \isCategoryLevelSubscriptionEnabled ->
     QDriverPlan.updateIsSubscriptionEnabledAtCategoryLevel personId YATRI_SUBSCRIPTION isCategoryLevelSubscriptionEnabled
-  getInformation (personId, merchantId, merchantOpCityId) mbClientId toss tenant' context mbServiceName driverInfo
+  getInformation (personId, merchantId, merchantOpCityId) mbClientId toss tenant' context mbServiceName (Just driverInfo)
 
 getInformation ::
   ( CacheFlow m r,
