@@ -54,7 +54,7 @@ findAllByRiderId (Kernel.Types.Id.Id personId) mbLimit mbOffset mbFromDate mbToD
                  ]
           )
       ]
-      (Se.Desc Beam.startTime)
+      (Se.Desc Beam.createdAt)
       (Just limit')
       (Just offset')
   pure journeys
