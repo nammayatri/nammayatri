@@ -995,7 +995,7 @@ buildMultimodalRouteDetails subLegOrder mbRouteCode originStopCode destinationSt
             destStopTimings
 
 buildSingleModeDirectRoutes ::
-  (LocationV2 -> Flow (Maybe MultiModalTypes.MultiModalLeg)) ->
+  (Maybe Text -> LocationV2 -> Flow (Maybe MultiModalTypes.MultiModalLeg)) ->
   Maybe Text ->
   Maybe Text ->
   Maybe Text ->
@@ -1011,14 +1011,14 @@ buildSingleModeDirectRoutes getPreliminaryLeg mbRouteCode (Just originStopCode) 
     Just routeDetails -> do
       currentTime <- getCurrentTime
       let (_, currentTimeIST) = getISTTimeInfo currentTime
-      mbPreliminaryLeg <- getPreliminaryLeg routeDetails.startLocation
+      mbPreliminaryLeg <- getPreliminaryLeg (routeDetails.fromStopDetails >>= (.name)) routeDetails.startLocation
       return [mkMultiModalRoute currentTimeIST mbPreliminaryLeg mode (NonEmpty.fromList [routeDetails]) Nothing]
     Nothing -> return []
 buildSingleModeDirectRoutes _ _ _ _ _ _ _ _ _ = return []
 
 getSubwayValidRoutes ::
   [ViaRoute] ->
-  (LocationV2 -> Flow (Maybe MultiModalTypes.MultiModalLeg)) ->
+  (Maybe Text -> LocationV2 -> Flow (Maybe MultiModalTypes.MultiModalLeg)) ->
   DIntegratedBPPConfig.IntegratedBPPConfig ->
   Id Merchant ->
   Id MerchantOperatingCity ->
@@ -1054,7 +1054,7 @@ getSubwayValidRoutes allSubwayRoutes getPreliminaryLeg integratedBppConfig mid m
             (rD : _) -> do
               currentTime <- getCurrentTime
               let (_, currentTimeIST) = getISTTimeInfo currentTime
-              mbPreliminaryLeg <- getPreliminaryLeg rD.startLocation
+              mbPreliminaryLeg <- getPreliminaryLeg (rD.fromStopDetails >>= (.name)) rD.startLocation
               return $ Just $ mkMultiModalRoute currentTimeIST mbPreliminaryLeg mode (NonEmpty.fromList updateRouteDetails) (Just routeDistance)
         else return Nothing
     go [] = return ([], [])
@@ -1067,7 +1067,7 @@ getSubwayValidRoutes allSubwayRoutes getPreliminaryLeg integratedBppConfig mid m
           go xs
 
 buildTrainAllViaRoutes ::
-  (LocationV2 -> Flow (Maybe MultiModalTypes.MultiModalLeg)) ->
+  (Maybe Text -> LocationV2 -> Flow (Maybe MultiModalTypes.MultiModalLeg)) ->
   Maybe Text ->
   Maybe Text ->
   Maybe DIntegratedBPPConfig.IntegratedBPPConfig ->
