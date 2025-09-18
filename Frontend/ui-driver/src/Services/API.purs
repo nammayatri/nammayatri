@@ -4636,7 +4636,7 @@ instance decodeServiceTierType :: Decode ServiceTierType
                   "SUV_PLUS"     -> except $ Right SUV_PLUS_TIER
                   "DELIVERY_BIKE" -> except $ Right DELIVERY_BIKE
                   "AMBULANCE_TAXI" -> except $ Right AMBULANCE_TAXI_TIER
-                  "AMBULANCE_TAXI_OXY" -> except $ Right AMBULANCE_TAXI_OXY_TIER
+                  "AMBULANCE_TAXI_OXY" -> except $ Right AUTO_PLUS
                   "AMBULANCE_AC" -> except $ Right AMBULANCE_AC_TIER
                   "AMBULANCE_AC_OXY" -> except $ Right AMBULANCE_AC_OXY_TIER
                   "AMBULANCE_VENTILATOR" -> except $ Right AMBULANCE_VENTILATOR_TIER
