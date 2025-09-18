@@ -11,6 +11,7 @@ imports:
   VehicleCategory: BecknV2.FRFS.Enums
   UpcomingTripInfo: Lib.JourneyModule.Utils
   RouteState: Storage.CachedQueries.Merchant.MultiModalBus
+  Seconds: Kernel.Types.Time
 module: NearbyBuses
 
 types:
@@ -48,6 +49,9 @@ types:
     timeOfArrival: TimeOfDay
     timeOfDeparture: TimeOfDay
     serviceTierType: ServiceTierType
+    platformCode: Maybe Text
+    tripId: Text
+    delay: Maybe Seconds
 
   TimetableResponse:
     timetable: [TimetableEntry]
