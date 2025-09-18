@@ -32,7 +32,6 @@ import qualified Beckn.ACL.Cancel as CancelACL
 import qualified BecknV2.FRFS.Enums as FRFSEnums
 import Data.Char (toLower)
 import qualified Data.HashMap.Strict as HM
-import Data.List (group)
 import Data.OpenApi (ToSchema (..), genericDeclareNamedSchema)
 import qualified Domain.Action.UI.Cancel as DCancel
 import qualified Domain.Action.UI.Estimate as UEstimate
@@ -74,6 +73,7 @@ import qualified SharedLogic.CallBPP as CallBPP
 import SharedLogic.MetroOffer (MetroOffer)
 import qualified SharedLogic.MetroOffer as Metro
 import SharedLogic.Quote
+import qualified SharedLogic.Search as SLS
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
@@ -184,7 +184,7 @@ getQuotes searchRequestId mbAllowMultiple = do
   logDebug $ "search Request is : " <> show searchRequest
   journeyData <- getJourneys searchRequest searchRequest.hasMultimodalSearch
   person <- QP.findById searchRequest.riderId >>= fromMaybeM (PersonDoesNotExist searchRequest.riderId.getId)
-  let mostFrequentVehicleCategory = mostFrequent person.lastUsedVehicleServiceTiers
+  let mostFrequentVehicleCategory = SLS.mostFrequent person.lastUsedVehicleServiceTiers
   let lockKey = estimateBuildLockKey searchRequestId.getId
   Redis.withLockRedisAndReturnValue lockKey 5 $ do
     offers <- getOffers searchRequest
@@ -367,14 +367,6 @@ getJourneys searchRequest hasMultimodalSearch = do
           fromStationPlatformCode = routeDetail.fromStopPlatformCode,
           toStationPlatformCode = routeDetail.toStopPlatformCode
         }
-
--- Get the most frequent element in the list
-mostFrequent :: [DVST.ServiceTierType] -> Maybe DVST.ServiceTierType
-mostFrequent [] = Nothing
-mostFrequent xs = Just $ fst $ maximumBy (comparing snd) frequencyList
-  where
-    grouped = group . sort $ xs
-    frequencyList = [(head g, length g) | g <- grouped]
 
 mostFrequentVehicleCategoryConfig :: Maybe DVST.ServiceTierType -> [VehicleServiceTierOrderConfig] -> Maybe VehicleServiceTierOrderConfig
 mostFrequentVehicleCategoryConfig Nothing _ = Nothing

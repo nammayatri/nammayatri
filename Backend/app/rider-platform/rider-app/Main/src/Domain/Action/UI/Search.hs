@@ -70,6 +70,7 @@ import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.MerchantConfig as SMC
 import qualified SharedLogic.Referral as Referral
 import SharedLogic.Search
+import qualified SharedLogic.Search as SLS
 import qualified SharedLogic.Serviceability as Serviceability
 import Storage.Beam.Yudhishthira ()
 import qualified Storage.CachedQueries.HotSpotConfig as QHotSpotConfig
@@ -396,6 +397,9 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
     isFirstRideFor :: Person.Person -> Bool
     isFirstRideFor person = person.totalRidesCount == Just 0
 
+    personVehicleCategory :: Person.Person -> Maybe Enums.VehicleCategory
+    personVehicleCategory person = SLS.mostFrequent person.lastUsedVehicleCategories
+
     backfillCustomerNammaTags :: Person.Person -> Person.Person
     backfillCustomerNammaTags Person.Person {..} =
       if isNothing customerNammaTags
@@ -435,6 +439,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
               ],
             Beckn.personTags =
               [ (Beckn.CUSTOMER_LANGUAGE, (Just . show) searchRequest.language),
+                (Beckn.CUSTOMER_VEHICLE_CATEGORY, maybe Nothing (Just . show) (personVehicleCategory person)),
                 (Beckn.DASHBOARD_USER, (Just . show) isDashboardRequest),
                 (Beckn.CUSTOMER_DISABILITY, (decode . encode) tag),
                 (Beckn.CUSTOMER_NAMMA_TAGS, show @Text @[Text] . fmap ((.getTagNameValue) . Yudhishthira.removeTagExpiry) <$> person.customerNammaTags)
