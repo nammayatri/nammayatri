@@ -269,7 +269,7 @@ checkAndMarkTerminalJourneyStatus journey allLegStates = do
        in legState.bookingStatus `elem` cancelledStatuses
 
     isCompleted :: JL.JourneyLegStateData -> Bool
-    isCompleted legState = legState.bookingStatus == JMState.TaxiRide DTaxiRide.COMPLETED
+    isCompleted legState = legState.bookingStatus `elem` [JMState.TaxiRide DTaxiRide.COMPLETED, JMState.Feedback JMState.FEEDBACK_PENDING]
 
     allTrackingFinished :: [JL.JourneyLegStateData] -> Bool
     allTrackingFinished = all (\legState -> legState.trackingStatus == JMState.Finished)

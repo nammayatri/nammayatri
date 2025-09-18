@@ -42,6 +42,7 @@ import qualified Kernel.Types.APISuccess as APISuccess
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.JourneyLeg.Types as JL
+import qualified Lib.JourneyModule.Base as JM
 import qualified Lib.JourneyModule.State.Types as JMState
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.ValueAddNP as QNP
@@ -118,7 +119,7 @@ getPersonFlowStatus personId merchantId _ pollActiveBooking = do
             Just expiryTime ->
               if now > expiryTime
                 then do
-                  _ <- QJourney.updateStatus DJ.EXPIRED j.id
+                  _ <- JM.updateJourneyStatus j DJ.EXPIRED
                   return j {DJ.status = DJ.EXPIRED}
                 else return j
             Nothing -> return j
