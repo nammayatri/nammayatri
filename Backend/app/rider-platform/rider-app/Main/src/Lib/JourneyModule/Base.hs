@@ -1278,6 +1278,7 @@ generateJourneyInfoResponse journey legs = do
         unifiedQR,
         journeyId = journey.id,
         startTime = journey.startTime,
+        createdAt = journey.createdAt,
         endTime = journey.endTime,
         merchantOperatingCityName,
         paymentOrderShortId = journey.paymentOrderShortId,
