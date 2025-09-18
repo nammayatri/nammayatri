@@ -322,7 +322,7 @@ buildApiEntityForRideOrJourneyWithCounts personId mbLimit bookings journeys init
 
     compareBookingJourney :: SRB.Booking -> DJ.Journey -> Ordering
     compareBookingJourney booking journey =
-      compare booking.startTime (fromMaybe journey.createdAt journey.startTime)
+      compare booking.startTime journey.createdAt
 
     buildBookingListV2 :: Id Person.Person -> [Either SRB.Booking DJ.Journey] -> Flow [BookingAPIEntityV2]
     buildBookingListV2 riderId items = go riderId items Seq.empty
