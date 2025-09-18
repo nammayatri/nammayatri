@@ -10,6 +10,7 @@ import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Maps.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Price
+import qualified Kernel.Types.Time
 import Servant
 import qualified Storage.CachedQueries.Merchant.MultiModalBus
 import Tools.Auth
@@ -50,7 +51,14 @@ data RouteCodes = RouteCodes {routeCodes :: [Data.Text.Text]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data TimetableEntry = TimetableEntry {serviceTierType :: BecknV2.FRFS.Enums.ServiceTierType, timeOfArrival :: Kernel.Prelude.TimeOfDay, timeOfDeparture :: Kernel.Prelude.TimeOfDay}
+data TimetableEntry = TimetableEntry
+  { delay :: Kernel.Prelude.Maybe Kernel.Types.Time.Seconds,
+    platformCode :: Kernel.Prelude.Maybe Data.Text.Text,
+    serviceTierType :: BecknV2.FRFS.Enums.ServiceTierType,
+    timeOfArrival :: Kernel.Prelude.TimeOfDay,
+    timeOfDeparture :: Kernel.Prelude.TimeOfDay,
+    tripId :: Data.Text.Text
+  }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
