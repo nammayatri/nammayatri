@@ -78,6 +78,7 @@ data RouteStopTimeTableEntry = RouteStopTimeTableEntry
     realtimeArrival :: Int,
     arrivalDelay :: Int,
     scheduledDeparture :: Int,
+    realtimeDeparture :: Int,
     extraInfo :: Maybe ExtraInfo,
     trip :: TripData,
     stop :: Maybe PlatformCode
@@ -120,6 +121,7 @@ instance FromJSON RouteStopTimeTableEntry where
       <*> obj .: "realtimeArrival"
       <*> obj .: "arrivalDelay"
       <*> obj .: "scheduledDeparture"
+      <*> obj .: "realtimeDeparture"
       <*> pure headsignParser
       <*> obj .: "trip"
       <*> obj .:? "stop"
@@ -185,6 +187,7 @@ instance RequestType RouteStopTimeTableQuery where
       ++ "      realtimeArrival\n"
       ++ "      arrivalDelay\n"
       ++ "      scheduledDeparture\n"
+      ++ "      realtimeDeparture\n"
       ++ "      headsign\n"
       ++ "      trip {\n"
       ++ "        serviceId\n"

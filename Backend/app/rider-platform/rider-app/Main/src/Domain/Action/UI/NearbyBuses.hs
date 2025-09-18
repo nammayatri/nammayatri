@@ -19,6 +19,7 @@ import ExternalBPP.ExternalAPI.CallAPI as CallAPI
 import qualified ExternalBPP.Flow as Flow
 import qualified Kernel.External.Maps.Types as Maps
 import qualified Kernel.Prelude
+import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -265,6 +266,12 @@ getNextVehicleDetails (mbPersonId, mid) routeCode stopCode mbVehicleType = do
   let vehicleType = maybe BecknV2.OnDemand.Enums.BUS castToOnDemandVehicleCategory mbVehicleType
   JourneyUtils.findUpcomingTrips routeCode stopCode Nothing now mid person.merchantOperatingCityId vehicleType
 
+fetchPlatformCodesFromRedis :: [Text] -> Environment.Flow (HashMap.HashMap Text Text)
+fetchPlatformCodesFromRedis tripIds = do
+  let platformHashKey = "platform-codes-hashmap"
+  platformCodes <- CQMMB.withCrossAppRedisNew $ Hedis.hmGet platformHashKey tripIds
+  return $ HashMap.fromList $ catMaybes $ zipWith (\tripId mbCode -> (tripId,) <$> mbCode) tripIds platformCodes
+
 getTimetableStop ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
@@ -280,7 +287,6 @@ getTimetableStop (mbPersonId, mid) routeCode fromStopCode mbToCode mbVehicleType
   person <- QP.findById riderId >>= fromMaybeM (PersonNotFound riderId.getId)
   let vehicleType = maybe BecknV2.OnDemand.Enums.BUS castToOnDemandVehicleCategory mbVehicleType
   integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId vehicleType DIBC.MULTIMODAL
-  -- Getting route codes according to user travel direction if toStop is given and ignoring the requested routeCode
   routeStopTimeTables <-
     SIBC.fetchFirstIntegratedBPPConfigResult integratedBPPConfigs $ \integratedBPPConfig -> do
       routeCodes <-
@@ -289,12 +295,21 @@ getTimetableStop (mbPersonId, mid) routeCode fromStopCode mbToCode mbVehicleType
           (\toCode -> JourneyUtils.getRouteCodesFromTo fromStopCode toCode integratedBPPConfig)
           mbToCode
       GRSM.findByRouteCodeAndStopCode integratedBPPConfig mid person.merchantOperatingCityId routeCodes fromStopCode
-  return $ API.Types.UI.NearbyBuses.TimetableResponse $ map convertToTimetableEntry routeStopTimeTables
+
+  let tripIds = map (.tripId.getId) routeStopTimeTables
+  platformCodeMap <- fetchPlatformCodesFromRedis tripIds
+
+  return $ API.Types.UI.NearbyBuses.TimetableResponse $ map (convertToTimetableEntry platformCodeMap) routeStopTimeTables
   where
-    convertToTimetableEntry :: RouteStopTimeTable -> API.Types.UI.NearbyBuses.TimetableEntry
-    convertToTimetableEntry routeStopTimeTable = do
+    convertToTimetableEntry :: HashMap.HashMap Text Text -> RouteStopTimeTable -> API.Types.UI.NearbyBuses.TimetableEntry
+    convertToTimetableEntry platformCodeMap routeStopTimeTable = do
+      let tripId = routeStopTimeTable.tripId.getId
+      let updatedPlatformCode = HashMap.lookup tripId platformCodeMap <|> routeStopTimeTable.platformCode
       API.Types.UI.NearbyBuses.TimetableEntry
         { timeOfArrival = routeStopTimeTable.timeOfArrival,
           timeOfDeparture = routeStopTimeTable.timeOfDeparture,
-          serviceTierType = routeStopTimeTable.serviceTierType
+          serviceTierType = routeStopTimeTable.serviceTierType,
+          platformCode = updatedPlatformCode,
+          tripId = tripId,
+          delay = routeStopTimeTable.delay
         }
