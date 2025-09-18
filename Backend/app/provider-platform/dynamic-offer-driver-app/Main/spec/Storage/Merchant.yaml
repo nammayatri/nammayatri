@@ -1049,6 +1049,8 @@ TransporterConfig:
     cancellationRateSlabConfig: Maybe CancellationRateSlabConfig
     driverCallingOption: "Maybe CallingOption"
 
+    aaEnabledClientSdkVersion : Maybe Text
+
   beamType:
     currency: Maybe Currency
     distanceUnit: Maybe DistanceUnit
@@ -1453,6 +1455,7 @@ TransporterConfig:
     cancellationRateSlabConfig: '{}'
     driverCallingOption: "'AnonymousCall'"
 
+    aaEnabledClientSdkVersion : "999.999.999"
   excludedDefaultQueries:
     - findByPrimaryKey
     - updateByPrimaryKey

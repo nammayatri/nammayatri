@@ -65,10 +65,9 @@ getReferralVerifyVpa (mbPersonId, _mbMerchantId) vpa = do
         KT.VerifyVPAReq
           { orderId = Nothing,
             customerId = Just personId.getId,
-            vpa = vpa,
-            personId = Just $ getId personId
+            vpa = vpa
           }
-      verifyVpaCall = TPayment.verifyVpa person.merchantId person.merchantOperatingCityId Nothing TPayment.Normal person.clientSdkVersion
+      verifyVpaCall = TPayment.verifyVpa person.merchantId person.merchantOperatingCityId Nothing TPayment.Normal (Just person.id.getId) person.clientSdkVersion
   resp <- try @_ @SomeException $ DP.verifyVPAService verifyVPAReq verifyVpaCall
   case resp of
     Left e -> throwError $ InvalidRequest $ "VPA Verification Failed: " <> show e
@@ -138,8 +137,8 @@ processBacklogReferralPayout personId vpa merchantOpCityId = do
           uid <- generateGUID
           let createPayoutOrderReq = Payout.mkCreatePayoutOrderReq uid amount phoneNo emailId person.id.getId payoutConfig.remark person.firstName vpa payoutConfig.orderType True
           logDebug $ "create payoutOrder with riderId: " <> person.id.getId <> " | amount: " <> show amount <> " | orderId: " <> show uid
-          let serviceName = DEMSC.PayoutService PT.Juspay
-              createPayoutOrderCall = TPayout.createPayoutOrder person.merchantId merchantOpCityId serviceName
+          payoutServiceName <- TPayout.decidePayoutService (DEMSC.PayoutService PT.Juspay) person.clientSdkVersion
+          let createPayoutOrderCall = TPayout.createPayoutOrder person.merchantId merchantOpCityId payoutServiceName (Just person.id.getId)
           merchantOperatingCity <- CQMOC.findById merchantOpCityId >>= fromMaybeM (MerchantOperatingCityNotFound merchantOpCityId.getId)
           mbPayoutOrderResp <- try @_ @SomeException $ Payout.createPayoutService (cast person.merchantId) (Just $ cast merchantOpCityId) (cast person.id) (Just []) (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
           case mbPayoutOrderResp of

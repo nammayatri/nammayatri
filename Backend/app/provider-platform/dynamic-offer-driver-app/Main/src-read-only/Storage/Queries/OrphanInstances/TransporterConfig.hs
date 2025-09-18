@@ -233,7 +233,8 @@ instance FromTType' Beam.TransporterConfig Domain.Types.TransporterConfig.Transp
             weeklyConditionCooldownTimeHours = weeklyConditionCooldownTimeHours,
             weeklyMinRidesForBlocking = weeklyMinRidesForBlocking,
             weeklyMinRidesForNudging = weeklyMinRidesForNudging,
-            weeklyOffenceSuspensionTimeHours = weeklyOffenceSuspensionTimeHours
+            weeklyOffenceSuspensionTimeHours = weeklyOffenceSuspensionTimeHours,
+            aaEnabledClientSdkVersion = aaEnabledClientSdkVersion
           }
 
 instance ToTType' Beam.TransporterConfig Domain.Types.TransporterConfig.TransporterConfig where
@@ -449,5 +450,6 @@ instance ToTType' Beam.TransporterConfig Domain.Types.TransporterConfig.Transpor
         Beam.weeklyConditionCooldownTimeHours = weeklyConditionCooldownTimeHours,
         Beam.weeklyMinRidesForBlocking = weeklyMinRidesForBlocking,
         Beam.weeklyMinRidesForNudging = weeklyMinRidesForNudging,
-        Beam.weeklyOffenceSuspensionTimeHours = weeklyOffenceSuspensionTimeHours
+        Beam.weeklyOffenceSuspensionTimeHours = weeklyOffenceSuspensionTimeHours,
+        Beam.aaEnabledClientSdkVersion = aaEnabledClientSdkVersion
       }

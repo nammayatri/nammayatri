@@ -243,7 +243,7 @@ postMultimodalPaymentUpdateOrder (mbPersonId, _merchantId) journeyId req = do
               { amount = totalFare,
                 orderShortId = order.shortId.getShortId
               }
-      _ <- TPayment.updateOrder person.merchantId person.merchantOperatingCityId Nothing TPayment.FRFSMultiModalBooking person.clientSdkVersion updateReq
+      _ <- TPayment.updateOrder person.merchantId person.merchantOperatingCityId Nothing TPayment.FRFSMultiModalBooking (Just person.id.getId) person.clientSdkVersion updateReq
       QOrder.updateAmount order.id totalFare
       let updatedOrder :: DOrder.PaymentOrder
           updatedOrder = order {DOrder.amount = totalFare}

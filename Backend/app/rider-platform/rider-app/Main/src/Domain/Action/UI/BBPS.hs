@@ -124,7 +124,7 @@ postBbpsCreateOrder (mbPersonId, merchantId) req = do
           }
   let commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant person.merchantId
       commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person personId
-      createOrderCall = Payment.createOrder person.merchantId person.merchantOperatingCityId Nothing Payment.BBPS person.clientSdkVersion
+      createOrderCall = Payment.createOrder person.merchantId person.merchantOperatingCityId Nothing Payment.BBPS (Just person.id.getId) person.clientSdkVersion
   mCreateOrderRes <- DPayment.createOrderService commonMerchantId (Just $ Kernel.Types.Id.cast person.merchantOperatingCityId) commonPersonId createOrderReq createOrderCall
   case mCreateOrderRes of
     Just createOrderRes -> do
@@ -217,7 +217,7 @@ bbpsStatusHandler :: DBBPS.BBPS -> Environment.Flow API.Types.UI.BBPS.BBPSPaymen
 bbpsStatusHandler bbpsInfo = do
   let commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person bbpsInfo.customerId
   person <- QP.findById (Kernel.Types.Id.cast bbpsInfo.customerId) >>= fromMaybeM (InvalidRequest "Person not found")
-  let orderStatusCall = Payment.orderStatus bbpsInfo.merchantId bbpsInfo.merchantOperatingCityId Nothing Payment.BBPS person.clientSdkVersion
+  let orderStatusCall = Payment.orderStatus bbpsInfo.merchantId bbpsInfo.merchantOperatingCityId Nothing Payment.BBPS (Just person.id.getId) person.clientSdkVersion
       oldResp =
         API.BBPSPaymentStatusAPIRes
           { status = bbpsInfo.status,

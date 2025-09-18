@@ -142,7 +142,6 @@ sendSwitchPlanNudge transporterConfig driverInfo mbCurrPlan mbDriverPlan numRide
             dutyDate = addUTCTime (fromIntegral transporterConfig.timeDiffFromUtc) now,
             paymentMode = show paymentMode_,
             numOfRides = if paymentMode_ == AUTOPAY then 0 else -1,
-            personId = Just driver.id.getId,
             offerListingMetric = if transporterConfig.enableUdfForOffers then Just Payments.IS_VISIBLE else Nothing
           }
 
