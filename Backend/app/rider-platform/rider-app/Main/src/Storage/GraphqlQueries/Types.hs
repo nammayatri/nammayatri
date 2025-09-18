@@ -22,6 +22,7 @@ import qualified Data.Text.Encoding as TE
 import qualified Data.Time.LocalTime as LocalTime
 import EulerHS.Types (OptionEntity)
 import Kernel.Prelude
+import qualified Kernel.Types.Time
 import Network.HTTP.Client
 
 -- Data types for RouteStopTimeTable query
@@ -78,6 +79,7 @@ data RouteStopTimeTableEntry = RouteStopTimeTableEntry
     realtimeArrival :: Int,
     arrivalDelay :: Int,
     scheduledDeparture :: Int,
+    realtimeDeparture :: Int,
     extraInfo :: Maybe ExtraInfo,
     trip :: TripData,
     stop :: Maybe PlatformCode
@@ -120,6 +122,7 @@ instance FromJSON RouteStopTimeTableEntry where
       <*> obj .: "realtimeArrival"
       <*> obj .: "arrivalDelay"
       <*> obj .: "scheduledDeparture"
+      <*> obj .: "realtimeDeparture"
       <*> pure headsignParser
       <*> obj .: "trip"
       <*> obj .:? "stop"
@@ -168,7 +171,8 @@ data TimetableEntry = TimetableEntry
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
     platformCode :: Maybe Text,
-    isStageStop :: Maybe Bool
+    isStageStop :: Maybe Bool,
+    arrivalDelay :: Kernel.Types.Time.Seconds
   }
   deriving (Show, Generic, FromJSON, ToJSON)
 
@@ -185,6 +189,7 @@ instance RequestType RouteStopTimeTableQuery where
       ++ "      realtimeArrival\n"
       ++ "      arrivalDelay\n"
       ++ "      scheduledDeparture\n"
+      ++ "      realtimeDeparture\n"
       ++ "      headsign\n"
       ++ "      trip {\n"
       ++ "        serviceId\n"
