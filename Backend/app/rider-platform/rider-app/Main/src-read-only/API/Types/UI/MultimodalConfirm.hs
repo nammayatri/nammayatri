@@ -122,7 +122,8 @@ data JourneyFeedBackForm = JourneyFeedBackForm {additionalFeedBack :: Kernel.Pre
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data JourneyInfoResp = JourneyInfoResp
-  { endTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+  { createdAt :: Kernel.Prelude.UTCTime,
+    endTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     estimatedDistance :: Kernel.Types.Common.Distance,
     estimatedDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     estimatedMaxFare :: Kernel.Types.Common.PriceAPIEntity,

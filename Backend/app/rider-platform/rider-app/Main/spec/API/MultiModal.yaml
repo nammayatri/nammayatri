@@ -58,6 +58,7 @@ types:
     legs: [LegInfo]
     startTime: Maybe UTCTime
     endTime: Maybe UTCTime
+    createdAt: UTCTime
     merchantOperatingCityName : Maybe Text
     paymentOrderShortId: Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder)
     result: Maybe Text # for backward compatibility hardcoding to Success in response
