@@ -256,3 +256,12 @@ ALTER TABLE atlas_app.route_details ADD COLUMN leg_end_time timestamp with time 
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.route_details ADD COLUMN tracking_status_last_updated_at timestamp with time zone ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

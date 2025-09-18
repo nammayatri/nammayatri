@@ -293,7 +293,8 @@ data LegInfo = LegInfo
     totalFare :: Maybe PriceAPIEntity,
     entrance :: Maybe MultiModalLegGate,
     exit :: Maybe MultiModalLegGate,
-    validTill :: Maybe UTCTime
+    validTill :: Maybe UTCTime,
+    busNumberUpdateMethod :: Maybe DJL.BusNumberUpdateMethod
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -644,7 +645,8 @@ mkLegInfoFromBookingAndRide booking mRide journeyLeg = do
         totalFare = mkPriceAPIEntity <$> (mRide >>= (.totalFare)),
         entrance = journeyLeg.osmEntrance,
         exit = journeyLeg.osmExit,
-        validTill = Nothing
+        validTill = Nothing,
+        busNumberUpdateMethod = journeyLeg.busNumberUpdateMethod
       }
   where
     getBookingDetailsConstructor :: DBooking.BookingDetails -> Text
@@ -722,7 +724,8 @@ mkLegInfoFromSearchRequest DSR.SearchRequest {..} journeyLeg = do
         totalFare = Nothing,
         entrance = journeyLeg.osmEntrance,
         exit = journeyLeg.osmExit,
-        validTill = Nothing
+        validTill = Nothing,
+        busNumberUpdateMethod = journeyLeg.busNumberUpdateMethod
       }
 
 mkWalkLegInfoFromWalkLegData :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => Id DP.Person -> DJL.JourneyLeg -> m LegInfo
@@ -765,7 +768,8 @@ mkWalkLegInfoFromWalkLegData personId legData@DJL.JourneyLeg {..} = do
         totalFare = Nothing,
         entrance = straightLineEntrance,
         exit = straightLineExit,
-        validTill = Nothing
+        validTill = Nothing,
+        busNumberUpdateMethod = legData.busNumberUpdateMethod
       }
   where
     mkLocation now location name =
@@ -863,7 +867,8 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
         totalFare = mkPriceAPIEntity <$> (booking.finalPrice <|> Just booking.price),
         entrance = Nothing,
         exit = Nothing,
-        validTill = (if null qrValidity then Nothing else Just $ maximum qrValidity) <|> Just booking.validTill
+        validTill = (if null qrValidity then Nothing else Just $ maximum qrValidity) <|> Just booking.validTill,
+        busNumberUpdateMethod = journeyLeg.busNumberUpdateMethod
       }
   where
     mkLegExtraInfo qrDataList qrValidity ticketsCreatedAt journeyRouteDetails journeyLegInfo' ticketNo categories categoryBookingDetails = do
@@ -1075,7 +1080,8 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg = do
         totalFare = Nothing,
         entrance = Nothing,
         exit = Nothing,
-        validTill = (mbQuote <&> (.validTill)) <|> (frfsSearch.validTill)
+        validTill = (mbQuote <&> (.validTill)) <|> (frfsSearch.validTill),
+        busNumberUpdateMethod = journeyLeg.busNumberUpdateMethod
       }
   where
     mkLegExtraInfo mbQuote journeyLegInfo' categories = do
@@ -1303,7 +1309,8 @@ mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation m
         journeyId = journeyId,
         isDeleted = Just False,
         sequenceNumber = idx,
-        multimodalSearchRequestId = Just multimodalSearchRequestId.getId
+        multimodalSearchRequestId = Just multimodalSearchRequestId.getId,
+        busNumberUpdateMethod = Nothing
       }
   where
     straightLineDistance = highPrecMetersToMeters $ distanceBetweenInMeters (LatLong leg.startLocation.latLng.latitude leg.startLocation.latLng.longitude) (LatLong leg.endLocation.latLng.latitude leg.endLocation.latLng.longitude)

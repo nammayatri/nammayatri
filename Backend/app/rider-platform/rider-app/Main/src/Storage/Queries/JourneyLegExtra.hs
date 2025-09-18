@@ -106,3 +106,20 @@ findByJourneyIdAndSequenceNumber journeyId sequenceNumber = do
                 [Se.Is Beam.isDeleted $ Se.Eq (Just False), Se.Is Beam.isDeleted $ Se.Eq Nothing]
             ]
         ]
+
+updateByPrimaryKeyIfUnsetFinalBoardedBus ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  JL.JourneyLeg ->
+  m ()
+updateByPrimaryKeyIfUnsetFinalBoardedBus (JL.JourneyLeg {..}) = do
+  _now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.finalBoardedBusNumber finalBoardedBusNumber,
+      Se.Set Beam.busNumberUpdateMethod busNumberUpdateMethod,
+      Se.Set Beam.updatedAt _now
+    ]
+    [ Se.And
+        [ Se.Is Beam.id (Se.Eq (Kernel.Types.Id.getId id)),
+          Se.Is Beam.finalBoardedBusNumber Se.Null
+        ]
+    ]

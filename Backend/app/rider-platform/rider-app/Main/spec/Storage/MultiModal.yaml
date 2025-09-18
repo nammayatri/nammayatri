@@ -199,6 +199,10 @@ JourneyLegMapping:
       where: journeyLegId
 
 JourneyLeg:
+  types:
+    BusNumberUpdateMethod:
+      enum: "GPS, MANUAL"
+      derive: "ToParamSchema"
   fields:
     id: Id JourneyLeg
     groupCode: Maybe Text # <parentSearchRequestId>-<mode>-<fromStopDetails.stopCode>-<toStopDetails.stopCode>
@@ -233,6 +237,7 @@ JourneyLeg:
     isDeleted: Maybe Bool
     sequenceNumber: Int
     multimodalSearchRequestId: Maybe Text
+    busNumberUpdateMethod: Maybe BusNumberUpdateMethod
 
   sqlType:
     serviceTypes: text[]

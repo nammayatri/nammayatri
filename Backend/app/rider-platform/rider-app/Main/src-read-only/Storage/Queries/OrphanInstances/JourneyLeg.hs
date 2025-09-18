@@ -32,6 +32,7 @@ instance FromTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
       Just
         Domain.Types.JourneyLeg.JourneyLeg
           { agency = Kernel.External.MultiModal.Interface.Types.MultiModalAgency agencyGtfsId <$> agencyName,
+            busNumberUpdateMethod = busNumberUpdateMethod,
             changedBusesInSequence = changedBusesInSequence,
             distance = Kernel.Types.Common.Distance <$> distance <*> distanceUnit,
             duration = duration,
@@ -72,6 +73,7 @@ instance ToTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
     Beam.JourneyLegT
       { Beam.agencyGtfsId = agency >>= (.gtfsId),
         Beam.agencyName = agency <&> (.name),
+        Beam.busNumberUpdateMethod = busNumberUpdateMethod,
         Beam.changedBusesInSequence = changedBusesInSequence,
         Beam.distance = (.value) <$> distance,
         Beam.distanceUnit = (.unit) <$> distance,

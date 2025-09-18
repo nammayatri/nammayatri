@@ -242,7 +242,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
                   case bestCandidateResult of
                     [] -> pure detailedStateData
                     ((bestVehicleNumber, _) : _) -> do
-                      QJourneyLeg.updateByPrimaryKey legToUpdate {DJourneyLeg.finalBoardedBusNumber = Just bestVehicleNumber}
+                      QJourneyLeg.updateByPrimaryKeyIfUnsetFinalBoardedBus legToUpdate {DJourneyLeg.finalBoardedBusNumber = Just bestVehicleNumber, DJourneyLeg.busNumberUpdateMethod = Just DJourneyLeg.GPS}
                       -- Update in-memory detailedStateData as well
                       pure (detailedStateData :: JT.JourneyLegStateData) {JT.fleetNo = Just bestVehicleNumber}
                 Just _ -> pure detailedStateData

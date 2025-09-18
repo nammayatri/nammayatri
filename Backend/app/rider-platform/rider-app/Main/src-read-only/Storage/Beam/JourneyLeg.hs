@@ -8,6 +8,7 @@ import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.Common
+import qualified Domain.Types.JourneyLeg
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -17,6 +18,7 @@ import Tools.Beam.UtilsTH
 data JourneyLegT f = JourneyLegT
   { agencyGtfsId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     agencyName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    busNumberUpdateMethod :: B.C f (Kernel.Prelude.Maybe Domain.Types.JourneyLeg.BusNumberUpdateMethod),
     changedBusesInSequence :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     distance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecDistance),
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),

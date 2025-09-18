@@ -19,6 +19,7 @@ import qualified Tools.Beam.UtilsTH
 
 data JourneyLeg = JourneyLeg
   { agency :: Kernel.Prelude.Maybe Kernel.External.MultiModal.Interface.Types.MultiModalAgency,
+    busNumberUpdateMethod :: Kernel.Prelude.Maybe Domain.Types.JourneyLeg.BusNumberUpdateMethod,
     changedBusesInSequence :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     distance :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
     duration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
@@ -54,3 +55,7 @@ data JourneyLeg = JourneyLeg
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data BusNumberUpdateMethod = GPS | MANUAL deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''BusNumberUpdateMethod)

@@ -494,7 +494,8 @@ mkJourneyForSearch searchRequest estimate personId = do
             journeyId = journeyGuid,
             isDeleted = Just False,
             sequenceNumber = 0,
-            multimodalSearchRequestId = Nothing
+            multimodalSearchRequestId = Nothing,
+            busNumberUpdateMethod = Nothing
           }
   pure (journey, journeyLeg)
 
