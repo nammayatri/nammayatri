@@ -612,6 +612,7 @@ library
       Storage.Queries.Feedback.FeedbackBadge
       Storage.Queries.Feedback.FeedbackForm
       Storage.Queries.FeedbackExtra
+      Storage.Queries.FinancialYearEarningsExtra
       Storage.Queries.FleetBadgeAssociationExtra
       Storage.Queries.FleetBadgeExtra
       Storage.Queries.FleetBookingAssignmentsExtra
@@ -906,6 +907,7 @@ library
       Domain.Types.Exophone
       Domain.Types.FareProduct
       Domain.Types.Feedback
+      Domain.Types.FinancialYearEarnings
       Domain.Types.FleetBadge
       Domain.Types.FleetBadgeAssociation
       Domain.Types.FleetBookingAssignments
@@ -1059,6 +1061,7 @@ library
       Storage.Beam.Exophone
       Storage.Beam.FareProduct
       Storage.Beam.Feedback
+      Storage.Beam.FinancialYearEarnings
       Storage.Beam.FleetBadge
       Storage.Beam.FleetBadgeAssociation
       Storage.Beam.FleetBookingAssignments
@@ -1215,6 +1218,7 @@ library
       Storage.Queries.Exophone
       Storage.Queries.FareProduct
       Storage.Queries.Feedback
+      Storage.Queries.FinancialYearEarnings
       Storage.Queries.FleetBadge
       Storage.Queries.FleetBadgeAssociation
       Storage.Queries.FleetBookingAssignments
@@ -1294,6 +1298,7 @@ library
       Storage.Queries.OrphanInstances.Exophone
       Storage.Queries.OrphanInstances.FareProduct
       Storage.Queries.OrphanInstances.Feedback
+      Storage.Queries.OrphanInstances.FinancialYearEarnings
       Storage.Queries.OrphanInstances.FleetBadge
       Storage.Queries.OrphanInstances.FleetBadgeAssociation
       Storage.Queries.OrphanInstances.FleetBookingAssignments

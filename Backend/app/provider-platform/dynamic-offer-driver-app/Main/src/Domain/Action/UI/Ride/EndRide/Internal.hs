@@ -14,7 +14,6 @@
 
 module Domain.Action.UI.Ride.EndRide.Internal
   ( endRideTransaction,
-    createDriverWalletTransaction,
     putDiffMetric,
     getRouteAndDistanceBetweenPoints,
     safeMod,
@@ -60,6 +59,7 @@ import qualified Domain.Types.DriverWallet as DW
 import Domain.Types.Extra.MerchantPaymentMethod
 import qualified Domain.Types.FareParameters as DFare
 import qualified Domain.Types.FarePolicy as DFP
+import qualified Domain.Types.FinancialYearEarnings as DFYE
 import qualified Domain.Types.LeaderBoardConfigs as LConfig
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
@@ -130,6 +130,7 @@ import qualified Storage.Queries.DriverStats as QDriverStats
 import qualified Storage.Queries.DriverWallet as QDW
 import qualified Storage.Queries.DriverWalletExtra as QDWE
 import qualified Storage.Queries.FareParameters as QFare
+import qualified Storage.Queries.FinancialYearEarnings as QFYE
 import Storage.Queries.FleetDriverAssociationExtra as QFDAE
 import Storage.Queries.FleetOwnerInformation as QFOI
 import Storage.Queries.Person as SQP
@@ -203,8 +204,11 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
     -- Turn this off for only prepaid subscriptions
     let serviceName = YATRI_SUBSCRIPTION
     createDriverFee booking.providerId booking.merchantOperatingCityId driverId ride.fare ride.currency newFareParams driverInfo booking serviceName
+
   when (fromMaybe False merchant.enforceSufficientDriverBalance && thresholdConfig.driverWalletConfig.enableDriverWallet) $ do
-    fork "createDriverWalletTransaction" $ createDriverWalletTransaction ride booking thresholdConfig
+    fork "createDriverWalletTransaction" $ do
+      (collectionAmount, gstDeduction) <- createDriverWalletTransaction ride booking thresholdConfig
+      createFinancialYearEarnings ride newFareParams thresholdConfig collectionAmount gstDeduction
 
   triggerRideEndEvent RideEventData {ride = ride{status = Ride.COMPLETED}, personId = cast driverId, merchantId = booking.providerId}
   triggerBookingCompletedEvent BookingEventData {booking = booking{status = SRB.COMPLETED}, personId = cast driverId, merchantId = booking.providerId}
@@ -297,7 +301,7 @@ createDriverWalletTransaction ::
   Ride.Ride ->
   SRB.Booking ->
   TransporterConfig ->
-  m ()
+  m (HighPrecMoney, HighPrecMoney)
 createDriverWalletTransaction ride booking transporterConfig = do
   now <- getCurrentTime
   newId <- generateGUID
@@ -341,9 +345,67 @@ createDriverWalletTransaction ride booking transporterConfig = do
             }
     QDI.updateWalletBalance (Just newRunningBalance) ride.driverId
     QDW.create driverWallet
+  pure (collectionAmount, gstDeduction)
+
+createFinancialYearEarnings ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    CacheFlow m r
+  ) =>
+  Ride.Ride ->
+  DFare.FareParameters ->
+  TransporterConfig ->
+  HighPrecMoney ->
+  HighPrecMoney ->
+  m ()
+createFinancialYearEarnings ride fareParameters transporterConfig collectionAmount gstDeduction = do
+  let driverId = cast @DP.Person @DP.Driver ride.driverId
+  personId <-
+    if transporterConfig.driverWalletConfig.enableFleetWallet
+      then do
+        mbFleetDriverAssociation <- QFDAE.findByDriverId driverId True
+        let mbFleetOwnerId = Id @DP.Person . (.fleetOwnerId) <$> mbFleetDriverAssociation
+        pure $ fromMaybe ride.driverId mbFleetOwnerId
+      else pure ride.driverId
+  Redis.withWaitOnLockRedisWithExpiry (makeFinancialYearEarningsLockKey personId) 10 10 $ do
+    now <- getCurrentTime
+    let timeDiffFromUtc = transporterConfig.timeDiffFromUtc
+        currentFinancialYearStart = getCurrentFinancialYearStart timeDiffFromUtc now
+    mbLatestFYEarnings <- QFYE.findLatestByPersonIdAndFinancialYear personId currentFinancialYearStart
+    let currentTotalEarnings = maybe 0 (.totalEarnings) mbLatestFYEarnings
+        collectionDeduction = Kernel.Prelude.sum [gstDeduction, fromMaybe 0 fareParameters.parkingCharge, fromMaybe 0 fareParameters.tollCharges]
+        earningsAmount = collectionAmount - collectionDeduction
+        newTotalEarnings = currentTotalEarnings + earningsAmount
+    fyEarningsId <- generateGUID
+    let fyEarnings =
+          DFYE.FinancialYearEarnings
+            { id = fyEarningsId,
+              merchantId = transporterConfig.merchantId,
+              merchantOperatingCityId = transporterConfig.merchantOperatingCityId,
+              personId,
+              driverId,
+              rideId = ride.id,
+              collectionAmount,
+              gstDeduction,
+              earningsAmount,
+              totalEarnings = newTotalEarnings,
+              financialYearStart = currentFinancialYearStart,
+              createdAt = now
+            }
+    QFYE.create fyEarnings
+
+getCurrentFinancialYearStart :: Seconds -> UTCTime -> Int
+getCurrentFinancialYearStart timeDiffFromUtc now =
+  let localDay = utctDay $ addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) now
+      (year, month, _) = toGregorian localDay
+   in fromEnum $ if month < 4 then year - 1 else year
 
 makeWalletRunningBalanceLockKey :: Text -> Text
 makeWalletRunningBalanceLockKey personId = "WalletRunningBalanceLockKey:" <> personId
+
+-- lock on fleetOwnerId or operatorId, not on driverId
+makeFinancialYearEarningsLockKey :: Id DP.Person -> Text
+makeFinancialYearEarningsLockKey personId = "FinancialYearEarningsLockKey:" <> personId.getId
 
 makeSubscriptionRunningBalanceLockKey :: Text -> Text
 makeSubscriptionRunningBalanceLockKey personId = "SubscriptionRunningBalanceLockKey:" <> personId

@@ -348,6 +348,7 @@ data DistanceRecomputeConfigs = DistanceRecomputeConfigs {estimatedDistanceUpper
 data DriverWalletConfig = DriverWalletConfig
   { driverWalletPayoutThreshold :: Kernel.Types.Common.HighPrecMoney,
     enableDriverWallet :: Kernel.Prelude.Bool,
+    enableFleetWallet :: Kernel.Prelude.Bool,
     enableWalletPayout :: Kernel.Prelude.Bool,
     enableWalletTopup :: Kernel.Prelude.Bool,
     gstPercentage :: Kernel.Prelude.Double,
