@@ -155,6 +155,9 @@ data FareBreakUp = FareBreakUp
     customerCancellationDuesWithCurrency :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
     tollChargesWithCurrency :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
     congestionChargeWithCurrency :: Kernel.Prelude.Maybe Kernel.Types.Common.PriceAPIEntity,
+    parkingCharge :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    petCharges :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    insuranceCharge :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving stock (Generic)
