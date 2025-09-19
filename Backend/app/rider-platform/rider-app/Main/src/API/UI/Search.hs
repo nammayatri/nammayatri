@@ -397,25 +397,27 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
             return (warningType, MInterface.MultiModalResponse {routes = filteredRoutes})
   when (not (null restOfViaPoints) && isJust mbIntegratedBPPConfig) $ do
     fork "Process rest of single mode routes" $ processSingleModeRoutes restOfViaPoints userPreferences mbIntegratedBPPConfig (getPreliminaryLeg now currentLocation searchRequest.fromLocation.address.area) routeLiveInfo
-  when (null restOfViaPoints) $ cacheAllRoutesLoadedKey searchRequest.id.getId True
 
   let (indexedRoutesToProcess, showMultimodalWarningForFirstJourney) = getIndexedRoutesAndWarning userPreferences otpResponse
 
   -- This function should be called only once. calling this multiple times will result in suburban booking failure.
   mbCrisSdkToken <- getCrisSdkToken merchantOperatingCityId indexedRoutesToProcess
 
-  multimodalIntiateHelper singleModeWarningType otpResponse userPreferences indexedRoutesToProcess showMultimodalWarningForFirstJourney mbCrisSdkToken True routeLiveInfo
+  multimodalIntiateHelper singleModeWarningType otpResponse userPreferences indexedRoutesToProcess showMultimodalWarningForFirstJourney mbCrisSdkToken True (null restOfViaPoints) routeLiveInfo
   where
     processSingleModeRoutes restOfViaPoints userPreferences mbIntegratedBPPConfig preliminaryLeg routeLiveInfo = do
       (restOfRoutes, _) <- JMU.getSubwayValidRoutes restOfViaPoints preliminaryLeg (fromJust mbIntegratedBPPConfig) searchRequest.merchantId searchRequest.merchantOperatingCityId (fromMaybe BecknV2.OnDemand.Enums.BUS searchRequest.vehicleCategory) (castVehicleCategoryToGeneralVehicleType (fromMaybe BecknV2.OnDemand.Enums.BUS searchRequest.vehicleCategory)) True
-      cacheAllRoutesLoadedKey searchRequest.id.getId True
-      when (not (null restOfRoutes)) $
-        do
+      if null restOfRoutes
+        then
+          getAllRoutesLoadedKey searchRequest.id.getId >>= \case
+            True -> QSearchRequest.updateAllJourneysLoaded (Just True) searchRequest.id
+            False -> cacheAllRoutesLoadedKey searchRequest.id.getId True
+        else do
           let multimodalResponse = MInterface.MultiModalResponse {routes = restOfRoutes}
               (indexedRoutesToProcess, showMultimodalWarningForFirstJourney) = getIndexedRoutesAndWarning userPreferences multimodalResponse
-          void $ multimodalIntiateHelper Nothing multimodalResponse userPreferences indexedRoutesToProcess showMultimodalWarningForFirstJourney Nothing False routeLiveInfo
+          void $ multimodalIntiateHelper Nothing multimodalResponse userPreferences indexedRoutesToProcess showMultimodalWarningForFirstJourney Nothing False True routeLiveInfo
 
-    multimodalIntiateHelper singleModeWarningType otpResponse userPreferences indexedRoutesToProcess showMultimodalWarningForFirstJourney mbCrisSdkToken isFirstJourneyReq routeLiveInfo = do
+    multimodalIntiateHelper singleModeWarningType otpResponse userPreferences indexedRoutesToProcess showMultimodalWarningForFirstJourney mbCrisSdkToken isFirstJourneyReq allJourneysLoaded routeLiveInfo = do
       mbJourneyWithIndex <- JMU.measureLatency (go indexedRoutesToProcess userPreferences routeLiveInfo) "Multimodal Init Time" -- process until first journey is found
       QSearchRequest.updateHasMultimodalSearch (Just True) searchRequest.id
 
@@ -435,7 +437,7 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
                     else do
                       res <- DMC.postMultimodalInitiate (Just searchRequest.riderId, searchRequest.merchantId) firstJourney.id
                       return $ Just res
-                fork "Rest of the routes Init" $ processRestOfRoutes [x | (j, x) <- zip [0 ..] otpResponse.routes, j /= idx] userPreferences routeLiveInfo
+                fork "Rest of the routes Init" $ processRestOfRoutes [x | (j, x) <- zip [0 ..] otpResponse.routes, j /= idx] userPreferences routeLiveInfo allJourneysLoaded
                 return resp
               Nothing -> do
                 QSearchRequest.updateAllJourneysLoaded (Just True) searchRequest.id
@@ -443,9 +445,9 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
           else do
             case mbJourneyWithIndex of
               Just (idx, _) -> do
-                fork "Process all routes " $ processRestOfRoutes [x | (j, x) <- indexedRoutesToProcess, j /= idx] userPreferences routeLiveInfo
+                fork "Process all routes " $ processRestOfRoutes [x | (j, x) <- indexedRoutesToProcess, j /= idx] userPreferences routeLiveInfo allJourneysLoaded
               Nothing -> do
-                fork "Process all routes " $ processRestOfRoutes (map snd indexedRoutesToProcess) userPreferences routeLiveInfo
+                fork "Process all routes " $ processRestOfRoutes (map snd indexedRoutesToProcess) userPreferences routeLiveInfo allJourneysLoaded
             return Nothing
 
       return $
@@ -580,13 +582,12 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
                   routeDetails = updatedRouteDetails
                 }
 
-    processRestOfRoutes :: [MultiModalTypes.MultiModalRoute] -> ApiTypes.MultimodalUserPreferences -> Maybe JMU.VehicleLiveRouteInfo -> Flow ()
-    processRestOfRoutes routes userPreferences routeLiveInfo = do
+    processRestOfRoutes :: [MultiModalTypes.MultiModalRoute] -> ApiTypes.MultimodalUserPreferences -> Maybe JMU.VehicleLiveRouteInfo -> Bool -> Flow ()
+    processRestOfRoutes routes userPreferences routeLiveInfo allJourneysLoaded = do
       forM_ routes $ \route' -> processRoute route' userPreferences routeLiveInfo
-      getAllRoutesLoadedKey searchRequest.id.getId >>= \case
-        True -> QSearchRequest.updateAllJourneysLoaded (Just True) searchRequest.id
-        False -> do
-          return ()
+      allRoutesLoaded <- getAllRoutesLoadedKey searchRequest.id.getId
+      when (allJourneysLoaded || allRoutesLoaded) $ QSearchRequest.updateAllJourneysLoaded (Just True) searchRequest.id
+      cacheAllRoutesLoadedKey searchRequest.id.getId True
 
     extractDest Nothing = throwError $ InvalidRequest "Destination is required for multimodal search"
     extractDest (Just d) = return d
