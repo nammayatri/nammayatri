@@ -123,9 +123,9 @@ onConfirm merchant booking' dOrder = do
   tickets <- createTickets booking dOrder.tickets discountedTickets
   void $ QTicket.createMany tickets
   mbJourneyId <- FRFSUtils.getJourneyIdFromBooking booking
-  -- Update journey expiry time based on ticket validity using the created tickets
+  -- Update journey expiry time based on maximum ticket validity using the created tickets
   whenJust mbJourneyId $ \journeyId -> do
-    QJourneyExtra.updateShortestJourneyExpiryTimeWithTickets journeyId tickets
+    QJourneyExtra.updateLongestJourneyExpiryTimeWithTickets journeyId tickets
   void $ QTBooking.updateBPPOrderIdAndStatusById (Just dOrder.bppOrderId) Booking.CONFIRMED booking.id
   person <- runInReplica $ QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   mRiderNumber <- mapM ENC.decrypt person.mobileNumber

@@ -1375,9 +1375,6 @@ mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation m
 sumHighPrecMoney :: [HighPrecMoney] -> HighPrecMoney
 sumHighPrecMoney = HighPrecMoney . sum . map getHighPrecMoney
 
-allCompletedStatus :: [JourneyLegStatus]
-allCompletedStatus = [Completed, Cancelled, Skipped]
-
 data ExtendLegStartPoint
   = StartLocation StartLocationType
   | StartLegOrder Int

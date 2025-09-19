@@ -297,28 +297,9 @@ getAllLegsStatus journey = do
   logDebug $ "getAllLegsStatus: legsWithNext: " <> show legsWithNext
   (_, legPairs) <- foldlM (processLeg riderLastPoints movementDetected) (Nothing, []) legsWithNext
   let allLegsState = map snd legPairs
-  -- Update journey expiry time to the next valid ticket expiry when a leg is completed
-  whenJust (minimumTicketLegOrder legPairs) $ \nextLegOrder -> do
-    QJourneyExtra.updateJourneyToNextTicketExpiryTime journey.id allLegsRawData nextLegOrder
   checkAndMarkTerminalJourneyStatus journey allLegsState
   return allLegsState
   where
-    minimumTicketLegOrder = foldl' go Nothing
-      where
-        go acc (leg, legState)
-          | leg.mode `elem` [DTrip.Walk, DTrip.Taxi] = acc -- Skip non-ticket modes
-          | isIncomplete legState =
-            case acc of
-              Nothing -> Just (leg.sequenceNumber)
-              Just minS -> Just (min minS leg.sequenceNumber)
-          | otherwise = acc
-
-        isIncomplete :: JL.JourneyLegState -> Bool
-        isIncomplete (JL.Single legData) =
-          legData.status `notElem` JL.allCompletedStatus
-        isIncomplete (JL.Transit legDataList) =
-          any (\legData -> legData.status `notElem` JL.allCompletedStatus) legDataList
-
     getRouteCodeToTrack :: DJourneyLeg.JourneyLeg -> Maybe Text
     getRouteCodeToTrack leg = safeHead leg.routeDetails >>= ((.routeGtfsId) >=> (pure . gtfsIdtoDomainCode))
 
