@@ -101,7 +101,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
   let jobDataT :: Text = show jobData
   hashedJobData <- getHash jobDataT
   let lockKey = "CalculateDriverFeesScheduler:Lock:" <> hashedJobData
-  lockResult <- Hedis.whenWithLockRedisAndReturnValue lockKey 2700 $ do
+  lockResult <- Hedis.whenWithLockRedisAndReturnValue lockKey 1800 $ do
     now <- getCurrentTime
     merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
     merchantOpCityId <- CQMOC.getMerchantOpCityId mbMerchantOpCityId merchant Nothing
@@ -208,7 +208,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
   case lockResult of
     Left () -> do
       logError $ "Driver fee calculation job for merchant " <> merchantId.getId <> " could not acquire lock. Job completing without processing."
-      return Complete
+      ReSchedule <$> getRescheduledTime 600
     Right result -> return result
 
 processDriverFee ::
