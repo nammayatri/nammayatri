@@ -300,7 +300,7 @@ createOrder config integratedBPPConfig booking = do
 
   return $
     ProviderOrder
-      { orderId = bookJourneyResp.ticketNumber,
+      { orderId = orderId,
         tickets =
           [ ProviderTicket
               { ticketNumber = bookJourneyResp.ticketNumber,
