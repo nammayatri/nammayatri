@@ -263,24 +263,55 @@ roundToTwoDecimalPlaces x = fromIntegral (round (x * 100) :: Integer) / 100
 roundVendorFee :: VendorSplitDetails -> VendorSplitDetails
 roundVendorFee vf = vf {splitAmount = roundToTwoDecimalPlaces vf.splitAmount}
 
-mkSplitSettlementDetails :: (MonadFlow m) => Bool -> HighPrecMoney -> [VendorSplitDetails] -> m (Maybe SplitSettlementDetails)
-mkSplitSettlementDetails isSplitEnabled totalAmount vendorFees = case isSplitEnabled of
+-- Convert absolute amount to percentage based on total amount
+-- Formula: (amount / totalAmount) * 100
+convertToPercentage :: HighPrecMoney -> HighPrecMoney -> HighPrecMoney
+convertToPercentage amount totalAmount = roundToTwoDecimalPlaces $ (amount / totalAmount) * 100
+
+mkSplitSettlementDetails :: (MonadFlow m) => Bool -> HighPrecMoney -> [VendorSplitDetails] -> Bool -> m (Maybe SplitSettlementDetails)
+mkSplitSettlementDetails isSplitEnabled totalAmount vendorFees isPercentageSplitEnabled = case isSplitEnabled of
   False -> return Nothing
   True -> do
     uuid <- L.generateGUID
-    let sortedVendorFees = sortBy (compare `on` (\p -> (p.vendorId, p.ticketId))) (roundVendorFee <$> vendorFees)
-        groupedVendorFees = groupBy ((==) `on` (\p -> (p.vendorId, p.ticketId))) sortedVendorFees
-        mbVendorSplits = map (computeSplit uuid) groupedVendorFees
-        vendorSplits = catMaybes mbVendorSplits
-        totalVendorAmount = roundToTwoDecimalPlaces $ sum $ map (\Split {amount} -> amount) vendorSplits
-        marketplaceAmount = roundToTwoDecimalPlaces (totalAmount - totalVendorAmount)
-    return $
-      Just $
-        SplitSettlementDetails
-          { marketplace = Marketplace marketplaceAmount,
-            mdrBorneBy = ALL,
-            vendor = Vendor vendorSplits
-          }
+    if isPercentageSplitEnabled
+      then do
+        -- Create percentage-based splits with aggregation
+        let sortedVendorFees = sortBy (compare `on` (\p -> (p.vendorId, p.ticketId))) (roundVendorFee <$> vendorFees)
+            groupedVendorFees = groupBy ((==) `on` (\p -> (p.vendorId, p.ticketId))) sortedVendorFees
+            mbVendorSplits = map (computePercentageSplit uuid) groupedVendorFees
+            vendorPercentageSplits = catMaybes mbVendorSplits
+            -- Calculate marketplace percentage (100% - sum of vendor percentages)
+            totalVendorPercentage = sum $ map (\SplitPercentage {amountPercentage} -> amountPercentage) vendorPercentageSplits
+            marketplacePercentage = 100.0 - totalVendorPercentage
+
+        when (marketplacePercentage < 0) $ do
+          logError $ "Marketplace percentage is negative: " <> show marketplacePercentage <> " for vendorFees: " <> show vendorFees <> "totalVendorPercentage: " <> show totalVendorPercentage
+          throwError (InternalError "Marketplace percentage is negative")
+
+        return $
+          Just $
+            PercentageBased $
+              SplitSettlementDetailsPercentage
+                { marketplace = MarketplacePercentage marketplacePercentage,
+                  mdrBorneBy = ALL,
+                  vendor = VendorPercentage vendorPercentageSplits
+                }
+      else do
+        -- Create amount-based splits with aggregation (existing logic)
+        let sortedVendorFees = sortBy (compare `on` (\p -> (p.vendorId, p.ticketId))) (roundVendorFee <$> vendorFees)
+            groupedVendorFees = groupBy ((==) `on` (\p -> (p.vendorId, p.ticketId))) sortedVendorFees
+            mbVendorSplits = map (computeSplit uuid) groupedVendorFees
+            vendorSplits = catMaybes mbVendorSplits
+            totalVendorAmount = roundToTwoDecimalPlaces $ sum $ map (\Split {amount} -> amount) vendorSplits
+            marketplaceAmount = roundToTwoDecimalPlaces (totalAmount - totalVendorAmount)
+        return $
+          Just $
+            AmountBased $
+              SplitSettlementDetailsAmount
+                { marketplace = Marketplace marketplaceAmount,
+                  mdrBorneBy = ALL,
+                  vendor = Vendor vendorSplits
+                }
   where
     computeSplit uniqueId feesForVendor =
       case feesForVendor of
@@ -294,36 +325,89 @@ mkSplitSettlementDetails isSplitEnabled totalAmount vendorFees = case isSplitEna
                 uniqueSplitId = fromMaybe uniqueId firstFee.ticketId
               }
 
-mkUnaggregatedSplitSettlementDetails :: (MonadFlow m) => Bool -> HighPrecMoney -> [VendorSplitDetails] -> m (Maybe SplitSettlementDetails)
-mkUnaggregatedSplitSettlementDetails isSplitEnabled totalAmount vendorFees = case isSplitEnabled of
+    computePercentageSplit uniqueId feesForVendor =
+      case feesForVendor of
+        [] -> Nothing
+        (firstFee : _) ->
+          let percentageAmount = convertToPercentage (splitAmount firstFee) totalAmount
+           in Just $
+                SplitPercentage
+                  { amountPercentage = realToFrac percentageAmount,
+                    merchantCommissionPercentage = 0,
+                    subMid = firstFee.vendorId,
+                    uniqueSplitId = fromMaybe uniqueId firstFee.ticketId
+                  }
+
+mkUnaggregatedSplitSettlementDetails :: (MonadFlow m) => Bool -> HighPrecMoney -> [VendorSplitDetails] -> Bool -> m (Maybe SplitSettlementDetails)
+mkUnaggregatedSplitSettlementDetails isSplitEnabled totalAmount vendorFees isPercentageSplitEnabled = case isSplitEnabled of
   False -> return Nothing
   True -> do
     uuid <- L.generateGUID
-    let vendorSplits =
-          map
-            ( \fee ->
-                let roundedFee = roundVendorFee fee
-                 in Split
-                      { amount = splitAmount roundedFee,
-                        merchantCommission = 0,
-                        subMid = vendorId roundedFee,
-                        uniqueSplitId = fromMaybe uuid fee.ticketId
-                      }
-            )
-            vendorFees
+    if isPercentageSplitEnabled
+      then do
+        -- Create percentage-based splits
+        let vendorPercentageSplits =
+              map
+                ( \fee ->
+                    let roundedFee = roundVendorFee fee
+                        -- Convert absolute amount to percentage: (amount / totalAmount) * 100
+                        percentageAmount = convertToPercentage (splitAmount roundedFee) totalAmount
+                     in SplitPercentage
+                          { amountPercentage = realToFrac percentageAmount,
+                            merchantCommissionPercentage = 0,
+                            subMid = vendorId roundedFee,
+                            uniqueSplitId = fromMaybe uuid fee.ticketId
+                          }
+                )
+                vendorFees
 
-        totalVendorAmount = roundToTwoDecimalPlaces $ sum $ map (\Split {amount} -> amount) vendorSplits
-        marketplaceAmount = roundToTwoDecimalPlaces (totalAmount - totalVendorAmount)
-    when (marketplaceAmount < 0) $ do
-      logError $ "Marketplace amount is negative: " <> show marketplaceAmount <> " for vendorFees: " <> show vendorFees <> "totalVendorAmount: " <> show totalVendorAmount <> " totalAmount: " <> show totalAmount
-      throwError (InternalError "Marketplace amount is negative")
-    return $
-      Just $
-        SplitSettlementDetails
-          { marketplace = Marketplace marketplaceAmount,
-            mdrBorneBy = ALL,
-            vendor = Vendor vendorSplits
-          }
+            -- Calculate marketplace percentage (100% - sum of vendor percentages)
+            totalVendorPercentage = sum $ map (\SplitPercentage {amountPercentage} -> amountPercentage) vendorPercentageSplits
+            marketplacePercentage = 100.0 - totalVendorPercentage
+
+        when (marketplacePercentage < 0) $ do
+          logError $ "Marketplace percentage is negative: " <> show marketplacePercentage <> " for vendorFees: " <> show vendorFees <> "totalVendorPercentage: " <> show totalVendorPercentage
+          throwError (InternalError "Marketplace percentage is negative")
+
+        return $
+          Just $
+            PercentageBased $
+              SplitSettlementDetailsPercentage
+                { marketplace = MarketplacePercentage marketplacePercentage,
+                  mdrBorneBy = ALL,
+                  vendor = VendorPercentage vendorPercentageSplits
+                }
+      else do
+        -- Create amount-based splits (existing logic)
+        let vendorSplits =
+              map
+                ( \fee ->
+                    let roundedFee = roundVendorFee fee
+                        -- Convert absolute amount to percentage: (amount / totalAmount) * 100
+                        percentageAmount = splitAmount roundedFee
+                     in Split
+                          { amount = percentageAmount,
+                            merchantCommission = 0,
+                            subMid = vendorId roundedFee,
+                            uniqueSplitId = fromMaybe uuid fee.ticketId
+                          }
+                )
+                vendorFees
+
+            -- Calculate actual amounts for validation (convert percentages back to amounts)
+            totalVendorAmount = roundToTwoDecimalPlaces $ sum $ map (\Split {amount} -> (amount / 100) * totalAmount) vendorSplits
+            marketplaceAmount = roundToTwoDecimalPlaces (totalAmount - totalVendorAmount)
+        when (marketplaceAmount < 0) $ do
+          logError $ "Marketplace amount is negative: " <> show marketplaceAmount <> " for vendorFees: " <> show vendorFees <> "totalVendorAmount: " <> show totalVendorAmount <> " totalAmount: " <> show totalAmount
+          throwError (InternalError "Marketplace amount is negative")
+        return $
+          Just $
+            AmountBased $
+              SplitSettlementDetailsAmount
+                { marketplace = Marketplace marketplaceAmount,
+                  mdrBorneBy = ALL,
+                  vendor = Vendor vendorSplits
+                }
 
 groupSumVendorSplits :: [VendorSplitDetails] -> [VendorSplitDetails]
 groupSumVendorSplits vendorFees = map (\groups -> (head groups) {splitAmount = roundToTwoDecimalPlaces $ sum (map splitAmount groups)}) (groupBy ((==) `on` vendorId) (sortOn vendorId vendorFees))

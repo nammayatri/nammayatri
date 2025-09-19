@@ -905,7 +905,7 @@ markAllRefundBookings booking personId = do
         >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> show person.merchantOperatingCityId)
     (vendorSplitDetails, amountUpdated) <- SMMFRFS.createVendorSplitFromBookings nonRefundInitiatedBookings person.merchantId person.merchantOperatingCityId Payment.FRFSMultiModalBooking frfsConfig.isFRFSTestingEnabled
     isSplitEnabled <- Payment.getIsSplitEnabled person.merchantId person.merchantOperatingCityId Nothing Payment.FRFSMultiModalBooking
-    splitDetails <- Payment.mkUnaggregatedSplitSettlementDetails isSplitEnabled amountUpdated vendorSplitDetails
+    _splitDetails <- Payment.mkUnaggregatedSplitSettlementDetails isSplitEnabled amountUpdated vendorSplitDetails False
     let refundSplitDetails = mkRefundSplitDetails nonRefundInitiatedBookings
     refundId <- generateGUID
     when allFailed $ whenJust mbJourneyId $ \journeyId -> QJourney.updateStatus DJourney.FAILED journeyId
@@ -914,7 +914,7 @@ markAllRefundBookings booking personId = do
             { orderId = orderShortId,
               requestId = refundId,
               amount = amountUpdated,
-              splitSettlementDetails = splitDetails
+              splitSettlementDetails = Nothing --splitDetails
             }
         createRefundCall refundReq' = Payment.refundOrder person.merchantId person.merchantOperatingCityId Nothing Payment.FRFSMultiModalBooking (Just person.id.getId) person.clientSdkVersion refundReq'
     result <- try @_ @SomeException $ DPayment.refundService (refundReq, Kernel.Types.Id.Id {Kernel.Types.Id.getId = refundId}) (Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant person.merchantId) (Just refundSplitDetails) createRefundCall
@@ -975,7 +975,7 @@ createPaymentOrder bookings merchantOperatingCityId merchantId amount person pay
   ticketBookingPayments' <- processPayments orderId `mapM` bookings
   QFRFSTicketBookingPayment.createMany ticketBookingPayments'
   isSplitEnabled <- Payment.getIsSplitEnabled merchantId merchantOperatingCityId Nothing paymentType
-  splitSettlementDetails <- Payment.mkUnaggregatedSplitSettlementDetails isSplitEnabled amount vendorSplitArr
+  splitSettlementDetails <- Payment.mkUnaggregatedSplitSettlementDetails isSplitEnabled amount vendorSplitArr True
   let createOrderReq =
         Payment.CreateOrderReq
           { orderId = orderId.getId,

@@ -82,7 +82,7 @@ createOrder (personId, merchantId) rideId = do
   customerEmail <- person.email & fromMaybeM (PersonFieldNotPresent "email") >>= decrypt
   customerPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
   isSplitEnabled <- Payment.getIsSplitEnabled merchantId person.merchantOperatingCityId Nothing Payment.Normal
-  splitSettlementDetails <- Payment.mkSplitSettlementDetails isSplitEnabled totalFare.amount []
+  splitSettlementDetails <- Payment.mkSplitSettlementDetails isSplitEnabled totalFare.amount [] True
   let createOrderReq =
         Payment.CreateOrderReq
           { orderId = rideId.getId,
