@@ -67,6 +67,7 @@ import qualified Kernel.External.Maps.Types as MapsTypes
 import qualified Kernel.External.MultiModal.Interface as MInterface
 import qualified Kernel.External.MultiModal.Interface as MultiModal
 import Kernel.External.MultiModal.Interface.Types as MultiModalTypes
+import Kernel.External.MultiModal.OpenTripPlanner.Types
 import qualified Kernel.External.Slack.Flow as SF
 import Kernel.External.Slack.Types (SlackConfig)
 import Kernel.Prelude
@@ -353,7 +354,7 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
                   departureTime = Nothing,
                   mode = Nothing,
                   transitPreferences = Nothing,
-                  transportModes = Nothing,
+                  transportModes = castVehicleCategoryToOTPTypes searchRequest.vehicleCategory,
                   minimumWalkDistance = riderConfig.minimumWalkDistance,
                   permissibleModes = fromMaybe [] riderConfig.permissibleModes,
                   maxAllowedPublicTransportLegs = riderConfig.maxAllowedPublicTransportLegs,
@@ -605,6 +606,13 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
       BecknV2.OnDemand.Enums.METRO -> MultiModalTypes.MetroRail
       BecknV2.OnDemand.Enums.SUBWAY -> MultiModalTypes.Subway
       _ -> MultiModalTypes.Unspecified
+
+    castVehicleCategoryToOTPTypes :: Maybe BecknV2.OnDemand.Enums.VehicleCategory -> Maybe [Maybe TransportMode]
+    castVehicleCategoryToOTPTypes vehicleCategory = case vehicleCategory of
+      Just (BecknV2.OnDemand.Enums.BUS) -> Just $ fmap Just [TransportMode {mode = "BUS"}, TransportMode {mode = "WALK"}]
+      Just (BecknV2.OnDemand.Enums.METRO) -> Just $ fmap Just [TransportMode {mode = "RAIL"}, TransportMode {mode = "WALK"}]
+      Just (BecknV2.OnDemand.Enums.SUBWAY) -> Just $ map Just [TransportMode {mode = "SUBWAY"}, TransportMode {mode = "WALK"}]
+      _ -> Nothing
 
     mkRouteDetailsForWalkLegs :: MultiModalTypes.MultiModalRoute -> MultiModalTypes.MultiModalRoute
     mkRouteDetailsForWalkLegs MultiModalTypes.MultiModalRoute {..} =
