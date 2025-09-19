@@ -349,6 +349,9 @@ types:
     - customerCancellationDuesWithCurrency: Maybe PriceAPIEntity
     - tollChargesWithCurrency: Maybe PriceAPIEntity
     - congestionChargeWithCurrency: Maybe PriceAPIEntity
+    - parkingCharge: Maybe HighPrecMoney
+    - petCharges: Maybe HighPrecMoney
+    - insuranceCharge: Maybe HighPrecMoney
     - updatedAt: UTCTime
   FareParametersDetails:
     - enum: "ProgressiveDetails FParamsProgressiveDetails, SlabDetails FParamsSlabDetails, RentalDetails FParamsRentalDetails, InterCityDetails FParamsInterCityDetails, AmbulanceDetails FParamsAmbulanceDetails"
