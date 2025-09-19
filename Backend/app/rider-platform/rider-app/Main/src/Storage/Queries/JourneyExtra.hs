@@ -4,7 +4,7 @@
 module Storage.Queries.JourneyExtra where
 
 import Control.Monad.Extra (mapMaybeM)
-import Data.List (minimumBy, sortBy)
+import Data.List (maximumBy, sortBy)
 import Data.Ord (comparing)
 import Data.Time hiding (getCurrentTime)
 import qualified Domain.Types.FRFSTicket as DTicket
@@ -77,35 +77,19 @@ updateJourneyExpiryTime journeyId expiryTime = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.journeyExpiryTime $ Just expiryTime, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId journeyId)]
 
-minimumByMay' :: (a -> a -> Ordering) -> [a] -> Maybe a
-minimumByMay' _ [] = Nothing
-minimumByMay' cmp xs = Just (minimumBy cmp xs)
+maximumByMay' :: (a -> a -> Ordering) -> [a] -> Maybe a
+maximumByMay' _ [] = Nothing
+maximumByMay' cmp xs = Just (maximumBy cmp xs)
 
 -- Update journey expiry time with provided tickets (avoids additional DB queries)
-updateShortestJourneyExpiryTimeWithTickets ::
+updateLongestJourneyExpiryTimeWithTickets ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   Kernel.Types.Id.Id DJ.Journey ->
   [DTicket.FRFSTicket] ->
   m ()
-updateShortestJourneyExpiryTimeWithTickets journeyId tickets =
-  forM_ (minimumByMay' (comparing (.validTill)) tickets) $ \ticket -> do
+updateLongestJourneyExpiryTimeWithTickets journeyId tickets =
+  forM_ (maximumByMay' (comparing (.validTill)) tickets) $ \ticket -> do
     updateJourneyExpiryTime journeyId ticket.validTill
-
--- Update journey expiry time to the next valid ticket expiry when a leg is completed
-updateJourneyToNextTicketExpiryTime ::
-  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  Kernel.Types.Id.Id DJ.Journey ->
-  [JL.JourneyLeg] ->
-  Int ->
-  m ()
-updateJourneyToNextTicketExpiryTime journeyId allLegs nextLegSequence = do
-  -- Get all bookings for the journey and filter upcoming ones
-  bookings <- mapMaybeM (QTicketBooking.findBySearchId . Kernel.Types.Id.Id) (mapMaybe (.legSearchId) $ filter (\leg -> leg.sequenceNumber >= nextLegSequence) allLegs)
-  let upcomingBookingIds = map (.id) bookings
-  -- Fetch all tickets from those bookings
-  tickets <- fmap concat $ mapM QTicket.findAllByTicketBookingId upcomingBookingIds
-  -- Find the earliest ticket expiry
-  updateShortestJourneyExpiryTimeWithTickets journeyId tickets
 
 -- Update journey status and end time when journey is completed
 updateStatusAndEndTime :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => DJ.JourneyStatus -> Kernel.Types.Id.Id DJ.Journey -> m ()
