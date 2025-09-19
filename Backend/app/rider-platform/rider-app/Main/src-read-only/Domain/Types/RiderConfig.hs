@@ -5,6 +5,7 @@
 module Domain.Types.RiderConfig (module Domain.Types.RiderConfig, module ReExport) where
 
 import qualified BecknV2.FRFS.Enums
+import qualified BecknV2.OnDemand.Enums
 import Data.Aeson
 import qualified Data.Time
 import Domain.Types.Extra.RiderConfig as ReExport
@@ -109,6 +110,7 @@ data RiderConfig = RiderConfig
     safetyCheckStartTime :: Kernel.Types.Common.Seconds,
     sensitiveWords :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     sensitiveWordsForExactMatch :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
+    serviceTierRelationshipCfg :: Kernel.Prelude.Maybe [Domain.Types.RiderConfig.ServiceTierRelationshipCfg],
     settleCancellationFeeBeforeNextRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     sourceOfServiceTier :: Domain.Types.RiderConfig.ServiceTierSource,
     specialZoneRadius :: Kernel.Prelude.Int,
@@ -147,6 +149,9 @@ data BusTrackingConfig = BusTrackingConfig
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
 data RingBucketCfg = RingBucketCfg {radiusInMeters :: Kernel.Types.Common.Meters, size :: Kernel.Prelude.Int, vehVariant :: Domain.Types.VehicleVariant.VehicleVariant}
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
+
+data ServiceTierRelationshipCfg = ServiceTierRelationshipCfg {canBoardIn :: [BecknV2.FRFS.Enums.ServiceTierType], serviceTierType :: BecknV2.FRFS.Enums.ServiceTierType, vehicleType :: BecknV2.OnDemand.Enums.VehicleCategory}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
 data ServiceTierSource = NANDI | QUOTES deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)

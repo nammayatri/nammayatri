@@ -26,7 +26,7 @@ imports:
   RouteStopMapping: Domain.Types.RouteStopMapping
   JourneyOptionsSortingType: Domain.Types.MultimodalPreferences
   FRFSQuote: Domain.Types.FRFSQuote
-  AvailableRoutesByTier: Lib.JourneyModule.Utils
+  AvailableRoutesByTier: Domain.Types.RouteDetails
   JourneyLegOption: Lib.JourneyModule.Utils
   VehiclePosition: Lib.JourneyModule.Types
   SDKPayloadDetails: Kernel.External.Payment.Juspay.Types

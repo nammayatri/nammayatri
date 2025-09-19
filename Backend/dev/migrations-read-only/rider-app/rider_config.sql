@@ -405,3 +405,8 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN bus_scan_route_calculation_enabled
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN validate_set_onboarding_vehicle_request boolean  default false;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN service_tier_relationship_cfg json ;

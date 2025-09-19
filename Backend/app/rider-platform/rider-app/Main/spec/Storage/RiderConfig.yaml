@@ -39,6 +39,11 @@ RiderConfig:
       derive: "Eq"
       tier: BecknV2.FRFS.Enums.ServiceTierType
       rank: Int
+    ServiceTierRelationshipCfg: # move it to integrated bpp config if required in future 🙂
+      derive: "Eq"
+      serviceTierType: BecknV2.FRFS.Enums.ServiceTierType
+      vehicleType: BecknV2.OnDemand.Enums.VehicleCategory
+      canBoardIn: "[BecknV2.FRFS.Enums.ServiceTierType]"
     ServiceTierSource:
       enum: "NANDI,QUOTES"
 
@@ -145,6 +150,7 @@ RiderConfig:
     sourceOfServiceTier: ServiceTierSource
     domainRouteCalculationEnabledModes: "Maybe [GeneralVehicleType]"
     upcomingBusThresholdSec: Maybe Seconds
+    serviceTierRelationshipCfg: "Maybe [ServiceTierRelationshipCfg]"
     busScanRouteCalculationEnabledModes: "Maybe Bool"
     trackVehicleKeyExpiry: Maybe Int
     distanceToNearestStopThreshold: Maybe Int
@@ -185,6 +191,7 @@ RiderConfig:
     noOfRideRequestsConfig: Maybe Int
     busTrackingConfig: Maybe Value
     busTierSortingConfig: Maybe Value
+    serviceTierRelationshipCfg: Maybe Value
     pickupInstructionsThreshold: Maybe Int
     pickupInstructionsProximityMeters: Maybe Int
     initiateFirstMultimodalJourney: Maybe Bool
@@ -236,6 +243,7 @@ RiderConfig:
     userServiceTierOrderConfig: fromMaybe [] (userServiceTierOrderConfig >>= Kernel.Utils.JSON.valueToMaybe)|E
     boostSearchPreSelectionServiceTierConfig: fromMaybe [] (boostSearchPreSelectionServiceTierConfig >>= Kernel.Utils.JSON.valueToMaybe)|E
     busTierSortingConfig: (busTierSortingConfig >>= Kernel.Utils.JSON.valueToMaybe)|E
+    serviceTierRelationshipCfg: (serviceTierRelationshipCfg >>= Kernel.Utils.JSON.valueToMaybe)|E
     noOfRideRequestsConfig: fromMaybe 5 noOfRideRequestsConfig|E
     busTrackingConfig: busTrackingConfig >>= Kernel.Utils.JSON.valueToMaybe|E
     pickupInstructionsThreshold: fromMaybe 4 pickupInstructionsThreshold|E
@@ -282,6 +290,7 @@ RiderConfig:
     userServiceTierOrderConfig: (Just . Data.Aeson.toJSON)|I
     boostSearchPreSelectionServiceTierConfig: (Just . Data.Aeson.toJSON)|I
     busTierSortingConfig: (busTierSortingConfig >>= Just . Data.Aeson.toJSON)|E
+    serviceTierRelationshipCfg: (serviceTierRelationshipCfg >>= Just . Data.Aeson.toJSON)|E
     noOfRideRequestsConfig: Just noOfRideRequestsConfig|E
     busTrackingConfig: busTrackingConfig >>= Just . Data.Aeson.toJSON|E
     pickupInstructionsThreshold: Just pickupInstructionsThreshold|E
@@ -374,6 +383,7 @@ RiderConfig:
     ticketingPermissionConfig: "json"
     busTrackingConfig: "json"
     busTierSortingConfig: "json"
+    serviceTierRelationshipCfg: "json"
 
   extraOperations:
     - EXTRA_DOMAIN_TYPE_FILE
