@@ -123,7 +123,9 @@ getServiceName = \case
   Domain.AadhaarVerificationServiceConfig aadhaarVerificationCfg -> case aadhaarVerificationCfg of
     AadhaarVerification.GridlineConfig _ -> Domain.AadhaarVerificationService AadhaarVerification.Gridline
   Domain.PaymentServiceConfig paymentCfg -> case paymentCfg of
-    Payment.JuspayConfig _ -> Domain.PaymentService Payment.Juspay
+    Payment.JuspayConfig cfg -> case cfg.serviceMode of
+      Just Juspay.AA -> Domain.PaymentService Payment.AAJuspay
+      _ -> Domain.PaymentService Payment.Juspay
     Payment.StripeConfig _ -> Domain.PaymentService Payment.Stripe
   Domain.PayoutServiceConfig payoutCfg -> case payoutCfg of
     Payout.JuspayConfig _ -> Domain.PayoutService Payout.Juspay
@@ -132,12 +134,12 @@ getServiceName = \case
   Domain.RentalPaymentServiceConfig paymentCfg -> case paymentCfg of
     Payment.JuspayConfig cfg -> case cfg.serviceMode of
       Just Juspay.AA -> Domain.RentalPaymentService Payment.AAJuspay
-      _ -> Domain.RentalPaymentService Payment.AAJuspay
+      _ -> Domain.RentalPaymentService Payment.Juspay
     Payment.StripeConfig _ -> Domain.RentalPaymentService Payment.Stripe
   Domain.CautioPaymentServiceConfig paymentCfg -> case paymentCfg of
     Payment.JuspayConfig cfg -> case cfg.serviceMode of
       Just Juspay.AA -> Domain.RentalPaymentService Payment.AAJuspay
-      _ -> Domain.RentalPaymentService Payment.AAJuspay
+      _ -> Domain.RentalPaymentService Payment.Juspay
     Payment.StripeConfig _ -> Domain.CautioPaymentService Payment.Stripe
   Domain.IssueTicketServiceConfig ticketCfg -> case ticketCfg of
     Ticket.KaptureConfig _ -> Domain.IssueTicketService Ticket.Kapture

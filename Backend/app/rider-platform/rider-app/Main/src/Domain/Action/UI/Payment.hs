@@ -103,7 +103,7 @@ createOrder (personId, merchantId) rideId = do
 
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
       commonPersonId = cast @DP.Person @DPayment.Person personId
-      createOrderCall = Payment.createOrder merchantId person.merchantOperatingCityId Nothing Payment.Normal person.clientSdkVersion -- api call
+      createOrderCall = Payment.createOrder merchantId person.merchantOperatingCityId Nothing Payment.Normal (Just person.id.getId) person.clientSdkVersion -- api call
   DPayment.createOrderService commonMerchantId (Just $ cast person.merchantOperatingCityId) commonPersonId createOrderReq createOrderCall >>= fromMaybeM (InternalError "Order expired please try again")
 
 -- order status -----------------------------------------------------
@@ -125,7 +125,7 @@ getStatus (personId, merchantId) orderId = do
   person <- QP.findById personId >>= fromMaybeM (InvalidRequest "Person not found")
   mocId <- ticketBooking <&> (.merchantOperatingCityId) & fromMaybeM (InternalError "MerchantOperatingCityId not found in booking") ----- fix the api and pass mocId in params
   let commonPersonId = cast @DP.Person @DPayment.Person personId
-      orderStatusCall = Payment.orderStatus merchantId mocId (ticketBooking <&> (.ticketPlaceId)) Payment.Normal person.clientSdkVersion -- api call
+      orderStatusCall = Payment.orderStatus merchantId mocId (ticketBooking <&> (.ticketPlaceId)) Payment.Normal (Just person.id.getId) person.clientSdkVersion -- api call
   DPayment.orderStatusService commonPersonId orderId orderStatusCall
 
 getOrder ::
