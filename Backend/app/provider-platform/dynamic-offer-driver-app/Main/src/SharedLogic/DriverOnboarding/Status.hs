@@ -977,17 +977,21 @@ verificationStatusCheck status language img mbReasons = do
     (INVALID, DVC.DriverLicense) -> toVerificationMessage DLInvalid language
     (INVALID, DVC.VehicleRegistrationCertificate) -> do
       msg <- toVerificationMessage RCInvalid language
-      case mbReasons of
-        Just reasons | not (null reasons) -> do
-          translatedReasons <- forM reasons $ \reason -> do
-            let (key, value) = T.breakOn ":" reason
-            translatedKey <- translateDynamicKey key language
-            if T.null value
-              then pure translatedKey
-              else pure $ translatedKey <> ": " <> T.drop 1 value
-          pure $ msg <> T.intercalate ", " translatedReasons
-        _ -> pure msg
+      addVerificationReasons language mbReasons msg
     _ -> toVerificationMessage DocumentValid language
+
+addVerificationReasons :: Language -> Maybe [Text] -> Text -> Flow Text
+addVerificationReasons language mbReasons msg = do
+  case mbReasons of
+    Just reasons | not (null reasons) -> do
+      translatedReasons <- forM reasons $ \reason -> do
+        let (key, value) = T.breakOn ":" reason
+        translatedKey <- translateDynamicKey key language
+        if T.null value
+          then pure translatedKey
+          else pure $ translatedKey <> ": " <> T.drop 1 value
+      pure $ msg <> T.intercalate ", " translatedReasons
+    _ -> pure msg
 
 checkIfInVerification :: IQuery.DriverImagesInfo -> DVC.DocumentType -> Language -> Flow (ResponseStatus, Text)
 checkIfInVerification driverImagesInfo docType language = do
@@ -1003,12 +1007,24 @@ verificationStatusWithMessage :: Int -> Int -> Maybe SDO.VerificationReqRecord -
 verificationStatusWithMessage onboardingTryLimit imagesNum mbVerificationReqRecord language docType =
   case mbVerificationReqRecord of
     Just req -> do
+      mbRC <- case docType of
+        DVC.VehicleRegistrationCertificate -> do
+          registrationNoEither <- try @_ @SomeException (decrypt req.documentNumber)
+          case registrationNoEither of
+            Left err -> do
+              logError $ "Error while decrypting document number: " <> (req.documentNumber & unEncrypted . encrypted) <> " with err: " <> show err
+              pure Nothing
+            Right registrationNo -> do
+              rcNoEnc <- encrypt registrationNo
+              RCQuery.findByCertificateNumberHash (rcNoEnc & hash)
+        _ -> pure Nothing
+
       if req.status == "pending" || req.status == "source_down_retrying"
         then do
-          msg <- toVerificationMessage VerificationInProgress language
+          msg <- toVerificationMessage VerificationInProgress language >>= addVerificationReasons language (mbRC <&> (.failedRules))
           return (PENDING, msg)
         else do
-          message <- getMessageFromResponse language req.verificaitonResponse
+          message <- getMessageFromResponse language req.verificaitonResponse >>= addVerificationReasons language (mbRC <&> (.failedRules))
           return (FAILED, message)
     Nothing -> do
       if imagesNum > onboardingTryLimit * bool 1 2 (docType == DVC.DriverLicense)
