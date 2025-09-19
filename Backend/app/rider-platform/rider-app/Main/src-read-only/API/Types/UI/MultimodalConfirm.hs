@@ -16,6 +16,7 @@ import qualified Domain.Types.JourneyLeg
 import qualified Domain.Types.Location
 import qualified Domain.Types.LocationAddress
 import qualified Domain.Types.MultimodalPreferences
+import qualified Domain.Types.RouteDetails
 import qualified Domain.Types.RouteStopTimeTable
 import qualified Domain.Types.Station
 import qualified Domain.Types.StationType
@@ -150,12 +151,13 @@ data JourneyStatusResp = JourneyStatusResp
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data LegServiceTierOptionsResp = LegServiceTierOptionsResp {options :: [Lib.JourneyModule.Utils.AvailableRoutesByTier]}
+data LegServiceTierOptionsResp = LegServiceTierOptionsResp {options :: [Domain.Types.RouteDetails.AvailableRoutesByTier]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data LegStatus = LegStatus
   { bookingStatus :: Lib.JourneyModule.State.Types.JourneyBookingStatus,
+    fleetNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     legOrder :: Kernel.Prelude.Int,
     mode :: Domain.Types.Trip.MultimodalTravelMode,
     status :: Lib.JourneyLeg.Types.JourneyLegStatus,

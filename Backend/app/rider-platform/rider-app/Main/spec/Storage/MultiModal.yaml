@@ -13,7 +13,10 @@ imports:
   MultiModalStopDetails: Kernel.External.MultiModal.Interface.Types
   MultiModalAgency: Kernel.External.MultiModal.Interface.Types
   MultiModalLegGate: Kernel.External.MultiModal.Interface.Types
+  PriceAPIEntity: Kernel.Types.Common
+  FRFSQuote: Domain.Types.FRFSQuote
   RecentLocation: Domain.Types.RecentLocation
+  SourceType: Domain.Types.RouteStopTimeTable
   ServiceTierType: BecknV2.FRFS.Enums
   PaymentOrder: Lib.Payment.Domain.Types.PaymentOrder
   AbsoluteDirection: Kernel.External.MultiModal.OpenTripPlanner.Types
@@ -21,6 +24,8 @@ imports:
   JourneyLegStatus: Lib.JourneyLeg.Types
   RouteDetails: Domain.Types.RouteDetails
   TrackingStatus: Lib.JourneyModule.State.Types
+  AvailableRoutesByTier: Domain.Types.RouteDetails
+
 
 # add journeyLegId (Maybe (Id JourneyLeg)) in SearchRequest
 Journey:
@@ -367,6 +372,27 @@ JourneyLeg:
     - EXTRA_QUERY_FILE
 
 RouteDetails:
+  types:
+    AvailableRoutesInfo:
+      shortName: "Text"
+      longName: "Text"
+      routeCode: "Text"
+      routeTimings: "[Seconds]"
+      isLiveTrackingAvailable: "Bool"
+      source: "SourceType"
+    AvailableRoutesByTier:
+      serviceTier: "ServiceTierType"
+      serviceTierName: "Maybe Text"
+      serviceTierDescription: "Maybe Text"
+      via: "Maybe Text"
+      trainTypeCode: "Maybe Text"
+      quoteId: "Maybe (Id FRFSQuote)"
+      availableRoutes: "[Text]"
+      availableRoutesInfo: "[AvailableRoutesInfo]"
+      nextAvailableBuses: "[Seconds]"
+      nextAvailableTimings: "[(TimeOfDay, TimeOfDay)]"
+      fare: "PriceAPIEntity"
+      source: "SourceType"
   fields:
     id: Id RouteDetails
     journeyLegId: Text

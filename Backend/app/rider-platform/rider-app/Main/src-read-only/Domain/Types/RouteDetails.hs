@@ -3,9 +3,12 @@
 
 module Domain.Types.RouteDetails where
 
+import qualified BecknV2.FRFS.Enums
 import Data.Aeson
+import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.RouteStopTimeTable
 import Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -48,5 +51,31 @@ data RouteDetails = RouteDetails
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data AvailableRoutesByTier = AvailableRoutesByTier
+  { availableRoutes :: [Kernel.Prelude.Text],
+    availableRoutesInfo :: [Domain.Types.RouteDetails.AvailableRoutesInfo],
+    fare :: Kernel.Types.Common.PriceAPIEntity,
+    nextAvailableBuses :: [Kernel.Types.Common.Seconds],
+    nextAvailableTimings :: [(TimeOfDay, Kernel.Prelude.TimeOfDay)],
+    quoteId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote),
+    serviceTier :: BecknV2.FRFS.Enums.ServiceTierType,
+    serviceTierDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    serviceTierName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    source :: Domain.Types.RouteStopTimeTable.SourceType,
+    trainTypeCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    via :: Kernel.Prelude.Maybe Kernel.Prelude.Text
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data AvailableRoutesInfo = AvailableRoutesInfo
+  { isLiveTrackingAvailable :: Kernel.Prelude.Bool,
+    longName :: Kernel.Prelude.Text,
+    routeCode :: Kernel.Prelude.Text,
+    routeTimings :: [Kernel.Types.Common.Seconds],
+    shortName :: Kernel.Prelude.Text,
+    source :: Domain.Types.RouteStopTimeTable.SourceType
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)

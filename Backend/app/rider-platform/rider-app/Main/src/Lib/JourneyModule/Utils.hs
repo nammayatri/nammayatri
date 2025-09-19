@@ -25,6 +25,7 @@ import qualified Domain.Types.MultimodalPreferences as DMP
 import Domain.Types.Person
 import qualified Domain.Types.RecentLocation as DTRL
 import qualified Domain.Types.RiderConfig as RCTypes
+import Domain.Types.RouteDetails
 import Domain.Types.RouteStopTimeTable
 import qualified Domain.Types.Trip as DTrip
 import Domain.Utils (mapConcurrently)
@@ -153,16 +154,6 @@ data LegServiceTier = LegServiceTier
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data AvailableRoutesInfo = AvailableRoutesInfo
-  { shortName :: Text,
-    longName :: Text,
-    routeCode :: Text,
-    routeTimings :: [Seconds],
-    isLiveTrackingAvailable :: Bool,
-    source :: SourceType
-  }
-  deriving (Generic, Show, Eq, ToJSON, FromJSON, ToSchema)
-
 data JourneyLegOption = JourneyLegOption
   { viaPoints :: [Text],
     routeDetails :: [JourneyLegRouteDetails],
@@ -179,23 +170,6 @@ data JourneyLegRouteDetails = JourneyLegRouteDetails
   { fromStopCode :: Text,
     toStopCode :: Text,
     subLegOrder :: Int
-  }
-  deriving (Generic, Show, Eq, ToJSON, FromJSON, ToSchema)
-
--- | Data structure to represent available routes grouped by service tier
-data AvailableRoutesByTier = AvailableRoutesByTier
-  { serviceTier :: Spec.ServiceTierType,
-    serviceTierName :: Maybe Text,
-    serviceTierDescription :: Maybe Text,
-    via :: Maybe Text,
-    trainTypeCode :: Maybe Text,
-    quoteId :: Maybe (Id DFRFSQuote.FRFSQuote),
-    availableRoutes :: [Text], -- todo: deprecate this
-    availableRoutesInfo :: [AvailableRoutesInfo],
-    nextAvailableBuses :: [Seconds],
-    nextAvailableTimings :: [(TimeOfDay, TimeOfDay)],
-    fare :: PriceAPIEntity,
-    source :: SourceType
   }
   deriving (Generic, Show, Eq, ToJSON, FromJSON, ToSchema)
 
@@ -486,6 +460,7 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
   let groupedByTier = (if vc == Enums.BUS then map (take maxBusTimingPerTier) else (\a -> a)) $ groupBy (\a b -> a.serviceTierType == b.serviceTierType) $ sortBy (comparing (tierRank cfgMap . (.serviceTierType))) routeStopTimings
   logDebug $ "groupedByTier: " <> show groupedByTier <> " sortedTimings: " <> show sortedTimings <> " routeStopTimings: " <> show routeStopTimings
   let upcomingBusThresholdSec = fromMaybe (Seconds 3600) (mbRiderConfig >>= (.upcomingBusThresholdSec))
+  let mbServiceTierRelationshipCfg :: Maybe [RCTypes.ServiceTierRelationshipCfg] = filter (\cfg -> cfg.vehicleType == vc) <$> ((.serviceTierRelationshipCfg) =<< mbRiderConfig)
   let normalizeEtaSeconds tod =
         let eta = nominalDiffTimeToSeconds $ diffUTCTime (getISTArrivalTime tod currentTime) currentTimeIST
             secondsValue = fromIntegral (getSeconds eta) :: Double
@@ -517,10 +492,47 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
           )
           tierWithEarliest
   let groupedByTierReordered = map snd sortedTierGroups
+  let serviceTierAlternatesMap :: M.Map Spec.ServiceTierType [Text] =
+        M.fromList $
+          map
+            ( \timingsForTier -> do
+                let serviceTierType = if null timingsForTier then Spec.ORDINARY else (head timingsForTier).serviceTierType
+                    routeCodesForTier = nub $ (map (.routeCode) timingsForTier)
+                (serviceTierType, routeCodesForTier)
+            )
+            groupedByTierReordered
+
+  let alternateRouteHashMap :: M.Map Spec.ServiceTierType [Text] =
+        case mbServiceTierRelationshipCfg of
+          Nothing -> serviceTierAlternatesMap
+          Just serviceTierRelationshipCfg ->
+            foldl'
+              ( \acc serviceTierRelationshipCfg' ->
+                  foldl'
+                    ( \accIn serviceTierType ->
+                        case M.lookup serviceTierType serviceTierAlternatesMap of
+                          Just alternateRouteIds ->
+                            case M.lookup serviceTierRelationshipCfg'.serviceTierType accIn of
+                              Just alternateRouteIds' ->
+                                M.insert serviceTierRelationshipCfg'.serviceTierType (nub $ alternateRouteIds ++ alternateRouteIds') accIn
+                              Nothing ->
+                                M.insert serviceTierRelationshipCfg'.serviceTierType alternateRouteIds accIn
+                          Nothing -> accIn
+                    )
+                    acc
+                    serviceTierRelationshipCfg'.canBoardIn
+              )
+              M.empty
+              serviceTierRelationshipCfg
+
+  let finalAlternateRouteHashMap =
+        M.union alternateRouteHashMap $
+          M.filterWithKey (\k _ -> not (M.member k alternateRouteHashMap)) serviceTierAlternatesMap
+
   -- For each service tier, collect route information
   results <- forM groupedByTierReordered $ \timingsForTier -> do
     let serviceTierType = if null timingsForTier then Spec.ORDINARY else (head timingsForTier).serviceTierType
-        routeCodesForTier = nub $ map (.routeCode) timingsForTier
+        routeCodesForTier = nub $ fromMaybe (map (.routeCode) timingsForTier) (M.lookup serviceTierType finalAlternateRouteHashMap)
     let tierSource = fromMaybe GTFS $ listToMaybe $ map (.source) timingsForTier
 
     -- Get route details to include the short name

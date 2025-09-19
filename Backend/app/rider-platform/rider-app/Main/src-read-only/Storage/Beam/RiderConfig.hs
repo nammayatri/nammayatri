@@ -108,6 +108,7 @@ data RiderConfigT f = RiderConfigT
     safetyCheckStartTime :: B.C f Kernel.Types.Common.Seconds,
     sensitiveWords :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     sensitiveWordsForExactMatch :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
+    serviceTierRelationshipCfg :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     settleCancellationFeeBeforeNextRide :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     sourceOfServiceTier :: B.C f (Kernel.Prelude.Maybe Domain.Types.RiderConfig.ServiceTierSource),
     specialZoneRadius :: B.C f Kernel.Prelude.Int,
