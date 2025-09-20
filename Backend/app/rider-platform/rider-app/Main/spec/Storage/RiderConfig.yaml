@@ -98,6 +98,8 @@ RiderConfig:
     maximumWalkDistance: Meters
     minimumWalkDistance: Meters
     permissibleModes: "Maybe [GeneralVehicleType]"
+    busTransitTypes: "Maybe [ServiceTierType]"
+    subwayTransitTypes: "Maybe [ServiceTierType]"
     maxAllowedPublicTransportLegs: Int
     driverReferredSearchReqExpiry: Maybe Seconds
     dynamicLogicUpdatePassword: Text
@@ -328,6 +330,8 @@ RiderConfig:
     maximumWalkDistance: "600"
     minimumWalkDistance: "100"
     permissibleModes: "'{Walk, Bus, MetroRail, Subway}'"
+    busTransitTypes: "'{ORDINARY,NON_AC,SPECIAL,EXECUTIVE,EXPRESS,AC}'"
+    subwayTransitTypes: "'{FIRST_CLASS,SECOND_CLASS}'"
     domainRouteCalculationEnabledModes: "'{Bus, Subway}'"
     busScanRouteCalculationEnabledModes: "true"
     maxAllowedPublicTransportLegs: "2"
