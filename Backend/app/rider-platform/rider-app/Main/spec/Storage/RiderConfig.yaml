@@ -16,6 +16,7 @@ imports:
   VehicleVariant: Domain.Types.VehicleVariant
   Minutes: Kernel.Types.Common
   TimeOfDay: Data.Time
+  JourneyOptionsSortingType: Domain.Types.MultimodalPreferences
 
 RiderConfig:
   types:
@@ -98,8 +99,9 @@ RiderConfig:
     maximumWalkDistance: Meters
     minimumWalkDistance: Meters
     permissibleModes: "Maybe [GeneralVehicleType]"
-    busTransitTypes: "Maybe [ServiceTierType]"
-    subwayTransitTypes: "Maybe [ServiceTierType]"
+    busTransitTypes: "Maybe [BecknV2.FRFS.Enums.ServiceTierType]"
+    subwayTransitTypes: "Maybe [BecknV2.FRFS.Enums.ServiceTierType]"
+    journeyOptionsSortingType: Maybe JourneyOptionsSortingType
     maxAllowedPublicTransportLegs: Int
     driverReferredSearchReqExpiry: Maybe Seconds
     dynamicLogicUpdatePassword: Text
@@ -373,6 +375,8 @@ RiderConfig:
     sensitiveWords: text []
     sensitiveWordsForExactMatch: text []
     permissibleModes: text []
+    busTransitTypes: text []
+    subwayTransitTypes: text []
     domainRouteCalculationEnabledModes: text []
     excludedVehicleVariants: text []
     rentalsConfig: text []

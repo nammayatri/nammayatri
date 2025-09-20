@@ -389,9 +389,20 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN validate_set_onboarding_vehicle_re
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN upcoming_bus_threshold_sec integer  default 3600;
 ALTER TABLE atlas_app.rider_config ADD COLUMN bus_tier_sorting_config json ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN service_tier_relationship_cfg json ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN subway_transit_types text []  default '{FIRST_CLASS,SECOND_CLASS}';
+ALTER TABLE atlas_app.rider_config ADD COLUMN bus_transit_types text []  default '{ORDINARY,NON_AC,SPECIAL,EXECUTIVE,EXPRESS,AC}';
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN journey_options_sorting_type text ;
 
 
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN source_of_service_tier text default 'NANDI';
-ALTER TABLE atlas_app.rider_config ADD COLUMN service_tier_relationship_cfg json ;

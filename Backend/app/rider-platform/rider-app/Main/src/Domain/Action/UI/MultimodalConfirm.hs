@@ -561,12 +561,15 @@ getMultimodalUserPreferences (mbPersonId, _merchantId) = do
       personCityInfo <- QP.findCityInfoById personId >>= fromMaybeM (PersonNotFound personId.getId)
       riderConfig <- QRiderConfig.findByMerchantOperatingCityId personCityInfo.merchantOperatingCityId >>= fromMaybeM (RiderConfigNotFound personCityInfo.merchantOperatingCityId.getId)
       let convertedModes = mapMaybe generalVehicleTypeToAllowedTransitMode (fromMaybe [] riderConfig.permissibleModes)
+          journeyOptionsSortingType = fromMaybe DMP.MOST_RELEVANT riderConfig.journeyOptionsSortingType
+          busTransitTypes = fromMaybe [Spec.ORDINARY, Spec.EXPRESS, Spec.SPECIAL, Spec.AC, Spec.NON_AC, Spec.EXECUTIVE] riderConfig.busTransitTypes
+          subwayTransitTypes = fromMaybe [Spec.FIRST_CLASS, Spec.SECOND_CLASS] riderConfig.subwayTransitTypes
       return $
         ApiTypes.MultimodalUserPreferences
           { allowedTransitModes = convertedModes <> [DTrip.Taxi],
-            journeyOptionsSortingType = Just DMP.MOST_RELEVANT,
-            busTransitTypes = Just [Spec.ORDINARY, Spec.EXPRESS, Spec.SPECIAL],
-            subwayTransitTypes = Just [Spec.FIRST_CLASS, Spec.SECOND_CLASS]
+            journeyOptionsSortingType = Just journeyOptionsSortingType,
+            busTransitTypes = Just busTransitTypes,
+            subwayTransitTypes = Just subwayTransitTypes
           }
   where
     generalVehicleTypeToAllowedTransitMode :: GeneralVehicleType -> Maybe DTrip.MultimodalTravelMode
