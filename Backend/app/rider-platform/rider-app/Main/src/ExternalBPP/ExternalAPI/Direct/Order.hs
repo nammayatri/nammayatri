@@ -62,6 +62,7 @@ getTicketDetail config integratedBPPConfig qrTtl booking routeStation = do
   let ticketDescription = "ROUTE: " <> route.shortName <> " | FROM: " <> fromStation.name <> " | TO: " <> toStation.name
       amount = Money $ round routeStation.priceWithCurrency.amount
       adultQuantity = booking.quantity
+      childQuantity = fromMaybe 0 booking.childTicketQuantity
       qrValidityIST = addUTCTime (secondsToNominalDiffTime 19800) qrValidity
       qrRefreshAt = config.qrRefreshTtl <&> (\ttl -> addUTCTime (secondsToNominalDiffTime ttl) now)
   qrData <-
@@ -70,7 +71,7 @@ getTicketDetail config integratedBPPConfig qrTtl booking routeStation = do
         { fromRouteProviderCode = fromRoute.providerCode,
           toRouteProviderCode = toRoute.providerCode,
           adultQuantity = adultQuantity,
-          childQuantity = 0,
+          childQuantity = childQuantity,
           vehicleTypeProviderCode = busTypeId,
           expiry = formatUtcTime qrValidityIST,
           ticketNumber,

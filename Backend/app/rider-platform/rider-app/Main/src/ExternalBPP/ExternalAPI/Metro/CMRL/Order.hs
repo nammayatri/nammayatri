@@ -30,6 +30,7 @@ createOrder config integratedBPPConfig booking mRiderNumber = do
   paymentTxnId <- booking.paymentTxnId & fromMaybeM (InternalError $ "Payment Transaction Id Missing")
   fromStation <- OTPRest.getStationByGtfsIdAndStopCode booking.fromStationCode integratedBPPConfig >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> booking.fromStationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
   toStation <- OTPRest.getStationByGtfsIdAndStopCode booking.toStationCode integratedBPPConfig >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> booking.toStationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
+  let totalTicketQuantity = max 1 (booking.quantity + fromMaybe 0 booking.childTicketQuantity)
   ticketsData <-
     generateQRTickets config $
       GenerateQRReq
@@ -37,13 +38,13 @@ createOrder config integratedBPPConfig booking mRiderNumber = do
           destination = toStation.code,
           ticketType = "SJT", -- TODO: FIX THIS
           noOfTickets = 1, -- Always set to 1 as per requirement
-          ticketFare = getMoney (maybe booking.price.amountInt (.amountInt) booking.finalPrice) `div` max 1 booking.quantity,
+          ticketFare = getMoney (maybe booking.price.amountInt (.amountInt) booking.finalPrice) `div` totalTicketQuantity,
           customerMobileNo = fromMaybe "9999999999" mRiderNumber,
           uniqueTxnRefNo = orderId,
           bankRefNo = paymentTxnId,
           paymentMode = "UPI",
           appType = cmrlAppType,
-          paxCount = booking.quantity, -- Number of tickets
+          paxCount = totalTicketQuantity, -- Number of tickets
           qrTypeCode = "FQR"
         }
   tickets <-
