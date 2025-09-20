@@ -416,22 +416,7 @@ findPossibleRoutes ::
   m (Maybe Text, [AvailableRoutesByTier], [RouteStopTimeTable])
 findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime integratedBppConfig mid mocid vc sendWithoutFare useLiveBusData = do
   -- Get route mappings that contain the origin stop
-
-  fromRouteStopMappings <- measureLatency (OTPRest.getRouteStopMappingByStopCode fromStopCode integratedBppConfig) ("getRouteStopMappingByStopCode" <> show fromStopCode)
-  -- Get route mappings that contain the destination stop
-  toRouteStopMappings <- measureLatency (OTPRest.getRouteStopMappingByStopCode toStopCode integratedBppConfig) ("getRouteStopMappingByStopCode" <> show toStopCode)
-
-  -- Find common routes that have both the origin and destination stops
-  -- and ensure that from-stop comes before to-stop in the route sequence
-  let fromRouteStopMap = map (\mapping -> (mapping.routeCode, mapping.sequenceNum)) fromRouteStopMappings
-      toRouteStopMap = map (\mapping -> (mapping.routeCode, mapping.sequenceNum)) toRouteStopMappings
-      validRoutes =
-        nub $
-          [ fromRouteCode
-            | (fromRouteCode, fromSeq) <- fromRouteStopMap,
-              (toRouteCode, toSeq) <- toRouteStopMap,
-              fromRouteCode == toRouteCode && fromSeq < toSeq -- Ensure correct sequence
-          ]
+  validRoutes <- getRouteCodesFromTo fromStopCode toStopCode integratedBppConfig
 
   routeStopTimings <- measureLatency (fetchLiveTimings mbAvailableServiceTiers validRoutes fromStopCode currentTime integratedBppConfig mid mocid vc useLiveBusData) ("fetchLiveTimings" <> show validRoutes <> " fromStopCode: " <> show fromStopCode <> " toStopCode: " <> show toStopCode)
 
