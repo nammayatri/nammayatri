@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#E3F2FD" />
+            <corners android:radius="8dp" />
+        </shape>
+    </item>
+    
+    <!-- Waveform bars - these simulate an audio waveform visualization -->
+    <!-- You could make this more complex with individual bars, but this is a simple representation -->
+    <item android:left="4dp" android:right="4dp" android:top="12dp" android:bottom="12dp">
+        <shape android:shape="line">
+            <stroke android:color="#1976D2" android:width="1dp" />
+            <size android:height="1dp" />
+        </shape>
+    </item>
+    
+    <item android:left="24dp" android:right="24dp" android:top="10dp" android:bottom="14dp">
+        <shape android:shape="line">
+            <stroke android:color="#1976D2" android:width="2dp" />
+            <size android:height="2dp" />
+        </shape>
+    </item>
+    
+    <item android:left="48dp" android:right="48dp" android:top="6dp" android:bottom="18dp">
+        <shape android:shape="line">
+            <stroke android:color="#1976D2" android:width="2dp" />
+            <size android:height="2dp" />
+        </shape>
+    </item>
+    
+    <item android:left="72dp" android:right="72dp" android:top="2dp" android:bottom="22dp">
+        <shape android:shape="line">
+            <stroke android:color="#1976D2" android:width="2dp" />
+            <size android:height="2dp" />
+        </shape>
+    </item>
+    
+    <item android:left="96dp" android:right="96dp" android:top="8dp" android:bottom="16dp">
+        <shape android:shape="line">
+            <stroke android:color="#1976D2" android:width="2dp" />
+            <size android:height="2dp" />
+        </shape>
+    </item>
+    
+    <item android:left="120dp" android:right="120dp" android:top="4dp" android:bottom="20dp">
+        <shape android:shape="line">
+            <stroke android:color="#1976D2" android:width="2dp" />
+            <size android:height="2dp" />
+        </shape>
+    </item>
+    
+    <item android:left="144dp" android:right="144dp" android:top="10dp" android:bottom="14dp">
+        <shape android:shape="line">
+            <stroke android:color="#1976D2" android:width="2dp" />
+            <size android:height="2dp" />
+        </shape>
+    </item>
+    
+    <item android:left="168dp" android:right="168dp" android:top="6dp" android:bottom="18dp">
+        <shape android:shape="line">
+            <stroke android:color="#1976D2" android:width="2dp" />
+            <size android:height="2dp" />
+        </shape>
+    </item>
+    
+    <item android:left="192dp" android:right="192dp" android:top="8dp" android:bottom="16dp">
+        <shape android:shape="line">
+            <stroke android:color="#1976D2" android:width="2dp" />
+            <size android:height="2dp" />
+        </shape>
+    </item>
+</layer-list>

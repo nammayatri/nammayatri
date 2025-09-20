@@ -88,4 +88,10 @@
     <string name="stops">%1$d నిలిపి స్థానాలు</string>
     <string name="round_trip"> రౌండ్ ట్రిప్</string>
     <string name="points">పాయింట్లు</string>
+    <string name="pickup_instruction_fallback">పికప్ సూచనలు అందుబాటులో ఉన్నాయి. దయచేసి మీ సందేశాలను చూడండి.</string>
+    <string name="pickup_instruction_error">పికప్ సూచనలను చూపడంలో లోపం</string>
+    <string name="pickup_instruction_none">పికప్ సూచనలు అందుబాటులో లేవు</string>
+    <string name="pickup_instruction_play_voice">వాయిస్ సూచనలను ప్లే చేయండి</string>
+    <string name="pickup_instruction_audio_unavailable_suffix">(ఆడియో అందుబాటులో లేదు)</string>
+    <string name="pickup_instruction_default_text">దయచేసి గేట్ 4 వద్ద నన్ను పికప్ చేయండి. నీలం బోర్డు కోసం చూడండి మరియు అక్కడ వేచి ఉండండి.</string>
 </resources>
