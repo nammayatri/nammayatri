@@ -23,6 +23,7 @@ data TicketBookingT f = TicketBookingT
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     id :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    paymentMethod :: B.C f (Kernel.Prelude.Maybe Domain.Types.Extra.TicketBooking.PaymentMethod),
     peopleTicketQuantity :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     personId :: B.C f Kernel.Prelude.Text,
     shortId :: B.C f Kernel.Prelude.Text,
