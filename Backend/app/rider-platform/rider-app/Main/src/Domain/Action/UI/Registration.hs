@@ -35,8 +35,10 @@ where
 
 import qualified Data.Aeson as A
 import Data.Aeson.Types ((.:), (.:?))
+import Data.Either.Extra (eitherToMaybe)
+import Data.List (nub)
 import Data.Maybe (listToMaybe)
-import Data.OpenApi hiding (email, info)
+import Data.OpenApi hiding (email, info, tags)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Domain.Action.UI.Person as SP
@@ -49,6 +51,7 @@ import qualified Domain.Types.Person as SP
 import qualified Domain.Types.PersonStats as DPS
 import Domain.Types.RegistrationToken (RegistrationToken)
 import qualified Domain.Types.RegistrationToken as SR
+import qualified Domain.Types.Yudhishthira as Y
 import qualified Email.AWS.Flow as Email
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id)
@@ -77,6 +80,8 @@ import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Validation
 import Kernel.Utils.Version
+import qualified Lib.Yudhishthira.Event as Yudhishthira
+import qualified Lib.Yudhishthira.Types as Yudhishthira
 import qualified SharedLogic.MerchantConfig as SMC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.Person as SLP
@@ -650,10 +655,16 @@ createPerson req identifierType notificationToken mbBundleVersion mbClientVersio
   createPersonStats <- makePersonStats person
   Person.create person
   QPS.create createPersonStats
+  addNammaTags person (Y.LoginTagData {id = person.id, gender = req.gender, clientSdkVersion = mbClientVersion, clientBundleVersion = mbBundleVersion, clientReactNativeVersion = mbRnVersion, clientConfigVersion = mbClientConfigVersion, clientDevice = mbDevice})
   fork "update emergency contact id" $
     whenJust req.mobileNumber $ \mobileNumber -> updatePersonIdForEmergencyContacts person.id mobileNumber merchant.id
   pure person
   where
+    addNammaTags person tagData = do
+      newPersonTags <- try @_ @SomeException (Yudhishthira.computeNammaTagsWithExpiry Yudhishthira.Login tagData)
+      let tags = nub (fromMaybe [] person.customerNammaTags <> fromMaybe [] (eitherToMaybe newPersonTags))
+      Person.updateCustomerTags (Just tags) tagData.id
+
     makePersonStats :: MonadTime m => SP.Person -> m DPS.PersonStats
     makePersonStats person = do
       now <- getCurrentTime

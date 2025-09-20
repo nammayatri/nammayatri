@@ -10,7 +10,7 @@ import Kernel.Utils.Common
 import Lib.Yudhishthira.Storage.Beam.BeamFlow
 import qualified Lib.Yudhishthira.Storage.Queries.NammaTag as SQNT
 import qualified Lib.Yudhishthira.Storage.Queries.NammaTagTrigger as SQNTT
-import Lib.Yudhishthira.Tools.Utils (mkTagNameValue)
+import Lib.Yudhishthira.Tools.Utils (mkTagNameValue, mkTagNameValueExpiry)
 import Lib.Yudhishthira.Types
 import qualified Lib.Yudhishthira.Types.NammaTag as DNT
 
@@ -105,3 +105,21 @@ computeNammaTags event sourceData_ = do
   let req = YudhishthiraDecideReq {source = Application event, sourceData}
   resp <- yudhishthiraDecide req
   pure $ resp.tags <&> (\tag -> mkTagNameValue (TagName tag.tagName) tag.tagValue)
+
+computeNammaTagsWithExpiry ::
+  ( MonadFlow m,
+    Metrics.CoreMetrics m,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    HasYudhishthiraTablesSchema,
+    ToJSON a
+  ) =>
+  ApplicationEvent ->
+  a ->
+  m [TagNameValueExpiry]
+computeNammaTagsWithExpiry event sourceData_ = do
+  let sourceData = A.toJSON sourceData_
+  let req = YudhishthiraDecideReq {source = Application event, sourceData}
+  resp <- yudhishthiraDecide req
+  now <- getCurrentTime
+  pure $ resp.tags <&> (\tag -> mkTagNameValueExpiry (TagName tag.tagName) tag.tagValue tag.tagValidity now)

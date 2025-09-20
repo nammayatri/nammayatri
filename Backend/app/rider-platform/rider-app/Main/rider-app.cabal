@@ -308,6 +308,7 @@ library
       Domain.Types.TicketDashboard
       Domain.Types.TicketKapture
       Domain.Types.UtilsTH
+      Domain.Types.Yudhishthira
       Environment
       ExternalBPP.CallAPI
       ExternalBPP.ExternalAPI.Bus.EBIX.Auth
