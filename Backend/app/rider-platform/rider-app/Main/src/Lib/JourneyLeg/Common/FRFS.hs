@@ -294,7 +294,7 @@ getFare riderId merchant merchantOperatingCity vehicleCategory serviecType route
             logError $ "Did not get Beckn Config for Vehicle Category : " <> show vehicleCategory <> "for riderId: " <> show riderId
             return (False, Nothing)
   where
-    filterAvailableBuses :: (EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, MonadFlow m, CacheFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv, HasKafkaProducer r, HasShortDurationRetryCfg r c) => UTCTime -> NE.NonEmpty CallAPI.BasicRouteDetail -> DIBC.IntegratedBPPConfig -> [FRFSFare] -> m ((Maybe [Spec.ServiceTierType], [FRFSFare]), Maybe [RD.AvailableRoutesByTier])
+    filterAvailableBuses :: (EsqDBFlow m r, EsqDBReplicaFlow m r, EncFlow m r, MonadFlow m, CacheFlow m r, HasField "ltsHedisEnv" r Hedis.HedisEnv, HasKafkaProducer r, HasShortDurationRetryCfg r c) => UTCTime -> NE.NonEmpty CallAPI.BasicRouteDetail -> DIBC.IntegratedBPPConfig -> [FRFSFare] -> m (Maybe [Spec.ServiceTierType], [FRFSFare])
     filterAvailableBuses arrivalTime fareRouteDetails integratedBPPConfig fares = do
       case vehicleCategory of
         Spec.BUS -> do

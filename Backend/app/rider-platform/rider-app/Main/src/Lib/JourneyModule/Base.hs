@@ -82,7 +82,6 @@ import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.BookingUpdateRequest as QBUR
 import qualified Storage.Queries.FRFSTicketBooking as QTBooking
 import qualified Storage.Queries.Journey as QJourney
-import qualified Storage.Queries.JourneyExtra as QJourneyExtra
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.JourneyLegMapping as QJourneyLegMapping
 import qualified Storage.Queries.Ride as QRide
@@ -1323,7 +1322,8 @@ generateJourneyStatusResponse journey legs = do
               trackingStatusLastUpdatedAt = legData.trackingStatusLastUpdatedAt,
               userPosition = legData.userPosition,
               vehiclePositions = legData.vehiclePositions,
-              mode = legData.mode
+              mode = legData.mode,
+              fleetNo = legData.fleetNo
             }
 
 markLegStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Maybe JL.JourneyLegStatus -> Maybe JMState.TrackingStatus -> DJourneyLeg.JourneyLeg -> Maybe Int -> UTCTime -> m ()
