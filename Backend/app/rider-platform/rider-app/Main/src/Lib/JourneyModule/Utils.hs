@@ -531,7 +531,7 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
   results <- forM groupedByTierReordered $ \timingsForTier -> do
     let serviceTierType = if null timingsForTier then Spec.ORDINARY else (head timingsForTier).serviceTierType
         routeCodesForTier = nub $ fromMaybe (map (.routeCode) timingsForTier) (M.lookup serviceTierType finalAlternateRouteHashMap)
-    let tierSource = fromMaybe GTFS $ listToMaybe $ map (.source) timingsForTier
+    let tierSource = maybe GTFS (\a -> a.source) $ find (\a -> a.source == LIVE) timingsForTier
 
     -- Get route details to include the short name
     validRouteDetails <- OTPRest.getRoutesByRouteIds integratedBppConfig routeCodesForTier
@@ -572,7 +572,7 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
           map
             ( \routeDetail -> do
                 let routeArrivalTimes = filter (\(rtCode, _, _) -> rtCode == routeDetail.code) arrivalTimes
-                    routeSource = fromMaybe GTFS $ listToMaybe $ map (\(_, sr, _) -> sr) routeArrivalTimes
+                    routeSource = maybe GTFS (\(_, sr, _) -> sr) $ find (\(_, sr, _) -> sr == LIVE) routeArrivalTimes
                 AvailableRoutesInfo
                   { shortName = routeDetail.shortName,
                     longName = routeDetail.longName,

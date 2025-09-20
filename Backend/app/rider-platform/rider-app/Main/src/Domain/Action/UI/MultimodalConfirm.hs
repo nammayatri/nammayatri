@@ -48,7 +48,7 @@ import qualified BecknV2.FRFS.Utils as Utils
 import qualified BecknV2.OnDemand.Enums as Enums
 import Control.Monad.Extra (mapMaybeM)
 import qualified Data.HashMap.Strict as HashMap
-import Data.List (nub, nubBy)
+import Data.List (nub, nubBy, partition)
 import qualified Data.Text as T
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified Domain.Types.CancellationReason as SCR
@@ -1416,13 +1416,14 @@ postMultimodalRouteAvailability (mbPersonId, merchantId) req = do
           person.merchantOperatingCityId
           vehicleCategory
           True -- sendWithoutFare
-          False
+          True
 
+      let (liveBuses, staticBuses) = partition (\route -> route.source == LIVE) availableRoutesByTier
       -- Filter routes based on onlyLive flag if needed
       let filteredRoutes =
             if req.onlyLive
-              then filter (\route -> route.source == LIVE) availableRoutesByTier
-              else availableRoutesByTier
+              then liveBuses
+              else liveBuses <> staticBuses
 
       -- Convert to API response format
       availableRoutes <- concatMapM (convertToAvailableRoute integratedBPPConfig person) filteredRoutes
