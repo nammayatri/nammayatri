@@ -530,7 +530,7 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
           M.filterWithKey (\k _ -> not (M.member k alternateRouteHashMap)) serviceTierAlternatesMap
 
   -- For each service tier, collect route information
-  results <- forM groupedByTierReordered $ \timingsForTier -> do
+  results <- (flip mapConcurrently) groupedByTierReordered $ \timingsForTier -> do
     let serviceTierType = if null timingsForTier then Spec.ORDINARY else (head timingsForTier).serviceTierType
         routeCodesForTier = nub $ fromMaybe (map (.routeCode) timingsForTier) (M.lookup serviceTierType finalAlternateRouteHashMap)
     let tierSource = maybe GTFS (\a -> a.source) $ find (\a -> a.source == LIVE) timingsForTier
