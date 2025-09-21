@@ -280,8 +280,14 @@ getFare riderId merchant merchantOperatingCity vehicleCategory serviecType route
                     Just serviceTier -> pure ((Just [serviceTier], fares), Nothing) -- bypassing as in case of serviceType/serviceTier is passed, we only calculate fare for that type
                     Nothing -> JMU.measureLatency (filterAvailableBuses arrivalTime fareRouteDetails integratedBPPConfig fares) ("filterAvailableBuses" <> show vehicleCategory <> " routeDetails: " <> show fareRouteDetails)
                   -- L.setOptionLocal QRSTT.CalledForFare False
-                  let mbMinFarePerRoute = selectMinFare availableFares
-                  let mbMaxFarePerRoute = selectMaxFare availableFares
+
+                  (mbMinFarePerRoute, mbMaxFarePerRoute) <- case vehicleCategory of
+                    Spec.BUS -> do
+                      mbSelectedServiceTierQuote <- JMU.sortAndGetBusFares merchantOperatingCity.id availableFares
+                      case mbSelectedServiceTierQuote of
+                        Just selectedServiceTierQuote -> pure (Just selectedServiceTierQuote, Just selectedServiceTierQuote)
+                        Nothing -> pure (selectMinFare availableFares, selectMaxFare availableFares)
+                    _ -> pure (selectMinFare availableFares, selectMaxFare availableFares)
                   logDebug $ "all fares: " <> show fares <> "min fare: " <> show mbMinFarePerRoute <> "max fare: " <> show mbMaxFarePerRoute <> "possible service tiers: " <> show possibleServiceTiers <> "available fares: " <> show availableFares
                   case (mbMinFarePerRoute, mbMaxFarePerRoute) of
                     (Just minFare, Just maxFare) -> do
