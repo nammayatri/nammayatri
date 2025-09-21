@@ -617,25 +617,6 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
     withinThreshold :: Maybe Int -> Seconds -> Int
     withinThreshold s upcomingBusThresholdSec = maybe 1 (\s' -> if s' <= upcomingBusThresholdSec.getSeconds then 0 else 1) s
 
-    defaultBusTierSortingConfig :: [RCTypes.BusTierSortingConfig]
-    defaultBusTierSortingConfig =
-      [ RCTypes.BusTierSortingConfig 1 Spec.EXECUTIVE,
-        RCTypes.BusTierSortingConfig 2 Spec.AC,
-        RCTypes.BusTierSortingConfig 3 Spec.EXPRESS,
-        RCTypes.BusTierSortingConfig 4 Spec.FIRST_CLASS,
-        RCTypes.BusTierSortingConfig 5 Spec.NON_AC,
-        RCTypes.BusTierSortingConfig 6 Spec.ORDINARY,
-        RCTypes.BusTierSortingConfig 7 Spec.SECOND_CLASS,
-        RCTypes.BusTierSortingConfig 8 Spec.SPECIAL,
-        RCTypes.BusTierSortingConfig 9 Spec.THIRD_CLASS
-      ]
-
-    tierRank :: M.Map Spec.ServiceTierType Int -> Spec.ServiceTierType -> Int
-    tierRank cfg tier = fromMaybe maxBound (M.lookup tier cfg)
-
-    toCfgMap :: [RCTypes.BusTierSortingConfig] -> M.Map Spec.ServiceTierType Int
-    toCfgMap xs = M.fromList [(RCTypes.tier x, RCTypes.rank x) | x <- xs]
-
 -- | Find the top upcoming trips for a given route code and stop code
 -- Returns arrival times in seconds for the upcoming trips along with route ID and service type
 findUpcomingTrips ::
@@ -1320,3 +1301,37 @@ getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber = do
     SIBC.fetchFirstIntegratedBPPConfigRightResult integratedBPPConfigs $ \config ->
       OTPRest.getVehicleServiceType config vehicleNumber
   return $ mbMbResult >>= \mbResult -> mbResult <&> (\result -> VehicleLiveRouteInfo {vehicleNumber = vehicleNumber, routeCode = result.route_id, serviceType = result.service_type})
+
+sortAndGetBusFares :: (EsqDBFlow m r, CacheFlow m r, MonadFlow m) => Id MerchantOperatingCity -> [FRFSFare] -> m (Maybe FRFSFare)
+sortAndGetBusFares merchantOpCityId finalFares = do
+  mbRiderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOpCityId Nothing
+  let cfgMap = maybe (toCfgMap defaultBusTierSortingConfig) toCfgMap (mbRiderConfig >>= (.busTierSortingConfig))
+  let serviceTierTypeFromFare fare = Just fare.vehicleServiceTier.serviceTierType
+  return $
+    Just $
+      minimumBy
+        ( \fare1 fare2 ->
+            compare
+              (maybe maxBound (tierRank cfgMap) (serviceTierTypeFromFare fare1))
+              (maybe maxBound (tierRank cfgMap) (serviceTierTypeFromFare fare2))
+        )
+        finalFares
+
+defaultBusTierSortingConfig :: [RCTypes.BusTierSortingConfig]
+defaultBusTierSortingConfig =
+  [ RCTypes.BusTierSortingConfig 1 Spec.EXECUTIVE,
+    RCTypes.BusTierSortingConfig 2 Spec.AC,
+    RCTypes.BusTierSortingConfig 3 Spec.EXPRESS,
+    RCTypes.BusTierSortingConfig 4 Spec.FIRST_CLASS,
+    RCTypes.BusTierSortingConfig 5 Spec.NON_AC,
+    RCTypes.BusTierSortingConfig 6 Spec.ORDINARY,
+    RCTypes.BusTierSortingConfig 7 Spec.SECOND_CLASS,
+    RCTypes.BusTierSortingConfig 8 Spec.SPECIAL,
+    RCTypes.BusTierSortingConfig 9 Spec.THIRD_CLASS
+  ]
+
+tierRank :: M.Map Spec.ServiceTierType Int -> Spec.ServiceTierType -> Int
+tierRank cfg tier = fromMaybe maxBound (M.lookup tier cfg)
+
+toCfgMap :: [RCTypes.BusTierSortingConfig] -> M.Map Spec.ServiceTierType Int
+toCfgMap xs = M.fromList [(RCTypes.tier x, RCTypes.rank x) | x <- xs]

@@ -18,7 +18,6 @@ import qualified API.Types.UI.FRFSTicketService as API
 import qualified BecknV2.FRFS.Enums as Spec
 import Data.Aeson
 import Data.List (sortBy)
-import qualified Data.Map.Strict as M
 import Data.Ord (Down (..))
 import qualified Data.Text as T
 import Domain.Types.Extra.FRFSCachedQuote as CachedQuote
@@ -34,7 +33,6 @@ import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.JourneyLeg as DJourneyLeg
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
-import qualified Domain.Types.RiderConfig as RCTypes
 import qualified Domain.Types.StationType as Station
 import qualified Domain.Types.StopFare as StopFare
 import qualified Domain.Types.Trip as DTripTypes
@@ -48,6 +46,7 @@ import Kernel.Types.Id
 import qualified Kernel.Types.TimeBound as DTB
 import Kernel.Utils.Common
 import qualified Lib.JourneyModule.Types as JourneyTypes
+import qualified Lib.JourneyModule.Utils as JourneyUtils
 import qualified SharedLogic.CreateFareForMultiModal as SLCF
 import qualified SharedLogic.FRFSUtils as SFU
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
@@ -291,35 +290,18 @@ filterQuotes quotes (Just journeyLeg) = do
   case journeyLeg.mode of
     DTripTypes.Bus -> do
       mbRiderConfig <- QRC.findByMerchantOperatingCityId journeyLeg.merchantOperatingCityId Nothing
-      let cfgMap = maybe (toCfgMap defaultBusTierSortingConfig) toCfgMap (mbRiderConfig >>= (.busTierSortingConfig))
+      let cfgMap = maybe (JourneyUtils.toCfgMap JourneyUtils.defaultBusTierSortingConfig) JourneyUtils.toCfgMap (mbRiderConfig >>= (.busTierSortingConfig))
       let serviceTierTypeFromQuote quote = JourneyTypes.getServiceTierFromQuote quote <&> (.serviceTierType)
       return $
         Just $
           minimumBy
             ( \quote1 quote2 ->
                 compare
-                  (maybe maxBound (tierRank cfgMap) (serviceTierTypeFromQuote quote1))
-                  (maybe maxBound (tierRank cfgMap) (serviceTierTypeFromQuote quote2))
+                  (maybe maxBound (JourneyUtils.tierRank cfgMap) (serviceTierTypeFromQuote quote1))
+                  (maybe maxBound (JourneyUtils.tierRank cfgMap) (serviceTierTypeFromQuote quote2))
             )
             finalQuotes
     _ -> return $ Just $ minimumBy (\quote1 quote2 -> compare quote1.price.amount.getHighPrecMoney quote2.price.amount.getHighPrecMoney) finalQuotes
-  where
-    defaultBusTierSortingConfig :: [RCTypes.BusTierSortingConfig]
-    defaultBusTierSortingConfig =
-      [ RCTypes.BusTierSortingConfig 1 Spec.EXECUTIVE,
-        RCTypes.BusTierSortingConfig 2 Spec.AC,
-        RCTypes.BusTierSortingConfig 3 Spec.EXPRESS,
-        RCTypes.BusTierSortingConfig 4 Spec.FIRST_CLASS,
-        RCTypes.BusTierSortingConfig 5 Spec.NON_AC,
-        RCTypes.BusTierSortingConfig 6 Spec.ORDINARY,
-        RCTypes.BusTierSortingConfig 7 Spec.SECOND_CLASS,
-        RCTypes.BusTierSortingConfig 8 Spec.SPECIAL,
-        RCTypes.BusTierSortingConfig 9 Spec.THIRD_CLASS
-      ]
-    tierRank :: M.Map Spec.ServiceTierType Int -> Spec.ServiceTierType -> Int
-    tierRank cfg tier = fromMaybe maxBound (M.lookup tier cfg)
-    toCfgMap :: [RCTypes.BusTierSortingConfig] -> M.Map Spec.ServiceTierType Int
-    toCfgMap xs = M.fromList [(RCTypes.tier x, RCTypes.rank x) | x <- xs]
 filterQuotes _ Nothing = return Nothing
 
 mkQuotes :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, HasShortDurationRetryCfg r c) => DOnSearch -> ValidatedDOnSearch -> DQuote -> m Quote.FRFSQuote
