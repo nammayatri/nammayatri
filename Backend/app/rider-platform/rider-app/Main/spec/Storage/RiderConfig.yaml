@@ -159,6 +159,8 @@ RiderConfig:
     distanceToNearestStopThreshold: Maybe Int
     validateSetOnboardingVehicleRequest: Maybe Bool
     upcomingBusThresholdSec: Maybe Seconds
+    domainPublicTransportDataVersion: Maybe Int
+    updateTicketValidityInSecondsPostSetOnboarding: Maybe Seconds
 
   beamType:
     ivrTriggerDelay: Maybe Seconds

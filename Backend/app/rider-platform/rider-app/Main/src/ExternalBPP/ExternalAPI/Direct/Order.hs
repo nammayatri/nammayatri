@@ -74,6 +74,7 @@ getTicketDetail config integratedBPPConfig qrTtl booking routeStation = do
           childQuantity = childQuantity,
           vehicleTypeProviderCode = busTypeId,
           expiry = formatUtcTime qrValidityIST,
+          expiryIST = qrValidityIST,
           ticketNumber,
           ticketAmount = amount,
           refreshAt = qrRefreshAt,

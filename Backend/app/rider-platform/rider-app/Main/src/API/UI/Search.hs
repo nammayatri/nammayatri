@@ -296,7 +296,7 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
                       then Just routeLiveInfo
                       else Nothing
                 )
-                mbRouteLiveInfo
+                (snd <$> mbRouteLiveInfo)
           _ -> return Nothing
       _ -> return Nothing
   let result

@@ -51,6 +51,7 @@ import Control.Monad.Extra (mapMaybeM)
 import qualified Data.HashMap.Strict as HashMap
 import Data.List (nub, nubBy, partition)
 import qualified Data.Text as T
+import Data.Time (defaultTimeLocale, formatTime, parseTimeM)
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
 import qualified Domain.Types.CancellationReason as SCR
 import qualified Domain.Types.Common as DTrip
@@ -71,9 +72,12 @@ import qualified Domain.Types.RouteStopMapping as DRSM
 import Domain.Types.RouteStopTimeTable (SourceType (..))
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.Station as DStation
+import Domain.Utils (mapConcurrently)
 import Environment
 import EulerHS.Prelude hiding (all, any, catMaybes, concatMap, elem, find, forM_, groupBy, id, length, map, mapM_, null, sum, toList, whenJust)
 import qualified ExternalBPP.CallAPI as CallExternalBPP
+import qualified ExternalBPP.ExternalAPI.CallAPI as DirectExternalBPP
+import qualified ExternalBPP.ExternalAPI.Types
 import Kernel.External.Maps.Google.MapsClient.Types (LatLngV2 (..), LocationV2 (..), WayPointV2 (..))
 import Kernel.External.Maps.Types (LatLong (..))
 import qualified Kernel.External.MultiModal.Interface as MultiModal
@@ -103,6 +107,7 @@ import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.Estimate as QEstimate
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
+import qualified Storage.Queries.FRFSTicket as QFRFSTicket
 import Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.Journey as QJourney
 import Storage.Queries.JourneyFeedback as SQJFB
@@ -665,7 +670,7 @@ getPublicTransportData (mbPersonId, merchantId) mbCity _mbConfigVersion mbVehicl
   mbVehicleLiveInfo <-
     case mbVehicleNumber of
       Just vehicleNumber -> do
-        vehicleLiveInfo <- JLU.getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber >>= fromMaybeM (InvalidVehicleNumber $ "Vehicle " <> vehicleNumber <> ", not found on any route")
+        vehicleLiveInfo <- (JLU.getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber >>= \mbResult -> pure $ ((.routeCode) . snd) <$> mbResult) >>= fromMaybeM (InvalidVehicleNumber $ "Vehicle " <> vehicleNumber <> ", not found on any route")
         return $ Just vehicleLiveInfo
       Nothing -> return Nothing
 
@@ -1489,23 +1494,85 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (_mbPersonId, _merchantId) j
   let vehicleNumber = req.vehicleNumber
   journey <- JM.getJourney journeyId
   journeyLeg <- QJourneyLeg.getJourneyLeg journeyId legOrder
+  legSearchId <- journeyLeg.legSearchId & fromMaybeM (InvalidRequest $ "Leg search ID not found for journey: " <> journeyLeg.id.getId)
+  booking <- QFRFSTicketBooking.findBySearchId (Id legSearchId) >>= fromMaybeM (BookingNotFound $ "FRFS booking with search ID:" <> legSearchId)
+  vehicleType <-
+    case journeyLeg.mode of
+      DTrip.Bus -> return Enums.BUS
+      DTrip.Metro -> return Enums.METRO
+      DTrip.Subway -> return Enums.SUBWAY
+      _ -> throwError $ UnsupportedVehicleType (show journeyLeg.mode)
+  integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig journey.merchantOperatingCityId vehicleType DIBC.MULTIMODAL
+  (integratedBPPConfig, vehicleLiveRouteInfo) <- JLU.getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber >>= fromMaybeM (VehicleUnserviceableOnRoute "Vehicle not found on any route")
   riderConfig <- QRiderConfig.findByMerchantOperatingCityId journey.merchantOperatingCityId >>= fromMaybeM (RiderConfigNotFound journey.merchantOperatingCityId.getId)
-  if riderConfig.validateSetOnboardingVehicleRequest == Just True
-    then do
-      let journeyLegRouteCodes = mapMaybe (.routeCode) journeyLeg.routeDetails <> (concat $ mapMaybe (.alternateRouteIds) journeyLeg.routeDetails)
-      vehicleType <-
-        case journeyLeg.mode of
-          DTrip.Bus -> return Enums.BUS
-          DTrip.Metro -> return Enums.METRO
-          DTrip.Subway -> return Enums.SUBWAY
-          _ -> throwError $ UnsupportedVehicleType (show journeyLeg.mode)
-      integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig journey.merchantOperatingCityId vehicleType DIBC.MULTIMODAL
-      vehicleLiveRouteInfo <- JLU.getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber >>= fromMaybeM (VehicleUnserviceableOnRoute "Vehicle not found on any route")
-      unless (vehicleLiveRouteInfo.routeCode `elem` journeyLegRouteCodes) $
-        throwError $ VehicleUnserviceableOnRoute ("Vehicle " <> vehicleNumber <> ", the route code " <> vehicleLiveRouteInfo.routeCode <> ", not found on any route: " <> show journeyLegRouteCodes)
-      unless (maybe False (\legServiceTypes -> vehicleLiveRouteInfo.serviceType `elem` legServiceTypes) journeyLeg.serviceTypes) $
-        throwError $ VehicleServiceTierUnserviceable ("Vehicle " <> vehicleNumber <> ", the service tier" <> show vehicleLiveRouteInfo.serviceType <> ", not found on any route: " <> show journeyLeg.serviceTypes)
-    else pure ()
+  unless (maybe False (\legServiceTypes -> vehicleLiveRouteInfo.serviceType `elem` legServiceTypes) journeyLeg.serviceTypes) $
+    throwError $ VehicleServiceTierUnserviceable ("Vehicle " <> vehicleNumber <> ", the service tier" <> show vehicleLiveRouteInfo.serviceType <> ", not found on any route: " <> show journeyLeg.serviceTypes)
+  mbNewRouteCode <-
+    if riderConfig.validateSetOnboardingVehicleRequest == Just True
+      then do
+        let journeyLegRouteCodes = mapMaybe (.routeCode) journeyLeg.routeDetails <> (concat $ mapMaybe (.alternateRouteIds) journeyLeg.routeDetails)
+        unless (vehicleLiveRouteInfo.routeCode `elem` journeyLegRouteCodes) $
+          throwError $ VehicleUnserviceableOnRoute ("Vehicle " <> vehicleNumber <> ", the route code " <> vehicleLiveRouteInfo.routeCode <> ", not found on any route: " <> show journeyLegRouteCodes)
+        pure $
+          if (vehicleLiveRouteInfo.routeCode `elem` mapMaybe (.routeCode) journeyLeg.routeDetails)
+            then Nothing
+            else do
+              let routeDetail = listToMaybe journeyLeg.routeDetails -- doing list to maybe as onluy need from and to stop codes, which will be same in all tickets
+              (vehicleLiveRouteInfo.routeCode,) <$> routeDetail
+      else pure Nothing
+  updateTicketQRData journey journeyLeg riderConfig integratedBPPConfig booking.id mbNewRouteCode
   QJourneyLeg.updateByPrimaryKey $ journeyLeg {DJourneyLeg.finalBoardedBusNumber = Just vehicleNumber}
   updatedLegs <- JM.getAllLegsInfo journey.riderId journeyId
   generateJourneyInfoResponse journey updatedLegs
+  where
+    formatUtcTime :: UTCTime -> Text
+    formatUtcTime utcTime = T.pack $ formatTime defaultTimeLocale "%d-%m-%Y %H:%M:%S" utcTime
+
+    parseUtcTime :: Text -> Maybe UTCTime
+    parseUtcTime t = parseTimeM True defaultTimeLocale "%d-%m-%Y %H:%M:%S" (T.unpack t)
+
+    updateTicketQRData journey journeyLeg riderConfig integratedBPPConfig ticketBookingId mbNewRouteCode = do
+      now <- getCurrentTime
+      let newExpiryTimeIst = addUTCTime (fromIntegral $ fromMaybe 7200 riderConfig.updateTicketValidityInSecondsPostSetOnboarding) (addUTCTime (secondsToNominalDiffTime 19800) now)
+      updatedTickets <-
+        DirectExternalBPP.generateUpdatedQRTicket
+          integratedBPPConfig
+          ticketBookingId
+          ( \ticket -> do
+              let mbPrevExpiryTime = parseUtcTime ticket.expiry
+              let newTicket =
+                    case mbPrevExpiryTime of
+                      Just prevExpiryTime -> do
+                        let finalNewExpiryIst = min newExpiryTimeIst prevExpiryTime
+                        ticket {ExternalBPP.ExternalAPI.Types.expiry = formatUtcTime finalNewExpiryIst, ExternalBPP.ExternalAPI.Types.expiryIST = finalNewExpiryIst}
+                      Nothing -> do
+                        ticket
+              case mbNewRouteCode of
+                Just (newRouteCode, routeDetail) -> do
+                  case (routeDetail.fromStopCode, routeDetail.toStopCode) of
+                    (Just fromStopCode, Just toStopCode) -> do
+                      mbNewRoute <- OTPRest.getRouteByRouteId integratedBPPConfig newRouteCode
+                      QRouteDetails.updateRoute (Just newRouteCode) (Just newRouteCode) ((.longName) <$> mbNewRoute) ((.shortName) <$> mbNewRoute) journeyLeg.id.getId
+                      fromRoute <- OTPRest.getRouteStopMappingByStopCodeAndRouteCode fromStopCode newRouteCode integratedBPPConfig <&> listToMaybe >>= fromMaybeM (RouteMappingDoesNotExist newRouteCode fromStopCode integratedBPPConfig.id.getId)
+                      toRoute <- OTPRest.getRouteStopMappingByStopCodeAndRouteCode toStopCode newRouteCode integratedBPPConfig <&> listToMaybe >>= fromMaybeM (RouteMappingDoesNotExist newRouteCode toStopCode integratedBPPConfig.id.getId)
+                      pure $
+                        newTicket
+                          { ExternalBPP.ExternalAPI.Types.fromRouteProviderCode = fromRoute.providerCode,
+                            ExternalBPP.ExternalAPI.Types.toRouteProviderCode = toRoute.providerCode
+                          }
+                    _ -> pure newTicket
+                Nothing -> do
+                  pure newTicket
+          )
+      void $
+        mapConcurrently
+          ( \ticketPayload -> do
+              qrData <- DirectExternalBPP.generateQR integratedBPPConfig ticketPayload
+              QFRFSTicket.udpateQrDataAndValidTill qrData ticketPayload.expiryIST ticketBookingId ticketPayload.ticketNumber
+          )
+          updatedTickets
+      case updatedTickets of
+        [] -> pure ()
+        (ticket : _) -> do
+          let newJourneyExpiry = addUTCTime (-19800) ticket.expiryIST
+          QJourney.updateJourneyExpiryTime journey.id $ fromMaybe newJourneyExpiry (max journey.journeyExpiryTime . Just $ newJourneyExpiry)

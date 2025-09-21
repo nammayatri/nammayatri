@@ -314,9 +314,9 @@ getPersonDetails (personId, _) toss tenant' context mbBundleVersion mbRnVersion 
       )
       vehicleTypes
   let isMultimodalRider = getIsMultimodalRider riderConfig.enableMultiModalForAllUsers decPerson.customerNammaTags integratedBPPConfigs
-  makeProfileRes decPerson tag mbMd5Digest isSafetyCenterDisabled_ newCustomerReferralCode hasTakenValidFirstCabRide hasTakenValidFirstAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig integratedBPPConfigs isMultimodalRider
+  makeProfileRes riderConfig decPerson tag mbMd5Digest isSafetyCenterDisabled_ newCustomerReferralCode hasTakenValidFirstCabRide hasTakenValidFirstAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig integratedBPPConfigs isMultimodalRider
   where
-    makeProfileRes Person.Person {..} disability md5DigestHash isSafetyCenterDisabled_ newCustomerReferralCode hasTakenCabRide hasTakenAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig integratedBPPConfigs isMultimodalRider = do
+    makeProfileRes riderConfig Person.Person {..} disability md5DigestHash isSafetyCenterDisabled_ newCustomerReferralCode hasTakenCabRide hasTakenAutoRide hasTakenValidFirstBikeRide hasTakenValidAmbulanceRide hasTakenValidTruckRide hasTakenValidBusRide safetySettings personStats cancellationPerc mbPayoutConfig integratedBPPConfigs isMultimodalRider = do
       gtfsVersion <-
         try @_ @SomeException (mapM OTPRest.getGtfsVersion integratedBPPConfigs) >>= \case
           Left _ -> return (map (.feedKey) integratedBPPConfigs)
@@ -347,7 +347,7 @@ getPersonDetails (personId, _) toss tenant' context mbBundleVersion mbRnVersion 
             referralAmountPaid = Just personStats.referralAmountPaid,
             isPayoutEnabled = mbPayoutConfig <&> (.isPayoutEnabled),
             cancellationRate = cancellationPerc,
-            publicTransportVersion = if null gtfsVersion then Nothing else Just (T.intercalate (T.pack "#") gtfsVersion),
+            publicTransportVersion = if null gtfsVersion then Nothing else Just (T.intercalate (T.pack "#") gtfsVersion <> (maybe "" (\version -> "#" <> show version) riderConfig.domainPublicTransportDataVersion)),
             customerTags = YUtils.convertTags $ fromMaybe [] customerNammaTags,
             ..
           }

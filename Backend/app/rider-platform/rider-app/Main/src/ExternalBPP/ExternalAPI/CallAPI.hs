@@ -19,6 +19,7 @@ import qualified ExternalBPP.ExternalAPI.Bus.EBIX.Order as EBIXOrder
 import qualified ExternalBPP.ExternalAPI.Bus.EBIX.Status as EBIXStatus
 import qualified ExternalBPP.ExternalAPI.Direct.Order as DIRECTOrder
 import qualified ExternalBPP.ExternalAPI.Direct.Status as DIRECTStatus
+import qualified ExternalBPP.ExternalAPI.Direct.Utils as DirectUTILS
 import qualified ExternalBPP.ExternalAPI.Direct.Verify as DIRECTVerify
 import qualified ExternalBPP.ExternalAPI.Metro.CMRL.BusinessHour as CMRLBusinessHour
 import qualified ExternalBPP.ExternalAPI.Metro.CMRL.DurationDetails as CMRLDurationDetails
@@ -167,6 +168,18 @@ verifyTicket :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow
 verifyTicket integrationBPPConfig encryptedQrData = do
   case integrationBPPConfig.providerConfig of
     DIRECT config' -> DIRECTVerify.verifyTicket config' encryptedQrData
+    _ -> throwError $ InternalError "Unimplemented!"
+
+generateQR :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => IntegratedBPPConfig -> TicketPayload -> m Text
+generateQR integrationBPPConfig ticketPayload = do
+  case integrationBPPConfig.providerConfig of
+    DIRECT config' -> DirectUTILS.generateQR config' ticketPayload
+    _ -> throwError $ InternalError "Unimplemented!"
+
+generateUpdatedQRTicket :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r) => IntegratedBPPConfig -> Id FRFSTicketBooking -> (TicketPayload -> m TicketPayload) -> m [TicketPayload]
+generateUpdatedQRTicket integrationBPPConfig ticketBookingId updateFn = do
+  case integrationBPPConfig.providerConfig of
+    DIRECT config' -> DIRECTVerify.generateUpdatedQRTicket config' ticketBookingId updateFn
     _ -> throwError $ InternalError "Unimplemented!"
 
 getBusinessHour :: (CoreMetrics m, MonadFlow m, CacheFlow m r, EncFlow m r, CacheFlow m r, EncFlow m r) => IntegratedBPPConfig -> m CMRLBusinessHour.BusinessHourResult
