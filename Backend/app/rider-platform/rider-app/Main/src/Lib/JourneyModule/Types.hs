@@ -1399,6 +1399,8 @@ data Gates = Gates
     osmEntrance :: Maybe KEMIT.MultiModalLegGate,
     osmExit :: Maybe KEMIT.MultiModalLegGate
   }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 getGates ::
   (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasShortDurationRetryCfg r c) =>

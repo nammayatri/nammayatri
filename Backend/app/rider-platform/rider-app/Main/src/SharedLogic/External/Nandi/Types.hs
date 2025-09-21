@@ -49,7 +49,9 @@ data RouteStopMappingInMemoryServer = RouteStopMappingInMemoryServer
     stopPoint :: Kernel.External.Maps.Types.LatLong,
     vehicleType :: BecknV2.FRFS.Enums.VehicleCategory,
     hindiName :: Maybe Text,
-    regionalName :: Maybe Text
+    regionalName :: Maybe Text,
+    parentStopCode :: Maybe Text,
+    gates :: Maybe [Gate]
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 

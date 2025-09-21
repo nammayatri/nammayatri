@@ -195,7 +195,7 @@ parseStationsFromInMemoryServer ::
   IntegratedBPPConfig ->
   m [Station.Station]
 parseStationsFromInMemoryServer stations integratedBPPConfig = do
-  let routeStopMappingInMemoryServerWithPublicData = map (\RouteStopMappingInMemoryServer {..} -> RouteStopMappingInMemoryServerWithPublicData estimatedTravelTimeFromPreviousStop providerCode routeCode sequenceNum stopCode stopName stopPoint vehicleType Nothing Nothing hindiName regionalName) stations
+  let routeStopMappingInMemoryServerWithPublicData = map (\RouteStopMappingInMemoryServer {..} -> RouteStopMappingInMemoryServerWithPublicData estimatedTravelTimeFromPreviousStop providerCode routeCode sequenceNum stopCode stopName stopPoint vehicleType Nothing gates hindiName regionalName parentStopCode) stations
   parseStationsFromInMemoryServerWithPublicData routeStopMappingInMemoryServerWithPublicData integratedBPPConfig
 
 parseStationsFromInMemoryServerWithPublicData ::
