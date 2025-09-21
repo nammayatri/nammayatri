@@ -206,7 +206,13 @@ getMultimodalBookingPaymentStatus (mbPersonId, merchantId) journeyId = do
       paymentOrder =
         anyFirstBooking >>= (.payment)
           <&> ( \p ->
-                  ApiTypes.PaymentOrder {sdkPayload = p.paymentOrder, status = p.status}
+                  ApiTypes.PaymentOrder
+                    { sdkPayload = p.paymentOrder,
+                      status =
+                        if any (\b -> (b.payment <&> (.status)) == Just FRFSTicketService.SUCCESS) frfsBookingStatusArr
+                          then FRFSTicketService.SUCCESS
+                          else p.status
+                    }
               )
       allLegsOnInitDone = all (\b -> b.journeyOnInitDone == Just True) allJourneyFrfsBookings
   let paymentFareUpdate =
