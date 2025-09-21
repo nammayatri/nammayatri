@@ -7,6 +7,7 @@ import BecknV2.FRFS.Utils
 import qualified BecknV2.OnDemand.Enums as Enums
 import Control.Applicative ((<|>))
 import qualified Data.HashMap.Strict as HM
+import Data.List (partition)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Text.Encoding as TE
 import qualified Data.Time as Time
@@ -28,6 +29,7 @@ import qualified Domain.Types.RouteDetails as RD
 import Domain.Types.RouteStopMapping (RouteStopMapping)
 import Domain.Types.Station
 import Domain.Types.Trip as DTrip
+import Domain.Utils (mapConcurrently)
 import ExternalBPP.CallAPI as CallExternalBPP
 import ExternalBPP.ExternalAPI.CallAPI as CallAPI
 import qualified ExternalBPP.Flow as Flow
@@ -82,15 +84,15 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
           logDebug $ "CFRFS getState: Processing Bus leg for booking with searchId: " <> show searchId.getId
           mbCurrentLegDetails <- QJourneyLeg.findByLegSearchId (Just searchId.getId)
 
-          let routeCodeToUseForTrackVehicles = routeCodeForDetailedTracking <|> (mbCurrentLegDetails >>= (listToMaybe . (.routeDetails)) >>= (.routeGtfsId) <&> gtfsIdtoDomainCode)
+          let bookedForRouteId = routeCodeForDetailedTracking <|> (mbCurrentLegDetails >>= (listToMaybe . (.routeDetails)) >>= (.routeGtfsId) <&> gtfsIdtoDomainCode)
+
+          let routesToUseForTrackVehicles = concat (mapMaybe (.alternateRouteIds) journeyLeg.routeDetails) <> (fromMaybe [] $ bookedForRouteId <&> (: []))
 
           -- Fetch all bus data for the route using getRoutesBuses
-          (allBusDataForRoute, routeStopMapping) <- case routeCodeToUseForTrackVehicles of
-            Just rc -> do
-              buses <- (.buses) <$> CQMMB.getRoutesBuses rc
-              routeStopMapping <- HM.fromList . map (\a -> (a.stopCode, a)) <$> OTPRest.getRouteStopMappingByRouteCode rc integratedBppConfig
-              return (buses, routeStopMapping)
-            Nothing -> pure ([], HM.empty)
+          (allBusDataForRoute, routeStopMappings) <- do
+            buses <- concat <$> mapConcurrently (\rc -> (.buses) <$> CQMMB.getRoutesBuses rc) routesToUseForTrackVehicles
+            routeStopMappings <- HM.fromList <$> mapM (\rc -> (rc,) <$> HM.fromList . map (\a -> (a.stopCode, a)) <$> OTPRest.getRouteStopMappingByRouteCode rc integratedBppConfig) routesToUseForTrackVehicles
+            return (buses, routeStopMappings)
 
           -- Fetch user's boarding station and leg's end station details
           mbUserBoardingStation <- OTPRest.getStationByGtfsIdAndStopCode booking.fromStationCode integratedBppConfig
@@ -118,13 +120,13 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
             processBusLegState
               now
               mbCurrentLegDetails
-              routeCodeToUseForTrackVehicles
+              bookedForRouteId
               riderLastPoints
               booking.merchantOperatingCityId
               mbUserBoardingStation
               mbLegEndStation
               allBusDataForRoute
-              routeStopMapping
+              routeStopMappings
               trackingStatus
               movementDetected
 
@@ -156,15 +158,15 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
         DTrip.Bus -> do
           mbCurrentLegDetails <- QJourneyLeg.findByLegSearchId (Just searchId.getId)
 
-          let routeCodeToUseForTrackVehicles = routeCodeForDetailedTracking <|> (mbCurrentLegDetails >>= (listToMaybe . (.routeDetails)) >>= (.routeGtfsId) <&> gtfsIdtoDomainCode)
+          let bookedForRouteId = routeCodeForDetailedTracking <|> (mbCurrentLegDetails >>= (listToMaybe . (.routeDetails)) >>= (.routeGtfsId) <&> gtfsIdtoDomainCode)
+
+          let routesToUseForTrackVehicles = concat (mapMaybe (.alternateRouteIds) journeyLeg.routeDetails) <> (fromMaybe [] $ bookedForRouteId <&> (: []))
 
           -- Fetch all bus data for the route using getRoutesBuses
-          (allBusDataForRoute, routeStopMapping) <- case routeCodeToUseForTrackVehicles of
-            Just rc -> do
-              buses <- (.buses) <$> CQMMB.getRoutesBuses rc
-              routeStopMapping <- HM.fromList . map (\a -> (a.stopCode, a)) <$> OTPRest.getRouteStopMappingByRouteCode rc integratedBppConfig
-              return (buses, routeStopMapping)
-            Nothing -> pure ([], HM.empty)
+          (allBusDataForRoute, routeStopMappings) <- do
+            buses <- concat <$> mapConcurrently (\rc -> (.buses) <$> CQMMB.getRoutesBuses rc) routesToUseForTrackVehicles
+            routeStopMappings <- HM.fromList <$> mapM (\rc -> (rc,) <$> HM.fromList . map (\a -> (a.stopCode, a)) <$> OTPRest.getRouteStopMappingByRouteCode rc integratedBppConfig) routesToUseForTrackVehicles
+            return (buses, routeStopMappings)
 
           -- Fetch user's boarding station and leg's end station details
           mbUserBoardingStation <- OTPRest.getStationByGtfsIdAndStopCode searchReq.fromStationCode integratedBppConfig
@@ -191,13 +193,13 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
             processBusLegState
               now
               mbCurrentLegDetails
-              routeCodeToUseForTrackVehicles
+              bookedForRouteId
               riderLastPoints
               searchReq.merchantOperatingCityId
               mbUserBoardingStation
               mbLegEndStation
               allBusDataForRoute
-              routeStopMapping
+              routeStopMappings
               trackingStatus
               movementDetected
 
@@ -429,7 +431,7 @@ processBusLegState ::
   Maybe Station ->
   Maybe Station ->
   [FullBusData] ->
-  HM.HashMap Text RouteStopMapping ->
+  HM.HashMap Text (HM.HashMap Text RouteStopMapping) ->
   JMStateTypes.TrackingStatus ->
   Bool ->
   m [JT.VehiclePosition]
@@ -442,7 +444,7 @@ processBusLegState
   mbUserBoardingStation
   mbLegEndStation
   allBusDataForRoute
-  routeStopMapping
+  routeStopMappings
   journeyLegTrackingStatus
   movementDetected = do
     logDebug $ "movementDetected: " <> show movementDetected <> " journeyLegTrackingStatus: " <> show journeyLegTrackingStatus
@@ -472,6 +474,7 @@ processBusLegState
                 case mbBestFullBusData of
                   Just bestFullBusData -> do
                     let bestBusData = bestFullBusData.busData
+                    let routeStopMapping = HM.lookup bestBusData.route_id routeStopMappings
                     let upcomingStops =
                           if journeyLegTrackingStatus `elem` [JMStateTypes.Arriving, JMStateTypes.AlmostArrived, JMStateTypes.Arrived]
                             then getUpcomingStopsForBus routeStopMapping now mbUserBoardingStation bestBusData False -- Stops up to boarding for OnTheWay
@@ -523,6 +526,7 @@ processBusLegState
         logDebug $ "Looking for bus number: " <> show busNum
         case find (\bd -> bd.vehicleNumber == busNum) allBusDataForRoute of
           Just bestBusData -> do
+            let routeStopMapping = HM.lookup bestBusData.busData.route_id routeStopMappings
             let upcomingStops = getUpcomingStopsForBus routeStopMapping now mbLegEndStation bestBusData.busData True
             logDebug $ "findVehiclePositionFromSequence upcomingStops: " <> show upcomingStops <> " " <> show bestBusData.busData.latitude <> " " <> show bestBusData.busData.longitude
             pure
@@ -541,10 +545,12 @@ processBusLegState
         let filteredBusData = case mbBoardingStation of
               Just boardingStation -> filter (isYetToReachStop boardingStation.code) allBusData
               Nothing -> allBusData
-        logDebug $ "filteredBusData: " <> show filteredBusData
+        let (confirmedHighBuses, ghostBuses) = partition (\a -> a.busData.route_state == Just CQMMB.ConfirmedHigh) filteredBusData
+        logInfo $ "confirmedHighBuses: " <> show (length confirmedHighBuses) <> " ghostBuses: " <> show (length ghostBuses)
         pure $
           map
-            ( \bd ->
+            ( \bd -> do
+                let routeStopMapping = HM.lookup bd.busData.route_id routeStopMappings
                 JT.VehiclePosition
                   { position = Just $ LatLong bd.busData.latitude bd.busData.longitude,
                     vehicleId = bd.vehicleNumber,
@@ -552,18 +558,18 @@ processBusLegState
                     upcomingStops = getUpcomingStopsForBus routeStopMapping now mbBoardingStation bd.busData False
                   }
             )
-            filteredBusData
+            confirmedHighBuses
 
 getUpcomingStopsForBus ::
-  HM.HashMap Text RouteStopMapping ->
+  Maybe (HM.HashMap Text RouteStopMapping) ->
   UTCTime -> -- Current time (`now`)
   Maybe Station -> -- The target station (e.g., boarding or destination)
   BusData -> -- The specific bus's data, containing `eta_data`
   Bool -> -- `True` if filtering from current time onwards, `False` otherwise (e.g., for OnTheWay, we might want all stops up to boarding)
   [JT.NextStopDetails]
-getUpcomingStopsForBus routeStopMapping now mbTargetStation busData filterFromCurrentTime =
-  case busData.eta_data of
-    Just etaData ->
+getUpcomingStopsForBus mbRouteStopMapping now mbTargetStation busData filterFromCurrentTime =
+  case (busData.eta_data, mbRouteStopMapping) of
+    (Just etaData, Just routeStopMapping) ->
       let -- Filter stops up to the target station
           stopsUpToTarget :: [CQMMB.BusStopETA] = case mbTargetStation of
             Just targetStation -> fst $ foldl' (\(eta_data_acc, foundTarget) bs -> if not foundTarget then (bs : eta_data_acc, bs.stopCode == targetStation.code) else (eta_data_acc, True)) ([], False) etaData
@@ -596,7 +602,7 @@ getUpcomingStopsForBus routeStopMapping now mbTargetStation busData filterFromCu
                         stopName = Nothing
                       }
        in map toNextStopDetails filteredStops
-    Nothing -> []
+    _ -> []
 
 getNearbyBusesFRFS :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig], HasField "ltsHedisEnv" r Redis.HedisEnv, HasShortDurationRetryCfg r c, HasKafkaProducer r) => LatLong -> DomainRiderConfig.RiderConfig -> m [BusDataWithRoutesInfo]
 getNearbyBusesFRFS userPos' riderConfig = do
