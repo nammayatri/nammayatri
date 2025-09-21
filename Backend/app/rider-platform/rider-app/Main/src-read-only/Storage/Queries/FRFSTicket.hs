@@ -26,7 +26,7 @@ createMany = traverse_ create
 findAllByStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.FRFSTicketStatus.FRFSTicketStatus -> m (Maybe Domain.Types.FRFSTicket.FRFSTicket))
 findAllByStatus status = do findOneWithKV [Se.Is Beam.status $ Se.Eq status]
 
-findAllByTicketBookingId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ([Domain.Types.FRFSTicket.FRFSTicket]))
+findAllByTicketBookingId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m [Domain.Types.FRFSTicket.FRFSTicket])
 findAllByTicketBookingId frfsTicketBookingId = do findAllWithKV [Se.Is Beam.frfsTicketBookingId $ Se.Eq (Kernel.Types.Id.getId frfsTicketBookingId)]
 
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.FRFSTicket.FRFSTicket -> m (Maybe Domain.Types.FRFSTicket.FRFSTicket))
@@ -45,6 +45,19 @@ findByTicketBookingIdTicketNumber frfsTicketBookingId ticketNumber = do
 
 findOneByTicketNumber :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Text -> m (Maybe Domain.Types.FRFSTicket.FRFSTicket))
 findOneByTicketNumber ticketNumber = do findOneWithKV [Se.Is Beam.ticketNumber $ Se.Eq ticketNumber]
+
+udpateQrDataAndValidTill ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Text -> Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> Kernel.Prelude.Text -> m ())
+udpateQrDataAndValidTill qrData validTill frfsTicketBookingId ticketNumber = do
+  _now <- getCurrentTime
+  updateWithKV
+    [Se.Set Beam.qrData qrData, Se.Set Beam.validTill validTill, Se.Set Beam.updatedAt _now]
+    [ Se.And
+        [ Se.Is Beam.frfsTicketBookingId $ Se.Eq (Kernel.Types.Id.getId frfsTicketBookingId),
+          Se.Is Beam.ticketNumber $ Se.Eq ticketNumber
+        ]
+    ]
 
 updateAllStatusByBookingId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>

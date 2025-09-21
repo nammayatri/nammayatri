@@ -13,6 +13,7 @@ data TicketPayload = TicketPayload
     ticketNumber :: Text,
     ticketAmount :: Money,
     expiry :: Text,
+    expiryIST :: UTCTime,
     refreshAt :: Maybe UTCTime,
     otpCode :: Maybe Int
   }

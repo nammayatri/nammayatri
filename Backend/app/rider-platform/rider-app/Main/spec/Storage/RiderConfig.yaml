@@ -159,6 +159,8 @@ RiderConfig:
     trackVehicleKeyExpiry: Maybe Int
     distanceToNearestStopThreshold: Maybe Int
     validateSetOnboardingVehicleRequest: Maybe Bool
+    domainPublicTransportDataVersion: Maybe Int
+    updateTicketValidityInSecondsPostSetOnboarding: Maybe Seconds
 
   beamType:
     ivrTriggerDelay: Maybe Seconds

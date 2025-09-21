@@ -368,7 +368,7 @@ getVehicleServiceType ::
   IntegratedBPPConfig ->
   Text ->
   m (Maybe VehicleServiceTypeResponse)
-getVehicleServiceType integratedBPPConfig vehicleNumber = IM.withInMemCache ["VST", integratedBPPConfig.id.getId, vehicleNumber] $ do
+getVehicleServiceType integratedBPPConfig vehicleNumber = do
   baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
   Flow.getVehicleServiceType baseUrl vehicleNumber
 

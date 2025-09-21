@@ -425,3 +425,14 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN journey_options_sorting_type text 
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN update_ticket_validity_in_seconds_post_set_onboarding integer ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN domain_public_transport_data_version integer ;
+
+
+------- SQL updates -------
+

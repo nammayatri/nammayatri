@@ -1295,12 +1295,20 @@ getVehicleLiveRouteInfo ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
   [DIntegratedBPPConfig.IntegratedBPPConfig] ->
   Text ->
-  m (Maybe VehicleLiveRouteInfo)
+  m (Maybe (DIntegratedBPPConfig.IntegratedBPPConfig, VehicleLiveRouteInfo))
 getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber = do
   mbMbResult <-
     SIBC.fetchFirstIntegratedBPPConfigRightResult integratedBPPConfigs $ \config ->
-      OTPRest.getVehicleServiceType config vehicleNumber
-  return $ mbMbResult >>= \mbResult -> mbResult <&> (\result -> VehicleLiveRouteInfo {vehicleNumber = vehicleNumber, routeCode = result.route_id, serviceType = result.service_type})
+      (config,) <$> OTPRest.getVehicleServiceType config vehicleNumber
+  return $
+    mbMbResult
+      >>= \(integratedBPPConfig, mbResult) ->
+        mbResult
+          <&> ( \result ->
+                  ( integratedBPPConfig,
+                    VehicleLiveRouteInfo {vehicleNumber = vehicleNumber, routeCode = result.route_id, serviceType = result.service_type}
+                  )
+              )
 
 sortAndGetBusFares :: (EsqDBFlow m r, CacheFlow m r, MonadFlow m) => Id MerchantOperatingCity -> [FRFSFare] -> m (Maybe FRFSFare)
 sortAndGetBusFares merchantOpCityId finalFares = do

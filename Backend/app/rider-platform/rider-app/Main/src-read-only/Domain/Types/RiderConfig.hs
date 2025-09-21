@@ -44,6 +44,7 @@ data RiderConfig = RiderConfig
     cxAgentDetails :: Kernel.Prelude.Maybe [IssueManagement.Common.CxAgentDetails],
     distanceToNearestStopThreshold :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     distanceWeightage :: Kernel.Prelude.Int,
+    domainPublicTransportDataVersion :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     domainRouteCalculationEnabledModes :: Kernel.Prelude.Maybe [Kernel.External.MultiModal.Interface.Types.GeneralVehicleType],
     driverReferredSearchReqExpiry :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     dynamicLogicUpdatePassword :: Kernel.Prelude.Text,
@@ -126,6 +127,7 @@ data RiderConfig = RiderConfig
     trackVehicleKeyExpiry :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     trackingShortUrlPattern :: Kernel.Prelude.Text,
     upcomingBusThresholdSec :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    updateTicketValidityInSecondsPostSetOnboarding :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     useUserSettingsForSafetyIVR :: Kernel.Prelude.Bool,
     userServiceTierOrderConfig :: [Domain.Types.Extra.RiderConfig.VehicleServiceTierOrderConfig],
     validateSetOnboardingVehicleRequest :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -135,7 +137,7 @@ data RiderConfig = RiderConfig
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
-  deriving (Show, (Generic), (ToJSON), (FromJSON), (Eq))
+  deriving (Show, Generic, ToJSON, FromJSON, Eq)
 
 data BusTierSortingConfig = BusTierSortingConfig {rank :: Kernel.Prelude.Int, tier :: BecknV2.FRFS.Enums.ServiceTierType} deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
@@ -160,4 +162,4 @@ data ServiceTierRelationshipCfg = ServiceTierRelationshipCfg {canBoardIn :: [Bec
 
 data ServiceTierSource = NANDI | QUOTES deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''ServiceTierSource))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''ServiceTierSource)

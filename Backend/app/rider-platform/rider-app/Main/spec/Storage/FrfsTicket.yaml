@@ -539,6 +539,11 @@ FRFSTicket:
       params: [status, updatedAt]
       where:
         and: [frfsTicketBookingId]
+    udpateQrDataAndValidTill:
+      kvFunction: updateWithKV
+      params: [qrData, validTill]
+      where:
+        and: [frfsTicketBookingId, ticketNumber]
     updateRefreshTicketQRByTBookingIdAndTicketNumber:
       kvFunction: updateWithKV
       params: [qrData, qrRefreshAt]

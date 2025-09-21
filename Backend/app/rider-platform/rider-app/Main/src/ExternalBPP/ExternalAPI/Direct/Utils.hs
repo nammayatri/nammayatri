@@ -7,6 +7,7 @@ import Data.ByteString hiding (length)
 import qualified Data.ByteString.Base64 as Base64
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
+import Data.Time (defaultTimeLocale, parseTimeM)
 import Domain.Types.IntegratedBPPConfig
 import ExternalBPP.ExternalAPI.Types
 import Kernel.Prelude
@@ -59,6 +60,8 @@ decodeQR config signatureAndQrData = do
     case T.strip <$> T.splitOn "," qrData of
       [ticketNumber, fromRouteProviderCode, toRouteProviderCode, adultQuantity', childQuantity', vehicleTypeProviderCode, ticketAmount', otpCode', colorCode, expiry, refreshAt'] -> pure (ticketNumber, fromRouteProviderCode, toRouteProviderCode, adultQuantity', childQuantity', vehicleTypeProviderCode, ticketAmount', otpCode', colorCode, expiry, refreshAt')
       _ -> throwError (InvalidRequest "Unable to decode QR data")
+  now <- getCurrentTime
+  let expiryIST = fromMaybe (addUTCTime (secondsToNominalDiffTime 330) now) $ parseUtcTime expiry
   adultQuantity :: Int <- (readMaybe . T.unpack $ adultQuantity') & fromMaybeM (InvalidRequest "Unable to decode adult quantity")
   childQuantity :: Int <- (readMaybe . T.unpack $ childQuantity') & fromMaybeM (InvalidRequest "Unable to decode child quantity")
   ticketAmount :: Money <- (readMaybe . T.unpack $ ticketAmount') & fromMaybeM (InvalidRequest "Unable to decode ticket amount")
@@ -68,6 +71,9 @@ decodeQR config signatureAndQrData = do
     TicketPayload
       { ..
       }
+  where
+    parseUtcTime :: Text -> Maybe UTCTime
+    parseUtcTime t = parseTimeM True defaultTimeLocale "%d-%m-%Y %H:%M:%S" (T.unpack t)
 
 refreshQR :: (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DIRECTConfig -> Text -> m (Maybe (Text, UTCTime))
 refreshQR config signatureAndQrData = do
