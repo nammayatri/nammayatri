@@ -548,7 +548,7 @@ processBusLegState
         let filteredBusData = case mbBoardingStation of
               Just boardingStation -> filter (isYetToReachStop boardingStation.code) allBusData
               Nothing -> allBusData
-        let (confirmedHighBuses, _ghostBuses) = partition (\a -> a.busData.route_state == Just CQMMB.ConfirmedHigh) filteredBusData
+        let (confirmedHighBuses, ghostBuses) = partition (\a -> a.busData.route_state == Just CQMMB.ConfirmedHigh) filteredBusData
         logInfo $ "confirmedHighBuses: " <> show (length confirmedHighBuses) <> " ghostBuses: " <> show (length ghostBuses)
         pure $
           map
