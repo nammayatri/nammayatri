@@ -61,8 +61,9 @@ data GetPersonFlowStatusRes = GetPersonFlowStatusRes
 data FrontendEvent = RATE_DRIVER_SKIPPED | SEARCH_CANCELLED
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
-newtype NotifyEventReq = NotifyEventReq
-  { event :: FrontendEvent
+data NotifyEventReq = NotifyEventReq
+  { event :: FrontendEvent,
+    journeyId :: Maybe (Id DJ.Journey)
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -107,22 +108,6 @@ getPersonFlowStatus personId merchantId _ pollActiveBooking = do
             _ -> checkForActiveBooking
         Nothing -> checkForActiveBooking
   where
-    -- filter payment success journeys and update journey status if expired
-    processJourneys :: UTCTime -> [DJ.Journey] -> Flow [DJ.Journey]
-    processJourneys _ [] = return []
-    processJourneys now journeys = do
-      updatedJourneys <- mapM updateJourneyStatus journeys
-      return $ filter (\j -> j.status /= DJ.EXPIRED) updatedJourneys
-      where
-        updateJourneyStatus j = do
-          case j.journeyExpiryTime of
-            Just expiryTime ->
-              if now > expiryTime
-                then do
-                  _ <- JM.updateJourneyStatus j DJ.EXPIRED
-                  return j {DJ.status = DJ.EXPIRED}
-                else return j
-            Nothing -> return j
     isNormalRideJourney :: DJ.Journey -> Bool
     isNormalRideJourney journey =
       case listToMaybe journey.modes of
@@ -169,10 +154,44 @@ notifyEvent personId merchantId req = do
           let mbRideId = booking.rideList & listToMaybe <&> (.id)
           whenJust mbRideId $ \rideId -> QR.updateFeedbackSkipped True rideId
         _ -> pure ()
-      activeJourneys <- QJourney.findAllActiveByRiderId personId
-      mapM_ (QJourney.updateStatus DJ.COMPLETED) (activeJourneys <&> (.id))
+      case req.journeyId of
+        Just journeyId -> do
+          QJourney.updateStatus DJ.COMPLETED journeyId
+          fork "processOtherActiveJourneys" $ do
+            now <- getCurrentTime
+            activeJourneys <- QJourney.findAllActiveByRiderId personId
+            processedActiveJourneys <- processJourneys now activeJourneys
+            markJourneysComplete processedActiveJourneys
+        -- TODO: For backward compatibility
+        Nothing -> do
+          activeJourneys <- QJourney.findAllActiveByRiderId personId
+          markJourneysComplete activeJourneys
     SEARCH_CANCELLED -> do
       activeBooking <- B.runInReplica $ QB.findLatestSelfAndPartyBookingByRiderId personId
       whenJust activeBooking $ \booking -> processActiveBooking booking OnSearch
       QPFS.updateStatus personId DPFS.IDLE
   pure APISuccess.Success
+  where
+    markJourneysComplete =
+      mapM_
+        ( \journey ->
+            when (journey.status `notElem` [DJ.COMPLETED, DJ.EXPIRED, DJ.CANCELLED, DJ.FAILED]) $
+              JM.updateJourneyStatus journey DJ.COMPLETED
+        )
+
+-- filter payment success journeys and update journey status if expired
+processJourneys :: UTCTime -> [DJ.Journey] -> Flow [DJ.Journey]
+processJourneys _ [] = return []
+processJourneys now journeys = do
+  updatedJourneys <- mapM updateJourneyStatus journeys
+  return $ filter (\j -> j.status /= DJ.EXPIRED) updatedJourneys
+  where
+    updateJourneyStatus j = do
+      case j.journeyExpiryTime of
+        Just expiryTime ->
+          if now > expiryTime
+            then do
+              _ <- JM.updateJourneyStatus j DJ.EXPIRED
+              return j {DJ.status = DJ.EXPIRED}
+            else return j
+        Nothing -> return j
