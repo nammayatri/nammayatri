@@ -63,6 +63,7 @@ import ExternalBPP.ExternalAPI.CallAPI as CallAPI
 import ExternalBPP.ExternalAPI.Subway.CRIS.RouteFare as CRISRouteFare
 import Kernel.External.Encryption
 import Kernel.External.Maps.Google.MapsClient.Types
+import Kernel.External.Maps.Types
 import qualified Kernel.External.Maps.Types as MapsTypes
 import qualified Kernel.External.MultiModal.Interface as MInterface
 import qualified Kernel.External.MultiModal.Interface as MultiModal
@@ -78,6 +79,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Types.SlidingWindowLimiter
 import Kernel.Types.Version
+import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
 import Kernel.Utils.SlidingWindowLimiter
 import Kernel.Utils.Version
@@ -504,6 +506,8 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
           route' = route_ {duration = totalDuration, legs = updatedLegs, endTime = updatedEndTime} :: MultiModalTypes.MultiModalRoute
       return route'
 
+    straightLineDistance leg = highPrecMetersToMeters $ distanceBetweenInMeters (LatLong leg.startLocation.latLng.latitude leg.startLocation.latLng.longitude) (LatLong leg.endLocation.latLng.latitude leg.endLocation.latLng.longitude)
+
     -- Calculate proportional duration only for Walk and Unspecified legs
     calculateLegProportionalDuration :: MultiModalTypes.MultiModalLeg -> Flow MultiModalTypes.MultiModalLeg
     calculateLegProportionalDuration leg = do
@@ -511,7 +515,7 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
           totalEstimatedDistance = fromMaybe (Distance 0 Meter) searchRequest.distance
       case leg.mode of
         MultiModalTypes.Walk ->
-          if (distanceToMeters leg.distance) > riderConfig.maximumWalkDistance
+          if straightLineDistance leg > riderConfig.maximumWalkDistance
             then do
               -- Call OSRM for taxi/auto (car) distance/duration, fallback to proportional duration if it fails
               res <-
