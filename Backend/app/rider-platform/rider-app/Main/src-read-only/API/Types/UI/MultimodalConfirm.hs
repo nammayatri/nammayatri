@@ -253,6 +253,10 @@ data RouteAvailabilityResp = RouteAvailabilityResp {availableRoutes :: [Availabl
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data SetRouteNameReq = SetRouteNameReq {journeyId :: Kernel.Types.Id.Id Domain.Types.Journey.Journey, legOrder :: Kernel.Prelude.Int, shortName :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data SimilarJourneyLegsResp = SimilarJourneyLegsResp {allLegsLoaded :: Kernel.Prelude.Bool, journeyLegsInfo :: [Lib.JourneyModule.Utils.JourneyLegOption]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

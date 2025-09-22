@@ -34,6 +34,7 @@ module Domain.Action.UI.MultimodalConfirm
     postMultimodalRouteAvailability,
     postMultimodalSwitchRoute,
     postMultimodalOrderSublegSetOnboardedVehicleDetails,
+    postMultimodalSetRouteName,
   )
 where
 
@@ -1122,6 +1123,35 @@ postMultimodalOrderSwitchJourneyLeg _ journeyId legOrder req = do
               )
               Nothing
               legs
+
+postMultimodalSetRouteName ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    API.Types.UI.MultimodalConfirm.SetRouteNameReq ->
+    Environment.Flow API.Types.UI.MultimodalConfirm.JourneyInfoResp
+  )
+postMultimodalSetRouteName userInfo req =
+  setRouteByShortName userInfo req.journeyId req.legOrder req.shortName
+  where
+    setRouteByShortName userInfo' journeyId legOrder shortName = do
+      journey <- JM.getJourney journeyId
+      journeyLeg <- QJourneyLeg.getJourneyLeg journeyId legOrder
+      unless (journeyLeg.mode == DTrip.Bus) $ throwError $ InvalidRequest "Only Bus legs supported for route name update"
+
+      options <- getMultimodalOrderGetLegTierOptions userInfo' journeyId legOrder
+      let mbMatch =
+            listToMaybe $ do
+              option <- options.options
+              routeInfo <- option.availableRoutesInfo
+              if routeInfo.shortName == shortName then [routeInfo] else []
+
+      case mbMatch of
+        Nothing -> throwError $ InvalidRequest "Invalid route short name for the leg"
+        Just routeInfo -> do
+          QRouteDetails.updateRoute (Just routeInfo.routeCode) (Just routeInfo.routeCode) (Just routeInfo.longName) (Just routeInfo.shortName) journeyLeg.id.getId
+          updatedLegs <- JM.getAllLegsInfo journey.riderId journeyId
+          generateJourneyInfoResponse journey updatedLegs
 
 postMultimodalOrderChangeStops ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
