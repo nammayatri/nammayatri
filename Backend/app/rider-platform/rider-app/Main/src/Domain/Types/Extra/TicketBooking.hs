@@ -32,3 +32,9 @@ instance ToParamSchema BookingStatus where
 $(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''BookingStatus)
 
 $(mkHttpInstancesForEnum ''BookingStatus)
+
+data PaymentMethod = ONLINE | CASH deriving (Eq, Ord, Show, Read, Enum, Bounded, Generic, ToJSON, FromJSON)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PaymentMethod)
+
+$(mkHttpInstancesForEnum ''PaymentMethod)

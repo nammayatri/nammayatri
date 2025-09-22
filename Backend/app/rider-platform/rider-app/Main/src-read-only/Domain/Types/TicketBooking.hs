@@ -27,6 +27,7 @@ data TicketBooking = TicketBooking
     createdAt :: Kernel.Prelude.UTCTime,
     id :: Kernel.Types.Id.Id Domain.Types.TicketBooking.TicketBooking,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
+    paymentMethod :: Kernel.Prelude.Maybe Domain.Types.Extra.TicketBooking.PaymentMethod,
     peopleTicketQuantity :: Kernel.Prelude.Maybe [Domain.Types.TicketBooking.PeopleTicketQuantity],
     personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     shortId :: Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking,

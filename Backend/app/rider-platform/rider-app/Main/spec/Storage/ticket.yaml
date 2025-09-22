@@ -22,6 +22,7 @@ imports:
   Value: Data.Aeson
   TimeBound : Kernel.Types.TimeBound
   BookingStatus: Domain.Types.Extra.TicketBooking
+  PaymentMethod: Domain.Types.Extra.TicketBooking
   Day: Data.Time
   VendorSplitDetails: Tools.Payment
   SplitType: Tools.Payment
@@ -608,6 +609,7 @@ TicketBooking:
     vendorSplitDetails: "Maybe [VendorSplitDetails]"
     blockExpirationTime: Maybe Double
     peopleTicketQuantity: "Maybe [PeopleTicketQuantity]"
+    paymentMethod: Maybe PaymentMethod
 
   types:
     PeopleTicketQuantity:
@@ -670,6 +672,10 @@ TicketBooking:
       kvFunction: updateOneWithKV
       params: [status, cancelledSeats, updatedAt]
       where: id
+    updatePaymentMethodByShortId:
+      kvFunction: updateOneWithKV
+      params: [paymentMethod, updatedAt]
+      where: shortId
     getAllBookingsByPersonId:
       kvFunction: findAllWithOptionsKV
       where:
