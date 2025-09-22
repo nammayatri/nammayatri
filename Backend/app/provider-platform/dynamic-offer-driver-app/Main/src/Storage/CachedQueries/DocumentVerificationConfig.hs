@@ -33,6 +33,7 @@ import Domain.Types.DocumentVerificationConfig as DTO
   )
 import Domain.Types.MerchantOperatingCity
 import Domain.Types.VehicleCategory
+import qualified Domain.Types.VehicleCategory as DTV
 import Kernel.Prelude
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -85,5 +86,5 @@ clearCache merchantOpCityId =
 update :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DocumentVerificationConfig -> m ()
 update = Queries.update
 
-updateSupportedVehicleClassesJSON :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> SupportedVehicleClasses -> m ()
+updateSupportedVehicleClassesJSON :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> SupportedVehicleClasses -> DTV.VehicleCategory -> m ()
 updateSupportedVehicleClassesJSON = Queries.updateSupportedVehicleClassesJSON
