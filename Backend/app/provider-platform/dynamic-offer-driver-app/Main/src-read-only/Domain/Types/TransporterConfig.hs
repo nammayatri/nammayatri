@@ -133,6 +133,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     enableFaceVerification :: Kernel.Prelude.Bool,
     enableFleetWallet :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableOverchargingBlocker :: Kernel.Prelude.Bool,
+    enableTdsDeduction :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableTollCrossedNotifications :: Kernel.Prelude.Bool,
     enableUdfForOffers :: Kernel.Prelude.Bool,
     enableWalletPayout :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,

@@ -128,6 +128,7 @@ data TransporterConfigT f = TransporterConfigT
     enableFaceVerification :: B.C f Kernel.Prelude.Bool,
     enableFleetWallet :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableOverchargingBlocker :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    enableTdsDeduction :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableTollCrossedNotifications :: B.C f Kernel.Prelude.Bool,
     enableUdfForOffers :: B.C f Kernel.Prelude.Bool,
     enableWalletPayout :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),

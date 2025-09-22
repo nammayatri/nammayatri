@@ -274,6 +274,7 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
                         transactionType = DW.TOPUP,
                         collectionAmount = Nothing,
                         gstDeduction = Nothing,
+                        tdsDeduction = Nothing,
                         merchantPayable = Nothing,
                         driverPayable = Just driverFee.totalEarnings,
                         runningBalance = newBalance,
