@@ -26,6 +26,7 @@ data JourneyLeg = JourneyLeg
     estimatedMaxFare :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     estimatedMinFare :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     finalBoardedBusNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    finalBoardedBusNumberUpdatedByUser :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     fromArrivalTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     fromDepartureTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     fromStopDetails :: Kernel.Prelude.Maybe Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails,

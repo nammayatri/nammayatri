@@ -520,3 +520,18 @@ ALTER TABLE atlas_app.journey ADD COLUMN has_started_tracking_without_booking bo
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
