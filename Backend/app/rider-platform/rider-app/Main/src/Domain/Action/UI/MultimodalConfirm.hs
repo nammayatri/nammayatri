@@ -658,6 +658,7 @@ getPublicTransportData (mbPersonId, merchantId) mbCity _mbConfigVersion mbVehicl
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   mbRequestCity <- maybe (pure Nothing) (CQMOC.findByMerchantIdAndCity merchantId) mbCity
   let merchantOperatingCityId = maybe person.merchantOperatingCityId (.id) mbRequestCity
+  riderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCityId
   let vehicleTypes =
         case mbVehicleType of
           Just BUS -> [Enums.BUS]
@@ -806,7 +807,7 @@ getPublicTransportData (mbPersonId, merchantId) mbCity _mbConfigVersion mbVehicl
           { ss = concatMap (.ss) transportDataList,
             rs = concatMap (.rs) transportDataList,
             rsm = concatMap (.rsm) transportDataList,
-            ptcv = T.intercalate (T.pack "#") gtfsVersion
+            ptcv = T.intercalate (T.pack "#") gtfsVersion <> (maybe "" (\version -> "#" <> show version) (riderConfig <&> (.domainPublicTransportDataVersion)))
           }
   return transportData
 
