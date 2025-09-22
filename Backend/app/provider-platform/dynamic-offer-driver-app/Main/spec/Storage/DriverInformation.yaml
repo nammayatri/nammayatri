@@ -126,6 +126,7 @@ DriverInformation:
     isHighAccuracyLocationEnabled: Maybe Bool
     rideRequestVolumeEnabled: Maybe Bool
     lastOfflineTime: Maybe UTCTime
+    isTTSEnabled: Maybe Bool
 
   default:
     active: "false"
@@ -263,6 +264,7 @@ DriverInformation:
           rideRequestVolume,
           isHighAccuracyLocationEnabled,
           rideRequestVolumeEnabled,
+          isTTSEnabled,
         ]
       where: driverId
     updateRentalInterCityAndIntraCitySwitch:

@@ -394,7 +394,8 @@ data DriverInformationRes = DriverInformationRes
     maxPickupRadius :: Maybe Meters,
     isSilentModeEnabled :: Maybe Bool,
     isHighAccuracyLocationEnabled :: Maybe Bool,
-    rideRequestVolumeEnabled :: Maybe Bool
+    rideRequestVolumeEnabled :: Maybe Bool,
+    isTTSEnabled :: Maybe Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -471,7 +472,8 @@ data DriverEntityRes = DriverEntityRes
     reactVersion :: Maybe Text,
     rideRequestVolume :: Maybe Int,
     isHighAccuracyLocationEnabled :: Maybe Bool,
-    rideRequestVolumeEnabled :: Maybe Bool
+    rideRequestVolumeEnabled :: Maybe Bool,
+    isTTSEnabled :: Maybe Bool
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -502,7 +504,8 @@ data UpdateDriverReq = UpdateDriverReq
     rideRequestVolume :: Maybe Int,
     reactVersion :: Maybe Text,
     isHighAccuracyLocationEnabled :: Maybe Bool,
-    rideRequestVolumeEnabled :: Maybe Bool
+    rideRequestVolumeEnabled :: Maybe Bool,
+    isTTSEnabled :: Maybe Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -1126,6 +1129,7 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) service
         rideRequestVolume = driverInfo.rideRequestVolume,
         isHighAccuracyLocationEnabled = driverInfo.isHighAccuracyLocationEnabled,
         rideRequestVolumeEnabled = driverInfo.rideRequestVolumeEnabled,
+        isTTSEnabled = driverInfo.isTTSEnabled,
         ..
       }
   where
@@ -1204,8 +1208,9 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
       rideRequestVolume = req.rideRequestVolume <|> driverInfo.rideRequestVolume
       isHighAccuracyLocationEnabled = req.isHighAccuracyLocationEnabled <|> driverInfo.isHighAccuracyLocationEnabled
       rideRequestVolumeEnabled = req.rideRequestVolumeEnabled <|> driverInfo.rideRequestVolumeEnabled
+      isTTSEnabled = req.isTTSEnabled <|> driverInfo.isTTSEnabled
   whenJust mVehicle $ \vehicle -> do
-    when (isJust req.canDowngradeToSedan || isJust req.canDowngradeToHatchback || isJust req.canDowngradeToTaxi || isJust req.canSwitchToRental || isJust req.canSwitchToInterCity || isJust req.isPetModeEnabled || isJust req.tripDistanceMaxThreshold || isJust req.tripDistanceMinThreshold || isJust req.maxPickupRadius || isJust req.isSilentModeEnabled || isJust req.rideRequestVolume || isJust req.isHighAccuracyLocationEnabled || isJust req.rideRequestVolumeEnabled) $ do
+    when (isJust req.canDowngradeToSedan || isJust req.canDowngradeToHatchback || isJust req.canDowngradeToTaxi || isJust req.canSwitchToRental || isJust req.canSwitchToInterCity || isJust req.isPetModeEnabled || isJust req.tripDistanceMaxThreshold || isJust req.tripDistanceMinThreshold || isJust req.maxPickupRadius || isJust req.isSilentModeEnabled || isJust req.rideRequestVolume || isJust req.isHighAccuracyLocationEnabled || isJust req.rideRequestVolumeEnabled || isJust req.isTTSEnabled) $ do
       -- deprecated logic, moved to driver service tier options
       checkIfCanDowngrade vehicle
       let canDowngradeToSedan = fromMaybe driverInfo.canDowngradeToSedan req.canDowngradeToSedan
@@ -1248,7 +1253,7 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
               DV.VIP_ESCORT -> [DVST.VIP_ESCORT]
               DV.VIP_OFFICER -> [DVST.VIP_OFFICER]
 
-      QDriverInformation.updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi canSwitchToRental canSwitchToInterCity canSwitchToIntraCity availableUpiApps isPetModeEnabled tripDistanceMaxThreshold tripDistanceMinThreshold maxPickupRadius isSilentModeEnabled rideRequestVolume isHighAccuracyLocationEnabled rideRequestVolumeEnabled person.id
+      QDriverInformation.updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi canSwitchToRental canSwitchToInterCity canSwitchToIntraCity availableUpiApps isPetModeEnabled tripDistanceMaxThreshold tripDistanceMinThreshold maxPickupRadius isSilentModeEnabled rideRequestVolume isHighAccuracyLocationEnabled rideRequestVolumeEnabled isTTSEnabled person.id
       when (isJust req.canDowngradeToSedan || isJust req.canDowngradeToHatchback || isJust req.canDowngradeToTaxi) $
         QVehicle.updateSelectedServiceTiers selectedServiceTiers person.id
 
