@@ -790,7 +790,7 @@ compareNames merchantId merchantOpCityId mbExtractedName mbVerifiedName personId
                 driverId = personId.getId
               }
       isNameValid <- isNameComparePercentageValid merchantId merchantOpCityId nameCompareReq
-      unless isNameValid $ throwError (InvalidRequest "Name match failed with previously uploaded docs")
+      unless isNameValid $ throwError (MismatchDataError "Name match failed with previously uploaded docs")
       return True
     _ -> do
       logInfo "Name comparison checks not executed."
@@ -802,7 +802,7 @@ compareDateOfBirth mbExtractedValue mbVerifiedValue = do
     (Just extractedValue, Just verifiedValue) -> do
       let extractedDay = utctDay extractedValue
           verifiedDay = utctDay verifiedValue
-      unless (compare extractedDay verifiedDay == EQ) $ throwError (InvalidRequest $ "Date of birth mismatch: " <> show extractedDay <> " " <> show verifiedDay)
+      unless (extractedDay == verifiedDay) $ throwError (MismatchDataError $ "Date of birth mismatch: " <> show extractedDay <> " " <> show verifiedDay)
       return True
     _ -> do
       logInfo "Date of birth checks not executed."
@@ -889,7 +889,7 @@ checkTwoPanNumber :: Maybe Text -> Maybe Text -> Flow ()
 checkTwoPanNumber mbExtractedValue mbVerifiedValue = do
   case (mbExtractedValue, mbVerifiedValue) of
     (Just extractedValue, Just verifiedValue) -> do
-      unless (extractedValue == verifiedValue) $ throwError (InvalidRequest "GST not linked with existing PAN")
+      unless (extractedValue == verifiedValue) $ throwError (MismatchDataError "GST not linked with existing PAN")
       return ()
     _ -> return ()
 

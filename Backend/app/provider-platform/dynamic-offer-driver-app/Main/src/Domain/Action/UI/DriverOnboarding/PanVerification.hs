@@ -24,7 +24,7 @@ import qualified API.Types.UI.DriverOnboardingV2 as DO
 import Control.Monad.Extra hiding (fromMaybeM, whenJust)
 import qualified Control.Monad.Extra as CME
 import Data.Aeson hiding (Success)
-import Data.Text as T hiding (elem, find, length, map, null, zip)
+import Data.Text as T hiding (elem, find, length, map, zip)
 import Data.Time (defaultTimeLocale, formatTime)
 import qualified Domain.Action.Dashboard.Common as DCommon
 import qualified Domain.Action.Dashboard.Fleet.RegistrationV2 as DFR
@@ -40,7 +40,7 @@ import Environment
 import Kernel.External.Encryption
 import Kernel.External.Types (ServiceFlow)
 import qualified Kernel.External.Verification.Interface as VI
-import Kernel.Prelude hiding (find)
+import Kernel.Prelude hiding (find, null)
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
 import qualified Kernel.Types.Documents as Documents
@@ -161,9 +161,11 @@ verifyPan verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprovalR
             Just extractedPan -> do
               let extractedPanNo = removeSpaceAndDash <$> extractedPan.id_number
               let extractedNameOnCard = extractedPan.name_on_card
+              logInfo ("extractedNameOnCard: " <> show extractedNameOnCard)
+              logInfo ("req.panName: " <> show req.panName)
               if verifyBy == DPan.FRONTEND_SDK
                 then case (req.panName, extractedNameOnCard) of
-                  (Just providedName, Just extractedName) -> do
+                  (Just providedName, Just extractedName) | not (T.null providedName) && not (T.null extractedName) -> do
                     let nameCompareReq =
                           Verification.NameCompareReq
                             { extractedName = extractedName,
@@ -172,7 +174,7 @@ verifyPan verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprovalR
                               driverId = person.id.getId
                             }
                     isValid <- DVRC.isNameComparePercentageValid person.merchantId merchantOpCityId nameCompareReq
-                    unless isValid $ throwError (InvalidRequest "Name match failed")
+                    unless isValid $ throwError (MismatchDataError "Provided name and extracted name on card do not match")
                   _ -> throwError (InvalidRequest "PAN name is required")
                 else
                   unless (extractedPanNo == Just req.panNumber) $
