@@ -67,7 +67,8 @@ data RouteStopMappingInMemoryServerWithPublicData = RouteStopMappingInMemoryServ
     geoJson :: Maybe Value,
     gates :: Maybe [Gate],
     hindiName :: Maybe Text,
-    regionalName :: Maybe Text
+    regionalName :: Maybe Text,
+    parentStopCode :: Maybe Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 
