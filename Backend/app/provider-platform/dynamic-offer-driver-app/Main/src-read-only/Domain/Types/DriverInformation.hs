@@ -63,6 +63,7 @@ data DriverInformationE e = DriverInformation
     isPetModeEnabled :: Kernel.Prelude.Bool,
     isSilentModeEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isSpecialLocWarrior :: Kernel.Prelude.Bool,
+    isTTSEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     issueBreachCooldownTimes :: Kernel.Prelude.Maybe [SharedLogic.BehaviourManagement.IssueBreach.IssueBreachCooldownTime],
     lastACStatusCheckedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     lastEnabledOn :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
@@ -85,7 +86,7 @@ data DriverInformationE e = DriverInformation
     payoutVpaStatus :: Kernel.Prelude.Maybe Domain.Types.DriverInformation.PayoutVpaStatus,
     planExpiryDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     preferredPrimarySpecialLocId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation),
-    preferredSecondarySpecialLocIds :: [Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation],
+    preferredSecondarySpecialLocIds :: [(Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation)],
     prepaidSubscriptionBalance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     referralCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     referredByDriverId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -112,9 +113,9 @@ data DriverInformationE e = DriverInformation
   }
   deriving (Generic)
 
-type DriverInformation = DriverInformationE 'AsEncrypted
+type DriverInformation = DriverInformationE ('AsEncrypted)
 
-type DecryptedDriverInformation = DriverInformationE 'AsUnencrypted
+type DecryptedDriverInformation = DriverInformationE ('AsUnencrypted)
 
 instance EncryptedItem DriverInformation where
   type Unencrypted DriverInformation = (DecryptedDriverInformation, HashSalt)
@@ -163,6 +164,7 @@ instance EncryptedItem DriverInformation where
           isPetModeEnabled = isPetModeEnabled entity,
           isSilentModeEnabled = isSilentModeEnabled entity,
           isSpecialLocWarrior = isSpecialLocWarrior entity,
+          isTTSEnabled = isTTSEnabled entity,
           issueBreachCooldownTimes = issueBreachCooldownTimes entity,
           lastACStatusCheckedAt = lastACStatusCheckedAt entity,
           lastEnabledOn = lastEnabledOn entity,
@@ -255,6 +257,7 @@ instance EncryptedItem DriverInformation where
             isPetModeEnabled = isPetModeEnabled entity,
             isSilentModeEnabled = isSilentModeEnabled entity,
             isSpecialLocWarrior = isSpecialLocWarrior entity,
+            isTTSEnabled = isTTSEnabled entity,
             issueBreachCooldownTimes = issueBreachCooldownTimes entity,
             lastACStatusCheckedAt = lastACStatusCheckedAt entity,
             lastEnabledOn = lastEnabledOn entity,
@@ -348,10 +351,10 @@ data DriverSummary = DriverSummary
 
 data PayoutVpaStatus = VIA_WEBHOOK | MANUALLY_ADDED | VERIFIED_BY_USER deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''AirConditionedRestrictionType)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''AirConditionedRestrictionType))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DriverAutoPayStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''DriverAutoPayStatus))
 
-$(mkHttpInstancesForEnum ''DriverAutoPayStatus)
+$(mkHttpInstancesForEnum (''DriverAutoPayStatus))
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PayoutVpaStatus)
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''PayoutVpaStatus))

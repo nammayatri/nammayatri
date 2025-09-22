@@ -259,3 +259,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN max_pickup_radi
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN is_silent_mode_enabled boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN is_tts_enabled boolean default true;
