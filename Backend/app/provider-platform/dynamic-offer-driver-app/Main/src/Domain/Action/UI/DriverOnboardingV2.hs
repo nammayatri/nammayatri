@@ -98,6 +98,7 @@ mkDocumentVerificationConfigAPIEntity language Domain.Types.DocumentVerification
     API.Types.UI.DriverOnboardingV2.DocumentVerificationConfigAPIEntity
       { title = maybe title (.message) mbTitle,
         description = maybe description (Just . (.message)) mbDescription,
+        isMandatoryForEnabling = fromMaybe isMandatory isMandatoryForEnabling,
         ..
       }
 

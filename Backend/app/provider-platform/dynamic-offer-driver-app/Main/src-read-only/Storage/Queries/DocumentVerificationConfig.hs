@@ -58,6 +58,7 @@ updateByPrimaryKey (Domain.Types.DocumentVerificationConfig.DocumentVerification
       Se.Set Beam.isHidden isHidden,
       Se.Set Beam.isImageValidationRequired isImageValidationRequired,
       Se.Set Beam.isMandatory isMandatory,
+      Se.Set Beam.isMandatoryForEnabling isMandatoryForEnabling,
       Se.Set Beam.maxRetryCount maxRetryCount,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.order order,

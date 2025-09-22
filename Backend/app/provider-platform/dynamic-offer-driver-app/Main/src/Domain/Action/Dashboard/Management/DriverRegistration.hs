@@ -323,7 +323,7 @@ postDriverRegistrationUnlinkDocument merchantShortId opCity personId documentTyp
             else pure False
         DP.DRIVER -> do
           mbVerificationConfig <- CQDVC.findByMerchantOpCityIdAndDocumentTypeAndCategory merchantOpCityId (mapDocumentType docType) DVC.CAR Nothing
-          let isMandatory = maybe False (.isMandatory) mbVerificationConfig
+          let isMandatory = maybe False (\config -> fromMaybe config.isMandatory config.isMandatoryForEnabling) mbVerificationConfig
           when isMandatory $ do
             QDriverInfo.updateEnabledVerifiedState person.id False Nothing
           pure False

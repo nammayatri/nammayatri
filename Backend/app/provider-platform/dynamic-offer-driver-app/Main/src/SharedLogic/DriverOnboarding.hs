@@ -619,6 +619,7 @@ mkFleetOwnerDocumentVerificationConfigAPIEntity language Domain.Types.FleetOwner
         documentType = castDocumentType documentType,
         dependencyDocumentType = map castDocumentType dependencyDocumentType,
         documentCategory = castDocumentCategory <$> documentCategory,
+        isMandatoryForEnabling = isMandatory,
         ..
       }
 

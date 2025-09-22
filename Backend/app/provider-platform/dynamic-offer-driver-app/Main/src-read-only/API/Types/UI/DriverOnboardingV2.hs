@@ -59,6 +59,7 @@ data DocumentVerificationConfigAPIEntity = DocumentVerificationConfigAPIEntity
     isDisabled :: Kernel.Prelude.Bool,
     isHidden :: Kernel.Prelude.Bool,
     isMandatory :: Kernel.Prelude.Bool,
+    isMandatoryForEnabling :: Kernel.Prelude.Bool,
     rcNumberPrefixList :: [Kernel.Prelude.Text],
     title :: Kernel.Prelude.Text
   }
