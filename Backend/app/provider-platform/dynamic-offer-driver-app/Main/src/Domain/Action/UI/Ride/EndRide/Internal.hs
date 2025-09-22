@@ -207,8 +207,9 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
 
   when (fromMaybe False merchant.enforceSufficientDriverBalance && thresholdConfig.driverWalletConfig.enableDriverWallet) $ do
     fork "createDriverWalletTransaction" $ do
-      (collectionAmount, gstDeduction) <- createDriverWalletTransaction ride booking thresholdConfig
-      createFinancialYearEarnings ride newFareParams thresholdConfig collectionAmount gstDeduction
+      walletAmounts <- calcWalletAmounts ride booking newFareParams thresholdConfig
+      createDriverWalletTransaction walletAmounts ride
+      createFinancialYearEarnings walletAmounts ride thresholdConfig
 
   triggerRideEndEvent RideEventData {ride = ride{status = Ride.COMPLETED}, personId = cast driverId, merchantId = booking.providerId}
   triggerBookingCompletedEvent BookingEventData {booking = booking{status = SRB.COMPLETED}, personId = cast driverId, merchantId = booking.providerId}
@@ -293,39 +294,73 @@ createSubscriptionTransaction ride runningBalance booking = do
           }
   QSubscriptionTransaction.create transaction
 
-createDriverWalletTransaction ::
+data WalletAmounts = WalletAmounts
+  { collectionAmount :: HighPrecMoney,
+    gstDeduction :: HighPrecMoney,
+    earningsAmount :: HighPrecMoney, -- amount for TDS calculation
+    driverTdsDeduction :: HighPrecMoney,
+    driverPayable :: HighPrecMoney,
+    merchantPayable :: HighPrecMoney,
+    mbFleetOwnerId :: Maybe (Id DP.Person)
+  }
+
+calcWalletAmounts ::
   ( MonadFlow m,
     EsqDBFlow m r,
     CacheFlow m r
   ) =>
   Ride.Ride ->
   SRB.Booking ->
+  DFare.FareParameters ->
   TransporterConfig ->
-  m (HighPrecMoney, HighPrecMoney)
-createDriverWalletTransaction ride booking transporterConfig = do
-  now <- getCurrentTime
-  newId <- generateGUID
+  m WalletAmounts
+calcWalletAmounts ride booking fareParameters transporterConfig = do
+  let driverId = cast @DP.Person @DP.Driver ride.driverId
+  -- If enableFleetWallet then TDS will be deducted from fleet wallet
+  mbFleetOwnerId <-
+    if transporterConfig.driverWalletConfig.enableFleetWallet
+      then do
+        mbFleetDriverAssociation <- QFDAE.findByDriverId driverId True
+        pure $ Id @DP.Person . (.fleetOwnerId) <$> mbFleetDriverAssociation
+      else pure Nothing
   let collectionAmount = fromMaybe 0 ride.fare
       gstPercentage = transporterConfig.driverWalletConfig.gstPercentage
       gstDeduction = collectionAmount * (realToFrac gstPercentage / 100)
+      collectionDeduction = Kernel.Prelude.sum [gstDeduction, fromMaybe 0 fareParameters.parkingCharge, fromMaybe 0 fareParameters.tollCharges]
+      earningsAmount = collectionAmount - collectionDeduction
+      driverTdsDeduction =
+        if transporterConfig.enableTdsDeduction == Just True && isNothing mbFleetOwnerId
+          then earningsAmount / 100 -- 1 %
+          else 0
+      driverDeduction = gstDeduction + driverTdsDeduction
+  (merchantPayable, driverPayable) <- do
+    mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
+      CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
+        >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
+    case mbPaymentMethod of
+      Nothing -> pure (0, driverDeduction) -- Considering OFFLINE. To be tested
+      Just paymentMethod -> do
+        case paymentMethod.paymentInstrument of
+          Cash -> pure (0, driverDeduction) -- OFFLINE
+          _ -> pure (collectionAmount - driverDeduction, 0) -- ONLINE
+  pure WalletAmounts {..}
 
+createDriverWalletTransaction ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    CacheFlow m r
+  ) =>
+  WalletAmounts ->
+  Ride.Ride ->
+  m ()
+createDriverWalletTransaction WalletAmounts {..} ride = do
   Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey ride.driverId.getId) 10 10 $ do
+    newId <- generateGUID
+    now <- getCurrentTime
     lastTransaction <- QDWE.findLatestByDriverId ride.driverId
     let lastRunningBalance = maybe 0 (.runningBalance) lastTransaction
-
-    (merchantPayable, driverPayable) <- do
-      mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId ->
-        do
-          CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
-          >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
-      case mbPaymentMethod of
-        Nothing -> pure (0, gstDeduction) -- Considering OFFLINE. To be tested
-        Just paymentMethod -> do
-          case paymentMethod.paymentInstrument of
-            Cash -> pure (0, gstDeduction) -- OFFLINE
-            _ -> pure (collectionAmount - gstDeduction, 0) -- ONLINE
-    let newRunningBalance = lastRunningBalance + merchantPayable - driverPayable
-    let driverWallet =
+        newRunningBalance = lastRunningBalance + merchantPayable - driverPayable
+        driverWallet =
           DW.DriverWallet
             { id = newId,
               merchantId = ride.merchantId,
@@ -335,6 +370,7 @@ createDriverWalletTransaction ride booking transporterConfig = do
               transactionType = DW.RIDE_TRANSACTION,
               collectionAmount = Just collectionAmount,
               gstDeduction = Just gstDeduction,
+              tdsDeduction = Just driverTdsDeduction,
               merchantPayable = Just merchantPayable,
               driverPayable = Just driverPayable,
               runningBalance = newRunningBalance,
@@ -345,36 +381,25 @@ createDriverWalletTransaction ride booking transporterConfig = do
             }
     QDI.updateWalletBalance (Just newRunningBalance) ride.driverId
     QDW.create driverWallet
-  pure (collectionAmount, gstDeduction)
 
 createFinancialYearEarnings ::
   ( MonadFlow m,
     EsqDBFlow m r,
     CacheFlow m r
   ) =>
+  WalletAmounts ->
   Ride.Ride ->
-  DFare.FareParameters ->
   TransporterConfig ->
-  HighPrecMoney ->
-  HighPrecMoney ->
   m ()
-createFinancialYearEarnings ride fareParameters transporterConfig collectionAmount gstDeduction = do
+createFinancialYearEarnings WalletAmounts {..} ride transporterConfig = do
   let driverId = cast @DP.Person @DP.Driver ride.driverId
-  personId <-
-    if transporterConfig.driverWalletConfig.enableFleetWallet
-      then do
-        mbFleetDriverAssociation <- QFDAE.findByDriverId driverId True
-        let mbFleetOwnerId = Id @DP.Person . (.fleetOwnerId) <$> mbFleetDriverAssociation
-        pure $ fromMaybe ride.driverId mbFleetOwnerId
-      else pure ride.driverId
+      personId = fromMaybe ride.driverId mbFleetOwnerId
   Redis.withWaitOnLockRedisWithExpiry (makeFinancialYearEarningsLockKey personId) 10 10 $ do
     now <- getCurrentTime
     let timeDiffFromUtc = transporterConfig.timeDiffFromUtc
         currentFinancialYearStart = getCurrentFinancialYearStart timeDiffFromUtc now
     mbLatestFYEarnings <- QFYE.findLatestByPersonIdAndFinancialYear personId currentFinancialYearStart
     let currentTotalEarnings = maybe 0 (.totalEarnings) mbLatestFYEarnings
-        collectionDeduction = Kernel.Prelude.sum [gstDeduction, fromMaybe 0 fareParameters.parkingCharge, fromMaybe 0 fareParameters.tollCharges]
-        earningsAmount = collectionAmount - collectionDeduction
         newTotalEarnings = currentTotalEarnings + earningsAmount
     fyEarningsId <- generateGUID
     let fyEarnings =

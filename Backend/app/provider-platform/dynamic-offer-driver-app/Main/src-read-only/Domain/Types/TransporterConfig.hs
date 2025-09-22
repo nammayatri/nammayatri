@@ -131,6 +131,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     enableExistingVehicleInBulkUpload :: Kernel.Prelude.Bool,
     enableFaceVerification :: Kernel.Prelude.Bool,
     enableOverchargingBlocker :: Kernel.Prelude.Bool,
+    enableTdsDeduction :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableTollCrossedNotifications :: Kernel.Prelude.Bool,
     enableUdfForOffers :: Kernel.Prelude.Bool,
     exotelAppIdMapping :: Kernel.Prelude.Maybe Domain.Types.Extra.TransporterConfig.ExotelMapping,

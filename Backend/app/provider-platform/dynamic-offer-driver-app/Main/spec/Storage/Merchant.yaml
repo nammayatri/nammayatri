@@ -863,6 +863,7 @@ TransporterConfig:
       minimumWalletPayoutAmount: HighPrecMoney
       payoutCutOffDays: Int
       enableFleetWallet: Bool
+      enableTdsDeduction: Bool
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
     SubscriptionConfig:
       prepaidSubscriptionThreshold: Maybe HighPrecMoney
@@ -1522,7 +1523,7 @@ TransporterConfig:
     disableDriverWhenUnlinkingVehicle : "true"
     distanceWeightage: "20"
     driverCallingOption: "'AnonymousCall'"
-    driverWalletConfig:  '''{"enableDriverWallet": false, "driverWalletPayoutThreshold": 0, "gstPercentage": 0.0, "enableWalletPayout": false, "enableWalletTopup": false, "maxWalletPayoutsPerDay": null, "minimumWalletPayoutAmount": 0, "payoutCutOffDays": 7, "enableFleetWallet": false}'' :: json'
+    driverWalletConfig:  '''{"enableDriverWallet": false, "driverWalletPayoutThreshold": 0, "gstPercentage": 0.0, "enableWalletPayout": false, "enableWalletTopup": false, "maxWalletPayoutsPerDay": null, "minimumWalletPayoutAmount": 0, "payoutCutOffDays": 7, "enableFleetWallet": false, "enableTdsDeduction": false}'' :: json'
     analyticsConfig: '''{"weekStartMode": 3, "earningsWindowSize": 7, "allowCacheDriverFlowStatus": false, "maxOnlineDurationDays": 10, "onlineDurationCalculateFrom": null}'' :: json'
     subscriptionConfig:  '''{"prepaidSubscriptionThreshold": null}'' :: json'
   excludedDefaultQueries:

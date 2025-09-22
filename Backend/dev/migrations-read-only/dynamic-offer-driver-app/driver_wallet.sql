@@ -29,3 +29,9 @@ ALTER TABLE atlas_driver_offer_bpp.driver_wallet ADD COLUMN payout_status text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_wallet ADD COLUMN collection_amount numeric(30,2) ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_wallet ADD COLUMN tds_deduction double precision ;

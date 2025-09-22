@@ -30,6 +30,7 @@ instance FromTType' Beam.DriverWallet Domain.Types.DriverWallet.DriverWallet whe
             payoutStatus = payoutStatus,
             rideId = Kernel.Types.Id.Id <$> rideId,
             runningBalance = runningBalance,
+            tdsDeduction = tdsDeduction,
             transactionType = transactionType,
             updatedAt = updatedAt
           }
@@ -50,6 +51,7 @@ instance ToTType' Beam.DriverWallet Domain.Types.DriverWallet.DriverWallet where
         Beam.payoutStatus = payoutStatus,
         Beam.rideId = Kernel.Types.Id.getId <$> rideId,
         Beam.runningBalance = runningBalance,
+        Beam.tdsDeduction = tdsDeduction,
         Beam.transactionType = transactionType,
         Beam.updatedAt = updatedAt
       }

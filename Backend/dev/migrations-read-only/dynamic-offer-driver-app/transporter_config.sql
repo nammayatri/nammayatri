@@ -493,16 +493,6 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN driver_wallet_c
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN analytics_config json  default '{"weekStartMode": 3, "earningsWindowSize": 7, "allowCacheDriverFlowStatus": false, "maxOnlineDurationDays": 10, "onlineDurationCalculateFrom": null}' :: json;
 
 
-
 ------- SQL updates -------
 
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN driver_wallet_config SET DEFAULT '{"enableDriverWallet": false, "driverWalletPayoutThreshold": 0, "gstPercentage": 0.0, "enableWalletPayout": false, "enableWalletTopup": false, "maxWalletPayoutsPerDay": null, "minimumWalletPayoutAmount": 0, "payoutCutOffDays": 7, "enableFleetWallet": false}' :: json;
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN driver_wallet_config SET DEFAULT '{"enableDriverWallet": false, "driverWalletPayoutThreshold": 0, "gstPercentage": 0.0, "enableWalletPayout": false, "enableWalletTopup": false, "maxWalletPayoutsPerDay": null, "minimumWalletPayoutAmount": 0, "payoutCutOffDays": 7, "enableFleetWallet": false, "enableTdsDeduction": false}' :: json;

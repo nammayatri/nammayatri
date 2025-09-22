@@ -30,6 +30,7 @@ data DriverWallet = DriverWallet
     payoutStatus :: Kernel.Prelude.Maybe Domain.Types.DriverWallet.PayoutStatus,
     rideId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Ride.Ride),
     runningBalance :: Kernel.Types.Common.HighPrecMoney,
+    tdsDeduction :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     transactionType :: Domain.Types.DriverWallet.TransactionType,
     updatedAt :: Data.Time.UTCTime
   }

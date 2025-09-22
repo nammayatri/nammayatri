@@ -188,6 +188,7 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
                           transactionType = DW.PAYOUT,
                           collectionAmount = Nothing,
                           gstDeduction = Nothing,
+                          tdsDeduction = Nothing,
                           merchantPayable = Nothing,
                           driverPayable = Just (-1 * amount),
                           runningBalance = newRunningBalance,
