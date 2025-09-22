@@ -1577,16 +1577,20 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (_mbPersonId, _merchantId) j
   mbNewRouteCode <-
     if riderConfig.validateSetOnboardingVehicleRequest == Just True
       then do
-        let journeyLegRouteCodes = mapMaybe (.routeCode) journeyLeg.routeDetails <> (concat $ mapMaybe (.alternateRouteIds) journeyLeg.routeDetails)
+        let journeyLegRouteCodes = nub (mapMaybe (.routeCode) journeyLeg.routeDetails <> (concat $ mapMaybe (.alternateRouteIds) journeyLeg.routeDetails))
         unless (vehicleLiveRouteInfo.routeCode `elem` journeyLegRouteCodes) $
-          throwError $ VehicleUnserviceableOnRoute ("Vehicle " <> vehicleNumber <> ", the route code " <> vehicleLiveRouteInfo.routeCode <> ", not found on any route: " <> show journeyLegRouteCodes)
+          throwError $ VehicleUnserviceableOnRoute ("Vehicle " <> vehicleNumber <> ", the route code " <> vehicleLiveRouteInfo.routeCode <> ", not found on any route: " <> show journeyLegRouteCodes <> ", Please board the bus moving on allowed possible Routes for the booking.")
         pure $
           if (vehicleLiveRouteInfo.routeCode `elem` mapMaybe (.routeCode) journeyLeg.routeDetails)
             then Nothing
             else do
               let routeDetail = listToMaybe journeyLeg.routeDetails -- doing list to maybe as onluy need from and to stop codes, which will be same in all tickets
               (vehicleLiveRouteInfo.routeCode,) <$> routeDetail
-      else pure Nothing
+      else do
+        let journeyLegRouteCodes = nub (mapMaybe (.routeCode) journeyLeg.routeDetails <> (concat $ mapMaybe (.alternateRouteIds) journeyLeg.routeDetails))
+        unless (vehicleLiveRouteInfo.routeCode `elem` journeyLegRouteCodes) $
+          logError $ "Vehicle " <> vehicleNumber <> ", the route code " <> vehicleLiveRouteInfo.routeCode <> ", not found on any route: " <> show journeyLegRouteCodes <> ", Please board the bus moving on allowed possible Routes for the booking."
+        pure Nothing
   updateTicketQRData journey journeyLeg riderConfig integratedBPPConfig booking.id mbNewRouteCode
   QJourneyLeg.updateByPrimaryKey $
     journeyLeg
