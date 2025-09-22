@@ -261,3 +261,17 @@ ALTER TABLE atlas_app.route_details ADD COLUMN tracking_status_last_updated_at t
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.route_details ADD COLUMN alternate_route_ids text[] ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

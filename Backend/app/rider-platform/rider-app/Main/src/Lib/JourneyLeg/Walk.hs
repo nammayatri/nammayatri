@@ -38,7 +38,8 @@ instance JT.JourneyLeg WalkLegRequest m where
             legOrder = req.journeyLeg.sequenceNumber,
             subLegOrder = 1,
             mode = DTrip.Walk,
-            fleetNo = Nothing
+            fleetNo = Nothing,
+            finalBoardedBusNumberUpdatedByUser = Nothing
           }
   getState _ = throwError (InternalError "Not supported")
 

@@ -1521,7 +1521,7 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (_mbPersonId, _merchantId) j
               (vehicleLiveRouteInfo.routeCode,) <$> routeDetail
       else pure Nothing
   updateTicketQRData journey journeyLeg riderConfig integratedBPPConfig booking.id mbNewRouteCode
-  QJourneyLeg.updateByPrimaryKey $ journeyLeg {DJourneyLeg.finalBoardedBusNumber = Just vehicleNumber}
+  QJourneyLeg.updateByPrimaryKey $ journeyLeg {DJourneyLeg.finalBoardedBusNumber = Just vehicleNumber, DJourneyLeg.finalBoardedBusNumberUpdatedByUser = Just True}
   updatedLegs <- JM.getAllLegsInfo journey.riderId journeyId
   generateJourneyInfoResponse journey updatedLegs
   where

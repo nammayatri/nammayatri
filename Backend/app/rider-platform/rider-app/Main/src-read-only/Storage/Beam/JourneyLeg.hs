@@ -26,6 +26,7 @@ data JourneyLegT f = JourneyLegT
     estimatedMaxFare :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     estimatedMinFare :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     finalBoardedBusNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    finalBoardedBusNumberUpdatedByUser :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     fromArrivalTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     fromDepartureTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     fromStopCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

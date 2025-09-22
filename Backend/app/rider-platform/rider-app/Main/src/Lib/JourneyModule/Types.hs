@@ -240,7 +240,8 @@ data JourneyLegStateData = JourneyLegStateData
     subLegOrder :: Int,
     legOrder :: Int,
     mode :: DTrip.MultimodalTravelMode,
-    fleetNo :: Maybe Text
+    fleetNo :: Maybe Text,
+    finalBoardedBusNumberUpdatedByUser :: Maybe Bool
     -- boardedVehicles field removed
   }
   deriving stock (Show, Generic)
@@ -1302,7 +1303,8 @@ mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation m
         journeyId = journeyId,
         isDeleted = Just False,
         sequenceNumber = idx,
-        multimodalSearchRequestId = Just multimodalSearchRequestId.getId
+        multimodalSearchRequestId = Just multimodalSearchRequestId.getId,
+        finalBoardedBusNumberUpdatedByUser = Nothing
       }
   where
     straightLineDistance = highPrecMetersToMeters $ distanceBetweenInMeters (LatLong leg.startLocation.latLng.latitude leg.startLocation.latLng.longitude) (LatLong leg.endLocation.latLng.latitude leg.endLocation.latLng.longitude)
