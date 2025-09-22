@@ -595,7 +595,7 @@ postDriverAddVehicle merchantShortId opCity reqDriverId req = do
       when (newRC.verificationStatus == Documents.INVALID) $ do throwError (InvalidRequest $ "No valid mapping found for (vehicleClass: " <> req.vehicleClass <> ", manufacturer: " <> req.make <> " and model: " <> req.model <> ")")
       RCQuery.upsert newRC
       createRCAssociationIfNotExists personId requestor.role newRC transporterConfig now
-      fork "Parallely verifying RC for add Vehicle: " $ DCommon.runVerifyRCFlow personId merchant merchantOpCityId opCity req False False Nothing -- run RC verification details
+
       cityVehicleServiceTiers <- CQVST.findAllByMerchantOpCityId merchantOpCityId (Just [])
       -- as we create new rc, need to pass onboard inspection before activate rc and create vehicle
       unless (transporterConfig.requiresOnboardingInspection == Just True || DCommon.checkFleetOwnerRole requestor.role) $ do
