@@ -1230,7 +1230,20 @@ switchLeg journeyId _ req = do
         journeyLeg
           { DJourneyLeg.distance = newDistance,
             DJourneyLeg.duration = newDuration,
-            DJourneyLeg.fromStopDetails = if isJust req.startLocation then Nothing else journeyLeg.fromStopDetails,
+            DJourneyLeg.fromStopDetails =
+              case req.originAddress of
+                Just originAddress ->
+                  case originAddress.area <|> originAddress.title of
+                    Just name ->
+                      Just
+                        MultiModalTypes.MultiModalStopDetails
+                          { stopCode = Nothing,
+                            platformCode = Nothing,
+                            name = Just name,
+                            gtfsId = Nothing
+                          }
+                    Nothing -> journeyLeg.fromStopDetails
+                Nothing -> journeyLeg.fromStopDetails,
             DJourneyLeg.id = journeyLegId,
             DJourneyLeg.routeDetails = (\routeDetail -> routeDetail {DRouteDetails.journeyLegId = journeyLegId.getId, DRouteDetails.trackingStatus = Nothing}) <$> journeyLeg.routeDetails,
             DJourneyLeg.mode = newMode,
