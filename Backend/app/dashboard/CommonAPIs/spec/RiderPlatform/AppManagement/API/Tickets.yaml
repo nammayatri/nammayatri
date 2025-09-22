@@ -18,6 +18,10 @@ imports:
   RequestorRole: Domain.Types.MerchantOnboarding
   GetFileResponse: Domain.Types.MerchantOnboarding
   TicketPlaceDashboardDetails: Domain.Types.TicketDashboard
+  CreateOrderResp: Kernel.External.Payment.Interface.Types
+  TicketBookingReq: API.Types.UI.TicketService
+  TicketBookingAPIEntityV2: API.Types.UI.TicketService
+  BookingStatus: Domain.Types.TicketBooking
 
 importPackageOverrides:
   API.Types.UI.TicketService: "rider-app"
@@ -227,6 +231,74 @@ apis:
         type: TicketServiceVerificationReq
       response:
         type: TicketServiceVerificationResp
+
+  - POST: # BookTicketFromDashboardAPI
+      endpoint: /ticket/places/{placeId}/book
+      name: PostTicketPlacesBook
+      auth: ApiAuthV2
+      params:
+        placeId: Id TicketPlace
+      request:
+        type: TicketBookingReq
+      response:
+        type: CreateOrderResp
+
+  - GET: # GetTicketPlacesForDashboardAPI
+      endpoint: /ticket/places
+      name: GetTicketPlaces
+      auth: ApiAuthV2
+      response:
+        type: "[TicketPlace]"
+
+  - GET: # GetTicketPlaceServicesForDashboardAPI
+      endpoint: /ticket/places/{placeId}/services
+      name: GetTicketPlaceServices
+      auth: ApiAuthV2
+      params:
+        placeId: Id TicketPlace
+      query:
+        - date: Day
+        - subPlaceId: Id TicketSubPlace
+      response:
+        type: "[TicketServiceResp]"
+
+  - GET: # GetTicketBookingFromDashboardAPI
+      endpoint: /ticket/booking/{bookingShortId}
+      name: GetTicketBookingDetails
+      auth: ApiAuthV2
+      params:
+        bookingShortId: ShortId TicketBooking
+      response:
+        type: TicketBookingDetails
+
+  - GET: # GetTicketBookingStatusForDashboardAPI
+      endpoint: /ticket/booking/{bookingShortId}/status
+      name: GetTicketBookingStatus
+      auth: ApiAuthV2
+      params:
+        bookingShortId: ShortId TicketBooking
+      response:
+        type: BookingStatus
+
+  - GET: # GetAllTicketBookingsForDashboardAPI
+      endpoint: /ticket/bookings
+      name: GetAllTicketBookings
+      auth: ApiAuthV2
+      query:
+        - limit: Int
+        - offset: Int
+        - status: BookingStatus
+      response:
+        type: "[TicketBookingAPIEntityV2]"
+
+  - POST: # CashCollectionAPI
+      endpoint: /ticket/booking/{bookingShortId}/cashCollect
+      name: PostTicketBookingCashCollect
+      auth: ApiAuthV2
+      params:
+        bookingShortId: ShortId TicketBooking
+      response:
+        type: APISuccess
 
 types:
   SendVerifyOtpReq:
