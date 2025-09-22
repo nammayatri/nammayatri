@@ -113,7 +113,8 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
                     legOrder = journeyLeg.sequenceNumber,
                     subLegOrder = 1,
                     mode,
-                    fleetNo = mbCurrentLegDetails >>= (.finalBoardedBusNumber)
+                    fleetNo = mbCurrentLegDetails >>= (.finalBoardedBusNumber),
+                    finalBoardedBusNumberUpdatedByUser = mbCurrentLegDetails >>= (.finalBoardedBusNumberUpdatedByUser)
                   }
 
           vehiclePositionsToReturn <-
@@ -145,7 +146,8 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
                       legOrder = journeyLeg.sequenceNumber,
                       subLegOrder,
                       mode,
-                      fleetNo = Nothing
+                      fleetNo = Nothing,
+                      finalBoardedBusNumberUpdatedByUser = Nothing
                     }
                   | (subLegOrder, trackingStatus, trackingStatusLastUpdatedAt) <- trackingStatuses
                 ]
@@ -186,7 +188,8 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
                     legOrder = journeyLeg.sequenceNumber,
                     subLegOrder = 1,
                     mode,
-                    fleetNo = mbCurrentLegDetails >>= (.finalBoardedBusNumber)
+                    fleetNo = mbCurrentLegDetails >>= (.finalBoardedBusNumber),
+                    finalBoardedBusNumberUpdatedByUser = mbCurrentLegDetails >>= (.finalBoardedBusNumberUpdatedByUser)
                   }
 
           vehiclePositionsToReturn <-
@@ -220,7 +223,8 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
                       legOrder = journeyLeg.sequenceNumber,
                       subLegOrder = subLegOrder,
                       mode,
-                      fleetNo = Nothing
+                      fleetNo = Nothing,
+                      finalBoardedBusNumberUpdatedByUser = Nothing
                     }
                   | (subLegOrder, trackingStatus, trackingStatusLastUpdatedAt) <- trackingStatuses
                 ]
@@ -244,7 +248,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
                   case bestCandidateResult of
                     [] -> pure detailedStateData
                     ((bestVehicleNumber, _) : _) -> do
-                      QJourneyLeg.updateByPrimaryKey legToUpdate {DJourneyLeg.finalBoardedBusNumber = Just bestVehicleNumber}
+                      QJourneyLeg.updateByPrimaryKey legToUpdate {DJourneyLeg.finalBoardedBusNumber = Just bestVehicleNumber, DJourneyLeg.finalBoardedBusNumberUpdatedByUser = Just False}
                       -- Update in-memory detailedStateData as well
                       pure (detailedStateData :: JT.JourneyLegStateData) {JT.fleetNo = Just bestVehicleNumber}
                 Just _ -> pure detailedStateData

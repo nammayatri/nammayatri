@@ -203,7 +203,8 @@ instance JT.JourneyLeg TaxiLegRequest m where
             legOrder = req.journeyLeg.sequenceNumber,
             subLegOrder = 1,
             mode = DTrip.Taxi,
-            fleetNo = Nothing
+            fleetNo = Nothing,
+            finalBoardedBusNumberUpdatedByUser = Nothing
           }
   getState _ = throwError (InternalError "Not Supported")
 

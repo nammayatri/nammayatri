@@ -238,6 +238,7 @@ JourneyLeg:
     isDeleted: Maybe Bool
     sequenceNumber: Int
     multimodalSearchRequestId: Maybe Text
+    finalBoardedBusNumberUpdatedByUser: Maybe Bool
 
   sqlType:
     serviceTypes: text[]

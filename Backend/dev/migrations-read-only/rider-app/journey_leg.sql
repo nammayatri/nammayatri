@@ -315,3 +315,27 @@ ALTER TABLE atlas_app.journey_leg ADD COLUMN multimodal_search_request_id text ;
 
 ------- SQL updates -------
 
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.journey_leg ADD COLUMN final_boarded_bus_number_updated_by_user boolean ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

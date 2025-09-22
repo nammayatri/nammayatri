@@ -95,6 +95,7 @@ updateByPrimaryKey (Domain.Types.JourneyLeg.JourneyLeg {..}) = do
       Se.Set Beam.estimatedMaxFare estimatedMaxFare,
       Se.Set Beam.estimatedMinFare estimatedMinFare,
       Se.Set Beam.finalBoardedBusNumber finalBoardedBusNumber,
+      Se.Set Beam.finalBoardedBusNumberUpdatedByUser finalBoardedBusNumberUpdatedByUser,
       Se.Set Beam.fromArrivalTime fromArrivalTime,
       Se.Set Beam.fromDepartureTime fromDepartureTime,
       Se.Set Beam.fromStopCode (fromStopDetails >>= (.stopCode)),
