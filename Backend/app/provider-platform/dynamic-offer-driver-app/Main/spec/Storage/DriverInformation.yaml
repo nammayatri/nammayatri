@@ -132,6 +132,7 @@ DriverInformation:
     tripDistanceMinThreshold: Maybe Meters
     rideRequestVolume: Maybe Int
     isSilentModeEnabled: Maybe Bool
+    isTTSEnabled: Maybe Bool
 
   default:
     active: "false"
@@ -286,6 +287,7 @@ DriverInformation:
           maxPickupRadius,
           isSilentModeEnabled,
           rideRequestVolume,
+          isTTSEnabled,
         ]
       where: driverId
     updateRentalInterCityAndIntraCitySwitch:

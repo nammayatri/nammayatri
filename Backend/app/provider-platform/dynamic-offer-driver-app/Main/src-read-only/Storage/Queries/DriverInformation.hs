@@ -136,8 +136,8 @@ updateDriverDowngradeForSuv canDowngradeToHatchback canDowngradeToTaxi driverId 
 
 updateDriverInformation ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Bool -> Kernel.Prelude.Bool -> Kernel.Prelude.Bool -> Kernel.Prelude.Bool -> Kernel.Prelude.Bool -> Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Types.Common.Meters -> Kernel.Prelude.Maybe Kernel.Types.Common.Meters -> Kernel.Prelude.Maybe Kernel.Types.Common.Meters -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
-updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi canSwitchToRental canSwitchToInterCity canSwitchToIntraCity availableUpiApps isPetModeEnabled tripDistanceMaxThreshold tripDistanceMinThreshold maxPickupRadius isSilentModeEnabled rideRequestVolume driverId = do
+  (Kernel.Prelude.Bool -> Kernel.Prelude.Bool -> Kernel.Prelude.Bool -> Kernel.Prelude.Bool -> Kernel.Prelude.Bool -> Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Types.Common.Meters -> Kernel.Prelude.Maybe Kernel.Types.Common.Meters -> Kernel.Prelude.Maybe Kernel.Types.Common.Meters -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi canSwitchToRental canSwitchToInterCity canSwitchToIntraCity availableUpiApps isPetModeEnabled tripDistanceMaxThreshold tripDistanceMinThreshold maxPickupRadius isSilentModeEnabled rideRequestVolume isTTSEnabled driverId = do
   _now <- getCurrentTime
   updateOneWithKV
     [ Se.Set Beam.canDowngradeToSedan canDowngradeToSedan,
@@ -153,6 +153,7 @@ updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngrade
       Se.Set Beam.maxPickupRadius maxPickupRadius,
       Se.Set Beam.isSilentModeEnabled isSilentModeEnabled,
       Se.Set Beam.rideRequestVolume rideRequestVolume,
+      Se.Set Beam.isTTSEnabled isTTSEnabled,
       Se.Set Beam.updatedAt _now
     ]
     [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
@@ -293,7 +294,7 @@ updateSoftBlock softBlockStiers softBlockExpiryTime softBlockReasonFlag driverId
 
 updateSpecialLocWarriorInfo ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Bool -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation) -> [Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation] -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
+  (Kernel.Prelude.Bool -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation) -> [(Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation)] -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.Person.Person -> m ())
 updateSpecialLocWarriorInfo isSpecialLocWarrior preferredPrimarySpecialLocId preferredSecondarySpecialLocIds specialLocWarriorEnabledAt driverId = do
   _now <- getCurrentTime
   updateOneWithKV
@@ -383,6 +384,7 @@ updateByPrimaryKey (Domain.Types.DriverInformation.DriverInformation {..}) = do
       Se.Set Beam.isPetModeEnabled (Kernel.Prelude.Just isPetModeEnabled),
       Se.Set Beam.isSilentModeEnabled isSilentModeEnabled,
       Se.Set Beam.isSpecialLocWarrior (Kernel.Prelude.Just isSpecialLocWarrior),
+      Se.Set Beam.isTTSEnabled isTTSEnabled,
       Se.Set Beam.issueBreachCooldownTimes (Kernel.Prelude.toJSON <$> issueBreachCooldownTimes),
       Se.Set Beam.lastACStatusCheckedAt lastACStatusCheckedAt,
       Se.Set Beam.lastEnabledOn lastEnabledOn,

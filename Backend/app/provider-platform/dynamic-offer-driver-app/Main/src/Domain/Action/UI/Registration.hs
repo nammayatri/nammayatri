@@ -332,7 +332,8 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
             tripDistanceMaxThreshold = Nothing,
             tripDistanceMinThreshold = Nothing,
             rideRequestVolume = Nothing,
-            isSilentModeEnabled = Nothing
+            isSilentModeEnabled = Nothing,
+            isTTSEnabled = Nothing
           }
   QDriverStats.createInitialDriverStats merchantOperatingCity.currency merchantOperatingCity.distanceUnit driverId
   QD.create driverInfo
