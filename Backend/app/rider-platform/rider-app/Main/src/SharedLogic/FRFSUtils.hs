@@ -911,7 +911,7 @@ markAllRefundBookings booking personId = do
         >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> show person.merchantOperatingCityId)
     (vendorSplitDetails, amountUpdated) <- SMMFRFS.createVendorSplitFromBookings nonRefundInitiatedBookings person.merchantId person.merchantOperatingCityId Payment.FRFSMultiModalBooking frfsConfig.isFRFSTestingEnabled
     isSplitEnabled <- Payment.getIsSplitEnabled person.merchantId person.merchantOperatingCityId Nothing Payment.FRFSMultiModalBooking
-    splitDetails <- Payment.mkUnaggregatedSplitSettlementDetails isSplitEnabled amountUpdated vendorSplitDetails
+    splitDetails <- Payment.mkUnaggregatedRefundSplitSettlementDetails isSplitEnabled amountUpdated vendorSplitDetails
     let refundSplitDetails = mkRefundSplitDetails nonRefundInitiatedBookings
     refundId <- generateGUID
     when allFailed $ whenJust mbJourneyId $ \journeyId -> QJourney.updateStatus DJourney.FAILED journeyId

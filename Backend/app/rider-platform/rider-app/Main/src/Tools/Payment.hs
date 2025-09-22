@@ -37,6 +37,7 @@ module Tools.Payment
     SplitType (..),
     mkSplitSettlementDetails,
     mkUnaggregatedSplitSettlementDetails,
+    mkUnaggregatedRefundSplitSettlementDetails,
     groupSumVendorSplits,
     roundVendorFee,
     getIsSplitEnabled,
@@ -323,6 +324,33 @@ mkUnaggregatedSplitSettlementDetails isSplitEnabled totalAmount vendorFees = cas
           { marketplace = Marketplace marketplaceAmount,
             mdrBorneBy = ALL,
             vendor = Vendor vendorSplits
+          }
+
+mkUnaggregatedRefundSplitSettlementDetails :: (MonadFlow m) => Bool -> HighPrecMoney -> [VendorSplitDetails] -> m (Maybe RefundSplitSettlementDetails)
+mkUnaggregatedRefundSplitSettlementDetails isSplitEnabled totalAmount vendorFees = case isSplitEnabled of
+  False -> return Nothing
+  True -> do
+    let vendorSplits =
+          map
+            ( \fee ->
+                let roundedFee = roundVendorFee fee
+                 in RefundSplit
+                      { refundAmount = splitAmount roundedFee,
+                        subMid = vendorId roundedFee
+                      }
+            )
+            vendorFees
+        totalVendorAmount = roundToTwoDecimalPlaces $ sum $ map (\RefundSplit {refundAmount} -> refundAmount) vendorSplits
+        marketplaceAmount = roundToTwoDecimalPlaces (totalAmount - totalVendorAmount)
+    when (marketplaceAmount < 0) $ do
+      logError $ "Marketplace amount is negative: " <> show marketplaceAmount <> " for vendorFees: " <> show vendorFees <> "totalVendorAmount: " <> show totalVendorAmount <> " totalAmount: " <> show totalAmount
+      throwError (InternalError "Marketplace amount is negative")
+    return $
+      Just $
+        RefundSplitSettlementDetails
+          { marketplace = RefundMarketplace marketplaceAmount,
+            mdrBorneBy = ALL,
+            vendor = RefundVendor vendorSplits
           }
 
 groupSumVendorSplits :: [VendorSplitDetails] -> [VendorSplitDetails]
