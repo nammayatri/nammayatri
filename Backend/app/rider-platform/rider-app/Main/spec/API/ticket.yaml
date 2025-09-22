@@ -342,6 +342,15 @@ apis:
       response:
         type: BookingStatus
 
+  # # POST /ticket/bookings/{ticketBookingShortId}/cashCollect
+  - POST:
+      endpoint: /ticket/bookings/{ticketBookingShortId}/cashCollect
+      auth: TokenAuth
+      params:
+        ticketBookingShortId: ShortId TicketBooking
+      response:
+        type: APISuccess
+
   # POST /ticket/bookings/cancel
   - POST:
       endpoint: /ticket/booking/cancel

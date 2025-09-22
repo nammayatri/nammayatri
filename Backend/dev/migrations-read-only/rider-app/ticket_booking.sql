@@ -54,3 +54,8 @@ ALTER TABLE atlas_app.ticket_booking ADD COLUMN people_ticket_quantity json ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.ticket_booking ADD COLUMN ticket_sub_place_id character varying(36) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ticket_booking ADD COLUMN payment_method text ;

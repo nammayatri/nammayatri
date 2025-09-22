@@ -145,6 +145,16 @@ type API =
            Domain.Types.TicketBooking.BookingStatus
       :<|> TokenAuth
       :> "ticket"
+      :> "bookings"
+      :> Capture
+           "ticketBookingShortId"
+           (Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking)
+      :> "cashCollect"
+      :> Post
+           '[JSON]
+           Kernel.Types.APISuccess.APISuccess
+      :<|> TokenAuth
+      :> "ticket"
       :> "booking"
       :> "cancel"
       :> ReqBody
@@ -230,7 +240,7 @@ type API =
   )
 
 handler :: Environment.FlowServer API
-handler = getTicketPlaces :<|> getTicketPlacesServices :<|> postTicketPlacesBook :<|> getTicketBookings :<|> getTicketBookingsV2 :<|> getTicketBookingsDetails :<|> postTicketBookingsVerifyV2 :<|> postTicketBookingsVerify :<|> getTicketBookingsStatus :<|> postTicketBookingCancel :<|> postTicketBookingsUpdateSeats :<|> postTicketServiceCancel :<|> getTicketPlaceAvailability :<|> getTicketPlacesV2 :<|> getTicketPlace :<|> getTicketFleetVehicles
+handler = getTicketPlaces :<|> getTicketPlacesServices :<|> postTicketPlacesBook :<|> getTicketBookings :<|> getTicketBookingsV2 :<|> getTicketBookingsDetails :<|> postTicketBookingsVerifyV2 :<|> postTicketBookingsVerify :<|> getTicketBookingsStatus :<|> postTicketBookingsCashCollect :<|> postTicketBookingCancel :<|> postTicketBookingsUpdateSeats :<|> postTicketServiceCancel :<|> getTicketPlaceAvailability :<|> getTicketPlacesV2 :<|> getTicketPlace :<|> getTicketFleetVehicles
 
 getTicketPlaces :: ((Kernel.Types.Id.Id Domain.Types.Person.Person, Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Environment.FlowHandler [Domain.Types.TicketPlace.TicketPlace])
 getTicketPlaces a1 = withFlowHandlerAPI $ Domain.Action.UI.TicketService.getTicketPlaces (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a1)
@@ -318,6 +328,15 @@ getTicketBookingsStatus ::
     Environment.FlowHandler Domain.Types.TicketBooking.BookingStatus
   )
 getTicketBookingsStatus a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.TicketService.getTicketBookingsStatus (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+
+postTicketBookingsCashCollect ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking ->
+    Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
+  )
+postTicketBookingsCashCollect a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.TicketService.postTicketBookingCashCollect (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postTicketBookingCancel ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
