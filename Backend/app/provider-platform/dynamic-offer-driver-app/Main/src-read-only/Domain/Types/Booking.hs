@@ -44,6 +44,7 @@ data Booking = Booking
     estimatedDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     estimatedDuration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     estimatedFare :: Kernel.Types.Common.HighPrecMoney,
+    exotelDeclinedCallStatusReceivingTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     fareParams :: Domain.Types.FareParameters.FareParameters,
     fromLocGeohash :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     fromLocation :: Domain.Types.Location.Location,
