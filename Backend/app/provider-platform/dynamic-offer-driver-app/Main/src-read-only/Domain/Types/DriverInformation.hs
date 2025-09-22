@@ -61,6 +61,7 @@ data DriverInformation = DriverInformation
     isPetModeEnabled :: Kernel.Prelude.Bool,
     isSilentModeEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isSpecialLocWarrior :: Kernel.Prelude.Bool,
+    isTTSEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     issueBreachCooldownTimes :: Kernel.Prelude.Maybe [SharedLogic.BehaviourManagement.IssueBreach.IssueBreachCooldownTime],
     lastACStatusCheckedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     lastEnabledOn :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,

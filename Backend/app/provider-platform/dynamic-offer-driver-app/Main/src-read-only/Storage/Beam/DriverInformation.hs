@@ -59,6 +59,7 @@ data DriverInformationT f = DriverInformationT
     isPetModeEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isSilentModeEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isSpecialLocWarrior :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    isTTSEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     issueBreachCooldownTimes :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     lastACStatusCheckedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     lastEnabledOn :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),

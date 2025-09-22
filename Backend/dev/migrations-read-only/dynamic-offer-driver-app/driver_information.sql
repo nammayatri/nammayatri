@@ -242,3 +242,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN ride_request_vo
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN last_offline_time timestamp with time zone;
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN is_tts_enabled boolean ;
+
