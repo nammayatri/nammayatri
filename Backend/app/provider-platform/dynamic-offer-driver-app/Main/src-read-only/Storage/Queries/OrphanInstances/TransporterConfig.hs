@@ -25,7 +25,7 @@ instance FromTType' Beam.TransporterConfig Domain.Types.TransporterConfig.Transp
     pure $
       Just
         Domain.Types.TransporterConfig.TransporterConfig
-          { aaEnabledClientSdkVersion = fromMaybe "99999999999" aaEnabledClientSdkVersion,
+          { aaEnabledClientSdkVersion = fromMaybe "999.999.999" aaEnabledClientSdkVersion,
             aadhaarImageResizeConfig = (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< aadhaarImageResizeConfig,
             aadhaarVerificationRequired = aadhaarVerificationRequired,
             acStatusCheckGap = acStatusCheckGap,

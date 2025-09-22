@@ -61,7 +61,7 @@ runWithServiceConfigAndName func merchantId merchantOperatingCity serviceName mR
 
 decidePayoutService :: (ServiceFlow m r) => DMSC.ServiceName -> Maybe Version -> m DMSC.ServiceName
 decidePayoutService payoutServiceName clientSdkVersion = do
-  aaClientSdkVersion <- L.runIO $ (T.pack . (fromMaybe "") <$> SE.lookupEnv "AA_ENABLED_CLIENT_SDK_VERSION")
+  aaClientSdkVersion <- L.runIO $ (T.pack . (fromMaybe "999.999.999") <$> SE.lookupEnv "AA_ENABLED_CLIENT_SDK_VERSION")
   return $ case clientSdkVersion of
     Just v
       | v >= textToVersionDefault aaClientSdkVersion -> DMSC.PayoutService PT.AAJuspay
