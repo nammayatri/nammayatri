@@ -102,6 +102,7 @@ import qualified Domain.Types.SubscriptionConfig as DSC
 import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.ValueAddNP as VNP
 import qualified Domain.Types.VehicleCategory as DVC
+import qualified Domain.Types.VehicleCategory as Enums
 import qualified Domain.Types.VehicleServiceTier as DVST
 import qualified Domain.Types.VehicleVariant as DVeh
 import qualified Domain.Types.WhiteListOrg as WLO
@@ -2531,9 +2532,10 @@ postMerchantUpdateOnboardingVehicleVariantMapping merchantShortId opCity req = d
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
   logTagInfo "Updating onboarding vehicle variant mapping for merchant: " (show merchant.id <> " and city: " <> show opCity)
+  fetchedCategory <- validateCategory req.vehicleCategory
   configs <- readCsv req.file
   logTagInfo "Read file: " (show configs)
-  CQDVC.updateSupportedVehicleClassesJSON merchantOpCity.id (DVC.RCValidClasses configs)
+  CQDVC.updateSupportedVehicleClassesJSON merchantOpCity.id (DVC.RCValidClasses configs) fetchedCategory
   logTagInfo "Read file Done" ""
   CQDVC.clearCache merchantOpCity.id
   return Success
@@ -2562,6 +2564,25 @@ postMerchantUpdateOnboardingVehicleVariantMapping merchantShortId opCity req = d
             priority = cleanFieldToLower row.priority >>= readMaybe . T.unpack,
             bodyType = Nothing
           }
+
+    validateCategory :: Text -> Flow Enums.VehicleCategory
+    validateCategory fetchedCategory =
+      case parseCategory fetchedCategory of
+        Just validCat -> pure validCat
+        Nothing -> throwError (InvalidRequest "Category not found: ")
+
+    parseCategory :: T.Text -> Maybe Enums.VehicleCategory
+    parseCategory t = case T.toUpper (T.strip t) of
+      "CAR" -> Just Enums.CAR
+      "MOTORCYCLE" -> Just Enums.MOTORCYCLE
+      "TRAIN" -> Just Enums.TRAIN
+      "BUS" -> Just Enums.BUS
+      "FLIGHT" -> Just Enums.FLIGHT
+      "AUTO_CATEGORY" -> Just Enums.AUTO_CATEGORY
+      "AMBULANCE" -> Just Enums.AMBULANCE
+      "TRUCK" -> Just Enums.TRUCK
+      "BOAT" -> Just Enums.BOAT
+      _ -> Nothing
 
 postMerchantConfigClearCacheSubscription :: ShortId DM.Merchant -> Context.City -> Common.ClearCacheSubscriptionReq -> Flow APISuccess
 postMerchantConfigClearCacheSubscription merchantShortId opCity req = do

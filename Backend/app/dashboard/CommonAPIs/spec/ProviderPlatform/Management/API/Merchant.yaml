@@ -823,8 +823,8 @@ types:
   JobName:
     - enum: "BadDebtCalculationTrigger, DriverFeeCalculationTrigger, SendManualPaymentLinkTrigger, ReferralPayoutTrigger, SupplyDemandCalculation,CongestionChargeCalculation"
   UpdateOnboardingVehicleVariantMappingReq:
-    - recordType: NewType
     - file: FilePath
+    - vehicleCategory: Text
     - derive: "'HideSecrets"
   ClearCacheSubscriptionReq:
     - serviceName: Maybe ServiceNames
