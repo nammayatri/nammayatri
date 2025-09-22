@@ -59,7 +59,7 @@ types:
     startTime: Maybe UTCTime
     endTime: Maybe UTCTime
     createdAt: UTCTime
-    merchantOperatingCityName : Maybe Text
+    merchantOperatingCityName: Maybe Text
     paymentOrderShortId: Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder)
     result: Maybe Text # for backward compatibility hardcoding to Success in response
     derive: "Show"
@@ -194,10 +194,10 @@ types:
     options: "[AvailableRoutesByTier]"
 
   MultimodalCancelStatusResp:
-    cancellationCharges : Maybe HighPrecMoney
-    refundAmount : Maybe HighPrecMoney
-    isCancellable : Maybe Bool
-    bookingStatus : FRFSTicketBookingStatus
+    cancellationCharges: Maybe HighPrecMoney
+    refundAmount: Maybe HighPrecMoney
+    isCancellable: Maybe Bool
+    bookingStatus: FRFSTicketBookingStatus
 
   TransportRoute:
     cd: Text
@@ -289,6 +289,11 @@ types:
     routeShortName: Text
     routeLongName: Text
 
+  SetRouteNameReq:
+    journeyId: Id Journey
+    legOrder: Int
+    shortName: Text
+
   OnboardedVehicleDetailsReq:
     vehicleNumber: Text
 
@@ -322,7 +327,7 @@ apis:
       response:
         type: JourneyBookingPaymentStatus
   - POST:
-      endpoint : /multimodal/{journeyId}/payment/updateOrder
+      endpoint: /multimodal/{journeyId}/payment/updateOrder
       auth: TokenAuth
       request:
         type: UpdatePaymentOrderReq
@@ -583,5 +588,12 @@ apis:
       endpoint: /multimodal/switch/route
       request:
         type: SwitchRouteReq
+      response:
+        type: JourneyInfoResp
+
+  - POST:
+      endpoint: /multimodal/set/routeName
+      request:
+        type: SetRouteNameReq
       response:
         type: JourneyInfoResp
