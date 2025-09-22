@@ -750,6 +750,7 @@ buildDocumentVerificationConfig merchantId merchantOpCityId documentType Common.
         isDisabled = False,
         isHidden = False,
         isMandatory = False,
+        isMandatoryForEnabling = Just False,
         title = "Empty title",
         vehicleCategory = DVC.AUTO_CATEGORY,
         order = 0,

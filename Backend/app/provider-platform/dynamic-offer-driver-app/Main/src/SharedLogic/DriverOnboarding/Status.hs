@@ -209,7 +209,7 @@ statusHandler' mPerson driverImagesInfo makeSelfieAadhaarPanMandatory multipleRC
   let vehicleCategoryWithoutMandatoryConfigs = case onboardingVehicleCategory <|> (mDL >>= (.vehicleCategory)) of
         Just vehicleCategory -> do
           let vehicleDocumentVerificationConfigs = filter (\config -> config.vehicleCategory == vehicleCategory) allDocumentVerificationConfigs
-          let mandatoryVehicleDocumentVerificationConfigs = filter (\config -> config.documentType `elem` SDO.defaultVehicleDocumentTypes && config.isMandatory) vehicleDocumentVerificationConfigs
+          let mandatoryVehicleDocumentVerificationConfigs = filter (\config -> config.documentType `elem` SDO.defaultVehicleDocumentTypes && fromMaybe config.isMandatory config.isMandatoryForEnabling) vehicleDocumentVerificationConfigs
           if null mandatoryVehicleDocumentVerificationConfigs then Just vehicleCategory else Nothing
         Nothing -> Nothing
 
@@ -383,7 +383,7 @@ getVehicleDocTypes ::
   m [DVC.DocumentType]
 getVehicleDocTypes merchantOpCityId allDocumentVerificationConfigs verifiedVehicleCategory userSelectedVehicleCategory onlyMandatoryDocs = do
   let vehicleCategory = fromMaybe userSelectedVehicleCategory verifiedVehicleCategory
-  let mandatoryVehicleDocumentVerificationConfigs = filter (\config -> config.isMandatory && config.vehicleCategory == vehicleCategory) allDocumentVerificationConfigs
+  let mandatoryVehicleDocumentVerificationConfigs = filter (\config -> fromMaybe config.isMandatory config.isMandatoryForEnabling && config.vehicleCategory == vehicleCategory) allDocumentVerificationConfigs
   if onlyMandatoryDocs == Just True
     then do
       let vehicleDocumentTypes = filter (\doc -> doc `elem` (mandatoryVehicleDocumentVerificationConfigs <&> (.documentType))) SDO.defaultVehicleDocumentTypes
@@ -409,7 +409,7 @@ getDriverDocTypes merchantOpCityId allDocumentVerificationConfigs possibleVehicl
   if isFleetRole role
     then pure SDO.defaultFleetDocumentTypes
     else do
-      let mandatoryVehicleDocumentVerificationConfigs = filter (\config -> config.isMandatory && config.vehicleCategory `elem` possibleVehicleCategories) allDocumentVerificationConfigs
+      let mandatoryVehicleDocumentVerificationConfigs = filter (\config -> fromMaybe config.isMandatory config.isMandatoryForEnabling && config.vehicleCategory `elem` possibleVehicleCategories) allDocumentVerificationConfigs
       if onlyMandatoryDocs == Just True
         then do
           let driverDocumentTypes = filter (\doc -> doc `elem` nub (mandatoryVehicleDocumentVerificationConfigs <&> (.documentType))) SDO.defaultDriverDocumentTypes
@@ -629,7 +629,7 @@ checkIfDocumentValid allDocumentVerificationConfigs docType category status make
   let mbVerificationConfig = find (\config -> config.documentType == docType && config.vehicleCategory == category) allDocumentVerificationConfigs
   case mbVerificationConfig of
     Just verificationConfig -> do
-      if verificationConfig.isMandatory && (not (fromMaybe False verificationConfig.filterForOldApks) || fromMaybe False makeSelfieAadhaarPanMandatory)
+      if fromMaybe verificationConfig.isMandatory verificationConfig.isMandatoryForEnabling && (not (fromMaybe False verificationConfig.filterForOldApks) || fromMaybe False makeSelfieAadhaarPanMandatory)
         then case status of
           MANUAL_VERIFICATION_REQUIRED -> verificationConfig.isDefaultEnabledOnManualVerification
           _ -> False

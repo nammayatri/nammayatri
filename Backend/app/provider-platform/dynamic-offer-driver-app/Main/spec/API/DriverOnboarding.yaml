@@ -39,6 +39,7 @@ types:
     title: Text
     description: Maybe Text
     isMandatory: Bool
+    isMandatoryForEnabling: Bool
     isDisabled: Bool
     disableWarning: Maybe Text
     isHidden: Bool

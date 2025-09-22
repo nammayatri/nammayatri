@@ -435,6 +435,7 @@ DocumentVerificationConfig:
     title: Text
     description: Maybe Text
     isMandatory: Bool
+    isMandatoryForEnabling: Maybe Bool
     isDisabled: Bool
     disableWarning: Maybe Text
     isHidden: Bool
