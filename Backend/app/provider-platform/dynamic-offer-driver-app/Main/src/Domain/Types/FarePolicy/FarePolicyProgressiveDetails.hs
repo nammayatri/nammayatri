@@ -18,6 +18,8 @@ module Domain.Types.FarePolicy.FarePolicyProgressiveDetails
     WaitingChargeInfo (..),
     NightShiftCharge (..),
     WaitingCharge (..),
+    PickupCharges (..),
+    PickupChargesWithCurrency (..),
   )
 where
 
@@ -38,6 +40,7 @@ data FPProgressiveDetailsD (s :: UsageSafety) = FPProgressiveDetails
     perExtraKmRateSections :: NonEmpty (FPProgressiveDetailsPerExtraKmRateSectionD s),
     perMinRateSections :: Maybe (NonEmpty FPProgressiveDetailsPerMinRateSection),
     deadKmFare :: HighPrecMoney,
+    pickupCharges :: PickupCharges,
     waitingChargeInfo :: Maybe WaitingChargeInfo,
     nightShiftCharge :: Maybe NightShiftCharge,
     currency :: Currency
@@ -67,6 +70,8 @@ data FPProgressiveDetailsAPIEntity = FPProgressiveDetailsAPIEntity
     perExtraKmRateSections :: NonEmpty FPProgressiveDetailsPerExtraKmRateSectionAPIEntity,
     perMinRateSections :: Maybe (NonEmpty FPProgressiveDetailsPerMinRateSectionAPIEntity),
     deadKmFare :: Money,
+    pickupCharges :: PickupChargesApiEntity,
+    pickupChargesWithCurrency :: PickupChargesWithCurrency,
     deadKmFareWithCurrency :: PriceAPIEntity,
     waitingChargeInfo :: Maybe Common.WaitingChargeInfoAPIEntity,
     nightShiftCharge :: Maybe Common.NightShiftChargeAPIEntity

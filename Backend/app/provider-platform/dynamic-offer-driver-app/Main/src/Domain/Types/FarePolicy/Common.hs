@@ -30,6 +30,29 @@ data NightShiftCharge
   deriving stock (Show, Eq, Read, Ord, Generic)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
 
+data PickupCharges = PickupCharges
+  { pickupChargesMin :: HighPrecMoney,
+    pickupChargesMax :: HighPrecMoney
+  }
+  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
+
+$(mkBeamInstancesForJSON ''PickupCharges)
+
+data PickupChargesApiEntity = PickupChargesApiEntity
+  { pickupChargesMin :: Money,
+    pickupChargesMax :: Money
+  }
+  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
+
+data PickupChargesWithCurrency = PickupChargesWithCurrency
+  { pickupChargesMinWithCurrency :: PriceAPIEntity,
+    pickupChargesMaxWithCurrency :: PriceAPIEntity
+  }
+  deriving stock (Show, Eq, Read, Ord, Generic)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
+
 data WaitingChargeInfo = WaitingChargeInfo
   { freeWaitingTime :: Minutes,
     waitingCharge :: WaitingCharge

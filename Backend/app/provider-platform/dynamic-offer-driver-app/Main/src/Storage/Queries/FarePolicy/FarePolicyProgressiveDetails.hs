@@ -60,6 +60,13 @@ fromTTypeFarePolicyProgressiveDetails BeamFPPD.FarePolicyProgressiveDetailsT {..
         baseFare = mkAmountWithDefault baseFareAmount baseFare,
         perExtraKmRateSections = snd <$> fPPDP,
         deadKmFare = mkAmountWithDefault deadKmFareAmount deadKmFare,
+        pickupCharges = do
+          let pChargesmin = fromMaybe deadKmFare pickupChargesMin
+              pChargesmax = fromMaybe deadKmFare pickupChargesMax
+          Domain.PickupCharges
+            { pickupChargesMin = mkAmountWithDefault pickupChargesMinAmount pChargesmin,
+              pickupChargesMax = mkAmountWithDefault pickupChargesMaxAmount pChargesmax
+            },
         currency = fromMaybe INR currency,
         distanceUnit = fromMaybe Meter distanceUnit,
         perMinRateSections = fullMinFP,
@@ -85,6 +92,10 @@ instance ToTType' BeamFPPD.FarePolicyProgressiveDetails Domain.FullFarePolicyPro
         deadKmFareAmount = Just deadKmFare,
         currency = Just currency,
         distanceUnit = Just distanceUnit,
+        pickupChargesMin = Just $ roundToIntegral pickupCharges.pickupChargesMin,
+        pickupChargesMax = Just $ roundToIntegral pickupCharges.pickupChargesMax,
+        pickupChargesMinAmount = Just pickupCharges.pickupChargesMin,
+        pickupChargesMaxAmount = Just pickupCharges.pickupChargesMax,
         waitingCharge = (.waitingCharge) <$> waitingChargeInfo,
         nightShiftCharge = nightShiftCharge
       }

@@ -1057,6 +1057,8 @@ data FarePolicyCSVRow = FarePolicyCSVRow
     baseDistance :: Text,
     baseFare :: Text,
     deadKmFare :: Text,
+    pickupChargesMin :: Text, --HighPrecMoney <- readCSVField idx row.pickupChargesMin "Pickup Charges Min"
+    pickupChargesMax :: Text,
     waitingCharge :: Text,
     waitingChargeType :: Text,
     nightShiftCharge :: Text,
@@ -1146,6 +1148,8 @@ instance FromNamedRecord FarePolicyCSVRow where
       <*> r .: "base_distance"
       <*> r .: "base_fare"
       <*> r .: "dead_km_fare"
+      <*> r .: "pickup_charges_min"
+      <*> r .: "pickup_charges_max"
       <*> r .: "waiting_charge"
       <*> r .: "waiting_charge_type"
       <*> r .: "night_shift_charge"
@@ -1513,6 +1517,8 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
             baseDistance :: Meters <- readCSVField idx row.baseDistance "Base Distance"
             baseFare :: HighPrecMoney <- readCSVField idx row.baseFare "Base Fare"
             deadKmFare :: HighPrecMoney <- readCSVField idx row.deadKmFare "Dead Km Fare"
+            pickupChargesMin :: HighPrecMoney <- readCSVField idx row.pickupChargesMin "Pickup Charges Min"
+            pickupChargesMax :: HighPrecMoney <- readCSVField idx row.pickupChargesMax "Pickup Charges Max"
             let waitingChargeInfo =
                   Just
                     FarePolicy.WaitingChargeInfo
@@ -1521,6 +1527,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
                       }
             startDistance :: Meters <- readCSVField idx row.extraKmRateStartDistance "Extra Km Rate Start Distance"
             perExtraKmRate :: HighPrecMoney <- readCSVField idx row.perExtraKmRate "Per Extra Km Rate"
+            let pickupCharges = FarePolicy.PickupCharges {pickupChargesMin = pickupChargesMin, pickupChargesMax = pickupChargesMax}
             let baseFareDepreciation :: HighPrecMoney = fromMaybe (HighPrecMoney 0.0) (readMaybeCSVField idx row.baseFareDepreciation "Base fare depreciation")
             let perExtraKmRateSections = NE.fromList [FarePolicy.FPProgressiveDetailsPerExtraKmRateSection {startDistance, distanceUnit, perExtraKmRate, baseFareDepreciation}]
             -- TODO: Add support for per min rate sections in csv file
