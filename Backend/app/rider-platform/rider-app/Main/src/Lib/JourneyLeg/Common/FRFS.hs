@@ -113,8 +113,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
                     legOrder = journeyLeg.sequenceNumber,
                     subLegOrder = 1,
                     mode,
-                    fleetNo = mbCurrentLegDetails >>= (.finalBoardedBusNumber),
-                    finalBoardedBusNumberUpdatedByUser = mbCurrentLegDetails >>= (.finalBoardedBusNumberUpdatedByUser)
+                    fleetNo = mbCurrentLegDetails >>= (.finalBoardedBusNumber)
                   }
 
           vehiclePositionsToReturn <-
@@ -132,7 +131,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
               movementDetected
 
           let detailedStateData = baseStateData {JT.vehiclePositions = vehiclePositionsToReturn}
-          finalStateData <- updateFleetNoIfFinalized detailedStateData mbCurrentLegDetails searchId (isJust mbBooking)
+          finalStateData <- updateFleetNoIfFinalized integratedBppConfig detailedStateData mbCurrentLegDetails searchId (isJust mbBooking)
           return $ JT.Single finalStateData
         _ -> do
           let journeyLegStates =
@@ -146,8 +145,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
                       legOrder = journeyLeg.sequenceNumber,
                       subLegOrder,
                       mode,
-                      fleetNo = Nothing,
-                      finalBoardedBusNumberUpdatedByUser = Nothing
+                      fleetNo = Nothing
                     }
                   | (subLegOrder, trackingStatus, trackingStatusLastUpdatedAt) <- trackingStatuses
                 ]
@@ -188,8 +186,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
                     legOrder = journeyLeg.sequenceNumber,
                     subLegOrder = 1,
                     mode,
-                    fleetNo = mbCurrentLegDetails >>= (.finalBoardedBusNumber),
-                    finalBoardedBusNumberUpdatedByUser = mbCurrentLegDetails >>= (.finalBoardedBusNumberUpdatedByUser)
+                    fleetNo = mbCurrentLegDetails >>= (.finalBoardedBusNumber)
                   }
 
           vehiclePositionsToReturn <-
@@ -208,7 +205,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
 
           let detailedStateData = baseStateData {JT.vehiclePositions = vehiclePositionsToReturn}
           logDebug $ "CFRFS getState: Detailed state data for without booking: " <> show vehiclePositionsToReturn
-          finalStateData <- updateFleetNoIfFinalized detailedStateData mbCurrentLegDetails searchId (isJust mbBooking)
+          finalStateData <- updateFleetNoIfFinalized integratedBppConfig detailedStateData mbCurrentLegDetails searchId (isJust mbBooking)
           return $ JT.Single finalStateData
         _ -> do
           -- Other modes (Metro, Subway, etc.)
@@ -223,8 +220,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
                       legOrder = journeyLeg.sequenceNumber,
                       subLegOrder = subLegOrder,
                       mode,
-                      fleetNo = Nothing,
-                      finalBoardedBusNumberUpdatedByUser = Nothing
+                      fleetNo = Nothing
                     }
                   | (subLegOrder, trackingStatus, trackingStatusLastUpdatedAt) <- trackingStatuses
                 ]
@@ -232,12 +228,13 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
   where
     updateFleetNoIfFinalized ::
       (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig], HasField "ltsHedisEnv" r Redis.HedisEnv, HasShortDurationRetryCfg r c, HasKafkaProducer r) =>
+      DIBC.IntegratedBPPConfig ->
       JT.JourneyLegStateData ->
       Maybe DJourneyLeg.JourneyLeg ->
       Id FRFSSearch ->
       Bool ->
       m JT.JourneyLegStateData
-    updateFleetNoIfFinalized detailedStateData mbCurrentLegDetails searchId' isBooking =
+    updateFleetNoIfFinalized integratedBppConfig detailedStateData mbCurrentLegDetails searchId' isBooking =
       if detailedStateData.status `elem` [JPT.Finishing, JPT.Completed]
         then do
           case mbCurrentLegDetails of
@@ -248,7 +245,16 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
                   case bestCandidateResult of
                     [] -> pure detailedStateData
                     ((bestVehicleNumber, _) : _) -> do
-                      QJourneyLeg.updateByPrimaryKey legToUpdate {DJourneyLeg.finalBoardedBusNumber = Just bestVehicleNumber, DJourneyLeg.finalBoardedBusNumberUpdatedByUser = Just False}
+                      mbVehicleRouteInfo <- JMU.getVehicleLiveRouteInfo [integratedBppConfig] bestVehicleNumber
+                      let mbVehicleInfo = mbVehicleRouteInfo <&> snd
+                      QJourneyLeg.updateByPrimaryKey $
+                        legToUpdate
+                          { DJourneyLeg.finalBoardedBusNumber = Just bestVehicleNumber,
+                            DJourneyLeg.finalBoardedBusNumberSource = Just DJourneyLeg.Detected,
+                            DJourneyLeg.finalBoardedDepotNo = mbVehicleInfo >>= (.depot),
+                            DJourneyLeg.finalBoardedWaybillId = mbVehicleInfo >>= (.waybillId),
+                            DJourneyLeg.finalBoardedScheduleNo = mbVehicleInfo <&> (.scheduleNo)
+                          }
                       -- Update in-memory detailedStateData as well
                       pure (detailedStateData :: JT.JourneyLegStateData) {JT.fleetNo = Just bestVehicleNumber}
                 Just _ -> pure detailedStateData

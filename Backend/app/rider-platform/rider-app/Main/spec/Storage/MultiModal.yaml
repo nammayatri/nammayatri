@@ -206,7 +206,7 @@ JourneyLegMapping:
 JourneyLeg:
   types:
     BusBoardingMethod:
-      enum: "UserActivated | UserInitiated | Detected"
+      enum: "UserActivated | UserSpotBooked | Detected"
       derive: "ToParamSchema"
   fields:
     id: Id JourneyLeg
@@ -237,13 +237,14 @@ JourneyLeg:
     osmExit: Maybe MultiModalLegGate
     merchantId: Id Merchant
     merchantOperatingCityId: Id MerchantOperatingCity
-    # To be removed, post journey leg mapping creation these will not be null
     journeyId: Id Journey
     isDeleted: Maybe Bool
     sequenceNumber: Int
     multimodalSearchRequestId: Maybe Text
-    finalBoardedBusNumberUpdatedByUser: Maybe Bool # deprecated
     finalBoardedBusNumberSource: Maybe BusBoardingMethod
+    finalBoardedDepotNo: Maybe Text
+    finalBoardedWaybillId: Maybe Text
+    finalBoardedScheduleNo: Maybe Text
 
   sqlType:
     serviceTypes: text[]

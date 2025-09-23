@@ -1291,7 +1291,7 @@ data VehicleLiveRouteInfo = VehicleLiveRouteInfo
     serviceType :: Spec.ServiceTierType,
     vehicleNumber :: Text,
     waybillId :: Maybe Text,
-    scheduleNo :: Maybe Text,
+    scheduleNo :: Text,
     depot :: Maybe Text
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
