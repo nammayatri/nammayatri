@@ -6,6 +6,7 @@ import Data.Text
 import Data.Time (UTCTime (..), defaultTimeLocale, formatTime, utctDay)
 import Data.Time.Calendar (toGregorian)
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
+import qualified Domain.SharedLogic.Cancel as SharedCancel
 import Domain.Types.Booking as DRB
 import qualified Domain.Types.BookingCancellationReason as DBCR
 import qualified Domain.Types.Merchant as DM
@@ -61,27 +62,30 @@ cancelBooking booking mbDriver transporter = do
   mbRide <- QRide.findActiveByRBId booking.id
   bookingCancellationReason <- case mbDriver of
     Nothing -> buildBookingCancellationReason Nothing mbRide transporterId'
-    Just driver -> do
+    Just driver -> buildBookingCancellationReason (Just driver.id) mbRide transporterId'
+
+  -- Lock Description: This is a Shared Lock held Between Booking Cancel for Customer & Driver, At a time only one of them can do the full Cancel to OnCancel/Reallocation flow.
+  -- Lock Release: Held for 30 seconds and released at the end of the OnCancel.
+  SharedCancel.tryCancellationLock booking.transactionId $ do
+    whenJust mbDriver $ \driver ->
       updateOnRideStatusWithAdvancedRideCheck driver.id mbRide
-      buildBookingCancellationReason (Just driver.id) mbRide transporterId'
+    QRB.updateStatus booking.id DRB.CANCELLED
+    when booking.isScheduled $ removeBookingFromRedis booking
+    QBCR.upsert bookingCancellationReason
+    whenJust mbRide $ \ride -> do
+      void $ CQDGR.setDriverGoHomeIsOnRideStatus ride.driverId booking.merchantOperatingCityId False
+      QRide.updateStatus ride.id SRide.CANCELLED
+      updateOnRideStatusWithAdvancedRideCheck (cast ride.driverId) mbRide
+      void $ LF.rideDetails ride.id SRide.CANCELLED transporter.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon Nothing (Just $ (LT.Car $ LT.CarRideInfo {pickupLocation = LatLong (booking.fromLocation.lat) (booking.fromLocation.lon), minDistanceBetweenTwoPoints = Nothing}))
 
-  QRB.updateStatus booking.id DRB.CANCELLED
-  when booking.isScheduled $ removeBookingFromRedis booking
-  QBCR.upsert bookingCancellationReason
-  whenJust mbRide $ \ride -> do
-    void $ CQDGR.setDriverGoHomeIsOnRideStatus ride.driverId booking.merchantOperatingCityId False
-    QRide.updateStatus ride.id SRide.CANCELLED
-    updateOnRideStatusWithAdvancedRideCheck (cast ride.driverId) mbRide
-    void $ LF.rideDetails ride.id SRide.CANCELLED transporter.id ride.driverId booking.fromLocation.lat booking.fromLocation.lon Nothing (Just $ (LT.Car $ LT.CarRideInfo {pickupLocation = LatLong (booking.fromLocation.lat) (booking.fromLocation.lon), minDistanceBetweenTwoPoints = Nothing}))
-
-  fork "cancelBooking - Notify BAP" $ do
-    BP.sendBookingCancelledUpdateToBAP booking transporter bookingCancellationReason.source Nothing
-  whenJust mbRide $ \ride ->
-    case mbDriver of
-      Nothing -> throwError (PersonNotFound ride.driverId.getId)
-      Just driver -> do
-        fork "cancelRide - Notify driver" $ do
-          Notify.notifyOnCancel booking.merchantOperatingCityId booking driver bookingCancellationReason.source
+    fork "cancelBooking - Notify BAP" $ do
+      BP.sendBookingCancelledUpdateToBAP booking transporter bookingCancellationReason.source Nothing
+    whenJust mbRide $ \ride ->
+      case mbDriver of
+        Nothing -> throwError (PersonNotFound ride.driverId.getId)
+        Just driver -> do
+          fork "cancelRide - Notify driver" $ do
+            Notify.notifyOnCancel booking.merchantOperatingCityId booking driver bookingCancellationReason.source
   where
     buildBookingCancellationReason driverId ride merchantId = do
       return $
