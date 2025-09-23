@@ -1313,6 +1313,7 @@ getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber = do
               )
 
 sortAndGetBusFares :: (EsqDBFlow m r, CacheFlow m r, MonadFlow m) => Id MerchantOperatingCity -> [FRFSFare] -> m (Maybe FRFSFare)
+sortAndGetBusFares _ [] = return Nothing
 sortAndGetBusFares merchantOpCityId finalFares = do
   mbRiderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOpCityId Nothing
   let cfgMap = maybe (toCfgMap defaultBusTierSortingConfig) toCfgMap (mbRiderConfig >>= (.busTierSortingConfig))

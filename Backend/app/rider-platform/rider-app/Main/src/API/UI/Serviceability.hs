@@ -30,7 +30,7 @@ import Kernel.Types.Error
 import Kernel.Types.Geofencing
 import Kernel.Types.Id
 import Kernel.Utils.Common
-import Servant
+import Servant hiding (throwError)
 import qualified SharedLogic.CallBPPInternal as BPPInternal
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -84,4 +84,9 @@ checkForIsInterCity ::
   FlowHandler BPPInternal.IsIntercityResp
 checkForIsInterCity (personId, merchantId) req = withFlowHandlerAPI . withPersonIdLogTag personId $ do
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  BPPInternal.getIsInterCity merchant req
+  eitherResp <- try @_ @SomeException (BPPInternal.getIsInterCity merchant req)
+  case eitherResp of
+    Left err -> do
+      logDebug $ "Intercity API failed: " <> show err
+      throwError RideNotServiceable
+    Right resp -> return resp
