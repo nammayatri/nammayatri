@@ -201,8 +201,7 @@ bookingList (personId, merchantId) mbLimit mbOffset mbOnlyActive mbBookingStatus
 data BookingListResV2 = BookingListResV2
   { list :: [BookingAPIEntityV2],
     bookingOffset :: Maybe Int,
-    journeyOffset :: Maybe Int,
-    hasMoreData :: Bool
+    journeyOffset :: Maybe Int
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema)
 
@@ -211,28 +210,24 @@ data BookingAPIEntityV2 = Ride SRB.BookingAPIEntity | MultiModalRide APITypes.Jo
 
 bookingListV2 :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> [SRB.BookingStatus] -> [DJ.JourneyStatus] -> Maybe Bool -> Maybe SRB.BookingRequestType -> Flow BookingListResV2
 bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyOffset mbFromDate' mbToDate' mbBookingStatusList mbJourneyStatusList mbIsPaymentSuccess mbBookingRequestType = do
-  (apiEntity, nextBookingOffset, nextJourneyOffset, hasMoreData) <- case mbBookingRequestType of
+  (apiEntity, nextBookingOffset, nextJourneyOffset) <- case mbBookingRequestType of
     Just SRB.BookingRequest -> do
-      (rbList, allbookings) <- getBookingList (personId, merchantId) integralLimit mbInitialBookingOffset Nothing Nothing Nothing mbFromDate' mbToDate' mbBookingStatusList
+      (rbList, allbookings) <- getBookingList (personId, merchantId) mbLimit mbInitialBookingOffset Nothing Nothing Nothing mbFromDate' mbToDate' mbBookingStatusList
       clearStuckRides (Just allbookings) rbList
 
-      let hasMoreData = length rbList >= limit
+      (entitiesWithSource, finalBookingOffset, _) <- buildApiEntityForRideOrJourneyWithCounts personId mbLimit rbList [] mbInitialBookingOffset (Just 0)
 
-      (entitiesWithSource, finalBookingOffset, _) <- buildApiEntityForRideOrJourneyWithCounts personId limit rbList [] mbInitialBookingOffset (Just 0)
-
-      pure (entitiesWithSource, Just finalBookingOffset, Nothing, hasMoreData)
+      pure (entitiesWithSource, Just finalBookingOffset, Nothing)
     Just SRB.JourneyRequest -> do
-      allJourneys <- getJourneyList personId integralLimit mbInitialJourneyOffset mbFromDate' mbToDate' mbJourneyStatusList mbIsPaymentSuccess
+      allJourneys <- getJourneyList personId mbLimit mbInitialJourneyOffset mbFromDate' mbToDate' mbJourneyStatusList mbIsPaymentSuccess
       clearStuckRides Nothing []
 
-      let hasMoreData = length allJourneys >= limit
+      (entitiesWithSource, _, finalJourneyOffset) <- buildApiEntityForRideOrJourneyWithCounts personId mbLimit [] allJourneys (Just 0) mbInitialJourneyOffset
 
-      (entitiesWithSource, _, finalJourneyOffset) <- buildApiEntityForRideOrJourneyWithCounts personId limit [] allJourneys (Just 0) mbInitialJourneyOffset
-
-      pure (entitiesWithSource, Nothing, Just finalJourneyOffset, hasMoreData)
+      pure (entitiesWithSource, Nothing, Just finalJourneyOffset)
     _ -> do
-      bookingListFork <- awaitableFork "bookingListV2->getBookingList" $ getBookingList (personId, merchantId) integralLimit mbInitialBookingOffset Nothing Nothing Nothing mbFromDate' mbToDate' mbBookingStatusList
-      journeyListFork <- awaitableFork "bookingListV2->getJourneyList" $ getJourneyList personId integralLimit mbInitialJourneyOffset mbFromDate' mbToDate' mbJourneyStatusList mbIsPaymentSuccess
+      bookingListFork <- awaitableFork "bookingListV2->getBookingList" $ getBookingList (personId, merchantId) mbLimit mbInitialBookingOffset Nothing Nothing Nothing mbFromDate' mbToDate' mbBookingStatusList
+      journeyListFork <- awaitableFork "bookingListV2->getJourneyList" $ getJourneyList personId mbLimit mbInitialJourneyOffset mbFromDate' mbToDate' mbJourneyStatusList mbIsPaymentSuccess
 
       (rbList, allbookings) <-
         L.await Nothing bookingListFork >>= \case
@@ -244,26 +239,21 @@ bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyO
           Left err -> throwError $ InternalError $ "Failed to get journey list: " <> show err
           Right result -> pure result
 
-      let hasMoreData = length rbList + length allJourneys >= limit
-
       clearStuckRides (Just allbookings) rbList
 
-      (entitiesWithSource, finalBookingOffset, finalJourneyOffset) <- buildApiEntityForRideOrJourneyWithCounts personId limit rbList allJourneys mbInitialBookingOffset mbInitialJourneyOffset
+      (entitiesWithSource, finalBookingOffset, finalJourneyOffset) <- buildApiEntityForRideOrJourneyWithCounts personId mbLimit rbList allJourneys mbInitialBookingOffset mbInitialJourneyOffset
 
-      pure (entitiesWithSource, Just finalBookingOffset, Just finalJourneyOffset, hasMoreData)
+      pure (entitiesWithSource, Just finalBookingOffset, Just finalJourneyOffset)
 
   pure $
     BookingListResV2
       { list = apiEntity,
         bookingOffset = nextBookingOffset,
-        journeyOffset = nextJourneyOffset,
-        hasMoreData = hasMoreData
+        journeyOffset = nextJourneyOffset
       }
   where
     mbInitialBookingOffset = mbBookingOffset <|> mbOffset
     mbInitialJourneyOffset = mbJourneyOffset <|> mbOffset
-    limit = maybe 10 fromIntegral mbLimit
-    integralLimit = Just (fromIntegral limit)
 
     clearStuckRides mbAllbookings rbList = do
       case mbAllbookings of
@@ -273,58 +263,57 @@ bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyO
         Nothing -> do
           fork "booking list status update" $ do
             -- Fetching Bookings in Fork for stuck booking case
-            (rbList_, allbookings_) <- getBookingList (personId, merchantId) integralLimit mbInitialBookingOffset Nothing Nothing Nothing mbFromDate' mbToDate' mbBookingStatusList
+            (rbList_, allbookings_) <- getBookingList (personId, merchantId) mbLimit mbInitialBookingOffset Nothing Nothing Nothing mbFromDate' mbToDate' mbBookingStatusList
             checkBookingsForStatus allbookings_
             logInfo $ "rbList: test " <> show rbList_
 
-buildApiEntityForRideOrJourneyWithCounts :: Id Person.Person -> Int -> [SRB.Booking] -> [DJ.Journey] -> Maybe Integer -> Maybe Integer -> Flow ([BookingAPIEntityV2], Int, Int)
-buildApiEntityForRideOrJourneyWithCounts personId finalLimit bookings journeys initialBookingOffset initialJourneyOffset = do
-  let (mergedList, bookingOffset, journeyOffset) = mergeWithCounts bookings journeys finalLimit 0 0 []
-      finalBookingOffset = bookingOffset + maybe 0 fromIntegral initialBookingOffset
-      finalJourneyOffset = journeyOffset + maybe 0 fromIntegral initialJourneyOffset
+buildApiEntityForRideOrJourneyWithCounts :: Id Person.Person -> Maybe Integer -> [SRB.Booking] -> [DJ.Journey] -> Maybe Integer -> Maybe Integer -> Flow ([BookingAPIEntityV2], Int, Int)
+buildApiEntityForRideOrJourneyWithCounts personId mbLimit bookings journeys initialBookingOffset initialJourneyOffset = do
+  let limit = maybe maxBound fromIntegral mbLimit
+      (mergedList, bookingOffset, journeyOffset) = mergeWithCounts bookings journeys limit 0 0 (maybe 0 fromIntegral initialBookingOffset) (maybe 0 fromIntegral initialJourneyOffset) []
   entities <- JMU.measureLatency (buildBookingListV2 personId (reverse mergedList)) "buildBookingListV2 measureLatency: "
-  return (entities, finalBookingOffset, finalJourneyOffset)
+  return (entities, bookingOffset, journeyOffset)
   where
     -- Merge bookings and journeys while respecting the limit and counting each type
-    mergeWithCounts :: [SRB.Booking] -> [DJ.Journey] -> Int -> Int -> Int -> [Either SRB.Booking DJ.Journey] -> ([Either SRB.Booking DJ.Journey], Int, Int)
+    mergeWithCounts :: [SRB.Booking] -> [DJ.Journey] -> Int -> Int -> Int -> Int -> Int -> [Either SRB.Booking DJ.Journey] -> ([Either SRB.Booking DJ.Journey], Int, Int)
     -- Base case: no more bookings, take remaining journeys up to limit
-    mergeWithCounts [] js limit bOffset jOffset acc
+    mergeWithCounts [] js limit bCount jCount bOffset jOffset acc
       | reachedLimit = (acc, bOffset, jOffset)
       | otherwise =
-        let takeCount = limit - (bOffset + jOffset)
+        let takeCount = limit - (bCount + jCount)
             (newAcc, newJOffset) = takeValidJourneys js takeCount jOffset acc
          in (newAcc, bOffset, newJOffset)
       where
-        reachedLimit = bOffset + jOffset >= limit
+        reachedLimit = bCount + jCount >= limit
         takeValidJourneys :: [DJ.Journey] -> Int -> Int -> [Either SRB.Booking DJ.Journey] -> ([Either SRB.Booking DJ.Journey], Int)
         takeValidJourneys [] _ currentOffset acc' = (acc', currentOffset)
         takeValidJourneys _ 0 currentOffset acc' = (acc', currentOffset)
         takeValidJourneys (j : js') remainingCount currentOffset acc'
           | isSingleTaxiJourney j =
-            takeValidJourneys js' (remainingCount - 1) (currentOffset + 1) acc' -- Skip single-leg taxi journey but include for offset
+            takeValidJourneys js' remainingCount (currentOffset + 1) acc' -- Skip single-leg taxi journey but include for offset
           | otherwise =
             takeValidJourneys js' (remainingCount - 1) (currentOffset + 1) (Right j : acc')
 
     -- Base case: no more journeys, take remaining bookings up to limit
-    mergeWithCounts bs [] limit bOffset jOffset acc
+    mergeWithCounts bs [] limit bCount jCount bOffset jOffset acc
       | reachedLimit = (acc, bOffset, jOffset)
       | otherwise =
-        let takeCount = limit - (bOffset + jOffset)
+        let takeCount = limit - (bCount + jCount)
             takenBookings = take takeCount bs
          in (foldl' (\acc' x -> Left x : acc') acc takenBookings, bOffset + length takenBookings, jOffset)
       where
-        reachedLimit = bOffset + jOffset >= limit
+        reachedLimit = bCount + jCount >= limit
 
     -- Recursive case: compare current booking and journey, take the more recent one
-    mergeWithCounts (b : bs) (j : js) limit bOffset jOffset acc
+    mergeWithCounts (b : bs) (j : js) limit bCount jCount bOffset jOffset acc
       | reachedLimit = (acc, bOffset, jOffset)
-      | isSingleTaxiJourney j = mergeWithCounts (b : bs) js limit bOffset (jOffset + 1) acc -- Skip single-leg taxi journey but include offset
+      | isSingleTaxiJourney j = mergeWithCounts (b : bs) js limit bCount jCount bOffset (jOffset + 1) acc -- Skip single-leg taxi journey but include offset
       | otherwise =
         case compareBookingJourney b j of
-          GT -> mergeWithCounts bs (j : js) limit (bOffset + 1) jOffset (Left b : acc)
-          _ -> mergeWithCounts (b : bs) js limit bOffset (jOffset + 1) (Right j : acc)
+          GT -> mergeWithCounts bs (j : js) limit (bCount + 1) jCount (bOffset + 1) jOffset (Left b : acc)
+          _ -> mergeWithCounts (b : bs) js limit bCount (jCount + 1) bOffset (jOffset + 1) (Right j : acc)
       where
-        reachedLimit = bOffset + jOffset >= limit
+        reachedLimit = bCount + jCount >= limit
 
     isSingleTaxiJourney :: DJ.Journey -> Bool
     isSingleTaxiJourney j = j.totalLegs == 1 && j.modes == [DTrip.Taxi]
