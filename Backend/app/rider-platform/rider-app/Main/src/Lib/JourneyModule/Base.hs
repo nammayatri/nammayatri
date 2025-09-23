@@ -143,8 +143,19 @@ init journeyReq userPreferences = do
       ( \idx (mbPrev, leg, mbNext) -> do
           let travelMode = convertMultiModalModeToTripMode leg.mode (straightLineDistance leg) journeyReq.maximumWalkDistance
           legFare@(_, mbTotalLegFare) <- measureLatency (JLI.getFare leg.fromArrivalTime journeyReq.personId journeyReq.merchantId journeyReq.merchantOperatingCityId journeyReq.routeLiveInfo leg travelMode) "multimodal getFare"
-          let onboardedSingleModeVehicleNumber = if travelMode `elem` [DTrip.Bus, DTrip.Metro, DTrip.Subway] then journeyReq.routeLiveInfo <&> (.vehicleNumber) else Nothing
-          journeyLeg <- JL.mkJourneyLeg idx (mbPrev, leg, mbNext) fromLocation toLocation journeyReq.merchantId journeyReq.merchantOperatingCityId journeyId journeyReq.parentSearchId journeyReq.maximumWalkDistance mbTotalLegFare Nothing onboardedSingleModeVehicleNumber
+          let onboardedSingleModeVehicle =
+                if travelMode `elem` [DTrip.Bus, DTrip.Metro, DTrip.Subway]
+                  then
+                    journeyReq.routeLiveInfo <&> \liveInfo ->
+                      JL.FinalBoardedBusData
+                        { busNumber = Just liveInfo.vehicleNumber,
+                          depotNo = liveInfo.depot,
+                          waybillId = liveInfo.waybillId,
+                          scheduleNo = Just liveInfo.scheduleNo,
+                          updateSource = Just DJourneyLeg.UserSpotBooked
+                        }
+                  else Nothing
+          journeyLeg <- JL.mkJourneyLeg idx (mbPrev, leg, mbNext) fromLocation toLocation journeyReq.merchantId journeyReq.merchantOperatingCityId journeyId journeyReq.parentSearchId journeyReq.maximumWalkDistance mbTotalLegFare Nothing onboardedSingleModeVehicle
           return (legFare, journeyLeg)
       )
       legsWithContext

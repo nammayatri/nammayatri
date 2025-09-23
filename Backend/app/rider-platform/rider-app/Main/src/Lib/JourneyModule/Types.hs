@@ -240,9 +240,7 @@ data JourneyLegStateData = JourneyLegStateData
     subLegOrder :: Int,
     legOrder :: Int,
     mode :: DTrip.MultimodalTravelMode,
-    fleetNo :: Maybe Text,
-    finalBoardedBusNumberUpdatedByUser :: Maybe Bool
-    -- boardedVehicles field removed
+    fleetNo :: Maybe Text
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -1233,6 +1231,16 @@ mkJourneyLegGroupCode multimodalSearchRequestId mode mbFromStopDetails mbToStopD
     DTrip.Taxi -> Nothing
     _ -> Just $ multimodalSearchRequestId.getId <> "-" <> show mode <> "-" <> fromMaybe "" (mbFromStopDetails >>= (.stopCode)) <> "-" <> fromMaybe "" (mbToStopDetails >>= (.stopCode))
 
+data FinalBoardedBusData = FinalBoardedBusData
+  { busNumber :: Maybe Text,
+    depotNo :: Maybe Text,
+    waybillId :: Maybe Text,
+    scheduleNo :: Maybe Text,
+    updateSource :: Maybe DJL.BusBoardingMethod
+  }
+  deriving stock (Show, Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 mkJourneyLeg ::
   ( CacheFlow m r,
     EncFlow m r,
@@ -1252,9 +1260,9 @@ mkJourneyLeg ::
   Meters ->
   Maybe GetFareResponse ->
   Maybe Gates ->
-  Maybe Text ->
+  Maybe FinalBoardedBusData ->
   m DJL.JourneyLeg
-mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation merchantId merchantOpCityId journeyId multimodalSearchRequestId maximumWalkDistance fare mbGates mbSingleModeVehicleNumber = do
+mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation merchantId merchantOpCityId journeyId multimodalSearchRequestId maximumWalkDistance fare mbGates mbFinalBoardedBusData = do
   now <- getCurrentTime
   journeyLegId <- generateGUID
   routeDetails <- mapM (mkRouteDetail journeyLegId fare) leg.routeDetails
@@ -1295,7 +1303,11 @@ mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation m
         legSearchId = Nothing,
         legPricingId = Nothing,
         changedBusesInSequence = Nothing,
-        finalBoardedBusNumber = mbSingleModeVehicleNumber,
+        finalBoardedBusNumber = mbFinalBoardedBusData >>= (.busNumber),
+        finalBoardedDepotNo = mbFinalBoardedBusData >>= (.depotNo),
+        finalBoardedWaybillId = mbFinalBoardedBusData >>= (.waybillId),
+        finalBoardedScheduleNo = mbFinalBoardedBusData >>= (.scheduleNo),
+        finalBoardedBusNumberSource = mbFinalBoardedBusData >>= (.updateSource),
         osmEntrance = chooseGate (gates >>= (.osmEntrance)) (leg.entrance),
         osmExit = chooseGate (gates >>= (.osmExit)) (leg.exit),
         straightLineEntrance = chooseGate (gates >>= (.straightLineEntrance)) (leg.entrance),
@@ -1303,8 +1315,7 @@ mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation m
         journeyId = journeyId,
         isDeleted = Just False,
         sequenceNumber = idx,
-        multimodalSearchRequestId = Just multimodalSearchRequestId.getId,
-        finalBoardedBusNumberUpdatedByUser = Nothing
+        multimodalSearchRequestId = Just multimodalSearchRequestId.getId
       }
   where
     straightLineDistance = highPrecMetersToMeters $ distanceBetweenInMeters (LatLong leg.startLocation.latLng.latitude leg.startLocation.latLng.longitude) (LatLong leg.endLocation.latLng.latitude leg.endLocation.latLng.longitude)

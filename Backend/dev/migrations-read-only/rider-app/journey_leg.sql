@@ -344,3 +344,12 @@ ALTER TABLE atlas_app.journey_leg ADD COLUMN final_boarded_bus_number_updated_by
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.journey_leg ADD COLUMN final_boarded_waybill_id text ;
+ALTER TABLE atlas_app.journey_leg ADD COLUMN final_boarded_schedule_no text ;
+ALTER TABLE atlas_app.journey_leg ADD COLUMN final_boarded_depot_no text ;
+ALTER TABLE atlas_app.journey_leg ADD COLUMN final_boarded_bus_number_source text ;

@@ -1179,6 +1179,14 @@ postMultimodalOrderChangeStops _ journeyId legOrder req = do
   let (prevLeg, nextLeg) = JMU.findAdjacentLegs reqJourneyLeg.sequenceNumber allLegs
   mbGates <- updateLegsWithGates riderConfig prevLeg nextLeg reqJourneyLeg newLeg journey.merchantId reqJourneyLeg.merchantOperatingCityId mbSourceStation mbDestStation
 
+  let finalBoardedBus =
+        JMTypes.FinalBoardedBusData
+          { busNumber = reqJourneyLeg.finalBoardedBusNumber,
+            depotNo = reqJourneyLeg.finalBoardedDepotNo,
+            waybillId = reqJourneyLeg.finalBoardedWaybillId,
+            scheduleNo = reqJourneyLeg.finalBoardedScheduleNo,
+            updateSource = reqJourneyLeg.finalBoardedBusNumberSource
+          }
   newJourneyLeg <-
     JMTypes.mkJourneyLeg
       legOrder
@@ -1190,7 +1198,7 @@ postMultimodalOrderChangeStops _ journeyId legOrder req = do
       riderConfig.maximumWalkDistance
       Nothing
       mbGates
-      reqJourneyLeg.finalBoardedBusNumber
+      (Just finalBoardedBus)
 
   QJourneyLegMapping.updateIsDeleted True reqJourneyLeg.id
   QJourneyLegExtra.create newJourneyLeg
@@ -1551,7 +1559,14 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (_mbPersonId, _merchantId) j
               (vehicleLiveRouteInfo.routeCode,) <$> routeDetail
       else pure Nothing
   updateTicketQRData journey journeyLeg riderConfig integratedBPPConfig booking.id mbNewRouteCode
-  QJourneyLeg.updateByPrimaryKey $ journeyLeg {DJourneyLeg.finalBoardedBusNumber = Just vehicleNumber, DJourneyLeg.finalBoardedBusNumberUpdatedByUser = Just True}
+  QJourneyLeg.updateByPrimaryKey $
+    journeyLeg
+      { DJourneyLeg.finalBoardedBusNumber = Just vehicleNumber,
+        DJourneyLeg.finalBoardedBusNumberSource = Just DJourneyLeg.UserActivated,
+        DJourneyLeg.finalBoardedDepotNo = vehicleLiveRouteInfo.depot,
+        DJourneyLeg.finalBoardedWaybillId = vehicleLiveRouteInfo.waybillId,
+        DJourneyLeg.finalBoardedScheduleNo = Just vehicleLiveRouteInfo.scheduleNo
+      }
   updatedLegs <- JM.getAllLegsInfo journey.riderId journeyId
   generateJourneyInfoResponse journey updatedLegs
   where

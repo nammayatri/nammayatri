@@ -26,7 +26,10 @@ data JourneyLeg = JourneyLeg
     estimatedMaxFare :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     estimatedMinFare :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     finalBoardedBusNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    finalBoardedBusNumberUpdatedByUser :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    finalBoardedBusNumberSource :: Kernel.Prelude.Maybe Domain.Types.JourneyLeg.BusBoardingMethod,
+    finalBoardedDepotNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    finalBoardedScheduleNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    finalBoardedWaybillId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     fromArrivalTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     fromDepartureTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     fromStopDetails :: Kernel.Prelude.Maybe Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails,
@@ -55,3 +58,7 @@ data JourneyLeg = JourneyLeg
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data BusBoardingMethod = UserActivated | UserSpotBooked | Detected deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
+
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''BusBoardingMethod)

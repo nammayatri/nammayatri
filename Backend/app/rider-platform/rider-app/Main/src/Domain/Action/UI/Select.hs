@@ -488,6 +488,10 @@ mkJourneyForSearch searchRequest estimate personId = do
             legPricingId = Just estimate.id.getId,
             changedBusesInSequence = Nothing,
             finalBoardedBusNumber = Nothing,
+            finalBoardedBusNumberSource = Nothing,
+            finalBoardedDepotNo = Nothing,
+            finalBoardedScheduleNo = Nothing,
+            finalBoardedWaybillId = Nothing,
             osmEntrance = Nothing,
             osmExit = Nothing,
             straightLineEntrance = Nothing,
@@ -495,8 +499,7 @@ mkJourneyForSearch searchRequest estimate personId = do
             journeyId = journeyGuid,
             isDeleted = Just False,
             sequenceNumber = 0,
-            multimodalSearchRequestId = Nothing,
-            finalBoardedBusNumberUpdatedByUser = Nothing
+            multimodalSearchRequestId = Nothing
           }
   pure (journey, journeyLeg)
 

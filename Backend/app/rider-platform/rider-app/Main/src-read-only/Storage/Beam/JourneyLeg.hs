@@ -8,6 +8,7 @@ import qualified Data.Aeson
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.Common
+import qualified Domain.Types.JourneyLeg
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
@@ -26,7 +27,10 @@ data JourneyLegT f = JourneyLegT
     estimatedMaxFare :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     estimatedMinFare :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     finalBoardedBusNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    finalBoardedBusNumberUpdatedByUser :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    finalBoardedBusNumberSource :: B.C f (Kernel.Prelude.Maybe Domain.Types.JourneyLeg.BusBoardingMethod),
+    finalBoardedDepotNo :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    finalBoardedScheduleNo :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    finalBoardedWaybillId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     fromArrivalTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     fromDepartureTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     fromStopCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
