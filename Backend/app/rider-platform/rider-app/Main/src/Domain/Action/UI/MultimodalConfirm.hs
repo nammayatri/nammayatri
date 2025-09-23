@@ -1545,7 +1545,7 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (_mbPersonId, _merchantId) j
       throwError $ VehicleUnserviceableOnRoute ("Vehicle " <> vehicleNumber <> ", the route code " <> vehicleLiveRouteInfo.routeCode <> ", not found on any route: " <> show journeyLegRouteCodes <> ", Please board the bus moving on allowed possible Routes for the booking.")
   let mbNewRouteCode = (vehicleLiveRouteInfo.routeCode,) <$> (listToMaybe journeyLeg.routeDetails) -- doing list to maybe as onluy need from and to stop codes, which will be same in all tickets
   updateTicketQRData journey journeyLeg riderConfig integratedBPPConfig booking.id mbNewRouteCode
-  QJourneyLeg.updateByPrimaryKey $ journeyLeg {DJourneyLeg.finalBoardedBusNumber = Just vehicleNumber, DJourneyLeg.finalBoardedBusNumberUpdatedByUser = Just True}
+  QJourneyLeg.updateByPrimaryKey $ journeyLeg {DJourneyLeg.finalBoardedBusNumber = Just vehicleNumber, DJourneyLeg.finalBoardedBusNumberUpdatedByUser = Just True} -- somethe here hemu
   updatedLegs <- JM.getAllLegsInfo journey.riderId journeyId
   generateJourneyInfoResponse journey updatedLegs
   where

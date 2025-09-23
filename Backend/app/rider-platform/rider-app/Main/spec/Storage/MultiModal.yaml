@@ -204,6 +204,10 @@ JourneyLegMapping:
       where: journeyLegId
 
 JourneyLeg:
+  types:
+    BusBoardingMethod:
+      enum: "UserActivated | UserInitiated | Detected"
+      derive: "ToParamSchema"
   fields:
     id: Id JourneyLeg
     groupCode: Maybe Text # <parentSearchRequestId>-<mode>-<fromStopDetails.stopCode>-<toStopDetails.stopCode>
@@ -238,7 +242,8 @@ JourneyLeg:
     isDeleted: Maybe Bool
     sequenceNumber: Int
     multimodalSearchRequestId: Maybe Text
-    finalBoardedBusNumberUpdatedByUser: Maybe Bool
+    finalBoardedBusNumberUpdatedByUser: Maybe Bool # deprecated
+    finalBoardedBusNumberSource: Maybe BusBoardingMethod
 
   sqlType:
     serviceTypes: text[]
