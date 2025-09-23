@@ -43,6 +43,7 @@ module Tools.Payment
     getIsRefundSplitEnabled,
     roundToTwoDecimalPlaces,
     fetchGatewayReferenceId,
+    extractSplitSettlementDetailsAmount,
   )
 where
 
@@ -469,6 +470,12 @@ getIsRefundSplitEnabled merchantId merchantOperatingCityId mbPlaceId paymentServ
       FRFSBooking -> DMSC.MetroPaymentService Payment.Juspay
       FRFSBusBooking -> DMSC.BusPaymentService Payment.Juspay
       FRFSMultiModalBooking -> DMSC.MultiModalPaymentService Payment.Juspay
+
+-- Helper function to extract SplitSettlementDetailsAmount from SplitSettlementDetails for backward compatibility
+extractSplitSettlementDetailsAmount :: Maybe SplitSettlementDetails -> Maybe SplitSettlementDetailsAmount
+extractSplitSettlementDetailsAmount Nothing = Nothing
+extractSplitSettlementDetailsAmount (Just (AmountBased details)) = Just details
+extractSplitSettlementDetailsAmount (Just (PercentageBased _)) = Nothing -- Cannot convert percentage-based to amount-based
 
 fetchGatewayReferenceId ::
   (MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r) =>

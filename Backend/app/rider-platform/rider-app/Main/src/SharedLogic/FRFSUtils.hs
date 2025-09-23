@@ -905,8 +905,10 @@ markAllRefundBookings booking personId = do
         >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> show person.merchantOperatingCityId)
     (vendorSplitDetails, amountUpdated) <- SMMFRFS.createVendorSplitFromBookings nonRefundInitiatedBookings person.merchantId person.merchantOperatingCityId Payment.FRFSMultiModalBooking frfsConfig.isFRFSTestingEnabled
     isSplitEnabled <- Payment.getIsSplitEnabled person.merchantId person.merchantOperatingCityId Nothing Payment.FRFSMultiModalBooking
-    _splitDetails <- Payment.mkUnaggregatedSplitSettlementDetails isSplitEnabled amountUpdated vendorSplitDetails False
+    splitDetails <- Payment.mkUnaggregatedSplitSettlementDetails isSplitEnabled amountUpdated vendorSplitDetails False
     let refundSplitDetails = mkRefundSplitDetails nonRefundInitiatedBookings
+        -- Extract SplitSettlementDetailsAmount for backward compatibility with AutoRefundReq
+        splitDetailsAmount = Payment.extractSplitSettlementDetailsAmount splitDetails
     refundId <- generateGUID
     when allFailed $ whenJust mbJourneyId $ \journeyId -> QJourney.updateStatus DJourney.FAILED journeyId
     let refundReq =
@@ -914,7 +916,7 @@ markAllRefundBookings booking personId = do
             { orderId = orderShortId,
               requestId = refundId,
               amount = amountUpdated,
-              splitSettlementDetails = Nothing --splitDetails
+              splitSettlementDetails = splitDetailsAmount
             }
         createRefundCall refundReq' = Payment.refundOrder person.merchantId person.merchantOperatingCityId Nothing Payment.FRFSMultiModalBooking (Just person.id.getId) person.clientSdkVersion refundReq'
     result <- try @_ @SomeException $ DPayment.refundService (refundReq, Kernel.Types.Id.Id {Kernel.Types.Id.getId = refundId}) (Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant person.merchantId) (Just refundSplitDetails) createRefundCall

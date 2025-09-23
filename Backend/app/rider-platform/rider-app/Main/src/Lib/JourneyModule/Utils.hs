@@ -1183,7 +1183,8 @@ postMultimodalPaymentUpdateOrderUtil paymentType person merchantId merchantOpera
   frfsBookingsPayments <- mapMaybeM (QFRFSTicketBookingPayment.findNewTBPByBookingId . (.id)) bookings
   (vendorSplitDetails, amountUpdated) <- SMMFRFS.createVendorSplitFromBookings bookings merchantId person.merchantOperatingCityId paymentType frfsConfig.isFRFSTestingEnabled
   isSplitEnabled <- TPayment.getIsSplitEnabled merchantId person.merchantOperatingCityId Nothing paymentType -- TODO :: You can be moved inside :)
-  _splitDetails <- TPayment.mkUnaggregatedSplitSettlementDetails isSplitEnabled amountUpdated vendorSplitDetails False
+  splitDetails <- TPayment.mkUnaggregatedSplitSettlementDetails isSplitEnabled amountUpdated vendorSplitDetails False
+  let splitDetailsAmount = TPayment.extractSplitSettlementDetailsAmount splitDetails
   if frfsConfig.canUpdateExistingPaymentOrder
     then do
       case listToMaybe frfsBookingsPayments of
@@ -1194,7 +1195,7 @@ postMultimodalPaymentUpdateOrderUtil paymentType person merchantId merchantOpera
                 KT.OrderUpdateReq
                   { amount = amountUpdated,
                     orderShortId = paymentOrder.shortId.getShortId,
-                    splitSettlementDetails = Nothing --splitDetails
+                    splitSettlementDetails = splitDetailsAmount --splitDetails
                   }
           _ <- TPayment.updateOrder person.merchantId person.merchantOperatingCityId Nothing TPayment.FRFSMultiModalBooking (Just person.id.getId) person.clientSdkVersion updateReq
           QOrder.updateAmount paymentOrder.id amountUpdated
