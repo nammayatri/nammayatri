@@ -1,0 +1,54 @@
+name: Nix CLOUD CI
+
+on:
+  push:
+    branches:
+      - main
+      - prodHotPush-Common
+      - prodHotPush-MMFRFS
+      - prodHotPush-BAP
+      - prodHotPush-BPP
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+    branches:
+      - main
+      - prodHotPush-Common
+      - prodHotPush-MMFRFS
+      - prodHotPush-BAP
+      - prodHotPush-BPP
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: read
+  packages: write
+
+jobs:
+  build:
+    name: Master Release Build
+    runs-on: aws-runners
+    outputs:
+      docker-image-name: ${{ steps.docker.outputs.base_image }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build all flake outputs
+        run: |
+          om ci run --systems "x86_64-linux" --no-link -- -v --option max-call-depth 1000000
+
+      - name: Build And Push Docker image
+        id: docker
+        env:
+          DOCKER_REGISTRY: ghcr.io
+        run: |
+          nix build .#packages.x86_64-linux.dockerImage
+
+          BASE_IMAGE="$(nix eval --raw .#packages.x86_64-linux.dockerImage.imageName):$(nix eval --raw .#packages.x86_64-linux.dockerImage.imageTag)"
+          echo "base_image=${BASE_IMAGE}" >> $GITHUB_OUTPUT
+
+          gunzip -c ./result > image.tar || cp ./result image.tar
+          echo "${{ secrets.GITHUB_TOKEN }}" | crane auth login ${DOCKER_REGISTRY} -u "${{ github.actor }}" --password-stdin
+          crane push image.tar "${DOCKER_REGISTRY}/${BASE_IMAGE}"
+          crane auth logout ${DOCKER_REGISTRY}

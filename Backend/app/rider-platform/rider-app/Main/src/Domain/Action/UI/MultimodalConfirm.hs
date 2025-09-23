@@ -35,6 +35,7 @@ module Domain.Action.UI.MultimodalConfirm
     postMultimodalSwitchRoute,
     postMultimodalOrderSublegSetOnboardedVehicleDetails,
     postMultimodalSetRouteName,
+    func,
   )
 where
 
@@ -1615,3 +1616,6 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (_mbPersonId, _merchantId) j
         (ticket : _) -> do
           let newJourneyExpiry = addUTCTime (-19800) ticket.expiryIST
           QJourney.updateJourneyExpiryTime journey.id $ fromMaybe newJourneyExpiry (max journey.journeyExpiryTime . Just $ newJourneyExpiry)
+
+func :: Text
+func = "a"
