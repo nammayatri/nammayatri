@@ -1289,7 +1289,10 @@ getRouteFareRequest sourceCode destCode changeOver viaPoints personId = do
 data VehicleLiveRouteInfo = VehicleLiveRouteInfo
   { routeCode :: Text,
     serviceType :: Spec.ServiceTierType,
-    vehicleNumber :: Text
+    vehicleNumber :: Text,
+    waybillId :: Maybe Text,
+    scheduleNo :: Text,
+    depot :: Maybe Text
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -1308,7 +1311,7 @@ getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber = do
         mbResult
           <&> ( \result ->
                   ( integratedBPPConfig,
-                    VehicleLiveRouteInfo {vehicleNumber = vehicleNumber, routeCode = result.route_id, serviceType = result.service_type}
+                    VehicleLiveRouteInfo {vehicleNumber = vehicleNumber, routeCode = result.route_id, serviceType = result.service_type, waybillId = result.waybill_id, scheduleNo = result.schedule_no, depot = result.depot}
                   )
               )
 
