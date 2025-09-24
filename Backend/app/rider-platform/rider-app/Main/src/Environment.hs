@@ -169,7 +169,8 @@ data AppCfg = AppCfg
     nearByDriverAPIRateLimitOptions :: APIRateLimitOptions,
     selfBaseUrl :: BaseUrl,
     tsServiceConfig :: CPT.TSServiceConfig,
-    inMemConfig :: CF.InMemConfig
+    inMemConfig :: CF.InMemConfig,
+    disableViaPointTimetableCheck :: Bool
   }
   deriving (Generic, FromDhall)
 
@@ -271,7 +272,8 @@ data AppEnv = AppEnv
     nearByDriverAPIRateLimitOptions :: APIRateLimitOptions,
     selfBaseUrl :: BaseUrl,
     tsServiceConfig :: CPT.TSServiceConfig,
-    inMemEnv :: CF.InMemEnv
+    inMemEnv :: CF.InMemEnv,
+    disableViaPointTimetableCheck :: Bool
   }
   deriving (Generic)
 
@@ -325,7 +327,7 @@ buildAppEnv cfg@AppCfg {..} = do
   let ondcTokenHashMap = HM.fromList $ M.toList ondcTokenMap
   ltsHedisEnv <- connectHedis ltsRedis identity
   inMemEnv <- IM.setupInMemEnv inMemConfig
-  return AppEnv {minTripDistanceForReferralCfg = convertHighPrecMetersToDistance Meter <$> minTripDistanceForReferralCfg, ..}
+  return AppEnv {minTripDistanceForReferralCfg = convertHighPrecMetersToDistance Meter <$> minTripDistanceForReferralCfg, disableViaPointTimetableCheck = disableViaPointTimetableCheck, ..}
 
 releaseAppEnv :: AppEnv -> IO ()
 releaseAppEnv AppEnv {..} = do
