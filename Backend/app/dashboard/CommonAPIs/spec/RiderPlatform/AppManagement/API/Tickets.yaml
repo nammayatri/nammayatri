@@ -275,10 +275,10 @@ apis:
         type: TicketBookingDetails
 
   - GET: # GetTicketBookingStatusForDashboardAPI
-      endpoint: /ticket/booking/{bookingShortId}/status
-      name: GetTicketBookingStatus
+      endpoint: /dashboard/booking/{userPhoneNumber}/{bookingShortId}/status
       auth: ApiAuthV2
       params:
+        userPhoneNumber: Text
         bookingShortId: ShortId TicketBooking
       response:
         type: BookingStatus

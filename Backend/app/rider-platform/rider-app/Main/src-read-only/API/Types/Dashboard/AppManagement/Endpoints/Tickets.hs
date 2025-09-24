@@ -80,7 +80,7 @@ data TicketDashboardUserInfo = TicketDashboardUserInfo
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-type API = (PostTicketsVerify :<|> PostTicketsServices :<|> GetTicketsPlaces :<|> PostTicketsUpdate :<|> PostTicketsBookingsCancel :<|> PostTicketsServiceCancel :<|> GetTicketsBookingDetails :<|> PostTicketsTicketdashboardRegister :<|> PostTicketsTicketdashboardLoginAuth :<|> PostTicketsTicketdashboardLoginVerify :<|> GetTicketsTicketdashboardAgreement :<|> GetTicketsTicketdashboardUserInfo :<|> GetTicketsTicketdashboardFile :<|> PostTicketsTicketdashboardSendverifyotp :<|> GetTicketsTicketdashboardTicketplaceInfo :<|> PostTicketsTicketdashboardTicketplaceUpdate :<|> GetTicketsTicketdashboardTicketplaces :<|> GetTicketsTicketdashboardTicketplaceSubPlaces :<|> PostTicketsTicketdashboardTicketplaceUpdateSubPlaces :<|> GetTicketFleetVehicles :<|> PostTicketBookingsVerifyV2 :<|> PostTicketPlacesBook :<|> GetTicketPlaces :<|> GetTicketPlaceServices :<|> GetTicketBookingDetails :<|> GetTicketBookingStatus :<|> GetAllTicketBookings :<|> PostTicketBookingCashCollect :<|> PostTicketPlacesDirectBook)
+type API = (PostTicketsVerify :<|> PostTicketsServices :<|> GetTicketsPlaces :<|> PostTicketsUpdate :<|> PostTicketsBookingsCancel :<|> PostTicketsServiceCancel :<|> GetTicketsBookingDetails :<|> PostTicketsTicketdashboardRegister :<|> PostTicketsTicketdashboardLoginAuth :<|> PostTicketsTicketdashboardLoginVerify :<|> GetTicketsTicketdashboardAgreement :<|> GetTicketsTicketdashboardUserInfo :<|> GetTicketsTicketdashboardFile :<|> PostTicketsTicketdashboardSendverifyotp :<|> GetTicketsTicketdashboardTicketplaceInfo :<|> PostTicketsTicketdashboardTicketplaceUpdate :<|> GetTicketsTicketdashboardTicketplaces :<|> GetTicketsTicketdashboardTicketplaceSubPlaces :<|> PostTicketsTicketdashboardTicketplaceUpdateSubPlaces :<|> GetTicketFleetVehicles :<|> PostTicketBookingsVerifyV2 :<|> PostTicketPlacesBook :<|> GetTicketPlaces :<|> GetTicketPlaceServices :<|> GetTicketBookingDetails :<|> GetTicketsDashboardBookingStatus :<|> GetAllTicketBookings :<|> PostTicketBookingCashCollect :<|> PostTicketPlacesDirectBook)
 
 type PostTicketsVerify =
   ( "tickets" :> Capture "personServiceId" (Kernel.Types.Id.Id Domain.Types.TicketService.TicketService)
@@ -268,11 +268,13 @@ type GetTicketBookingDetails =
            API.Types.UI.TicketService.TicketBookingDetails
   )
 
-type GetTicketBookingStatus =
-  ( "ticket" :> "booking" :> Capture "bookingShortId" (Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking) :> "status"
-      :> Get
-           '[JSON]
-           Domain.Types.TicketBooking.BookingStatus
+type GetTicketsDashboardBookingStatus =
+  ( "dashboard" :> "booking" :> Capture "userPhoneNumber" Kernel.Prelude.Text
+      :> Capture
+           "bookingShortId"
+           (Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking)
+      :> "status"
+      :> Get '[JSON] Domain.Types.TicketBooking.BookingStatus
   )
 
 type GetAllTicketBookings =
@@ -327,7 +329,7 @@ data TicketsAPIs = TicketsAPIs
     getTicketPlaces :: EulerHS.Types.EulerClient [Domain.Types.TicketPlace.TicketPlace],
     getTicketPlaceServices :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Prelude.Maybe Data.Time.Calendar.Day -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.TicketSubPlace.TicketSubPlace) -> EulerHS.Types.EulerClient [API.Types.UI.TicketService.TicketServiceResp],
     getTicketBookingDetails :: Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking -> EulerHS.Types.EulerClient API.Types.UI.TicketService.TicketBookingDetails,
-    getTicketBookingStatus :: Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking -> EulerHS.Types.EulerClient Domain.Types.TicketBooking.BookingStatus,
+    getTicketsDashboardBookingStatus :: Kernel.Prelude.Text -> Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking -> EulerHS.Types.EulerClient Domain.Types.TicketBooking.BookingStatus,
     getAllTicketBookings :: Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Domain.Types.TicketBooking.BookingStatus -> EulerHS.Types.EulerClient [API.Types.UI.TicketService.TicketBookingAPIEntityV2],
     postTicketBookingCashCollect :: Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postTicketPlacesDirectBook :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> API.Types.UI.TicketService.DirectTicketBookingReq -> EulerHS.Types.EulerClient API.Types.UI.TicketService.DirectTicketBookingResp
@@ -336,7 +338,7 @@ data TicketsAPIs = TicketsAPIs
 mkTicketsAPIs :: (Client EulerHS.Types.EulerClient API -> TicketsAPIs)
 mkTicketsAPIs ticketsClient = (TicketsAPIs {..})
   where
-    postTicketsVerify :<|> postTicketsServices :<|> getTicketsPlaces :<|> postTicketsUpdate :<|> postTicketsBookingsCancel :<|> postTicketsServiceCancel :<|> getTicketsBookingDetails :<|> postTicketsTicketdashboardRegister :<|> postTicketsTicketdashboardLoginAuth :<|> postTicketsTicketdashboardLoginVerify :<|> getTicketsTicketdashboardAgreement :<|> getTicketsTicketdashboardUserInfo :<|> getTicketsTicketdashboardFile :<|> postTicketsTicketdashboardSendverifyotp :<|> getTicketsTicketdashboardTicketplaceInfo :<|> postTicketsTicketdashboardTicketplaceUpdate :<|> getTicketsTicketdashboardTicketplaces :<|> getTicketsTicketdashboardTicketplaceSubPlaces :<|> postTicketsTicketdashboardTicketplaceUpdateSubPlaces :<|> getTicketFleetVehicles :<|> postTicketBookingsVerifyV2 :<|> postTicketPlacesBook :<|> getTicketPlaces :<|> getTicketPlaceServices :<|> getTicketBookingDetails :<|> getTicketBookingStatus :<|> getAllTicketBookings :<|> postTicketBookingCashCollect :<|> postTicketPlacesDirectBook = ticketsClient
+    postTicketsVerify :<|> postTicketsServices :<|> getTicketsPlaces :<|> postTicketsUpdate :<|> postTicketsBookingsCancel :<|> postTicketsServiceCancel :<|> getTicketsBookingDetails :<|> postTicketsTicketdashboardRegister :<|> postTicketsTicketdashboardLoginAuth :<|> postTicketsTicketdashboardLoginVerify :<|> getTicketsTicketdashboardAgreement :<|> getTicketsTicketdashboardUserInfo :<|> getTicketsTicketdashboardFile :<|> postTicketsTicketdashboardSendverifyotp :<|> getTicketsTicketdashboardTicketplaceInfo :<|> postTicketsTicketdashboardTicketplaceUpdate :<|> getTicketsTicketdashboardTicketplaces :<|> getTicketsTicketdashboardTicketplaceSubPlaces :<|> postTicketsTicketdashboardTicketplaceUpdateSubPlaces :<|> getTicketFleetVehicles :<|> postTicketBookingsVerifyV2 :<|> postTicketPlacesBook :<|> getTicketPlaces :<|> getTicketPlaceServices :<|> getTicketBookingDetails :<|> getTicketsDashboardBookingStatus :<|> getAllTicketBookings :<|> postTicketBookingCashCollect :<|> postTicketPlacesDirectBook = ticketsClient
 
 data TicketsUserActionType
   = POST_TICKETS_VERIFY
@@ -364,7 +366,7 @@ data TicketsUserActionType
   | GET_TICKET_PLACES
   | GET_TICKET_PLACE_SERVICES
   | GET_TICKET_BOOKING_DETAILS
-  | GET_TICKET_BOOKING_STATUS
+  | GET_TICKETS_DASHBOARD_BOOKING_STATUS
   | GET_ALL_TICKET_BOOKINGS
   | POST_TICKET_BOOKING_CASH_COLLECT
   | POST_TICKET_PLACES_DIRECT_BOOK
