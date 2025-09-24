@@ -259,8 +259,8 @@ handler merchantId req validatedReq = do
       QLoc.updateInstructionsAndExtrasById deliveryDetails.receiverDetails.address.instructions deliveryDetails.receiverDetails.address.extras receiverLocationId
 
       -- update Rider details
-      (senderRiderDetails, isNewSender) <- SRD.getRiderDetails searchReq.currency mId mbMerchantOperatingCityId (fromMaybe "+91" merchant.mobileCountryCode) deliveryDetails.senderDetails.phoneNumber searchReq.bapId False
-      (receiverRiderDetails, isNewReceiver) <- SRD.getRiderDetails searchReq.currency mId mbMerchantOperatingCityId (fromMaybe "+91" merchant.mobileCountryCode) deliveryDetails.receiverDetails.phoneNumber searchReq.bapId False
+      (senderRiderDetails, isNewSender) <- SRD.getRiderDetails searchReq.currency mId mbMerchantOperatingCityId (fromMaybe "+91" merchant.mobileCountryCode) deliveryDetails.senderDetails.phoneNumber searchReq.bapId False Nothing
+      (receiverRiderDetails, isNewReceiver) <- SRD.getRiderDetails searchReq.currency mId mbMerchantOperatingCityId (fromMaybe "+91" merchant.mobileCountryCode) deliveryDetails.receiverDetails.phoneNumber searchReq.bapId False Nothing
       when isNewSender $ QRD.create senderRiderDetails
       when isNewReceiver $ QRD.create receiverRiderDetails
 

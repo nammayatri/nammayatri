@@ -21,6 +21,7 @@ import qualified Domain.Types.Booking as DRB
 import qualified Domain.Types.FareBreakup as DFareBreakup
 import qualified Domain.Types.Location as DL
 import qualified Domain.Types.Merchant as DM
+import qualified Domain.Types.Person as DTP
 import qualified Domain.Types.VehicleVariant as DV
 import Kernel.External.Encryption (decrypt)
 import Kernel.Prelude
@@ -77,7 +78,8 @@ data OnInitRes = OnInitRes
     enableFrequentLocationUpdates :: Bool,
     paymentId :: Maybe Text,
     enableOtpLessRide :: Bool,
-    tripCategory :: Maybe TripCategory
+    tripCategory :: Maybe TripCategory,
+    riderGender :: Maybe DTP.Gender
   }
   deriving (Generic, Show)
 
@@ -135,6 +137,7 @@ onInit req = do
             paymentId = req.paymentId,
             enableOtpLessRide = isBookingMeterRide booking.bookingDetails || fromMaybe False safetySettings.enableOtpLessRide,
             tripCategory = booking.tripCategory,
+            riderGender = Just decRider.gender,
             ..
           }
   Metrics.finishMetricsBap Metrics.INIT merchant.name booking.transactionId booking.merchantOperatingCityId.getId

@@ -16,6 +16,7 @@ module SharedLogic.RiderDetails where
 
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.Person as DTP
 import qualified Domain.Types.RiderDetails as DRD
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -23,8 +24,8 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.RiderDetails as QRD
 
-getRiderDetails :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r) => Currency -> Id DM.Merchant -> Maybe (Id DMOC.MerchantOperatingCity) -> Text -> Text -> Text -> Bool -> m (DRD.RiderDetails, Bool)
-getRiderDetails currency merchantId mbMerchantOperatingCityId customerMobileCountryCode customerPhoneNumber bapId nightSafetyCheck = do
+getRiderDetails :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r) => Currency -> Id DM.Merchant -> Maybe (Id DMOC.MerchantOperatingCity) -> Text -> Text -> Text -> Bool -> Maybe DTP.Gender -> m (DRD.RiderDetails, Bool)
+getRiderDetails currency merchantId mbMerchantOperatingCityId customerMobileCountryCode customerPhoneNumber bapId nightSafetyCheck customerGender = do
   now <- getCurrentTime
   QRD.findByMobileNumberAndMerchantAndBapId customerPhoneNumber merchantId bapId >>= \case
     Nothing -> do
@@ -68,5 +69,6 @@ getRiderDetails currency merchantId mbMerchantOperatingCityId customerMobileCoun
             validCancellations = 0,
             cancellationDueRides = 0,
             merchantOperatingCityId = mbMerchantOperatingCityId,
-            bapId = Just bapId
+            bapId = Just bapId,
+            riderGender = customerGender
           }

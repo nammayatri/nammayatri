@@ -204,7 +204,7 @@ listDriverRides driverId mocId mbLimit mbOffset mbOnlyActive mbRideStatus mbDay 
     driverNumber <- RD.getDriverNumber rideDetail
     mbExophone <- CQExophone.findByPrimaryPhone booking.primaryExophone
     bapMetadata <- CQSM.findBySubscriberIdAndDomain (Id booking.bapId) Domain.MOBILITY
-    riderCallingNumber <- case transporterConfig >>= DTC.driverCallingOption of
+    riderCallingNumber <- case transporterConfig >>= DTC.driverCallingOptionConfigs of
       Just option | ride.status `notElem` [DRide.COMPLETED, DRide.CANCELLED] -> getRiderMobileNumber booking option
       _ -> pure Nothing
     isValueAddNP <- CQVAN.isValueAddNP booking.bapId
@@ -271,7 +271,7 @@ otpRideCreate driver otpCode booking clientId = do
   stopsInfo <- if (fromMaybe False ride.hasStops) then QSI.findAllByRideId ride.id else return []
   mbExophone <- CQExophone.findByPrimaryPhone booking.primaryExophone
   bapMetadata <- CQSM.findBySubscriberIdAndDomain (Id booking.bapId) Domain.MOBILITY
-  riderCallingNumber <- case DTC.driverCallingOption transporterConfig of
+  riderCallingNumber <- case DTC.driverCallingOptionConfigs transporterConfig of
     Just option | ride.status `notElem` [DRide.COMPLETED, DRide.CANCELLED] -> getRiderMobileNumber booking option
     _ -> pure Nothing
   isValueAddNP <- CQVAN.isValueAddNP booking.bapId
@@ -487,17 +487,19 @@ arrivedAtDestination rideId pt = do
 getRiderMobileNumber ::
   (EsqDBReplicaFlow m r, EncFlow m r, EsqDBFlow m r, CacheFlow m r) =>
   DRB.Booking ->
-  DTC.CallingOption ->
+  DTC.DriverCallingOptionConfigs ->
   m (Maybe Text)
 getRiderMobileNumber booking option = do
-  mbRiderNumber <-
-    if option == DTC.DirectCall || option == DTC.DualCall
-      then case booking.riderId of
-        Nothing -> pure Nothing
-        Just riderId -> do
-          mbRider <- QRID.findById riderId
-          case mbRider of
-            Nothing -> pure Nothing
-            Just rider -> Just <$> decrypt rider.mobileNumber
-      else pure Nothing
-  pure mbRiderNumber
+  if option.driverCallingOption /= DTC.DirectCall
+    then pure Nothing
+    else case booking.riderId of
+      Nothing -> pure Nothing
+      Just riderId ->
+        QRID.findById riderId >>= \case
+          Nothing -> pure Nothing
+          Just rider ->
+            case rider.riderGender of
+              Just gender
+                | gender `elem` option.directCallingAllowedGenderType ->
+                  Just <$> decrypt rider.mobileNumber
+              _ -> pure Nothing

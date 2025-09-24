@@ -559,3 +559,8 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_wallet_t
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN payout_cut_off_days integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN driver_calling_option_configs SET DEFAULT {"driverCallingOption": "AnonymousCall","directCallingAllowedGenderType": "[MALE]"};
