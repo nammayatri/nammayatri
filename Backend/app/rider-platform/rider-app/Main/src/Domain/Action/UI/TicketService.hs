@@ -817,7 +817,7 @@ postTicketBookingsVerify _ = processBookingService
                             amount = Just bookingService.amount.amount,
                             assignments = Nothing,
                             ticketPlaceId = Just ticketPlace.id.getId,
-                            paymentMethod = Nothing
+                            paymentMethod = show <$> booking.paymentMethod
                           }
                   response <- CallBPPInternal.updateFleetBookingInformation merchant updateReq
                   QTicketBookingService.updateAssignmentById (Just response.assignmentId) bookingService.id
@@ -984,7 +984,7 @@ postTicketBookingsVerifyV2 _ = processBookingService
                         amount = Just bookingService.amount.amount,
                         assignments = req.assignments,
                         ticketPlaceId = Just ticketPlace.id.getId,
-                        paymentMethod = Nothing
+                        paymentMethod = show <$> booking.paymentMethod
                       }
               response <- CallBPPInternal.updateFleetBookingInformation merchant updateReq
               QTicketBookingService.updateAssignmentById (Just response.assignmentId) bookingService.id
@@ -1067,6 +1067,12 @@ postTicketBookingsVerifyV2 _ = processBookingService
     verificationMsg PaymentPending = "Payment Pending!"
     verificationMsg InvalidBooking = "Not a valid QR"
     verificationMsg CancelledBooking = "Booking Cancelled!"
+
+getTicketsDashboardBookingStatus :: (Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Text -> Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking -> Environment.Flow Domain.Types.TicketBooking.BookingStatus
+getTicketsDashboardBookingStatus (_mbPersonId, merchantId) userPhoneNumber bookingShortId = do
+  mobileNumberHash <- getDbHash userPhoneNumber
+  person <- QP.findByMobileNumberAndMerchantAndRole mobileNumberHash merchantId [Domain.Types.Person.USER] >>= fromMaybeM (InvalidRequest "Mobile number not registered")
+  getTicketBookingsStatus (Just person.id, merchantId) bookingShortId
 
 getTicketBookingsStatus :: (Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking -> Environment.Flow Domain.Types.TicketBooking.BookingStatus
 getTicketBookingsStatus (mbPersonId, merchantId) _shortId@(Kernel.Types.Id.ShortId shortId) = do
