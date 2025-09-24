@@ -336,7 +336,7 @@ postTicketBookingsCashCollect ::
     Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking ->
     Environment.FlowHandler Kernel.Types.APISuccess.APISuccess
   )
-postTicketBookingsCashCollect a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.TicketService.postTicketBookingCashCollect (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
+postTicketBookingsCashCollect a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.TicketService.postTicketBookingsCashCollect (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1
 
 postTicketBookingCancel ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

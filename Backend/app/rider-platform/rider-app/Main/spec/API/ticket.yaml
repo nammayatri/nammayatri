@@ -19,6 +19,7 @@ imports:
   APISuccess: Kernel.Types.APISuccess
   TicketBooking: Domain.Types.TicketBooking
   BookingStatus: Domain.Types.TicketBooking
+  PaymentMethod: Domain.Types.TicketBooking
   PeopleTicketQuantity: Domain.Types.TicketBooking
   TicketBookingService: Domain.Types.TicketBookingService
   TicketBookingServiceCategory: Domain.Types.TicketBookingServiceCategory
@@ -28,6 +29,7 @@ imports:
   CancellationCharge: Domain.Types.ServicePeopleCategory
   Refunds: Lib.Payment.Domain.Types.Refunds
   Person: Domain.Types.Person
+  CreateOrderResp: Kernel.External.Payment.Interface.Types
 
 module: TicketService
 types:
@@ -79,6 +81,21 @@ types:
     visitDate: Day
     ticketSubPlaceId: Maybe (Id TicketSubPlace)
     services: [TicketBookingServicesReq]
+
+  DirectTicketBookingReq:
+    visitDate: Day
+    ticketSubPlaceId: Maybe (Id TicketSubPlace)
+    services: [TicketBookingServicesReq]
+    paymentMethod: PaymentMethod
+    customerPhoneNumber: Text
+    customerPhoneCountryCode: Maybe Text
+    customerName: Maybe Text
+
+  DirectTicketBookingResp:
+    bookingShortId: ShortId TicketBooking
+    bookingStatus: BookingStatus
+    orderResponse: Maybe CreateOrderResp
+    message: Text
 
   TicketBookingServicesReq:
     serviceId: Id TicketService
