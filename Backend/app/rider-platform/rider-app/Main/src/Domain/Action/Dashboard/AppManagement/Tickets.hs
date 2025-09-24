@@ -24,10 +24,10 @@ module Domain.Action.Dashboard.AppManagement.Tickets
     getTicketPlaces,
     getTicketPlaceServices,
     getTicketBookingDetails,
-    getTicketBookingStatus,
     getAllTicketBookings,
     postTicketBookingCashCollect,
     postTicketPlacesDirectBook,
+    getTicketsDashboardBookingStatus,
   )
 where
 
@@ -306,14 +306,15 @@ getTicketBookingDetails merchantShortId _opCity bookingShortId = do
   m <- findMerchantByShortId merchantShortId
   Domain.Action.UI.TicketService.getTicketBookingsDetails (Nothing, m.id) bookingShortId
 
-getTicketBookingStatus ::
+getTicketsDashboardBookingStatus ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
   Kernel.Types.Beckn.Context.City ->
+  Kernel.Prelude.Text ->
   Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking ->
   Environment.Flow Domain.Types.TicketBooking.BookingStatus
-getTicketBookingStatus merchantShortId _opCity bookingShortId = do
+getTicketsDashboardBookingStatus merchantShortId _opCity userPhoneNumber bookingShortId = do
   m <- findMerchantByShortId merchantShortId
-  Domain.Action.UI.TicketService.getTicketBookingsStatus (Nothing, m.id) bookingShortId
+  Domain.Action.UI.TicketService.getTicketsDashboardBookingStatus (Nothing, m.id) userPhoneNumber bookingShortId
 
 getAllTicketBookings ::
   Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
