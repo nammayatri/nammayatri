@@ -872,6 +872,7 @@ library
       Domain.Types.CancellationFarePolicy
       Domain.Types.CancellationReason
       Domain.Types.Client
+      Domain.Types.CommonDriverOnboardingDocuments
       Domain.Types.ConditionalCharges
       Domain.Types.DailyStats
       Domain.Types.DocumentVerificationConfig
@@ -1024,6 +1025,7 @@ library
       Storage.Beam.CancellationFarePolicy
       Storage.Beam.CancellationReason
       Storage.Beam.Client
+      Storage.Beam.CommonDriverOnboardingDocuments
       Storage.Beam.ConditionalCharges
       Storage.Beam.DailyStats
       Storage.Beam.DocumentVerificationConfig
@@ -1179,6 +1181,7 @@ library
       Storage.Queries.CancellationFarePolicy
       Storage.Queries.CancellationReason
       Storage.Queries.Client
+      Storage.Queries.CommonDriverOnboardingDocuments
       Storage.Queries.ConditionalCharges
       Storage.Queries.DailyStats
       Storage.Queries.DocumentVerificationConfig

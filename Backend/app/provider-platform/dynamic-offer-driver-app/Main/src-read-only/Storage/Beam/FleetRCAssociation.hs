@@ -11,15 +11,15 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data FleetRCAssociationT f = FleetRCAssociationT
-  { associatedOn :: B.C f Kernel.Prelude.UTCTime,
-    associatedTill :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
-    fleetOwnerId :: B.C f Kernel.Prelude.Text,
-    id :: B.C f Kernel.Prelude.Text,
-    rcId :: B.C f Kernel.Prelude.Text,
-    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+  { associatedOn :: (B.C f Kernel.Prelude.UTCTime),
+    associatedTill :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
+    fleetOwnerId :: (B.C f Kernel.Prelude.Text),
+    id :: (B.C f Kernel.Prelude.Text),
+    rcId :: (B.C f Kernel.Prelude.Text),
+    merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
+    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 
@@ -29,6 +29,6 @@ instance B.Table FleetRCAssociationT where
 
 type FleetRCAssociation = FleetRCAssociationT Identity
 
-$(enableKVPG ''FleetRCAssociationT ['id] [['rcId]])
+$(enableKVPG (''FleetRCAssociationT) [('id)] [[('rcId)]])
 
-$(mkTableInstances ''FleetRCAssociationT "fleet_rc_association")
+$(mkTableInstances (''FleetRCAssociationT) "fleet_rc_association")
