@@ -27,6 +27,7 @@ module Domain.Action.Dashboard.AppManagement.Tickets
     getTicketBookingStatus,
     getAllTicketBookings,
     postTicketBookingCashCollect,
+    postTicketPlacesDirectBook,
   )
 where
 
@@ -332,4 +333,15 @@ postTicketBookingCashCollect ::
   Environment.Flow Kernel.Types.APISuccess.APISuccess
 postTicketBookingCashCollect merchantShortId _opCity bookingShortId = do
   m <- findMerchantByShortId merchantShortId
-  Domain.Action.UI.TicketService.postTicketBookingCashCollect (Nothing, m.id) bookingShortId
+  Domain.Action.UI.TicketService.postTicketBookingsCashCollect (Nothing, m.id) bookingShortId
+
+postTicketPlacesDirectBook ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace ->
+  Maybe Text ->
+  API.Types.UI.TicketService.DirectTicketBookingReq ->
+  Environment.Flow API.Types.UI.TicketService.DirectTicketBookingResp
+postTicketPlacesDirectBook merchantShortId _opCity placeId requestorId req = do
+  m <- findMerchantByShortId merchantShortId
+  Domain.Action.UI.TicketService.postTicketPlacesDirectBook (Nothing, m.id) requestorId placeId req

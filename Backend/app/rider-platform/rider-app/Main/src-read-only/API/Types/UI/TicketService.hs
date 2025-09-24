@@ -17,6 +17,7 @@ import qualified Domain.Types.TicketPlace
 import qualified Domain.Types.TicketService
 import qualified Domain.Types.TicketSubPlace
 import EulerHS.Prelude hiding (id)
+import qualified Kernel.External.Payment.Interface.Types
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
 import qualified Kernel.Types.Id
@@ -49,6 +50,27 @@ data CategoriesResp = CategoriesResp
     maxSelection :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     name :: Data.Text.Text,
     peopleCategories :: [PeopleCategoriesResp]
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data DirectTicketBookingReq = DirectTicketBookingReq
+  { customerName :: Kernel.Prelude.Maybe Data.Text.Text,
+    customerPhoneCountryCode :: Kernel.Prelude.Maybe Data.Text.Text,
+    customerPhoneNumber :: Data.Text.Text,
+    paymentMethod :: Domain.Types.TicketBooking.PaymentMethod,
+    services :: [TicketBookingServicesReq],
+    ticketSubPlaceId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.TicketSubPlace.TicketSubPlace),
+    visitDate :: Data.Time.Calendar.Day
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data DirectTicketBookingResp = DirectTicketBookingResp
+  { bookingShortId :: Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking,
+    bookingStatus :: Domain.Types.TicketBooking.BookingStatus,
+    message :: Data.Text.Text,
+    orderResponse :: Kernel.Prelude.Maybe Kernel.External.Payment.Interface.Types.CreateOrderResp
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

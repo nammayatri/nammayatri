@@ -20,8 +20,11 @@ imports:
   TicketPlaceDashboardDetails: Domain.Types.TicketDashboard
   CreateOrderResp: Kernel.External.Payment.Interface.Types
   TicketBookingReq: API.Types.UI.TicketService
+  DirectTicketBookingReq: API.Types.UI.TicketService
+  DirectTicketBookingResp: API.Types.UI.TicketService
   TicketBookingAPIEntityV2: API.Types.UI.TicketService
   BookingStatus: Domain.Types.TicketBooking
+  PaymentMethod: Domain.Types.TicketBooking
 
 importPackageOverrides:
   API.Types.UI.TicketService: "rider-app"
@@ -299,6 +302,19 @@ apis:
         bookingShortId: ShortId TicketBooking
       response:
         type: APISuccess
+
+  - POST: # DirectBookTicketFromDashboardAPI
+      endpoint: /ticket/places/{placeId}/directBook
+      name: PostTicketPlacesDirectBook
+      auth: ApiAuthV2
+      params:
+        placeId: Id TicketPlace
+      query:
+        requestorId: Text
+      request:
+        type: DirectTicketBookingReq
+      response:
+        type: DirectTicketBookingResp
 
 types:
   SendVerifyOtpReq:

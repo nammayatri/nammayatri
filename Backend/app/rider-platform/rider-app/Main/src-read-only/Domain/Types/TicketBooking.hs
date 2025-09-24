@@ -32,6 +32,7 @@ data TicketBooking = TicketBooking
     personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     shortId :: Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking,
     status :: Domain.Types.Extra.TicketBooking.BookingStatus,
+    ticketBookedBy :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     ticketPlaceId :: Kernel.Types.Id.Id Domain.Types.TicketPlace.TicketPlace,
     ticketSubPlaceId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.TicketSubPlace.TicketSubPlace),
     updatedAt :: Kernel.Prelude.UTCTime,

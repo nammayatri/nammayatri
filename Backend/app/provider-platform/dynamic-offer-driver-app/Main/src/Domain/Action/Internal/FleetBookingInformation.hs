@@ -39,7 +39,8 @@ data CreateFleetBookingInformationReq = CreateFleetBookingInformationReq
     visitDate :: Maybe Day,
     bookedSeats :: Maybe Int,
     status :: Maybe Text,
-    ticketPlaceId :: Maybe Text
+    ticketPlaceId :: Maybe Text,
+    paymentMethod :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -62,7 +63,8 @@ data UpdateFleetBookingInformationReq = UpdateFleetBookingInformationReq
     bookedSeats :: Maybe Int,
     amount :: Maybe HighPrecMoney,
     ticketPlaceId :: Maybe Text,
-    assignments :: Maybe [BookingAssignment]
+    assignments :: Maybe [BookingAssignment],
+    paymentMethod :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -100,6 +102,7 @@ createBookingInformation req = do
             ticketPlaceId = req.ticketPlaceId,
             ticketBookingShortId = req.ticketBookingShortId,
             ticketBookingServiceShortId = req.ticketBookingServiceShortId,
+            paymentMethod = req.paymentMethod,
             createdAt = now,
             updatedAt = now
           }
@@ -124,6 +127,7 @@ updateBookingInformation req = do
                 DFBI.ticketPlaceId = req.ticketPlaceId <|> existing.ticketPlaceId,
                 DFBI.ticketBookingShortId = req.ticketBookingShortId <|> existing.ticketBookingShortId,
                 DFBI.ticketBookingServiceShortId = req.ticketBookingServiceShortId <|> existing.ticketBookingServiceShortId,
+                DFBI.paymentMethod = req.paymentMethod <|> existing.paymentMethod,
                 DFBI.updatedAt = now
               }
       QFBI.updateByPrimaryKey updated
@@ -144,7 +148,8 @@ updateBookingInformation req = do
                 status = req.status,
                 ticketPlaceId = req.ticketPlaceId,
                 ticketBookingShortId = req.ticketBookingShortId,
-                ticketBookingServiceShortId = req.ticketBookingServiceShortId
+                ticketBookingServiceShortId = req.ticketBookingServiceShortId,
+                paymentMethod = req.paymentMethod
               }
       (newAssignment, CreateFleetBookingInformationResp newId) <- createBookingInformation createReq
       createAssignments newAssignment req.assignments
