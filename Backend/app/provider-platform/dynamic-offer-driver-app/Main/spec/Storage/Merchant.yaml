@@ -1075,6 +1075,7 @@ TransporterConfig:
     enableWalletTopup: Maybe Bool
     maxWalletPayoutsPerDay: Maybe Int
     minimumWalletPayoutAmount: Maybe HighPrecMoney
+    payoutCutOffDays: Maybe Int
     gstPercentage: Maybe Double
     maxOnlineDurationDays : Maybe Int
     distanceWeightage: Maybe Int
