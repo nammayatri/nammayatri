@@ -22,6 +22,7 @@ data FleetBookingInformation = FleetBookingInformation
     id :: Kernel.Types.Id.Id Domain.Types.FleetBookingInformation.FleetBookingInformation,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
+    paymentMethod :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     personId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     placeName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     serviceId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,

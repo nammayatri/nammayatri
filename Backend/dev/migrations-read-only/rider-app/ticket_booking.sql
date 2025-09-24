@@ -59,3 +59,8 @@ ALTER TABLE atlas_app.ticket_booking ADD COLUMN ticket_sub_place_id character va
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.ticket_booking ADD COLUMN payment_method text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.ticket_booking ADD COLUMN ticket_booked_by text ;

@@ -113,6 +113,7 @@ updateByPrimaryKey (Domain.Types.TicketBooking.TicketBooking {..}) = do
       Se.Set Beam.personId (Kernel.Types.Id.getId personId),
       Se.Set Beam.shortId (Kernel.Types.Id.getShortId shortId),
       Se.Set Beam.status status,
+      Se.Set Beam.ticketBookedBy ticketBookedBy,
       Se.Set Beam.ticketPlaceId (Kernel.Types.Id.getId ticketPlaceId),
       Se.Set Beam.ticketSubPlaceId (Kernel.Types.Id.getId <$> ticketSubPlaceId),
       Se.Set Beam.updatedAt _now,

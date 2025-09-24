@@ -610,6 +610,7 @@ TicketBooking:
     blockExpirationTime: Maybe Double
     peopleTicketQuantity: "Maybe [PeopleTicketQuantity]"
     paymentMethod: Maybe PaymentMethod
+    ticketBookedBy: Maybe Text
 
   types:
     PeopleTicketQuantity:

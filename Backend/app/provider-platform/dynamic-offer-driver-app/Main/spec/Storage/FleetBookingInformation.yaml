@@ -27,6 +27,7 @@ FleetBookingInformation:
     visitDate: Maybe Day
     bookedSeats: Maybe Int
     status: Maybe Text
+    paymentMethod: Maybe Text
     createdAt: UTCTime
     updatedAt: UTCTime
 
