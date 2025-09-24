@@ -62,7 +62,7 @@ data ChangeStopsResp = ChangeStopsResp {stationsChanged :: Kernel.Prelude.Bool}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data CrisSdkResponse = CrisSdkResponse {bookAuthCode :: Kernel.Prelude.Text, osBuildVersion :: Kernel.Prelude.Text, osType :: Kernel.Prelude.Text}
+data CrisSdkResponse = CrisSdkResponse {bookAuthCode :: Kernel.Prelude.Text, latency :: Kernel.Prelude.Maybe Kernel.Prelude.Int, osBuildVersion :: Kernel.Prelude.Text, osType :: Kernel.Prelude.Text}
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
