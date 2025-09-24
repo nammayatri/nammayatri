@@ -115,7 +115,21 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
                     mode,
                     fleetNo = mbCurrentLegDetails >>= (.finalBoardedBusNumber)
                   }
-
+          mbQuote <- QFRFSQuote.findById booking.quoteId
+          validBuses <-
+            case mbQuote of
+              Just quote -> do
+                let mbServiceTier :: Maybe API.FRFSVehicleServiceTierAPI = listToMaybe =<< (.vehicleServiceTier) =<< decodeFromText =<< quote.routeStationsJson
+                let allowedVariants = maybe (defaultBusBoardingRelationshitCfg serviceTier) (.canBoardIn) $ find (\serviceRelationShip -> serviceRelationShip.vehicleType == Spec.BUS && serviceRelationShip.serviceTierType == serviceTier) =<< riderConfig.serviceTierRelationshipCfg
+                validBuses <-
+                  map fst . filter (\(bs, vehicleServiceTier) -> vehicleServiceTier `elem` allowedVariants)
+                    <$> mapConcurrently
+                      ( \busData -> do
+                          vd <- OTPRest.getVehicleServiceType integratedBppConfig busData.vehicleNumber
+                          return (busData, vd.service_type)
+                      )
+                      allBusDataForRoute
+              Nothing -> pure allBusDataForRoute
           vehiclePositionsToReturn <-
             processBusLegState
               now
