@@ -880,8 +880,9 @@ buildMultimodalRouteDetails ::
   Id MerchantOperatingCity ->
   Enums.VehicleCategory ->
   Bool ->
+  Bool ->
   m (Maybe MultiModalTypes.MultiModalRouteDetails, Maybe HighPrecMeters)
-buildMultimodalRouteDetails subLegOrder mbRouteCode originStopCode destinationStopCode integratedBppConfig mid mocid vc calledForSubwaySingleMode = do
+buildMultimodalRouteDetails subLegOrder mbRouteCode originStopCode destinationStopCode integratedBppConfig mid mocid vc fetchTimings calledForSubwaySingleMode = do
   mbFromStop <- OTPRest.getStationByGtfsIdAndStopCode originStopCode integratedBppConfig
   mbToStop <- OTPRest.getStationByGtfsIdAndStopCode destinationStopCode integratedBppConfig
   currentTime <- getCurrentTime
@@ -889,7 +890,34 @@ buildMultimodalRouteDetails subLegOrder mbRouteCode originStopCode destinationSt
 
   case (mbFromStop >>= (.lat), mbFromStop >>= (.lon), mbToStop >>= (.lat), mbToStop >>= (.lon)) of
     (Just fromStopLat, Just fromStopLon, Just toStopLat, Just toStopLon) -> do
-      (nextAvailableRouteCode, possibleRoutes, originStopTimings) <- measureLatency (findPossibleRoutes Nothing originStopCode destinationStopCode currentTime integratedBppConfig mid mocid vc True True calledForSubwaySingleMode) "findPossibleRoutes"
+      (nextAvailableRouteCode, possibleRoutes, originStopTimings) <-
+        measureLatency
+          ( bool
+              ( do
+                  validRoutes <- getRouteCodesFromTo originStopCode destinationStopCode integratedBppConfig
+                  validRouteDetails <- OTPRest.getRoutesByRouteIds integratedBppConfig validRoutes
+                  let availableRoutesByTier =
+                        [ AvailableRoutesByTier
+                            { availableRoutes = nub $ map (.shortName) validRouteDetails,
+                              availableRoutesInfo = map (\routeDetail -> AvailableRoutesInfo {shortName = routeDetail.shortName, longName = routeDetail.longName, routeCode = routeDetail.code, routeTimings = [], isLiveTrackingAvailable = False, source = GTFS}) validRouteDetails,
+                              fare = PriceAPIEntity {amount = 0.0, currency = INR},
+                              nextAvailableBuses = [],
+                              nextAvailableTimings = [],
+                              quoteId = Nothing,
+                              serviceTier = Spec.ORDINARY,
+                              serviceTierDescription = Nothing,
+                              serviceTierName = Nothing,
+                              source = GTFS,
+                              trainTypeCode = Nothing,
+                              via = Nothing
+                            }
+                        ]
+                  return (listToMaybe validRoutes, availableRoutesByTier, [])
+              )
+              (findPossibleRoutes Nothing originStopCode destinationStopCode currentTime integratedBppConfig mid mocid vc True True calledForSubwaySingleMode)
+              fetchTimings
+          )
+          "findPossibleRoutesMaybeFetchTimings"
       let originStopTripId = listToMaybe originStopTimings >>= (\timing -> Just timing.tripId)
       let distance = distanceBetweenInMeters (LatLong fromStopLat fromStopLon) (LatLong toStopLat toStopLon)
       let routeCode = mbRouteCode <|> nextAvailableRouteCode
@@ -1015,7 +1043,7 @@ buildSingleModeDirectRoutes ::
   MultiModalTypes.GeneralVehicleType ->
   Flow [MultiModalTypes.MultiModalRoute]
 buildSingleModeDirectRoutes getPreliminaryLeg mbRouteCode (Just originStopCode) (Just destinationStopCode) (Just integratedBppConfig) mid mocid vc mode = do
-  (mbRouteDetails, _) <- buildMultimodalRouteDetails 1 mbRouteCode originStopCode destinationStopCode integratedBppConfig mid mocid vc False
+  (mbRouteDetails, _) <- buildMultimodalRouteDetails 1 mbRouteCode originStopCode destinationStopCode integratedBppConfig mid mocid vc True False
   case mbRouteDetails of
     Just routeDetails -> do
       currentTime <- getCurrentTime
@@ -1047,9 +1075,10 @@ getSubwayValidRoutes allSubwayRoutes getPreliminaryLeg integratedBppConfig mid m
       go allSubwayRoutes
   where
     processRoute viaRoutes = do
+      disableViaPointTimetableCheck <- asks (.disableViaPointTimetableCheck)
       let viaPoints = viaRoutes.viaPoints
           routeDistance = metersToHighPrecMeters viaRoutes.distance
-      routeDetailsWithDistance <- mapM (\(osc, dsc) -> measureLatency (buildMultimodalRouteDetails 1 Nothing osc dsc integratedBppConfig mid mocid vc True) "buildMultimodalRouteDetails") viaPoints
+      routeDetailsWithDistance <- mapM (\(osc, dsc) -> measureLatency (buildMultimodalRouteDetails 1 Nothing osc dsc integratedBppConfig mid mocid vc disableViaPointTimetableCheck True) "buildMultimodalRouteDetails") viaPoints
       logDebug $ "buildTrainAllViaRoutes routeDetailsWithDistance: " <> show routeDetailsWithDistance
       -- ensure that atleast one train route is possible or two stops are less than 1km apart so that user can walk to other station e.g. Chennai Park to Central station
       let singleModeWalkThreshold =
