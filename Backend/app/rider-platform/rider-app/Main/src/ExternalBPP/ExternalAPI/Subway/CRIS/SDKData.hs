@@ -66,7 +66,7 @@ getSDKData config request = do
             "deviceID" .= deviceID
           ]
   let jsonStr = decodeUtf8 $ LBS.toStrict $ encode sdkDataRequest
-  logInfo $ "Get SDK Data JSON string: " <> jsonStr
+  logDebug $ "getSDKData Req: " <> jsonStr
   encryptionKey <- decrypt config.encryptionKey
   payload <- encryptPayload jsonStr encryptionKey
   let encReq =
@@ -75,6 +75,7 @@ getSDKData config request = do
             data_ = payload
           }
   sdkData <- callCRISAPI config sdkDataAPI (eulerClientFn encReq) "getSDKData"
+  logDebug $ "getSDKData Res: " <> show sdkData
   return sdkData
   where
     eulerClientFn payload token =

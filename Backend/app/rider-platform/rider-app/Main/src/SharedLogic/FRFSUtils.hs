@@ -366,7 +366,7 @@ data FRFSTicketCategory = FRFSTicketCategory
     eligibility :: Bool
   }
   deriving stock (Generic, Show)
-  deriving anyclass (FromJSON, ToJSON)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
 
 data FRFSVehicleServiceTier = FRFSVehicleServiceTier
   { serviceTierType :: Spec.ServiceTierType,
@@ -377,7 +377,7 @@ data FRFSVehicleServiceTier = FRFSVehicleServiceTier
     isAirConditioned :: Bool
   }
   deriving stock (Generic, Show)
-  deriving anyclass (FromJSON, ToJSON)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
 
 data FRFSFare = FRFSFare
   { farePolicyId :: Maybe (Id DFRFSFarePolicy.FRFSFarePolicy),
@@ -388,7 +388,7 @@ data FRFSFare = FRFSFare
     vehicleServiceTier :: FRFSVehicleServiceTier
   }
   deriving stock (Generic, Show)
-  deriving anyclass (FromJSON, ToJSON)
+  deriving anyclass (FromJSON, ToJSON, ToSchema)
 
 getFare :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r) => Id DP.Person -> Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> Id IntegratedBPPConfig -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Text -> Text -> m [FRFSFare]
 getFare riderId vehicleType serviceTier integratedBPPConfigId merchantId merchantOperatingCityId routeCode startStopCode endStopCode = do
