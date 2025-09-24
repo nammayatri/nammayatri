@@ -195,7 +195,7 @@ cancelRideImpl ServiceHandle {..} requestorId rideId req isForceReallocation = d
   let driverId = ride.driverId
   booking <- findBookingByIdInReplica ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   driver <- findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-  (rideCancelationReason, cancellationCnt, isGoToDisabled, driverGoHomeRequestId, dghInfo, goHomeConfig, disToPickup, rideEndedBy) <- case requestorId of
+  (rideCancelationReason, cancellationCnt, isGoToDisabled, driverGoHomeRequestId, dghInfo, goHomeConfig, _disToPickup, rideEndedBy) <- case requestorId of
     PersonRequestorId personId -> do
       authPerson <-
         findById personId
