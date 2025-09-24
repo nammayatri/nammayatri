@@ -11,6 +11,7 @@ import qualified Domain.Types.Trip as DTrip
 import qualified Kernel.External.MultiModal.Interface as EMInterface
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import Kernel.Tools.Metrics.CoreMetrics.Types
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -160,6 +161,9 @@ confirm forcedBooked ticketQuantity childTicketQuantity bookLater JL.LegInfo {..
       confirmReq :: MetroLegRequest <- mkMetroLegConfirmReq
       JL.confirm confirmReq
     DTrip.Subway -> do
+      case crisSdkResponse >>= (.latency) of
+        Just latency -> fork "Push UTS SDK Latencies" $ addGenericLatency "Uts_Sdk_Request_Booking_Latency" (Milliseconds latency)
+        Nothing -> pure ()
       confirmReq :: SubwayLegRequest <- mkSubwayLegConfirmReq
       JL.confirm confirmReq
     DTrip.Walk -> do
