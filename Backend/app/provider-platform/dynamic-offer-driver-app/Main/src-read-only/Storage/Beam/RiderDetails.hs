@@ -36,6 +36,7 @@ data RiderDetailsT f = RiderDetailsT
     referralCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     referredAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     referredByDriver :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    riderGender :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }
   deriving (Generic, B.Beamable)
