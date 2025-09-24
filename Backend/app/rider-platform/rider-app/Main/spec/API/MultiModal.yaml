@@ -189,6 +189,7 @@ types:
     osType: Text
     osBuildVersion: Text
     bookAuthCode: Text
+    latency: Maybe Int
     derive: "Show"
 
   LegServiceTierOptionsResp:

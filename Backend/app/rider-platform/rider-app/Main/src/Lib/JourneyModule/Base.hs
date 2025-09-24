@@ -458,7 +458,7 @@ startJourneyLeg legInfo = do
         mbBooking <- QTBooking.findBySearchId (Id legInfo.searchId)
         let crisSdkResponse =
               case ((mbBooking >>= (.bookingAuthCode)), (mbBooking >>= (.osType)), (mbBooking >>= (.osBuildVersion))) of
-                (Just bookingAuthCode, Just osType, Just osBuildVersion) -> Just APITypes.CrisSdkResponse {bookAuthCode = bookingAuthCode, osType = osType, osBuildVersion = osBuildVersion}
+                (Just bookingAuthCode, Just osType, Just osBuildVersion) -> Just APITypes.CrisSdkResponse {bookAuthCode = bookingAuthCode, osType = osType, osBuildVersion = osBuildVersion, latency = Nothing}
                 _ -> Nothing
         return (legExtraInfo.adultTicketQuantity, legExtraInfo.childTicketQuantity, crisSdkResponse)
       JL.Bus legExtraInfo -> return (legExtraInfo.adultTicketQuantity, legExtraInfo.childTicketQuantity, Nothing)
