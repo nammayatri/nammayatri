@@ -842,8 +842,10 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking booking' = do
         void $ QFRFSRecon.updateTOrderValueAndSettlementAmountById mPrice mPrice booking.id
       when (paymentBookingStatus == FRFSTicketService.SUCCESS) do
         unless (paymentBooking.status `elem` [DFRFSTicketBookingPayment.REFUND_INITIATED, DFRFSTicketBookingPayment.REFUND_FAILED, DFRFSTicketBookingPayment.REFUNDED]) $ do
+          logInfo $ "inside refund bloc"
           void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.REFUND_PENDING booking.id
           riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCity.id Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCity.id.getId)
+          logInfo $ "riderConfig.enableAutoJourneyRefund: " <> show riderConfig.enableAutoJourneyRefund
           when riderConfig.enableAutoJourneyRefund $ refundOrderCall booking person
         markJourneyPaymentSuccess booking paymentOrder
       when (paymentBookingStatus == FRFSTicketService.PENDING) do
