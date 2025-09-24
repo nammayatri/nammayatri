@@ -4,10 +4,11 @@ import Config.Env (getDbConnectionRetryDelay, getDbConnectionRetryMaxAttempts)
 import Control.Exception (throwIO)
 import DBQuery.Types
 import qualified Data.Map.Strict as M
-import Data.Pool (Pool, withResource)
+import Data.Pool (Pool, destroyAllResources, withResource)
 import qualified Data.Text as T
 import qualified Database.PostgreSQL.Simple as Pg
 import EulerHS.Prelude hiding (id)
+import qualified EulerHS.Types as ET
 import Text.Casing (quietSnake)
 
 currentSchemaName :: String
@@ -68,6 +69,8 @@ executeQueryUsingConnectionPool pool query' = do
     Left (e :: SomeException) ->
       if isConnectionError e
         then do
+          putStrLn @String "[Failover] Destroying all pool connections to handle potential database failover"
+          destroyAllResources pool
           maxAttempts <- getDbConnectionRetryMaxAttempts
           retryDelay <- getDbConnectionRetryDelay
           executeQueryWithRetry pool query' maxAttempts retryDelay e
@@ -99,24 +102,17 @@ executeQueryWithRetry pool query' maxAttempts retryDelay firstError = go (maxAtt
 
 isConnectionError :: SomeException -> Bool
 isConnectionError e =
-  let errorMsg = T.toLower $ T.pack $ show e
-   in any (`T.isInfixOf` errorMsg) connectionErrorPatterns
-  where
-    connectionErrorPatterns =
-      [ "server closed the connection",
-        "server terminated abnormally",
-        "connection to server",
-        "timeout",
-        "network",
-        "host is unreachable",
-        "no route to host",
-        "connection reset by peer",
-        "broken pipe",
-        "connection timed out",
-        "connection refused",
-        "name resolution failed",
-        "connection closed"
-      ]
+  let res = transformException e
+   in case res of
+        ET.DBError (ET.SQLError (ET.PostgresError (ET.PostgresSqlError "" ET.PostgresFatalError "" "" ""))) _ -> True
+        _ -> False
+
+transformException :: SomeException -> ET.DBError
+transformException e =
+  maybe
+    (ET.DBError ET.UnrecognizedError $ show e)
+    (ET.postgresErrorToDbError (show e))
+    $ fromException e
 
 textToSnakeCaseText :: Text -> Text
 textToSnakeCaseText = T.pack . quietSnake . T.unpack
