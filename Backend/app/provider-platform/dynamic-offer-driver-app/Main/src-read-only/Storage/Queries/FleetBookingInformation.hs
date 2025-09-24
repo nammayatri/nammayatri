@@ -46,6 +46,7 @@ updateByPrimaryKey (Domain.Types.FleetBookingInformation.FleetBookingInformation
       Se.Set Beam.fleetOwnerId (Kernel.Types.Id.getId <$> fleetOwnerId),
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
+      Se.Set Beam.paymentMethod paymentMethod,
       Se.Set Beam.personId (Kernel.Types.Id.getId <$> personId),
       Se.Set Beam.placeName placeName,
       Se.Set Beam.serviceId serviceId,
