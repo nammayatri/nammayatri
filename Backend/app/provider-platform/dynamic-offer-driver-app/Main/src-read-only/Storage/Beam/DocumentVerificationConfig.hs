@@ -14,31 +14,31 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data DocumentVerificationConfigT f = DocumentVerificationConfigT
-  { checkExpiry :: B.C f Kernel.Prelude.Bool,
-    checkExtraction :: B.C f Kernel.Prelude.Bool,
-    dependencyDocumentType :: B.C f [Domain.Types.DocumentVerificationConfig.DocumentType],
-    description :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    disableWarning :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    doStrictVerifcation :: B.C f Kernel.Prelude.Bool,
-    documentCategory :: B.C f (Kernel.Prelude.Maybe Domain.Types.DocumentVerificationConfig.DocumentCategory),
-    documentType :: B.C f Domain.Types.DocumentVerificationConfig.DocumentType,
-    filterForOldApks :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
-    isDefaultEnabledOnManualVerification :: B.C f Kernel.Prelude.Bool,
-    isDisabled :: B.C f Kernel.Prelude.Bool,
-    isHidden :: B.C f Kernel.Prelude.Bool,
-    isImageValidationRequired :: B.C f Kernel.Prelude.Bool,
-    isMandatory :: B.C f Kernel.Prelude.Bool,
-    maxRetryCount :: B.C f Kernel.Prelude.Int,
-    merchantId :: B.C f Kernel.Prelude.Text,
-    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
-    order :: B.C f Kernel.Prelude.Int,
-    rcNumberPrefixList :: B.C f [Kernel.Prelude.Text],
-    supportedVehicleClassesJSON :: B.C f Data.Aeson.Value,
-    title :: B.C f Kernel.Prelude.Text,
-    vehicleCategory :: B.C f Domain.Types.VehicleCategory.VehicleCategory,
-    vehicleClassCheckType :: B.C f Domain.Types.DocumentVerificationConfig.VehicleClassCheckType,
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+  { checkExpiry :: (B.C f Kernel.Prelude.Bool),
+    checkExtraction :: (B.C f Kernel.Prelude.Bool),
+    dependencyDocumentType :: (B.C f [Domain.Types.DocumentVerificationConfig.DocumentType]),
+    description :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    disableWarning :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    doStrictVerifcation :: (B.C f Kernel.Prelude.Bool),
+    documentCategory :: (B.C f (Kernel.Prelude.Maybe Domain.Types.DocumentVerificationConfig.DocumentCategory)),
+    documentType :: (B.C f Domain.Types.DocumentVerificationConfig.DocumentType),
+    filterForOldApks :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
+    isDefaultEnabledOnManualVerification :: (B.C f Kernel.Prelude.Bool),
+    isDisabled :: (B.C f Kernel.Prelude.Bool),
+    isHidden :: (B.C f Kernel.Prelude.Bool),
+    isImageValidationRequired :: (B.C f Kernel.Prelude.Bool),
+    isMandatory :: (B.C f Kernel.Prelude.Bool),
+    maxRetryCount :: (B.C f Kernel.Prelude.Int),
+    merchantId :: (B.C f Kernel.Prelude.Text),
+    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
+    order :: (B.C f Kernel.Prelude.Int),
+    rcNumberPrefixList :: (B.C f [Kernel.Prelude.Text]),
+    supportedVehicleClassesJSON :: (B.C f Data.Aeson.Value),
+    title :: (B.C f Kernel.Prelude.Text),
+    vehicleCategory :: (B.C f Domain.Types.VehicleCategory.VehicleCategory),
+    vehicleClassCheckType :: (B.C f Domain.Types.DocumentVerificationConfig.VehicleClassCheckType),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 
@@ -50,6 +50,6 @@ instance B.Table DocumentVerificationConfigT where
 
 type DocumentVerificationConfig = DocumentVerificationConfigT Identity
 
-$(enableKVPG ''DocumentVerificationConfigT ['documentType, 'merchantOperatingCityId, 'vehicleCategory] [])
+$(enableKVPG (''DocumentVerificationConfigT) [('documentType), ('merchantOperatingCityId), ('vehicleCategory)] [])
 
-$(mkTableInstances ''DocumentVerificationConfigT "document_verification_config")
+$(mkTableInstances (''DocumentVerificationConfigT) "document_verification_config")

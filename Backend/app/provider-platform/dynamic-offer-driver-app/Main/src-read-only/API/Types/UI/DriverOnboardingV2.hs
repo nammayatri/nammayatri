@@ -47,6 +47,14 @@ data BankAccountResp = BankAccountResp {chargesEnabled :: Kernel.Prelude.Bool, d
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data CommonDocumentReq = CommonDocumentReq
+  { documentData :: Kernel.Prelude.Text,
+    documentType :: Domain.Types.DocumentVerificationConfig.DocumentType,
+    imageId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Image.Image)
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data DocumentVerificationConfigAPIEntity = DocumentVerificationConfigAPIEntity
   { checkExpiry :: Kernel.Prelude.Bool,
     checkExtraction :: Kernel.Prelude.Bool,

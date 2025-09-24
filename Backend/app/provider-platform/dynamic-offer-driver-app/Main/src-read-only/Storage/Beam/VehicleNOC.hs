@@ -13,18 +13,18 @@ import qualified Kernel.Types.Documents
 import Tools.Beam.UtilsTH
 
 data VehicleNOCT f = VehicleNOCT
-  { documentImageId :: B.C f Kernel.Prelude.Text,
-    driverId :: B.C f Kernel.Prelude.Text,
-    id :: B.C f Kernel.Prelude.Text,
-    nocExpiry :: B.C f Kernel.Prelude.UTCTime,
-    nocNumberEncrypted :: B.C f Kernel.Prelude.Text,
-    nocNumberHash :: B.C f Kernel.External.Encryption.DbHash,
-    rcId :: B.C f Kernel.Prelude.Text,
-    verificationStatus :: B.C f Kernel.Types.Documents.VerificationStatus,
-    merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+  { documentImageId :: (B.C f Kernel.Prelude.Text),
+    driverId :: (B.C f Kernel.Prelude.Text),
+    id :: (B.C f Kernel.Prelude.Text),
+    nocExpiry :: (B.C f Kernel.Prelude.UTCTime),
+    nocNumberEncrypted :: (B.C f Kernel.Prelude.Text),
+    nocNumberHash :: (B.C f Kernel.External.Encryption.DbHash),
+    rcId :: (B.C f Kernel.Prelude.Text),
+    verificationStatus :: (B.C f Kernel.Types.Documents.VerificationStatus),
+    merchantId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
+    merchantOperatingCityId :: (B.C f (Kernel.Prelude.Maybe (Kernel.Prelude.Text))),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 
@@ -34,6 +34,6 @@ instance B.Table VehicleNOCT where
 
 type VehicleNOC = VehicleNOCT Identity
 
-$(enableKVPG ''VehicleNOCT ['id] [['documentImageId], ['rcId]])
+$(enableKVPG (''VehicleNOCT) [('id)] [[('documentImageId)], [('rcId)]])
 
-$(mkTableInstances ''VehicleNOCT "vehicle_noc")
+$(mkTableInstances (''VehicleNOCT) "vehicle_noc")
