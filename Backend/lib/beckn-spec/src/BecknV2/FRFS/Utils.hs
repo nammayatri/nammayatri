@@ -187,3 +187,10 @@ getAndValidateCancellationParams quoteBreakup _ = do
       case find (\qb -> qb.quotationBreakupInnerTitle == Just (show titleToFind)) quoteBreakup of
         Just qb -> qb.quotationBreakupInnerPrice >>= parseMoney
         Nothing -> Nothing
+
+-- use below with care with care
+defaultBusBoardingRelationshitCfg :: Spec.ServiceTierType -> [Spec.ServiceTierType]
+defaultBusBoardingRelationshitCfg Spec.ORDINARY = [Spec.ORDINARY]
+defaultBusBoardingRelationshitCfg Spec.EXECUTIVE = [Spec.ORDINARY, Spec.EXECUTIVE]
+defaultBusBoardingRelationshitCfg Spec.AC = [Spec.ORDINARY, Spec.EXECUTIVE, Spec.AC]
+defaultBusBoardingRelationshitCfg a = [a]

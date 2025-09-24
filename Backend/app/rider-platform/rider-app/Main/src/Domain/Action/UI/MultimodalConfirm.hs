@@ -1550,7 +1550,7 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (_mbPersonId, _merchantId) j
   let mbServiceTier :: Maybe FRFSTicketService.FRFSVehicleServiceTierAPI = listToMaybe =<< (.vehicleServiceTier) =<< decodeFromText =<< quote.routeStationsJson
   case mbServiceTier of
     Just serviceTier -> do
-      let allowedVariants = maybe (getServiceTierRelationship serviceTier) (.canBoardIn) $ find (\serviceRelationShip -> serviceRelationShip.vehicleType == Spec.BUS && serviceRelationShip.serviceTierType == serviceTier) =<< riderConfig.serviceTierRelationshipCfg
+      let allowedVariants = maybe (Utils.defaultBusBoardingRelationshitCfg serviceTier) (.canBoardIn) $ find (\serviceRelationShip -> serviceRelationShip.vehicleType == Spec.BUS && serviceRelationShip.serviceTierType == serviceTier) =<< riderConfig.serviceTierRelationshipCfg
       unless (vehicleLiveRouteInfo.serviceType `elem` allowedVariants) $
         throwError $ VehicleServiceTierUnserviceable ("Vehicle " <> vehicleNumber <> ", the service tier" <> show vehicleLiveRouteInfo.serviceType <> ", not found on any route: " <> show journeyLeg.serviceTypes)
     Nothing -> do
@@ -1574,12 +1574,6 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (_mbPersonId, _merchantId) j
   updatedLegs <- JM.getAllLegsInfo journey.riderId journeyId
   generateJourneyInfoResponse journey updatedLegs
   where
-
-    getServiceTierRelationship :: Spec.ServiceTierType -> [Spec.ServiceTierType]
-    getServiceTierRelationship Spec.ORDINARY = [Spec.ORDINARY]
-    getServiceTierRelationship Spec.EXECUTIVE = [Spec.ORDINARY, Spec.EXECUTIVE]
-    getServiceTierRelationship Spec.AC = [Spec.ORDINARY, Spec.EXECUTIVE, Spec.AC]
-
     formatUtcTime :: UTCTime -> Text
     formatUtcTime utcTime = T.pack $ formatTime defaultTimeLocale "%d-%m-%Y %H:%M:%S" utcTime
 
