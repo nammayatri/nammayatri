@@ -336,6 +336,8 @@ let tsServiceConfig = { url = "http://0.0.0.0:3001/" }
 
 let inMemConfig = { enableInMem = True, maxInMemSize = +100000000 }
 
+let disableViaPointTimetableCheck = False
+
 in  { esqDBCfg
     , esqDBReplicaCfg
     , hedisCfg = hcfg
@@ -429,4 +431,5 @@ in  { esqDBCfg
     , locationTrackingServiceKey = sec.locationTrackingServiceKey
     , nearByDriverAPIRateLimitOptions
     , inMemConfig
+    , disableViaPointTimetableCheck
     }
