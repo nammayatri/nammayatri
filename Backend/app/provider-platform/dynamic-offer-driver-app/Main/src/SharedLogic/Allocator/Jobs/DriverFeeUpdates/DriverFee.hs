@@ -137,8 +137,8 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
           Just plan -> do
             let (planBaseFrequcency, baseAmount) = getFreqAndBaseAmountcase plan.planBaseAmount
                 (mandateSetupDate, mandateId, waiveOffMode, waiveOffPercentage, waiveOffValidTill) = case mbDriverPlan of
-                  Nothing -> (now, Nothing, DPlan.NO_WAIVE_OFF, 0.0, endTime) -- if there is no driverplan in that case we pass endTime it will be greater then startTime to avoid waiveoff in getFinalOrderAmount function
-                  Just driverPlan -> (fromMaybe now driverPlan.mandateSetupDate, driverPlan.mandateId, driverPlan.waiveOfMode, driverPlan.waiverOffPercentage, fromMaybe endTime driverPlan.waiveOffValidTill)
+                  Nothing -> (now, Nothing, DPlan.NO_WAIVE_OFF, 0.0, Nothing) -- if there is no driverplan in that case we pass Nothing to avoid waiveoff in getFinalOrderAmount function
+                  Just driverPlan -> (fromMaybe now driverPlan.mandateSetupDate, driverPlan.mandateId, driverPlan.waiveOfMode, driverPlan.waiverOffPercentage, driverPlan.waiveOffValidTill)
                 coinCashLeft = if plan.eligibleForCoinDiscount then max 0.0 $ maybe 0.0 (.coinCovertedToCashLeft) mbDriverStat else 0.0
 
             driver <- QP.findById (cast driverFee.driverId) >>= fromMaybeM (PersonDoesNotExist driverFee.driverId.getId)
@@ -287,14 +287,14 @@ getFinalOrderAmount ::
   DriverFee ->
   HighPrecMoney ->
   DPlan.WaiveOffMode ->
-  UTCTime ->
+  Maybe UTCTime ->
   m (HighPrecMoney, HighPrecMoney, Maybe Text, Maybe Text)
 getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan registrationDate numOfRidesConsideredForCharges driverFee waiveOffPercentage waiveOffMode waiveOffValidTill = do
   now <- getCurrentTime
   let dutyDate = driverFee.createdAt
       registrationDateLocal = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) registrationDate
-      waiveOffValidTillIst = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) waiveOffValidTill
-      waiveOffMultiplier = if (waiveOffMode == DPlan.NO_WAIVE_OFF || driverFee.startTime > waiveOffValidTillIst) then 1.0 else (1.0 - (waiveOffPercentage / 100)) -- If there is no driver plan, the start time will always be greater than the end time
+      waiveOffValidTillIst = fmap (addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc)) waiveOffValidTill
+      waiveOffMultiplier = if (waiveOffMode == DPlan.NO_WAIVE_OFF || maybe True (driverFee.startTime >) waiveOffValidTillIst) then 1.0 else (1.0 - (waiveOffPercentage / 100)) -- If there is no driver plan or waive-off validity is Nothing, no discount applies
       feeWithoutDiscountWithWaiveOff = feeWithoutDiscount * waiveOffMultiplier
       feeWithoutDiscountWithWaiveOffAndSpecialZone = feeWithoutDiscountWithWaiveOff + driverFee.specialZoneAmount
       feeWithOutDiscountPlusSpecialZone = feeWithoutDiscount + driverFee.specialZoneAmount
@@ -628,7 +628,7 @@ calcFinalOrderAmounts ::
   DriverFee ->
   HighPrecMoney ->
   DPlan.WaiveOffMode ->
-  UTCTime ->
+  Maybe UTCTime ->
   m (HighPrecMoney, HighPrecMoney, Maybe Text, Maybe Text)
 calcFinalOrderAmounts merchantId transporterConfig driver plan mandateSetupDate numRidesForPlanCharges planBaseFrequcency baseAmount driverFee waiveOffPercentage waiveOffMode waiveOffValidTill =
   case (planBaseFrequcency, plan.basedOnEntity) of
