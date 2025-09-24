@@ -18,6 +18,7 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Kernel.Utils.Common
 import qualified Storage.Beam.TransporterConfig as Beam
+import qualified Storage.Queries.Transformers.TransporterConfig
 
 instance FromTType' Beam.TransporterConfig Domain.Types.TransporterConfig.TransporterConfig where
   fromTType' (Beam.TransporterConfigT {..}) = do
@@ -25,7 +26,7 @@ instance FromTType' Beam.TransporterConfig Domain.Types.TransporterConfig.Transp
     pure $
       Just
         Domain.Types.TransporterConfig.TransporterConfig
-          { aaEnabledClientSdkVersion = fromMaybe "999.999.999" aaEnabledClientSdkVersion,
+          { aaEnabledClientSdkVersion = fromMaybe Storage.Queries.Transformers.TransporterConfig.fallBackVersionInText aaEnabledClientSdkVersion,
             aadhaarImageResizeConfig = (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< aadhaarImageResizeConfig,
             aadhaarVerificationRequired = aadhaarVerificationRequired,
             acStatusCheckGap = acStatusCheckGap,

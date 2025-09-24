@@ -658,6 +658,7 @@ library
       Storage.Queries.Transformers.SearchRequest
       Storage.Queries.Transformers.SearchRequestForDriver
       Storage.Queries.Transformers.SearchTry
+      Storage.Queries.Transformers.TransporterConfig
       Storage.Queries.TranslationsExtra
       Storage.Queries.TransporterConfigExtra
       Storage.Queries.TripAlertRequestExtra
