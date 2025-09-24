@@ -242,6 +242,21 @@ mapDocumentType Common.VehicleLeft = Domain.VehicleLeft
 mapDocumentType Common.VehicleRight = Domain.VehicleRight
 mapDocumentType Common.Odometer = Domain.Odometer
 mapDocumentType Common.InspectionHub = Domain.InspectionHub
+-- Netherlands Document Types
+mapDocumentType Common.KIWADriverCard = Domain.KIWADriverCard
+mapDocumentType Common.KIWATaxiPermit = Domain.KIWATaxiPermit
+mapDocumentType Common.KvKChamberOfCommerceRegistration = Domain.KvKChamberOfCommerceRegistration
+mapDocumentType Common.TAXDetails = Domain.TAXDetails
+mapDocumentType Common.BankingDetails = Domain.BankingDetails
+mapDocumentType Common.VehicleDetails = Domain.VehicleDetails
+mapDocumentType Common.SchipolAirportAgreement = Domain.SchipolAirportAgreement
+mapDocumentType Common.SchipolSmartcardProof = Domain.SchipolSmartcardProof
+mapDocumentType Common.TXQualityMark = Domain.TXQualityMark
+-- Finland Document Types
+mapDocumentType Common.TaxiDriverPermit = Domain.TaxiDriverPermit
+mapDocumentType Common.TaxiTransportLicense = Domain.TaxiTransportLicense
+mapDocumentType Common.FinnishIDResidencePermit = Domain.FinnishIDResidencePermit
+mapDocumentType Common.BusinessRegistrationExtract = Domain.BusinessRegistrationExtract
 
 postDriverRegistrationDocumentUpload :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> Common.UploadDocumentReq -> Flow Common.UploadDocumentResp
 postDriverRegistrationDocumentUpload merchantShortId opCity driverId_ req = do

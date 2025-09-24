@@ -133,6 +133,10 @@ types:
     status : Maybe Text
     callbackResponse : Maybe Text
     failureReason : Maybe Text
+  CommonDocumentReq:
+    documentType: DocumentType
+    documentData: Text  # JSON string containing all document data
+    imageId: Maybe (Id Image)  # Optional image for documents that need it
   VehiclePhotosResp:
     left: [Text]
     right: [Text]
@@ -263,5 +267,12 @@ apis:
       auth: TokenAuth PROVIDER_TYPE
       request:
         type: HVSdkCallLogReq
+      response:
+        type: APISuccess
+  - POST:
+      endpoint: /driver/register/commonDocument
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: CommonDocumentReq
       response:
         type: APISuccess

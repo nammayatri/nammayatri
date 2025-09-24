@@ -12,6 +12,7 @@ import qualified Domain.Action.UI.DriverOnboarding.Image as Image
 import qualified Domain.Types.AadhaarCard
 import Domain.Types.BackgroundVerification
 import Domain.Types.Common
+import qualified Domain.Types.CommonDriverOnboardingDocuments
 import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.DocumentVerificationConfig as DTO
 import qualified Domain.Types.DocumentVerificationConfig as Domain
@@ -61,6 +62,7 @@ import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.BackgroundVerification as QBV
 import qualified Storage.Queries.Booking as QBooking
+import qualified Storage.Queries.CommonDriverOnboardingDocuments as QCommonDriverOnboardingDocuments
 import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.DriverGstin as QDGTIN
 import qualified Storage.Queries.DriverInformation as QDI
@@ -1022,4 +1024,44 @@ postDriverRegisterLogHvSdkCall (mbDriverId, merchantId, merchantOperatingCityId)
           { createdAt = now,
             updatedAt = now,
             ..
+          }
+
+postDriverRegisterCommonDocument ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    API.Types.UI.DriverOnboardingV2.CommonDocumentReq ->
+    Environment.Flow APISuccess
+  )
+postDriverRegisterCommonDocument (mbDriverId, merchantId, merchantOperatingCityId) APITypes.CommonDocumentReq {..} = do
+  driverId <- mbDriverId & fromMaybeM (PersonNotFound "No person found")
+
+  -- Validate that imageId exists if provided
+  whenJust imageId $ \imgId -> do
+    mbImage <- ImageQuery.findById imgId
+    whenNothing_ mbImage $ throwError (InvalidRequest "Image not found")
+
+  -- Create the common document entry
+  documentEntry <- buildCommonDocument driverId
+  logInfo $ "documentEntry: " <> show documentEntry
+  QCommonDriverOnboardingDocuments.create documentEntry
+  return Success
+  where
+    buildCommonDocument driverId = do
+      id <- generateGUID
+      now <- getCurrentTime
+      return $
+        Domain.Types.CommonDriverOnboardingDocuments.CommonDriverOnboardingDocuments
+          { id = id,
+            documentImageId = imageId,
+            driverId = Just driverId,
+            documentType = documentType,
+            documentData = documentData,
+            rejectReason = Nothing,
+            verificationStatus = Documents.MANUAL_VERIFICATION_REQUIRED,
+            merchantOperatingCityId = merchantOperatingCityId,
+            merchantId = merchantId,
+            createdAt = now,
+            updatedAt = now
           }

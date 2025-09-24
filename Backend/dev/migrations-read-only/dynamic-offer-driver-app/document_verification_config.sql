@@ -71,3 +71,13 @@ ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN docum
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
