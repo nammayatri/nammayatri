@@ -15,6 +15,7 @@ import Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context as Context
 import Kernel.Types.Id
 import qualified Lib.JourneyModule.Types as JL
+import qualified SharedLogic.FRFSUtils as FRFSUtils
 
 data SubwayLegRequestSearchData = SubwayLegRequestSearchData
   { quantity :: Int,
@@ -75,5 +76,6 @@ data SubwayLegRequestGetFareData = SubwayLegRequestGetFareData
     fromArrivalTime :: Maybe UTCTime,
     merchant :: DMerchant.Merchant,
     merchantOpCity :: DMOC.MerchantOperatingCity,
-    riderId :: Id DPerson.Person
+    riderId :: Id DPerson.Person,
+    fares :: [FRFSUtils.FRFSFare]
   }

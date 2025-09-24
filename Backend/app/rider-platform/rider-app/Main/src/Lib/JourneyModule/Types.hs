@@ -73,6 +73,9 @@ import Lib.SessionizerMetrics.Types.Event
 import qualified Lib.Yudhishthira.Types as YTypes
 import SharedLogic.Booking (getfareBreakups)
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+-- import Tools.Payment (roundToTwoDecimalPlaces)
+
+import qualified SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.Ride as DARide
 import qualified SharedLogic.Search as SLSearch
@@ -89,7 +92,6 @@ import qualified Storage.Queries.Transformers.Booking as QTB
 import Tools.Error
 import Tools.Maps as Maps
 import Tools.Metrics.BAPMetrics.Types
--- import Tools.Payment (roundToTwoDecimalPlaces)
 import qualified Tools.SharedRedisKeys as SharedRedisKeys
 import TransactionLogs.Types
 
@@ -262,7 +264,8 @@ data JourneyInitData = JourneyInitData
     endTime :: Maybe UTCTime,
     maximumWalkDistance :: Meters,
     isSingleMode :: Bool,
-    relevanceScore :: Maybe Double
+    relevanceScore :: Maybe Double,
+    subwayFares :: [FRFSUtils.FRFSFare]
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

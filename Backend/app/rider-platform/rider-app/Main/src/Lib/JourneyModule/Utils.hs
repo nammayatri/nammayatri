@@ -31,6 +31,7 @@ import qualified Domain.Types.Trip as DTrip
 import Domain.Utils (mapConcurrently)
 import Environment
 import ExternalBPP.ExternalAPI.Subway.CRIS.RouteFare as CRISRouteFare
+import qualified ExternalBPP.ExternalAPI.Subway.CRIS.Types as CRISTypes
 import Kernel.External.Encryption
 import Kernel.External.Maps.Google.MapsClient.Types
 import qualified Kernel.External.MultiModal.Interface as MultiModal hiding (decode, encode)
@@ -1053,12 +1054,13 @@ buildTrainAllViaRoutes ::
   MultiModalTypes.GeneralVehicleType ->
   Bool ->
   Id Person ->
-  Flow ([MultiModalTypes.MultiModalRoute], [ViaRoute])
+  Flow ([MultiModalTypes.MultiModalRoute], [ViaRoute], [FRFSFare])
 buildTrainAllViaRoutes getPreliminaryLeg (Just originStopCode) (Just destinationStopCode) (Just integratedBppConfig) mid mocid vc mode processAllViaPoints personId = do
-  allSubwayRoutes <- measureLatency getAllSubwayRoutes "getAllSubwayRoutes"
-  measureLatency (getSubwayValidRoutes allSubwayRoutes getPreliminaryLeg integratedBppConfig mid mocid vc mode processAllViaPoints) "getSubwayValidRoutes"
+  (allSubwayRoutes, fares) <- measureLatency getAllSubwayRoutes "getAllSubwayRoutes"
+  (multimodalRoutes, restOfRoutes) <- measureLatency (getSubwayValidRoutes allSubwayRoutes getPreliminaryLeg integratedBppConfig mid mocid vc mode processAllViaPoints) "getSubwayValidRoutes"
+  return (multimodalRoutes, restOfRoutes, fares)
   where
-    getAllSubwayRoutes :: Flow [ViaRoute]
+    getAllSubwayRoutes :: Flow ([ViaRoute], [FRFSFare])
     getAllSubwayRoutes = do
       case integratedBppConfig.providerConfig of
         DIntegratedBPPConfig.CRIS crisConfig -> do
@@ -1087,9 +1089,9 @@ buildTrainAllViaRoutes getPreliminaryLeg (Just originStopCode) (Just destination
                     )
                     $ mapMaybe (.fareDetails) sortedFares
           logDebug $ "getAllSubwayRoutes viaRoutes: " <> show viaRoutes
-          return viaRoutes
-        _ -> return []
-buildTrainAllViaRoutes _ _ _ _ _ _ _ _ _ _ = return ([], [])
+          return (viaRoutes, fares)
+        _ -> return ([], [])
+buildTrainAllViaRoutes _ _ _ _ _ _ _ _ _ _ = return ([], [], [])
 
 findEarliestTiming :: UTCTime -> UTCTime -> [RouteStopTimeTable] -> Maybe RouteStopTimeTable
 findEarliestTiming currentTimeIST currentTime routeStopTimings = filter (\rst -> getISTArrivalTime rst.timeOfDeparture currentTime >= currentTimeIST) routeStopTimings & listToMaybe
@@ -1254,14 +1256,14 @@ getDistanceAndDuration merchantId merchantOpCityId startLocation endLocation = d
       -- Return Nothing instead of throwing error to allow graceful fallback
       return (Nothing, Nothing)
 
-getRouteFareRequest :: (CoreMetrics m, MonadFlow m, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => Text -> Text -> Text -> Text -> Id Person -> m CRISRouteFare.CRISFareRequest
+getRouteFareRequest :: (CoreMetrics m, MonadFlow m, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => Text -> Text -> Text -> Text -> Id Person -> m CRISTypes.CRISFareRequest
 getRouteFareRequest sourceCode destCode changeOver viaPoints personId = do
   person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   mbMobileNumber <- mapM decrypt person.mobileNumber
   mbImeiNumber <- mapM decrypt person.imeiNumber
   sessionId <- getRandomInRange (1, 1000000 :: Int)
   return $
-    CRISRouteFare.CRISFareRequest
+    CRISTypes.CRISFareRequest
       { mobileNo = mbMobileNumber,
         imeiNo = fromMaybe "ed409d8d764c04f7" mbImeiNumber,
         appSession = sessionId,

@@ -1,9 +1,4 @@
-module ExternalBPP.ExternalAPI.Subway.CRIS.RouteFare
-  ( getRouteFare,
-    CRISFareRequest (..),
-    CRISFareResponse (..),
-  )
-where
+module ExternalBPP.ExternalAPI.Subway.CRIS.RouteFare where
 
 import Data.Aeson
 import qualified Data.ByteString.Lazy as LBS
@@ -16,6 +11,7 @@ import EulerHS.Prelude hiding (concatMap, find, null, readMaybe, whenJust)
 import qualified EulerHS.Types as ET
 import ExternalBPP.ExternalAPI.Subway.CRIS.Auth (callCRISAPI)
 import ExternalBPP.ExternalAPI.Subway.CRIS.Encryption (decryptResponseData, encryptPayload)
+import ExternalBPP.ExternalAPI.Subway.CRIS.Types
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
@@ -26,64 +22,6 @@ import Kernel.Utils.Common
 import Servant.API
 import qualified SharedLogic.FRFSUtils as FRFSUtils
 import qualified Storage.Queries.FRFSVehicleServiceTier as QFRFSVehicleServiceTier
-
-data EncryptedResponse = EncryptedResponse
-  { responseCode :: Text,
-    responseData :: Text
-  }
-  deriving (Generic, FromJSON, ToJSON, Show)
-
--- Request type with updated fields
-data CRISFareRequest = CRISFareRequest
-  { mobileNo :: Maybe Text,
-    imeiNo :: Text,
-    appSession :: Int,
-    sourceCode :: Text,
-    changeOver :: Text,
-    destCode :: Text,
-    via :: Text
-  }
-  deriving (Generic, Show, ToJSON, FromJSON)
-
--- Response types
-data CRISFareResponse = CRISFareResponse
-  { routeFareDetailsList :: [RouteFareDetails]
-  }
-  deriving (Generic, Show, ToJSON, FromJSON)
-
-data RouteFareDetails = RouteFareDetails
-  { routeId :: Int,
-    fareDtlsList :: [FareDetails],
-    maximumValuesList :: [MaximumValues],
-    allowedValuesList :: [AllowedValues]
-  }
-  deriving (Generic, Show, ToJSON, FromJSON)
-
-data FareDetails = FareDetails
-  { adultFare :: Text,
-    childFare :: Text,
-    distance :: Int,
-    via :: Text, -- Added via field
-    ticketTypeCode :: Text,
-    trainTypeCode :: Text,
-    classCode :: Text
-  }
-  deriving (Generic, Show, ToJSON, FromJSON)
-
-data MaximumValues = MaximumValues
-  { item :: Text,
-    value :: Text
-  }
-  deriving (Generic, Show, ToJSON, FromJSON)
-
-data AllowedValues = AllowedValues
-  { ticketTypeCode :: Text,
-    ticketTypeName :: Text,
-    trainTypeCode :: Text,
-    trainTypeDescription :: Text,
-    classCode :: Text
-  }
-  deriving (Generic, Show, ToJSON, FromJSON)
 
 -- API type with updated endpoint
 type RouteFareAPI =
@@ -107,7 +45,6 @@ getRouteFare ::
   CRISFareRequest ->
   m [FRFSUtils.FRFSFare]
 getRouteFare config merchantOperatingCityId request = do
-  logInfo $ "Request object: " <> show request
   let typeOfBooking :: Int = 0
   let mobileNo = request.mobileNo >>= (readMaybe @Int . T.unpack)
   let fareRequest =
@@ -127,7 +64,7 @@ getRouteFare config merchantOperatingCityId request = do
           ]
   let jsonStr = decodeUtf8 $ LBS.toStrict $ encode fareRequest
 
-  logInfo $ "JSON string: " <> jsonStr
+  logInfo $ "getRouteFare Req: " <> jsonStr
 
   encryptionKey <- decrypt config.encryptionKey
   decryptionKey <- decrypt config.decryptionKey
@@ -135,28 +72,26 @@ getRouteFare config merchantOperatingCityId request = do
 
   encryptedResponse <- callCRISAPI config routeFareAPI (eulerClientFn payload) "getRouteFare"
 
-  logInfo $ "Encrypted response: " <> show encryptedResponse
+  logInfo $ "getRouteFare Resp: " <> show encryptedResponse
 
   -- Fix the encoding chain
   decryptedResponse :: CRISFareResponse <- case eitherDecode (encode encryptedResponse) of
-    Left err -> throwError (InternalError $ "Failed to parse encrypted response: " <> T.pack (show err))
+    Left err -> throwError (InternalError $ "Failed to parse encrypted getRouteFare Resp: " <> T.pack (show err))
     Right encResp -> do
-      logInfo $ "Got response code: " <> responseCode encResp
-
+      logInfo $ "getRouteFare Resp Code: " <> responseCode encResp
       if encResp.responseCode == "0"
         then do
           case decryptResponseData (responseData encResp) decryptionKey of
-            Left err -> throwError (InternalError $ "Failed to decrypt response: " <> T.pack err)
+            Left err -> throwError (InternalError $ "Failed to decrypt getRouteFare Resp: " <> T.pack err)
             Right decryptedJson -> do
-              logInfo $ "Decrypted JSON: " <> decryptedJson
+              logInfo $ "getRouteFare Decrypted Resp: " <> decryptedJson
               case eitherDecode (LBS.fromStrict $ TE.encodeUtf8 decryptedJson) of
-                Left err -> throwError (InternalError $ "Failed to decode decrypted JSON: " <> T.pack (show err))
+                Left err -> throwError (InternalError $ "Failed to decode getRouteFare Resp: " <> T.pack (show err))
                 Right fareResponse -> pure fareResponse
-        else throwError (InternalError $ "Non-zero response code in routeFare: " <> encResp.responseCode <> " " <> encResp.responseData)
+        else throwError (InternalError $ "Non-zero response code in getRouteFare Resp: " <> encResp.responseCode <> " " <> encResp.responseData)
 
   let routeFareDetails = decryptedResponse.routeFareDetailsList
 
-  logInfo $ "FRFS Subway Fare: " <> show routeFareDetails
   frfsDetails <-
     routeFareDetails `forM` \routeFareDetail -> do
       let allFares = routeFareDetail.fareDtlsList
