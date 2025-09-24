@@ -14,6 +14,7 @@
 
 module API.Dashboard.Person where
 
+import qualified "dynamic-offer-driver-app" API.Dashboard.Person as BPPPerson
 import qualified "dashboard-helper-api" Dashboard.Common.Driver as Common
 import qualified Domain.Action.Dashboard.Person as DPerson
 import qualified Domain.Action.Dashboard.Transaction as DTransaction
@@ -31,6 +32,8 @@ import Servant hiding (Unauthorized, throwError)
 import Storage.Beam.BeamFlow
 import qualified Storage.Queries.Merchant as QMerchant
 import Tools.Auth
+import Tools.Auth.Merchant (skipMerchantCityAccessCheck)
+import qualified Tools.Client.Driver as DriverClient
 import Tools.Error
 
 type API =
@@ -222,8 +225,12 @@ changePasswordByAdmin tokenInfo personId req =
   withFlowHandlerAPI' $ DPerson.changePasswordByAdmin tokenInfo personId req
 
 changeMobileByAdmin :: BeamFlow' => TokenInfo -> Id DP.Person -> DPerson.ChangeMobileNumberByAdminReq -> FlowHandler APISuccess
-changeMobileByAdmin tokenInfo personId req =
-  withFlowHandlerAPI' $ DPerson.changeMobileNumberByAdmin tokenInfo personId req
+changeMobileByAdmin tokenInfo personId req = withFlowHandlerAPI' $ do
+  result <- DPerson.changeMobileNumberByAdmin tokenInfo personId req
+  let checkedMerchantId = skipMerchantCityAccessCheck (ShortId tokenInfo.merchantId.getId)
+      personReq = BPPPerson.UpdatePersonMobileByFleetRoleReq personId.getId req.newMobileNumber
+  void $ DriverClient.callDriverUpdatePersonMobileByFleetRole checkedMerchantId tokenInfo.city (.updatePersonMobileByFleetRole) personReq
+  pure result
 
 registerRelease :: BeamFlow' => TokenInfo -> DPerson.ReleaseRegisterReq -> FlowHandler DPerson.ReleaseRegisterRes
 registerRelease tokenInfo = withFlowHandlerAPI' . DPerson.registerRelease tokenInfo
