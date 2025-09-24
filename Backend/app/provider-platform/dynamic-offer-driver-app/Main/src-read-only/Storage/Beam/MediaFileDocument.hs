@@ -13,18 +13,18 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data MediaFileDocumentT f = MediaFileDocumentT
-  { creatorId :: B.C f Kernel.Prelude.Text,
-    fileHash :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    id :: B.C f Kernel.Prelude.Text,
-    mediaFileDocumentType :: B.C f Domain.Types.Common.MediaFileDocumentType,
-    merchantId :: B.C f Kernel.Prelude.Text,
-    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
-    rcId :: B.C f Kernel.Prelude.Text,
-    s3Path :: B.C f Kernel.Prelude.Text,
-    status :: B.C f Domain.Types.MediaFileDocument.MediaFileDocumentStatus,
-    uploadLink :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+  { creatorId :: (B.C f Kernel.Prelude.Text),
+    fileHash :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    id :: (B.C f Kernel.Prelude.Text),
+    mediaFileDocumentType :: (B.C f Domain.Types.Common.MediaFileDocumentType),
+    merchantId :: (B.C f Kernel.Prelude.Text),
+    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
+    rcId :: (B.C f Kernel.Prelude.Text),
+    s3Path :: (B.C f Kernel.Prelude.Text),
+    status :: (B.C f Domain.Types.MediaFileDocument.MediaFileDocumentStatus),
+    uploadLink :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 
@@ -34,6 +34,6 @@ instance B.Table MediaFileDocumentT where
 
 type MediaFileDocument = MediaFileDocumentT Identity
 
-$(enableKVPG ''MediaFileDocumentT ['id] [])
+$(enableKVPG (''MediaFileDocumentT) [('id)] [])
 
-$(mkTableInstances ''MediaFileDocumentT "media_file_document")
+$(mkTableInstances (''MediaFileDocumentT) "media_file_document")
