@@ -11,15 +11,15 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data RCValidationRulesT f = RCValidationRulesT
-  { fuelType :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
-    id :: B.C f Kernel.Prelude.Text,
-    maxVehicleAge :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
-    merchantId :: B.C f Kernel.Prelude.Text,
-    merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
-    vehicleClass :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
-    vehicleOEM :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+  { fuelType :: (B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text])),
+    id :: (B.C f Kernel.Prelude.Text),
+    maxVehicleAge :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)),
+    merchantId :: (B.C f Kernel.Prelude.Text),
+    merchantOperatingCityId :: (B.C f Kernel.Prelude.Text),
+    vehicleClass :: (B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text])),
+    vehicleOEM :: (B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text])),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 
@@ -29,6 +29,6 @@ instance B.Table RCValidationRulesT where
 
 type RCValidationRules = RCValidationRulesT Identity
 
-$(enableKVPG ''RCValidationRulesT ['id] [])
+$(enableKVPG (''RCValidationRulesT) [('id)] [])
 
-$(mkTableInstances ''RCValidationRulesT "rc_validation_rules")
+$(mkTableInstances (''RCValidationRulesT) "rc_validation_rules")

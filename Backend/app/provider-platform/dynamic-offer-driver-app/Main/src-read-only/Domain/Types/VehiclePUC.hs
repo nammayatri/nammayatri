@@ -31,9 +31,9 @@ data VehiclePUCE e = VehiclePUC
   }
   deriving (Generic)
 
-type VehiclePUC = VehiclePUCE 'AsEncrypted
+type VehiclePUC = VehiclePUCE ('AsEncrypted)
 
-type DecryptedVehiclePUC = VehiclePUCE 'AsUnencrypted
+type DecryptedVehiclePUC = VehiclePUCE ('AsUnencrypted)
 
 instance EncryptedItem VehiclePUC where
   type Unencrypted VehiclePUC = (DecryptedVehiclePUC, HashSalt)

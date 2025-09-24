@@ -11,14 +11,14 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data AadhaarOtpReqT f = AadhaarOtpReqT
-  { driverId :: B.C f Kernel.Prelude.Text,
-    id :: B.C f Kernel.Prelude.Text,
-    requestId :: B.C f Kernel.Prelude.Text,
-    requestMessage :: B.C f Kernel.Prelude.Text,
-    statusCode :: B.C f Kernel.Prelude.Text,
-    transactionId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    createdAt :: B.C f Kernel.Prelude.UTCTime,
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+  { driverId :: (B.C f Kernel.Prelude.Text),
+    id :: (B.C f Kernel.Prelude.Text),
+    requestId :: (B.C f Kernel.Prelude.Text),
+    requestMessage :: (B.C f Kernel.Prelude.Text),
+    statusCode :: (B.C f Kernel.Prelude.Text),
+    transactionId :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text)),
+    createdAt :: (B.C f Kernel.Prelude.UTCTime),
+    updatedAt :: (B.C f Kernel.Prelude.UTCTime)
   }
   deriving (Generic, B.Beamable)
 
@@ -28,6 +28,6 @@ instance B.Table AadhaarOtpReqT where
 
 type AadhaarOtpReq = AadhaarOtpReqT Identity
 
-$(enableKVPG ''AadhaarOtpReqT ['id] [['driverId]])
+$(enableKVPG (''AadhaarOtpReqT) [('id)] [[('driverId)]])
 
-$(mkTableInstances ''AadhaarOtpReqT "aadhaar_otp_req")
+$(mkTableInstances (''AadhaarOtpReqT) "aadhaar_otp_req")

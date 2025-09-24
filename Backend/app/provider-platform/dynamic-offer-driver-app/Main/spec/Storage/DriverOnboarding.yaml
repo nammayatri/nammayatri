@@ -422,7 +422,7 @@ DocumentVerificationConfig:
     SupportedVehicleClasses:
       enum: "DLValidClasses [Text],RCValidClasses [VehicleClassVariantMap]"
     DocumentType:
-      enum: "DriverLicense,VehicleRegistrationCertificate,Permissions,SubscriptionPlan,ProfilePhoto,AadhaarCard,PanCard,VehiclePermit,VehicleFitnessCertificate,VehicleInsurance,VehiclePUC,ProfileDetails,SocialSecurityNumber,VehicleInspectionForm,UploadProfile,GSTCertificate,BackgroundVerification,VehicleFront,VehicleBack,VehicleRight,VehicleLeft,VehicleFrontInterior,VehicleBackInterior,VehicleNOC,BusinessLicense,Odometer,InspectionHub"
+      enum: "DriverLicense,VehicleRegistrationCertificate,Permissions,SubscriptionPlan,ProfilePhoto,AadhaarCard,PanCard,VehiclePermit,VehicleFitnessCertificate,VehicleInsurance,VehiclePUC,ProfileDetails,SocialSecurityNumber,VehicleInspectionForm,UploadProfile,GSTCertificate,BackgroundVerification,VehicleFront,VehicleBack,VehicleRight,VehicleLeft,VehicleFrontInterior,VehicleBackInterior,VehicleNOC,BusinessLicense,Odometer,InspectionHub,KIWADriverCard,KIWATaxiPermit,KvKChamberOfCommerceRegistration,TAXDetails,BankingDetails,VehicleDetails,SchipolAirportAgreement,SchipolSmartcardProof,TXQualityMark,TaxiDriverPermit,TaxiTransportLicense,FinnishIDResidencePermit,BusinessRegistrationExtract"
     VehicleClassCheckType:
       enum: "Infix,Prefix,Suffix"
     DocumentCategory:
@@ -1091,3 +1091,42 @@ RCValidationRules:
     findByCityId:
       kvFunction: findOneWithKV
       where: merchantOperatingCityId
+
+CommonDriverOnboardingDocuments:
+  tableName: common_driver_onboarding_documents
+  fields:
+    id: Id CommonDriverOnboardingDocuments
+    documentImageId: Maybe (Id Image)
+    driverId: Maybe (Id Person)
+    documentType: DocumentType
+    documentData: Text  # JSON string containing all document data
+    rejectReason: Maybe Text
+    verificationStatus: VerificationStatus  # PENDING, VERIFIED, REJECTED
+    merchantOperatingCityId: Id MerchantOperatingCity
+    merchantId: Id Merchant
+  constraints:
+    id: PrimaryKey
+    driverId: SecondaryKey
+    documentImageId: SecondaryKey
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findByDriverId:
+      kvFunction: findAllWithKV
+      where: driverId
+    findByDriverIdAndDocumentType:
+      kvFunction: findAllWithKV
+      where:
+        and: [driverId, documentType]
+    findByImageId:
+      kvFunction: findOneWithKV
+      where: documentImageId
+    updateVerificationStatus:
+      kvFunction: updateWithKV
+      params: [verificationStatus, updatedAt]
+      where: id
+    updateRejectReason:
+      kvFunction: updateWithKV
+      params: [rejectReason, verificationStatus, updatedAt]
+      where: id
