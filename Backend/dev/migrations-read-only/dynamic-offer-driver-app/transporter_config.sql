@@ -554,3 +554,8 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_wallet_p
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_wallet_topup boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN payout_cut_off_days integer ;
