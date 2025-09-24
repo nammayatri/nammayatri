@@ -14,7 +14,7 @@
 
     # Backend inputs
     shared-kernel = {
-      url = "github:nammayatri/shared-kernel";
+      url = "github:nammayatri/shared-kernel/prodHotPush-BAP";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
