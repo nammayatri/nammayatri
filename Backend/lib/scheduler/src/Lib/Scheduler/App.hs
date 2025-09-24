@@ -55,6 +55,7 @@ runSchedulerService s@SchedulerConfig {..} jobInfoMap kvConfigUpdateFrequency ma
   version <- lookupDeploymentVersion
   loggerEnv <- prepareLoggerEnv loggerConfig hostname
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
+  esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv
   coreMetrics <- Metrics.registerCoreMetricsContainer
   kafkaProducerTools <- buildKafkaProducerTools kafkaProducerCfg
   let kafkaProducerForART = Just kafkaProducerTools
@@ -82,7 +83,7 @@ runSchedulerService s@SchedulerConfig {..} jobInfoMap kvConfigUpdateFrequency ma
             maxInMemSize = inMemConfig.maxInMemSize,
             inMemHashMap = inMemHashMap
           }
-  let schedulerEnv = SchedulerEnv {cacheConfig, ..}
+  let schedulerEnv = SchedulerEnv {cacheConfig, esqDBReplicaEnv, ..}
   when (tasksPerIteration <= 0) $ do
     hPutStrLn stderr ("tasksPerIteration should be greater than 0" :: Text)
     exitFailure

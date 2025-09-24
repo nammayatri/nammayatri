@@ -14,6 +14,7 @@ let schedulerConfig =
               , prettyPrinting = True
               }
       , esqDBCfg = appCfg.esqDBCfg
+      , esqDBReplicaCfg = appCfg.esqDBReplicaCfg
       , metricsPort = +8056
       , hedisCfg = appCfg.hedisCfg
       , hedisClusterCfg = appCfg.hedisClusterCfg
