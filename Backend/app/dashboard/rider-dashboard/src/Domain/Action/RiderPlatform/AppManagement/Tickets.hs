@@ -24,10 +24,10 @@ module Domain.Action.RiderPlatform.AppManagement.Tickets
     getTicketPlaces,
     getTicketPlaceServices,
     getTicketBookingDetails,
-    getTicketBookingStatus,
     getAllTicketBookings,
     postTicketBookingCashCollect,
     postTicketPlacesDirectBook,
+    getTicketsDashboardBookingStatus,
   )
 where
 
@@ -310,10 +310,10 @@ getTicketBookingDetails merchantShortId opCity apiTokenInfo bookingShortId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.ticketsDSL.getTicketBookingDetails) bookingShortId
 
-getTicketBookingStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking -> Environment.Flow Domain.Types.TicketBooking.BookingStatus)
-getTicketBookingStatus merchantShortId opCity apiTokenInfo bookingShortId = do
+getTicketsDashboardBookingStatus :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Text -> Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking -> Environment.Flow Domain.Types.TicketBooking.BookingStatus)
+getTicketsDashboardBookingStatus merchantShortId opCity apiTokenInfo userPhoneNumber bookingShortId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.ticketsDSL.getTicketBookingStatus) bookingShortId
+  API.Client.RiderPlatform.AppManagement.callAppManagementAPI checkedMerchantId opCity (.ticketsDSL.getTicketsDashboardBookingStatus) userPhoneNumber bookingShortId
 
 getAllTicketBookings :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Kernel.Prelude.Int) -> Kernel.Prelude.Maybe (Domain.Types.TicketBooking.BookingStatus) -> Environment.Flow [API.Types.UI.TicketService.TicketBookingAPIEntityV2])
 getAllTicketBookings merchantShortId opCity apiTokenInfo limit offset status = do
