@@ -15,6 +15,7 @@ imports:
   Value: Data.Aeson
   Seconds: Kernel.Types.Common
   Integer: Kernel.Prelude
+  Version: Kernel.Types.Version
   AadhaarVerificationService: Kernel.External.AadhaarVerification.Types
   CallService: Kernel.External.Call
   MapsService: Kernel.External.Maps.Types
@@ -1276,7 +1277,7 @@ TransporterConfig:
     meterRideBulkLocUpdateBatchSize: fromMaybe 4 meterRideBulkLocUpdateBatchSize|E
     dynamicReferralCodeValidForMinutes: fromMaybe 60 dynamicReferralCodeValidForMinutes|E
     dynamicReferralCodeEnabled: fromMaybe False dynamicReferralCodeEnabled|E
-    aaEnabledClientSdkVersion: fromMaybe "99999999999" aaEnabledClientSdkVersion| E
+    aaEnabledClientSdkVersion: fromMaybe Storage.Queries.Transformers.TransporterConfig.fallBackVersionInText aaEnabledClientSdkVersion|E
     issueBreachConfig: |-
       (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< issueBreachConfig|E
     recentScheduledBookingsSafeLimit: fromMaybe 50 recentScheduledBookingsSafeLimit|E
