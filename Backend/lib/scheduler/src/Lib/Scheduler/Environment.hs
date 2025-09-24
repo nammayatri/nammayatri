@@ -48,6 +48,7 @@ data SchedulerConfig = SchedulerConfig
   { loggerConfig :: LoggerConfig,
     metricsPort :: Int,
     esqDBCfg :: EsqDBConfig,
+    esqDBReplicaCfg :: EsqDBConfig,
     hedisCfg :: HedisCfg,
     hedisClusterCfg :: HedisCfg,
     hedisNonCriticalCfg :: HedisCfg,
@@ -78,6 +79,7 @@ data SchedulerConfig = SchedulerConfig
 
 data SchedulerEnv = SchedulerEnv
   { esqDBEnv :: EsqDBEnv,
+    esqDBReplicaEnv :: EsqDBEnv,
     hedisEnv :: HedisEnv,
     hedisNonCriticalEnv :: HedisEnv,
     hedisNonCriticalClusterEnv :: HedisEnv,
@@ -150,7 +152,7 @@ runSchedulerM schedulerConfig env action = do
       ( ( prepareConnectionDriver
             ConnectionConfigDriver
               { esqDBCfg = schedulerConfig.esqDBCfg,
-                esqDBReplicaCfg = schedulerConfig.esqDBCfg,
+                esqDBReplicaCfg = schedulerConfig.esqDBReplicaCfg,
                 hedisClusterCfg = schedulerConfig.hedisClusterCfg
               }
             env.kvConfigUpdateFrequency
