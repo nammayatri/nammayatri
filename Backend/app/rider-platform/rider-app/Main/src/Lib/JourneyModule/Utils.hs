@@ -1052,8 +1052,9 @@ buildTrainAllViaRoutes ::
   Enums.VehicleCategory ->
   MultiModalTypes.GeneralVehicleType ->
   Bool ->
+  Id Person ->
   Flow ([MultiModalTypes.MultiModalRoute], [ViaRoute])
-buildTrainAllViaRoutes getPreliminaryLeg (Just originStopCode) (Just destinationStopCode) (Just integratedBppConfig) mid mocid vc mode processAllViaPoints = do
+buildTrainAllViaRoutes getPreliminaryLeg (Just originStopCode) (Just destinationStopCode) (Just integratedBppConfig) mid mocid vc mode processAllViaPoints personId = do
   allSubwayRoutes <- measureLatency getAllSubwayRoutes "getAllSubwayRoutes"
   measureLatency (getSubwayValidRoutes allSubwayRoutes getPreliminaryLeg integratedBppConfig mid mocid vc mode processAllViaPoints) "getSubwayValidRoutes"
   where
@@ -1061,7 +1062,7 @@ buildTrainAllViaRoutes getPreliminaryLeg (Just originStopCode) (Just destination
     getAllSubwayRoutes = do
       case integratedBppConfig.providerConfig of
         DIntegratedBPPConfig.CRIS crisConfig -> do
-          routeFareReq <- getDummyRouteFareRequest originStopCode destinationStopCode " " " "
+          routeFareReq <- getRouteFareRequest originStopCode destinationStopCode " " " " personId
           fares <- CRISRouteFare.getRouteFare crisConfig mocid routeFareReq
           let sortedFares = case crisConfig.routeSortingCriteria of
                 Just DIntegratedBPPConfig.FARE -> sortBy (comparing (\fare -> fare.price.amount)) fares
@@ -1088,7 +1089,7 @@ buildTrainAllViaRoutes getPreliminaryLeg (Just originStopCode) (Just destination
           logDebug $ "getAllSubwayRoutes viaRoutes: " <> show viaRoutes
           return viaRoutes
         _ -> return []
-buildTrainAllViaRoutes _ _ _ _ _ _ _ _ _ = return ([], [])
+buildTrainAllViaRoutes _ _ _ _ _ _ _ _ _ _ = return ([], [])
 
 findEarliestTiming :: UTCTime -> UTCTime -> [RouteStopTimeTable] -> Maybe RouteStopTimeTable
 findEarliestTiming currentTimeIST currentTime routeStopTimings = filter (\rst -> getISTArrivalTime rst.timeOfDeparture currentTime >= currentTimeIST) routeStopTimings & listToMaybe
@@ -1252,20 +1253,6 @@ getDistanceAndDuration merchantId merchantOpCityId startLocation endLocation = d
       logError $ "Failed to get walk distance from OSRM for leg " <> show merchantId.getId <> ": " <> show err
       -- Return Nothing instead of throwing error to allow graceful fallback
       return (Nothing, Nothing)
-
-getDummyRouteFareRequest :: MonadFlow m => Text -> Text -> Text -> Text -> m CRISRouteFare.CRISFareRequest
-getDummyRouteFareRequest sourceCode destCode changeOver viaPoints = do
-  sessionId <- getRandomInRange (1, 1000000 :: Int)
-  return $
-    CRISRouteFare.CRISFareRequest
-      { mobileNo = Just "1111111111",
-        imeiNo = "abcdefgh",
-        appSession = sessionId,
-        sourceCode = sourceCode,
-        destCode = destCode,
-        changeOver = changeOver,
-        via = viaPoints
-      }
 
 getRouteFareRequest :: (CoreMetrics m, MonadFlow m, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => Text -> Text -> Text -> Text -> Id Person -> m CRISRouteFare.CRISFareRequest
 getRouteFareRequest sourceCode destCode changeOver viaPoints personId = do

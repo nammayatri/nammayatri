@@ -47,8 +47,7 @@ data CRISFareRequest = CRISFareRequest
 
 -- Response types
 data CRISFareResponse = CRISFareResponse
-  { routeFareDetailsList :: [RouteFareDetails],
-    sdkData :: Text -- Added sdkData field
+  { routeFareDetailsList :: [RouteFareDetails]
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
@@ -88,7 +87,7 @@ data AllowedValues = AllowedValues
 
 -- API type with updated endpoint
 type RouteFareAPI =
-  "t" :> "uts.cris.in" :> "VCU" :> "1" :> "get_route_fare_details_v3"
+  "t" :> "uts.cris.in" :> "VCU" :> "1" :> "get_route_fare_details_v4"
     :> Header "Authorization" Text
     :> Header "Content-Type" Text
     :> Header "appCode" Text
@@ -197,7 +196,6 @@ getRouteFare config merchantOperatingCityId request = do
                       via = fare.via,
                       ticketTypeCode = fare.ticketTypeCode,
                       trainTypeCode = fare.trainTypeCode,
-                      sdkToken = decryptedResponse.sdkData,
                       appSession = request.appSession
                     },
               vehicleServiceTier =

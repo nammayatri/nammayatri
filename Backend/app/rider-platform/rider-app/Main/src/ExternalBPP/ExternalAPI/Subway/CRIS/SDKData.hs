@@ -4,6 +4,7 @@ import API.Types.UI.CRIS as CRIS
 import Data.Aeson
 import qualified Data.ByteString.Lazy as LBS
 import Domain.Types.Extra.IntegratedBPPConfig (CRISConfig)
+import Domain.Types.Person
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET
 import ExternalBPP.ExternalAPI.Subway.CRIS.Auth (callCRISAPI)
@@ -12,8 +13,11 @@ import Kernel.External.Encryption
 import Kernel.Prelude hiding (app)
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.App
+import Kernel.Types.Error
+import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant.API
+import qualified Storage.Queries.Person as QPerson
 
 data EncryptedRequest = EncryptedRequest
   { app :: Text,
@@ -32,6 +36,15 @@ type SDKDataAPI =
     :> Header "appCode" Text
     :> ReqBody '[JSON] EncryptedRequest
     :> Post '[JSON] CRIS.GetSDKDataResponse
+
+mkGetSDKDataReq :: (CoreMetrics m, MonadFlow m, EsqDBFlow m r, EncFlow m r, CacheFlow m r) => Id Person -> m (Maybe CRIS.GetSDKDataRequest)
+mkGetSDKDataReq personId = do
+  person <- QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  mbMobileNumber <- mapM decrypt person.mobileNumber
+  mbImeiNumber <- mapM decrypt person.imeiNumber
+  case (mbMobileNumber, mbImeiNumber) of
+    (Just mobile, Just imei) -> return $ Just $ CRIS.GetSDKDataRequest {mobileNo = mobile, deviceID = imei}
+    _ -> return Nothing
 
 getSDKData ::
   ( CoreMetrics m,

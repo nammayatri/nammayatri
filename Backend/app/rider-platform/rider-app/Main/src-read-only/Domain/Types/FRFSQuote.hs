@@ -59,7 +59,6 @@ data FRFSFareDetails = FRFSFareDetails
   { appSession :: Kernel.Prelude.Int,
     distance :: Kernel.Types.Common.Meters,
     providerRouteId :: Kernel.Prelude.Text,
-    sdkToken :: Kernel.Prelude.Text,
     ticketTypeCode :: Kernel.Prelude.Text,
     trainTypeCode :: Kernel.Prelude.Text,
     via :: Kernel.Prelude.Text
