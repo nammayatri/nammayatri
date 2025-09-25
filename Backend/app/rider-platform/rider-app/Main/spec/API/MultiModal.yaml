@@ -484,6 +484,7 @@ apis:
         city: City
         vehicleNumber: Text
         vehicleType: VehicleCategory
+        enableSwitchRoute: Bool
       response:
         type: PublicTransportData
 

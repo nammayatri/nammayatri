@@ -143,7 +143,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
               booking.merchantOperatingCityId
               mbUserBoardingStation
               mbLegEndStation
-              allBusDataForRoute
+              validBuses
               routeStopMappings
               trackingStatus
               movementDetected
