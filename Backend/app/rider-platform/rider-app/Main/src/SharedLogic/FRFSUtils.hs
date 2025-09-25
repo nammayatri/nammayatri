@@ -915,6 +915,8 @@ markAllRefundBookings booking personId = do
     let refundSplitDetails = mkRefundSplitDetails nonRefundInitiatedBookings
     refundId <- generateGUID
     when allFailed $ whenJust mbJourneyId $ \journeyId -> QJourney.updateStatus DJourney.FAILED journeyId
+    logInfo $ "refund info for refundId: " <> show refundId <> ", amount: " <> show amountUpdated <> ", orderShortId: " <> orderShortId <> ", splitSettlementDetails" <> show splitDetails
+    logInfo $ "internal split details: " <> show refundSplitDetails
     let refundReq =
           Payment.AutoRefundReq
             { orderId = orderShortId,
