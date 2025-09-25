@@ -129,7 +129,7 @@ verifyGstin verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprova
       pure False
     role
       | DCommon.checkFleetOwnerRole role ->
-        DFR.enableFleetIfPossible person.id adminApprovalRequired (DFR.castRoleToFleetType person.role)
+        DFR.enableFleetIfPossible person.id adminApprovalRequired (DFR.castRoleToFleetType person.role) person.merchantOperatingCityId
     _ -> pure False
   pure res
   where

@@ -43,6 +43,7 @@ import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverOnboarding as DomainRC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified Storage.Cac.TransporterConfig as SCTC
+import qualified Storage.CachedQueries.FleetOwnerDocumentVerificationConfig as FODVC
 import Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
@@ -157,33 +158,58 @@ fleetOwnerRegister _merchantShortId _opCity mbRequestorId req = do
       image <- Image.validateImage True (fleetOwnerId, person.merchantId, person.merchantOperatingCityId) req'
       businessLicenseNumber <- forM req.businessLicenseNumber encrypt
       QFOI.updateBusinessLicenseImageAndNumber (Just image.imageId.getId) businessLicenseNumber fleetOwnerId
-  enabled <- enableFleetIfPossible fleetOwnerId req.adminApprovalRequired (castFleetType <$> req.fleetType)
+  enabled <- enableFleetIfPossible fleetOwnerId req.adminApprovalRequired (castFleetType <$> req.fleetType) person.merchantOperatingCityId
   return $ Common.FleetOwnerRegisterResV2 enabled
 
-enableFleetIfPossible :: Id DP.Person -> Maybe Bool -> Maybe FOI.FleetType -> Flow Bool
-enableFleetIfPossible fleetOwnerId adminApprovalRequired mbfleetType = do
+enableFleetIfPossible :: Id DP.Person -> Maybe Bool -> Maybe FOI.FleetType -> Id DMOC.MerchantOperatingCity -> Flow Bool
+enableFleetIfPossible fleetOwnerId adminApprovalRequired mbfleetType merchantOperatingCityId = do
   if adminApprovalRequired /= Just True
     then do
-      aadhaarCard <- QAadhaarCard.findByPrimaryKey fleetOwnerId -- TODO: Take from DVC
-      panCard <- QPanCard.findByDriverId fleetOwnerId
-      gstIn <- QGST.findByDriverId fleetOwnerId
+      let role = case mbfleetType of
+            Just FOI.NORMAL_FLEET -> DP.FLEET_OWNER
+            Just FOI.BUSINESS_FLEET -> DP.FLEET_BUSINESS
+            _ -> DP.FLEET_OWNER
+
+      mandatoryConfigs <- FODVC.findAllMandatoryByMerchantOpCityIdAndRole merchantOperatingCityId role (Just [])
+
+      let isAadhaarMandatory = any (\cfg -> cfg.documentType == DVC.AadhaarCard) mandatoryConfigs
+      let isPanMandatory = any (\cfg -> cfg.documentType == DVC.PanCard) mandatoryConfigs
+      let isGstMandatory = any (\cfg -> cfg.documentType == DVC.GSTCertificate) mandatoryConfigs
+
+      aadhaarCard <-
+        if isAadhaarMandatory
+          then QAadhaarCard.findByPrimaryKey fleetOwnerId
+          else pure Nothing
+
+      panCard <-
+        if isPanMandatory
+          then QPanCard.findByDriverId fleetOwnerId
+          else pure Nothing
+
+      gstIn <-
+        if isGstMandatory
+          then QGST.findByDriverId fleetOwnerId
+          else pure Nothing
+
+      let isValid mDoc isMandatory = case mDoc of
+            Just doc -> doc.verificationStatus == Documents.VALID
+            Nothing -> not isMandatory
+
+          panValid = isValid panCard isPanMandatory
+          aadhaarValid = isValid aadhaarCard isAadhaarMandatory
+          gstValid = isValid gstIn isGstMandatory
+
       case mbfleetType of
-        Just FOI.NORMAL_FLEET ->
-          case (panCard, aadhaarCard) of
-            (Just pan, Just aadhaar) | pan.verificationStatus == Documents.VALID
-                                         && aadhaar.verificationStatus == Documents.VALID -> do
-              void $ QFOI.updateFleetOwnerEnabledStatus True fleetOwnerId
-              pure True
-            _ -> pure False
-        Just FOI.BUSINESS_FLEET ->
-          case (aadhaarCard, panCard, gstIn) of
-            (Just aadhaar, Just pan, Just gst)
-              | pan.verificationStatus == Documents.VALID
-                  && gst.verificationStatus == Documents.VALID
-                  && aadhaar.verificationStatus == Documents.VALID -> do
-                void $ QFOI.updateFleetOwnerEnabledStatus True fleetOwnerId
-                pure True
-            _ -> pure False
+        Just FOI.NORMAL_FLEET
+          | panValid && aadhaarValid -> do
+            void $ QFOI.updateFleetOwnerEnabledStatus True fleetOwnerId
+            pure True
+          | otherwise -> pure False
+        Just FOI.BUSINESS_FLEET
+          | panValid && aadhaarValid && gstValid -> do
+            void $ QFOI.updateFleetOwnerEnabledStatus True fleetOwnerId
+            pure True
+          | otherwise -> pure False
         _ -> pure False
     else pure False
 
