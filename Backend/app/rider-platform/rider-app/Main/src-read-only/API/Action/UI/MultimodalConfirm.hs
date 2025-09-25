@@ -296,6 +296,9 @@ type API =
            "city"
            Kernel.Types.Beckn.Context.City
       :> QueryParam
+           "enableSwitchRoute"
+           Kernel.Prelude.Bool
+      :> QueryParam
            "publicTransportConfigVersion"
            Kernel.Prelude.Text
       :> QueryParam
@@ -714,12 +717,13 @@ getPublicTransportData ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.City ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Kernel.Prelude.Maybe Kernel.Prelude.Text ->
     Kernel.Prelude.Maybe Kernel.Prelude.Text ->
     Kernel.Prelude.Maybe BecknV2.FRFS.Enums.VehicleCategory ->
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.PublicTransportData
   )
-getPublicTransportData a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.getPublicTransportData (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a5) a4 a3 a2 a1
+getPublicTransportData a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.getPublicTransportData (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a6) a5 a4 a3 a2 a1
 
 getMultimodalOrderGetLegTierOptions ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,

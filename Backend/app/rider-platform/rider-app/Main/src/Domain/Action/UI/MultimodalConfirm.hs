@@ -648,12 +648,13 @@ getPublicTransportData ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.City ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
     Kernel.Prelude.Maybe Kernel.Prelude.Text ->
     Kernel.Prelude.Maybe Kernel.Prelude.Text ->
     Kernel.Prelude.Maybe VehicleCategory ->
     Environment.Flow API.Types.UI.MultimodalConfirm.PublicTransportData
   )
-getPublicTransportData (mbPersonId, merchantId) mbCity _mbConfigVersion mbVehicleNumber mbVehicleType = do
+getPublicTransportData (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _mbConfigVersion mbVehicleNumber mbVehicleType = do
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   mbRequestCity <- maybe (pure Nothing) (CQMOC.findByMerchantIdAndCity merchantId) mbCity
@@ -682,13 +683,16 @@ getPublicTransportData (mbPersonId, merchantId) mbCity _mbConfigVersion mbVehicl
       Nothing -> return Nothing
 
   let mbOppositeTripDetails :: Maybe [NandiTypes.BusScheduleTrip] =
-        mbVehicleLiveRouteInfo
-          <&> \(_, vehicleLiveRouteInfo) -> do
-            ( if vehicleLiveRouteInfo.tripNumber == 1
-                then take 2
-                else take 1
-              )
-              $ sortOn (.stops_count) $ filter (\remainingTrip -> remainingTrip.route_number == vehicleLiveRouteInfo.routeNumber && remainingTrip.route_id /= vehicleLiveRouteInfo.routeCode) (fromMaybe [] vehicleLiveRouteInfo.remaining_trip_details)
+        case mbEnableSwitchRoute of
+          Just True -> do
+            mbVehicleLiveRouteInfo
+              <&> \(_, vehicleLiveRouteInfo) -> do
+                ( if vehicleLiveRouteInfo.tripNumber == 1
+                    then take 2
+                    else take 1
+                  )
+                  $ sortOn (.stops_count) $ filter (\remainingTrip -> remainingTrip.route_number == vehicleLiveRouteInfo.routeNumber && remainingTrip.route_id /= vehicleLiveRouteInfo.routeCode) (fromMaybe [] vehicleLiveRouteInfo.remaining_trip_details)
+          _ -> Nothing
 
   let mkResponse stations routes routeStops bppConfig = do
         gtfsVersion <-
