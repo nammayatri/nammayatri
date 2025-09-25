@@ -581,6 +581,10 @@ FRFSTicketBookingPayment:
       kvFunction: updateWithKV
       params: [status, updatedAt]
       where: frfsTicketBookingId
+    updateStatusById:
+      kvFunction: updateWithKV
+      params: [status, updatedAt]
+      where: id
 
   extraOperations:
     - EXTRA_QUERY_FILE

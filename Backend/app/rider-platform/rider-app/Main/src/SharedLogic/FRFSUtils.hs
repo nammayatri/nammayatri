@@ -793,20 +793,21 @@ markAllRefundBookings booking personId = do
 
   let terminalBookings = filter (\frfsBooking -> frfsBooking.status `elem` [DFRFSTicketBooking.FAILED, DFRFSTicketBooking.CANCELLED]) allJourneyFrfsBookings
       nonRefundInitiatedBookings' =
-        filter
-          ( \bkg ->
-              ( any
+        catMaybes $
+          map
+            ( \bkg ->
+                find
                   ( \paymentBooking ->
                       paymentBooking.frfsTicketBookingId == bkg.id
                         && paymentBooking.status == DFRFSTicketBookingPayment.REFUND_PENDING
                   )
                   paymentBookings
-              )
-          )
-          terminalBookings
+                  <&> \paymentBooking -> (bkg, paymentBooking.id)
+            )
+            terminalBookings
   nonRefundInitiatedBookings <-
     filterM
-      ( \currBooking -> do
+      ( \(currBooking, _paymentBookingId) -> do
           let mkRefundLockKey = "frfsRefundBooking:" <> currBooking.id.getId
           processedCount <- Redis.incr mkRefundLockKey
           void $ Redis.expire mkRefundLockKey 60
@@ -818,7 +819,8 @@ markAllRefundBookings booking personId = do
     logInfo $ "payment status api markAllRefundBookings: " <> show nonRefundInitiatedBookings
     logInfo $ "allFailed flag in markAllRefundBookings: " <> show allFailed
     person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-    payments <- mapM (QFRFSTicketBookingPayment.findNewTBPByBookingId . (.id)) nonRefundInitiatedBookings
+    let (bookings, paymentBookingIds) = unzip nonRefundInitiatedBookings
+    payments <- mapM (QFRFSTicketBookingPayment.findById) paymentBookingIds
     orderShortId <- case listToMaybe (catMaybes payments) of
       Just payment -> do
         order <- QPaymentOrder.findById payment.paymentOrderId >>= fromMaybeM (PaymentOrderNotFound payment.paymentOrderId.getId)
@@ -827,10 +829,10 @@ markAllRefundBookings booking personId = do
     frfsConfig <-
       CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow person.merchantOperatingCityId []
         >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> show person.merchantOperatingCityId)
-    (vendorSplitDetails, amountUpdated) <- SMMFRFS.createVendorSplitFromBookings nonRefundInitiatedBookings person.merchantId person.merchantOperatingCityId Payment.FRFSMultiModalBooking frfsConfig.isFRFSTestingEnabled
+    (vendorSplitDetails, amountUpdated) <- SMMFRFS.createVendorSplitFromBookings bookings person.merchantId person.merchantOperatingCityId Payment.FRFSMultiModalBooking frfsConfig.isFRFSTestingEnabled
     isSplitEnabled <- Payment.getIsSplitEnabled person.merchantId person.merchantOperatingCityId Nothing Payment.FRFSMultiModalBooking
     splitDetails <- Payment.mkUnaggregatedRefundSplitSettlementDetails isSplitEnabled amountUpdated vendorSplitDetails
-    let refundSplitDetails = mkRefundSplitDetails nonRefundInitiatedBookings
+    let refundSplitDetails = mkRefundSplitDetails bookings
     refundId <- generateGUID
     when allFailed $ whenJust mbJourneyId $ \journeyId -> QJourney.updateStatus DJourney.FAILED journeyId
     let refundReq =
@@ -844,13 +846,13 @@ markAllRefundBookings booking personId = do
     result <- try @_ @SomeException $ DPayment.refundService (refundReq, Kernel.Types.Id.Id {Kernel.Types.Id.getId = refundId}) (Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant person.merchantId) (Just refundSplitDetails) createRefundCall
     case result of
       Left err -> do
-        forM_ nonRefundInitiatedBookings $ \frfsBooking -> do
-          void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.REFUND_FAILED frfsBooking.id
+        forM_ paymentBookingIds $ \paymentBookingId -> do
+          void $ QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.REFUND_FAILED paymentBookingId
         logError $ "Refund service failed for journey " <> refundId <> ": " <> show err
       Right _ -> do
         logInfo $ "Refund service completed successfully for journey " <> refundId
-        forM_ nonRefundInitiatedBookings $ \frfsBooking -> do
-          void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.REFUND_INITIATED frfsBooking.id
+        forM_ paymentBookingIds $ \paymentBookingId -> do
+          void $ QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.REFUND_INITIATED paymentBookingId
 
         riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
         let scheduleAfter = riderConfig.refundStatusUpdateInterval -- Schedule for 24 hours later
