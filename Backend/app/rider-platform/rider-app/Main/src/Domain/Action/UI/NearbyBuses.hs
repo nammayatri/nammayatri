@@ -266,16 +266,17 @@ getNextVehicleDetails (mbPersonId, mid) routeCode stopCode mbVehicleType = do
   let vehicleType = maybe BecknV2.OnDemand.Enums.BUS castToOnDemandVehicleCategory mbVehicleType
   JourneyUtils.findUpcomingTrips routeCode stopCode Nothing now mid person.merchantOperatingCityId vehicleType
 
-fetchPlatformCodesFromRedis :: [Text] -> Environment.Flow (HashMap.HashMap Text Text)
-fetchPlatformCodesFromRedis tripIds = do
+fetchPlatformCodesFromRedis :: [Text] -> Text -> Environment.Flow (HashMap.HashMap Text Text)
+fetchPlatformCodesFromRedis tripIds stopCode = do
   if null tripIds
     then do
       logDebug $ "fetchPlatformCodesFromRedis: No tripIds provided, returning empty map"
       return HashMap.empty
     else do
       let platformHashKey = "platform-codes-hashmap"
-      logDebug $ "fetchPlatformCodesFromRedis: Fetching platform codes for " <> show (length tripIds) <> " tripIds"
-      platformCodes <- CQMMB.withCrossAppRedisNew $ Hedis.hmGet platformHashKey tripIds
+      let redisKeys = map (\tripId -> tripId <> ":" <> stopCode) tripIds
+      logDebug $ "fetchPlatformCodesFromRedis: Fetching platform codes for " <> show (length redisKeys) <> " tripId:stopCode keys for stopCode: " <> stopCode
+      platformCodes <- CQMMB.withCrossAppRedisNew $ Hedis.hmGet platformHashKey redisKeys
       let result = HashMap.fromList $ catMaybes $ zipWith (\tripId mbCode -> (tripId,) <$> mbCode) tripIds platformCodes
       logDebug $ "fetchPlatformCodesFromRedis: Retrieved " <> show (HashMap.size result) <> " platform codes"
       return result
@@ -305,7 +306,7 @@ getTimetableStop (mbPersonId, mid) routeCode fromStopCode mbToCode mbVehicleType
       GRSM.findByRouteCodeAndStopCode integratedBPPConfig mid person.merchantOperatingCityId routeCodes fromStopCode
 
   let tripIds = map (.tripId.getId) routeStopTimeTables
-  platformCodeMap <- fetchPlatformCodesFromRedis tripIds
+  platformCodeMap <- fetchPlatformCodesFromRedis tripIds fromStopCode
 
   return $ API.Types.UI.NearbyBuses.TimetableResponse $ map (convertToTimetableEntry platformCodeMap) routeStopTimeTables
   where
