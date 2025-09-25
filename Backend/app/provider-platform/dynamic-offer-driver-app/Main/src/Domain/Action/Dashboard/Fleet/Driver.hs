@@ -138,11 +138,14 @@ import Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Clickhouse.Ride as CQRide
 import Storage.Clickhouse.RideDetails (findIdsByFleetOwner)
+import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.AlertRequest as QAR
+import qualified Storage.Queries.DriverGstin as QGST
 import qualified Storage.Queries.DriverInformation as QDriverInfo
 import qualified Storage.Queries.DriverLicense as QDriverLicense
 import qualified Storage.Queries.DriverOperatorAssociation as DOV
 import qualified Storage.Queries.DriverOperatorAssociation as QDOA
+import qualified Storage.Queries.DriverPanCard as DPC
 import qualified Storage.Queries.DriverRCAssociation as QRCAssociation
 import qualified Storage.Queries.DriverRCAssociationExtra as DRCAE
 import qualified Storage.Queries.DriverReferral as QDR
@@ -1417,13 +1420,25 @@ getDriverFleetOwnerInfo _ _ driverId = do
                 }
       let name = fleetOwner.firstName <> maybe "" (" " <>) fleetOwner.middleName <> maybe "" (" " <>) fleetOwner.lastName
       mobileNo' <- mapM decrypt fleetOwner.mobileNumber
+      panDetails <- B.runInReplica $ DPC.findByDriverId fleetOwnerPersonId
+      gstDetails <- QGST.findByDriverId fleetOwnerPersonId
+      aadhaarDetails <- QAadhaarCard.findByPrimaryKey fleetOwnerPersonId
+      decryptedPanNumber <- case panDetails of
+        Just pan -> Just <$> decrypt pan.panCardNumber
+        Nothing -> pure Nothing
+      decryptedgstNumber <- case gstDetails of
+        Just gst -> Just <$> decrypt gst.gstin
+        Nothing -> pure Nothing
+      let aadhaarNumber = case aadhaarDetails of
+            Just aadhaar -> aadhaar.maskedAadhaarNumber
+            Nothing -> Nothing
       return $
         Common.FleetOwnerInfoRes
           { fleetType = show fleetType,
             referralCode = (.referralCode.getId) <$> referral,
-            gstNumber = Nothing,
-            panNumber = Nothing,
-            maskedAadhaarNumber = Nothing,
+            gstNumber = decryptedgstNumber,
+            panNumber = decryptedPanNumber,
+            maskedAadhaarNumber = aadhaarNumber,
             businessLicenseNumber = Nothing,
             approvedBy = Nothing,
             registeredAt = Nothing,
