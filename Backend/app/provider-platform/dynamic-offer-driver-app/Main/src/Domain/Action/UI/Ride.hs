@@ -490,7 +490,7 @@ getRiderMobileNumber ::
   DTC.DriverCallingOptionConfigs ->
   m (Maybe Text)
 getRiderMobileNumber booking option = do
-  if option.driverCallingOption /= DTC.DirectCall
+  if option.driverCallingOptions /= DTC.DirectCall
     then pure Nothing
     else case booking.riderId of
       Nothing -> pure Nothing
