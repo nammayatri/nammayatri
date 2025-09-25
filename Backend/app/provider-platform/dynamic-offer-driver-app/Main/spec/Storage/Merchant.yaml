@@ -846,9 +846,9 @@ TransporterConfig:
       minThresholdDistance: Meters
       derive': Generic, Show, ToJSON, FromJSON, Read,Eq
     CallingOption:
-      enum: "AnonymousCall, DirectCall"
+      enum: "AnonymousCall, DirectCall, DualCall"
     DriverCallingOptionConfigs:
-      driverCallingOption: "CallingOption"
+      driverCallingOptions: "CallingOption"
       directCallingAllowedGenderType: "[Gender]"
       derive': Generic, Show, ToJSON, FromJSON, Read,Eq
   beamInstance:
@@ -1085,6 +1085,7 @@ TransporterConfig:
     gstPercentage: Maybe Double
     maxOnlineDurationDays : Maybe Int
     distanceWeightage: Maybe Int
+    driverCallingOption: "Maybe CallingOption"
     driverCallingOptionConfigs: Maybe DriverCallingOptionConfigs
     onlineDurationCalculateFrom: Maybe UTCTime # set null to switch off calculation, current UTC timestamp to switch on
 
@@ -1363,6 +1364,7 @@ TransporterConfig:
     weekStartMode : int
     earningsWindowSize : int
     cancellationRateSlabConfig: json
+    driverCallingOption: text
     driverCallingOptionConfigs: json
   default:
     mediaFileUrlPattern: |-
@@ -1511,7 +1513,8 @@ TransporterConfig:
     allowCacheDriverFlowStatus : "false"
     maxOnlineDurationDays : "10"
     distanceWeightage: "20"
-    driverCallingOptionConfigs: '{"driverCallingOption": "AnonymousCall","directCallingAllowedGenderType": "[MALE]"}'
+    driverCallingOption: "'AnonymousCall'"
+    driverCallingOptionConfigs: '{"driverCallingOptions": "AnonymousCall","directCallingAllowedGenderType": "[MALE]"}'
   excludedDefaultQueries:
     - findByPrimaryKey
     - updateByPrimaryKey

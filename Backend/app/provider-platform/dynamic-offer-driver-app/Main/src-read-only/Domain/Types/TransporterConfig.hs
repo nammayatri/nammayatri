@@ -99,6 +99,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     driverAutoPayExecutionTime :: Kernel.Prelude.NominalDiffTime,
     driverAutoPayExecutionTimeFallBack :: Kernel.Prelude.NominalDiffTime,
     driverAutoPayNotificationTime :: Kernel.Prelude.NominalDiffTime,
+    driverCallingOption :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.CallingOption,
     driverCallingOptionConfigs :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.DriverCallingOptionConfigs,
     driverDistanceToPickupThresholdOnCancel :: Kernel.Types.Common.Meters,
     driverDistanceTravelledOnPickupThresholdOnCancel :: Kernel.Types.Common.Meters,
@@ -307,7 +308,7 @@ data AvgSpeedOfVechilePerKm = AvgSpeedOfVechilePerKm
   }
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
-data CallingOption = AnonymousCall | DirectCall deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
+data CallingOption = AnonymousCall | DirectCall | DualCall deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
 data CancellationRateBasedNudgingAndBlockingConfig = CancellationRateBasedNudgingAndBlockingConfig
   { cancellationRateSlabConfig :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.CancellationRateSlabConfig,
@@ -345,7 +346,7 @@ data DemandHotspotsConfig = DemandHotspotsConfig
 data DistanceRecomputeConfigs = DistanceRecomputeConfigs {estimatedDistanceUpper :: Kernel.Types.Common.Meters, minThresholdDistance :: Kernel.Types.Common.Meters, minThresholdPercentage :: Kernel.Prelude.Int}
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
-data DriverCallingOptionConfigs = DriverCallingOptionConfigs {directCallingAllowedGenderType :: [Domain.Types.Person.Gender], driverCallingOption :: Domain.Types.TransporterConfig.CallingOption}
+data DriverCallingOptionConfigs = DriverCallingOptionConfigs {directCallingAllowedGenderType :: [Domain.Types.Person.Gender], driverCallingOptions :: Domain.Types.TransporterConfig.CallingOption}
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
 data SlabType = SlabType {minBookingsRange :: [Kernel.Prelude.Int], penalityForCancellation :: Domain.Types.TransporterConfig.CancellationRateSlab}
