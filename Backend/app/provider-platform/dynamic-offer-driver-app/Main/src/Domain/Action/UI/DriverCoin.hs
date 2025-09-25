@@ -269,13 +269,15 @@ useCoinsHandler (driverId, merchantId_, merchantOpCityId) ConvertCoinToCashReq {
                 title = "converted from coins",
                 vehicleCategory = Just vehCategory
               }
-      histories <- CHistory.getDriverCoinInfo driverId timeDiffFromUtc
-      let result = accumulateCoins coins histories
+
       void $ PHistory.createPurchaseHistory history
       void $ QDS.updateCoinFieldsByDriverId driverId calculatedAmount
       driver <- B.runInReplica $ Person.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-      void $ Person.updateUsedCoins (coins + driver.usedCoins) driverId
+      -- Deduct Existing Coin Amount from the drivers coin history
+      histories <- CHistory.getDriverCoinInfo driverId timeDiffFromUtc
+      let result = accumulateCoins coins histories
       mapM_ (\(id, coinValue, status) -> CHistory.updateStatusOfCoins id coinValue status) result
+      void $ Person.updateUsedCoins (coins + driver.usedCoins) driverId
       Coins.safeIncrBy (Coins.mkCoinAccumulationByDriverIdKey driverId currentDate) (fromIntegral (- coins)) driverId transporterConfig.timeDiffFromUtc
     else do
       throwError $ InsufficientCoins driverId.getId coins

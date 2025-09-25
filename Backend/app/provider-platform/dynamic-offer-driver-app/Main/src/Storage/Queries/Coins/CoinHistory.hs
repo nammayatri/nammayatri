@@ -105,7 +105,10 @@ getDriverCoinInfo (Id driverId) timeDiffFromUtc = do
     [ Se.And
         [ Se.Is BeamDC.driverId $ Se.Eq driverId,
           Se.Is BeamDC.status $ Se.Eq Remaining,
-          Se.Is BeamDC.expirationAt $ Se.GreaterThanOrEq (Just istTime)
+          Se.Or
+            [ Se.Is BeamDC.expirationAt $ Se.GreaterThanOrEq (Just istTime),
+              Se.Is BeamDC.expirationAt $ Se.Eq Nothing
+            ]
         ]
     ]
     (Se.Asc BeamDC.createdAt)
