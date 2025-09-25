@@ -578,6 +578,7 @@ library
       Tools.Constants
       Tools.Error
       Tools.Event
+      Tools.HTTPManager
       Tools.Insurance
       Tools.JSON
       Tools.Maps

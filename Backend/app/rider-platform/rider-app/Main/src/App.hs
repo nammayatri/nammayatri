@@ -55,6 +55,7 @@ import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBecknConfig
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import System.Environment (lookupEnv)
+import Tools.HTTPManager (prepareCRISHttpManager)
 import "utils" Utils.Common.Events as UE
 
 createCAC :: AppCfg -> IO ()
@@ -135,7 +136,8 @@ runRiderApp' appCfg = do
               [ Just (Nothing, prepareAuthManagers flowRt appEnv allSubscriberIds),
                 Just (Nothing, prepareAuthManagers flowRt appEnv allFRFSSubIds),
                 Just (Just 150000, prepareGridlineHttpManager 150000),
-                Just (Just 10000, prepareJourneyMonitoringHttpManager 10000)
+                Just (Just 10000, prepareJourneyMonitoringHttpManager 10000),
+                Just (Just 30000, prepareCRISHttpManager 300000)
               ]
         logInfo ("Runtime created. Starting server at port " <> show (appCfg.port))
         pure flowRt'

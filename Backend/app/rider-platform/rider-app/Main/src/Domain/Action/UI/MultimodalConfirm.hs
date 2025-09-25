@@ -1630,12 +1630,12 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (_mbPersonId, _merchantId) j
                     (Just fromStopCode, Just toStopCode) -> do
                       mbNewRoute <- OTPRest.getRouteByRouteId integratedBPPConfig newRouteCode
                       QRouteDetails.updateRoute (Just newRouteCode) (Just newRouteCode) ((.longName) <$> mbNewRoute) ((.shortName) <$> mbNewRoute) journeyLeg.id.getId
-                      fromRoute <- OTPRest.getRouteStopMappingByStopCodeAndRouteCode fromStopCode newRouteCode integratedBPPConfig <&> listToMaybe >>= fromMaybeM (RouteMappingDoesNotExist newRouteCode fromStopCode integratedBPPConfig.id.getId)
-                      toRoute <- OTPRest.getRouteStopMappingByStopCodeAndRouteCode toStopCode newRouteCode integratedBPPConfig <&> listToMaybe >>= fromMaybeM (RouteMappingDoesNotExist newRouteCode toStopCode integratedBPPConfig.id.getId)
+                      fromRoute <- OTPRest.getRouteStopMappingByStopCodeAndRouteCode fromStopCode newRouteCode integratedBPPConfig <&> listToMaybe
+                      toRoute <- OTPRest.getRouteStopMappingByStopCodeAndRouteCode toStopCode newRouteCode integratedBPPConfig <&> listToMaybe
                       pure $
                         newTicket
-                          { ExternalBPP.ExternalAPI.Types.fromRouteProviderCode = fromRoute.providerCode,
-                            ExternalBPP.ExternalAPI.Types.toRouteProviderCode = toRoute.providerCode
+                          { ExternalBPP.ExternalAPI.Types.fromRouteProviderCode = maybe "NANDI" (.providerCode) fromRoute,
+                            ExternalBPP.ExternalAPI.Types.toRouteProviderCode = maybe "NANDI" (.providerCode) toRoute
                           }
                     _ -> pure newTicket
                 Nothing -> do

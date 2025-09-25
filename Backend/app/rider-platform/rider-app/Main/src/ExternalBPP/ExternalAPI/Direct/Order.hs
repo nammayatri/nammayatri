@@ -42,8 +42,8 @@ getTicketDetail config integratedBPPConfig qrTtl booking routeStation = do
   fromStation <- B.runInReplica $ OTPRest.getStationByGtfsIdAndStopCode startStation.code integratedBPPConfig >>= fromMaybeM (StationNotFound $ startStation.code <> " for integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
   toStation <- B.runInReplica $ OTPRest.getStationByGtfsIdAndStopCode endStation.code integratedBPPConfig >>= fromMaybeM (StationNotFound $ endStation.code <> " for integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
   route <- OTPRest.getRouteByRouteId integratedBPPConfig routeStation.code >>= fromMaybeM (RouteNotFound routeStation.code)
-  fromRoute <- OTPRest.getRouteStopMappingByStopCodeAndRouteCode fromStation.code route.code integratedBPPConfig <&> listToMaybe >>= fromMaybeM (RouteMappingDoesNotExist route.code fromStation.code integratedBPPConfig.id.getId)
-  toRoute <- OTPRest.getRouteStopMappingByStopCodeAndRouteCode toStation.code route.code integratedBPPConfig <&> listToMaybe >>= fromMaybeM (RouteMappingDoesNotExist route.code toStation.code integratedBPPConfig.id.getId)
+  fromRoute <- OTPRest.getRouteStopMappingByStopCodeAndRouteCode fromStation.code route.code integratedBPPConfig <&> listToMaybe
+  toRoute <- OTPRest.getRouteStopMappingByStopCodeAndRouteCode toStation.code route.code integratedBPPConfig <&> listToMaybe
   qrValidity <- addUTCTime (secondsToNominalDiffTime qrTtl) <$> getCurrentTime
   ticketNumber <- do
     id <- generateGUID
@@ -68,8 +68,8 @@ getTicketDetail config integratedBPPConfig qrTtl booking routeStation = do
   qrData <-
     generateQR config $
       TicketPayload
-        { fromRouteProviderCode = fromRoute.providerCode,
-          toRouteProviderCode = toRoute.providerCode,
+        { fromRouteProviderCode = maybe "NANDI" (.providerCode) fromRoute,
+          toRouteProviderCode = maybe "NANDI" (.providerCode) toRoute,
           adultQuantity = adultQuantity,
           childQuantity = childQuantity,
           vehicleTypeProviderCode = busTypeId,

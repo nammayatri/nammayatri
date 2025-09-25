@@ -560,7 +560,7 @@ FRFSTicketBookingPayment:
 
   types:
     FRFSTicketBookingPaymentStatus:
-      enum: "PENDING, SUCCESS, FAILED, REFUND_PENDING, REFUNDED, REFUND_FAILED, REFUND_INITIATED"
+      enum: "PENDING, SUCCESS, FAILED, REATTEMPTED, REFUND_PENDING, REFUNDED, REFUND_FAILED, REFUND_INITIATED"
 
   constraints:
     id: PrimaryKey

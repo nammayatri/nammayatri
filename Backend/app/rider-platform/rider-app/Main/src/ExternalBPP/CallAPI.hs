@@ -235,8 +235,9 @@ confirm onConfirmHandler merchant merchantOperatingCity bapConfig (mRiderName, m
           onConfirmHandler onConfirmReq
         case result of
           Left err -> do
+            paymentBooking <- QFRFSTicketBookingPayment.findNewTBPByBookingId booking.id >>= fromMaybeM (FRFSTicketBookingPaymentNotFound booking.id.getId)
             void $ QFRFSTicketBooking.updateStatusById DBooking.FAILED booking.id
-            void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.REFUND_PENDING booking.id
+            void $ QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.REFUND_PENDING paymentBooking.id
             riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCity.id Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCity.id.getId)
             when riderConfig.enableAutoJourneyRefund $
               FRFSUtils.markAllRefundBookings booking booking.riderId
