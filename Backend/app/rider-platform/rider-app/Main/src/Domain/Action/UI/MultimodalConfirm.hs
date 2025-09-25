@@ -779,7 +779,7 @@ getPublicTransportData (mbPersonId, merchantId) mbCity _mbConfigVersion mbVehicl
           { ss = concatMap (.ss) transportDataList,
             rs = concatMap (.rs) transportDataList,
             rsm = concatMap (.rsm) transportDataList,
-            ptcv = T.intercalate (T.pack "#") gtfsVersion <> (maybe "" (\version -> "#" <> show version) (riderConfig <&> (.domainPublicTransportDataVersion)))
+            ptcv = T.intercalate (T.pack "#") gtfsVersion <> (maybe "" (\version -> "#" <> show version) (riderConfig >>= (.domainPublicTransportDataVersion)))
           }
   return transportData
 
