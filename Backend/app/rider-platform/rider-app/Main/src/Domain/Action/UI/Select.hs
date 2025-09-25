@@ -403,6 +403,7 @@ mkJourneyForSearch searchRequest estimate personId = do
             updatedAt = now,
             recentLocationId = searchRequest.recentLocationId,
             isPublicTransportIncluded = Just False,
+            isSingleMode = Just True,
             relevanceScore = Nothing,
             hasPreferredServiceTier = Nothing,
             hasPreferredTransitModes = Just False,

@@ -27,6 +27,7 @@ data JourneyT f = JourneyT
     id :: B.C f Kernel.Prelude.Text,
     isPaymentSuccess :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isPublicTransportIncluded :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    isSingleMode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     journeyExpiryTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,

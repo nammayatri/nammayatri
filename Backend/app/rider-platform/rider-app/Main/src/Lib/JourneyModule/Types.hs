@@ -261,6 +261,7 @@ data JourneyInitData = JourneyInitData
     startTime :: Maybe UTCTime,
     endTime :: Maybe UTCTime,
     maximumWalkDistance :: Meters,
+    isSingleMode :: Bool,
     relevanceScore :: Maybe Double
   }
   deriving stock (Show, Generic)
@@ -1167,8 +1168,8 @@ mkSearchReqLocation address latLng = do
       address = address
     }
 
-mkJourney :: MonadFlow m => Id DP.Person -> Maybe UTCTime -> Maybe UTCTime -> Distance -> Seconds -> Id DJ.Journey -> Id DSR.SearchRequest -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> [EMInterface.MultiModalLeg] -> Meters -> Maybe (Id DRL.RecentLocation) -> Maybe Double -> Bool -> Bool -> Location -> Maybe Location -> m DJ.Journey
-mkJourney riderId startTime endTime estimatedDistance estiamtedDuration journeyId parentSearchId merchantId merchantOperatingCityId legs maximumWalkDistance mbRecentLocationId relevanceScore hasUserPreferredServiceTier hasUserPreferredTransitModes fromLocation toLocation = do
+mkJourney :: MonadFlow m => Bool -> Id DP.Person -> Maybe UTCTime -> Maybe UTCTime -> Distance -> Seconds -> Id DJ.Journey -> Id DSR.SearchRequest -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> [EMInterface.MultiModalLeg] -> Meters -> Maybe (Id DRL.RecentLocation) -> Maybe Double -> Bool -> Bool -> Location -> Maybe Location -> m DJ.Journey
+mkJourney isSingleMode riderId startTime endTime estimatedDistance estiamtedDuration journeyId parentSearchId merchantId merchantOperatingCityId legs maximumWalkDistance mbRecentLocationId relevanceScore hasUserPreferredServiceTier hasUserPreferredTransitModes fromLocation toLocation = do
   let journeyLegsCount = length legs
       modes = map (\x -> convertMultiModalModeToTripMode x.mode (straightLineDistance x) maximumWalkDistance) legs
   let isPublicTransportIncluded = any (`elem` [DTrip.Bus, DTrip.Metro, DTrip.Subway]) modes
@@ -1191,6 +1192,7 @@ mkJourney riderId startTime endTime estimatedDistance estiamtedDuration journeyI
         merchantOperatingCityId = merchantOperatingCityId,
         createdAt = now,
         updatedAt = now,
+        isSingleMode = Just isSingleMode,
         DJ.recentLocationId = mbRecentLocationId, -- Fully qualify the field name
         isPublicTransportIncluded = Just isPublicTransportIncluded,
         relevanceScore,
