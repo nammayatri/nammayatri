@@ -111,10 +111,9 @@ getFares riderId merchant merchanOperatingCity integrationBPPConfig fareRouteDet
       return (isFareMandatory, fares)
     CRIS config' -> do
       (viaPoints, changeOver) <- getChangeOverAndViaPoints (NE.toList fareRouteDetails) integrationBPPConfig
-      let routeFare = find (\fare -> maybe False (\fd -> fd.via == changeOver) fare.fareDetails) subwayFares
-      case routeFare of
-        Just fare -> return (isFareMandatory, [fare])
-        Nothing -> do
+      let cachedFares = filter (\fare -> maybe False (\fd -> fd.via == changeOver) fare.fareDetails) subwayFares
+      if null cachedFares
+        then do
           routeFareReq <- JMU.getRouteFareRequest startStopCode endStopCode changeOver viaPoints riderId
           resp <- try @_ @SomeException $ CRISRouteFare.getRouteFare config' merchanOperatingCity.id routeFareReq
           case resp of
@@ -123,6 +122,7 @@ getFares riderId merchant merchanOperatingCity integrationBPPConfig fareRouteDet
               return (isFareMandatory, [])
             Right fares -> do
               return (isFareMandatory, fares)
+        else return (isFareMandatory, cachedFares)
   where
     getRouteCodeAndStartAndStop :: (Text, Text, Text)
     getRouteCodeAndStartAndStop = do
