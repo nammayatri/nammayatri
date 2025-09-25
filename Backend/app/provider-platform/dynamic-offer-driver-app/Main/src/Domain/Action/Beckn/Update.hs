@@ -196,18 +196,21 @@ handler (UEditLocationReq EditLocationReq {..}) = do
             (pickedWaypoints, currentPoint, snapToRoadFailed) <-
               if ride.status == DRide.INPROGRESS
                 then do
-                  currentLocationPointsBatch <- LTS.driverLocation rideId merchantOperatingCity.merchantId ride.driverId
-                  editDestinationWaypoints <- getEditDestinationWaypoints ride.driverId
+                  currentLocationPointsBatch <- LTS.driverLocation rideId merchantOperatingCity.merchantId ride.driverId -- fetches from LTS
+                  editDestinationWaypoints <- getEditDestinationWaypoints ride.driverId -- fetches from redis, which is updated by LTS using bulk location update in batches
                   (snapToRoadFailed, editDestinationPoints) <- getLatlongsViaSnapToRoad (editDestinationWaypoints <> currentLocationPointsBatch.loc) merchantOperatingCity.merchantId merchantOperatingCity.id
+                  alreadySnappedPoints <- getEditDestinationSnappedWaypoints ride.driverId
+                  -- Current Driver Location
                   let (currentLocPoint :: Maps.LatLong) =
-                        fromMaybe (Maps.LatLong ride.fromLocation.lat ride.fromLocation.lon) $
+                        fromMaybe (fst $ last alreadySnappedPoints) $
                           (if not $ null currentLocationPointsBatch.loc then Just (last currentLocationPointsBatch.loc) else Nothing)
                             <|> (if not $ null editDestinationWaypoints then Just (last editDestinationWaypoints) else Nothing)
-                  alreadySnappedPoints <- getEditDestinationSnappedWaypoints ride.driverId
+
                   let currentPoint = if snapToRoadFailed || null editDestinationPoints then currentLocPoint else fst $ last editDestinationPoints
                       alreadySnappedPointsWithCurrentPoint = alreadySnappedPoints <> editDestinationPoints <> [(currentPoint, True)]
+
                   whenJust (nonEmpty alreadySnappedPointsWithCurrentPoint) $ \alreadySnappedPointsWithCurrentPoint' -> do
-                    addEditDestinationSnappedWayPoints ride.driverId alreadySnappedPointsWithCurrentPoint'
+                    deleteAndPushEditDestinationSnappedWayPoints ride.driverId alreadySnappedPointsWithCurrentPoint' -- deletes the existing snapped points and pushes the new snapped points for future update requests
                   deleteEditDestinationWaypoints ride.driverId
                   return (srcPt :| (pickedWaypointsForEditDestination (alreadySnappedPoints <> editDestinationPoints) ++ [currentPoint, dropLatLong]), Just currentPoint, Just snapToRoadFailed)
                 else return (srcPt :| [dropLatLong], Nothing, Nothing)
