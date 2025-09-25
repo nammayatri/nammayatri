@@ -101,7 +101,8 @@ data AppEnv = AppEnv
     requestId :: Maybe Text,
     shouldLogRequestId :: Bool,
     kafkaProducerForART :: Maybe KafkaProducerTools,
-    inMemEnv :: CF.InMemEnv
+    inMemEnv :: CF.InMemEnv,
+    url :: Maybe Text
   }
   deriving (Generic)
 
@@ -128,7 +129,8 @@ buildAppEnv AppCfg {..} producerType = do
       else connectHedisCluster hedisNonCriticalClusterCfg id
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   esqDBReplicaEnv <- prepareEsqDBEnv esqDBReplicaCfg loggerEnv
-  inMemEnv <- IM.setupInMemEnv inMemConfig
+  inMemEnv <- IM.setupInMemEnv inMemConfig (Just hedisClusterEnv)
+  let url = Nothing
   pure $ AppEnv {..}
 
 type FlowHandler = FlowHandlerR AppEnv

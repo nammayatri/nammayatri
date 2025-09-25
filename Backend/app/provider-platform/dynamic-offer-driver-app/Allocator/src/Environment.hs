@@ -123,7 +123,8 @@ data HandlerEnv = HandlerEnv
     selfBaseUrl :: BaseUrl,
     appBackendBapInternal :: AppBackendBapInternal,
     mlPricingInternal :: MLPricingInternal,
-    inMemEnv :: CF.InMemEnv
+    inMemEnv :: CF.InMemEnv,
+    url :: Maybe Text
   }
   deriving (Generic)
 
@@ -161,7 +162,8 @@ buildHandlerEnv HandlerCfg {..} = do
   let searchRequestExpirationSeconds' = fromIntegral appCfg.searchRequestExpirationSeconds
       serviceClickhouseCfg = driverClickhouseCfg
       searchRequestExpirationSecondsForMultimodal' = fromIntegral appCfg.searchRequestExpirationSecondsForMultimodal
-  inMemEnv <- IM.setupInMemEnv inMemConfig
+  inMemEnv <- IM.setupInMemEnv inMemConfig (Just hedisClusterEnv)
+  let url = Nothing
   return HandlerEnv {modelNamesHashMap = HMS.fromList $ M.toList modelNamesMap, searchRequestExpirationSeconds = searchRequestExpirationSeconds', searchRequestExpirationSecondsForMultimodal = searchRequestExpirationSecondsForMultimodal', ..}
 
 releaseHandlerEnv :: HandlerEnv -> IO ()

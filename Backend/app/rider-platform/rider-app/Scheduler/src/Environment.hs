@@ -124,7 +124,8 @@ data HandlerEnv = HandlerEnv
     kafkaClickhouseCfg :: ClickhouseCfg,
     searchLimitExceedNotificationTemplate :: Text,
     slackCfg :: SlackConfig,
-    inMemEnv :: KTC.InMemEnv
+    inMemEnv :: KTC.InMemEnv,
+    url :: Maybe Text
   }
   deriving (Generic)
 
@@ -161,7 +162,8 @@ buildHandlerEnv HandlerCfg {..} = do
   dashboardClickhouseEnv <- createConn dashboardClickhouseCfg
   kafkaClickhouseEnv <- createConn kafkaClickhouseCfg
   let serviceClickhouseCfg = riderClickhouseCfg
-  inMemEnv <- IM.setupInMemEnv inMemConfig
+  inMemEnv <- IM.setupInMemEnv inMemConfig (Just hedisClusterEnv)
+  let url = Nothing
   return HandlerEnv {..}
 
 releaseHandlerEnv :: HandlerEnv -> IO ()

@@ -50,7 +50,8 @@ data AppEnv = AppEnv
     snapToRoadSnippetThreshold :: HighPrecMeters,
     version :: Metrics.DeploymentVersion,
     enableRedisLatencyLogging :: Bool,
-    enablePrometheusMetricLogging :: Bool
+    enablePrometheusMetricLogging :: Bool,
+    url :: Maybe Text
   }
   deriving (Generic)
 
@@ -81,6 +82,7 @@ wrapTests func = do
       -- fetch google configs for using mock-google or real google
       appCfg <- Environment.readConfig "../"
       version <- lookupDeploymentVersion
+      let url = Nothing
       let appEnv =
             AppEnv
               { httpClientOptions = defaultHttpClientOptions,

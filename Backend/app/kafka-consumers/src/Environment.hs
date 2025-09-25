@@ -162,7 +162,8 @@ data AppEnv = AppEnv
     kafkaReadBatchDelay :: Seconds,
     consumerStartTime :: Maybe Integer,
     consumerEndTime :: Maybe Integer,
-    inMemEnv :: CF.InMemEnv
+    inMemEnv :: CF.InMemEnv,
+    url :: Maybe Text
   }
   deriving (Generic)
 
@@ -209,7 +210,8 @@ buildAppEnv AppCfg {..} consumerType = do
   serviceClickhouseEnv <- createConn serviceClickhouseCfg
   kafkaClickhouseEnv <- createConn kafkaClickhouseCfg
   dashboardClickhouseEnv <- createConn dashboardClickhouseCfg
-  inMemEnv <- IM.setupInMemEnv inMemConfig
+  inMemEnv <- IM.setupInMemEnv inMemConfig (Just hedisClusterEnv)
+  let url = Nothing
   pure $ AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()

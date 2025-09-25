@@ -271,7 +271,8 @@ data AppEnv = AppEnv
     nearByDriverAPIRateLimitOptions :: APIRateLimitOptions,
     selfBaseUrl :: BaseUrl,
     tsServiceConfig :: CPT.TSServiceConfig,
-    inMemEnv :: CF.InMemEnv
+    inMemEnv :: CF.InMemEnv,
+    url :: Maybe Text
   }
   deriving (Generic)
 
@@ -324,7 +325,8 @@ buildAppEnv cfg@AppCfg {..} = do
   let serviceClickhouseCfg = riderClickhouseCfg
   let ondcTokenHashMap = HM.fromList $ M.toList ondcTokenMap
   ltsHedisEnv <- connectHedis ltsRedis identity
-  inMemEnv <- IM.setupInMemEnv inMemConfig
+  inMemEnv <- IM.setupInMemEnv inMemConfig (Just hedisClusterEnv)
+  let url = Nothing
   return AppEnv {minTripDistanceForReferralCfg = convertHighPrecMetersToDistance Meter <$> minTripDistanceForReferralCfg, ..}
 
 releaseAppEnv :: AppEnv -> IO ()

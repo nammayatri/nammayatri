@@ -69,7 +69,8 @@ data AppEnv = AppEnv
     internalEndPointHashMap :: HM.HashMap BaseUrl BaseUrl,
     requestId :: Maybe Text,
     shouldLogRequestId :: Bool,
-    kafkaProducerForART :: Maybe KafkaProducerTools
+    kafkaProducerForART :: Maybe KafkaProducerTools,
+    url :: Maybe Text
   }
   deriving (Generic)
 
@@ -86,6 +87,7 @@ buildAppEnv AppCfg {..} = do
   kafkaConsumerEnv <- buildKafkaConsumerEnv kafkaConsumerCfgs
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   let internalEndPointHashMap = HM.fromList $ M.toList internalEndPointMap
+  let url = Nothing
   return $ AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()

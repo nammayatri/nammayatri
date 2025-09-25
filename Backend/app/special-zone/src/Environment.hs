@@ -52,7 +52,8 @@ data AppEnv = AppEnv
     loggerEnv :: LoggerEnv,
     shouldLogRequestId :: Bool,
     requestId :: Maybe Text,
-    kafkaProducerForART :: Maybe KafkaProducerTools
+    kafkaProducerForART :: Maybe KafkaProducerTools,
+    url :: Maybe Text
   }
   deriving (Generic)
 
@@ -68,6 +69,7 @@ buildAppEnv AppCfg {..} = do
   isShuttingDown <- mkShutdown
   let requestId = Nothing
       shouldLogRequestId = False
+  let url = Nothing
   return $ AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()

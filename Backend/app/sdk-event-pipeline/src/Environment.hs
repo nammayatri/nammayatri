@@ -74,7 +74,8 @@ data AppEnv = AppEnv
     cacheConfig :: CacheConfig,
     requestId :: Maybe Text,
     shouldLogRequestId :: Bool,
-    kafkaProducerForART :: Maybe KafkaProducerTools
+    kafkaProducerForART :: Maybe KafkaProducerTools,
+    url :: Maybe Text
   }
   deriving (Generic)
 
@@ -97,6 +98,7 @@ buildAppEnv AppCfg {..} = do
   let hedisMigrationStage = False
       enablePrometheusMetricLogging = False
       enableRedisLatencyLogging = False
+  let url = Nothing
   return $ AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()

@@ -21,7 +21,7 @@ findAllByDomainAndCityAndVehicleCategory ::
   m [IntegratedBPPConfig]
 findAllByDomainAndCityAndVehicleCategory domain merchantOperatingCityId vehicleCategory platformType = do
   let cacheKey = buildDomainCacheKey domain merchantOperatingCityId vehicleCategory platformType ":All"
-  IM.withInMemCache [cacheKey] $ do
+  IM.withInMemCache [cacheKey] 3600 $ do
     Hedis.safeGet cacheKey
       >>= ( \case
               Just a -> pure a
@@ -36,7 +36,7 @@ findAllByDomainAndCityAndVehicleCategory domain merchantOperatingCityId vehicleC
 findByDomainAndCityAndVehicleCategory :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Text -> Id MerchantOperatingCity -> VehicleCategory -> PlatformType -> m (Maybe IntegratedBPPConfig)
 findByDomainAndCityAndVehicleCategory domain merchantOperatingCityId vehicleCategory platformType = do
   let cacheKey = buildDomainCacheKey domain merchantOperatingCityId vehicleCategory platformType ""
-  IM.withInMemCache [cacheKey] $ do
+  IM.withInMemCache [cacheKey] 3600 $ do
     Hedis.safeGet cacheKey
       >>= ( \case
               Just a -> pure a
@@ -51,7 +51,7 @@ findByDomainAndCityAndVehicleCategory domain merchantOperatingCityId vehicleCate
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id IntegratedBPPConfig -> m (Maybe IntegratedBPPConfig)
 findById integratedBPPConfigId = do
   let cacheKey = buildIdCacheKey integratedBPPConfigId
-  IM.withInMemCache [cacheKey] $ do
+  IM.withInMemCache [cacheKey] 3600 $ do
     Hedis.safeGet cacheKey
       >>= ( \case
               Just a -> pure a
@@ -66,7 +66,7 @@ findById integratedBPPConfigId = do
 findByAgencyId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Text -> m (Maybe IntegratedBPPConfig)
 findByAgencyId agencyKey = do
   let cacheKey = buildAgencyCacheKey agencyKey
-  IM.withInMemCache [cacheKey] $ do
+  IM.withInMemCache [cacheKey] 3600 $ do
     Hedis.safeGet cacheKey
       >>= ( \case
               Just a -> pure a
@@ -81,7 +81,7 @@ findByAgencyId agencyKey = do
 findAllByPlatformAndVehicleCategory :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Text -> VehicleCategory -> PlatformType -> m [IntegratedBPPConfig]
 findAllByPlatformAndVehicleCategory domain vehicleCategory platformType = do
   let cacheKey = buildPlatformCacheKey domain vehicleCategory platformType
-  IM.withInMemCache [cacheKey] $ do
+  IM.withInMemCache [cacheKey] 3600 $ do
     Hedis.safeGet cacheKey
       >>= ( \case
               Just a -> pure a

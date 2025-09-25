@@ -126,7 +126,8 @@ data AppEnv = AppEnv
     passettoContext :: PassettoContext,
     passwordExpiryDays :: Maybe Int,
     enforceStrongPasswordPolicy :: Bool,
-    inMemEnv :: InMemEnv
+    inMemEnv :: InMemEnv,
+    url :: Maybe Text
   }
   deriving (Generic)
 
@@ -160,7 +161,8 @@ buildAppEnv authTokenCacheKeyPrefix AppCfg {..} = do
   let internalEndPointHashMap = HM.fromList $ M.toList internalEndPointMap
   cacAclMapRaw <- fromMaybe (error "AUTH_MAP not found in Env !!!!") <$> lookupEnv "AUTH_MAP"
   let cacAclMap = fromMaybe (error "Unable to Parse AUTH_MAP of CAC") (readMaybe cacAclMapRaw :: Maybe [(String, [(String, String)])])
-  inMemEnv <- IM.setupInMemEnv inMemConfig
+  inMemEnv <- IM.setupInMemEnv inMemConfig (Just hedisClusterEnv)
+  let url = Nothing
   return $ AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()

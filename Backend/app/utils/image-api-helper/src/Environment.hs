@@ -33,7 +33,8 @@ data AppEnv = AppEnv
   { loggerConfig :: LoggerConfig,
     loggerEnv :: LoggerEnv,
     coreMetrics :: CoreMetricsContainer,
-    version :: DeploymentVersion
+    version :: DeploymentVersion,
+    url :: Maybe Text
   }
   deriving (Generic)
 
@@ -42,6 +43,7 @@ buildAppEnv AppCfg {..} = do
   version <- lookupDeploymentVersion
   loggerEnv <- prepareLoggerEnv loggerConfig Nothing
   coreMetrics <- registerCoreMetricsContainer
+  let url = Nothing
   return $ AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()
