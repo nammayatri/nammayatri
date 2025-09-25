@@ -15,7 +15,8 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data RiderDetailsE e = RiderDetails
-  { cancellationDues :: Kernel.Types.Common.HighPrecMoney,
+  { bapId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    cancellationDues :: Kernel.Types.Common.HighPrecMoney,
     createdAt :: Kernel.Prelude.UTCTime,
     currency :: Kernel.Types.Common.Currency,
     disputeChancesUsed :: Kernel.Prelude.Int,
@@ -49,7 +50,8 @@ instance EncryptedItem RiderDetails where
     mobileNumber_ <- encryptItem (mobileNumber entity, salt)
     pure
       RiderDetails
-        { cancellationDues = cancellationDues entity,
+        { bapId = bapId entity,
+          cancellationDues = cancellationDues entity,
           createdAt = createdAt entity,
           currency = currency entity,
           disputeChancesUsed = disputeChancesUsed entity,
@@ -75,7 +77,8 @@ instance EncryptedItem RiderDetails where
     mobileNumber_ <- fst <$> decryptItem (mobileNumber entity)
     pure
       ( RiderDetails
-          { cancellationDues = cancellationDues entity,
+          { bapId = bapId entity,
+            cancellationDues = cancellationDues entity,
             createdAt = createdAt entity,
             currency = currency entity,
             disputeChancesUsed = disputeChancesUsed entity,
