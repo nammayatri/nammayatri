@@ -1,5 +1,6 @@
 module ExternalBPP.ExternalAPI.Subway.CRIS.Auth where
 
+import qualified Data.Text as T
 import qualified Data.Text.Encoding as DT
 import Domain.Types.Extra.IntegratedBPPConfig
 import EulerHS.Prelude
@@ -13,6 +14,7 @@ import Kernel.Utils.Common
 import Kernel.Utils.Monitoring.Prometheus.Servant
 import Servant hiding (throwError)
 import Tools.Error
+import Tools.HTTPManager (crisHttpManagerKey)
 import Tools.Metrics (CoreMetrics)
 
 type AuthAPI =
@@ -87,7 +89,7 @@ callCRISAPI config proxy clientFn description = do
     try @_ @SomeException $
       callApiUnwrappingApiError
         (identity @CRISError) -- Changed Error to CRISError
-        Nothing
+        (Just $ ET.ManagerSelector $ T.pack crisHttpManagerKey)
         Nothing
         Nothing
         config.baseUrl

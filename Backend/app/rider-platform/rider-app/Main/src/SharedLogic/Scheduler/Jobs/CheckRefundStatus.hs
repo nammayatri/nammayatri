@@ -101,7 +101,7 @@ processRefundStatus refundEntry person paymentOrder = do
                           Payment.REFUND_SUCCESS -> DFRFSTicketBookingPayment.REFUNDED
                           Payment.REFUND_FAILURE -> DFRFSTicketBookingPayment.REFUND_FAILED
                           _ -> DFRFSTicketBookingPayment.REFUND_PENDING
-                  QFRFSTicketBookingPayment.updateStatusByTicketBookingId refundStatus frfsTicketBookingPayment.frfsTicketBookingId
+                  QFRFSTicketBookingPayment.updateStatusById refundStatus frfsTicketBookingPayment.id
               )
               frfsTicketBookingPayments
           return True
