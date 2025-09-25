@@ -162,6 +162,7 @@ tripCategoryToFulfillmentType = \case
   CrossCity OneWayRideOtp _ -> show Enums.RIDE_OTP
   RideShare RideOtp -> show Enums.RIDE_OTP
   Rental _ -> show Enums.RENTAL
+  i@(InterCity OneWayRideOtp _) -> show i
   InterCity _ _ -> show Enums.INTER_CITY
   Ambulance _ -> show Enums.AMBULANCE_FLOW
   OneWay MeterRide -> show Enums.METER_RIDE
