@@ -470,7 +470,7 @@ verifyAadhaar verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req a
             shouldActivateRc = False
         void $ SStatus.statusHandler' (Just person) driverImagesInfo Nothing Nothing Nothing Nothing Nothing (Just True) shouldActivateRc onlyMandatoryDocs
       pure False
-    role | DCommon.checkFleetOwnerRole role -> DFR.enableFleetIfPossible person.id adminApprovalRequired (DFR.castRoleToFleetType person.role)
+    role | DCommon.checkFleetOwnerRole role -> DFR.enableFleetIfPossible person.id adminApprovalRequired (DFR.castRoleToFleetType person.role) person.merchantOperatingCityId
     _ -> pure False
   pure res
   where

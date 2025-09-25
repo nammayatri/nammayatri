@@ -19,6 +19,7 @@ module Storage.CachedQueries.FleetOwnerDocumentVerificationConfig
     findAllByMerchantOpCityIdAndRole,
     clearCache,
     create,
+    findAllMandatoryByMerchantOpCityIdAndRole,
   )
 where
 
@@ -52,6 +53,9 @@ findByMerchantOpCityIdAndDocumentType merchantOpCityId documentType mbConfigVers
 
 findAllByMerchantOpCityIdAndRole :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id MerchantOperatingCity -> Role -> Maybe [LYT.ConfigVersionMap] -> m [FODTO.FleetOwnerDocumentVerificationConfig]
 findAllByMerchantOpCityIdAndRole merchantOpCityId role mbConfigVersionMap = filter (\config -> config.role == role) <$> findAllByMerchantOpCityId merchantOpCityId mbConfigVersionMap
+
+findAllMandatoryByMerchantOpCityIdAndRole :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id MerchantOperatingCity -> Role -> Maybe [LYT.ConfigVersionMap] -> m [FODTO.FleetOwnerDocumentVerificationConfig]
+findAllMandatoryByMerchantOpCityIdAndRole merchantOpCityId role mbConfigVersionMap = filter (\config -> config.role == role && config.isMandatory) <$> findAllByMerchantOpCityId merchantOpCityId mbConfigVersionMap
 
 -- Call it after any update
 clearCache :: (CacheFlow m r, EsqDBFlow m r) => Id MerchantOperatingCity -> m ()
