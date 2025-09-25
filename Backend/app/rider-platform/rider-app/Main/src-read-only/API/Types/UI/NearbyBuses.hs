@@ -6,6 +6,7 @@ import qualified BecknV2.FRFS.Enums
 import Data.OpenApi (ToSchema)
 import qualified Data.Text
 import qualified Domain.Types.IntegratedBPPConfig
+import qualified Domain.Types.RouteStopTimeTable
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.External.Maps.Types
 import qualified Kernel.Prelude
@@ -55,6 +56,7 @@ data TimetableEntry = TimetableEntry
   { delay :: Kernel.Prelude.Maybe Kernel.Types.Time.Seconds,
     platformCode :: Kernel.Prelude.Maybe Data.Text.Text,
     serviceTierType :: BecknV2.FRFS.Enums.ServiceTierType,
+    source :: Domain.Types.RouteStopTimeTable.SourceType,
     timeOfArrival :: Kernel.Prelude.TimeOfDay,
     timeOfDeparture :: Kernel.Prelude.TimeOfDay,
     tripId :: Data.Text.Text
