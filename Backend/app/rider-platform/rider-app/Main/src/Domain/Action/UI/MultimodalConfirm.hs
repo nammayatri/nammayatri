@@ -99,6 +99,7 @@ import qualified Lib.JourneyModule.Types as JMTypes
 import qualified Lib.JourneyModule.Utils as JLU
 import qualified Lib.JourneyModule.Utils as JMU
 import qualified SharedLogic.Cancel as SharedCancel
+import qualified SharedLogic.External.Nandi.Types as NandiTypes
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.CachedQueries.FRFSVehicleServiceTier as CQFRFSVehicleServiceTier
@@ -123,6 +124,7 @@ import qualified Storage.Queries.RouteDetails as QRouteDetails
 import Storage.Queries.SearchRequest as QSearchRequest
 import Tools.Error
 import qualified Tools.Error as StationError
+import qualified Tools.Metrics as Metrics
 import Tools.MultiModal as MM
 import qualified Tools.MultiModal as TMultiModal
 import qualified Tools.Payment as Payment
@@ -662,18 +664,30 @@ getPublicTransportData (mbPersonId, merchantId) mbCity _mbConfigVersion mbVehicl
           Just METRO -> [Enums.METRO]
           Just SUBWAY -> [Enums.SUBWAY]
           _ -> [Enums.BUS, Enums.METRO, Enums.SUBWAY]
+  whenJust mbVehicleNumber $ \vehicleNumber -> do
+    Metrics.incrementBusScannetCounterMetric "ANNA_APP" merchantOperatingCityId.getId vehicleNumber
+
   integratedBPPConfigs <-
     concatMapM
       ( \vType ->
           SIBC.findAllIntegratedBPPConfig merchantOperatingCityId vType DIBC.MULTIMODAL
       )
       vehicleTypes
-  mbRouteCode <-
+  mbVehicleLiveRouteInfo <-
     case mbVehicleNumber of
       Just vehicleNumber -> do
-        routeCode <- (JLU.getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber >>= \mbResult -> pure $ ((.routeCode) . snd) <$> mbResult) >>= fromMaybeM (InvalidVehicleNumber $ "Vehicle " <> vehicleNumber <> ", not found on any route")
-        return $ Just routeCode
+        vehicleRouteInfo <- JLU.getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber >>= fromMaybeM (InvalidVehicleNumber $ "Vehicle " <> vehicleNumber <> ", not found on any route")
+        pure $ Just vehicleRouteInfo
       Nothing -> return Nothing
+
+  let mbOppositeTripDetails :: Maybe [NandiTypes.BusScheduleTrip] =
+        mbVehicleLiveRouteInfo
+          <&> \(_, vehicleLiveRouteInfo) -> do
+            ( if vehicleLiveRouteInfo.tripNumber == 1
+                then take 2
+                else take 1
+              )
+              $ sortOn (.stops_count) $ filter (\remainingTrip -> remainingTrip.route_number == vehicleLiveRouteInfo.routeNumber && remainingTrip.route_id /= vehicleLiveRouteInfo.routeCode) (fromMaybe [] vehicleLiveRouteInfo.remaining_trip_details)
 
   let mkResponse stations routes routeStops bppConfig = do
         gtfsVersion <-
@@ -733,7 +747,7 @@ getPublicTransportData (mbPersonId, merchantId) mbCity _mbConfigVersion mbVehicl
               ptcv = gtfsVersion
             }
 
-  let fetchData bppConfig = do
+  let fetchData mbRouteCode bppConfig = do
         case mbRouteCode of
           Just routeCode -> do
             try @_ @SomeException
@@ -762,12 +776,26 @@ getPublicTransportData (mbPersonId, merchantId) mbCity _mbConfigVersion mbVehicl
           integratedBPPConfigs
       )
       >>= \case
-        Left _ -> mapM fetchData integratedBPPConfigs
+        Left _ -> do
+          lst1 <- mapConcurrently (fetchData (((.routeCode) . snd) <$> mbVehicleLiveRouteInfo)) integratedBPPConfigs
+          lst2 <-
+            maybe
+              (pure [])
+              ( \oppositeTripDetails ->
+                  concat
+                    <$> mapConcurrently
+                      (\oppositeTripDetail -> mapConcurrently (fetchData (Just oppositeTripDetail.route_id)) integratedBPPConfigs)
+                      oppositeTripDetails
+              )
+              mbOppositeTripDetails
+          return (lst1 <> lst2)
         Right configsWithFeedInfo -> do
           -- Group configs by feed_id and take first config for each feed_id
           let configsByFeedId = HashMap.fromListWith (++) $ map (\(config, (feedKey, _)) -> (feedKey, [config])) configsWithFeedInfo
               uniqueConfigs = map (head . snd) $ HashMap.toList configsByFeedId
-          mapM fetchData uniqueConfigs
+          lst1 <- mapConcurrently (fetchData (((.routeCode) . snd) <$> mbVehicleLiveRouteInfo)) uniqueConfigs
+          lst2 <- maybe (pure []) (\oppositeTripDetails -> concat <$> mapConcurrently (\oppositeTripDetail -> mapConcurrently (fetchData (Just oppositeTripDetail.route_id)) uniqueConfigs) oppositeTripDetails) mbOppositeTripDetails
+          return (lst1 <> lst2)
 
   gtfsVersion <-
     try @_ @SomeException (mapM OTPRest.getGtfsVersion integratedBPPConfigs) >>= \case

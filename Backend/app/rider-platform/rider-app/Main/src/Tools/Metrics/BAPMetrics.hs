@@ -88,6 +88,13 @@ incrementSearchRequestCount' bmContainer merchantName merchantOperatingCityId ve
   let searchRequestCounter = bmContainer.searchRequestCounter
   liftIO $ P.withLabel searchRequestCounter (merchantName, version.getDeploymentVersion, merchantOperatingCityId) P.incCounter
 
+incrementBusScannetCounterMetric :: HasBAPMetrics m r => Text -> Text -> Text -> m ()
+incrementBusScannetCounterMetric merchantName merchantOperatingCityId vehicleNumber = do
+  bmContainer <- asks (.bapMetrics)
+  version <- asks (.version)
+  let busScannerCounter = bmContainer.busScannerCounter
+  liftIO $ P.withLabel busScannerCounter (merchantName, version.getDeploymentVersion, merchantOperatingCityId, vehicleNumber) P.incCounter
+
 putSearchDuration :: MonadIO m => P.Vector P.Label2 P.Histogram -> Text -> DeploymentVersion -> Double -> m ()
 putSearchDuration searchDurationHistogram merchantName version duration = liftIO $ P.withLabel searchDurationHistogram (merchantName, version.getDeploymentVersion) (`P.observe` duration)
 
