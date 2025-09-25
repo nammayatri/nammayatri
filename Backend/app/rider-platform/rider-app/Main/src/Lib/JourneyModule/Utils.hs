@@ -51,6 +51,7 @@ import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
 import qualified SharedLogic.CreateFareForMultiModal as SMMFRFS
+import qualified SharedLogic.External.Nandi.Types as NandiTypes
 import SharedLogic.FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
@@ -1290,9 +1291,12 @@ data VehicleLiveRouteInfo = VehicleLiveRouteInfo
   { routeCode :: Text,
     serviceType :: Spec.ServiceTierType,
     vehicleNumber :: Text,
+    routeNumber :: Maybe Text,
     waybillId :: Maybe Text,
     scheduleNo :: Text,
-    depot :: Maybe Text
+    tripNumber :: Int,
+    depot :: Maybe Text,
+    remaining_trip_details :: Maybe [NandiTypes.BusScheduleTrip]
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -1311,7 +1315,7 @@ getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber = do
         mbResult
           <&> ( \result ->
                   ( integratedBPPConfig,
-                    VehicleLiveRouteInfo {vehicleNumber = vehicleNumber, routeCode = result.route_id, serviceType = result.service_type, waybillId = result.waybill_id, scheduleNo = result.schedule_no, depot = result.depot}
+                    VehicleLiveRouteInfo {routeNumber = result.route_number, vehicleNumber = vehicleNumber, routeCode = result.route_id, serviceType = result.service_type, waybillId = result.waybill_id, scheduleNo = result.schedule_no, depot = result.depot, remaining_trip_details = result.remaining_trip_details, tripNumber = result.trip_number}
                   )
               )
 

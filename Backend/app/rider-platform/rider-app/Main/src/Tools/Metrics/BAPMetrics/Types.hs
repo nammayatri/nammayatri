@@ -38,10 +38,13 @@ data BAPMetricsContainer = BAPMetricsContainer
     confirmDurationFRFS :: DurationMetric,
     cancelDurationFRFS :: DurationMetric,
     initDuration :: DurationMetric,
-    confirmDuration :: DurationMetric
+    confirmDuration :: DurationMetric,
+    busScannerCounter :: BusScannetCounterMetric
   }
 
 type SearchRequestCounterMetric = P.Vector P.Label3 P.Counter
+
+type BusScannetCounterMetric = P.Vector P.Label4 P.Counter
 
 type RideCreatedCounterMetric = P.Vector P.Label4 P.Counter
 
@@ -52,6 +55,7 @@ type DurationMetric = (P.Vector P.Label3 P.Histogram, P.Vector P.Label3 P.Counte
 registerBAPMetricsContainer :: Seconds -> IO BAPMetricsContainer
 registerBAPMetricsContainer searchDurationTimeout = do
   searchRequestCounter <- registerSearchRequestCounterMetric
+  busScannerCounter <- registerBusScannetCounterMetric
   rideCreatedCounter <- registerRideCreatedCounterMetric
   searchDuration <- registerSearchDurationMetric searchDurationTimeout
   searchDurationFRFS <- registerDurationMetricFRFS searchDurationTimeout "merchant_name" "version" "merchantOperatingCityId" "beckn_search_frfs_round_trip" "beckn_search_frfs_round_trip_failure_counter"
@@ -65,6 +69,9 @@ registerBAPMetricsContainer searchDurationTimeout = do
 
 registerSearchRequestCounterMetric :: IO SearchRequestCounterMetric
 registerSearchRequestCounterMetric = P.register $ P.vector ("merchant_name", "version", "merchantOperatingCityId") $ P.counter $ P.Info "search_request_count" ""
+
+registerBusScannetCounterMetric :: IO BusScannetCounterMetric
+registerBusScannetCounterMetric = P.register $ P.vector ("merchant_name", "version", "merchantOperatingCityId", "vehicle_number") $ P.counter $ P.Info "scanned_bus_counter" ""
 
 registerRideCreatedCounterMetric :: IO RideCreatedCounterMetric
 registerRideCreatedCounterMetric = P.register $ P.vector ("merchant_id", "version", "category", "merchantOperatingCityId") $ P.counter $ P.Info "ride_created_count" ""

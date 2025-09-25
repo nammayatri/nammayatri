@@ -286,15 +286,18 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
     case req' of
       DSearch.PTSearch ptSearchDetails -> do
         case (mbIntegratedBPPConfig, ptSearchDetails.vehicleNumber, ptSearchDetails.routeCode) of
-          (Just integratedBPPConfig, Just vehicleNumber, Just routeCode) -> do
-            mbRouteLiveInfo <- JMU.getVehicleLiveRouteInfo [integratedBPPConfig] vehicleNumber
+          (Just integratedBPPConfig, Just userPassedVehicleNumber, Just userPassedRouteCode) -> do
+            mbRouteLiveInfo <- JMU.getVehicleLiveRouteInfo [integratedBPPConfig] userPassedVehicleNumber
             return $
               maybe
                 Nothing
-                ( \routeLiveInfo ->
-                    if routeLiveInfo.routeCode == routeCode
+                ( \routeLiveInfo@(JMU.VehicleLiveRouteInfo {..}) ->
+                    if routeCode == userPassedRouteCode
                       then Just routeLiveInfo
-                      else Nothing
+                      else
+                        if ptSearchDetails.routeCodeEditedManually == Just True
+                          then Just (JMU.VehicleLiveRouteInfo {routeCode = userPassedRouteCode, ..})
+                          else Nothing
                 )
                 (snd <$> mbRouteLiveInfo)
           _ -> return Nothing

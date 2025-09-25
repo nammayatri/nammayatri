@@ -77,9 +77,23 @@ data VehicleServiceTypeResponse = VehicleServiceTypeResponse
     vehicle_no :: Text,
     last_updated :: Maybe UTCTime,
     schedule_no :: Text,
+    trip_number :: Int,
     route_id :: Text,
     waybill_id :: Maybe Text,
-    depot :: Maybe Text
+    route_number :: Maybe Text,
+    depot :: Maybe Text,
+    remaining_trip_details :: Maybe [BusScheduleTrip]
+  }
+  deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+data BusScheduleTrip = BusScheduleTrip
+  { schedule_number :: Maybe Text,
+    route_id :: Text,
+    route_name :: Maybe Text,
+    org_name :: Maybe Text,
+    trip_number :: Maybe Int,
+    route_number :: Maybe Text,
+    stops_count :: Maybe Int
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
 

@@ -121,6 +121,7 @@ data PublicTransportSearchReq = PublicTransportSearchReq
     destinationStopCode :: Text,
     startTime :: Maybe UTCTime,
     routeCode :: Maybe Text,
+    routeCodeEditedManually :: Maybe Bool,
     vehicleNumber :: Maybe Text,
     recentLocationId :: Maybe (Id DTRL.RecentLocation),
     vehicleCategory :: Maybe Enums.VehicleCategory,
