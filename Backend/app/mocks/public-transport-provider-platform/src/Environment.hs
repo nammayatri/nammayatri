@@ -68,7 +68,8 @@ data AppEnv = AppEnv
     enablePrometheusMetricLogging :: Bool,
     shouldLogRequestId :: Bool,
     requestId :: Maybe Text,
-    kafkaProducerForART :: Maybe KafkaProducerTools
+    kafkaProducerForART :: Maybe KafkaProducerTools,
+    url :: Maybe Text
   }
   deriving (Generic)
 
@@ -91,6 +92,7 @@ buildAppEnv config@AppCfg {..} = do
   loggerEnv <- prepareLoggerEnv loggerConfig Nothing
   let authManagerSettings = prepareAuthManager config ["Authorization"] selfId uniqueKeyId (logOutputIO loggerEnv)
   authManager <- newManager authManagerSettings
+  let url = Nothing
   return $ AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()

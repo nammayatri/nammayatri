@@ -271,7 +271,8 @@ data AppEnv = AppEnv
     meterRideReferralLink :: Text,
     minDistanceBetweenTwoPoints :: Int,
     tsServiceConfig :: CPT.TSServiceConfig,
-    inMemEnv :: KTC.InMemEnv
+    inMemEnv :: KTC.InMemEnv,
+    url :: Maybe Text
   }
   deriving (Generic)
 
@@ -330,7 +331,8 @@ buildAppEnv cfg@AppCfg {searchRequestExpirationSeconds = _searchRequestExpiratio
   let internalEndPointHashMap = HMS.fromList $ M.toList internalEndPointMap
   let ondcTokenHashMap = HMS.fromList $ M.toList ondcTokenMap
       serviceClickhouseCfg = driverClickhouseCfg
-  inMemEnv <- IM.setupInMemEnv inMemConfig
+  inMemEnv <- IM.setupInMemEnv inMemConfig (Just hedisClusterEnv)
+  let url = Nothing
   return AppEnv {modelNamesHashMap = HMS.fromList $ M.toList modelNamesMap, ..}
 
 releaseAppEnv :: AppEnv -> IO ()

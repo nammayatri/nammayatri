@@ -40,7 +40,8 @@ data AppEnv = AppEnv
     isShuttingDown :: Shutdown,
     loggerEnv :: LoggerEnv,
     coreMetrics :: CoreMetricsContainer,
-    version :: DeploymentVersion
+    version :: DeploymentVersion,
+    url :: Maybe Text
   }
   deriving (Generic)
 
@@ -52,6 +53,7 @@ buildAppEnv AppCfg {..} = do
   esqDBEnv <- prepareEsqDBEnv esqDBCfg loggerEnv
   coreMetrics <- registerCoreMetricsContainer
   isShuttingDown <- mkShutdown
+  let url = Nothing
   return $ AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()

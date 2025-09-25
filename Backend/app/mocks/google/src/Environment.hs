@@ -50,7 +50,8 @@ data AppEnv = AppEnv
     snapToRoadIdentityMode :: Bool,
     requestId :: Maybe Text,
     shouldLogRequestId :: Bool,
-    kafkaProducerForART :: Maybe KafkaProducerTools
+    kafkaProducerForART :: Maybe KafkaProducerTools,
+    url :: Maybe Text
   }
   deriving (Generic)
 
@@ -66,6 +67,7 @@ buildAppEnv AppCfg {..} = do
   shouldLogRequestId <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "SHOULD_LOG_REQUEST_ID"
   let kafkaProducerForART = Nothing
   isShuttingDown <- mkShutdown
+  let url = Nothing
   return $ AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()

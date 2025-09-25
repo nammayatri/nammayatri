@@ -48,7 +48,7 @@ getRoutesByRouteIds ::
   IntegratedBPPConfig ->
   [Text] ->
   m [Route.Route]
-getRoutesByRouteIds integratedBPPConfig routeIds = IM.withInMemCache ["RoutesByRouteIds", integratedBPPConfig.id.getId, show routeIds] $ do
+getRoutesByRouteIds integratedBPPConfig routeIds = IM.withInMemCache ["RoutesByRouteIds", integratedBPPConfig.id.getId, show routeIds] 3600 $ do
   baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
   routes <- Flow.getRoutesByRouteIds baseUrl integratedBPPConfig.feedKey routeIds
   parseRoutesFromInMemoryServer routes integratedBPPConfig.id integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
@@ -98,7 +98,7 @@ getRouteStopMappingByRouteCode ::
   Text ->
   IntegratedBPPConfig ->
   m [RouteStopMapping]
-getRouteStopMappingByRouteCode routeCode integratedBPPConfig = IM.withInMemCache ["RSM", routeCode, integratedBPPConfig.id.getId] $ do
+getRouteStopMappingByRouteCode routeCode integratedBPPConfig = IM.withInMemCache ["RSM", routeCode, integratedBPPConfig.id.getId] 3600 $ do
   baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
   routeStopMapping' <- Flow.getRouteStopMappingInMemoryServer baseUrl integratedBPPConfig.feedKey (Just routeCode) Nothing
   logDebug $ "routeStopMapping from rest api: " <> show routeStopMapping'
@@ -176,7 +176,7 @@ getStationByGtfsIdAndStopCode ::
   Text ->
   IntegratedBPPConfig ->
   m (Maybe Station.Station)
-getStationByGtfsIdAndStopCode stopCode integratedBPPConfig = IM.withInMemCache ["SBSC", stopCode, integratedBPPConfig.id.getId] $ do
+getStationByGtfsIdAndStopCode stopCode integratedBPPConfig = IM.withInMemCache ["SBSC", stopCode, integratedBPPConfig.id.getId] 3600 $ do
   baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
   stations <- Flow.getStationsByGtfsIdAndStopCode baseUrl integratedBPPConfig.feedKey stopCode
   listToMaybe <$> parseStationsFromInMemoryServer [stations] integratedBPPConfig

@@ -117,7 +117,8 @@ data SchedulerEnv = SchedulerEnv
     shouldLogRequestId :: Bool,
     cacConfig :: CacConfig,
     kafkaProducerForART :: Maybe KafkaProducerTools,
-    inMemEnv :: InMemEnv
+    inMemEnv :: InMemEnv,
+    url :: Maybe Text
   }
   deriving (Generic)
 

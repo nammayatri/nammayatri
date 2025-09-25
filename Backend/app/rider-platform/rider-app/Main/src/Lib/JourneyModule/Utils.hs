@@ -264,7 +264,7 @@ fetchLiveBusTimings mbAvailableServiceTiers routeCodes stopCode currentTime inte
         case vrMapping of
           Just mapping -> return $ Just ((vehicleNumber, etaData), mapping.schedule_no)
           Nothing -> do
-            mbMapping <- listToMaybe <$> IM.withInMemCache [vehicleNumber] (QVehicleRouteMapping.findByVehicleNo vehicleNumber)
+            mbMapping <- listToMaybe <$> IM.withInMemCache [vehicleNumber] 3600 (QVehicleRouteMapping.findByVehicleNo vehicleNumber)
             case mbMapping of
               Just mapping -> return $ Just ((vehicleNumber, etaData), mapping.typeOfService)
               Nothing -> return Nothing

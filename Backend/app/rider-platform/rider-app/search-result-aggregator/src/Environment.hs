@@ -62,7 +62,8 @@ data AppEnv = AppEnv
     enablePrometheusMetricLogging :: Bool,
     shouldLogRequestId :: Bool,
     requestId :: Maybe Text,
-    kafkaProducerForART :: Maybe KafkaProducerTools
+    kafkaProducerForART :: Maybe KafkaProducerTools,
+    url :: Maybe Text
   }
   deriving (Generic)
 
@@ -88,6 +89,7 @@ buildAppEnv AppCfg {..} = do
     if cutOffHedisCluster
       then pure hedisEnv
       else connectHedisCluster hedisClusterCfg riderAppPrefix
+  let url = Nothing
   return $ AppEnv {..}
 
 releaseAppEnv :: AppEnv -> IO ()

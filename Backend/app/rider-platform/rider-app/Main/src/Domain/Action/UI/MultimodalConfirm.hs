@@ -691,7 +691,7 @@ getPublicTransportData (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _mbCo
                     then take 2
                     else take 1
                   )
-                  $ sortOn (.stops_count) $ filter (\remainingTrip -> remainingTrip.route_number == vehicleLiveRouteInfo.routeNumber && remainingTrip.route_id /= vehicleLiveRouteInfo.routeCode) (fromMaybe [] vehicleLiveRouteInfo.remaining_trip_details)
+                  $ sortOn (Down . (.stops_count)) $ filter (\remainingTrip -> remainingTrip.route_number == vehicleLiveRouteInfo.routeNumber && remainingTrip.route_id /= vehicleLiveRouteInfo.routeCode) (fromMaybe [] vehicleLiveRouteInfo.remaining_trip_details)
           _ -> Nothing
 
   let mkResponse stations routes routeStops bppConfig = do
