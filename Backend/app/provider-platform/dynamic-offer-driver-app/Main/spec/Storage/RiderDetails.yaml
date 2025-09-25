@@ -37,6 +37,7 @@ RiderDetails:
     payoutFlagReason: Maybe PayoutFlagReason
     isDeviceIdExists: Maybe Bool
     isFlagConfirmed: Maybe Bool
+    bapId: Maybe Text
 
   fromTType:
     currency: fromMaybe Kernel.Types.Common.INR currency|E
@@ -131,6 +132,7 @@ RiderDetails:
     mobileNumberHash: bytea
     referralCode: character varying(15)
     referredByDriver: character varying(255)
+    bapId: character varying(255)
 
   extraOperations:
     - EXTRA_QUERY_FILE
