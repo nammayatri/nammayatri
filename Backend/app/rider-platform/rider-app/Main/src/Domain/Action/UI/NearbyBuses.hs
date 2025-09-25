@@ -268,9 +268,17 @@ getNextVehicleDetails (mbPersonId, mid) routeCode stopCode mbVehicleType = do
 
 fetchPlatformCodesFromRedis :: [Text] -> Environment.Flow (HashMap.HashMap Text Text)
 fetchPlatformCodesFromRedis tripIds = do
-  let platformHashKey = "platform-codes-hashmap"
-  platformCodes <- CQMMB.withCrossAppRedisNew $ Hedis.hmGet platformHashKey tripIds
-  return $ HashMap.fromList $ catMaybes $ zipWith (\tripId mbCode -> (tripId,) <$> mbCode) tripIds platformCodes
+  if null tripIds
+    then do
+      logDebug $ "fetchPlatformCodesFromRedis: No tripIds provided, returning empty map"
+      return HashMap.empty
+    else do
+      let platformHashKey = "platform-codes-hashmap"
+      logDebug $ "fetchPlatformCodesFromRedis: Fetching platform codes for " <> show (length tripIds) <> " tripIds"
+      platformCodes <- CQMMB.withCrossAppRedisNew $ Hedis.hmGet platformHashKey tripIds
+      let result = HashMap.fromList $ catMaybes $ zipWith (\tripId mbCode -> (tripId,) <$> mbCode) tripIds platformCodes
+      logDebug $ "fetchPlatformCodesFromRedis: Retrieved " <> show (HashMap.size result) <> " platform codes"
+      return result
 
 getTimetableStop ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
