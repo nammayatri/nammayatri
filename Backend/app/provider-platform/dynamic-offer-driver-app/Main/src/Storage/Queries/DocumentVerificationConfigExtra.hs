@@ -2,6 +2,7 @@ module Storage.Queries.DocumentVerificationConfigExtra where
 
 import Domain.Types.DocumentVerificationConfig
 import Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.VehicleCategory as DTV
 import Kernel.Beam.Functions
 import Kernel.Prelude
 import Kernel.Types.Id
@@ -26,13 +27,14 @@ update config = do
     ]
     [Se.Is BeamODC.merchantOperatingCityId $ Se.Eq $ getId config.merchantOperatingCityId, Se.Is BeamODC.documentType $ Se.Eq config.documentType]
 
-updateSupportedVehicleClassesJSON :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> SupportedVehicleClasses -> m ()
-updateSupportedVehicleClassesJSON merchantOperatingCityId supportedVehicleClasses = do
+updateSupportedVehicleClassesJSON :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id MerchantOperatingCity -> SupportedVehicleClasses -> DTV.VehicleCategory -> m ()
+updateSupportedVehicleClassesJSON merchantOperatingCityId supportedVehicleClasses vehicleCategory = do
   now <- getCurrentTime
   updateWithKV
     [ Se.Set BeamODC.supportedVehicleClassesJSON $ getConfigJSON supportedVehicleClasses,
       Se.Set BeamODC.updatedAt now
     ]
     [ Se.Is BeamODC.merchantOperatingCityId $ Se.Eq $ getId merchantOperatingCityId,
-      Se.Is BeamODC.documentType $ Se.Eq VehicleRegistrationCertificate
+      Se.Is BeamODC.documentType $ Se.Eq VehicleRegistrationCertificate,
+      Se.Is BeamODC.vehicleCategory $ Se.Eq vehicleCategory
     ]

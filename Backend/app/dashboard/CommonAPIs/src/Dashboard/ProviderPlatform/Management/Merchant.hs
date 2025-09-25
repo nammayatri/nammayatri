@@ -211,9 +211,18 @@ instance ToMultipart Tmp UpsertFarePolicyReq where
 
 instance FromMultipart Tmp UpdateOnboardingVehicleVariantMappingReq where
   fromMultipart form = do
-    UpdateOnboardingVehicleVariantMappingReq
-      <$> fmap fdPayload (lookupFile "file" form)
+    fileData <- lookupFile "file" form
+    let vehicleCategory = lookupInput "vehicleCategory" form
+    pure $
+      UpdateOnboardingVehicleVariantMappingReq
+        { file = fdPayload fileData,
+          vehicleCategory = case vehicleCategory of
+            Left _ -> "CAR" -- Having Default as CAR to support backward compatibility
+            Right x -> x
+        }
 
 instance ToMultipart Tmp UpdateOnboardingVehicleVariantMappingReq where
   toMultipart form =
-    MultipartData [] [FileData "file" (T.pack form.file) "" (form.file)]
+    MultipartData
+      [Input "vehicleCategory" form.vehicleCategory]
+      [FileData "file" (T.pack form.file) "" (form.file)]
