@@ -16,3 +16,4 @@ customer:
 backend:
   - 'Backend/**'
   - '.github/workflows/nix.yaml'
+  - '.github/workflows/nixCloud.yaml'
