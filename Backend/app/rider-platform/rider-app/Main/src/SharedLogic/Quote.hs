@@ -14,6 +14,7 @@ import Domain.Types.Quote
 import Domain.Types.QuoteBreakup
 import Domain.Types.ServiceTierType as DVST
 import qualified Domain.Types.SpecialZoneQuote as DSpecialZoneQuote
+import qualified Domain.Types.Trip as DTC
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
@@ -42,6 +43,7 @@ data QuoteAPIEntity = QuoteAPIEntity
     vehicleServiceTierAirConditioned :: Maybe Double,
     isAirConditioned :: Maybe Bool,
     vehicleServiceTierSeatingCapacity :: Maybe Int,
+    tripCategory :: Maybe DTC.TripCategory,
     createdAt :: UTCTime,
     isValueAddNP :: Bool,
     validTill :: UTCTime,
