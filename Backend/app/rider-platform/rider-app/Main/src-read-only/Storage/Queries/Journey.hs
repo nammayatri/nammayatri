@@ -65,6 +65,7 @@ updateByPrimaryKey (Domain.Types.Journey.Journey {..}) = do
       Se.Set Beam.hasStartedTrackingWithoutBooking hasStartedTrackingWithoutBooking,
       Se.Set Beam.isPaymentSuccess isPaymentSuccess,
       Se.Set Beam.isPublicTransportIncluded isPublicTransportIncluded,
+      Se.Set Beam.isSingleMode isSingleMode,
       Se.Set Beam.journeyExpiryTime journeyExpiryTime,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),

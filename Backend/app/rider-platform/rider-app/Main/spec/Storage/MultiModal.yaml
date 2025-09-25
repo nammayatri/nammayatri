@@ -57,6 +57,7 @@ Journey:
     fromLocation: Location
     toLocation: Maybe Location
     isPublicTransportIncluded: Maybe Bool
+    isSingleMode: Maybe Bool
     paymentOrderShortId: Maybe (ShortId PaymentOrder)
     journeyExpiryTime: Maybe UTCTime
     merchantId: Id Merchant
