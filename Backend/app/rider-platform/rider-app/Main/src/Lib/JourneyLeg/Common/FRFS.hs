@@ -9,6 +9,7 @@ import Control.Applicative ((<|>))
 import qualified Data.HashMap.Strict as HM
 import Data.List (partition)
 import qualified Data.List.NonEmpty as NE
+import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import qualified Data.Time as Time
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
@@ -244,7 +245,8 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
                   bestCandidateResult <- Hedis.zrevrangeWithscores (topVehicleCandidatesKeyFRFS (legToUpdate.id.getId)) 0 0
                   case bestCandidateResult of
                     [] -> pure detailedStateData
-                    ((bestVehicleNumber, _) : _) -> do
+                    ((bestVehicleNumberText, _) : _) -> do
+                      let bestVehicleNumber = T.filter (/= '"') bestVehicleNumberText
                       mbVehicleRouteInfo <- JMU.getVehicleLiveRouteInfo [integratedBppConfig] bestVehicleNumber
                       let mbVehicleInfo = mbVehicleRouteInfo <&> snd
                       QJourneyLeg.updateByPrimaryKey $
