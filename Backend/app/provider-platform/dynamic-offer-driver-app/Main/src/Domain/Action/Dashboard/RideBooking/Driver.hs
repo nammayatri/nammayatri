@@ -582,13 +582,17 @@ postDriverAddVehicle merchantShortId opCity reqDriverId req = do
       let rcValidationReq = DomainRC.RCValidationReq {mYManufacturing = req.mYManufacturing, fuelType = req.fuelType, vehicleClass = Just req.vehicleClass, manufacturer = Just req.make, model = Just req.model}
       DomainRC.validateRCResponse rcValidationReq rules
   -- Create RC for vehicle before verifying it
+  let mbFleetOwnerId = bool Nothing (Just $ requestor.id.getId) (DCommon.checkFleetOwnerRole requestor.role)
+
   now <- getCurrentTime
   mbRC <- RCQuery.findLastVehicleRCWrapper req.registrationNo
   whenJust mbRC $ \rc -> do
+    when (DCommon.checkFleetOwnerRole requestor.role) $
+      RCQuery.updateFleetOwnerId mbFleetOwnerId rc.id
     createRCAssociationIfNotExists personId requestor.role rc transporterConfig now
     throwError $ InvalidRequest "RC already exists for this vehicle number, please activate."
 
-  let createRCInput = createRCInputFromVehicle req
+  let createRCInput = createRCInputFromVehicle req mbFleetOwnerId
   mbNewRC <- buildRC merchant.id merchantOpCityId createRCInput failures
   case mbNewRC of
     Just newRC -> do
@@ -622,12 +626,12 @@ postDriverAddVehicle merchantShortId opCity reqDriverId req = do
             createFleetRCAssociationIfPossible transporterConfig personId rc
         _ -> pure ()
 
-createRCInputFromVehicle :: Common.AddVehicleReq -> CreateRCInput
-createRCInputFromVehicle req@Common.AddVehicleReq {..} =
+createRCInputFromVehicle :: Common.AddVehicleReq -> Maybe Text -> CreateRCInput
+createRCInputFromVehicle req@Common.AddVehicleReq {..} mbFleetOwnerId =
   CreateRCInput
     { registrationNumber = Just registrationNo,
       fitnessUpto = Nothing,
-      fleetOwnerId = Nothing,
+      fleetOwnerId = mbFleetOwnerId,
       vehicleCategory = Nothing,
       airConditioned,
       oxygen,
