@@ -116,7 +116,7 @@ getFares riderId merchant merchanOperatingCity integrationBPPConfig fareRouteDet
       case redisResp of
         Just frfsFare -> return (isFareMandatory, frfsFare)
         Nothing -> do
-          routeFareReq <- JMU.getDummyRouteFareRequest startStopCode endStopCode changeOver viaPoints
+          routeFareReq <- JMU.getRouteFareRequest startStopCode endStopCode changeOver viaPoints riderId
           resp <- try @_ @SomeException $ CRISRouteFare.getRouteFare config' merchanOperatingCity.id routeFareReq
           case resp of
             Left err -> do

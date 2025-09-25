@@ -373,7 +373,6 @@ data SubwayLegExtraInfo = SubwayLegExtraInfo
     ticketsCreatedAt :: Maybe [UTCTime],
     ticketValidityHours :: [Int],
     providerName :: Maybe Text,
-    sdkToken :: Maybe Text,
     providerRouteId :: Maybe Text,
     deviceId :: Maybe Text,
     ticketTypeCode :: Maybe Text,
@@ -962,7 +961,6 @@ mkLegInfoFromFrfsBooking booking journeyLeg = do
                   ticketsCreatedAt = Just ticketsCreatedAt,
                   ticketValidityHours = ticketValidityHours,
                   providerName = Just booking.providerName,
-                  sdkToken = mbQuote >>= (.fareDetails) <&> (.sdkToken), -- required for show cris ticket
                   deviceId = imeiNumber, -- required for show cris ticket
                   providerRouteId = mbQuote >>= (.fareDetails) <&> (.providerRouteId), -- not required for show cris ticket but still sending for future use
                   ticketTypeCode = mbQuote >>= (.fareDetails) <&> (.ticketTypeCode), -- not required for cris sdk initiation
@@ -1142,7 +1140,6 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg = do
                   ticketsCreatedAt = Nothing,
                   ticketValidityHours = [],
                   providerName = Nothing,
-                  sdkToken = mbQuote >>= (.fareDetails) <&> (.sdkToken), -- required for cris sdk initiation
                   deviceId = Nothing, -- not required for cris sdk initiation
                   providerRouteId = mbQuote >>= (.fareDetails) <&> (.providerRouteId), -- required for cris sdk initiation
                   ticketTypeCode = mbQuote >>= (.fareDetails) <&> (.ticketTypeCode), -- required for cris sdk initiation

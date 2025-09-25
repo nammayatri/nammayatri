@@ -34,7 +34,6 @@ import qualified API.UI.CancelSearch as CancelSearch
 import qualified Beckn.ACL.Cancel as ACL
 import qualified Beckn.ACL.Search as TaxiACL
 import qualified BecknV2.OnDemand.Enums
-import Control.Applicative ((<|>))
 import Data.Aeson
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as T
@@ -47,7 +46,6 @@ import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.CancellationReason as SCR
 import qualified Domain.Types.Client as DC
 import qualified Domain.Types.EstimateStatus as Estimate
-import Domain.Types.FRFSRouteDetails (gtfsIdtoDomainCode)
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Journey as Journey
 import qualified Domain.Types.Merchant as Merchant
@@ -59,8 +57,7 @@ import qualified Domain.Types.RiderConfig as DRC
 import qualified Domain.Types.SearchRequest as SearchRequest
 import qualified Domain.Types.Trip as DTrip
 import Environment
-import ExternalBPP.ExternalAPI.CallAPI as CallAPI
-import ExternalBPP.ExternalAPI.Subway.CRIS.RouteFare as CRISRouteFare
+import ExternalBPP.ExternalAPI.Subway.CRIS.SDKData
 import Kernel.External.Encryption
 import Kernel.External.Maps.Google.MapsClient.Types
 import Kernel.External.Maps.Types
@@ -310,7 +307,7 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
           case vehicleCategory of
             BecknV2.OnDemand.Enums.BUS -> JMU.measureLatency (JMU.buildSingleModeDirectRoutes (getPreliminaryLeg now currentLocation searchRequest.fromLocation.address.area) searchRequest.routeCode searchRequest.originStopCode searchRequest.destinationStopCode mbIntegratedBPPConfig searchRequest.merchantId searchRequest.merchantOperatingCityId vehicleCategory mode >>= (\x -> return (x, []))) "buildSingleModeDirectRoutes"
             BecknV2.OnDemand.Enums.METRO -> JMU.measureLatency (JMU.buildSingleModeDirectRoutes (getPreliminaryLeg now currentLocation searchRequest.fromLocation.address.area) searchRequest.routeCode searchRequest.originStopCode searchRequest.destinationStopCode mbIntegratedBPPConfig searchRequest.merchantId searchRequest.merchantOperatingCityId vehicleCategory mode >>= (\x -> return (x, []))) "buildSingleModeDirectRoutes"
-            BecknV2.OnDemand.Enums.SUBWAY -> JMU.measureLatency (JMU.buildTrainAllViaRoutes (getPreliminaryLeg now currentLocation searchRequest.fromLocation.address.area) searchRequest.originStopCode searchRequest.destinationStopCode mbIntegratedBPPConfig searchRequest.merchantId searchRequest.merchantOperatingCityId vehicleCategory mode False) "buildTrainAllViaRoutes"
+            BecknV2.OnDemand.Enums.SUBWAY -> JMU.measureLatency (JMU.buildTrainAllViaRoutes (getPreliminaryLeg now currentLocation searchRequest.fromLocation.address.area) searchRequest.originStopCode searchRequest.destinationStopCode mbIntegratedBPPConfig searchRequest.merchantId searchRequest.merchantOperatingCityId vehicleCategory mode False personId) "buildTrainAllViaRoutes"
             _ -> return ([], [])
         | otherwise = return ([], [])
   (directSingleModeRoutes, restOfViaPoints) <- result
@@ -407,7 +404,6 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
 
   let (indexedRoutesToProcess, showMultimodalWarningForFirstJourney) = getIndexedRoutesAndWarning userPreferences otpResponse
 
-  -- This function should be called only once. calling this multiple times will result in suburban booking failure.
   mbCrisSdkToken <- getCrisSdkToken merchantOperatingCityId indexedRoutesToProcess
 
   multimodalIntiateHelper isSingleMode singleModeWarningType otpResponse userPreferences indexedRoutesToProcess showMultimodalWarningForFirstJourney mbCrisSdkToken True routeLiveInfo
@@ -722,44 +718,19 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
       let subwayRoutes = filter (\(_, multiModalRoute) -> any (\leg -> leg.mode == MultiModalTypes.Subway) multiModalRoute.legs) indexedRoutes
       if null subwayRoutes
         then return Nothing
-        else findValidSdkToken subwayRoutes
-      where
-        findValidSdkToken :: [(Int, MultiModalTypes.MultiModalRoute)] -> Flow (Maybe Text)
-        findValidSdkToken [] = return Nothing
-        findValidSdkToken ((_, multiModalRoute) : restRoutes) = do
-          let subwayLegs = filter (\leg -> leg.mode == MultiModalTypes.Subway) multiModalRoute.legs
-          mbSdkToken <- findValidSdkTokenFromLegs subwayLegs
-          case mbSdkToken of
-            Just token -> return $ Just token
-            Nothing -> findValidSdkToken restRoutes
-
-        findValidSdkTokenFromLegs :: [MultiModalTypes.MultiModalLeg] -> Flow (Maybe Text)
-        findValidSdkTokenFromLegs [] = return Nothing
-        findValidSdkTokenFromLegs (leg : restLegs) = do
-          mbSdkToken <- tryGetSdkTokenFromLeg leg
-          case mbSdkToken of
-            Just token -> return $ Just token
-            Nothing -> findValidSdkTokenFromLegs restLegs
-
-        tryGetSdkTokenFromLeg :: MultiModalTypes.MultiModalLeg -> Flow (Maybe Text)
-        tryGetSdkTokenFromLeg leg = do
-          let mbRouteCode = listToMaybe leg.routeDetails >>= (.gtfsId) <&> gtfsIdtoDomainCode
-              mbFromStopCode = (leg.fromStopDetails >>= (.stopCode)) <|> ((leg.fromStopDetails >>= (.gtfsId)) <&> gtfsIdtoDomainCode)
-              mbToStopCode = (leg.toStopDetails >>= (.stopCode)) <|> ((leg.toStopDetails >>= (.gtfsId)) <&> gtfsIdtoDomainCode)
-          case (mbFromStopCode, mbToStopCode, mbRouteCode) of
-            (Just fromCode, Just toCode, Just routeCode) -> do
-              SIBC.findMaybeIntegratedBPPConfig Nothing merchantOperatingCityId BecknV2.OnDemand.Enums.SUBWAY DIBC.MULTIMODAL
-                >>= \case
-                  Just integratedBPPConfig -> do
-                    case integratedBPPConfig.providerConfig of
-                      DIBC.CRIS config' -> do
-                        (viaPoints, changeOver) <- getChangeOverAndViaPoints [BasicRouteDetail {routeCode = routeCode, startStopCode = fromCode, endStopCode = toCode}] integratedBPPConfig
-                        routeFareReq <- JMU.getRouteFareRequest fromCode toCode changeOver viaPoints personId
-                        fares <- CRISRouteFare.getRouteFare config' merchantOperatingCityId routeFareReq <&> listToMaybe
-                        return $ fares >>= (.fareDetails) >>= Just . (.sdkToken)
-                      _ -> return Nothing
-                  Nothing -> return Nothing
-            _ -> return Nothing
+        else do
+          SIBC.findMaybeIntegratedBPPConfig Nothing merchantOperatingCityId BecknV2.OnDemand.Enums.SUBWAY DIBC.MULTIMODAL >>= \case
+            Just integratedBPPConfig -> do
+              case integratedBPPConfig.providerConfig of
+                DIBC.CRIS config -> do
+                  mbGetSdkDataReq <- mkGetSDKDataReq personId
+                  case mbGetSdkDataReq of
+                    Just getSDKDataReq -> do
+                      getSdkDataResp <- getSDKData config getSDKDataReq
+                      return $ Just getSdkDataResp.sdkData
+                    Nothing -> return Nothing
+                _ -> return Nothing
+            Nothing -> return Nothing
 
     mkMultimodalResponse :: MultiModalTypes.MultiModalLeg -> UTCTime -> UTCTime -> MultiModalTypes.MultiModalResponse
     mkMultimodalResponse leg startTime endTime =
