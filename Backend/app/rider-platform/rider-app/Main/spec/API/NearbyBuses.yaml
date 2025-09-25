@@ -12,6 +12,7 @@ imports:
   UpcomingTripInfo: Lib.JourneyModule.Utils
   RouteState: Storage.CachedQueries.Merchant.MultiModalBus
   Seconds: Kernel.Types.Time
+  SourceType: Domain.Types.RouteStopTimeTable
 module: NearbyBuses
 
 types:
@@ -52,6 +53,7 @@ types:
     platformCode: Maybe Text
     tripId: Text
     delay: Maybe Seconds
+    source: SourceType
 
   TimetableResponse:
     timetable: [TimetableEntry]
