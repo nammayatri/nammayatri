@@ -4603,13 +4603,18 @@ instance eqFRFSVehicleServiceTierAPI :: Eq FRFSVehicleServiceTierAPI where eq = 
 data ConfirmFRFSQuoteReqV2 = ConfirmFRFSQuoteReqV2 String FRFSQuoteConfirmReq
 
 newtype FRFSQuoteConfirmReq = FRFSQuoteConfirmReq {
-  discounts :: Array FRFSDiscountReq
+  offered :: Array FRFSCategorySelectionReq
 }
 
 newtype FRFSDiscountReq = FRFSDiscountReq { 
     code :: String
   , quantity :: Int
   }
+
+newtype FRFSCategorySelectionReq = FRFSCategorySelectionReq {
+  quantity :: Int,
+  quoteCategoryId :: String
+}
 
 instance makeConfirmMetroQuoteReqV2 :: RestEndpoint ConfirmFRFSQuoteReqV2  where
  makeRequest reqBody@(ConfirmFRFSQuoteReqV2 quoteId (FRFSQuoteConfirmReq rqBody)) headers = defaultMakeRequestWithoutLogs POST (EP.confirmMetroQuoteV2 quoteId) headers reqBody Nothing
@@ -4634,6 +4639,13 @@ instance standardDiscountItem :: StandardEncode FRFSDiscountReq where
 instance showDiscountItem :: Show FRFSDiscountReq where show = genericShow
 instance decodeDiscountItem :: Decode FRFSDiscountReq where decode = defaultDecode
 instance encodeDiscountItem :: Encode FRFSDiscountReq where encode = defaultEncode
+
+derive instance genericOfferedItem :: Generic FRFSCategorySelectionReq _
+instance standardOfferedItem :: StandardEncode FRFSCategorySelectionReq where
+    standardEncode (FRFSCategorySelectionReq body) = standardEncode body
+instance showOfferedItem :: Show FRFSCategorySelectionReq where show = genericShow
+instance decodeOfferedItem :: Decode FRFSCategorySelectionReq where decode = defaultDecode
+instance encodeOfferedItem :: Encode FRFSCategorySelectionReq where encode = defaultEncode
 
 ----------------------------------------------- Verify VPA  --------------------------------------------
 
