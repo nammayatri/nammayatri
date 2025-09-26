@@ -72,6 +72,7 @@ library
       Tools.Auth.Dashboard
       Tools.Auth.Merchant
       Tools.Client
+      Tools.Client.Driver
       Tools.Error
       Tools.Metrics
       Tools.Servant.HeaderAuth

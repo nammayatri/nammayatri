@@ -42,6 +42,7 @@ library
       API.Dashboard.Exotel
       API.Dashboard.Fleet
       API.Dashboard.Fleet.Registration
+      API.Dashboard.Person
       API.External.LiveEKD
       API.IGM
       API.Internal
@@ -176,6 +177,7 @@ library
       Domain.Action.Dashboard.Operator.Driver
       Domain.Action.Dashboard.Operator.FleetManagement
       Domain.Action.Dashboard.Operator.Registration
+      Domain.Action.Dashboard.Person
       Domain.Action.Dashboard.Ride
       Domain.Action.Dashboard.RideBooking.Driver
       Domain.Action.Dashboard.RideBooking.DriverRegistration

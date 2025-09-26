@@ -2,7 +2,7 @@ module Domain.Action.ProviderPlatform.Operator.Registration (postOperatorRegiste
 
 import qualified API.Client.ProviderPlatform.Operator as Client
 import qualified API.Types.ProviderPlatform.Operator.Registration as Common
-import qualified Domain.Action.Dashboard.Person as DP
+import qualified "lib-dashboard" Domain.Action.Dashboard.Person as DP
 import qualified "lib-dashboard" Domain.Types.Merchant as DM
 import qualified "lib-dashboard" Domain.Types.Person as PT
 import qualified Domain.Types.Person.Type as DP

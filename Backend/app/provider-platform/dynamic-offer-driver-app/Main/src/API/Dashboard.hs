@@ -22,6 +22,7 @@ import qualified API.Action.Dashboard.Operator as OperatorDSL
 import qualified API.Action.Dashboard.RideBooking as RideBookingDSL
 import qualified API.Dashboard.Exotel as Exotel
 import qualified API.Dashboard.Fleet as Fleet
+import qualified API.Dashboard.Person as Person
 import qualified Domain.Types.Merchant as DM
 import Environment
 import Kernel.Types.Beckn.Context as Context
@@ -40,6 +41,7 @@ type API =
            :<|> RideBookingDSLAPI
            :<|> FleetDSLAPI
            :<|> OperatorDSLAPI
+           :<|> PersonAPI
        )
     :<|> Exotel.API
 
@@ -54,6 +56,7 @@ type APIV2 =
            :<|> RideBookingDSLAPI
            :<|> FleetDSLAPI
            :<|> OperatorDSLAPI
+           :<|> PersonAPI
        )
     :<|> Exotel.API
 
@@ -69,6 +72,8 @@ type FleetDSLAPI = DashboardTokenAuth :> FleetDSL.API
 
 type OperatorDSLAPI = DashboardTokenAuth :> OperatorDSL.API -- Add handler also Todo
 
+type PersonAPI = DashboardTokenAuth :> Person.API
+
 -- TODO :: Deprecated, Remove after successful deployment
 handler :: FlowServer API
 handler =
@@ -81,6 +86,7 @@ handler =
         :<|> rideBookingDSLHandler merchantId city
         :<|> fleetDSLHandler merchantId city
         :<|> operatorDSLHandler merchantId city
+        :<|> personHandler merchantId city
   )
     :<|> Exotel.handler
   where
@@ -102,6 +108,7 @@ handlerV2 =
         :<|> rideBookingDSLHandler merchantId city
         :<|> fleetDSLHandler merchantId city
         :<|> operatorDSLHandler merchantId city
+        :<|> personHandler merchantId city
   )
     :<|> Exotel.handler
 
@@ -122,3 +129,6 @@ fleetDSLHandler merchantId city _auth = FleetDSL.handler merchantId city
 
 operatorDSLHandler :: ShortId DM.Merchant -> Context.City -> FlowServer OperatorDSLAPI
 operatorDSLHandler merchantId city _auth = OperatorDSL.handler merchantId city
+
+personHandler :: ShortId DM.Merchant -> Context.City -> FlowServer PersonAPI
+personHandler _merchantId _city _auth = Person.handler
