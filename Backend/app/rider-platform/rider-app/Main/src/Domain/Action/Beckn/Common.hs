@@ -771,6 +771,7 @@ addOffersNammaTags ride person = do
       customerData = Y.CustomerData {mobileNumber = decrptedMobileNumber, gender = person.gender}
   tags <- Yudhishthira.computeNammaTagsWithExpiry Yudhishthira.RideEndOffers (Y.EndRideOffersTagData customerData rideData)
   newTags <- modifiedNewNammaTags tags (fromMaybe [] person.customerNammaTags) now
+  logDebug $ "newTags: " <> show newTags
   when (not $ null newTags) $ do
     QP.updateCustomerTags (Just $ (fromMaybe [] person.customerNammaTags) <> newTags) person.id
     pushToKafka (RideEndOffersKafkaData ride.id person.id newTags now) "customer-ride-end-offers" person.id.getId
@@ -814,14 +815,18 @@ addOffersNammaTags ride person = do
 
     getOfferCodeModifiedTag _ _ [] = pure Nothing
     getOfferCodeModifiedTag tagName validity tags@(tagValue : _) = do
-      logDebug $ "getOfferCodeModifiedTag: " <> show tagName <> " " <> show validity <> " " <> show tags
+      logDebug $ "getOfferCodeModifiedTag: " <> show tagName <> " " <> show validity <> " " <> show tags <> " " <> tagValue
       if tagValue == "Valid"
         then do
+          logDebug "I am inside If dude"
           mbOfferCode <- Redis.withCrossAppRedis $ Redis.rPop ("offerCodesPool-" <> tagValue)
+          logDebug $ "mbOfferCode: " <> show mbOfferCode
           case mbOfferCode of
             Just offerCode -> pure $ Just (LYT.TagName tagName, LYT.ArrayValue (tags <> [offerCode]), validity)
             Nothing -> pure Nothing
-        else pure Nothing
+        else do
+          logDebug "I am inside Else dude"
+          pure Nothing
 
     mkRideData DRide.Ride {updatedAt = updatedAt', ..} = Y.RideData {updatedAt = updatedAt', ..}
 
