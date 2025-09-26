@@ -257,7 +257,8 @@ mkTicket booking dTicket isTicketFree = do
         Ticket.partnerOrgTransactionId = booking.partnerOrgTransactionId,
         Ticket.createdAt = now,
         Ticket.updatedAt = now,
-        Ticket.isTicketFree = Just isTicketFree
+        Ticket.isTicketFree = Just isTicketFree,
+        Ticket.commencingHours = dTicket.commencingHours
       }
 
 processQRData :: Text -> Flow Text

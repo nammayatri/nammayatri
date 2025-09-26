@@ -97,7 +97,8 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.FRFSTicket.FRFSTicket {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.description description,
+    [ Se.Set Beam.commencingHours commencingHours,
+      Se.Set Beam.description description,
       Se.Set Beam.frfsTicketBookingId (Kernel.Types.Id.getId frfsTicketBookingId),
       Se.Set Beam.isTicketFree isTicketFree,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId merchantId),
@@ -121,7 +122,8 @@ instance FromTType' Beam.FRFSTicket Domain.Types.FRFSTicket.FRFSTicket where
     pure $
       Just
         Domain.Types.FRFSTicket.FRFSTicket
-          { description = description,
+          { commencingHours = commencingHours,
+            description = description,
             frfsTicketBookingId = Kernel.Types.Id.Id frfsTicketBookingId,
             id = Kernel.Types.Id.Id id,
             isTicketFree = isTicketFree,
@@ -143,7 +145,8 @@ instance FromTType' Beam.FRFSTicket Domain.Types.FRFSTicket.FRFSTicket where
 instance ToTType' Beam.FRFSTicket Domain.Types.FRFSTicket.FRFSTicket where
   toTType' (Domain.Types.FRFSTicket.FRFSTicket {..}) = do
     Beam.FRFSTicketT
-      { Beam.description = description,
+      { Beam.commencingHours = commencingHours,
+        Beam.description = description,
         Beam.frfsTicketBookingId = Kernel.Types.Id.getId frfsTicketBookingId,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.isTicketFree = isTicketFree,

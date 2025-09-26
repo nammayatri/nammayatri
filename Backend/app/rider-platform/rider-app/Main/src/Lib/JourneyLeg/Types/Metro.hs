@@ -38,7 +38,8 @@ data MetroLegRequestConfirmData = MetroLegRequestConfirmData
     merchantId :: Id DMerchant.Merchant,
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     quantity :: Maybe Int,
-    childTicketQuantity :: Maybe Int
+    childTicketQuantity :: Maybe Int,
+    isSingleMode :: Maybe Bool
   }
 
 data MetroLegRequestCancelData = MetroLegRequestCancelData

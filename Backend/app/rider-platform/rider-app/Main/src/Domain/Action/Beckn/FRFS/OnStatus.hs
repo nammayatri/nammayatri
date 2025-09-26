@@ -106,7 +106,8 @@ onStatus _merchant booking (Booking dOrder) = do
           ticketNumber = ticket.ticketNumber,
           validTill = ticket.validTill,
           status = (mapFRFSStatusToDTicketStatus ticket.status),
-          qrRefreshAt = ticket.qrRefreshAt
+          qrRefreshAt = ticket.qrRefreshAt,
+          commencingHours = ticket.commencingHours
         }
 
     mapFRFSStatusToDTicketStatus :: Ticket.FRFSTicketStatus -> Text

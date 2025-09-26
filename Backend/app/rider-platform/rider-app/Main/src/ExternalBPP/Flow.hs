@@ -226,7 +226,8 @@ confirm _merchant _merchantOperatingCity frfsConfig integratedBPPConfig bapConfi
                   validTill = ticket.qrValidity,
                   status = ticket.qrStatus,
                   description = ticket.description,
-                  qrRefreshAt = ticket.qrRefreshAt
+                  qrRefreshAt = ticket.qrRefreshAt,
+                  commencingHours = ticket.commencingHours
                 }
           )
           order.tickets
@@ -258,7 +259,8 @@ status _merchantId _merchantOperatingCity integratedBPPConfig bapConfig booking 
                   validTill = ticket.qrValidity,
                   status = ticket.qrStatus,
                   qrRefreshAt = ticket.qrRefreshAt,
-                  description = ticket.description
+                  description = ticket.description,
+                  commencingHours = ticket.commencingHours
                 }
           )
           tickets'

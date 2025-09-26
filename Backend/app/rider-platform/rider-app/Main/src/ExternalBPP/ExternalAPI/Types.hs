@@ -26,7 +26,8 @@ data ProviderTicket = ProviderTicket
     qrData :: Text,
     qrStatus :: Text,
     qrValidity :: UTCTime,
-    qrRefreshAt :: Maybe UTCTime
+    qrRefreshAt :: Maybe UTCTime,
+    commencingHours :: Maybe Int
   }
 
 data ProviderOrder = ProviderOrder
