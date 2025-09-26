@@ -252,7 +252,7 @@ updateNammaTagsForCancelledRide booking ride bookingCReason transporterConfig = 
   driverStats <- QDriverStats.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   let tags = fromMaybe [] allTags
   when (validDriverCancellation `elem` tags) $ do
-    when (transporterConfig.allowAnalytics == Just True) $ Analytics.updateOperatorAnalyticsCancelCount transporterConfig ride.driverId
+    when (transporterConfig.enableFleetOperatorDashboardAnalytics == Just True) $ Analytics.updateOperatorAnalyticsCancelCount transporterConfig ride.driverId
     QDriverStats.updateValidDriverCancellationTagCount (driverStats.validDriverCancellationTagCount + 1) ride.driverId
   when (validCustomerCancellation `elem` tags) $ do
     QDriverStats.updateValidCustomerCancellationTagCount (driverStats.validCustomerCancellationTagCount + 1) ride.driverId

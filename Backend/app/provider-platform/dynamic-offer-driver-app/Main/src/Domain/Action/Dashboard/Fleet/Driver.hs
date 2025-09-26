@@ -890,10 +890,10 @@ postDriverFleetRemoveDriver merchantShortId opCity requestorId driverId mbFleetO
         rc <- RCQuery.findByRCIdAndFleetOwnerId assoc.rcId $ Just entityId
         when (isJust rc) $ throwError (InvalidRequest "Driver is linked to fleet Vehicle, first unlink then try")
       FDV.endFleetDriverAssociation entityId personId
-      let needDriverInfo = transporterConfig.allowAnalytics == Just True || allowCacheDriverFlowStatus
+      let needDriverInfo = transporterConfig.enableFleetOperatorDashboardAnalytics == Just True || allowCacheDriverFlowStatus
       when needDriverInfo $ do
         driverInfo <- QDriverInfo.findById personId >>= fromMaybeM (DriverNotFound personId.getId)
-        when (transporterConfig.allowAnalytics == Just True) $ do
+        when (transporterConfig.enableFleetOperatorDashboardAnalytics == Just True) $ do
           mbOperator <- FOV.findByFleetOwnerId entityId True
           when (isNothing mbOperator) $ logTagError "AnalyticsRemoveDriver" "Operator not found for fleet owner"
           whenJust mbOperator $ \operator -> do
@@ -903,10 +903,10 @@ postDriverFleetRemoveDriver merchantShortId opCity requestorId driverId mbFleetO
           DDriverMode.decrementFleetOperatorStatusKeyForDriver DP.FLEET_OWNER entityId driverInfo.driverFlowStatus
     DP.OPERATOR -> do
       DOV.endOperatorDriverAssociation entityId personId
-      let needDriverInfo = transporterConfig.allowAnalytics == Just True || allowCacheDriverFlowStatus
+      let needDriverInfo = transporterConfig.enableFleetOperatorDashboardAnalytics == Just True || allowCacheDriverFlowStatus
       when needDriverInfo $ do
         driverInfo <- QDriverInfo.findById personId >>= fromMaybeM (DriverNotFound personId.getId)
-        when (transporterConfig.allowAnalytics == Just True) $ do
+        when (transporterConfig.enableFleetOperatorDashboardAnalytics == Just True) $ do
           when driverInfo.enabled $ Analytics.decrementOperatorAnalyticsDriverEnabled transporterConfig entityId
           Analytics.decrementOperatorAnalyticsApplicationCount transporterConfig entityId
         when allowCacheDriverFlowStatus $ do
@@ -1740,10 +1740,11 @@ postDriverFleetVerifyJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId mbR
       -- onboarded operator required only for new drivers
       assoc <- FDA.makeFleetDriverAssociation person.id fleetOwnerId Nothing (DomainRC.convertTextToUTC (Just "2099-12-12"))
       QFDV.create assoc
-      let needsDriverInfo = transporterConfig.allowAnalytics == Just True || allowCacheDriverFlowStatus
+      let allowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
+      let needsDriverInfo = transporterConfig.enableFleetOperatorDashboardAnalytics == Just True || allowCacheDriverFlowStatus
       when needsDriverInfo $ do
         driverInfo <- QDriverInfo.findById person.id >>= fromMaybeM (DriverNotFound person.id.getId)
-        when (transporterConfig.allowAnalytics == Just True) $ do
+        when (transporterConfig.enableFleetOperatorDashboardAnalytics == Just True) $ do
           mOperator <- FOV.findByFleetOwnerId fleetOwnerId True
           when (isNothing mOperator) $ logTagError "AnalyticsAddDriver" "Operator not found for fleet owner"
           whenJust mOperator $ \operator -> do
