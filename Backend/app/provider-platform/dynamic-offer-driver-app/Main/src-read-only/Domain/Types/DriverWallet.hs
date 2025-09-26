@@ -21,6 +21,10 @@ data DriverWallet = DriverWallet
     createdAt :: Data.Time.UTCTime,
     driverId :: Kernel.Types.Id.Id Domain.Types.Person.Driver,
     driverPayable :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    financialYearCollectionAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    financialYearStart :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    financialYearTdsBaseAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    financialYearTdsDeduction :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     gstDeduction :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     id :: Kernel.Types.Id.Id Domain.Types.DriverWallet.DriverWallet,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
@@ -30,6 +34,8 @@ data DriverWallet = DriverWallet
     payoutStatus :: Kernel.Prelude.Maybe Domain.Types.DriverWallet.PayoutStatus,
     rideId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Ride.Ride),
     runningBalance :: Kernel.Types.Common.HighPrecMoney,
+    tdsBaseAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    tdsDeduction :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     transactionType :: Domain.Types.DriverWallet.TransactionType,
     updatedAt :: Data.Time.UTCTime
   }
