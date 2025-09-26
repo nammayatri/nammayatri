@@ -483,6 +483,23 @@ apis:
       response:
         type: WhiteListOperatingCityRes
       userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT WHITELIST_MERCHANT_OPERATING_CITY
+  - POST: # CreateMerchantAPI
+      endpoint: /config/merchant/create
+      auth: ApiAuthV2
+      multipart:
+        type: CreateMerchantOperatingCityReq
+      response:
+        type: CreateMerchantOperatingCityRes
+      helperApi:
+        - POST:
+            endpoint: /config/merchant/create
+            auth: ApiAuthV2
+            request:
+              type: CreateMerchantOperatingCityReqT
+            response:
+              type: CreateMerchantOperatingCityRes
+      userActionType: ApiAuth APP_BACKEND_MANAGEMENT MERCHANT CREATE_MERCHANT_OPERATING_CITY
+
 
 types:
   MerchantUpdateReq:
