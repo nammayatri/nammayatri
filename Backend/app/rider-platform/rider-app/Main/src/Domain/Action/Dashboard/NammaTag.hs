@@ -7,6 +7,7 @@ module Domain.Action.Dashboard.NammaTag
     postNammaTagQueryCreate,
     postNammaTagQueryUpdate,
     deleteNammaTagQueryDelete,
+    postNammaTagTagVerify,
     postNammaTagAppDynamicLogicVerify,
     getNammaTagAppDynamicLogic,
     postNammaTagRunJob,
@@ -37,6 +38,7 @@ where
 import qualified ConfigPilotFrontend.Flow as CPF
 import qualified ConfigPilotFrontend.Types as CPT
 import qualified Dashboard.Common as Common
+import qualified Data.Aeson as A
 import Data.Singletons
 import qualified Data.Text as Text
 import qualified Domain.Types.FRFSConfig as DFRFS
@@ -49,6 +51,7 @@ import qualified Domain.Types.RideRelatedNotificationConfig as DTRN
 import qualified Domain.Types.RiderConfig as DTR
 import Domain.Types.UiRiderConfig (UiRiderConfig (..))
 import qualified Domain.Types.UiRiderConfig as DTRC
+import qualified Domain.Types.Yudhishthira
 import qualified Environment
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude as Prelude
@@ -64,6 +67,7 @@ import qualified Lib.Yudhishthira.Storage.CachedQueries.AppDynamicLogicRollout a
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types
 import qualified Lib.Yudhishthira.Types as LYTU
+import qualified Lib.Yudhishthira.Types.Common as C
 import qualified Lib.Yudhishthira.TypesTH as YTH
 import SharedLogic.JobScheduler (RiderJobType (..))
 import SharedLogic.Merchant
@@ -103,6 +107,39 @@ postNammaTagQueryUpdate _merchantShortId _opCity = YudhishthiraFlow.postQueryUpd
 
 deleteNammaTagQueryDelete :: Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.ChakraQueryDeleteReq -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 deleteNammaTagQueryDelete _merchantShortId _opCity = YudhishthiraFlow.queryDelete
+
+postNammaTagTagVerify :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.VerifyNammaTagRequest -> Environment.Flow LYTU.VerifyNammaTagResponse)
+postNammaTagTagVerify _merchantShortId _opCity LYTU.VerifyNammaTagRequest {..} = do
+  case source of
+    LYTU.Application tagStage -> do
+      let val =
+            if useDefaultData
+              then C.getLogicInputDef tagStage
+              else logicData <|> C.getLogicInputDef tagStage
+      case val of
+        Just value -> do
+          -- validating data provided gets parsed to Stage InputData type.
+          validateInputType tagStage value
+          result <- YudhishthiraFlow.verifyEventLogic tagStage [logic] value
+          pure $ LYTU.VerifyNammaTagResponse {executionResult = result, dataUsed = value}
+        Nothing -> throwError $ InvalidRequest "No data supplied and failed to get default for the specified event, check if `getLogicInputDef` is defined for your event in `instance YTC.LogicInputLink YA.ApplicationEvent`"
+    _ -> do
+      throwError $ InvalidRequest $ "Available only for Application events currenlty"
+  where
+    validateInputType tagStage value =
+      case tagStage of
+        LYTU.Login -> do
+          _ :: Domain.Types.Yudhishthira.LoginTagData <- parseOrThrowError value
+          pure ()
+        LYTU.RideEndOffers -> do
+          _ :: Domain.Types.Yudhishthira.EndRideOffersTagData <- parseOrThrowError value
+          pure ()
+        _ -> throwError $ InvalidRequest $ "Only supported for Search, Cancel and EndRide event for now"
+
+    parseOrThrowError value =
+      case A.fromJSON value of
+        A.Success res -> pure res
+        A.Error err -> throwError $ InvalidRequest $ show err
 
 postNammaTagAppDynamicLogicVerify :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> LYTU.AppDynamicLogicReq -> Environment.Flow LYTU.AppDynamicLogicResp)
 postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do

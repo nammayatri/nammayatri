@@ -31,6 +31,8 @@ imports:
   ActionChangeRequest: Lib.Yudhishthira.Types
   UiConfigGetVersionResponse: Lib.Yudhishthira.Types
   UiDevicePlatformReq: Lib.Yudhishthira.Types
+  VerifyNammaTagRequest: Lib.Yudhishthira.Types
+  VerifyNammaTagResponse: Lib.Yudhishthira.Types
 
 
 module: NammaTag
@@ -56,6 +58,13 @@ apis:
         type: APISuccess
       migrate:
         userActionType: ApiAuth APP_BACKEND_MANAGEMENT NAMMA_TAG CREATE_NAMMA_TAG
+  - POST:
+      endpoint: /tag/verify
+      auth: ApiAuthV2
+      request:
+        type: VerifyNammaTagRequest
+      response:
+        type: VerifyNammaTagResponse
   - DELETE:
       endpoint: /tag/delete
       auth: ApiAuthV2

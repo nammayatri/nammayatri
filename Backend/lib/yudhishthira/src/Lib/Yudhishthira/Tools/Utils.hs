@@ -140,16 +140,18 @@ addTagExpiry (LYT.TagNameValue txt) Nothing _now = LYT.TagNameValueExpiry txt
 
 parseTag :: LYT.TagNameValueExpiry -> UTCTime -> Maybe (LYT.TagName, LYT.TagValue, Maybe Hours)
 parseTag (LYT.TagNameValueExpiry txt) now = case T.splitOn "#" txt of
-  (tagName : tagValue : expiredAt : _xs) -> do
+  (tagName : tagValue : expiredAt : _xs) ->
     let validity = parseTagExpiryTxt expiredAt <&> (\expiry -> toHours $ diffUTCTime expiry now)
-        mbParsedTagValue =
-          case T.splitOn "&" tagValue of
-            [tagValueText] -> Just $ LYT.TextValue tagValueText
-            [] -> Nothing
-            tagValueArray -> Just $ LYT.ArrayValue tagValueArray
-    mbParsedTagValue <&> \parsedTagValue -> (LYT.TagName tagName, parsedTagValue, validity)
+     in parseTagValue tagValue <&> \parsedTagValue -> (LYT.TagName tagName, parsedTagValue, validity)
+  (tagName : tagValue : _xs) ->
+    parseTagValue tagValue <&> \parsedTagValue -> (LYT.TagName tagName, parsedTagValue, Nothing)
   _ -> Nothing
   where
+    parseTagValue tagValue =
+      case T.splitOn "&" tagValue of
+        [tagValueText] -> Just $ LYT.TextValue tagValueText
+        [] -> Nothing
+        tagValueArray -> Just $ LYT.ArrayValue tagValueArray
     toHours :: NominalDiffTime -> Hours
     toHours diffTime =
       let (Seconds sec) = nominalDiffTimeToSeconds diffTime
