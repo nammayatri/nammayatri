@@ -796,19 +796,26 @@ addOffersNammaTags ride person = do
       modifiedParsedTags <-
         mapMaybeM
           ( \(LYT.TagName tagName, tagValue, validity) -> do
-              mbOfferCode <- Redis.withCrossAppRedis $ Redis.rPop ("offerCodesPool-" <> tagName)
-              case mbOfferCode of
-                Just offerCode -> do
-                  case tagValue of
-                    LYT.TextValue tagValueText -> pure $ Just (LYT.TagName tagName, LYT.TextValue (tagValueText <> "|" <> offerCode), validity)
-                    _ -> pure Nothing
-                Nothing -> pure Nothing
+              case tagValue of
+                LYT.TextValue tagValueText -> getOfferCodeModifiedTag tagName validity [tagValueText]
+                LYT.ArrayValue tagValueTextArray -> getOfferCodeModifiedTag tagName validity tagValueTextArray
+                _ -> pure Nothing
           )
           newParsedTagsNotInCurrTags
       return $
         map
           (\(tagName, tagValue, tagValidity) -> Yudhishthira.mkTagNameValueExpiry tagName tagValue tagValidity now)
           modifiedParsedTags
+
+    getOfferCodeModifiedTag _ _ [] = pure Nothing
+    getOfferCodeModifiedTag tagName validity tags@(tagValue : _) = do
+      if tagValue == "Valid"
+        then do
+          mbOfferCode <- Redis.withCrossAppRedis $ Redis.rPop ("offerCodesPool-" <> tagValue)
+          case mbOfferCode of
+            Just offerCode -> pure $ Just (LYT.TagName tagName, LYT.ArrayValue (tags <> [offerCode]), validity)
+            Nothing -> pure Nothing
+        else pure Nothing
 
     mkRideData DRide.Ride {updatedAt = updatedAt', ..} = Y.RideData {updatedAt = updatedAt', ..}
 
