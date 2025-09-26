@@ -1898,8 +1898,14 @@ postMerchantConfigOperatingCityCreate :: ShortId DM.Merchant -> Context.City -> 
 postMerchantConfigOperatingCityCreate merchantShortId city req = do
   when (req.city == Context.AnyCity) $ throwError $ InvalidRequest "This Operation is not Allowed For AnyCity"
   baseMerchant <- findMerchantByShortId merchantShortId
+  baseMerchantCity <- case req.baseRequestCity of
+    Just baseMerchantCity -> return baseMerchantCity
+    Nothing -> return city
+  baseRequestedCityMerchant <- case req.baseRequestMerchant of
+    Just merchant -> findMerchantByShortId (ShortId merchant)
+    Nothing -> return baseMerchant
   let baseMerchantId = baseMerchant.id
-  baseOperatingCityId <- CQMOC.getMerchantOpCityId Nothing baseMerchant (Just city)
+  baseOperatingCityId <- CQMOC.getMerchantOpCityId Nothing baseRequestedCityMerchant (Just baseMerchantCity)
   now <- getCurrentTime
 
   let newMerchantId =
