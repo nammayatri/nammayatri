@@ -186,7 +186,7 @@ startRide' :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity
 startRide' (requestorId, merchantId, merchantOpCityId) rideId StartRideReq {..} = do
   requestor <- findPerson requestorId
   let driverReq = RideStart.DriverStartRideReq {requestor, ..}
-  shandle <- withTimeAPI "startRide" "buildStartRideHandle" $ RideStart.buildStartRideHandle merchantId merchantOpCityId
+  shandle <- withTimeAPI "startRide" "buildStartRideHandle" $ RideStart.buildStartRideHandle merchantId merchantOpCityId (Just rideId)
   withTimeAPI "startRide" "driverStartRide" $ RideStart.driverStartRide shandle rideId driverReq
 
 otpRideCreateAndStart :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Maybe Text -> DRide.OTPRideReq -> FlowHandler RideCommon.DriverRideRes
@@ -205,7 +205,7 @@ otpRideCreateAndStart (requestorId, merchantId, merchantOpCityId) clientId DRide
   void $ validateOtpRideStartRestriction driverInfo transporterConfig.otpRideStartRestrictionRadius booking.fromLocation
   ride <- DRide.otpRideCreate requestor rideOtp booking clientId
   let driverReq = RideStart.DriverStartRideReq {rideOtp, requestor, ..}
-  shandle <- RideStart.buildStartRideHandle merchantId merchantOpCityId
+  shandle <- RideStart.buildStartRideHandle merchantId merchantOpCityId (Just ride.id)
   void $ RideStart.driverStartRide shandle ride.id driverReq
   return ride
   where
@@ -229,7 +229,7 @@ endRide :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -
 endRide (requestorId, merchantId, merchantOpCityId) rideId EndRideReq {..} = withFlowHandlerAPI $ do
   requestor <- findPerson requestorId
   let driverReq = RideEnd.DriverEndRideReq {..}
-  shandle <- withTimeAPI "endRide" "buildEndRideHandle" $ RideEnd.buildEndRideHandle merchantId merchantOpCityId
+  shandle <- withTimeAPI "endRide" "buildEndRideHandle" $ RideEnd.buildEndRideHandle merchantId merchantOpCityId (Just rideId)
   withTimeAPI "endRide" "driverEndRide" $ RideEnd.driverEndRide shandle rideId driverReq
 
 cancelRide :: (Id SP.Person, Id Merchant.Merchant, Id DMOC.MerchantOperatingCity) -> Id Ride.Ride -> CancelRideReq -> FlowHandler RideCancel.CancelRideResp
