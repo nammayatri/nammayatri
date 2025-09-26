@@ -465,13 +465,14 @@ getRouteAndDistanceBetweenPoints ::
   LatLong ->
   [LatLong] ->
   Meters ->
+  Id Ride.Ride ->
   m ([LatLong], Meters)
-getRouteAndDistanceBetweenPoints merchantId merchantOpCityId origin destination interpolatedPoints estimatedDistance = do
+getRouteAndDistanceBetweenPoints merchantId merchantOpCityId origin destination interpolatedPoints estimatedDistance rideId = do
   -- somehow interpolated points pushed to redis in reversed order, so we need to reverse it back
   let pickedWaypoints = origin :| (pickWaypoints interpolatedPoints <> [destination])
   logTagInfo "endRide" $ "pickedWaypoints: " <> show pickedWaypoints
   routeResponse <-
-    Maps.getRoutes merchantId merchantOpCityId Nothing $
+    Maps.getRoutes merchantId merchantOpCityId (Just rideId.getId) $
       Maps.GetRoutesReq
         { waypoints = pickedWaypoints,
           mode = Just Maps.CAR,
