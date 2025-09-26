@@ -819,7 +819,7 @@ addOffersNammaTags ride person = do
       if tagValue == "Valid"
         then do
           logDebug "I am inside If dude"
-          mbOfferCode <- Redis.withCrossAppRedis $ Redis.rPop ("offerCodesPool-" <> tagValue)
+          mbOfferCode :: Maybe Text <- Redis.withCrossAppRedis $ Redis.rPop ("offerCodesPool-" <> tagName)
           logDebug $ "mbOfferCode: " <> show mbOfferCode
           case mbOfferCode of
             Just offerCode -> pure $ Just (LYT.TagName tagName, LYT.ArrayValue (tags <> [offerCode]), validity)
