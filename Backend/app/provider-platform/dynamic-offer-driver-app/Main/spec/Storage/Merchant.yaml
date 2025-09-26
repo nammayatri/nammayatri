@@ -1081,7 +1081,7 @@ TransporterConfig:
     distanceWeightage: Maybe Int
     driverCallingOption: "Maybe CallingOption"
     onlineDurationCalculateFrom: Maybe UTCTime # set null to switch off calculation, current UTC timestamp to switch on
-    allowAnalytics : Maybe Bool
+    enableFleetOperatorDashboardAnalytics : Maybe Bool
 
   beamType:
     currency: Maybe Currency
@@ -1504,7 +1504,7 @@ TransporterConfig:
     maxOnlineDurationDays : "10"
     distanceWeightage: "20"
     driverCallingOption: "'AnonymousCall'"
-    allowAnalytics : "false"
+    enableFleetOperatorDashboardAnalytics : "false"
   excludedDefaultQueries:
     - findByPrimaryKey
     - updateByPrimaryKey

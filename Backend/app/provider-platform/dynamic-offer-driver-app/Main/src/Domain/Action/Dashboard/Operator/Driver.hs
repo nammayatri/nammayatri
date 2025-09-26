@@ -418,10 +418,10 @@ postDriverOperatorVerifyJoiningOtp merchantShortId opCity mbAuthId requestorId r
 
       assoc <- SA.makeDriverOperatorAssociation merchant.id merchantOpCityId person.id operator.id.getId (DomainRC.convertTextToUTC (Just "2099-12-12"))
       QDOA.create assoc
-      let needsDriverInfo = transporterConfig.allowAnalytics == Just True || transporterConfig.allowCacheDriverFlowStatus == Just True
+      let needsDriverInfo = transporterConfig.enableFleetOperatorDashboardAnalytics == Just True || transporterConfig.allowCacheDriverFlowStatus == Just True
       when needsDriverInfo $ do
         driverInfo <- QDI.findById person.id >>= fromMaybeM (DriverNotFound person.id.getId)
-        when (transporterConfig.allowAnalytics == Just True) $ do
+        when (transporterConfig.enableFleetOperatorDashboardAnalytics == Just True) $ do
           when driverInfo.enabled $ Analytics.incrementOperatorAnalyticsDriverEnabled transporterConfig operator.id.getId
           Analytics.incrementOperatorAnalyticsApplicationCount transporterConfig operator.id.getId
         when (transporterConfig.allowCacheDriverFlowStatus == Just True) $ do
@@ -443,7 +443,7 @@ getDriverOperatorDashboardAnalyticsAllTime merchantShortId opCity requestorId = 
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   transporterConfig <- findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  when (transporterConfig.allowAnalytics /= Just True) $ throwError (InvalidRequest "Analytics is not allowed for this merchant")
+  when (transporterConfig.enableFleetOperatorDashboardAnalytics /= Just True) $ throwError (InvalidRequest "Analytics is not allowed for this merchant")
   operator <- B.runInReplica $ QP.findById (Id requestorId :: Id DP.Person) >>= fromMaybeM (PersonNotFound requestorId)
   unless (operator.role == DP.OPERATOR) $
     throwError AccessDenied
@@ -489,7 +489,7 @@ getDriverOperatorDashboardAnalytics merchantShortId opCity requestorId fromDay t
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   transporterConfig <- findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  when (transporterConfig.allowAnalytics /= Just True) $ throwError (InvalidRequest "Analytics is not allowed for this merchant")
+  when (transporterConfig.enableFleetOperatorDashboardAnalytics /= Just True) $ throwError (InvalidRequest "Analytics is not allowed for this merchant")
   operator <- B.runInReplica $ QP.findById (Id requestorId :: Id DP.Person) >>= fromMaybeM (PersonNotFound requestorId)
   unless (operator.role == DP.OPERATOR) $ throwError AccessDenied
 

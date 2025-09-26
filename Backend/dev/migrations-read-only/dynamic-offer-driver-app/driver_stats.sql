@@ -83,3 +83,7 @@ ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN blacklist_coin_events
 
 ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN total_request_count integer ;
 ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN acceptation_request_count integer ;
+
+
+------- SQL updates -------
+

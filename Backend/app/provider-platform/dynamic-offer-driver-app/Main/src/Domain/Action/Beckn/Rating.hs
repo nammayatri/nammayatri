@@ -171,7 +171,7 @@ calculateAverageRating personId minimumDriverRatesCount ratingValue mbtotalRatin
     logTagInfo "PersonAPI" "No rating found to calculate"
   let isValidRating = newRatingsCount >= minimumDriverRatesCount
   logTagInfo "PersonAPI" $ "New average rating for person " +|| personId ||+ ""
-  when (transporterConfig.allowAnalytics == Just True) $ Analytics.updateOperatorAnalyticsRatingScoreKey personId transporterConfig ratingValue
+  when (transporterConfig.enableFleetOperatorDashboardAnalytics == Just True) $ Analytics.updateOperatorAnalyticsRatingScoreKey personId transporterConfig ratingValue
   void $ QDriverStats.updateAverageRating personId (Just newRatingsCount) (Just newTotalRatingScore) (Just isValidRating)
 
 buildRating ::

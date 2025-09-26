@@ -63,9 +63,7 @@ createInitialDriverStats currency distanceUnit driverId = do
             safetyPlusEarnings = 0.0,
             safetyPlusRideCount = 0,
             onlineDuration = Seconds 0,
-            blacklistCoinEvents = Nothing,
-            acceptationRequestCount = Just 0,
-            totalRequestCount = Just 0
+            blacklistCoinEvents = Nothing
           }
   createWithKV dStats
 
@@ -256,13 +254,3 @@ incSafetyPlusRiderCountAndEarnings driverId safetyPlusEarnings = do
         ]
         [Se.Is BeamDS.driverId (Se.Eq driverId.getId)]
     Nothing -> pure ()
-
-updateAcceptationRequestCountAndTotalRequestCount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> Int -> Int -> m ()
-updateAcceptationRequestCountAndTotalRequestCount driverId acceptationCount totalRequestCount = do
-  now <- getCurrentTime
-  updateOneWithKV
-    [ Se.Set BeamDS.acceptationRequestCount (Just acceptationCount),
-      Se.Set BeamDS.totalRequestCount (Just totalRequestCount),
-      Se.Set BeamDS.updatedAt now
-    ]
-    [Se.Is BeamDS.driverId (Se.Eq driverId.getId)]

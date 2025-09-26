@@ -54,6 +54,6 @@ getTotalDriverCountByOperatorIdInDateRange operatorId from to = do
     CH.findAll $
       CH.select_ (\assoc -> CH.aggregate $ CH.count_ (assoc.driverId)) $
         CH.filter_
-          (\assoc _ -> assoc.operatorId CH.==. operatorId CH.&&. assoc.isActive CH.==. True CH.&&. assoc.associatedOn CH.>=. from CH.&&. assoc.associatedOn CH.<=. to)
+          (\assoc -> assoc.operatorId CH.==. operatorId CH.&&. assoc.isActive CH.==. True CH.&&. assoc.associatedOn CH.>=. from CH.&&. assoc.associatedOn CH.<=. to)
           (CH.all_ @CH.APP_SERVICE_CLICKHOUSE driverOperatorAssociationTTable)
   pure $ fromMaybe 0 (listToMaybe res)

@@ -83,7 +83,7 @@ sumStatsByFleetOperatorId fleetOperatorId = do
               )
         )
         $ CH.filter_
-          ( \fos _ -> fos.fleetOperatorId CH.==. fleetOperatorId
+          ( \fos -> fos.fleetOperatorId CH.==. fleetOperatorId
           )
           (CH.all_ @CH.APP_SERVICE_CLICKHOUSE fleetOperatorStatsTTable)
   pure $ maybe (OperatorStatsAggregated Nothing Nothing Nothing Nothing Nothing) mkOperatorStatsAggregated (listToMaybe res)

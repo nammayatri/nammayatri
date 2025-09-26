@@ -228,15 +228,15 @@ updateOperatorAnalyticsAcceptationAndTotalRequestCount ::
   ) =>
   Id DP.Person ->
   TC.TransporterConfig ->
-  Maybe Int ->
-  Maybe Int ->
+  Bool ->
+  Bool ->
   m ()
-updateOperatorAnalyticsAcceptationAndTotalRequestCount driverId transporterConfig mbAcceptationCount mbTotalRequestCount = do
+updateOperatorAnalyticsAcceptationAndTotalRequestCount driverId transporterConfig incrementAcceptationCount incrementTotalRequestCount = do
   mbOperatorId <- findOperatorIdForDriver driverId
   when (isNothing mbOperatorId) $ logTagInfo "AnalyticsUpdateAcceptationAndTotalRequestCount" $ "No operator found for driver: " <> show driverId
   whenJust mbOperatorId $ \operatorId -> do
-    when (isJust mbAcceptationCount) $ updateAcceptationCount operatorId
-    when (isJust mbTotalRequestCount) $ updateTotalRequestCount operatorId
+    when incrementAcceptationCount $ updateAcceptationCount operatorId
+    when incrementTotalRequestCount $ updateTotalRequestCount operatorId
   where
     updateAcceptationCount operatorId = do
       let acceptationCountKey = makeOperatorAnalyticsKey operatorId ACCEPTATION_COUNT
@@ -350,7 +350,7 @@ decrementOperatorAnalyticsDriverEnabled transporterConfig operatorId = do
 
 updateEnabledVerifiedStateWithAnalytics :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, Redis.HedisFlow m r, HasField "serviceClickhouseCfg" r CH.ClickhouseCfg, HasField "serviceClickhouseEnv" r CH.ClickhouseEnv) => Maybe DI.DriverInformation -> TC.TransporterConfig -> Id DP.Person -> Bool -> Maybe Bool -> m ()
 updateEnabledVerifiedStateWithAnalytics mbDriverInfoData transporterConfig driverId isEnabled isVerified = do
-  when (transporterConfig.allowAnalytics == Just True) $ do
+  when (transporterConfig.enableFleetOperatorDashboardAnalytics == Just True) $ do
     mbDriverInfo <- case mbDriverInfoData of
       Just driverInfoData -> pure (Just driverInfoData)
       Nothing -> QDI.findById driverId

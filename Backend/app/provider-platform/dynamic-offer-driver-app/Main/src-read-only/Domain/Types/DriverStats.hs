@@ -12,8 +12,7 @@ import qualified Lib.DriverCoins.Types
 import qualified Tools.Beam.UtilsTH
 
 data DriverStats = DriverStats
-  { acceptationRequestCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
-    blacklistCoinEvents :: Kernel.Prelude.Maybe [Lib.DriverCoins.Types.DriverCoinsFunctionType],
+  { blacklistCoinEvents :: Kernel.Prelude.Maybe [Lib.DriverCoins.Types.DriverCoinsFunctionType],
     bonusEarned :: Kernel.Types.Common.HighPrecMoney,
     coinCovertedToCashLeft :: Kernel.Types.Common.HighPrecMoney,
     currency :: Kernel.Types.Common.Currency,
@@ -39,7 +38,6 @@ data DriverStats = DriverStats
     totalRatingScore :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     totalRatings :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     totalReferralCounts :: Kernel.Prelude.Int,
-    totalRequestCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     totalRides :: Kernel.Prelude.Int,
     totalRidesAssigned :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     totalValidActivatedRides :: Kernel.Prelude.Int,

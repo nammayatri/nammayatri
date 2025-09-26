@@ -62,10 +62,10 @@ endDriverAssociationsIfAllowed merchant merchantOpCityId transporterConfig drive
       then forM_ existingFDAssociations $ \existingAssociation -> do
         logInfo $ "End existing fleet driver association: fleetOwnerId: " <> existingAssociation.fleetOwnerId <> "driverId: " <> existingAssociation.driverId.getId
         QFDA.endFleetDriverAssociation existingAssociation.fleetOwnerId existingAssociation.driverId
-        let needDriverInfo = transporterConfig.allowAnalytics == Just True || transporterConfig.allowCacheDriverFlowStatus == Just True
+        let needDriverInfo = transporterConfig.enableFleetOperatorDashboardAnalytics == Just True || transporterConfig.allowCacheDriverFlowStatus == Just True
         when needDriverInfo $ do
           driverInfo <- QDI.findById existingAssociation.driverId >>= fromMaybeM (DriverNotFound existingAssociation.driverId.getId)
-          when (transporterConfig.allowAnalytics == Just True) $ do
+          when (transporterConfig.enableFleetOperatorDashboardAnalytics == Just True) $ do
             mbOperator <- QFOA.findByFleetOwnerId existingAssociation.fleetOwnerId True
             when (isNothing mbOperator) $ logTagError "AnalyticsRemoveDriver" "Operator not found for fleet owner"
             whenJust mbOperator $ \operator -> do
@@ -90,10 +90,10 @@ endDriverAssociationsIfAllowed merchant merchantOpCityId transporterConfig drive
       then forM_ existingDOAssociations $ \existingAssociation -> do
         logInfo $ "End existing operator driver association: operatorId: " <> existingAssociation.operatorId <> "driverId: " <> existingAssociation.driverId.getId
         QDOA.endOperatorDriverAssociation existingAssociation.operatorId existingAssociation.driverId
-        let needDriverInfo = transporterConfig.allowAnalytics == Just True || transporterConfig.allowCacheDriverFlowStatus == Just True
+        let needDriverInfo = transporterConfig.enableFleetOperatorDashboardAnalytics == Just True || transporterConfig.allowCacheDriverFlowStatus == Just True
         when needDriverInfo $ do
           driverInfo <- QDI.findById existingAssociation.driverId >>= fromMaybeM (DriverNotFound existingAssociation.driverId.getId)
-          when (transporterConfig.allowAnalytics == Just True) $ do
+          when (transporterConfig.enableFleetOperatorDashboardAnalytics == Just True) $ do
             when driverInfo.enabled $ Analytics.decrementOperatorAnalyticsDriverEnabled transporterConfig existingAssociation.operatorId
             Analytics.decrementOperatorAnalyticsApplicationCount transporterConfig existingAssociation.operatorId
           when (transporterConfig.allowCacheDriverFlowStatus == Just True) $ do
