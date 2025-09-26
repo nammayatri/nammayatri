@@ -236,6 +236,9 @@ window.onMerchantEvent = function (_event, globalPayload) {
     if (window.merchantID == "YATRI") {
       window.merchantID = "NAMMAYATRI";
     }
+    else if (window.merchantID == "MOBILITY_YO") {
+      window.merchantID = "YATRISATHI";
+    }
     console.log("MID",window.merchantID);
     try {
       if (
