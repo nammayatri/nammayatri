@@ -39,6 +39,10 @@ updateByPrimaryKey (Domain.Types.DriverWallet.DriverWallet {..}) = do
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),
       Se.Set Beam.driverPayable driverPayable,
+      Se.Set Beam.financialYearCollectionAmount financialYearCollectionAmount,
+      Se.Set Beam.financialYearStart financialYearStart,
+      Se.Set Beam.financialYearTdsBaseAmount financialYearTdsBaseAmount,
+      Se.Set Beam.financialYearTdsDeduction financialYearTdsDeduction,
       Se.Set Beam.gstDeduction gstDeduction,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId merchantOperatingCityId),
@@ -47,6 +51,8 @@ updateByPrimaryKey (Domain.Types.DriverWallet.DriverWallet {..}) = do
       Se.Set Beam.payoutStatus payoutStatus,
       Se.Set Beam.rideId (Kernel.Types.Id.getId <$> rideId),
       Se.Set Beam.runningBalance runningBalance,
+      Se.Set Beam.tdsBaseAmount tdsBaseAmount,
+      Se.Set Beam.tdsDeduction tdsDeduction,
       Se.Set Beam.transactionType transactionType,
       Se.Set Beam.updatedAt _now
     ]

@@ -76,6 +76,7 @@ import qualified Lib.Webhook.Types.Webhook as DW
 import Servant (BasicAuthData)
 import SharedLogic.Allocator
 import qualified SharedLogic.DriverFee as SLDriverFee
+import qualified SharedLogic.DriverWallet as SDW
 import qualified SharedLogic.EventTracking as SEVT
 import SharedLogic.Merchant
 import qualified SharedLogic.Merchant as SMerchant
@@ -90,7 +91,6 @@ import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverInformationExtra as QDIExtra
 import Storage.Queries.DriverPlan (findByDriverIdWithServiceName)
 import qualified Storage.Queries.DriverPlan as QDP
-import qualified Storage.Queries.DriverWallet as QDW
 import qualified Storage.Queries.Invoice as QIN
 import qualified Storage.Queries.Mandate as QM
 import qualified Storage.Queries.Notification as QNTF
@@ -259,30 +259,10 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
           driverFees <- QDF.findAllByDriverFeeIds driverFeeIds
           let nonClearedDriverFees = filter (\df -> df.status /= CLEARED) driverFees
           forM_ nonClearedDriverFees $ \driverFee -> do
-            Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey driver.id.getId) 10 10 $ do
-              driverInfo <- QDI.findById driver.id >>= fromMaybeM (PersonNotFound driver.id.getId)
-              let newBalance = fromMaybe 0 driverInfo.walletBalance + driverFee.totalEarnings
-              QDI.updateWalletBalance (Just newBalance) driver.id
-              newId <- generateGUID
-              let transaction =
-                    DW.DriverWallet
-                      { id = newId,
-                        merchantId = Just merchantId,
-                        merchantOperatingCityId = driver.merchantOperatingCityId,
-                        driverId = driver.id,
-                        rideId = Nothing,
-                        transactionType = DW.TOPUP,
-                        collectionAmount = Nothing,
-                        gstDeduction = Nothing,
-                        merchantPayable = Nothing,
-                        driverPayable = Just driverFee.totalEarnings,
-                        runningBalance = newBalance,
-                        payoutOrderId = Nothing,
-                        payoutStatus = Nothing,
-                        createdAt = now,
-                        updatedAt = now
-                      }
-              QDW.create transaction
+            Redis.withWaitOnLockRedisWithExpiry (SDW.makeWalletRunningBalanceLockKey driver.id.getId) 10 10 $ do
+              transporterConfig <- SCTC.findByMerchantOpCityId driver.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound driver.merchantOperatingCityId.getId)
+              SDW.withDriverWalletAndFYEarningsStore driver.id transporterConfig SDW.emptyDriverWalletCollection $
+                mkDriverWallet driverFee
               QDF.updateStatusByIds CLEARED [driverFee.id] now
               let notificationTitle = "Wallet Top-up Successful"
                   notificationMessage = "Your wallet has been topped up with Rs." <> show driverFee.totalEarnings
@@ -313,6 +293,26 @@ juspayWebhookHandler merchantShortId mbOpCity mbServiceName authData value = do
     Payment.BadStatusResp -> pure ()
   pure Ack
   where
+    mkDriverWallet ::
+      Domain.Types.DriverFee.DriverFee ->
+      Maybe DW.DriverWallet ->
+      SDW.DriverWalletCollection ->
+      SDW.DriverWalletInfo ->
+      DW.DriverWallet
+    mkDriverWallet driverFee lastTransaction SDW.DriverWalletCollection {..} SDW.DriverWalletInfo {..} = do
+      let lastRunningBalance = maybe 0 (.runningBalance) lastTransaction
+          newBalance = lastRunningBalance + driverFee.totalEarnings
+      DW.DriverWallet
+        { rideId = Nothing,
+          transactionType = DW.TOPUP,
+          merchantPayable = Nothing,
+          driverPayable = Just driverFee.totalEarnings,
+          runningBalance = newBalance,
+          payoutOrderId = Nothing,
+          payoutStatus = Nothing,
+          ..
+        }
+
     getInvoicesAndServiceWithServiceConfigByOrderId ::
       (MonadFlow m, CacheFlow m r, EsqDBReplicaFlow m r, EsqDBFlow m r) =>
       DOrder.PaymentOrder ->

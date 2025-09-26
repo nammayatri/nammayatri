@@ -22,12 +22,18 @@ data TransactionDetails = TransactionDetails
   { collectionAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     createdAt :: Data.Time.UTCTime,
     driverPayable :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    financialYearCollectionAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    financialYearStart :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    financialYearTdsBaseAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    financialYearTdsDeduction :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     fromLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location,
     gstDeduction :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     id :: Kernel.Types.Id.Id Domain.Types.DriverWallet.DriverWallet,
     merchantPayable :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     rideId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Ride.Ride),
     runningBalance :: Kernel.Types.Common.HighPrecMoney,
+    tdsBaseAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    tdsDeduction :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     toLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location,
     transactionType :: Domain.Types.DriverWallet.TransactionType
   }

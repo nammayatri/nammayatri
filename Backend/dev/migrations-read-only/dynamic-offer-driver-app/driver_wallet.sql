@@ -29,3 +29,14 @@ ALTER TABLE atlas_driver_offer_bpp.driver_wallet ADD COLUMN payout_status text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_wallet ADD COLUMN collection_amount numeric(30,2) ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_wallet ADD COLUMN tds_deduction numeric(30,2) ;
+ALTER TABLE atlas_driver_offer_bpp.driver_wallet ADD COLUMN tds_base_amount numeric(30,2) ;
+ALTER TABLE atlas_driver_offer_bpp.driver_wallet ADD COLUMN financial_year_tds_deduction numeric(30,2) ;
+ALTER TABLE atlas_driver_offer_bpp.driver_wallet ADD COLUMN financial_year_tds_base_amount numeric(30,2) ;
+ALTER TABLE atlas_driver_offer_bpp.driver_wallet ADD COLUMN financial_year_start integer ;
+ALTER TABLE atlas_driver_offer_bpp.driver_wallet ADD COLUMN financial_year_collection_amount numeric(30,2) ;
