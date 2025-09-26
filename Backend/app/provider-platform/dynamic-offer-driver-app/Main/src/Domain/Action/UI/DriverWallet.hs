@@ -77,7 +77,7 @@ getWalletTransactions (mbPersonId, _, _) mbFromDate mbToDate mbTransactionType m
       toDate = fromMaybe now mbToDate
       limit = min maxLimit . fromMaybe 10 $ mbLimit
       offset = fromMaybe 0 mbOffset
-  transactions <- QDW.findAllByDriverIdRangeAndTransactionType driverId fromDate toDate mbTransactionType limit offset
+  transactions <- QDW.findAllByDriverIdRangeAndTransactionType driverId fromDate toDate mbTransactionType (Just limit) (Just offset)
   let rideIds = mapMaybe (\dw -> if dw.transactionType == DW.RIDE_TRANSACTION then dw.rideId else Nothing) transactions
   (rideMap, bookingMap) <- Utils.fetchRideLocationData rideIds
   transactionsAPIEntity <-
@@ -121,24 +121,29 @@ postWalletPayout (mbPersonId, merchantId, mocId) = do
     driverInfo <- QDI.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
     let walletBalance = fromMaybe 0 driverInfo.walletBalance
     let minPayoutAmount = fromMaybe 0 transporterConfig.minimumWalletPayoutAmount
-    when (walletBalance < minPayoutAmount) $ throwError $ InvalidRequest ("Minimum payout amount is " <> show minPayoutAmount)
-    utcTime <- getCurrentTime
+    utcTimeNow <- getCurrentTime
     let timeDiff = secondsToNominalDiffTime transporterConfig.timeDiffFromUtc
-        localTime = addUTCTime timeDiff utcTime
+        localTime = addUTCTime timeDiff utcTimeNow
         localDay = Data.Time.utctDay localTime
         startOfLocalDay = Data.Time.UTCTime localDay 0
         endOfLocalDay = Data.Time.UTCTime localDay 86399
         utcStartOfDay = addUTCTime (negate timeDiff) startOfLocalDay
         utcEndOfDay = addUTCTime (negate timeDiff) endOfLocalDay
     whenJust transporterConfig.maxWalletPayoutsPerDay $ \maxPayoutsPerDay -> do
-      payoutsToday <- QDW.findAllByDriverIdRangeAndTransactionType driverId utcStartOfDay utcEndOfDay (Just DW.PAYOUT) (maxPayoutsPerDay + 1) 0
+      payoutsToday <- QDW.findAllByDriverIdRangeAndTransactionType driverId utcStartOfDay utcEndOfDay (Just DW.PAYOUT) (Just $ maxPayoutsPerDay + 1) Nothing
       when (length payoutsToday >= maxPayoutsPerDay) $ throwError $ InvalidRequest "Maximum payouts per day reached"
     let mbVpa = driverInfo.payoutVpa
     vpa <- fromMaybeM (InternalError $ "Payout vpa not present for " <> driverId.getId) mbVpa
     payoutId <- generateGUID
     phoneNo <- mapM decrypt person.mobileNumber
     payoutServiceName <- Payout.decidePayoutService (fromMaybe (DEMSC.PayoutService TPayout.Juspay) subscriptionConfig.payoutServiceName) person.clientSdkVersion person.merchantOperatingCityId
-    let createPayoutOrderReq = mkPayoutReq person vpa payoutId phoneNo walletBalance
+    let cutOffDate = Data.Time.addDays (negate (fromIntegral $ fromMaybe 0 transporterConfig.payoutCutOffDays)) localDay
+        utcCutOffTime = addUTCTime (negate timeDiff) (Data.Time.UTCTime cutOffDate 0)
+    transactionsAfterCutoff <- QDW.findAllByDriverIdRangeAndTransactionType driverId utcCutOffTime utcTimeNow Nothing Nothing Nothing
+    let unsettledReceivables = sum $ mapMaybe (.merchantPayable) transactionsAfterCutoff
+    let payoutableBalance = walletBalance - unsettledReceivables
+    when (payoutableBalance < minPayoutAmount) $ throwError $ InvalidRequest ("Minimum payout amount is " <> show minPayoutAmount)
+    let createPayoutOrderReq = mkPayoutReq person vpa payoutId phoneNo payoutableBalance
         entityName = DPayment.DRIVER_WALLET_TRANSACTION
         createPayoutOrderCall = Payout.createPayoutOrder person.merchantId person.merchantOperatingCityId payoutServiceName (Just person.id.getId)
     merchantOperatingCity <- CQMOC.findById (Kernel.Types.Id.cast person.merchantOperatingCityId) >>= fromMaybeM (MerchantOperatingCityNotFound person.merchantOperatingCityId.getId)
@@ -158,17 +163,17 @@ postWalletPayout (mbPersonId, merchantId, mocId) = do
                   collectionAmount = Nothing,
                   gstDeduction = Nothing,
                   merchantPayable = Nothing,
-                  driverPayable = Just (-1 * walletBalance),
-                  runningBalance = 0,
+                  driverPayable = Just (-1 * payoutableBalance),
+                  runningBalance = unsettledReceivables,
                   payoutOrderId = Just payoutOrder.id,
                   payoutStatus = Just DW.INITIATED,
-                  createdAt = utcTime,
-                  updatedAt = utcTime
+                  createdAt = utcTimeNow,
+                  updatedAt = utcTimeNow
                 }
         QDW.create transaction
-        QDI.updateWalletBalance (Just 0) driverId
+        QDI.updateWalletBalance (Just newWalletBalance) driverId
         let notificationTitle = "Payout Initiated"
-            notificationMessage = "Your payout of " <> show walletBalance <> " has been initiated."
+            notificationMessage = "Your payout of " <> show payoutableBalance <> " has been initiated."
         Notify.sendNotificationToDriver person.merchantOperatingCityId FCM.SHOW Nothing FCM.PAYOUT_INITIATED notificationTitle notificationMessage person person.deviceToken
   pure APISuccess.Success
 

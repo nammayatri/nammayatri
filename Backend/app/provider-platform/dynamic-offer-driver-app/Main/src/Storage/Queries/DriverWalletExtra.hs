@@ -26,8 +26,8 @@ import qualified Storage.Beam.DriverWallet as BeamDW
 import Storage.Queries.OrphanInstances.DriverWallet ()
 
 -- Extra code goes here --
-findAllByDriverIdRangeAndTransactionType :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Driver -> UTCTime -> UTCTime -> Maybe TransactionType -> Int -> Int -> m [DriverWallet]
-findAllByDriverIdRangeAndTransactionType driverId fromDate toDate transactionType limit offset = do
+findAllByDriverIdRangeAndTransactionType :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Id Driver -> UTCTime -> UTCTime -> Maybe TransactionType -> Maybe Int -> Maybe Int -> m [DriverWallet]
+findAllByDriverIdRangeAndTransactionType driverId fromDate toDate transactionType mbLimit mbOffset = do
   findAllWithOptionsKV
     [ Se.And
         ( [ Se.Is BeamDW.driverId $ Se.Eq $ driverId.getId,
@@ -38,8 +38,8 @@ findAllByDriverIdRangeAndTransactionType driverId fromDate toDate transactionTyp
         )
     ]
     (Se.Desc BeamDW.createdAt)
-    (Just limit)
-    (Just offset)
+    mbLimit
+    mbOffset
 
 findLatestByDriverId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Id Driver -> m (Maybe DriverWallet)
 findLatestByDriverId driverId =

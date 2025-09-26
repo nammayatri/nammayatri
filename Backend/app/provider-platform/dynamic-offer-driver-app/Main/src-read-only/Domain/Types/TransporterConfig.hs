@@ -204,6 +204,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     overlayBatchSize :: Kernel.Prelude.Int,
     pastDaysRideCounter :: Kernel.Prelude.Int,
     payoutBatchLimit :: Kernel.Prelude.Int,
+    payoutCutOffDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     pickupLocThreshold :: Kernel.Types.Common.Meters,
     placeNameCacheExpiryDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     popupDelayToAddAsPenalty :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
