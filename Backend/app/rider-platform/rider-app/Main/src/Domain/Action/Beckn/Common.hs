@@ -759,22 +759,23 @@ addOffersNammaTags ::
     CoreMetrics m,
     EsqDBFlow m r,
     CacheFlow m r,
-    EncFlow m r
+    EncFlow m r,
+    HasKafkaProducer r
   ) =>
   DRide.Ride ->
   DPerson.Person ->
   m ()
 addOffersNammaTags ride person = do
-  decrptedMobileNumber <- mapM decrypt person.mobileNumber >>= fromMaybeM (InternalError "Customer has no mobile number")
+  decryptedMobileNumber <- mapM decrypt person.mobileNumber >>= fromMaybeM (InternalError "Customer has no mobile number")
   now <- getCurrentTime
   let rideData = mkRideData ride
-      customerData = Y.CustomerData {mobileNumber = decrptedMobileNumber, gender = person.gender}
+      customerData = Y.CustomerData {mobileNumber = decryptedMobileNumber, gender = person.gender}
   tags <- Yudhishthira.computeNammaTagsWithExpiry Yudhishthira.RideEndOffers (Y.EndRideOffersTagData customerData rideData)
   newTags <- modifiedNewNammaTags tags (fromMaybe [] person.customerNammaTags) now
-  logDebug $ "newTags: " <> show newTags
   when (not $ null newTags) $ do
     QP.updateCustomerTags (Just $ (fromMaybe [] person.customerNammaTags) <> newTags) person.id
     pushToKafka (RideEndOffersKafkaData ride.id person.id newTags now) "customer-ride-end-offers" person.id.getId
+    Notify.notifyOnRideEndOffer person
   where
     modifiedNewNammaTags newTags currTags now = do
       let currValidParsedTags =
@@ -794,10 +795,6 @@ addOffersNammaTags ride person = do
               currTags
           newParsedTags = mapMaybe (\tag -> Yudhishthira.parseTag tag now) newTags
           newParsedTagsNotInCurrTags = filter (\(tagName, _, _) -> tagName `notElem` (currValidParsedTags <&> (\(tagName', _, _) -> tagName'))) newParsedTags
-      logDebug $ "currValidParsedTags: " <> show currValidParsedTags
-      logDebug $ "newTags: " <> show newTags
-      logDebug $ "newParsedTags: " <> show newParsedTags
-      logDebug $ "newParsedTagsNotInCurrTags: " <> show newParsedTagsNotInCurrTags
       modifiedParsedTags <-
         mapMaybeM
           ( \(LYT.TagName tagName, tagValue, validity) -> do
@@ -807,7 +804,6 @@ addOffersNammaTags ride person = do
                 _ -> pure Nothing
           )
           newParsedTagsNotInCurrTags
-      logDebug $ "modifiedParsedTags: " <> show modifiedParsedTags
       return $
         map
           (\(tagName, tagValue, tagValidity) -> Yudhishthira.mkTagNameValueExpiry tagName tagValue tagValidity now)
@@ -815,18 +811,13 @@ addOffersNammaTags ride person = do
 
     getOfferCodeModifiedTag _ _ [] = pure Nothing
     getOfferCodeModifiedTag tagName validity tags@(tagValue : _) = do
-      logDebug $ "getOfferCodeModifiedTag: " <> show tagName <> " " <> show validity <> " " <> show tags <> " " <> tagValue
       if tagValue == "Valid"
         then do
-          logDebug "I am inside If dude"
           mbOfferCode :: Maybe Text <- Redis.withCrossAppRedis $ Redis.rPop ("offerCodesPool-" <> tagName)
-          logDebug $ "mbOfferCode: " <> show mbOfferCode
           case mbOfferCode of
             Just offerCode -> pure $ Just (LYT.TagName tagName, LYT.ArrayValue (tags <> [offerCode]), validity)
             Nothing -> pure Nothing
-        else do
-          logDebug "I am inside Else dude"
-          pure Nothing
+        else pure Nothing
 
     mkRideData DRide.Ride {updatedAt = updatedAt', ..} = Y.RideData {updatedAt = updatedAt', ..}
 
