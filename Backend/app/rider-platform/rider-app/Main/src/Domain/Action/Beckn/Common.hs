@@ -793,6 +793,9 @@ addOffersNammaTags ride person = do
               currTags
           newParsedTags = mapMaybe (\tag -> Yudhishthira.parseTag tag now) newTags
           newParsedTagsNotInCurrTags = filter (\(tagName, _, _) -> tagName `notElem` (currValidParsedTags <&> (\(tagName', _, _) -> tagName'))) newParsedTags
+      logDebug $ "currValidParsedTags: " <> show currValidParsedTags
+      logDebug $ "newParsedTags: " <> show newParsedTags
+      logDebug $ "newParsedTagsNotInCurrTags: " <> show newParsedTagsNotInCurrTags
       modifiedParsedTags <-
         mapMaybeM
           ( \(LYT.TagName tagName, tagValue, validity) -> do
@@ -802,6 +805,7 @@ addOffersNammaTags ride person = do
                 _ -> pure Nothing
           )
           newParsedTagsNotInCurrTags
+      logDebug $ "modifiedParsedTags: " <> show modifiedParsedTags
       return $
         map
           (\(tagName, tagValue, tagValidity) -> Yudhishthira.mkTagNameValueExpiry tagName tagValue tagValidity now)
@@ -809,6 +813,7 @@ addOffersNammaTags ride person = do
 
     getOfferCodeModifiedTag _ _ [] = pure Nothing
     getOfferCodeModifiedTag tagName validity tags@(tagValue : _) = do
+      logDebug $ "getOfferCodeModifiedTag: " <> show tagName <> " " <> show validity <> " " <> show tags
       if tagValue == "Valid"
         then do
           mbOfferCode <- Redis.withCrossAppRedis $ Redis.rPop ("offerCodesPool-" <> tagValue)
