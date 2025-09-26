@@ -44,7 +44,7 @@ data GetCongestionChargeReq = GetCongestionChargeReq
     pickupFare :: HighPrecMoney,
     maxDAFare :: Maybe HighPrecMoney
   }
-  deriving (Generic, ToJSON, FromJSON, ToSchema)
+  deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
 data GetCongestionChargeRes = GetCongestionChargeRes
   { congestionChargeMultiplier :: Maybe FarePolicyD.CongestionChargeMultiplier

@@ -22,6 +22,7 @@ import qualified BecknV2.OnDemand.Utils.Common
 import qualified Data.Text
 import qualified Domain.Action.Beckn.Search
 import EulerHS.Prelude hiding (id)
+import Kernel.External.Encryption
 import qualified Kernel.External.Maps
 import qualified Kernel.Types.App
 import qualified Kernel.Types.Common
@@ -29,7 +30,7 @@ import qualified Kernel.Types.Registry.Subscriber
 import Kernel.Utils.Common (fromMaybeM, type (:::))
 import Tools.Error
 
-buildSearchReq :: (Kernel.Types.App.HasFlowEnv m r '["_version" ::: Data.Text.Text]) => Data.Text.Text -> Kernel.Types.Registry.Subscriber.Subscriber -> BecknV2.OnDemand.Types.SearchReqMessage -> BecknV2.OnDemand.Types.Context -> m Domain.Action.Beckn.Search.DSearchReq
+buildSearchReq :: (Kernel.Types.App.HasFlowEnv m r '["_version" ::: Data.Text.Text], EncFlow m r) => Data.Text.Text -> Kernel.Types.Registry.Subscriber.Subscriber -> BecknV2.OnDemand.Types.SearchReqMessage -> BecknV2.OnDemand.Types.Context -> m Domain.Action.Beckn.Search.DSearchReq
 buildSearchReq messageId subscriber req context = do
   now <- Kernel.Types.Common.getCurrentTime
   let bapId_ = subscriber.subscriber_id
@@ -37,7 +38,6 @@ buildSearchReq messageId subscriber req context = do
       customerLanguage_ = Beckn.OnDemand.Utils.Search.buildCustomerLanguage req
       customerNammaTags_ = Beckn.OnDemand.Utils.Search.buildCustomerNammaTags req
       isDashboardRequest_ = Beckn.OnDemand.Utils.Search.checkIfDashboardSearch req
-      customerPhoneNum_ = Beckn.OnDemand.Utils.Search.buildCustomerPhoneNumber req
       device_ = Nothing
       disabilityTag_ = Beckn.OnDemand.Utils.Search.buildDisabilityTag req
       isReallocationEnabled_ = Beckn.OnDemand.Utils.Search.getIsReallocationEnabled req
@@ -54,6 +54,7 @@ buildSearchReq messageId subscriber req context = do
       pickupTime_ = fromMaybe now $ Beckn.OnDemand.Utils.Search.getPickUpTime req
       isMultimodalSearch = Beckn.OnDemand.Utils.Search.getIsMultimodalSearch req
   bapCountry_ <- Beckn.OnDemand.Utils.Common.getContextCountry context
+  customerPhoneNum_ <- getPhoneNumberFromTag $ Beckn.OnDemand.Utils.Search.buildCustomerPhoneNumber req
   dropAddrress_ <- Beckn.OnDemand.Utils.Search.getDropOffLocation req & tfAddress
   dropLocation_ <- tfLatLong `mapM` Beckn.OnDemand.Utils.Search.getDropOffLocationGps req
   stopLocations <- Beckn.OnDemand.Utils.Search.getIntermediateStopLocations req
@@ -117,3 +118,28 @@ buildLocation location = do
       { address,
         gps = latLong
       }
+
+getIsReserveRide :: Spec.SearchReqMessage -> Maybe Bool
+getIsReserveRide req = do
+  intent <- req.searchReqMessageIntent
+  fulfillment <- intent.intentFulfillment
+  tags <- fulfillment.fulfillmentTags
+  readMaybe . T.unpack =<< Utils.getTagV2 Tags.SEARCH_REQUEST_INFO Tags.RESERVED_RIDE_TAG (Just tags)
+
+getReserveRideEstimate :: Spec.SearchReqMessage -> Maybe Bool -> Maybe DBppEstimate.BppEstimate
+getReserveRideEstimate req isReserveRide = do
+  if isReserveRide == Just True
+    then do
+      intent <- req.searchReqMessageIntent
+      fulfillment <- intent.intentFulfillment
+      tags <- fulfillment.fulfillmentTags
+      decodeFromText =<< Utils.getTagV2 Tags.SEARCH_REQUEST_INFO Tags.RESERVED_PRICING_TAG (Just tags)
+    else Nothing
+
+getPhoneNumberFromTag :: (Kernel.Types.App.HasFlowEnv m r '["_version" ::: Data.Text.Text], EncFlow m r) => Maybe Text -> m (Maybe Text)
+getPhoneNumberFromTag customerPhoneNum_ = do
+  case customerPhoneNum_ of
+    Just phoneNumber ->
+      mapM decrypt $ textToEncryptedHashed phoneNumber
+    Nothing -> do
+      return Nothing

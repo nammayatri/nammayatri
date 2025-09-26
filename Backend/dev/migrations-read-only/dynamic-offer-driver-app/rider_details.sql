@@ -44,3 +44,8 @@ ALTER TABLE atlas_driver_offer_bpp.rider_details ADD COLUMN is_flag_confirmed bo
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.rider_details ADD COLUMN merchant_operating_city_id character varying(36) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.rider_details ADD COLUMN bap_id character varying(255) ;

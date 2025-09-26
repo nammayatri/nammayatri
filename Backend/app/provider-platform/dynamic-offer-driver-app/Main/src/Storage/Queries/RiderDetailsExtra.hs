@@ -22,6 +22,11 @@ findByMobileNumberAndMerchant mobileNumber_ (Id merchantId) = do
   mobileNumberDbHash <- getDbHash mobileNumber_
   findOneWithKV [Se.And [Se.Is BeamRD.mobileNumberHash $ Se.Eq mobileNumberDbHash, Se.Is BeamRD.merchantId $ Se.Eq merchantId]]
 
+findByMobileNumberAndMerchantAndBapId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => Text -> Id Merchant -> Text -> m (Maybe RiderDetails)
+findByMobileNumberAndMerchantAndBapId mobileNumber_ (Id merchantId) bapId_ = do
+  mobileNumberDbHash <- getDbHash mobileNumber_
+  findOneWithKV [Se.And [Se.Is BeamRD.mobileNumberHash $ Se.Eq mobileNumberDbHash, Se.Is BeamRD.merchantId $ Se.Eq merchantId, Se.Is BeamRD.bapId $ Se.Eq (Just bapId_)]]
+
 findByMobileNumberHashAndMerchant :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DbHash -> Id Merchant -> m (Maybe RiderDetails)
 findByMobileNumberHashAndMerchant mobileNumberDbHash (Id merchantId) = findOneWithKV [Se.And [Se.Is BeamRD.mobileNumberHash $ Se.Eq mobileNumberDbHash, Se.Is BeamRD.merchantId $ Se.Eq merchantId]]
 

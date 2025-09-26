@@ -266,6 +266,8 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
 
   let isDashboardRequest = isDashboardRequest_ || isNothing quotesUnifiedFlow -- Don't get confused with this, it is done to handle backward compatibility so that in both dashboard request or mobile app request without quotesUnifiedFlow can be consider same
   person <- QP.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  let phoneNumber = fmap encryptedHashedToText person.mobileNumber
+  logDebug $ "phoneNumber: to debug" <> fromMaybe "No Mobile Number" phoneNumber
   tag <- case person.hasDisability of
     Just True -> B.runInReplica $ fmap (.tag) <$> PD.findByPersonId personId
     _ -> return Nothing
@@ -357,7 +359,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
         city = originCity,
         distance = shortestRouteDistance,
         duration = shortestRouteDuration,
-        taggings = getTags tag searchRequest updatedPerson shortestRouteDistance shortestRouteDuration returnTime roundTrip ((.points) <$> shortestRouteInfo) multipleRoutes txnCity isReallocationEnabled isDashboardRequest fareParametersInRateCard isMeterRide,
+        taggings = getTags tag searchRequest reservePricingTag updatedPerson shortestRouteDistance shortestRouteDuration returnTime roundTrip ((.points) <$> shortestRouteInfo) multipleRoutes txnCity isReallocationEnabled isDashboardRequest fareParametersInRateCard isMeterRide phoneNumber,
         ..
       }
   where
@@ -382,7 +384,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
           Person.Person {customerNammaTags = Just [genderTag], ..}
         else Person.Person {..}
 
-    getTags tag searchRequest person distance duration returnTime roundTrip mbPoints mbMultipleRoutes txnCity mbIsReallocationEnabled isDashboardRequest mbfareParametersInRateCard isMeterRideSearch = do
+    getTags tag searchRequest reservePricingTag person distance duration returnTime roundTrip mbPoints mbMultipleRoutes txnCity mbIsReallocationEnabled isDashboardRequest mbfareParametersInRateCard isMeterRideSearch phoneNumber = do
       let isReallocationEnabled = fromMaybe False mbIsReallocationEnabled
       let fareParametersInRateCard = fromMaybe False mbfareParametersInRateCard
       let isMultimodalSearch = case journeySearchData of
@@ -415,6 +417,7 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
                 (Beckn.CUSTOMER_DISABILITY, (decode . encode) tag),
                 (Beckn.CUSTOMER_NAMMA_TAGS, show @Text @[Text] . fmap ((.getTagNameValue) . Yudhishthira.removeTagExpiry) <$> person.customerNammaTags)
               ]
+                ++ maybe [] (\pn -> [(Beckn.CUSTOMER_PHONE_NUMBER, Just pn)]) phoneNumber
            }
 
     lastMaybe [] = Nothing
