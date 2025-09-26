@@ -36,6 +36,7 @@ import Kernel.External.Encryption
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.Id
 import Kernel.Utils.Common
@@ -61,8 +62,8 @@ data BasicRouteDetail = BasicRouteDetail
   }
   deriving (Show)
 
-getFares :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Id Person -> Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> NonEmpty BasicRouteDetail -> Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> [FRFSUtils.FRFSFare] -> m (Bool, [FRFSUtils.FRFSFare])
-getFares riderId merchant merchanOperatingCity integrationBPPConfig fareRouteDetails vehicleCategory serviceTier subwayFares = do
+getFares :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, EsqDBReplicaFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Id Person -> Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> NonEmpty BasicRouteDetail -> Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> Maybe Text -> m (Bool, [FRFSUtils.FRFSFare])
+getFares riderId merchant merchanOperatingCity integrationBPPConfig fareRouteDetails vehicleCategory serviceTier mbSearchReqId = do
   let (routeCode, startStopCode, endStopCode) = getRouteCodeAndStartAndStop
   let isFareMandatory =
         case integrationBPPConfig.providerConfig of
@@ -111,19 +112,36 @@ getFares riderId merchant merchanOperatingCity integrationBPPConfig fareRouteDet
       return (isFareMandatory, fares)
     CRIS config' -> do
       (viaPoints, changeOver) <- getChangeOverAndViaPoints (NE.toList fareRouteDetails) integrationBPPConfig
-      let cachedFares = filter (\fare -> maybe False (\fd -> fd.via == changeOver) fare.fareDetails) subwayFares
-      if null cachedFares
-        then do
-          routeFareReq <- JMU.getRouteFareRequest startStopCode endStopCode changeOver viaPoints riderId
-          resp <- try @_ @SomeException $ CRISRouteFare.getRouteFare config' merchanOperatingCity.id routeFareReq
-          case resp of
-            Left err -> do
-              logError $ "Error while calling CRIS API: " <> show err
-              return (isFareMandatory, [])
-            Right fares -> do
-              return (isFareMandatory, fares)
-        else return (isFareMandatory, cachedFares)
+      maybe
+        (callCRISAPI config' changeOver viaPoints >>= \fares -> return (isFareMandatory, fares))
+        ( \searchReqId -> do
+            let redisKey = CRISRouteFare.mkRouteFareKey startStopCode endStopCode searchReqId
+            redisResp <- Redis.safeGet redisKey
+            case redisResp of
+              Just subwayFares -> do
+                let cachedFares = filter (\fare -> maybe False (\fd -> fd.via == changeOver) fare.fareDetails) subwayFares
+                if null cachedFares
+                  then fetchAndCacheFares config' redisKey changeOver viaPoints isFareMandatory
+                  else return (isFareMandatory, cachedFares)
+              Nothing -> fetchAndCacheFares config' redisKey changeOver viaPoints isFareMandatory
+        )
+        mbSearchReqId
   where
+    callCRISAPI config' changeOver viaPoints = do
+      let (_, startStop, endStop) = getRouteCodeAndStartAndStop
+      routeFareReq <- JMU.getRouteFareRequest startStop endStop changeOver viaPoints riderId
+      resp <- try @_ @SomeException $ CRISRouteFare.getRouteFare config' merchanOperatingCity.id routeFareReq
+      case resp of
+        Left err -> do
+          logError $ "Error while calling CRIS API: " <> show err
+          return []
+        Right fares -> return fares
+
+    fetchAndCacheFares config' redisKey changeOver viaPoints isFareMandatory = do
+      fares <- callCRISAPI config' changeOver viaPoints
+      unless (null fares) $ Redis.setExp redisKey fares 1800
+      return (isFareMandatory, fares)
+
     getRouteCodeAndStartAndStop :: (Text, Text, Text)
     getRouteCodeAndStartAndStop = do
       let firstFareRouteDetail = NE.head fareRouteDetails

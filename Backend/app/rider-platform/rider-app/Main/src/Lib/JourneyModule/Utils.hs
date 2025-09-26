@@ -1055,18 +1055,21 @@ buildTrainAllViaRoutes ::
   MultiModalTypes.GeneralVehicleType ->
   Bool ->
   Id Person ->
-  Flow ([MultiModalTypes.MultiModalRoute], [ViaRoute], [FRFSFare])
-buildTrainAllViaRoutes getPreliminaryLeg (Just originStopCode) (Just destinationStopCode) (Just integratedBppConfig) mid mocid vc mode processAllViaPoints personId = do
-  (allSubwayRoutes, fares) <- measureLatency getAllSubwayRoutes "getAllSubwayRoutes"
+  Text ->
+  Flow ([MultiModalTypes.MultiModalRoute], [ViaRoute])
+buildTrainAllViaRoutes getPreliminaryLeg (Just originStopCode) (Just destinationStopCode) (Just integratedBppConfig) mid mocid vc mode processAllViaPoints personId searchReqId = do
+  allSubwayRoutes <- measureLatency getAllSubwayRoutes "getAllSubwayRoutes"
   (multimodalRoutes, restOfRoutes) <- measureLatency (getSubwayValidRoutes allSubwayRoutes getPreliminaryLeg integratedBppConfig mid mocid vc mode processAllViaPoints) "getSubwayValidRoutes"
-  return (multimodalRoutes, restOfRoutes, fares)
+  return (multimodalRoutes, restOfRoutes)
   where
-    getAllSubwayRoutes :: Flow ([ViaRoute], [FRFSFare])
+    getAllSubwayRoutes :: Flow ([ViaRoute])
     getAllSubwayRoutes = do
       case integratedBppConfig.providerConfig of
         DIntegratedBPPConfig.CRIS crisConfig -> do
           routeFareReq <- getRouteFareRequest originStopCode destinationStopCode " " " " personId
           fares <- CRISRouteFare.getRouteFare crisConfig mocid routeFareReq
+          let redisKey = CRISRouteFare.mkRouteFareKey originStopCode destinationStopCode searchReqId
+          unless (null fares) $ Hedis.setExp redisKey fares 1800
           let sortedFares = case crisConfig.routeSortingCriteria of
                 Just DIntegratedBPPConfig.FARE -> sortBy (comparing (\fare -> fare.price.amount)) fares
                 Just DIntegratedBPPConfig.DISTANCE ->
@@ -1090,9 +1093,9 @@ buildTrainAllViaRoutes getPreliminaryLeg (Just originStopCode) (Just destination
                     )
                     $ mapMaybe (.fareDetails) sortedFares
           logDebug $ "getAllSubwayRoutes viaRoutes: " <> show viaRoutes
-          return (viaRoutes, fares)
-        _ -> return ([], [])
-buildTrainAllViaRoutes _ _ _ _ _ _ _ _ _ _ = return ([], [], [])
+          return viaRoutes
+        _ -> return []
+buildTrainAllViaRoutes _ _ _ _ _ _ _ _ _ _ _ = return ([], [])
 
 findEarliestTiming :: UTCTime -> UTCTime -> [RouteStopTimeTable] -> Maybe RouteStopTimeTable
 findEarliestTiming currentTimeIST currentTime routeStopTimings = filter (\rst -> getISTArrivalTime rst.timeOfDeparture currentTime >= currentTimeIST) routeStopTimings & listToMaybe
