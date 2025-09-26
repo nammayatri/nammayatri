@@ -5042,7 +5042,7 @@ metroTicketBookingFlow = do
           modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state { data { searchId = searchMetroResp.searchId }, props { currentStage = GetMetroQuote, isButtonActive = false} })
       else if state.props.currentStage == ConfirmMetroQuote then do
         -- metroBookingStatus <- lift $ lift $ Remote.confirmMetroQuote state.data.quoteId
-        metroBookingStatus <- lift $ lift $ Remote.confirmMetroQuoteV2 state.data.quoteId $ API.FRFSQuoteConfirmReq {discounts: fromMaybe [] state.data.applyDiscounts}
+        metroBookingStatus <- lift $ lift $ Remote.confirmMetroQuoteV2 state.data.quoteId $ API.FRFSQuoteConfirmReq {offered: []}
         updateMetroBookingQuoteInfo metroBookingStatus
       else
         pure unit
@@ -5086,7 +5086,7 @@ metroTicketBookingFlow = do
                 { code: offerType
                 , quantity: 1
                 } ]
-        metroBookingStatus <- lift $ lift $ Remote.confirmMetroQuoteV2 state.data.quoteId $ API.FRFSQuoteConfirmReq {discounts: fromMaybe [] appliedDiscountItem}
+        metroBookingStatus <- lift $ lift $ Remote.confirmMetroQuoteV2 state.data.quoteId $ API.FRFSQuoteConfirmReq {offered: []}
         updateMetroBookingQuoteInfo metroBookingStatus
         modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state { data {applyDiscounts = appliedDiscountItem}, props { currentStage = GetMetroQuote} })
         metroTicketBookingFlow
@@ -8072,7 +8072,7 @@ aadhaarVerificationFlow offerType = do
                 { code: offerType
                 , quantity: 1
                 } ]
-              metroBookingStatus <- lift $ lift $ Remote.confirmMetroQuoteV2 currentGlobalState.metroTicketBookingScreen.data.quoteId $ API.FRFSQuoteConfirmReq $ {discounts: fromMaybe [] appliedDiscountItem}
+              metroBookingStatus <- lift $ lift $ Remote.confirmMetroQuoteV2 currentGlobalState.metroTicketBookingScreen.data.quoteId $ API.FRFSQuoteConfirmReq $ {offered: []}
               updateMetroBookingQuoteInfo metroBookingStatus
               modifyScreenState $ MetroTicketBookingScreenStateType (\state -> state { data {applyDiscounts = appliedDiscountItem}, props { currentStage = GetMetroQuote} })
               metroTicketBookingFlow
