@@ -495,7 +495,12 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN analytics_confi
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allow_analytics boolean  default false;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_fleet_operator_dashboard_analytics boolean  default false;
+
+
+------- SQL updates -------
+
+
 
 
 

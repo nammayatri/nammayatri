@@ -58,11 +58,6 @@ updateTotalReferralCount totalReferralCounts driverId = do
   _now <- getCurrentTime
   updateOneWithKV [Se.Set Beam.totalReferralCounts (Kernel.Prelude.Just totalReferralCounts), Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
 
-updateTotalRequestCount :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.Person.Driver -> m ())
-updateTotalRequestCount totalRequestCount driverId = do
-  _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.totalRequestCount totalRequestCount, Se.Set Beam.updatedAt _now] [Se.Is Beam.driverId $ Se.Eq (Kernel.Types.Id.getId driverId)]
-
 updateTotalValidRidesAndPayoutEarnings ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Prelude.Int -> Kernel.Types.Common.HighPrecMoney -> Kernel.Types.Id.Id Domain.Types.Person.Driver -> m ())
@@ -100,8 +95,7 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.DriverStats.DriverStats {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.acceptationRequestCount acceptationRequestCount,
-      Se.Set Beam.blacklistCoinEvents blacklistCoinEvents,
+    [ Se.Set Beam.blacklistCoinEvents blacklistCoinEvents,
       Se.Set Beam.bonusEarned (Kernel.Prelude.roundToIntegral bonusEarned),
       Se.Set Beam.bonusEarnedAmount (Kernel.Prelude.Just bonusEarned),
       Se.Set Beam.coinCovertedToCashLeft (Kernel.Prelude.Just coinCovertedToCashLeft),
@@ -128,7 +122,6 @@ updateByPrimaryKey (Domain.Types.DriverStats.DriverStats {..}) = do
       Se.Set Beam.totalRatingScore totalRatingScore,
       Se.Set Beam.totalRatings totalRatings,
       Se.Set Beam.totalReferralCounts (Kernel.Prelude.Just totalReferralCounts),
-      Se.Set Beam.totalRequestCount totalRequestCount,
       Se.Set Beam.totalRides totalRides,
       Se.Set Beam.totalRidesAssigned totalRidesAssigned,
       Se.Set Beam.totalValidActivatedRides (Kernel.Prelude.Just totalValidActivatedRides),

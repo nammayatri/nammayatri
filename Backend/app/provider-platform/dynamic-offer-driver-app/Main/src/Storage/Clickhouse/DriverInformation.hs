@@ -58,5 +58,5 @@ getEnabledDriverCountByDriverIds driverIds from to = do
       CH.select_
         ( \info -> CH.aggregate $ CH.count_ info.driverId
         )
-        $ CH.filter_ (\info _ -> info.driverId `CH.in_` driverIds CH.&&. info.enabled CH.==. True CH.&&. info.enabledAt CH.>=. Just from CH.&&. info.enabledAt CH.<=. Just to) (CH.all_ @CH.APP_SERVICE_CLICKHOUSE driverInformationTTable)
+        $ CH.filter_ (\info -> info.driverId `CH.in_` driverIds CH.&&. info.enabled CH.==. True CH.&&. info.enabledAt CH.>=. Just from CH.&&. info.enabledAt CH.<=. Just to) (CH.all_ @CH.APP_SERVICE_CLICKHOUSE driverInformationTTable)
   pure $ fromMaybe 0 (listToMaybe res)
