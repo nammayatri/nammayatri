@@ -31,6 +31,15 @@ DriverWallet:
     runningBalance: HighPrecMoney
     payoutOrderId: Maybe (Id PayoutOrder)
     payoutStatus: Maybe PayoutStatus
+
+    # TDS calculation for current financial year
+    tdsBaseAmount: Maybe HighPrecMoney
+    tdsDeduction: Maybe HighPrecMoney
+    financialYearCollectionAmount: Maybe HighPrecMoney
+    financialYearTdsBaseAmount: Maybe HighPrecMoney
+    financialYearTdsDeduction: Maybe HighPrecMoney
+    financialYearStart: Maybe Int # 2025 means FY from 2025.04.01 to 2026.03.31
+
     createdAt: UTCTime
     updatedAt: UTCTime
   constraints:
@@ -45,6 +54,11 @@ DriverWallet:
     merchantPayable: numeric(30,2)
     driverPayable: numeric(30,2)
     runningBalance: numeric(30,2)
+    tdsBaseAmount: numeric(30,2)
+    tdsDeduction: numeric(30,2)
+    financialYearCollectionAmount: numeric(30,2)
+    financialYearTdsBaseAmount: numeric(30,2)
+    financialYearTdsDeduction: numeric(30,2)
     transactionType: character varying(255)
   extraOperations:
     - EXTRA_QUERY_FILE

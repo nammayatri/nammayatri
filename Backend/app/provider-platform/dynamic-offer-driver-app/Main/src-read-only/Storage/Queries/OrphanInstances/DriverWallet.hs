@@ -21,6 +21,10 @@ instance FromTType' Beam.DriverWallet Domain.Types.DriverWallet.DriverWallet whe
             createdAt = createdAt,
             driverId = Kernel.Types.Id.Id driverId,
             driverPayable = driverPayable,
+            financialYearCollectionAmount = financialYearCollectionAmount,
+            financialYearStart = financialYearStart,
+            financialYearTdsBaseAmount = financialYearTdsBaseAmount,
+            financialYearTdsDeduction = financialYearTdsDeduction,
             gstDeduction = gstDeduction,
             id = Kernel.Types.Id.Id id,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
@@ -30,6 +34,8 @@ instance FromTType' Beam.DriverWallet Domain.Types.DriverWallet.DriverWallet whe
             payoutStatus = payoutStatus,
             rideId = Kernel.Types.Id.Id <$> rideId,
             runningBalance = runningBalance,
+            tdsBaseAmount = tdsBaseAmount,
+            tdsDeduction = tdsDeduction,
             transactionType = transactionType,
             updatedAt = updatedAt
           }
@@ -41,6 +47,10 @@ instance ToTType' Beam.DriverWallet Domain.Types.DriverWallet.DriverWallet where
         Beam.createdAt = createdAt,
         Beam.driverId = Kernel.Types.Id.getId driverId,
         Beam.driverPayable = driverPayable,
+        Beam.financialYearCollectionAmount = financialYearCollectionAmount,
+        Beam.financialYearStart = financialYearStart,
+        Beam.financialYearTdsBaseAmount = financialYearTdsBaseAmount,
+        Beam.financialYearTdsDeduction = financialYearTdsDeduction,
         Beam.gstDeduction = gstDeduction,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
@@ -50,6 +60,8 @@ instance ToTType' Beam.DriverWallet Domain.Types.DriverWallet.DriverWallet where
         Beam.payoutStatus = payoutStatus,
         Beam.rideId = Kernel.Types.Id.getId <$> rideId,
         Beam.runningBalance = runningBalance,
+        Beam.tdsBaseAmount = tdsBaseAmount,
+        Beam.tdsDeduction = tdsDeduction,
         Beam.transactionType = transactionType,
         Beam.updatedAt = updatedAt
       }

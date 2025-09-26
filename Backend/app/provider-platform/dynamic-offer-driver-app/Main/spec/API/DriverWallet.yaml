@@ -21,6 +21,12 @@ types:
     merchantPayable: Maybe HighPrecMoney
     driverPayable: Maybe HighPrecMoney
     runningBalance: HighPrecMoney
+    tdsBaseAmount: Maybe HighPrecMoney
+    tdsDeduction: Maybe HighPrecMoney
+    financialYearCollectionAmount: Maybe HighPrecMoney
+    financialYearTdsBaseAmount: Maybe HighPrecMoney
+    financialYearTdsDeduction: Maybe HighPrecMoney
+    financialYearStart: Maybe Int
     fromLocation: Maybe Location
     toLocation: Maybe Location
     createdAt: UTCTime
