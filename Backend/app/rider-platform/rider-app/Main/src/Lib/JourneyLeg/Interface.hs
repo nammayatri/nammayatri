@@ -27,7 +27,6 @@ import Lib.JourneyLeg.Types.Walk
 import Lib.JourneyLeg.Walk ()
 import qualified Lib.JourneyModule.Types as JL
 import qualified Lib.JourneyModule.Utils as JMU
-import qualified SharedLogic.FRFSUtils as FRFSUtils
 import qualified Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 
@@ -40,9 +39,9 @@ getFare ::
   Maybe JMU.VehicleLiveRouteInfo ->
   EMInterface.MultiModalLeg ->
   DTrip.MultimodalTravelMode ->
-  [FRFSUtils.FRFSFare] ->
+  Maybe Text ->
   m (Bool, Maybe JL.GetFareResponse)
-getFare fromArrivalTime riderId merchantId merchantOperatingCityId mbRouteLiveInfo leg mode subwayFares = case mode of
+getFare fromArrivalTime riderId merchantId merchantOperatingCityId mbRouteLiveInfo leg mode searchReqId = case mode of
   DTrip.Taxi -> do
     getFareReq :: TaxiLegRequest <- mkTaxiGetFareReq
     JL.getFare getFareReq
@@ -132,7 +131,7 @@ getFare fromArrivalTime riderId merchantId merchantOperatingCityId mbRouteLiveIn
                   { startLocation = leg.startLocation.latLng,
                     endLocation = leg.endLocation.latLng,
                     agencyGtfsId = leg.agency >>= (.gtfsId),
-                    fares = subwayFares,
+                    searchReqId = searchReqId,
                     ..
                   }
 

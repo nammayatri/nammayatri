@@ -32,6 +32,9 @@ type RouteFareAPI =
     :> ReqBody '[PlainText] Text
     :> Post '[JSON] EncryptedResponse
 
+mkRouteFareKey :: Text -> Text -> Text -> Text
+mkRouteFareKey startStopCode endStopCode searchReqId = "CRIS:" <> searchReqId <> "-" <> startStopCode <> "-" <> endStopCode
+
 -- Main function
 getRouteFare ::
   ( CoreMetrics m,
