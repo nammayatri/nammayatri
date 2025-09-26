@@ -131,7 +131,7 @@ data FRFSQuoteAPIRes = FRFSQuoteAPIRes
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data FRFSQuoteConfirmReq = FRFSQuoteConfirmReq {childTicketQuantity :: Data.Maybe.Maybe Kernel.Prelude.Int, offered :: [FRFSCategorySelectionReq], ticketQuantity :: Data.Maybe.Maybe Kernel.Prelude.Int}
+data FRFSQuoteConfirmReq = FRFSQuoteConfirmReq {childTicketQuantity :: Data.Maybe.Maybe Kernel.Prelude.Int, offered :: Data.Maybe.Maybe [FRFSCategorySelectionReq], ticketQuantity :: Data.Maybe.Maybe Kernel.Prelude.Int}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
