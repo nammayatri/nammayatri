@@ -348,7 +348,7 @@ fetchLiveSubwayTimings routeCodes stopCode currentTime integratedBppConfig mid m
           stopCode = stopCode,
           timeOfArrival = train.schedArrivalTime,
           timeOfDeparture = train.schedDepartureTime,
-          tripId = Id train.trainNo,
+          tripId = Id (T.concat [train.trainNo, "_T1"]),
           merchantId = Just mid,
           merchantOperatingCityId = Just mocid,
           createdAt = currentTime,
