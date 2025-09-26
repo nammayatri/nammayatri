@@ -23,13 +23,21 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.RiderDetails as QRD
 
-getRiderDetails :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r) => Currency -> Id DM.Merchant -> Maybe (Id DMOC.MerchantOperatingCity) -> Text -> Text -> UTCTime -> Bool -> m (DRD.RiderDetails, Bool)
-getRiderDetails currency merchantId mbMerchantOperatingCityId customerMobileCountryCode customerPhoneNumber now nightSafetyCheck =
-  QRD.findByMobileNumberAndMerchant customerPhoneNumber merchantId >>= \case
-    Nothing -> fmap (,True) . encrypt =<< buildRiderDetails
+getRiderDetails :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r) => Currency -> Id DM.Merchant -> Maybe (Id DMOC.MerchantOperatingCity) -> Text -> Text -> Text -> Bool -> m (DRD.RiderDetails, Bool)
+getRiderDetails currency merchantId mbMerchantOperatingCityId customerMobileCountryCode customerPhoneNumber bapId nightSafetyCheck = do
+  now <- getCurrentTime
+  QRD.findByMobileNumberAndMerchantAndBapId customerPhoneNumber merchantId bapId >>= \case
+    Nothing -> do
+      riderD <- QRD.findByMobileNumberAndMerchant customerPhoneNumber merchantId
+      case riderD of
+        Nothing -> fmap (,True) . encrypt =<< buildRiderDetails now
+        Just riderDetails -> do
+          let updatedRiderDetails = riderDetails{bapId = Just bapId}
+          QRD.updateByPrimaryKey updatedRiderDetails
+          return (updatedRiderDetails, False)
     Just a -> return (a, False)
   where
-    buildRiderDetails = do
+    buildRiderDetails now = do
       id <- generateGUID
       otp <- generateOTPCode
       return $
@@ -54,5 +62,6 @@ getRiderDetails currency merchantId mbMerchantOperatingCityId customerMobileCoun
             payoutFlagReason = Nothing,
             isDeviceIdExists = Nothing,
             isFlagConfirmed = Nothing,
-            merchantOperatingCityId = mbMerchantOperatingCityId
+            merchantOperatingCityId = mbMerchantOperatingCityId,
+            bapId = Just bapId
           }

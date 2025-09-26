@@ -14,7 +14,8 @@ import qualified Kernel.Types.Common
 import Tools.Beam.UtilsTH
 
 data RiderDetailsT f = RiderDetailsT
-  { cancellationDues :: B.C f Kernel.Types.Common.HighPrecMoney,
+  { bapId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    cancellationDues :: B.C f Kernel.Types.Common.HighPrecMoney,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
     disputeChancesUsed :: B.C f Kernel.Prelude.Int,
