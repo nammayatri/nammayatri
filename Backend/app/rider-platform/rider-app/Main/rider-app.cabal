@@ -389,6 +389,7 @@ library
       SharedLogic.LocationMapping
       SharedLogic.Merchant
       SharedLogic.MerchantConfig
+      SharedLogic.MerchantPaymentMethod
       SharedLogic.MessageBuilder
       SharedLogic.MetroOffer
       SharedLogic.NyRegularSubscriptionHasher

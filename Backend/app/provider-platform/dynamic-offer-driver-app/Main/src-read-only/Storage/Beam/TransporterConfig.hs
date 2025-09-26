@@ -179,6 +179,7 @@ data TransporterConfigT f = TransporterConfigT
     minRidesForCancellationScore :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     minRidesToUnlist :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     minThresholdForPassThroughDestination :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
+    minWalletAmountForCashRides :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     minimumWalletPayoutAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     minmRentalAndScheduledBookingLeadTimeHours :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     nightSafetyEndTime :: B.C f Kernel.Types.Common.Seconds,

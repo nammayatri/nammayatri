@@ -63,6 +63,8 @@ createNearestDriverReq nearestRadius now =
       onlinePayment = False,
       prepaidSubscriptionThreshold = Nothing,
       rideFare = Nothing,
+      paymentInstrument = Nothing,
+      minWalletAmountForCashRides = Nothing,
       ..
     }
 
