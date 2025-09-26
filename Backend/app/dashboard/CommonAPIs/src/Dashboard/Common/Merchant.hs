@@ -604,7 +604,9 @@ data CreateMerchantOperatingCityReq = CreateMerchantOperatingCityReq
     distanceUnit :: Maybe DistanceUnit,
     merchantData :: Maybe MerchantData,
     driverOfferMerchantOperatingCityId :: Maybe Text,
-    buildFRFSSubscriber :: Maybe Bool
+    buildFRFSSubscriber :: Maybe Bool,
+    baseRequestCity :: Maybe Context.City,
+    baseRequestMerchant :: Maybe Text
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -629,6 +631,8 @@ instance FromMultipart Tmp CreateMerchantOperatingCityReq where
       <*> parseMaybeJsonInput "merchantData" form
       <*> parseMaybeJsonInput "driverOfferMerchantOperatingCityId" form
       <*> parseMaybeInput "buildFRFSSubscriber" form
+      <*> parseMaybeInput "baseRequestCity" form
+      <*> parseMaybeInput "baseRequestMerchant" form
 
 parseInput :: Read b => Text -> MultipartData tag -> Either String b
 parseInput fieldName form = case lookupInput fieldName form of
@@ -670,7 +674,9 @@ data CreateMerchantOperatingCityReqT = CreateMerchantOperatingCityReqT
     distanceUnit :: Maybe DistanceUnit,
     merchantData :: Maybe MerchantData,
     driverOfferMerchantOperatingCityId :: Maybe Text,
-    buildFRFSSubscriber :: Maybe Bool
+    buildFRFSSubscriber :: Maybe Bool,
+    baseRequestCity :: Maybe Context.City,
+    baseRequestMerchant :: Maybe Text
   }
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -897,6 +903,7 @@ data WhiteListOperatingCityReq = WhiteListOperatingCityReq
   { bppMerchantOperatingCityId :: Text,
     bppMerchantId :: Text,
     bppSubscriberDomain :: Context.Domain,
+    bppSubscriberId :: Id.ShortId BecknSub.Subscriber,
     bapMerchantId :: Text,
     bapMerchantOperatingCityId :: Text,
     bapUniqueKeyId :: Text,

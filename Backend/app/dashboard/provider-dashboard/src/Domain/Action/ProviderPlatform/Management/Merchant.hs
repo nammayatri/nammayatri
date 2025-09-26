@@ -48,6 +48,7 @@ module Domain.Action.ProviderPlatform.Management.Merchant
     postMerchantConfigSpecialLocationUpsert,
     postMerchantConfigUpsertPlanAndConfigSubscription,
     postMerchantConfigOperatingCityWhiteList,
+    postMerchantConfigMerchantCreate,
   )
 where
 
@@ -333,37 +334,8 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity apiTokenInfo req = do
   T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (Common.addMultipartBoundary "XXX00XXX" . (.merchantDSL.postMerchantConfigFarePolicyUpsert)) req
 
 postMerchantConfigOperatingCityCreate :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.CreateMerchantOperatingCityReq -> Flow Common.CreateMerchantOperatingCityRes
-postMerchantConfigOperatingCityCreate merchantShortId opCity apiTokenInfo req@Common.CreateMerchantOperatingCityReq {..} = do
-  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
-  transaction <- buildTransaction apiTokenInfo (Just req)
-  -- update entry in dashboard
-  baseMerchant <- SQM.findByShortId merchantShortId >>= fromMaybeM (InvalidRequest $ "Merchant not found with shortId " <> show merchantShortId)
-  geom <- getGeomFromKML req.file >>= fromMaybeM (InvalidRequest "Cannot convert KML to Geom.")
-  now <- getCurrentTime
-  merchant <-
-    case merchantData of
-      Just merchantD -> do
-        SQM.findByShortId (ShortId merchantD.shortId) >>= \case
-          Nothing -> do
-            let newMerchant = buildMerchant now merchantD baseMerchant
-            SQM.create newMerchant
-            return newMerchant
-          Just newMerchant -> return newMerchant
-      Nothing -> return baseMerchant
-  unless (req.city `elem` merchant.supportedOperatingCities) $
-    SQM.updateSupportedOperatingCities merchant.shortId (merchant.supportedOperatingCities <> [req.city])
-  T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantConfigOperatingCityCreate) Common.CreateMerchantOperatingCityReqT {geom = T.pack geom, ..}
-  where
-    buildMerchant now merchantD DM.Merchant {..} =
-      DM.Merchant
-        { id = Id merchantD.subscriberId,
-          shortId = ShortId merchantD.shortId,
-          defaultOperatingCity = req.city,
-          supportedOperatingCities = [req.city],
-          createdAt = now,
-          enabled = Just enableForMerchant,
-          ..
-        }
+postMerchantConfigOperatingCityCreate merchantShortId opCity apiTokenInfo req = do
+  processMerchantCreateRequest merchantShortId opCity apiTokenInfo False req
 
 postMerchantSchedulerTrigger ::
   ShortId DM.Merchant ->
@@ -450,3 +422,47 @@ postMerchantConfigOperatingCityWhiteList merchantShortId opCity apiTokenInfo req
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo (Just req)
   T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantConfigOperatingCityWhiteList) req
+
+postMerchantConfigMerchantCreate :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.CreateMerchantOperatingCityReq -> Flow Common.CreateMerchantOperatingCityRes
+postMerchantConfigMerchantCreate merchantShortId opCity apiTokenInfo req = do
+  processMerchantCreateRequest merchantShortId opCity apiTokenInfo True req
+
+processMerchantCreateRequest ::
+  ShortId DM.Merchant ->
+  City.City ->
+  ApiTokenInfo ->
+  Bool ->
+  Common.CreateMerchantOperatingCityReq ->
+  Flow Common.CreateMerchantOperatingCityRes
+processMerchantCreateRequest merchantShortId opCity apiTokenInfo canCreateMerchant req@Common.CreateMerchantOperatingCityReq {..} = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo (Just req)
+  -- update entry in dashboard
+  baseMerchant <- SQM.findByShortId merchantShortId >>= fromMaybeM (InvalidRequest $ "Merchant not found with shortId " <> show merchantShortId)
+  geom <- getGeomFromKML req.file >>= fromMaybeM (InvalidRequest "Cannot convert KML to Geom.")
+  now <- getCurrentTime
+  merchant <-
+    case (merchantData, canCreateMerchant) of
+      (Just merchantD, True) -> do
+        SQM.findByShortId (ShortId merchantD.shortId) >>= \case
+          Nothing -> do
+            let newMerchant = buildMerchant now merchantD baseMerchant
+            SQM.create newMerchant
+            return newMerchant
+          Just newMerchant -> return newMerchant
+      (Just merchantD, False) -> throwError (InvalidRequest $ "Merchant Cannot be created using city/create: " <> merchantD.shortId)
+      (Nothing, _) -> return baseMerchant
+  unless (req.city `elem` merchant.supportedOperatingCities) $
+    SQM.updateSupportedOperatingCities merchant.shortId (merchant.supportedOperatingCities <> [req.city])
+  T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.merchantDSL.postMerchantConfigOperatingCityCreate) Common.CreateMerchantOperatingCityReqT {geom = T.pack geom, ..}
+  where
+    buildMerchant now merchantD DM.Merchant {..} =
+      DM.Merchant
+        { id = Id merchantD.subscriberId,
+          shortId = ShortId merchantD.shortId,
+          defaultOperatingCity = req.city,
+          supportedOperatingCities = [req.city],
+          createdAt = now,
+          enabled = Just enableForMerchant,
+          ..
+        }
