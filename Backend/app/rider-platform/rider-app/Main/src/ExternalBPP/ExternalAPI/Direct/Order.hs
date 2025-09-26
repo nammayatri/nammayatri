@@ -88,7 +88,8 @@ getTicketDetail config integratedBPPConfig qrTtl booking routeStation = do
         qrData,
         qrStatus = "UNCLAIMED",
         qrValidity,
-        qrRefreshAt
+        qrRefreshAt,
+        commencingHours = Nothing
       }
   where
     formatUtcTime :: UTCTime -> Text

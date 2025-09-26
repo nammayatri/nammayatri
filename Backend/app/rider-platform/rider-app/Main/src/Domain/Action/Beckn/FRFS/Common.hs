@@ -61,7 +61,8 @@ data DTicket = DTicket
     ticketNumber :: Text,
     validTill :: UTCTime,
     status :: Text,
-    qrRefreshAt :: Maybe UTCTime
+    qrRefreshAt :: Maybe UTCTime,
+    commencingHours :: Maybe Int
   }
 
 data DTicketPayload = DTicketPayload

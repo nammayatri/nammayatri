@@ -45,3 +45,8 @@ ALTER TABLE atlas_app.frfs_ticket ADD COLUMN description text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.frfs_ticket ADD COLUMN scanned_by_vehicle_number text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket ADD COLUMN commencing_hours integer ;
