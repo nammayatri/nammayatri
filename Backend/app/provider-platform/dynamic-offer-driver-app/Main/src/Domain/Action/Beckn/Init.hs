@@ -251,7 +251,6 @@ handler merchantId req validatedReq = do
     makeBookingDeliveryDetails :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r, EncFlow m r) => DSR.SearchRequest -> DTDD.DeliveryDetails -> Id DM.Merchant -> m (Maybe TripParty, Maybe DTDPD.DeliveryPersonDetails, Maybe DTDPD.DeliveryPersonDetails)
     makeBookingDeliveryDetails searchReq deliveryDetails mId = do
       --update search req locations
-      now <- getCurrentTime
       merchant <- QM.findById mId >>= fromMaybeM (MerchantNotFound mId.getId)
       let senderLocationId = searchReq.fromLocation.id
           mbMerchantOperatingCityId = Just searchReq.merchantOperatingCityId
@@ -260,8 +259,8 @@ handler merchantId req validatedReq = do
       QLoc.updateInstructionsAndExtrasById deliveryDetails.receiverDetails.address.instructions deliveryDetails.receiverDetails.address.extras receiverLocationId
 
       -- update Rider details
-      (senderRiderDetails, isNewSender) <- SRD.getRiderDetails searchReq.currency mId mbMerchantOperatingCityId (fromMaybe "+91" merchant.mobileCountryCode) deliveryDetails.senderDetails.phoneNumber now False
-      (receiverRiderDetails, isNewReceiver) <- SRD.getRiderDetails searchReq.currency mId mbMerchantOperatingCityId (fromMaybe "+91" merchant.mobileCountryCode) deliveryDetails.receiverDetails.phoneNumber now False
+      (senderRiderDetails, isNewSender) <- SRD.getRiderDetails searchReq.currency mId mbMerchantOperatingCityId (fromMaybe "+91" merchant.mobileCountryCode) deliveryDetails.senderDetails.phoneNumber searchReq.bapId False
+      (receiverRiderDetails, isNewReceiver) <- SRD.getRiderDetails searchReq.currency mId mbMerchantOperatingCityId (fromMaybe "+91" merchant.mobileCountryCode) deliveryDetails.receiverDetails.phoneNumber searchReq.bapId False
       when isNewSender $ QRD.create senderRiderDetails
       when isNewReceiver $ QRD.create receiverRiderDetails
 

@@ -305,7 +305,7 @@ getFullFarePolicy mbFromLocation mbToLocation mbFromLocGeohash mbToLocGeohash mb
           case resOrErr of
             Right congestionChargeRes -> return congestionChargeRes.congestionChargeMultiplier
             Left e -> do
-              logError $ "getCongestionCharge via MLfailed, defaulting to Nothing: " <> show e
+              logError $ "getCongestionCharge via MLfailed, defaulting to Nothing: " <> show e <> "   :: req body is " <> show req
               return Nothing
         -- return fullFarePolicy.congestionChargeMultiplier
         _ -> return Nothing

@@ -23,7 +23,7 @@ import qualified Kernel.Types.Registry.Subscriber as Subscriber
 import Kernel.Utils.Common
 
 buildSearchReqV2 ::
-  (HasFlowEnv m r '["_version" ::: Text], CacheFlow m r, EsqDBFlow m r) =>
+  (HasFlowEnv m r '["_version" ::: Text], CacheFlow m r, EsqDBFlow m r, EncFlow m r) =>
   Subscriber.Subscriber ->
   Search.SearchReqV2 ->
   m DSearch.DSearchReq
