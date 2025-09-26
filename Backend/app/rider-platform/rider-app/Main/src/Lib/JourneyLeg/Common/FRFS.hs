@@ -405,7 +405,7 @@ confirm personId merchantId mbQuoteId ticketQuantity childTicketQuantity bookLat
         bapConfig <- CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory vehicleType) >>= fromMaybeM (InternalError "Beckn Config not found")
         void $ CallExternalBPP.select processOnSelect merchant merchantOperatingCity bapConfig quote ticketQuantity childTicketQuantity categorySelectionReq
       else do
-        void $ FRFSTicketService.postFrfsQuoteV2ConfirmUtil (Just personId, merchantId) quoteId (API.FRFSQuoteConfirmReq {offered = fromMaybe [] categorySelectionReq, ticketQuantity = ticketQuantity, childTicketQuantity = childTicketQuantity}) crisSdkResponse
+        void $ FRFSTicketService.postFrfsQuoteV2ConfirmUtil (Just personId, merchantId) quoteId (API.FRFSQuoteConfirmReq {offered = categorySelectionReq, ticketQuantity = ticketQuantity, childTicketQuantity = childTicketQuantity}) crisSdkResponse
   where
     processOnSelect :: FRFSConfirmFlow m r => DOnSelect -> m ()
     processOnSelect onSelectReq = do

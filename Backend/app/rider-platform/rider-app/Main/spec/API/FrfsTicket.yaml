@@ -86,7 +86,7 @@ types:
     quantity: Int
 
   FRFSQuoteConfirmReq:
-    offered: "[FRFSCategorySelectionReq]"
+    offered: Maybe "[FRFSCategorySelectionReq]"
     ticketQuantity: Maybe Int # TODO: To Be Deprecated
     childTicketQuantity: Maybe Int # TODO: To Be Deprecated
 

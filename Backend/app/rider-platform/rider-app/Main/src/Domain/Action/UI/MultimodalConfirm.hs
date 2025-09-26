@@ -39,6 +39,7 @@ module Domain.Action.UI.MultimodalConfirm
 where
 
 import qualified API.Types.UI.FRFSTicketService as FRFSTicketService
+import qualified API.Types.UI.FRFSTicketService as FRFSTicketServiceAPI
 import qualified API.Types.UI.MultimodalConfirm
 import qualified API.Types.UI.MultimodalConfirm as ApiTypes
 import qualified API.UI.CancelSearch as CancelSearch
@@ -57,6 +58,7 @@ import qualified Domain.Types.CancellationReason as SCR
 import qualified Domain.Types.Common as DTrip
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.EstimateStatus as DEst
+import qualified Domain.Types.FRFSQuote as DFRFSQuote
 import qualified Domain.Types.FRFSTicketBooking as DFRFSB
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Journey
@@ -1482,42 +1484,47 @@ postMultimodalRouteAvailability (mbPersonId, merchantId) req = do
   -- Find integrated BPP configs for the merchant operating city
   integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId vehicleCategory DIBC.MULTIMODAL
 
-  availableServiceTiers <-
+  -- Get rider config to check source of service tier
+  mbSourceOfServiceTier <- fmap (.sourceOfServiceTier) <$> QRiderConfig.findByMerchantOperatingCityId person.merchantOperatingCityId
+
+  frfsQuotes <-
     case (req.journeyId, req.legOrder) of
       (Just journeyId, Just legOrder) -> do
         journeyLeg <- QJourneyLeg.getJourneyLeg journeyId legOrder
         quotes <- maybe (pure []) (QFRFSQuote.findAllBySearchId . Id) journeyLeg.legSearchId
-        return $ Just $ mapMaybe JMTypes.getServiceTierFromQuote quotes
-      _ -> pure Nothing
+        return quotes
+      _ -> pure []
 
-  case integratedBPPConfigs of
-    [] -> return $ ApiTypes.RouteAvailabilityResp {availableRoutes = []}
-    (integratedBPPConfig : _) -> do
-      -- Use findPossibleRoutes to get available routes
-      (_, availableRoutesByTier, _) <-
-        JMU.findPossibleRoutes
-          availableServiceTiers
-          req.startStopCode
-          req.endStopCode
-          currentTime
-          integratedBPPConfig
-          merchantId
-          person.merchantOperatingCityId
-          vehicleCategory
-          True -- sendWithoutFare
-          True
-
-      let (liveBuses, staticBuses) = partition (\route -> route.source == LIVE) availableRoutesByTier
-      -- Filter routes based on onlyLive flag if needed
-      let filteredRoutes =
-            if req.onlyLive
-              then liveBuses
-              else liveBuses <> staticBuses
-
-      -- Convert to API response format
-      availableRoutes <- concatMapM (convertToAvailableRoute integratedBPPConfig person) filteredRoutes
-
+  case mbSourceOfServiceTier of
+    Just DRC.QUOTES -> do
+      let availableRoutes = mapMaybe convertFRFSQuoteToAvailableRoute frfsQuotes
       return $ ApiTypes.RouteAvailabilityResp {availableRoutes = availableRoutes}
+    _ -> do
+      let availableServiceTiers = if null frfsQuotes then Nothing else Just (mapMaybe JMTypes.getServiceTierFromQuote frfsQuotes)
+      case integratedBPPConfigs of
+        [] -> return $ ApiTypes.RouteAvailabilityResp {availableRoutes = []}
+        (integratedBPPConfig : _) -> do
+          (_, availableRoutesByTier, _) <-
+            JMU.findPossibleRoutes
+              availableServiceTiers
+              req.startStopCode
+              req.endStopCode
+              currentTime
+              integratedBPPConfig
+              merchantId
+              person.merchantOperatingCityId
+              vehicleCategory
+              True -- sendWithoutFare
+              True
+
+          let (liveBuses, staticBuses) = partition (\route -> route.source == LIVE) availableRoutesByTier
+          let filteredRoutes =
+                if req.onlyLive
+                  then liveBuses
+                  else liveBuses <> staticBuses
+
+          availableRoutes <- concatMapM (convertToAvailableRoute integratedBPPConfig person) filteredRoutes
+          return $ ApiTypes.RouteAvailabilityResp {availableRoutes = availableRoutes}
   where
     convertToAvailableRoute :: DIBC.IntegratedBPPConfig -> Domain.Types.Person.Person -> RD.AvailableRoutesByTier -> Environment.Flow [ApiTypes.AvailableRoute]
     convertToAvailableRoute integratedBPPConfig person routesByTier =
@@ -1661,3 +1668,20 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (_mbPersonId, _merchantId) j
         (ticket : _) -> do
           let newJourneyExpiry = addUTCTime (-19800) ticket.expiryIST
           QJourney.updateJourneyExpiryTime journey.id $ fromMaybe newJourneyExpiry (max journey.journeyExpiryTime . Just $ newJourneyExpiry)
+
+convertFRFSQuoteToAvailableRoute :: DFRFSQuote.FRFSQuote -> Maybe (ApiTypes.AvailableRoute)
+convertFRFSQuoteToAvailableRoute quote = do
+  let routeStations :: Maybe [FRFSTicketServiceAPI.FRFSRouteStationsAPI] = decodeFromText =<< quote.routeStationsJson
+  routeInfo <- listToMaybe (fromMaybe [] routeStations)
+  serviceTier <- routeInfo.vehicleServiceTier
+  return $
+    ApiTypes.AvailableRoute
+      { source = GTFS,
+        quoteId = Just quote.id,
+        serviceTierName = Just serviceTier.shortName,
+        serviceTierType = serviceTier._type,
+        routeCode = routeInfo.code,
+        routeShortName = routeInfo.shortName,
+        routeLongName = routeInfo.longName,
+        routeTimings = []
+      }
