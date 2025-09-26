@@ -131,48 +131,48 @@ BookingLocation:
 Booking:
   tableName: booking
 
-  derives: Generic,Show
+  derives: Generic,Show,FromJSON,ToJSON
 
   types:
     BPPBooking: {}
     BookingDetails:
       enum: OneWayDetails OneWayBookingDetails,RentalDetails RentalBookingDetails,DriverOfferDetails OneWayBookingDetails,OneWaySpecialZoneDetails OneWaySpecialZoneBookingDetails,InterCityDetails InterCityBookingDetails, AmbulanceDetails AmbulanceBookingDetails, DeliveryDetails DeliveryBookingDetails, MeterRideDetails MeterRideBookingDetails
-      derive': Show
+      derive': Generic,Show,FromJSON,ToJSON
     OneWayBookingDetails:
       stops: "[Location]"
       toLocation: Location
       distance: Distance
       isUpgradedToCab: Maybe Bool
-      derive': Show
+      derive': Generic,Show,FromJSON,ToJSON
     RentalBookingDetails:
       stopLocation: Maybe Location
       otpCode: Maybe Text
-      derive': Show
+      derive': Generic,Show,FromJSON,ToJSON
     OneWaySpecialZoneBookingDetails:
       toLocation: Location
       stops: "[Location]"
       distance: Distance
       otpCode: Maybe Text
-      derive': Show
+      derive': Generic,Show,FromJSON,ToJSON
     InterCityBookingDetails:
       toLocation: Location
       distance: Distance
       stops: "[Location]"
       otpCode: Maybe Text
-      derive': Show
+      derive': Generic,Show,FromJSON,ToJSON
     AmbulanceBookingDetails:
       toLocation: Location
       distance: Distance
-      derive': Show
+      derive': Generic,Show,FromJSON,ToJSON
     DeliveryBookingDetails:
-      derive': Generic,Show
+      derive': Generic,Show,FromJSON,ToJSON
       toLocation: Location
       distance: Distance
       otpCode: Maybe Text
       parcelType: ParcelType
       parcelQuantity: Maybe Int
     MeterRideBookingDetails:
-      derive': Generic,Show
+      derive': Generic,Show,FromJSON,ToJSON
       distanceCovered: Maybe Distance
       toLocation: Maybe Location
 
