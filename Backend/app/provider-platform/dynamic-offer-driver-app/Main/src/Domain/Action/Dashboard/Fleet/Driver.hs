@@ -2683,6 +2683,7 @@ getDriverFleetBookings _ _ memberPersonId mbLimit mbOffset mbFrom mbTo mbStatus 
           amount = fromMaybe 0.0 (fmap realToFrac booking.amount),
           bookedSeats = fromMaybe 0 booking.bookedSeats,
           status = fromMaybe "" booking.status,
+          paymentMethod = booking.paymentMethod,
           visitDate = booking.visitDate,
           createdAt = booking.createdAt,
           updatedAt = booking.updatedAt,
@@ -2731,7 +2732,8 @@ getDriverFleetAssignments _ _ memberPersonId mbLimit mbOffset mbFrom mbTo mbVehi
           visitDate = assignment.visitDate,
           createdAt = assignment.createdAt,
           fleetOwnerId = fleetOwnerId,
-          fleetOwnerName = fleetOwnerName
+          fleetOwnerName = fleetOwnerName,
+          paymentMethod = assignment.paymentMethod
         }
 
   let summary = Common.Summary {totalCount = 10000, count = length ticketAssignmentsList}

@@ -20,3 +20,8 @@ CREATE INDEX fleet_booking_assignments_idx_main_assignment_id ON atlas_driver_of
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.fleet_booking_assignments ADD COLUMN visit_date date ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.fleet_booking_assignments ADD COLUMN payment_method text ;

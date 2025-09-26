@@ -1241,6 +1241,7 @@ types:
     - updatedAt: UTCTime
     - fleetOwnerId: Text
     - fleetOwnerName: Text
+    - paymentMethod: Maybe Text
   FleetBookingAssignmentsResponse:
     - bookings: [FleetBookingAssignmentItem]
     - summary: Summary
@@ -1255,6 +1256,7 @@ types:
     - createdAt: UTCTime
     - fleetOwnerId: Text
     - fleetOwnerName: Text
+    - paymentMethod: Maybe Text
   SortOn:
     - enum: "COMPLETED_RIDES, CANCELLED_RIDES"
     - derive: "HttpInstance"
