@@ -738,6 +738,7 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req crisSdkResponse
                 osType = crisSdkResponse <&> (.osType),
                 osBuildVersion = crisSdkResponse <&> (.osBuildVersion),
                 recentLocationId = mbSearch >>= (.recentLocationId),
+                failureReason = Nothing,
                 ..
               }
       QFRFSTicketBooking.create booking

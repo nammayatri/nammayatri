@@ -27,6 +27,7 @@ import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Station as DStation
 import Environment
+import ExternalBPP.ExternalAPI.Subway.CRIS.Error (CRISError (..))
 import qualified ExternalBPP.Flow as Flow
 import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
@@ -235,6 +236,10 @@ confirm onConfirmHandler merchant merchantOperatingCity bapConfig (mRiderName, m
           onConfirmHandler onConfirmReq
         case result of
           Left err -> do
+            case fromException err :: Maybe CRISError of
+              Just crisError -> do
+                void $ QFRFSTicketBooking.updateFailureReasonById (Just crisError.errorMessage) booking.id
+              Nothing -> pure ()
             paymentBooking <- QFRFSTicketBookingPayment.findNewTBPByBookingId booking.id >>= fromMaybeM (FRFSTicketBookingPaymentNotFound booking.id.getId)
             void $ QFRFSTicketBooking.updateStatusById DBooking.FAILED booking.id
             void $ QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.REFUND_PENDING paymentBooking.id

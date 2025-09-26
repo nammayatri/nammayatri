@@ -18,6 +18,7 @@ import EulerHS.Prelude hiding (find, readMaybe)
 import qualified EulerHS.Types as ET
 import ExternalBPP.ExternalAPI.Subway.CRIS.Auth (callCRISAPI)
 import ExternalBPP.ExternalAPI.Subway.CRIS.Encryption (decryptResponseData, encryptPayload)
+import ExternalBPP.ExternalAPI.Subway.CRIS.Error (CRISError (..))
 import ExternalBPP.ExternalAPI.Types
 import Kernel.External.Encryption
 import Kernel.Prelude ((!!))
@@ -189,13 +190,13 @@ getBookJourney config request = do
   if respCode encResponse == 0
     then do
       case decryptResponseData encryptedData decryptedAgentDataKey of
-        Left err -> throwError $ InternalError $ "Failed to decrypt ticket data: " <> T.pack err
+        Left err -> throwError $ CRISError $ "Failed to decrypt ticket data: " <> T.pack err
         Right decryptedJson -> do
           logInfo $ "Decrypted ticket data: " <> decryptedJson
           case eitherDecode (LBS.fromStrict $ TE.encodeUtf8 decryptedJson) of
-            Left err -> throwError $ InternalError $ "Failed to parse ticket data: " <> T.pack err
+            Left err -> throwError $ CRISError $ "Failed to parse ticket data: " <> T.pack err
             Right ticketData -> pure $ convertToBookingResponse ticketData encResponse.encrypted
-    else throwError $ InternalError $ "Booking failed with code: " <> (show $ respCode encResponse)
+    else throwError $ CRISError $ "Booking failed with code: " <> encResponse.respMessage <> " : " <> show encResponse.respCode
   where
     eulerClientFn encReq token =
       let client = ET.client bookJourneyAPI

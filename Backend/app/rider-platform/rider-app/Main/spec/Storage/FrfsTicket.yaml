@@ -346,6 +346,7 @@ FRFSTicketBooking:
     osType: Maybe Text
     osBuildVersion: Maybe Text
     multimodalSearchRequestId: Maybe Text
+    failureReason: Maybe Text
 
   default:
     customerCancelled: "false"
@@ -477,6 +478,10 @@ FRFSTicketBooking:
     updateQuantity:
       kvFunction: updateWithKV
       params: [quantity, updatedAt]
+      where: id
+    updateFailureReasonById:
+      kvFunction: updateOneWithKV
+      params: [failureReason]
       where: id
 
   extraOperations:
