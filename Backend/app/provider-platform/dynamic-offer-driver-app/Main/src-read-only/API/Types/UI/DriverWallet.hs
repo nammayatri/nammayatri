@@ -28,6 +28,7 @@ data TransactionDetails = TransactionDetails
     merchantPayable :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     rideId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Ride.Ride),
     runningBalance :: Kernel.Types.Common.HighPrecMoney,
+    tdsDeduction :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     toLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location,
     transactionType :: Domain.Types.DriverWallet.TransactionType
   }

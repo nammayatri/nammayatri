@@ -26,6 +26,7 @@ DriverWallet:
     transactionType: TransactionType
     collectionAmount: Maybe HighPrecMoney
     gstDeduction: Maybe HighPrecMoney
+    tdsDeduction: Maybe HighPrecMoney
     merchantPayable: Maybe HighPrecMoney
     driverPayable: Maybe HighPrecMoney
     runningBalance: HighPrecMoney
