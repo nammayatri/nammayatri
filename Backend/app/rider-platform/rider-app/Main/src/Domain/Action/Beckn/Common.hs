@@ -21,6 +21,7 @@ where
 
 import qualified BecknV2.OnDemand.Enums as BecknEnums
 import qualified BecknV2.OnDemand.Utils.Common as Utils
+import Control.Monad.Extra (mapMaybeM)
 import qualified Data.Geohash as Geohash
 import qualified Data.HashMap.Strict as HM
 import qualified Data.Text as Text
@@ -51,8 +52,10 @@ import qualified Domain.Types.RideStatus as DRide
 import qualified Domain.Types.RiderConfig as DRC
 import qualified Domain.Types.Trip as Trip
 import qualified Domain.Types.VehicleVariant as DV
+import qualified Domain.Types.Yudhishthira as Y
 import Environment
 import Kernel.Beam.Functions as B
+import Kernel.Beam.Lib.Utils (pushToKafka)
 import Kernel.External.Encryption
 import Kernel.External.Payment.Interface.Types as Payment
 import qualified Kernel.External.Payout.Types as PT
@@ -76,7 +79,10 @@ import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DLP
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import Lib.SessionizerMetrics.Types.Event
+import qualified Lib.Yudhishthira.Event as Yudhishthira
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
+import qualified Lib.Yudhishthira.Types as LYT
+import qualified Lib.Yudhishthira.Types as Yudhishthira
 import SharedLogic.Booking
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified SharedLogic.Insurance as SI
@@ -606,6 +612,14 @@ rideStartedReqHandler ValidatedRideStartedReq {..} = do
           logInfo "Merchant not configured to send dashboard sms"
           pure ()
 
+data RideEndOffersKafkaData = RideEndOffersKafkaData
+  { rideId :: Id DRide.Ride,
+    personId :: Id DPerson.Person,
+    tags :: [LYT.TagNameValueExpiry],
+    createdAt :: UTCTime
+  }
+  deriving (Generic, Show, ToJSON)
+
 rideCompletedReqHandler ::
   ( HasFlowEnv m r '["nwAddress" ::: BaseUrl, "smsCfg" ::: SmsConfig],
     CacheFlow m r,
@@ -675,6 +689,11 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
           Notify.notifyFirstRideEvent booking.riderId (Utils.mapServiceTierToCategory booking.vehicleServiceTierType) booking.tripCategory
           fork ("processing referral payouts for ride: " <> ride.id.getId) $ do
             customerReferralPayout ride isValidRide riderConfig person booking.merchantId booking.merchantOperatingCityId
+
+  when (riderConfig.enableRideEndOffers) $ do
+    fork "computing offers namma tag" $
+      addOffersNammaTags updRide person
+
   -- we should create job for collecting money from customer
   let onlinePayment = maybe False (.onlinePayment) mbMerchant
   when onlinePayment $ do
@@ -734,6 +753,64 @@ rideCompletedReqHandler ValidatedRideCompletedReq {..} = do
             entityType = DFareBreakup.RIDE,
             ..
           }
+
+addOffersNammaTags ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    EncFlow m r
+  ) =>
+  DRide.Ride ->
+  DPerson.Person ->
+  m ()
+addOffersNammaTags ride person = do
+  decrptedMobileNumber <- mapM decrypt person.mobileNumber >>= fromMaybeM (InternalError "Customer has no mobile number")
+  now <- getCurrentTime
+  let rideData = mkRideData ride
+      customerData = Y.CustomerData {mobileNumber = decrptedMobileNumber, gender = person.gender}
+  tags <- Yudhishthira.computeNammaTagsWithExpiry Yudhishthira.RideEndOffers (Y.EndRideOffersTagData customerData rideData)
+  newTags <- modifiedNewNammaTags tags (fromMaybe [] person.customerNammaTags) now
+  when (not $ null newTags) $ do
+    QP.updateCustomerTags (Just $ (fromMaybe [] person.customerNammaTags) <> newTags) person.id
+    pushToKafka (RideEndOffersKafkaData ride.id person.id newTags now) "customer-ride-end-offers" person.id.getId
+  where
+    modifiedNewNammaTags newTags currTags now = do
+      let currValidParsedTags =
+            foldr
+              ( \tag acc ->
+                  case Yudhishthira.parseTag tag now of
+                    Just (tagName, tagValue, validity) ->
+                      case validity of
+                        Just (Hours val) ->
+                          if val > 0
+                            then (tagName, tagValue, validity) : acc
+                            else acc
+                        Nothing -> (tagName, tagValue, validity) : acc
+                    Nothing -> acc
+              )
+              []
+              currTags
+          newParsedTags = mapMaybe (\tag -> Yudhishthira.parseTag tag now) newTags
+          newParsedTagsNotInCurrTags = filter (\(tagName, _, _) -> tagName `notElem` (currValidParsedTags <&> (\(tagName', _, _) -> tagName'))) newParsedTags
+      modifiedParsedTags <-
+        mapMaybeM
+          ( \(LYT.TagName tagName, tagValue, validity) -> do
+              mbOfferCode <- Redis.withCrossAppRedis $ Redis.rPop ("offerCodesPool-" <> tagName)
+              case mbOfferCode of
+                Just offerCode -> do
+                  case tagValue of
+                    LYT.TextValue tagValueText -> pure $ Just (LYT.TagName tagName, LYT.TextValue (tagValueText <> "|" <> offerCode), validity)
+                    _ -> pure Nothing
+                Nothing -> pure Nothing
+          )
+          newParsedTagsNotInCurrTags
+      return $
+        map
+          (\(tagName, tagValue, tagValidity) -> Yudhishthira.mkTagNameValueExpiry tagName tagValue tagValidity now)
+          modifiedParsedTags
+
+    mkRideData DRide.Ride {updatedAt = updatedAt', ..} = Y.RideData {updatedAt = updatedAt', ..}
 
 buildFareBreakupV2 :: MonadFlow m => Text -> DFareBreakup.FareBreakupEntityType -> DFareBreakup -> m DFareBreakup.FareBreakup
 buildFareBreakupV2 entityId entityType DFareBreakup {..} = do

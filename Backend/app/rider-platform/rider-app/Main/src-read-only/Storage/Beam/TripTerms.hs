@@ -12,10 +12,10 @@ import qualified Kernel.Prelude
 import Tools.Beam.UtilsTH
 
 data TripTermsT f = TripTermsT
-  { createdAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
-    descriptions :: B.C f Data.Text.Text,
-    id :: B.C f Data.Text.Text,
-    updatedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)
+  { createdAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime)),
+    descriptions :: (B.C f Data.Text.Text),
+    id :: (B.C f Data.Text.Text),
+    updatedAt :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime))
   }
   deriving (Generic, B.Beamable)
 
@@ -25,6 +25,6 @@ instance B.Table TripTermsT where
 
 type TripTerms = TripTermsT Identity
 
-$(enableKVPG ''TripTermsT ['id] [])
+$(enableKVPG (''TripTermsT) [('id)] [])
 
-$(mkTableInstances ''TripTermsT "trip_terms")
+$(mkTableInstances (''TripTermsT) "trip_terms")

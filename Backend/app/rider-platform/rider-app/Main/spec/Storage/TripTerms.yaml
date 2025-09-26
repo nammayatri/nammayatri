@@ -11,7 +11,7 @@ TripTerms:
     descriptions : "[Text]"
     createdAt: UTCTime
     updatedAt: UTCTime
-  derives: "Generic, Show, Kernel.Utils.GenericPretty.PrettyShow"
+  derives: "Generic, Show, FromJSON, ToJSON, Kernel.Utils.GenericPretty.PrettyShow"
 
   beamType:
     descriptions: Text

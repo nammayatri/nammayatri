@@ -161,6 +161,7 @@ RiderConfig:
     upcomingBusThresholdSec: Maybe Seconds
     domainPublicTransportDataVersion: Maybe Int
     updateTicketValidityInSecondsPostSetOnboarding: Maybe Seconds
+    enableRideEndOffers: Bool
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
@@ -208,6 +209,7 @@ RiderConfig:
     refundStatusUpdateInterval: Maybe Seconds
     refundStatusUpdateRetries: Maybe Int
     sourceOfServiceTier: Maybe ServiceTierSource
+    enableRideEndOffers: Maybe Bool
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -262,6 +264,7 @@ RiderConfig:
     refundStatusUpdateInterval: fromMaybe 43200 (Kernel.Utils.Common.secondsToNominalDiffTime <$> refundStatusUpdateInterval)| E
     refundStatusUpdateRetries: fromMaybe 5 refundStatusUpdateRetries|E
     sourceOfServiceTier: fromMaybe (Domain.Types.RiderConfig.NANDI) sourceOfServiceTier|E
+    enableRideEndOffers: fromMaybe False enableRideEndOffers|E
 
   toTType:
     ivrTriggerDelay: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
@@ -309,6 +312,7 @@ RiderConfig:
     refundStatusUpdateInterval: (Just . Kernel.Utils.Common.nominalDiffTimeToSeconds)|I
     refundStatusUpdateRetries: Just refundStatusUpdateRetries|E
     sourceOfServiceTier: Just sourceOfServiceTier|E
+    enableRideEndOffers: Just enableRideEndOffers|E
 
 
   default:
