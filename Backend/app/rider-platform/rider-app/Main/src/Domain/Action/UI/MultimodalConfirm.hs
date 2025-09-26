@@ -166,6 +166,11 @@ postMultimodalConfirm (_, _) journeyId forcedBookLegOrder journeyConfirmReq = do
   journey <- JM.getJourney journeyId
   legs <- QJourneyLeg.getJourneyLegs journey.id
   let confirmElements = journeyConfirmReq.journeyConfirmReqElements
+
+  isLockAcquired <- Redis.tryLockRedis (mkSwitchFRFSTierLockKey journeyId) 60
+  when (not isLockAcquired) $ do
+    throwError (InvalidRequest $ "Lock on journeyId:-" <> journeyId.getId <> " to switch FRFS tier already acquired, can't confirm FRFS tier")
+
   void $ JM.startJourney journey.riderId confirmElements forcedBookLegOrder journey.id
   -- If all FRFS legs are skipped, update journey status to INPROGRESS. Otherwise, update journey status to CONFIRMED and it would be marked as INPROGRESS on Payment Success in `markJourneyPaymentSuccess`.
   -- Note: INPROGRESS journey status indicates that the tracking has started.
@@ -175,6 +180,9 @@ postMultimodalConfirm (_, _) journeyId forcedBookLegOrder journeyConfirmReq = do
       fork "Analytics - Journey Skip Without Booking Update" $ QJourney.updateHasStartedTrackingWithoutBooking (Just True) journeyId
     else JM.updateJourneyStatus journey Domain.Types.Journey.CONFIRMED
   fork "Caching recent location" $ JLU.createRecentLocationForMultimodal journey
+
+  Redis.unlockRedis (mkSwitchFRFSTierLockKey journeyId)
+
   pure Kernel.Types.APISuccess.Success
   where
     isAllFRFSLegSkipped legs journeyConfirmReqElements =
@@ -336,6 +344,11 @@ postMultimodalOrderSwitchFRFSTier (mbPersonId, merchantId) journeyId legOrder re
   whenJust journeyLeg.legSearchId $ \legSearchId -> do
     mbAlternateShortNames <- getAlternateRouteInfo
     let searchId = Id legSearchId
+
+    isLockAcquired <- Redis.tryLockRedis (mkSwitchFRFSTierLockKey journeyId) 60
+    when (not isLockAcquired) $ do
+      throwError (InvalidRequest $ "Lock on journeyId:-" <> journeyId.getId <> " to switch FRFS tier already acquired, can't switch FRFS tier")
+
     QJourneyLeg.updateLegPricingIdByLegSearchId (Just req.quoteId.getId) journeyLeg.legSearchId
     mbBooking <- QFRFSTicketBooking.findBySearchId searchId
     whenJust mbBooking $ \booking -> do
@@ -361,6 +374,9 @@ postMultimodalOrderSwitchFRFSTier (mbPersonId, merchantId) journeyId legOrder re
     whenJust mbAlternateShortNames $ \(alternateShortNames, alternateRouteIds) -> do
       QRouteDetails.updateAlternateShortNamesAndRouteIds alternateShortNames (Just alternateRouteIds) journeyLeg.id.getId
   updatedLegs <- JM.getAllLegsInfo journey.riderId journeyId
+
+  Redis.unlockRedis (mkSwitchFRFSTierLockKey journeyId)
+
   generateJourneyInfoResponse journey updatedLegs
   where
     getAlternateRouteInfo :: Flow (Maybe ([Text], [Text]))
@@ -1661,3 +1677,6 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (_mbPersonId, _merchantId) j
         (ticket : _) -> do
           let newJourneyExpiry = addUTCTime (-19800) ticket.expiryIST
           QJourney.updateJourneyExpiryTime journey.id $ fromMaybe newJourneyExpiry (max journey.journeyExpiryTime . Just $ newJourneyExpiry)
+
+mkSwitchFRFSTierLockKey :: Id Domain.Types.Journey.Journey -> Text
+mkSwitchFRFSTierLockKey journeyId = "FRFS:SwitchFRFSTier:JourneyId-" <> journeyId.getId
