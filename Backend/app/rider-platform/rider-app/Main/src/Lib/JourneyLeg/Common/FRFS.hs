@@ -339,8 +339,10 @@ getFare riderId merchant merchantOperatingCity vehicleCategory serviecType route
           let startStationCode = (NE.head fareRouteDetails).startStopCode
           let endStationCode = (NE.last fareRouteDetails).endStopCode
           (_, possibleRoutes, _) <- JMU.findPossibleRoutes Nothing startStationCode endStationCode arrivalTime integratedBPPConfig merchant.id merchantOperatingCity.id Enums.BUS True False
-          let possibleServiceTiers = map (.serviceTier) possibleRoutes
-          return ((Just possibleServiceTiers, filter (\fare -> fare.vehicleServiceTier.serviceTierType `elem` possibleServiceTiers) fares), Just possibleRoutes)
+          let selectedFareRouteCodes = mapMaybe (.routeCode) routeDetails
+          let possibleServiceTiers = map (.serviceTier) $ filter (\route -> all (\rd -> rd `elem` map (.routeCode) route.availableRoutesInfo) selectedFareRouteCodes) possibleRoutes
+          let filteredFares = filter (\fare -> fare.vehicleServiceTier.serviceTierType `elem` possibleServiceTiers) fares
+          return ((Just possibleServiceTiers, filteredFares), Just possibleRoutes)
         _ -> return ((Nothing, fares), Nothing)
     selectMinFare :: [FRFSFare] -> Maybe FRFSFare
     selectMinFare [] = Nothing

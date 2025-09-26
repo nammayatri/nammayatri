@@ -687,9 +687,13 @@ getPublicTransportData (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _mbCo
           Just True -> do
             mbVehicleLiveRouteInfo
               <&> \(_, vehicleLiveRouteInfo) -> do
-                ( if vehicleLiveRouteInfo.tripNumber == 1
-                    then take 2
-                    else take 1
+                ( \tripsSortedOnStopCount ->
+                    if vehicleLiveRouteInfo.tripNumber == 1
+                      then do
+                        let nextTrip = take 1 tripsSortedOnStopCount
+                        let nextUniqueTrip = take 1 $ filter (\t -> not $ t.route_id `elem` map (.route_id) nextTrip) tripsSortedOnStopCount
+                        nextTrip ++ nextUniqueTrip
+                      else take 1 tripsSortedOnStopCount
                   )
                   $ sortOn (Down . (.stops_count)) $ filter (\remainingTrip -> remainingTrip.route_number == vehicleLiveRouteInfo.routeNumber && remainingTrip.route_id /= vehicleLiveRouteInfo.routeCode) (fromMaybe [] vehicleLiveRouteInfo.remaining_trip_details)
           _ -> Nothing
