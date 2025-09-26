@@ -22,6 +22,7 @@ data FleetBookingAssignments = FleetBookingAssignments
     mainAssignmentId :: Kernel.Types.Id.Id Domain.Types.FleetBookingInformation.FleetBookingInformation,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity),
+    paymentMethod :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     placeName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     serviceId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     serviceName :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
