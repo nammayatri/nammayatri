@@ -281,6 +281,17 @@ fetchPlatformCodesFromRedis tripIds stopCode = do
       logDebug $ "fetchPlatformCodesFromRedis: Retrieved " <> show (HashMap.size result) <> " platform codes"
       return result
 
+fetchCancelledTrainsFromRedis :: Environment.Flow [Text]
+fetchCancelledTrainsFromRedis = do
+  cancelledTrains <- CQMMB.withCrossAppRedisNew $ Hedis.get "trains:cancelled"
+  case cancelledTrains of
+    Nothing -> do
+      logDebug "fetchCancelledTrainsFromRedis: No cancelled trains data found in Redis"
+      return []
+    Just cancelledTrainsList -> do
+      logDebug $ "fetchCancelledTrainsFromRedis: Retrieved " <> show (length cancelledTrainsList) <> " cancelled trains"
+      return cancelledTrainsList
+
 getTimetableStop ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
@@ -297,6 +308,10 @@ getTimetableStop (mbPersonId, mid) routeCode fromStopCode mbToCode mbVehicleType
   let vehicleType = maybe BecknV2.OnDemand.Enums.BUS castToOnDemandVehicleCategory mbVehicleType
   integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig person.merchantOperatingCityId vehicleType DIBC.MULTIMODAL
   currentTime <- getCurrentTime
+
+  -- Fetch cancelled trains from Redis
+  cancelledTrains <- fetchCancelledTrainsFromRedis
+
   routeStopTimeTables <-
     SIBC.fetchFirstIntegratedBPPConfigResult integratedBPPConfigs $ \integratedBPPConfig -> do
       routeCodes <-
@@ -307,7 +322,10 @@ getTimetableStop (mbPersonId, mid) routeCode fromStopCode mbToCode mbVehicleType
       staticTimetable <- GRSM.findByRouteCodeAndStopCode integratedBPPConfig mid person.merchantOperatingCityId routeCodes fromStopCode
       liveSubWayTimings <- JourneyUtils.fetchLiveSubwayTimings routeCodes fromStopCode currentTime integratedBPPConfig mid person.merchantOperatingCityId
       let liveSubWayTrips = map (.tripId.getId) liveSubWayTimings
-      return $ liveSubWayTimings ++ filter (\trip -> trip.tripId.getId `notElem` liveSubWayTrips) staticTimetable
+      let allTrips = liveSubWayTimings ++ filter (\trip -> trip.tripId.getId `notElem` liveSubWayTrips) staticTimetable
+      -- Filter out cancelled trains
+      let filteredTrips = filter (\trip -> trip.tripId.getId `notElem` cancelledTrains) allTrips
+      return filteredTrips
 
   let tripIds = map (.tripId.getId) routeStopTimeTables
   platformCodeMap <- fetchPlatformCodesFromRedis tripIds fromStopCode
