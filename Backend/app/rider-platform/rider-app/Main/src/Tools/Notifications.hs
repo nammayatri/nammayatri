@@ -1567,3 +1567,19 @@ notifyAboutDeletedPerson personId = do
     []
     Nothing
     Nothing
+
+notifyOnRideEndOffer ::
+  ServiceFlow m r =>
+  Person ->
+  m ()
+notifyOnRideEndOffer person = do
+  let entity = Notification.Entity Notification.Person person.id.getId ()
+  dynamicNotifyPerson
+    person
+    (createNotificationReq "RIDE_END_OFFER" identity)
+    EmptyDynamicParam
+    entity
+    Nothing
+    []
+    Nothing
+    Nothing
