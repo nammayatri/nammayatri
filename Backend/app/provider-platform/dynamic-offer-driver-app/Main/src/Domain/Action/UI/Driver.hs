@@ -1493,10 +1493,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
             driverFCMPulledList <- case DTC.tripCategoryToPricingPolicy searchTry.tripCategory of
               DTC.EstimateBased _ -> acceptDynamicOfferDriverRequest merchant searchTry searchReq driver sReqFD mbBundleVersion mbClientVersion mbConfigVersion mbReactBundleVersion mbDevice reqOfferedValue driverStats
               DTC.QuoteBased _ -> acceptStaticOfferDriverRequest (Just searchTry) driver (fromMaybe searchTry.estimateId sReqFD.estimateId) reqOfferedValue merchant clientId
-            let acceptationCount = fromMaybe 0 driverStats.acceptationRequestCount
-                totalRequestCount = fromMaybe 0 driverStats.totalRequestCount
-            when (transporterConfig.allowAnalytics == Just True) $ Analytics.updateOperatorAnalyticsAcceptationAndTotalRequestCount driverId transporterConfig (Just acceptationCount) (Just totalRequestCount)
-            QDriverStats.updateAcceptationRequestCountAndTotalRequestCount driverId (acceptationCount + 1) (totalRequestCount + 1) -- Discuss:- Should be do backfill for old drivers
+            when (transporterConfig.enableFleetOperatorDashboardAnalytics == Just True) $ Analytics.updateOperatorAnalyticsAcceptationAndTotalRequestCount driverId transporterConfig True True
             QSRD.updateDriverResponse (Just Accept) Inactive req.notificationSource req.renderedAt req.respondedAt sReqFD.id
             DS.driverScoreEventHandler merchantOpCityId $ buildDriverRespondEventPayload searchTry.id searchTry.requestId driverFCMPulledList
             unless (sReqFD.isForwardRequest) $ Redis.unlockRedis (editDestinationLockKey driverId)
@@ -1506,16 +1503,12 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
               else do
                 void $ Redis.unlockRedis (editDestinationLockKey driverId)
     Reject -> do
-      let totalRequestCount = Just ((fromMaybe 0 driverStats.totalRequestCount) + 1)
-      when (transporterConfig.allowAnalytics == Just True) $ Analytics.updateOperatorAnalyticsAcceptationAndTotalRequestCount driverId transporterConfig Nothing totalRequestCount
-      QDriverStats.updateTotalRequestCount totalRequestCount driverId -- Discuss:- Should be do backfill for old drivers
+      when (transporterConfig.enableFleetOperatorDashboardAnalytics == Just True) $ Analytics.updateOperatorAnalyticsAcceptationAndTotalRequestCount driverId transporterConfig False True
       QSRD.updateDriverResponse (Just Reject) Inactive req.notificationSource req.renderedAt req.respondedAt sReqFD.id
       DP.removeSearchReqIdFromMap merchantId driverId searchTry.requestId
       unlockRedisQuoteKeys
     Pulled -> do
-      let totalRequestCount = Just ((fromMaybe 0 driverStats.totalRequestCount) + 1)
-      when (transporterConfig.allowAnalytics == Just True) $ Analytics.updateOperatorAnalyticsAcceptationAndTotalRequestCount driverId transporterConfig Nothing totalRequestCount
-      QDriverStats.updateTotalRequestCount totalRequestCount driverId
+      when (transporterConfig.enableFleetOperatorDashboardAnalytics == Just True) $ Analytics.updateOperatorAnalyticsAcceptationAndTotalRequestCount driverId transporterConfig False True
       QSRD.updateDriverResponse (Just Pulled) Inactive req.notificationSource req.renderedAt req.respondedAt sReqFD.id
       throwError UnexpectedResponseValue
   pure Success

@@ -126,7 +126,7 @@ countDriversWithNumRidesGreaterThanBetween driverIds fromDateU toDateU threshold
             CH.groupBy ds.driverId $ \driver -> (driver, CH.sum_ ds.numRides)
         )
         $ CH.filter_
-          ( \ds _ ->
+          ( \ds ->
               ds.driverId `CH.in_` driverIds
                 CH.&&. ds.merchantLocalDate >=. fromDateU
                 CH.&&. ds.merchantLocalDate <=. toDateU

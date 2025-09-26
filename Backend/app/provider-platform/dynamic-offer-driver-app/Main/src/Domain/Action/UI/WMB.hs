@@ -433,10 +433,10 @@ postFleetConsent (mbDriverId, merchantId, merchantOperatingCityId) = do
 
   FDV.updateByPrimaryKey (fleetDriverAssociation {isActive = True})
   let allowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
-  let needDriverInfo = transporterConfig.allowAnalytics == Just True || allowCacheDriverFlowStatus
+  let needDriverInfo = transporterConfig.enableFleetOperatorDashboardAnalytics == Just True || allowCacheDriverFlowStatus
   when needDriverInfo $ do
     driverInfo <- QDI.findById fleetDriverAssociation.driverId >>= fromMaybeM (DriverNotFound fleetDriverAssociation.driverId.getId)
-    when (transporterConfig.allowAnalytics == Just True) $ do
+    when (transporterConfig.enableFleetOperatorDashboardAnalytics == Just True) $ do
       mbOperator <- QFOA.findByFleetOwnerId fleetDriverAssociation.fleetOwnerId True
       when (isNothing mbOperator) $ logTagError "AnalyticsAddDriver" "Operator not found for fleet owner"
       whenJust mbOperator $ \operator -> do

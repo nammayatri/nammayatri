@@ -81,10 +81,10 @@ verify authId mbFleet fleetOwnerId mbOperatorId transporterConfig req = do
     assoc <- FDV.makeFleetDriverAssociation res.person.id fleetOwnerId mbOperatorId (DomainRC.convertTextToUTC (Just "2099-12-12"))
     QFDV.create assoc
     let allowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
-    let needsDriverInfo = transporterConfig.allowAnalytics == Just True || allowCacheDriverFlowStatus
+    let needsDriverInfo = transporterConfig.enableFleetOperatorDashboardAnalytics == Just True || allowCacheDriverFlowStatus
     when needsDriverInfo $ do
       driverInfo <- QDI.findById res.person.id >>= fromMaybeM (DriverNotFound res.person.id.getId)
-      when (transporterConfig.allowAnalytics == Just True) $ do
+      when (transporterConfig.enableFleetOperatorDashboardAnalytics == Just True) $ do
         mbOperator <- QFOA.findByFleetOwnerId fleetOwnerId True
         when (isNothing mbOperator) $ logTagError "AnalyticsAddDriver" "Operator not found for fleet owner"
         whenJust mbOperator $ \operator -> do
