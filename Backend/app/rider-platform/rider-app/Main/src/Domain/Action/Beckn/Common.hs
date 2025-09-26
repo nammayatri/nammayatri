@@ -794,6 +794,7 @@ addOffersNammaTags ride person = do
           newParsedTags = mapMaybe (\tag -> Yudhishthira.parseTag tag now) newTags
           newParsedTagsNotInCurrTags = filter (\(tagName, _, _) -> tagName `notElem` (currValidParsedTags <&> (\(tagName', _, _) -> tagName'))) newParsedTags
       logDebug $ "currValidParsedTags: " <> show currValidParsedTags
+      logDebug $ "newTags: " <> show newTags
       logDebug $ "newParsedTags: " <> show newParsedTags
       logDebug $ "newParsedTagsNotInCurrTags: " <> show newParsedTagsNotInCurrTags
       modifiedParsedTags <-
