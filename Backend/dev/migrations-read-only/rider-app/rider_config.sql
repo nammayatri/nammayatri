@@ -436,3 +436,9 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN domain_public_transport_data_versi
 
 ------- SQL updates -------
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN enable_ride_end_offers boolean ;

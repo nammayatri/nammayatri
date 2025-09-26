@@ -95,9 +95,9 @@ data Booking = Booking
     vehicleServiceTierSeatingCapacity :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     vehicleServiceTierType :: Domain.Types.ServiceTierType.ServiceTierType
   }
-  deriving (Generic, Show)
+  deriving (Generic, Show, FromJSON, ToJSON)
 
-data AmbulanceBookingDetails = AmbulanceBookingDetails {distance :: Kernel.Types.Common.Distance, toLocation :: Domain.Types.Location.Location} deriving (Show)
+data AmbulanceBookingDetails = AmbulanceBookingDetails {distance :: Kernel.Types.Common.Distance, toLocation :: Domain.Types.Location.Location} deriving (Generic, Show, FromJSON, ToJSON)
 
 data BPPBooking = BPPBooking {} deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
 
@@ -110,7 +110,7 @@ data BookingDetails
   | AmbulanceDetails Domain.Types.Booking.AmbulanceBookingDetails
   | DeliveryDetails Domain.Types.Booking.DeliveryBookingDetails
   | MeterRideDetails Domain.Types.Booking.MeterRideBookingDetails
-  deriving (Show)
+  deriving (Generic, Show, FromJSON, ToJSON)
 
 data DeliveryBookingDetails = DeliveryBookingDetails
   { distance :: Kernel.Types.Common.Distance,
@@ -119,7 +119,7 @@ data DeliveryBookingDetails = DeliveryBookingDetails
     parcelType :: Domain.Types.ParcelType.ParcelType,
     toLocation :: Domain.Types.Location.Location
   }
-  deriving (Generic, Show)
+  deriving (Generic, Show, FromJSON, ToJSON)
 
 data InterCityBookingDetails = InterCityBookingDetails
   { distance :: Kernel.Types.Common.Distance,
@@ -127,10 +127,10 @@ data InterCityBookingDetails = InterCityBookingDetails
     stops :: [Domain.Types.Location.Location],
     toLocation :: Domain.Types.Location.Location
   }
-  deriving (Show)
+  deriving (Generic, Show, FromJSON, ToJSON)
 
 data MeterRideBookingDetails = MeterRideBookingDetails {distanceCovered :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance, toLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location}
-  deriving (Generic, Show)
+  deriving (Generic, Show, FromJSON, ToJSON)
 
 data OneWayBookingDetails = OneWayBookingDetails
   { distance :: Kernel.Types.Common.Distance,
@@ -138,7 +138,7 @@ data OneWayBookingDetails = OneWayBookingDetails
     stops :: [Domain.Types.Location.Location],
     toLocation :: Domain.Types.Location.Location
   }
-  deriving (Show)
+  deriving (Generic, Show, FromJSON, ToJSON)
 
 data OneWaySpecialZoneBookingDetails = OneWaySpecialZoneBookingDetails
   { distance :: Kernel.Types.Common.Distance,
@@ -146,6 +146,7 @@ data OneWaySpecialZoneBookingDetails = OneWaySpecialZoneBookingDetails
     stops :: [Domain.Types.Location.Location],
     toLocation :: Domain.Types.Location.Location
   }
-  deriving (Show)
+  deriving (Generic, Show, FromJSON, ToJSON)
 
-data RentalBookingDetails = RentalBookingDetails {otpCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text, stopLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location} deriving (Show)
+data RentalBookingDetails = RentalBookingDetails {otpCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text, stopLocation :: Kernel.Prelude.Maybe Domain.Types.Location.Location}
+  deriving (Generic, Show, FromJSON, ToJSON)
