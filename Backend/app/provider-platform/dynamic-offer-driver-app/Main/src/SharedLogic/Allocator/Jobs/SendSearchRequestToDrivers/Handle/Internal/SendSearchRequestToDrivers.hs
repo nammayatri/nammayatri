@@ -202,7 +202,7 @@ sendSearchRequestToDrivers isAllocatorBatch tripQuoteDetails oldSearchReq search
               driverSelectedFare = Nothing,
               customerExtraFee = Nothing,
               nightShiftCharge = Nothing,
-              customerCancellationDues = Nothing,
+              customerCancellationDues = searchReq.customerCancellationDues,
               nightShiftOverlapChecking = DTC.isFixedNightCharge tripQuoteDetail.tripCategory,
               timeDiffFromUtc = Just transporterConfig.timeDiffFromUtc,
               tollCharges = Nothing,

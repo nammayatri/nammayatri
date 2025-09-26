@@ -163,6 +163,7 @@ linkReferee merchantId apiKey RefereeLinkInfoReq {..} = do
             firstRideId = Nothing,
             payoutFlagReason = flagReason,
             currency,
+            bapId = Nothing,
             isDeviceIdExists = Just $ isJust isMultipleDeviceIdExist,
             isFlagConfirmed = Nothing,
             merchantOperatingCityId = Just merchOpCityId
@@ -251,7 +252,7 @@ updatePayoutRelatedFieldsIfRideValie ::
   DS.DailyStats ->
   m ()
 updatePayoutRelatedFieldsIfRideValie transporterConfig merchOpCityId driverId ride driverStats dailyStats = do
-  if (isValidRide ride)
+  if isValidRide ride
     then do
       let localTimeOfThatDay = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) ride.updatedAt
       vehicle <- QVeh.findById driverId >>= fromMaybeM (VehicleNotFound $ "driverId:-" <> driverId.getId)

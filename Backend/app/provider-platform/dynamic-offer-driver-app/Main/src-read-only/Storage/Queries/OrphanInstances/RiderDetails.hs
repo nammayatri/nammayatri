@@ -19,7 +19,8 @@ instance FromTType' Beam.RiderDetails Domain.Types.RiderDetails.RiderDetails whe
     pure $
       Just
         Domain.Types.RiderDetails.RiderDetails
-          { cancellationDues = cancellationDues,
+          { bapId = bapId,
+            cancellationDues = cancellationDues,
             createdAt = createdAt,
             currency = fromMaybe Kernel.Types.Common.INR currency,
             disputeChancesUsed = disputeChancesUsed,
@@ -45,7 +46,8 @@ instance FromTType' Beam.RiderDetails Domain.Types.RiderDetails.RiderDetails whe
 instance ToTType' Beam.RiderDetails Domain.Types.RiderDetails.RiderDetails where
   toTType' (Domain.Types.RiderDetails.RiderDetails {..}) = do
     Beam.RiderDetailsT
-      { Beam.cancellationDues = cancellationDues,
+      { Beam.bapId = bapId,
+        Beam.cancellationDues = cancellationDues,
         Beam.createdAt = createdAt,
         Beam.currency = Kernel.Prelude.Just currency,
         Beam.disputeChancesUsed = disputeChancesUsed,
