@@ -58,6 +58,7 @@ FleetBookingAssignments:
     visitDate: Maybe Day
     fleetOwnerId: Text
     vehicleNo: Text
+    paymentMethod: Maybe Text
     amount: Maybe HighPrecMoney
     merchantId: Maybe (Id Merchant)
     merchantOperatingCityId: Maybe (Id MerchantOperatingCity)

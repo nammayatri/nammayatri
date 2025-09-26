@@ -248,7 +248,8 @@ data FleetBookingAssignmentItem = FleetBookingAssignmentItem
     visitDate :: Kernel.Prelude.Maybe Data.Time.Day,
     createdAt :: Kernel.Prelude.UTCTime,
     fleetOwnerId :: Kernel.Prelude.Text,
-    fleetOwnerName :: Kernel.Prelude.Text
+    fleetOwnerName :: Kernel.Prelude.Text,
+    paymentMethod :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -272,7 +273,8 @@ data FleetBookingItem = FleetBookingItem
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime,
     fleetOwnerId :: Kernel.Prelude.Text,
-    fleetOwnerName :: Kernel.Prelude.Text
+    fleetOwnerName :: Kernel.Prelude.Text,
+    paymentMethod :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
