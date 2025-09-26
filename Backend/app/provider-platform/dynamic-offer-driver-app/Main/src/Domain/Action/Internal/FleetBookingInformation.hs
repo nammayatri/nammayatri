@@ -175,6 +175,7 @@ updateBookingInformation req = do
                   vehicleNo = assignment.vehicleNo,
                   amount = individualAmount,
                   merchantId = mainAssignment.merchantId,
+                  paymentMethod = mainAssignment.paymentMethod,
                   merchantOperatingCityId = mainAssignment.merchantOperatingCityId,
                   createdAt = now,
                   updatedAt = now
