@@ -124,6 +124,7 @@ import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderConfig as QRiderConfig
 import qualified Storage.Queries.RouteDetails as QRouteDetails
 import Storage.Queries.SearchRequest as QSearchRequest
+import System.Environment (lookupEnv)
 import Tools.Error
 import qualified Tools.Error as StationError
 import qualified Tools.Metrics as Metrics
@@ -700,6 +701,8 @@ getPublicTransportData (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _mbCo
                   $ sortOn (Down . (.stops_count)) $ filter (\remainingTrip -> remainingTrip.route_number == vehicleLiveRouteInfo.routeNumber && remainingTrip.route_id /= vehicleLiveRouteInfo.routeCode) (fromMaybe [] vehicleLiveRouteInfo.remaining_trip_details)
           _ -> Nothing
 
+  busStationListHackEnabled <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "BUS_STATION_LIST_HACK_ENABLED"
+
   let mkResponse stations routes routeStops bppConfig = do
         gtfsVersion <-
           try @_ @SomeException (OTPRest.getGtfsVersion bppConfig) >>= \case
@@ -775,7 +778,12 @@ getPublicTransportData (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _mbCo
           Nothing -> do
             stations <- OTPRest.getStationsByGtfsId bppConfig
             routes <- OTPRest.getRoutesByGtfsId bppConfig
-            mkResponse stations routes ([] :: [DRSM.RouteStopMapping]) bppConfig
+            let (finalStations, finalRoutes) =
+                  -- hack to solve the dummy trips and stations, route added for spot booking in GTFS to not appear in single mode search.
+                  if bppConfig.vehicleCategory == Enums.BUS && busStationListHackEnabled
+                    then (filter (\s -> isJust s.address) stations, filter (\r -> isJust r.polyline) routes)
+                    else (stations, routes)
+            mkResponse finalStations finalRoutes ([] :: [DRSM.RouteStopMapping]) bppConfig
 
   transportDataList <-
     try @_ @SomeException
