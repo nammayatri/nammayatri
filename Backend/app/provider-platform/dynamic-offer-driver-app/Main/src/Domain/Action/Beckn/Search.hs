@@ -293,7 +293,7 @@ handler ValidatedDSearchReq {..} sReq = do
       then do
         case sReq.customerPhoneNum of
           Just number -> do
-            (riderDetails, isNewRider) <- SRD.getRiderDetails cityCurrency merchant.id (Just merchantOpCityId) (fromMaybe "+91" merchant.mobileCountryCode) number sReq.bapId False
+            (riderDetails, isNewRider) <- SRD.getRiderDetails cityCurrency merchant.id (Just merchantOpCityId) (fromMaybe "+91" merchant.mobileCountryCode) number sReq.bapId False Nothing
             when isNewRider $ QRD.create riderDetails
             return riderDetails.cancellationDues
           Nothing -> do

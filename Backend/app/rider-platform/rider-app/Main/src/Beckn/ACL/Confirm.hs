@@ -216,6 +216,17 @@ tfCustomer res =
                     },
               tagDisplay = Just False,
               tagValue = Just $ show res.enableOtpLessRide
+            },
+          Spec.Tag
+            { tagDescriptor =
+                Just $
+                  Spec.Descriptor
+                    { descriptorCode = Just $ show Tags.RIDER_GENDER,
+                      descriptorName = Just "Rider gender",
+                      descriptorShortDesc = Nothing
+                    },
+              tagDisplay = Just False,
+              tagValue = Just $ show res.riderGender
             }
         ]
 

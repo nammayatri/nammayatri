@@ -20,9 +20,11 @@ import qualified BecknV2.OnDemand.Types as Spec
 import qualified BecknV2.OnDemand.Utils.Common as Utils
 import qualified BecknV2.OnDemand.Utils.Context as Utils
 import qualified BecknV2.Utils as Utils
+import Control.Applicative ((<|>))
 import qualified Data.Text as T
 import Domain.Action.Beckn.Confirm as DConfirm
 import Domain.Types.Booking (BookingStatus (NEW))
+import qualified Domain.Types.Person as DTP
 import Kernel.Prelude
 import Kernel.Types.App
 import qualified Kernel.Types.Beckn.Context as Context
@@ -60,6 +62,7 @@ buildConfirmReqV2 req isValueAddNP = do
   let nightSafetyCheck = fulfillment.fulfillmentCustomer >>= (.customerPerson) >>= (.personTags) & getNightSafetyCheckTag isValueAddNP
       enableFrequentLocationUpdates = fulfillment.fulfillmentCustomer >>= (.customerPerson) >>= (.personTags) & getEnableFrequentLocationUpdatesTag
       enableOtpLessRide = fulfillment.fulfillmentCustomer >>= (.customerPerson) >>= (.personTags) & getEnableOtpLessRideTag
+      mbRiderGender = fulfillment.fulfillmentCustomer >>= (.customerPerson) >>= (.personTags) & getRiderGender
   toAddress <- fulfillment.fulfillmentStops >>= Utils.getDropLocation >>= (.stopLocation) & maybe (pure Nothing) Utils.parseAddress
   let paymentId = req.confirmReqMessage.confirmReqMessageOrder.orderPayments >>= listToMaybe >>= (.paymentId)
   return $
@@ -87,3 +90,8 @@ getEnableOtpLessRideTag = maybe False getTagValue
     getTagValue tagGroups =
       let tagValue = Utils.getTagV2 Tag.CUSTOMER_INFO Tag.ENABLE_OTP_LESS_RIDE (Just tagGroups)
        in fromMaybe False (readMaybe . T.unpack =<< tagValue)
+
+getRiderGender :: Maybe [Spec.TagGroup] -> Maybe DTP.Gender
+getRiderGender tagGroups =
+  (Utils.getTagV2 Tag.CUSTOMER_INFO Tag.RIDER_GENDER tagGroups >>= readMaybe . T.unpack)
+    <|> Just DTP.UNKNOWN
