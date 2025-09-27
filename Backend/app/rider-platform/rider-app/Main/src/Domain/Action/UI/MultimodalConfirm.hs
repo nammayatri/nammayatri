@@ -701,7 +701,7 @@ getPublicTransportData (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _mbCo
                   $ sortOn (Down . (.stops_count)) $ filter (\remainingTrip -> remainingTrip.route_number == vehicleLiveRouteInfo.routeNumber && remainingTrip.route_id /= vehicleLiveRouteInfo.routeCode) (fromMaybe [] vehicleLiveRouteInfo.remaining_trip_details)
           _ -> Nothing
 
-  busStationListHackEnabled <- fromMaybe False . (>>= readMaybe) <$> lookupEnv "BUS_STATION_LIST_HACK_ENABLED"
+  busStationListHackEnabled <- fromMaybe False . (>>= readMaybe) <$> (liftIO $ lookupEnv "BUS_STATION_LIST_HACK_ENABLED")
 
   let mkResponse stations routes routeStops bppConfig = do
         gtfsVersion <-
