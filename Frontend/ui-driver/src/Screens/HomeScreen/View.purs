@@ -4073,7 +4073,7 @@ customerNotPickingUpTheCallPopUp push state =
         width MATCH_PARENT
       , height WRAP_CONTENT
       , orientation HORIZONTAL
-      , padding $ Padding 10 10 10 10
+      , padding $ Padding 10 8 8 10
       , margin $ Margin 10 200 10 10
       , cornerRadius 24.0
       , background Color.white900
@@ -4086,7 +4086,8 @@ customerNotPickingUpTheCallPopUp push state =
         , height WRAP_CONTENT
         , imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_call_not_picked_bg_removed"
         , cornerRadius 24.0
-        , padding $ PaddingTop 10
+        , gravity LEFT
+        , padding $ PaddingVertical 10 10
         ]
       , textView $
         [ width $ V (2*(EHC.screenWidth unit)/3)
@@ -4095,12 +4096,14 @@ customerNotPickingUpTheCallPopUp push state =
         , text $ "Customer not picking up the call?"
         , margin $ MarginLeft 5
         , margin $ MarginRight 5
-        , padding $ PaddingHorizontal 10 15
+        , weight 1.0
+        , padding $ PaddingHorizontal 10 10
         ] <> FontStyle.title8 TypoGraphy
         ,imageView
         [ width $ V 50
         , height WRAP_CONTENT
         , padding $ PaddingVertical 10 10
+        , gravity RIGHT
         , imageWithFallback $ HU.fetchImage HU.FF_COMMON_ASSET "ny_ic_right_arrow_grey_bg"
         , onClick push $ const $ OpenCallNotPickUp 
         ]
