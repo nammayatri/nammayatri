@@ -542,7 +542,9 @@ onUpdate = \case
       toLocation <- ride.toLocation & fromMaybeM (InvalidRequest $ "toLocation not found for rideId: " <> show ride.id)
       -- fix it properly later
       -- JM.cancelRemainingLegs journeyId True booking.riderId
-      QJourneyLeg.updateAfterEditLocation Nothing (convertHighPrecMetersToDistance bookingUpdateRequest.distanceUnit <$> bookingUpdateRequest.estimatedDistance) (Maps.LatLngV2 {latitude = toLocation.lat, longitude = toLocation.lon}) journeyLeg.id
+      -- TODO: Fix this properly
+      let duration = maybe (Just 0) Just booking.estimatedDuration
+      QJourneyLeg.updateAfterEditLocation duration (convertHighPrecMetersToDistance bookingUpdateRequest.distanceUnit <$> bookingUpdateRequest.estimatedDistance) (Maps.LatLngV2 {latitude = toLocation.lat, longitude = toLocation.lon}) journeyLeg.id
       JM.updateJourneyChangeLogCounter journeyId
     Notify.notifyOnTripUpdate booking ride Nothing
   OUValidatedTollCrossedEventReq ValidatedTollCrossedEventReq {..} -> do
