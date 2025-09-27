@@ -132,7 +132,8 @@ type Config = {
     dropdownTextFieldConfig :: DropdownTextField.Config,
     searchableListConfig :: SearchableList.Config,
     showDownloadPolicy :: Boolean,
-    certificateUrl :: String
+    certificateUrl :: String,
+    showCallNotPickingUpConfig :: Boolean
 }
 
 type OptionsConfig = {
@@ -879,6 +880,7 @@ config = {
   , dropdownTextFieldConfig : DropdownTextField.config
   , searchableListConfig : SearchableList.config
   , certificateUrl : ""
+  , showCallNotPickingUpConfig : false
 }
 
 dummyDeliveryDetailsConfig :: DeliveryDetailsConfig

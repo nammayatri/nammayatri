@@ -972,6 +972,9 @@
       "ys_ic_kolkata_map" : true,
       "ys_ic_petrapol_map" : true,
       "ys_ic_siliguri_map" : true,
-      "zone_curve" : true
+      "zone_curve" : true,
+      "ny_ic_call_not_picked" : true,
+      "ny_ic_call_not_picked_bg_removed" : true,
+      "ny_ic_right_arrow_grey_bg" : true
    }
 }

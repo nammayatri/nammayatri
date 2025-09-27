@@ -1893,4 +1893,7 @@ getHi =
     , bus_conductor: "बस कंडक्टर"
     , link_trip: "यात्रा लिंक करें"
     , driver_name: "चालक का नाम"
+    , you_can_cancel_the_ride_without_affecting_your_rating: "आप अपनी रेटिंग को प्रभावित किए बिना सवारी रद्द कर सकते हैं"
+    , customer_not_picking_up_the_call: "ग्राहक कॉल नहीं उठा रहा है"
+    , your_rating_wont_be_affected: "(आपकी रेटिंग प्रभावित नहीं होगी)"
     }
