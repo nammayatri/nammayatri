@@ -1514,7 +1514,7 @@ TransporterConfig:
     maxOnlineDurationDays : "10"
     distanceWeightage: "20"
     driverCallingOption: "'AnonymousCall'"
-    driverCallingOptionConfigs: '{"driverCallingOptions": "AnonymousCall","directCallingAllowedGenderType": "[MALE]"}'
+    driverCallingOptionConfigs: '''{"driverCallingOptions": "AnonymousCall","directCallingAllowedGenderType": "[MALE]"}'''
   excludedDefaultQueries:
     - findByPrimaryKey
     - updateByPrimaryKey
