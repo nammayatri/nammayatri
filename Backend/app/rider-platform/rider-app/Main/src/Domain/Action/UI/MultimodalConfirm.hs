@@ -76,7 +76,7 @@ import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.Station as DStation
 import Domain.Utils (mapConcurrently)
 import Environment
-import EulerHS.Prelude hiding (all, any, catMaybes, concatMap, elem, find, forM_, groupBy, id, length, map, mapM_, null, sum, toList, whenJust)
+import EulerHS.Prelude hiding (all, any, catMaybes, concatMap, elem, find, forM_, groupBy, id, length, map, mapM_, null, readMaybe, sum, toList, whenJust)
 import qualified ExternalBPP.CallAPI as CallExternalBPP
 import qualified ExternalBPP.ExternalAPI.CallAPI as DirectExternalBPP
 import qualified ExternalBPP.ExternalAPI.Types
