@@ -404,19 +404,12 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
     fork "Process rest of single mode routes" $ processSingleModeRoutes restOfViaPoints userPreferences mbIntegratedBPPConfig (getPreliminaryLeg now currentLocation searchRequest.fromLocation.address.area) routeLiveInfo
   when (null restOfViaPoints) $ cacheAllRoutesLoadedKey searchRequest.id.getId True
 
-  let (indexedRoutesToProcess', showMultimodalWarningForFirstJourney') = getIndexedRoutesAndWarning userPreferences otpResponse
-  -- This function should be called only once. calling this multiple times will result in suburban booking failure.
-  mbCrisSdkToken' <- try @_ @SomeException $ getCrisSdkToken merchantOperatingCityId indexedRoutesToProcess'
-  (otpResponse', mbCrisSdkToken, indexedRoutesToProcess, showMultimodalWarningForFirstJourney) <- case mbCrisSdkToken' of
-    Left err -> do
-      logError $ "CRIS SDK token not available, filtering out subway routes: " <> show err
-      let filteredRoutes = filterRoutesWithoutSubwayLegs otpResponse
-      let otpResponse'' = MInterface.MultiModalResponse {routes = filteredRoutes}
-      let (indexedRoutesToProcess'', showMultimodalWarningForFirstJourney'') = getIndexedRoutesAndWarning userPreferences otpResponse''
-      return (otpResponse'', Nothing, indexedRoutesToProcess'', showMultimodalWarningForFirstJourney'')
-    Right token -> return (otpResponse, token, indexedRoutesToProcess', showMultimodalWarningForFirstJourney')
+  let (indexedRoutesToProcess, showMultimodalWarningForFirstJourney) = getIndexedRoutesAndWarning userPreferences otpResponse
 
-  multimodalIntiateHelper singleModeWarningType otpResponse' userPreferences indexedRoutesToProcess showMultimodalWarningForFirstJourney mbCrisSdkToken True routeLiveInfo
+  -- This function should be called only once. calling this multiple times will result in suburban booking failure.
+  mbCrisSdkToken <- getCrisSdkToken merchantOperatingCityId indexedRoutesToProcess
+
+  multimodalIntiateHelper singleModeWarningType otpResponse userPreferences indexedRoutesToProcess showMultimodalWarningForFirstJourney mbCrisSdkToken True routeLiveInfo
   where
     processSingleModeRoutes restOfViaPoints userPreferences mbIntegratedBPPConfig preliminaryLeg routeLiveInfo = do
       (restOfRoutes, _) <- JMU.getSubwayValidRoutes restOfViaPoints preliminaryLeg (fromJust mbIntegratedBPPConfig) searchRequest.merchantId searchRequest.merchantOperatingCityId (fromMaybe BecknV2.OnDemand.Enums.BUS searchRequest.vehicleCategory) (castVehicleCategoryToGeneralVehicleType (fromMaybe BecknV2.OnDemand.Enums.BUS searchRequest.vehicleCategory)) True
@@ -840,10 +833,6 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
               else baseRoutes
           showMultimodalWarningForFirstJourney = null filteredUserPreferredIndexedRoutes
       (indexedRoutesToProcess, showMultimodalWarningForFirstJourney)
-
-    filterRoutesWithoutSubwayLegs :: MInterface.MultiModalResponse -> [MultiModalTypes.MultiModalRoute]
-    filterRoutesWithoutSubwayLegs response =
-      filter (\route' -> not $ any (\leg -> leg.mode == MultiModalTypes.Subway) route'.legs) response.routes
 
 checkSearchRateLimit ::
   ( Redis.HedisFlow m r,

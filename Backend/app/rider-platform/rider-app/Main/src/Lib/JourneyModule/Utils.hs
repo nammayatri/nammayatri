@@ -1046,36 +1046,31 @@ buildTrainAllViaRoutes getPreliminaryLeg (Just originStopCode) (Just destination
       case integratedBppConfig.providerConfig of
         DIntegratedBPPConfig.CRIS crisConfig -> do
           routeFareReq <- getDummyRouteFareRequest originStopCode destinationStopCode " " " "
-          fares' <- try @_ @SomeException $ CRISRouteFare.getRouteFare crisConfig mocid routeFareReq
-          case fares' of
-            Right fares -> do
-              let sortedFares = case crisConfig.routeSortingCriteria of
-                    Just DIntegratedBPPConfig.FARE -> sortBy (comparing (\fare -> fare.price.amount)) fares
-                    Just DIntegratedBPPConfig.DISTANCE ->
-                      sortBy
-                        ( comparing
-                            ( \fare -> case fare.fareDetails of
-                                Just details -> details.distance
-                                Nothing -> Meters 0
-                            )
+          fares <- CRISRouteFare.getRouteFare crisConfig mocid routeFareReq
+          let sortedFares = case crisConfig.routeSortingCriteria of
+                Just DIntegratedBPPConfig.FARE -> sortBy (comparing (\fare -> fare.price.amount)) fares
+                Just DIntegratedBPPConfig.DISTANCE ->
+                  sortBy
+                    ( comparing
+                        ( \fare -> case fare.fareDetails of
+                            Just details -> details.distance
+                            Nothing -> Meters 0
                         )
-                        fares
-                    Nothing -> fares
-              let viaRoutes =
-                    nub $
-                      map
-                        ( \fd ->
-                            let viaStops = if T.strip fd.via == "" then [] else T.splitOn "-" (T.strip fd.via)
-                                stops = [originStopCode] <> viaStops <> [destinationStopCode]
-                                viaPoints = zipWith (,) stops (drop 1 stops)
-                             in ViaRoute {viaPoints = viaPoints, distance = fd.distance}
-                        )
-                        $ mapMaybe (.fareDetails) sortedFares
-              logDebug $ "getAllSubwayRoutes viaRoutes: " <> show viaRoutes
-              return viaRoutes
-            Left err -> do
-              logError $ "getAllSubwayRoutes error: " <> show err
-              return []
+                    )
+                    fares
+                Nothing -> fares
+          let viaRoutes =
+                nub $
+                  map
+                    ( \fd ->
+                        let viaStops = if T.strip fd.via == "" then [] else T.splitOn "-" (T.strip fd.via)
+                            stops = [originStopCode] <> viaStops <> [destinationStopCode]
+                            viaPoints = zipWith (,) stops (drop 1 stops)
+                         in ViaRoute {viaPoints = viaPoints, distance = fd.distance}
+                    )
+                    $ mapMaybe (.fareDetails) sortedFares
+          logDebug $ "getAllSubwayRoutes viaRoutes: " <> show viaRoutes
+          return viaRoutes
         _ -> return []
 buildTrainAllViaRoutes _ _ _ _ _ _ _ _ _ = return ([], [])
 
