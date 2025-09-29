@@ -59,7 +59,10 @@ library
       MultiParamTypeClasses
       MultiWayIf
       NamedFieldPuns
+      NoFieldSelectors
       NoImplicitPrelude
+      OverloadedRecordDot
+      OverloadedRecordUpdate
       OverloadedStrings
       PackageImports
       PatternSynonyms
@@ -77,7 +80,7 @@ library
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
-  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
   build-depends:
       aeson
     , base >=4.7 && <5
@@ -90,7 +93,6 @@ library
     , http-client
     , http-types
     , mobility-core
-    , record-dot-preprocessor
     , record-hasfield
     , servant
     , servant-client
@@ -128,7 +130,10 @@ executable special-zone-exe
       MultiParamTypeClasses
       MultiWayIf
       NamedFieldPuns
+      NoFieldSelectors
       NoImplicitPrelude
+      OverloadedRecordDot
+      OverloadedRecordUpdate
       OverloadedStrings
       PackageImports
       PatternSynonyms
@@ -146,7 +151,7 @@ executable special-zone-exe
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
-  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T"
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -threaded -rtsopts "-with-rtsopts=-N -T"
   build-depends:
       aeson
     , base >=4.7 && <5
@@ -159,7 +164,6 @@ executable special-zone-exe
     , http-client
     , http-types
     , mobility-core
-    , record-dot-preprocessor
     , record-hasfield
     , servant
     , servant-client

@@ -50,7 +50,10 @@ library
       MultiParamTypeClasses
       MultiWayIf
       NamedFieldPuns
+      NoFieldSelectors
       NoImplicitPrelude
+      OverloadedRecordDot
+      OverloadedRecordUpdate
       OverloadedStrings
       PatternSynonyms
       PolyKinds
@@ -67,7 +70,7 @@ library
       UndecidableInstances
       StandaloneDeriving
       PackageImports
-  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
   build-depends:
       aeson
     , base >=4.7 && <5
@@ -87,7 +90,6 @@ library
     , openapi3
     , passetto-client
     , prometheus-client
-    , record-dot-preprocessor
     , record-hasfield
     , resource-pool
     , rider-app
@@ -138,7 +140,10 @@ executable rider-app-scheduler-exe
       MultiParamTypeClasses
       MultiWayIf
       NamedFieldPuns
+      NoFieldSelectors
       NoImplicitPrelude
+      OverloadedRecordDot
+      OverloadedRecordUpdate
       OverloadedStrings
       PatternSynonyms
       PolyKinds
@@ -155,7 +160,7 @@ executable rider-app-scheduler-exe
       UndecidableInstances
       StandaloneDeriving
       PackageImports
-  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T"
+  ghc-options: -fwrite-ide-info -hiedir=.hie -threaded -rtsopts "-with-rtsopts=-N -T"
   build-depends:
       aeson
     , base >=4.7 && <5
@@ -174,7 +179,6 @@ executable rider-app-scheduler-exe
     , openapi3
     , passetto-client
     , prometheus-client
-    , record-dot-preprocessor
     , record-hasfield
     , resource-pool
     , rider-app-scheduler

@@ -47,7 +47,10 @@ executable alchemist-generator-exe
       MultiParamTypeClasses
       MultiWayIf
       NamedFieldPuns
+      NoFieldSelectors
       NoImplicitPrelude
+      OverloadedRecordDot
+      OverloadedRecordUpdate
       OverloadedLabels
       OverloadedStrings
       PackageImports
@@ -64,7 +67,7 @@ executable alchemist-generator-exe
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
-  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -fwrite-ide-info -hiedir=.hie -threaded -rtsopts "-with-rtsopts=-N -T"
+  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -fwrite-ide-info -hiedir=.hie -threaded -rtsopts "-with-rtsopts=-N -T"
   build-depends:
       aeson
     , base >=4.7 && <5
@@ -75,7 +78,6 @@ executable alchemist-generator-exe
     , filepath
     , mobility-core
     , namma-dsl
-    , record-dot-preprocessor
     , record-hasfield
     , template-haskell
     , text

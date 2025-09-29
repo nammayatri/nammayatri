@@ -54,7 +54,10 @@ library
       MultiParamTypeClasses
       MultiWayIf
       NamedFieldPuns
+      NoFieldSelectors
       NoImplicitPrelude
+      OverloadedRecordDot
+      OverloadedRecordUpdate
       OverloadedStrings
       PatternSynonyms
       PolyKinds
@@ -70,7 +73,7 @@ library
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
-  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
   build-depends:
       aeson
     , amazonka
@@ -93,7 +96,6 @@ library
     , mobility-core
     , openapi3
     , process
-    , record-dot-preprocessor
     , record-hasfield
     , servant
     , servant-client

@@ -106,7 +106,10 @@ library
       MultiParamTypeClasses
       MultiWayIf
       NamedFieldPuns
+      NoFieldSelectors
       NoImplicitPrelude
+      OverloadedRecordDot
+      OverloadedRecordUpdate
       OverloadedStrings
       PatternSynonyms
       PolyKinds
@@ -125,7 +128,7 @@ library
       PackageImports
       TemplateHaskell
       DerivingStrategies
-  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
   extra-libraries:
       cac_client
   build-depends:
@@ -171,7 +174,6 @@ library
     , prometheus-client
     , pureMD5
     , random
-    , record-dot-preprocessor
     , record-hasfield
     , resource-pool
     , scheduler
@@ -233,7 +235,10 @@ test-suite yudhishthira-tests
       MultiParamTypeClasses
       MultiWayIf
       NamedFieldPuns
+      NoFieldSelectors
       NoImplicitPrelude
+      OverloadedRecordDot
+      OverloadedRecordUpdate
       OverloadedStrings
       PatternSynonyms
       PolyKinds
@@ -252,7 +257,7 @@ test-suite yudhishthira-tests
       PackageImports
       TemplateHaskell
       DerivingStrategies
-  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor
+  ghc-options: -fwrite-ide-info -hiedir=.hie 
   build-depends:
       JuicyPixels
     , JuicyPixels-extra
@@ -294,7 +299,6 @@ test-suite yudhishthira-tests
     , prometheus-client
     , pureMD5
     , random
-    , record-dot-preprocessor
     , record-hasfield
     , resource-pool
     , scheduler

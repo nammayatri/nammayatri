@@ -43,7 +43,10 @@ default-extensions:
   - MultiParamTypeClasses
   - MultiWayIf
   - NamedFieldPuns
+  - NoFieldSelectors
   - NoImplicitPrelude
+  - OverloadedRecordDot
+  - OverloadedRecordUpdate
   - OverloadedLabels
   - OverloadedStrings
   - PackageImports
@@ -65,7 +68,6 @@ default-extensions:
 dependencies:
   - base >= 4.7 && < 5
   - record-hasfield
-  - record-dot-preprocessor
   - aeson
   - mobility-core
   - bytestring
@@ -101,7 +103,7 @@ ghc-options:
   - -Wcompat
   - -Widentities
   - -Wunused-imports
-  - -fplugin=RecordDotPreprocessor
+  - 
 
 library:
   source-dirs: src

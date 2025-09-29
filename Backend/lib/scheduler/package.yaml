@@ -39,7 +39,10 @@ default-extensions:
   - MultiParamTypeClasses
   - MultiWayIf
   - NamedFieldPuns
+  - NoFieldSelectors
   - NoImplicitPrelude
+  - OverloadedRecordDot
+  - OverloadedRecordUpdate
   - OverloadedStrings
   - PatternSynonyms
   - PolyKinds
@@ -62,7 +65,6 @@ dependencies:
   - beam-core
   - beam-postgres
   - bytestring
-  - record-dot-preprocessor
   - record-hasfield
   - bytestring
   - text
@@ -98,7 +100,7 @@ ghc-options:
   - -Widentities
   - -fhide-source-paths
   - -Werror
-  - -fplugin=RecordDotPreprocessor
+  - 
 
 library:
   source-dirs:

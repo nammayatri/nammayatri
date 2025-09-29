@@ -52,7 +52,10 @@ library
       MultiParamTypeClasses
       MultiWayIf
       NamedFieldPuns
+      NoFieldSelectors
       NoImplicitPrelude
+      OverloadedRecordDot
+      OverloadedRecordUpdate
       OverloadedStrings
       PackageImports
       PatternSynonyms
@@ -72,7 +75,7 @@ library
       UndecidableInstances
       TemplateHaskell
       DerivingStrategies
-  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wall -Wcompat -Widentities -fhide-source-paths -Werror
   build-depends:
       aeson
     , base >=4.7 && <5
@@ -90,7 +93,6 @@ library
     , http-types
     , mobility-core
     , postgresql-simple
-    , record-dot-preprocessor
     , record-hasfield
     , sequelize
     , servant

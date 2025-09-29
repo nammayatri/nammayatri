@@ -38,7 +38,10 @@ default-extensions:
   - MultiParamTypeClasses
   - MultiWayIf
   - NamedFieldPuns
+  - NoFieldSelectors
   - NoImplicitPrelude
+  - OverloadedRecordDot
+  - OverloadedRecordUpdate
   - OverloadedStrings
   - PatternSynonyms
   - PolyKinds
@@ -57,7 +60,6 @@ default-extensions:
 
 dependencies:
   - base >= 4.7 && < 5
-  - record-dot-preprocessor
   - record-hasfield
   - uri-encode
   - base16-bytestring
@@ -98,7 +100,7 @@ ghc-options:
   - -Widentities
   - -fhide-source-paths
   - -Werror
-  - -fplugin=RecordDotPreprocessor
+  - 
 
 library:
   source-dirs:

@@ -1418,7 +1418,10 @@ library
       MultiParamTypeClasses
       MultiWayIf
       NamedFieldPuns
+      NoFieldSelectors
       NoImplicitPrelude
+      OverloadedRecordDot
+      OverloadedRecordUpdate
       OverloadedStrings
       PatternSynonyms
       PolyKinds
@@ -1436,7 +1439,7 @@ library
       StandaloneDeriving
       PackageImports
       TemplateHaskell
-  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
   build-depends:
       JuicyPixels
     , JuicyPixels-extra
@@ -1488,7 +1491,6 @@ library
     , prometheus-client
     , pureMD5
     , random
-    , record-dot-preprocessor
     , record-hasfield
     , resource-pool
     , scheduler
@@ -1555,7 +1557,10 @@ executable dynamic-offer-driver-app-exe
       MultiParamTypeClasses
       MultiWayIf
       NamedFieldPuns
+      NoFieldSelectors
       NoImplicitPrelude
+      OverloadedRecordDot
+      OverloadedRecordUpdate
       OverloadedStrings
       PatternSynonyms
       PolyKinds
@@ -1573,7 +1578,7 @@ executable dynamic-offer-driver-app-exe
       StandaloneDeriving
       PackageImports
       TemplateHaskell
-  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T"
+  ghc-options: -fwrite-ide-info -hiedir=.hie -threaded -rtsopts "-with-rtsopts=-N -T"
   build-depends:
       JuicyPixels
     , JuicyPixels-extra
@@ -1622,7 +1627,6 @@ executable dynamic-offer-driver-app-exe
     , prometheus-client
     , pureMD5
     , random
-    , record-dot-preprocessor
     , record-hasfield
     , resource-pool
     , scheduler

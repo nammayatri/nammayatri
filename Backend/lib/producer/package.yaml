@@ -38,7 +38,10 @@ default-extensions:
   - MultiParamTypeClasses
   - MultiWayIf
   - NamedFieldPuns
+  - NoFieldSelectors
   - NoImplicitPrelude
+  - OverloadedRecordDot
+  - OverloadedRecordUpdate
   - OverloadedLabels
   - OverloadedStrings
   - PackageImports
@@ -64,7 +67,6 @@ dependencies:
   - monad-control
   - euler-hs
   - bytestring
-  - record-dot-preprocessor
   - record-hasfield
   - text
   - time
@@ -96,7 +98,7 @@ ghc-options:
   - -Werror
   - -Widentities
   - -Wunused-imports
-  - -fplugin=RecordDotPreprocessor
+  - 
   - -fwrite-ide-info
   - -hiedir=.hie
 

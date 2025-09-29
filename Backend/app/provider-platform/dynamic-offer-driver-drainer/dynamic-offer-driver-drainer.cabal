@@ -54,6 +54,8 @@ library
       src
   default-extensions:
       NoImplicitPrelude
+      OverloadedRecordDot
+      OverloadedRecordUpdate
       ConstraintKinds
       DataKinds
       DefaultSignatures
@@ -70,6 +72,7 @@ library
       MultiParamTypeClasses
       MultiWayIf
       NamedFieldPuns
+      NoFieldSelectors
       OverloadedStrings
       PackageImports
       PatternSynonyms
@@ -84,7 +87,7 @@ library
       ViewPatterns
       UndecidableInstances
       LambdaCase
-  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror
   build-depends:
       aeson
     , aeson-pretty
@@ -115,7 +118,6 @@ library
     , mobility-core
     , pcg-random
     , postgresql-simple
-    , record-dot-preprocessor
     , record-hasfield
     , resource-pool
     , scientific
@@ -147,6 +149,8 @@ executable dynamic-offer-driver-drainer-exe
       server
   default-extensions:
       NoImplicitPrelude
+      OverloadedRecordDot
+      OverloadedRecordUpdate
       ConstraintKinds
       DataKinds
       DefaultSignatures
@@ -163,6 +167,7 @@ executable dynamic-offer-driver-drainer-exe
       MultiParamTypeClasses
       MultiWayIf
       NamedFieldPuns
+      NoFieldSelectors
       OverloadedStrings
       PackageImports
       PatternSynonyms
@@ -177,7 +182,7 @@ executable dynamic-offer-driver-drainer-exe
       ViewPatterns
       UndecidableInstances
       LambdaCase
-  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T"
+  ghc-options: -fwrite-ide-info -hiedir=.hie -threaded -rtsopts "-with-rtsopts=-N -T"
   build-depends:
       aeson
     , aeson-pretty
@@ -209,7 +214,6 @@ executable dynamic-offer-driver-drainer-exe
     , mobility-core
     , pcg-random
     , postgresql-simple
-    , record-dot-preprocessor
     , record-hasfield
     , resource-pool
     , scientific

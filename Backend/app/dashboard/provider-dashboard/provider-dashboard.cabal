@@ -150,7 +150,10 @@ library
       MultiParamTypeClasses
       MultiWayIf
       NamedFieldPuns
+      NoFieldSelectors
       NoImplicitPrelude
+      OverloadedRecordDot
+      OverloadedRecordUpdate
       OverloadedLabels
       OverloadedStrings
       PackageImports
@@ -169,7 +172,7 @@ library
       UndecidableInstances
       TemplateHaskell
       DerivingStrategies
-  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -fwrite-ide-info -hiedir=.hie -fhide-source-paths -Wincomplete-uni-patterns -Wwarn=ambiguous-fields
+  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -fwrite-ide-info -hiedir=.hie -fhide-source-paths -Wincomplete-uni-patterns -Wwarn=ambiguous-fields
   build-depends:
       aeson
     , base >=4.7 && <5
@@ -189,7 +192,6 @@ library
     , openapi3
     , persistent
     , persistent-postgresql
-    , record-dot-preprocessor
     , record-hasfield
     , rider-app
     , sequelize
@@ -234,7 +236,10 @@ executable provider-dashboard-exe
       MultiParamTypeClasses
       MultiWayIf
       NamedFieldPuns
+      NoFieldSelectors
       NoImplicitPrelude
+      OverloadedRecordDot
+      OverloadedRecordUpdate
       OverloadedLabels
       OverloadedStrings
       PackageImports
@@ -253,7 +258,7 @@ executable provider-dashboard-exe
       UndecidableInstances
       TemplateHaskell
       DerivingStrategies
-  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -fwrite-ide-info -hiedir=.hie -threaded -rtsopts "-with-rtsopts=-N -T" -Wincomplete-uni-patterns
+  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -fwrite-ide-info -hiedir=.hie -threaded -rtsopts "-with-rtsopts=-N -T" -Wincomplete-uni-patterns
   build-depends:
       aeson
     , base >=4.7 && <5
@@ -272,7 +277,6 @@ executable provider-dashboard-exe
     , persistent
     , persistent-postgresql
     , provider-dashboard
-    , record-dot-preprocessor
     , record-hasfield
     , sequelize
     , servant-client

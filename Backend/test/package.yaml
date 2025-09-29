@@ -38,7 +38,10 @@ default-extensions:
   - MultiParamTypeClasses
   - MultiWayIf
   - NamedFieldPuns
+  - NoFieldSelectors
   - NoImplicitPrelude
+  - OverloadedRecordDot
+  - OverloadedRecordUpdate
   - NumDecimals
   - OverloadedStrings
   - PackageImports
@@ -88,7 +91,6 @@ dependencies:
   - tasty
   - tasty-hspec
   - record-hasfield
-  - record-dot-preprocessor
   - hspec-expectations-lifted
   - HUnit
   - unix
@@ -113,7 +115,7 @@ ghc-options:
   - -fhide-source-paths
   - -Werror
   - -Wno-unrecognised-pragmas
-  - -fplugin=RecordDotPreprocessor
+  - 
   - -threaded
 
 library:

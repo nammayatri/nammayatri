@@ -28,7 +28,6 @@ dependencies:
 - mobility-core
 - mock-sms
 - provider-dashboard
-- record-dot-preprocessor
 - record-hasfield
 - rider-app
 - string-conversions
@@ -62,7 +61,10 @@ default-extensions:
 - MultiParamTypeClasses
 - MultiWayIf
 - NamedFieldPuns
+  - NoFieldSelectors
 - NoImplicitPrelude
+  - OverloadedRecordDot
+  - OverloadedRecordUpdate
 - OverloadedStrings
 - PackageImports
 - PatternSynonyms

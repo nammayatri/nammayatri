@@ -38,7 +38,10 @@ default-extensions:
   - MultiParamTypeClasses
   - MultiWayIf
   - NamedFieldPuns
+  - NoFieldSelectors
   - NoImplicitPrelude
+  - OverloadedRecordDot
+  - OverloadedRecordUpdate
   - OverloadedStrings
   - PatternSynonyms
   - PolyKinds
@@ -88,7 +91,6 @@ dependencies:
   - warp
   - time
   - record-hasfield
-  - record-dot-preprocessor
   - servant-openapi3
   - openapi3
   - persistent
@@ -140,7 +142,7 @@ dependencies:
 ghc-options:
   - -fwrite-ide-info
   - -hiedir=.hie
-  - -fplugin=RecordDotPreprocessor
+  - 
 
 library:
   source-dirs:

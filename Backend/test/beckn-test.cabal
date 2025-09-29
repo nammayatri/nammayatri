@@ -77,7 +77,10 @@ library
       MultiParamTypeClasses
       MultiWayIf
       NamedFieldPuns
+      NoFieldSelectors
       NoImplicitPrelude
+      OverloadedRecordDot
+      OverloadedRecordUpdate
       NumDecimals
       OverloadedStrings
       PackageImports
@@ -94,7 +97,7 @@ library
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
-  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wno-unrecognised-pragmas -fplugin=RecordDotPreprocessor -threaded -Wwarn=ambiguous-fields
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wno-unrecognised-pragmas -threaded -Wwarn=ambiguous-fields
   build-depends:
       HUnit
     , aeson
@@ -125,7 +128,6 @@ library
     , mock-sms
     , public-transport-rider-platform
     , public-transport-search-consumer
-    , record-dot-preprocessor
     , record-hasfield
     , rider-app
     , search-result-aggregator
@@ -173,7 +175,10 @@ test-suite beckn-integ-test
       MultiParamTypeClasses
       MultiWayIf
       NamedFieldPuns
+      NoFieldSelectors
       NoImplicitPrelude
+      OverloadedRecordDot
+      OverloadedRecordUpdate
       NumDecimals
       OverloadedStrings
       PackageImports
@@ -190,7 +195,7 @@ test-suite beckn-integ-test
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
-  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wno-unrecognised-pragmas -fplugin=RecordDotPreprocessor -threaded
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wno-unrecognised-pragmas -threaded
   build-depends:
       HUnit
     , aeson
@@ -221,7 +226,6 @@ test-suite beckn-integ-test
     , mock-sms
     , public-transport-rider-platform
     , public-transport-search-consumer
-    , record-dot-preprocessor
     , record-hasfield
     , rider-app
     , search-result-aggregator

@@ -43,7 +43,10 @@ default-extensions:
   - MultiParamTypeClasses
   - MultiWayIf
   - NamedFieldPuns
+  - NoFieldSelectors
   - NoImplicitPrelude
+  - OverloadedRecordDot
+  - OverloadedRecordUpdate
   - OverloadedLabels
   - OverloadedStrings
   - PatternSynonyms
@@ -123,7 +126,6 @@ dependencies:
   - stm
   - unix
   - record-hasfield
-  - record-dot-preprocessor
   - openapi3
   - fast-logger
   - persistent
@@ -158,7 +160,7 @@ ghc-options:
   - -Widentities
   - -fhide-source-paths
   - -Werror
-  - -fplugin=RecordDotPreprocessor
+  - 
   - -Wwarn=ambiguous-fields
 
 library:

@@ -69,7 +69,10 @@ library
       MultiParamTypeClasses
       MultiWayIf
       NamedFieldPuns
+      NoFieldSelectors
       NoImplicitPrelude
+      OverloadedRecordDot
+      OverloadedRecordUpdate
       OverloadedLabels
       OverloadedStrings
       PatternSynonyms
@@ -86,7 +89,7 @@ library
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
-  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -fplugin=RecordDotPreprocessor -Wwarn=ambiguous-fields
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
   build-depends:
       aeson
     , aeson-casing
@@ -140,7 +143,6 @@ library
     , prometheus-metrics-ghc
     , prometheus-proc
     , pureMD5
-    , record-dot-preprocessor
     , record-hasfield
     , regex-applicative
     , relude

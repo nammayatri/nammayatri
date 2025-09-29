@@ -65,7 +65,10 @@ library
       MultiParamTypeClasses
       MultiWayIf
       NamedFieldPuns
+      NoFieldSelectors
       NoImplicitPrelude
+      OverloadedRecordDot
+      OverloadedRecordUpdate
       OverloadedLabels
       OverloadedStrings
       PackageImports
@@ -83,7 +86,7 @@ library
       TypeSynonymInstances
       UndecidableInstances
       AllowAmbiguousTypes
-  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -Wunused-imports -Werror -fplugin=RecordDotPreprocessor -Wincomplete-uni-patterns -Wwarn=ambiguous-fields
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -Wunused-imports -Werror -Wincomplete-uni-patterns -Wwarn=ambiguous-fields
   build-depends:
       aeson
     , base >=4.7 && <5
@@ -98,7 +101,6 @@ library
     , mobility-core
     , openapi3
     , public-transport-rider-platform
-    , record-dot-preprocessor
     , record-hasfield
     , relude
     , scientific
@@ -149,7 +151,10 @@ executable mock-public-transport-provider-platform-exe
       MultiParamTypeClasses
       MultiWayIf
       NamedFieldPuns
+      NoFieldSelectors
       NoImplicitPrelude
+      OverloadedRecordDot
+      OverloadedRecordUpdate
       OverloadedLabels
       OverloadedStrings
       PackageImports
@@ -167,7 +172,7 @@ executable mock-public-transport-provider-platform-exe
       TypeSynonymInstances
       UndecidableInstances
       AllowAmbiguousTypes
-  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -Wunused-imports -Werror -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T" -Wincomplete-uni-patterns
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -Wunused-imports -Werror -threaded -rtsopts "-with-rtsopts=-N -T" -Wincomplete-uni-patterns
   build-depends:
       aeson
     , base >=4.7 && <5
@@ -183,7 +188,6 @@ executable mock-public-transport-provider-platform-exe
     , mock-public-transport-provider-platform
     , openapi3
     , public-transport-rider-platform
-    , record-dot-preprocessor
     , record-hasfield
     , relude
     , scientific

@@ -23,6 +23,8 @@ description: Please see the README on GitHub at <https://github.com/nammayatri/n
 
 default-extensions:
   - NoImplicitPrelude
+  - OverloadedRecordDot
+  - OverloadedRecordUpdate
   - ConstraintKinds
   - DataKinds
   - DefaultSignatures
@@ -39,6 +41,7 @@ default-extensions:
   - MultiParamTypeClasses
   - MultiWayIf
   - NamedFieldPuns
+  - NoFieldSelectors
   - OverloadedStrings
   - PackageImports
   - PatternSynonyms
@@ -69,7 +72,6 @@ dependencies:
   - containers
   - directory
   - errors
-  - record-dot-preprocessor
   - record-hasfield
   # - euler-webservice
   - euler-events-hs >=2.0.0 && <2.1
@@ -108,7 +110,7 @@ dependencies:
 ghc-options:
   - -fwrite-ide-info
   - -hiedir=.hie
-  - -fplugin=RecordDotPreprocessor
+  - 
 
 library:
   source-dirs: src

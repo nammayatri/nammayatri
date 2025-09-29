@@ -50,7 +50,10 @@ library
       MultiParamTypeClasses
       MultiWayIf
       NamedFieldPuns
+      NoFieldSelectors
       NoImplicitPrelude
+      OverloadedRecordDot
+      OverloadedRecordUpdate
       OverloadedStrings
       PackageImports
       PatternSynonyms
@@ -66,7 +69,7 @@ library
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
-  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wall -Wcompat -Widentities -fhide-source-paths -Werror
   build-depends:
       aeson
     , base >=4.7 && <5
@@ -79,7 +82,6 @@ library
     , http-client
     , http-types
     , mobility-core
-    , record-dot-preprocessor
     , record-hasfield
     , servant
     , servant-client
@@ -124,7 +126,10 @@ test-suite location-updates-tests
       MultiParamTypeClasses
       MultiWayIf
       NamedFieldPuns
+      NoFieldSelectors
       NoImplicitPrelude
+      OverloadedRecordDot
+      OverloadedRecordUpdate
       OverloadedStrings
       PackageImports
       PatternSynonyms
@@ -140,7 +145,7 @@ test-suite location-updates-tests
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
-  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -fplugin=RecordDotPreprocessor -Wall -Werror
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wall -Werror
   build-depends:
       QuickCheck
     , aeson
@@ -159,7 +164,6 @@ test-suite location-updates-tests
     , location-updates
     , mobility-core
     , mock-google
-    , record-dot-preprocessor
     , record-hasfield
     , servant
     , servant-client

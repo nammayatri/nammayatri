@@ -57,7 +57,10 @@ library
       MultiParamTypeClasses
       MultiWayIf
       NamedFieldPuns
+      NoFieldSelectors
       NoImplicitPrelude
+      OverloadedRecordDot
+      OverloadedRecordUpdate
       OverloadedLabels
       OverloadedStrings
       PackageImports
@@ -75,7 +78,7 @@ library
       TypeSynonymInstances
       UndecidableInstances
       AllowAmbiguousTypes
-  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Werror -Wcompat -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -Wincomplete-uni-patterns -Wwarn=ambiguous-fields
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Werror -Wcompat -Widentities -Wunused-imports -Wincomplete-uni-patterns -Wwarn=ambiguous-fields
   build-depends:
       aeson
     , base >=4.7 && <5
@@ -90,7 +93,6 @@ library
     , http-client
     , mobility-core
     , openapi3
-    , record-dot-preprocessor
     , record-hasfield
     , relude
     , scientific
@@ -139,7 +141,10 @@ executable image-api-helper-exe
       MultiParamTypeClasses
       MultiWayIf
       NamedFieldPuns
+      NoFieldSelectors
       NoImplicitPrelude
+      OverloadedRecordDot
+      OverloadedRecordUpdate
       OverloadedLabels
       OverloadedStrings
       PackageImports
@@ -157,7 +162,7 @@ executable image-api-helper-exe
       TypeSynonymInstances
       UndecidableInstances
       AllowAmbiguousTypes
-  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Werror -Wcompat -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T" -Wincomplete-uni-patterns
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Werror -Wcompat -Widentities -Wunused-imports -threaded -rtsopts "-with-rtsopts=-N -T" -Wincomplete-uni-patterns
   build-depends:
       aeson
     , base >=4.7 && <5
@@ -173,7 +178,6 @@ executable image-api-helper-exe
     , image-api-helper
     , mobility-core
     , openapi3
-    , record-dot-preprocessor
     , record-hasfield
     , relude
     , scientific

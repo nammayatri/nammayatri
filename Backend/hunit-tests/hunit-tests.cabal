@@ -47,7 +47,10 @@ library
       MultiParamTypeClasses
       MultiWayIf
       NamedFieldPuns
+      NoFieldSelectors
       NoImplicitPrelude
+      OverloadedRecordDot
+      OverloadedRecordUpdate
       OverloadedStrings
       PackageImports
       PatternSynonyms
@@ -82,7 +85,6 @@ library
     , mock-sms
     , mtl
     , provider-dashboard
-    , record-dot-preprocessor
     , record-hasfield
     , rider-app
     , string-conversions
@@ -121,7 +123,10 @@ executable hunit-tests
       MultiParamTypeClasses
       MultiWayIf
       NamedFieldPuns
+      NoFieldSelectors
       NoImplicitPrelude
+      OverloadedRecordDot
+      OverloadedRecordUpdate
       OverloadedStrings
       PackageImports
       PatternSynonyms
@@ -157,7 +162,6 @@ executable hunit-tests
     , mock-sms
     , mtl
     , provider-dashboard
-    , record-dot-preprocessor
     , record-hasfield
     , rider-app
     , string-conversions
