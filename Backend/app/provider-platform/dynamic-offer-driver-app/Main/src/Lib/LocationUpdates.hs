@@ -226,13 +226,13 @@ getTravelledDistanceAndTollInfo merchantOperatingCityId (Just ride) estimatedDis
       logInfo $ "MultipleRoutes not found for ride" <> show rideId
       return (estimatedDistance, estimatedTollInfo)
 
-buildRideInterpolationHandler :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Bool -> Maybe Integer -> Flow (RideInterpolationHandler Person Flow)
-buildRideInterpolationHandler merchantId merchantOpCityId isEndRide mbBatchSize = do
+buildRideInterpolationHandler :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id Ride) -> Bool -> Maybe Integer -> Flow (RideInterpolationHandler Person Flow)
+buildRideInterpolationHandler merchantId merchantOpCityId rideId isEndRide mbBatchSize = do
   transportConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let snapToRoad' shouldRectifyDistantPointsFailure =
         if transportConfig.useWithSnapToRoadFallback
-          then TMaps.snapToRoadWithFallback shouldRectifyDistantPointsFailure merchantId merchantOpCityId Nothing
-          else snapToRoadWithService
+          then TMaps.snapToRoadWithFallback shouldRectifyDistantPointsFailure merchantId merchantOpCityId (fmap getId rideId)
+          else snapToRoadWithService (fmap getId rideId)
       enableNightSafety = not isEndRide
       enableSafetyCheckWrtTripCategory = \case
         Trip.Delivery _ -> False
@@ -274,8 +274,8 @@ buildRideInterpolationHandler merchantId merchantOpCityId isEndRide mbBatchSize 
           BP.sendTollCrossedUpdateToBAP mbBooking mbRide driver driverStats vehicle
       )
   where
-    snapToRoadWithService req = do
-      resp <- TMaps.snapToRoad merchantId merchantOpCityId Nothing req
+    snapToRoadWithService rideId' req = do
+      resp <- TMaps.snapToRoad merchantId merchantOpCityId rideId' req
       return ([Google], Right resp)
 
 whenWithLocationUpdatesLock :: (HedisFlow m r, MonadMask m) => Id Person -> m a -> m a
