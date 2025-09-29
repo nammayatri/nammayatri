@@ -11,7 +11,7 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base64 as B64
 import qualified Data.Text.Encoding as TE
 import EulerHS.Prelude
-import Kernel.Types.Error
+import ExternalBPP.ExternalAPI.Subway.CRIS.Error (CRISError (..))
 import Kernel.Utils.Common
 
 cipherInit :: Text -> Either String AES.AES256
@@ -51,7 +51,7 @@ encryptPayload jsonStr clientKey = do
   logInfo $ "Exact JSON before encryption: " <> jsonStr
   let eitherCipher = cipherInit clientKey
   case eitherCipher of
-    Left err -> throwError $ InternalError (show err)
+    Left err -> throwError $ CRISError (show err)
     Right cipher -> do
       let plaintext = TE.encodeUtf8 jsonStr
           paddedPlaintext = pkcs7Pad plaintext

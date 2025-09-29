@@ -231,26 +231,26 @@ createOrder :: (CoreMetrics m, MonadTime m, MonadFlow m, CacheFlow m r, EsqDBFlo
 createOrder config integratedBPPConfig booking = do
   person <- QPerson.findById booking.riderId >>= fromMaybeM (PersonNotFound booking.riderId.getId)
   mbMobileNumber <- decrypt `mapM` person.mobileNumber
-  fromStation <- OTPRest.getStationByGtfsIdAndStopCode booking.fromStationCode integratedBPPConfig >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> booking.fromStationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
-  toStation <- OTPRest.getStationByGtfsIdAndStopCode booking.toStationCode integratedBPPConfig >>= fromMaybeM (InternalError $ "Station not found for stationCode: " <> booking.toStationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
+  fromStation <- OTPRest.getStationByGtfsIdAndStopCode booking.fromStationCode integratedBPPConfig >>= fromMaybeM (CRISError $ "Station not found for stationCode: " <> booking.fromStationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
+  toStation <- OTPRest.getStationByGtfsIdAndStopCode booking.toStationCode integratedBPPConfig >>= fromMaybeM (CRISError $ "Station not found for stationCode: " <> booking.toStationCode <> " and integratedBPPConfigId: " <> integratedBPPConfig.id.getId)
   quote <- QFRFSQuote.findById booking.quoteId >>= fromMaybeM (QuoteNotFound booking.quoteId.getId)
 
   (osBuildVersion, osType, bookAuthCode) <- case (booking.osBuildVersion, booking.osType, booking.bookingAuthCode) of
     (Just osBuildVersion, Just osType, Just bookingAuthCode) -> return (osBuildVersion, osType, bookingAuthCode)
-    _ -> throwError $ InternalError ("Invalid booking data: " <> show booking.osBuildVersion <> " " <> show booking.osType <> " " <> show booking.bookingAuthCode)
+    _ -> throwError $ CRISError ("Invalid booking data: " <> show booking.osBuildVersion <> " " <> show booking.osType <> " " <> show booking.bookingAuthCode)
 
   mbImeiNumber <- decrypt `mapM` person.imeiNumber
   let deviceId = fromMaybe "ed409d8d764c04f7" mbImeiNumber
   (trainTypeCode, distance, crisRouteId, appSession) <-
     case (quote.fareDetails <&> (.trainTypeCode), quote.fareDetails <&> (.distance), quote.fareDetails <&> (.providerRouteId), quote.fareDetails <&> (.appSession)) of
       (Just trainTypeCode, Just distance, Just crisRouteId, Just appSession) -> return (trainTypeCode, distance, crisRouteId, appSession)
-      _ -> throwError $ InternalError ("Invalid quote data: " <> show quote.fareDetails)
+      _ -> throwError $ CRISError ("Invalid quote data: " <> show quote.fareDetails)
 
   orderId <- case booking.bppOrderId of
     Just oid -> return oid
     Nothing -> getBppOrderId booking
   classCode <- getFRFSVehicleServiceTier quote
-  startTime <- fromMaybeM (InternalError "Start time not found") booking.startTime
+  startTime <- fromMaybeM (CRISError "Start time not found") booking.startTime
 
   let bookJourneyReq =
         CRISBookingRequest
@@ -369,12 +369,12 @@ getFRFSVehicleServiceTier ::
 getFRFSVehicleServiceTier quote = do
   let routeStations :: Maybe [FRFSTicketServiceAPI.FRFSRouteStationsAPI] = decodeFromText =<< quote.routeStationsJson
   let mbServiceTier = listToMaybe $ mapMaybe (.vehicleServiceTier) (fromMaybe [] routeStations)
-  serviceTier <- mbServiceTier & fromMaybeM (InternalError "serviceTier not found")
+  serviceTier <- mbServiceTier & fromMaybeM (CRISError "serviceTier not found")
   -- serviceTierType <- mbServiceTier._type & fromMaybeM (InternalError "serviceTierType not found")
   case serviceTier._type of
     Enums.FIRST_CLASS -> pure "FC"
     Enums.SECOND_CLASS -> pure "II"
-    _ -> throwError $ InternalError "Invalid vehicle service tier"
+    _ -> throwError $ CRISError "Invalid vehicle service tier"
 
 alphabet :: String
 alphabet = ['0' .. '9'] ++ ['a' .. 'z'] ++ ['A' .. 'Z']
@@ -404,7 +404,7 @@ uuidTo21CharString = T.pack . normalizeLength 21 . intToBase62 . uuidToInteger
 
 getBppOrderId :: (MonadFlow m) => FRFSTicketBooking -> m Text
 getBppOrderId booking = do
-  bookingUUID <- fromText booking.id.getId & fromMaybeM (InternalError "Booking Id not being able to parse into UUID")
+  bookingUUID <- fromText booking.id.getId & fromMaybeM (CRISError "Booking Id not being able to parse into UUID")
   return $ uuidTo21CharString bookingUUID --- The length should be 21 characters (alphanumeric)
 
 -- Convert UTC time to IST
@@ -418,7 +418,7 @@ parseTicketValidity :: (MonadFlow m) => Text -> m UTCTime
 parseTicketValidity validityStr = do
   let timeFormat = "%d/%m/%Y %H:%M:%S" --Parse format: "04/08/2025 23:59:00" in IST
   case parseTimeM True defaultTimeLocale timeFormat (T.unpack validityStr) of
-    Nothing -> throwError $ InternalError $ "Failed to parse ticket validity: " <> validityStr
+    Nothing -> throwError $ CRISError $ "Failed to parse ticket validity: " <> validityStr
     Just localTime -> do
       let istTimeZone = TimeZone (5 * 60 + 30) False "IST" -- IST is UTC+5:30
       let zonedTime = ZonedTime localTime istTimeZone
