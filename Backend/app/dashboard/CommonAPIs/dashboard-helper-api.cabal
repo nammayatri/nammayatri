@@ -1,6 +1,6 @@
-cabal-version: 1.12
+cabal-version: 2.2
 
--- This file has been generated from package.yaml by hpack version 0.35.2.
+-- This file has been generated from package.yaml by hpack version 0.37.0.
 --
 -- see: https://github.com/sol/hpack
 
@@ -12,7 +12,7 @@ bug-reports:    https://github.com/nammayatri/nammayatri/issues
 author:         nammayatri
 maintainer:     nammayatri
 copyright:      2023 Juspay Technologies Private Limited
-license:        AllRightsReserved
+license:        NONE
 build-type:     Simple
 
 source-repository head
@@ -123,6 +123,8 @@ library
       API.Types.RiderPlatform.Management.System
   other-modules:
       Paths_dashboard_helper_api
+  autogen-modules:
+      Paths_dashboard_helper_api
   hs-source-dirs:
       src
       src-read-only
@@ -161,8 +163,12 @@ library
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
+      NoFieldSelectors
+      OverloadedRecordDot
+      OverloadedRecordUpdate
+      RebindableSyntax
       TemplateHaskell
-  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -fwrite-ide-info -hiedir=.hie -Wincomplete-uni-patterns -Wwarn=ambiguous-fields
+  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -fwrite-ide-info -hiedir=.hie -Wincomplete-uni-patterns -Wwarn=ambiguous-fields
   build-depends:
       aeson
     , base >=4.7 && <5
@@ -179,7 +185,6 @@ library
     , openapi3
     , persistent
     , persistent-postgresql
-    , record-dot-preprocessor
     , record-hasfield
     , servant-client
     , servant-multipart

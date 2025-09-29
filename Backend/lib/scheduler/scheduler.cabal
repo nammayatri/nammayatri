@@ -1,6 +1,6 @@
-cabal-version: 1.12
+cabal-version: 2.2
 
--- This file has been generated from package.yaml by hpack version 0.35.2.
+-- This file has been generated from package.yaml by hpack version 0.37.0.
 --
 -- see: https://github.com/sol/hpack
 
@@ -12,7 +12,7 @@ bug-reports:    https://github.com/nammayatri/nammayatri/issues
 author:         nammayatri
 maintainer:     nammayatri
 copyright:      2023 Juspay Technologies Private Limited
-license:        AllRightsReserved
+license:        NONE
 build-type:     Simple
 
 source-repository head
@@ -40,6 +40,8 @@ library
       Lib.Scheduler.ScheduleJob
       Lib.Scheduler.Types
   other-modules:
+      Paths_scheduler
+  autogen-modules:
       Paths_scheduler
   hs-source-dirs:
       src
@@ -78,7 +80,11 @@ library
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
-  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
+      NoFieldSelectors
+      OverloadedRecordDot
+      OverloadedRecordUpdate
+      RebindableSyntax
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
   build-depends:
       aeson
     , base >=4.7 && <5
@@ -95,7 +101,6 @@ library
     , postgresql-simple
     , prometheus-client
     , random
-    , record-dot-preprocessor
     , record-hasfield
     , sequelize
     , servant-server

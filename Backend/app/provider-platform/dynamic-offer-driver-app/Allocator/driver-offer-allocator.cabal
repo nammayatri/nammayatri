@@ -1,6 +1,6 @@
-cabal-version: 1.12
+cabal-version: 2.2
 
--- This file has been generated from package.yaml by hpack version 0.35.2.
+-- This file has been generated from package.yaml by hpack version 0.37.0.
 --
 -- see: https://github.com/sol/hpack
 
@@ -12,7 +12,7 @@ bug-reports:    https://github.com/nammayatri/nammayatri/issues
 author:         nammayatri
 maintainer:     nammayatri
 copyright:      2023 Juspay Technologies Private Limited
-license:        AllRightsReserved
+license:        NONE
 build-type:     Simple
 
 source-repository head
@@ -30,6 +30,8 @@ library
       Environment
       Tools.Metrics
   other-modules:
+      Paths_driver_offer_allocator
+  autogen-modules:
       Paths_driver_offer_allocator
   hs-source-dirs:
       src
@@ -65,9 +67,13 @@ library
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
+      NoFieldSelectors
+      OverloadedRecordDot
+      OverloadedRecordUpdate
+      RebindableSyntax
       StandaloneDeriving
       PackageImports
-  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
   extra-libraries:
       cac_client
   build-depends:
@@ -91,7 +97,6 @@ library
     , openapi3
     , passetto-client
     , prometheus-client
-    , record-dot-preprocessor
     , record-hasfield
     , resource-pool
     , safe
@@ -121,6 +126,8 @@ library
 executable driver-offer-allocator-exe
   main-is: Main.hs
   other-modules:
+      Paths_driver_offer_allocator
+  autogen-modules:
       Paths_driver_offer_allocator
   hs-source-dirs:
       server
@@ -156,9 +163,13 @@ executable driver-offer-allocator-exe
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
+      NoFieldSelectors
+      OverloadedRecordDot
+      OverloadedRecordUpdate
+      RebindableSyntax
       StandaloneDeriving
       PackageImports
-  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T"
+  ghc-options: -fwrite-ide-info -hiedir=.hie -threaded -rtsopts "-with-rtsopts=-N -T"
   extra-libraries:
       cac_client
   build-depends:
@@ -181,7 +192,6 @@ executable driver-offer-allocator-exe
     , openapi3
     , passetto-client
     , prometheus-client
-    , record-dot-preprocessor
     , record-hasfield
     , resource-pool
     , safe

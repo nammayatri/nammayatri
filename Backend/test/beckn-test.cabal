@@ -1,6 +1,6 @@
-cabal-version: 1.12
+cabal-version: 2.2
 
--- This file has been generated from package.yaml by hpack version 0.35.2.
+-- This file has been generated from package.yaml by hpack version 0.37.0.
 --
 -- see: https://github.com/sol/hpack
 
@@ -12,7 +12,7 @@ bug-reports:    https://github.com/nammayatri/nammayatri/issues
 author:         nammayatri
 maintainer:     nammayatri
 copyright:      2023 Juspay Technologies Private Limited
-license:        AllRightsReserved
+license:        NONE
 build-type:     Simple
 
 source-repository head
@@ -58,6 +58,8 @@ library
       Utils
   other-modules:
       Paths_beckn_test
+  autogen-modules:
+      Paths_beckn_test
   hs-source-dirs:
       src
   default-extensions:
@@ -94,7 +96,11 @@ library
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
-  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wno-unrecognised-pragmas -fplugin=RecordDotPreprocessor -threaded -Wwarn=ambiguous-fields
+      NoFieldSelectors
+      OverloadedRecordDot
+      OverloadedRecordUpdate
+      RebindableSyntax
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wno-unrecognised-pragmas -threaded -Wwarn=ambiguous-fields
   build-depends:
       HUnit
     , aeson
@@ -125,7 +131,6 @@ library
     , mock-sms
     , public-transport-rider-platform
     , public-transport-search-consumer
-    , record-dot-preprocessor
     , record-hasfield
     , rider-app
     , search-result-aggregator
@@ -153,6 +158,8 @@ test-suite beckn-integ-test
   type: exitcode-stdio-1.0
   main-is: Main.hs
   other-modules:
+      Paths_beckn_test
+  autogen-modules:
       Paths_beckn_test
   hs-source-dirs:
       app
@@ -190,7 +197,11 @@ test-suite beckn-integ-test
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
-  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wno-unrecognised-pragmas -fplugin=RecordDotPreprocessor -threaded
+      NoFieldSelectors
+      OverloadedRecordDot
+      OverloadedRecordUpdate
+      RebindableSyntax
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wno-unrecognised-pragmas -threaded
   build-depends:
       HUnit
     , aeson
@@ -221,7 +232,6 @@ test-suite beckn-integ-test
     , mock-sms
     , public-transport-rider-platform
     , public-transport-search-consumer
-    , record-dot-preprocessor
     , record-hasfield
     , rider-app
     , search-result-aggregator

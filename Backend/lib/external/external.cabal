@@ -1,6 +1,6 @@
-cabal-version: 1.12
+cabal-version: 2.2
 
--- This file has been generated from package.yaml by hpack version 0.35.2.
+-- This file has been generated from package.yaml by hpack version 0.37.0.
 --
 -- see: https://github.com/sol/hpack
 
@@ -12,7 +12,7 @@ bug-reports:    https://github.com/nammayatri/nammayatri/issues
 author:         nammayatri
 maintainer:     nammayatri
 copyright:      2024 Juspay Technologies Private Limited
-license:        AllRightsReserved
+license:        NONE
 build-type:     Simple
 
 source-repository head
@@ -50,6 +50,8 @@ library
       TransactionLogs.Types
   other-modules:
       Paths_external
+  autogen-modules:
+      Paths_external
   hs-source-dirs:
       src
   default-extensions:
@@ -86,7 +88,11 @@ library
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
-  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -fplugin=RecordDotPreprocessor -Wwarn=ambiguous-fields
+      NoFieldSelectors
+      OverloadedRecordDot
+      OverloadedRecordUpdate
+      RebindableSyntax
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
   build-depends:
       aeson
     , aeson-casing
@@ -140,7 +146,6 @@ library
     , prometheus-metrics-ghc
     , prometheus-proc
     , pureMD5
-    , record-dot-preprocessor
     , record-hasfield
     , regex-applicative
     , relude

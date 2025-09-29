@@ -1,6 +1,6 @@
-cabal-version: 1.12
+cabal-version: 2.2
 
--- This file has been generated from package.yaml by hpack version 0.35.2.
+-- This file has been generated from package.yaml by hpack version 0.37.0.
 --
 -- see: https://github.com/sol/hpack
 
@@ -12,7 +12,7 @@ bug-reports:    https://github.com/nammayatri/nammayatri/issues
 author:         nammayatri
 maintainer:     nammayatri
 copyright:      2023 Juspay Technologies Private Limited
-license:        AllRightsReserved
+license:        NONE
 build-type:     Simple
 
 source-repository head
@@ -60,6 +60,10 @@ library
       TypeFamilies
       TypeOperators
       ViewPatterns
+      NoFieldSelectors
+      OverloadedRecordDot
+      OverloadedRecordUpdate
+      RebindableSyntax
   build-depends:
       HUnit
     , aeson
@@ -82,7 +86,6 @@ library
     , mock-sms
     , mtl
     , provider-dashboard
-    , record-dot-preprocessor
     , record-hasfield
     , rider-app
     , string-conversions
@@ -102,6 +105,8 @@ library
 executable hunit-tests
   main-is: Main.hs
   other-modules:
+      Paths_hunit_tests
+  autogen-modules:
       Paths_hunit_tests
   hs-source-dirs:
       app
@@ -134,6 +139,10 @@ executable hunit-tests
       TypeFamilies
       TypeOperators
       ViewPatterns
+      NoFieldSelectors
+      OverloadedRecordDot
+      OverloadedRecordUpdate
+      RebindableSyntax
   build-depends:
       HUnit
     , aeson
@@ -157,7 +166,6 @@ executable hunit-tests
     , mock-sms
     , mtl
     , provider-dashboard
-    , record-dot-preprocessor
     , record-hasfield
     , rider-app
     , string-conversions

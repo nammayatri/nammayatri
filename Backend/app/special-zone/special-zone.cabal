@@ -1,6 +1,6 @@
-cabal-version: 1.12
+cabal-version: 2.2
 
--- This file has been generated from package.yaml by hpack version 0.35.2.
+-- This file has been generated from package.yaml by hpack version 0.37.0.
 --
 -- see: https://github.com/sol/hpack
 
@@ -12,7 +12,7 @@ bug-reports:    https://github.com/nammayatri/nammayatri/issues
 author:         nammayatri
 maintainer:     nammayatri
 copyright:      2023 Juspay Technologies Private Limited
-license:        AllRightsReserved
+license:        NONE
 build-type:     Simple
 
 source-repository head
@@ -38,6 +38,8 @@ library
       Storage.Tabular.SpecialZone
       Tools.Auth
   other-modules:
+      Paths_special_zone
+  autogen-modules:
       Paths_special_zone
   hs-source-dirs:
       src
@@ -77,7 +79,11 @@ library
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
-  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
+      NoFieldSelectors
+      OverloadedRecordDot
+      OverloadedRecordUpdate
+      RebindableSyntax
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
   build-depends:
       aeson
     , base >=4.7 && <5
@@ -90,7 +96,6 @@ library
     , http-client
     , http-types
     , mobility-core
-    , record-dot-preprocessor
     , record-hasfield
     , servant
     , servant-client
@@ -107,6 +112,8 @@ library
 executable special-zone-exe
   main-is: Main.hs
   other-modules:
+      Paths_special_zone
+  autogen-modules:
       Paths_special_zone
   hs-source-dirs:
       server
@@ -146,7 +153,11 @@ executable special-zone-exe
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
-  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T"
+      NoFieldSelectors
+      OverloadedRecordDot
+      OverloadedRecordUpdate
+      RebindableSyntax
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -threaded -rtsopts "-with-rtsopts=-N -T"
   build-depends:
       aeson
     , base >=4.7 && <5
@@ -159,7 +170,6 @@ executable special-zone-exe
     , http-client
     , http-types
     , mobility-core
-    , record-dot-preprocessor
     , record-hasfield
     , servant
     , servant-client

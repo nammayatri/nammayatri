@@ -1,6 +1,6 @@
-cabal-version: 1.12
+cabal-version: 2.2
 
--- This file has been generated from package.yaml by hpack version 0.35.2.
+-- This file has been generated from package.yaml by hpack version 0.37.0.
 --
 -- see: https://github.com/sol/hpack
 
@@ -12,7 +12,7 @@ bug-reports:    https://github.com/nammayatri/nammayatri/issues
 author:         nammayatri
 maintainer:     nammayatri
 copyright:      2023 Juspay Technologies Private Limited
-license:        AllRightsReserved
+license:        NONE
 build-type:     Simple
 
 source-repository head
@@ -31,6 +31,8 @@ library
       Lib.Dashcam.Domain.Interface
       Lib.Dashcam.Domain.Types
   other-modules:
+      Paths_dashcam
+  autogen-modules:
       Paths_dashcam
   hs-source-dirs:
       src
@@ -70,9 +72,13 @@ library
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
+      NoFieldSelectors
+      OverloadedRecordDot
+      OverloadedRecordUpdate
+      RebindableSyntax
       TemplateHaskell
       DerivingStrategies
-  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wall -Wcompat -Widentities -fhide-source-paths -Werror
   build-depends:
       aeson
     , base >=4.7 && <5
@@ -90,7 +96,6 @@ library
     , http-types
     , mobility-core
     , postgresql-simple
-    , record-dot-preprocessor
     , record-hasfield
     , sequelize
     , servant

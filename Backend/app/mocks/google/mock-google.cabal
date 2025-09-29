@@ -1,6 +1,6 @@
-cabal-version: 1.12
+cabal-version: 2.2
 
--- This file has been generated from package.yaml by hpack version 0.35.2.
+-- This file has been generated from package.yaml by hpack version 0.37.0.
 --
 -- see: https://github.com/sol/hpack
 
@@ -12,7 +12,7 @@ bug-reports:    https://github.com/nammayatri/nammayatri/issues
 author:         nammayatri
 maintainer:     nammayatri
 copyright:      2023 Juspay Technologies Private Limited
-license:        AllRightsReserved
+license:        NONE
 build-type:     Simple
 
 source-repository head
@@ -46,6 +46,8 @@ library
       Tools.Error
       Tools.Metrics
   other-modules:
+      Paths_mock_google
+  autogen-modules:
       Paths_mock_google
   hs-source-dirs:
       src
@@ -85,7 +87,11 @@ library
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
-  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -fwrite-ide-info -hiedir=.hie -Wincomplete-uni-patterns -Wwarn=ambiguous-fields
+      NoFieldSelectors
+      OverloadedRecordDot
+      OverloadedRecordUpdate
+      RebindableSyntax
+  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -fwrite-ide-info -hiedir=.hie -Wincomplete-uni-patterns -Wwarn=ambiguous-fields
   build-depends:
       aeson
     , base >=4.7 && <5
@@ -98,7 +104,6 @@ library
     , passetto-client
     , persistent
     , persistent-postgresql
-    , record-dot-preprocessor
     , record-hasfield
     , servant
     , servant-server
@@ -115,6 +120,8 @@ library
 executable mock-google-exe
   main-is: Main.hs
   other-modules:
+      Paths_mock_google
+  autogen-modules:
       Paths_mock_google
   hs-source-dirs:
       server
@@ -154,7 +161,11 @@ executable mock-google-exe
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
-  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -fwrite-ide-info -hiedir=.hie -threaded -rtsopts "-with-rtsopts=-N -T" -Wincomplete-uni-patterns
+      NoFieldSelectors
+      OverloadedRecordDot
+      OverloadedRecordUpdate
+      RebindableSyntax
+  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -fwrite-ide-info -hiedir=.hie -threaded -rtsopts "-with-rtsopts=-N -T" -Wincomplete-uni-patterns
   build-depends:
       aeson
     , base >=4.7 && <5
@@ -168,7 +179,6 @@ executable mock-google-exe
     , passetto-client
     , persistent
     , persistent-postgresql
-    , record-dot-preprocessor
     , record-hasfield
     , servant
     , servant-server

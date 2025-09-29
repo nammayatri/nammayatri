@@ -1,6 +1,6 @@
-cabal-version: 1.12
+cabal-version: 2.2
 
--- This file has been generated from package.yaml by hpack version 0.35.2.
+-- This file has been generated from package.yaml by hpack version 0.37.0.
 --
 -- see: https://github.com/sol/hpack
 
@@ -12,7 +12,7 @@ bug-reports:    https://github.com/nammayatri/nammayatri/issues
 author:         nammayatri
 maintainer:     nammayatri
 copyright:      2023 Juspay Technologies Private Limited
-license:        AllRightsReserved
+license:        NONE
 build-type:     Simple
 
 source-repository head
@@ -34,6 +34,8 @@ library
       Utils.Common.JWT.TransitClaim
       Utils.QRCode.Scanner
   other-modules:
+      Paths_utils
+  autogen-modules:
       Paths_utils
   hs-source-dirs:
       src
@@ -69,10 +71,14 @@ library
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
+      NoFieldSelectors
+      OverloadedRecordDot
+      OverloadedRecordUpdate
+      RebindableSyntax
       StandaloneDeriving
       PackageImports
       TemplateHaskell
-  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror
   build-depends:
       JuicyPixels
     , JuicyPixels-extra
@@ -117,7 +123,6 @@ library
     , process
     , prometheus-client
     , random
-    , record-dot-preprocessor
     , record-hasfield
     , resource-pool
     , scheduler

@@ -1,6 +1,6 @@
-cabal-version: 1.12
+cabal-version: 2.2
 
--- This file has been generated from package.yaml by hpack version 0.35.2.
+-- This file has been generated from package.yaml by hpack version 0.37.0.
 --
 -- see: https://github.com/sol/hpack
 
@@ -12,7 +12,7 @@ bug-reports:    https://github.com/nammayatri/nammayatri/issues
 author:         nammayatri
 maintainer:     nammayatri
 copyright:      2023 Juspay Technologies Private Limited
-license:        AllRightsReserved
+license:        NONE
 build-type:     Simple
 
 source-repository head
@@ -143,6 +143,8 @@ library
       Tools.Streaming.Kafka.Topic.BusinessEvent
   other-modules:
       Paths_public_transport_rider_platform
+  autogen-modules:
+      Paths_public_transport_rider_platform
   hs-source-dirs:
       src
   default-extensions:
@@ -182,9 +184,13 @@ library
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
+      NoFieldSelectors
+      OverloadedRecordDot
+      OverloadedRecordUpdate
+      RebindableSyntax
       DerivingStrategies
       DerivingVia
-  ghc-options: -Wall -Werror -Wcompat -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -fwrite-ide-info -hiedir=.hie -Wincomplete-uni-patterns -Wwarn=ambiguous-fields
+  ghc-options: -Wall -Werror -Wcompat -Widentities -Wunused-imports -fwrite-ide-info -hiedir=.hie -Wincomplete-uni-patterns -Wwarn=ambiguous-fields
   build-depends:
       aeson
     , base >=4.7 && <5
@@ -198,7 +204,6 @@ library
     , persistent
     , persistent-postgresql
     , prometheus-client
-    , record-dot-preprocessor
     , record-hasfield
     , relude
     , servant
@@ -219,6 +224,8 @@ library
 executable public-transport-rider-platform-exe
   main-is: Main.hs
   other-modules:
+      Paths_public_transport_rider_platform
+  autogen-modules:
       Paths_public_transport_rider_platform
   hs-source-dirs:
       server
@@ -259,9 +266,13 @@ executable public-transport-rider-platform-exe
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
+      NoFieldSelectors
+      OverloadedRecordDot
+      OverloadedRecordUpdate
+      RebindableSyntax
       DerivingStrategies
       DerivingVia
-  ghc-options: -Wall -Werror -Wcompat -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -fwrite-ide-info -hiedir=.hie -threaded -rtsopts "-with-rtsopts=-N -T" -Wincomplete-uni-patterns
+  ghc-options: -Wall -Werror -Wcompat -Widentities -Wunused-imports -fwrite-ide-info -hiedir=.hie -threaded -rtsopts "-with-rtsopts=-N -T" -Wincomplete-uni-patterns
   build-depends:
       aeson
     , base >=4.7 && <5
@@ -276,7 +287,6 @@ executable public-transport-rider-platform-exe
     , persistent-postgresql
     , prometheus-client
     , public-transport-rider-platform
-    , record-dot-preprocessor
     , record-hasfield
     , relude
     , servant

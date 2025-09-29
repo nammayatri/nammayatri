@@ -1,6 +1,6 @@
-cabal-version: 1.12
+cabal-version: 2.2
 
--- This file has been generated from package.yaml by hpack version 0.35.2.
+-- This file has been generated from package.yaml by hpack version 0.37.0.
 --
 -- see: https://github.com/sol/hpack
 
@@ -12,7 +12,7 @@ bug-reports:    https://github.com/nammayatri/nammayatri/issues
 author:         nammayatri
 maintainer:     nammayatri
 copyright:      2023 Juspay Technologies Private Limited
-license:        AllRightsReserved
+license:        NONE
 build-type:     Simple
 
 source-repository head
@@ -130,6 +130,8 @@ library
       API.Client.ProviderPlatform.RideBooking
   other-modules:
       Paths_provider_dashboard
+  autogen-modules:
+      Paths_provider_dashboard
   hs-source-dirs:
       src
       src-read-only
@@ -167,9 +169,13 @@ library
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
+      NoFieldSelectors
+      OverloadedRecordDot
+      OverloadedRecordUpdate
+      RebindableSyntax
       TemplateHaskell
       DerivingStrategies
-  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -fwrite-ide-info -hiedir=.hie -fhide-source-paths -Wincomplete-uni-patterns -Wwarn=ambiguous-fields
+  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -fwrite-ide-info -hiedir=.hie -fhide-source-paths -Wincomplete-uni-patterns -Wwarn=ambiguous-fields
   build-depends:
       aeson
     , base >=4.7 && <5
@@ -189,7 +195,6 @@ library
     , openapi3
     , persistent
     , persistent-postgresql
-    , record-dot-preprocessor
     , record-hasfield
     , rider-app
     , sequelize
@@ -214,6 +219,8 @@ library
 executable provider-dashboard-exe
   main-is: Main.hs
   other-modules:
+      Paths_provider_dashboard
+  autogen-modules:
       Paths_provider_dashboard
   hs-source-dirs:
       server
@@ -251,9 +258,13 @@ executable provider-dashboard-exe
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
+      NoFieldSelectors
+      OverloadedRecordDot
+      OverloadedRecordUpdate
+      RebindableSyntax
       TemplateHaskell
       DerivingStrategies
-  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -fwrite-ide-info -hiedir=.hie -threaded -rtsopts "-with-rtsopts=-N -T" -Wincomplete-uni-patterns
+  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -fwrite-ide-info -hiedir=.hie -threaded -rtsopts "-with-rtsopts=-N -T" -Wincomplete-uni-patterns
   build-depends:
       aeson
     , base >=4.7 && <5
@@ -272,7 +283,6 @@ executable provider-dashboard-exe
     , persistent
     , persistent-postgresql
     , provider-dashboard
-    , record-dot-preprocessor
     , record-hasfield
     , sequelize
     , servant-client

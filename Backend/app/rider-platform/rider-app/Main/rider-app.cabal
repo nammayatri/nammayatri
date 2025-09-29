@@ -1,6 +1,6 @@
-cabal-version: 1.12
+cabal-version: 2.2
 
--- This file has been generated from package.yaml by hpack version 0.35.2.
+-- This file has been generated from package.yaml by hpack version 0.37.0.
 --
 -- see: https://github.com/sol/hpack
 
@@ -13,7 +13,7 @@ bug-reports:    https://github.com/nammayatri/nammayatri/issues
 author:         nammayatri
 maintainer:     nammayatri
 copyright:      2023 Juspay Technologies Private Limited
-license:        AllRightsReserved
+license:        NONE
 build-type:     Simple
 
 source-repository head
@@ -1184,6 +1184,8 @@ library
       Storage.Queries.WhiteListOrg
   other-modules:
       Paths_rider_app
+  autogen-modules:
+      Paths_rider_app
   hs-source-dirs:
       src
       src-read-only
@@ -1222,9 +1224,13 @@ library
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
+      NoFieldSelectors
+      OverloadedRecordDot
+      OverloadedRecordUpdate
+      RebindableSyntax
       PackageImports
       TemplateHaskell
-  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wwarn=ambiguous-fields
   build-depends:
       aeson
     , amazonka-core
@@ -1277,7 +1283,6 @@ library
     , pureMD5
     , random
     , raw-strings-qq
-    , record-dot-preprocessor
     , record-hasfield
     , regex-posix
     , resource-pool
@@ -1323,6 +1328,8 @@ executable rider-app-exe
   main-is: Main.hs
   other-modules:
       Paths_rider_app
+  autogen-modules:
+      Paths_rider_app
   hs-source-dirs:
       server
   default-extensions:
@@ -1360,9 +1367,13 @@ executable rider-app-exe
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
+      NoFieldSelectors
+      OverloadedRecordDot
+      OverloadedRecordUpdate
+      RebindableSyntax
       PackageImports
       TemplateHaskell
-  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T"
+  ghc-options: -fwrite-ide-info -hiedir=.hie -threaded -rtsopts "-with-rtsopts=-N -T"
   build-depends:
       aeson
     , amazonka-core
@@ -1411,7 +1422,6 @@ executable rider-app-exe
     , pureMD5
     , random
     , raw-strings-qq
-    , record-dot-preprocessor
     , record-hasfield
     , regex-posix
     , resource-pool
@@ -1455,6 +1465,8 @@ test-suite rider-app-test
   other-modules:
       FRFS.DirectQR
       Paths_rider_app
+  autogen-modules:
+      Paths_rider_app
   hs-source-dirs:
       test
   default-extensions:
@@ -1492,9 +1504,13 @@ test-suite rider-app-test
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
+      NoFieldSelectors
+      OverloadedRecordDot
+      OverloadedRecordUpdate
+      RebindableSyntax
       PackageImports
       TemplateHaskell
-  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts -with-rtsopts=-N
+  ghc-options: -fwrite-ide-info -hiedir=.hie -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       aeson
     , amazonka-core
@@ -1542,7 +1558,6 @@ test-suite rider-app-test
     , pureMD5
     , random
     , raw-strings-qq
-    , record-dot-preprocessor
     , record-hasfield
     , regex-posix
     , resource-pool

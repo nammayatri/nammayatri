@@ -1,6 +1,6 @@
-cabal-version: 1.12
+cabal-version: 2.2
 
--- This file has been generated from package.yaml by hpack version 0.35.2.
+-- This file has been generated from package.yaml by hpack version 0.37.0.
 --
 -- see: https://github.com/sol/hpack
 
@@ -12,7 +12,7 @@ bug-reports:    https://github.com/nammayatri/nammayatri/issues
 author:         nammayatri
 maintainer:     nammayatri
 copyright:      2023 Juspay Technologies Private Limited
-license:        AllRightsReserved
+license:        NONE
 build-type:     Simple
 
 source-repository head
@@ -91,6 +91,8 @@ library
       Storage.Queries.SuspectStatusHistory
   other-modules:
       Paths_safety_dashboard
+  autogen-modules:
+      Paths_safety_dashboard
   hs-source-dirs:
       src
       src-read-only
@@ -130,9 +132,13 @@ library
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
+      NoFieldSelectors
+      OverloadedRecordDot
+      OverloadedRecordUpdate
+      RebindableSyntax
       PackageImports
       TemplateHaskell
-  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -fwrite-ide-info -hiedir=.hie -Wincomplete-uni-patterns -Wwarn=ambiguous-fields -Wwarn=ambiguous-fields
+  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -fwrite-ide-info -hiedir=.hie -Wincomplete-uni-patterns -Wwarn=ambiguous-fields -Wwarn=ambiguous-fields
   build-depends:
       aeson
     , base >=4.7 && <5
@@ -154,7 +160,6 @@ library
     , openapi3
     , persistent
     , persistent-postgresql
-    , record-dot-preprocessor
     , record-hasfield
     , sequelize
     , servant-client
@@ -175,6 +180,8 @@ library
 executable safety-dashboard-exe
   main-is: Main.hs
   other-modules:
+      Paths_safety_dashboard
+  autogen-modules:
       Paths_safety_dashboard
   hs-source-dirs:
       server
@@ -214,9 +221,13 @@ executable safety-dashboard-exe
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
+      NoFieldSelectors
+      OverloadedRecordDot
+      OverloadedRecordUpdate
+      RebindableSyntax
       PackageImports
       TemplateHaskell
-  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -fplugin=RecordDotPreprocessor -fwrite-ide-info -hiedir=.hie -threaded -rtsopts "-with-rtsopts=-N -T" -Wincomplete-uni-patterns
+  ghc-options: -Wall -Wcompat -Werror -Widentities -Wunused-imports -fwrite-ide-info -hiedir=.hie -threaded -rtsopts "-with-rtsopts=-N -T" -Wincomplete-uni-patterns
   build-depends:
       aeson
     , base >=4.7 && <5
@@ -237,7 +248,6 @@ executable safety-dashboard-exe
     , openapi3
     , persistent
     , persistent-postgresql
-    , record-dot-preprocessor
     , record-hasfield
     , safety-dashboard
     , sequelize

@@ -1,6 +1,6 @@
-cabal-version: 1.12
+cabal-version: 2.2
 
--- This file has been generated from package.yaml by hpack version 0.35.2.
+-- This file has been generated from package.yaml by hpack version 0.37.0.
 --
 -- see: https://github.com/sol/hpack
 
@@ -12,7 +12,7 @@ bug-reports:    https://github.com/nammayatri/nammayatri/issues
 author:         nammayatri
 maintainer:     nammayatri
 copyright:      2023 Juspay Technologies Private Limited
-license:        AllRightsReserved
+license:        NONE
 build-type:     Simple
 
 source-repository head
@@ -42,6 +42,8 @@ library
       Environment
       SystemConfigsOverride
   other-modules:
+      Paths_kafka_consumers
+  autogen-modules:
       Paths_kafka_consumers
   hs-source-dirs:
       src
@@ -82,7 +84,11 @@ library
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
-  ghc-options: -Wall -Werror -Wcompat -Widentities -Wunused-imports -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wincomplete-uni-patterns -Wwarn=ambiguous-fields
+      NoFieldSelectors
+      OverloadedRecordDot
+      OverloadedRecordUpdate
+      RebindableSyntax
+  ghc-options: -Wall -Werror -Wcompat -Widentities -Wunused-imports -fwrite-ide-info -hiedir=.hie -Wincomplete-uni-patterns -Wwarn=ambiguous-fields
   build-depends:
       aeson
     , base >=4.7 && <5
@@ -105,7 +111,6 @@ library
     , persistent
     , persistent-postgresql
     , postgresql-simple
-    , record-dot-preprocessor
     , record-hasfield
     , rider-app
     , sequelize
@@ -128,6 +133,8 @@ library
 executable kafka-consumers-exe
   main-is: Main.hs
   other-modules:
+      Paths_kafka_consumers
+  autogen-modules:
       Paths_kafka_consumers
   hs-source-dirs:
       app
@@ -168,7 +175,11 @@ executable kafka-consumers-exe
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
-  ghc-options: -Wall -Werror -Wcompat -Widentities -Wunused-imports -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T" -Wincomplete-uni-patterns
+      NoFieldSelectors
+      OverloadedRecordDot
+      OverloadedRecordUpdate
+      RebindableSyntax
+  ghc-options: -Wall -Werror -Wcompat -Widentities -Wunused-imports -fwrite-ide-info -hiedir=.hie -threaded -rtsopts "-with-rtsopts=-N -T" -Wincomplete-uni-patterns
   build-depends:
       aeson
     , base >=4.7 && <5
@@ -191,7 +202,6 @@ executable kafka-consumers-exe
     , persistent
     , persistent-postgresql
     , postgresql-simple
-    , record-dot-preprocessor
     , record-hasfield
     , sequelize
     , servant-openapi3

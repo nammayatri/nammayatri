@@ -1,6 +1,6 @@
-cabal-version: 1.12
+cabal-version: 2.2
 
--- This file has been generated from package.yaml by hpack version 0.35.2.
+-- This file has been generated from package.yaml by hpack version 0.37.0.
 --
 -- see: https://github.com/sol/hpack
 
@@ -12,7 +12,7 @@ bug-reports:    https://github.com/nammayatri/nammayatri/issues
 author:         nammayatri
 maintainer:     nammayatri
 copyright:      2023 Juspay Technologies Private Limited
-license:        AllRightsReserved
+license:        NONE
 build-type:     Simple
 
 source-repository head
@@ -29,6 +29,8 @@ library
       Lib.LocationUpdates
       Lib.LocationUpdates.Internal
   other-modules:
+      Paths_location_updates
+  autogen-modules:
       Paths_location_updates
   hs-source-dirs:
       src
@@ -66,7 +68,11 @@ library
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
-  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror
+      NoFieldSelectors
+      OverloadedRecordDot
+      OverloadedRecordUpdate
+      RebindableSyntax
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wall -Wcompat -Widentities -fhide-source-paths -Werror
   build-depends:
       aeson
     , base >=4.7 && <5
@@ -79,7 +85,6 @@ library
     , http-client
     , http-types
     , mobility-core
-    , record-dot-preprocessor
     , record-hasfield
     , servant
     , servant-client
@@ -102,6 +107,8 @@ test-suite location-updates-tests
       RedisAlgorithm
       Routes
       Utils
+      Paths_location_updates
+  autogen-modules:
       Paths_location_updates
   hs-source-dirs:
       test/app
@@ -140,7 +147,11 @@ test-suite location-updates-tests
       BlockArguments
       TypeSynonymInstances
       UndecidableInstances
-  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -fplugin=RecordDotPreprocessor -Wall -Werror
+      NoFieldSelectors
+      OverloadedRecordDot
+      OverloadedRecordUpdate
+      RebindableSyntax
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror -Wall -Werror
   build-depends:
       QuickCheck
     , aeson
@@ -159,7 +170,6 @@ test-suite location-updates-tests
     , location-updates
     , mobility-core
     , mock-google
-    , record-dot-preprocessor
     , record-hasfield
     , servant
     , servant-client

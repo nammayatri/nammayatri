@@ -1,6 +1,6 @@
-cabal-version: 1.12
+cabal-version: 2.2
 
--- This file has been generated from package.yaml by hpack version 0.35.2.
+-- This file has been generated from package.yaml by hpack version 0.37.0.
 --
 -- see: https://github.com/sol/hpack
 
@@ -12,7 +12,7 @@ bug-reports:    https://github.com/nammayatri/nammayatri/issues
 author:         nammayatri
 maintainer:     nammayatri
 copyright:      2023 Juspay Technologies Private Limited
-license:        AllRightsReserved
+license:        NONE
 build-type:     Simple
 
 source-repository head
@@ -49,6 +49,8 @@ library
       Utils.Utils
   other-modules:
       Paths_rider_app_drainer
+  autogen-modules:
+      Paths_rider_app_drainer
   hs-source-dirs:
       src
   default-extensions:
@@ -82,8 +84,12 @@ library
       TypeOperators
       ViewPatterns
       UndecidableInstances
+      NoFieldSelectors
+      OverloadedRecordDot
+      OverloadedRecordUpdate
+      RebindableSyntax
       LambdaCase
-  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -Wall -Wcompat -Widentities -fhide-source-paths -Werror
+  ghc-options: -fwrite-ide-info -hiedir=.hie -Wall -Wcompat -Widentities -fhide-source-paths -Werror
   build-depends:
       aeson
     , aeson-pretty
@@ -114,7 +120,6 @@ library
     , mobility-core
     , pcg-random
     , postgresql-simple
-    , record-dot-preprocessor
     , record-hasfield
     , resource-pool
     , scientific
@@ -175,8 +180,12 @@ executable rider-app-drainer-exe
       TypeOperators
       ViewPatterns
       UndecidableInstances
+      NoFieldSelectors
+      OverloadedRecordDot
+      OverloadedRecordUpdate
+      RebindableSyntax
       LambdaCase
-  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=RecordDotPreprocessor -threaded -rtsopts "-with-rtsopts=-N -T"
+  ghc-options: -fwrite-ide-info -hiedir=.hie -threaded -rtsopts "-with-rtsopts=-N -T"
   build-depends:
       aeson
     , aeson-pretty
@@ -207,7 +216,6 @@ executable rider-app-drainer-exe
     , mobility-core
     , pcg-random
     , postgresql-simple
-    , record-dot-preprocessor
     , record-hasfield
     , resource-pool
     , rider-app-drainer
