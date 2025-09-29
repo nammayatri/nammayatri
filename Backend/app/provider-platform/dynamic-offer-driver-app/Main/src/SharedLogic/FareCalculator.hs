@@ -478,18 +478,18 @@ calculateFareParameters params = do
           extraMins = max 0 (actualDuration - estimatedDuration) `div` 60
           fareByTime = HighPrecMoney $ toRational extraMins * perExtraMinRate.getHighPrecMoney
 
-      let estimatedDistance = (.getMeters) <$> params.estimatedDistance
-          estimatedDistanceInKm = max (estimatedDurationInHr * includedKmPerHr.getKilometers) (fromMaybe 0 estimatedDistance `div` 1000)
-          actualDistance = (.getMeters) <$> params.actualDistance
-          extraDist = max 0 (fromMaybe 0 actualDistance - fromMaybe 0 estimatedDistance)
+      let estimatedDistanceM = (.getMeters) <$> params.estimatedDistance
+          plannedDistanceM = max (estimatedDurationInHr * includedKmPerHr.getKilometers * 1000) (fromMaybe 0 estimatedDistanceM)
+          actualDistanceM = (.getMeters) <$> params.actualDistance
+          extraDistM = max 0 (fromMaybe 0 actualDistanceM - plannedDistanceM)
           distanceBuffer = DFP.findFPRentalDetailsByDuration actualRideDurationInHr distanceBuffers
-          fareByDist = if extraDist > distanceBuffer.bufferMeters then HighPrecMoney (toRational (fromIntegral extraDist / 1000 :: Double) * perExtraKmRate.getHighPrecMoney) else 0
+          fareByDist = if extraDistM > distanceBuffer.bufferMeters then HighPrecMoney (toRational (fromIntegral extraDistM / 1000 :: Double) * perExtraKmRate.getHighPrecMoney) else 0
 
-      let extraPlannedKm = max 0 (estimatedDistanceInKm - (estimatedDurationInHr * includedKmPerHr.getKilometers))
+      let extraPlannedKm = max 0 ((plannedDistanceM `div` 1000) - (estimatedDurationInHr * includedKmPerHr.getKilometers))
           extraPlannedKmFare = toRational extraPlannedKm * plannedPerKmRate.getHighPrecMoney
           potentialBaseFare = toRational estimatedDurationInHr * perHourCharge.getHighPrecMoney + extraPlannedKmFare
 
-      let distPercent = case (actualDistance, estimatedDistance) of
+      let distPercent = case (actualDistanceM, estimatedDistanceM) of
             (Just ad, Just ed) -> if ed == 0 then 1 else min 1 (fromIntegral ad / (fromIntegral ed :: Double))
             _ -> 1
           timePercent = if estimatedDuration == 0 then 1 else min 1 (fromIntegral actualDuration / (fromIntegral estimatedDuration :: Double))
@@ -505,7 +505,7 @@ calculateFareParameters params = do
           DFParams.FParamsRentalDetails
             { timeBasedFare = fareByTime,
               distBasedFare = fareByDist,
-              extraDistance = Meters extraDist,
+              extraDistance = Meters extraDistM,
               extraDuration = Seconds $ extraMins * 60,
               currency = params.currency,
               distanceUnit = params.distanceUnit,
