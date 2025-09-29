@@ -168,9 +168,9 @@ data ServiceHandle m = ServiceHandle
     uiDistanceCalculation :: Id DRide.Ride -> Maybe Int -> Maybe Int -> m ()
   }
 
-buildEndRideHandle :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow (ServiceHandle Flow)
-buildEndRideHandle merchantId merchantOpCityId = do
-  defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler merchantId merchantOpCityId True Nothing
+buildEndRideHandle :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id DRide.Ride) -> Flow (ServiceHandle Flow)
+buildEndRideHandle merchantId merchantOpCityId rideId = do
+  defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler merchantId merchantOpCityId rideId True Nothing
   return $
     ServiceHandle
       { findBookingById = QRB.findById,

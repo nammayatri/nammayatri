@@ -49,7 +49,7 @@ postRideStart merchantShortId opCity reqRideId Common.StartRideReq {point, odome
   merchantOperatingCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   let odometer = (\value -> DRide.OdometerReading Nothing value) <$> odometerReadingValue
   let dashboardReq = SHandler.DashboardStartRideReq {point, merchantId, merchantOperatingCityId, odometer}
-  shandle <- SHandler.buildStartRideHandle merchantId merchantOperatingCityId
+  shandle <- SHandler.buildStartRideHandle merchantId merchantOperatingCityId (Just rideId)
   SHandler.dashboardStartRide shandle rideId dashboardReq
 
 postRideEnd :: ShortId DM.Merchant -> Context.City -> Id Common.Ride -> Common.EndRideReq -> Flow APISuccess
@@ -60,7 +60,7 @@ postRideEnd merchantShortId opCity reqRideId Common.EndRideReq {point, odometerR
   let merchantId = merchant.id
   let odometer = (\value -> DRide.OdometerReading Nothing value) <$> odometerReadingValue
   let dashboardReq = EHandler.DashboardEndRideReq {point, merchantId, merchantOperatingCityId, odometer}
-  shandle <- EHandler.buildEndRideHandle merchantId merchantOperatingCityId
+  shandle <- EHandler.buildEndRideHandle merchantId merchantOperatingCityId (Just rideId)
   EHandler.dashboardEndRide shandle rideId dashboardReq
 
 getRideCurrentActiveRide :: ShortId DM.Merchant -> Context.City -> Text -> Flow (Id Common.Ride)
