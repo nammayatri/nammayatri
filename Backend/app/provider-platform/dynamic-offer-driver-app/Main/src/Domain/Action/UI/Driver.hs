@@ -1741,7 +1741,7 @@ getEarnings (driverId, _, merchantOpCityId) from to earningType = do
   when (from > to) $
     throwError $ InvalidRequest $ "Start date must not be after end date."
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  let earningsWindowSize = fromMaybe 7 transporterConfig.analyticsConfig.earningsWindowSize
+  let earningsWindowSize = transporterConfig.analyticsConfig.earningsWindowSize
   case earningType of
     DCommon.DAILY -> do
       when (daysBetween > earningsWindowSize) $
@@ -1752,7 +1752,7 @@ getEarnings (driverId, _, merchantOpCityId) from to earningType = do
     DCommon.WEEKLY -> do
       when (weeksBetween > earningsWindowSize) $
         throwError $ InvalidRequest $ "For weekly earnings, the date range must be less than or equal to " <> T.pack (show earningsWindowSize) <> " weeks (inclusive)."
-      let weekStartMode = fromMaybe 3 transporterConfig.analyticsConfig.weekStartMode
+      let weekStartMode = transporterConfig.analyticsConfig.weekStartMode
       weeklyEarningData <- runInReplica $ CHDS.aggregatePeriodStatsWithBoundaries driverId from to (CHDS.WeeklyStats weekStartMode)
       pure $ mkEarningPeriodStatsRes weeklyEarningData
     DCommon.MONTHLY -> do
@@ -3086,7 +3086,7 @@ findOnboardedDriversOrFleets personId merchantOpCityId maybeFrom maybeTo = do
             bonusEarningsWithCurrency = PriceAPIEntity 0.0 currency,
             onlineDuration = Seconds 0
           }
-  let earningsWindowSize = fromMaybe 7 transporterConfig.analyticsConfig.earningsWindowSize
+  let earningsWindowSize = transporterConfig.analyticsConfig.earningsWindowSize
   case (maybeFrom, maybeTo) of
     (Nothing, Nothing) -> do
       stats <- runInReplica $ QDriverStats.findByPrimaryKey personId >>= fromMaybeM (InternalError $ "Driver Stats data not found for entity " <> show personId.getId)
