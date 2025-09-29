@@ -121,7 +121,8 @@ INSERT INTO
     short_name,
     long_name,
     description,
-    integrated_bpp_config_id
+    integrated_bpp_config_id,
+    is_air_conditioned
   )
 VALUES
   (
@@ -133,7 +134,8 @@ VALUES
     'ALA',
     'ASHOK LEYLAND AC',
     'অশোক লেইল্যান্ড এসি',
-    'dabe23a5-3ce6-4c37-8b9b-41377c3c1a52'
+    'dabe23a5-3ce6-4c37-8b9b-41377c3c1a52',
+    true
   ),
   (
     '59e722df-feb0-4a86-bd5b-015cf118f401',
@@ -144,7 +146,8 @@ VALUES
     'MDA',
     'MIDI AC',
     'মিডিয়াম এসি',
-    'dabe23a5-3ce6-4c37-8b9b-41377c3c1a52'
+    'dabe23a5-3ce6-4c37-8b9b-41377c3c1a52',
+    false
   ),
   (
     '59e722df-feb0-4a86-bd5b-015cf118f402',
@@ -155,7 +158,8 @@ VALUES
     'VOL',
     'VOLVO AC',
     'ভলভো এসি',
-    'dabe23a5-3ce6-4c37-8b9b-41377c3c1a52'
+    'dabe23a5-3ce6-4c37-8b9b-41377c3c1a52',
+    true
   ),
   (
     '59e722df-feb0-4a86-bd5b-015cf118f403',
@@ -166,7 +170,8 @@ VALUES
     'SPL',
     'SPECIAL',
     'স্পেশাল',
-    'dabe23a5-3ce6-4c37-8b9b-41377c3c1a52'
+    'dabe23a5-3ce6-4c37-8b9b-41377c3c1a52',
+    false
   ),
   (
     '59e722df-feb0-4a86-bd5b-015cf118f404',
@@ -177,7 +182,8 @@ VALUES
     'MDN',
     'MIDI NON AC',
     'মিডি নন এসি',
-    'dabe23a5-3ce6-4c37-8b9b-41377c3c1a52'
+    'dabe23a5-3ce6-4c37-8b9b-41377c3c1a52',
+    false
   ),
   (
     '59e722df-feb0-4a86-bd5b-015cf118f405',
@@ -188,7 +194,8 @@ VALUES
     'GSA',
     'GSAGAR',
     'গঙ্গা সাগর',
-    'dabe23a5-3ce6-4c37-8b9b-41377c3c1a52'
+    'dabe23a5-3ce6-4c37-8b9b-41377c3c1a52',
+    false
   ),
   (
     '59e722df-feb0-4a86-bd5b-015cf118f406',
@@ -199,7 +206,8 @@ VALUES
     'EXE',
     'EXECUTIVE',
     'এক্সিকিউটিভ',
-    'dabe23a5-3ce6-4c37-8b9b-41377c3c1a52'
+    'dabe23a5-3ce6-4c37-8b9b-41377c3c1a52',
+    true
   ),
   (
     '59e722df-feb0-4a86-bd5b-015cf118f407',
@@ -210,7 +218,8 @@ VALUES
     'ELE',
     'ELECTRIC V',
     'ইলেক্ট্রিক ভি',
-    'dabe23a5-3ce6-4c37-8b9b-41377c3c1a52'
+    'dabe23a5-3ce6-4c37-8b9b-41377c3c1a52',
+    true
   ),
   (
     '59e722df-feb0-4a86-bd5b-015cf118f408',
@@ -221,7 +230,8 @@ VALUES
     'ORD',
     'ORDINARY',
     'সাধারণ',
-    'dabe23a5-3ce6-4c37-8b9b-41377c3c1a52'
+    'dabe23a5-3ce6-4c37-8b9b-41377c3c1a52',
+    false
   );
 
 -- ONLY FOR LOCAL

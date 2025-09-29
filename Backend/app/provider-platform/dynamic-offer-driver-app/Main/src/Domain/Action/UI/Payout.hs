@@ -21,7 +21,6 @@ module Domain.Action.UI.Payout
 where
 
 import Data.Time (utctDay)
-import Domain.Action.UI.Ride.EndRide.Internal (makeWalletRunningBalanceLockKey)
 import qualified Domain.Types.DailyStats as DS
 import qualified Domain.Types.DriverFee as DDF
 import qualified Domain.Types.DriverWallet as DW
@@ -50,9 +49,11 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
+import qualified Lib.Payment.Domain.Types.PayoutOrder as DPayment
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import Servant (BasicAuthData)
 import qualified SharedLogic.DriverFee as SLDriverFee
+import qualified SharedLogic.DriverWallet as SDW
 import SharedLogic.Merchant
 import Storage.Beam.Payment ()
 import Storage.Cac.TransporterConfig as SCTC
@@ -170,34 +171,13 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
                 SLDriverFee.adjustDues dueDriverFees
           Just DPayment.DRIVER_WALLET_TRANSACTION -> do
             let driverId = Id payoutOrder.customerId
-            Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey driverId.getId) 10 10 $ do
+            Redis.withWaitOnLockRedisWithExpiry (SDW.makeWalletRunningBalanceLockKey driverId.getId) 10 10 $ do
               driverWalletRecords <- QDW.findAllByPayoutOrderId (Just payoutOrder.id)
               let isSettledOrFailed = any (\dw -> dw.payoutStatus == Just DW.SETTLED || dw.payoutStatus == Just DW.FAILED) driverWalletRecords
               unless isSettledOrFailed $ do
-                driverInfo <- QDI.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-                now <- getCurrentTime
-                newId <- generateGUID
-                let newRunningBalance = if isSuccessStatus payoutStatus then fromMaybe 0 driverInfo.walletBalance else fromMaybe 0 driverInfo.walletBalance + amount
-                let transaction =
-                      DW.DriverWallet
-                        { id = newId,
-                          merchantId = Just merchantId,
-                          merchantOperatingCityId = merchantOperatingCityId,
-                          driverId = driverId,
-                          rideId = Nothing,
-                          transactionType = DW.PAYOUT,
-                          collectionAmount = Nothing,
-                          gstDeduction = Nothing,
-                          merchantPayable = Nothing,
-                          driverPayable = Just (-1 * amount),
-                          runningBalance = newRunningBalance,
-                          payoutOrderId = Just payoutOrder.id,
-                          payoutStatus = if isSuccessStatus payoutStatus then Just DW.SETTLED else Just DW.FAILED,
-                          createdAt = now,
-                          updatedAt = now
-                        }
-                QDW.create transaction
-                unless (isSuccessStatus payoutStatus) $ QDI.updateWalletBalance (Just newRunningBalance) driverId
+                transporterConfig <- SCTC.findByMerchantOpCityId merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOperatingCityId.getId)
+                SDW.withDriverWalletAndFYEarningsStore driverId transporterConfig SDW.emptyDriverWalletCollection $
+                  mkDriverWallet amount payoutOrder payoutStatus
                 person <- QP.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
                 let (notificationTitle, notificationMessage, notificationType) =
                       if isSuccessStatus payoutStatus
@@ -209,6 +189,27 @@ juspayPayoutWebhookHandler merchantShortId mbOpCity mbServiceName authData value
     IPayout.BadStatusResp -> pure ()
   pure Ack
   where
+    mkDriverWallet ::
+      HighPrecMoney ->
+      DPayment.PayoutOrder ->
+      Payout.PayoutOrderStatus ->
+      Maybe DW.DriverWallet ->
+      SDW.DriverWalletCollection ->
+      SDW.DriverWalletInfo ->
+      DW.DriverWallet
+    mkDriverWallet amount payoutOrder payoutStatus lastTransaction SDW.DriverWalletCollection {..} SDW.DriverWalletInfo {..} = do
+      let lastRunningBalance = maybe 0 (.runningBalance) lastTransaction
+          newRunningBalance = if isSuccessStatus payoutStatus then lastRunningBalance else lastRunningBalance + amount
+      DW.DriverWallet
+        { rideId = Nothing,
+          transactionType = DW.PAYOUT,
+          merchantPayable = Nothing,
+          driverPayable = Just (negate amount),
+          runningBalance = newRunningBalance,
+          payoutOrderId = Just payoutOrder.id,
+          payoutStatus = if isSuccessStatus payoutStatus then Just DW.SETTLED else Just DW.FAILED,
+          ..
+        }
     isSuccessStatus payoutStatus = payoutStatus `elem` [Payout.SUCCESS, Payout.FULFILLMENTS_SUCCESSFUL]
 
     updateDFeeStatusForPayoutRegistrationRefund driverId = do
