@@ -65,6 +65,7 @@ default-extensions:
   - NoFieldSelectors
   - OverloadedRecordDot
   - OverloadedRecordUpdate
+  - RebindableSyntax
   - AllowAmbiguousTypes
 
 dependencies:

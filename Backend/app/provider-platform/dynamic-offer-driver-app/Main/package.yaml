@@ -57,6 +57,7 @@ default-extensions:
   - NoFieldSelectors
   - OverloadedRecordDot
   - OverloadedRecordUpdate
+  - RebindableSyntax
   - StandaloneDeriving
   - PackageImports
   - TemplateHaskell

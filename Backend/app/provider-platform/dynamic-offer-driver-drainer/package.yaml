@@ -55,6 +55,7 @@ default-extensions:
   - NoFieldSelectors
   - OverloadedRecordDot
   - OverloadedRecordUpdate
+  - RebindableSyntax
   - LambdaCase
 
 dependencies:

@@ -63,6 +63,7 @@ default-extensions:
   - NoFieldSelectors
   - OverloadedRecordDot
   - OverloadedRecordUpdate
+  - RebindableSyntax
 
 dependencies:
   - aeson
