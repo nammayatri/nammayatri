@@ -15,10 +15,10 @@ import EulerHS.Prelude
 import qualified EulerHS.Types as ET
 import ExternalBPP.ExternalAPI.Subway.CRIS.Auth (callCRISAPI)
 import ExternalBPP.ExternalAPI.Subway.CRIS.Encryption (decryptResponseData)
+import ExternalBPP.ExternalAPI.Subway.CRIS.Error (CRISError (..))
 import Kernel.External.Encryption
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.App
-import Kernel.Types.Error
 import Kernel.Utils.Common
 import Servant.API
 
@@ -85,13 +85,13 @@ getUtsData config = do
   if resp.respCode == 0
     then do
       case decryptResponseData resp.utsData utsKey of
-        Left err -> throwError $ InternalError $ "Failed to decrypt key data: " <> T.pack err
+        Left err -> throwError $ CRISError $ "Failed to decrypt key data: " <> T.pack err
         Right decryptedJson -> do
           logInfo $ "Decrypted uts data: " <> decryptedJson
           case eitherDecode (LBS.fromStrict $ TE.encodeUtf8 decryptedJson) :: Either String DecodedUtsData of
-            Left err -> throwError $ InternalError $ "Failed to parse uts data: " <> T.pack err
+            Left err -> throwError $ CRISError $ "Failed to parse uts data: " <> T.pack err
             Right utsData -> pure utsData
-    else throwError $ InternalError $ "Fetching uts data failed with code: " <> (show $ resp.respCode)
+    else throwError $ CRISError $ "Fetching uts data failed with code: " <> (show $ resp.respCode)
   where
     eulerClientFn req token =
       let client = ET.client utsAPI

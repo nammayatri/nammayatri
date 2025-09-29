@@ -11,12 +11,12 @@ import EulerHS.Prelude hiding (concatMap, find, null, readMaybe, whenJust)
 import qualified EulerHS.Types as ET
 import ExternalBPP.ExternalAPI.Subway.CRIS.Auth (callCRISAPI)
 import ExternalBPP.ExternalAPI.Subway.CRIS.Encryption (decryptResponseData, encryptPayload)
+import ExternalBPP.ExternalAPI.Subway.CRIS.Error (CRISError (..))
 import ExternalBPP.ExternalAPI.Subway.CRIS.Types
 import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.App
-import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Servant.API
@@ -79,19 +79,19 @@ getRouteFare config merchantOperatingCityId request = do
 
   -- Fix the encoding chain
   decryptedResponse :: CRISFareResponse <- case eitherDecode (encode encryptedResponse) of
-    Left err -> throwError (InternalError $ "Failed to parse encrypted getRouteFare Resp: " <> T.pack (show err))
+    Left err -> throwError (CRISError $ "Failed to parse encrypted getRouteFare Resp: " <> T.pack (show err))
     Right encResp -> do
       logInfo $ "getRouteFare Resp Code: " <> responseCode encResp
       if encResp.responseCode == "0"
         then do
           case decryptResponseData (responseData encResp) decryptionKey of
-            Left err -> throwError (InternalError $ "Failed to decrypt getRouteFare Resp: " <> T.pack err)
+            Left err -> throwError (CRISError $ "Failed to decrypt getRouteFare Resp: " <> T.pack err)
             Right decryptedJson -> do
               logInfo $ "getRouteFare Decrypted Resp: " <> decryptedJson
               case eitherDecode (LBS.fromStrict $ TE.encodeUtf8 decryptedJson) of
-                Left err -> throwError (InternalError $ "Failed to decode getRouteFare Resp: " <> T.pack (show err))
+                Left err -> throwError (CRISError $ "Failed to decode getRouteFare Resp: " <> T.pack (show err))
                 Right fareResponse -> pure fareResponse
-        else throwError (InternalError $ "Non-zero response code in getRouteFare Resp: " <> encResp.responseCode <> " " <> encResp.responseData)
+        else throwError (CRISError $ "Non-zero response code in getRouteFare Resp: " <> encResp.responseCode <> " " <> encResp.responseData)
 
   let routeFareDetails = decryptedResponse.routeFareDetailsList
 
@@ -104,11 +104,11 @@ getRouteFare config merchantOperatingCityId request = do
       fares `forM` \fare -> do
         let mbFareAmount = readMaybe @HighPrecMoney . T.unpack $ fare.adultFare
             mbChildFareAmount = readMaybe @HighPrecMoney . T.unpack $ fare.childFare
-        fareAmount <- mbFareAmount & fromMaybeM (InternalError $ "Failed to parse fare amount: " <> show fare.adultFare)
-        childFareAmount <- mbChildFareAmount & fromMaybeM (InternalError $ "Failed to parse fare amount: " <> show fare.childFare)
-        classCode <- pure fare.classCode & fromMaybeM (InternalError $ "Failed to parse class code: " <> show fare.classCode)
+        fareAmount <- mbFareAmount & fromMaybeM (CRISError $ "Failed to parse fare amount: " <> show fare.adultFare)
+        childFareAmount <- mbChildFareAmount & fromMaybeM (CRISError $ "Failed to parse fare amount: " <> show fare.childFare)
+        classCode <- pure fare.classCode & fromMaybeM (CRISError $ "Failed to parse class code: " <> show fare.classCode)
         serviceTiers <- QFRFSVehicleServiceTier.findByProviderCode classCode merchantOperatingCityId
-        serviceTier <- serviceTiers & listToMaybe & fromMaybeM (InternalError $ "Failed to find service tier: " <> show classCode)
+        serviceTier <- serviceTiers & listToMaybe & fromMaybeM (CRISError $ "Failed to find service tier: " <> show classCode)
         return $
           FRFSUtils.FRFSFare
             { price =

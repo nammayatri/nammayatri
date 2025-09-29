@@ -5,7 +5,7 @@ import qualified Data.Text.Encoding as DT
 import Domain.Types.Extra.IntegratedBPPConfig
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET
-import ExternalBPP.ExternalAPI.Subway.CRIS.Error (CRISError)
+import ExternalBPP.ExternalAPI.Subway.CRIS.Error (CRISError (..))
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
@@ -97,5 +97,8 @@ callCRISAPI config proxy clientFn description = do
         description
         proxy
   case eitherResp of
-    Left err -> throwError $ InternalError $ "Error while calling CRIS API" <> (show err)
+    Left err -> do
+      case fromException err :: Maybe CRISError of
+        Just crisError -> throwError crisError
+        Nothing -> throwError $ CRISError $ "Error while calling CRIS API : " <> T.pack (show err)
     Right res -> return res
