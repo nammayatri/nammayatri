@@ -14,7 +14,9 @@ import Domain.Types.BecknConfig
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Beckn.Context
+import Servant.API (ToHttpApiData (toUrlPiece))
 import SharedLogic.Search as SLS
+import qualified Tools.Maps as Maps
 
 buildBecknSearchReqV2 :: SLS.SearchRes -> BecknConfig -> Kernel.Prelude.BaseUrl -> Text -> Either Text BecknV2.OnDemand.Types.SearchReq
 buildBecknSearchReqV2 res@SLS.SearchRes {..} bapConfig bapUri messageId = do
@@ -26,10 +28,10 @@ buildBecknSearchReqV2 res@SLS.SearchRes {..} bapConfig bapUri messageId = do
 buildSearchMessageV2 :: SLS.SearchRes -> BecknConfig -> BecknV2.OnDemand.Types.SearchReqMessage
 buildSearchMessageV2 res bapConfig = BecknV2.OnDemand.Types.SearchReqMessage {searchReqMessageIntent = tfIntent res bapConfig}
 
-tfCustomer :: Maybe Tags.Taggings -> Maybe BecknV2.OnDemand.Types.Customer
-tfCustomer taggings = do
+tfCustomer :: Maybe Tags.Taggings -> Maybe Maps.Language -> Maybe BecknV2.OnDemand.Types.Customer
+tfCustomer taggings mbLanguage = do
   let customerContact_ = Nothing
-      customerPerson_ = tfPerson taggings
+      customerPerson_ = tfPerson taggings mbLanguage
       returnData = BecknV2.OnDemand.Types.Customer {customerContact = customerContact_, customerPerson = customerPerson_}
       allNothing = BecknV2.OnDemand.Utils.Common.allNothing returnData
   if allNothing
@@ -45,7 +47,7 @@ tfFulfillment SLS.SearchRes {..} = do
       fulfillmentTags_ = Tags.convertToTagGroup . (.fulfillmentTags) =<< taggings
       fulfillmentType_ = Nothing
       fulfillmentVehicle_ = Nothing
-      fulfillmentCustomer_ = tfCustomer taggings
+      fulfillmentCustomer_ = tfCustomer taggings searchRequest.language
       returnData = BecknV2.OnDemand.Types.Fulfillment {fulfillmentAgent = fulfillmentAgent_, fulfillmentCustomer = fulfillmentCustomer_, fulfillmentId = fulfillmentId_, fulfillmentState = fulfillmentState_, fulfillmentStops = fulfillmentStops_, fulfillmentTags = fulfillmentTags_, fulfillmentType = fulfillmentType_, fulfillmentVehicle = fulfillmentVehicle_}
       allNothing = BecknV2.OnDemand.Utils.Common.allNothing returnData
   if allNothing
@@ -57,7 +59,8 @@ tfIntent res bapConfig = do
   let intentTags_ = Nothing
       intentFulfillment_ = tfFulfillment res
       intentPayment_ = tfPayment res bapConfig
-      returnData = BecknV2.OnDemand.Types.Intent {intentFulfillment = intentFulfillment_, intentPayment = intentPayment_, intentTags = intentTags_}
+      intentCategory_ = tfCategory <$> res.categoryCode
+      returnData = BecknV2.OnDemand.Types.Intent {intentFulfillment = intentFulfillment_, intentPayment = intentPayment_, intentTags = intentTags_, intentCategory = intentCategory_}
       allNothing = BecknV2.OnDemand.Utils.Common.allNothing returnData
   if allNothing
     then Nothing
@@ -80,14 +83,29 @@ tfPayment res bapConfig = do
   let mkParams :: (Maybe BknPaymentParams) = (readMaybe . T.unpack) =<< bapConfig.paymentParamsJson
   Just $ mkPayment' updatedPaymentTags (show bapConfig.collectedBy) Enums.NOT_PAID Nothing Nothing mkParams
 
-tfPerson :: Maybe Tags.Taggings -> Maybe BecknV2.OnDemand.Types.Person
-tfPerson taggings = do
+tfPerson :: Maybe Tags.Taggings -> Maybe Maps.Language -> Maybe BecknV2.OnDemand.Types.Person
+tfPerson taggings mbLanguage = do
   let personId_ = Nothing
       personImage_ = Nothing
       personName_ = Nothing
       personTags_ = Tags.convertToTagGroup . (.personTags) =<< taggings
-      returnData = BecknV2.OnDemand.Types.Person {personId = personId_, personImage = personImage_, personName = personName_, personTags = personTags_}
+      personLanguages_ = tfLanguages <$> mbLanguage
+      returnData = BecknV2.OnDemand.Types.Person {personId = personId_, personImage = personImage_, personName = personName_, personTags = personTags_, personLanguages = personLanguages_}
       allNothing = BecknV2.OnDemand.Utils.Common.allNothing returnData
   if allNothing
     then Nothing
     else Just returnData
+
+tfCategory :: Enums.CategoryCode -> BecknV2.OnDemand.Types.Category
+tfCategory categoryCode = do
+  let descriptorCode_ = show categoryCode
+  let categoryDescriptor_ = Just $ BecknV2.OnDemand.Types.Descriptor {descriptorCode = Just descriptorCode_, descriptorName = Nothing, descriptorShortDesc = Nothing}
+  BecknV2.OnDemand.Types.Category {categoryDescriptor = categoryDescriptor_, categoryId = Nothing}
+
+tfLanguages :: Maps.Language -> [BecknV2.OnDemand.Types.Language]
+tfLanguages language =
+  [ BecknV2.OnDemand.Types.Language
+      { languageCode = Just $ toUrlPiece language,
+        languageName = Just $ show language
+      }
+  ]

@@ -16,6 +16,7 @@ module Beckn.OnDemand.Transformer.Search where
 import qualified Beckn.OnDemand.Utils.Common
 import qualified Beckn.OnDemand.Utils.Search
 import qualified Beckn.Types.Core.Taxi.Common.Address
+import qualified BecknV2.OnDemand.Enums
 import qualified BecknV2.OnDemand.Tags as Tags
 import qualified BecknV2.OnDemand.Types
 import qualified BecknV2.OnDemand.Types as Spec
@@ -61,6 +62,7 @@ buildSearchReq messageId subscriber req context = do
       isMultimodalSearch = Beckn.OnDemand.Utils.Search.getIsMultimodalSearch req
       isReserveRide = getIsReserveRide req
       reserveRideEstimate = getReserveRideEstimate req isReserveRide
+      categoryCode = getCategoryCode req
   bapCountry_ <- Beckn.OnDemand.Utils.Common.getContextCountry context
   customerPhoneNum_ <- getPhoneNumberFromTag $ Beckn.OnDemand.Utils.Search.buildCustomerPhoneNumber req
   dropAddrress_ <- Beckn.OnDemand.Utils.Search.getDropOffLocation req & tfAddress
@@ -157,3 +159,11 @@ getPhoneNumberFromTag customerPhoneNum_ = do
       mapM decrypt $ textToEncryptedHashed phoneNumber
     Nothing -> do
       return Nothing
+
+getCategoryCode :: Spec.SearchReqMessage -> Maybe BecknV2.OnDemand.Enums.CategoryCode
+getCategoryCode req = do
+  intent <- req.searchReqMessageIntent
+  category <- intent.intentCategory
+  descriptor <- category.categoryDescriptor
+  descriptorCode <- descriptor.descriptorCode
+  readMaybe descriptorCode

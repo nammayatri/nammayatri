@@ -374,6 +374,10 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
     case merchant.gatewayAndRegistryPriorityList of
       (NY : _) -> asks (.nyGatewayUrl)
       _ -> asks (.ondcGatewayUrl)
+  let isRentalRideSearch = case req of
+        RentalSearch _ -> True
+        _ -> False
+  let categoryCode = getCategoryCode merchant now startTime isRentalRideSearch justMultimodalSearch
   return $
     SearchRes -- TODO: cleanup this reponse field based on what is not required for beckn type conversions
       { searchRequest = searchRequest,
@@ -732,3 +736,16 @@ autoCompleteEvent riderConfig searchRequestId sessionToken isSourceManuallyMoved
           let updatedRecord = AutoCompleteEventData record.autocompleteInputs record.customerId record.id isDestinationManuallyMoved (Just searchRequestId) record.searchType record.sessionToken record.merchantId record.merchantOperatingCityId record.originLat record.originLon record.createdAt now
           -- let updatedRecord = record {DTA.searchRequestId = Just searchRequestId, DTA.isLocationSelectedOnMap = isDestinationManuallyMoved, DTA.updatedAt = now}
           triggerAutoCompleteEvent updatedRecord
+
+getCategoryCode :: DM.Merchant -> UTCTime -> UTCTime -> Bool -> Bool -> Maybe Enums.CategoryCode
+getCategoryCode merchant now startTime isRentalRideSearch justMultimodalSearch =
+  -- in case of Nothing tripCategory will be determined on bpp side, based on locations and start time (getPossibleTripOption)
+  if merchant.sendBecknCategoryCode
+    then do
+      let isScheduledRideSearch = not justMultimodalSearch && merchant.scheduleRideBufferTime `addUTCTime` now < startTime
+      Just $ case (isRentalRideSearch, isScheduledRideSearch) of
+        (False, False) -> Enums.CATEGORY_ON_DEMAND_TRIP
+        (True, False) -> Enums.CATEGORY_ON_DEMAND_RENTAL
+        (False, True) -> Enums.CATEGORY_SCHEDULED_TRIP
+        (True, True) -> Enums.CATEGORY_SCHEDULED_RENTAL
+    else Nothing
