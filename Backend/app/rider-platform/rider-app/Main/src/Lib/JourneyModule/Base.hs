@@ -151,7 +151,7 @@ init journeyReq userPreferences = do
                         { busNumber = Just liveInfo.vehicleNumber,
                           depotNo = liveInfo.depot,
                           waybillId = liveInfo.waybillId,
-                          scheduleNo = Just liveInfo.scheduleNo,
+                          scheduleNo = liveInfo.scheduleNo,
                           updateSource = Just DJourneyLeg.UserSpotBooked
                         }
                   else Nothing

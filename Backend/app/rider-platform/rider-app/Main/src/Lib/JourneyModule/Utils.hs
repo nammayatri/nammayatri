@@ -245,8 +245,8 @@ fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid moci
           try @_ @SomeException (OTPRest.getVehicleServiceType integratedBppConfig vehicleNumber) >>= \case
             Left _ -> return Nothing
             Right mapping -> return mapping
-        case vrMapping of
-          Just mapping -> return $ Just ((vehicleNumber, etaData), mapping.schedule_no)
+        case vrMapping >>= (.schedule_no) of
+          Just scheduleNo -> return $ Just ((vehicleNumber, etaData), scheduleNo)
           Nothing -> do
             mbMapping <- listToMaybe <$> IM.withInMemCache [vehicleNumber] 3600 (QVehicleRouteMapping.findByVehicleNo vehicleNumber)
             case mbMapping of
@@ -1260,13 +1260,13 @@ getRouteFareRequest sourceCode destCode changeOver viaPoints personId = do
       }
 
 data VehicleLiveRouteInfo = VehicleLiveRouteInfo
-  { routeCode :: Text,
+  { routeCode :: Maybe Text,
     serviceType :: Spec.ServiceTierType,
     vehicleNumber :: Text,
     routeNumber :: Maybe Text,
     waybillId :: Maybe Text,
-    scheduleNo :: Text,
-    tripNumber :: Int,
+    scheduleNo :: Maybe Text,
+    tripNumber :: Maybe Int,
     depot :: Maybe Text,
     remaining_trip_details :: Maybe [NandiTypes.BusScheduleTrip]
   }
@@ -1278,6 +1278,19 @@ getVehicleLiveRouteInfo ::
   Text ->
   m (Maybe (DIntegratedBPPConfig.IntegratedBPPConfig, VehicleLiveRouteInfo))
 getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber = do
+  eitherResult <- try @_ @SomeException (getVehicleLiveRouteInfoUnsafe integratedBPPConfigs vehicleNumber)
+  case eitherResult of
+    Left err -> do
+      logError $ "Error getting vehicle live route info: " <> show err
+      return Nothing
+    Right result -> return result
+
+getVehicleLiveRouteInfoUnsafe ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  [DIntegratedBPPConfig.IntegratedBPPConfig] ->
+  Text ->
+  m (Maybe (DIntegratedBPPConfig.IntegratedBPPConfig, VehicleLiveRouteInfo))
+getVehicleLiveRouteInfoUnsafe integratedBPPConfigs vehicleNumber = do
   mbMbResult <-
     SIBC.fetchFirstIntegratedBPPConfigRightResult integratedBPPConfigs $ \config ->
       (config,) <$> OTPRest.getVehicleServiceType config vehicleNumber

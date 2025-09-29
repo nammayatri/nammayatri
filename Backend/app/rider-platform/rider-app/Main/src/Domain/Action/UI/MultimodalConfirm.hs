@@ -690,14 +690,14 @@ getPublicTransportData (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _mbCo
             mbVehicleLiveRouteInfo
               <&> \(_, vehicleLiveRouteInfo) -> do
                 ( \tripsSortedOnStopCount ->
-                    if vehicleLiveRouteInfo.tripNumber == 1
+                    if vehicleLiveRouteInfo.tripNumber == Just 1
                       then do
                         let nextTrip = take 1 tripsSortedOnStopCount
                         let nextUniqueTrip = take 1 $ filter (\t -> not $ t.route_id `elem` map (.route_id) nextTrip) tripsSortedOnStopCount
                         nextTrip ++ nextUniqueTrip
                       else take 1 tripsSortedOnStopCount
                   )
-                  $ sortOn (Down . (.stops_count)) $ filter (\remainingTrip -> remainingTrip.route_number == vehicleLiveRouteInfo.routeNumber && remainingTrip.route_id /= vehicleLiveRouteInfo.routeCode) (fromMaybe [] vehicleLiveRouteInfo.remaining_trip_details)
+                  $ sortOn (Down . (.stops_count)) $ filter (\remainingTrip -> remainingTrip.route_number == vehicleLiveRouteInfo.routeNumber && Just remainingTrip.route_id /= vehicleLiveRouteInfo.routeCode) (fromMaybe [] vehicleLiveRouteInfo.remaining_trip_details)
           _ -> Nothing
 
   let mkResponse stations routes routeStops bppConfig = do
@@ -788,7 +788,8 @@ getPublicTransportData (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _mbCo
       )
       >>= \case
         Left _ -> do
-          lst1 <- mapConcurrently (fetchData (((.routeCode) . snd) <$> mbVehicleLiveRouteInfo)) integratedBPPConfigs
+          mbRouteCode <- getRouteCode mbVehicleLiveRouteInfo
+          lst1 <- mapConcurrently (fetchData mbRouteCode) integratedBPPConfigs
           lst2 <-
             maybe
               (pure [])
@@ -804,7 +805,8 @@ getPublicTransportData (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _mbCo
           -- Group configs by feed_id and take first config for each feed_id
           let configsByFeedId = HashMap.fromListWith (++) $ map (\(config, (feedKey, _)) -> (feedKey, [config])) configsWithFeedInfo
               uniqueConfigs = map (head . snd) $ HashMap.toList configsByFeedId
-          lst1 <- mapConcurrently (fetchData (((.routeCode) . snd) <$> mbVehicleLiveRouteInfo)) uniqueConfigs
+          mbRouteCode <- getRouteCode mbVehicleLiveRouteInfo
+          lst1 <- mapConcurrently (fetchData mbRouteCode) uniqueConfigs
           lst2 <- maybe (pure []) (\oppositeTripDetails -> concat <$> mapConcurrently (\oppositeTripDetail -> mapConcurrently (fetchData (Just oppositeTripDetail.route_id)) uniqueConfigs) oppositeTripDetails) mbOppositeTripDetails
           return (lst1 <> lst2)
 
@@ -820,6 +822,13 @@ getPublicTransportData (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _mbCo
             ptcv = T.intercalate (T.pack "#") gtfsVersion <> (maybe "" (\version -> "#" <> show version) (riderConfig >>= (.domainPublicTransportDataVersion)))
           }
   return transportData
+  where
+    getRouteCode Nothing = return Nothing
+    getRouteCode (Just vehicleLiveRouteInfo) = do
+      let mbRouteCode = (snd vehicleLiveRouteInfo).routeCode
+      case mbRouteCode of
+        Just routeCode -> return $ Just routeCode
+        Nothing -> throwError (FleetRouteMapMissing $ "Route code not found for fleetId: " <> show (snd vehicleLiveRouteInfo).vehicleNumber)
 
 getMultimodalOrderGetLegTierOptions ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -1600,10 +1609,15 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (_mbPersonId, _merchantId) j
       -- todo: MERTRICS add metric here
       logError $ "CRITICAL: Service tier not found for vehicle, skipping validation " <> vehicleNumber
   let journeyLegRouteCodes = nub (mapMaybe (.routeCode) journeyLeg.routeDetails <> (concat $ mapMaybe (.alternateRouteIds) journeyLeg.routeDetails))
-  unless (vehicleLiveRouteInfo.routeCode `elem` journeyLegRouteCodes) $ do
-    logError $ "Vehicle " <> vehicleNumber <> ", the route code " <> vehicleLiveRouteInfo.routeCode <> ", not found on any route: " <> show journeyLegRouteCodes <> ", Please board the bus moving on allowed possible Routes for the booking."
-    when (riderConfig.validateSetOnboardingVehicleRequest == Just True) $
-      throwError $ VehicleUnserviceableOnRoute ("Vehicle " <> vehicleNumber <> ", the route code " <> vehicleLiveRouteInfo.routeCode <> ", not found on any route: " <> show journeyLegRouteCodes <> ", Please board the bus moving on allowed possible Routes for the booking.")
+
+  case vehicleLiveRouteInfo.routeCode of
+    Just routeCode -> do
+      unless (routeCode `elem` journeyLegRouteCodes) $ do
+        logError $ "Vehicle " <> vehicleNumber <> ", the route code " <> routeCode <> ", not found on any route: " <> show journeyLegRouteCodes <> ", Please board the bus moving on allowed possible Routes for the booking."
+        when (riderConfig.validateSetOnboardingVehicleRequest == Just True) $
+          throwError $ VehicleUnserviceableOnRoute ("Vehicle " <> vehicleNumber <> ", the route code " <> routeCode <> ", not found on any route: " <> show journeyLegRouteCodes <> ", Please board the bus moving on allowed possible Routes for the booking.")
+    Nothing -> logError $ "Vehicle " <> vehicleNumber <> " not found on any route " <> show journeyLegRouteCodes <> ", Please board the bus moving on allowed possible Routes for the booking."
+
   let mbNewRouteCode = (vehicleLiveRouteInfo.routeCode,) <$> (listToMaybe journeyLeg.routeDetails) -- doing list to maybe as onluy need from and to stop codes, which will be same in all tickets
   updateTicketQRData journey journeyLeg riderConfig integratedBPPConfig booking.id mbNewRouteCode
   QJourneyLeg.updateByPrimaryKey $
@@ -1612,7 +1626,7 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (_mbPersonId, _merchantId) j
         DJourneyLeg.finalBoardedBusNumberSource = Just DJourneyLeg.UserActivated,
         DJourneyLeg.finalBoardedDepotNo = vehicleLiveRouteInfo.depot,
         DJourneyLeg.finalBoardedWaybillId = vehicleLiveRouteInfo.waybillId,
-        DJourneyLeg.finalBoardedScheduleNo = Just vehicleLiveRouteInfo.scheduleNo
+        DJourneyLeg.finalBoardedScheduleNo = vehicleLiveRouteInfo.scheduleNo
       }
   updatedLegs <- JM.getAllLegsInfo journey.riderId journeyId
   generateJourneyInfoResponse journey updatedLegs
@@ -1640,7 +1654,7 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (_mbPersonId, _merchantId) j
                       Nothing -> do
                         ticket
               case mbNewRouteCode of
-                Just (newRouteCode, routeDetail) -> do
+                Just (Just newRouteCode, routeDetail) -> do
                   case (routeDetail.fromStopCode, routeDetail.toStopCode) of
                     (Just fromStopCode, Just toStopCode) -> do
                       mbNewRoute <- OTPRest.getRouteByRouteId integratedBPPConfig newRouteCode
@@ -1653,7 +1667,7 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (_mbPersonId, _merchantId) j
                             ExternalBPP.ExternalAPI.Types.toRouteProviderCode = maybe "NANDI" (.providerCode) toRoute
                           }
                     _ -> pure newTicket
-                Nothing -> do
+                _ -> do
                   pure newTicket
           )
       void $

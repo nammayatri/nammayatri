@@ -271,7 +271,7 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
                             DJourneyLeg.finalBoardedBusNumberSource = Just DJourneyLeg.Detected,
                             DJourneyLeg.finalBoardedDepotNo = mbVehicleInfo >>= (.depot),
                             DJourneyLeg.finalBoardedWaybillId = mbVehicleInfo >>= (.waybillId),
-                            DJourneyLeg.finalBoardedScheduleNo = mbVehicleInfo <&> (.scheduleNo)
+                            DJourneyLeg.finalBoardedScheduleNo = mbVehicleInfo >>= (.scheduleNo)
                           }
                       -- Update in-memory detailedStateData as well
                       pure (detailedStateData :: JT.JourneyLegStateData) {JT.fleetNo = Just bestVehicleNumber}
