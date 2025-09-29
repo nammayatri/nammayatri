@@ -90,8 +90,15 @@ mkStops origin mDestination mStartOtp intermediateStops =
           <> (map (\(location, order) -> UCommon.mkIntermediateStop location order (order - 1)) $ zip intermediateStops [1 ..])
 
 mkPayment :: Maybe DMPM.PaymentMethodInfo -> DBC.BecknConfig -> Context.City -> [Spec.Payment]
-mkPayment _ bapConfig city = do
-  let mkParams :: (Maybe BknPaymentParams) = decodeFromText =<< bapConfig.paymentParamsJson
+mkPayment mbPaymentMethodInfo bapConfig city = do
+  let mkParams :: (Maybe BknPaymentParams) =
+        case mbPaymentMethodInfo of
+          Just paymentMethodInfo ->
+            -- add this part only for testing purpose
+            if paymentMethodInfo.paymentInstrument == DMPM.Cash
+              then Nothing
+              else Just $ BknPaymentParams Nothing Nothing (Just $ show paymentMethodInfo.paymentInstrument) -- Bpp side we consider online when vpa is present (Ideally we should put upi_id here)
+          Nothing -> decodeFromText =<< bapConfig.paymentParamsJson
   singleton $ OUP.mkPayment (show city) (show bapConfig.collectedBy) Enums.NOT_PAID Nothing Nothing mkParams bapConfig.settlementType bapConfig.settlementWindow bapConfig.staticTermsUrl bapConfig.buyerFinderFee
 
 castDPaymentType :: DMPM.PaymentType -> Text

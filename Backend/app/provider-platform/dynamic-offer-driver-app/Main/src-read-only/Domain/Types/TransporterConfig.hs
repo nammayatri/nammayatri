@@ -182,6 +182,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     minRidesForCancellationScore :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     minRidesToUnlist :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     minThresholdForPassThroughDestination :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
+    minWalletAmountForCashRides :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     minimumWalletPayoutAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     minmRentalAndScheduledBookingLeadTimeHours :: Kernel.Types.Common.Hours,
     nightSafetyEndTime :: Kernel.Types.Common.Seconds,
