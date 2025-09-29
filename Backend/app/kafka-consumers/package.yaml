@@ -58,6 +58,10 @@ default-extensions:
   - BlockArguments
   - TypeSynonymInstances
   - UndecidableInstances
+  - NoFieldSelectors
+  - OverloadedRecordDot
+  - OverloadedRecordUpdate
+  - RebindableSyntax
 
 dependencies:
   - aeson
@@ -65,7 +69,6 @@ dependencies:
   - mobility-core
   - bytestring
   - euler-hs
-  - record-dot-preprocessor
   - record-hasfield
   - text
   - containers
@@ -103,7 +106,6 @@ ghc-options:
   - -Wunused-imports
   - -fwrite-ide-info
   - -hiedir=.hie
-  - -fplugin=RecordDotPreprocessor
 
 library:
   source-dirs: src

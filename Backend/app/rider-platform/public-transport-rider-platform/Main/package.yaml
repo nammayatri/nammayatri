@@ -58,6 +58,10 @@ default-extensions:
   - BlockArguments
   - TypeSynonymInstances
   - UndecidableInstances
+  - NoFieldSelectors
+  - OverloadedRecordDot
+  - OverloadedRecordUpdate
+  - RebindableSyntax
   - DerivingStrategies
   - DerivingVia
 
@@ -66,7 +70,6 @@ dependencies:
   - base >= 4.7 && < 5
   - mobility-core
   - bytestring
-  - record-dot-preprocessor
   - record-hasfield
   - text
   - time
@@ -93,7 +96,6 @@ ghc-options:
   - -Wcompat
   - -Widentities
   - -Wunused-imports
-  - -fplugin=RecordDotPreprocessor
   - -fwrite-ide-info
   - -hiedir=.hie
 

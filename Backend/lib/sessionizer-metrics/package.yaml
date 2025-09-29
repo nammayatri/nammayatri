@@ -54,10 +54,13 @@ default-extensions:
   - BlockArguments
   - TypeSynonymInstances
   - UndecidableInstances
+  - NoFieldSelectors
+  - OverloadedRecordDot
+  - OverloadedRecordUpdate
+  - RebindableSyntax
 
 dependencies:
   - base >= 4.7 && < 5
-  - record-dot-preprocessor
   - record-hasfield
   - uri-encode
   - base16-bytestring
@@ -86,7 +89,6 @@ ghc-options:
   - -Widentities
   - -fhide-source-paths
   - -Werror
-  - -fplugin=RecordDotPreprocessor
 
 library:
   source-dirs:
