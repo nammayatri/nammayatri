@@ -976,6 +976,7 @@ data MultimodalError
   | VehicleUnserviceableOnRoute Text -- reason
   | VehicleServiceTierUnserviceable Text -- reason
   | InvalidVehicleNumber Text -- reason
+  | FleetRouteMapMissing Text -- reason
   | PublicTransportDataUnavailable Text -- reason
   deriving (Eq, Show, IsBecknAPIError)
 
@@ -993,6 +994,7 @@ instance IsBaseError MultimodalError where
     VehicleUnserviceableOnRoute reason -> Just $ "Vehicle unserviceable on route: " <> reason
     VehicleServiceTierUnserviceable reason -> Just $ "Vehicle service tier unserviceable: " <> reason
     InvalidVehicleNumber reason -> Just $ "Invalid vehicle number: " <> reason
+    FleetRouteMapMissing reason -> Just $ "Fleet route map missing: " <> reason
     PublicTransportDataUnavailable reason -> Just $ "Public transport data unavailable: " <> reason
 
 instance IsHTTPError MultimodalError where
@@ -1007,6 +1009,7 @@ instance IsHTTPError MultimodalError where
     VehicleUnserviceableOnRoute _ -> "VEHICLE_UNSERVICEABLE_ON_ROUTE"
     VehicleServiceTierUnserviceable _ -> "VEHICLE_SERVICE_TIER_UNSERVICEABLE"
     InvalidVehicleNumber _ -> "INVALID_VEHICLE_NUMBER"
+    FleetRouteMapMissing _ -> "FLEET_ROUTE_MAP_MISSING"
     PublicTransportDataUnavailable _ -> "PUBLIC_TRANSPORT_DATA_UNAVAILABLE"
   toHttpCode = \case
     InvalidStationChange _ _ -> E400
@@ -1019,6 +1022,7 @@ instance IsHTTPError MultimodalError where
     VehicleUnserviceableOnRoute _ -> E400
     VehicleServiceTierUnserviceable _ -> E400
     InvalidVehicleNumber _ -> E400
+    FleetRouteMapMissing _ -> E400
     PublicTransportDataUnavailable _ -> E500
 
 instance IsAPIError MultimodalError
