@@ -77,3 +77,13 @@ ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN online_duration integ
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN blacklist_coin_events text[]  default '{}';
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN total_request_count integer ;
+ALTER TABLE atlas_driver_offer_bpp.driver_stats ADD COLUMN acceptation_request_count integer ;
+
+
+------- SQL updates -------
+

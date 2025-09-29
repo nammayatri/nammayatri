@@ -133,7 +133,7 @@ cancel req merchant booking mbActiveSearchTry = do
       triggerRideCancelledEvent RideEventData {ride = ride{status = SRide.CANCELLED}, personId = ride.driverId, merchantId = merchant.id}
       triggerBookingCancelledEvent BookingEventData {booking = booking{status = SRB.CANCELLED}, personId = ride.driverId, merchantId = merchant.id}
       fork "incrementCancelledCount based on nammatag" $ do
-        rideTags <- CInternal.updateNammaTagsForCancelledRide booking ride bookingCR
+        rideTags <- CInternal.updateNammaTagsForCancelledRide booking ride bookingCR transporterConfig
         when (validDriverCancellation `elem` rideTags) $ do
           let windowSize = toInteger $ fromMaybe 7 transporterConfig.cancellationRateWindow
           void $ SCR.incrementCancelledCount ride.driverId windowSize
