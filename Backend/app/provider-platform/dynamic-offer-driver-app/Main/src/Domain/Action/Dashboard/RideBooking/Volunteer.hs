@@ -125,6 +125,6 @@ postVolunteerAssignStartOtpRide _ _ Common.AssignCreateAndStartOtpRideAPIReq {..
     fork "sending dashboard sms - start ride" $ do
       mride <- runInReplica $ QRide.findById ride.id >>= fromMaybeM (RideDoesNotExist ride.id.getId)
       Sms.sendDashboardSms booking.providerId booking.merchantOperatingCityId Sms.BOOKING (Just mride) mride.driverId (Just booking) 0
-    shandle <- RideStart.buildStartRideHandle requestor.merchantId booking.merchantOperatingCityId
+    shandle <- RideStart.buildStartRideHandle requestor.merchantId booking.merchantOperatingCityId (Just ride.id)
     void $ RideStart.driverStartRide shandle ride.id driverReq
   return Success
