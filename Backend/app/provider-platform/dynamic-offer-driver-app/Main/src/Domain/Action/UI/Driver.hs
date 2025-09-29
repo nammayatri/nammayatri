@@ -813,45 +813,60 @@ getInformation (personId, merchantId, merchantOpCityId) mbClientId toss tnant' c
 
 setActivity :: (CacheFlow m r, EsqDBFlow m r, HasField "serviceClickhouseCfg" r CH.ClickhouseCfg, HasField "serviceClickhouseEnv" r CH.ClickhouseEnv) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Bool -> Maybe DriverInfo.DriverMode -> m APISuccess.APISuccess
 setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
-  void $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  let driverId = cast personId
-  driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
-  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  when (isActive || (isJust mode && (mode == Just DriverInfo.SILENT || mode == Just DriverInfo.ONLINE))) $ do
-    merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-    mbVehicle <- QVehicle.findById personId
-    DriverSpecificSubscriptionData {..} <- getDriverSpecificSubscriptionDataWithSubsConfig (personId, merchantId, merchantOpCityId) transporterConfig driverInfo mbVehicle Plan.YATRI_SUBSCRIPTION
-    let commonSubscriptionChecks = not isOnFreeTrial && not transporterConfig.allowDefaultPlanAllocation
-    (planBasedChecks, changeBasedChecks) <- do
-      if isSubscriptionEnabledAtCategoryLevel
-        then do
-          let planBasedChecks' = planMandatoryForCategory && isNothing autoPayStatus && commonSubscriptionChecks && isEnabledForCategory
-          let isSubscriptionEnabledAtCategoryLevelUI = (mbDriverPlan >>= (.isCategoryLevelSubscriptionEnabled)) == Just True
-          let changeBasedChecks' = (isSubscriptionVehicleCategoryChanged || isSubscriptionCityChanged) && commonSubscriptionChecks && isEnabledForCategory && isSubscriptionEnabledAtCategoryLevelUI
-          pure (planBasedChecks', changeBasedChecks')
-        else do
-          let isEnableForVariant = maybe False (`elem` transporterConfig.variantsToEnableForSubscription) (mbVehicle <&> (.variant))
-          let planBasedChecks' = transporterConfig.isPlanMandatory && isNothing autoPayStatus && commonSubscriptionChecks && isEnableForVariant
-          pure (planBasedChecks', False)
-    when (planBasedChecks || changeBasedChecks) $ throwError (NoPlanSelected personId.getId)
-    when merchant.onlinePayment $ do
-      driverBankAccount <- QDBA.findByPrimaryKey driverId >>= fromMaybeM (DriverBankAccountNotFound driverId.getId)
-      unless driverBankAccount.chargesEnabled $ throwError (DriverChargesDisabled driverId.getId)
-    unless (driverInfo.enabled) $ throwError DriverAccountDisabled
-    unless (driverInfo.subscribed || transporterConfig.openMarketUnBlocked) $ throwError DriverUnsubscribed
-    when driverInfo.blocked $ do
-      case driverInfo.blockExpiryTime of
-        Just expiryTime -> do
-          now <- getCurrentTime
-          if now > expiryTime
-            then do
-              QDriverInformation.updateBlockedState driverId False (Just "AUTOMATICALLY_UNBLOCKED") merchantId merchantOpCityId DTDBT.Application
-            else throwError $ DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag)
-        Nothing -> throwError $ DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag)
-  when (driverInfo.active /= isActive || driverInfo.mode /= mode) $ do
-    let newFlowStatus = DDriverMode.getDriverFlowStatus (mode <|> Just DriverInfo.OFFLINE) isActive
-    DDriverMode.updateDriverModeAndFlowStatus driverId transporterConfig isActive (mode <|> Just DriverInfo.OFFLINE) newFlowStatus driverInfo
-  pure APISuccess.Success
+  isLocked <- withLockDriverIdForSetActivity personId
+  unless isLocked $ throwError (InternalError "Driver activity update is already in progress")
+  finally
+    ( do
+        void $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+        let driverId = cast personId
+        driverInfo <- QDriverInformation.findById driverId >>= fromMaybeM DriverInfoNotFound
+        transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast personId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+        when (isActive || (isJust mode && (mode == Just DriverInfo.SILENT || mode == Just DriverInfo.ONLINE))) $ do
+          merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
+          mbVehicle <- QVehicle.findById personId
+          DriverSpecificSubscriptionData {..} <- getDriverSpecificSubscriptionDataWithSubsConfig (personId, merchantId, merchantOpCityId) transporterConfig driverInfo mbVehicle Plan.YATRI_SUBSCRIPTION
+          let commonSubscriptionChecks = not isOnFreeTrial && not transporterConfig.allowDefaultPlanAllocation
+          (planBasedChecks, changeBasedChecks) <- do
+            if isSubscriptionEnabledAtCategoryLevel
+              then do
+                let planBasedChecks' = planMandatoryForCategory && isNothing autoPayStatus && commonSubscriptionChecks && isEnabledForCategory
+                let isSubscriptionEnabledAtCategoryLevelUI = (mbDriverPlan >>= (.isCategoryLevelSubscriptionEnabled)) == Just True
+                let changeBasedChecks' = (isSubscriptionVehicleCategoryChanged || isSubscriptionCityChanged) && commonSubscriptionChecks && isEnabledForCategory && isSubscriptionEnabledAtCategoryLevelUI
+                pure (planBasedChecks', changeBasedChecks')
+              else do
+                let isEnableForVariant = maybe False (`elem` transporterConfig.variantsToEnableForSubscription) (mbVehicle <&> (.variant))
+                let planBasedChecks' = transporterConfig.isPlanMandatory && isNothing autoPayStatus && commonSubscriptionChecks && isEnableForVariant
+                pure (planBasedChecks', False)
+          when (planBasedChecks || changeBasedChecks) $ throwError (NoPlanSelected personId.getId)
+          when merchant.onlinePayment $ do
+            driverBankAccount <- QDBA.findByPrimaryKey driverId >>= fromMaybeM (DriverBankAccountNotFound driverId.getId)
+            unless driverBankAccount.chargesEnabled $ throwError (DriverChargesDisabled driverId.getId)
+          unless (driverInfo.enabled) $ throwError DriverAccountDisabled
+          unless (driverInfo.subscribed || transporterConfig.openMarketUnBlocked) $ throwError DriverUnsubscribed
+          when driverInfo.blocked $ do
+            case driverInfo.blockExpiryTime of
+              Just expiryTime -> do
+                now <- getCurrentTime
+                if now > expiryTime
+                  then do
+                    QDriverInformation.updateBlockedState driverId False (Just "AUTOMATICALLY_UNBLOCKED") merchantId merchantOpCityId DTDBT.Application
+                  else throwError $ DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag)
+              Nothing -> throwError $ DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag)
+        when (driverInfo.active /= isActive || driverInfo.mode /= mode) $ do
+          let newFlowStatus = DDriverMode.getDriverFlowStatus (mode <|> Just DriverInfo.OFFLINE) isActive
+          DDriverMode.updateDriverModeAndFlowStatus driverId transporterConfig isActive (mode <|> Just DriverInfo.OFFLINE) newFlowStatus driverInfo
+        pure APISuccess.Success
+    )
+    ( do
+        Redis.unlockRedis (buildSetActivityLockKey personId)
+    )
+  where
+    withLockDriverIdForSetActivity driverId' = do
+      isLockSuccessful <- Redis.tryLockRedis (buildSetActivityLockKey driverId') 5
+      return isLockSuccessful
+
+    buildSetActivityLockKey :: Id SP.Person -> Text
+    buildSetActivityLockKey driverId' = "Driver:SetActivity:" <> show driverId'
 
 activateGoHomeFeature :: (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Id DDHL.DriverHomeLocation -> LatLong -> Flow APISuccess.APISuccess
 activateGoHomeFeature (driverId, merchantId, merchantOpCityId) driverHomeLocationId driverLocation = do
