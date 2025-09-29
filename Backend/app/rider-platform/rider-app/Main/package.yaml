@@ -54,6 +54,9 @@ default-extensions:
   - BlockArguments
   - TypeSynonymInstances
   - UndecidableInstances
+  - NoFieldSelectors
+  - OverloadedRecordDot
+  - OverloadedRecordUpdate
   - PackageImports
   - TemplateHaskell
 
@@ -88,7 +91,6 @@ dependencies:
   - warp
   - time
   - record-hasfield
-  - record-dot-preprocessor
   - servant-openapi3
   - openapi3
   - persistent
@@ -140,7 +142,6 @@ dependencies:
 ghc-options:
   - -fwrite-ide-info
   - -hiedir=.hie
-  - -fplugin=RecordDotPreprocessor
 
 library:
   source-dirs:

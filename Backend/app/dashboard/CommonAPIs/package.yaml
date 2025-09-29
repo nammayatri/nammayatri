@@ -56,6 +56,9 @@ default-extensions:
   - BlockArguments
   - TypeSynonymInstances
   - UndecidableInstances
+  - NoFieldSelectors
+  - OverloadedRecordDot
+  - OverloadedRecordUpdate
   - TemplateHaskell
 
 dependencies:
@@ -64,7 +67,6 @@ dependencies:
   - mobility-core
   - beckn-spec
   - bytestring
-  - record-dot-preprocessor
   - record-hasfield
   - text
   - time
@@ -97,7 +99,6 @@ ghc-options:
   - -Werror
   - -Widentities
   - -Wunused-imports
-  - -fplugin=RecordDotPreprocessor
   - -fwrite-ide-info
   - -hiedir=.hie
 

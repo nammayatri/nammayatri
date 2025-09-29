@@ -62,12 +62,14 @@ default-extensions:
   - BlockArguments
   - TypeSynonymInstances
   - UndecidableInstances
+  - NoFieldSelectors
+  - OverloadedRecordDot
+  - OverloadedRecordUpdate
   - AllowAmbiguousTypes
 
 dependencies:
   - base >= 4.7 && < 5
   - record-hasfield
-  - record-dot-preprocessor
   - aeson
   - mobility-core
   - bytestring
@@ -103,7 +105,6 @@ ghc-options:
   - -Widentities
   - -Wunused-imports
   - -Werror
-  - -fplugin=RecordDotPreprocessor
 
 library:
   source-dirs: src

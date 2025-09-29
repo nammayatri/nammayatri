@@ -55,6 +55,9 @@ default-extensions:
   - BlockArguments
   - TypeSynonymInstances
   - UndecidableInstances
+  - NoFieldSelectors
+  - OverloadedRecordDot
+  - OverloadedRecordUpdate
 
 dependencies:
   - aeson
@@ -62,7 +65,6 @@ dependencies:
   - public-transport-rider-platform
   - mobility-core
   - bytestring
-  - record-dot-preprocessor
   - record-hasfield
   - text
   - time
@@ -82,7 +84,6 @@ ghc-options:
   - -Werror
   - -Widentities
   - -Wunused-imports
-  - -fplugin=RecordDotPreprocessor
   - -fwrite-ide-info
   - -hiedir=.hie
 

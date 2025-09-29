@@ -52,6 +52,9 @@ default-extensions:
   - TypeOperators
   - ViewPatterns
   - UndecidableInstances
+  - NoFieldSelectors
+  - OverloadedRecordDot
+  - OverloadedRecordUpdate
   - LambdaCase
 
 dependencies:
@@ -69,7 +72,6 @@ dependencies:
   - containers
   - directory
   - errors
-  - record-dot-preprocessor
   - record-hasfield
   # - euler-webservice
   - euler-events-hs >=2.0.0 && <2.1
@@ -108,7 +110,6 @@ dependencies:
 ghc-options:
   - -fwrite-ide-info
   - -hiedir=.hie
-  - -fplugin=RecordDotPreprocessor
 
 library:
   source-dirs: src

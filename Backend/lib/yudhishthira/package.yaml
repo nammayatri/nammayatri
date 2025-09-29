@@ -54,6 +54,9 @@ default-extensions:
   - BlockArguments
   - TypeSynonymInstances
   - UndecidableInstances
+  - NoFieldSelectors
+  - OverloadedRecordDot
+  - OverloadedRecordUpdate
   - StandaloneDeriving
   - PackageImports
   - TemplateHaskell
@@ -90,7 +93,6 @@ dependencies:
   - uuid
   - prometheus-client
   - record-hasfield
-  - record-dot-preprocessor
   - servant-openapi3
   - openapi3
   - string-conversions
@@ -132,7 +134,6 @@ dependencies:
 ghc-options:
   - -fwrite-ide-info
   - -hiedir=.hie
-  - -fplugin=RecordDotPreprocessor
 
 library:
   source-dirs:

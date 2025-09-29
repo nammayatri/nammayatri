@@ -55,12 +55,14 @@ default-extensions:
   - BlockArguments
   - TypeSynonymInstances
   - UndecidableInstances
+  - NoFieldSelectors
+  - OverloadedRecordDot
+  - OverloadedRecordUpdate
 
 dependencies:
   - base >= 4.7 && < 5
   - euler-hs
   - record-hasfield
-  - record-dot-preprocessor
 
 ghc-options:
   - -fwrite-ide-info
@@ -70,7 +72,6 @@ ghc-options:
   - -Widentities
   - -Wunused-imports
   - -Werror
-  - -fplugin=RecordDotPreprocessor
 
 library:
   source-dirs: src

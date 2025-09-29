@@ -28,7 +28,6 @@ dependencies:
 - mobility-core
 - mock-sms
 - provider-dashboard
-- record-dot-preprocessor
 - record-hasfield
 - rider-app
 - string-conversions
@@ -75,6 +74,9 @@ default-extensions:
 - TypeFamilies
 - TypeOperators
 - ViewPatterns
+- NoFieldSelectors
+- OverloadedRecordDot
+- OverloadedRecordUpdate
 
 library:
   source-dirs: src

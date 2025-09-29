@@ -62,6 +62,9 @@ default-extensions:
   - BlockArguments
   - TypeSynonymInstances
   - UndecidableInstances
+  - NoFieldSelectors
+  - OverloadedRecordDot
+  - OverloadedRecordUpdate
 
 dependencies:
   - aeson
@@ -74,12 +77,10 @@ dependencies:
   - optparse-applicative
   - directory
   - record-hasfield
-  - record-dot-preprocessor
 
 ghc-options:
   - -fwrite-ide-info
   - -hiedir=.hie
-  - -fplugin=RecordDotPreprocessor
 
 library:
   source-dirs: src

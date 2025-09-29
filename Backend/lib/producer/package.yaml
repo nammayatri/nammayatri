@@ -55,6 +55,9 @@ default-extensions:
   - BlockArguments
   - TypeSynonymInstances
   - UndecidableInstances
+  - NoFieldSelectors
+  - OverloadedRecordDot
+  - OverloadedRecordUpdate
 
 dependencies:
   - aeson
@@ -64,7 +67,6 @@ dependencies:
   - monad-control
   - euler-hs
   - bytestring
-  - record-dot-preprocessor
   - record-hasfield
   - text
   - time
@@ -96,7 +98,6 @@ ghc-options:
   - -Werror
   - -Widentities
   - -Wunused-imports
-  - -fplugin=RecordDotPreprocessor
   - -fwrite-ide-info
   - -hiedir=.hie
 
