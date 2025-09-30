@@ -162,6 +162,7 @@ RiderConfig:
     domainPublicTransportDataVersion: Maybe Int
     updateTicketValidityInSecondsPostSetOnboarding: Maybe Seconds
     enableRideEndOffers: Bool
+    metricsBlacklistPatterns: "Maybe [Text]"
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
@@ -398,6 +399,7 @@ RiderConfig:
     busTrackingConfig: "json"
     busTierSortingConfig: "json"
     serviceTierRelationshipCfg: "json"
+    metricsBlacklistPatterns: text []
 
   extraOperations:
     - EXTRA_DOMAIN_TYPE_FILE
