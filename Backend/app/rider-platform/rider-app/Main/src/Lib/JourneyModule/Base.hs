@@ -430,10 +430,10 @@ startJourney ::
   Id DPerson.Person ->
   [APITypes.JourneyConfirmReqElement] ->
   Maybe Int ->
-  Id DJourney.Journey ->
+  DJourney.Journey ->
   m ()
-startJourney riderId confirmElements forcedBookedLegOrder journeyId = do
-  allLegs <- getAllLegsInfo riderId journeyId
+startJourney riderId confirmElements forcedBookedLegOrder journey = do
+  allLegs <- getAllLegsInfo riderId journey.id
   mapM_ (\leg -> QTBooking.updateOnInitDoneBySearchId (Just False) (Id leg.searchId)) allLegs -- TODO :: Handle the case where isMultiAllowed is False
   mapM_
     ( \leg -> do
@@ -444,13 +444,13 @@ startJourney riderId confirmElements forcedBookedLegOrder journeyId = do
         let forcedBooking = Just leg.order == forcedBookedLegOrder
         let crisSdkResponse = find (\element -> element.journeyLegOrder == leg.order) confirmElements >>= (.crisSdkResponse)
         let categorySelectionReq = find (\element -> element.journeyLegOrder == leg.order) confirmElements >>= (.categorySelectionReq)
-        JLI.confirm forcedBooking ticketQuantity childTicketQuantity bookLater leg crisSdkResponse categorySelectionReq
+        JLI.confirm forcedBooking ticketQuantity childTicketQuantity bookLater leg crisSdkResponse categorySelectionReq journey.isSingleMode
     )
     allLegs
 
 startJourneyLeg ::
-  (JL.ConfirmFlow m r c, JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) => JL.LegInfo -> m ()
-startJourneyLeg legInfo = do
+  (JL.ConfirmFlow m r c, JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) => JL.LegInfo -> Maybe Bool -> m ()
+startJourneyLeg legInfo isSingleMode = do
   (adultTicketQuantity, childTicketQuantity, crisSdkResponse) <-
     case legInfo.legExtraInfo of
       JL.Metro legExtraInfo -> return (legExtraInfo.adultTicketQuantity, legExtraInfo.childTicketQuantity, Nothing)
@@ -465,7 +465,7 @@ startJourneyLeg legInfo = do
       _ -> return (Nothing, Nothing, Nothing)
   when (legInfo.travelMode `elem` [DTrip.Metro, DTrip.Subway, DTrip.Bus]) $ do
     QTBooking.updateOnInitDoneBySearchId (Just False) (Id legInfo.searchId)
-  JLI.confirm True adultTicketQuantity childTicketQuantity False legInfo crisSdkResponse Nothing -- TODO :: Add category selection req
+  JLI.confirm True adultTicketQuantity childTicketQuantity False legInfo crisSdkResponse Nothing isSingleMode -- TODO :: Add category selection req
 
 addAllLegs ::
   ( JL.SearchRequestFlow m r c,
@@ -976,7 +976,7 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
         -- cancelRequiredLegs journey.riderId
         QJourneyLeg.create journeyLeg
         void $ addTaxiLeg journey journeyLeg (mkLocationAddress startlocation.location) (mkLocationAddress endLocation) (\searchId -> QJourneyLeg.updateLegSearchId (Just searchId) journeyLeg.id)
-        startJourney journey.riderId [] (Just currentLeg.sequenceNumber) journeyId
+        startJourney journey.riderId [] (Just currentLeg.sequenceNumber) journey
 
     -- cancelRequiredLegs riderId = do
     --   case mbEndLegOrder of

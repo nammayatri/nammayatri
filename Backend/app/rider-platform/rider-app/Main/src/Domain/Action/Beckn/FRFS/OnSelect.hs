@@ -54,8 +54,8 @@ validateRequest DOnSelect {..} = do
   merchant <- QMerch.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   return (merchant, quote)
 
-onSelect :: FRFSConfirmFlow m r => DOnSelect -> Merchant.Merchant -> DQuote.FRFSQuote -> m ()
-onSelect onSelectReq merchant quote = do
+onSelect :: FRFSConfirmFlow m r => DOnSelect -> Merchant.Merchant -> DQuote.FRFSQuote -> Maybe Bool -> m ()
+onSelect onSelectReq merchant quote isSingleMode = do
   whenJust (onSelectReq.validTill) (\validity -> void $ Qquote.updateValidTillById quote.id validity)
   Qquote.updatePriceAndEstimatedPriceById quote.id onSelectReq.totalPrice (Just quote.price)
   QJourneyLeg.updateEstimatedFaresBySearchId (Just onSelectReq.totalPrice.amount) (Just onSelectReq.totalPrice.amount) (Just quote.searchId.getId)
@@ -67,4 +67,4 @@ onSelect onSelectReq merchant quote = do
               return $ FRFSCategorySelectionReq {quantity = selectedQuantity, quoteCategoryId = category.id}
           )
           quoteCategories
-  void $ FRFSTicketService.postFrfsQuoteV2ConfirmUtil (Just quote.riderId, merchant.id) quote.id (FRFSQuoteConfirmReq {offered = Just categorySelectionReq, ticketQuantity = Nothing, childTicketQuantity = Nothing}) Nothing
+  void $ FRFSTicketService.postFrfsQuoteV2ConfirmUtil (Just quote.riderId, merchant.id) quote.id (FRFSQuoteConfirmReq {offered = Just categorySelectionReq, ticketQuantity = Nothing, childTicketQuantity = Nothing}) Nothing isSingleMode

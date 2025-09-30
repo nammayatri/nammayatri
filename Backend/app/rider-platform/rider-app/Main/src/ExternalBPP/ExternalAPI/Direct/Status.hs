@@ -32,7 +32,8 @@ getTicketStatus config booking = do
                       qrValidity = ticket.validTill,
                       description = ticket.description,
                       qrStatus = "UNCLAIMED",
-                      ..
+                      qrRefreshAt,
+                      commencingHours = Nothing
                     }
             else pure Nothing
       )

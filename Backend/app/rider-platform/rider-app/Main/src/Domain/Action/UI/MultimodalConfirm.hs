@@ -168,7 +168,7 @@ postMultimodalConfirm (_, _) journeyId forcedBookLegOrder journeyConfirmReq = do
   journey <- JM.getJourney journeyId
   legs <- QJourneyLeg.getJourneyLegs journey.id
   let confirmElements = journeyConfirmReq.journeyConfirmReqElements
-  void $ JM.startJourney journey.riderId confirmElements forcedBookLegOrder journey.id
+  void $ JM.startJourney journey.riderId confirmElements forcedBookLegOrder journey
   -- If all FRFS legs are skipped, update journey status to INPROGRESS. Otherwise, update journey status to CONFIRMED and it would be marked as INPROGRESS on Payment Success in `markJourneyPaymentSuccess`.
   -- Note: INPROGRESS journey status indicates that the tracking has started.
   if isAllFRFSLegSkipped legs confirmElements
@@ -451,7 +451,7 @@ postMultimodalJourneyLegAddSkippedLeg (_, _) journeyId legOrder = do
   journey <- JM.getJourney journeyId
   legs <- JM.getAllLegsInfo journey.riderId journeyId
   leg <- find (\leg -> leg.order == legOrder) legs & fromMaybeM (InvalidRequest "No matching journey leg found for the given legOrder")
-  void $ JM.startJourneyLeg leg
+  void $ JM.startJourneyLeg leg journey.isSingleMode
   pure Kernel.Types.APISuccess.Success
 
 getMultimodalJourneyStatus ::

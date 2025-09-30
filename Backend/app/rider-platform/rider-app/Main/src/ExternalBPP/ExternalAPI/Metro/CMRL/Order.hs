@@ -57,7 +57,8 @@ createOrder config integratedBPPConfig booking mRiderNumber = do
             qrStatus = "UNCLAIMED",
             qrValidity = expiryTime,
             description = Nothing,
-            qrRefreshAt = Nothing
+            qrRefreshAt = Nothing,
+            commencingHours = Nothing
           }
   return ProviderOrder {..}
 

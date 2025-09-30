@@ -165,7 +165,8 @@ getTicketDetail config integratedBPPConfig qrTtl booking routeStation = do
         qrStatus = "UNCLAIMED",
         qrValidity,
         description = Nothing,
-        qrRefreshAt = Nothing
+        qrRefreshAt = Nothing,
+        commencingHours = Nothing
       }
 
 newtype Ticket = Ticket

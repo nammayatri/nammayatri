@@ -150,8 +150,8 @@ getFare fromArrivalTime riderId merchantId merchantOperatingCityId mbRouteLiveIn
               Just $ FRFSRouteDetails {routeCode = Just routeCode, ..}
             _ -> Nothing
 
-confirm :: JL.ConfirmFlow m r c => Bool -> Maybe Int -> Maybe Int -> Bool -> JL.LegInfo -> Maybe CrisSdkResponse -> Maybe [FRFSCategorySelectionReq] -> m ()
-confirm forcedBooked ticketQuantity childTicketQuantity bookLater JL.LegInfo {..} crisSdkResponse categorySelectionReq =
+confirm :: JL.ConfirmFlow m r c => Bool -> Maybe Int -> Maybe Int -> Bool -> JL.LegInfo -> Maybe CrisSdkResponse -> Maybe [FRFSCategorySelectionReq] -> Maybe Bool -> m ()
+confirm forcedBooked ticketQuantity childTicketQuantity bookLater JL.LegInfo {..} crisSdkResponse categorySelectionReq isSingleMode =
   case travelMode of
     DTrip.Taxi -> do
       confirmReq :: TaxiLegRequest <- mkTaxiLegConfirmReq
@@ -198,7 +198,8 @@ confirm forcedBooked ticketQuantity childTicketQuantity bookLater JL.LegInfo {..
               merchantId,
               merchantOperatingCityId,
               quantity = ticketQuantity,
-              childTicketQuantity
+              childTicketQuantity,
+              isSingleMode
             }
     mkSubwayLegConfirmReq :: JL.ConfirmFlow m r c => m SubwayLegRequest
     mkSubwayLegConfirmReq = do
@@ -214,7 +215,8 @@ confirm forcedBooked ticketQuantity childTicketQuantity bookLater JL.LegInfo {..
               merchantOperatingCityId,
               crisSdkResponse,
               quantity = ticketQuantity,
-              childTicketQuantity
+              childTicketQuantity,
+              isSingleMode
             }
     mkBusLegConfirmReq :: JL.ConfirmFlow m r c => m BusLegRequest
     mkBusLegConfirmReq = do
@@ -230,5 +232,6 @@ confirm forcedBooked ticketQuantity childTicketQuantity bookLater JL.LegInfo {..
               merchantOperatingCityId,
               quantity = ticketQuantity,
               childTicketQuantity,
-              categorySelectionReq
+              categorySelectionReq,
+              isSingleMode
             }

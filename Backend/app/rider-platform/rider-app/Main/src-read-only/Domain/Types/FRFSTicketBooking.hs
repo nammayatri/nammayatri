@@ -46,6 +46,7 @@ data FRFSTicketBooking = FRFSTicketBooking
     integratedBppConfigId :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
     isBookingCancellable :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isFareChanged :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    isSingleMode :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     journeyOnInitDone :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
