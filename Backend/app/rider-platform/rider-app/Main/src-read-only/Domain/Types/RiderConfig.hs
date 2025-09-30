@@ -81,6 +81,7 @@ data RiderConfig = RiderConfig
     maxAllowedPublicTransportLegs :: Kernel.Prelude.Int,
     maximumWalkDistance :: Kernel.Types.Common.Meters,
     merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
+    metricsBlacklistPatterns :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     metroBookingAllowed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     minRidesToBlock :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     minRidesToShowCancellationRate :: Kernel.Prelude.Maybe Kernel.Prelude.Int,

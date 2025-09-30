@@ -235,6 +235,7 @@ library
       Domain.Action.UI.Maps
       Domain.Action.UI.MerchantPaymentMethod
       Domain.Action.UI.MeterRideInternal
+      Domain.Action.UI.Metrics
       Domain.Action.UI.Miscellaneous
       Domain.Action.UI.MultimodalConfirm
       Domain.Action.UI.NearbyBuses
@@ -641,6 +642,7 @@ library
       API.Action.UI.InsuranceInternal
       API.Action.UI.Invoice
       API.Action.UI.MeterRideInternal
+      API.Action.UI.Metrics
       API.Action.UI.Miscellaneous
       API.Action.UI.MultimodalConfirm
       API.Action.UI.NearbyBuses
@@ -703,6 +705,7 @@ library
       API.Types.UI.Insurance
       API.Types.UI.Invoice
       API.Types.UI.MeterRideInternal
+      API.Types.UI.Metrics
       API.Types.UI.Miscellaneous
       API.Types.UI.MultimodalConfirm
       API.Types.UI.NearbyBuses
