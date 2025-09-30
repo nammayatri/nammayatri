@@ -472,9 +472,9 @@ FRFSTicketBooking:
       kvFunction: updateOneWithKV
       params: [googleWalletJWTUrl]
       where: id
-    updateQuoteAndBppItemId:
+    updateQuoteAndBppItemIdAndRouteStationsJson:
       kvFunction: updateOneWithKV
-      params: [quoteId, bppItemId]
+      params: [quoteId, bppItemId, routeStationsJson]
       where: id
     updateQuantity:
       kvFunction: updateWithKV
