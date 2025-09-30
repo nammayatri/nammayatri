@@ -67,7 +67,7 @@ executeQueryUsingConnectionPool pool query' = do
   res <- try $ withResource pool $ \conn -> Pg.execute_ conn query'
   case res of
     Left (e :: SomeException) ->
-      if isConnectionError e
+      if isConnectionError e || isConnectionError' e
         then do
           putStrLn @String "[Failover] Destroying all pool connections to handle potential database failover"
           destroyAllResources pool
@@ -91,7 +91,7 @@ executeQueryWithRetry pool query' maxAttempts retryDelay firstError = go (maxAtt
           res <- try $ withResource pool $ \conn -> Pg.execute_ conn query'
           case res of
             Left (e :: SomeException) ->
-              if isConnectionError e
+              if isConnectionError e || isConnectionError' e
                 then go (attemptsLeft - 1) e
                 else throwIO $ QueryError $ "Query execution failed: " <> T.pack (show e)
             Right _ -> return ()
@@ -107,6 +107,27 @@ isConnectionError e =
    in case res of
         ET.DBError (ET.SQLError (ET.PostgresError (ET.PostgresSqlError "" ET.PostgresFatalError "" "" ""))) _ -> True
         _ -> False
+
+isConnectionError' :: SomeException -> Bool
+isConnectionError' e =
+  let errorMsg = T.toLower $ T.pack $ show e
+   in any (`T.isInfixOf` errorMsg) connectionErrorPatterns
+  where
+    connectionErrorPatterns =
+      [ "server closed the connection",
+        "server terminated abnormally",
+        "connection to server",
+        "timeout",
+        "network",
+        "host is unreachable",
+        "no route to host",
+        "connection reset by peer",
+        "broken pipe",
+        "connection timed out",
+        "connection refused",
+        "name resolution failed",
+        "connection closed"
+      ]
 
 transformException :: SomeException -> ET.DBError
 transformException e =
