@@ -670,7 +670,7 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req crisSdkResponse
                 then do
                   let mBookAuthCode = crisSdkResponse <&> (.bookAuthCode)
                   void $ QFRFSTicketBooking.updateBookingAuthCodeById mBookAuthCode booking.id
-                  void $ QFRFSTicketBooking.updateQuoteAndBppItemId updatedQuote.id updatedQuote.bppItemId booking.id
+                  void $ QFRFSTicketBooking.updateQuoteAndBppItemIdAndRouteStationsJson updatedQuote.id updatedQuote.bppItemId updatedQuote.routeStationsJson booking.id
                   -- TODO :: Update the status of the old payment booking to REATTEMPTED, Uncomment post release.
                   -- void $ QFRFSTicketBookingPayment.updateStatusByTicketBookingId DFRFSTicketBookingPayment.REATTEMPTED booking.id
                   let totalOfferedPrice =
