@@ -63,7 +63,8 @@ updateCrisUtsDataJob Job {id, jobInfo} = withLogTag ("JobId-" <> id.getId) do
                   changeOverIndirectStations = changeOverIndirectStations config,
                   changeOverDirectStations = changeOverDirectStations config,
                   consumerSecret = consumerSecret config,
-                  routeSortingCriteria = routeSortingCriteria config
+                  routeSortingCriteria = routeSortingCriteria config,
+                  reconDuration = reconDuration config
                 }
       QIntegratedBPPConfig.updateByPrimaryKey integratedBppConfig {providerConfig = updatedProviderConfig}
       let scheduleAfter = secondsToNominalDiffTime (24 * 60 * 60)

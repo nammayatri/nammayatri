@@ -245,6 +245,7 @@ let RiderJobType =
       | MetroBusinessHour
       | NyRegularMaster
       | NyRegularInstance
+      | CrisRecon
       >
 
 let jobInfoMapx =
@@ -281,6 +282,7 @@ let jobInfoMapx =
       , { mapKey = RiderJobType.MetroBusinessHour, mapValue = True }
       , { mapKey = RiderJobType.NyRegularInstance, mapValue = True }
       , { mapKey = RiderJobType.NyRegularMaster, mapValue = True }
+      , { mapKey = RiderJobType.CrisRecon, mapValue = True }
       ]
 
 let cacConfig =

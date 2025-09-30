@@ -78,7 +78,8 @@ data CRISConfig = CRISConfig
     changeOverDirectStations :: Maybe [Text],
     agentDataDecryptionKey :: EncryptedField 'AsEncrypted Text,
     utsDataKey :: EncryptedField 'AsEncrypted Text,
-    routeSortingCriteria :: Maybe CRISRouteSortingCriteria
+    routeSortingCriteria :: Maybe CRISRouteSortingCriteria,
+    reconDuration :: Maybe Int
   }
   deriving stock (Eq, Generic)
   deriving anyclass (FromJSON, ToJSON)
