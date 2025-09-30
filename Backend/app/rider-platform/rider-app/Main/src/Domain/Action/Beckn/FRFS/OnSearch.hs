@@ -88,7 +88,7 @@ data DVehicleServiceTier = DVehicleServiceTier
     serviceTierShortName :: Text,
     serviceTierDescription :: Text,
     serviceTierLongName :: Text,
-    isAirConditioned :: Bool
+    isAirConditioned :: Maybe Bool
   }
   deriving (Show)
 
@@ -596,7 +596,7 @@ createEntriesInFareTables merchantId merchantOperatingCityId quote integratedBpp
                   description = "ORDINARY",
                   shortName = show quote.vehicleType,
                   longName = show quote.vehicleType,
-                  isAirConditioned = False,
+                  isAirConditioned = Just False,
                   integratedBppConfigId,
                   merchantId,
                   merchantOperatingCityId,

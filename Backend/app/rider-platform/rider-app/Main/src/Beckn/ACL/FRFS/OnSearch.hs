@@ -319,7 +319,7 @@ createVehicleServiceTier fulfillment = do
       serviceTierShortName = variant
       serviceTierDescription = category <> " " <> variant
       serviceTierLongName = category <> " " <> variant
-      isAirConditioned = False
+      isAirConditioned = Just False
 
   Just $
     Domain.DVehicleServiceTier
