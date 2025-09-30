@@ -91,9 +91,9 @@ data ServiceHandle m = ServiceHandle
     whenWithLocationUpdatesLock :: Id DP.Person -> m () -> m ()
   }
 
-buildStartRideHandle :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Flow (ServiceHandle Flow)
-buildStartRideHandle merchantId merchantOpCityId = do
-  defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler merchantId merchantOpCityId False Nothing
+buildStartRideHandle :: Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Maybe (Id DRide.Ride) -> Flow (ServiceHandle Flow)
+buildStartRideHandle merchantId merchantOpCityId rideId = do
+  defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler merchantId merchantOpCityId rideId False Nothing
   pure
     ServiceHandle
       { findRideById = QRide.findById,

@@ -56,7 +56,7 @@ bulkLocUpdate req = do
   booking <- QBooking.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   merchantId <- fromMaybeM (InternalError "Ride does not have a merchantId") $ ride.merchantId
   let minUpdatesToTriggerSnapToRoad = getMinLocUpdateCountForDistanceCalculation transportConfig ride.tripCategory
-  defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler merchantId ride.merchantOperatingCityId False (Just minUpdatesToTriggerSnapToRoad)
+  defaultRideInterpolationHandler <- LocUpd.buildRideInterpolationHandler merchantId ride.merchantOperatingCityId (Just rideId) False (Just minUpdatesToTriggerSnapToRoad)
   rectificationServiceConfig <-
     if DC.shouldRectifyDistantPointsSnapToRoadFailure booking.tripCategory
       then Just <$> TM.getServiceConfigForRectifyingSnapToRoadDistantPointsFailure booking.providerId booking.merchantOperatingCityId
