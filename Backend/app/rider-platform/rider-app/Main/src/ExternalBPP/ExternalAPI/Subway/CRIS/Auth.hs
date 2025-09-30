@@ -5,7 +5,7 @@ import qualified Data.Text.Encoding as DT
 import Domain.Types.Extra.IntegratedBPPConfig
 import EulerHS.Prelude
 import qualified EulerHS.Types as ET
-import ExternalBPP.ExternalAPI.Subway.CRIS.Error (CRISError (..))
+import ExternalBPP.ExternalAPI.Subway.CRIS.Error (CRISErrorUnhandled (..))
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Hedis
@@ -76,7 +76,7 @@ callCRISAPI ::
     ToJSON res,
     CacheFlow m r,
     EncFlow m r,
-    FromResponse CRISError
+    FromResponse CRISErrorUnhandled
   ) =>
   CRISConfig ->
   Proxy api ->
@@ -88,7 +88,7 @@ callCRISAPI config proxy clientFn description = do
   eitherResp <-
     try @_ @SomeException $
       callApiUnwrappingApiError
-        (identity @CRISError) -- Changed Error to CRISError
+        (identity @CRISErrorUnhandled)
         (Just $ ET.ManagerSelector $ T.pack crisHttpManagerKey)
         Nothing
         Nothing
@@ -97,8 +97,5 @@ callCRISAPI config proxy clientFn description = do
         description
         proxy
   case eitherResp of
-    Left err -> do
-      case fromException err :: Maybe CRISError of
-        Just crisError -> throwError crisError
-        Nothing -> throwError $ CRISError $ "Error while calling CRIS API : " <> T.pack (show err)
+    Left err -> throwError $ CRISErrorUnhandled $ "Error while calling CRIS API : " <> T.pack (show err)
     Right res -> return res

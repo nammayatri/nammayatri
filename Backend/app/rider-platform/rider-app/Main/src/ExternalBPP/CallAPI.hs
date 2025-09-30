@@ -237,11 +237,9 @@ confirm onConfirmHandler merchant merchantOperatingCity bapConfig (mRiderName, m
           onConfirmHandler onConfirmReq
         case result of
           Left err -> do
-            logError $ "FRFS External Confirm failed with error: " <> show err
             case fromException err :: Maybe CRISError of
-              Just crisError -> do
-                void $ QFRFSTicketBooking.updateFailureReasonById (Just crisError.errorMessage) booking.id
-              Nothing -> pure ()
+              Just crisError -> void $ QFRFSTicketBooking.updateFailureReasonById (Just crisError.errorMessage) booking.id
+              Nothing -> logError $ "FRFS External Confirm failed with error: " <> show err
             paymentBooking <- QFRFSTicketBookingPayment.findNewTBPByBookingId booking.id >>= fromMaybeM (FRFSTicketBookingPaymentNotFound booking.id.getId)
             void $ QFRFSTicketBooking.updateStatusById DBooking.FAILED booking.id
             void $ QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.REFUND_PENDING paymentBooking.id
