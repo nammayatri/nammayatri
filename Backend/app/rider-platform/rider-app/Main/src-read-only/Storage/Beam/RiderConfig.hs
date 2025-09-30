@@ -80,6 +80,7 @@ data RiderConfigT f = RiderConfigT
     maxAllowedPublicTransportLegs :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     maximumWalkDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Meters),
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,
+    metricsBlacklistPatterns :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     metroBookingAllowed :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     minRidesToBlock :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     minRidesToShowCancellationRate :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
