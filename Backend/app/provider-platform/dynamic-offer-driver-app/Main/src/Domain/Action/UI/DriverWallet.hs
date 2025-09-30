@@ -171,7 +171,7 @@ postWalletPayout (mbPersonId, merchantId, mocId) = do
                   updatedAt = utcTimeNow
                 }
         QDW.create transaction
-        QDI.updateWalletBalance (Just newWalletBalance) driverId
+        QDI.updateWalletBalance (Just unsettledReceivables) driverId
         let notificationTitle = "Payout Initiated"
             notificationMessage = "Your payout of " <> show payoutableBalance <> " has been initiated."
         Notify.sendNotificationToDriver person.merchantOperatingCityId FCM.SHOW Nothing FCM.PAYOUT_INITIATED notificationTitle notificationMessage person person.deviceToken
