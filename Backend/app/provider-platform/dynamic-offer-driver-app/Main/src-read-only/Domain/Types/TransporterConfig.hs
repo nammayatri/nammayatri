@@ -100,6 +100,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     driverAutoPayExecutionTimeFallBack :: Kernel.Prelude.NominalDiffTime,
     driverAutoPayNotificationTime :: Kernel.Prelude.NominalDiffTime,
     driverCallingOption :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.CallingOption,
+    driverCallingOptionConfigs :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.DriverCallingOptionConfigs,
     driverDistanceToPickupThresholdOnCancel :: Kernel.Types.Common.Meters,
     driverDistanceTravelledOnPickupThresholdOnCancel :: Kernel.Types.Common.Meters,
     driverDrivenSearchReqExpiry :: Kernel.Prelude.Maybe Kernel.Prelude.NominalDiffTime,
@@ -342,6 +343,9 @@ data DemandHotspotsConfig = DemandHotspotsConfig
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
 data DistanceRecomputeConfigs = DistanceRecomputeConfigs {estimatedDistanceUpper :: Kernel.Types.Common.Meters, minThresholdDistance :: Kernel.Types.Common.Meters, minThresholdPercentage :: Kernel.Prelude.Int}
+  deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
+
+data DriverCallingOptionConfigs = DriverCallingOptionConfigs {directCallingAllowedGenderType :: [Domain.Types.Person.Gender], driverCallingOptions :: Domain.Types.TransporterConfig.CallingOption}
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
 data SlabType = SlabType {minBookingsRange :: [Kernel.Prelude.Int], penalityForCancellation :: Domain.Types.TransporterConfig.CancellationRateSlab}

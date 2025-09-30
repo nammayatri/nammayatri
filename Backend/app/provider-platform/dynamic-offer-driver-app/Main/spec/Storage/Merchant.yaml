@@ -47,6 +47,7 @@ imports:
   ServiceName: Domain.Types.Extra.MerchantServiceConfig
   GatewayAndRegistryService: Domain.Types
   Role: Domain.Types.Person
+  Gender: Domain.Types.Person
 Merchant:
   derives: Generic,Show,'UsageSafety
   types:
@@ -846,6 +847,10 @@ TransporterConfig:
       derive': Generic, Show, ToJSON, FromJSON, Read,Eq
     CallingOption:
       enum: "AnonymousCall, DirectCall, DualCall"
+    DriverCallingOptionConfigs:
+      driverCallingOptions: "CallingOption"
+      directCallingAllowedGenderType: "[Gender]"
+      derive': Generic, Show, ToJSON, FromJSON, Read,Eq
   beamInstance:
     - MakeTableInstancesWithTModifier [("automaticRCActivationCutOff", "automatic_r_c_activation_cut_off")]
     - Custom Domain.Types.UtilsTH.mkCacParseInstance
@@ -1080,6 +1085,7 @@ TransporterConfig:
     maxOnlineDurationDays : Maybe Int
     distanceWeightage: Maybe Int
     driverCallingOption: "Maybe CallingOption"
+    driverCallingOptionConfigs: Maybe DriverCallingOptionConfigs
     onlineDurationCalculateFrom: Maybe UTCTime # set null to switch off calculation, current UTC timestamp to switch on
 
   beamType:
@@ -1144,6 +1150,7 @@ TransporterConfig:
     aaEnabledClientSdkVersion: Maybe Text
     isMLBasedDynamicPricingEnabled: Maybe Bool
     cancellationRateSlabConfig: Maybe Value
+    driverCallingOptionConfigs: Maybe Value
   beamFields:
     fcmConfig:
       fcmUrl: Text
@@ -1215,6 +1222,7 @@ TransporterConfig:
     aaEnabledClientSdkVersion: Just aaEnabledClientSdkVersion| E
     cancellationRateSlabConfig: Data.Aeson.toJSON <$> cancellationRateSlabConfig|E
     isMLBasedDynamicPricingEnabled: Just isMLBasedDynamicPricingEnabled|E
+    driverCallingOptionConfigs: Data.Aeson.toJSON <$> driverCallingOptionConfigs|E
 
   intermediateTransformers:
     fromTType:
@@ -1293,6 +1301,7 @@ TransporterConfig:
     earningsWindowSize : fromMaybe 7 earningsWindowSize|E
     cancellationRateSlabConfig: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< cancellationRateSlabConfig|E
     isMLBasedDynamicPricingEnabled: fromMaybe False isMLBasedDynamicPricingEnabled|E
+    driverCallingOptionConfigs: (\val -> case Data.Aeson.fromJSON val of Data.Aeson.Success x -> Just x; Data.Aeson.Error _ -> Nothing) =<< driverCallingOptionConfigs|E
 
   constraints:
     merchantOperatingCityId: PrimaryKey
@@ -1355,6 +1364,7 @@ TransporterConfig:
     earningsWindowSize : int
     cancellationRateSlabConfig: json
     driverCallingOption: text
+    driverCallingOptionConfigs: json
   default:
     mediaFileUrlPattern: |-
       'http://localhost:8016/ui/<DOMAIN>/media?filePath=<FILE_PATH>'
@@ -1503,6 +1513,7 @@ TransporterConfig:
     maxOnlineDurationDays : "10"
     distanceWeightage: "20"
     driverCallingOption: "'AnonymousCall'"
+    driverCallingOptionConfigs: '''{"driverCallingOptions": "AnonymousCall","directCallingAllowedGenderType": "[MALE]"}'''
   excludedDefaultQueries:
     - findByPrimaryKey
     - updateByPrimaryKey

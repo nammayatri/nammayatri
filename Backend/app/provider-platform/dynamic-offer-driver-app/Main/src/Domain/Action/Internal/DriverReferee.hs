@@ -166,7 +166,8 @@ linkReferee merchantId apiKey RefereeLinkInfoReq {..} = do
             bapId = Nothing,
             isDeviceIdExists = Just $ isJust isMultipleDeviceIdExist,
             isFlagConfirmed = Nothing,
-            merchantOperatingCityId = Just merchOpCityId
+            merchantOperatingCityId = Just merchOpCityId,
+            riderGender = Nothing
           }
 
     updateRefereeInfoAndNotify transporterConfig isMultipleDeviceIdExist_ numberHash driverReferralLinkage currency driver merchOpCityId = do

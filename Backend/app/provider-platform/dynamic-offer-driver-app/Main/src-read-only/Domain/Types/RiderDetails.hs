@@ -36,6 +36,7 @@ data RiderDetailsE e = RiderDetails
     referralCode :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.DriverReferral.DriverReferral),
     referredAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     referredByDriver :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+    riderGender :: Kernel.Prelude.Maybe Domain.Types.Person.Gender,
     updatedAt :: Kernel.Prelude.UTCTime
   }
   deriving (Generic)
@@ -71,6 +72,7 @@ instance EncryptedItem RiderDetails where
           referralCode = referralCode entity,
           referredAt = referredAt entity,
           referredByDriver = referredByDriver entity,
+          riderGender = riderGender entity,
           updatedAt = updatedAt entity
         }
   decryptItem entity = do
@@ -98,6 +100,7 @@ instance EncryptedItem RiderDetails where
             referralCode = referralCode entity,
             referredAt = referredAt entity,
             referredByDriver = referredByDriver entity,
+            riderGender = riderGender entity,
             updatedAt = updatedAt entity
           },
         ""
