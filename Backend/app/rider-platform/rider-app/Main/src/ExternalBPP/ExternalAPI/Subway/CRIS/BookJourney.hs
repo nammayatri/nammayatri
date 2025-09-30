@@ -18,7 +18,7 @@ import EulerHS.Prelude hiding (find, readMaybe)
 import qualified EulerHS.Types as ET
 import ExternalBPP.ExternalAPI.Subway.CRIS.Auth (callCRISAPI)
 import ExternalBPP.ExternalAPI.Subway.CRIS.Encryption (decryptResponseData, encryptPayload)
-import ExternalBPP.ExternalAPI.Subway.CRIS.Error (CRISError (..))
+import ExternalBPP.ExternalAPI.Subway.CRIS.Error (CRISError (..), CRISErrorUnhandled (..))
 import ExternalBPP.ExternalAPI.Types
 import Kernel.External.Encryption
 import Kernel.Prelude ((!!))
@@ -45,8 +45,8 @@ instance ToJSON EncryptedRequest where
 data EncryptedResponse = EncryptedResponse
   { respCode :: Int,
     respMessage :: Text,
-    encrypted :: Text,
-    agentTicketData :: Text
+    encrypted :: Maybe Text,
+    agentTicketData :: Maybe Text
   }
   deriving (Generic, Show, ToJSON, FromJSON)
 
@@ -184,19 +184,34 @@ getBookJourney config request = do
 
   encResponse <- callCRISAPI config bookJourneyAPI (eulerClientFn encReq) "bookJourney"
 
-  let (encryptedData, _) = T.breakOn "#" encResponse.agentTicketData
-
-  -- 3. Handle the encrypted response
-  if respCode encResponse == 0
-    then do
+  case (respCode encResponse, encResponse.agentTicketData, encResponse.encrypted) of
+    -- Case 1: Non-zero response code (API error)
+    (code, _, _)
+      | code /= 0 ->
+        throwError $ CRISError $ "API returned error code " <> show code <> ": " <> encResponse.respMessage
+    -- Case 2: Success code but no agent ticket data
+    (0, Nothing, _) ->
+      throwError $ CRISError $ "No ticket data received from API: " <> encResponse.respMessage
+    -- Case 3: Success code but no encrypted field
+    (0, Just _, Nothing) ->
+      throwError $ CRISError $ "No encrypted data received from API: " <> encResponse.respMessage
+    -- Case 4: Success case - process the ticket data
+    (0, Just agentTicketData, Just encrypted) -> do
+      let (encryptedData, _) = T.breakOn "#" agentTicketData
       case decryptResponseData encryptedData decryptedAgentDataKey of
-        Left err -> throwError $ CRISError $ "Failed to decrypt ticket data: " <> T.pack err
+        Left err -> do
+          logError $ "Failed to decrypt ticket data: " <> T.pack err
+          throwError $ CRISError $ "Failed to decrypt ticket data"
         Right decryptedJson -> do
           logInfo $ "Decrypted ticket data: " <> decryptedJson
           case eitherDecode (LBS.fromStrict $ TE.encodeUtf8 decryptedJson) of
-            Left err -> throwError $ CRISError $ "Failed to parse ticket data: " <> T.pack err
-            Right ticketData -> pure $ convertToBookingResponse ticketData encResponse.encrypted
-    else throwError $ CRISError $ "Booking failed with code: " <> encResponse.respMessage <> " : " <> show encResponse.respCode
+            Left err -> do
+              logError $ "Failed to parse ticket data: " <> T.pack err
+              throwError $ CRISError $ "Failed to parse ticket data"
+            Right ticketData -> pure $ convertToBookingResponse ticketData encrypted
+    -- Catch-all case (should never be reached)
+    (code, _, _) ->
+      throwError $ CRISErrorUnhandled $ "Unhandled response pattern: code=" <> show code <> ", message=" <> encResponse.respMessage
   where
     eulerClientFn encReq token =
       let client = ET.client bookJourneyAPI
