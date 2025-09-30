@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+
 module Domain.Action.UI.MultimodalConfirm
   ( postMultimodalInitiate,
     postMultimodalConfirm,
@@ -91,6 +93,7 @@ import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Utils.TH
 import qualified Lib.JourneyLeg.Types as JL
 import Lib.JourneyLeg.Types.Taxi
 import Lib.JourneyModule.Base
@@ -130,6 +133,13 @@ import qualified Tools.Metrics as Metrics
 import Tools.MultiModal as MM
 import qualified Tools.MultiModal as TMultiModal
 import qualified Tools.Payment as Payment
+
+-- Custom JSON instance for PublicTransportData with omitNothingFields
+-- Type of these fields are Defined in Backend/app/rider-platform/rider-app/Main/src-read-only/API/Types/UI/MultimodalConfirm.hs
+$(deriveJSONOmitNothing ''API.Types.UI.MultimodalConfirm.TransportRoute)
+$(deriveJSONOmitNothing ''API.Types.UI.MultimodalConfirm.TransportStation)
+$(deriveJSONOmitNothing ''API.Types.UI.MultimodalConfirm.TransportRouteStopMapping)
+$(deriveJSONOmitNothing ''API.Types.UI.MultimodalConfirm.PublicTransportData)
 
 postMultimodalInitiate ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),

@@ -224,7 +224,7 @@ data PaymentOrder = PaymentOrder {sdkPayload :: Kernel.Prelude.Maybe Kernel.Exte
 
 data PublicTransportData = PublicTransportData {ptcv :: Kernel.Prelude.Text, rs :: [TransportRoute], rsm :: [TransportRouteStopMapping], ss :: [TransportStation]}
   deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
+  deriving anyclass (ToSchema)
 
 data RateMultiModelTravelModes = RateMultiModelTravelModes
   { isExperienceGood :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -312,11 +312,11 @@ data TransportRoute = TransportRoute
     vt :: Kernel.Prelude.Text
   }
   deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
+  deriving anyclass (ToSchema)
 
 data TransportRouteStopMapping = TransportRouteStopMapping {ibc :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig, rc :: Kernel.Prelude.Text, sc :: Kernel.Prelude.Text, sn :: Kernel.Prelude.Int}
   deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
+  deriving anyclass (ToSchema)
 
 data TransportStation = TransportStation
   { ad :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -333,7 +333,7 @@ data TransportStation = TransportStation
     vt :: Kernel.Prelude.Text
   }
   deriving stock (Generic)
-  deriving anyclass (ToJSON, FromJSON, ToSchema)
+  deriving anyclass (ToSchema)
 
 data UpdatePaymentOrderReq = UpdatePaymentOrderReq {childTicketQuantity :: Kernel.Prelude.Int, quantity :: Kernel.Prelude.Int}
   deriving stock (Generic)
