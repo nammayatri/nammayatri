@@ -928,7 +928,7 @@ scheduledRideFilter currentSearchInfo merchantId merchantOpCityId isRental isInt
         case (currentSearchInfo.dropLocation, driverInfo.latestScheduledPickup, currentSearchInfo.routeDistance, transporterConfig.avgSpeedOfVehicle) of
           (Just dropLoc, Just scheduledPickup, Just routeDistance, Just avgSpeeds) -> do
             currentDroptoScheduledPickupDistance <-
-              TMaps.getDistanceForScheduledRides merchantId merchantOpCityId Nothing $
+              TMaps.getDistanceForScheduledRides merchantId merchantOpCityId (Just currentSearchInfo.searchTry.id.getId) $
                 TMaps.GetDistanceReq
                   { origin = dropLoc,
                     destination = scheduledPickup,
