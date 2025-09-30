@@ -124,12 +124,18 @@ updatePriceAndQuantityById price quantity childTicketQuantity id = do
 updateQuantity :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Int -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
 updateQuantity quantity id = do _now <- getCurrentTime; updateWithKV [Se.Set Beam.quantity quantity, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
-updateQuoteAndBppItemId ::
+updateQuoteAndBppItemIdAndRouteStationsJson ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
-updateQuoteAndBppItemId quoteId bppItemId id = do
+  (Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking -> m ())
+updateQuoteAndBppItemIdAndRouteStationsJson quoteId bppItemId routeStationsJson id = do
   _now <- getCurrentTime
-  updateOneWithKV [Se.Set Beam.quoteId (Kernel.Types.Id.getId quoteId), Se.Set Beam.bppItemId bppItemId, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+  updateOneWithKV
+    [ Se.Set Beam.quoteId (Kernel.Types.Id.getId quoteId),
+      Se.Set Beam.bppItemId bppItemId,
+      Se.Set Beam.routeStationsJson routeStationsJson,
+      Se.Set Beam.updatedAt _now
+    ]
+    [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
 updateRefundCancellationChargesAndIsCancellableByBookingId ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
