@@ -212,6 +212,7 @@ types:
     stn: Maybe Text
     clr: Maybe Text
     ibc: Id IntegratedBPPConfig
+    derive': "Generic, ToSchema"
 
   TransportStation:
     cd: Text
@@ -226,18 +227,21 @@ types:
     gj: Maybe Value
     gi: Maybe [Gate]
     ibc: Id IntegratedBPPConfig
+    derive': "Generic, ToSchema"
 
   TransportRouteStopMapping:
     rc: Text
     sc: Text
     sn: Int
     ibc: Id IntegratedBPPConfig
+    derive': "Generic, ToSchema"
 
   PublicTransportData:
     rs: [TransportRoute]
     ss: [TransportStation]
     rsm: [TransportRouteStopMapping]
     ptcv: Text
+    derive': "Generic, ToSchema"
 
   UpdatePaymentOrderReq:
     quantity: Int
