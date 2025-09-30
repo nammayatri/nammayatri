@@ -94,7 +94,8 @@ getTicketStatus config booking = do
                       qrStatus,
                       qrValidity = ticket.validTill,
                       description = ticket.description,
-                      qrRefreshAt = ticket.qrRefreshAt
+                      qrRefreshAt = ticket.qrRefreshAt,
+                      commencingHours = ticket.commencingHours
                     }
             else pure Nothing
       )

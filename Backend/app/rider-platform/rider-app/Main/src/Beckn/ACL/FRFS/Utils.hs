@@ -157,7 +157,8 @@ parseTicket fallbackTicketNumber fulfillment = do
         ticketNumber,
         status,
         description = Nothing,
-        qrRefreshAt = Nothing
+        qrRefreshAt = Nothing,
+        commencingHours = Nothing
       }
 
 type TxnId = Text

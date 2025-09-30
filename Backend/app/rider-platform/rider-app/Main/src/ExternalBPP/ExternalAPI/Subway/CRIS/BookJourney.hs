@@ -251,6 +251,7 @@ createOrder config integratedBPPConfig booking = do
     Nothing -> getBppOrderId booking
   classCode <- getFRFSVehicleServiceTier quote
   startTime <- fromMaybeM (CRISError "Start time not found") booking.startTime
+  let tpBookType = if booking.isSingleMode == Just True then 1 else 0
 
   let bookJourneyReq =
         CRISBookingRequest
@@ -292,7 +293,7 @@ createOrder config integratedBPPConfig booking = do
             bookAuthCode = bookAuthCode,
             agentAppTxnId = orderId,
             bankDeductedAmount = round booking.price.amount.getHighPrecMoney,
-            tpBookType = 0
+            tpBookType = tpBookType
           }
   logInfo $ "GetBookJourney: " <> show bookJourneyReq
   bookJourneyResp <- getBookJourney config bookJourneyReq
@@ -310,7 +311,8 @@ createOrder config integratedBPPConfig booking = do
                 qrData = bookJourneyResp.encryptedTicketData,
                 qrStatus = "UNCLAIMED",
                 qrValidity = qrValidityTime,
-                qrRefreshAt = Nothing
+                qrRefreshAt = Nothing,
+                commencingHours = bookJourneyResp.validUntil
               }
           ]
       }

@@ -42,6 +42,7 @@ data FRFSTicketBookingT f = FRFSTicketBookingT
     integratedBppConfigId :: B.C f Kernel.Prelude.Text,
     isBookingCancellable :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isFareChanged :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    isSingleMode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     journeyOnInitDone :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     merchantId :: B.C f Kernel.Prelude.Text,
     merchantOperatingCityId :: B.C f Kernel.Prelude.Text,

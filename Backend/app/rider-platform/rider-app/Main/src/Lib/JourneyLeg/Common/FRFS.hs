@@ -393,8 +393,8 @@ search vehicleCategory personId merchantId quantity city journeyLeg recentLocati
         )
         routeDetails
 
-confirm :: JT.ConfirmFlow m r c => Id DPerson.Person -> Id DMerchant.Merchant -> Maybe (Id FRFSQuote) -> Maybe Int -> Maybe Int -> Bool -> Bool -> Maybe APITypes.CrisSdkResponse -> Spec.VehicleCategory -> Maybe [API.FRFSCategorySelectionReq] -> m ()
-confirm personId merchantId mbQuoteId ticketQuantity childTicketQuantity bookLater bookingAllowed crisSdkResponse vehicleType categorySelectionReq = do
+confirm :: JT.ConfirmFlow m r c => Id DPerson.Person -> Id DMerchant.Merchant -> Maybe (Id FRFSQuote) -> Maybe Int -> Maybe Int -> Bool -> Bool -> Maybe APITypes.CrisSdkResponse -> Spec.VehicleCategory -> Maybe [API.FRFSCategorySelectionReq] -> Maybe Bool -> m ()
+confirm personId merchantId mbQuoteId ticketQuantity childTicketQuantity bookLater bookingAllowed crisSdkResponse vehicleType categorySelectionReq isSingleMode = do
   when (not bookLater && bookingAllowed) $ do
     quoteId <- mbQuoteId & fromMaybeM (InvalidRequest "You can't confirm bus before getting the fare")
     quote <- QFRFSQuote.findById quoteId >>= fromMaybeM (QuoteNotFound quoteId.getId)
@@ -403,14 +403,14 @@ confirm personId merchantId mbQuoteId ticketQuantity childTicketQuantity bookLat
         merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
         merchantOperatingCity <- CQMOC.findById quote.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound quote.merchantOperatingCityId.getId)
         bapConfig <- CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory vehicleType) >>= fromMaybeM (InternalError "Beckn Config not found")
-        void $ CallExternalBPP.select processOnSelect merchant merchantOperatingCity bapConfig quote ticketQuantity childTicketQuantity categorySelectionReq
+        void $ CallExternalBPP.select processOnSelect merchant merchantOperatingCity bapConfig quote ticketQuantity childTicketQuantity categorySelectionReq isSingleMode
       else do
-        void $ FRFSTicketService.postFrfsQuoteV2ConfirmUtil (Just personId, merchantId) quoteId (API.FRFSQuoteConfirmReq {offered = categorySelectionReq, ticketQuantity = ticketQuantity, childTicketQuantity = childTicketQuantity}) crisSdkResponse
+        void $ FRFSTicketService.postFrfsQuoteV2ConfirmUtil (Just personId, merchantId) quoteId (API.FRFSQuoteConfirmReq {offered = categorySelectionReq, ticketQuantity = ticketQuantity, childTicketQuantity = childTicketQuantity}) crisSdkResponse isSingleMode
   where
-    processOnSelect :: FRFSConfirmFlow m r => DOnSelect -> m ()
-    processOnSelect onSelectReq = do
+    processOnSelect :: FRFSConfirmFlow m r => DOnSelect -> Maybe Bool -> m ()
+    processOnSelect onSelectReq mbSingleMode = do
       (merchant', quote') <- DOnSelect.validateRequest onSelectReq
-      DOnSelect.onSelect onSelectReq merchant' quote'
+      DOnSelect.onSelect onSelectReq merchant' quote' mbSingleMode
 
 cancel :: JT.CancelFlow m r c => Id FRFSSearch -> Spec.CancellationType -> m ()
 cancel searchId cancellationType = do

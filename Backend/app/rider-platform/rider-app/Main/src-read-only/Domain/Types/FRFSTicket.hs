@@ -15,7 +15,8 @@ import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
 
 data FRFSTicket = FRFSTicket
-  { description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+  { commencingHours :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     frfsTicketBookingId :: Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking,
     id :: Kernel.Types.Id.Id Domain.Types.FRFSTicket.FRFSTicket,
     isTicketFree :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,

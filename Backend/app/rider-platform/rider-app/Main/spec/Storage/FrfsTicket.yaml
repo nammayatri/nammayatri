@@ -347,6 +347,7 @@ FRFSTicketBooking:
     osBuildVersion: Maybe Text
     multimodalSearchRequestId: Maybe Text
     failureReason: Maybe Text
+    isSingleMode: Maybe Bool
 
   default:
     customerCancelled: "false"
@@ -509,6 +510,7 @@ FRFSTicket:
     partnerOrgTransactionId: Maybe (Id PartnerOrgTransaction)
     partnerOrgId: Maybe (Id PartnerOrganization)
     isTicketFree: Maybe Bool
+    commencingHours: Maybe Int
 
   constraints:
     id: PrimaryKey
