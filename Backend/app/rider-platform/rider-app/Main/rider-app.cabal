@@ -337,6 +337,7 @@ library
       ExternalBPP.ExternalAPI.Subway.CRIS.Encryption
       ExternalBPP.ExternalAPI.Subway.CRIS.Error
       ExternalBPP.ExternalAPI.Subway.CRIS.OtpGeneration
+      ExternalBPP.ExternalAPI.Subway.CRIS.ReconTicketEnquiry
       ExternalBPP.ExternalAPI.Subway.CRIS.RouteFare
       ExternalBPP.ExternalAPI.Subway.CRIS.SDKData
       ExternalBPP.ExternalAPI.Subway.CRIS.Types
@@ -407,6 +408,7 @@ library
       SharedLogic.Scheduler.Jobs.CheckMultimodalConfirmFail
       SharedLogic.Scheduler.Jobs.CheckPNAndSendSMS
       SharedLogic.Scheduler.Jobs.CheckRefundStatus
+      SharedLogic.Scheduler.Jobs.CrisRecon
       SharedLogic.Scheduler.Jobs.ExecutePaymentIntent
       SharedLogic.Scheduler.Jobs.MetroBusinessHour
       SharedLogic.Scheduler.Jobs.NyRegularInstance
