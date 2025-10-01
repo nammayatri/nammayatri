@@ -280,3 +280,23 @@ ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN failure_reason text ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN is_single_mode boolean ;
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

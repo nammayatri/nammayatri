@@ -375,7 +375,7 @@ data FRFSVehicleServiceTier = FRFSVehicleServiceTier
     serviceTierShortName :: Text,
     serviceTierDescription :: Text,
     serviceTierLongName :: Text,
-    isAirConditioned :: Bool
+    isAirConditioned :: Maybe Bool
   }
   deriving stock (Generic, Show)
   deriving anyclass (FromJSON, ToJSON, ToSchema)
