@@ -487,8 +487,8 @@ mkCategory price (category, eligibility) =
 
 getFareThroughGTFS :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Id DP.Person -> Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> IntegratedBPPConfig -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Text -> Text -> m [FRFSFare]
 getFareThroughGTFS riderId vehicleType serviceTier integratedBPPConfig merchantId merchantOperatingCityId routeCode startStopCode endStopCode = do
-  routeStopTimeTableStartStop <- listToMaybe <$> QRouteStopTimeTable.findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOperatingCityId [routeCode] startStopCode
-  routeStopTimeTableEndStop <- listToMaybe <$> QRouteStopTimeTable.findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOperatingCityId [routeCode] endStopCode
+  routeStopTimeTableStartStop <- listToMaybe <$> QRouteStopTimeTable.findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOperatingCityId [routeCode] startStopCode True
+  routeStopTimeTableEndStop <- listToMaybe <$> QRouteStopTimeTable.findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOperatingCityId [routeCode] endStopCode True
   logDebug $ "routeStopTimeTableStartStop: " <> show routeStopTimeTableStartStop <> " routeStopTimeTableEndStop: " <> show routeStopTimeTableEndStop
   case (routeStopTimeTableStartStop, routeStopTimeTableEndStop) of
     (Just startStop, Just endStop) -> do

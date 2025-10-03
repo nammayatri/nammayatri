@@ -197,7 +197,7 @@ getFrfsRoute (_personId, _mId) routeCode mbIntegratedBPPConfigId _platformType _
       then do
         -- now <- getCurrentTime
         -- let currentTimeOfDay = utcToTimeOfDay now
-        allSchedules <- QRouteStopTimeTable.findByRouteCodeAndStopCode integratedBPPConfig integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId [route.code] (fromJust firstStop).stopCode
+        allSchedules <- QRouteStopTimeTable.findByRouteCodeAndStopCode integratedBPPConfig integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId [route.code] (fromJust firstStop).stopCode True
         -- TODO: Do we actually need to filter based on time. Timetable api we have for this.
         -- let futureSchedules = filter (\schedule -> schedule.timeOfDeparture > currentTimeOfDay) allSchedules
         --     sortedFutureSchedules = sortBy (compare `on` (.timeOfDeparture)) futureSchedules

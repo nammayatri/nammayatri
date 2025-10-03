@@ -60,12 +60,13 @@ findByRouteCodeAndStopCode ::
   Id MerchantOperatingCity ->
   [Text] ->
   Text ->
+  Bool ->
   m [RouteStopTimeTable]
-findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCodes' stopCode' = do
+findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCodes' stopCode' needOnlyOneTrip = do
   vehicleType <- castVehicleType integratedBPPConfig.vehicleCategory
   let routeCodes = P.map (modifyCodesToGTFS integratedBPPConfig) routeCodes'
       stopCode = modifyCodesToGTFS integratedBPPConfig stopCode'
-  routeStopTimeTable <- Hedis.safeGet (routeTimeTableKey stopCode)
+  routeStopTimeTable <- Hedis.safeGet (routeTimeTableKey stopCode needOnlyOneTrip)
   allTrips <-
     case (routeStopTimeTable, vehicleType == BecknV2.FRFS.Enums.SUBWAY) of
       (Just a, False) -> do
@@ -81,21 +82,21 @@ findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCode
                     [] -> pure [stopCode']
                     stopCodes@(_ : _) -> pure stopCodes
               _ -> pure [stopCode']
-        allTrips <- Queries.findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCodes' stopCodes vehicleType
+        allTrips <- Queries.findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCodes' stopCodes vehicleType needOnlyOneTrip
         logDebug $ "Fetched route stop time table graphql: " <> show allTrips <> " for routeCodes:" <> show routeCodes <> " and stopCode:" <> show stopCode
-        unless (P.null allTrips) $ cacheRouteStopTimeInfo stopCode allTrips
+        unless (P.null allTrips) $ cacheRouteStopTimeInfo stopCode allTrips needOnlyOneTrip
         pure allTrips
   val <- L.getOptionLocal CalledForFare
   return $ P.filter (\trip -> (trip.routeCode `P.elem` routeCodes') || (val == Just True)) allTrips
 
-cacheRouteStopTimeInfo :: (CacheFlow m r, MonadFlow m) => Text -> [RouteStopTimeTable] -> m ()
-cacheRouteStopTimeInfo stopCode routeStopInfo = do
+cacheRouteStopTimeInfo :: (CacheFlow m r, MonadFlow m) => Text -> [RouteStopTimeTable] -> Bool -> m ()
+cacheRouteStopTimeInfo stopCode routeStopInfo needOnlyOneTrip = do
   let expTime = 60 * 60
-  let idKey = routeTimeTableKey stopCode
+  let idKey = routeTimeTableKey stopCode needOnlyOneTrip
   Hedis.setExp idKey routeStopInfo expTime
 
-routeTimeTableKey :: Text -> Text
-routeTimeTableKey stopCode = "routeStop-time-table:" <> stopCode
+routeTimeTableKey :: Text -> Bool -> Text
+routeTimeTableKey stopCode needOnlyOneTrip = "routeStop-time-table:" <> stopCode <> ":" <> show needOnlyOneTrip
 
 data CalledForFare = CalledForFare
   deriving stock (Generic, Typeable, Show, Eq)
