@@ -1038,12 +1038,11 @@ buildTrainAllViaRoutes ::
   Bool ->
   Flow ([MultiModalTypes.MultiModalRoute], [ViaRoute])
 buildTrainAllViaRoutes getPreliminaryLeg (Just originStopCode) (Just destinationStopCode) (Just integratedBppConfig) mid mocid vc mode processAllViaPoints = do
-  allSubwayRoutes <- measureLatency getAllSubwayRoutes "getAllSubwayRoutes"
-  resp <- try @_ @SomeException (measureLatency (getSubwayValidRoutes allSubwayRoutes getPreliminaryLeg integratedBppConfig mid mocid vc mode processAllViaPoints) "getSubwayValidRoutes")
-  case resp of
-    Right (multimodalRoutes, restOfRoutes) -> return (multimodalRoutes, restOfRoutes)
+  eitherAllSubwayRoutes <- try @_ @SomeException (measureLatency getAllSubwayRoutes "getAllSubwayRoutes")
+  case eitherAllSubwayRoutes of
+    Right allSubwayRoutes -> measureLatency (getSubwayValidRoutes allSubwayRoutes getPreliminaryLeg integratedBppConfig mid mocid vc mode processAllViaPoints) "getSubwayValidRoutes"
     Left err -> do
-      logError $ "Error in getSubwayValidRoutes: " <> show err
+      logError $ "Error in getAllSubwayRoutes: " <> show err
       return ([], [])
   where
     getAllSubwayRoutes :: Flow [ViaRoute]
