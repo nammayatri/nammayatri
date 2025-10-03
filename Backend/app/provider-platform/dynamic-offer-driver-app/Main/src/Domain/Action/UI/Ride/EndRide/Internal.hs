@@ -136,6 +136,7 @@ import Storage.Queries.Person as SQP
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.RiderDetails as QRD
+import qualified Storage.Queries.RiderDetails as QRiderDetails
 import qualified Storage.Queries.SubscriptionTransaction as QSubscriptionTransaction
 import qualified Storage.Queries.Vehicle as QV
 import qualified Storage.Queries.VendorFee as QVF
@@ -178,6 +179,8 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   updateOnRideStatusWithAdvancedRideCheck ride.driverId (Just ride)
   QDI.updateHasRideStarted driverId False
   QRB.updateStatus booking.id SRB.COMPLETED
+  whenJust mbRiderDetailsId $ \riderDetailsId -> do
+    QRiderDetails.updateCompletedRidesCount riderDetailsId.getId
   whenJust mbFareParams QFare.create
   QRide.updateAll ride.id ride
   oldDriverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
@@ -710,7 +713,7 @@ createDriverFee merchantId merchantOpCityId driverId rideFare currency newFarePa
     let fleetIsSubscriptionEligble = maybe True (.isEligibleForSubscription) fleetOwnerInfo
     freeTrialDaysLeft' <- getFreeTrialDaysLeft transporterConfig.freeTrialDays driverInfo
     let govtCharges = fromMaybe 0.0 newFareParams.govtCharges
-    let chargeBy = if (not fleetIsSubscriptionEligble) then DFP.NoCharge else newFareParams.platformFeeChargesBy
+    let chargeBy = if not fleetIsSubscriptionEligble then DFP.NoCharge else newFareParams.platformFeeChargesBy
     case chargeBy of
       DFP.NoCharge -> pure ()
       _ -> createDriverFee' transporterConfig freeTrialDaysLeft' govtCharges
@@ -792,7 +795,7 @@ createDriverFee merchantId merchantOpCityId driverId rideFare currency newFarePa
           Just subsConfig -> Plan.isOnFreeTrial driverId subsConfig freeTrialDaysLeft' mbDriverPlan'
           Nothing -> return (True, Nothing)
       let chargeSPZRides = transporterConfig.considerSpecialZoneRideChargesInFreeTrial
-          isEligibleForDefaultPlanAfterFreeTrial = (not isOnFreeTrial') && planMandatory && transporterConfig.allowDefaultPlanAllocation
+          isEligibleForDefaultPlanAfterFreeTrial = not isOnFreeTrial' && planMandatory && transporterConfig.allowDefaultPlanAllocation
           isEligibleForDefaultPlanBeforeFreeTrial = isOnFreeTrial' && chargeSPZRides && planMandatory
       if isNothing mbDriverPlan'
         then do

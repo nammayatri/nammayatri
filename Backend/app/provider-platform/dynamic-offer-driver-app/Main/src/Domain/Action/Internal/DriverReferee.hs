@@ -164,6 +164,11 @@ linkReferee merchantId apiKey RefereeLinkInfoReq {..} = do
             payoutFlagReason = flagReason,
             currency,
             bapId = Nothing,
+            cancelledRides = 0,
+            totalBookings = 0,
+            completedRides = 0,
+            validCancellations = 0,
+            cancellationDueRides = 0,
             isDeviceIdExists = Just $ isJust isMultipleDeviceIdExist,
             isFlagConfirmed = Nothing,
             merchantOperatingCityId = Just merchOpCityId

@@ -49,3 +49,12 @@ ALTER TABLE atlas_driver_offer_bpp.rider_details ADD COLUMN merchant_operating_c
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.rider_details ADD COLUMN bap_id character varying(255) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.rider_details ADD COLUMN valid_cancellations integer ;
+ALTER TABLE atlas_driver_offer_bpp.rider_details ADD COLUMN total_bookings integer ;
+ALTER TABLE atlas_driver_offer_bpp.rider_details ADD COLUMN completed_rides integer ;
+ALTER TABLE atlas_driver_offer_bpp.rider_details ADD COLUMN cancelled_rides integer ;
+ALTER TABLE atlas_driver_offer_bpp.rider_details ADD COLUMN cancellation_due_rides integer ;
