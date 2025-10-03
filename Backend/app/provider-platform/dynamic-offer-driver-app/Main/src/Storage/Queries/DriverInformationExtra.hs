@@ -473,3 +473,17 @@ findAllByDriverIds driverIds = do
   case res of
     Right driverInfoList -> catMaybes <$> mapM fromTType' driverInfoList
     Left _ -> pure []
+
+-- TODO extra filters?
+findAllByMerchantOperatingCityId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Int ->
+  Int ->
+  Id DMOC.MerchantOperatingCity ->
+  m [DriverInformation]
+findAllByMerchantOperatingCityId limit offset merchantOperatingCityId =
+  findAllWithOptionsKV
+    [Se.Is BeamDI.merchantOperatingCityId $ Se.Eq (Just merchantOperatingCityId.getId)]
+    (Se.Asc BeamDI.createdAt)
+    (Just limit)
+    (Just offset)

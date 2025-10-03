@@ -60,6 +60,7 @@ import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestT
 import SharedLogic.Allocator.Jobs.SupplyDemand.SupplyDemandRatio
 import SharedLogic.Allocator.Jobs.UnblockDriverUpdate.UnblockDriver
 import SharedLogic.Allocator.Jobs.Webhook.Webhook
+import SharedLogic.DriverWalletPayout (driversWalletPayoutJob)
 import SharedLogic.KaalChakra.Chakras
 import SharedLogic.MediaFileDocument (mediaFileDocumentComplete)
 import Storage.Beam.SystemConfigs ()
@@ -130,6 +131,7 @@ allocatorHandle flowRt env =
           & putJobHandlerInList (liftIO . runFlowR flowRt env . sendWebhookWithRetryToExternal)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . installationStatus)
           & putJobHandlerInList (liftIO . runFlowR flowRt env . mediaFileDocumentComplete)
+          & putJobHandlerInList (liftIO . runFlowR flowRt env . driversWalletPayoutJob)
     }
 
 runDriverOfferAllocator ::
