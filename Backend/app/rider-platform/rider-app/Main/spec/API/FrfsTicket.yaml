@@ -196,6 +196,7 @@ types:
     freeTicketInterval: Maybe Int
     maxFreeTicketCashback: Maybe Int
     ticketsBookedInEvent: Int
+    providerId: Maybe Text
     derive: "Show"
 
   FRFSRouteAPI:

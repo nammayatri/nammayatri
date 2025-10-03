@@ -93,7 +93,8 @@ data FRFSConfigAPIRes = FRFSConfigAPIRes
     metroStationTtl :: Kernel.Prelude.Int,
     oneWayTicketLimit :: Kernel.Prelude.Int,
     roundTripTicketLimit :: Kernel.Prelude.Int,
-    ticketsBookedInEvent :: Kernel.Prelude.Int
+    ticketsBookedInEvent :: Kernel.Prelude.Int,
+    providerId :: Data.Maybe.Maybe Data.Text.Text
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
