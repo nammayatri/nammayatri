@@ -212,8 +212,10 @@ instance JT.JourneyLeg TaxiLegRequest m where
         mRide <- QRide.findByRBId booking.id
         Just <$> JT.mkLegInfoFromBookingAndRide booking mRide req.journeyLeg
       Nothing -> do
-        searchReq <- QSearchRequest.findById req.searchId >>= fromMaybeM (SearchRequestNotFound req.searchId.getId)
-        Just <$> JT.mkLegInfoFromSearchRequest searchReq req.journeyLeg
+        QSearchRequest.findById req.searchId
+          >>= \case
+            Just searchReq -> Just <$> JT.mkLegInfoFromSearchRequest searchReq req.journeyLeg
+            Nothing -> return Nothing
   getInfo _ = throwError (InternalError "Not Supported")
 
   getFare (TaxiLegRequestGetFare taxiGetFareData) = do

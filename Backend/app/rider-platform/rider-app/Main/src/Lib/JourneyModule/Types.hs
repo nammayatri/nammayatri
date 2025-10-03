@@ -176,7 +176,8 @@ type GetStateFlow m r c =
     HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig],
     HasField "ltsHedisEnv" r Redis.HedisEnv,
     HasLongDurationRetryCfg r c,
-    HasShortDurationRetryCfg r c
+    HasShortDurationRetryCfg r c,
+    m ~ Kernel.Types.Flow.FlowR AppEnv
   )
 
 type SearchJourneyLeg leg m = leg -> m SearchResponse
