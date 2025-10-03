@@ -16,7 +16,6 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-matches #-}
 
 module Lib.Scheduler.JobStorageType.DB.Queries where
 
@@ -113,7 +112,7 @@ createJobIn merchantId merchantOperatingCityId uuid inTime maxShards jobData = d
           maxErrors = 5
         }
 
-createJobByTime ::
+createJobByTimeReturningId ::
   forall t (e :: t) m r.
   (JobFlow t e, JobCreator r m) =>
   Maybe (Id (MerchantType t)) ->
@@ -122,14 +121,13 @@ createJobByTime ::
   UTCTime ->
   Int ->
   JobContent e ->
-  m ()
-createJobByTime merchantId merchantOperatingCityId uuid byTime maxShards jobData = do
-  void $
-    ScheduleJob.createJobByTime @t @e @m merchantId merchantOperatingCityId uuid createWithKVScheduler byTime maxShards $
-      JobEntry
-        { jobData = jobData,
-          maxErrors = 5
-        }
+  m (Id AnyJob)
+createJobByTimeReturningId merchantId merchantOperatingCityId uuid byTime maxShards jobData =
+  ScheduleJob.createJobByTime @t @e @m merchantId merchantOperatingCityId uuid createWithKVScheduler byTime maxShards $
+    JobEntry
+      { jobData = jobData,
+        maxErrors = 5
+      }
 
 findAll :: forall m r t. (FromTType'' BeamST.SchedulerJob (AnyJob t), JobMonad r m) => m [AnyJob t]
 findAll = findAllWithKVScheduler [Se.Is BeamST.id $ Se.Not $ Se.Eq ""]
@@ -157,6 +155,16 @@ getJobByTypeAndScheduleTime jobType minScheduleTime maxScheduleTime = do
           Se.Is BeamST.scheduledAt $ Se.GreaterThan (T.utcToLocalTime T.utc minScheduleTime),
           Se.Is BeamST.scheduledAt $ Se.LessThan (T.utcToLocalTime T.utc maxScheduleTime),
           Se.Is BeamST.jobType $ Se.Eq jobType
+        ]
+    ]
+
+getJobByTypeAndMerchantOperatingCityId :: forall m r t. (FromTType'' BeamST.SchedulerJob (AnyJob t), JobMonad r m) => Text -> Id (MerchantOperatingCityType t) -> m [AnyJob t]
+getJobByTypeAndMerchantOperatingCityId jobType merchantOperatingCityId = do
+  findAllWithKVScheduler
+    [ Se.And
+        [ Se.Is BeamST.status $ Se.Eq Pending,
+          Se.Is BeamST.jobType $ Se.Eq jobType,
+          Se.Is BeamST.merchantOperatingCityId $ Se.Eq (Just merchantOperatingCityId.getId)
         ]
     ]
 

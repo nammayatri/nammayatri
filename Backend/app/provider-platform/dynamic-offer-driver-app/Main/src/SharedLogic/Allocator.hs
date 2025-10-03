@@ -18,6 +18,7 @@
 module SharedLogic.Allocator where
 
 import Data.Singletons.TH
+import Data.Text as T
 import qualified Domain.Action.WebhookHandler as AWebhook
 import qualified Domain.Types.AlertRequest as DAR
 import qualified Domain.Types.Booking as DB
@@ -36,7 +37,7 @@ import qualified Domain.Types.RideRelatedNotificationConfig as DRN
 import qualified Domain.Types.SearchTry as DST
 import qualified Domain.Types.VehicleCategory as DVC
 import Kernel.Prelude
-import Kernel.Types.Common (Meters, Seconds)
+import Kernel.Types.Common (Meters, Milliseconds, Seconds)
 import Kernel.Types.Id
 import Kernel.Utils.Dhall (FromDhall)
 import Lib.Scheduler
@@ -76,6 +77,7 @@ data AllocatorJobType
   | ScheduledFCMS
   | CheckDashCamInstallationStatus
   | MediaFileDocumentComplete
+  | DriversWalletPayout
   deriving (Generic, FromDhall, Eq, Ord, Show, Read, FromJSON, ToJSON)
 
 genSingletons [''AllocatorJobType]
@@ -117,6 +119,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SScheduledFCMS jobData = AnyJobInfo <$> restoreJobInfo SScheduledFCMS jobData
   restoreAnyJobInfo SCheckDashCamInstallationStatus jobData = AnyJobInfo <$> restoreJobInfo SCheckDashCamInstallationStatus jobData
   restoreAnyJobInfo SMediaFileDocumentComplete jobData = AnyJobInfo <$> restoreJobInfo SMediaFileDocumentComplete jobData
+  restoreAnyJobInfo SDriversWalletPayout jobData = AnyJobInfo <$> restoreJobInfo SDriversWalletPayout jobData
 
 instance JobInfoProcessor 'Daily
 
@@ -437,3 +440,20 @@ newtype MediaFileDocumentCompleteJobData = MediaFileDocumentCompleteJobData
 instance JobInfoProcessor 'MediaFileDocumentComplete
 
 type instance JobContent 'MediaFileDocumentComplete = MediaFileDocumentCompleteJobData
+
+data PayoutPeriod = SinglePayout | DailyPayout Int | WeeklyPayout Int | MonthlyPayout Int
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+data DriversWalletPayoutJobData = DriversWalletPayoutJobData
+  { merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
+    startTime :: UTCTime,
+    payoutPeriod :: PayoutPeriod,
+    driversInBatch :: Int,
+    eachDriverDelayMs :: Milliseconds,
+    batchDelayS :: Seconds
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'DriversWalletPayout
+
+type instance JobContent 'DriversWalletPayout = DriversWalletPayoutJobData

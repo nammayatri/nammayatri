@@ -10,9 +10,29 @@ GET {{bpp-dashboard-host}}
 
 ###
 
-# @name GetIPayoutHistory
-
+# @name GetPayoutHistory
 
 GET {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/payout/payout/history
 content-type: application/json
 token: {{juspay_admin}}
+
+###
+
+# @name PostPayoutScheduler
+
+POST {{bpp-dashboard-host}}/bpp/driver-offer/NAMMA_YATRI_PARTNER/KOCHI/payout/scheduler
+content-type: application/json
+token: {{juspay_admin}}
+
+{
+    "runNewJob": true,
+    "startTime": "2025-10-03T09:08:00Z",
+    "payoutPeriod":
+      {"tag": "DailyPayout",
+       "contents": 3
+      },
+    "driversInBatch": 3,
+    "eachDriverDelayMs": 100,
+    "batchDelayS": 80,
+    "completeExistingJob": null
+}

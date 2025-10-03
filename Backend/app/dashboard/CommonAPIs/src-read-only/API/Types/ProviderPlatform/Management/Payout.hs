@@ -3,3 +3,4 @@
 module API.Types.ProviderPlatform.Management.Payout (module ReExport) where
 
 import API.Types.ProviderPlatform.Management.Endpoints.Payout as ReExport
+import Dashboard.ProviderPlatform.Management.Payout as ReExport

@@ -78,6 +78,8 @@ data Person
 
 data IntegratedBPPConfig
 
+data Job
+
 data Role = DRIVER | FLEET
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema, ToParamSchema)

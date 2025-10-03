@@ -76,8 +76,44 @@ data PayoutHistoryRes = PayoutHistoryRes {history :: [PayoutHistoryItem], summar
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data PayoutPeriod
+  = SinglePayout
+  | DailyPayout Kernel.Prelude.Int
+  | WeeklyPayout Kernel.Prelude.Int
+  | MonthlyPayout Kernel.Prelude.Int
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data PayoutReferralHistoryRes = PayoutReferralHistoryRes {history :: [ReferralHistoryItem], summary :: Dashboard.Common.Summary}
   deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data PayoutSchedulerReq = PayoutSchedulerReq
+  { runNewJob :: Kernel.Prelude.Bool,
+    startTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    payoutPeriod :: Kernel.Prelude.Maybe PayoutPeriod,
+    driversInBatch :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    eachDriverDelayMs :: Kernel.Prelude.Maybe Kernel.Types.Common.Milliseconds,
+    batchDelayS :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    completeExistingJob :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Job)
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Kernel.Types.HideSecrets.HideSecrets PayoutSchedulerReq where
+  hideSecrets = Kernel.Prelude.identity
+
+data PayoutSchedulerResp = PayoutSchedulerResp {result :: PayoutSchedulerResult, jobId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Job), existingJobs :: [Kernel.Types.Id.Id Dashboard.Common.Job]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+instance Kernel.Types.HideSecrets.HideSecrets PayoutSchedulerResp where
+  hideSecrets = Kernel.Prelude.identity
+
+data PayoutSchedulerResult
+  = Success
+  | Failed
+  deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data PayoutVpaStatus
@@ -148,7 +184,7 @@ data UpdateVpaReq = UpdateVpaReq {driverId :: Kernel.Types.Id.Id Dashboard.Commo
 instance Kernel.Types.HideSecrets.HideSecrets UpdateVpaReq where
   hideSecrets = Kernel.Prelude.identity
 
-type API = ("payout" :> (GetPayoutPayoutReferralHistory :<|> GetPayoutPayoutHistory :<|> PostPayoutPayoutVerifyFraudStatus :<|> PostPayoutPayoutRetryFailed :<|> PostPayoutPayoutRetryAllWithStatus :<|> PostPayoutPayoutPendingPayout :<|> PostPayoutPayoutDeleteVPA :<|> PostPayoutPayoutDriversSetBlockState :<|> PostPayoutPayoutUpdateVPA :<|> PostPayoutPayoutRefundRegistrationAmount))
+type API = ("payout" :> (GetPayoutPayoutReferralHistory :<|> GetPayoutPayoutHistory :<|> PostPayoutPayoutVerifyFraudStatus :<|> PostPayoutPayoutRetryFailed :<|> PostPayoutPayoutRetryAllWithStatus :<|> PostPayoutPayoutPendingPayout :<|> PostPayoutPayoutDeleteVPA :<|> PostPayoutPayoutDriversSetBlockState :<|> PostPayoutPayoutUpdateVPA :<|> PostPayoutPayoutRefundRegistrationAmount :<|> PostPayoutScheduler))
 
 type GetPayoutPayoutReferralHistory =
   ( "payout" :> "referral" :> "history" :> QueryParam "areActivatedRidesOnly" Kernel.Prelude.Bool
@@ -212,6 +248,8 @@ type PostPayoutPayoutUpdateVPA = ("payout" :> "updateVPA" :> ReqBody '[JSON] Upd
 
 type PostPayoutPayoutRefundRegistrationAmount = ("payout" :> "refundRegistrationAmount" :> ReqBody '[JSON] RefundRegAmountReq :> Post '[JSON] Kernel.Types.APISuccess.APISuccess)
 
+type PostPayoutScheduler = ("scheduler" :> ReqBody '[JSON] PayoutSchedulerReq :> Post '[JSON] PayoutSchedulerResp)
+
 data PayoutAPIs = PayoutAPIs
   { getPayoutPayoutReferralHistory :: Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient PayoutReferralHistoryRes,
     getPayoutPayoutHistory :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Dashboard.Common.Driver) -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.UTCTime -> EulerHS.Types.EulerClient PayoutHistoryRes,
@@ -222,13 +260,14 @@ data PayoutAPIs = PayoutAPIs
     postPayoutPayoutDeleteVPA :: DeleteVpaReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postPayoutPayoutDriversSetBlockState :: SetDriversBlockStateReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
     postPayoutPayoutUpdateVPA :: UpdateVpaReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
-    postPayoutPayoutRefundRegistrationAmount :: RefundRegAmountReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess
+    postPayoutPayoutRefundRegistrationAmount :: RefundRegAmountReq -> EulerHS.Types.EulerClient Kernel.Types.APISuccess.APISuccess,
+    postPayoutScheduler :: PayoutSchedulerReq -> EulerHS.Types.EulerClient PayoutSchedulerResp
   }
 
 mkPayoutAPIs :: (Client EulerHS.Types.EulerClient API -> PayoutAPIs)
 mkPayoutAPIs payoutClient = (PayoutAPIs {..})
   where
-    getPayoutPayoutReferralHistory :<|> getPayoutPayoutHistory :<|> postPayoutPayoutVerifyFraudStatus :<|> postPayoutPayoutRetryFailed :<|> postPayoutPayoutRetryAllWithStatus :<|> postPayoutPayoutPendingPayout :<|> postPayoutPayoutDeleteVPA :<|> postPayoutPayoutDriversSetBlockState :<|> postPayoutPayoutUpdateVPA :<|> postPayoutPayoutRefundRegistrationAmount = payoutClient
+    getPayoutPayoutReferralHistory :<|> getPayoutPayoutHistory :<|> postPayoutPayoutVerifyFraudStatus :<|> postPayoutPayoutRetryFailed :<|> postPayoutPayoutRetryAllWithStatus :<|> postPayoutPayoutPendingPayout :<|> postPayoutPayoutDeleteVPA :<|> postPayoutPayoutDriversSetBlockState :<|> postPayoutPayoutUpdateVPA :<|> postPayoutPayoutRefundRegistrationAmount :<|> postPayoutScheduler = payoutClient
 
 data PayoutUserActionType
   = GET_PAYOUT_PAYOUT_REFERRAL_HISTORY
@@ -241,6 +280,7 @@ data PayoutUserActionType
   | POST_PAYOUT_PAYOUT_DRIVERS_SET_BLOCK_STATE
   | POST_PAYOUT_PAYOUT_UPDATE_VPA
   | POST_PAYOUT_PAYOUT_REFUND_REGISTRATION_AMOUNT
+  | POST_PAYOUT_SCHEDULER
   deriving stock (Show, Read, Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

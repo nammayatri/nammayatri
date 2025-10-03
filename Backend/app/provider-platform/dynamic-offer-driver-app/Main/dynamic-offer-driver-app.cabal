@@ -402,6 +402,7 @@ library
       SharedLogic.DriverPool
       SharedLogic.DriverPool.Config
       SharedLogic.DriverPool.Types
+      SharedLogic.DriverWalletPayout
       SharedLogic.DynamicPricing
       SharedLogic.EventTracking
       SharedLogic.External.LocationTrackingService.API.DriverBlockTill

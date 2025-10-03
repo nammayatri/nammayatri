@@ -27,7 +27,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Kernel.Utils.Time ()
 import Lib.Scheduler.Environment
-import Lib.Scheduler.JobStorageType.DB.Queries as DBQ
+import qualified Lib.Scheduler.JobStorageType.DB.Queries as DBQ
 import qualified Lib.Scheduler.JobStorageType.DB.Table as BeamST
 import qualified Lib.Scheduler.JobStorageType.Redis.Queries as RQ
 import Lib.Scheduler.Types
@@ -101,6 +101,17 @@ createJobByTime ::
   JobContent e ->
   m ()
 createJobByTime merchantId merchantOperatingCityId byTime jobData = do
+  void $ createJobByTimeReturningId @t @e @m @r merchantId merchantOperatingCityId byTime jobData
+
+createJobByTimeReturningId ::
+  forall t (e :: t) m r.
+  (JobFlow t e, JobCreator r m) =>
+  Maybe (Id (MerchantType t)) ->
+  Maybe (Id (MerchantOperatingCityType t)) ->
+  UTCTime ->
+  JobContent e ->
+  m (Id AnyJob)
+createJobByTimeReturningId merchantId merchantOperatingCityId byTime jobData = do
   maxShards <- asks (.maxShards)
   schedulerType <- asks (.schedulerType)
   uuid <- generateGUIDText
@@ -111,13 +122,13 @@ createJobByTime merchantId merchantOperatingCityId byTime jobData = do
       logDebug $ "LONG RUNNING " <> show longRunning
       if longRunning
         then do
-          DBQ.createJobByTime @t @e merchantId merchantOperatingCityId uuid byTime maxShards jobData
-          RQ.createJobByTime @t @e merchantId merchantOperatingCityId uuid byTime maxShards jobData
+          void $ DBQ.createJobByTimeReturningId @t @e merchantId merchantOperatingCityId uuid byTime maxShards jobData
+          RQ.createJobByTimeReturningId @t @e merchantId merchantOperatingCityId uuid byTime maxShards jobData
         else do
-          RQ.createJobByTime @t @e merchantId merchantOperatingCityId uuid byTime maxShards jobData
+          RQ.createJobByTimeReturningId @t @e merchantId merchantOperatingCityId uuid byTime maxShards jobData
     DbBased -> do
       logDebug "DB BASED JOB "
-      DBQ.createJobByTime @t @e merchantId merchantOperatingCityId uuid byTime maxShards jobData
+      DBQ.createJobByTimeReturningId @t @e merchantId merchantOperatingCityId uuid byTime maxShards jobData
 
 findAll :: forall t m r. (FromTType'' BeamST.SchedulerJob (AnyJob t), JobExecutor r m, JobProcessor t) => m [AnyJob t]
 findAll = do
@@ -153,6 +164,20 @@ getJobByTypeAndScheduleTime jobType minScheduleTime maxScheduleTime = do
         else do
           RQ.getJobByTypeAndScheduleTime jobType minScheduleTime maxScheduleTime
     DbBased -> DBQ.getJobByTypeAndScheduleTime jobType minScheduleTime maxScheduleTime
+
+getJobByTypeAndMerchantOperatingCityId :: forall t m r. (FromTType'' BeamST.SchedulerJob (AnyJob t), JobMonad r m, JobProcessor t, HasJobInfoMap r) => Text -> Id (MerchantOperatingCityType t) -> m [AnyJob t]
+getJobByTypeAndMerchantOperatingCityId jobType merchantOperatingCityId = do
+  schedulerType <- asks (.schedulerType)
+  case schedulerType of
+    RedisBased -> do
+      longRunning <- isLongRunning jobType
+      logDebug $ "LONG RUNNING " <> show longRunning <> " getJobByTypeAndMerchantOperatingCityId: " <> show jobType <> " merchantOperatingCityId: " <> merchantOperatingCityId.getId
+      if longRunning
+        then do
+          DBQ.getJobByTypeAndMerchantOperatingCityId jobType merchantOperatingCityId
+        else do
+          RQ.getJobByTypeAndMerchantOperatingCityId jobType merchantOperatingCityId
+    DbBased -> DBQ.getJobByTypeAndMerchantOperatingCityId jobType merchantOperatingCityId
 
 getReadyTasks ::
   forall t m r.

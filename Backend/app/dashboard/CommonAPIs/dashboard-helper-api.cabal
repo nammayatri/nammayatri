@@ -45,6 +45,7 @@ library
       Dashboard.ProviderPlatform.Management.MediaFileDocument
       Dashboard.ProviderPlatform.Management.Merchant
       Dashboard.ProviderPlatform.Management.Message
+      Dashboard.ProviderPlatform.Management.Payout
       Dashboard.ProviderPlatform.Management.Ride
       Dashboard.ProviderPlatform.Operator.Registration
       Dashboard.RiderPlatform.Management.FRFSTicket

@@ -11,6 +11,7 @@ module Domain.Action.ProviderPlatform.Management.Payout
     postPayoutPayoutDriversSetBlockState,
     postPayoutPayoutUpdateVPA,
     postPayoutPayoutRefundRegistrationAmount,
+    postPayoutScheduler,
   )
 where
 
@@ -26,6 +27,7 @@ import qualified Kernel.Types.APISuccess
 import qualified Kernel.Types.Beckn.Context
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Utils.Validation (runRequestValidation)
 import qualified SharedLogic.Transaction as T
 import Storage.Beam.CommonInstances ()
 import Tools.Auth.Api
@@ -107,3 +109,11 @@ postPayoutPayoutRefundRegistrationAmount merchantShortId opCity apiTokenInfo req
   transaction <- buildPayoutManagementServerTransaction apiTokenInfo Nothing (Just req)
   T.withTransactionStoring transaction $ do
     API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.payoutDSL.postPayoutPayoutRefundRegistrationAmount) req
+
+postPayoutScheduler :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> ApiTokenInfo -> API.Types.ProviderPlatform.Management.Payout.PayoutSchedulerReq -> Environment.Flow API.Types.ProviderPlatform.Management.Payout.PayoutSchedulerResp)
+postPayoutScheduler merchantShortId opCity apiTokenInfo req = do
+  runRequestValidation API.Types.ProviderPlatform.Management.Payout.validatePayoutSchedulerReq req
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildPayoutManagementServerTransaction apiTokenInfo Nothing (Just req)
+  T.withResponseTransactionStoring transaction $ do
+    API.Client.ProviderPlatform.Management.callManagementAPI checkedMerchantId opCity (.payoutDSL.postPayoutScheduler) req
