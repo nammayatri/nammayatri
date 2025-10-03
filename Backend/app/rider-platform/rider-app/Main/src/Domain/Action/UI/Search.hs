@@ -478,7 +478,16 @@ search personId req bundleVersion clientVersion clientConfigVersion_ mbRnVersion
       InterCitySearch interCityReq -> processOneWaySearch person merchant merchantOperatingCity searchRequestId interCityReq.sessionToken interCityReq.isSourceManuallyMoved interCityReq.isDestinationManuallyMoved stopsLatLong now sourceLatLong roundTrip riderCfg isMeterRide
       RentalSearch rentalReq -> processRentalSearch person rentalReq stopsLatLong originCity
       DeliverySearch deliveryReq -> processOneWaySearch person merchant merchantOperatingCity searchRequestId deliveryReq.sessionToken deliveryReq.isSourceManuallyMoved deliveryReq.isDestinationManuallyMoved stopsLatLong now sourceLatLong roundTrip riderCfg isMeterRide
-      PTSearch _ -> processOneWaySearch person merchant merchantOperatingCity searchRequestId Nothing Nothing Nothing stopsLatLong now sourceLatLong roundTrip riderCfg isMeterRide
+      PTSearch _ -> do
+        return $
+          RouteDetails
+            { longestRouteDistance = Nothing,
+              shortestRouteDistance = Nothing,
+              shortestRouteDuration = Nothing,
+              shortestRouteStaticDuration = Nothing,
+              shortestRouteInfo = Nothing,
+              multipleRoutes = Nothing
+            }
 
     processOneWaySearch ::
       SearchRequestFlow m r =>
