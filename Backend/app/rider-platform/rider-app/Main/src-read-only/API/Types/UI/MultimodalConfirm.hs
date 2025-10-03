@@ -308,7 +308,9 @@ data TransportRoute = TransportRoute
     ibc :: Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig,
     lN :: Kernel.Prelude.Text,
     sN :: Kernel.Prelude.Text,
+    st :: Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType,
     stC :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    stn :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     vt :: Kernel.Prelude.Text
   }
   deriving stock (Generic)

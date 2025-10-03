@@ -208,6 +208,8 @@ types:
     dTC: Maybe Int
     stC: Maybe Int
     vt: Text
+    st: Maybe ServiceTierType
+    stn: Maybe Text
     clr: Maybe Text
     ibc: Id IntegratedBPPConfig
     derive': "Generic, ToSchema"
