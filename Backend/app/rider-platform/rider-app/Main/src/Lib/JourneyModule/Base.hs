@@ -37,7 +37,7 @@ import qualified Domain.Types.RiderConfig
 import qualified Domain.Types.RouteDetails as DRouteDetails
 import qualified Domain.Types.Trip as DTrip
 import Environment
-import EulerHS.Prelude (safeHead, whenNothing_)
+import EulerHS.Prelude (safeHead)
 import Kernel.External.Maps.Google.MapsClient.Types as Maps
 import Kernel.External.Maps.Types
 import qualified Kernel.External.MultiModal.Interface as KMultiModal
@@ -203,29 +203,45 @@ multiModalTravelModeToBecknVehicleCategory = \case
   DTrip.Subway -> Just BecknSpec.SUBWAY
   _ -> Nothing
 
+getAllLegsInfoWithoutSearch ::
+  (JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
+  Id DPerson.Person ->
+  Id DJourney.Journey ->
+  m [JL.LegInfo]
+getAllLegsInfoWithoutSearch personId journeyId = getAllLegsInfo' personId journeyId False
+
 getAllLegsInfo ::
   (JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
   Id DPerson.Person ->
   Id DJourney.Journey ->
   m [JL.LegInfo]
-getAllLegsInfo personId journeyId = do
+getAllLegsInfo personId journeyId = getAllLegsInfo' personId journeyId True
+
+getAllLegsInfo' ::
+  (JL.GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) =>
+  Id DPerson.Person ->
+  Id DJourney.Journey ->
+  Bool ->
+  m [JL.LegInfo]
+getAllLegsInfo' personId journeyId checkSearch = do
   whenJourneyUpdateInProgress journeyId $ do
     allLegs <- QJourneyLeg.getJourneyLegs journeyId
-    mapMaybeM (getLegInfo personId) allLegs
+    mapMaybeM (getLegInfo personId checkSearch) allLegs
 
 getLegInfo ::
   JL.GetStateFlow m r c =>
   Id DPerson.Person ->
+  Bool ->
   DJourneyLeg.JourneyLeg ->
   m (Maybe JL.LegInfo)
-getLegInfo personId journeyLeg = do
+getLegInfo personId checkSearch journeyLeg = do
   case journeyLeg.legSearchId of
     Just legSearchIdText -> do
       let legSearchId = Id legSearchIdText
       case journeyLeg.mode of
         DTrip.Taxi -> do
           legInfo <- JL.getInfo $ TaxiLegRequestGetInfo $ TaxiLegRequestGetInfoData {searchId = cast legSearchId, journeyLeg}
-          whenNothing_ legInfo $ do
+          when (isNothing legInfo && checkSearch) $ do
             let journeyId = journeyLeg.journeyId
             journey <- QJourney.findByPrimaryKey journeyId >>= fromMaybeM (JourneyNotFound journeyId.getId)
             legs <- QJourneyLeg.getJourneyLegs journeyId
