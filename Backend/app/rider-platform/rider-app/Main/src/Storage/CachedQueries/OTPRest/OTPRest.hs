@@ -5,6 +5,7 @@ import qualified BecknV2.FRFS.Utils as BecknFRFSUtils
 import qualified Data.HashMap.Strict as HM
 import Data.List (groupBy)
 import Data.Text (splitOn)
+import qualified Data.Text as T
 import Domain.Types.IntegratedBPPConfig
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity
@@ -401,3 +402,40 @@ getGtfsVersion ::
 getGtfsVersion integratedBPPConfig = do
   baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
   Flow.getGtfsVersion baseUrl integratedBPPConfig.feedKey
+
+getExampleTrip ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  IntegratedBPPConfig ->
+  Text ->
+  m (Maybe TripDetails)
+getExampleTrip integratedBPPConfig routeId = IM.withInMemCache ["ExampleTrip", integratedBPPConfig.id.getId, routeId] 86400 $ do
+  baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
+  Flow.getExampleTrip baseUrl integratedBPPConfig.feedKey routeId
+
+-- Helper function to find a specific stop in TripDetails
+findTripStopByStopCode :: TripDetails -> Text -> Maybe TripStopDetail
+findTripStopByStopCode tripDetails stopCode =
+  find (\stop -> stop.stopCode == stopCode) tripDetails.stops
+
+-- Helper function to extract stage information from TripStopDetail
+extractStageFromTripStop :: TripStopDetail -> Maybe Int
+extractStageFromTripStop tripStop = do
+  extraInfo <- tripStop.extraInfo
+  fareStageText <- extraInfo.fareStageNumber
+  readMaybe (T.unpack fareStageText)
+
+-- Helper function to extract isStageStop from TripStopDetail
+extractIsStageStopFromTripStop :: TripStopDetail -> Maybe Bool
+extractIsStageStopFromTripStop tripStop = do
+  extraInfo <- tripStop.extraInfo
+  extraInfo.isStageStop
+
+-- Helper function to extract providerStopCode from TripStopDetail
+extractProviderStopCodeFromTripStop :: TripStopDetail -> Maybe Text
+extractProviderStopCodeFromTripStop tripStop = do
+  extraInfo <- tripStop.extraInfo
+  extraInfo.providerStopCode
+
+-- Helper function to extract platformCode from TripStopDetail
+extractPlatformCodeFromTripStop :: TripStopDetail -> Maybe Text
+extractPlatformCodeFromTripStop tripStop = tripStop.platformCode

@@ -93,7 +93,6 @@ import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.PartnerOrgStation as CQPOS
-import Storage.CachedQueries.RouteStopTimeTable as QRouteStopTimeTable
 import Storage.Queries.AadhaarVerification as QAV
 import Storage.Queries.FRFSFarePolicy as QFRFSFarePolicy
 import qualified Storage.Queries.FRFSGtfsStageFare as QQFRFSGtfsStageFare
@@ -486,48 +485,56 @@ mkCategory price (category, eligibility) =
         }
 
 getFareThroughGTFS :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Id DP.Person -> Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> IntegratedBPPConfig -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Text -> Text -> m [FRFSFare]
-getFareThroughGTFS riderId vehicleType serviceTier integratedBPPConfig merchantId merchantOperatingCityId routeCode startStopCode endStopCode = do
-  routeStopTimeTableStartStop <- listToMaybe <$> QRouteStopTimeTable.findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOperatingCityId [routeCode] startStopCode True
-  routeStopTimeTableEndStop <- listToMaybe <$> QRouteStopTimeTable.findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOperatingCityId [routeCode] endStopCode True
-  logDebug $ "routeStopTimeTableStartStop: " <> show routeStopTimeTableStartStop <> " routeStopTimeTableEndStop: " <> show routeStopTimeTableEndStop
-  case (routeStopTimeTableStartStop, routeStopTimeTableEndStop) of
-    (Just startStop, Just endStop) -> do
-      case (startStop.stage, endStop.stage) of
-        (Just startStage, Just endStage) -> do
-          let stage = abs (endStage - startStage)
-          logDebug $ "isStageStop flags: startStop=" <> show startStop.isStageStop <> " endStop=" <> show endStop.isStageStop
-          let adjustedStage = case endStop.isStageStop of
-                Just True -> stage - 1 -- Reduce stage by 1 if found, but ensure minimum is 1
-                _ -> stage -- Use original stage if not found or Nothing
-          fares <- case serviceTier of
-            Just serviceTier' -> do
-              vehicleServiceTier <- QFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId serviceTier' merchantOperatingCityId integratedBPPConfig.id >>= fromMaybeM (InternalError $ "FRFS Vehicle Service Tier Not Found " <> show serviceTier')
-              maybeToList <$> QQFRFSGtfsStageFare.findOneByVehicleTypeAndStageAndMerchantOperatingCityIdAndVehicleServiceTierId vehicleType (max 0 adjustedStage) merchantOperatingCityId vehicleServiceTier.id
-            Nothing -> QFRFSGtfsStageFare.findAllByVehicleTypeAndStageAndMerchantOperatingCityId vehicleType (max 0 adjustedStage) merchantOperatingCityId
-          forM fares $ \fare -> do
-            vehicleServiceTier <- QFRFSVehicleServiceTier.findById fare.vehicleServiceTierId >>= fromMaybeM (InternalError $ "FRFS Vehicle Service Tier Not Found " <> fare.vehicleServiceTierId.getId)
-            let price = Price {amountInt = round (fare.amount + fromMaybe 0 fare.cessCharge), amount = fare.amount + fromMaybe 0 fare.cessCharge, currency = fare.currency}
-            categoriesWithEligibility <- getFRFSTicketCategoryWithEligibility merchantOperatingCityId vehicleType riderId fare.discountIds
-            logDebug $ "categoriesWithEligibility: " <> show categoriesWithEligibility <> " fare: " <> show fare <> " price: " <> show price <> " vehicleServiceTier: " <> show vehicleServiceTier <> " fare.discountIds: "
-            return $
-              FRFSFare
-                { farePolicyId = Nothing,
-                  price = price,
-                  childPrice = Nothing,
-                  categories = map (mkCategory price) categoriesWithEligibility,
-                  fareDetails = Nothing,
-                  vehicleServiceTier =
-                    FRFSVehicleServiceTier
-                      { serviceTierType = vehicleServiceTier._type,
-                        serviceTierProviderCode = vehicleServiceTier.providerCode,
-                        serviceTierShortName = vehicleServiceTier.shortName,
-                        serviceTierDescription = vehicleServiceTier.description,
-                        serviceTierLongName = vehicleServiceTier.longName,
-                        isAirConditioned = vehicleServiceTier.isAirConditioned
-                      }
-                }
-        _ -> return []
-    _ -> return []
+getFareThroughGTFS riderId vehicleType serviceTier integratedBPPConfig _merchantId merchantOperatingCityId routeCode startStopCode endStopCode = do
+  tripDetails <- OTPRest.getExampleTrip integratedBPPConfig routeCode
+  case tripDetails of
+    Just trip -> do
+      let startStop = OTPRest.findTripStopByStopCode trip startStopCode
+          endStop = OTPRest.findTripStopByStopCode trip endStopCode
+      logDebug $ "startStop: " <> show startStop <> " endStop: " <> show endStop
+      case (startStop, endStop) of
+        (Just startTripStop, Just endTripStop) -> do
+          let startStage = OTPRest.extractStageFromTripStop startTripStop
+              endStage = OTPRest.extractStageFromTripStop endTripStop
+              startIsStageStop = OTPRest.extractIsStageStopFromTripStop startTripStop
+              endIsStageStop = OTPRest.extractIsStageStopFromTripStop endTripStop
+          case (startStage, endStage) of
+            (Just startStageNum, Just endStageNum) -> do
+              let stage = abs (endStageNum - startStageNum)
+              logDebug $ "isStageStop flags: startStop=" <> show startIsStageStop <> " endStop=" <> show endIsStageStop
+              let adjustedStage = case endIsStageStop of
+                    Just True -> stage - 1 -- Reduce stage by 1 if found, but ensure minimum is 1
+                    _ -> stage -- Use original stage if not found or Nothing
+              fares <- case serviceTier of
+                Just serviceTier' -> do
+                  vehicleServiceTier <- QFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId serviceTier' merchantOperatingCityId integratedBPPConfig.id >>= fromMaybeM (InternalError $ "FRFS Vehicle Service Tier Not Found " <> show serviceTier')
+                  maybeToList <$> QQFRFSGtfsStageFare.findOneByVehicleTypeAndStageAndMerchantOperatingCityIdAndVehicleServiceTierId vehicleType (max 0 adjustedStage) merchantOperatingCityId vehicleServiceTier.id
+                Nothing -> QFRFSGtfsStageFare.findAllByVehicleTypeAndStageAndMerchantOperatingCityId vehicleType (max 0 adjustedStage) merchantOperatingCityId
+              forM fares $ \fare -> do
+                vehicleServiceTier <- QFRFSVehicleServiceTier.findById fare.vehicleServiceTierId >>= fromMaybeM (InternalError $ "FRFS Vehicle Service Tier Not Found " <> fare.vehicleServiceTierId.getId)
+                let price = Price {amountInt = round (fare.amount + fromMaybe 0 fare.cessCharge), amount = fare.amount + fromMaybe 0 fare.cessCharge, currency = fare.currency}
+                categoriesWithEligibility <- getFRFSTicketCategoryWithEligibility merchantOperatingCityId vehicleType riderId fare.discountIds
+                logDebug $ "categoriesWithEligibility: " <> show categoriesWithEligibility <> " fare: " <> show fare <> " price: " <> show price <> " vehicleServiceTier: " <> show vehicleServiceTier <> " fare.discountIds: "
+                return $
+                  FRFSFare
+                    { farePolicyId = Nothing,
+                      price = price,
+                      childPrice = Nothing,
+                      categories = map (mkCategory price) categoriesWithEligibility,
+                      fareDetails = Nothing,
+                      vehicleServiceTier =
+                        FRFSVehicleServiceTier
+                          { serviceTierType = vehicleServiceTier._type,
+                            serviceTierProviderCode = vehicleServiceTier.providerCode,
+                            serviceTierShortName = vehicleServiceTier.shortName,
+                            serviceTierDescription = vehicleServiceTier.description,
+                            serviceTierLongName = vehicleServiceTier.longName,
+                            isAirConditioned = vehicleServiceTier.isAirConditioned
+                          }
+                    }
+            _ -> return [] -- No stage information available
+        _ -> return [] -- Start or end stop not found in trip
+    Nothing -> return [] -- Trip details not found
 
 getFares :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EsqDBReplicaFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Id DP.Person -> Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> IntegratedBPPConfig -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> Text -> Text -> Text -> m [FRFSFare]
 getFares riderId vehicleType serviceTier integratedBPPConfig merchantId merchantOperatingCityId routeCode startStopCode endStopCode = do
