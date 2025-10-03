@@ -55,7 +55,8 @@ data ONDCBecknConfig = ONDCBecknConfig
     fareCachingAllowed :: Maybe Bool,
     singleTicketForMultiplePassengers :: Maybe Bool,
     mergeQuoteCriteria :: Maybe MergeQuoteCriteria,
-    routeBasedQuoteSelection :: Maybe Bool
+    routeBasedQuoteSelection :: Maybe Bool,
+    providerInfo :: Maybe ProviderLevelInfo
   }
   deriving stock (Eq, Generic)
   deriving anyclass (FromJSON, ToJSON)
@@ -85,3 +86,14 @@ data CRISConfig = CRISConfig
 
 instance Show CRISConfig where
   show _ = "CRISConfig"
+
+data ProviderLevelInfo = ProviderLevelInfo
+  { providerId :: Text,
+    providerName :: Maybe Text,
+    oneWayTicketLimit :: Int,
+    roundTripTicketLimit :: Int,
+    isCancellationAllowed :: Bool,
+    bookingEndTime :: UTCTime,
+    bookingStartTime :: UTCTime
+  }
+  deriving (Generic, FromJSON, ToJSON, Show, ToSchema, Eq)
