@@ -1038,7 +1038,8 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking booking' = do
       personEmail <- mapM decrypt person.email
       personPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
       isSplitEnabled_ <- Payment.getIsSplitEnabled merchantId_ merchantOperatingCityId Nothing (getPaymentType booking.vehicleType)
-      splitSettlementDetails <- Payment.mkSplitSettlementDetails isSplitEnabled_ paymentOrder.amount []
+      isPercentageSplitEnabled <- Payment.getIsPercentageSplit merchantId_ merchantOperatingCityId Nothing (getPaymentType booking.vehicleType)
+      splitSettlementDetails <- Payment.mkSplitSettlementDetails isSplitEnabled_ paymentOrder.amount [] isPercentageSplitEnabled
       let createOrderReq =
             Payment.CreateOrderReq
               { orderId = paymentOrder.id.getId,
