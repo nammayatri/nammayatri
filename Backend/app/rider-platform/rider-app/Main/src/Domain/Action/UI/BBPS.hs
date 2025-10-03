@@ -102,7 +102,7 @@ postBbpsCreateOrder (mbPersonId, merchantId) req = do
             DBBPS.updatedAt = now
           }
   isSplitEnabled <- Payment.getIsSplitEnabled merchantId person.merchantOperatingCityId Nothing Payment.BBPS
-  splitSettlementDetails <- Payment.mkSplitSettlementDetails isSplitEnabled bbpsAmount []
+  splitSettlementDetails <- Payment.mkSplitSettlementDetails isSplitEnabled bbpsAmount [] False
   let createOrderReq =
         Payment.CreateOrderReq
           { orderId = req.bbpsTxnId,

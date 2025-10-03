@@ -16,6 +16,7 @@ import Domain.Types.Plan as Plan
 import qualified Domain.Types.SubscriptionConfig as DSC
 import Domain.Types.TransporterConfig
 import Kernel.Beam.Functions as B
+import Kernel.External.Payment.Interface.Types (SplitSettlementDetails (..))
 import qualified Kernel.External.Payment.Interface.Types as PaymentInterface
 import qualified Kernel.External.Payment.Juspay.Types as JuspayTypes
 import Kernel.Prelude
@@ -131,6 +132,10 @@ buildExecutionRequestAndInvoice driverFee notification executionDate subscriptio
           logError ("Execution failed for driverFeeId : " <> invoice.driverFeeId.getId <> " error : " <> show err)
           return Nothing
         Right splitSettlementDetails -> do
+          let splitSettlementDetailsAmount = case splitSettlementDetails of
+                Nothing -> Nothing
+                Just (AmountBased details) -> Just details
+                Just (PercentageBased _) -> Nothing
           let executionRequest =
                 PaymentInterface.MandateExecutionReq
                   { orderId = invoice.invoiceShortId,
@@ -139,7 +144,7 @@ buildExecutionRequestAndInvoice driverFee notification executionDate subscriptio
                     notificationId = notification.shortId,
                     mandateId = mandateId.getId,
                     executionDate,
-                    splitSettlementDetails = splitSettlementDetails
+                    splitSettlementDetails = splitSettlementDetailsAmount
                   }
           return $
             Just

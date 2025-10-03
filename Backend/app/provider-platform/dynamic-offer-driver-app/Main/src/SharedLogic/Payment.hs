@@ -153,11 +153,12 @@ mkSplitSettlementDetails vendorFees totalAmount = do
     throwError (InternalError "Marketplace amount is negative")
   return $
     Just $
-      SplitSettlementDetails
-        { marketplace = Marketplace marketplaceAmount,
-          mdrBorneBy = ALL,
-          vendor = Vendor vendorSplits
-        }
+      AmountBased $
+        SplitSettlementDetailsAmount
+          { marketplace = Marketplace marketplaceAmount,
+            mdrBorneBy = ALL,
+            vendor = Vendor vendorSplits
+          }
   where
     computeSplit uniqueId feesForVendor =
       case feesForVendor of
