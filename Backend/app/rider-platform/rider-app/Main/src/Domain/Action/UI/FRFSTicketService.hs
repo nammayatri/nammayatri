@@ -65,6 +65,7 @@ import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified Lib.Payment.Storage.Queries.PaymentTransaction as QPaymentTransaction
 import qualified Lib.Payment.Storage.Queries.Refunds as QRefunds
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
+import SharedLogic.External.Nandi.Types (StopInfo (..), StopSchedule (..))
 import SharedLogic.FRFSUtils
 import SharedLogic.FRFSUtils as FRFSUtils
 import qualified SharedLogic.FRFSUtils as Utils
@@ -79,7 +80,6 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.Person as CQP
-import qualified Storage.CachedQueries.RouteStopTimeTable as QRouteStopTimeTable
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import qualified Storage.Queries.FRFSRecon as QFRFSRecon
@@ -193,18 +193,16 @@ getFrfsRoute (_personId, _mId) routeCode mbIntegratedBPPConfigId _platformType _
   stops <-
     if isJust firstStop
       then do
-        -- now <- getCurrentTime
-        -- let currentTimeOfDay = utcToTimeOfDay now
-        allSchedules <- QRouteStopTimeTable.findByRouteCodeAndStopCode integratedBPPConfig integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId [route.code] (fromJust firstStop).stopCode True
-        -- TODO: Do we actually need to filter based on time. Timetable api we have for this.
-        -- let futureSchedules = filter (\schedule -> schedule.timeOfDeparture > currentTimeOfDay) allSchedules
-        --     sortedFutureSchedules = sortBy (compare `on` (.timeOfDeparture)) futureSchedules
-        let frfsSchedule = listToMaybe allSchedules
-        tripInfo' <- maybe (pure Nothing) (\schedule -> OTPRest.getNandiTripInfo integratedBPPConfig schedule.tripId.getId) frfsSchedule
-        case tripInfo' of
+        -- Use the new getExampleTrip API to get trip details directly
+        tripDetails <- OTPRest.getExampleTrip integratedBPPConfig route.code
+        case tripDetails of
           Just tripInfo -> do
-            let stopSchedules = tripInfo.schedule
-                stopInfos = tripInfo.stops
+            -- Convert TripStopDetail to the format expected by the existing logic
+            let tripStops = tripInfo.stops
+                -- Create schedule-like data from TripStopDetail
+                stopSchedules = map (\stop -> StopSchedule stop.stopCode stop.scheduledArrival stop.scheduledDeparture stop.stopPosition) tripStops
+                -- Create stop info-like data from TripStopDetail using the new fields
+                stopInfos = map (\stop -> StopInfo stop.stopId stop.stopCode (fromMaybe stop.stopCode stop.stopName) stop.stopPosition stop.lat stop.lon) tripStops
                 hashmapSchedule = HashMap.fromList $ map (\stop -> (stop.stopCode, stop)) stopSchedules
                 hashmapStop = HashMap.fromList $ map (\stop -> (stop.stopCode, stop)) stopInfos
             foldM

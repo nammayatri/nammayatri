@@ -105,3 +105,12 @@ getNandiTripInfo baseUrl tripId = do
       Left err -> do
         logError $ "Error getting trip info: " <> show err
         pure Nothing
+
+getExampleTrip :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c) => BaseUrl -> Text -> Text -> m (Maybe TripDetails)
+getExampleTrip baseUrl gtfsId routeId = do
+  withShortRetry $
+    callAPI baseUrl (NandiAPI.getNandiExampleTrip gtfsId routeId) "getExampleTrip" NandiAPI.nandiExampleTripAPI >>= \case
+      Right response -> pure (Just response)
+      Left err -> do
+        logError $ "Error getting example trip: " <> show err
+        pure Nothing

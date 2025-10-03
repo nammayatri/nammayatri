@@ -4,6 +4,8 @@ module SharedLogic.External.Nandi.Types where
 
 import qualified BecknV2.FRFS.Enums
 import Data.Aeson
+import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
 import Domain.Types.Station
 import qualified Kernel.External.Maps.Types
 import Kernel.Prelude
@@ -227,3 +229,101 @@ data GtfsGraphQLRequest = GtfsGraphQLRequest
     feedId :: Text
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema, Show)
+
+data ExtraInfo = ExtraInfo
+  { fareStageNumber :: Maybe Text,
+    providerStopCode :: Maybe Text,
+    isStageStop :: Maybe Bool
+  }
+  deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
+
+-- Replace single quotes with double quotes
+sanitizeJsonQuotes :: Text -> Text
+sanitizeJsonQuotes = T.replace "'" "\""
+
+data TripStopDetail = TripStopDetail
+  { stopId :: Text,
+    stopCode :: Text,
+    stopName :: Maybe Text,
+    platformCode :: Maybe Text,
+    lat :: Double,
+    lon :: Double,
+    scheduledArrival :: Int,
+    scheduledDeparture :: Int,
+    extraInfo :: Maybe ExtraInfo,
+    stopPosition :: Int
+  }
+  deriving (Generic, Show, ToSchema)
+
+instance FromJSON TripStopDetail where
+  parseJSON = withObject "TripStopDetail" $ \obj -> do
+    headsignParser <- do
+      mHeadsignText <- obj .:? "headsign"
+      case mHeadsignText of
+        Nothing -> pure Nothing
+        Just headsignText -> do
+          let sanitized = sanitizeJsonQuotes headsignText
+          -- Try to parse headsign as JSON first
+          case eitherDecodeStrict (TE.encodeUtf8 sanitized) of
+            Right (Object headsignObj) -> do
+              -- Parse as ExtraInfo object
+              extraInfo <- parseJSON (Object headsignObj)
+              pure (Just extraInfo)
+            Right (String jsonString) -> do
+              -- The JSON string contains another JSON object, parse that
+              case eitherDecodeStrict (TE.encodeUtf8 (sanitizeJsonQuotes jsonString)) of
+                Right (Object headsignObj) -> do
+                  extraInfo <- parseJSON (Object headsignObj)
+                  pure (Just extraInfo)
+                _ -> do
+                  -- Fallback: treat as simple text for fareStageNumber
+                  pure (Just (ExtraInfo (Just headsignText) Nothing Nothing))
+            _ -> do
+              -- Fallback: treat as simple text for fareStageNumber
+              pure (Just (ExtraInfo (Just headsignText) Nothing Nothing))
+
+    TripStopDetail
+      <$> obj .: "stopId"
+      <*> obj .: "stopCode"
+      <*> obj .:? "stopName"
+      <*> obj .:? "platformCode"
+      <*> obj .: "lat"
+      <*> obj .: "lon"
+      <*> obj .: "scheduledArrival"
+      <*> obj .: "scheduledDeparture"
+      <*> pure headsignParser
+      <*> obj .: "stopPosition"
+
+instance ToJSON TripStopDetail where
+  toJSON (TripStopDetail stopId stopCode stopName platformCode lat lon scheduledArrival scheduledDeparture extraInfo stopPosition) =
+    object
+      [ "stopId" .= stopId,
+        "stopCode" .= stopCode,
+        "stopName" .= stopName,
+        "platformCode" .= platformCode,
+        "lat" .= lat,
+        "lon" .= lon,
+        "scheduledArrival" .= scheduledArrival,
+        "scheduledDeparture" .= scheduledDeparture,
+        "extraInfo" .= extraInfo,
+        "stopPosition" .= stopPosition
+      ]
+
+data TripDetails = TripDetails
+  { tripId :: Text,
+    stops :: [TripStopDetail]
+  }
+  deriving (Generic, Show, ToSchema)
+
+instance FromJSON TripDetails where
+  parseJSON = withObject "TripDetails" $ \obj ->
+    TripDetails
+      <$> obj .: "tripId"
+      <*> obj .: "stops"
+
+instance ToJSON TripDetails where
+  toJSON (TripDetails tripId stops) =
+    object
+      [ "tripId" .= tripId,
+        "stops" .= stops
+      ]
