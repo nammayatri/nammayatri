@@ -232,7 +232,7 @@ getTimetableStop (mbPersonId, mid) routeCode fromStopCode mbToCode mbVehicleType
           (pure [routeCode])
           (\toCode -> JourneyUtils.getRouteCodesFromTo fromStopCode toCode integratedBPPConfig)
           mbToCode
-      staticTimetable <- GRSM.findByRouteCodeAndStopCode integratedBPPConfig mid person.merchantOperatingCityId routeCodes fromStopCode
+      staticTimetable <- GRSM.findByRouteCodeAndStopCode integratedBPPConfig mid person.merchantOperatingCityId routeCodes fromStopCode False
       liveSubWayTimings <- JourneyUtils.fetchLiveSubwayTimings routeCodes fromStopCode currentTime integratedBPPConfig mid person.merchantOperatingCityId
       let liveSubWayTrips = map (.tripId.getId) liveSubWayTimings
       let allTrips = liveSubWayTimings ++ filter (\trip -> trip.tripId.getId `notElem` liveSubWayTrips) staticTimetable

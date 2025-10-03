@@ -44,8 +44,9 @@ findByRouteCodeAndStopCode ::
   [Text] ->
   [Text] ->
   VehicleCategory ->
+  Bool ->
   m [RouteStopTimeTable]
-findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCodes stopCodes vehicleCategory = do
+findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCodes stopCodes vehicleCategory needOnlyOneTrip = do
   concatMapM
     ( \stopCode -> do
         let variables =
@@ -61,7 +62,8 @@ findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCode
             logError $ "GraphQL query failed: " <> show err
             pure []
           Right response -> do
-            concatMapM (parseToRouteStopTimeTable integratedBPPConfig.id merchantId merchantOpId vehicleCategory) response.routeStopTimeTables
+            let filteredRouteStopTimeTables = if needOnlyOneTrip then take 1 response.routeStopTimeTables else response.routeStopTimeTables
+            concatMapM (parseToRouteStopTimeTable integratedBPPConfig.id merchantId merchantOpId vehicleCategory) filteredRouteStopTimeTables
     )
     stopCodes
 

@@ -231,7 +231,7 @@ fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid moci
         return (flattenedLiveRouteStopTimes, routesWithoutBuses)
       else do
         return ([], routeCodes)
-  staticRouteStopTimes <- measureLatency (GRSM.findByRouteCodeAndStopCode integratedBppConfig mid mocid routesWithoutBuses stopCode) "fetch route stop timing through graphql"
+  staticRouteStopTimes <- measureLatency (GRSM.findByRouteCodeAndStopCode integratedBppConfig mid mocid routesWithoutBuses stopCode False) "fetch route stop timing through graphql"
   return $ flattenedLiveRouteStopTimes ++ staticRouteStopTimes
   where
     processRoute routeWithBuses = do
@@ -315,7 +315,7 @@ fetchLiveSubwayTimings routeCodes stopCode currentTime integratedBppConfig mid m
   let routeStopTimes = concatMap processRoute allRouteWithTrains
   if not (null routeStopTimes)
     then return routeStopTimes
-    else measureLatency (GRSM.findByRouteCodeAndStopCode integratedBppConfig mid mocid routeCodes stopCode) "fetch route stop timing through graphql"
+    else measureLatency (GRSM.findByRouteCodeAndStopCode integratedBppConfig mid mocid routeCodes stopCode False) "fetch route stop timing through graphql"
   where
     processRoute routeWithTrains =
       let filteredTrains = filter (\train -> train.stationCode == stopCode) (routeWithTrains.trains)
@@ -366,7 +366,7 @@ fetchLiveTimings ::
 fetchLiveTimings routeCodes stopCode currentTime integratedBppConfig mid mocid vc useLiveBusData = case vc of
   -- Enums.SUBWAY -> fetchLiveSubwayTimings routeCodes stopCode currentTime integratedBppConfig mid mocid -- Removed this for now.
   Enums.BUS -> fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid mocid useLiveBusData
-  _ -> measureLatency (GRSM.findByRouteCodeAndStopCode integratedBppConfig mid mocid routeCodes stopCode) "fetch route stop timing through graphql"
+  _ -> measureLatency (GRSM.findByRouteCodeAndStopCode integratedBppConfig mid mocid routeCodes stopCode False) "fetch route stop timing through graphql"
 
 type RouteCodeText = Text
 
