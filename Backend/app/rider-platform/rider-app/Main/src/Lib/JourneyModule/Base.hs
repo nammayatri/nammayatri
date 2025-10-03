@@ -37,7 +37,7 @@ import qualified Domain.Types.RiderConfig
 import qualified Domain.Types.RouteDetails as DRouteDetails
 import qualified Domain.Types.Trip as DTrip
 import Environment
-import EulerHS.Prelude (safeHead)
+import EulerHS.Prelude (safeHead, whenNothing_)
 import Kernel.External.Maps.Google.MapsClient.Types as Maps
 import Kernel.External.Maps.Types
 import qualified Kernel.External.MultiModal.Interface as KMultiModal
@@ -223,7 +223,14 @@ getLegInfo personId journeyLeg = do
     Just legSearchIdText -> do
       let legSearchId = Id legSearchIdText
       case journeyLeg.mode of
-        DTrip.Taxi -> JL.getInfo $ TaxiLegRequestGetInfo $ TaxiLegRequestGetInfoData {searchId = cast legSearchId, journeyLeg}
+        DTrip.Taxi -> do
+          legInfo <- JL.getInfo $ TaxiLegRequestGetInfo $ TaxiLegRequestGetInfoData {searchId = cast legSearchId, journeyLeg}
+          whenNothing_ legInfo $ do
+            let journeyId = journeyLeg.journeyId
+            journey <- QJourney.findByPrimaryKey journeyId >>= fromMaybeM (JourneyNotFound journeyId.getId)
+            legs <- QJourneyLeg.getJourneyLegs journeyId
+            void $ markJourneyComplete journey legs
+          return legInfo
         DTrip.Walk -> JL.getInfo $ WalkLegRequestGetInfo $ WalkLegRequestGetInfoData {journeyLeg = journeyLeg, personId}
         DTrip.Metro -> JL.getInfo $ MetroLegRequestGetInfo $ MetroLegRequestGetInfoData {searchId = cast legSearchId, journeyLeg = journeyLeg}
         DTrip.Subway -> JL.getInfo $ SubwayLegRequestGetInfo $ SubwayLegRequestGetInfoData {searchId = cast legSearchId, journeyLeg = journeyLeg}
@@ -1427,3 +1434,20 @@ isTaxiLegOngoing journeyLeg = do
       mbBooking <- QBooking.findByTransactionIdAndStatus legSearchId DBooking.activeBookingStatus
       return $ isJust mbBooking
     _ -> return False
+
+markJourneyComplete :: DJourney.Journey -> [DJourneyLeg.JourneyLeg] -> Flow [JL.JourneyLegState]
+markJourneyComplete journey legs = do
+  cancelOngoingTaxiLegs legs
+  now <- getCurrentTime
+  mapM_ (\leg -> markAllSubLegsCompleted leg now) legs
+  updatedLegStatus <- getAllLegsStatus journey
+  checkAndMarkTerminalJourneyStatus journey updatedLegStatus
+  return updatedLegStatus
+  where
+    -- Helper function to mark all sub-legs as completed for FRFS legs
+    markAllSubLegsCompleted :: (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m) => DJourneyLeg.JourneyLeg -> UTCTime -> m ()
+    markAllSubLegsCompleted journeyLeg trackingStatusUpdateTime = do
+      let subLegOrders = map (\r -> fromMaybe 1 r.subLegOrder) journeyLeg.routeDetails
+      case subLegOrders of
+        [] -> markLegStatus (Just JL.Completed) (Just JMState.Finished) journeyLeg Nothing trackingStatusUpdateTime
+        orders -> mapM_ (\subOrder -> markLegStatus (Just JL.Completed) (Just JMState.Finished) journeyLeg (Just subOrder) trackingStatusUpdateTime) orders
