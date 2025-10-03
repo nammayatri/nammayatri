@@ -55,8 +55,6 @@ findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCode
                   Client.stopId = stopCode
                 }
         result <- Client.executeRouteStopTimeTableQuery integratedBPPConfig variables needOnlyOneTrip
-        logDebug $ "GraphQL query result: " <> show result
-
         case result of
           Left err -> do
             logError $ "GraphQL query failed: " <> show err
