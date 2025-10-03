@@ -34,10 +34,11 @@ getTrackVehicles ::
     Kernel.Prelude.Maybe (Kernel.Types.Id.Id DIBC.IntegratedBPPConfig) ->
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
     Kernel.Prelude.Maybe DIBC.PlatformType ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Text ->
     Kernel.Prelude.Maybe Spec.VehicleCategory ->
     Environment.Flow TrackRoute.TrackingResp
   )
-getTrackVehicles (mbPersonId, merchantId) routeCode mbCurrentLat mbCurrentLon mbIntegratedBPPConfigId mbMaxBuses mbPlatformType mbVehicleType = do
+getTrackVehicles (mbPersonId, merchantId) routeCode mbCurrentLat mbCurrentLon mbIntegratedBPPConfigId mbMaxBuses mbPlatformType mbSelectedStopId mbVehicleType = do
   let vehicleType = fromMaybe Spec.BUS mbVehicleType
       maxBuses = fromMaybe 5 mbMaxBuses
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
@@ -62,14 +63,20 @@ getTrackVehicles (mbPersonId, merchantId) routeCode mbCurrentLat mbCurrentLon mb
         Nothing -> getTrackWithoutCurrentLocation personId personCityInfo vehicleType maxBuses riderConfig
         Just stop -> do
           vehicleTracking <- trackVehicles personId merchantId personCityInfo.merchantOperatingCityId vehicleType routeCode (fromMaybe DIBC.APPLICATION mbPlatformType) (Just currentLocation) (Just integratedBPPConfig.id)
-          let sortedTracking = sortOn (distanceToStop stop) vehicleTracking
+          let vehiclesYetToReachSelectedStop = filterVehiclesYetToReachSelectedStop vehicleTracking
+          let (confirmedHighBuses, ghostBuses) = List.partition (\a -> (a.vehicleInfo >>= (.routeState)) == Just CQMMB.ConfirmedHigh) vehiclesYetToReachSelectedStop
+          let sortedTracking = sortOn (distanceToStop stop) ghostBuses
           pure $
             TrackRoute.TrackingResp
               { vehicleTrackingInfo =
-                  map mkVehicleTrackingResponse (take maxBuses sortedTracking)
+                  map mkVehicleTrackingResponse (confirmedHighBuses <> take maxBuses sortedTracking)
               }
     _ -> getTrackWithoutCurrentLocation personId personCityInfo vehicleType maxBuses riderConfig
   where
+    filterVehiclesYetToReachSelectedStop vehicleTracking =
+      case mbSelectedStopId of
+        Just selectedStopId -> filter (\a -> any (\u -> u.stopCode == selectedStopId) a.upcomingStops) vehicleTracking
+        Nothing -> vehicleTracking
     getTrackWithoutCurrentLocation personId personCityInfo vehicleType maxBuses riderConfig = do
       vehicleTracking <- trackVehicles personId merchantId personCityInfo.merchantOperatingCityId vehicleType routeCode (fromMaybe DIBC.APPLICATION mbPlatformType) Nothing mbIntegratedBPPConfigId
       let trackVehicleKey = mkTrackVehicleKey routeCode vehicleType
@@ -78,9 +85,11 @@ getTrackVehicles (mbPersonId, merchantId) routeCode mbCurrentLat mbCurrentLon mb
         map mkVehicleTrackingResponse
           <$> case cachedResp of
             Just resp -> do
-              pure $ filter (\vt -> vt.vehicleId `elem` resp) vehicleTracking
+              let vehiclesYetToReachSelectedStop = filterVehiclesYetToReachSelectedStop vehicleTracking
+              pure $ filter (\vt -> vt.vehicleId `elem` resp) vehiclesYetToReachSelectedStop
             Nothing -> do
-              let vehiclesToShow = take maxBuses vehicleTracking
+              let vehiclesYetToReachSelectedStop = filterVehiclesYetToReachSelectedStop vehicleTracking
+              let vehiclesToShow = take maxBuses vehiclesYetToReachSelectedStop
               Redis.setExp trackVehicleKey (map (.vehicleId) vehiclesToShow) (fromMaybe 900 riderConfig.trackVehicleKeyExpiry)
               pure vehiclesToShow
       pure $
