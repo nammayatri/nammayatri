@@ -65,13 +65,14 @@ executeRouteStopTimeTableQuery integratedBPPConfig vars needOnlyOneTrip = do
   case parseEither parseJSON result of
     Left err -> return $ Left err
     Right (response :: OTPResponse) -> do
-      Right . RouteStopTimeTableResponse <$> transformToTimeTableEntries response needOnlyOneTrip
+      Right . RouteStopTimeTableResponse <$> transformToTimeTableEntries vars.routeIds response needOnlyOneTrip
 
 -- Helper function to convert OTP response to our domain model
-transformToTimeTableEntries :: MonadFlow m => OTPResponse -> Bool -> m [TimetableEntry]
-transformToTimeTableEntries otpResponse needOnlyOneTrip = do
+transformToTimeTableEntries :: MonadFlow m => [Text] -> OTPResponse -> Bool -> m [TimetableEntry]
+transformToTimeTableEntries routeIds otpResponse needOnlyOneTrip = do
   now <- getCurrentTime
-  return $ map (transformEntry otpResponse.stop now) $ if needOnlyOneTrip then take 1 otpResponse.stop.stoptimesWithoutPatterns else otpResponse.stop.stoptimesWithoutPatterns
+  let desiredStopTimes = filter (\entry -> (fromMaybe entry.trip.route.gtfsId $ lastMay $ Text.splitOn ":" entry.trip.route.gtfsId) `elem` routeIds) otpResponse.stop.stoptimesWithoutPatterns
+  return $ map (transformEntry otpResponse.stop now) $ if needOnlyOneTrip then take 1 desiredStopTimes else desiredStopTimes
 
 transformEntry :: StopData -> UTCTime -> RouteStopTimeTableEntry -> TimetableEntry
 transformEntry stopData timestamp entry = do

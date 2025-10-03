@@ -66,7 +66,7 @@ findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCode
   vehicleType <- castVehicleType integratedBPPConfig.vehicleCategory
   let routeCodes = P.map (modifyCodesToGTFS integratedBPPConfig) routeCodes'
       stopCode = modifyCodesToGTFS integratedBPPConfig stopCode'
-  routeStopTimeTable <- Hedis.safeGet (routeTimeTableKey stopCode needOnlyOneTrip)
+  routeStopTimeTable <- Hedis.safeGet (routeTimeTableKey stopCode routeCodes needOnlyOneTrip)
   allTrips <-
     case (routeStopTimeTable, vehicleType == BecknV2.FRFS.Enums.SUBWAY) of
       (Just a, False) -> do
@@ -83,20 +83,19 @@ findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCode
                     stopCodes@(_ : _) -> pure stopCodes
               _ -> pure [stopCode']
         allTrips <- Queries.findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCodes' stopCodes vehicleType needOnlyOneTrip
-        logDebug $ "Fetched route stop time table graphql: " <> show allTrips <> " for routeCodes:" <> show routeCodes <> " and stopCode:" <> show stopCode
-        unless (P.null allTrips) $ cacheRouteStopTimeInfo stopCode allTrips needOnlyOneTrip
+        unless (P.null allTrips) $ cacheRouteStopTimeInfo stopCode routeCodes allTrips needOnlyOneTrip
         pure allTrips
   val <- L.getOptionLocal CalledForFare
   return $ P.filter (\trip -> (trip.routeCode `P.elem` routeCodes') || (val == Just True)) allTrips
 
-cacheRouteStopTimeInfo :: (CacheFlow m r, MonadFlow m) => Text -> [RouteStopTimeTable] -> Bool -> m ()
-cacheRouteStopTimeInfo stopCode routeStopInfo needOnlyOneTrip = do
+cacheRouteStopTimeInfo :: (CacheFlow m r, MonadFlow m) => Text -> [Text] -> [RouteStopTimeTable] -> Bool -> m ()
+cacheRouteStopTimeInfo stopCode routeCodes routeStopInfo needOnlyOneTrip = do
   let expTime = 60 * 60
-  let idKey = routeTimeTableKey stopCode needOnlyOneTrip
+  let idKey = routeTimeTableKey stopCode routeCodes needOnlyOneTrip
   Hedis.setExp idKey routeStopInfo expTime
 
-routeTimeTableKey :: Text -> Bool -> Text
-routeTimeTableKey stopCode needOnlyOneTrip = "routeStop-time-table:" <> stopCode <> ":" <> show needOnlyOneTrip
+routeTimeTableKey :: Text -> [Text] -> Bool -> Text
+routeTimeTableKey stopCode routeCodes needOnlyOneTrip = "routeStop-time-table:" <> stopCode <> ":" <> Text.intercalate ":" routeCodes <> ":" <> show needOnlyOneTrip
 
 data CalledForFare = CalledForFare
   deriving stock (Generic, Typeable, Show, Eq)
