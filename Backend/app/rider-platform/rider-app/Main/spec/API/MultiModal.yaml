@@ -74,6 +74,7 @@ types:
     vehiclePositions: "[VehiclePosition]"
     userPosition: Maybe LatLong
     mode: MultimodalTravelMode
+    fleetNo: Maybe Text
 
   JourneyStatusResp:
     journeyStatus: Domain.Types.Journey.JourneyStatus
@@ -483,6 +484,14 @@ apis:
         vehicleNumber: Text
         vehicleType: VehicleCategory
         enableSwitchRoute: Bool
+      response:
+        type: PublicTransportData
+
+  - GET:
+      endpoint: /publicTransport/vehicleData/{vehicleType}/{vehicleNumber}
+      params:
+        vehicleType: VehicleCategory
+        vehicleNumber: Text
       response:
         type: PublicTransportData
 

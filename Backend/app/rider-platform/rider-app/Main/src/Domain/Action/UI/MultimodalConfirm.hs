@@ -19,6 +19,7 @@ module Domain.Action.UI.MultimodalConfirm
     postMultimodalTransitOptionsLite,
     postMultimodalOrderSwitchFRFSTier,
     getPublicTransportData,
+    getPublicTransportVehicleData,
     getMultimodalOrderGetLegTierOptions,
     postMultimodalPaymentUpdateOrder,
     postMultimodalOrderSublegSetStatus,
@@ -646,6 +647,21 @@ postMultimodalTransitOptionsLite (mbPersonId, merchantId) req = do
   userPreferences <- getMultimodalUserPreferences (mbPersonId, merchantId)
   JM.getMultiModalTransitOptions userPreferences merchantId personCityInfo.merchantOperatingCityId req
 
+getPublicTransportVehicleData ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    VehicleCategory ->
+    Kernel.Prelude.Text ->
+    Environment.Flow API.Types.UI.MultimodalConfirm.PublicTransportData
+  )
+getPublicTransportVehicleData (mbPersonId, merchantId) vehicleType vehicleNumber = do
+  case vehicleType of
+    BUS -> getPublicTransportDataImpl (mbPersonId, merchantId) Nothing Nothing Nothing (Just vehicleNumber) (Just BUS) True
+    _ -> throwError (InvalidRequest $ "Invalid vehicle type: " <> show vehicleType)
+
+-- todo: segregate these APIs properly.
+
 getPublicTransportData ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
@@ -658,6 +674,21 @@ getPublicTransportData ::
     Environment.Flow API.Types.UI.MultimodalConfirm.PublicTransportData
   )
 getPublicTransportData (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _mbConfigVersion mbVehicleNumber mbVehicleType = do
+  getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _mbConfigVersion mbVehicleNumber mbVehicleType False
+
+getPublicTransportDataImpl ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    Kernel.Prelude.Maybe Kernel.Types.Beckn.Context.City ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Bool ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+    Kernel.Prelude.Maybe VehicleCategory ->
+    Kernel.Prelude.Bool ->
+    Environment.Flow API.Types.UI.MultimodalConfirm.PublicTransportData
+  )
+getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _mbConfigVersion mbVehicleNumber mbVehicleType sendAllUpcomingTrips = do
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
   person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   mbRequestCity <- maybe (pure Nothing) (CQMOC.findByMerchantIdAndCity merchantId) mbCity
@@ -686,8 +717,8 @@ getPublicTransportData (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _mbCo
       Nothing -> return Nothing
 
   let mbOppositeTripDetails :: Maybe [NandiTypes.BusScheduleTrip] =
-        case mbEnableSwitchRoute of
-          Just True -> do
+        case (mbEnableSwitchRoute, sendAllUpcomingTrips) of
+          (Just True, False) -> do
             mbVehicleLiveRouteInfo
               <&> \(_, vehicleLiveRouteInfo) -> do
                 ( \tripsSortedOnStopCount ->
@@ -699,6 +730,7 @@ getPublicTransportData (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _mbCo
                       else take 1 tripsSortedOnStopCount
                   )
                   $ sortOn (Down . (.stops_count)) $ filter (\remainingTrip -> remainingTrip.route_number == vehicleLiveRouteInfo.routeNumber && Just remainingTrip.route_id /= vehicleLiveRouteInfo.routeCode) (fromMaybe [] vehicleLiveRouteInfo.remaining_trip_details)
+          (Just True, True) -> mbVehicleLiveRouteInfo >>= \(_, vehicleLiveRouteInfo) -> vehicleLiveRouteInfo.remaining_trip_details
           _ -> Nothing
 
   busStationListHackEnabled <- fromMaybe False . (>>= readMaybe) <$> (liftIO $ lookupEnv "BUS_STATION_LIST_HACK_ENABLED")

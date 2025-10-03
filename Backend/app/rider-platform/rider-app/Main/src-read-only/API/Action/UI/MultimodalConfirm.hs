@@ -311,6 +311,18 @@ type API =
            '[JSON]
            API.Types.UI.MultimodalConfirm.PublicTransportData
       :<|> TokenAuth
+      :> "publicTransport"
+      :> "vehicleData"
+      :> Capture
+           "vehicleType"
+           BecknV2.FRFS.Enums.VehicleCategory
+      :> Capture
+           "vehicleNumber"
+           Kernel.Prelude.Text
+      :> Get
+           '[JSON]
+           API.Types.UI.MultimodalConfirm.PublicTransportData
+      :<|> TokenAuth
       :> "multimodal"
       :> Capture
            "journeyId"
@@ -496,7 +508,7 @@ type API =
   )
 
 handler :: Environment.FlowServer API
-handler = postMultimodalInitiate :<|> postMultimodalConfirm :<|> getMultimodalBookingInfo :<|> getMultimodalBookingPaymentStatus :<|> postMultimodalPaymentUpdateOrder :<|> postMultimodalSwitch :<|> postMultimodalJourneyLegSkip :<|> postMultimodalJourneyLegAddSkippedLeg :<|> postMultimodalExtendLeg :<|> postMultimodalExtendLegGetfare :<|> getMultimodalJourneyStatus :<|> postMultimodalJourneyCancel :<|> postMultimodalRiderLocation :<|> postMultimodalOrderSwitchTaxi :<|> postMultimodalOrderSwitchFRFSTier :<|> getMultimodalOrderSimilarJourneyLegs :<|> postMultimodalOrderSwitchJourneyLeg :<|> postMultimodalJourneyFeedback :<|> getMultimodalFeedback :<|> getMultimodalUserPreferences :<|> postMultimodalUserPreferences :<|> postMultimodalTransitOptionsLite :<|> getPublicTransportData :<|> getMultimodalOrderGetLegTierOptions :<|> postMultimodalOrderSublegSetOnboardedVehicleDetails :<|> postMultimodalOrderSublegSetStatus :<|> postMultimodalOrderSublegSetTrackingStatus :<|> postMultimodalComplete :<|> postMultimodalTicketVerify :<|> postMultimodalOrderSoftCancel :<|> getMultimodalOrderCancelStatus :<|> postMultimodalOrderCancel :<|> postMultimodalOrderChangeStops :<|> postMultimodalRouteAvailability :<|> postMultimodalSwitchRoute :<|> postMultimodalSetRouteName
+handler = postMultimodalInitiate :<|> postMultimodalConfirm :<|> getMultimodalBookingInfo :<|> getMultimodalBookingPaymentStatus :<|> postMultimodalPaymentUpdateOrder :<|> postMultimodalSwitch :<|> postMultimodalJourneyLegSkip :<|> postMultimodalJourneyLegAddSkippedLeg :<|> postMultimodalExtendLeg :<|> postMultimodalExtendLegGetfare :<|> getMultimodalJourneyStatus :<|> postMultimodalJourneyCancel :<|> postMultimodalRiderLocation :<|> postMultimodalOrderSwitchTaxi :<|> postMultimodalOrderSwitchFRFSTier :<|> getMultimodalOrderSimilarJourneyLegs :<|> postMultimodalOrderSwitchJourneyLeg :<|> postMultimodalJourneyFeedback :<|> getMultimodalFeedback :<|> getMultimodalUserPreferences :<|> postMultimodalUserPreferences :<|> postMultimodalTransitOptionsLite :<|> getPublicTransportData :<|> getPublicTransportVehicleData :<|> getMultimodalOrderGetLegTierOptions :<|> postMultimodalOrderSublegSetOnboardedVehicleDetails :<|> postMultimodalOrderSublegSetStatus :<|> postMultimodalOrderSublegSetTrackingStatus :<|> postMultimodalComplete :<|> postMultimodalTicketVerify :<|> postMultimodalOrderSoftCancel :<|> getMultimodalOrderCancelStatus :<|> postMultimodalOrderCancel :<|> postMultimodalOrderChangeStops :<|> postMultimodalRouteAvailability :<|> postMultimodalSwitchRoute :<|> postMultimodalSetRouteName
 
 postMultimodalInitiate ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
@@ -724,6 +736,16 @@ getPublicTransportData ::
     Environment.FlowHandler API.Types.UI.MultimodalConfirm.PublicTransportData
   )
 getPublicTransportData a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.getPublicTransportData (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a6) a5 a4 a3 a2 a1
+
+getPublicTransportVehicleData ::
+  ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+    ) ->
+    BecknV2.FRFS.Enums.VehicleCategory ->
+    Kernel.Prelude.Text ->
+    Environment.FlowHandler API.Types.UI.MultimodalConfirm.PublicTransportData
+  )
+getPublicTransportVehicleData a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.MultimodalConfirm.getPublicTransportVehicleData (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a3) a2 a1
 
 getMultimodalOrderGetLegTierOptions ::
   ( ( Kernel.Types.Id.Id Domain.Types.Person.Person,
