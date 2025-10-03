@@ -1698,14 +1698,17 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (_mbPersonId, _merchantId) j
                   case (routeDetail.fromStopCode, routeDetail.toStopCode) of
                     (Just fromStopCode, Just toStopCode) -> do
                       mbNewRoute <- tryGettingMaybe $ OTPRest.getRouteByRouteId integratedBPPConfig newRouteCode
-                      QRouteDetails.updateRoute (Just newRouteCode) (Just newRouteCode) ((.longName) <$> mbNewRoute) ((.shortName) <$> mbNewRoute) journeyLeg.id.getId
-                      fromRoute <- (tryGettingArray $ OTPRest.getRouteStopMappingByStopCodeAndRouteCode fromStopCode newRouteCode integratedBPPConfig) <&> listToMaybe
-                      toRoute <- (tryGettingArray $ OTPRest.getRouteStopMappingByStopCodeAndRouteCode toStopCode newRouteCode integratedBPPConfig) <&> listToMaybe
-                      pure $
-                        newTicket
-                          { ExternalBPP.ExternalAPI.Types.fromRouteProviderCode = maybe "NANDI" (.providerCode) fromRoute,
-                            ExternalBPP.ExternalAPI.Types.toRouteProviderCode = maybe "NANDI" (.providerCode) toRoute
-                          }
+                      case mbNewRoute of
+                        Just newRoute -> do
+                          QRouteDetails.updateRoute (Just newRouteCode) (Just newRouteCode) (Just newRoute.longName) (Just newRoute.shortName) journeyLeg.id.getId
+                          fromRoute <- (tryGettingArray $ OTPRest.getRouteStopMappingByStopCodeAndRouteCode fromStopCode newRouteCode integratedBPPConfig) <&> listToMaybe
+                          toRoute <- (tryGettingArray $ OTPRest.getRouteStopMappingByStopCodeAndRouteCode toStopCode newRouteCode integratedBPPConfig) <&> listToMaybe
+                          pure $
+                            newTicket
+                              { ExternalBPP.ExternalAPI.Types.fromRouteProviderCode = maybe "NANDI" (.providerCode) fromRoute,
+                                ExternalBPP.ExternalAPI.Types.toRouteProviderCode = maybe "NANDI" (.providerCode) toRoute
+                              }
+                        Nothing -> pure newTicket
                     _ -> pure newTicket
                 _ -> do
                   pure newTicket
