@@ -1697,10 +1697,10 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (_mbPersonId, _merchantId) j
                 Just (Just newRouteCode, routeDetail) -> do
                   case (routeDetail.fromStopCode, routeDetail.toStopCode) of
                     (Just fromStopCode, Just toStopCode) -> do
-                      mbNewRoute <- OTPRest.getRouteByRouteId integratedBPPConfig newRouteCode
+                      mbNewRoute <- tryGettingMaybe $ OTPRest.getRouteByRouteId integratedBPPConfig newRouteCode
                       QRouteDetails.updateRoute (Just newRouteCode) (Just newRouteCode) ((.longName) <$> mbNewRoute) ((.shortName) <$> mbNewRoute) journeyLeg.id.getId
-                      fromRoute <- OTPRest.getRouteStopMappingByStopCodeAndRouteCode fromStopCode newRouteCode integratedBPPConfig <&> listToMaybe
-                      toRoute <- OTPRest.getRouteStopMappingByStopCodeAndRouteCode toStopCode newRouteCode integratedBPPConfig <&> listToMaybe
+                      fromRoute <- (tryGettingArray $ OTPRest.getRouteStopMappingByStopCodeAndRouteCode fromStopCode newRouteCode integratedBPPConfig) <&> listToMaybe
+                      toRoute <- (tryGettingArray $ OTPRest.getRouteStopMappingByStopCodeAndRouteCode toStopCode newRouteCode integratedBPPConfig) <&> listToMaybe
                       pure $
                         newTicket
                           { ExternalBPP.ExternalAPI.Types.fromRouteProviderCode = maybe "NANDI" (.providerCode) fromRoute,
@@ -1722,6 +1722,22 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (_mbPersonId, _merchantId) j
         (ticket : _) -> do
           let newJourneyExpiry = addUTCTime (-19800) ticket.expiryIST
           QJourney.updateJourneyExpiryTime journey.id $ fromMaybe newJourneyExpiry (max journey.journeyExpiryTime . Just $ newJourneyExpiry)
+
+    tryGettingArray action = do
+      resp <- try @_ @SomeException action
+      case resp of
+        Right rightResp -> return rightResp
+        Left err -> do
+          logError $ "SetOnboarding OTPRest failed: " <> show err
+          return []
+
+    tryGettingMaybe action = do
+      resp <- try @_ @SomeException action
+      case resp of
+        Right rightResp -> return rightResp
+        Left err -> do
+          logError $ "SetOnboarding OTPRest failed: " <> show err
+          return Nothing
 
 convertFRFSQuoteToAvailableRoute :: DFRFSQuote.FRFSQuote -> Maybe (ApiTypes.AvailableRoute)
 convertFRFSQuoteToAvailableRoute quote = do
