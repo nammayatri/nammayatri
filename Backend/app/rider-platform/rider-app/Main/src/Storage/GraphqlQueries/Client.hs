@@ -48,8 +48,9 @@ executeRouteStopTimeTableQuery ::
   (CacheFlow m r, EsqDBFlow m r, MonadFlow m, HasShortDurationRetryCfg r c) =>
   IntegratedBPPConfig ->
   RouteStopTimeTableQueryVars ->
+  Bool ->
   m (Either String RouteStopTimeTableResponse)
-executeRouteStopTimeTableQuery integratedBPPConfig vars = do
+executeRouteStopTimeTableQuery integratedBPPConfig vars needOnlyOneTrip = do
   let query = (Data.Proxy.Proxy :: Data.Proxy.Proxy RouteStopTimeTableQuery)
   baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
   let request' =
@@ -63,13 +64,14 @@ executeRouteStopTimeTableQuery integratedBPPConfig vars = do
   result <- postGtfsGraphQL baseUrl request'
   case parseEither parseJSON result of
     Left err -> return $ Left err
-    Right (response :: OTPResponse) -> Right . RouteStopTimeTableResponse <$> transformToTimeTableEntries response
+    Right (response :: OTPResponse) -> do
+      Right . RouteStopTimeTableResponse <$> transformToTimeTableEntries response needOnlyOneTrip
 
 -- Helper function to convert OTP response to our domain model
-transformToTimeTableEntries :: MonadFlow m => OTPResponse -> m [TimetableEntry]
-transformToTimeTableEntries otpResponse = do
+transformToTimeTableEntries :: MonadFlow m => OTPResponse -> Bool -> m [TimetableEntry]
+transformToTimeTableEntries otpResponse needOnlyOneTrip = do
   now <- getCurrentTime
-  return $ map (transformEntry otpResponse.stop now) otpResponse.stop.stoptimesWithoutPatterns
+  return $ map (transformEntry otpResponse.stop now) $ if needOnlyOneTrip then take 1 otpResponse.stop.stoptimesWithoutPatterns else otpResponse.stop.stoptimesWithoutPatterns
 
 transformEntry :: StopData -> UTCTime -> RouteStopTimeTableEntry -> TimetableEntry
 transformEntry stopData timestamp entry = do
