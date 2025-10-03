@@ -9,6 +9,7 @@ module Domain.Action.Dashboard.Management.Payout
     postPayoutPayoutDriversSetBlockState,
     postPayoutPayoutUpdateVPA,
     postPayoutPayoutRefundRegistrationAmount,
+    postPayoutScheduler,
   )
 where
 
@@ -31,7 +32,7 @@ import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderDetails as DR
 import qualified Domain.Types.VehicleCategory as DV
 import qualified Environment
-import EulerHS.Prelude hiding (elem, forM_, id, length, map, mapM_, sum, whenJust)
+import EulerHS.Prelude hiding (elem, forM_, id, length, map, mapM_, minimumBy, null, sum, whenJust)
 import Kernel.Beam.Functions (runInReplica)
 import Kernel.External.Encryption (decrypt, getDbHash)
 import qualified Kernel.External.Payment.Interface as Payment
@@ -47,10 +48,17 @@ import Kernel.Types.Common
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import Kernel.Utils.Validation (runRequestValidation)
 import qualified Lib.Payment.Domain.Action as Payout
 import qualified Lib.Payment.Domain.Types.Common as DLP
 import qualified Lib.Payment.Domain.Types.PayoutOrder as PO
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
+import Lib.Scheduler
+import qualified Lib.Scheduler.JobStorageType.DB.Queries as QDBJ
+import qualified Lib.Scheduler.JobStorageType.SchedulerType as QAllJ
+import SharedLogic.Allocator (AllocatorJobType (..))
+import qualified SharedLogic.Allocator as SAllocator
+import qualified SharedLogic.DriverWalletPayout as SDWPayout
 import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -454,3 +462,80 @@ castVpaStatus vpaStatus = case vpaStatus of
   DTP.VIA_WEBHOOK -> DI.VIA_WEBHOOK
   DTP.VERIFIED_BY_USER -> DI.VERIFIED_BY_USER
   _ -> DI.MANUALLY_ADDED
+
+postPayoutScheduler ::
+  Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant ->
+  Kernel.Types.Beckn.Context.City ->
+  DTP.PayoutSchedulerReq ->
+  Environment.Flow DTP.PayoutSchedulerResp
+postPayoutScheduler merchantShortId opCity req = do
+  runRequestValidation DTP.validatePayoutSchedulerReq req
+  merchantOperatingCity <-
+    CQMOC.findByMerchantShortIdAndCity merchantShortId opCity
+      >>= fromMaybeM (MerchantOperatingCityDoesNotExist $ "merchantShortId: " <> merchantShortId.getShortId <> ", opCity: " <> show opCity)
+  now <- getCurrentTime
+  jobs :: [AnyJob AllocatorJobType] <- QAllJ.getJobByTypeAndMerchantOperatingCityId (show DriversWalletPayout) merchantOperatingCity.id
+  let jobIds = SDWPayout.getJobId <$> jobs
+  -- Logic for complete old jobs works only for DbBased jobs
+  updJobIds <- case req.completeExistingJob of
+    Just reqExistingJobId -> do
+      let existingJobId = cast @Dashboard.Common.Job @AnyJob reqExistingJobId
+      unless (existingJobId `elem` jobIds) $
+        throwError (InvalidRequest $ "Job not found: " <> existingJobId.getId)
+      QDBJ.markAsComplete existingJobId
+      -- reset batch number if job is earliest (most likely we don't have more than one job)
+      whenJust (nonEmpty jobs) $ \neJobs -> do
+        let earliestJob = minimumBy (compare `on` (\(AnyJob job) -> Lib.Scheduler.scheduledAt job)) neJobs
+        when (SDWPayout.getJobId earliestJob == existingJobId) $
+          SDWPayout.resetDriversPayoutBatchNumber merchantOperatingCity.id
+      pure $ filter (/= existingJobId) jobIds
+    Nothing -> pure jobIds
+  if req.runNewJob
+    then do
+      if null updJobIds
+        then do
+          startTime <-
+            req.startTime
+              & fromMaybeM (InvalidRequest "startTime required for run new job")
+          when (startTime <= now) $
+            throwError (InvalidRequest "Schedule job available only for future")
+          payoutPeriod <-
+            (castPayoutPeriod <$> req.payoutPeriod)
+              & fromMaybeM (InvalidRequest "payoutPeriod required for run new job")
+          let jobData =
+                SAllocator.DriversWalletPayoutJobData
+                  { merchantOperatingCityId = merchantOperatingCity.id,
+                    startTime,
+                    payoutPeriod,
+                    driversInBatch = fromMaybe 100 req.driversInBatch,
+                    eachDriverDelayMs = fromMaybe 50 req.eachDriverDelayMs,
+                    batchDelayS = fromMaybe 60 req.batchDelayS
+                  }
+          jobId <- QAllJ.createJobByTimeReturningId @_ @'DriversWalletPayout (Just merchantOperatingCity.merchantId) (Just merchantOperatingCity.id) startTime jobData
+          pure
+            DTP.PayoutSchedulerResp
+              { result = DTP.Success,
+                jobId = Just $ cast @AnyJob @Dashboard.Common.Job jobId,
+                existingJobs = cast @AnyJob @Dashboard.Common.Job <$> updJobIds
+              }
+        else
+          pure
+            DTP.PayoutSchedulerResp
+              { result = DTP.Failed,
+                jobId = Nothing,
+                existingJobs = cast @AnyJob @Dashboard.Common.Job <$> updJobIds
+              }
+    else
+      pure
+        DTP.PayoutSchedulerResp
+          { result = DTP.Success,
+            jobId = Nothing,
+            existingJobs = cast @AnyJob @Dashboard.Common.Job <$> updJobIds
+          }
+
+castPayoutPeriod :: DTP.PayoutPeriod -> SAllocator.PayoutPeriod
+castPayoutPeriod = \case
+  DTP.SinglePayout -> SAllocator.SinglePayout
+  DTP.DailyPayout days -> SAllocator.DailyPayout days
+  DTP.WeeklyPayout weeks -> SAllocator.WeeklyPayout weeks
+  DTP.MonthlyPayout months -> SAllocator.MonthlyPayout months

@@ -1,7 +1,9 @@
 imports:
   HighPrecMoney: Kernel.Types.Common
+  Milliseconds: Kernel.Types.Common
   Driver: Dashboard.Common
   Ride: Dashboard.Common
+  Job: Dashboard.Common
   LocalTime: Data.Time
   PayoutOrderStatus: Kernel.External.Payout.Juspay.Types.Payout
   Summary: Dashboard.Common
@@ -134,6 +136,14 @@ apis:
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS PAYOUT_MANAGEMENT
 
+  - POST: # payout scheduler
+      endpoint: /scheduler
+      auth: ApiAuthV2
+      request:
+        type: PayoutSchedulerReq
+      response:
+        type: PayoutSchedulerResp
+
 types:
 
   PayoutReferralHistoryRes:
@@ -204,3 +214,24 @@ types:
   RefundRegAmountReq:
    - driverId: Id Driver
    - derive: "'HideSecrets"
+  PayoutSchedulerReq:
+    - runNewJob: Bool
+    - startTime: Maybe UTCTime # mandatory for runNewJob
+    - payoutPeriod: Maybe PayoutPeriod # mandatory for runNewJob
+    - driversInBatch: Maybe Int
+    - eachDriverDelayMs: Maybe Milliseconds
+    - batchDelayS: Maybe Seconds
+    - completeExistingJob: Maybe (Id Job)
+    - derive: "'HideSecrets"
+  PayoutPeriod:
+    - enum: "SinglePayout, DailyPayout Int, WeeklyPayout Int, MonthlyPayout Int"
+  PayoutSchedulerResp:
+    - result: PayoutSchedulerResult
+    - jobId: Maybe (Id Job)
+    - existingJobs: [Id Job]
+    - derive: "'HideSecrets"
+  PayoutSchedulerResult:
+    - enum: Success, Failed
+
+extraOperations:
+  - EXTRA_API_TYPES_FILE
