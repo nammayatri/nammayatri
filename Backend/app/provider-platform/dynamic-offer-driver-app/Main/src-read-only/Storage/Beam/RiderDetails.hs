@@ -15,7 +15,10 @@ import Tools.Beam.UtilsTH
 
 data RiderDetailsT f = RiderDetailsT
   { bapId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    cancellationDueRides :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     cancellationDues :: B.C f Kernel.Types.Common.HighPrecMoney,
+    cancelledRides :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    completedRides :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
     disputeChancesUsed :: B.C f Kernel.Prelude.Int,
@@ -36,7 +39,9 @@ data RiderDetailsT f = RiderDetailsT
     referralCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     referredAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     referredByDriver :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
-    updatedAt :: B.C f Kernel.Prelude.UTCTime
+    totalBookings :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    validCancellations :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)
   }
   deriving (Generic, B.Beamable)
 

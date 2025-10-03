@@ -20,7 +20,10 @@ instance FromTType' Beam.RiderDetails Domain.Types.RiderDetails.RiderDetails whe
       Just
         Domain.Types.RiderDetails.RiderDetails
           { bapId = bapId,
+            cancellationDueRides = fromMaybe 0 cancellationDueRides,
             cancellationDues = cancellationDues,
+            cancelledRides = fromMaybe 0 cancelledRides,
+            completedRides = fromMaybe 0 completedRides,
             createdAt = createdAt,
             currency = fromMaybe Kernel.Types.Common.INR currency,
             disputeChancesUsed = disputeChancesUsed,
@@ -40,14 +43,19 @@ instance FromTType' Beam.RiderDetails Domain.Types.RiderDetails.RiderDetails whe
             referralCode = Kernel.Types.Id.Id <$> referralCode,
             referredAt = referredAt,
             referredByDriver = Kernel.Types.Id.Id <$> referredByDriver,
-            updatedAt = updatedAt
+            totalBookings = fromMaybe 0 totalBookings,
+            updatedAt = updatedAt,
+            validCancellations = fromMaybe 0 validCancellations
           }
 
 instance ToTType' Beam.RiderDetails Domain.Types.RiderDetails.RiderDetails where
   toTType' (Domain.Types.RiderDetails.RiderDetails {..}) = do
     Beam.RiderDetailsT
       { Beam.bapId = bapId,
+        Beam.cancellationDueRides = Kernel.Prelude.Just cancellationDueRides,
         Beam.cancellationDues = cancellationDues,
+        Beam.cancelledRides = Kernel.Prelude.Just cancelledRides,
+        Beam.completedRides = Kernel.Prelude.Just completedRides,
         Beam.createdAt = createdAt,
         Beam.currency = Kernel.Prelude.Just currency,
         Beam.disputeChancesUsed = disputeChancesUsed,
@@ -68,5 +76,7 @@ instance ToTType' Beam.RiderDetails Domain.Types.RiderDetails.RiderDetails where
         Beam.referralCode = Kernel.Types.Id.getId <$> referralCode,
         Beam.referredAt = referredAt,
         Beam.referredByDriver = Kernel.Types.Id.getId <$> referredByDriver,
-        Beam.updatedAt = updatedAt
+        Beam.totalBookings = Kernel.Prelude.Just totalBookings,
+        Beam.updatedAt = updatedAt,
+        Beam.validCancellations = Kernel.Prelude.Just validCancellations
       }

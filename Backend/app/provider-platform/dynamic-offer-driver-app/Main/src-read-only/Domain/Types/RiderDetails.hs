@@ -16,7 +16,10 @@ import qualified Tools.Beam.UtilsTH
 
 data RiderDetailsE e = RiderDetails
   { bapId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    cancellationDueRides :: Kernel.Prelude.Int,
     cancellationDues :: Kernel.Types.Common.HighPrecMoney,
+    cancelledRides :: Kernel.Prelude.Int,
+    completedRides :: Kernel.Prelude.Int,
     createdAt :: Kernel.Prelude.UTCTime,
     currency :: Kernel.Types.Common.Currency,
     disputeChancesUsed :: Kernel.Prelude.Int,
@@ -36,7 +39,9 @@ data RiderDetailsE e = RiderDetails
     referralCode :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.DriverReferral.DriverReferral),
     referredAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     referredByDriver :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
-    updatedAt :: Kernel.Prelude.UTCTime
+    totalBookings :: Kernel.Prelude.Int,
+    updatedAt :: Kernel.Prelude.UTCTime,
+    validCancellations :: Kernel.Prelude.Int
   }
   deriving (Generic)
 
@@ -51,7 +56,10 @@ instance EncryptedItem RiderDetails where
     pure
       RiderDetails
         { bapId = bapId entity,
+          cancellationDueRides = cancellationDueRides entity,
           cancellationDues = cancellationDues entity,
+          cancelledRides = cancelledRides entity,
+          completedRides = completedRides entity,
           createdAt = createdAt entity,
           currency = currency entity,
           disputeChancesUsed = disputeChancesUsed entity,
@@ -71,14 +79,19 @@ instance EncryptedItem RiderDetails where
           referralCode = referralCode entity,
           referredAt = referredAt entity,
           referredByDriver = referredByDriver entity,
-          updatedAt = updatedAt entity
+          totalBookings = totalBookings entity,
+          updatedAt = updatedAt entity,
+          validCancellations = validCancellations entity
         }
   decryptItem entity = do
     mobileNumber_ <- fst <$> decryptItem (mobileNumber entity)
     pure
       ( RiderDetails
           { bapId = bapId entity,
+            cancellationDueRides = cancellationDueRides entity,
             cancellationDues = cancellationDues entity,
+            cancelledRides = cancelledRides entity,
+            completedRides = completedRides entity,
             createdAt = createdAt entity,
             currency = currency entity,
             disputeChancesUsed = disputeChancesUsed entity,
@@ -98,7 +111,9 @@ instance EncryptedItem RiderDetails where
             referralCode = referralCode entity,
             referredAt = referredAt entity,
             referredByDriver = referredByDriver entity,
-            updatedAt = updatedAt entity
+            totalBookings = totalBookings entity,
+            updatedAt = updatedAt entity,
+            validCancellations = validCancellations entity
           },
         ""
       )
