@@ -109,3 +109,12 @@ getNandiTripInfo baseUrl tripId = do
 postRouteStopMappingByStopCodes :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c) => BaseUrl -> Text -> [Text] -> m [RouteStopMappingInMemoryServer]
 postRouteStopMappingByStopCodes baseUrl gtfsId stopCodes = do
   withShortRetry $ callAPI baseUrl (NandiAPI.postNandiRouteStopMappingByStopCodes (RouteStopMappingByStopCodesReq {..})) "postRouteStopMappingByStopCodes" NandiAPI.nandiRouteStopMappingByStopCodesAPI >>= fromEitherM (ExternalAPICallError (Just "UNABLE_TO_CALL_NANDI_POST_ROUTE_STOP_MAPPING_BY_STOP_CODES_API") baseUrl)
+
+getExampleTrip :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c) => BaseUrl -> Text -> Text -> m (Maybe TripDetails)
+getExampleTrip baseUrl gtfsId routeId = do
+  withShortRetry $
+    callAPI baseUrl (NandiAPI.getNandiExampleTrip gtfsId routeId) "getExampleTrip" NandiAPI.nandiExampleTripAPI >>= \case
+      Right response -> pure (Just response)
+      Left err -> do
+        logError $ "Error getting example trip: " <> show err
+        pure Nothing
