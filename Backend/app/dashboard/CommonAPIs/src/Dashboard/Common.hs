@@ -70,6 +70,8 @@ data DriverGoHomeRequest
 
 data Document
 
+data CommonDriverOnboardingDocuments
+
 data TripTransaction
 
 data CoinsConfig

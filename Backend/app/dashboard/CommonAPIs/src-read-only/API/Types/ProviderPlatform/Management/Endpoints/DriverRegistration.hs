@@ -51,10 +51,19 @@ data ApproveDetails
   | Pan PanApproveDetails
   | NOC NOCApproveDetails
   | BusinessLicenseImg BusinessLicenseApproveDetails
+  | CommonDocument CommonDocumentApproveDetails
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data BusinessLicenseApproveDetails = BusinessLicenseApproveDetails {documentImageId :: Kernel.Types.Id.Id Dashboard.Common.Image, businessLicenseNumber :: Kernel.Prelude.Text, licenseExpiry :: Kernel.Prelude.UTCTime}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data CommonDocumentApproveDetails = CommonDocumentApproveDetails {documentId :: Kernel.Types.Id.Id Dashboard.Common.CommonDriverOnboardingDocuments, updatedDocumentData :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data CommonDocumentRejectDetails = CommonDocumentRejectDetails {reason :: Kernel.Prelude.Text, documentId :: Kernel.Types.Id.Id Dashboard.Common.CommonDriverOnboardingDocuments}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -301,6 +310,7 @@ instance Kernel.Types.HideSecrets.HideSecrets RegisterRCReq where
 data RejectDetails
   = SSNReject SSNRejectDetails
   | ImageDocuments ImageDocumentsRejectDetails
+  | CommonDocumentReject CommonDocumentRejectDetails
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
