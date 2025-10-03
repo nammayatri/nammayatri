@@ -62,6 +62,11 @@ getRiderDetails currency merchantId mbMerchantOperatingCityId customerMobileCoun
             payoutFlagReason = Nothing,
             isDeviceIdExists = Nothing,
             isFlagConfirmed = Nothing,
+            cancelledRides = 0,
+            totalBookings = 0,
+            completedRides = 0,
+            validCancellations = 0,
+            cancellationDueRides = 0,
             merchantOperatingCityId = mbMerchantOperatingCityId,
             bapId = Just bapId
           }
