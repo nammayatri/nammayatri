@@ -383,11 +383,28 @@ getConfigByStationIds partnerOrg fromGMMStationId toGMMStationId integratedBPPCo
 
   fromStation <- Utils.mkPOrgStationAPIRes fromStation' (Just partnerOrg.orgId)
   toStation <- Utils.mkPOrgStationAPIRes toStation' (Just partnerOrg.orgId)
-  let frfsConfig = Utils.mkFRFSConfigAPI frfsConfig'
+  let modifiedFrfsConfig = case integratedBPPConfig.providerConfig of
+        DIBC.ONDC DIBC.ONDCBecknConfig {providerInfo} ->
+          case providerInfo of
+            Just providerInfo' ->
+              mkProviderSpecificConfig providerInfo' frfsConfig'
+            Nothing -> frfsConfig'
+        _ -> frfsConfig'
+  let frfsConfig = Utils.mkFRFSConfigAPI modifiedFrfsConfig
   moc <- CQMOC.findById fromStation'.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound fromStation'.merchantOperatingCityId.getId)
   let city = moc.city
   let cityId = moc.id
   pure $ GetConfigResp {..}
+  where
+    mkProviderSpecificConfig :: DIBC.ProviderLevelInfo -> FRFSConfig -> FRFSConfig
+    mkProviderSpecificConfig providerInfo baseFrfsConfig =
+      baseFrfsConfig
+        { bookingEndTime = providerInfo.bookingEndTime,
+          bookingStartTime = providerInfo.bookingStartTime,
+          isCancellationAllowed = providerInfo.isCancellationAllowed,
+          oneWayTicketLimit = providerInfo.oneWayTicketLimit,
+          roundTripTicketLimit = providerInfo.roundTripTicketLimit
+        }
 
 shareTicketInfo :: Id DFTB.FRFSTicketBooking -> Flow ShareTicketInfoResp
 shareTicketInfo ticketBookingId = do
