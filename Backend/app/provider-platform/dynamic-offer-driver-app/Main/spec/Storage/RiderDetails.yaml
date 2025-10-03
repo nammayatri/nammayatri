@@ -27,6 +27,11 @@ RiderDetails:
     hasTakenValidRide : Bool
     hasTakenValidRideAt : Maybe UTCTime
     cancellationDues : HighPrecMoney
+    cancelledRides : Int
+    totalBookings : Int
+    completedRides : Int
+    validCancellations : Int
+    cancellationDueRides : Int
     currency : Currency
     disputeChancesUsed : Int
     merchantId : Id Merchant
@@ -41,12 +46,27 @@ RiderDetails:
 
   fromTType:
     currency: fromMaybe Kernel.Types.Common.INR currency|E
+    cancelledRides: fromMaybe 0 cancelledRides|E
+    totalBookings: fromMaybe 0 totalBookings|E
+    completedRides: fromMaybe 0 completedRides|E
+    validCancellations: fromMaybe 0 validCancellations|E
+    cancellationDueRides: fromMaybe 0 cancellationDueRides|E
 
   toTType:
     currency: Kernel.Prelude.Just|I
+    cancelledRides: Kernel.Prelude.Just|I
+    totalBookings: Kernel.Prelude.Just|I
+    completedRides: Kernel.Prelude.Just|I
+    validCancellations: Kernel.Prelude.Just|I
+    cancellationDueRides: Kernel.Prelude.Just|I
 
   beamType:
     currency: Maybe Currency
+    cancelledRides : Maybe Int
+    totalBookings : Maybe Int
+    completedRides : Maybe Int
+    validCancellations : Maybe Int
+    cancellationDueRides : Maybe Int
   constraints:
     id: PrimaryKey
     mobileNumberHash: "!SecondaryKey" # forcing to be a secondary key

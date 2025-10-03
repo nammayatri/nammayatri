@@ -101,6 +101,8 @@ initializeRide merchant driver booking mbOtpCode enableFrequentLocationUpdates m
   QRB.updateStatus booking.id DBooking.TRIP_ASSIGNED
   QRideD.create rideDetails
   QRide.createRide ride
+  fork "updateRiderDetails" $ do
+    whenJust booking.riderId (QRiderD.updateTotalBookingsCount . getId)
   Redis.withWaitOnLockRedisWithExpiry (isOnRideWithAdvRideConditionKey driver.id.getId) 4 4 $ do
     when (not booking.isScheduled) $ do
       QDI.updateOnRide True (cast driver.id)

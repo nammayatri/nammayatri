@@ -142,6 +142,12 @@ cancel req merchant booking mbActiveSearchTry = do
     whenJust mbRide $ \ride -> do
       triggerRideCancelledEvent RideEventData {ride = ride{status = SRide.CANCELLED}, personId = ride.driverId, merchantId = merchant.id}
       triggerBookingCancelledEvent BookingEventData {booking = booking{status = SRB.CANCELLED}, personId = ride.driverId, merchantId = merchant.id}
+      fork "updateRiderDetails" $ do
+        rideTags <- CInternal.updateNammaTagsForCancelledRide booking ride bookingCR
+        when (validCustomerCancellation `elem` rideTags) $ do
+          whenJust booking.riderId (QRD.updateValidCancellationsCount . getId)
+        whenJust booking.riderId (QRD.updateCancelledRidesCount . getId)
+
       fork "incrementCancelledCount based on nammatag" $ do
         rideTags <- CInternal.updateNammaTagsForCancelledRide booking ride bookingCR
         when (validDriverCancellation `elem` rideTags) $ do
