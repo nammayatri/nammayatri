@@ -33,6 +33,7 @@ types:
     nextStopTravelTime: Maybe Seconds
     nextStopTravelDistance: Maybe Meters
     vehicleId: Text
+    routeCode: Text
     vehicleInfo: VehicleInfoForRoute
     upcomingStops: [SharedLogic.FRFSUtils.UpcomingStop]
     delay: Maybe Seconds
@@ -46,6 +47,7 @@ apis:
         integratedBppConfigId: Id IntegratedBPPConfig
         currentLat: Double
         currentLon: Double
+        selectedStopId: Text
         maxBuses: Int
       params:
         routeCode: Text
