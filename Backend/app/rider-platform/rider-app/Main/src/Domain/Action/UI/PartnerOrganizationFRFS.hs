@@ -403,7 +403,8 @@ getConfigByStationIds partnerOrg fromGMMStationId toGMMStationId integratedBPPCo
           bookingStartTime = providerInfo.bookingStartTime,
           isCancellationAllowed = providerInfo.isCancellationAllowed,
           oneWayTicketLimit = providerInfo.oneWayTicketLimit,
-          roundTripTicketLimit = providerInfo.roundTripTicketLimit
+          roundTripTicketLimit = providerInfo.roundTripTicketLimit,
+          providerId = Just providerInfo.providerId
         }
 
 shareTicketInfo :: Id DFTB.FRFSTicketBooking -> Flow ShareTicketInfoResp
