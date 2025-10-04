@@ -402,6 +402,7 @@ data DriverInformationRes = DriverInformationRes
     maxPickupRadius :: Maybe Meters,
     isSilentModeEnabled :: Maybe Bool,
     reactVersion :: Maybe Text,
+    rideRequestVolume :: Maybe Int,
     isTTSEnabled :: Maybe Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
@@ -479,6 +480,7 @@ data DriverEntityRes = DriverEntityRes
     maxPickupRadius :: Maybe Meters,
     isSilentModeEnabled :: Maybe Bool,
     reactVersion :: Maybe Text,
+    rideRequestVolume :: Maybe Int,
     isTTSEnabled :: Maybe Bool
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
@@ -1133,6 +1135,7 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) service
         tripDistanceMinThreshold = driverInfo.tripDistanceMinThreshold,
         maxPickupRadius = driverInfo.maxPickupRadius,
         isSilentModeEnabled = driverInfo.isSilentModeEnabled,
+        rideRequestVolume = driverInfo.rideRequestVolume,
         isTTSEnabled = driverInfo.isTTSEnabled,
         ..
       }
