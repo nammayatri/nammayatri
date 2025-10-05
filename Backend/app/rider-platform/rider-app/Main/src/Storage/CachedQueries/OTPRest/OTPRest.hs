@@ -52,7 +52,7 @@ getRoutesByRouteIds ::
 getRoutesByRouteIds integratedBPPConfig routeIds = IM.withInMemCache ["RoutesByRouteIds", integratedBPPConfig.id.getId, show routeIds] 3600 $ do
   baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
   routes <- Flow.getRoutesByRouteIds baseUrl integratedBPPConfig.feedKey routeIds
-  parseRoutesFromInMemoryServer routes integratedBPPConfig.id integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
+  parseRoutesFromInMemoryServer routes integratedBPPConfig.id integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId False
 
 getRouteByFuzzySearch ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
@@ -62,7 +62,7 @@ getRouteByFuzzySearch ::
 getRouteByFuzzySearch integratedBPPConfig query = do
   baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
   routes <- Flow.getRouteByFuzzySearch baseUrl integratedBPPConfig.feedKey query
-  parseRoutesFromInMemoryServer routes integratedBPPConfig.id integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
+  parseRoutesFromInMemoryServer routes integratedBPPConfig.id integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId False
 
 findAllMatchingRoutes :: (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) => Maybe Text -> Maybe Int -> Maybe Int -> VehicleCategory -> IntegratedBPPConfig -> m [Route.Route]
 findAllMatchingRoutes mbSearchStr mbLimit mbOffset vehicle integratedBPPConfig = do
@@ -71,7 +71,7 @@ findAllMatchingRoutes mbSearchStr mbLimit mbOffset vehicle integratedBPPConfig =
     else do
       baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
       routes <- Flow.getRouteByFuzzySearch baseUrl integratedBPPConfig.feedKey (fromMaybe "" mbSearchStr)
-      parsedRoutes <- parseRoutesFromInMemoryServer routes integratedBPPConfig.id integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
+      parsedRoutes <- parseRoutesFromInMemoryServer routes integratedBPPConfig.id integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId False
       pure $ take (fromMaybe (length parsedRoutes) mbLimit) $ drop (fromMaybe 0 mbOffset) $ filter (\route -> route.vehicleType == vehicle) parsedRoutes
 
 getRoutesByGtfsId ::
@@ -81,7 +81,7 @@ getRoutesByGtfsId ::
 getRoutesByGtfsId integratedBPPConfig = do
   baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
   routes <- Flow.getRoutesByGtfsId baseUrl integratedBPPConfig.feedKey
-  parseRoutesFromInMemoryServer routes integratedBPPConfig.id integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
+  parseRoutesFromInMemoryServer routes integratedBPPConfig.id integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId False
 
 getRoutesByVehicleType ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
@@ -241,10 +241,11 @@ parseRoutesFromInMemoryServer ::
   Id IntegratedBPPConfig ->
   Id Merchant ->
   Id MerchantOperatingCity ->
+  Bool ->
   m [Route.Route]
-parseRoutesFromInMemoryServer routes integratedBppConfigId merchantId merchantOperatingCityId = do
+parseRoutesFromInMemoryServer routes integratedBppConfigId merchantId merchantOperatingCityId isPolylineRequired = do
   let routeIds = map (.id) routes
-  routePolylines <- QRoutePolylines.getByRouteIdsAndCity routeIds merchantOperatingCityId
+  routePolylines <- if isPolylineRequired then QRoutePolylines.getByRouteIdsAndCity routeIds merchantOperatingCityId else pure []
   let polylineMap = HM.fromList $ map (\polyline -> (polyline.routeId, polyline.polyline)) routePolylines
   now <- getCurrentTime
   return $
@@ -280,7 +281,7 @@ parseRouteFromInMemoryServer ::
   Id MerchantOperatingCity ->
   m Route.Route
 parseRouteFromInMemoryServer routeInfoNandi integratedBppConfigId merchantId merchantOperatingCityId = do
-  routes <- parseRoutesFromInMemoryServer [routeInfoNandi] integratedBppConfigId merchantId merchantOperatingCityId
+  routes <- parseRoutesFromInMemoryServer [routeInfoNandi] integratedBppConfigId merchantId merchantOperatingCityId True
   case routes of
     (route : _) -> pure route
     _ -> throwError $ InternalError "Failed to parse route"
