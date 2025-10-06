@@ -456,6 +456,7 @@ apis:
         - from: UTCTime
         - to: UTCTime
         - status: Text
+        - vehicleNo: Text
         - searchByFleetOwnerId: Bool
       response:
         type: FleetBookingsInformationResponse
@@ -473,6 +474,7 @@ apis:
               - from: UTCTime
               - to: UTCTime
               - status: Text
+              - vehicleNo: Text
               - searchByFleetOwnerId: Bool
             response:
               type: FleetBookingsInformationResponse
@@ -1197,6 +1199,8 @@ types:
   FleetBookingItem:
     - bookingId: Text
     - serviceId: Text
+    - ticketBookingShortId: Maybe Text
+    - ticketBookingServiceShortId: Maybe Text
     - serviceName: Text
     - placeName: Text
     - vehicleNo: Text
@@ -1208,6 +1212,7 @@ types:
     - updatedAt: UTCTime
     - fleetOwnerId: Text
     - fleetOwnerName: Text
+    - paymentMethod: Maybe Text
   FleetBookingAssignmentsResponse:
     - bookings: [FleetBookingAssignmentItem]
     - summary: Summary
@@ -1222,6 +1227,7 @@ types:
     - createdAt: UTCTime
     - fleetOwnerId: Text
     - fleetOwnerName: Text
+    - paymentMethod: Maybe Text
   SortOn:
     - enum: "COMPLETED_RIDES, CANCELLED_RIDES"
     - derive: "HttpInstance"
