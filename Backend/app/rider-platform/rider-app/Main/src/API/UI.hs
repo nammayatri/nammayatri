@@ -31,6 +31,7 @@ import qualified API.Action.UI.FavouriteDriver as FavouriteDriver
 import qualified API.Action.UI.FollowRide as FollowRide
 import qualified API.Action.UI.Insurance as Insurance
 import qualified API.Action.UI.Invoice as Invoice
+import qualified API.Action.UI.Metrics as Metrics
 import qualified API.Action.UI.Miscellaneous as Miscellaneous
 import qualified API.Action.UI.MultimodalConfirm as MultimodalConfirm
 import qualified API.Action.UI.NearbyBuses as NearbyBuses
@@ -144,6 +145,7 @@ type API =
            :<|> CRIS.API
            :<|> TicketKapture.API
            :<|> Insurance.API
+           :<|> Metrics.API
            :<|> PickupInstructions.API
            :<|> NYRegular.API
            :<|> AttractionRecommend.API
@@ -210,6 +212,7 @@ handler =
     :<|> CRIS.handler
     :<|> TicketKapture.handler
     :<|> Insurance.handler
+    :<|> Metrics.handler
     :<|> PickupInstructions.handler
     :<|> NYRegular.handler
     :<|> AttractionRecommend.handler
