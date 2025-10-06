@@ -20,10 +20,14 @@ FleetBookingInformation:
     fleetOwnerId: Maybe (Id Person) # This will be deprecated like my sleep
     vehicleNo: Maybe Text  # This will be deprecated like my sleep
     personId: Maybe (Id Person)
+    ticketPlaceId: Maybe Text
+    ticketBookingShortId: Maybe Text
+    ticketBookingServiceShortId: Maybe Text
     amount: Maybe HighPrecMoney
     visitDate: Maybe Day
     bookedSeats: Maybe Int
     status: Maybe Text
+    paymentMethod: Maybe Text
     createdAt: UTCTime
     updatedAt: UTCTime
 
@@ -54,6 +58,7 @@ FleetBookingAssignments:
     visitDate: Maybe Day
     fleetOwnerId: Text
     vehicleNo: Text
+    paymentMethod: Maybe Text
     amount: Maybe HighPrecMoney
     merchantId: Maybe (Id Merchant)
     merchantOperatingCityId: Maybe (Id MerchantOperatingCity)

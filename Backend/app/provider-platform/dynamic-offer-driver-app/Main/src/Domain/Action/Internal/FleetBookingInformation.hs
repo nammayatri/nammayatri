@@ -29,6 +29,8 @@ import qualified Storage.Queries.FleetBookingInformation as QFBI
 data CreateFleetBookingInformationReq = CreateFleetBookingInformationReq
   { bookingId :: Text,
     serviceId :: Text,
+    ticketBookingShortId :: Maybe Text,
+    ticketBookingServiceShortId :: Maybe Text,
     placeName :: Maybe Text,
     serviceName :: Maybe Text,
     vehicleNo :: Maybe Text,
@@ -36,7 +38,9 @@ data CreateFleetBookingInformationReq = CreateFleetBookingInformationReq
     amount :: Maybe HighPrecMoney,
     visitDate :: Maybe Day,
     bookedSeats :: Maybe Int,
-    status :: Maybe Text
+    status :: Maybe Text,
+    ticketPlaceId :: Maybe Text,
+    paymentMethod :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -49,6 +53,8 @@ data UpdateFleetBookingInformationReq = UpdateFleetBookingInformationReq
   { id :: Maybe (Kernel.Types.Id.Id DFBI.FleetBookingInformation),
     bookingId :: Text,
     serviceId :: Text,
+    ticketBookingShortId :: Maybe Text,
+    ticketBookingServiceShortId :: Maybe Text,
     fleetOwnerId :: Maybe (Kernel.Types.Id.Id DP.Person),
     vehicleNo :: Text,
     personId :: Maybe (Kernel.Types.Id.Id DP.Person),
@@ -56,7 +62,9 @@ data UpdateFleetBookingInformationReq = UpdateFleetBookingInformationReq
     visitDate :: Maybe Day,
     bookedSeats :: Maybe Int,
     amount :: Maybe HighPrecMoney,
-    assignments :: Maybe [BookingAssignment]
+    ticketPlaceId :: Maybe Text,
+    assignments :: Maybe [BookingAssignment],
+    paymentMethod :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -91,6 +99,10 @@ createBookingInformation req = do
             visitDate = req.visitDate,
             bookedSeats = req.bookedSeats,
             status = req.status,
+            ticketPlaceId = req.ticketPlaceId,
+            ticketBookingShortId = req.ticketBookingShortId,
+            ticketBookingServiceShortId = req.ticketBookingServiceShortId,
+            paymentMethod = req.paymentMethod,
             createdAt = now,
             updatedAt = now
           }
@@ -112,6 +124,10 @@ updateBookingInformation req = do
                 DFBI.personId = req.personId <|> existing.personId,
                 DFBI.status = req.status <|> existing.status,
                 DFBI.amount = req.amount <|> existing.amount,
+                DFBI.ticketPlaceId = req.ticketPlaceId <|> existing.ticketPlaceId,
+                DFBI.ticketBookingShortId = req.ticketBookingShortId <|> existing.ticketBookingShortId,
+                DFBI.ticketBookingServiceShortId = req.ticketBookingServiceShortId <|> existing.ticketBookingServiceShortId,
+                DFBI.paymentMethod = req.paymentMethod <|> existing.paymentMethod,
                 DFBI.updatedAt = now
               }
       QFBI.updateByPrimaryKey updated
@@ -129,7 +145,11 @@ updateBookingInformation req = do
                 vehicleNo = Just req.vehicleNo,
                 visitDate = req.visitDate,
                 bookedSeats = req.bookedSeats,
-                status = req.status
+                status = req.status,
+                ticketPlaceId = req.ticketPlaceId,
+                ticketBookingShortId = req.ticketBookingShortId,
+                ticketBookingServiceShortId = req.ticketBookingServiceShortId,
+                paymentMethod = req.paymentMethod
               }
       (newAssignment, CreateFleetBookingInformationResp newId) <- createBookingInformation createReq
       createAssignments newAssignment req.assignments
@@ -155,6 +175,7 @@ updateBookingInformation req = do
                   vehicleNo = assignment.vehicleNo,
                   amount = individualAmount,
                   merchantId = mainAssignment.merchantId,
+                  paymentMethod = mainAssignment.paymentMethod,
                   merchantOperatingCityId = mainAssignment.merchantOperatingCityId,
                   createdAt = now,
                   updatedAt = now

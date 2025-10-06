@@ -21,6 +21,7 @@ data FleetBookingAssignmentsT f = FleetBookingAssignmentsT
     mainAssignmentId :: B.C f Kernel.Prelude.Text,
     merchantId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    paymentMethod :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     placeName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     serviceId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     serviceName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
