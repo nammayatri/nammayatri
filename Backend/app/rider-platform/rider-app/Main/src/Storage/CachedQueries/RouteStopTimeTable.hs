@@ -61,15 +61,19 @@ findByRouteCodeAndStopCode ::
   [Text] ->
   Text ->
   Bool ->
+  Bool ->
   m [RouteStopTimeTable]
-findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCodes' stopCode' needOnlyOneTrip = do
+findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCodes' stopCode' needOnlyOneTrip subWayCached = do
   vehicleType <- castVehicleType integratedBPPConfig.vehicleCategory
   let routeCodes = P.map (modifyCodesToGTFS integratedBPPConfig) routeCodes'
       stopCode = modifyCodesToGTFS integratedBPPConfig stopCode'
   routeStopTimeTable <- Hedis.safeGet (routeTimeTableKey stopCode routeCodes needOnlyOneTrip)
   allTrips <-
-    case (routeStopTimeTable, vehicleType == BecknV2.FRFS.Enums.SUBWAY) of
-      (Just a, False) -> do
+    case (routeStopTimeTable, vehicleType == BecknV2.FRFS.Enums.SUBWAY, subWayCached) of
+      (Just a, False, _) -> do
+        logDebug $ "Fetched route stop time table cached: " <> show a <> "for routeCodes:" <> show routeCodes <> " and stopCode:" <> show stopCode
+        pure a
+      (Just a, True, True) -> do
         logDebug $ "Fetched route stop time table cached: " <> show a <> "for routeCodes:" <> show routeCodes <> " and stopCode:" <> show stopCode
         pure a
       _ -> do
