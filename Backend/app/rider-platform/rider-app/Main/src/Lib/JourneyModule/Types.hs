@@ -1234,6 +1234,7 @@ data FinalBoardedBusData = FinalBoardedBusData
     depotNo :: Maybe Text,
     waybillId :: Maybe Text,
     scheduleNo :: Maybe Text,
+    routeNumber :: Maybe Text,
     updateSource :: Maybe DJL.BusBoardingMethod
   }
   deriving stock (Show, Generic)
@@ -1305,6 +1306,7 @@ mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation m
         finalBoardedDepotNo = mbFinalBoardedBusData >>= (.depotNo),
         finalBoardedWaybillId = mbFinalBoardedBusData >>= (.waybillId),
         finalBoardedScheduleNo = mbFinalBoardedBusData >>= (.scheduleNo),
+        finalBoardedRouteNumber = mbFinalBoardedBusData >>= (.routeNumber),
         finalBoardedBusNumberSource = mbFinalBoardedBusData >>= (.updateSource),
         osmEntrance = chooseGate (gates >>= (.osmEntrance)) (leg.entrance),
         osmExit = chooseGate (gates >>= (.osmExit)) (leg.exit),

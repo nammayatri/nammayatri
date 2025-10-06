@@ -1278,7 +1278,8 @@ postMultimodalOrderChangeStops _ journeyId legOrder req = do
             depotNo = reqJourneyLeg.finalBoardedDepotNo,
             waybillId = reqJourneyLeg.finalBoardedWaybillId,
             scheduleNo = reqJourneyLeg.finalBoardedScheduleNo,
-            updateSource = reqJourneyLeg.finalBoardedBusNumberSource
+            updateSource = reqJourneyLeg.finalBoardedBusNumberSource,
+            routeNumber = reqJourneyLeg.finalBoardedRouteNumber
           }
   newJourneyLeg <-
     JMTypes.mkJourneyLeg
@@ -1671,7 +1672,8 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (_mbPersonId, _merchantId) j
         DJourneyLeg.finalBoardedBusNumberSource = Just DJourneyLeg.UserActivated,
         DJourneyLeg.finalBoardedDepotNo = vehicleLiveRouteInfo.depot,
         DJourneyLeg.finalBoardedWaybillId = vehicleLiveRouteInfo.waybillId,
-        DJourneyLeg.finalBoardedScheduleNo = vehicleLiveRouteInfo.scheduleNo
+        DJourneyLeg.finalBoardedScheduleNo = vehicleLiveRouteInfo.scheduleNo,
+        DJourneyLeg.finalBoardedRouteNumber = vehicleLiveRouteInfo.routeNumber
       }
   updatedLegs <- JM.getAllLegsInfo journey.riderId journeyId
   generateJourneyInfoResponse journey updatedLegs

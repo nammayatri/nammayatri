@@ -246,6 +246,7 @@ JourneyLeg:
     finalBoardedDepotNo: Maybe Text
     finalBoardedWaybillId: Maybe Text
     finalBoardedScheduleNo: Maybe Text
+    finalBoardedRouteNumber: Maybe Text
 
   sqlType:
     serviceTypes: text[]

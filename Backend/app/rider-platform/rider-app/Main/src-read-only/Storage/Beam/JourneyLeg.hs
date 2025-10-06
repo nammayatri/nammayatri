@@ -29,6 +29,7 @@ data JourneyLegT f = JourneyLegT
     finalBoardedBusNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     finalBoardedBusNumberSource :: B.C f (Kernel.Prelude.Maybe Domain.Types.JourneyLeg.BusBoardingMethod),
     finalBoardedDepotNo :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    finalBoardedRouteNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     finalBoardedScheduleNo :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     finalBoardedWaybillId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     fromArrivalTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),

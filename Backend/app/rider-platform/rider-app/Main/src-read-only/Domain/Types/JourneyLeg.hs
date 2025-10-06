@@ -28,6 +28,7 @@ data JourneyLeg = JourneyLeg
     finalBoardedBusNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     finalBoardedBusNumberSource :: Kernel.Prelude.Maybe Domain.Types.JourneyLeg.BusBoardingMethod,
     finalBoardedDepotNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    finalBoardedRouteNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     finalBoardedScheduleNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     finalBoardedWaybillId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     fromArrivalTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,

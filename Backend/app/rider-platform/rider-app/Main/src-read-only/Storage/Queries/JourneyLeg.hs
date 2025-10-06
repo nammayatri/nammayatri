@@ -97,6 +97,7 @@ updateByPrimaryKey (Domain.Types.JourneyLeg.JourneyLeg {..}) = do
       Se.Set Beam.finalBoardedBusNumber finalBoardedBusNumber,
       Se.Set Beam.finalBoardedBusNumberSource finalBoardedBusNumberSource,
       Se.Set Beam.finalBoardedDepotNo finalBoardedDepotNo,
+      Se.Set Beam.finalBoardedRouteNumber finalBoardedRouteNumber,
       Se.Set Beam.finalBoardedScheduleNo finalBoardedScheduleNo,
       Se.Set Beam.finalBoardedWaybillId finalBoardedWaybillId,
       Se.Set Beam.fromArrivalTime fromArrivalTime,

@@ -494,6 +494,7 @@ mkJourneyForSearch searchRequest estimate personId = do
             finalBoardedDepotNo = Nothing,
             finalBoardedScheduleNo = Nothing,
             finalBoardedWaybillId = Nothing,
+            finalBoardedRouteNumber = Nothing,
             osmEntrance = Nothing,
             osmExit = Nothing,
             straightLineEntrance = Nothing,
