@@ -402,6 +402,7 @@ library
       SharedLogic.DriverPool
       SharedLogic.DriverPool.Config
       SharedLogic.DriverPool.Types
+      SharedLogic.DriverWallet
       SharedLogic.DynamicPricing
       SharedLogic.EventTracking
       SharedLogic.External.LocationTrackingService.API.DriverBlockTill
@@ -903,6 +904,7 @@ library
       Domain.Types.Exophone
       Domain.Types.FareProduct
       Domain.Types.Feedback
+      Domain.Types.FinancialYearEarnings
       Domain.Types.FleetBadge
       Domain.Types.FleetBadgeAssociation
       Domain.Types.FleetBookingAssignments
@@ -1056,6 +1058,7 @@ library
       Storage.Beam.Exophone
       Storage.Beam.FareProduct
       Storage.Beam.Feedback
+      Storage.Beam.FinancialYearEarnings
       Storage.Beam.FleetBadge
       Storage.Beam.FleetBadgeAssociation
       Storage.Beam.FleetBookingAssignments
@@ -1212,6 +1215,7 @@ library
       Storage.Queries.Exophone
       Storage.Queries.FareProduct
       Storage.Queries.Feedback
+      Storage.Queries.FinancialYearEarnings
       Storage.Queries.FleetBadge
       Storage.Queries.FleetBadgeAssociation
       Storage.Queries.FleetBookingAssignments

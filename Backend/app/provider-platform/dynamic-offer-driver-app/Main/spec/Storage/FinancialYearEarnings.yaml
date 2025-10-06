@@ -1,0 +1,31 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Driver: Domain.Types.Person
+  Ride: Domain.Types.Ride
+  HighPrecMoney: Kernel.Types.Common
+  Person: Domain.Types.Person
+
+FinancialYearEarnings:
+  tableName: financial_year_earnings
+
+  fields:
+    id: Id FinancialYearEarnings
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    personId: Id Person # either driver or fleet owner
+    financialYearCollectionAmount: HighPrecMoney
+    financialYearTdsBaseAmount: HighPrecMoney
+    financialYearTdsDeduction: HighPrecMoney
+    financialYearStart: Int # 2025 means FY from 2025.04.01 to 2026.03.31
+  excludedFields: [updatedAt]
+  constraints:
+    id: PrimaryKey
+  excludedDefaultQueries:
+    - createMany
+    - findByPrimaryKey
+    - updateByPrimaryKey
+  sqlType:
+    financialYearCollectionAmount: numeric(30,2)
+    financialYearTdsBaseAmount: numeric(30,2)
+    financialYearTdsDeduction: numeric(30,2)

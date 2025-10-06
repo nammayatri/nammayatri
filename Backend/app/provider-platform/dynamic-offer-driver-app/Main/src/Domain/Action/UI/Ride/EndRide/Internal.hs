@@ -14,7 +14,6 @@
 
 module Domain.Action.UI.Ride.EndRide.Internal
   ( endRideTransaction,
-    createDriverWalletTransaction,
     putDiffMetric,
     getRouteAndDistanceBetweenPoints,
     safeMod,
@@ -37,7 +36,6 @@ module Domain.Action.UI.Ride.EndRide.Internal
     getMonth,
     pickedWaypointsForEditDestination,
     pickNWayPoints,
-    makeWalletRunningBalanceLockKey,
     makeSubscriptionRunningBalanceLockKey,
   )
 where
@@ -102,6 +100,7 @@ import Lib.SessionizerMetrics.Types.Event
 import Lib.Types.SpecialLocation hiding (Merchant, MerchantOperatingCity)
 import SharedLogic.Allocator
 import SharedLogic.DriverOnboarding
+import qualified SharedLogic.DriverWallet as SDW
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
@@ -127,8 +126,6 @@ import qualified Storage.Queries.DriverInformationExtra as QDIE
 import Storage.Queries.DriverPlan (findByDriverIdWithServiceName)
 import qualified Storage.Queries.DriverPlan as QDPlan
 import qualified Storage.Queries.DriverStats as QDriverStats
-import qualified Storage.Queries.DriverWallet as QDW
-import qualified Storage.Queries.DriverWalletExtra as QDWE
 import qualified Storage.Queries.FareParameters as QFare
 import Storage.Queries.FleetDriverAssociationExtra as QFDAE
 import Storage.Queries.FleetOwnerInformation as QFOI
@@ -204,8 +201,8 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
     createDriverFee booking.providerId booking.merchantOperatingCityId driverId ride.fare ride.currency newFareParams driverInfo booking serviceName
 
   when (fromMaybe False merchant.enforceSufficientDriverBalance && fromMaybe False thresholdConfig.enableDriverWallet) $ do
-    fork "createDriverWalletTransaction" $ createDriverWalletTransaction ride booking thresholdConfig
-
+    fork "createDriverWalletTransaction" $ do
+      createDriverWalletTransaction ride booking newFareParams thresholdConfig
   triggerRideEndEvent RideEventData {ride = ride{status = Ride.COMPLETED}, personId = cast driverId, merchantId = booking.providerId}
   triggerBookingCompletedEvent BookingEventData {booking = booking{status = SRB.COMPLETED}, personId = cast driverId, merchantId = booking.providerId}
 
@@ -288,6 +285,42 @@ createSubscriptionTransaction ride runningBalance booking = do
           }
   QSubscriptionTransaction.create transaction
 
+calculateCollection ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    CacheFlow m r
+  ) =>
+  HighPrecMoney ->
+  Id DP.Person ->
+  DFare.FareParameters ->
+  TransporterConfig ->
+  m SDW.DriverWalletCollection
+calculateCollection 0 _ _ _ =
+  pure
+    SDW.DriverWalletCollection
+      { collectionAmount = Just 0,
+        gstDeduction = Just 0,
+        tdsBaseAmount = Just 0,
+        tdsDeduction = Nothing
+      }
+calculateCollection collectionAmount driverId fareParameters transporterConfig = do
+  let gstPercentage = fromMaybe 0.0 transporterConfig.gstPercentage
+      gstDeduction = collectionAmount * (realToFrac gstPercentage / 100)
+  -- If enableFleetWallet then TDS will be deducted from fleet wallet
+  mbFleetOwnerId <-
+    if transporterConfig.enableFleetWallet == Just True
+      then do
+        mbFleetDriverAssociation <- QFDAE.findByDriverId driverId True
+        pure $ Id @DP.Person . (.fleetOwnerId) <$> mbFleetDriverAssociation
+      else pure Nothing
+  let collectionDeduction = Kernel.Prelude.sum [gstDeduction, fromMaybe 0 fareParameters.parkingCharge, fromMaybe 0 fareParameters.tollCharges]
+      tdsBaseAmount = collectionAmount - collectionDeduction
+      tdsDeduction =
+        if transporterConfig.enableTdsDeduction == Just True && isNothing mbFleetOwnerId
+          then Just $ tdsBaseAmount / 100 -- 1 %
+          else Nothing
+  pure SDW.DriverWalletCollection {collectionAmount = Just collectionAmount, gstDeduction = Just gstDeduction, tdsBaseAmount = Just tdsBaseAmount, ..}
+
 createDriverWalletTransaction ::
   ( MonadFlow m,
     EsqDBFlow m r,
@@ -295,54 +328,49 @@ createDriverWalletTransaction ::
   ) =>
   Ride.Ride ->
   SRB.Booking ->
+  DFare.FareParameters ->
   TransporterConfig ->
   m ()
-createDriverWalletTransaction ride booking transporterConfig = do
-  now <- getCurrentTime
-  newId <- generateGUID
-  let collectionAmount = fromMaybe 0 ride.fare
-      gstPercentage = fromMaybe 0.0 transporterConfig.gstPercentage
-      gstDeduction = collectionAmount * (realToFrac gstPercentage / 100)
-
-  Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey ride.driverId.getId) 10 10 $ do
-    lastTransaction <- QDWE.findLatestByDriverId ride.driverId
-    let lastRunningBalance = maybe 0 (.runningBalance) lastTransaction
-
+createDriverWalletTransaction ride booking fareParameters transporterConfig = do
+  let driverId = cast @DP.Person @DP.Driver ride.driverId
+  Redis.withWaitOnLockRedisWithExpiry (SDW.makeWalletRunningBalanceLockKey driverId.getId) 10 10 $ do
+    let collectionAmount = fromMaybe 0 ride.fare
+    collection <- calculateCollection collectionAmount driverId fareParameters transporterConfig
+    let driverDeduction = fromMaybe 0 collection.gstDeduction + fromMaybe 0 collection.tdsDeduction
     (merchantPayable, driverPayable) <- do
-      mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId ->
-        do
-          CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
+      mbPaymentMethod <- forM booking.paymentMethodId $ \paymentMethodId -> do
+        CQMPM.findByIdAndMerchantOpCityId paymentMethodId booking.merchantOperatingCityId
           >>= fromMaybeM (MerchantPaymentMethodNotFound paymentMethodId.getId)
       case mbPaymentMethod of
-        Nothing -> pure (0, gstDeduction) -- Considering OFFLINE. To be tested
+        Nothing -> pure (0, driverDeduction) -- Considering OFFLINE. To be tested
         Just paymentMethod -> do
           case paymentMethod.paymentInstrument of
-            Cash -> pure (0, gstDeduction) -- OFFLINE
-            _ -> pure (collectionAmount - gstDeduction, 0) -- ONLINE
-    let newRunningBalance = lastRunningBalance + merchantPayable - driverPayable
-    let driverWallet =
-          DW.DriverWallet
-            { id = newId,
-              merchantId = ride.merchantId,
-              merchantOperatingCityId = ride.merchantOperatingCityId,
-              driverId = ride.driverId,
-              rideId = Just ride.id,
-              transactionType = DW.RIDE_TRANSACTION,
-              collectionAmount = Just collectionAmount,
-              gstDeduction = Just gstDeduction,
-              merchantPayable = Just merchantPayable,
-              driverPayable = Just driverPayable,
-              runningBalance = newRunningBalance,
-              payoutOrderId = Nothing,
-              payoutStatus = Nothing,
-              createdAt = now,
-              updatedAt = now
-            }
-    QDI.updateWalletBalance (Just newRunningBalance) ride.driverId
-    QDW.create driverWallet
+            Cash -> pure (0, driverDeduction) -- OFFLINE
+            _ -> pure (collectionAmount - driverDeduction, 0) -- ONLINE
+    SDW.withDriverWalletAndFYEarningsStore ride.driverId transporterConfig collection $
+      mkDriverWallet ride.id merchantPayable driverPayable
 
-makeWalletRunningBalanceLockKey :: Text -> Text
-makeWalletRunningBalanceLockKey personId = "WalletRunningBalanceLockKey:" <> personId
+mkDriverWallet ::
+  Id Ride.Ride ->
+  HighPrecMoney ->
+  HighPrecMoney ->
+  Maybe DW.DriverWallet ->
+  SDW.DriverWalletCollection ->
+  SDW.DriverWalletInfo ->
+  DW.DriverWallet
+mkDriverWallet rideId merchantPayable driverPayable lastTransaction SDW.DriverWalletCollection {..} SDW.DriverWalletInfo {..} = do
+  let lastRunningBalance = maybe 0 (.runningBalance) lastTransaction
+      newRunningBalance = lastRunningBalance + merchantPayable - driverPayable
+  DW.DriverWallet
+    { rideId = Just rideId,
+      transactionType = DW.RIDE_TRANSACTION,
+      merchantPayable = Just merchantPayable,
+      driverPayable = Just driverPayable,
+      runningBalance = newRunningBalance,
+      payoutOrderId = Nothing,
+      payoutStatus = Nothing,
+      ..
+    }
 
 makeSubscriptionRunningBalanceLockKey :: Text -> Text
 makeSubscriptionRunningBalanceLockKey personId = "SubscriptionRunningBalanceLockKey:" <> personId

@@ -559,3 +559,9 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_wallet_t
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN payout_cut_off_days integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_fleet_wallet boolean ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_tds_deduction boolean ;

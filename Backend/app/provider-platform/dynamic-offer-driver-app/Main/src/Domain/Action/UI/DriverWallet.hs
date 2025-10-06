@@ -18,7 +18,6 @@ import qualified API.Types.UI.DriverWallet as DriverWallet
 import qualified Data.Text as T
 import qualified Data.Time
 import Domain.Action.UI.Plan hiding (mkDriverFee)
-import Domain.Action.UI.Ride.EndRide.Internal (makeWalletRunningBalanceLockKey)
 import qualified Domain.Types.DriverFee as DF
 import qualified Domain.Types.DriverWallet as DW
 import Domain.Types.Extra.Plan
@@ -42,6 +41,8 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
+import qualified Lib.Payment.Domain.Types.PayoutOrder as DPayment
+import qualified SharedLogic.DriverWallet as SDW
 import qualified SharedLogic.Payment as SPayment
 import Storage.Cac.TransporterConfig (findByMerchantOpCityId)
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -85,23 +86,11 @@ getWalletTransactions (mbPersonId, _, _) mbFromDate mbToDate mbTransactionType m
       (fromLocation, toLocation) <- case dw.transactionType of
         DW.RIDE_TRANSACTION -> Utils.extractLocationFromMaps dw.rideId rideMap bookingMap
         _ -> return (Nothing, Nothing)
-      return $
-        DriverWallet.TransactionDetails
-          { id = dw.id,
-            rideId = dw.rideId,
-            transactionType = dw.transactionType,
-            collectionAmount = dw.collectionAmount,
-            gstDeduction = dw.gstDeduction,
-            merchantPayable = dw.merchantPayable,
-            driverPayable = dw.driverPayable,
-            runningBalance = dw.runningBalance,
-            fromLocation = fromLocation,
-            toLocation = toLocation,
-            createdAt = dw.createdAt
-          }
+      return $ mkTrasactionDetails fromLocation toLocation dw
   pure $ DriverWallet.TransactionResponse {transactions = transactionsAPIEntity, currentBalance = driverInfo.walletBalance}
   where
     maxLimit = 10
+    mkTrasactionDetails fromLocation toLocation DW.DriverWallet {..} = DriverWallet.TransactionDetails {..}
 
 postWalletPayout ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id DP.Person),
@@ -117,7 +106,7 @@ postWalletPayout (mbPersonId, merchantId, mocId) = do
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   subscriptionConfig <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName person.merchantOperatingCityId Nothing PREPAID_SUBSCRIPTION >>= fromMaybeM (NoSubscriptionConfigForService person.merchantOperatingCityId.getId "PREPAID_SUBSCRIPTION") -- Driver wallet is not required for postpaid
   unless (fromMaybe False merchant.enforceSufficientDriverBalance && fromMaybe False transporterConfig.enableWalletPayout) $ throwError $ InvalidRequest "Payouts are disabled"
-  Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey driverId.getId) 10 10 $ do
+  Redis.withWaitOnLockRedisWithExpiry (SDW.makeWalletRunningBalanceLockKey driverId.getId) 10 10 $ do
     driverInfo <- QDI.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
     let walletBalance = fromMaybe 0 driverInfo.walletBalance
     let minPayoutAmount = fromMaybe 0 transporterConfig.minimumWalletPayoutAmount
@@ -151,31 +140,32 @@ postWalletPayout (mbPersonId, merchantId, mocId) = do
     when (createPayoutOrderReq.amount > 0.0) $ do
       (_, mbPayoutOrder) <- DPayment.createPayoutService (Kernel.Types.Id.cast person.merchantId) (Just $ Kernel.Types.Id.cast person.merchantOperatingCityId) (Kernel.Types.Id.cast driverId) Nothing (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
       whenJust mbPayoutOrder $ \payoutOrder -> do
-        newId <- generateGUID
-        let transaction =
-              DW.DriverWallet
-                { id = newId,
-                  merchantId = driverInfo.merchantId,
-                  merchantOperatingCityId = mocId,
-                  driverId = driverId,
-                  rideId = Nothing,
-                  transactionType = DW.PAYOUT,
-                  collectionAmount = Nothing,
-                  gstDeduction = Nothing,
-                  merchantPayable = Nothing,
-                  driverPayable = Just (-1 * payoutableBalance),
-                  runningBalance = unsettledReceivables,
-                  payoutOrderId = Just payoutOrder.id,
-                  payoutStatus = Just DW.INITIATED,
-                  createdAt = utcTimeNow,
-                  updatedAt = utcTimeNow
-                }
-        QDW.create transaction
-        QDI.updateWalletBalance (Just unsettledReceivables) driverId
+        SDW.withDriverWalletAndFYEarningsStore driverId transporterConfig SDW.emptyDriverWalletCollection $
+          mkDriverWallet payoutableBalance unsettledReceivables payoutOrder
         let notificationTitle = "Payout Initiated"
             notificationMessage = "Your payout of " <> show payoutableBalance <> " has been initiated."
         Notify.sendNotificationToDriver person.merchantOperatingCityId FCM.SHOW Nothing FCM.PAYOUT_INITIATED notificationTitle notificationMessage person person.deviceToken
   pure APISuccess.Success
+
+mkDriverWallet ::
+  HighPrecMoney ->
+  HighPrecMoney ->
+  DPayment.PayoutOrder ->
+  Maybe DW.DriverWallet ->
+  SDW.DriverWalletCollection ->
+  SDW.DriverWalletInfo ->
+  DW.DriverWallet
+mkDriverWallet payoutableBalance unsettledReceivables payoutOrder _lastTransaction SDW.DriverWalletCollection {..} SDW.DriverWalletInfo {..} = do
+  DW.DriverWallet
+    { rideId = Nothing,
+      transactionType = DW.PAYOUT,
+      merchantPayable = Nothing,
+      driverPayable = Just (negate payoutableBalance),
+      runningBalance = unsettledReceivables,
+      payoutOrderId = Just payoutOrder.id,
+      payoutStatus = Just DW.INITIATED,
+      ..
+    }
 
 mkPayoutReq :: DP.Person -> Text -> T.Text -> Maybe Text -> HighPrecMoney -> Juspay.CreatePayoutOrderReq
 mkPayoutReq person vpa uid phoneNo amount =
