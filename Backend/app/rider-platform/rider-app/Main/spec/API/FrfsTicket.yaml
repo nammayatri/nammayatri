@@ -86,7 +86,7 @@ types:
     quantity: Int
 
   FRFSQuoteConfirmReq:
-    offered: Maybe "[FRFSCategorySelectionReq]"
+    offered: Maybe [FRFSCategorySelectionReq]
     ticketQuantity: Maybe Int # TODO: To Be Deprecated
     childTicketQuantity: Maybe Int # TODO: To Be Deprecated
 
@@ -228,6 +228,9 @@ types:
   FRFSBookingFeedbackReq:
     enum: "BookingFareAccepted BookingFareAcceptedReq, BookingFeedback BookingFeedbackReq"
 
+  FRFSPossibleStopsReq:
+    stationCodes: [Text]
+
 apis:
   # Get FRFS Config
   - GET:
@@ -284,6 +287,20 @@ apis:
         location: LatLong
         platformType: PlatformType
         minimalData: Bool
+      response:
+        type: "[API.Types.UI.FRFSTicketService.FRFSStationAPI]"
+
+  # POST stations by codes - bulk station lookup
+  - POST:
+      endpoint: /frfs/stations/possibleStops
+      auth: TokenAuth
+      mandatoryQuery:
+        vehicleType: VehicleCategory
+      query:
+        city: City
+        platformType: PlatformType
+      request:
+        type: API.Types.UI.FRFSTicketService.FRFSPossibleStopsReq
       response:
         type: "[API.Types.UI.FRFSTicketService.FRFSStationAPI]"
 
