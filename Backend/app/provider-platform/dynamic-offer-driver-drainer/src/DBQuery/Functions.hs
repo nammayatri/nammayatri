@@ -105,6 +105,7 @@ isConnectionError e =
   let res = transformException e
    in case res of
         ET.DBError (ET.SQLError (ET.PostgresError (ET.PostgresSqlError "" ET.PostgresFatalError "" "" ""))) _ -> True
+        ET.DBError (ET.SQLError (ET.PostgresError (ET.PostgresSqlError "25006" ET.PostgresFatalError _ _ _))) _ -> True
         _ -> False
 
 isConnectionError' :: SomeException -> Bool
@@ -125,7 +126,10 @@ isConnectionError' e =
         "connection timed out",
         "connection refused",
         "name resolution failed",
-        "connection closed"
+        "connection closed",
+        "cannot execute insert in a read-only transaction",
+        "read-only transaction",
+        "sqlstate = \"25006\""
       ]
 
 transformException :: SomeException -> ET.DBError
