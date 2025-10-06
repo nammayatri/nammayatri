@@ -29,3 +29,11 @@ getByRouteIdsAndCity routeIds city =
           Se.Is Beam.routeId $ Se.In routeIds
         ]
     ]
+
+getByRouteIdAndCity ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Text ->
+  Id MerchantOperatingCity ->
+  m (Maybe RoutePolylines)
+getByRouteIdAndCity routeId city =
+  findOneWithKV [Se.And [Se.Is Beam.routeId $ Se.Eq routeId, Se.Is Beam.merchantOperatingCityId $ Se.Eq city.getId]]

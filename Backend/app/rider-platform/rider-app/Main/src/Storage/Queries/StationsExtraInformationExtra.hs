@@ -29,3 +29,12 @@ getBystationIdsAndCity stationIds city =
           Se.Is Beam.stationId $ Se.In stationIds
         ]
     ]
+
+getAllStationsByCity ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  Kernel.Types.Id.Id MerchantOperatingCity ->
+  m [Domain.Types.StationsExtraInformation.StationsExtraInformation]
+getAllStationsByCity city =
+  findAllWithKV
+    [ Se.Is Beam.merchantOperatingCityId $ Se.Eq city.getId
+    ]

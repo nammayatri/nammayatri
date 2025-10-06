@@ -468,9 +468,11 @@ library
       Storage.CachedQueries.Person.PersonFlowStatus
       Storage.CachedQueries.PlaceBasedServiceConfig
       Storage.CachedQueries.RideRelatedNotificationConfig
+      Storage.CachedQueries.RoutePolylines
       Storage.CachedQueries.RouteStopTimeTable
       Storage.CachedQueries.SavedReqLocationExtra
       Storage.CachedQueries.Sos
+      Storage.CachedQueries.StationsExtraInformation
       Storage.CachedQueries.UiRiderConfig
       Storage.CachedQueries.ValueAddNP
       Storage.CachedQueries.VehicleConfig
