@@ -434,7 +434,8 @@ castStationToAPI integratedBppConfigId DStation {..} =
       API.distance = Nothing,
       API.towards = Nothing,
       API.timeTakenToTravelUpcomingStop = Nothing,
-      API.integratedBppConfigId = integratedBppConfigId
+      API.integratedBppConfigId = integratedBppConfigId,
+      API.parentStopCode = Nothing
     }
 
 castRouteStationToAPI :: Id DIBC.IntegratedBPPConfig -> DRouteStation -> API.FRFSRouteStationsAPI

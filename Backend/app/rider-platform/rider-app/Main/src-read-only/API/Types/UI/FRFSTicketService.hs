@@ -113,6 +113,10 @@ data FRFSDiscoverySearchAPIReq = FRFSDiscoverySearchAPIReq {city :: Kernel.Types
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data FRFSPossibleStopsReq = FRFSPossibleStopsReq {stationCodes :: [Data.Text.Text]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data FRFSQuoteAPIRes = FRFSQuoteAPIRes
   { _type :: Domain.Types.FRFSQuote.FRFSQuoteType,
     discountedTickets :: Data.Maybe.Maybe Kernel.Prelude.Int,
@@ -189,6 +193,7 @@ data FRFSStationAPI = FRFSStationAPI
     lat :: Data.Maybe.Maybe Kernel.Prelude.Double,
     lon :: Data.Maybe.Maybe Kernel.Prelude.Double,
     name :: Data.Maybe.Maybe Data.Text.Text,
+    parentStopCode :: Data.Maybe.Maybe Data.Text.Text,
     routeCodes :: Data.Maybe.Maybe [Data.Text.Text],
     sequenceNum :: Data.Maybe.Maybe Kernel.Prelude.Int,
     stationType :: Data.Maybe.Maybe Domain.Types.StationType.StationType,
