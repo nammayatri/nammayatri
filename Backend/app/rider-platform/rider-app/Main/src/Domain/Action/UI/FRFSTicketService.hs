@@ -127,7 +127,8 @@ getFrfsRoutes (_personId, _mId) mbEndStationCode mbStartStationCode _city _vehic
                                   distance = Nothing,
                                   color = Nothing,
                                   towards = Nothing,
-                                  integratedBppConfigId = integratedBPPConfig.id
+                                  integratedBppConfigId = integratedBPPConfig.id,
+                                  parentStopCode = Nothing
                                 }
                           )
                       )
@@ -237,7 +238,8 @@ getFrfsRoute (_personId, _mId) routeCode mbIntegratedBPPConfigId _platformType _
                               distance = Nothing,
                               color = Nothing,
                               towards = Nothing,
-                              integratedBppConfigId = integratedBPPConfig.id
+                              integratedBppConfigId = integratedBPPConfig.id,
+                              parentStopCode = Nothing
                             }
                         ) :
                         processedStops
@@ -337,7 +339,8 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin minimalData _p
                         distance = Nothing,
                         color = Nothing,
                         towards = Nothing,
-                        timeTakenToTravelUpcomingStop = Nothing
+                        timeTakenToTravelUpcomingStop = Nothing,
+                        parentStopCode = Nothing
                       }
                 )
                 possibleStartStops
@@ -365,7 +368,8 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin minimalData _p
                         distance = Nothing,
                         color = Nothing,
                         towards = Nothing,
-                        timeTakenToTravelUpcomingStop = Nothing
+                        timeTakenToTravelUpcomingStop = Nothing,
+                        parentStopCode = Nothing
                       }
                 )
                 filteredRouteStops
@@ -392,7 +396,8 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin minimalData _p
                         distance = Nothing,
                         color = Nothing,
                         towards = Nothing,
-                        timeTakenToTravelUpcomingStop = Nothing
+                        timeTakenToTravelUpcomingStop = Nothing,
+                        parentStopCode = Nothing
                       }
                 )
                 stopsSortedBySequenceNumber
@@ -433,7 +438,8 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin minimalData _p
                                   distance = Nothing,
                                   color = Nothing,
                                   towards = Nothing,
-                                  timeTakenToTravelUpcomingStop = Nothing
+                                  timeTakenToTravelUpcomingStop = Nothing,
+                                  parentStopCode = Nothing
                                 }
                             ]
                       _ -> []
@@ -456,6 +462,7 @@ getFrfsStations (_personId, mId) mbCity mbEndStationCode mbOrigin minimalData _p
                         name = Just name,
                         routeCodes = Nothing,
                         integratedBppConfigId = integratedBPPConfig.id,
+                        parentStopCode = Nothing,
                         ..
                       }
                 )
@@ -1275,6 +1282,7 @@ getFrfsAutocomplete (_, mId) mbInput mbLimit mbOffset _platformType opCity origi
                 timeTakenToTravelUpcomingStop = Nothing,
                 name = Just name,
                 integratedBppConfigId = integratedBPPConfig.id,
+                parentStopCode = Nothing,
                 ..
               }
         )
@@ -1369,7 +1377,7 @@ tryStationsAPIWithOSRMDistances merchantId merchantOpCity origin stops integrate
                     travelMode = Just Maps.CAR
                   }
           case res of
-            Left _ -> return $ map (\StationResult {..} -> FRFSStationAPI {lat = Just lat, lon = Just lon, address = Nothing, color = Nothing, distance = Nothing, towards = Nothing, timeTakenToTravelUpcomingStop = Nothing, integratedBppConfigId = integratedBPPConfig.id, ..}) batch
+            Left _ -> return $ map (\StationResult {..} -> FRFSStationAPI {lat = Just lat, lon = Just lon, address = Nothing, color = Nothing, distance = Nothing, towards = Nothing, timeTakenToTravelUpcomingStop = Nothing, integratedBppConfigId = integratedBPPConfig.id, parentStopCode = Nothing, ..}) batch
             Right stopsDistanceResp ->
               return $ map (\stop -> mkStopToAPI stop.origin stop.distance) (NonEmpty.toList stopsDistanceResp)
 
@@ -1389,10 +1397,84 @@ tryStationsAPIWithOSRMDistances merchantId merchantOpCity origin stops integrate
           address = Nothing,
           color = Nothing,
           towards = Nothing,
-          integratedBppConfigId = integratedBPPConfig.id
+          integratedBppConfigId = integratedBPPConfig.id,
+          parentStopCode = Nothing
         }
 
 getMerchantOperatingCityFromBooking :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DFRFSTicketBooking.FRFSTicketBooking -> m DMOC.MerchantOperatingCity
 getMerchantOperatingCityFromBooking tBooking = do
   let moCityId = tBooking.merchantOperatingCityId
   CQMOC.findById moCityId >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantOperatingCityId- " <> show moCityId)
+
+postFrfsStationsPossibleStops ::
+  ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+    Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
+  ) ->
+  Kernel.Prelude.Maybe Context.City ->
+  Kernel.Prelude.Maybe DIBC.PlatformType ->
+  Spec.VehicleCategory ->
+  API.Types.UI.FRFSTicketService.FRFSPossibleStopsReq ->
+  Environment.Flow [API.Types.UI.FRFSTicketService.FRFSStationAPI]
+postFrfsStationsPossibleStops (_personId, mId) mbCity _platformType vehicleType_ req = do
+  merchantOpCity <-
+    case mbCity of
+      Nothing ->
+        CQMOC.findById (Id "407c445a-2200-c45f-8d67-6f6dbfa28e73")
+          >>= fromMaybeM (MerchantOperatingCityNotFound "merchantOpCityId-407c445a-2200-c45f-8d67-6f6dbfa28e73")
+      Just city ->
+        CQMOC.findByMerchantIdAndCity mId city
+          >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> mId.getId <> "-city-" <> show city)
+  let platformType = fromMaybe (DIBC.APPLICATION) _platformType
+  integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig merchantOpCity.id (frfsVehicleCategoryToBecknVehicleCategory vehicleType_) platformType
+
+  allPossibleEndStops <- SIBC.fetchAllIntegratedBPPConfigResult integratedBPPConfigs $ \integratedBPPConfig -> do
+    endStopsForAllStarts <- mapM (getPossibleEndStopsForStartStation integratedBPPConfig) req.stationCodes
+    return $ concat endStopsForAllStarts
+
+  let uniqueEndStops = nubBy (\a b -> a.code == b.code) allPossibleEndStops
+  return uniqueEndStops
+  where
+    getPossibleEndStopsForStartStation :: DIBC.IntegratedBPPConfig -> Text -> Environment.Flow [API.Types.UI.FRFSTicketService.FRFSStationAPI]
+    getPossibleEndStopsForStartStation integratedBPPConfig startStationCode = do
+      currentTime <- getCurrentTime
+      routesWithStop <- OTPRest.getRouteStopMappingByStopCode startStationCode integratedBPPConfig
+      let routeCodes = nub $ map (.routeCode) routesWithStop
+      routeStops <- EulerHS.Prelude.concatMapM (\routeCode -> OTPRest.getRouteStopMappingByRouteCode routeCode integratedBPPConfig) routeCodes
+      let serviceableStops = DTB.findBoundedDomain routeStops currentTime ++ filter (\stop -> stop.timeBounds == DTB.Unbounded) routeStops
+          groupedStopsByRouteCode = groupBy (\a b -> a.routeCode == b.routeCode) $ sortBy (compare `on` (.routeCode)) serviceableStops
+          possibleEndStops =
+            groupBy (\a b -> a.stopCode == b.stopCode) $
+              sortBy (compare `on` (.stopCode)) $
+                concatMap
+                  ( \stops ->
+                      let mbStartStopSequence = (.sequenceNum) <$> find (\stop -> stop.stopCode == startStationCode) stops
+                       in sortBy (compare `on` (.sequenceNum)) $ filter (\stop -> maybe False (\startStopSequence -> stop.stopCode /= startStationCode && stop.sequenceNum > startStopSequence) mbStartStopSequence) stops
+                  )
+                  groupedStopsByRouteCode
+      let endStops =
+            concatMap
+              ( \routeStops' ->
+                  case routeStops' of
+                    routeStop : xs ->
+                      let routeCodes' = nub $ routeStop.routeCode : map (.routeCode) xs
+                       in [ FRFSStationAPI
+                              { name = Just routeStop.stopName,
+                                code = routeStop.stopCode,
+                                routeCodes = Just routeCodes',
+                                lat = Just routeStop.stopPoint.lat,
+                                lon = Just routeStop.stopPoint.lon,
+                                integratedBppConfigId = integratedBPPConfig.id,
+                                stationType = Nothing,
+                                sequenceNum = Nothing,
+                                address = Nothing,
+                                distance = Nothing,
+                                color = Nothing,
+                                towards = Nothing,
+                                timeTakenToTravelUpcomingStop = Nothing,
+                                parentStopCode = Just startStationCode -- Set the parent stop code
+                              }
+                          ]
+                    _ -> []
+              )
+              possibleEndStops
+      return endStops
