@@ -30,6 +30,9 @@ instance FromTType' Beam.FleetBookingInformation Domain.Types.FleetBookingInform
             serviceId = serviceId,
             serviceName = serviceName,
             status = status,
+            ticketBookingServiceShortId = ticketBookingServiceShortId,
+            ticketBookingShortId = ticketBookingShortId,
+            ticketPlaceId = ticketPlaceId,
             updatedAt = updatedAt,
             vehicleNo = vehicleNo,
             visitDate = visitDate
@@ -51,6 +54,9 @@ instance ToTType' Beam.FleetBookingInformation Domain.Types.FleetBookingInformat
         Beam.serviceId = serviceId,
         Beam.serviceName = serviceName,
         Beam.status = status,
+        Beam.ticketBookingServiceShortId = ticketBookingServiceShortId,
+        Beam.ticketBookingShortId = ticketBookingShortId,
+        Beam.ticketPlaceId = ticketPlaceId,
         Beam.updatedAt = updatedAt,
         Beam.vehicleNo = vehicleNo,
         Beam.visitDate = visitDate

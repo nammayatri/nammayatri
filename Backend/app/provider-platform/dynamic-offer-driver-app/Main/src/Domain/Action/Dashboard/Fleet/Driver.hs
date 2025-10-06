@@ -2410,19 +2410,21 @@ getDriverFleetBookings ::
   Maybe UTCTime ->
   Maybe UTCTime ->
   Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
   Maybe Bool ->
   Flow Common.FleetBookingsInformationResponse
-getDriverFleetBookings _ _ memberPersonId mbLimit mbOffset mbFrom mbTo mbStatus mbSearchByFleetOwnerId = do
+getDriverFleetBookings _ _ memberPersonId mbLimit mbOffset mbFrom mbTo mbStatus vehicleNo mbSearchByFleetOwnerId mbSearchByTicketPlaceId = do
   let searchByFleetOwnerId = fromMaybe True mbSearchByFleetOwnerId
   fleetOwnerInfo <- getFleetOwnerIds memberPersonId Nothing
   let fleetOwnerIds = map fst fleetOwnerInfo
       fleetNameMap = Map.fromList fleetOwnerInfo
+  mbFleetOwnerInfo <-
+    if fromMaybe False mbSearchByTicketPlaceId
+      then join <$> traverse (FOI.findByPrimaryKey . Id) (headMay fleetOwnerIds)
+      else pure Nothing
 
-  ticketBookings <- QFBI.findAllByFleetOwnerIdsAndFilters fleetOwnerIds mbFrom mbTo mbLimit mbOffset searchByFleetOwnerId
-
-  let filteredBookings = case mbStatus of
-        Just status -> filter (\booking -> fromMaybe "" booking.status == status) ticketBookings
-        Nothing -> ticketBookings
+  ticketBookings <- QFBI.findFleetBookingInformationByFleetOwnerIdsAndFilters fleetOwnerIds mbFrom mbTo mbLimit mbOffset searchByFleetOwnerId (mbFleetOwnerInfo >>= FOI.ticketPlaceId) vehicleNo mbStatus
 
   ticketBookingsList <- forM filteredBookings $ \booking -> do
     let fleetOwnerId = fromMaybe "" (fmap (.getId) booking.fleetOwnerId)
@@ -2433,6 +2435,8 @@ getDriverFleetBookings _ _ memberPersonId mbLimit mbOffset mbFrom mbTo mbStatus 
         { bookingId = booking.bookingId,
           serviceId = fromMaybe "" booking.serviceId,
           serviceName = fromMaybe "" booking.serviceName,
+          ticketBookingShortId = booking.ticketBookingShortId,
+          ticketBookingServiceShortId = booking.ticketBookingServiceShortId,
           placeName = fromMaybe "" booking.placeName,
           vehicleNo = fromMaybe "" booking.vehicleNo,
           amount = fromMaybe 0.0 (fmap realToFrac booking.amount),
@@ -2469,7 +2473,7 @@ getDriverFleetAssignments _ _ memberPersonId mbLimit mbOffset mbFrom mbTo mbVehi
   fleetOwnerInfo <- getFleetOwnerIds memberPersonId Nothing
   let fleetOwnerIds = map fst fleetOwnerInfo
       fleetNameMap = Map.fromList fleetOwnerInfo
-  ticketAssignments <- QFBA.findAllByFleetOwnerIdsAndFilters fleetOwnerIds mbMainAssignmentId mbFrom mbTo mbLimit mbOffset mbVehicleNo
+  ticketAssignments <- QFBA.findFleetBookingAssignmentsByFleetOwnerIdsAndFilters fleetOwnerIds mbMainAssignmentId mbFrom mbTo mbLimit mbOffset mbVehicleNo
 
   ticketAssignmentsList <- forM ticketAssignments $ \assignment -> do
     let fleetOwnerId = assignment.fleetOwnerId

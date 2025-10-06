@@ -17,3 +17,15 @@ ALTER TABLE atlas_driver_offer_bpp.fleet_booking_information ADD COLUMN updated_
 ALTER TABLE atlas_driver_offer_bpp.fleet_booking_information ADD COLUMN vehicle_no text ;
 ALTER TABLE atlas_driver_offer_bpp.fleet_booking_information ADD COLUMN visit_date date ;
 ALTER TABLE atlas_driver_offer_bpp.fleet_booking_information ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.fleet_booking_information ADD COLUMN ticket_place_id text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.fleet_booking_information ADD COLUMN ticket_booking_short_id text ;
+ALTER TABLE atlas_driver_offer_bpp.fleet_booking_information ADD COLUMN ticket_booking_service_short_id text ;
