@@ -35,7 +35,7 @@ processMetrics mbPersonId metricName message = do
         Nothing -> pure []
     Nothing -> pure []
 
-  let isBlacklisted = Kernel.Prelude.any (\blacklistPattern -> T.unpack message =~ T.unpack blacklistPattern) blacklistPatterns
+  let isBlacklisted = Kernel.Prelude.any (\blacklistPattern -> (T.unpack message =~ T.unpack blacklistPattern :: Bool)) blacklistPatterns
 
   unless isBlacklisted $ do
     logError $ "FRONTEND_METRIC | metric: " <> metricName <> " | message: " <> message
