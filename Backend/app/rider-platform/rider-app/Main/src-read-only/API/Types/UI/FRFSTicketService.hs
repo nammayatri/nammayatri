@@ -92,9 +92,9 @@ data FRFSConfigAPIRes = FRFSConfigAPIRes
     maxFreeTicketCashback :: Data.Maybe.Maybe Kernel.Prelude.Int,
     metroStationTtl :: Kernel.Prelude.Int,
     oneWayTicketLimit :: Kernel.Prelude.Int,
+    providerId :: Data.Maybe.Maybe Data.Text.Text,
     roundTripTicketLimit :: Kernel.Prelude.Int,
-    ticketsBookedInEvent :: Kernel.Prelude.Int,
-    providerId :: Data.Maybe.Maybe Data.Text.Text
+    ticketsBookedInEvent :: Kernel.Prelude.Int
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -111,6 +111,10 @@ data FRFSDiscountRes = FRFSDiscountRes
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data FRFSDiscoverySearchAPIReq = FRFSDiscoverySearchAPIReq {city :: Kernel.Types.Beckn.Context.City, vehicleType :: BecknV2.FRFS.Enums.VehicleCategory}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data FRFSPossibleStopsReq = FRFSPossibleStopsReq {stationCodes :: [Data.Text.Text]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
