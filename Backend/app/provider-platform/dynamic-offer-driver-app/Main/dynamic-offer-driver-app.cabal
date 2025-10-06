@@ -424,6 +424,7 @@ library
       SharedLogic.SearchTryLocker
       SharedLogic.SyncRide
       SharedLogic.TollsDetector
+      SharedLogic.UserCancellationDues
       SharedLogic.VehicleServiceTier
       SharedLogic.WMB
       Storage.Beam.BecknRequest
