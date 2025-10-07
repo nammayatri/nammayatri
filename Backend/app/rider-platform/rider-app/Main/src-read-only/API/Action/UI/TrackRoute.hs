@@ -38,13 +38,16 @@ type API =
            "platformType"
            Domain.Types.IntegratedBPPConfig.PlatformType
       :> QueryParam
-           "selectedStopId"
+           "selectedDestinationStopCode"
+           Kernel.Prelude.Text
+      :> QueryParam
+           "selectedSourceStopCode"
            Kernel.Prelude.Text
       :> QueryParam
            "vehicleType"
            BecknV2.FRFS.Enums.VehicleCategory
       :> Get
-           '[JSON]
+           ('[JSON])
            API.Types.UI.TrackRoute.TrackingResp
   )
 
@@ -56,13 +59,14 @@ getTrackVehicles ::
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
     ) ->
     Kernel.Prelude.Text ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Double ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Double ->
+    Kernel.Prelude.Maybe (Kernel.Prelude.Double) ->
+    Kernel.Prelude.Maybe (Kernel.Prelude.Double) ->
     Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.IntegratedBPPConfig.IntegratedBPPConfig) ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Int ->
-    Kernel.Prelude.Maybe Domain.Types.IntegratedBPPConfig.PlatformType ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Text ->
-    Kernel.Prelude.Maybe BecknV2.FRFS.Enums.VehicleCategory ->
+    Kernel.Prelude.Maybe (Kernel.Prelude.Int) ->
+    Kernel.Prelude.Maybe (Domain.Types.IntegratedBPPConfig.PlatformType) ->
+    Kernel.Prelude.Maybe (Kernel.Prelude.Text) ->
+    Kernel.Prelude.Maybe (Kernel.Prelude.Text) ->
+    Kernel.Prelude.Maybe (BecknV2.FRFS.Enums.VehicleCategory) ->
     Environment.FlowHandler API.Types.UI.TrackRoute.TrackingResp
   )
-getTrackVehicles a9 a8 a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.TrackRoute.getTrackVehicles (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a9) a8 a7 a6 a5 a4 a3 a2 a1
+getTrackVehicles a10 a9 a8 a7 a6 a5 a4 a3 a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.TrackRoute.getTrackVehicles (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a10) a9 a8 a7 a6 a5 a4 a3 a2 a1
