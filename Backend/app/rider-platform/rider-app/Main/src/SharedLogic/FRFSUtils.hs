@@ -65,6 +65,7 @@ import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
+import qualified Kernel.Storage.InMem as IM
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Id
 import qualified Kernel.Types.TimeBound as DTB
@@ -215,9 +216,11 @@ data RouteStopInfo = RouteStopInfo
     stops :: Maybe [RouteStopMapping.RouteStopMapping],
     travelTime :: Maybe Seconds
   }
+  deriving stock (Generic, Show)
+  deriving anyclass (FromJSON, ToJSON)
 
 getPossibleRoutesBetweenTwoStops :: (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c) => Text -> Text -> IntegratedBPPConfig -> m [RouteStopInfo]
-getPossibleRoutesBetweenTwoStops startStationCode endStationCode integratedBPPConfig = do
+getPossibleRoutesBetweenTwoStops startStationCode endStationCode integratedBPPConfig = IM.withInMemCache ["POSSIBLEROUTES", startStationCode, endStationCode, integratedBPPConfig.id.getId] 7200 $ do
   routesWithStop <- OTPRest.getRouteStopMappingByStopCode startStationCode integratedBPPConfig
   let routeCodes = nub $ map (.routeCode) routesWithStop
   routeStops <-
