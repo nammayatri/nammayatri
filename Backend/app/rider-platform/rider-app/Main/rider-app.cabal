@@ -1294,6 +1294,7 @@ library
     , servant-client-core
     , servant-openapi3
     , servant-server
+    , servant-xml
     , sessionizer-metrics
     , shared-services
     , singletons
@@ -1317,6 +1318,8 @@ library
     , wai-middleware-prometheus
     , warp
     , x509
+    , xml-conduit
+    , xmlbf
     , yudhishthira
   default-language: Haskell2010
   if flag(Local)
@@ -1429,6 +1432,7 @@ executable rider-app-exe
     , servant-client-core
     , servant-openapi3
     , servant-server
+    , servant-xml
     , singletons
     , singletons-th
     , split
@@ -1447,6 +1451,8 @@ executable rider-app-exe
     , wai-middleware-prometheus
     , warp
     , x509
+    , xml-conduit
+    , xmlbf
     , yudhishthira
   default-language: Haskell2010
   if flag(Local)
@@ -1561,6 +1567,7 @@ test-suite rider-app-test
     , servant-client-core
     , servant-openapi3
     , servant-server
+    , servant-xml
     , singletons
     , singletons-th
     , split
@@ -1582,5 +1589,7 @@ test-suite rider-app-test
     , wai-middleware-prometheus
     , warp
     , x509
+    , xml-conduit
+    , xmlbf
     , yudhishthira
   default-language: Haskell2010

@@ -477,15 +477,12 @@ getCallTwillioAccessToken ::
   )
 getCallTwillioAccessToken rideId entity deviceType = do
   ride <- QRide.findById rideId >>= fromMaybeM (RideNotFound rideId.getId)
+  booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
   entityId <- case entity of
-    Domain.Action.UI.Call.CUSTOMER -> do
-      booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
-      riderId <- booking.riderId & fromMaybeM (BookingFieldNotPresent "rider_id")
-      riderDetails <- QRD.findById riderId >>= fromMaybeM (RiderDetailsNotFound riderId.getId)
-      return riderDetails.id.getId
-    Domain.Action.UI.Call.DRIVER -> do
-      driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-      return driver.id.getId
+    Domain.Action.UI.Call.CUSTOMER ->
+      return booking.transactionId
+    Domain.Action.UI.Call.DRIVER ->
+      return ride.id.getId
   getAccessToken entityId ride.merchantOperatingCityId
   where
     getAccessToken id cityId = do
@@ -510,14 +507,11 @@ getCallTwillioConnectedEntityTwiml rideId entity = do
   let say = Just "Please wait while we are making the call"
   dial <- case entity of
     Domain.Action.UI.Call.CUSTOMER -> do
-      driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-      let dial = Dial (Just (T.unpack driver.id.getId))
+      let dial = Dial (Just (T.unpack ride.id.getId))
       return $ Just dial
     Domain.Action.UI.Call.DRIVER -> do
       booking <- QRB.findById ride.bookingId >>= fromMaybeM (BookingNotFound ride.bookingId.getId)
-      riderId <- booking.riderId & fromMaybeM (BookingFieldNotPresent "rider_id")
-      riderDetails <- QRD.findById riderId >>= fromMaybeM (RiderDetailsNotFound riderId.getId)
-      let dial = Dial (Just (T.unpack riderDetails.id.getId))
+      let dial = Dial (Just (T.unpack booking.transactionId))
       return $ Just dial
   let twimlResp = responseToXML (Response say dial)
   logDebug $ DTL.toStrict $ renderText def twimlResp
