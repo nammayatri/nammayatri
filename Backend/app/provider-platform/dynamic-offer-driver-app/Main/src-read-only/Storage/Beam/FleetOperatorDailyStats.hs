@@ -23,6 +23,8 @@ data FleetOperatorDailyStatsT f = FleetOperatorDailyStatsT
     id :: B.C f Kernel.Prelude.Text,
     inspectionCompleted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     merchantLocalDate :: B.C f Data.Time.Calendar.Day,
+    pulledRequestCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    rejectedRequestCount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     totalCompletedRides :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     totalDistance :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     totalEarning :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),

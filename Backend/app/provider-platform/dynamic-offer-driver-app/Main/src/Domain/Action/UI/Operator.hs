@@ -49,12 +49,12 @@ postOperatorConsent (mbDriverId, merchantId, merchantOperatingCityId) = do
 
   QDriverOperatorAssociation.updateByPrimaryKey driverOperatorAssociation{isActive = True}
   let allowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
-  let needDriverInfo = transporterConfig.enableFleetOperatorDashboardAnalytics == Just True || allowCacheDriverFlowStatus
+  let needDriverInfo = transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics || allowCacheDriverFlowStatus
   when needDriverInfo $ do
     driverInfo <- QDI.findById driverOperatorAssociation.driverId >>= fromMaybeM (DriverNotFound driverOperatorAssociation.driverId.getId)
-    when (transporterConfig.enableFleetOperatorDashboardAnalytics == Just True) $ do
+    when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ do
       when driverInfo.enabled $ Analytics.incrementOperatorAnalyticsDriverEnabled transporterConfig operator.id.getId
-      Analytics.incrementOperatorAnalyticsApplicationCount transporterConfig operator.id.getId
+      Analytics.incrementOperatorAnalyticsActiveDriver transporterConfig operator.id.getId
     when allowCacheDriverFlowStatus $ do
       DDriverMode.incrementFleetOperatorStatusKeyForDriver OPERATOR driverOperatorAssociation.operatorId driverInfo.driverFlowStatus
   QDriverInfoInternal.updateOnboardingVehicleCategory mbOnboardingVehicleCategory driver.id
