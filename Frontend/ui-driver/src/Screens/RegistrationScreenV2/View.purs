@@ -905,8 +905,8 @@ getCompletionStatus stepsForCategory documentList =
       
       completionStatus = 
         if (DA.null stagesToSearch) then ST.NOT_STARTED  -- replace stagesToSearch by stepsForCategory after backend handles VEHICLE_PHOTOS  
-          else if not $ DA.null notStartedDocs then ST.NOT_STARTED
           else if not $ DA.null failedDocs then ST.FAILED
+          else if not $ DA.null notStartedDocs then ST.NOT_STARTED
           else if not $ DA.null inProgressDocs then ST.IN_PROGRESS
           else if not $ DA.null manualVerificationRequiredDocs then ST.MANUAL_VERIFICATION_REQUIRED
           else if not $ DA.null completedDocs then ST.COMPLETED

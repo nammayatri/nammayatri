@@ -1333,7 +1333,7 @@ onBoardingFlowV2 _ = do
             case image' of
               Nothing -> void $ pure $ toast (getString TIMEOUT)
               Just image -> do
-                resp <- lift $ lift $ Remote.validateImage (Remote.makeValidateImageReq image "PanCard" Nothing (Just convertedStatus) result.transactionId state.data.vehicleCategory)
+                resp <- lift $ lift $ Remote.validateImageForIdfy (Remote.makeValidateImageReqForIdfyCase image "PanCard" Nothing (Just convertedStatus) state.data.vehicleCategory)
                 case resp of
                   Right (ValidateImageRes response)-> do
                     resp <- lift $ lift $ Remote.registerDriverPan (Remote.makeDriverPanReq panNum response.imageId (getValueToLocalStore DRIVER_ID) detail.name)
@@ -1356,8 +1356,8 @@ onBoardingFlowV2 _ = do
             imageFront <- lift $ lift  $ await imageFrontControl
             case imageFront, imageBack of
               Just imageFront, Just imageBack -> do
-                respFrontImage <- lift $ lift $ Remote.validateImage (Remote.makeValidateImageReq imageFront "AadhaarCard" Nothing (Just convertedStatus) result.transactionId state.data.vehicleCategory)
-                respBackImage <- lift $ lift $ Remote.validateImage (Remote.makeValidateImageReq imageBack "AadhaarCard" Nothing (Just convertedStatus) result.transactionId state.data.vehicleCategory)
+                respFrontImage <- lift $ lift $ Remote.validateImageForIdfy (Remote.makeValidateImageReqForIdfyCase imageFront "AadhaarCard" Nothing (Just convertedStatus) state.data.vehicleCategory)
+                respBackImage <- lift $ lift $ Remote.validateImageForIdfy (Remote.makeValidateImageReqForIdfyCase imageBack "AadhaarCard" Nothing (Just convertedStatus) state.data.vehicleCategory)
                 case respFrontImage, respBackImage of
                   Right (ValidateImageRes frontResp), Right (ValidateImageRes backResp) | isJust result.transactionId -> do
                     resp <- lift $ lift $ Remote.registerDriverAadhaar (Remote.makeDriverAadhaarReq aadhaarNum frontResp.imageId backResp.imageId true (getValueToLocalStore DRIVER_ID) detail.fullName)
@@ -1375,7 +1375,6 @@ onBoardingFlowV2 _ = do
       void $ lift $ lift $ toggleLoader false
       onBoardingFlow
     GO_TO_APP_UPDATE_POPUP_SCREEN_V2 _ -> appUpdatedFlow {title : (getString APP_UPDATE), description : (getString APP_UPDATE_MESSAGE), image : ""} ST.REG_PROF_PAN_AADHAAR
-    AADHAAR_PAN_SELFIE_UPLOAD_V2 state _ -> onBoardingFlow
     LOGOUT_FROM_REGISTERATION_SCREEN_V2 -> logoutFlow
     GO_TO_HOME_SCREEN_FROM_REGISTERATION_SCREEN_V2 state -> 
       if state.props.manageVehicle
