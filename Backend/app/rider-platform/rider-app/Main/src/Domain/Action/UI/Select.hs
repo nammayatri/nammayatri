@@ -236,7 +236,10 @@ select2 personId estimateId req@DSelectReq {..} = do
       _ -> pure Nothing
   let lastUsedVehicleServiceTiers = insertVehicleServiceTierAndCategory (maybe 5 (.noOfRideRequestsConfig) riderConfig) estimate.vehicleServiceTierType person.lastUsedVehicleServiceTiers
   let lastUsedVehicleCategories = insertVehicleServiceTierAndCategory (maybe 5 (.noOfRideRequestsConfig) riderConfig) (fromMaybe DVCT.AUTO_RICKSHAW estimate.vehicleCategory) person.lastUsedVehicleCategories
-  let toUpdateDeviceIdInfo = (fromMaybe 0 person.totalRidesCount) == 0
+  let toUpdateDeviceIdInfo =
+        if fromMaybe False (riderConfig >>= (.isDeviceIdCheckDisabled))
+          then False
+          else (fromMaybe 0 person.totalRidesCount) == 0
   isMultipleOrNoDeviceIdExist <-
     maybe
       (return Nothing)
