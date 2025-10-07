@@ -506,8 +506,7 @@ postDriverUnlinkVehicle merchantShortId opCity reqDriverId = do
   -- merchant access checking
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
 
-  DomainRC.deactivateCurrentRC personId
-  QVehicle.deleteById personId
+  DomainRC.deactivateCurrentRC transporterConfig personId
   Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId False (Just False)
   logTagInfo "dashboard -> unlinkVehicle : " (show personId)
   pure Success

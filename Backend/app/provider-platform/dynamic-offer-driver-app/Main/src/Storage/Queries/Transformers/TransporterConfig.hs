@@ -37,6 +37,7 @@ parseAnalyticsConfig merchantOperatingCityId mbVal = do
           { weekStartMode = 3,
             earningsWindowSize = 7,
             allowCacheDriverFlowStatus = False,
+            enableFleetOperatorDashboardAnalytics = False,
             maxOnlineDurationDays = 10,
             onlineDurationCalculateFrom = Nothing
           }

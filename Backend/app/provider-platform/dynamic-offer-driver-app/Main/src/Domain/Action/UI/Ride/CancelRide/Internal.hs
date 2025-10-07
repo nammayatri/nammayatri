@@ -45,9 +45,9 @@ import qualified Domain.Types.BookingCancellationReason as SBCR
 import qualified Domain.Types.CancellationReason as DTCR
 import Domain.Types.DriverLocation
 import qualified Domain.Types.Merchant as DMerc
-import qualified Domain.Types.TransporterConfig as DTTC
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderDetails as RiderDetails
+import qualified Domain.Types.TransporterConfig as DTTC
 import qualified Domain.Types.Yudhishthira as TY
 import EulerHS.Prelude
 import Kernel.External.Maps
@@ -110,6 +110,7 @@ cancelRideImpl ::
     EsqDBReplicaFlow m r,
     CacheFlow m r,
     EsqDBFlow m r,
+    HasKafkaProducer r,
     HasField "searchRequestExpirationSeconds" r NominalDiffTime,
     HasField "jobInfoMap" r (M.Map Text Bool),
     HasField "maxShards" r Int,
@@ -123,6 +124,7 @@ cancelRideImpl ::
     HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl],
     HasFlowEnv m r '["ondcTokenHashMap" ::: HMS.HashMap KeyConfig TokenConfig],
     HasFlowEnv m r '["nwAddress" ::: BaseUrl],
+    HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig],
     TranslateFlow m r,
     LT.HasLocationService m r,
     HasFlowEnv m r '["maxNotificationShards" ::: Int],
@@ -161,7 +163,7 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
             noShowCharges <- try @_ @SomeException $ do
               if transporterConfig.canAddCancellationFee
                 then do
-                  rideTags <- updateNammaTagsForCancelledRide booking ride bookingCReason
+                  rideTags <- updateNammaTagsForCancelledRide booking ride bookingCReason transporterConfig
                   if validCustomerCancellation `elem` rideTags
                     then getCancellationCharges booking ride
                     else return Nothing
@@ -286,9 +288,10 @@ updateNammaTagsForCancelledRide booking ride bookingCReason transporterConfig = 
   driverStats <- QDriverStats.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
   let tags = fromMaybe [] allTags
   when (validDriverCancellation `elem` tags) $ do
-    when (transporterConfig.enableFleetOperatorDashboardAnalytics == Just True) $ Analytics.updateOperatorAnalyticsCancelCount transporterConfig ride.driverId
+    when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsCancelCount transporterConfig ride.driverId
     QDriverStats.updateValidDriverCancellationTagCount (driverStats.validDriverCancellationTagCount + 1) ride.driverId
   when (validCustomerCancellation `elem` tags) $ do
+    when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateFleetOwnerAnalyticsCustomerCancelCount ride.driverId transporterConfig
     QDriverStats.updateValidCustomerCancellationTagCount (driverStats.validCustomerCancellationTagCount + 1) ride.driverId
   return $ fromMaybe [] allTags
 
