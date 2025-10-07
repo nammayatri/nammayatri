@@ -36,8 +36,8 @@ type RouteFareAPI =
 mkRouteFareKey :: Text -> Text -> Text -> Text
 mkRouteFareKey startStopCode endStopCode searchReqId = "CRIS:" <> searchReqId <> "-" <> startStopCode <> "-" <> endStopCode
 
-mkRouteFareCacheKey :: Text -> Text -> Text
-mkRouteFareCacheKey startStopCode endStopCode = "CRIS:" <> startStopCode <> "-" <> endStopCode
+mkRouteFareCacheKey :: Text -> Text -> Text -> Text
+mkRouteFareCacheKey startStopCode endStopCode changeOver = "CRIS:" <> startStopCode <> "-" <> endStopCode <> "-" <> changeOver
 
 getCachedFaresAndRecache ::
   ( CoreMetrics m,
@@ -50,7 +50,7 @@ getCachedFaresAndRecache ::
   CRISFareRequest ->
   m CRISFareResponse
 getCachedFaresAndRecache config request = do
-  let redisKey = mkRouteFareCacheKey request.sourceCode request.destCode
+  let redisKey = mkRouteFareCacheKey request.sourceCode request.destCode request.changeOver
   redisResp <- Hedis.safeGet redisKey
   case redisResp of
     Just fares -> do
@@ -107,7 +107,7 @@ getCachedFaresAndRecache config request = do
                     Left err -> throwError (CRISError $ "Failed to decode getRouteFare Resp: " <> T.pack (show err))
                     Right fareResponse -> pure fareResponse
             else throwError (CRISError $ "Non-zero response code in getRouteFare Resp: " <> encResp.responseCode <> " " <> encResp.responseData)
-      let fareCacheKey = mkRouteFareCacheKey request.sourceCode request.destCode
+      let fareCacheKey = mkRouteFareCacheKey request.sourceCode request.destCode request.changeOver
       Hedis.setExp fareCacheKey decryptedResponse 3600
       return decryptedResponse
 
