@@ -807,6 +807,7 @@ getCorrespondingErrorMessage errorPayload = do
         "IMAGE_VALIDATION_EXCEED_LIMIT" -> getString IMAGE_VALIDATION_EXCEED_LIMIT
         "CANNOT_ENABLE_GO_HOME_FOR_DIFFERENT_CITY" -> getString CANNOT_ENABLE_GO_HOME_FOR_DIFFERENT_CITY
         "DRIVER_UNSUBSCRIBED" -> getString DRIVER_UNSUBSCRIBED
+        "MISMATCH_DATA_ERROR" -> decodeErrorMessage errorPayload.response.errorMessage
         undefined -> getString ERROR_OCCURED_PLEASE_TRY_AGAIN_LATER
 
 registerDriverRC :: DriverRCReq -> Flow GlobalState (Either ErrorResponse ApiSuccessResult)
@@ -936,6 +937,24 @@ makeValidateImageReq image imageType rcNumber status transactionId category = Va
       "rcNumber" : rcNumber,
       "validationStatus" : status,
       "workflowTransactionId" : transactionId,
+      "vehicleCategory" : mkCategory category
+    }
+
+validateImageForIdfy :: ValidateImageForIdfyReq -> Flow GlobalState (Either ErrorResponse ValidateImageRes)
+validateImageForIdfy payload = do
+     headers <- getHeaders "" false
+     withAPIResult (EP.validateImage "") unwrapResponse $ callAPI headers payload
+    where
+        unwrapResponse (x) = x
+
+
+makeValidateImageReqForIdfyCase :: String -> String -> Maybe String -> Maybe ValidationStatus -> Maybe ST.VehicleCategory -> ValidateImageForIdfyReq
+makeValidateImageReqForIdfyCase image imageType rcNumber status category = ValidateImageForIdfyReq
+    {
+      "image" : image,
+      "imageType" : imageType,
+      "rcNumber" : rcNumber,
+      "validationStatus" : status, 
       "vehicleCategory" : mkCategory category
     }
 

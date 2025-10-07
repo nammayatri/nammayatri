@@ -50,6 +50,7 @@ public class MobilityServices extends HyperServices {
                         "    let headID = document.getElementsByTagName(\"head\")[0];\n" +
                         "    window.prevTimeStamp = Date.now();\n" +
                         "    window.isDev = " + BuildConfig.flavor.equals("dev") + ";" +
+                        "    window.isDebug = " + BuildConfig.DEBUG + ";" +
                         "    window.assetDownloadDuration = Date.now();\n" +
                         "    let jsFile = JBridge.loadFileInDUI('v1-assets_downloader.jsa'); // update index_bundle.js to share apk\n" +
                         "    window.assetDownloadDurationEnd = Date.now();\n" +
