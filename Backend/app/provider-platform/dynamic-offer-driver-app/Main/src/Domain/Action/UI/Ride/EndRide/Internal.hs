@@ -190,7 +190,7 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   let driverInfo = oldDriverInfo {DI.driverFlowStatus = Just newFlowStatus}
   let safetyPlusCharges = maybe Nothing (\a -> find (\ac -> ac.chargeCategory == DAC.SAFETY_PLUS_CHARGES) a) $ (mbFareParams <&> (.conditionalCharges)) <|> (Just newFareParams.conditionalCharges)
   void $ QDriverStats.incrementTotalRidesAndTotalDistAndIdleTime (cast ride.driverId) (fromMaybe 0 ride.chargeableDistance)
-  when (thresholdConfig.enableFleetOperatorDashboardAnalytics == Just True) $ Analytics.updateOperatorAnalyticsTotalRideCount thresholdConfig driverId ride
+  when thresholdConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsTotalRideCount thresholdConfig driverId ride
   when (isJust safetyPlusCharges) $ QDriverStats.incSafetyPlusRiderCountAndEarnings (cast ride.driverId) (fromMaybe 0.0 $ safetyPlusCharges <&> (.charge))
   Hedis.del $ multipleRouteKey booking.transactionId
   Hedis.del $ searchRequestKey booking.transactionId

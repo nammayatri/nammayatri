@@ -23,6 +23,8 @@ data FleetOperatorDailyStats = FleetOperatorDailyStats
     id :: Kernel.Prelude.Text,
     inspectionCompleted :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     merchantLocalDate :: Data.Time.Calendar.Day,
+    pulledRequestCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    rejectedRequestCount :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     totalCompletedRides :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     totalDistance :: Kernel.Prelude.Maybe Kernel.Types.Common.Meters,
     totalEarning :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
