@@ -125,7 +125,7 @@ handler merchantId req ride = do
 
   rating' <- B.runInReplica $ QRating.checkIfRatingExistsForDriver ride.driverId
   driverStats <- runInReplica $ QDriverStats.findById ride.driverId >>= fromMaybeM DriverInfoNotFound
-  transporterConfig <- SCTC.findByMerchantOpCityId ride.merchantOperatingCityId Nothing >>= fromMaybeM (MerchantNotFound ride.merchantOperatingCityId.getId)
+  transporterConfig <- SCTC.findByMerchantOpCityId ride.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound ride.merchantOperatingCityId.getId)
   -- backfilling rating for the old driver entries
   (ratingCount, ratingsSum) <- do
     if ((not $ null rating') && (isNothing driverStats.totalRatings) && (isNothing driverStats.totalRatingScore) && (isNothing driverStats.isValidRating))
@@ -171,7 +171,7 @@ calculateAverageRating personId minimumDriverRatesCount ratingValue mbtotalRatin
     logTagInfo "PersonAPI" "No rating found to calculate"
   let isValidRating = newRatingsCount >= minimumDriverRatesCount
   logTagInfo "PersonAPI" $ "New average rating for person " +|| personId ||+ ""
-  when (transporterConfig.enableFleetOperatorDashboardAnalytics == Just True) $ Analytics.updateOperatorAnalyticsRatingScoreKey personId transporterConfig ratingValue
+  when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ Analytics.updateOperatorAnalyticsRatingScoreKey personId transporterConfig ratingValue
   void $ QDriverStats.updateAverageRating personId (Just newRatingsCount) (Just newTotalRatingScore) (Just isValidRating)
 
 buildRating ::

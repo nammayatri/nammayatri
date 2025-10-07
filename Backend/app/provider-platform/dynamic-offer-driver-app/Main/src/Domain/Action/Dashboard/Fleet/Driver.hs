@@ -63,6 +63,8 @@ module Domain.Action.Dashboard.Fleet.Driver
     postDriverFleetLocationList,
     postDriverFleetGetDriverDetails,
     postDriverFleetGetNearbyDriversV2,
+    getDriverFleetDashboardAnalyticsAllTime,
+    getDriverFleetDashboardAnalytics,
   )
 where
 
@@ -149,6 +151,7 @@ import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.FleetBadgeAssociation as CFBA
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Clickhouse.DriverEdaKafka as CHDriverEda
+import qualified Storage.Clickhouse.FleetOperatorDailyStats as CFODS
 import qualified Storage.Clickhouse.Ride as CQRide
 import Storage.Clickhouse.RideDetails (findIdsByFleetOwner)
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
@@ -171,6 +174,7 @@ import qualified Storage.Queries.FleetDriverAssociation as QFDV
 import qualified Storage.Queries.FleetMemberAssociation as FMA
 import qualified Storage.Queries.FleetOperatorAssociation as FOV
 import qualified Storage.Queries.FleetOperatorAssociation as QFleetOperatorAssociation
+import qualified Storage.Queries.FleetOperatorStats as QFleetOperatorStats
 import qualified Storage.Queries.FleetOwnerInformation as FOI
 import Storage.Queries.FleetRCAssociationExtra as FRAE
 import qualified Storage.Queries.FleetRouteAssociation as QFRA
@@ -632,8 +636,7 @@ unlinkVehicleFromDriver merchant personId vehicleNo opCity role = do
   driverInfo <- QDriverInfo.findById personId >>= fromMaybeM DriverInfoNotFound
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  when (transporterConfig.deactivateRCOnUnlink == Just True) $ DomainRC.deactivateCurrentRC personId
-  QVehicle.deleteById personId
+  when (transporterConfig.deactivateRCOnUnlink == Just True) $ DomainRC.deactivateCurrentRC transporterConfig personId
   when (driverInfo.onboardingVehicleCategory /= Just DVC.BUS && transporterConfig.disableDriverWhenUnlinkingVehicle == Just True) $ Analytics.updateEnabledVerifiedStateWithAnalytics (Just driverInfo) transporterConfig personId False (Just False)
   _ <- QRCAssociation.endAssociationForRC personId rc.id
   logTagInfo (show role <> " -> unlinkVehicle : ") (show personId)
@@ -893,25 +896,27 @@ postDriverFleetRemoveDriver merchantShortId opCity requestorId driverId mbFleetO
         rc <- RCQuery.findByRCIdAndFleetOwnerId assoc.rcId $ Just entityId
         when (isJust rc) $ throwError (InvalidRequest "Driver is linked to fleet Vehicle, first unlink then try")
       FDV.endFleetDriverAssociation entityId personId
-      let needDriverInfo = transporterConfig.enableFleetOperatorDashboardAnalytics == Just True || allowCacheDriverFlowStatus
+      when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ do
+        Analytics.decrementFleetOwnerAnalyticsActiveDriverCount (Just entityId) personId
+      let needDriverInfo = transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics || allowCacheDriverFlowStatus
       when needDriverInfo $ do
         driverInfo <- QDriverInfo.findById personId >>= fromMaybeM (DriverNotFound personId.getId)
-        when (transporterConfig.enableFleetOperatorDashboardAnalytics == Just True) $ do
+        when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ do
           mbOperator <- FOV.findByFleetOwnerId entityId True
           when (isNothing mbOperator) $ logTagError "AnalyticsRemoveDriver" "Operator not found for fleet owner"
           whenJust mbOperator $ \operator -> do
             when driverInfo.enabled $ Analytics.decrementOperatorAnalyticsDriverEnabled transporterConfig operator.operatorId
-            Analytics.decrementOperatorAnalyticsApplicationCount transporterConfig operator.operatorId
+            Analytics.decrementOperatorAnalyticsActiveDriver transporterConfig operator.operatorId
         when allowCacheDriverFlowStatus $ do
           DDriverMode.decrementFleetOperatorStatusKeyForDriver DP.FLEET_OWNER entityId driverInfo.driverFlowStatus
     DP.OPERATOR -> do
       DOV.endOperatorDriverAssociation entityId personId
-      let needDriverInfo = transporterConfig.enableFleetOperatorDashboardAnalytics == Just True || allowCacheDriverFlowStatus
+      let needDriverInfo = transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics || allowCacheDriverFlowStatus
       when needDriverInfo $ do
         driverInfo <- QDriverInfo.findById personId >>= fromMaybeM (DriverNotFound personId.getId)
-        when (transporterConfig.enableFleetOperatorDashboardAnalytics == Just True) $ do
+        when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ do
           when driverInfo.enabled $ Analytics.decrementOperatorAnalyticsDriverEnabled transporterConfig entityId
-          Analytics.decrementOperatorAnalyticsApplicationCount transporterConfig entityId
+          Analytics.decrementOperatorAnalyticsActiveDriver transporterConfig entityId
         when allowCacheDriverFlowStatus $ do
           DDriverMode.decrementFleetOperatorStatusKeyForDriver DP.OPERATOR entityId driverInfo.driverFlowStatus
     _ -> throwError (InvalidRequest "Invalid Data")
@@ -1743,16 +1748,18 @@ postDriverFleetVerifyJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId mbR
       -- onboarded operator required only for new drivers
       assoc <- FDA.makeFleetDriverAssociation person.id fleetOwnerId Nothing (DomainRC.convertTextToUTC (Just "2099-12-12"))
       QFDV.create assoc
+      when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ do
+        Analytics.incrementFleetOwnerAnalyticsActiveDriverCount (Just fleetOwnerId) person.id
       let allowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
-      let needsDriverInfo = transporterConfig.enableFleetOperatorDashboardAnalytics == Just True || allowCacheDriverFlowStatus
+      let needsDriverInfo = transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics || allowCacheDriverFlowStatus
       when needsDriverInfo $ do
         driverInfo <- QDriverInfo.findById person.id >>= fromMaybeM (DriverNotFound person.id.getId)
-        when (transporterConfig.enableFleetOperatorDashboardAnalytics == Just True) $ do
+        when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ do
           mOperator <- FOV.findByFleetOwnerId fleetOwnerId True
           when (isNothing mOperator) $ logTagError "AnalyticsAddDriver" "Operator not found for fleet owner"
           whenJust mOperator $ \operator -> do
             when driverInfo.enabled $ Analytics.incrementOperatorAnalyticsDriverEnabled transporterConfig operator.operatorId
-            Analytics.incrementOperatorAnalyticsApplicationCount transporterConfig operator.operatorId
+            Analytics.incrementOperatorAnalyticsActiveDriver transporterConfig operator.operatorId
         when allowCacheDriverFlowStatus $ do
           DDriverMode.incrementFleetOperatorStatusKeyForDriver DP.FLEET_OWNER fleetOwnerId driverInfo.driverFlowStatus
   pure Success
@@ -2953,3 +2960,54 @@ postDriverFleetGetNearbyDriversV2 merchantShortId _ fleetOwnerId req = do
     mkRideStatus = \case
       TR.INPROGRESS -> Common.ON_RIDE
       _ -> Common.ON_PICKUP
+
+---------------------------------------------------------------------
+
+getDriverFleetDashboardAnalyticsAllTime :: ShortId DM.Merchant -> Context.City -> Text -> Flow Common.AllTimeFleetAnalyticsRes
+getDriverFleetDashboardAnalyticsAllTime merchantShortId opCity fleetOwnerId = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  when (not transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics) $ throwError (InvalidRequest "Analytics is not allowed for this merchant")
+  -- Redis keys for fleet aggregates
+  let allTimeKeysData = Analytics.fleetAllTimeKeys fleetOwnerId
+  logTagInfo "fleetAllTimeKeysData" (show allTimeKeysData)
+  -- try redis first
+  mbAllTimeKeysRes <- mapM (Redis.get @Int) allTimeKeysData
+  logTagInfo "fleetMbAllTimeKeysRes" (show mbAllTimeKeysRes)
+  -- fallback to ClickHouse and populate cache when missing
+  (activeDriverCount, activeVehicleCount, currentOnlineDriverCount) <- do
+    if all isJust mbAllTimeKeysRes
+      then do
+        let res = Analytics.convertToFleetAllTimeFallbackRes (zip Analytics.fleetAllTimeMetrics (map (fromMaybe 0) mbAllTimeKeysRes))
+        logTagInfo "FleetAllTimeFallbackRes" (show res)
+        pure (res.activeDriverCount, res.activeVehicleCount, res.currentOnlineDriverCount)
+      else do
+        res <- Analytics.handleCacheMissForFleetAnalyticsAllTime fleetOwnerId allTimeKeysData
+        logTagInfo "FleetAllTimeFallbackRes" (show res)
+        pure (res.activeDriverCount, res.activeVehicleCount, res.currentOnlineDriverCount)
+  -- compute remaining metrics from DB
+  mfos <- QFleetOperatorStats.findByPrimaryKey fleetOwnerId
+  let completedRides = fromMaybe 0 (mfos >>= (.totalCompletedRides))
+      ratingSum = fromMaybe 0 (mfos >>= (.totalRatingScore))
+      averageDriverRatings = if completedRides > 0 then realToFrac ratingSum / realToFrac completedRides else 0.0
+  pure $ Common.AllTimeFleetAnalyticsRes {activeVehicle = activeVehicleCount, completedRides = completedRides, totalActiveDrivers = activeDriverCount, currentOnlineDrivers = currentOnlineDriverCount, averageDriverRatings = averageDriverRatings}
+
+getDriverFleetDashboardAnalytics :: ShortId DM.Merchant -> Context.City -> Text -> Data.Time.Day -> Data.Time.Day -> Flow Common.FilteredFleetAnalyticsRes
+getDriverFleetDashboardAnalytics merchantShortId opCity fleetOwnerId fromDay toDay = do
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  when (not transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics) $ throwError (InvalidRequest "Analytics is not allowed for this merchant")
+  -- Aggregate period metrics from ClickHouse
+  agg <- CFODS.sumFleetMetricsByFleetOwnerIdAndDateRange fleetOwnerId fromDay toDay
+  let totalEarnings = PriceAPIEntity (fromMaybe (HighPrecMoney 0.0) agg.totalEarningSum) transporterConfig.currency
+      totalDistance = fromMaybe (Meters 0) agg.totalDistanceSum
+      completedRides = fromMaybe 0 agg.totalCompletedRidesSum
+      totalRideRequest = fromMaybe 0 agg.totalRequestCountSum
+      acceptedRequest = fromMaybe 0 agg.acceptationRequestCountSum
+      rejectedRequest = fromMaybe 0 agg.rejectedRequestCountSum
+      pulledRequest = fromMaybe 0 agg.pulledRequestCountSum
+      driverCancelled = fromMaybe 0 agg.driverCancellationCountSum
+      customerCancelled = fromMaybe 0 agg.customerCancellationCountSum
+  pure $ Common.FilteredFleetAnalyticsRes {..}

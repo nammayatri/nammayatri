@@ -122,9 +122,7 @@ countDriversWithNumRidesGreaterThanBetween driverIds fromDateU toDateU threshold
   res <-
     CH.findAll $
       CH.select_
-        ( \ds ->
-            CH.groupBy ds.driverId $ \driver -> (driver, CH.sum_ ds.numRides)
-        )
+        (\ds -> CH.groupBy ds.driverId $ \_ -> CH.sum_ ds.numRides)
         $ CH.filter_
           ( \ds ->
               ds.driverId `CH.in_` driverIds
@@ -132,7 +130,7 @@ countDriversWithNumRidesGreaterThanBetween driverIds fromDateU toDateU threshold
                 CH.&&. ds.merchantLocalDate <=. toDateU
           )
           (CH.all_ @CH.APP_SERVICE_CLICKHOUSE dailyStatsTTable)
-  let totals = [ridesSum | (_driver, ridesSum) <- res, ridesSum > threshold]
+  let totals = [ridesSum | ridesSum <- res, ridesSum > threshold]
   pure $ length totals
 
 countDriversWithNumRidesGreaterThan1Between ::

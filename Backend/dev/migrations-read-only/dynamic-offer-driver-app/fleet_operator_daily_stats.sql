@@ -21,3 +21,18 @@ ALTER TABLE atlas_driver_offer_bpp.fleet_operator_daily_stats ADD COLUMN updated
 ALTER TABLE atlas_driver_offer_bpp.fleet_operator_daily_stats ADD PRIMARY KEY ( id);
 ALTER TABLE atlas_driver_offer_bpp.fleet_operator_daily_stats ADD COLUMN distance_unit character varying(255) ;
 ALTER TABLE atlas_driver_offer_bpp.fleet_operator_daily_stats ADD COLUMN currency character varying(255) ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.fleet_operator_daily_stats ADD COLUMN rejected_request_count integer ;
+ALTER TABLE atlas_driver_offer_bpp.fleet_operator_daily_stats ADD COLUMN pulled_request_count integer ;
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

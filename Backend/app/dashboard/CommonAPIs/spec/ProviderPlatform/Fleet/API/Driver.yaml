@@ -1113,6 +1113,38 @@ apis:
               type: NearbyDriversReqV2
             response:
               type: NearbyDriversRespV2
+  - GET:
+      endpoint: /fleet/dashboard/analytics/allTime
+      auth: ApiAuthV2
+      response:
+        type: AllTimeFleetAnalyticsRes
+      helperApi:
+        - GET:
+            endpoint: /{fleetOwnerId}/fleet/dashboard/analytics/allTime
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+            response:
+              type: AllTimeFleetAnalyticsRes
+  - GET:
+      endpoint: /fleet/dashboard/analytics
+      auth: ApiAuthV2
+      mandatoryQuery:
+        - from: Day
+        - to: Day
+      response:
+        type: FilteredFleetAnalyticsRes
+      helperApi:
+        - GET:
+            endpoint: /{fleetOwnerId}/fleet/dashboard/analytics
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+            mandatoryQuery:
+              - from: Day
+              - to: Day
+            response:
+              type: FilteredFleetAnalyticsRes
 types:
   NearbyDriverReq:
     - point: LatLong
@@ -1626,6 +1658,22 @@ types:
     minDistanceBetweenTwoPoints: Maybe Int
     rideStops: Maybe [LatLong]
     derive: "'HideSecrets"
+  AllTimeFleetAnalyticsRes:
+    - activeVehicle: Int
+    - completedRides: Int
+    - totalActiveDrivers: Int
+    - currentOnlineDrivers: Int
+    - averageDriverRatings: Double
+  FilteredFleetAnalyticsRes:
+    - totalEarnings: PriceAPIEntity
+    - completedRides: Int
+    - totalDistance: Meters
+    - totalRideRequest: Int
+    - acceptedRequest: Int
+    - pulledRequest: Int
+    - rejectedRequest: Int
+    - driverCancelled: Int
+    - customerCancelled: Int
 
 extraOperations:
   - EXTRA_API_TYPES_FILE

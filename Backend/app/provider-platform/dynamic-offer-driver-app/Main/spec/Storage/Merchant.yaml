@@ -854,6 +854,7 @@ TransporterConfig:
       weekStartMode: Int
       earningsWindowSize: Int
       allowCacheDriverFlowStatus: Bool
+      enableFleetOperatorDashboardAnalytics: Bool
       maxOnlineDurationDays: Int
       onlineDurationCalculateFrom: Maybe UTCTime # set null to switch off calculation, current UTC timestamp to switch on
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
@@ -1099,7 +1100,6 @@ TransporterConfig:
     subscriptionConfig: SubscriptionConfig
     analyticsConfig: AnalyticsConfig
     driverWalletConfig: DriverWalletConfig
-    enableFleetOperatorDashboardAnalytics : Maybe Bool
 
   beamType:
     currency: Maybe Currency
@@ -1527,9 +1527,8 @@ TransporterConfig:
     disableDriverWhenUnlinkingVehicle : "true"
     distanceWeightage: "20"
     driverCallingOption: "'AnonymousCall'"
-    enableFleetOperatorDashboardAnalytics : "false"
     driverWalletConfig:  '''{"enableDriverWallet": false, "driverWalletPayoutThreshold": 0, "gstPercentage": 0.0, "enableWalletPayout": false, "enableWalletTopup": false, "maxWalletPayoutsPerDay": null, "minWalletAmountForCashRides": null, "minimumWalletPayoutAmount": 0, "payoutCutOffDays": 7}'' :: json'
-    analyticsConfig: '''{"weekStartMode": 3, "earningsWindowSize": 7, "allowCacheDriverFlowStatus": false, "maxOnlineDurationDays": 10, "onlineDurationCalculateFrom": null}'' :: json'
+    analyticsConfig: '''{"weekStartMode": 3, "earningsWindowSize": 7, "allowCacheDriverFlowStatus": false, "enableFleetOperatorDashboardAnalytics": false, "maxOnlineDurationDays": 10, "onlineDurationCalculateFrom": null}'' :: json'
     subscriptionConfig:  '''{"prepaidSubscriptionThreshold": null}'' :: json'
   excludedDefaultQueries:
     - findByPrimaryKey

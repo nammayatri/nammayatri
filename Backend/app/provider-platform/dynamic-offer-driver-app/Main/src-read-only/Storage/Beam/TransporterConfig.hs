@@ -125,7 +125,6 @@ data TransporterConfigT f = TransporterConfigT
     enableDashboardSms :: B.C f Kernel.Prelude.Bool,
     enableExistingVehicleInBulkUpload :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableFaceVerification :: B.C f Kernel.Prelude.Bool,
-    enableFleetOperatorDashboardAnalytics :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableOverchargingBlocker :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableTollCrossedNotifications :: B.C f Kernel.Prelude.Bool,
     enableUdfForOffers :: B.C f Kernel.Prelude.Bool,
