@@ -75,6 +75,7 @@ import SharedLogic.DriverPool.Types
 import SharedLogic.DynamicPricing
 import qualified SharedLogic.KaalChakra.Chakras as Chakras
 import SharedLogic.Merchant
+import SharedLogic.UserCancellationDues
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Cac.TransporterConfig as SCTC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -182,6 +183,9 @@ postNammaTagAppDynamicLogicVerify merchantShortId opCity req = do
     LYT.DYNAMIC_PRICING_UNIFIED -> do
       logicData :: DynamicPricingData <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy DynamicPricingResult) transporterConfig.referralLinkPassword req logicData
+    LYT.USER_CANCELLATION_DUES -> do
+      logicData :: UserCancellationDuesData <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
+      YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy UserCancellationDuesResult) transporterConfig.referralLinkPassword req logicData
     LYT.CONFIG LYT.DriverPoolConfig -> do
       logicData :: Config <- YudhishthiraFlow.createLogicData def (Prelude.listToMaybe req.inputData)
       YudhishthiraFlow.verifyAndUpdateDynamicLogic mbMerchantId (Proxy :: Proxy Config) transporterConfig.referralLinkPassword req logicData
