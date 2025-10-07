@@ -41,6 +41,7 @@ data RiderConfigT f = RiderConfigT
     collectMMIRouteData :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     csAlertTriggerDelay :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     cxAgentDetails :: B.C f (Kernel.Prelude.Maybe [IssueManagement.Common.CxAgentDetails]),
+    dashboardMediaFileUrlPattern :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     distanceToNearestStopThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     distanceWeightage :: B.C f Kernel.Prelude.Int,
     domainPublicTransportDataVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),

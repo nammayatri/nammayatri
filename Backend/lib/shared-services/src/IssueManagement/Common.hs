@@ -69,6 +69,7 @@ data Quote = Quote
 data MerchantOperatingCity = MerchantOperatingCity
   { id :: Id MerchantOperatingCity,
     merchantId :: Id Merchant,
+    merchantShortId :: ShortId Merchant,
     city :: Context.City
   }
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
@@ -275,6 +276,7 @@ data ChatDetail = ChatDetail
 data MerchantConfig = MerchantConfig
   { mediaFileSizeUpperLimit :: Int,
     mediaFileUrlPattern :: Text,
+    dashboardMediaFileUrlPattern :: Maybe Text,
     kaptureDisposition :: Text,
     kaptureQueue :: Text,
     counterPartyUrl :: BaseUrl,

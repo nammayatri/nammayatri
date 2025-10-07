@@ -172,6 +172,7 @@ library
       Domain.Action.Dashboard.Invoice
       Domain.Action.Dashboard.IssueManagement.Issue
       Domain.Action.Dashboard.IssueManagement.IssueList
+      Domain.Action.Dashboard.Media
       Domain.Action.Dashboard.Merchant
       Domain.Action.Dashboard.NammaTag
       Domain.Action.Dashboard.Ride
@@ -613,6 +614,7 @@ library
       API.Action.Dashboard.Management.Customer
       API.Action.Dashboard.Management.FRFSTicket
       API.Action.Dashboard.Management.Invoice
+      API.Action.Dashboard.Management.Media
       API.Action.Dashboard.Management.Merchant
       API.Action.Dashboard.Management.NammaTag
       API.Action.Dashboard.Management.Ride

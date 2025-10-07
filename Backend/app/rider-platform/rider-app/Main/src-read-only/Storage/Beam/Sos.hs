@@ -14,6 +14,7 @@ import Tools.Beam.UtilsTH
 data SosT f = SosT
   { flow :: B.C f Domain.Types.Sos.SosType,
     id :: B.C f Kernel.Prelude.Text,
+    mediaFiles :: B.C f (Kernel.Prelude.Maybe [Kernel.Prelude.Text]),
     personId :: B.C f Kernel.Prelude.Text,
     rideId :: B.C f Kernel.Prelude.Text,
     status :: B.C f Domain.Types.Sos.SosStatus,
