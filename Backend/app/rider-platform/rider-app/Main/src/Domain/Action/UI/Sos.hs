@@ -1,6 +1,5 @@
 module Domain.Action.UI.Sos where
 
-import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Message as Common
 import API.Types.UI.Sos
 import AWS.S3 as S3
 import qualified Data.Aeson as A
@@ -130,6 +129,7 @@ getSosGetDetails (mbPersonId, _) rideId_ = do
           rideId = rideId_,
           status = mockSos.status,
           ticketId = Nothing,
+          mediaFiles = [],
           merchantId = Nothing,
           merchantOperatingCityId = Nothing,
           createdAt = now,
@@ -292,43 +292,43 @@ uploadMedia sosId personId SOSVideoUploadReq {..} = do
     throwError $ FileSizeExceededError (show fileSize)
   mediaFile <- L.runIO $ base64Encode <$> BS.readFile payload
   filePath <- createFilePath "/sos/" ("sos-" <> getId sosId) fileType fileExtension
+  mediaFileId <- generateGUID
+  now <- getCurrentTime
   let fileUrl =
         merchantConfig.mediaFileUrlPattern
           & T.replace "<DOMAIN>" "sos"
           & T.replace "<FILE_PATH>" filePath
+      fileEntity =
+        DMF.MediaFile
+          { id = mediaFileId,
+            _type = fileType,
+            url = fileUrl,
+            s3FilePath = Just filePath,
+            createdAt = now
+          }
   result <- try @_ @SomeException $ S3.put (T.unpack filePath) mediaFile
   case result of
     Left err -> throwError $ InternalError ("S3 Upload Failed: " <> show err)
     Right _ -> do
+      MFQuery.create fileEntity
+      void $ QSos.updateMediaFiles [mediaFileId] sosId
       ride <- QRide.findById sosDetails.rideId >>= fromMaybeM (RideDoesNotExist sosDetails.rideId.getId)
       phoneNumber <- mapM decrypt person.mobileNumber
       let rideInfo = SIVR.buildRideInfo ride person phoneNumber
           trackLink = Notify.buildTrackingUrl ride.id [("vp", "shareRide")] riderConfig.trackingShortUrlPattern
           kaptureQueue = fromMaybe riderConfig.kaptureConfig.queue riderConfig.kaptureConfig.sosQueue
+          dashboardFileUrl =
+            maybe
+              []
+              ( \patternS ->
+                  [ patternS
+                      & T.replace "<FILE_PATH>" filePath
+                  ]
+              )
+              riderConfig.dashboardMediaFileUrlPattern
       when riderConfig.enableSupportForSafety $
-        void $ try @_ @SomeException $ withShortRetry (createTicket person.merchantId person.merchantOperatingCityId (SIVR.mkTicket person phoneNumber ["https://" <> trackLink, fileUrl] rideInfo DSos.AudioRecording riderConfig.kaptureConfig.disposition kaptureQueue))
-      createMediaEntry Common.AddLinkAsMedia {url = fileUrl, fileType} filePath
-
-createMediaEntry :: Common.AddLinkAsMedia -> Text -> Flow AddSosVideoRes
-createMediaEntry Common.AddLinkAsMedia {..} filePath = do
-  fileEntity <- mkFile url
-  MFQuery.create fileEntity
-  return $
-    AddSosVideoRes
-      { fileUrl = url
-      }
-  where
-    mkFile fileUrl = do
-      id <- generateGUID
-      now <- getCurrentTime
-      return $
-        DMF.MediaFile
-          { id,
-            _type = S3.Video,
-            url = fileUrl,
-            s3FilePath = Just filePath,
-            createdAt = now
-          }
+        void $ try @_ @SomeException $ withShortRetry (createTicket person.merchantId person.merchantOperatingCityId (SIVR.mkTicket person phoneNumber (["https://" <> trackLink] <> dashboardFileUrl) rideInfo DSos.AudioRecording riderConfig.kaptureConfig.disposition kaptureQueue))
+      return $ AddSosVideoRes {fileUrl = fileUrl}
 
 callUpdateTicket :: Person.Person -> DSos.Sos -> Maybe Text -> Flow APISuccess.APISuccess
 callUpdateTicket person sosDetails mbComment = do

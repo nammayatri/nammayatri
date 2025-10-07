@@ -154,6 +154,7 @@ buildSosDetails person req ticketId = do
         flow = req.flow,
         rideId = req.rideId,
         ticketId = ticketId,
+        mediaFiles = [],
         merchantId = Just person.merchantId,
         merchantOperatingCityId = Just person.merchantOperatingCityId,
         createdAt = now,

@@ -8,6 +8,7 @@ import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Person
 import qualified Domain.Types.Ride
+import qualified IssueManagement.Domain.Types.MediaFile
 import Kernel.Prelude
 import qualified Kernel.Types.Id
 import qualified Tools.Beam.UtilsTH
@@ -15,6 +16,7 @@ import qualified Tools.Beam.UtilsTH
 data Sos = Sos
   { flow :: Domain.Types.Sos.SosType,
     id :: Kernel.Types.Id.Id Domain.Types.Sos.Sos,
+    mediaFiles :: [Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile],
     personId :: Kernel.Types.Id.Id Domain.Types.Person.Person,
     rideId :: Kernel.Types.Id.Id Domain.Types.Ride.Ride,
     status :: Domain.Types.Sos.SosStatus,
