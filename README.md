@@ -1,6 +1,6 @@
 # 🛺 Namma Yatri 🚖
 
-**Open and Driver Centric Mobility Platform**
+**Open and Direct to Driver Centric Mobility Platform**
 
 ![Alt text](docs/images/drivers-with-vehicles.png)
 
