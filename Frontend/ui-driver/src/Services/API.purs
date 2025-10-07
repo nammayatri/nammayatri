@@ -1330,6 +1330,25 @@ instance decodeValidateImageRes:: Decode ValidateImageRes where decode = default
 instance encodeValidateImageRes  :: Encode ValidateImageRes where encode = defaultEncode
 
 
+newtype ValidateImageForIdfyReq = ValidateImageForIdfyReq {
+  image :: String,
+  imageType :: String,
+  rcNumber :: Maybe String,
+  validationStatus :: Maybe ValidationStatus,
+  vehicleCategory :: Maybe String
+}
+
+derive instance genericValidateImageForIdfyReq :: Generic ValidateImageForIdfyReq _
+derive instance newtypeValidateImageForIdfyReq :: Newtype ValidateImageForIdfyReq _
+instance standardEncodeValidateImageForIdfyReq :: StandardEncode ValidateImageForIdfyReq where standardEncode (ValidateImageForIdfyReq body) = standardEncode body
+instance showValidateImageForIdfyReq :: Show ValidateImageForIdfyReq where show = genericShow
+instance decodeValidateImageForIdfyReq:: Decode ValidateImageForIdfyReq where decode = defaultDecode
+instance encodeValidateImageForIdfyReq  :: Encode ValidateImageForIdfyReq where encode = defaultEncode
+
+instance makeValidateImageForIdfyReq :: RestEndpoint ValidateImageForIdfyReq where
+  makeRequest reqBody headers = defaultMakeRequestWithoutLogs POST (EP.validateImage "") headers reqBody Nothing
+  encodeRequest req = defaultEncode req
+
 -- DriverRegistrationStatus API request, response types
 data DriverRegistrationStatusReq = DriverRegistrationStatusReq Boolean Boolean Boolean
 
