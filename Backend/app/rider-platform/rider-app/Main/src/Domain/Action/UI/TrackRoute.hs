@@ -72,7 +72,8 @@ getTrackVehicles (mbPersonId, merchantId) routeCode mbCurrentLat mbCurrentLon mb
         Nothing -> getTrackWithoutCurrentLocation personId personCityInfo vehicleType maxBuses riderConfig
         Just stop -> do
           vehicleTracking <- concatMapM (\routeIdToTrack -> trackVehicles personId merchantId personCityInfo.merchantOperatingCityId vehicleType routeIdToTrack (fromMaybe DIBC.APPLICATION mbPlatformType) (Just currentLocation) (Just integratedBPPConfig.id)) routeIdsToTrack
-          let vehiclesYetToReachSelectedStop = filterVehiclesYetToReachSelectedStop vehicleTracking
+          let deduplicatedVehicles = List.nubBy (\a b -> a.vehicleId == b.vehicleId) vehicleTracking
+          let vehiclesYetToReachSelectedStop = filterVehiclesYetToReachSelectedStop deduplicatedVehicles
           let (confirmedHighBuses, ghostBuses) = List.partition (\a -> (a.vehicleInfo >>= (.routeState)) == Just CQMMB.ConfirmedHigh) vehiclesYetToReachSelectedStop
           let sortedTracking = sortOn (distanceToStop stop) ghostBuses
           pure $
