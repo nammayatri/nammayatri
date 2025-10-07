@@ -111,12 +111,14 @@ library
       API.Types.RiderPlatform.Management.Endpoints.Customer
       API.Types.RiderPlatform.Management.Endpoints.FRFSTicket
       API.Types.RiderPlatform.Management.Endpoints.Invoice
+      API.Types.RiderPlatform.Management.Endpoints.Media
       API.Types.RiderPlatform.Management.Endpoints.Merchant
       API.Types.RiderPlatform.Management.Endpoints.NammaTag
       API.Types.RiderPlatform.Management.Endpoints.Ride
       API.Types.RiderPlatform.Management.Endpoints.System
       API.Types.RiderPlatform.Management.FRFSTicket
       API.Types.RiderPlatform.Management.Invoice
+      API.Types.RiderPlatform.Management.Media
       API.Types.RiderPlatform.Management.Merchant
       API.Types.RiderPlatform.Management.NammaTag
       API.Types.RiderPlatform.Management.Ride

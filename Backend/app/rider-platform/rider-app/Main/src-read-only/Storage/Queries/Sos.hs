@@ -6,6 +6,7 @@ module Storage.Queries.Sos where
 
 import qualified Domain.Types.Ride
 import qualified Domain.Types.Sos
+import qualified IssueManagement.Domain.Types.MediaFile
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -31,6 +32,11 @@ findByRideId rideId = do findOneWithKV [Se.Is Beam.rideId $ Se.Eq (Kernel.Types.
 findByTicketId :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> m (Maybe Domain.Types.Sos.Sos))
 findByTicketId ticketId = do findOneWithKV [Se.Is Beam.ticketId $ Se.Eq ticketId]
 
+updateMediaFiles :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Kernel.Types.Id.Id IssueManagement.Domain.Types.MediaFile.MediaFile] -> Kernel.Types.Id.Id Domain.Types.Sos.Sos -> m ())
+updateMediaFiles mediaFiles id = do
+  _now <- getCurrentTime
+  updateOneWithKV [Se.Set Beam.mediaFiles (Kernel.Prelude.Just (Kernel.Types.Id.getId <$> mediaFiles)), Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
+
 updateStatus :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Sos.SosStatus -> Kernel.Types.Id.Id Domain.Types.Sos.Sos -> m ())
 updateStatus status id = do _now <- getCurrentTime; updateOneWithKV [Se.Set Beam.status status, Se.Set Beam.updatedAt _now] [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
@@ -42,6 +48,7 @@ updateByPrimaryKey (Domain.Types.Sos.Sos {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.flow flow,
+      Se.Set Beam.mediaFiles (Kernel.Prelude.Just (Kernel.Types.Id.getId <$> mediaFiles)),
       Se.Set Beam.personId (Kernel.Types.Id.getId personId),
       Se.Set Beam.rideId (Kernel.Types.Id.getId rideId),
       Se.Set Beam.status status,
@@ -60,6 +67,7 @@ instance FromTType' Beam.Sos Domain.Types.Sos.Sos where
         Domain.Types.Sos.Sos
           { flow = flow,
             id = Kernel.Types.Id.Id id,
+            mediaFiles = Kernel.Types.Id.Id <$> Kernel.Prelude.fromMaybe [] mediaFiles,
             personId = Kernel.Types.Id.Id personId,
             rideId = Kernel.Types.Id.Id rideId,
             status = status,
@@ -75,6 +83,7 @@ instance ToTType' Beam.Sos Domain.Types.Sos.Sos where
     Beam.SosT
       { Beam.flow = flow,
         Beam.id = Kernel.Types.Id.getId id,
+        Beam.mediaFiles = Kernel.Prelude.Just (Kernel.Types.Id.getId <$> mediaFiles),
         Beam.personId = Kernel.Types.Id.getId personId,
         Beam.rideId = Kernel.Types.Id.getId rideId,
         Beam.status = status,
