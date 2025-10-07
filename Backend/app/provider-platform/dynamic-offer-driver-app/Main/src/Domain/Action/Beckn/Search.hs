@@ -267,7 +267,7 @@ handler ValidatedDSearchReq {..} sReq = do
       specialLocationName = allFarePoliciesProduct.specialLocationName
   cityCurrency <- SMerchant.getCurrencyByMerchantOpCity merchantOpCityId
   customerCancellationDue <-
-    if transporterConfig.canAddCancellationFee
+    if transporterConfig.canAddCancellationFee && sReq.isMultimodalSearch == Just False
       then do
         case sReq.customerPhoneNum of
           Just number -> do
