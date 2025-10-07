@@ -7,6 +7,7 @@ import qualified Data.Text
 import qualified Database.Beam as B
 import Domain.Types.Common ()
 import qualified Domain.Types.VehicleVariant
+import qualified Domain.Types.VendorFee
 import qualified Domain.Types.VendorSplitDetails
 import Kernel.External.Encryption
 import Kernel.Prelude
@@ -17,6 +18,7 @@ import Tools.Beam.UtilsTH
 data VendorSplitDetailsT f = VendorSplitDetailsT
   { area :: B.C f Lib.Types.SpecialLocation.Area,
     merchantOperatingCityId :: B.C f Data.Text.Text,
+    splitMethod :: B.C f (Kernel.Prelude.Maybe Domain.Types.VendorFee.VendorFeeSplitMethod),
     splitType :: B.C f Domain.Types.VendorSplitDetails.SplitType,
     splitValue :: B.C f Kernel.Prelude.Double,
     vehicleVariant :: B.C f Domain.Types.VehicleVariant.VehicleVariant,

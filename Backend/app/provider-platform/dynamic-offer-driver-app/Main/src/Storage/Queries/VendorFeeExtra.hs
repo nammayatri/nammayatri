@@ -97,6 +97,8 @@ createChildVendorFee parentFee childFee totalFee = do
               VendorFee
                 { amount = roundToTwoDecimalPlaces $ HighPrecMoney $ (vfee.amount.getHighPrecMoney * adjustment),
                   driverFeeId = childFee.id,
+                  splitMethod = vfee.splitMethod,
+                  vendorFeeProcessedAt = vfee.vendorFeeProcessedAt,
                   vendorId = vfee.vendorId,
                   createdAt = now,
                   updatedAt = now
@@ -123,3 +125,18 @@ resetVendorFee merchantOpCityId vendorFees = do
             Se.Is Beam.vendorId $ Se.Eq vendorFee.vendorId
           ]
       ]
+
+findUnprocessedByVendorIdInTimeRange :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => Text -> UTCTime -> UTCTime -> Maybe Int -> m [VendorFee]
+findUnprocessedByVendorIdInTimeRange vendorId startTime endTime mbLimit = do
+  let limit = fromMaybe 5 mbLimit
+  findAllWithOptionsDb
+    [ Se.And
+        [ Se.Is Beam.vendorId $ Se.Eq vendorId,
+          Se.Is Beam.vendorFeeProcessedAt $ Se.Eq Nothing,
+          Se.Is Beam.createdAt $ Se.GreaterThanOrEq startTime,
+          Se.Is Beam.createdAt $ Se.LessThan endTime
+        ]
+    ]
+    (Se.Desc Beam.createdAt)
+    (Just limit)
+    Nothing

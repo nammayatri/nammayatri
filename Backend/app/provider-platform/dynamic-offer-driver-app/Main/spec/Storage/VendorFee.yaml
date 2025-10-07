@@ -10,6 +10,17 @@ VendorFee:
     driverFeeId : Id DriverFee
     vendorId : Text
     amount : HighPrecMoney
+    splitMethod : Maybe VendorFeeSplitMethod
+    vendorFeeProcessedAt : Maybe UTCTime
+
+
+  beamType:
+    splitMethod : Maybe VendorFeeSplitMethod
+
+  types:
+    VendorFeeSplitMethod:
+      enum: "Payout,Normal"
+      derive: "HttpInstance"
 
   constraints:
     driverFeeId: PrimaryKey

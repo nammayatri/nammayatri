@@ -768,7 +768,7 @@ createDriverFee merchantId merchantOpCityId driverId rideFare currency newFarePa
                           else areaDetails
                   Nothing -> DL.filter (\detail -> detail.area == Default) allVendorSplitDetails
             unless (null vendorSplitDetails) $ do
-              let vendorAmounts = DL.map (\vendor -> (vendor.vendorId, toRational vendor.splitValue)) vendorSplitDetails
+              let vendorAmounts = DL.map (\vendor -> (vendor.vendorId, toRational vendor.splitValue, vendor.splitMethod)) vendorSplitDetails
                   vendorFees = DL.map (mkVendorFee (maybe driverFee.id (.id) lastDriverFee) now) vendorAmounts
               case lastDriverFee of
                 Just ldFee | now >= ldFee.startTime && now < ldFee.endTime -> QVF.updateManyVendorFee merchantOpCityId vendorFees
@@ -777,7 +777,7 @@ createDriverFee merchantId merchantOpCityId driverId rideFare currency newFarePa
         plan <- getPlan mbDriverPlan serviceName merchantOpCityId Nothing currentVehicleCategory
         fork "Sending switch plan nudge" $ PaymentNudge.sendSwitchPlanNudge transporterConfig driverInfo plan mbDriverPlan numRides serviceName
         scheduleJobs transporterConfig driverFee merchantId merchantOpCityId now
-    mkVendorFee driverFeeId now vendorAmount = DVF.VendorFee {amount = HighPrecMoney (snd vendorAmount), driverFeeId = driverFeeId, vendorId = fst vendorAmount, createdAt = now, updatedAt = now}
+    mkVendorFee driverFeeId now (vendorId, amount, splitMethod) = DVF.VendorFee {amount = HighPrecMoney amount, driverFeeId = driverFeeId, vendorId = vendorId, splitMethod = splitMethod, vendorFeeProcessedAt = Nothing, createdAt = now, updatedAt = now}
     isEligibleForCharge transporterConfig isOnFreeTrial isSpecialZoneCharge = do
       let notOnFreeTrial = not isOnFreeTrial
       if isSpecialZoneCharge
@@ -934,6 +934,8 @@ mkDriverFee serviceName now startTime' endTime' merchantId driverId rideFare gov
         siblingFeeId = Nothing,
         splitOfDriverFeeId = Nothing,
         validDays = Nothing,
+        cashCollectedAtVendorId = Nothing,
+        driverConsideredInPayoutSettlementAt = Nothing,
         ..
       }
   where

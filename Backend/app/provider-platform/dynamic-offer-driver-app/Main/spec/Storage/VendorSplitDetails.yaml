@@ -4,6 +4,7 @@ imports:
   UTCTime: Kernel.Prelude
   Area: Lib.Types.SpecialLocation
   VehicleVariant: Domain.Types.VehicleVariant
+  VendorFeeSplitMethod: Domain.Types.VendorFee
 
 VendorSplitDetails:
   tableName: vendor_split_details
@@ -19,6 +20,7 @@ VendorSplitDetails:
     vehicleVariant : VehicleVariant|NoRelation
     splitType : SplitType
     splitValue : Double
+    splitMethod : Maybe VendorFeeSplitMethod
 
   constraints:
     merchantOperatingCityId: PrimaryKey

@@ -19,6 +19,8 @@ instance FromTType' Beam.VendorFee Domain.Types.VendorFee.VendorFee where
         Domain.Types.VendorFee.VendorFee
           { amount = amount,
             driverFeeId = Kernel.Types.Id.Id driverFeeId,
+            splitMethod = splitMethod,
+            vendorFeeProcessedAt = vendorFeeProcessedAt,
             vendorId = vendorId,
             createdAt = createdAt,
             updatedAt = updatedAt
@@ -29,6 +31,8 @@ instance ToTType' Beam.VendorFee Domain.Types.VendorFee.VendorFee where
     Beam.VendorFeeT
       { Beam.amount = amount,
         Beam.driverFeeId = Kernel.Types.Id.getId driverFeeId,
+        Beam.splitMethod = splitMethod,
+        Beam.vendorFeeProcessedAt = vendorFeeProcessedAt,
         Beam.vendorId = vendorId,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
