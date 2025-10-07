@@ -66,11 +66,6 @@
             android:exported="false"
             android:enabled="true">
         </receiver>
-        <service
-            android:name=".WidgetService"
-            android:enabled="true"
-            android:exported="false"
-            android:permission="android.permission.SYSTEM_ALERT_WINDOW" />
         <service android:name=".overlayMessage.Service"
             android:enabled="true"
             android:exported="true"

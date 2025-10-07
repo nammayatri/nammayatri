@@ -826,26 +826,26 @@ public class NotificationUtils {
     }
 
     public static void startWidgetService(Context context, String widgetMessage, JSONObject data, JSONObject payload, String source) {
-        SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
-        Intent widgetService = new Intent(context, WidgetService.class);
-        String key = context.getString(R.string.service);
-        boolean useSilentFCMForForwardBatch = fetchUseSilentFCMForForwardBatch(payload);
-        boolean activityStatusCheck = (sharedPref.getString(context.getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onPause") || sharedPref.getString(context.getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onDestroy"));
-        String merchantType = key.contains("partner") || key.contains("driver") || key.contains("provider")? "DRIVER" : "USER";
-        if (merchantType.equals("DRIVER") && Settings.canDrawOverlays(context) && !sharedPref.getString(context.getResources().getString(R.string.REGISTERATION_TOKEN), "null").equals("null") && !sharedPref.getString("ANOTHER_ACTIVITY_LAUNCHED", "false").equals("true") && (activityStatusCheck || useSilentFCMForForwardBatch)) {
-            widgetService.putExtra(context.getResources().getString(R.string.WIDGET_MESSAGE), widgetMessage);
-            widgetService.putExtra("payload", payload != null ? payload.toString() : null);
-            widgetService.putExtra("data", data != null ? data.toString() : null);
-            widgetService.putExtra("requestSource", source);
-            widgetService.putExtra("isForwardRequest", useSilentFCMForForwardBatch);
-            try {
-                context.startService(widgetService);
-            } catch (Exception e) {
-                Exception exception = new Exception("Error in WidgetServiceStart " + e);
-                FirebaseCrashlytics.getInstance().recordException(exception);
-                e.printStackTrace();
-            }
-        }
+//        SharedPreferences sharedPref = context.getSharedPreferences(context.getString(R.string.preference_file_key), Context.MODE_PRIVATE);
+//        Intent widgetService = new Intent(context, WidgetService.class);
+//        String key = context.getString(R.string.service);
+//        boolean useSilentFCMForForwardBatch = fetchUseSilentFCMForForwardBatch(payload);
+//        boolean activityStatusCheck = (sharedPref.getString(context.getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onPause") || sharedPref.getString(context.getResources().getString(R.string.ACTIVITY_STATUS), "null").equals("onDestroy"));
+//        String merchantType = key.contains("partner") || key.contains("driver") || key.contains("provider")? "DRIVER" : "USER";
+//        if (merchantType.equals("DRIVER") && Settings.canDrawOverlays(context) && !sharedPref.getString(context.getResources().getString(R.string.REGISTERATION_TOKEN), "null").equals("null") && !sharedPref.getString("ANOTHER_ACTIVITY_LAUNCHED", "false").equals("true") && (activityStatusCheck || useSilentFCMForForwardBatch)) {
+//            widgetService.putExtra(context.getResources().getString(R.string.WIDGET_MESSAGE), widgetMessage);
+//            widgetService.putExtra("payload", payload != null ? payload.toString() : null);
+//            widgetService.putExtra("data", data != null ? data.toString() : null);
+//            widgetService.putExtra("requestSource", source);
+//            widgetService.putExtra("isForwardRequest", useSilentFCMForForwardBatch);
+//            try {
+//                context.startService(widgetService);
+//            } catch (Exception e) {
+//                Exception exception = new Exception("Error in WidgetServiceStart " + e);
+//                FirebaseCrashlytics.getInstance().recordException(exception);
+//                e.printStackTrace();
+//            }
+//        }
     }
 
     public static boolean fetchUseSilentFCMForForwardBatch(JSONObject payload) {
