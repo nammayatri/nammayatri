@@ -1665,7 +1665,7 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (_mbPersonId, _merchantId) j
     Nothing -> logError $ "Vehicle " <> vehicleNumber <> " not found on any route " <> show journeyLegRouteCodes <> ", Please board the bus moving on allowed possible Routes for the booking."
 
   let mbNewRouteCode = (vehicleLiveRouteInfo.routeCode,) <$> (listToMaybe journeyLeg.routeDetails) -- doing list to maybe as onluy need from and to stop codes, which will be same in all tickets
-  updateTicketQRData journey journeyLeg riderConfig integratedBPPConfig booking.id mbNewRouteCode
+  updateTicketQRData journey journeyLeg riderConfig integratedBPPConfig booking.id mbNewRouteCode vehicleLiveRouteInfo
   QJourneyLeg.updateByPrimaryKey $
     journeyLeg
       { DJourneyLeg.finalBoardedBusNumber = Just vehicleNumber,
@@ -1683,7 +1683,7 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (_mbPersonId, _merchantId) j
     parseUtcTime :: Text -> Maybe UTCTime
     parseUtcTime t = parseTimeM True defaultTimeLocale "%d-%m-%Y %H:%M:%S" (T.unpack t)
 
-    updateTicketQRData journey journeyLeg riderConfig integratedBPPConfig ticketBookingId mbNewRouteCode = do
+    updateTicketQRData journey journeyLeg riderConfig integratedBPPConfig ticketBookingId mbNewRouteCode vehicleLiveRouteInfo = do
       now <- getCurrentTime
       let newExpiryTimeIst = addUTCTime (fromIntegral $ fromMaybe 7200 riderConfig.updateTicketValidityInSecondsPostSetOnboarding) (addUTCTime (secondsToNominalDiffTime 19800) now)
       updatedTickets <-
@@ -1714,7 +1714,18 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (_mbPersonId, _merchantId) j
                               { ExternalBPP.ExternalAPI.Types.fromRouteProviderCode = maybe "NANDI" (.providerCode) fromRoute,
                                 ExternalBPP.ExternalAPI.Types.toRouteProviderCode = maybe "NANDI" (.providerCode) toRoute
                               }
-                        Nothing -> pure newTicket
+                        Nothing -> do
+                          case vehicleLiveRouteInfo.routeNumber of
+                            Just routeShortName -> do
+                              QRouteDetails.updateRoute (Just newRouteCode) (Just newRouteCode) Nothing (Just routeShortName) journeyLeg.id.getId
+                              fromRoute <- (tryGettingArray $ OTPRest.getRouteStopMappingByStopCodeAndRouteCode fromStopCode newRouteCode integratedBPPConfig) <&> listToMaybe
+                              toRoute <- (tryGettingArray $ OTPRest.getRouteStopMappingByStopCodeAndRouteCode toStopCode newRouteCode integratedBPPConfig) <&> listToMaybe
+                              pure $
+                                newTicket
+                                  { ExternalBPP.ExternalAPI.Types.fromRouteProviderCode = maybe "NANDI" (.providerCode) fromRoute,
+                                    ExternalBPP.ExternalAPI.Types.toRouteProviderCode = maybe "NANDI" (.providerCode) toRoute
+                                  }
+                            Nothing -> return newTicket
                     _ -> pure newTicket
                 _ -> do
                   pure newTicket
