@@ -549,9 +549,8 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN online_duration
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_wallet_payout boolean ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN rc_change_threshold_days integer ;
 
-
-------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_wallet_topup boolean ;
 

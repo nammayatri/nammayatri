@@ -211,6 +211,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     prepaidSubscriptionThreshold :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     qarCalRadiusInKm :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
     ratingAsDecimal :: Kernel.Prelude.Bool,
+    rcChangeThresholdDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     rcExpiryChecks :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     rcLimit :: Kernel.Prelude.Int,
     recentScheduledBookingsSafeLimit :: Kernel.Prelude.Int,
