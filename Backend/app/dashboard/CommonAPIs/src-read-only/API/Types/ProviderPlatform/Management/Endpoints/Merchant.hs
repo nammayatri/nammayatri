@@ -505,7 +505,7 @@ data UpdateFarePolicyReq = UpdateFarePolicyReq
 instance Kernel.Types.HideSecrets.HideSecrets UpdateFarePolicyReq where
   hideSecrets = Kernel.Prelude.identity
 
-newtype UpdateOnboardingVehicleVariantMappingReq = UpdateOnboardingVehicleVariantMappingReq {file :: Kernel.Prelude.FilePath}
+data UpdateOnboardingVehicleVariantMappingReq = UpdateOnboardingVehicleVariantMappingReq {file :: Kernel.Prelude.FilePath, vehicleCategory :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
