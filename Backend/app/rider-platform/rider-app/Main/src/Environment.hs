@@ -169,7 +169,8 @@ data AppCfg = AppCfg
     nearByDriverAPIRateLimitOptions :: APIRateLimitOptions,
     selfBaseUrl :: BaseUrl,
     tsServiceConfig :: CPT.TSServiceConfig,
-    inMemConfig :: CF.InMemConfig
+    inMemConfig :: CF.InMemConfig,
+    offerSKUConfig :: Text
   }
   deriving (Generic, FromDhall)
 
@@ -272,7 +273,8 @@ data AppEnv = AppEnv
     selfBaseUrl :: BaseUrl,
     tsServiceConfig :: CPT.TSServiceConfig,
     inMemEnv :: CF.InMemEnv,
-    url :: Maybe Text
+    url :: Maybe Text,
+    offerSKUConfig :: Text
   }
   deriving (Generic)
 

@@ -293,7 +293,10 @@ mkSplitSettlementDetails isSplitEnabled totalAmount vendorFees isPercentageSplit
         when (marketplacePercentage < 0) $ do
           logError $ "Marketplace percentage is negative: " <> show marketplacePercentage <> " for vendorFees: " <> show vendorFees <> "totalVendorPercentage: " <> show totalVendorPercentage
           throwError (InternalError "Marketplace percentage is negative")
-
+        logInfo $ "mkSplitSettlementDetails vendorPercentageSplits" <> show vendorPercentageSplits
+        logInfo $ "mkSplitSettlementDetails marketplacePercentage" <> show marketplacePercentage
+        logInfo $ "mkSplitSettlementDetails totalVendorPercentage" <> show totalVendorPercentage
+        logInfo $ "mkSplitSettlementDetails totalAmount" <> show totalAmount
         return $
           Just $
             PercentageBased $
