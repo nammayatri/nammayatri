@@ -36,15 +36,22 @@ getTrackVehicles ::
     Kernel.Prelude.Maybe Kernel.Prelude.Int ->
     Kernel.Prelude.Maybe DIBC.PlatformType ->
     Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Text ->
     Kernel.Prelude.Maybe Spec.VehicleCategory ->
     Environment.Flow TrackRoute.TrackingResp
   )
-getTrackVehicles (mbPersonId, merchantId) routeCode mbCurrentLat mbCurrentLon mbIntegratedBPPConfigId mbMaxBuses mbPlatformType mbSelectedStopId mbVehicleType = do
+getTrackVehicles (mbPersonId, merchantId) routeCode mbCurrentLat mbCurrentLon mbIntegratedBPPConfigId mbMaxBuses mbPlatformType mbSelectedSourceStopId mbSelectedDestinationStopId mbVehicleType = do
   let vehicleType = fromMaybe Spec.BUS mbVehicleType
       maxBuses = fromMaybe 5 mbMaxBuses
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
   personCityInfo <- QP.findCityInfoById personId >>= fromMaybeM (PersonNotFound personId.getId)
   integratedBPPConfig <- SIBC.findIntegratedBPPConfig mbIntegratedBPPConfigId personCityInfo.merchantOperatingCityId (frfsVehicleCategoryToBecknVehicleCategory vehicleType) (fromMaybe DIBC.APPLICATION mbPlatformType)
+  routeIdsToTrack <-
+    case (mbSelectedSourceStopId, mbSelectedDestinationStopId) of
+      (Just sourceStopId, Just destinationStopId) -> do
+        possibleRoutes <- getPossibleRoutesBetweenTwoStops sourceStopId destinationStopId integratedBPPConfig
+        pure $ map (.route.code) possibleRoutes
+      _ -> pure [routeCode]
   riderConfig <- CQRC.findByMerchantOperatingCityId personCityInfo.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist personCityInfo.merchantOperatingCityId.getId)
   case (mbCurrentLat, mbCurrentLon) of
     (Just lat, Just lon) -> do
@@ -63,7 +70,7 @@ getTrackVehicles (mbPersonId, merchantId) routeCode mbCurrentLat mbCurrentLon mb
       case nearestStop of
         Nothing -> getTrackWithoutCurrentLocation personId personCityInfo vehicleType maxBuses riderConfig
         Just stop -> do
-          vehicleTracking <- trackVehicles personId merchantId personCityInfo.merchantOperatingCityId vehicleType routeCode (fromMaybe DIBC.APPLICATION mbPlatformType) (Just currentLocation) (Just integratedBPPConfig.id)
+          vehicleTracking <- concatMapM (\routeIdToTrack -> trackVehicles personId merchantId personCityInfo.merchantOperatingCityId vehicleType routeIdToTrack (fromMaybe DIBC.APPLICATION mbPlatformType) (Just currentLocation) (Just integratedBPPConfig.id)) routeIdsToTrack
           let vehiclesYetToReachSelectedStop = filterVehiclesYetToReachSelectedStop vehicleTracking
           let (confirmedHighBuses, ghostBuses) = List.partition (\a -> (a.vehicleInfo >>= (.routeState)) == Just CQMMB.ConfirmedHigh) vehiclesYetToReachSelectedStop
           let sortedTracking = sortOn (distanceToStop stop) ghostBuses
@@ -75,7 +82,7 @@ getTrackVehicles (mbPersonId, merchantId) routeCode mbCurrentLat mbCurrentLon mb
     _ -> getTrackWithoutCurrentLocation personId personCityInfo vehicleType maxBuses riderConfig
   where
     filterVehiclesYetToReachSelectedStop vehicleTracking =
-      case mbSelectedStopId of
+      case mbSelectedDestinationStopId of
         Just selectedStopId -> filter (\a -> any (\u -> u.stopCode == selectedStopId) a.upcomingStops) vehicleTracking
         Nothing -> vehicleTracking
     getTrackWithoutCurrentLocation personId personCityInfo vehicleType maxBuses riderConfig = do
