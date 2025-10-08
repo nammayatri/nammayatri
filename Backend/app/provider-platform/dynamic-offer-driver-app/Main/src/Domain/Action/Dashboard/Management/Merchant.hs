@@ -23,6 +23,7 @@ module Domain.Action.Dashboard.Management.Merchant
     postMerchantConfigFarePolicyUpsert,
     postMerchantConfigOperatingCityCreate,
     postMerchantUpdateOnboardingVehicleVariantMapping,
+    postMerchantUpdateVehicleServiceTier,
     postMerchantConfigSpecialLocationUpsert,
     postMerchantSpecialLocationUpsert,
     deleteMerchantSpecialLocationDelete,
@@ -53,6 +54,7 @@ where
 
 import qualified API.Types.ProviderPlatform.Fleet.Endpoints.Onboarding
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Merchant as Common
+import qualified Beckn.Types.Core.Taxi.Common.Vehicle ()
 import Control.Applicative
 import qualified Data.Aeson.KeyMap as HM
 import qualified Data.Aeson.Types as DAT
@@ -64,6 +66,7 @@ import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import Data.Time (DayOfWeek (..))
+import qualified Data.Time.Clock ()
 import qualified Data.Vector as V
 import qualified Domain.Action.UI.MerchantServiceConfig as DMSC
 import Domain.Action.UI.Ride.EndRide.Internal (setDriverFeeBillNumberKey, setDriverFeeCalcJobCache)
@@ -120,6 +123,7 @@ import qualified Kernel.Storage.Esqueleto.Transactionable as Esq
 import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Types.APISuccess (APISuccess (..))
 import qualified Kernel.Types.Beckn.Context as Context
+import qualified Kernel.Types.Common ()
 import Kernel.Types.Geofencing
 import Kernel.Types.Id
 import Kernel.Types.Registry (SimpleLookupRequest (..), lookupRequestToRedisKey)
@@ -127,6 +131,7 @@ import qualified Kernel.Types.Registry.Subscriber as BecknSub
 import Kernel.Types.TimeBound as TB
 import Kernel.Types.Value (MandatoryValue, OptionalValue)
 import Kernel.Utils.Common
+import qualified Kernel.Utils.Common ()
 import Kernel.Utils.Geometry
 import qualified Kernel.Utils.Registry as Registry
 import Kernel.Utils.Validation
@@ -188,6 +193,7 @@ import qualified Storage.Queries.PlanTranslation as SQPT
 import qualified Storage.Queries.RegistryMapFallback as QRMF
 import qualified Storage.Queries.SubscriptionConfig as QSC
 import qualified Storage.Queries.ValueAddNP as SQVNP
+import qualified Storage.Queries.VehicleServiceTier as VST
 import qualified Storage.Queries.WhiteListOrg as QWLO
 import Tools.Error
 
@@ -2579,24 +2585,233 @@ postMerchantUpdateOnboardingVehicleVariantMapping merchantShortId opCity req = d
             bodyType = Nothing
           }
 
-    validateCategory :: Text -> Flow Enums.VehicleCategory
-    validateCategory fetchedCategory =
-      case parseCategory fetchedCategory of
-        Just validCat -> pure validCat
-        Nothing -> throwError (InvalidRequest "Category not found: ")
+validateCategory :: Text -> Flow Enums.VehicleCategory
+validateCategory fetchedCategory =
+  case parseCategory fetchedCategory of
+    Just validCat -> pure validCat
+    Nothing -> throwError (InvalidRequest "Category not found: ")
 
-    parseCategory :: T.Text -> Maybe Enums.VehicleCategory
-    parseCategory t = case T.toUpper (T.strip t) of
-      "CAR" -> Just Enums.CAR
-      "MOTORCYCLE" -> Just Enums.MOTORCYCLE
-      "TRAIN" -> Just Enums.TRAIN
-      "BUS" -> Just Enums.BUS
-      "FLIGHT" -> Just Enums.FLIGHT
-      "AUTO_CATEGORY" -> Just Enums.AUTO_CATEGORY
-      "AMBULANCE" -> Just Enums.AMBULANCE
-      "TRUCK" -> Just Enums.TRUCK
-      "BOAT" -> Just Enums.BOAT
-      _ -> Nothing
+parseCategory :: T.Text -> Maybe Enums.VehicleCategory
+parseCategory t = case T.toUpper (T.strip t) of
+  "CAR" -> Just Enums.CAR
+  "MOTORCYCLE" -> Just Enums.MOTORCYCLE
+  "TRAIN" -> Just Enums.TRAIN
+  "BUS" -> Just Enums.BUS
+  "FLIGHT" -> Just Enums.FLIGHT
+  "AUTO_CATEGORY" -> Just Enums.AUTO_CATEGORY
+  "AMBULANCE" -> Just Enums.AMBULANCE
+  "TRUCK" -> Just Enums.TRUCK
+  "BOAT" -> Just Enums.BOAT
+  _ -> Nothing
+
+data VehicleServiceTierCSVRow = VehicleServiceTierCSVRow
+  { id :: Text,
+    serviceTierType :: Text,
+    name :: Text,
+    shortDescription :: Text,
+    longDescription :: Text,
+    seatingCapacity :: Text,
+    airConditionedThreshold :: Text,
+    isAirConditioned :: Text,
+    isIntercityEnabled :: Text,
+    isRentalsEnabled :: Text,
+    oxygen :: Text,
+    ventilator :: Text,
+    luggageCapacity :: Text,
+    driverRating :: Text,
+    vehicleCategory :: Text,
+    baseVehicleServiceTier :: Text,
+    fareAdditionPerKmOverBaseServiceTier :: Text,
+    vehicleRating :: Text,
+    merchantOperatingCityId :: Text,
+    merchantId :: Text,
+    allowedVehicleVariant :: Text,
+    autoSelectedVehicleVariant :: Text,
+    defaultForVehicleVariant :: Text,
+    vehicleIconUrl :: Text,
+    priority :: Text,
+    stopFcmThreshold :: Text,
+    stopFcmSuppressCount :: Text,
+    scheduleBookingListEligibilityTags :: Text
+  }
+  deriving (Show, Generic)
+
+instance FromNamedRecord VehicleServiceTierCSVRow where
+  parseNamedRecord r =
+    VehicleServiceTierCSVRow
+      <$> r .: "id"
+      <*> r .: "service_tier_type"
+      <*> r .: "name"
+      <*> r .: "short_description"
+      <*> r .: "long_description"
+      <*> r .: "seating_capacity"
+      <*> r .: "air_conditioned_threshold"
+      <*> r .: "is_air_conditioned"
+      <*> r .: "is_intercity_enabled"
+      <*> r .: "is_rentals_enabled"
+      <*> r .: "oxygen"
+      <*> r .: "ventilator"
+      <*> r .: "luggage_capacity"
+      <*> r .: "driver_rating"
+      <*> r .: "vehicle_category"
+      <*> r .: "base_vehicle_service_tier"
+      <*> r .: "fare_addition_per_km_over_base_service_tier"
+      <*> r .: "vehicle_rating"
+      <*> r .: "merchant_operating_city_id"
+      <*> r .: "merchant_id"
+      <*> r .: "allowed_vehicle_variant"
+      <*> r .: "auto_selected_vehicle_variant"
+      <*> r .: "default_for_vehicle_variant"
+      <*> r .: "vehicle_icon_url"
+      <*> r .: "priority"
+      <*> r .: "stop_fcm_threshold"
+      <*> r .: "stop_fcm_suppress_count"
+      <*> r .: "schedule_booking_list_eligibility_tags"
+
+postMerchantUpdateVehicleServiceTier ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Common.UpdateVehicleServiceTierReq ->
+  Flow APISuccess
+postMerchantUpdateVehicleServiceTier merchantShortId opCity req = do
+  -- Fetch merchant and merchant operating city
+  merchant <- findMerchantByShortId merchantShortId
+  merchantOpCity <- CQMOC.findByMerchantIdAndCity merchant.id opCity >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchantShortId: " <> merchantShortId.getShortId <> " ,city: " <> show opCity)
+
+  logTagInfo
+    "Updating onboarding vehicle category for merchant: "
+    (show merchant.id <> " and city: " <> show opCity)
+
+  configs <- readCsv req.file
+
+  forM_ configs $ \tier ->
+    VST.updateVehicleServiceTierByMerchantAndCity
+      (tier.serviceTierType)
+      (tier.name)
+      (tier.shortDescription)
+      (tier.longDescription)
+      (tier.seatingCapacity)
+      (tier.airConditionedThreshold)
+      (tier.isAirConditioned)
+      (tier.isIntercityEnabled)
+      (tier.isRentalsEnabled)
+      (tier.oxygen)
+      (tier.ventilator)
+      (tier.luggageCapacity)
+      (tier.driverRating)
+      (tier.vehicleCategory)
+      (tier.baseVehicleServiceTier)
+      (tier.fareAdditionPerKmOverBaseServiceTier)
+      (tier.vehicleRating)
+      (tier.allowedVehicleVariant)
+      (tier.autoSelectedVehicleVariant)
+      (tier.defaultForVehicleVariant)
+      (tier.vehicleIconUrl)
+      (tier.priority)
+      (tier.stopFcmThreshold)
+      (tier.stopFcmSuppressCount)
+      (tier.scheduleBookingListEligibilityTags)
+      (case getField @"id" merchant of Id t -> t)
+      (case getField @"id" merchantOpCity of Id t -> t)
+
+  return Success
+  where
+    -- Read CSV and convert each row to VehicleServiceTier
+    readCsv :: FilePath -> Flow [DVST.VehicleServiceTier]
+    readCsv csvFile = do
+      csvData <- liftIO $ BS.readFile csvFile
+      case decodeByName $ LBS.fromStrict csvData :: Either String (Header, V.Vector VehicleServiceTierCSVRow) of
+        Left err -> throwError (InvalidRequest $ show err)
+        -- call makeConfig with index and row only (signature matches)
+        Right (_, v) -> V.imapM makeConfig v >>= (pure . V.toList)
+
+    makeConfig :: Int -> VehicleServiceTierCSVRow -> Flow DVST.VehicleServiceTier
+    makeConfig idx row = do
+      now <- liftIO getCurrentTime
+      let cleanFieldToLower = replaceEmpty . T.toLower . T.strip
+
+      serviceTierType <-
+        readMaybe (T.unpack $ row.serviceTierType)
+          & fromMaybeM (InvalidRequest $ "Service tier type required at row: " <> show idx)
+      vehicleCategory <- validateCategory row.vehicleCategory
+
+      allowedVehicleVariant <- parseVehicleVariants idx row.allowedVehicleVariant
+      autoSelectedVehicleVariant <- parseVehicleVariants idx row.autoSelectedVehicleVariant
+      defaultForVehicleVariant <- parseVehicleVariants idx row.defaultForVehicleVariant
+      name <-
+        readMaybe (T.unpack $ row.name)
+          & fromMaybeM (InvalidRequest $ "Name required at row: " <> show idx)
+
+      let tags = filter (not . T.null) $ map T.strip $ T.splitOn "," row.scheduleBookingListEligibilityTags
+          scheduleBookingListEligibilityTags = if null tags then Nothing else Just tags
+
+      return
+        DVST.VehicleServiceTier
+          { DVST.id = textToId (getField @"id" row),
+            name = name,
+            serviceTierType = serviceTierType,
+            shortDescription = cleanFieldToLower row.shortDescription,
+            longDescription = cleanFieldToLower row.longDescription,
+            seatingCapacity = textToMaybeInt row.seatingCapacity,
+            airConditionedThreshold = textToMaybeDouble row.airConditionedThreshold,
+            isAirConditioned = textToMaybeBool row.isAirConditioned,
+            isIntercityEnabled = textToMaybeBool row.isIntercityEnabled,
+            isRentalsEnabled = textToMaybeBool row.isRentalsEnabled,
+            oxygen = textToMaybeDouble row.oxygen,
+            ventilator = textToMaybeInt row.ventilator,
+            luggageCapacity = textToMaybeInt row.luggageCapacity,
+            driverRating = textToMaybeCentesimal row.driverRating,
+            vehicleCategory = Just vehicleCategory,
+            baseVehicleServiceTier = textToMaybeBool row.baseVehicleServiceTier,
+            fareAdditionPerKmOverBaseServiceTier = textToMaybeInt row.fareAdditionPerKmOverBaseServiceTier,
+            vehicleRating = textToMaybeDouble row.vehicleRating,
+            allowedVehicleVariant = allowedVehicleVariant,
+            autoSelectedVehicleVariant = autoSelectedVehicleVariant,
+            defaultForVehicleVariant = defaultForVehicleVariant,
+            vehicleIconUrl = parseBaseUrl row.vehicleIconUrl,
+            priority = fromMaybe 0 (textToMaybeInt row.priority),
+            stopFcmThreshold = textToMaybeInt row.stopFcmThreshold,
+            stopFcmSuppressCount = textToMaybeInt row.stopFcmSuppressCount,
+            scheduleBookingListEligibilityTags = scheduleBookingListEligibilityTags,
+            createdAt = now,
+            updatedAt = now,
+            merchantId = readTextAsId row.merchantId,
+            merchantOperatingCityId = readTextAsId row.merchantOperatingCityId
+          }
+
+    -- Helpers
+    parseVehicleVariants :: Int -> Text -> Flow [DVeh.VehicleVariant]
+    parseVehicleVariants _ _ = return []
+
+    textToMaybeInt :: Text -> Maybe Int
+    textToMaybeInt t
+      | T.null t = Nothing
+      | otherwise = readMaybe (T.unpack t)
+
+    textToId :: Text -> Kernel.Types.Id.Id a
+    textToId t = Kernel.Types.Id.Id t
+
+    textToMaybeDouble :: Text -> Maybe Double
+    textToMaybeDouble t
+      | T.null t = Nothing
+      | otherwise = readMaybe (T.unpack t)
+
+    textToMaybeBool :: Text -> Maybe Bool
+    textToMaybeBool t
+      | T.null t = Nothing
+      | otherwise = Just $ case T.toLower t of
+        "true" -> True
+        "yes" -> True
+        "1" -> True
+        _ -> False
+
+    textToMaybeCentesimal :: Text -> Maybe Kernel.Utils.Common.Centesimal
+    textToMaybeCentesimal t
+      | T.null t = Nothing
+      | otherwise = readMaybe (T.unpack t)
+
+    readTextAsId :: Text -> Id a
+    readTextAsId t = Id t
 
 postMerchantConfigClearCacheSubscription :: ShortId DM.Merchant -> Context.City -> Common.ClearCacheSubscriptionReq -> Flow APISuccess
 postMerchantConfigClearCacheSubscription merchantShortId opCity req = do

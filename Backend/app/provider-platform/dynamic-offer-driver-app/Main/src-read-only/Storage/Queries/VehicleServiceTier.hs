@@ -8,10 +8,12 @@ import qualified Domain.Types.Common
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.VehicleCategory
 import qualified Domain.Types.VehicleServiceTier
+import qualified Domain.Types.VehicleVariant
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
 import qualified Kernel.Prelude
+import qualified Kernel.Types.Common
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -49,6 +51,46 @@ findByServiceTierTypeAndCityId serviceTierType merchantOperatingCityId = do
     [ Se.And
         [ Se.Is Beam.serviceTierType $ Se.Eq serviceTierType,
           Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)
+        ]
+    ]
+
+updateVehicleServiceTierByMerchantAndCity ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Domain.Types.Common.ServiceTierType -> Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Double -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Double -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Types.Common.Centesimal -> Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Double -> [Domain.Types.VehicleVariant.VehicleVariant] -> [Domain.Types.VehicleVariant.VehicleVariant] -> [Domain.Types.VehicleVariant.VehicleVariant] -> Kernel.Prelude.Maybe Kernel.Types.Common.BaseUrl -> Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe [Kernel.Prelude.Text] -> Kernel.Prelude.Text -> Kernel.Prelude.Text -> m ())
+updateVehicleServiceTierByMerchantAndCity serviceTierType name shortDescription longDescription seatingCapacity airConditionedThreshold isAirConditioned isIntercityEnabled isRentalsEnabled oxygen ventilator luggageCapacity driverRating vehicleCategory baseVehicleServiceTier fareAdditionPerKmOverBaseServiceTier vehicleRating allowedVehicleVariant autoSelectedVehicleVariant defaultForVehicleVariant vehicleIconUrl priority stopFcmThreshold stopFcmSuppressCount scheduleBookingListEligibilityTags merchantId merchantOperatingCityId = do
+  _now <- getCurrentTime
+  updateWithKV
+    [ Se.Set Beam.serviceTierType serviceTierType,
+      Se.Set Beam.name name,
+      Se.Set Beam.shortDescription shortDescription,
+      Se.Set Beam.longDescription longDescription,
+      Se.Set Beam.seatingCapacity seatingCapacity,
+      Se.Set Beam.airConditionedThreshold airConditionedThreshold,
+      Se.Set Beam.isAirConditioned isAirConditioned,
+      Se.Set Beam.isIntercityEnabled isIntercityEnabled,
+      Se.Set Beam.isRentalsEnabled isRentalsEnabled,
+      Se.Set Beam.oxygen oxygen,
+      Se.Set Beam.ventilator ventilator,
+      Se.Set Beam.luggageCapacity luggageCapacity,
+      Se.Set Beam.driverRating driverRating,
+      Se.Set Beam.vehicleCategory vehicleCategory,
+      Se.Set Beam.baseVehicleServiceTier baseVehicleServiceTier,
+      Se.Set Beam.fareAdditionPerKmOverBaseServiceTier fareAdditionPerKmOverBaseServiceTier,
+      Se.Set Beam.vehicleRating vehicleRating,
+      Se.Set Beam.allowedVehicleVariant allowedVehicleVariant,
+      Se.Set Beam.autoSelectedVehicleVariant autoSelectedVehicleVariant,
+      Se.Set Beam.defaultForVehicleVariant defaultForVehicleVariant,
+      Se.Set Beam.vehicleIconUrl (Kernel.Prelude.fmap showBaseUrl vehicleIconUrl),
+      Se.Set Beam.priority priority,
+      Se.Set Beam.stopFcmThreshold stopFcmThreshold,
+      Se.Set Beam.stopFcmSuppressCount stopFcmSuppressCount,
+      Se.Set Beam.scheduleBookingListEligibilityTags scheduleBookingListEligibilityTags,
+      Se.Set Beam.updatedAt _now
+    ]
+    [ Se.And
+        [ Se.Is Beam.merchantId $ Se.Eq merchantId,
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq merchantOperatingCityId,
+          Se.Is Beam.serviceTierType $ Se.Eq serviceTierType
         ]
     ]
 

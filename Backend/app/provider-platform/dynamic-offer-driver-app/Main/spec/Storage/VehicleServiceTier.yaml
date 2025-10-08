@@ -71,3 +71,63 @@ VehicleServiceTier:
           - vehicleCategory
           - merchantOperatingCityId
           - baseVehicleServiceTier: "(Just True)|CIM"
+    updateVehicleServiceTierByMerchantAndCity:
+      kvFunction: updateWithKV
+      params:
+        - serviceTierType: serviceTierType
+        - name: name
+        - shortDescription: shortDescription       # Maybe Text
+        - longDescription: longDescription         # Maybe Text
+        - seatingCapacity: seatingCapacity         # Maybe Int
+        - airConditionedThreshold: airConditionedThreshold  # Maybe Double
+        - isAirConditioned: isAirConditioned       # Maybe Bool
+        - isIntercityEnabled: isIntercityEnabled   # Maybe Bool
+        - isRentalsEnabled: isRentalsEnabled       # Maybe Bool
+        - oxygen: oxygen                           # Maybe Double
+        - ventilator: ventilator                   # Maybe Int
+        - luggageCapacity: luggageCapacity         # Maybe Int
+        - driverRating: driverRating               # Maybe Centesimal
+        - vehicleCategory: vehicleCategory         # Maybe VehicleCategory
+        - baseVehicleServiceTier: baseVehicleServiceTier  # Maybe Bool
+        - fareAdditionPerKmOverBaseServiceTier: fareAdditionPerKmOverBaseServiceTier
+        - vehicleRating: vehicleRating             # Maybe Double
+        - allowedVehicleVariant: allowedVehicleVariant   # '[VehicleVariant]'
+        - autoSelectedVehicleVariant: autoSelectedVehicleVariant
+        - defaultForVehicleVariant: defaultForVehicleVariant
+        - vehicleIconUrl: vehicleIconUrl           # Maybe BaseUrl
+        - priority: priority
+        - stopFcmThreshold: stopFcmThreshold       # Maybe Int
+        - stopFcmSuppressCount: stopFcmSuppressCount # Maybe Int
+        - scheduleBookingListEligibilityTags: scheduleBookingListEligibilityTags # Maybe [Text]
+      set:
+        - name
+        - shortDescription
+        - longDescription
+        - seatingCapacity
+        - airConditionedThreshold
+        - isAirConditioned
+        - isIntercityEnabled
+        - isRentalsEnabled
+        - oxygen
+        - ventilator
+        - luggageCapacity
+        - driverRating
+        - vehicleCategory
+        - baseVehicleServiceTier
+        - fareAdditionPerKmOverBaseServiceTier
+        - vehicleRating
+        - allowedVehicleVariant
+        - autoSelectedVehicleVariant
+        - defaultForVehicleVariant
+        - vehicleIconUrl
+        - priority
+        - stopFcmThreshold
+        - stopFcmSuppressCount
+        - scheduleBookingListEligibilityTags
+        - updatedAt
+      where:
+        and:
+          - eq:
+              - merchantId: merchantId|B
+              - merchantOperatingCityId: merchantOperatingCityId|B
+              - serviceTierType: serviceTierType
