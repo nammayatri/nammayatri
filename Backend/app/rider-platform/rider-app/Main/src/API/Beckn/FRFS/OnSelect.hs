@@ -12,7 +12,6 @@ import Kernel.Types.Error
 import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth
 import Storage.Beam.SystemConfigs ()
-import qualified Tools.Metrics as Metrics
 import TransactionLogs.PushLogs
 
 type API = Spec.OnSelectAPI
@@ -31,7 +30,6 @@ onSelect _ req = withFlowHandlerAPI $ do
     onSelectReq <- ACL.buildOnSelectReq req
     Redis.whenWithLockRedis (onSelectLockKey onSelectReq.messageId) 60 $ do
       (merchant, quote) <- DOnSelect.validateRequest onSelectReq
-      Metrics.finishMetrics Metrics.SELECT_FRFS merchant.name transaction_id quote.merchantOperatingCityId.getId
       fork "FRFS on_select processing" $ do
         Redis.whenWithLockRedis (onSelectProcessingLockKey onSelectReq.messageId) 60 $
           DOnSelect.onSelect onSelectReq merchant quote

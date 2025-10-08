@@ -41,6 +41,7 @@ import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.Person as QP
 import Tools.Error
+import qualified Tools.Metrics.BAPMetrics as Metrics
 import qualified Tools.Payment as Payment
 
 data DOnInit = DOnInit
@@ -71,13 +72,15 @@ onInit ::
     BeamFlow m r,
     EncFlow m r,
     ServiceFlow m r,
-    HasField "isMetroTestTransaction" r Bool
+    HasField "isMetroTestTransaction" r Bool,
+    Metrics.HasBAPMetrics m r
   ) =>
   DOnInit ->
   Merchant.Merchant ->
   FTBooking.FRFSTicketBooking ->
   m ()
 onInit onInitReq merchant oldBooking = do
+  Metrics.finishMetrics Metrics.INIT_FRFS merchant.name onInitReq.transactionId oldBooking.merchantOperatingCityId.getId
   person <- QP.findById oldBooking.riderId >>= fromMaybeM (PersonNotFound oldBooking.riderId.getId)
   whenJust (onInitReq.validTill) (\validity -> void $ QFRFSTicketBooking.updateValidTillById validity oldBooking.id)
   void $ QFRFSTicketBooking.updatePriceAndQuantityById onInitReq.totalPrice onInitReq.totalQuantity onInitReq.totalChildTicketQuantity oldBooking.id -- Full Ticket Price (Multiplied By Quantity)

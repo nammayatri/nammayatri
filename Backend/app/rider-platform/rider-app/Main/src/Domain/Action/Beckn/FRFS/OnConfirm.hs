@@ -75,6 +75,7 @@ import qualified Storage.Queries.JourneyExtra as QJourneyExtra
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.PersonStats as QPS
 import Tools.Error
+import qualified Tools.Metrics.BAPMetrics as Metrics
 import qualified Tools.SMS as Sms
 import qualified Utils.Common.JWT.Config as GW
 import qualified Utils.Common.JWT.TransitClaim as TC
@@ -120,6 +121,7 @@ onConfirmFailure bapConfig ticketBooking = do
 
 onConfirm :: Merchant -> Booking.FRFSTicketBooking -> DOrder -> Flow ()
 onConfirm merchant booking' dOrder = do
+  Metrics.finishMetrics Metrics.CONFIRM_FRFS merchant.name dOrder.transactionId booking'.merchantOperatingCityId.getId
   let booking = booking' {Booking.bppOrderId = Just dOrder.bppOrderId}
   let discountedTickets = fromMaybe 0 booking.discountedTickets
   tickets <- createTickets booking dOrder.tickets discountedTickets
