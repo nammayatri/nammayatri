@@ -155,7 +155,8 @@ data AppCfg = AppCfg
     selfBaseUrl :: BaseUrl,
     meterRideReferralLink :: Text,
     minDistanceBetweenTwoPoints :: Int,
-    vocalyticsCnfg :: VocalyticsCnfg
+    vocalyticsCnfg :: VocalyticsCnfg,
+    driverFleetLocationListAPIRateLimitOptions :: APIRateLimitOptions
   }
   deriving (Generic, FromDhall)
 
@@ -261,7 +262,8 @@ data AppEnv = AppEnv
     vocalyticsCnfg :: VocalyticsCnfg,
     selfBaseUrl :: BaseUrl,
     meterRideReferralLink :: Text,
-    minDistanceBetweenTwoPoints :: Int
+    minDistanceBetweenTwoPoints :: Int,
+    driverFleetLocationListAPIRateLimitOptions :: APIRateLimitOptions
   }
   deriving (Generic)
 

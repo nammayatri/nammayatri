@@ -60,6 +60,7 @@ module Domain.Action.ProviderPlatform.Fleet.Driver
     getDriverFleetAssignments,
     getDriverFleetOperatorInfo,
     getDriverFleetStatus,
+    postDriverFleetLocationList,
   )
 where
 
@@ -522,3 +523,9 @@ getDriverFleetOperatorInfo merchantShortId opCity apiTokenInfo mbMobileCountryCo
     (Nothing, Nothing) ->
       throwError $ InvalidRequest "Either personId or mobile number must be provided."
   Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetOperatorInfo) mbMobileCountryCode mbMobileNumber (Just person.id.getId)
+
+postDriverFleetLocationList :: (Kernel.Types.Id.ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.DriverLocationListReq -> Environment.Flow Common.DriverLocationListResp)
+postDriverFleetLocationList merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  let memberPersonId = apiTokenInfo.personId.getId
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetLocationList) memberPersonId req
