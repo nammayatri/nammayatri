@@ -25,11 +25,13 @@ import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
 import qualified Kernel.Storage.Hedis as Hedis
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Payment.Storage.Beam.BeamFlow
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import Storage.Beam.Payment ()
+import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.VendorSplitDetails as QVendorSplitDetails
 import qualified Tools.Payment as Payment
@@ -176,3 +178,41 @@ vendorSplitDetailSplitTypeToPaymentSplitType :: VendorSplitDetails.SplitType -> 
 vendorSplitDetailSplitTypeToPaymentSplitType = \case
   VendorSplitDetails.FIXED -> Payment.FIXED
   VendorSplitDetails.FLEXIBLE -> Payment.FLEXIBLE
+
+createBasketFromBookings ::
+  ( EsqDBReplicaFlow m r,
+    BeamFlow m r,
+    EncFlow m r,
+    ServiceFlow m r,
+    HasFlowEnv m r '["offerSKUConfig" ::: Text]
+  ) =>
+  [FTBooking.FRFSTicketBooking] ->
+  m (Maybe [Payment.Basket])
+createBasketFromBookings allJourneyBookings = do
+  logInfo $ "createBasketFromBookings Bookings" <> show allJourneyBookings
+  if null allJourneyBookings
+    then return Nothing
+    else do
+      -- Get quotes for all bookings
+      quotes <- mapM getQuoteForBooking allJourneyBookings
+      offerSKUProductId <- asks (.offerSKUConfig)
+      -- Sum all quote prices
+      let totalPrice = sum $ map (.price.amount) quotes
+      -- Get quantity from the first quote (assuming all have same quantity)
+      let firstQuote = head quotes
+          unitPrice = totalPrice / fromIntegral firstQuote.quantity
+          quantity = firstQuote.quantity
+      -- Return single basket with aggregated data
+      logInfo $ "createBasketFromBookings Basket" <> show (Just [Payment.Basket {Payment.id = offerSKUProductId, Payment.unitPrice = unitPrice, Payment.quantity = quantity}])
+      return
+        ( Just
+            [ Payment.Basket
+                { Payment.id = offerSKUProductId,
+                  Payment.unitPrice = unitPrice,
+                  Payment.quantity = quantity
+                }
+            ]
+        )
+  where
+    getQuoteForBooking booking = do
+      QFRFSQuote.findById booking.quoteId >>= fromMaybeM (QuoteNotFound booking.quoteId.getId)
