@@ -899,7 +899,7 @@ getMultimodalOrderGetLegTierOptions (mbPersonId, merchantId) journeyId legOrder 
 
   case (mbFomStopCode, mbToStopCode, mbIntegratedBPPConfig) of
     (Just fromStopCode, Just toStopCode, Just integratedBPPConfig) -> do
-      (_, availableRoutesByTiers, _) <- JLU.findPossibleRoutes (Just availableServiceTiers) fromStopCode toStopCode arrivalTime integratedBPPConfig merchantId person.merchantOperatingCityId vehicleCategory (vehicleCategory /= Enums.SUBWAY) False False
+      (_, availableRoutesByTiers, _) <- JLU.findPossibleRoutes (Just availableServiceTiers) fromStopCode toStopCode arrivalTime integratedBPPConfig merchantId person.merchantOperatingCityId vehicleCategory (vehicleCategory /= Enums.SUBWAY) False
       return $ ApiTypes.LegServiceTierOptionsResp {options = availableRoutesByTiers}
     _ -> return $ ApiTypes.LegServiceTierOptionsResp {options = []}
 
@@ -1124,7 +1124,7 @@ getMultimodalOrderSimilarJourneyLegs (mbPersonId, merchantId) journeyId legOrder
       mbAvailableTier <-
         case (mbFomStopCode, mbToStopCode, mbIntegratedBPPConfig) of
           (Just fromStopCode, Just toStopCode, Just integratedBPPConfig) -> do
-            (_, tiers, _) <- JLU.findPossibleRoutes Nothing fromStopCode toStopCode arrivalTime integratedBPPConfig merchantId person.merchantOperatingCityId vehicleCategory True False False
+            (_, tiers, _) <- JLU.findPossibleRoutes Nothing fromStopCode toStopCode arrivalTime integratedBPPConfig merchantId person.merchantOperatingCityId vehicleCategory True False
             return $ listToMaybe tiers
           _ -> return Nothing
       return $
@@ -1556,7 +1556,6 @@ postMultimodalRouteAvailability (mbPersonId, merchantId) req = do
               vehicleCategory
               True -- sendWithoutFare
               True
-              False
 
           let (liveBuses, staticBuses) = partition (\route -> route.source == LIVE) availableRoutesByTier
           let filteredRoutes =
