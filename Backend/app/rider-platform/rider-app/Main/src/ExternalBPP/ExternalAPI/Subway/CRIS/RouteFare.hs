@@ -18,7 +18,6 @@ import ExternalBPP.ExternalAPI.Subway.CRIS.Auth (callCRISAPI)
 import ExternalBPP.ExternalAPI.Subway.CRIS.Encryption (decryptResponseData, encryptPayload)
 import Kernel.External.Encryption
 import Kernel.Prelude
-import qualified Kernel.Storage.Hedis as Hedis
 import Kernel.Tools.Metrics.CoreMetrics (CoreMetrics)
 import Kernel.Types.App
 import Kernel.Types.Error
@@ -96,84 +95,6 @@ type RouteFareAPI =
     :> ReqBody '[PlainText] Text
     :> Post '[JSON] EncryptedResponse
 
-mkRouteFareKey :: Text -> Text -> Text -> Text
-mkRouteFareKey startStopCode endStopCode searchReqId = "CRIS:" <> searchReqId <> "-" <> startStopCode <> "-" <> endStopCode
-
-mkRouteFareCacheKey :: Text -> Text -> Text
-mkRouteFareCacheKey startStopCode endStopCode = "CRIS:" <> startStopCode <> "-" <> endStopCode
-
-getCachedFaresAndRecache ::
-  ( CoreMetrics m,
-    MonadFlow m,
-    CacheFlow m r,
-    EsqDBFlow m r,
-    EncFlow m r
-  ) =>
-  CRISConfig ->
-  CRISFareRequest ->
-  m CRISFareResponse
-getCachedFaresAndRecache config request = do
-  let redisKey = mkRouteFareCacheKey request.sourceCode request.destCode
-  redisResp <- Hedis.safeGet redisKey
-  case redisResp of
-    Just fares -> do
-      fork "fetchAndCacheFares for suburban" $ void fetchAndCacheFares
-      return fares
-    Nothing -> do
-      fetchAndCacheFares
-  where
-    fetchAndCacheFares = do
-      let typeOfBooking :: Int = 0
-      let mobileNo = request.mobileNo >>= (readMaybe @Int . T.unpack)
-      let fareRequest =
-            object
-              [ "tpAccountId" .= (config.tpAccountId :: Int), -- Explicitly mark as Int
-                "mobileNo" .= (fromMaybe 9999999999 mobileNo),
-                "imeiNo" .= request.imeiNo,
-                "appCode" .= config.appCode,
-                "appSession" .= request.appSession,
-                "sourceZone" .= config.sourceZone,
-                "sourceCode" .= sourceCode request,
-                "changeOver" .= request.changeOver,
-                "destCode" .= request.destCode,
-                "ticketType" .= config.ticketType,
-                "via" .= request.via,
-                "typeOfBooking" .= typeOfBooking
-              ]
-      let jsonStr = decodeUtf8 $ LBS.toStrict $ encode fareRequest
-
-      logInfo $ "getRouteFare Req: " <> jsonStr
-
-      encryptionKey <- decrypt config.encryptionKey
-      decryptionKey <- decrypt config.decryptionKey
-      payload <- encryptPayload jsonStr encryptionKey
-
-      let eulerClientFn payload' token =
-            let client = ET.client routeFareAPI
-             in client (Just $ "Bearer " <> token) (Just "application/json") (Just "CUMTA") payload'
-      encryptedResponse <- callCRISAPI config routeFareAPI (eulerClientFn payload) "getRouteFare"
-
-      logInfo $ "getRouteFare Resp: " <> show encryptedResponse
-
-      -- Fix the encoding chain
-      decryptedResponse :: CRISFareResponse <- case eitherDecode (encode encryptedResponse) of
-        Left err -> throwError (CRISError $ "Failed to parse encrypted getRouteFare Resp: " <> T.pack (show err))
-        Right encResp -> do
-          logInfo $ "getRouteFare Resp Code: " <> responseCode encResp
-          if encResp.responseCode == "0"
-            then do
-              case decryptResponseData (responseData encResp) decryptionKey of
-                Left err -> throwError (CRISError $ "Failed to decrypt getRouteFare Resp: " <> T.pack err)
-                Right decryptedJson -> do
-                  logInfo $ "getRouteFare Decrypted Resp: " <> decryptedJson
-                  case eitherDecode (LBS.fromStrict $ TE.encodeUtf8 decryptedJson) of
-                    Left err -> throwError (CRISError $ "Failed to decode getRouteFare Resp: " <> T.pack (show err))
-                    Right fareResponse -> pure fareResponse
-            else throwError (CRISError $ "Non-zero response code in getRouteFare Resp: " <> encResp.responseCode <> " " <> encResp.responseData)
-      let fareCacheKey = mkRouteFareCacheKey request.sourceCode request.destCode
-      Hedis.setExp fareCacheKey decryptedResponse 3600
-      return decryptedResponse
-
 -- Main function
 getRouteFare ::
   ( CoreMetrics m,
@@ -187,7 +108,52 @@ getRouteFare ::
   CRISFareRequest ->
   m [FRFSUtils.FRFSFare]
 getRouteFare config merchantOperatingCityId request = do
-  decryptedResponse <- getCachedFaresAndRecache config request
+  logInfo $ "Request object: " <> show request
+  let typeOfBooking :: Int = 0
+  let mobileNo = request.mobileNo >>= (readMaybe @Int . T.unpack)
+  let fareRequest =
+        object
+          [ "tpAccountId" .= (config.tpAccountId :: Int), -- Explicitly mark as Int
+            "mobileNo" .= (fromMaybe 9999999999 mobileNo),
+            "imeiNo" .= imeiNo request,
+            "appCode" .= config.appCode,
+            "appSession" .= appSession request,
+            "sourceZone" .= config.sourceZone,
+            "sourceCode" .= sourceCode request,
+            "changeOver" .= changeOver request,
+            "destCode" .= destCode request,
+            "ticketType" .= config.ticketType,
+            "via" .= request.via,
+            "typeOfBooking" .= typeOfBooking
+          ]
+  let jsonStr = decodeUtf8 $ LBS.toStrict $ encode fareRequest
+
+  logInfo $ "JSON string: " <> jsonStr
+
+  encryptionKey <- decrypt config.encryptionKey
+  decryptionKey <- decrypt config.decryptionKey
+  payload <- encryptPayload jsonStr encryptionKey
+
+  encryptedResponse <- callCRISAPI config routeFareAPI (eulerClientFn payload) "getRouteFare"
+
+  logInfo $ "Encrypted response: " <> show encryptedResponse
+
+  -- Fix the encoding chain
+  decryptedResponse :: CRISFareResponse <- case eitherDecode (encode encryptedResponse) of
+    Left err -> throwError (InternalError $ "Failed to parse encrypted response: " <> T.pack (show err))
+    Right encResp -> do
+      logInfo $ "Got response code: " <> responseCode encResp
+
+      if encResp.responseCode == "0"
+        then do
+          case decryptResponseData (responseData encResp) decryptionKey of
+            Left err -> throwError (InternalError $ "Failed to decrypt response: " <> T.pack err)
+            Right decryptedJson -> do
+              logInfo $ "Decrypted JSON: " <> decryptedJson
+              case eitherDecode (LBS.fromStrict $ TE.encodeUtf8 decryptedJson) of
+                Left err -> throwError (InternalError $ "Failed to decode decrypted JSON: " <> T.pack (show err))
+                Right fareResponse -> pure fareResponse
+        else throwError (InternalError $ "Non-zero response code in routeFare: " <> encResp.responseCode <> " " <> encResp.responseData)
 
   let routeFareDetails = decryptedResponse.routeFareDetailsList
 
@@ -245,6 +211,10 @@ getRouteFare config merchantOperatingCityId request = do
                   }
             }
   return $ concat frfsDetails
+  where
+    eulerClientFn payload token =
+      let client = ET.client routeFareAPI
+       in client (Just $ "Bearer " <> token) (Just "application/json") (Just "CUMTA") payload
 
 routeFareAPI :: Proxy RouteFareAPI
 routeFareAPI = Proxy
