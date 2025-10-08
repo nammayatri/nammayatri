@@ -373,7 +373,7 @@ mkTransitObjects pOrgId booking ticket person serviceAccount className sortIndex
       let dynamicQrData = qrData <> dynamicData
       periodMillis <- mbPeriodMillis
       let totpDetails = TC.TOTPDetails {TC.algorithm = "TOTP_SHA1", TC.periodMillis = periodMillis}
-      let rotatingBarcode = TC.RotatingBarcode {TC._type = show GWSA.QR_CODE, TC.renderEncoding = "UTF_8", TC.valuePattern = dynamicQrData, TC.totpDetails = totpDetails, TC.alternateText = "This is a dynamic QR, please don't take screenshots"}
+      let rotatingBarcode = TC.RotatingBarcode {TC._type = show GWSA.QR_CODE, TC.renderEncoding = "UTF_8", TC.valuePattern = dynamicQrData, TC.totpDetails = totpDetails, TC.alternateText = "Dynamic QR, don't screenshot"}
       return rotatingBarcode
 
 createTickets :: Booking.FRFSTicketBooking -> [DTicket] -> Int -> Flow [Ticket.FRFSTicket]
