@@ -21,6 +21,7 @@ import Kernel.Utils.Common
 import Network.HTTP.Client
 import Network.HTTP.Client.TLS (tlsManagerSettings)
 import Network.HTTP.Types.Status (statusCode)
+import qualified Storage.CachedQueries.Merchant as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Queries.Person as PQ
 import qualified Storage.Queries.RegistrationToken as QR
@@ -60,31 +61,34 @@ fetchTokenInfo iosValidateEnpoint oauthProvider token = do
 postSocialLogin :: SL.SocialLoginReq -> Environment.Flow SL.SocialLoginRes
 postSocialLogin req = do
   iosValidateEnpoint <- asks (.iosValidateEnpoint)
+  merchant <- case req.merchantShortId of
+    Just merchantShortId -> CQMOC.findByShortId merchantShortId >>= fromMaybeM (MerchantDoesNotExist merchantShortId.getShortId)
+    Nothing -> throwError $ InvalidRequest "Cannot perform social auth without MerchantShortId"
   result <- L.runIO $ fetchTokenInfo iosValidateEnpoint req.oauthProvider req.tokenId
   case result of
     Right info -> do
-      oldPerson <- PQ.findByEmailAndMerchant (Just $ info.email) req.merchantId
-      moc <- CQMOC.findByMerchantIdAndCity req.merchantId req.merchantOperatingCity >>= fromMaybeM (MerchantOperatingCityNotFound $ show req.merchantOperatingCity)
+      oldPerson <- PQ.findByEmailAndMerchant (Just $ info.email) merchant.id
+      moc <- CQMOC.findByMerchantIdAndCity merchant.id req.merchantOperatingCity >>= fromMaybeM (MerchantOperatingCityNotFound $ show req.merchantOperatingCity)
       (person, isNew) <-
         case oldPerson of
           Just person' -> pure (person', False)
           Nothing ->
             (,True) <$> do
               deploymentVersion <- asks (.version)
-              let createPersonInput = buildCreatePersonInput moc.city req.name info.email
-              DR.createDriverWithDetails createPersonInput Nothing Nothing Nothing Nothing Nothing (Just deploymentVersion.getDeploymentVersion) req.merchantId moc.id False
+              let createPersonInput = buildCreatePersonInput moc.city req.name info.email merchant
+              DR.createDriverWithDetails createPersonInput Nothing Nothing Nothing Nothing Nothing (Just deploymentVersion.getDeploymentVersion) merchant.id moc.id False
       QR.deleteByPersonId (getId person.id)
-      token <- makeSession person.id.getId req.merchantId.getId moc.id.getId
+      token <- makeSession person.id.getId merchant.id.getId moc.id.getId
       _ <- QR.create token
       pure $ SL.SocialLoginRes isNew token.token
     Left _ -> throwError . FailedToVerifyIdToken $ show req.oauthProvider <> ", idToken: " <> req.tokenId <> " error: "
   where
-    buildCreatePersonInput city name email =
+    buildCreatePersonInput city name email merchant =
       DR.AuthReq
         { mobileNumber = Nothing,
           mobileCountryCode = Nothing,
           name = name,
-          merchantId = req.merchantId.getId,
+          merchantId = merchant.id.getId,
           merchantOperatingCity = Just city,
           email = Just email,
           identifierType = Just SP.EMAIL,

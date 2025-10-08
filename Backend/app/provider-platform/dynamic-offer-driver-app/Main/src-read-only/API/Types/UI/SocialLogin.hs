@@ -19,8 +19,9 @@ data OAuthProvider
 
 data SocialLoginReq = SocialLoginReq
   { email :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
-    merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+    merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCity :: Kernel.Types.Beckn.Context.City,
+    merchantShortId :: Kernel.Prelude.Maybe (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant),
     name :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     oauthProvider :: OAuthProvider,
     registrationLat :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
