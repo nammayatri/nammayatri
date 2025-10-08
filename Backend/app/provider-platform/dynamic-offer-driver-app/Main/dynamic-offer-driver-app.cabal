@@ -651,6 +651,7 @@ library
       Storage.Queries.Quote
       Storage.Queries.RatingExtra
       Storage.Queries.RegistrationTokenExtra
+      Storage.Queries.RideDetailsExtra
       Storage.Queries.RideExtra
       Storage.Queries.RiderDetailsExtra
       Storage.Queries.RouteExtra
@@ -1323,6 +1324,7 @@ library
       Storage.Queries.OrphanInstances.Rating
       Storage.Queries.OrphanInstances.RegistrationToken
       Storage.Queries.OrphanInstances.Ride
+      Storage.Queries.OrphanInstances.RideDetails
       Storage.Queries.OrphanInstances.RiderDetails
       Storage.Queries.OrphanInstances.RiderDriverCorrelation
       Storage.Queries.OrphanInstances.Route

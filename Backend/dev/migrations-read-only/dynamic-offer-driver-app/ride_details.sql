@@ -25,3 +25,8 @@ ALTER TABLE atlas_driver_offer_bpp.ride_details ADD COLUMN vehicle_age int ;
 
 ALTER TABLE atlas_driver_offer_bpp.ride_details ADD COLUMN merchant_operating_city_id character varying(36) ;
 ALTER TABLE atlas_driver_offer_bpp.ride_details ADD COLUMN merchant_id character varying(36) ;
+
+
+------- SQL updates -------
+
+CREATE INDEX ride_details_idx_vehicle_number ON atlas_driver_offer_bpp.ride_details USING btree (vehicle_number);

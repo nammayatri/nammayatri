@@ -66,3 +66,10 @@ RideDetails:
     fleetOwnerId: character varying(36)
 
   excludedFields: [createdAt, updatedAt]
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+    - GENERATE_INDEXES
+
+  extraIndexes:
+    - columns: [vehicleNumber]

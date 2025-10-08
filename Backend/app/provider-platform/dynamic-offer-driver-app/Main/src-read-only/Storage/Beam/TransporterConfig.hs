@@ -208,6 +208,7 @@ data TransporterConfigT f = TransporterConfigT
     prepaidSubscriptionThreshold :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     qarCalRadiusInKm :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Double),
     ratingAsDecimal :: B.C f Kernel.Prelude.Bool,
+    rcChangeThresholdDays :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     rcExpiryChecks :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     rcLimit :: B.C f Kernel.Prelude.Int,
     recentScheduledBookingsSafeLimit :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
