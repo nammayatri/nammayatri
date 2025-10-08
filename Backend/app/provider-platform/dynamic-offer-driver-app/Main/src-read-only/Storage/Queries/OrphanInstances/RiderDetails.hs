@@ -3,6 +3,7 @@
 
 module Storage.Queries.OrphanInstances.RiderDetails where
 
+import qualified Data.Text
 import qualified Domain.Types.RiderDetails
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -44,6 +45,7 @@ instance FromTType' Beam.RiderDetails Domain.Types.RiderDetails.RiderDetails whe
             referredAt = referredAt,
             referredByDriver = Kernel.Types.Id.Id <$> referredByDriver,
             totalBookings = fromMaybe 0 totalBookings,
+            riderGender = riderGender >>= (readMaybe . Data.Text.unpack),
             updatedAt = updatedAt,
             validCancellations = fromMaybe 0 validCancellations
           }
@@ -77,6 +79,7 @@ instance ToTType' Beam.RiderDetails Domain.Types.RiderDetails.RiderDetails where
         Beam.referredAt = referredAt,
         Beam.referredByDriver = Kernel.Types.Id.getId <$> referredByDriver,
         Beam.totalBookings = Kernel.Prelude.Just totalBookings,
+        Beam.riderGender = Data.Text.pack . Kernel.Prelude.show <$> riderGender,
         Beam.updatedAt = updatedAt,
         Beam.validCancellations = Kernel.Prelude.Just validCancellations
       }

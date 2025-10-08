@@ -40,6 +40,7 @@ data RiderDetailsT f = RiderDetailsT
     referredAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     referredByDriver :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     totalBookings :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    riderGender :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
     validCancellations :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int)
   }

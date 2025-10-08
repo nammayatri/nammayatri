@@ -4,6 +4,7 @@ imports:
   EncryptedHashedField: Kernel.External.Encryption
   DriverReferral: Domain.Types.DriverReferral
   Person: Domain.Types.Person
+  Gender: Domain.Types.Person
   HighPrecMoney: Kernel.Types.Common
   Currency: Kernel.Types.Common
 
@@ -42,6 +43,7 @@ RiderDetails:
     payoutFlagReason: Maybe PayoutFlagReason
     isDeviceIdExists: Maybe Bool
     isFlagConfirmed: Maybe Bool
+    riderGender: Maybe Gender
     bapId: Maybe Text
 
   fromTType:
@@ -51,6 +53,7 @@ RiderDetails:
     completedRides: fromMaybe 0 completedRides|E
     validCancellations: fromMaybe 0 validCancellations|E
     cancellationDueRides: fromMaybe 0 cancellationDueRides|E
+    riderGender: riderGender >>= (readMaybe . Data.Text.unpack)|E
 
   toTType:
     currency: Kernel.Prelude.Just|I
@@ -59,6 +62,7 @@ RiderDetails:
     completedRides: Kernel.Prelude.Just|I
     validCancellations: Kernel.Prelude.Just|I
     cancellationDueRides: Kernel.Prelude.Just|I
+    riderGender: Data.Text.pack . Kernel.Prelude.show <$> riderGender|E
 
   beamType:
     currency: Maybe Currency
@@ -67,6 +71,7 @@ RiderDetails:
     completedRides : Maybe Int
     validCancellations : Maybe Int
     cancellationDueRides : Maybe Int
+    riderGender: Maybe Text
   constraints:
     id: PrimaryKey
     mobileNumberHash: "!SecondaryKey" # forcing to be a secondary key

@@ -21,6 +21,7 @@ import Domain.Types.DriverReferral
 import Domain.Types.Merchant
 import Domain.Types.MerchantOperatingCity (MerchantOperatingCity (..))
 import Domain.Types.Person
+import qualified Domain.Types.Person as DTP
 import Domain.Types.Ride
 import qualified Domain.Types.Ride as Ride
 import Domain.Types.RideDetails as RideDetails
@@ -90,7 +91,8 @@ data BppTransactionJoinT f = BppTransactionJoinT
     rideFare :: C f (Maybe HighPrecMoney),
     rideFareAmount :: C f HighPrecMoney,
     rideStatus :: C f RideStatus,
-    rideTripStartTime :: C f (Maybe UTCTime)
+    rideTripStartTime :: C f (Maybe UTCTime),
+    riderGender :: C f (Maybe DTP.Gender)
   }
   deriving (Generic)
 
@@ -151,7 +153,8 @@ bppTransactionJoinTTable =
       rideFare = "ride_fare",
       rideFareAmount = "ride_fare_amount",
       rideTripStartTime = "ride_trip_start_time",
-      rideStatus = "ride_status"
+      rideStatus = "ride_status",
+      riderGender = "rider_gender"
     }
 
 type BppTransactionJoin = BppTransactionJoinT Identity
@@ -165,6 +168,8 @@ instance ClickhouseValue Time.Months
 instance ClickhouseValue TripCategory
 
 instance CH.ClickhouseValue PayoutFlagReason
+
+instance ClickhouseValue DTP.Gender
 
 $(TH.mkClickhouseInstances ''BppTransactionJoinT 'SELECT_FINAL_MODIFIER)
 
@@ -264,6 +269,7 @@ findAllRideItems merchant opCity limitVal offsetVal mbBookingStatus mbRideShortI
                 RiderDetails.updatedAt = bppTxn.riderDetailsUpdatedAt,
                 RiderDetails.merchantOperatingCityId = Just opCity.id,
                 RiderDetails.bapId = bppTxn.riderDetailsBapId,
+                RiderDetails.riderGender = bppTxn.riderGender,
                 RiderDetails.cancelledRides = bppTxn.riderDetailsCancelledRides,
                 RiderDetails.totalBookings = bppTxn.riderDetailsTotalBookings,
                 RiderDetails.completedRides = bppTxn.riderDetailsCompletedRides,

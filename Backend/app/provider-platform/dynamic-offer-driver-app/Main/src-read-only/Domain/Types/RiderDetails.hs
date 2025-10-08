@@ -40,6 +40,7 @@ data RiderDetailsE e = RiderDetails
     referredAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     referredByDriver :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     totalBookings :: Kernel.Prelude.Int,
+    riderGender :: Kernel.Prelude.Maybe Domain.Types.Person.Gender,
     updatedAt :: Kernel.Prelude.UTCTime,
     validCancellations :: Kernel.Prelude.Int
   }
@@ -80,6 +81,7 @@ instance EncryptedItem RiderDetails where
           referredAt = referredAt entity,
           referredByDriver = referredByDriver entity,
           totalBookings = totalBookings entity,
+          riderGender = riderGender entity,
           updatedAt = updatedAt entity,
           validCancellations = validCancellations entity
         }
@@ -112,6 +114,7 @@ instance EncryptedItem RiderDetails where
             referredAt = referredAt entity,
             referredByDriver = referredByDriver entity,
             totalBookings = totalBookings entity,
+            riderGender = riderGender entity,
             updatedAt = updatedAt entity,
             validCancellations = validCancellations entity
           },

@@ -95,6 +95,7 @@ data TransporterConfigT f = TransporterConfigT
     driverAutoPayExecutionTimeFallBack :: B.C f Kernel.Types.Common.Seconds,
     driverAutoPayNotificationTime :: B.C f Kernel.Types.Common.Seconds,
     driverCallingOption :: B.C f (Kernel.Prelude.Maybe Domain.Types.TransporterConfig.CallingOption),
+    driverCallingOptionConfigs :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     driverDistanceToPickupThresholdOnCancel :: B.C f Kernel.Types.Common.Meters,
     driverDistanceTravelledOnPickupThresholdOnCancel :: B.C f Kernel.Types.Common.Meters,
     driverDrivenSearchReqExpiry :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),

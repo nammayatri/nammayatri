@@ -58,3 +58,8 @@ ALTER TABLE atlas_driver_offer_bpp.rider_details ADD COLUMN total_bookings integ
 ALTER TABLE atlas_driver_offer_bpp.rider_details ADD COLUMN completed_rides integer ;
 ALTER TABLE atlas_driver_offer_bpp.rider_details ADD COLUMN cancelled_rides integer ;
 ALTER TABLE atlas_driver_offer_bpp.rider_details ADD COLUMN cancellation_due_rides integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.rider_details ADD COLUMN rider_gender text ;

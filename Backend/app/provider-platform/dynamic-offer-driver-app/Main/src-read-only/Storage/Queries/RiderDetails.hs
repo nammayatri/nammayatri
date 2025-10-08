@@ -4,6 +4,7 @@
 
 module Storage.Queries.RiderDetails (module Storage.Queries.RiderDetails, module ReExport) where
 
+import qualified Data.Text
 import qualified Domain.Types.Person
 import qualified Domain.Types.RiderDetails
 import Kernel.Beam.Functions
@@ -125,6 +126,7 @@ updateByPrimaryKey (Domain.Types.RiderDetails.RiderDetails {..}) = do
       Se.Set Beam.referredAt referredAt,
       Se.Set Beam.referredByDriver (Kernel.Types.Id.getId <$> referredByDriver),
       Se.Set Beam.totalBookings (Kernel.Prelude.Just totalBookings),
+      Se.Set Beam.riderGender (Data.Text.pack . Kernel.Prelude.show <$> riderGender),
       Se.Set Beam.updatedAt _now,
       Se.Set Beam.validCancellations (Kernel.Prelude.Just validCancellations)
     ]
