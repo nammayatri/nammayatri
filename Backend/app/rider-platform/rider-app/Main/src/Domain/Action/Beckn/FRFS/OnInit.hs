@@ -31,7 +31,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Lib.JourneyModule.Utils as JourneyUtils
 import Lib.Payment.Storage.Beam.BeamFlow
-import SharedLogic.CreateFareForMultiModal (createVendorSplitFromBookings)
+import SharedLogic.CreateFareForMultiModal (createBasketFromBookings, createVendorSplitFromBookings)
 import SharedLogic.FRFSUtils
 import Storage.Beam.Payment ()
 import qualified Storage.CachedQueries.FRFSConfig as CQFRFSConfig
@@ -39,6 +39,7 @@ import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.FRFSSearch as QSearch
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
+import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.Person as QP
 import Tools.Error
 import qualified Tools.Metrics.BAPMetrics as Metrics
@@ -73,7 +74,8 @@ onInit ::
     EncFlow m r,
     ServiceFlow m r,
     HasField "isMetroTestTransaction" r Bool,
-    Metrics.HasBAPMetrics m r
+    Metrics.HasBAPMetrics m r,
+    HasFlowEnv m r '["offerSKUConfig" ::: Text]
   ) =>
   DOnInit ->
   Merchant.Merchant ->
@@ -91,12 +93,20 @@ onInit onInitReq merchant oldBooking = do
   let booking = oldBooking {FTBooking.price = onInitReq.totalPrice, FTBooking.journeyOnInitDone = Just True}
   QFRFSTicketBooking.updateOnInitDone (Just True) booking.id
   (mbJourneyId, allJourneyBookings) <- getAllJourneyFrfsBookings booking
+
   let allLegsOnInitDone = all (\b -> b.journeyOnInitDone == Just True) allJourneyBookings
   when allLegsOnInitDone $ do
     Redis.withLockRedis (key (maybe booking.id.getId (.getId) mbJourneyId)) 60 $ do
       let paymentType = getPaymentType booking.vehicleType mbJourneyId
       (vendorSplitDetails, amount) <- createVendorSplitFromBookings allJourneyBookings merchant.id oldBooking.merchantOperatingCityId paymentType (isMetroTestTransaction && frfsConfig.isFRFSTestingEnabled)
-      createPayments allJourneyBookings oldBooking.merchantOperatingCityId oldBooking.merchantId amount person paymentType vendorSplitDetails
+      baskets <- case mbJourneyId of
+        Just journeyId -> do
+          journey <- QJourney.findByPrimaryKey journeyId >>= fromMaybeM (JourneyNotFound journeyId.getId)
+          if journey.isSingleMode == Just True
+            then createBasketFromBookings allJourneyBookings
+            else return Nothing
+        Nothing -> return Nothing
+      createPayments allJourneyBookings oldBooking.merchantOperatingCityId oldBooking.merchantId amount person paymentType vendorSplitDetails baskets
   where
     getPaymentType vehicleType mbJourneyId = do
       case mbJourneyId of
@@ -122,13 +132,14 @@ createPayments ::
   DP.Person ->
   Payment.PaymentServiceType ->
   [Payment.VendorSplitDetails] ->
+  Maybe [Payment.Basket] ->
   m ()
-createPayments bookings merchantOperatingCityId merchantId amount person paymentType vendorSplitArr = do
+createPayments bookings merchantOperatingCityId merchantId amount person paymentType vendorSplitArr basket = do
   ticketBookingPaymentsExist <- mapM (fmap isNothing . QFRFSTicketBookingPayment.findNewTBPByBookingId . (.id)) bookings
   isPaymentOrderProcessed <-
     if and ticketBookingPaymentsExist
       then do
-        paymentOrder <- createPaymentOrder bookings merchantOperatingCityId merchantId amount person paymentType vendorSplitArr
+        paymentOrder <- createPaymentOrder bookings merchantOperatingCityId merchantId amount person paymentType vendorSplitArr basket
         return $ isJust paymentOrder
       else do
         updatedPaymentOrder <- JourneyUtils.postMultimodalPaymentUpdateOrderUtil paymentType person merchantId merchantOperatingCityId bookings
