@@ -51,7 +51,8 @@ getTrackVehicles (mbPersonId, merchantId) routeCode mbCurrentLat mbCurrentLon mb
     case (mbSelectedSourceStopId, mbSelectedDestinationStopId) of
       (Just sourceStopId, Just destinationStopId) -> do
         possibleRoutes <- getPossibleRoutesBetweenTwoStops sourceStopId destinationStopId integratedBPPConfig
-        pure $ map (.route.code) possibleRoutes
+        let routeCodes = map (.route.code) possibleRoutes
+        pure $ if null routeCodes then [routeCode] else routeCodes
       _ -> pure [routeCode]
   logInfo $ "routeIdsToTrack: " <> show routeIdsToTrack
   riderConfig <- CQRC.findByMerchantOperatingCityId personCityInfo.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist personCityInfo.merchantOperatingCityId.getId)
