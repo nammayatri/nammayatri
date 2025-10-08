@@ -59,6 +59,7 @@ module Domain.Action.Dashboard.Fleet.Driver
     getDriverFleetOperatorInfo,
     checkRCAssociationForFleet,
     validateRequestorRoleAndGetEntityId,
+    postDriverFleetLocationList,
   )
 where
 
@@ -141,6 +142,7 @@ import Storage.Beam.SystemConfigs ()
 import qualified Storage.Cac.TransporterConfig as SCTC
 import Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.Clickhouse.DriverEdaKafka as CHDriverEda
 import qualified Storage.Clickhouse.Ride as CQRide
 import Storage.Clickhouse.RideDetails (findIdsByFleetOwner)
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
@@ -2650,3 +2652,39 @@ getDriverFleetAssignments _ _ memberPersonId mbLimit mbOffset mbFrom mbTo mbVehi
 
   let summary = Common.Summary {totalCount = 10000, count = length ticketAssignmentsList}
   pure $ Common.FleetBookingAssignmentsResponse {bookings = ticketAssignmentsList, summary = summary}
+
+---------------------------------------------------------------------
+postDriverFleetLocationList ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Common.DriverLocationListReq ->
+  Environment.Flow Common.DriverLocationListResp
+postDriverFleetLocationList _ _ memberPersonId req = do
+  if null req.driverIds
+    then throwError $ InvalidRequest "Driver IDs are required"
+    else do
+      rateLimitOptions <- asks (.driverFleetLocationListAPIRateLimitOptions)
+      checkSlidingWindowLimitWithOptions postDriverFleetLocationListHitsCountKey rateLimitOptions
+      currentTime <- getCurrentTime
+      let firstDate = fromMaybe (negate 86400 `addUTCTime` currentTime) req.firstDate
+          lastDate = fromMaybe currentTime req.lastDate
+      allLocations <- fmap concat $
+        forM req.driverIds $ \driverId -> do
+          let personId = cast driverId
+          driverEdaKafkaList <- CHDriverEda.findAllTupleByTimestamp firstDate lastDate personId $ min 10000 $ fromMaybe 1000 req.limit
+          pure $
+            map
+              ( \(mbLat, mbLon, timestamp, mbAccuracy, _mbRideStatus) ->
+                  Common.DriverLocation
+                    { driverId = driverId,
+                      lat = mbLat,
+                      lon = mbLon,
+                      timeStamp = timestamp,
+                      accuracy = mbAccuracy
+                    }
+              )
+              driverEdaKafkaList
+      pure $ Common.DriverLocationListResp allLocations
+  where
+    postDriverFleetLocationListHitsCountKey = "BPP:API:ACTION:DriverFleetLocationList:PersonId:" <> memberPersonId <> ":hitsCount"

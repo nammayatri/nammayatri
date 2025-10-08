@@ -113,3 +113,23 @@ findAllTuple firstDate lastDate driverId rideId = do
                 CH.&&. dek.rideId CH.==. rideId
           )
           (CH.all_ @CH.ATLAS_KAFKA driverEdaKafkaTTable)
+
+-- Query using timestamp range instead of partitionDate equality as timestamp seems to be much better indexed with utc time not timeofday
+findAllTupleByTimestamp ::
+  CH.HasClickhouseEnv CH.ATLAS_KAFKA m =>
+  UTCTime ->
+  UTCTime ->
+  Id DP.Driver ->
+  Int ->
+  m [(Maybe Double, Maybe Double, UTCTime, Maybe Double, Maybe Status)]
+findAllTupleByTimestamp startTs endTs driverId limit = do
+  CH.findAll $
+    CH.select_ (\dek -> CH.notGrouped (dek.lat, dek.lon, dek.timestamp, dek.accuracy, dek.rideStatus)) $
+      CH.orderBy_ (\dek _ -> CH.asc dek.timestamp) $
+        CH.limit_ limit $
+          CH.filter_
+            ( \dek ->
+                (dek.timestamp CH.>=. startTs CH.&&. dek.timestamp CH.<=. endTs)
+                  CH.&&. dek.driverId CH.==. driverId
+            )
+            (CH.all_ @CH.ATLAS_KAFKA driverEdaKafkaTTable)
