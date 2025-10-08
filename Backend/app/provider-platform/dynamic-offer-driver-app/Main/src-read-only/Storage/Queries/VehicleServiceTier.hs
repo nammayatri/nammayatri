@@ -5,6 +5,7 @@
 module Storage.Queries.VehicleServiceTier where
 
 import qualified Domain.Types.Common
+import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.VehicleCategory
 import qualified Domain.Types.VehicleServiceTier
@@ -49,6 +50,18 @@ findByServiceTierTypeAndCityId serviceTierType merchantOperatingCityId = do
     [ Se.And
         [ Se.Is Beam.serviceTierType $ Se.Eq serviceTierType,
           Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId)
+        ]
+    ]
+
+findOneByBaseServiceTierTypeAndMerchantIdAndCityId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Common.ServiceTierType -> m (Maybe Domain.Types.VehicleServiceTier.VehicleServiceTier))
+findOneByBaseServiceTierTypeAndMerchantIdAndCityId merchantId merchantOperatingCityId serviceTierType = do
+  findOneWithKV
+    [ Se.And
+        [ Se.Is Beam.merchantId $ Se.Eq (Kernel.Types.Id.getId merchantId),
+          Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId merchantOperatingCityId),
+          Se.Is Beam.serviceTierType $ Se.Eq serviceTierType
         ]
     ]
 

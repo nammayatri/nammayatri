@@ -354,6 +354,14 @@ apis:
         endpoint: MerchantAPI UpdateOnboardingVehicleVariantMappingEndpoint
         endpointV2:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT MERCHANT UPDATE_ONBOARDING_VEHICLE_VARIANT_MAPPING
+
+  - POST: # UpsertVehicleServiceTierAPI
+      endpoint: /vehicleServiceTier/upsert
+      auth: ApiAuthV2
+      multipart:
+        type: UpdateVehicleServiceTierReq
+      response:
+        type: APISuccess
   - POST: # UpsertSpecialLocationCsvAPI
       endpoint: /config/specialLocation/upsert/
       auth: ApiAuthV2
@@ -842,6 +850,9 @@ types:
   UpdateOnboardingVehicleVariantMappingReq:
     - file: FilePath
     - vehicleCategory: Text
+    - derive: "'HideSecrets"
+  UpdateVehicleServiceTierReq:
+    - file: FilePath
     - derive: "'HideSecrets"
   ClearCacheSubscriptionReq:
     - serviceName: Maybe ServiceNames
