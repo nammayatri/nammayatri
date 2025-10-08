@@ -108,15 +108,16 @@ getCachedFaresAndRecache ::
   ) =>
   CRISConfig ->
   CRISFareRequest ->
+  Bool ->
   m CRISFareResponse
-getCachedFaresAndRecache config request = do
+getCachedFaresAndRecache config request fetchFromCache = do
   let redisKey = mkRouteFareCacheKey request.sourceCode request.destCode request.changeOver
   redisResp <- Hedis.safeGet redisKey
-  case redisResp of
-    Just fares -> do
+  case (redisResp, fetchFromCache) of
+    (Just fares, True) -> do
       fork "fetchAndCacheFares for suburban" $ void fetchAndCacheFares
       return fares
-    Nothing -> do
+    _ -> do
       fetchAndCacheFares
   where
     fetchAndCacheFares = do
@@ -182,9 +183,10 @@ getRouteFare ::
   CRISConfig ->
   Id MerchantOperatingCity ->
   CRISFareRequest ->
+  Bool ->
   m [FRFSUtils.FRFSFare]
-getRouteFare config merchantOperatingCityId request = do
-  decryptedResponse <- getCachedFaresAndRecache config request
+getRouteFare config merchantOperatingCityId request fetchFromCache = do
+  decryptedResponse <- getCachedFaresAndRecache config request fetchFromCache
 
   let routeFareDetails = decryptedResponse.routeFareDetailsList
 

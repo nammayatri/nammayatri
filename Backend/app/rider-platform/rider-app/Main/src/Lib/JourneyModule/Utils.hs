@@ -1080,7 +1080,7 @@ buildTrainAllViaRoutes getPreliminaryLeg (Just originStopCode) (Just destination
       case integratedBppConfig.providerConfig of
         DIntegratedBPPConfig.CRIS crisConfig -> do
           routeFareReq <- getDummyRouteFareRequest originStopCode destinationStopCode " " " "
-          fares <- CRISRouteFare.getRouteFare crisConfig mocid routeFareReq
+          fares <- CRISRouteFare.getRouteFare crisConfig mocid routeFareReq True
           let sortedFares = case crisConfig.routeSortingCriteria of
                 Just DIntegratedBPPConfig.FARE -> sortBy (comparing (\fare -> fare.price.amount)) fares
                 Just DIntegratedBPPConfig.DISTANCE ->

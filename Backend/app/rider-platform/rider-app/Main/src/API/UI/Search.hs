@@ -759,7 +759,7 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
                       DIBC.CRIS config' -> do
                         (viaPoints, changeOver) <- getChangeOverAndViaPoints [BasicRouteDetail {routeCode = routeCode, startStopCode = fromCode, endStopCode = toCode}] integratedBPPConfig
                         routeFareReq <- JMU.getRouteFareRequest fromCode toCode changeOver viaPoints personId
-                        fares <- CRISRouteFare.getRouteFare config' merchantOperatingCityId routeFareReq <&> listToMaybe
+                        fares <- CRISRouteFare.getRouteFare config' merchantOperatingCityId routeFareReq False <&> listToMaybe
                         return $ fares >>= (.fareDetails) >>= Just . (.sdkToken)
                       _ -> return Nothing
                   Nothing -> return Nothing
