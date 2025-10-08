@@ -14,7 +14,6 @@ import qualified Data.Map.Strict as Map
 import Data.Ord (Down (..), comparing)
 import qualified Data.Text as T
 import Data.Time hiding (getCurrentTime, nominalDiffTimeToSeconds, secondsToNominalDiffTime)
-import qualified Data.Time.LocalTime as LocalTime
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
 import qualified Domain.Types.FRFSTicketBooking as DFRFSTicketBooking
 import qualified Domain.Types.IntegratedBPPConfig as DIntegratedBPPConfig
@@ -232,7 +231,7 @@ fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid moci
         return (flattenedLiveRouteStopTimes, routesWithoutBuses)
       else do
         return ([], routeCodes)
-  staticRouteStopTimes <- measureLatency (GRSM.findByRouteCodeAndStopCode integratedBppConfig mid mocid routesWithoutBuses stopCode False False) "fetch route stop timing through graphql"
+  staticRouteStopTimes <- measureLatency (GRSM.findByRouteCodeAndStopCode integratedBppConfig mid mocid routesWithoutBuses stopCode False) "fetch route stop timing through graphql"
   return $ flattenedLiveRouteStopTimes ++ staticRouteStopTimes
   where
     processRoute routeWithBuses = do
@@ -316,7 +315,7 @@ fetchLiveSubwayTimings routeCodes stopCode currentTime integratedBppConfig mid m
   let routeStopTimes = concatMap processRoute allRouteWithTrains
   if not (null routeStopTimes)
     then return routeStopTimes
-    else measureLatency (GRSM.findByRouteCodeAndStopCode integratedBppConfig mid mocid routeCodes stopCode False False) "fetch route stop timing through graphql"
+    else measureLatency (GRSM.findByRouteCodeAndStopCode integratedBppConfig mid mocid routeCodes stopCode False) "fetch route stop timing through graphql"
   where
     processRoute routeWithTrains =
       let filteredTrains = filter (\train -> train.stationCode == stopCode) (routeWithTrains.trains)
@@ -363,12 +362,11 @@ fetchLiveTimings ::
   Id MerchantOperatingCity ->
   Enums.VehicleCategory ->
   Bool ->
-  Bool ->
   m [RouteStopTimeTable]
-fetchLiveTimings routeCodes stopCode currentTime integratedBppConfig mid mocid vc useLiveBusData calledForSubwaySingleMode = case vc of
+fetchLiveTimings routeCodes stopCode currentTime integratedBppConfig mid mocid vc useLiveBusData = case vc of
   -- Enums.SUBWAY -> fetchLiveSubwayTimings routeCodes stopCode currentTime integratedBppConfig mid mocid -- Removed this for now.
   Enums.BUS -> fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid mocid useLiveBusData
-  _ -> measureLatency (GRSM.findByRouteCodeAndStopCode integratedBppConfig mid mocid routeCodes stopCode False calledForSubwaySingleMode) "fetch route stop timing through graphql"
+  _ -> measureLatency (GRSM.findByRouteCodeAndStopCode integratedBppConfig mid mocid routeCodes stopCode False) "fetch route stop timing through graphql"
 
 type RouteCodeText = Text
 
@@ -396,13 +394,12 @@ findPossibleRoutes ::
   Enums.VehicleCategory ->
   Bool ->
   Bool ->
-  Bool ->
   m (Maybe Text, [AvailableRoutesByTier], [RouteStopTimeTable])
-findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime integratedBppConfig mid mocid vc sendWithoutFare useLiveBusData calledForSubwaySingleMode = do
+findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime integratedBppConfig mid mocid vc sendWithoutFare useLiveBusData = do
   -- Get route mappings that contain the origin stop
   validRoutes <- getRouteCodesFromTo fromStopCode toStopCode integratedBppConfig
 
-  routeStopTimings <- measureLatency (fetchLiveTimings validRoutes fromStopCode currentTime integratedBppConfig mid mocid vc useLiveBusData (vc == Enums.SUBWAY && calledForSubwaySingleMode)) ("fetchLiveTimings" <> show validRoutes <> " fromStopCode: " <> show fromStopCode <> " toStopCode: " <> show toStopCode)
+  routeStopTimings <- measureLatency (fetchLiveTimings validRoutes fromStopCode currentTime integratedBppConfig mid mocid vc useLiveBusData) ("fetchLiveTimings" <> show validRoutes <> " fromStopCode: " <> show fromStopCode <> " toStopCode: " <> show toStopCode)
 
   let (_, currentTimeIST) = getISTTimeInfo currentTime
   freqMap <- loadRouteFrequencies routeStopTimings
@@ -573,7 +570,7 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
         }
 
   -- Only return service tiers that have available routes
-  return $ ((listToMaybe sortedTimings) <&> (.routeCode), filter (\r -> not (null $ r.availableRoutes) && (r.fare /= PriceAPIEntity 0.0 INR || sendWithoutFare)) results, sortedTimings)
+  return $ ((listToMaybe sortedTimings) <&> (.routeCode), filter (\r -> not (null $ r.availableRoutes) && (r.fare /= PriceAPIEntity 0.0 INR || sendWithoutFare)) results, routeStopTimings)
   where
     routeTripCountKey :: Text -> Text
     routeTripCountKey routeId = "gtfs_route_trip_count:" <> routeId
@@ -634,7 +631,7 @@ findUpcomingTrips routeCode stopCode mbServiceType currentTime mid mocid vc = do
     SIBC.fetchFirstIntegratedBPPConfigResult
       integratedBPPConfigs
       ( \integratedBPPConfig ->
-          fetchLiveTimings [routeCode] stopCode currentTime integratedBPPConfig mid mocid vc True False
+          fetchLiveTimings [routeCode] stopCode currentTime integratedBPPConfig mid mocid vc True
       )
   logDebug $ "routeStopTimings: " <> show routeStopTimings
 
@@ -859,9 +856,8 @@ buildMultimodalRouteDetails ::
   Id Merchant ->
   Id MerchantOperatingCity ->
   Enums.VehicleCategory ->
-  Bool ->
   m (Maybe MultiModalTypes.MultiModalRouteDetails, Maybe HighPrecMeters)
-buildMultimodalRouteDetails subLegOrder mbRouteCode originStopCode destinationStopCode integratedBppConfig mid mocid vc calledForSubwaySingleMode = do
+buildMultimodalRouteDetails subLegOrder mbRouteCode originStopCode destinationStopCode integratedBppConfig mid mocid vc = do
   mbFromStop <- OTPRest.getStationByGtfsIdAndStopCode originStopCode integratedBppConfig
   mbToStop <- OTPRest.getStationByGtfsIdAndStopCode destinationStopCode integratedBppConfig
   currentTime <- getCurrentTime
@@ -869,8 +865,7 @@ buildMultimodalRouteDetails subLegOrder mbRouteCode originStopCode destinationSt
 
   case (mbFromStop >>= (.lat), mbFromStop >>= (.lon), mbToStop >>= (.lat), mbToStop >>= (.lon)) of
     (Just fromStopLat, Just fromStopLon, Just toStopLat, Just toStopLon) -> do
-      (nextAvailableRouteCode, possibleRoutes, originStopTimings) <- measureLatency (findPossibleRoutes Nothing originStopCode destinationStopCode currentTime integratedBppConfig mid mocid vc True True calledForSubwaySingleMode) "findPossibleRoutes"
-      let originStopTripId = listToMaybe originStopTimings >>= (\timing -> Just timing.tripId)
+      (nextAvailableRouteCode, possibleRoutes, originStopTimings) <- measureLatency (findPossibleRoutes Nothing originStopCode destinationStopCode currentTime integratedBppConfig mid mocid vc True True) "findPossibleRoutes"
       let distance = distanceBetweenInMeters (LatLong fromStopLat fromStopLon) (LatLong toStopLat toStopLon)
       let routeCode = mbRouteCode <|> nextAvailableRouteCode
       mbRoute <-
@@ -882,40 +877,19 @@ buildMultimodalRouteDetails subLegOrder mbRouteCode originStopCode destinationSt
         Just route -> do
           routeStopMappings <- OTPRest.getRouteStopMappingByRouteCode route.code integratedBppConfig
           -- Get timing information for this route at the origin stop
-          tripInfo' <- maybe (return Nothing) (\tripId -> OTPRest.getNandiTripInfo integratedBppConfig tripId.getId) originStopTripId
-          let destinationArrivalTime' = tripInfo' >>= \tripInfo -> fmap secondsToTime $ find (\schedule -> schedule.stopCode == destinationStopCode) tripInfo.schedule >>= Just . (.arrivalTime)
-              destinationDepartureTime' = tripInfo' >>= \tripInfo -> fmap secondsToTime $ find (\schedule -> schedule.stopCode == destinationStopCode) tripInfo.schedule >>= Just . (.departureTime)
-          destStopTimings <- case (mbRouteCode, tripInfo', destinationArrivalTime', destinationDepartureTime') of
-            (Nothing, Just tripInfo, Just destinationArrivalTime, Just destinationDepartureTime) -> do
-              return $
-                [ RouteStopTimeTable
-                    { integratedBppConfigId = integratedBppConfig.id,
-                      tripId = Id tripInfo.tripId,
-                      stopCode = destinationStopCode,
-                      timeOfArrival = destinationArrivalTime,
-                      timeOfDeparture = destinationDepartureTime,
-                      routeCode = route.code,
-                      serviceTierType = Spec.SECOND_CLASS,
-                      serviceTierName = Just "SECOND_CLASS",
-                      delay = Nothing,
-                      source = GTFS,
-                      stage = Nothing,
-                      platformCode = Nothing,
-                      providerStopCode = Nothing,
-                      isStageStop = Nothing,
-                      merchantId = Just mid,
-                      merchantOperatingCityId = Just mocid,
-                      createdAt = currentTime,
-                      updatedAt = currentTime
-                    }
-                ]
-            -- fetchLiveTimings [route.code] destinationStopCode currentTime integratedBppConfig mid mocid vc True calledForSubwaySingleMode
-            _ -> fetchLiveTimings [route.code] destinationStopCode currentTime integratedBppConfig mid mocid vc True calledForSubwaySingleMode
+          destStopTimings <- fetchLiveTimings [route.code] destinationStopCode currentTime integratedBppConfig mid mocid vc True
 
           let stopCodeToSequenceNum = Map.fromList $ map (\rst -> (rst.stopCode, rst.sequenceNum)) routeStopMappings
 
           let mbEarliestOriginTiming =
-                findEarliestTiming currentTimeIST currentTime $ originStopTimings
+                findEarliestTiming currentTimeIST currentTime $
+                  sortBy
+                    ( \a b ->
+                        compare
+                          (getISTArrivalTime a.timeOfDeparture currentTime)
+                          (getISTArrivalTime b.timeOfDeparture currentTime)
+                    )
+                    originStopTimings
 
           let mbDestinationTiming = do
                 originTiming <- mbEarliestOriginTiming
@@ -992,7 +966,7 @@ buildSingleModeDirectRoutes ::
   MultiModalTypes.GeneralVehicleType ->
   Flow [MultiModalTypes.MultiModalRoute]
 buildSingleModeDirectRoutes getPreliminaryLeg mbRouteCode (Just originStopCode) (Just destinationStopCode) (Just integratedBppConfig) mid mocid vc mode = do
-  (mbRouteDetails, _) <- buildMultimodalRouteDetails 1 mbRouteCode originStopCode destinationStopCode integratedBppConfig mid mocid vc False
+  (mbRouteDetails, _) <- buildMultimodalRouteDetails 1 mbRouteCode originStopCode destinationStopCode integratedBppConfig mid mocid vc
   case mbRouteDetails of
     Just routeDetails -> do
       currentTime <- getCurrentTime
@@ -1026,7 +1000,7 @@ getSubwayValidRoutes allSubwayRoutes getPreliminaryLeg integratedBppConfig mid m
     processRoute viaRoutes = do
       let viaPoints = viaRoutes.viaPoints
           routeDistance = metersToHighPrecMeters viaRoutes.distance
-      routeDetailsWithDistance <- mapM (\(osc, dsc) -> measureLatency (buildMultimodalRouteDetails 1 Nothing osc dsc integratedBppConfig mid mocid vc True) "buildMultimodalRouteDetails") viaPoints
+      routeDetailsWithDistance <- mapM (\(osc, dsc) -> measureLatency (buildMultimodalRouteDetails 1 Nothing osc dsc integratedBppConfig mid mocid vc) "buildMultimodalRouteDetails") viaPoints
       logDebug $ "buildTrainAllViaRoutes routeDetailsWithDistance: " <> show routeDetailsWithDistance
       -- ensure that atleast one train route is possible or two stops are less than 1km apart so that user can walk to other station e.g. Chennai Park to Central station
       let isRoutePossible = all (\(mbRouteDetails, mbDistance) -> isJust mbRouteDetails || (isJust mbDistance && mbDistance < Just (HighPrecMeters 1000))) routeDetailsWithDistance
@@ -1377,13 +1351,3 @@ tierRank cfg tier = fromMaybe maxBound (M.lookup tier cfg)
 
 toCfgMap :: [RCTypes.BusTierSortingConfig] -> M.Map Spec.ServiceTierType Int
 toCfgMap xs = M.fromList [(RCTypes.tier x, RCTypes.rank x) | x <- xs]
-
--- Convert seconds from midnight to TimeOfDay format
--- Wraps around for next-day times (>= 24 hours)
-secondsToTime :: Int -> LocalTime.TimeOfDay
-secondsToTime seconds =
-  let totalSeconds = seconds `mod` 86400 -- Wrap around after 24 hours (86400 seconds)
-      hours :: Int = totalSeconds `div` 3600
-      minutes :: Int = (totalSeconds `mod` 3600) `div` 60
-      secs = fromIntegral $ totalSeconds `mod` 60
-   in LocalTime.TimeOfDay hours minutes secs
