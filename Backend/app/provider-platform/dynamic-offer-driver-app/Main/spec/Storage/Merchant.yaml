@@ -1093,6 +1093,7 @@ TransporterConfig:
     allowDuplicatePan : Maybe Bool
     allowDuplicateGst: Maybe Bool
     allowDuplicateAadhaar : Maybe Bool
+    isFaceMatchRequired : Maybe Bool
     cancellationRateSlabConfig: Maybe CancellationRateSlabConfig
     distanceWeightage: Maybe Int
     driverCallingOption: "Maybe CallingOption"

@@ -20,6 +20,7 @@ import AWS.S3 as S3
 import qualified Data.ByteString as BS
 import qualified Data.Text as T hiding (length)
 import Data.Time.Format.ISO8601
+import Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as VC
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.Image as Domain hiding (SelfieFetchStatus (..))
 import qualified Domain.Types.Merchant as DM
@@ -133,6 +134,9 @@ validateImage isDashboard (personId, _, merchantOpCityId) req@ImageValidateReque
   let maxSizeInBytes = fromMaybe 100 transporterConfig.maxAllowedDocSizeInMB * 1024 * 1024 -- Should be set for all merchants, taking 100 if not set
   when (BS.length imageSizeInBytes > maxSizeInBytes) $
     throwError $ InvalidRequest $ "Image size " <> show (BS.length imageSizeInBytes) <> " bytes exceeds maximum limit of " <> show maxSizeInBytes <> " bytes (" <> show (fromMaybe 100 transporterConfig.maxAllowedDocSizeInMB) <> "MB)"
+  when ((fromMaybe False transporterConfig.isFaceMatchRequired) && imageType == DVC.ProfilePhoto) $ do
+    let driverDocument = VC.DriverDocument {panNumber = Nothing, aadhaarNumber = Nothing, dlNumber = Nothing, gstNumber = Nothing}
+    VC.verifyDocumentImageMatch person merchantOpCityId DVC.ProfilePhoto Nothing driverDocument (Just image)
   let rcDependentDocuments = [DVC.VehiclePUC, DVC.VehiclePermit, DVC.VehicleInsurance, DVC.VehicleFitnessCertificate, DVC.VehicleNOC, DVC.VehicleBack, DVC.VehicleBackInterior, DVC.VehicleFront, DVC.VehicleFrontInterior, DVC.VehicleRight, DVC.VehicleLeft, DVC.Odometer]
   mbRcId <-
     if imageType `elem` rcDependentDocuments

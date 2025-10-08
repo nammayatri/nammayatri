@@ -393,16 +393,16 @@ verifyAadhaar verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req a
     _ -> pure ()
   whenJust mbMerchant $ \merchant -> do
     unless (merchant.id == person.merchantId) $ throwError (PersonNotFound personId.getId)
-  image1 <- DVRC.getDocumentImage person.id req.aadhaarFrontImageId ODC.AadhaarCard
-  image2 <- case req.aadhaarBackImageId of
+  aadhaarFrontImage <- DVRC.getDocumentImage person.id req.aadhaarFrontImageId ODC.AadhaarCard
+  aadhaarBackImage <- case req.aadhaarBackImageId of
     Just backImageId -> do
       image <- DVRC.getDocumentImage person.id backImageId ODC.AadhaarCard
       return $ Just image
     Nothing -> return Nothing
   let extractReq =
         Verification.ExtractAadhaarImageReq
-          { image1 = image1,
-            image2 = image2,
+          { image1 = aadhaarFrontImage,
+            image2 = aadhaarBackImage,
             driverId = person.id.getId,
             consent = if req.consent then "yes" else "no"
           }
@@ -428,6 +428,8 @@ verifyAadhaar verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req a
               Nothing -> throwError (InvalidRequest "Aadhaar number is required")
             when (DVRC.isNameCompareRequired transporterConfig verifyBy) $
               DVRC.validateDocument person.merchantId merchantOpCityId person.id extractedAadhaarOutputData.name_on_card extractedAadhaarOutputData.date_of_birth Nothing ODC.AadhaarCard driverDocument
+            when (fromMaybe False transporterConfig.isFaceMatchRequired) $ do
+              DVRC.verifyDocumentImageMatch person merchantOpCityId ODC.AadhaarCard (Just aadhaarFrontImage) driverDocument Nothing
             aadhaarCard <- makeAadhaarCardEntity person.id extractedAadhaarOutputData req
             QAadhaarCard.upsertAadhaarRecord aadhaarCard
             return extractedAadhaarNumber
@@ -441,7 +443,7 @@ verifyAadhaar verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req a
               encryptedAadhaarNumber <- encrypt aadhaarNumber
               DIQuery.updateAadhaarNumber (Just encryptedAadhaarNumber) person.id
             _ -> pure ()
-  if DVRC.isNameCompareRequired transporterConfig verifyBy
+  if DVRC.isNameCompareRequired transporterConfig verifyBy || fromMaybe False transporterConfig.isFaceMatchRequired
     then Redis.withWaitOnLockRedisWithExpiry (DVRC.makeDocumentVerificationLockKey personId.getId) 10 10 runBody
     else runBody
   res <- case person.role of
