@@ -1084,6 +1084,7 @@ TransporterConfig:
     isAAEnabledForRecurring : Maybe Bool
     disableDriverWhenUnlinkingVehicle : Maybe Bool
     validNameComparePercentage : Maybe Int
+    isFaceMatchRequired : Maybe Bool
     allowDuplicatePan : Maybe Bool
     allowDuplicateGst: Maybe Bool
     allowDuplicateAadhaar : Maybe Bool
