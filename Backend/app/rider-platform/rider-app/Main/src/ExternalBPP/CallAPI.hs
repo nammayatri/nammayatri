@@ -108,7 +108,7 @@ search merchant merchantOperatingCity bapConfig searchReq mbFare routeDetails in
       onSearchReq <- Flow.search merchant merchantOperatingCity integratedBPPConfig bapConfig Nothing Nothing searchReq routeDetails
       processOnSearch onSearchReq
     _ -> do
-      fork "FRFS Direct SearchReq" $ do
+      fork "FRFS External SearchReq" $ do
         onSearchReq <- Flow.search merchant merchantOperatingCity integratedBPPConfig bapConfig Nothing Nothing searchReq routeDetails
         processOnSearch onSearchReq
   where
