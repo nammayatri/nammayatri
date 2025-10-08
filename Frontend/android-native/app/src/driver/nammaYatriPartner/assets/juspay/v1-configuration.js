@@ -1719,7 +1719,7 @@ function getNammaYatriConfig() {
           },
           "variantSubscriptionConfig" : {
             "enableVariantBasedSubscription" : true,
-            "variantList" : [],
+            "variantList" : ["AutoCategory", "CarCategory"],
             "enableCabsSubscriptionView" : true,
             "staticViewPlans" : staticSubscriptionConfig
           },
@@ -2432,7 +2432,7 @@ function getNammaYatriConfig() {
           "enableGullak": false,
           "advancedRidePopUpYoutubeLink" : "",
           "callDriverInfoPost": false,
-          "showSubscriptions": false,
+          "showSubscriptions": true,
           "cityLat": 9.931233,
           "cityLong": 76.267303,
           "supportNumber": "08069724930",
@@ -2449,8 +2449,8 @@ function getNammaYatriConfig() {
             "whatsappSupport": false
           },
           "variantSubscriptionConfig": {
-            "enableVariantBasedSubscription": false,
-            "variantList": [],
+            "enableVariantBasedSubscription": true,
+            "variantList": ["AutoCategory", "CarCategory"],
             "enableCabsSubscriptionView": false,
             "staticViewPlans": staticSubscriptionConfig
           },
@@ -5288,7 +5288,7 @@ function getKeralaSavaariConfig() {
         },
         "variantSubscriptionConfig" : {
           "enableVariantBasedSubscription" : true,
-          "variantList" : [],
+          "variantList" : ["AutoCategory", "CarCategory"],
           "enableCabsSubscriptionView" : true,
           "staticViewPlans" : staticSubscriptionConfig
         },
@@ -5990,7 +5990,7 @@ function getKeralaSavaariConfig() {
         "enableGullak": false,
         "advancedRidePopUpYoutubeLink" : "",
         "callDriverInfoPost": false,
-        "showSubscriptions": false,
+        "showSubscriptions": true,
         "cityLat": 9.931233,
         "cityLong": 76.267303,
         "supportNumber": "08069724930",
