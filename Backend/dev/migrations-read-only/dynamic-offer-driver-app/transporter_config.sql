@@ -491,3 +491,23 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN rc_change_thres
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN subscription_config json  default '{"prepaidSubscriptionThreshold": null}' :: json;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN driver_wallet_config json  default '{"enableDriverWallet": false, "driverWalletPayoutThreshold": 0, "gstPercentage": 0.0, "enableWalletPayout": false, "enableWalletTopup": false, "maxWalletPayoutsPerDay": null, "minimumWalletPayoutAmount": 0, "payoutCutOffDays": 7}' :: json;
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN analytics_config json  default '{"weekStartMode": 3, "earningsWindowSize": 7, "allowCacheDriverFlowStatus": false, "maxOnlineDurationDays": 10, "onlineDurationCalculateFrom": null}' :: json;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_wallet_payout boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_wallet_topup boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN payout_cut_off_days integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN is_face_match_required boolean ;
+
+
+------- SQL updates -------
+

@@ -26,6 +26,7 @@ module Tools.Verification
     verifySdkResp,
     getTask,
     nameCompare,
+    faceCompare,
   )
 where
 
@@ -41,6 +42,7 @@ import Kernel.External.Verification as Reexport hiding
     extractGSTImage,
     extractPanImage,
     extractRCImage,
+    faceCompare,
     getTask,
     nameCompare,
     searchAgent,
@@ -150,6 +152,14 @@ nameCompare ::
   NameCompareReq ->
   m NameCompareResp
 nameCompare = runWithServiceConfig Verification.nameCompare (.verificationService)
+
+faceCompare ::
+  ServiceFlow m r =>
+  Id DM.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  FaceCompareReq ->
+  m FaceCompareResp
+faceCompare = runWithServiceConfig Verification.faceCompare (.verificationService)
 
 extractDLImage ::
   ServiceFlow m r =>

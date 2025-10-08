@@ -32,9 +32,11 @@ import qualified Domain.Types.AadhaarCard as DAadhaarCard
 import qualified Domain.Types.AadhaarCard as VDomain
 import qualified Domain.Types.AadhaarOtpReq as DAR
 import qualified Domain.Types.AadhaarOtpVerify as DAV
+import qualified Domain.Types.DocumentVerificationConfig as DTO
 import qualified Domain.Types.DocumentVerificationConfig as ODC
 import Domain.Types.DriverInformation (DriverInformation)
 import qualified Domain.Types.DriverPanCard as DPan
+import qualified Domain.Types.Image as DImage
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
@@ -393,16 +395,16 @@ verifyAadhaar verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req a
     _ -> pure ()
   whenJust mbMerchant $ \merchant -> do
     unless (merchant.id == person.merchantId) $ throwError (PersonNotFound personId.getId)
-  image1 <- DVRC.getDocumentImage person.id req.aadhaarFrontImageId ODC.AadhaarCard
-  image2 <- case req.aadhaarBackImageId of
+  aadhaarFrontImage <- DVRC.getDocumentImage person.id req.aadhaarFrontImageId ODC.AadhaarCard
+  aadhaarBackImage <- case req.aadhaarBackImageId of
     Just backImageId -> do
       image <- DVRC.getDocumentImage person.id backImageId ODC.AadhaarCard
       return $ Just image
     Nothing -> return Nothing
   let extractReq =
         Verification.ExtractAadhaarImageReq
-          { image1 = image1,
-            image2 = image2,
+          { image1 = aadhaarFrontImage,
+            image2 = aadhaarBackImage,
             driverId = person.id.getId,
             consent = if req.consent then "yes" else "no"
           }
@@ -430,6 +432,11 @@ verifyAadhaar verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req a
                           }
                   isValid <- DVRC.isNameComparePercentageValid merchantId merchantOpCityId nameCompareReq
                   unless isValid $ throwError (MismatchDataError "Provided name and extracted name on card do not match")
+                  when (fromMaybe False transporterConfig.isFaceMatchRequired) $ do
+                    profileImage <- DVRC.getPersonImageByDocType person.id DTO.ProfilePhoto DImage.APPROVED >>= fromMaybeM (InvalidRequest "Please upload your profile picture before proceeding with Aadhaar upload.")
+                    isMatch <- DVRC.isFaceCompareValid person merchantOpCityId profileImage aadhaarFrontImage
+                    unless isMatch $
+                      throwError (MismatchDataError "The profile photo does not match the photo on the Aadhaar")
                 _ -> throwError (InvalidRequest "Aadhaar name is required")
               else case req.aadhaarNumber of
                 Just aadhaarNumber ->
@@ -441,6 +448,8 @@ verifyAadhaar verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req a
                 Nothing -> throwError (InvalidRequest "Aadhaar number is required")
             when (DVRC.isNameCompareRequired transporterConfig verifyBy) $
               DVRC.validateDocument person.merchantId merchantOpCityId person.id extractedAadhaarOutputData.name_on_card extractedAadhaarOutputData.date_of_birth Nothing ODC.AadhaarCard driverDocument
+            when (fromMaybe False transporterConfig.isFaceMatchRequired) $ do
+              DVRC.verifyDocumentImageMatch person merchantOpCityId ODC.AadhaarCard (Just (Id req.aadhaarFrontImageId)) driverDocument Nothing
             aadhaarCard <- makeAadhaarCardEntity person.id extractedAadhaarOutputData req
             QAadhaarCard.upsertAadhaarRecord aadhaarCard
             return extractedAadhaarNumber
