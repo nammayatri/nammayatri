@@ -217,6 +217,7 @@ cancel req merchant booking mbActiveSearchTry = do
                 else return Nothing
             Nothing -> return Nothing
         Nothing -> return Nothing
+    logTagInfo ("bookingId-" <> getId req.bookingId) ("Cancellation charges: " <> show cancellationCharges)
     cancelCharges <- case cancellationCharges of
       Left e -> do
         logError $ "Error in getting cancellation charges - " <> show e
@@ -227,6 +228,7 @@ cancel req merchant booking mbActiveSearchTry = do
     -- Just charges -> do
     --   QRD.updateCancellationDues charges booking.riderId.getId
     -- Nothing -> return 0
+    logTagInfo ("bookingId-" <> getId req.bookingId) ("cancellationCharges: " <> show cancelCharges)
     logTagInfo ("bookingId-" <> getId req.bookingId) ("Cancellation reason " <> show bookingCR.source)
 
     -- cancellationCharge <- do
@@ -258,7 +260,7 @@ cancel req merchant booking mbActiveSearchTry = do
           return isReallocat
         Nothing -> return False
     whenJust mbActiveSearchTry $ cancelSearch merchant.id
-    return (isReallocated, cancelCharges)
+    return (isReallocated, Nothing) ------testing -----fix in future
   where
     buildBookingCancellationReason disToPickup currentLocation mbRide = do
       return $
