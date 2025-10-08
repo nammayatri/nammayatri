@@ -85,7 +85,8 @@ data PaymentStatusResp
         card :: Maybe Payment.CardInfo,
         paymentMethodType :: Maybe Text,
         authIdCode :: Maybe Text,
-        txnUUID :: Maybe Text
+        txnUUID :: Maybe Text,
+        effectAmount :: Maybe HighPrecMoney
       }
   | MandatePaymentStatus
       { status :: Payment.TransactionStatus,
@@ -584,7 +585,22 @@ orderStatusService personId orderId orderStatusCall = do
         )
         transactionUUID
       mapM_ updateRefundStatus refunds
-      return $ PaymentStatus {status = transactionStatus, bankErrorCode = orderTxn.bankErrorCode, bankErrorMessage = orderTxn.bankErrorMessage, isRetried = isRetriedOrder, isRetargeted = isRetargetedOrder, retargetLink = retargetPaymentLink, refunds = refunds, payerVpa = (payerVpa <|> ((.payerVpa) =<< upi)), authIdCode = ((.authIdCode) =<< paymentGatewayResponse), txnUUID = transactionUUID, ..}
+      void $ QOrder.updateEffectiveAmount orderId (Just effectiveAmount)
+      return $
+        PaymentStatus
+          { status = transactionStatus,
+            bankErrorCode = orderTxn.bankErrorCode,
+            bankErrorMessage = orderTxn.bankErrorMessage,
+            isRetried = isRetriedOrder,
+            isRetargeted = isRetargetedOrder,
+            retargetLink = retargetPaymentLink,
+            refunds = refunds,
+            payerVpa = (payerVpa <|> ((.payerVpa) =<< upi)),
+            authIdCode = ((.authIdCode) =<< paymentGatewayResponse),
+            txnUUID = transactionUUID,
+            effectAmount = Just effectiveAmount,
+            ..
+          }
     _ -> throwError $ InternalError "Unexpected Order Status Response."
 
 data OrderTxn = OrderTxn
