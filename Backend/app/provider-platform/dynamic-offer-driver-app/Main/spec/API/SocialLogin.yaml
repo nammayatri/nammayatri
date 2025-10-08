@@ -14,9 +14,10 @@ types:
     tokenId: Text
     oauthProvider: OAuthProvider
     merchantOperatingCity: City
-    merchantId: Id Merchant
+    merchantId: Maybe (Id Merchant)
     registrationLat: Maybe Double
     registrationLon: Maybe Double
+    merchantShortId: Maybe (ShortId Merchant)
   SocialLoginRes:
     isNew: Bool
     token: Text
