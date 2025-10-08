@@ -401,10 +401,11 @@ findPossibleRoutes ::
 findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime integratedBppConfig mid mocid vc sendWithoutFare useLiveBusData calledForSubwaySingleMode = do
   -- Get route mappings that contain the origin stop
   validRoutes <- getRouteCodesFromTo fromStopCode toStopCode integratedBppConfig
-
-  routeStopTimings <- measureLatency (fetchLiveTimings validRoutes fromStopCode currentTime integratedBppConfig mid mocid vc useLiveBusData (vc == Enums.SUBWAY && calledForSubwaySingleMode)) ("fetchLiveTimings" <> show validRoutes <> " fromStopCode: " <> show fromStopCode <> " toStopCode: " <> show toStopCode)
-
   let (_, currentTimeIST) = getISTTimeInfo currentTime
+
+  routeStopTimings' <- measureLatency (fetchLiveTimings validRoutes fromStopCode currentTime integratedBppConfig mid mocid vc useLiveBusData (vc == Enums.SUBWAY && calledForSubwaySingleMode)) ("fetchLiveTimings" <> show validRoutes <> " fromStopCode: " <> show fromStopCode <> " toStopCode: " <> show toStopCode)
+  let routeStopTimings = filter (\rst -> ((getISTArrivalTime rst.timeOfArrival currentTime >= currentTimeIST) || vc == Enums.BUS)) routeStopTimings'
+
   freqMap <- loadRouteFrequencies routeStopTimings
 
   let sortedTimings =
@@ -882,11 +883,12 @@ buildMultimodalRouteDetails subLegOrder mbRouteCode originStopCode destinationSt
         Just route -> do
           routeStopMappings <- OTPRest.getRouteStopMappingByRouteCode route.code integratedBppConfig
           -- Get timing information for this route at the origin stop
-          tripInfo' <- maybe (return Nothing) (\tripId -> OTPRest.getNandiTripInfo integratedBppConfig tripId.getId) originStopTripId
+          tripInfo' <- maybe (return Nothing) (\tripId -> measureLatency (OTPRest.getNandiTripInfo integratedBppConfig tripId.getId) "getNandiTripInfo") originStopTripId
           let destinationArrivalTime' = tripInfo' >>= \tripInfo -> fmap secondsToTime $ find (\schedule -> schedule.stopCode == destinationStopCode) tripInfo.schedule >>= Just . (.arrivalTime)
               destinationDepartureTime' = tripInfo' >>= \tripInfo -> fmap secondsToTime $ find (\schedule -> schedule.stopCode == destinationStopCode) tripInfo.schedule >>= Just . (.departureTime)
           destStopTimings <- case (mbRouteCode, tripInfo', destinationArrivalTime', destinationDepartureTime') of
             (Nothing, Just tripInfo, Just destinationArrivalTime, Just destinationDepartureTime) -> do
+              logDebug $ "destinationArrivalTime: " <> show destinationArrivalTime <> " destinationDepartureTime: " <> show destinationDepartureTime <> " tripInfo: " <> show tripInfo
               return $
                 [ RouteStopTimeTable
                     { integratedBppConfigId = integratedBppConfig.id,
@@ -910,7 +912,9 @@ buildMultimodalRouteDetails subLegOrder mbRouteCode originStopCode destinationSt
                     }
                 ]
             -- fetchLiveTimings [route.code] destinationStopCode currentTime integratedBppConfig mid mocid vc True calledForSubwaySingleMode
-            _ -> fetchLiveTimings [route.code] destinationStopCode currentTime integratedBppConfig mid mocid vc True calledForSubwaySingleMode
+            _ -> do
+              logDebug $ "fetching old traditional way using live timings"
+              fetchLiveTimings [route.code] destinationStopCode currentTime integratedBppConfig mid mocid vc True calledForSubwaySingleMode
 
           let stopCodeToSequenceNum = Map.fromList $ map (\rst -> (rst.stopCode, rst.sequenceNum)) routeStopMappings
 
