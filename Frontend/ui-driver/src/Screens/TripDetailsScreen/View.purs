@@ -293,7 +293,7 @@ tripDetailsView state =
               ] <> FontStyle.body1 TypoGraphy
             ]
           , textView $
-            [ text if state.data.vehicleModel == "Unkown" || state.data.vehicleModel == "" then HU.getVehicleType state.data.vehicleServiceTier else state.data.vehicleModel
+            [ text if state.data.vehicleModel == "Unknown" || state.data.vehicleModel == "" then HU.getVehicleType state.data.vehicleServiceTier else state.data.vehicleModel
             , color Color.black700
             ] <> FontStyle.body3 TypoGraphy
         ]
