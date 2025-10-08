@@ -1085,7 +1085,7 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking booking' = do
         FRFSUtils.markAllRefundBookings booking person.id
 
 getFrfsBookingList :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Maybe Spec.VehicleCategory -> Environment.Flow [API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes]
-getFrfsBookingList (mbPersonId, merchantId) mbLimit mbOffset mbVehicleCategory = do
+getFrfsBookingList (mbPersonId, _merchantId) mbLimit mbOffset mbVehicleCategory = do
   personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
   bookings <- B.runInReplica $ QFRFSTicketBooking.findAllByRiderId mbLimit mbOffset personId mbVehicleCategory
   mapM (`buildFRFSTicketBookingStatusAPIRes` Nothing) bookings
