@@ -118,7 +118,7 @@ getFares riderId merchant merchanOperatingCity integrationBPPConfig fareRouteDet
         Just frfsFare -> return (isFareMandatory, frfsFare)
         Nothing -> do
           routeFareReq <- JMU.getDummyRouteFareRequest startStopCode endStopCode changeOver viaPoints
-          resp <- try @_ @SomeException $ CRISRouteFare.getRouteFare config' merchanOperatingCity.id routeFareReq
+          resp <- try @_ @SomeException $ CRISRouteFare.getRouteFare config' merchanOperatingCity.id routeFareReq True
           case resp of
             Left err -> do
               logError $ "Error while calling CRIS API: " <> show err
