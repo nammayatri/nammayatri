@@ -1202,12 +1202,12 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
   mVehicle <- QVehicle.findById personId
   driverInfo <- QDriverInformation.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
   let isPetModeEnabled = fromMaybe driverInfo.isPetModeEnabled req.isPetModeEnabled
-      tripDistanceMaxThreshold = req.tripDistanceMaxThreshold
-      tripDistanceMinThreshold = req.tripDistanceMinThreshold
-      maxPickupRadius = req.maxPickupRadius
-      isSilentModeEnabled = req.isSilentModeEnabled
-      rideRequestVolume = req.rideRequestVolume
-      isTTSEnabled = req.isTTSEnabled
+      tripDistanceMaxThreshold = req.tripDistanceMaxThreshold <|> driverInfo.tripDistanceMaxThreshold
+      tripDistanceMinThreshold = req.tripDistanceMinThreshold <|> driverInfo.tripDistanceMinThreshold
+      maxPickupRadius = req.maxPickupRadius <|> driverInfo.maxPickupRadius
+      isSilentModeEnabled = req.isSilentModeEnabled <|> driverInfo.isSilentModeEnabled
+      rideRequestVolume = req.rideRequestVolume <|> driverInfo.rideRequestVolume
+      isTTSEnabled = req.isTTSEnabled <|> driverInfo.isTTSEnabled
   whenJust mVehicle $ \vehicle -> do
     when (isJust req.canDowngradeToSedan || isJust req.canDowngradeToHatchback || isJust req.canDowngradeToTaxi || isJust req.canSwitchToRental || isJust req.canSwitchToInterCity || isJust req.isPetModeEnabled || isJust req.tripDistanceMaxThreshold || isJust req.tripDistanceMinThreshold || isJust req.maxPickupRadius || isJust req.isSilentModeEnabled || isJust req.rideRequestVolume || isJust req.isTTSEnabled) $ do
       -- deprecated logic, moved to driver service tier options
