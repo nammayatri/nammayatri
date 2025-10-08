@@ -703,7 +703,7 @@ findUpcomingTrips routeCode stopCode mbServiceType currentTime mid mocid vc = do
 measureLatency :: MonadFlow m => m a -> Text -> m a
 measureLatency action label = do
   startTime <- getCurrentTime
-  result <- action
+  result <- withLogTag label action
   endTime <- getCurrentTime
   let latency = diffUTCTime endTime startTime
   logDebug $ label <> " Latency: " <> show latency <> " seconds"

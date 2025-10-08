@@ -440,7 +440,7 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
                         void $ DMC.postMultimodalInitiate (Just searchRequest.riderId, searchRequest.merchantId) firstJourney.id
                       return Nothing
                     else do
-                      res <- DMC.postMultimodalInitiate (Just searchRequest.riderId, searchRequest.merchantId) firstJourney.id
+                      res <- JMU.measureLatency (DMC.postMultimodalInitiate (Just searchRequest.riderId, searchRequest.merchantId) firstJourney.id) "DMC.postMultimodalInitiate"
                       return $ Just res
                 fork "Rest of the routes Init" $ processRestOfRoutes [x | (j, x) <- zip [0 ..] otpResponse.routes, j /= idx] userPreferences routeLiveInfo allJourneysLoaded
                 return resp

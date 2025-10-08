@@ -152,11 +152,11 @@ postMultimodalInitiate ::
 postMultimodalInitiate (_personId, _merchantId) journeyId = do
   runAction $ do
     journeyLegs <- QJourneyLeg.getJourneyLegs journeyId
-    addAllLegs journeyId (Just journeyLegs) journeyLegs
+    JMU.measureLatency (addAllLegs journeyId (Just journeyLegs) journeyLegs) "addAllLegs"
     journey <- JM.getJourney journeyId
     JM.updateJourneyStatus journey Domain.Types.Journey.INITIATED
-    legs <- JM.getAllLegsInfo journey.riderId journeyId
-    generateJourneyInfoResponse journey legs
+    legs <- JMU.measureLatency (JM.getAllLegsInfo journey.riderId journeyId) "JM.getAllLegsInfo"
+    JMU.measureLatency (generateJourneyInfoResponse journey legs) "generateJourneyInfoResponse"
   where
     runAction action = do
       if journeyId.getId == ""
