@@ -76,7 +76,7 @@ getShardKey = do
   myShardId <- (`mod` maxShards) . fromIntegral <$> Hedis.incr getShardIdKey
   return $ setName <> "{" <> show myShardId <> "}"
 
-createJobByTime ::
+createJobByTimeReturningId ::
   forall t (e :: t) m r.
   (JobFlow t e, JobCreator r m) =>
   Maybe (Id (MerchantType t)) ->
@@ -85,9 +85,9 @@ createJobByTime ::
   UTCTime ->
   Int ->
   JobContent e ->
-  m ()
-createJobByTime merchantId merchantOperatingCityId uuid byTime maxShards jobData = do
-  void $ ScheduleJob.createJobByTime @t @e merchantId merchantOperatingCityId uuid createJobFunc byTime maxShards $ JobEntry {jobData = jobData, maxErrors = 5}
+  m (Id AnyJob)
+createJobByTimeReturningId merchantId merchantOperatingCityId uuid byTime maxShards jobData = do
+  ScheduleJob.createJobByTime @t @e merchantId merchantOperatingCityId uuid createJobFunc byTime maxShards $ JobEntry {jobData = jobData, maxErrors = 5}
 
 -----  below functions aren't implemented for redis -------------
 findAll :: (JobExecutor r m, JobProcessor t) => m [AnyJob t]
@@ -101,6 +101,9 @@ getTasksById _ = pure []
 
 getJobByTypeAndScheduleTime :: (JobMonad r m, JobProcessor t) => Text -> UTCTime -> UTCTime -> m [AnyJob t]
 getJobByTypeAndScheduleTime _ _ _ = return []
+
+getJobByTypeAndMerchantOperatingCityId :: (JobMonad r m, JobProcessor t) => Text -> Id (MerchantOperatingCityType t) -> m [AnyJob t]
+getJobByTypeAndMerchantOperatingCityId _ _ = return []
 
 -------------------------------------------------------
 

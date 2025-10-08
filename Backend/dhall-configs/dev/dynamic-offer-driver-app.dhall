@@ -243,6 +243,7 @@ let AllocatorJobType =
       | ScheduledFCMS
       | CheckDashCamInstallationStatus
       | MediaFileDocumentComplete
+      | DriversWalletPayout
       >
 
 let jobInfoMapx =
@@ -294,6 +295,7 @@ let jobInfoMapx =
         , mapValue = True
         }
       , { mapKey = AllocatorJobType.MediaFileDocumentComplete, mapValue = True }
+      , { mapKey = AllocatorJobType.DriversWalletPayout, mapValue = True }
       ]
 
 let LocationTrackingeServiceConfig = { url = "http://localhost:8081/" }

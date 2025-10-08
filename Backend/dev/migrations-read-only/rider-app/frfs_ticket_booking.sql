@@ -238,11 +238,6 @@ ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN journey_leg_id character va
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_app.frfs_ticket_booking ADD COLUMN multimodal_search_request_id text ;
-
-
-------- SQL updates -------
-
 
 
 

@@ -15,10 +15,8 @@
 module Domain.Action.UI.DriverWallet (getWalletTransactions, postWalletPayout, postWalletTopup) where
 
 import qualified API.Types.UI.DriverWallet as DriverWallet
-import qualified Data.Text as T
 import qualified Data.Time
 import Domain.Action.UI.Plan hiding (mkDriverFee)
-import Domain.Action.UI.Ride.EndRide.Internal (makeWalletRunningBalanceLockKey)
 import qualified Domain.Types.DriverFee as DF
 import qualified Domain.Types.DriverWallet as DW
 import Domain.Types.Extra.Plan
@@ -30,18 +28,14 @@ import qualified Domain.Types.Person as DP
 import Domain.Types.VehicleCategory
 import qualified Environment
 import EulerHS.Prelude hiding (id)
-import Kernel.External.Encryption (decrypt)
-import qualified Kernel.External.Notification.FCM.Types as FCM
 import qualified Kernel.External.Payment.Types as Payment
-import qualified Kernel.External.Payout.Interface as Juspay
-import qualified Kernel.External.Payout.Types as TPayout
 import qualified Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import qualified Kernel.Types.APISuccess as APISuccess
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
-import qualified Lib.Payment.Domain.Action as DPayment
 import qualified Lib.Payment.Domain.Types.Common as DPayment
+import qualified SharedLogic.DriverWalletPayout as SDWPayout
 import qualified SharedLogic.Payment as SPayment
 import Storage.Cac.TransporterConfig (findByMerchantOpCityId)
 import qualified Storage.CachedQueries.Merchant as CQM
@@ -51,10 +45,7 @@ import qualified Storage.Queries.DriverFee as QDF
 import qualified Storage.Queries.DriverFeeExtra as QDFE
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverWallet as QDW
-import qualified Storage.Queries.Person as QPerson
 import Tools.Error
-import qualified Tools.Notifications as Notify
-import qualified Tools.Payout as Payout
 import qualified Tools.Utils as Utils
 
 getWalletTransactions ::
@@ -113,84 +104,17 @@ postWalletPayout ::
 postWalletPayout (mbPersonId, merchantId, mocId) = do
   driverId <- fromMaybeM (PersonDoesNotExist "Nothing") mbPersonId
   transporterConfig <- findByMerchantOpCityId mocId Nothing >>= fromMaybeM (TransporterConfigNotFound mocId.getId)
-  person <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
-  subscriptionConfig <- CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName person.merchantOperatingCityId Nothing PREPAID_SUBSCRIPTION >>= fromMaybeM (NoSubscriptionConfigForService person.merchantOperatingCityId.getId "PREPAID_SUBSCRIPTION") -- Driver wallet is not required for postpaid
-  unless (fromMaybe False merchant.enforceSufficientDriverBalance && fromMaybe False transporterConfig.enableWalletPayout) $ throwError $ InvalidRequest "Payouts are disabled"
-  Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey driverId.getId) 10 10 $ do
-    driverInfo <- QDI.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-    let walletBalance = fromMaybe 0 driverInfo.walletBalance
-    let minPayoutAmount = fromMaybe 0 transporterConfig.minimumWalletPayoutAmount
-    utcTimeNow <- getCurrentTime
-    let timeDiff = secondsToNominalDiffTime transporterConfig.timeDiffFromUtc
-        localTime = addUTCTime timeDiff utcTimeNow
-        localDay = Data.Time.utctDay localTime
-        startOfLocalDay = Data.Time.UTCTime localDay 0
-        endOfLocalDay = Data.Time.UTCTime localDay 86399
-        utcStartOfDay = addUTCTime (negate timeDiff) startOfLocalDay
-        utcEndOfDay = addUTCTime (negate timeDiff) endOfLocalDay
-    whenJust transporterConfig.maxWalletPayoutsPerDay $ \maxPayoutsPerDay -> do
-      payoutsToday <- QDW.findAllByDriverIdRangeAndTransactionType driverId utcStartOfDay utcEndOfDay (Just DW.PAYOUT) (Just $ maxPayoutsPerDay + 1) Nothing
-      when (length payoutsToday >= maxPayoutsPerDay) $ throwError $ InvalidRequest "Maximum payouts per day reached"
-    let mbVpa = driverInfo.payoutVpa
-    vpa <- fromMaybeM (InternalError $ "Payout vpa not present for " <> driverId.getId) mbVpa
-    payoutId <- generateGUID
-    phoneNo <- mapM decrypt person.mobileNumber
-    payoutServiceName <- Payout.decidePayoutService (fromMaybe (DEMSC.PayoutService TPayout.Juspay) subscriptionConfig.payoutServiceName) person.clientSdkVersion person.merchantOperatingCityId
-    let cutOffDate = Data.Time.addDays (negate (fromIntegral $ fromMaybe 0 transporterConfig.payoutCutOffDays)) localDay
-        utcCutOffTime = addUTCTime (negate timeDiff) (Data.Time.UTCTime cutOffDate 0)
-    transactionsAfterCutoff <- QDW.findAllByDriverIdRangeAndTransactionType driverId utcCutOffTime utcTimeNow Nothing Nothing Nothing
-    let unsettledReceivables = sum $ mapMaybe (.merchantPayable) transactionsAfterCutoff
-    let payoutableBalance = walletBalance - unsettledReceivables
-    when (payoutableBalance < minPayoutAmount) $ throwError $ InvalidRequest ("Minimum payout amount is " <> show minPayoutAmount)
-    let createPayoutOrderReq = mkPayoutReq person vpa payoutId phoneNo payoutableBalance
-        entityName = DPayment.DRIVER_WALLET_TRANSACTION
-        createPayoutOrderCall = Payout.createPayoutOrder person.merchantId person.merchantOperatingCityId payoutServiceName (Just person.id.getId)
-    merchantOperatingCity <- CQMOC.findById (Kernel.Types.Id.cast person.merchantOperatingCityId) >>= fromMaybeM (MerchantOperatingCityNotFound person.merchantOperatingCityId.getId)
-    logDebug $ "calling create payoutOrder with driverId: " <> driverId.getId <> " | amount: " <> show createPayoutOrderReq.amount <> " | orderId: " <> show payoutId
-    when (createPayoutOrderReq.amount > 0.0) $ do
-      (_, mbPayoutOrder) <- DPayment.createPayoutService (Kernel.Types.Id.cast person.merchantId) (Just $ Kernel.Types.Id.cast person.merchantOperatingCityId) (Kernel.Types.Id.cast driverId) Nothing (Just entityName) (show merchantOperatingCity.city) createPayoutOrderReq createPayoutOrderCall
-      whenJust mbPayoutOrder $ \payoutOrder -> do
-        newId <- generateGUID
-        let transaction =
-              DW.DriverWallet
-                { id = newId,
-                  merchantId = driverInfo.merchantId,
-                  merchantOperatingCityId = mocId,
-                  driverId = driverId,
-                  rideId = Nothing,
-                  transactionType = DW.PAYOUT,
-                  collectionAmount = Nothing,
-                  gstDeduction = Nothing,
-                  merchantPayable = Nothing,
-                  driverPayable = Just (-1 * payoutableBalance),
-                  runningBalance = unsettledReceivables,
-                  payoutOrderId = Just payoutOrder.id,
-                  payoutStatus = Just DW.INITIATED,
-                  createdAt = utcTimeNow,
-                  updatedAt = utcTimeNow
-                }
-        QDW.create transaction
-        QDI.updateWalletBalance (Just unsettledReceivables) driverId
-        let notificationTitle = "Payout Initiated"
-            notificationMessage = "Your payout of " <> show payoutableBalance <> " has been initiated."
-        Notify.sendNotificationToDriver person.merchantOperatingCityId FCM.SHOW Nothing FCM.PAYOUT_INITIATED notificationTitle notificationMessage person person.deviceToken
-  pure APISuccess.Success
-
-mkPayoutReq :: DP.Person -> Text -> T.Text -> Maybe Text -> HighPrecMoney -> Juspay.CreatePayoutOrderReq
-mkPayoutReq person vpa uid phoneNo amount =
-  Juspay.CreatePayoutOrderReq
-    { orderId = uid,
-      amount = SPayment.roundToTwoDecimalPlaces amount,
-      customerPhone = fromMaybe "6666666666" phoneNo, -- dummy no.
-      customerEmail = fromMaybe "dummymail@gmail.com" person.email, -- dummy mail
-      customerId = person.id.getId,
-      orderType = "FULFILL_ONLY",
-      remark = "Settlement for wallet",
-      customerName = person.firstName,
-      customerVpa = vpa,
-      isDynamicWebhookRequired = False
-    }
+  unless (fromMaybe False merchant.enforceSufficientDriverBalance && fromMaybe False transporterConfig.enableWalletPayout) $
+    throwError $ InvalidRequest "Payouts are disabled"
+  subscriptionConfig <-
+    CQSC.findSubscriptionConfigsByMerchantOpCityIdAndServiceName mocId Nothing PREPAID_SUBSCRIPTION
+      >>= fromMaybeM (NoSubscriptionConfigForService mocId.getId "PREPAID_SUBSCRIPTION") -- Driver wallet is not required for postpaid
+  merchantOperatingCity <-
+    CQMOC.findById mocId
+      >>= fromMaybeM (MerchantOperatingCityNotFound mocId.getId)
+  driverInfo <- QDI.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  SDWPayout.driverWalletPayout merchantOperatingCity transporterConfig subscriptionConfig driverInfo.driverId driverInfo.payoutVpa
 
 postWalletTopup ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id DP.Person),
