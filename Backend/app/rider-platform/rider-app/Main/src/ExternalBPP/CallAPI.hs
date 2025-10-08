@@ -169,7 +169,7 @@ select processOnSelectHandler merchant merchantOperatingCity bapConfig quote tic
       onSelectReq <- Flow.select merchant merchantOperatingCity integratedBPPConfig bapConfig quote ticketQuantity childTicketQuantity categorySelectionReq
       processOnSelectHandler onSelectReq
 
-init :: FRFSConfirmFlow m r => Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> DBooking.FRFSTicketBooking -> [DCategorySelect] -> m ()
+init :: (FRFSConfirmFlow m r, HasFlowEnv m r '["offerSKUConfig" ::: Text]) => Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> DBooking.FRFSTicketBooking -> [DCategorySelect] -> m ()
 init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking categories = do
   Metrics.startMetrics Metrics.INIT_FRFS merchant.name booking.searchId.getId merchantOperatingCity.id.getId
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
@@ -183,7 +183,7 @@ init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking
       onInitReq <- Flow.init merchant merchantOperatingCity integratedBPPConfig bapConfig (mRiderName, mRiderNumber) booking
       processOnInit onInitReq
   where
-    processOnInit :: FRFSConfirmFlow m r => DOnInit.DOnInit -> m ()
+    processOnInit :: (FRFSConfirmFlow m r, HasFlowEnv m r '["offerSKUConfig" ::: Text]) => DOnInit.DOnInit -> m ()
     processOnInit onInitReq = do
       (merchant', booking') <- DOnInit.validateRequest onInitReq
       DOnInit.onInit onInitReq merchant' booking'

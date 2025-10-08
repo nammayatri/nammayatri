@@ -424,4 +424,6 @@ in  { esqDBCfg
     , googleSAPrivateKey = sec.googleSAPrivateKey
     , locationTrackingServiceKey = sec.locationTrackingServiceKey
     , nearByDriverAPIRateLimitOptions
+    , inMemConfig
+    , offerSKUConfig = "public_transport_ticket"
     }

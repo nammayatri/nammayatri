@@ -1204,7 +1204,7 @@ postMultimodalPaymentUpdateOrderUtil paymentType person merchantId merchantOpera
           let updatedOrder :: DOrder.PaymentOrder
               updatedOrder = paymentOrder {DOrder.amount = amountUpdated}
           return $ Just updatedOrder
-    else createPaymentOrder bookings merchantOperatingCityId merchantId amountUpdated person paymentType vendorSplitDetails
+    else createPaymentOrder bookings merchantOperatingCityId merchantId amountUpdated person paymentType vendorSplitDetails Nothing
 
 makePossibleRoutesKey :: Text -> Text -> Id DIntegratedBPPConfig.IntegratedBPPConfig -> Text
 makePossibleRoutesKey fromCode toCode integratedBPPConfig = "PossibleRoutes:" <> fromCode <> ":" <> toCode <> ":" <> integratedBPPConfig.getId
