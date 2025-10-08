@@ -67,6 +67,7 @@ import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.PersonStats as QPStats
 import qualified Storage.Queries.StopFare as QRSF
 import Tools.Error
+import qualified Tools.Metrics.BAPMetrics as Metrics
 
 data DOnSearch = DOnSearch
   { bppSubscriberId :: Text,
@@ -171,12 +172,14 @@ onSearch ::
   ( EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     CacheFlow m r,
-    HasShortDurationRetryCfg r c
+    HasShortDurationRetryCfg r c,
+    Metrics.HasBAPMetrics m r
   ) =>
   DOnSearch ->
   ValidatedDOnSearch ->
   m ()
 onSearch onSearchReq validatedReq = do
+  Metrics.finishMetrics Metrics.SEARCH_FRFS validatedReq.merchant.name validatedReq.search.id.getId validatedReq.search.merchantOperatingCityId.getId
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity validatedReq.search
   case integratedBPPConfig.providerConfig of
     DIBC.ONDC _ -> do

@@ -37,6 +37,7 @@ data BAPMetricsContainer = BAPMetricsContainer
     initDurationFRFS :: DurationMetric,
     confirmDurationFRFS :: DurationMetric,
     cancelDurationFRFS :: DurationMetric,
+    createOrderDurationFRFS :: DurationMetric,
     initDuration :: DurationMetric,
     confirmDuration :: DurationMetric,
     busScannerCounter :: BusScannetCounterMetric
@@ -65,6 +66,7 @@ registerBAPMetricsContainer searchDurationTimeout = do
   cancelDurationFRFS <- registerDurationMetricFRFS searchDurationTimeout "merchant_name" "version" "merchantOperatingCityId" "beckn_cancel_frfs_round_trip" "beckn_cancel_frfs_round_trip_failure_counter"
   initDuration <- registerDurationMetric searchDurationTimeout "merchant_name" "version" "merchantOperatingCityId" "beckn_init_round_trip" "beckn_init_round_trip_failure_counter"
   confirmDuration <- registerDurationMetric searchDurationTimeout "merchant_name" "version" "merchantOperatingCityId" "beckn_confirm_round_trip" "beckn_confirm_round_trip_failure_counter"
+  createOrderDurationFRFS <- registerDurationMetricFRFS searchDurationTimeout "merchant_name" "version" "merchantOperatingCityId" "beckn_create_order_frfs_round_trip" "beckn_create_order_frfs_round_trip_failure_counter"
   return $ BAPMetricsContainer {..}
 
 registerSearchRequestCounterMetric :: IO SearchRequestCounterMetric
