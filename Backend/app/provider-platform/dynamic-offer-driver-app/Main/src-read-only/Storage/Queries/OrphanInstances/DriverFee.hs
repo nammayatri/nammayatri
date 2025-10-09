@@ -23,11 +23,13 @@ instance FromTType' Beam.DriverFee Domain.Types.DriverFee.DriverFee where
     pure $
       Just
         Domain.Types.DriverFee.DriverFee
-          { amountPaidByCoin = amountPaidByCoin,
+          { addedToFeeId = Kernel.Types.Id.Id <$> addedToFeeId,
+            amountPaidByCoin = amountPaidByCoin,
             autopayPaymentStage = autopayPaymentStage,
             badDebtDeclarationDate = badDebtDeclarationDate,
             badDebtRecoveryDate = badDebtRecoveryDate,
             billNumber = billNumber,
+            cancellationPenaltyAmount = cancellationPenaltyAmount,
             collectedAt = collectedAt,
             collectedBy = collectedBy,
             createdAt = createdAt,
@@ -73,11 +75,13 @@ instance FromTType' Beam.DriverFee Domain.Types.DriverFee.DriverFee where
 instance ToTType' Beam.DriverFee Domain.Types.DriverFee.DriverFee where
   toTType' (Domain.Types.DriverFee.DriverFee {..}) = do
     Beam.DriverFeeT
-      { Beam.amountPaidByCoin = amountPaidByCoin,
+      { Beam.addedToFeeId = Kernel.Types.Id.getId <$> addedToFeeId,
+        Beam.amountPaidByCoin = amountPaidByCoin,
         Beam.autopayPaymentStage = autopayPaymentStage,
         Beam.badDebtDeclarationDate = badDebtDeclarationDate,
         Beam.badDebtRecoveryDate = badDebtRecoveryDate,
         Beam.billNumber = billNumber,
+        Beam.cancellationPenaltyAmount = cancellationPenaltyAmount,
         Beam.collectedAt = collectedAt,
         Beam.collectedBy = collectedBy,
         Beam.createdAt = createdAt,

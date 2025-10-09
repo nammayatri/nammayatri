@@ -19,11 +19,13 @@ import qualified Kernel.Utils.TH
 import qualified Tools.Beam.UtilsTH
 
 data DriverFee = DriverFee
-  { amountPaidByCoin :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+  { addedToFeeId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.DriverFee.DriverFee),
+    amountPaidByCoin :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     autopayPaymentStage :: Kernel.Prelude.Maybe Domain.Types.DriverFee.AutopayPaymentStage,
     badDebtDeclarationDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     badDebtRecoveryDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     billNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    cancellationPenaltyAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     collectedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     collectedBy :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,
@@ -92,6 +94,8 @@ data DriverFeeStatus
   | REFUND_MANUAL_REVIEW_REQUIRED
   | ONE_TIME_SECURITY_ADJUSTED
   | SETTLED
+  | IN_DISPUTE_WINDOW
+  | ADDED_TO_INVOICE
   deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord)
 
 data FeeType
@@ -102,6 +106,7 @@ data FeeType
   | ONE_TIME_SECURITY_DEPOSIT
   | PREPAID_RECHARGE
   | WALLET_TOPUP
+  | CANCELLATION_PENALTY
   deriving (Read, Show, Eq, Generic, FromJSON, ToJSON, ToSchema, ToParamSchema, Ord, Enum)
 
 data PlatformFee = PlatformFee {cgst :: Kernel.Types.Common.HighPrecMoney, currency :: Kernel.Types.Common.Currency, fee :: Kernel.Types.Common.HighPrecMoney, sgst :: Kernel.Types.Common.HighPrecMoney}

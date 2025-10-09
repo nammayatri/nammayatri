@@ -1,0 +1,21 @@
+imports: {}
+
+
+module: Penalty
+
+apis:
+  - POST:
+      endpoint: /penalty/check
+      request:
+        type: "PenaltyCheckReq"
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: "PenaltyCheckRes"
+
+types:
+  PenaltyCheckReq:
+    - rideId: Text
+    - bookingId: Maybe Text
+  PenaltyCheckRes:
+    - isCancellationPenaltyApplicable: Maybe Bool
+    - cancellationPenaltyAmount: Maybe HighPrecMoney

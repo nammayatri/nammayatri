@@ -1120,7 +1120,8 @@ data FarePolicyCSVRow = FarePolicyCSVRow
     pickupBufferInSecsForNightShiftCal :: Text,
     disableRecompute :: Text,
     stateEntryPermitCharges :: Text,
-    conditionalCharges :: Text
+    conditionalCharges :: Text,
+    driverCancellationPenaltyAmount :: Text
   }
   deriving (Show)
 
@@ -1212,6 +1213,7 @@ instance FromNamedRecord FarePolicyCSVRow where
       <*> r .: "disable_recompute"
       <*> r .: "state_entry_permit_charges"
       <*> r .: "additional_charges"
+      <*> r .: "driver_cancellation_penalty_amount"
 
 merchantCityLockKey :: Text -> Text
 merchantCityLockKey id = "Driver:MerchantOperating:CityId-" <> id
@@ -1411,6 +1413,7 @@ postMerchantConfigFarePolicyUpsert merchantShortId opCity req = do
       maxAllowedTripDistance :: Meters <- readCSVField idx row.maxAllowedTripDistance "Max Allowed Trip Distance"
       let allowedTripDistanceBounds = Just $ FarePolicy.AllowedTripDistanceBounds {distanceUnit, minAllowedTripDistance, maxAllowedTripDistance}
       let serviceCharge :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.serviceCharge "Service Charge"
+      let driverCancellationPenaltyAmount :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.driverCancellationPenaltyAmount "Driver Cancellation Penalty Amount"
       let tollCharges :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.tollCharges "Toll Charge"
       let petCharges :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.petCharges "Pet Charges"
       let priorityCharges :: (Maybe HighPrecMoney) = readMaybeCSVField idx row.priorityCharges "Priority Charges"

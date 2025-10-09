@@ -1100,6 +1100,9 @@ TransporterConfig:
     subscriptionConfig: SubscriptionConfig
     analyticsConfig: AnalyticsConfig
     driverWalletConfig: DriverWalletConfig
+    cancellationFeeCycle: Maybe Seconds
+    cancellationFeeDisputeWindow: Maybe Seconds
+    cancellationFeeVendor: Maybe Text
 
   beamType:
     currency: Maybe Currency
