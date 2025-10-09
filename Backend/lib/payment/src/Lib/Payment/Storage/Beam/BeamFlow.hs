@@ -18,6 +18,8 @@ import Kernel.Beam.Lib.UtilsTH as Reexport
 import Kernel.Types.Common as Reexport hiding (id)
 import Kernel.Utils.Common
 import qualified Lib.Payment.Storage.Beam.PaymentOrder as BeamPO
+import qualified Lib.Payment.Storage.Beam.PaymentOrderOffer as BeamOffer
+import qualified Lib.Payment.Storage.Beam.PaymentOrderSplit as BeamPOS
 import qualified Lib.Payment.Storage.Beam.PaymentTransaction as BeamPT
 import qualified Lib.Payment.Storage.Beam.PayoutOrder as BeamPOO
 import qualified Lib.Payment.Storage.Beam.PayoutTransaction as BeamPOT
@@ -31,5 +33,7 @@ type BeamFlow m r =
     HasSchemaName BeamPT.PaymentTransactionT,
     HasSchemaName BeamRF.RefundsT,
     HasSchemaName BeamPOO.PayoutOrderT,
-    HasSchemaName BeamPOT.PayoutTransactionT
+    HasSchemaName BeamPOT.PayoutTransactionT,
+    HasSchemaName BeamPOS.PaymentOrderSplitT,
+    HasSchemaName BeamOffer.PaymentOrderOfferT
   )
