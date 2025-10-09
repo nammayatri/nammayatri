@@ -85,7 +85,7 @@ getTrackVehicles (mbPersonId, merchantId) routeCode mbCurrentLat mbCurrentLon mb
     _ -> getTrackWithoutCurrentLocation personId personCityInfo vehicleType maxBuses riderConfig routeIdsToTrack
   where
     filterVehiclesYetToReachSelectedStop vehicleTracking =
-      case mbSelectedDestinationStopId of
+      case mbSelectedSourceStopId of
         Just selectedStopId -> filter (\(_, vt) -> any (\u -> u.stopCode == selectedStopId) vt.upcomingStops) vehicleTracking
         Nothing -> vehicleTracking
     getTrackWithoutCurrentLocation personId personCityInfo vehicleType maxBuses riderConfig routeIdsToTrack = do
