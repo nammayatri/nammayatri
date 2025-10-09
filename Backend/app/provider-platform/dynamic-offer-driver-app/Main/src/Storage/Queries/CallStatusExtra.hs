@@ -26,6 +26,18 @@ create cs = do
 findByCallSid :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> m (Maybe CallStatus)
 findByCallSid callSid = findOneWithKV [Se.Is BeamCT.callId $ Se.Eq callSid]
 
+-- countCallsByEntityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Ride -> m Int
+-- countCallsByEntityId entityID = do
+--   dbConf <- getReplicaBeamConfig
+--   resp <-
+--     L.runDB dbConf $
+--       L.findRow $
+--         B.select $
+--           B.aggregate_ (\ride -> (B.group_ (BeamCT.entityId ride), B.as_ @Int B.countAll_)) $
+--             B.filter_' (\(BeamCT.CallStatusT {..}) -> B.fromMaybe_ (B.val_ "") entityId B.==?. B.val_ (getId entityID)) $
+--               B.all_ (BeamCommon.callStatus BeamCommon.atlasDB)
+--   pure $ either (const 0) (maybe 0 snd) resp
+
 countCallsByEntityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Ride -> m Int
 countCallsByEntityId entityID = do
   dbConf <- getReplicaBeamConfig
@@ -33,10 +45,13 @@ countCallsByEntityId entityID = do
     L.runDB dbConf $
       L.findRow $
         B.select $
-          B.aggregate_ (\ride -> (B.group_ (BeamCT.entityId ride), B.as_ @Int B.countAll_)) $
-            B.filter_' (\(BeamCT.CallStatusT {..}) -> B.fromMaybe_ (B.val_ "") entityId B.==?. B.val_ (getId entityID)) $
-              B.all_ (BeamCommon.callStatus BeamCommon.atlasDB)
-  pure $ either (const 0) (maybe 0 snd) resp
+          B.aggregate_ (\_ -> B.as_ @Int B.countAll_) $
+            B.filter_'
+              ( \cs ->
+                  cs.entityId B.==?. B.val_ (Just entityID.getId)
+              )
+              $ B.all_ (BeamCommon.callStatus BeamCommon.atlasDB)
+  pure $ either (const 0) (fromMaybe 0) resp
 
 findOneByEntityId :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Maybe Text -> m (Maybe CallStatus)
 findOneByEntityId rideId = findAllWithOptionsKV [Se.Is BeamCT.entityId $ Se.Eq rideId] (Se.Desc BeamCT.createdAt) (Just 1) Nothing <&> listToMaybe

@@ -16,9 +16,11 @@ module Domain.Action.UI.Ride.CancelRide.Internal
   ( cancelRideImpl,
     updateNammaTagsForCancelledRide,
     driverDistanceToPickup,
+    buildPenaltyCheckContext,
   )
 where
 
+import Control.Monad.Extra (maybeM)
 import Data.Either.Extra (eitherToMaybe)
 import qualified Data.HashMap.Strict as HM
 import qualified Data.HashMap.Strict as HMS
@@ -273,3 +275,61 @@ driverDistanceToPickup booking tripStartPos tripEndPos = do
           sourceDestinationMapping = Nothing
         }
   return $ distRes.distance
+
+buildPenaltyCheckContext ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    Esq.EsqDBReplicaFlow m r,
+    HasShortDurationRetryCfg r c,
+    EncFlow m r,
+    LT.HasLocationService m r,
+    HasKafkaProducer r
+  ) =>
+  SRB.Booking ->
+  DRide.Ride ->
+  m TY.PenaltyCheckTagData
+buildPenaltyCheckContext booking ride = do
+  now <- getCurrentTime
+  numberOfCallAttempts <- QCallStatus.countCallsByEntityId ride.id
+
+  driverLocations <- try @_ @SomeException $ LF.driversLocation [ride.driverId]
+  mbDriverLocation <- case driverLocations of
+    Left err -> do
+      logError ("PenaltyCheckError: Failed to fetch Driver Location with error : " <> show err)
+      return Nothing
+    Right locations -> do
+      return $ listToMaybe locations
+
+  driverDistanceFromPickupNow <-
+    maybeM
+      (return Nothing)
+      ( \location -> do
+          distRes <- try @_ @SomeException $ driverDistanceToPickup booking (getCoordinates location) (getCoordinates booking.fromLocation)
+          either
+            ( \err -> do
+                logError ("PenaltyCheckError: Failed to calculate Driver Distance to Pickup with error : " <> show err)
+                return Nothing
+            )
+            (\d -> return $ Just d)
+            distRes
+      )
+      (pure mbDriverLocation)
+
+  let driverDistanceFromPickupAtAcceptance = booking.distanceToPickup
+
+  let currentTime = floor $ utcTimeToPOSIXSeconds now
+      rideCreatedTime = floor $ utcTimeToPOSIXSeconds ride.createdAt
+      driverArrivedAtPickup = isJust ride.driverArrivalTime
+
+  return $
+    TY.PenaltyCheckTagData
+      { ride = ride,
+        booking = booking,
+        currentTime,
+        rideCreatedTime,
+        driverArrivedAtPickup,
+        driverDistanceFromPickupNow,
+        driverDistanceFromPickupAtAcceptance,
+        numberOfCallAttempts
+      }
