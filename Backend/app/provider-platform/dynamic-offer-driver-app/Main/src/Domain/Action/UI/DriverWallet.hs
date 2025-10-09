@@ -289,5 +289,6 @@ postWalletTopup (mbPersonId, merchantId, mocId) req = do
             splitOfDriverFeeId = Nothing,
             stageUpdatedAt = Nothing,
             validDays = Nothing,
-            vehicleNumber = Nothing
+            vehicleNumber = Nothing,
+            collectedAtVendorId = Nothing
           }

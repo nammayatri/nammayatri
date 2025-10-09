@@ -58,6 +58,7 @@ DriverFee:
     status : DriverFeeStatus
     collectedBy : Maybe Text
     collectedAt : Maybe UTCTime
+    collectedAtVendorId : Maybe Text
     createdAt : UTCTime
     updatedAt : UTCTime
     feeType : FeeType

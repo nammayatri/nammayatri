@@ -7,3 +7,9 @@ ALTER TABLE atlas_driver_offer_bpp.volunteer ADD COLUMN updated_at timestamp wit
 ALTER TABLE atlas_driver_offer_bpp.volunteer ADD COLUMN merchant_id character varying(36) ;
 ALTER TABLE atlas_driver_offer_bpp.volunteer ADD COLUMN merchant_operating_city_id character varying(36) ;
 ALTER TABLE atlas_driver_offer_bpp.volunteer ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.volunteer ADD COLUMN vendor_id text ;

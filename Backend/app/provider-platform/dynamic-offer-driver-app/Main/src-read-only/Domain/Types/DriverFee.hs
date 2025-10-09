@@ -25,6 +25,7 @@ data DriverFee = DriverFee
     badDebtRecoveryDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     billNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     collectedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    collectedAtVendorId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     collectedBy :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,
     currency :: Kernel.Types.Common.Currency,

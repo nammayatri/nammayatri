@@ -1100,6 +1100,7 @@ TransporterConfig:
     subscriptionConfig: SubscriptionConfig
     analyticsConfig: AnalyticsConfig
     driverWalletConfig: DriverWalletConfig
+    enableVendorCheckForCollectingDues: Maybe Bool
 
   beamType:
     currency: Maybe Currency
