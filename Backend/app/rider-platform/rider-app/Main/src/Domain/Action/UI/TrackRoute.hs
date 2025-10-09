@@ -5,7 +5,6 @@ import qualified BecknV2.FRFS.Enums as Spec
 import BecknV2.FRFS.Utils (frfsVehicleCategoryToBecknVehicleCategory)
 import Data.Function
 import qualified Data.List as List
-import qualified Data.Text as T
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
@@ -90,9 +89,15 @@ getTrackVehicles (mbPersonId, merchantId) routeCode mbCurrentLat mbCurrentLon mb
         Just selectedStopId -> filter (\(_, vt) -> any (\u -> u.stopCode == selectedStopId) vt.upcomingStops) vehicleTracking
         Nothing -> vehicleTracking
     getTrackWithoutCurrentLocation personId personCityInfo vehicleType maxBuses riderConfig routeIdsToTrack = do
+      -- Track vehicles for all routes and deduplicate
       vehicleTrackingWithRoutes <- concatMapM (\routeIdToTrack -> map (routeIdToTrack,) <$> trackVehicles personId merchantId personCityInfo.merchantOperatingCityId vehicleType routeIdToTrack (fromMaybe DIBC.APPLICATION mbPlatformType) Nothing mbIntegratedBPPConfigId) routeIdsToTrack
       let deduplicatedVehicles = List.nubBy (\a b -> (snd a).vehicleId == (snd b).vehicleId) vehicleTrackingWithRoutes
-      let trackVehicleKey = mkTrackVehicleKey (T.intercalate "," routeIdsToTrack) vehicleType
+
+      -- Create cache key based on source/destination stops or route codes
+      let trackVehicleKey = case (mbSelectedSourceStopId, mbSelectedDestinationStopId) of
+            (Just sourceStopId, Just destStopId) -> mkTrackVehicleKeyByStops sourceStopId destStopId vehicleType
+            _ -> mkTrackVehicleKey routeCode vehicleType
+
       cachedResp :: Maybe [Text] <- Redis.safeGet trackVehicleKey
       response <-
         map (uncurry mkVehicleTrackingResponse)
@@ -103,7 +108,7 @@ getTrackVehicles (mbPersonId, merchantId) routeCode mbCurrentLat mbCurrentLon mb
             Nothing -> do
               let vehiclesYetToReachSelectedStop = filterVehiclesYetToReachSelectedStop deduplicatedVehicles
               let vehiclesToShow = take maxBuses vehiclesYetToReachSelectedStop
-              Redis.setExp trackVehicleKey (map (\(_, vt) -> vt.vehicleId) vehiclesToShow) (fromMaybe 900 riderConfig.trackVehicleKeyExpiry)
+              Redis.setExp trackVehicleKey (map ((.vehicleId) . snd) vehiclesToShow) (fromMaybe 900 riderConfig.trackVehicleKeyExpiry)
               pure vehiclesToShow
       pure $
         TrackRoute.TrackingResp
@@ -141,3 +146,6 @@ getTrackVehicles (mbPersonId, merchantId) routeCode mbCurrentLat mbCurrentLon mb
 
 mkTrackVehicleKey :: Text -> Spec.VehicleCategory -> Text
 mkTrackVehicleKey routeCode vehicleType = "trackVehicles:busNumber:" <> routeCode <> ":" <> show vehicleType
+
+mkTrackVehicleKeyByStops :: Text -> Text -> Spec.VehicleCategory -> Text
+mkTrackVehicleKeyByStops sourceStopCode destStopCode vehicleType = "trackVehicles:stops:" <> sourceStopCode <> ":" <> destStopCode <> ":" <> show vehicleType
