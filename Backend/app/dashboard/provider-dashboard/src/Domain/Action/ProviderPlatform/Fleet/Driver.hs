@@ -60,6 +60,7 @@ module Domain.Action.ProviderPlatform.Fleet.Driver
     getDriverFleetBookings,
     getDriverFleetAssignments,
     getDriverFleetOperatorInfo,
+    postDriverFleetLocationList,
   )
 where
 
@@ -525,3 +526,9 @@ getDriverFleetOperatorInfo merchantShortId opCity apiTokenInfo mbMobileCountryCo
   res <- Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetOperatorInfo) person.id.getId
   pure
     res {Common.approvedBy = person.approvedBy <&> getId}
+
+postDriverFleetLocationList :: (Kernel.Types.Id.ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.DriverLocationListReq -> Environment.Flow Common.DriverLocationListResp)
+postDriverFleetLocationList merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  let memberPersonId = apiTokenInfo.personId.getId
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetLocationList) memberPersonId req
