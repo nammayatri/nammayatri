@@ -61,12 +61,14 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Payment.Domain.Types.Common
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
+import qualified Lib.Payment.Domain.Types.PaymentOrderSplit as DPaymentOrderSplit
 import qualified Lib.Payment.Domain.Types.PaymentTransaction as DTransaction
 import qualified Lib.Payment.Domain.Types.PayoutOrder as Payment
 import qualified Lib.Payment.Domain.Types.PayoutTransaction as PT
 import Lib.Payment.Domain.Types.Refunds (Refunds (..), Split (..))
 import Lib.Payment.Storage.Beam.BeamFlow
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
+import qualified Lib.Payment.Storage.Queries.PaymentOrderSplit as QPaymentOrderSplit
 import qualified Lib.Payment.Storage.Queries.PaymentTransaction as QTransaction
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import qualified Lib.Payment.Storage.Queries.PayoutTransaction as QPayoutTransaction
@@ -478,6 +480,7 @@ buildPaymentOrder ::
 buildPaymentOrder merchantId mbMerchantOpCityId personId mbEntityName req resp = do
   now <- getCurrentTime
   clientAuthToken <- encrypt resp.sdk_payload.payload.clientAuthToken
+  buildPaymentSplit req.orderId req.splitSettlementDetails merchantId mbMerchantOpCityId
   pure
     DOrder.PaymentOrder
       { id = Id req.orderId,
@@ -516,6 +519,34 @@ buildPaymentOrder merchantId mbMerchantOpCityId personId mbEntityName req resp =
         updatedAt = now,
         merchantOperatingCityId = mbMerchantOpCityId
       }
+
+mkPaymentOrderSplit :: (EncFlow m r, BeamFlow m r) => Text -> HighPrecMoney -> PInterface.MBY -> HighPrecMoney -> Text -> Id Merchant -> Maybe (Id MerchantOperatingCity) -> m DPaymentOrderSplit.PaymentOrderSplit
+mkPaymentOrderSplit vendorId amount mdrBorneBy merchantCommission paymentOrderId merchantId merchantOperatingCityId = do
+  id <- generateGUID
+  now <- getCurrentTime
+  return $
+    DPaymentOrderSplit.PaymentOrderSplit
+      { id = id,
+        vendorId = vendorId,
+        merchantId = merchantId.getId,
+        amount = mkPrice Nothing amount,
+        mdrBorneBy = show mdrBorneBy,
+        merchantCommission = mkPrice Nothing merchantCommission,
+        merchantOperatingCityId = merchantOperatingCityId <&> (.getId),
+        paymentOrderId = Id paymentOrderId,
+        createdAt = now,
+        updatedAt = now
+      }
+
+buildPaymentSplit :: (EncFlow m r, BeamFlow m r) => Text -> Maybe PInterface.SplitSettlementDetails -> Id Merchant -> Maybe (Id MerchantOperatingCity) -> m ()
+buildPaymentSplit paymentOrderId mbSplitSettlementDetails merchantId merchantOperatingCityId = do
+  case mbSplitSettlementDetails of
+    Just splitSettlementDetails -> do
+      marketPlaceSplit <- mkPaymentOrderSplit "marketPlace" splitSettlementDetails.marketplace.amount splitSettlementDetails.mdrBorneBy 0 paymentOrderId merchantId merchantOperatingCityId
+      vendorSplits <- mapM (\vendor -> mkPaymentOrderSplit vendor.subMid vendor.amount splitSettlementDetails.mdrBorneBy vendor.merchantCommission paymentOrderId merchantId merchantOperatingCityId) splitSettlementDetails.vendor.split
+      let splits = marketPlaceSplit : vendorSplits
+      QPaymentOrderSplit.createMany splits
+    Nothing -> pure ()
 
 -- order status -----------------------------------------------------
 
@@ -794,6 +825,7 @@ createExecutionService (request, orderId) merchantId mbMerchantOpCityId executio
   where
     mkExecutionOrder req = do
       now <- getCurrentTime
+      buildPaymentSplit orderId req.splitSettlementDetails merchantId mbMerchantOpCityId
       return
         DOrder.PaymentOrder
           { id = Id orderId,
