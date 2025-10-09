@@ -27,6 +27,7 @@ data DriverWalletT f = DriverWalletT
     payoutStatus :: B.C f (Kernel.Prelude.Maybe Domain.Types.DriverWallet.PayoutStatus),
     rideId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     runningBalance :: B.C f Kernel.Types.Common.HighPrecMoney,
+    tdsDeduction :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     transactionType :: B.C f Domain.Types.DriverWallet.TransactionType,
     updatedAt :: B.C f Data.Time.UTCTime
   }

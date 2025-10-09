@@ -47,6 +47,7 @@ updateByPrimaryKey (Domain.Types.DriverWallet.DriverWallet {..}) = do
       Se.Set Beam.payoutStatus payoutStatus,
       Se.Set Beam.rideId (Kernel.Types.Id.getId <$> rideId),
       Se.Set Beam.runningBalance runningBalance,
+      Se.Set Beam.tdsDeduction tdsDeduction,
       Se.Set Beam.transactionType transactionType,
       Se.Set Beam.updatedAt _now
     ]

@@ -131,6 +131,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     enableExistingVehicleInBulkUpload :: Kernel.Prelude.Bool,
     enableFaceVerification :: Kernel.Prelude.Bool,
     enableOverchargingBlocker :: Kernel.Prelude.Bool,
+    enableTdsDeduction :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableTollCrossedNotifications :: Kernel.Prelude.Bool,
     enableUdfForOffers :: Kernel.Prelude.Bool,
     exotelAppIdMapping :: Kernel.Prelude.Maybe Domain.Types.Extra.TransporterConfig.ExotelMapping,
@@ -348,6 +349,7 @@ data DistanceRecomputeConfigs = DistanceRecomputeConfigs {estimatedDistanceUpper
 data DriverWalletConfig = DriverWalletConfig
   { driverWalletPayoutThreshold :: Kernel.Types.Common.HighPrecMoney,
     enableDriverWallet :: Kernel.Prelude.Bool,
+    enableFleetWallet :: Kernel.Prelude.Bool,
     enableWalletPayout :: Kernel.Prelude.Bool,
     enableWalletTopup :: Kernel.Prelude.Bool,
     gstPercentage :: Kernel.Prelude.Double,

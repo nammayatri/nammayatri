@@ -49,6 +49,7 @@ parseDriverWalletConfig merchantOperatingCityId mbVal = do
   let def =
         DriverWalletConfig
           { enableDriverWallet = False,
+            enableFleetWallet = False,
             driverWalletPayoutThreshold = 0,
             gstPercentage = 0.0,
             enableWalletPayout = False,
