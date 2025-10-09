@@ -300,7 +300,7 @@ getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan 
       feeWithOutDiscountPlusSpecialZone = feeWithoutDiscount + driverFee.specialZoneAmount
   if (feeWithOutDiscountPlusSpecialZone == 0 || feeWithoutDiscountWithWaiveOffAndSpecialZone == 0)
     then do
-      updateCollectedPaymentStatus CLEARED Nothing now driverFee.id
+      updateCollectedPaymentStatus CLEARED Nothing now Nothing driverFee.id
       return (0, 0, Nothing, Nothing)
     else do
       offerResp <- do
@@ -317,7 +317,7 @@ getFinalOrderAmount feeWithoutDiscount merchantId transporterConfig driver plan 
             pure (bestOffer.finalOrderAmount, Just bestOffer.offerId, bestOffer.offerDescription.title)
       if finalOrderAmount + driverFee.specialZoneAmount == 0
         then do
-          updateCollectedPaymentStatus CLEARED offerId now driverFee.id
+          updateCollectedPaymentStatus CLEARED offerId now Nothing driverFee.id
           updateFeeWithoutDiscount (Just feeWithOutDiscountPlusSpecialZone) driverFee.id
           return (0, 0, offerId, offerTitle)
         else return (feeWithOutDiscountPlusSpecialZone, finalOrderAmount + driverFee.specialZoneAmount, offerId, offerTitle)

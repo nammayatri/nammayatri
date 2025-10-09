@@ -71,3 +71,9 @@ ALTER TABLE atlas_driver_offer_bpp.driver_fee ADD COLUMN has_sibling boolean ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_fee ADD COLUMN valid_days integer ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_fee ADD COLUMN collected_at_vendor_id text ;

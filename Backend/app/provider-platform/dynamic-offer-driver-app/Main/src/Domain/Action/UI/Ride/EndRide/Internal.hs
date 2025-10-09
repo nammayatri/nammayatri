@@ -938,6 +938,7 @@ mkDriverFee serviceName now startTime' endTime' merchantId driverId rideFare gov
         siblingFeeId = Nothing,
         splitOfDriverFeeId = Nothing,
         validDays = Nothing,
+        collectedAtVendorId = Nothing,
         ..
       }
   where

@@ -11,6 +11,7 @@ Volunteer:
 
   fields:
     id : Id Volunteer
+    vendorId : Maybe Text
     place : Text
     createdAt : UTCTime
     updatedAt : UTCTime
@@ -27,3 +28,10 @@ Volunteer:
     findAllByPlace:
       kvFunction: findAllWithKV
       where: place
+
+    findByIdAndVendorId:
+      kvFunction: findOneWithKV
+      where:
+        and:
+          - id
+          - vendorId

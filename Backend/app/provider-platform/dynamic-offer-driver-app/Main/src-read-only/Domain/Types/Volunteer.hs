@@ -16,6 +16,7 @@ data Volunteer = Volunteer
     id :: Kernel.Types.Id.Id Domain.Types.Volunteer.Volunteer,
     place :: Data.Text.Text,
     updatedAt :: Kernel.Prelude.UTCTime,
+    vendorId :: Kernel.Prelude.Maybe Data.Text.Text,
     merchantId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Merchant.Merchant),
     merchantOperatingCityId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity)
   }

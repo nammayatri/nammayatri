@@ -21,6 +21,7 @@ data DriverFeeT f = DriverFeeT
     badDebtRecoveryDate :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     billNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
     collectedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
+    collectedAtVendorId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     collectedBy :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     currency :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Currency),
