@@ -42,6 +42,7 @@ import qualified Domain.Types.DeliveryDetails as DTDD
 import qualified Domain.Types.DriverOffer as DDO
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.EstimateStatus as DEstimate
+import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.Journey as DJ
 import qualified Domain.Types.JourneyLeg as DJL
 import qualified Domain.Types.Merchant as DM
@@ -74,10 +75,12 @@ import Kernel.Utils.Common
 import qualified Kernel.Utils.Predicates as P
 import Kernel.Utils.Validation
 import Lib.SessionizerMetrics.Types.Event
+import SharedLogic.MerchantPaymentMethod
 import SharedLogic.Quote
 import qualified Storage.CachedQueries.BppDetails as CQBPP
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as QMPM
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.Person.PersonFlowStatus as QPFS
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
@@ -173,7 +176,8 @@ data DSelectRes = DSelectRes
     disabilityDisable :: Maybe Bool,
     selectResDetails :: Maybe DSelectResDetails,
     preferSafetyPlus :: Bool,
-    mbJourneyId :: Maybe (Id DJ.Journey)
+    mbJourneyId :: Maybe (Id DJ.Journey),
+    paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo
   }
 
 data DSelectResDetails = DSelectResDelivery DParcel.ParcelDetails
@@ -266,6 +270,8 @@ select2 personId estimateId req@DSelectReq {..} = do
   -- TODO :: This Delivery transaction still throws error inside, can be refactored later upon scale.
   when merchant.onlinePayment $ do
     QP.updateDefaultPaymentMethodId paymentMethodId personId -- Make payment method as default payment method for customer
+  merchantPaymentMethod <- maybe (return Nothing) (QMPM.findById . Id) req.paymentMethodId
+  let paymentMethodInfo = mkPaymentMethodInfo <$> merchantPaymentMethod
   when (maybe False Trip.isDeliveryTrip (DEstimate.tripCategory estimate)) $ do
     validDeliveryDetails <- deliveryDetails & fromMaybeM (InvalidRequest "Delivery details not found for trip category Delivery")
     updateRequiredDeliveryDetails searchRequestId searchRequest.merchantId searchRequest.merchantOperatingCityId validDeliveryDetails
@@ -302,6 +308,7 @@ select2 personId estimateId req@DSelectReq {..} = do
         selectResDetails = dselectResDetails,
         preferSafetyPlus = fromMaybe False preferSafetyPlus,
         mbJourneyId = Just journey.id,
+        paymentMethodInfo = paymentMethodInfo,
         ..
       }
   where

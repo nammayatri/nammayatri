@@ -23,6 +23,7 @@ import Data.Text as Text hiding (find)
 import qualified Domain.Action.UI.SearchRequestForDriver as USRD
 import qualified Domain.Types.ConditionalCharges as DAC
 import qualified Domain.Types.Estimate as DEst
+import qualified Domain.Types.Extra.MerchantPaymentMethod as DMPM
 import qualified Domain.Types.FarePolicy as DFP
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.ParcelType as DParcel
@@ -63,7 +64,8 @@ data DSelectReq = DSelectReq
     toUpdateDeviceIdInfo :: Bool,
     disabilityDisable :: Maybe Bool,
     parcelDetails :: (Maybe Text, Maybe Int),
-    preferSafetyPlus :: Bool
+    preferSafetyPlus :: Bool,
+    paymentMethodInfo :: Maybe DMPM.PaymentMethodInfo
   }
 
 -- user can select array of estimate because of book any option, in most of the cases it will be a single estimate
@@ -120,7 +122,8 @@ handler merchant sReq searchReq estimates = do
             customerExtraFee = sReq.customerExtraFee,
             messageId = sReq.messageId,
             isRepeatSearch = False,
-            isAllocatorBatch = False
+            isAllocatorBatch = False,
+            paymentMethodInfo = sReq.paymentMethodInfo
           }
   initiateDriverSearchBatch driverSearchBatchInput
   Metrics.finishGenericLatencyMetrics Metrics.SELECT_TO_SEND_REQUEST searchReq.transactionId

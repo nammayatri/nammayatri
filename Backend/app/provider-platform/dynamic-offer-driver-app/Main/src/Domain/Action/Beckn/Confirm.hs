@@ -44,10 +44,12 @@ import SharedLogic.Allocator.Jobs.SendSearchRequestToDrivers (sendSearchRequestT
 import qualified SharedLogic.Booking as SBooking
 import SharedLogic.DriverPool.Types
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
+import SharedLogic.MerchantPaymentMethod
 import SharedLogic.Ride
 import qualified SharedLogic.RiderDetails as SRD
 import SharedLogic.SearchTry
 import Storage.CachedQueries.Merchant as QM
+import qualified Storage.CachedQueries.Merchant.MerchantPaymentMethod as QMPM
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BusinessEvent as QBE
@@ -170,6 +172,8 @@ handler merchant req validatedQuote = do
           driverPickUpCharge = join $ USRD.extractDriverPickupCharges <$> ((.farePolicyDetails) <$> quote.farePolicy)
           driverParkingCharge = join $ (.parkingCharge) <$> quote.farePolicy
       tripQuoteDetail <- buildTripQuoteDetail searchReq booking.tripCategory booking.vehicleServiceTier quote.vehicleServiceTierName booking.estimatedFare (Just booking.isDashboardRequest) (mbDriverExtraFeeBounds <&> (.minFee)) (mbDriverExtraFeeBounds <&> (.maxFee)) (mbDriverExtraFeeBounds <&> (.stepFee)) (mbDriverExtraFeeBounds <&> (.defaultStepFee)) driverPickUpCharge driverParkingCharge quote.id.getId [] False booking.fareParams.congestionCharge booking.fareParams.petCharges booking.fareParams.priorityCharges
+      merchantPaymentMethod <- maybe (return Nothing) QMPM.findById booking.paymentMethodId
+      let paymentMethodInfo = mkPaymentMethodInfo <$> merchantPaymentMethod
       let driverSearchBatchInput =
             DriverSearchBatchInput
               { sendSearchRequestToDrivers = sendSearchRequestToDrivers',
@@ -179,7 +183,8 @@ handler merchant req validatedQuote = do
                 customerExtraFee = Nothing,
                 messageId = booking.id.getId,
                 isRepeatSearch = False,
-                isAllocatorBatch = False
+                isAllocatorBatch = False,
+                paymentMethodInfo = paymentMethodInfo
               }
       initiateDriverSearchBatch driverSearchBatchInput
       uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
