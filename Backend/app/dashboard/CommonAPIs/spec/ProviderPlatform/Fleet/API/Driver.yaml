@@ -692,7 +692,15 @@ apis:
         type: FleetOwnerInfoRes
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT FLEET GET_FLEET_OWNER_INFO
-
+  - GET:
+      endpoint: /fleetOperatorInfo
+      auth: ApiAuthV2
+      query:
+        personId: Text
+        mobileNumber: Text
+        mobileCountryCode: Text
+      response:
+        type: FleetOwnerInfoRes
   - POST: # SendFleetJoiningOtpAPI
       endpoint: /fleet/sendJoiningOtp
       auth: ApiAuthV2
@@ -1324,10 +1332,17 @@ types:
     - requestorId: Maybe Text
     - derive: "'HideSecrets"
   FleetOwnerInfoRes:
+    - id: Text
+    - name: Maybe Text
+    - mobileNo: Maybe Text
     - blocked: Bool
     - enabled: Bool
     - fleetType: Text
     - verified: Bool
+    - approvedBy: Maybe Text
+    - roleName: Maybe Text
+    - referredByOperatorId: Maybe Text
+    - isEligibleForSubscription: Maybe Bool
     - gstNumber: Maybe Text
     - gstImageId: Maybe Text
     - panNumber: Maybe Text
@@ -1335,6 +1350,10 @@ types:
     - fleetConfig: Maybe FleetConfig
     - operatorName: Maybe Text
     - operatorContact: Maybe Text
+    - referralCode: Maybe Text
+    - registeredAt: Maybe UTCTime
+    - businessLicenseNumber: Maybe Text
+    - updatedAt: UTCTime
     - derive: "'HideSecrets"
   FleetConfig:
     - allowAutomaticRoundTripAssignment: Bool
