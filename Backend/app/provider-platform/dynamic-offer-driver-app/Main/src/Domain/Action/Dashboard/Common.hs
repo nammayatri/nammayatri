@@ -156,6 +156,8 @@ castStatus status = case status of -- only PENDING and OVERDUE possible
   REFUND_MANUAL_REVIEW_REQUIRED -> Common.REFUND_MANUAL_REVIEW_REQUIRED
   ONE_TIME_SECURITY_ADJUSTED -> Common.ONE_TIME_SECURITY_ADJUSTED
   SETTLED -> Common.SETTLED
+  IN_DISPUTE_WINDOW -> Common.IN_DISPUTE_WINDOW
+  ADDED_TO_INVOICE -> Common.ADDED_TO_INVOICE
 
 checkFleetOwnerVerification :: Text -> Maybe Bool -> Flow ()
 checkFleetOwnerVerification personId mbEnabledCheck = do

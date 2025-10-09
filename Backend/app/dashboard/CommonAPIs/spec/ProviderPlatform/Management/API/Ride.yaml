@@ -137,6 +137,13 @@ apis:
         type: FareBreakUpRes
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT RIDES FARE_BREAKUP
+  - POST: # WaiverRideCancellationPenaltyAPI
+      endpoint: /{rideId}/waiverRideCancellationPenalty
+      auth: ApiAuthV2
+      params:
+        rideId: Id Ride
+      response:
+        type: APISuccess
 
 types:
   RideListRes:

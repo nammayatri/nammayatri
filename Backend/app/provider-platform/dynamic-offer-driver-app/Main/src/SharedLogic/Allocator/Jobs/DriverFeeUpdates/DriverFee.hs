@@ -143,9 +143,22 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
 
             driver <- QP.findById (cast driverFee.driverId) >>= fromMaybeM (PersonDoesNotExist driverFee.driverId.getId)
             let numRidesForPlanCharges = calcNumRides driverFee transporterConfig - plan.freeRideCount
+
+            --------- find all payment pending cancellation penalties ------------
+            cancellationPenalties <- QDF.findPendingCancellationPenaltiesForDriver (cast driverFee.driverId) serviceName
+            let totalCancellationPenalty = sum $ map (\cp -> roundToHalf cp.currency $ fromMaybe 0 cp.cancellationPenaltyAmount) cancellationPenalties
+            driverFeeWithPenalties <-
+              if totalCancellationPenalty > 0
+                then do
+                  QDF.updateCancellationPenaltyAmount driverFee.id totalCancellationPenalty now
+                  let cancellationPenaltyIds = map (.id) cancellationPenalties
+                  QDF.updateStatusAndAddedToFeeId ADDED_TO_INVOICE (Just driverFee.id) cancellationPenaltyIds now
+                  pure $ driverFee {cancellationPenaltyAmount = Just totalCancellationPenalty}
+                else do
+                  pure driverFee
             --------- calculations based of frequency happens here ------------
             (feeWithoutDiscount, totalFee, offerId, offerTitle) <- do
-              calcFinalOrderAmounts merchantId transporterConfig driver plan mandateSetupDate numRidesForPlanCharges planBaseFrequcency baseAmount driverFee waiveOffPercentage waiveOffMode waiveOffValidTill
+              calcFinalOrderAmounts merchantId transporterConfig driver plan mandateSetupDate numRidesForPlanCharges planBaseFrequcency baseAmount driverFeeWithPenalties waiveOffPercentage waiveOffMode waiveOffValidTill
             ---------------------------------------------------------------------
             ------------- update driver fee with offer and plan details ---------
             let offerAndPlanTitle = Just plan.name <> Just "-*@*-" <> offerTitle ---- this we will send in payment history ----
@@ -155,7 +168,8 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
                     { offerId = offerId,
                       planOfferTitle = offerAndPlanTitle,
                       planId = Just plan.id,
-                      planMode = Just plan.paymentMode
+                      planMode = Just plan.paymentMode,
+                      cancellationPenaltyAmount = Just totalCancellationPenalty
                     }
             --------------------------------------------------
             let paymentMode = maybe MANUAL (.planType) mbDriverPlan
@@ -168,7 +182,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
                   void $ QDS.updateCoinToCashByDriverId (cast driverFeeUpdateWithPlanAndOffer.driverId) (-1.0 * totalFee)
                   setCoinToCashUsedAmount driverFeeUpdateWithPlanAndOffer totalFee
                   QDF.updateStatusByIds CLEARED_BY_YATRI_COINS [driverFeeUpdateWithPlanAndOffer.id] now
-                  driverFeeSplitter paymentMode plan feeWithoutDiscount totalFee driverFeeUpdateWithPlanAndOffer mandateId Nothing subscriptionConfigs now
+                  driverFeeSplitter paymentMode plan feeWithoutDiscount totalFee driverFeeUpdateWithPlanAndOffer mandateId Nothing subscriptionConfigs transporterConfig now
                   invoice <- mkInvoiceAgainstDriverFee driverFeeUpdateWithPlanAndOffer (True, paymentMode == AUTOPAY)
                   updateAmountPaidByCoins (Just totalFee) driverFeeUpdateWithPlanAndOffer.id
                   QINV.create invoice
@@ -176,7 +190,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
                   when (coinCashLeft > 0) $ do
                     QDS.updateCoinToCashByDriverId (cast driverFeeUpdateWithPlanAndOffer.driverId) (-1.0 * coinCashLeft)
                     setCoinToCashUsedAmount driverFeeUpdateWithPlanAndOffer coinCashLeft
-                  driverFeeSplitter paymentMode plan feeWithoutDiscount totalFee driverFeeUpdateWithPlanAndOffer mandateId (Just coinCashLeft) subscriptionConfigs now
+                  driverFeeSplitter paymentMode plan feeWithoutDiscount totalFee driverFeeUpdateWithPlanAndOffer mandateId (Just coinCashLeft) subscriptionConfigs transporterConfig now
                   updatePendingPayment True (cast driverFeeUpdateWithPlanAndOffer.driverId)
                   SLOSO.addSendOverlaySchedulerDriverIds merchantOpCityId (Just driverFee.vehicleCategory) (Just "PaymentOverdueGreaterThan") nonEmptyDriverId
                   SLOSO.addSendOverlaySchedulerDriverIds merchantOpCityId (Just driverFee.vehicleCategory) (Just "PaymentOverdueBetween") nonEmptyDriverId
@@ -184,7 +198,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
             -- blocking
             dueDriverFees <- QDF.findAllFeeByTypeServiceStatusAndDriver serviceName (cast driverFee.driverId) [RECURRING_INVOICE, RECURRING_EXECUTION_INVOICE] [PAYMENT_PENDING, PAYMENT_OVERDUE]
             let driverFeeIds = map (.id) dueDriverFees
-                due = sum $ map (\fee -> if (fee.startTime /= startTime && fee.endTime /= endTime) then roundToHalf driverFee.currency $ fee.govtCharges + fee.platformFee.fee + fee.platformFee.cgst + fee.platformFee.sgst else 0) dueDriverFees
+                due = sum $ map (\fee -> if (fee.startTime /= startTime && fee.endTime /= endTime) then roundToHalf driverFee.currency $ fee.govtCharges + fee.platformFee.fee + fee.platformFee.cgst + fee.platformFee.sgst + fromMaybe 0 fee.cancellationPenaltyAmount else 0) dueDriverFees
             if roundToHalf driverFee.currency (due + totalFee - min coinCashLeft totalFee) >= fromMaybe plan.maxCreditLimit maxCreditLimitLinkedToDPlan
               then do
                 mapM_ updateDriverFeeToManual driverFeeIds
@@ -193,7 +207,7 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
                   updateSubscription False (cast driverFee.driverId)
                   SLOSO.addSendOverlaySchedulerDriverIds merchantOpCityId (Just driverFee.vehicleCategory) (Just "BlockedDrivers") nonEmptyDriverId
               else do
-                unless (totalFee == 0 || coinCashLeft >= totalFee) $ processDriverFee paymentMode driverFee subscriptionConfigs
+                unless (totalFee == 0 || coinCashLeft >= totalFee) $ processDriverFee paymentMode driverFeeWithPenalties subscriptionConfigs transporterConfig
             updateSerialOrderForInvoicesInWindow driverFee.id merchantOpCityId startTime endTime serviceName
 
     case listToMaybe driverFees of
@@ -211,16 +225,131 @@ calculateDriverFeeForDrivers Job {id, jobInfo} = withLogTag ("JobId-" <> id.getI
       ReSchedule <$> getRescheduledTime 600
     Right result -> return result
 
+-- | Split cancellation penalty amount into separate DriverFees for AUTOPAY vendor routing
+splitCancellationPenaltyIntoDriverFees ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasKafkaProducer r) =>
+  DriverFee ->
+  SubscriptionConfig ->
+  TransporterConfig ->
+  UTCTime ->
+  m ()
+splitCancellationPenaltyIntoDriverFees parentDriverFee subscriptionConfig transporterConfig now = do
+  let totalCancellationAmount = fromMaybe 0 parentDriverFee.cancellationPenaltyAmount
+  when (totalCancellationAmount > 0) $ do
+    mbDriverPlan <- QDPlan.findByDriverIdWithServiceName (cast parentDriverFee.driverId) parentDriverFee.serviceName
+    mandate <- maybe (pure Nothing) QMD.findById (mbDriverPlan >>= (.mandateId))
+    case mandate <&> (.maxAmount) of
+      Nothing -> do
+        createCancellationPenaltyDriverFee parentDriverFee totalCancellationAmount (Just parentDriverFee.id) subscriptionConfig transporterConfig.cancellationFeeVendor now
+      Just maxAmt -> do
+        if totalCancellationAmount <= maxAmt || maxAmt == 0
+          then do
+            createCancellationPenaltyDriverFee parentDriverFee totalCancellationAmount (Just parentDriverFee.id) subscriptionConfig transporterConfig.cancellationFeeVendor now
+          else do
+            let numSplits = ceiling (totalCancellationAmount / maxAmt) :: Int
+                amounts = splitAmountToMaximizeMandateUsage totalCancellationAmount maxAmt numSplits
+            forM_ amounts $ \amount -> do
+              createCancellationPenaltyDriverFee parentDriverFee amount (Just parentDriverFee.id) subscriptionConfig transporterConfig.cancellationFeeVendor now
+    QDF.updateCancellationPenaltyAmount parentDriverFee.id 0 now
+  where
+    splitAmountToMaximizeMandateUsage :: HighPrecMoney -> HighPrecMoney -> Int -> [HighPrecMoney]
+    splitAmountToMaximizeMandateUsage totalAmount maxAmount numSplits
+      | numSplits <= 1 = [totalAmount]
+      | otherwise =
+        let fullSplits = replicate (numSplits - 1) maxAmount
+            remainder = totalAmount - (fromIntegral (numSplits - 1) * maxAmount)
+         in fullSplits ++ [remainder]
+
+-- | Create a single CANCELLATION_PENALTY DriverFee with optional VendorFee
+createCancellationPenaltyDriverFee ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasKafkaProducer r) =>
+  DriverFee ->
+  HighPrecMoney ->
+  Maybe (Id DriverFee) ->
+  SubscriptionConfig ->
+  Maybe Text ->
+  UTCTime ->
+  m ()
+createCancellationPenaltyDriverFee parentFee amount mbSplitOfDriverFeeId subscriptionConfig vendor now = do
+  childId <- generateGUID
+  let childDriverFee =
+        DriverFee
+          { id = childId,
+            govtCharges = 0,
+            platformFee = PlatformFee {fee = 0, cgst = 0, sgst = 0, currency = parentFee.currency},
+            driverId = parentFee.driverId,
+            merchantId = parentFee.merchantId,
+            merchantOperatingCityId = parentFee.merchantOperatingCityId,
+            serviceName = parentFee.serviceName,
+            cancellationPenaltyAmount = Just amount,
+            feeType = RECURRING_EXECUTION_INVOICE,
+            splitOfDriverFeeId = mbSplitOfDriverFeeId,
+            status = PAYMENT_PENDING,
+            autopayPaymentStage = Just NOTIFICATION_SCHEDULED,
+            createdAt = now,
+            updatedAt = now,
+            numRides = 0,
+            addedToFeeId = Nothing,
+            amountPaidByCoin = Nothing,
+            badDebtDeclarationDate = Nothing,
+            badDebtRecoveryDate = Nothing,
+            billNumber = Nothing,
+            collectedAt = Nothing,
+            collectedBy = Nothing,
+            currency = parentFee.currency,
+            endTime = parentFee.endTime,
+            feeWithoutDiscount = Nothing,
+            hasSibling = Nothing,
+            notificationRetryCount = parentFee.notificationRetryCount,
+            offerId = Nothing,
+            overlaySent = False,
+            payBy = parentFee.payBy,
+            planId = parentFee.planId,
+            planMode = parentFee.planMode,
+            planOfferTitle = parentFee.planOfferTitle,
+            refundEntityId = Nothing,
+            refundedAmount = Nothing,
+            refundedAt = Nothing,
+            refundedBy = Nothing,
+            schedulerTryCount = parentFee.schedulerTryCount,
+            siblingFeeId = Nothing,
+            specialZoneAmount = 0,
+            specialZoneRideCount = 0,
+            stageUpdatedAt = Nothing,
+            startTime = parentFee.startTime,
+            totalEarnings = 0,
+            validDays = parentFee.validDays,
+            vehicleCategory = parentFee.vehicleCategory,
+            vehicleNumber = Nothing
+          }
+  QDF.create childDriverFee
+  when (fromMaybe False subscriptionConfig.isVendorSplitEnabled && isJust vendor) $ do
+    let vendorFee =
+          DVF.VendorFee
+            { driverFeeId = childId,
+              vendorId = fromMaybe "CANCELLATION_PENALTY_VENDOR" vendor,
+              amount = amount,
+              createdAt = now,
+              updatedAt = now
+            }
+    QVF.create vendorFee
+
+  invoice <- mkInvoiceAgainstDriverFee childDriverFee (False, True)
+  QINV.create invoice
+  QDF.updateAutopayPaymentStageById (Just NOTIFICATION_SCHEDULED) (Just now) childId
+
 processDriverFee ::
   (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasKafkaProducer r) =>
   PaymentMode ->
   DriverFee ->
   SubscriptionConfig ->
+  TransporterConfig ->
   m ()
-processDriverFee paymentMode driverFee subscriptionConfig = do
+processDriverFee paymentMode driverFee subscriptionConfig transporterConfig = do
   now <- getCurrentTime
   case paymentMode of
     MANUAL -> do
+      _ <- try @_ @SomeException $ makeVendorFeeForCancellationPenalty driverFee subscriptionConfig transporterConfig
       ( if subscriptionConfig.allowManualPaymentLinks
           then
             ( do
@@ -233,6 +362,7 @@ processDriverFee paymentMode driverFee subscriptionConfig = do
             )
         )
     AUTOPAY -> do
+      _ <- try @_ @SomeException $ splitCancellationPenaltyIntoDriverFees driverFee subscriptionConfig transporterConfig now
       updateStatus PAYMENT_PENDING driverFee.id now
       updateFeeType RECURRING_EXECUTION_INVOICE driverFee.id
       invoice <- mkInvoiceAgainstDriverFee driverFee (False, True)
@@ -247,8 +377,9 @@ processRestFee ::
   SubscriptionConfig ->
   DriverFee ->
   HighPrecMoney ->
+  TransporterConfig ->
   m ()
-processRestFee paymentMode DriverFee {..} vendorFees subscriptionConfig _ _ = do
+processRestFee paymentMode DriverFee {..} vendorFees subscriptionConfig _ _ transporterConfig = do
   let driverFee =
         DriverFee
           { status = if paymentMode == MANUAL && not (subscriptionConfig.allowManualPaymentLinks) then PAYMENT_OVERDUE else PAYMENT_PENDING,
@@ -257,7 +388,7 @@ processRestFee paymentMode DriverFee {..} vendorFees subscriptionConfig _ _ = do
           }
   QDF.create driverFee
   when (fromMaybe False subscriptionConfig.isVendorSplitEnabled) $ mapM_ (QVF.create) vendorFees
-  processDriverFee paymentMode driverFee subscriptionConfig
+  processDriverFee paymentMode driverFee subscriptionConfig transporterConfig
   updateSerialOrderForInvoicesInWindow driverFee.id merchantOperatingCityId startTime endTime driverFee.serviceName
 
 makeOfferReq :: HighPrecMoney -> Person -> Plan -> UTCTime -> UTCTime -> Int -> TransporterConfig -> Payment.OfferListReq
@@ -380,9 +511,10 @@ driverFeeSplitter ::
   Maybe (Id Mandate) ->
   Maybe HighPrecMoney ->
   SubscriptionConfig ->
+  TransporterConfig ->
   UTCTime ->
   m ()
-driverFeeSplitter paymentMode plan feeWithoutDiscount totalFee driverFee mandateId mbCoinAmountUsed subscriptionConfigs now = do
+driverFeeSplitter paymentMode plan feeWithoutDiscount totalFee driverFee mandateId mbCoinAmountUsed subscriptionConfigs transporterConfig now = do
   mandate <- maybe (pure Nothing) QMD.findById mandateId
   let amountForSpiltting = if isNothing mbCoinAmountUsed then Just $ roundToHalf driverFee.currency totalFee else roundToHalf driverFee.currency <$> (mandate <&> (.maxAmount))
       coinAmountUsed = fromMaybe 0 mbCoinAmountUsed
@@ -394,7 +526,7 @@ driverFeeSplitter paymentMode plan feeWithoutDiscount totalFee driverFee mandate
     _ -> do
       forM_ splittedFeesWithRespectiveVendorFee $ \(dfee, vfee) -> do
         if dfee.id /= driverFee.id
-          then processRestFee paymentMode dfee vfee subscriptionConfigs driverFee totalFee
+          then processRestFee paymentMode dfee vfee subscriptionConfigs driverFee totalFee transporterConfig
           else do
             -- Reset The Original Fee Amount & adjust the vendor fee amount by subtracting sums of child vendor fees
             resetFee dfee.id dfee.govtCharges dfee.platformFee (Just feeWithoutDiscount) dfee.amountPaidByCoin now
@@ -757,3 +889,20 @@ mkManualLinkErrorTrackingByDriverIdKey driverId = "ErrorRetryCountFor:DriverId:"
 
 getsetManualLinkErrorTrackingKey :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Driver -> m (Maybe Int)
 getsetManualLinkErrorTrackingKey driverId = Hedis.get (mkManualLinkErrorTrackingByDriverIdKey driverId)
+
+makeVendorFeeForCancellationPenalty ::
+  (MonadFlow m, CacheFlow m r, EsqDBFlow m r, EncFlow m r, HasKafkaProducer r) =>
+  DriverFee ->
+  SubscriptionConfig ->
+  TransporterConfig ->
+  m ()
+makeVendorFeeForCancellationPenalty driverFee subscriptionConfig transporterConfig = when (fromMaybe False subscriptionConfig.isVendorSplitEnabled && isJust transporterConfig.cancellationFeeVendor && fromMaybe 0 driverFee.cancellationPenaltyAmount > 0) $ do
+  let vendorFee =
+        DVF.VendorFee
+          { driverFeeId = driverFee.id,
+            vendorId = fromMaybe "CANCELLATION_PENALTY_VENDOR" transporterConfig.cancellationFeeVendor,
+            amount = fromMaybe 0 driverFee.cancellationPenaltyAmount,
+            createdAt = driverFee.createdAt,
+            updatedAt = driverFee.updatedAt
+          }
+  QVF.create vendorFee
