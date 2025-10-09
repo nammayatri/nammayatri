@@ -173,7 +173,7 @@ data DriverRCAssociationAPIEntity = DriverRCAssociationAPIEntity
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data ExemptionAndCashCollectionDriverFeeReq = ExemptionAndCashCollectionDriverFeeReq {paymentIds :: [Kernel.Prelude.Text], isExempt :: Kernel.Prelude.Bool}
+data ExemptionAndCashCollectionDriverFeeReq = ExemptionAndCashCollectionDriverFeeReq {paymentIds :: [Kernel.Prelude.Text], isExempt :: Kernel.Prelude.Bool, vendorId :: Kernel.Prelude.Maybe Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

@@ -117,7 +117,8 @@ mkCancellationPenaltyFee now merchantId merchantOpCityId driverId penaltyAmount 
           splitOfDriverFeeId = Nothing,
           validDays = Nothing,
           currency = currency,
-          addedToFeeId = Nothing
+          addedToFeeId = Nothing,
+          collectedAtVendorId = Nothing
         }
     )
 

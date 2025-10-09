@@ -96,6 +96,7 @@ import Storage.Queries.RCValidationRules
 import qualified Storage.Queries.Rating as QRating
 import qualified Storage.Queries.Vehicle as QVehicle
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
+import qualified Storage.Queries.Volunteer as QVF
 import Tools.Error
 import qualified Tools.SMS as Sms
 import Utils.Common.Cac.KeyNameConstants
@@ -219,6 +220,13 @@ recordPayment isExempted merchantShortId opCity reqDriverId requestorId serviceN
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
   let personId = cast @Common.Driver @DP.Person reqDriverId
   driver <- B.runInReplica (QPerson.findById personId) >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  when (fromMaybe False transporterConfig.enableVendorCheckForCollectingDues && not isExempted) $ do
+    case mbExemptionAndCashCollectionDriverFeeReq >>= (.vendorId) of
+      Nothing -> throwError $ InvalidRequest "vendorId is required."
+      Just vendorId -> do
+        volunteer <- QVF.findActiveVolunteerByIdAndVendorId (Id requestorId) vendorId
+        when (isNothing volunteer) $ throwError $ InvalidRequest "You do not have access to collect cash at this booth"
   Redis.whenWithLockRedis (recordPaymentLockKey reqDriverId) 30 $ do
     -- merchant access checking
     let merchantId = driver.merchantId
@@ -234,11 +242,10 @@ recordPayment isExempted merchantShortId opCity reqDriverId requestorId serviceN
             throwError $ InvalidRequest "Status of some id is not PAYMENT_OVERDUE."
           return duePaymentIds
     let totalFee = sum $ map (\fee -> fee.govtCharges + fee.platformFee.fee + fee.platformFee.cgst + fee.platformFee.sgst) driverFees
-    transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
     now <- getLocalCurrentTime transporterConfig.timeDiffFromUtc
     QDriverInfo.updatePendingPayment False driverId
     QDriverInfo.updateSubscription True driverId
-    mapM_ (QDF.updateCollectedPaymentStatus (paymentStatus isExempted) (Just requestorId) now) ((.id) <$> driverFees)
+    mapM_ (QDF.updateCollectedPaymentStatus (paymentStatus isExempted) (Just requestorId) now (mbExemptionAndCashCollectionDriverFeeReq >>= (.vendorId))) ((.id) <$> driverFees)
     invoices <- (B.runInReplica . QINV.findActiveManualOrMandateSetupInvoiceByFeeId . (.id)) `mapM` driverFees
     mapM_ (QINV.updateInvoiceStatusByInvoiceId INV.INACTIVE . (.id)) (concat invoices)
     unless isExempted $ do

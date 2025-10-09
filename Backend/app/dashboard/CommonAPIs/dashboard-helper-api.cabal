@@ -87,6 +87,7 @@ library
       API.Types.ProviderPlatform.Management.Endpoints.Ride
       API.Types.ProviderPlatform.Management.Endpoints.System
       API.Types.ProviderPlatform.Management.Endpoints.VehicleInfo
+      API.Types.ProviderPlatform.Management.Endpoints.Volunteer
       API.Types.ProviderPlatform.Management.Media
       API.Types.ProviderPlatform.Management.MediaFileDocument
       API.Types.ProviderPlatform.Management.Merchant
@@ -97,6 +98,7 @@ library
       API.Types.ProviderPlatform.Management.Ride
       API.Types.ProviderPlatform.Management.System
       API.Types.ProviderPlatform.Management.VehicleInfo
+      API.Types.ProviderPlatform.Management.Volunteer
       API.Types.ProviderPlatform.Operator
       API.Types.ProviderPlatform.Operator.Driver
       API.Types.ProviderPlatform.Operator.Endpoints.Driver
