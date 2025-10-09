@@ -9,6 +9,7 @@ import qualified Domain.Types.Volunteer
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
 import Kernel.Prelude
+import qualified Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
@@ -27,6 +28,11 @@ findAllByPlace place = do findAllWithKV [Se.Is Beam.place $ Se.Eq place]
 findById :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Volunteer.Volunteer -> m (Maybe Domain.Types.Volunteer.Volunteer))
 findById id = do findOneWithKV [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]
 
+findByIdAndVendorId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.Volunteer.Volunteer -> Kernel.Prelude.Maybe Data.Text.Text -> m (Maybe Domain.Types.Volunteer.Volunteer))
+findByIdAndVendorId id vendorId = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id), Se.Is Beam.vendorId $ Se.Eq vendorId]]
+
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.Volunteer.Volunteer -> m (Maybe Domain.Types.Volunteer.Volunteer))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
@@ -36,6 +42,7 @@ updateByPrimaryKey (Domain.Types.Volunteer.Volunteer {..}) = do
   updateWithKV
     [ Se.Set Beam.place place,
       Se.Set Beam.updatedAt _now,
+      Se.Set Beam.vendorId vendorId,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId)
     ]
@@ -50,6 +57,7 @@ instance FromTType' Beam.Volunteer Domain.Types.Volunteer.Volunteer where
             id = Kernel.Types.Id.Id id,
             place = place,
             updatedAt = updatedAt,
+            vendorId = vendorId,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
             merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId
           }
@@ -61,6 +69,7 @@ instance ToTType' Beam.Volunteer Domain.Types.Volunteer.Volunteer where
         Beam.id = Kernel.Types.Id.getId id,
         Beam.place = place,
         Beam.updatedAt = updatedAt,
+        Beam.vendorId = vendorId,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
         Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId
       }

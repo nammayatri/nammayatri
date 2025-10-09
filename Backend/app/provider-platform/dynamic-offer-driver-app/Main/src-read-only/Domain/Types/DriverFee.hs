@@ -27,6 +27,7 @@ data DriverFee = DriverFee
     billNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     cancellationPenaltyAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     collectedAt :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    collectedAtVendorId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     collectedBy :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     createdAt :: Kernel.Prelude.UTCTime,
     currency :: Kernel.Types.Common.Currency,

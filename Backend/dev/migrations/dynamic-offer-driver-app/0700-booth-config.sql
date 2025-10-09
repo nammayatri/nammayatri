@@ -1,0 +1,1 @@
+update atlas_driver_offer_bpp.transporter_config set enable_vendor_check_for_collecting_dues = true where merchant_operating_city_id in (select id from atlas_driver_offer_bpp.merchant_operating_city where city = 'Kolkata');
