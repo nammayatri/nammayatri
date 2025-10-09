@@ -689,10 +689,10 @@ updateRegisterationFeeStatusByDriverIdForServiceName status (Id driverId) servic
     ]
 
 --- note :- bad debt recovery date set in fork pls remeber to add fork in all places with driver fee status update in future----
-updateCollectedPaymentStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DriverFeeStatus -> Maybe Text -> UTCTime -> Id DriverFee -> m ()
-updateCollectedPaymentStatus status volunteerId now (Id driverFeeId) = do
+updateCollectedPaymentStatus :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => DriverFeeStatus -> Maybe Text -> UTCTime -> Maybe Text -> Id DriverFee -> m ()
+updateCollectedPaymentStatus status volunteerId now mbVendorId (Id driverFeeId) = do
   updateOneWithKV
-    ( [Se.Set BeamDF.status status, Se.Set BeamDF.updatedAt now, Se.Set BeamDF.collectedBy volunteerId, Se.Set BeamDF.collectedAt (Just now)]
+    ( [Se.Set BeamDF.status status, Se.Set BeamDF.updatedAt now, Se.Set BeamDF.collectedBy volunteerId, Se.Set BeamDF.collectedAt (Just now), Se.Set BeamDF.collectedAtVendorId mbVendorId]
         <> [Se.Set BeamDF.badDebtDeclarationDate $ Just now | status `elem` [EXEMPTED, INACTIVE]]
     )
     [Se.Is BeamDF.id (Se.Eq driverFeeId)]
