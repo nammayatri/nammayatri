@@ -16,6 +16,7 @@ data VolunteerT f = VolunteerT
     id :: B.C f Data.Text.Text,
     place :: B.C f Data.Text.Text,
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
+    vendorId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
     merchantId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
     merchantOperatingCityId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text)
   }
