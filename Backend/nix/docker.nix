@@ -5,6 +5,13 @@ let
   # self.rev will be non-null only when the working tree is clean
   # This is equivalent to `git rev-parse --short HEAD`
   imageTag = builtins.substring 0 6 (self.rev or "dev");
+  nixFromDockerHub = { dockerTools, ... }: dockerTools.pullImage {
+    imageName = "nixpkgs/nix-flakes";
+    imageDigest = "sha256:24f4c6e651067886c065c544583c8542d90f9cf93e3128c8138458e1af03edc2";
+    sha256 = "sha256-+pGYiVm4Pex+uDO8LqN7MLjH479Cuypr3GLm+dk5Dd8=";
+    finalImageTag = "nixos-22.11";
+    finalImageName = "nix-flakes";
+  };
 in
 {
   config = {
@@ -12,6 +19,7 @@ in
       packages = lib.optionalAttrs pkgs.stdenv.isLinux {
         dockerImage = (pkgs.dockerTools.buildImage {
           name = imageName;
+          fromImage = pkgs.callPackage nixFromDockerHub { };
           created = "now";
           tag = imageTag;
           copyToRoot = pkgs.buildEnv {
@@ -19,7 +27,7 @@ in
               cacert
               awscli
               coreutils
-              bash
+              bashInteractive # Better than 'bash', as it provides readline.
               self'.packages.nammayatri
               gdal
               postgis
