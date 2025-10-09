@@ -47,13 +47,15 @@ getCachedFaresAndRecache ::
     EncFlow m r
   ) =>
   CRISConfig ->
+  Id MerchantOperatingCity ->
   CRISFareRequest ->
-  m CRISFareResponse
-getCachedFaresAndRecache config request = do
+  m [FRFSUtils.FRFSFare]
+getCachedFaresAndRecache config merchantOperatingCityId request = do
   let redisKey = mkRouteFareCacheKey request.sourceCode request.destCode request.changeOver
   redisResp <- Hedis.safeGet redisKey
   case redisResp of
     Just fares -> do
+      logDebug $ "getCachedFaresAndRecache: fares found in cache" <> show fares
       fork "fetchAndCacheFares for suburban" $ void fetchAndCacheFares
       return fares
     Nothing -> do
@@ -107,9 +109,63 @@ getCachedFaresAndRecache config request = do
                     Left err -> throwError (CRISError $ "Failed to decode getRouteFare Resp: " <> T.pack (show err))
                     Right fareResponse -> pure fareResponse
             else throwError (CRISError $ "Non-zero response code in getRouteFare Resp: " <> encResp.responseCode <> " " <> encResp.responseData)
+      let routeFareDetails = decryptedResponse.routeFareDetailsList
+
+      frfsDetails <-
+        routeFareDetails `forM` \routeFareDetail -> do
+          let allFares = routeFareDetail.fareDtlsList
+          let routeId = routeFareDetail.routeId
+          let onlySelectedViaFares = filter (\fare -> fare.via == request.changeOver) allFares
+          let fares = if null onlySelectedViaFares || request.changeOver == " " then allFares else onlySelectedViaFares
+          fares `forM` \fare -> do
+            let mbFareAmount = readMaybe @HighPrecMoney . T.unpack $ fare.adultFare
+                mbChildFareAmount = readMaybe @HighPrecMoney . T.unpack $ fare.childFare
+            fareAmount <- mbFareAmount & fromMaybeM (CRISError $ "Failed to parse fare amount: " <> show fare.adultFare)
+            childFareAmount <- mbChildFareAmount & fromMaybeM (CRISError $ "Failed to parse fare amount: " <> show fare.childFare)
+            classCode <- pure fare.classCode & fromMaybeM (CRISError $ "Failed to parse class code: " <> show fare.classCode)
+            serviceTiers <- QFRFSVehicleServiceTier.findByProviderCode classCode merchantOperatingCityId
+            serviceTier <- serviceTiers & listToMaybe & fromMaybeM (CRISError $ "Failed to find service tier: " <> show classCode)
+            return $
+              FRFSUtils.FRFSFare
+                { price =
+                    Price
+                      { amountInt = round fareAmount,
+                        amount = fareAmount,
+                        currency = INR
+                      },
+                  childPrice =
+                    Just $
+                      Price
+                        { amountInt = round childFareAmount,
+                          amount = childFareAmount,
+                          currency = INR
+                        },
+                  categories = [],
+                  farePolicyId = Nothing,
+                  fareDetails =
+                    Just
+                      Quote.FRFSFareDetails
+                        { providerRouteId = show routeId,
+                          distance = kilometersToMeters $ Kilometers fare.distance,
+                          via = fare.via,
+                          ticketTypeCode = fare.ticketTypeCode,
+                          trainTypeCode = fare.trainTypeCode,
+                          appSession = request.appSession
+                        },
+                  vehicleServiceTier =
+                    FRFSUtils.FRFSVehicleServiceTier
+                      { serviceTierType = serviceTier._type,
+                        serviceTierProviderCode = serviceTier.providerCode,
+                        serviceTierShortName = serviceTier.shortName,
+                        serviceTierDescription = serviceTier.description,
+                        serviceTierLongName = serviceTier.longName,
+                        isAirConditioned = serviceTier.isAirConditioned
+                      }
+                }
       let fareCacheKey = mkRouteFareCacheKey request.sourceCode request.destCode request.changeOver
-      Hedis.setExp fareCacheKey decryptedResponse 3600
-      return decryptedResponse
+      let fares = concat frfsDetails
+      Hedis.setExp fareCacheKey fares 3600
+      return $ fares
 
 -- Main function
 getRouteFare ::
@@ -123,63 +179,7 @@ getRouteFare ::
   Id MerchantOperatingCity ->
   CRISFareRequest ->
   m [FRFSUtils.FRFSFare]
-getRouteFare config merchantOperatingCityId request = do
-  decryptedResponse <- getCachedFaresAndRecache config request
-
-  let routeFareDetails = decryptedResponse.routeFareDetailsList
-
-  frfsDetails <-
-    routeFareDetails `forM` \routeFareDetail -> do
-      let allFares = routeFareDetail.fareDtlsList
-      let routeId = routeFareDetail.routeId
-      let onlySelectedViaFares = filter (\fare -> fare.via == request.changeOver) allFares
-      let fares = if null onlySelectedViaFares || request.changeOver == " " then allFares else onlySelectedViaFares
-      fares `forM` \fare -> do
-        let mbFareAmount = readMaybe @HighPrecMoney . T.unpack $ fare.adultFare
-            mbChildFareAmount = readMaybe @HighPrecMoney . T.unpack $ fare.childFare
-        fareAmount <- mbFareAmount & fromMaybeM (CRISError $ "Failed to parse fare amount: " <> show fare.adultFare)
-        childFareAmount <- mbChildFareAmount & fromMaybeM (CRISError $ "Failed to parse fare amount: " <> show fare.childFare)
-        classCode <- pure fare.classCode & fromMaybeM (CRISError $ "Failed to parse class code: " <> show fare.classCode)
-        serviceTiers <- QFRFSVehicleServiceTier.findByProviderCode classCode merchantOperatingCityId
-        serviceTier <- serviceTiers & listToMaybe & fromMaybeM (CRISError $ "Failed to find service tier: " <> show classCode)
-        return $
-          FRFSUtils.FRFSFare
-            { price =
-                Price
-                  { amountInt = round fareAmount,
-                    amount = fareAmount,
-                    currency = INR
-                  },
-              childPrice =
-                Just $
-                  Price
-                    { amountInt = round childFareAmount,
-                      amount = childFareAmount,
-                      currency = INR
-                    },
-              categories = [],
-              farePolicyId = Nothing,
-              fareDetails =
-                Just
-                  Quote.FRFSFareDetails
-                    { providerRouteId = show routeId,
-                      distance = kilometersToMeters $ Kilometers fare.distance,
-                      via = fare.via,
-                      ticketTypeCode = fare.ticketTypeCode,
-                      trainTypeCode = fare.trainTypeCode,
-                      appSession = request.appSession
-                    },
-              vehicleServiceTier =
-                FRFSUtils.FRFSVehicleServiceTier
-                  { serviceTierType = serviceTier._type,
-                    serviceTierProviderCode = serviceTier.providerCode,
-                    serviceTierShortName = serviceTier.shortName,
-                    serviceTierDescription = serviceTier.description,
-                    serviceTierLongName = serviceTier.longName,
-                    isAirConditioned = serviceTier.isAirConditioned
-                  }
-            }
-  return $ concat frfsDetails
+getRouteFare = getCachedFaresAndRecache
 
 routeFareAPI :: Proxy RouteFareAPI
 routeFareAPI = Proxy
