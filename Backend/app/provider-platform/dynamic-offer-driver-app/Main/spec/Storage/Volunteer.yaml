@@ -11,13 +11,33 @@ Volunteer:
 
   fields:
     id : Id Volunteer
+    vendorId : Maybe Text
+    isActive: Maybe Bool
     place : Text
     createdAt : UTCTime
     updatedAt : UTCTime
 
+  beamType:
+    isActive: Maybe Bool
+    vendorId: Text
+
   constraints:
     id: PrimaryKey
+    vendorId: PrimaryKey
     place: SecondaryKey
+
+  default:
+    isActive: "true"
+    vendorId: "'DEFAULT_VENDOR'"
+
+  fromTType:
+    isActive : Kernel.Prelude.Just . Kernel.Prelude.fromMaybe True|I
+    vendorId : Kernel.Prelude.Just|I
+
+  toTType:
+    isActive : Kernel.Prelude.Just . Kernel.Prelude.fromMaybe True|I
+    vendorId: Kernel.Prelude.fromMaybe "DEFAULT_VENDOR"|I
+
 
   queries:
     findById:
@@ -27,3 +47,7 @@ Volunteer:
     findAllByPlace:
       kvFunction: findAllWithKV
       where: place
+
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

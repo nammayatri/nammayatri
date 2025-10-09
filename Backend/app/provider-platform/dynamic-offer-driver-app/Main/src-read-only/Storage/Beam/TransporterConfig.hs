@@ -133,6 +133,7 @@ data TransporterConfigT f = TransporterConfigT
     enableOverchargingBlocker :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     enableTollCrossedNotifications :: B.C f Kernel.Prelude.Bool,
     enableUdfForOffers :: B.C f Kernel.Prelude.Bool,
+    enableVendorCheckForCollectingDues :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     exotelAppIdMapping :: B.C f (Kernel.Prelude.Maybe Domain.Types.Extra.TransporterConfig.ExotelMapping),
     exotelStatusCheckSchedulerDelay :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Seconds),
     fakeOtpEmails :: B.C f [Kernel.Prelude.Text],

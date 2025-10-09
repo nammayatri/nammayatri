@@ -100,6 +100,7 @@ updateByPrimaryKey (Domain.Types.DriverFee.DriverFee {..}) = do
       Se.Set Beam.billNumber billNumber,
       Se.Set Beam.cancellationPenaltyAmount cancellationPenaltyAmount,
       Se.Set Beam.collectedAt collectedAt,
+      Se.Set Beam.collectedAtVendorId collectedAtVendorId,
       Se.Set Beam.collectedBy collectedBy,
       Se.Set Beam.currency (Kernel.Prelude.Just currency),
       Se.Set Beam.driverId (Kernel.Types.Id.getId driverId),

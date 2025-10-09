@@ -1111,6 +1111,7 @@ TransporterConfig:
     upgradeTierDropRetentionTime: Maybe Seconds
     allowDriverToUseFleetRcs: Maybe Bool
     enableFareCalculatorV2: Maybe Bool
+    enableVendorCheckForCollectingDues: Maybe Bool
 
   beamType:
     currency: Maybe Currency

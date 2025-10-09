@@ -1,0 +1,54 @@
+module: Volunteer
+
+apis:
+  - POST: # CreateVolunteerAPI
+      endpoint: /create
+      auth: ApiAuthV2
+      request:
+        type: CreateVolunteerReq
+      response:
+        type: CreateVolunteerRes
+
+  - GET: # VolunteerListAPI
+      endpoint: /list
+      auth: ApiAuthV2
+      query:
+        - limit: Int
+        - offset: Int
+        - volunteerId: Text
+        - vendorId: Text
+        - isActive: Bool
+      response:
+        type: VolunteerListRes
+
+  - POST: # UpdateVolunteerAPI
+      endpoint: /{volunteerId}/{vendorId}/update
+      auth: ApiAuthV2
+      params:
+        volunteerId: Text
+        vendorId: Text
+      request:
+        type: UpdateVolunteerReq
+      response:
+        type: APISuccess
+
+types:
+  CreateVolunteerReq:
+    - place: Text
+    - vendorId: Text
+    - isActive: Maybe Bool
+    - personId: Text
+    - derive: "'HideSecrets"
+  CreateVolunteerRes:
+    - volunteerId: Text
+  VolunteerListRes:
+    - volunteers: [VolunteerListItem]
+  VolunteerListItem:
+    - volunteerId: Text
+    - place: Text
+    - vendorId: Text
+    - isActive: Maybe Bool
+  UpdateVolunteerReq:
+    - isActive: Maybe Bool
+    - derive: "'HideSecrets"
+

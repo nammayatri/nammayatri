@@ -421,6 +421,7 @@ types:
   ExemptionAndCashCollectionDriverFeeReq:
     - paymentIds: [Text]
     - isExempt: Bool
+    - vendorId: Maybe Text
     - derive: "'HideSecrets"
 
 extraOperations:
