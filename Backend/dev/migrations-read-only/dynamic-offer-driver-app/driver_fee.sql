@@ -83,3 +83,9 @@ ALTER TABLE atlas_driver_offer_bpp.driver_fee ADD COLUMN cancellation_penalty_am
 ALTER TABLE atlas_driver_offer_bpp.driver_fee ADD COLUMN added_to_fee_id character varying(36) ;
 
 
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_fee ADD COLUMN collected_at_vendor_id text ;
