@@ -90,6 +90,8 @@ DriverFee:
     hasSibling : Maybe Bool
     splitOfDriverFeeId : Maybe (Id DriverFee)
     validDays: Maybe Int
+    cashCollectedAtVendorId : Maybe Text
+    driverConsideredInPayoutSettlementAt : Maybe UTCTime
 
   derives: "Generic, Show, Eq"
 

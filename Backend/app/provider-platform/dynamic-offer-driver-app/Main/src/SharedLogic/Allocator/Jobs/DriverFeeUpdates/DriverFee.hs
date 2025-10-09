@@ -335,13 +335,14 @@ splitPlatformFee feeWithoutDiscount_ totalFee plan DriverFee {..} maxAmountPerDr
               let amountVf = vf.amount / numEntities
               let remainingVf = vf.amount - (amountVf * (HighPrecMoney $ toRational numEntitiesInt))
               let vendorId = vf.vendorId
-              (amountVf, vendorId, remainingVf)
+              let splitMethod = vf.splitMethod
+              (amountVf, vendorId, remainingVf, splitMethod)
           )
           $ vendorFees
   newIds <- replicateM (fromInteger $ if remainingFee == 0.0 then numEntitiesInt - 1 else numEntitiesInt) (generateGUID)
   let idsToApply = newIds <> [id]
-  let vendorFeeAmountEqualParts :: [(HighPrecMoney, Text)] = map (\(amount, vendorId, _) -> (amount, vendorId)) vendorFeeAmountEqualPartsAndRemaining
-  let vendorFeeAmountRemaining :: [(HighPrecMoney, Text)] = map (\(_, vendorId, amount) -> (amount, vendorId)) vendorFeeAmountEqualPartsAndRemaining
+  let vendorFeeAmountEqualParts :: [(HighPrecMoney, Text, Maybe DVF.VendorFeeSplitMethod)] = map (\(amount, vendorId, _, splitMethod) -> (amount, vendorId, splitMethod)) vendorFeeAmountEqualPartsAndRemaining
+  let vendorFeeAmountRemaining :: [(HighPrecMoney, Text, Maybe DVF.VendorFeeSplitMethod)] = map (\(_, vendorId, amount, splitMethod) -> (amount, vendorId, splitMethod)) vendorFeeAmountEqualPartsAndRemaining
   let entityList = replicate (fromInteger numEntitiesInt) (maxAmount, coinDiscount, vendorFeeAmountEqualParts) ++ [(remainingFee, coinClearedAmount, vendorFeeAmountRemaining) | remainingFee > 0]
   let entityListZpWithId = zip idsToApply entityList
    in mapM
@@ -357,7 +358,7 @@ splitPlatformFee feeWithoutDiscount_ totalFee plan DriverFee {..} maxAmountPerDr
                       id = driverFeeId,
                       ..
                     }
-            let vfs = map (\(amount, vendorId) -> DVF.VendorFee {driverFeeId = driverFeeId, vendorId = vendorId, amount = amount, createdAt = now, updatedAt = now}) $ vendorFeeData
+            let vfs = map (\(amount, vendorId, splitMethod) -> DVF.VendorFee {driverFeeId = driverFeeId, vendorId = vendorId, amount = amount, splitMethod = splitMethod, vendorFeeProcessedAt = Nothing, createdAt = now, updatedAt = now}) $ vendorFeeData
             return $ (dfee, vfs)
         )
         $ entityListZpWithId

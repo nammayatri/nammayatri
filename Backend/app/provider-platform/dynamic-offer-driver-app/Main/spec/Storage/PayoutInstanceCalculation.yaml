@@ -1,0 +1,35 @@
+imports:
+  Text: Data.Text
+  UTCTime: Kernel.Prelude
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Merchant: Domain.Types.Merchant
+
+PayoutInstanceCalculation:
+  tableName: payout_instance_calculation
+
+  fields:
+    id : Id PayoutInstanceCalculation
+    fromVendorId : Text
+    toVendorId : Text
+    status : PayoutStatus
+    instanceBalance : HighPrecMoney
+    runningBalance : HighPrecMoney
+    startTime : UTCTime
+    endTime : UTCTime
+    settlementMode : SettlementMode
+    settlementDate : Maybe UTCTime
+
+  types:
+    PayoutStatus:
+      enum: "Pending,Settled,SettleInNext"
+      derive: "HttpInstance"
+
+    SettlementMode:
+      enum: "Manual,Online"
+      derive: "HttpInstance"
+
+  constraints:
+    id: PrimaryKey
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

@@ -28,6 +28,7 @@ data SubscriptionConfig = SubscriptionConfig
     deepLinkExpiryTimeInMinutes :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
     defaultCityVehicleCategory :: Domain.Types.VehicleCategory.VehicleCategory,
     enableCityBasedFeeSwitch :: Kernel.Prelude.Bool,
+    enablePayoutSettlement :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableServiceUsageChargeDefault :: Kernel.Prelude.Bool,
     eventsEnabledForWebhook :: [Domain.Types.WebhookExtra.WebhookEvent],
     executionEnabledForVehicleCategories :: Kernel.Prelude.Maybe [Domain.Types.VehicleCategory.VehicleCategory],
