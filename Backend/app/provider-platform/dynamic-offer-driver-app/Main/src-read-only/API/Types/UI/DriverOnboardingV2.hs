@@ -56,12 +56,14 @@ data CommonDocumentReq = CommonDocumentReq
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
 data DocumentVerificationConfigAPIEntity = DocumentVerificationConfigAPIEntity
-  { checkExpiry :: Kernel.Prelude.Bool,
+  { applicableTo :: Domain.Types.DocumentVerificationConfig.DocumentApplicableType,
+    checkExpiry :: Kernel.Prelude.Bool,
     checkExtraction :: Kernel.Prelude.Bool,
     dependencyDocumentType :: [Domain.Types.DocumentVerificationConfig.DocumentType],
     description :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     disableWarning :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     documentCategory :: Kernel.Prelude.Maybe Domain.Types.DocumentVerificationConfig.DocumentCategory,
+    documentFields :: Kernel.Prelude.Maybe [Domain.Types.DocumentVerificationConfig.FieldInfo],
     documentType :: Domain.Types.DocumentVerificationConfig.DocumentType,
     filterForOldApks :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isDisabled :: Kernel.Prelude.Bool,

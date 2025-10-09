@@ -101,6 +101,8 @@ mkDocumentVerificationConfigAPIEntity language Domain.Types.DocumentVerification
       { title = maybe title (.message) mbTitle,
         description = maybe description (Just . (.message)) mbDescription,
         isMandatoryForEnabling = fromMaybe isMandatory isMandatoryForEnabling,
+        applicableTo = applicableTo,
+        documentFields = documentFields,
         ..
       }
 

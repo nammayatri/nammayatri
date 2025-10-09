@@ -758,6 +758,8 @@ buildDocumentVerificationConfig merchantId merchantOpCityId documentType Common.
         isDefaultEnabledOnManualVerification = fromMaybe True isDefaultEnabledOnManualVerification,
         isImageValidationRequired = fromMaybe True isImageValidationRequired,
         doStrictVerifcation = fromMaybe True doStrictVerifcation,
+        applicableTo = DVC.FLEET_AND_INDIVIDUAL,
+        documentFields = Nothing,
         updatedAt = now,
         createdAt = now,
         documentCategory = castDocumentCategory <$> documentCategory,
