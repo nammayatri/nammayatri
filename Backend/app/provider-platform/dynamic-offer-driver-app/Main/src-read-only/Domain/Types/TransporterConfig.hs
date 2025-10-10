@@ -263,7 +263,9 @@ data ArrivalTimeBufferOfVehicle = ArrivalTimeBufferOfVehicle
     suv :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     suvplus :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
     taxi :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
-    taxiplus :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds
+    taxiplus :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    vipEscort :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
+    vipOfficer :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds
   }
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
@@ -285,7 +287,9 @@ data AvgSpeedOfVechilePerKm = AvgSpeedOfVechilePerKm
     suv :: Kernel.Types.Common.Kilometers,
     suvplus :: Kernel.Types.Common.Kilometers,
     taxi :: Kernel.Types.Common.Kilometers,
-    taxiplus :: Kernel.Types.Common.Kilometers
+    taxiplus :: Kernel.Types.Common.Kilometers,
+    vipEscort :: Kernel.Types.Common.Kilometers,
+    vipOfficer :: Kernel.Types.Common.Kilometers
   }
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 

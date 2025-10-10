@@ -14,6 +14,7 @@ import qualified Tools.Beam.UtilsTH
 
 data FleetBadge = FleetBadge
   { badgeName :: Kernel.Prelude.Text,
+    badgeRank :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     badgeType :: Domain.Types.FleetBadgeType.FleetBadgeType,
     createdAt :: Kernel.Prelude.UTCTime,
     fleetOwnerId :: Kernel.Types.Id.Id Domain.Types.Person.Person,

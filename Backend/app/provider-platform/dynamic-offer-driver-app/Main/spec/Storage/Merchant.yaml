@@ -801,6 +801,8 @@ TransporterConfig:
       busAc: Kilometers
       busNonAc: Kilometers
       boat: Kilometers
+      vipEscort: Kilometers
+      vipOfficer: Kilometers
       derive': Generic, Show, ToJSON, FromJSON, Read,Eq
     DashboardMediaSendingLimit:
       sms: Int
@@ -828,6 +830,8 @@ TransporterConfig:
       busNonAc: Maybe Seconds
       busAc: Maybe Seconds
       boat: Maybe Seconds
+      vipEscort: Maybe Seconds
+      vipOfficer: Maybe Seconds
       derive': Generic, Show, ToJSON, FromJSON, Read,Eq
     DistanceRecomputeConfigs:
       estimatedDistanceUpper: Meters

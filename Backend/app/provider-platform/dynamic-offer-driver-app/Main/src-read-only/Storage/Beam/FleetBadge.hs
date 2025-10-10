@@ -13,6 +13,7 @@ import Tools.Beam.UtilsTH
 
 data FleetBadgeT f = FleetBadgeT
   { badgeName :: B.C f Kernel.Prelude.Text,
+    badgeRank :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     badgeType :: B.C f Domain.Types.FleetBadgeType.FleetBadgeType,
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     fleetOwnerId :: B.C f Kernel.Prelude.Text,
