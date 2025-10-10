@@ -9,6 +9,7 @@ module Domain.Action.Dashboard.Common
     castStatus,
     checkFleetOwnerVerification,
     checkFleetOwnerRole,
+    castDashboardVehicleVariantToDomain,
   )
 where
 
@@ -87,6 +88,8 @@ castVehicleVariantDashboard = \case
   Just DV.BUS_NON_AC -> Just Common.BUS_NON_AC
   Just DV.BUS_AC -> Just Common.BUS_AC
   Just DV.BOAT -> Just Common.BOAT
+  Just DV.VIP_ESCORT -> Just Common.VIP_ESCORT
+  Just DV.VIP_OFFICER -> Just Common.VIP_OFFICER
   _ -> Nothing
 
 runVerifyRCFlow :: Id DP.Person -> DM.Merchant -> Id DMOC.MerchantOperatingCity -> Context.City -> Common.AddVehicleReq -> Bool -> Bool -> Maybe (Id DP.Person) -> Flow ()
@@ -162,3 +165,37 @@ checkFleetOwnerVerification personId mbEnabledCheck = do
 
 checkFleetOwnerRole :: DP.Role -> Bool
 checkFleetOwnerRole role = role `elem` [DP.FLEET_OWNER, DP.FLEET_BUSINESS]
+
+castDashboardVehicleVariantToDomain :: Common.VehicleVariant -> DV.VehicleVariant
+castDashboardVehicleVariantToDomain = \case
+  Common.SUV -> DV.SUV
+  Common.HATCHBACK -> DV.HATCHBACK
+  Common.SEDAN -> DV.SEDAN
+  Common.AUTO_RICKSHAW -> DV.AUTO_RICKSHAW
+  Common.AUTO_PLUS -> DV.AUTO_PLUS
+  Common.TAXI -> DV.TAXI
+  Common.TAXI_PLUS -> DV.TAXI_PLUS
+  Common.PREMIUM_SEDAN -> DV.PREMIUM_SEDAN
+  Common.BLACK -> DV.BLACK
+  Common.BLACK_XL -> DV.BLACK_XL
+  Common.BIKE -> DV.BIKE
+  Common.AMBULANCE_TAXI -> DV.AMBULANCE_TAXI
+  Common.AMBULANCE_TAXI_OXY -> DV.AMBULANCE_TAXI_OXY
+  Common.AMBULANCE_AC -> DV.AMBULANCE_AC
+  Common.AMBULANCE_AC_OXY -> DV.AMBULANCE_AC_OXY
+  Common.AMBULANCE_VENTILATOR -> DV.AMBULANCE_VENTILATOR
+  Common.SUV_PLUS -> DV.SUV_PLUS
+  Common.DELIVERY_BIKE -> DV.DELIVERY_BIKE
+  Common.DELIVERY_LIGHT_GOODS_VEHICLE -> DV.DELIVERY_LIGHT_GOODS_VEHICLE
+  Common.DELIVERY_TRUCK_MINI -> DV.DELIVERY_TRUCK_MINI
+  Common.DELIVERY_TRUCK_SMALL -> DV.DELIVERY_TRUCK_SMALL
+  Common.DELIVERY_TRUCK_MEDIUM -> DV.DELIVERY_TRUCK_MEDIUM
+  Common.DELIVERY_TRUCK_LARGE -> DV.DELIVERY_TRUCK_LARGE
+  Common.DELIVERY_TRUCK_ULTRA_LARGE -> DV.DELIVERY_TRUCK_ULTRA_LARGE
+  Common.BUS_NON_AC -> DV.BUS_NON_AC
+  Common.BUS_AC -> DV.BUS_AC
+  Common.BOAT -> DV.BOAT
+  Common.HERITAGE_CAB -> DV.HERITAGE_CAB
+  Common.EV_AUTO_RICKSHAW -> DV.EV_AUTO_RICKSHAW
+  Common.VIP_ESCORT -> DV.VIP_ESCORT
+  Common.VIP_OFFICER -> DV.VIP_OFFICER

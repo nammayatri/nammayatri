@@ -57,6 +57,8 @@ data VehicleVariant
   | HERITAGE_CAB
   | EV_AUTO_RICKSHAW
   | BOAT
+  | VIP_ESCORT
+  | VIP_OFFICER
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema, Enum, Bounded, EP.Hashable)
 
 instance CH.ClickhouseValue VehicleVariant
@@ -100,6 +102,8 @@ castServiceTierToVariant = \case
   DVST.BUS_AC -> BUS_AC
   DVST.AUTO_PLUS -> AUTO_PLUS
   DVST.BOAT -> BOAT
+  DVST.VIP_ESCORT -> VIP_ESCORT
+  DVST.VIP_OFFICER -> VIP_OFFICER
 
 castVariantToServiceTier :: VehicleVariant -> DVST.ServiceTierType
 castVariantToServiceTier = \case
@@ -132,6 +136,8 @@ castVariantToServiceTier = \case
   BUS_AC -> DVST.BUS_AC
   AUTO_PLUS -> DVST.AUTO_PLUS
   BOAT -> DVST.BOAT
+  VIP_ESCORT -> DVST.VIP_ESCORT
+  VIP_OFFICER -> DVST.VIP_OFFICER
 
 castVehicleVariantToVehicleCategory :: VehicleVariant -> DVC.VehicleCategory
 castVehicleVariantToVehicleCategory = \case
@@ -164,6 +170,8 @@ castVehicleVariantToVehicleCategory = \case
   BUS_AC -> DVC.BUS
   AUTO_PLUS -> DVC.AUTO_CATEGORY
   BOAT -> DVC.BOAT
+  VIP_ESCORT -> DVC.CAR
+  VIP_OFFICER -> DVC.CAR
 
 castServiceTierToVehicleCategory :: DVST.ServiceTierType -> DVC.VehicleCategory
 castServiceTierToVehicleCategory = \case
@@ -199,6 +207,8 @@ castServiceTierToVehicleCategory = \case
   DVST.BUS_AC -> DVC.BUS
   DVST.AUTO_PLUS -> DVC.AUTO_CATEGORY
   DVST.BOAT -> DVC.BOAT
+  DVST.VIP_ESCORT -> DVC.CAR
+  DVST.VIP_OFFICER -> DVC.CAR
 
 getVehicleCategory :: Maybe DVC.VehicleCategory -> VehicleVariant -> Maybe DVC.VehicleCategory
 getVehicleCategory mbVehicleCategory variant = mbVehicleCategory <|> (Just $ castVehicleVariantToVehicleCategory variant)

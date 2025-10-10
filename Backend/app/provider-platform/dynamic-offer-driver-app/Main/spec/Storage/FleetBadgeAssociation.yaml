@@ -34,6 +34,38 @@ FleetBadgeAssociation:
     deleteByBadgeId:
       kvFunction: deleteWithKV
       where: badgeId
+    findAllFleetBadgeAssociationByFleetOwnerId:
+      kvFunction: findAllWithKV
+      where:
+        and: [fleetOwnerId, isActive]
+    findOneFleetBadgeAssociationByFleetOwnerIdAndDriverIdAndBadgeTypeAndIsActive:
+      kvFunction: findOneWithKV
+      where:
+        and: [fleetOwnerId, driverId, badgeType, isActive]
+
+  cachedQueries:
+    findAllFleetBadgeAssociationByFleetOwnerId:
+      keyParams:
+        - fleetOwnerId
+        - isActive
+      returnType: Array
+      dbQuery: findAllFleetBadgeAssociationByFleetOwnerId
+      dbQueryParams:
+        - fleetOwnerId
+        - isActive
+    findOneFleetBadgeAssociationByFleetOwnerIdAndDriverIdAndBadgeTypeAndIsActive:
+      keyParams:
+        - fleetOwnerId
+        - driverId
+        - badgeType
+        - isActive
+      returnType: One
+      dbQuery: findOneFleetBadgeAssociationByFleetOwnerIdAndDriverIdAndBadgeTypeAndIsActive
+      dbQueryParams:
+        - fleetOwnerId
+        - driverId
+        - badgeType
+        - isActive
 
   sqlType:
     id: text

@@ -1160,6 +1160,7 @@ library
       Storage.Beam.Volunteer
       Storage.Beam.WhiteListOrg
       Storage.CachedQueries.CancellationFarePolicy
+      Storage.CachedQueries.FleetBadgeAssociation
       Storage.CachedQueries.Plan
       Storage.CachedQueries.SurgePricing
       Storage.Queries.AadhaarCard

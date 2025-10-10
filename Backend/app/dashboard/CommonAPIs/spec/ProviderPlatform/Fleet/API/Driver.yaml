@@ -1081,6 +1081,7 @@ types:
   NearbyDriverReq:
     - point: LatLong
     - radius: Int
+    - vehicleVariantList: Maybe [VehicleVariant]
     - derive: "'HideSecrets"
   NearbyDriverResp:
     - drivers: [DriverInfo]
