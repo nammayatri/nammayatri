@@ -59,6 +59,7 @@ data DriverInformationE e = DriverInformation
     hasAdvanceBooking :: Kernel.Prelude.Bool,
     hasRideStarted :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isBlockedForReferralPayout :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    isHighAccuracyLocationEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     isInteroperable :: Kernel.Prelude.Bool,
     isPetModeEnabled :: Kernel.Prelude.Bool,
     isSilentModeEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
@@ -86,7 +87,7 @@ data DriverInformationE e = DriverInformation
     payoutVpaStatus :: Kernel.Prelude.Maybe Domain.Types.DriverInformation.PayoutVpaStatus,
     planExpiryDate :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     preferredPrimarySpecialLocId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation),
-    preferredSecondarySpecialLocIds :: [(Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation)],
+    preferredSecondarySpecialLocIds :: [Kernel.Types.Id.Id Lib.Types.SpecialLocation.SpecialLocation],
     prepaidSubscriptionBalance :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     referralCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     referredByDriverId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -113,9 +114,9 @@ data DriverInformationE e = DriverInformation
   }
   deriving (Generic)
 
-type DriverInformation = DriverInformationE ('AsEncrypted)
+type DriverInformation = DriverInformationE 'AsEncrypted
 
-type DecryptedDriverInformation = DriverInformationE ('AsUnencrypted)
+type DecryptedDriverInformation = DriverInformationE 'AsUnencrypted
 
 instance EncryptedItem DriverInformation where
   type Unencrypted DriverInformation = (DecryptedDriverInformation, HashSalt)
@@ -160,6 +161,7 @@ instance EncryptedItem DriverInformation where
           hasAdvanceBooking = hasAdvanceBooking entity,
           hasRideStarted = hasRideStarted entity,
           isBlockedForReferralPayout = isBlockedForReferralPayout entity,
+          isHighAccuracyLocationEnabled = isHighAccuracyLocationEnabled entity,
           isInteroperable = isInteroperable entity,
           isPetModeEnabled = isPetModeEnabled entity,
           isSilentModeEnabled = isSilentModeEnabled entity,
@@ -253,6 +255,7 @@ instance EncryptedItem DriverInformation where
             hasAdvanceBooking = hasAdvanceBooking entity,
             hasRideStarted = hasRideStarted entity,
             isBlockedForReferralPayout = isBlockedForReferralPayout entity,
+            isHighAccuracyLocationEnabled = isHighAccuracyLocationEnabled entity,
             isInteroperable = isInteroperable entity,
             isPetModeEnabled = isPetModeEnabled entity,
             isSilentModeEnabled = isSilentModeEnabled entity,
@@ -351,10 +354,10 @@ data DriverSummary = DriverSummary
 
 data PayoutVpaStatus = VIA_WEBHOOK | MANUALLY_ADDED | VERIFIED_BY_USER deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''AirConditionedRestrictionType))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''AirConditionedRestrictionType)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''DriverAutoPayStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''DriverAutoPayStatus)
 
-$(mkHttpInstancesForEnum (''DriverAutoPayStatus))
+$(mkHttpInstancesForEnum ''DriverAutoPayStatus)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''PayoutVpaStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''PayoutVpaStatus)

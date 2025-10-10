@@ -59,11 +59,12 @@ data DriverInformationT f = DriverInformationT
     hasAdvanceBooking :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     hasRideStarted :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isBlockedForReferralPayout :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
+    isHighAccuracyLocationEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isInteroperable :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isPetModeEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isSilentModeEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     isSpecialLocWarrior :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
-    isTTSEnabled :: (B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool)),
+    isTTSEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     issueBreachCooldownTimes :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     lastACStatusCheckedAt :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     lastEnabledOn :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
@@ -121,6 +122,6 @@ instance B.Table DriverInformationT where
 
 type DriverInformation = DriverInformationT Identity
 
-$(enableKVPG (''DriverInformationT) [('driverId)] [])
+$(enableKVPG ''DriverInformationT ['driverId] [])
 
-$(mkTableInstances (''DriverInformationT) "driver_information")
+$(mkTableInstances ''DriverInformationT "driver_information")

@@ -133,6 +133,7 @@ DriverInformation:
     rideRequestVolume: Maybe Int
     isSilentModeEnabled: Maybe Bool
     isTTSEnabled: Maybe Bool
+    isHighAccuracyLocationEnabled: Maybe Bool
 
   default:
     active: "false"
@@ -288,6 +289,7 @@ DriverInformation:
           isSilentModeEnabled,
           rideRequestVolume,
           isTTSEnabled,
+          isHighAccuracyLocationEnabled,
         ]
       where: driverId
     updateRentalInterCityAndIntraCitySwitch:

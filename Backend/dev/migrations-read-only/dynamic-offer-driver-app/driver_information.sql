@@ -264,3 +264,9 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN is_silent_mode_
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN is_tts_enabled boolean default true;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ALTER COLUMN is_tts_enabled DROP DEFAULT;
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN is_high_accuracy_location_enabled boolean ;
