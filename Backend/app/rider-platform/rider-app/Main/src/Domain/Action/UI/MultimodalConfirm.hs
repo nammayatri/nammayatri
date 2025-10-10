@@ -865,7 +865,7 @@ getPublicTransportDataImpl (mbPersonId, merchantId) mbCity mbEnableSwitchRoute _
             let (finalStations, finalRoutes) =
                   -- hack to solve the dummy trips and stations, route added for spot booking in GTFS to not appear in single mode search.
                   if bppConfig.vehicleCategory == Enums.BUS && busStationListHackEnabled
-                    then (filter (\s -> isJust s.address) stations, filter (\r -> isJust r.polyline) routes)
+                    then (filter (\s -> isJust s.address) stations, routes)
                     else (stations, routes)
             mkResponse finalStations finalRoutes ([] :: [DRSM.RouteStopMapping]) bppConfig Nothing
 
