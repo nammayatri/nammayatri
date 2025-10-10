@@ -14,6 +14,7 @@ import Tools.Beam.UtilsTH
 data VolunteerT f = VolunteerT
   { createdAt :: B.C f Kernel.Prelude.UTCTime,
     id :: B.C f Data.Text.Text,
+    isActive :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     place :: B.C f Data.Text.Text,
     updatedAt :: B.C f Kernel.Prelude.UTCTime,
     vendorId :: B.C f (Kernel.Prelude.Maybe Data.Text.Text),
