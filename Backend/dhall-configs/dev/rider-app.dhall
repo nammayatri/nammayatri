@@ -425,5 +425,4 @@ in  { esqDBCfg
     , locationTrackingServiceKey = sec.locationTrackingServiceKey
     , nearByDriverAPIRateLimitOptions
     , inMemConfig
-    , offerSKUConfig = "public_transport_ticket"
     }
