@@ -149,10 +149,10 @@ verifyPan verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprovalR
   where
     callIdfy :: Person.Person -> Maybe DPan.DriverPanCard -> DVRC.DriverDocument -> DTC.TransporterConfig -> Flow APISuccess
     callIdfy person mdriverPanInformation driverDocument transporterConfig = do
-      image1 <- DVRC.getDocumentImage person.id req.imageId ODC.PanCard
+      panImage <- DVRC.getDocumentImage person.id req.imageId ODC.PanCard
       let extractReq =
             Verification.ExtractImageReq
-              { image1 = image1,
+              { image1 = panImage,
                 image2 = Nothing,
                 driverId = person.id.getId
               }

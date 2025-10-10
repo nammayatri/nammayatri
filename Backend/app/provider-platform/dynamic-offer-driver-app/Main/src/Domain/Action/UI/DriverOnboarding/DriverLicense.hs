@@ -162,8 +162,11 @@ verifyDL verifyBy mbMerchant (personId, merchantId, merchantOpCityId) req@Driver
             logInfo $ "Ticket: " <> show ticket
             return ()
   let runBody = do
+        let driverDocument = VC.DriverDocument {panNumber = decryptedPanNumber, aadhaarNumber = decryptedAadhaarNumber, dlNumber = decryptedDlNumber, gstNumber = Nothing}
         when (VC.isNameCompareRequired transporterConfig verifyBy) $
-          VC.validateDocument merchantId merchantOpCityId person.id nameOnCard dateOfBirth Nothing DTO.DriverLicense VC.DriverDocument {panNumber = decryptedPanNumber, aadhaarNumber = decryptedAadhaarNumber, dlNumber = decryptedDlNumber, gstNumber = Nothing}
+          VC.validateDocument merchantId merchantOpCityId person.id nameOnCard dateOfBirth Nothing DTO.DriverLicense driverDocument
+        when (fromMaybe False transporterConfig.isFaceMatchRequired) $
+          VC.verifyDocumentImageMatch person merchantOpCityId DTO.DriverLicense (Just imageId1) driverDocument Nothing
         mdriverLicense <- Query.findByDLNumber driverLicenseNumber
         case mdriverLicense of
           Just driverLicense -> do
