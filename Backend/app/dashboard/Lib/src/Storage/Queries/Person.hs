@@ -471,3 +471,53 @@ updatePersonRejectedBy personId rejecterId = do
     ]
     [ Se.Is BeamP.id $ Se.Eq $ getId personId
     ]
+
+findByIdWithRoleAndCheckMobileHash ::
+  BeamFlow m r =>
+  Id Person ->
+  Maybe DbHash ->
+  m (Maybe (Person, Role), [Person])
+findByIdWithRoleAndCheckMobileHash personId mbMobileHash = do
+  dbConf <- getReplicaBeamConfig
+  res <- L.runDB dbConf $
+    L.findRows $
+      B.select $ do
+        person <- B.all_ (SBC.person SBC.atlasDB)
+        role <- B.join_' (SBC.role SBC.atlasDB) (\role -> BeamP.roleId person B.==?. BeamR.id role)
+        _ <-
+          B.filter_
+            ( \_ ->
+                case mbMobileHash of
+                  Just mobileHash ->
+                    (person.id B.==. B.val_ (getId personId)) B.||. (person.mobileNumberHash B.==. B.val_ mobileHash)
+                  Nothing ->
+                    person.id B.==. B.val_ (getId personId)
+            )
+            (pure ())
+
+        pure (person, role)
+
+  case res of
+    Right res' -> do
+      finalRes <- forM res' $ \(person, role) -> runMaybeT $ do
+        p <- MaybeT $ fromTType' person
+        r <- MaybeT $ fromTType' role
+        pure (p, r)
+
+      let results = catMaybes finalRes
+
+      let targetPersonAndRole = find (\(p, _) -> p.id == personId) results
+
+          conflictingPersons =
+            map fst $
+              filter
+                ( \(p, _) ->
+                    p.id /= personId
+                      && case mbMobileHash of
+                        Just hash -> p.mobileNumber.hash == hash
+                        Nothing -> False
+                )
+                results
+
+      pure (targetPersonAndRole, conflictingPersons)
+    Left _ -> pure (Nothing, [])
