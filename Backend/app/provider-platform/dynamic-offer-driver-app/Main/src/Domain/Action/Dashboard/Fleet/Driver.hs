@@ -140,6 +140,7 @@ import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.WMB as WMB
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Cac.TransporterConfig as SCTC
+import qualified Storage.CachedQueries.FleetBadgeAssociation as CFBA
 import Storage.CachedQueries.Merchant as QMerchant
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.Clickhouse.DriverEdaKafka as CHDriverEda
@@ -2170,15 +2171,21 @@ postDriverFleetAddDriverBusRouteMapping merchantShortId opCity req = do
 data CreateDriversCSVRow = CreateDriversCSVRow
   { driverName :: Text,
     driverPhoneNumber :: Text,
-    driverOnboardingVehicleCategory :: Text,
-    fleetPhoneNo :: Maybe Text
+    driverOnboardingVehicleCategory :: Maybe Text,
+    fleetPhoneNo :: Maybe Text,
+    badgeName :: Maybe Text,
+    badgeRank :: Maybe Text,
+    badgeType :: Maybe Text
   }
 
 data DriverDetails = DriverDetails
   { driverName :: Text,
     driverPhoneNumber :: Text,
-    driverOnboardingVehicleCategory :: DVC.VehicleCategory,
-    fleetPhoneNo :: Maybe Text
+    driverOnboardingVehicleCategory :: Maybe DVC.VehicleCategory,
+    fleetPhoneNo :: Maybe Text,
+    badgeName :: Maybe Text,
+    badgeRank :: Maybe Text,
+    badgeType :: Maybe DFBT.FleetBadgeType
   }
 
 instance FromNamedRecord CreateDriversCSVRow where
@@ -2188,6 +2195,9 @@ instance FromNamedRecord CreateDriversCSVRow where
       <*> r .: "driver_phone_number"
       <*> r .: "driver_onboarding_vehicle_category"
       <*> optional (r .: "fleet_phone_no")
+      <*> optional (r .: "badge_name")
+      <*> optional (r .: "badge_rank")
+      <*> optional (r .: "badge_type")
 
 postDriverFleetAddDrivers ::
   ShortId DM.Merchant ->
@@ -2280,6 +2290,7 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
                   let driverMobile = req_.driverPhoneNumber
                   let onboardedOperatorId = if isNew then mbOperatorId else Nothing
                   FDV.createFleetDriverAssociationIfNotExists person.id fleetOwner.id onboardedOperatorId req_.driverOnboardingVehicleCategory False
+                  whenJust req_.badgeType $ createOrUpdateFleetBadge merchant moc person req_ fleetOwner
                   sendDeepLinkForAuth person driverMobile moc.merchantId moc.id fleetOwner
 
     linkDriverToOperator :: DM.Merchant -> DMOC.MerchantOperatingCity -> DP.Person -> DriverDetails -> Flow () -- TODO: create single query to update all later
@@ -2327,9 +2338,12 @@ parseDriverInfo :: Int -> CreateDriversCSVRow -> Flow DriverDetails
 parseDriverInfo idx row = do
   driverName <- Csv.cleanCSVField idx row.driverName "Driver name"
   driverPhoneNumber <- Csv.cleanCSVField idx row.driverPhoneNumber "Mobile number"
-  driverOnboardingVehicleCategory :: DVC.VehicleCategory <- Csv.readCSVField idx row.driverOnboardingVehicleCategory "Onboarding Vehicle Category"
-  let fleetPhoneNo :: Maybe Text = Csv.cleanMaybeCSVField idx (fromMaybe "" row.fleetPhoneNo) "Fleet number"
-  pure $ DriverDetails driverName driverPhoneNumber driverOnboardingVehicleCategory fleetPhoneNo
+  let driverOnboardingVehicleCategory :: Maybe DVC.VehicleCategory = Csv.readMaybeCSVField idx (fromMaybe "" row.driverOnboardingVehicleCategory) "Onboarding Vehicle Category"
+      fleetPhoneNo :: Maybe Text = Csv.cleanMaybeCSVField idx (fromMaybe "" row.fleetPhoneNo) "Fleet number"
+      badgeName :: Maybe Text = Csv.readMaybeCSVField idx (fromMaybe "" row.badgeName) "Badge name"
+      badgeRank :: Maybe Text = Csv.readMaybeCSVField idx (fromMaybe "" row.badgeRank) "Badge rank"
+      badgeType :: Maybe DFBT.FleetBadgeType = Csv.readMaybeCSVField idx (fromMaybe "" row.badgeType) "Badge type"
+  pure $ DriverDetails driverName driverPhoneNumber driverOnboardingVehicleCategory fleetPhoneNo badgeName badgeRank badgeType
 
 fetchOrCreatePerson :: DMOC.MerchantOperatingCity -> DriverDetails -> Flow (DP.Person, Bool)
 fetchOrCreatePerson moc req_ = do
@@ -2379,7 +2393,8 @@ getDriverFleetWmbRouteDetails _ _ _ routeCode = WMB.getRouteDetails routeCode
 postDriverFleetGetNearbyDrivers :: ShortId DM.Merchant -> Context.City -> Text -> Common.NearbyDriverReq -> Flow Common.NearbyDriverResp
 postDriverFleetGetNearbyDrivers merchantShortId _ fleetOwnerId req = do
   merchant <- findMerchantByShortId merchantShortId
-  nearbyDriverLocations <- LF.nearBy req.point.lat req.point.lon Nothing (Just [DV.BUS_NON_AC, DV.BUS_AC]) req.radius merchant.id (Just fleetOwnerId) Nothing
+  let vehicleVariantList = Just $ maybe [DV.BUS_NON_AC, DV.BUS_AC] (map DCommon.castDashboardVehicleVariantToDomain) (req.vehicleVariantList)
+  nearbyDriverLocations <- LF.nearBy req.point.lat req.point.lon Nothing vehicleVariantList req.radius merchant.id (Just fleetOwnerId) Nothing
   return $
     Common.NearbyDriverResp $
       catMaybes $
@@ -2688,3 +2703,31 @@ postDriverFleetLocationList _ _ memberPersonId req = do
       pure $ Common.DriverLocationListResp allLocations
   where
     postDriverFleetLocationListHitsCountKey = "BPP:API:ACTION:DriverFleetLocationList:PersonId:" <> memberPersonId <> ":hitsCount"
+
+createOrUpdateFleetBadge :: DM.Merchant -> DMOC.MerchantOperatingCity -> DP.Person -> DriverDetails -> DP.Person -> DFBT.FleetBadgeType -> Flow ()
+createOrUpdateFleetBadge merchant merchantOpCity person driverDetails fleetOwner badgeType = do
+  now <- getCurrentTime
+  let badgeName = fromMaybe driverDetails.driverName driverDetails.badgeName
+  mbBadgeAssociation <- CFBA.findOneFleetBadgeAssociationByFleetOwnerIdAndDriverIdAndBadgeTypeAndIsActive fleetOwner.id.getId person.id badgeType True
+  case mbBadgeAssociation of
+    Just badgeAssociation -> do
+      QFB.updateBadgeNameAndRankById badgeName driverDetails.badgeRank badgeAssociation.badgeId
+    Nothing -> do
+      fleetBadgeId <- generateGUID
+      let newBadge = buildNewBadge fleetBadgeId now
+      QFB.create newBadge
+      WMB.linkFleetBadge (cast person.id) merchant.id merchantOpCity.id (fleetOwner.id.getId) newBadge badgeType
+  where
+    buildNewBadge badgeId now =
+      DFB.FleetBadge
+        { badgeName = fromMaybe driverDetails.driverName driverDetails.badgeName,
+          badgeType = badgeType,
+          createdAt = now,
+          personId = Just person.id,
+          fleetOwnerId = fleetOwner.id,
+          id = Id badgeId,
+          merchantId = merchant.id,
+          merchantOperatingCityId = merchantOpCity.id,
+          updatedAt = now,
+          badgeRank = driverDetails.badgeRank
+        }

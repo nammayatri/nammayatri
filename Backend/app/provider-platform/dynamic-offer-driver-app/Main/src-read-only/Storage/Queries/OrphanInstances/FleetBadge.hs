@@ -18,6 +18,7 @@ instance FromTType' Beam.FleetBadge Domain.Types.FleetBadge.FleetBadge where
       Just
         Domain.Types.FleetBadge.FleetBadge
           { badgeName = badgeName,
+            badgeRank = badgeRank,
             badgeType = badgeType,
             createdAt = createdAt,
             fleetOwnerId = Kernel.Types.Id.Id fleetOwnerId,
@@ -32,6 +33,7 @@ instance ToTType' Beam.FleetBadge Domain.Types.FleetBadge.FleetBadge where
   toTType' (Domain.Types.FleetBadge.FleetBadge {..}) = do
     Beam.FleetBadgeT
       { Beam.badgeName = badgeName,
+        Beam.badgeRank = badgeRank,
         Beam.badgeType = badgeType,
         Beam.createdAt = createdAt,
         Beam.fleetOwnerId = Kernel.Types.Id.getId fleetOwnerId,

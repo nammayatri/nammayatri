@@ -463,7 +463,7 @@ newtype MultiOwnerSelect = MultiOwnerSelect {fleetOwnerIds :: [Kernel.Prelude.Te
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data NearbyDriverReq = NearbyDriverReq {point :: Kernel.External.Maps.Types.LatLong, radius :: Kernel.Prelude.Int}
+data NearbyDriverReq = NearbyDriverReq {point :: Kernel.External.Maps.Types.LatLong, radius :: Kernel.Prelude.Int, vehicleVariantList :: Kernel.Prelude.Maybe [Dashboard.Common.VehicleVariant]}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
