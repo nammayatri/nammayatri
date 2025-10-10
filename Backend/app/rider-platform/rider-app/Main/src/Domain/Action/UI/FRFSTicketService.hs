@@ -28,6 +28,7 @@ import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPaym
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBooking
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Journey as DJ
+import qualified Domain.Types.JourneyLeg as DJL
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant as Merchant
 import Domain.Types.MerchantOperatingCity as DMOC
@@ -89,7 +90,9 @@ import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBookingFeedback as QFRFSTicketBookingFeedback
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.Journey as QJourney
+import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.RouteDetails as QRouteDetails
 import Tools.Error
 import Tools.Maps as Maps
 import qualified Tools.Payment as Payment
@@ -744,6 +747,19 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req crisSdkResponse
       -- Create booking breakup entries based on category selections
       -- dcategories <- buildCategorySelectFromReq req.offered
       -- FRFSUtils.createBookingBreakupEntries booking dcategories merchantId_ quote.merchantOperatingCityId
+
+      -- Update userBookedRouteShortName and userBookedBusServiceTierType from route_stations_json
+      let routeStations :: Maybe [FRFSRouteStationsAPI] = decodeFromText =<< routeStationsJson
+      let mbFirstRouteStation = listToMaybe (fromMaybe [] routeStations)
+      let mbBookedRouteShortName = mbFirstRouteStation <&> (.shortName)
+      let mbBookedServiceTierType = mbFirstRouteStation >>= (.vehicleServiceTier) <&> (._type)
+      when (isJust mbBookedRouteShortName && isJust mbBookedServiceTierType) $ do
+        mbJourneyLeg <- QJourneyLeg.findByLegSearchId (Just searchId.getId)
+        whenJust mbJourneyLeg $ \journeyLeg -> do
+          whenJust mbBookedRouteShortName $ \bookedRouteShortName ->
+            QRouteDetails.updateUserBookedRouteShortName (Just bookedRouteShortName) journeyLeg.id.getId
+          QJourneyLeg.updateByPrimaryKey $ journeyLeg {DJL.userBookedBusServiceTierType = mbBookedServiceTierType}
+
       return (rider, booking)
 
     makeBookingStatusAPI booking discounts routeStations stations city =

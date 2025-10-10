@@ -1235,7 +1235,8 @@ data FinalBoardedBusData = FinalBoardedBusData
     depotNo :: Maybe Text,
     waybillId :: Maybe Text,
     scheduleNo :: Maybe Text,
-    updateSource :: Maybe DJL.BusBoardingMethod
+    updateSource :: Maybe DJL.BusBoardingMethod,
+    serviceTierType :: Maybe Spec.ServiceTierType
   }
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -1260,8 +1261,9 @@ mkJourneyLeg ::
   Maybe GetFareResponse ->
   Maybe Gates ->
   Maybe FinalBoardedBusData ->
+  Maybe Spec.ServiceTierType ->
   m DJL.JourneyLeg
-mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation merchantId merchantOpCityId journeyId multimodalSearchRequestId maximumWalkDistance fare mbGates mbFinalBoardedBusData = do
+mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation merchantId merchantOpCityId journeyId multimodalSearchRequestId maximumWalkDistance fare mbGates mbFinalBoardedBusData mbUserBookedServiceTierType = do
   now <- getCurrentTime
   journeyLegId <- generateGUID
   routeDetails <- mapM (mkRouteDetail journeyLegId fare) leg.routeDetails
@@ -1303,6 +1305,8 @@ mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation m
         legPricingId = Nothing,
         changedBusesInSequence = Nothing,
         finalBoardedBusNumber = mbFinalBoardedBusData >>= (.busNumber),
+        finalBoardedBusServiceTierType = mbFinalBoardedBusData >>= (.serviceTierType),
+        userBookedBusServiceTierType = mbUserBookedServiceTierType,
         finalBoardedDepotNo = mbFinalBoardedBusData >>= (.depotNo),
         finalBoardedWaybillId = mbFinalBoardedBusData >>= (.waybillId),
         finalBoardedScheduleNo = mbFinalBoardedBusData >>= (.scheduleNo),
@@ -1368,6 +1372,7 @@ mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation m
             id = newId,
             routeLongName = routeDetail.longName,
             routeShortName = routeDetail.shortName,
+            userBookedRouteShortName = Nothing,
             routeColorName = routeDetail.shortName,
             routeColorCode = routeDetail.color,
             frequency = Nothing,

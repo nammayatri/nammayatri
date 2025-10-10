@@ -353,3 +353,13 @@ ALTER TABLE atlas_app.journey_leg ADD COLUMN final_boarded_waybill_id text ;
 ALTER TABLE atlas_app.journey_leg ADD COLUMN final_boarded_schedule_no text ;
 ALTER TABLE atlas_app.journey_leg ADD COLUMN final_boarded_depot_no text ;
 ALTER TABLE atlas_app.journey_leg ADD COLUMN final_boarded_bus_number_source text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.journey_leg ADD COLUMN final_boarded_bus_service_tier_type text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.journey_leg ADD COLUMN user_booked_bus_service_tier_type text ;

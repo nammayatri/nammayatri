@@ -27,6 +27,7 @@ data JourneyLeg = JourneyLeg
     estimatedMinFare :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
     finalBoardedBusNumber :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     finalBoardedBusNumberSource :: Kernel.Prelude.Maybe Domain.Types.JourneyLeg.BusBoardingMethod,
+    finalBoardedBusServiceTierType :: Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType,
     finalBoardedDepotNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     finalBoardedScheduleNo :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     finalBoardedWaybillId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -54,6 +55,7 @@ data JourneyLeg = JourneyLeg
     toArrivalTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     toDepartureTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     toStopDetails :: Kernel.Prelude.Maybe Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails,
+    userBookedBusServiceTierType :: Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType,
     createdAt :: Kernel.Prelude.UTCTime,
     updatedAt :: Kernel.Prelude.UTCTime
   }
