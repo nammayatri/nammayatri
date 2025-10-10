@@ -46,6 +46,7 @@ import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.Merchant as CQM
 import Storage.Queries.Booking as QRB
+import qualified Storage.Queries.Ride as QRide
 import Storage.Queries.SearchTry as QST
 import Tools.Error
 import TransactionLogs.PushLogs
@@ -110,7 +111,8 @@ cancel transporterId subscriber reqV2 = withFlowHandlerBecknAPI do
                   Callback.withCallback merchant "on_cancel" OnCancel.onCancelAPIV2 callbackUrl internalEndPointHashMap (errHandler context) $ do
                     pure buildOnCancelMessageV2
         Just Enums.SOFT_CANCEL -> do
-          cancellationCharges <- DCancel.getCancellationCharges booking
+          mbRide <- QRide.findActiveByRBId booking.id
+          cancellationCharges <- maybe (return Nothing) (\ride -> DCancel.getCancellationCharges booking ride) mbRide
           let onCancelBuildReq =
                 OC.DBookingCancelledReqV2
                   { booking = booking,
