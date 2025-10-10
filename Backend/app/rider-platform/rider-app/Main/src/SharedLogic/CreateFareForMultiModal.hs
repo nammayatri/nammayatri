@@ -183,36 +183,36 @@ createBasketFromBookings ::
   ( EsqDBReplicaFlow m r,
     BeamFlow m r,
     EncFlow m r,
-    ServiceFlow m r,
-    HasFlowEnv m r '["offerSKUConfig" ::: Text]
+    ServiceFlow m r
   ) =>
   [FTBooking.FRFSTicketBooking] ->
-  m (Maybe [Payment.Basket])
-createBasketFromBookings allJourneyBookings = do
-  logInfo $ "createBasketFromBookings Bookings" <> show allJourneyBookings
-  if null allJourneyBookings
-    then return Nothing
-    else do
-      -- Get quotes for all bookings
-      quotes <- mapM getQuoteForBooking allJourneyBookings
-      offerSKUProductId <- asks (.offerSKUConfig)
-      -- Sum all quote prices
-      let totalPrice = sum $ map (.price.amount) quotes
-      -- Get quantity from the first quote (assuming all have same quantity)
-      let firstQuote = head quotes
-          unitPrice = totalPrice / fromIntegral firstQuote.quantity
-          quantity = firstQuote.quantity
-      -- Return single basket with aggregated data
-      logInfo $ "createBasketFromBookings Basket" <> show (Just [Payment.Basket {Payment.id = offerSKUProductId, Payment.unitPrice = unitPrice, Payment.quantity = quantity}])
-      return
-        ( Just
+  Id Merchant.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Payment.PaymentServiceType ->
+  m [Payment.Basket]
+createBasketFromBookings allJourneyBookings merchantId merchantOperatingCityId paymentServiceType = do
+  let dummyBasket =
+        [ Payment.Basket
+            { Payment.id = "no_basket",
+              Payment.unitPrice = 0,
+              Payment.quantity = 0
+            }
+        ]
+  case allJourneyBookings of
+    [booking] -> do
+      -- offer valid only for single mode booking (not handled for multimodal right now)
+      quote <- QFRFSQuote.findById booking.quoteId >>= fromMaybeM (QuoteNotFound booking.quoteId.getId)
+      mbOfferSKUProductId <- Payment.fetchOfferSKUConfig merchantId merchantOperatingCityId Nothing paymentServiceType
+      case (mbOfferSKUProductId, quote.quantity, quote.childTicketQuantity) of
+        (_, 0, _) -> return dummyBasket -- offer valid only if adult tickets are more than or equal to 1
+        (Just offerSKUProductId, _, _) -> do
+          let unitPrice = quote.price.amount / fromIntegral quote.quantity
+          return $
             [ Payment.Basket
                 { Payment.id = offerSKUProductId,
                   Payment.unitPrice = unitPrice,
-                  Payment.quantity = quantity
+                  Payment.quantity = quote.quantity
                 }
             ]
-        )
-  where
-    getQuoteForBooking booking = do
-      QFRFSQuote.findById booking.quoteId >>= fromMaybeM (QuoteNotFound booking.quoteId.getId)
+        _ -> return dummyBasket
+    _ -> return dummyBasket

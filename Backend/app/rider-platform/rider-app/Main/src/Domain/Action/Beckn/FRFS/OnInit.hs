@@ -39,7 +39,6 @@ import qualified Storage.CachedQueries.Merchant as QMerch
 import qualified Storage.Queries.FRFSSearch as QSearch
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
-import qualified Storage.Queries.Journey as QJourney
 import qualified Storage.Queries.Person as QP
 import Tools.Error
 import qualified Tools.Metrics.BAPMetrics as Metrics
@@ -74,7 +73,6 @@ onInit ::
     EncFlow m r,
     ServiceFlow m r,
     HasField "isMetroTestTransaction" r Bool,
-    HasFlowEnv m r '["offerSKUConfig" ::: Text],
     Metrics.HasBAPMetrics m r
   ) =>
   DOnInit ->
@@ -100,11 +98,8 @@ onInit onInitReq merchant oldBooking = do
       let paymentType = getPaymentType booking.vehicleType mbJourneyId
       (vendorSplitDetails, amount) <- createVendorSplitFromBookings allJourneyBookings merchant.id oldBooking.merchantOperatingCityId paymentType (isMetroTestTransaction && frfsConfig.isFRFSTestingEnabled)
       baskets <- case mbJourneyId of
-        Just journeyId -> do
-          journey <- QJourney.findByPrimaryKey journeyId >>= fromMaybeM (JourneyNotFound journeyId.getId)
-          if journey.isSingleMode == Just True
-            then createBasketFromBookings allJourneyBookings
-            else return Nothing
+        Just _ -> do
+          Just <$> createBasketFromBookings allJourneyBookings merchant.id oldBooking.merchantOperatingCityId paymentType
         Nothing -> return Nothing
       createPayments allJourneyBookings oldBooking.merchantOperatingCityId oldBooking.merchantId amount person paymentType vendorSplitDetails baskets
   where
