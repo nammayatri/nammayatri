@@ -18,6 +18,7 @@ FleetBadge:
     merchantId: Id Merchant
     createdAt: UTCTime
     updatedAt: UTCTime
+    badgeRank: Maybe Text
 
   default:
     badgeType: "'DRIVER'"
@@ -39,6 +40,13 @@ FleetBadge:
         and:
           - in: [fleetOwnerId]
           - eq: [badgeName, badgeType]
+    updateBadgeNameAndRankById:
+      kvFunction: updateOneWithKV
+      params:
+        - badgeName
+        - badgeRank
+        - updatedAt
+      where: id
 
   extraOperations:
     - EXTRA_QUERY_FILE

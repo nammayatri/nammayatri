@@ -394,7 +394,8 @@ validateBadgeAssignment driverId merchantId merchantOperatingCityId fleetOwnerId
           id = Id badgeId,
           merchantId = merchantId,
           merchantOperatingCityId = merchantOperatingCityId,
-          updatedAt = now
+          updatedAt = now,
+          badgeRank = Nothing
         }
 
 -- TODO :: Unlink Fleet Badge Driver to be Figured Out, If Required
@@ -404,6 +405,8 @@ linkFleetBadge driverId _ _ fleetOwnerId badge badgeType = do
   let (driverBadgeName, conductorBadgeName) = case badgeType of
         DFBT.DRIVER -> (Just badge.badgeName, Nothing)
         DFBT.CONDUCTOR -> (Nothing, Just badge.badgeName)
+        DFBT.PILOT -> (Just badge.badgeName, badge.badgeRank)
+        DFBT.OFFICER -> (Just badge.badgeName, badge.badgeRank)
   QP.updatePersonName driverId driverBadgeName conductorBadgeName
   where
     createBadgeAssociation = do

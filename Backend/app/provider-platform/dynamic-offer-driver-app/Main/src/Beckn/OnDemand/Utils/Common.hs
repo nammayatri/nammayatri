@@ -241,6 +241,8 @@ castVariant Variant.BUS_NON_AC = (show Enums.BUS, "BUS_NON_AC")
 castVariant Variant.BUS_AC = (show Enums.BUS, "BUS_AC")
 castVariant Variant.BOAT = (show Enums.BOAT, "BOAT")
 castVariant Variant.AUTO_PLUS = (show Enums.AUTO_RICKSHAW, "AUTO_PLUS")
+castVariant Variant.VIP_ESCORT = (show Enums.CAB, "VIP_ESCORT")
+castVariant Variant.VIP_OFFICER = (show Enums.CAB, "VIP_OFFICER")
 
 rationaliseMoney :: Money -> Text
 rationaliseMoney = OS.valueToString . OS.DecimalValue . toRational
@@ -280,6 +282,8 @@ parseVehicleVariant mbCategory mbVariant = case (mbCategory, mbVariant) of
   (Just "TRUCK", Just "DELIVERY_TRUCK_ULTRA_LARGE") -> Just Variant.DELIVERY_TRUCK_ULTRA_LARGE
   (Just "BUS", Just "BUS_NON_AC") -> Just Variant.BUS_NON_AC
   (Just "BUS", Just "BUS_AC") -> Just Variant.BUS_AC
+  (Just "CAB", Just "VIP_ESCORT") -> Just Variant.VIP_ESCORT
+  (Just "CAB", Just "VIP_OFFICER") -> Just Variant.VIP_OFFICER
   _ -> Nothing
 
 parseAddress :: MonadFlow m => Spec.Location -> m (Maybe DL.LocationAddress)
@@ -1608,6 +1612,8 @@ mkGeneralInfoTagGroup transporterConfig pricing isValueAddNP =
                 Variant.BUS_AC -> avgSpeed.busAc.getKilometers
                 Variant.BOAT -> avgSpeed.boat.getKilometers
                 Variant.AUTO_PLUS -> avgSpeed.autorickshaw.getKilometers
+                Variant.VIP_ESCORT -> avgSpeed.vipEscort.getKilometers
+                Variant.VIP_OFFICER -> avgSpeed.vipOfficer.getKilometers
 
           getDuration pricing.distanceToNearestDriver variantSpeed
 

@@ -57,6 +57,8 @@ data ServiceTierType
   | HERITAGE_CAB
   | EV_AUTO_RICKSHAW
   | BOAT
+  | VIP_ESCORT
+  | VIP_OFFICER
   deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema, EulerHS.Prelude.Hashable, Enum, Bounded)
 
 allServiceTiersTypes :: [ServiceTierType]
