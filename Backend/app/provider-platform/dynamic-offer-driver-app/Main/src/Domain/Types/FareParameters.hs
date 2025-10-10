@@ -55,7 +55,8 @@ data FareParameters = FareParameters
     updatedAt :: UTCTime,
     merchantId :: Maybe (Id DM.Merchant),
     merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
-    conditionalCharges :: [DAC.ConditionalCharges]
+    conditionalCharges :: [DAC.ConditionalCharges],
+    driverCancellationPenaltyAmount :: Maybe HighPrecMoney
   }
   deriving (Generic, Show, Eq, PrettyShow, FromJSON, ToJSON, ToSchema)
 

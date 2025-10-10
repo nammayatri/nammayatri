@@ -260,6 +260,7 @@ library
       Domain.Action.UI.OrgAdmin
       Domain.Action.UI.Payment
       Domain.Action.UI.Payout
+      Domain.Action.UI.Penalty
       Domain.Action.UI.Performance
       Domain.Action.UI.Person
       Domain.Action.UI.PickupInstructions
@@ -793,6 +794,7 @@ library
       API.Action.UI.MeterRide
       API.Action.UI.OperationHub
       API.Action.UI.Operator
+      API.Action.UI.Penalty
       API.Action.UI.PickupInstructions
       API.Action.UI.PriceBreakup
       API.Action.UI.Reels
@@ -842,6 +844,7 @@ library
       API.Types.UI.Merchant
       API.Types.UI.MeterRide
       API.Types.UI.OperationHub
+      API.Types.UI.Penalty
       API.Types.UI.PickupInstructions
       API.Types.UI.PriceBreakup
       API.Types.UI.Reels

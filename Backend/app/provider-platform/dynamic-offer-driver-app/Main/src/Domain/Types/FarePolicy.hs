@@ -69,7 +69,8 @@ data FarePolicyD (s :: DTC.UsageSafety) = FarePolicy
     updatedAt :: UTCTime,
     merchantId :: Maybe (Id Merchant),
     merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
-    conditionalCharges :: [DTAC.ConditionalCharges]
+    conditionalCharges :: [DTAC.ConditionalCharges],
+    driverCancellationPenaltyAmount :: Maybe HighPrecMoney
   }
   deriving (Generic, Show, ToSchema)
 
@@ -181,7 +182,8 @@ data FullFarePolicyD (s :: DTC.UsageSafety) = FullFarePolicy
     mbActualQARFromLocGeohash :: Maybe Double,
     mbActualQARCity :: Maybe Double,
     conditionalCharges :: [DTAC.ConditionalCharges],
-    congestionChargeData :: Maybe CongestionChargeData
+    congestionChargeData :: Maybe CongestionChargeData,
+    driverCancellationPenaltyAmount :: Maybe HighPrecMoney
   }
   deriving (Generic, Show)
 
