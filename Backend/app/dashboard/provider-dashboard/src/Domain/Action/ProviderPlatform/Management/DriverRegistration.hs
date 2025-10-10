@@ -24,6 +24,7 @@ module Domain.Action.ProviderPlatform.Management.DriverRegistration
     getDriverRegistrationDocumentsInfo,
     postDriverRegistrationDocumentsUpdate,
     postDriverRegistrationRegisterAadhaar,
+    getDriverRegistrationVerificationStatus,
   )
 where
 
@@ -120,3 +121,8 @@ postDriverRegistrationRegisterAadhaar merchantShortId opCity apiTokenInfo driver
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   transaction <- buildTransaction apiTokenInfo Nothing (Just req)
   T.withTransactionStoring transaction $ Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.postDriverRegistrationRegisterAadhaar) driverId req
+
+getDriverRegistrationVerificationStatus :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Id Common.Driver -> UTCTime -> UTCTime -> Int -> Int -> Common.DocumentType -> Common.ServiceType -> Flow Common.VerificationStatusListResponse
+getDriverRegistrationVerificationStatus merchantShortId opCity apiTokenInfo driverId fromDate toDate limit offset documentType serviceType = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  Client.callManagementAPI checkedMerchantId opCity (.driverRegistrationDSL.getDriverRegistrationVerificationStatus) driverId fromDate toDate limit offset documentType serviceType

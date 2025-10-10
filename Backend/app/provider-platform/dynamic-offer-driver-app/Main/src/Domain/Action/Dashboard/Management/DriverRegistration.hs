@@ -24,6 +24,7 @@ module Domain.Action.Dashboard.Management.DriverRegistration
     getDriverRegistrationDocumentsInfo,
     postDriverRegistrationDocumentsUpdate,
     postDriverRegistrationRegisterAadhaar,
+    getDriverRegistrationVerificationStatus,
   )
 where
 
@@ -42,6 +43,7 @@ import qualified Domain.Types.DriverLicense as DDL
 import qualified Domain.Types.DriverPanCard as DPan
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
+import qualified Domain.Types.Person as DP
 import qualified Domain.Types.VehicleFitnessCertificate as DFC
 import qualified Domain.Types.VehicleInsurance as DVI
 import qualified Domain.Types.VehicleNOC as DNOC
@@ -68,6 +70,8 @@ import qualified Storage.Queries.BusinessLicense as QBL
 import qualified Storage.Queries.DriverLicense as QDL
 import qualified Storage.Queries.DriverPanCard as QPan
 import qualified Storage.Queries.DriverSSN as QSSN
+import qualified Storage.Queries.HyperVergeVerificationExtra as HVQuery
+import qualified Storage.Queries.IdfyVerificationExtra as IDQuery
 import Storage.Queries.Image as QImage
 import qualified Storage.Queries.Person as QDriver
 import qualified Storage.Queries.Person as QPerson
@@ -760,3 +764,30 @@ convertVerifyOtp AadhaarVerificationResp {..} = Common.GenerateAadhaarOtpRes {..
 
 convertSubmitOtp :: AadhaarOtpVerifyRes -> Common.VerifyAadhaarOtpRes
 convertSubmitOtp AadhaarOtpVerifyRes {..} = Common.VerifyAadhaarOtpRes {..}
+
+getDriverRegistrationVerificationStatus :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> UTCTime -> UTCTime -> Int -> Int -> Common.DocumentType -> Common.ServiceType -> Flow Common.VerificationStatusListResponse
+getDriverRegistrationVerificationStatus _merchantShortId _opCity driverId fromDate toDate limit offset documentType serviceType = do
+  let personId = cast @Common.Driver @DP.Person driverId
+  _ <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  logDebug $ "serviceType: " <> show serviceType
+  logDebug $ "documentType: " <> show documentType
+  logDebug $ "personId: " <> show personId
+  verificationStatuses <- case serviceType of
+    Common.HyperVerge -> do
+      entries <- HVQuery.findLatestByDriverIdAndDocType limit offset personId (mapDocumentType documentType) fromDate toDate
+      pure $ map (\entry -> convertToVerificationStatusItem entry.status entry.hypervergeResponse entry.retryCount entry.requestId entry.createdAt) entries
+    Common.Idfy -> do
+      entries <- IDQuery.findLatestByDriverIdAndDocType limit offset personId (mapDocumentType documentType) fromDate toDate
+      pure $ map (\entry -> convertToVerificationStatusItem entry.status entry.idfyResponse entry.retryCount entry.requestId entry.createdAt) entries
+  logDebug $ "entries IDs: " <> show (map (\entry -> entry.requestId) verificationStatuses)
+  pure Common.VerificationStatusListResponse {verificationStatuses = verificationStatuses}
+  where
+    convertToVerificationStatusItem status verificationMessage retryCount requestId createdAt =
+      Common.VerificationStatusItem
+        { documentType = documentType,
+          status = status,
+          verificationMessage = verificationMessage,
+          retryCount = fromMaybe 0 retryCount,
+          requestId = Just requestId,
+          createdAt = createdAt
+        }
