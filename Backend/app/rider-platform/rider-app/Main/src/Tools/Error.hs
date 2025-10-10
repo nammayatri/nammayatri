@@ -980,6 +980,7 @@ data MultimodalError
   | PublicTransportDataUnavailable Text -- reason
   | StopNotFound Text
   | StopDoesNotHaveLocation Text
+  | InvalidJourneyStatusForFeedback Text -- reason
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''MultimodalError
@@ -1000,6 +1001,7 @@ instance IsBaseError MultimodalError where
     PublicTransportDataUnavailable reason -> Just $ "Public transport data unavailable: " <> reason
     StopNotFound reason -> Just $ "Stop not found: " <> reason
     StopDoesNotHaveLocation reason -> Just $ "Stop does not have location: " <> reason
+    InvalidJourneyStatusForFeedback reason -> Just $ "Invalid journey status for feedback: " <> reason
 
 instance IsHTTPError MultimodalError where
   toErrorCode = \case
@@ -1017,6 +1019,8 @@ instance IsHTTPError MultimodalError where
     PublicTransportDataUnavailable _ -> "PUBLIC_TRANSPORT_DATA_UNAVAILABLE"
     StopNotFound _ -> "STOP_NOT_FOUND"
     StopDoesNotHaveLocation _ -> "STOP_DOES_NOT_HAVE_LOCATION"
+    InvalidJourneyStatusForFeedback _ -> "INVALID_JOURNEY_STATUS_FOR_FEEDBACK"
+
   toHttpCode = \case
     InvalidStationChange _ _ -> E400
     NoValidMetroRoute _ _ -> E400
@@ -1032,5 +1036,6 @@ instance IsHTTPError MultimodalError where
     PublicTransportDataUnavailable _ -> E500
     StopNotFound _ -> E400
     StopDoesNotHaveLocation _ -> E400
+    InvalidJourneyStatusForFeedback _ -> E400
 
 instance IsAPIError MultimodalError
