@@ -918,7 +918,8 @@ createPaymentOrder bookings merchantOperatingCityId merchantId amount person pay
   ticketBookingPayments' <- processPayments orderId `mapM` bookings
   QFRFSTicketBookingPayment.createMany ticketBookingPayments'
   isSplitEnabled <- Payment.getIsSplitEnabled merchantId merchantOperatingCityId Nothing paymentType
-  splitSettlementDetails <- Payment.mkUnaggregatedSplitSettlementDetails isSplitEnabled amount vendorSplitArr
+  isPercentageSplitEnabled <- Payment.getIsPercentageSplit merchantId merchantOperatingCityId Nothing paymentType
+  splitSettlementDetails <- Payment.mkUnaggregatedSplitSettlementDetails isSplitEnabled amount vendorSplitArr isPercentageSplitEnabled
   let createOrderReq =
         Payment.CreateOrderReq
           { orderId = orderId.getId,
