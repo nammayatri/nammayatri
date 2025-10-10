@@ -363,3 +363,12 @@ ALTER TABLE atlas_app.journey_leg ADD COLUMN final_boarded_bus_service_tier_type
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.journey_leg ADD COLUMN user_booked_bus_service_tier_type text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.journey_leg ADD COLUMN bus_location_data json ;
+
+
+------- SQL updates -------
+
