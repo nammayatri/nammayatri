@@ -128,6 +128,7 @@ in  { esqDBCfg
     , authTokenCacheExpiry = +600
     , registrationTokenExpiry = +365
     , registrationTokenInactivityTimeout = None Integer
+    , updateRestrictedBppRoles = [ "FLEET_OWNER", "OPERATOR" ]
     , sendEmailRateLimitOptions
     , encTools
     , exotelToken = sec.exotelToken
