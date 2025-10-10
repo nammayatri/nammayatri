@@ -406,7 +406,7 @@ confirm personId merchantId mbQuoteId ticketQuantity childTicketQuantity bookLat
       else do
         void $ FRFSTicketService.postFrfsQuoteV2ConfirmUtil (Just personId, merchantId) quoteId (API.FRFSQuoteConfirmReq {offered = categorySelectionReq, ticketQuantity = ticketQuantity, childTicketQuantity = childTicketQuantity}) crisSdkResponse
   where
-    processOnSelect :: (FRFSConfirmFlow m r, HasFlowEnv m r '["offerSKUConfig" ::: Text]) => DOnSelect -> Maybe Bool -> m ()
+    processOnSelect :: (FRFSConfirmFlow m r) => DOnSelect -> Maybe Bool -> m ()
     processOnSelect onSelectReq mbSingleMode = do
       (merchant', quote') <- DOnSelect.validateRequest onSelectReq
       DOnSelect.onSelect onSelectReq merchant' quote'
