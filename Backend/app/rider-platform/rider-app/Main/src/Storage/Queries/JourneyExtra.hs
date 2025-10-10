@@ -17,7 +17,7 @@ import Kernel.External.Encryption
 import Kernel.Prelude
 import Kernel.Types.Error
 import qualified Kernel.Types.Id
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime, logDebug)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Journey as Beam
 import qualified Storage.Queries.FRFSTicket as QTicket
@@ -33,6 +33,7 @@ findAllActiveByRiderId riderId = do
 
 findAllByRiderId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Kernel.Types.Id.Id Domain.Types.Person.Person -> Maybe Integer -> Maybe Integer -> Maybe UTCTime -> Maybe UTCTime -> [DJ.JourneyStatus] -> Maybe Bool -> m [DJ.Journey]
 findAllByRiderId (Kernel.Types.Id.Id personId) mbLimit mbOffset mbFromDate mbToDate mbJourneyStatusList mbIsPaymentSuccess = do
+  logDebug $ "myrides getJourneyList PersonId: " <> show personId <> " mbLimit: " <> show mbLimit <> " mbOffset: " <> show mbOffset <> " mbFromDate: " <> show mbFromDate <> " mbToDate: " <> show mbToDate <> " mbJourneyStatusList: " <> show mbJourneyStatusList <> " mbIsPaymentSuccess: " <> show mbIsPaymentSuccess
   let limit' = maybe 10 fromIntegral mbLimit
   let offset' = maybe 0 fromIntegral mbOffset
       mbJourneyStatus = Just <$> mbJourneyStatusList
@@ -44,14 +45,8 @@ findAllByRiderId (Kernel.Types.Id.Id personId) mbLimit mbOffset mbFromDate mbToD
               <> ([Se.Is Beam.createdAt $ Se.LessThanOrEq (fromJust mbToDate) | isJust mbToDate])
               <> ([Se.Is Beam.status $ Se.Not $ Se.In [Just DJ.NEW, Just DJ.INITIATED]])
               <> ([Se.Is Beam.status $ Se.In mbJourneyStatus | not (null mbJourneyStatus)])
-              <> [ Se.Or
-                     [ Se.Is Beam.isPublicTransportIncluded $ Se.Eq (Just False),
-                       Se.And
-                         [ Se.Is Beam.isPublicTransportIncluded $ Se.Eq (Just True),
-                           Se.Is Beam.isPaymentSuccess $ Se.Eq mbIsPaymentSuccess
-                         ]
-                     ]
-                 ]
+              <> ([Se.Is Beam.isPublicTransportIncluded $ Se.Not $ Se.Eq (Just False)])
+              <> ([Se.Is Beam.isPaymentSuccess $ Se.Eq mbIsPaymentSuccess])
           )
       ]
       (Se.Desc Beam.createdAt)
