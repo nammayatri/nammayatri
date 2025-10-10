@@ -622,6 +622,8 @@ library
       Storage.Queries.FleetOwnerInformationExtra
       Storage.Queries.FleetRCAssociationExtra
       Storage.Queries.Geometry
+      Storage.Queries.HyperVergeVerificationExtra
+      Storage.Queries.IdfyVerificationExtra
       Storage.Queries.ImageExtra
       Storage.Queries.InterCityTravelCities
       Storage.Queries.InvoiceExtra

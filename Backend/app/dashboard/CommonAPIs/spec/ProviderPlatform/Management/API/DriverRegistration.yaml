@@ -129,6 +129,20 @@ apis:
         type: "[DriverDocument]"
       migrate:
         userActionType: ApiAuth DRIVER_OFFER_BPP_MANAGEMENT DRIVERS DRIVER_DOCUMENT_INFO
+  - GET: # VerificationStatusAPI
+      endpoint: /verificationStatus
+      auth: ApiAuthV2
+      mandatoryQuery:
+        - driverId: Id Driver
+        - fromDate: UTCTime
+        - toDate: UTCTime
+        - limit: Int
+        - offset: Int
+        - documentType: DocumentType
+        - serviceType: ServiceType
+      response:
+        type: VerificationStatusListResponse
+
   - POST: # UpdateDocumentAPI
       endpoint: /documents/update
       auth: ApiAuthV2
@@ -390,8 +404,20 @@ types:
     - documentImageId: Id Image
     - businessLicenseNumber: Text
     - licenseExpiry: UTCTime
+  VerificationStatusListResponse:
+    - verificationStatuses: [VerificationStatusItem]
+  VerificationStatusItem:
+    - documentType: DocumentType
+    - status: Text
+    - verificationMessage: Maybe Text
+    - retryCount: Int
+    - requestId: Maybe Text
+    - createdAt: UTCTime
   PanType:
       enum: "INDIVIDUAL,BUSINESS"
+  ServiceType:
+    enum: "HyperVerge,Idfy"
+    derive: "HttpInstance"
   ApproveDetails:
     - enum: "RC RCApproveDetails, DL DLApproveDetails, UploadProfile (Id Image), SSNApprove Text, ProfilePhoto (Id Image), VehiclePermit VPermitApproveDetails, VehiclePUC VPUCApproveDetails, VehicleInsurance VInsuranceApproveDetails, VehicleFitnessCertificate FitnessApproveDetails, VehicleInspectionForm VInspectionApproveDetails, Pan PanApproveDetails, NOC NOCApproveDetails, BusinessLicenseImg BusinessLicenseApproveDetails"
 
