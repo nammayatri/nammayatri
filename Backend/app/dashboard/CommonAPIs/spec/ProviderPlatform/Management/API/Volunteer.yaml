@@ -1,0 +1,55 @@
+module: Volunteer
+
+apis:
+  - POST: # CreateVolunteerAPI
+      endpoint: /create
+      auth: ApiAuthV2
+      request:
+        type: CreateVolunteerReq
+      response:
+        type: CreateVolunteerRes
+
+  - GET: # VolunteerListAPI
+      endpoint: /list
+      auth: ApiAuthV2
+      query:
+        - limit: Int
+        - offset: Int
+        - volunteerId: Text
+        - place: Text
+        - vendorId: Text
+      response:
+        type: VolunteerListRes
+
+  - POST: # UpdateVolunteerAPI
+      endpoint: /{volunteerId}/update
+      auth: ApiAuthV2
+      params:
+        volunteerId: Text
+      request:
+        type: UpdateVolunteerReq
+      response:
+        type: APISuccess
+
+types:
+  CreateVolunteerReq:
+    - place: Text
+    - vendorId: Maybe Text
+    - isActive: Maybe Bool
+    - derive: "'HideSecrets"
+  CreateVolunteerRes:
+    - volunteerId: Text
+  VolunteerListRes:
+    - volunteers: [VolunteerListItem]
+  VolunteerListItem:
+    - volunteerId: Text
+    - place: Text
+    - vendorId: Maybe Text
+    - isActive: Maybe Bool
+  UpdateVolunteerReq:
+    - vendorId: Maybe Text
+    - isActive: Maybe Bool
+    - derive: "'HideSecrets"
+
+extraOperations:
+  - EXTRA_API_COMMON_TYPES_FILE

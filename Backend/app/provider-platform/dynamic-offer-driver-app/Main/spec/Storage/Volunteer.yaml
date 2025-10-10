@@ -12,6 +12,7 @@ Volunteer:
   fields:
     id : Id Volunteer
     vendorId : Maybe Text
+    isActive: Maybe Bool
     place : Text
     createdAt : UTCTime
     updatedAt : UTCTime
@@ -19,6 +20,9 @@ Volunteer:
   constraints:
     id: PrimaryKey
     place: SecondaryKey
+
+  default:
+    isActive: "false"
 
   queries:
     findById:
@@ -35,3 +39,10 @@ Volunteer:
         and:
           - id
           - vendorId
+
+    findAllByMerchantOpCityId:
+      kvFunction: findAllWithKV
+      where: merchantOperatingCityId
+
+  extraOperations:
+    - EXTRA_QUERY_FILE

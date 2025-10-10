@@ -2,9 +2,10 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
-module Storage.Queries.Volunteer where
+module Storage.Queries.Volunteer (module Storage.Queries.Volunteer, module ReExport) where
 
 import qualified Data.Text
+import qualified Domain.Types.MerchantOperatingCity
 import qualified Domain.Types.Volunteer
 import Kernel.Beam.Functions
 import Kernel.External.Encryption
@@ -15,12 +16,18 @@ import qualified Kernel.Types.Id
 import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
 import qualified Sequelize as Se
 import qualified Storage.Beam.Volunteer as Beam
+import Storage.Queries.VolunteerExtra as ReExport
 
 create :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Types.Volunteer.Volunteer -> m ())
 create = createWithKV
 
 createMany :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => ([Domain.Types.Volunteer.Volunteer] -> m ())
 createMany = traverse_ create
+
+findAllByMerchantOpCityId ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity) -> m [Domain.Types.Volunteer.Volunteer])
+findAllByMerchantOpCityId merchantOperatingCityId = do findAllWithKV [Se.Is Beam.merchantOperatingCityId $ Se.Eq (Kernel.Types.Id.getId <$> merchantOperatingCityId)]
 
 findAllByPlace :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Data.Text.Text -> m [Domain.Types.Volunteer.Volunteer])
 findAllByPlace place = do findAllWithKV [Se.Is Beam.place $ Se.Eq place]
@@ -41,6 +48,7 @@ updateByPrimaryKey (Domain.Types.Volunteer.Volunteer {..}) = do
   _now <- getCurrentTime
   updateWithKV
     [ Se.Set Beam.createdAt createdAt,
+      Se.Set Beam.isActive isActive,
       Se.Set Beam.place place,
       Se.Set Beam.updatedAt _now,
       Se.Set Beam.vendorId vendorId,
@@ -48,29 +56,3 @@ updateByPrimaryKey (Domain.Types.Volunteer.Volunteer {..}) = do
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId)
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
-
-instance FromTType' Beam.Volunteer Domain.Types.Volunteer.Volunteer where
-  fromTType' (Beam.VolunteerT {..}) = do
-    pure $
-      Just
-        Domain.Types.Volunteer.Volunteer
-          { createdAt = createdAt,
-            id = Kernel.Types.Id.Id id,
-            place = place,
-            updatedAt = updatedAt,
-            vendorId = vendorId,
-            merchantId = Kernel.Types.Id.Id <$> merchantId,
-            merchantOperatingCityId = Kernel.Types.Id.Id <$> merchantOperatingCityId
-          }
-
-instance ToTType' Beam.Volunteer Domain.Types.Volunteer.Volunteer where
-  toTType' (Domain.Types.Volunteer.Volunteer {..}) = do
-    Beam.VolunteerT
-      { Beam.createdAt = createdAt,
-        Beam.id = Kernel.Types.Id.getId id,
-        Beam.place = place,
-        Beam.updatedAt = updatedAt,
-        Beam.vendorId = vendorId,
-        Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,
-        Beam.merchantOperatingCityId = Kernel.Types.Id.getId <$> merchantOperatingCityId
-      }
