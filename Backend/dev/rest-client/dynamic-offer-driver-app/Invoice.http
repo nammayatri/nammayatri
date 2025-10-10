@@ -1,0 +1,15 @@
+@token2 = {{driver-offer-bpp-auto-token2}}
+@driver-offer-bpp-host = http://localhost:8016
+@juspay_admin = {{bpp-dashboard/token/NAMMA_YATRI_PARTNER/juspay_admin}}
+
+# @name healthcheck
+GET {{driver-offer-bpp-host}}/ui
+
+###
+
+# @name getInvoice
+
+GET {{driver-offer-bpp-host}}/ui/invoice
+content-type: application/json
+token: {{juspay_admin}}
+

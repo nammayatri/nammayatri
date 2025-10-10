@@ -1,0 +1,29 @@
+imports: {}
+
+
+module: Invoice
+
+apis:
+  - GET:
+      endpoint: /invoice
+      auth: TokenAuth PROVIDER_TYPE
+      query:
+        - fromDate: UTCTime
+        - toDate: UTCTime
+        - rcNo: Text
+      response:
+        type: "[InvoiceRes]"
+
+types:
+  InvoiceRes:
+    - date: UTCTime
+    - driverName: Text
+    - vehicleNumber: Text
+    - chargeableDistance: HighPrecMeters
+    - fare: Int
+    - rideStartTime: UTCTime
+    - rideEndTime: UTCTime
+    - shortRideId: Text
+    - source: Text
+    - destination: Text
+    - chargeableDistanceWithUnit: Distance
