@@ -469,14 +469,24 @@ changePasswordByAdmin _ personId req = do
   pure Success
 
 changeMobileNumberByAdmin ::
-  (BeamFlow m r, EncFlow m r) =>
+  (BeamFlow m r, EncFlow m r, HasFlowEnv m r '["updateRestrictedBppRoles" ::: [Text]]) =>
   TokenInfo ->
   Id DP.Person ->
   ChangeMobileNumberByAdminReq ->
   m APISuccess
 changeMobileNumberByAdmin _ personId req = do
   runRequestValidation validateChangeMobileNumberReq req
-  void $ QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  role <- QRole.findById person.roleId >>= fromMaybeM (RoleNotFound person.roleId.getId)
+  updateRestrictedBppRoles <- asks (.updateRestrictedBppRoles)
+  when (role.name `elem` updateRestrictedBppRoles) $
+    throwError $ InvalidRequest $ "Cannot update phone number for role: " <> role.name
+
+  mbExistingPerson <- QP.findByMobileNumber req.newMobileNumber person.mobileCountryCode
+  whenJust mbExistingPerson $ \existingPerson ->
+    when (existingPerson.id /= personId) $
+      throwError (InvalidRequest "Phone already registered")
+
   encMobileNum <- encrypt req.newMobileNumber
   QP.updatePersonMobile personId encMobileNum
   QPerson.updatePersonMobileByFleetRole personId.getId encMobileNum
