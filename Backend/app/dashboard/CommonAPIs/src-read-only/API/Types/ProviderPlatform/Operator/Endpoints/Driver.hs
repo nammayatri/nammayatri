@@ -56,7 +56,7 @@ instance Kernel.Types.HideSecrets.HideSecrets DriverOperationHubRequest where
   hideSecrets = Kernel.Prelude.identity
 
 data FilteredOperatorAnalyticsRes = FilteredOperatorAnalyticsRes
-  { totalApplicationCount :: Kernel.Prelude.Int,
+  { activeDriver :: Kernel.Prelude.Int,
     driverEnabled :: Kernel.Prelude.Int,
     greaterThanOneRide :: Kernel.Prelude.Int,
     greaterThanTenRide :: Kernel.Prelude.Int,

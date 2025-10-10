@@ -226,7 +226,7 @@ types:
     - acceptanceRate: Double
 
   FilteredOperatorAnalyticsRes:
-    - totalApplicationCount: Int
+    - activeDriver: Int
     - driverEnabled: Int
     - greaterThanOneRide: Int
     - greaterThanTenRide: Int

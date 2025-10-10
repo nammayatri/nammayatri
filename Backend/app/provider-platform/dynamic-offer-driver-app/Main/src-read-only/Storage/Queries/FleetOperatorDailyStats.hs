@@ -43,14 +43,16 @@ updateAcceptationRequestCountByFleetOperatorIdAndDate acceptationRequestCount fl
 
 updateByFleetOperatorIdAndDate ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Types.Common.Meters -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Text -> Data.Time.Calendar.Day -> m ())
-updateByFleetOperatorIdAndDate totalRatingCount totalRatingScore driverFirstSubscription inspectionCompleted acceptationRequestCount totalRequestCount customerCancellationCount driverCancellationCount totalDistance totalCompletedRides totalEarning fleetOperatorId merchantLocalDate = do
+  (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Types.Common.Meters -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Text -> Data.Time.Calendar.Day -> m ())
+updateByFleetOperatorIdAndDate totalRatingCount totalRatingScore driverFirstSubscription inspectionCompleted rejectedRequestCount pulledRequestCount acceptationRequestCount totalRequestCount customerCancellationCount driverCancellationCount totalDistance totalCompletedRides totalEarning fleetOperatorId merchantLocalDate = do
   _now <- getCurrentTime
   updateOneWithKV
     [ Se.Set Beam.totalRatingCount totalRatingCount,
       Se.Set Beam.totalRatingScore totalRatingScore,
       Se.Set Beam.driverFirstSubscription driverFirstSubscription,
       Se.Set Beam.inspectionCompleted inspectionCompleted,
+      Se.Set Beam.rejectedRequestCount rejectedRequestCount,
+      Se.Set Beam.pulledRequestCount pulledRequestCount,
       Se.Set Beam.acceptationRequestCount acceptationRequestCount,
       Se.Set Beam.totalRequestCount totalRequestCount,
       Se.Set Beam.customerCancellationCount customerCancellationCount,
@@ -73,6 +75,23 @@ updateCustomerCancellationCountByFleetOperatorIdAndDate customerCancellationCoun
   _now <- getCurrentTime
   updateOneWithKV
     [Se.Set Beam.customerCancellationCount customerCancellationCount, Se.Set Beam.updatedAt _now]
+    [ Se.And
+        [ Se.Is Beam.fleetOperatorId $ Se.Eq fleetOperatorId,
+          Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate
+        ]
+    ]
+
+updateDistanceEarningAndCompletedRidesByFleetOperatorIdAndDate ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Prelude.Maybe Kernel.Types.Common.Meters -> Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Text -> Data.Time.Calendar.Day -> m ())
+updateDistanceEarningAndCompletedRidesByFleetOperatorIdAndDate totalDistance totalEarning totalCompletedRides fleetOperatorId merchantLocalDate = do
+  _now <- getCurrentTime
+  updateOneWithKV
+    [ Se.Set Beam.totalDistance (getTotalDistance totalDistance),
+      Se.Set Beam.totalEarning totalEarning,
+      Se.Set Beam.totalCompletedRides totalCompletedRides,
+      Se.Set Beam.updatedAt _now
+    ]
     [ Se.And
         [ Se.Is Beam.fleetOperatorId $ Se.Eq fleetOperatorId,
           Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate
@@ -116,57 +135,38 @@ updateInspectionCompletedByFleetOperatorIdAndDate inspectionCompleted fleetOpera
         ]
     ]
 
-updateTotalCompletedRidesByFleetOperatorIdAndDate :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Text -> Data.Time.Calendar.Day -> m ())
-updateTotalCompletedRidesByFleetOperatorIdAndDate totalCompletedRides fleetOperatorId merchantLocalDate = do
+updatePulledRequestCountByFleetOperatorIdAndDate :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Text -> Data.Time.Calendar.Day -> m ())
+updatePulledRequestCountByFleetOperatorIdAndDate pulledRequestCount fleetOperatorId merchantLocalDate = do
   _now <- getCurrentTime
   updateOneWithKV
-    [Se.Set Beam.totalCompletedRides totalCompletedRides, Se.Set Beam.updatedAt _now]
+    [Se.Set Beam.pulledRequestCount pulledRequestCount, Se.Set Beam.updatedAt _now]
     [ Se.And
         [ Se.Is Beam.fleetOperatorId $ Se.Eq fleetOperatorId,
           Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate
         ]
     ]
 
-updateTotalDistanceByFleetOperatorIdAndDate :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Types.Common.Meters -> Kernel.Prelude.Text -> Data.Time.Calendar.Day -> m ())
-updateTotalDistanceByFleetOperatorIdAndDate totalDistance fleetOperatorId merchantLocalDate = do
+updateRejectedRequestCountByFleetOperatorIdAndDate :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Text -> Data.Time.Calendar.Day -> m ())
+updateRejectedRequestCountByFleetOperatorIdAndDate rejectedRequestCount fleetOperatorId merchantLocalDate = do
   _now <- getCurrentTime
   updateOneWithKV
-    [Se.Set Beam.totalDistance (getTotalDistance totalDistance), Se.Set Beam.updatedAt _now]
+    [Se.Set Beam.rejectedRequestCount rejectedRequestCount, Se.Set Beam.updatedAt _now]
     [ Se.And
         [ Se.Is Beam.fleetOperatorId $ Se.Eq fleetOperatorId,
           Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate
         ]
     ]
 
-updateTotalEarningByFleetOperatorIdAndDate ::
+updateTotalRatingCountAndTotalRatingScoreByFleetOperatorIdAndDate ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
-  (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney -> Kernel.Prelude.Text -> Data.Time.Calendar.Day -> m ())
-updateTotalEarningByFleetOperatorIdAndDate totalEarning fleetOperatorId merchantLocalDate = do
+  (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Text -> Data.Time.Calendar.Day -> m ())
+updateTotalRatingCountAndTotalRatingScoreByFleetOperatorIdAndDate totalRatingCount totalRatingScore fleetOperatorId merchantLocalDate = do
   _now <- getCurrentTime
   updateOneWithKV
-    [Se.Set Beam.totalEarning totalEarning, Se.Set Beam.updatedAt _now]
-    [ Se.And
-        [ Se.Is Beam.fleetOperatorId $ Se.Eq fleetOperatorId,
-          Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate
-        ]
+    [ Se.Set Beam.totalRatingCount totalRatingCount,
+      Se.Set Beam.totalRatingScore totalRatingScore,
+      Se.Set Beam.updatedAt _now
     ]
-
-updateTotalRatingCountByFleetOperatorIdAndDate :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Text -> Data.Time.Calendar.Day -> m ())
-updateTotalRatingCountByFleetOperatorIdAndDate totalRatingCount fleetOperatorId merchantLocalDate = do
-  _now <- getCurrentTime
-  updateOneWithKV
-    [Se.Set Beam.totalRatingCount totalRatingCount, Se.Set Beam.updatedAt _now]
-    [ Se.And
-        [ Se.Is Beam.fleetOperatorId $ Se.Eq fleetOperatorId,
-          Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate
-        ]
-    ]
-
-updateTotalRatingScoreByFleetOperatorIdAndDate :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Text -> Data.Time.Calendar.Day -> m ())
-updateTotalRatingScoreByFleetOperatorIdAndDate totalRatingScore fleetOperatorId merchantLocalDate = do
-  _now <- getCurrentTime
-  updateOneWithKV
-    [Se.Set Beam.totalRatingScore totalRatingScore, Se.Set Beam.updatedAt _now]
     [ Se.And
         [ Se.Is Beam.fleetOperatorId $ Se.Eq fleetOperatorId,
           Se.Is Beam.merchantLocalDate $ Se.Eq merchantLocalDate
@@ -200,6 +200,8 @@ updateByPrimaryKey (Domain.Types.FleetOperatorDailyStats.FleetOperatorDailyStats
       Se.Set Beam.fleetOperatorId fleetOperatorId,
       Se.Set Beam.inspectionCompleted inspectionCompleted,
       Se.Set Beam.merchantLocalDate merchantLocalDate,
+      Se.Set Beam.pulledRequestCount pulledRequestCount,
+      Se.Set Beam.rejectedRequestCount rejectedRequestCount,
       Se.Set Beam.totalCompletedRides totalCompletedRides,
       Se.Set Beam.totalDistance (getTotalDistance totalDistance),
       Se.Set Beam.totalEarning totalEarning,
@@ -228,6 +230,8 @@ instance FromTType' Beam.FleetOperatorDailyStats Domain.Types.FleetOperatorDaily
             id = id,
             inspectionCompleted = inspectionCompleted,
             merchantLocalDate = merchantLocalDate,
+            pulledRequestCount = pulledRequestCount,
+            rejectedRequestCount = rejectedRequestCount,
             totalCompletedRides = totalCompletedRides,
             totalDistance = Kernel.Prelude.fmap (Kernel.Types.Common.Meters . GHC.Float.double2Int) totalDistance,
             totalEarning = totalEarning,
@@ -253,6 +257,8 @@ instance ToTType' Beam.FleetOperatorDailyStats Domain.Types.FleetOperatorDailySt
         Beam.id = id,
         Beam.inspectionCompleted = inspectionCompleted,
         Beam.merchantLocalDate = merchantLocalDate,
+        Beam.pulledRequestCount = pulledRequestCount,
+        Beam.rejectedRequestCount = rejectedRequestCount,
         Beam.totalCompletedRides = totalCompletedRides,
         Beam.totalDistance = getTotalDistance totalDistance,
         Beam.totalEarning = totalEarning,

@@ -16,6 +16,8 @@ FleetOperatorDailyStats:
     totalRatingScore : Maybe Int
     driverFirstSubscription : Maybe Int
     inspectionCompleted : Maybe Int
+    rejectedRequestCount : Maybe Int
+    pulledRequestCount : Maybe Int
     acceptationRequestCount : Maybe Int
     totalRequestCount : Maybe Int
     customerCancellationCount : Maybe Int
@@ -47,19 +49,13 @@ FleetOperatorDailyStats:
 
     updateByFleetOperatorIdAndDate:
       kvFunction: updateOneWithKV
-      params: [totalRatingCount, totalRatingScore, driverFirstSubscription, inspectionCompleted, acceptationRequestCount, totalRequestCount, customerCancellationCount, driverCancellationCount, totalDistance, totalCompletedRides, totalEarning]
+      params: [totalRatingCount, totalRatingScore, driverFirstSubscription, inspectionCompleted, rejectedRequestCount, pulledRequestCount, acceptationRequestCount, totalRequestCount, customerCancellationCount, driverCancellationCount, totalDistance, totalCompletedRides, totalEarning]
       where:
         and: [fleetOperatorId, merchantLocalDate]
 
-    updateTotalRatingCountByFleetOperatorIdAndDate:
+    updateTotalRatingCountAndTotalRatingScoreByFleetOperatorIdAndDate:
       kvFunction: updateOneWithKV
-      params: [totalRatingCount]
-      where:
-        and: [fleetOperatorId, merchantLocalDate]
-
-    updateTotalRatingScoreByFleetOperatorIdAndDate:
-      kvFunction: updateOneWithKV
-      params: [totalRatingScore]
+      params: [totalRatingCount, totalRatingScore]
       where:
         and: [fleetOperatorId, merchantLocalDate]
 
@@ -87,6 +83,18 @@ FleetOperatorDailyStats:
       where:
         and: [fleetOperatorId, merchantLocalDate]
 
+    updateRejectedRequestCountByFleetOperatorIdAndDate:
+      kvFunction: updateOneWithKV
+      params: [rejectedRequestCount]
+      where:
+        and: [fleetOperatorId, merchantLocalDate]
+
+    updatePulledRequestCountByFleetOperatorIdAndDate:
+      kvFunction: updateOneWithKV
+      params: [pulledRequestCount]
+      where:
+        and: [fleetOperatorId, merchantLocalDate]
+
     updateCustomerCancellationCountByFleetOperatorIdAndDate:
       kvFunction: updateOneWithKV
       params: [customerCancellationCount]
@@ -99,20 +107,8 @@ FleetOperatorDailyStats:
       where:
         and: [fleetOperatorId, merchantLocalDate]
 
-    updateTotalDistanceByFleetOperatorIdAndDate:
+    updateDistanceEarningAndCompletedRidesByFleetOperatorIdAndDate:
       kvFunction: updateOneWithKV
-      params: [totalDistance]
-      where:
-        and: [fleetOperatorId, merchantLocalDate]
-
-    updateTotalCompletedRidesByFleetOperatorIdAndDate:
-      kvFunction: updateOneWithKV
-      params: [totalCompletedRides]
-      where:
-        and: [fleetOperatorId, merchantLocalDate]
-
-    updateTotalEarningByFleetOperatorIdAndDate:
-      kvFunction: updateOneWithKV
-      params: [totalEarning]
+      params: [totalDistance, totalEarning, totalCompletedRides]
       where:
         and: [fleetOperatorId, merchantLocalDate]

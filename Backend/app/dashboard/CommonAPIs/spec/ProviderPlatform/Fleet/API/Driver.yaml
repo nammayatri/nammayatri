@@ -1077,6 +1077,38 @@ apis:
               type: DriverLocationListReq
             response:
               type: DriverLocationListResp
+  - GET:
+      endpoint: /fleet/dashboard/analytics/allTime
+      auth: ApiAuthV2
+      response:
+        type: AllTimeFleetAnalyticsRes
+      helperApi:
+        - GET:
+            endpoint: /{fleetOwnerId}/fleet/dashboard/analytics/allTime
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+            response:
+              type: AllTimeFleetAnalyticsRes
+  - GET:
+      endpoint: /fleet/dashboard/analytics
+      auth: ApiAuthV2
+      mandatoryQuery:
+        - from: Day
+        - to: Day
+      response:
+        type: FilteredFleetAnalyticsRes
+      helperApi:
+        - GET:
+            endpoint: /{fleetOwnerId}/fleet/dashboard/analytics
+            auth: ApiAuthV2
+            params:
+              fleetOwnerId: Text
+            mandatoryQuery:
+              - from: Day
+              - to: Day
+            response:
+              type: FilteredFleetAnalyticsRes
 types:
   NearbyDriverReq:
     - point: LatLong
@@ -1533,6 +1565,22 @@ types:
     - lon: Maybe Double
     - timeStamp: UTCTime
     - accuracy: Maybe Double
+  AllTimeFleetAnalyticsRes:
+    - activeVehicle: Int
+    - completedRides: Int
+    - totalActiveDrivers: Int
+    - currentOnlineDrivers: Int
+    - averageDriverRatings: Double
+  FilteredFleetAnalyticsRes:
+    - totalEarnings: Int
+    - completedRides: Int
+    - totalDistance: Double
+    - totalRideRequest: Int
+    - acceptationRequest: Int
+    - pulledRequest: Int
+    - rejectedRequest: Int
+    - driverCancelled: Int
+    - customerCancelled: Int
 
 extraOperations:
   - EXTRA_API_TYPES_FILE

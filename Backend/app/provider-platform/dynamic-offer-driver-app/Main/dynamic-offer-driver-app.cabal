@@ -554,11 +554,13 @@ library
       Storage.Clickhouse.Estimate
       Storage.Clickhouse.FleetDriverAssociation
       Storage.Clickhouse.FleetOperatorAssociation
+      Storage.Clickhouse.FleetOperatorDailyStats
       Storage.Clickhouse.FleetOperatorStats
       Storage.Clickhouse.Location
       Storage.Clickhouse.Ride
       Storage.Clickhouse.RideDetails
       Storage.Clickhouse.SearchRequestForDriver
+      Storage.Clickhouse.Vehicle
       Storage.Queries.AadhaarCardExtra
       Storage.Queries.BackgroundVerificationExtra
       Storage.Queries.Booking.Internal

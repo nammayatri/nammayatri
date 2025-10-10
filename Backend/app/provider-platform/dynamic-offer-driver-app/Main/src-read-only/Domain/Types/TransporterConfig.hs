@@ -130,7 +130,6 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     enableDashboardSms :: Kernel.Prelude.Bool,
     enableExistingVehicleInBulkUpload :: Kernel.Prelude.Bool,
     enableFaceVerification :: Kernel.Prelude.Bool,
-    enableFleetOperatorDashboardAnalytics :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableOverchargingBlocker :: Kernel.Prelude.Bool,
     enableTollCrossedNotifications :: Kernel.Prelude.Bool,
     enableUdfForOffers :: Kernel.Prelude.Bool,
@@ -257,6 +256,7 @@ data AadhaarImageResizeConfig = AadhaarImageResizeConfig {height :: Kernel.Prelu
 data AnalyticsConfig = AnalyticsConfig
   { allowCacheDriverFlowStatus :: Kernel.Prelude.Bool,
     earningsWindowSize :: Kernel.Prelude.Int,
+    enableFleetOperatorDashboardAnalytics :: Kernel.Prelude.Bool,
     maxOnlineDurationDays :: Kernel.Prelude.Int,
     onlineDurationCalculateFrom :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     weekStartMode :: Kernel.Prelude.Int

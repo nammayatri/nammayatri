@@ -61,6 +61,8 @@ module Domain.Action.ProviderPlatform.Fleet.Driver
     getDriverFleetAssignments,
     getDriverFleetOperatorInfo,
     postDriverFleetLocationList,
+    getDriverFleetDashboardAnalyticsAllTime,
+    getDriverFleetDashboardAnalytics,
   )
 where
 
@@ -70,6 +72,7 @@ import qualified "dashboard-helper-api" Dashboard.Common as DCommon
 import qualified "dashboard-helper-api" Dashboard.ProviderPlatform.Management.DriverRegistration as Registration
 import qualified Data.ByteString.Lazy as LBS
 import Data.Text hiding (elem, filter, find, length, map, null)
+import Data.Time (Day)
 import qualified Domain.Action.Dashboard.Common as DCommon
 import "lib-dashboard" Domain.Action.Dashboard.Person as DPerson
 import Domain.Action.ProviderPlatform.CheckVerification (checkFleetOwnerVerification)
@@ -419,6 +422,18 @@ getDriverFleetStatus merchantShortId opCity apiTokenInfo mbFleetOwnerId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   (mbFleetOwnerId', requestorId) <- getMbFleetOwnerAndRequestorIdMerchantBased apiTokenInfo mbFleetOwnerId
   Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetStatus) requestorId mbFleetOwnerId'
+
+getDriverFleetDashboardAnalyticsAllTime :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Flow Common.AllTimeFleetAnalyticsRes
+getDriverFleetDashboardAnalyticsAllTime merchantShortId opCity apiTokenInfo = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  fleetOwnerId <- getFleetOwnerId apiTokenInfo.personId.getId Nothing
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetDashboardAnalyticsAllTime) fleetOwnerId
+
+getDriverFleetDashboardAnalytics :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Day -> Day -> Flow Common.FilteredFleetAnalyticsRes
+getDriverFleetDashboardAnalytics merchantShortId opCity apiTokenInfo from to = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  fleetOwnerId <- getFleetOwnerId apiTokenInfo.personId.getId Nothing
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetDashboardAnalytics) fleetOwnerId from to
 
 ---------------------------------------------------------------------------------------------------------------------------------
 ----------------------------------------------- READ LAYER (Multi Fleet Level) --------------------------------------------------
