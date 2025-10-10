@@ -86,6 +86,7 @@ updateByPrimaryKey (Domain.Types.JourneyLeg.JourneyLeg {..}) = do
   updateWithKV
     [ Se.Set Beam.agencyGtfsId (agency >>= (.gtfsId)),
       Se.Set Beam.agencyName (agency <&> (.name)),
+      Se.Set Beam.busLocationData (Just $ toJSON busLocationData),
       Se.Set Beam.changedBusesInSequence changedBusesInSequence,
       Se.Set Beam.distance ((.value) <$> distance),
       Se.Set Beam.distanceUnit ((.unit) <$> distance),
