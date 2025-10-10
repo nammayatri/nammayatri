@@ -40,6 +40,7 @@ instance FromTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
             estimatedMinFare = estimatedMinFare,
             finalBoardedBusNumber = finalBoardedBusNumber,
             finalBoardedBusNumberSource = finalBoardedBusNumberSource,
+            finalBoardedBusServiceTierType = finalBoardedBusServiceTierType,
             finalBoardedDepotNo = finalBoardedDepotNo,
             finalBoardedScheduleNo = finalBoardedScheduleNo,
             finalBoardedWaybillId = finalBoardedWaybillId,
@@ -67,6 +68,7 @@ instance FromTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
             toArrivalTime = toArrivalTime,
             toDepartureTime = toDepartureTime,
             toStopDetails = Just $ Kernel.External.MultiModal.Interface.Types.MultiModalStopDetails toStopCode toStopPlatformCode toStopName toStopGtfsId,
+            userBookedBusServiceTierType = userBookedBusServiceTierType,
             createdAt = createdAt,
             updatedAt = updatedAt
           }
@@ -86,6 +88,7 @@ instance ToTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
         Beam.estimatedMinFare = estimatedMinFare,
         Beam.finalBoardedBusNumber = finalBoardedBusNumber,
         Beam.finalBoardedBusNumberSource = finalBoardedBusNumberSource,
+        Beam.finalBoardedBusServiceTierType = finalBoardedBusServiceTierType,
         Beam.finalBoardedDepotNo = finalBoardedDepotNo,
         Beam.finalBoardedScheduleNo = finalBoardedScheduleNo,
         Beam.finalBoardedWaybillId = finalBoardedWaybillId,
@@ -119,6 +122,7 @@ instance ToTType' Beam.JourneyLeg Domain.Types.JourneyLeg.JourneyLeg where
         Beam.toStopGtfsId = (toStopDetails >>= (.gtfsId)) <&> Domain.Types.FRFSRouteDetails.gtfsIdtoDomainCode,
         Beam.toStopName = toStopDetails >>= (.name),
         Beam.toStopPlatformCode = toStopDetails >>= (.platformCode),
+        Beam.userBookedBusServiceTierType = userBookedBusServiceTierType,
         Beam.createdAt = createdAt,
         Beam.updatedAt = updatedAt
       }

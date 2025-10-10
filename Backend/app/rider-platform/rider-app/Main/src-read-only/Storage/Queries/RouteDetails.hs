@@ -47,6 +47,11 @@ updateRoute routeGtfsId routeCode routeLongName routeShortName journeyLegId = do
     ]
     [Se.Is Beam.journeyLegId $ Se.Eq journeyLegId]
 
+updateUserBookedRouteShortName :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Text -> m ())
+updateUserBookedRouteShortName userBookedRouteShortName journeyLegId = do
+  _now <- getCurrentTime
+  updateWithKV [Se.Set Beam.userBookedRouteShortName userBookedRouteShortName, Se.Set Beam.updatedAt _now] [Se.Is Beam.journeyLegId $ Se.Eq journeyLegId]
+
 findByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Kernel.Types.Id.Id Domain.Types.RouteDetails.RouteDetails -> m (Maybe Domain.Types.RouteDetails.RouteDetails))
 findByPrimaryKey id = do findOneWithKV [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]
 
@@ -87,6 +92,7 @@ updateByPrimaryKey (Domain.Types.RouteDetails.RouteDetails {..}) = do
       Se.Set Beam.toStopPlatformCode toStopPlatformCode,
       Se.Set Beam.trackingStatus trackingStatus,
       Se.Set Beam.trackingStatusLastUpdatedAt trackingStatusLastUpdatedAt,
+      Se.Set Beam.userBookedRouteShortName userBookedRouteShortName,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),
       Se.Set Beam.merchantOperatingCityId (Kernel.Types.Id.getId <$> merchantOperatingCityId),
       Se.Set Beam.createdAt createdAt,
