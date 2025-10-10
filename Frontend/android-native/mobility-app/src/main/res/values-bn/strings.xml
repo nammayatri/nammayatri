@@ -82,4 +82,10 @@
     <string name="stops">%1$d স্টপস</string>
     <string name="round_trip">রাউন্ড ট্রিপ</string>
     <string name="points">পয়েন্ট</string>
+    <string name="pickup_instruction_fallback">পিকআপ নির্দেশাবলী উপলব্ধ। দয়া করে আপনার বার্তা দেখুন।</string>
+    <string name="pickup_instruction_error">পিকআপ নির্দেশাবলী প্রদর্শনে ত্রুটি</string>
+    <string name="pickup_instruction_none">কোনো পিকআপ নির্দেশাবলী নেই</string>
+    <string name="pickup_instruction_play_voice">ভয়েস নির্দেশনা চালান</string>
+    <string name="pickup_instruction_audio_unavailable_suffix">(অডিও অনুপলব্ধ)</string>
+    <string name="pickup_instruction_default_text">দয়া করে আমাকে গেট ৪ থেকে পিকআপ করুন। নীল সাইনবোর্ডটি দেখুন এবং সেখানে অপেক্ষা করুন।</string>
 </resources>

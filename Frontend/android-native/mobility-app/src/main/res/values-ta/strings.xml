@@ -88,4 +88,10 @@
     <string name="stops">%1$d நிறுத்தங்கள்</string>
     <string name="round_trip">சுற்றுலா பயணம்</string>
     <string name="points">புள்ளிகள்</string>
+    <string name="pickup_instruction_fallback">பிக்கப் வழிமுறைகள் கிடைக்கின்றன. தயவுசெய்து உங்கள் செய்திகளைச் சரிபார்க்கவும்.</string>
+    <string name="pickup_instruction_error">பிக்கப் வழிமுறைகளை காட்சிப்படுத்துவதில் பிழை</string>
+    <string name="pickup_instruction_none">பிக்கப் வழிமுறைகள் கிடைக்கவில்லை</string>
+    <string name="pickup_instruction_play_voice">குரல் வழிமுறைகளை இயக்கவும்</string>
+    <string name="pickup_instruction_audio_unavailable_suffix">(ஆடியோ கிடைக்கவில்லை)</string>
+    <string name="pickup_instruction_default_text">கேட் 4-ல் என்னை பிக்கப் செய்யவும். நீல குறியீட்டைத் தேடுங்கள் மற்றும் அங்கு காத்திருங்கள்.</string>
 </resources>
