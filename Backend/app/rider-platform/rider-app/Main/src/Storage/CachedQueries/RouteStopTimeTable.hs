@@ -35,6 +35,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Storage.CachedQueries.OTPRest.Common as OTPRestCommon
 import qualified Storage.GraphqlQueries.RouteStopTimeTable as Queries
+import qualified System.Environment as Se
 import Tools.Error
 
 modifyCodesToGTFS :: IntegratedBPPConfig -> Text -> Text
@@ -94,7 +95,7 @@ findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCode
 
 cacheRouteStopTimeInfo :: (CacheFlow m r, MonadFlow m) => Text -> [Text] -> [RouteStopTimeTable] -> Bool -> m ()
 cacheRouteStopTimeInfo stopCode routeCodes routeStopInfo needOnlyOneTrip = do
-  let expTime = 60 * 60
+  expTime <- liftIO $ fromMaybe 3600 . (>>= readMaybe) <$> Se.lookupEnv "ROUTE_STOP_TIMETABLE_CACHE_EXPIRY_SECONDS"
   let idKey = routeTimeTableKey stopCode routeCodes needOnlyOneTrip
   Hedis.setExp idKey routeStopInfo expTime
 

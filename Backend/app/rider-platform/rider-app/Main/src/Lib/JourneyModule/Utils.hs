@@ -405,8 +405,7 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
   validRoutes <- measureLatency (getRouteCodesFromTo fromStopCode toStopCode integratedBppConfig) "getRouteCodesFromTo"
   let (_, currentTimeIST) = getISTTimeInfo currentTime
 
-  routeStopTimings' <- measureLatency (fetchLiveTimings validRoutes fromStopCode currentTime integratedBppConfig mid mocid vc useLiveBusData (vc == Enums.SUBWAY && calledForSubwaySingleMode)) ("fetchLiveTimings" <> show validRoutes <> " fromStopCode: " <> show fromStopCode <> " toStopCode: " <> show toStopCode)
-  let routeStopTimings = filter (\rst -> ((getISTArrivalTime rst.timeOfArrival currentTime >= currentTimeIST) || vc == Enums.BUS)) routeStopTimings'
+  routeStopTimings <- measureLatency (fetchLiveTimings validRoutes fromStopCode currentTime integratedBppConfig mid mocid vc useLiveBusData (vc == Enums.SUBWAY && calledForSubwaySingleMode)) ("fetchLiveTimings" <> show validRoutes <> " fromStopCode: " <> show fromStopCode <> " toStopCode: " <> show toStopCode)
 
   freqMap <- measureLatency (loadRouteFrequencies routeStopTimings) "loadRouteFrequencies"
 
@@ -421,7 +420,10 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
                 else
                   let aTime = nominalDiffTimeToSeconds $ diffUTCTime (getISTArrivalTime a.timeOfArrival currentTime) currentTimeIST
                       bTime = nominalDiffTimeToSeconds $ diffUTCTime (getISTArrivalTime b.timeOfArrival currentTime) currentTimeIST
-                   in compare aTime bTime
+                      -- If either timing has already passed (negative time), treat it as next day (add 24 hours)
+                      aTimeAdjusted = if aTime < 0 then aTime + 86400 else aTime -- 86400 seconds = 24 hours
+                      bTimeAdjusted = if bTime < 0 then bTime + 86400 else bTime
+                   in compare aTimeAdjusted bTimeAdjusted
           )
           routeStopTimings
 
