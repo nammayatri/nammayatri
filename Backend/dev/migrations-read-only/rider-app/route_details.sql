@@ -267,6 +267,10 @@ ALTER TABLE atlas_app.route_details ADD COLUMN alternate_route_ids text[] ;
 
 
 
+------- SQL updates -------
+
+ALTER TABLE atlas_app.route_details ADD COLUMN user_booked_route_short_name text ;
+
 
 ------- SQL updates -------
 
