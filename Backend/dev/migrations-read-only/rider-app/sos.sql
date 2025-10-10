@@ -23,3 +23,8 @@ ALTER TABLE atlas_app.sos ADD PRIMARY KEY ( id, ride_id);
 
 ALTER TABLE atlas_app.sos DROP CONSTRAINT sos_pkey;
 ALTER TABLE atlas_app.sos ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.sos ADD COLUMN media_files text[] ;

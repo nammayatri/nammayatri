@@ -393,8 +393,10 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
   uploadedMediaFiles <- forM mediaFiles $ \mediaFile ->
     CQMF.findById mediaFile identifier >>= fromMaybeM (FileDoesNotExist mediaFile.getId)
   person <- issueHandle.findPersonById personId >>= fromMaybeM (PersonNotFound personId.getId)
-  let mediaFileUrls = map (.url) uploadedMediaFiles
-      mocId = fromMaybe person.merchantOperatingCityId ((.merchantOperatingCityId) <$> mbRide <|> (.merchantOperatingCityId) <$> mbFRFSTicketBooking)
+  let mocId = fromMaybe person.merchantOperatingCityId ((.merchantOperatingCityId) <$> mbRide <|> (.merchantOperatingCityId) <$> mbFRFSTicketBooking)
+  moCity <-
+    issueHandle.findMOCityById mocId
+      >>= fromMaybeM (MerchantOperatingCityNotFound $ "MerchantOpCityId - " <> show mocId)
   language <- getLanguage personId mbLanguage issueHandle
   issueConfig <- CQI.findByMerchantOpCityId mocId identifier >>= fromMaybeM (IssueConfigNotFound mocId.getId)
   let shouldCreateTicket = isNothing createTicket || fromJust createTicket
@@ -413,15 +415,12 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
   when isLOFeedback $
     fork "notify on slack" $ do
       sosAlertsTopicARN <- asks (.sosAlertsTopicARN)
-      moCity <-
-        issueHandle.findMOCityById mocId
-          >>= fromMaybeM (MerchantOperatingCityNotFound $ "MerchantOpCityId - " <> show mocId)
       msg <- generateMsg moCity mbRide mbRideInfoRes person description
       let message = createJsonMessage msg
       void $ L.runIO $ Slack.publishMessage sosAlertsTopicARN message
   _ <- QIR.create issueReport
   when shouldCreateTicket $ do
-    ticket <- buildTicket issueReport category mbOption mbRide mbRideInfoRes mbFRFSTicketBooking person mocId config mediaFileUrls now issueHandle
+    ticket <- buildTicket issueReport category mbOption mbRide mbRideInfoRes mbFRFSTicketBooking person moCity config uploadedMediaFiles now issueHandle
     ticketResponse <- try @_ @SomeException (issueHandle.createTicket merchantId mocId ticket)
     case ticketResponse of
       Right ticketResponse' -> do
@@ -535,10 +534,11 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
               <> show moCity.city
               <> "\n"
 
-    buildTicket :: (EncFlow m r, BeamFlow m r) => D.IssueReport -> D.IssueCategory -> Maybe D.IssueOption -> Maybe Ride -> Maybe RideInfoRes -> Maybe FRFSTicketBooking -> Person -> Id MerchantOperatingCity -> MerchantConfig -> [Text] -> UTCTime -> ServiceHandle m -> m TIT.CreateTicketReq
-    buildTicket issue category mbOption mbRide mbRideInfoRes mbFRFSTicketBooking person moCityId merchantCfg mediaFileUrls now iHandle = do
-      info <- buildRideInfo moCityId now mbRide mbRideInfoRes mbFRFSTicketBooking person iHandle
+    buildTicket :: (EncFlow m r, BeamFlow m r) => D.IssueReport -> D.IssueCategory -> Maybe D.IssueOption -> Maybe Ride -> Maybe RideInfoRes -> Maybe FRFSTicketBooking -> Person -> MerchantOperatingCity -> MerchantConfig -> [D.MediaFile] -> UTCTime -> ServiceHandle m -> m TIT.CreateTicketReq
+    buildTicket issue category mbOption mbRide mbRideInfoRes mbFRFSTicketBooking person moCity merchantCfg uploadedMediaFiles now iHandle = do
+      info <- buildRideInfo moCity now mbRide mbRideInfoRes mbFRFSTicketBooking person iHandle
       phoneNumber <- mapM decrypt person.mobileNumber
+      let dashboardMediaFileUrls = mapMaybe (generateDashboardFileUrl merchantCfg moCity) uploadedMediaFiles
       return $
         TIT.CreateTicketReq
           { category = category.category,
@@ -547,7 +547,7 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
             queue = merchantCfg.kaptureQueue,
             issueId = Just issue.id.getId,
             issueDescription = description,
-            mediaFiles = Just mediaFileUrls,
+            mediaFiles = Just dashboardMediaFileUrls,
             name = Just $ fromMaybe "" person.firstName <> " " <> fromMaybe "" person.lastName,
             phoneNo = phoneNumber,
             personId = person.id.getId,
@@ -556,12 +556,8 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
             becknIssueId
           }
 
-    buildRideInfo :: (BeamFlow m r, EncFlow m r) => Id MerchantOperatingCity -> UTCTime -> Maybe Ride -> Maybe RideInfoRes -> Maybe FRFSTicketBooking -> Person -> ServiceHandle m -> m TIT.RideInfo
-    buildRideInfo moCityId now mbRide mbRideInfoRes mbFRFSTicketBooking person iHandle = do
-      moCity <-
-        iHandle.findMOCityById moCityId
-          >>= fromMaybeM (MerchantOperatingCityNotFound $ "MerchantOpCityId - " <> show moCityId)
-
+    buildRideInfo :: (BeamFlow m r, EncFlow m r) => MerchantOperatingCity -> UTCTime -> Maybe Ride -> Maybe RideInfoRes -> Maybe FRFSTicketBooking -> Person -> ServiceHandle m -> m TIT.RideInfo
+    buildRideInfo moCity now mbRide mbRideInfoRes mbFRFSTicketBooking person iHandle = do
       customerPhoneNumber <- mapM decrypt person.mobileNumber
       let customerFullName = buildCustomerName person.firstName person.middleName person.lastName
           cityName = show moCity.city
@@ -686,6 +682,15 @@ createIssueReport (personId, merchantId) mbLanguage Common.IssueReportReq {..} i
     castIdentifierToClassification = \case
       DRIVER -> TIT.DRIVER
       CUSTOMER -> TIT.CUSTOMER
+
+    generateDashboardFileUrl :: MerchantConfig -> MerchantOperatingCity -> D.MediaFile -> Maybe Text
+    generateDashboardFileUrl merchantConfig _moCity mediaFile =
+      case (merchantConfig.dashboardMediaFileUrlPattern, mediaFile.s3FilePath) of
+        (Just filePattern, Just s3FilePath) ->
+          Just $
+            filePattern
+              & T.replace "<FILE_PATH>" s3FilePath
+        _ -> Nothing
 
 issueInfo ::
   ( EsqDBReplicaFlow m r,

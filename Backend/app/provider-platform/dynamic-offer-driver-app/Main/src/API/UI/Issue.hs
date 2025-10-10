@@ -146,7 +146,8 @@ castMOCity moCity =
   Common.MerchantOperatingCity
     { id = cast moCity.id,
       city = moCity.city,
-      merchantId = cast moCity.merchantId
+      merchantId = cast moCity.merchantId,
+      merchantShortId = ShortId moCity.merchantShortId.getShortId
     }
 
 castBookingById :: Id Common.Booking -> Flow (Maybe Common.Booking)
@@ -276,6 +277,7 @@ buildMerchantConfig _merchantId merchantOpCityId mbPersonId = do
     Common.MerchantConfig
       { mediaFileSizeUpperLimit = transporterConfig.mediaFileSizeUpperLimit,
         mediaFileUrlPattern = transporterConfig.mediaFileUrlPattern,
+        dashboardMediaFileUrlPattern = Nothing,
         kaptureDisposition = transporterConfig.kaptureDisposition,
         kaptureQueue = transporterConfig.kaptureQueue,
         counterPartyUrl = appBackendBapInternal.url,

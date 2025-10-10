@@ -278,7 +278,8 @@ castMOCity moCity =
   Common.MerchantOperatingCity
     { id = cast moCity.id,
       city = moCity.city,
-      merchantId = cast moCity.merchantId
+      merchantId = cast moCity.merchantId,
+      merchantShortId = ShortId moCity.merchantShortId.getShortId
     }
 
 castRideInfo :: Id Common.Merchant -> Id Common.MerchantOperatingCity -> Id Common.Ride -> Flow Common.RideInfoRes
@@ -384,6 +385,7 @@ buildMerchantConfig merchantId merchantOpCityId _mbPersonId = do
     MerchantConfig
       { mediaFileSizeUpperLimit = merchant.mediaFileSizeUpperLimit,
         mediaFileUrlPattern = merchant.mediaFileUrlPattern,
+        dashboardMediaFileUrlPattern = riderConfig.dashboardMediaFileUrlPattern,
         kaptureDisposition = riderConfig.kaptureConfig.disposition,
         kaptureQueue = riderConfig.kaptureConfig.queue,
         counterPartyUrl = merchant.driverOfferBaseUrl,
