@@ -3,6 +3,7 @@
 
 module Domain.Types.JourneyLeg where
 
+import qualified API.Types.UI.RiderLocation
 import qualified BecknV2.FRFS.Enums
 import Data.Aeson
 import qualified Domain.Types.Common
@@ -19,6 +20,7 @@ import qualified Tools.Beam.UtilsTH
 
 data JourneyLeg = JourneyLeg
   { agency :: Kernel.Prelude.Maybe Kernel.External.MultiModal.Interface.Types.MultiModalAgency,
+    busLocationData :: [API.Types.UI.RiderLocation.BusLocation],
     changedBusesInSequence :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     distance :: Kernel.Prelude.Maybe Kernel.Types.Common.Distance,
     duration :: Kernel.Prelude.Maybe Kernel.Types.Common.Seconds,
