@@ -403,8 +403,7 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
   validRoutes <- getRouteCodesFromTo fromStopCode toStopCode integratedBppConfig
   let (_, currentTimeIST) = getISTTimeInfo currentTime
 
-  routeStopTimings' <- measureLatency (fetchLiveTimings validRoutes fromStopCode currentTime integratedBppConfig mid mocid vc useLiveBusData (vc == Enums.SUBWAY && calledForSubwaySingleMode)) ("fetchLiveTimings" <> show validRoutes <> " fromStopCode: " <> show fromStopCode <> " toStopCode: " <> show toStopCode)
-  let routeStopTimings = filter (\rst -> ((getISTArrivalTime rst.timeOfArrival currentTime >= currentTimeIST) || vc == Enums.BUS)) routeStopTimings'
+  routeStopTimings <- measureLatency (fetchLiveTimings validRoutes fromStopCode currentTime integratedBppConfig mid mocid vc useLiveBusData (vc == Enums.SUBWAY && calledForSubwaySingleMode)) ("fetchLiveTimings" <> show validRoutes <> " fromStopCode: " <> show fromStopCode <> " toStopCode: " <> show toStopCode)
 
   freqMap <- loadRouteFrequencies routeStopTimings
 
