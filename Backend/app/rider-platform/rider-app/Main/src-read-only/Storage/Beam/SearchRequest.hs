@@ -27,6 +27,7 @@ data SearchRequestT f = SearchRequestT
     availablePaymentMethods :: B.C f [Kernel.Prelude.Text],
     backendAppVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     backendConfigVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    busLocationData :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
     clientBundleVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     clientConfigVersion :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     clientManufacturer :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
