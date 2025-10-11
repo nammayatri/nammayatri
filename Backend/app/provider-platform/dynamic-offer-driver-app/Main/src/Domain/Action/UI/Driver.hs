@@ -774,7 +774,7 @@ getInformation (personId, merchantId, merchantOpCityId) mbClientId toss tnant' c
 setActivity :: (CacheFlow m r, EsqDBFlow m r) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Bool -> Maybe DriverInfo.DriverMode -> m APISuccess.APISuccess
 setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
   isLocked <- withLockDriverIdForSetActivity personId
-  unless isLocked $ throwError DriverActivityUpdateInProgress
+  unless isLocked $ throwError $ DriverActivityUpdateInProgress personId.getId
   finally
     ( do
         void $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)

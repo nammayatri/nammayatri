@@ -19,11 +19,13 @@ import qualified Domain.Types.Common as DriverInfo
 import qualified Domain.Types.Person as DP
 import Environment
 import EulerHS.Prelude
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified Storage.Queries.DriverInformation as QDriverInformation
+import Tools.Error
 
 data DriverModeReq = DriverModeReq
   { driverId :: Id DP.Person,
@@ -40,5 +42,21 @@ setDriverMode apiKey req = do
   locationTrackingServiceKey <- asks (.locationTrackingServiceKey)
   unless (apiKey == Just locationTrackingServiceKey) $ do
     throwError $ InvalidRequest "Invalid API key"
-  void $ QDriverInformation.updateActivity isActive (Just mode) driverId
-  pure Success
+
+  isLocked <- withLockDriverIdForSetActivity driverId
+  unless isLocked $ do
+    throwError $ DriverActivityUpdateInProgress driverId.getId
+  finally
+    ( do
+        void $ QDriverInformation.updateActivity isActive (Just mode) driverId
+        pure Success
+    )
+    ( Redis.unlockRedis (buildSetActivityLockKey driverId)
+    )
+  where
+    withLockDriverIdForSetActivity driverId' = do
+      isLockSuccessful <- Redis.tryLockRedis (buildSetActivityLockKey driverId') 5
+      return isLockSuccessful
+
+    buildSetActivityLockKey :: Id DP.Person -> Text
+    buildSetActivityLockKey driverId' = "Driver:SetActivity:" <> show driverId'
