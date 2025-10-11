@@ -204,7 +204,7 @@ data DriverError
   | DriverAlreadyLinkedWithVehicle Text
   | FleetOwnerAccountBlocked
   | AccountBlocked
-  | DriverActivityUpdateInProgress
+  | DriverActivityUpdateInProgress Text
   deriving (Eq, Show, IsBecknAPIError)
 
 instanceExceptionWithParent 'HTTPException ''DriverError
@@ -224,7 +224,7 @@ instance IsBaseError DriverError where
   toMessage (DriverAlreadyLinkedWithVehicle vehicleNo) = Just $ "Driver is already linked with vehicle " <> vehicleNo
   toMessage FleetOwnerAccountBlocked = Just "Fleet Owner account has been blocked."
   toMessage AccountBlocked = Just "Account has been blocked."
-  toMessage DriverActivityUpdateInProgress = Just "Driver activity update is already in progress. Please try again later."
+  toMessage (DriverActivityUpdateInProgress driverId) = Just $ "Driver activity update is already in progress for driverId: " <> driverId <> ". Please try again later."
 
 instance IsHTTPError DriverError where
   toErrorCode = \case
@@ -242,7 +242,7 @@ instance IsHTTPError DriverError where
     DriverEmailAlreadyExists _ -> "DRIVER_EMAIL_ALREADY_EXISTS"
     FleetOwnerAccountBlocked -> "FLEET_OWNER_ACCOUNT_BLOCKED"
     AccountBlocked -> "ACCOUNT_BLOCKED"
-    DriverActivityUpdateInProgress -> "DRIVER_ACTIVITY_UPDATE_IN_PROGRESS"
+    DriverActivityUpdateInProgress _ -> "DRIVER_ACTIVITY_UPDATE_IN_PROGRESS"
   toHttpCode = \case
     DriverAccountDisabled -> E403
     DriverWithoutVehicle _ -> E400
@@ -258,7 +258,7 @@ instance IsHTTPError DriverError where
     DriverEmailAlreadyExists _ -> E400
     FleetOwnerAccountBlocked -> E403
     AccountBlocked -> E403
-    DriverActivityUpdateInProgress -> E409
+    DriverActivityUpdateInProgress _ -> E409
 
 instance IsAPIError DriverError where
   toPayload (DriverAccountBlocked errorPayload) = toJSON errorPayload
