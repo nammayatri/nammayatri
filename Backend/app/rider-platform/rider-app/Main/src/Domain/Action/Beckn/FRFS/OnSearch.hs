@@ -67,6 +67,7 @@ import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.PersonStats as QPStats
 import qualified Storage.Queries.StopFare as QRSF
 import Tools.Error
+import qualified Tools.Metrics.BAPMetrics as Metrics
 
 data DOnSearch = DOnSearch
   { bppSubscriberId :: Text,
@@ -171,12 +172,14 @@ onSearch ::
   ( EsqDBFlow m r,
     EsqDBReplicaFlow m r,
     CacheFlow m r,
-    HasShortDurationRetryCfg r c
+    HasShortDurationRetryCfg r c,
+    Metrics.HasBAPMetrics m r
   ) =>
   DOnSearch ->
   ValidatedDOnSearch ->
   m ()
 onSearch onSearchReq validatedReq = do
+  Metrics.finishMetrics Metrics.SEARCH_FRFS validatedReq.merchant.name validatedReq.search.id.getId validatedReq.search.merchantOperatingCityId.getId
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity validatedReq.search
   case integratedBPPConfig.providerConfig of
     DIBC.ONDC _ -> do
@@ -281,6 +284,7 @@ onSearchHelper onSearchReq validatedReq integratedBPPConfig = do
 
 filterQuotes :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r) => DIBC.IntegratedBPPConfig -> [Quote.FRFSQuote] -> Maybe DJourneyLeg.JourneyLeg -> m (Maybe Quote.FRFSQuote)
 filterQuotes _ [] _ = return Nothing
+filterQuotes _ _ Nothing = return Nothing
 filterQuotes integratedBPPConfig quotes (Just journeyLeg) = do
   filteredQuotes <- case journeyLeg.serviceTypes of
     Just serviceTypes -> do
@@ -289,20 +293,9 @@ filterQuotes integratedBPPConfig quotes (Just journeyLeg) = do
           & filter
             ( \quote ->
                 maybe False (\serviceTier -> serviceTier.serviceTierType `elem` serviceTypes) (JourneyTypes.getServiceTierFromQuote quote)
-                  &&
-                  -- TODO :: Can be used across all, but as we don't want to break others we are doing this only for ONDC
-                  case integratedBPPConfig.providerConfig of
-                    DIBC.ONDC config ->
-                      (config.routeBasedQuoteSelection /= Just True)
-                        || maybe
-                          True
-                          ( \(routeStationsJson :: [API.FRFSRouteStationsAPI], firstRouteDetail) ->
-                              any (\route -> Just route.code == firstRouteDetail.routeCode) routeStationsJson
-                          )
-                          ((,) <$> (decodeFromText =<< quote.routeStationsJson) <*> (listToMaybe journeyLeg.routeDetails))
-                    _ -> True
+                  && isRouteBasedQuote quote
             )
-    Nothing -> return quotes
+    Nothing -> return $ filter isRouteBasedQuote quotes
   let finalQuotes = if null filteredQuotes then quotes else filteredQuotes
   case journeyLeg.mode of
     DTripTypes.Bus -> do
@@ -319,7 +312,19 @@ filterQuotes integratedBPPConfig quotes (Just journeyLeg) = do
             )
             finalQuotes
     _ -> return $ Just $ minimumBy (\quote1 quote2 -> compare quote1.price.amount.getHighPrecMoney quote2.price.amount.getHighPrecMoney) finalQuotes
-filterQuotes _ _ Nothing = return Nothing
+  where
+    isRouteBasedQuote quote =
+      -- TODO :: Can be used across all, but as we don't want to break others we are doing this only for ONDC
+      case integratedBPPConfig.providerConfig of
+        DIBC.ONDC config ->
+          (config.routeBasedQuoteSelection /= Just True)
+            || maybe
+              True
+              ( \(routeStationsJson :: [API.FRFSRouteStationsAPI], firstRouteDetail) ->
+                  any (\route -> Just route.code == firstRouteDetail.routeCode) routeStationsJson
+              )
+              ((,) <$> (decodeFromText =<< quote.routeStationsJson) <*> (listToMaybe journeyLeg.routeDetails))
+        _ -> True
 
 mkQuotes :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r, HasShortDurationRetryCfg r c) => DOnSearch -> ValidatedDOnSearch -> DQuote -> m Quote.FRFSQuote
 mkQuotes dOnSearch ValidatedDOnSearch {..} DQuote {..} = do

@@ -30,7 +30,6 @@ import Kernel.Utils.Servant.SignatureAuth
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.BecknConfig as CQBC
 import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
-import qualified Tools.Metrics as Metrics
 import TransactionLogs.PushLogs
 
 type API = Spec.OnConfirmAPI
@@ -53,7 +52,6 @@ onConfirm _ req = withFlowHandlerAPI $ do
     case dOnConfirmReq of
       Just onConfirmReq -> do
         (merchant, booking) <- DOnConfirm.validateRequest onConfirmReq
-        Metrics.finishMetrics Metrics.CONFIRM_FRFS merchant.name transaction_id booking.merchantOperatingCityId.getId
         fork "onConfirm request processing" $
           Redis.whenWithLockRedis (onConfirmProcessingLockKey onConfirmReq.bppOrderId) 60 $
             DOnConfirm.onConfirm merchant booking onConfirmReq

@@ -391,7 +391,7 @@ getNandiTripInfo ::
   IntegratedBPPConfig ->
   Text ->
   m (Maybe TripInfoResponse)
-getNandiTripInfo integratedBPPConfig tripId = do
+getNandiTripInfo integratedBPPConfig tripId = IM.withInMemCache ["NandiTripInfo", integratedBPPConfig.id.getId, tripId] 3600 $ do
   baseUrl <- MM.getOTPRestServiceReq integratedBPPConfig.merchantId integratedBPPConfig.merchantOperatingCityId
   let updatedTripId = integratedBPPConfig.feedKey <> ":" <> tripId
   Flow.getNandiTripInfo baseUrl updatedTripId

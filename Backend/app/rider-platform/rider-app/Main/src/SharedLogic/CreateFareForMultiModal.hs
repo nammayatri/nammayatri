@@ -25,11 +25,13 @@ import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config
 import qualified Kernel.Storage.Hedis as Hedis
+import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Payment.Storage.Beam.BeamFlow
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import Storage.Beam.Payment ()
+import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.VendorSplitDetails as QVendorSplitDetails
 import qualified Tools.Payment as Payment
@@ -176,3 +178,41 @@ vendorSplitDetailSplitTypeToPaymentSplitType :: VendorSplitDetails.SplitType -> 
 vendorSplitDetailSplitTypeToPaymentSplitType = \case
   VendorSplitDetails.FIXED -> Payment.FIXED
   VendorSplitDetails.FLEXIBLE -> Payment.FLEXIBLE
+
+createBasketFromBookings ::
+  ( EsqDBReplicaFlow m r,
+    BeamFlow m r,
+    EncFlow m r,
+    ServiceFlow m r
+  ) =>
+  [FTBooking.FRFSTicketBooking] ->
+  Id Merchant.Merchant ->
+  Id DMOC.MerchantOperatingCity ->
+  Payment.PaymentServiceType ->
+  m [Payment.Basket]
+createBasketFromBookings allJourneyBookings merchantId merchantOperatingCityId paymentServiceType = do
+  let dummyBasket =
+        [ Payment.Basket
+            { Payment.id = "no_basket",
+              Payment.unitPrice = 0,
+              Payment.quantity = 0
+            }
+        ]
+  case allJourneyBookings of
+    [booking] -> do
+      -- offer valid only for single mode booking (not handled for multimodal right now)
+      quote <- QFRFSQuote.findById booking.quoteId >>= fromMaybeM (QuoteNotFound booking.quoteId.getId)
+      mbOfferSKUProductId <- Payment.fetchOfferSKUConfig merchantId merchantOperatingCityId Nothing paymentServiceType
+      case (mbOfferSKUProductId, quote.quantity, quote.childTicketQuantity) of
+        (_, 0, _) -> return dummyBasket -- offer valid only if adult tickets are more than or equal to 1
+        (Just offerSKUProductId, _, _) -> do
+          let unitPrice = quote.price.amount / fromIntegral quote.quantity
+          return $
+            [ Payment.Basket
+                { Payment.id = offerSKUProductId,
+                  Payment.unitPrice = unitPrice,
+                  Payment.quantity = quote.quantity
+                }
+            ]
+        _ -> return dummyBasket
+    _ -> return dummyBasket

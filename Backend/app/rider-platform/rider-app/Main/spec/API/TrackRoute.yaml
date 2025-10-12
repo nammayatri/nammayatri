@@ -47,7 +47,8 @@ apis:
         integratedBppConfigId: Id IntegratedBPPConfig
         currentLat: Double
         currentLon: Double
-        selectedStopId: Text
+        selectedSourceStopCode: Text
+        selectedDestinationStopCode: Text
         maxBuses: Int
       params:
         routeCode: Text

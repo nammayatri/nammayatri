@@ -54,8 +54,9 @@ validateRequest DOnSelect {..} = do
   merchant <- QMerch.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   return (merchant, quote)
 
-onSelect :: FRFSConfirmFlow m r => DOnSelect -> Merchant.Merchant -> DQuote.FRFSQuote -> Maybe Bool -> m ()
+onSelect :: (FRFSConfirmFlow m r) => DOnSelect -> Merchant.Merchant -> DQuote.FRFSQuote -> Maybe Bool -> m ()
 onSelect onSelectReq merchant quote isSingleMode = do
+  Metrics.finishMetrics Metrics.SELECT_FRFS merchant.name onSelectReq.transactionId quote.merchantOperatingCityId.getId
   whenJust (onSelectReq.validTill) (\validity -> void $ Qquote.updateValidTillById quote.id validity)
   Qquote.updatePriceAndEstimatedPriceById quote.id onSelectReq.totalPrice (Just quote.price)
   QJourneyLeg.updateEstimatedFaresBySearchId (Just onSelectReq.totalPrice.amount) (Just onSelectReq.totalPrice.amount) (Just quote.searchId.getId)

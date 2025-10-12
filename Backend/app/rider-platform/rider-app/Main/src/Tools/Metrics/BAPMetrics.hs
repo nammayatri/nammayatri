@@ -28,7 +28,7 @@ import Kernel.Types.Common
 import Prometheus as P
 import Tools.Metrics.BAPMetrics.Types as Reexport
 
-data MetricsAction = INIT | CONFIRM | SEARCH_FRFS | SELECT_FRFS | INIT_FRFS | CONFIRM_FRFS | CANCEL_FRFS
+data MetricsAction = INIT | CONFIRM | SEARCH_FRFS | SELECT_FRFS | INIT_FRFS | CONFIRM_FRFS | CANCEL_FRFS | CREATE_ORDER_FRFS
 
 deriving instance Show MetricsAction
 
@@ -151,6 +151,7 @@ startMetrics' bmContainer action merchantName version txnId merchantOperatingCit
         INIT_FRFS -> bmContainer.initDurationFRFS
         CONFIRM_FRFS -> bmContainer.confirmDurationFRFS
         CANCEL_FRFS -> bmContainer.cancelDurationFRFS
+        CREATE_ORDER_FRFS -> bmContainer.createOrderDurationFRFS
       redisExTime = getSeconds bmContainer.searchDurationTimeout
   startTime <- getCurrentTime
   Redis.setExp (durationKey txnId action) startTime (redisExTime + 1) -- a bit more time to
@@ -174,6 +175,7 @@ finishMetrics' bmContainer action merchantName version txnId merchantOperatingCi
         INIT_FRFS -> bmContainer.initDurationFRFS
         CONFIRM_FRFS -> bmContainer.confirmDurationFRFS
         CANCEL_FRFS -> bmContainer.cancelDurationFRFS
+        CREATE_ORDER_FRFS -> bmContainer.createOrderDurationFRFS
       redisExTime = getSeconds bmContainer.searchDurationTimeout
   endTime <- getCurrentTime
   Redis.whenWithLockRedis (durationLockKey txnId action) redisExTime $ do

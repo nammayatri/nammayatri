@@ -152,11 +152,11 @@ postMultimodalInitiate ::
 postMultimodalInitiate (_personId, _merchantId) journeyId = do
   runAction $ do
     journeyLegs <- QJourneyLeg.getJourneyLegs journeyId
-    addAllLegs journeyId (Just journeyLegs) journeyLegs
+    JMU.measureLatency (addAllLegs journeyId (Just journeyLegs) journeyLegs) "addAllLegs"
     journey <- JM.getJourney journeyId
     JM.updateJourneyStatus journey Domain.Types.Journey.INITIATED
-    legs <- JM.getAllLegsInfo journey.riderId journeyId
-    generateJourneyInfoResponse journey legs
+    legs <- JMU.measureLatency (JM.getAllLegsInfo journey.riderId journeyId) "JM.getAllLegsInfo"
+    JMU.measureLatency (generateJourneyInfoResponse journey legs) "generateJourneyInfoResponse"
   where
     runAction action = do
       if journeyId.getId == ""
@@ -1009,14 +1009,6 @@ postMultimodalTicketVerify (_mbPersonId, merchantId) opCity req = do
         JMTypes.CRIS -> throwError $ InvalidRequest "CRIS provider not implemented yet"
         _ -> throwError $ InvalidRequest "Invalid provider"
 
--- Helper function to mark all sub-legs as completed for FRFS legs
-markAllSubLegsCompleted :: DJourneyLeg.JourneyLeg -> UTCTime -> Environment.Flow ()
-markAllSubLegsCompleted journeyLeg trackingStatusUpdateTime = do
-  let subLegOrders = map (\r -> fromMaybe 1 r.subLegOrder) journeyLeg.routeDetails
-  case subLegOrders of
-    [] -> markLegStatus (Just JL.Completed) (Just JMState.Finished) journeyLeg Nothing trackingStatusUpdateTime
-    orders -> mapM_ (\subOrder -> markLegStatus (Just JL.Completed) (Just JMState.Finished) journeyLeg (Just subOrder) trackingStatusUpdateTime) orders
-
 postMultimodalComplete ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
     Kernel.Types.Id.Id Domain.Types.Merchant.Merchant
@@ -1026,11 +1018,7 @@ postMultimodalComplete ::
 postMultimodalComplete (_, _) journeyId = do
   journey <- JM.getJourney journeyId
   legs <- QJourneyLeg.getJourneyLegs journeyId
-  cancelOngoingTaxiLegs legs
-  now <- getCurrentTime
-  mapM_ (\leg -> markAllSubLegsCompleted leg now) legs
-  updatedLegStatus <- JM.getAllLegsStatus journey
-  checkAndMarkTerminalJourneyStatus journey updatedLegStatus
+  updatedLegStatus <- JM.markJourneyComplete journey legs
   updatedJourney <- JM.getJourney journeyId
   generateJourneyStatusResponse updatedJourney updatedLegStatus
 
@@ -1278,7 +1266,8 @@ postMultimodalOrderChangeStops _ journeyId legOrder req = do
             depotNo = reqJourneyLeg.finalBoardedDepotNo,
             waybillId = reqJourneyLeg.finalBoardedWaybillId,
             scheduleNo = reqJourneyLeg.finalBoardedScheduleNo,
-            updateSource = reqJourneyLeg.finalBoardedBusNumberSource
+            updateSource = reqJourneyLeg.finalBoardedBusNumberSource,
+            serviceTierType = reqJourneyLeg.finalBoardedBusServiceTierType
           }
   newJourneyLeg <-
     JMTypes.mkJourneyLeg
@@ -1292,6 +1281,7 @@ postMultimodalOrderChangeStops _ journeyId legOrder req = do
       Nothing
       mbGates
       (Just finalBoardedBus)
+      reqJourneyLeg.userBookedBusServiceTierType
 
   QJourneyLegMapping.updateIsDeleted True reqJourneyLeg.id
   QJourneyLegExtra.create newJourneyLeg
@@ -1672,7 +1662,8 @@ postMultimodalOrderSublegSetOnboardedVehicleDetails (_mbPersonId, _merchantId) j
         DJourneyLeg.finalBoardedBusNumberSource = Just DJourneyLeg.UserActivated,
         DJourneyLeg.finalBoardedDepotNo = vehicleLiveRouteInfo.depot,
         DJourneyLeg.finalBoardedWaybillId = vehicleLiveRouteInfo.waybillId,
-        DJourneyLeg.finalBoardedScheduleNo = vehicleLiveRouteInfo.scheduleNo
+        DJourneyLeg.finalBoardedScheduleNo = vehicleLiveRouteInfo.scheduleNo,
+        DJourneyLeg.finalBoardedBusServiceTierType = Just vehicleLiveRouteInfo.serviceType
       }
   updatedLegs <- JM.getAllLegsInfo journey.riderId journeyId
   generateJourneyInfoResponse journey updatedLegs

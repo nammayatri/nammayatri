@@ -96,6 +96,7 @@ updateByPrimaryKey (Domain.Types.JourneyLeg.JourneyLeg {..}) = do
       Se.Set Beam.estimatedMinFare estimatedMinFare,
       Se.Set Beam.finalBoardedBusNumber finalBoardedBusNumber,
       Se.Set Beam.finalBoardedBusNumberSource finalBoardedBusNumberSource,
+      Se.Set Beam.finalBoardedBusServiceTierType finalBoardedBusServiceTierType,
       Se.Set Beam.finalBoardedDepotNo finalBoardedDepotNo,
       Se.Set Beam.finalBoardedScheduleNo finalBoardedScheduleNo,
       Se.Set Beam.finalBoardedWaybillId finalBoardedWaybillId,
@@ -128,6 +129,7 @@ updateByPrimaryKey (Domain.Types.JourneyLeg.JourneyLeg {..}) = do
       Se.Set Beam.toStopGtfsId ((toStopDetails >>= (.gtfsId)) <&> Domain.Types.FRFSRouteDetails.gtfsIdtoDomainCode),
       Se.Set Beam.toStopName (toStopDetails >>= (.name)),
       Se.Set Beam.toStopPlatformCode (toStopDetails >>= (.platformCode)),
+      Se.Set Beam.userBookedBusServiceTierType userBookedBusServiceTierType,
       Se.Set Beam.createdAt createdAt,
       Se.Set Beam.updatedAt _now
     ]

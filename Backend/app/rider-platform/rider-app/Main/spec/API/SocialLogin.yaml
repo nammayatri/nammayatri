@@ -12,7 +12,7 @@ types:
     email: Maybe Text
     tokenId: Text
     oauthProvider: OAuthProvider
-    merchantId: Id Merchant
+    merchantId: Maybe (Id Merchant)
     merchantShortId: ShortId Merchant
     registrationLat: Maybe Double
     registrationLon: Maybe Double

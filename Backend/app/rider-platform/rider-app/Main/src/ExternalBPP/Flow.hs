@@ -32,6 +32,7 @@ import Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.FRFSQuote as QFRFSQuote
 import qualified Storage.Queries.FRFSQuoteCategory as QFRFSQuoteCategory
 import Tools.Error
+import qualified Tools.Metrics.BAPMetrics as Metrics
 
 getFares :: (CoreMetrics m, CacheFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, EncFlow m r, ServiceFlow m r, HasShortDurationRetryCfg r c) => Id Person -> Merchant -> MerchantOperatingCity -> IntegratedBPPConfig -> BecknConfig -> NonEmpty CallAPI.BasicRouteDetail -> Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> Maybe Text -> m (Bool, [FRFSFare])
 getFares riderId merchant merchantOperatingCity integratedBPPConfig _bapConfig fareRouteDetails vehicleCategory serviceTier mbParentSearchReqId = do
@@ -207,7 +208,7 @@ init merchant merchantOperatingCity integratedBPPConfig bapConfig (mRiderName, m
         paymentParams & fromMaybeM (InternalError "BknPaymentParams Not Found")
       Spec.BPP -> CallAPI.getPaymentDetails merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking
 
-confirm :: (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c) => Merchant -> MerchantOperatingCity -> FRFSConfig -> IntegratedBPPConfig -> BecknConfig -> (Maybe Text, Maybe Text) -> DFRFSTicketBooking.FRFSTicketBooking -> m DOrder
+confirm :: (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c, Metrics.HasBAPMetrics m r) => Merchant -> MerchantOperatingCity -> FRFSConfig -> IntegratedBPPConfig -> BecknConfig -> (Maybe Text, Maybe Text) -> DFRFSTicketBooking.FRFSTicketBooking -> m DOrder
 confirm _merchant _merchantOperatingCity frfsConfig integratedBPPConfig bapConfig (mRiderName, mRiderNumber) booking = do
   let qrTtl =
         case booking.vehicleType of

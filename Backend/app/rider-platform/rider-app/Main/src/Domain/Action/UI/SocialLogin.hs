@@ -58,20 +58,20 @@ fetchTokenInfo iosValidateEnpoint oauthProvider token = do
 postSocialLogin :: SL.SocialLoginReq -> Environment.Flow SL.SocialLoginRes
 postSocialLogin req = do
   iosValidateEnpoint <- asks (.iosValidateEnpoint)
+  merchant <- CQMOC.findByShortId req.merchantShortId >>= fromMaybeM (MerchantDoesNotExist req.merchantShortId.getShortId)
   result <- L.runIO $ fetchTokenInfo iosValidateEnpoint req.oauthProvider req.tokenId
   case result of
     Right info -> do
-      oldPerson <- PQ.findByEmailAndMerchantId req.merchantId info.email
+      oldPerson <- PQ.findByEmailAndMerchantId merchant.id info.email
       (person, isNew) <-
         case oldPerson of
           Just person' -> pure (person', False)
           Nothing ->
             (,True) <$> do
-              merchant <- CQMOC.findById req.merchantId >>= fromMaybeM (MerchantNotFound req.merchantId.getId)
               let authReq = buildAuthReq info.email
               PR.createPerson authReq SP.EMAIL Nothing Nothing Nothing Nothing Nothing Nothing merchant Nothing
       QR.deleteByPersonId person.id
-      token <- makeSession person.id.getId req.merchantId.getId
+      token <- makeSession person.id.getId merchant.id.getId
       _ <- QR.create token
       pure $ SL.SocialLoginRes isNew token.token
     Left _ -> throwError . InternalError $ show req.oauthProvider <> ", idToken: " <> req.tokenId <> " error: "

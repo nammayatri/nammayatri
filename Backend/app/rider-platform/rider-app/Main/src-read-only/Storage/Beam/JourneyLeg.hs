@@ -28,6 +28,7 @@ data JourneyLegT f = JourneyLegT
     estimatedMinFare :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     finalBoardedBusNumber :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     finalBoardedBusNumberSource :: B.C f (Kernel.Prelude.Maybe Domain.Types.JourneyLeg.BusBoardingMethod),
+    finalBoardedBusServiceTierType :: B.C f (Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType),
     finalBoardedDepotNo :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     finalBoardedScheduleNo :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     finalBoardedWaybillId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
@@ -61,6 +62,7 @@ data JourneyLegT f = JourneyLegT
     toStopGtfsId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     toStopName :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     toStopPlatformCode :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    userBookedBusServiceTierType :: B.C f (Kernel.Prelude.Maybe BecknV2.FRFS.Enums.ServiceTierType),
     createdAt :: B.C f Kernel.Prelude.UTCTime,
     updatedAt :: B.C f Kernel.Prelude.UTCTime
   }

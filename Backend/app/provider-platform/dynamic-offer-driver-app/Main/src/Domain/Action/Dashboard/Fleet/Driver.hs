@@ -60,6 +60,7 @@ module Domain.Action.Dashboard.Fleet.Driver
     validateRequestorRoleAndGetEntityId,
     getDriverFleetOperatorInfo,
     checkRCAssociationForFleet,
+    postDriverFleetLocationList,
   )
 where
 
@@ -142,7 +143,9 @@ import qualified SharedLogic.MessageBuilder as MessageBuilder
 import qualified SharedLogic.WMB as WMB
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.Cac.TransporterConfig as SCTC
+import qualified Storage.CachedQueries.FleetBadgeAssociation as CFBA
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.Clickhouse.DriverEdaKafka as CHDriverEda
 import qualified Storage.Clickhouse.Ride as CQRide
 import Storage.Clickhouse.RideDetails (findIdsByFleetOwner)
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
@@ -878,6 +881,7 @@ postDriverFleetRemoveDriver merchantShortId opCity requestorId driverId mbFleetO
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let personId = cast @Common.Driver @DP.Person driverId
+  let allowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
   case entityRole of
     DP.FLEET_OWNER -> do
       DCommon.checkFleetOwnerVerification entityId merchant.fleetOwnerEnabledCheck
@@ -886,12 +890,12 @@ postDriverFleetRemoveDriver merchantShortId opCity requestorId driverId mbFleetO
         rc <- RCQuery.findByRCIdAndFleetOwnerId assoc.rcId $ Just entityId
         when (isJust rc) $ throwError (InvalidRequest "Driver is linked to fleet Vehicle, first unlink then try")
       FDV.endFleetDriverAssociation entityId personId
-      when (transporterConfig.allowCacheDriverFlowStatus == Just True) $ do
+      when allowCacheDriverFlowStatus $ do
         driverInfo <- QDriverInfo.findById personId >>= fromMaybeM (DriverNotFound personId.getId)
         DDriverMode.decrementFleetOperatorStatusKeyForDriver DP.FLEET_OWNER entityId driverInfo.driverFlowStatus
     DP.OPERATOR -> do
       DOV.endOperatorDriverAssociation entityId personId
-      when (transporterConfig.allowCacheDriverFlowStatus == Just True) $ do
+      when allowCacheDriverFlowStatus $ do
         driverInfo <- QDriverInfo.findById personId >>= fromMaybeM (DriverNotFound personId.getId)
         DDriverMode.decrementFleetOperatorStatusKeyForDriver DP.OPERATOR entityId driverInfo.driverFlowStatus
     _ -> throwError (InvalidRequest "Invalid Data")
@@ -1089,7 +1093,8 @@ getDriverFleetStatus merchantShortId opCity requestorId mbFleetOwnerId = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
-  when (transporterConfig.allowCacheDriverFlowStatus /= Just True) $ throwError (InvalidRequest "Cache driver flow status is not allowed in this merchant")
+  let allowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
+  unless allowCacheDriverFlowStatus $ throwError (InvalidRequest "Cache driver flow status is not allowed in this merchant")
   requestedPerson <- QPerson.findById (Id requestorId) >>= fromMaybeM (PersonDoesNotExist requestorId)
   (entityRole, entityId) <- validateRequestorRoleAndGetEntityId requestedPerson mbFleetOwnerId
   let allKeys = DDF.allKeys entityId
@@ -1722,7 +1727,8 @@ postDriverFleetVerifyJoiningOtp merchantShortId opCity fleetOwnerId mbAuthId mbR
       -- onboarded operator required only for new drivers
       assoc <- FDA.makeFleetDriverAssociation person.id fleetOwnerId Nothing (DomainRC.convertTextToUTC (Just "2099-12-12"))
       QFDV.create assoc
-      when (transporterConfig.allowCacheDriverFlowStatus == Just True) $ do
+      let allowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
+      when allowCacheDriverFlowStatus $ do
         driverInfo <- QDriverInfo.findById person.id >>= fromMaybeM (DriverNotFound person.id.getId)
         DDriverMode.incrementFleetOperatorStatusKeyForDriver DP.FLEET_OWNER fleetOwnerId driverInfo.driverFlowStatus
   pure Success
@@ -2263,14 +2269,20 @@ data CreateDriversCSVRow = CreateDriversCSVRow
   { driverName :: Text,
     driverPhoneNumber :: Text,
     driverOnboardingVehicleCategory :: Maybe Text,
-    fleetPhoneNo :: Maybe Text
+    fleetPhoneNo :: Maybe Text,
+    badgeName :: Maybe Text,
+    badgeRank :: Maybe Text,
+    badgeType :: Maybe Text
   }
 
 data DriverDetails = DriverDetails
   { driverName :: Text,
     driverPhoneNumber :: Text,
     driverOnboardingVehicleCategory :: Maybe DVC.VehicleCategory,
-    fleetPhoneNo :: Maybe Text
+    fleetPhoneNo :: Maybe Text,
+    badgeName :: Maybe Text,
+    badgeRank :: Maybe Text,
+    badgeType :: Maybe DFBT.FleetBadgeType
   }
 
 instance FromNamedRecord CreateDriversCSVRow where
@@ -2280,6 +2292,9 @@ instance FromNamedRecord CreateDriversCSVRow where
       <*> r .: "driver_phone_number"
       <*> optional (r .: "driver_onboarding_vehicle_category")
       <*> optional (r .: "fleet_phone_no")
+      <*> optional (r .: "badge_name")
+      <*> optional (r .: "badge_rank")
+      <*> optional (r .: "badge_type")
 
 postDriverFleetAddDrivers ::
   ShortId DM.Merchant ->
@@ -2381,6 +2396,7 @@ postDriverFleetAddDrivers merchantShortId opCity mbRequestorId req = do
             let driverMobile = req_.driverPhoneNumber
             let onboardedOperatorId = if isNew then mbOperatorId else Nothing
             FDV.createFleetDriverAssociationIfNotExists person.id fleetOwner.id onboardedOperatorId (fromMaybe DVC.CAR req_.driverOnboardingVehicleCategory) False
+            whenJust req_.badgeType $ createOrUpdateFleetBadge merchant moc person req_ fleetOwner
             sendDeepLinkForAuth person driverMobile moc.merchantId moc.id fleetOwner
 
     linkDriverToOperator :: DM.Merchant -> DMOC.MerchantOperatingCity -> DP.Person -> DriverDetails -> Flow () -- TODO: create single query to update all later
@@ -2441,8 +2457,11 @@ parseDriverInfo idx row = do
   driverName <- Csv.cleanCSVField idx row.driverName "Driver name"
   driverPhoneNumber <- Csv.cleanCSVField idx row.driverPhoneNumber "Mobile number"
   let driverOnboardingVehicleCategory :: Maybe DVC.VehicleCategory = Csv.readMaybeCSVField idx (fromMaybe "" row.driverOnboardingVehicleCategory) "Onboarding Vehicle Category"
-  let fleetPhoneNo :: Maybe Text = Csv.cleanMaybeCSVField idx (fromMaybe "" row.fleetPhoneNo) "Fleet number"
-  pure $ DriverDetails driverName driverPhoneNumber driverOnboardingVehicleCategory fleetPhoneNo
+      fleetPhoneNo :: Maybe Text = Csv.cleanMaybeCSVField idx (fromMaybe "" row.fleetPhoneNo) "Fleet number"
+      badgeName :: Maybe Text = Csv.readMaybeCSVField idx (fromMaybe "" row.badgeName) "Badge name"
+      badgeRank :: Maybe Text = Csv.readMaybeCSVField idx (fromMaybe "" row.badgeRank) "Badge rank"
+      badgeType :: Maybe DFBT.FleetBadgeType = Csv.readMaybeCSVField idx (fromMaybe "" row.badgeType) "Badge type"
+  pure $ DriverDetails driverName driverPhoneNumber driverOnboardingVehicleCategory fleetPhoneNo badgeName badgeRank badgeType
 
 fetchOrCreatePerson :: DMOC.MerchantOperatingCity -> DriverDetails -> Flow (DP.Person, Bool)
 fetchOrCreatePerson moc req_ = do
@@ -2493,7 +2512,8 @@ getDriverFleetWmbRouteDetails _ _ _ routeCode = WMB.getRouteDetails routeCode
 postDriverFleetGetNearbyDrivers :: ShortId DM.Merchant -> Context.City -> Text -> Common.NearbyDriverReq -> Flow Common.NearbyDriverResp
 postDriverFleetGetNearbyDrivers merchantShortId _ fleetOwnerId req = do
   merchant <- findMerchantByShortId merchantShortId
-  nearbyDriverLocations <- LF.nearBy req.point.lat req.point.lon Nothing (Just [DV.BUS_NON_AC, DV.BUS_AC]) req.radius merchant.id (Just fleetOwnerId) Nothing
+  let vehicleVariantList = Just $ maybe [DV.BUS_NON_AC, DV.BUS_AC] (map DCommon.castDashboardVehicleVariantToDomain) (req.vehicleVariantList)
+  nearbyDriverLocations <- LF.nearBy req.point.lat req.point.lon Nothing vehicleVariantList req.radius merchant.id (Just fleetOwnerId) Nothing
   return $
     Common.NearbyDriverResp $
       catMaybes $
@@ -2766,3 +2786,67 @@ getDriverFleetAssignments _ _ memberPersonId mbLimit mbOffset mbFrom mbTo mbVehi
 
   let summary = Common.Summary {totalCount = 10000, count = length ticketAssignmentsList}
   pure $ Common.FleetBookingAssignmentsResponse {bookings = ticketAssignmentsList, summary = summary}
+
+---------------------------------------------------------------------
+postDriverFleetLocationList ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Common.DriverLocationListReq ->
+  Environment.Flow Common.DriverLocationListResp
+postDriverFleetLocationList _ _ memberPersonId req = do
+  if null req.driverIds
+    then throwError $ InvalidRequest "Driver IDs are required"
+    else do
+      rateLimitOptions <- asks (.driverFleetLocationListAPIRateLimitOptions)
+      checkSlidingWindowLimitWithOptions postDriverFleetLocationListHitsCountKey rateLimitOptions
+      currentTime <- getCurrentTime
+      let firstDate = fromMaybe (negate 86400 `addUTCTime` currentTime) req.firstDate
+          lastDate = fromMaybe currentTime req.lastDate
+      allLocations <- fmap concat $
+        forM req.driverIds $ \driverId -> do
+          let personId = cast driverId
+          driverEdaKafkaList <- CHDriverEda.findAllTupleByTimestamp firstDate lastDate personId $ min 10000 $ fromMaybe 1000 req.limit
+          pure $
+            map
+              ( \(mbLat, mbLon, timestamp, mbAccuracy, _mbRideStatus) ->
+                  Common.DriverLocation
+                    { driverId = driverId,
+                      lat = mbLat,
+                      lon = mbLon,
+                      timeStamp = timestamp,
+                      accuracy = mbAccuracy
+                    }
+              )
+              driverEdaKafkaList
+      pure $ Common.DriverLocationListResp allLocations
+  where
+    postDriverFleetLocationListHitsCountKey = "BPP:API:ACTION:DriverFleetLocationList:PersonId:" <> memberPersonId <> ":hitsCount"
+
+createOrUpdateFleetBadge :: DM.Merchant -> DMOC.MerchantOperatingCity -> DP.Person -> DriverDetails -> DP.Person -> DFBT.FleetBadgeType -> Flow ()
+createOrUpdateFleetBadge merchant merchantOpCity person driverDetails fleetOwner badgeType = do
+  now <- getCurrentTime
+  let badgeName = fromMaybe driverDetails.driverName driverDetails.badgeName
+  mbBadgeAssociation <- CFBA.findOneFleetBadgeAssociationByFleetOwnerIdAndDriverIdAndBadgeTypeAndIsActive fleetOwner.id.getId person.id badgeType True
+  case mbBadgeAssociation of
+    Just badgeAssociation -> do
+      QFB.updateBadgeNameAndRankById badgeName driverDetails.badgeRank badgeAssociation.badgeId
+    Nothing -> do
+      fleetBadgeId <- generateGUID
+      let newBadge = buildNewBadge fleetBadgeId now
+      QFB.create newBadge
+      WMB.linkFleetBadge (cast person.id) merchant.id merchantOpCity.id (fleetOwner.id.getId) newBadge badgeType
+  where
+    buildNewBadge badgeId now =
+      DFB.FleetBadge
+        { badgeName = fromMaybe driverDetails.driverName driverDetails.badgeName,
+          badgeType = badgeType,
+          createdAt = now,
+          personId = Just person.id,
+          fleetOwnerId = fleetOwner.id,
+          id = Id badgeId,
+          merchantId = merchant.id,
+          merchantOperatingCityId = merchantOpCity.id,
+          updatedAt = now,
+          badgeRank = driverDetails.badgeRank
+        }

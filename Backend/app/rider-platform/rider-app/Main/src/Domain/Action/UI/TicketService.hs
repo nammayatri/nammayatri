@@ -320,7 +320,7 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
   personEmail <- mapM decrypt person.email
   personPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
   isSplitEnabled <- Payment.getIsSplitEnabled merchantId merchantOpCity.id (Just placeId) Payment.Normal
-  splitSettlementDetails <- Payment.mkSplitSettlementDetails isSplitEnabled amount.amount (fromMaybe [] vendorSplits)
+  splitSettlementDetails <- Payment.mkSplitSettlementDetails isSplitEnabled amount.amount (fromMaybe [] vendorSplits) False
   let createOrderReq =
         Payment.CreateOrderReq
           { orderId = ticketBooking.id.getId,
@@ -339,7 +339,8 @@ postTicketPlacesBook (mbPersonId, merchantId) placeId req = do
             optionsGetUpiDeepLinks = Nothing,
             metadataExpiryInMins = Nothing,
             metadataGatewayReferenceId = Nothing,
-            splitSettlementDetails = splitSettlementDetails
+            splitSettlementDetails = splitSettlementDetails,
+            basket = Nothing
           }
   let commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant merchantId
       commonPersonId = Kernel.Types.Id.cast @DP.Person @DPayment.Person personId_

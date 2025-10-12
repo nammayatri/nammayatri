@@ -622,6 +622,8 @@ library
       Storage.Queries.FleetOwnerInformationExtra
       Storage.Queries.FleetRCAssociationExtra
       Storage.Queries.Geometry
+      Storage.Queries.HyperVergeVerificationExtra
+      Storage.Queries.IdfyVerificationExtra
       Storage.Queries.ImageExtra
       Storage.Queries.InterCityTravelCities
       Storage.Queries.InvoiceExtra
@@ -651,6 +653,7 @@ library
       Storage.Queries.Quote
       Storage.Queries.RatingExtra
       Storage.Queries.RegistrationTokenExtra
+      Storage.Queries.RideDetailsExtra
       Storage.Queries.RideExtra
       Storage.Queries.RiderDetailsExtra
       Storage.Queries.RouteExtra
@@ -717,6 +720,7 @@ library
       Tools.Encryption
       Tools.Error
       Tools.Event
+      Tools.FieldParse
       Tools.Maps
       Tools.MarketingEvents
       Tools.Metrics
@@ -1158,6 +1162,7 @@ library
       Storage.Beam.Volunteer
       Storage.Beam.WhiteListOrg
       Storage.CachedQueries.CancellationFarePolicy
+      Storage.CachedQueries.FleetBadgeAssociation
       Storage.CachedQueries.Plan
       Storage.CachedQueries.SurgePricing
       Storage.Queries.AadhaarCard
@@ -1323,6 +1328,7 @@ library
       Storage.Queries.OrphanInstances.Rating
       Storage.Queries.OrphanInstances.RegistrationToken
       Storage.Queries.OrphanInstances.Ride
+      Storage.Queries.OrphanInstances.RideDetails
       Storage.Queries.OrphanInstances.RiderDetails
       Storage.Queries.OrphanInstances.RiderDriverCorrelation
       Storage.Queries.OrphanInstances.Route

@@ -430,7 +430,8 @@ postFleetConsent (mbDriverId, merchantId, merchantOperatingCityId) = do
   SA.endDriverAssociationsIfAllowed merchant merchantOperatingCityId transporterConfig driver
 
   FDV.updateByPrimaryKey (fleetDriverAssociation {isActive = True})
-  when (transporterConfig.allowCacheDriverFlowStatus == Just True) $ do
+  let allowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
+  when allowCacheDriverFlowStatus $ do
     driverInfo <- QDI.findById fleetDriverAssociation.driverId >>= fromMaybeM (DriverNotFound fleetDriverAssociation.driverId.getId)
     DDriverMode.incrementFleetOperatorStatusKeyForDriver FLEET_OWNER fleetDriverAssociation.fleetOwnerId driverInfo.driverFlowStatus
   QDriverInfoInternal.updateOnboardingVehicleCategory (Just onboardingVehicleCategory) driver.id

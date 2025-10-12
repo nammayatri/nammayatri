@@ -136,6 +136,9 @@ dependencies:
   - mtl
   - transformers
   - morpheus-graphql-client
+  - xml-conduit
+  - servant-xml
+  - xmlbf
 
 ghc-options:
   - -fwrite-ide-info

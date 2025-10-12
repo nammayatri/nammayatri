@@ -25,3 +25,8 @@ ALTER TABLE atlas_driver_offer_bpp.fleet_badge ALTER COLUMN badge_type SET DEFAU
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.fleet_badge ALTER COLUMN badge_type SET NOT NULL;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.fleet_badge ADD COLUMN badge_rank text ;

@@ -65,6 +65,7 @@ import Kernel.External.Types (SchedulerFlow, ServiceFlow)
 import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Hedis as Redis
+import qualified Kernel.Storage.InMem as IM
 import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import Kernel.Types.Id
 import qualified Kernel.Types.TimeBound as DTB
@@ -215,9 +216,11 @@ data RouteStopInfo = RouteStopInfo
     stops :: Maybe [RouteStopMapping.RouteStopMapping],
     travelTime :: Maybe Seconds
   }
+  deriving stock (Generic, Show)
+  deriving anyclass (FromJSON, ToJSON)
 
 getPossibleRoutesBetweenTwoStops :: (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c) => Text -> Text -> IntegratedBPPConfig -> m [RouteStopInfo]
-getPossibleRoutesBetweenTwoStops startStationCode endStationCode integratedBPPConfig = do
+getPossibleRoutesBetweenTwoStops startStationCode endStationCode integratedBPPConfig = IM.withInMemCache ["POSSIBLEROUTES", startStationCode, endStationCode, integratedBPPConfig.id.getId] 7200 $ do
   routesWithStop <- OTPRest.getRouteStopMappingByStopCode startStationCode integratedBPPConfig
   let routeCodes = nub $ map (.routeCode) routesWithStop
   routeStops <-
@@ -984,16 +987,19 @@ createPaymentOrder ::
   DP.Person ->
   Payment.PaymentServiceType ->
   [Payment.VendorSplitDetails] ->
+  Maybe [Payment.Basket] ->
   m (Maybe DOrder.PaymentOrder)
-createPaymentOrder bookings merchantOperatingCityId merchantId amount person paymentType vendorSplitArr = do
+createPaymentOrder bookings merchantOperatingCityId merchantId amount person paymentType vendorSplitArr basket = do
   logInfo $ "createPayments vendorSplitArr" <> show vendorSplitArr
+  logInfo $ "createPayments basket" <> show basket
   personPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
   personEmail <- mapM decrypt person.email
   (orderId, orderShortId) <- getPaymentIds
   ticketBookingPayments' <- processPayments orderId `mapM` bookings
   QFRFSTicketBookingPayment.createMany ticketBookingPayments'
   isSplitEnabled <- Payment.getIsSplitEnabled merchantId merchantOperatingCityId Nothing paymentType
-  splitSettlementDetails <- Payment.mkUnaggregatedSplitSettlementDetails isSplitEnabled amount vendorSplitArr
+  isPercentageSplitEnabled <- Payment.getIsPercentageSplit merchantId merchantOperatingCityId Nothing paymentType
+  splitSettlementDetails <- Payment.mkUnaggregatedSplitSettlementDetails isSplitEnabled amount vendorSplitArr isPercentageSplitEnabled
   let createOrderReq =
         Payment.CreateOrderReq
           { orderId = orderId.getId,
@@ -1012,7 +1018,8 @@ createPaymentOrder bookings merchantOperatingCityId merchantId amount person pay
             optionsGetUpiDeepLinks = Nothing,
             metadataExpiryInMins = Nothing,
             metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
-            splitSettlementDetails = splitSettlementDetails
+            splitSettlementDetails = splitSettlementDetails,
+            basket = basket
           }
   let mocId = merchantOperatingCityId
       commonMerchantId = Kernel.Types.Id.cast @Merchant.Merchant @DPayment.Merchant merchantId

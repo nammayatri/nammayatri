@@ -271,7 +271,8 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
                             DJourneyLeg.finalBoardedBusNumberSource = Just DJourneyLeg.Detected,
                             DJourneyLeg.finalBoardedDepotNo = mbVehicleInfo >>= (.depot),
                             DJourneyLeg.finalBoardedWaybillId = mbVehicleInfo >>= (.waybillId),
-                            DJourneyLeg.finalBoardedScheduleNo = mbVehicleInfo >>= (.scheduleNo)
+                            DJourneyLeg.finalBoardedScheduleNo = mbVehicleInfo >>= (.scheduleNo),
+                            DJourneyLeg.finalBoardedBusServiceTierType = mbVehicleInfo <&> (.serviceType)
                           }
                       -- Update in-memory detailedStateData as well
                       pure (detailedStateData :: JT.JourneyLegStateData) {JT.fleetNo = Just bestVehicleNumber}
@@ -407,7 +408,7 @@ confirm personId merchantId mbQuoteId ticketQuantity childTicketQuantity bookLat
       else do
         void $ FRFSTicketService.postFrfsQuoteV2ConfirmUtil (Just personId, merchantId) quoteId (API.FRFSQuoteConfirmReq {offered = categorySelectionReq, ticketQuantity = ticketQuantity, childTicketQuantity = childTicketQuantity}) crisSdkResponse isSingleMode
   where
-    processOnSelect :: FRFSConfirmFlow m r => DOnSelect -> Maybe Bool -> m ()
+    processOnSelect :: (FRFSConfirmFlow m r) => DOnSelect -> Maybe Bool -> m ()
     processOnSelect onSelectReq mbSingleMode = do
       (merchant', quote') <- DOnSelect.validateRequest onSelectReq
       DOnSelect.onSelect onSelectReq merchant' quote' mbSingleMode

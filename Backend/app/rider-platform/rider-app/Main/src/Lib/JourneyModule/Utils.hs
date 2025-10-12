@@ -402,13 +402,12 @@ findPossibleRoutes ::
   m (Maybe Text, [AvailableRoutesByTier], [RouteStopTimeTable])
 findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime integratedBppConfig mid mocid vc sendWithoutFare useLiveBusData calledForSubwaySingleMode = do
   -- Get route mappings that contain the origin stop
-  validRoutes <- getRouteCodesFromTo fromStopCode toStopCode integratedBppConfig
+  validRoutes <- measureLatency (getRouteCodesFromTo fromStopCode toStopCode integratedBppConfig) "getRouteCodesFromTo"
   let (_, currentTimeIST) = getISTTimeInfo currentTime
 
-  routeStopTimings' <- measureLatency (fetchLiveTimings validRoutes fromStopCode currentTime integratedBppConfig mid mocid vc useLiveBusData (vc == Enums.SUBWAY && calledForSubwaySingleMode)) ("fetchLiveTimings" <> show validRoutes <> " fromStopCode: " <> show fromStopCode <> " toStopCode: " <> show toStopCode)
-  let routeStopTimings = filter (\rst -> ((getISTArrivalTime rst.timeOfArrival currentTime >= currentTimeIST) || vc == Enums.BUS)) routeStopTimings'
+  routeStopTimings <- measureLatency (fetchLiveTimings validRoutes fromStopCode currentTime integratedBppConfig mid mocid vc useLiveBusData (vc == Enums.SUBWAY && calledForSubwaySingleMode)) ("fetchLiveTimings" <> show validRoutes <> " fromStopCode: " <> show fromStopCode <> " toStopCode: " <> show toStopCode)
 
-  freqMap <- loadRouteFrequencies routeStopTimings
+  freqMap <- measureLatency (loadRouteFrequencies routeStopTimings) "loadRouteFrequencies"
 
   let sortedTimings =
         sortBy
@@ -421,12 +420,15 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
                 else
                   let aTime = nominalDiffTimeToSeconds $ diffUTCTime (getISTArrivalTime a.timeOfArrival currentTime) currentTimeIST
                       bTime = nominalDiffTimeToSeconds $ diffUTCTime (getISTArrivalTime b.timeOfArrival currentTime) currentTimeIST
-                   in compare aTime bTime
+                      -- If either timing has already passed (negative time), treat it as next day (add 24 hours)
+                      aTimeAdjusted = if aTime < 0 then aTime + 86400 else aTime -- 86400 seconds = 24 hours
+                      bTimeAdjusted = if bTime < 0 then bTime + 86400 else bTime
+                   in compare aTimeAdjusted bTimeAdjusted
           )
           routeStopTimings
 
   -- Group by service tier
-  mbRiderConfig <- QRiderConfig.findByMerchantOperatingCityId mocid Nothing
+  mbRiderConfig <- measureLatency (QRiderConfig.findByMerchantOperatingCityId mocid Nothing) "QRiderConfig.findByMerchantOperatingCityId"
   let cfgMap = maybe (toCfgMap defaultBusTierSortingConfig) toCfgMap (mbRiderConfig >>= (.busTierSortingConfig))
   maxBusTimingPerTier <- liftIO $ fromMaybe 3 . (>>= readMaybe) <$> lookupEnv "BUS_TIER_MAX_PER_TIER"
   let groupedByTier = (if vc == Enums.BUS then map (take maxBusTimingPerTier) else (\a -> a)) $ groupBy (\a b -> a.serviceTierType == b.serviceTierType) $ sortBy (comparing (tierRank cfgMap . (.serviceTierType))) routeStopTimings
@@ -502,78 +504,82 @@ findPossibleRoutes mbAvailableServiceTiers fromStopCode toStopCode currentTime i
           M.filterWithKey (\k _ -> not (M.member k alternateRouteHashMap)) serviceTierAlternatesMap
 
   -- For each service tier, collect route information
-  results <- (flip mapConcurrently) groupedByTierReordered $ \timingsForTier -> do
-    let serviceTierType = if null timingsForTier then Spec.ORDINARY else (head timingsForTier).serviceTierType
-        routeCodesForTier = nub $ fromMaybe (map (.routeCode) timingsForTier) (M.lookup serviceTierType finalAlternateRouteHashMap)
-    logDebug $ "routeCodesForTier: " <> show routeCodesForTier <> "serviceTierType: " <> show serviceTierType
-    let tierSource = maybe GTFS (\a -> a.source) $ find (\a -> a.source == LIVE) timingsForTier
+  results <-
+    measureLatency
+      ( (flip mapConcurrently) groupedByTierReordered $ \timingsForTier -> do
+          let serviceTierType = if null timingsForTier then Spec.ORDINARY else (head timingsForTier).serviceTierType
+              routeCodesForTier = nub $ fromMaybe (map (.routeCode) timingsForTier) (M.lookup serviceTierType finalAlternateRouteHashMap)
+          logDebug $ "routeCodesForTier: " <> show routeCodesForTier <> "serviceTierType: " <> show serviceTierType
+          let tierSource = maybe GTFS (\a -> a.source) $ find (\a -> a.source == LIVE) timingsForTier
 
-    -- Get route details to include the short name
-    validRouteDetails <- OTPRest.getRoutesByRouteIds integratedBppConfig routeCodesForTier
-    logDebug $ "validRouteDetails: " <> show validRouteDetails
-    let routeShortNames = nub $ map (.shortName) validRouteDetails
+          -- Get route details to include the short name
+          validRouteDetails <- measureLatency (OTPRest.getRoutesByRouteIds integratedBppConfig routeCodesForTier) ("OTPRest.getRoutesByRouteIds for tier: " <> show serviceTierType)
+          logDebug $ "validRouteDetails: " <> show validRouteDetails
+          let routeShortNames = nub $ map (.shortName) validRouteDetails
 
-    -- Calculate arrival times in seconds
-    let arrivalTimes =
-          [ (routeCode, source, estimatedArrivalTimeInSeconds)
-            | timing <- timingsForTier,
-              let routeCode = timing.routeCode,
-              let source = timing.source,
-              let arrivalTimeInSeconds' = nominalDiffTimeToSeconds $ diffUTCTime (getISTArrivalTime timing.timeOfArrival currentTime) currentTimeIST,
-              let secondsValue = fromIntegral (getSeconds arrivalTimeInSeconds') :: Double,
-              let estimatedArrivalTimeInSeconds
-                    | arrivalTimeInSeconds' > 0 = arrivalTimeInSeconds'
-                    | abs secondsValue > 86400 = Seconds $ round $ (7 * 86400) + secondsValue
-                    | otherwise = Seconds $ round $ 86400 + secondsValue
-          ]
+          -- Calculate arrival times in seconds
+          let arrivalTimes =
+                [ (routeCode, source, estimatedArrivalTimeInSeconds)
+                  | timing <- timingsForTier,
+                    let routeCode = timing.routeCode,
+                    let source = timing.source,
+                    let arrivalTimeInSeconds' = nominalDiffTimeToSeconds $ diffUTCTime (getISTArrivalTime timing.timeOfArrival currentTime) currentTimeIST,
+                    let secondsValue = fromIntegral (getSeconds arrivalTimeInSeconds') :: Double,
+                    let estimatedArrivalTimeInSeconds
+                          | arrivalTimeInSeconds' > 0 = arrivalTimeInSeconds'
+                          | abs secondsValue > 86400 = Seconds $ round $ (7 * 86400) + secondsValue
+                          | otherwise = Seconds $ round $ 86400 + secondsValue
+                ]
 
-    let nextAvailableTimings = timingsForTier <&> (\timing -> (timing.timeOfArrival, timing.timeOfDeparture))
+          let nextAvailableTimings = timingsForTier <&> (\timing -> (timing.timeOfArrival, timing.timeOfDeparture))
 
-    (mbFare, serviceTierName, serviceTierDescription, quoteId, via, trainTypeCode) <- do
-      case mbAvailableServiceTiers of
-        Just availableServiceTiers -> do
-          let availableServiceTier = find (\tier -> tier.serviceTierType == serviceTierType) availableServiceTiers
-              quoteId = availableServiceTier <&> (.quoteId)
-              serviceTierName = availableServiceTier <&> (.serviceTierName)
-              serviceTierDescription = availableServiceTier <&> (.serviceTierDescription)
-              via = availableServiceTier >>= (.via)
-              trainTypeCode = availableServiceTier >>= (.trainTypeCode)
-              mbFare = availableServiceTier <&> (.fare)
-          return (mbFare, serviceTierName, serviceTierDescription, quoteId, via, trainTypeCode)
-        Nothing -> return (Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
+          (mbFare, serviceTierName, serviceTierDescription, quoteId, via, trainTypeCode) <- do
+            case mbAvailableServiceTiers of
+              Just availableServiceTiers -> do
+                let availableServiceTier = find (\tier -> tier.serviceTierType == serviceTierType) availableServiceTiers
+                    quoteId = availableServiceTier <&> (.quoteId)
+                    serviceTierName = availableServiceTier <&> (.serviceTierName)
+                    serviceTierDescription = availableServiceTier <&> (.serviceTierDescription)
+                    via = availableServiceTier >>= (.via)
+                    trainTypeCode = availableServiceTier >>= (.trainTypeCode)
+                    mbFare = availableServiceTier <&> (.fare)
+                return (mbFare, serviceTierName, serviceTierDescription, quoteId, via, trainTypeCode)
+              Nothing -> return (Nothing, Nothing, Nothing, Nothing, Nothing, Nothing)
 
-    logDebug $ "mbFare: " <> show mbFare <> "serviceTierType: " <> show serviceTierType <> "routeShortNames: " <> show routeShortNames <> "quoteId: " <> show quoteId <> "via: " <> show via <> "trainTypeCode: " <> show trainTypeCode
-    let fare = fromMaybe (PriceAPIEntity 0.0 INR) mbFare -- fix it later
-    let availableRoutesInfo =
-          map
-            ( \routeDetail -> do
-                let routeArrivalTimes = filter (\(rtCode, _, _) -> rtCode == routeDetail.code) arrivalTimes
-                    routeSource = maybe GTFS (\(_, sr, _) -> sr) $ find (\(_, sr, _) -> sr == LIVE) routeArrivalTimes
-                AvailableRoutesInfo
-                  { shortName = routeDetail.shortName,
-                    longName = routeDetail.longName,
-                    routeCode = routeDetail.code,
-                    routeTimings = sort $ map (\(_, _, arrivalTime) -> arrivalTime) routeArrivalTimes,
-                    isLiveTrackingAvailable = routeSource == LIVE,
-                    source = routeSource
-                  }
-            )
-            validRouteDetails
-    return $
-      AvailableRoutesByTier
-        { serviceTier = serviceTierType,
-          availableRoutes = routeShortNames, -- TODO: deprecate this
-          availableRoutesInfo = availableRoutesInfo,
-          nextAvailableBuses = sort $ map (\(_, _, arrivalTime) -> arrivalTime) arrivalTimes,
-          serviceTierName = serviceTierName,
-          serviceTierDescription = serviceTierDescription,
-          quoteId = quoteId,
-          via = via,
-          trainTypeCode = trainTypeCode,
-          fare = fare,
-          nextAvailableTimings = sortBy (\a b -> compare (fst a) (fst b)) nextAvailableTimings,
-          source = tierSource
-        }
+          logDebug $ "mbFare: " <> show mbFare <> "serviceTierType: " <> show serviceTierType <> "routeShortNames: " <> show routeShortNames <> "quoteId: " <> show quoteId <> "via: " <> show via <> "trainTypeCode: " <> show trainTypeCode
+          let fare = fromMaybe (PriceAPIEntity 0.0 INR) mbFare -- fix it later
+          let availableRoutesInfo =
+                map
+                  ( \routeDetail -> do
+                      let routeArrivalTimes = filter (\(rtCode, _, _) -> rtCode == routeDetail.code) arrivalTimes
+                          routeSource = maybe GTFS (\(_, sr, _) -> sr) $ find (\(_, sr, _) -> sr == LIVE) routeArrivalTimes
+                      AvailableRoutesInfo
+                        { shortName = routeDetail.shortName,
+                          longName = routeDetail.longName,
+                          routeCode = routeDetail.code,
+                          routeTimings = sort $ map (\(_, _, arrivalTime) -> arrivalTime) routeArrivalTimes,
+                          isLiveTrackingAvailable = routeSource == LIVE,
+                          source = routeSource
+                        }
+                  )
+                  validRouteDetails
+          return $
+            AvailableRoutesByTier
+              { serviceTier = serviceTierType,
+                availableRoutes = routeShortNames, -- TODO: deprecate this
+                availableRoutesInfo = availableRoutesInfo,
+                nextAvailableBuses = sort $ map (\(_, _, arrivalTime) -> arrivalTime) arrivalTimes,
+                serviceTierName = serviceTierName,
+                serviceTierDescription = serviceTierDescription,
+                quoteId = quoteId,
+                via = via,
+                trainTypeCode = trainTypeCode,
+                fare = fare,
+                nextAvailableTimings = sortBy (\a b -> compare (fst a) (fst b)) nextAvailableTimings,
+                source = tierSource
+              }
+      )
+      "concurrentTierProcessing"
 
   -- Only return service tiers that have available routes
   let filteredResults = filter (\r -> not (null $ r.availableRoutes) && (r.fare /= PriceAPIEntity 0.0 INR || sendWithoutFare)) results
@@ -699,7 +705,7 @@ findUpcomingTrips routeCode stopCode mbServiceType currentTime mid mocid vc = do
 measureLatency :: MonadFlow m => m a -> Text -> m a
 measureLatency action label = do
   startTime <- getCurrentTime
-  result <- action
+  result <- withLogTag label action
   endTime <- getCurrentTime
   let latency = diffUTCTime endTime startTime
   logDebug $ label <> " Latency: " <> show latency <> " seconds"
@@ -1186,7 +1192,8 @@ postMultimodalPaymentUpdateOrderUtil paymentType person merchantId merchantOpera
   frfsBookingsPayments <- mapMaybeM (QFRFSTicketBookingPayment.findNewTBPByBookingId . (.id)) bookings
   (vendorSplitDetails, amountUpdated) <- SMMFRFS.createVendorSplitFromBookings bookings merchantId person.merchantOperatingCityId paymentType frfsConfig.isFRFSTestingEnabled
   isSplitEnabled <- TPayment.getIsSplitEnabled merchantId person.merchantOperatingCityId Nothing paymentType -- TODO :: You can be moved inside :)
-  splitDetails <- TPayment.mkUnaggregatedSplitSettlementDetails isSplitEnabled amountUpdated vendorSplitDetails
+  splitDetails <- TPayment.mkUnaggregatedSplitSettlementDetails isSplitEnabled amountUpdated vendorSplitDetails False
+  let splitDetailsAmount = TPayment.extractSplitSettlementDetailsAmount splitDetails
   if frfsConfig.canUpdateExistingPaymentOrder
     then do
       case listToMaybe frfsBookingsPayments of
@@ -1197,14 +1204,14 @@ postMultimodalPaymentUpdateOrderUtil paymentType person merchantId merchantOpera
                 KT.OrderUpdateReq
                   { amount = amountUpdated,
                     orderShortId = paymentOrder.shortId.getShortId,
-                    splitSettlementDetails = splitDetails
+                    splitSettlementDetails = splitDetailsAmount
                   }
           _ <- TPayment.updateOrder person.merchantId person.merchantOperatingCityId Nothing TPayment.FRFSMultiModalBooking (Just person.id.getId) person.clientSdkVersion updateReq
           QOrder.updateAmount paymentOrder.id amountUpdated
           let updatedOrder :: DOrder.PaymentOrder
               updatedOrder = paymentOrder {DOrder.amount = amountUpdated}
           return $ Just updatedOrder
-    else createPaymentOrder bookings merchantOperatingCityId merchantId amountUpdated person paymentType vendorSplitDetails
+    else createPaymentOrder bookings merchantOperatingCityId merchantId amountUpdated person paymentType vendorSplitDetails Nothing
 
 makePossibleRoutesKey :: Text -> Text -> Id DIntegratedBPPConfig.IntegratedBPPConfig -> Text
 makePossibleRoutesKey fromCode toCode integratedBPPConfig = "PossibleRoutes:" <> fromCode <> ":" <> toCode <> ":" <> integratedBPPConfig.getId

@@ -44,6 +44,7 @@ import qualified Lib.JourneyModule.Utils as JMU
 import qualified SharedLogic.FRFSUtils as FRFSUtils
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import Tools.Error
+import qualified Tools.Metrics.BAPMetrics as Metrics
 
 getProviderName :: IntegratedBPPConfig -> Text
 getProviderName integrationBPPConfig =
@@ -151,14 +152,18 @@ getFares riderId merchant merchanOperatingCity integrationBPPConfig fareRouteDet
       let endStopCode = lastFareRouteDetail.endStopCode
       (routeCode, startStopCode, endStopCode)
 
-createOrder :: (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c) => IntegratedBPPConfig -> Seconds -> (Maybe Text, Maybe Text) -> FRFSTicketBooking -> m ProviderOrder
+createOrder :: (MonadFlow m, ServiceFlow m r, HasShortDurationRetryCfg r c, Metrics.HasBAPMetrics m r) => IntegratedBPPConfig -> Seconds -> (Maybe Text, Maybe Text) -> FRFSTicketBooking -> m ProviderOrder
 createOrder integrationBPPConfig qrTtl (_mRiderName, mRiderNumber) booking = do
-  case integrationBPPConfig.providerConfig of
-    CMRL config' -> CMRLOrder.createOrder config' integrationBPPConfig booking mRiderNumber
-    EBIX config' -> EBIXOrder.createOrder config' integrationBPPConfig qrTtl booking
-    DIRECT config' -> DIRECTOrder.createOrder config' integrationBPPConfig qrTtl booking
-    CRIS config' -> CRISBookJourney.createOrder config' integrationBPPConfig booking
-    _ -> throwError $ InternalError "Unimplemented!"
+  Metrics.startMetrics Metrics.CREATE_ORDER_FRFS (getProviderName integrationBPPConfig) booking.searchId.getId booking.merchantOperatingCityId.getId
+  resp <-
+    case integrationBPPConfig.providerConfig of
+      CMRL config' -> CMRLOrder.createOrder config' integrationBPPConfig booking mRiderNumber
+      EBIX config' -> EBIXOrder.createOrder config' integrationBPPConfig qrTtl booking
+      DIRECT config' -> DIRECTOrder.createOrder config' integrationBPPConfig qrTtl booking
+      CRIS config' -> CRISBookJourney.createOrder config' integrationBPPConfig booking
+      _ -> throwError $ InternalError "Unimplemented!"
+  Metrics.finishMetrics Metrics.CREATE_ORDER_FRFS (getProviderName integrationBPPConfig) booking.searchId.getId booking.merchantOperatingCityId.getId
+  return resp
 
 getBppOrderId :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => IntegratedBPPConfig -> FRFSTicketBooking -> m (Maybe Text)
 getBppOrderId integratedBPPConfig booking = do

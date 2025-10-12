@@ -558,7 +558,7 @@ calculateGoHomeDriverPool req@CalculateGoHomeDriverPoolReq {..} merchantOpCityId
             homeRadius = goHomeCfg.goHomeWayPointRadius,
             merchantId,
             driverPositionInfoExpiry = driverPoolCfg.driverPositionInfoExpiry,
-            prepaidSubscriptionThreshold = bool Nothing transporterConfig.prepaidSubscriptionThreshold enforceSufficientDriverBalance,
+            prepaidSubscriptionThreshold = bool Nothing transporterConfig.subscriptionConfig.prepaidSubscriptionThreshold enforceSufficientDriverBalance,
             rideFare,
             isRental,
             isInterCity,
@@ -784,7 +784,7 @@ calculateDriverPool CalculateDriverPoolReq {..} = do
           { fromLocLatLong = coord,
             nearestRadius = radius,
             driverPositionInfoExpiry = driverPoolCfg.driverPositionInfoExpiry,
-            prepaidSubscriptionThreshold = bool Nothing transporterConfig.prepaidSubscriptionThreshold enforceSufficientDriverBalance,
+            prepaidSubscriptionThreshold = bool Nothing transporterConfig.subscriptionConfig.prepaidSubscriptionThreshold enforceSufficientDriverBalance,
             rideFare,
             ..
           }
@@ -1017,6 +1017,8 @@ getVehicleAvgSpeed variant avgSpeedOfVehicle = case variant of
   DVeh.BUS_AC -> avgSpeedOfVehicle.busAc
   DVeh.AUTO_PLUS -> avgSpeedOfVehicle.autorickshaw
   DVeh.BOAT -> avgSpeedOfVehicle.boat
+  DVeh.VIP_ESCORT -> avgSpeedOfVehicle.vipEscort
+  DVeh.VIP_OFFICER -> avgSpeedOfVehicle.vipOfficer
 
 calculateDriverPoolCurrentlyOnRide ::
   ( EncFlow m r,
@@ -1045,7 +1047,7 @@ calculateDriverPoolCurrentlyOnRide CalculateDriverPoolReq {..} mbBatchNum = do
               nearestRadius = radius,
               driverPositionInfoExpiry = driverPoolCfg.driverPositionInfoExpiry,
               currentRideTripCategoryValidForForwardBatching = driverPoolCfg.currentRideTripCategoryValidForForwardBatching,
-              prepaidSubscriptionThreshold = bool Nothing transporterConfig.prepaidSubscriptionThreshold enforceSufficientDriverBalance,
+              prepaidSubscriptionThreshold = bool Nothing transporterConfig.subscriptionConfig.prepaidSubscriptionThreshold enforceSufficientDriverBalance,
               rideFare,
               ..
             }

@@ -403,7 +403,8 @@ data DriverInformationRes = DriverInformationRes
     isSilentModeEnabled :: Maybe Bool,
     reactVersion :: Maybe Text,
     rideRequestVolume :: Maybe Int,
-    isTTSEnabled :: Maybe Bool
+    isTTSEnabled :: Maybe Bool,
+    isHighAccuracyLocationEnabled :: Maybe Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -481,7 +482,8 @@ data DriverEntityRes = DriverEntityRes
     isSilentModeEnabled :: Maybe Bool,
     reactVersion :: Maybe Text,
     rideRequestVolume :: Maybe Int,
-    isTTSEnabled :: Maybe Bool
+    isTTSEnabled :: Maybe Bool,
+    isHighAccuracyLocationEnabled :: Maybe Bool
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -511,7 +513,8 @@ data UpdateDriverReq = UpdateDriverReq
     isSilentModeEnabled :: Maybe Bool,
     rideRequestVolume :: Maybe Int,
     reactVersion :: Maybe Text,
-    isTTSEnabled :: Maybe Bool
+    isTTSEnabled :: Maybe Bool,
+    isHighAccuracyLocationEnabled :: Maybe Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -816,7 +819,7 @@ getInformation (personId, merchantId, merchantOpCityId) mbClientId toss tnant' c
 setActivity :: (CacheFlow m r, EsqDBFlow m r, HasField "serviceClickhouseCfg" r CH.ClickhouseCfg, HasField "serviceClickhouseEnv" r CH.ClickhouseEnv) => (Id SP.Person, Id DM.Merchant, Id DMOC.MerchantOperatingCity) -> Bool -> Maybe DriverInfo.DriverMode -> m APISuccess.APISuccess
 setActivity (personId, merchantId, merchantOpCityId) isActive mode = do
   isLocked <- withLockDriverIdForSetActivity personId
-  unless isLocked $ throwError (InternalError "Driver activity update is already in progress")
+  unless isLocked $ throwError DriverActivityUpdateInProgress
   finally
     ( do
         void $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -1137,6 +1140,7 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) service
         isSilentModeEnabled = driverInfo.isSilentModeEnabled,
         rideRequestVolume = driverInfo.rideRequestVolume,
         isTTSEnabled = driverInfo.isTTSEnabled,
+        isHighAccuracyLocationEnabled = driverInfo.isHighAccuracyLocationEnabled,
         ..
       }
   where
@@ -1202,14 +1206,21 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
   mVehicle <- QVehicle.findById personId
   driverInfo <- QDriverInformation.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
   let isPetModeEnabled = fromMaybe driverInfo.isPetModeEnabled req.isPetModeEnabled
-      tripDistanceMaxThreshold = req.tripDistanceMaxThreshold
-      tripDistanceMinThreshold = req.tripDistanceMinThreshold
-      maxPickupRadius = req.maxPickupRadius
-      isSilentModeEnabled = req.isSilentModeEnabled
-      rideRequestVolume = req.rideRequestVolume
-      isTTSEnabled = req.isTTSEnabled
+      tripDistanceMaxThreshold = case req.tripDistanceMaxThreshold of
+        Nothing -> driverInfo.tripDistanceMaxThreshold
+        Just val -> if val.getMeters < 0 then Nothing else Just val
+      tripDistanceMinThreshold = case req.tripDistanceMinThreshold of
+        Nothing -> driverInfo.tripDistanceMinThreshold
+        Just val -> if val.getMeters < 0 then Nothing else Just val
+      maxPickupRadius = case req.maxPickupRadius of
+        Nothing -> driverInfo.maxPickupRadius
+        Just val -> if val.getMeters < 0 then Nothing else Just val
+      isSilentModeEnabled = req.isSilentModeEnabled <|> driverInfo.isSilentModeEnabled
+      rideRequestVolume = req.rideRequestVolume <|> driverInfo.rideRequestVolume
+      isTTSEnabled = req.isTTSEnabled <|> driverInfo.isTTSEnabled
+      isHighAccuracyLocationEnabled = req.isHighAccuracyLocationEnabled <|> driverInfo.isHighAccuracyLocationEnabled
   whenJust mVehicle $ \vehicle -> do
-    when (isJust req.canDowngradeToSedan || isJust req.canDowngradeToHatchback || isJust req.canDowngradeToTaxi || isJust req.canSwitchToRental || isJust req.canSwitchToInterCity || isJust req.isPetModeEnabled || isJust req.tripDistanceMaxThreshold || isJust req.tripDistanceMinThreshold || isJust req.maxPickupRadius || isJust req.isSilentModeEnabled || isJust req.rideRequestVolume || isJust req.isTTSEnabled) $ do
+    when (isJust req.canDowngradeToSedan || isJust req.canDowngradeToHatchback || isJust req.canDowngradeToTaxi || isJust req.canSwitchToRental || isJust req.canSwitchToInterCity || isJust req.isPetModeEnabled || isJust req.tripDistanceMaxThreshold || isJust req.tripDistanceMinThreshold || isJust req.maxPickupRadius || isJust req.isSilentModeEnabled || isJust req.rideRequestVolume || isJust req.isTTSEnabled || isJust req.isHighAccuracyLocationEnabled) $ do
       -- deprecated logic, moved to driver service tier options
       checkIfCanDowngrade vehicle
       let canDowngradeToSedan = fromMaybe driverInfo.canDowngradeToSedan req.canDowngradeToSedan
@@ -1250,8 +1261,10 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
               DV.BUS_AC -> [DVST.BUS_AC]
               DV.BOAT -> [DVST.BOAT]
               DV.AUTO_PLUS -> [DVST.AUTO_PLUS]
+              DV.VIP_ESCORT -> [DVST.VIP_ESCORT]
+              DV.VIP_OFFICER -> [DVST.VIP_OFFICER]
 
-      QDriverInformation.updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi canSwitchToRental canSwitchToInterCity canSwitchToIntraCity availableUpiApps isPetModeEnabled tripDistanceMaxThreshold tripDistanceMinThreshold maxPickupRadius isSilentModeEnabled rideRequestVolume isTTSEnabled person.id
+      QDriverInformation.updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi canSwitchToRental canSwitchToInterCity canSwitchToIntraCity availableUpiApps isPetModeEnabled tripDistanceMaxThreshold tripDistanceMinThreshold maxPickupRadius isSilentModeEnabled rideRequestVolume isTTSEnabled isHighAccuracyLocationEnabled person.id
       when (isJust req.canDowngradeToSedan || isJust req.canDowngradeToHatchback || isJust req.canDowngradeToTaxi) $
         QVehicle.updateSelectedServiceTiers selectedServiceTiers person.id
 
@@ -1744,21 +1757,23 @@ getEarnings (driverId, _, merchantOpCityId) from to earningType = do
   when (from > to) $
     throwError $ InvalidRequest $ "Start date must not be after end date."
   transporterConfig <- SCTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
+  let earningsWindowSize = transporterConfig.analyticsConfig.earningsWindowSize
   case earningType of
     DCommon.DAILY -> do
-      when (daysBetween > transporterConfig.earningsWindowSize) $
-        throwError $ InvalidRequest $ "For daily earnings, the date range must be less than or equal to " <> T.pack (show transporterConfig.earningsWindowSize) <> " days (inclusive)."
+      when (daysBetween > earningsWindowSize) $
+        throwError $ InvalidRequest $ "For daily earnings, the date range must be less than or equal to " <> T.pack (show earningsWindowSize) <> " days (inclusive)."
       driverStats <- runInReplica $ SQDS.findAllInRangeByDriverId_ driverId from to
       let dailyEarningData = CHDS.mkEarningsBar <$> map (\d -> (driverId, d.merchantLocalDate, d.totalEarnings, d.totalDistance, d.numRides, d.cancellationCharges, d.bonusEarnings)) driverStats
       pure $ mkEarningPeriodStatsRes dailyEarningData
     DCommon.WEEKLY -> do
-      when (weeksBetween > transporterConfig.earningsWindowSize) $
-        throwError $ InvalidRequest $ "For weekly earnings, the date range must be less than or equal to " <> T.pack (show transporterConfig.earningsWindowSize) <> " weeks (inclusive)."
-      weeklyEarningData <- runInReplica $ CHDS.aggregatePeriodStatsWithBoundaries driverId from to (CHDS.WeeklyStats transporterConfig.weekStartMode)
+      when (weeksBetween > earningsWindowSize) $
+        throwError $ InvalidRequest $ "For weekly earnings, the date range must be less than or equal to " <> T.pack (show earningsWindowSize) <> " weeks (inclusive)."
+      let weekStartMode = transporterConfig.analyticsConfig.weekStartMode
+      weeklyEarningData <- runInReplica $ CHDS.aggregatePeriodStatsWithBoundaries driverId from to (CHDS.WeeklyStats weekStartMode)
       pure $ mkEarningPeriodStatsRes weeklyEarningData
     DCommon.MONTHLY -> do
-      when (monthsBetween > transporterConfig.earningsWindowSize) $
-        throwError $ InvalidRequest $ "For monthly earnings, the date range must be less than or equal to " <> T.pack (show transporterConfig.earningsWindowSize) <> " months (inclusive)."
+      when (monthsBetween > earningsWindowSize) $
+        throwError $ InvalidRequest $ "For monthly earnings, the date range must be less than or equal to " <> T.pack (show earningsWindowSize) <> " months (inclusive)."
       monthlyEarningData <- runInReplica $ CHDS.aggregatePeriodStatsWithBoundaries driverId from to CHDS.MonthlyStats
       pure $ mkEarningPeriodStatsRes monthlyEarningData
   where
@@ -3087,6 +3102,7 @@ findOnboardedDriversOrFleets personId merchantOpCityId maybeFrom maybeTo = do
             bonusEarningsWithCurrency = PriceAPIEntity 0.0 currency,
             onlineDuration = Seconds 0
           }
+  let earningsWindowSize = transporterConfig.analyticsConfig.earningsWindowSize
   case (maybeFrom, maybeTo) of
     (Nothing, Nothing) -> do
       stats <- runInReplica $ QDriverStats.findByPrimaryKey personId >>= fromMaybeM (InternalError $ "Driver Stats data not found for entity " <> show personId.getId)
@@ -3125,7 +3141,7 @@ findOnboardedDriversOrFleets personId merchantOpCityId maybeFrom maybeTo = do
                 bonusEarningsWithCurrency = PriceAPIEntity stats.bonusEarnings currency,
                 onlineDuration = fromMaybe (Seconds 0) stats.onlineDuration
               }
-    (Just fromDate, Just toDate) | fromIntegral (diffDays toDate fromDate) <= transporterConfig.earningsWindowSize -> do
+    (Just fromDate, Just toDate) | fromIntegral (diffDays toDate fromDate) <= earningsWindowSize -> do
       statsList <- runInReplica $ SQDS.findAllInRangeByDriverId_ personId fromDate toDate
       if null statsList
         then return defaultStats

@@ -69,7 +69,7 @@ import Domain.Types.Plan
 import qualified Domain.Types.Ride as Ride
 import qualified Domain.Types.RideRelatedNotificationConfig as DRN
 import qualified Domain.Types.RiderDetails as RD
-import Domain.Types.SubscriptionConfig
+import Domain.Types.SubscriptionConfig as DSC
 import qualified Domain.Types.SubscriptionTransaction as SubscriptionTransaction
 import Domain.Types.TransporterConfig
 import qualified Domain.Types.VehicleCategory as DVC
@@ -194,7 +194,8 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   Hedis.del $ searchRequestKey booking.transactionId
   clearCachedFarePolicyByEstOrQuoteId booking.quoteId
   clearTollStartGateBatchCache ride.driverId
-  when (fromMaybe False merchant.enforceSufficientDriverBalance && isJust thresholdConfig.prepaidSubscriptionThreshold) $ do
+  let prepaidSubscriptionThreshold = thresholdConfig.subscriptionConfig.prepaidSubscriptionThreshold
+  when (fromMaybe False merchant.enforceSufficientDriverBalance && isJust prepaidSubscriptionThreshold) $ do
     case ride.fare of
       Just fare -> fork "update driver's prepaid balance" $ updateBalance fare
       Nothing -> logWarning $ "Fare is not present for ride: " <> show ride.id.getId
@@ -202,8 +203,7 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
     -- Turn this off for only prepaid subscriptions
     let serviceName = YATRI_SUBSCRIPTION
     createDriverFee booking.providerId booking.merchantOperatingCityId driverId ride.fare ride.currency newFareParams driverInfo booking serviceName
-
-  when (fromMaybe False merchant.enforceSufficientDriverBalance && fromMaybe False thresholdConfig.enableDriverWallet) $ do
+  when (fromMaybe False merchant.enforceSufficientDriverBalance && thresholdConfig.driverWalletConfig.enableDriverWallet) $ do
     fork "createDriverWalletTransaction" $ createDriverWalletTransaction ride booking thresholdConfig
 
   triggerRideEndEvent RideEventData {ride = ride{status = Ride.COMPLETED}, personId = cast driverId, merchantId = booking.providerId}
@@ -252,7 +252,8 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
         sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.PREPAID_BALANCE_UPDATE balanceUpdatedTitle balanceUpdateMessage driver driver.deviceToken
         QDIE.updatePrepaidSubscriptionBalance (cast ride.driverId) newBalance
         createSubscriptionTransaction ride newBalance booking
-        when (newBalance < fromMaybe 0 thresholdConfig.prepaidSubscriptionThreshold) $ do
+        let prepaidSubscriptionThreshold = thresholdConfig.subscriptionConfig.prepaidSubscriptionThreshold
+        when (newBalance < fromMaybe 0 prepaidSubscriptionThreshold) $ do
           logInfo $ "Prepaid subscription balance is less than threshold for driver: " <> show driverId.getId
           let unsubscribedMessage = "Your subscription balance is low. Please recharge to get rides"
               unsubscribedTitle = "Low Balance Alert!"
@@ -301,7 +302,7 @@ createDriverWalletTransaction ride booking transporterConfig = do
   now <- getCurrentTime
   newId <- generateGUID
   let collectionAmount = fromMaybe 0 ride.fare
-      gstPercentage = fromMaybe 0.0 transporterConfig.gstPercentage
+      gstPercentage = transporterConfig.driverWalletConfig.gstPercentage
       gstDeduction = collectionAmount * (realToFrac gstPercentage / 100)
 
   Redis.withWaitOnLockRedisWithExpiry (makeWalletRunningBalanceLockKey ride.driverId.getId) 10 10 $ do
@@ -787,7 +788,7 @@ createDriverFee merchantId merchantOpCityId driverId rideFare currency newFarePa
         then transporterConfig.considerSpecialZoneRideChargesInFreeTrial || notOnFreeTrial
         else notOnFreeTrial
 
-    getPlanAndPushToDefualtIfEligible :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => TransporterConfig -> Maybe SubscriptionConfig -> Int -> Bool -> Bool -> Maybe DVC.VehicleCategory -> m (Maybe DriverPlan, Bool)
+    getPlanAndPushToDefualtIfEligible :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => TransporterConfig -> Maybe DSC.SubscriptionConfig -> Int -> Bool -> Bool -> Maybe DVC.VehicleCategory -> m (Maybe DriverPlan, Bool)
     getPlanAndPushToDefualtIfEligible transporterConfig mbSubsConfig freeTrialDaysLeft' isSpecialZoneCharge planMandatory currentVehicleCategory = do
       mbDriverPlan' <- findByDriverIdWithServiceName (cast driverId) serviceName
       (isOnFreeTrial', _) <- do
@@ -878,7 +879,7 @@ mkDriverFee ::
   Maybe SRB.Booking ->
   Bool ->
   Maybe DVC.VehicleCategory ->
-  Maybe SubscriptionConfig ->
+  Maybe DSC.SubscriptionConfig ->
   m DF.DriverFee
 mkDriverFee serviceName now startTime' endTime' merchantId driverId rideFare govtCharges platformFee cgst sgst currency transporterConfig _mbBooking isSpecialZoneCharge currentVehicleCategory subsConfig = do
   id <- generateGUID

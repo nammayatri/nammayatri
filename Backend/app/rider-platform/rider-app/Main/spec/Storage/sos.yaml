@@ -3,6 +3,7 @@ imports:
   Merchant: Domain.Types.Merchant
   Person: Domain.Types.Person
   Ride: Domain.Types.Ride
+  MediaFile: IssueManagement.Domain.Types.MediaFile
 
 Sos:
   tableName: sos
@@ -14,6 +15,7 @@ Sos:
     flow : SosType
     status : SosStatus
     ticketId : Maybe Text
+    mediaFiles : "[Id MediaFile]"
 
   types:
     EmergencyContactId:
@@ -34,6 +36,10 @@ Sos:
       kvFunction: updateOneWithKV
       params: [status]
       where: id
+    updateMediaFiles:
+      kvFunction: updateOneWithKV
+      params: [mediaFiles]
+      where: id
     findById:
       kvFunction: findOneWithKV
       where: id
@@ -43,6 +49,18 @@ Sos:
     findByTicketId:
       kvFunction: findOneWithKV
       where: ticketId
+
+  beamType:
+    mediaFiles: Maybe [Text]
+
+  fromTType:
+    mediaFiles: Kernel.Types.Id.Id <$> (Kernel.Prelude.fromMaybe [] mediaFiles)|E
+
+  toTType:
+    mediaFiles: Kernel.Prelude.Just (Kernel.Types.Id.getId <$> mediaFiles)|E
+
+  sqlType:
+    mediaFiles: "text[]"
 
   constraints:
     id: PrimaryKey

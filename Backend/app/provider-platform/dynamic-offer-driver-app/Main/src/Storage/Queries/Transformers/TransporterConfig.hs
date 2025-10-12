@@ -1,15 +1,19 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
+module Storage.Queries.Transformers.TransporterConfig
+  ( fallBackVersionInText,
+    parseFieldM,
+    parseFieldWithDefaultM,
+    parseAnalyticsConfig,
+    parseDriverWalletConfig,
+    parseSubscriptionConfig,
+  )
+where
 
-module Storage.Queries.Transformers.TransporterConfig where
-
-import Kernel.Beam.Functions
-import Kernel.External.Encryption
+import qualified Data.Aeson as A
+import Domain.Types.TransporterConfig
 import Kernel.Prelude
-import qualified Kernel.Prelude
-import Kernel.Types.Error
+import Kernel.Types.Common
 import Kernel.Types.Version
-import Kernel.Utils.Common (CacheFlow, EsqDBFlow, MonadFlow, fromMaybeM, getCurrentTime)
+import Tools.FieldParse as FieldParse
 
 fallbackVersion :: Version
 fallbackVersion =
@@ -23,3 +27,41 @@ fallbackVersion =
 
 fallBackVersionInText :: Text
 fallBackVersionInText = versionToText fallbackVersion
+
+$(mkFieldParserWithDefault ''AnalyticsConfig)
+
+parseAnalyticsConfig :: (Monad m, Log m) => Text -> Maybe A.Value -> m AnalyticsConfig
+parseAnalyticsConfig merchantOperatingCityId mbVal = do
+  let def =
+        AnalyticsConfig
+          { weekStartMode = 3,
+            earningsWindowSize = 7,
+            allowCacheDriverFlowStatus = False,
+            maxOnlineDurationDays = 10,
+            onlineDurationCalculateFrom = Nothing
+          }
+  parseFieldWithDefaultM "transporterConfig" "analyticsConfig" merchantOperatingCityId def parseAnalyticsConfigWithDefault mbVal
+
+$(mkFieldParserWithDefault ''DriverWalletConfig)
+
+parseDriverWalletConfig :: (Monad m, Log m) => Text -> Maybe A.Value -> m DriverWalletConfig
+parseDriverWalletConfig merchantOperatingCityId mbVal = do
+  let def =
+        DriverWalletConfig
+          { enableDriverWallet = False,
+            driverWalletPayoutThreshold = 0,
+            gstPercentage = 0.0,
+            enableWalletPayout = False,
+            enableWalletTopup = False,
+            maxWalletPayoutsPerDay = Nothing,
+            minimumWalletPayoutAmount = 0,
+            payoutCutOffDays = 7
+          }
+  parseFieldWithDefaultM "transporterConfig" "driverWalletConfig" merchantOperatingCityId def parseDriverWalletConfigWithDefault mbVal
+
+$(mkFieldParserWithDefault ''SubscriptionConfig)
+
+parseSubscriptionConfig :: (Monad m, Log m) => Text -> Maybe A.Value -> m SubscriptionConfig
+parseSubscriptionConfig merchantOperatingCityId mbVal = do
+  let def = SubscriptionConfig {prepaidSubscriptionThreshold = Nothing}
+  parseFieldWithDefaultM "transporterConfig" "subscriptionConfig" merchantOperatingCityId def parseSubscriptionConfigWithDefault mbVal

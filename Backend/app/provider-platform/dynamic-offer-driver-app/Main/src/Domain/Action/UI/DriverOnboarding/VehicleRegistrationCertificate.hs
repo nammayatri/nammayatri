@@ -109,6 +109,7 @@ import qualified Storage.Queries.Image as ImageQuery
 import qualified Storage.Queries.Person as Person
 import Storage.Queries.RCValidationRules
 import Storage.Queries.Ride as RQuery
+import qualified Storage.Queries.RideDetailsExtra as RDE
 import qualified Storage.Queries.Vehicle as VQuery
 import qualified Storage.Queries.VehicleDetails as CQVD
 import qualified Storage.Queries.VehicleRegistrationCertificate as RCQuery
@@ -255,7 +256,7 @@ verifyRC isDashboard mbMerchant (personId, _, merchantOpCityId) req bulkUpload m
   let imageExtractionValidation = bool Domain.Skipped Domain.Success (isNothing req.dateOfRegistration && documentVerificationConfig.checkExtraction)
   Redis.whenWithLockRedis (rcVerificationLockKey req.vehicleRegistrationCertNumber) 60 $ do
     whenJust mVehicleRC $ \vehicleRC -> do
-      when (isNothing req.multipleRC) $ checkIfVehicleAlreadyExists person.id vehicleRC -- backward compatibility
+      when (isNothing req.multipleRC) $ checkIfVehicleAlreadyExists person vehicleRC merchantOpCityId transporterConfig.rcChangeThresholdDays -- backward compatibility
     case req.vehicleDetails of
       Just vDetails@DriverVehicleDetails {..} -> do
         vehicleDetails <-
@@ -700,12 +701,30 @@ validateRCActivation driverId merchantOpCityId rc = do
             then deactivateFunc oldDriverId
             else throwError RCActiveOnOtherAccount
 
-checkIfVehicleAlreadyExists :: Id Person.Person -> Domain.VehicleRegistrationCertificate -> Flow ()
-checkIfVehicleAlreadyExists driverId rc = do
+checkIfVehicleAlreadyExists :: Person.Person -> Domain.VehicleRegistrationCertificate -> Id DMOC.MerchantOperatingCity -> Maybe Int -> Flow ()
+checkIfVehicleAlreadyExists person rc merchantOpCityId rideThresholdLastXDays = do
   rcNumber <- decrypt rc.certificateNumber
   mVehicle <- VQuery.findByRegistrationNo rcNumber
   case mVehicle of
-    Just vehicle -> unless (vehicle.driverId == driverId) $ throwError RCActiveOnOtherAccount
+    Just vehicle -> do
+      let driverId = person.id
+      if vehicle.driverId == driverId
+        then return ()
+        else do
+          case rideThresholdLastXDays of
+            Just days -> do
+              now <- getCurrentTime
+              let secondsInDay = 86400
+                  fromDate = addUTCTime (negate $ fromIntegral days * secondsInDay) now
+              maybeRide <- RDE.findByCreatedAtAndVehicleNumber fromDate rcNumber -- finding if there is a ride in the past threshold number of days.
+              case maybeRide of
+                Just _ -> do
+                  throwError RCActiveOnOtherAccount -- if ride exists, do not let the new driver add the RC
+                Nothing -> do
+                  driverInfo <- DIQuery.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
+                  activateRC driverInfo person.merchantId merchantOpCityId now rc -- otherwise add the RC
+            Nothing -> do
+              throwError RCActiveOnOtherAccount
     Nothing -> return ()
 
 activateRC :: DI.DriverInformation -> Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> UTCTime -> Domain.VehicleRegistrationCertificate -> Flow ()

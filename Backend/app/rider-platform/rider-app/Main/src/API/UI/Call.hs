@@ -35,15 +35,18 @@ import Kernel.External.Call.Exotel.Types (ExotelCallStatus)
 import Kernel.Prelude
 import Kernel.Types.Common
 import Kernel.Types.Id
+import Kernel.Types.Version (DeviceType (..))
 import Kernel.Utils.Common
+import Kernel.Utils.XML (XmlText)
 import Servant
+import Servant.XML
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
-type API = BackendBasedCallAPI :<|> FrontendBasedCallAPI
+type API = BackendBasedCallAPI :<|> FrontendBasedCallAPI :<|> SDKBasedCallAPI
 
 handler :: FlowServer API
-handler = backendBasedCallHandler :<|> frontendBasedCallHandler
+handler = backendBasedCallHandler :<|> frontendBasedCallHandler :<|> sdkBasedCallHandler
 
 -------- Initiate a call (Exotel) APIs --------
 type BackendBasedCallAPI =
@@ -103,6 +106,20 @@ type FrontendBasedCallAPI =
              :> Get '[JSON] DCall.GetDriverMobileNumberResp
        )
 
+type SDKBasedCallAPI =
+  "call"
+    :> "twillio"
+    :> ( "accessToken"
+           :> MandatoryQueryParam "bapRideId" (Id SRide.Ride)
+           :> MandatoryQueryParam "user" DCall.EntityType
+           :> MandatoryQueryParam "deviceType" DeviceType
+           :> Get '[JSON] Kernel.Prelude.Text
+           :<|> "connectedEntityTwiml"
+           :> MandatoryQueryParam "bapRideId" (Id SRide.Ride)
+           :> MandatoryQueryParam "user" DCall.EntityType
+           :> Get '[XML] XmlText
+       )
+
 frontendBasedCallHandler :: FlowServer FrontendBasedCallAPI
 frontendBasedCallHandler =
   getDriverMobileNumber
@@ -127,3 +144,12 @@ getDriverAlternateNumber callSid callFrom_ callTo_ dtmfNumber exotelCallStatus =
 
 getCallStatus :: Id CallStatus -> (Id Person.Person, Id Merchant.Merchant) -> FlowHandler DCall.GetCallStatusRes
 getCallStatus callStatusId _ = withFlowHandlerAPI $ DCall.getCallStatus callStatusId
+
+sdkBasedCallHandler :: FlowServer SDKBasedCallAPI
+sdkBasedCallHandler = getCallTwillioAccessToken :<|> getCallTwillioConnectedEntityTwiml
+
+getCallTwillioAccessToken :: Id SRide.Ride -> DCall.EntityType -> DeviceType -> FlowHandler Text
+getCallTwillioAccessToken rideId entity deviceType = withFlowHandlerAPI $ DCall.getCallTwillioAccessToken rideId entity deviceType
+
+getCallTwillioConnectedEntityTwiml :: Id SRide.Ride -> DCall.EntityType -> FlowHandler XmlText
+getCallTwillioConnectedEntityTwiml rideId entity = withFlowHandlerAPI $ DCall.getCallTwillioConnectedEntityTwiml rideId entity

@@ -51,7 +51,7 @@ withOnlineDurationLock ::
   (DriverInfo.DriverInformation -> UTCTime -> UTCTime -> m ()) ->
   m ()
 withOnlineDurationLock driverId transporterConfig action = do
-  whenJust transporterConfig.onlineDurationCalculateFrom $ \onlineDurationCalculateFrom -> do
+  whenJust transporterConfig.analyticsConfig.onlineDurationCalculateFrom $ \onlineDurationCalculateFrom -> do
     -- To avoid race condition we need to fetch driveInfo, dailyStats, driverStats inside of lock
     Redis.whenWithLockRedis (updateDriverOnlineDurationLockKey driverId) 60 $ do
       now <- getCurrentTime
@@ -71,10 +71,9 @@ updateOnlineDuration driverId transporterConfig driverInfo now onlineDurationCal
   let timeDiffFromUtc = transporterConfig.timeDiffFromUtc
       localTime = addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) now
       merchantLocalDate = utctDay localTime
-      mbMaxOnlineDurationDays = transporterConfig.maxOnlineDurationDays
+      numDaysAgo = transporterConfig.analyticsConfig.maxOnlineDurationDays
       mbLastOnlineFrom = max onlineDurationCalculateFrom <$> driverInfo.onlineDurationRefreshedAt
       mbLastOnlineFromLocal = addUTCTime (secondsToNominalDiffTime timeDiffFromUtc) <$> mbLastOnlineFrom
-      numDaysAgo = fromMaybe 10 mbMaxOnlineDurationDays
       limitNumDaysAgoLocal = addUTCTime (secondsToNominalDiffTime . Seconds $ (- numDaysAgo) * 86400) localTime
       lastOnlineFromLocalLimited = maybe localTime (max limitNumDaysAgoLocal) mbLastOnlineFromLocal
       startDayTimeLocal = UTCTime (utctDay localTime) 0

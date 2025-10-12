@@ -175,7 +175,8 @@ getStatus (personId, merchantId, merchantOperatingCityId) orderId = do
             card = Nothing,
             paymentMethodType = Nothing,
             authIdCode = Nothing,
-            txnUUID = Nothing
+            txnUUID = Nothing,
+            effectAmount = Nothing
           }
     else do
       let serviceName = fromMaybe DP.YATRI_SUBSCRIPTION mbServiceName

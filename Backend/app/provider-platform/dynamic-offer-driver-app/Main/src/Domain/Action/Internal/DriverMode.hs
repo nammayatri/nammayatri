@@ -245,9 +245,9 @@ updateDriverModeAndFlowStatus ::
   DI.DriverInformation ->
   m ()
 updateDriverModeAndFlowStatus driverId transporterConfig isActive mbNewMode newFlowStatus oldDriverInfo = do
-  let mbAllowCacheDriverFlowStatus = transporterConfig.allowCacheDriverFlowStatus
   QDriverInformation.updateActivity isActive mbNewMode (Just newFlowStatus) driverId
-  when (mbAllowCacheDriverFlowStatus == Just True) $
+  let allowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
+  when allowCacheDriverFlowStatus $
     updateFleetOperatorStatusKeyForDriver driverId newFlowStatus oldDriverInfo
   fork "update driver online duration" $ do
     processingChangeOnline driverId transporterConfig mbNewMode oldDriverInfo.mode

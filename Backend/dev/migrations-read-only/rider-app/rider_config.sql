@@ -447,3 +447,4 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN enable_ride_end_offers boolean ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN metrics_blacklist_patterns text [] ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN dashboard_media_file_url_pattern text ;

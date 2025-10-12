@@ -172,6 +172,7 @@ library
       Domain.Action.Dashboard.Invoice
       Domain.Action.Dashboard.IssueManagement.Issue
       Domain.Action.Dashboard.IssueManagement.IssueList
+      Domain.Action.Dashboard.Media
       Domain.Action.Dashboard.Merchant
       Domain.Action.Dashboard.NammaTag
       Domain.Action.Dashboard.Ride
@@ -615,6 +616,7 @@ library
       API.Action.Dashboard.Management.Customer
       API.Action.Dashboard.Management.FRFSTicket
       API.Action.Dashboard.Management.Invoice
+      API.Action.Dashboard.Management.Media
       API.Action.Dashboard.Management.Merchant
       API.Action.Dashboard.Management.NammaTag
       API.Action.Dashboard.Management.Ride
@@ -1296,6 +1298,7 @@ library
     , servant-client-core
     , servant-openapi3
     , servant-server
+    , servant-xml
     , sessionizer-metrics
     , shared-services
     , singletons
@@ -1319,6 +1322,8 @@ library
     , wai-middleware-prometheus
     , warp
     , x509
+    , xml-conduit
+    , xmlbf
     , yudhishthira
   default-language: Haskell2010
   if flag(Local)
@@ -1431,6 +1436,7 @@ executable rider-app-exe
     , servant-client-core
     , servant-openapi3
     , servant-server
+    , servant-xml
     , singletons
     , singletons-th
     , split
@@ -1449,6 +1455,8 @@ executable rider-app-exe
     , wai-middleware-prometheus
     , warp
     , x509
+    , xml-conduit
+    , xmlbf
     , yudhishthira
   default-language: Haskell2010
   if flag(Local)
@@ -1563,6 +1571,7 @@ test-suite rider-app-test
     , servant-client-core
     , servant-openapi3
     , servant-server
+    , servant-xml
     , singletons
     , singletons-th
     , split
@@ -1584,5 +1593,7 @@ test-suite rider-app-test
     , wai-middleware-prometheus
     , warp
     , x509
+    , xml-conduit
+    , xmlbf
     , yudhishthira
   default-language: Haskell2010

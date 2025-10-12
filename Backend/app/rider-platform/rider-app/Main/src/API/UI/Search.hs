@@ -406,12 +406,12 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
 
   let (indexedRoutesToProcess, showMultimodalWarningForFirstJourney) = getIndexedRoutesAndWarning userPreferences otpResponse
 
-  mbCrisSdkToken <- getCrisSdkToken merchantOperatingCityId indexedRoutesToProcess
+  mbCrisSdkToken <- JMU.measureLatency (getCrisSdkToken merchantOperatingCityId indexedRoutesToProcess) "getCrisSdkToken"
 
-  multimodalIntiateHelper isSingleMode singleModeWarningType otpResponse userPreferences indexedRoutesToProcess showMultimodalWarningForFirstJourney mbCrisSdkToken True (null restOfViaPoints) routeLiveInfo
+  JMU.measureLatency (multimodalIntiateHelper isSingleMode singleModeWarningType otpResponse userPreferences indexedRoutesToProcess showMultimodalWarningForFirstJourney mbCrisSdkToken True (null restOfViaPoints) routeLiveInfo) "multimodalIntiateHelper"
   where
     processSingleModeRoutes isSingleMode restOfViaPoints userPreferences mbIntegratedBPPConfig preliminaryLeg routeLiveInfo = do
-      (restOfRoutes, _) <- JMU.getSubwayValidRoutes restOfViaPoints preliminaryLeg (fromJust mbIntegratedBPPConfig) searchRequest.merchantId searchRequest.merchantOperatingCityId (fromMaybe BecknV2.OnDemand.Enums.BUS searchRequest.vehicleCategory) (castVehicleCategoryToGeneralVehicleType (fromMaybe BecknV2.OnDemand.Enums.BUS searchRequest.vehicleCategory)) True
+      (restOfRoutes, _) <- JMU.measureLatency (JMU.getSubwayValidRoutes restOfViaPoints preliminaryLeg (fromJust mbIntegratedBPPConfig) searchRequest.merchantId searchRequest.merchantOperatingCityId (fromMaybe BecknV2.OnDemand.Enums.BUS searchRequest.vehicleCategory) (castVehicleCategoryToGeneralVehicleType (fromMaybe BecknV2.OnDemand.Enums.BUS searchRequest.vehicleCategory)) True) "getSubwayValidRoutes"
       if null restOfRoutes
         then
           getAllRoutesLoadedKey searchRequest.id.getId >>= \case
@@ -440,7 +440,7 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
                         void $ DMC.postMultimodalInitiate (Just searchRequest.riderId, searchRequest.merchantId) firstJourney.id
                       return Nothing
                     else do
-                      res <- DMC.postMultimodalInitiate (Just searchRequest.riderId, searchRequest.merchantId) firstJourney.id
+                      res <- JMU.measureLatency (DMC.postMultimodalInitiate (Just searchRequest.riderId, searchRequest.merchantId) firstJourney.id) "DMC.postMultimodalInitiate"
                       return $ Just res
                 fork "Rest of the routes Init" $ processRestOfRoutes [x | (j, x) <- zip [0 ..] otpResponse.routes, j /= idx] userPreferences routeLiveInfo allJourneysLoaded
                 return resp

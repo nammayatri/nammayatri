@@ -236,7 +236,10 @@ select2 personId estimateId req@DSelectReq {..} = do
       _ -> pure Nothing
   let lastUsedVehicleServiceTiers = insertVehicleServiceTierAndCategory (maybe 5 (.noOfRideRequestsConfig) riderConfig) estimate.vehicleServiceTierType person.lastUsedVehicleServiceTiers
   let lastUsedVehicleCategories = insertVehicleServiceTierAndCategory (maybe 5 (.noOfRideRequestsConfig) riderConfig) (fromMaybe DVCT.AUTO_RICKSHAW estimate.vehicleCategory) person.lastUsedVehicleCategories
-  let toUpdateDeviceIdInfo = (fromMaybe 0 person.totalRidesCount) == 0
+  let toUpdateDeviceIdInfo =
+        if fromMaybe False (riderConfig >>= (.isDeviceIdCheckDisabled))
+          then False
+          else (fromMaybe 0 person.totalRidesCount) == 0
   isMultipleOrNoDeviceIdExist <-
     maybe
       (return Nothing)
@@ -460,6 +463,7 @@ mkJourneyForSearch searchRequest estimate personId = do
                     routeGtfsId = Nothing,
                     routeLongName = Nothing,
                     routeShortName = Nothing,
+                    userBookedRouteShortName = Nothing,
                     startLocationLat = searchRequest.fromLocation.lat,
                     startLocationLon = searchRequest.fromLocation.lon,
                     subLegOrder = Just 1,
@@ -494,6 +498,8 @@ mkJourneyForSearch searchRequest estimate personId = do
             finalBoardedDepotNo = Nothing,
             finalBoardedScheduleNo = Nothing,
             finalBoardedWaybillId = Nothing,
+            finalBoardedBusServiceTierType = Nothing,
+            userBookedBusServiceTierType = Nothing,
             osmEntrance = Nothing,
             osmExit = Nothing,
             straightLineEntrance = Nothing,

@@ -61,12 +61,14 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Payment.Domain.Types.Common
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
+import qualified Lib.Payment.Domain.Types.PaymentOrderSplit as DPaymentOrderSplit
 import qualified Lib.Payment.Domain.Types.PaymentTransaction as DTransaction
 import qualified Lib.Payment.Domain.Types.PayoutOrder as Payment
 import qualified Lib.Payment.Domain.Types.PayoutTransaction as PT
 import Lib.Payment.Domain.Types.Refunds (Refunds (..), Split (..))
 import Lib.Payment.Storage.Beam.BeamFlow
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
+import qualified Lib.Payment.Storage.Queries.PaymentOrderSplit as QPaymentOrderSplit
 import qualified Lib.Payment.Storage.Queries.PaymentTransaction as QTransaction
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
 import qualified Lib.Payment.Storage.Queries.PayoutTransaction as QPayoutTransaction
@@ -85,7 +87,8 @@ data PaymentStatusResp
         card :: Maybe Payment.CardInfo,
         paymentMethodType :: Maybe Text,
         authIdCode :: Maybe Text,
-        txnUUID :: Maybe Text
+        txnUUID :: Maybe Text,
+        effectAmount :: Maybe HighPrecMoney
       }
   | MandatePaymentStatus
       { status :: Payment.TransactionStatus,
@@ -477,44 +480,92 @@ buildPaymentOrder ::
 buildPaymentOrder merchantId mbMerchantOpCityId personId mbEntityName req resp = do
   now <- getCurrentTime
   clientAuthToken <- encrypt resp.sdk_payload.payload.clientAuthToken
-  pure
-    DOrder.PaymentOrder
-      { id = Id req.orderId,
-        shortId = ShortId req.orderShortId,
-        paymentServiceOrderId = resp.id,
-        requestId = resp.sdk_payload.requestId,
-        service = resp.sdk_payload.service,
-        clientId = resp.sdk_payload.payload.clientId,
-        description = resp.sdk_payload.payload.description,
-        returnUrl = resp.sdk_payload.payload.returnUrl,
-        action = resp.sdk_payload.payload.action,
-        personId,
-        merchantId,
-        entityName = mbEntityName,
-        paymentMerchantId = resp.sdk_payload.payload.merchantId,
-        amount = req.amount,
-        currency = resp.sdk_payload.payload.currency,
-        status = resp.status,
-        paymentLinks = fromMaybe (Payment.PaymentLinks Nothing Nothing Nothing Nothing) resp.payment_links,
-        clientAuthToken = Just clientAuthToken,
-        clientAuthTokenExpiry = Just resp.sdk_payload.payload.clientAuthTokenExpiry,
-        getUpiDeepLinksOption = resp.sdk_payload.payload.options_getUpiDeepLinks,
-        environment = resp.sdk_payload.payload.environment,
-        createMandate = resp.sdk_payload.payload.createMandate,
-        mandateMaxAmount = read . T.unpack <$> resp.sdk_payload.payload.mandateMaxAmount,
-        mandateStartDate = posixSecondsToUTCTime . read . T.unpack <$> (resp.sdk_payload.payload.mandateStartDate),
-        mandateEndDate = posixSecondsToUTCTime . read . T.unpack <$> resp.sdk_payload.payload.mandateEndDate,
-        serviceProvider = Payment.Juspay, -- fix it later
-        bankErrorCode = Nothing,
-        bankErrorMessage = Nothing,
-        isRetried = False,
-        isRetargeted = False,
-        retargetLink = Nothing,
-        sdkPayloadDump = resp.sdk_payload_json,
+  let mkPaymentOrder =
+        DOrder.PaymentOrder
+          { id = Id req.orderId,
+            shortId = ShortId req.orderShortId,
+            paymentServiceOrderId = resp.id,
+            requestId = resp.sdk_payload.requestId,
+            service = resp.sdk_payload.service,
+            clientId = resp.sdk_payload.payload.clientId,
+            description = resp.sdk_payload.payload.description,
+            returnUrl = resp.sdk_payload.payload.returnUrl,
+            action = resp.sdk_payload.payload.action,
+            personId,
+            merchantId,
+            entityName = mbEntityName,
+            paymentMerchantId = resp.sdk_payload.payload.merchantId,
+            amount = req.amount,
+            currency = resp.sdk_payload.payload.currency,
+            status = resp.status,
+            paymentLinks = fromMaybe (Payment.PaymentLinks Nothing Nothing Nothing Nothing) resp.payment_links,
+            clientAuthToken = Just clientAuthToken,
+            clientAuthTokenExpiry = Just resp.sdk_payload.payload.clientAuthTokenExpiry,
+            getUpiDeepLinksOption = resp.sdk_payload.payload.options_getUpiDeepLinks,
+            environment = resp.sdk_payload.payload.environment,
+            createMandate = resp.sdk_payload.payload.createMandate,
+            mandateMaxAmount = read . T.unpack <$> resp.sdk_payload.payload.mandateMaxAmount,
+            mandateStartDate = posixSecondsToUTCTime . read . T.unpack <$> (resp.sdk_payload.payload.mandateStartDate),
+            mandateEndDate = posixSecondsToUTCTime . read . T.unpack <$> resp.sdk_payload.payload.mandateEndDate,
+            serviceProvider = Payment.Juspay, -- fix it later
+            bankErrorCode = Nothing,
+            bankErrorMessage = Nothing,
+            isRetried = False,
+            isRetargeted = False,
+            retargetLink = Nothing,
+            sdkPayloadDump = resp.sdk_payload_json,
+            createdAt = now,
+            updatedAt = now,
+            merchantOperatingCityId = mbMerchantOpCityId
+          }
+  buildPaymentSplit req.orderId mkPaymentOrder req.splitSettlementDetails merchantId mbMerchantOpCityId
+  pure mkPaymentOrder
+
+mkPaymentOrderSplit :: (EncFlow m r, BeamFlow m r) => Text -> HighPrecMoney -> PInterface.MBY -> HighPrecMoney -> Text -> Id Merchant -> Maybe (Id MerchantOperatingCity) -> m DPaymentOrderSplit.PaymentOrderSplit
+mkPaymentOrderSplit vendorId amount mdrBorneBy merchantCommission paymentOrderId merchantId merchantOperatingCityId = do
+  id <- generateGUID
+  now <- getCurrentTime
+  return $
+    DPaymentOrderSplit.PaymentOrderSplit
+      { id = id,
+        vendorId = vendorId,
+        merchantId = merchantId.getId,
+        amount = mkPrice Nothing amount,
+        mdrBorneBy = show mdrBorneBy,
+        merchantCommission = mkPrice Nothing merchantCommission,
+        merchantOperatingCityId = merchantOperatingCityId <&> (.getId),
+        paymentOrderId = Id paymentOrderId,
         createdAt = now,
-        updatedAt = now,
-        merchantOperatingCityId = mbMerchantOpCityId
+        updatedAt = now
       }
+
+buildPaymentSplit :: (EncFlow m r, BeamFlow m r) => Text -> DOrder.PaymentOrder -> Maybe PInterface.SplitSettlementDetails -> Id Merchant -> Maybe (Id MerchantOperatingCity) -> m ()
+buildPaymentSplit paymentOrderId paymentOrder mbSplitSettlementDetails merchantId merchantOperatingCityId = do
+  case mbSplitSettlementDetails of
+    Just (PInterface.AmountBased splitSettlementDetails) ->
+      createSplits splitSettlementDetails.marketplace.amount splitSettlementDetails.mdrBorneBy splitSettlementDetails.vendor.split
+    Just (PInterface.PercentageBased splitSettlementDetails) -> do
+      let totalAmount = paymentOrder.amount
+          marketplaceAmount = (realToFrac splitSettlementDetails.marketplace.amountPercentage / 100.0) * totalAmount
+          convertedVendorSplits =
+            map
+              ( \v ->
+                  PInterface.Split
+                    { amount = (realToFrac v.amountPercentage / 100.0) * totalAmount,
+                      merchantCommission = (realToFrac v.merchantCommissionPercentage / 100.0) * totalAmount,
+                      subMid = v.subMid,
+                      uniqueSplitId = v.uniqueSplitId
+                    }
+              )
+              splitSettlementDetails.vendor.split
+      createSplits marketplaceAmount splitSettlementDetails.mdrBorneBy convertedVendorSplits
+    Nothing -> pure ()
+  where
+    createSplits marketplaceAmount mdrBorneBy vendorSplits = do
+      marketPlaceSplit <- mkPaymentOrderSplit "marketPlace" marketplaceAmount mdrBorneBy 0 paymentOrderId merchantId merchantOperatingCityId
+      vendorSplitEntries <- mapM (\vendor -> mkPaymentOrderSplit vendor.subMid vendor.amount mdrBorneBy vendor.merchantCommission paymentOrderId merchantId merchantOperatingCityId) vendorSplits
+      let splits = marketPlaceSplit : vendorSplitEntries
+      QPaymentOrderSplit.createMany splits
 
 -- order status -----------------------------------------------------
 
@@ -584,7 +635,22 @@ orderStatusService personId orderId orderStatusCall = do
         )
         transactionUUID
       mapM_ updateRefundStatus refunds
-      return $ PaymentStatus {status = transactionStatus, bankErrorCode = orderTxn.bankErrorCode, bankErrorMessage = orderTxn.bankErrorMessage, isRetried = isRetriedOrder, isRetargeted = isRetargetedOrder, retargetLink = retargetPaymentLink, refunds = refunds, payerVpa = (payerVpa <|> ((.payerVpa) =<< upi)), authIdCode = ((.authIdCode) =<< paymentGatewayResponse), txnUUID = transactionUUID, ..}
+      void $ QOrder.updateEffectiveAmount orderId effectiveAmount
+      return $
+        PaymentStatus
+          { status = transactionStatus,
+            bankErrorCode = orderTxn.bankErrorCode,
+            bankErrorMessage = orderTxn.bankErrorMessage,
+            isRetried = isRetriedOrder,
+            isRetargeted = isRetargetedOrder,
+            retargetLink = retargetPaymentLink,
+            refunds = refunds,
+            payerVpa = (payerVpa <|> ((.payerVpa) =<< upi)),
+            authIdCode = ((.authIdCode) =<< paymentGatewayResponse),
+            txnUUID = transactionUUID,
+            effectAmount = effectiveAmount,
+            ..
+          }
     _ -> throwError $ InternalError "Unexpected Order Status Response."
 
 data OrderTxn = OrderTxn
@@ -772,6 +838,7 @@ createExecutionService ::
 createExecutionService (request, orderId) merchantId mbMerchantOpCityId executionCall = do
   executionOrder <- mkExecutionOrder request
   QOrder.create executionOrder
+  buildPaymentSplit orderId executionOrder (PInterface.AmountBased <$> request.splitSettlementDetails) merchantId mbMerchantOpCityId
   executionResp <- withShortRetry $ executionCall request
   QOrder.updateStatus (Id orderId) executionResp.orderId executionResp.status
   return executionResp

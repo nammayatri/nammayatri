@@ -125,13 +125,17 @@ createOrder (driverId, merchantId, opCity) serviceName (driverFees, driverFeesTo
             optionsGetUpiDeepLinks = mbDeepLinkData >>= (.sendDeepLink),
             metadataExpiryInMins = mbDeepLinkData >>= (.expiryTimeInMinutes),
             splitSettlementDetails = splitSettlementDetails,
-            metadataGatewayReferenceId = Nothing --- assigned in shared kernel
+            metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
+            basket = Nothing
           }
   let commonMerchantId = cast @DM.Merchant @DPayment.Merchant merchantId
       commonPersonId = cast @DP.Person @DPayment.Person driver.id
   paymentServiceName <- TPayment.decidePaymentService serviceName driver.clientSdkVersion driver.merchantOperatingCityId
   (createOrderCall, pseudoClientId) <- TPayment.createOrder merchantId opCity paymentServiceName (Just driver.id.getId) -- api call
-  mCreateOrderRes <- DPayment.createOrderService commonMerchantId (Just $ cast opCity) commonPersonId mbEntityName createOrderReq createOrderCall
+  mCreateOrderRes <-
+    if (isJust existingInvoice && amount < 1) -- In case driver fee was cleared with coins and remaining amount is less than 1 (Juspay create order fails)
+      then pure Nothing
+      else DPayment.createOrderService commonMerchantId (Just $ cast opCity) commonPersonId mbEntityName createOrderReq createOrderCall
   case mCreateOrderRes of
     Just createOrderRes -> return (createOrderRes{sdk_payload = createOrderRes.sdk_payload{payload = createOrderRes.sdk_payload.payload{clientId = pseudoClientId <|> createOrderRes.sdk_payload.payload.clientId}}}, cast invoiceId)
     Nothing -> do
@@ -153,11 +157,12 @@ mkSplitSettlementDetails vendorFees totalAmount = do
     throwError (InternalError "Marketplace amount is negative")
   return $
     Just $
-      SplitSettlementDetails
-        { marketplace = Marketplace marketplaceAmount,
-          mdrBorneBy = ALL,
-          vendor = Vendor vendorSplits
-        }
+      AmountBased $
+        SplitSettlementDetailsAmount
+          { marketplace = Marketplace marketplaceAmount,
+            mdrBorneBy = ALL,
+            vendor = Vendor vendorSplits
+          }
   where
     computeSplit uniqueId feesForVendor =
       case feesForVendor of

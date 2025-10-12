@@ -380,7 +380,6 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allowed_referra
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN qar_cal_radius_in_km double precision ;
 
 
-
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN is_dynamic_pricing_qar_cal_enabled boolean ;
@@ -397,7 +396,6 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN generate_referr
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN max_allowed_doc_size_in_mb integer ;
 
 
-
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN bulk_waive_off_limit integer ;
@@ -406,7 +404,6 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN bulk_waive_off_
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN rc_expiry_checks boolean ;
-
 
 
 ------- SQL updates -------
@@ -428,23 +425,7 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN local_ambulance
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN week_start_mode int  default 3;
-
-
-------- SQL updates -------
-
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN earnings_window_size int  default 7;
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN live_ekd boolean  default false;
-
 
 
 ------- SQL updates -------
@@ -458,13 +439,9 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN is_aa_enabled_f
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN aa_enabled_client_sdk_version text  default '999.999.999';
 
 
-
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN disable_driver_when_unlinking_vehicle boolean  default true;
-
-
-------- SQL updates -------
 
 
 ------- SQL updates -------
@@ -486,47 +463,17 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN max_allowed_vid
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN allow_cache_driver_flow_status boolean  default false;
-
-
-------- SQL updates -------
-
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN cancellation_rate_slab_config json;
 
 
-
-
-
 ------- SQL updates -------
-
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN prepaid_subscription_threshold double precision ;
-
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN is_ml_based_dynamic_pricing_enabled boolean ;
-
-
-
-------- SQL updates -------
-
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN gst_percentage double precision ;
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_driver_wallet boolean ;
-
-
-------- SQL updates -------
-
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN max_online_duration_days integer  default 10;
-
-
-
-------- SQL updates -------
-
-
 
 
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN distance_weightage integer  default 20;
-
 
 
 ------- SQL updates -------
@@ -536,26 +483,51 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN driver_calling_
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN minimum_wallet_payout_amount double precision ;
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN max_wallet_payouts_per_day integer ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN rc_change_threshold_days integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN subscription_config json  default '{"prepaidSubscriptionThreshold": null}' :: json;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN driver_wallet_config json  default '{"enableDriverWallet": false, "driverWalletPayoutThreshold": 0, "gstPercentage": 0.0, "enableWalletPayout": false, "enableWalletTopup": false, "maxWalletPayoutsPerDay": null, "minimumWalletPayoutAmount": 0, "payoutCutOffDays": 7}' :: json;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN analytics_config json  default '{"weekStartMode": 3, "earningsWindowSize": 7, "allowCacheDriverFlowStatus": false, "maxOnlineDurationDays": 10, "onlineDurationCalculateFrom": null}' :: json;
 
 
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN online_duration_calculate_from timestamp with time zone ;
 
-
-------- SQL updates -------
-
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_wallet_payout boolean ;
 
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN enable_wallet_topup boolean ;
+
 
 
 ------- SQL updates -------
 
-ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN payout_cut_off_days integer ;
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

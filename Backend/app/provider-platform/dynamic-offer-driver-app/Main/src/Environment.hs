@@ -161,7 +161,8 @@ data AppCfg = AppCfg
     meterRideReferralLink :: Text,
     minDistanceBetweenTwoPoints :: Int,
     tsServiceConfig :: CPT.TSServiceConfig,
-    inMemConfig :: KTC.InMemConfig
+    inMemConfig :: KTC.InMemConfig,
+    driverFleetLocationListAPIRateLimitOptions :: APIRateLimitOptions
   }
   deriving (Generic, FromDhall)
 
@@ -272,7 +273,8 @@ data AppEnv = AppEnv
     minDistanceBetweenTwoPoints :: Int,
     tsServiceConfig :: CPT.TSServiceConfig,
     inMemEnv :: KTC.InMemEnv,
-    url :: Maybe Text
+    url :: Maybe Text,
+    driverFleetLocationListAPIRateLimitOptions :: APIRateLimitOptions
   }
   deriving (Generic)
 

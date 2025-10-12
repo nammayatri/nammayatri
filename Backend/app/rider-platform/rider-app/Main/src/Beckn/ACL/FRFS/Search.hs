@@ -67,7 +67,7 @@ tfIntentFulfillment vehicleType mbFromStation mbToStation =
   Just $
     Spec.Fulfillment
       { fulfillmentId = Nothing,
-        fulfillmentStops = tfStops mbFromStation mbToStation,
+        fulfillmentStops = maybe Nothing (\(fromStation, toStation) -> tfStops (Just fromStation) (Just toStation)) ((,) <$> mbFromStation <*> mbToStation),
         fulfillmentTags = Nothing,
         fulfillmentType = Nothing,
         fulfillmentVehicle = tfVehicle vehicleType

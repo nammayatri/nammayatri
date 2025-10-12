@@ -28,6 +28,7 @@ import qualified Domain.Types.FRFSTicketBookingPayment as DFRFSTicketBookingPaym
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSTicketBooking
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Journey as DJ
+import qualified Domain.Types.JourneyLeg as DJL
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Merchant as Merchant
 import Domain.Types.MerchantOperatingCity as DMOC
@@ -89,7 +90,9 @@ import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBookingFeedback as QFRFSTicketBookingFeedback
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.Journey as QJourney
+import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.RouteDetails as QRouteDetails
 import Tools.Error
 import Tools.Maps as Maps
 import qualified Tools.Payment as Payment
@@ -592,11 +595,11 @@ getFrfsSearchQuote (mbPersonId, _) searchId_ = do
     )
     quotes
 
-postFrfsQuoteV2Confirm :: CallExternalBPP.FRFSConfirmFlow m r => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
+postFrfsQuoteV2Confirm :: (CallExternalBPP.FRFSConfirmFlow m r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 postFrfsQuoteV2Confirm (mbPersonId, merchantId_) quoteId req = do
   postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req Nothing Nothing
 
-postFrfsQuoteV2ConfirmUtil :: CallExternalBPP.FRFSConfirmFlow m r => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq -> Maybe MultimodalConfirm.CrisSdkResponse -> Maybe Bool -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
+postFrfsQuoteV2ConfirmUtil :: (CallExternalBPP.FRFSConfirmFlow m r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq -> Maybe MultimodalConfirm.CrisSdkResponse -> Maybe Bool -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req crisSdkResponse isSingleMode = do
   merchant <- CQM.findById merchantId_ >>= fromMaybeM (InvalidRequest "Invalid merchant id")
   quote <- B.runInReplica $ QFRFSQuote.findById quoteId >>= fromMaybeM (InvalidRequest "Invalid quote id")
@@ -744,6 +747,19 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req crisSdkResponse
       -- Create booking breakup entries based on category selections
       -- dcategories <- buildCategorySelectFromReq req.offered
       -- FRFSUtils.createBookingBreakupEntries booking dcategories merchantId_ quote.merchantOperatingCityId
+
+      -- Update userBookedRouteShortName and userBookedBusServiceTierType from route_stations_json
+      let routeStations :: Maybe [FRFSRouteStationsAPI] = decodeFromText =<< routeStationsJson
+      let mbFirstRouteStation = listToMaybe (fromMaybe [] routeStations)
+      let mbBookedRouteShortName = mbFirstRouteStation <&> (.shortName)
+      let mbBookedServiceTierType = mbFirstRouteStation >>= (.vehicleServiceTier) <&> (._type)
+      when (isJust mbBookedRouteShortName && isJust mbBookedServiceTierType) $ do
+        mbJourneyLeg <- QJourneyLeg.findByLegSearchId (Just searchId.getId)
+        whenJust mbJourneyLeg $ \journeyLeg -> do
+          whenJust mbBookedRouteShortName $ \bookedRouteShortName ->
+            QRouteDetails.updateUserBookedRouteShortName (Just bookedRouteShortName) journeyLeg.id.getId
+          QJourneyLeg.updateByPrimaryKey $ journeyLeg {DJL.userBookedBusServiceTierType = mbBookedServiceTierType}
+
       return (rider, booking)
 
     makeBookingStatusAPI booking discounts routeStations stations city =
@@ -769,7 +785,7 @@ postFrfsQuoteV2ConfirmUtil (mbPersonId, merchantId_) quoteId req crisSdkResponse
           ..
         }
 
-postFrfsQuoteConfirm :: CallExternalBPP.FRFSConfirmFlow m r => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
+postFrfsQuoteConfirm :: (CallExternalBPP.FRFSConfirmFlow m r) => (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id DFRFSQuote.FRFSQuote -> m API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes
 postFrfsQuoteConfirm (mbPersonId, merchantId_) quoteId = do
   postFrfsQuoteV2Confirm (mbPersonId, merchantId_) quoteId (API.Types.UI.FRFSTicketService.FRFSQuoteConfirmReq {offered = Nothing, ticketQuantity = Nothing, childTicketQuantity = Nothing})
 
@@ -1036,7 +1052,8 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking booking' = do
       personEmail <- mapM decrypt person.email
       personPhone <- person.mobileNumber & fromMaybeM (PersonFieldNotPresent "mobileNumber") >>= decrypt
       isSplitEnabled_ <- Payment.getIsSplitEnabled merchantId_ merchantOperatingCityId Nothing (getPaymentType booking.vehicleType)
-      splitSettlementDetails <- Payment.mkSplitSettlementDetails isSplitEnabled_ paymentOrder.amount []
+      isPercentageSplitEnabled <- Payment.getIsPercentageSplit merchantId_ merchantOperatingCityId Nothing (getPaymentType booking.vehicleType)
+      splitSettlementDetails <- Payment.mkSplitSettlementDetails isSplitEnabled_ paymentOrder.amount [] isPercentageSplitEnabled
       let createOrderReq =
             Payment.CreateOrderReq
               { orderId = paymentOrder.id.getId,
@@ -1055,7 +1072,8 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking booking' = do
                 optionsGetUpiDeepLinks = Nothing,
                 metadataExpiryInMins = Nothing,
                 metadataGatewayReferenceId = Nothing, --- assigned in shared kernel
-                splitSettlementDetails = splitSettlementDetails
+                splitSettlementDetails = splitSettlementDetails,
+                basket = Nothing
               }
       DPayment.createOrderService commonMerchantId (Just $ cast merchantOperatingCityId) commonPersonId Nothing createOrderReq (createOrderCall merchantOperatingCityId booking (Just person.id.getId) person.clientSdkVersion)
 
@@ -1085,12 +1103,10 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking booking' = do
         FRFSUtils.markAllRefundBookings booking person.id
 
 getFrfsBookingList :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Kernel.Prelude.Maybe Kernel.Prelude.Int -> Maybe Spec.VehicleCategory -> Environment.Flow [API.Types.UI.FRFSTicketService.FRFSTicketBookingStatusAPIRes]
-getFrfsBookingList (mbPersonId, merchantId) mbLimit mbOffset mbVehicleCategory = do
+getFrfsBookingList (mbPersonId, _merchantId) mbLimit mbOffset mbVehicleCategory = do
   personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
   bookings <- B.runInReplica $ QFRFSTicketBooking.findAllByRiderId mbLimit mbOffset personId mbVehicleCategory
-  case mbVehicleCategory of
-    Just Spec.BUS -> mapM (frfsBookingStatus (personId, merchantId) False) bookings
-    _ -> mapM (`buildFRFSTicketBookingStatusAPIRes` Nothing) bookings
+  mapM (`buildFRFSTicketBookingStatusAPIRes` Nothing) bookings
 
 buildFRFSTicketBookingStatusAPIRes :: DFRFSTicketBooking.FRFSTicketBooking -> Maybe FRFSTicketService.FRFSBookingPaymentAPI -> Environment.Flow FRFSTicketService.FRFSTicketBookingStatusAPIRes
 buildFRFSTicketBookingStatusAPIRes booking payment = do
