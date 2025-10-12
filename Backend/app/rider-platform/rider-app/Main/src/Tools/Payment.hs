@@ -295,6 +295,9 @@ mkSplitSettlementDetails isSplitEnabled totalAmount vendorFees isPercentageSplit
           logError $ "Marketplace percentage is negative: " <> show marketplacePercentage <> " for vendorFees: " <> show vendorFees <> "totalVendorPercentage: " <> show totalVendorPercentage
           throwError (InternalError "Marketplace percentage is negative")
 
+        logInfo $ "Creating aggregated percentage-based split settlement details - vendorPercentageSplits: " <> show vendorPercentageSplits <> " marketplacePercentage: " <> show marketplacePercentage
+        logInfo $ "Aggregated percentage-based split settlement details created successfully with totalAmount: " <> show totalAmount <> " and " <> show (length vendorPercentageSplits) <> " vendor splits"
+
         return $
           Just $
             PercentageBased $
@@ -314,6 +317,10 @@ mkSplitSettlementDetails isSplitEnabled totalAmount vendorFees isPercentageSplit
         when (marketplaceAmount < 0) $ do
           logError $ "Marketplace amount is negative: " <> show marketplaceAmount <> " for vendorFees: " <> show vendorFees <> " totalVendorAmount: " <> show totalVendorAmount <> " totalAmount: " <> show totalAmount
           throwError (InternalError "Marketplace amount is negative")
+
+        logInfo $ "Creating aggregated amount-based split settlement details - vendorSplits: " <> show vendorSplits <> " marketplaceAmount: " <> show marketplaceAmount
+        logInfo $ "Aggregated amount-based split settlement details created successfully with totalAmount: " <> show totalAmount <> " totalVendorAmount: " <> show totalVendorAmount <> " and " <> show (length vendorSplits) <> " vendor splits"
+
         return $
           Just $
             AmountBased $
@@ -383,6 +390,9 @@ mkUnaggregatedSplitSettlementDetails isSplitEnabled totalAmount vendorFees isPer
           logError $ "Marketplace percentage is negative: " <> show marketplacePercentage <> " for vendorFees: " <> show vendorFees <> "totalVendorPercentage: " <> show totalVendorPercentage
           throwError (InternalError "Marketplace percentage is negative")
 
+        logInfo $ "Creating percentage-based split settlement details - vendorPercentageSplits: " <> show vendorPercentageSplits <> " marketplacePercentage: " <> show marketplacePercentage
+        logInfo $ "Split settlement details created successfully with totalAmount: " <> show totalAmount <> " and " <> show (length vendorPercentageSplits) <> " vendor splits"
+
         return $
           Just $
             PercentageBased $
@@ -409,6 +419,10 @@ mkUnaggregatedSplitSettlementDetails isSplitEnabled totalAmount vendorFees isPer
         when (marketplaceAmount < 0) $ do
           logError $ "Marketplace amount is negative: " <> show marketplaceAmount <> " for vendorFees: " <> show vendorFees <> "totalVendorAmount: " <> show totalVendorAmount <> " totalAmount: " <> show totalAmount
           throwError (InternalError "Marketplace amount is negative")
+
+        logInfo $ "Creating amount-based split settlement details - vendorSplits: " <> show vendorSplits <> " marketplaceAmount: " <> show marketplaceAmount
+        logInfo $ "Amount-based split settlement details created successfully with totalAmount: " <> show totalAmount <> " totalVendorAmount: " <> show totalVendorAmount <> " and " <> show (length vendorSplits) <> " vendor splits"
+
         return $
           Just $
             AmountBased $
@@ -437,6 +451,10 @@ mkUnaggregatedRefundSplitSettlementDetails isSplitEnabled totalAmount vendorFees
     when (marketplaceAmount < 0) $ do
       logError $ "Marketplace amount is negative: " <> show marketplaceAmount <> " for vendorFees: " <> show vendorFees <> "totalVendorAmount: " <> show totalVendorAmount <> " totalAmount: " <> show totalAmount
       throwError (InternalError "Marketplace amount is negative")
+
+    logInfo $ "Creating refund split settlement details - vendorSplits: " <> show vendorSplits <> " marketplaceAmount: " <> show marketplaceAmount
+    logInfo $ "Refund split settlement details created successfully with totalAmount: " <> show totalAmount <> " totalVendorAmount: " <> show totalVendorAmount <> " and " <> show (length vendorSplits) <> " vendor refund splits"
+
     return $
       Just $
         RefundSplitSettlementDetails
