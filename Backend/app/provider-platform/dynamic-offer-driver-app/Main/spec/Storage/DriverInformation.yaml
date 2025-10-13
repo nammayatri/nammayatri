@@ -134,6 +134,7 @@ DriverInformation:
     isSilentModeEnabled: Maybe Bool
     isTTSEnabled: Maybe Bool
     isHighAccuracyLocationEnabled: Maybe Bool
+    rideRequestVolumeEnabled: Maybe Bool
 
   default:
     active: "false"
@@ -290,6 +291,7 @@ DriverInformation:
           rideRequestVolume,
           isTTSEnabled,
           isHighAccuracyLocationEnabled,
+          rideRequestVolumeEnabled,
         ]
       where: driverId
     updateRentalInterCityAndIntraCitySwitch:
