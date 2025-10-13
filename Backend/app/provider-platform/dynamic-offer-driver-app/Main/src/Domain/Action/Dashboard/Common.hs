@@ -170,7 +170,6 @@ castDashboardVehicleVariantToDomain = \case
   Common.HATCHBACK -> DV.HATCHBACK
   Common.SEDAN -> DV.SEDAN
   Common.AUTO_RICKSHAW -> DV.AUTO_RICKSHAW
-  Common.AUTO_PLUS -> DV.AUTO_PLUS
   Common.TAXI -> DV.TAXI
   Common.TAXI_PLUS -> DV.TAXI_PLUS
   Common.PREMIUM_SEDAN -> DV.PREMIUM_SEDAN

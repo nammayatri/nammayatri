@@ -128,7 +128,7 @@ findAllTupleByTimestamp startTs endTs driverId limit = do
       CH.orderBy_ (\dek _ -> CH.asc dek.timestamp) $
         CH.limit_ limit $
           CH.filter_
-            ( \dek ->
+            ( \dek _ ->
                 (dek.timestamp CH.>=. startTs CH.&&. dek.timestamp CH.<=. endTs)
                   CH.&&. dek.driverId CH.==. driverId
             )
