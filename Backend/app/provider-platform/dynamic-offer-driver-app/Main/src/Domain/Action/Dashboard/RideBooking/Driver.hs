@@ -215,10 +215,10 @@ recordPayment isExempted merchantShortId opCity reqDriverId requestorId serviceN
   driver <- B.runInReplica (QPerson.findById personId) >>= fromMaybeM (PersonDoesNotExist personId.getId)
   transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId (Just (DriverId (cast driverId))) >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   when (fromMaybe False transporterConfig.enableVendorCheckForCollectingDues && not isExempted) $ do
-    case (.vendorId) <$> mbExemptionAndCashCollectionDriverFeeReq of
+    case mbExemptionAndCashCollectionDriverFeeReq >>= (.vendorId) of
       Nothing -> throwError $ InvalidRequest "vendorId is required."
       Just vendorId -> do
-        volunteer <- QVF.findByIdAndVendorId (Id requestorId) vendorId
+        volunteer <- QVF.findActiveVolunteerByIdAndVendorId (Id requestorId) vendorId
         when (isNothing volunteer) $ throwError $ InvalidRequest "You do not have access to collect cash at this booth"
   Redis.whenWithLockRedis (recordPaymentLockKey reqDriverId) 30 $ do
     -- merchant access checking
