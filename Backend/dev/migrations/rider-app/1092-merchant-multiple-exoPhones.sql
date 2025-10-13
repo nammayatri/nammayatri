@@ -1,7 +1,7 @@
+-- LOCAL : DO NOT RUN IN MASTER/PROD
 ALTER TABLE atlas_app.merchant
-    DROP COLUMN exo_phone,
-    DROP COLUMN exo_phones,
-    DROP COLUMN exo_phone_country_code;
+    DROP COLUMN IF EXISTS exo_phone,
+    DROP COLUMN IF EXISTS exo_phones;
 
 ALTER TABLE atlas_app.merchant
     ADD COLUMN exo_phones character varying(255) [];
