@@ -87,6 +87,7 @@ types:
     - businessLicenseImage: Maybe Text
     - operatorReferralCode: Maybe Text
     - adminApprovalRequired: Maybe Bool
+    - setIsEnabled: Maybe Bool
     - derive: "'HideSecrets"
   FleetOwnerRegisterResV2:
     - enabled: Bool

@@ -60,11 +60,12 @@ module Domain.Action.Dashboard.Fleet.Driver
     checkRCAssociationForFleet,
     validateRequestorRoleAndGetEntityId,
     postDriverFleetLocationList,
+    postDriverFleetGetDriverDetails,
+    postDriverFleetGetNearbyDriversV2,
   )
 where
 
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Fleet.Driver as Common
-import API.Types.ProviderPlatform.Fleet.Endpoints.Driver ()
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.DriverRegistration as Common
 import qualified "dashboard-helper-api" API.Types.ProviderPlatform.Management.Endpoints.Driver as Common
 import Control.Applicative (optional)
@@ -74,6 +75,7 @@ import Data.List (groupBy, sortOn)
 import Data.List.NonEmpty (fromList, toList)
 import Data.List.Split (chunksOf)
 import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 import Data.String.Conversions (cs)
 import qualified Data.Text as T
 import Data.Time ()
@@ -2406,7 +2408,8 @@ postDriverFleetGetNearbyDrivers merchantShortId _ fleetOwnerId req = do
                     Just driverName' ->
                       Just $
                         Common.DriverInfo
-                          { driverName = driverName',
+                          { driverId = cast driverLocation.driverId,
+                            driverName = driverName',
                             vehicleNumber = busNumber,
                             rideStatus = mkRideStatus rideStatus,
                             point = LatLong {lat = driverLocation.lat, lon = driverLocation.lon},
@@ -2731,3 +2734,81 @@ createOrUpdateFleetBadge merchant merchantOpCity person driverDetails fleetOwner
           updatedAt = now,
           badgeRank = driverDetails.badgeRank
         }
+
+---------------------------------------------------------------------
+postDriverFleetGetDriverDetails ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Common.DriverDetailsReq ->
+  Environment.Flow Common.DriverDetailsResp
+postDriverFleetGetDriverDetails _ _ fleetOwnerId req = do
+  respArray <-
+    for req.driverIds $ \driverId -> do
+      let personId = cast @Common.Driver @DP.Person driverId
+      person <- B.runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+      mbVehicle <- B.runInReplica $ QVehicle.findById person.id
+      validateFleetDriverAssociation fleetOwnerId person
+      decryptedMobileNumber <- mapM decrypt person.mobileNumber
+      pure $
+        Common.DriverDetails
+          { driverId = cast person.id,
+            firstName = person.firstName,
+            middleName = person.middleName,
+            lastName = person.lastName,
+            mobileCountryCode = person.mobileCountryCode,
+            mobileNumber = decryptedMobileNumber,
+            email = person.email,
+            vehicleNumber = mbVehicle <&> (.registrationNo),
+            vehicleVariant = DCommon.castVehicleVariantDashboard $ mbVehicle <&> (.variant)
+          }
+  pure $ Common.DriverDetailsResp respArray
+
+---------------------------------------------------------------------
+postDriverFleetGetNearbyDriversV2 ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Text ->
+  Common.NearbyDriversReqV2 ->
+  Environment.Flow Common.NearbyDriversRespV2
+postDriverFleetGetNearbyDriversV2 merchantShortId _ fleetOwnerId req = do
+  merchant <- findMerchantByShortId merchantShortId
+  nearbyDriverLocations <- LF.nearBy req.point.lat req.point.lon Nothing (Just $ map DCommon.castDashboardVehicleVariantToDomain req.vehicleVariantList) req.radius merchant.id (Just fleetOwnerId) Nothing
+  return $
+    Common.NearbyDriversRespV2 $
+      mapMaybe (filterByVehicleType req.vehicleVariantList) nearbyDriverLocations
+  where
+    filterByVehicleType vlist driverLocation
+      | isBusRequest = handleBusDriver driverLocation
+      | isVipRequest = handleVipDriver driverLocation
+      | otherwise = Nothing
+      where
+        isBusRequest = all (`elem` Set.fromList [DV.BUS_AC, DV.BUS_NON_AC]) vlist
+        isVipRequest = all (`elem` Set.fromList [DV.VIP_OFFICER, DV.VIP_ESCORT]) vlist
+
+    handleBusDriver driverLocation =
+      case (driverLocation.rideDetails >>= (.rideInfo), driverLocation.rideDetails <&> (.rideStatus)) of
+        (Just (LTST.Bus LTST.BusRideInfo {..}), Just rideStatus) ->
+          Just $
+            Common.NearbyDriverDetails
+              { driverId = cast driverLocation.driverId,
+                rideInfo = Just $ Common.Bus Common.BusRideInfo {..},
+                rideStatus = Just $ mkRideStatus rideStatus,
+                rideId = driverLocation.rideDetails <&> (.rideId),
+                point = LatLong {lat = driverLocation.lat, lon = driverLocation.lon}
+              }
+        _ -> Nothing
+
+    handleVipDriver driverLocation =
+      Just $
+        Common.NearbyDriverDetails
+          { driverId = cast driverLocation.driverId,
+            rideInfo = Nothing,
+            rideStatus = Nothing,
+            rideId = Nothing,
+            point = LatLong {lat = driverLocation.lat, lon = driverLocation.lon}
+          }
+
+    mkRideStatus = \case
+      TR.INPROGRESS -> Common.ON_RIDE
+      _ -> Common.ON_PICKUP
