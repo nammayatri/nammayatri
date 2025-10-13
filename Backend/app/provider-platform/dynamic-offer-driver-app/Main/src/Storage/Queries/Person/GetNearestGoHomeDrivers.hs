@@ -75,7 +75,9 @@ data NearestGoHomeDriversResult = NearestGoHomeDriversResult
     latestScheduledBooking :: Maybe UTCTime,
     latestScheduledPickup :: Maybe LatLong,
     driverTags :: A.Value,
-    score :: Maybe A.Value
+    score :: Maybe A.Value,
+    tripDistanceMinThreshold :: Maybe Meters,
+    tripDistanceMaxThreshold :: Maybe Meters
   }
   deriving (Generic, Show, HasCoordinates)
 
@@ -175,5 +177,7 @@ getNearestGoHomeDrivers NearestGoHomeDriversReq {..} = do
                 latestScheduledBooking = info.latestScheduledBooking,
                 latestScheduledPickup = info.latestScheduledPickup,
                 driverTags = Yudhishthira.convertTags $ fromMaybe [] person.driverTag,
-                score = Nothing
+                score = Nothing,
+                tripDistanceMinThreshold = Nothing,
+                tripDistanceMaxThreshold = Nothing
               }
