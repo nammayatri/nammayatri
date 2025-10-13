@@ -23,6 +23,7 @@ where
 
 import Data.Ord
 import qualified Data.Text as T
+import qualified Domain.Action.Dashboard.Common as Common
 import qualified Domain.Types.DriverFee as DF
 import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.DriverPlan as DPlan
@@ -92,12 +93,14 @@ sendSwitchPlanNudge ::
 sendSwitchPlanNudge transporterConfig driverInfo mbCurrPlan mbDriverPlan numRides serviceName = do
   whenJust mbCurrPlan $ \currPlan -> do
     driver <- QDP.findById (cast driverInfo.driverId) >>= fromMaybeM (PersonNotFound driverInfo.driverId.getId)
+    let isFleetOwner = Common.checkFleetOwnerRole driver.role
+    let mbIsFleetOwnerPlan = if isFleetOwner then Just True else Nothing
     if numRides == currPlan.freeRideCount + 1
       then notifyPlanActivatedForDay driver
       else case currPlan.planBaseAmount of
         PERRIDE_BASE amount -> do
           let currentTotal = fromIntegral numRides * amount
-          availablePlans <- filterM (checkPlanEligible currPlan) =<< (CQP.findByMerchantOpCityIdAndPaymentModeWithServiceName transporterConfig.merchantOperatingCityId currPlan.paymentMode serviceName) (Just False)
+          availablePlans <- filterM (checkPlanEligible currPlan) =<< (CQP.findByMerchantOpCityIdAndPaymentModeWithServiceName transporterConfig.merchantOperatingCityId currPlan.paymentMode serviceName) (Just False) mbIsFleetOwnerPlan
           offeredAmountsEntity <- getOfferedAmount currentTotal driver `mapM` availablePlans
 
           unless (null offeredAmountsEntity) do
