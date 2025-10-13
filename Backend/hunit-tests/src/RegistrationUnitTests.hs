@@ -187,7 +187,8 @@ testPostRegistrationV2RegisterWithRealExecution =
                   Common.businessLicenseNumber = Nothing,
                   Common.businessLicenseImage = Nothing,
                   Common.operatorReferralCode = Nothing,
-                  Common.adminApprovalRequired = Nothing
+                  Common.adminApprovalRequired = Nothing,
+                  Common.setIsEnabled = Nothing
                 }
             merchantShortId = ShortId "test-merchant"
             opCity = Context.Bangalore
@@ -239,8 +240,8 @@ testPostRegistrationV2RegisterWithRealExecution =
         let expectedResponseType = DRegistrationV2.postRegistrationV2Register :: ShortId DM.Merchant -> Context.City -> Tools.Auth.Api.ApiTokenInfo -> Common.FleetOwnerRegisterReqV2 -> Environment.Flow APISuccess
         True @? "Function should return APISuccess",
       testCase "Executes with different fleet types and validates request handling" $ do
-        let req1 = Common.FleetOwnerRegisterReqV2 "John" "Doe" Nothing Nothing (Just Common.RENTAL_FLEET) Nothing Nothing Nothing Nothing
-            req2 = Common.FleetOwnerRegisterReqV2 "Jane" "Smith" Nothing Nothing (Just Common.BUSINESS_FLEET) Nothing Nothing Nothing Nothing
+        let req1 = Common.FleetOwnerRegisterReqV2 "John" "Doe" Nothing Nothing (Just Common.RENTAL_FLEET) Nothing Nothing Nothing Nothing Nothing
+            req2 = Common.FleetOwnerRegisterReqV2 "Jane" "Smith" Nothing Nothing (Just Common.BUSINESS_FLEET) Nothing Nothing Nothing Nothing Nothing
             merchantShortId = ShortId "test-merchant"
             opCity = Context.Bangalore
             apiTokenInfo =
@@ -328,9 +329,9 @@ testComplexScenariosWithRealFunctions =
   testGroup
     "Complex Scenarios with Real Functions"
     [ testCase "Different fleet types work correctly" $ do
-        let rentalReq = Common.FleetOwnerRegisterReqV2 "John" "Doe" Nothing Nothing (Just Common.RENTAL_FLEET) Nothing Nothing Nothing Nothing
-            normalReq = Common.FleetOwnerRegisterReqV2 "John" "Doe" Nothing Nothing (Just Common.NORMAL_FLEET) Nothing Nothing Nothing Nothing
-            businessReq = Common.FleetOwnerRegisterReqV2 "John" "Doe" Nothing Nothing (Just Common.BUSINESS_FLEET) Nothing Nothing Nothing Nothing
+        let rentalReq = Common.FleetOwnerRegisterReqV2 "John" "Doe" Nothing Nothing (Just Common.RENTAL_FLEET) Nothing Nothing Nothing Nothing Nothing
+            normalReq = Common.FleetOwnerRegisterReqV2 "John" "Doe" Nothing Nothing (Just Common.NORMAL_FLEET) Nothing Nothing Nothing Nothing Nothing
+            businessReq = Common.FleetOwnerRegisterReqV2 "John" "Doe" Nothing Nothing (Just Common.BUSINESS_FLEET) Nothing Nothing Nothing Nothing Nothing
 
         let Common.FleetOwnerRegisterReqV2 {Common.fleetType = ft1} = rentalReq
             Common.FleetOwnerRegisterReqV2 {Common.fleetType = ft2} = normalReq
@@ -339,8 +340,8 @@ testComplexScenariosWithRealFunctions =
         ft2 @?= Just Common.NORMAL_FLEET
         ft3 @?= Just Common.BUSINESS_FLEET,
       testCase "Optional fields work correctly" $ do
-        let reqWithEmail = Common.FleetOwnerRegisterReqV2 "John" "Doe" Nothing (Just "john@example.com") (Just Common.NORMAL_FLEET) Nothing Nothing Nothing Nothing
-            reqWithPersonId = Common.FleetOwnerRegisterReqV2 "John" "Doe" (Just (Id "person-123")) Nothing (Just Common.NORMAL_FLEET) Nothing Nothing Nothing Nothing
+        let reqWithEmail = Common.FleetOwnerRegisterReqV2 "John" "Doe" Nothing (Just "john@example.com") (Just Common.NORMAL_FLEET) Nothing Nothing Nothing Nothing Nothing
+            reqWithPersonId = Common.FleetOwnerRegisterReqV2 "John" "Doe" (Just (Id "person-123")) Nothing (Just Common.NORMAL_FLEET) Nothing Nothing Nothing Nothing Nothing
 
         let Common.FleetOwnerRegisterReqV2 {Common.email = em} = reqWithEmail
             Common.FleetOwnerRegisterReqV2 {Common.personId = pid} = reqWithPersonId
@@ -365,7 +366,7 @@ testErrorHandlingWithRealFunctions =
         let Common.FleetOwnerLoginReqV2 {Common.mobileCountryCode = mcc} = invalidReq
         mcc @?= "91",
       testCase "Empty name validation" $ do
-        let invalidReq = Common.FleetOwnerRegisterReqV2 "" "Doe" Nothing Nothing (Just Common.NORMAL_FLEET) Nothing Nothing Nothing Nothing
+        let invalidReq = Common.FleetOwnerRegisterReqV2 "" "Doe" Nothing Nothing (Just Common.NORMAL_FLEET) Nothing Nothing Nothing Nothing Nothing
         let Common.FleetOwnerRegisterReqV2 {Common.firstName = fn} = invalidReq
         fn @?= ""
     ]

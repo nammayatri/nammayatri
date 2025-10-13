@@ -61,6 +61,8 @@ module Domain.Action.ProviderPlatform.Fleet.Driver
     getDriverFleetAssignments,
     getDriverFleetOperatorInfo,
     postDriverFleetLocationList,
+    postDriverFleetGetDriverDetails,
+    postDriverFleetGetNearbyDriversV2,
   )
 where
 
@@ -532,3 +534,24 @@ postDriverFleetLocationList merchantShortId opCity apiTokenInfo req = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
   let memberPersonId = apiTokenInfo.personId.getId
   Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetLocationList) memberPersonId req
+
+postDriverFleetGetDriverDetails :: (Kernel.Types.Id.ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.DriverDetailsReq -> Environment.Flow Common.DriverDetailsResp)
+postDriverFleetGetDriverDetails merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  let memberPersonId = apiTokenInfo.personId.getId
+  Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetGetDriverDetails) memberPersonId req
+
+postDriverFleetGetNearbyDriversV2 :: (Kernel.Types.Id.ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.NearbyDriversReqV2 -> Environment.Flow Common.NearbyDriversRespTV2)
+postDriverFleetGetNearbyDriversV2 merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  fleetOwnerIds <- getFleetOwnerIds apiTokenInfo.personId.getId Nothing
+  drivers <-
+    concatMapM
+      ( \(fleetOwnerId', fleetOwnerName) -> do
+          Common.NearbyDriversRespV2 {..} <- Client.callFleetAPI checkedMerchantId opCity (.driverDSL.postDriverFleetGetNearbyDriversV2) fleetOwnerId' req
+          return $ map (addFleetOwnerDetails fleetOwnerId' fleetOwnerName) drivers
+      )
+      fleetOwnerIds
+  return $ Common.NearbyDriversRespTV2 {..}
+  where
+    addFleetOwnerDetails fleetOwnerId fleetOwnerName Common.NearbyDriverDetails {..} = Common.NearbyDriverDetailsT {..}
