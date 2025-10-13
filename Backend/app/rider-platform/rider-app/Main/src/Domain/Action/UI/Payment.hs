@@ -24,6 +24,7 @@ where
 import Control.Applicative ((<|>))
 import qualified Domain.Action.UI.BBPS as BBPS
 import qualified Domain.Action.UI.FRFSTicketService as FRFSTicketService
+import qualified Domain.Action.UI.Pass as Pass
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantServiceConfig as DMSC
 import qualified Domain.Types.Person as DP
@@ -57,6 +58,7 @@ import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.PlaceBasedServiceConfig as CQPBSC
 import qualified Storage.Queries.Person as QP
+import qualified Storage.Queries.PurchasedPassExtra as QPurchasedPass
 import qualified Storage.Queries.Ride as QRide
 import qualified Storage.Queries.TicketBooking as QTB
 import Tools.Error
@@ -195,7 +197,11 @@ juspayWebhookHandler merchantShortId mbCity mbServiceType mbPlaceId authData val
     case mbServiceType of
       Just Payment.FRFSBooking -> void $ FRFSTicketService.webhookHandlerFRFSTicket (ShortId orderShortId) merchantId refunds JMU.switchFRFSQuoteTierUtil
       Just Payment.FRFSBusBooking -> void $ FRFSTicketService.webhookHandlerFRFSTicket (ShortId orderShortId) merchantId refunds JMU.switchFRFSQuoteTierUtil
-      Just Payment.FRFSMultiModalBooking -> void $ FRFSTicketService.webhookHandlerFRFSTicket (ShortId orderShortId) merchantId refunds JMU.switchFRFSQuoteTierUtil
+      Just Payment.FRFSMultiModalBooking -> do
+        mbPass <- QPurchasedPass.findByShortId (ShortId orderShortId)
+        case mbPass of
+          Just _ -> void $ Pass.webhookHandlerPass (ShortId orderShortId) merchantId
+          Nothing -> void $ FRFSTicketService.webhookHandlerFRFSTicket (ShortId orderShortId) merchantId refunds JMU.switchFRFSQuoteTierUtil
       Just Payment.BBPS -> void $ BBPS.webhookHandlerBBPS (ShortId orderShortId) merchantId
       _ -> pure ()
   pure Ack

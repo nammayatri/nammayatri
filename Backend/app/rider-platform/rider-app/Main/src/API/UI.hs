@@ -65,6 +65,7 @@ import qualified API.UI.HotSpot as HotSpot
 import qualified API.UI.Issue as Issue
 import qualified API.UI.Maps as MapsProxy
 import qualified API.UI.PartnerOrganizationFRFS as PartnerOrgFRFS
+import qualified API.UI.Pass as Pass
 import qualified API.UI.Payment as Payment
 import qualified API.UI.PersonStats as PersonStats
 import qualified API.UI.Profile as Profile
@@ -151,6 +152,7 @@ type API =
            :<|> NYRegular.API
            :<|> AttractionRecommend.API
            :<|> RiderLocation.API
+           :<|> Pass.API
        )
 
 handler :: FlowServer API
@@ -219,3 +221,4 @@ handler =
     :<|> NYRegular.handler
     :<|> AttractionRecommend.handler
     :<|> RiderLocation.handler
+    :<|> Pass.handler
