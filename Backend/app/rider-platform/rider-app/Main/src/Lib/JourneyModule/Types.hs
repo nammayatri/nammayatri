@@ -12,7 +12,6 @@ import qualified Data.List.NonEmpty as NE
 import qualified Data.Text as Text
 import qualified Domain.Types.Booking as DBooking
 import qualified Domain.Types.Common as DTrip
-import qualified Domain.Types.FRFSQuote as DFRFSQuote
 import qualified Domain.Types.FRFSQuoteCategory as DFRFSQuoteCategory
 import Domain.Types.FRFSRouteDetails
 import Domain.Types.FRFSSearch
@@ -1149,21 +1148,6 @@ mkLegInfoFromFrfsSearchRequest frfsSearch@FRFSSR.FRFSSearch {..} journeyLeg = do
                   childTicketQuantity = mbQuote >>= (.childTicketQuantity),
                   refund = Nothing
                 }
-
-getServiceTierFromQuote :: DFRFSQuote.FRFSQuote -> Maybe LegServiceTier
-getServiceTierFromQuote quote = do
-  let routeStations :: Maybe [FRFSTicketServiceAPI.FRFSRouteStationsAPI] = decodeFromText =<< quote.routeStationsJson
-  let mbServiceTier = listToMaybe $ mapMaybe (.vehicleServiceTier) (fromMaybe [] routeStations)
-  mbServiceTier <&> \serviceTier -> do
-    LegServiceTier
-      { fare = mkPriceAPIEntity quote.price,
-        quoteId = quote.id,
-        serviceTierName = serviceTier.shortName,
-        serviceTierType = serviceTier._type,
-        serviceTierDescription = serviceTier.description,
-        via = quote.fareDetails <&> (.via),
-        trainTypeCode = quote.fareDetails <&> (.trainTypeCode)
-      }
 
 stationToStationAPI :: DTS.Station -> FRFSStationAPI
 stationToStationAPI station =

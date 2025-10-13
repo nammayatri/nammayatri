@@ -1051,6 +1051,7 @@ createPaymentOrder bookings merchantOperatingCityId merchantId amount person pay
       let ticketBookingPayment =
             DFRFSTicketBookingPayment.FRFSTicketBookingPayment
               { frfsTicketBookingId = booking.id,
+                frfsQuoteId = Just booking.quoteId,
                 id = ticketBookingPaymentId,
                 status = DFRFSTicketBookingPayment.PENDING,
                 merchantId = Just booking.merchantId,

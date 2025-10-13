@@ -19,6 +19,7 @@ import qualified Domain.Types.CancellationReason as SCR
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.EstimateStatus as DTaxiEstimate
 import Domain.Types.Extra.Ride as DRide
+import qualified Domain.Types.FRFSQuote as DFRFSQuote
 import Domain.Types.FRFSRouteDetails
 import qualified Domain.Types.FRFSTicketBooking as DFRFSBooking
 import qualified Domain.Types.FRFSTicketBookingStatus as DFRFSBooking
@@ -47,6 +48,7 @@ import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import qualified Kernel.Storage.Esqueleto.Transactionable as Esq
 import qualified Kernel.Storage.Hedis as Hedis
 import qualified Kernel.Storage.Hedis as Redis
+import Kernel.Streaming.Kafka.Producer.Types (HasKafkaProducer)
 import qualified Kernel.Types.Common as Common
 import Kernel.Types.Distance
 import Kernel.Types.Error
@@ -1469,3 +1471,32 @@ markJourneyComplete journey legs = do
       case subLegOrders of
         [] -> markLegStatus (Just JL.Completed) (Just JMState.Finished) journeyLeg Nothing trackingStatusUpdateTime
         orders -> mapM_ (\subOrder -> markLegStatus (Just JL.Completed) (Just JMState.Finished) journeyLeg (Just subOrder) trackingStatusUpdateTime) orders
+
+switchFRFSQuoteTier ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    EncFlow m r,
+    Monad m,
+    HasField "ltsHedisEnv" r Hedis.HedisEnv,
+    HasKafkaProducer r,
+    HasShortDurationRetryCfg r c
+  ) =>
+  DJourneyLeg.JourneyLeg ->
+  Id DFRFSQuote.FRFSQuote ->
+  m ()
+switchFRFSQuoteTier journeyLeg quoteId = switchFRFSQuoteTierUtil journeyLeg quoteId
+
+getLegTierOptions ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    EncFlow m r,
+    Monad m,
+    HasField "ltsHedisEnv" r Hedis.HedisEnv,
+    HasKafkaProducer r,
+    HasShortDurationRetryCfg r c
+  ) =>
+  DJourneyLeg.JourneyLeg ->
+  m [DRouteDetails.AvailableRoutesByTier]
+getLegTierOptions journeyLeg = getLegTierOptionsUtil journeyLeg

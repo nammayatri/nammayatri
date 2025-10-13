@@ -560,6 +560,7 @@ FRFSTicketBookingPayment:
   fields:
     id: Id FRFSTicketBookingPayment
     frfsTicketBookingId: Id FRFSTicketBooking
+    frfsQuoteId: Maybe (Id FRFSQuote)
     paymentOrderId: Id PaymentOrder
     status: FRFSTicketBookingPaymentStatus
 

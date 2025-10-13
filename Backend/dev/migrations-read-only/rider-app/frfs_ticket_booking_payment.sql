@@ -9,3 +9,8 @@ ALTER TABLE atlas_app.frfs_ticket_booking_payment ADD COLUMN merchant_operating_
 ALTER TABLE atlas_app.frfs_ticket_booking_payment ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.frfs_ticket_booking_payment ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_app.frfs_ticket_booking_payment ADD PRIMARY KEY ( id);
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.frfs_ticket_booking_payment ADD COLUMN frfs_quote_id character varying(36) ;

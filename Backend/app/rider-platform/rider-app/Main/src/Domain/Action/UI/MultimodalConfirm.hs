@@ -62,7 +62,6 @@ import qualified Domain.Types.Common as DTrip
 import qualified Domain.Types.Estimate as DEstimate
 import qualified Domain.Types.EstimateStatus as DEst
 import qualified Domain.Types.FRFSQuote as DFRFSQuote
-import qualified Domain.Types.FRFSTicketBooking as DFRFSB
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Journey
 import qualified Domain.Types.JourneyFeedback as JFB
@@ -77,7 +76,7 @@ import qualified Domain.Types.RouteStopMapping as DRSM
 import Domain.Types.RouteStopTimeTable (SourceType (..))
 import qualified Domain.Types.SearchRequest as DSR
 import qualified Domain.Types.Station as DStation
-import Domain.Utils (mapConcurrently)
+import Domain.Utils (castTravelModeToVehicleCategory, mapConcurrently)
 import Environment
 import EulerHS.Prelude hiding (all, any, catMaybes, concatMap, elem, find, forM_, groupBy, id, length, map, mapM_, null, sum, toList, whenJust)
 import qualified ExternalBPP.CallAPI as CallExternalBPP
@@ -220,7 +219,7 @@ getMultimodalBookingPaymentStatus (mbPersonId, merchantId) journeyId = do
   person <- QP.findById personId >>= fromMaybeM (InvalidRequest "Person not found")
   legs <- QJourneyLeg.getJourneyLegs journeyId
   allJourneyFrfsBookings <- mapMaybeM (QFRFSTicketBooking.findBySearchId . Id) (mapMaybe (.legSearchId) legs)
-  frfsBookingStatusArr <- mapM (FRFSTicketService.frfsBookingStatus (personId, merchantId) True) allJourneyFrfsBookings
+  frfsBookingStatusArr <- mapM (\booking -> FRFSTicketService.frfsBookingStatus (personId, merchantId) True booking JMU.switchFRFSQuoteTierUtil) allJourneyFrfsBookings
   paymentGateWayId <- Payment.fetchGatewayReferenceId merchantId person.merchantOperatingCityId Nothing Payment.FRFSMultiModalBooking
   logInfo $ "paymentGateWayId: " <> show paymentGateWayId
   let anyFirstBooking = listToMaybe frfsBookingStatusArr
@@ -341,46 +340,13 @@ postMultimodalOrderSwitchFRFSTier ::
     API.Types.UI.MultimodalConfirm.SwitchFRFSTierReq ->
     Environment.Flow API.Types.UI.MultimodalConfirm.JourneyInfoResp
   )
-postMultimodalOrderSwitchFRFSTier (mbPersonId, merchantId) journeyId legOrder req = do
+postMultimodalOrderSwitchFRFSTier (_mbPersonId, _merchantId) journeyId legOrder req = do
   journey <- JM.getJourney journeyId
   legs <- QJourneyLeg.getJourneyLegs journeyId
   journeyLeg <- find (\leg -> leg.sequenceNumber == legOrder) legs & fromMaybeM (InvalidRequest "No matching journey leg found for the given legOrder")
-
-  whenJust journeyLeg.legSearchId $ \legSearchId -> do
-    mbAlternateShortNames <- getAlternateRouteInfo
-    let searchId = Id legSearchId
-    QJourneyLeg.updateLegPricingIdByLegSearchId (Just req.quoteId.getId) journeyLeg.legSearchId
-    mbBooking <- QFRFSTicketBooking.findBySearchId searchId
-    whenJust mbBooking $ \booking -> do
-      quote <- QFRFSQuote.findById req.quoteId >>= fromMaybeM (InvalidRequest "Quote not found")
-      let quantity = booking.quantity
-          childTicketQuantity = fromMaybe 0 booking.childTicketQuantity
-          quantityRational = fromIntegral quantity :: Rational
-          childTicketQuantityRational = fromIntegral childTicketQuantity :: Rational
-          childPrice = fromMaybe quote.price quote.childPrice
-          totalPriceForSwitchLeg =
-            Price
-              { amount = HighPrecMoney $ (quote.price.amount.getHighPrecMoney * quantityRational) + (childPrice.amount.getHighPrecMoney * childTicketQuantityRational),
-                amountInt = Money $ (quote.price.amountInt.getMoney * quantity) + (childPrice.amountInt.getMoney * childTicketQuantity),
-                currency = quote.price.currency
-              }
-          updatedBooking =
-            booking
-              { DFRFSB.quoteId = req.quoteId,
-                DFRFSB.price = totalPriceForSwitchLeg,
-                DFRFSB.estimatedPrice = totalPriceForSwitchLeg
-              }
-      void $ QFRFSTicketBooking.updateByPrimaryKey updatedBooking
-    whenJust mbAlternateShortNames $ \(alternateShortNames, alternateRouteIds) -> do
-      QRouteDetails.updateAlternateShortNamesAndRouteIds alternateShortNames (Just alternateRouteIds) journeyLeg.id.getId
+  JMU.switchFRFSQuoteTierUtil journeyLeg req.quoteId
   updatedLegs <- JM.getAllLegsInfo journey.riderId journeyId
   generateJourneyInfoResponse journey updatedLegs
-  where
-    getAlternateRouteInfo :: Flow (Maybe ([Text], [Text]))
-    getAlternateRouteInfo = do
-      options <- getMultimodalOrderGetLegTierOptions (mbPersonId, merchantId) journeyId legOrder
-      let mbSelectedOption = find (\option -> option.quoteId == Just req.quoteId) options.options
-      return $ mbSelectedOption <&> (unzip . map (\a -> (a.shortName, a.routeCode)) . (.availableRoutesInfo))
 
 postMultimodalSwitch ::
   ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -882,35 +848,11 @@ getMultimodalOrderGetLegTierOptions ::
   Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
   Kernel.Prelude.Int ->
   Environment.Flow ApiTypes.LegServiceTierOptionsResp
-getMultimodalOrderGetLegTierOptions (mbPersonId, merchantId) journeyId legOrder = do
-  personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
-  person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+getMultimodalOrderGetLegTierOptions (_mbPersonId, _merchantId) journeyId legOrder = do
   legs <- QJourneyLeg.getJourneyLegs journeyId
-  now <- getCurrentTime
   journeyLegInfo <- find (\leg -> leg.sequenceNumber == legOrder) legs & fromMaybeM (InvalidRequest "No matching journey leg found for the given legOrder")
-  let mbAgencyId = journeyLegInfo.agency >>= (.gtfsId)
-  let vehicleCategory = castTravelModeToVehicleCategory journeyLegInfo.mode
-  quotes <- maybe (pure []) (QFRFSQuote.findAllBySearchId . Id) journeyLegInfo.legSearchId
-  let availableServiceTiers = mapMaybe JMTypes.getServiceTierFromQuote quotes
-  mbIntegratedBPPConfig <- SIBC.findMaybeIntegratedBPPConfigFromAgency mbAgencyId person.merchantOperatingCityId vehicleCategory DIBC.MULTIMODAL
-  let mbRouteDetail = journeyLegInfo.routeDetails & listToMaybe
-  let mbFomStopCode = mbRouteDetail >>= (.fromStopCode)
-  let mbToStopCode = mbRouteDetail >>= (.toStopCode)
-  let mbArrivalTime = mbRouteDetail >>= (.fromArrivalTime)
-  let arrivalTime = fromMaybe now mbArrivalTime
-
-  case (mbFomStopCode, mbToStopCode, mbIntegratedBPPConfig) of
-    (Just fromStopCode, Just toStopCode, Just integratedBPPConfig) -> do
-      (_, availableRoutesByTiers, _) <- JLU.findPossibleRoutes (Just availableServiceTiers) fromStopCode toStopCode arrivalTime integratedBPPConfig merchantId person.merchantOperatingCityId vehicleCategory (vehicleCategory /= Enums.SUBWAY) False False
-      return $ ApiTypes.LegServiceTierOptionsResp {options = availableRoutesByTiers}
-    _ -> return $ ApiTypes.LegServiceTierOptionsResp {options = []}
-
-castTravelModeToVehicleCategory :: DTrip.MultimodalTravelMode -> Enums.VehicleCategory
-castTravelModeToVehicleCategory DTrip.Bus = Enums.BUS
-castTravelModeToVehicleCategory DTrip.Taxi = Enums.AUTO_RICKSHAW
-castTravelModeToVehicleCategory DTrip.Walk = Enums.AUTO_RICKSHAW
-castTravelModeToVehicleCategory DTrip.Metro = Enums.METRO
-castTravelModeToVehicleCategory DTrip.Subway = Enums.SUBWAY
+  options <- getLegTierOptions journeyLegInfo
+  return $ ApiTypes.LegServiceTierOptionsResp {options}
 
 -- TODO :: For Backward compatibility, remove this post `postMultimodalOrderSublegSetTrackingStatus` release
 postMultimodalOrderSublegSetStatus ::
@@ -1544,7 +1486,7 @@ postMultimodalRouteAvailability (mbPersonId, merchantId) req = do
       let availableRoutes = mapMaybe convertFRFSQuoteToAvailableRoute frfsQuotes
       return $ ApiTypes.RouteAvailabilityResp {availableRoutes = availableRoutes}
     _ -> do
-      let availableServiceTiers = if null frfsQuotes then Nothing else Just (mapMaybe JMTypes.getServiceTierFromQuote frfsQuotes)
+      let availableServiceTiers = if null frfsQuotes then Nothing else Just (mapMaybe JMU.getServiceTierFromQuote frfsQuotes)
       case integratedBPPConfigs of
         [] -> return $ ApiTypes.RouteAvailabilityResp {availableRoutes = []}
         (integratedBPPConfig : _) -> do

@@ -4,6 +4,7 @@
 module Domain.Types.FRFSTicketBookingPayment where
 
 import Data.Aeson
+import qualified Domain.Types.FRFSQuote
 import qualified Domain.Types.FRFSTicketBooking
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -13,7 +14,8 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder
 import qualified Tools.Beam.UtilsTH
 
 data FRFSTicketBookingPayment = FRFSTicketBookingPayment
-  { frfsTicketBookingId :: Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking,
+  { frfsQuoteId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.FRFSQuote.FRFSQuote),
+    frfsTicketBookingId :: Kernel.Types.Id.Id Domain.Types.FRFSTicketBooking.FRFSTicketBooking,
     id :: Kernel.Types.Id.Id Domain.Types.FRFSTicketBookingPayment.FRFSTicketBookingPayment,
     paymentOrderId :: Kernel.Types.Id.Id Lib.Payment.Domain.Types.PaymentOrder.PaymentOrder,
     status :: Domain.Types.FRFSTicketBookingPayment.FRFSTicketBookingPaymentStatus,
