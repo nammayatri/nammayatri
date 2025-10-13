@@ -14,6 +14,7 @@ import qualified Tools.Beam.UtilsTH
 data Volunteer = Volunteer
   { createdAt :: Kernel.Prelude.UTCTime,
     id :: Kernel.Types.Id.Id Domain.Types.Volunteer.Volunteer,
+    isActive :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     place :: Data.Text.Text,
     updatedAt :: Kernel.Prelude.UTCTime,
     vendorId :: Kernel.Prelude.Maybe Data.Text.Text,

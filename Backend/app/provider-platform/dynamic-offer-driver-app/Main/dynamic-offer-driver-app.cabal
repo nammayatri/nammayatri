@@ -173,6 +173,7 @@ library
       Domain.Action.Dashboard.Management.Ride
       Domain.Action.Dashboard.Management.System
       Domain.Action.Dashboard.Management.VehicleInfo
+      Domain.Action.Dashboard.Management.Volunteer
       Domain.Action.Dashboard.Operator.Driver
       Domain.Action.Dashboard.Operator.FleetManagement
       Domain.Action.Dashboard.Operator.Registration
@@ -703,6 +704,7 @@ library
       Storage.Queries.VehicleRegistrationCertificateExtra
       Storage.Queries.VehicleRouteMappingExtra
       Storage.Queries.VendorFeeExtra
+      Storage.Queries.VolunteerExtra
       Storage.Queries.WhiteListOrgExtra
       Tools.AadhaarVerification
       Tools.Auth
@@ -766,6 +768,7 @@ library
       API.Action.Dashboard.Management.Ride
       API.Action.Dashboard.Management.System
       API.Action.Dashboard.Management.VehicleInfo
+      API.Action.Dashboard.Management.Volunteer
       API.Action.Dashboard.Operator
       API.Action.Dashboard.Operator.Driver
       API.Action.Dashboard.Operator.FleetManagement
@@ -1346,6 +1349,7 @@ library
       Storage.Queries.OrphanInstances.VehicleRouteMapping
       Storage.Queries.OrphanInstances.VendorFee
       Storage.Queries.OrphanInstances.VendorSplitDetails
+      Storage.Queries.OrphanInstances.Volunteer
       Storage.Queries.OrphanInstances.WhiteListOrg
       Storage.Queries.Overlay
       Storage.Queries.PayoutConfig
