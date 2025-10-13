@@ -376,7 +376,7 @@ tripDetailsView state =
   where
     getProperVehicleModelName :: String -> String
     getProperVehicleModelName vehicleModel = 
-      if vehicleModel == "Unkown" -- Fallback case when vehicle mapping fails during vehicle onboarding 
+      if vehicleModel == "Unknown" -- Fallback case when vehicle mapping fails during vehicle onboarding 
         then fromMaybe "" $ state.data.selectedItem.serviceTierName 
         else vehicleModel
 
