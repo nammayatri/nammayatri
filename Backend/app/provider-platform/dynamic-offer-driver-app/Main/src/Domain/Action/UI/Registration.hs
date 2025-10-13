@@ -319,7 +319,14 @@ createDriverDetails personId merchantId merchantOpCityId transporterConfig = do
             isBlockedForReferralPayout = Nothing,
             onboardingVehicleCategory = Nothing,
             servicesEnabledForSubscription = [DEP.YATRI_SUBSCRIPTION],
-            driverFlowStatus = Just DriverFlowStatus.OFFLINE
+            driverFlowStatus = Just DriverFlowStatus.OFFLINE,
+            maxPickupRadius = Nothing,
+            tripDistanceMaxThreshold = Nothing,
+            tripDistanceMinThreshold = Nothing,
+            rideRequestVolume = Nothing,
+            isSilentModeEnabled = Nothing,
+            isHighAccuracyLocationEnabled = Nothing,
+            rideRequestVolumeEnabled = Nothing
           }
   QDriverStats.createInitialDriverStats merchantOperatingCity.currency merchantOperatingCity.distanceUnit driverId
   QD.create driverInfo

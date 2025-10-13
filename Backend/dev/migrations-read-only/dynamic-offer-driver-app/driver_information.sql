@@ -218,3 +218,22 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN is_pet_mode_ena
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN driver_flow_status text ;
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN trip_distance_min_threshold integer ;
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN trip_distance_max_threshold integer ;
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN ride_request_volume integer ;
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN max_pickup_radius integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN is_silent_mode_enabled boolean ;
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN is_high_accuracy_location_enabled boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN ride_request_volume_enabled boolean ;

@@ -387,7 +387,14 @@ data DriverInformationRes = DriverInformationRes
     cancellationRateSlabConfig :: Maybe Domain.Types.TransporterConfig.CancellationRateSlabConfig,
     reactVersion :: Maybe Text,
     fleetOwnerId :: Maybe Text,
-    operatorId :: Maybe Text
+    operatorId :: Maybe Text,
+    rideRequestVolume :: Maybe Int,
+    tripDistanceMaxThreshold :: Maybe Meters,
+    tripDistanceMinThreshold :: Maybe Meters,
+    maxPickupRadius :: Maybe Meters,
+    isSilentModeEnabled :: Maybe Bool,
+    isHighAccuracyLocationEnabled :: Maybe Bool,
+    rideRequestVolumeEnabled :: Maybe Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -457,7 +464,14 @@ data DriverEntityRes = DriverEntityRes
     subscriptionDown :: Maybe Bool,
     driverTags :: Maybe DA.Value,
     nyClubConsent :: Maybe Bool,
-    reactVersion :: Maybe Text
+    tripDistanceMaxThreshold :: Maybe Meters,
+    tripDistanceMinThreshold :: Maybe Meters,
+    maxPickupRadius :: Maybe Meters,
+    isSilentModeEnabled :: Maybe Bool,
+    reactVersion :: Maybe Text,
+    rideRequestVolume :: Maybe Int,
+    isHighAccuracyLocationEnabled :: Maybe Bool,
+    rideRequestVolumeEnabled :: Maybe Bool
   }
   deriving (Show, Generic, FromJSON, ToJSON, ToSchema)
 
@@ -481,7 +495,14 @@ data UpdateDriverReq = UpdateDriverReq
     hometown :: Maybe Text,
     vehicleName :: Maybe Text,
     availableUpiApps :: Maybe Text,
-    reactVersion :: Maybe Text
+    tripDistanceMaxThreshold :: Maybe Meters,
+    tripDistanceMinThreshold :: Maybe Meters,
+    maxPickupRadius :: Maybe Meters,
+    isSilentModeEnabled :: Maybe Bool,
+    rideRequestVolume :: Maybe Int,
+    reactVersion :: Maybe Text,
+    isHighAccuracyLocationEnabled :: Maybe Bool,
+    rideRequestVolumeEnabled :: Maybe Bool
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
@@ -1098,6 +1119,13 @@ buildDriverEntityRes (person, driverInfo, driverStats, merchantOpCityId) service
         onboardingVehicleCategory = driverInfo.onboardingVehicleCategory,
         driverTags = Just driverTags,
         nyClubConsent = person.nyClubConsent,
+        tripDistanceMaxThreshold = driverInfo.tripDistanceMaxThreshold,
+        tripDistanceMinThreshold = driverInfo.tripDistanceMinThreshold,
+        maxPickupRadius = driverInfo.maxPickupRadius,
+        isSilentModeEnabled = driverInfo.isSilentModeEnabled,
+        rideRequestVolume = driverInfo.rideRequestVolume,
+        isHighAccuracyLocationEnabled = driverInfo.isHighAccuracyLocationEnabled,
+        rideRequestVolumeEnabled = driverInfo.rideRequestVolumeEnabled,
         ..
       }
   where
@@ -1163,8 +1191,21 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
   mVehicle <- QVehicle.findById personId
   driverInfo <- QDriverInformation.findById (cast personId) >>= fromMaybeM DriverInfoNotFound
   let isPetModeEnabled = fromMaybe driverInfo.isPetModeEnabled req.isPetModeEnabled
+      tripDistanceMaxThreshold = case req.tripDistanceMaxThreshold of
+        Nothing -> driverInfo.tripDistanceMaxThreshold
+        Just val -> if val.getMeters < 0 then Nothing else Just val
+      tripDistanceMinThreshold = case req.tripDistanceMinThreshold of
+        Nothing -> driverInfo.tripDistanceMinThreshold
+        Just val -> if val.getMeters < 0 then Nothing else Just val
+      maxPickupRadius = case req.maxPickupRadius of
+        Nothing -> driverInfo.maxPickupRadius
+        Just val -> if val.getMeters < 0 then Nothing else Just val
+      isSilentModeEnabled = req.isSilentModeEnabled <|> driverInfo.isSilentModeEnabled
+      rideRequestVolume = req.rideRequestVolume <|> driverInfo.rideRequestVolume
+      isHighAccuracyLocationEnabled = req.isHighAccuracyLocationEnabled <|> driverInfo.isHighAccuracyLocationEnabled
+      rideRequestVolumeEnabled = req.rideRequestVolumeEnabled <|> driverInfo.rideRequestVolumeEnabled
   whenJust mVehicle $ \vehicle -> do
-    when (isJust req.canDowngradeToSedan || isJust req.canDowngradeToHatchback || isJust req.canDowngradeToTaxi || isJust req.canSwitchToRental || isJust req.canSwitchToInterCity || isJust req.isPetModeEnabled) $ do
+    when (isJust req.canDowngradeToSedan || isJust req.canDowngradeToHatchback || isJust req.canDowngradeToTaxi || isJust req.canSwitchToRental || isJust req.canSwitchToInterCity || isJust req.isPetModeEnabled || isJust req.tripDistanceMaxThreshold || isJust req.tripDistanceMinThreshold || isJust req.maxPickupRadius || isJust req.isSilentModeEnabled || isJust req.rideRequestVolume || isJust req.isHighAccuracyLocationEnabled || isJust req.rideRequestVolumeEnabled) $ do
       -- deprecated logic, moved to driver service tier options
       checkIfCanDowngrade vehicle
       let canDowngradeToSedan = fromMaybe driverInfo.canDowngradeToSedan req.canDowngradeToSedan
@@ -1205,7 +1246,7 @@ updateDriver (personId, _, merchantOpCityId) mbBundleVersion mbClientVersion mbC
               DV.BUS_AC -> [DVST.BUS_AC]
               DV.BOAT -> [DVST.BOAT]
 
-      QDriverInformation.updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi canSwitchToRental canSwitchToInterCity canSwitchToIntraCity availableUpiApps isPetModeEnabled person.id
+      QDriverInformation.updateDriverInformation canDowngradeToSedan canDowngradeToHatchback canDowngradeToTaxi canSwitchToRental canSwitchToInterCity canSwitchToIntraCity availableUpiApps isPetModeEnabled tripDistanceMaxThreshold tripDistanceMinThreshold maxPickupRadius isSilentModeEnabled rideRequestVolume isHighAccuracyLocationEnabled rideRequestVolumeEnabled person.id
       when (isJust req.canDowngradeToSedan || isJust req.canDowngradeToHatchback || isJust req.canDowngradeToTaxi) $
         QVehicle.updateSelectedServiceTiers selectedServiceTiers person.id
 

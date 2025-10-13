@@ -16,7 +16,7 @@ imports:
   Value: Data.Aeson
   VehicleCategory: Domain.Types.VehicleCategory
   ServiceNames : Domain.Types.Extra.Plan
-
+  Meters: Kernel.Types.Common
 DriverInformation:
   tableName: driver_information
   types:
@@ -118,6 +118,14 @@ DriverInformation:
     onboardingVehicleCategory: Maybe VehicleCategory
     servicesEnabledForSubscription: "[ServiceNames]"
     driverFlowStatus: Maybe DriverFlowStatus
+    maxPickupRadius: Maybe Meters
+    tripDistanceMaxThreshold: Maybe Meters
+    tripDistanceMinThreshold: Maybe Meters
+    rideRequestVolume: Maybe Int
+    isSilentModeEnabled: Maybe Bool
+    isHighAccuracyLocationEnabled: Maybe Bool
+    rideRequestVolumeEnabled: Maybe Bool
+
   default:
     active: "false"
     verified: "false"
@@ -247,6 +255,13 @@ DriverInformation:
           canSwitchToIntraCity,
           availableUpiApps,
           isPetModeEnabled,
+          tripDistanceMaxThreshold,
+          tripDistanceMinThreshold,
+          maxPickupRadius,
+          isSilentModeEnabled,
+          rideRequestVolume,
+          isHighAccuracyLocationEnabled,
+          rideRequestVolumeEnabled,
         ]
       where: driverId
     updateRentalInterCityAndIntraCitySwitch:
