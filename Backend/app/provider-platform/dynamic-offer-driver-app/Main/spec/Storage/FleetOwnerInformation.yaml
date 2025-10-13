@@ -33,6 +33,7 @@ FleetOwnerInformation:
     ticketPlaceId: Maybe Text
     prepaidSubscriptionBalance: Maybe HighPrecMoney
     lienAmount: Maybe HighPrecMoney
+    planExpiryDate: Maybe UTCTime
   sqlType:
     referredByOperatorId: character varying (36)
   excludedFields: [merchantOperatingCityId]
@@ -116,6 +117,7 @@ FleetOwnerInformation:
       params: [lienAmount]
       where: fleetOwnerPersonId
     updatePrepaidSubscriptionBalance:
+    updateFleetOwnerPrepaidSubscriptionBalance:
       kvFunction: updateOneWithKV
       params: [prepaidSubscriptionBalance]
       where: fleetOwnerPersonId
