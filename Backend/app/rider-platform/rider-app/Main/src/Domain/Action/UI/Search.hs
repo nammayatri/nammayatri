@@ -246,6 +246,7 @@ extractSearchDetails now = \case
         placeNameSource = Nothing,
         destinationStopCode = Just destinationStopCode,
         originStopCode = Just originStopCode,
+        busLocationData = fromMaybe [] busLocationData,
         ..
       }
 

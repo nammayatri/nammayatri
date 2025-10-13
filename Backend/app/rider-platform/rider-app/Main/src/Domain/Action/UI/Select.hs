@@ -28,7 +28,6 @@ module Domain.Action.UI.Select
   )
 where
 
--- import API.Types.UI.RiderLocation (BusLocation)
 import qualified BecknV2.OnDemand.Enums as DVCT
 import Control.Applicative ((<|>))
 import Control.Monad.Extra (anyM)
@@ -36,7 +35,6 @@ import qualified Data.HashMap.Strict as HMS
 import Data.OpenApi hiding (name)
 import qualified Domain.Action.UI.Estimate as UEstimate
 import qualified Domain.Action.UI.Registration as Reg
--- import Domain.Action.UI.RiderLocation (makeBusCacheKey)
 import Domain.Types.Booking
 import Domain.Types.BookingStatus
 import Domain.Types.Common
@@ -385,8 +383,6 @@ mkJourneyForSearch searchRequest estimate personId = do
   journeyGuid <- generateGUID
   journeyLegGuid <- generateGUID
   journeyRouteDetailsId <- generateGUID
-  -- busLocationData :: Maybe [API.Types.UI.RiderLocation.BusLocation] <- Redis.safeGet (makeBusCacheKey personId)
-  -- Redis.del (makeBusCacheKey personId)
   let estimatedMinFare = Just estimate.estimatedFare.amount
       estimatedMaxFare = Just estimate.estimatedFare.amount
 

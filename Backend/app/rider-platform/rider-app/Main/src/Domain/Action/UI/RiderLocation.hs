@@ -37,16 +37,12 @@ postIdentifyNearByBus ::
     Environment.Flow API.Types.UI.RiderLocation.RiderLocationResponse
   )
 postIdentifyNearByBus (_mbPersonId, merchantId) req = do
-  -- now <- getCurrentTime
   _merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
   merchantOperatingCity <- CQMOC.findByMerchantIdAndCity merchantId req.city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> merchantId.getId <> "-city-" <> show req.city)
   riderConfig <- QRiderConfig.findByMerchantOperatingCityId merchantOperatingCity.id Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCity.id.getId)
   let riderLocation = Kernel.External.Maps.Types.LatLong req.riderLat req.riderLon
   nearbyBuses <- getNearbyBuses riderLocation riderConfig
   busLocations <- mapM (convertToBusLocation riderLocation) nearbyBuses
-
-  -- whenJust mbPersonId $ \personId ->
-  -- cacheNearbyBuses personId busLocations now
 
   return $ API.Types.UI.RiderLocation.RiderLocationResponse {buses = busLocations}
   where
@@ -80,20 +76,8 @@ postIdentifyNearByBus (_mbPersonId, merchantId) req = do
             customerLocation = riderLocation
           }
 
-    -- cacheNearbyBuses :: Kernel.Types.Id.Id Domain.Types.Person.Person -> [API.Types.UI.RiderLocation.BusLocation] -> UTCTime -> Environment.Flow ()
-    -- cacheNearbyBuses personId busLocations currentTime = do
-    --   let cacheKey = makeBusCacheKey personId
-    --       expirySeconds = 300 :: Int
-    --       expiryTime = addUTCTime (fromIntegral expirySeconds) currentTime
-
-    --   Hedis.setExp cacheKey busLocations expirySeconds
-    --   logDebug $ "Cached " <> show (length busLocations) <> " buses for personId: " <> personId.getId <> ", expires at: " <> show expiryTime
-
     nearbyBusKey :: Text
     nearbyBusKey = "bus_locations"
 
     vehicleMetaKey :: Text
     vehicleMetaKey = "bus_metadata_v2"
-
--- makeBusCacheKey :: Kernel.Types.Id.Id Domain.Types.Person.Person -> Text
--- makeBusCacheKey personId = "NearbyBuses:Person:" <> personId.getId
