@@ -1,6 +1,6 @@
+-- LOCAL : DO NOT RUN IN MASTER/PROD
 ALTER TABLE atlas_driver_offer_bpp.merchant
-    DROP COLUMN exo_phones,
-    DROP COLUMN exo_phone_country_code;
+    DROP COLUMN IF EXISTS exo_phones;
 
 ALTER TABLE atlas_driver_offer_bpp.merchant
     ADD COLUMN exo_phones character varying(255) [];
