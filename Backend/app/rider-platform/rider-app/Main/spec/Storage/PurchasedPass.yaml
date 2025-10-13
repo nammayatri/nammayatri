@@ -1,0 +1,44 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  Person: Domain.Types.Person
+  PassType: Domain.Types.PassType
+  PaymentOrder: Lib.Payment.Domain.Types.PaymentOrder
+  HighPrecMoney: Kernel.Types.Common
+  FRFSVehicleServiceTier: Domain.Types.FRFSVehicleServiceTier
+
+PurchasedPass:
+  tableName: purchased_pass
+
+  types:
+    StatusType:
+      enum: "Pending,Active,Failed,Expired,RefundPending,RefundInitiated,Refunded"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+
+    BenefitType:
+      enum: "FullSaving,FixedSaving,PercentageSaving"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+
+  fields:
+    id: Id PurchasedPass
+    shortId: ShortId PurchasedPass
+    orderShortId: ShortId PaymentOrder
+    personId: Id Person
+    validTill: Maybe UTCTime
+    usedCount: Int
+    passTypeId: Id PassType
+    passCode: Text
+    passName: Maybe Text
+    passAmount: HighPrecMoney
+    benefitDescription: Text
+    benefitType: Maybe BenefitType
+    benefitValue: Maybe HighPrecMoney
+    applicableVehicleServiceTiers: "[Id FRFSVehicleServiceTier]"
+    maxValidTrips: Maybe Int
+    maxValidDays: Maybe Int
+    status: StatusType
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+
+  constraints:
+    id: PrimaryKey
