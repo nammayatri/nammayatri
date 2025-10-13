@@ -123,7 +123,6 @@ getTrackVehicles (mbPersonId, merchantId) routeCode mbCurrentLat mbCurrentLon mb
           nextStopTravelDistance = nextStopTravelDistance,
           upcomingStops = upcomingStops,
           delay = delay,
-          routeCode = routeCode,
           vehicleInfo =
             maybe
               (TrackRoute.VehicleInfoForRoute Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing)
