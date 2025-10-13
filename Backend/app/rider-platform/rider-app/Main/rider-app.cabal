@@ -79,6 +79,7 @@ library
       API.UI.Issue
       API.UI.Maps
       API.UI.PartnerOrganizationFRFS
+      API.UI.Pass
       API.UI.Payment
       API.UI.PersonStats
       API.UI.Profile
@@ -243,6 +244,7 @@ library
       Domain.Action.UI.NearbyDrivers
       Domain.Action.UI.NyRegularSubscription
       Domain.Action.UI.PartnerOrganizationFRFS
+      Domain.Action.UI.Pass
       Domain.Action.UI.Payment
       Domain.Action.UI.Person
       Domain.Action.UI.PersonDefaultEmergencyNumber
@@ -290,8 +292,10 @@ library
       Domain.Types.Extra.MerchantServiceConfig
       Domain.Types.Extra.NyRegularSubscription
       Domain.Types.Extra.PartnerOrgConfig
+      Domain.Types.Extra.Pass
       Domain.Types.Extra.PersonFlowStatus
       Domain.Types.Extra.PlaceNameCache
+      Domain.Types.Extra.PurchasedPass
       Domain.Types.Extra.RecentLocation
       Domain.Types.Extra.RentalDetails
       Domain.Types.Extra.Ride
@@ -527,11 +531,15 @@ library
       Storage.Queries.NyRegularSubscriptionExtra
       Storage.Queries.PartnerOrganizationExtra
       Storage.Queries.PartnerOrgConfigExtra
+      Storage.Queries.PassCategoryExtra
+      Storage.Queries.PassExtra
+      Storage.Queries.PassTypeExtra
       Storage.Queries.PersonDefaultEmergencyNumberExtra
       Storage.Queries.PersonExtra
       Storage.Queries.PersonStatsExtra
       Storage.Queries.PlaceBasedServiceConfigExtra
       Storage.Queries.PopularLocationExtra
+      Storage.Queries.PurchasedPassExtra
       Storage.Queries.QueriesExtra.RideLite
       Storage.Queries.QuoteExtra
       Storage.Queries.RatingExtra
@@ -656,6 +664,7 @@ library
       API.Action.UI.NearbyBuses
       API.Action.UI.NearbyDrivers
       API.Action.UI.NyRegularSubscription
+      API.Action.UI.Pass
       API.Action.UI.PickupInstructions
       API.Action.UI.Places
       API.Action.UI.PriceBreakup
@@ -720,6 +729,7 @@ library
       API.Types.UI.NearbyBuses
       API.Types.UI.NearbyDrivers
       API.Types.UI.NyRegularSubscription
+      API.Types.UI.Pass
       API.Types.UI.PickupInstructions
       API.Types.UI.Places
       API.Types.UI.PriceBreakup
@@ -813,6 +823,9 @@ library
       Domain.Types.PartnerOrganization
       Domain.Types.PartnerOrgConfig
       Domain.Types.PartnerOrgStation
+      Domain.Types.Pass
+      Domain.Types.PassCategory
+      Domain.Types.PassType
       Domain.Types.PaymentCustomer
       Domain.Types.PayoutConfig
       Domain.Types.Person
@@ -824,6 +837,7 @@ library
       Domain.Types.PlaceBasedServiceConfig
       Domain.Types.PlaceNameCache
       Domain.Types.PopularLocation
+      Domain.Types.PurchasedPass
       Domain.Types.Quote
       Domain.Types.QuoteBreakup
       Domain.Types.Rating
@@ -949,6 +963,9 @@ library
       Storage.Beam.PartnerOrganization
       Storage.Beam.PartnerOrgConfig
       Storage.Beam.PartnerOrgStation
+      Storage.Beam.Pass
+      Storage.Beam.PassCategory
+      Storage.Beam.PassType
       Storage.Beam.PaymentCustomer
       Storage.Beam.PayoutConfig
       Storage.Beam.Person
@@ -959,6 +976,7 @@ library
       Storage.Beam.PlaceBasedServiceConfig
       Storage.Beam.PlaceNameCache
       Storage.Beam.PopularLocation
+      Storage.Beam.PurchasedPass
       Storage.Beam.Quote
       Storage.Beam.QuoteBreakup
       Storage.Beam.Rating
@@ -1143,6 +1161,9 @@ library
       Storage.Queries.PartnerOrganization
       Storage.Queries.PartnerOrgConfig
       Storage.Queries.PartnerOrgStation
+      Storage.Queries.Pass
+      Storage.Queries.PassCategory
+      Storage.Queries.PassType
       Storage.Queries.PaymentCustomer
       Storage.Queries.PayoutConfig
       Storage.Queries.Person
@@ -1153,6 +1174,7 @@ library
       Storage.Queries.PlaceBasedServiceConfig
       Storage.Queries.PlaceNameCache
       Storage.Queries.PopularLocation
+      Storage.Queries.PurchasedPass
       Storage.Queries.Quote
       Storage.Queries.QuoteBreakup
       Storage.Queries.Rating
