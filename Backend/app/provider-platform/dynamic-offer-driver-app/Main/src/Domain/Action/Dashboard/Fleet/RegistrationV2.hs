@@ -117,7 +117,10 @@ fleetOwnerRegister _merchantShortId _opCity mbRequestorId req = do
       let req' = Image.ImageValidateRequest {imageType = DVC.BusinessLicense, image = businessLicenseImage, rcNumber = Nothing, validationStatus = Nothing, workflowTransactionId = Nothing, vehicleCategory = Nothing, sdkFailureReason = Nothing}
       image <- Image.validateImage True (personId, person.merchantId, person.merchantOperatingCityId) req'
       QFOI.updateBusinessLicenseImage (Just image.imageId.getId) personId
-  enabled <- enableFleetIfPossible
+  enabled <-
+    case req.setIsEnabled of -- Required for fleets where docs are not mandatory
+      Just True -> pure True
+      _ -> enableFleetIfPossible
   return $ Common.FleetOwnerRegisterResV2 enabled
   where
     enableFleetIfPossible :: Flow Bool
