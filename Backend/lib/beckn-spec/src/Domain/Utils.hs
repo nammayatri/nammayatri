@@ -1,7 +1,9 @@
 module Domain.Utils where
 
+import qualified BecknV2.OnDemand.Enums as Enums
 import qualified Data.Text as T
 import Data.Time
+import qualified Domain.Types.Trip as DTrip
 import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (length, map)
 import Kernel.Types.Forkable
@@ -42,3 +44,10 @@ mapConcurrently fn ar = do
   awaitables <- mapM (awaitableFork "mapConcurrently" . fn) ar
   results <- rights <$> mapM (L.await Nothing) awaitables
   return results
+
+castTravelModeToVehicleCategory :: DTrip.MultimodalTravelMode -> Enums.VehicleCategory
+castTravelModeToVehicleCategory DTrip.Bus = Enums.BUS
+castTravelModeToVehicleCategory DTrip.Taxi = Enums.AUTO_RICKSHAW
+castTravelModeToVehicleCategory DTrip.Walk = Enums.AUTO_RICKSHAW
+castTravelModeToVehicleCategory DTrip.Metro = Enums.METRO
+castTravelModeToVehicleCategory DTrip.Subway = Enums.SUBWAY

@@ -1,5 +1,6 @@
 module Lib.JourneyModule.Utils where
 
+import qualified API.Types.UI.FRFSTicketService as FRFSTicketServiceAPI
 import qualified Beckn.OnDemand.Utils.Common as UCommon
 import BecknV2.FRFS.Enums as Spec
 import qualified BecknV2.OnDemand.Enums as Enums
@@ -27,9 +28,10 @@ import Domain.Types.Person
 import qualified Domain.Types.RecentLocation as DTRL
 import qualified Domain.Types.RiderConfig as RCTypes
 import Domain.Types.RouteDetails
+import qualified Domain.Types.RouteDetails as DRouteDetails
 import Domain.Types.RouteStopTimeTable
 import qualified Domain.Types.Trip as DTrip
-import Domain.Utils (mapConcurrently)
+import Domain.Utils (castTravelModeToVehicleCategory, mapConcurrently)
 import Environment
 import ExternalBPP.ExternalAPI.Subway.CRIS.RouteFare as CRISRouteFare
 import Kernel.External.Encryption
@@ -64,10 +66,13 @@ import qualified Storage.CachedQueries.Merchant.RiderConfig as QRiderConfig
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.CachedQueries.RouteStopTimeTable as GRSM
 import Storage.GraphqlQueries.Client (mapToServiceTierType)
+import qualified Storage.Queries.FRFSQuote as QFRFSQuote
+import qualified Storage.Queries.FRFSTicketBooking as QFRFSTicketBooking
 import qualified Storage.Queries.FRFSTicketBookingPayment as QFRFSTicketBookingPayment
 import qualified Storage.Queries.JourneyLeg as QJourneyLeg
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.RecentLocation as SQRL
+import qualified Storage.Queries.RouteDetails as QRouteDetails
 import qualified Storage.Queries.VehicleRouteMapping as QVehicleRouteMapping
 import System.Environment (lookupEnv)
 import Tools.Maps (LatLong (..))
@@ -1390,3 +1395,107 @@ secondsToTime seconds =
       minutes :: Int = (totalSeconds `mod` 3600) `div` 60
       secs = fromIntegral $ totalSeconds `mod` 60
    in LocalTime.TimeOfDay hours minutes secs
+
+getServiceTierFromQuote :: DFRFSQuote.FRFSQuote -> Maybe LegServiceTier
+getServiceTierFromQuote quote = do
+  let routeStations :: Maybe [FRFSTicketServiceAPI.FRFSRouteStationsAPI] = decodeFromText =<< quote.routeStationsJson
+  let mbServiceTier = listToMaybe $ mapMaybe (.vehicleServiceTier) (fromMaybe [] routeStations)
+  mbServiceTier <&> \serviceTier -> do
+    LegServiceTier
+      { fare = mkPriceAPIEntity quote.price,
+        quoteId = quote.id,
+        serviceTierName = serviceTier.shortName,
+        serviceTierType = serviceTier._type,
+        serviceTierDescription = serviceTier.description,
+        via = quote.fareDetails <&> (.via),
+        trainTypeCode = quote.fareDetails <&> (.trainTypeCode)
+      }
+
+switchFRFSQuoteTierUtil ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    EncFlow m r,
+    Monad m,
+    HasField "ltsHedisEnv" r Hedis.HedisEnv,
+    HasKafkaProducer r,
+    HasShortDurationRetryCfg r c
+  ) =>
+  DJourneyLeg.JourneyLeg ->
+  Id DFRFSQuote.FRFSQuote ->
+  m ()
+switchFRFSQuoteTierUtil journeyLeg quoteId = do
+  whenJust journeyLeg.legSearchId $ \legSearchId -> do
+    mbAlternateShortNames <- getAlternateRouteInfo
+    let searchId = Id legSearchId
+    QJourneyLeg.updateLegPricingIdByLegSearchId (Just quoteId.getId) journeyLeg.legSearchId
+    mbBooking <- QFRFSTicketBooking.findBySearchId searchId
+    whenJust mbBooking $ \booking -> do
+      quote <- QFRFSQuote.findById quoteId >>= fromMaybeM (InvalidRequest "Quote not found")
+      let quantity = booking.quantity
+          childTicketQuantity = fromMaybe 0 booking.childTicketQuantity
+          quantityRational = fromIntegral quantity :: Rational
+          childTicketQuantityRational = fromIntegral childTicketQuantity :: Rational
+          childPrice = fromMaybe quote.price quote.childPrice
+          totalPriceForSwitchLeg =
+            Price
+              { amount = HighPrecMoney $ (quote.price.amount.getHighPrecMoney * quantityRational) + (childPrice.amount.getHighPrecMoney * childTicketQuantityRational),
+                amountInt = Money $ (quote.price.amountInt.getMoney * quantity) + (childPrice.amountInt.getMoney * childTicketQuantity),
+                currency = quote.price.currency
+              }
+          updatedBooking =
+            booking
+              { DFRFSTicketBooking.quoteId = quoteId,
+                DFRFSTicketBooking.price = totalPriceForSwitchLeg,
+                DFRFSTicketBooking.estimatedPrice = totalPriceForSwitchLeg
+              }
+      void $ QFRFSTicketBooking.updateByPrimaryKey updatedBooking
+    whenJust mbAlternateShortNames $ \(alternateShortNames, alternateRouteIds) -> do
+      QRouteDetails.updateAlternateShortNamesAndRouteIds alternateShortNames (Just alternateRouteIds) journeyLeg.id.getId
+  where
+    getAlternateRouteInfo ::
+      ( CacheFlow m r,
+        EsqDBFlow m r,
+        EsqDBReplicaFlow m r,
+        EncFlow m r,
+        Monad m,
+        HasField "ltsHedisEnv" r Hedis.HedisEnv,
+        HasKafkaProducer r,
+        HasShortDurationRetryCfg r c
+      ) =>
+      m (Maybe ([Text], [Text]))
+    getAlternateRouteInfo = do
+      options <- getLegTierOptionsUtil journeyLeg
+      let mbSelectedOption = find (\option -> option.quoteId == Just quoteId) options
+      return $ mbSelectedOption <&> (\option -> unzip $ map (\a -> (a.shortName, a.routeCode)) option.availableRoutesInfo)
+
+getLegTierOptionsUtil ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EsqDBReplicaFlow m r,
+    EncFlow m r,
+    Monad m,
+    HasField "ltsHedisEnv" r Hedis.HedisEnv,
+    HasKafkaProducer r,
+    HasShortDurationRetryCfg r c
+  ) =>
+  DJourneyLeg.JourneyLeg ->
+  m [DRouteDetails.AvailableRoutesByTier]
+getLegTierOptionsUtil journeyLeg = do
+  now <- getCurrentTime
+  let mbAgencyId = journeyLeg.agency >>= (.gtfsId)
+  let vehicleCategory = castTravelModeToVehicleCategory journeyLeg.mode
+  quotes <- maybe (pure []) (QFRFSQuote.findAllBySearchId . Id) journeyLeg.legSearchId
+  let availableServiceTiers = mapMaybe getServiceTierFromQuote quotes
+  mbIntegratedBPPConfig <- SIBC.findMaybeIntegratedBPPConfigFromAgency mbAgencyId journeyLeg.merchantOperatingCityId vehicleCategory DIntegratedBPPConfig.MULTIMODAL
+  let mbRouteDetail = journeyLeg.routeDetails & listToMaybe
+  let mbFomStopCode = mbRouteDetail >>= (.fromStopCode)
+  let mbToStopCode = mbRouteDetail >>= (.toStopCode)
+  let mbArrivalTime = mbRouteDetail >>= (.fromArrivalTime)
+  let arrivalTime = fromMaybe now mbArrivalTime
+
+  case (mbFomStopCode, mbToStopCode, mbIntegratedBPPConfig) of
+    (Just fromStopCode, Just toStopCode, Just integratedBPPConfig) -> do
+      (_, availableRoutesByTiers, _) <- findPossibleRoutes (Just availableServiceTiers) fromStopCode toStopCode arrivalTime integratedBPPConfig journeyLeg.merchantId journeyLeg.merchantOperatingCityId vehicleCategory (vehicleCategory /= Enums.SUBWAY) False False
+      return availableRoutesByTiers
+    _ -> return []

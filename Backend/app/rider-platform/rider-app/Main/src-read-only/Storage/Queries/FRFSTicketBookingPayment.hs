@@ -59,7 +59,8 @@ updateByPrimaryKey :: (EsqDBFlow m r, MonadFlow m, CacheFlow m r) => (Domain.Typ
 updateByPrimaryKey (Domain.Types.FRFSTicketBookingPayment.FRFSTicketBookingPayment {..}) = do
   _now <- getCurrentTime
   updateWithKV
-    [ Se.Set Beam.frfsTicketBookingId (Kernel.Types.Id.getId frfsTicketBookingId),
+    [ Se.Set Beam.frfsQuoteId (Kernel.Types.Id.getId <$> frfsQuoteId),
+      Se.Set Beam.frfsTicketBookingId (Kernel.Types.Id.getId frfsTicketBookingId),
       Se.Set Beam.paymentOrderId (Kernel.Types.Id.getId paymentOrderId),
       Se.Set Beam.status status,
       Se.Set Beam.merchantId (Kernel.Types.Id.getId <$> merchantId),

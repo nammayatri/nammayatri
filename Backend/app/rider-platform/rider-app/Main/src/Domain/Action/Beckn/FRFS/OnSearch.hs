@@ -45,7 +45,6 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import qualified Kernel.Types.TimeBound as DTB
 import Kernel.Utils.Common
-import qualified Lib.JourneyModule.Types as JourneyTypes
 import qualified Lib.JourneyModule.Utils as JourneyUtils
 import qualified SharedLogic.CreateFareForMultiModal as SLCF
 import qualified SharedLogic.FRFSUtils as SFU
@@ -292,7 +291,7 @@ filterQuotes integratedBPPConfig quotes (Just journeyLeg) = do
         quotes
           & filter
             ( \quote ->
-                maybe False (\serviceTier -> serviceTier.serviceTierType `elem` serviceTypes) (JourneyTypes.getServiceTierFromQuote quote)
+                maybe False (\serviceTier -> serviceTier.serviceTierType `elem` serviceTypes) (JourneyUtils.getServiceTierFromQuote quote)
                   && isRouteBasedQuote quote
             )
     Nothing -> return $ filter isRouteBasedQuote quotes
@@ -301,7 +300,7 @@ filterQuotes integratedBPPConfig quotes (Just journeyLeg) = do
     DTripTypes.Bus -> do
       mbRiderConfig <- QRC.findByMerchantOperatingCityId journeyLeg.merchantOperatingCityId Nothing
       let cfgMap = maybe (JourneyUtils.toCfgMap JourneyUtils.defaultBusTierSortingConfig) JourneyUtils.toCfgMap (mbRiderConfig >>= (.busTierSortingConfig))
-      let serviceTierTypeFromQuote quote = JourneyTypes.getServiceTierFromQuote quote <&> (.serviceTierType)
+      let serviceTierTypeFromQuote quote = JourneyUtils.getServiceTierFromQuote quote <&> (.serviceTierType)
       return $
         Just $
           minimumBy
