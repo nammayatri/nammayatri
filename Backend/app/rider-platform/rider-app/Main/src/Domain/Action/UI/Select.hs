@@ -379,7 +379,6 @@ mkJourneyForSearch searchRequest estimate personId = do
   journeyGuid <- generateGUID
   journeyLegGuid <- generateGUID
   journeyRouteDetailsId <- generateGUID
-
   let estimatedMinFare = Just estimate.estimatedFare.amount
       estimatedMaxFare = Just estimate.estimatedFare.amount
 
@@ -501,7 +500,8 @@ mkJourneyForSearch searchRequest estimate personId = do
             journeyId = journeyGuid,
             isDeleted = Just False,
             sequenceNumber = 0,
-            multimodalSearchRequestId = Nothing
+            multimodalSearchRequestId = Nothing,
+            busLocationData = searchRequest.busLocationData
           }
   pure (journey, journeyLeg)
 

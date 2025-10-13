@@ -31,6 +31,7 @@ imports:
   Value: Data.Aeson
   RecentLocation: Domain.Types.RecentLocation
   VehicleCategory: BecknV2.OnDemand.Enums
+  BusLocation: API.Types.UI.RiderLocation
 
 SearchRequest:
   tableName: search_request
@@ -93,6 +94,8 @@ SearchRequest:
     searchMode: Maybe SearchMode
     isMultimodalSearch: Maybe Bool
     multimodalSearchRequestId: Maybe Text
+    busLocationData: "[BusLocation]"
+
 
   default:
     hasMultimodalSearch: "false"
@@ -118,6 +121,7 @@ SearchRequest:
     clientModelName: Maybe Text
     clientManufacturer: Maybe Text
     configInExperimentVersions: Maybe Value
+    busLocationData: Maybe Value
 
   sqlType:
     toLocationId : character varying(36)
@@ -128,6 +132,7 @@ SearchRequest:
     currency: character varying(255)
     fromLocationId: character varying(36)
     configInExperimentVersions: "json"
+    busLocationData: "json"
 
   beamFields:
     distance:
@@ -184,6 +189,7 @@ SearchRequest:
     driverIdentifierType: driverIdentifier <&> (._type)|E
     driverIdentifierValue: driverIdentifier <&> (.value)|E
     configInExperimentVersions: Just $ toJSON configInExperimentVersions|E
+    busLocationData: Just $ toJSON busLocationData|E
 
   fromTType:
     merchantOperatingCityId: Storage.Queries.Transformers.SearchRequest.backfillMOCId merchantId merchantOperatingCityId|EM
@@ -202,6 +208,7 @@ SearchRequest:
     distanceUnit: Kernel.Prelude.fromMaybe Kernel.Types.Common.Meter |I
     driverIdentifier: Domain.Types.RefereeLink.mkDriverIdentifier
     configInExperimentVersions: fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< configInExperimentVersions)|E
+    busLocationData: fromMaybe [] (Kernel.Utils.JSON.valueToMaybe =<< busLocationData)|E
 
   excludedFields: [updatedAt]
 
