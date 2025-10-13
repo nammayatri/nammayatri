@@ -130,7 +130,7 @@ data PublicTransportSearchReq = PublicTransportSearchReq
     vehicleCategory :: Maybe Enums.VehicleCategory,
     platformType :: Maybe DIBPC.PlatformType,
     currentLocation :: Maybe LatLong,
-    busLocationData :: [RL.BusLocation]
+    busLocationData :: Maybe [RL.BusLocation]
   }
   deriving (Generic, FromJSON, ToJSON, Show, ToSchema)
 
