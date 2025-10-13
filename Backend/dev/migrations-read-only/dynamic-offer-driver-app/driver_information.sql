@@ -270,3 +270,8 @@ ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN is_tts_enabled 
 
 ALTER TABLE atlas_driver_offer_bpp.driver_information ALTER COLUMN is_tts_enabled DROP DEFAULT;
 ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN is_high_accuracy_location_enabled boolean ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.driver_information ADD COLUMN ride_request_volume_enabled boolean ;

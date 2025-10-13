@@ -96,6 +96,7 @@ data DriverInformationT f = DriverInformationT
     referredByFleetOwnerId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     referredByOperatorId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     rideRequestVolume :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Int),
+    rideRequestVolumeEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     servicesEnabledForSubscription :: B.C f (Kernel.Prelude.Maybe [Domain.Types.Extra.Plan.ServiceNames]),
     softBlockExpiryTime :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.UTCTime),
     softBlockReasonFlag :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
