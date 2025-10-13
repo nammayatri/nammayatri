@@ -1,0 +1,95 @@
+imports:
+  Text: Data.Text
+  Maybe: Data.Maybe
+  PassCategory: Domain.Types.PassCategory
+  PassType: Domain.Types.PassType
+  Pass: Domain.Types.Pass
+  PassDocumentType: Domain.Types.Pass
+  PurchasedPass: Domain.Types.PurchasedPass
+  StatusType: Domain.Types.PurchasedPass
+  HighPrecMoney: Kernel.Types.Common
+  ServiceTierType: BecknV2.FRFS.Enums
+  CreateOrderResp: Kernel.External.Payment.Juspay.Types.CreateOrder
+  Benefit: Domain.Types.Pass
+
+module: Pass
+types:
+  PassCategoryAPIEntity:
+    id: Id PassCategory
+    name: Text
+    description: Text
+    derive: "Show"
+
+  PassTypeAPIEntity:
+    id: Id PassType
+    name: Maybe Text
+    catchline: Maybe Text
+    title: Text
+    description: Maybe Text
+    derive: "Show"
+
+  PassAPIEntity:
+    id: Id Pass
+    amount: HighPrecMoney
+    savings: Maybe HighPrecMoney
+    benefit: Maybe Benefit
+    benefitDescription: Text
+    vehicleServiceTierType: "[ServiceTierType]"
+    maxTrips: Maybe Int
+    maxDays: Maybe Int
+    documentsRequired: "[PassDocumentType]"
+    eligibility: Bool
+    name: Maybe Text
+    code: Text
+    autoApply: Bool
+    derive: "Show"
+
+  PassInfoAPIEntity:
+    passCategory: PassCategoryAPIEntity
+    passTypes: "[PassTypeAPIEntity]"
+    passes: "[PassAPIEntity]"
+    derive: "Show"
+
+  PassSelectionAPIEntity:
+    purchasedPassId: Id PurchasedPass
+    paymentOrder: Maybe CreateOrderResp
+    derive: "Show"
+
+  PurchasedPassAPIEntity:
+    id: Id PurchasedPass
+    shortId: ShortId PurchasedPass
+    passEntity: PassDetailsAPIEntity
+    tripsLeft: Maybe Int
+    status: StatusType
+    purchaseDate: UTCTime
+    expiryDate: Maybe UTCTime
+    derive: "Show"
+
+  PassDetailsAPIEntity:
+    category: PassCategoryAPIEntity
+    passType: PassTypeAPIEntity
+    passDetails: PassAPIEntity
+    derive: "Show"
+
+apis:
+  - GET:
+      endpoint: /multimodal/pass/availablePasses
+      auth: TokenAuth
+      response:
+        type: "[PassInfoAPIEntity]"
+
+  - POST:
+      endpoint: /multimodal/pass/{passId}/select
+      auth: TokenAuth
+      params:
+        passId: Id Pass
+      response:
+        type: PassSelectionAPIEntity
+
+  - GET:
+      endpoint: /multimodal/pass/{purchasedPassId}/status
+      auth: TokenAuth
+      params:
+        purchasedPassId: Id PurchasedPass
+      response:
+        type: PurchasedPassAPIEntity
