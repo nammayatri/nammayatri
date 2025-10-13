@@ -12,13 +12,30 @@ Volunteer:
   fields:
     id : Id Volunteer
     vendorId : Maybe Text
+    isActive: Maybe Bool
     place : Text
     createdAt : UTCTime
     updatedAt : UTCTime
 
+  beamType:
+    isActive: Maybe Bool
+
   constraints:
     id: PrimaryKey
     place: SecondaryKey
+
+  default:
+    isActive: "true"
+
+  constraints:
+    vendorId: PrimaryKey
+
+  fromTType:
+    isActive : Kernel.Prelude.Just . Kernel.Prelude.fromMaybe True|I
+
+  toTType:
+    isActive : Kernel.Prelude.Just . Kernel.Prelude.fromMaybe True|I
+
 
   queries:
     findById:
@@ -35,3 +52,6 @@ Volunteer:
         and:
           - id
           - vendorId
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
