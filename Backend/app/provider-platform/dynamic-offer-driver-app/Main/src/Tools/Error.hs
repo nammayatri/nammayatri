@@ -1238,6 +1238,7 @@ data DriverOnboardingError
   | InvalidDocumentType Text
   | DriverOnboardingVehicleCategoryNotFound
   | HyperVergeWebhookPayloadRecordNotFound Text
+  | DocumentNotFound Text
   | DuplicateWebhookReceived
   | WebhookAuthFailed
   deriving (Show, Eq, Read, Ord, Generic, FromJSON, ToJSON, ToSchema, IsBecknAPIError)
@@ -1293,6 +1294,7 @@ instance IsBaseError DriverOnboardingError where
     InvalidDocumentType docType -> Just $ "Document type send in the query is invalid or not supported!!!! query = " <> docType
     DriverOnboardingVehicleCategoryNotFound -> Just $ "Driver Onboarding Vehicle Catgeory Not Found"
     HyperVergeWebhookPayloadRecordNotFound reqId -> Just $ "Request id in Hyperverge webhook does not match any request id in HypervergeVerification table. RequestId : " <> reqId
+    DocumentNotFound docId -> Just $ "Document not found with id: " <> docId
     DuplicateWebhookReceived -> Just "Multiple webhooks received for same request id."
     WebhookAuthFailed -> Just "Auth header data mismatch ocurred!!!!!!"
 
@@ -1347,6 +1349,7 @@ instance IsHTTPError DriverOnboardingError where
     InvalidDocumentType _ -> "INAVLID_DOCUMENT_TYPE"
     DriverOnboardingVehicleCategoryNotFound -> "DRIVER_ONBOARDING_VEHICLE_CATEGORY_NOT_FOUND"
     HyperVergeWebhookPayloadRecordNotFound _ -> "HYPERVERGE_WEBHOOK_PAYLOAD_RECORD_NOT_FOUND"
+    DocumentNotFound _ -> "DOCUMENT_NOT_FOUND"
     DuplicateWebhookReceived -> "DUPLICATE_WEBHOOK_RECEIVED"
     WebhookAuthFailed -> "WEBHOOK_AUTH_FAILED"
   toHttpCode = \case
@@ -1399,6 +1402,7 @@ instance IsHTTPError DriverOnboardingError where
     InvalidDocumentType _ -> E400
     DriverOnboardingVehicleCategoryNotFound -> E500
     HyperVergeWebhookPayloadRecordNotFound _ -> E400
+    DocumentNotFound _ -> E404
     DuplicateWebhookReceived -> E400
     WebhookAuthFailed -> E401
 
