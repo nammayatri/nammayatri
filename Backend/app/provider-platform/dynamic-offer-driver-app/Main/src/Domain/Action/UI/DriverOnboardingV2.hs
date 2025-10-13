@@ -101,6 +101,8 @@ mkDocumentVerificationConfigAPIEntity language Domain.Types.DocumentVerification
       { title = maybe title (.message) mbTitle,
         description = maybe description (Just . (.message)) mbDescription,
         isMandatoryForEnabling = fromMaybe isMandatory isMandatoryForEnabling,
+        applicableTo = applicableTo,
+        documentFields = documentFields,
         ..
       }
 
@@ -929,7 +931,7 @@ getDriverRegisterBankAccountLink (mbPersonId, _, _) = do
     createAccount :: Domain.Types.Person.Person -> UTCTime -> Environment.Flow API.Types.UI.DriverOnboardingV2.BankAccountLinkResp
     createAccount person now = do
       merchantOpCity <- CQMOC.findById person.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound person.merchantOperatingCityId.getId)
-      when (merchantOpCity.country /= Context.USA) $ throwError $ InvalidRequest "Bank account creation is only supported for USA"
+      when (merchantOpCity.country `notElem` [Context.USA, Context.Netherlands]) $ throwError $ InvalidRequest "Bank account creation is only supported for USA and Netherlands"
 
       mbMobileNumber <- mapM decrypt person.mobileNumber
       mobileNumber <- mbMobileNumber & fromMaybeM (InvalidRequest "Mobile number is required for opening a bank account")
