@@ -482,6 +482,8 @@ postMultimodalJourneyFeedback (mbPersonId, merchantId) journeyId journeyFeedback
   riderId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   now <- getCurrentTime
   whenJust journeyFeedbackForm.rating $ \rating -> do
+    unless (journey.status == Domain.Types.Journey.FEEDBACK_PENDING) $ do
+      throwError (InvalidJourneyStatusForFeedback "Journey is not in FEEDBACK_PENDING status")
     let mkJourneyfeedbackForm =
           JFB.JourneyFeedback
             { additionalFeedBack = journeyFeedbackForm.additionalFeedBack,
