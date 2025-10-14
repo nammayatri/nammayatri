@@ -34,6 +34,7 @@ module Lib.Payment.Domain.Action
     mkCreatePayoutOrderReq,
     buildPaymentOrder,
     updateRefundStatus,
+    buildOrderOffer,
   )
 where
 
@@ -61,6 +62,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.Payment.Domain.Types.Common
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
+import qualified Lib.Payment.Domain.Types.PaymentOrderOffer as DPaymentOrderOffer
 import qualified Lib.Payment.Domain.Types.PaymentOrderSplit as DPaymentOrderSplit
 import qualified Lib.Payment.Domain.Types.PaymentTransaction as DTransaction
 import qualified Lib.Payment.Domain.Types.PayoutOrder as Payment
@@ -68,6 +70,7 @@ import qualified Lib.Payment.Domain.Types.PayoutTransaction as PT
 import Lib.Payment.Domain.Types.Refunds (Refunds (..), Split (..))
 import Lib.Payment.Storage.Beam.BeamFlow
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
+import qualified Lib.Payment.Storage.Queries.PaymentOrderOffer as QPaymentOrderOffer
 import qualified Lib.Payment.Storage.Queries.PaymentOrderSplit as QPaymentOrderSplit
 import qualified Lib.Payment.Storage.Queries.PaymentTransaction as QTransaction
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
@@ -463,7 +466,8 @@ buildSDKPayloadDetails req order = do
               createMandate = order.createMandate,
               mandateMaxAmount = show <$> order.mandateMaxAmount,
               mandateStartDate = show . utcTimeToPOSIXSeconds <$> (order.mandateStartDate),
-              mandateEndDate = show . utcTimeToPOSIXSeconds <$> order.mandateEndDate
+              mandateEndDate = show . utcTimeToPOSIXSeconds <$> order.mandateEndDate,
+              basket = encodeToText <$> req.basket
             }
     (_, _) -> return Nothing
 
@@ -568,6 +572,54 @@ buildPaymentSplit paymentOrderId paymentOrder mbSplitSettlementDetails merchantI
       let splits = marketPlaceSplit : vendorSplitEntries
       QPaymentOrderSplit.createMany splits
 
+buildOrderOffer :: (EncFlow m r, BeamFlow m r) => Id DOrder.PaymentOrder -> Maybe [PInterface.Offer] -> Id Merchant -> Maybe (Id MerchantOperatingCity) -> m ()
+buildOrderOffer paymentOrderId mbOffers merchantId merchantOperatingCityId = do
+  logDebug $ "buildOrderOffer called for paymentOrderId: " <> paymentOrderId.getId <> " with " <> show (length (fromMaybe [] mbOffers)) <> " offers"
+  existingPaymentOffers <- QPaymentOrderOffer.findByPaymentOrder paymentOrderId
+  case existingPaymentOffers of
+    [] -> do
+      case mbOffers of
+        Just [] -> do
+          logInfo $ "No offers to create for paymentOrderId: " <> paymentOrderId.getId
+          pure ()
+        Just offers -> do
+          now <- getCurrentTime
+          paymentOrderOffers <- mapM (createPaymentOrderOffer now) offers
+          logInfo $ "Creating " <> show (length paymentOrderOffers) <> " payment order offers for paymentOrderId: " <> paymentOrderId.getId
+          QPaymentOrderOffer.createMany paymentOrderOffers
+          logInfo $ "Successfully created payment order offers for paymentOrderId: " <> paymentOrderId.getId
+        Nothing -> do
+          logInfo $ "No offers to create for paymentOrderId: " <> paymentOrderId.getId
+          pure ()
+    _ -> do
+      logInfo $ "Payment order offers already exist for paymentOrderId: " <> paymentOrderId.getId <> ", skipping creation"
+      pure ()
+  where
+    createPaymentOrderOffer now offer = do
+      offerId <- generateGUID
+      let offerIdText = fromMaybe "" offer.offerId
+          offerCodeText = fromMaybe "" offer.offerCode
+          statusText = show offer.status
+          responseJsonText = encodeToText offer
+          merchantIdText = merchantId.getId
+          merchantOperatingCityIdText = maybe "" ((.getId) . cast) merchantOperatingCityId
+
+      logDebug $ "Creating payment order offer with offerId: " <> offerIdText <> ", offerCode: " <> offerCodeText
+
+      pure $
+        DPaymentOrderOffer.PaymentOrderOffer
+          { id = offerId,
+            paymentOrderId = show paymentOrderId,
+            offer_id = offerIdText,
+            offer_code = offerCodeText,
+            status = statusText,
+            responseJSON = responseJsonText,
+            merchantId = merchantIdText,
+            merchantOperatingCityId = merchantOperatingCityIdText,
+            createdAt = now,
+            updatedAt = now
+          }
+
 -- order status -----------------------------------------------------
 
 orderStatusService ::
@@ -637,6 +689,7 @@ orderStatusService personId orderId orderStatusCall = do
         transactionUUID
       mapM_ updateRefundStatus refunds
       void $ QOrder.updateEffectiveAmount orderId effectiveAmount
+      void $ buildOrderOffer orderId offers order.merchantId order.merchantOperatingCityId
       return $
         PaymentStatus
           { status = transactionStatus,
