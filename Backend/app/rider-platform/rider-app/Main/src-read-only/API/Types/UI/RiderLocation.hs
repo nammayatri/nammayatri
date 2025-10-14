@@ -11,11 +11,17 @@ import qualified Kernel.Types.Beckn.Context
 import Servant
 import Tools.Auth
 
-data BusLocation = BusLocation {busNumber :: Data.Text.Text, customerLocation :: Kernel.External.Maps.Types.LatLong, distanceToBus :: Kernel.Prelude.Double, timestamp :: Kernel.Prelude.UTCTime}
+data BusLocation = BusLocation
+  { busNumber :: Data.Text.Text,
+    customerLocation :: Kernel.External.Maps.Types.LatLong,
+    distanceToBus :: Kernel.Prelude.Double,
+    locationAccuracy :: Kernel.Prelude.Maybe Kernel.Prelude.Double,
+    timestamp :: Kernel.Prelude.UTCTime
+  }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data RiderLocationRequest = RiderLocationRequest {city :: Kernel.Types.Beckn.Context.City, riderLat :: Kernel.Prelude.Double, riderLon :: Kernel.Prelude.Double}
+data RiderLocationRequest = RiderLocationRequest {city :: Kernel.Types.Beckn.Context.City, locationAccuracy :: Kernel.Prelude.Maybe Kernel.Prelude.Double, riderLat :: Kernel.Prelude.Double, riderLon :: Kernel.Prelude.Double}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
