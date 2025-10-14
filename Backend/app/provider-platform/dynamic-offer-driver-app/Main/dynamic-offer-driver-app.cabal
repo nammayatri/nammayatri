@@ -238,6 +238,7 @@ library
       Domain.Action.UI.DriverProfileQuestions
       Domain.Action.UI.DriverProfileSummary
       Domain.Action.UI.DriverReferral
+      Domain.Action.UI.DriverToDriverDirectCalling
       Domain.Action.UI.DriverWallet
       Domain.Action.UI.EditBooking
       Domain.Action.UI.ExotelEndRide
@@ -785,6 +786,7 @@ library
       API.Action.UI.DemandHotspots
       API.Action.UI.DriverOnboardingV2
       API.Action.UI.DriverProfileQuestions
+      API.Action.UI.DriverToDriverDirectCalling
       API.Action.UI.DriverWallet
       API.Action.UI.EditBooking
       API.Action.UI.FareCalculator
