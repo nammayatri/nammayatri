@@ -218,6 +218,7 @@ getDriverRegistrationGetDocument merchantShortId _ imageId = do
       INVALID -> Common.INVALID
       MANUAL_VERIFICATION_REQUIRED -> Common.MANUAL_VERIFICATION_REQUIRED
       UNAUTHORIZED -> Common.UNAUTHORIZED
+      PULL_REQUIRED -> Common.PENDING
 
 mapDocumentType :: Common.DocumentType -> Domain.DocumentType
 mapDocumentType Common.DriverLicense = Domain.DriverLicense

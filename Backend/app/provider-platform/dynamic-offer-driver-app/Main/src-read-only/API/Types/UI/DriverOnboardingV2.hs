@@ -8,6 +8,7 @@ import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.DriverInformation
 import qualified Domain.Types.DriverPanCard
 import qualified Domain.Types.Image
+import qualified Domain.Types.VehicleCategory
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -52,6 +53,14 @@ data CommonDocumentReq = CommonDocumentReq
     documentType :: Domain.Types.DocumentVerificationConfig.DocumentType,
     imageId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Image.Image)
   }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data DigiLockerInitiateReq = DigiLockerInitiateReq {vehicleCategory :: Domain.Types.VehicleCategory.VehicleCategory}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data DigiLockerInitiateResp = DigiLockerInitiateResp {authorizationUrl :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

@@ -970,6 +970,7 @@ mapStatus = \case
   Documents.VALID -> VALID
   Documents.INVALID -> INVALID
   Documents.UNAUTHORIZED -> UNAUTHORIZED
+  Documents.PULL_REQUIRED -> PENDING
 
 verificationStatusCheck :: ResponseStatus -> Language -> DVC.DocumentType -> Maybe [Text] -> Flow Text
 verificationStatusCheck status language img mbReasons = do

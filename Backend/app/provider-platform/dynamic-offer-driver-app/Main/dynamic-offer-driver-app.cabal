@@ -227,6 +227,7 @@ library
       Domain.Action.UI.DriverGoHomeRequest
       Domain.Action.UI.DriverHomeLocation
       Domain.Action.UI.DriverOnboarding.AadhaarVerification
+      Domain.Action.UI.DriverOnboarding.DigiLockerCallback
       Domain.Action.UI.DriverOnboarding.DriverLicense
       Domain.Action.UI.DriverOnboarding.GstVerification
       Domain.Action.UI.DriverOnboarding.HyperVergeWebhook
@@ -884,6 +885,7 @@ library
       Domain.Types.CommonDriverOnboardingDocuments
       Domain.Types.ConditionalCharges
       Domain.Types.DailyStats
+      Domain.Types.DigilockerVerification
       Domain.Types.DocumentVerificationConfig
       Domain.Types.DriverBankAccount
       Domain.Types.DriverBlockReason
@@ -1037,6 +1039,7 @@ library
       Storage.Beam.CommonDriverOnboardingDocuments
       Storage.Beam.ConditionalCharges
       Storage.Beam.DailyStats
+      Storage.Beam.DigilockerVerification
       Storage.Beam.DocumentVerificationConfig
       Storage.Beam.DriverBankAccount
       Storage.Beam.DriverBlockReason
@@ -1194,6 +1197,7 @@ library
       Storage.Queries.CommonDriverOnboardingDocuments
       Storage.Queries.ConditionalCharges
       Storage.Queries.DailyStats
+      Storage.Queries.DigilockerVerification
       Storage.Queries.DocumentVerificationConfig
       Storage.Queries.DriverBankAccount
       Storage.Queries.DriverBlockReason
@@ -1489,6 +1493,7 @@ library
     , lens
     , lens-aeson
     , location-updates
+    , memory
     , mobility-core
     , network-uri
     , openapi3
@@ -1624,6 +1629,7 @@ executable dynamic-offer-driver-app-exe
     , jwt >=0.11
     , lens
     , lens-aeson
+    , memory
     , mobility-core
     , network-uri
     , openapi3
