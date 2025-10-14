@@ -21,6 +21,7 @@ import qualified API.Internal as Internal
 import qualified API.UI as UI
 import qualified Data.ByteString as BS
 import Data.OpenApi
+import qualified Domain.Action.UI.DriverOnboarding.DigiLockerCallback as DigiLockerCallback
 import qualified Domain.Action.UI.DriverOnboarding.HyperVergeWebhook as HyperVergeWebhook
 import qualified Domain.Action.UI.DriverOnboarding.IdfyWebhook as DriverOnboarding
 import qualified Domain.Action.UI.Payment as Payment
@@ -76,6 +77,7 @@ type MainAPI =
          )
     :<|> HyperVergeWebhook.HyperVergeResultWebhookAPI
     :<|> HyperVergeWebhook.HyperVergeVerificationWebhookAPI
+    :<|> DigiLockerCallback.DigiLockerCallbackAPI
     :<|> ( Capture "merchantId" (ShortId DM.Merchant)
              :> JuspayPayout.JuspayPayoutWebhookAPI
          )
@@ -104,6 +106,7 @@ mainServer =
     :<|> safetyWebhookHandler
     :<|> hyperVergeResultWebhookHandler
     :<|> hyperVergeVerificaitonWebhookHandler
+    :<|> digiLockerCallbackHandler
     :<|> juspayPayoutWebhookHandler
     :<|> juspayPayoutWebhookHandlerV2
     :<|> Dashboard.handler
@@ -203,6 +206,15 @@ hyperVergeVerificaitonWebhookHandler ::
   FlowHandler AckResponse
 hyperVergeVerificaitonWebhookHandler authData =
   withFlowHandlerAPI . HyperVergeWebhook.hyperVergeVerificaitonWebhookHandler authData
+
+digiLockerCallbackHandler ::
+  Maybe Text ->
+  Maybe Text ->
+  Maybe Text ->
+  Text ->
+  FlowHandler AckResponse
+digiLockerCallbackHandler mbError mbErrorDescription mbCode stateParam =
+  withFlowHandlerAPI $ DigiLockerCallback.digiLockerCallbackHandler mbError mbErrorDescription mbCode stateParam
 
 juspayPayoutWebhookHandler ::
   ShortId DM.Merchant ->
