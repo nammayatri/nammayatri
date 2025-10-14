@@ -48,8 +48,9 @@ postIdentifyNearByBus (_mbPersonId, merchantId) req = do
   where
     getNearbyBuses :: Kernel.External.Maps.Types.LatLong -> DomainRiderConfig.RiderConfig -> Environment.Flow [CQMMB.BusDataWithRoutesInfo]
     getNearbyBuses userPos riderConfig = do
-      let nearbyDriverSearchRadius :: Double = fromMaybe 0.5 riderConfig.nearbyDriverSearchRadius
-      busesBS <- mapM (pure . decodeUtf8) =<< (CQMMB.withCrossAppRedisNew $ Hedis.geoSearch nearbyBusKey (Hedis.FromLonLat userPos.lon userPos.lat) (Hedis.ByRadius nearbyDriverSearchRadius "km"))
+      let nearbyBusSearchRadius :: Double = fromMaybe 0.1 riderConfig.nearbyBusSearchRadius
+          maxNearbyBuses :: Int = fromMaybe 5 riderConfig.maxNearbyBuses
+      busesBS <- mapM (pure . decodeUtf8) =<< (CQMMB.withCrossAppRedisNew $ Hedis.geoSearch nearbyBusKey (Hedis.FromLonLat userPos.lon userPos.lat) (Hedis.ByRadius nearbyBusSearchRadius "km"))
       logDebug $ "getNearbyBuses: busesBS: " <> show busesBS
       buses <-
         if null busesBS
@@ -59,8 +60,13 @@ postIdentifyNearByBus (_mbPersonId, merchantId) req = do
           else do
             logDebug $ "getNearbyBuses: Fetching bus metadata for " <> show (length busesBS) <> " buses"
             CQMMB.withCrossAppRedisNew $ Hedis.hmGet vehicleMetaKey busesBS
-      logDebug $ "getNearbyBuses: buses: " <> show buses
-      pure $ catMaybes buses
+      let validBuses = catMaybes buses
+          sortedLimitedBuses = take maxNearbyBuses $ EulerHS.Prelude.sortOn (distanceToUser userPos) validBuses
+      logDebug $ "getNearbyBuses: returning " <> show (length sortedLimitedBuses) <> " nearest buses out of " <> show (length validBuses)
+      pure sortedLimitedBuses
+      where
+        distanceToUser :: Kernel.External.Maps.Types.LatLong -> CQMMB.BusDataWithRoutesInfo -> Double
+        distanceToUser riderLoc busData = realToFrac $ Kernel.Utils.CalculateDistance.distanceBetweenInMeters riderLoc (Kernel.External.Maps.Types.LatLong busData.latitude busData.longitude)
 
     convertToBusLocation :: Kernel.External.Maps.Types.LatLong -> CQMMB.BusDataWithRoutesInfo -> Environment.Flow API.Types.UI.RiderLocation.BusLocation
     convertToBusLocation riderLocation busData = do
@@ -73,7 +79,8 @@ postIdentifyNearByBus (_mbPersonId, merchantId) req = do
           { busNumber = busNumber,
             distanceToBus = distanceToBus,
             timestamp = busTimestamp,
-            customerLocation = riderLocation
+            customerLocation = riderLocation,
+            locationAccuracy = req.locationAccuracy
           }
 
     nearbyBusKey :: Text

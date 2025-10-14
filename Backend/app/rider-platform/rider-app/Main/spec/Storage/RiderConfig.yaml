@@ -163,6 +163,9 @@ RiderConfig:
     updateTicketValidityInSecondsPostSetOnboarding: Maybe Seconds
     enableRideEndOffers: Bool
     metricsBlacklistPatterns: "Maybe [Text]"
+    dashboardMediaFileUrlPattern : Maybe Text
+    maxNearbyBuses: Maybe Int
+    nearbyBusSearchRadius: Maybe Double
 
   beamType:
     ivrTriggerDelay: Maybe Seconds

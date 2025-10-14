@@ -428,3 +428,11 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN enable_ride_end_offers boolean ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN metrics_blacklist_patterns text [] ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN dashboard_media_file_url_pattern text ;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN nearby_bus_search_radius double precision ;
+ALTER TABLE atlas_app.rider_config ADD COLUMN max_nearby_buses integer ;
