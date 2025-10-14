@@ -4,16 +4,22 @@ import qualified API.Types.UI.DriverOnboardingV2
 import qualified API.Types.UI.DriverOnboardingV2 as APITypes
 import qualified AWS.S3 as S3
 import qualified Control.Monad.Extra as CME
+import Crypto.Random (getRandomBytes)
 import qualified Data.List as DL
 import Data.Maybe
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
 import Data.Time (defaultTimeLocale, formatTime)
+import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import qualified Domain.Action.UI.DriverOnboarding.Image as Image
+import qualified Domain.Action.UI.DriverOnboarding.PullDocument as PullDocument
 import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate as VRC
 import qualified Domain.Types.AadhaarCard
 import Domain.Types.BackgroundVerification
 import Domain.Types.Common
 import qualified Domain.Types.CommonDriverOnboardingDocuments
+import qualified Domain.Types.DigilockerVerification as DDV
+import qualified Domain.Types.DocStatus as DocStatus
 import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.DocumentVerificationConfig as DTO
 import qualified Domain.Types.DocumentVerificationConfig as Domain
@@ -38,6 +44,7 @@ import Kernel.External.Encryption
 import Kernel.External.Maps (LatLong (..))
 import Kernel.External.Types (Language (..), ServiceFlow)
 import qualified Kernel.External.Verification.Interface as VI
+import qualified Kernel.External.Verification.Interface.Types as Verification
 import qualified Kernel.Prelude
 import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Types.APISuccess
@@ -48,6 +55,14 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.DriverOnboarding as SDO
+import SharedLogic.DriverOnboarding.Digilocker
+  ( base64UrlEncodeNoPadding,
+    constructDigiLockerAuthUrl,
+    generateCodeChallenge,
+    getDigiLockerConfig,
+    verifyDigiLockerEnabled,
+  )
+import qualified SharedLogic.DriverOnboarding.Digilocker as DigilockerLockerShared
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
 import qualified SharedLogic.Merchant as SMerchant
@@ -62,6 +77,7 @@ import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.BackgroundVerification as QBV
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.CommonDriverOnboardingDocuments as QCommonDriverOnboardingDocuments
+import qualified Storage.Queries.DigilockerVerification as QDV
 import qualified Storage.Queries.DriverGstin as QDGTIN
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverLicense as QDL
@@ -605,18 +621,19 @@ postDriverRegisterPancard ::
     API.Types.UI.DriverOnboardingV2.DriverPanReq ->
     Environment.Flow Kernel.Types.APISuccess.APISuccess
   )
-postDriverRegisterPancard (mbPersonId, merchantId, merchantOpCityId) req = postDriverRegisterPancardHelper (mbPersonId, merchantId, merchantOpCityId) False req
+postDriverRegisterPancard (mbPersonId, merchantId, merchantOpCityId) req = postDriverRegisterPancardHelper (mbPersonId, merchantId, merchantOpCityId) False False req
 
 postDriverRegisterPancardHelper ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
       Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
-    Bool ->
+    Bool -> -- isDashboard
+    Bool -> -- isDigiLockerFlow (server-controlled flag to skip verification for DigiLocker-verified documents)
     API.Types.UI.DriverOnboardingV2.DriverPanReq ->
     Flow APISuccess
   )
-postDriverRegisterPancardHelper (mbPersonId, merchantId, merchantOpCityId) isDashboard req = do
+postDriverRegisterPancardHelper (mbPersonId, merchantId, merchantOpCityId) isDashboard isDigiLockerFlow req = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
   person <- runInReplica $ PersonQuery.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
   merchantServiceUsageConfig <-
@@ -636,12 +653,15 @@ postDriverRegisterPancardHelper (mbPersonId, merchantId, merchantOpCityId) isDas
     when (panInfo.verificationStatus == Documents.VALID) $ do
       ImageQuery.deleteById req.imageId1
       throwError $ DocumentAlreadyValidated "PAN"
-  verificationStatus <- case mbPanVerificationService of
-    Just VI.HyperVerge -> do
-      callHyperVerge
-    Just VI.Idfy -> do
-      callIdfy person.id.getId
-    _ -> pure Documents.VALID
+  verificationStatus <-
+    if isDigiLockerFlow
+      then pure Documents.VALID
+      else case mbPanVerificationService of
+        Just VI.HyperVerge -> do
+          callHyperVerge
+        Just VI.Idfy -> do
+          callIdfy person.id.getId
+        _ -> pure Documents.VALID
 
   QDPC.upsertPanRecord =<< buildPanCard merchantId person req verificationStatus (Just merchantOpCityId)
   return Success
@@ -847,32 +867,20 @@ postDriverRegisterAadhaarCard ::
     API.Types.UI.DriverOnboardingV2.AadhaarCardReq ->
     Environment.Flow APISuccess
   )
-postDriverRegisterAadhaarCard (mbPersonId, merchantId, merchantOperatingCityId) req@API.Types.UI.DriverOnboardingV2.AadhaarCardReq {..} = do
+postDriverRegisterAadhaarCard (mbPersonId, merchantId, merchantOperatingCityId) req = do
   personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
-  prevTry <- QAadhaarCard.findByPrimaryKey personId
+
+  -- SDK validation (HyperVerge-specific)
   checkIfGenuineReq req
-  whenJust prevTry $ \aadhaarEntity -> do
-    when (aadhaarEntity.verificationStatus == Documents.MANUAL_VERIFICATION_REQUIRED) $
-      throwError $ DocumentUnderManualReview "Aadhaar"
-    when (aadhaarEntity.verificationStatus == Documents.VALID) $
-      throwError $ DocumentAlreadyValidated "Aadhaar"
-  QAadhaarCard.upsertAadhaarRecord =<< makeAadhaarCardEntity personId
+
+  -- Duplicate/status checks
+  validateAadhaarChecks personId
+
+  -- Create and store Aadhaar record
+  createAadhaarRecord personId merchantId merchantOperatingCityId req
+
   return Success
   where
-    makeAadhaarCardEntity personId = do
-      currTime <- getCurrentTime
-      let verificationStatus = Image.convertValidationStatusToVerificationStatus validationStatus
-      return $
-        Domain.Types.AadhaarCard.AadhaarCard
-          { driverId = personId,
-            createdAt = currTime,
-            updatedAt = currTime,
-            aadhaarNumberHash = Nothing,
-            driverGender = Nothing,
-            driverImage = Nothing,
-            driverImagePath = Nothing,
-            ..
-          }
     checkIfGenuineReq :: ServiceFlow m r => API.Types.UI.DriverOnboardingV2.AadhaarCardReq -> m ()
     checkIfGenuineReq aadhaarReq = do
       hvResp <- Verification.verifySdkResp merchantId merchantOperatingCityId (VI.VerifySdkDataReq aadhaarReq.transactionId)
@@ -886,6 +894,50 @@ postDriverRegisterAadhaarCard (mbPersonId, merchantId, merchantOperatingCityId) 
           when (aadhaarReq.dateOfBirth /= hvRespDetails.dob) $ void $ Image.throwValidationError aadhaarReq.aadhaarBackImageId aadhaarReq.aadhaarFrontImageId Nothing
           when (aadhaarReq.address /= hvRespDetails.address) $ void $ Image.throwValidationError aadhaarReq.aadhaarBackImageId aadhaarReq.aadhaarFrontImageId Nothing
         _ -> void $ Image.throwValidationError aadhaarReq.aadhaarBackImageId aadhaarReq.aadhaarFrontImageId Nothing
+
+-- | Validate Aadhaar checks (duplicate and status checks)
+-- Separated from SDK validation for DigiLocker flow
+validateAadhaarChecks ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id Domain.Types.Person.Person ->
+  m ()
+validateAadhaarChecks personId = do
+  prevTry <- QAadhaarCard.findByPrimaryKey personId
+  whenJust prevTry $ \aadhaarEntity -> do
+    when (aadhaarEntity.verificationStatus == Documents.MANUAL_VERIFICATION_REQUIRED) $
+      throwError $ DocumentUnderManualReview "Aadhaar"
+    when (aadhaarEntity.verificationStatus == Documents.VALID) $
+      throwError $ DocumentAlreadyValidated "Aadhaar"
+
+-- | Create and store Aadhaar record
+-- Can be called independently from DigiLocker (without SDK validation)
+createAadhaarRecord ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Id Domain.Types.Person.Person ->
+  Id Domain.Types.Merchant.Merchant ->
+  Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
+  API.Types.UI.DriverOnboardingV2.AadhaarCardReq -> -- Request with all fields
+  m ()
+createAadhaarRecord personId merchantId merchantOperatingCityId API.Types.UI.DriverOnboardingV2.AadhaarCardReq {..} = do
+  currTime <- getCurrentTime
+  let verificationStatus = Image.convertValidationStatusToVerificationStatus validationStatus
+  let aadhaarCard =
+        Domain.Types.AadhaarCard.AadhaarCard
+          { driverId = personId,
+            merchantId = merchantId,
+            merchantOperatingCityId = merchantOperatingCityId,
+            verificationStatus = verificationStatus,
+            createdAt = currTime,
+            updatedAt = currTime,
+            aadhaarNumberHash = Nothing,
+            driverGender = Nothing,
+            driverImage = Nothing,
+            driverImagePath = Nothing,
+            ..
+          }
+  -- Uses fields from AadhaarCardReq: aadhaarFrontImageId, aadhaarBackImageId, maskedAadhaarNumber, nameOnCard, dateOfBirth, address, consent, consentTimestamp
+
+  QAadhaarCard.upsertAadhaarRecord aadhaarCard
 
 getDriverRegisterBankAccountLink ::
   ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
@@ -1023,3 +1075,227 @@ postDriverLinkToFleet (mbDriverId, _, _) req = do
   driverId <- mbDriverId & fromMaybeM (PersonNotFound "No person found")
   FDA.createFleetDriverAssociationIfNotExists driverId req.fleetOwnerId Nothing (fromMaybe DVC.CAR req.onboardingVehicleCategory) False
   pure Success
+
+postDriverDigilockerInitiate ::
+  ( Maybe (Id Domain.Types.Person.Person),
+    Id Domain.Types.Merchant.Merchant,
+    Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+  ) ->
+  APITypes.DigiLockerInitiateReq ->
+  Environment.Flow APITypes.DigiLockerInitiateResp
+postDriverDigilockerInitiate (mbDriverId, merchantId, merchantOpCityId) req = do
+  driverId <- mbDriverId & fromMaybeM (PersonNotFound "No person found")
+  logInfo $ "DigiLocker initiate - Starting authorization flow for DriverId: " <> driverId.getId <> ", VehicleCategory: " <> show req.vehicleCategory
+
+  verifyDigiLockerEnabled merchantOpCityId
+
+  allowedVehicleCategories <- DigilockerLockerShared.getAllowedVehicleCategories merchantOpCityId
+  unless (req.vehicleCategory `elem` allowedVehicleCategories) $ do
+    let categoriesStr = T.intercalate ", " (map (T.toLower . show) allowedVehicleCategories)
+    throwError $ DigiLockerInvalidVehicleCategory $ "Vehicle category must be one of: " <> categoriesStr <> ". Received: " <> show req.vehicleCategory
+
+  latestSession <- QDV.findLatestByDriverId (Just 1) (Just 0) driverId
+
+  case latestSession of
+    [] -> do
+      logInfo $ "DigiLocker initiate - No existing session found for DriverId: " <> driverId.getId
+      createNewDigiLockerSession driverId merchantId merchantOpCityId req.vehicleCategory
+    (session : _) -> do
+      logInfo $ "DigiLocker initiate - Found existing session for DriverId: " <> driverId.getId <> ", StateId: " <> session.stateId <> ", SessionStatus: " <> show session.sessionStatus
+      handleExistingSession driverId merchantId merchantOpCityId session req.vehicleCategory
+
+handleExistingSession ::
+  Id Domain.Types.Person.Person ->
+  Id Domain.Types.Merchant.Merchant ->
+  Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
+  DDV.DigilockerVerification ->
+  DVC.VehicleCategory ->
+  Flow APITypes.DigiLockerInitiateResp
+handleExistingSession driverId merchantId merchantOpCityId session vehicleCategory = do
+  now <- getCurrentTime
+
+  case session.sessionStatus of
+    DDV.PENDING -> handlePendingSession driverId merchantId merchantOpCityId session now
+    DDV.SUCCESS -> handleSuccessSession driverId merchantId merchantOpCityId session now vehicleCategory
+    DDV.FAILED -> do
+      logInfo $ "DigiLocker initiate - Previous session FAILED, creating new session for DriverId: " <> driverId.getId <> ", StateId: " <> session.stateId
+      createNewDigiLockerSession driverId merchantId merchantOpCityId vehicleCategory
+    DDV.CONSENT_DENIED -> do
+      logInfo $ "DigiLocker initiate - Previous session CONSENT_DENIED, creating new session for DriverId: " <> driverId.getId <> ", StateId: " <> session.stateId
+      createNewDigiLockerSession driverId merchantId merchantOpCityId vehicleCategory
+
+handlePendingSession ::
+  Id Domain.Types.Person.Person ->
+  Id Domain.Types.Merchant.Merchant ->
+  Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
+  DDV.DigilockerVerification ->
+  UTCTime ->
+  Flow APITypes.DigiLockerInitiateResp
+handlePendingSession driverId _merchantId _merchantOpCityId session _now = do
+  logInfo $ "DigiLocker initiate - DriverId: " <> driverId.getId <> ", StateId: " <> session.stateId <> ", Session PENDING, returning 409"
+  throwError DigiLockerVerificationInProgress
+
+handleSuccessSession ::
+  Id Domain.Types.Person.Person ->
+  Id Domain.Types.Merchant.Merchant ->
+  Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
+  DDV.DigilockerVerification ->
+  UTCTime ->
+  DVC.VehicleCategory ->
+  Flow APITypes.DigiLockerInitiateResp
+handleSuccessSession driverId merchantId merchantOpCityId session now vehicleCategory = do
+  checkDocumentStatuses driverId merchantId merchantOpCityId session now vehicleCategory
+
+checkDocumentStatuses ::
+  Id Domain.Types.Person.Person ->
+  Id Domain.Types.Merchant.Merchant ->
+  Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
+  DDV.DigilockerVerification ->
+  UTCTime ->
+  DVC.VehicleCategory ->
+  Flow APITypes.DigiLockerInitiateResp
+checkDocumentStatuses driverId merchantId merchantOpCityId session now vehicleCategory = do
+  let docStatusMap = session.docStatus
+
+  when (hasDocWithStatus docStatusMap (DocStatus.docStatusToText DocStatus.DOC_PENDING)) $ do
+    logInfo $ "DigiLocker initiate - DriverId: " <> driverId.getId <> ", StateId: " <> session.stateId <> ", Found PENDING documents, returning 409"
+    throwError DigiLockerDocumentsBeingVerified
+
+  if hasDocWithStatus docStatusMap (DocStatus.docStatusToText DocStatus.DOC_FAILED)
+    || hasDocWithStatus docStatusMap (DocStatus.docStatusToText DocStatus.DOC_CONSENT_DENIED)
+    then do
+      logInfo $ "DigiLocker initiate - DriverId: " <> driverId.getId <> ", StateId: " <> session.stateId <> ", Found FAILED or CONSENT_DENIED documents, creating new session"
+      createNewDigiLockerSession driverId merchantId merchantOpCityId vehicleCategory
+    else
+      if hasDocWithStatus docStatusMap (DocStatus.docStatusToText DocStatus.DOC_PULL_REQUIRED)
+        then handlePullRequiredDocs driverId merchantId merchantOpCityId session docStatusMap now vehicleCategory
+        else checkActualDocumentTables driverId merchantId merchantOpCityId vehicleCategory
+
+handlePullRequiredDocs ::
+  Id Domain.Types.Person.Person ->
+  Id Domain.Types.Merchant.Merchant ->
+  Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
+  DDV.DigilockerVerification ->
+  DocStatus.DocStatusMap ->
+  UTCTime ->
+  DVC.VehicleCategory ->
+  Flow APITypes.DigiLockerInitiateResp
+handlePullRequiredDocs driverId merchantId merchantOpCityId session _docStatusMap now vehicleCategory = do
+  let stateId = session.stateId
+  case session.accessTokenExpiresAt of
+    Nothing -> do
+      logInfo $ "DigiLocker initiate - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", PULL_REQUIRED with no expiry, creating new session"
+      createNewDigiLockerSession driverId merchantId merchantOpCityId vehicleCategory
+    Just expiresAt ->
+      if now < expiresAt
+        then do
+          logInfo $ "DigiLocker initiate - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", PULL_REQUIRED with valid token, returning 409"
+          throwError DigiLockerPullRequired
+        else do
+          logInfo $ "DigiLocker initiate - DriverId: " <> driverId.getId <> ", StateId: " <> stateId <> ", PULL_REQUIRED with expired token, creating new session"
+          createNewDigiLockerSession driverId merchantId merchantOpCityId vehicleCategory
+
+checkActualDocumentTables ::
+  Id Domain.Types.Person.Person ->
+  Id Domain.Types.Merchant.Merchant ->
+  Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
+  DVC.VehicleCategory ->
+  Flow APITypes.DigiLockerInitiateResp
+checkActualDocumentTables driverId merchantId merchantOpCityId vehicleCategory = do
+  mbDL <- QDL.findByDriverId driverId
+  let dlStatus = mbDL >>= (\dl -> Just dl.verificationStatus)
+
+  mbPan <- QDPC.findByDriverId driverId
+  let panStatus = mbPan >>= (\pan -> Just pan.verificationStatus)
+
+  mbAadhaar <- QAadhaarCard.findByPrimaryKey driverId
+  let aadhaarStatus = mbAadhaar >>= (\aadhaar -> Just aadhaar.verificationStatus)
+
+  let allStatuses = [dlStatus, panStatus, aadhaarStatus]
+
+  when (any (== Just Documents.PENDING) allStatuses) $ do
+    logInfo $ "DigiLocker initiate - DriverId: " <> driverId.getId <> ", Found PENDING documents in tables, returning 409"
+    throwError DigiLockerDocumentsBeingVerified
+
+  let allDocumentsValid = all (== Just Documents.VALID) allStatuses
+  if allDocumentsValid
+    then do
+      logInfo $ "DigiLocker initiate - DriverId: " <> driverId.getId <> ", All documents already verified"
+      throwError DigiLockerAllDocumentsVerified
+    else do
+      logInfo $ "DigiLocker initiate - DriverId: " <> driverId.getId <> ", Creating new session for document verification"
+      createNewDigiLockerSession driverId merchantId merchantOpCityId vehicleCategory
+
+createNewDigiLockerSession ::
+  Id Domain.Types.Person.Person ->
+  Id Domain.Types.Merchant.Merchant ->
+  Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
+  DVC.VehicleCategory ->
+  Flow APITypes.DigiLockerInitiateResp
+createNewDigiLockerSession driverId merchantId merchantOpCityId vehicleCategory = do
+  logInfo $ "DigiLocker initiate - Creating new session for DriverId: " <> driverId.getId <> ", VehicleCategory: " <> show vehicleCategory
+
+  digiLockerConfig <- getDigiLockerConfig merchantOpCityId
+  logInfo $ "DigiLocker initiate - Config retrieved for merchantOpCityId: " <> merchantOpCityId.getId
+
+  randomBytes <- liftIO $ getRandomBytes 24
+  now <- getCurrentTime
+  let timestampMillis = T.pack $ show $ (floor (utcTimeToPOSIXSeconds now * 1000) :: Integer)
+  let timestampBytes = TE.encodeUtf8 timestampMillis
+  let combinedBytes = randomBytes <> timestampBytes
+  let codeVerifier = base64UrlEncodeNoPadding combinedBytes
+  let codeChallenge = generateCodeChallenge codeVerifier
+  let codeMethod = "S256"
+
+  stateId <- generateGUID
+
+  sessionId <- generateGUID
+  let newSession =
+        DDV.DigilockerVerification
+          { id = sessionId,
+            driverId = driverId,
+            stateId = stateId,
+            codeVerifier = codeVerifier,
+            codeChallenge = codeChallenge,
+            codeMethod = codeMethod,
+            authorizationCode = Nothing,
+            accessToken = Nothing,
+            accessTokenExpiresAt = Nothing,
+            scope = Nothing,
+            docStatus = DocStatus.emptyDocStatusMap,
+            sessionStatus = DDV.PENDING,
+            responseCode = Nothing,
+            responseDescription = Nothing,
+            vehicleCategory = vehicleCategory,
+            merchantId = merchantId,
+            merchantOperatingCityId = merchantOpCityId,
+            createdAt = now,
+            updatedAt = now
+          }
+
+  QDV.create newSession
+
+  logInfo $ "DigiLocker initiate - DriverId: " <> driverId.getId <> ", Created session with ID: " <> sessionId.getId <> ", StateId: " <> stateId <> ", VehicleCategory: " <> show vehicleCategory
+
+  let authUrl = constructDigiLockerAuthUrl digiLockerConfig stateId codeChallenge
+
+  return $ APITypes.DigiLockerInitiateResp {authorizationUrl = authUrl}
+
+hasDocWithStatus :: DocStatus.DocStatusMap -> Text -> Bool
+hasDocWithStatus docStatusMap targetStatus =
+  any (hasStatus targetStatus) (DocStatus.toList docStatusMap)
+  where
+    hasStatus :: Text -> (Domain.DocumentType, DocStatus.DocumentStatus) -> Bool
+    hasStatus target (_, documentStatus) =
+      DocStatus.docStatusEnumToText documentStatus.status == target
+
+postDriverDigilockerPullDocuments ::
+  ( Maybe (Id Domain.Types.Person.Person),
+    Id Domain.Types.Merchant.Merchant,
+    Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+  ) ->
+  APITypes.PullDocumentReq ->
+  Environment.Flow APISuccess
+postDriverDigilockerPullDocuments (mbDriverId, merchantId, merchantOpCityId) req = do
+  logInfo $ "PullDocuments - Starting pull operation for DocType: " <> show req.docType
+  PullDocument.pullDocuments (mbDriverId, merchantId, merchantOpCityId) req
