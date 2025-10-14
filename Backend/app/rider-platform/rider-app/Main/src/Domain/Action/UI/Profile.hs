@@ -182,7 +182,9 @@ data UpdateProfileReq = UpdateProfileReq
     registrationLon :: Maybe Double,
     latestLat :: Maybe Double,
     latestLon :: Maybe Double,
-    marketingParams :: Maybe MarketingParams
+    marketingParams :: Maybe MarketingParams,
+    mbMobileNumber :: Maybe Text,
+    mbMobileCountryCode :: Maybe Text
   }
   deriving (Generic, ToJSON, FromJSON, ToSchema)
 
@@ -396,6 +398,13 @@ updatePerson personId merchantId req mbRnVersion mbBundleVersion mbClientVersion
       Nothing -> pure ()
   -- TODO: Remove this part from here once UI stops using updatePerson api to apply referral code
   void $ mapM (\refCode -> Referral.applyReferralCode person False refCode Nothing) req.referralCode
+  let encryptedMobileNumber = case req.mbMobileNumber of
+        Just mobileNumber -> do
+          mobileNumberDbHash <- getDbHash mobileNumber
+          mobileNumberExists <- QPerson.findByMobileNumberAndMerchantId (fromMaybe "+91" req.mbMobileCountryCode) mobileNumberDbHash merchantId
+          when (isJust mobileNumberExists) $ throwError (InvalidRequest "Phone already registered")
+          Just $ encrypt mobileNumber
+        Nothing -> Nothing
   void $
     QPerson.updatePersonalInfo
       personId
@@ -425,6 +434,8 @@ updatePerson personId merchantId req mbRnVersion mbBundleVersion mbClientVersion
       req.latestLon
       person
       req.liveActivityToken
+      encryptedMobileNumber
+      req.mbMobileCountryCode
   updateDisability req.hasDisability req.disability personId
 
 updateDisability :: (CacheFlow m r, EsqDBFlow m r, EncFlow m r) => Maybe Bool -> Maybe Disability -> Id Person.Person -> m APISuccess.APISuccess
