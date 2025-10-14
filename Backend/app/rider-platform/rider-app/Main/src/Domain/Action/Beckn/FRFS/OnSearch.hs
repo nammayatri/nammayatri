@@ -285,16 +285,16 @@ filterQuotes :: (EsqDBFlow m r, EsqDBReplicaFlow m r, CacheFlow m r) => DIBC.Int
 filterQuotes _ [] _ = return Nothing
 filterQuotes _ _ Nothing = return Nothing
 filterQuotes integratedBPPConfig quotes (Just journeyLeg) = do
-  filteredQuotes <- case journeyLeg.serviceTypes of
-    Just serviceTypes -> do
+  filteredQuotes <- case journeyLeg.liveVehicleAvailableServiceTypes of
+    Just liveVehicleAvailableServiceTypes@(_ : _) -> do
       return $
         quotes
           & filter
             ( \quote ->
-                maybe False (\serviceTier -> serviceTier.serviceTierType `elem` serviceTypes) (JourneyUtils.getServiceTierFromQuote quote)
+                maybe False (\serviceTier -> serviceTier.serviceTierType `elem` liveVehicleAvailableServiceTypes) (JourneyUtils.getServiceTierFromQuote quote)
                   && isRouteBasedQuote quote
             )
-    Nothing -> return $ filter isRouteBasedQuote quotes
+    _ -> return $ filter isRouteBasedQuote quotes
   let finalQuotes = if null filteredQuotes then quotes else filteredQuotes
   case journeyLeg.mode of
     DTripTypes.Bus -> do

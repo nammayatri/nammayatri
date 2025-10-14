@@ -181,8 +181,8 @@ init journeyReq userPreferences = do
       let relevantLegs = filter (\leg -> leg.mode == DTrip.Bus || leg.mode == DTrip.Subway) legs
           checkLeg leg =
             case leg.mode of
-              DTrip.Bus -> checkTransitType userPrefs.busTransitTypes leg.serviceTypes
-              DTrip.Subway -> checkTransitType userPrefs.subwayTransitTypes leg.serviceTypes
+              DTrip.Bus -> checkTransitType userPrefs.busTransitTypes leg.liveVehicleAvailableServiceTypes
+              DTrip.Subway -> checkTransitType userPrefs.subwayTransitTypes leg.liveVehicleAvailableServiceTypes
               _ -> True
       return (all checkLeg relevantLegs)
       where
@@ -1150,7 +1150,7 @@ extendLegEstimatedFare journeyId startPoint mbEndLocation _ = do
           estimatedDistance <- bookingUpdateReq.estimatedDistance & fromMaybeM (InvalidRequest $ "EditLocation distance not Found for bookingUpdateReqId: " <> show bookingUpdateReq.id)
           return $
             APITypes.ExtendLegGetFareResp
-              { totalFare = Just JL.GetFareResponse {estimatedMinFare = estimatedFare, estimatedMaxFare = estimatedFare, serviceTypes = Nothing, possibleRoutes = Nothing},
+              { totalFare = Just JL.GetFareResponse {estimatedMinFare = estimatedFare, estimatedMaxFare = estimatedFare, liveVehicleAvailableServiceTypes = Nothing, possibleRoutes = Nothing},
                 distance = convertHighPrecMetersToDistance bookingUpdateReq.distanceUnit estimatedDistance,
                 duration = Nothing,
                 bookingUpdateRequestId = Just bookingUpdateReq.id
@@ -1273,7 +1273,7 @@ switchLeg journeyId _ req = do
             DJourneyLeg.id = journeyLegId,
             DJourneyLeg.routeDetails = (\routeDetail -> routeDetail {DRouteDetails.journeyLegId = journeyLegId.getId, DRouteDetails.trackingStatus = Nothing}) <$> journeyLeg.routeDetails,
             DJourneyLeg.mode = newMode,
-            DJourneyLeg.serviceTypes = Nothing,
+            DJourneyLeg.liveVehicleAvailableServiceTypes = Nothing,
             DJourneyLeg.startLocation = startLocation,
             DJourneyLeg.toArrivalTime = Nothing,
             DJourneyLeg.estimatedMinFare = Nothing, -- will be updated by on_search

@@ -77,7 +77,7 @@ The multimodal journey system uses a relational database structure designed to h
 | `toStopPlatformCode` | Text? | Transit: Platform number |
 | `toDepartureTime` | UTCTime? | Departure from destination |
 | `toArrivalTime` | UTCTime? | Scheduled arrival |
-| `serviceTypes` | [ServiceTierType]? | Available service tiers |
+| `liveVehicleAvailableServiceTypes` | [ServiceTierType]? | Available service tiers |
 | `changedBusesInSequence` | [Text]? | Bus transfers |
 | `finalBoardedBusNumber` | Text? | Last bus used |
 | `entrance` | JSON? | Entry gate information |

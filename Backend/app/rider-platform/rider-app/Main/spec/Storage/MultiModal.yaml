@@ -228,7 +228,7 @@ JourneyLeg:
     estimatedMaxFare: Maybe HighPrecMoney
     toArrivalTime: Maybe UTCTime
     toDepartureTime: Maybe UTCTime
-    serviceTypes: Maybe [ServiceTierType]
+    liveVehicleAvailableServiceTypes: Maybe [ServiceTierType]
     legSearchId: Maybe Text
     legPricingId: Maybe Text
     changedBusesInSequence: "Maybe [Text]"
@@ -252,7 +252,7 @@ JourneyLeg:
     busLocationData: "[BusLocation]"
 
   sqlType:
-    serviceTypes: text[]
+    liveVehicleAvailableServiceTypes: text[]
     straightLineEntrance: "json"
     straightLineExit: "json"
     osmEntrance: "json"
@@ -295,6 +295,8 @@ JourneyLeg:
       endLocationLon: Double
     legSearchId:
       legId: Maybe Text
+    liveVehicleAvailableServiceTypes:
+      serviceTypes: Maybe [ServiceTierType]
   queries:
     findById:
       kvFunction: findOneWithKV
