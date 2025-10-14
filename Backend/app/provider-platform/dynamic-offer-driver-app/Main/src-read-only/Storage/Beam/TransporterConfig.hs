@@ -89,6 +89,7 @@ data TransporterConfigT f = TransporterConfigT
     defaultPopupDelay :: B.C f Kernel.Types.Common.Seconds,
     deleteDriverBankAccountWhenLinkToFleet :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     demandHotspotsConfig :: B.C f (Kernel.Prelude.Maybe Data.Aeson.Value),
+    digilockerEnabled :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     disableDriverWhenUnlinkingVehicle :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     disableListScheduledBookingAPI :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     distanceUnit :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.DistanceUnit),

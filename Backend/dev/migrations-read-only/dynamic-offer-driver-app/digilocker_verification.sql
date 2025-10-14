@@ -1,0 +1,22 @@
+CREATE TABLE atlas_driver_offer_bpp.digilocker_verification ();
+
+ALTER TABLE atlas_driver_offer_bpp.digilocker_verification ADD COLUMN access_token text ;
+ALTER TABLE atlas_driver_offer_bpp.digilocker_verification ADD COLUMN access_token_expires_at timestamp with time zone ;
+ALTER TABLE atlas_driver_offer_bpp.digilocker_verification ADD COLUMN authorization_code text ;
+ALTER TABLE atlas_driver_offer_bpp.digilocker_verification ADD COLUMN code_challenge text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.digilocker_verification ADD COLUMN code_method text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.digilocker_verification ADD COLUMN code_verifier text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.digilocker_verification ADD COLUMN created_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_driver_offer_bpp.digilocker_verification ADD COLUMN doc_status json NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.digilocker_verification ADD COLUMN driver_id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.digilocker_verification ADD COLUMN id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.digilocker_verification ADD COLUMN merchant_id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.digilocker_verification ADD COLUMN merchant_operating_city_id character varying(36) NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.digilocker_verification ADD COLUMN response_code text ;
+ALTER TABLE atlas_driver_offer_bpp.digilocker_verification ADD COLUMN response_description text ;
+ALTER TABLE atlas_driver_offer_bpp.digilocker_verification ADD COLUMN scope text ;
+ALTER TABLE atlas_driver_offer_bpp.digilocker_verification ADD COLUMN session_status text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.digilocker_verification ADD COLUMN state_id text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.digilocker_verification ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
+ALTER TABLE atlas_driver_offer_bpp.digilocker_verification ADD COLUMN vehicle_category text NOT NULL;
+ALTER TABLE atlas_driver_offer_bpp.digilocker_verification ADD PRIMARY KEY ( id);

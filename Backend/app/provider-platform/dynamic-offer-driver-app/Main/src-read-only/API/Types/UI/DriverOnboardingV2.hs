@@ -67,6 +67,14 @@ data CommonDocumentReq = CommonDocumentReq
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data DigiLockerInitiateReq = DigiLockerInitiateReq {vehicleCategory :: Domain.Types.VehicleCategory.VehicleCategory}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data DigiLockerInitiateResp = DigiLockerInitiateResp {authorizationUrl :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data DocumentVerificationConfigAPIEntity = DocumentVerificationConfigAPIEntity
   { applicableTo :: Domain.Types.DocumentVerificationConfig.DocumentApplicableType,
     checkExpiry :: Kernel.Prelude.Bool,
@@ -189,6 +197,10 @@ data LinkToFleetReq = LinkToFleetReq
     onboardingVehicleCategory :: Kernel.Prelude.Maybe Domain.Types.VehicleCategory.VehicleCategory,
     requestReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text
   }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data PullDocumentReq = PullDocumentReq {docType :: Domain.Types.DocumentVerificationConfig.DocumentType, drivingLicenseNumber :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
