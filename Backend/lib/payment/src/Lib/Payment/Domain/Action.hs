@@ -34,6 +34,7 @@ module Lib.Payment.Domain.Action
     mkCreatePayoutOrderReq,
     buildPaymentOrder,
     updateRefundStatus,
+    -- buildOrderOffer,
   )
 where
 
@@ -59,8 +60,10 @@ import Kernel.Types.Common hiding (id)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+-- import Kernel.Utils.Text (encodeToText)
 import Lib.Payment.Domain.Types.Common
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
+import qualified Lib.Payment.Domain.Types.PaymentOrderOffer as DPaymentOrderOffer
 import qualified Lib.Payment.Domain.Types.PaymentOrderSplit as DPaymentOrderSplit
 import qualified Lib.Payment.Domain.Types.PaymentTransaction as DTransaction
 import qualified Lib.Payment.Domain.Types.PayoutOrder as Payment
@@ -68,6 +71,7 @@ import qualified Lib.Payment.Domain.Types.PayoutTransaction as PT
 import Lib.Payment.Domain.Types.Refunds (Refunds (..), Split (..))
 import Lib.Payment.Storage.Beam.BeamFlow
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QOrder
+import qualified Lib.Payment.Storage.Queries.PaymentOrderOffer as QPaymentOrderOffer
 import qualified Lib.Payment.Storage.Queries.PaymentOrderSplit as QPaymentOrderSplit
 import qualified Lib.Payment.Storage.Queries.PaymentTransaction as QTransaction
 import qualified Lib.Payment.Storage.Queries.PayoutOrder as QPayoutOrder
@@ -567,6 +571,35 @@ buildPaymentSplit paymentOrderId paymentOrder mbSplitSettlementDetails merchantI
       vendorSplitEntries <- mapM (\vendor -> mkPaymentOrderSplit vendor.subMid vendor.amount mdrBorneBy vendor.merchantCommission paymentOrderId merchantId merchantOperatingCityId) vendorSplits
       let splits = marketPlaceSplit : vendorSplitEntries
       QPaymentOrderSplit.createMany splits
+
+buildOrderOffer :: (EncFlow m r, BeamFlow m r) => Text -> Maybe [PInterface.Offer] -> Id Merchant -> Maybe (Id MerchantOperatingCity) -> m ()
+buildOrderOffer paymentOrderId mbOffers merchantId merchantOperatingCityId = do
+  case mbOffers of
+    Just offers -> do
+      now <- getCurrentTime
+      paymentOrderOffers <- mapM (createPaymentOrderOffer now) offers
+      logInfo $ "Creating " <> show (length paymentOrderOffers) <> " payment order offers for paymentOrderId: " <> paymentOrderId
+      QPaymentOrderOffer.createMany paymentOrderOffers
+      logInfo $ "Successfully created payment order offers for paymentOrderId: " <> paymentOrderId
+    Nothing -> do
+      logInfo $ "No offers to create for paymentOrderId: " <> paymentOrderId
+      pure ()
+  where
+    createPaymentOrderOffer now offer = do
+      offerId <- generateGUID
+      pure $
+        DPaymentOrderOffer.PaymentOrderOffer
+          { id = offerId,
+            paymentOrderId = Id paymentOrderId,
+            offer_id = fromMaybe "" offer.offerId,
+            offer_code = fromMaybe "" offer.offerCode,
+            status = show offer.status,
+            responseJSON = encodeToText offer,
+            merchantId = merchantId.getId,
+            merchantOperatingCityId = maybe "" ((.getId) . cast) merchantOperatingCityId,
+            createdAt = now,
+            updatedAt = now
+          }
 
 -- order status -----------------------------------------------------
 

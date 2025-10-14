@@ -65,6 +65,8 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as DPaymentOrder
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
 import qualified Lib.Payment.Storage.Queries.PaymentTransaction as QPaymentTransaction
 import qualified Lib.Payment.Storage.Queries.Refunds as QRefunds
+-- import qualified Lib.Payment.Storage.Queries.PaymentOrderOffer as QPaymentOrderOffer
+-- import qualified Lib.Payment.Domain.Types.PaymentOrderOffer as DPaymentOrderOffer
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import SharedLogic.External.Nandi.Types (StopInfo (..), StopSchedule (..))
 import SharedLogic.FRFSUtils
@@ -973,12 +975,15 @@ frfsBookingStatus (personId, merchantId_) isMultiModalBooking booking' switchFRF
                   -- setNxExpire
                   isLockAcquired <- Hedis.tryLockRedis (mkPaymentSuccessLockKey bookingId) 60
                   when isLockAcquired $ do
+                    -- now <- getCurrentTime
                     void $ QFRFSTicketBookingPayment.updateStatusById DFRFSTicketBookingPayment.SUCCESS paymentBooking.id
                     void $ QFRFSTicketBooking.updateStatusValidTillAndPaymentTxnById DFRFSTicketBooking.CONFIRMING updatedTTL (Just txnId.getId) booking.id
                     markJourneyPaymentSuccess booking paymentOrder paymentBooking
                     let mRiderName = person.firstName <&> (\fName -> person.lastName & maybe fName (\lName -> fName <> " " <> lName))
                     mRiderNumber <- mapM decrypt person.mobileNumber
                     void $ QFRFSTicketBooking.insertPayerVpaIfNotPresent paymentStatusResp.payerVpa bookingId
+                    void $ DPayment.buildOrderOffer paymentOrder.id (Just paymentStatusResp.offers) (cast merchantId_) (Just (cast merchantOperatingCity.id))
+                    -- void $ QPaymentOrderOffer.createMany $ map (\offer -> DPaymentOrderOffer.PaymentOrderOffer {id = offer.id, paymentOrderId = paymentOrder.id, offer_id = offer.offer_id, offer_code = offer.offer_code, status = offer.status, responseJSON = offer.responseJSON, merchantId = show merchantId_, merchantOperatingCityId = show merchantOperatingCity.id, createdAt = now, updatedAt = now}) paymentStatusResp.offers
                     void $ CallExternalBPP.confirm processOnConfirm merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) updatedBooking
                     when isMultiModalBooking do
                       riderConfig <- QRC.findByMerchantOperatingCityId merchantOperatingCity.id Nothing >>= fromMaybeM (RiderConfigDoesNotExist merchantOperatingCity.id.getId)
