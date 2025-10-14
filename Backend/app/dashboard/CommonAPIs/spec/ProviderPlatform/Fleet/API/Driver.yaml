@@ -458,6 +458,7 @@ apis:
         - status: Text
         - vehicleNo: Text
         - searchByFleetOwnerId: Bool
+        - searchByTicketPlaceId: Bool
       response:
         type: FleetBookingsInformationResponse
       migrate:
@@ -476,6 +477,7 @@ apis:
               - status: Text
               - vehicleNo: Text
               - searchByFleetOwnerId: Bool
+              - searchByTicketPlaceId: Bool
             response:
               type: FleetBookingsInformationResponse
 
