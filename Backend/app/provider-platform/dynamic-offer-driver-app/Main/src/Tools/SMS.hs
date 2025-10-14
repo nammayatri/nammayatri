@@ -20,6 +20,8 @@ module Tools.SMS
   )
 where
 
+import Data.Char (digitToInt)
+import qualified Data.Text as T
 import qualified Domain.Types.Booking as SRB
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
@@ -47,7 +49,7 @@ import Tools.Error
 import Utils.Common.Cac.KeyNameConstants
 
 sendSMS :: ServiceFlow m r => Id DM.Merchant -> Id DMOC.MerchantOperatingCity -> SendSMSReq -> m SendSMSRes
-sendSMS merchantId merchantOpCityId = Sms.sendSMS handler
+sendSMS merchantId merchantOpCityId req = Sms.sendSMS handler req
   where
     handler = Sms.SmsHandler {..}
 
@@ -55,7 +57,12 @@ sendSMS merchantId merchantOpCityId = Sms.sendSMS handler
       merchantConfig <- QMSUC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (MerchantServiceUsageConfigNotFound merchantOpCityId.getId)
       let smsServiceProviders = merchantConfig.smsProvidersPriorityList
       when (null smsServiceProviders) $ throwError $ InternalError ("No sms service provider configured for the merchant, merchantOpCityId:" <> merchantOpCityId.getId)
-      pure smsServiceProviders
+      -- get last digit
+      let lastDigit = digitToInt (T.last req.phoneNumber)
+          startIndex = lastDigit `mod` (length smsServiceProviders)
+      let shiftedProviders = rotate startIndex smsServiceProviders
+      logDebug $ "huhu" <> (T.pack $ show smsServiceProviders) <> (T.pack $ show shiftedProviders)
+      pure shiftedProviders
 
     getProviderConfig provider = do
       merchantSmsServiceConfig <-
@@ -64,6 +71,11 @@ sendSMS merchantId merchantOpCityId = Sms.sendSMS handler
       case merchantSmsServiceConfig.serviceConfig of
         DMSC.SmsServiceConfig msc -> pure msc
         _ -> throwError $ InternalError "Unknown Service Config"
+
+rotate :: Int -> [a] -> [a]
+rotate n xs = take len . drop (n `mod` len) . cycle $ xs
+  where
+    len = length xs
 
 data DashboardMessageType = BOOKING | ENDRIDE | ONBOARDING | CASH_COLLECTED deriving (Show, Generic, Eq)
 
