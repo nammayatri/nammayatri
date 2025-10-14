@@ -4,6 +4,8 @@ import qualified API.Types.UI.DriverOnboardingV2
 import qualified API.Types.UI.DriverOnboardingV2 as APITypes
 import qualified AWS.S3 as S3
 import qualified Control.Monad.Extra as CME
+import Data.Aeson (FromJSON, ToJSON)
+import qualified Data.Aeson as A
 import Data.Maybe
 import qualified Data.Text as T
 import Data.Time (defaultTimeLocale, formatTime)
@@ -1072,3 +1074,76 @@ postDriverRegisterCommonDocument (mbDriverId, merchantId, merchantOperatingCityI
             createdAt = now,
             updatedAt = now
           }
+
+-- DigiLocker state data stored in Redis
+data DigiLockerStateData = DigiLockerStateData
+  { driverId :: Id Domain.Types.Person.Person,
+    codeVerifier :: Text
+  }
+  deriving (Show, Generic, ToJSON, FromJSON)
+
+-- DigiLocker status data for frontend polling
+data DigiLockerStatusData = DigiLockerStatusData
+  { status :: Text, -- "success", "error", "pending"
+    errorCode :: Maybe Text,
+    errorDescription :: Maybe Text
+  }
+  deriving (Show, Generic, ToJSON, FromJSON)
+
+-- Redis key for DigiLocker state
+mkDigiLockerStateKey :: Text -> Text
+mkDigiLockerStateKey stateId = "digilocker_state_id:" <> stateId
+
+-- Redis key for DigiLocker status (for frontend polling)
+mkDigiLockerStatusKey :: Id Domain.Types.Person.Person -> Text
+mkDigiLockerStatusKey driverId = "digilockerStatus:" <> driverId.getId
+
+postDobppVerifyCallbackDigiLocker ::
+  ( Kernel.Prelude.Text ->
+    Kernel.Prelude.Text ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+    Environment.Flow APISuccess
+  )
+postDobppVerifyCallbackDigiLocker code state mbError mbErrorDescription = do
+  -- Fetch driver information from Redis using state
+  let stateKey = mkDigiLockerStateKey state
+  mbStateData <- Redis.get stateKey
+  stateData <- mbStateData & fromMaybeM (InvalidRequest "Invalid or expired state parameter")
+
+  let statusKey = mkDigiLockerStatusKey stateData.driverId
+  let ttlSeconds = 600 :: Integer -- 10 minutes TTL for status data
+
+  -- Handle error cases from DigiLocker
+  whenJust mbError $ \errorCode -> do
+    let errorMsg = fromMaybe "Unknown error occurred during DigiLocker verification" mbErrorDescription
+    logError $ "DigiLocker callback error - Code: " <> errorCode <> ", Description: " <> errorMsg <> ", State: " <> state <> ", DriverId: " <> stateData.driverId.getId
+
+    -- Push error to Redis for frontend polling
+    let errorStatusData =
+          DigiLockerStatusData
+            { status = "error",
+              errorCode = Just errorCode,
+              errorDescription = Just errorMsg
+            }
+    Redis.setExp statusKey errorStatusData ttlSeconds
+
+    return Success
+
+  -- Success case - store success status in Redis
+  logInfo $ "DigiLocker callback success - State: " <> state <> ", Code: " <> code <> ", DriverId: " <> stateData.driverId.getId
+
+  let successStatusData =
+        DigiLockerStatusData
+          { status = "success",
+            errorCode = Nothing,
+            errorDescription = Nothing
+          }
+  Redis.setExp statusKey successStatusData ttlSeconds
+
+  -- TODO: Implement DigiLocker verification logic using:
+  --   - code (authorization code)
+  --   - stateData.codeVerifier (PKCE code verifier)
+  --   - stateData.driverId (driver ID)
+
+  return Success

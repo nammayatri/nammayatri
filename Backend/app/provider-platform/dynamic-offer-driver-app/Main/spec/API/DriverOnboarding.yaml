@@ -282,3 +282,14 @@ apis:
         type: CommonDocumentReq
       response:
         type: APISuccess
+  - POST:
+      endpoint: /dobpp/verify/callback/digiLocker
+      mandatoryQuery:
+        code: Text
+        state: Text
+      query:
+        error: Text
+        error_description: Text
+      response:
+        type: APISuccess
+      auth: NoAuth
