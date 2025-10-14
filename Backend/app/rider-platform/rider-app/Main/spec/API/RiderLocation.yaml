@@ -11,12 +11,14 @@ types:
     riderLat: Double
     riderLon: Double
     city: City
+    locationAccuracy: Maybe Double
 
   BusLocation:
     busNumber: Text
     distanceToBus: Double
     timestamp: UTCTime
     customerLocation: LatLong
+    locationAccuracy: Maybe Double
     derive: "Show"
 
   RiderLocationResponse:
