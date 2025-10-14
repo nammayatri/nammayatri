@@ -41,6 +41,7 @@ import qualified API.Action.UI.PickupInstructions as PickupInstructions
 import qualified API.Action.UI.Places as Places
 import qualified API.Action.UI.PriceBreakup as PriceBreakup
 import qualified API.Action.UI.RidePayment as RidePayment
+import qualified API.Action.UI.RiderLocation as RiderLocation
 import qualified API.Action.UI.SocialLogin as SocialLogin
 import qualified API.Action.UI.Sos as SosApi
 import qualified API.Action.UI.TicketKapture as TicketKapture
@@ -149,6 +150,7 @@ type API =
            :<|> PickupInstructions.API
            :<|> NYRegular.API
            :<|> AttractionRecommend.API
+           :<|> RiderLocation.API
        )
 
 handler :: FlowServer API
@@ -216,3 +218,4 @@ handler =
     :<|> PickupInstructions.handler
     :<|> NYRegular.handler
     :<|> AttractionRecommend.handler
+    :<|> RiderLocation.handler
