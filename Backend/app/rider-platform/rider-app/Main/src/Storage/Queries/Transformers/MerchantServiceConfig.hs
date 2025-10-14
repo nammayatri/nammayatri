@@ -64,6 +64,7 @@ getServiceConfigFromDomain serviceName configJSON = do
     Domain.TokenizationService Tokenize.JourneyMonitoring -> Domain.TokenizationServiceConfig . Tokenize.JourneyMonitoringTokenizationServiceConfig <$> valueToMaybe configJSON
     Domain.TokenizationService Tokenize.HyperVerge -> Domain.TokenizationServiceConfig . Tokenize.HyperVergeTokenizationServiceConfig <$> valueToMaybe configJSON
     Domain.TokenizationService Tokenize.Gullak -> Domain.TokenizationServiceConfig . Tokenize.GullakTokenizationServiceConfig <$> valueToMaybe configJSON
+    Domain.TokenizationService Tokenize.Digilocker -> Domain.TokenizationServiceConfig . Tokenize.DigilockerTokenizationServiceConfig <$> valueToMaybe configJSON
     Domain.IncidentReportService IncidentReport.ERSS -> Domain.IncidentReportServiceConfig . IncidentReport.ERSSConfig <$> valueToMaybe configJSON
     Domain.PayoutService Payout.Juspay -> Domain.PayoutServiceConfig . Payout.JuspayConfig <$> valueToMaybe configJSON
     Domain.PayoutService Payout.AAJuspay -> Domain.PayoutServiceConfig . Payout.JuspayConfig <$> valueToMaybe configJSON
@@ -128,6 +129,7 @@ getServiceNameConfigJson = \case
     Tokenize.HyperVergeTokenizationServiceConfig cfg -> (Domain.TokenizationService Tokenize.HyperVerge, toJSON cfg)
     Tokenize.GullakTokenizationServiceConfig cfg -> (Domain.TokenizationService Tokenize.Gullak, toJSON cfg)
     Tokenize.JourneyMonitoringTokenizationServiceConfig cfg -> (Domain.TokenizationService Tokenize.JourneyMonitoring, toJSON cfg)
+    Tokenize.DigilockerTokenizationServiceConfig cfg -> (Domain.TokenizationService Tokenize.Digilocker, toJSON cfg)
   Domain.IncidentReportServiceConfig incidentReportCfg -> case incidentReportCfg of
     IncidentReport.ERSSConfig cfg -> (Domain.IncidentReportService IncidentReport.ERSS, toJSON cfg)
   Domain.PayoutServiceConfig payoutCfg -> case payoutCfg of

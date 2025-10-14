@@ -249,6 +249,7 @@ getDriverRegistrationGetDocument merchantShortId _ imageId = do
       INVALID -> Common.INVALID
       MANUAL_VERIFICATION_REQUIRED -> Common.MANUAL_VERIFICATION_REQUIRED
       UNAUTHORIZED -> Common.UNAUTHORIZED
+      PULL_REQUIRED -> Common.PENDING
 
 mapDocumentType :: Common.DocumentType -> Domain.DocumentType
 mapDocumentType Common.DriverLicense = Domain.DriverLicense
@@ -316,7 +317,8 @@ postDriverRegistrationDocumentUpload merchantShortId opCity driverId_ req = do
           validationStatus = Nothing,
           workflowTransactionId = Nothing,
           vehicleCategory = Nothing,
-          sdkFailureReason = Nothing
+          sdkFailureReason = Nothing,
+          fileExtension = Nothing
         }
   pure $ Common.UploadDocumentResp {imageId = cast res.imageId}
 

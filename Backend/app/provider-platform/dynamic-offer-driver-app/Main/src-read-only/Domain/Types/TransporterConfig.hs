@@ -94,6 +94,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     defaultPopupDelay :: Kernel.Types.Common.Seconds,
     deleteDriverBankAccountWhenLinkToFleet :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     demandHotspotsConfig :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.DemandHotspotsConfig,
+    digilockerEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     disableDriverWhenUnlinkingVehicle :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     disableListScheduledBookingAPI :: Kernel.Prelude.Bool,
     distanceUnit :: Kernel.Types.Common.DistanceUnit,

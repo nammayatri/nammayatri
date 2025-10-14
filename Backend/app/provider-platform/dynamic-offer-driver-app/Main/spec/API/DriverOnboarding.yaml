@@ -15,6 +15,7 @@ imports:
   Person: Domain.Types.Person
   PriceAPIEntity: Kernel.Types.Common
   Money: Kernel.Types.Common
+  VehicleCategory: Domain.Types.VehicleCategory
   Driver: Domain.Types.Person
   TripCategory: Domain.Types.Common
   VerifiedBy: Domain.Types.DriverPanCard
@@ -177,6 +178,13 @@ types:
     onboardingVehicleCategory: Maybe VehicleCategory
     isRevoke: Maybe Bool
     requestReason: Maybe Text
+  DigiLockerInitiateReq:
+    vehicleCategory: VehicleCategory
+  DigiLockerInitiateResp:
+    authorizationUrl: Text
+  PullDocumentReq:
+    docType: DocumentType
+    drivingLicenseNumber: Text
 
 apis:
   - GET:
@@ -316,5 +324,20 @@ apis:
       auth: TokenAuth PROVIDER_TYPE
       request:
         type: LinkToFleetReq
+      response:
+        type: APISuccess
+  # Digilocker
+  - POST:
+      endpoint: /driver/digilocker/initiate
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: DigiLockerInitiateReq
+      response:
+        type: DigiLockerInitiateResp
+  - POST:
+      endpoint: /driver/digilocker/pullDocuments
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: PullDocumentReq
       response:
         type: APISuccess

@@ -5,6 +5,8 @@ imports:
   MerchantOperatingCity: Domain.Types.MerchantOperatingCity
   UTCTime: Kernel.Prelude
   EncryptedHashedField: Kernel.External.Encryption
+  EncryptedField: Kernel.External.Encryption
+  AsEncrypted: Kernel.External.Encryption
   DbHash: Kernel.External.Encryption
   VehicleVariant: Domain.Types.VehicleVariant
   VehicleCategory: Domain.Types.VehicleCategory
@@ -12,6 +14,7 @@ imports:
   encode: Data.Aeson
   decode: Data.Aeson
   DocumentType: Domain.Types.DocumentVerificationConfig
+  DocStatusMap: Domain.Types.DocStatus
   Image: Domain.Types.Image
   DriverOnboardingError: Tools.Error
   VerificationStatus: Kernel.Types.Documents
@@ -88,6 +91,97 @@ IdfyVerification:
       kvFunction: updateWithKV
       params: [merchantId, merchantOperatingCityId]
       where: driverId
+
+DigilockerVerification:
+  tableName: digilocker_verification
+
+  types:
+    SessionStatus:
+      enum: "PENDING, SUCCESS, FAILED, CONSENT_DENIED"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
+
+  fields:
+    id: Id DigilockerVerification
+    driverId: Id Person
+
+    # OAuth Session Field
+    stateId: Text
+    codeVerifier: Text
+    codeChallenge: Text
+    codeMethod: Text
+    authorizationCode: Maybe Text
+    accessToken: Maybe (EncryptedField 'AsEncrypted Text)
+    accessTokenExpiresAt: Maybe UTCTime
+    scope: Maybe Text
+
+    # Document Status (strongly-typed JSON map)
+    docStatus: DocStatusMap
+
+    # Session Status
+    sessionStatus: SessionStatus
+    responseCode: Maybe Text
+    responseDescription: Maybe Text
+
+    # Vehicle Category (for DL validation - mandatory for initiation)
+    vehicleCategory: VehicleCategory|NoRelation
+
+    # Metadata
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+    createdAt: UTCTime
+    updatedAt: UTCTime
+
+  excludedFields: []
+
+  sqlType:
+    docStatus: json
+
+  beamType:
+    accessToken: Maybe Text
+
+  fromTType:
+    accessToken: Encrypted <$> accessToken|E
+
+  toTType:
+    accessToken: accessToken <&> unEncrypted|E
+
+  constraints:
+    id: PrimaryKey
+    driverId: SecondaryKey
+    stateId: SecondaryKey
+
+  extraOperations:
+    - EXTRA_QUERY_FILE
+
+  queries:
+    findById:
+      kvFunction: findOneWithKV
+      where: id
+    findAllByDriverId:
+      kvFunction: findAllWithKV
+      where: driverId
+    findByStateId:
+      kvFunction: findOneWithKV
+      where: stateId
+    findLatestByDriverId:
+      kvFunction: findAllWithOptionsKV
+      where: driverId
+    updateSessionStatus:
+      kvFunction: updateOneWithKV
+      params: [sessionStatus, responseCode, responseDescription]
+      where: id
+    # updateAccessToken is defined in DigilockerVerificationExtra.hs to avoid type ambiguity
+    # with EncryptedHashedField e Text
+    updateDocStatus:
+      kvFunction: updateOneWithKV
+      params: [docStatus]
+      where: id
+    deleteByDriverId:
+      kvFunction: deleteWithKV
+      where: driverId
+
+  domainInstance:
+    - Custom Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList <SessionStatus>
 
 AadhaarOtpVerify:
   tableName: aadhaar_otp_verify
@@ -764,7 +858,7 @@ DriverPanCard:
   tableName: driver_pan_card
   types:
     VerifiedBy:
-      enum: "FRONTEND_SDK,DASHBOARD,DASHBOARD_ADMIN,DASHBOARD_USER"
+      enum: "FRONTEND_SDK,DASHBOARD,DASHBOARD_ADMIN,DASHBOARD_USER,DIGILOCKER"
     PanType:
       enum: "INDIVIDUAL,BUSINESS"
   fields:

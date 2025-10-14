@@ -63,7 +63,7 @@ validateDocument ::
   Flow ValidateDocumentImageResponse
 validateDocument isDashboard (personId, merchantId, merchantOpCityId) ValidateDocumentImageRequest {..} = do
   logDebug $ "DocumentRegistration.validateDocument: Starting validation for personId=" <> show personId <> ", imageType=" <> show imageType
-  imageResponse <- Image.validateImage isDashboard (personId, merchantId, merchantOpCityId) Image.ImageValidateRequest {image = image, imageType = imageType, rcNumber = Nothing, validationStatus = Nothing, workflowTransactionId = Nothing, vehicleCategory = Nothing, sdkFailureReason = Nothing}
+  imageResponse <- Image.validateImage isDashboard (personId, merchantId, merchantOpCityId) Image.ImageValidateRequest {image = image, imageType = imageType, rcNumber = Nothing, validationStatus = Nothing, workflowTransactionId = Nothing, vehicleCategory = Nothing, sdkFailureReason = Nothing, fileExtension = Nothing}
   let imageId :: Id Domain.Image = imageResponse.imageId
   let imageData = image
   logDebug $ "DocumentRegistration.validateDocument: Image validated successfully, imageId=" <> show imageId

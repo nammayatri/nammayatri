@@ -1099,6 +1099,7 @@ TransporterConfig:
     enableMobileNumberValidation: Maybe Bool
     allowRcUnlinkWhenDriverOffline: Maybe Bool
     deleteDriverBankAccountWhenLinkToFleet: Maybe Bool
+    digilockerEnabled: Maybe Bool
 
   beamType:
     currency: Maybe Currency
