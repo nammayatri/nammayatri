@@ -53,7 +53,7 @@ instance JT.JourneyLeg WalkLegRequest m where
           JT.GetFareResponse
             { estimatedMinFare = HighPrecMoney {getHighPrecMoney = 0},
               estimatedMaxFare = HighPrecMoney {getHighPrecMoney = 0},
-              serviceTypes = Nothing,
+              liveVehicleAvailableServiceTypes = Nothing,
               possibleRoutes = Nothing
             }
       )

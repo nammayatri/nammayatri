@@ -476,7 +476,7 @@ mkJourneyForSearch searchRequest estimate personId = do
                     updatedAt = now
                   }
               ],
-            serviceTypes = Nothing,
+            liveVehicleAvailableServiceTypes = Nothing,
             estimatedMinFare = estimatedMinFare,
             estimatedMaxFare = estimatedMaxFare,
             merchantId = searchRequest.merchantId,

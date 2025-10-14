@@ -1105,7 +1105,7 @@ getFrfsBookingList (mbPersonId, merchantId) mbLimit mbOffset mbVehicleCategory =
   personId <- fromMaybeM (InvalidRequest "Invalid person id") mbPersonId
   bookings <- B.runInReplica $ QFRFSTicketBooking.findAllByRiderId mbLimit mbOffset personId mbVehicleCategory
   case mbVehicleCategory of
-    Just Spec.BUS -> mapM (frfsBookingStatus (personId, merchantId) False) bookings
+    Just Spec.BUS -> mapM (\booking -> frfsBookingStatus (personId, merchantId) False booking (\_ _ -> pure ())) bookings
     _ -> mapM (`buildFRFSTicketBookingStatusAPIRes` Nothing) bookings
 
 buildFRFSTicketBookingStatusAPIRes :: DFRFSTicketBooking.FRFSTicketBooking -> Maybe FRFSTicketService.FRFSBookingPaymentAPI -> Environment.Flow FRFSTicketService.FRFSTicketBookingStatusAPIRes

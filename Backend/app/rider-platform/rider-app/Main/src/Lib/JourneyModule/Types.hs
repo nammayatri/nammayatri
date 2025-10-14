@@ -245,7 +245,7 @@ data JourneyLegStateData = JourneyLegStateData
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data GetFareResponse = GetFareResponse {estimatedMinFare :: HighPrecMoney, estimatedMaxFare :: HighPrecMoney, serviceTypes :: Maybe [Spec.ServiceTierType], possibleRoutes :: Maybe [AvailableRoutesByTier]}
+data GetFareResponse = GetFareResponse {estimatedMinFare :: HighPrecMoney, estimatedMaxFare :: HighPrecMoney, liveVehicleAvailableServiceTypes :: Maybe [Spec.ServiceTierType], possibleRoutes :: Maybe [AvailableRoutesByTier]}
   deriving stock (Show, Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -1262,7 +1262,7 @@ mkJourneyLeg idx (mbPrev, leg, mbNext) journeyStartLocation journeyEndLocation m
         toArrivalTime = leg.toArrivalTime,
         toDepartureTime = leg.toDepartureTime,
         toStopDetails = toStopDetails,
-        serviceTypes = fare >>= (.serviceTypes),
+        liveVehicleAvailableServiceTypes = fare >>= (.liveVehicleAvailableServiceTypes),
         estimatedMinFare = fare <&> (.estimatedMinFare),
         estimatedMaxFare = fare <&> (.estimatedMaxFare),
         merchantId = merchantId,
