@@ -18,6 +18,7 @@ module Domain.Action.UI.DriverOnboarding.Status
   )
 where
 
+import qualified Domain.Types.DigilockerVerification as DDV
 import qualified Domain.Types.Merchant as DM
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as SP
@@ -31,6 +32,7 @@ import qualified SharedLogic.DriverOnboarding.Status as SStatus
 import Storage.Cac.TransporterConfig
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as SMOC
 import qualified Storage.Queries.CommonDriverOnboardingDocuments as QCommonDoc
+import qualified Storage.Queries.DigilockerVerification as QDV
 import qualified Storage.Queries.Image as IQuery
 import qualified Storage.Queries.Person as QPerson
 import Utils.Common.Cac.KeyNameConstants
@@ -49,7 +51,10 @@ data StatusRes = StatusRes
     enabled :: Bool,
     manualVerificationRequired :: Maybe Bool,
     driverLicenseDetails :: Maybe [SStatus.DLDetails],
-    vehicleRegistrationCertificateDetails :: Maybe [SStatus.RCDetails]
+    vehicleRegistrationCertificateDetails :: Maybe [SStatus.RCDetails],
+    digilockerStatus :: Maybe DDV.SessionStatus,
+    digilockerResponseCode :: Maybe Text,
+    digilockerAuthorizationUrl :: Maybe Text
   }
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema)
 
@@ -72,6 +77,11 @@ statusHandler (personId, _merchantId, merchantOpCityId) makeSelfieAadhaarPanMand
   -- Fetch common documents
   commonDocumentsData <- QCommonDoc.findByDriverId (Just personId)
   let commonDocuments = map SStatus.mkCommonDocumentItem commonDocumentsData
+  -- Check if DigiLocker is enabled for this merchant+city
+  digilockerStatus <-
+    if transporterConfig.digilockerEnabled == Just True
+      then getDigilockerOverallStatus personId
+      else pure Nothing
 
   pure $
     StatusRes
@@ -81,5 +91,15 @@ statusHandler (personId, _merchantId, merchantOpCityId) makeSelfieAadhaarPanMand
         rcVerficationMessage = rcVerficationMessage,
         aadhaarVerificationStatus = aadhaarStatus,
         commonDocuments = commonDocuments,
+        digilockerStatus = digilockerStatus,
+        digilockerResponseCode = digilockerResponseCode,
+        digilockerAuthorizationUrl = digilockerAuthorizationUrl,
         ..
       }
+
+-- Helper function to get DigiLocker session status
+-- Returns the sessionStatus directly from the latest DigilockerVerification record
+getDigilockerOverallStatus :: Id SP.Person -> Flow (Maybe DDV.SessionStatus)
+getDigilockerOverallStatus driverId = do
+  latestSessions <- QDV.findLatestByDriverId (Just 1) (Just 0) driverId
+  return $ fmap (.sessionStatus) (listToMaybe latestSessions)

@@ -230,12 +230,14 @@ library
       Domain.Action.UI.DriverHomeLocation
       Domain.Action.UI.DriverOnboarding.AadhaarVerification
       Domain.Action.UI.DriverOnboarding.DocumentRegistration
+      Domain.Action.UI.DriverOnboarding.DigiLockerCallback
       Domain.Action.UI.DriverOnboarding.DriverLicense
       Domain.Action.UI.DriverOnboarding.GstVerification
       Domain.Action.UI.DriverOnboarding.HyperVergeWebhook
       Domain.Action.UI.DriverOnboarding.IdfyWebhook
       Domain.Action.UI.DriverOnboarding.Image
       Domain.Action.UI.DriverOnboarding.PanVerification
+      Domain.Action.UI.DriverOnboarding.PullDocument
       Domain.Action.UI.DriverOnboarding.Referral
       Domain.Action.UI.DriverOnboarding.Status
       Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificate
@@ -310,6 +312,7 @@ library
       Domain.Types.Common
       Domain.Types.DeliveryDetails
       Domain.Types.DeliveryPersonDetails
+      Domain.Types.DocStatus
       Domain.Types.Driver.DriverInformation
       Domain.Types.DriverFlowStatus
       Domain.Types.DriverLocation
@@ -408,6 +411,7 @@ library
       SharedLogic.DriverFleetOperatorAssociation
       SharedLogic.DriverFlowStatus
       SharedLogic.DriverOnboarding
+      SharedLogic.DriverOnboarding.Digilocker
       SharedLogic.DriverOnboarding.Status
       SharedLogic.DriverPool
       SharedLogic.DriverPool.Config
@@ -582,6 +586,7 @@ library
       Storage.Queries.Coins.CoinHistory
       Storage.Queries.Coins.CoinsConfig
       Storage.Queries.DailyStatsExtra
+      Storage.Queries.DigilockerVerificationExtra
       Storage.Queries.DocumentVerificationConfigExtra
       Storage.Queries.Driver.GoHomeFeature.DriverGoHomeRequest.Internal
       Storage.Queries.DriverBankAccountExtra
@@ -908,6 +913,7 @@ library
       Domain.Types.CommonDriverOnboardingDocuments
       Domain.Types.ConditionalCharges
       Domain.Types.DailyStats
+      Domain.Types.DigilockerVerification
       Domain.Types.DocumentVerificationConfig
       Domain.Types.DriverBankAccount
       Domain.Types.DriverBlockReason
@@ -1064,6 +1070,7 @@ library
       Storage.Beam.CommonDriverOnboardingDocuments
       Storage.Beam.ConditionalCharges
       Storage.Beam.DailyStats
+      Storage.Beam.DigilockerVerification
       Storage.Beam.DocumentVerificationConfig
       Storage.Beam.DriverBankAccount
       Storage.Beam.DriverBlockReason
@@ -1224,6 +1231,7 @@ library
       Storage.Queries.CommonDriverOnboardingDocuments
       Storage.Queries.ConditionalCharges
       Storage.Queries.DailyStats
+      Storage.Queries.DigilockerVerification
       Storage.Queries.DocumentVerificationConfig
       Storage.Queries.DriverBankAccount
       Storage.Queries.DriverBlockReason
@@ -1312,6 +1320,7 @@ library
       Storage.Queries.OrphanInstances.CallStatus
       Storage.Queries.OrphanInstances.CancellationReason
       Storage.Queries.OrphanInstances.DailyStats
+      Storage.Queries.OrphanInstances.DigilockerVerification
       Storage.Queries.OrphanInstances.DocumentVerificationConfig
       Storage.Queries.OrphanInstances.DriverBankAccount
       Storage.Queries.OrphanInstances.DriverBlockReason
@@ -1523,6 +1532,7 @@ library
     , lens
     , lens-aeson
     , location-updates
+    , memory
     , mobility-core
     , network-uri
     , openapi3
@@ -1658,6 +1668,7 @@ executable dynamic-offer-driver-app-exe
     , jwt >=0.11
     , lens
     , lens-aeson
+    , memory
     , mobility-core
     , network-uri
     , openapi3

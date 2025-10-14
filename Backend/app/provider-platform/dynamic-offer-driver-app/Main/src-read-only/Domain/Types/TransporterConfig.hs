@@ -92,6 +92,7 @@ data TransporterConfigD (s :: UsageSafety) = TransporterConfig
     deactivateRCOnUnlink :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     defaultPopupDelay :: Kernel.Types.Common.Seconds,
     demandHotspotsConfig :: Kernel.Prelude.Maybe Domain.Types.TransporterConfig.DemandHotspotsConfig,
+    digilockerEnabled :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     disableDriverWhenUnlinkingVehicle :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     disableListScheduledBookingAPI :: Kernel.Prelude.Bool,
     distanceUnit :: Kernel.Types.Common.DistanceUnit,

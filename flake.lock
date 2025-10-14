@@ -1824,8 +1824,11 @@
       "locked": {
         "lastModified": 1762323148,
         "narHash": "sha256-kwYzyCXQaivGZXIO6TDk+aDE9cvGM7isOtNyc0guuXA=",
+        "lastModified": 1762323148,
+        "narHash": "sha256-kwYzyCXQaivGZXIO6TDk+aDE9cvGM7isOtNyc0guuXA=",
         "owner": "nammayatri",
         "repo": "namma-dsl",
+        "rev": "ed196921a27eb79508e2361244239cc2c0826a8d",
         "rev": "ed196921a27eb79508e2361244239cc2c0826a8d",
         "type": "github"
       },
@@ -3596,17 +3599,16 @@
         "prometheus-haskell": "prometheus-haskell_2"
       },
       "locked": {
-        "lastModified": 1763552732,
-        "narHash": "sha256-o67QTt5fpf7PUXw89+tTioz+f2x3Ou4ZknzCQg2ALCg=",
+        "lastModified": 1763625960,
+        "narHash": "sha256-faqsDgPMZcYo2Y1tErsJd/6sqjLEGECW2Rm7eCkuRTk=",
         "owner": "nammayatri",
         "repo": "shared-kernel",
-        "rev": "ae42a1215d8247cf69c351bf88f16fcfcefeddf9",
+        "rev": "ea1713a9da5118e6f940be90039becf22f8d0869",
         "type": "github"
       },
       "original": {
-        "owner": "nammayatri",
-        "repo": "shared-kernel",
-        "type": "github"
+        "path": "/Users/himanshukm-yatri/files/shared-kernel",
+        "type": "path"
       }
     },
     "systems": {

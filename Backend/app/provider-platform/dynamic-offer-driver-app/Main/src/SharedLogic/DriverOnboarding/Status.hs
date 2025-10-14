@@ -18,6 +18,8 @@ module SharedLogic.DriverOnboarding.Status
 where
 
 import Control.Applicative ((<|>))
+import qualified Data.Aeson as A
+import qualified Data.HashMap.Strict as HM
 import Data.List (nub)
 import qualified Data.Text as T
 import qualified Domain.Action.UI.DriverOnboarding.DriverLicense as DDL
@@ -25,6 +27,7 @@ import qualified Domain.Action.UI.DriverOnboarding.VehicleRegistrationCertificat
 import qualified Domain.Action.UI.Plan as DAPlan
 import qualified Domain.Types.AadhaarCard as DAadhaarCard
 import qualified Domain.Types.CommonDriverOnboardingDocuments as DCDOD
+import qualified Domain.Types.DocStatus as DocStatus
 import qualified Domain.Types.DocumentVerificationConfig as DDVC
 import qualified Domain.Types.DocumentVerificationConfig as DVC
 import qualified Domain.Types.DriverLicense as DL
@@ -49,9 +52,11 @@ import Kernel.Types.Error hiding (Unauthorized)
 import Kernel.Types.Id
 import Kernel.Utils.Common
 import qualified SharedLogic.DriverOnboarding as SDO
+import qualified SharedLogic.DriverOnboarding.Digilocker as SDDigilocker
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
 import qualified Storage.Queries.BackgroundVerification as BVQuery
+import qualified Storage.Queries.DigilockerVerification as QDV
 import qualified Storage.Queries.DriverGstin as QDGST
 import qualified Storage.Queries.DriverInformation as DIQuery
 import qualified Storage.Queries.DriverInformation.Internal as DIIQuery
@@ -81,7 +86,9 @@ import qualified Tools.Verification as Verification
 -- UNAUTHORIZED is used when a driver is not eligible to be onboarded to the platform
 -- INVALID is the state
 --   which the doc switches to when, for example, it's expired or when it is invalidated from dashboard.
-data ResponseStatus = NO_DOC_AVAILABLE | PENDING | VALID | FAILED | INVALID | LIMIT_EXCEED | MANUAL_VERIFICATION_REQUIRED | UNAUTHORIZED
+-- PULL_REQUIRED is used when a document needs to be pulled from DigiLocker
+-- CONSENT_DENIED is used when user denies consent for DigiLocker verification
+data ResponseStatus = NO_DOC_AVAILABLE | PENDING | VALID | FAILED | INVALID | LIMIT_EXCEED | MANUAL_VERIFICATION_REQUIRED | UNAUTHORIZED | PULL_REQUIRED | CONSENT_DENIED
   deriving (Show, Eq, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema, Enum, Bounded)
 
 data StatusRes' = StatusRes'
@@ -90,7 +97,9 @@ data StatusRes' = StatusRes'
     enabled :: Bool,
     manualVerificationRequired :: Maybe Bool,
     driverLicenseDetails :: Maybe [DLDetails],
-    vehicleRegistrationCertificateDetails :: Maybe [RCDetails]
+    vehicleRegistrationCertificateDetails :: Maybe [RCDetails],
+    digilockerResponseCode :: Maybe Text,
+    digilockerAuthorizationUrl :: Maybe Text
   }
 
 data VehicleDocumentItem = VehicleDocumentItem
@@ -263,6 +272,14 @@ statusHandler' mPerson driverImagesInfo makeSelfieAadhaarPanMandatory multipleRC
       driverInfo <- DIQuery.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
       return driverInfo.enabled
 
+  digilockerResponseCode <- getDigilockerResponseCode personId
+
+  -- Get DigiLocker authorization URL if there's a pending session
+  digilockerAuthorizationUrl <-
+    if transporterConfig.digilockerEnabled == Just True
+      then SDDigilocker.getDigiLockerAuthorizationUrl personId
+      else pure Nothing
+
   return $
     StatusRes'
       { driverDocuments,
@@ -270,7 +287,9 @@ statusHandler' mPerson driverImagesInfo makeSelfieAadhaarPanMandatory multipleRC
         enabled = enabled,
         manualVerificationRequired = transporterConfig.requiresOnboardingInspection,
         driverLicenseDetails = dlDetails,
-        vehicleRegistrationCertificateDetails = rcDetails
+        vehicleRegistrationCertificateDetails = rcDetails,
+        digilockerResponseCode = digilockerResponseCode,
+        digilockerAuthorizationUrl = digilockerAuthorizationUrl
       }
   where
     getVehicleDocuments allDocumentVerificationConfigs driverDocuments role vehicleDocumentsUnverified requiresOnboardingInspection = do
@@ -340,17 +359,37 @@ fetchDriverDocuments ::
   Flow [DocumentStatusItem]
 fetchDriverDocuments driverImagesInfo allDocumentVerificationConfigs possibleVehicleCategories role language useHVSdkForDL onlyMandatoryDocs = do
   let merchantOpCityId = driverImagesInfo.merchantOperatingCity.id
+      driverId = driverImagesInfo.driverId
+      transporterConfig = driverImagesInfo.transporterConfig
+      isDigiLockerEnabled = fromMaybe False transporterConfig.digilockerEnabled
+
+  -- Only fetch DigiLocker doc status if DigiLocker is enabled for this city
+  digilockerDocStatusMap <- if isDigiLockerEnabled then getDigilockerDocStatusMap driverId else pure HM.empty
+
   driverDocumentTypes <- getDriverDocTypes merchantOpCityId allDocumentVerificationConfigs possibleVehicleCategories role onlyMandatoryDocs
   driverDocumentTypes `forM` \docType -> do
     (mbStatus, mbProcessedReason, mbProcessedUrl) <- getProcessedDriverDocuments driverImagesInfo docType useHVSdkForDL
+    let responseCode = if isDigiLockerEnabled then getResponseCode docType digilockerDocStatusMap else Nothing
     case mbStatus of
       Just status -> do
         message <- documentStatusMessage status Nothing docType mbProcessedUrl language
-        return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = mbProcessedReason <|> Just message, verificationUrl = mbProcessedUrl}
+        -- For DigiLocker-enabled cities: mbProcessedReason -> responseCode -> message
+        -- For non-DigiLocker cities: mbProcessedReason -> message
+        let finalMessage =
+              if isDigiLockerEnabled
+                then mbProcessedReason <|> responseCode <|> Just message
+                else mbProcessedReason <|> Just message
+        return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = finalMessage, verificationUrl = mbProcessedUrl}
       Nothing -> do
         (status, mbReason, mbUrl) <- getInProgressDriverDocuments driverImagesInfo docType
         message <- documentStatusMessage status mbReason docType mbUrl language
-        return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = Just message, verificationUrl = mbUrl}
+        -- For DigiLocker-enabled cities: mbReason -> responseCode -> message
+        -- For non-DigiLocker cities: mbReason -> message
+        let finalMessage =
+              if isDigiLockerEnabled
+                then mbReason <|> responseCode <|> Just message
+                else mbReason <|> Just message
+        return $ DocumentStatusItem {documentType = docType, verificationStatus = status, verificationMessage = finalMessage, verificationUrl = mbUrl}
 
 fetchVehicleDocuments ::
   IQuery.DriverImagesInfo ->
@@ -880,6 +919,8 @@ documentStatusMessage status mbReason docType mbVerificationUrl language = do
     (MANUAL_VERIFICATION_REQUIRED, _, _) -> toVerificationMessage UnderManualReview language
     (PENDING, DDVC.BackgroundVerification, Just _) -> toVerificationMessage VerificationPendingOnUserInput language
     (PENDING, _, _) -> toVerificationMessage VerificationInProgress language
+    (PULL_REQUIRED, _, _) -> toVerificationMessage PullRequired language
+    (CONSENT_DENIED, _, _) -> toVerificationMessage ConsentDenied language
     (LIMIT_EXCEED, _, _) -> toVerificationMessage LimitExceed language
     (NO_DOC_AVAILABLE, _, _) -> toVerificationMessage NoDcoumentFound language
     (INVALID, DDVC.DriverLicense, _) -> do
@@ -984,6 +1025,7 @@ mapStatus = \case
   Documents.VALID -> VALID
   Documents.INVALID -> INVALID
   Documents.UNAUTHORIZED -> UNAUTHORIZED
+  Documents.PULL_REQUIRED -> PULL_REQUIRED
 
 verificationStatusCheck :: ResponseStatus -> Language -> DVC.DocumentType -> Maybe [Text] -> Flow Text
 verificationStatusCheck status language img mbReasons = do
@@ -1074,6 +1116,8 @@ data VerificationMessage
   | VerificationPendingOnUserInput
   | UnderManualReview
   | Unauthorized
+  | PullRequired
+  | ConsentDenied
   | Other
   | Reasons
   deriving (Show, Eq, Ord)
@@ -1117,3 +1161,34 @@ mkCommonDocumentItem doc =
     mapVerificationStatus Documents.INVALID = INVALID
     mapVerificationStatus Documents.MANUAL_VERIFICATION_REQUIRED = MANUAL_VERIFICATION_REQUIRED
     mapVerificationStatus _ = PENDING -- default case
+getDigilockerResponseCode :: Id DP.Person -> Flow (Maybe Text)
+getDigilockerResponseCode driverId = do
+  mbSession <- listToMaybe <$> QDV.findLatestByDriverId (Just 1) (Just 0) driverId
+  pure $ mbSession >>= (.responseCode)
+
+getDigilockerDocStatusMap :: Id DP.Person -> Flow (HM.HashMap Text (HM.HashMap Text A.Value))
+getDigilockerDocStatusMap driverId = do
+  mbSession <- listToMaybe <$> QDV.findLatestByDriverId (Just 1) (Just 0) driverId
+  pure $ maybe HM.empty (parseDocStatus . (.docStatus)) mbSession
+
+getResponseCode :: DDVC.DocumentType -> HM.HashMap Text (HM.HashMap Text A.Value) -> Maybe Text
+getResponseCode docType docStatusMap = do
+  docMap <- HM.lookup (show docType) docStatusMap
+  case HM.lookup "responseCode" docMap of
+    Just (A.String code) -> Just code
+    _ -> Nothing
+
+-- Convert DocStatusMap to the expected format
+parseDocStatus :: DocStatus.DocStatusMap -> HM.HashMap Text (HM.HashMap Text A.Value)
+parseDocStatus docStatusMap =
+  let mapList = DocStatus.toList docStatusMap
+      convertDocStatus (docType, documentStatus) =
+        let docTypeText = T.pack $ show docType
+            docStatusObj =
+              HM.fromList
+                [ ("status", A.String $ DocStatus.docStatusEnumToText documentStatus.status),
+                  ("responseCode", maybe A.Null A.String documentStatus.responseCode),
+                  ("responseDescription", maybe A.Null A.String documentStatus.responseDescription)
+                ]
+         in (docTypeText, docStatusObj)
+   in HM.fromList $ map convertDocStatus mapList

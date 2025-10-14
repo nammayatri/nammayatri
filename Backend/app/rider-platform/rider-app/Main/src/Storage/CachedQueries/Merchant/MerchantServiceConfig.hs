@@ -137,6 +137,7 @@ cacheMerchantServiceConfig merchantServiceConfig = do
         Tokenize.JourneyMonitoringTokenizationServiceConfig _ -> TokenizationService Tokenize.JourneyMonitoring
         Tokenize.HyperVergeTokenizationServiceConfig _ -> TokenizationService Tokenize.HyperVerge
         Tokenize.GullakTokenizationServiceConfig _ -> TokenizationService Tokenize.Gullak
+        Tokenize.DigilockerTokenizationServiceConfig _ -> TokenizationService Tokenize.Digilocker
       PayoutServiceConfig payoutCfg -> case payoutCfg of
         Payout.JuspayConfig _ -> PayoutService Payout.Juspay
       MultiModalServiceConfig multiModalCfg -> case multiModalCfg of

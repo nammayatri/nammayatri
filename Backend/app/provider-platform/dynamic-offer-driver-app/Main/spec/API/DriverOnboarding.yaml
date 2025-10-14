@@ -14,6 +14,7 @@ imports:
   Person: Domain.Types.Person
   PriceAPIEntity: Kernel.Types.Common
   Money: Kernel.Types.Common
+  VehicleCategory: Domain.Types.VehicleCategory
   Driver: Domain.Types.Person
   TripCategory: Domain.Types.Common
   VerifiedBy: Domain.Types.DriverPanCard
@@ -162,6 +163,13 @@ types:
   FleetRCListRes:
     recordType: NewType
     rcs: "[LinkedRC]"
+  DigiLockerInitiateReq:
+    vehicleCategory: VehicleCategory
+  DigiLockerInitiateResp:
+    authorizationUrl: Text
+  PullDocumentReq:
+    docType: DocumentType
+    drivingLicenseNumber: Text
 
 apis:
   - GET:
@@ -294,3 +302,17 @@ apis:
         offset: Int
       response:
         type: FleetRCListRes
+  - POST:
+      endpoint: /driver/digilocker/initiate
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: DigiLockerInitiateReq
+      response:
+        type: DigiLockerInitiateResp
+  - POST:
+      endpoint: /driver/digilocker/pullDocuments
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: PullDocumentReq
+      response:
+        type: APISuccess

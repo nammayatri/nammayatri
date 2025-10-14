@@ -1110,6 +1110,7 @@ TransporterConfig:
     cancellationFeeVendor: Maybe Text
     upgradeTierDropRetentionTime: Maybe Seconds
     allowDriverToUseFleetRcs: Maybe Bool
+    digilockerEnabled: Maybe Bool
 
   beamType:
     currency: Maybe Currency
