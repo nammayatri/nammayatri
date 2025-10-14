@@ -88,7 +88,8 @@ data PaymentStatusResp
         paymentMethodType :: Maybe Text,
         authIdCode :: Maybe Text,
         txnUUID :: Maybe Text,
-        effectAmount :: Maybe HighPrecMoney
+        effectAmount :: Maybe HighPrecMoney,
+        offers :: Maybe [Payment.Offer]
       }
   | MandatePaymentStatus
       { status :: Payment.TransactionStatus,
@@ -649,6 +650,7 @@ orderStatusService personId orderId orderStatusCall = do
             authIdCode = ((.authIdCode) =<< paymentGatewayResponse),
             txnUUID = transactionUUID,
             effectAmount = effectiveAmount,
+            offers = offers,
             ..
           }
     _ -> throwError $ InternalError "Unexpected Order Status Response."
