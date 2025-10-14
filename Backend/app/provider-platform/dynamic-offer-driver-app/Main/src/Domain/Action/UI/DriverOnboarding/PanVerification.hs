@@ -163,25 +163,12 @@ verifyPan verifyBy mbMerchant (personId, _, merchantOpCityId) req adminApprovalR
               let extractedNameOnCard = extractedPan.name_on_card
               logInfo ("extractedNameOnCard: " <> show extractedNameOnCard)
               logInfo ("req.panName: " <> show req.panName)
-              if verifyBy == DPan.FRONTEND_SDK
-                then case (req.panName, extractedNameOnCard) of
-                  (Just providedName, Just extractedName) | not (T.null providedName) && not (T.null extractedName) -> do
-                    let nameCompareReq =
-                          Verification.NameCompareReq
-                            { extractedName = extractedName,
-                              verifiedName = providedName,
-                              percentage = Just True,
-                              driverId = person.id.getId
-                            }
-                    isValid <- DVRC.isNameComparePercentageValid person.merchantId merchantOpCityId nameCompareReq
-                    unless isValid $ throwError (MismatchDataError "Provided name and extracted name on card do not match")
-                  _ -> throwError (InvalidRequest "PAN name is required")
-                else
-                  unless (extractedPanNo == Just req.panNumber) $
-                    throwImageError (Id req.imageId) $
-                      ImageDocumentNumberMismatch
-                        (maybe "null" maskText extractedPanNo)
-                        (maskText req.panNumber)
+              when (verifyBy /= DPan.FRONTEND_SDK) $
+                unless (extractedPanNo == Just req.panNumber) $
+                  throwImageError (Id req.imageId) $
+                    ImageDocumentNumberMismatch
+                      (maybe "null" maskText extractedPanNo)
+                      (maskText req.panNumber)
               pure extractedPan
             Nothing -> throwImageError (Id req.imageId) ImageExtractionFailed
 
