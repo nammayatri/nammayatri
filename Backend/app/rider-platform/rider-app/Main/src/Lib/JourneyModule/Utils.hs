@@ -1446,6 +1446,8 @@ switchFRFSQuoteTierUtil journeyLeg quoteId = do
           updatedBooking =
             booking
               { DFRFSTicketBooking.quoteId = quoteId,
+                DFRFSTicketBooking.stationsJson = quote.stationsJson,
+                DFRFSTicketBooking.routeStationsJson = quote.routeStationsJson,
                 DFRFSTicketBooking.price = totalPriceForSwitchLeg,
                 DFRFSTicketBooking.estimatedPrice = totalPriceForSwitchLeg
               }
