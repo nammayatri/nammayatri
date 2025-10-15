@@ -1231,6 +1231,7 @@ mkQuotationBreakup fareParams =
             || breakup.quotationBreakupInnerTitle == Just (show Enums.PARKING_CHARGE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.TOLL_CHARGES)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.NIGHT_SHIFT_CHARGE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.CANCELLATION_CHARGES)
         DFParams.Slab ->
           breakup.quotationBreakupInnerTitle == Just (show Enums.BASE_FARE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.SERVICE_CHARGE)
@@ -1245,6 +1246,7 @@ mkQuotationBreakup fareParams =
             || breakup.quotationBreakupInnerTitle == Just (show Enums.EXTRA_TIME_FARE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.PARKING_CHARGE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.TOLL_CHARGES)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.CANCELLATION_CHARGES)
         DFParams.Rental ->
           breakup.quotationBreakupInnerTitle == Just (show Enums.BASE_FARE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.SERVICE_CHARGE)
@@ -1258,6 +1260,7 @@ mkQuotationBreakup fareParams =
             || breakup.quotationBreakupInnerTitle == Just (show Enums.WAITING_OR_PICKUP_CHARGES)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.EXTRA_TIME_FARE)
             || breakup.quotationBreakupInnerTitle == Just (show Enums.PARKING_CHARGE)
+            || breakup.quotationBreakupInnerTitle == Just (show Enums.CANCELLATION_CHARGES)
         _ -> True
 
 type MerchantShortId = Text
@@ -1607,7 +1610,7 @@ mkGeneralInfoTagGroup transporterConfig pricing isValueAddNP =
 
 mkRateCardTag :: Maybe Meters -> Maybe HighPrecMoney -> HighPrecMoney -> Maybe HighPrecMoney -> Maybe FarePolicyD.FarePolicy -> Maybe Bool -> Maybe Params.FareParameters -> Maybe [Spec.TagGroup]
 mkRateCardTag estimatedDistance tollCharges estimatedFare congestionChargeViaDp farePolicy fareParametersInRateCard fareParams = do
-  let farePolicyBreakups = maybe [] (mkFarePolicyBreakups Prelude.id mkRateCardBreakupItem estimatedDistance tollCharges estimatedFare congestionChargeViaDp) farePolicy
+  let farePolicyBreakups = maybe [] (mkFarePolicyBreakups Prelude.id mkRateCardBreakupItem estimatedDistance Nothing tollCharges estimatedFare congestionChargeViaDp) farePolicy
       fareParamsBreakups =
         case fareParametersInRateCard of
           Just True -> maybe [] (mkFareParamsBreakups (\price -> show price) mkRateCardFareParamsBreakupItem) fareParams
