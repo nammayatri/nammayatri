@@ -199,7 +199,13 @@ incrementDriverAcUsageRestrictionCount cityVehicleServiceTiers personId = do
               else driverInfo.acUsageRestrictionType
       DIQuery.updateAcUsageRestrictionAndScore newRestrictionType (Just airConditionScore) personId
       fork "Send AC Restriction Overlay" $ ACOverlay.sendACUsageRestrictionOverlay driver
-    else DIQuery.updateAirConditionScore (Just airConditionScore) personId
+    else do
+      DIQuery.updateAirConditionScore (Just airConditionScore) personId
+      whenJust mbMaxACUsageRestrictionThreshold $ \threshold -> do
+        let thresholdInt = round threshold :: Int
+            scoreInt = round airConditionScore :: Int
+        when (scoreInt == thresholdInt - 1 || scoreInt == thresholdInt) $
+          fork "Send AC Warning Overlay" $ ACOverlay.sendACUsageWarningOverlay driver
   where
     safeMaximum :: Ord a => [a] -> Maybe a
     safeMaximum [] = Nothing
