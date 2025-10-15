@@ -117,9 +117,12 @@ FleetOwnerInformation:
       params: [lienAmount]
       where: fleetOwnerPersonId
     updatePrepaidSubscriptionBalance:
-    updateFleetOwnerPrepaidSubscriptionBalance:
       kvFunction: updateOneWithKV
       params: [prepaidSubscriptionBalance]
+      where: fleetOwnerPersonId
+    updatePrepaidSubscriptionBalanceAndExpiry:
+      kvFunction: updateOneWithKV
+      params: [prepaidSubscriptionBalance, planExpiryDate]
       where: fleetOwnerPersonId
     deleteByFleetOwnerPersonId:
       kvFunction: deleteWithKV

@@ -377,13 +377,13 @@ processNonClearedDriverFees ::
 processNonClearedDriverFees merchantId person now driverFee = do
   when (driverFee.feeType == PREPAID_RECHARGE) $
     Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey person.id.getId) 10 10 $ do
-      newBalance <- updatePrepaidBalanceAndExpiry person now driverFee
+      (newBalance, mbFleetOwnerId) <- updatePrepaidBalanceAndExpiry person now driverFee
       id <- generateGUID
       let transaction =
             SubscriptionTransaction.SubscriptionTransaction
               { id = id,
                 merchantId = Just merchantId,
-                fleetOwnerId = Nothing, -- To be populated in recharge PR
+                fleetOwnerId = mbFleetOwnerId,
                 merchantOperatingCityId = person.merchantOperatingCityId,
                 driverId = person.id,
                 entityId = (.getId) <$> driverFee.planId,
@@ -408,14 +408,14 @@ updatePrepaidBalanceAndExpiry ::
   DP.Person ->
   UTCTime ->
   DriverFee ->
-  m HighPrecMoney
+  m (HighPrecMoney, Maybe (Id DP.Person))
 updatePrepaidBalanceAndExpiry person now driverFee = do
   if DCommon.checkFleetOwnerRole person.role
     then do
       fleetOwnerInfo <- QFOI.findByPrimaryKey (cast driverFee.driverId) >>= fromMaybeM (PersonNotFound driverFee.driverId.getId)
       let (finalExpiry, newBalance) = computeExpiryAndBalance now fleetOwnerInfo.planExpiryDate fleetOwnerInfo.prepaidSubscriptionBalance driverFee
-      QDIExtra.updatePrepaidSubscriptionBalanceAndExpiry driverFee.driverId newBalance (Just finalExpiry)
-      pure newBalance
+      QFOI.updatePrepaidSubscriptionBalanceAndExpiry (Just newBalance) (Just finalExpiry) driverFee.driverId
+      pure (newBalance, Just person.id)
     else do
       driverInfo <- QDI.findById (cast driverFee.driverId) >>= fromMaybeM (PersonNotFound driverFee.driverId.getId)
       let (finalExpiry, newBalance) = computeExpiryAndBalance now driverInfo.planExpiryDate driverInfo.prepaidSubscriptionBalance driverFee
@@ -427,7 +427,7 @@ updatePrepaidBalanceAndExpiry person now driverFee = do
               <> " is successful"
           prepaidRechargeTitle = "Recharge Successful!"
       sendNotificationToDriver person.merchantOperatingCityId FCM.SHOW Nothing FCM.PREPAID_RECHARGE_SUCCESS prepaidRechargeTitle prepaidRechargeMessage person person.deviceToken
-      pure newBalance
+      pure (newBalance, Nothing)
 
 computeExpiryAndBalance ::
   UTCTime ->

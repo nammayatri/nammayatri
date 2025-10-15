@@ -59,20 +59,21 @@ findByMerchantOpCityIdAndServiceName ::
   Maybe Bool ->
   m [Plan]
 findByMerchantOpCityIdAndServiceName merchantOperatingCityId serviceName mbIsDeprecated mbIsFleetOwnerPlan =
-  Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantIdAndServiceNameKey merchantOperatingCityId serviceName mbIsDeprecated) >>= \case
+  Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantIdAndServiceNameKey merchantOperatingCityId serviceName mbIsDeprecated mbIsFleetOwnerPlan) >>= \case
     Just a -> pure a
-    Nothing -> cacheByMerchantIdAndServiceName merchantOperatingCityId serviceName mbIsDeprecated /=<< Queries.findByMerchantOpCityIdAndServiceName merchantOperatingCityId serviceName mbIsDeprecated mbIsFleetOwnerPlan
+    Nothing -> cacheByMerchantIdAndServiceName merchantOperatingCityId serviceName mbIsDeprecated mbIsFleetOwnerPlan /=<< Queries.findByMerchantOpCityIdAndServiceName merchantOperatingCityId serviceName mbIsDeprecated mbIsFleetOwnerPlan
 
 cacheByMerchantIdAndServiceName ::
   (CacheFlow m r) =>
   Id DMOC.MerchantOperatingCity ->
   ServiceNames ->
   Maybe Bool ->
+  Maybe Bool ->
   [Plan] ->
   m ()
-cacheByMerchantIdAndServiceName merchantOperatingCityId serviceName mbIsDeprecated plans = do
+cacheByMerchantIdAndServiceName merchantOperatingCityId serviceName mbIsDeprecated mbIsFleetOwnerPlan plans = do
   expTime <- fromIntegral <$> asks (.cacheConfig.configsExpTime)
-  Hedis.withCrossAppRedis $ Hedis.setExp (makeMerchantIdAndServiceNameKey merchantOperatingCityId serviceName mbIsDeprecated) plans expTime
+  Hedis.withCrossAppRedis $ Hedis.setExp (makeMerchantIdAndServiceNameKey merchantOperatingCityId serviceName mbIsDeprecated mbIsFleetOwnerPlan) plans expTime
 
 cacheByMerchantIdAndPaymentMode ::
   (CacheFlow m r) =>
@@ -167,14 +168,16 @@ makeMerchantIdAndPaymentModeKey merchantOpCityId paymentMode serviceName mbIsDep
     <> ":IsDeprecated-"
     <> show mbIsDeprecated
 
-makeMerchantIdAndServiceNameKey :: Id DMOC.MerchantOperatingCity -> ServiceNames -> Maybe Bool -> Text
-makeMerchantIdAndServiceNameKey merchantOpCityId serviceName mbIsDeprecated =
+makeMerchantIdAndServiceNameKey :: Id DMOC.MerchantOperatingCity -> ServiceNames -> Maybe Bool -> Maybe Bool -> Text
+makeMerchantIdAndServiceNameKey merchantOpCityId serviceName mbIsDeprecated mbIsFleetOwnerPlan =
   "driver-offer:CachedQueries:Plan:MerchantOperatingCityId-"
     <> merchantOpCityId.getId
     <> ":ServiceName-"
     <> show serviceName
     <> ":IsDeprecated-"
     <> show mbIsDeprecated
+    <> ":IsFleetOwnerPlan-"
+    <> show mbIsFleetOwnerPlan
 
 makeMerchantIdAndTypeKey :: Id DMOC.MerchantOperatingCity -> PlanType -> ServiceNames -> DVC.VehicleCategory -> Bool -> Text
 makeMerchantIdAndTypeKey merchantOpCityId planType serviceName vehicleCategory isDeprecated = "driver-offer:CachedQueries:Plan:MerchantOperatingCityId-" <> merchantOpCityId.getId <> ":PlanType-" <> show planType <> ":ServiceName-" <> show serviceName <> ":IsDeprecated-" <> show isDeprecated <> ":VehicleCategory-" <> show vehicleCategory
