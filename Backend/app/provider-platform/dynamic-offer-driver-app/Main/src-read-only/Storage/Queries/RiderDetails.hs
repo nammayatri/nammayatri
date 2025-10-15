@@ -103,6 +103,7 @@ updateByPrimaryKey (Domain.Types.RiderDetails.RiderDetails {..}) = do
     [ Se.Set Beam.bapId bapId,
       Se.Set Beam.cancellationDueRides (Kernel.Prelude.Just cancellationDueRides),
       Se.Set Beam.cancellationDues cancellationDues,
+      Se.Set Beam.cancellationDuesPaid (Kernel.Prelude.Just cancellationDuesPaid),
       Se.Set Beam.cancelledRides (Kernel.Prelude.Just cancelledRides),
       Se.Set Beam.completedRides (Kernel.Prelude.Just completedRides),
       Se.Set Beam.createdAt createdAt,
@@ -119,6 +120,8 @@ updateByPrimaryKey (Domain.Types.RiderDetails.RiderDetails {..}) = do
       Se.Set Beam.mobileNumberEncrypted (mobileNumber & unEncrypted . encrypted),
       Se.Set Beam.mobileNumberHash (mobileNumber & hash),
       Se.Set Beam.nightSafetyChecks nightSafetyChecks,
+      Se.Set Beam.noOfTimesCanellationDuesPaid (Kernel.Prelude.Just noOfTimesCanellationDuesPaid),
+      Se.Set Beam.noOfTimesWaiveOffUsed (Kernel.Prelude.Just noOfTimesWaiveOffUsed),
       Se.Set Beam.otpCode otpCode,
       Se.Set Beam.payoutFlagReason payoutFlagReason,
       Se.Set Beam.referralCode (Kernel.Types.Id.getId <$> referralCode),
@@ -126,6 +129,7 @@ updateByPrimaryKey (Domain.Types.RiderDetails.RiderDetails {..}) = do
       Se.Set Beam.referredByDriver (Kernel.Types.Id.getId <$> referredByDriver),
       Se.Set Beam.totalBookings (Kernel.Prelude.Just totalBookings),
       Se.Set Beam.updatedAt _now,
-      Se.Set Beam.validCancellations (Kernel.Prelude.Just validCancellations)
+      Se.Set Beam.validCancellations (Kernel.Prelude.Just validCancellations),
+      Se.Set Beam.waivedOffAmount (Kernel.Prelude.Just waivedOffAmount)
     ]
     [Se.And [Se.Is Beam.id $ Se.Eq (Kernel.Types.Id.getId id)]]

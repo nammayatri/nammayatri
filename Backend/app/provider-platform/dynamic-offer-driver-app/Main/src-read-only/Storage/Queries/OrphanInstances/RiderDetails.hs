@@ -22,6 +22,7 @@ instance FromTType' Beam.RiderDetails Domain.Types.RiderDetails.RiderDetails whe
           { bapId = bapId,
             cancellationDueRides = fromMaybe 0 cancellationDueRides,
             cancellationDues = cancellationDues,
+            cancellationDuesPaid = fromMaybe 0 cancellationDuesPaid,
             cancelledRides = fromMaybe 0 cancelledRides,
             completedRides = fromMaybe 0 completedRides,
             createdAt = createdAt,
@@ -38,6 +39,8 @@ instance FromTType' Beam.RiderDetails Domain.Types.RiderDetails.RiderDetails whe
             mobileCountryCode = mobileCountryCode,
             mobileNumber = EncryptedHashed (Encrypted mobileNumberEncrypted) mobileNumberHash,
             nightSafetyChecks = nightSafetyChecks,
+            noOfTimesCanellationDuesPaid = fromMaybe 0 noOfTimesCanellationDuesPaid,
+            noOfTimesWaiveOffUsed = fromMaybe 0 noOfTimesWaiveOffUsed,
             otpCode = otpCode,
             payoutFlagReason = payoutFlagReason,
             referralCode = Kernel.Types.Id.Id <$> referralCode,
@@ -45,7 +48,8 @@ instance FromTType' Beam.RiderDetails Domain.Types.RiderDetails.RiderDetails whe
             referredByDriver = Kernel.Types.Id.Id <$> referredByDriver,
             totalBookings = fromMaybe 0 totalBookings,
             updatedAt = updatedAt,
-            validCancellations = fromMaybe 0 validCancellations
+            validCancellations = fromMaybe 0 validCancellations,
+            waivedOffAmount = fromMaybe 0 waivedOffAmount
           }
 
 instance ToTType' Beam.RiderDetails Domain.Types.RiderDetails.RiderDetails where
@@ -54,6 +58,7 @@ instance ToTType' Beam.RiderDetails Domain.Types.RiderDetails.RiderDetails where
       { Beam.bapId = bapId,
         Beam.cancellationDueRides = Kernel.Prelude.Just cancellationDueRides,
         Beam.cancellationDues = cancellationDues,
+        Beam.cancellationDuesPaid = Kernel.Prelude.Just cancellationDuesPaid,
         Beam.cancelledRides = Kernel.Prelude.Just cancelledRides,
         Beam.completedRides = Kernel.Prelude.Just completedRides,
         Beam.createdAt = createdAt,
@@ -71,6 +76,8 @@ instance ToTType' Beam.RiderDetails Domain.Types.RiderDetails.RiderDetails where
         Beam.mobileNumberEncrypted = mobileNumber & unEncrypted . encrypted,
         Beam.mobileNumberHash = mobileNumber & hash,
         Beam.nightSafetyChecks = nightSafetyChecks,
+        Beam.noOfTimesCanellationDuesPaid = Kernel.Prelude.Just noOfTimesCanellationDuesPaid,
+        Beam.noOfTimesWaiveOffUsed = Kernel.Prelude.Just noOfTimesWaiveOffUsed,
         Beam.otpCode = otpCode,
         Beam.payoutFlagReason = payoutFlagReason,
         Beam.referralCode = Kernel.Types.Id.getId <$> referralCode,
@@ -78,5 +85,6 @@ instance ToTType' Beam.RiderDetails Domain.Types.RiderDetails.RiderDetails where
         Beam.referredByDriver = Kernel.Types.Id.getId <$> referredByDriver,
         Beam.totalBookings = Kernel.Prelude.Just totalBookings,
         Beam.updatedAt = updatedAt,
-        Beam.validCancellations = Kernel.Prelude.Just validCancellations
+        Beam.validCancellations = Kernel.Prelude.Just validCancellations,
+        Beam.waivedOffAmount = Kernel.Prelude.Just waivedOffAmount
       }

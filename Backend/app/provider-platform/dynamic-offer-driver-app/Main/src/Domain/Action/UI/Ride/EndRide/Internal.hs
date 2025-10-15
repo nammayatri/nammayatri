@@ -228,14 +228,17 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
                   cancellationCharges = customerCancellationDues,
                   ..
                 }
-        calDisputeChances <-
-          if thresholdConfig.cancellationFee == 0.0
-            then do
-              logWarning "Unable to calculate dispute chances used"
-              return 0
-            else do
-              return $ round (customerCancellationDues / thresholdConfig.cancellationFee)
-        QRD.updateDisputeChancesUsedAndCancellationDues (max 0 (riderDetails.disputeChancesUsed - calDisputeChances)) 0 (riderDetails.id) >> QCC.create cancellationCharges
+        -- calDisputeChances <-
+        --   if thresholdConfig.cancellationFee == 0.0
+        --     then do
+        --       logWarning "Unable to calculate dispute chances used"
+        --       return 0
+        --     else do
+        --       return $ round (customerCancellationDues / thresholdConfig.cancellationFee)
+        QRD.updateCancellationDuesPaid customerCancellationDues riderDetails.id.getId
+        QRD.updateNoOfTimesCanellationDuesPaid riderDetails.id.getId
+        QRD.updateCancellationDues 0 riderDetails.id >> QCC.create cancellationCharges
+      -- QRD.updateDisputeChancesUsedAndCancellationDues (max 0 (riderDetails.disputeChancesUsed - calDisputeChances)) 0 (riderDetails.id) >> QCC.create cancellationCharges
       _ -> logWarning $ "Unable to update customer cancellation dues as RiderDetailsId is NULL with rideId " <> ride.id.getId
   now <- getCurrentTime
   rideRelatedNotificationConfigList <- CRN.findAllByMerchantOperatingCityIdAndTimeDiffEventInRideFlow booking.merchantOperatingCityId DRN.END_TIME booking.configInExperimentVersions
