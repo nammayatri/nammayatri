@@ -1241,6 +1241,7 @@ data DriverOnboardingError
   | DocumentNotFound Text
   | DuplicateWebhookReceived
   | WebhookAuthFailed
+  | RCBlockedByAnotherAccount
   deriving (Show, Eq, Read, Ord, Generic, FromJSON, ToJSON, ToSchema, IsBecknAPIError)
 
 instance IsBaseError DriverOnboardingError where
@@ -1297,6 +1298,7 @@ instance IsBaseError DriverOnboardingError where
     DocumentNotFound docId -> Just $ "Document not found with id: " <> docId
     DuplicateWebhookReceived -> Just "Multiple webhooks received for same request id."
     WebhookAuthFailed -> Just "Auth header data mismatch ocurred!!!!!!"
+    RCBlockedByAnotherAccount -> Just "RC is Blocked By another Account"
 
 instance IsHTTPError DriverOnboardingError where
   toErrorCode = \case
@@ -1352,6 +1354,7 @@ instance IsHTTPError DriverOnboardingError where
     DocumentNotFound _ -> "DOCUMENT_NOT_FOUND"
     DuplicateWebhookReceived -> "DUPLICATE_WEBHOOK_RECEIVED"
     WebhookAuthFailed -> "WEBHOOK_AUTH_FAILED"
+    RCBlockedByAnotherAccount -> "RC_BLOCKED_BY_ANOTHER_ACCOUNT"
   toHttpCode = \case
     ImageValidationExceedLimit _ -> E429
     ImageValidationFailed -> E400
@@ -1405,6 +1408,7 @@ instance IsHTTPError DriverOnboardingError where
     DocumentNotFound _ -> E404
     DuplicateWebhookReceived -> E400
     WebhookAuthFailed -> E401
+    RCBlockedByAnotherAccount -> E400
 
 instance IsAPIError DriverOnboardingError
 

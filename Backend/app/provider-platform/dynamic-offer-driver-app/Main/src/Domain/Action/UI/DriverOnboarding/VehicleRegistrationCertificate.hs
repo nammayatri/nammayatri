@@ -719,7 +719,7 @@ checkIfVehicleAlreadyExists person rc merchantOpCityId rideThresholdLastXDays = 
               maybeRide <- RDE.findByCreatedAtAndVehicleNumber fromDate rcNumber -- finding if there is a ride in the past threshold number of days.
               case maybeRide of
                 Just _ -> do
-                  throwError RCActiveOnOtherAccount -- if ride exists, do not let the new driver add the RC
+                  throwError RCBlockedByAnotherAccount -- if ride exists, do not let the new driver add the RC
                 Nothing -> do
                   driverInfo <- DIQuery.findById (cast driverId) >>= fromMaybeM (PersonNotFound driverId.getId)
                   activateRC driverInfo person.merchantId merchantOpCityId now rc -- otherwise add the RC
