@@ -105,7 +105,7 @@ import SharedLogic.DriverOnboarding
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.FareCalculator
 import SharedLogic.FarePolicy
-import SharedLogic.Ride (multipleRouteKey, searchRequestKey, updateOnRideStatusWithAdvancedRideCheck)
+import SharedLogic.Ride (makeSubscriptionRunningBalanceLockKey, multipleRouteKey, searchRequestKey, updateOnRideStatusWithAdvancedRideCheck)
 import qualified SharedLogic.ScheduledNotifications as SN
 import SharedLogic.TollsDetector
 import qualified Storage.Cac.TransporterConfig as SCTC
@@ -194,16 +194,15 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   Hedis.del $ searchRequestKey booking.transactionId
   clearCachedFarePolicyByEstOrQuoteId booking.quoteId
   clearTollStartGateBatchCache ride.driverId
-  let prepaidSubscriptionThreshold = thresholdConfig.subscriptionConfig.prepaidSubscriptionThreshold
-  when (fromMaybe False merchant.enforceSufficientDriverBalance && isJust prepaidSubscriptionThreshold) $ do
+  when (fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled) $ do
     case ride.fare of
-      Just fare -> fork "update driver's prepaid balance" $ updateBalance fare
+      Just fare -> fork "update prepaid balance" $ updateBalance fare
       Nothing -> logWarning $ "Fare is not present for ride: " <> show ride.id.getId
   when (thresholdConfig.subscription) $ do
     -- Turn this off for only prepaid subscriptions
     let serviceName = YATRI_SUBSCRIPTION
     createDriverFee booking.providerId booking.merchantOperatingCityId driverId ride.fare ride.currency newFareParams driverInfo booking serviceName
-  when (fromMaybe False merchant.enforceSufficientDriverBalance && thresholdConfig.driverWalletConfig.enableDriverWallet) $ do
+  when (fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled && thresholdConfig.driverWalletConfig.enableDriverWallet) $ do
     fork "createDriverWalletTransaction" $ createDriverWalletTransaction ride booking thresholdConfig
 
   triggerRideEndEvent RideEventData {ride = ride{status = Ride.COMPLETED}, personId = cast driverId, merchantId = booking.providerId}
@@ -242,22 +241,36 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   forM_ rideRelatedNotificationConfigList (SN.pushReminderUpdatesInScheduler booking ride now driverId)
   where
     updateBalance fare = do
-      Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey ride.driverId.getId) 10 10 $ do
-        -- Fetching again to avoid race conditions
-        freshDriverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
-        let newBalance = fromMaybe 0 freshDriverInfo.prepaidSubscriptionBalance - fare
-        driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-        let balanceUpdateMessage = "Thank you for taking the ride. Your updated subscription balance is Rs." <> show newBalance
-            balanceUpdatedTitle = "Subscription balance updated!"
-        sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.PREPAID_BALANCE_UPDATE balanceUpdatedTitle balanceUpdateMessage driver driver.deviceToken
-        QDIE.updatePrepaidSubscriptionBalance (cast ride.driverId) newBalance
-        createSubscriptionTransaction ride newBalance booking
-        let prepaidSubscriptionThreshold = thresholdConfig.subscriptionConfig.prepaidSubscriptionThreshold
-        when (newBalance < fromMaybe 0 prepaidSubscriptionThreshold) $ do
-          logInfo $ "Prepaid subscription balance is less than threshold for driver: " <> show driverId.getId
-          let unsubscribedMessage = "Your subscription balance is low. Please recharge to get rides"
-              unsubscribedTitle = "Low Balance Alert!"
-          sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.DRIVER_UNSUBSCRIBED unsubscribedTitle unsubscribedMessage driver driver.deviceToken
+      let subscriptionConfig = thresholdConfig.subscriptionConfig
+      case ride.fleetOwnerId of
+        Just fleetOwnerId -> do
+          when (isJust subscriptionConfig.fleetPrepaidSubscriptionThreshold) $ do
+            Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey fleetOwnerId.getId) 10 10 $ do
+              fleetOwnerInfo <- QFOI.findByPrimaryKey fleetOwnerId >>= fromMaybeM (PersonNotFound fleetOwnerId.getId)
+              let newBalance = fromMaybe 0 fleetOwnerInfo.prepaidSubscriptionBalance - fare
+                  reserved = booking.estimatedFare
+                  newlien = fromMaybe 0 fleetOwnerInfo.lienAmount - reserved
+              QFOI.updatePrepaidSubscriptionBalance (Just newBalance) fleetOwnerId
+              QFOI.updateLienAmount (Just newlien) fleetOwnerId
+              createSubscriptionTransaction ride newBalance booking
+        Nothing -> do
+          when (isJust subscriptionConfig.prepaidSubscriptionThreshold) $ do
+            Redis.withWaitOnLockRedisWithExpiry (makeSubscriptionRunningBalanceLockKey ride.driverId.getId) 10 10 $ do
+              -- Fetching again to avoid race conditions
+              freshDriverInfo <- QDI.findById (cast ride.driverId) >>= fromMaybeM (PersonNotFound ride.driverId.getId)
+              let newBalance = fromMaybe 0 freshDriverInfo.prepaidSubscriptionBalance - fare
+              driver <- QPerson.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+              let balanceUpdateMessage = "Thank you for taking the ride. Your updated subscription balance is Rs." <> show newBalance
+                  balanceUpdatedTitle = "Subscription balance updated!"
+              sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.PREPAID_BALANCE_UPDATE balanceUpdatedTitle balanceUpdateMessage driver driver.deviceToken
+              QDIE.updatePrepaidSubscriptionBalance newBalance (cast ride.driverId)
+              createSubscriptionTransaction ride newBalance booking
+              let prepaidSubscriptionThreshold = subscriptionConfig.prepaidSubscriptionThreshold
+              when (newBalance < fromMaybe 0 prepaidSubscriptionThreshold) $ do
+                logInfo $ "Prepaid subscription balance is less than threshold for driver: " <> show driverId.getId
+                let unsubscribedMessage = "Your subscription balance is low. Please recharge to get rides"
+                    unsubscribedTitle = "Low Balance Alert!"
+                sendNotificationToDriver driver.merchantOperatingCityId FCM.SHOW Nothing FCM.DRIVER_UNSUBSCRIBED unsubscribedTitle unsubscribedMessage driver driver.deviceToken
 
 createSubscriptionTransaction ::
   ( MonadFlow m,
@@ -277,6 +290,7 @@ createSubscriptionTransaction ride runningBalance booking = do
             merchantId = ride.merchantId,
             merchantOperatingCityId = ride.merchantOperatingCityId,
             driverId = ride.driverId,
+            fleetOwnerId = ride.fleetOwnerId,
             entityId = Just ride.id.getId,
             transactionType = SubscriptionTransaction.RIDE,
             amount = fromMaybe 0 ride.fare,
@@ -344,9 +358,6 @@ createDriverWalletTransaction ride booking transporterConfig = do
 
 makeWalletRunningBalanceLockKey :: Text -> Text
 makeWalletRunningBalanceLockKey personId = "WalletRunningBalanceLockKey:" <> personId
-
-makeSubscriptionRunningBalanceLockKey :: Text -> Text
-makeSubscriptionRunningBalanceLockKey personId = "SubscriptionRunningBalanceLockKey:" <> personId
 
 sendReferralFCM ::
   ( CacheFlow m r,

@@ -93,7 +93,7 @@ Merchant:
     fleetOwnerEnabledCheck: Maybe Bool
     overwriteAssociation: Maybe Bool
     mediaFileDocumentLinkExpires: Seconds
-    enforceSufficientDriverBalance: Maybe Bool
+    prepaidSubscriptionAndWalletEnabled: Maybe Bool # This is a top level switch to enable prepaid subscription and wallet features for drivers and fleet owners
   sqlType:
     destinationRestriction: text[]
     originRestriction: text[]
@@ -869,7 +869,7 @@ TransporterConfig:
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
     SubscriptionConfig:
       prepaidSubscriptionThreshold: Maybe HighPrecMoney
-      recordType: NewType
+      fleetPrepaidSubscriptionThreshold: Maybe HighPrecMoney
       derive': Generic, Show, ToJSON, FromJSON, Read, Eq
   beamInstance:
     - MakeTableInstancesWithTModifier [("automaticRCActivationCutOff", "automatic_r_c_activation_cut_off")]
@@ -1527,7 +1527,7 @@ TransporterConfig:
     driverCallingOption: "'AnonymousCall'"
     driverWalletConfig:  '''{"enableDriverWallet": false, "driverWalletPayoutThreshold": 0, "gstPercentage": 0.0, "enableWalletPayout": false, "enableWalletTopup": false, "maxWalletPayoutsPerDay": null, "minimumWalletPayoutAmount": 0, "payoutCutOffDays": 7}'' :: json'
     analyticsConfig: '''{"weekStartMode": 3, "earningsWindowSize": 7, "allowCacheDriverFlowStatus": false, "maxOnlineDurationDays": 10, "onlineDurationCalculateFrom": null}'' :: json'
-    subscriptionConfig:  '''{"prepaidSubscriptionThreshold": null}'' :: json'
+    subscriptionConfig:  '''{"prepaidSubscriptionThreshold": null,"fleetPrepaidSubscriptionThreshold": null}'' :: json'
   excludedDefaultQueries:
     - findByPrimaryKey
     - updateByPrimaryKey

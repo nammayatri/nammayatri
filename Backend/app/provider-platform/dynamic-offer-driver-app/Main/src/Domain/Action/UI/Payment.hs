@@ -392,6 +392,7 @@ processNonClearedDriverFees merchantId driver now driverFee = do
                 merchantId = Just merchantId,
                 merchantOperatingCityId = driver.merchantOperatingCityId,
                 driverId = driver.id,
+                fleetOwnerId = Nothing, -- To be populated in recharge PR
                 entityId = (.getId) <$> driverFee.planId,
                 transactionType = SubscriptionTransaction.PLAN_PURCHASE,
                 amount = driverFee.totalEarnings,

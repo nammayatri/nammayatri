@@ -364,7 +364,10 @@ data DriverWalletConfig = DriverWalletConfig
 data SlabType = SlabType {minBookingsRange :: [Kernel.Prelude.Int], penalityForCancellation :: Domain.Types.TransporterConfig.CancellationRateSlab}
   deriving (Generic, Show, ToJSON, FromJSON, ToSchema, Eq)
 
-newtype SubscriptionConfig = SubscriptionConfig {prepaidSubscriptionThreshold :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney}
+data SubscriptionConfig = SubscriptionConfig
+  { fleetPrepaidSubscriptionThreshold :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    prepaidSubscriptionThreshold :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney
+  }
   deriving (Generic, Show, ToJSON, FromJSON, Read, Eq)
 
 type TransporterConfig = TransporterConfigD 'Safe

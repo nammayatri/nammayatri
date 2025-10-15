@@ -209,3 +209,8 @@ ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN is_pet_ride boolean ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN react_bundle_version text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN fleet_owner_id character varying(36) ;

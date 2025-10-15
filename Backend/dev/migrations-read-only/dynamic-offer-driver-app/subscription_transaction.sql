@@ -14,3 +14,9 @@ ALTER TABLE atlas_driver_offer_bpp.subscription_transaction ADD COLUMN to_locati
 ALTER TABLE atlas_driver_offer_bpp.subscription_transaction ADD COLUMN transaction_type character varying(255) NOT NULL;
 ALTER TABLE atlas_driver_offer_bpp.subscription_transaction ADD COLUMN updated_at timestamp with time zone NOT NULL default CURRENT_TIMESTAMP;
 ALTER TABLE atlas_driver_offer_bpp.subscription_transaction ADD PRIMARY KEY ( id);
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.subscription_transaction ADD COLUMN fleet_owner_id character varying(36) ;

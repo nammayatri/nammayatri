@@ -1524,6 +1524,7 @@ respondQuote (driverId, merchantId, merchantOpCityId) clientId mbBundleVersion m
           unlockRedisQuoteKeys
           someExceptionToAPIErrorThrow e
         Right a -> pure a
+
     someExceptionToAPIErrorThrow exc
       | Just (HTTPException err) <- fromException exc = throwError err
       | Just (BaseException err) <- fromException exc =
@@ -1693,8 +1694,9 @@ acceptStaticOfferDriverRequest mbSearchTry driver quoteId reqOfferedValue mercha
   when isBookingCancelled' $ throwError (InternalError "BOOKING_CANCELLED")
   CS.markBookingAssignmentInprogress booking.id -- this is to handle booking assignment and user cancellation at same time
   unless (booking.status == DRB.NEW) $ throwError RideRequestAlreadyAccepted
+  mFleetAssociation <- QFDA.findByDriverId driver.id True
   whenJust mbSearchTry $ \searchTry -> QST.updateStatus DST.COMPLETED searchTry.id
-  (ride, _, vehicle) <- initializeRide merchant driver booking Nothing Nothing clientId Nothing
+  (ride, _, vehicle) <- initializeRide merchant driver booking Nothing Nothing clientId Nothing (mFleetAssociation <&> (.fleetOwnerId) <&> Id)
   driverFCMPulledList <-
     case mbSearchTry of
       Just searchTry -> deactivateExistingQuotes booking.merchantOperatingCityId merchant.id driver.id searchTry.id $ mkPrice (Just quote.currency) quote.estimatedFare
