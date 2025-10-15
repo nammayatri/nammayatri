@@ -8,6 +8,7 @@ import qualified API.Types.Dashboard.AppManagement.DriverSubscription
 import qualified API.Types.Dashboard.AppManagement.Overlay
 import qualified API.Types.Dashboard.AppManagement.Penalty
 import qualified API.Types.Dashboard.AppManagement.Subscription
+import qualified API.Types.Dashboard.AppManagement.SubscriptionTransaction
 import qualified Data.List
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
@@ -21,6 +22,7 @@ data AppManagementUserActionType
   | OVERLAY API.Types.Dashboard.AppManagement.Overlay.OverlayUserActionType
   | PENALTY API.Types.Dashboard.AppManagement.Penalty.PenaltyUserActionType
   | SUBSCRIPTION API.Types.Dashboard.AppManagement.Subscription.SubscriptionUserActionType
+  | SUBSCRIPTION_TRANSACTION API.Types.Dashboard.AppManagement.SubscriptionTransaction.SubscriptionTransactionUserActionType
   deriving stock (Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -31,6 +33,7 @@ instance Text.Show.Show AppManagementUserActionType where
     OVERLAY e -> "OVERLAY/" <> show e
     PENALTY e -> "PENALTY/" <> show e
     SUBSCRIPTION e -> "SUBSCRIPTION/" <> show e
+    SUBSCRIPTION_TRANSACTION e -> "SUBSCRIPTION_TRANSACTION/" <> show e
 
 instance Text.Read.Read AppManagementUserActionType where
   readsPrec d' =
@@ -66,6 +69,15 @@ instance Text.Read.Read AppManagementUserActionType where
                    r2
                  )
                  | r1 <- stripPrefix "SUBSCRIPTION/" r,
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
+               ]
+            ++ [ ( SUBSCRIPTION_TRANSACTION v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "SUBSCRIPTION_TRANSACTION/" r,
                    ( v1,
                      r2
                      ) <-
