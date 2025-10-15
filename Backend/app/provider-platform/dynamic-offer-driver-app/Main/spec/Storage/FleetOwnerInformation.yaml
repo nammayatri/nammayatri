@@ -31,6 +31,8 @@ FleetOwnerInformation:
     referredByOperatorId: Maybe Text
     registeredAt: Maybe UTCTime
     ticketPlaceId: Maybe Text
+    prepaidSubscriptionBalance: Maybe HighPrecMoney
+    lienAmount: Maybe HighPrecMoney
   sqlType:
     referredByOperatorId: character varying (36)
   excludedFields: [merchantOperatingCityId]
@@ -109,9 +111,21 @@ FleetOwnerInformation:
       kvFunction: updateOneWithKV
       params: [referredByOperatorId]
       where: fleetOwnerPersonId
+    updateLienAmount:
+      kvFunction: updateOneWithKV
+      params: [lienAmount]
+      where: fleetOwnerPersonId
+    updatePrepaidSubscriptionBalance:
+      kvFunction: updateOneWithKV
+      params: [prepaidSubscriptionBalance]
+      where: fleetOwnerPersonId
     deleteByFleetOwnerPersonId:
       kvFunction: deleteWithKV
       where: fleetOwnerPersonId
+    findAllByPrimaryKeys:
+      kvFunction: findAllWithKV
+      where:
+        in: [fleetOwnerPersonId]
 
   excludedDefaultQueries:
     - updateByPrimaryKey

@@ -40,9 +40,8 @@ getDriverInfos ::
 getDriverInfos personKeys = do
   findAllWithKV [Se.Is BeamDI.driverId $ Se.In personKeys]
 
-getDriverInfosWithCond :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id DP.Person] -> Bool -> Bool -> Bool -> Bool -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> Maybe MP.PaymentInstrument -> m [DriverInfo.DriverInformation]
-getDriverInfosWithCond driverLocs onlyNotOnRide onlyOnRide isRental isInterCity prepaidSubscriptionThreshold rideFare minWalletAmountForCashRides paymentInstrument = do
-  now <- getCurrentTime
+getDriverInfosWithCond :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => [Id DP.Person] -> Bool -> Bool -> Bool -> Bool -> m [DriverInfo.DriverInformation]
+getDriverInfosWithCond driverLocs onlyNotOnRide onlyOnRide isRental isInterCity = do
   findAllWithKV
     [ Se.And
         ( [ Se.Is BeamDI.driverId $ Se.In personsKeys,
@@ -68,9 +67,6 @@ getDriverInfosWithCond driverLocs onlyNotOnRide onlyOnRide isRental isInterCity 
             <> ([Se.Is BeamDI.canSwitchToInterCity $ Se.Eq (Just True) | isInterCity])
             <> ([Se.Is BeamDI.canSwitchToIntraCity $ Se.Eq (Just True) | (not isInterCity && not isRental)])
             <> [Se.Is BeamDI.subscribed $ Se.Eq True]
-            <> ([Se.Is BeamDI.prepaidSubscriptionBalance $ Se.GreaterThan (Just $ HighPrecMoney ((fromJust rideFare).getHighPrecMoney + (fromJust prepaidSubscriptionThreshold).getHighPrecMoney)) | isJust prepaidSubscriptionThreshold && isJust rideFare])
-            <> [Se.Is BeamDI.walletBalance $ Se.GreaterThan minWalletAmountForCashRides | isJust minWalletAmountForCashRides && (isNothing paymentInstrument || paymentInstrument == Just MP.Cash)]
-            <> ([Se.Is BeamDI.planExpiryDate $ Se.GreaterThan (Just now) | isJust prepaidSubscriptionThreshold])
         )
     ]
   where

@@ -559,7 +559,8 @@ calculateGoHomeDriverPool req@CalculateGoHomeDriverPoolReq {..} merchantOpCityId
             homeRadius = goHomeCfg.goHomeWayPointRadius,
             merchantId,
             driverPositionInfoExpiry = driverPoolCfg.driverPositionInfoExpiry,
-            prepaidSubscriptionThreshold = bool Nothing transporterConfig.subscriptionConfig.prepaidSubscriptionThreshold enforceSufficientDriverBalance,
+            prepaidSubscriptionThreshold = bool Nothing transporterConfig.subscriptionConfig.prepaidSubscriptionThreshold prepaidSubscriptionAndWalletEnabled,
+            fleetPrepaidSubscriptionThreshold = bool Nothing transporterConfig.subscriptionConfig.fleetPrepaidSubscriptionThreshold prepaidSubscriptionAndWalletEnabled,
             rideFare,
             minWalletAmountForCashRides = bool Nothing transporterConfig.driverWalletConfig.minWalletAmountForCashRides enforceSufficientDriverBalance,
             paymentInstrument,
@@ -567,7 +568,8 @@ calculateGoHomeDriverPool req@CalculateGoHomeDriverPoolReq {..} merchantOpCityId
             isInterCity,
             onlinePayment,
             now,
-            isValueAddNP
+            isValueAddNP,
+            prepaidSubscriptionAndWalletEnabled
           }
   driversWithLessThanNParallelRequests <- case poolStage of
     DriverSelection ->
@@ -761,7 +763,7 @@ data CalculateDriverPoolReq a = CalculateDriverPoolReq
     isValueAddNP :: Bool,
     onlinePayment :: Bool,
     now :: UTCTime,
-    enforceSufficientDriverBalance :: Bool
+    prepaidSubscriptionAndWalletEnabled :: Bool
   }
 
 calculateDriverPool ::
@@ -788,7 +790,8 @@ calculateDriverPool CalculateDriverPoolReq {..} = do
           { fromLocLatLong = coord,
             nearestRadius = radius,
             driverPositionInfoExpiry = driverPoolCfg.driverPositionInfoExpiry,
-            prepaidSubscriptionThreshold = bool Nothing transporterConfig.subscriptionConfig.prepaidSubscriptionThreshold enforceSufficientDriverBalance,
+            prepaidSubscriptionThreshold = bool Nothing transporterConfig.subscriptionConfig.prepaidSubscriptionThreshold prepaidSubscriptionAndWalletEnabled,
+            fleetPrepaidSubscriptionThreshold = bool Nothing transporterConfig.subscriptionConfig.fleetPrepaidSubscriptionThreshold prepaidSubscriptionAndWalletEnabled,
             minWalletAmountForCashRides = bool Nothing transporterConfig.driverWalletConfig.minWalletAmountForCashRides enforceSufficientDriverBalance,
             paymentInstrument,
             rideFare,
@@ -1056,7 +1059,8 @@ calculateDriverPoolCurrentlyOnRide CalculateDriverPoolReq {..} mbBatchNum = do
               nearestRadius = radius,
               driverPositionInfoExpiry = driverPoolCfg.driverPositionInfoExpiry,
               currentRideTripCategoryValidForForwardBatching = driverPoolCfg.currentRideTripCategoryValidForForwardBatching,
-              prepaidSubscriptionThreshold = bool Nothing transporterConfig.subscriptionConfig.prepaidSubscriptionThreshold enforceSufficientDriverBalance,
+              prepaidSubscriptionThreshold = bool Nothing transporterConfig.subscriptionConfig.prepaidSubscriptionThreshold prepaidSubscriptionAndWalletEnabled,
+              fleetPrepaidSubscriptionThreshold = bool Nothing transporterConfig.subscriptionConfig.fleetPrepaidSubscriptionThreshold prepaidSubscriptionAndWalletEnabled,
               rideFare,
               minWalletAmountForCashRides = bool Nothing transporterConfig.driverWalletConfig.minWalletAmountForCashRides enforceSufficientDriverBalance,
               paymentInstrument,

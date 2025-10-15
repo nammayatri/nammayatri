@@ -212,7 +212,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                               configsInExperimentVersions = searchReq.configInExperimentVersions,
                               rideFare = Just searchTry.baseFare, -- TODO: add walletBalance check
                               paymentInstrument = fmap (.paymentInstrument) paymentMethodInfo,
-                              enforceSufficientDriverBalance = fromMaybe False merchant.enforceSufficientDriverBalance,
+                              prepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled,
                               ..
                             }
                     filterOutGoHomeDriversAccordingToHomeLocation (map (convertDriverPoolWithActualDistResultToNearestGoHomeDriversResult False True) driversInQueue) goHomeReq merchantOpCityId_
@@ -452,7 +452,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                         configsInExperimentVersions = searchReq.configInExperimentVersions,
                         rideFare = Just searchTry.baseFare,
                         paymentInstrument = fmap (.paymentInstrument) paymentMethodInfo,
-                        enforceSufficientDriverBalance = fromMaybe False merchant.enforceSufficientDriverBalance,
+                        prepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled,
                         ..
                       }
                   )
@@ -484,7 +484,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                     onlinePayment = merchant.onlinePayment,
                     rideFare = Just searchTry.baseFare,
                     paymentInstrument = fmap (.paymentInstrument) paymentMethodInfo,
-                    enforceSufficientDriverBalance = fromMaybe False merchant.enforceSufficientDriverBalance,
+                    prepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled,
                     ..
                   }
           calculateDriverPoolWithActualDist driverPoolReq poolType currentSearchInfo batchNum
@@ -510,7 +510,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                         onlinePayment = merchant.onlinePayment,
                         rideFare = Just searchTry.baseFare,
                         paymentInstrument = fmap (.paymentInstrument) paymentMethodInfo,
-                        enforceSufficientDriverBalance = fromMaybe False merchant.enforceSufficientDriverBalance,
+                        prepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled,
                         ..
                       }
               calculateDriverCurrentlyOnRideWithActualDist driverPoolReq poolType (toInteger batchNum') currentSearchInfo
