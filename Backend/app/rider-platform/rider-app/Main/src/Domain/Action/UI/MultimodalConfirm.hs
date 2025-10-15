@@ -1192,7 +1192,7 @@ postMultimodalOrderChangeStops _ journeyId legOrder req = do
   allLegs <- QJourneyLeg.getJourneyLegs journeyId
   reqJourneyLeg <- find (\leg -> leg.sequenceNumber == legOrder) allLegs & fromMaybeM (InvalidLegOrder legOrder)
   validateChangeNeededForStop reqJourneyLeg req.newSourceStation req.newDestinationStation
-  integratedBPPConfig <- SIBC.findIntegratedBPPConfig Nothing reqJourneyLeg.merchantOperatingCityId (Utils.frfsVehicleCategoryToBecknVehicleCategory Spec.METRO) DIBC.MULTIMODAL
+  integratedBPPConfig <- SIBC.findIntegratedBPPConfig Nothing reqJourneyLeg.merchantOperatingCityId (fromMaybe Enums.METRO $ JM.multiModalTravelModeToBecknVehicleCategory reqJourneyLeg.mode) DIBC.MULTIMODAL
   riderConfig <-
     QRC.findByMerchantOperatingCityId reqJourneyLeg.merchantOperatingCityId Nothing
       >>= fromMaybeM (RiderConfigDoesNotExist reqJourneyLeg.merchantOperatingCityId.getId)
