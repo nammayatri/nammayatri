@@ -70,9 +70,12 @@ getSearchRequestList _merchantShortId _opCity driverId fromDate toDate mbLimit m
 
 getSearchRequestInfo :: (Kernel.Types.Id.ShortId Domain.Types.Merchant.Merchant -> Kernel.Types.Beckn.Context.City -> Kernel.Prelude.UTCTime -> Kernel.Prelude.UTCTime -> Kernel.Types.Id.Id Domain.Types.Person.Person -> Environment.Flow API.Types.Dashboard.RideBooking.SearchRequest.SearchReqInfoRes)
 getSearchRequestInfo _merchantShortId _opCity fromDate toDate driverId = do
+  logError $ "Querying Clickhouse for driverId: " <> show driverId <> " from: " <> show fromDate <> " to: " <> show toDate
   sreqs <- SCSRD.findByDriverIdForInfo driverId fromDate toDate
+  logError $ "Clickhouse returned " <> show (length sreqs) <> " records"
   let acceptedCount = length $ filter (\(_srfdId, response) -> response == Just Common.Accept) sreqs
   let rejectedCount = length $ filter (\(_srfdId, response) -> response == Just Common.Reject) sreqs
   let pulledCount = length $ filter (\(_srfdId, response) -> response == Just Common.Pulled) sreqs
   let emptyCount = length $ filter (\(_srfdId, response) -> response == Nothing) sreqs
+  logError $ "Accepted count: " <> show acceptedCount <> " Rejected count: " <> show rejectedCount <> " Pulled count: " <> show pulledCount <> " Empty count: " <> show emptyCount
   return SRType.SearchReqInfoRes {totalCount = length sreqs, acceptedCount = acceptedCount, rejectedCount = rejectedCount, pulledCount = pulledCount, emptyCount = emptyCount}
