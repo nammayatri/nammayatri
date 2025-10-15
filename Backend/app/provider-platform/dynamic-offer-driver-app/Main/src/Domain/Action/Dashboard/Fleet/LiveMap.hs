@@ -79,6 +79,7 @@ getLiveMapDrivers merchantShortId _opCity radius requestorId mbReqFleetOwnerId m
         InvalidRequest "Longitude must be between -180 and 180 degrees"
 
     autoTypeLs =
+      -- TODO: Fetch from Vehicle Service Tier for this city
       [ DV.SUV,
         DV.AUTO_RICKSHAW,
         DV.HATCHBACK,
@@ -88,7 +89,10 @@ getLiveMapDrivers merchantShortId _opCity radius requestorId mbReqFleetOwnerId m
         DV.PREMIUM_SEDAN,
         DV.BLACK,
         DV.BLACK_XL,
-        DV.SUV_PLUS
+        DV.SUV_PLUS,
+        DV.BIKE,
+        DV.EV_AUTO_RICKSHAW,
+        DV.HERITAGE_CAB
       ]
 
 getDriverCurrentLocation :: ID.Id DP.Person -> Environment.Flow LatLong
