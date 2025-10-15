@@ -30,15 +30,18 @@ getDriverGetnumber ::
     Kernel.Prelude.Text ->
     Environment.Flow Kernel.Prelude.Text
   )
-getDriverGetnumber _ rcNo = do
+getDriverGetnumber (_, mid, _) rcNo = do
   vehicleRC <- RCQuery.findLastVehicleRCWrapper rcNo >>= fromMaybeM (RCNotFound rcNo)
   rcActiveAssociation <- DAQuery.findActiveAssociationByRC vehicleRC.id True >>= fromMaybeM ActiveRCNotFound
-  getDecryptedMobileNumberByDriverId rcActiveAssociation.driverId
+  getDecryptedMobileNumberByDriverId rcActiveAssociation.driverId mid
 
-getDecryptedMobileNumberByDriverId :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r) => Id Person.Person -> m Text
-getDecryptedMobileNumberByDriverId driverId = do
+getDecryptedMobileNumberByDriverId :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r) => Id Person.Person -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> m Text
+getDecryptedMobileNumberByDriverId driverId mid = do
   driver <- PSQuery.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
-  let encMobNum = driver.mobileNumber
-  case encMobNum of
-    Just mobNum -> decrypt mobNum
-    Nothing -> throwError $ InvalidRequest "Mobile Number not found."
+  if driver.merchantId == mid
+    then do
+      let encMobNum = driver.mobileNumber
+      case encMobNum of
+        Just mobNum -> decrypt mobNum
+        Nothing -> throwError $ InvalidRequest "Mobile Number not found."
+    else throwError $ InvalidRequest "Merchant Id Did not match"
