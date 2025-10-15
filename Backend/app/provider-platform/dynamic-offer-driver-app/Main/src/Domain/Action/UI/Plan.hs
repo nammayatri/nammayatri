@@ -398,7 +398,7 @@ planList (personId, merchantId, merchantOpCityId) serviceName _mbLimit _mbOffset
   person <- QPerson.findById (cast personId) >>= fromMaybeM (PersonNotFound personId.getId)
   isAutoPayActive <-
     if DCommon.checkFleetOwnerRole person.role
-      then pure False
+      then pure False -- prepaid subscription is only for fleet owners
       else do
         driverInfo <-
           DI.findById (cast personId)
