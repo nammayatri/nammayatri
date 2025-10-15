@@ -117,7 +117,6 @@ FleetOwnerInformation:
       params: [lienAmount]
       where: fleetOwnerPersonId
     updatePrepaidSubscriptionBalance:
-    updateFleetOwnerPrepaidSubscriptionBalance:
       kvFunction: updateOneWithKV
       params: [prepaidSubscriptionBalance]
       where: fleetOwnerPersonId
