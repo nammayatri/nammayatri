@@ -88,6 +88,7 @@ import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.Booking as QBooking
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.FleetDriverAssociation as FDV
+import qualified Storage.Queries.FleetDriverAssociation as QFDA
 import qualified Storage.Queries.Location as QLoc
 import qualified Storage.Queries.LocationMapping as QLM
 import qualified Storage.Queries.Person as QPerson
@@ -263,7 +264,8 @@ otpRideCreate driver otpCode booking clientId = do
   unless (driverInfo.enabled) $ throwError DriverAccountDisabled
   when driverInfo.blocked $ throwError (DriverAccountBlocked (BlockErrorPayload driverInfo.blockExpiryTime driverInfo.blockReasonFlag))
   throwErrorOnRide transporterConfig.includeDriverCurrentlyOnRide driverInfo False
-  (ride, rideDetails, _) <- initializeRide transporter driver booking (Just otpCode) Nothing clientId Nothing
+  mFleetOwnerId <- QFDA.findByDriverId driver.id True
+  (ride, rideDetails, _) <- initializeRide transporter driver booking (Just otpCode) Nothing clientId Nothing (mFleetOwnerId <&> (.fleetOwnerId) <&> Id)
   uBooking <- runInReplica $ QBooking.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId) -- in replica db we can have outdated value
   handle (errHandler uBooking transporter) $ BP.sendRideAssignedUpdateToBAP uBooking ride driver vehicle False
 

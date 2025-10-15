@@ -21,6 +21,7 @@ SubscriptionTransaction:
     merchantId: Maybe (Id Merchant)
     merchantOperatingCityId: Id MerchantOperatingCity
     driverId: Id Driver
+    fleetOwnerId: Maybe (Id Driver)
     entityId: Maybe Text
     transactionType: TransactionType
     amount: HighPrecMoney

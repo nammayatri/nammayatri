@@ -1,4 +1,11 @@
-module Storage.Queries.Person.GetNearestDrivers where
+module Storage.Queries.Person.GetNearestDrivers
+  ( getNearestDrivers,
+    NearestDriversResult (..),
+    NearestDriversReq (..),
+    hasSufficientBalance,
+    filterDriversBySufficientBalance,
+  )
+where
 
 import qualified Data.Aeson as A
 import qualified Data.HashMap.Strict as HashMap
@@ -7,6 +14,9 @@ import qualified Data.Text as T
 import Domain.Types
 import qualified Domain.Types.Common as DriverInfo
 import qualified Domain.Types.Driver.DriverInformation as DIAPI
+import qualified Domain.Types.DriverInformation as DI
+import qualified Domain.Types.FleetDriverAssociation as FDA
+import qualified Domain.Types.FleetOwnerInformation as FOI
 import Domain.Types.Merchant
 import Domain.Types.Person as Person
 import Domain.Types.VehicleServiceTier as DVST
@@ -28,6 +38,8 @@ import SharedLogic.VehicleServiceTier
 import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.DriverInformation.Internal as Int
 import qualified Storage.Queries.DriverLocation.Internal as Int
+import qualified Storage.Queries.FleetDriverAssociationExtra as QFDA
+import qualified Storage.Queries.FleetOwnerInformation as QFOI
 import qualified Storage.Queries.Person.Internal as Int
 import qualified Storage.Queries.Vehicle.Internal as Int
 
@@ -72,10 +84,12 @@ data NearestDriversReq = NearestDriversReq
     isRental :: Bool,
     isInterCity :: Bool,
     prepaidSubscriptionThreshold :: Maybe HighPrecMoney,
+    fleetPrepaidSubscriptionThreshold :: Maybe HighPrecMoney,
     rideFare :: Maybe HighPrecMoney,
     isValueAddNP :: Bool,
     onlinePayment :: Bool,
-    now :: UTCTime
+    now :: UTCTime,
+    prepaidSubscriptionAndWalletEnabled :: Bool
   }
 
 getNearestDrivers ::
@@ -86,7 +100,8 @@ getNearestDrivers NearestDriversReq {..} = do
   let allowedCityServiceTiers = filter (\cvst -> cvst.serviceTierType `elem` serviceTiers) cityServiceTiers
       allowedVehicleVariant = DL.nub (concatMap (.allowedVehicleVariant) allowedCityServiceTiers)
   driverLocs <- Int.getDriverLocsWithCond merchantId driverPositionInfoExpiry fromLocLatLong nearestRadius (bool (Just allowedVehicleVariant) Nothing (null allowedVehicleVariant))
-  driverInfos <- Int.getDriverInfosWithCond (driverLocs <&> (.driverId)) True False isRental isInterCity prepaidSubscriptionThreshold rideFare
+  driverInfos_ <- Int.getDriverInfosWithCond (driverLocs <&> (.driverId)) True False isRental isInterCity
+  driverInfos <- filterDriversBySufficientBalance prepaidSubscriptionAndWalletEnabled rideFare fleetPrepaidSubscriptionThreshold prepaidSubscriptionThreshold driverInfos_
   vehicle <- Int.getVehicles driverInfos
   drivers <- Int.getDrivers vehicle
   -- driverStats <- QDriverStats.findAllByDriverIds drivers
@@ -176,3 +191,49 @@ getNearestDrivers NearestDriversReq {..} = do
                 tripDistanceMaxThreshold = info.tripDistanceMaxThreshold,
                 maxPickupDistance = info.maxPickupRadius
               }
+
+hasSufficientBalance ::
+  (MonadFlow m) =>
+  HighPrecMoney ->
+  Maybe HighPrecMoney ->
+  Maybe HighPrecMoney ->
+  HashMap.HashMap (Id Person.Driver) FDA.FleetDriverAssociation ->
+  HashMap.HashMap (Id Person) FOI.FleetOwnerInformation ->
+  DI.DriverInformation ->
+  m Bool
+hasSufficientBalance fare fleetThreshold driverThreshold fleetAssociationMap fleetOwnerMap driver =
+  case HashMap.lookup driver.driverId fleetAssociationMap of
+    Just fleetAssociation ->
+      case HashMap.lookup (Id fleetAssociation.fleetOwnerId) fleetOwnerMap of
+        Just fleetOwner ->
+          pure $
+            case fleetOwner.prepaidSubscriptionBalance of
+              Just balance -> balance - fromMaybe 0 fleetOwner.lienAmount >= (fare + fromMaybe 0 fleetThreshold)
+              _ -> False
+        Nothing -> do
+          logError "Fleet owner not found for an existing fleet driver association."
+          pure False
+    Nothing ->
+      pure $
+        case driver.prepaidSubscriptionBalance of
+          Just balance -> balance >= (fare + fromMaybe 0 driverThreshold)
+          _ -> False
+
+filterDriversBySufficientBalance ::
+  (EsqDBFlow m r, CacheFlow m r, MonadFlow m) =>
+  Bool ->
+  Maybe HighPrecMoney ->
+  Maybe HighPrecMoney ->
+  Maybe HighPrecMoney ->
+  [DI.DriverInformation] ->
+  m [DI.DriverInformation]
+filterDriversBySufficientBalance prepaidSubscriptionAndWalletEnabled rideFare fleetPrepaidSubscriptionThreshold prepaidSubscriptionThreshold driverInfos_ =
+  case (prepaidSubscriptionAndWalletEnabled, rideFare) of
+    (True, Just fare) -> do
+      fleetAssociations <- QFDA.findAllByDriverIds (driverInfos_ <&> (.driverId))
+      let fleetOwnerIds = fleetAssociations <&> (.fleetOwnerId)
+      fleetOwners <- QFOI.findAllByPrimaryKeys (map Id fleetOwnerIds)
+      let fleetOwnerMap = HashMap.fromList $ map (\fo -> (fo.fleetOwnerPersonId, fo)) fleetOwners
+          fleetAssociationMap = HashMap.fromList $ map (\fa -> (fa.driverId, fa)) fleetAssociations
+      filterM (hasSufficientBalance fare fleetPrepaidSubscriptionThreshold prepaidSubscriptionThreshold fleetAssociationMap fleetOwnerMap) driverInfos_
+    _ -> pure driverInfos_

@@ -493,41 +493,4 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN driver_wallet_c
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN analytics_config json  default '{"weekStartMode": 3, "earningsWindowSize": 7, "allowCacheDriverFlowStatus": false, "maxOnlineDurationDays": 10, "onlineDurationCalculateFrom": null}' :: json;
 
 
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
-
-
-
-------- SQL updates -------
-
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN subscription_config SET DEFAULT '{"prepaidSubscriptionThreshold": null,"fleetPrepaidSubscriptionThreshold": null}' :: json;

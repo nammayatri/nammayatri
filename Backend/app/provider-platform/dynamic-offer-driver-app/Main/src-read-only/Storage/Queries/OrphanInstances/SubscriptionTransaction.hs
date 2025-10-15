@@ -1,16 +1,3 @@
-{-
- Copyright 2022-23, Juspay India Pvt Ltd
-
- This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License
-
- as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. This program
-
- is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-
- or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details. You should have received a copy of
-
- the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
--}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
@@ -34,6 +21,7 @@ instance FromTType' Beam.SubscriptionTransaction Domain.Types.SubscriptionTransa
             createdAt = createdAt,
             driverId = Kernel.Types.Id.Id driverId,
             entityId = entityId,
+            fleetOwnerId = Kernel.Types.Id.Id <$> fleetOwnerId,
             fromLocationId = Kernel.Types.Id.Id <$> fromLocationId,
             id = Kernel.Types.Id.Id id,
             merchantId = Kernel.Types.Id.Id <$> merchantId,
@@ -52,6 +40,7 @@ instance ToTType' Beam.SubscriptionTransaction Domain.Types.SubscriptionTransact
         Beam.createdAt = createdAt,
         Beam.driverId = Kernel.Types.Id.getId driverId,
         Beam.entityId = entityId,
+        Beam.fleetOwnerId = Kernel.Types.Id.getId <$> fleetOwnerId,
         Beam.fromLocationId = Kernel.Types.Id.getId <$> fromLocationId,
         Beam.id = Kernel.Types.Id.getId id,
         Beam.merchantId = Kernel.Types.Id.getId <$> merchantId,

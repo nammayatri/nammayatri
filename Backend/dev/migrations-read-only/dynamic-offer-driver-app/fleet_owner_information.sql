@@ -76,3 +76,13 @@ ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN is_eligibl
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN ticket_place_id text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN prepaid_subscription_balance double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN lien_amount double precision ;

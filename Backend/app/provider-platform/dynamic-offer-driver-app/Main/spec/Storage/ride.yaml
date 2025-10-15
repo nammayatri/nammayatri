@@ -50,6 +50,7 @@ Ride:
     merchantOperatingCityId: Id MerchantOperatingCity
     status: RideStatus|NoRelation
     driverId: Id Person
+    fleetOwnerId: Maybe (Id Person)
     otp: Text
     endOtp: Maybe Text
     trackingUrl: BaseUrl
