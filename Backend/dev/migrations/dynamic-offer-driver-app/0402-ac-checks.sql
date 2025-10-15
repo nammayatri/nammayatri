@@ -92,6 +92,5 @@ INSERT INTO
     from atlas_driver_offer_bpp.merchant_operating_city
     );
 
-
 insert into atlas_driver_offer_bpp.translations(created_at, id, language, message, message_key, updated_at) VALUES (now(), atlas_driver_offer_bpp.uuid_generate_v4() ,'ENGLISH' , 'You have been downgraded to only Non-AC rides due to multiple customer complaints', 'AC_RESTRICTION_MESSAGE', now());
 insert into atlas_driver_offer_bpp.translations(created_at, id, language, message, message_key, updated_at) VALUES (now(), atlas_driver_offer_bpp.uuid_generate_v4() ,'ENGLISH' , 'For uninterrupted service, please ensure that the AC is turned ON on AC rides', 'AC_WORKING_MESSAGE', now());
