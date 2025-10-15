@@ -275,13 +275,14 @@ findByDriverIdForInfo ::
 findByDriverIdForInfo driverId from to = do
   CH.findAll $
     CH.select_ (\srfd -> CH.notGrouped (srfd.id, srfd.response)) $
-      CH.filter_
-        ( \srfd _ ->
-            srfd.driverId CH.==. driverId
-              CH.&&. srfd.createdAt >=. CH.DateTime from
-              CH.&&. srfd.createdAt <=. CH.DateTime to
-        )
-        (CH.all_ @CH.APP_SERVICE_CLICKHOUSE searchRequestForDriverTTable)
+      CH.selectModifierOverride CH.NO_SELECT_MODIFIER $
+        CH.filter_
+          ( \srfd _ ->
+              srfd.driverId CH.==. driverId
+                CH.&&. srfd.createdAt >=. CH.DateTime from
+                CH.&&. srfd.createdAt <=. CH.DateTime to
+          )
+          (CH.all_ @CH.APP_SERVICE_CLICKHOUSE searchRequestForDriverTTable)
 
 concatFun :: [(Maybe Text, Int, Int, Maybe DVC.VehicleCategory)] -> [(Maybe Text, Int, Maybe DVC.VehicleCategory)] -> [(Maybe Text, Int, Int, Int, Maybe DVC.VehicleCategory)]
 concatFun [] _ = []
