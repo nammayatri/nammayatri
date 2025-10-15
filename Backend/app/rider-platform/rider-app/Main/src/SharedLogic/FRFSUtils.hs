@@ -78,10 +78,10 @@ import qualified Lib.Payment.Domain.Types.PaymentOrder as PaymentOrder
 import Lib.Payment.Domain.Types.Refunds as Refunds
 import Lib.Payment.Storage.Beam.BeamFlow
 import qualified Lib.Payment.Storage.Queries.PaymentOrder as QPaymentOrder
+import Lib.Payment.Storage.Queries.PaymentOrderSplit as QPaymentOrderSplit
 import Lib.Scheduler.JobStorageType.SchedulerType (createJobIn)
 import qualified Lib.Yudhishthira.Tools.Utils as LYTU
 import qualified Lib.Yudhishthira.Types as LYT
-import qualified SharedLogic.CreateFareForMultiModal as SMMFRFS
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
@@ -874,7 +874,8 @@ markAllRefundBookings ::
     EsqDBReplicaFlow m r,
     ServiceFlow m r,
     EncFlow m r,
-    SchedulerFlow r
+    SchedulerFlow r,
+    BeamFlow m r
   ) =>
   DFRFSTicketBooking.FRFSTicketBooking ->
   Id DP.Person ->
@@ -914,17 +915,19 @@ markAllRefundBookings booking personId = do
     person <- QP.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
     let (bookings, paymentBookingIds) = unzip nonRefundInitiatedBookings
     payments <- mapM (QFRFSTicketBookingPayment.findById) paymentBookingIds
-    orderShortId <- case listToMaybe (catMaybes payments) of
+    (orderShortId, paymentOrderId, effectiveAmount) <- case listToMaybe (catMaybes payments) of
       Just payment -> do
         order <- QPaymentOrder.findById payment.paymentOrderId >>= fromMaybeM (PaymentOrderNotFound payment.paymentOrderId.getId)
-        pure order.shortId.getShortId
+        pure (order.shortId.getShortId, payment.paymentOrderId, order.effectAmount)
       Nothing -> throwError (InvalidRequest "orderShortId not found in markAllRefundBookings")
     frfsConfig <-
       CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow person.merchantOperatingCityId []
         >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> show person.merchantOperatingCityId)
-    (vendorSplitDetails, amountUpdated) <- SMMFRFS.createVendorSplitFromBookings bookings person.merchantId person.merchantOperatingCityId Payment.FRFSMultiModalBooking frfsConfig.isFRFSTestingEnabled
+    let amountUpdated =
+          if frfsConfig.isFRFSTestingEnabled then 1.0 * (HighPrecMoney $ toRational $ length bookings) else foldl (\accAmt item -> (accAmt + item.price.amount)) 0.0 bookings
     isSplitEnabled <- Payment.getIsSplitEnabled person.merchantId person.merchantOperatingCityId Nothing Payment.FRFSMultiModalBooking
-    splitDetails <- Payment.mkUnaggregatedRefundSplitSettlementDetails isSplitEnabled amountUpdated vendorSplitDetails
+    paymentOrderSplits <- QPaymentOrderSplit.findByPaymentOrder paymentOrderId
+    splitDetails <- Payment.mkUnaggregatedRefundSplitSettlementDetails isSplitEnabled amountUpdated paymentOrderSplits effectiveAmount
     let refundSplitDetails = mkRefundSplitDetails bookings
     refundId <- generateGUID
     when allFailed $ whenJust mbJourneyId $ \journeyId -> QJourney.updateStatus DJourney.FAILED journeyId

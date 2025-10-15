@@ -21,6 +21,7 @@ import Kernel.Prelude
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
 import Kernel.Types.Error
 import Kernel.Utils.Common
+import Lib.Payment.Storage.Beam.BeamFlow
 import Lib.Scheduler
 import SharedLogic.FRFSUtils as FRFSUtils
 import SharedLogic.JobScheduler
@@ -38,7 +39,8 @@ checkMultimodalConfirmFailJob ::
     EsqDBFlow m r,
     SchedulerFlow r,
     EsqDBReplicaFlow m r,
-    ServiceFlow m r
+    ServiceFlow m r,
+    BeamFlow m r
   ) =>
   Job 'CheckMultimodalConfirmFail ->
   m ExecutionResult
