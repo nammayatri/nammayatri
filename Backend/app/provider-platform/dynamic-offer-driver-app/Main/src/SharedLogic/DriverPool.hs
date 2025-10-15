@@ -1116,13 +1116,13 @@ calculateDriverCurrentlyOnRideWithActualDist calculateReq@CalculateDriverPoolReq
       logDebug "driverPool is empty"
       return []
     (a : pprox) -> do
-      let driverPoolResultsWithDriverLocationAsDestinationLocation = NE.fromList $ map driverResultFromDestinationLocation (a : pprox)
+      let driverPoolResultsWithDriverLocationAsDestinationLocation = driverResultFromDestinationLocation <$> (a :| pprox)
           driverToDestinationDistanceThreshold = driverPoolCfg.driverToDestinationDistanceThreshold
       driverPoolWithActualDistFromDestinationLocation <- computeActualDistance driverPoolCfg.distanceUnit merchantId merchantOperatingCityId Nothing pickup driverPoolResultsWithDriverLocationAsDestinationLocation
       driverPoolWithActualDistFromCurrentLocation <- do
         case driverPoolCfg.useOneToOneOsrmMapping of
           Just True -> calculateActualDistanceCurrentlyOneToOneSrcAndDestMapping (a :| pprox)
-          _ -> traverse (\driver -> calculateActualDistanceCurrently driverToDestinationDistanceThreshold driver) (a :| pprox)
+          _ -> traverse (calculateActualDistanceCurrently driverToDestinationDistanceThreshold) (a :| pprox)
       let driverPoolWithActualDist = catMaybes $ zipWith (curry $ combine driverToDestinationDistanceThreshold) (NE.toList driverPoolWithActualDistFromDestinationLocation) (NE.toList driverPoolWithActualDistFromCurrentLocation)
           filtDriverPoolWithActualDist' = case (driverPoolCfg.actualDistanceThresholdOnRide, poolType) of
             (_, SpecialZoneQueuePool) -> driverPoolWithActualDist
