@@ -41,6 +41,16 @@ import Environment
 import EulerHS.Prelude
 import Kernel.Beam.Functions
 import Kernel.External.Maps
+-- import qualified Lib.Yudhishthira.Tools.Utils as LYTU
+-- import qualified Lib.Yudhishthira.Types as LYT
+
+-- import qualified SharedLogic.UserCancellationDues as UserCancellationDues
+
+-- import qualified Storage.Queries.CallStatus as QCallStatus
+
+-- import Tools.DynamicLogic
+
+import Kernel.External.Types (ServiceFlow)
 import Kernel.Prelude (roundToIntegral)
 import qualified Kernel.Storage.Esqueleto as Esq
 import qualified Kernel.Storage.Hedis as Redis
@@ -50,8 +60,6 @@ import Kernel.Utils.Common
 import Kernel.Utils.Servant.SignatureAuth (SignatureAuthResult (..))
 import qualified Lib.DriverCoins.Coins as DC
 import qualified Lib.DriverCoins.Types as DCT
--- import qualified Lib.Yudhishthira.Tools.Utils as LYTU
--- import qualified Lib.Yudhishthira.Types as LYT
 import qualified SharedLogic.BehaviourManagement.CancellationRate as SCR
 import SharedLogic.Booking
 import SharedLogic.Cancel
@@ -62,14 +70,12 @@ import SharedLogic.FareCalculator as FareCalculator
 import SharedLogic.FarePolicy as SFP
 import SharedLogic.Ride
 import qualified SharedLogic.SearchTryLocker as CS
--- import qualified SharedLogic.UserCancellationDues as UserCancellationDues
 import qualified Storage.Cac.TransporterConfig as CCT
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Merchant as QM
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
 import qualified Storage.Queries.Booking as QRB
 import qualified Storage.Queries.BookingCancellationReason as QBCR
--- import qualified Storage.Queries.CallStatus as QCallStatus
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverQuote as QDQ
 import qualified Storage.Queries.Person as QPers
@@ -81,7 +87,6 @@ import qualified Storage.Queries.SearchRequestForDriver as QSRD
 import qualified Storage.Queries.SearchTry as QST
 import qualified Storage.Queries.Vehicle as QVeh
 import Tools.Constants
--- import Tools.DynamicLogic
 import Tools.Error
 import Tools.Event
 import qualified Tools.Notifications as Notify
@@ -262,6 +267,8 @@ _customerCancellationChargesCalculation' booking mbRide currDistanceToPickup = d
 cancelSearch ::
   ( CacheFlow m r,
     EsqDBFlow m r,
+    ServiceFlow m r,
+    HasFlowEnv m r '["maxNotificationShards" ::: Int],
     Esq.EsqDBReplicaFlow m r
   ) =>
   Id DM.Merchant ->
