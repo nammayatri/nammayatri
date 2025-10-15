@@ -350,14 +350,17 @@ calculateFareParametersForFarePolicy fullFarePolicy mbDistance mbDuration mercha
           }
   SFC.calculateFareParameters params
 
-mkFarePolicyBreakups :: (Text -> breakupItemValue) -> (Text -> breakupItemValue -> breakupItem) -> Maybe Meters -> Maybe HighPrecMoney -> HighPrecMoney -> Maybe HighPrecMoney -> FarePolicyD.FarePolicy -> [breakupItem]
-mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges estimatedTotalFare congestionChargeViaDp farePolicy = do
+mkFarePolicyBreakups :: (Text -> breakupItemValue) -> (Text -> breakupItemValue -> breakupItem) -> Maybe Meters -> Maybe HighPrecMoney -> Maybe HighPrecMoney -> HighPrecMoney -> Maybe HighPrecMoney -> FarePolicyD.FarePolicy -> [breakupItem]
+mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbCancellationCharge mbTollCharges estimatedTotalFare congestionChargeViaDp farePolicy = do
   let distance = fromMaybe 0 mbDistance -- TODO: Fix Later
       driverExtraFeeBounds = FarePolicyD.findDriverExtraFeeBoundsByDistance distance <$> farePolicy.driverExtraFeeBounds
       nightShiftBounds = farePolicy.nightShiftBounds
 
       tollChargesCaption = show Tags.TOLL_CHARGES
       tollChargesItem = mkBreakupItem tollChargesCaption . (mkValue . show) <$> mbTollCharges
+
+      cancellationChargeCaption = show Tags.CANCELLATION_CHARGES
+      cancellationChargeItem = mkBreakupItem cancellationChargeCaption . (mkValue . highPrecMoneyToText) <$> mbCancellationCharge
 
       congestionChargePercentageCaption = show Tags.CONGESTION_CHARGE_PERCENTAGE
       congestionChargePercentageItemMultiplier =
@@ -425,6 +428,7 @@ mkFarePolicyBreakups mkValue mkBreakupItem mbDistance mbTollCharges estimatedTot
   catMaybes
     [ tollChargesItem,
       serviceChargeItem,
+      cancellationChargeItem,
       parkingChargeItem,
       governmentChargeItem,
       driverMinExtraFeeItem,
