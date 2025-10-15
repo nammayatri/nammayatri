@@ -1453,6 +1453,16 @@ switchFRFSQuoteTierUtil journeyLeg quoteId = do
                 DFRFSTicketBooking.estimatedPrice = totalPriceForSwitchLeg
               }
       void $ QFRFSTicketBooking.updateByPrimaryKey updatedBooking
+      -- Update routeShortName and serviceTierType
+      let routeStations :: Maybe [FRFSTicketServiceAPI.FRFSRouteStationsAPI] = decodeFromText =<< quote.routeStationsJson
+      let mbFirstRouteStation = listToMaybe (fromMaybe [] routeStations)
+      let mbBookedRouteShortName = mbFirstRouteStation <&> (.shortName)
+      let mbBookedServiceTierType = mbFirstRouteStation >>= (.vehicleServiceTier) <&> (._type)
+      when (isJust mbBookedRouteShortName) $ do
+        whenJust mbBookedRouteShortName $ \bookedRouteShortName ->
+          QRouteDetails.updateUserBookedRouteShortName (Just bookedRouteShortName) journeyLeg.id.getId
+      when (isJust mbBookedServiceTierType) $ do
+        QJourneyLeg.updateByPrimaryKey $ journeyLeg {DJourneyLeg.userBookedBusServiceTierType = mbBookedServiceTierType}
     whenJust mbAlternateShortNames $ \(alternateShortNames, alternateRouteIds) -> do
       QRouteDetails.updateAlternateShortNamesAndRouteIds alternateShortNames (Just alternateRouteIds) journeyLeg.id.getId
   where
