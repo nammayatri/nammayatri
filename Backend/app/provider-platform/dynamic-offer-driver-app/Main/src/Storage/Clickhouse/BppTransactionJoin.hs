@@ -51,6 +51,7 @@ data BppTransactionJoinT f = BppTransactionJoinT
     riderDetailsHasTakenValidRide :: C f Bool,
     riderDetailsHasTakenValidRideAt :: C f (Maybe UTCTime),
     riderDetailsId :: C f (Id RiderDetails),
+    riderDetailsBapId :: C f (Maybe Text),
     riderDetailsIsDeviceIdExists :: C f (Maybe Bool),
     riderDetailsIsFlagConfirmed :: C f (Maybe Bool),
     riderDetailsMerchantId :: C f (Id Merchant),
@@ -105,6 +106,7 @@ bppTransactionJoinTTable =
       riderDetailsHasTakenValidRide = "rider_details_has_taken_valid_ride",
       riderDetailsHasTakenValidRideAt = "rider_details_has_taken_valid_ride_at",
       riderDetailsId = "rider_details_id",
+      riderDetailsBapId = "rider_details_bap_id",
       riderDetailsIsDeviceIdExists = "rider_details_is_device_id_exists",
       riderDetailsIsFlagConfirmed = "rider_details_is_flag_confirmed",
       riderDetailsMerchantId = "rider_details_merchant_id",
@@ -250,7 +252,8 @@ findAllRideItems merchant opCity limitVal offsetVal mbBookingStatus mbRideShortI
                 RiderDetails.referredAt = bppTxn.riderDetailsReferredAt,
                 RiderDetails.referredByDriver = bppTxn.riderDetailsReferredByDriver,
                 RiderDetails.updatedAt = bppTxn.riderDetailsUpdatedAt,
-                RiderDetails.merchantOperatingCityId = Just opCity.id
+                RiderDetails.merchantOperatingCityId = Just opCity.id,
+                RiderDetails.bapId = bppTxn.riderDetailsBapId
               },
           customerName = bppTxn.bookingCustomerName,
           fareDiff = mkPrice bppTxn.rideCurrency <$> (bppTxn.rideFare - bppTxn.bookingEstimatedFare),
