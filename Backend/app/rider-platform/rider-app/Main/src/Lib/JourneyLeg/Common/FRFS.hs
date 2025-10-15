@@ -46,7 +46,7 @@ import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.CalculateDistance (distanceBetweenInMeters)
 import Kernel.Utils.Common
-import qualified Lib.JourneyLeg.Types as JPT
+-- import qualified Lib.JourneyLeg.Types as JPT
 import qualified Lib.JourneyModule.State.Types as JMStateTypes
 import qualified Lib.JourneyModule.State.Utils as JMStateUtils
 import qualified Lib.JourneyModule.Types as JT
@@ -149,8 +149,10 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
               movementDetected
 
           let detailedStateData = baseStateData {JT.vehiclePositions = vehiclePositionsToReturn}
-          finalStateData <- updateFleetNoIfFinalized integratedBppConfig detailedStateData mbCurrentLegDetails searchId (isJust mbBooking)
-          return $ JT.Single finalStateData
+          -- Commented out: Automatic fleet number finalization based on rider location
+          -- finalStateData <- updateFleetNoIfFinalized integratedBppConfig detailedStateData mbCurrentLegDetails searchId (isJust mbBooking)
+          -- return $ JT.Single finalStateData
+          return $ JT.Single detailedStateData
         _ -> do
           let journeyLegStates =
                 [ JT.JourneyLegStateData
@@ -223,8 +225,10 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
 
           let detailedStateData = baseStateData {JT.vehiclePositions = vehiclePositionsToReturn}
           logDebug $ "CFRFS getState: Detailed state data for without booking: " <> show vehiclePositionsToReturn
-          finalStateData <- updateFleetNoIfFinalized integratedBppConfig detailedStateData mbCurrentLegDetails searchId (isJust mbBooking)
-          return $ JT.Single finalStateData
+          -- Commented out: Automatic fleet number finalization based on rider location
+          -- finalStateData <- updateFleetNoIfFinalized integratedBppConfig detailedStateData mbCurrentLegDetails searchId (isJust mbBooking)
+          -- return $ JT.Single finalStateData
+          return $ JT.Single detailedStateData
         _ -> do
           -- Other modes (Metro, Subway, etc.)
           let journeyLegStates =
@@ -243,46 +247,47 @@ getState mode searchId riderLastPoints movementDetected routeCodeForDetailedTrac
                   | (subLegOrder, trackingStatus, trackingStatusLastUpdatedAt) <- trackingStatuses
                 ]
           return $ JT.Transit journeyLegStates
-  where
-    updateFleetNoIfFinalized ::
-      (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig], HasField "ltsHedisEnv" r Redis.HedisEnv, HasShortDurationRetryCfg r c, HasKafkaProducer r) =>
-      DIBC.IntegratedBPPConfig ->
-      JT.JourneyLegStateData ->
-      Maybe DJourneyLeg.JourneyLeg ->
-      Id FRFSSearch ->
-      Bool ->
-      m JT.JourneyLegStateData
-    updateFleetNoIfFinalized integratedBppConfig detailedStateData mbCurrentLegDetails searchId' isBooking =
-      if detailedStateData.status `elem` [JPT.Finishing, JPT.Completed]
-        then do
-          case mbCurrentLegDetails of
-            Just legToUpdate -> do
-              case legToUpdate.finalBoardedBusNumber of
-                Nothing -> do
-                  bestCandidateResult <- Hedis.zrevrangeWithscores (topVehicleCandidatesKeyFRFS (legToUpdate.id.getId)) 0 0
-                  case bestCandidateResult of
-                    [] -> pure detailedStateData
-                    ((bestVehicleNumber, _) : _) -> do
-                      mbVehicleRouteInfo <- JMU.getVehicleLiveRouteInfo [integratedBppConfig] bestVehicleNumber
-                      let mbVehicleInfo = mbVehicleRouteInfo <&> snd
-                      QJourneyLeg.updateByPrimaryKey $
-                        legToUpdate
-                          { DJourneyLeg.finalBoardedBusNumber = Just bestVehicleNumber,
-                            DJourneyLeg.finalBoardedBusNumberSource = Just DJourneyLeg.Detected,
-                            DJourneyLeg.finalBoardedDepotNo = mbVehicleInfo >>= (.depot),
-                            DJourneyLeg.finalBoardedWaybillId = mbVehicleInfo >>= (.waybillId),
-                            DJourneyLeg.finalBoardedScheduleNo = mbVehicleInfo >>= (.scheduleNo),
-                            DJourneyLeg.finalBoardedBusServiceTierType = mbVehicleInfo <&> (.serviceType)
-                          }
-                      -- Update in-memory detailedStateData as well
-                      pure (detailedStateData :: JT.JourneyLegStateData) {JT.fleetNo = Just bestVehicleNumber}
-                Just _ -> pure detailedStateData
-            Nothing -> do
-              logError $ "CFRFS getState: Could not find leg to update finalBoardedBusNumber for searchId: " <> searchId'.getId
-              pure detailedStateData
-        else do
-          when isBooking $ logDebug $ "CFRFS getState: Not finalizing state for booking with searchId: " <> searchId'.getId <> "for state: " <> show detailedStateData
-          pure detailedStateData
+
+-- where
+--   updateFleetNoIfFinalized ::
+--     (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["ltsCfg" ::: LT.LocationTrackingeServiceConfig], HasField "ltsHedisEnv" r Redis.HedisEnv, HasShortDurationRetryCfg r c, HasKafkaProducer r) =>
+--     DIBC.IntegratedBPPConfig ->
+--     JT.JourneyLegStateData ->
+--     Maybe DJourneyLeg.JourneyLeg ->
+--     Id FRFSSearch ->
+--     Bool ->
+--     m JT.JourneyLegStateData
+--   updateFleetNoIfFinalized integratedBppConfig detailedStateData mbCurrentLegDetails searchId' isBooking =
+--     if detailedStateData.status `elem` [JPT.Finishing, JPT.Completed]
+--       then do
+--         case mbCurrentLegDetails of
+--           Just legToUpdate -> do
+--             case legToUpdate.finalBoardedBusNumber of
+--               Nothing -> do
+--                 bestCandidateResult <- Hedis.zrevrangeWithscores (topVehicleCandidatesKeyFRFS (legToUpdate.id.getId)) 0 0
+--                 case bestCandidateResult of
+--                   [] -> pure detailedStateData
+--                   ((bestVehicleNumber, _) : _) -> do
+--                     mbVehicleRouteInfo <- JMU.getVehicleLiveRouteInfo [integratedBppConfig] bestVehicleNumber
+--                     let mbVehicleInfo = mbVehicleRouteInfo <&> snd
+--                     QJourneyLeg.updateByPrimaryKey $
+--                       legToUpdate
+--                         { DJourneyLeg.finalBoardedBusNumber = Just bestVehicleNumber,
+--                           DJourneyLeg.finalBoardedBusNumberSource = Just DJourneyLeg.Detected,
+--                           DJourneyLeg.finalBoardedDepotNo = mbVehicleInfo >>= (.depot),
+--                           DJourneyLeg.finalBoardedWaybillId = mbVehicleInfo >>= (.waybillId),
+--                           DJourneyLeg.finalBoardedScheduleNo = mbVehicleInfo >>= (.scheduleNo),
+--                           DJourneyLeg.finalBoardedBusServiceTierType = mbVehicleInfo <&> (.serviceType)
+--                         }
+--                     -- Update in-memory detailedStateData as well
+--                     pure (detailedStateData :: JT.JourneyLegStateData) {JT.fleetNo = Just bestVehicleNumber}
+--               Just _ -> pure detailedStateData
+--           Nothing -> do
+--             logError $ "CFRFS getState: Could not find leg to update finalBoardedBusNumber for searchId: " <> searchId'.getId
+--             pure detailedStateData
+--       else do
+--         when isBooking $ logDebug $ "CFRFS getState: Not finalizing state for booking with searchId: " <> searchId'.getId <> "for state: " <> show detailedStateData
+--         pure detailedStateData
 
 getFare :: (CoreMetrics m, CacheFlow m r, EncFlow m r, EsqDBFlow m r, DB.EsqDBReplicaFlow m r, HasField "ltsHedisEnv" r Redis.HedisEnv, HasKafkaProducer r, HasShortDurationRetryCfg r c) => Id DPerson.Person -> DMerchant.Merchant -> MerchantOperatingCity -> Spec.VehicleCategory -> Maybe Spec.ServiceTierType -> [FRFSRouteDetails] -> Maybe UTCTime -> Maybe Text -> Maybe Text -> m (Bool, Maybe JT.GetFareResponse)
 getFare riderId merchant merchantOperatingCity vehicleCategory serviecType routeDetails mbFromArrivalTime agencyGtfsId mbSearchReqId = do
