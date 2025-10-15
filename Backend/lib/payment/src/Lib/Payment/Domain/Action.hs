@@ -244,7 +244,8 @@ createPaymentIntentService merchantId mbMerchantOpCityId personId rideId rideSho
             sdkPayloadDump = Nothing,
             createdAt = now,
             updatedAt = now,
-            merchantOperatingCityId = mbMerchantOpCityId
+            merchantOperatingCityId = mbMerchantOpCityId,
+            effectAmount = Nothing
           }
 
     buildTransaction ::
@@ -523,7 +524,8 @@ buildPaymentOrder merchantId mbMerchantOpCityId personId mbEntityName req resp =
             sdkPayloadDump = resp.sdk_payload_json,
             createdAt = now,
             updatedAt = now,
-            merchantOperatingCityId = mbMerchantOpCityId
+            merchantOperatingCityId = mbMerchantOpCityId,
+            effectAmount = Nothing
           }
   buildPaymentSplit req.orderId mkPaymentOrder req.splitSettlementDetails merchantId mbMerchantOpCityId
   pure mkPaymentOrder
@@ -944,7 +946,8 @@ createExecutionService (request, orderId) merchantId mbMerchantOpCityId executio
             sdkPayloadDump = Nothing,
             createdAt = now,
             updatedAt = now,
-            merchantOperatingCityId = mbMerchantOpCityId
+            merchantOperatingCityId = mbMerchantOpCityId,
+            effectAmount = Nothing
           }
 
 --- refunds api ----
