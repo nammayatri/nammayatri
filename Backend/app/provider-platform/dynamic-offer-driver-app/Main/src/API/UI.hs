@@ -23,6 +23,7 @@ import qualified API.Action.UI.CallFeedback as CallFeedback
 import qualified API.Action.UI.DemandHotspots as DemandHotspots
 import qualified API.Action.UI.DriverOnboardingV2 as DriverOnboardingV2
 import qualified API.Action.UI.DriverProfileQuestions as DriverProfileQuestions
+import qualified API.Action.UI.DriverToDriverDirectCalling as DirectCall
 import qualified API.Action.UI.DriverWallet as DriverWallet
 import qualified API.Action.UI.EditBooking as EditBooking
 import qualified API.Action.UI.FareCalculator as FareCalculator
@@ -135,6 +136,7 @@ type API =
            :<|> Insurance.API
            :<|> DriverWallet.API
            :<|> SubscriptionTransaction.API
+           :<|> DirectCall.API
        )
 
 handler :: FlowServer API
@@ -194,3 +196,4 @@ handler =
     :<|> Insurance.handler
     :<|> DriverWallet.handler
     :<|> SubscriptionTransaction.handler
+    :<|> DirectCall.handler

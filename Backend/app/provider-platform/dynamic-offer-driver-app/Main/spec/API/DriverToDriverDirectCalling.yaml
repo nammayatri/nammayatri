@@ -1,0 +1,11 @@
+module: DriverToDriverDirectCalling
+apis:
+  - GET:
+      endpoint: driver/getnumber/{rcNumber}
+      params:
+        rcNumber: Text
+      auth: TokenAuth PROVIDER_TYPE
+      response:
+        type: Text
+
+types: {}
