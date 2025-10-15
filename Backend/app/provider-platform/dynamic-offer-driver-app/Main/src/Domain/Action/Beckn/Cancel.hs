@@ -168,6 +168,7 @@ cancel req merchant booking mbActiveSearchTry = do
                     Just charges -> do
                       logTagInfo ("bookingId-" <> getId req.bookingId) ("cancellation dues: " <> show charges)
                       QRD.updateCancellationDues (charges + riderDetails.cancellationDues) riderId
+                      QRide.updateCancellationFeeIfCancelledField (Just charges) ride.id
                       logTagInfo ("bookingId-" <> getId req.bookingId) ("after updation riderDetails.cancellationDues: " <> show riderDetails.cancellationDues <> " charges: " <> show charges)
                       return (Just charges)
                     Nothing -> return Nothing
@@ -213,7 +214,7 @@ cancel req merchant booking mbActiveSearchTry = do
           return isReallocat
         Nothing -> return False
     whenJust mbActiveSearchTry $ cancelSearch merchant.id
-    return (isReallocated, Nothing) ------testing -----fix in future
+    return (isReallocated, cancelCharges)
   where
     buildBookingCancellationReason disToPickup currentLocation mbRide = do
       return $
