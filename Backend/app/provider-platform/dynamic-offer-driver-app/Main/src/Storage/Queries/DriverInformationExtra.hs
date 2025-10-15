@@ -400,8 +400,8 @@ updatePrepaidSubscriptionBalanceAndExpiry driverId amount expiryDate = do
     ]
     [Se.Is BeamDI.driverId $ Se.Eq (getId driverId)]
 
-updatePrepaidSubscriptionBalance :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Id Person.Driver -> HighPrecMoney -> m ()
-updatePrepaidSubscriptionBalance driverId amount = do
+updatePrepaidSubscriptionBalance :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => HighPrecMoney -> Id Person.Driver -> m ()
+updatePrepaidSubscriptionBalance amount driverId = do
   now <- getCurrentTime
   updateOneWithKV
     [ Se.Set BeamDI.prepaidSubscriptionBalance (Just amount),

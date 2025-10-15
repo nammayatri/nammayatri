@@ -23,18 +23,6 @@ module Domain.Action.UI.Ride.CancelRide.Internal
   )
 where
 
--- import qualified Domain.Types.CancellationFarePolicy as DTC
-
--- import Kernel.External.Maps.Types
-
--- import qualified SharedLogic.FareCalculator as FareCalculator
--- import SharedLogic.FarePolicy as SFP
-
--- import qualified SharedLogic.External.LocationTrackingService.Flow as LF
--- import qualified SharedLogic.External.LocationTrackingService.Types as LT
-
--- import qualified Lib.Yudhishthira.Types as LYT
-
 import Data.Aeson as A
 import Data.Either.Extra (eitherToMaybe)
 import qualified Data.HashMap.Strict as HM
@@ -48,9 +36,9 @@ import Domain.Types.DriverLocation
 import qualified Domain.Types.Merchant as DMerc
 import qualified Domain.Types.Ride as DRide
 import qualified Domain.Types.RiderDetails as RiderDetails
-import qualified Domain.Types.TransporterConfig as DTTC
+import qualified Domain.Types.TransporterConfig as DTC
 import qualified Domain.Types.Yudhishthira as TY
-import EulerHS.Prelude
+import EulerHS.Prelude hiding (whenJust)
 import Kernel.External.Maps
 import Kernel.Prelude hiding (any, elem, map)
 import qualified Kernel.Storage.Clickhouse.Config as CH
@@ -79,11 +67,10 @@ import qualified SharedLogic.DriverCancellationPenalty as DCP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.GoogleTranslate (TranslateFlow)
-import SharedLogic.Ride (updateOnRideStatusWithAdvancedRideCheck)
+import SharedLogic.Ride (releaseLien, updateOnRideStatusWithAdvancedRideCheck)
 import SharedLogic.RuleBasedTierUpgrade
 import qualified SharedLogic.UserCancellationDues as UserCancellationDues
 import qualified Storage.Cac.TransporterConfig as CCT
-import qualified Storage.Cac.TransporterConfig as CTC
 import qualified Storage.CachedQueries.Driver.GoHomeRequest as CQDGR
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.ValueAddNP as CQVAN
@@ -162,7 +149,7 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
             merchant <-
               CQM.findById merchantId
                 >>= fromMaybeM (MerchantNotFound merchantId.getId)
-            transporterConfig <- CTC.findByMerchantOpCityId booking.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
+            transporterConfig <- CCT.findByMerchantOpCityId booking.merchantOperatingCityId Nothing >>= fromMaybeM (TransporterConfigNotFound booking.merchantOperatingCityId.getId)
             noShowCharges <- try @_ @SomeException $ do
               if transporterConfig.canAddCancellationFee
                 then do
@@ -180,7 +167,7 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
             driver <- QPerson.findById ride.driverId >>= fromMaybeM (PersonNotFound ride.driverId.getId)
             vehicle <- QVeh.findById ride.driverId >>= fromMaybeM (DriverWithoutVehicle ride.driverId.getId)
             unless (isValidRide ride) $ throwError (InternalError "Ride is not valid for cancellation")
-            cancelRideTransaction booking ride bookingCReason merchantId rideEndedBy userNoShowCharges
+            cancelRideTransaction booking ride bookingCReason merchantId rideEndedBy userNoShowCharges transporterConfig merchant
             logTagInfo ("rideId-" <> getId rideId) ("Cancellation reason " <> show bookingCReason.source)
 
             fork "DriverRideCancelledCoin Event : " $ do
@@ -239,9 +226,12 @@ cancelRideTransaction ::
   Id DMerc.Merchant ->
   DRide.RideEndedBy ->
   Maybe PriceAPIEntity ->
+  DTC.TransporterConfig ->
+  DMerc.Merchant ->
   m ()
-cancelRideTransaction booking ride bookingCReason merchantId rideEndedBy cancellationFee = do
+cancelRideTransaction booking ride bookingCReason merchantId rideEndedBy cancellationFee transporterConfig merchant = do
   let driverId = cast ride.driverId
+  when (fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled && isJust transporterConfig.subscriptionConfig.fleetPrepaidSubscriptionThreshold) $ releaseLien booking ride
   void $ CQDGR.setDriverGoHomeIsOnRideStatus ride.driverId booking.merchantOperatingCityId False
   updateOnRideStatusWithAdvancedRideCheck driverId (Just ride)
   when booking.isScheduled $ QDI.updateLatestScheduledBookingAndPickup Nothing Nothing driverId
@@ -270,7 +260,7 @@ updateNammaTagsForCancelledRide ::
   SRB.Booking ->
   DRide.Ride ->
   SBCR.BookingCancellationReason ->
-  DTTC.TransporterConfig ->
+  DTC.TransporterConfig ->
   m [LYT.TagNameValue]
 updateNammaTagsForCancelledRide booking ride bookingCReason transporterConfig = do
   now <- getCurrentTime

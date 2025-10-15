@@ -56,6 +56,7 @@ import qualified Storage.Queries.BusinessEvent as QBE
 import qualified Storage.Queries.DriverQuote as QDQ
 import Storage.Queries.DriverReferral as QDR
 import qualified Storage.Queries.DriverStats as QDriverStats
+import qualified Storage.Queries.FleetDriverAssociation as QFDA
 import qualified Storage.Queries.Location as QL
 import qualified Storage.Queries.Person as QPerson
 import qualified Storage.Queries.Quote as QQuote
@@ -122,7 +123,8 @@ handler merchant req validatedQuote = do
     handleDynamicOfferFlow isNewRider driver driverQuote booking riderDetails = do
       updateBookingDetails isNewRider booking riderDetails
       uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
-      (ride, _, vehicle) <- initializeRide merchant driver uBooking Nothing (Just req.enableFrequentLocationUpdates) driverQuote.clientId (Just req.enableOtpLessRide)
+      mFleetOwnerId <- QFDA.findByDriverId driver.id True
+      (ride, _, vehicle) <- initializeRide merchant driver uBooking Nothing (Just req.enableFrequentLocationUpdates) driverQuote.clientId (Just req.enableOtpLessRide) (mFleetOwnerId <&> (.fleetOwnerId) <&> Id)
       void $ deactivateExistingQuotes booking.merchantOperatingCityId merchant.id driver.id driverQuote.searchTryId $ mkPrice (Just driverQuote.currency) driverQuote.estimatedFare
       uBooking2 <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
       mkDConfirmResp (Just $ RideInfo {ride, driver, vehicle}) uBooking2 riderDetails
@@ -144,7 +146,8 @@ handler merchant req validatedQuote = do
             pure res.dynamicReferralCode
           Just dr -> pure dr.dynamicReferralCode
       uBooking <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
-      (ride, _, vehicle) <- initializeRide merchant driver uBooking dynamicReferralCode (Just req.enableFrequentLocationUpdates) Nothing (Just req.enableOtpLessRide)
+      mFleetOwnerId <- QFDA.findByDriverId driver.id True
+      (ride, _, vehicle) <- initializeRide merchant driver uBooking dynamicReferralCode (Just req.enableFrequentLocationUpdates) Nothing (Just req.enableOtpLessRide) (mFleetOwnerId <&> (.fleetOwnerId) <&> Id)
       uBooking2 <- QRB.findById booking.id >>= fromMaybeM (BookingNotFound booking.id.getId)
       mkDConfirmResp (Just $ RideInfo {ride, driver, vehicle}) uBooking2 riderDetails
 

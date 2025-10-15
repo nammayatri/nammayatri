@@ -201,7 +201,9 @@ createFleetOwnerInfo personId merchantId mbFleetType mbEnabled mbGstNumber mbRef
             updatedAt = now,
             registeredAt = Nothing,
             isEligibleForSubscription = True,
-            ticketPlaceId = mbTicketPlaceId
+            ticketPlaceId = mbTicketPlaceId,
+            lienAmount = Nothing,
+            prepaidSubscriptionBalance = Nothing
           }
   QFOI.create fleetOwnerInfo
 

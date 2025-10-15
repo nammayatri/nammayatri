@@ -57,6 +57,7 @@ data RideT f = RideT
     fare :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.Money),
     fareAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney),
     fareParametersId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
+    fleetOwnerId :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),
     hasStops :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Bool),
     id :: B.C f Kernel.Prelude.Text,
     insuredAmount :: B.C f (Kernel.Prelude.Maybe Kernel.Prelude.Text),

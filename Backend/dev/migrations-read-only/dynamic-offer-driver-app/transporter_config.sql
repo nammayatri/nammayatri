@@ -494,6 +494,7 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN analytics_confi
 
 
 ------- SQL updates -------
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN subscription_config SET DEFAULT '{"prepaidSubscriptionThreshold": null,"fleetPrepaidSubscriptionThreshold": null}' :: json;
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN analytics_config SET DEFAULT '{"weekStartMode": 3, "earningsWindowSize": 7, "allowCacheDriverFlowStatus": false, "enableFleetOperatorDashboardAnalytics": false, "maxOnlineDurationDays": 10, "onlineDurationCalculateFrom": null}' :: json;
 
@@ -514,6 +515,8 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN cancellation_fe
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN upgrade_tier_drop_retention_time integer ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN subscription_config SET DEFAULT '{"prepaidSubscriptionThreshold": null,"fleetPrepaidSubscriptionThreshold": null}' :: json;
+
 
 
 

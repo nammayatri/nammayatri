@@ -31,6 +31,7 @@ import SharedLogic.VehicleServiceTier
 import qualified Storage.Queries.DriverBankAccount as QDBA
 import qualified Storage.Queries.DriverInformation.Internal as Int
 import qualified Storage.Queries.DriverLocation.Internal as Int
+import qualified Storage.Queries.Person.GetNearestDrivers as QGND
 import qualified Storage.Queries.Person.Internal as Int
 import qualified Storage.Queries.Vehicle.Internal as Int
 
@@ -80,11 +81,13 @@ data NearestDriversOnRideReq = NearestDriversOnRideReq
     isInterCity :: Bool,
     isValueAddNP :: Bool,
     prepaidSubscriptionThreshold :: Maybe HighPrecMoney,
+    fleetPrepaidSubscriptionThreshold :: Maybe HighPrecMoney,
     rideFare :: Maybe HighPrecMoney,
     minWalletAmountForCashRides :: Maybe HighPrecMoney,
     paymentInstrument :: Maybe MP.PaymentInstrument,
     onlinePayment :: Bool,
-    now :: UTCTime
+    now :: UTCTime,
+    prepaidSubscriptionAndWalletEnabled :: Bool
   }
 
 getNearestDriversCurrentlyOnRide ::
@@ -99,7 +102,8 @@ getNearestDriversCurrentlyOnRide NearestDriversOnRideReq {..} = do
       allowedVehicleVariant = DL.nub $ concatMap (.allowedVehicleVariant) allowedCityServiceTiers
   driverLocs <- Int.getDriverLocsWithCond merchantId driverPositionInfoExpiry fromLocLatLong onRideRadius (Just allowedVehicleVariant)
   logDebug $ "GetNearestDriversCurrentlyOnRide - DLoc:- " <> show driverLocs
-  driverInfos <- Int.getDriverInfosWithCond (driverLocs <&> (.driverId)) False True isRental isInterCity prepaidSubscriptionThreshold rideFare minWalletAmountForCashRides paymentInstrument
+  driverInfos_ <- Int.getDriverInfosWithCond (driverLocs <&> (.driverId)) False True isRental isInterCity
+  driverInfos <- QGND.filterDriversBySufficientBalance prepaidSubscriptionAndWalletEnabled rideFare fleetPrepaidSubscriptionThreshold prepaidSubscriptionThreshold driverInfos_
   logDebug $ "GetNearestDriversCurrentlyOnRide - DInfo:- " <> show (DIAPI.convertToDriverInfoAPIEntity <$> driverInfos)
   vehicles <- Int.getVehicles driverInfos
   drivers <- Int.getDrivers vehicles

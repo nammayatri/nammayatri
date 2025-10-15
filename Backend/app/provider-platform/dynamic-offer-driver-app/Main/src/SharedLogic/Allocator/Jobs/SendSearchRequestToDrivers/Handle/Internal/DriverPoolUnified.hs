@@ -213,7 +213,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                     onlinePayment = merchant.onlinePayment,
                     rideFare = Just searchTry.baseFare, -- TODO: add walletBalance check
                     paymentInstrument = fmap (.paymentInstrument) paymentMethodInfo,
-                    enforceSufficientDriverBalance = fromMaybe False merchant.enforceSufficientDriverBalance,
+                    prepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled,
                     ..
                   }
           calculateDriverPoolWithActualDist driverPoolReq poolType currentSearchInfo batchNum
@@ -341,7 +341,7 @@ prepareDriverPoolBatch cityServiceTiers merchant driverPoolCfg searchReq searchT
                         isInterCity = isInterCityTrip searchTry.tripCategory,
                         onlinePayment = merchant.onlinePayment,
                         rideFare = Just searchTry.baseFare,
-                        enforceSufficientDriverBalance = fromMaybe False merchant.enforceSufficientDriverBalance,
+                        prepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled,
                         paymentInstrument = fmap (.paymentInstrument) paymentMethodInfo,
                         ..
                       }
@@ -493,7 +493,7 @@ assignDriverGoHomeTags pool searchReq searchTry tripQuoteDetails driverPoolCfg m
                   configsInExperimentVersions = searchReq.configInExperimentVersions,
                   rideFare = Just searchTry.baseFare,
                   paymentInstrument = fmap (.paymentInstrument) paymentMethodInfo,
-                  enforceSufficientDriverBalance = fromMaybe False merchant.enforceSufficientDriverBalance,
+                  prepaidSubscriptionAndWalletEnabled = fromMaybe False merchant.prepaidSubscriptionAndWalletEnabled,
                   ..
                 }
         filterOutGoHomeDriversAccordingToHomeLocation (map (convertDriverPoolWithActualDistResultToNearestGoHomeDriversResult False True) pool) goHomeReq merchantOpCityId
