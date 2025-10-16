@@ -45,9 +45,6 @@ findByMobileNumberAndMerchantId countryCode mobileNumberHash (Id merchantId) = f
 findByRoleAndMobileNumberAndMerchantId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Role -> Text -> DbHash -> Id Merchant -> m (Maybe Person)
 findByRoleAndMobileNumberAndMerchantId role_ countryCode mobileNumberHash (Id merchantId) = findOneWithKV [Se.And [Se.Is BeamP.role $ Se.Eq role_, Se.Is BeamP.mobileCountryCode $ Se.Eq (Just countryCode), Se.Is BeamP.mobileNumberHash $ Se.Eq (Just mobileNumberHash), Se.Is BeamP.merchantId $ Se.Eq merchantId]]
 
-findByMobileNumberHashCountryCodeAndMerchantId :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => DbHash -> Text -> Id Merchant -> m (Maybe Person)
-findByMobileNumberHashCountryCodeAndMerchantId mobileNumberHash countryCode (Id merchantId) = findOneWithKV [Se.And [Se.Is BeamP.mobileCountryCode $ Se.Eq (Just countryCode), Se.Is BeamP.mobileNumberHash $ Se.Eq (Just mobileNumberHash), Se.Is BeamP.merchantId $ Se.Eq merchantId]]
-
 findByMobileNumberHashAndCountryCode :: (MonadFlow m, CacheFlow m r, EsqDBFlow m r) => Text -> DbHash -> m (Maybe Person)
 findByMobileNumberHashAndCountryCode countryCode mobileNumberHash =
   findAllWithOptionsKV
