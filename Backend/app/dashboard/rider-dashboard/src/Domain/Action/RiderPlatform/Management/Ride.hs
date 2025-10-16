@@ -10,6 +10,7 @@ module Domain.Action.RiderPlatform.Management.Ride
     postRideSyncMultiple,
     postRideCancelMultiple,
     getRideKaptureList,
+    cancellationChargesWaiveOff,
   )
 where
 
