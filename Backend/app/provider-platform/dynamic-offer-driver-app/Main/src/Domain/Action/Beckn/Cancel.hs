@@ -169,6 +169,8 @@ cancel req merchant booking mbActiveSearchTry = do
                       logTagInfo ("bookingId-" <> getId req.bookingId) ("cancellation dues: " <> show charges)
                       QRD.updateCancellationDues (charges + riderDetails.cancellationDues) riderId
                       QRide.updateCancellationFeeIfCancelledField (Just charges) ride.id
+                      when (charges > 0) $ do
+                        QRD.updateCancellationDueRidesCount riderId.getId
                       logTagInfo ("bookingId-" <> getId req.bookingId) ("after updation riderDetails.cancellationDues: " <> show riderDetails.cancellationDues <> " charges: " <> show charges)
                       return (Just charges)
                     Nothing -> return Nothing
