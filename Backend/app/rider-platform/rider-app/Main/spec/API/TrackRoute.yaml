@@ -5,6 +5,7 @@ imports:
   UTCTime: Kernel.Prelude
   Double: Kernel.Prelude
   VehicleCategory: BecknV2.FRFS.Enums
+  ServiceTierType: BecknV2.FRFS.Enums
   PlatformType: Domain.Types.IntegratedBPPConfig
   IntegratedBPPConfig: Domain.Types.IntegratedBPPConfig
   RouteState: Storage.CachedQueries.Merchant.MultiModalBus
@@ -37,6 +38,8 @@ types:
     vehicleInfo: VehicleInfoForRoute
     upcomingStops: [SharedLogic.FRFSUtils.UpcomingStop]
     delay: Maybe Seconds
+    routeShortName: Maybe Text
+    serviceTierType: Maybe ServiceTierType
 
 apis:
   - GET:

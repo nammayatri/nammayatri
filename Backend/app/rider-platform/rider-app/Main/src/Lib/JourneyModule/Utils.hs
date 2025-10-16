@@ -1338,6 +1338,17 @@ getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber = do
       return Nothing
     Right result -> return result
 
+getVehicleServiceTypeFromInMem ::
+  (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
+  [DIntegratedBPPConfig.IntegratedBPPConfig] ->
+  Text ->
+  m (Maybe Spec.ServiceTierType)
+getVehicleServiceTypeFromInMem integratedBPPConfigs vehicleNumber = IM.withInMemCache ["CACHED_VEHICLE_TYPE", vehicleNumber] 43200 $ do
+  res <- getVehicleLiveRouteInfo integratedBPPConfigs vehicleNumber
+  case res of
+    Just (_, VehicleLiveRouteInfo {serviceType}) -> return $ Just serviceType
+    Nothing -> return Nothing
+
 getVehicleLiveRouteInfoUnsafe ::
   (CoreMetrics m, MonadFlow m, MonadReader r m, HasShortDurationRetryCfg r c, Log m, CacheFlow m r, EsqDBFlow m r) =>
   [DIntegratedBPPConfig.IntegratedBPPConfig] ->

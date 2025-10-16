@@ -5,6 +5,7 @@ import qualified BecknV2.FRFS.Enums as Spec
 import BecknV2.FRFS.Utils (frfsVehicleCategoryToBecknVehicleCategory)
 import Data.Function
 import qualified Data.List as List
+import qualified Data.Map as M
 import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.Person
@@ -15,6 +16,7 @@ import Kernel.External.Maps.Types (LatLong (..))
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Lib.JourneyModule.Utils as JMU
 import SharedLogic.FRFSUtils
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
@@ -62,10 +64,18 @@ getTrackVehicles (mbPersonId, merchantId) routeCode _mbCurrentLat _mbCurrentLon 
   let vehiclesYetToReachSelectedStop = filterVehiclesYetToReachSelectedStop deduplicatedVehicles
   let (confirmedHighBuses, ghostBuses) = List.partition (\a -> ((snd a).vehicleInfo >>= (.routeState)) == Just CQMMB.ConfirmedHigh) vehiclesYetToReachSelectedStop
   let sortedTracking = sortOn (distanceToStop mbSourceStop . snd) ghostBuses
+  let sortedConfirmed = sortOn (distanceToStop mbSourceStop . snd) confirmedHighBuses
+  let (nearestXBuses, restOfBuses) = splitAt maxBuses $ sortedConfirmed <> sortedTracking
+  serviceTiersOfSelectedBuses :: [(Maybe Spec.ServiceTierType, (Text, VehicleTracking))] <- mapM (\vehicle -> (,vehicle) <$> JMU.getVehicleServiceTypeFromInMem [integratedBPPConfig] (snd vehicle).vehicleId) nearestXBuses
+  serviceTiersOfRemainingBuses :: [(Maybe Spec.ServiceTierType, (Text, VehicleTracking))] <- mapM (\vehicle -> (,vehicle) <$> JMU.getVehicleServiceTypeFromInMem [integratedBPPConfig] (snd vehicle).vehicleId) restOfBuses
+  let alreadySelectedServiceTiers :: [Maybe Spec.ServiceTierType] = List.nub $ map fst serviceTiersOfSelectedBuses
+  let oneFromEachRemaining :: [(Maybe Spec.ServiceTierType, (Text, VehicleTracking))] = filter (\(st, _) -> not $ st `elem` alreadySelectedServiceTiers) . M.toList $ M.fromList serviceTiersOfRemainingBuses
+  let allBuses :: [(Maybe Spec.ServiceTierType, (Text, VehicleTracking))] = serviceTiersOfSelectedBuses <> oneFromEachRemaining
+
   pure $
     TrackRoute.TrackingResp
       { vehicleTrackingInfo =
-          map (uncurry mkVehicleTrackingResponse) (confirmedHighBuses <> take maxBuses sortedTracking)
+          map (uncurry mkVehicleTrackingResponse) allBuses
       }
   where
     filterVehiclesYetToReachSelectedStop vehicleTracking =
@@ -73,7 +83,7 @@ getTrackVehicles (mbPersonId, merchantId) routeCode _mbCurrentLat _mbCurrentLon 
         Just selectedStopId -> filter (\(_, vt) -> any (\u -> u.stopCode == selectedStopId) vt.upcomingStops) vehicleTracking
         Nothing -> vehicleTracking
 
-    mkVehicleTrackingResponse actualRouteCode VehicleTracking {..} =
+    mkVehicleTrackingResponse serviceTierType (actualRouteCode, VehicleTracking {..}) =
       TrackRoute.VehicleInfo
         { vehicleId = vehicleId,
           nextStop = nextStop,
@@ -86,7 +96,9 @@ getTrackVehicles (mbPersonId, merchantId) routeCode _mbCurrentLat _mbCurrentLon 
               (TrackRoute.VehicleInfoForRoute Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing)
               mkVehicleInfo
               vehicleInfo,
-          routeCode = actualRouteCode
+          routeCode = actualRouteCode,
+          routeShortName = routeShortName,
+          serviceTierType = serviceTierType
         }
 
     mkVehicleInfo VehicleInfo {..} = TrackRoute.VehicleInfoForRoute {..}
