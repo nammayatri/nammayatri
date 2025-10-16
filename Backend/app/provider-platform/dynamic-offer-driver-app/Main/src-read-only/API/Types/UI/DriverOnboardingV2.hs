@@ -8,6 +8,7 @@ import qualified Domain.Types.DocumentVerificationConfig
 import qualified Domain.Types.DriverInformation
 import qualified Domain.Types.DriverPanCard
 import qualified Domain.Types.Image
+import qualified Domain.Types.Person
 import EulerHS.Prelude hiding (id)
 import qualified Kernel.Prelude
 import qualified Kernel.Types.Common
@@ -51,6 +52,62 @@ data CommonDocumentReq = CommonDocumentReq
   { documentData :: Kernel.Prelude.Text,
     documentType :: Domain.Types.DocumentVerificationConfig.DocumentType,
     imageId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Image.Image)
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data DigiLockerAuthData = DigiLockerAuthData
+  { accessToken :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    codeID :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    errorCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    errorDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    scope :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    stateID :: Kernel.Prelude.Maybe Kernel.Prelude.Bool
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data DigiLockerDetailsData = DigiLockerDetailsData {digilocker :: DigiLockerAuthData, documents :: [DigiLockerDocumentStatus]}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data DigiLockerDocumentStatus = DigiLockerDocumentStatus
+  { availability :: Kernel.Prelude.Text,
+    documentType :: Kernel.Prelude.Text,
+    errorCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    errorDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    pullFields :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
+    status :: Kernel.Prelude.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data DigiLockerStateData = DigiLockerStateData {codeVerifier :: Kernel.Prelude.Text, driverId :: Kernel.Types.Id.Id Domain.Types.Person.Person}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data DigiLockerStatusData = DigiLockerStatusData {errorCode :: Kernel.Prelude.Maybe Kernel.Prelude.Text, errorDescription :: Kernel.Prelude.Maybe Kernel.Prelude.Text, status :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data DigiLockerTokenRequest = DigiLockerTokenRequest
+  { client_id :: Kernel.Prelude.Text,
+    client_secret :: Kernel.Prelude.Text,
+    code :: Kernel.Prelude.Text,
+    code_verifier :: Kernel.Prelude.Text,
+    grant_type :: Kernel.Prelude.Text,
+    redirect_uri :: Kernel.Prelude.Text
+  }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data DigiLockerTokenResponse = DigiLockerTokenResponse
+  { access_token :: Kernel.Prelude.Text,
+    expires_in :: Kernel.Prelude.Int,
+    issued :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    pull_docs :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    scope :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    token_type :: Kernel.Prelude.Text
   }
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)

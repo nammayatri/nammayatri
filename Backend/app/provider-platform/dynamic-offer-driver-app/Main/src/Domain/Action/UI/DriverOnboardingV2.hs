@@ -4,8 +4,6 @@ import qualified API.Types.UI.DriverOnboardingV2
 import qualified API.Types.UI.DriverOnboardingV2 as APITypes
 import qualified AWS.S3 as S3
 import qualified Control.Monad.Extra as CME
-import Data.Aeson (FromJSON, ToJSON)
-import qualified Data.Aeson as A
 import Data.Maybe
 import qualified Data.Text as T
 import Data.Time (defaultTimeLocale, formatTime)
@@ -34,6 +32,7 @@ import Domain.Types.VehicleServiceTier
 import Environment
 import EulerHS.Prelude hiding (id)
 import qualified EulerHS.Prelude
+import qualified EulerHS.Types as Euler
 import Kernel.Beam.Functions
 import qualified Kernel.External.BackgroundVerification.Interface as BackgroundVerification
 import Kernel.External.Encryption
@@ -50,6 +49,7 @@ import qualified Kernel.Types.Documents as Documents
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Servant
 import SharedLogic.DriverOnboarding
 import qualified SharedLogic.DriverOnboarding as SDO
 import SharedLogic.FareCalculator
@@ -59,6 +59,7 @@ import SharedLogic.VehicleServiceTier
 import qualified Storage.Cac.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.Cac.TransporterConfig as CQTC
 import qualified Storage.CachedQueries.DocumentVerificationConfig as CQDVC
+import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
 import qualified Storage.CachedQueries.VehicleServiceTier as CQVST
 import qualified Storage.Queries.AadhaarCard as QAadhaarCard
@@ -70,6 +71,7 @@ import qualified Storage.Queries.DriverGstin as QDGTIN
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverLicense as QDL
 import qualified Storage.Queries.DriverPanCard as QDPC
+import qualified Storage.Queries.DriverRCAssociationExtra as DRAE
 import qualified Storage.Queries.DriverSSN as QDriverSSN
 import qualified Storage.Queries.HyperVergeSdkLogs as HVSdkLogsQuery
 import qualified Storage.Queries.Image as ImageQuery
@@ -1075,75 +1077,417 @@ postDriverRegisterCommonDocument (mbDriverId, merchantId, merchantOperatingCityI
             updatedAt = now
           }
 
--- DigiLocker state data stored in Redis
-data DigiLockerStateData = DigiLockerStateData
-  { driverId :: Id Domain.Types.Person.Person,
-    codeVerifier :: Text
-  }
-  deriving (Show, Generic, ToJSON, FromJSON)
+----------- DigiLocker Integration Configuration and Helpers -----------
 
--- DigiLocker status data for frontend polling
-data DigiLockerStatusData = DigiLockerStatusData
-  { status :: Text, -- "success", "error", "pending"
-    errorCode :: Maybe Text,
-    errorDescription :: Maybe Text
-  }
-  deriving (Show, Generic, ToJSON, FromJSON)
+-- TODO: Move these to environment variables in AppCfg/AppEnv
+-- For now keeping them as constants, will be updated to fetch from environment
+digiLockerClientId :: Text
+digiLockerClientId = "YOUR_CLIENT_ID" -- TODO: Fetch from environment
+
+digiLockerClientSecret :: Text
+digiLockerClientSecret = "YOUR_CLIENT_SECRET" -- TODO: Fetch from environment
+
+digiLockerRedirectUri :: Text
+digiLockerRedirectUri = "YOUR_REDIRECT_URI" -- TODO: Fetch from environment
+
+digiLockerTokenUrl :: Text
+digiLockerTokenUrl = "http://digilocker.meripehchaan.gov.in/public/oauth2/1/token"
+
+-- Servant API type for DigiLocker token endpoint
+type DigiLockerTokenAPI =
+  Servant.ReqBody '[Servant.JSON] APITypes.DigiLockerTokenRequest
+    Servant.:> Servant.Post '[Servant.JSON] APITypes.DigiLockerTokenResponse
+
+digiLockerTokenAPI :: Servant.Proxy DigiLockerTokenAPI
+digiLockerTokenAPI = Servant.Proxy
 
 -- Redis key for DigiLocker state
 mkDigiLockerStateKey :: Text -> Text
-mkDigiLockerStateKey stateId = "digilocker_state_id:" <> stateId
+mkDigiLockerStateKey stateId = "digilocker:state:" <> stateId
 
 -- Redis key for DigiLocker status (for frontend polling)
 mkDigiLockerStatusKey :: Id Domain.Types.Person.Person -> Text
 mkDigiLockerStatusKey driverId = "digilockerStatus:" <> driverId.getId
 
-postDobppVerifyCallbackDigiLocker ::
-  ( Kernel.Prelude.Text ->
-    Kernel.Prelude.Text ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Text ->
-    Kernel.Prelude.Maybe Kernel.Prelude.Text ->
-    Environment.Flow APISuccess
-  )
-postDobppVerifyCallbackDigiLocker code state mbError mbErrorDescription = do
-  -- Fetch driver information from Redis using state
-  let stateKey = mkDigiLockerStateKey state
-  mbStateData <- Redis.get stateKey
-  stateData <- mbStateData & fromMaybeM (InvalidRequest "Invalid or expired state parameter")
+-- Redis key for DigiLocker details
+mkDigiLockerDetailsKey :: Id Domain.Types.Person.Person -> Text
+mkDigiLockerDetailsKey driverId = "digilocker:details:" <> driverId.getId
 
-  let statusKey = mkDigiLockerStatusKey stateData.driverId
-  let ttlSeconds = 600 :: Integer -- 10 minutes TTL for status data
+----------- DigiLocker Helper Functions -----------
 
-  -- Handle error cases from DigiLocker
-  whenJust mbError $ \errorCode -> do
-    let errorMsg = fromMaybe "Unknown error occurred during DigiLocker verification" mbErrorDescription
-    logError $ "DigiLocker callback error - Code: " <> errorCode <> ", Description: " <> errorMsg <> ", State: " <> state <> ", DriverId: " <> stateData.driverId.getId
+-- Parse DigiLocker scope string to extract document URIs
+-- Format: "files.issueddocs issued/in.gov.transport-DRVLC-GJ06001227 userdetails issued/in.gov.transport-RVCER-GJ06J066 picture issued/in.gov.pan-PANCR-F2525N"
+parseDigiLockerScope :: Text -> [(Text, Text)] -- Returns list of (type, uri) tuples where type is "issued" or "pull"
+parseDigiLockerScope scopeText = do
+  let tokens = T.words scopeText
+  catMaybes $ map parseToken tokens
+  where
+    parseToken :: Text -> Maybe (Text, Text)
+    parseToken token
+      | "issued/" `T.isPrefixOf` token = Just ("issued", token)
+      | "file.partners/" `T.isPrefixOf` token = Just ("pull", token)
+      | otherwise = Nothing
 
-    -- Push error to Redis for frontend polling
-    let errorStatusData =
-          DigiLockerStatusData
-            { status = "error",
-              errorCode = Just errorCode,
-              errorDescription = Just errorMsg
-            }
-    Redis.setExp statusKey errorStatusData ttlSeconds
+-- Extract document type from URI
+-- Examples:
+--   "issued/in.gov.pan-PANCR-F2525N" -> "PAN"
+--   "issued/in.gov.transport-DRVLC-GJ06001227" -> "DL"
+--   "issued/in.gov.transport-RVCER-GJ06J066" -> "RC"
+extractDocumentType :: (Text, Text) -> Text
+extractDocumentType (_, uri) =
+  case T.splitOn "-" uri of
+    (_ : docType : _) -> case T.toUpper docType of
+      "PANCR" -> "PAN"
+      "DRVLC" -> "DL"
+      "RVCER" -> "RC"
+      other -> other
+    _ -> "UNKNOWN"
 
-    return Success
+-- Main document processing function (runs in background)
+processDigiLockerDocuments ::
+  Id Domain.Types.Person.Person ->
+  Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
+  Text -> -- access token
+  Text -> -- scope
+  Text -> -- details Redis key
+  Flow ()
+processDigiLockerDocuments driverId merchantOpCityId accessToken scopeText detailsKey = do
+  logInfo $ "DigiLocker processing - Starting background processing for DriverId: " <> driverId.getId
 
-  -- Success case - store success status in Redis
-  logInfo $ "DigiLocker callback success - State: " <> state <> ", Code: " <> code <> ", DriverId: " <> stateData.driverId.getId
+  -- Parse scope to get issued and pull documents
+  let allDocs = parseDigiLockerScope scopeText
+  let issuedDocs = filter (\(docType, _) -> docType == "issued") allDocs
+  let pullDocs = filter (\(docType, _) -> docType == "pull") allDocs
 
-  let successStatusData =
-        DigiLockerStatusData
-          { status = "success",
+  logInfo $ "DigiLocker processing - Found " <> show (length issuedDocs) <> " issued docs and " <> show (length pullDocs) <> " pull docs. DriverId: " <> driverId.getId
+
+  -- Get mandatory documents for this city
+  mandatoryDocTypes <- getMandatoryDocumentTypes merchantOpCityId
+
+  -- Process issued documents
+  processedIssuedDocs <- mapM (processIssuedDocument driverId merchantOpCityId accessToken mandatoryDocTypes) issuedDocs
+
+  -- Process pull documents (just mark with required fields, don't fetch yet)
+  processedPullDocs <- mapM (processPullDocument driverId merchantOpCityId mandatoryDocTypes) pullDocs
+
+  -- Update Redis with final document statuses
+  let allProcessedDocs = processedIssuedDocs <> processedPullDocs
+  mbCurrentData <- Redis.get detailsKey
+  whenJust mbCurrentData $ \currentData -> do
+    let updatedData = currentData {APITypes.documents = allProcessedDocs}
+    Redis.setExp detailsKey updatedData 3600
+
+  logInfo $ "DigiLocker processing - Completed. Processed " <> show (length allProcessedDocs) <> " documents. DriverId: " <> driverId.getId
+
+-- Get mandatory document types for a city
+getMandatoryDocumentTypes :: Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Flow [Text]
+getMandatoryDocumentTypes _merchantOpCityId = do
+  -- TODO: This should check DocumentVerificationConfig to determine which docs are mandatory
+  -- For now, returning common mandatory documents
+  return ["DL", "RC", "PAN"]
+
+-- Process a single issued document
+processIssuedDocument ::
+  Id Domain.Types.Person.Person ->
+  Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
+  Text -> -- access token
+  [Text] -> -- mandatory doc types
+  (Text, Text) -> -- (type, uri)
+  Flow APITypes.DigiLockerDocumentStatus
+processIssuedDocument driverId merchantOpCityId accessToken mandatoryDocTypes (_, uri) = do
+  let docType = extractDocumentType ("issued", uri)
+
+  -- Check if this document type is mandatory
+  let isMandatory = docType `elem` mandatoryDocTypes
+
+  -- Check if document already exists in DB
+  alreadyExists <- checkDocumentExistsInDB driverId docType
+
+  if not isMandatory || alreadyExists
+    then do
+      -- Not mandatory or already exists - skip processing
+      logDebug $ "DigiLocker processing - Skipping " <> docType <> " (mandatory: " <> show isMandatory <> ", exists: " <> show alreadyExists <> "). DriverId: " <> driverId.getId
+      return
+        APITypes.DigiLockerDocumentStatus
+          { documentType = docType,
+            status = if alreadyExists then "VALID" else "SKIPPED",
+            availability = "ISSUED",
+            pullFields = Nothing,
             errorCode = Nothing,
             errorDescription = Nothing
           }
-  Redis.setExp statusKey successStatusData ttlSeconds
+    else do
+      -- Fetch and process the document
+      logInfo $ "DigiLocker processing - Fetching " <> docType <> " from DigiLocker. DriverId: " <> driverId.getId
+      result <- try @_ @SomeException (fetchAndStoreDocument driverId merchantOpCityId accessToken uri docType)
+      case result of
+        Left err -> do
+          logError $ "DigiLocker processing - Failed to fetch " <> docType <> ". Error: " <> show err <> ", DriverId: " <> driverId.getId
+          return
+            APITypes.DigiLockerDocumentStatus
+              { documentType = docType,
+                status = "FAILED",
+                availability = "ISSUED",
+                pullFields = Nothing,
+                errorCode = Just "FETCH_FAILED",
+                errorDescription = Just $ T.pack $ show err
+              }
+        Right () -> do
+          logInfo $ "DigiLocker processing - Successfully processed " <> docType <> ". DriverId: " <> driverId.getId
+          return
+            APITypes.DigiLockerDocumentStatus
+              { documentType = docType,
+                status = "VALID",
+                availability = "ISSUED",
+                pullFields = Nothing,
+                errorCode = Nothing,
+                errorDescription = Nothing
+              }
 
-  -- TODO: Implement DigiLocker verification logic using:
-  --   - code (authorization code)
-  --   - stateData.codeVerifier (PKCE code verifier)
-  --   - stateData.driverId (driver ID)
+-- Process a pull document (mark with required fields)
+processPullDocument ::
+  Id Domain.Types.Person.Person ->
+  Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
+  [Text] -> -- mandatory doc types
+  (Text, Text) -> -- (type, uri)
+  Flow APITypes.DigiLockerDocumentStatus
+processPullDocument driverId _merchantOpCityId mandatoryDocTypes (_, uri) = do
+  let docType = extractDocumentType ("pull", uri)
+
+  -- Check if document already exists in DB
+  alreadyExists <- checkDocumentExistsInDB driverId docType
+
+  -- Check if this document type is mandatory
+  let isMandatory = docType `elem` mandatoryDocTypes
+
+  if alreadyExists || not isMandatory
+    then do
+      -- Already exists or not mandatory - skip
+      logDebug $ "DigiLocker processing - Skipping pull doc " <> docType <> " (mandatory: " <> show isMandatory <> ", exists: " <> show alreadyExists <> "). DriverId: " <> driverId.getId
+      return
+        APITypes.DigiLockerDocumentStatus
+          { documentType = docType,
+            status = if alreadyExists then "VALID" else "SKIPPED",
+            availability = "ISSUED",
+            pullFields = Nothing,
+            errorCode = Nothing,
+            errorDescription = Nothing
+          }
+    else do
+      -- Needs manual entry to pull
+      let requiredFields = getPullRequiredFields docType
+      logInfo $ "DigiLocker processing - Marking " <> docType <> " as PULL with fields: " <> T.intercalate ", " requiredFields <> ". DriverId: " <> driverId.getId
+      return
+        APITypes.DigiLockerDocumentStatus
+          { documentType = docType,
+            status = "PENDING",
+            availability = "PULL",
+            pullFields = Just requiredFields,
+            errorCode = Nothing,
+            errorDescription = Nothing
+          }
+
+-- Get required fields for pulling a document
+getPullRequiredFields :: Text -> [Text]
+getPullRequiredFields docType = case docType of
+  "PAN" -> ["DOB", "PAN_Number"]
+  "DL" -> ["DOB", "DL_Number"]
+  "RC" -> ["RC_Number"]
+  _ -> []
+
+-- Check if document already exists in DB
+checkDocumentExistsInDB :: Id Domain.Types.Person.Person -> Text -> Flow Bool
+checkDocumentExistsInDB driverId docType = do
+  case docType of
+    "PAN" -> do
+      mbPan <- QDPC.findByDriverId driverId
+      return $ isJust mbPan && maybe False (\pan -> pan.verificationStatus == Documents.VALID) mbPan
+    "DL" -> do
+      mbDL <- QDL.findByDriverId driverId
+      return $ isJust mbDL && maybe False (\dl -> dl.verificationStatus == Documents.VALID) mbDL
+    "RC" -> do
+      rcList <- DRAE.findAllByDriverId driverId
+      let mbRC = fmap snd $ listToMaybe rcList
+      return $ isJust mbRC && maybe False (\rc -> rc.verificationStatus == Documents.VALID) mbRC
+    _ -> return False
+
+-- Fetch document from DigiLocker and store in DB
+fetchAndStoreDocument ::
+  Id Domain.Types.Person.Person ->
+  Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
+  Text -> -- access token
+  Text -> -- document URI (e.g., "issued/in.gov.pan-PANCR-F2525N")
+  Text -> -- document type
+  Flow ()
+fetchAndStoreDocument driverId _merchantOpCityId _accessToken uri docType = do
+  -- Construct DigiLocker XML API URL
+  let xmlUrl = "https://digilocker.meripehchaan.gov.in/public/oauth2/1/xml/" <> T.replace "issued/" "" uri
+
+  logInfo $ "DigiLocker processing - Fetching document from: " <> xmlUrl <> ", DriverId: " <> driverId.getId
+
+  -- TODO: Implement actual HTTP call to DigiLocker XML API with access token
+  -- TODO: Parse XML response
+  -- TODO: Extract document data based on docType
+  -- TODO: Store in appropriate DB table (PAN, DL, RC, etc.)
+  -- For now, just logging that we would do this
+  logInfo $ "DigiLocker processing - TODO: Fetch and store " <> docType <> " document. DriverId: " <> driverId.getId
+
+  -- This will be implemented in the next iteration with actual XML parsing and DB updates
+  return ()
+
+postDobppVerifyCallbackDigiLocker ::
+  ( Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+    Kernel.Prelude.Maybe Kernel.Prelude.Text ->
+    Kernel.Prelude.Text ->
+    Kernel.Prelude.Text ->
+    Environment.Flow APISuccess
+  )
+postDobppVerifyCallbackDigiLocker mbError mbErrorDescription code stateParam = do
+  -- Step 1: Validate code and state parameters
+  -- If either is empty, log and return error (500 Internal Error)
+  when (T.null code || T.null stateParam) $ do
+    logError $ "DigiLocker callback - Missing required parameters. Code empty: " <> show (T.null code) <> ", State empty: " <> show (T.null stateParam)
+    throwError $ InternalError "DigiLocker callback received with empty code or state parameter"
+
+  -- Step 2: Fetch driver information from Redis using state
+  let stateKey = mkDigiLockerStateKey stateParam
+  logDebug $ "DigiLocker callback - Fetching state data from Redis key: " <> stateKey
+  mbStateData <- Redis.get stateKey :: Flow (Maybe APITypes.DigiLockerStateData)
+  stateData <- mbStateData & fromMaybeM (InvalidRequest "Invalid or expired state parameter from DigiLocker")
+
+  let driverId = APITypes.driverId stateData
+  let codeVerifier = APITypes.codeVerifier stateData
+  let detailsKey = mkDigiLockerDetailsKey driverId
+
+  logInfo $ "DigiLocker callback - Received callback for DriverId: " <> driverId.getId <> ", State: " <> stateParam
+
+  -- Handle error cases from DigiLocker
+  whenJust mbError $ \errorCode -> do
+    let errorMsg = fromMaybe "Unknown DigiLocker error" mbErrorDescription
+    logError $ "DigiLocker callback - Error from DigiLocker. Code: " <> errorCode <> ", Description: " <> errorMsg <> ", DriverId: " <> driverId.getId
+
+    -- Store error in details Redis key
+    let errorDetailsData =
+          APITypes.DigiLockerDetailsData
+            { digilocker =
+                APITypes.DigiLockerAuthData
+                  { stateID = Just False,
+                    codeID = Just False,
+                    errorCode = Just errorCode,
+                    errorDescription = Just errorMsg,
+                    accessToken = Nothing,
+                    scope = Nothing
+                  },
+              documents = []
+            }
+    Redis.setExp detailsKey errorDetailsData 3600 -- 1 hour TTL
+    throwError $ InvalidRequest $ "DigiLocker authentication failed: " <> errorCode
+
+  -- Step 3: Fetch person and merchant to validate merchant
+  person <- runInReplica $ PersonQuery.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+  merchant <- CQM.findById person.merchantId >>= fromMaybeM (MerchantDoesNotExist person.merchantId.getId)
+
+  -- Step 4: Check if merchant is Namma Yatri
+  unless (merchant.name == "Namma Yatri") $ do
+    logError $ "DigiLocker callback - Merchant mismatch. Expected: Namma Yatri, Got: " <> merchant.name <> ", DriverId: " <> driverId.getId
+    throwError $ InvalidRequest "DigiLocker verification is only supported for Namma Yatri merchant"
+
+  logInfo $ "DigiLocker callback - Merchant validated: " <> merchant.name <> ", DriverId: " <> driverId.getId
+
+  -- Step 5: Call DigiLocker token API to exchange code for access token
+  let tokenRequest =
+        APITypes.DigiLockerTokenRequest
+          { grant_type = "authorization_code",
+            code = code,
+            client_id = digiLockerClientId,
+            client_secret = digiLockerClientSecret,
+            redirect_uri = digiLockerRedirectUri,
+            code_verifier = codeVerifier
+          }
+
+  logInfo $ "DigiLocker callback - Calling token API for DriverId: " <> driverId.getId
+
+  -- Make the HTTP call to DigiLocker token endpoint
+  tokenUrl <- Kernel.Prelude.parseBaseUrl digiLockerTokenUrl
+  let eulerClient = Euler.client digiLockerTokenAPI tokenRequest
+  tokenResponse <-
+    ( try @_ @SomeException (callAPI tokenUrl eulerClient "digilocker-token" digiLockerTokenAPI)
+        >>= \case
+          Left err -> do
+            logError $ "DigiLocker callback - Token API call failed. Error: " <> show err <> ", DriverId: " <> driverId.getId
+            -- Store error in details Redis key
+            let errorDetailsData =
+                  APITypes.DigiLockerDetailsData
+                    { digilocker =
+                        APITypes.DigiLockerAuthData
+                          { stateID = Just True,
+                            codeID = Just False,
+                            errorCode = Just "TOKEN_API_FAILED",
+                            errorDescription = Just $ T.pack $ show err,
+                            accessToken = Nothing,
+                            scope = Nothing
+                          },
+                      documents = []
+                    }
+            Redis.setExp detailsKey errorDetailsData 3600
+            throwError $ InternalError "Failed to obtain access token from DigiLocker API"
+          Right eitherResp -> case eitherResp of
+            Left clientErr -> do
+              logError $ "DigiLocker callback - Token API client error: " <> show clientErr <> ", DriverId: " <> driverId.getId
+              throwError $ InternalError "DigiLocker token API returned client error"
+            Right resp -> return resp
+    ) ::
+      Flow APITypes.DigiLockerTokenResponse
+
+  logInfo $ "DigiLocker callback - Token API success. DriverId: " <> driverId.getId
+
+  -- Step 6: Parse scope to identify documents and mark all as PENDING initially
+  let scopeText = case tokenResponse of
+        APITypes.DigiLockerTokenResponse {APITypes.scope = s} -> fromMaybe "" s
+  let documentURIs = parseDigiLockerScope scopeText
+  let initialDocuments =
+        map
+          ( \uri ->
+              APITypes.DigiLockerDocumentStatus
+                { documentType = extractDocumentType uri,
+                  status = "PENDING",
+                  availability = "UNKNOWN",
+                  pullFields = Nothing,
+                  errorCode = Nothing,
+                  errorDescription = Nothing
+                }
+          )
+          documentURIs
+
+  -- Store access token, scope, and pending documents in Redis
+  let pendingDetailsData =
+        APITypes.DigiLockerDetailsData
+          { digilocker =
+              APITypes.DigiLockerAuthData
+                { stateID = Just True,
+                  codeID = Just True,
+                  errorCode = Nothing,
+                  errorDescription = Nothing,
+                  accessToken = Just (case tokenResponse of APITypes.DigiLockerTokenResponse {APITypes.access_token = at} -> at),
+                  scope = case tokenResponse of APITypes.DigiLockerTokenResponse {APITypes.scope = s} -> s
+                },
+            documents = initialDocuments
+          }
+  Redis.setExp detailsKey pendingDetailsData 3600 -- 1 hour TTL
+  logInfo $ "DigiLocker callback - Access token stored, marked " <> show (length initialDocuments) <> " documents as PENDING. DriverId: " <> driverId.getId
+
+  -- Step 7: Return success immediately and continue processing in background thread
+  fork "digilocker-document-processing" $ do
+    let accessToken = case tokenResponse of APITypes.DigiLockerTokenResponse {APITypes.access_token = at} -> at
+    processDigiLockerDocuments driverId person.merchantOperatingCityId accessToken scopeText detailsKey
+      `catchAny` \err -> do
+        logError $ "DigiLocker document processing failed - Error: " <> show err <> ", DriverId: " <> driverId.getId
+        -- Update Redis with error
+        mbCurrentData <- Redis.get detailsKey
+        whenJust mbCurrentData $ \currentData -> do
+          let currentDigiLocker = APITypes.digilocker currentData
+          let updatedDigiLocker = currentDigiLocker {APITypes.errorCode = Just "PROCESSING_FAILED", APITypes.errorDescription = Just $ T.pack $ show err} :: APITypes.DigiLockerAuthData
+          let errorData = currentData {APITypes.digilocker = updatedDigiLocker}
+          Redis.setExp detailsKey errorData 3600
 
   return Success

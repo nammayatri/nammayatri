@@ -158,6 +158,44 @@ types:
     transactionId : Maybe Text
     validationStatus : Maybe ValidationStatus
     verifiedBy : Maybe VerifiedBy
+  DigiLockerStateData:
+    driverId: Id Person
+    codeVerifier: Text
+  DigiLockerStatusData:
+    status: Text
+    errorCode: Maybe Text
+    errorDescription: Maybe Text
+  DigiLockerDetailsData:
+    digilocker: DigiLockerAuthData
+    documents: [DigiLockerDocumentStatus]
+  DigiLockerAuthData:
+    stateID: Maybe Bool
+    codeID: Maybe Bool
+    errorCode: Maybe Text
+    errorDescription: Maybe Text
+    accessToken: Maybe Text
+    scope: Maybe Text
+  DigiLockerDocumentStatus:
+    documentType: Text
+    status: Text
+    availability: Text
+    pullFields: Maybe [Text]
+    errorCode: Maybe Text
+    errorDescription: Maybe Text
+  DigiLockerTokenRequest:
+    grant_type: Text
+    code: Text
+    client_id: Text
+    client_secret: Text
+    redirect_uri: Text
+    code_verifier: Text
+  DigiLockerTokenResponse:
+    access_token: Text
+    token_type: Text
+    expires_in: Int
+    scope: Maybe Text
+    issued: Maybe Text
+    pull_docs: Maybe Text
 
 apis:
   - GET:
