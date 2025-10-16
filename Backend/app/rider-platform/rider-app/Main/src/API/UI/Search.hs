@@ -90,6 +90,7 @@ import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import SharedLogic.Search as DSearch
 import Storage.Beam.SystemConfigs ()
 import qualified Storage.CachedQueries.Merchant as CQM
+import qualified Storage.CachedQueries.Merchant.MultiModalBus as CQMMB
 import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.OTPRest.OTPRest as OTPRest
 import qualified Storage.Queries.Booking as QBooking
@@ -289,18 +290,15 @@ multiModalSearch searchRequest riderConfig initiateJourney forkInitiateFirstJour
         case (mbIntegratedBPPConfig, ptSearchDetails.vehicleNumber, ptSearchDetails.routeCode) of
           (Just integratedBPPConfig, Just userPassedVehicleNumber, Just userPassedRouteCode) -> do
             mbRouteLiveInfo <- JMU.getVehicleLiveRouteInfo [integratedBPPConfig] userPassedVehicleNumber
-            return $
-              maybe
-                Nothing
-                ( \routeLiveInfo@(JMU.VehicleLiveRouteInfo {..}) ->
-                    if routeCode == Just userPassedRouteCode
-                      then Just routeLiveInfo
-                      else
-                        if ptSearchDetails.routeCodeEditedManually == Just True
-                          then Just (JMU.VehicleLiveRouteInfo {routeCode = Just userPassedRouteCode, ..})
-                          else Nothing
-                )
-                (snd <$> mbRouteLiveInfo)
+            case snd <$> mbRouteLiveInfo of
+              Just routeLiveInfo@(JMU.VehicleLiveRouteInfo {..})
+                | routeCode == Just userPassedRouteCode ->
+                  return $ Just routeLiveInfo
+                | ptSearchDetails.routeCodeEditedManually == Just True -> do
+                  CQMMB.incrementBusRouteMismatchCounter userPassedVehicleNumber userPassedRouteCode
+                  return $ Just (JMU.VehicleLiveRouteInfo {routeCode = Just userPassedRouteCode, ..})
+                | otherwise -> return Nothing
+              Nothing -> return Nothing
           _ -> return Nothing
       _ -> return Nothing
   let result
