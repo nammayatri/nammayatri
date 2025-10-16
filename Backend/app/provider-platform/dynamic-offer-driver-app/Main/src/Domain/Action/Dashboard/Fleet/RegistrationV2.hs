@@ -284,7 +284,8 @@ createFleetOwnerInfo personId merchantId enabled = do
             isEligibleForSubscription = True,
             ticketPlaceId = Nothing,
             lienAmount = Nothing,
-            prepaidSubscriptionBalance = Nothing
+            prepaidSubscriptionBalance = Nothing,
+            planExpiryDate = Nothing
           }
   QFOI.create fleetOwnerInfo
 

@@ -43,11 +43,12 @@ findByMerchantOpCityIdAndPaymentModeWithServiceName ::
   PaymentMode ->
   ServiceNames ->
   Maybe Bool ->
+  Maybe Bool ->
   m [Plan]
-findByMerchantOpCityIdAndPaymentModeWithServiceName (Id merchantOperatingCityId) paymentMode serviceName mbIsDeprecated =
+findByMerchantOpCityIdAndPaymentModeWithServiceName (Id merchantOperatingCityId) paymentMode serviceName mbIsDeprecated mbIsFleetOwnerPlan =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantIdAndPaymentModeKey (Id merchantOperatingCityId) paymentMode serviceName mbIsDeprecated) >>= \case
     Just a -> pure a
-    Nothing -> cacheByMerchantIdAndPaymentMode (Id merchantOperatingCityId) paymentMode serviceName mbIsDeprecated /=<< Queries.findByMerchantOpCityIdAndPaymentModeWithServiceName (Id merchantOperatingCityId) paymentMode serviceName mbIsDeprecated
+    Nothing -> cacheByMerchantIdAndPaymentMode (Id merchantOperatingCityId) paymentMode serviceName mbIsDeprecated /=<< Queries.findByMerchantOpCityIdAndPaymentModeWithServiceName (Id merchantOperatingCityId) paymentMode serviceName mbIsDeprecated mbIsFleetOwnerPlan
 
 ------------------- -----------------------
 findByMerchantOpCityIdAndServiceName ::
@@ -55,11 +56,12 @@ findByMerchantOpCityIdAndServiceName ::
   Id DMOC.MerchantOperatingCity ->
   ServiceNames ->
   Maybe Bool ->
+  Maybe Bool ->
   m [Plan]
-findByMerchantOpCityIdAndServiceName merchantOperatingCityId serviceName mbIsDeprecated =
+findByMerchantOpCityIdAndServiceName merchantOperatingCityId serviceName mbIsDeprecated mbIsFleetOwnerPlan =
   Hedis.withCrossAppRedis (Hedis.safeGet $ makeMerchantIdAndServiceNameKey merchantOperatingCityId serviceName mbIsDeprecated) >>= \case
     Just a -> pure a
-    Nothing -> cacheByMerchantIdAndServiceName merchantOperatingCityId serviceName mbIsDeprecated /=<< Queries.findByMerchantOpCityIdAndServiceName merchantOperatingCityId serviceName mbIsDeprecated
+    Nothing -> cacheByMerchantIdAndServiceName merchantOperatingCityId serviceName mbIsDeprecated /=<< Queries.findByMerchantOpCityIdAndServiceName merchantOperatingCityId serviceName mbIsDeprecated mbIsFleetOwnerPlan
 
 cacheByMerchantIdAndServiceName ::
   (CacheFlow m r) =>

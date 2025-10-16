@@ -145,6 +145,7 @@ library
       Domain.Action.Dashboard.AppManagement.DriverSubscription
       Domain.Action.Dashboard.AppManagement.Overlay
       Domain.Action.Dashboard.AppManagement.Subscription
+      Domain.Action.Dashboard.AppManagement.SubscriptionTransaction
       Domain.Action.Dashboard.Common
       Domain.Action.Dashboard.Driver.Notification
       Domain.Action.Dashboard.Exotel
@@ -742,6 +743,7 @@ library
       API.Action.Dashboard.AppManagement.DriverSubscription
       API.Action.Dashboard.AppManagement.Overlay
       API.Action.Dashboard.AppManagement.Subscription
+      API.Action.Dashboard.AppManagement.SubscriptionTransaction
       API.Action.Dashboard.Fleet
       API.Action.Dashboard.Fleet.Driver
       API.Action.Dashboard.Fleet.LiveMap
@@ -814,8 +816,10 @@ library
       API.Types.Dashboard.AppManagement.Endpoints.DriverSubscription
       API.Types.Dashboard.AppManagement.Endpoints.Overlay
       API.Types.Dashboard.AppManagement.Endpoints.Subscription
+      API.Types.Dashboard.AppManagement.Endpoints.SubscriptionTransaction
       API.Types.Dashboard.AppManagement.Overlay
       API.Types.Dashboard.AppManagement.Subscription
+      API.Types.Dashboard.AppManagement.SubscriptionTransaction
       API.Types.Dashboard.RideBooking
       API.Types.Dashboard.RideBooking.Driver
       API.Types.Dashboard.RideBooking.DriverRegistration

@@ -86,3 +86,6 @@ ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN prepaid_su
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN lien_amount double precision ;
+ALTER TABLE atlas_driver_offer_bpp.fleet_owner_information ADD COLUMN plan_expiry_date timestamp with time zone ;
+
+

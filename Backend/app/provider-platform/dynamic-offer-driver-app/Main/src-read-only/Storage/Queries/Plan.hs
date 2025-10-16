@@ -51,6 +51,18 @@ findByIdAndPaymentModeWithServiceName id paymentMode serviceName = do
         ]
     ]
 
+findByMerchantOpCityAndServiceAndFleetOwnerPlan ::
+  (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
+  (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Extra.Plan.ServiceNames -> Kernel.Prelude.Maybe Kernel.Prelude.Bool -> m [Domain.Types.Plan.Plan])
+findByMerchantOpCityAndServiceAndFleetOwnerPlan merchantOpCityId serviceName isFleetOwnerPlan = do
+  findAllWithKV
+    [ Se.And
+        [ Se.Is Beam.merchantOpCityId $ Se.Eq (Kernel.Types.Id.getId merchantOpCityId),
+          Se.Is Beam.serviceName $ Se.Eq serviceName,
+          Se.Is Beam.isFleetOwnerPlan $ Se.Eq isFleetOwnerPlan
+        ]
+    ]
+
 findByMerchantOpCityIdAndTypeWithServiceName ::
   (EsqDBFlow m r, MonadFlow m, CacheFlow m r) =>
   (Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Domain.Types.Plan.PlanType -> Domain.Types.Extra.Plan.ServiceNames -> Domain.Types.VehicleCategory.VehicleCategory -> Kernel.Prelude.Bool -> m [Domain.Types.Plan.Plan])
@@ -118,6 +130,7 @@ updateByPrimaryKey (Domain.Types.Plan.Plan {..}) = do
       Se.Set Beam.freeRideCount freeRideCount,
       Se.Set Beam.frequency frequency,
       Se.Set Beam.isDeprecated isDeprecated,
+      Se.Set Beam.isFleetOwnerPlan isFleetOwnerPlan,
       Se.Set Beam.isOfferApplicable isOfferApplicable,
       Se.Set Beam.listingPriority listingPriority,
       Se.Set Beam.maxAmount maxAmount,
