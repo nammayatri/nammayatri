@@ -655,3 +655,40 @@ getIsInterCity merchant req = do
   let merchantId = merchant.driverOfferMerchantId
   internalEndPointHashMap <- asks (.internalEndPointHashMap)
   EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (getIsInterCityClient merchantId (Just apiKey) req) "GetIsInterCity" getIsInterCityApi
+
+type CustomerCancellationDuesWaiveOffAPI =
+  "internal"
+    :> Capture "merchantId" Text
+    :> "customerCancellationDuesWaiveOff"
+    :> Header "token" Text
+    :> ReqBody '[JSON] CustomerCancellationDuesWaiveOffReq
+    :> Post '[JSON] APISuccess
+
+data CustomerCancellationDuesWaiveOffReq = CustomerCancellationDuesWaiveOffReq
+  { rideId :: Text,
+    bookingId :: Text,
+    waiveOffAmount :: HighPrecMoney
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+customerCancellationDuesWaiveOffClient :: Text -> Maybe Text -> CustomerCancellationDuesWaiveOffReq -> EulerClient APISuccess
+customerCancellationDuesWaiveOffClient = client customerCancellationDuesWaiveOffApi
+
+customerCancellationDuesWaiveOffApi :: Proxy CustomerCancellationDuesWaiveOffAPI
+customerCancellationDuesWaiveOffApi = Proxy
+
+customerCancellationDuesWaiveOff ::
+  ( MonadFlow m,
+    CoreMetrics m,
+    HasFlowEnv m r '["internalEndPointHashMap" ::: HM.HashMap BaseUrl BaseUrl]
+  ) =>
+  Text ->
+  BaseUrl ->
+  Text ->
+  Text ->
+  Text ->
+  HighPrecMoney ->
+  m APISuccess
+customerCancellationDuesWaiveOff apiKey internalUrl merchantId bookingId rideId waivedOffAmount = do
+  internalEndPointHashMap <- asks (.internalEndPointHashMap)
+  EC.callApiUnwrappingApiError (identity @Error) Nothing (Just "BPP_INTERNAL_API_ERROR") (Just internalEndPointHashMap) internalUrl (customerCancellationDuesWaiveOffClient merchantId (Just apiKey) (CustomerCancellationDuesWaiveOffReq bookingId rideId waivedOffAmount)) "CustomerCancellationDuesWaiveOff" customerCancellationDuesWaiveOffApi
