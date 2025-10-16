@@ -1197,7 +1197,9 @@ postMultimodalPaymentUpdateOrderUtil paymentType person merchantId merchantOpera
   frfsBookingsPayments <- mapMaybeM (QFRFSTicketBookingPayment.findNewTBPByBookingId . (.id)) bookings
   (vendorSplitDetails, amountUpdated) <- SMMFRFS.createVendorSplitFromBookings bookings merchantId person.merchantOperatingCityId paymentType frfsConfig.isFRFSTestingEnabled
   isSplitEnabled <- TPayment.getIsSplitEnabled merchantId person.merchantOperatingCityId Nothing paymentType -- TODO :: You can be moved inside :)
-  splitDetails <- TPayment.mkUnaggregatedSplitSettlementDetails isSplitEnabled amountUpdated vendorSplitDetails False
+  isPercentageSplitEnabled <- TPayment.getIsPercentageSplit merchantId merchantOperatingCityId Nothing paymentType
+  splitDetails <- TPayment.mkUnaggregatedSplitSettlementDetails isSplitEnabled amountUpdated vendorSplitDetails isPercentageSplitEnabled
+  baskets <- SMMFRFS.createBasketFromBookings bookings merchantId merchantOperatingCityId paymentType
   let splitDetailsAmount = TPayment.extractSplitSettlementDetailsAmount splitDetails
   if frfsConfig.canUpdateExistingPaymentOrder
     then do
@@ -1216,7 +1218,7 @@ postMultimodalPaymentUpdateOrderUtil paymentType person merchantId merchantOpera
           let updatedOrder :: DOrder.PaymentOrder
               updatedOrder = paymentOrder {DOrder.amount = amountUpdated}
           return $ Just updatedOrder
-    else createPaymentOrder bookings merchantOperatingCityId merchantId amountUpdated person paymentType vendorSplitDetails Nothing
+    else createPaymentOrder bookings merchantOperatingCityId merchantId amountUpdated person paymentType vendorSplitDetails (Just baskets)
 
 makePossibleRoutesKey :: Text -> Text -> Id DIntegratedBPPConfig.IntegratedBPPConfig -> Text
 makePossibleRoutesKey fromCode toCode integratedBPPConfig = "PossibleRoutes:" <> fromCode <> ":" <> toCode <> ":" <> integratedBPPConfig.getId

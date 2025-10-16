@@ -441,6 +441,7 @@ buildSDKPayload req order = do
 
 buildSDKPayloadDetails :: EncFlow m r => Payment.CreateOrderReq -> DOrder.PaymentOrder -> m (Maybe Juspay.SDKPayloadDetails)
 buildSDKPayloadDetails req order = do
+  logDebug $ "CreateOrderReq called for order: " <> show req
   case (order.clientAuthToken, order.clientAuthTokenExpiry) of
     (Just token, Just clientAuthTokenExpiry) -> do
       clientAuthToken <- decrypt token
@@ -468,7 +469,7 @@ buildSDKPayloadDetails req order = do
               mandateMaxAmount = show <$> order.mandateMaxAmount,
               mandateStartDate = show . utcTimeToPOSIXSeconds <$> (order.mandateStartDate),
               mandateEndDate = show . utcTimeToPOSIXSeconds <$> order.mandateEndDate,
-              basket = TU.encodeToText <$> req.basket
+              basket = Just $ TU.encodeToText req.basket
             }
     (_, _) -> return Nothing
 
