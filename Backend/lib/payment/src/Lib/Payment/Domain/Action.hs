@@ -60,6 +60,7 @@ import Kernel.Types.Common hiding (id)
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import qualified Kernel.Utils.Text as TU
 import Lib.Payment.Domain.Types.Common
 import qualified Lib.Payment.Domain.Types.PaymentOrder as DOrder
 import qualified Lib.Payment.Domain.Types.PaymentOrderOffer as DPaymentOrderOffer
@@ -465,7 +466,7 @@ buildSDKPayloadDetails req order = do
               mandateMaxAmount = show <$> order.mandateMaxAmount,
               mandateStartDate = show . utcTimeToPOSIXSeconds <$> (order.mandateStartDate),
               mandateEndDate = show . utcTimeToPOSIXSeconds <$> order.mandateEndDate,
-              basket = T.pack . show <$> req.basket
+              basket = TU.encodeToText <$> req.basket
             }
     (_, _) -> return Nothing
 
