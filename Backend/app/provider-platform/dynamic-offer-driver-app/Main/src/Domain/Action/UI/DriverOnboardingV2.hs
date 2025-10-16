@@ -940,9 +940,13 @@ getDriverRegisterBankAccountLink (mbPersonId, _, _) = do
       driverDob <- driverLicense.driverDob & fromMaybeM (InvalidRequest "Driver DOB is required for opening a bank account")
       -- idNumber <- decrypt driverLicense.licenseNumber
 
-      driverSSN <- runInReplica $ QDriverSSN.findByDriverId person.id >>= fromMaybeM (DriverSSNNotFound person.id.getId)
-      ssnNumber <- decrypt driverSSN.ssn
-      let ssnLast4 = T.takeEnd 4 ssnNumber
+      ssnLast4 <-
+        if merchantOpCity.country == Context.USA
+          then do
+            driverSSN <- runInReplica $ QDriverSSN.findByDriverId person.id >>= fromMaybeM (DriverSSNNotFound person.id.getId)
+            ssnNumber <- decrypt driverSSN.ssn
+            return $ Just $ T.takeEnd 4 ssnNumber
+          else return Nothing
 
       let createAccountReq =
             Payment.IndividualConnectAccountReq
@@ -952,7 +956,7 @@ getDriverRegisterBankAccountLink (mbPersonId, _, _) = do
                 firstName = person.firstName,
                 lastName = person.lastName,
                 address = Nothing, -- will add later
-                ssnLast4 = Just ssnLast4,
+                ssnLast4 = ssnLast4,
                 idNumber = Nothing,
                 mobileNumber
               }
