@@ -203,9 +203,8 @@ createBasketFromBookings allJourneyBookings merchantId merchantOperatingCityId p
       -- offer valid only for single mode booking (not handled for multimodal right now)
       quote <- QFRFSQuote.findById booking.quoteId >>= fromMaybeM (QuoteNotFound booking.quoteId.getId)
       mbOfferSKUProductId <- Payment.fetchOfferSKUConfig merchantId merchantOperatingCityId Nothing paymentServiceType
-      case (mbOfferSKUProductId, quote.quantity, quote.childTicketQuantity) of
-        (_, 0, _) -> return dummyBasket -- offer valid only if adult tickets are more than or equal to 1
-        (Just offerSKUProductId, _, _) -> do
+      case (mbOfferSKUProductId, quote.quantity, fromMaybe 0 quote.childTicketQuantity) of
+        (Just offerSKUProductId, 1, 0) -> do
           let unitPrice = quote.price.amount
           return $
             [ Payment.Basket
