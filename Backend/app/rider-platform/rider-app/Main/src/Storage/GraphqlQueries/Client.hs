@@ -72,7 +72,9 @@ transformToTimeTableEntries :: MonadFlow m => [Text] -> OTPResponse -> Bool -> m
 transformToTimeTableEntries routeIds otpResponse needOnlyOneTrip = do
   now <- getCurrentTime
   let desiredStopTimes = filter (\entry -> (fromMaybe entry.trip.route.gtfsId $ lastMay $ Text.splitOn ":" entry.trip.route.gtfsId) `elem` routeIds) otpResponse.stop.stoptimesWithoutPatterns
-  return $ map (transformEntry otpResponse.stop now) $ if needOnlyOneTrip then take 1 desiredStopTimes else desiredStopTimes
+  let result = map (transformEntry otpResponse.stop now) $ if needOnlyOneTrip then take 1 desiredStopTimes else desiredStopTimes
+  logDebug $ "result from transformToTimeTableEntries is " <> show result <> "full data: " <> show otpResponse <> " and the routeCodes are: " <> show routeIds
+  pure result
 
 transformEntry :: StopData -> UTCTime -> RouteStopTimeTableEntry -> TimetableEntry
 transformEntry stopData timestamp entry = do

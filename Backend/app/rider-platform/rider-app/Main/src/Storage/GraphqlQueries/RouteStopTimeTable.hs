@@ -60,6 +60,13 @@ findByRouteCodeAndStopCode integratedBPPConfig merchantId merchantOpId routeCode
             logError $ "GraphQL query failed: " <> show err
             pure []
           Right response -> do
+            logDebug $
+              "GraphQL query returned: "
+                <> show (response.routeStopTimeTables)
+                <> " for routeCodes: "
+                <> show routeCodes
+                <> " and stopCode: "
+                <> show stopCode
             let filteredRouteStopTimeTables = if needOnlyOneTrip then take 1 response.routeStopTimeTables else response.routeStopTimeTables
             concatMapM (parseToRouteStopTimeTable integratedBPPConfig.id merchantId merchantOpId vehicleCategory) filteredRouteStopTimeTables
     )
