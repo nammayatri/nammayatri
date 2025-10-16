@@ -533,6 +533,7 @@ getDriverFleetAssignments merchantShortId opCity apiTokenInfo limit offset from 
 getDriverFleetOperatorInfo :: (Kernel.Types.Id.ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Kernel.Prelude.Maybe Kernel.Prelude.Text -> Environment.Flow Common.FleetOwnerInfoRes)
 getDriverFleetOperatorInfo merchantShortId opCity apiTokenInfo mbMobileCountryCode mbMobileNumber mbPersonId = do
   checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+
   person <- case (mbPersonId, mbMobileNumber) of
     (Just pid, _) -> QP.findById (Id pid) >>= fromMaybeM (PersonNotFound pid)
     (_, Just mobileNumber) -> do
@@ -541,6 +542,7 @@ getDriverFleetOperatorInfo merchantShortId opCity apiTokenInfo mbMobileCountryCo
     (Nothing, Nothing) ->
       throwError $ InvalidRequest "Either personId or mobile number must be provided."
   res <- Client.callFleetAPI checkedMerchantId opCity (.driverDSL.getDriverFleetOperatorInfo) person.id.getId
+
   pure
     res {Common.approvedBy = person.approvedBy <&> getId}
 
