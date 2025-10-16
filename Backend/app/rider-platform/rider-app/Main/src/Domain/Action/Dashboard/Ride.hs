@@ -25,6 +25,7 @@ module Domain.Action.Dashboard.Ride
     getRidePickupRoute,
     postRideSyncMultiple,
     validateMultipleRideSyncReq,
+    cancellationChargesWaiveOff,
   )
 where
 
@@ -67,6 +68,7 @@ import Kernel.Types.Predicate (UniqueField (..))
 import Kernel.Utils.Common
 import Kernel.Utils.Validation (Validate, runRequestValidation, validateField)
 import qualified SharedLogic.CallBPP as CallBPP
+import qualified SharedLogic.CallBPPInternal as CallBPPInternal
 import SharedLogic.Merchant (findMerchantByShortId)
 import Storage.CachedQueries.Merchant (findByShortId)
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
@@ -339,7 +341,7 @@ rideInfo merchantId reqRideId = do
   let rideId = cast @Common.Ride @DRide.Ride reqRideId
   ride <- B.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
   booking <- B.runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
-  let estimatedDuration :: Maybe Seconds = (booking.estimatedDuration)
+  let estimatedDuration :: Maybe Seconds = booking.estimatedDuration
   estBreakup <- case booking.quoteId of
     Just quoteId -> do
       quote <- B.runInReplica $ QQuote.findById quoteId
@@ -591,3 +593,38 @@ postRideSyncMultiple merchantShortId _ req = withDynamicLogLevel "ride-sync-mult
 validateMultipleRideSyncReq :: Validate Common.MultipleRideSyncReq
 validateMultipleRideSyncReq Common.MultipleRideSyncReq {..} = do
   validateField "rides" rides $ UniqueField @"rideId"
+
+cancellationChargesWaiveOff ::
+  ShortId DM.Merchant ->
+  Context.City ->
+  Id Common.Ride ->
+  Flow Common.CancellationChargesWaiveOffRes
+cancellationChargesWaiveOff merchantShortId _ reqRideId = do
+  merchant <- findMerchantByShortId merchantShortId
+  let rideId = cast @Common.Ride @DRide.Ride reqRideId
+  ride <- B.runInReplica $ QRide.findById rideId >>= fromMaybeM (RideDoesNotExist rideId.getId)
+  booking <- B.runInReplica $ QRB.findById ride.bookingId >>= fromMaybeM (BookingDoesNotExist ride.bookingId.getId)
+  unless (merchant.id == booking.merchantId) $
+    throwError (RideDoesNotExist rideId.getId)
+  fareBreakup <- B.runInReplica $ QFareBreakup.findAllByEntityIdAndEntityType rideId.getId DFareBreakup.RIDE
+  let cancellationCharges = filter (\fareBreakup' -> fareBreakup'.description == "CANCELLATION_CHARGES") fareBreakup
+  case listToMaybe cancellationCharges of
+    Just entity -> do
+      let charges = entity.amount.amount
+      if charges > 0
+        then do
+          logInfo $ "CancellationChargesWaiveOff: Trying to waive off cancellation charges for rideId: " <> rideId.getId <> " with amount: " <> show charges
+          result <- try @_ @SomeException $ CallBPPInternal.customerCancellationDuesWaiveOff merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.driverOfferMerchantId booking.id.getId rideId.getId charges
+          case result of
+            Right _ -> do
+              logInfo $ "CancellationChargesWaiveOff: Successfully waived off cancellation charges for rideId: " <> rideId.getId <> " with amount: " <> show charges
+              return $ Common.CancellationChargesWaiveOffRes {rideId = reqRideId, waivedOffAmount = Just charges, waivedOffAmountWithCurrency = Just PriceAPIEntity {amount = charges, currency = entity.amount.currency}, waivedOffSuccess = True}
+            Left err -> do
+              logError $ "CancellationChargesWaiveOff: Failed to waive off cancellation charges for rideId: " <> rideId.getId <> " with amount: " <> show charges <> " with error: " <> show err
+              return $ Common.CancellationChargesWaiveOffRes {rideId = reqRideId, waivedOffAmount = Nothing, waivedOffAmountWithCurrency = Nothing, waivedOffSuccess = False}
+        else do
+          logInfo $ "CancellationChargesWaiveOff: No cancellation charges found for rideId: " <> rideId.getId
+          return $ Common.CancellationChargesWaiveOffRes {rideId = reqRideId, waivedOffAmount = Nothing, waivedOffAmountWithCurrency = Nothing, waivedOffSuccess = False}
+    _ -> do
+      logInfo $ "CancellationChargesWaiveOff: No cancellation charges found for rideId: " <> rideId.getId
+      return $ Common.CancellationChargesWaiveOffRes {rideId = reqRideId, waivedOffAmount = Nothing, waivedOffAmountWithCurrency = Nothing, waivedOffSuccess = False}
