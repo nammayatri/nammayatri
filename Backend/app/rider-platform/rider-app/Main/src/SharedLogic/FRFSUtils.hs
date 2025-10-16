@@ -496,7 +496,8 @@ data VehicleTracking = VehicleTracking
     upcomingStops :: [UpcomingStop],
     vehicleId :: Text,
     vehicleInfo :: Maybe VehicleInfo,
-    delay :: Maybe Seconds
+    delay :: Maybe Seconds,
+    routeShortName :: Maybe Text
   }
   deriving stock (Generic, Show)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
@@ -556,7 +557,8 @@ trackVehicles _personId _merchantId merchantOpCityId vehicleType routeCode platf
                       upcomingStops = [],
                       vehicleId = vehicleId,
                       vehicleInfo = Just vehicleInfo,
-                      delay = Nothing
+                      delay = Nothing,
+                      routeShortName = Nothing
                     }
             )
             vehicleTrackingInfo
@@ -595,6 +597,7 @@ trackVehicles _personId _merchantId merchantOpCityId vehicleType routeCode platf
                   nextStopTravelDistance = Nothing,
                   upcomingStops = upcomingStops, -- fix it later
                   vehicleId = bus.vehicleNumber,
+                  routeShortName = busData.route_number,
                   vehicleInfo =
                     Just $
                       VehicleInfo
@@ -648,6 +651,7 @@ trackVehicles _personId _merchantId merchantOpCityId vehicleType routeCode platf
                       nextStopTravelTime = Nothing,
                       nextStopTravelDistance = Nothing,
                       upcomingStops = [],
+                      routeShortName = Nothing,
                       vehicleId = show vehicleType,
                       vehicleInfo = Nothing,
                       delay = Nothing
