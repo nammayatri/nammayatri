@@ -206,7 +206,7 @@ createBasketFromBookings allJourneyBookings merchantId merchantOperatingCityId p
       case (mbOfferSKUProductId, quote.quantity, quote.childTicketQuantity) of
         (_, 0, _) -> return dummyBasket -- offer valid only if adult tickets are more than or equal to 1
         (Just offerSKUProductId, _, _) -> do
-          let unitPrice = quote.price.amount / fromIntegral quote.quantity
+          let unitPrice = quote.price.amount
           return $
             [ Payment.Basket
                 { Payment.id = offerSKUProductId,
