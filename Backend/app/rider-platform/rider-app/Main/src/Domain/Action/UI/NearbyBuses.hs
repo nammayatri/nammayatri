@@ -82,16 +82,44 @@ getSimpleNearbyBuses :: Id MerchantOperatingCity -> DomainRiderConfig.RiderConfi
 getSimpleNearbyBuses merchantOperatingCityId riderConfig req = do
   buses <- getNearbyBusesFRFS (Maps.LatLong req.userLat req.userLon) riderConfig
   logDebug $ "Nearby buses: " <> show buses
-  let busesWithMostMatchingRouteStates = mapMaybe (\bus -> (bus,) <$> sortOnRouteMatchConfidence bus.routes_info) buses
+
+  busesWithUpdatedRoutes <- forM buses $ \bus -> do
+    case (bus.vehicle_number, bus.routes_info) of
+      (Just busNum, Just routesInfoMap) -> do
+        counts <- forM (M.toList routesInfoMap) $ \(routeId, routeInfo) -> do
+          count <- CQMMB.getBusRouteMismatchCount busNum routeId
+          return (routeId, routeInfo, fromMaybe 0 count)
+
+        let highConfidenceRoutes = [routeId | (routeId, _, cnt) <- counts, cnt >= 2]
+        let updatedRoutes =
+              M.fromList $
+                flip map counts $ \(routeId, routeInfo, _cnt) ->
+                  let routeInfo' :: CQMMB.BusRouteInfo
+                      newState :: CQMMB.RouteState
+                        | routeId `elem` highConfidenceRoutes = CQMMB.ConfirmedHigh
+                        | routeInfo'.route_state == CQMMB.ConfirmedHigh = CQMMB.ConfirmedMed
+                        | otherwise = routeInfo'.route_state
+                      routeInfo' = CQMMB.BusRouteInfo {route_number = routeInfo.route_number, route_state = newState}
+                   in (routeId, routeInfo')
+
+        when (not (null highConfidenceRoutes)) $
+          logInfo $ "Bus " <> busNum <> ": elevated " <> show highConfidenceRoutes <> " to ConfirmedHigh"
+        pure bus {CQMMB.routes_info = Just updatedRoutes}
+      _ -> pure bus
+
+  logDebug $ "Buses after route state override: " <> show busesWithUpdatedRoutes
+
+  let busesWithMostMatchingRouteStates =
+        mapMaybe (\bus -> (bus,) <$> sortOnRouteMatchConfidence bus.routes_info) busesWithUpdatedRoutes
+
   logDebug $ "Buses with most matching route states: " <> show busesWithMostMatchingRouteStates
-  logDebug $ "Number of nearby buses: " <> show (length buses)
+  logDebug $ "Number of nearby buses: " <> show (length busesWithUpdatedRoutes)
 
   let vehicleCategory = castToOnDemandVehicleCategory req.vehicleType
   integratedBPPConfigs <- SIBC.findAllIntegratedBPPConfig merchantOperatingCityId vehicleCategory req.platformType
 
-  let vehicleNumbers = Set.toList $ Set.fromList $ mapMaybe (.vehicle_number) buses
+  let vehicleNumbers = Set.toList $ Set.fromList $ mapMaybe (.vehicle_number) busesWithUpdatedRoutes
   logDebug $ "Vehicle numbers: " <> show vehicleNumbers
-  logDebug $ "Number of unique vehicle numbers: " <> show (length vehicleNumbers)
 
   busRouteMapping <- forM vehicleNumbers $ \vehicleNumber -> do
     mbResult <- SIBC.fetchFirstIntegratedBPPConfigResult integratedBPPConfigs $ \config ->
@@ -104,8 +132,9 @@ getSimpleNearbyBuses merchantOperatingCityId riderConfig req = do
     HashMap.fromList
       <$> mapM
         ( \m -> do
-            frfsServiceTier <- SIBC.fetchFirstIntegratedBPPConfigMaybeResult integratedBPPConfigs $ \config -> do
-              CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId m.service_type riderConfig.merchantOperatingCityId config.id
+            frfsServiceTier <- SIBC.fetchFirstIntegratedBPPConfigMaybeResult integratedBPPConfigs $ \config ->
+              CQFRFSVehicleServiceTier.findByServiceTierAndMerchantOperatingCityIdAndIntegratedBPPConfigId
+                m.service_type riderConfig.merchantOperatingCityId config.id
             return (m.vehicle_no, (m.service_type, frfsServiceTier <&> (.shortName)))
         )
         successfulMappings
@@ -127,9 +156,11 @@ getSimpleNearbyBuses merchantOperatingCityId riderConfig req = do
       )
       busesWithMostMatchingRouteStates
   where
-    sortOnRouteMatchConfidence :: Maybe (M.Map CQMMB.BusRouteId CQMMB.BusRouteInfo) -> Maybe (CQMMB.BusRouteId, CQMMB.BusRouteInfo)
+    sortOnRouteMatchConfidence ::
+      Maybe (M.Map CQMMB.BusRouteId CQMMB.BusRouteInfo) ->
+      Maybe (CQMMB.BusRouteId, CQMMB.BusRouteInfo)
     sortOnRouteMatchConfidence mbRouteInfo = do
-      let routeInfoList = M.toList (fromMaybe (M.empty) mbRouteInfo)
+      let routeInfoList = M.toList (fromMaybe M.empty mbRouteInfo)
       Kernel.Prelude.listToMaybe $ sortOn (\(_, a) -> a.route_state) routeInfoList
 
 getRecentRides :: Domain.Types.Person.Person -> API.Types.UI.NearbyBuses.NearbyBusesRequest -> Environment.Flow [Maybe API.Types.UI.NearbyBuses.RecentRide]
