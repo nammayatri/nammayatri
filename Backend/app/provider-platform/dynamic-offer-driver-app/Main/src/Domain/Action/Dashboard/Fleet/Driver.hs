@@ -1514,9 +1514,13 @@ getDriverFleetOwnerInfo :: -- Deprecated, use getDriverFleetOperatorInfo
   Context.City ->
   Id Common.Driver ->
   Flow Common.FleetOwnerInfoRes
-getDriverFleetOwnerInfo _ _ driverId = do
+getDriverFleetOwnerInfo requestorMerchantShortId requestorCity driverId = do
   let personId = cast @Common.Driver @DP.Person driverId
   person <- QPerson.findById personId >>= fromMaybeM (PersonDoesNotExist personId.getId)
+  merchantOpCity <-
+    CQMOC.findById person.merchantOperatingCityId
+      >>= fromMaybeM (MerchantOperatingCityNotFound person.merchantOperatingCityId.getId)
+  unless (merchantOpCity.merchantShortId == requestorMerchantShortId && merchantOpCity.city == requestorCity) $ throwError (PersonDoesNotExist personId.getId)
   mbFleetOwnerInfo <- B.runInReplica $ FOI.findByPrimaryKey personId
   case mbFleetOwnerInfo of
     Nothing -> do
