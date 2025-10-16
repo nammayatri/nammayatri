@@ -195,7 +195,7 @@ createBasketFromBookings allJourneyBookings merchantId merchantOperatingCityId p
         [ Payment.Basket
             { Payment.id = "no_basket",
               Payment.unitPrice = 0,
-              Payment.quantity = 0
+              Payment.quantity = 1
             }
         ]
   case allJourneyBookings of
