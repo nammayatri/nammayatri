@@ -465,7 +465,7 @@ buildSDKPayloadDetails req order = do
               mandateMaxAmount = show <$> order.mandateMaxAmount,
               mandateStartDate = show . utcTimeToPOSIXSeconds <$> (order.mandateStartDate),
               mandateEndDate = show . utcTimeToPOSIXSeconds <$> order.mandateEndDate,
-              basket = encodeToText <$> req.basket
+              basket = T.pack . show <$> req.basket
             }
     (_, _) -> return Nothing
 
