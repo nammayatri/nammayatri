@@ -60,10 +60,11 @@ getTrackVehicles (mbPersonId, merchantId) routeCode _mbCurrentLat _mbCurrentLon 
   let vehiclesYetToReachSelectedStop = filterVehiclesYetToReachSelectedStop deduplicatedVehicles
   let (confirmedHighBuses, ghostBuses) = List.partition (\a -> ((snd a).vehicleInfo >>= (.routeState)) == Just CQMMB.ConfirmedHigh) vehiclesYetToReachSelectedStop
   let sortedTracking = sortOn (distanceToStop mbSourceStop . snd) ghostBuses
+  let sortedConfirmed = sortOn (distanceToStop mbSourceStop . snd) confirmedHighBuses
   pure $
     TrackRoute.TrackingResp
       { vehicleTrackingInfo =
-          map (uncurry mkVehicleTrackingResponse) (confirmedHighBuses <> take maxBuses sortedTracking)
+          map (uncurry mkVehicleTrackingResponse) (take maxBuses $ sortedConfirmed <> sortedTracking)
       }
   where
     filterVehiclesYetToReachSelectedStop vehicleTracking =
