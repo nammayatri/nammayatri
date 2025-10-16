@@ -97,7 +97,7 @@ updatePersonVersions person mbBundleVersion mbClientVersion mbClientConfigVersio
         [Se.Is BeamP.id (Se.Eq (getId (person.id)))]
 
 updatePersonalInfo ::
-  (MonadFlow m, EsqDBFlow m r) =>
+  (MonadFlow m, EsqDBFlow m r, EncFlow m r) =>
   Id Person ->
   Maybe Text ->
   Maybe Text ->
@@ -125,9 +125,16 @@ updatePersonalInfo ::
   Maybe Double ->
   Person ->
   Maybe Text ->
+  Maybe (Encrypted Text) ->
+  Maybe Text ->
   m ()
-updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbEncEmail mbDeviceToken mbNotificationToken mbLanguage mbGender mbRnVersion mbClientVersion mbBundleVersion mbClientConfigVersion mbDevice deploymentVersion enableOtpLessRide mbDeviceId mbAndroidId mbDateOfBirth mbProfilePicture mbVerificationChannel mbRegLat mbRegLon mbLatestLat mbLatestLon person mbLiveActivityToken = do
+updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbEncEmail mbDeviceToken mbNotificationToken mbLanguage mbGender mbRnVersion mbClientVersion mbBundleVersion mbClientConfigVersion mbDevice deploymentVersion enableOtpLessRide mbDeviceId mbAndroidId mbDateOfBirth mbProfilePicture mbVerificationChannel mbRegLat mbRegLon mbLatestLat mbLatestLon person mbLiveActivityToken mbMobileNumberEncrypted mbMobileCountryCode = do
   now <- getCurrentTime
+  mobileNumberHash <- case mbMobileNumberEncrypted of
+    Just encMobile -> do
+      mobileNumber <- decrypt encMobile
+      Just <$> getDbHash mobileNumber
+    Nothing -> pure Nothing
   let mbEmailEncrypted = mbEncEmail <&> unEncrypted . (.encrypted)
   let mbEmailHash = mbEncEmail <&> (.hash)
   updateWithKV
@@ -161,6 +168,9 @@ updatePersonalInfo (Id personId) mbFirstName mbMiddleName mbLastName mbEncEmail 
         <> [Se.Set BeamP.latestLat mbLatestLat | isJust mbLatestLat]
         <> [Se.Set BeamP.latestLon mbLatestLon | isJust mbLatestLon]
         <> [Se.Set BeamP.liveActivityToken mbLiveActivityToken | isJust mbLiveActivityToken]
+        <> [Se.Set BeamP.mobileNumberEncrypted (Just $ unEncrypted encMobile) | Just encMobile <- [mbMobileNumberEncrypted]]
+        <> [Se.Set BeamP.mobileNumberHash mobileNumberHash | isJust mobileNumberHash]
+        <> [Se.Set BeamP.mobileCountryCode mbMobileCountryCode | isJust mbMobileCountryCode]
     )
     [Se.Is BeamP.id (Se.Eq personId)]
 
