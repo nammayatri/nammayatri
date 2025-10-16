@@ -1,0 +1,2 @@
+alter table atlas_driver_offer_bpp.fare_parameters add column driver_cancellation_penalty_amount double precision;
+alter table atlas_driver_offer_bpp.fare_policy add column driver_cancellation_penalty_amount double precision;

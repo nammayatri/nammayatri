@@ -152,8 +152,9 @@ groupDriverFeeByInvoices currency driverFees_ = do
           fee = sum (invoiceDriverFees <&> (.platformFee.fee))
           cgst = sum (invoiceDriverFees <&> (.platformFee.cgst))
           sgst = sum (invoiceDriverFees <&> (.platformFee.sgst))
+          cancellationPenaltyTotal = sum (invoiceDriverFees <&> (fromMaybe 0 . (.cancellationPenaltyAmount)))
           platformFee = PlatformFee {..}
-          totalFee = govtCharges + platformFee.fee + platformFee.cgst + platformFee.sgst
+          totalFee = govtCharges + platformFee.fee + platformFee.cgst + platformFee.sgst + cancellationPenaltyTotal
           status =
             case mStatus of
               (Just status_) -> status_
