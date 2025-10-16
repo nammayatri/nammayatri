@@ -30,7 +30,12 @@ module Domain.Action.UI.Profile
     getDefaultEmergencyNumbers,
     updateEmergencySettings,
     getEmergencySettings,
+    triggerOtp,
+    verifyOtp,
     marketingEvents,
+    VerifyOTPReq (..),
+    TriggerOTPReq (..),
+    AuthData (..),
   )
 where
 
@@ -52,6 +57,7 @@ import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant as Merchant
 import Domain.Types.Person (RideShareOptions)
 import qualified Domain.Types.Person as Person
+import qualified Domain.Types.Person as SP
 import qualified Domain.Types.PersonDefaultEmergencyNumber as DPDEN
 import qualified Domain.Types.PersonDisability as PersonDisability
 import Domain.Types.SafetySettings
@@ -67,7 +73,9 @@ import qualified Kernel.External.Maps as Maps
 import qualified Kernel.External.Notification as Notification
 import qualified Kernel.External.Whatsapp.Interface.Types as Whatsapp (OptApiMethods)
 import Kernel.Prelude
+import Kernel.Sms.Config (SmsConfig, useFakeSms)
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
+import qualified Kernel.Storage.Hedis as Redis
 import Kernel.Streaming.Kafka.Producer.Types (KafkaProducerTools)
 import Kernel.Tools.Metrics.CoreMetrics
 import qualified Kernel.Types.APISuccess as APISuccess
@@ -85,6 +93,7 @@ import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.Cac
 import qualified SharedLogic.IntegratedBPPConfig as SIBC
 import qualified SharedLogic.MessageBuilder as MessageBuilder
+import qualified SharedLogic.OTP as SOTP
 import SharedLogic.Person as SLP
 import SharedLogic.PersonDefaultEmergencyNumber as SPDEN
 import qualified SharedLogic.Referral as Referral
@@ -557,7 +566,7 @@ getDefaultEmergencyNumbers (personId, _) = do
 
 getUniquePersonByMobileNumber :: UpdateProfileDefaultEmergencyNumbersReq -> [PersonDefaultEmergencyNumber]
 getUniquePersonByMobileNumber req =
-  nubBy ((==) `on` mobileNumber) req.defaultEmergencyNumbers
+  nubBy ((==) `on` (.mobileNumber)) req.defaultEmergencyNumbers
 
 data UpdateEmergencySettingsReq = UpdateEmergencySettingsReq
   { shareEmergencyContacts :: Maybe Bool,
@@ -656,3 +665,197 @@ getEmergencySettings personId = do
         safetyCheckStartTime = riderConfig.safetyCheckStartTime,
         ..
       }
+
+data TriggerOTPReq = TriggerOTPReq
+  { identifier :: Maybe SP.IdentifierType,
+    email :: Maybe Text,
+    mobileNumber :: Maybe Text,
+    mobileCountryCode :: Maybe Text
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+data AuthData = AuthData
+  { mobileNumber :: Maybe Text,
+    email :: Maybe Text,
+    otp :: Text
+  }
+  deriving (Generic, Show, FromJSON, ToJSON)
+
+data VerifyOTPReq = VerifyOTPReq
+  { identifier :: Maybe SP.IdentifierType,
+    otp :: Text
+  }
+  deriving (Generic, ToJSON, FromJSON, ToSchema)
+
+triggerOtp ::
+  ( HasFlowEnv m r '["smsCfg" ::: SmsConfig, "kafkaProducerTools" ::: KafkaProducerTools],
+    CacheFlow m r,
+    EsqDBFlow m r,
+    EncFlow m r,
+    EsqDBReplicaFlow m r
+  ) =>
+  (Id Person.Person, Id Merchant.Merchant) ->
+  TriggerOTPReq ->
+  m APISuccess.APISuccess
+triggerOtp (personId, _merchantId) req = do
+  person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  smsCfg <- asks (.smsCfg)
+  riderConfig <- QRC.findByMerchantOperatingCityId person.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist person.merchantOperatingCityId.getId)
+
+  identifierType <- req.identifier & fromMaybeM (InvalidRequest "Identifier type is required")
+  let useFakeOtpM = (show <$> useFakeSms smsCfg) <|> person.useFakeOtp
+
+  -- Generate OTP
+  otpCode <- maybe generateOTPCode return useFakeOtpM
+
+  -- Determine OTP channel based on identifier type
+  let otpChannel = case identifierType of
+        SP.MOBILENUMBER -> SOTP.SMS
+        SP.EMAIL -> SOTP.EMAIL
+        SP.AADHAAR -> SOTP.SMS -- This will be rejected by sendOTP anyway
+
+  -- Send OTP using shared logic (only if not using fake OTP)
+  when (isNothing useFakeOtpM) $ do
+    SOTP.sendOTP
+      otpChannel
+      otpCode
+      personId
+      person.merchantId
+      person.merchantOperatingCityId
+      req.mobileCountryCode
+      req.mobileNumber
+      req.email
+      riderConfig.emailOtpConfig
+
+  -- Store auth data in Redis
+  case identifierType of
+    SP.MOBILENUMBER -> do
+      mobileNumber <- req.mobileNumber & fromMaybeM (InvalidRequest "MobileNumber is required for MOBILENUMBER identifier")
+      let authData =
+            AuthData
+              { mobileNumber = Just mobileNumber,
+                email = Nothing,
+                otp = otpCode
+              }
+      logDebug $ "otpCode_ye_hai: " <> otpCode
+      let redisKey = makeUpdateAuthRedisKey identifierType (getId personId)
+      Redis.setExp redisKey authData 600
+    SP.EMAIL -> do
+      receiverEmail <- req.email & fromMaybeM (InvalidRequest "Email is required for EMAIL identifier")
+      let authData =
+            AuthData
+              { mobileNumber = Nothing,
+                email = Just receiverEmail,
+                otp = otpCode
+              }
+      let redisKey = makeUpdateAuthRedisKey identifierType (getId personId)
+      Redis.setExp redisKey authData 600
+    SP.AADHAAR -> throwError $ InvalidRequest "Aadhaar identifier is not supported"
+
+  pure APISuccess.Success
+
+verifyOtp ::
+  ( CacheFlow m r,
+    EsqDBFlow m r,
+    EncFlow m r,
+    EsqDBReplicaFlow m r,
+    HasFlowEnv m r '["version" ::: DeploymentVersion]
+  ) =>
+  (Id Person.Person, Id Merchant.Merchant) ->
+  VerifyOTPReq ->
+  m APISuccess.APISuccess
+verifyOtp (personId, _merchantId) req = do
+  identifierType <- req.identifier & fromMaybeM (InvalidRequest "Identifier type is required")
+
+  -- Get identifier value based on type
+  let redisKey = makeUpdateAuthRedisKey identifierType (getId personId)
+
+  -- Fetch stored auth data from Redis with explicit type annotation
+  storedAuthData :: AuthData <- Redis.get redisKey >>= fromMaybeM (InvalidRequest "OTP expired or not found")
+
+  -- Validate OTP using record accessor
+  when ((storedAuthData.otp) /= (req.otp)) $ throwError $ InvalidRequest "Invalid OTP"
+
+  -- Extract identifier value, encrypt, and update person info based on type
+  person <- runInReplica $ QPerson.findById personId >>= fromMaybeM (PersonNotFound personId.getId)
+  deploymentVersion <- asks (.version)
+  logDebug $ "personId_hai: " <> getId person.id
+
+  void $ case identifierType of
+    SP.MOBILENUMBER -> do
+      identifierValue <- case storedAuthData of
+        AuthData {mobileNumber = Just num} -> pure num
+        _ -> throwError $ InvalidRequest "Mobile number not found in auth data"
+      encryptedValue <- encrypt identifierValue
+      QPerson.updatePersonalInfo
+        personId
+        Nothing
+        Nothing
+        Nothing
+        (Just encryptedValue)
+        Nothing
+        Nothing
+        Nothing
+        Nothing
+        Nothing
+        Nothing
+        Nothing
+        Nothing
+        Nothing
+        deploymentVersion.getDeploymentVersion
+        Nothing
+        Nothing
+        Nothing
+        Nothing
+        Nothing
+        Nothing
+        Nothing
+        Nothing
+        Nothing
+        Nothing
+        person
+        Nothing
+    SP.EMAIL -> do
+      identifierValue <- case storedAuthData of
+        AuthData {email = Just em} -> pure em
+        _ -> throwError $ InvalidRequest "Email not found in auth data"
+      encryptedValue <- encrypt identifierValue
+      QPerson.updatePersonalInfo
+        personId
+        Nothing
+        Nothing
+        Nothing
+        (Just encryptedValue)
+        Nothing
+        Nothing
+        Nothing
+        Nothing
+        Nothing
+        Nothing
+        Nothing
+        Nothing
+        Nothing
+        deploymentVersion.getDeploymentVersion
+        Nothing
+        Nothing
+        Nothing
+        Nothing
+        Nothing
+        Nothing
+        Nothing
+        Nothing
+        Nothing
+        Nothing
+        person
+        Nothing
+    SP.AADHAAR -> throwError $ InvalidRequest "Aadhaar identifier is not supported"
+
+  -- Delete the OTP from Redis after successful verification
+  void $ Redis.del redisKey
+
+  pure APISuccess.Success
+
+-- Helper function to create Redis key for update auth
+makeUpdateAuthRedisKey :: SP.IdentifierType -> Text -> Text
+makeUpdateAuthRedisKey identifierType identifier =
+  "updateAuth:" <> show identifierType <> ":" <> identifier
