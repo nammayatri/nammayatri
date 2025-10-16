@@ -194,6 +194,7 @@ data LogicDomain
   | FARE_POLICY
   | DYNAMIC_PRICING_UNIFIED
   | USER_CANCELLATION_DUES
+  | USER_CANCELLATION_DUES_WAIVE_OFF
   | FRFS_TICKET_CATEGORIES
   | CONFIG ConfigType
   | RIDER_CONFIG ConfigType
@@ -209,6 +210,7 @@ instance Enumerable LogicDomain where
       FARE_POLICY,
       DYNAMIC_PRICING_UNIFIED,
       USER_CANCELLATION_DUES,
+      USER_CANCELLATION_DUES_WAIVE_OFF,
       FRFS_TICKET_CATEGORIES,
       CANCELLATION_COIN_POLICY
     ]
@@ -228,6 +230,7 @@ generateLogicDomainShowInstances =
     ++ [show FARE_POLICY]
     ++ [show DYNAMIC_PRICING_UNIFIED]
     ++ [show USER_CANCELLATION_DUES]
+    ++ [show USER_CANCELLATION_DUES_WAIVE_OFF]
     ++ [show FRFS_TICKET_CATEGORIES]
     ++ [show (CONFIG configType) | configType <- configTypes]
     ++ [show (RIDER_CONFIG configType) | configType <- configTypes]
@@ -254,6 +257,7 @@ instance Show LogicDomain where
   show FARE_POLICY = "FARE-POLICY"
   show DYNAMIC_PRICING_UNIFIED = "DYNAMIC-PRICING-UNIFIED"
   show USER_CANCELLATION_DUES = "USER-CANCELLATION-DUES"
+  show USER_CANCELLATION_DUES_WAIVE_OFF = "USER-CANCELLATION-DUES-WAIVE-OFF"
   show FRFS_TICKET_CATEGORIES = "FRFS-TICKET-CATEGORIES"
   show (CONFIG configType) = "CONFIG_" ++ show configType
   show (RIDER_CONFIG configType) = "RIDER-CONFIG_" ++ show configType
@@ -276,6 +280,8 @@ instance Read LogicDomain where
             [(DYNAMIC_PRICING_UNIFIED, drop 1 rest)]
           "USER-CANCELLATION-DUES" ->
             [(USER_CANCELLATION_DUES, drop 1 rest)]
+          "USER-CANCELLATION-DUES-WAIVE-OFF" ->
+            [(USER_CANCELLATION_DUES_WAIVE_OFF, drop 1 rest)]
           "FRFS-TICKET-CATEGORIES" ->
             [(FRFS_TICKET_CATEGORIES, drop 1 rest)]
           "CANCELLATION-COIN-POLICY" ->
