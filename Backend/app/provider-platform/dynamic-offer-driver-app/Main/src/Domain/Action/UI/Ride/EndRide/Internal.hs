@@ -217,7 +217,10 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
   DS.driverScoreEventHandler booking.merchantOperatingCityId DST.OnRideCompletion {merchantId = booking.providerId, driverId = cast driverId, ride = ride, fareParameter = Just newFareParams, ..}
   let currency = booking.currency
   let customerCancellationDues = fromMaybe 0.0 newFareParams.customerCancellationDues
-  when (thresholdConfig.canAddCancellationFee && customerCancellationDues > 0.0) $ do
+  logInfo $ "customerCancellationDues: newFareParams.customerCancellationDues: " <> show newFareParams.customerCancellationDues <> " ride.id: " <> show ride.id.getId <> " thresholdConfig.canAddCancellationFee: " <> show thresholdConfig.canAddCancellationFee
+  let cancellationDues = fromMaybe 0.0 booking.fareParams.customerCancellationDues
+  logInfo $ "cancellationDues: booking cancellationDues: " <> show cancellationDues <> " ride.id: " <> show ride.id.getId <> " thresholdConfig.canAddCancellationFee: " <> show thresholdConfig.canAddCancellationFee
+  when (thresholdConfig.canAddCancellationFee && cancellationDues > 0.0) $ do
     case mbRiderDetails of
       Just riderDetails -> do
         id <- generateGUID
@@ -225,7 +228,7 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
               DCC.CancellationCharges
                 { driverId = cast driverId,
                   rideId = Just ride.id,
-                  cancellationCharges = customerCancellationDues,
+                  cancellationCharges = cancellationDues,
                   ..
                 }
         -- calDisputeChances <-
@@ -235,7 +238,7 @@ endRideTransaction driverId booking ride mbFareParams mbRiderDetailsId newFarePa
         --       return 0
         --     else do
         --       return $ round (customerCancellationDues / thresholdConfig.cancellationFee)
-        QRD.updateCancellationDuesPaid customerCancellationDues riderDetails.id.getId
+        QRD.updateCancellationDuesPaid cancellationDues riderDetails.id.getId
         QRD.updateNoOfTimesCanellationDuesPaid riderDetails.id.getId
         QRD.updateCancellationDues 0 riderDetails.id >> QCC.create cancellationCharges
       -- QRD.updateDisputeChancesUsedAndCancellationDues (max 0 (riderDetails.disputeChancesUsed - calDisputeChances)) 0 (riderDetails.id) >> QCC.create cancellationCharges
