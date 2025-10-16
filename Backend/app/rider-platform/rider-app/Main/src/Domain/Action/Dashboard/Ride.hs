@@ -613,19 +613,24 @@ cancellationChargesWaiveOff merchantShortId _ reqRideId = do
   case listToMaybe cancellationCharges of
     Just entity -> do
       let charges = entity.amount.amount
-      if charges > 0
-        then do
-          logInfo $ "CancellationChargesWaiveOff: Trying to waive off cancellation charges for rideId: " <> rideId.getId <> " with amount: " <> show charges
-          result <- try @_ @SomeException $ CallBPPInternal.customerCancellationDuesWaiveOff merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.driverOfferMerchantId booking.id.getId rideId.getId charges
-          case result of
-            Right _ -> do
-              logInfo $ "CancellationChargesWaiveOff: Successfully waived off cancellation charges for rideId: " <> rideId.getId <> " with amount: " <> show charges
-              return $ Common.CancellationChargesWaiveOffRes {rideId = reqRideId, waivedOffAmount = Just charges, waivedOffAmountWithCurrency = Just PriceAPIEntity {amount = charges, currency = entity.amount.currency}, waivedOffSuccess = True}
-            Left err -> do
-              logError $ "CancellationChargesWaiveOff: Failed to waive off cancellation charges for rideId: " <> rideId.getId <> " with amount: " <> show charges <> " with error: " <> show err
+      case booking.bppBookingId of
+        Just bppBookingId -> do
+          if charges > 0
+            then do
+              logInfo $ "CancellationChargesWaiveOff: Trying to waive off cancellation charges for rideId: " <> rideId.getId <> " with amount: " <> show charges
+              result <- try @_ @SomeException $ CallBPPInternal.customerCancellationDuesWaiveOff merchant.driverOfferApiKey merchant.driverOfferBaseUrl merchant.driverOfferMerchantId bppBookingId.getId ride.bppRideId.getId charges
+              case result of
+                Right _ -> do
+                  logInfo $ "CancellationChargesWaiveOff: Successfully waived off cancellation charges for rideId: " <> rideId.getId <> " with amount: " <> show charges
+                  return $ Common.CancellationChargesWaiveOffRes {rideId = reqRideId, waivedOffAmount = Just charges, waivedOffAmountWithCurrency = Just PriceAPIEntity {amount = charges, currency = entity.amount.currency}, waivedOffSuccess = True}
+                Left err -> do
+                  logError $ "CancellationChargesWaiveOff: Failed to waive off cancellation charges for rideId: " <> rideId.getId <> " with amount: " <> show charges <> " with error: " <> show err
+                  return $ Common.CancellationChargesWaiveOffRes {rideId = reqRideId, waivedOffAmount = Nothing, waivedOffAmountWithCurrency = Nothing, waivedOffSuccess = False}
+            else do
+              logInfo $ "CancellationChargesWaiveOff: No cancellation charges found for rideId: " <> rideId.getId
               return $ Common.CancellationChargesWaiveOffRes {rideId = reqRideId, waivedOffAmount = Nothing, waivedOffAmountWithCurrency = Nothing, waivedOffSuccess = False}
-        else do
-          logInfo $ "CancellationChargesWaiveOff: No cancellation charges found for rideId: " <> rideId.getId
+        _ -> do
+          logInfo $ "CancellationChargesWaiveOff: No bppBookingId found for rideId: " <> rideId.getId
           return $ Common.CancellationChargesWaiveOffRes {rideId = reqRideId, waivedOffAmount = Nothing, waivedOffAmountWithCurrency = Nothing, waivedOffSuccess = False}
     _ -> do
       logInfo $ "CancellationChargesWaiveOff: No cancellation charges found for rideId: " <> rideId.getId
