@@ -230,11 +230,14 @@ fetchLiveBusTimings routeCodes stopCode currentTime integratedBppConfig mid moci
     if useLiveBusData
       then do
         allRouteWithBuses <- MultiModalBus.getBusesForRoutes routeCodes
-        let routesWithoutBuses = map (.routeId) $ filter (\route -> null route.buses) allRouteWithBuses
         liveRouteStopTimes <- mapConcurrently processRoute allRouteWithBuses
         let flattenedLiveRouteStopTimes = concat liveRouteStopTimes
+        let liveRouteCodes = nub $ map (.routeCode) flattenedLiveRouteStopTimes
+        -- Pass only routeCodes which don't have route.buses and also don't serve our source stop
+        let routesWithoutBuses = map (.routeId) $ filter (\route -> null route.buses) allRouteWithBuses
+        let routesWithoutLiveTimings = filter (`notElem` liveRouteCodes) routeCodes
         logDebug $ "allRouteWithBuses: " <> show (length allRouteWithBuses) <> " flattenedLiveRouteStopTimes: " <> show (length flattenedLiveRouteStopTimes)
-        return (flattenedLiveRouteStopTimes, routesWithoutBuses)
+        return (flattenedLiveRouteStopTimes, nub $ routesWithoutLiveTimings ++ routesWithoutBuses)
       else do
         return ([], routeCodes)
   staticRouteStopTimes <- measureLatency (GRSM.findByRouteCodeAndStopCode integratedBppConfig mid mocid routesWithoutBuses stopCode False False) "fetch route stop timing through graphql"
