@@ -8,7 +8,8 @@ import qualified API.Internal.Auth as Auth
 import qualified API.Internal.BulkLocUpdate as BulkLocUpdate
 import qualified API.Internal.Cac as Cac
 import qualified API.Internal.CallCustomerFCM as CallCustomerFCM
-import qualified API.Internal.CustomerCancellationDues as CancellationDues
+import qualified API.Internal.CancellationDues as CancellationDues
+import qualified API.Internal.CustomerCancellationDues as CustomerCancellationDues
 import qualified API.Internal.DriverCoordinates as DriverCoordinates
 import qualified API.Internal.DriverInactiveFCM as DriverInactiveFCM
 import qualified API.Internal.DriverReachedDestination as DriverReachedDestination
@@ -39,7 +40,7 @@ type API =
            :<|> ReportIssue.API
            :<|> Auth.API
            :<|> BulkLocUpdate.API
-           :<|> CancellationDues.API
+           :<|> CustomerCancellationDues.API
            :<|> DriverInactiveFCM.API
            :<|> CallCustomerFCM.API
            :<|> Cac.API
@@ -56,6 +57,7 @@ type API =
            :<|> ViolationDetection.API
            :<|> FleetBookingInformation.API
            :<|> FleetVehiclesAssociation.API
+           :<|> CancellationDues.CustomerCancellationDuesWaiveOffAPI
        )
 
 handler :: FlowServer API
@@ -66,7 +68,7 @@ handler =
     :<|> ReportIssue.handler
     :<|> Auth.handler
     :<|> BulkLocUpdate.handler
-    :<|> CancellationDues.handler
+    :<|> CustomerCancellationDues.handler
     :<|> DriverInactiveFCM.handler
     :<|> CallCustomerFCM.handler
     :<|> Cac.handler
@@ -83,3 +85,4 @@ handler =
     :<|> ViolationDetection.handler
     :<|> FleetBookingInformation.handler
     :<|> FleetVehiclesAssociation.handler
+    :<|> CancellationDues.handler
