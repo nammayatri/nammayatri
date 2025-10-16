@@ -38,7 +38,7 @@ getTrackVehicles ::
     Kernel.Prelude.Maybe Spec.VehicleCategory ->
     Environment.Flow TrackRoute.TrackingResp
   )
-getTrackVehicles (mbPersonId, merchantId) routeCode _mbCurrentLat _mbCurrentLon mbIntegratedBPPConfigId mbMaxBuses mbPlatformType mbSelectedSourceStopId mbSelectedDestinationStopId mbVehicleType = do
+getTrackVehicles (mbPersonId, merchantId) routeCode _mbCurrentLat _mbCurrentLon mbIntegratedBPPConfigId mbMaxBuses mbPlatformType mbSelectedDestinationStopId mbSelectedSourceStopId mbVehicleType = do
   let vehicleType = fromMaybe Spec.BUS mbVehicleType
   personId <- mbPersonId & fromMaybeM (InvalidRequest "Person not found")
   personCityInfo <- QP.findCityInfoById personId >>= fromMaybeM (PersonNotFound personId.getId)
@@ -47,10 +47,10 @@ getTrackVehicles (mbPersonId, merchantId) routeCode _mbCurrentLat _mbCurrentLon 
     case (mbSelectedSourceStopId, mbSelectedDestinationStopId) of
       (Just sourceStopId, Just destinationStopId) -> do
         possibleRoutes <- getPossibleRoutesBetweenTwoStops sourceStopId destinationStopId integratedBPPConfig
+        logInfo $ "possibleRoutes between two stops: " <> show possibleRoutes
         let routeCodes = map (.route.code) possibleRoutes
         pure $ if null routeCodes then [routeCode] else routeCodes
       _ -> pure [routeCode]
-  logInfo $ "routeIdsToTrack: " <> show routeIdsToTrack
   riderConfig <- CQRC.findByMerchantOperatingCityId personCityInfo.merchantOperatingCityId Nothing >>= fromMaybeM (RiderConfigDoesNotExist personCityInfo.merchantOperatingCityId.getId)
   let maxBuses = fromMaybe 5 $ mbMaxBuses <|> riderConfig.maxNearbyBuses
   mbSourceStop <- maybe (pure Nothing) (\stopCode -> OTPRest.getStationByGtfsIdAndStopCode stopCode integratedBPPConfig) mbSelectedSourceStopId
