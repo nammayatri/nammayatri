@@ -424,5 +424,4 @@ in  { esqDBCfg
     , googleSAPrivateKey = sec.googleSAPrivateKey
     , locationTrackingServiceKey = sec.locationTrackingServiceKey
     , nearByDriverAPIRateLimitOptions
-    , inMemConfig
     }

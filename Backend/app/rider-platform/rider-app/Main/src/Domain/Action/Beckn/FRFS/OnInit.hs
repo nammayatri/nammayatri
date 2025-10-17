@@ -73,8 +73,7 @@ onInit ::
     EncFlow m r,
     ServiceFlow m r,
     HasField "isMetroTestTransaction" r Bool,
-    Metrics.HasBAPMetrics m r,
-    HasFlowEnv m r '["offerSKUConfig" ::: Text]
+    Metrics.HasBAPMetrics m r
   ) =>
   DOnInit ->
   Merchant.Merchant ->

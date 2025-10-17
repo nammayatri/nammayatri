@@ -384,17 +384,16 @@ createOrderService ::
   Id Merchant ->
   Maybe (Id MerchantOperatingCity) ->
   Id Person ->
-  Maybe EntityName ->
   Payment.CreateOrderReq ->
   (Payment.CreateOrderReq -> m Payment.CreateOrderResp) ->
   m (Maybe Payment.CreateOrderResp)
-createOrderService merchantId mbMerchantOpCityId personId mbEntityName createOrderReq createOrderCall = do
+createOrderService merchantId mbMerchantOpCityId personId createOrderReq createOrderCall = do
   logInfo $ "CreateOrderService: "
   mbExistingOrder <- QOrder.findById (Id createOrderReq.orderId)
   case mbExistingOrder of
     Nothing -> do
       createOrderResp <- createOrderCall createOrderReq -- api call
-      paymentOrder <- buildPaymentOrder merchantId mbMerchantOpCityId personId mbEntityName createOrderReq createOrderResp
+      paymentOrder <- buildPaymentOrder merchantId mbMerchantOpCityId personId createOrderReq createOrderResp
       QOrder.create paymentOrder
       return $ Just createOrderResp
     Just existingOrder -> do
@@ -479,11 +478,10 @@ buildPaymentOrder ::
   Id Merchant ->
   Maybe (Id MerchantOperatingCity) ->
   Id Person ->
-  Maybe EntityName ->
   Payment.CreateOrderReq ->
   Payment.CreateOrderResp ->
   m DOrder.PaymentOrder
-buildPaymentOrder merchantId mbMerchantOpCityId personId mbEntityName req resp = do
+buildPaymentOrder merchantId mbMerchantOpCityId personId req resp = do
   now <- getCurrentTime
   clientAuthToken <- encrypt resp.sdk_payload.payload.clientAuthToken
   let mkPaymentOrder =
@@ -499,7 +497,6 @@ buildPaymentOrder merchantId mbMerchantOpCityId personId mbEntityName req resp =
             action = resp.sdk_payload.payload.action,
             personId,
             merchantId,
-            entityName = mbEntityName,
             paymentMerchantId = resp.sdk_payload.payload.merchantId,
             amount = req.amount,
             currency = resp.sdk_payload.payload.currency,
@@ -907,7 +904,6 @@ createExecutionService (request, orderId) merchantId mbMerchantOpCityId executio
   where
     mkExecutionOrder req = do
       now <- getCurrentTime
-      buildPaymentSplit orderId req.splitSettlementDetails merchantId mbMerchantOpCityId
       return
         DOrder.PaymentOrder
           { id = Id orderId,

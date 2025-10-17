@@ -470,7 +470,7 @@ startJourney riderId confirmElements forcedBookedLegOrder journey mbEnableOffer 
         let forcedBooking = Just leg.order == forcedBookedLegOrder
         let crisSdkResponse = find (\element -> element.journeyLegOrder == leg.order) confirmElements >>= (.crisSdkResponse)
         let categorySelectionReq = find (\element -> element.journeyLegOrder == leg.order) confirmElements >>= (.categorySelectionReq)
-        JLI.confirm forcedBooking ticketQuantity childTicketQuantity bookLater leg crisSdkResponse categorySelectionReq journey.isSingleMode mbEnableOffer
+        JLI.confirm forcedBooking ticketQuantity childTicketQuantity bookLater leg crisSdkResponse categorySelectionReq mbEnableOffer
     )
     allLegs
 
@@ -491,7 +491,7 @@ startJourneyLeg legInfo = do
       _ -> return (Nothing, Nothing, Nothing)
   when (legInfo.travelMode `elem` [DTrip.Metro, DTrip.Subway, DTrip.Bus]) $ do
     QTBooking.updateOnInitDoneBySearchId (Just False) (Id legInfo.searchId)
-  JLI.confirm True adultTicketQuantity childTicketQuantity False legInfo crisSdkResponse Nothing isSingleMode Nothing -- TODO :: Add category selection req
+  JLI.confirm True adultTicketQuantity childTicketQuantity False legInfo crisSdkResponse Nothing Nothing -- TODO :: Add category selection req
 
 addAllLegs ::
   ( JL.SearchRequestFlow m r c,
