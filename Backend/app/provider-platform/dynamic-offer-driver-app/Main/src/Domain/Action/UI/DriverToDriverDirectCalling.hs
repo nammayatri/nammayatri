@@ -2,6 +2,7 @@
 
 module Domain.Action.UI.DriverToDriverDirectCalling (getDriverGetnumber) where
 
+import API.Types.UI.DriverToDriverDirectCalling
 import Data.OpenApi (ToSchema)
 import qualified Domain.Types.Merchant
 import qualified Domain.Types.MerchantOperatingCity
@@ -28,20 +29,20 @@ getDriverGetnumber ::
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     Kernel.Prelude.Text ->
-    Environment.Flow Kernel.Prelude.Text
+    Environment.Flow API.Types.UI.DriverToDriverDirectCalling.DriverGetnumberResp
   )
 getDriverGetnumber (_, mid, _) rcNo = do
   vehicleRC <- RCQuery.findLastVehicleRCWrapper rcNo >>= fromMaybeM (RCNotFound rcNo)
   rcActiveAssociation <- DAQuery.findActiveAssociationByRC vehicleRC.id True >>= fromMaybeM ActiveRCNotFound
   getDecryptedMobileNumberByDriverId rcActiveAssociation.driverId mid
 
-getDecryptedMobileNumberByDriverId :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r) => Id Person.Person -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> m Text
+getDecryptedMobileNumberByDriverId :: (EncFlow m r, CacheFlow m r, EsqDBFlow m r) => Id Person.Person -> Kernel.Types.Id.Id Domain.Types.Merchant.Merchant -> m API.Types.UI.DriverToDriverDirectCalling.DriverGetnumberResp
 getDecryptedMobileNumberByDriverId driverId mid = do
   driver <- PSQuery.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
   if driver.merchantId == mid
-    then do
-      let encMobNum = driver.mobileNumber
-      case encMobNum of
-        Just mobNum -> decrypt mobNum
-        Nothing -> throwError $ InvalidRequest "Mobile Number not found."
+    then case driver.mobileNumber of
+      Just mobNum -> do
+        decryptedNumber <- decrypt mobNum
+        return $ API.Types.UI.DriverToDriverDirectCalling.DriverGetnumberResp {mobileNumber = decryptedNumber, name = driver.firstName}
+      Nothing -> throwError $ InvalidRequest "Mobile Number not found."
     else throwError $ InvalidRequest "Merchant Id Did not match"

@@ -7,6 +7,7 @@ module API.Action.UI.DriverToDriverDirectCalling
   )
 where
 
+import qualified API.Types.UI.DriverToDriverDirectCalling
 import qualified Control.Lens
 import qualified Domain.Action.UI.DriverToDriverDirectCalling
 import qualified Domain.Types.Merchant
@@ -21,7 +22,7 @@ import Servant
 import Storage.Beam.SystemConfigs ()
 import Tools.Auth
 
-type API = (TokenAuth :> "driver" :> "getnumber" :> Capture "rcNumber" Kernel.Prelude.Text :> Get ('[JSON]) Kernel.Prelude.Text)
+type API = (TokenAuth :> "driver" :> "getnumber" :> Capture "rcNumber" Kernel.Prelude.Text :> Get '[JSON] API.Types.UI.DriverToDriverDirectCalling.DriverGetnumberResp)
 
 handler :: Environment.FlowServer API
 handler = getDriverGetnumber
@@ -32,6 +33,6 @@ getDriverGetnumber ::
       Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
     ) ->
     Kernel.Prelude.Text ->
-    Environment.FlowHandler Kernel.Prelude.Text
+    Environment.FlowHandler API.Types.UI.DriverToDriverDirectCalling.DriverGetnumberResp
   )
 getDriverGetnumber a2 a1 = withFlowHandlerAPI $ Domain.Action.UI.DriverToDriverDirectCalling.getDriverGetnumber (Control.Lens.over Control.Lens._1 Kernel.Prelude.Just a2) a1

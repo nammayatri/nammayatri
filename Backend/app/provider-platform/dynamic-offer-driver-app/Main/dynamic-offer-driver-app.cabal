@@ -846,6 +846,7 @@ library
       API.Types.UI.DemandHotspots
       API.Types.UI.DriverOnboardingV2
       API.Types.UI.DriverProfileQuestions
+      API.Types.UI.DriverToDriverDirectCalling
       API.Types.UI.DriverWallet
       API.Types.UI.EditBooking
       API.Types.UI.FareCalculator
