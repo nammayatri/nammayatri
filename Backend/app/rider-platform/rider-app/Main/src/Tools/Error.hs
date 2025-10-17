@@ -969,6 +969,8 @@ data MultimodalError
   = InvalidStationChange Text Text
   | NoValidMetroRoute Text Text -- source, destination
   | MetroLegNotFound Text -- reason
+  | NoValidSubwayRoute Text Text -- source, destination
+  | SubwayLegNotFound Text -- reason
   | InvalidLegOrder Int -- legOrder
   | OSRMFailure Text -- reason
   | OTPServiceUnavailable Text -- reason
@@ -989,6 +991,8 @@ instance IsBaseError MultimodalError where
     InvalidStationChange stopCode reason -> Just $ "Invalid station change for stop code " <> stopCode <> ": " <> reason
     NoValidMetroRoute source dest -> Just $ "No valid metro route found between " <> source <> " and " <> dest
     MetroLegNotFound reason -> Just $ "Metro leg not found: " <> reason
+    NoValidSubwayRoute source dest -> Just $ "No valid subway route found between " <> source <> " and " <> dest
+    SubwayLegNotFound reason -> Just $ "Subway leg not found: " <> reason
     InvalidLegOrder legOrder -> Just $ "Invalid leg order: " <> show legOrder
     OSRMFailure reason -> Just $ "OSRM service failure: " <> reason
     OTPServiceUnavailable reason -> Just $ "OTP service unavailable: " <> reason
@@ -1006,6 +1010,8 @@ instance IsHTTPError MultimodalError where
     InvalidStationChange _ _ -> "INVALID_STATION_CHANGE"
     NoValidMetroRoute _ _ -> "NO_VALID_METRO_ROUTE"
     MetroLegNotFound _ -> "METRO_LEG_NOT_FOUND"
+    NoValidSubwayRoute _ _ -> "NO_VALID_SUBWAY_ROUTE"
+    SubwayLegNotFound _ -> "SUBWAY_LEG_NOT_FOUND"
     InvalidLegOrder _ -> "INVALID_LEG_ORDER"
     OSRMFailure _ -> "OSRM_FAILURE"
     OTPServiceUnavailable _ -> "OTP_SERVICE_UNAVAILABLE"
@@ -1021,6 +1027,8 @@ instance IsHTTPError MultimodalError where
     InvalidStationChange _ _ -> E400
     NoValidMetroRoute _ _ -> E400
     MetroLegNotFound _ -> E400
+    NoValidSubwayRoute _ _ -> E400
+    SubwayLegNotFound _ -> E400
     InvalidLegOrder _ -> E400
     OSRMFailure _ -> E500
     OTPServiceUnavailable _ -> E503

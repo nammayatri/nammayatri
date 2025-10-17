@@ -1304,11 +1304,13 @@ postMultimodalOrderChangeStops _ journeyId legOrder req = do
       m MultiModalTypes.MultiModalLeg
     getUpdatedMultiModalLeg sourceLatLong destLatLong sourceStopCode destStopCode journey reqJourneyLeg riderConfig = do
       case reqJourneyLeg.mode of
-        DTrip.Metro -> validateAndGetMetroLeg sourceLatLong destLatLong sourceStopCode destStopCode journey reqJourneyLeg riderConfig
+        DTrip.Metro -> validateAndGetTransitLeg MultiModalTypes.MetroRail sourceLatLong destLatLong sourceStopCode destStopCode journey reqJourneyLeg riderConfig
+        DTrip.Subway -> validateAndGetTransitLeg MultiModalTypes.Subway sourceLatLong destLatLong sourceStopCode destStopCode journey reqJourneyLeg riderConfig
         _ -> throwError $ InvalidRequest "Mode not implemented for station changes"
 
-    validateAndGetMetroLeg ::
+    validateAndGetTransitLeg ::
       (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasShortDurationRetryCfg r c) =>
+      GeneralVehicleType -> -- Transit mode (MetroRail or Subway)
       LatLong -> -- Source location
       LatLong -> -- Destination location
       Text -> -- Source stop code
@@ -1317,7 +1319,7 @@ postMultimodalOrderChangeStops _ journeyId legOrder req = do
       DJourneyLeg.JourneyLeg ->
       DRC.RiderConfig ->
       m MultiModalTypes.MultiModalLeg
-    validateAndGetMetroLeg sourceLatLong destLatLong sourceStopCode destStopCode journey reqJourneyLeg riderConfig = do
+    validateAndGetTransitLeg transitMode sourceLatLong destLatLong sourceStopCode destStopCode journey reqJourneyLeg riderConfig = do
       let transitRoutesReq =
             GetTransitRoutesReq
               { origin = WayPointV2 {location = LocationV2 {latLng = LatLngV2 {latitude = sourceLatLong.lat, longitude = sourceLatLong.lon}}},
@@ -1336,13 +1338,21 @@ postMultimodalOrderChangeStops _ journeyId legOrder req = do
       transitServiceReq <- TMultiModal.getTransitServiceReq journey.merchantId reqJourneyLeg.merchantOperatingCityId
       otpResponse <- JMU.measureLatency (MultiModal.getTransitRoutes (Just journeyId.getId) transitServiceReq transitRoutesReq >>= fromMaybeM (OTPServiceUnavailable "No routes found from OTP")) "getTransitRoutes"
 
-      validatedRoute <- JMU.getBestOneWayRoute MultiModalTypes.MetroRail otpResponse.routes (Just sourceStopCode) (Just destStopCode) & fromMaybeM (NoValidMetroRoute sourceStopCode destStopCode)
+      validatedRoute <- JMU.getBestOneWayRoute transitMode otpResponse.routes (Just sourceStopCode) (Just destStopCode) & fromMaybeM (getRouteNotFoundError transitMode sourceStopCode destStopCode)
 
-      metroLeg <- case filter (\leg -> leg.mode == MultiModalTypes.MetroRail) validatedRoute.legs of
-        [singleMetroLeg] -> return singleMetroLeg
-        _ -> throwError $ MetroLegNotFound "Multiple metro legs found in route"
-      return metroLeg
+      transitLeg <- case filter (\leg -> leg.mode == transitMode) validatedRoute.legs of
+        [singleTransitLeg] -> return singleTransitLeg
+        _ -> throwError $ getLegNotFoundError transitMode "Multiple transit legs found in route"
+      return transitLeg
 
+    getRouteNotFoundError :: GeneralVehicleType -> Text -> Text -> MultimodalError
+    getRouteNotFoundError MultiModalTypes.MetroRail source dest = NoValidMetroRoute source dest
+    getRouteNotFoundError MultiModalTypes.Subway source dest = NoValidSubwayRoute source dest
+    getRouteNotFoundError _ source dest = NoValidMetroRoute source dest -- fallback
+    getLegNotFoundError :: GeneralVehicleType -> Text -> MultimodalError
+    getLegNotFoundError MultiModalTypes.MetroRail reason = MetroLegNotFound reason
+    getLegNotFoundError MultiModalTypes.Subway reason = SubwayLegNotFound reason
+    getLegNotFoundError _ reason = MetroLegNotFound reason -- fallback
     updateLegsWithGates ::
       (CacheFlow m r, EncFlow m r, EsqDBFlow m r, MonadFlow m, HasFlowEnv m r '["kafkaProducerTools" ::: KafkaProducerTools], HasShortDurationRetryCfg r c) =>
       DRC.RiderConfig ->
