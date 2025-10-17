@@ -36,6 +36,7 @@ import Kernel.Types.Predicate
 import Kernel.Types.Validation (Validate)
 import Kernel.Utils.Common
 import Kernel.Utils.Validation (runRequestValidation, validateField)
+import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import qualified SharedLogic.DriverOnboarding as DomainRC
 import qualified Storage.Cac.TransporterConfig as CCT
@@ -127,6 +128,9 @@ addReferral (personId, merchantId, merchantOpCityId) req = do
           DriverInformation.updateReferredByOperatorId (Just dr.driverId.getId) personId
           driverOperatorAssData <- SA.makeDriverOperatorAssociation merchantId merchantOpCityId personId dr.driverId.getId (DomainRC.convertTextToUTC (Just "2099-12-12"))
           void $ QDOA.create driverOperatorAssData
+          when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ do
+            when di.enabled $ Analytics.incrementOperatorAnalyticsDriverEnabled transporterConfig dr.driverId.getId
+            Analytics.incrementOperatorAnalyticsActiveDriver transporterConfig dr.driverId.getId
           let allowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
           when allowCacheDriverFlowStatus $ do
             DDriverMode.incrementFleetOperatorStatusKeyForDriver Person.OPERATOR dr.driverId.getId di.driverFlowStatus

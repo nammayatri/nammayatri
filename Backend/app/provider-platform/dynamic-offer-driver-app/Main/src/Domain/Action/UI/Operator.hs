@@ -13,6 +13,7 @@ import Kernel.Types.APISuccess
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DriverFleetOperatorAssociation as SA
 import Storage.Beam.SchedulerJob ()
 import qualified Storage.Cac.TransporterConfig as SCT
@@ -48,13 +49,17 @@ postOperatorConsent (mbDriverId, merchantId, merchantOperatingCityId) = do
 
   QDriverOperatorAssociation.updateByPrimaryKey driverOperatorAssociation{isActive = True}
   let allowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
-  when allowCacheDriverFlowStatus $ do
+  let needDriverInfo = transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics || allowCacheDriverFlowStatus
+  when needDriverInfo $ do
     driverInfo <- QDI.findById driverOperatorAssociation.driverId >>= fromMaybeM (DriverNotFound driverOperatorAssociation.driverId.getId)
-    DDriverMode.incrementFleetOperatorStatusKeyForDriver OPERATOR driverOperatorAssociation.operatorId driverInfo.driverFlowStatus
+    when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ do
+      when driverInfo.enabled $ Analytics.incrementOperatorAnalyticsDriverEnabled transporterConfig operator.id.getId
+      Analytics.incrementOperatorAnalyticsActiveDriver transporterConfig operator.id.getId
+    when allowCacheDriverFlowStatus $ do
+      DDriverMode.incrementFleetOperatorStatusKeyForDriver OPERATOR driverOperatorAssociation.operatorId driverInfo.driverFlowStatus
   QDriverInfoInternal.updateOnboardingVehicleCategory mbOnboardingVehicleCategory driver.id
 
-  unless (transporterConfig.requiresOnboardingInspection == Just True) $
-    QDI.updateEnabledVerifiedState driverId True (Just True)
+  unless (transporterConfig.requiresOnboardingInspection == Just True) $ Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId True (Just True)
   mbMerchantPN <- CPN.findMatchingMerchantPN merchantOperatingCityId "OPERATOR_CONSENT" Nothing Nothing driver.language Nothing
   whenJust mbMerchantPN $ \merchantPN -> do
     let title = T.replace "{#operatorName#}" operator.firstName merchantPN.title

@@ -256,6 +256,7 @@ data AadhaarImageResizeConfig = AadhaarImageResizeConfig {height :: Kernel.Prelu
 data AnalyticsConfig = AnalyticsConfig
   { allowCacheDriverFlowStatus :: Kernel.Prelude.Bool,
     earningsWindowSize :: Kernel.Prelude.Int,
+    enableFleetOperatorDashboardAnalytics :: Kernel.Prelude.Bool,
     maxOnlineDurationDays :: Kernel.Prelude.Int,
     onlineDurationCalculateFrom :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
     weekStartMode :: Kernel.Prelude.Int

@@ -1072,7 +1072,7 @@ postTicketBookingsVerifyV2 _ = processBookingService
 getTicketsDashboardBookingStatus :: (Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Text -> Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking -> Environment.Flow Domain.Types.TicketBooking.BookingStatus
 getTicketsDashboardBookingStatus (_mbPersonId, merchantId) userPhoneNumber bookingShortId = do
   mobileNumberHash <- getDbHash userPhoneNumber
-  person <- QP.findByMobileNumberHashCountryCodeAndMerchantId mobileNumberHash "+91" merchantId >>= fromMaybeM (InvalidRequest "Mobile number not registered")
+  person <- PersonExtra.findByMobileNumberAndMerchantId "+91" mobileNumberHash merchantId >>= fromMaybeM (InvalidRequest "Mobile number not registered")
   getTicketBookingsStatus (Just person.id, merchantId) bookingShortId
 
 getTicketBookingsStatus :: (Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.ShortId Domain.Types.TicketBooking.TicketBooking -> Environment.Flow Domain.Types.TicketBooking.BookingStatus
@@ -1224,7 +1224,7 @@ findOrCreatePersonForDirectBooking merchantId req = do
   mobileNumberHash <- getDbHash req.customerPhoneNumber
 
   -- Try to find existing person
-  existingPerson <- QP.findByMobileNumberHashCountryCodeAndMerchantId mobileNumberHash countryCode merchantId
+  existingPerson <- PersonExtra.findByMobileNumberAndMerchantId countryCode mobileNumberHash merchantId
   case existingPerson of
     Just person -> return person.id
     Nothing -> do

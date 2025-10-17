@@ -23,6 +23,7 @@ import Kernel.Prelude
 import Kernel.Types.Error
 import Kernel.Types.Id
 import Kernel.Utils.Common
+import SharedLogic.Analytics as Analytics
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverOperatorAssociation as QDOA
@@ -61,10 +62,20 @@ endDriverAssociationsIfAllowed merchant merchantOpCityId transporterConfig drive
       then forM_ existingFDAssociations $ \existingAssociation -> do
         logInfo $ "End existing fleet driver association: fleetOwnerId: " <> existingAssociation.fleetOwnerId <> "driverId: " <> existingAssociation.driverId.getId
         QFDA.endFleetDriverAssociation existingAssociation.fleetOwnerId existingAssociation.driverId
+        when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ do
+          Analytics.decrementFleetOwnerAnalyticsActiveDriverCount (Just existingAssociation.fleetOwnerId) existingAssociation.driverId
         let allowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
-        when allowCacheDriverFlowStatus $ do
+        let needDriverInfo = transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics || allowCacheDriverFlowStatus
+        when needDriverInfo $ do
           driverInfo <- QDI.findById existingAssociation.driverId >>= fromMaybeM (DriverNotFound existingAssociation.driverId.getId)
-          DDriverMode.decrementFleetOperatorStatusKeyForDriver DP.FLEET_OWNER existingAssociation.fleetOwnerId driverInfo.driverFlowStatus
+          when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ do
+            mbOperator <- QFOA.findByFleetOwnerId existingAssociation.fleetOwnerId True
+            when (isNothing mbOperator) $ logTagError "AnalyticsRemoveDriver" "Operator not found for fleet owner"
+            whenJust mbOperator $ \operator -> do
+              when driverInfo.enabled $ Analytics.decrementOperatorAnalyticsDriverEnabled transporterConfig operator.operatorId
+              Analytics.decrementOperatorAnalyticsActiveDriver transporterConfig operator.operatorId
+          when allowCacheDriverFlowStatus $ do
+            DDriverMode.decrementFleetOperatorStatusKeyForDriver DP.FLEET_OWNER existingAssociation.fleetOwnerId driverInfo.driverFlowStatus
 
         -- send notification to existing fleet owner about driver unlink
         mbExistingFleetOwner <- B.runInReplica $ QP.findById (Id existingAssociation.fleetOwnerId :: Id DP.Person)
@@ -83,9 +94,14 @@ endDriverAssociationsIfAllowed merchant merchantOpCityId transporterConfig drive
         logInfo $ "End existing operator driver association: operatorId: " <> existingAssociation.operatorId <> "driverId: " <> existingAssociation.driverId.getId
         QDOA.endOperatorDriverAssociation existingAssociation.operatorId existingAssociation.driverId
         let allowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
-        when allowCacheDriverFlowStatus $ do
+        let needDriverInfo = transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics || allowCacheDriverFlowStatus
+        when needDriverInfo $ do
           driverInfo <- QDI.findById existingAssociation.driverId >>= fromMaybeM (DriverNotFound existingAssociation.driverId.getId)
-          DDriverMode.decrementFleetOperatorStatusKeyForDriver DP.OPERATOR existingAssociation.operatorId driverInfo.driverFlowStatus
+          when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ do
+            when driverInfo.enabled $ Analytics.decrementOperatorAnalyticsDriverEnabled transporterConfig existingAssociation.operatorId
+            Analytics.decrementOperatorAnalyticsActiveDriver transporterConfig existingAssociation.operatorId
+          when allowCacheDriverFlowStatus $ do
+            DDriverMode.decrementFleetOperatorStatusKeyForDriver DP.OPERATOR existingAssociation.operatorId driverInfo.driverFlowStatus
 
         -- send notification to existing operator about driver unlink
         mbExistingOperator <- B.runInReplica $ QP.findById (Id existingAssociation.operatorId :: Id DP.Person)

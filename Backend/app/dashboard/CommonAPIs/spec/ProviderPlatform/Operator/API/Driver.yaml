@@ -119,6 +119,41 @@ apis:
             response:
               type: APISuccess
 
+  - GET:
+      endpoint: /operator/dashboard/analytics/allTime
+      auth: ApiAuthV2
+      response:
+        type: AllTimeOperatorAnalyticsRes
+      helperApi:
+        - GET:
+            endpoint: /{requestorId}/operator/dashboard/analytics/allTime
+            auth: ApiAuthV2
+            params:
+              requestorId: Text
+            response:
+              type: AllTimeOperatorAnalyticsRes
+
+  - GET:
+      endpoint: /operator/dashboard/analytics
+      auth: ApiAuthV2
+      mandatoryQuery:
+        - from: Day
+        - to: Day
+      response:
+        type: FilteredOperatorAnalyticsRes
+      helperApi:
+        - GET:
+            endpoint: /{requestorId}/operator/dashboard/analytics
+            auth: ApiAuthV2
+            params:
+              requestorId: Text
+            mandatoryQuery:
+              - from: Day
+              - to: Day
+            response:
+              type: FilteredOperatorAnalyticsRes
+
+
 types:
   DriverInfoResp:
     - listItem: [DriverInfo]
@@ -184,3 +219,15 @@ types:
     - otp: Text
     - deviceToken: Maybe FCMRecipientToken
     - derive: "'HideSecrets"
+
+  AllTimeOperatorAnalyticsRes:
+    - rating: Double
+    - cancellationRate: Double
+    - acceptanceRate: Double
+
+  FilteredOperatorAnalyticsRes:
+    - activeDriver: Int
+    - driverEnabled: Int
+    - greaterThanOneRide: Int
+    - greaterThanTenRide: Int
+    - greaterThanFiftyRide: Int

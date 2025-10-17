@@ -121,6 +121,7 @@ import qualified Lib.Yudhishthira.Flow.Dashboard as Yudhishthira
 import qualified Lib.Yudhishthira.Tools.Utils as Yudhishthira
 import qualified Lib.Yudhishthira.Types as LYT
 import SharedLogic.Allocator
+import SharedLogic.Analytics as Analytics
 import qualified SharedLogic.DeleteDriver as DeleteDriver
 import SharedLogic.DriverOnboarding
 import SharedLogic.DriverOnboarding.Status (ResponseStatus (..))
@@ -328,6 +329,7 @@ postDriverDisable :: ShortId DM.Merchant -> Context.City -> Id Common.Driver -> 
 postDriverDisable merchantShortId opCity reqDriverId = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let driverId = cast @Common.Driver @DP.Driver reqDriverId
   let personId = cast @Common.Driver @DP.Person reqDriverId
   driver <-
@@ -337,7 +339,7 @@ postDriverDisable merchantShortId opCity reqDriverId = do
   -- merchant access checking
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
 
-  QDriverInfo.updateEnabledVerifiedState driverId False Nothing
+  Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId False Nothing
   logTagInfo "dashboard -> disableDriver : " (show personId)
   pure Success
 
@@ -500,6 +502,7 @@ postDriverUnlinkDL :: ShortId DM.Merchant -> Context.City -> Id Common.Driver ->
 postDriverUnlinkDL merchantShortId opCity driverId = do
   merchant <- findMerchantByShortId merchantShortId
   merchantOpCityId <- CQMOC.getMerchantOpCityId Nothing merchant (Just opCity)
+  transporterConfig <- CTC.findByMerchantOpCityId merchantOpCityId Nothing >>= fromMaybeM (TransporterConfigNotFound merchantOpCityId.getId)
   let driverId_ = cast @Common.Driver @DP.Driver driverId
   let personId = cast @Common.Driver @DP.Person driverId
 
@@ -508,7 +511,7 @@ postDriverUnlinkDL merchantShortId opCity driverId = do
   unless (merchant.id == driver.merchantId && merchantOpCityId == driver.merchantOperatingCityId) $ throwError (PersonDoesNotExist personId.getId)
 
   QDriverLicense.deleteByDriverId personId
-  QDriverInfo.updateEnabledVerifiedState driverId_ False (Just False)
+  Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId_ False (Just False)
   logTagInfo "dashboard -> unlinkDL : " (show personId)
   pure Success
 
@@ -525,7 +528,7 @@ postDriverUnlinkAadhaar merchantShortId opCity driverId = do
 
   QAadhaarCard.deleteByPersonId personId
   QDriverInfo.updateAadhaarVerifiedState False driverId_
-  unless (transporterConfig.aadhaarVerificationRequired) $ QDriverInfo.updateEnabledVerifiedState driverId_ False (Just False)
+  unless (transporterConfig.aadhaarVerificationRequired) $ Analytics.updateEnabledVerifiedStateWithAnalytics Nothing transporterConfig driverId_ False (Just False)
   logTagInfo "dashboard -> unlinkAadhaar : " (show personId)
   pure Success
 
