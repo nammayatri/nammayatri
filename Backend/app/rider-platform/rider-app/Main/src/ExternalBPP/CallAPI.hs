@@ -169,9 +169,8 @@ select processOnSelectHandler merchant merchantOperatingCity bapConfig quote tic
       onSelectReq <- Flow.select merchant merchantOperatingCity integratedBPPConfig bapConfig quote ticketQuantity childTicketQuantity categorySelectionReq
       processOnSelectHandler onSelectReq
 
-init :: (FRFSConfirmFlow m r) => Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> DBooking.FRFSTicketBooking -> [DCategorySelect] -> m ()
-init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking categories = do
-  Metrics.startMetrics Metrics.INIT_FRFS merchant.name booking.searchId.getId merchantOperatingCity.id.getId
+init :: (FRFSConfirmFlow m r) => Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> DBooking.FRFSTicketBooking -> [DCategorySelect] -> Maybe Bool -> m ()
+init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking categories mbEnableOffer = do
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity booking
   case integratedBPPConfig.providerConfig of
     ONDC _ -> do
@@ -186,7 +185,7 @@ init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking
     processOnInit :: (FRFSConfirmFlow m r) => DOnInit.DOnInit -> m ()
     processOnInit onInitReq = do
       (merchant', booking') <- DOnInit.validateRequest onInitReq
-      DOnInit.onInit onInitReq merchant' booking'
+      DOnInit.onInit onInitReq merchant' booking' mbEnableOffer
 
 cancel :: Merchant -> MerchantOperatingCity -> BecknConfig -> Spec.CancellationType -> DBooking.FRFSTicketBooking -> Flow ()
 cancel merchant merchantOperatingCity bapConfig cancellationType booking = do
