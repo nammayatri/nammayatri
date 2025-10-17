@@ -39,7 +39,9 @@ data SubwayLegRequestConfirmData = SubwayLegRequestConfirmData
     merchantOperatingCityId :: Id DMOC.MerchantOperatingCity,
     crisSdkResponse :: Maybe ApiTypes.CrisSdkResponse,
     quantity :: Maybe Int,
-    childTicketQuantity :: Maybe Int
+    childTicketQuantity :: Maybe Int,
+    isSingleMode :: Maybe Bool,
+    mbEnableOffer :: Maybe Bool
   }
 
 data SubwayLegRequestCancelData = SubwayLegRequestCancelData

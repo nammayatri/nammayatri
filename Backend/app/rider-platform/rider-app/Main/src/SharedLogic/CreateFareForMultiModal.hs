@@ -189,8 +189,10 @@ createBasketFromBookings ::
   Id Merchant.Merchant ->
   Id DMOC.MerchantOperatingCity ->
   Payment.PaymentServiceType ->
+  Maybe Bool ->
   m [Payment.Basket]
-createBasketFromBookings allJourneyBookings merchantId merchantOperatingCityId paymentServiceType = do
+createBasketFromBookings allJourneyBookings merchantId merchantOperatingCityId paymentServiceType mbEnableOffer = do
+  logDebug $ "mbEnableOffer: " <> show mbEnableOffer
   let dummyBasket =
         [ Payment.Basket
             { Payment.id = "no_basket",
@@ -198,20 +200,24 @@ createBasketFromBookings allJourneyBookings merchantId merchantOperatingCityId p
               Payment.quantity = 1
             }
         ]
-  case allJourneyBookings of
-    [booking] -> do
-      -- offer valid only for single mode booking (not handled for multimodal right now)
-      quote <- QFRFSQuote.findById booking.quoteId >>= fromMaybeM (QuoteNotFound booking.quoteId.getId)
-      mbOfferSKUProductId <- Payment.fetchOfferSKUConfig merchantId merchantOperatingCityId Nothing paymentServiceType
-      case (mbOfferSKUProductId, quote.quantity, fromMaybe 0 quote.childTicketQuantity) of
-        (Just offerSKUProductId, 1, 0) -> do
-          let unitPrice = quote.price.amount
-          return $
-            [ Payment.Basket
-                { Payment.id = offerSKUProductId,
-                  Payment.unitPrice = unitPrice,
-                  Payment.quantity = quote.quantity
-                }
-            ]
+  if mbEnableOffer /= Just True
+    then do
+      return dummyBasket
+    else do
+      case allJourneyBookings of
+        [booking] -> do
+          -- offer valid only for single mode booking (not handled for multimodal right now)
+          quote <- QFRFSQuote.findById booking.quoteId >>= fromMaybeM (QuoteNotFound booking.quoteId.getId)
+          mbOfferSKUProductId <- Payment.fetchOfferSKUConfig merchantId merchantOperatingCityId Nothing paymentServiceType
+          case (mbOfferSKUProductId, quote.quantity, fromMaybe 0 quote.childTicketQuantity) of
+            (Just offerSKUProductId, 1, 0) -> do
+              let unitPrice = quote.price.amount
+              return $
+                [ Payment.Basket
+                    { Payment.id = offerSKUProductId,
+                      Payment.unitPrice = unitPrice,
+                      Payment.quantity = quote.quantity
+                    }
+                ]
+            _ -> return dummyBasket
         _ -> return dummyBasket
-    _ -> return dummyBasket
