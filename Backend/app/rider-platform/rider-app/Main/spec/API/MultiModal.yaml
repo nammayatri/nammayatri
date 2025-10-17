@@ -176,6 +176,7 @@ types:
 
   JourneyConfirmReq:
     journeyConfirmReqElements: "[JourneyConfirmReqElement]"
+    enableOffer: Maybe Bool
 
   JourneyConfirmReqElement:
     journeyLegOrder: Int

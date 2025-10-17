@@ -150,8 +150,8 @@ getFare fromArrivalTime riderId merchantId merchantOperatingCityId mbRouteLiveIn
               Just $ FRFSRouteDetails {routeCode = Just routeCode, ..}
             _ -> Nothing
 
-confirm :: JL.ConfirmFlow m r c => Bool -> Maybe Int -> Maybe Int -> Bool -> JL.LegInfo -> Maybe CrisSdkResponse -> Maybe [FRFSCategorySelectionReq] -> Maybe Bool -> m ()
-confirm forcedBooked ticketQuantity childTicketQuantity bookLater JL.LegInfo {..} crisSdkResponse categorySelectionReq isSingleMode =
+confirm :: JL.ConfirmFlow m r c => Bool -> Maybe Int -> Maybe Int -> Bool -> JL.LegInfo -> Maybe CrisSdkResponse -> Maybe [FRFSCategorySelectionReq] -> Maybe Bool -> Maybe Bool -> m ()
+confirm forcedBooked ticketQuantity childTicketQuantity bookLater JL.LegInfo {..} crisSdkResponse categorySelectionReq isSingleMode mbEnableOffer =
   case travelMode of
     DTrip.Taxi -> do
       confirmReq :: TaxiLegRequest <- mkTaxiLegConfirmReq
@@ -199,7 +199,8 @@ confirm forcedBooked ticketQuantity childTicketQuantity bookLater JL.LegInfo {..
               merchantOperatingCityId,
               quantity = ticketQuantity,
               childTicketQuantity,
-              isSingleMode
+              isSingleMode,
+              mbEnableOffer
             }
     mkSubwayLegConfirmReq :: JL.ConfirmFlow m r c => m SubwayLegRequest
     mkSubwayLegConfirmReq = do
@@ -216,7 +217,8 @@ confirm forcedBooked ticketQuantity childTicketQuantity bookLater JL.LegInfo {..
               crisSdkResponse,
               quantity = ticketQuantity,
               childTicketQuantity,
-              isSingleMode
+              isSingleMode,
+              mbEnableOffer
             }
     mkBusLegConfirmReq :: JL.ConfirmFlow m r c => m BusLegRequest
     mkBusLegConfirmReq = do
@@ -233,5 +235,6 @@ confirm forcedBooked ticketQuantity childTicketQuantity bookLater JL.LegInfo {..
               quantity = ticketQuantity,
               childTicketQuantity,
               categorySelectionReq,
-              isSingleMode
+              isSingleMode,
+              mbEnableOffer
             }

@@ -40,7 +40,8 @@ data SubwayLegRequestConfirmData = SubwayLegRequestConfirmData
     crisSdkResponse :: Maybe ApiTypes.CrisSdkResponse,
     quantity :: Maybe Int,
     childTicketQuantity :: Maybe Int,
-    isSingleMode :: Maybe Bool
+    isSingleMode :: Maybe Bool,
+    mbEnableOffer :: Maybe Bool
   }
 
 data SubwayLegRequestCancelData = SubwayLegRequestCancelData
