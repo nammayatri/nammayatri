@@ -56,6 +56,7 @@ data RiderConfig = RiderConfig
     enableIGMIssueFlow :: Kernel.Prelude.Bool,
     enableLocalPoliceSupport :: Kernel.Prelude.Bool,
     enableMultiModalForAllUsers :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
+    enableOnlinePaymentRide :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     enableRideEndOffers :: Kernel.Prelude.Bool,
     enableSupportForSafety :: Kernel.Prelude.Bool,
     excludedVehicleVariants :: Kernel.Prelude.Maybe [Domain.Types.ServiceTierType.ServiceTierType],
