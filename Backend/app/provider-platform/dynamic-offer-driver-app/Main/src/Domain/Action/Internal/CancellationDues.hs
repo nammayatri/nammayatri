@@ -28,7 +28,8 @@ data CustomerCancellationDuesWaiveOffReq = CustomerCancellationDuesWaiveOffReq
   deriving (Generic, ToJSON, FromJSON, ToSchema, Show)
 
 customerCancellationDuesWaiveOff :: Id DMerchant.Merchant -> Maybe Text -> CustomerCancellationDuesWaiveOffReq -> Flow APISuccess
-customerCancellationDuesWaiveOff merchantId apiKey req = do
+customerCancellationDuesWaiveOff merchantId apiKey req = withLogTag ("customerCancellationDuesWaiveOff: rideId-" <> req.rideId <> " bookingId-" <> req.bookingId) $ do
+  logInfo $ "customerCancellationDuesWaiveOff: received request" <> show req
   merchant <- QM.findById merchantId >>= fromMaybeM (MerchantNotFound merchantId.getId)
   unless (Just merchant.internalApiKey == apiKey) $
     throwError $ AuthBlocked "Invalid BPP internal api key"
