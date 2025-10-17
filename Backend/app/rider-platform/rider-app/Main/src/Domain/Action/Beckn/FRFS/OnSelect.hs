@@ -67,4 +67,4 @@ onSelect onSelectReq merchant quote isSingleMode = do
               return $ FRFSCategorySelectionReq {quantity = selectedQuantity, quoteCategoryId = category.id}
           )
           quoteCategories
-  void $ FRFSTicketService.postFrfsQuoteV2ConfirmUtil (Just quote.riderId, merchant.id) quote.id (FRFSQuoteConfirmReq {offered = Just categorySelectionReq, ticketQuantity = Nothing, childTicketQuantity = Nothing}) Nothing
+  void $ FRFSTicketService.postFrfsQuoteV2ConfirmUtil (Just quote.riderId, merchant.id) quote.id (FRFSQuoteConfirmReq {offered = Just categorySelectionReq, ticketQuantity = Nothing, childTicketQuantity = Nothing}) Nothing isSingleMode Nothing

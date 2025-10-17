@@ -103,7 +103,7 @@ data JourneyBookingPaymentStatus = JourneyBookingPaymentStatus
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
-data JourneyConfirmReq = JourneyConfirmReq {journeyConfirmReqElements :: [JourneyConfirmReqElement]}
+data JourneyConfirmReq = JourneyConfirmReq {journeyConfirmReqElements :: [JourneyConfirmReqElement], enableOffer :: Kernel.Prelude.Maybe Kernel.Prelude.Bool}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

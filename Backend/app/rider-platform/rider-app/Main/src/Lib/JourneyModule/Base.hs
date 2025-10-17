@@ -455,10 +455,11 @@ startJourney ::
   Id DPerson.Person ->
   [APITypes.JourneyConfirmReqElement] ->
   Maybe Int ->
-  Id DJourney.Journey ->
+  DJourney.Journey ->
+  Maybe Bool ->
   m ()
-startJourney riderId confirmElements forcedBookedLegOrder journeyId = do
-  allLegs <- getAllLegsInfo riderId journeyId
+startJourney riderId confirmElements forcedBookedLegOrder journey mbEnableOffer = do
+  allLegs <- getAllLegsInfo riderId journey.id
   mapM_ (\leg -> QTBooking.updateOnInitDoneBySearchId (Just False) (Id leg.searchId)) allLegs -- TODO :: Handle the case where isMultiAllowed is False
   mapM_
     ( \leg -> do
@@ -469,7 +470,7 @@ startJourney riderId confirmElements forcedBookedLegOrder journeyId = do
         let forcedBooking = Just leg.order == forcedBookedLegOrder
         let crisSdkResponse = find (\element -> element.journeyLegOrder == leg.order) confirmElements >>= (.crisSdkResponse)
         let categorySelectionReq = find (\element -> element.journeyLegOrder == leg.order) confirmElements >>= (.categorySelectionReq)
-        JLI.confirm forcedBooking ticketQuantity childTicketQuantity bookLater leg crisSdkResponse categorySelectionReq
+        JLI.confirm forcedBooking ticketQuantity childTicketQuantity bookLater leg crisSdkResponse categorySelectionReq journey.isSingleMode mbEnableOffer
     )
     allLegs
 
@@ -490,7 +491,7 @@ startJourneyLeg legInfo = do
       _ -> return (Nothing, Nothing, Nothing)
   when (legInfo.travelMode `elem` [DTrip.Metro, DTrip.Subway, DTrip.Bus]) $ do
     QTBooking.updateOnInitDoneBySearchId (Just False) (Id legInfo.searchId)
-  JLI.confirm True adultTicketQuantity childTicketQuantity False legInfo crisSdkResponse Nothing -- TODO :: Add category selection req
+  JLI.confirm True adultTicketQuantity childTicketQuantity False legInfo crisSdkResponse Nothing isSingleMode Nothing -- TODO :: Add category selection req
 
 addAllLegs ::
   ( JL.SearchRequestFlow m r c,
@@ -1001,7 +1002,7 @@ extendLeg journeyId startPoint mbEndLocation mbEndLegOrder fare newDistance newD
         -- cancelRequiredLegs journey.riderId
         QJourneyLeg.create journeyLeg
         void $ addTaxiLeg journey journeyLeg (mkLocationAddress startlocation.location) (mkLocationAddress endLocation) (\searchId -> QJourneyLeg.updateLegSearchId (Just searchId) journeyLeg.id)
-        startJourney journey.riderId [] (Just currentLeg.sequenceNumber) journeyId
+        startJourney journey.riderId [] (Just currentLeg.sequenceNumber) journey Nothing
 
     -- cancelRequiredLegs riderId = do
     --   case mbEndLegOrder of
