@@ -21,6 +21,7 @@ import qualified API.Types.ProviderPlatform.Management.Revenue
 import qualified API.Types.ProviderPlatform.Management.Ride
 import qualified API.Types.ProviderPlatform.Management.System
 import qualified API.Types.ProviderPlatform.Management.VehicleInfo
+import qualified API.Types.ProviderPlatform.Management.Volunteer
 import qualified Data.List
 import Data.OpenApi (ToSchema)
 import qualified Data.Singletons.TH
@@ -47,6 +48,7 @@ data ManagementUserActionType
   | RIDE API.Types.ProviderPlatform.Management.Ride.RideUserActionType
   | SYSTEM API.Types.ProviderPlatform.Management.System.SystemUserActionType
   | VEHICLE_INFO API.Types.ProviderPlatform.Management.VehicleInfo.VehicleInfoUserActionType
+  | VOLUNTEER API.Types.ProviderPlatform.Management.Volunteer.VolunteerUserActionType
   deriving stock (Generic, Eq, Ord)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -70,6 +72,7 @@ instance Text.Show.Show ManagementUserActionType where
     RIDE e -> "RIDE/" <> show e
     SYSTEM e -> "SYSTEM/" <> show e
     VEHICLE_INFO e -> "VEHICLE_INFO/" <> show e
+    VOLUNTEER e -> "VOLUNTEER/" <> show e
 
 instance Text.Read.Read ManagementUserActionType where
   readsPrec d' =
@@ -227,9 +230,18 @@ instance Text.Read.Read ManagementUserActionType where
                      ) <-
                      Text.Read.readsPrec (app_prec + 1) r1
                ]
+            ++ [ ( VOLUNTEER v1,
+                   r2
+                 )
+                 | r1 <- stripPrefix "VOLUNTEER/" r,
+                   ( v1,
+                     r2
+                     ) <-
+                     Text.Read.readsPrec (app_prec + 1) r1
+               ]
       )
     where
       app_prec = 10
       stripPrefix pref r = bool [] [Data.List.drop (length pref) r] $ Data.List.isPrefixOf pref r
 
-$(Data.Singletons.TH.genSingletons [(''ManagementUserActionType)])
+$(Data.Singletons.TH.genSingletons [''ManagementUserActionType])
