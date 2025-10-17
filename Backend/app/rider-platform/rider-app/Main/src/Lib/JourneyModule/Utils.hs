@@ -1192,8 +1192,8 @@ createRecentLocationForMultimodal journey = do
           SQRL.create recentLocation
     _ -> return ()
 
-postMultimodalPaymentUpdateOrderUtil :: (ServiceFlow m r, EncFlow m r, EsqDBReplicaFlow m r, HasField "isMetroTestTransaction" r Bool) => TPayment.PaymentServiceType -> Person -> Id Merchant -> Id MerchantOperatingCity -> [DFRFSTicketBooking.FRFSTicketBooking] -> m (Maybe DOrder.PaymentOrder)
-postMultimodalPaymentUpdateOrderUtil paymentType person merchantId merchantOperatingCityId bookings = do
+postMultimodalPaymentUpdateOrderUtil :: (ServiceFlow m r, EncFlow m r, EsqDBReplicaFlow m r, HasField "isMetroTestTransaction" r Bool) => TPayment.PaymentServiceType -> Person -> Id Merchant -> Id MerchantOperatingCity -> [DFRFSTicketBooking.FRFSTicketBooking] -> Maybe Bool -> m (Maybe DOrder.PaymentOrder)
+postMultimodalPaymentUpdateOrderUtil paymentType person merchantId merchantOperatingCityId bookings mbEnableOffer = do
   frfsConfig <-
     CQFRFSConfig.findByMerchantOperatingCityIdInRideFlow person.merchantOperatingCityId []
       >>= fromMaybeM (InternalError $ "FRFS config not found for merchant operating city Id " <> show person.merchantOperatingCityId)
@@ -1202,7 +1202,7 @@ postMultimodalPaymentUpdateOrderUtil paymentType person merchantId merchantOpera
   isSplitEnabled <- TPayment.getIsSplitEnabled merchantId person.merchantOperatingCityId Nothing paymentType -- TODO :: You can be moved inside :)
   isPercentageSplitEnabled <- TPayment.getIsPercentageSplit merchantId merchantOperatingCityId Nothing paymentType
   splitDetails <- TPayment.mkUnaggregatedSplitSettlementDetails isSplitEnabled amountUpdated vendorSplitDetails isPercentageSplitEnabled
-  baskets <- SMMFRFS.createBasketFromBookings bookings merchantId merchantOperatingCityId paymentType
+  baskets <- SMMFRFS.createBasketFromBookings bookings merchantId merchantOperatingCityId paymentType mbEnableOffer
   let splitDetailsAmount = TPayment.extractSplitSettlementDetailsAmount splitDetails
   if frfsConfig.canUpdateExistingPaymentOrder
     then do

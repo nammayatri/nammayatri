@@ -46,7 +46,7 @@ onInit _ req = withFlowHandlerAPI $ do
       (merchant, booking) <- DOnInit.validateRequest onInitReq
       fork "FRFS on_init processing" $ do
         Redis.whenWithLockRedis (onInitProcessingLockKey onInitReq.messageId) 60 $
-          DOnInit.onInit onInitReq merchant booking
+          DOnInit.onInit onInitReq merchant booking Nothing
       fork "FRFS onInit received pushing ondc logs" do
         void $ pushLogs "on_init" (toJSON req) merchant.id.getId "PUBLIC_TRANSPORT"
   pure Utils.ack

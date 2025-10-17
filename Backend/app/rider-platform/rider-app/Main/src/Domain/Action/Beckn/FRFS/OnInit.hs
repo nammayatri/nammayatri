@@ -78,8 +78,9 @@ onInit ::
   DOnInit ->
   Merchant.Merchant ->
   FTBooking.FRFSTicketBooking ->
+  Maybe Bool ->
   m ()
-onInit onInitReq merchant oldBooking = do
+onInit onInitReq merchant oldBooking mbEnableOffer = do
   Metrics.finishMetrics Metrics.INIT_FRFS merchant.name onInitReq.transactionId oldBooking.merchantOperatingCityId.getId
   person <- QP.findById oldBooking.riderId >>= fromMaybeM (PersonNotFound oldBooking.riderId.getId)
   whenJust (onInitReq.validTill) (\validity -> void $ QFRFSTicketBooking.updateValidTillById validity oldBooking.id)
@@ -99,9 +100,9 @@ onInit onInitReq merchant oldBooking = do
       (vendorSplitDetails, amount) <- createVendorSplitFromBookings allJourneyBookings merchant.id oldBooking.merchantOperatingCityId paymentType (isMetroTestTransaction && frfsConfig.isFRFSTestingEnabled)
       baskets <- case mbJourneyId of
         Just _ -> do
-          Just <$> createBasketFromBookings allJourneyBookings merchant.id oldBooking.merchantOperatingCityId paymentType
+          Just <$> createBasketFromBookings allJourneyBookings merchant.id oldBooking.merchantOperatingCityId paymentType mbEnableOffer
         Nothing -> return Nothing
-      createPayments allJourneyBookings oldBooking.merchantOperatingCityId oldBooking.merchantId amount person paymentType vendorSplitDetails baskets
+      createPayments allJourneyBookings oldBooking.merchantOperatingCityId oldBooking.merchantId amount person paymentType vendorSplitDetails baskets mbEnableOffer
   where
     getPaymentType vehicleType mbJourneyId = do
       case mbJourneyId of
@@ -128,8 +129,9 @@ createPayments ::
   Payment.PaymentServiceType ->
   [Payment.VendorSplitDetails] ->
   Maybe [Payment.Basket] ->
+  Maybe Bool ->
   m ()
-createPayments bookings merchantOperatingCityId merchantId amount person paymentType vendorSplitArr basket = do
+createPayments bookings merchantOperatingCityId merchantId amount person paymentType vendorSplitArr basket mbEnableOffer = do
   ticketBookingPaymentsExist <- mapM (fmap isNothing . QFRFSTicketBookingPayment.findNewTBPByBookingId . (.id)) bookings
   isPaymentOrderProcessed <-
     if and ticketBookingPaymentsExist
@@ -137,7 +139,7 @@ createPayments bookings merchantOperatingCityId merchantId amount person payment
         paymentOrder <- createPaymentOrder bookings merchantOperatingCityId merchantId amount person paymentType vendorSplitArr basket
         return $ isJust paymentOrder
       else do
-        updatedPaymentOrder <- JourneyUtils.postMultimodalPaymentUpdateOrderUtil paymentType person merchantId merchantOperatingCityId bookings
+        updatedPaymentOrder <- JourneyUtils.postMultimodalPaymentUpdateOrderUtil paymentType person merchantId merchantOperatingCityId bookings mbEnableOffer
         return $ isJust updatedPaymentOrder
   if isPaymentOrderProcessed
     then markBookingApproved `mapM_` bookings

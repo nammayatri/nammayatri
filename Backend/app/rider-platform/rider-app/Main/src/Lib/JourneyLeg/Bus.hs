@@ -15,7 +15,7 @@ instance JT.JourneyLeg BusLegRequest m where
   search (BusLegRequestSearch BusLegRequestSearchData {..}) = CFRFS.search Spec.BUS personId merchantId quantity city journeyLeg recentLocationId multimodalSearchRequestId upsertJourneyLegAction
   search _ = throwError (InternalError "Not supported")
 
-  confirm (BusLegRequestConfirm BusLegRequestConfirmData {..}) = CFRFS.confirm personId merchantId quoteId quantity childTicketQuantity bookLater bookingAllowed Nothing Spec.BUS categorySelectionReq isSingleMode
+  confirm (BusLegRequestConfirm BusLegRequestConfirmData {..}) = CFRFS.confirm personId merchantId quoteId quantity childTicketQuantity bookLater bookingAllowed Nothing Spec.BUS categorySelectionReq isSingleMode mbEnableOffer
   confirm _ = throwError (InternalError "Not supported")
 
   update (BusLegRequestUpdate _) = do
