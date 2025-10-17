@@ -409,14 +409,14 @@ confirm personId merchantId mbQuoteId ticketQuantity childTicketQuantity bookLat
         merchant <- CQM.findById merchantId >>= fromMaybeM (MerchantDoesNotExist merchantId.getId)
         merchantOperatingCity <- CQMOC.findById quote.merchantOperatingCityId >>= fromMaybeM (MerchantOperatingCityNotFound quote.merchantOperatingCityId.getId)
         bapConfig <- CQBC.findByMerchantIdDomainVehicleAndMerchantOperatingCityIdWithFallback merchantOperatingCity.id merchant.id (show Spec.FRFS) (frfsVehicleCategoryToBecknVehicleCategory vehicleType) >>= fromMaybeM (InternalError "Beckn Config not found")
-        void $ CallExternalBPP.select processOnSelect merchant merchantOperatingCity bapConfig quote ticketQuantity childTicketQuantity categorySelectionReq isSingleMode
+        void $ CallExternalBPP.select processOnSelect merchant merchantOperatingCity bapConfig quote ticketQuantity childTicketQuantity categorySelectionReq isSingleMode mbEnableOffer
       else do
         void $ FRFSTicketService.postFrfsQuoteV2ConfirmUtil (Just personId, merchantId) quoteId (API.FRFSQuoteConfirmReq {offered = categorySelectionReq, ticketQuantity = ticketQuantity, childTicketQuantity = childTicketQuantity}) crisSdkResponse isSingleMode mbEnableOffer
   where
-    processOnSelect :: (FRFSConfirmFlow m r) => DOnSelect -> Maybe Bool -> m ()
-    processOnSelect onSelectReq mbSingleMode = do
+    processOnSelect :: (FRFSConfirmFlow m r) => DOnSelect -> Maybe Bool -> Maybe Bool -> m ()
+    processOnSelect onSelectReq mbSingleMode enableOffer = do
       (merchant', quote') <- DOnSelect.validateRequest onSelectReq
-      DOnSelect.onSelect onSelectReq merchant' quote' mbSingleMode
+      DOnSelect.onSelect onSelectReq merchant' quote' mbSingleMode enableOffer
 
 cancel :: JT.CancelFlow m r c => Id FRFSSearch -> Spec.CancellationType -> m ()
 cancel searchId cancellationType = do
