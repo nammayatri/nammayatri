@@ -455,3 +455,12 @@ ALTER TABLE atlas_app.rider_config ADD COLUMN dashboard_media_file_url_pattern t
 
 ALTER TABLE atlas_app.rider_config ADD COLUMN nearby_bus_search_radius double precision ;
 ALTER TABLE atlas_app.rider_config ADD COLUMN max_nearby_buses integer ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_app.rider_config ADD COLUMN enable_online_payment_ride boolean  default false;
+
+
+------- SQL updates -------
+

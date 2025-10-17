@@ -24,6 +24,7 @@ import Data.List (singleton)
 import qualified Domain.Types.BecknConfig as DBC
 import qualified Domain.Types.Location as Location
 import qualified Domain.Types.MerchantPaymentMethod as DMPM
+import qualified Domain.Types.RiderConfig as DRC
 import EulerHS.Prelude hiding (id, state)
 import qualified Kernel.Types.Beckn.Context as Context
 import qualified Kernel.Types.Beckn.Gps as Gps
@@ -89,9 +90,9 @@ mkStops origin mDestination mStartOtp intermediateStops =
           ]
           <> (map (\(location, order) -> UCommon.mkIntermediateStop location order (order - 1)) $ zip intermediateStops [1 ..])
 
-mkPayment :: Maybe DMPM.PaymentMethodInfo -> DBC.BecknConfig -> Context.City -> [Spec.Payment]
-mkPayment mbPaymentMethodInfo bapConfig city = do
-  let mkParams = SLMPM.mkBknPaymentParams mbPaymentMethodInfo bapConfig
+mkPayment :: Maybe DMPM.PaymentMethodInfo -> DBC.BecknConfig -> DRC.RiderConfig -> Context.City -> [Spec.Payment]
+mkPayment mbPaymentMethodInfo bapConfig riderConfig city = do
+  let mkParams = SLMPM.mkBknPaymentParams mbPaymentMethodInfo bapConfig riderConfig
   singleton $ OUP.mkPayment (show city) (show bapConfig.collectedBy) Enums.NOT_PAID Nothing Nothing mkParams bapConfig.settlementType bapConfig.settlementWindow bapConfig.staticTermsUrl bapConfig.buyerFinderFee
 
 castDPaymentType :: DMPM.PaymentType -> Text

@@ -166,6 +166,7 @@ RiderConfig:
     dashboardMediaFileUrlPattern : Maybe Text
     maxNearbyBuses: Maybe Int
     nearbyBusSearchRadius: Maybe Double
+    enableOnlinePaymentRide: Maybe Bool
 
   beamType:
     ivrTriggerDelay: Maybe Seconds
@@ -363,7 +364,7 @@ RiderConfig:
     trackVehicleKeyExpiry: "900"
     distanceToNearestStopThreshold: "200"
     validateSetOnboardingVehicleRequest: "false"
-
+    enableOnlinePaymentRide: "false"
   queries:
     findByMerchantOperatingCityId:
       kvFunction: findOneWithKV

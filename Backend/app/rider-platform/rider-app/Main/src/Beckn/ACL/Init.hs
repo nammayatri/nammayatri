@@ -28,7 +28,9 @@ import Kernel.Utils.Common
 import qualified SharedLogic.Confirm as SConfirm
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.Merchant.MerchantOperatingCity as CQMOC
+import qualified Storage.CachedQueries.Merchant.RiderConfig as QRC
 import qualified Storage.CachedQueries.ValueAddNP as VNP
+import Tools.Error
 
 buildInitReqV2 ::
   (MonadFlow m, HasFlowEnv m r '["nwAddress" ::: BaseUrl], EncFlow m r, CacheFlow m r, EsqDBFlow m r) =>
@@ -37,10 +39,11 @@ buildInitReqV2 ::
 buildInitReqV2 res = do
   bapUrl <- asks (.nwAddress) <&> #baseUrlPath %~ (<> "/" <> T.unpack res.merchant.id.getId)
   moc <- CQMOC.findByMerchantIdAndCity res.merchant.id res.city >>= fromMaybeM (MerchantOperatingCityNotFound $ "merchant-Id-" <> res.merchant.id.getId <> "-city-" <> show res.city)
+  riderConfig <- QRC.findByMerchantOperatingCityId moc.id Nothing >>= fromMaybeM (RiderConfigDoesNotExist moc.id.getId)
   bapConfigs <- QBC.findByMerchantIdDomainandMerchantOperatingCityId res.merchant.id "MOBILITY" moc.id
   bapConfig <- listToMaybe bapConfigs & fromMaybeM (InvalidRequest $ "BecknConfig not found for merchantId " <> show res.merchant.id.getId <> " merchantOperatingCityId " <> show moc.id.getId) -- Using findAll for backward compatibility, TODO : Remove findAll and use findOne
   let action = Context.INIT
   let domain = Context.MOBILITY
   isValueAddNP <- VNP.isValueAddNP res.providerId
   ttl <- bapConfig.initTTLSec & fromMaybeM (InternalError "Invalid ttl") <&> Utils.computeTtlISO8601
-  TF.buildInitReq res bapUrl action domain isValueAddNP bapConfig ttl
+  TF.buildInitReq res bapUrl action domain isValueAddNP bapConfig riderConfig ttl
