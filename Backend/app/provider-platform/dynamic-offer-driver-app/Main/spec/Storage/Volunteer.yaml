@@ -22,13 +22,11 @@ Volunteer:
 
   constraints:
     id: PrimaryKey
+    vendorId: PrimaryKey
     place: SecondaryKey
 
   default:
     isActive: "true"
-
-  constraints:
-    vendorId: PrimaryKey
 
   fromTType:
     isActive : Kernel.Prelude.Just . Kernel.Prelude.fromMaybe True|I
