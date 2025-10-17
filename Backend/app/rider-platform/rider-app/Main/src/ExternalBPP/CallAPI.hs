@@ -134,7 +134,7 @@ search merchant merchantOperatingCity bapConfig searchReq mbFare routeDetails in
 
 select ::
   FRFSSelectFlow m r c =>
-  (DOnSelect -> Maybe Bool -> m ()) ->
+  (DOnSelect -> Maybe Bool -> Maybe Bool -> m ()) ->
   Merchant ->
   MerchantOperatingCity ->
   BecknConfig ->
@@ -143,8 +143,9 @@ select ::
   Maybe Int ->
   Maybe [API.Types.UI.FRFSTicketService.FRFSCategorySelectionReq] ->
   Maybe Bool ->
+  Maybe Bool ->
   m ()
-select processOnSelectHandler merchant merchantOperatingCity bapConfig quote ticketQuantity childTicketQuantity categorySelectionReq isSingleMode = do
+select processOnSelectHandler merchant merchantOperatingCity bapConfig quote ticketQuantity childTicketQuantity categorySelectionReq isSingleMode mbEnableOffer = do
   integratedBPPConfig <- SIBC.findIntegratedBPPConfigFromEntity quote
   case integratedBPPConfig.providerConfig of
     ONDC _ -> do
@@ -168,8 +169,8 @@ select processOnSelectHandler merchant merchantOperatingCity bapConfig quote tic
         Metrics.startMetrics Metrics.SELECT_FRFS merchant.name quote.searchId.getId merchantOperatingCity.id.getId
         void $ CallFRFSBPP.select providerUrl bknSelectReq merchant.id
     _ -> do
-      onSelectReq <- Flow.select merchant merchantOperatingCity integratedBPPConfig bapConfig quote ticketQuantity childTicketQuantity categorySelectionReq
-      processOnSelectHandler onSelectReq isSingleMode
+      onSelectReq <- Flow.select merchant merchantOperatingCity integratedBPPConfig bapConfig quote ticketQuantity childTicketQuantity categorySelectionReq -- mbEnableOffer
+      processOnSelectHandler onSelectReq isSingleMode mbEnableOffer
 
 init :: (FRFSConfirmFlow m r) => Merchant -> MerchantOperatingCity -> BecknConfig -> (Maybe Text, Maybe Text) -> DBooking.FRFSTicketBooking -> [DCategorySelect] -> Maybe Bool -> m ()
 init merchant merchantOperatingCity bapConfig (mRiderName, mRiderNumber) booking categories mbEnableOffer = do

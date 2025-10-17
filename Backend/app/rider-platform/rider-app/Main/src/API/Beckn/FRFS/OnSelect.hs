@@ -32,7 +32,7 @@ onSelect _ req = withFlowHandlerAPI $ do
       (merchant, quote) <- DOnSelect.validateRequest onSelectReq
       fork "FRFS on_select processing" $ do
         Redis.whenWithLockRedis (onSelectProcessingLockKey onSelectReq.messageId) 60 $
-          DOnSelect.onSelect onSelectReq merchant quote Nothing
+          DOnSelect.onSelect onSelectReq merchant quote Nothing Nothing
       fork "FRFS onSelect received pushing ondc logs" do
         void $ pushLogs "on_select" (toJSON req) merchant.id.getId "PUBLIC_TRANSPORT"
   pure Utils.ack
