@@ -44,6 +44,7 @@ import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.Person as Person
 import qualified Domain.Types.Ride as DTR
 import Environment
+import qualified EulerHS.Language as L
 import EulerHS.Prelude hiding (id, pack, safeHead)
 import Kernel.Beam.Functions as B
 import Kernel.External.Encryption
@@ -57,6 +58,7 @@ import Kernel.Types.Id
 import Kernel.Utils.Common
 import Lib.JourneyModule.Base (generateJourneyInfoResponse, getAllLegsInfo)
 import Lib.JourneyModule.Types (GetStateFlow)
+import qualified Lib.JourneyModule.Utils as JMU
 import qualified SharedLogic.CallBPP as CallBPP
 import qualified Storage.CachedQueries.BecknConfig as QBC
 import qualified Storage.CachedQueries.Merchant as CQMerchant
@@ -197,8 +199,9 @@ bookingList (personId, merchantId) mbLimit mbOffset mbOnlyActive mbBookingStatus
 
 data BookingListResV2 = BookingListResV2
   { list :: [BookingAPIEntityV2],
-    bookingOffset :: Maybe Integer,
-    journeyOffset :: Maybe Integer
+    bookingOffset :: Maybe Int,
+    journeyOffset :: Maybe Int,
+    hasMoreData :: Bool
   }
   deriving (Generic, FromJSON, ToJSON, ToSchema)
 
@@ -207,63 +210,68 @@ data BookingAPIEntityV2 = Ride SRB.BookingAPIEntity | MultiModalRide APITypes.Jo
 
 bookingListV2 :: (Id Person.Person, Id Merchant.Merchant) -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> Maybe Integer -> [SRB.BookingStatus] -> [DJ.JourneyStatus] -> Maybe Bool -> Maybe SRB.BookingRequestType -> Flow BookingListResV2
 bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyOffset mbFromDate' mbToDate' mbBookingStatusList mbJourneyStatusList mbIsPaymentSuccess mbBookingRequestType = do
-  let bookingOffsetToUse = if isJust mbOffset then mbOffset else mbBookingOffset
-      journeyOffsetToUse = if isJust mbOffset then mbOffset else mbJourneyOffset
-      useLegacyFunction = isJust mbOffset
-
-  (apiEntity, nextBookingOffset, nextJourneyOffset) <- case mbBookingRequestType of
+  (apiEntity, nextBookingOffset, nextJourneyOffset, hasMoreData) <- case mbBookingRequestType of
     Just SRB.BookingRequest -> do
-      (rbList, allbookings) <- getBookingList (personId, merchantId) mbLimit bookingOffsetToUse Nothing Nothing Nothing mbFromDate' mbToDate' mbBookingStatusList
+      (rbList, allbookings) <- getBookingList (personId, merchantId) integralLimit mbInitialBookingOffset Nothing Nothing Nothing mbFromDate' mbToDate' mbBookingStatusList
       clearStuckRides (Just allbookings) rbList
-      if useLegacyFunction
-        then do
-          -- Backward compatibility: use old function when mbOffset is passed
-          entitiesWithSource <- buildApiEntityForRideOrJourney personId mbLimit rbList []
-          let nextOffset = Just (fromMaybe 0 mbOffset + fromIntegral (length rbList))
-          pure (entitiesWithSource, nextOffset, Nothing)
-        else do
-          -- New logic: use new function when mbBookingOffset is passed
-          (entitiesWithSource, bookingCount, _) <- buildApiEntityForRideOrJourneyWithCounts personId mbLimit rbList []
-          let nextOffset = Just (fromMaybe 0 mbBookingOffset + fromIntegral bookingCount)
-          pure (entitiesWithSource, nextOffset, Nothing)
+
+      logDebug $ "myrides PersonId: " <> show personId <> " Limit: " <> show limit <> " offset: " <> show mbInitialBookingOffset <> " BookingRequest getBookingList (id, startTime): " <> show (map (\b -> (b.id, b.startTime)) rbList)
+
+      let hasMoreData = length rbList >= limit
+
+      (entitiesWithSource, finalBookingOffset, _) <- buildApiEntityForRideOrJourneyWithCounts personId limit rbList [] mbInitialBookingOffset (Just 0)
+
+      pure (entitiesWithSource, Just finalBookingOffset, Nothing, hasMoreData)
     Just SRB.JourneyRequest -> do
-      allJourneys <- getJourneyList personId mbLimit journeyOffsetToUse mbFromDate' mbToDate' mbJourneyStatusList mbIsPaymentSuccess
+      allJourneys <- getJourneyList personId integralLimit mbInitialJourneyOffset mbFromDate' mbToDate' mbJourneyStatusList mbIsPaymentSuccess
       clearStuckRides Nothing []
-      if useLegacyFunction
-        then do
-          -- Backward compatibility: use old function when mbOffset is passed
-          entitiesWithSource <- buildApiEntityForRideOrJourney personId mbLimit [] allJourneys
-          let nextOffset = Just (fromMaybe 0 mbOffset + fromIntegral (length allJourneys))
-          pure (entitiesWithSource, Nothing, nextOffset)
-        else do
-          -- New logic: use new function when mbJourneyOffset is passed
-          (entitiesWithSource, _, journeyCount) <- buildApiEntityForRideOrJourneyWithCounts personId mbLimit [] allJourneys
-          let nextOffset = Just (fromMaybe 0 mbJourneyOffset + fromIntegral journeyCount)
-          pure (entitiesWithSource, Nothing, nextOffset)
+
+      logDebug $ "myrides PersonId: " <> show personId <> " Limit: " <> show limit <> " offset: " <> show mbInitialJourneyOffset <> " JourneyRequest getJourneyList (id, createdAt): " <> show (map (\j -> (j.id, j.createdAt)) allJourneys)
+
+      let hasMoreData = length allJourneys >= limit
+
+      (entitiesWithSource, _, finalJourneyOffset) <- buildApiEntityForRideOrJourneyWithCounts personId limit [] allJourneys (Just 0) mbInitialJourneyOffset
+
+      pure (entitiesWithSource, Nothing, Just finalJourneyOffset, hasMoreData)
     _ -> do
-      (rbList, allbookings) <- getBookingList (personId, merchantId) mbLimit bookingOffsetToUse Nothing Nothing Nothing mbFromDate' mbToDate' mbBookingStatusList
-      allJourneys <- getJourneyList personId mbLimit journeyOffsetToUse mbFromDate' mbToDate' mbJourneyStatusList mbIsPaymentSuccess
+      bookingListFork <- awaitableFork "bookingListV2->getBookingList" $ getBookingList (personId, merchantId) integralLimit mbInitialBookingOffset Nothing Nothing Nothing mbFromDate' mbToDate' mbBookingStatusList
+      journeyListFork <- awaitableFork "bookingListV2->getJourneyList" $ getJourneyList personId integralLimit mbInitialJourneyOffset mbFromDate' mbToDate' mbJourneyStatusList mbIsPaymentSuccess
+
+      (rbList, allbookings) <-
+        L.await Nothing bookingListFork >>= \case
+          Left err -> throwError $ InternalError $ "Failed to get booking list: " <> show err
+          Right result -> pure result
+
+      logDebug $ "myrides PersonId: " <> show personId <> " Limit: " <> show limit <> " offset: " <> show mbInitialBookingOffset <> " BookingRequest getBookingList (id, startTime): " <> show (map (\b -> (b.id, b.startTime)) rbList)
+
+      allJourneys <-
+        L.await Nothing journeyListFork >>= \case
+          Left err -> throwError $ InternalError $ "Failed to get journey list: " <> show err
+          Right result -> pure result
+
+      logDebug $ "myrides PersonId: " <> show personId <> " Limit: " <> show limit <> " offset: " <> show mbInitialJourneyOffset <> " JourneyRequest getJourneyList (id, createdAt): " <> show (map (\j -> (j.id, j.createdAt)) allJourneys)
+
+      let hasMoreData = length rbList + length allJourneys >= limit
+
       clearStuckRides (Just allbookings) rbList
-      if useLegacyFunction
-        then do
-          -- Backward compatibility: use old function when mbOffset is passed
-          entitiesWithSource <- buildApiEntityForRideOrJourney personId mbLimit rbList allJourneys
-          let nextOffset = Just (fromMaybe 0 mbOffset + fromIntegral (length rbList + length allJourneys))
-          pure (entitiesWithSource, nextOffset, Nothing)
-        else do
-          -- New logic: use new function when mbBookingOffset and mbJourneyOffset are passed
-          (entitiesWithSource, bookingCount, journeyCount) <- buildApiEntityForRideOrJourneyWithCounts personId mbLimit rbList allJourneys
-          let nextBookingOffset = Just (fromMaybe 0 mbBookingOffset + fromIntegral bookingCount)
-              nextJourneyOffset = Just (fromMaybe 0 mbJourneyOffset + fromIntegral journeyCount)
-          pure (entitiesWithSource, nextBookingOffset, nextJourneyOffset)
+
+      (entitiesWithSource, finalBookingOffset, finalJourneyOffset) <- buildApiEntityForRideOrJourneyWithCounts personId limit rbList allJourneys mbInitialBookingOffset mbInitialJourneyOffset
+
+      pure (entitiesWithSource, Just finalBookingOffset, Just finalJourneyOffset, hasMoreData)
 
   pure $
     BookingListResV2
       { list = apiEntity,
         bookingOffset = nextBookingOffset,
-        journeyOffset = nextJourneyOffset
+        journeyOffset = nextJourneyOffset,
+        hasMoreData = hasMoreData
       }
   where
+    mbInitialBookingOffset = mbBookingOffset <|> mbOffset
+    mbInitialJourneyOffset = mbJourneyOffset <|> mbOffset
+    limit = maybe 10 fromIntegral mbLimit
+    integralLimit = Just (fromIntegral limit)
+
     clearStuckRides mbAllbookings rbList = do
       case mbAllbookings of
         Just allbookings -> do
@@ -272,49 +280,58 @@ bookingListV2 (personId, merchantId) mbLimit mbOffset mbBookingOffset mbJourneyO
         Nothing -> do
           fork "booking list status update" $ do
             -- Fetching Bookings in Fork for stuck booking case
-            (rbList_, allbookings_) <- getBookingList (personId, merchantId) mbLimit (if isJust mbOffset then mbOffset else mbBookingOffset) Nothing Nothing Nothing mbFromDate' mbToDate' mbBookingStatusList
+            (rbList_, allbookings_) <- getBookingList (personId, merchantId) integralLimit mbInitialBookingOffset Nothing Nothing Nothing mbFromDate' mbToDate' mbBookingStatusList
             checkBookingsForStatus allbookings_
             logInfo $ "rbList: test " <> show rbList_
 
--- Build API entities for rides and journeys with proper counting and limiting
-buildApiEntityForRideOrJourneyWithCounts :: Id Person.Person -> Maybe Integer -> [SRB.Booking] -> [DJ.Journey] -> Flow ([BookingAPIEntityV2], Int, Int)
-buildApiEntityForRideOrJourneyWithCounts personId mbLimit bookings journeys = do
-  let limit = maybe maxBound fromIntegral mbLimit
-      (mergedList, bookingCount, journeyCount) = mergeWithCounts bookings journeys limit 0 0 []
-  entities <- buildBookingListV2 personId (reverse mergedList)
-  return (entities, bookingCount, journeyCount)
+buildApiEntityForRideOrJourneyWithCounts :: Id Person.Person -> Int -> [SRB.Booking] -> [DJ.Journey] -> Maybe Integer -> Maybe Integer -> Flow ([BookingAPIEntityV2], Int, Int)
+buildApiEntityForRideOrJourneyWithCounts personId finalLimit bookings journeys initialBookingOffset initialJourneyOffset = do
+  let (mergedList, bookingOffset, journeyOffset) = mergeWithCounts bookings journeys finalLimit 0 0 []
+      finalBookingOffset = bookingOffset + maybe 0 fromIntegral initialBookingOffset
+      finalJourneyOffset = journeyOffset + maybe 0 fromIntegral initialJourneyOffset
+
+  let mergedListInfo =
+        map
+          ( \item -> case item of
+              Left booking -> ("Booking" :: Text, booking.id.getId, show booking.startTime :: String)
+              Right journey -> ("Journey" :: Text, journey.id.getId, show journey.createdAt :: String)
+          )
+          mergedList
+  logDebug $ "myrides PersonId: " <> show personId <> " internal batch bookingOffset: " <> show bookingOffset <> " internal batch journeyOffset: " <> show journeyOffset <> " mergedList (type, id, timestamp): " <> show mergedListInfo
+
+  entities <- JMU.measureLatency (buildBookingListV2 personId (reverse mergedList)) "buildBookingListV2 measureLatency: "
+  return (entities, finalBookingOffset, finalJourneyOffset)
   where
-    -- Merge bookings and journeys while respecting the limit and counting each type
     mergeWithCounts :: [SRB.Booking] -> [DJ.Journey] -> Int -> Int -> Int -> [Either SRB.Booking DJ.Journey] -> ([Either SRB.Booking DJ.Journey], Int, Int)
     -- Base case: no more bookings, take remaining journeys up to limit
-    mergeWithCounts [] js limit bCount jCount acc
-      | reachedLimit = (acc, bCount, jCount)
+    mergeWithCounts [] js limit bOffset jOffset acc
+      | reachedLimit = (acc, bOffset, jOffset)
       | otherwise =
-        let takeCount = limit - (bCount + jCount)
+        let takeCount = limit - (bOffset + jOffset)
             takenJourneys = take takeCount js
-         in (foldl' (\acc' x -> Right x : acc') acc takenJourneys, bCount, jCount + length takenJourneys)
+         in (foldl' (\acc' x -> Right x : acc') acc takenJourneys, bOffset, jOffset + takeCount)
       where
-        reachedLimit = bCount + jCount >= limit
+        reachedLimit = bOffset + jOffset >= limit
 
     -- Base case: no more journeys, take remaining bookings up to limit
-    mergeWithCounts bs [] limit bCount jCount acc
-      | reachedLimit = (acc, bCount, jCount)
+    mergeWithCounts bs [] limit bOffset jOffset acc
+      | reachedLimit = (acc, bOffset, jOffset)
       | otherwise =
-        let takeCount = limit - (bCount + jCount)
+        let takeCount = limit - (bOffset + jOffset)
             takenBookings = take takeCount bs
-         in (foldl' (\acc' x -> Left x : acc') acc takenBookings, bCount + length takenBookings, jCount)
+         in (foldl' (\acc' x -> Left x : acc') acc takenBookings, bOffset + takeCount, jOffset)
       where
-        reachedLimit = bCount + jCount >= limit
+        reachedLimit = bOffset + jOffset >= limit
 
     -- Recursive case: compare current booking and journey, take the more recent one
-    mergeWithCounts (b : bs) (j : js) limit bCount jCount acc
-      | reachedLimit = (acc, bCount, jCount)
+    mergeWithCounts (b : bs) (j : js) limit bOffset jOffset acc
+      | reachedLimit = (acc, bOffset, jOffset)
       | otherwise =
         case compareBookingJourney b j of
-          GT -> mergeWithCounts bs (j : js) limit (bCount + 1) jCount (Left b : acc)
-          _ -> mergeWithCounts (b : bs) js limit bCount (jCount + 1) (Right j : acc)
+          GT -> mergeWithCounts bs (j : js) limit (bOffset + 1) jOffset (Left b : acc)
+          _ -> mergeWithCounts (b : bs) js limit bOffset (jOffset + 1) (Right j : acc)
       where
-        reachedLimit = bCount + jCount >= limit
+        reachedLimit = bOffset + jOffset >= limit
 
     compareBookingJourney :: SRB.Booking -> DJ.Journey -> Ordering
     compareBookingJourney booking journey =
@@ -328,7 +345,7 @@ buildApiEntityForRideOrJourneyWithCounts personId mbLimit bookings journeys = do
           bookingEntity <- SRB.buildBookingAPIEntity booking riderId'
           go riderId' ls (acc Seq.|> Ride bookingEntity)
         go riderId' (Right journey : ls) acc = do
-          mbJourneyEntity <- buildJourneyApiEntity journey
+          mbJourneyEntity <- JMU.measureLatency (buildJourneyApiEntity journey) (show journey.id <> " buildJourneyApiEntity measureLatency: ")
           case mbJourneyEntity of
             Just journeyEntity -> go riderId' ls (acc Seq.|> MultiModalRide journeyEntity)
             Nothing -> go riderId' ls acc
@@ -336,57 +353,7 @@ buildApiEntityForRideOrJourneyWithCounts personId mbLimit bookings journeys = do
     buildJourneyApiEntity :: (GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) => DJ.Journey -> m (Maybe APITypes.JourneyInfoResp)
     buildJourneyApiEntity journey = do
       legsInfo <-
-        try @_ @SomeException (getAllLegsInfo journey.riderId journey.id)
-          >>= \case
-            Left err -> do
-              logError $ "Error getting legs info for journeyId: " <> show journey.id <> ", skipping from booking list : " <> show err
-              return []
-            Right legsInfo -> do
-              return legsInfo
-      if null legsInfo
-        then do
-          logError $ "No legs info for journeyId: " <> show journey.id <> ", skipping from booking list"
-          return Nothing
-        else Just <$> generateJourneyInfoResponse journey legsInfo
-
--- Old function for backward compatibility ( to be deprecated )
-buildApiEntityForRideOrJourney :: Id Person.Person -> Maybe Integer -> [SRB.Booking] -> [DJ.Journey] -> Flow [BookingAPIEntityV2]
-buildApiEntityForRideOrJourney personId mbLimit bookings journeys =
-  let mergedList = mergeBookingsJourneys bookings journeys
-      limitedList = case mbLimit of
-        Just limit -> take (fromIntegral limit) mergedList
-        Nothing -> mergedList
-   in buildBookingListV2 personId limitedList
-  where
-    mergeBookingsJourneys :: [SRB.Booking] -> [DJ.Journey] -> [Either SRB.Booking DJ.Journey]
-    mergeBookingsJourneys [] js = map Right js
-    mergeBookingsJourneys bs [] = map Left bs
-    mergeBookingsJourneys (b : bs) (j : js) =
-      case compareBookingJourney b j of
-        GT -> Left b : mergeBookingsJourneys bs (j : js)
-        _ -> Right j : mergeBookingsJourneys (b : bs) js
-
-    compareBookingJourney :: SRB.Booking -> DJ.Journey -> Ordering
-    compareBookingJourney booking journey =
-      compare booking.startTime (fromMaybe journey.createdAt journey.startTime)
-
-    buildBookingListV2 :: Id Person.Person -> [Either SRB.Booking DJ.Journey] -> Flow [BookingAPIEntityV2]
-    buildBookingListV2 _ [] = pure []
-    buildBookingListV2 id (Left booking : ls) = do
-      res <- buildBookingListV2 id ls
-      bookingEntity <- SRB.buildBookingAPIEntity booking id
-      return $ Ride bookingEntity : res
-    buildBookingListV2 id (Right journey : ls) = do
-      res <- buildBookingListV2 id ls
-      mbJourneyEntity <- buildJourneyApiEntity journey
-      case mbJourneyEntity of
-        Just journeyEntity -> return $ MultiModalRide journeyEntity : res
-        Nothing -> return res
-
-    buildJourneyApiEntity :: (GetStateFlow m r c, m ~ Kernel.Types.Flow.FlowR AppEnv) => DJ.Journey -> m (Maybe APITypes.JourneyInfoResp)
-    buildJourneyApiEntity journey = do
-      legsInfo <-
-        try @_ @SomeException (getAllLegsInfo journey.riderId journey.id)
+        try @_ @SomeException (JMU.measureLatency (getAllLegsInfo journey.riderId journey.id) (show journey.id <> " getAllLegsInfo journey myrides measureLatency: "))
           >>= \case
             Left err -> do
               logError $ "Error getting legs info for journeyId: " <> show journey.id <> ", skipping from booking list : " <> show err
