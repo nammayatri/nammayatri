@@ -38,6 +38,7 @@ module Domain.Action.ProviderPlatform.Management.Merchant
     postMerchantConfigOperatingCityCreate,
     postMerchantSchedulerTrigger,
     postMerchantUpdateOnboardingVehicleVariantMapping,
+    postMerchantInsertOrUpdateVehicleServiceTier,
     postMerchantSpecialLocationUpsert,
     deleteMerchantSpecialLocationDelete,
     postMerchantSpecialLocationGatesUpsert,
@@ -466,3 +467,12 @@ processMerchantCreateRequest merchantShortId opCity apiTokenInfo canCreateMercha
           enabled = Just enableForMerchant,
           ..
         }
+
+postMerchantInsertOrUpdateVehicleServiceTier :: ShortId DM.Merchant -> City.City -> ApiTokenInfo -> Common.UpdateVehicleServiceTierReq -> Flow APISuccess
+postMerchantInsertOrUpdateVehicleServiceTier merchantShortId opCity apiTokenInfo req = do
+  checkedMerchantId <- merchantCityAccessCheck merchantShortId apiTokenInfo.merchant.shortId opCity apiTokenInfo.city
+  transaction <- buildTransaction apiTokenInfo T.emptyRequest
+  T.withTransactionStoring transaction $
+    Client.callManagementAPI checkedMerchantId opCity (addMultipartBoundary . (.merchantDSL.postMerchantInsertOrUpdateVehicleServiceTier)) req
+  where
+    addMultipartBoundary clientFn reqBody = clientFn ("XXX00XXX", reqBody)
