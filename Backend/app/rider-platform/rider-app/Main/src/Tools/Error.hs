@@ -283,6 +283,35 @@ instance IsHTTPError TicketBookingError where
 
 instance IsAPIError TicketBookingError
 
+data PassError
+  = PassNotFound Text
+  | PassCategoryNotFound Text
+  | PassTypeNotFound Text
+  | PurchasedPassNotFound Text
+  deriving (Eq, Show, IsBecknAPIError)
+
+instanceExceptionWithParent 'HTTPException ''PassError
+
+instance IsBaseError PassError where
+  toMessage (PassNotFound passId) = Just $ "Pass not found: " <> show passId
+  toMessage (PassCategoryNotFound categoryId) = Just $ "Pass category not found: " <> show categoryId
+  toMessage (PassTypeNotFound typeId) = Just $ "Pass type not found: " <> show typeId
+  toMessage (PurchasedPassNotFound purchasedPassId) = Just $ "Purchased pass not found: " <> show purchasedPassId
+
+instance IsHTTPError PassError where
+  toErrorCode = \case
+    PassNotFound _ -> "PASS_NOT_FOUND"
+    PassCategoryNotFound _ -> "PASS_CATEGORY_NOT_FOUND"
+    PassTypeNotFound _ -> "PASS_TYPE_NOT_FOUND"
+    PurchasedPassNotFound _ -> "PURCHASED_PASS_NOT_FOUND"
+  toHttpCode = \case
+    PassNotFound _ -> E500
+    PassCategoryNotFound _ -> E500
+    PassTypeNotFound _ -> E500
+    PurchasedPassNotFound _ -> E500
+
+instance IsAPIError PassError
+
 data RiderError
   = RiderConfigNotFound Text
   | RiderConfigDoesNotExist Text

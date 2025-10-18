@@ -1,0 +1,43 @@
+imports:
+  Merchant: Domain.Types.Merchant
+  MerchantOperatingCity: Domain.Types.MerchantOperatingCity
+  PassType: Domain.Types.PassType
+  HighPrecMoney: Kernel.Types.Common
+  FRFSVehicleServiceTier: Domain.Types.FRFSVehicleServiceTier
+  Value: Data.Aeson
+
+Pass:
+  tableName: pass
+
+  types:
+    PassDocumentType:
+      enum: "ProfilePicture,Aadhaar"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema"
+
+    Benefit:
+      enum: "FullSaving,FixedSaving HighPrecMoney,PercentageSaving HighPrecMoney"
+      derive': "Show, Eq, Ord, Read, Generic, ToJSON, FromJSON, ToSchema"
+
+  fields:
+    id: Id Pass
+    passTypeId: Id PassType
+    code: Text
+    name: Maybe Text
+    amount: HighPrecMoney
+    benefitDescription: Text
+    benefit: Maybe Benefit
+    applicableVehicleServiceTiers: "[Id FRFSVehicleServiceTier]"
+    purchaseEligibilityJsonLogic: "[Value]"
+    redeemEligibilityJsonLogic: "[Value]"
+    maxValidTrips: Maybe Int
+    maxValidDays: Maybe Int
+    documentsRequired: "[PassDocumentType]"
+    order: Int
+    enable: Bool
+    autoApply: Bool
+    merchantId: Id Merchant
+    merchantOperatingCityId: Id MerchantOperatingCity
+
+  constraints:
+    id: PrimaryKey
+    passTypeId: !SecondaryKey

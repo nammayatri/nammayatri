@@ -1,0 +1,46 @@
+{-# LANGUAGE ApplicativeDo #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+
+module Domain.Types.Pass where
+
+import Data.Aeson
+import qualified Domain.Types.FRFSVehicleServiceTier
+import qualified Domain.Types.Merchant
+import qualified Domain.Types.MerchantOperatingCity
+import qualified Domain.Types.PassType
+import Kernel.Prelude
+import qualified Kernel.Types.Common
+import qualified Kernel.Types.Id
+import qualified Tools.Beam.UtilsTH
+
+data Pass = Pass
+  { amount :: Kernel.Types.Common.HighPrecMoney,
+    applicableVehicleServiceTiers :: [Kernel.Types.Id.Id Domain.Types.FRFSVehicleServiceTier.FRFSVehicleServiceTier],
+    autoApply :: Kernel.Prelude.Bool,
+    benefit :: Kernel.Prelude.Maybe Domain.Types.Pass.Benefit,
+    benefitDescription :: Kernel.Prelude.Text,
+    code :: Kernel.Prelude.Text,
+    documentsRequired :: [Domain.Types.Pass.PassDocumentType],
+    enable :: Kernel.Prelude.Bool,
+    id :: Kernel.Types.Id.Id Domain.Types.Pass.Pass,
+    maxValidDays :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    maxValidTrips :: Kernel.Prelude.Maybe Kernel.Prelude.Int,
+    merchantId :: Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+    merchantOperatingCityId :: Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity,
+    name :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    order :: Kernel.Prelude.Int,
+    passTypeId :: Kernel.Types.Id.Id Domain.Types.PassType.PassType,
+    purchaseEligibilityJsonLogic :: [Data.Aeson.Value],
+    redeemEligibilityJsonLogic :: [Data.Aeson.Value],
+    createdAt :: Kernel.Prelude.UTCTime,
+    updatedAt :: Kernel.Prelude.UTCTime
+  }
+  deriving (Generic, Show, ToJSON, FromJSON, ToSchema)
+
+data Benefit
+  = FullSaving
+  | FixedSaving Kernel.Types.Common.HighPrecMoney
+  | PercentageSaving Kernel.Types.Common.HighPrecMoney
+  deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema))
+
+data PassDocumentType = ProfilePicture | Aadhaar deriving (Show, (Eq), (Ord), (Read), (Generic), (ToJSON), (FromJSON), (ToSchema), (ToParamSchema))
