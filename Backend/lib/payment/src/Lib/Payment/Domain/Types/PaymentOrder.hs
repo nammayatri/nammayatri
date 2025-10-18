@@ -57,7 +57,8 @@ data PaymentOrderE e = PaymentOrder
     sdkPayloadDump :: Maybe Value,
     createdAt :: UTCTime,
     updatedAt :: UTCTime,
-    merchantOperatingCityId :: Maybe (Id MerchantOperatingCity)
+    merchantOperatingCityId :: Maybe (Id MerchantOperatingCity),
+    effectAmount :: Maybe HighPrecMoney
   }
   deriving (Generic)
 

@@ -88,6 +88,7 @@ import Kernel.Types.Version
 import Kernel.Utils.Common
 import Kernel.Utils.TH (mkHttpInstancesForEnum)
 import Kernel.Utils.Version
+import qualified Lib.Payment.Domain.Types.PaymentOrderSplit as DPaymentOrderSplit
 import qualified Storage.CachedQueries.Merchant.MerchantServiceConfig as CQMSC
 import qualified Storage.CachedQueries.Merchant.MerchantServiceUsageConfig as CQMSUC
 import qualified Storage.CachedQueries.PlaceBasedServiceConfig as CQPBSC
@@ -432,36 +433,80 @@ mkUnaggregatedSplitSettlementDetails isSplitEnabled totalAmount vendorFees isPer
                   vendor = Vendor vendorSplits
                 }
 
-mkUnaggregatedRefundSplitSettlementDetails :: (MonadFlow m) => Bool -> HighPrecMoney -> [VendorSplitDetails] -> m (Maybe RefundSplitSettlementDetails)
-mkUnaggregatedRefundSplitSettlementDetails isSplitEnabled totalAmount vendorFees = case isSplitEnabled of
+mkUnaggregatedRefundSplitSettlementDetails :: (MonadFlow m) => Bool -> HighPrecMoney -> [DPaymentOrderSplit.PaymentOrderSplit] -> Maybe HighPrecMoney -> m (Maybe RefundSplitSettlementDetails)
+mkUnaggregatedRefundSplitSettlementDetails isSplitEnabled totalAmount paymentOrderSplits mbEffectiveAmount = case isSplitEnabled of
   False -> return Nothing
   True -> do
-    let vendorSplits =
-          map
-            ( \fee ->
-                let roundedFee = roundVendorFee fee
-                 in RefundSplit
-                      { refundAmount = splitAmount roundedFee,
-                        subMid = vendorId roundedFee
+    -- Filter out marketplace splits (vendorId == "marketPlace") and only process vendor splits
+    let vendorPaymentSplits = filter (\split -> split.vendorId /= "marketPlace") paymentOrderSplits
+
+    -- Check if we should use effective amount for single split
+    let shouldUseEffectiveAmount = case mbEffectiveAmount of
+          Just effectiveAmount ->
+            effectiveAmount < totalAmount
+              && length paymentOrderSplits == 1
+          Nothing -> False
+
+    if shouldUseEffectiveAmount
+      then -- Use effective amount for the single split
+      case paymentOrderSplits of
+        [singleSplit] -> do
+          let effectiveAmount = fromMaybe totalAmount mbEffectiveAmount
+              refundAmount = roundToTwoDecimalPlaces effectiveAmount
+
+          if singleSplit.vendorId == "marketPlace"
+            then -- Single marketplace split
+
+              return $
+                Just $
+                  RefundSplitSettlementDetails
+                    { marketplace = RefundMarketplace {refundAmount = refundAmount},
+                      mdrBorneBy = ALL,
+                      vendor = RefundVendor {split = []}
+                    }
+            else do
+              -- Single vendor split
+              let vendorSplit =
+                    RefundSplit
+                      { refundAmount = refundAmount,
+                        subMid = singleSplit.vendorId
                       }
-            )
-            vendorFees
-        totalVendorAmount = roundToTwoDecimalPlaces $ sum $ map (\RefundSplit {refundAmount} -> refundAmount) vendorSplits
-        marketplaceAmount = roundToTwoDecimalPlaces (totalAmount - totalVendorAmount)
-    when (marketplaceAmount < 0) $ do
-      logError $ "Marketplace amount is negative: " <> show marketplaceAmount <> " for vendorFees: " <> show vendorFees <> "totalVendorAmount: " <> show totalVendorAmount <> " totalAmount: " <> show totalAmount
-      throwError (InternalError "Marketplace amount is negative")
+              return $
+                Just $
+                  RefundSplitSettlementDetails
+                    { marketplace = RefundMarketplace {refundAmount = 0.0},
+                      mdrBorneBy = ALL,
+                      vendor = RefundVendor {split = [vendorSplit]}
+                    }
+        _ -> throwError (InternalError "Expected exactly one split when using effectiveAmount path")
+      else do
+        -- Original logic for multiple splits or when effective amount >= total amount
+        let vendorSplits =
+              map
+                ( \paymentSplit ->
+                    RefundSplit
+                      { refundAmount = roundToTwoDecimalPlaces paymentSplit.amount.amount,
+                        subMid = paymentSplit.vendorId
+                      }
+                )
+                vendorPaymentSplits
+            totalVendorAmount = roundToTwoDecimalPlaces $ sum $ map (\RefundSplit {refundAmount} -> refundAmount) vendorSplits
+            marketplaceAmount = roundToTwoDecimalPlaces (totalAmount - totalVendorAmount)
 
-    logInfo $ "Creating refund split settlement details - vendorSplits: " <> show vendorSplits <> " marketplaceAmount: " <> show marketplaceAmount
-    logInfo $ "Refund split settlement details created successfully with totalAmount: " <> show totalAmount <> " totalVendorAmount: " <> show totalVendorAmount <> " and " <> show (length vendorSplits) <> " vendor refund splits"
+        when (marketplaceAmount < 0) $ do
+          logError $ "Marketplace amount is negative: " <> show marketplaceAmount
+          throwError (InternalError "Marketplace amount is negative")
 
-    return $
-      Just $
-        RefundSplitSettlementDetails
-          { marketplace = RefundMarketplace marketplaceAmount,
-            mdrBorneBy = ALL,
-            vendor = RefundVendor vendorSplits
-          }
+        logInfo $ "Creating refund split settlement details - vendorSplits: " <> show vendorSplits <> " marketplaceAmount: " <> show marketplaceAmount
+        logInfo $ "Refund split settlement details created successfully with totalAmount: " <> show totalAmount <> " totalVendorAmount: " <> show totalVendorAmount <> " and " <> show (length vendorSplits) <> " vendor refund splits"
+
+        return $
+          Just $
+            RefundSplitSettlementDetails
+              { marketplace = RefundMarketplace {refundAmount = marketplaceAmount},
+                mdrBorneBy = ALL,
+                vendor = RefundVendor {split = vendorSplits}
+              }
 
 groupSumVendorSplits :: [VendorSplitDetails] -> [VendorSplitDetails]
 groupSumVendorSplits vendorFees = map (\groups -> (head groups) {splitAmount = roundToTwoDecimalPlaces $ sum (map splitAmount groups)}) (groupBy ((==) `on` vendorId) (sortOn vendorId vendorFees))
