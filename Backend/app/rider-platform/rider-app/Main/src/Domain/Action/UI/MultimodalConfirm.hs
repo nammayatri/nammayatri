@@ -368,9 +368,17 @@ postMultimodalRiderLocation ::
   Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
   ApiTypes.RiderLocationReq ->
   Environment.Flow ApiTypes.JourneyStatusResp
-postMultimodalRiderLocation personOrMerchantId journeyId req = do
-  addPoint journeyId req
-  journeyStatus <- getMultimodalJourneyStatus personOrMerchantId journeyId
+postMultimodalRiderLocation _ journeyId req = do
+  (journeyStatus, legs) <- getMultimodalJourneyStatusAndLegs journeyId
+  let concatLegs =
+        concatMap
+          ( \leg -> case leg of
+              JMTypes.Transit transitLegs -> transitLegs
+              JMTypes.Single singleLeg -> [singleLeg]
+          )
+          legs
+  let busLeg = find (\leg -> leg.mode == DTrip.Bus && leg.status == JL.Ongoing) concatLegs
+  addPoint journeyId req ((.fleetNo) =<< busLeg)
   return journeyStatus
 
 postMultimodalJourneyCancel ::
@@ -439,9 +447,16 @@ getMultimodalJourneyStatus ::
   Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
   Environment.Flow ApiTypes.JourneyStatusResp
 getMultimodalJourneyStatus (_, _) journeyId = do
+  (journeyStatusResp, _) <- getMultimodalJourneyStatusAndLegs journeyId
+  return journeyStatusResp
+
+getMultimodalJourneyStatusAndLegs ::
+  Kernel.Types.Id.Id Domain.Types.Journey.Journey ->
+  Environment.Flow (ApiTypes.JourneyStatusResp, [JMTypes.JourneyLegState])
+getMultimodalJourneyStatusAndLegs journeyId = do
   journey <- JM.getJourney journeyId
   legs <- JM.getAllLegsStatus journey
-  generateJourneyStatusResponse journey legs
+  (,legs) <$> generateJourneyStatusResponse journey legs
 
 postMultimodalJourneyFeedback :: (Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person), Kernel.Types.Id.Id Domain.Types.Merchant.Merchant) -> Kernel.Types.Id.Id Domain.Types.Journey.Journey -> API.Types.UI.MultimodalConfirm.JourneyFeedBackForm -> Environment.Flow Kernel.Types.APISuccess.APISuccess
 postMultimodalJourneyFeedback (mbPersonId, merchantId) journeyId journeyFeedbackForm = do
