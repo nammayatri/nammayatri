@@ -49,6 +49,7 @@ type API =
            :> Header "x-rn-version" Text
            :> Header "x-device" Text
            :> Header "x-forwarded-for" Text
+           :> Header "x-sender-hash" Text
            :> Post '[JSON] DRegistration.AuthRes
            :<|> "signature"
              :> SignatureAuth DRegistration.AuthReq "x-sdk-authorization"
@@ -64,6 +65,7 @@ type API =
              :> Post '[JSON] DRegistration.AuthVerifyRes
            :<|> "otp"
              :> Capture "authId" (Id SRT.RegistrationToken)
+             :> Header "x-sender-hash" Text
              :> "resend"
              :> Post '[JSON] DRegistration.ResendAuthRes
            :<|> "logout"
@@ -79,9 +81,9 @@ handler =
     :<|> resend
     :<|> logout
 
-auth :: DRegistration.AuthReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> Maybe Text -> FlowHandler DRegistration.AuthRes
-auth req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice mbXForwardedFor =
-  withFlowHandlerAPI $ DRegistration.auth req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice mbXForwardedFor
+auth :: DRegistration.AuthReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> Maybe Text -> Maybe Text -> FlowHandler DRegistration.AuthRes
+auth req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice mbXForwardedFor mbSenderHash =
+  withFlowHandlerAPI $ DRegistration.auth req mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice mbXForwardedFor mbSenderHash
 
 signatureAuth :: SignatureAuthResult DRegistration.AuthReq -> Maybe Version -> Maybe Version -> Maybe Version -> Maybe Text -> Maybe Text -> FlowHandler DRegistration.AuthRes
 signatureAuth (SignatureAuthResult req) mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion =
@@ -90,8 +92,8 @@ signatureAuth (SignatureAuthResult req) mbBundleVersion mbClientVersion mbClient
 verify :: Id SR.RegistrationToken -> DRegistration.AuthVerifyReq -> FlowHandler DRegistration.AuthVerifyRes
 verify tokenId = withFlowHandlerAPI . DRegistration.verify tokenId
 
-resend :: Id SR.RegistrationToken -> FlowHandler DRegistration.ResendAuthRes
-resend = withFlowHandlerAPI . DRegistration.resend
+resend :: Id SR.RegistrationToken -> Maybe Text -> FlowHandler DRegistration.ResendAuthRes
+resend tokenId mbSenderHash = withFlowHandlerAPI $ DRegistration.resend tokenId mbSenderHash
 
 logout :: (Id SP.Person, Id Merchant.Merchant) -> FlowHandler APISuccess
 logout (personId, _) = withFlowHandlerAPI . withPersonIdLogTag personId $ DRegistration.logout personId
