@@ -224,8 +224,9 @@ auth ::
   Maybe Text ->
   Maybe Text ->
   Maybe Text ->
+  Maybe Text ->
   m AuthRes
-auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice mbXForwardedFor = do
+auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDevice mbXForwardedFor mbSenderHash = do
   let req = if req'.merchantId.getShortId == "YATRI" then req' {merchantId = ShortId "NAMMA_YATRI"} else req'
   let mbClientIP =
         mbXForwardedFor
@@ -298,7 +299,7 @@ auth req' mbBundleVersion mbClientVersion mbClientConfigVersion mbRnVersion mbDe
       RegistrationToken.create regToken
       when (isNothing useFakeOtpM) $ do
         let otpCode = SR.authValueHash regToken
-        let otpHash = smsCfg.credConfig.otpHash
+        let otpHash = fromMaybe smsCfg.credConfig.otpHash mbSenderHash
         case otpChannel of
           SMS -> do
             countryCode <- req.mobileCountryCode & fromMaybeM (InvalidRequest "MobileCountryCode is required for SMS OTP channel")
@@ -707,15 +708,16 @@ resend ::
     HasKafkaProducer r
   ) =>
   Id SR.RegistrationToken ->
+  Maybe Text ->
   m ResendAuthRes
-resend tokenId = do
+resend tokenId mbSenderHash = do
   SR.RegistrationToken {..} <- getRegistrationTokenE tokenId
   person <- checkPersonExists entityId
   unless (attempts > 0) $ throwError $ AuthBlocked "Attempts limit exceed."
   smsCfg <- asks (.smsCfg)
   let merchantOperatingCityId = person.merchantOperatingCityId
   let otpCode = authValueHash
-  let otpHash = smsCfg.credConfig.otpHash
+  let otpHash = fromMaybe smsCfg.credConfig.otpHash mbSenderHash
   otpChannel <- getPersonOTPChannel person.id
   case otpChannel of
     SMS -> do
