@@ -32,6 +32,10 @@ data AadhaarCardReq = AadhaarCardReq
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
+data AadhaarDocParams = AadhaarDocParams {aadhaarNumber :: Kernel.Prelude.Text}
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
 data AirConditionedTier = AirConditionedTier
   { isWorking :: Kernel.Prelude.Bool,
     restrictionMessage :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
@@ -53,6 +57,10 @@ data CommonDocumentReq = CommonDocumentReq
     documentType :: Domain.Types.DocumentVerificationConfig.DocumentType,
     imageId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Image.Image)
   }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data DLDocParams = DLDocParams {dateOfBirth :: Kernel.Prelude.Maybe Kernel.Prelude.Text, dlNumber :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -79,6 +87,10 @@ data DigiLockerDocumentStatus = DigiLockerDocumentStatus
     pullFields :: Kernel.Prelude.Maybe [Kernel.Prelude.Text],
     status :: Kernel.Prelude.Text
   }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data DigiLockerPullDocRequest = DigiLockerPullDocRequest {docParams :: DocParams, docType :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -109,6 +121,13 @@ data DigiLockerTokenResponse = DigiLockerTokenResponse
     scope :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     token_type :: Kernel.Prelude.Text
   }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data DocParams
+  = PanParams PanDocParams
+  | DLParams DLDocParams
+  | AadhaarParams AadhaarDocParams
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 
@@ -220,6 +239,10 @@ data HVSdkCallLogReq = HVSdkCallLogReq
     status :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     txnId :: Kernel.Prelude.Text
   }
+  deriving stock (Generic)
+  deriving anyclass (ToJSON, FromJSON, ToSchema)
+
+data PanDocParams = PanDocParams {dateOfBirth :: Kernel.Prelude.Maybe Kernel.Prelude.Text, panNumber :: Kernel.Prelude.Text}
   deriving stock (Generic)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

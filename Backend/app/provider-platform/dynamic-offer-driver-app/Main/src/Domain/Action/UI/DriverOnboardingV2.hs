@@ -1491,3 +1491,244 @@ postDobppVerifyCallbackDigiLocker mbError mbErrorDescription code stateParam = d
           Redis.setExp detailsKey errorData 3600
 
   return Success
+
+----------- DigiLocker Pull Documents API -----------
+
+postDriverDocumentsVerifyDigilocker ::
+  ( ( Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.Person.Person),
+      Kernel.Types.Id.Id Domain.Types.Merchant.Merchant,
+      Kernel.Types.Id.Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity
+    ) ->
+    API.Types.UI.DriverOnboardingV2.DigiLockerPullDocRequest ->
+    Environment.Flow APISuccess
+  )
+postDriverDocumentsVerifyDigilocker (mbPersonId, merchantId, merchantOpCityId) req = do
+  personId <- mbPersonId & fromMaybeM (PersonNotFound "No person found")
+
+  logInfo $ "DigiLocker pull - Received request for DocType: " <> req.docType <> ", DriverId: " <> personId.getId
+
+  -- Fetch DigiLocker details from Redis
+  let detailsKey = mkDigiLockerDetailsKey personId
+  mbDetailsData <- Redis.get detailsKey :: Flow (Maybe APITypes.DigiLockerDetailsData)
+  detailsData <- mbDetailsData & fromMaybeM (InvalidRequest "DigiLocker session not found. Please authenticate with DigiLocker first.")
+
+  -- Extract access token
+  let mbAccessToken = APITypes.accessToken (APITypes.digilocker detailsData)
+  accessToken <- mbAccessToken & fromMaybeM (InvalidRequest "DigiLocker access token not found. Please re-authenticate.")
+
+  logInfo $ "DigiLocker pull - Access token found. DriverId: " <> personId.getId
+
+  -- Return success immediately and process in background
+  fork "digilocker-pull-document" $ do
+    processDigiLockerPullDocument personId merchantId merchantOpCityId accessToken req detailsKey
+      `catchAny` \err -> do
+        logError $ "DigiLocker pull document failed - DocType: " <> req.docType <> ", Error: " <> show err <> ", DriverId: " <> personId.getId
+        -- Update Redis with error
+        updateDocumentStatus detailsKey req.docType "FAILED" "UNKNOWN" Nothing (Just "PROCESSING_FAILED") (Just $ T.pack $ show err)
+
+  return Success
+
+-- Process document pull in background
+processDigiLockerPullDocument ::
+  Id Domain.Types.Person.Person ->
+  Id Domain.Types.Merchant.Merchant ->
+  Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
+  Text -> -- access token
+  APITypes.DigiLockerPullDocRequest ->
+  Text -> -- details Redis key
+  Flow ()
+processDigiLockerPullDocument driverId merchantId merchantOpCityId accessToken req detailsKey = do
+  logInfo $ "DigiLocker pull processing - Starting for DocType: " <> req.docType <> ", DriverId: " <> driverId.getId
+
+  -- Update status to PENDING
+  updateDocumentStatus detailsKey req.docType "PENDING" "PULL" Nothing Nothing Nothing
+
+  -- Parse document parameters and construct URI based on document type
+  let docUri = case req.docParams of
+        APITypes.PanParams (APITypes.PanDocParams {APITypes.panNumber = panNum}) ->
+          "in.gov.pan-PANCR-" <> panNum
+        APITypes.DLParams (APITypes.DLDocParams {APITypes.dlNumber = dlNum}) ->
+          "in.gov.transport-DRVLC-" <> dlNum
+        APITypes.AadhaarParams (APITypes.AadhaarDocParams {APITypes.aadhaarNumber = aadhaarNum}) ->
+          "in.gov.uidai-ADHAR-" <> aadhaarNum
+
+  logInfo $ "DigiLocker pull processing - Constructed URI: " <> docUri <> ", DriverId: " <> driverId.getId
+
+  -- Fetch XML document from DigiLocker
+  let xmlUrl = "https://digilocker.meripehchaan.gov.in/public/oauth2/1/xml/" <> docUri
+  xmlData <- fetchDigiLockerDocument xmlUrl accessToken
+
+  logInfo $ "DigiLocker pull processing - Fetched XML successfully. DriverId: " <> driverId.getId
+
+  -- Fetch PDF/image and upload to S3
+  let pdfUrl = "https://digilocker.meripehchaan.gov.in/public/oauth2/1/file/" <> docUri
+  pdfData <- fetchDigiLockerDocument pdfUrl accessToken
+  imageId <- uploadDocumentToS3 driverId merchantId merchantOpCityId req.docType pdfData
+
+  logInfo $ "DigiLocker pull processing - Uploaded to S3, ImageId: " <> imageId.getId <> ", DriverId: " <> driverId.getId
+
+  -- Parse XML and store in DB based on document type
+  case req.docParams of
+    APITypes.PanParams params ->
+      storePanDocument driverId merchantId merchantOpCityId xmlData imageId params
+    APITypes.DLParams params ->
+      storeDLDocument driverId merchantId merchantOpCityId xmlData imageId params
+    APITypes.AadhaarParams params ->
+      storeAadhaarDocument driverId merchantId merchantOpCityId xmlData imageId params
+
+  -- Update Redis status to VALID
+  updateDocumentStatus detailsKey req.docType "VALID" "ISSUED" Nothing Nothing Nothing
+
+  logInfo $ "DigiLocker pull processing - Completed successfully for DocType: " <> req.docType <> ", DriverId: " <> driverId.getId
+
+-- Helper: Fetch document from DigiLocker
+fetchDigiLockerDocument :: Text -> Text -> Flow Text
+fetchDigiLockerDocument _url _accessToken = do
+  -- TODO: Implement actual HTTP call with Bearer token authorization
+  -- For now, throwing an error as this needs HTTP client implementation
+  throwError $ InternalError "DigiLocker document fetch not yet implemented - needs HTTP client"
+
+-- Helper: Upload document to S3 and create Image record
+uploadDocumentToS3 :: Id Domain.Types.Person.Person -> Id Domain.Types.Merchant.Merchant -> Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity -> Text -> Text -> Flow (Id Image.Image)
+uploadDocumentToS3 driverId merchantId merchantOpCityId docType pdfData = do
+  imageId <- generateGUID
+  now <- getCurrentTime
+
+  -- Determine image type based on document type
+  let imageType = case T.toUpper docType of
+        "PAN" -> DTO.PanCard
+        "DL" -> DTO.DriverLicense
+        "AADHAAR" -> DTO.AadhaarCard
+        _ -> DTO.PanCard -- fallback
+
+  -- Create S3 path
+  s3Path <- S3.createFilePath "/digilocker-documents/" ("driver-" <> driverId.getId <> "-" <> T.toLower docType) S3.Image ".pdf"
+
+  -- Upload to S3
+  _ <- S3.put (T.unpack s3Path) pdfData
+
+  -- Create Image record
+  let imageEntity =
+        Image.Image
+          { id = imageId,
+            personId = driverId,
+            merchantId = merchantId,
+            merchantOperatingCityId = Just merchantOpCityId,
+            s3Path = s3Path,
+            imageType = imageType,
+            verificationStatus = Just Documents.VALID,
+            failureReason = Nothing,
+            workflowTransactionId = Nothing,
+            reviewerEmail = Nothing,
+            rcId = Nothing,
+            documentExpiry = Nothing,
+            createdAt = now,
+            updatedAt = now
+          }
+
+  ImageQuery.create imageEntity
+
+  return imageId
+
+-- Helper: Store PAN document in DB
+storePanDocument ::
+  Id Domain.Types.Person.Person ->
+  Id Domain.Types.Merchant.Merchant ->
+  Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
+  Text -> -- XML data
+  Id Image.Image ->
+  APITypes.PanDocParams ->
+  Flow ()
+storePanDocument driverId merchantId merchantOpCityId _xmlData imageId (APITypes.PanDocParams {APITypes.panNumber = panNum}) = do
+  -- TODO: Parse XML to extract PAN details
+  -- For now, using the parameters provided by user
+
+  person <- PersonQuery.findById driverId >>= fromMaybeM (PersonNotFound driverId.getId)
+
+  -- Build PAN card entity
+  now <- getCurrentTime
+  uuid <- generateGUID
+  encryptedPan <- encrypt panNum
+
+  let panCard =
+        DPC.DriverPanCard
+          { id = uuid,
+            driverId = driverId,
+            panCardNumber = encryptedPan,
+            documentImageId1 = imageId,
+            documentImageId2 = Nothing,
+            driverDob = Nothing, -- TODO: Extract from XML if available
+            driverName = Just person.firstName, -- TODO: Extract from XML
+            driverNameOnGovtDB = Nothing, -- TODO: Extract from XML
+            verificationStatus = Documents.VALID,
+            verifiedBy = Just DPC.DIGILOCKER,
+            consent = True,
+            consentTimestamp = now,
+            docType = Nothing,
+            failedRules = [],
+            merchantId = Just merchantId,
+            merchantOperatingCityId = Just merchantOpCityId,
+            createdAt = now,
+            updatedAt = now
+          }
+
+  QDPC.upsertPanRecord panCard
+
+  logInfo $ "DigiLocker pull - PAN card stored. DriverId: " <> driverId.getId
+
+-- Helper: Store DL document in DB
+storeDLDocument ::
+  Id Domain.Types.Person.Person ->
+  Id Domain.Types.Merchant.Merchant ->
+  Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
+  Text -> -- XML data
+  Id Image.Image ->
+  APITypes.DLDocParams ->
+  Flow ()
+storeDLDocument _driverId _merchantId _merchantOpCityId _xmlData _imageId _params = do
+  -- TODO: Parse XML to extract DL details
+  -- For now, throwing error as implementation is pending
+  throwError $ InternalError "DL document storage from DigiLocker not yet implemented"
+
+-- Helper: Store Aadhaar document in DB
+storeAadhaarDocument ::
+  Id Domain.Types.Person.Person ->
+  Id Domain.Types.Merchant.Merchant ->
+  Id Domain.Types.MerchantOperatingCity.MerchantOperatingCity ->
+  Text -> -- XML data
+  Id Image.Image ->
+  APITypes.AadhaarDocParams ->
+  Flow ()
+storeAadhaarDocument _driverId _merchantId _merchantOpCityId _xmlData _imageId _params = do
+  -- TODO: Parse XML to extract Aadhaar details
+  -- For now, throwing error as implementation is pending
+  throwError $ InternalError "Aadhaar document storage from DigiLocker not yet implemented"
+
+-- Helper: Update document status in Redis
+updateDocumentStatus ::
+  Text -> -- details key
+  Text -> -- doc type
+  Text -> -- status
+  Text -> -- availability
+  Maybe [Text] -> -- pull fields
+  Maybe Text -> -- error code
+  Maybe Text -> -- error description
+  Flow ()
+updateDocumentStatus detailsKey docType status availability pullFields errorCode errorDesc = do
+  mbDetailsData <- Redis.get detailsKey :: Flow (Maybe APITypes.DigiLockerDetailsData)
+  whenJust mbDetailsData $ \detailsData -> do
+    let currentDocs = APITypes.documents detailsData
+    let updatedDocs = map updateDoc currentDocs
+    let updatedData = detailsData {APITypes.documents = updatedDocs}
+    Redis.setExp detailsKey updatedData 3600
+  where
+    updateDoc doc@(APITypes.DigiLockerDocumentStatus _ docTypeField _ _ _ _) =
+      if docTypeField == docType
+        then
+          doc{APITypes.status = status,
+              APITypes.availability = availability,
+              APITypes.pullFields = pullFields,
+              APITypes.errorCode = errorCode,
+              APITypes.errorDescription = errorDesc
+             }
+        else doc

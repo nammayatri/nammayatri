@@ -83,3 +83,12 @@ ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN is_ma
 
 ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN document_fields_json json ;
 ALTER TABLE atlas_driver_offer_bpp.document_verification_config ADD COLUMN applicable_to text  default 'FLEET_AND_INDIVIDUAL';
+
+
+------- SQL updates -------
+
+
+
+
+------- SQL updates -------
+

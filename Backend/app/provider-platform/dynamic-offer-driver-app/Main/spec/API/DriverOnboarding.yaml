@@ -196,6 +196,19 @@ types:
     scope: Maybe Text
     issued: Maybe Text
     pull_docs: Maybe Text
+  DigiLockerPullDocRequest:
+    docType: Text
+    docParams: DocParams
+  DocParams:
+    enum: "PanParams PanDocParams | DLParams DLDocParams | AadhaarParams AadhaarDocParams"
+  PanDocParams:
+    panNumber: Text
+    dateOfBirth: Maybe Text
+  DLDocParams:
+    dlNumber: Text
+    dateOfBirth: Maybe Text
+  AadhaarDocParams:
+    aadhaarNumber: Text
 
 apis:
   - GET:
@@ -331,3 +344,10 @@ apis:
       response:
         type: APISuccess
       auth: NoAuth
+  - POST:
+      endpoint: /driver/documents/verify/digilocker
+      auth: TokenAuth PROVIDER_TYPE
+      request:
+        type: DigiLockerPullDocRequest
+      response:
+        type: APISuccess
