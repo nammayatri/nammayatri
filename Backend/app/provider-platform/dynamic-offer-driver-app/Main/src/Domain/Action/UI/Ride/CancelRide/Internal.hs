@@ -19,6 +19,7 @@ module Domain.Action.UI.Ride.CancelRide.Internal
     getCancellationCharges,
     customerCancellationChargesCalculation,
     getDistanceToPickup,
+    buildPenaltyCheckContext,
   )
 where
 
@@ -74,6 +75,7 @@ import qualified SharedLogic.CallBAP as BP
 import SharedLogic.CallBAPInternal
 import qualified SharedLogic.CallInternalMLPricing as ML
 import SharedLogic.Cancel
+import qualified SharedLogic.DriverCancellationPenalty as DCP
 import qualified SharedLogic.External.LocationTrackingService.Flow as LF
 import qualified SharedLogic.External.LocationTrackingService.Types as LT
 import SharedLogic.GoogleTranslate (TranslateFlow)
@@ -193,8 +195,9 @@ cancelRideImpl rideId rideEndedBy bookingCReason isForceReallocation doCancellat
               rideTags <- updateNammaTagsForCancelledRide booking ride bookingCReason transporterConfig
               triggerRideCancelledEvent RideEventData {ride = ride{status = DRide.CANCELLED}, personId = driver.id, merchantId = merchantId}
               triggerBookingCancelledEvent BookingEventData {booking = booking{status = SRB.CANCELLED}, personId = driver.id, merchantId = merchantId}
-              when (bookingCReason.source == SBCR.ByDriver) $
+              when (bookingCReason.source == SBCR.ByDriver) $ do
                 DS.driverScoreEventHandler ride.merchantOperatingCityId DST.OnDriverCancellation {rideTags, merchantId = merchantId, driver = driver, rideFare = Just booking.estimatedFare, currency = booking.currency, distanceUnit = booking.distanceUnit, doCancellationRateBasedBlocking}
+                DCP.accumulateCancellationPenalty booking ride rideTags transporterConfig
               Notify.notifyOnCancel ride.merchantOperatingCityId booking driver bookingCReason.source
             fork "cancelRide/ReAllocate - Notify BAP" $ do
               isReallocated <- reAllocateBookingIfPossible isValueAddNP False merchant booking ride driver vehicle bookingCReason isForceReallocation
@@ -452,3 +455,49 @@ getCancellationCharges booking ride = do
               return $ Just $ PriceAPIEntity {amount = charges, currency = booking.currency}
             Nothing -> return Nothing
         else return Nothing
+
+buildPenaltyCheckContext ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    Esq.EsqDBReplicaFlow m r,
+    HasShortDurationRetryCfg r c,
+    EncFlow m r,
+    LT.HasLocationService m r,
+    HasKafkaProducer r
+  ) =>
+  SRB.Booking ->
+  DRide.Ride ->
+  LatLong ->
+  m TY.PenaltyCheckTagData
+buildPenaltyCheckContext booking ride point = do
+  now <- getCurrentTime
+  numberOfCallAttempts <- QCallStatus.countCallsByEntityId ride.id
+
+  driverDistanceFromPickupNow <- do
+    distRes <- try @_ @SomeException $ driverDistanceToPickup booking (getCoordinates point) (getCoordinates booking.fromLocation)
+    either
+      ( \err -> do
+          logError ("PenaltyCheckError: Failed to calculate Driver Distance to Pickup with error : " <> show err)
+          return Nothing
+      )
+      (\d -> return $ Just d)
+      distRes
+
+  let driverDistanceFromPickupAtAcceptance = booking.distanceToPickup
+
+  let currentTime = floor $ utcTimeToPOSIXSeconds now
+      rideCreatedTime = floor $ utcTimeToPOSIXSeconds ride.createdAt
+      driverArrivedAtPickup = isJust ride.driverArrivalTime
+
+  return $
+    TY.PenaltyCheckTagData
+      { ride = ride,
+        booking = booking,
+        currentTime,
+        rideCreatedTime,
+        driverArrivedAtPickup,
+        driverDistanceFromPickupNow,
+        driverDistanceFromPickupAtAcceptance,
+        numberOfCallAttempts
+      }

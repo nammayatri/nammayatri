@@ -121,6 +121,9 @@ Ride:
     isPickupOrDestinationEdited: Maybe Bool
     isInsured: Bool
     insuredAmount: Maybe Text
+    driverCancellationPenaltyFeeId: Maybe Text
+    driverCancellationPenaltyAmount: Maybe HighPrecMoney
+    driverCancellationPenaltyWaivedReason: Maybe Text
 
   sqlType:
     id: character(36)
@@ -294,6 +297,14 @@ Ride:
     updateIsPickupOrDestinationEdited:
       kvFunction: updateOneWithKV
       params: [isPickupOrDestinationEdited]
+      where: id
+    updateDriverCancellationPenalty:
+      kvFunction: updateOneWithKV
+      params: [driverCancellationPenaltyFeeId, driverCancellationPenaltyAmount]
+      where: id
+    updateDriverCancellationPenaltyWaivedReasonAndAmount:
+      kvFunction: updateOneWithKV
+      params: [driverCancellationPenaltyWaivedReason, driverCancellationPenaltyAmount]
       where: id
 
   excludedDefaultQueries:

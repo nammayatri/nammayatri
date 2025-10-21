@@ -42,6 +42,9 @@ data Ride = Ride
     distanceCalculationFailed :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     distanceUnit :: Kernel.Types.Common.DistanceUnit,
     driverArrivalTime :: Kernel.Prelude.Maybe Kernel.Prelude.UTCTime,
+    driverCancellationPenaltyAmount :: Kernel.Prelude.Maybe Kernel.Types.Common.HighPrecMoney,
+    driverCancellationPenaltyFeeId :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
+    driverCancellationPenaltyWaivedReason :: Kernel.Prelude.Maybe Kernel.Prelude.Text,
     driverDeviatedFromRoute :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     driverDeviatedToTollRoute :: Kernel.Prelude.Maybe Kernel.Prelude.Bool,
     driverGoHomeRequestId :: Kernel.Prelude.Maybe (Kernel.Types.Id.Id Domain.Types.DriverGoHomeRequest.DriverGoHomeRequest),
@@ -117,8 +120,8 @@ data RideEndedBy = Driver | Dashboard | CallBased | CronJob | Allocator deriving
 
 data RideStatus = UPCOMING | NEW | INPROGRESS | COMPLETED | CANCELLED deriving (Eq, Ord, Show, Read, Generic, ToJSON, FromJSON, ToSchema, ToParamSchema)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RideEndedBy))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideEndedBy)
 
-$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList (''RideStatus))
+$(Tools.Beam.UtilsTH.mkBeamInstancesForEnumAndList ''RideStatus)
 
-$(mkHttpInstancesForEnum (''RideStatus))
+$(mkHttpInstancesForEnum ''RideStatus)

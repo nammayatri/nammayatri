@@ -412,6 +412,7 @@ calculateFareParameters params = do
             merchantId = Just params.farePolicy.merchantId,
             merchantOperatingCityId = params.merchantOperatingCityId,
             conditionalCharges = filter (\addCharges -> maybe True (\chargesCategories -> addCharges.chargeCategory `elem` chargesCategories) params.mbAdditonalChargeCategories) params.farePolicy.conditionalCharges,
+            driverCancellationPenaltyAmount = fp.driverCancellationPenaltyAmount,
             ..
           }
   KP.forM_ debugLogs $ logTagInfo ("FareCalculator:FarePolicyId:" <> show fp.id.getId)

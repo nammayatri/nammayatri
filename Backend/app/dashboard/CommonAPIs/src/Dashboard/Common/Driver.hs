@@ -168,6 +168,8 @@ data DriverFeeStatus
   | REFUND_MANUAL_REVIEW_REQUIRED
   | ONE_TIME_SECURITY_ADJUSTED
   | SETTLED
+  | IN_DISPUTE_WINDOW
+  | ADDED_TO_INVOICE
   deriving stock (Eq, Show, Generic, Read)
   deriving anyclass (ToJSON, FromJSON, ToSchema)
 

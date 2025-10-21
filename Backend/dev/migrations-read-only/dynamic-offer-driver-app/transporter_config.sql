@@ -500,3 +500,11 @@ ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN analytics_con
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.transporter_config ALTER COLUMN driver_wallet_config SET DEFAULT '{"enableDriverWallet": false, "driverWalletPayoutThreshold": 0, "gstPercentage": 0.0, "enableWalletPayout": false, "enableWalletTopup": false, "maxWalletPayoutsPerDay": null, "minWalletAmountForCashRides": null, "minimumWalletPayoutAmount": 0, "payoutCutOffDays": 7}' :: json;
+
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN cancellation_fee_dispute_window integer ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN cancellation_fee_cycle integer ;
+ALTER TABLE atlas_driver_offer_bpp.transporter_config ADD COLUMN cancellation_fee_vendor text ;

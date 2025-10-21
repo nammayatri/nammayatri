@@ -209,3 +209,18 @@ ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN is_pet_ride boolean ;
 ------- SQL updates -------
 
 ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN react_bundle_version text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN driver_cancellation_penalty_fee_id text ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN driver_cancellation_penalty_amount double precision ;
+
+
+------- SQL updates -------
+
+ALTER TABLE atlas_driver_offer_bpp.ride ADD COLUMN driver_cancellation_penalty_waived_reason text ;

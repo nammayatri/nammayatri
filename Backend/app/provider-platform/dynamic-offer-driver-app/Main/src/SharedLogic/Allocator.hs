@@ -53,6 +53,7 @@ data AllocatorJobType
   | SendPDNNotificationToDriver
   | MandateExecution
   | CalculateDriverFees
+  | ProcessCancellationPenaltyStatus
   | OrderAndNotificationStatusUpdate
   | SendOverlay
   | BadDebtCalculation
@@ -94,6 +95,7 @@ instance JobProcessor AllocatorJobType where
   restoreAnyJobInfo SSendPDNNotificationToDriver jobData = AnyJobInfo <$> restoreJobInfo SSendPDNNotificationToDriver jobData
   restoreAnyJobInfo SMandateExecution jobData = AnyJobInfo <$> restoreJobInfo SMandateExecution jobData
   restoreAnyJobInfo SCalculateDriverFees jobData = AnyJobInfo <$> restoreJobInfo SCalculateDriverFees jobData
+  restoreAnyJobInfo SProcessCancellationPenaltyStatus jobData = AnyJobInfo <$> restoreJobInfo SProcessCancellationPenaltyStatus jobData
   restoreAnyJobInfo SOrderAndNotificationStatusUpdate jobData = AnyJobInfo <$> restoreJobInfo SOrderAndNotificationStatusUpdate jobData
   restoreAnyJobInfo SSendOverlay jobData = AnyJobInfo <$> restoreJobInfo SSendOverlay jobData
   restoreAnyJobInfo SBadDebtCalculation jobData = AnyJobInfo <$> restoreJobInfo SBadDebtCalculation jobData
@@ -279,6 +281,19 @@ data CalculateDriverFeesJobData = CalculateDriverFeesJobData
 instance JobInfoProcessor 'CalculateDriverFees
 
 type instance JobContent 'CalculateDriverFees = CalculateDriverFeesJobData
+
+data ProcessCancellationPenaltyStatusJobData = ProcessCancellationPenaltyStatusJobData
+  { merchantId :: Id DM.Merchant,
+    merchantOperatingCityId :: Maybe (Id DMOC.MerchantOperatingCity),
+    driverFeeId :: Text,
+    disputeEndTime :: UTCTime,
+    targetStatus :: Text
+  }
+  deriving (Generic, Show, Eq, FromJSON, ToJSON)
+
+instance JobInfoProcessor 'ProcessCancellationPenaltyStatus
+
+type instance JobContent 'ProcessCancellationPenaltyStatus = ProcessCancellationPenaltyStatusJobData
 
 data RetryDocumentVerificationJobData = RetryDocumentVerificationJobData
   { requestId :: Text
