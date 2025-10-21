@@ -82,11 +82,16 @@ type FRFSSelectFlow m r c =
   )
 
 discoverySearch :: FRFSSearchFlow m r => Merchant -> BecknConfig -> IntegratedBPPConfig -> API.Types.UI.FRFSTicketService.FRFSDiscoverySearchAPIReq -> m ()
-discoverySearch merchant bapConfig _integratedBPPConfigId req = do
+discoverySearch merchant bapConfig integratedBPPConfig req = do
   transactionId <- generateGUID
   bknSearchReq <- ACL.buildSearchReq transactionId req.vehicleType bapConfig Nothing Nothing req.city
   logDebug $ "FRFS Discovery SearchReq " <> encodeToText bknSearchReq
-  void $ CallFRFSBPP.search bapConfig.gatewayUrl bknSearchReq merchant.id
+  case integratedBPPConfig.providerConfig of
+    ONDC ONDCBecknConfig {networkHostUrl} -> do
+      let providerUrl = fromMaybe bapConfig.gatewayUrl networkHostUrl
+      void $ CallFRFSBPP.search providerUrl bknSearchReq merchant.id
+    _ -> do
+      void $ CallFRFSBPP.search bapConfig.gatewayUrl bknSearchReq merchant.id
 
 search :: (FRFSSearchFlow m r, HasShortDurationRetryCfg r c) => Merchant -> MerchantOperatingCity -> BecknConfig -> DSearch.FRFSSearch -> Maybe HighPrecMoney -> [FRFSRouteDetails] -> IntegratedBPPConfig -> m ()
 search merchant merchantOperatingCity bapConfig searchReq mbFare routeDetails integratedBPPConfig = do
