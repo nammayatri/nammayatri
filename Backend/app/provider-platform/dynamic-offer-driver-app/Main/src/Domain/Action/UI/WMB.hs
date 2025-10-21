@@ -60,7 +60,6 @@ import qualified Storage.Cac.TransporterConfig as SCT
 import qualified Storage.CachedQueries.Merchant as CQM
 import qualified Storage.CachedQueries.Merchant.MerchantPushNotification as CPN
 import qualified Storage.Queries.AlertRequest as QAR
-import qualified Storage.Queries.DriverInformation as QDI
 import qualified Storage.Queries.DriverInformation.Internal as QDriverInfoInternal
 import qualified Storage.Queries.FleetBadge as QFB
 import qualified Storage.Queries.FleetBadgeAssociation as QFBA
@@ -432,20 +431,21 @@ postFleetConsent (mbDriverId, merchantId, merchantOperatingCityId) = do
   SA.endDriverAssociationsIfAllowed merchant merchantOperatingCityId transporterConfig driver
 
   FDV.updateByPrimaryKey (fleetDriverAssociation {isActive = True})
-  when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ do
-    Analytics.incrementFleetOwnerAnalyticsActiveDriverCount (Just fleetDriverAssociation.fleetOwnerId) driver.id
-  let allowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
-  let needDriverInfo = transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics || allowCacheDriverFlowStatus
-  when needDriverInfo $ do
-    driverInfo <- QDI.findById fleetDriverAssociation.driverId >>= fromMaybeM (DriverNotFound fleetDriverAssociation.driverId.getId)
-    when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ do
-      mbOperator <- QFOA.findByFleetOwnerId fleetDriverAssociation.fleetOwnerId True
-      when (isNothing mbOperator) $ logTagError "AnalyticsAddDriver" "Operator not found for fleet owner"
-      whenJust mbOperator $ \operator -> do
-        when driverInfo.enabled $ Analytics.incrementOperatorAnalyticsDriverEnabled transporterConfig operator.operatorId
-        Analytics.incrementOperatorAnalyticsActiveDriver transporterConfig operator.operatorId
-    when allowCacheDriverFlowStatus $ do
-      DDriverMode.incrementFleetOperatorStatusKeyForDriver FLEET_OWNER fleetDriverAssociation.fleetOwnerId driverInfo.driverFlowStatus
+  Analytics.handleDriverAnalyticsAndFlowStatus
+    transporterConfig
+    fleetDriverAssociation.driverId
+    Nothing
+    ( \driverInfo -> do
+        Analytics.incrementFleetOwnerAnalyticsActiveDriverCount (Just fleetDriverAssociation.fleetOwnerId) driver.id
+        mOperator <- QFOA.findByFleetOwnerId fleetDriverAssociation.fleetOwnerId True
+        when (isNothing mOperator) $ logTagError "AnalyticsAddDriver" "Operator not found for fleet owner"
+        whenJust mOperator $ \operator -> do
+          when driverInfo.enabled $ Analytics.incrementOperatorAnalyticsDriverEnabled transporterConfig operator.operatorId
+          Analytics.incrementOperatorAnalyticsActiveDriver transporterConfig operator.operatorId
+    )
+    ( \driverInfo -> do
+        DDriverMode.incrementFleetOperatorStatusKeyForDriver FLEET_OWNER fleetDriverAssociation.fleetOwnerId driverInfo.driverFlowStatus
+    )
   QDriverInfoInternal.updateOnboardingVehicleCategory (Just onboardingVehicleCategory) driver.id
 
   whenJust fleetDriverAssociation.onboardedOperatorId $ \referredOperatorId -> do

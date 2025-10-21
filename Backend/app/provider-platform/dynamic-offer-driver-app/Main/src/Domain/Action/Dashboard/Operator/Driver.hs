@@ -418,15 +418,17 @@ postDriverOperatorVerifyJoiningOtp merchantShortId opCity mbAuthId requestorId r
 
       assoc <- SA.makeDriverOperatorAssociation merchant.id merchantOpCityId person.id operator.id.getId (DomainRC.convertTextToUTC (Just "2099-12-12"))
       QDOA.create assoc
-      let allowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
-      let needsDriverInfo = transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics || allowCacheDriverFlowStatus
-      when needsDriverInfo $ do
-        driverInfo <- QDI.findById person.id >>= fromMaybeM (DriverNotFound person.id.getId)
-        when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ do
-          when driverInfo.enabled $ Analytics.incrementOperatorAnalyticsDriverEnabled transporterConfig operator.id.getId
-          Analytics.incrementOperatorAnalyticsActiveDriver transporterConfig operator.id.getId
-        when allowCacheDriverFlowStatus $ do
-          DDriverMode.incrementFleetOperatorStatusKeyForDriver DP.OPERATOR operator.id.getId driverInfo.driverFlowStatus
+      Analytics.handleDriverAnalyticsAndFlowStatus
+        transporterConfig
+        person.id
+        Nothing
+        ( \driverInfo -> do
+            when driverInfo.enabled $ Analytics.incrementOperatorAnalyticsDriverEnabled transporterConfig operator.id.getId
+            Analytics.incrementOperatorAnalyticsActiveDriver transporterConfig operator.id.getId
+        )
+        ( \driverInfo -> do
+            DDriverMode.incrementFleetOperatorStatusKeyForDriver DP.OPERATOR operator.id.getId driverInfo.driverFlowStatus
+        )
 
 makeOperatorDriverOtpKey :: Text -> Text
 makeOperatorDriverOtpKey phoneNo = "Operator:Driver:PhoneNo" <> phoneNo
@@ -463,11 +465,11 @@ getDriverOperatorDashboardAnalyticsAllTime merchantShortId opCity requestorId = 
       then do
         let res = Analytics.convertToAllTimeFallbackRes (zip Analytics.allTimeMetrics (map (fromMaybe 0) mbAllTimeKeysRes))
         logTagInfo "AllTimeFallbackRes" (show res)
-        pure (res.totalRideCount, res.ratingSum, res.cancelCount, res.acceptationCount, res.totalRequestCount)
+        Analytics.extractOperatorAnalyticsData res
       else do
-        res <- Analytics.handleCacheMissForOperatorAnalyticsAllTime operator.id.getId allTimeKeysData
+        res <- Analytics.handleCacheMissForAnalyticsAllTimeCommon DP.OPERATOR operator.id.getId allTimeKeysData
         logTagInfo "AllTimeFallbackRes" (show res)
-        pure (res.totalRideCount, res.ratingSum, res.cancelCount, res.acceptationCount, res.totalRequestCount)
+        Analytics.extractOperatorAnalyticsData res
 
   logTagInfo "Total rides" (show totalRides)
   logTagInfo "Rating sum" (show ratingSum)

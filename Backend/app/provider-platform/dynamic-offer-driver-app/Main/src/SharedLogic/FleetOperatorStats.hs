@@ -5,10 +5,47 @@ import qualified Domain.Types.FleetOperatorDailyStats as DFODS
 import qualified Domain.Types.FleetOperatorStats as DFS
 import qualified Domain.Types.Ride as DR
 import qualified Domain.Types.TransporterConfig as DTTC
-import Kernel.Prelude
+import Kernel.Prelude hiding (getField)
 import Kernel.Utils.Common
 import qualified Storage.Queries.FleetOperatorDailyStats as QFleetOpsDaily
 import qualified Storage.Queries.FleetOperatorStats as QFleetOps
+
+-- Generic helpers to reduce duplication for simple count increments
+incrementDailyCount ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Text -> -- Fleet operator id
+  DTTC.TransporterConfig -> -- Transporter config (for tz & merchant info)
+  (DFODS.FleetOperatorDailyStats -> Maybe Int) -> -- Getter for the counter from existing row
+  (Maybe Int -> Text -> Day -> m ()) -> -- Update action for that counter
+  (DFODS.FleetOperatorDailyStats -> DFODS.FleetOperatorDailyStats) -> -- Setter for initial row (set counter = Just 1)
+  m ()
+incrementDailyCount fleetOperatorId transporterConfig getField updateCounter setInitField = do
+  nowUTCTime <- getCurrentTime
+  let now = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) nowUTCTime
+  let merchantLocalDate = utctDay now
+  mbCurrent <- QFleetOpsDaily.findByFleetOperatorIdAndDate fleetOperatorId merchantLocalDate
+  case mbCurrent of
+    Just s -> updateCounter (Just (fromMaybe 0 (getField s) + 1)) fleetOperatorId merchantLocalDate
+    Nothing -> do
+      rowId <- generateGUIDText
+      initStats <- buildInitialFleetOperatorDailyStats fleetOperatorId rowId merchantLocalDate transporterConfig nowUTCTime
+      QFleetOpsDaily.create (setInitField initStats)
+
+incrementOverallCount ::
+  (MonadFlow m, EsqDBFlow m r, CacheFlow m r) =>
+  Text -> -- Fleet operator id
+  DTTC.TransporterConfig -> -- Transporter config
+  (DFS.FleetOperatorStats -> Maybe Int) -> -- Getter for the counter from existing row
+  (Maybe Int -> Text -> m ()) -> -- Update action for that counter
+  (DFS.FleetOperatorStats -> DFS.FleetOperatorStats) -> -- Setter for initial row (set counter = Just 1)
+  m ()
+incrementOverallCount fleetOperatorId transporterConfig getField updateCounter setInitField = do
+  mbCurrent <- QFleetOps.findByPrimaryKey fleetOperatorId
+  case mbCurrent of
+    Just s -> updateCounter (Just (fromMaybe 0 (getField s) + 1)) fleetOperatorId
+    Nothing -> do
+      initStats <- buildInitialFleetOperatorStats fleetOperatorId transporterConfig
+      QFleetOps.create (setInitField initStats)
 
 computeOperatorIncrements :: DR.Ride -> (Meters, HighPrecMoney, Int)
 computeOperatorIncrements r =
@@ -67,40 +104,40 @@ incrementTotalRidesTotalDistAndTotalEarning fleetOperatorId ride transporterConf
       QFleetOps.create initStats {DFS.totalDistance = dist, DFS.totalCompletedRides = Just 1, DFS.totalEarning = earn}
 
 incrementDriverCancellationCount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> DTTC.TransporterConfig -> m ()
-incrementDriverCancellationCount fleetOperatorId transporterConfig = do
-  mbCurrent <- QFleetOps.findByPrimaryKey fleetOperatorId
-  case mbCurrent of
-    Just s -> QFleetOps.updateDriverCancellationCountByFleetOperatorId (Just (fromMaybe 0 s.driverCancellationCount + 1)) fleetOperatorId
-    Nothing -> do
-      initStats <- buildInitialFleetOperatorStats fleetOperatorId transporterConfig
-      QFleetOps.create initStats {DFS.driverCancellationCount = Just 1}
+incrementDriverCancellationCount fleetOperatorId transporterConfig =
+  incrementOverallCount
+    fleetOperatorId
+    transporterConfig
+    (.driverCancellationCount)
+    QFleetOps.updateDriverCancellationCountByFleetOperatorId
+    (\s -> s {DFS.driverCancellationCount = Just 1})
 
 incrementCustomerCancellationCount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> DTTC.TransporterConfig -> m ()
-incrementCustomerCancellationCount fleetOperatorId transporterConfig = do
-  mbCurrent <- QFleetOps.findByPrimaryKey fleetOperatorId
-  case mbCurrent of
-    Just s -> QFleetOps.updateCustomerCancellationCountByFleetOperatorId (Just (fromMaybe 0 s.customerCancellationCount + 1)) fleetOperatorId
-    Nothing -> do
-      initStats <- buildInitialFleetOperatorStats fleetOperatorId transporterConfig
-      QFleetOps.create initStats {DFS.customerCancellationCount = Just 1}
+incrementCustomerCancellationCount fleetOperatorId transporterConfig =
+  incrementOverallCount
+    fleetOperatorId
+    transporterConfig
+    (.customerCancellationCount)
+    QFleetOps.updateCustomerCancellationCountByFleetOperatorId
+    (\s -> s {DFS.customerCancellationCount = Just 1})
 
 incrementAcceptationRequestCount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> DTTC.TransporterConfig -> m ()
-incrementAcceptationRequestCount fleetOperatorId transporterConfig = do
-  mbCurrent <- QFleetOps.findByPrimaryKey fleetOperatorId
-  case mbCurrent of
-    Just s -> QFleetOps.updateAcceptationRequestCountByFleetOperatorId (Just (fromMaybe 0 s.acceptationRequestCount + 1)) fleetOperatorId
-    Nothing -> do
-      initStats <- buildInitialFleetOperatorStats fleetOperatorId transporterConfig
-      QFleetOps.create initStats {DFS.acceptationRequestCount = Just 1}
+incrementAcceptationRequestCount fleetOperatorId transporterConfig =
+  incrementOverallCount
+    fleetOperatorId
+    transporterConfig
+    (.acceptationRequestCount)
+    QFleetOps.updateAcceptationRequestCountByFleetOperatorId
+    (\s -> s {DFS.acceptationRequestCount = Just 1})
 
 incrementTotalRequestCount :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> DTTC.TransporterConfig -> m ()
-incrementTotalRequestCount fleetOperatorId transporterConfig = do
-  mbCurrent <- QFleetOps.findByPrimaryKey fleetOperatorId
-  case mbCurrent of
-    Just s -> QFleetOps.updateTotalRequestCountByFleetOperatorId (Just (fromMaybe 0 s.totalRequestCount + 1)) fleetOperatorId
-    Nothing -> do
-      initStats <- buildInitialFleetOperatorStats fleetOperatorId transporterConfig
-      QFleetOps.create initStats {DFS.totalRequestCount = Just 1}
+incrementTotalRequestCount fleetOperatorId transporterConfig =
+  incrementOverallCount
+    fleetOperatorId
+    transporterConfig
+    (.totalRequestCount)
+    QFleetOps.updateTotalRequestCountByFleetOperatorId
+    (\s -> s {DFS.totalRequestCount = Just 1})
 
 incrementTotalRatingCountAndTotalRatingScore :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> DTTC.TransporterConfig -> Int -> m ()
 incrementTotalRatingCountAndTotalRatingScore fleetOperatorId transporterConfig ratingValue = do
@@ -145,87 +182,63 @@ buildInitialFleetOperatorDailyStats fleetOperatorId rowId merchantLocalDate tran
 
 -- Daily: increment AcceptationRequestCount
 incrementAcceptationRequestCountDaily :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> DTTC.TransporterConfig -> m ()
-incrementAcceptationRequestCountDaily fleetOperatorId transporterConfig = do
-  nowUTCTime <- getCurrentTime
-  let now = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) nowUTCTime
-  let merchantLocalDate = utctDay now
-  mbCurrent <- QFleetOpsDaily.findByFleetOperatorIdAndDate fleetOperatorId merchantLocalDate
-  case mbCurrent of
-    Just s -> QFleetOpsDaily.updateAcceptationRequestCountByFleetOperatorIdAndDate (Just (fromMaybe 0 s.acceptationRequestCount + 1)) fleetOperatorId merchantLocalDate
-    Nothing -> do
-      rowId <- generateGUIDText
-      initStats <- buildInitialFleetOperatorDailyStats fleetOperatorId rowId merchantLocalDate transporterConfig nowUTCTime
-      QFleetOpsDaily.create initStats {DFODS.acceptationRequestCount = Just 1}
+incrementAcceptationRequestCountDaily fleetOperatorId transporterConfig =
+  incrementDailyCount
+    fleetOperatorId
+    transporterConfig
+    (.acceptationRequestCount)
+    QFleetOpsDaily.updateAcceptationRequestCountByFleetOperatorIdAndDate
+    (\s -> s {DFODS.acceptationRequestCount = Just 1})
 
 -- Daily: increment TotalRequestCount
 incrementTotalRequestCountDaily :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> DTTC.TransporterConfig -> m ()
-incrementTotalRequestCountDaily fleetOperatorId transporterConfig = do
-  nowUTCTime <- getCurrentTime
-  let now = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) nowUTCTime
-  let merchantLocalDate = utctDay now
-  mbCurrent <- QFleetOpsDaily.findByFleetOperatorIdAndDate fleetOperatorId merchantLocalDate
-  case mbCurrent of
-    Just s -> QFleetOpsDaily.updateTotalRequestCountByFleetOperatorIdAndDate (Just (fromMaybe 0 s.totalRequestCount + 1)) fleetOperatorId merchantLocalDate
-    Nothing -> do
-      rowId <- generateGUIDText
-      initStats <- buildInitialFleetOperatorDailyStats fleetOperatorId rowId merchantLocalDate transporterConfig nowUTCTime
-      QFleetOpsDaily.create initStats {DFODS.totalRequestCount = Just 1}
+incrementTotalRequestCountDaily fleetOperatorId transporterConfig =
+  incrementDailyCount
+    fleetOperatorId
+    transporterConfig
+    (.totalRequestCount)
+    QFleetOpsDaily.updateTotalRequestCountByFleetOperatorIdAndDate
+    (\s -> s {DFODS.totalRequestCount = Just 1})
 
 -- Daily: increment RejectedRequestCount
 incrementRejectedRequestCountDaily :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> DTTC.TransporterConfig -> m ()
-incrementRejectedRequestCountDaily fleetOperatorId transporterConfig = do
-  nowUTCTime <- getCurrentTime
-  let now = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) nowUTCTime
-  let merchantLocalDate = utctDay now
-  mbCurrent <- QFleetOpsDaily.findByFleetOperatorIdAndDate fleetOperatorId merchantLocalDate
-  case mbCurrent of
-    Just s -> QFleetOpsDaily.updateRejectedRequestCountByFleetOperatorIdAndDate (Just (fromMaybe 0 s.rejectedRequestCount + 1)) fleetOperatorId merchantLocalDate
-    Nothing -> do
-      rowId <- generateGUIDText
-      initStats <- buildInitialFleetOperatorDailyStats fleetOperatorId rowId merchantLocalDate transporterConfig nowUTCTime
-      QFleetOpsDaily.create initStats {DFODS.rejectedRequestCount = Just 1}
+incrementRejectedRequestCountDaily fleetOperatorId transporterConfig =
+  incrementDailyCount
+    fleetOperatorId
+    transporterConfig
+    (.rejectedRequestCount)
+    QFleetOpsDaily.updateRejectedRequestCountByFleetOperatorIdAndDate
+    (\s -> s {DFODS.rejectedRequestCount = Just 1})
 
 -- Daily: increment PulledRequestCount
 incrementPulledRequestCountDaily :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> DTTC.TransporterConfig -> m ()
-incrementPulledRequestCountDaily fleetOperatorId transporterConfig = do
-  nowUTCTime <- getCurrentTime
-  let now = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) nowUTCTime
-  let merchantLocalDate = utctDay now
-  mbCurrent <- QFleetOpsDaily.findByFleetOperatorIdAndDate fleetOperatorId merchantLocalDate
-  case mbCurrent of
-    Just s -> QFleetOpsDaily.updatePulledRequestCountByFleetOperatorIdAndDate (Just (fromMaybe 0 s.pulledRequestCount + 1)) fleetOperatorId merchantLocalDate
-    Nothing -> do
-      rowId <- generateGUIDText
-      initStats <- buildInitialFleetOperatorDailyStats fleetOperatorId rowId merchantLocalDate transporterConfig nowUTCTime
-      QFleetOpsDaily.create initStats {DFODS.pulledRequestCount = Just 1}
+incrementPulledRequestCountDaily fleetOperatorId transporterConfig =
+  incrementDailyCount
+    fleetOperatorId
+    transporterConfig
+    (.pulledRequestCount)
+    QFleetOpsDaily.updatePulledRequestCountByFleetOperatorIdAndDate
+    (\s -> s {DFODS.pulledRequestCount = Just 1})
 
 -- Daily: increment DriverCancellationCount
 incrementDriverCancellationCountDaily :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> DTTC.TransporterConfig -> m ()
-incrementDriverCancellationCountDaily fleetOperatorId transporterConfig = do
-  nowUTCTime <- getCurrentTime
-  let now = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) nowUTCTime
-  let merchantLocalDate = utctDay now
-  mbCurrent <- QFleetOpsDaily.findByFleetOperatorIdAndDate fleetOperatorId merchantLocalDate
-  case mbCurrent of
-    Just s -> QFleetOpsDaily.updateDriverCancellationCountByFleetOperatorIdAndDate (Just (fromMaybe 0 s.driverCancellationCount + 1)) fleetOperatorId merchantLocalDate
-    Nothing -> do
-      rowId <- generateGUIDText
-      initStats <- buildInitialFleetOperatorDailyStats fleetOperatorId rowId merchantLocalDate transporterConfig nowUTCTime
-      QFleetOpsDaily.create initStats {DFODS.driverCancellationCount = Just 1}
+incrementDriverCancellationCountDaily fleetOperatorId transporterConfig =
+  incrementDailyCount
+    fleetOperatorId
+    transporterConfig
+    (.driverCancellationCount)
+    QFleetOpsDaily.updateDriverCancellationCountByFleetOperatorIdAndDate
+    (\s -> s {DFODS.driverCancellationCount = Just 1})
 
 -- Daily: increment CustomerCancellationCount
 incrementCustomerCancellationCountDaily :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> DTTC.TransporterConfig -> m ()
-incrementCustomerCancellationCountDaily fleetOperatorId transporterConfig = do
-  nowUTCTime <- getCurrentTime
-  let now = addUTCTime (secondsToNominalDiffTime transporterConfig.timeDiffFromUtc) nowUTCTime
-  let merchantLocalDate = utctDay now
-  mbCurrent <- QFleetOpsDaily.findByFleetOperatorIdAndDate fleetOperatorId merchantLocalDate
-  case mbCurrent of
-    Just s -> QFleetOpsDaily.updateCustomerCancellationCountByFleetOperatorIdAndDate (Just (fromMaybe 0 s.customerCancellationCount + 1)) fleetOperatorId merchantLocalDate
-    Nothing -> do
-      rowId <- generateGUIDText
-      initStats <- buildInitialFleetOperatorDailyStats fleetOperatorId rowId merchantLocalDate transporterConfig nowUTCTime
-      QFleetOpsDaily.create initStats {DFODS.customerCancellationCount = Just 1}
+incrementCustomerCancellationCountDaily fleetOperatorId transporterConfig =
+  incrementDailyCount
+    fleetOperatorId
+    transporterConfig
+    (.customerCancellationCount)
+    QFleetOpsDaily.updateCustomerCancellationCountByFleetOperatorIdAndDate
+    (\s -> s {DFODS.customerCancellationCount = Just 1})
 
 -- Daily: increment totals for earning, distance, and completed rides (aka ride completed)
 incrementTotalEarningDistanceAndCompletedRidesDaily :: (MonadFlow m, EsqDBFlow m r, CacheFlow m r) => Text -> DR.Ride -> DTTC.TransporterConfig -> m ()
