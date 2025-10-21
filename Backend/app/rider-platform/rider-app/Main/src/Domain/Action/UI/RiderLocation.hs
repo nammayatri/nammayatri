@@ -74,12 +74,16 @@ postIdentifyNearByBus (_mbPersonId, merchantId) req = do
       let distanceToBus = realToFrac $ Kernel.Utils.CalculateDistance.distanceBetweenInMeters riderLocation busLocation
       let busTimestamp = posixSecondsToUTCTime (fromIntegral busData.timestamp)
       let busNumber = fromMaybe "UNKNOWN" busData.vehicle_number
+      now <- getCurrentTime
+      locationId <- generateGUID
       pure
         API.Types.UI.RiderLocation.BusLocation
-          { busNumber = busNumber,
+          { id = locationId,
+            busNumber = busNumber,
             distanceToBus = distanceToBus,
             timestamp = busTimestamp,
             customerLocation = riderLocation,
+            customerLocationTimestamp = now,
             locationAccuracy = req.locationAccuracy
           }
 
