@@ -368,7 +368,18 @@ postMultimodalRiderLocation ::
   ApiTypes.RiderLocationReq ->
   Environment.Flow ApiTypes.JourneyStatusResp
 postMultimodalRiderLocation personOrMerchantId journeyId req = do
-  addPoint journeyId req
+  journey <- JM.getJourney journeyId
+  allLegsStatus <- JM.getAllLegsStatus journey
+  journeyLegs <- QJourneyLeg.getJourneyLegs journeyId
+
+  -- Get bus number from current ongoing bus leg
+  let allLegStates = concatMap (\case JMTypes.Single legStateData -> [legStateData]; JMTypes.Transit states -> states) allLegsStatus
+      currentBusNumber = do
+        busLegState <- find (\legStateData -> legStateData.trackingStatus == JMState.Ongoing && legStateData.mode == DTrip.Bus) allLegStates
+        currentLeg <- find (\leg -> leg.sequenceNumber == busLegState.legOrder) journeyLegs
+        currentLeg.finalBoardedBusNumber
+
+  addPoint journeyId req currentBusNumber
   journeyStatus <- getMultimodalJourneyStatus personOrMerchantId journeyId
   return journeyStatus
 

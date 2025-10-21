@@ -29,7 +29,8 @@ data RiderLocationEvent = RiderLocationEvent
   { journeyId :: Text,
     latitude :: Double,
     longitude :: Double,
-    timestamp :: UTCTime
+    timestamp :: UTCTime,
+    busNumber :: Maybe Text
   }
   deriving (Generic, Show)
 
@@ -44,14 +45,16 @@ pushRiderLocationToKafka ::
   ) =>
   Id Journey ->
   ApiTypes.RiderLocationReq ->
+  Maybe Text ->
   m ()
-pushRiderLocationToKafka journeyId ApiTypes.RiderLocationReq {..} = do
+pushRiderLocationToKafka journeyId ApiTypes.RiderLocationReq {..} mbBusNumber = do
   let event =
         RiderLocationEvent
           { journeyId = journeyId.getId,
             latitude = latLong.lat,
             longitude = latLong.lon,
-            timestamp = currTime
+            timestamp = currTime,
+            busNumber = mbBusNumber
           }
   let topicName = "rider-location-updates"
   let key = journeyId.getId
@@ -68,14 +71,15 @@ addPoint ::
   ) =>
   Id Journey ->
   ApiTypes.RiderLocationReq ->
+  Maybe Text ->
   m ()
-addPoint journeyId req = do
+addPoint journeyId req mbBusNumber = do
   let key = makeLocationRedisKey journeyId
   lPush key $ NE.singleton req
   lTrim key 0 10 -- always keep last 10 points
   Hedis.expire key 21600 -- 6 hours
   -- Push rider location to Kafka topic
-  pushRiderLocationToKafka journeyId req
+  pushRiderLocationToKafka journeyId req mbBusNumber
 
 clearPoints :: HedisFlow m env => Id Journey -> m ()
 clearPoints journeyId = do
