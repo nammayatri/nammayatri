@@ -14,10 +14,8 @@
 
 module SharedLogic.CreateFareForMultiModal where
 
-import BecknV2.FRFS.Utils
 import qualified Domain.Types.Extra.VendorSplitDetails as VendorSplitDetails
 import qualified Domain.Types.FRFSTicketBooking as FTBooking
-import qualified Domain.Types.IntegratedBPPConfig as DIBC
 import qualified Domain.Types.Merchant as Merchant
 import qualified Domain.Types.MerchantOperatingCity as DMOC
 import qualified Domain.Types.VendorSplitDetails as VendorSplitDetails
@@ -90,10 +88,10 @@ createVendorSplitFromBookings allJourneyBookings merchantId merchantOperatingCit
           splitDetailsZippedByBooking <- do
             mapM
               ( \item -> do
-                  integBppConfigs <- SIBC.findAllIntegratedBPPConfig merchantOperatingCityId (frfsVehicleCategoryToBecknVehicleCategory item.vehicleType) DIBC.MULTIMODAL
-                  vendorSplitDetailsList <- mapM (QVendorSplitDetails.findAllByIntegratedBPPConfigId . (.id)) integBppConfigs
+                  integBppConfig <- SIBC.findIntegratedBPPConfigById item.integratedBppConfigId
+                  vendorSplitDetailsList <- QVendorSplitDetails.findAllByIntegratedBPPConfigId integBppConfig.id
                   let amountPerBooking = if isFRFSTestingEnabled then 1.0 else item.price.amount
-                  return (item.id, (amountPerBooking, concat vendorSplitDetailsList))
+                  return (item.id, (amountPerBooking, vendorSplitDetailsList))
               )
               allJourneyBookings
           vendorSplitDetailsListToIncludeInSplit <- QVendorSplitDetails.findAllByMerchantOperatingCityIdAndIncludeInSplit (Just merchantOperatingCityId) (Just True)
