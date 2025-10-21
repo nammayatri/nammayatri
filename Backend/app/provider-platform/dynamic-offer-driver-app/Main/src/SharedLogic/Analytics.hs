@@ -21,6 +21,7 @@ import qualified Domain.Types.DriverInformation as DI
 import qualified Domain.Types.Person as DP
 import qualified Domain.Types.Ride as DR
 import qualified Domain.Types.TransporterConfig as TC
+import Environment
 import Kernel.Prelude
 import qualified Kernel.Storage.Clickhouse.Config as CH
 import Kernel.Storage.Esqueleto.Config (EsqDBReplicaFlow)
@@ -60,17 +61,66 @@ data AllTimeFallbackRes = AllTimeFallbackRes
   }
   deriving (Show, Eq)
 
-convertToAllTimeFallbackRes :: [(AllTimeMetric, Int)] -> AllTimeFallbackRes
+convertToAllTimeFallbackRes :: [(AllTimeMetric, Int)] -> CommonAllTimeFallbackRes
 convertToAllTimeFallbackRes metricsList =
   let metricsMap = Map.fromList metricsList
       getMetricValue metric = Map.findWithDefault 0 metric metricsMap
-   in AllTimeFallbackRes
-        { totalRideCount = getMetricValue TOTAL_RIDE_COUNT,
-          ratingSum = getMetricValue RATING_SUM,
-          cancelCount = getMetricValue CANCEL_COUNT,
-          acceptationCount = getMetricValue ACCEPTATION_COUNT,
-          totalRequestCount = getMetricValue TOTAL_REQUEST_COUNT
-        }
+   in OperatorAllTimeFallback $
+        AllTimeFallbackRes
+          { totalRideCount = getMetricValue TOTAL_RIDE_COUNT,
+            ratingSum = getMetricValue RATING_SUM,
+            cancelCount = getMetricValue CANCEL_COUNT,
+            acceptationCount = getMetricValue ACCEPTATION_COUNT,
+            totalRequestCount = getMetricValue TOTAL_REQUEST_COUNT
+          }
+
+data FleetAllTimeMetric = ACTIVE_DRIVER_COUNT | ACTIVE_VEHICLE_COUNT | CURRENT_ONLINE_DRIVER_COUNT
+  deriving (Show, Eq, Ord)
+
+fleetAllTimeMetrics :: [FleetAllTimeMetric]
+fleetAllTimeMetrics = [ACTIVE_DRIVER_COUNT, ACTIVE_VEHICLE_COUNT, CURRENT_ONLINE_DRIVER_COUNT]
+
+fleetAllTimeKeys :: Text -> [Text]
+fleetAllTimeKeys fleetOperatorId = map (makeFleetAnalyticsKey fleetOperatorId) fleetAllTimeMetrics
+
+data FleetAllTimeFallbackRes = FleetAllTimeFallbackRes
+  { activeDriverCount :: Int,
+    activeVehicleCount :: Int,
+    currentOnlineDriverCount :: Int
+  }
+  deriving (Show, Eq)
+
+convertToFleetAllTimeFallbackRes :: [(FleetAllTimeMetric, Int)] -> CommonAllTimeFallbackRes
+convertToFleetAllTimeFallbackRes metricsList =
+  let metricsMap = Map.fromList metricsList
+      getMetricValue metric = Map.findWithDefault 0 metric metricsMap
+   in FleetAllTimeFallback $
+        FleetAllTimeFallbackRes
+          { activeDriverCount = getMetricValue ACTIVE_DRIVER_COUNT,
+            activeVehicleCount = getMetricValue ACTIVE_VEHICLE_COUNT,
+            currentOnlineDriverCount = getMetricValue CURRENT_ONLINE_DRIVER_COUNT
+          }
+
+makeFleetKeyPrefix :: Text -> Text
+makeFleetKeyPrefix fleetOperatorId = "fleetOwner:" <> fleetOperatorId <> ":"
+
+makeFleetAnalyticsKey :: Text -> FleetAllTimeMetric -> Text
+makeFleetAnalyticsKey fleetOperatorId metric = makeFleetKeyPrefix fleetOperatorId <> show metric
+
+-- | Common datatype for all analytics fallback results
+data CommonAllTimeFallbackRes
+  = OperatorAllTimeFallback AllTimeFallbackRes
+  | FleetAllTimeFallback FleetAllTimeFallbackRes
+  deriving (Show, Eq)
+
+-- | Helper function to extract fleet analytics data from common result
+extractFleetAnalyticsData :: CommonAllTimeFallbackRes -> Flow (Int, Int, Int)
+extractFleetAnalyticsData (FleetAllTimeFallback fleetData) = pure (fleetData.activeDriverCount, fleetData.activeVehicleCount, fleetData.currentOnlineDriverCount)
+extractFleetAnalyticsData _ = throwError $ InvalidRequest "Expected FleetAllTimeFallback but got OperatorAllTimeFallback"
+
+extractOperatorAnalyticsData :: CommonAllTimeFallbackRes -> Flow (Int, Int, Int, Int, Int)
+extractOperatorAnalyticsData (OperatorAllTimeFallback operatorData) = pure (operatorData.totalRideCount, operatorData.ratingSum, operatorData.cancelCount, operatorData.acceptationCount, operatorData.totalRequestCount)
+extractOperatorAnalyticsData _ = throwError $ InvalidRequest "Expected OperatorAllTimeFallback but got FleetAllTimeFallback"
 
 data PeriodMetric = ACTIVE_DRIVER | DRIVER_ENABLED | GREATER_THAN_ONE_RIDE | GREATER_THAN_TEN_RIDE | GREATER_THAN_FIFTY_RIDE
   deriving (Show, Eq, Ord)
@@ -112,38 +162,6 @@ makeOperatorAnalyticsKey operatorId metric = makeOperatorKeyPrefix operatorId <>
 makeOperatorPeriodicKey :: Text -> PeriodMetric -> Period -> Text
 makeOperatorPeriodicKey operatorId metric period = makeOperatorKeyPrefix operatorId <> show metric <> ":" <> show period
 
-data FleetAllTimeMetric = ACTIVE_DRIVER_COUNT | ACTIVE_VEHICLE_COUNT | CURRENT_ONLINE_DRIVER_COUNT
-  deriving (Show, Eq, Ord)
-
-fleetAllTimeMetrics :: [FleetAllTimeMetric]
-fleetAllTimeMetrics = [ACTIVE_DRIVER_COUNT, ACTIVE_VEHICLE_COUNT, CURRENT_ONLINE_DRIVER_COUNT]
-
-fleetAllTimeKeys :: Text -> [Text]
-fleetAllTimeKeys fleetOperatorId = map (makeFleetAnalyticsKey fleetOperatorId) fleetAllTimeMetrics
-
-data FleetAllTimeFallbackRes = FleetAllTimeFallbackRes
-  { activeDriverCount :: Int,
-    activeVehicleCount :: Int,
-    currentOnlineDriverCount :: Int
-  }
-  deriving (Show, Eq)
-
-convertToFleetAllTimeFallbackRes :: [(FleetAllTimeMetric, Int)] -> FleetAllTimeFallbackRes
-convertToFleetAllTimeFallbackRes metricsList =
-  let metricsMap = Map.fromList metricsList
-      getMetricValue metric = Map.findWithDefault 0 metric metricsMap
-   in FleetAllTimeFallbackRes
-        { activeDriverCount = getMetricValue ACTIVE_DRIVER_COUNT,
-          activeVehicleCount = getMetricValue ACTIVE_VEHICLE_COUNT,
-          currentOnlineDriverCount = getMetricValue CURRENT_ONLINE_DRIVER_COUNT
-        }
-
-makeFleetKeyPrefix :: Text -> Text
-makeFleetKeyPrefix fleetOperatorId = "fleetOwner:" <> fleetOperatorId <> ":"
-
-makeFleetAnalyticsKey :: Text -> FleetAllTimeMetric -> Text
-makeFleetAnalyticsKey fleetOperatorId metric = makeFleetKeyPrefix fleetOperatorId <> show metric
-
 -- | Find the operator ID for a driver by checking direct association or fleet association
 findOperatorIdForDriver ::
   ( MonadFlow m,
@@ -170,7 +188,8 @@ findOperatorIdForDriver driverId = do
         Nothing -> pure Nothing
 
 -- | Common function to ensure Redis keys exist by falling back to ClickHouse if needed
-ensureRedisKeysExistForAllTime ::
+-- Uses Person role to determine which fallback function to call
+ensureRedisKeysExistForAllTimeCommon ::
   ( MonadFlow m,
     EsqDBFlow m r,
     CacheFlow m r,
@@ -178,51 +197,40 @@ ensureRedisKeysExistForAllTime ::
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
   ) =>
+  DP.Role ->
   Text ->
   Text ->
-  Int ->
+  (Text -> Integer -> m Integer) ->
+  Integer ->
   m ()
-ensureRedisKeysExistForAllTime operatorId targetKey incrValue = do
+ensureRedisKeysExistForAllTimeCommon role entityId targetKey redisOps value = do
   mbValue <- Redis.get @Int targetKey
-  let msg = "Key does not exist for operator alltime analytics key: " <> show targetKey <> ", operatorId: " <> show operatorId
+  (msg, logTag, allTimeKeysData, handleCacheMiss) <- case role of
+    DP.OPERATOR ->
+      pure
+        ( "Key does not exist for operator alltime analytics key: " <> show targetKey <> ", operatorId: " <> show entityId,
+          "AllTimeAnalytics",
+          allTimeKeys entityId,
+          handleCacheMissForAnalyticsAllTimeCommon DP.OPERATOR entityId
+        )
+    DP.FLEET_OWNER ->
+      pure
+        ( "Key does not exist for fleet alltime analytics key: " <> show targetKey <> ", fleetOwnerId: " <> show entityId,
+          "AllTimeAnalyticsFleet",
+          fleetAllTimeKeys entityId,
+          handleCacheMissForAnalyticsAllTimeCommon DP.FLEET_OWNER entityId
+        )
+    _ -> throwError $ InvalidRequest $ "Unsupported role for analytics: " <> show role
 
   if isNothing mbValue
     then fork msg $ do
-      logTagInfo "AllTimeAnalytics" $ "Key does not exist. Handling cache miss for operatorId: " <> show operatorId
-      let allTimeKeysData = allTimeKeys operatorId
-      void $ handleCacheMissForOperatorAnalyticsAllTime operatorId allTimeKeysData
-      void $ Redis.incrby targetKey (fromIntegral incrValue)
-      logTagInfo "AllTimeAnalytics" $ "Updated key after cache miss: key=" <> show targetKey <> ", operatorId=" <> show operatorId
+      logTagInfo logTag $ "Key does not exist. Handling cache miss for " <> show role <> "Id: " <> show entityId
+      void $ handleCacheMiss allTimeKeysData
+      void $ redisOps targetKey value
+      logTagInfo logTag $ "Updated key after cache miss: key=" <> show targetKey <> ", " <> show role <> "Id=" <> show entityId
     else do
-      logTagInfo "AllTimeAnalytics" $ "Key already exists for operator analytics key: " <> show targetKey <> ", operatorId=" <> show operatorId
-      void $ Redis.incrby targetKey (fromIntegral incrValue)
-
-ensureRedisKeysExistForAllTimeFleet ::
-  ( MonadFlow m,
-    EsqDBFlow m r,
-    CacheFlow m r,
-    Redis.HedisFlow m r,
-    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
-  ) =>
-  Text ->
-  Text ->
-  (Text -> m Integer) ->
-  m ()
-ensureRedisKeysExistForAllTimeFleet fleetOwnerId targetKey redisOps = do
-  mbValue <- Redis.get @Int targetKey
-  let msg = "Key does not exist for fleet alltime analytics key: " <> show targetKey <> ", fleetOwnerId: " <> show fleetOwnerId
-
-  if isNothing mbValue
-    then fork msg $ do
-      let fleetAllTimeKeysData = fleetAllTimeKeys fleetOwnerId
-      logTagInfo "AllTimeAnalyticsFleet" $ "Key does not exist. Handling cache miss for fleetOwnerId: " <> show fleetOwnerId
-      void $ handleCacheMissForFleetAnalyticsAllTime fleetOwnerId fleetAllTimeKeysData
-      void $ redisOps targetKey
-      logTagInfo "AllTimeAnalyticsFleet" $ "Updated key after cache miss: key=" <> show targetKey <> ", fleetOwnerId=" <> show fleetOwnerId
-    else do
-      logTagInfo "AllTimeAnalyticsFleet" $ "Key already exists for fleet analytics key: " <> show targetKey <> ", fleetOwnerId=" <> show fleetOwnerId
-      void $ redisOps targetKey
+      logTagInfo logTag $ "Key already exists for " <> show role <> " analytics key: " <> show targetKey <> ", " <> show role <> "Id=" <> show entityId
+      void $ redisOps targetKey value
 
 ensureRedisKeysExistForPeriod ::
   ( MonadFlow m,
@@ -278,7 +286,7 @@ updateOperatorAnalyticsCancelCount transporterConfig driverId = do
     Redis.withWaitAndLockRedis (SFleetOperatorStats.makeFleetOperatorMetricLockKey operatorId SFleetOperatorStats.DRIVER_CANCEL) 10 5000 $
       SFleetOperatorStats.incrementDriverCancellationCount operatorId transporterConfig
     -- Ensure Redis keys exist
-    ensureRedisKeysExistForAllTime operatorId cancelCountKey 1
+    ensureRedisKeysExistForAllTimeCommon DP.OPERATOR operatorId cancelCountKey Redis.incrby 1
 
   mbFleetOwner <- QFDA.findByDriverId driverId True
   when (isNothing mbFleetOwner) $ logTagInfo "AnalyticsUpdateCancelCount" $ "No fleet owner found for driver: " <> show driverId
@@ -350,12 +358,12 @@ updateOperatorAnalyticsAcceptationTotalRequestAndPassedCount driverId transporte
       let acceptationCountKey = makeOperatorAnalyticsKey operatorId ACCEPTATION_COUNT
       Redis.withWaitAndLockRedis (SFleetOperatorStats.makeFleetOperatorMetricLockKey operatorId SFleetOperatorStats.ACCEPTATION_REQUEST) 10 5000 $
         SFleetOperatorStats.incrementAcceptationRequestCount operatorId (transporterConfig :: TC.TransporterConfig)
-      ensureRedisKeysExistForAllTime operatorId acceptationCountKey 1
+      ensureRedisKeysExistForAllTimeCommon DP.OPERATOR operatorId acceptationCountKey Redis.incrby 1
     updateTotalRequestCount operatorId = do
       let totalRequestCountKey = makeOperatorAnalyticsKey operatorId TOTAL_REQUEST_COUNT
       Redis.withWaitAndLockRedis (SFleetOperatorStats.makeFleetOperatorMetricLockKey operatorId SFleetOperatorStats.TOTAL_REQUEST) 10 5000 $
         SFleetOperatorStats.incrementTotalRequestCount operatorId (transporterConfig :: TC.TransporterConfig)
-      ensureRedisKeysExistForAllTime operatorId totalRequestCountKey 1
+      ensureRedisKeysExistForAllTimeCommon DP.OPERATOR operatorId totalRequestCountKey Redis.incrby 1
 
 -- | Update the operator analytics rating score for a driver
 updateOperatorAnalyticsRatingScoreKey ::
@@ -380,7 +388,7 @@ updateOperatorAnalyticsRatingScoreKey driverId transporterConfig ratingValue = d
     Redis.withWaitAndLockRedis (SFleetOperatorStats.makeFleetOperatorMetricLockKey operatorId SFleetOperatorStats.RATING_COUNT_AND_SCORE) 10 5000 $
       SFleetOperatorStats.incrementTotalRatingCountAndTotalRatingScore operatorId transporterConfig ratingValue
     -- Ensure Redis keys exist
-    ensureRedisKeysExistForAllTime operatorId ratingSumKey ratingValue
+    ensureRedisKeysExistForAllTimeCommon DP.OPERATOR operatorId ratingSumKey Redis.incrby (fromIntegral ratingValue)
 
   -- Fleet owner analytics
   mbFLeetOwner <- QFDA.findByDriverId driverId True
@@ -410,7 +418,7 @@ updateOperatorAnalyticsTotalRideCount transporterConfig driverId ride = do
     Redis.withWaitAndLockRedis (SFleetOperatorStats.makeFleetOperatorMetricLockKey operatorId SFleetOperatorStats.RIDE_METRICS) 10 5000 $
       SFleetOperatorStats.incrementTotalRidesTotalDistAndTotalEarning operatorId ride transporterConfig
     -- Ensure Redis keys exist
-    ensureRedisKeysExistForAllTime operatorId totalRideCountKey 1
+    ensureRedisKeysExistForAllTimeCommon DP.OPERATOR operatorId totalRideCountKey Redis.incrby 1
 
   mbFLeetOwner <- QFDA.findByDriverId driverId True
   when (isNothing mbFLeetOwner) $ logTagInfo "AnalyticsUpdateTotalRideCount" $ "No fleet owner found for driver: " <> show driverId
@@ -542,7 +550,7 @@ incrementFleetOwnerAnalyticsActiveDriverCount mbFleetOwnerId driverId = do
   where
     incrementActiveDriverCount fleetOwnerId = do
       let totalActiveDriverCountKey = makeFleetAnalyticsKey fleetOwnerId ACTIVE_DRIVER_COUNT
-      ensureRedisKeysExistForAllTimeFleet fleetOwnerId totalActiveDriverCountKey Redis.incr
+      ensureRedisKeysExistForAllTimeCommon DP.FLEET_OWNER fleetOwnerId totalActiveDriverCountKey Redis.incrby 1
 
 decrementFleetOwnerAnalyticsActiveDriverCount ::
   ( MonadFlow m,
@@ -565,7 +573,7 @@ decrementFleetOwnerAnalyticsActiveDriverCount mbFleetOwnerId driverId = do
   where
     decrementActiveDriverCount fleetOwnerId = do
       let totalActiveDriverCountKey = makeFleetAnalyticsKey fleetOwnerId ACTIVE_DRIVER_COUNT
-      ensureRedisKeysExistForAllTimeFleet fleetOwnerId totalActiveDriverCountKey Redis.decr
+      ensureRedisKeysExistForAllTimeCommon DP.FLEET_OWNER fleetOwnerId totalActiveDriverCountKey Redis.decrby 1
 
 incrementFleetOwnerAnalyticsActiveVehicleCount ::
   ( MonadFlow m,
@@ -588,7 +596,7 @@ incrementFleetOwnerAnalyticsActiveVehicleCount mbFleetOwnerId driverId = do
   where
     incrementActiveVehicleCount fleetOwnerId = do
       let totalActiveVehicleCountKey = makeFleetAnalyticsKey fleetOwnerId ACTIVE_VEHICLE_COUNT
-      ensureRedisKeysExistForAllTimeFleet fleetOwnerId totalActiveVehicleCountKey Redis.incr
+      ensureRedisKeysExistForAllTimeCommon DP.FLEET_OWNER fleetOwnerId totalActiveVehicleCountKey Redis.incrby 1
 
 decrementFleetOwnerAnalyticsActiveVehicleCount ::
   ( MonadFlow m,
@@ -611,7 +619,7 @@ decrementFleetOwnerAnalyticsActiveVehicleCount mbFleetOwnerId driverId = do
   where
     decrementActiveVehicleCount fleetOwnerId = do
       let totalActiveVehicleCountKey = makeFleetAnalyticsKey fleetOwnerId ACTIVE_VEHICLE_COUNT
-      ensureRedisKeysExistForAllTimeFleet fleetOwnerId totalActiveVehicleCountKey Redis.decr
+      ensureRedisKeysExistForAllTimeCommon DP.FLEET_OWNER fleetOwnerId totalActiveVehicleCountKey Redis.decrby 1
 
 -- | ClickHouse fallback function for fleet analytics
 fallbackToClickHouseAndUpdateRedisForAllTime ::
@@ -624,7 +632,7 @@ fallbackToClickHouseAndUpdateRedisForAllTime ::
   ) =>
   Text ->
   [Text] ->
-  m AllTimeFallbackRes
+  m CommonAllTimeFallbackRes
 fallbackToClickHouseAndUpdateRedisForAllTime operatorId allTimeKeysData = do
   logTagInfo "FallbackClickhouseAllTime" $ "Initiating ClickHouse query to retrieve analytics data for operator ID: " <> operatorId
   operatorStats <- CFO.sumStatsByFleetOperatorId operatorId
@@ -647,7 +655,7 @@ fallbackToClickHouseAndUpdateRedisForAllTimeFleet ::
   ) =>
   Text ->
   [Text] ->
-  m FleetAllTimeFallbackRes
+  m CommonAllTimeFallbackRes
 fallbackToClickHouseAndUpdateRedisForAllTimeFleet fleetOwnerId fleetAllTimeKeysData = do
   logTagInfo "FallbackClickhouseAllTimeFleet" $ "Initiating ClickHouse query to retrieve analytics data for fleetOwnerId: " <> fleetOwnerId
   driverIds <- CFDA.getDriverIdsByFleetOwnerId fleetOwnerId
@@ -717,7 +725,8 @@ fallbackToClickHouseAndUpdateRedisForPeriod transporterConfig operatorId periodK
   mapM_ (\(key, value) -> Redis.setExp key value expireTime) (zip periodKeysData [res.activeDriver, res.driverEnabled, res.greaterThanOneRide, res.greaterThanTenRide, res.greaterThanFiftyRide])
   pure res
 
-handleCacheMissForOperatorAnalyticsAllTime ::
+-- | Common function to handle cache miss for analytics using Person role
+handleCacheMissForAnalyticsAllTimeCommon ::
   ( MonadFlow m,
     EsqDBFlow m r,
     CacheFlow m r,
@@ -725,69 +734,51 @@ handleCacheMissForOperatorAnalyticsAllTime ::
     HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
     HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
   ) =>
+  DP.Role ->
   Text ->
   [Text] ->
-  m AllTimeFallbackRes
-handleCacheMissForOperatorAnalyticsAllTime operatorId allTimeKeysData = do
-  let inProgressKey = makeOperatorKeyPrefix operatorId <> "inProgressAllTime"
+  m CommonAllTimeFallbackRes
+handleCacheMissForAnalyticsAllTimeCommon role entityId allTimeKeysData = do
+  (inProgressKey, logTag, fallbackFunc) <- case role of
+    DP.OPERATOR ->
+      pure
+        ( makeOperatorKeyPrefix entityId <> "inProgressAllTime",
+          "OperatorAnalyticsAllTime",
+          fallbackToClickHouseAndUpdateRedisForAllTime entityId
+        )
+    DP.FLEET_OWNER ->
+      pure
+        ( makeFleetKeyPrefix entityId <> "inProgressAllTime",
+          "FleetAnalyticsAllTime",
+          fallbackToClickHouseAndUpdateRedisForAllTimeFleet entityId
+        )
+    _ -> throwError $ InvalidRequest $ "Unsupported role for analytics: " <> show role
+
   inProgress <- Redis.get @Bool inProgressKey
   case inProgress of
     Just True -> do
-      logTagInfo "OperatorAnalyticsAllTime" $ "inProgress key present for operatorId: " <> operatorId <> ". Waiting for it to clear."
+      logTagInfo logTag $ "inProgress key present for " <> show role <> "Id: " <> entityId <> ". Waiting for it to clear."
       SDFStatus.waitUntilKeyGone inProgressKey
       allTimeKeysRes <- mapM (\key -> fromMaybe 0 <$> Redis.get @Int key) allTimeKeysData
-      pure $ convertToAllTimeFallbackRes (zip allTimeMetrics allTimeKeysRes)
+      pure $ case role of
+        DP.OPERATOR -> convertToAllTimeFallbackRes (zip allTimeMetrics allTimeKeysRes)
+        DP.FLEET_OWNER -> convertToFleetAllTimeFallbackRes (zip fleetAllTimeMetrics allTimeKeysRes)
+        _ -> error $ "Unsupported role for analytics: " <> show role
     _ -> do
       lockAcquired <- Redis.setNxExpire inProgressKey 60 True -- 60 seconds expiry
       if lockAcquired
         then do
-          logTagInfo "OperatorAnalyticsAllTime" $ "Acquired inProgress lock for operatorId: " <> operatorId <> ". Running ClickHouse query."
-          res <- try @_ @SomeException $ fallbackToClickHouseAndUpdateRedisForAllTime operatorId allTimeKeysData
+          logTagInfo logTag $ "Acquired inProgress lock for " <> show role <> "Id: " <> entityId <> ". Running ClickHouse query."
+          res <- try @_ @SomeException $ fallbackFunc allTimeKeysData
           Redis.del inProgressKey
           case res of
             Left err -> do
-              logTagError "OperatorAnalyticsAllTime" $ "Error during ClickHouse/Redis operation for operatorId: " <> operatorId <> ". Error: " <> show err
-              throwError (InternalError $ "Failed to perform operation for operatorId: " <> operatorId)
+              logTagError logTag $ "Error during ClickHouse/Redis operation for " <> show role <> "Id: " <> entityId <> ". Error: " <> show err
+              throwError (InternalError $ "Failed to perform operation for " <> show role <> "Id: " <> entityId)
             Right allTimeRes -> pure allTimeRes
         else do
-          logTagInfo "OperatorAnalyticsAllTime" $ "inProgress lock already held for operatorId: " <> operatorId <> " (race detected in else). Waiting for it to clear."
-          handleCacheMissForOperatorAnalyticsAllTime operatorId allTimeKeysData
-
-handleCacheMissForFleetAnalyticsAllTime ::
-  ( MonadFlow m,
-    EsqDBFlow m r,
-    CacheFlow m r,
-    Redis.HedisFlow m r,
-    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
-    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
-  ) =>
-  Text ->
-  [Text] ->
-  m FleetAllTimeFallbackRes
-handleCacheMissForFleetAnalyticsAllTime fleetOwnerId fleetAllTimeKeysData = do
-  let inProgressKey = makeFleetKeyPrefix fleetOwnerId <> "inProgressAllTime"
-  inProgress <- Redis.get @Bool inProgressKey
-  case inProgress of
-    Just True -> do
-      logTagInfo "FleetAnalyticsAllTime" $ "inProgress key present for fleetOwnerId: " <> fleetOwnerId <> ". Waiting for it to clear."
-      SDFStatus.waitUntilKeyGone inProgressKey
-      allTimeKeysRes <- mapM (\key -> fromMaybe 0 <$> Redis.get @Int key) fleetAllTimeKeysData
-      pure $ convertToFleetAllTimeFallbackRes (zip fleetAllTimeMetrics allTimeKeysRes)
-    _ -> do
-      lockAcquired <- Redis.setNxExpire inProgressKey 60 True -- 60 seconds expiry
-      if lockAcquired
-        then do
-          logTagInfo "FleetAnalyticsAllTime" $ "Acquired inProgress lock for fleetOwnerId: " <> fleetOwnerId <> ". Running ClickHouse query."
-          res <- try @_ @SomeException $ fallbackToClickHouseAndUpdateRedisForAllTimeFleet fleetOwnerId fleetAllTimeKeysData
-          Redis.del inProgressKey
-          case res of
-            Left err -> do
-              logTagError "FleetAnalyticsAllTime" $ "Error during ClickHouse/Redis operation for fleetOwnerId: " <> fleetOwnerId <> ". Error: " <> show err
-              throwError (InternalError $ "Failed to perform operation for fleetOwnerId: " <> fleetOwnerId)
-            Right allTimeRes -> pure allTimeRes
-        else do
-          logTagInfo "FleetAnalyticsAllTime" $ "inProgress lock already held for fleetOwnerId: " <> fleetOwnerId <> " (race detected in else). Waiting for it to clear."
-          handleCacheMissForFleetAnalyticsAllTime fleetOwnerId fleetAllTimeKeysData
+          logTagInfo logTag $ "inProgress lock already held for " <> show role <> "Id: " <> entityId <> " (race detected in else). Waiting for it to clear."
+          handleCacheMissForAnalyticsAllTimeCommon role entityId allTimeKeysData
 
 handleCacheMissForOperatorAnalyticsPeriod ::
   ( MonadFlow m,
@@ -882,3 +873,33 @@ deriveFromAndToDay period now =
   let today = utctDay now
       periodDefs = getPeriodDefinitions today
    in fromMaybe (today, today) $ lookup period periodDefs
+
+-- | Common function to handle driver analytics and flow status caching
+handleDriverAnalyticsAndFlowStatus ::
+  ( MonadFlow m,
+    EsqDBFlow m r,
+    CacheFlow m r,
+    Redis.HedisFlow m r,
+    HasField "serviceClickhouseCfg" r CH.ClickhouseCfg,
+    HasField "serviceClickhouseEnv" r CH.ClickhouseEnv
+  ) =>
+  TC.TransporterConfig ->
+  Id DP.Person ->
+  Maybe DI.DriverInformation ->
+  (DI.DriverInformation -> m ()) -> -- analytics action to perform
+  (DI.DriverInformation -> m ()) -> -- flow status action to perform
+  m ()
+handleDriverAnalyticsAndFlowStatus transporterConfig driverId mbDriverInfo analyticsAction flowStatusAction = do
+  let allowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
+  let needsDriverInfo = transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics || allowCacheDriverFlowStatus
+
+  when needsDriverInfo $ do
+    driverInfo <- case mbDriverInfo of
+      Just driverInfo -> pure driverInfo
+      Nothing -> QDI.findById driverId >>= fromMaybeM (DriverNotFound driverId.getId)
+
+    when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ do
+      analyticsAction driverInfo
+
+    when allowCacheDriverFlowStatus $ do
+      flowStatusAction driverInfo

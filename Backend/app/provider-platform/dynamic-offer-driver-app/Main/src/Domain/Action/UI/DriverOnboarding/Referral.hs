@@ -128,12 +128,17 @@ addReferral (personId, merchantId, merchantOpCityId) req = do
           DriverInformation.updateReferredByOperatorId (Just dr.driverId.getId) personId
           driverOperatorAssData <- SA.makeDriverOperatorAssociation merchantId merchantOpCityId personId dr.driverId.getId (DomainRC.convertTextToUTC (Just "2099-12-12"))
           void $ QDOA.create driverOperatorAssData
-          when transporterConfig.analyticsConfig.enableFleetOperatorDashboardAnalytics $ do
-            when di.enabled $ Analytics.incrementOperatorAnalyticsDriverEnabled transporterConfig dr.driverId.getId
-            Analytics.incrementOperatorAnalyticsActiveDriver transporterConfig dr.driverId.getId
-          let allowCacheDriverFlowStatus = transporterConfig.analyticsConfig.allowCacheDriverFlowStatus
-          when allowCacheDriverFlowStatus $ do
-            DDriverMode.incrementFleetOperatorStatusKeyForDriver Person.OPERATOR dr.driverId.getId di.driverFlowStatus
+          Analytics.handleDriverAnalyticsAndFlowStatus
+            transporterConfig
+            dr.driverId
+            Nothing
+            ( \driverInfo -> do
+                when driverInfo.enabled $ Analytics.incrementOperatorAnalyticsDriverEnabled transporterConfig dr.driverId.getId
+                Analytics.incrementOperatorAnalyticsActiveDriver transporterConfig dr.driverId.getId
+            )
+            ( \driverInfo -> do
+                DDriverMode.incrementFleetOperatorStatusKeyForDriver Person.OPERATOR dr.driverId.getId driverInfo.driverFlowStatus
+            )
           incrementOnboardedCount DriverReferral dr.driverId transporterConfig
           return Success
         _ -> throwError (InvalidRequest "Invalid referral role")
